@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/fmgr.c,v 1.113.2.2 2009/12/09 21:58:17 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/fmgr.c,v 1.122 2008/08/25 22:42:34 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -23,7 +23,7 @@
 #include "executor/spi.h"
 #include "lib/stringinfo.h"
 #include "miscadmin.h"
-#include "parser/parse_expr.h"
+#include "nodes/nodeFuncs.h"
 #include "pgstat.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"

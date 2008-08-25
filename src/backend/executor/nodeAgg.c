@@ -74,7 +74,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeAgg.c,v 1.156.2.1 2008/10/16 19:25:58 neilc Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeAgg.c,v 1.160 2008/08/25 22:42:32 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -91,11 +91,11 @@
 #include "lib/stringinfo.h"             /* StringInfo */
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/tlist.h"
 #include "parser/parse_agg.h"
 #include "parser/parse_coerce.h"
-#include "parser/parse_expr.h"
 #include "parser/parse_oper.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"

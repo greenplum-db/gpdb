@@ -16,6 +16,7 @@
 
 #include "postgres.h"
 
+#include "nodes/nodeFuncs.h"
 #ifdef OPTIMIZER_DEBUG
 #include "nodes/print.h"
 #endif
@@ -30,7 +31,6 @@
 #include "optimizer/var.h"
 #include "optimizer/planshare.h"
 #include "parser/parse_clause.h"
-#include "parser/parse_expr.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteManip.h"
 #include "utils/guc.h"
