@@ -17,6 +17,7 @@
 #include "postgres.h"
 
 #include "access/skey.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/cost.h"
 #include "optimizer/paths.h"

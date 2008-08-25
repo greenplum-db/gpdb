@@ -17,6 +17,7 @@
 #include "postgres.h"
 
 #include "nodes/makefuncs.h"                /* makeVar() */
+#include "nodes/nodeFuncs.h"
 #include "catalog/gp_policy.h"
 #include "optimizer/cost.h"
 #include "optimizer/pathnode.h"

@@ -37,8 +37,8 @@
 #include "cdb/cdbpartition.h"
 #include "commands/tablecmds.h"
 #include "nodes/makefuncs.h"
-#include "optimizer/clauses.h"
 #include "optimizer/paths.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/plancat.h"
 #include "optimizer/planmain.h"
 #include "optimizer/planner.h"
@@ -46,7 +46,6 @@
 #include "optimizer/tlist.h"
 #include "parser/parse_clause.h"
 #include "parser/parse_coerce.h"
-#include "parser/parse_expr.h"
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
 

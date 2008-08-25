@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * src/backend/utils/adt/xml.c
+ * $PostgreSQL: pgsql/src/backend/utils/adt/xml.c,v 1.76 2008/08/25 22:42:34 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -69,7 +69,6 @@
 #include "miscadmin.h"
 #include "nodes/execnodes.h"
 #include "nodes/nodeFuncs.h"
-#include "parser/parse_expr.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/date.h"

@@ -28,7 +28,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execMain.c,v 1.305 2008/03/28 00:21:55 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execMain.c,v 1.313 2008/08/25 22:42:32 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -64,10 +64,9 @@
 #include "libpq/pqformat.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h" /* temporary */
+#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "parser/parse_clause.h"
-#include "parser/parse_expr.h"
-#include "parser/parse_relation.h"
 #include "parser/parsetree.h"
 #include "storage/smgr.h"
 #include "utils/acl.h"

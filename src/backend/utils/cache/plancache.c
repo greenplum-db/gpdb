@@ -47,7 +47,6 @@
 #include "executor/executor.h"
 #include "executor/spi.h"
 #include "nodes/nodeFuncs.h"
-#include "optimizer/clauses.h"
 #include "optimizer/planmain.h"
 #include "storage/lmgr.h"
 #include "tcop/pquery.h"

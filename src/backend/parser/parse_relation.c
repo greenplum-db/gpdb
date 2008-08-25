@@ -29,7 +29,6 @@
 #include "nodes/relation.h"                 /* CdbRelColumnInfo */
 #include "optimizer/pathnode.h"             /* cdb_rte_find_pseudo_column() */
 #include "parser/parsetree.h"
-#include "parser/parse_expr.h"
 #include "parser/parse_relation.h"
 #include "parser/parse_type.h"
 #include "parser/parse_coerce.h"

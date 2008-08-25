@@ -23,7 +23,8 @@
 #include "postgres.h"
 
 #include "access/htup.h"
-#include "optimizer/clauses.h"
+#include "nodes/nodeFuncs.h"
+#include "optimizer/walkers.h"
 #include "optimizer/prep.h"
 #include "optimizer/var.h"
 #include "parser/parsetree.h"

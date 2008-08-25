@@ -32,7 +32,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/tidpath.c,v 1.31 2008/01/01 19:45:50 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/tidpath.c,v 1.33 2008/08/25 22:42:33 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -41,10 +41,10 @@
 #include "access/htup.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_type.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
-#include "parser/parse_expr.h"
 
 
 static bool IsTidEqualClause(OpExpr *node, int varno);

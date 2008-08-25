@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.332 2008/03/27 03:57:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.338 2008/08/25 22:42:32 tgl Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -62,7 +62,7 @@
 #include "commands/tablecmds.h"
 #include "commands/typecmds.h"
 #include "miscadmin.h"
-#include "optimizer/clauses.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/var.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_expr.h"

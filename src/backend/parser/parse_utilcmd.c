@@ -44,7 +44,6 @@
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
-#include "optimizer/clauses.h"
 #include "parser/analyze.h"
 #include "parser/gramparse.h"
 #include "parser/parse_clause.h"

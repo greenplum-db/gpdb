@@ -214,6 +214,8 @@ typedef enum NodeTag
 	T_FromExpr,
 	T_IntoClause,
 	T_Flow,
+	T_WindowFrame,
+	T_WindowFrameEdge,
 	T_WindowKey,
 	T_Grouping,
 	T_GroupId,

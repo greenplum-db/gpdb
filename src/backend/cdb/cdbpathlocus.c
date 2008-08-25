@@ -17,6 +17,7 @@
 #include "cdb/cdbdef.h"         /* CdbSwap() */
 #include "cdb/cdbpullup.h"      /* cdbpullup_missing_var_walker() */
 #include "nodes/makefuncs.h"    /* makeVar() */
+#include "nodes/nodeFuncs.h"
 #include "nodes/plannodes.h"    /* Plan */
 #include "nodes/relation.h"     /* RelOptInfo */
 #include "optimizer/pathnode.h" /* Path */

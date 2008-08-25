@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/clauses.h,v 1.93 2008/08/22 00:16:04 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/clauses.h,v 1.94 2008/08/25 22:42:34 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -73,7 +73,6 @@ extern void count_agg_clauses(Node *clause, AggClauseCounts *counts);
 
 extern bool contain_window_function(Node *clause);
 
-extern bool expression_returns_set(Node *clause);
 extern double expression_returns_set_rows(Node *clause);
 
 extern bool contain_subplans(Node *clause);
@@ -115,17 +114,6 @@ extern Query *inline_set_returning_function(PlannerInfo *root, Node *node);
 
 extern Expr *evaluate_expr(Expr *expr, Oid result_type, int32 result_typmod);
 
-extern Node *expression_tree_mutator(Node *node, Node *(*mutator) (),
-												 void *context);
-
-extern Query *query_tree_mutator(Query *query, Node *(*mutator) (),
-											 void *context, int flags);
-
-extern List *range_table_mutator(List *rtable, Node *(*mutator) (),
-											 void *context, int flags);
-
-extern Node *query_or_expression_tree_mutator(Node *node, Node *(*mutator) (),
-												   void *context, int flags);
 extern bool is_grouping_extension(CanonicalGroupingSets *grpsets);
 extern bool contain_extended_grouping(List *grp);
 

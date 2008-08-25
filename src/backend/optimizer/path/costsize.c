@@ -67,6 +67,7 @@
 
 #include "executor/hashjoin.h"
 #include "miscadmin.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/cost.h"
 #include "optimizer/pathnode.h"
@@ -74,7 +75,6 @@
 #include "optimizer/planmain.h"
 #include "parser/parse_expr.h"
 #include "parser/parsetree.h"
-#include "parser/parse_expr.h"
 #include "utils/lsyscache.h"
 #include "utils/selfuncs.h"
 #include "utils/tuplesort.h"

@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/view.c,v 1.104 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/view.c,v 1.107 2008/08/25 22:42:32 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -27,9 +27,8 @@
 #include "commands/view.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
-#include "optimizer/clauses.h"
+#include "nodes/nodeFuncs.h"
 #include "parser/analyze.h"
-#include "parser/parse_expr.h"
 #include "parser/parse_relation.h"
 #include "rewrite/rewriteDefine.h"
 #include "rewrite/rewriteManip.h"

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_exec.c,v 1.209 2008/04/06 23:43:29 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_exec.c,v 1.217 2008/08/25 22:42:34 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -25,8 +25,7 @@
 #include "cdb/cdbvars.h"
 #include "executor/spi_priv.h"
 #include "funcapi.h"
-#include "optimizer/clauses.h"
-#include "parser/parse_expr.h"
+#include "nodes/nodeFuncs.h"
 #include "parser/scansup.h"
 #include "tcop/tcopprot.h"
 #include "utils/array.h"

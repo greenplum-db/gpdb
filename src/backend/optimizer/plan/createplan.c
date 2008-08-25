@@ -24,6 +24,7 @@
 #include "catalog/pg_type.h"	/* INT8OID */
 #include "access/skey.h"
 #include "nodes/makefuncs.h"
+#include "nodes/nodeFuncs.h"
 #include "executor/execHHashagg.h"
 #include "optimizer/clauses.h"
 #include "optimizer/cost.h"
@@ -36,7 +37,6 @@
 #include "optimizer/tlist.h"
 #include "optimizer/var.h"
 #include "parser/parse_clause.h"
-#include "parser/parse_expr.h"
 #include "parser/parsetree.h"
 #include "parser/parse_oper.h"	/* ordering_oper_opid */
 #include "utils/lsyscache.h"

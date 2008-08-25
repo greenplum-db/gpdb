@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/index.c,v 1.296 2008/03/26 21:10:37 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/index.c,v 1.303 2008/08/25 22:42:32 tgl Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -48,8 +48,9 @@
 #include "commands/tablecmds.h"
 #include "executor/executor.h"
 #include "miscadmin.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
-#include "parser/parse_expr.h"
+#include "optimizer/var.h"
 #include "storage/procarray.h"
 #include "storage/smgr.h"
 #include "utils/builtins.h"

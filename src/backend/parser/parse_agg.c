@@ -15,7 +15,8 @@
 #include "postgres.h"
 
 #include "nodes/makefuncs.h"
-#include "optimizer/clauses.h"
+#include "nodes/nodeFuncs.h"
+#include "optimizer/walkers.h"
 #include "optimizer/tlist.h"
 #include "optimizer/var.h"
 #include "parser/parse_agg.h"
