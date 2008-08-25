@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/functions.c,v 1.120 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/functions.c,v 1.126 2008/08/25 22:42:32 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -22,8 +22,8 @@
 #include "executor/executor.h"          /* ExecutorStart, ExecutorRun, etc */
 #include "executor/functions.h"
 #include "funcapi.h"
+#include "nodes/nodeFuncs.h"
 #include "parser/parse_coerce.h"
-#include "parser/parse_expr.h"
 #include "tcop/tcopprot.h"
 #include "tcop/utility.h"
 #include "utils/builtins.h"

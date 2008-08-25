@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_coerce.c,v 2.161.2.2 2008/12/14 19:46:02 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_coerce.c,v 2.164 2008/08/25 22:42:33 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -21,10 +21,8 @@
 #include "nodes/nodeFuncs.h"
 #include "nodes/print.h"
 #include "nodes/nodeFuncs.h"
-#include "optimizer/clauses.h"
 #include "parser/parsetree.h"               /* get_tle_by_resno */
 #include "parser/parse_coerce.h"
-#include "parser/parse_expr.h"
 #include "parser/parse_func.h"
 #include "parser/parse_relation.h"
 #include "parser/parse_type.h"
