@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/subselect.c,v 1.141 2008/10/04 21:56:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/subselect.c,v 1.143 2008/12/08 00:16:09 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1442,6 +1442,12 @@ convert_EXISTS_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 			return (Node *) make_notclause((Expr *)node);
 		return node;
 	}
+
+	/*
+	 * The subquery must have a nonempty jointree, else we won't have a join.
+	 */
+	if (subselect->jointree->fromlist == NIL)
+		return NULL;
 
 	/*
 	 * Separate out the WHERE clause.  (We could theoretically also remove
