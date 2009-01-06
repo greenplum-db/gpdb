@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/reloptions.c,v 1.13 2009/01/05 17:14:28 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/common/reloptions.c,v 1.16 2009/01/06 14:47:37 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -102,7 +102,7 @@ static relopt_real realRelOpts[] =
 	{ { NULL } }
 };
 
-static relopt_string stringRelOpts[] = 
+static relopt_string stringRelOpts[] =
 {
 	/* list terminator */
 	{ { NULL } }
@@ -792,7 +792,8 @@ default_reloptions(Datum reloptions, bool validate, relopt_kind kind)
 
 	for (i = 0; i < numoptions; i++)
 	{
-		HANDLE_INT_RELOPTION("fillfactor", lopts.fillfactor, options[i]);
+		HANDLE_INT_RELOPTION("fillfactor", lopts.fillfactor, options[i],
+							 (char *) NULL);
 	}
 
 	/* GPDB has some special logic for default options, so we need to call it. */
