@@ -223,30 +223,62 @@ pull_up_sublinks_jointree_recurse(PlannerInfo *root, Node *jtnode,
 		memcpy(j, jtnode, sizeof(JoinExpr));
 		jtlink = (Node *) j;
 
-		/*
-		 * We support flattening of sublinks in JOIN...ON only for
-		 * inner joins
-		 */
-		if (j->jointype == JOIN_INNER)
-		{
-			/* Recurse to process children and collect their relids */
-			j->larg = pull_up_sublinks_jointree_recurse(root, j->larg,
+		/* Recurse to process children and collect their relids */
+		j->larg = pull_up_sublinks_jointree_recurse(root, j->larg,
 														&leftrelids);
-			j->rarg = pull_up_sublinks_jointree_recurse(root, j->rarg,
+		j->rarg = pull_up_sublinks_jointree_recurse(root, j->rarg,
 														&rightrelids);
 
-			/*
-			 * Now process qual, showing appropriate child relids as available,
-			 * and attach any pulled-up jointree items at the right place.
-			 * We put new JoinExprs above the existing one (much as for a
-			 * FromExpr-style join). The point of the available_rels
-			 * machinations is to ensure that we only pull up quals for
-			 * which that's okay.
-			 */
-			j->quals = pull_up_sublinks_qual_recurse(root, j->quals,
-													 bms_union(leftrelids,
-															   rightrelids),
-													 &jtlink);
+		/*
+		 * Now process qual, showing appropriate child relids as available,
+		 * and attach any pulled-up jointree items at the right place.
+		 * In the inner-join case we put new JoinExprs above the existing one
+		 * (much as for a FromExpr-style join).  In outer-join cases the
+		 * new JoinExprs must go into the nullable side of the outer join.
+		 * The point of the available_rels machinations is to ensure that we
+		 * only pull up quals for which that's okay.
+		 *
+		 * XXX for the moment, we refrain from pulling up IN/EXISTS clauses
+		 * appearing in LEFT or RIGHT join conditions.  Although it is
+		 * semantically valid to do so under the above conditions, we end up
+		 * with a query in which the semijoin or antijoin must be evaluated
+		 * below the outer join, which could perform far worse than leaving
+		 * it as a sublink that is executed only for row pairs that meet the
+		 * other join conditions.  Fixing this seems to require considerable
+		 * restructuring of the executor, but maybe someday it can happen.
+		 *
+		 * We don't expect to see any pre-existing JOIN_SEMI or JOIN_ANTI
+		 * nodes here.
+		 */
+		 switch (j->jointype)
+		 {
+			case JOIN_INNER:
+				j->quals = pull_up_sublinks_qual_recurse(root, j->quals,
+														 bms_union(leftrelids,
+																  rightrelids),
+														 &jtlink);
+				break;
+			case JOIN_LEFT:
+#ifdef NOT_USED					/* see XXX comment above */
+				j->quals = pull_up_sublinks_qual_recurse(root, j->quals,
+														 rightrelids,
+														 &j->rarg);
+#endif
+				break;
+			case JOIN_FULL:
+				/* can't do anything with full-join quals */
+				break;
+			case JOIN_RIGHT:
+#ifdef NOT_USED					/* see XXX comment above */
+				j->quals = pull_up_sublinks_qual_recurse(root, j->quals,
+														 leftrelids,
+														 &j->larg);
+#endif
+				break;
+			default:
+				elog(ERROR, "unrecognized join type: %d",
+					 (int) j->jointype);
+				break;
 		}
 
 		/*

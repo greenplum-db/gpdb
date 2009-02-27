@@ -821,6 +821,16 @@ select rnum, c1, c2 from qp_tjoin2 where 75 > all ( select c2 from qp_tjoin1) or
 
 select rnum, c1, c2 from qp_tjoin2 where 20 > all ( select c1 from qp_tjoin1) order by rnum;
 
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+DROP TABLE IF EXISTS bar;
+
+CREATE TABLE foo(a int, b int);
+CREATE TABLE bar(c int, d int);
+-- end_ignore
+
+EXPLAIN SELECT a FROM foo f1 LEFT JOIN bar on a=c WHERE NOT EXISTS(SELECT 1 FROM foo f2 WHERE f1.a = f2.a);
+
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
