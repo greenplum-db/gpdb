@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/reloptions.c,v 1.18 2009/01/12 21:02:14 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/common/reloptions.c,v 1.25 2009/04/04 00:45:02 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -55,6 +55,22 @@
 
 static relopt_bool boolRelOpts[] =
 {
+	{
+		{
+			"autovacuum_enabled",
+			"Enables autovacuum in this relation",
+			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
+		},
+		true
+	},
+	{
+		{
+			"fastupdate",
+			"Enables \"fast update\" feature for this GIN index",
+			RELOPT_KIND_GIN
+		},
+		true
+	},
 	/* list terminator */
 	{ { NULL } }
 };
@@ -93,12 +109,87 @@ static relopt_int intRelOpts[] =
 		},
 		GIST_DEFAULT_FILLFACTOR, GIST_MIN_FILLFACTOR, 100
 	},
+#if 0
+	{
+		{
+			"autovacuum_vacuum_threshold",
+			"Minimum number of tuple updates or deletes prior to vacuum",
+			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
+		},
+		50, 0, INT_MAX
+	},
+	{
+		{
+			"autovacuum_analyze_threshold",
+			"Minimum number of tuple inserts, updates or deletes prior to analyze",
+			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
+		},
+		50, 0, INT_MAX
+	},
+	{
+		{
+			"autovacuum_vacuum_cost_delay",
+			"Vacuum cost delay in milliseconds, for autovacuum",
+			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
+		},
+		20, 0, 100
+	},
+	{
+		{
+			"autovacuum_vacuum_cost_limit",
+			"Vacuum cost amount available before napping, for autovacuum",
+			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
+		},
+		200, 1, 10000
+	},
+	{
+		{
+			"autovacuum_freeze_min_age",
+			"Minimum age at which VACUUM should freeze a table row, for autovacuum",
+			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
+		},
+		100000000, 0, 1000000000
+	},
+	{
+		{
+			"autovacuum_freeze_max_age",
+			"Age at which to autovacuum a table to prevent transaction ID wraparound",
+			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
+		},
+		200000000, 100000000, 2000000000
+	},
+	{
+		{
+			"autovacuum_freeze_table_age",
+			"Age at which VACUUM should perform a full table sweep to replace old Xid values with FrozenXID",
+			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
+		}, 150000000, 0, 2000000000
+	},
+#endif
 	/* list terminator */
 	{ { NULL } }
 };
 
 static relopt_real realRelOpts[] =
 {
+#if 0
+	{
+		{
+			"autovacuum_vacuum_scale_factor",
+			"Number of tuple updates or deletes prior to vacuum as a fraction of reltuples",
+			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
+		},
+		0.2, 0.0, 100.0
+	},
+	{
+		{
+			"autovacuum_analyze_scale_factor",
+			"Number of tuple inserts, updates or deletes prior to analyze as a fraction of reltuples",
+			RELOPT_KIND_HEAP | RELOPT_KIND_TOAST
+		},
+		0.1, 0.0, 100.0
+	},
+#endif
 	/* list terminator */
 	{ { NULL } }
 };
@@ -110,7 +201,7 @@ static relopt_string stringRelOpts[] =
 };
 
 static relopt_gen **relOpts = NULL;
-static int last_assigned_kind = RELOPT_KIND_LAST_DEFAULT + 1;
+static bits32 last_assigned_kind = RELOPT_KIND_LAST_DEFAULT << 1;
 
 static int		num_custom_options = 0;
 static relopt_gen **custom_options = NULL;
@@ -203,14 +294,20 @@ initialize_reloptions(void)
  * 		Create a new relopt_kind value, to be used in custom reloptions by
  * 		user-defined AMs.
  */
-int
+relopt_kind
 add_reloption_kind(void)
 {
+	relopt_kind		kind;
+
+	/* don't hand out the last bit so that the wraparound check is portable */
 	if (last_assigned_kind >= RELOPT_KIND_MAX)
 		ereport(ERROR,
-				(errmsg("user-defined relation parameter types limit exceeded")));
+				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+				 errmsg("user-defined relation parameter types limit exceeded")));
 
-	return last_assigned_kind++;
+	kind = (relopt_kind) last_assigned_kind;
+	last_assigned_kind <<= 1;
+	return kind;
 }
 
 /*
@@ -253,7 +350,7 @@ add_reloption(relopt_gen *newoption)
  * 		(for types other than string)
  */
 static relopt_gen *
-allocate_reloption(int kind, int type, char *name, char *desc)
+allocate_reloption(bits32 kinds, int type, char *name, char *desc)
 {
 	MemoryContext	oldcxt;
 	size_t			size;
@@ -286,7 +383,7 @@ allocate_reloption(int kind, int type, char *name, char *desc)
 		newoption->desc = pstrdup(desc);
 	else
 		newoption->desc = NULL;
-	newoption->kind = kind;
+	newoption->kinds = kinds;
 	newoption->namelen = strlen(name);
 	newoption->type = type;
 
@@ -300,11 +397,11 @@ allocate_reloption(int kind, int type, char *name, char *desc)
  * 		Add a new boolean reloption
  */
 void
-add_bool_reloption(int kind, char *name, char *desc, bool default_val)
+add_bool_reloption(bits32 kinds, char *name, char *desc, bool default_val)
 {
 	relopt_bool	   *newoption;
 
-	newoption = (relopt_bool *) allocate_reloption(kind, RELOPT_TYPE_BOOL,
+	newoption = (relopt_bool *) allocate_reloption(kinds, RELOPT_TYPE_BOOL,
 												   name, desc);
 	newoption->default_val = default_val;
 
@@ -316,12 +413,12 @@ add_bool_reloption(int kind, char *name, char *desc, bool default_val)
  * 		Add a new integer reloption
  */
 void
-add_int_reloption(int kind, char *name, char *desc, int default_val,
+add_int_reloption(bits32 kinds, char *name, char *desc, int default_val,
 				  int min_val, int max_val)
 {
 	relopt_int	   *newoption;
 
-	newoption = (relopt_int *) allocate_reloption(kind, RELOPT_TYPE_INT,
+	newoption = (relopt_int *) allocate_reloption(kinds, RELOPT_TYPE_INT,
 												  name, desc);
 	newoption->default_val = default_val;
 	newoption->min = min_val;
@@ -335,12 +432,12 @@ add_int_reloption(int kind, char *name, char *desc, int default_val,
  * 		Add a new float reloption
  */
 void
-add_real_reloption(int kind, char *name, char *desc, double default_val,
+add_real_reloption(bits32 kinds, char *name, char *desc, double default_val,
 				  double min_val, double max_val)
 {
 	relopt_real	   *newoption;
 
-	newoption = (relopt_real *) allocate_reloption(kind, RELOPT_TYPE_REAL,
+	newoption = (relopt_real *) allocate_reloption(kinds, RELOPT_TYPE_REAL,
 												   name, desc);
 	newoption->default_val = default_val;
 	newoption->min = min_val;
@@ -359,7 +456,7 @@ add_real_reloption(int kind, char *name, char *desc, double default_val,
  * the validation.
  */
 void
-add_string_reloption(int kind, char *name, char *desc, char *default_val,
+add_string_reloption(bits32 kinds, char *name, char *desc, char *default_val,
 					 validate_string_relopt validator)
 {
 	MemoryContext	oldcxt;
@@ -378,7 +475,7 @@ add_string_reloption(int kind, char *name, char *desc, char *default_val,
 		newoption->gen.desc = pstrdup(desc);
 	else
 		newoption->gen.desc = NULL;
-	newoption->gen.kind = kind;
+	newoption->gen.kinds = kinds;
 	newoption->gen.namelen = strlen(name);
 	newoption->gen.type = RELOPT_TYPE_STRING;
 	newoption->validate_cb = validator;
@@ -606,7 +703,7 @@ parseRelOptions(Datum options, bool validate, relopt_kind kind,
 	/* Build a list of expected options, based on kind */
 
 	for (i = 0; relOpts[i]; i++)
-		if (relOpts[i]->kind == kind)
+		if (relOpts[i]->kinds & kind)
 			numoptions++;
 
 	if (numoptions == 0)
@@ -619,7 +716,7 @@ parseRelOptions(Datum options, bool validate, relopt_kind kind,
 
 	for (i = 0, j = 0; relOpts[i]; i++)
 	{
-		if (relOpts[i]->kind == kind)
+		if (relOpts[i]->kinds & kind)
 		{
 			reloptions[j].gen = relOpts[i];
 			reloptions[j].isset = false;
@@ -928,14 +1025,15 @@ default_reloptions(Datum reloptions, bool validate, relopt_kind kind)
 bytea *
 heap_reloptions(char relkind, Datum reloptions, bool validate)
 {
-	/* For non relation kind, fall back to GPDB process to handle. */
-	if (relkind == RELKIND_RELATION)
+	switch (relkind)
 	{
-		return default_reloptions(reloptions, validate, RELOPT_KIND_HEAP);
-	}
-	else
-	{
-		return default_reloptions(reloptions, validate, RELOPT_KIND_INTERNAL);
+		case RELKIND_TOASTVALUE:
+			return default_reloptions(reloptions, validate, RELOPT_KIND_TOAST);
+		case RELKIND_RELATION:
+			return default_reloptions(reloptions, validate, RELOPT_KIND_HEAP);
+		default:
+			/* sequences, composite types and views are not supported */
+			return NULL;
 	}
 }
 
