@@ -23,7 +23,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.334 2008/10/21 20:42:52 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.352 2009/04/05 19:59:40 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -130,8 +130,8 @@ _equalRangeVar(RangeVar *a, RangeVar *b)
 	return true;
 }
 
-/* 
- * Records information about the target of a CTAS (SELECT ... INTO). 
+/*
+ * Records information about the target of a CTAS (SELECT ... INTO).
  */
 static bool
 _equalIntoClause(IntoClause *a, IntoClause *b)
@@ -368,6 +368,7 @@ _equalSubPlan(SubPlan *a, SubPlan *b)
 	COMPARE_NODE_FIELD(testexpr);
 	COMPARE_NODE_FIELD(paramIds);
 	COMPARE_SCALAR_FIELD(plan_id);
+	COMPARE_STRING_FIELD(plan_name);
 	COMPARE_SCALAR_FIELD(firstColType);
 	COMPARE_SCALAR_FIELD(firstColTypmod);
 	COMPARE_SCALAR_FIELD(useHashTable);
@@ -388,7 +389,7 @@ static bool
 _equalAlternativeSubPlan(AlternativeSubPlan *a, AlternativeSubPlan *b)
 {
 	COMPARE_NODE_FIELD(subplans);
-	
+
 	return true;
 }
 
@@ -813,7 +814,7 @@ _equalPlaceHolderVar(PlaceHolderVar *a, PlaceHolderVar *b)
 	COMPARE_BITMAPSET_FIELD(phrels);
 	COMPARE_SCALAR_FIELD(phid);
 	COMPARE_SCALAR_FIELD(phlevelsup);
-	
+
 	return true;
 }
 
@@ -830,7 +831,7 @@ _equalSpecialJoinInfo(SpecialJoinInfo *a, SpecialJoinInfo *b)
 	COMPARE_NODE_FIELD(join_quals);
 	COMPARE_SCALAR_FIELD(try_join_unique);	/* CDB */
 	COMPARE_SCALAR_FIELD(consider_dedup);		/* CDB */
-	
+
 	return true;
 }
 
@@ -857,7 +858,7 @@ _equalPlaceHolderInfo(PlaceHolderInfo *a, PlaceHolderInfo *b)
 	COMPARE_BITMAPSET_FIELD(ph_needed);
 	COMPARE_BITMAPSET_FIELD(ph_may_need);
 	COMPARE_SCALAR_FIELD(ph_width);
-	
+
 	return true;
 }
 
@@ -896,9 +897,9 @@ _equalQuery(Query *a, Query *b)
 	COMPARE_NODE_FIELD(limitCount);
 	COMPARE_NODE_FIELD(rowMarks);
 	COMPARE_NODE_FIELD(setOperations);
-	
+
 	/* Prior to 3.4 this test was
-	 *     COMPARE_SCALAR_FIELD(intoPolicy); 
+	 *     COMPARE_SCALAR_FIELD(intoPolicy);
 	 * Maybe GpPolicy should be a Node?
 	 */
 	if (!GpPolicyEqual(a->intoPolicy, b->intoPolicy))
@@ -987,7 +988,7 @@ _equalAlterTableStmt(AlterTableStmt *a, AlterTableStmt *b)
 	COMPARE_NODE_FIELD(relation);
 	COMPARE_NODE_FIELD(cmds);
 	COMPARE_SCALAR_FIELD(relkind);
-	
+
 	/* No need to compare AT workspace fields.  */
 
 	return true;
@@ -1002,7 +1003,7 @@ _equalAlterTableCmd(AlterTableCmd *a, AlterTableCmd *b)
 	COMPARE_NODE_FIELD(transform);
 	COMPARE_SCALAR_FIELD(behavior);
 	COMPARE_SCALAR_FIELD(part_expanded);
-	
+
 	/* No need to compare AT workspace field, partoids.  */
 
 	return true;
@@ -1824,7 +1825,7 @@ _equalDenyLoginPoint(DenyLoginPoint *a, DenyLoginPoint *b)
 {
 	COMPARE_NODE_FIELD(day);
 	COMPARE_NODE_FIELD(time);
-	
+
 	return true;
 }
 
@@ -2399,7 +2400,7 @@ _equalWithClause(WithClause *a, WithClause *b)
 	COMPARE_NODE_FIELD(ctes);
 	COMPARE_SCALAR_FIELD(recursive);
 	COMPARE_SCALAR_FIELD(location);
-	
+
 	return true;
 }
 

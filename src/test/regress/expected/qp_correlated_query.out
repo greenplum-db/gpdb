@@ -532,7 +532,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = any ( select C.j from C wh
                                                                      QUERY PLAN                                                                     
 ----------------------------------------------------------------------------------------------------------------------------------------------------
  Limit  (cost=43.24..43.47 rows=10 width=12)
-   InitPlan  (slice7)
+   InitPlan 1 (returns $0)  (slice7)
      ->  Limit  (cost=0.00..1.88 rows=1 width=0)
            ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1.88 rows=1 width=0)
                  ->  Limit  (cost=0.00..1.86 rows=1 width=0)
@@ -742,7 +742,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j < all ( select C.j from C wh
                                                        QUERY PLAN                                                        
 -------------------------------------------------------------------------------------------------------------------------
  Limit  (cost=200.43..200.66 rows=10 width=12)
-   InitPlan  (slice6)
+   InitPlan 1 (returns $0)  (slice6)
      ->  Limit  (cost=0.00..1.88 rows=1 width=0)
            ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1.88 rows=1 width=0)
                  ->  Limit  (cost=0.00..1.86 rows=1 width=0)

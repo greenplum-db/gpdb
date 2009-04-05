@@ -1733,7 +1733,7 @@ explain SELECT ARRAY(SELECT a FROM multiset_5( TABLE ( SELECT a, b from example)
                                        QUERY PLAN                                        
 -----------------------------------------------------------------------------------------
  Result  (cost=2.42..2.43 rows=1 width=0)
-   InitPlan  (slice2)
+   InitPlan 1 (returns $0)  (slice2)
      ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=2.39..2.42 rows=5 width=4)
            Merge Key: a
            ->  Sort  (cost=2.39..2.42 rows=5 width=4)
@@ -1747,7 +1747,7 @@ explain SELECT ARRAY(SELECT a FROM multiset_5( TABLE ( SELECT a, b from example 
                                      QUERY PLAN                                     
 ------------------------------------------------------------------------------------
  Result  (cost=2.42..2.43 rows=1 width=0)
-   InitPlan  (slice2)
+   InitPlan 1 (returns $0)  (slice2)
      ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=2.27..2.42 rows=5 width=4)
            ->  Table Function Scan on multiset_5  (cost=2.27..2.42 rows=5 width=4)
                  ->  Sort  (cost=2.27..2.29 rows=5 width=16)
@@ -1906,7 +1906,7 @@ explain SELECT * FROM multiset_5( TABLE( SELECT * FROM example WHERE a >= (SELEC
    ->  Table Function Scan on multiset_5  (cost=2.25..4.42 rows=2 width=36)
          ->  Seq Scan on example  (cost=2.25..4.38 rows=2 width=16)
                Filter: a >= $0
-               InitPlan  (slice3)
+               InitPlan 1 (returns $0)  (slice3)
                  ->  Aggregate  (cost=2.24..2.25 rows=1 width=4)
                        ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=2.13..2.23 rows=1 width=4)
                              ->  Aggregate  (cost=2.13..2.14 rows=1 width=4)

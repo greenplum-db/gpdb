@@ -327,7 +327,7 @@ EXPLAIN SELECT ARRAY(select f2 from arrtest_f) AS "ARRAY";
                                      QUERY PLAN                                     
 ------------------------------------------------------------------------------------
  Result  (cost=1.01..1.02 rows=1 width=0)
-   InitPlan  (slice2)
+   InitPlan 1 (returns $0)  (slice2)
      ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..1.01 rows=1 width=8)
            ->  Seq Scan on arrtest_f  (cost=0.00..1.01 rows=1 width=8)
 (4 rows)

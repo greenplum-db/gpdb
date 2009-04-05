@@ -954,6 +954,7 @@ _readSubPlan(void)
 	READ_NODE_FIELD(testexpr);
 	READ_NODE_FIELD(paramIds);
 	READ_INT_FIELD(plan_id);
+	READ_STRING_FIELD(plan_name);
 	READ_OID_FIELD(firstColType);
 	READ_INT_FIELD(firstColTypmod);
 	READ_BOOL_FIELD(useHashTable);

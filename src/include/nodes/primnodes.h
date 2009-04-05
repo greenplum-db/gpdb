@@ -11,7 +11,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.142 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.148 2009/04/05 19:59:40 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -279,7 +279,7 @@ typedef struct Grouping
  * Defined to make it easy to distinguish this column from others.
  *
  * This is used to determine whether output tuples are coming from
- * duplicate grouping sets. For example, a table 
+ * duplicate grouping sets. For example, a table
  *
  *    test (a integer, b integer)
  *
@@ -321,14 +321,14 @@ typedef enum WinStage
 	WINSTAGE_PRELIMINARY, /* Evaluate preliminary function. */
 	WINSTAGE_ROWKEY /* WINSTAGE_IMMEDIATE for row key generation. */
 } WinStage;
- 
+
 /*
  * WindowRef: describes a window function call
  *
  * In a query tree, a WindowRef corresponds to a SQL window function
  * call.  In a plan tree, a WindowRef is an expression the corresponds
  * to some or all of the calculation of the window function result.
- * 
+ *
  */
 typedef struct WindowRef
 {
@@ -339,7 +339,7 @@ typedef struct WindowRef
 	Index		winlevelsup;	/* FIXME: unused, but we cannot remove it right now because that would require a catalog change */
 	bool		windistinct;	/* TRUE if it's agg(DISTINCT ...) */
 	Index		winspec;		/* index into Query window clause */
-	
+
 	/* Following fields are significant only in a Plan tree. */
 	Index		winindex;		/* RefInfo index during planning. */
 	WinStage	winstage;		/* Stage of execution. */
@@ -505,11 +505,11 @@ typedef struct BoolExpr
 
 /*
  * TableValueExpr - a "TABLE( <subquery> )" expression indicating a subquery
- * expression that is passed as a value to a function.  
+ * expression that is passed as a value to a function.
  *
  * This is <table value constructor by query> within the SQL Standard
  */
-typedef struct TableValueExpr  
+typedef struct TableValueExpr
 {
 	NodeTag     type;
 	Node       *subquery;
@@ -603,7 +603,7 @@ typedef struct SubLink
  *
  * If the sub-select becomes an initplan rather than a subplan, the executable
  * expression is part of the outer plan's expression tree (and the SubPlan
- * node itself is not, but rather is found in the outer plan's initPlan 
+ * node itself is not, but rather is found in the outer plan's initPlan
  * list). In this case testexpr is NULL to avoid duplication.
  *
  * The planner also derives lists of the values that need to be passed into
@@ -634,10 +634,8 @@ typedef struct SubPlan
 
 	/* Identification of the Plan tree to use: */
 	int			plan_id;		/* Index (from 1) in PlannedStmt.subplans */
-
 	/* Identification of the SubPlan for EXPLAIN and debugging purposes: */
 	char	   *plan_name;		/* A name assigned during planning */
-
 	/* Extra data useful for determining subplan's output type: */
 	Oid			firstColType;	/* Type of first column of subplan result */
 	int32		firstColTypmod;	/* Typmod of first column of subplan result */
@@ -1159,7 +1157,7 @@ typedef struct CurrentOfExpr
 	/* for planning */
 	Index		cvarno;			/* RT index of target relation */
 	/* for validation */
-	Oid			target_relid;	/* OID of original target relation, 
+	Oid			target_relid;	/* OID of original target relation,
 								 * before any inheritance expansion */
 } CurrentOfExpr;
 
@@ -1358,20 +1356,20 @@ typedef struct Flow
 {
 	NodeTag		type;			/* T_Flow */
 	FlowType	flotype;		/* Type of flow produced by the plan. */
-	
+
 	/* What motion (including none) should be applied to this Plan's output. */
 	Movement	req_move;
-	
+
 	/* Locus type (optimizer flow characterization).
 	 */
 	CdbLocusType	locustype;
-	
+
 	/* If flotype is FLOW_SINGLETON, then this is the segment (-1 for entry)
 	 * on which tuples occur.  If req_move is MOVEMENT_FOCUS, then this is
 	 * the desired segment for the resulting singleton flow.
 	 */
 	int			segindex;		/* Segment index of singleton flow. */
-	
+
 	/* Sort specifications. */
 	int			numSortCols;		/* number of sort key columns */
 	AttrNumber	*sortColIdx;		/* their indexes in target list */
@@ -1379,20 +1377,20 @@ typedef struct Flow
 	bool		*nullsFirst;
 
 	int			numOrderbyCols;		/* number of explicit order-by columns */
-	
-	/* If req_move is MOVEMENT_REPARTITION, these express the desired 
+
+	/* If req_move is MOVEMENT_REPARTITION, these express the desired
      * partitioning for a hash motion.  Else if flotype is FLOW_PARTITIONED,
-     * this is the partitioning key.  Otherwise NIL. 
+     * this is the partitioning key.  Otherwise NIL.
 	 * otherwise, they are NIL. */
 	List       *hashExpr;			/* list of hash expressions */
 
 	/* If req_move is MOVEMENT_EXPLICIT, this contains the index of the segid column
 	 * to use in the motion	 */
 	AttrNumber segidColIdx;
-	
+
     /* The original Flow ptr is saved here upon setting req_move. */
     struct Flow    *flow_before_req_move;
-	
+
 } Flow;
 
 typedef enum GroupingType
@@ -1436,7 +1434,7 @@ typedef struct WindowFrame
 	NodeTag type;
 	bool is_rows;	/* true if ROWS was specificied, false if RANGE */
 	bool is_between; /* user specified BETWEEN */
-	
+
 	/*
 	 * XXX: determine if trail and lead must be mentioned in that order
 	 */
@@ -1447,13 +1445,13 @@ typedef struct WindowFrame
 
 
 /* ---------------
- * WindowKey is an auxiliary node of the Window node (a Plan node).  It 
- * represents one level of the potentially multi-level ordering key of 
+ * WindowKey is an auxiliary node of the Window node (a Plan node).  It
+ * represents one level of the potentially multi-level ordering key of
  * the Window node.  The ORDER BY key of the Nth WindowKey of a Window
  * is the concatenation of the sort keys from WindowKeys 0 thru N.
  *
- * Note that, since a window key represents partial sort key, it may be 
- * empty.  For example (ORDER BY a,b ROWS x) and (ORDER BY a,b ROWS y) 
+ * Note that, since a window key represents partial sort key, it may be
+ * empty.  For example (ORDER BY a,b ROWS x) and (ORDER BY a,b ROWS y)
  * would be represented by partial key (a,b) with framing ROWS x followed
  * by partial key () with framing ROWS y.
  * ---------------

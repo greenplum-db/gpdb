@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/ruleutils.c,v 1.285 2008/10/04 21:56:54 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/ruleutils.c,v 1.297 2009/04/05 19:59:40 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -190,7 +190,7 @@ static void get_func_expr(FuncExpr *expr, deparse_context *context,
 static void get_groupingfunc_expr(GroupingFunc *grpfunc,
 								  deparse_context *context);
 static void get_agg_expr(Aggref *aggref, deparse_context *context);
-static void get_windowedge_expr(WindowFrameEdge *edge, 
+static void get_windowedge_expr(WindowFrameEdge *edge,
 								deparse_context *context);
 static void get_sortlist_expr(List *l, List *targetList, bool force_colno,
                               deparse_context *context, char *keyword_clause);
@@ -222,8 +222,8 @@ static char *generate_function_name(Oid funcid, int nargs, Oid *argtypes,
 static char *generate_operator_name(Oid operid, Oid arg1, Oid arg2);
 static text *string_to_text(char *str);
 static char *flatten_reloptions(Oid relid);
-static void get_partition_recursive(PartitionNode *pn, 
-									deparse_context *head, 
+static void get_partition_recursive(PartitionNode *pn,
+									deparse_context *head,
 									deparse_context *body,
 									int16 *leveldone,
 									int bLeafTablename);
@@ -2307,10 +2307,10 @@ get_select_query_def(Query *query, deparse_context *context,
 							 -PRETTYINDENT_STD, PRETTYINDENT_STD, 1);
 
 		/* Distinguish between RANDOMLY and BY <expr-list> */
-		if (list_length(query->scatterClause) == 1 && 
+		if (list_length(query->scatterClause) == 1 &&
 			linitial(query->scatterClause) == NULL)
 		{
-			appendStringInfo(buf, "RANDOMLY");			
+			appendStringInfo(buf, "RANDOMLY");
 		}
 		else
 		{
@@ -2683,7 +2683,7 @@ get_rule_grouplist(List *grplist, List *tlist,
 			if (in_grpsets)
 				appendStringInfoString(buf, ")");
 		}
-		
+
 		else
 		{
 			get_rule_groupingclause((GroupingClause *)node, tlist,
@@ -4235,20 +4235,42 @@ get_rule_expr(Node *node, deparse_context *context,
 
 		case T_SubPlan:
 			{
+				SubPlan *subplan = (SubPlan *) node;
+
 				/*
 				 * We cannot see an already-planned subplan in rule deparsing,
-				 * only while EXPLAINing a query plan. For now, just punt.
+				 * only while EXPLAINing a query plan.  We don't try to
+				 * reconstruct the original SQL, just reference the subplan
+				 * that appears elsewhere in EXPLAIN's result.
 				 */
-				if (((SubPlan *) node)->useHashTable)
-					appendStringInfo(buf, "(hashed subplan)");
+				if (subplan->useHashTable)
+					appendStringInfo(buf, "(hashed %s)", subplan->plan_name);
 				else
-					appendStringInfo(buf, "(subplan)");
+					appendStringInfo(buf, "(%s)", subplan->plan_name);
 			}
 			break;
 
 		case T_AlternativeSubPlan:
-			/* As above, just punt */
-			appendStringInfo(buf, "(alternative subplans)");
+			{
+				AlternativeSubPlan *asplan = (AlternativeSubPlan *) node;
+				ListCell   *lc;
+
+				/* As above, this can only happen during EXPLAIN */
+				appendStringInfo(buf, "(alternatives: ");
+				foreach(lc, asplan->subplans)
+				{
+					SubPlan	   *splan = (SubPlan *) lfirst(lc);
+
+					Assert(IsA(splan, SubPlan));
+					if (splan->useHashTable)
+						appendStringInfo(buf, "hashed %s", splan->plan_name);
+					else
+						appendStringInfo(buf, "%s", splan->plan_name);
+					if (lnext(lc))
+						appendStringInfo(buf, " or ");
+				}
+				appendStringInfo(buf, ")");
+			}
 			break;
 
 		case T_FieldSelect:
@@ -5134,7 +5156,7 @@ get_groupingfunc_expr(GroupingFunc *grpfunc, deparse_context *context)
 		get_rule_expr(expr, context, true);
 		sep = ", ";
 	}
-	
+
 	appendStringInfoString(buf, ")");
 }
 
@@ -5199,10 +5221,10 @@ get_agg_expr(Aggref *aggref, deparse_context *context)
     /* Handle ORDER BY clause for ordered aggregates */
     if (aggref->aggorder != NULL && !aggref->aggorder->sortImplicit)
     {
-        get_sortlist_expr(aggref->aggorder->sortClause, 
+        get_sortlist_expr(aggref->aggorder->sortClause,
                           aggref->aggorder->sortTargets,
                           false,  /* force_colno */
-                          context, 
+                          context,
                           " ORDER BY ");
     }
 	appendStringInfoChar(buf, ')');
@@ -5307,21 +5329,21 @@ get_windowspec_expr(WindowSpec *spec, deparse_context *context)
 	{
 		/* parent and partition are mutually exclusive */
 		if (spec->partition)
-			get_sortlist_expr(spec->partition, 
+			get_sortlist_expr(spec->partition,
                               context->query->targetList,
                               false,  /* force_colno */
-                              context, 
+                              context,
                               "PARTITION BY ");
-	}	
-	
+	}
+
 	if (spec->order)
 	{
-		/* 
+		/*
 		 * If spec has a parent and that parent defines ordering, don't
 		 * display the order here.
 		 */
 		bool display_order = true;
-		
+
 		if (spec->parent)
 		{
 			ListCell *l;
@@ -5339,14 +5361,14 @@ get_windowspec_expr(WindowSpec *spec, deparse_context *context)
 		}
 		if (display_order)
 		{
-			get_sortlist_expr(spec->order, 
+			get_sortlist_expr(spec->order,
                               context->query->targetList,
                               false,  /* force_colno */
-                              context, 
+                              context,
                               " ORDER BY ");
 		}
 	}
-	
+
 	if (spec->frame)
 	{
 		WindowFrame *f = spec->frame;
@@ -5357,7 +5379,7 @@ get_windowspec_expr(WindowSpec *spec, deparse_context *context)
 		 * here.
 		 */
 		bool display_frame = true;
-		
+
 		if (spec->parent)
 		{
 			ListCell *l;
@@ -6770,7 +6792,7 @@ deparse_part_param(deparse_context *c, List *dat)
 }
 
 static void
-partition_rule_range(deparse_context *c, List *start, bool startinc, 
+partition_rule_range(deparse_context *c, List *start, bool startinc,
 					 List *end, bool endinc, List *every)
 {
 	List *l1;
@@ -6802,7 +6824,7 @@ partition_rule_range(deparse_context *c, List *start, bool startinc,
 	}
 }
 
-/* 
+/*
  * MPP-7232: need a check if name was not generated by EVERY
  *
  * The characteristic of a generated EVERY name is that the name of
@@ -6822,7 +6844,7 @@ check_first_every_name(char *parname)
 		char	*pnum = NULL;
 		int		 len  = strlen(parname) - 1;
 
-		/* 
+		/*
 		 * MPP-7232: need a check if name was not generated by EVERY
 		 */
 		while (len >= 0)
@@ -6864,7 +6886,7 @@ check_next_every_name(char *parname1, char *nextname, int parrank)
 	bstat = nextname && (0 == strcmp(sid1.data, nextname));
 
 	pfree(sid1.data);
-		
+
 	return bstat;
 } /* end check_next_every_name */
 
@@ -6876,7 +6898,7 @@ make_par_name(char *parname, bool isevery)
 		char *str = pstrdup(parname);
 		int len = strlen(parname) - 1;
 
-		/* 
+		/*
 		 * MPP-7232: need a check if name was not generated by EVERY
 		 */
 		while (len >= 0)
@@ -6951,7 +6973,7 @@ make_partition_column_encoding_str(Oid relid, int indent)
 }
 
 static char *
-partition_rule_def_worker(PartitionRule *rule, Node *start, 
+partition_rule_def_worker(PartitionRule *rule, Node *start,
 						  Node *end, PartitionRule *end_rule,
 						  Node *every,
 						  Partition *part, bool handleevery, int prettyFlags,
@@ -6990,7 +7012,7 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 
 		reloptions = flatten_reloptions(rule->parchildrelid);
 
-		if (bLeafTablename) /* MPP-6297: dump by tablename */	
+		if (bLeafTablename) /* MPP-6297: dump by tablename */
 		{
 			StringInfoData      	 sid1;
 
@@ -7072,7 +7094,7 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 					appendStringInfo(&buf, ", ");
 
 				appendStringInfoString(&buf, e->defname);
-				
+
 				if (e->arg)
 					appendStringInfo(&buf, "=%s", strVal(e->arg));
 			}
@@ -7117,9 +7139,9 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 	if (rule->parname && rule->parname[0] != '\0')
 		appendStringInfo(&str, "%sPARTITION %s ",
 						 part->parlevel > 0 ? "SUB" : "",
-						 quote_identifier(make_par_name(rule->parname, 
+						 quote_identifier(make_par_name(rule->parname,
 														handleevery)));
-			
+
 	switch (part->parkind)
 	{
 		case 'h':
@@ -7131,7 +7153,7 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 				 * "end_rule", because for an EVERY clause
 				 * inclusivity/exclusivity can differ
 				 */
-				partition_rule_range(&c, (List *)start, 
+				partition_rule_range(&c, (List *)start,
 									 rule->parrangestartincl,
 									 (List *)end,
 									 end_rule->parrangeendincl,
@@ -7194,7 +7216,7 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 	{
 		/* if have reloptions, then need a space, else just use needspace */
 		bool needspace2 = reloptions ? true : (needspace);
-		appendStringInfo(&str, "%s%s", 
+		appendStringInfo(&str, "%s%s",
 						 needspace2 ? " " : "",
 						 tspaceoptions);
 	}
@@ -7206,11 +7228,11 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
  * Writes out rule of partition, as well as column compression if any.
  */
 static void
-write_out_rule(PartitionRule *rule, PartitionNode *pn, Node *start, 
+write_out_rule(PartitionRule *rule, PartitionNode *pn, Node *start,
 			   Node *end,
 			   PartitionRule *end_rule,
 			   Node *every, deparse_context *head, deparse_context *body,
-			   bool handleevery, bool *needcomma, 
+			   bool handleevery, bool *needcomma,
 			   bool *first_rule, int16 *leveldone,
 			   PartitionNode *children, bool bLeafTablename)
 {
@@ -7225,13 +7247,13 @@ write_out_rule(PartitionRule *rule, PartitionNode *pn, Node *start,
 	if (PRETTY_INDENT(body))
 	{
 		appendStringInfoChar(body->buf, '\n');
-		appendStringInfoSpaces(body->buf, 
+		appendStringInfoSpaces(body->buf,
 							   Max(body->indentLevel, 0) + 2);
 	}
 
 	/* MPP-7232: Note: distinguish "(start) rule" and "end_rule",
 	 * because for an EVERY clause inclusivity/exclusivity
-	 * can differ 
+	 * can differ
 	 */
 	str = partition_rule_def_worker(rule, start,
 									end, end_rule,
@@ -7242,7 +7264,7 @@ write_out_rule(PartitionRule *rule, PartitionNode *pn, Node *start,
 
 	if (str && strlen(str))
 	{
-		if (strlen(body->buf->data) && !first_rule && 
+		if (strlen(body->buf->data) && !first_rule &&
 			!PRETTY_INDENT(body))
 			appendStringInfoString(body->buf, " ");
 
@@ -7316,26 +7338,26 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 			case 'h': appendStringInfoString(head->buf, "HASH"); break;
 			case 'l': appendStringInfoString(head->buf, "LIST"); break;
 			case 'r': appendStringInfoString(head->buf, "RANGE"); break;
-			default: 
+			default:
 				  elog(ERROR, "unknown partitioning kind '%c'",
 					   pn->part->parkind);
 				  break;
 		}
-	
+
 		appendStringInfoChar(head->buf, '(');
 		for (i = 0; i < pn->part->parnatts; i++)
 		{
 			char *attname = get_relid_attribute_name(pn->part->parrelid,
 													 pn->part->paratts[i]);
-	
+
 			if (i)
 				appendStringInfoString(head->buf, ", ");
-	
+
 			appendStringInfoString(head->buf, quote_identifier(attname));
 			pfree(attname);
 		}
 		appendStringInfoChar(head->buf, ')');
-	
+
 		if (pn->part->parkind == 'h')
 			appendStringInfo(head->buf, " %sPARTITIONS %i ",
 							 pn->part->parlevel > 0 ? "SUB" : "",
@@ -7353,7 +7375,7 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 	{
 		rule = lfirst(lc);
 
-		/* 
+		/*
 		 * If we're doing hash partitioning and the first rule doesn't have
 		 * a parname, none will so break out.
 		 *
@@ -7363,7 +7385,7 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 		if (pn->part->parkind == 'h' && !strlen(rule->parname))
 			break;
 
-		/* 
+		/*
 		 * RANGE partitions are the interesting case. If the partitions use
 		 * EVERY(), we want to dump a single rule which generates all the rules
 		 * we've expanded from EVERY(), rather than a bunch of rules.
@@ -7403,7 +7425,7 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 			}
 			else if (first_every_rule->parrangeevery)
 			{
-				bool estat = equal(first_every_rule->parrangeevery, 
+				bool estat = equal(first_every_rule->parrangeevery,
 								   rule->parrangeevery);
 
 				if (estat)
@@ -7416,13 +7438,13 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 
 					/* note that the case of an unnamed partition in a
 					 * block of named every partitions is handled by
-					 * check_next_every_name... 
+					 * check_next_every_name...
 					 */
 				}
 
 				if (estat && parname1)
 				{
-					estat = check_next_every_name(parname1, 
+					estat = check_next_every_name(parname1,
 												  rule->parname, parrank);
 
 					if (estat)
@@ -7464,18 +7486,18 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 				{
 					/* MPP-6297: write out the "every" rule (based
 					 * on the first one), then clear it if we are
-					 * done 
+					 * done
 					 */
-					write_out_rule(first_every_rule, pn, 
+					write_out_rule(first_every_rule, pn,
 								   first_every_rule->parrangestart,
-								   prev_rule ? 
-								    prev_rule->parrangeend : 
+								   prev_rule ?
+								    prev_rule->parrangeend :
 								    first_every_rule->parrangeend,
 								   prev_rule ? prev_rule : first_every_rule,
 								   first_every_rule->parrangeevery,
-			   					   head, body, true, &needcomma, &first_rule, 
+			   					   head, body, true, &needcomma, &first_rule,
 								   leveldone,
-								   first_every_rule->children, 
+								   first_every_rule->children,
 								   bLeafTablename);
 					if (rule->parrangeevery)
 					{
@@ -7488,14 +7510,14 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 							/* MPP-7232: check if name was not generated
 							 * by EVERY
 							 */
-								
+
 							if (parname1)
 							{
 								pfree(parname1);
 								parname1 = NULL;
 							}
 
-							parname1 = 
+							parname1 =
 									check_first_every_name(rule->parname);
 
 							if (parname1)
@@ -7520,7 +7542,7 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 
 		/*
 		 * Note that this handles the LIST and HASH cases too */
-		write_out_rule(rule, pn, rule->parrangestart, 
+		write_out_rule(rule, pn, rule->parrangestart,
 					   rule->parrangeend,
 					   rule,
 					   rule->parrangeevery, head, body, false, &needcomma,
@@ -7531,8 +7553,8 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 	if (first_every_rule)
 	{
 		write_out_rule(first_every_rule, pn, first_every_rule->parrangestart,
-					   prev_rule ? 
-					    prev_rule->parrangeend : 
+					   prev_rule ?
+					    prev_rule->parrangeend :
 					    first_every_rule->parrangeend,
 					   prev_rule ? prev_rule : first_every_rule,
 					   first_every_rule->parrangeevery,
@@ -7543,8 +7565,8 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 
 	if (pn->default_part)
 	{
-		write_out_rule(pn->default_part, pn, NULL, NULL, 
-					   NULL, NULL, 
+		write_out_rule(pn->default_part, pn, NULL, NULL,
+					   NULL, NULL,
 					   head, body, false,
 					   &needcomma,
 					   &first_rule, leveldone, pn->default_part->children,
@@ -7558,7 +7580,7 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 			/* Add column encoding rules at the end */
 			int indent = 0;
 			Relation rel = heap_open(pn->part->parrelid, AccessShareLock);
-			Datum *opts = get_partition_encoding_attoptions(rel, 
+			Datum *opts = get_partition_encoding_attoptions(rel,
 															pn->part->partid);
 			char *str;
 
@@ -7568,7 +7590,7 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 				indent = body->indentLevel - 2;
 				if (indent < 0)
 					indent = 0;
-			}	
+			}
 
 			str = column_encodings_to_string(rel, opts, ", ", indent);
 
@@ -7585,7 +7607,7 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 
 /* MPP-6095: dump template definitions */
 static char *
-pg_get_partition_template_def_worker(Oid relid, int prettyFlags, 
+pg_get_partition_template_def_worker(Oid relid, int prettyFlags,
 									 int bLeafTablename)
 {
 	Relation		 	rel	 = heap_open(relid, AccessShareLock);
@@ -7613,19 +7635,19 @@ pg_get_partition_template_def_worker(Oid relid, int prettyFlags,
 		return NULL;
 	}
 	/* head string for get_partition_recursive() -- just discard this */
-	initStringInfo(&head); 
+	initStringInfo(&head);
 	headc.buf = &head;
 	headc.prettyFlags = prettyFlags;
 	headc.indentLevel = 0;
 
 	/* body: partition definition associated with template */
-	initStringInfo(&body); 
+	initStringInfo(&body);
 	bodyc.buf = &body;
 	bodyc.prettyFlags = prettyFlags;
 	bodyc.indentLevel = 0;
 
 	/* altr: the real "head" string (first part of ALTER TABLE statement) */
-	initStringInfo(&altr); 
+	initStringInfo(&altr);
 
 	initStringInfo(&sid1); /* final output string */
 	initStringInfo(&sid2); /* string for temp storage */
@@ -7650,22 +7672,22 @@ pg_get_partition_template_def_worker(Oid relid, int prettyFlags,
 	 */
 	while (pn)
 	{
-		PartitionRule	*prule = NULL; 
+		PartitionRule	*prule = NULL;
 		const char		*partIdStr = "";
 
 		truncateStringInfo(&head, 0);
 		truncateStringInfo(&body, 0);
 		truncateStringInfo(&sid2, 0);
 
-		pnt = get_parts(relid, 
+		pnt = get_parts(relid,
 						templatelevel, 0, true, true /*includesubparts*/);
-		get_partition_recursive(pnt, &headc, &bodyc, &leveldone, 
+		get_partition_recursive(pnt, &headc, &bodyc, &leveldone,
 								bLeafTablename);
 
 		/* look at the prule for the default partition (or non-default
 		 * if necessary).  We need to build the partition identifier
 		 * for the next level of the tree (used for the next iteration
-		 * of this loop, not the current iteration). 
+		 * of this loop, not the current iteration).
 		 */
 		prule = pn->default_part;
 		if (!prule)
@@ -7714,7 +7736,7 @@ pg_get_partition_template_def_worker(Oid relid, int prettyFlags,
 
 							if (lcv != list_head(vals))
 								appendStringInfoString(&partidsid, ", ");
-							
+
 							get_const_expr(con, &partidc, -1);
 
 							lcv = lnext(lcv);
@@ -7749,7 +7771,7 @@ pg_get_partition_template_def_worker(Oid relid, int prettyFlags,
 			appendStringInfoString(&sid1, sid2.data);
 
 			/* no trailing semicolon on end of statement -- dumper
-			 * will add it 
+			 * will add it
 			 */
 			if (bFirstOne)
 				bFirstOne = false;
@@ -7829,9 +7851,9 @@ get_rule_def_common(Oid partid, int prettyFlags, int bLeafTablename)
 
 	ReleaseSysCache(tuple);
 
-	return partition_rule_def_worker(rule, rule->parrangestart, 
+	return partition_rule_def_worker(rule, rule->parrangestart,
 									 rule->parrangeend, rule,
-									 rule->parrangeevery, part, 
+									 rule->parrangeevery, part,
 									 false, prettyFlags, bLeafTablename, 0);
 }
 
@@ -7841,7 +7863,7 @@ pg_get_partition_rule_def(PG_FUNCTION_ARGS)
 	Oid ruleid = PG_GETARG_OID(0);
 	char *str;
 
-	/* MPP-6297: don't dump by tablename here */ 
+	/* MPP-6297: don't dump by tablename here */
 	str = get_rule_def_common(ruleid, 0, FALSE);
 	if (!str)
 		PG_RETURN_NULL();
@@ -7858,7 +7880,7 @@ pg_get_partition_rule_def_ext(PG_FUNCTION_ARGS)
 
 	prettyFlags = pretty ? PRETTYFLAG_PAREN | PRETTYFLAG_INDENT : 0;
 
-	/* MPP-6297: don't dump by tablename here */ 
+	/* MPP-6297: don't dump by tablename here */
 	str = get_rule_def_common(partid, prettyFlags, FALSE);
 	if (!str)
 		PG_RETURN_NULL();
@@ -7872,7 +7894,7 @@ pg_get_partition_def(PG_FUNCTION_ARGS)
 	Oid			relid = PG_GETARG_OID(0);
 	char 	   *str;
 
-	/* MPP-6297: don't dump by tablename here */ 
+	/* MPP-6297: don't dump by tablename here */
 	str = pg_get_partition_def_worker(relid, 0, FALSE);
 
 	if (!str)
@@ -7896,9 +7918,9 @@ pg_get_partition_def_ext(PG_FUNCTION_ARGS)
 	 * MPP-6297: don't dump by tablename here. NOTE: changing bLeafTablename to
 	 * TRUE here should only affect pg_dump/cdb_dump_agent (and partition.sql
 	 * test)
-	 */ 
+	 */
 	str = pg_get_partition_def_worker(relid, prettyFlags, bLeafTablename);
-	
+
 	if (!str)
 		PG_RETURN_NULL();
 
@@ -7907,7 +7929,7 @@ pg_get_partition_def_ext(PG_FUNCTION_ARGS)
 
 /* MPP-6297: final boolean argument to determine whether to dump by
  * tablename (normally, only for pg_dump.c/cdb_dump_agent.c)
- */ 
+ */
 Datum
 pg_get_partition_def_ext2(PG_FUNCTION_ARGS)
 {
@@ -7919,9 +7941,9 @@ pg_get_partition_def_ext2(PG_FUNCTION_ARGS)
 
 	prettyFlags = pretty ? PRETTYFLAG_PAREN | PRETTYFLAG_INDENT : 0;
 
-	/* MPP-6297: dump by tablename */ 
-	str = pg_get_partition_def_worker(relid, prettyFlags, bLeafTablename); 
-	
+	/* MPP-6297: dump by tablename */
+	str = pg_get_partition_def_worker(relid, prettyFlags, bLeafTablename);
+
 	if (!str)
 		PG_RETURN_NULL();
 
@@ -7937,10 +7959,10 @@ pg_get_partition_template_def(PG_FUNCTION_ARGS)
 	bool		 bLeafTablename = PG_GETARG_BOOL(2);
 	char		*str;
 	int			 prettyFlags	= 0;
-	
+
 	prettyFlags = pretty ? PRETTYFLAG_PAREN | PRETTYFLAG_INDENT : 0;
 
-	str = pg_get_partition_template_def_worker(relid, 
+	str = pg_get_partition_template_def_worker(relid,
 											   prettyFlags, bLeafTablename);
 
 	if (!str)
