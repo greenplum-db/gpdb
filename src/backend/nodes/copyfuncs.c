@@ -16,7 +16,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/copyfuncs.c,v 1.409 2008/10/21 20:42:52 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/copyfuncs.c,v 1.429 2009/04/05 19:59:39 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -110,7 +110,7 @@ _copyPlannedStmt(PlannedStmt *from)
 	COPY_NODE_FIELD(subplans);
 	COPY_BITMAPSET_FIELD(rewindPlanIDs);
 	COPY_NODE_FIELD(returningLists);
-	
+
 	COPY_NODE_FIELD(result_partitions);
 	COPY_NODE_FIELD(result_aosegnos);
 	COPY_NODE_FIELD(queryPartOids);
@@ -122,7 +122,7 @@ _copyPlannedStmt(PlannedStmt *from)
 	COPY_SCALAR_FIELD(nParamExec);
 	COPY_SCALAR_FIELD(nMotionNodes);
 	COPY_SCALAR_FIELD(nInitPlans);
-	
+
 	if (from->intoPolicy)
 	{
 		COPY_POINTER_FIELD(intoPolicy,sizeof(GpPolicy) + from->intoPolicy->nattrs*sizeof(from->intoPolicy->attrs[0]));
@@ -685,7 +685,7 @@ _copySubqueryScan(SubqueryScan *from)
 	COPY_NODE_FIELD(subrtable);
 
 	COPY_NODE_FIELD(subrtable);
-	
+
 	return newnode;
 }
 
@@ -1168,9 +1168,9 @@ _copyMotion(Motion *from)
 	COPY_POINTER_FIELD(sortColIdx, from->numSortCols * sizeof(AttrNumber));
 	COPY_POINTER_FIELD(sortOperators, from->numSortCols * sizeof(Oid));
 	COPY_POINTER_FIELD(nullsFirst, from->numSortCols * sizeof(bool));
-	
+
 	COPY_SCALAR_FIELD(segidColIdx);
-	
+
 	return newnode;
 }
 
@@ -1253,7 +1253,7 @@ _copyAssertOp(const AssertOp *from)
 
 	COPY_SCALAR_FIELD(errcode);
 	COPY_NODE_FIELD(errmessage);
-	
+
 	return newnode;
 }
 
@@ -1333,13 +1333,13 @@ static IntoClause *
 _copyIntoClause(IntoClause *from)
 {
 	IntoClause *newnode = makeNode(IntoClause);
-	
+
 	COPY_NODE_FIELD(rel);
 	COPY_NODE_FIELD(colNames);
 	COPY_NODE_FIELD(options);
 	COPY_SCALAR_FIELD(onCommit);
 	COPY_STRING_FIELD(tableSpaceName);
-	
+
 	return newnode;
 }
 
@@ -1642,9 +1642,9 @@ static AlternativeSubPlan *
 _copyAlternativeSubPlan(AlternativeSubPlan *from)
 {
 	AlternativeSubPlan *newnode = makeNode(AlternativeSubPlan);
-	
+
 	COPY_NODE_FIELD(subplans);
-	
+
 	return newnode;
 }
 
@@ -2182,12 +2182,12 @@ static PlaceHolderVar *
 _copyPlaceHolderVar(PlaceHolderVar *from)
 {
 	PlaceHolderVar *newnode = makeNode(PlaceHolderVar);
-	
+
 	COPY_NODE_FIELD(phexpr);
 	COPY_BITMAPSET_FIELD(phrels);
 	COPY_SCALAR_FIELD(phid);
 	COPY_SCALAR_FIELD(phlevelsup);
-	
+
 	return newnode;
 }
 
@@ -2198,7 +2198,7 @@ static SpecialJoinInfo *
 _copySpecialJoinInfo(SpecialJoinInfo *from)
 {
 	SpecialJoinInfo *newnode = makeNode(SpecialJoinInfo);
-	
+
 	COPY_BITMAPSET_FIELD(min_lefthand);
 	COPY_BITMAPSET_FIELD(min_righthand);
 	COPY_BITMAPSET_FIELD(syn_lefthand);
@@ -2209,7 +2209,7 @@ _copySpecialJoinInfo(SpecialJoinInfo *from)
 	COPY_NODE_FIELD(join_quals);
 	COPY_SCALAR_FIELD(try_join_unique);	/* CDB */
 	COPY_SCALAR_FIELD(consider_dedup);	/* CDB */
-	
+
 	return newnode;
 }
 
@@ -2239,14 +2239,14 @@ static PlaceHolderInfo *
 _copyPlaceHolderInfo(PlaceHolderInfo *from)
 {
 	PlaceHolderInfo *newnode = makeNode(PlaceHolderInfo);
-	
+
 	COPY_SCALAR_FIELD(phid);
 	COPY_NODE_FIELD(ph_var);
 	COPY_BITMAPSET_FIELD(ph_eval_at);
 	COPY_BITMAPSET_FIELD(ph_needed);
 	COPY_BITMAPSET_FIELD(ph_may_need);
 	COPY_SCALAR_FIELD(ph_width);
-	
+
 	return newnode;
 }
 
@@ -2462,11 +2462,11 @@ static WithClause *
 _copyWithClause(WithClause *from)
 {
 	WithClause *newnode = makeNode(WithClause);
-	
+
 	COPY_NODE_FIELD(ctes);
 	COPY_SCALAR_FIELD(recursive);
 	COPY_SCALAR_FIELD(location);
-	
+
 	return newnode;
 }
 
@@ -2474,7 +2474,7 @@ static CommonTableExpr *
 _copyCommonTableExpr(CommonTableExpr *from)
 {
 	CommonTableExpr *newnode = makeNode(CommonTableExpr);
-	
+
 	COPY_STRING_FIELD(ctename);
 	COPY_NODE_FIELD(aliascolnames);
 	COPY_NODE_FIELD(ctequery);
@@ -3011,7 +3011,7 @@ _copyAlterTableCmd(AlterTableCmd *from)
 	COPY_NODE_FIELD(transform);
 	COPY_SCALAR_FIELD(behavior);
 	COPY_SCALAR_FIELD(part_expanded);
-	
+
 	/* Need to copy AT workspace since process uses copy internally. */
 	COPY_NODE_FIELD(partoids);
 
@@ -3415,7 +3415,7 @@ _copyCreateExternalStmt(CreateExternalStmt *from)
 	COPY_NODE_FIELD(sreh);
 	COPY_NODE_FIELD(extOptions);
 	COPY_NODE_FIELD(encoding);
-	COPY_NODE_FIELD(distributedBy);	
+	COPY_NODE_FIELD(distributedBy);
 	if (from->policy)
 	{
 		COPY_POINTER_FIELD(policy,sizeof(GpPolicy) + from->policy->nattrs*sizeof(from->policy->attrs[0]));
@@ -3987,7 +3987,7 @@ _copyFileSpaceEntry(FileSpaceEntry *from)
 	FileSpaceEntry *newnode = makeNode(FileSpaceEntry);
 
 	COPY_SCALAR_FIELD(dbid);
-	COPY_SCALAR_FIELD(contentid);	
+	COPY_SCALAR_FIELD(contentid);
 	COPY_STRING_FIELD(location);
 	COPY_STRING_FIELD(hostname);
 

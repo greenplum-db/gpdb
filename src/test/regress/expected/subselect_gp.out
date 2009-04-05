@@ -220,7 +220,7 @@ explain select * from mrs_t1 where exists (select x from mrs_t1 where x < -1);
  Gather Motion 3:1  (slice2; segments: 3)  (cost=3.27..6.47 rows=20 width=4)
    ->  Result  (cost=3.27..6.47 rows=7 width=4)
          One-Time Filter: $0
-         InitPlan  (slice3)
+         InitPlan 1 (returns $0)  (slice3)
            ->  Limit  (cost=0.00..3.27 rows=1 width=0)
                  ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3.27 rows=1 width=0)
                        ->  Limit  (cost=0.00..3.25 rows=1 width=0)
@@ -242,7 +242,7 @@ explain select * from mrs_t1 where exists (select x from mrs_t1 where x = 1);
  Gather Motion 3:1  (slice2; segments: 3)  (cost=3.27..6.47 rows=20 width=4)
    ->  Result  (cost=3.27..6.47 rows=7 width=4)
          One-Time Filter: $0
-         InitPlan  (slice3)
+         InitPlan 1 (returns $0)  (slice3)
            ->  Limit  (cost=0.00..3.27 rows=1 width=0)
                  ->  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..3.27 rows=1 width=0)
                        ->  Limit  (cost=0.00..3.25 rows=1 width=0)
@@ -346,7 +346,7 @@ explain select array(select x from csq_m1); -- no initplan
                           QUERY PLAN                          
 --------------------------------------------------------------
  Result  (cost=1.01..1.02 rows=1 width=0)
-   InitPlan
+   InitPlan 1 (returns $0)
      ->  Seq Scan on csq_m1  (cost=0.00..1.01 rows=1 width=4)
  Settings:  optimizer_segments=3
  Optimizer status: legacy query optimizer
@@ -362,7 +362,7 @@ explain select array(select x from csq_d1); -- initplan
                                      QUERY PLAN                                     
 ------------------------------------------------------------------------------------
  Result  (cost=1.01..1.02 rows=1 width=0)
-   InitPlan  (slice2)
+   InitPlan 1 (returns $0)  (slice2)
      ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=4)
            ->  Seq Scan on csq_d1  (cost=0.00..1.01 rows=1 width=4)
  Settings:  optimizer_segments=3
@@ -1090,7 +1090,7 @@ where t1.a = foo.a;
  Gather Motion 1:1  (slice2; segments: 1)  (cost=2607.56..4213.88 rows=6 width=8)
    ->  Result  (cost=2607.56..4213.88 rows=2 width=8)
          One-Time Filter: false
-         InitPlan  (slice3)
+         InitPlan 1 (returns $0)  (slice3)
            ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1063.00 rows=96300 width=4)
                  ->  Seq Scan on t2  (cost=0.00..1063.00 rows=32100 width=4)
          ->  Nested Loop  (cost=1544.56..3150.88 rows=2 width=8)

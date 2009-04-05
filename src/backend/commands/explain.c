@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/explain.c,v 1.179 2008/10/04 21:56:52 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/explain.c,v 1.185 2009/04/05 19:59:39 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1168,7 +1168,7 @@ explain_outNode(StringInfo str,
 
 				/* scale the number of rows by the number of segments sending data */
 				scaleFactor = nSenders;
-				
+
 				switch (pMotion->motionType)
 				{
 					case MOTIONTYPE_HASH:
@@ -1310,8 +1310,8 @@ explain_outNode(StringInfo str,
 				/* Get the range table, it should be a TableFunction */
 				rte = rt_fetch(((Scan *) plan)->scanrelid, es->rtable);
 				Assert(rte->rtekind == RTE_TABLEFUNCTION);
-				
-				/* 
+
+				/*
 				 * Lookup the function name.
 				 *
 				 * Unlike RTE_FUNCTION there should be no cases where the
@@ -1326,9 +1326,9 @@ explain_outNode(StringInfo str,
 				if (strcmp(rte->eref->aliasname, proname) != 0)
 					appendStringInfo(str, " %s",
 									 quote_identifier(rte->eref->aliasname));
-				
+
 				/* might be nice to add order by and scatter by info */
-				
+
 			}
 			break;
 		case T_FunctionScan:
@@ -1647,7 +1647,7 @@ explain_outNode(StringInfo str,
 						   str, indent, es);
 
 			/* Partitioning and ordering information */
-			
+
 		}
 		break;
 
@@ -1745,7 +1745,7 @@ explain_outNode(StringInfo str,
             SliceTable *sliceTable = planstate->state->es_sliceTable;
 
 			appendStringInfoFill(str, 2*indent, ' ');
-		    appendStringInfoString(str, "  InitPlan");
+			appendStringInfo(str, "  %s", sp->plan_name);
 
             /* Subplan might have its own root slice */
             if (sliceTable &&
@@ -1862,7 +1862,7 @@ explain_outNode(StringInfo str,
 
 			for (i = 0; i < indent; i++)
 				appendStringInfo(str, "  ");
-			
+
 			appendStringInfo(str, "  ->  ");
 
 			explain_outNode(str, subnode,
@@ -1954,7 +1954,6 @@ explain_outNode(StringInfo str,
 			for (i = 0; i < indent; i++)
 				appendStringInfo(str, "  ");
 			appendStringInfo(str, "  %s\n", sp->plan_name);
-
 			for (i = 0; i < indent; i++)
 				appendStringInfo(str, "  ");
 			appendStringInfo(str, "    ->  ");
