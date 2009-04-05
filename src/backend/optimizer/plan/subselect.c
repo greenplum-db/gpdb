@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/subselect.c,v 1.143 2008/12/08 00:16:09 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/subselect.c,v 1.148 2009/04/05 19:59:40 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -497,7 +497,7 @@ make_subplan(PlannerInfo *root, Query *orig_subquery, SubLinkType subLinkType,
 	{
 		Node	   *newtestexpr;
 		List	   *paramIds;
-		
+
 		/* Make a second copy of the original subquery */
 		subquery = (Query *) copyObject(orig_subquery);
 		/* and re-simplify */
@@ -515,13 +515,13 @@ make_subplan(PlannerInfo *root, Query *orig_subquery, SubLinkType subLinkType,
 									0.0,
 									&subroot,
 									config);
-			
+
 			/* Now we can check if it'll fit in work_mem */
 			if (subplan_is_hashable(root, plan))
 			{
 				SubPlan	   *hashplan;
 				AlternativeSubPlan *asplan;
-				
+
 				/* OK, convert to SubPlan format. */
 				hashplan = (SubPlan *) build_subplan(root, plan,
 													 subroot->parse->rtable,
@@ -533,7 +533,7 @@ make_subplan(PlannerInfo *root, Query *orig_subquery, SubLinkType subLinkType,
 				Assert(hashplan->useHashTable);
 				/* build_subplan won't have filled in paramIds */
 				hashplan->paramIds = paramIds;
-				
+
 				/* Leave it to the executor to decide which plan to use */
 				asplan = makeNode(AlternativeSubPlan);
 				asplan->subplans = list_make2(result, hashplan);
@@ -562,8 +562,8 @@ build_subplan(PlannerInfo *root, Plan *plan, List *rtable,
 	int			paramid;
 
 	/*
-	 * Initialize the SubPlan node.  Note plan_id isn't set till further down,
-	 * likewise the cost fields.
+	 * Initialize the SubPlan node.  Note plan_id, plan_name, and cost fields
+	 * are set further down.
 	 */
 	splan = makeNode(SubPlan);
 	splan->subLinkType = subLinkType;
@@ -753,11 +753,11 @@ build_subplan(PlannerInfo *root, Plan *plan, List *rtable,
 	if (splan->is_initplan)
 	{
 		ListCell   *lc;
-		
+
 		StringInfo buf = makeStringInfo();
-		
+
 		appendStringInfo(buf, "InitPlan %d (returns ", splan->plan_id);
-		
+
 		foreach(lc, splan->setParam)
 		{
 			appendStringInfo(buf, "$%d%s",
@@ -780,6 +780,7 @@ build_subplan(PlannerInfo *root, Plan *plan, List *rtable,
 		buf = NULL;
 	}
 
+    /* Lastly, fill in the cost estimates for use later */
 	cost_subplan(root, splan, plan);
 
 	return result;
@@ -1049,7 +1050,7 @@ SS_process_ctes(PlannerInfo *root)
 		 * Make a SubPlan node for it.  This is just enough unlike
 		 * build_subplan that we can't share code.
 		 *
-		 * Note plan_id isn't set till further down, likewise the cost fields.
+		 * Note plan_id, plan_name, and cost fields are set further down.
 		 */
 		splan = makeNode(SubPlan);
 		splan->subLinkType = CTE_SUBLINK;
@@ -1104,6 +1105,10 @@ SS_process_ctes(PlannerInfo *root)
 		root->init_plans = lappend(root->init_plans, splan);
 
 		root->cte_plan_ids = lappend_int(root->cte_plan_ids, splan->plan_id);
+
+		/* Label the subplan for EXPLAIN purposes */
+		splan->plan_name = palloc(4 + strlen(cte->ctename) + 1);
+		sprintf(splan->plan_name, "CTE %s", cte->ctename);
 
 		/* Lastly, fill in the cost estimates for use later */
 		// FIXME : CTE_MERGE: cost_subplan is part of the commit bd3daddaf232d95b0c9ba6f99b0170a0147dd8af
@@ -1607,13 +1612,13 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect,
 	*rc,
 	*oc;
 	AttrNumber	resno;
-	
+
 	/*
 	 * Query must not require a targetlist, since we have to insert a new one.
 	 * Caller should have dealt with the case already.
 	 */
 	Assert(subselect->targetList == NIL);
-	
+
 	/*
 	 * Separate out the WHERE clause.  (We could theoretically also remove
 	 * top-level plain JOIN/ON clauses, but it's probably not worth the
@@ -1621,7 +1626,7 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect,
 	 */
 	whereClause = subselect->jointree->quals;
 	subselect->jointree->quals = NULL;
-	
+
 	/*
 	 * The rest of the sub-select must not refer to any Vars of the parent
 	 * query.  (Vars of higher levels should be okay, though.)
@@ -1632,13 +1637,13 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect,
 	 */
 	if (contain_vars_of_level((Node *) subselect, 1))
 		return NULL;
-	
+
 	/*
 	 * We don't risk optimizing if the WHERE clause is volatile, either.
 	 */
 	if (contain_volatile_functions(whereClause))
 		return NULL;
-	
+
 	/*
 	 * Clean up the WHERE clause by doing const-simplification etc on it.
 	 * Aside from simplifying the processing we're about to do, this is
@@ -1660,7 +1665,7 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect,
 	whereClause = eval_const_expressions(root, whereClause);
 	whereClause = (Node *) canonicalize_qual((Expr *) whereClause);
 	whereClause = (Node *) make_ands_implicit((Expr *) whereClause);
-	
+
 	/*
 	 * We now have a flattened implicit-AND list of clauses, which we
 	 * try to break apart into "outervar = innervar" hash clauses.
@@ -1673,13 +1678,13 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect,
 	foreach(lc, (List *) whereClause)
 	{
 		OpExpr	   *expr = (OpExpr *) lfirst(lc);
-		
+
 		if (IsA(expr, OpExpr) &&
 			hash_ok_operator(expr))
 		{
 			Node   *leftarg = (Node *) linitial(expr->args);
 			Node   *rightarg = (Node *) lsecond(expr->args);
-			
+
 			if (contain_vars_of_level(leftarg, 1))
 			{
 				leftargs = lappend(leftargs, leftarg);
@@ -1710,13 +1715,13 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect,
 		/* Couldn't handle it as a hash clause */
 		newWhere = lappend(newWhere, expr);
 	}
-	
+
 	/*
 	 * If we didn't find anything we could convert, fail.
 	 */
 	if (leftargs == NIL)
 		return NULL;
-	
+
 	/*
 	 * There mustn't be any parent Vars or Aggs in the stuff that we intend to
 	 * put back into the child query.  Note: you might think we don't need to
@@ -1733,7 +1738,7 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect,
 		(contain_aggs_of_level((Node *) newWhere, 1) ||
 		 contain_aggs_of_level((Node *) rightargs, 1)))
 		return NULL;
-	
+
 	/*
 	 * And there can't be any child Vars in the stuff we intend to pull up.
 	 * (Note: we'd need to check for child Aggs too, except we know the
@@ -1741,25 +1746,25 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect,
 	 */
 	if (contain_vars_of_level((Node *) leftargs, 0))
 		return NULL;
-	
+
 	/*
 	 * Also reject sublinks in the stuff we intend to pull up.  (It might be
 	 * possible to support this, but doesn't seem worth the complication.)
 	 */
 	if (contain_subplans((Node *) leftargs))
 		return NULL;
-	
+
 	/*
 	 * Okay, adjust the sublevelsup in the stuff we're pulling up.
 	 */
 	IncrementVarSublevelsUp((Node *) leftargs, -1, 1);
-	
+
 	/*
 	 * Put back any child-level-only WHERE clauses.
 	 */
 	if (newWhere)
 		subselect->jointree->quals = (Node *) make_ands_explicit(newWhere);
-	
+
 	/*
 	 * Build a new targetlist for the child that emits the expressions
 	 * we need.  Concurrently, build a testexpr for the parent using
@@ -1777,7 +1782,7 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect,
 		Node	   *rightarg = (Node *) lfirst(rc);
 		Oid			opid = lfirst_oid(oc);
 		Param	   *param;
-		
+
 		oc = lnext(oc);
 		param = generate_new_param(root,
 								   exprType(rightarg),
@@ -1792,12 +1797,12 @@ convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect,
 										 (Expr *) leftarg, (Expr *) param));
 		paramids = lappend_int(paramids, param->paramid);
 	}
-	
+
 	/* Put everything where it should go, and we're done */
 	subselect->targetList = tlist;
 	*testexpr = (Node *) make_ands_explicit(testlist);
 	*paramIds = paramids;
-	
+
 	return subselect;
 }
 
@@ -2359,7 +2364,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, Bitmapset *valid_params)
 			finalize_primnode((Node *) ((PartitionSelector *) plan)->levelExpressions,
 							  &context);
 			finalize_primnode(((PartitionSelector *) plan)->residualPredicate,
-							  &context);	
+							  &context);
 			finalize_primnode(((PartitionSelector *) plan)->propagationExpression,
 							  &context);
 			finalize_primnode(((PartitionSelector *) plan)->printablePredicate,
@@ -2367,14 +2372,14 @@ finalize_plan(PlannerInfo *root, Plan *plan, Bitmapset *valid_params)
 			finalize_primnode((Node *) ((PartitionSelector *) plan)->partTabTargetlist,
 							  &context);
 			break;
-			
+
 		case T_RecursiveUnion:
 		case T_Hash:
 		case T_Agg:
 		case T_WindowAgg:
 		case T_SeqScan:
 		case T_AppendOnlyScan:
-		case T_AOCSScan: 
+		case T_AOCSScan:
 		case T_ExternalScan:
 		case T_Material:
 		case T_Sort:
@@ -2564,7 +2569,7 @@ SS_make_initplan_from_plan(PlannerInfo *root, Plan *plan,
 	 * The node can't have any inputs (since it's an initplan), so the
 	 * parParam and args lists remain empty.
 	 */
-	
+
 	/* NB PostgreSQL calculates subplan cost here, but GPDB does it elsewhere. */
 
 	/*
@@ -2572,7 +2577,7 @@ SS_make_initplan_from_plan(PlannerInfo *root, Plan *plan,
 	 */
 	prm = generate_new_param(root, resulttype, resulttypmod);
 	node->setParam = list_make1_int(prm->paramid);
-	
+
 	/* Label the subplan for EXPLAIN purposes */
 	StringInfo buf = makeStringInfo();
 	appendStringInfo(buf, "InitPlan %d (returns $%d)",
@@ -2581,6 +2586,11 @@ SS_make_initplan_from_plan(PlannerInfo *root, Plan *plan,
 	pfree(buf->data);
 	pfree(buf);
 	buf = NULL;
+
+	/* Label the subplan for EXPLAIN purposes */
+	node->plan_name = palloc(64);
+	sprintf(node->plan_name, "InitPlan %d (returns $%d)",
+			node->plan_id, prm->paramid);
 
 	return prm;
 }

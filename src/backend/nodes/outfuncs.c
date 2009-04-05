@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/outfuncs.c,v 1.343 2008/10/21 20:42:52 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/outfuncs.c,v 1.358 2009/04/05 19:59:40 tgl Exp $
  *
  * NOTES
  *	  Every node type that can appear in stored rules' parsetrees *must*
@@ -1067,7 +1067,7 @@ _outSplitUpdate(StringInfo str, SplitUpdate *node)
 	WRITE_INT_FIELD(tupleoidColIdx);
 	WRITE_NODE_FIELD(insertColIdx);
 	WRITE_NODE_FIELD(deleteColIdx);
-	
+
 	_outPlanInfo(str, (Plan *) node);
 }
 
@@ -1097,7 +1097,7 @@ _outAssertOp(StringInfo str, AssertOp *node)
 
 	WRITE_NODE_FIELD(errmessage);
 	WRITE_INT_FIELD(errcode);
-	
+
 	_outPlanInfo(str, (Plan *) node);
 }
 
@@ -1380,6 +1380,7 @@ _outSubPlan(StringInfo str, SubPlan *node)
 	WRITE_NODE_FIELD(testexpr);
 	WRITE_NODE_FIELD(paramIds);
 	WRITE_INT_FIELD(plan_id);
+	WRITE_STRING_FIELD(plan_name);
 	WRITE_OID_FIELD(firstColType);
 	WRITE_INT_FIELD(firstColTypmod);
 	WRITE_BOOL_FIELD(useHashTable);
@@ -1398,7 +1399,7 @@ static void
 _outAlternativeSubPlan(StringInfo str, AlternativeSubPlan *node)
 {
 	WRITE_NODE_TYPE("ALTERNATIVESUBPLAN");
-	
+
 	WRITE_NODE_FIELD(subplans);
 }
 
@@ -1948,7 +1949,7 @@ static void
 _outPlannerGlobal(StringInfo str, PlannerGlobal *node)
 {
 	WRITE_NODE_TYPE("PLANNERGLOBAL");
-	
+
 	/* NB: this isn't a complete set of fields */
 	WRITE_NODE_FIELD(paramlist);
 	WRITE_NODE_FIELD(subplans);
@@ -2204,7 +2205,7 @@ static void
 _outPlaceHolderVar(StringInfo str, PlaceHolderVar *node)
 {
 	WRITE_NODE_TYPE("PLACEHOLDERVAR");
-	
+
 	WRITE_NODE_FIELD(phexpr);
 	WRITE_BITMAPSET_FIELD(phrels);
 	WRITE_UINT_FIELD(phid);
@@ -2215,7 +2216,7 @@ static void
 _outSpecialJoinInfo(StringInfo str, SpecialJoinInfo *node)
 {
 	WRITE_NODE_TYPE("SPECIALJOININFO");
-	
+
 	WRITE_BITMAPSET_FIELD(min_lefthand);
 	WRITE_BITMAPSET_FIELD(min_righthand);
 	WRITE_BITMAPSET_FIELD(syn_lefthand);
@@ -2246,7 +2247,7 @@ static void
 _outPlaceHolderInfo(StringInfo str, PlaceHolderInfo *node)
 {
 	WRITE_NODE_TYPE("PLACEHOLDERINFO");
-	
+
 	WRITE_UINT_FIELD(phid);
 	WRITE_NODE_FIELD(ph_var);
 	WRITE_BITMAPSET_FIELD(ph_eval_at);
@@ -2305,7 +2306,7 @@ static void
 _outColumnReferenceStorageDirective(StringInfo str, ColumnReferenceStorageDirective *node)
 {
 	WRITE_NODE_TYPE("COLUMNREFERENCESTORAGEDIRECTIVE");
-	
+
 	WRITE_STRING_FIELD(column);
 	WRITE_BOOL_FIELD(deflt);
 	WRITE_NODE_FIELD(encoding);
@@ -2526,10 +2527,10 @@ _outCreateRoleStmt(StringInfo str, CreateRoleStmt *node)
 }
 
 static void
-_outDenyLoginInterval(StringInfo str, DenyLoginInterval *node) 
+_outDenyLoginInterval(StringInfo str, DenyLoginInterval *node)
 {
 	WRITE_NODE_TYPE("DENYLOGININTERVAL");
-	
+
 	WRITE_NODE_FIELD(start);
 	WRITE_NODE_FIELD(end);
 }
@@ -4232,7 +4233,7 @@ static void
 _outTableValueExpr(StringInfo str, TableValueExpr *node)
 {
 	WRITE_NODE_TYPE("TABLEVALUEEXPR");
-	
+
 	WRITE_NODE_FIELD(subquery);
 }
 
@@ -4940,7 +4941,7 @@ _outNode(StringInfo str, void *obj)
 			case T_AlterDomainStmt:
 				_outAlterDomainStmt(str, obj);
 				break;
-				
+
 			case T_TransactionStmt:
 				_outTransactionStmt(str, obj);
 				break;

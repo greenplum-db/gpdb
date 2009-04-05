@@ -643,7 +643,7 @@ explain select (case when c1%2 = 0
 ---------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice5; segments: 3)  (cost=7.81..10.96 rows=10 width=4)
    ->  Seq Scan on t1  (cost=7.81..10.96 rows=4 width=4)
-         InitPlan  (slice6)
+         InitPlan 1 (returns $0)  (slice6)
            ->  Aggregate  (cost=4.46..4.47 rows=1 width=8)
                  ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=4.39..4.44 rows=1 width=8)
                        ->  Aggregate  (cost=4.39..4.40 rows=1 width=8)
@@ -653,7 +653,7 @@ explain select (case when c1%2 = 0
                                    ->  Hash  (cost=2.15..2.15 rows=3 width=4)
                                          ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.15 rows=3 width=4)
                                                ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
-         InitPlan  (slice7)
+         InitPlan 2 (returns $1)  (slice7)
            ->  Aggregate  (cost=3.34..3.35 rows=1 width=8)
                  ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=3.27..3.32 rows=1 width=8)
                        ->  Aggregate  (cost=3.27..3.28 rows=1 width=8)
@@ -1041,7 +1041,7 @@ explain select c1 from t1 where not exists (select c2 from t2 where exists (sele
    ->  Hash Anti Join  (cost=7.86..11.09 rows=4 width=4)
          Hash Cond: t1.c1 = t2.c2
          Join Filter: $0
-         InitPlan  (slice4)
+         InitPlan 1 (returns $0)  (slice4)
            ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..2.03 rows=3 width=0)
                  ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=0)
          ->  Seq Scan on t1  (cost=0.00..3.10 rows=4 width=4)
