@@ -321,6 +321,20 @@ select * from
 group by f1,f2,fs;
 
 --
+-- Test case for bug #5514 (mishandling of whole-row Vars in subselects)
+--
+
+create temp table table_a(id integer);
+insert into table_a values (42);
+
+create temp view view_a as select * from table_a;
+
+select view_a from view_a;
+select (select view_a) from view_a;
+select (select (select view_a)) from view_a;
+select (select (a.*)::text) from view_a a;
+
+--
 -- Check that whole-row Vars reading the result of a subselect don't include
 -- any junk columns therein
 --
