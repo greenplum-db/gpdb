@@ -495,7 +495,7 @@ max_appendonly_tables = 10000 # Maximum number of append only tables that can
 #backslash_quote = safe_encoding	# on, off, or safe_encoding
 #escape_string_warning = on
 #regex_flavor = advanced		# advanced, extended, or basic
-#standard_conforming_strings = off
+#standard_conforming_strings = on
 
 
 # - Other Platforms and Clients -

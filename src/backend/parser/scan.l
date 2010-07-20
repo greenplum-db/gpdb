@@ -24,7 +24,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/scan.l,v 1.153 2009/05/05 21:09:23 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/scan.l,v 1.168 2010/07/20 00:34:44 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -76,7 +76,7 @@ static uint32	utf16_top_part;
  */
 int				backslash_quote = BACKSLASH_QUOTE_SAFE_ENCODING;
 bool			escape_string_warning = true;
-bool			standard_conforming_strings = false;
+bool			standard_conforming_strings = true;
 
 static bool		warn_on_first_escape;
 static bool		saw_non_ascii = false;
