@@ -120,8 +120,8 @@ pg_isblank(const char c)
  * whichever comes first. If no more tokens on line, position the file to the
  * beginning of the next line or EOF, whichever comes first.
  *
- * Handle comments. Treat unquoted keywords that might be role names or
- * database names specially, by appending a newline to them.  Also, when
+ * Handle comments. Treat unquoted keywords that might be role, database, or
+ * host names specially, by appending a newline to them.  Also, when
  * a token is terminated by a comma, the comma is included in the returned
  * token.
  */
@@ -216,6 +216,8 @@ next_token(FILE *fp, char *buf, int bufsz, bool *initial_quote)
 
 	if (!saw_quote &&
 		(strcmp(start_buf, "all") == 0 ||
+		 strcmp(start_buf, "samehost") == 0 ||
+		 strcmp(start_buf, "samenet") == 0 ||
 		 strcmp(start_buf, "sameuser") == 0 ||
 		 strcmp(start_buf, "samegroup") == 0 ||
 		 strcmp(start_buf, "samerole") == 0 ||
@@ -507,12 +509,12 @@ List *
 get_role_intervals(const char *role)
 {
 	List	*ret;
-	List 	**needle, 
-			**temp; 
+	List 	**needle,
+			**temp;
 
 	if (role_interval_length == 0)
 		return NIL;
-	
+
 	/*  Find ONE entry that pertains to role. There may be more. See below. */
 	needle = bsearch((void *) role,
 				  	 (void *) role_interval_sorted,
@@ -529,7 +531,7 @@ get_role_intervals(const char *role)
 	/* Find first constraint for *role in role_interval. */
 	char	*myrole;
 	for (temp = needle - 1; temp >= role_interval_sorted; temp--)
-	{	
+	{
 		myrole = linitial(*temp);
 		if (strcmp(role, myrole) != 0)
 			break;
@@ -542,7 +544,7 @@ get_role_intervals(const char *role)
 		if (strcmp(role, myrole) != 0)
 			break;
 		ret = lappend(ret, *temp);
-	} 
+	}
 
 	return ret;
 }
@@ -651,6 +653,102 @@ check_db(const char *dbname, const char *role, char *param_str)
 			return true;
 	}
 	return false;
+}
+
+static bool
+ipv4eq(struct sockaddr_in *a, struct sockaddr_in *b)
+{
+	return (a->sin_addr.s_addr == b->sin_addr.s_addr);
+}
+
+static bool
+ipv6eq(struct sockaddr_in6 *a, struct sockaddr_in6 *b)
+{
+	int i;
+
+	for (i = 0; i < 16; i++)
+		if (a->sin6_addr.s6_addr[i] != b->sin6_addr.s6_addr[i])
+			return false;
+
+	return true;
+}
+
+/*
+ * Check to see if a connecting IP matches a given host name.
+ */
+static bool
+check_hostname(hbaPort *port, const char *hostname)
+{
+	struct addrinfo *gai_result, *gai;
+	int			ret;
+	bool		found;
+
+	/* Lookup remote host name if not already done */
+	if (!port->remote_hostname)
+	{
+		char		remote_hostname[NI_MAXHOST];
+
+		if (pg_getnameinfo_all(&port->raddr.addr, port->raddr.salen,
+							   remote_hostname, sizeof(remote_hostname),
+							   NULL, 0,
+							   0))
+			return false;
+
+		port->remote_hostname = pstrdup(remote_hostname);
+	}
+
+	if (pg_strcasecmp(port->remote_hostname, hostname) != 0)
+		return false;
+
+	/* Lookup IP from host name and check against original IP */
+
+	if (port->remote_hostname_resolv == +1)
+		return true;
+	if (port->remote_hostname_resolv == -1)
+		return false;
+
+	ret = getaddrinfo(port->remote_hostname, NULL, NULL, &gai_result);
+	if (ret != 0)
+		ereport(ERROR,
+				(errmsg("could not translate host name \"%s\" to address: %s",
+						port->remote_hostname, gai_strerror(ret))));
+
+	found = false;
+	for (gai = gai_result; gai; gai = gai->ai_next)
+	{
+		if (gai->ai_addr->sa_family == port->raddr.addr.ss_family)
+		{
+			if (gai->ai_addr->sa_family == AF_INET)
+			{
+				if (ipv4eq((struct sockaddr_in *) gai->ai_addr,
+						   (struct sockaddr_in *) &port->raddr.addr))
+				{
+					found = true;
+					break;
+				}
+			}
+			else if (gai->ai_addr->sa_family == AF_INET6)
+			{
+				if (ipv6eq((struct sockaddr_in6 *) gai->ai_addr,
+						   (struct sockaddr_in6 *) &port->raddr.addr))
+				{
+					found = true;
+					break;
+				}
+			}
+		}
+	}
+
+	if (gai_result)
+		freeaddrinfo(gai_result);
+
+	if (!found)
+		elog(DEBUG2, "pg_hba.conf host name \"%s\" rejected because address resolution did not return a match with IP address of client",
+			 hostname);
+
+	port->remote_hostname_resolv = found ? +1 : -1;
+
+	return found;
 }
 
 /*
@@ -836,7 +934,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 			parsedline->conntype = ctHostNoSSL;
 		}
 #endif
-		else 
+		else
 		{
 			/* "host", or "hostnossl" and SSL support not built in */
 			parsedline->conntype = ctHost;
@@ -928,58 +1026,74 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 		hints.ai_addr = NULL;
 		hints.ai_next = NULL;
 
-		ret = pg_getaddrinfo_all(token, NULL, &hints, &gai_result);
-		if (ret || !gai_result)
-		{
-			ereport(LOG,
-					(errcode(ERRCODE_CONFIG_FILE_ERROR),
-					 errmsg("invalid IP address \"%s\": %s",
-							token, gai_strerror(ret)),
-					 errcontext("line %d of configuration file \"%s\"",
-							line_num, HbaFileName)));
-			if (gai_result)
-				pg_freeaddrinfo_all(hints.ai_family, gai_result);
-			pfree(token);
-			return false;
-		}
-
-			memcpy(&parsedline->addr, gai_result->ai_addr,
-				   gai_result->ai_addrlen);
-		pg_freeaddrinfo_all(hints.ai_family, gai_result);
-
-		/* Get the netmask */
-		if (cidr_slash)
-		{
-			if (pg_sockaddr_cidr_mask(&parsedline->mask, cidr_slash + 1,
-									  parsedline->addr.ss_family) < 0)
+			ret = pg_getaddrinfo_all(token, NULL, &hints, &gai_result);
+			if (ret == 0 && gai_result)
+				memcpy(&parsedline->addr, gai_result->ai_addr,
+					   gai_result->ai_addrlen);
+			else if (ret == EAI_NONAME)
+				parsedline->hostname = token;
+			else
 			{
-				*cidr_slash = '/';			/* restore token for message */
 				ereport(LOG,
 						(errcode(ERRCODE_CONFIG_FILE_ERROR),
-						 errmsg("invalid CIDR mask in address \"%s\"",
-								token),
+						 errmsg("invalid IP address \"%s\": %s",
+								token, gai_strerror(ret)),
 						 errcontext("line %d of configuration file \"%s\"",
-							line_num, HbaFileName)));
+									line_num, HbaFileName)));
+				if (gai_result)
+					pg_freeaddrinfo_all(hints.ai_family, gai_result);
 				pfree(token);
 				return false;
 			}
-			pfree(token);
-		}
-		else
-		{
-			/* Read the mask field. */
-			pfree(token);
-			line_item = lnext(line_item);
-			if (!line_item)
+
+			pg_freeaddrinfo_all(hints.ai_family, gai_result);
+
+			/* Get the netmask */
+			if (cidr_slash)
 			{
-				ereport(LOG,
-						(errcode(ERRCODE_CONFIG_FILE_ERROR),
-						 errmsg("end-of-line before netmask specification"),
-						 errcontext("line %d of configuration file \"%s\"",
-								line_num, HbaFileName)));
-				return false;
+				if (parsedline->hostname)
+				{
+					*cidr_slash = '/';	/* restore token for message */
+					ereport(LOG,
+							(errcode(ERRCODE_CONFIG_FILE_ERROR),
+							 errmsg("specifying both host name and CIDR mask is invalid: \"%s\"",
+									token),
+							 errcontext("line %d of configuration file \"%s\"",
+										line_num, HbaFileName)));
+					pfree(token);
+					return false;
+				}
+
+				if (pg_sockaddr_cidr_mask(&parsedline->mask, cidr_slash + 1,
+										  parsedline->addr.ss_family) < 0)
+				{
+					*cidr_slash = '/';	/* restore token for message */
+					ereport(LOG,
+							(errcode(ERRCODE_CONFIG_FILE_ERROR),
+							 errmsg("invalid CIDR mask in address \"%s\"",
+									token),
+						   errcontext("line %d of configuration file \"%s\"",
+									  line_num, HbaFileName)));
+					pfree(token);
+					return false;
+				}
+				pfree(token);
 			}
-			token = lfirst(line_item);
+			else if (!parsedline->hostname)
+			{
+				/* Read the mask field. */
+				pfree(token);
+				line_item = lnext(line_item);
+				if (!line_item)
+				{
+					ereport(LOG,
+							(errcode(ERRCODE_CONFIG_FILE_ERROR),
+						  errmsg("end-of-line before netmask specification"),
+						   errcontext("line %d of configuration file \"%s\"",
+									  line_num, HbaFileName)));
+					return false;
+				}
+				token = lfirst(line_item);
 
 			ret = pg_getaddrinfo_all(token, NULL, &hints, &gai_result);
 			if (ret || !gai_result)
@@ -1165,7 +1279,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 					 errmsg("authentication option not in name=value format: %s", token),
 					 errcontext("line %d of configuration file \"%s\"",
 								line_num, HbaFileName)));
-			
+
 			if (parsedline->auth_method == uaIdent && strcmp(token,"sameuser")==0)
 			{
 				if (strcmp(parsedline->database,"all")==0)
@@ -1177,7 +1291,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 				parsedline->usermap = pstrdup(token);
 				continue;
 			}
-			
+
 			return false;
 		}
 		else
@@ -1448,7 +1562,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 	{
 		parsedline->clientcert = true;
 	}
-	
+
 	return true;
 }
 
@@ -1512,10 +1626,19 @@ check_hba(hbaPort *port)
 			switch (hba->ip_cmp_method)
 			{
 				case ipCmpMask:
-					if (!check_ip(&port->raddr,
-								  (struct sockaddr *) & hba->addr,
-								  (struct sockaddr *) & hba->mask))
-					continue;
+					if (hba->hostname)
+					{
+						if (!check_hostname(port,
+											hba->hostname))
+							continue;
+					}
+					else
+					{
+						if (!check_ip(&port->raddr,
+									  (struct sockaddr *) & hba->addr,
+									  (struct sockaddr *) & hba->mask))
+							continue;
+					}
 					break;
 				case ipCmpSameHost:
 				case ipCmpSameNet:
@@ -1669,7 +1792,7 @@ load_role_interval(void)
 /*
  * The primary purpose of this function is to ensure that the role information
  * is available to the backend process, for the sake of unit testing through SQL queries.
- * 
+ *
  * Traditionally, load_role is invoked after the postmaster forks to the backend, but while
  * the backend retains the PostmasterContext. Once this context is released, the pointers
  * mentioned in this function are, in some sense, stale. Thus, we reinitialize them here.
