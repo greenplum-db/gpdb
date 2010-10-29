@@ -1486,7 +1486,7 @@ SELECT substr(a, 1) as a FROM (SELECT ('-'||a)::varchar as a FROM (SELECT a FROM
  -bbbbbbb
 (3 rows)
 
-SELECT array_agg(f)  FROM (SELECT b::text as f FROM t1 GROUP BY b ORDER BY b) q;
+SELECT array_agg(f ORDER BY f)  FROM (SELECT b::text as f FROM t1 GROUP BY b ORDER BY b) q;
              array_agg              
 ------------------------------------
  {cccccccccc,ddddd,dfafa,eeee,eeef}

@@ -1361,7 +1361,7 @@ INSERT INTO t1 VALUES ('bbbbbbb', 'eeee');
 INSERT INTO t1 VALUES ('bbbbbbb', 'eeef');
 INSERT INTO t1 VALUES ('bbbbb', 'dfafa');
 SELECT substr(a, 1) as a FROM (SELECT ('-'||a)::varchar as a FROM (SELECT a FROM t1) t2) t3 GROUP BY a ORDER BY a;
-SELECT array_agg(f)  FROM (SELECT b::text as f FROM t1 GROUP BY b ORDER BY b) q;
+SELECT array_agg(f ORDER BY f)  FROM (SELECT b::text as f FROM t1 GROUP BY b ORDER BY b) q;
 
 
 -- Check that ORDER BY NULLS FIRST/LAST in an aggregate is respected (these are
