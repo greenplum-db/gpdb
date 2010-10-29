@@ -788,3 +788,22 @@ from int4_tbl;
  -2147483647
 (5 rows)
 
+-- resolve "could not find pathkey item to sort" for subquery
+CREATE TEMP TABLE subquery_pathkey (
+	id int, claim_num character varying(20),
+	siu_type character varying(20), recrd_trans_seq bigint);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- this used to raise error "could not find pathkey item to sort"
+WITH sub AS
+(
+	SELECT *, RANK() OVER(PARTITION BY claim_num, siu_type ORDER BY recrd_trans_seq DESC) AS RECRD_RNK FROM subquery_pathkey
+)
+SELECT SIU_REVWD.claim_num
+FROM (SELECT * FROM sub ) SIU_REVWD
+FULL OUTER JOIN (SELECT * FROM sub WHERE UPPER(TRIM(siu_type)) = 'INVESTIGATED') SIU_INVESTIGATED
+ON SIU_INVESTIGATED.claim_num = SIU_REVWD.claim_num;
+ claim_num 
+-----------
+(0 rows)
+

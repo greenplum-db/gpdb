@@ -373,7 +373,7 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext *ctx,
 			RestrictInfo *rinfo = (RestrictInfo *) lfirst(rcell);
 
 			if (!rinfo->left_ec)
-				cache_mergeclause_eclasses(ctx->root, rinfo);
+				update_mergeclause_eclasses(ctx->root, rinfo);
 
 			if (bms_is_subset(rinfo->right_relids, ctx->path->parent->relids))
 			{
@@ -546,7 +546,7 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo   *root,
             RestrictInfo   *rinfo = (RestrictInfo *)lfirst(rcell);
 
             if (!rinfo->left_ec)
-                cache_mergeclause_eclasses(root, rinfo);
+                update_mergeclause_eclasses(root, rinfo);
 
             /* Skip predicate if neither side matches outer partkey item. */
             if (CdbPathLocus_IsHashed(outer_locus))
@@ -663,7 +663,7 @@ cdbpath_partkeys_from_preds(PlannerInfo    *root,
 
         if (!rinfo->left_ec)
         {
-            cache_mergeclause_eclasses(root, rinfo);
+            update_mergeclause_eclasses(root, rinfo);
             Assert(rinfo->left_ec);
         }
 

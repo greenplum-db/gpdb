@@ -4253,7 +4253,9 @@ reconstruct_pathkeys(PlannerInfo *root, List *pathkeys, int *resno_map,
 
 				new_eclass = get_eclass_for_sort_expr(root, new_tle->expr,
 													  em->em_datatype,
-													  pathkey->pk_eclass->ec_opfamilies, 0);
+													  pathkey->pk_eclass->ec_opfamilies,
+													  0,
+													  true);
 				new_pathkey = makePathKey(new_eclass, pathkey->pk_opfamily, pathkey->pk_strategy,
 										  pathkey->pk_nulls_first);
 

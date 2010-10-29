@@ -458,3 +458,18 @@ from int4_tbl;
 select ( with cte(foo) as ( values(f1) )
           values((select foo from cte)) )
 from int4_tbl;
+
+-- resolve "could not find pathkey item to sort" for subquery
+CREATE TEMP TABLE subquery_pathkey (
+	id int, claim_num character varying(20),
+	siu_type character varying(20), recrd_trans_seq bigint);
+
+-- this used to raise error "could not find pathkey item to sort"
+WITH sub AS
+(
+	SELECT *, RANK() OVER(PARTITION BY claim_num, siu_type ORDER BY recrd_trans_seq DESC) AS RECRD_RNK FROM subquery_pathkey
+)
+SELECT SIU_REVWD.claim_num
+FROM (SELECT * FROM sub ) SIU_REVWD
+FULL OUTER JOIN (SELECT * FROM sub WHERE UPPER(TRIM(siu_type)) = 'INVESTIGATED') SIU_INVESTIGATED
+ON SIU_INVESTIGATED.claim_num = SIU_REVWD.claim_num;
