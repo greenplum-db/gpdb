@@ -37,9 +37,14 @@ int GUC_yylex_destroy  (void);
 
 
 
-/* Avoid exit() on fatal scanner errors (a bit ugly -- see yy_fatal_error) */
+/*
+ * flex emits a yy_fatal_error() function that it calls in response to
+ * critical errors like malloc failure, file I/O errors, and detection of
+ * internal inconsistency.  That function prints a message and calls exit().
+ * Mutate it to instead call our handler, which jumps out of the parser.
+ */
 #undef fprintf
-#define fprintf(file, fmt, msg)  ereport(ERROR, (errmsg_internal("%s", msg)))
+#define fprintf(file, fmt, msg) GUC_flex_fatal(msg)
 
 enum {
 	GUC_ID = 1,
@@ -61,6 +66,8 @@ struct name_value_pair
 };
 
 static unsigned int ConfigFileLineno;
+static const char *GUC_flex_fatal_errmsg;
+static sigjmp_buf *GUC_flex_fatal_jmp;
 
 /* flex fails to supply a prototype for yylex, so provide one */
 int GUC_yylex(void);
@@ -70,6 +77,7 @@ static bool ParseConfigFile(const char *config_file, const char *calling_file,
 							struct name_value_pair **head_p,
 							struct name_value_pair **tail_p);
 static void free_name_value_list(struct name_value_pair * list);
+static int GUC_flex_fatal(const char *msg);
 static char *GUC_scanstr(const char *s);
 
 %}
@@ -334,6 +342,21 @@ ProcessConfigFile(GucContext context)
 		free(cvc);
 }
 
+/*
+ * Flex fatal errors bring us here.  Stash the error message and jump back to
+ * ParseConfigFp().  Assume all msg arguments point to string constants; this
+ * holds for flex 2.5.31 (earliest we support) and flex 2.5.35 (latest as of
+ * this writing).  Otherwise, we would need to copy the message.
+ *
+ * We return "int" since this takes the place of calls to fprintf().
+*/
+static int
+GUC_flex_fatal(const char *msg)
+{
+	GUC_flex_fatal_errmsg = msg;
+	siglongjmp(*GUC_flex_fatal_jmp, 1);
+	return 0;	/* keep compiler quiet */
+}
 
 /*
  * Read and parse a single configuration file.  This function recurses
@@ -370,9 +393,12 @@ ParseConfigFile(const char *config_file, const char *calling_file,
 				struct name_value_pair **tail_p)
 {
 	bool		OK = true;
+	unsigned int save_ConfigFileLineno = ConfigFileLineno;
+	sigjmp_buf *save_GUC_flex_fatal_jmp = GUC_flex_fatal_jmp;
+	sigjmp_buf	flex_fatal_jmp;
 	char		abs_path[MAXPGPATH];
 	FILE	   *fp;
-	YY_BUFFER_STATE lex_buffer;
+	volatile YY_BUFFER_STATE lex_buffer = NULL;
 	int			token;
 
 	/*
@@ -417,13 +443,29 @@ ParseConfigFile(const char *config_file, const char *calling_file,
 		return false;
 	}
 
+	if (sigsetjmp(flex_fatal_jmp, 1) == 0)
+		GUC_flex_fatal_jmp = &flex_fatal_jmp;
+	else
+	{
+		/*
+		 * Regain control after a fatal, internal flex error.  It may have
+		 * corrupted parser state.  Consequently, abandon the file, but trust
+		 * that the state remains sane enough for yy_delete_buffer().
+		 */
+		elog(elevel, "%s at file \"%s\" line %u",
+			 GUC_flex_fatal_errmsg, config_file, ConfigFileLineno);
+
+		OK = false;
+		goto cleanup_exit;
+	}
+
 	/*
 	 * Parse
 	 */
+	ConfigFileLineno = 1;
+
 	lex_buffer = yy_create_buffer(fp, YY_BUF_SIZE);
 	yy_switch_to_buffer(lex_buffer);
-
-	ConfigFileLineno = 1;
 
 	/* This loop iterates once per logical line */
 	while ((token = yylex()))
@@ -481,7 +523,6 @@ ParseConfigFile(const char *config_file, const char *calling_file,
 				goto cleanup_exit;
 			}
 			yy_switch_to_buffer(lex_buffer);
-			ConfigFileLineno = save_ConfigFileLineno;
 			pfree(opt_name);
 			pfree(opt_value);
 		}
@@ -553,6 +594,9 @@ ParseConfigFile(const char *config_file, const char *calling_file,
 cleanup_exit:
 	yy_delete_buffer(lex_buffer);
 	FreeFile(fp);
+	/* Each recursion level must save and restore these static variables. */
+	ConfigFileLineno = save_ConfigFileLineno;
+	GUC_flex_fatal_jmp = save_GUC_flex_fatal_jmp;
 	
 	Assert(OK || (context == PGC_POSTMASTER && IsUnderPostmaster) || context == PGC_SIGHUP);
 
