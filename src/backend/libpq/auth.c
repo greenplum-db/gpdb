@@ -1808,9 +1808,8 @@ ident_inet(const SockAddr remote_addr,
 		   const SockAddr local_addr,
 		   char *ident_user)
 {
-	pgsocket	sock_fd,		/* File descriptor for socket on which we talk
-								 * to Ident */
-				rc;				/* Return code from a locally called function */
+	pgsocket	sock_fd = PGINVALID_SOCKET;		/* for talking to Ident server */
+	int			rc;				/* Return code from a locally called function */
 	bool		ident_return;
 	char		remote_addr_s[NI_MAXHOST];
 	char		remote_port[NI_MAXSERV];
