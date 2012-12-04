@@ -1066,7 +1066,8 @@ dumpRoles(PGconn *conn)
 				i_rolcreaterexthttp = -1,
 				i_rolcreatewextgpfd = -1,
 				i_rolcreaterexthdfs = -1,
-				i_rolcreatewexthdfs = -1;
+				i_rolcreatewexthdfs = -1,
+				i_is_current_user;
 	int			i;
 	bool		exttab_auth = (server_version >= 80214);
 	bool		hdfs_auth = (server_version >= 80215);
@@ -1091,7 +1092,8 @@ dumpRoles(PGconn *conn)
 						  "rolcreaterole, rolcreatedb, rolcatupdate, "
 						  "rolcanlogin, rolconnlimit, rolpassword, "
 						  "rolvaliduntil, rolreplication, "
-			  "pg_catalog.shobj_description(oid, 'pg_authid') as rolcomment "
+			  "pg_catalog.shobj_description(oid, 'pg_authid') as rolcomment, "
+			  			  "rolname = current_user AS is_current_user "
 						  " %s %s %s %s"
 						  "FROM pg_authid "
 						  "ORDER BY 2",
@@ -1102,7 +1104,8 @@ dumpRoles(PGconn *conn)
 						  "rolcreaterole, rolcreatedb, rolcatupdate, "
 						  "rolcanlogin, rolconnlimit, rolpassword, "
 						  "rolvaliduntil, false as rolreplication, "
-			  "pg_catalog.shobj_description(oid, 'pg_authid') as rolcomment "
+			  "pg_catalog.shobj_description(oid, 'pg_authid') as rolcomment, "
+			  			  "rolname = current_user AS is_current_user "
 						  " %s %s %s %s"
 						  "FROM pg_authid "
 						  "ORDER BY 2",
@@ -1124,6 +1127,7 @@ dumpRoles(PGconn *conn)
 	i_rolvaliduntil = PQfnumber(res, "rolvaliduntil");
 	i_rolreplication = PQfnumber(res, "rolreplication");
 	i_rolcomment = PQfnumber(res, "rolcomment");
+	i_is_current_user = PQfnumber(res, "is_current_user");
 
 	if (resource_queues)
 		i_rolqueuename = PQfnumber(res, "rolqueuename");
@@ -1171,9 +1175,11 @@ dumpRoles(PGconn *conn)
 		 * will acquire the right properties even if it already exists (ie, it
 		 * won't hurt for the CREATE to fail).  This is particularly important
 		 * for the role we are connected as, since even with --clean we will
-		 * have failed to drop it.
+		 * have failed to drop it.  binary_upgrade cannot generate any errors,
+		 * so we assume the current role is already created.
 		 */
-		if (!binary_upgrade)
+		if (!binary_upgrade ||
+			strcmp(PQgetvalue(res, i, i_is_current_user), "f") == 0)
 			appendPQExpBuffer(buf, "CREATE ROLE %s;\n", fmtId(rolename));
 		appendPQExpBuffer(buf, "ALTER ROLE %s WITH", fmtId(rolename));
 
