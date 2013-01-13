@@ -705,7 +705,22 @@
 /* Define to 1 if you have __get_cpuid. */
 #undef HAVE__GET_CPUID
 
-/* Define to the appropriate snprintf format for 64-bit ints, if any. */
+/* Define to 1 if your compiler understands __builtin_constant_p. */
+#undef HAVE__BUILTIN_CONSTANT_P
+
+/* Define to 1 if your compiler understands __builtin_types_compatible_p. */
+#undef HAVE__BUILTIN_TYPES_COMPATIBLE_P
+
+/* Define to 1 if your compiler understands __builtin_unreachable. */
+#undef HAVE__BUILTIN_UNREACHABLE
+
+/* Define to 1 if your compiler understands _Static_assert. */
+#undef HAVE__STATIC_ASSERT
+
+/* Define to 1 if your compiler understands __VA_ARGS__ in macros. */
+#undef HAVE__VA_ARGS
+
+/* Define to the appropriate snprintf format for 64-bit ints. */
 #undef INT64_FORMAT
 
 /* Define to build with Kerberos 5 support. (--with-krb5) */

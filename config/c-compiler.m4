@@ -158,6 +158,103 @@ fi])# PGAC_C_FUNCNAME_SUPPORT
 
 
 
+# PGAC_C_STATIC_ASSERT
+# --------------------
+# Check if the C compiler understands _Static_assert(),
+# and define HAVE__STATIC_ASSERT if so.
+#
+# We actually check the syntax ({ _Static_assert(...) }), because we need
+# gcc-style compound expressions to be able to wrap the thing into macros.
+AC_DEFUN([PGAC_C_STATIC_ASSERT],
+[AC_CACHE_CHECK(for _Static_assert, pgac_cv__static_assert,
+[AC_TRY_LINK([],
+[({ _Static_assert(1, "foo"); })],
+[pgac_cv__static_assert=yes],
+[pgac_cv__static_assert=no])])
+if test x"$pgac_cv__static_assert" = xyes ; then
+AC_DEFINE(HAVE__STATIC_ASSERT, 1,
+          [Define to 1 if your compiler understands _Static_assert.])
+fi])# PGAC_C_STATIC_ASSERT
+
+
+
+# PGAC_C_TYPES_COMPATIBLE
+# -----------------------
+# Check if the C compiler understands __builtin_types_compatible_p,
+# and define HAVE__BUILTIN_TYPES_COMPATIBLE_P if so.
+#
+# We check usage with __typeof__, though it's unlikely any compiler would
+# have the former and not the latter.
+AC_DEFUN([PGAC_C_TYPES_COMPATIBLE],
+[AC_CACHE_CHECK(for __builtin_types_compatible_p, pgac_cv__types_compatible,
+[AC_TRY_COMPILE([],
+[ int x; static int y[__builtin_types_compatible_p(__typeof__(x), int)]; ],
+[pgac_cv__types_compatible=yes],
+[pgac_cv__types_compatible=no])])
+if test x"$pgac_cv__types_compatible" = xyes ; then
+AC_DEFINE(HAVE__BUILTIN_TYPES_COMPATIBLE_P, 1,
+          [Define to 1 if your compiler understands __builtin_types_compatible_p.])
+fi])# PGAC_C_TYPES_COMPATIBLE
+
+
+
+# PGAC_C_BUILTIN_CONSTANT_P
+# -------------------------
+# Check if the C compiler understands __builtin_constant_p(),
+# and define HAVE__BUILTIN_CONSTANT_P if so.
+AC_DEFUN([PGAC_C_BUILTIN_CONSTANT_P],
+[AC_CACHE_CHECK(for __builtin_constant_p, pgac_cv__builtin_constant_p,
+[AC_TRY_COMPILE([static int x; static int y[__builtin_constant_p(x) ? x : 1];],
+[],
+[pgac_cv__builtin_constant_p=yes],
+[pgac_cv__builtin_constant_p=no])])
+if test x"$pgac_cv__builtin_constant_p" = xyes ; then
+AC_DEFINE(HAVE__BUILTIN_CONSTANT_P, 1,
+          [Define to 1 if your compiler understands __builtin_constant_p.])
+fi])# PGAC_C_BUILTIN_CONSTANT_P
+
+
+
+# PGAC_C_BUILTIN_UNREACHABLE
+# --------------------------
+# Check if the C compiler understands __builtin_unreachable(),
+# and define HAVE__BUILTIN_UNREACHABLE if so.
+#
+# NB: Don't get the idea of putting a for(;;); or such before the
+# __builtin_unreachable() call.  Some compilers would remove it before linking
+# and only a warning instead of an error would be produced.
+AC_DEFUN([PGAC_C_BUILTIN_UNREACHABLE],
+[AC_CACHE_CHECK(for __builtin_unreachable, pgac_cv__builtin_unreachable,
+[AC_TRY_LINK([],
+[__builtin_unreachable();],
+[pgac_cv__builtin_unreachable=yes],
+[pgac_cv__builtin_unreachable=no])])
+if test x"$pgac_cv__builtin_unreachable" = xyes ; then
+AC_DEFINE(HAVE__BUILTIN_UNREACHABLE, 1,
+          [Define to 1 if your compiler understands __builtin_unreachable.])
+fi])# PGAC_C_BUILTIN_UNREACHABLE
+
+
+
+# PGAC_C_VA_ARGS
+# --------------
+# Check if the C compiler understands C99-style variadic macros,
+# and define HAVE__VA_ARGS if so.
+AC_DEFUN([PGAC_C_VA_ARGS],
+[AC_CACHE_CHECK(for __VA_ARGS__, pgac_cv__va_args,
+[AC_TRY_COMPILE([#include <stdio.h>],
+[#define debug(...) fprintf(stderr, __VA_ARGS__)
+debug("%s", "blarg");
+],
+[pgac_cv__va_args=yes],
+[pgac_cv__va_args=no])])
+if test x"$pgac_cv__va_args" = xyes ; then
+AC_DEFINE(HAVE__VA_ARGS, 1,
+          [Define to 1 if your compiler understands __VA_ARGS__ in macros.])
+fi])# PGAC_C_VA_ARGS
+
+
+
 # PGAC_PROG_CC_CFLAGS_OPT
 # -----------------------
 # Given a string, check if the compiler supports the string as a
