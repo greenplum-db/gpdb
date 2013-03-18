@@ -3407,7 +3407,6 @@ RestoreBkpBlocks(XLogRecord *record, XLogRecPtr lsn)
 		}
 
 		PageSetLSN(page, lsn);
-		PageSetTLI(page, ThisTimeLineID);
 		MarkBufferDirty(buffer);
 		UnlockReleaseBuffer(buffer);
 
