@@ -137,7 +137,6 @@ gistDeleteSubtree(GistVacuum *gv, BlockNumber blkno)
 
 		recptr = XLogInsert(RM_GIST_ID, XLOG_GIST_PAGE_DELETE, rdata);
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 	else
 		PageSetLSN(page, GetXLogRecPtrForTemp());
@@ -255,7 +254,6 @@ vacuumSplitPage(GistVacuum *gv, Page tempPage, Buffer buffer, IndexTuple *addon,
 		for (ptr = dist; ptr; ptr = ptr->next)
 		{
 			PageSetLSN(BufferGetPage(ptr->buffer), recptr);
-			PageSetTLI(BufferGetPage(ptr->buffer), ThisTimeLineID);
 		}
 
 		pfree(xlinfo);
@@ -477,7 +475,6 @@ gistVacuumUpdate(GistVacuum *gv, BlockNumber blkno, bool needunion)
 
 				recptr = XLogInsert(RM_GIST_ID, XLOG_GIST_PAGE_UPDATE, rdata);
 				PageSetLSN(page, recptr);
-				PageSetTLI(page, ThisTimeLineID);
 
 				pfree(xlinfo);
 				pfree(rdata);
@@ -823,7 +820,6 @@ gistbulkdelete(PG_FUNCTION_ARGS)
 
 					recptr = XLogInsert(RM_GIST_ID, XLOG_GIST_PAGE_UPDATE, rdata);
 					PageSetLSN(page, recptr);
-					PageSetTLI(page, ThisTimeLineID);
 
 					pfree(xlinfo);
 					pfree(rdata);

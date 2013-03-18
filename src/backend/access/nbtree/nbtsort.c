@@ -293,12 +293,6 @@ _bt_blwritepage(BTWriteState *wstate, Page page, BlockNumber blkno)
 		log_newpage_rel(wstate->index, blkno, page);
 	}
 
-	else
-	{
-		/* Leave the page LSN zero if not WAL-logged, but set TLI anyway */
-		PageSetTLI(page, ThisTimeLineID);
-	}
-
 	/*
 	 * If we have to write pages nonsequentially, fill in the space with
 	 * zeroes until we come back and overwrite.  This is not logically

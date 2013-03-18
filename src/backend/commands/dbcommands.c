@@ -318,7 +318,6 @@ static void copy_buffer_pool_files(
 			recptr = XLogInsert(RM_HEAP_ID, XLOG_HEAP_NEWPAGE, rdata);
 		
 			PageSetLSN(buffer, recptr);
-			PageSetTLI(buffer, ThisTimeLineID);
 		
 			END_CRIT_SECTION();
 
