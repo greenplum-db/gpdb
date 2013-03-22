@@ -3288,7 +3288,6 @@ l2:
 
 			recptr = XLogInsert(RM_HEAP_ID, XLOG_HEAP_LOCK, rdata);
 			PageSetLSN(BufferGetPage(buffer), recptr);
-			PageSetTLI(BufferGetPage(buffer), ThisTimeLineID);
 		}
 
 		END_CRIT_SECTION();

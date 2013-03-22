@@ -309,6 +309,7 @@ _bt_blwritepage(BTWriteState *wstate, Page page, BlockNumber blkno)
 		// UNDONE: Unfortunately, I think we write temp relations to the mirror...
 		LWLockAcquire(MirroredLock, LW_SHARED);
 
+		/* don't set checksum for all-zero page */
 		smgrextend(wstate->index->rd_smgr, wstate->btws_pages_written++,
 				   (char *) wstate->btws_zeropage,
 				   true);
@@ -321,6 +322,7 @@ _bt_blwritepage(BTWriteState *wstate, Page page, BlockNumber blkno)
 	// -------- MirroredLock ----------
 	// UNDONE: Unfortunately, I think we write temp relations to the mirror...
 	LWLockAcquire(MirroredLock, LW_SHARED);
+	PageSetChecksumInplace(page, blkno);
 
 	/*
 	 * Now write the page.	We say isTemp = true even if it's not a temp

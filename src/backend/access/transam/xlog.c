@@ -230,6 +230,8 @@ static uint32 ProcLastRecTotalLen = 0;
 
 static uint32 ProcLastRecDataLen = 0;
 
+static XLogRecPtr InvalidXLogRecPtr = {0, 0};
+
 /*
  * RedoRecPtr is this backend's local copy of the REDO record pointer
  * (which is almost but not quite the same as a pointer to the most recent
@@ -839,7 +841,7 @@ XLogInsert_Internal(RmgrId rmid, uint8 info, XLogRecData *rdata, TransactionId h
 	bool		updrqst;
 	bool		doPageWrites;
 	bool		isLogSwitch = (rmid == RM_XLOG_ID && info == XLOG_SWITCH);
-
+	bool		isHint = (rmid == RM_XLOG_ID && info == XLOG_HINT);
 	bool		rdata_iscopy = false;
 
     /* Safety check in case our assumption is ever broken. */
@@ -1145,6 +1147,18 @@ begin:;
 	 */
 	if ((info & XLR_BKP_BLOCK_MASK) && !Insert->forcePageWrites)
 		info |= XLR_BKP_REMOVABLE;
+
+	/*
+	 * If this is a hint record and we don't need a backup block then
+	 * we have no more work to do and can exit quickly without inserting
+	 * a WAL record at all. In that case return InvalidXLogRecPtr.
+	 */
+	if (isHint && !(info & XLR_BKP_BLOCK_MASK))
+	{
+		LWLockRelease(WALInsertLock);
+		END_CRIT_SECTION();
+		return InvalidXLogRecPtr;
+	}
 
 	/*
 	 * If there isn't enough space on the current XLOG page for a record
@@ -1531,10 +1545,10 @@ XLogCheckBuffer(XLogRecData *rdata, bool doPageWrites,
 	 * to XLogInsert, whether it otherwise has the standard page layout or
 	 * not.
 	 */
-	*lsn = page->pd_lsn;
+	*lsn = BufferGetLSNAtomic(rdata->buffer);
 
 	if (doPageWrites &&
-		XLByteLE(page->pd_lsn, RedoRecPtr))
+		XLByteLE(*lsn, RedoRecPtr))
 	{
 		/*
 		 * The page needs to be backed up, so set up *bkpb
@@ -5427,16 +5441,6 @@ GetSystemIdentifier(void)
 }
 
 /*
- * Are checksums enabled for data pages?
- */
-bool
-DataChecksumsEnabled(void)
-{
-	Assert(ControlFile != NULL);
-	return (ControlFile->data_checksum_version > 0);
-}
-
-/*
  * Initialization of shared memory for XLOG
  */
 Size
@@ -5552,6 +5556,16 @@ XLogStartupInit(void)
 	 */
 	if (!IsBootstrapProcessingMode())
 		ReadControlFile();
+}
+
+/*
+ * Are checksums enabled for data pages?
+ */
+bool
+DataChecksumsEnabled(void)
+{
+	Assert(ControlFile != NULL);
+	return (ControlFile->data_checksum_version > 0);
 }
 
 /*
@@ -9513,6 +9527,51 @@ RequestXLogSwitch(void)
 }
 
 /*
+ * Write a backup block if needed when we are setting a hint. Note that
+ * this may be called for a variety of page types, not just heaps.
+ *
+ * Deciding the "if needed" part is delicate and requires us to either
+ * grab WALInsertLock or check the info_lck spinlock. If we check the
+ * spinlock and it says Yes then we will need to get WALInsertLock as well,
+ * so the design choice here is to just go straight for the WALInsertLock
+ * and trust that calls to this function are minimised elsewhere.
+ *
+ * Callable while holding just share lock on the buffer content.
+ *
+ * Possible that multiple concurrent backends could attempt to write
+ * WAL records. In that case, more than one backup block may be recorded
+ * though that isn't important to the outcome and the backup blocks are
+ * likely to be identical anyway.
+ */
+#define	XLOG_HINT_WATERMARK		13579
+XLogRecPtr
+XLogSaveBufferForHint(Buffer buffer)
+{
+	/*
+	 * Make an XLOG entry reporting the hint
+	 */
+	XLogRecData rdata[2];
+	int			watermark = XLOG_HINT_WATERMARK;
+
+	/*
+	 * Not allowed to have zero-length records, so use a small watermark
+	 */
+	rdata[0].data = (char *) (&watermark);
+	rdata[0].len = sizeof(int);
+	rdata[0].buffer = InvalidBuffer;
+	rdata[0].buffer_std = false;
+	rdata[0].next = &(rdata[1]);
+
+	rdata[1].data = NULL;
+	rdata[1].len = 0;
+	rdata[1].buffer = buffer;
+	rdata[1].buffer_std = true;
+	rdata[1].next = NULL;
+
+	return XLogInsert(RM_XLOG_ID, XLOG_HINT, rdata);
+}
+
+/*
  * XLOG resource manager's routines
  *
  * Definitions of info values are in include/catalog/pg_control.h, though
@@ -9522,6 +9581,9 @@ void
 xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribute__((unused)), XLogRecord *record)
 {
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
+
+	/* Backup blocks are not used in most xlog records */
+	Assert(info == XLOG_HINT || !(record->xl_info & XLR_BKP_BLOCK_MASK));
 
 	if (info == XLOG_NEXTOID)
 	{
@@ -9648,6 +9710,34 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 	else if (info == XLOG_SWITCH)
 	{
 		/* nothing to do here */
+	}
+	else if (info == XLOG_HINT)
+	{
+#ifdef USE_ASSERT_CHECKING
+		int	*watermark = (int *) XLogRecGetData(record);
+#endif
+
+		/* Check the watermark is correct for the hint record */
+		Assert(*watermark == XLOG_HINT_WATERMARK);
+
+		/* Backup blocks must be present for smgr hint records */
+		Assert(record->xl_info & XLR_BKP_BLOCK_MASK);
+
+		/*
+		 * Hint records have no information that needs to be replayed.
+		 * The sole purpose of them is to ensure that a hint bit does
+		 * not cause a checksum invalidation if a hint bit write should
+		 * cause a torn page. So the body of the record is empty but
+		 * there must be one backup block.
+		 *
+		 * Since the only change in the backup block is a hint bit,
+		 * there is no conflict with Hot Standby.
+		 *
+		 * This also means there is no corresponding API call for this,
+		 * so an smgr implementation has no need to implement anything.
+		 * Which means nothing is needed in md.c etc
+		 */
+		RestoreBkpBlocks(record, lsn);
 	}
 	else if (info == XLOG_BACKUP_END)
 	{

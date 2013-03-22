@@ -266,6 +266,8 @@ end_heap_rewrite(RewriteState state)
 	/* Write the last page, if any */
 	if (state->rs_buffer_valid)
 	{
+		PageSetChecksumInplace(state->rs_buffer, state->rs_blockno);
+
 		if (state->rs_use_wal)
 			log_newpage_rel(state->rs_new_rel,state->rs_blockno, state->rs_buffer);
 
@@ -600,6 +602,8 @@ raw_heap_insert(RewriteState state, HeapTuple tup)
 		if (len + saveFreeSpace > pageFreeSpace)
 		{
 			/* Doesn't fit, so write out the existing page */
+
+			PageSetChecksumInplace(page, state->rs_blockno);
 
 			/* XLOG stuff */
 			if (state->rs_use_wal)
