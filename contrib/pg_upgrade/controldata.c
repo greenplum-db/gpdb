@@ -52,6 +52,7 @@ get_control_data(migratorContext *ctx, ClusterInfo *cluster, bool live_check)
 	bool		got_toast = false;
 	bool		got_date_is_int = false;
 	bool		got_float8_pass_by_value = false;
+	bool		got_data_checksums = false;
 	char	   *lc_collate = NULL;
 	char	   *lc_ctype = NULL;
 	char	   *lc_monetary = NULL;
@@ -121,6 +122,13 @@ get_control_data(migratorContext *ctx, ClusterInfo *cluster, bool live_check)
 	{
 		cluster->controldata.float8_pass_by_value = false;
 		got_float8_pass_by_value = true;
+	}
+
+	/* Only in <= 9.2 */
+	if (GET_MAJOR_VERSION(cluster->major_version) <= 902)
+	{
+		cluster->controldata.data_checksums = false;
+		got_data_checksums = true;
 	}
 
 	/* we have the result of cmd in "output". so parse it line by line now */
@@ -360,6 +368,18 @@ get_control_data(migratorContext *ctx, ClusterInfo *cluster, bool live_check)
 			cluster->controldata.float8_pass_by_value = strstr(p, "by value") != NULL;
 			got_float8_pass_by_value = true;
 		}
+		else if ((p = strstr(bufin, "checksums")) != NULL)
+		{
+			p = strchr(p, ':');
+
+			if (p == NULL || strlen(p) <= 1)
+				pg_log(ctx, PG_FATAL, "%d: controldata retrieval problem\n", __LINE__);
+
+			p++;				/* removing ':' char */
+			/* used later for contrib check */
+			cluster->controldata.data_checksums = strstr(p, "enabled") != NULL;
+			got_data_checksums = true;
+		}
 		/* In pre-8.4 only */
 		else if ((p = strstr(bufin, "LC_COLLATE:")) != NULL)
 		{
@@ -425,7 +445,7 @@ get_control_data(migratorContext *ctx, ClusterInfo *cluster, bool live_check)
 		!got_tli ||
 		!got_align || !got_blocksz || !got_largesz || !got_walsz ||
 		!got_walseg || !got_ident || !got_index || /* !got_toast || */
-		!got_date_is_int || !got_float8_pass_by_value)
+		!got_date_is_int || !got_float8_pass_by_value || !got_data_checksums)
 	{
 		pg_log(ctx, PG_REPORT,
 			"Some required control information is missing;  cannot find:\n");
@@ -478,8 +498,12 @@ get_control_data(migratorContext *ctx, ClusterInfo *cluster, bool live_check)
 		if (!got_float8_pass_by_value)
 			pg_log(ctx, PG_REPORT, "  float8 argument passing method\n");
 
+		/* value added in Postgres 9.3 */
+		if (!got_data_checksums)
+			pg_log(ctx, PG_REPORT, "  data checksums\n");
+
 		pg_log(ctx, PG_FATAL,
-			   "Unable to continue without required control information, terminating\n");
+			   "Cannot continue without required control information, terminating\n");
 	}
 }
 
@@ -546,6 +570,12 @@ check_control_data(migratorContext *ctx, ControlData *oldctrl,
 			   "You will need to rebuild the new server with configure\n"
 			   "--disable-integer-datetimes or get server binaries built\n"
 			   "with those options.\n");
+	}
+
+	if (oldctrl->data_checksums != newctrl->data_checksums)
+	{
+		pg_log(ctx, PG_FATAL,
+			   "old and new pg_controldata checksums settings are invalid or do not match\n");
 	}
 }
 

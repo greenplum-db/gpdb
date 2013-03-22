@@ -6,7 +6,7 @@
  * NOTE: all the HeapTupleSatisfies routines will update the tuple's
  * "hint" status bits if we see that the inserting or deleting transaction
  * has now committed or aborted (and it is safe to set the hint bits).
- * If the hint bits are changed, SetBufferCommitInfoNeedsSave is called on
+ * If the hint bits are changed, MarkBufferDirtyHint is called on
  * the passed-in buffer.  The caller must hold not only a pin, but at least
  * shared buffer content lock on the buffer containing the tuple.
  *
@@ -131,7 +131,7 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
 
 	if (!gp_disable_tuple_hints)
 	{
-		SetBufferCommitInfoNeedsSave(buffer);
+		MarkBufferDirtyHint(buffer);
 		return;
 	}
 
@@ -141,14 +141,14 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
 	 */
 	if (relation == NULL)
 	{
-		SetBufferCommitInfoNeedsSave(buffer);
+		MarkBufferDirtyHint(buffer);
 		return;
 	}
 
 	if (relation->rd_issyscat)
 	{
 		/* Assume we want to always mark the buffer dirty */
-		SetBufferCommitInfoNeedsSave(buffer);
+		MarkBufferDirtyHint(buffer);
 		return;
 	}
 
@@ -162,7 +162,7 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
 
 	if (xid == InvalidTransactionId)
 	{
-		SetBufferCommitInfoNeedsSave(buffer);
+		MarkBufferDirtyHint(buffer);
 		return;
 	}
 
@@ -171,7 +171,7 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
 	 */
 	if (CLOGTransactionIsOld(xid))
 	{
-		SetBufferCommitInfoNeedsSave(buffer);
+		MarkBufferDirtyHint(buffer);
 		return;
 	}
 }

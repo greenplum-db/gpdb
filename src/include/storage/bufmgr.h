@@ -318,6 +318,7 @@ extern void FlushDatabaseBuffers(Oid dbid);
 extern void DropRelFileNodeBuffers(RelFileNode rnode, bool istemp,
 					   BlockNumber firstDelBlock);
 extern void DropDatabaseBuffers(Oid tbpoid, Oid dbid);
+extern XLogRecPtr BufferGetLSNAtomic(Buffer buffer);
 
 #ifdef NOT_USED
 extern void PrintPinnedBufs(void);
@@ -325,7 +326,7 @@ extern void PrintPinnedBufs(void);
 extern Size BufferShmemSize(void);
 extern RelFileNode BufferGetFileNode(Buffer buffer);
 
-extern void SetBufferCommitInfoNeedsSave(Buffer buffer);
+extern void MarkBufferDirtyHint(Buffer buffer);
 
 extern void UnlockBuffers(void);
 extern void LockBuffer(Buffer buffer, int mode);

@@ -86,6 +86,7 @@ static bool IsForInput;
 /* local state for LockBufferForCleanup */
 static volatile BufferDesc *PinCountWaitBuf = NULL;
 
+static XLogRecPtr InvalidXLogRecPtr = {0, 0};
 
 static Buffer ReadBuffer_common(SMgrRelation reln, bool isLocalBuf,
 				  bool isTemp, BlockNumber blockNum, bool zeroPage,
@@ -373,6 +374,7 @@ ReadBuffer_common(SMgrRelation reln,
 	{
 		/* new buffers are zero-filled */
 		MemSet((char *) bufBlock, 0, BLCKSZ);
+		/* don't set checksum for all-zero page */
 		smgrextend(reln, blockNum, (char *) bufBlock,
 				   isTemp);
 	}
@@ -387,20 +389,20 @@ ReadBuffer_common(SMgrRelation reln,
 		else
 			smgrread(reln, blockNum, (char *) bufBlock);
 		/* check for garbage data */
-		if (!PageHeaderIsValid((PageHeader) bufBlock))
+		if (!PageIsVerified((Page) bufBlock, blockNum))
 		{
 			if (zero_damaged_pages)
 			{
 				ereport(WARNING,
 						(errcode(ERRCODE_DATA_CORRUPTED),
-						 errmsg("invalid page header in block %u of relation %s; zeroing out page",
+						 errmsg("invalid page in block %u of relation %s; zeroing out page",
 								blockNum, relpath(reln->smgr_rnode))));
 				MemSet((char *) bufBlock, 0, BLCKSZ);
 			}
 			else
 				ereport(ERROR,
 						(errcode(ERRCODE_DATA_CORRUPTED),
-				 errmsg("invalid page header in block %u of relation %s",
+				 errmsg("invalid page in block %u of relation %s",
 						blockNum, relpath(reln->smgr_rnode)),
 				 errSendAlert(true)));
 		}
@@ -579,14 +581,23 @@ BufferAlloc(SMgrRelation smgr,
 				 * victim.	We need lock to inspect the page LSN, so this
 				 * can't be done inside StrategyGetBuffer.
 				 */
-				if (strategy != NULL &&
-					XLogNeedsFlush(BufferGetLSN(buf)) &&
-					StrategyRejectBuffer(strategy, buf))
+				if (strategy != NULL)
 				{
-					/* Drop lock/pin and loop around for another buffer */
-					ReleaseContentLock(buf);
-					UnpinBuffer(buf, true);
-					continue;
+					XLogRecPtr	lsn;
+
+					/* Read the LSN while holding buffer header lock */
+					LockBufHdr(buf);
+					lsn = BufferGetLSN(buf);
+					UnlockBufHdr(buf);
+
+					if (XLogNeedsFlush(lsn) &&
+						StrategyRejectBuffer(strategy, buf))
+					{
+						/* Drop lock/pin and loop around for another buffer */
+						LWLockRelease(buf->content_lock);
+						UnpinBuffer(buf, true);
+						continue;
+					}
 				}
 
 				/* OK, do the I/O */
@@ -1924,6 +1935,8 @@ FlushBuffer(volatile BufferDesc *buf, SMgrRelation reln)
 	XLogRecPtr	recptr;
 	ErrorContextCallback errcontext;
 	XLogRecPtr GistXLogRecPtrForTemp = {1, 1};	/* Magic GIST value */
+	Block		bufBlock;
+	char		*bufToWrite;
 
 	/*
 	 * Acquire the buffer's io_in_progress lock.  If StartBufferIO returns
@@ -1943,6 +1956,18 @@ FlushBuffer(volatile BufferDesc *buf, SMgrRelation reln)
 	if (reln == NULL)
 		reln = smgropen(buf->tag.rnode);
 
+	LockBufHdr(buf);
+
+	/*
+	 * Run PageGetLSN while holding header lock, since we don't have the
+	 * buffer locked exclusively in all cases.
+	 */
+	recptr = BufferGetLSN(buf);
+
+	/* To check if block content changes while flushing. - vadim 01/17/97 */
+	buf->flags &= ~BM_JUST_DIRTIED;
+	UnlockBufHdr(buf);
+
 	/*
 	 * Force XLOG flush up to buffer's LSN.  This implements the basic WAL
 	 * rule that log updates must hit disk before any of the data-file changes
@@ -1961,14 +1986,16 @@ FlushBuffer(volatile BufferDesc *buf, SMgrRelation reln)
 	 * we have the io_in_progress lock.
 	 */
 
-	/* To check if block content changes while flushing. - vadim 01/17/97 */
-	LockBufHdr(buf);
-	buf->flags &= ~BM_JUST_DIRTIED;
-	UnlockBufHdr(buf);
+	bufBlock = BufHdrGetBlock(buf);
 
+	bufToWrite = PageSetChecksumCopy((Page) bufBlock, buf->tag.blockNum);
+
+	/*
+	 * bufToWrite is either the shared buffer or a copy, as appropriate.
+	 */
 	smgrwrite(reln,
 			  buf->tag.blockNum,
-			  (char *) BufHdrGetBlock(buf),
+			  bufToWrite,
 			  false);
 
 	BufferFlushCount++;
@@ -2077,6 +2104,34 @@ RelationTruncate(Relation rel, BlockNumber nblocks, bool markPersistentAsPhysica
 	{
 		UnlockRelationForResynchronize(&rel->rd_node, AccessExclusiveLock);
 	}
+}
+
+/*
+ * BufferGetLSNAtomic
+ *		Retrieves the LSN of the buffer atomically using a buffer header lock.
+ *		This is necessary for some callers who may not have an exclusive lock
+ *		on the buffer.
+ */
+XLogRecPtr
+BufferGetLSNAtomic(Buffer buffer)
+{
+	volatile BufferDesc *bufHdr = &BufferDescriptors[buffer - 1];
+	char				*page = BufferGetPage(buffer);
+	XLogRecPtr			 lsn;
+
+	/* Local buffers don't need a lock. */
+	if (BufferIsLocal(buffer))
+		return PageGetLSN(page);
+
+	/* Make sure we've got a real buffer, and that we hold a pin on it. */
+	Assert(BufferIsValid(buffer));
+	Assert(BufferIsPinned(buffer));
+
+	LockBufHdr(bufHdr);
+	lsn = PageGetLSN(page);
+	UnlockBufHdr(bufHdr);
+
+	return lsn;
 }
 
 /* ---------------------------------------------------------------------
@@ -2259,6 +2314,9 @@ FlushRelationBuffers(Relation rel)
 				(bufHdr->flags & BM_VALID) && (bufHdr->flags & BM_DIRTY))
 			{
 				ErrorContextCallback errcontext;
+				Page					localpage;
+
+				localpage = (char *) LocalBufHdrGetBlock(bufHdr);
 
 				MIRROREDLOCK_BUFMGR_DECLARE;
 				
@@ -2271,10 +2329,12 @@ FlushRelationBuffers(Relation rel)
 				// -------- MirroredLock ----------
 				// UNDONE: Unfortunately, I think we write temp relations to the mirror...
 				MIRROREDLOCK_BUFMGR_LOCK;
+
+				PageSetChecksumInplace(localpage, bufHdr->tag.blockNum);
 				
 				smgrwrite(rel->rd_smgr,
 						  bufHdr->tag.blockNum,
-						  (char *) LocalBufHdrGetBlock(bufHdr),
+						  localpage,
 						  rel->rd_istemp);
 
 				MIRROREDLOCK_BUFMGR_UNLOCK;
@@ -2427,22 +2487,24 @@ IncrBufferRefCount(Buffer buffer)
 }
 
 /*
- * SetBufferCommitInfoNeedsSave
+ * MarkBufferDirtyHint
  *
- *	Mark a buffer dirty when we have updated tuple commit-status bits in it.
+ *	Mark a buffer dirty for non-critical changes.
  *
- * This is essentially the same as MarkBufferDirty, except that the caller
- * might have only share-lock instead of exclusive-lock on the buffer's
- * content lock.  We preserve the distinction mainly as a way of documenting
- * that the caller has not made a critical data change --- the status-bit
- * update could be redone by someone else just as easily.  Therefore, no WAL
- * log record need be generated, whereas calls to MarkBufferDirty really ought
- * to be associated with a WAL-entry-creating action.
+ * This is essentially the same as MarkBufferDirty, except:
+ *
+ * 1. The caller does not write WAL; so if checksums are enabled, we may need
+ *    to write an XLOG_HINT WAL record to protect against torn pages.
+ * 2. The caller might have only share-lock instead of exclusive-lock on the
+ *    buffer's content lock.
+ * 3. This function does not guarantee that the buffer is always marked dirty
+ *    (due to a race condition), so it cannot be used for important changes.
  */
 void
-SetBufferCommitInfoNeedsSave(Buffer buffer)
+MarkBufferDirtyHint(Buffer buffer)
 {
 	volatile BufferDesc *bufHdr;
+	Page	page = BufferGetPage(buffer);
 
 	if (!BufferIsValid(buffer))
 		elog(ERROR, "bad buffer id: %d", buffer);
