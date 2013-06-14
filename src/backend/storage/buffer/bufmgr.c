@@ -1984,9 +1984,13 @@ FlushBuffer(volatile BufferDesc *buf, SMgrRelation reln)
 	 * have been able to write it while we were busy with log flushing because
 	 * we have the io_in_progress lock.
 	 */
-
 	bufBlock = BufHdrGetBlock(buf);
 
+	/*
+	 * Update page checksum if desired.  Since we have only shared lock on the
+	 * buffer, other processes might be updating hint bits in it, so we must
+	 * copy the page to private storage if we do checksumming.
+	 */
 	bufToWrite = PageSetChecksumCopy((Page) bufBlock, buf->tag.blockNum);
 
 	/*
