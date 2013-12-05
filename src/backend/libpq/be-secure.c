@@ -484,6 +484,7 @@ my_sock_write(BIO *h, const char *buf, int size)
 	prepare_for_client_write();
 
 	res = send(h->num, buf, size, 0);
+	BIO_clear_retry_flags(h);
 	if (res <= 0)
 	{
 		if (errno == EINTR)
