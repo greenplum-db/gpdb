@@ -331,7 +331,7 @@ internal_client_authentication(Port *port)
 {
 	if (GpIdentity.segindex == MASTER_CONTENT_ID)
 	{
-		/* 
+		/*
 		 * The entry-DB (or QE at the master) case.
 		 *
 		 * The goal here is to block network connection from out of
@@ -366,7 +366,7 @@ internal_client_authentication(Port *port)
 		}
 		else if (port->raddr.addr.ss_family == AF_UNIX)
 		{
-			/* 
+			/*
 			 * Internal connection via a domain socket -- use ident
 			 */
 			char *local_name;
@@ -402,7 +402,7 @@ internal_client_authentication(Port *port)
 	}
 	else
 	{
-		/* We're on an actual segment host */	
+		/* We're on an actual segment host */
 		FakeClientAuthentication(port);
 	}
 
@@ -412,7 +412,7 @@ internal_client_authentication(Port *port)
 static bool
 is_internal_gpdb_conn(Port *port)
 {
-	/* 
+	/*
 	 * This is an internal connection if major version is three and we've set
 	 * the upper bits to 7.
 	 */
@@ -575,6 +575,27 @@ ClientAuthentication(Port *port)
 								   hostinfo, sizeof(hostinfo),
 								   NULL, 0,
 								   NI_NUMERICHOST);
+
+#define HOSTNAME_LOOKUP_DETAIL(port) \
+				(port->remote_hostname ? \
+				 (port->remote_hostname_resolv == +1 ? \
+				  errdetail_log("Client IP address resolved to \"%s\", forward lookup matches.", \
+								port->remote_hostname) : \
+				  port->remote_hostname_resolv == 0 ? \
+				  errdetail_log("Client IP address resolved to \"%s\", forward lookup not checked.", \
+								port->remote_hostname) : \
+				  port->remote_hostname_resolv == -1 ? \
+				  errdetail_log("Client IP address resolved to \"%s\", forward lookup does not match.", \
+								port->remote_hostname) : \
+				  port->remote_hostname_resolv == -2 ? \
+				  errdetail_log("Could not translate client host name \"%s\" to IP address: %s.", \
+								port->remote_hostname, \
+								gai_strerror(port->remote_hostname_errcode)) : \
+				  0) \
+				 : (port->remote_hostname_resolv == -2 ? \
+					errdetail_log("Could not resolve client IP address to a host name: %s.", \
+								  gai_strerror(port->remote_hostname_errcode)) : \
+					0))
 
 				if (am_walsender)
 				{
@@ -1135,14 +1156,14 @@ pg_GSS_error(int severity, char *errmsg, OM_uint32 maj_stat, OM_uint32 min_stat)
 			 errdetail("%s: %s", msg_major, msg_minor)));
 }
 
-/* Check to see if the password of a user is valid 
+/* Check to see if the password of a user is valid
  * (using the validuntil attribute associated with the pg_role)
  * for GSSAPI based authentication.
  */
 static int
 check_valid_until_for_gssapi(Port *port)
 {
-	int         retval = 0;  
+	int         retval = 0;
 	char        *valuntil = NULL;
 	char        *shadow_pass = NULL;
 	List        **line = NULL;
@@ -1158,20 +1179,20 @@ check_valid_until_for_gssapi(Port *port)
 		token = lnext(token);
 
 	if (token)
-	{        
+	{
 		shadow_pass = (char *) lfirst(token);
 		token = lnext(token);
 		if (token)
 			valuntil = (char *) lfirst(token);
-	}    
+	}
 
 	/* Validuntil attribute is not set.
 	 * No time constraint on the user to access the database.
 	 */
 	if (valuntil == NULL || *valuntil == '\0')
 		retval = STATUS_OK;
-	else 
-	{       
+	else
+	{
 		TimestampTz vuntil;
 
 		vuntil = DatumGetTimestampTz(DirectFunctionCall3(timestamptz_in,
@@ -3199,7 +3220,7 @@ timestamptz_to_point(TimestampTz in, authPoint *out)
 {
 	/* from timestamptz_to_char */
 	struct	pg_tm 	tm;
-	fsec_t  fsec;   
+	fsec_t  fsec;
 	char	*tzn;
 	int 	tzp, thisdate;
 	if (timestamp2tm(in, &tzp, &tm, &fsec, &tzn, NULL) != 0)
@@ -3219,7 +3240,7 @@ timestamptz_to_point(TimestampTz in, authPoint *out)
  * Invokes check_auth_time_constraints_internal against the current timestamp
  */
 bool
-CheckAuthTimeConstraints(char *rolname) 
+CheckAuthTimeConstraints(char *rolname)
 {
 	if (gp_auth_time_override_str != NULL && gp_auth_time_override_str[0] != '\0')
 	{
@@ -3256,13 +3277,13 @@ check_auth_time_constraints_internal(char *rolname, TimestampTz timestamp)
 	authPoint 		now;
 
 	timestamptz_to_point(timestamp, &now);
-	
-	foreach (line, role_intervals) 
+
+	foreach (line, role_intervals)
 	{
 		row = lfirst(line);
-		/* 
+		/*
 		 * Each row of role_intervals is a List of 5 records
-		 * <rolname> <startday> <starttime> <endday> <endtime> 
+		 * <rolname> <startday> <starttime> <endday> <endtime>
 	 	 */
 		cell = list_head(row);
 		cell = lnext(cell);			/* skip first entry in record, which is rolname */
@@ -3273,11 +3294,11 @@ check_auth_time_constraints_internal(char *rolname, TimestampTz timestamp)
 		temp = lfirst(cell);
 		given.start.time = DatumGetTimeADT(DirectFunctionCall1(time_in,
 										   CStringGetDatum(temp)));
-		
+
 		cell = lnext(cell);
 		temp = lfirst(cell);
 		given.end.day = pg_atoi(temp, sizeof(int16), 0);
-	
+
 		cell = lnext(cell);
 		temp = lfirst(cell);
 		given.end.time = DatumGetTimeADT(DirectFunctionCall1(time_in,
@@ -3289,7 +3310,7 @@ check_auth_time_constraints_internal(char *rolname, TimestampTz timestamp)
 			return false;
 		}
 	}
-	
+
 	list_free(role_intervals);
 	return true;
 }
