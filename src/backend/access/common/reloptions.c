@@ -629,8 +629,6 @@ transformRelOptions(Datum oldOptions, List *defList, char *namspace,
 		int			noldoptions;
 		int			i;
 
-		Assert(ARR_ELEMTYPE(array) == TEXTOID);
-
 		deconstruct_array(array, TEXTOID, -1, false, 'i',
 						  &oldoptions, NULL, &noldoptions);
 
@@ -786,8 +784,6 @@ untransformRelOptions(Datum options)
 
 	array = DatumGetArrayTypeP(options);
 
-	Assert(ARR_ELEMTYPE(array) == TEXTOID);
-
 	deconstruct_array(array, TEXTOID, -1, false, 'i',
 					  &optiondatums, NULL, &noptions);
 
@@ -921,13 +917,9 @@ parseRelOptions(Datum options, bool validate, relopt_kind kind,
 	/* Done if no options */
 	if (PointerIsValid(DatumGetPointer(options)))
 	{
-		ArrayType  *array;
+		ArrayType  *array = DatumGetArrayTypeP(options);
 		Datum	   *optiondatums;
 		int			noptions;
-
-		array = DatumGetArrayTypeP(options);
-
-		Assert(ARR_ELEMTYPE(array) == TEXTOID);
 
 		deconstruct_array(array, TEXTOID, -1, false, 'i',
 						  &optiondatums, NULL, &noptions);
@@ -968,6 +960,11 @@ parseRelOptions(Datum options, bool validate, relopt_kind kind,
 						 errmsg("unrecognized parameter \"%s\"", s)));
 			}
 		}
+
+		/* It's worth avoiding memory leaks in this function */
+		pfree(optiondatums);
+		if (((void *) array) != DatumGetPointer(options))
+			pfree(array);
 	}
 
 	*numrelopts = numoptions;
