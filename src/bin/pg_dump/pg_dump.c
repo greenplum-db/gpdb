@@ -1908,7 +1908,8 @@ dumpTableData_copy(Archive *fout, void *dcontext)
 	const char *column_list;
 
 	if (g_verbose)
-		write_msg(NULL, "dumping contents of table %s\n", classname);
+		write_msg(NULL, "dumping contents of table \"%s\".\"%s\"\n",
+				  tbinfo->dobj.namespace->dobj.name, classname);
 
 	/*
 	 * If possible, specify the column list explicitly so that we have no
@@ -5791,7 +5792,8 @@ getIndexes(Archive *fout, TableInfo tblinfo[], int numTables)
 			continue;
 
 		if (g_verbose)
-			write_msg(NULL, "reading indexes for table \"%s\"\n",
+			write_msg(NULL, "reading indexes for table \"%s\".\"%s\"\n",
+					  tbinfo->dobj.namespace->dobj.name,
 					  tbinfo->dobj.name);
 
 		/*
@@ -6044,7 +6046,8 @@ getConstraints(Archive *fout, TableInfo tblinfo[], int numTables)
 			continue;
 
 		if (g_verbose)
-			write_msg(NULL, "reading foreign key constraints for table \"%s\"\n",
+			write_msg(NULL, "reading foreign key constraints for table \"%s\".\"%s\"\n",
+					  tbinfo->dobj.namespace->dobj.name,
 					  tbinfo->dobj.name);
 
 		resetPQExpBuffer(query);
@@ -6342,7 +6345,8 @@ getTriggers(Archive *fout, TableInfo tblinfo[], int numTables)
 			continue;
 
 		if (g_verbose)
-			write_msg(NULL, "reading triggers for table \"%s\"\n",
+			write_msg(NULL, "reading triggers for table \"%s\".\"%s\"\n",
+					  tbinfo->dobj.namespace->dobj.name,
 					  tbinfo->dobj.name);
 
 		resetPQExpBuffer(query);
@@ -6883,8 +6887,9 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 		 * the output of an indexscan on pg_attribute_relid_attnum_index.
 		 */
 		if (g_verbose)
-			write_msg(NULL, "finding the columns and types of table \"%s\"\n",
-					  tbinfo->dobj.name);
+			write_msg(NULL, "finding the columns and types of table \"%s\".\"%s\"\n",
+						  tbinfo->dobj.namespace->dobj.name,
+						  tbinfo->dobj.name);
 
 		resetPQExpBuffer(q);
 
@@ -7117,8 +7122,9 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 			int			numDefaults;
 
 			if (g_verbose)
-				write_msg(NULL, "finding default expressions of table \"%s\"\n",
-						  tbinfo->dobj.name);
+				write_msg(NULL, "finding default expressions of table \"%s\".\"%s\"\n",
+							  tbinfo->dobj.namespace->dobj.name,
+							  tbinfo->dobj.name);
 
 			resetPQExpBuffer(q);
 			if (fout->remoteVersion >= 70300)
@@ -7219,7 +7225,8 @@ getTableAttrs(Archive *fout, TableInfo *tblinfo, int numTables)
 			int			numConstrs;
 
 			if (g_verbose)
-				write_msg(NULL, "finding check constraints for table \"%s\"\n",
+				write_msg(NULL, "finding check constraints for table \"%s\".\"%s\"\n",
+						  tbinfo->dobj.namespace->dobj.name,
 						  tbinfo->dobj.name);
 
 			resetPQExpBuffer(q);
