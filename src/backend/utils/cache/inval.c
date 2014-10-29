@@ -761,19 +761,32 @@ AcceptInvalidationMessages(void)
 }
 
 /*
- * AtStart_Inval
- *		Initialize inval lists at start of a main transaction.
+ * PrepareInvalidationState
+ *		Initialize inval lists for the current (sub)transaction.
  */
-void
-AtStart_Inval(void)
+static void
+PrepareInvalidationState(void)
 {
-	Assert(transInvalInfo == NULL);
-	transInvalInfo = (TransInvalidationInfo *)
+	TransInvalidationInfo *myInfo;
+
+	if (transInvalInfo != NULL &&
+		transInvalInfo->my_level == GetCurrentTransactionNestLevel())
+		return;
+
+	myInfo = (TransInvalidationInfo *)
 		MemoryContextAllocZero(TopTransactionContext,
 							   sizeof(TransInvalidationInfo));
-	transInvalInfo->my_level = GetCurrentTransactionNestLevel();
-	SharedInvalidMessagesArray = NULL;
-	numSharedInvalidMessagesArray = 0;
+	myInfo->parent = transInvalInfo;
+	myInfo->my_level = GetCurrentTransactionNestLevel();
+
+	/*
+	 * If there's any previous entry, this one should be for a deeper
+	 * nesting level.
+	 */
+	Assert(transInvalInfo == NULL ||
+		myInfo->my_level > transInvalInfo->my_level);
+
+	transInvalInfo = myInfo;
 }
 
 /*
@@ -792,24 +805,6 @@ void
 PostPrepare_Inval(void)
 {
 	AtEOXact_Inval(false);
-}
-
-/*
- * AtSubStart_Inval
- *		Initialize inval lists at start of a subtransaction.
- */
-void
-AtSubStart_Inval(void)
-{
-	TransInvalidationInfo *myInfo;
-
-	Assert(transInvalInfo != NULL);
-	myInfo = (TransInvalidationInfo *)
-		MemoryContextAllocZero(TopTransactionContext,
-							   sizeof(TransInvalidationInfo));
-	myInfo->parent = transInvalInfo;
-	myInfo->my_level = GetCurrentTransactionNestLevel();
-	transInvalInfo = myInfo;
 }
 
 /*
@@ -871,8 +866,16 @@ xactGetCommittedInvalidationMessages(SharedInvalidationMessage **msgs,
 {
 	MemoryContext oldcontext;
 
+	/* Quick exit if we haven't done anything with invalidation messages. */
+	if (transInvalInfo == NULL)
+	{
+		*RelcacheInitFileInval = false;
+		*msgs = NULL;
+		return 0;
+	}
+
 	/* Must be at top of stack */
-	Assert(transInvalInfo != NULL && transInvalInfo->parent == NULL);
+	Assert(transInvalInfo->my_level == 1 && transInvalInfo->parent == NULL);
 
 	/*
 	 * Relcache init file invalidation requires processing both before and
@@ -980,11 +983,15 @@ ProcessCommittedInvalidationMessages(SharedInvalidationMessage *msgs,
 void
 AtEOXact_Inval(bool isCommit)
 {
+	/* Quick exit if no messages */
+	if (transInvalInfo == NULL)
+		return;
+
+	/* Must be at top of stack */
+	Assert(transInvalInfo->my_level == 1 && transInvalInfo->parent == NULL);
+
 	if (isCommit)
 	{
-		/* Must be at top of stack */
-		Assert(transInvalInfo != NULL && transInvalInfo->parent == NULL);
-
 		/*
 		 * Relcache init file invalidation requires processing both before and
 		 * after we send the SI messages.  However, we need not do anything
@@ -1002,17 +1009,16 @@ AtEOXact_Inval(bool isCommit)
 		if (transInvalInfo->RelcacheInitFileInval)
 			RelationCacheInitFilePostInvalidate();
 	}
-	else if (transInvalInfo != NULL)
+	else
 	{
-		/* Must be at top of stack */
-		Assert(transInvalInfo->parent == NULL);
-
 		ProcessInvalidationMessages(&transInvalInfo->PriorCmdInvalidMsgs,
 									LocalExecuteInvalidationMessage);
 	}
 
 	/* Need not free anything explicitly */
 	transInvalInfo = NULL;
+	SharedInvalidMessagesArray = NULL;
+	numSharedInvalidMessagesArray = 0;
 }
 
 /*
@@ -1036,17 +1042,37 @@ AtEOXact_Inval(bool isCommit)
 void
 AtEOSubXact_Inval(bool isCommit)
 {
-	int			my_level = GetCurrentTransactionNestLevel();
+	int			my_level;
 	TransInvalidationInfo *myInfo = transInvalInfo;
+
+	/* Quick exit if no messages. */
+	if (myInfo == NULL)
+		return;
+
+	/* Also bail out quickly if messages are not for this level. */
+	my_level = GetCurrentTransactionNestLevel();
+	if (myInfo->my_level != my_level)
+	{
+		Assert(myInfo->my_level < my_level);
+		return;
+	}
 
 	if (isCommit)
 	{
-		/* Must be at non-top of stack */
-		Assert(myInfo != NULL && myInfo->parent != NULL);
-		Assert(myInfo->my_level == my_level);
-
 		/* If CurrentCmdInvalidMsgs still has anything, fix it */
 		CommandEndInvalidationMessages();
+
+		/*
+		 * We create invalidation stack entries lazily, so the parent might
+		 * not have one.  Instead of creating one, moving all the data over,
+		 * and then freeing our own, we can just adjust the level of our own
+		 * entry.
+		 */
+		if (myInfo->parent == NULL || myInfo->parent->my_level < my_level - 1)
+		{
+			myInfo->my_level--;
+			return;
+		}
 
 		/* Pass up my inval messages to parent */
 		AppendInvalidationMessages(&myInfo->parent->PriorCmdInvalidMsgs,
@@ -1062,11 +1088,8 @@ AtEOSubXact_Inval(bool isCommit)
 		/* Need not free anything else explicitly */
 		pfree(myInfo);
 	}
-	else if (myInfo != NULL && myInfo->my_level == my_level)
+	else
 	{
-		/* Must be at non-top of stack */
-		Assert(myInfo->parent != NULL);
-
 		ProcessInvalidationMessages(&myInfo->PriorCmdInvalidMsgs,
 									LocalExecuteInvalidationMessage);
 
@@ -1149,6 +1172,12 @@ CacheInvalidateHeapTuple(Relation relation,
 	 */
 	if (IsToastRelation(relation))
 		return;
+
+	/*
+	 * If we're not prepared to queue invalidation messages for this
+	 * subtransaction level, get ready now.
+	 */
+	PrepareInvalidationState();
 
 	/*
 	 * First let the catcache do its thing
@@ -1249,6 +1278,8 @@ CacheInvalidateCatalog(Oid catalogId)
 {
 	Oid			databaseId;
 
+	PrepareInvalidationState();
+
 	if (IsSharedRelation(catalogId))
 		databaseId = InvalidOid;
 	else
@@ -1272,6 +1303,8 @@ CacheInvalidateRelcache(Relation relation)
 	Oid			databaseId;
 	Oid			relationId;
 
+	PrepareInvalidationState();
+
 	relationId = RelationGetRelid(relation);
 	if (relation->rd_rel->relisshared)
 		databaseId = InvalidOid;
@@ -1292,6 +1325,8 @@ CacheInvalidateRelcacheByTuple(HeapTuple classTuple)
 	Oid			databaseId;
 	Oid			relationId;
 
+	PrepareInvalidationState();
+
 	relationId = HeapTupleGetOid(classTuple);
 	if (classtup->relisshared)
 		databaseId = InvalidOid;
@@ -1310,6 +1345,8 @@ void
 CacheInvalidateRelcacheByRelid(Oid relid)
 {
 	HeapTuple	tup;
+
+	PrepareInvalidationState();
 
 	tup = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
 	if (!HeapTupleIsValid(tup))
