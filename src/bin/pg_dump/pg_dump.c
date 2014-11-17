@@ -161,7 +161,8 @@ static DumpId binary_upgrade_dumpid;
 
 static void help(const char *progname);
 static void setup_connection(Archive *AH,
-							const char *dumpencoding, char *use_role);
+				const char *dumpencoding, const char *dumpsnapshot,
+				char *use_role);
 static ArchiveFormat parseArchiveFormat(const char *format, ArchiveMode *mode);
 static void expand_schema_name_patterns(Archive *fout,
 							SimpleStringList *patterns,
@@ -459,6 +460,7 @@ main(int argc, char **argv)
 	RestoreOptions *ropt;
 	Archive    *fout;			/* the script file */
 	const char *dumpencoding = NULL;
+	const char *dumpsnapshot = NULL;
 	char	   *use_role = NULL;
 	int			numWorkers = 1;
 	trivalue	prompt_password = TRI_DEFAULT;
@@ -527,13 +529,13 @@ main(int argc, char **argv)
 		{"role", required_argument, NULL, 3},
 		{"section", required_argument, NULL, 5},
 		{"serializable-deferrable", no_argument, &dopt.serializable_deferrable, 1},
+		{"snapshot", required_argument, NULL, 6},
 		{"use-set-session-authorization", no_argument, &dopt.use_setsessauth, 1},
 		{"no-security-labels", no_argument, &dopt.no_security_labels, 1},
 		{"no-synchronized-snapshots", no_argument, &dopt.no_synchronized_snapshots, 1},
 		{"no-unlogged-table-data", no_argument, &dopt.no_unlogged_table_data, 1},
 
 		/* START MPP ADDITION */
-
 		/*
 		 * the following are mpp specific, and don't have an equivalent short
 		 * option
@@ -754,6 +756,10 @@ main(int argc, char **argv)
 				dopt.include_everything = false;
 				break;
 
+			case 6:				/* snapshot */
+				dumpsnapshot = pg_strdup(optarg);
+				break;
+
 			default:
 				fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 				exit_nicely(1);
@@ -878,7 +884,7 @@ main(int argc, char **argv)
 	 * death.
 	 */
 	ConnectDatabase(fout, dopt.dbname, dopt.pghost, dopt.pgport, dopt.username, prompt_password, dopt.binary_upgrade);
-	setup_connection(fout, dumpencoding, use_role);
+	setup_connection(fout, dumpencoding, dumpsnapshot, use_role);
 
 	/*
 	 * Determine whether or not we're interacting with a GP backend.
@@ -955,6 +961,11 @@ main(int argc, char **argv)
 		 "Synchronized snapshots are not supported by this server version.\n"
 		  "Run with --no-synchronized-snapshots instead if you do not need\n"
 					  "synchronized snapshots.\n");
+
+	/* check the version when a snapshot is explicitly specified by user */
+	if (dumpsnapshot && fout->remoteVersion < 90200)
+		exit_horribly(NULL,
+			"Exported snapshots are not supported by this server version.\n");
 
 	/* Expand schema selection patterns into OID lists */
 	if (schema_include_patterns.head != NULL)
@@ -1201,6 +1212,7 @@ help(const char *progname)
 	printf(_("  --quote-all-identifiers      quote all identifiers, even if not key words\n"));
 	printf(_("  --section=SECTION            dump named section (pre-data, data, or post-data)\n"));
 	printf(_("  --serializable-deferrable    wait until the dump can run without anomalies\n"));
+	printf(_("  --snapshot=SNAPSHOT          use given synchronous snapshot for the dump\n"));
 	printf(_("  --use-set-session-authorization\n"
 			 "                               use SET SESSION AUTHORIZATION commands instead of\n"
 			 "                               ALTER OWNER commands to set ownership\n"));
@@ -1227,7 +1239,8 @@ help(const char *progname)
 }
 
 static void
-setup_connection(Archive *AH, const char *dumpencoding, char *use_role)
+setup_connection(Archive *AH, const char *dumpencoding,
+				 const char *dumpsnapshot, char *use_role)
 {
 	DumpOptions *dopt = AH->dopt;
 	PGconn	   *conn = GetConnection(AH);
@@ -1354,22 +1367,25 @@ setup_connection(Archive *AH, const char *dumpencoding, char *use_role)
 		ExecuteSqlStatement(AH,
 							"SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 
+	/*
+	 * define an export snapshot, either chosen by user or needed for
+	 * parallel dump.
+	 */
+	if (dumpsnapshot)
+		AH->sync_snapshot_id = strdup(dumpsnapshot);
 
-
-	if (AH->numWorkers > 1 && AH->remoteVersion >= 90200 && !dopt->no_synchronized_snapshots)
+	if (AH->sync_snapshot_id)
 	{
-		if (AH->sync_snapshot_id)
-		{
-			PQExpBuffer query = createPQExpBuffer();
-
-			appendPQExpBufferStr(query, "SET TRANSACTION SNAPSHOT ");
-			appendStringLiteralConn(query, AH->sync_snapshot_id, conn);
-			ExecuteSqlStatement(AH, query->data);
-			destroyPQExpBuffer(query);
-		}
-		else
-			AH->sync_snapshot_id = get_synchronized_snapshot(AH);
+		PQExpBuffer query = createPQExpBuffer();
+		appendPQExpBuffer(query, "SET TRANSACTION SNAPSHOT ");
+		appendStringLiteralConn(query, AH->sync_snapshot_id, conn);
+		ExecuteSqlStatement(AH, query->data);
+		destroyPQExpBuffer(query);
 	}
+	else if (AH->numWorkers > 1 &&
+			 AH->remoteVersion >= 90200 &&
+			 !dopt->no_synchronized_snapshots)
+		AH->sync_snapshot_id = get_synchronized_snapshot(AH);
 }
 
 /* Set up connection for a parallel worker process */
@@ -1384,6 +1400,7 @@ setupDumpWorker(Archive *AH)
 	 */
 	setup_connection(AH,
 					 pg_encoding_to_char(AH->encoding),
+					 NULL,
 					 NULL);
 }
 
