@@ -290,6 +290,7 @@ errcontext_msg(const char *fmt,...)
 __attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
 
 extern int	errhidestmt(bool hide_stmt);
+extern int	errhidecontext(bool hide_ctx);
 
 extern int	errfunction(const char *funcname);
 extern int	errposition(int cursorpos);
@@ -497,6 +498,7 @@ typedef struct ErrorData
 
 	/* context containing associated non-constant strings */
 	struct MemoryContextData *assoc_context;
+	bool		hide_ctx;		/* true to prevent CONTEXT: inclusion */
 } ErrorData;
 
 extern void EmitErrorReport(void);
