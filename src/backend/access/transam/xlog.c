@@ -6501,7 +6501,6 @@ StartupXLOG(void)
 	XLogRecPtr	RecPtr,
 				checkPointLoc,
 				EndOfLog;
-    XLogSegNo	startLogSegNo;
     TimeLineID	EndOfLogTLI;
 	TimeLineID	PrevTimeLineID;
 	XLogRecord *record;
@@ -7603,7 +7602,6 @@ StartupXLOG(void)
 	 */
 	record = ReadRecord(xlogreader, LastRec, PANIC, false);
 	EndOfLog = EndRecPtr;
-	XLByteToSeg(EndOfLog, startLogSegNo);
 
 	elog(LOG,"end of transaction log location is %X/%X",
 		 (uint32) (EndOfLog >> 32), (uint32) EndOfLog);
@@ -7742,9 +7740,6 @@ StartupXLOG(void)
 	 * buffer cache using the block containing the last record from the
 	 * previous incarnation.
 	 */
-	openLogSegNo = startLogSegNo;
-	openLogFile = XLogFileOpen(openLogSegNo);
-	openLogOff = 0;
 	Insert = &XLogCtl->Insert;
 	Insert->PrevBytePos = XLogRecPtrToBytePos(LastRec);
 	Insert->CurrBytePos = XLogRecPtrToBytePos(EndOfLog);
