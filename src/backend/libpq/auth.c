@@ -1848,9 +1848,9 @@ ident_inet(const SockAddr remote_addr,
 	rc = pg_getaddrinfo_all(remote_addr_s, ident_port, &hints, &ident_serv);
 	if (rc || !ident_serv)
 	{
-		if (ident_serv)
-			pg_freeaddrinfo_all(hints.ai_family, ident_serv);
-		return false;			/* we don't expect this to happen */
+		/* we don't expect this to happen */
+		ident_return = false;
+		goto ident_inet_done;
 	}
 
 	hints.ai_flags = AI_NUMERICHOST;
@@ -1864,9 +1864,9 @@ ident_inet(const SockAddr remote_addr,
 	rc = pg_getaddrinfo_all(local_addr_s, NULL, &hints, &la);
 	if (rc || !la)
 	{
-		if (la)
-			pg_freeaddrinfo_all(hints.ai_family, la);
-		return false;			/* we don't expect this to happen */
+		/* we don't expect this to happen */
+		ident_return = false;
+		goto ident_inet_done;
 	}
 
 	sock_fd = socket(ident_serv->ai_family, ident_serv->ai_socktype,
@@ -1953,8 +1953,11 @@ ident_inet(const SockAddr remote_addr,
 ident_inet_done:
 	if (sock_fd >= 0)
 		closesocket(sock_fd);
-	pg_freeaddrinfo_all(remote_addr.addr.ss_family, ident_serv);
-	pg_freeaddrinfo_all(local_addr.addr.ss_family, la);
+	if (ident_serv)
+		pg_freeaddrinfo_all(remote_addr.addr.ss_family, ident_serv);
+	if (la)
+		pg_freeaddrinfo_all(local_addr.addr.ss_family, la);
+
 	return ident_return;
 }
 
