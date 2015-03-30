@@ -120,7 +120,7 @@ select pg_get_viewdef('myview',true);
              WHEN IS NOT DISTINCT FROM mytable.b + 1 THEN (mytable.b * 100)::numeric+
              WHEN mytable.b - 1 THEN (mytable.b * 1000)::numeric                    +
              WHEN mytable.b * 10 THEN (mytable.b * 10000)::numeric                  +
-             WHEN negate(mytable.b) THEN mytable.b::numeric * (-1.0)                +
+             WHEN negate(mytable.b) THEN mytable.b::numeric * '-1.0'::numeric       +
              ELSE mytable.b::numeric                                                +
          END AS newb                                                                +
     FROM mytable;

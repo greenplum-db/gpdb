@@ -831,14 +831,14 @@ select * from
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Append
    ->  Result
-         Output: ((CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
+         Output: ((CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > '0'::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = '0'::bigint) THEN true ELSE false END) = true)
          ->  Nested Loop Left Join
-               Output: (CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END)
+               Output: (CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > '0'::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = '0'::bigint) THEN true ELSE false END)
                Join Filter: true
                ->  Result
                      Output: true
                ->  Result
-                     Output: CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END
+                     Output: CASE WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))) > '0'::bigint) THEN NULL::boolean WHEN (3 IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END))) = '0'::bigint) THEN true ELSE false END
                      ->  Aggregate
                            Output: sum((CASE WHEN (3 = column1) THEN 1 ELSE 0 END)), sum((CASE WHEN (column1 IS NULL) THEN 1 ELSE 0 END))
                            ->  Result

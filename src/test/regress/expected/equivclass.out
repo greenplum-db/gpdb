@@ -108,8 +108,8 @@ explain (costs off)
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Index Scan using ec0_pkey on ec0
-         Index Cond: (ff = 42::bigint)
-         Filter: (f1 = 42::bigint)
+         Index Cond: (ff = '42'::bigint)
+         Filter: (f1 = '42'::bigint)
  Optimizer: Postgres query optimizer
 (5 rows)
 
@@ -156,7 +156,7 @@ explain (costs off)
          ->  Materialize
                ->  Broadcast Motion 1:3  (slice1; segments: 1)
                      ->  Index Scan using ec1_pkey on ec1
-                           Index Cond: ((ff = 42::bigint) AND (ff = 42::bigint))
+                           Index Cond: ((ff = '42'::bigint) AND (ff = '42'::bigint))
  Optimizer: Postgres query optimizer
 (9 rows)
 
@@ -184,10 +184,10 @@ explain (costs off)
          Join Filter: (ec1.ff = ec2.x1)
          ->  Broadcast Motion 1:3  (slice1; segments: 1)
                ->  Index Scan using ec1_pkey on ec1
-                     Index Cond: (ff = 42::bigint)
+                     Index Cond: (ff = '42'::bigint)
          ->  Materialize
                ->  Seq Scan on ec2
-                     Filter: (42::bigint = x1)
+                     Filter: ('42'::bigint = x1)
  Optimizer: Postgres query optimizer
 (10 rows)
 
@@ -247,7 +247,7 @@ explain (costs off)
          ->  Materialize
                ->  Broadcast Motion 1:3  (slice1; segments: 1)
                      ->  Index Scan using ec1_pkey on ec1
-                           Index Cond: (ff = 42::bigint)
+                           Index Cond: (ff = '42'::bigint)
  Optimizer: Postgres query optimizer
 (14 rows)
 
@@ -269,15 +269,15 @@ explain (costs off)
                ->  Subquery Scan on ss0
                      ->  Append
                            ->  Seq Scan on ec1 ec1_1
-                                 Filter: (((ff + 2) + 1) = 42::bigint)
+                                 Filter: (((ff + 2) + 1) = '42'::bigint)
                            ->  Seq Scan on ec1 ec1_2
-                                 Filter: (((ff + 3) + 1) = 42::bigint)
+                                 Filter: (((ff + 3) + 1) = '42'::bigint)
                ->  Seq Scan on ec1 ec1_3
-                     Filter: ((ff + 4) = 42::bigint)
+                     Filter: ((ff + 4) = '42'::bigint)
          ->  Materialize
                ->  Broadcast Motion 1:3  (slice1; segments: 1)
                      ->  Index Scan using ec1_pkey on ec1
-                           Index Cond: ((ff = 42::bigint) AND (ff = 42::bigint))
+                           Index Cond: ((ff = '42'::bigint) AND (ff = '42'::bigint))
                            Filter: (ff = f1)
  Optimizer: Postgres query optimizer
 (18 rows)
@@ -316,7 +316,7 @@ explain (costs off)
                            ->  Materialize
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)
                                        ->  Index Scan using ec1_pkey on ec1
-                                             Index Cond: (ff = 42::bigint)
+                                             Index Cond: (ff = '42'::bigint)
          ->  Sort
                Sort Key: ((ss0_1.ff + 1))
                ->  Append
@@ -365,7 +365,7 @@ explain (costs off)
                            ->  Materialize
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)
                                        ->  Index Scan using ec1_pkey on ec1
-                                             Index Cond: (ff = 42::bigint)
+                                             Index Cond: (ff = '42'::bigint)
          ->  Sort
                Sort Key: ((ss0_1.ff + 1))
                ->  Append
@@ -404,7 +404,7 @@ explain (costs off)
          ->  Materialize
                ->  Broadcast Motion 1:3  (slice1; segments: 1)
                      ->  Index Scan using ec1_pkey on ec1
-                           Index Cond: (ff = 42::bigint)
+                           Index Cond: (ff = '42'::bigint)
  Optimizer: Postgres query optimizer
 (14 rows)
 
@@ -434,7 +434,7 @@ explain (costs off)
          ->  Materialize
                ->  Broadcast Motion 1:3  (slice1; segments: 1)
                      ->  Index Scan using ec1_pkey on ec1
-                           Index Cond: (ff = 42::bigint)
+                           Index Cond: (ff = '42'::bigint)
  Optimizer: Postgres query optimizer
 (14 rows)
 

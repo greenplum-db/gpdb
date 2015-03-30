@@ -108,8 +108,8 @@ explain (costs off)
 ---------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Index Scan using ec0_pkey on ec0
-         Index Cond: (ff = 42::bigint)
-         Filter: ((f1 = 42::bigint) AND (ff = f1))
+         Index Cond: (ff = '42'::bigint)
+         Filter: ((f1 = '42'::bigint) AND (ff = f1))
  Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (5 rows)
 
@@ -154,7 +154,7 @@ explain (costs off)
          ->  Broadcast Motion 3:3  (slice1; segments: 3)
                ->  Seq Scan on ec2
          ->  Index Scan using ec1_pkey on ec1
-               Index Cond: ((ff = ec2.x1) AND (ff = 42::bigint))
+               Index Cond: ((ff = ec2.x1) AND (ff = '42'::bigint))
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
@@ -182,7 +182,7 @@ explain (costs off)
          Join Filter: true
          ->  Broadcast Motion 3:3  (slice1; segments: 3)
                ->  Seq Scan on ec2
-                     Filter: (42::bigint = x1)
+                     Filter: ('42'::bigint = x1)
          ->  Index Scan using ec1_pkey on ec1
                Index Cond: (ff = ec2.x1)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
@@ -237,7 +237,7 @@ explain (costs off)
    ->  Nested Loop
          Join Filter: (((((ec1.ff + 2)) + 1)) = ec1_3.f1)
          ->  Index Scan using ec1_pkey on ec1 ec1_3
-               Index Cond: (ff = 42::bigint)
+               Index Cond: (ff = '42'::bigint)
          ->  Materialize
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                      ->  Append
@@ -267,7 +267,7 @@ explain (costs off)
    ->  Nested Loop
          Join Filter: (((((ec1.ff + 2)) + 1)) = ec1_3.f1)
          ->  Index Scan using ec1_pkey on ec1 ec1_3
-               Index Cond: (ff = 42::bigint)
+               Index Cond: (ff = '42'::bigint)
                Filter: (ff = f1)
          ->  Materialize
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
@@ -307,7 +307,7 @@ explain (costs off)
          ->  Nested Loop
                Join Filter: true
                ->  Index Scan using ec1_pkey on ec1 ec1_3
-                     Index Cond: (ff = 42::bigint)
+                     Index Cond: (ff = '42'::bigint)
                ->  Materialize
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)
                            ->  Append
@@ -360,7 +360,7 @@ explain (costs off)
          ->  Nested Loop
                Join Filter: true
                ->  Index Scan using ec1_pkey on ec1 ec1_3
-                     Index Cond: (ff = 42::bigint)
+                     Index Cond: (ff = '42'::bigint)
                ->  Materialize
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)
                            ->  Append
@@ -405,7 +405,7 @@ explain (costs off)
    ->  Nested Loop
          Join Filter: (((((ec1.ff + 2)) + 1)) = ec1_3.f1)
          ->  Index Scan using ec1_pkey on ec1 ec1_3
-               Index Cond: (ff = 42::bigint)
+               Index Cond: (ff = '42'::bigint)
          ->  Materialize
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                      ->  Append
@@ -438,7 +438,7 @@ explain (costs off)
    ->  Nested Loop
          Join Filter: (((((ec1.ff + 2)) + 1)) = ec1_3.f1)
          ->  Index Scan using ec1_pkey on ec1 ec1_3
-               Index Cond: (ff = 42::bigint)
+               Index Cond: (ff = '42'::bigint)
          ->  Materialize
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                      ->  Append

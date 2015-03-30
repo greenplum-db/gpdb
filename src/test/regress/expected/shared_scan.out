@@ -108,7 +108,7 @@ WITH cte AS (SELECT * FROM t1 WHERE random() < 0.1 LIMIT 10) SELECT a, 1, 1 FROM
                                  ->  Gather Motion 3:1  (slice1; segments: 3)
                                        ->  Limit
                                              ->  Seq Scan on t1
-                                                   Filter: (random() < 0.1::double precision)
+                                                   Filter: (random() < '0.1'::double precision)
  Optimizer: Postgres query optimizer
 (14 rows)
 
@@ -148,7 +148,7 @@ WITH cte AS (SELECT * FROM t1 WHERE random() < 0.1 ORDER BY b LIMIT 10) SELECT a
                                              ->  Sort
                                                    Sort Key: t1.b
                                                    ->  Seq Scan on t1
-                                                         Filter: (random() < 0.1::double precision)
+                                                         Filter: (random() < '0.1'::double precision)
  Optimizer: Postgres query optimizer
 (17 rows)
 

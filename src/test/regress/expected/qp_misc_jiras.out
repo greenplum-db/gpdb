@@ -3161,12 +3161,12 @@ NOTICE:  CREATE TABLE will create partition "tbl8258_1_prt_4" for table "tbl8258
 NOTICE:  CREATE TABLE will create partition "tbl8258_1_prt_5" for table "tbl8258"
 NOTICE:  CREATE TABLE will create partition "tbl8258_1_prt_p1" for table "tbl8258"
 select pg_get_partition_def('qp_misc_jiras.tbl8258'::regclass, true);
-                                       pg_get_partition_def                                       
---------------------------------------------------------------------------------------------------
- PARTITION BY RANGE(b)                                                                           +
-           (                                                                                     +
-           START (1::double precision) END (100::double precision) EVERY (20::double precision), +
-           PARTITION p1 START (100::double precision) END (150::double precision)                +
+                                         pg_get_partition_def                                         
+------------------------------------------------------------------------------------------------------
+ PARTITION BY RANGE(b)                                                                               +
+           (                                                                                         +
+           START ('1'::double precision) END ('100'::double precision) EVERY (20::double precision), +
+           PARTITION p1 START ('100'::double precision) END ('150'::double precision)                +
            )
 (1 row)
 

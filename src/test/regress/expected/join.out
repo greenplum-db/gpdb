@@ -2813,18 +2813,18 @@ SELECT qq, unique1
 --------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice4; segments: 3)
    ->  Hash Join
-         Hash Cond: (c.unique2 = COALESCE((COALESCE(a.q1, 0::bigint)), (COALESCE(b.q2, (-1)::bigint))))
+         Hash Cond: (c.unique2 = COALESCE((COALESCE(a.q1, '0'::bigint)), (COALESCE(b.q2, '-1'::bigint))))
          ->  Seq Scan on tenk1 c
          ->  Hash
                ->  Broadcast Motion 3:3  (slice3; segments: 3)
                      ->  Hash Full Join
-                           Hash Cond: (COALESCE(a.q1, 0::bigint) = COALESCE(b.q2, (-1)::bigint))
+                           Hash Cond: (COALESCE(a.q1, '0'::bigint) = COALESCE(b.q2, '-1'::bigint))
                            ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                                 Hash Key: COALESCE(a.q1, 0::bigint)
+                                 Hash Key: COALESCE(a.q1, '0'::bigint)
                                  ->  Seq Scan on int8_tbl a
                            ->  Hash
                                  ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                       Hash Key: COALESCE(b.q2, (-1)::bigint)
+                                       Hash Key: COALESCE(b.q2, '-1'::bigint)
                                        ->  Seq Scan on int8_tbl b
  Optimizer: Postgres query optimizer
 (16 rows)
@@ -3428,7 +3428,7 @@ order by fault;
  Gather Motion 3:1  (slice3; segments: 3)
    ->  Hash Right Join
          Hash Cond: (tenk1.unique2 = int8_tbl.q2)
-         Filter: ((COALESCE(tenk1.unique1, (-1)) + int8_tbl.q1) = 122)
+         Filter: ((COALESCE(tenk1.unique1, '-1'::integer) + int8_tbl.q1) = 122)
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
                Hash Key: tenk1.unique2
                ->  Seq Scan on tenk1
@@ -4235,8 +4235,8 @@ explain (verbose, costs off)
    Output: a.q2, b.q1
    ->  Merge Left Join
          Output: a.q2, b.q1
-         Merge Cond: (a.q2 = (COALESCE(b.q1, 1::bigint)))
-         Filter: (COALESCE(b.q1, 1::bigint) > 0)
+         Merge Cond: (a.q2 = (COALESCE(b.q1, '1'::bigint)))
+         Filter: (COALESCE(b.q1, '1'::bigint) > 0)
          ->  Sort
                Output: a.q2, a.q1
                Sort Key: a.q2
@@ -4246,13 +4246,13 @@ explain (verbose, costs off)
                      ->  Seq Scan on public.int8_tbl a
                            Output: a.q2, a.q1
          ->  Sort
-               Output: b.q1, (COALESCE(b.q1, 1::bigint))
-               Sort Key: (COALESCE(b.q1, 1::bigint))
+               Output: b.q1, (COALESCE(b.q1, '1'::bigint))
+               Sort Key: (COALESCE(b.q1, '1'::bigint))
                ->  Result
-                     Output: b.q1, COALESCE(b.q1, 1::bigint)
+                     Output: b.q1, COALESCE(b.q1, '1'::bigint)
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Output: b.q1
-                           Hash Key: COALESCE(b.q1, 1::bigint)
+                           Hash Key: COALESCE(b.q1, '1'::bigint)
                            ->  Seq Scan on public.int8_tbl b
                                  Output: b.q1
  Optimizer: Postgres query optimizer
@@ -5108,16 +5108,16 @@ select * from
                               QUERY PLAN                              
 ----------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
-   Output: a.q1, a.q2, b.q1, b.q2, (COALESCE(a.q2, 42::bigint))
+   Output: a.q1, a.q2, b.q1, b.q2, (COALESCE(a.q2, '42'::bigint))
    ->  Nested Loop Left Join
-         Output: a.q1, a.q2, b.q1, b.q2, (COALESCE(a.q2, 42::bigint))
+         Output: a.q1, a.q2, b.q1, b.q2, (COALESCE(a.q2, '42'::bigint))
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
                Output: a.q1, a.q2
                Hash Key: a.q2
                ->  Seq Scan on public.int8_tbl a
                      Output: a.q1, a.q2
          ->  Seq Scan on public.int8_tbl b
-               Output: b.q1, b.q2, COALESCE(a.q2, 42::bigint)
+               Output: b.q1, b.q2, COALESCE(a.q2, '42'::bigint)
                Filter: (a.q2 = b.q1)
  Optimizer: Postgres query optimizer
  Settings: optimizer=off
@@ -5369,18 +5369,18 @@ select * from
                                                                                      QUERY PLAN                                                                                     
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice4; segments: 3)
-   Output: c.q1, c.q2, a.q1, a.q2, b.q1, (COALESCE(b.q2, 42::bigint)), d.q1, (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)), ((COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)))
+   Output: c.q1, c.q2, a.q1, a.q2, b.q1, (COALESCE(b.q2, '42'::bigint)), d.q1, (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)), ((COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)))
    ->  Nested Loop
-         Output: c.q1, c.q2, a.q1, a.q2, b.q1, (COALESCE(b.q2, 42::bigint)), d.q1, (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)), ((COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)))
+         Output: c.q1, c.q2, a.q1, a.q2, b.q1, (COALESCE(b.q2, '42'::bigint)), d.q1, (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)), ((COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)))
          ->  Hash Right Join
-               Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, 42::bigint)), (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
+               Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, '42'::bigint)), (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2))
                Hash Cond: (d.q1 = c.q2)
                ->  Nested Loop
-                     Output: a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, 42::bigint)), (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
+                     Output: a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, '42'::bigint)), (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2))
                      ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                           Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, 42::bigint))
+                           Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, '42'::bigint))
                            ->  Hash Left Join
-                                 Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, 42::bigint))
+                                 Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, '42'::bigint))
                                  Hash Cond: (a.q2 = b.q1)
                                  ->  Redistribute Motion 3:3  (slice1; segments: 3)
                                        Output: a.q1, a.q2
@@ -5388,11 +5388,11 @@ select * from
                                        ->  Seq Scan on public.int8_tbl a
                                              Output: a.q1, a.q2
                                  ->  Hash
-                                       Output: b.q1, (COALESCE(b.q2, 42::bigint))
+                                       Output: b.q1, (COALESCE(b.q2, '42'::bigint))
                                        ->  Seq Scan on public.int8_tbl b
-                                             Output: b.q1, COALESCE(b.q2, 42::bigint)
+                                             Output: b.q1, COALESCE(b.q2, '42'::bigint)
                      ->  Seq Scan on public.int8_tbl d
-                           Output: d.q1, COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)
+                           Output: d.q1, COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)
                ->  Hash
                      Output: c.q1, c.q2
                      ->  Redistribute Motion 3:3  (slice3; segments: 3)
@@ -5401,9 +5401,9 @@ select * from
                            ->  Seq Scan on public.int8_tbl c
                                  Output: c.q1, c.q2
          ->  Materialize
-               Output: ((COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)))
+               Output: ((COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2)))
                ->  Result
-                     Output: (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
+                     Output: (COALESCE((COALESCE(b.q2, '42'::bigint)), d.q2))
  Optimizer: Postgres query optimizer
  Settings: optimizer=off
 (38 rows)
