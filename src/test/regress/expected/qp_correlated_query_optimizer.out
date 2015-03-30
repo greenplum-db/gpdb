@@ -206,14 +206,14 @@ select * from A,B where exists (select * from C where B.i not in (select C.i fro
          ->  Broadcast Motion 3:3  (slice3; segments: 3)
                ->  Seq Scan on a
          ->  Result
-               Filter: ((SubPlan 1) > 0::bigint)
+               Filter: ((SubPlan 1) > '0'::bigint)
                ->  Seq Scan on b
                SubPlan 1  (slice4; segments: 3)
                  ->  Aggregate
                        ->  Nested Loop
                              Join Filter: true
                              ->  Result
-                                   Filter: ((CASE WHEN ((sum((CASE WHEN (b.i = c_1.i) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (c_1.i IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (b.i IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (b.i = c_1.i) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
+                                   Filter: ((CASE WHEN ((sum((CASE WHEN (b.i = c_1.i) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (c_1.i IS NULL) THEN 1 ELSE 0 END))) > '0'::bigint) THEN NULL::boolean WHEN (b.i IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (b.i = c_1.i) THEN 1 ELSE 0 END))) = '0'::bigint) THEN true ELSE false END) = true)
                                    ->  Result
                                          ->  Aggregate
                                                ->  Result
@@ -414,7 +414,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C
                                                                              SubPlan 1  (slice3; segments: 3)
                                                                                ->  Result  (cost=0.00..431.00 rows=1 width=1)
                                                                                      ->  Result  (cost=0.00..431.00 rows=1 width=1)
-                                                                                           Filter: ((CASE WHEN ((sum((CASE WHEN (c_1.i = b_1.i) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (b_1.i IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (c_1.i IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (c_1.i = b_1.i) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
+                                                                                           Filter: ((CASE WHEN ((sum((CASE WHEN (c_1.i = b_1.i) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (b_1.i IS NULL) THEN 1 ELSE 0 END))) > '0'::bigint) THEN NULL::boolean WHEN (c_1.i IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (c_1.i = b_1.i) THEN 1 ELSE 0 END))) = '0'::bigint) THEN true ELSE false END) = true)
                                                                                            ->  Result  (cost=0.00..431.00 rows=1 width=1)
                                                                                                  ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
                                                                                                        ->  Result  (cost=0.00..431.00 rows=1 width=8)
@@ -471,7 +471,7 @@ explain select A.j from A, B, C where A.j = (select C.j from C where C.j = A.j a
                                                                  SubPlan 1  (slice4; segments: 3)
                                                                    ->  Result  (cost=0.00..431.00 rows=1 width=1)
                                                                          ->  Result  (cost=0.00..431.00 rows=1 width=1)
-                                                                               Filter: ((CASE WHEN ((sum((CASE WHEN (c_1.i = b_1.i) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (b_1.i IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (c_1.i IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (c_1.i = b_1.i) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
+                                                                               Filter: ((CASE WHEN ((sum((CASE WHEN (c_1.i = b_1.i) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (b_1.i IS NULL) THEN 1 ELSE 0 END))) > '0'::bigint) THEN NULL::boolean WHEN (c_1.i IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (c_1.i = b_1.i) THEN 1 ELSE 0 END))) = '0'::bigint) THEN true ELSE false END) = true)
                                                                                ->  Result  (cost=0.00..431.00 rows=1 width=1)
                                                                                      ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
                                                                                            ->  Result  (cost=0.00..431.00 rows=1 width=8)
@@ -851,7 +851,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = (select sum(C.j) from C wh
                                                                            SubPlan 1  (slice3; segments: 3)
                                                                              ->  Result  (cost=0.00..431.00 rows=1 width=1)
                                                                                    ->  Result  (cost=0.00..431.00 rows=1 width=1)
-                                                                                         Filter: ((CASE WHEN ((sum((CASE WHEN (c_1.i <> b_1.i) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (b_1.i IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (c_1.i IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (c_1.i <> b_1.i) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
+                                                                                         Filter: ((CASE WHEN ((sum((CASE WHEN (c_1.i <> b_1.i) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN (b_1.i IS NULL) THEN 1 ELSE 0 END))) > '0'::bigint) THEN NULL::boolean WHEN (c_1.i IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (c_1.i <> b_1.i) THEN 1 ELSE 0 END))) = '0'::bigint) THEN true ELSE false END) = true)
                                                                                          ->  Result  (cost=0.00..431.00 rows=1 width=1)
                                                                                                ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
                                                                                                      ->  Result  (cost=0.00..431.00 rows=1 width=8)
@@ -951,7 +951,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C whe
                                                    SubPlan 1  (slice2; segments: 3)
                                                      ->  Result  (cost=0.00..0.00 rows=1 width=1)
                                                            ->  Result  (cost=0.00..0.00 rows=1 width=1)
-                                                                 Filter: ((CASE WHEN ((sum((CASE WHEN (a.j <> "outer".j) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN ("outer".j IS NULL) THEN 1 ELSE 0 END))) > 0::bigint) THEN NULL::boolean WHEN (a.j IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (a.j <> "outer".j) THEN 1 ELSE 0 END))) = 0::bigint) THEN true ELSE false END) = true)
+                                                                 Filter: ((CASE WHEN ((sum((CASE WHEN (a.j <> "outer".j) THEN 1 ELSE 0 END))) IS NULL) THEN true WHEN ((sum((CASE WHEN ("outer".j IS NULL) THEN 1 ELSE 0 END))) > '0'::bigint) THEN NULL::boolean WHEN (a.j IS NULL) THEN NULL::boolean WHEN ((sum((CASE WHEN (a.j <> "outer".j) THEN 1 ELSE 0 END))) = '0'::bigint) THEN true ELSE false END) = true)
                                                                  ->  Result  (cost=0.00..0.00 rows=0 width=1)
                                                                        ->  Aggregate  (cost=0.00..0.00 rows=0 width=16)
                                                                              ->  Result  (cost=0.00..0.00 rows=0 width=8)

@@ -1311,8 +1311,8 @@ set enable_seqscan=off;
 set enable_bitmapscan=off;
 explain (costs off)
 select * from patest0 join (select f1 from int4_tbl where f1 < 10 and f1 > -10 limit 1) ss on id = f1;
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)
    ->  Hash Join
          Hash Cond: (patest0.id = int4_tbl.f1)
@@ -1327,7 +1327,7 @@ select * from patest0 join (select f1 from int4_tbl where f1 < 10 and f1 > -10 l
                            ->  Gather Motion 3:1  (slice1; segments: 3)
                                  ->  Limit
                                        ->  Seq Scan on int4_tbl
-                                             Filter: ((f1 < 10) AND (f1 > (-10)))
+                                             Filter: ((f1 < 10) AND (f1 > '-10'::integer))
  Optimizer: Postgres query optimizer
 (16 rows)
 
@@ -1342,8 +1342,8 @@ select * from patest0 join (select f1 from int4_tbl where f1 < 10 and f1 > -10 l
 drop index patest2i;
 explain (costs off)
 select * from patest0 join (select f1 from int4_tbl where f1 < 10 and f1 > -10 limit 1) ss on id = f1;
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)
    ->  Hash Join
          Hash Cond: (patest0.id = int4_tbl.f1)
@@ -1358,7 +1358,7 @@ select * from patest0 join (select f1 from int4_tbl where f1 < 10 and f1 > -10 l
                            ->  Gather Motion 3:1  (slice1; segments: 3)
                                  ->  Limit
                                        ->  Seq Scan on int4_tbl
-                                             Filter: ((f1 < 10) AND (f1 > (-10)))
+                                             Filter: ((f1 < 10) AND (f1 > '-10'::integer))
  Optimizer: Postgres query optimizer
 (16 rows)
 

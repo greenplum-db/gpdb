@@ -105,7 +105,7 @@ WITH cte AS (SELECT * FROM t1 WHERE random() < 0.1 LIMIT 10) SELECT a, 1, 1 FROM
                ->  Limit
                      ->  Gather Motion 3:1  (slice3; segments: 3)
                            ->  Seq Scan on t1
-                                 Filter: (random() < 0.1::double precision)
+                                 Filter: (random() < '0.1'::double precision)
    ->  Result
          ->  Gather Motion 3:1  (slice2; segments: 3)
                ->  Hash Join
@@ -150,7 +150,7 @@ WITH cte AS (SELECT * FROM t1 WHERE random() < 0.1 ORDER BY b LIMIT 10) SELECT a
                            ->  Sort
                                  Sort Key: t1.b
                                  ->  Seq Scan on t1
-                                       Filter: (random() < 0.1::double precision)
+                                       Filter: (random() < '0.1'::double precision)
    ->  Result
          ->  Gather Motion 3:1  (slice2; segments: 3)
                ->  Hash Join

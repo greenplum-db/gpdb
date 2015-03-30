@@ -1568,8 +1568,8 @@ NOTICE:  CREATE TABLE will create partition "partsupp_1_prt_p1_2_2_prt_sp1_4_3_p
 select tablename, partitiontablename,
 partitionboundary from pg_partitions where
 tablename = 'partsupp';
- tablename |           partitiontablename            |                       partitionboundary                       
------------+-----------------------------------------+---------------------------------------------------------------
+ tablename |           partitiontablename            |                          partitionboundary                          
+-----------+-----------------------------------------+---------------------------------------------------------------------
  partsupp  | partsupp_1_prt_p1_1                     | PARTITION p1_1 START (1) END (5001) EVERY (5000)
  partsupp  | partsupp_1_prt_p1_2                     | PARTITION p1_2 START (5001) END (10001) EVERY (5000)
  partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_1         | SUBPARTITION sp1_1 START (1) END (66667) EVERY (66666)
@@ -1580,38 +1580,38 @@ tablename = 'partsupp';
  partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_2         | SUBPARTITION sp1_2 START (66667) END (133333) EVERY (66666)
  partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_3         | SUBPARTITION sp1_3 START (133333) END (199999) EVERY (66666)
  partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_4         | SUBPARTITION sp1_4 START (199999) END (200001) EVERY (66666)
- partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_1_3_prt_1 | START (1::numeric) END (501::numeric) EVERY (500::numeric)
- partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_1_3_prt_2 | START (501::numeric) END (1001::numeric) EVERY (500::numeric)
- partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_2_3_prt_1 | START (1::numeric) END (501::numeric) EVERY (500::numeric)
- partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_2_3_prt_2 | START (501::numeric) END (1001::numeric) EVERY (500::numeric)
- partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_3_3_prt_1 | START (1::numeric) END (501::numeric) EVERY (500::numeric)
- partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_3_3_prt_2 | START (501::numeric) END (1001::numeric) EVERY (500::numeric)
- partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_4_3_prt_1 | START (1::numeric) END (501::numeric) EVERY (500::numeric)
- partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_4_3_prt_2 | START (501::numeric) END (1001::numeric) EVERY (500::numeric)
- partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_1_3_prt_1 | START (1::numeric) END (501::numeric) EVERY (500::numeric)
- partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_1_3_prt_2 | START (501::numeric) END (1001::numeric) EVERY (500::numeric)
- partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_2_3_prt_1 | START (1::numeric) END (501::numeric) EVERY (500::numeric)
- partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_2_3_prt_2 | START (501::numeric) END (1001::numeric) EVERY (500::numeric)
- partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_3_3_prt_1 | START (1::numeric) END (501::numeric) EVERY (500::numeric)
- partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_3_3_prt_2 | START (501::numeric) END (1001::numeric) EVERY (500::numeric)
- partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_4_3_prt_1 | START (1::numeric) END (501::numeric) EVERY (500::numeric)
- partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_4_3_prt_2 | START (501::numeric) END (1001::numeric) EVERY (500::numeric)
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_1_3_prt_1 | START ('1'::numeric) END ('501'::numeric) EVERY ('500'::numeric)
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_1_3_prt_2 | START ('501'::numeric) END ('1001'::numeric) EVERY ('500'::numeric)
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_2_3_prt_1 | START ('1'::numeric) END ('501'::numeric) EVERY ('500'::numeric)
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_2_3_prt_2 | START ('501'::numeric) END ('1001'::numeric) EVERY ('500'::numeric)
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_3_3_prt_1 | START ('1'::numeric) END ('501'::numeric) EVERY ('500'::numeric)
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_3_3_prt_2 | START ('501'::numeric) END ('1001'::numeric) EVERY ('500'::numeric)
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_4_3_prt_1 | START ('1'::numeric) END ('501'::numeric) EVERY ('500'::numeric)
+ partsupp  | partsupp_1_prt_p1_1_2_prt_sp1_4_3_prt_2 | START ('501'::numeric) END ('1001'::numeric) EVERY ('500'::numeric)
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_1_3_prt_1 | START ('1'::numeric) END ('501'::numeric) EVERY ('500'::numeric)
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_1_3_prt_2 | START ('501'::numeric) END ('1001'::numeric) EVERY ('500'::numeric)
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_2_3_prt_1 | START ('1'::numeric) END ('501'::numeric) EVERY ('500'::numeric)
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_2_3_prt_2 | START ('501'::numeric) END ('1001'::numeric) EVERY ('500'::numeric)
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_3_3_prt_1 | START ('1'::numeric) END ('501'::numeric) EVERY ('500'::numeric)
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_3_3_prt_2 | START ('501'::numeric) END ('1001'::numeric) EVERY ('500'::numeric)
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_4_3_prt_1 | START ('1'::numeric) END ('501'::numeric) EVERY ('500'::numeric)
+ partsupp  | partsupp_1_prt_p1_2_2_prt_sp1_4_3_prt_2 | START ('501'::numeric) END ('1001'::numeric) EVERY ('500'::numeric)
 (26 rows)
 
 select pg_get_partition_def('partsupp'::regclass, true);
-                                 pg_get_partition_def                                  
----------------------------------------------------------------------------------------
- PARTITION BY RANGE(ps_suppkey)                                                       +
-           SUBPARTITION BY RANGE(ps_partkey)                                          +
-                   SUBPARTITION BY RANGE(ps_supplycost)                               +
-           (                                                                          +
-           PARTITION p1 START (1) END (10001) EVERY (5000)                            +
-                   (                                                                  +
-                   SUBPARTITION sp1 START (1) END (200001) EVERY (66666)              +
-                           (                                                          +
-                           START (1::numeric) END (1001::numeric) EVERY (500::numeric)+
-                           )                                                          +
-                   )                                                                  +
+                                    pg_get_partition_def                                     
+---------------------------------------------------------------------------------------------
+ PARTITION BY RANGE(ps_suppkey)                                                             +
+           SUBPARTITION BY RANGE(ps_partkey)                                                +
+                   SUBPARTITION BY RANGE(ps_supplycost)                                     +
+           (                                                                                +
+           PARTITION p1 START (1) END (10001) EVERY (5000)                                  +
+                   (                                                                        +
+                   SUBPARTITION sp1 START (1) END (200001) EVERY (66666)                    +
+                           (                                                                +
+                           START ('1'::numeric) END ('1001'::numeric) EVERY ('500'::numeric)+
+                           )                                                                +
+                   )                                                                        +
            )
 (1 row)
 

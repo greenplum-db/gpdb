@@ -872,7 +872,7 @@ explain (costs off) select count((pg_database_size(oid) - dbsize) / dbsize) < 0
                              ->  Gather Motion 3:1  (slice1; segments: 3)
                                    ->  Aggregate
                                          ->  Seq Scan on pg_class
-                                               Filter: (oid <= 16384::oid)
+                                               Filter: (oid <= '16384'::oid)
                      InitPlan 2 (returns $1)  (slice4)
                        ->  Aggregate
                              ->  Gather Motion 3:1  (slice2; segments: 3)

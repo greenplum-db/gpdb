@@ -740,9 +740,9 @@ WHERE x > 3;
  Subquery Scan on ss
    Filter: (ss.x > 3)
    ->  Unique
-         Group Key: "outer".t, ((($0 * 3::double precision))::integer)
+         Group Key: "outer".t, ((($0 * '3'::double precision))::integer)
          ->  Sort
-               Sort Key (Distinct): "outer".t, ((($0 * 3::double precision))::integer)
+               Sort Key (Distinct): "outer".t, ((($0 * '3'::double precision))::integer)
                ->  Append
                      ->  Result
                            InitPlan 1 (returns $0)

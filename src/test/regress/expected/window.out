@@ -1177,7 +1177,7 @@ WHERE depname = 'sales' OR RANDOM() > 0.5;
 ---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Subquery Scan on emp
-         Filter: (((emp.depname)::text = 'sales'::text) OR (random() > 0.5::double precision))
+         Filter: (((emp.depname)::text = 'sales'::text) OR (random() > '0.5'::double precision))
          ->  WindowAgg
                Partition By: empsalary.depname
                ->  Sort
