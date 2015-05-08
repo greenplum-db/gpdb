@@ -168,6 +168,19 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
 			 (uint32) ((logSegNo) / XLogSegmentsPerXLogId), \
 			 (uint32) ((logSegNo) % XLogSegmentsPerXLogId))
 
+#define IsXLogFileName(fname) \
+	(strlen(fname) == 24 && strspn(fname, "0123456789ABCDEF") == 24)
+
+/*
+ * XLOG segment with .partial suffix.  Used by pg_receivexlog and at end of
+ * archive recovery, when we want to archive a WAL segment but it might not
+ * be complete yet.
+ */
+#define IsPartialXLogFileName(fname)	\
+	(strlen(fname) == 24 + strlen(".partial") &&	\
+	 strspn(fname, "0123456789ABCDEF") == 24 &&		\
+	 strcmp((fname) + 24, ".partial") == 0)
+
 #define XLogFromFileName(fname, tli, logSegNo)	\
 	do {												\
 		uint32 log;										\
