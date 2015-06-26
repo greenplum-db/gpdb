@@ -3606,7 +3606,8 @@ CleanupBackgroundWorker(int pid,
 		rw->rw_child_slot = 0;
 		ReportBackgroundWorkerPID(rw);	/* report child death */
 
-		LogChildExit(LOG, namebuf, pid, exitstatus);
+		LogChildExit(EXIT_STATUS_0(exitstatus) ? DEBUG1 : LOG,
+							    namebuf, pid, exitstatus);
 
 		return true;
 	}
@@ -6144,7 +6145,7 @@ do_start_bgworker(RegisteredBgWorker *rw)
 	else
 		rw->rw_child_slot = MyPMChildSlot = AssignPostmasterChildSlot();
 
-	ereport(LOG,
+	ereport(DEBUG1,
 			(errmsg("starting background worker process \"%s\"",
 					rw->rw_worker.bgw_name)));
 
