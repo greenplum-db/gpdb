@@ -139,12 +139,13 @@ WHERE p1.oid < p2.oid AND
      p1.pronargs != p2.pronargs);
  oid  |      proname      | oid  |       proname       
 ------+-------------------+------+---------------------
+ 3293 | pg_read_file      | 6045 | pg_file_read
  6212 | int2_matrix_accum | 6215 | float8_matrix_accum
  6212 | int2_matrix_accum | 6214 | int8_matrix_accum
  6213 | int4_matrix_accum | 6215 | float8_matrix_accum
  6213 | int4_matrix_accum | 6214 | int8_matrix_accum
  5044 | gp_elog           | 5045 | gp_elog
-(5 rows)
+(6 rows)
 
 -- Look for uses of different type OIDs in the argument/result type fields
 -- for different aliases of the same built-in function.
