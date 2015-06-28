@@ -139,12 +139,13 @@ WHERE p1.oid < p2.oid AND
      p1.pronargs != p2.pronargs);
  oid  |      proname      | oid  |       proname       
 ------+-------------------+------+---------------------
+ 3293 | pg_read_file      | 6045 | pg_file_read
  6212 | int2_matrix_accum | 6215 | float8_matrix_accum
  6212 | int2_matrix_accum | 6214 | int8_matrix_accum
  6213 | int4_matrix_accum | 6215 | float8_matrix_accum
  6213 | int4_matrix_accum | 6214 | int8_matrix_accum
  5044 | gp_elog           | 5045 | gp_elog
-(5 rows)
+(6 rows)
 
 -- Look for uses of different type OIDs in the argument/result type fields
 -- for different aliases of the same built-in function.
@@ -1295,14 +1296,6 @@ WHERE a.aggfnoid = p.oid AND
 -- combine(transtype, transtype) returns transtype
 -- NOTE: use physically_coercible here, not binary_coercible, because
 -- max and min on abstime are implemented using int4larger/int4smaller.
--- start_ignore
--- GPDB: pivot_sum() currently fails this. It uses int8_matrix_accum,
--- which is declared to takes as argument and returns an int8[], as the
--- combine function, even though the transition type is int4[]. That's bogus,
--- but it works, because the C implementation of int8_matrix_accum() actually
--- checks the type of the input array, and returns an int4[] array. FIXME
--- some day.
--- end_ignore
 SELECT a.aggfnoid, p.proname
 FROM pg_aggregate as a, pg_proc as p
 WHERE a.aggcombinefn = p.oid AND
