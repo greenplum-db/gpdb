@@ -267,7 +267,7 @@ static char *format_function_signature(Archive *fout,
 static char *convertRegProcReference(Archive *fout,
 						const char *proc);
 static char *getFormattedOperatorName(Archive *fout, const char *oproid);
-static const char *convertTSFunction(Archive *fout, Oid funcOid);
+static char *convertTSFunction(Archive *fout, Oid funcOid);
 static char *getFormattedTypeName(Archive *fout, Oid oid, OidOptions opts);
 static void getBlobs(Archive *fout);
 static void dumpBlob(Archive *fout, BlobInfo *binfo);
@@ -11267,7 +11267,7 @@ getFormattedOperatorName(Archive *fout, const char *oproid)
  * caller should ensure we are in the proper schema, because the results
  * are search path dependent!
  */
-static const char *
+static char *
 convertTSFunction(Archive *fout, Oid funcOid)
 {
 	char	   *result;
