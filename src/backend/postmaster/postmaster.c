@@ -80,6 +80,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <limits.h>
+#include <sys/statvfs.h>
 
 /* headers required for process affinity bindings */
 #if defined(pg_on_solaris)
@@ -1981,6 +1982,57 @@ checkIODataDirectory(void)
 	return failure;
 }
 
+static bool
+checkDiskUsage()
+{
+
+	if (!gp_diskusage_soft_limit && !gp_diskusage_hard_limit)
+	{
+		return false;
+	}
+
+	Assert(DataDir);
+	struct statvfs buf;
+	double percentageFull=0;
+
+	if (statvfs(DataDir, &buf) != 0)
+	{
+		return true;
+	}
+
+	percentageFull = 100.0 - (((double)buf.f_bavail/(double)buf.f_blocks)*100.0);
+
+	if (gp_log_fts >= GPVARS_VERBOSITY_VERBOSE)
+	{
+		elog(LOG, "%f Total Disk size=%d, free blocks=%d,"
+			" f_bsize=%lu, f_frsize=%lu, f_bavail=%d",
+			percentageFull, buf.f_blocks, buf.f_bfree,
+			buf.f_bsize, buf.f_frsize, buf.f_bavail);
+	}
+
+	if (gp_diskusage_soft_limit && (percentageFull >= gp_diskusage_soft_limit))
+	{
+		ereport(WARNING, (errmsg(
+			"SoftLimit of %d%% crossed. Current utilization is %.2f%%."
+			" Please freeup space before hard limit of %d%% is reached.",
+		  gp_diskusage_soft_limit, percentageFull, gp_diskusage_hard_limit),
+											errSendAlert(true)));
+	}
+
+	if (gp_diskusage_hard_limit && (percentageFull >= gp_diskusage_hard_limit))
+	{
+		ereport(WARNING, (errmsg(
+		  "HardLimit of %d%% is reached. Current utilization is %.2f%%."
+			" Database will shutdown. Operation in Restricted mode only will be allowed.",
+			gp_diskusage_hard_limit, percentageFull),
+			errSendAlert(true)));
+
+		return true;
+	}
+
+	return false;
+}
+
 #ifdef USE_TEST_UTILS
 /*
  * Simulate an unexpected process exit using SimEx
@@ -3872,7 +3924,8 @@ processPrimaryMirrorTransitionRequest(Port *port, void *pkt)
 }
 
 static void
-sendPrimaryMirrorTransitionQuery(uint32 mode, uint32 segstate, uint32 datastate, uint32 faulttype)
+sendPrimaryMirrorTransitionQuery(uint32 mode, uint32 segstate, uint32 datastate,
+		uint32 faulttype, uint32 hardlimitreached)
 {
 	StringInfoData buf;
 
@@ -3884,6 +3937,7 @@ sendPrimaryMirrorTransitionQuery(uint32 mode, uint32 segstate, uint32 datastate,
 	pq_sendint(&buf, segstate, 4);
 	pq_sendint(&buf, datastate, 4);
 	pq_sendint(&buf, faulttype, 4);
+	pq_sendint(&buf, hardlimitreached, 4);
 
 	pq_endmessage(&buf);
 	pq_flush();
@@ -3905,6 +3959,7 @@ processPrimaryMirrorTransitionQuery(Port *port, void *pkt)
 	SegmentState_e s_state;
 	DataState_e d_state;
 	FaultType_e f_type;
+	bool hardlimitreached = false;
 
 	init_ps_display("filerep status query process", "", "", "");
 
@@ -3984,9 +4039,12 @@ processPrimaryMirrorTransitionQuery(Port *port, void *pkt)
 				FileRep_SetSegmentState(s_state, f_type);
 			}
 		}
+
+		hardlimitreached = checkDiskUsage();
 	}
 
-	sendPrimaryMirrorTransitionQuery((uint32)pm_mode, (uint32)s_state, (uint32)d_state, (uint32)f_type);
+	sendPrimaryMirrorTransitionQuery((uint32)pm_mode, (uint32)s_state,
+			(uint32)d_state, (uint32)f_type, hardlimitreached);
 
 	return;
 }

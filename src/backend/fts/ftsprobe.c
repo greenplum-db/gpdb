@@ -42,7 +42,7 @@
  * CONSTANTS
  */
 
-#define PROBE_RESPONSE_LEN  (20)         /* size of segment response message */
+#define PROBE_RESPONSE_LEN  (24)         /* size of segment response message */
 #define PROBE_ERR_MSG_LEN   (256)        /* length of error message for errno */
 
 /*
@@ -712,6 +712,9 @@ probeProcessResponse(ProbeConnectionInfo *probeInfo)
 		return false;
 	}
 
+	/* segment responded to probe, mark it as alive */
+	probeInfo->segmentStatus = PROBE_ALIVE;
+
 	memcpy(&bufInt, probeInfo->response + 4, sizeof(bufInt));
 	role = (PrimaryMirrorMode)ntohl(bufInt);
 
@@ -724,6 +727,14 @@ probeProcessResponse(ProbeConnectionInfo *probeInfo)
 	memcpy(&bufInt, probeInfo->response + 16, sizeof(bufInt));
 	fault = (FaultType_e)ntohl(bufInt);
 
+	memcpy(&bufInt, probeInfo->response + 20, sizeof(bufInt));
+	if ((uint32)ntohl(bufInt))
+	{
+		probeInfo->segmentStatus |= PROBE_DISK_HARDLIMIT;
+
+		write_log("FTS: Probe response is Disk usage HardLimit exceeded.");
+	}
+
 	if (gp_log_fts > GPVARS_VERBOSITY_VERBOSE)
 	{
 		write_log("FTS: probe result for dbid=%d, content=%d: %s %s %s %s.",
@@ -734,8 +745,6 @@ probeProcessResponse(ProbeConnectionInfo *probeInfo)
 				  getFaultTypeLabel(fault));
 	}
 
-	/* segment responded to probe, mark it as alive */
-	probeInfo->segmentStatus = PROBE_ALIVE;
 
 	/* check if segment has completed re-synchronizing */
 	if (mode == DataStateInSync && probeInfo->mode == 'r')

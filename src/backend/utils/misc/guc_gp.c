@@ -4208,6 +4208,26 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"gp_diskusage_soft_limit", PGC_USERSET, GP_ARRAY_TUNING,
+			gettext_noop("Percentage value of disk consumption at which to start triggering warnings."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&gp_diskusage_soft_limit,
+		80, 0, 100, NULL, NULL
+	},
+
+	{
+		{"gp_diskusage_hard_limit", PGC_USERSET, GP_ARRAY_TUNING,
+			gettext_noop("Percentage value of disk consumption at which to shutdown the database."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&gp_diskusage_hard_limit,
+		95, 0, 100, NULL, NULL
+	},
+
+	{
 		{"gp_gang_creation_retry_count", PGC_USERSET, GP_ARRAY_TUNING,
 			gettext_noop("After a gang-creation fails, retry the number of times if failure is retryable."),
 			gettext_noop("A value of zero disables retries."),
