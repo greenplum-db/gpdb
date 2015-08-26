@@ -112,6 +112,49 @@ Feature: gptransfer tests
         And verify that table "one_row_table" in "gptransfer_testdb4" has "1" rows
         And verify that table "wide_rows" in "gptransfer_testdb5" has "10" rows
 
+    Scenario: gptransfer full md5 validator in CSV format
+        Given the database is running
+        And the database "gptransfer_destdb" does not exist
+        And the database "gptransfer_testdb1" does not exist
+        And the database "gptransfer_testdb2" does not exist
+        And the database "gptransfer_testdb3" does not exist
+        And the database "gptransfer_testdb4" does not exist
+        And the database "gptransfer_testdb5" does not exist
+        And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 --format=csv"
+        Then gptransfer should return a return code of 0
+        And verify that table "t0" in "gptransfer_testdb1" has "100" rows
+        And verify that table "t1" in "gptransfer_testdb1" has "200" rows
+        And verify that table "t2" in "gptransfer_testdb1" has "300" rows
+        And verify that table "t3" in "gptransfer_testdb2" has "400" rows
+        And verify that table "t4" in "gptransfer_testdb2" has "500" rows
+        And verify that table "t5" in "gptransfer_testdb2" has "600" rows
+        And verify that table "t0" in "gptransfer_testdb3" has "700" rows
+        And verify that table "empty_table" in "gptransfer_testdb4" has "0" rows
+        And verify that table "one_row_table" in "gptransfer_testdb4" has "1" rows
+        And verify that table "wide_rows" in "gptransfer_testdb5" has "10" rows
+
+    Scenario: gptransfer full count validator in CSV format
+        Given the database is running
+        And the database "gptest" does not exist
+        And the database "gptransfer_destdb" does not exist
+        And the database "gptransfer_testdb1" does not exist
+        And the database "gptransfer_testdb2" does not exist
+        And the database "gptransfer_testdb3" does not exist
+        And the database "gptransfer_testdb4" does not exist
+        And the database "gptransfer_testdb5" does not exist
+        And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate count --format=csv"
+        Then gptransfer should return a return code of 0
+        And verify that table "t0" in "gptransfer_testdb1" has "100" rows
+        And verify that table "t1" in "gptransfer_testdb1" has "200" rows
+        And verify that table "t2" in "gptransfer_testdb1" has "300" rows
+        And verify that table "t3" in "gptransfer_testdb2" has "400" rows
+        And verify that table "t4" in "gptransfer_testdb2" has "500" rows
+        And verify that table "t5" in "gptransfer_testdb2" has "600" rows
+        And verify that table "t0" in "gptransfer_testdb3" has "700" rows
+        And verify that table "empty_table" in "gptransfer_testdb4" has "0" rows
+        And verify that table "one_row_table" in "gptransfer_testdb4" has "1" rows
+        And verify that table "wide_rows" in "gptransfer_testdb5" has "10" rows
+
     @T339915
     Scenario: gptransfer full with drop
         Given the database is running
@@ -1349,7 +1392,6 @@ Feature: gptransfer tests
         And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
         And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
 
-
    @T339824
     Scenario: gptransfer full with all ddl, dml and filespace
         Given the database is running
@@ -1436,6 +1478,30 @@ Feature: gptransfer tests
         And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
         And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
 
+   Scenario: gptransfer filespace exists test with --full -t and -d options
+        Given the database is running
+        And the database "gptransfer_destdb" does not exist
+        And the database "gptransfer_testdb1" does not exist
+        And the database "gptransfer_testdb2" does not exist
+        And the database "gptransfer_testdb3" does not exist
+        And the database "gptransfer_testdb4" does not exist
+        And the database "gptransfer_testdb5" does not exist
+        And the database "gptest" does not exist
+        And the user "GPTRANSFER_SOURCE_USER" creates filespace_config file for "fs" on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
+        And the user "GPTRANSFER_SOURCE_USER" creates filespace on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/filespace_exists_test.sql -d template1"
+        And psql should return a return code of 0 
+        And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE > /tmp/gptransfer_stdout.txt"
+        Then gptransfer should return a return code of 2
+        And verify that the file "/tmp/gptransfer_stdout.txt" contains "Filespace 'fs' does not exist on destination. Please create the filespace to run gptransfer"
+        And the user runs "gptransfer -d gptransfer_filespace_test --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE > /tmp/gptransfer_stdout.txt"
+        Then gptransfer should return a return code of 2
+        And verify that the file "/tmp/gptransfer_stdout.txt" contains "Filespace 'fs' does not exist on destination. Please create the filespace to run gptransfer"
+        And the user runs "gptransfer -t gptransfer_filespace_test.public.t2 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE > /tmp/gptransfer_stdout.txt"
+        Then gptransfer should return a return code of 2
+        And verify that the file "/tmp/gptransfer_stdout.txt" contains "Filespace 'fs' does not exist on destination. Please create the filespace to run gptransfer"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/filespace_exists_test_teardown.sql -d template1"
+        And psql should return a return code of 0 
 
     @T339870
     Scenario: gptransfer with max-line-length of 16KB
@@ -1502,48 +1568,6 @@ Feature: gptransfer tests
         And gptransfer should print Value must be between 32768 and 268435456 to stdout
         And the temporary table file "wide_row_269484032.sql" is removed
         And drop the table "wide_row_269484032" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d gptransfer_testdb5"
-
-    Scenario: gptransfer full md5 validator in CSV format
-        Given the database is running
-        And the database "gptransfer_destdb" does not exist
-        And the database "gptransfer_testdb1" does not exist
-        And the database "gptransfer_testdb2" does not exist
-        And the database "gptransfer_testdb3" does not exist
-        And the database "gptransfer_testdb4" does not exist
-        And the database "gptransfer_testdb5" does not exist
-        And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 --format=csv"
-        Then gptransfer should return a return code of 0
-        And verify that table "t0" in "gptransfer_testdb1" has "100" rows
-        And verify that table "t1" in "gptransfer_testdb1" has "200" rows
-        And verify that table "t2" in "gptransfer_testdb1" has "300" rows
-        And verify that table "t3" in "gptransfer_testdb2" has "400" rows
-        And verify that table "t4" in "gptransfer_testdb2" has "500" rows
-        And verify that table "t5" in "gptransfer_testdb2" has "600" rows
-        And verify that table "t0" in "gptransfer_testdb3" has "700" rows
-        And verify that table "empty_table" in "gptransfer_testdb4" has "0" rows
-        And verify that table "one_row_table" in "gptransfer_testdb4" has "1" rows
-        And verify that table "wide_rows" in "gptransfer_testdb5" has "10" rows
-
-    Scenario: gptransfer full count validator in CSV format
-        Given the database is running
-        And the database "gptransfer_destdb" does not exist
-        And the database "gptransfer_testdb1" does not exist
-        And the database "gptransfer_testdb2" does not exist
-        And the database "gptransfer_testdb3" does not exist
-        And the database "gptransfer_testdb4" does not exist
-        And the database "gptransfer_testdb5" does not exist
-        And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate count --format=csv"
-        Then gptransfer should return a return code of 0
-        And verify that table "t0" in "gptransfer_testdb1" has "100" rows
-        And verify that table "t1" in "gptransfer_testdb1" has "200" rows
-        And verify that table "t2" in "gptransfer_testdb1" has "300" rows
-        And verify that table "t3" in "gptransfer_testdb2" has "400" rows
-        And verify that table "t4" in "gptransfer_testdb2" has "500" rows
-        And verify that table "t5" in "gptransfer_testdb2" has "600" rows
-        And verify that table "t0" in "gptransfer_testdb3" has "700" rows
-        And verify that table "empty_table" in "gptransfer_testdb4" has "0" rows
-        And verify that table "one_row_table" in "gptransfer_testdb4" has "1" rows
-        And verify that table "wide_rows" in "gptransfer_testdb5" has "10" rows
 
     Scenario: Negative test for gptransfer full with invalid delimiter and format option
         Given the database is running
