@@ -16,75 +16,12 @@ override CPPFLAGS+= -I$(top_srcdir)/src/backend/libpq \
 
 # TODO: add ldl for quick hack; we need to figure out why
 # postgres in src/backend/Makefile doesn't need this and -pthread.
-MOCK_LIBS := -ldl $(filter-out -lpgport -ledit, $(LIBS))
-
-# This is a basic set of backend object files that every test program is linked
-# with by default.
-BACKEND_REAL_OBJS=\
-	src/backend/access/common/heaptuple.o \
-	src/backend/access/heap/tuptoaster.o \
-	src/backend/access/hash/hashfunc.o \
-	src/backend/access/transam/filerepdefs.o \
-	src/backend/access/transam/transam.o \
-	src/backend/cdb/cdbgang.o \
-	src/backend/lib/stringinfo.o \
-	src/backend/nodes/bitmapset.o \
-	src/backend/nodes/equalfuncs.o \
-	src/backend/nodes/list.o \
-	src/backend/nodes/makefuncs.o \
-	src/backend/nodes/value.o \
-	src/backend/storage/file/compress_nothing.o \
-	src/backend/storage/page/itemptr.o \
-	src/backend/utils/adt/arrayfuncs.o \
-	src/backend/utils/adt/arrayutils.o \
-	src/backend/utils/adt/datetime.o \
-	src/backend/utils/adt/datum.o \
-	src/backend/utils/fmgr/fmgr.o \
-	src/backend/utils/hash/hashfn.o \
-	src/backend/utils/init/globals.o \
-	src/backend/bootstrap/bootparse.o \
-	src/backend/catalog/caql/catquery.o \
-	src/backend/catalog/caql/gram.o \
-	src/backend/catalog/core/catcore.o \
-	src/backend/catalog/core/catcoretable.o \
-	src/backend/parser/gram.o \
-	src/backend/parser/kwlookup.o \
-	src/backend/parser/parse_type.o \
-	src/backend/parser/scansup.o \
-	src/backend/regex/regcomp.o \
-	src/backend/regex/regexec.o \
-	src/backend/utils/adt/like.o \
-	src/backend/utils/adt/varlena.o \
-	src/backend/utils/misc/atomic.o \
-	src/backend/utils/misc/bitstream.o \
-	src/backend/utils/misc/guc.o \
-	src/backend/utils/misc/guc_gp.o \
-	src/backend/utils/misc/size.o \
-	src/backend/utils/mmgr/aset.o \
-	src/backend/utils/mmgr/mcxt.o \
-	src/backend/utils/mmgr/memaccounting.o \
-	src/backend/utils/mmgr/memprot.o \
-	src/backend/utils/mmgr/vmem_tracker.o \
-	src/backend/utils/time/tqual.o \
-	src/backend/replication/repl_gram.o \
-	src/timezone/pgtz.o \
-	src/timezone/localtime.o \
-	src/timezone/strftime.o \
-	src/port/libpgport_srv.a
-
-# These files are not needed by any test program, so don't mock or link them.
-EXCL_OBJS=\
-	src/timezone/%.o \
-	src/backend/main/%.o \
-	src/backend/gpopt/%.o \
-	src/backend/gpopt/config/%.o \
-	src/backend/gpopt/relcache/%.o \
-	src/backend/gpopt/translate/%.o \
-	src/backend/gpopt/utils/%.o \
+MOCK_LIBS := -ldl $(filter-out -lpgport -ledit, $(LIBS)) $(LDAP_LIBS_BE)
 
 # These files cannot be mocked, because they #include header files or other
 # C files that are not in the standard include path.
-EXCL_OBJS+=\
+NO_MOCK_OBJS+=\
+	src/backend/libpq/auth.o \
 	src/backend/bootstrap/bootparse.o \
 	src/backend/parser/gram.o \
 	src/backend/catalog/caql/gram.o \
@@ -95,39 +32,59 @@ EXCL_OBJS+=\
 	src/backend/regex/regexec.o \
 	src/backend/utils/adt/like.o \
 	src/backend/utils/misc/guc.o \
-	src/backend/utils/misc/guc_gp.o
+	src/backend/utils/misc/guc_gp.o \
+	src/timezone/localtime.o \
+	src/timezone/pgtz.o \
+	src/timezone/strftime.o
 
-# Create a _mock.c version of every backend object file that's not listed in
-# EXCL_OBJS
-OBJFILES=$(top_srcdir)/src/backend/objfiles.txt
-MOCK_OBJS=$(addprefix $(top_srcdir)/, \
-			$(filter-out $(EXCL_OBJS), \
-				$(shell test -f $(OBJFILES) && cat $(OBJFILES))))
+# These files are not linked into test programs.
+EXCL_OBJS=\
+	src/backend/main/main.o \
+	src/backend/gpopt/%.o \
+	src/backend/gpopt/config/%.o \
+	src/backend/gpopt/relcache/%.o \
+	src/backend/gpopt/translate/%.o \
+	src/backend/gpopt/utils/%.o
 
-SUT_OBJ=$(top_srcdir)/$(subdir)/$(1).o
+# These files are linked into every test program.
+MOCK_OBJS=\
+	$(top_srcdir)/src/test/unit/mock/main_mock.o
+# No test programs currently exercise the ORCA translator library, so
+# mock that instead of linking with the real library.
+ifeq ($(enable_orca),yes)
+MOCK_OBJS+=$(top_srcdir)/src/test/unit/mock/gpopt_mock.o
+endif
 
-# A function that generates TARGET_OBJS = test case, mock objects, real objects,
-# and cmockery.o.
-TARGET_OBJS=$(1)_test.o $($(1)_OBJS) $(CMOCKERY_OBJS)
-
-# Add the non-mocked versions of requested files.
-TARGET_OBJS+=$($(1)_REAL_OBJS)
-
-# Add the standard set of backend .o files that have not been explicitly
-# mocked
-TARGET_OBJS+=$(filter-out $(SUT_OBJ) $($(1)_MOCK_OBJS), $(addprefix $(top_srcdir)/, $(BACKEND_REAL_OBJS)))
-
-# Add mock versions of other backend .o files
-#
 # $(OBJFILES) contains %/objfiles.txt, because src/backend/Makefile will
 # create it with rule=objfiles.txt, which is not expected in postgres rule.
 # It actually uses expand_subsys to obtain the .o file list.  But here we
 # don't include common.mk so just clear out objfiles.txt from the list for
 # $(TARGET_OBJS)
+OBJFILES=$(top_srcdir)/src/backend/objfiles.txt
+ALL_OBJS=$(addprefix $(top_srcdir)/, \
+			$(filter-out $(EXCL_OBJS) %/objfiles.txt, \
+				$(shell test -f $(OBJFILES) && cat $(OBJFILES))))
+
+AUTO_MOCK_OBJS=$(filter-out $(NO_MOCK_OBJS) %/objfiles.txt %.a, \
+	$(shell test -f $(OBJFILES) && cat $(OBJFILES)))
+
+# A function that generates TARGET_OBJS = test case, mock objects, real objects,
+# and cmockery.o.
+TARGET_OBJS=$(1)_test.o $($(1)_OBJS) $(CMOCKERY_OBJS)
+
+# Add mocked versions of all requested backend .o files.
 TARGET_OBJS+=$(patsubst $(top_srcdir)/src/%.o,$(MOCK_DIR)/%_mock.o,\
-			$($(1)_MOCK_OBJS) \
-			$(filter-out $(SUT_OBJ) $(addprefix $(top_srcdir)/, $(BACKEND_REAL_OBJS)) $($(1)_REAL_OBJS) %/objfiles.txt, \
-				$(MOCK_OBJS)))
+			$($(1)_MOCK_OBJS) )
+
+# Add all backend .o files that have not been explicitly mocked. Also leave
+# out the file we're testing; the test .c file is expected to #include the
+# real file. (That allows the test program to call static functions in the
+# SUT)
+SUT_OBJ=$(top_srcdir)/$(subdir)/$(1).o
+TARGET_OBJS+=$(filter-out $(SUT_OBJ) $($(1)_MOCK_OBJS), $(ALL_OBJS))
+
+# Add the common mock objects
+TARGET_OBJS+=$(MOCK_OBJS)
 
 # The test target depends on $(OBJFILES) which would update files including mocks.
 %.t: $(OBJFILES) $(CMOCKERY_OBJS) %_test.o mockup-phony
@@ -137,7 +94,7 @@ TARGET_OBJS+=$(patsubst $(top_srcdir)/src/%.o,$(MOCK_DIR)/%_mock.o,\
 # src/timezone before src/backend.  This is not the case when main build has finished,
 # but this makes sure a simple make works fine in this directory any time.
 # With PARTIAL_LINKING it will generate objfiles.txt
-$(OBJFILES): $(MOCK_OBJS)
+$(OBJFILES): $(ALL_OBJS)
 	$(MAKE) -C $(top_srcdir)/src
 	$(MAKE) PARTIAL_LINKING= -C $(top_srcdir)/src/backend objfiles.txt
 
@@ -146,4 +103,4 @@ mockup-phony: $(OBJFILES)
 	$(MAKE) mockup
 
 .PHONY:
-mockup: $(patsubst $(top_srcdir)/src/%.o,$(MOCK_DIR)/%_mock.o,$(MOCK_OBJS))
+mockup: $(patsubst src/%.o,$(MOCK_DIR)/%_mock.o,$(AUTO_MOCK_OBJS)) $(MOCK_OBJS)

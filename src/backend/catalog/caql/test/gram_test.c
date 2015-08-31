@@ -7,6 +7,7 @@
 #include "catalog/caqlparse.h"
 #include "nodes/value.h"
 
+#include "../gram.c"
 
 /*
  * Test for simple SELECT

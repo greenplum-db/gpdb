@@ -3,10 +3,7 @@
 #include <setjmp.h>
 #include "cmockery.h"
 
-#include "c.h"
-#include "utils/elog.h"
-#include "utils/palloc.h"
-#include "utils/hsearch.h"
+#include "../dynahash.c"
 
 /* A dummy hash entry structure. */
 typedef struct

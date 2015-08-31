@@ -5,7 +5,7 @@ include $(top_builddir)/src/Makefile.global
 TARGETS=backoff \
 		syslogger
 
-backoff_REAL_OBJS=\
-	$(top_srcdir)/src/backend/utils/error/elog.o \
+backoff_MOCK_OBJS=\
+	$(top_srcdir)/src/backend/utils/error/assert.o
 
 include $(top_builddir)/src/backend/mock.mk

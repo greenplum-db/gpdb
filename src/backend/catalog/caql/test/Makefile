@@ -4,20 +4,13 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS=catquery caqlanalyze gram 
 
-COMMON_REAL_OBJS = \
-	$(top_srcdir)/src/backend/nodes/copyfuncs.o \
-	$(top_srcdir)/src/backend/utils/error/elog.o \
-	$(top_srcdir)/src/backend/utils/mb/mbutils.o \
-	$(top_srcdir)/src/backend/utils/mb/wchar.o \
-
-caqlanalyze_REAL_OBJS=$(COMMON_REAL_OBJS)
-
-gram_REAL_OBJS=$(COMMON_REAL_OBJS) \
-	$(top_srcdir)/src/backend/catalog/caql/gram.o \
-
-catquery_REAL_OBJS=$(COMMON_REAL_OBJS)
-
 include $(top_builddir)/src/backend/mock.mk
+
+caqlanalyze_MOCK_OBJS=\
+	$(top_srcdir)/src/backend/access/common/scankey.o \
+	$(top_srcdir)/src/backend/access/heap/heapam.o \
+	$(top_srcdir)/src/backend/access/index/genam.o \
+	$(top_srcdir)/src/backend/utils/cache/syscache.o
 
 gram.t: gram_upper
 

@@ -8,32 +8,19 @@ TARGETS=cdbbufferedread \
 	cdbfilerep \
 	cdbgang
 
-# Objects from backend, which don't need to be mocked but need to be linked.
-cdbbufferedread_REAL_OBJS=\
-	$(top_srcdir)/src/backend/utils/error/elog.o \
-	$(top_srcdir)/src/backend/utils/mb/mbutils.o \
-	$(top_srcdir)/src/backend/utils/mb/wchar.o \
+cdbgang_MOCK_OBJS=\
+	$(top_srcdir)/src/backend/catalog/namespace.o \
+	$(top_srcdir)/src/backend/storage/lmgr/proc.o \
+	$(top_srcdir)/src/backend/utils/mmgr/redzone_handler.o
 
-cdbbackup_REAL_OBJS=\
-	$(top_srcdir)/src/backend/utils/error/elog.o \
-	$(top_srcdir)/src/backend/utils/mb/mbutils.o \
-	$(top_srcdir)/src/backend/utils/mb/wchar.o \
-
-cdbdisp_REAL_OBJS=\
-	$(top_srcdir)/src/backend/utils/error/elog.o \
-	$(top_srcdir)/src/backend/utils/mb/mbutils.o \
-	$(top_srcdir)/src/backend/utils/mb/wchar.o \
-
-cdbgang_REAL_OBJS=\
-	$(top_srcdir)/src/backend/utils/error/elog.o \
-	$(top_srcdir)/src/backend/utils/mb/mbutils.o \
-	$(top_srcdir)/src/backend/utils/mb/wchar.o \
-
-cdbfilerep_REAL_OBJS=\
+cdbdisp_MOCK_OBJS=\
+	$(top_srcdir)/src/backend/cdb/cdbrelsize.o \
+	$(top_srcdir)/src/backend/cdb/cdbsrlz.o \
 	$(top_srcdir)/src/backend/utils/error/assert.o \
-	$(top_srcdir)/src/backend/utils/error/elog.o \
-	$(top_srcdir)/src/backend/utils/hash/dynahash.o \
-	$(top_srcdir)/src/backend/utils/mb/mbutils.o \
-	$(top_srcdir)/src/backend/utils/mb/wchar.o \
+	$(top_srcdir)/src/backend/executor/execUtils.o
+
+cdbfilerep_MOCK_OBJS=\
+	$(top_srcdir)/src/backend/postmaster/fork_process.o \
+	$(top_srcdir)/src/backend/utils/mmgr/redzone_handler.o
 
 include $(top_builddir)/src/backend/mock.mk

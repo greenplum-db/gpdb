@@ -4,10 +4,7 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS=url
 
-# Objects from backend, which don't need to be mocked but need to be linked.
-COMMON_REAL_OBJS=\
-	$(top_srcdir)/src/backend/utils/error/elog.o \
-
-url_REAL_OBJS=$(COMMON_REAL_OBJS)
+url_MOCK_OBJS=\
+	$(top_srcdir)/src/backend/cdb/cdbutil.o
 
 include $(top_builddir)/src/backend/mock.mk
