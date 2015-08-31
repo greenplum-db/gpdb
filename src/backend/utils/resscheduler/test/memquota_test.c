@@ -91,5 +91,7 @@ main(int argc, char* argv[])
 		unit_test(test__ComputeMemLimitForChildGroups_rounding)
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

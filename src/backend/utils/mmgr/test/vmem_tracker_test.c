@@ -356,7 +356,7 @@ test__VmemTracker_ReserveVmem__OOMLoggingBeforeReservation(void **state)
 	/* Verify that we are actually trying to log OOM */
 	expect_value(UpdateTimeAtomically, time_var, &alreadyReportedOOMTime);
 	will_be_called(UpdateTimeAtomically);
-	expect_any(write_stderr, fmt);
+	expect_any_count(write_stderr, fmt, -1);
 	will_be_called(write_stderr);
 	will_be_called(MemoryAccounting_SaveToLog);
 	expect_any(MemoryContextStats, context);

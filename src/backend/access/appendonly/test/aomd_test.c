@@ -13,7 +13,7 @@ test__AOSegmentFilePathNameLen(void **state)
 	char* basepath = "base/21381/123";
 
 	expect_any(relpath, &rnode);
-	will_return(relpath, strdup(basepath));
+	will_return(relpath, pstrdup(basepath));
 
 	int r = AOSegmentFilePathNameLen(&reldata);
 
@@ -65,31 +65,31 @@ test__MakeAOSegmentFileName(void **state)
 	expect_any_count(relpath, &rnode, -1);
 
 	// seg 0, no columns
-	will_return(relpath, strdup(basepath));
+	will_return(relpath, pstrdup(basepath));
 	MakeAOSegmentFileName(&reldata, 0, -1, &fileSegNo, filepathname);
 	assert_string_equal(filepathname, "base/21381/123");
 	assert_int_equal(fileSegNo, 0);
 
 	// seg 1, no columns
-	will_return(relpath, strdup(basepath));
+	will_return(relpath, pstrdup(basepath));
 	MakeAOSegmentFileName(&reldata, 1, -1, &fileSegNo, filepathname);
 	assert_string_equal(filepathname, "base/21381/123.1");
 	assert_int_equal(fileSegNo, 1);
 
 	// seg 0, column 1
-	will_return(relpath, strdup(basepath));
+	will_return(relpath, pstrdup(basepath));
 	MakeAOSegmentFileName(&reldata, 0, 1, &fileSegNo, filepathname);
 	assert_string_equal(filepathname, "base/21381/123.128");
 	assert_int_equal(fileSegNo, 128);
 
 	// seg 1, column 1
-	will_return(relpath, strdup(basepath));
+	will_return(relpath, pstrdup(basepath));
 	MakeAOSegmentFileName(&reldata, 1, 1, &fileSegNo, filepathname);
 	assert_string_equal(filepathname, "base/21381/123.129");
 	assert_int_equal(fileSegNo, 129);
 
 	// seg 0, column 2
-	will_return(relpath, strdup(basepath));
+	will_return(relpath, pstrdup(basepath));
 	MakeAOSegmentFileName(&reldata, 0, 2, &fileSegNo, filepathname);
 	assert_string_equal(filepathname, "base/21381/123.256");
 	assert_int_equal(fileSegNo, 256);
@@ -106,5 +106,8 @@ main(int argc, char* argv[])
 			unit_test(test__FormatAOSegmentFileName),
 			unit_test(test__MakeAOSegmentFileName)
 	};
+
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

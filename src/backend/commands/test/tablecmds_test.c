@@ -85,5 +85,8 @@ main(int argc, char* argv[])
 	const UnitTest tests[] = {
 			unit_test(test__column_to_scan)
 	};
+
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

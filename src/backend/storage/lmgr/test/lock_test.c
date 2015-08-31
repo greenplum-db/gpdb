@@ -32,23 +32,6 @@ test__RemoveLocalLock_Null(void **state)
 	info.hash = tag_hash;
 	hash_flags = (HASH_ELEM | HASH_FUNCTION);
 
-	/* prepare for hash_create */
-	expect_any(AllocSetContextCreate, parent);
-	expect_any(AllocSetContextCreate, name);
-	expect_any(AllocSetContextCreate, minContextSize);
-	expect_any(AllocSetContextCreate, initBlockSize);
-	expect_any(AllocSetContextCreate, maxBlockSize);
-	will_be_called(AllocSetContextCreate);
-
-	/* We don't care Assert macro */
-#ifdef USE_ASSERT_CHECKING
-	expect_any_count(ExceptionalCondition, conditionName, -1);
-	expect_any_count(ExceptionalCondition, errorType, -1);
-	expect_any_count(ExceptionalCondition, fileName, -1);
-	expect_any_count(ExceptionalCondition, lineNumber, -1);
-	will_be_called_count(ExceptionalCondition, -1);
-#endif
-
 	LockMethodLocalHash = hash_create("LOCALLOCK hash",
 									  128,
 									  &info,

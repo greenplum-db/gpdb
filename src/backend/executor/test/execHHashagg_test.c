@@ -137,5 +137,7 @@ main(int argc, char* argv[])
 		unit_test(test__getSpillFile__Initialize_wfile_exception)
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

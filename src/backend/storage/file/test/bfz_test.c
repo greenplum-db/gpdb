@@ -52,5 +52,7 @@ main(int argc, char* argv[])
 		unit_test(test__bfz_scan_begin_initbytes)
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

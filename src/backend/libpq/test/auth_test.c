@@ -134,5 +134,7 @@ main(int argc, char* argv[])
 #endif
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

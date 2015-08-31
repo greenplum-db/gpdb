@@ -38,5 +38,7 @@ main(int argc, char* argv[])
 		unit_test(test__resetSessionForPrimaryGangLoss),
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

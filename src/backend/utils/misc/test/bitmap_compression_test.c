@@ -269,8 +269,6 @@ test__BitmapCompression_ShortDecompress(void **state)
 		}
 		PG_CATCH();
 		{
-			expect_any(MemoryContextResetAndDeleteChildren, context);
-			will_be_called(MemoryContextResetAndDeleteChildren);
 			FlushErrorState();
 		}
 		PG_END_TRY();	
@@ -297,8 +295,6 @@ test__BitmapCompression__IllegalCompressionType(void **state)
 	}
 	PG_CATCH();
 	{
-		expect_any(MemoryContextResetAndDeleteChildren, context);
-		will_be_called(MemoryContextResetAndDeleteChildren);
 		FlushErrorState();
 	}
 	PG_END_TRY();	
@@ -319,6 +315,8 @@ main(int argc, char* argv[])
 		unit_test(test__BitmapCompression__ExplicitNoCompressionNoBlocks),
 		unit_test(test__BitmapCompression__IllegalCompressionType)
 	};
+
+	MemoryContextInit();
 
 	return run_tests(tests);
 }

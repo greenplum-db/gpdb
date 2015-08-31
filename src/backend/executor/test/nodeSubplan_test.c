@@ -30,30 +30,14 @@ test__ExecSetParamPlan__Check_Dispatch_Results(void **state)
 	plan->planstate->instrument = (Instrumentation *)palloc(sizeof(Instrumentation));
 	plan->planstate->plan = makeNode(SubPlanState);
 	
-	/*Function needed for estate.*/
-	expect_any(AllocSetContextCreate,parent);
-	expect_any(AllocSetContextCreate,name);
-	expect_any(AllocSetContextCreate,minContextSize);
-	expect_any(AllocSetContextCreate,initBlockSize);
-	expect_any(AllocSetContextCreate,maxBlockSize);
-	will_be_called(AllocSetContextCreate);	
 	EState *estate = CreateExecutorState();
 
 	/*Assign mocked estate to plan.*/
 	((PlanState *)(plan->planstate))->state= estate;
 
-	/*Function needed for GetPerTupleExprContext*/
-	expect_any(AllocSetContextCreate,parent);
-	expect_any(AllocSetContextCreate,name);
-	expect_any(AllocSetContextCreate,minContextSize);
-	expect_any(AllocSetContextCreate,initBlockSize);
-	expect_any(AllocSetContextCreate,maxBlockSize);
-	will_be_called(AllocSetContextCreate);
-
 	/*Re-use estate mocked object. Needed as input parameter for
 	tested function */
 	ExprContext *econtext = GetPerTupleExprContext(estate);
-
 
 	/*Set QueryDescriptor input parameter for tested function */
 	PlannedStmt   *plannedstmt = (PlannedStmt *)palloc(sizeof(PlannedStmt));
@@ -62,14 +46,6 @@ test__ExecSetParamPlan__Check_Dispatch_Results(void **state)
 	queryDesc->estate = (EState *)palloc(sizeof(EState));
 	queryDesc->estate->es_sliceTable = (SliceTable *) palloc(sizeof(SliceTable));
 	
-	/*Set of functions called within tested function*/
-	expect_any(MemoryContextGetPeakSpace,context);
-	will_be_called(MemoryContextGetPeakSpace);
-
-	expect_any(MemoryContextSetPeakSpace,context);
-	expect_any(MemoryContextSetPeakSpace,nbytes);
-	will_be_called(MemoryContextSetPeakSpace);
-
 	/*QueryDescriptor generated when shouldDispatch is true.*/
 	QueryDesc *internalQueryDesc = (QueryDesc *)palloc(sizeof(QueryDesc));
 	internalQueryDesc->estate = (EState *)palloc(sizeof(EState));
@@ -87,13 +63,6 @@ test__ExecSetParamPlan__Check_Dispatch_Results(void **state)
 	expect_any(CreateQueryDesc,doInstrument);
 	will_return(CreateQueryDesc,internalQueryDesc);
 	
-	expect_any(AllocSetContextCreate,parent);
-	expect_any(AllocSetContextCreate,name);
-	expect_any(AllocSetContextCreate,minContextSize);
-	expect_any(AllocSetContextCreate,initBlockSize);
-	expect_any(AllocSetContextCreate,maxBlockSize);
-	will_be_called(AllocSetContextCreate);
-
 	Gp_role = GP_ROLE_DISPATCH;
 	plan->planstate->plan->dispatch=DISPATCH_PARALLEL;
 
@@ -124,10 +93,6 @@ test__ExecSetParamPlan__Check_Dispatch_Results(void **state)
 	expect_any(cdbexplain_recvExecStats,showstatctx);
 	will_be_called(cdbexplain_recvExecStats);
 
-	expect_any(MemoryContextSetPeakSpace,context);
-	expect_any(MemoryContextSetPeakSpace,nbytes);
-	will_be_called(MemoryContextSetPeakSpace);
-
 	will_be_called(TeardownSequenceServer);
 
 	expect_any(TeardownInterconnect,transportStates);
@@ -151,6 +116,8 @@ main(int argc, char* argv[])
 	const UnitTest tests[] = {
 		unit_test(test__ExecSetParamPlan__Check_Dispatch_Results)
 	};
+
+	MemoryContextInit();
 
 	return run_tests(tests);
 }

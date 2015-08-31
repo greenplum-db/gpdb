@@ -54,5 +54,8 @@ main(int argc, char* argv[])
 	const UnitTest tests[] = {
 		unit_test(test__make_url)
 	};
+
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

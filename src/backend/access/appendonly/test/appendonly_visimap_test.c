@@ -73,5 +73,8 @@ main(int argc, char* argv[])
 	const UnitTest tests[] = {
 			unit_test(test__AppendOnlyVisimapDelete_Finish_outoforder)
 	};
+
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

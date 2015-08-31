@@ -33,6 +33,9 @@ main(int argc, char* argv[])
 	const UnitTest tests[] = {
 		unit_test(test__date_in_overrun),
 	};
+
+	MemoryContextInit();
+
 	return run_tests(tests);
 }
 

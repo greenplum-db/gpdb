@@ -86,5 +86,8 @@ main(int argc, char* argv[]) {
     		unit_test(test__open_alert_log_file__NonMaster),
     		unit_test(test__open_alert_log_file__OpenAlertLog)
     };
+
+	MemoryContextInit();
+
     return run_tests(tests);
 }

@@ -96,5 +96,7 @@ main(int argc, char* argv[])
 		unit_test(test__ExecEagerFreeShareInputScan_SHARE_MATERIAL)
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

@@ -45,6 +45,8 @@ main(int argc, char* argv[])
 		unit_test(test__gp_strxfrm__LongQuery)
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }
 

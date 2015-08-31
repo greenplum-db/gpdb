@@ -56,5 +56,7 @@ main(int argc, char* argv[])
 		unit_test(test__ReleaseTupleDesc__ref_count)
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

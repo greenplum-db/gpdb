@@ -121,5 +121,8 @@ main(int argc, char* argv[])
 			unit_test(test__aocs_begin_headerscan),
 			unit_test(test__aocs_addcol_init)
 	};
+
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

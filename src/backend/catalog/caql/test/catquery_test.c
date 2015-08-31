@@ -142,6 +142,8 @@ main(int argc, char* argv[])
 		unit_test(test__disable_attribute_check__true)
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }
 

@@ -30,5 +30,7 @@ main(int argc, char* argv[])
 		unit_test(test__ExecEagerFree_ExecEagerFreeShareInputScan)
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

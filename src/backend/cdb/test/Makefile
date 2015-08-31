@@ -28,9 +28,9 @@ cdbgang_REAL_OBJS=\
 	$(top_srcdir)/src/backend/utils/error/elog.o \
 	$(top_srcdir)/src/backend/utils/mb/mbutils.o \
 	$(top_srcdir)/src/backend/utils/mb/wchar.o \
-	$(top_srcdir)/src/backend/utils/mmgr/vmem_tracker.o \
 
 cdbfilerep_REAL_OBJS=\
+	$(top_srcdir)/src/backend/utils/error/assert.o \
 	$(top_srcdir)/src/backend/utils/error/elog.o \
 	$(top_srcdir)/src/backend/utils/hash/dynahash.o \
 	$(top_srcdir)/src/backend/utils/mb/mbutils.o \

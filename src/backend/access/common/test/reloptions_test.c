@@ -47,5 +47,7 @@ main(int argc, char* argv[])
 		unit_test(test__parse_AO_options)
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

@@ -67,14 +67,16 @@ test__ExecWorkFile_Create__InTopMemContext(void **state)
 
 	expect_value(BufFileSetWorkfile, buffile, NULL);
 	will_be_called(BufFileSetWorkfile);
-
 	/*
-	 * All the memory context stuff is mocked, so the TopMemoryContext is NULL
-	 * at this point. Set it to something specific so we can distinguish it from
-	 * the CurrentMemoryContext.
+	 * Create a new memory context, so that we can distinguish it from
+	 * TopMemoryContext.
 	 */
-	TopMemoryContext = (MemoryContext) 0xdeadbeef;
-	CurrentMemoryContext = (MemoryContext) 0xfeadbead;
+	CurrentMemoryContext =
+	  AllocSetContextCreate(TopMemoryContext,
+				"mock test context",
+				ALLOCSET_DEFAULT_MINSIZE,
+				ALLOCSET_DEFAULT_INITSIZE,
+				ALLOCSET_DEFAULT_MAXSIZE);
 
 	/*
 	 * ExecWorkFile_Create will call our mocked palloc0 function execWorkfile__palloc0_mock
@@ -109,12 +111,15 @@ test__ExecWorkFile_Open__InTopMemContext(void **state)
 	will_return(BufFileGetSize, 0);
 
 	/*
-	 * All the memory context stuff is mocked, so the TopMemoryContext is NULL
-	 * at this point. Set it to something specific so we can distinguish it from
-	 * the CurrentMemoryContext.
+	 * Create a new memory context, so that we can distinguish it from
+	 * TopMemoryContext.
 	 */
-	TopMemoryContext = (MemoryContext) 0xdeadbeef;
-	CurrentMemoryContext = (MemoryContext) 0xfeadbead;
+	CurrentMemoryContext =
+	  AllocSetContextCreate(TopMemoryContext,
+				"mock test context",
+				ALLOCSET_DEFAULT_MINSIZE,
+				ALLOCSET_DEFAULT_INITSIZE,
+				ALLOCSET_DEFAULT_MAXSIZE);
 
 	/*
 	 * ExecWorkFile_Open will call our mocked palloc0 function execWorkfile__palloc0_mock
@@ -137,6 +142,8 @@ main(int argc, char* argv[])
 		unit_test(test__ExecWorkFile_Create__InTopMemContext),
 		unit_test(test__ExecWorkFile_Open__InTopMemContext)
 	};
+
+	MemoryContextInit();
 
 	return run_tests(tests);
 }

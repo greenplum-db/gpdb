@@ -327,5 +327,7 @@ main(int argc, char* argv[])
 		unit_test(test__find_option)
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

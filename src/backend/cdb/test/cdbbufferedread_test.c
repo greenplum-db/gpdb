@@ -5,6 +5,7 @@
 
 #include "../cdbbufferedread.c"
 
+#include "utils/memutils.h"
 
 void
 test__BufferedReadInit__IsConsistent(void **state)
@@ -31,6 +32,7 @@ test__BufferedReadInit__IsConsistent(void **state)
 	assert_int_equal(bufferedRead->memoryLen, memoryLen);
 }
 
+static MemoryContext *exception_cxt;
 
 void
 test__BufferedReadUseBeforeBuffer__IsNextReadLenZero(void **state)
@@ -69,8 +71,10 @@ test__BufferedReadUseBeforeBuffer__IsNextReadLenZero(void **state)
 	}
 	PG_CATCH();
 	{
-		CurrentMemoryContext = 1; //To be fixed
-		ErrorData *edata = CopyErrorData();
+		ErrorData *edata;
+
+		MemoryContextSwitchTo(exception_cxt);
+		edata = CopyErrorData();
 		/*
 		 * Validate the expected error
 		 */
@@ -89,6 +93,13 @@ main(int argc, char* argv[])
 		unit_test(test__BufferedReadUseBeforeBuffer__IsNextReadLenZero),
 		unit_test(test__BufferedReadInit__IsConsistent)
 	};
+
+	MemoryContextInit();
+	exception_cxt = AllocSetContextCreate(TopMemoryContext,
+										  "mock error handling context",
+										  ALLOCSET_DEFAULT_MINSIZE,
+										  ALLOCSET_DEFAULT_INITSIZE,
+										  ALLOCSET_DEFAULT_MAXSIZE);
 
 	return run_tests(tests);
 }

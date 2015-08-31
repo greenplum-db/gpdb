@@ -64,7 +64,7 @@ test__cdbdisp_dispatchPlan__Overflow_plan_size_in_kb(void **state)
 		/* Verify that we get the correct error (limit exceeded) */
 
 		/* CopyErrorData() requires us to get out of ErrorContext */
-		CurrentMemoryContext = (MemoryContext *) 0x1;
+		CurrentMemoryContext = TopMemoryContext;
 
 		ErrorData *edata = CopyErrorData();
 
@@ -96,8 +96,7 @@ main(int argc, char* argv[])
 
 	/* There are assertions in dispatch code for this */
 	Gp_role = GP_ROLE_DISPATCH;
-	/* And CopyErrorData() asserts that this is different from CurrentMemoryContext */
-	ErrorContext = (MemoryContext *) 0x2;
+	MemoryContextInit();
 
 	return run_tests(tests);
 }

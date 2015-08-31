@@ -154,5 +154,7 @@ main(int argc, char* argv[])
 		unit_test(test_parse_option_from_params_5)
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

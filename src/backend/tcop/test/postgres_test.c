@@ -165,5 +165,7 @@ main(int argc, char* argv[])
 		unit_test(test__ProcessInterrupts__DoingCommandRead)
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

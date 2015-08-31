@@ -37,5 +37,7 @@ main(int argc, char* argv[])
 		unit_test(test__FileRep_StartChildProcess)
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

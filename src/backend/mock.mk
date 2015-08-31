@@ -60,6 +60,11 @@ BACKEND_REAL_OBJS=\
 	src/backend/utils/misc/guc.o \
 	src/backend/utils/misc/guc_gp.o \
 	src/backend/utils/misc/size.o \
+	src/backend/utils/mmgr/aset.o \
+	src/backend/utils/mmgr/mcxt.o \
+	src/backend/utils/mmgr/memaccounting.o \
+	src/backend/utils/mmgr/memprot.o \
+	src/backend/utils/mmgr/vmem_tracker.o \
 	src/backend/utils/time/tqual.o \
 	src/backend/replication/repl_gram.o \
 	src/timezone/pgtz.o \
