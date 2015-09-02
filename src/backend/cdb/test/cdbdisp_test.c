@@ -5,46 +5,26 @@
 
 #include "../cdbdisp.c"
 
-/* 
- * Expected variables for Assertions 
- */
-void
-_ExceptionalCondition()
-{
-	expect_any(ExceptionalCondition,conditionName);
-	expect_any(ExceptionalCondition,errorType);
-	expect_any(ExceptionalCondition,fileName);
-	expect_any(ExceptionalCondition,lineNumber);
-	will_be_called(ExceptionalCondition);
-}
-
 /*
  * Mocked object initializations required for dispatchPlan.
  */
 void
 _init_cdbdisp_dispatchPlan(QueryDesc *queryDesc)
 {
-#ifdef USE_ASSERT_CHECKING
-
-	_ExceptionalCondition( );
-	_ExceptionalCondition( );
-
-#endif
-
 	queryDesc->estate = (struct EState *)palloc0(sizeof(struct EState));
 	queryDesc->estate->es_sliceTable = (struct SliceTable *)
                                             palloc0(sizeof(struct SliceTable));
 	queryDesc->operation = CMD_NOTHING;
-	queryDesc->plannedstmt = (PlannedStmt *)palloc0(sizeof(PlannedStmt));   
+	queryDesc->plannedstmt = (PlannedStmt *)palloc0(sizeof(PlannedStmt));
 
 	will_be_called(clear_relsize_cache);
 
 	expect_any(RootSliceIndex, estate);
-	will_return(RootSliceIndex,0);  
+	will_return(RootSliceIndex,0);
 }
 
-/* 
- * Tests that cdbdisp_dispatchPlan handles a plan size overflow 
+/*
+ * Tests that cdbdisp_dispatchPlan handles a plan size overflow
  * when splan_len_uncompressed * num_slices.
  */
 void
@@ -60,7 +40,7 @@ test__cdbdisp_dispatchPlan__Overflow_plan_size_in_kb(void **state)
 
 	_init_cdbdisp_dispatchPlan(queryDesc);
 
-	/* Set max plan to a value that will require handling INT32 
+	/* Set max plan to a value that will require handling INT32
 	 * overflow of the current plan size */
 	gp_max_plan_size = INT_MAX;
 
@@ -82,6 +62,10 @@ test__cdbdisp_dispatchPlan__Overflow_plan_size_in_kb(void **state)
 	PG_CATCH();
 	{
 		/* Verify that we get the correct error (limit exceeded) */
+
+		/* CopyErrorData() requires us to get out of ErrorContext */
+		CurrentMemoryContext = (MemoryContext *) 0x1;
+
 		ErrorData *edata = CopyErrorData();
 
 		StringInfo message = makeStringInfo();
@@ -100,8 +84,8 @@ test__cdbdisp_dispatchPlan__Overflow_plan_size_in_kb(void **state)
 
 	assert_true(success);
 }
-	
-int		
+
+int
 main(int argc, char* argv[])
 {
 	cmockery_parse_arguments(argc, argv);
@@ -109,6 +93,11 @@ main(int argc, char* argv[])
 	const UnitTest tests[] = {
 		unit_test(test__cdbdisp_dispatchPlan__Overflow_plan_size_in_kb)
 	};
+
+	/* There are assertions in dispatch code for this */
+	Gp_role = GP_ROLE_DISPATCH;
+	/* And CopyErrorData() asserts that this is different from CurrentMemoryContext */
+	ErrorContext = (MemoryContext *) 0x2;
 
 	return run_tests(tests);
 }
