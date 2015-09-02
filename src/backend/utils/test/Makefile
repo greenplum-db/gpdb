@@ -4,11 +4,11 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS=session_state
 
-session_state_MOCK_OBJS=\
-	$(top_srcdir)/src/backend/storage/ipc/shmem.o \
-	$(top_srcdir)/src/backend/storage/lmgr/lwlock.o \
-	$(top_srcdir)/src/backend/utils/error/assert.o \
-	$(top_srcdir)/src/backend/utils/error/elog.o \
-	$(top_srcdir)/src/backend/utils/mmgr/runaway_cleaner.o
-
 include $(top_builddir)/src/backend/mock.mk
+
+session_state.t: \
+	$(MOCK_DIR)/backend/storage/ipc/shmem_mock.o \
+	$(MOCK_DIR)/backend/storage/lmgr/lwlock_mock.o \
+	$(MOCK_DIR)/backend/utils/error/assert_mock.o \
+	$(MOCK_DIR)/backend/utils/error/elog_mock.o \
+	$(MOCK_DIR)/backend/utils/mmgr/runaway_cleaner_mock.o

@@ -6,13 +6,13 @@ TARGETS=pqcomm auth
 
 include $(top_builddir)/src/backend/mock.mk
 
-pqcomm_MOCK_OBJS=\
-	$(top_srcdir)/src/backend/libpq/be-secure.o \
-	$(top_srcdir)/src/backend/utils/error/elog.o
+auth.t: $(MOCK_DIR)/backend/utils/fmgr/fmgr_mock.o
 
-auth_MOCK_OBJS=\
-	$(top_srcdir)/src/backend/libpq/hba.o \
-	$(top_srcdir)/src/backend/utils/adt/timestamp.o \
-	$(top_srcdir)/src/backend/utils/fmgr/fmgr.o
+pqcomm.t: \
+	$(MOCK_DIR)/backend/libpq/be-secure_mock.o \
+	$(MOCK_DIR)/backend/utils/error/elog_mock.o
 
-override MOCK_LIBS+= -lldap
+auth.t: \
+	$(MOCK_DIR)/backend/libpq/hba_mock.o \
+	$(MOCK_DIR)/backend/utils/adt/timestamp_mock.o \
+	$(MOCK_DIR)/backend/utils/fmgr/fmgr_mock.o

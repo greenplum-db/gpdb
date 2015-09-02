@@ -4,8 +4,8 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS=xact distributedlog xlog
 
-distributedlog_MOCK_OBJS=\
-	$(top_srcdir)/src/backend/access/transam/slru.o \
-	$(top_srcdir)/src/backend/storage/lmgr/lwlock.o
-
 include $(top_builddir)/src/backend/mock.mk
+
+distributedlog.t: \
+	$(MOCK_DIR)/backend/access/transam/slru_mock.o \
+	$(MOCK_DIR)/backend/storage/lmgr/lwlock_mock.o

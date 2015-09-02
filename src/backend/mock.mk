@@ -18,25 +18,6 @@ override CPPFLAGS+= -I$(top_srcdir)/src/backend/libpq \
 # postgres in src/backend/Makefile doesn't need this and -pthread.
 MOCK_LIBS := -ldl $(filter-out -lpgport -ledit, $(LIBS)) $(LDAP_LIBS_BE)
 
-# These files cannot be mocked, because they #include header files or other
-# C files that are not in the standard include path.
-NO_MOCK_OBJS+=\
-	src/backend/libpq/auth.o \
-	src/backend/bootstrap/bootparse.o \
-	src/backend/parser/gram.o \
-	src/backend/catalog/caql/gram.o \
-	src/backend/nodes/outfast.o \
-	src/backend/nodes/readfast.o \
-	src/backend/replication/repl_gram.o \
-	src/backend/regex/regcomp.o \
-	src/backend/regex/regexec.o \
-	src/backend/utils/adt/like.o \
-	src/backend/utils/misc/guc.o \
-	src/backend/utils/misc/guc_gp.o \
-	src/timezone/localtime.o \
-	src/timezone/pgtz.o \
-	src/timezone/strftime.o
-
 # These files are not linked into test programs.
 EXCL_OBJS=\
 	src/backend/main/main.o \
@@ -65,30 +46,15 @@ ALL_OBJS=$(addprefix $(top_srcdir)/, \
 			$(filter-out $(EXCL_OBJS) %/objfiles.txt, \
 				$(shell test -f $(OBJFILES) && cat $(OBJFILES))))
 
-AUTO_MOCK_OBJS=$(filter-out $(NO_MOCK_OBJS) %/objfiles.txt %.a, \
-	$(shell test -f $(OBJFILES) && cat $(OBJFILES)))
-
-# A function that generates TARGET_OBJS = test case, mock objects, real objects,
-# and cmockery.o.
-TARGET_OBJS=$(1)_test.o $($(1)_OBJS) $(CMOCKERY_OBJS)
-
-# Add mocked versions of all requested backend .o files.
-TARGET_OBJS+=$(patsubst $(top_srcdir)/src/%.o,$(MOCK_DIR)/%_mock.o,\
-			$($(1)_MOCK_OBJS) )
-
-# Add all backend .o files that have not been explicitly mocked. Also leave
-# out the file we're testing; the test .c file is expected to #include the
-# real file. (That allows the test program to call static functions in the
-# SUT)
-SUT_OBJ=$(top_srcdir)/$(subdir)/$(1).o
-TARGET_OBJS+=$(filter-out $(SUT_OBJ) $($(1)_MOCK_OBJS), $(ALL_OBJS))
-
-# Add the common mock objects
-TARGET_OBJS+=$(MOCK_OBJS)
+# A function that generates a list of backend .o files that should be included
+# in a test program.
+#
+# The argument is a list of backend object files that should *not* be included
+BACKEND_OBJS=$(filter-out $(1), $(ALL_OBJS))
 
 # The test target depends on $(OBJFILES) which would update files including mocks.
-%.t: $(OBJFILES) $(CMOCKERY_OBJS) %_test.o mockup-phony
-	$(CC) $(CFLAGS) $(LDFLAGS) $(call TARGET_OBJS,$*) $(MOCK_LIBS) -o $@
+%.t: $(OBJFILES) $(CMOCKERY_OBJS) $(MOCK_OBJS) %_test.o
+	$(CC) $(CFLAGS) $(LDFLAGS) $(call BACKEND_OBJS, $(top_srcdir)/$(subdir)/$*.o $(patsubst $(MOCK_DIR)/%_mock.o,$(top_builddir)/src/%.o, $^)) $(filter-out %/objfiles.txt, $^) $(MOCK_LIBS) -o $@
 
 # We'd like to call only src/backend, but it seems we should build src/port and
 # src/timezone before src/backend.  This is not the case when main build has finished,
@@ -97,10 +63,3 @@ TARGET_OBJS+=$(MOCK_OBJS)
 $(OBJFILES): $(ALL_OBJS)
 	$(MAKE) -C $(top_srcdir)/src
 	$(MAKE) PARTIAL_LINKING= -C $(top_srcdir)/src/backend objfiles.txt
-
-# Need to separate make, as it's using the output of another make.
-mockup-phony: $(OBJFILES)
-	$(MAKE) mockup
-
-.PHONY:
-mockup: $(patsubst src/%.o,$(MOCK_DIR)/%_mock.o,$(AUTO_MOCK_OBJS)) $(MOCK_OBJS)

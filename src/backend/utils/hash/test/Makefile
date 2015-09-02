@@ -4,7 +4,6 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS=dynahash
 
-dynahash_MOCK_OBJS=\
-	$(top_srcdir)/src/backend/access/transam/xact.o
-
 include $(top_builddir)/src/backend/mock.mk
+
+dynahash.t: $(MOCK_DIR)/backend/access/transam/xact_mock.o

@@ -8,19 +8,19 @@ TARGETS=cdbbufferedread \
 	cdbfilerep \
 	cdbgang
 
-cdbgang_MOCK_OBJS=\
-	$(top_srcdir)/src/backend/catalog/namespace.o \
-	$(top_srcdir)/src/backend/storage/lmgr/proc.o \
-	$(top_srcdir)/src/backend/utils/mmgr/redzone_handler.o
-
-cdbdisp_MOCK_OBJS=\
-	$(top_srcdir)/src/backend/cdb/cdbrelsize.o \
-	$(top_srcdir)/src/backend/cdb/cdbsrlz.o \
-	$(top_srcdir)/src/backend/utils/error/assert.o \
-	$(top_srcdir)/src/backend/executor/execUtils.o
-
-cdbfilerep_MOCK_OBJS=\
-	$(top_srcdir)/src/backend/postmaster/fork_process.o \
-	$(top_srcdir)/src/backend/utils/mmgr/redzone_handler.o
-
 include $(top_builddir)/src/backend/mock.mk
+
+cdbgang.t: \
+	$(MOCK_DIR)/backend/catalog/namespace_mock.o \
+	$(MOCK_DIR)/backend/storage/lmgr/proc_mock.o \
+	$(MOCK_DIR)/backend/utils/mmgr/redzone_handler_mock.o
+
+cdbdisp.t: \
+	$(MOCK_DIR)/backend/cdb/cdbrelsize_mock.o \
+	$(MOCK_DIR)/backend/cdb/cdbsrlz_mock.o \
+	$(MOCK_DIR)/backend/utils/error/assert_mock.o \
+	$(MOCK_DIR)/backend/executor/execUtils_mock.o
+
+cdbfilerep.t: \
+	$(MOCK_DIR)/backend/postmaster/fork_process_mock.o \
+	$(MOCK_DIR)/backend/utils/mmgr/redzone_handler_mock.o
