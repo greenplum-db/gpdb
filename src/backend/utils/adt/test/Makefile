@@ -48,4 +48,4 @@ date_REAL_OBJS=$(common_REAL_OBJS) \
 	$(top_srcdir)/src/backend/utils/mb/mbutils.o \
 	$(top_srcdir)/src/backend/utils/mb/wchar.o
 
-include $(top_builddir)/src/Makefile.mock
+include $(top_builddir)/src/backend/mock.mk

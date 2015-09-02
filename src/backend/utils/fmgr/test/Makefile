@@ -41,4 +41,4 @@ dfmgr_REAL_OBJS=$(common_REAL_OBJS) \
 	$(top_srcdir)/src/backend/utils/mmgr/aset.o \
 	$(top_srcdir)/src/backend/utils/mmgr/memprot.o
 
-include $(top_builddir)/src/Makefile.mock
+include $(top_builddir)/src/backend/mock.mk

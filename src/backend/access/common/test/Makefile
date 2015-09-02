@@ -43,4 +43,4 @@ reloptions_REAL_OBJS=\
 tupdesc_REAL_OBJS=\
 	$(COMMON_REAL_OBJS) \
 
-include $(top_builddir)/src/Makefile.mock
+include $(top_builddir)/src/backend/mock.mk

@@ -34,5 +34,4 @@ postgres_REAL_OBJS=\
 	$(top_srcdir)/src/timezone/localtime.o \
 	$(top_srcdir)/src/timezone/pgtz.o
 
-include $(top_builddir)/src/Makefile.mock
-
+include $(top_builddir)/src/backend/mock.mk

@@ -73,4 +73,4 @@ lwlock_REAL_OBJS=\
 	$(top_srcdir)/src/timezone/pgtz.o \
 	$(top_srcdir)/src/backend/utils/misc/size.o
 
-include $(top_builddir)/src/Makefile.mock
+include $(top_builddir)/src/backend/mock.mk

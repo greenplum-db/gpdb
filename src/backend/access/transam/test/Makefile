@@ -69,4 +69,5 @@ distributedlog_REAL_OBJS=\
 	$(top_srcdir)/src/timezone/pgtz.o \
 	$(top_srcdir)/src/backend/access/transam/transam.o \
 	$(top_srcdir)/src/backend/utils/time/tqual.o
-include $(top_builddir)/src/Makefile.mock
+
+include $(top_builddir)/src/backend/mock.mk

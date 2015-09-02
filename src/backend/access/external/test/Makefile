@@ -36,4 +36,4 @@ COMMON_REAL_OBJS=\
 
 url_REAL_OBJS=$(COMMON_REAL_OBJS)
 
-include $(top_builddir)/src/Makefile.mock
+include $(top_builddir)/src/backend/mock.mk

@@ -55,10 +55,9 @@ catquery_REAL_OBJS=$(COMMON_REAL_OBJS) \
 	$(top_srcdir)/src/backend/executor/execUtils.o \
 	$(top_srcdir)/src/port/exec.o 
 
-include $(top_builddir)/src/Makefile.mock
+include $(top_builddir)/src/backend/mock.mk
 
 gram.t: gram_upper
 
 gram_upper:
 	$(MAKE) -C ..
-

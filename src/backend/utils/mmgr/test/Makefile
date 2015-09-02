@@ -70,4 +70,4 @@ idle_tracker_REAL_OBJS=$(common_REAL_OBJS) \
 event_version_REAL_OBJS=$(common_REAL_OBJS) \
 	$(top_srcdir)/src/backend/utils/misc/atomic.o \
 
-include $(top_builddir)/src/Makefile.mock
+include $(top_builddir)/src/backend/mock.mk
