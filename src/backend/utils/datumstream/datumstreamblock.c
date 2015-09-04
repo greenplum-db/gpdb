@@ -1911,6 +1911,53 @@ DatumStreamBlockWrite_MakeCompressBitMapSpace(
 }
 
 /*
+ * Function calculates the space required for storing the 
+ * RLE meta-data for current block.
+ * Increments headerSize and rleSize to reflect the additional
+ * size needed for RLE in block, if any.
+ */
+static inline void
+DatumStreamBlockWrite_DenseRleSpace(
+		DatumStreamBlockWrite *dsw, bool null,
+		int32 *headerSize, int32 *rleSize)
+{
+	if (!dsw->rle_has_compression)
+	{
+		return;
+	}
+
+	*headerSize += sizeof(DatumStreamBlock_Rle_Extension);
+
+	if (null)
+	{
+		/* CURRENT compressbitmap byte size since we don't add bits when NULL. */
+		*rleSize += DatumStreamBitMapWrite_Size(&dsw->rle_compress_bitmap);
+	}
+	else
+	{
+		/* NEXT compressbitmap byte size. */
+		*rleSize += DatumStreamBitMapWrite_NextSize(&dsw->rle_compress_bitmap);
+	}
+
+	/*
+	 * CURRENT repeat counts size.
+	 */
+	*rleSize += dsw->rle_repeatcounts_current_size;
+
+	/*
+	 * If last item repeated is true, then to finalize the repeatcounts
+	 * anytime later we will need space equivalent to its size in block.
+	 * Hence account for its size now else during block write may go
+	 * beyond block boundary.
+	 */
+	if (dsw->rle_last_item_is_repeated)
+	{
+		*rleSize += DatumStreamInt32Compress_Size(
+					dsw->rle_repeatcounts[dsw->rle_repeatcounts_count - 1]);
+	}
+}
+
+/*
  * Can we add an optional NULL bitmap entry or optionally the compress bit-map and
  * repeat count array for RLE_TYPE?
  */
@@ -1918,14 +1965,14 @@ static bool
 DatumStreamBlockWrite_DenseHasSpaceNull(
 										DatumStreamBlockWrite * dsw)
 {
-	int32		headerSize;
-	int32		nullSize;
-	int32		rleSize;
-	int32		deltaSize;
-	int32		alignedHeaderSize;
-	int32		currentDataSize;
-	int32		newTotalSize;
-	bool		result;
+	int32		headerSize = 0;
+	int32		nullSize = 0;
+	int32		rleSize = 0;
+	int32		deltaSize = 0;
+	int32		alignedHeaderSize = 0;
+	int32		currentDataSize = 0;
+	int32		newTotalSize = 0;
+	bool		result = false;
 
 	if (dsw->nth + 1 >= dsw->maxDatumPerBlock)
 	{
@@ -1939,28 +1986,7 @@ DatumStreamBlockWrite_DenseHasSpaceNull(
 	 */
 	nullSize = DatumStreamBitMap_Size(dsw->always_null_bitmap_count + 1);
 
-	if (dsw->rle_has_compression)
-	{
-		/*
-		 * Add in CURRENT compress bitmap and CURRENT repeated count array byte lengths,
-		 * if we have done compression in this block.
-		 */
-		headerSize += sizeof(DatumStreamBlock_Rle_Extension);
-
-		/*
-		 * CURRENT compressbitmap byte size since we don't add bits when NULL;
-		 */
-		rleSize = DatumStreamBitMapWrite_Size(&dsw->rle_compress_bitmap);
-
-		/*
-		 * CURRENT repeat counts size.
-		 */
-		rleSize += dsw->rle_repeatcounts_current_size;
-	}
-	else
-	{
-		rleSize = 0;
-	}
+	DatumStreamBlockWrite_DenseRleSpace(dsw, true, &headerSize, &rleSize);
 
 	/* Add in Delta Compression structures */
 	if (dsw->delta_has_compression)
@@ -1979,10 +2005,6 @@ DatumStreamBlockWrite_DenseHasSpaceNull(
 		 * CURRENT deltas size.
 		 */
 		deltaSize += dsw->deltas_current_size;
-	}
-	else
-	{
-		deltaSize = 0;
 	}
 
 	/*
@@ -2044,15 +2066,15 @@ DatumStreamBlockWrite_DenseHasSpaceRepeat(
 										  DatumStreamBlockWrite * dsw,
 										  bool newRepeat)
 {
-	int32		headerSize;
-	int32		nullSize;
-	int32		rleSize;
-	int32		deltaSize;
-	int32		alignedHeaderSize;
-	int32		currentDataSize;
-	int32		newTotalSize;
-	bool		result;
-	int32		total_datum_count;
+	int32		headerSize = 0;
+	int32		nullSize = 0;
+	int32		rleSize = 0;
+	int32		deltaSize = 0;
+	int32		alignedHeaderSize = 0;
+	int32		currentDataSize = 0;
+	int32		newTotalSize = 0;
+	bool		result = false;
+	int32		total_datum_count = 0;
 
 	if (dsw->nth + 1 >= dsw->maxDatumPerBlock)
 	{
@@ -2070,10 +2092,6 @@ DatumStreamBlockWrite_DenseHasSpaceRepeat(
 		 * The first item already incremented always_null_bitmap_count.
 		 */
 		nullSize = DatumStreamBitMap_Size(dsw->always_null_bitmap_count);
-	}
-	else
-	{
-		nullSize = 0;
 	}
 
 	total_datum_count = dsw->physical_datum_count;
@@ -2099,10 +2117,6 @@ DatumStreamBlockWrite_DenseHasSpaceRepeat(
 		deltaSize += dsw->deltas_current_size;
 
 		total_datum_count += DatumStreamBitMapWrite_OnCount(&dsw->delta_bitmap);
-	}
-	else
-	{
-		deltaSize = 0;
 	}
 
 	headerSize += sizeof(DatumStreamBlock_Rle_Extension);
@@ -2184,15 +2198,15 @@ static bool
 DatumStreamBlockWrite_DenseHasSpaceDelta(
 										 DatumStreamBlockWrite * dsw)
 {
-	int32		headerSize;
-	int32		nullSize;
-	int32		rleSize;
-	int32		deltaSize;
-	int32		alignedHeaderSize;
-	int32		currentDataSize;
-	int32		newTotalSize;
-	bool		result;
-	int32		total_datum_count;
+	int32		headerSize = 0;
+	int32		nullSize = 0;
+	int32		rleSize = 0;
+	int32		deltaSize = 0;
+	int32		alignedHeaderSize = 0;
+	int32		currentDataSize = 0;
+	int32		newTotalSize = 0;
+	bool		result = false;
+	int32		total_datum_count = 0;
 
 	if (dsw->nth + 1 >= dsw->maxDatumPerBlock)
 	{
@@ -2211,32 +2225,8 @@ DatumStreamBlockWrite_DenseHasSpaceDelta(
 		 */
 		nullSize = DatumStreamBitMap_Size(dsw->always_null_bitmap_count);
 	}
-	else
-	{
-		nullSize = 0;
-	}
 
-	if (dsw->rle_has_compression)
-	{
-		/*
-		 * Add in NEW compress bitmap but CURRENT repeated count array byte lengths.
-		 */
-		headerSize += sizeof(DatumStreamBlock_Rle_Extension);
-
-		/*
-		 * NEW compressbitmap byte size since we don't add bits when NULL;
-		 */
-		rleSize = DatumStreamBitMapWrite_NextSize(&dsw->rle_compress_bitmap);
-
-		/*
-		 * CURRENT repeat counts size.
-		 */
-		rleSize += dsw->rle_repeatcounts_current_size;
-	}
-	else
-	{
-		rleSize = 0;
-	}
+	DatumStreamBlockWrite_DenseRleSpace(dsw, false, &headerSize, &rleSize);
 
 	total_datum_count = dsw->physical_datum_count;
 	if (dsw->delta_has_compression)
@@ -2317,14 +2307,14 @@ DatumStreamBlockWrite_DenseHasSpaceItem(
 										DatumStreamBlockWrite * dsw,
 										int32 sz)
 {
-	int32		headerSize;
-	int32		nullSize;
-	int32		rleSize;
-	int32		deltaSize;
-	int32		alignedHeaderSize;
-	int32		currentDataSize;
-	int32		newTotalSize;
-	bool		result;
+	int32		headerSize = 0;
+	int32		nullSize = 0;
+	int32		rleSize = 0;
+	int32		deltaSize = 0;
+	int32		alignedHeaderSize = 0;
+	int32		currentDataSize = 0;
+	int32		newTotalSize = 0;
+	bool		result = false;
 
 	if (dsw->nth + 1 >= dsw->maxDatumPerBlock)
 	{
@@ -2341,32 +2331,8 @@ DatumStreamBlockWrite_DenseHasSpaceItem(
 	{
 		nullSize = DatumStreamBitMap_Size(dsw->always_null_bitmap_count + 1);
 	}
-	else
-	{
-		nullSize = 0;
-	}
 
-	if (dsw->rle_has_compression)
-	{
-		/*
-		 * Add in NEW compress bitmap but CURRENT repeated count array byte lengths.
-		 */
-		headerSize += sizeof(DatumStreamBlock_Rle_Extension);
-
-		/*
-		 * NEW compressbitmap byte size since we don't add bits when NULL;
-		 */
-		rleSize = DatumStreamBitMapWrite_NextSize(&dsw->rle_compress_bitmap);
-
-		/*
-		 * CURRENT repeat counts size.
-		 */
-		rleSize += dsw->rle_repeatcounts_current_size;
-	}
-	else
-	{
-		rleSize = 0;
-	}
+	DatumStreamBlockWrite_DenseRleSpace(dsw, false, &headerSize, &rleSize);
 
 	if (dsw->delta_has_compression)
 	{
@@ -2384,10 +2350,6 @@ DatumStreamBlockWrite_DenseHasSpaceItem(
 		 * CURRENT deltas size.
 		 */
 		deltaSize += dsw->deltas_current_size;
-	}
-	else
-	{
-		deltaSize = 0;
 	}
 
 	/*
