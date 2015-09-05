@@ -20,7 +20,7 @@ import os
 import sys
 
 progname = os.path.split(sys.argv[0])[-1]
-sys.path.append(sys.path[0] + '/lib')
+sys.path.insert(1, sys.path[0] + '/lib')
 
 if sys.version_info < (2, 5, 0):
     sys.exit(

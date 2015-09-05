@@ -4,18 +4,16 @@
 #
 # This file contains ssh Session class and support functions/classes.
 
-import sys
-import os
 import cmd
+import os
+import sys
+import socket
 import threading
 from gppylib.commands.base import WorkerPool, REMOTE, ExecutionError
 from gppylib.commands.unix import Hostname, Echo
 
-sys.path.append(sys.path[0] + '/lib')
-import pxssh
-import pexpect
-import socket
-
+sys.path.insert(1, sys.path[0] + '/lib')
+from pexpect import pxssh
 
 class HostNameError(Exception):
     def __init__(self, msg, lineno = 0):
@@ -141,7 +139,7 @@ class Session(cmd.Cmd):
 
     def __init__(self, hostList=None, userName=None):
         cmd.Cmd.__init__(self)
-        self.pxssh = []
+        self.pxssh_list = []
         self.prompt = '=> '
         self.peerStringFormatRaw = None
         if hostList:
@@ -152,7 +150,7 @@ class Session(cmd.Cmd):
     def peerStringFormat(self):
         if self.peerStringFormatRaw: return self.peerStringFormatRaw
         cnt = 0
-        for p in self.pxssh:
+        for p in self.pxssh_list:
             if cnt < len(p.x_peer): cnt = len(p.x_peer)
         self.peerStringFormatRaw = "[%%%ds]" % cnt
         return self.peerStringFormatRaw
@@ -177,52 +175,53 @@ class Session(cmd.Cmd):
         # MPP-6583.  Save off term type and set to nothing before creating ssh process
         origTERM = os.getenv('TERM', None)
         os.putenv('TERM', '')
-        
-        for host in hostList:
+
+        good_list = []
+        print_lock = threading.Lock()
+
+        def connect_host(host):
             self.hostList.append(host)
-            p = pxssh.pxssh()
-            p.loginAsync(host, self.userName)
-            p.x_peer = host
-            p.x_pid = p.pid
-            self.pxssh.append(p)
-            
+            p = pxssh.pxssh(options={"StrictHostKeyChecking": "no",
+                                     "BatchMode": "yes"})
+            try:
+                p.login(host, self.userName, sync_multiplier=0.5)
+                p.x_peer = host
+                p.x_pid = p.pid
+                good_list.append(p)
+                if self.verbose:
+                    with print_lock:
+                        print '[INFO] login %s' % host
+            except:
+                with print_lock:
+                    print '[ERROR] unable to login to %s' % host
+                    print 'hint: use gpssh-exkeys to setup public-key authentication between hosts'
+
+        thread_list = []
+        for host in hostList:
+            t = threading.Thread(target=connect_host, args=(host,))
+            t.start()
+            thread_list.append(t)
+
+        for t in thread_list:
+            t.join()
+
         # Restore terminal type
         if origTERM:
             os.putenv('TERM', origTERM)
 
-        some_errors = False
-        good_list = []
-        for p in self.pxssh:
-            
-            success_login = False
-            if self.verbose: print '[INFO] login %s' % p.x_peer
-            try:
-                success_login = p.loginWait(set_term_dumb=True)
-            except Exception as e:
-                pass
-
-            if success_login:
-                good_list.append(p)
-            else:
-                some_errors = True
-                print '[ERROR] unable to login to %s' % p.x_peer
-
-        if some_errors:
-            print 'hint: use gpssh-exkeys to setup public-key authentication between hosts'
-
-        self.pxssh = good_list
+        self.pxssh_list = good_list
 
     def close(self):
         return self.clean()
     
     def reset(self):
         '''reads from all the ssh connections to make sure we dont have any pending cruft'''
-        for s in self.pxssh:
+        for s in self.pxssh_list:
             s.readlines()
                 
     def clean(self):
-        net_return_code = self.closePxsshList(self.pxssh)
-        self.pxssh = []
+        net_return_code = self.closePxsshList(self.pxssh_list)
+        self.pxssh_list = []
         return net_return_code
 
     def emptyline(self):
@@ -251,17 +250,16 @@ class Session(cmd.Cmd):
             command = 'echo "%s"; %s' % (escapedCommand, command)
             
         #Execute the command in all of the ssh sessions
-        for s in self.pxssh:
+        for s in self.pxssh_list:
             s.sendline(command)
-            s.flush()
             
         #Wait for each command and retrieve the output
-        for s in self.pxssh:
+        for s in self.pxssh_list:
             #Wait for each command to finish
             #!! TODO verify that this is a tight wait loop and find another way to do this
             while not s.prompt(120) and s.isalive() and not s.eof(): pass
             
-        for s in self.pxssh:
+        for s in self.pxssh_list:
             #Split the output into an array of lines so that we can add text to the beginning of
             #    each line
             output = s.before.split('\n')
@@ -289,7 +287,7 @@ class Session(cmd.Cmd):
     def writeCommandOutput(self,commandoutput):
         '''Takes a list of output lists as an iterator and writes them to standard output,
         formatted with the hostname from which each output array was obtained'''
-        for s in self.pxssh:
+        for s in self.pxssh_list:
             output = commandoutput.next()
             #Write the output
             if len(output) == 0:
@@ -303,7 +301,6 @@ class Session(cmd.Cmd):
         return_codes = [0]
         def closePxsshOne(p, return_codes): 
             p.logout()
-            p.close()
             with lock:
                 return_codes.append(p.exitstatus)
         th = []
