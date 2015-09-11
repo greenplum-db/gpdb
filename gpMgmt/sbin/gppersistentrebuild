@@ -83,7 +83,7 @@ def create_parser():
                        version='%prog version $Revision: #5 $',
                        description='Rebuild persistent tables')
 
-    addStandardLoggingAndHelpOptions(parser, includeNonInteractiveOption=True)
+    addStandardLoggingAndHelpOptions(parser, includeNonInteractiveOption=False)
 
     addTo = OptionGroup(parser, 'Persistent tables rebuild options')
     addTo.add_option('-f', '--contentid-file', metavar="<filename>",
