@@ -38,7 +38,9 @@ typedef struct SimpleOidList
 typedef struct SimpleStringListCell
 {
 	struct SimpleStringListCell *next;
-	char		val[1];			/* VARIABLE LENGTH FIELD */
+	bool		touched;				/* true, when this string was searched
+								      and touched */
+	char		val[FLEXIBLE_ARRAY_MEMBER];		/* null-terminated string here */
 } SimpleStringListCell;
 
 typedef struct SimpleStringList
@@ -113,6 +115,8 @@ extern void set_dump_section(const char *arg, int *dumpSections);
 
 extern void simple_string_list_append(SimpleStringList *list, const char *val);
 extern bool simple_string_list_member(SimpleStringList *list, const char *val);
+extern const char *simple_string_list_not_touched(SimpleStringList *list);
+
 
 extern bool variable_is_guc_list_quote(const char *name);
 

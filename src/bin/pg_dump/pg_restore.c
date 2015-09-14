@@ -76,6 +76,7 @@ main(int argc, char **argv)
 	static int	outputNoTablespaces = 0;
 	static int	use_setsessauth = 0;
 	static int	no_security_labels = 0;
+	static int	strict_names = 0;
 
 	static int	binary_upgrade = 0;
 
@@ -119,6 +120,7 @@ main(int argc, char **argv)
 		{"no-tablespaces", no_argument, &outputNoTablespaces, 1},
 		{"role", required_argument, NULL, 2},
 		{"section", required_argument, NULL, 3},
+		{"strict-names", no_argument, &strict_names, 1},
 		{"use-set-session-authorization", no_argument, &use_setsessauth, 1},
 		{"no-security-labels", no_argument, &no_security_labels, 1},
 
@@ -369,6 +371,7 @@ main(int argc, char **argv)
 		exit_nicely(1);
 	}
 	opts->if_exists = if_exists;
+	opts->strict_names = strict_names;
 
 	if (opts->formatName)
 	{
@@ -484,6 +487,8 @@ usage(const char *progname)
 	printf(_("  --no-security-labels         do not restore security labels\n"));
 	printf(_("  --no-tablespaces             do not restore tablespace assignments\n"));
 	printf(_("  --section=SECTION            restore named section (pre-data, data, or post-data)\n"));
+	printf(_("  --strict-names               require table and/or schema include patterns to\n"
+			 "                               match at least one entity each\n"));
 	printf(_("  --use-set-session-authorization\n"
 			 "                               use SET SESSION AUTHORIZATION commands instead of\n"
 			 "                               ALTER OWNER commands to set ownership\n"));
