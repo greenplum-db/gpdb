@@ -17,7 +17,7 @@
 BEGIN;
 
 -- Use this pl/pgsql function to execute DML on cat tab on all segs
-create or replace function @gpupgradeschemaname@.catDML(stmt text) returns int as $$
+create or replace function upg_catalog.catDML(stmt text) returns int as $$
 begin
   execute stmt;
   return 1;
@@ -25,10 +25,10 @@ end;
 $$ language 'plpgsql';
 
 -- Use this pl/pgsql function to add PIn dependency of the newly created procedure
-create or replace function @gpupgradeschemaname@.addProcPIN(procid oid) returns int as $$
+create or replace function upg_catalog.addProcPIN(procid oid) returns int as $$
 begin
-  INSERT INTO @gpupgradeschemaname@.pg_depend values(0,0,0, 1255, procid, 0, 'p');
-  PERFORM @gpupgradeschemaname@.catDML('INSERT INTO @gpupgradeschemaname@.pg_depend values(0,0,0, 1255, '||procid||', 0, ''p'')') from gp_dist_random('gp_id');
+  INSERT INTO upg_catalog.pg_depend values(0,0,0, 1255, procid, 0, 'p');
+  PERFORM upg_catalog.catDML('INSERT INTO upg_catalog.pg_depend values(0,0,0, 1255, '||procid||', 0, ''p'')') from gp_dist_random('gp_id');
   return 1;
 end;
 $$ language 'plpgsql';
@@ -46,19 +46,19 @@ $$ language 'plpgsql';
 --   drop temp helper routine
 --   commit the txn
 ----------------------------------------
-INSERT INTO @gpupgradeschemaname@.pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' FROM @gpupgradeschemaname@.pg_proc
-        where (tableoid,oid) not in (Select refclassid, refobjid from @gpupgradeschemaname@.pg_depend)
+INSERT INTO upg_catalog.pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' FROM upg_catalog.pg_proc
+        where (tableoid,oid) not in (Select refclassid, refobjid from upg_catalog.pg_depend)
           and pronamespace = 11
           and oid < 16384;
-select @gpupgradeschemaname@.catDML(
-'INSERT INTO @gpupgradeschemaname@.pg_depend SELECT 0,0,0, tableoid,oid,0, ''p'' FROM @gpupgradeschemaname@.pg_proc
-        where (tableoid,oid) not in (Select refclassid, refobjid from @gpupgradeschemaname@.pg_depend)
+select upg_catalog.catDML(
+'INSERT INTO upg_catalog.pg_depend SELECT 0,0,0, tableoid,oid,0, ''p'' FROM upg_catalog.pg_proc
+        where (tableoid,oid) not in (Select refclassid, refobjid from upg_catalog.pg_depend)
           and pronamespace = 11
           and oid < 16384')
 from gp_dist_random('gp_id');
 
-drop function @gpupgradeschemaname@.catDML(stmt text);
-drop function @gpupgradeschemaname@.addProcPIN(procid oid);
+drop function upg_catalog.catDML(stmt text);
+drop function upg_catalog.addProcPIN(procid oid);
 abort;
 
 \unset ON_ERROR_STOP
