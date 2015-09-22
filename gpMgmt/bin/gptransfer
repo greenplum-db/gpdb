@@ -2492,7 +2492,7 @@ class GpTransfer(object):
         initializes the validator if needed.
         """
         # create base pipe directory on each source system
-        logger.info('Creating work directory...')
+        logger.info("Creating work directory '%s'" % self._work_dir)
 
         for host in self._host_map.keys():
             address = iter(self._host_map[host]).next()
