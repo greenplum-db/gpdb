@@ -1572,8 +1572,6 @@ RemoveRelation(const RangeVar *relation, DropBehavior behavior,
 
 	AcceptInvalidationMessages();
 
-	relOid = RangeVarGetRelid(relation, false);
-
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		LockRelationOid(RelationRelationId, RowExclusiveLock);
@@ -1581,7 +1579,16 @@ RemoveRelation(const RangeVar *relation, DropBehavior behavior,
 		LockRelationOid(DependRelationId, RowExclusiveLock);
 	}
 
-	LockRelationOid(relOid, AccessExclusiveLock);
+
+	/*
+	 * Perform name lookup again if we had to wait to acquire lock on
+	 * OID of the relation.  The relation's name could have been
+	 * altered while we were waiting.
+	 */
+	relOid = RangeVarGetRelidExtended(
+			relation, AccessExclusiveLock, false /* missing_ok */,
+			false /* nowait */, NULL /* callback */,
+			NULL /* callback_arg */);
 
 	pcqCtx = caql_beginscan(
 			NULL,

@@ -15,7 +15,7 @@
 #define NAMESPACE_H
 
 #include "nodes/primnodes.h"
-
+#include "storage/lock.h"
 
 /*
  *	This structure holds a list of possible functions or operators
@@ -32,8 +32,14 @@ typedef struct _FuncCandidateList
 	Oid			args[1];		/* arg types --- VARIABLE LENGTH ARRAY */
 }	*FuncCandidateList;	/* VARIABLE LENGTH STRUCT */
 
+typedef void (*RangeVarGetRelidCallback) (const RangeVar *relation, Oid relId,
+										   Oid oldRelId, void *callback_arg);
 
 extern Oid	RangeVarGetRelid(const RangeVar *relation, bool failOK);
+extern Oid  RangeVarGetRelidExtended(const RangeVar *relation,
+						 LOCKMODE lockmode, bool missing_ok, bool nowait,
+						 RangeVarGetRelidCallback callback,
+						 void *callback_arg);
 extern Oid	RangeVarGetCreationNamespace(const RangeVar *newRelation);
 extern Oid	RelnameGetRelid(const char *relname);
 extern bool RelationIsVisible(Oid relid);
