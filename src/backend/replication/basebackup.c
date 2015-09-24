@@ -30,6 +30,7 @@
 #include "lib/stringinfo.h"
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
+#include "miscadmin.h"
 #include "nodes/pg_list.h"
 #include "replication/basebackup.h"
 #include "replication/walsender.h"
@@ -41,7 +42,6 @@
 #include "utils/elog.h"
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
-#include "utils/memutils.h"
 #include "utils/ps_status.h"
 
 typedef struct
@@ -390,16 +390,7 @@ void
 SendBaseBackup(BaseBackupCmd *cmd)
 {
 	DIR		   *dir;
-	MemoryContext backup_context;
-	MemoryContext old_context;
 	basebackup_options opt;
-
-	backup_context = AllocSetContextCreate(CurrentMemoryContext,
-										   "Streaming base backup context",
-										   ALLOCSET_DEFAULT_MINSIZE,
-										   ALLOCSET_DEFAULT_INITSIZE,
-										   ALLOCSET_DEFAULT_MAXSIZE);
-	old_context = MemoryContextSwitchTo(backup_context);
 
 	parse_basebackup_options(cmd->options, &opt);
 
@@ -450,8 +441,6 @@ SendBaseBackup(BaseBackupCmd *cmd)
 
 	CommitTransactionCommand();
 
-	MemoryContextSwitchTo(old_context);
-	MemoryContextDelete(backup_context);
 }
 
 static void
@@ -671,7 +660,7 @@ match_exclude_list(char *path, List *exclude)
 
 /*
  * Include all files from the given directory in the output tar stream. If
- * 'sizeonly' is true, we just calculate a total length and return ig, without
+ * 'sizeonly' is true, we just calculate a total length and return it, without
  * actually sending anything.
  */
 static int64
@@ -709,7 +698,7 @@ sendDir(char *path, int basepathlen, List *exclude, bool sizeonly)
 		 * error in that case. The error handler further up will call
 		 * do_pg_abort_backup() for us.
 		 */
-		if (walsender_shutdown_requested || walsender_ready_to_stop)
+		if (ProcDiePending || walsender_ready_to_stop)
 			ereport(ERROR,
 				(errmsg("shutdown requested, aborting active base backup")));
 
