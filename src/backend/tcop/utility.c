@@ -1090,12 +1090,9 @@ ProcessUtility(Node *parsetree,
 					{
 						/*
 						 * If we are the QD, dispatch this DROP command to all the QEs
-						 * NOTE: on the segments we convert all drop-statements into
-						 * drop-if-exists.
 						 */
 						if (Gp_role == GP_ROLE_DISPATCH)
 						{
-							stmt->missing_ok = true;
 							CdbDispatchUtilityStatement((Node *) stmt, "ProcessUtility");
 						}
 					}
