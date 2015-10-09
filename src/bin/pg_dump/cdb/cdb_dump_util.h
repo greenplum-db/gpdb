@@ -161,7 +161,7 @@ extern char* formCompressionProgramString(char* compPg);
 extern void formDDBoostPsqlCommandLine(char** retVal, bool compUsed, const char* ddboostPg, const char* compProg, 
 							const char* ddp_file_name, const char* dd_boost_buf_size,
 							const char* filter_script, const char* table_filter_file, 
-							int role, const char* psqlPg);
+							int role, const char* psqlPg, bool postSchemaOnly);
 extern void formSegmentPsqlCommandLine(char** retVal, const char* inputFileSpec, 
 						bool compUsed, const char* compProg, const char* filter_script, 
 						const char* table_filter_file, int role, const char* psqlPg, const char* catPg,
@@ -185,4 +185,5 @@ char getTypstorage(Oid o);
 
 int removeNode(Oid o);
 
+extern char* shellEscape(const char *shellArg, PQExpBuffer escapeBuf);
 #endif   /* CDB_DUMP_UTIL_H */

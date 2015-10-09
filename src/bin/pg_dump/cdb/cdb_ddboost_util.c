@@ -141,7 +141,6 @@ static const char *logError = "ERROR";
 const char *progname;
 
 static char * addPassThroughLongParm(const char *Parm, const char *pszValue, char *pszPassThroughParmString);
-static char * shellEscape(const char *shellArg, PQExpBuffer escapeBuf);
 static int dd_boost_enabled = 1;
 
 extern ddp_client_info_t dd_client_info;
@@ -898,48 +897,6 @@ addPassThroughLongParm(const char *Parm, const char *pszValue, char *pszPassThro
         }
 
         return pszRtn;
-}
-
-/*
- * shellEscape: Returns a string in which the shell-significant quoted-string characters are
- * escaped.  The resulting string, if used as a SQL statement component, should be quoted
- * using the PG $$ delimiter (or as an E-string with the '\' characters escaped again).
- *
- * This function escapes the following characters: '"', '$', '`', '\', '!'.
- *
- * The PQExpBuffer escapeBuf is used for assembling the escaped string and is reset at the
- * start of this function.
- *
- * The return value of this function is the data area from excapeBuf.
- */
-static char *
-shellEscape(const char *shellArg, PQExpBuffer escapeBuf)
-{
-        const char *s = shellArg;
-        const char      escape = '\\';
-
-        resetPQExpBuffer(escapeBuf);
-
-        /*
-         * Copy the shellArg into the escapeBuf prepending any characters
-         * requiring an escape with the escape character.
-         */
-        while (*s != '\0')
-        {
-                switch (*s)
-                {
-                        case '"':
-                        case '$':
-                        case '\\':
-                        case '`':
-                        case '!':
-                                appendPQExpBufferChar(escapeBuf, escape);
-                }
-                appendPQExpBufferChar(escapeBuf, *s);
-                s++;
-        }
-
-        return escapeBuf->data;
 }
 
 int

@@ -26,6 +26,7 @@
 #include "cdb_dump.h"
 #include "cdb_dump_include.h"
 #include <poll.h>
+#include <time.h>
 
 /* This is necessary on platforms where optreset variable is not available.
  * Look at "man getopt" documentation for details.
@@ -41,7 +42,6 @@ int			optreset;
  */
 static char *addPassThroughParm(char Parm, const char *pszValue, char *pszPassThroughParmString);
 static char *addPassThroughLongParm(const char *Parm, const char *pszValue, char *pszPassThroughParmString);
-static char *shellEscape(const char *shellArg, PQExpBuffer escapeBuf);
 static bool createThreadParmArray(int nCount, ThreadParmArray * pParmAr);
 static void decrementFinishedLaunchCount(void);
 static void decrementFinishedLockingCount(void);
@@ -73,6 +73,8 @@ extern int	optind,
 			opterr;
 static int dump_inserts;		/* dump data using proper insert strings */
 static int column_inserts;			/* put attr names into insert strings */
+static int max_probe_retries = 10;
+static int probe_interval = 60; 	/* 1 minute interval */
 static char *dumpencoding = NULL;
 static bool schemaOnly;
 static bool incremental_backup;
@@ -501,48 +503,6 @@ copyFilesToSegments(InputOptions *pInputOpts, SegmentDatabaseArray *segDBAr)
 	}
 
 	return true;
-}
-
-/*
- * shellEscape: Returns a string in which the shell-significant quoted-string characters are
- * escaped.  The resulting string, if used as a SQL statement component, should be quoted
- * using the PG $$ delimiter (or as an E-string with the '\' characters escaped again).
- *
- * This function escapes the following characters: '"', '$', '`', '\', '!'.
- *
- * The PQExpBuffer escapeBuf is used for assembling the escaped string and is reset at the
- * start of this function.
- *
- * The return value of this function is the data area from excapeBuf.
- */
-static char *
-shellEscape(const char *shellArg, PQExpBuffer escapeBuf)
-{
-	const char *s = shellArg;
-	const char	escape = '\\';
-
-	resetPQExpBuffer(escapeBuf);
-
-	/*
-	 * Copy the shellArg into the escapeBuf prepending any characters
-	 * requiring an escape with the escape character.
-	 */
-	while (*s != '\0')
-	{
-		switch (*s)
-		{
-			case '"':
-			case '$':
-			case '\\':
-			case '`':
-			case '!':
-				appendPQExpBufferChar(escapeBuf, escape);
-		}
-		appendPQExpBufferChar(escapeBuf, *s);
-		s++;
-	}
-
-	return escapeBuf->data;
 }
 
 
@@ -1961,6 +1921,15 @@ spinOffThreads(PGconn *pConn,
 	mpp_msg(logInfo, progname, "Committing transaction on the master database, thereby releasing locks.\n");
 	execCommit(pConn);
 
+	/* The main purpose of probing is to detect segment crashes during the
+	 * the dump process, to prevent master from keeping pg_class lock
+	 * or waiting for status update from segment infinitely. So once the
+	 * pg_class lock has been released, we can increase the probing interval
+	 * to reduce the overhead.
+	 */
+	max_probe_retries = 5;
+	probe_interval = 120; 	/* 2 minute interval */
+
 	// Create a file on the master to signal to gpcrondump that it can release its pg_class lock
 	// Only do this if no-lock is passed, otherwise it can cause problems if gp_dump is called directly and does its own locks
 	if (pParm->pTargetSegDBData->role == ROLE_MASTER && no_lock)
@@ -2021,6 +1990,8 @@ threadProc(void *arg)
 	bool		decrementedLunchCount = false;
 	bool		decrementedLockCount = false;
 
+	time_t		now, last;
+
 	/*
 	 * The argument is a pointer to a ThreadParm structure that stays around
 	 * for the entire time the program is running. so we need not worry about
@@ -2040,8 +2011,10 @@ threadProc(void *arg)
 	bool		bSentCancelMessage;
 	BackupStateMachine *pState;
 	PGnotify   *pNotify;
-	int			pollResult = 0;
-	int			pollTimeout;
+	int         retryCnt = 0;
+	bool        notifyReceived = false;
+	int         pollResult = 0;
+	int         pollTimeout;
 	struct pollfd *pollInput;
 
 	/*
@@ -2074,6 +2047,7 @@ threadProc(void *arg)
 	DoCancelNotifyListen(pConn, true, pszKey, pSegDB->role, pSegDB->dbid, -1, SUFFIX_GOTLOCKS);
 	DoCancelNotifyListen(pConn, true, pszKey, pSegDB->role, pSegDB->dbid, -1, SUFFIX_SUCCEED);
 	DoCancelNotifyListen(pConn, true, pszKey, pSegDB->role, pSegDB->dbid, -1, SUFFIX_FAIL);
+	DoCancelNotifyListen(pConn, true, pszKey, pSegDB->role, pSegDB->dbid, -1, SUFFIX_SEGMENT_PROBE);
 
 	mpp_msg(logInfo, progname, "Listening for messages from server on dbid %d connection\n", pSegDB->dbid);
 
@@ -2156,6 +2130,9 @@ threadProc(void *arg)
 	 * receiving these notifications
 	 */
 	
+	time(&now);
+	time(&last);
+
 	while (!IsFinalState(pState))
 	{
 		/*
@@ -2173,6 +2150,7 @@ threadProc(void *arg)
 			 */
 			DoCancelNotifyListen(pConn, false, pszKey, pSegDB->role, pSegDB->dbid, -1, NULL);
 			bSentCancelMessage = true;
+			goto cleanup;
 		}
 		
 		/* Replacing select() by poll() here to overcome the limitations of 
@@ -2191,21 +2169,7 @@ threadProc(void *arg)
 			pParm->pszErrorMsg = MakeString("poll failed for backup key %s, role %d, dbid %d failed\n",
 										 pszKey, pSegDB->role, pSegDB->dbid);
 			mpp_err_msg(logFatal, progname, pParm->pszErrorMsg);
-			PQfinish(pConn);
-			DestroyBackupStateMachine(pState);
-			if (!decrementedLunchCount)
-			{
-				decrementFinishedLaunchCount();
-				decrementedLunchCount = true;
-			}
-
-			if (!decrementedLockCount)
-			{
-				decrementFinishedLockingCount();
-				decrementedLockCount = true;
-			}
-
-			return NULL;
+			goto cleanup;
 		}
 
 		/* See whether the connection went down */
@@ -2215,21 +2179,7 @@ threadProc(void *arg)
 			pParm->pszErrorMsg = MakeString("connection went down for backup key %s, role %d, dbid %d\n",
 										 pszKey, pSegDB->role, pSegDB->dbid);
 			mpp_err_msg(logError, progname, pParm->pszErrorMsg);
-			PQfinish(pConn);
-			DestroyBackupStateMachine(pState);
-			if (!decrementedLunchCount)
-			{
-				decrementFinishedLaunchCount();
-				decrementedLunchCount = true;
-			}
-
-			if (!decrementedLockCount)
-			{
-				decrementFinishedLockingCount();
-				decrementedLockCount = true;
-			}
-
-			return NULL;
+			goto cleanup;
 		}
 
 		/* try to get any notification from the server */
@@ -2245,7 +2195,9 @@ threadProc(void *arg)
 			 * expect
 			 */
 			if (strncasecmp(pState->pszNotifyRelName, pNotify->relname,
-							strlen(pState->pszNotifyRelName)) == 0)
+							strlen(pState->pszNotifyRelName)) == 0 &&
+				strncasecmp(pState->pszNotifyRelNameSegmentProbe, pNotify->relname,
+							strlen(pState->pszNotifyRelNameSegmentProbe)))
 			{
 				/* add this notification to our state notification array */
 				if (!AddNotificationtoBackupStateMachine(pState, pNotify))
@@ -2253,23 +2205,11 @@ threadProc(void *arg)
 					g_b_SendCancelMessage = true;
 					pParm->pszErrorMsg = MakeString("error allocating memory for Greenplum Database backup\n");
 					mpp_err_msg(logError, progname, pParm->pszErrorMsg);
-					PQfinish(pConn);
-					DestroyBackupStateMachine(pState);
-					if (!decrementedLunchCount)
-					{
-						decrementFinishedLaunchCount();
-						decrementedLunchCount = true;
-					}
-
-					if (!decrementedLockCount)
-					{
-						decrementFinishedLockingCount();
-						decrementedLockCount = true;
-					}
-
-					return NULL;
+					goto cleanup;
 				}
 			}
+			/* As long as the segment agent is responding with notifications, don't try cancelling */
+			notifyReceived = true;
 		}
 
 		ProcessInput(pState);
@@ -2285,22 +2225,36 @@ threadProc(void *arg)
 			decrementedLockCount = true;
 		}
 
-	}
+		time(&now);
 
-	/*
-	 * make sure to decrement if we haven't already, to release mutex if in
-	 * error state
-	 */
-	if (!decrementedLunchCount)
-	{
-		decrementFinishedLaunchCount();
-		decrementedLunchCount = true;
-	}
+		/* Wait here if no response received from segment. Once we reach the
+		 * probe_interval, send out next probe notification to the segment.
+		 */
+		if (notifyReceived)
+		{
+			/* reset and start next probing cycle */
+			notifyReceived = false;
+			retryCnt = 0;
+			last = now;
+		}
+		else if(difftime(now, last) >= probe_interval)
+		{
+			retryCnt += 1;
+			last = now;
 
-	if (!decrementedLockCount)
-	{
-		decrementFinishedLockingCount();
-		decrementedLockCount = true;
+			/* Sending probe notification to the segment every probe interval */
+			DoCancelNotifyListen(pConn, false, pszKey, pSegDB->role, pSegDB->dbid, -1, SUFFIX_MASTER_PROBE);
+		}
+
+		/* mark cancellation for dump agent if not receiving response for probe notifications after 10 min. */
+		if (retryCnt >= max_probe_retries)
+		{
+			g_b_SendCancelMessage = true;
+			pParm->pszErrorMsg = MakeString("Lost response from dump agent with dbid %d on host %s after 10 minutes.\n",
+							pSegDB->dbid, StringNotNull(pSegDB->pszHost, "localhost"));
+			mpp_err_msg(logError, progname, pParm->pszErrorMsg);
+			goto cleanup;
+		}
 	}
 
 	/*
@@ -2359,6 +2313,21 @@ threadProc(void *arg)
 		pParm->bSuccess = true;
 		mpp_msg(logInfo, progname, "backup succeeded for dbid %d on host %s\n",
 				pSegDB->dbid, StringNotNull(pSegDB->pszHost, "localhost"));
+	}
+
+cleanup:
+	/*
+	 * make sure to decrement if we haven't already, to release mutex if in
+	 * error state
+	 */
+	if (!decrementedLunchCount)
+	{
+		decrementFinishedLaunchCount();
+	}
+
+	if (!decrementedLockCount)
+	{
+		decrementFinishedLockingCount();
 	}
 
 	PQfinish(pConn);
