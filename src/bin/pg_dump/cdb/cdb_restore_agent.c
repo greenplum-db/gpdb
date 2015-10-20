@@ -150,6 +150,8 @@ static char * dump_prefix = NULL;
 static char *netbackup_service_host = NULL;
 static char *netbackup_block_size = NULL;
 
+static char *change_schema = NULL;
+
 int
 main(int argc, char **argv)
 {
@@ -237,6 +239,7 @@ main(int argc, char **argv)
 		{"status", required_argument, NULL, 14},
 		{"netbackup-service-host", required_argument, NULL, 15},
 		{"netbackup-block-size", required_argument, NULL, 16},
+		{"change-schema", required_argument, NULL, 17},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -445,6 +448,9 @@ main(int argc, char **argv)
 				break;
 			case 16:
 				netbackup_block_size = strdup(optarg);
+				break;
+			case 17:
+				change_schema = strdup(fmtId(optarg));
 				break;
 
 
@@ -812,7 +818,7 @@ main(int argc, char **argv)
 					formSegmentPsqlCommandLine(&pszCmdLine, inputFileSpec, bCompUsed, g_compPg,
 							filterScript, table_filter_file,
 							g_role, psqlPg, catPg,
-							gpNBURestorePg, netbackup_service_host, netbackup_block_size);
+							gpNBURestorePg, netbackup_service_host, netbackup_block_size, change_schema);
 				}
 #ifdef USE_DDBOOST
 			}
@@ -999,6 +1005,8 @@ main(int argc, char **argv)
 
 	DestroyStatusOpList(g_pStatusOpList);
 
+    if (change_schema)
+        free(change_schema);
 	if (SegDB.pszHost)
 		free(SegDB.pszHost);
 	if (SegDB.pszDBName)

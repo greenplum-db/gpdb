@@ -1005,6 +1005,13 @@ def impl(context, table_list, dbname):
     for t in tables:
         backup_data(context, t.strip(), dbname) 
 
+@when('verify that there is a table "{tablename}" of "{tabletype}" type in "{dbname}" with same data as table "{backedup_table}"')
+@then('verify that there is a table "{tablename}" of "{tabletype}" type in "{dbname}" with same data as table "{backedup_table}"')
+def impl(context, tablename, tabletype, dbname, backedup_table):
+    if not check_table_exists(context, dbname=dbname, table_name=tablename, table_type=tabletype):
+        raise Exception("Table '%s' does not exist when it should" % tablename)
+    validate_restore_data(context, tablename, dbname, backedup_table)
+
 @when('verify that there is a "{table_type}" table "{tablename}" in "{dbname}" with data')
 @then('verify that there is a "{table_type}" table "{tablename}" in "{dbname}" with data')
 def impl(context, table_type, tablename, dbname):

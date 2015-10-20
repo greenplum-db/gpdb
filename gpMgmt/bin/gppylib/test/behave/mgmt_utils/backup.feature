@@ -6019,6 +6019,48 @@ Feature: Validate command line arguments
         When the user runs "pg_dump -s -n public -f /tmp/public_pg_dump_ddl.dmp test_pg_dump"
         Then verify that function is backedup correctly in "/tmp/public_pg_dump_ddl.dmp"
 
+    @filter
+    Scenario: Full Backup and Restore with option --change-schema
+        Given the database is running
+        And the database "fullbkdb" does not exist
+        And database "fullbkdb" exists
+        And there is schema "schema_heap, schema_ao, schema_new1" exists in "fullbkdb"
+        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "fullbkdb" with data
+        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "quicklz" in "fullbkdb" with data
+        And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_part_table" in "fullbkdb" exists for validation
+        And there is a file "include_file" with tables "schema_heap.heap_table,schema_ao.ao_part_table"
+        When the user runs "gpcrondump -a -x fullbkdb --table-file include_file"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        And verify that the "report" file in " " dir contains "Backup Type: Full"
+        And the user runs "gpdbrestore --change-schema=schema_new1 -a --table-file include_file" with the stored timestamp
+        And gpdbrestore should return a return code of 0
+        And verify that there is a table "schema_new1.heap_table" of "heap" type in "fullbkdb" with same data as table "schema_heap.heap_table"
+        And verify that there is a table "schema_new1.ao_part_table" of "ao" type in "fullbkdb" with same data as table "schema_ao.ao_part_table"
+
+    @filter
+    Scenario: Incremental Backup and Restore with option --change-schema
+        Given the database is running
+        And the database "fullbkdb" does not exist
+        And database "fullbkdb" exists
+        And there is schema "schema_heap, schema_ao, schema_new1" exists in "fullbkdb"
+        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "fullbkdb" with data
+        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "quicklz" in "fullbkdb" with data
+        And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_part_table" in "fullbkdb" exists for validation
+        And there is a file "include_file" with tables "schema_heap.heap_table,schema_ao.ao_part_table"
+        When the user runs "gpcrondump -a -x fullbkdb --table-file include_file"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        And table "schema_ao.ao_part_table" is assumed to be in dirty state in "fullbkdb"
+        And the user runs "gpcrondump -a --incremental -x fullbkdb"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        And verify that the "report" file in " " dir contains "Backup Type: Incremental"
+        And the user runs "gpdbrestore --change-schema=schema_new1 -a --table-file include_file" with the stored timestamp
+        And gpdbrestore should return a return code of 0
+        And verify that there is a table "schema_new1.heap_table" of "heap" type in "fullbkdb" with same data as table "schema_heap.heap_table"
+        And verify that there is a table "schema_new1.ao_part_table" of "ao" type in "fullbkdb" with same data as table "schema_ao.ao_part_table"
+
     # THIS SHOULD BE THE LAST TEST
     @backupfire
     Scenario: cleanup for backup feature

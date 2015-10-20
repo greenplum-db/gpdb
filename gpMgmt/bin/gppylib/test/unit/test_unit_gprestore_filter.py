@@ -125,7 +125,7 @@ COPY ao_table (column1, column2, column3) FROM stdin;
         dump_tables = set([('pepper', 'ao_table')])
         with open(out_name, 'w') as fdout:
             with open(in_name, 'r') as fdin:
-                process_data(dump_schemas, dump_tables, fdin, fdout)
+                process_data(dump_schemas, dump_tables, fdin, fdout, None)
 
         with open(out_name, 'r') as fd:
             results = fd.read()
@@ -294,7 +294,7 @@ COPY ao_part_table_comp_1_prt_p1_2_prt_1 (column1, column2, column3) FROM stdin;
         dump_tables = set([('public', 'ao_part_table_comp_1_prt_p1_2_prt_1'), ('public', 'ao_part_table_1_prt_p1_2_prt_1')])
         with open(out_name, 'w') as fdout:
             with open(in_name, 'r') as fdin:
-                process_data(dump_schemas, dump_tables, fdin, fdout)
+                process_data(dump_schemas, dump_tables, fdin, fdout, None)
 
         with open(out_name, 'r') as fd:
             results = fd.read()
@@ -327,7 +327,7 @@ COPY ao_table (column1, column2, column3) FROM stdin;
         dump_tables = set([('public', 'ao_table')])
         with open(out_name, 'w') as fdout:
             with open(in_name, 'r') as fdin:
-                process_data(dump_schemas, dump_tables, fdin, fdout)
+                process_data(dump_schemas, dump_tables, fdin, fdout, None)
 
         with open(out_name, 'r') as fd:
             results = fd.read()
@@ -426,7 +426,7 @@ SET search_path = pepper, pg_catalog;
         dump_tables = set([('pepper', 'ao_table')])
         with open(out_name, 'w') as fdout:
             with open(in_name, 'r') as fdin:
-                process_data(dump_schemas, dump_tables, fdin, fdout)
+                process_data(dump_schemas, dump_tables, fdin, fdout, None)
 
         with open(out_name, 'r') as fd:
             results = fd.read()
@@ -471,7 +471,7 @@ COPY "测试" (column1, column2, column3) FROM stdin;
         dump_tables = set([('public', '测试')])
         with open(out_name, 'w') as fdout:
             with open(in_name, 'r') as fdin:
-                process_data(dump_schemas, dump_tables, fdin, fdout)
+                process_data(dump_schemas, dump_tables, fdin, fdout, None)
 
         with open(out_name, 'r') as fd:
             results = fd.read()
@@ -542,7 +542,7 @@ CREATE TABLE heap_table1 (
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -621,7 +621,7 @@ CREATE TABLE heap_table (
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -702,7 +702,7 @@ CREATE TABLE heap_table1 (
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -775,7 +775,7 @@ CREATE TABLE heap_table1 (
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -856,7 +856,7 @@ CREATE TABLE heap_table1 (
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -940,7 +940,7 @@ CREATE TABLE heap_table1 (
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1029,7 +1029,7 @@ CREATE TABLE heap_table1 (
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1117,7 +1117,7 @@ COPY ao_part_table from stdin;
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1214,7 +1214,7 @@ COPY ao_part_table from stdin;
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1307,7 +1307,7 @@ CREATE TABLE ao_part_table (
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1408,7 +1408,7 @@ CREATE TABLE ao_part_table (
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1509,7 +1509,7 @@ CREATE TABLE ao_part_table (
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1584,7 +1584,7 @@ CREATE TABLE ao_part_table (
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1662,7 +1662,7 @@ CREATE TABLE ao_part_table (
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1799,7 +1799,7 @@ CREATE TABLE ao_part_table (
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1905,7 +1905,7 @@ $$ LANGUAGE plpgsql;"""
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -1993,7 +1993,7 @@ CREATE TABLE ao_part_table (
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -2271,7 +2271,7 @@ GRANT ALL ON TABLE user_table TO user_role_b;
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -2421,7 +2421,7 @@ CREATE FOREIGN TABLE ao_part_table (
             
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET search_path = public, pg_catalog;
 
@@ -2585,7 +2585,7 @@ GRANT ALL ON TABLE user_table TO user_role_b;
      
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -2750,7 +2750,7 @@ GRANT ALL ON TABLE "测试" TO user_role_b;
      
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -2913,7 +2913,7 @@ GRANT ALL ON TABLE "Áá" TO user_role_b;
      
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
@@ -3076,7 +3076,7 @@ GRANT ALL ON TABLE "Ж" TO user_role_b;
      
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout)
+                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
         expected_out = """SET statement_timeout = 0;
 SET client_encoding = 'UTF8';

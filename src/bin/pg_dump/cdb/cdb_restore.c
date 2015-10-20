@@ -76,6 +76,8 @@ static char *status_file = NULL;
 static char *netbackup_service_host = NULL;
 static char *netbackup_block_size = NULL;
 
+static char *change_schema = NULL;
+
 #ifdef USE_DDBOOST
 static int dd_boost_enabled = 0;
 #endif
@@ -293,6 +295,7 @@ usage(void)
 	printf(("                          where backups are located. For example: --gp-l=i[10,12,15]\n"));
 	printf(("  --gp-f=FILE             FILE, present on all machines, with tables to include in restore\n"));
 	printf(("  --prefix=PREFIX         PREFIX of the dump files to be restored\n"));
+	printf(("  --change-schema=SCHEMA  Name of the schema to which files are to be restored\n"));
 }
 
 bool
@@ -369,6 +372,7 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 		{"status", required_argument, NULL, 14},
 		{"netbackup-service-host", required_argument, NULL, 15},
 		{"netbackup-block-size", required_argument, NULL, 16},
+		{"change-schema", required_argument, NULL, 17},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -744,6 +748,12 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 			case 16:
 				netbackup_block_size = Safe_strdup(optarg);
 				pInputOpts->pszPassThroughParms = addPassThroughLongParm("netbackup-block-size", netbackup_block_size, pInputOpts->pszPassThroughParms);
+				break;
+			case 17:
+				change_schema = Safe_strdup(optarg);
+				pInputOpts->pszPassThroughParms = addPassThroughLongParm("change-schema", change_schema, pInputOpts->pszPassThroughParms);
+				if (change_schema!= NULL)
+					free(change_schema);
 				break;
 
 			default:

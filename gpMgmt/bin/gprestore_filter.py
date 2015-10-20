@@ -33,13 +33,14 @@ def get_table_info(line):
         return (None, None, None)
     return (name, type, schema) 
 
-def process_schema(dump_schemas, dump_tables, fdin, fdout):
+def process_schema(dump_schemas, dump_tables, fdin, fdout, change_schema):
     """
     Filter the dump file line by line from restore
     dump_schemas: set of schemas to restore
     dump_tables: set of (schema, table) tuple to restore
     fdin: stdin from dump file
     fdout: to write filtered content to stdout
+    change_schema: different schema name to restore
     """
 
     schema, table = None, None
@@ -59,6 +60,8 @@ def process_schema(dump_schemas, dump_tables, fdin, fdout):
             further_investigation_required = False
             schema = extract_schema(line)
             if schema in dump_schemas:
+                if change_schema:
+                    line = line.replace(schema, change_schema)
                 output = True
                 search_path = False
             else:
@@ -188,7 +191,7 @@ def check_dropped_table(line, dump_tables):
         return True
     return False
 
-def process_data(dump_schemas, dump_tables, fdin, fdout):
+def process_data(dump_schemas, dump_tables, fdin, fdout, change_schema):
     schema, table = None, None
     output = False
     #PYTHON PERFORMANCE IS TRICKY .... THIS CODE IS LIKE THIS BECAUSE ITS FAST
@@ -196,6 +199,8 @@ def process_data(dump_schemas, dump_tables, fdin, fdout):
         if (line[0] == set_start) and line.startswith(search_path_expr):
             schema = extract_schema(line)
             if schema and schema in dump_schemas:
+                if change_schema:
+                    line = line.replace(schema, change_schema)
                 fdout.write(line)
         elif (line[0] == copy_start) and line.startswith(copy_expr) and line.endswith(copy_expr_end):
             table = extract_table(line)
@@ -218,12 +223,13 @@ if __name__ == "__main__":
     parser.add_option('-h', '-?', '--help', action='store_true')
     parser.add_option('-t', '--tablefile', type='string', default=None)
     parser.add_option('-m', '--master_only', action='store_true')
+    parser.add_option('-c', '--change_schema', type='string', default=None)
     (options, args) = parser.parse_args()
     if not options.tablefile:
         raise Exception('-t table file name has to be specified')
     (schemas, tables) = get_table_schema_set(options.tablefile)
     if options.master_only:
-        process_schema(schemas, tables, sys.stdin, sys.stdout)
+        process_schema(schemas, tables, sys.stdin, sys.stdout, options.change_schema)
     else:
-        process_data(schemas, tables, sys.stdin, sys.stdout)
+        process_data(schemas, tables, sys.stdin, sys.stdout, options.change_schema)
 

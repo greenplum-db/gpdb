@@ -8,6 +8,7 @@ from gppylib.commands.unix import Scp
 from gppylib.db import dbconn
 from gppylib.db.dbconn import execSQL
 from gppylib.gparray import GpArray
+from pygresql import pg
 
 logger = gplog.get_default_logger()
 
@@ -614,3 +615,16 @@ def get_latest_full_ts_with_nbu(dbname, backup_dir, dump_prefix, netbackup_servi
             return timestamp
 
     raise Exception('No full backup found for given incremental on the specified NetBackup server')
+
+def getRows(dbname, exec_sql):
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        curs = dbconn.execSQL(conn, exec_sql)
+        results = curs.fetchall()
+    return results
+
+def check_schema_exists(schema_name, dbname):
+    schemaname = pg.escape_string(schema_name)
+    schema_check_sql = "select * from pg_catalog.pg_namespace where nspname='%s';" % schemaname
+    if len(getRows(dbname, schema_check_sql)) < 1:
+        return False
+    return True

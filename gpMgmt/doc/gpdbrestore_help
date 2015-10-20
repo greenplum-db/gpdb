@@ -138,6 +138,20 @@ OPTIONS
  validation. If not specified, the utility will start up to 60 parallel 
  processes depending on how many segment instances it needs to restore. 
 
+
+--change-schema=schema-name
+
+ Optional. Restores tables from a backup created with gpcrondump to a
+ different schema. The specified schema must exist in the database.
+ If the schema does not exist, the utility returns an error. System
+ catalog schemas are not supported.
+
+ You must specify tables to restore with the -T and --table-file options.
+ If a table that is being restored exists in schema-name, the utility
+ returns a warning and attempts to append the data to the table from the
+ backup. You can specify the --trunctate option to truncate table data
+ before restoring data to the table from the backup.
+
  
 -d <master_data_directory>
 

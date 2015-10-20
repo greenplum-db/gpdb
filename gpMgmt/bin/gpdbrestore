@@ -24,7 +24,7 @@ try:
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.operations import Operation
     from gppylib.operations.backup_utils import check_dir_writable, generate_createdb_prefix, generate_master_dbdump_prefix, \
-                                                generate_report_filename, get_lines_from_file
+                                                generate_report_filename, get_lines_from_file, check_schema_exists
     from gppylib.operations.restore import GetDbName, GetDumpTables, RecoverRemoteDumps, RestoreDatabase, ValidateTimestamp, \
                                            config_files_dumped, create_restore_plan, get_restore_dir, get_restore_tables_from_table_file, \
                                            global_file_dumped, is_begin_incremental_run, is_incremental_restore, restore_cdatabase_file_with_nbu, \
@@ -84,6 +84,7 @@ class GpdbRestore(Operation):
         self.redirected_restore_db = options.redirected_restore_db
         self.report_status_dir = options.report_status_dir
         self.truncate = options.truncate
+        self.change_schema = options.change_schema
         # NetBackup params
         self.netbackup_service_host = options.netbackup_service_host
         self.netbackup_block_size = options.netbackup_block_size
@@ -103,6 +104,9 @@ class GpdbRestore(Operation):
 
         if self.list_backup and self.restore_tables:
             raise Exception('Cannot specify -T and --list-backup together')
+
+        if self.change_schema and not (self.restore_tables or self.table_file):
+            raise Exception('-T or --table-file option must be specified with the --change-schema option')
 
         if self.restore_tables is not None:
             self.restore_tables = self.restore_tables.split(',')
@@ -196,6 +200,14 @@ class GpdbRestore(Operation):
 
         self._output_info(info, restore_type)
 
+        if self.change_schema and not check_schema_exists(self.change_schema, info['restore_db']) and not self.redirected_restore_db:
+            raise Exception('Cannot restore tables to schema %s: schema does not exist' % self.change_schema)
+
+        if self.change_schema and self.redirected_restore_db:
+            if self.redirected_restore_db is not None:
+                if not check_schema_exists(self.change_schema, self.redirected_restore_db):
+                    raise Exception('Cannot restore tables to the database %s: schema %s does not exist' % (self.redirected_restore_db, self.change_schema))
+
         if self.interactive:
             if not userinput.ask_yesno(None, "\nContinue with Greenplum restore", 'N'):
                 raise UserAbortedException()
@@ -250,7 +262,8 @@ class GpdbRestore(Operation):
                         redirected_restore_db = self.redirected_restore_db,
                         report_status_dir = self.report_status_dir,
                         netbackup_service_host = self.netbackup_service_host,
-                        netbackup_block_size = self.netbackup_block_size).run()
+                        netbackup_block_size = self.netbackup_block_size,
+                        change_schema = self.change_schema).run()
 
         if self.no_analyze:
             logger.warn('--------------------------------------------------------------------------------------------------')
@@ -563,6 +576,8 @@ def create_parser():
                      help="Writable directory for report and status file creation")
     addTo.add_option('--truncate', action='store_true', dest='truncate', default=False,
                      help="Truncate's the restore tables specified using -T and --table-file option")
+    addTo.add_option('--change-schema', dest='change_schema', metavar="<change schema>",
+                     help="Different schema name to which tables will be restored")
     parser.add_option_group(addTo)
 
     # For Incremental Restore
