@@ -13,7 +13,6 @@ test: tiny
 test: subquery
 test: wrkloadadmin
 test: xpath
-test: initdb
 ignore: jdbc
 test: world
 test: sirv_functions
