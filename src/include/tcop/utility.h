@@ -40,5 +40,6 @@ extern bool QueryIsReadOnly(Query *parsetree);  /* Obsolete */
 extern bool CommandIsReadOnly(Node *parsetree);
 
 extern void CheckRelationOwnership(RangeVar *rel, bool noCatalogs);
+extern void DropErrorMsgNonExistent(const RangeVar *rel, char rightkind, bool missing_ok);
 
 #endif   /* UTILITY_H */

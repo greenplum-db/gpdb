@@ -1561,9 +1561,9 @@ MetaTrackValidKindNsp(Form_pg_class rd_rel)
  * RemoveRelation
  *		Deletes a relation.
  */
-void
+bool
 RemoveRelation(const RangeVar *relation, DropBehavior behavior,
-			   DropStmt *stmt)
+			   DropStmt *stmt, char relkind)
 {
 	Oid			relOid;
 	ObjectAddress object;
@@ -1579,16 +1579,34 @@ RemoveRelation(const RangeVar *relation, DropBehavior behavior,
 		LockRelationOid(DependRelationId, RowExclusiveLock);
 	}
 
-
 	/*
 	 * Perform name lookup again if we had to wait to acquire lock on
 	 * OID of the relation.  The relation's name could have been
 	 * altered while we were waiting.
 	 */
 	relOid = RangeVarGetRelidExtended(
-			relation, AccessExclusiveLock, false /* missing_ok */,
+			relation, AccessExclusiveLock, stmt->missing_ok,
 			false /* nowait */, NULL /* callback */,
 			NULL /* callback_arg */);
+
+	if (!OidIsValid(relOid))
+	{
+		/*
+		 * Missed to find the object to be dropped.
+		 * Drop with "if exists" just notify the same, unlock as not performing
+		 * any operation and return back to convey didn't drop the relation.
+		 * Drop without "if exists" won't even come here, as would error
+		 * inside RangeVarGetRelidExtended.
+		 */
+		DropErrorMsgNonExistent(relation, relkind, stmt->missing_ok);
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			UnlockRelationOid(DependRelationId, RowExclusiveLock);
+			UnlockRelationOid(TypeRelationId, RowExclusiveLock);
+			UnlockRelationOid(RelationRelationId, RowExclusiveLock);
+		}
+		return false;
+	}
 
 	pcqCtx = caql_beginscan(
 			NULL,
@@ -1629,6 +1647,7 @@ RemoveRelation(const RangeVar *relation, DropBehavior behavior,
 
 	/* if we got here then we should proceed. */
 	performDeletion(&object, behavior);
+	return true;
 }
 
 /*
