@@ -49,7 +49,6 @@ test: bkup_pg
 test: bkup_gpcrondump
 test: cursor
 test: aggfunc
-test: visibility
 test: tidscan
 test: memory_quota
 test: TestPSQL
