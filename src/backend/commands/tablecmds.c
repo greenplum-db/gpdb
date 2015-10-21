@@ -14952,7 +14952,9 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 		 * We do not allow EXCHANGE PARTITION for the default partition, so let's check for that
 		 * and error out.
 		 */
-		if (!is_split && rel_is_default_partition(oldrelid))
+		bool fExchangeDefaultPart = !is_split && rel_is_default_partition(oldrelid);
+
+		if (fExchangeDefaultPart && !gp_enable_exchange_default_partition)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
@@ -14970,6 +14972,12 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 		pc->partid = (Node *)oldrelrv;
 		pc2 = (AlterPartitionCmd *)pc->arg2;
 		pc2->arg2 = (Node *)pcols; /* for execute nodes */
+
+		if (fExchangeDefaultPart)
+		{
+			elog(WARNING, "Exchanging default partition may result in unexpected query results if "
+					"the data being exchanged should have been inserted into a different partition");
+		}
 
 		/* MPP-6929: metadata tracking */
 		MetaTrackUpdObject(RelationRelationId,

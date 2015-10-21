@@ -1725,6 +1725,9 @@ default partition abc);
 
 create table exh_abc (like d);
 alter table d exchange default partition with table exh_abc;
+set gp_enable_exchange_default_partition = on;
+alter table d exchange default partition with table exh_abc;
+reset gp_enable_exchange_default_partition;
 
 drop table d;
 drop table exh_abc;
@@ -1745,6 +1748,9 @@ create table exh_ao_ao (like sto_ao_ao) with (appendonly=true);
 
 -- Exchange default sub-partition, should fail
 alter table sto_ao_ao alter partition for (rank(3)) exchange default partition with table exh_ao_ao;
+set gp_enable_exchange_default_partition = on;
+alter table sto_ao_ao alter partition for (rank(3)) exchange default partition with table exh_ao_ao;
+reset gp_enable_exchange_default_partition;
 
 -- Exchange a non-default sub-partition of a default partition, should fail
 alter table sto_ao_ao alter default partition exchange partition for ('one') with table exh_ao_ao;

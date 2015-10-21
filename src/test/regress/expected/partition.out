@@ -3010,6 +3010,11 @@ create table exh_abc (like d);
 NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
 alter table d exchange default partition with table exh_abc;
 ERROR:  cannot exchange DEFAULT partition
+set gp_enable_exchange_default_partition = on;
+alter table d exchange default partition with table exh_abc;
+WARNING:  Exchanging default partition may result in unexpected query results if the data being exchanged should have been inserted into a different partition
+NOTICE:  exchanged partition "abc" of relation "d" with relation "exh_abc"
+reset gp_enable_exchange_default_partition;
 drop table d;
 drop table exh_abc;
 -- exchange default partition is not allowed (multi level)
@@ -3049,6 +3054,11 @@ NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution 
 -- Exchange default sub-partition, should fail
 alter table sto_ao_ao alter partition for (rank(3)) exchange default partition with table exh_ao_ao;
 ERROR:  cannot exchange DEFAULT partition
+set gp_enable_exchange_default_partition = on;
+alter table sto_ao_ao alter partition for (rank(3)) exchange default partition with table exh_ao_ao;
+WARNING:  Exchanging default partition may result in unexpected query results if the data being exchanged should have been inserted into a different partition
+NOTICE:  exchanged partition "subothers" of partition for rank 3 of relation "sto_ao_ao" with relation "exh_ao_ao"
+reset gp_enable_exchange_default_partition;
 -- Exchange a non-default sub-partition of a default partition, should fail
 alter table sto_ao_ao alter default partition exchange partition for ('one') with table exh_ao_ao;
 ERROR:  Cannot specify a name, rank, or value for a DEFAULT partition in this context
