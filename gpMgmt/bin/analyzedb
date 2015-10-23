@@ -247,10 +247,10 @@ class AnalyzeDb(Operation):
                 logger.warning("No valid state files directories exist. Exiting...")
 
         if self.include_cols is not None:
-            self.include_cols = self.include_cols.strip().lower().split(',')
+            self.include_cols = self.include_cols.strip().split(',')
 
         if self.exclude_cols is not None:
-            self.exclude_cols = self.exclude_cols.strip().lower().split(',')
+            self.exclude_cols = self.exclude_cols.strip().split(',')
 
         if self.single_table is None and self.schema is None and self.config_file is None:
             self.entire_db = True
@@ -354,10 +354,10 @@ class AnalyzeDb(Operation):
             for can in ordered_candidates:
                 if can in candidates:
                     target = self._get_tablename_with_cols(can, input_col_dict)
-                    cmd = Command('analyze %s' % target, ANALYZE_SQL % (self.dbname, target))
+                    cmd = Command('analyze %s' % target, ANALYZE_SQL % (self.dbname, quote_tbl(target)))
                 else: # can in root_partition_col_dict
                     target = self._get_tablename_with_cols(can, root_partition_col_dict)
-                    cmd = Command('analyze rootpartition %s' % target, ANALYZE_ROOT_SQL % (self.dbname, target))
+                    cmd = Command('analyze rootpartition %s' % target, ANALYZE_ROOT_SQL % (self.dbname, quote_tbl(target)))
                 pool.addCommand(cmd)
 
             wait_count = len(ordered_candidates)
@@ -366,7 +366,7 @@ class AnalyzeDb(Operation):
                 while wait_count > 0:
                     done_cmd = pool.completed_queue.get()
                     if done_cmd.was_successful():
-                        subject = self._get_tablename_from_cmd(done_cmd.cmdStr)
+                        subject = self._get_tablename_from_cmd_name(done_cmd.name)
                         self.success_list.append(subject)
                     if wait_count % 10 == 0:
                         logger.info("progress status: completed %d out of %d tables or partitions" %
@@ -417,13 +417,11 @@ class AnalyzeDb(Operation):
         """
         logger.info("Getting and verifying input tables...")
         if self.single_table:
-            self.single_table = self.single_table.lower()
             validate_include_tables(self.conn, [self.single_table], None)
             # for single table, we always try to expand it to avoid getting all root partitions in the database
             self._parse_column(col_dict, self.single_table, self.include_cols, self.exclude_cols, True)
 
         elif self.schema: # all tables in a schema
-            self.schema = self.schema.lower()
             ValidateSchemaExists(self.dbname, self.schema, self.pg_port).run()
             logger.debug("getting all tables in the schema...")
             all_schema_tables = run_sql(self.conn, GET_ALL_DATA_TABLES_IN_SCHEMA_SQL % self.schema)
@@ -436,7 +434,7 @@ class AnalyzeDb(Operation):
             all_root_partitions = run_sql(self.conn, GET_ALL_ROOT_PARTITION_TABLES_SQL)
             cfg_file = open(self.config_file, 'rU')
             for line in cfg_file:
-                toks = line.strip().lower().split()
+                toks = line.strip().split()
                 table = toks[0]
                 included_cols = self._get_include_or_exclude_cols(toks, '-i')
                 excluded_cols = self._get_include_or_exclude_cols(toks, '-x')
@@ -486,7 +484,7 @@ class AnalyzeDb(Operation):
         if self.config_file is not None or self.single_table is not None:
             valid_tables = []
             if len(ret) > 0:
-                oid_str = ','.join(["'%s'::regclass" % x for x in ret])
+                oid_str = get_oid_str(ret)
                 qresult = run_sql(self.conn, GET_VALID_DATA_TABLES_SQL % oid_str)
                 for tbl in qresult:
                     valid_tables.append('.'.join(tbl))
@@ -508,14 +506,14 @@ class AnalyzeDb(Operation):
 
     def _get_ao_state(self, input_tables_set):
         logger.debug("getting ao state...")
-        oid_str = ','.join(["'%s'::regclass" % x for x in input_tables_set])
+        oid_str = get_oid_str(input_tables_set)
         ao_partition_info = run_sql(self.conn, GET_REQUESTED_AO_DATA_TABLE_INFO_SQL % oid_str)
         return get_partition_state(self.pg_port, self.dbname, 'pg_aoseg', ao_partition_info)
 
     def _get_lastop_state(self, input_tables_set):
         # oid, action, subtype, timestamp
         logger.debug("getting last operation states...")
-        oid_str = ','.join(["'%s'::regclass" % x for x in input_tables_set])
+        oid_str = get_oid_str(input_tables_set)
         rows = run_sql(self.conn, GET_REQUESTED_LAST_OP_INFO_SQL % oid_str)
         data = []
         for row in rows:
@@ -641,11 +639,11 @@ class AnalyzeDb(Operation):
         else:
             return table + '(' + ','.join(sorted(col_dict[table])) + ')'
 
-    def _get_tablename_from_cmd(self, cmdStr):
-        if '(' in cmdStr:
-            subject = cmdStr.split()[-1].split('(')[0]
+    def _get_tablename_from_cmd_name(self, cmdName):
+        if '(' in cmdName:
+            subject = cmdName.split()[-1].split('(')[0]
         else:
-            subject = cmdStr.split()[-1][:-1]
+            subject = cmdName.split()[-1]
 
         return subject
 
@@ -678,7 +676,7 @@ class AnalyzeDb(Operation):
         # The leaf_root_dict keeps track of the mapping between a leaf partition and its root partition
         # for the use of refreshing root stats.
         leaf_root_dict = {}
-        oid_str = ','.join(["'%s'::regclass" % can for can in candidates])
+        oid_str = get_oid_str(candidates)
         qresult = run_sql(self.conn, GET_LEAF_ROOT_MAPPING_SQL % oid_str)
         for mapping in qresult:
             leaf_root_dict[mapping[0]] = mapping[1]
@@ -700,13 +698,13 @@ class AnalyzeDb(Operation):
         2. The leaf partitions (if range partitioned, especially by date) will be ordered in descending
            order of the partition key, so that newer partitions can be analyzed first.
         """
-        candidate_regclass_str = ','.join(["'%s'::regclass" % x for x in candidates+root_partition_col_dict.keys()])
+        candidate_regclass_str = get_oid_str(candidates+root_partition_col_dict.keys())
         qresult = run_sql(self.conn, ORDER_CANDIDATES_BY_OID_SQL % candidate_regclass_str)
         return ['.'.join(x) for x in qresult]
 
     def _expand_columns(self, col_dict, table):
         if '-1' in col_dict[table]:
-            cols = run_sql(self.conn, GET_COLUMN_NAMES_SQL % table)
+            cols = run_sql(self.conn, GET_COLUMN_NAMES_SQL % quote_tbl(table))
             return set([x[0] for x in cols])
         else:
             return col_dict[table]
@@ -725,9 +723,31 @@ def generate_timestamp():
     timestamp = datetime.now()
     return timestamp.strftime("%Y%m%d%H%M%S")
 
+def quote_tbl(target):
+    """
+    Quote schema names and table names before pass them to query strings.
+    If target contains column name, e.g. public.foo(a,b), quote column name separately.
+    E.g. public.foo(a,b) will become "public"."foo"("a","b")
+    """
+    sch, tbl_raw = target.split('.')
+    cols_str = ''
+    if '(' in tbl_raw:
+        tbl = tbl_raw.split('(')[0]
+        cols = tbl_raw.split('(')[1][:-1].split(',')
+        cols_str = '(' + ','.join(['"%s"' % x for x in cols]) + ')'
+    else:
+        tbl = tbl_raw
+
+    return '"%s"."%s"' % (sch, tbl) + cols_str
+
+
+def get_oid_str(table_list):
+    return ','.join(["""'\"%s\".\"%s\"'::regclass""" % (x.split('.')[0], x.split('.')[1]) for x in table_list])
+
+
 def get_heap_tables_set(conn, input_tables_set):
     logger.debug("getting heap tables...")
-    oid_str = ','.join(["'%s'::regclass" % x for x in input_tables_set])
+    oid_str = get_oid_str(input_tables_set)
     dirty_tables = set()
     qresult = run_sql(conn, GET_REQUESTED_NON_AO_TABLES_SQL % oid_str)
     for row in qresult:
@@ -920,7 +940,7 @@ def validate_include_tables(conn, table_list, include_file):
     curr_batch = 0
 
     while curr_batch < nbatches:
-        oid_str = ','.join(["'%s'::regclass" % x for x in tablenames[curr_batch*batch_size:(curr_batch+1)*batch_size]])
+        oid_str = get_oid_str(tablenames[curr_batch*batch_size:(curr_batch+1)*batch_size])
         run_sql(conn, VALIDATE_TABLE_NAMES_SQL % oid_str)
         curr_batch += 1
 
@@ -929,7 +949,7 @@ def get_include_cols_from_exclude(conn, table, exclude_cols):
     Given a list of excluded columns of a table, get the list of included columns
     """
     quoted_exclude_cols = ','.join(["'%s'" % x for x in exclude_cols])
-    cols = run_sql(conn, GET_INCLUDED_COLUMNS_FROM_EXCLUDE_SQL % (table, quoted_exclude_cols))
+    cols = run_sql(conn, GET_INCLUDED_COLUMNS_FROM_EXCLUDE_SQL % (quote_tbl(table), quoted_exclude_cols))
 
     return set([x[0] for x in cols])
 
@@ -939,7 +959,7 @@ def validate_columns(conn, table, column_list):
     """
     if len(column_list) == 0:
         return
-    valid_col_count = dbconn.execSQLForSingleton(conn, VALIDATE_COLUMN_NAMES_SQL % (table, ','.join(["'%s'" % x for x in column_list])))
+    valid_col_count = dbconn.execSQLForSingleton(conn, VALIDATE_COLUMN_NAMES_SQL % (quote_tbl(table), ','.join(["'%s'" % x for x in column_list])))
 
     if int(valid_col_count) != len(column_list):
         raise Exception("Invalid input columns for table %s." % table)
@@ -953,7 +973,8 @@ def create_parser():
                        "1. The incremental semantics only applies to append-only tables or partitions. All heap tables are regarded "
                        "as having stale stats every time analyzedb is run. This is because we use AO metadata to check for DML or "
                        "DDL events, which is not available to heap tables.  "
-                       "2. Views, indices and external tables are automatically skipped."
+                       "2. Views, indices and external tables are automatically skipped.  "
+                       "3. Table names or schema names containing comma or period is not supported yet."
                        )
     parser.set_usage('%prog [options] ')
     parser.remove_option('-h')
