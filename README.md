@@ -172,3 +172,7 @@ make installcheck-good
 
 For Greenplum Database documentation, please check online docs:
 http://gpdb.docs.pivotal.io
+
+## Notes
+
+* If you aready have a Postgres build environment/installation in the default location (/usr/local/pgsql/), make sure to provide different installation location to the GPDB build (./configure --prefix <...>) to avoid build failures.
