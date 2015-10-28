@@ -1,0 +1,50 @@
+FROM centos:5.11
+
+RUN GOSU_VERSION=1.6 \
+ && BUILD_DEPS="git \
+  glibc-common \
+  gcc44 gcc44-c++ \
+  ccache \
+  readline-devel \
+  bison flex \
+  zlib-devel \
+  openssl openssl-devel \
+  pam-devel \
+  bzip2-devel \
+  python-devel \
+  openssh \
+  curl-devel \
+  make cmake \
+  gnupg \
+  curl wget \
+  unzip \
+  yum-utils \
+  ruby ruby-devel rubygems rubygem-ffi rubygem-json \
+  rpm-build \
+  " \
+ && rpm -Uvh http://dl.fedoraproject.org/pub/epel/5/i386/epel-release-5-4.noarch.rpm \
+ && rpm -Uvh http://yum.puppetlabs.com/puppetlabs-release-el-5.noarch.rpm \
+ && rpm -Uvh http://rpms.famillecollet.com/enterprise/remi-release-5.rpm \
+ && rpm -Uvh http://rbel.frameos.org/stable/el5/x86_64/rbel5-release-1.0-2.el5.noarch.rpm \
+ && yum update -y \
+ && yum install -y --enablerepo=remi,epel,rbel5 $BUILD_DEPS \
+ && ln -s /usr/bin/g++44 /usr/bin/g++ \
+ && ln -s /usr/bin/gcc44 /usr/bin/gcc \
+ && gem install fpm --no-ri --no-rdoc \
+ && rm -rf /var/lib/apt/lists/* \
+ && wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-amd64" \
+ && wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-amd64.asc" \
+ && gpg --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 \
+ && gpg --verify /usr/local/bin/gosu.asc \
+ && rm /usr/local/bin/gosu.asc \
+ && chmod +x /usr/local/bin/gosu
+
+RUN yum update -y \
+ && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
+ENV LANG en_US.utf8
+
+ADD docker/docker_entrypoint.sh /docker_entrypoint.sh
+RUN chmod +x /docker_entrypoint.sh
+ENTRYPOINT [ "/docker_entrypoint.sh" ]
+ENV CC=gcc44 CXX=g++44 
+CMD [ "build" ]
