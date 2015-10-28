@@ -48,3 +48,11 @@ cscope.*
 # Added
 *.swp
 *.out
+VERSION
+build
+gpMgmt/bin/pythonSrc/subprocess32/build
+contrib/fuzzystrmatch/fuzzystrmatch.sql
+contrib/indexscan/indexscan.sql
+src/bin/gp_session_state/gp_session_state.sql
+src/bin/pg_dump/cdb/cdb_bsa_delete_agent
+src/interfaces/libpq/getpeereid.c
