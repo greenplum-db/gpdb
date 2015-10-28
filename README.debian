@@ -1,0 +1,13 @@
+apt-get install -y git-core
+apt-get install -y gcc g++
+apt-get install -y ccache
+apt-get install -y libreadline-dev
+apt-get install -y bison flex
+apt-get install -y zlib1g-dev
+apt-get install -y openssl libssl-dev
+apt-get install -y libpam-dev
+apt-get install -y libcurl4-dev
+apt-get install -y libbz2-dev
+apt-get install -y python-dev
+apt-get install -y ssh
+apt-get install libcurl4-openssl-dev
