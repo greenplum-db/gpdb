@@ -14,7 +14,13 @@ apt-get install -y libcurl4-dev
 apt-get install -y libbz2-dev
 apt-get install -y python-dev
 apt-get install -y ssh
-apt-get install -y libcurl4-openssl-dev
+
+apt-get install -y libcurl4-dev
+Package libcurl4-dev is a virtual package provided by:
+libcurl4-openssl-dev 7.38.0-4+deb8u2
+libcurl4-nss-dev 7.38.0-4+deb8u2
+libcurl4-gnutls-dev 7.38.0-4+deb8u2
+
 apt-get install -y ed 
 apt-get install -y python-pip
 
