@@ -34,6 +34,8 @@
 
 #include "c.h"
 
+/* Rely on the OS strlcpy under OSX */
+#ifndef __APPLE__
 
 /*
  * Copy src to string dst of size siz.	At most siz-1 characters
@@ -69,3 +71,5 @@ strlcpy(char *dst, const char *src, size_t siz)
 
 	return (s - src - 1);		/* count does not include NUL */
 }
+
+#endif

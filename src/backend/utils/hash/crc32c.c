@@ -537,6 +537,11 @@ crc32cSlicingBy8(pg_crc32 crc, const void* data, int length)
 #endif
 #include <nmmintrin.h>
 
+#ifdef __APPLE__
+/* Borrowed from https://github.com/qsnake/gfortran-osx/blob/bce58a7f491490ba9f312de7b2c98937ca9abcdc/usr/lib/gcc/x86_64-apple-darwin10.3.0/4.5.1/include/cpuid.h#L31 */
+#define bit_SSE4_2 (1 << 20)
+#endif
+
 /* Hardware-accelerated CRC-32C (using CRC32 instruction) */
 pg_crc32
 crc32cHardware32(pg_crc32 crc, const void* data, int length)
@@ -682,5 +687,3 @@ crc32cSimple(pg_crc32 crc, const void* data, int length)
 
 CRC32CFunctionPtr crc32c = &crc32cSimple;
 #endif
-
-
