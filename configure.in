@@ -325,6 +325,11 @@ if test "$GCC" = yes; then
   fi
 fi
 
+# SSE 4.2 on OSX
+if test "`uname -s`" = "Darwin"; then
+   CFLAGS="$CFLAGS -msse4.2"
+fi
+
 # Some versions of GCC support some additional useful warning flags.
 # Check whether they are supported, and add them to CFLAGS if so.
 # ICC pretends to be GCC but it's lying; it doesn't support these flags,
@@ -388,7 +393,7 @@ fi
 # enable profiling if --enable-profiling
 if test "$enable_profiling" = yes && test "$ac_cv_prog_cc_g" = yes; then
   if test "$GCC" = yes; then
-    AC_DEFINE([PROFILE_PID_DIR], 1, 
+    AC_DEFINE([PROFILE_PID_DIR], 1,
            [Define to 1 to allow profiling output to be saved separately for each process.])
     CFLAGS="$CFLAGS -pg $PLATFORM_PROFILE_FLAGS"
   else
@@ -445,7 +450,7 @@ AC_DEFINE_UNQUOTED(GP_VERSION,
                    ["$GP_VERSION"],
                    [A string containing the Greenplum version number])
 
-dnl If we are a development build, fake a numeric version number  
+dnl If we are a development build, fake a numeric version number
 dnl this needs to be manually updated each time we branch a new version
 
 if test "$GP_VERSION" = "devel" ; then
@@ -525,7 +530,7 @@ AC_SUBST(enable_orca)
 # --enable-snmp enables snmp mib and trap/inform
 #
 PGAC_ARG_BOOL(enable, snmp, no, [  --enable-snmp        enable snmp for MIB and alerts via TRAP/INFORM],
-              [AC_DEFINE([USE_SNMP], 1, 
+              [AC_DEFINE([USE_SNMP], 1,
                          [Define to 1 to build with snmp capabilities. (--enable-snmp)])])
 AC_MSG_RESULT([checking whether to build with snmp... $enable_snmp])
 AC_SUBST(enable_snmp)
@@ -1024,7 +1029,7 @@ AC_SEARCH_LIBS(BZ2_bzDecompress, bz2)
 # Check for net-snmp
 if test "$enable_snmp" = yes ; then
 	AC_CHECK_LIB(netsnmp,  netsnmp_ds_set_string,  [], [AC_MSG_ERROR([library 'netsnmp' is required for snmp support])])
-fi 
+fi
 
 ##
 ## Header files
@@ -1291,8 +1296,8 @@ if test "$PORTNAME" = "win32"; then
   #
   # To properly translate all NLS languages strings, we must support the
   # *printf() %$ format, which allows *printf() arguments to be selected
-  # by position in the translated string. 
-  # 
+  # by position in the translated string.
+  #
   # libintl versions < 0.13 use the native *printf() functions, and Win32
   # *printf() doesn't understand %$, so we must use our /port versions,
   # which do understand %$. libintl versions >= 0.13 include their own
@@ -1747,8 +1752,8 @@ AC_CHECK_SIZEOF([off_t])
 
 if test "$PORTNAME" != "win32"; then
 # If we don't have largefile support, can't handle segsize >= 2GB.
-if test "$ac_cv_sizeof_off_t" -lt 8 -a "$segsize" != "1"; then 
-   AC_MSG_ERROR([Large file support is not enabled. Segment size cannot be larger than 1GB.]) 
+if test "$ac_cv_sizeof_off_t" -lt 8 -a "$segsize" != "1"; then
+   AC_MSG_ERROR([Large file support is not enabled. Segment size cannot be larger than 1GB.])
 fi
 fi
 
@@ -1957,4 +1962,3 @@ AC_OUTPUT
 
 # Warn about unknown options
 PGAC_ARG_CHECK
-
