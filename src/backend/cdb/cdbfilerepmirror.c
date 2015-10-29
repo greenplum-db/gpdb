@@ -40,6 +40,7 @@
 #include "utils/faultinjector.h"
 #include "utils/hsearch.h"
 #include "utils/pg_crc.h"
+#include "port/pg_crc32c.h"
 
 /*
  * It specifies fields maintained by each entry in hash table

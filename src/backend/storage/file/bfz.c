@@ -66,7 +66,7 @@ bfz_close_callback(XactEvent event, void *arg)
 	bfz_close(arg, false);
 }
 
-#define BFZ_CHECKSUM_EQ(c1, c2) EQ_CRC32(c1, c2)
+#define BFZ_CHECKSUM_EQ(c1, c2) EQ_LEGACY_CRC32(c1, c2)
 
 /*
  * Compute a checksum for a given char array.
@@ -81,17 +81,17 @@ compute_checksum(const char *buffer, uint32 size)
 	 */
 	uint32 currSectorBegin = 0;
 	
-	crc = crc32cInit();
+	INIT_CRC32C(crc);
 	
 	while (currSectorBegin < size)
 	{
-		crc = crc32c(crc, buffer + currSectorBegin,
+		COMP_CRC32C(crc, buffer + currSectorBegin,
 				   Min(size - currSectorBegin,
 					   gp_workfile_bytes_to_checksum));
 		currSectorBegin += BFZ_CHECKSUM_SECTOR_SIZE;
 	}
 
-	crc32cFinish(crc);
+	FIN_CRC32C(crc);
 
 	return crc;
 }

@@ -233,6 +233,7 @@ CC = @CC@
 GCC = @GCC@
 SUN_STUDIO_CC = @SUN_STUDIO_CC@
 CFLAGS = @CFLAGS@
+CFLAGS_SSE42 = @CFLAGS_SSE42@
 
 # Kind-of compilers
 
@@ -278,7 +279,7 @@ RANLIB = @RANLIB@
 WINDRES = @WINDRES@
 X = @EXEEXT@
 
-# Perl 
+# Perl
 
 ifneq (@PERL@,)
     # quoted to protect pathname with spaces
@@ -502,6 +503,9 @@ endif
 # substitute implementations of C library routines (see src/port/)
 
 LIBOBJS = @LIBOBJS@
+
+# files needed for the chosen CRC-32C implementation
+PG_CRC32C_OBJS = @PG_CRC32C_OBJS@
 
 LIBS := -lpgport $(LIBS)
 # add location of libpgport.a to LDFLAGS

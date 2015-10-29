@@ -655,6 +655,12 @@
 /* Define to 1 if you have the <winldap.h> header file. */
 #undef HAVE_WINLDAP_H
 
+/* Define to 1 if you have __cpuid. */
+#undef HAVE__CPUID
+
+/* Define to 1 if you have __get_cpuid. */
+#undef HAVE__GET_CPUID
+
 /* Define to the appropriate snprintf format for 64-bit ints, if any. */
 #undef INT64_FORMAT
 
@@ -786,8 +792,17 @@
 /* Use replacement snprintf() functions. */
 #undef USE_REPL_SNPRINTF
 
+/* Define to 1 to use Intel SSE 4.2 CRC instructions with a runtime check. */
+#undef USE_SLICING_BY_8_CRC32C
+
 /* Define to 1 to build with snmp capabilities. (--enable-snmp) */
 #undef USE_SNMP
+
+/* Define to 1 use Intel SSE 4.2 CRC instructions. */
+#undef USE_SSE42_CRC32C
+
+/* Define to 1 to use Intel SSSE 4.2 CRC instructions with a runtime check. */
+#undef USE_SSE42_CRC32C_WITH_RUNTIME_CHECK
 
 /* Define to build with (Open)SSL support. (--with-openssl) */
 #undef USE_SSL

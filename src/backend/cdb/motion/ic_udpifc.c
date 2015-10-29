@@ -34,6 +34,7 @@
 #include "utils/builtins.h"
 #include "utils/debugbreak.h"
 #include "utils/pg_crc.h"
+#include "port/pg_crc32c.h"
 
 #include "cdb/cdbselect.h"
 #include "cdb/tupchunklist.h"
@@ -4641,8 +4642,9 @@ addCRC(icpkthdr *pkt)
 {
 	pg_crc32 local_crc;
 
-	local_crc = crc32c(crc32cInit(), pkt, pkt->len);
-	crc32cFinish(local_crc);
+	INIT_CRC32C(local_crc);
+	COMP_CRC32C(local_crc, pkt, pkt->len);
+	FIN_CRC32C(local_crc);
 
 	pkt->crc = local_crc;
 }
@@ -4659,8 +4661,9 @@ checkCRC(icpkthdr *pkt)
 	rx_crc = pkt->crc;
 	pkt->crc = 0;
 
-	local_crc = crc32c(crc32cInit(), pkt, pkt->len);
-	crc32cFinish(local_crc);
+	INIT_CRC32C(local_crc);
+	COMP_CRC32C(local_crc, pkt, pkt->len);
+	FIN_CRC32C(local_crc);
 
 	if (rx_crc != local_crc)
 	{

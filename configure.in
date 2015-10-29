@@ -325,6 +325,96 @@ if test "$GCC" = yes; then
   fi
 fi
 
+
+# Check for x86 cpuid instruction to determine if we can perform a
+# runtime check
+AC_CACHE_CHECK([for __get_cpuid], [pgac_cv__get_cpuid],
+[AC_LINK_IFELSE([AC_LANG_PROGRAM([#include <cpuid.h>],
+  [[unsigned int exx[4] = {0, 0, 0, 0};
+  __get_cpuid(1, &exx[0], &exx[1], &exx[2], &exx[3]);
+  ]])],
+  [pgac_cv__get_cpuid="yes"],
+  [pgac_cv__get_cpuid="no"])])
+if test x"$pgac_cv__get_cpuid" = x"yes"; then
+  AC_DEFINE(HAVE__GET_CPUID, 1, [Define to 1 if you have __get_cpuid.])
+fi
+
+AC_CACHE_CHECK([for __cpuid], [pgac_cv__cpuid],
+[AC_LINK_IFELSE([AC_LANG_PROGRAM([#include <intrin.h>],
+  [[unsigned int exx[4] = {0, 0, 0, 0};
+  __get_cpuid(exx[0], 1);
+  ]])],
+  [pgac_cv__cpuid="yes"],
+  [pgac_cv__cpuid="no"])])
+if test x"$pgac_cv__cpuid" = x"yes"; then
+  AC_DEFINE(HAVE__CPUID, 1, [Define to 1 if you have __cpuid.])
+fi
+
+# Check for Intel SSE 4.2 intrinsics to do CRC calculations.
+#
+# First check if the _mm_crc32_u8 and _mm_crc32_u64 intrinsics can be used
+# with the default compiler flags. If not, check if adding the -msse4.2
+# flag helps. CFLAGS_SSE42 is set to -msse4.2 if that's required.
+PGAC_SSE42_CRC32_INTRINSICS([])
+if test x"$pgac_sse42_crc32_intrinsics" != x"yes"; then
+  PGAC_SSE42_CRC32_INTRINSICS([-msse4.2])
+fi
+AC_SUBST(CFLAGS_SSE42)
+
+# Are we targeting a processor that supports SSE 4.2? gcc, clang and icc all
+# define __SSE4_2__ in that case.
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
+#ifndef __SSE4_2__
+#error __SSE4_2__ not defined
+#endif
+])], [SSE4_2_TARGETED=1])
+
+# Select CRC-32C implementation.
+#
+# If we are targeting a processor that has SSE 4.2 instructions, we can use the
+# special CRC instructions for calculating CRC-32C. If we're not targeting such
+# a processor, but we can nevertheless produce code that uses the SSE
+# intrinsics, perhaps with some extra CFLAGS, compile both implementations and
+# select which one to use at runtime, depending on whether SSE 4.2 is supported
+# by the processor we're running on.
+#
+# You can override this logic by setting the appropriate USE_*_CRC32 flag to 1
+# in the template or configure command line.
+if test x"$USE_SSE42_CRC32C" = x"" && test x"$USE_SSE42_CRC32C_WITH_RUNTIME_CHECK" = x"" && test x"$USE_SLICING_BY_8_CRC32C" = x""; then
+  if test x"$pgac_sse42_crc32_intrinsics" = x"yes" && test x"$SSE4_2_TARGETED" = x"1" ; then
+    USE_SSE42_CRC32C=1
+  else
+    # the CPUID instruction is needed for the runtime check.
+    if test x"$pgac_sse42_crc32_intrinsics" = x"yes" && (test x"$pgac_cv__get_cpuid" = x"yes" || test x"$pgac_cv__cpuid" = x"yes"); then
+      USE_SSE42_CRC32C_WITH_RUNTIME_CHECK=1
+    else
+      # fall back to slicing-by-8 algorithm which doesn't require any special
+      # CPU support.
+      USE_SLICING_BY_8_CRC32C=1
+    fi
+  fi
+fi
+
+# Set PG_CRC32C_OBJS appropriately depending on the selected implementation.
+AC_MSG_CHECKING([which CRC-32C implementation to use])
+if test x"$USE_SSE42_CRC32C" = x"1"; then
+  AC_DEFINE(USE_SSE42_CRC32C, 1, [Define to 1 use Intel SSE 4.2 CRC instructions.])
+  PG_CRC32C_OBJS="pg_crc32c_sse42.o"
+  AC_MSG_RESULT(SSE 4.2)
+else
+  if test x"$USE_SSE42_CRC32C_WITH_RUNTIME_CHECK" = x"1"; then
+    AC_DEFINE(USE_SSE42_CRC32C_WITH_RUNTIME_CHECK, 1, [Define to 1 to use Intel SSSE 4.2 CRC instructions with a runtime check.])
+    PG_CRC32C_OBJS="pg_crc32c_sse42.o pg_crc32c_sb8.o pg_crc32c_choose.o"
+    AC_MSG_RESULT(SSE 4.2 with runtime check)
+  else
+    AC_DEFINE(USE_SLICING_BY_8_CRC32C, 1, [Define to 1 to use Intel SSE 4.2 CRC instructions with a runtime check.])
+    PG_CRC32C_OBJS="pg_crc32c_sb8.o"
+    AC_MSG_RESULT(slicing-by-8)
+  fi
+fi
+AC_SUBST(PG_CRC32C_OBJS)
+
+
 # Some versions of GCC support some additional useful warning flags.
 # Check whether they are supported, and add them to CFLAGS if so.
 # ICC pretends to be GCC but it's lying; it doesn't support these flags,
@@ -388,7 +478,7 @@ fi
 # enable profiling if --enable-profiling
 if test "$enable_profiling" = yes && test "$ac_cv_prog_cc_g" = yes; then
   if test "$GCC" = yes; then
-    AC_DEFINE([PROFILE_PID_DIR], 1, 
+    AC_DEFINE([PROFILE_PID_DIR], 1,
            [Define to 1 to allow profiling output to be saved separately for each process.])
     CFLAGS="$CFLAGS -pg $PLATFORM_PROFILE_FLAGS"
   else
@@ -445,7 +535,7 @@ AC_DEFINE_UNQUOTED(GP_VERSION,
                    ["$GP_VERSION"],
                    [A string containing the Greenplum version number])
 
-dnl If we are a development build, fake a numeric version number  
+dnl If we are a development build, fake a numeric version number
 dnl this needs to be manually updated each time we branch a new version
 
 if test "$GP_VERSION" = "devel" ; then
@@ -525,7 +615,7 @@ AC_SUBST(enable_orca)
 # --enable-snmp enables snmp mib and trap/inform
 #
 PGAC_ARG_BOOL(enable, snmp, no, [  --enable-snmp        enable snmp for MIB and alerts via TRAP/INFORM],
-              [AC_DEFINE([USE_SNMP], 1, 
+              [AC_DEFINE([USE_SNMP], 1,
                          [Define to 1 to build with snmp capabilities. (--enable-snmp)])])
 AC_MSG_RESULT([checking whether to build with snmp... $enable_snmp])
 AC_SUBST(enable_snmp)
@@ -1024,7 +1114,7 @@ AC_SEARCH_LIBS(BZ2_bzDecompress, bz2)
 # Check for net-snmp
 if test "$enable_snmp" = yes ; then
 	AC_CHECK_LIB(netsnmp,  netsnmp_ds_set_string,  [], [AC_MSG_ERROR([library 'netsnmp' is required for snmp support])])
-fi 
+fi
 
 ##
 ## Header files
@@ -1291,8 +1381,8 @@ if test "$PORTNAME" = "win32"; then
   #
   # To properly translate all NLS languages strings, we must support the
   # *printf() %$ format, which allows *printf() arguments to be selected
-  # by position in the translated string. 
-  # 
+  # by position in the translated string.
+  #
   # libintl versions < 0.13 use the native *printf() functions, and Win32
   # *printf() doesn't understand %$, so we must use our /port versions,
   # which do understand %$. libintl versions >= 0.13 include their own
@@ -1747,8 +1837,8 @@ AC_CHECK_SIZEOF([off_t])
 
 if test "$PORTNAME" != "win32"; then
 # If we don't have largefile support, can't handle segsize >= 2GB.
-if test "$ac_cv_sizeof_off_t" -lt 8 -a "$segsize" != "1"; then 
-   AC_MSG_ERROR([Large file support is not enabled. Segment size cannot be larger than 1GB.]) 
+if test "$ac_cv_sizeof_off_t" -lt 8 -a "$segsize" != "1"; then
+   AC_MSG_ERROR([Large file support is not enabled. Segment size cannot be larger than 1GB.])
 fi
 fi
 
@@ -1957,4 +2047,3 @@ AC_OUTPUT
 
 # Warn about unknown options
 PGAC_ARG_CHECK
-

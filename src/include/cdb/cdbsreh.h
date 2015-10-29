@@ -15,7 +15,7 @@
 #include "fmgr.h"
 #include "cdb/cdbcopy.h"
 #include "utils/memutils.h"
-
+#include "port/pg_crc32c.h"
 
 /*
  * The error table is ALWAYS of the following format

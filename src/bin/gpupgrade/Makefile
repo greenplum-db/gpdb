@@ -17,7 +17,7 @@ include $(top_builddir)/src/Makefile.global
 LIBS := $(filter-out -lresolv -lbz2, $(LIBS))
 LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl -lz -lpam -lkrb5 -lgssapi_krb5 -lcom_err -lk5crypto -lnuma -lkrb5support, $(LIBS))
 
-MODCAT_OBJS= gpmodcontrol.o pg_crc.o crc32c.o
+MODCAT_OBJS= gpmodcontrol.o pg_crc.o 
 DATADIR=$(top_srcdir)/src/test/regress/data
 
 UPGRADEFILES = $(DATADIR)/upgrade/upg2_catupgrade.sql \
@@ -51,9 +51,6 @@ gpmodcontrol: $(MODCAT_OBJS)
 pg_crc.c: $(top_srcdir)/src/backend/utils/hash/pg_crc.c
 	rm -f $@ && $(LN_S) $< .
 
-crc32c.c: $(top_srcdir)/src/backend/utils/hash/crc32c.c
-	rm -f $@ && $(LN_S) $< .
-
 upgradesql:
 	@for i in $(UPGRADEFILES); \
 	do \
@@ -64,7 +61,6 @@ gpmodcontrol_clean:
 	rm -f gpmodcontrol$(X)
 	rm -f $(MODCAT_OBJS)
 	rm -f pg_crc.c
-	rm -f crc32c.c
 
 upgradesql_clean:
 	rm -f $(DATADIR)/upgrade43/*.sql

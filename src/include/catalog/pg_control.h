@@ -19,7 +19,7 @@
 
 #include "access/xlogdefs.h"
 #include "utils/pg_crc.h"
-
+#include "port/pg_crc32c.h"
 
 /*
  * Version identifier for this pg_control format.

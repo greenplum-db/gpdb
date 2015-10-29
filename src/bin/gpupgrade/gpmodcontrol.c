@@ -367,8 +367,9 @@ CreateOldControlFile(const char *progname, char *ControlFilePath, char *sourcefi
 	fclose(fp);
 
 	/* recalcualte the CRC. */
-	crc = crc32c(crc32cInit(), &ControlFile, offsetof(ControlFileData, crc));
-	crc32cFinish(crc);
+	INIT_CRC32C(crc);
+	COMP_CRC32C(crc, &ControlFile, offsetof(ControlFileData, crc));
+	FIN_CRC32C(crc);
 	ControlFile.crc = crc;
 
 	if ((fd = open(ControlFilePath, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR)) == -1)
@@ -490,22 +491,23 @@ ModifyControlFile(const char *progname, char *ControlFilePath, bool downgrade)
 	}
 
 	/* Check the CRC. */
-	crc = crc32c(crc32cInit(), &FromControlFile, offsetOfCRCFrom);
-	crc32cFinish(crc);
+	INIT_CRC32C(crc);
+	COMP_CRC32C(crc, &FromControlFile, offsetOfCRCFrom);
+	FIN_CRC32C(crc);
 
 	if (downgrade)
 		crcvalue = FromControlFile.newer.crc;
 	else
 		crcvalue = FromControlFile.older.crc;
 
-	if (!EQ_CRC32(crc, crcvalue))
+	if (!EQ_LEGACY_CRC32(crc, crcvalue))
 	{
 		/* Check the CRC using old algorithm. */
-		INIT_CRC32(crc);
-		COMP_CRC32(crc, (char *) &FromControlFile, offsetOfCRCFrom);
-		FIN_CRC32(crc);
+		INIT_LEGACY_CRC32(crc);
+		COMP_LEGACY_CRC32(crc, (char *) &FromControlFile, offsetOfCRCFrom);
+		FIN_LEGACY_CRC32(crc);
 
-		if (!EQ_CRC32(crc, crcvalue))
+		if (!EQ_LEGACY_CRC32(crc, crcvalue))
 			printf(_("WARNING: Calculated CRC checksum does not match value stored in file.\n"
 					 "Either the file is corrupt, or it has a different layout than this program\n"
 					 "is expecting.  The results below are untrustworthy.\n\n"));
@@ -605,8 +607,9 @@ ModifyControlFile(const char *progname, char *ControlFilePath, bool downgrade)
 	}
 
 	/* recalcualte the CRC. */
-	crc = crc32c(crc32cInit(), &ToControlFile, offsetOfCRCTo);
-	crc32cFinish(crc);
+	INIT_CRC32C(crc);
+	COMP_CRC32C(crc, &ToControlFile, offsetOfCRCTo);
+	FIN_CRC32C(crc);
 	if (downgrade)
 		ToControlFile.older.crc = crc;
 	else

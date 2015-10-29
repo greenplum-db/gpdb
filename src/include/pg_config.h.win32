@@ -32,7 +32,7 @@
 #ifdef __sparc__
 #define		  BYTE_ORDER	  BIG_ENDIAN
 #endif
-#if defined(__i386__) || defined(__x86_64__) 
+#if defined(__i386__) || defined(__x86_64__)
 #define		 BYTE_ORDER		 LITTLE_ENDIAN
 #endif
 #endif
@@ -41,8 +41,9 @@
  * changes to be valid for Visual C++ (and compatible):
  *
  * HAVE_CBRT, HAVE_FUNCNAME_FUNC, HAVE_FUNCNAME_FUNCTION, HAVE_GETOPT,
- * HAVE_GETOPT_H, HAVE_GETOPT_LONG, HAVE_RINT, HAVE_STRINGS_H, 
- * HAVE_STRTOLL, HAVE_STRTOULL, HAVE_STRUCT_OPTION, ENABLE_THREAD_SAFETY
+ * HAVE_GETOPT_H, HAVE_GETOPT_LONG, HAVE_RINT, HAVE_STRINGS_H,
+ * HAVE_STRTOLL, HAVE_STRTOULL, HAVE_STRUCT_OPTION, ENABLE_THREAD_SAFETY,
+ * USE_SSE42_CRC32C_WITH_RUNTIME_CHECK
  *
  * For now, also HAVE_IPV6
  */
@@ -222,7 +223,7 @@
 /* #define HAVE_INT_OPTRESET 1 */
 
 /* Define to 1 if you have the global variable 'int timezone'. */
-#define HAVE_INT_TIMEZONE 
+#define HAVE_INT_TIMEZONE
 
 /* Define to 1 if you have support for IPv6. */
 #define HAVE_IPV6 1
@@ -292,7 +293,7 @@
 
 /* Define to 1 if `long long int' works and is 64 bits. */
 #if (_MSC_VER > 1200)
-#define HAVE_LONG_LONG_INT_64 
+#define HAVE_LONG_LONG_INT_64
 #endif
 
 /* Define to 1 if you have the `memmove' function. */
@@ -584,6 +585,12 @@
 /* Define to 1 if you have the <winldap.h> header file. */
 /* #undef HAVE_WINLDAP_H */
 
+/* Define to 1 if you have __cpuid. */
+#define HAVE__CPUID 1
+
+/* Define to 1 if you have __get_cpuid. */
+#undef HAVE__GET_CPUID
+
 /* Define to the appropriate snprintf format for 64-bit ints, if any. */
 #define INT64_FORMAT "%lld"
 
@@ -671,6 +678,19 @@
 
 /* Use replacement snprintf() functions. */
 #define USE_REPL_SNPRINTF 1
+
+/* Define to 1 to use Intel SSE 4.2 CRC instructions with a runtime check. */
+#if (_MSC_VER < 1500)
+#define USE_SLICING_BY_8_CRC32C 1
+#end
+
+/* Define to 1 use Intel SSE 4.2 CRC instructions. */
+/* #undef USE_SSE42_CRC32C */
+
+/* Define to 1 to use Intel SSSE 4.2 CRC instructions with a runtime check. */
+#if (_MSC_VER >= 1500)
+#define USE_SSE42_CRC32C_WITH_RUNTIME_CHECK
+#endif
 
 /* Define to build with (Open)SSL support. (--with-openssl) */
 /* #undef USE_SSL */

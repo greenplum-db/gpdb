@@ -11,6 +11,7 @@
 
 #include "c.h"
 #include "utils/pg_crc.h"
+#include "port/pg_crc32c.h"
 #include "pg_config_manual.h"
 #include "storage/relfilenode.h"
 #include "access/xlogdefs.h"
