@@ -325,8 +325,8 @@ if test "$GCC" = yes; then
   fi
 fi
 
-# SSE 4.2 on OSX
-if test "`uname -s`" = "Darwin"; then
+# Enable SSE 4.2 on OSX if it supports the instruction set
+if test "`uname -s`" = "Darwin" && grep -q "SSE4.2" <<< `sysctl -n machdep.cpu.features`; then
    CFLAGS="$CFLAGS -msse4.2"
 fi
 
