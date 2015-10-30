@@ -21,6 +21,8 @@
 
 #include "c.h"
 
+/* Rely on the OS strlcat under OSX */
+#ifndef __APPLE__
 
 /*
  * Appends src to string dst of size siz (unlike strncat, siz is the
@@ -58,3 +60,5 @@ strlcat(char *dst, const char *src, size_t siz)
 
 	return (dlen + (s - src));	/* count does not include NUL */
 }
+
+#endif

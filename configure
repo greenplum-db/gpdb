@@ -4227,6 +4227,11 @@ if test "$GCC" = yes; then
   fi
 fi
 
+# Enable SSE 4.2 on OSX if it supports the instruction set
+if test "`uname -s`" = "Darwin" && grep -q "SSE4.2" <<< `sysctl -n machdep.cpu.features`; then
+   CFLAGS="$CFLAGS -msse4.2"
+fi
+
 # Some versions of GCC support some additional useful warning flags.
 # Check whether they are supported, and add them to CFLAGS if so.
 # ICC pretends to be GCC but it's lying; it doesn't support these flags,
@@ -15882,4 +15887,3 @@ for pgac_var in `set | sed 's/=.*//' | $EGREP 'with_|enable_'`; do
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: option ignored: --$pgac_txt" >&5
 $as_echo "$as_me: WARNING: option ignored: --$pgac_txt" >&2;}
 done
-
