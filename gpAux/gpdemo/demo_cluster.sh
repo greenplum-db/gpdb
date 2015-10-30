@@ -371,7 +371,7 @@ OPTIMIZER=$(psql -t -p ${MASTER_DEMO_PORT} -d template1 -c "show optimizer"   2>
 echo "======================================================================" 2>&1 | tee -a optimizer-state.log
 echo "                           OPTIMIZER STATE"                             2>&1 | tee -a optimizer-state.log
 echo "----------------------------------------------------------------------" 2>&1 | tee -a optimizer-state.log
-echo "  Optimmizer state .. : ${OPTIMIZER}"                                   2>&1 | tee -a optimizer-state.log
+echo "  Optimizer state .. : ${OPTIMIZER}"                                    2>&1 | tee -a optimizer-state.log
 echo "======================================================================" 2>&1 | tee -a optimizer-state.log
 echo ""                                                                       2>&1 | tee -a optimizer-state.log
 
