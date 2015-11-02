@@ -27,7 +27,7 @@ enable_xform(PG_FUNCTION_ARGS)
 #ifdef USE_ORCA
 	return EnableXform(fcinfo);
 #else
-	return CStringGetTextDatum("ORCA not supported");
+	return CStringGetTextDatum("Server has been compiled without ORCA");
 #endif
 }
 
@@ -42,7 +42,7 @@ disable_xform(PG_FUNCTION_ARGS)
 #ifdef USE_ORCA
 	return DisableXform(fcinfo);
 #else
-	return CStringGetTextDatum("ORCA not supported");
+	return CStringGetTextDatum("Server has been compiled without ORCA");
 #endif
 }
 
@@ -57,6 +57,6 @@ gp_opt_version(PG_FUNCTION_ARGS __attribute__((unused)))
 #ifdef USE_ORCA
 	return LibraryVersion();
 #else
-	return CStringGetTextDatum("ORCA not supported");
+	return CStringGetTextDatum("Server has been compiled without ORCA");
 #endif
 }
