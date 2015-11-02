@@ -171,7 +171,7 @@ int main(int argc, char** argv)
 
 void send_buffer(int fd, char* buffer, int bytes)
 {
-	size_t retval;
+	ssize_t retval;
 
 	while(bytes > 0)
 	{
