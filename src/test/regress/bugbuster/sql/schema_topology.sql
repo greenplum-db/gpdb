@@ -108,8 +108,6 @@ DROP SCHEMA db_schema9 CASCADE;
 
 DROP TABLE test_emp CASCADE;
 
-DROP LANGUAGE plpgsql CASCADE;
-
 DROP DOMAIN domain_us_zip_code;
 DROP DOMAIN domain_1;
 DROP DOMAIN domain_2;
@@ -268,11 +266,6 @@ create database create_objects_db;
     create view empvw1 as select * from employees1; drop view empvw1;
     --drop table employees1; 
     
---Create Language
-    \echo -- start_ignore
-    CREATE LANGUAGE plpgsql;
-    --DROP LANGUAGE plperl;
-    \echo -- end_ignore
 --Create Function
     
     CREATE FUNCTION add(integer,integer) RETURNS integer AS 'select $1 + $2;'
@@ -856,11 +849,6 @@ create database create_objects_db;
     create view empvw1 as select * from employees1; drop view empvw1;
     --drop table employees1;
 
---Create Language
-\echo -- start_ignore
-    CREATE LANGUAGE plpgsql;
-    --DROP LANGUAGE plperl;
-\echo --end_ignore
 --Create Function
 
     CREATE FUNCTION add(integer,integer) RETURNS integer AS 'select $1 + $2;'
@@ -1522,8 +1510,6 @@ create database alter_table_db;
 
 
           --trigger function to insert records as required:
-          CREATE LANGUAGE plpgsql;
-
           CREATE OR REPLACE FUNCTION insert_price_change() RETURNS trigger AS '
           DECLARE
           changed boolean;
@@ -2603,9 +2589,6 @@ CREATE OR REPLACE FUNCTION add(integer, integer) RETURNS integer
     LANGUAGE SQL CONTAINS SQL
     STABLE 
     RETURNS NULL ON NULL INPUT; 
-\echo -- start_ignore
-CREATE LANGUAGE plpgsql;
-\echo -- end_ignore
 CREATE OR REPLACE FUNCTION increment(i integer) RETURNS 
 integer AS $$ 
         BEGIN 

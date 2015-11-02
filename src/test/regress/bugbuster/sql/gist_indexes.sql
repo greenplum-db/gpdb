@@ -328,10 +328,6 @@ CREATE TABLE GistTable13 (
  )
  DISTRIBUTED BY (id);
 
---start_ignore
-drop language plpgsql;
---end_ignore
-create language plpgsql;
 -- Register a function that converts TEXT to BOX data type.
 CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
   $$

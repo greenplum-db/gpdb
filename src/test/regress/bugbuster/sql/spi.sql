@@ -1,7 +1,3 @@
---start_ignore
-drop language plpgsql cascade;
---end_ignore
-create language plpgsql;
 drop table if exists test cascade;
 create table test (d integer, a integer, b integer);
 insert into test select a, a, a%25 from generate_series(1,100) a;
@@ -24,10 +20,6 @@ update test set a=200 where a=10;
 
 drop trigger tg_bu on test;
 drop function bu();
---start_ignore
-drop language plpgsql;
---end_ignore
-create language plpgsql;
 drop table test;
 create table test (a integer, b integer, c integer);
 insert into test select a, a%25, a%30 from generate_series(1, 100) a;
@@ -60,4 +52,3 @@ $$ language plpgsql READS SQL DATA;
 select * from (select refcursor (1, 10)) t1, test;
 
 drop function refcursor(int, int);
---drop language plpgsql;
