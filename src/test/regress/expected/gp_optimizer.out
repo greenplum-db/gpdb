@@ -8950,7 +8950,7 @@ set optimizer_disable_missing_stats_collection = on;
 -- Push components of disjunctive predicates
 create table cust(cid integer, firstname text, lastname text) distributed by (cid);
 create table datedim(date_sk integer, year integer, moy integer) distributed by (date_sk);
-create table sales(item_sk integer, ticket_number integer, cid integer, date_sk integer, type text)
+create table sales_optimizer(item_sk integer, ticket_number integer, cid integer, date_sk integer, type text)
   distributed by (item_sk, ticket_number);
 -- create a volatile function which should not be pushed
 CREATE FUNCTION plusone(integer) RETURNS integer AS $$
@@ -8965,24 +8965,24 @@ select c.cid cid,
        c.firstname firstname,
        c.lastname lastname,
        d.year dyear
-from cust c, sales s, datedim d
+from cust c, sales_optimizer s, datedim d
 where c.cid = s.cid and s.date_sk = d.date_sk and
       ((d.year = 2001 and lower(s.type) = 't1' and plusone(d.moy) = 5) or (d.moy = 4 and upper(s.type) = 'T2'));
                                                                                       QUERY PLAN                                                                                      
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice3; segments: 2)  (cost=0.00..1293.00 rows=1 width=24)
    ->  Hash Join  (cost=0.00..1293.00 rows=1 width=24)
-         Hash Cond: cust.cid = sales.cid
+         Hash Cond: cust.cid = sales_optimizer.cid
          ->  Table Scan on cust  (cost=0.00..431.00 rows=1 width=20)
          ->  Hash  (cost=862.00..862.00 rows=1 width=8)
                ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=0.00..862.00 rows=1 width=8)
-                     Hash Key: sales.cid
+                     Hash Key: sales_optimizer.cid
                      ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
-                           Hash Cond: sales.date_sk = datedim.date_sk
-                           Join Filter: (datedim.year = 2001 AND lower(sales.type) = 't1'::text AND plusone(datedim.moy) = 5) OR (datedim.moy = 4 AND upper(sales.type) = 'T2'::text)
+                           Hash Cond: sales_optimizer.date_sk = datedim.date_sk
+                           Join Filter: (datedim.year = 2001 AND lower(sales_optimizer.type) = 't1'::text AND plusone(datedim.moy) = 5) OR (datedim.moy = 4 AND upper(sales_optimizer.type) = 'T2'::text)
                            ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=16)
-                                 Hash Key: sales.date_sk
-                                 ->  Table Scan on sales  (cost=0.00..431.00 rows=1 width=16)
+                                 Hash Key: sales_optimizer.date_sk
+                                 ->  Table Scan on sales_optimizer  (cost=0.00..431.00 rows=1 width=16)
                                        Filter: lower(type) = 't1'::text OR upper(type) = 'T2'::text
                            ->  Hash  (cost=431.00..431.00 rows=1 width=12)
                                  ->  Table Scan on datedim  (cost=0.00..431.00 rows=1 width=12)
