@@ -910,6 +910,7 @@ SPI_freetuptable(SPITupleTable *tuptable)
 }
 
 
+
 /*
  * SPI_cursor_open()
  *
@@ -1125,7 +1126,6 @@ SPI_cursor_open(const char *name, SPIPlanPtr plan,
 Portal
 SPI_cursor_find(const char *name)
 {
-	elog(DEBUG1, "SPI_cursor_find");
 	return GetPortalByName(name);
 }
 
@@ -1138,7 +1138,6 @@ SPI_cursor_find(const char *name)
 void
 SPI_cursor_fetch(Portal portal, bool forward, long count)
 {
-	elog(DEBUG1, "SPI_cursor_fetch");
 	_SPI_cursor_operation(portal, forward, count,
 						  CreateDestReceiver(DestSPI, NULL));
 	/* we know that the DestSPI receiver doesn't need a destroy call */
@@ -1153,7 +1152,6 @@ SPI_cursor_fetch(Portal portal, bool forward, long count)
 void
 SPI_cursor_move(Portal portal, bool forward, long count)
 {
-	elog(DEBUG1, "SPI_cursor_move");
 	_SPI_cursor_operation(portal, forward, count, None_Receiver);
 }
 
@@ -1166,7 +1164,6 @@ SPI_cursor_move(Portal portal, bool forward, long count)
 void
 SPI_cursor_close(Portal portal)
 {
-	elog(DEBUG1, "SPI_cursor_close");
 	insist_log(PortalIsValid(portal), "invalid portal in SPI cursor operation");
 
 	PortalDrop(portal, false);
@@ -1358,7 +1355,7 @@ spi_dest_startup(DestReceiver *self, int operation, TupleDesc typeinfo)
  *		of current SPI procedure
  */
 void
-spi_printtup(TupleTableSlot * slot, DestReceiver *self)
+spi_printtup(TupleTableSlot *slot, DestReceiver *self)
 {
 	SPITupleTable *tuptable;
 	MemoryContext oldcxt;
@@ -1442,7 +1439,7 @@ _SPI_prepare_plan(const char *src, SPIPlanPtr plan)
 	spierrcontext.arg = (void *) src;
 	spierrcontext.previous = error_context_stack;
 	error_context_stack = &spierrcontext;
-	
+
 	/*
 	 * Parse the request string into a list of raw parse trees.
 	 */
@@ -1602,8 +1599,8 @@ _SPI_execute_plan(_SPI_plan * plan, Datum *Values, const char *Nulls,
 				 * Get copy of the queryTree and the plan since this may be modified further down.
 				 */
 				queryTree = copyObject(queryTree);
-				stmt = copyObject(stmt); 
-				
+				stmt = copyObject(stmt);
+
 				_SPI_current->processed = 0;
 				_SPI_current->lastoid = InvalidOid;
 				_SPI_current->tuptable = NULL;
@@ -1690,7 +1687,7 @@ _SPI_execute_plan(_SPI_plan * plan, Datum *Values, const char *Nulls,
 				else
 				{
 					Assert(stmt); /* s.b. NULL only for utility command */
-					
+
 					qdesc = CreateQueryDesc(stmt, plan->query,
 											ActiveSnapshot,
 											crosscheck_snapshot,
