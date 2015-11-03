@@ -935,7 +935,7 @@ set optimizer_disable_missing_stats_collection = on;
 -- Push components of disjunctive predicates
 create table cust(cid integer, firstname text, lastname text) distributed by (cid);
 create table datedim(date_sk integer, year integer, moy integer) distributed by (date_sk);
-create table sales(item_sk integer, ticket_number integer, cid integer, date_sk integer, type text)
+create table sales_optimizer(item_sk integer, ticket_number integer, cid integer, date_sk integer, type text)
   distributed by (item_sk, ticket_number);
 -- create a volatile function which should not be pushed
 CREATE FUNCTION plusone(integer) RETURNS integer AS $$
@@ -951,7 +951,7 @@ select c.cid cid,
        c.firstname firstname,
        c.lastname lastname,
        d.year dyear
-from cust c, sales s, datedim d
+from cust c, sales_optimizer s, datedim d
 where c.cid = s.cid and s.date_sk = d.date_sk and
       ((d.year = 2001 and lower(s.type) = 't1' and plusone(d.moy) = 5) or (d.moy = 4 and upper(s.type) = 'T2'));
 reset optimizer_segments;
