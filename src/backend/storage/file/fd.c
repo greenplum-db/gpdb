@@ -810,6 +810,7 @@ PathNameOpenFile(FileName fileName, int fileFlags, int fileMode)
 
 	DO_DB(elog(LOG, "PathNameOpenFile: %s %x %o",
 			   fileName, fileFlags, fileMode));
+
 	/*
 	 * We need a malloc'd copy of the file name; fail cleanly if no room.
 	 */
@@ -854,10 +855,11 @@ PathNameOpenFile(FileName fileName, int fileFlags, int fileMode)
 
 /*
  * open a file in the database directory ($PGDATA/base/DIROID/)
+ *
  * if we are using the system default filespace. Otherwise open
  * the file in the filespace configured for temporary files.
  * The passed name MUST be a relative path.  Effectively, this
- * prepends DatabasePath or path of the filespace to it and then 
+ * prepends DatabasePath or path of the filespace to it and then
  * acts like PathNameOpenFile.
  */
 File
@@ -1086,15 +1088,8 @@ FileUnlink(File file)
 	FileClose(file);
 }
 
-
 int
 FileRead(File file, char *buffer, int amount)
-{
-	return FileReadIntr(file, buffer, amount, true);
-}
-
-int
-FileReadIntr(File file, char *buffer, int amount, bool fRetryIntr)
 {
 	int			returnCode;
 
@@ -1108,7 +1103,7 @@ FileReadIntr(File file, char *buffer, int amount, bool fRetryIntr)
 		(elog(LOG, "FileRead: %d (%s) " INT64_FORMAT " %d %p",
 			  file, VfdCache[file].fileName,
 			  VfdCache[file].seekPos, amount, buffer));
-	
+
 	returnCode = FileAccess(file);
 	if (returnCode < 0)
 		return returnCode;
@@ -1142,7 +1137,7 @@ retry:
 		}
 #endif
 		/* OK to retry if interrupted */
-		if (errno == EINTR && fRetryIntr)
+		if (errno == EINTR)
 			goto retry;
 
 		/* Trouble, so assume we don't know the file position anymore */
@@ -1178,7 +1173,7 @@ FileWrite(File file, char *buffer, int amount)
 	DO_DB(elog(LOG, "FileWrite: %d (%s) " INT64_FORMAT " %d %p",
 			   file, VfdCache[file].fileName,
 			   VfdCache[file].seekPos, amount, buffer));
-	
+
 	/* Added temporary for troubleshooting */
 	if (Debug_filerep_print)
 		elog(LOG, "FileWrite: %d (%s) " INT64_FORMAT " %d %p",
@@ -1194,12 +1189,12 @@ FileWrite(File file, char *buffer, int amount)
 							   FILEREP_UNDEFINED,
 							   FileRepAckStateNotInitialized,
 							   VfdCache[file].seekPos,
-							   amount);		
-	
+							   amount);
+
 	returnCode = FileAccess(file);
 	if (returnCode < 0)
 		return returnCode;
-	
+
 #ifdef FAULT_INJECTOR	
 	if (! strcmp(VfdCache[file].fileName, "global/pg_control"))
 	{
@@ -1224,10 +1219,8 @@ FileWrite(File file, char *buffer, int amount)
 			MemSet(buffer, 0, amount);
 		}
 	}
-	
-	
-#endif	
-	
+#endif
+
 retry:
 	errno = 0;
 	returnCode = write(VfdCache[file].fd, buffer, amount);
@@ -1265,14 +1258,14 @@ retry:
 		VfdCache[file].seekPos = FileUnknownPos;
 	}
 
-	if (returnCode >=0 )
+	if (returnCode >= 0)
 	{
-			//only include stat if successful
-			if ((fileRepRole == FileRepPrimaryRole) || 
-				(fileRepRole == FileRepMirrorRole))
-			{
-					FileRepGpmonStat_CloseRecord(whichStat, &gpmonRecord);
-			}
+		//only include stat if successful
+		if ((fileRepRole == FileRepPrimaryRole) ||
+			(fileRepRole == FileRepMirrorRole))
+		{
+			FileRepGpmonStat_CloseRecord(whichStat, &gpmonRecord);
+		}
 	}
 	return returnCode;
 }
