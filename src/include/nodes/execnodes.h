@@ -36,7 +36,6 @@
 struct CdbDispatchResults;              /* in cdbdispatchresult.h */
 struct CdbExplain_ShowStatCtx;          /* private, in "cdb/cdbexplain.c" */
 struct ChunkTransportState;             /* #include "cdb/cdbinterconnect.h" */
-struct IndexInfo;                       /* #include "catalog/index.h" */
 struct StringInfoData;                  /* #include "lib/stringinfo.h" */
 struct Tuplestorestate;                 /* #include "utils/tuplestore.h" */
 struct TupleTableSlot;
@@ -55,9 +54,54 @@ struct SliceTable;
 /* ----------------
  *	  IndexInfo information
  *
- *      CDB: Moved declaration into "catalog/index.h" from "nodes/execnodes.h"
+ *		this struct holds the information needed to construct new index
+ *		entries for a particular index.  Used for both index_build and
+ *		retail creation of index entries.
+ *
+ *		NumIndexAttrs		number of columns in this index
+ *		KeyAttrNumbers		underlying-rel attribute numbers used as keys
+ *							(zeroes indicate expressions)
+ *		Expressions			expr trees for expression entries, or NIL if none
+ *		ExpressionsState	exec state for expressions, or NIL if none
+ *		Predicate			partial-index predicate, or NIL if none
+ *		PredicateState		exec state for predicate, or NIL if none
+ *		Unique				is it a unique index?
+ *		Concurrent			are we doing a concurrent index build?
  * ----------------
  */
+typedef struct IndexInfo
+{
+	NodeTag		type;
+	int			ii_NumIndexAttrs;
+	AttrNumber	ii_KeyAttrNumbers[INDEX_MAX_KEYS];
+	List	   *ii_Expressions; /* list of Expr */
+	List	   *ii_ExpressionsState;	/* list of ExprState */
+	List	   *ii_Predicate;	/* list of Expr */
+	List	   *ii_PredicateState;		/* list of ExprState */
+	bool		ii_Unique;
+	bool		ii_Concurrent;
+
+	/* Additional info needed by index creation.
+	 * Used for
+	 * (1) bitmap indexes to store oids that are needed for lov heap and lov index.
+	 * (2) append-only tables to store oids for their block directory relations
+	 *     and indexes
+	 */
+	void       *opaque;
+
+} IndexInfo;
+
+typedef struct IndexInfoOpaque
+{
+	Oid        comptypeOid; /* the complex type oid for the lov heap. */
+	Oid        heapOid;  /* Oid for the lov heap in the bitmap index. */
+	Oid        indexOid; /* Oid for the lov index in the bitmap index. */
+	Oid        heapRelfilenode; /* Oid for the relfilenode of the lov heap in the bitmap index. */
+	Oid        indexRelfilenode;/* Oid for the relfilenode of the lov index in the bitmap index. */
+	Oid        blkdirRelOid; /* Oid for block directory relation */
+	Oid        blkdirIdxOid; /* Oid for block directory index */
+	Oid        blkdirComptypeOid; /* complex type Oid for block directry relation */
+} IndexInfoOpaque;
 
 /* ----------------
  *	  ExprContext_CB
@@ -270,7 +314,7 @@ typedef struct ResultRelInfo
 	Relation	ri_RelationDesc;
 	int			ri_NumIndices;
 	RelationPtr ri_IndexRelationDescs;
-	struct IndexInfo **ri_IndexRelationInfo;
+	IndexInfo **ri_IndexRelationInfo;
 	struct TriggerDesc *ri_TrigDesc;
 	FmgrInfo   *ri_TrigFunctions;
 	struct Instrumentation *ri_TrigInstrument;
