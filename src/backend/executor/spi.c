@@ -72,9 +72,6 @@ static int	_SPI_stack_depth = 0;		/* allocated size of _SPI_stack */
 static int	_SPI_connected = -1;
 static int	_SPI_curid = -1;
 
-static PGconn *_QD_conn = NULL; /* To call back to the QD for SQL execution */
-static char *_QD_currently_prepared_stmt = NULL;
-
 static void _SPI_prepare_plan(const char *src, SPIPlanPtr plan);
 
 static int _SPI_execute_plan(SPIPlanPtr plan,
@@ -247,48 +244,6 @@ AtEOXact_SPI(bool isCommit)
 				 errmsg("transaction left non-empty SPI stack"),
 				 errhint("Check for missing \"SPI_finish\" calls.")));
 
-	if (_QD_conn)
-	{
-		/*
-		 * If we are connected back to the QD, and we hit end-of-transaction, we
-		 * need to tell the QD to end that transaction as well.
-		 *
-		 * We need to make sure it commits if we commit, and it rolls back if we
-		 * rollback.   It would be even better if we involved it in the 2pc.
-		 */
-		PGresult   *res = 0;
-
-		/*
-		 * elog(DEBUG1,"atEOXact_SPI %d",isCommit);
-		 *
-		 * elog(DEBUG1,"Transaction status %d",PQtransactionStatus(_QD_conn));
-		 */
-
-		if (!isCommit)
-			res = PQexec(_QD_conn, "ROLLBACK");
-		else
-			res = PQexec(_QD_conn, "COMMIT");
-
-		if (PQresultStatus(res) != PGRES_COMMAND_OK)
-		{
-			elog(NOTICE, "%s", PQerrorMessage(_QD_conn));
-		}
-		PQclear(res);
-
-		/*
-		 * Now that we are done, let's disconnect from the QD.  It may make
-		 * more sense to try to save the connection and avoid the overhead of
-		 * reconnecting again in the future, but it seems more important to free
-		 * up the QD connection slot as soon as possible, as that is a very
-		 * limited resource.
-		 */
-
-		/* disconnection from the database */
-		PQfinish(_QD_conn);
-
-		_QD_conn = NULL;
-	}
-
 	_SPI_current = _SPI_stack = NULL;
 	_SPI_stack_depth = 0;
 	_SPI_connected = _SPI_curid = -1;
@@ -308,9 +263,6 @@ void
 AtEOSubXact_SPI(bool isCommit, SubTransactionId mySubid)
 {
 	bool		found = false;
-
-	if (_QD_conn)
-		elog(DEBUG1, "atEOSubXact_SPI %d", isCommit);
 
 	while (_SPI_connected >= 0)
 	{
@@ -417,8 +369,6 @@ void
 SPI_restore_connection(void)
 {
 	Assert(_SPI_connected >= 0);
-	if (_QD_conn)
-		elog(DEBUG1, "SPI_restore_connection");
 	_SPI_curid = _SPI_connected - 1;
 }
 
@@ -979,19 +929,6 @@ SPI_cursor_open(const char *name, SPIPlanPtr plan,
 	Portal		portal;
 	int			k;
 
-	/*
-	 * If we can't execute this SELECT locally, error out.
-	 */
-	if (spiplan->run_via_callback_to_qd)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
-				 errmsg("cannot run the query %s, since it requires dispatch from segments.",
-						spiplan->query)));
-
-		return NULL;
-	}
-
 	elog(DEBUG1, "SPI_cursor_open local: %s", spiplan->query);
 
 
@@ -1490,8 +1427,6 @@ _SPI_prepare_plan(const char *src, SPIPlanPtr plan)
 	Oid		   *argtypes = plan->argtypes;
 	int			nargs = plan->nargs;
 
-	_QD_currently_prepared_stmt = NULL;
-
 	/*
 	 * Increment CommandCounter to see changes made by now.  We must do this
 	 * to be sure of seeing any schema changes made by a just-preceding SPI
@@ -1507,12 +1442,6 @@ _SPI_prepare_plan(const char *src, SPIPlanPtr plan)
 	spierrcontext.arg = (void *) src;
 	spierrcontext.previous = error_context_stack;
 	error_context_stack = &spierrcontext;
-
-	/*
-	 * We do not run via callback to qd.
-	 */
-	plan->run_via_callback_to_qd = false;
-	
 	
 	/*
 	 * Parse the request string into a list of raw parse trees.
@@ -1592,17 +1521,6 @@ _SPI_execute_plan(_SPI_plan * plan, Datum *Values, const char *Nulls,
 	volatile int res = 0;
 	Snapshot	saveActiveSnapshot;
 	const char *saved_query_string;
-
-	/*
-	 * If we can't execute this SQL statement locally, error out.
-	 */
-	if (plan->run_via_callback_to_qd)
-	{
-		ereport(ERROR, 
-				(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
-				 errmsg("cannot run the query %s, since it requires dispatch from segments.",
-						plan->query)));
-	}
 
 	/* Be sure to restore ActiveSnapshot on error exit */
 	saveActiveSnapshot = ActiveSnapshot;
@@ -2329,7 +2247,6 @@ _SPI_copy_plan(SPIPlanPtr plan, int location)
 	else
 		newplan->argtypes = NULL;
 
-	newplan->run_via_callback_to_qd = plan->run_via_callback_to_qd;
 	newplan->use_count = plan->use_count;
 
 	MemoryContextSwitchTo(oldcxt);
