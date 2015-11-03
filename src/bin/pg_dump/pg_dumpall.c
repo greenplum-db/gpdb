@@ -120,7 +120,7 @@ main(int argc, char *argv[])
 		{"no-privileges", no_argument, NULL, 'x'},
 		{"no-acl", no_argument, NULL, 'x'},
 		{"resource-queues", no_argument, NULL, 'r'},
-		{"filespaces", no_argument, NULL, 'f'},
+		{"filespaces", no_argument, NULL, 'F'},
 
 		/*
 		 * the following options don't have an equivalent short option letter
@@ -460,12 +460,12 @@ main(int argc, char *argv[])
 		/* Dump role constraints */
 		dumpRoleConstraints(conn);
 
-		/* Dump filespaces */
+		/* Dump filespaces and tablespaces */
 		if (filespaces)
+		{
 			dumpFilespaces(conn);
-
-		/* Dump tablespaces */
-		dumpTablespaces(conn);
+			dumpTablespaces(conn);
+		}
 
 		/* Dump CREATE DATABASE commands */
 		if (!globals_only)
@@ -507,7 +507,7 @@ help(void)
 	printf(_("  -c, --clean              clean (drop) databases before recreating\n"));
 	printf(_("  -d, --inserts            dump data as INSERT, rather than COPY, commands\n"));
 	printf(_("  -D, --column-inserts     dump data as INSERT commands with column names\n"));
-	printf(_("  -f, --filespaces         dump filespace data\n"));
+	printf(_("  -F, --filespaces         dump filespace data\n"));
 	printf(_("  -g, --globals-only       dump only global objects, no databases\n"));
 	printf(_("  -o, --oids               include OIDs in dump\n"));
 	printf(_("  -O, --no-owner           skip restoration of object ownership\n"));
