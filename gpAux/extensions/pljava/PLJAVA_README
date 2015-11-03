@@ -47,9 +47,11 @@ implementation:
 
 * pljava_classpath
   A colon (:) separated list of the jar files containing your custom
-  Java classes. The jar files listed here must also be installed 
-  on all Greenplum hosts in the following location: 
-  $GPHOME/lib/postgresql/java/
+  Java classes. For the trusted version of the language jar files 
+  listed here must also be installed on all Greenplum hosts in the 
+  following location: $GPHOME/lib/postgresql/java/
+  The untrusted version allows jars to be placed anywhere and an 
+  absolute classpath is allowed.
  
 * pljava_statement_cache_size
   Sets the size in KB of the Most Recently Used (MRU)
