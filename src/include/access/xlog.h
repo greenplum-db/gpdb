@@ -240,10 +240,7 @@ extern void XLogPutNextOid(Oid nextOid);
 extern XLogRecPtr GetRedoRecPtr(void);
 extern void GetNextXidAndEpoch(TransactionId *xid, uint32 *epoch);
 
-extern void XLogFileClose(void);
-extern void XLogGetBuffer(int startidx, int npages, char **from, Size *nbytes);
 extern void XLogGetRecoveryStart(char *callerStr, char *reasonStr, XLogRecPtr *redoCheckPointLoc, CheckPoint *redoCheckPoint);
-extern void XLog_OutRec(StringInfo buf, XLogRecord *record);
 extern void XLogPrintLogNames(void);
 extern char *XLogLocationToString(XLogRecPtr *loc);
 extern char *XLogLocationToString2(XLogRecPtr *loc);
@@ -287,8 +284,6 @@ extern void xlog_print_redo_lsn_application(
 extern XLogRecord *XLogReadRecord(XLogRecPtr *RecPtr, bool fetching_ckpt, int emode);
 
 extern void XLogCloseReadRecord(void);
-
-extern XLogRecord *ReadCheckpointRecord(XLogRecPtr RecPtr, int whichChkpt);
 
 extern void XLogReadRecoveryCommandFile(int emode);
 
