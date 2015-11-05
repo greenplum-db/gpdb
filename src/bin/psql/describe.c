@@ -2735,8 +2735,9 @@ add_partition_by_footer(const char* oid, PQExpBufferData *inoutbuf, PQExpBufferD
 	if (nPartKey)
 	{
 		char *partColName;
+		int i = 0;
 		appendPQExpBuffer(inoutbuf, "Partition by: (");
-		for (int i = 0; i < nPartKey; i++)
+		for (i = 0; i < nPartKey; i++)
 		{
 			if (i > 0)
 				appendPQExpBuffer(inoutbuf, ", ");
