@@ -8,7 +8,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PostgreSQL 8.4\n"
-"Report-Msgid-Bugs-To: pgsql-bugs@postgresql.org\n"
+"Report-Msgid-Bugs-To: bugs@greenplum.org\n"
 "POT-Creation-Date: 2009-08-27 22:41+0000\n"
 "PO-Revision-Date: 2009-08-28 22:53+0300\n"
 "Last-Translator: Peter Eisentraut <peter_e@gmx.net>\n"
@@ -12193,14 +12193,14 @@ msgid ""
 "configuration settings and how to set them on the command line or in\n"
 "the configuration file.\n"
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
 "In der Dokumentation finden Sie eine komplette Liste der Konfigurations-\n"
 "parameter und Informationen wie man sie auf der Kommandozeile oder in der\n"
 "Konfiguratonsdatei setzen kann.\n"
 "\n"
-"Berichten Sie Fehler an <pgsql-bugs@postgresql.org>.\n"
+"Berichten Sie Fehler an <bugs@greenplum.org>.\n"
 
 #: main/main.c:333
 msgid ""
@@ -15739,8 +15739,8 @@ msgid "could not determine encoding for locale \"%s\": codeset is \"%s\""
 msgstr "konnte Kodierung für Locale »%s« nicht bestimmen: Codeset ist »%s«"
 
 #: ../port/chklocale.c:327
-msgid "Please report this to <pgsql-bugs@postgresql.org>."
-msgstr "Bitte berichten Sie das an <pgsql-bugs@postgresql.org>."
+msgid "Please report this to <bugs@greenplum.org>."
+msgstr "Bitte berichten Sie das an <bugs@greenplum.org>."
 
 #: ../port/dirmod.c:75 ../port/dirmod.c:88 ../port/dirmod.c:101
 #, c-format
