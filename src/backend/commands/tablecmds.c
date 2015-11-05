@@ -1585,7 +1585,7 @@ RemoveRelation(const RangeVar *relation, DropBehavior behavior,
 	 * altered while we were waiting.
 	 */
 	relOid = RangeVarGetRelidExtended(
-			relation, AccessExclusiveLock, stmt->missing_ok,
+			relation, AccessExclusiveLock, stmt?stmt->missing_ok:false,
 			false /* nowait */, NULL /* callback */,
 			NULL /* callback_arg */);
 
@@ -1598,7 +1598,7 @@ RemoveRelation(const RangeVar *relation, DropBehavior behavior,
 		 * Drop without "if exists" won't even come here, as would error
 		 * inside RangeVarGetRelidExtended.
 		 */
-		DropErrorMsgNonExistent(relation, relkind, stmt->missing_ok);
+		DropErrorMsgNonExistent(relation, relkind, stmt?stmt->missing_ok:false);
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
 			UnlockRelationOid(DependRelationId, RowExclusiveLock);
