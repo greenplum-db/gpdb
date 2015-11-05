@@ -72,13 +72,14 @@ pygresql:
 #
 # PARAMIKO
 #
-PARAMIKO_VERSION=1.7.6-9
+PARAMIKO_VERSION=1.7.6
 PARAMIKO_DIR=paramiko-$(PARAMIKO_VERSION)
 paramiko:
 	@echo "--- paramiko"
-	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PARAMIKO_DIR).tar.gz
+	test -f $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR).zip || pip install paramiko==$(PARAMIKO_VERSION)  --download="$(PYLIB_SRC_EXT)"
+	cd $(PYLIB_SRC_EXT)/ && unzip -o $(PARAMIKO_DIR).zip
 	cd $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/ && python setup.py build
-	cp -r $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/build/lib/paramiko  $(PYLIB_DIR)/
+	cp -r $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/build/lib.*/paramiko  $(PYLIB_DIR)/
 
 #
 # LOCKFILE
@@ -89,15 +90,16 @@ paramiko:
 #
 LOCKFILE_VERSION=0.9.1
 LOCKFILE_DIR=lockfile-$(LOCKFILE_VERSION)
-LOCKFILE_SRC=$(PYLIB_SRC_EXT)/$(LOCKFILE_DIR)/build/lib/lockfile
+LOCKFILE_SRC=$(PYLIB_SRC_EXT)/$(LOCKFILE_DIR)/build/lib.*/lockfile
 LOCKFILE_DST=$(PYLIB_DIR)/lockfile
 lockfile:
 	@echo "--- lockfile"
+	test -f $(PYLIB_SRC_EXT)/$(LOCKFILE_DIR).tar.gz || pip install lockfile==$(LOCKFILE_VERSION)  --download="$(PYLIB_SRC_EXT)"
 	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(LOCKFILE_DIR).tar.gz
 	cd $(PYLIB_SRC_EXT)/$(LOCKFILE_DIR)/ && python setup.py build
 	mkdir -p $(PYLIB_DIR)/lockfile
-	awk 'BEGIN{print "# pylint: disable-all"} /^if hasattr/ {exit} { print }' < $(LOCKFILE_SRC)/__init__.py    > $(LOCKFILE_DST)/__init__.py
-	awk 'BEGIN{print "# pylint: disable-all"} { print }'                      < $(LOCKFILE_SRC)/pidlockfile.py > $(LOCKFILE_DST)/pidlockfile.py
+	awk 'BEGIN{print "# pylint: disable-all"} /^if hasattr/ {exit} { print }' $(LOCKFILE_SRC)/__init__.py    > $(LOCKFILE_DST)/__init__.py
+	awk 'BEGIN{print "# pylint: disable-all"} { print }'                      $(LOCKFILE_SRC)/pidlockfile.py > $(LOCKFILE_DST)/pidlockfile.py
 
 subprocess32:
 	@echo "--- subprocess32, Linux only"
@@ -114,6 +116,7 @@ PYCRYPTO_DIR=pycrypto-$(PYCRYPTO_VERSION)
 
 pycrypto:
 	@echo "--- pycrypto"
+	test -f $(PYLIB_SRC_EXT)/$(PYCRYPTO_DIR).tar.gz || pip install pycrypto==$(PYCRYPTO_VERSION)  --download="$(PYLIB_SRC_EXT)"
 	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PYCRYPTO_DIR).tar.gz
 	cd $(PYLIB_SRC_EXT)/$(PYCRYPTO_DIR)/ && CC="$(CC)" python setup.py build
 	cp -r $(PYLIB_SRC_EXT)/$(PYCRYPTO_DIR)/build/lib.*/Crypto $(PYLIB_DIR)
@@ -121,11 +124,12 @@ pycrypto:
 #
 # PSI
 #
-PSI_VERSION=0.3b2_gp
+PSI_VERSION=0.3b2
 PSI_DIR=PSI-$(PSI_VERSION)
 
 psi:
 	@echo "--- psi"
+	test -f $(PYLIB_SRC_EXT)/$(PSI_DIR).tar.gz || pip install PSI==$(PSI_VERSION)  --download="$(PYLIB_SRC_EXT)"
 	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PSI_DIR).tar.gz
 	cd $(PYLIB_SRC_EXT)/$(PSI_DIR)/ && CC="$(CC)" python setup.py build
 	cp -r $(PYLIB_SRC_EXT)/$(PSI_DIR)/build/lib.*/psi $(PYLIB_DIR)
@@ -139,9 +143,10 @@ PYCHECKER_DIR=pychecker-$(PYCHECKER_VERSION)
 
 pychecker:
 	@echo "--- pychecker"
+	test -f $(PYLIB_SRC_EXT)/$(PYCHECKER_DIR).tar.gz || wget http://sourceforge.net/projects/pychecker/files/pychecker/$(PYCHECKER_VERSION)/pychecker-$(PYCHECKER_VERSION).tar.gz/download?use_mirror=iweb -O $(PYLIB_SRC_EXT)/$(PYCHECKER_DIR).tar.gz
 	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PYCHECKER_DIR).tar.gz
 	cd $(PYLIB_SRC_EXT)/$(PYCHECKER_DIR)/ && python setup.py build
-	cp -r $(PYLIB_SRC_EXT)/$(PYCHECKER_DIR)/build/lib/pychecker  $(PYLIB_DIR)/
+	cp -r $(PYLIB_SRC_EXT)/$(PYCHECKER_DIR)/build/lib.*/pychecker  $(PYLIB_DIR)/
 
 
 #
@@ -211,9 +216,10 @@ UNITTEST2_VERSION=0.5.1
 UNITTEST2_DIR=unittest2-${UNITTEST2_VERSION}
 unittest2:
 	@echo "--- unittest2"
+	test -f $(PYLIB_SRC_EXT)/$(UNITTEST2_DIR).tar.gz || pip install unittest2==$(UNITTEST2_VERSION)  --download="$(PYLIB_SRC_EXT)"
 	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(UNITTEST2_DIR).tar.gz
 	cd $(PYLIB_SRC_EXT)/$(UNITTEST2_DIR)/ && python setup.py build
-	cp -r $(PYLIB_SRC_EXT)/$(UNITTEST2_DIR)/build/lib/unittest2  $(PYLIB_DIR)/
+	cp -r $(PYLIB_SRC_EXT)/$(UNITTEST2_DIR)/build/lib.*/unittest2  $(PYLIB_DIR)/
 
 
 PYTHON_FILES=`grep -l --exclude=Makefile --exclude=gplogfilter "/bin/env python" *`\
