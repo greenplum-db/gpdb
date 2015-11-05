@@ -12842,6 +12842,13 @@ assign_ssl(bool newval, bool doit, GucSource source)
 static bool
 assign_optimizer(bool newval, bool doit, GucSource source)
 {
+#ifndef USE_ORCA
+	if (newval)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("ORCA is not supported by this build")));
+#endif
+
 	if (!optimizer_control)
 	{
 		if (source >= PGC_S_INTERACTIVE)

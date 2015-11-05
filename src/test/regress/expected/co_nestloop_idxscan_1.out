@@ -1,0 +1,86 @@
+--
+-- Nested loop join with index scan on CO table, test for MPP-17658
+--
+create schema co_nestloop_idxscan;
+create table co_nestloop_idxscan.foo (id bigint, data text) with (appendonly=true, orientation=column)
+distributed by (id);
+create table co_nestloop_idxscan.bar (id bigint) distributed by (id);
+-- Changing the text to be smaller doesn't repro the issue
+insert into co_nestloop_idxscan.foo select 1, repeat('xxxxxxxxxx', 100000);
+insert into co_nestloop_idxscan.bar values (1);
+create index foo_id_idx on co_nestloop_idxscan.foo(id);
+-- test with hash join
+explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)  (cost=1.02..32.07 rows=4 width=8)
+   ->  Hash Join  (cost=1.02..32.07 rows=2 width=8)
+         Hash Cond: f.id = b.id
+         ->  Append-only Columnar Scan on foo f  (cost=0.00..31.01 rows=1 width=8)
+         ->  Hash  (cost=1.01..1.01 rows=1 width=8)
+               ->  Seq Scan on bar b  (cost=0.00..1.01 rows=1 width=8)
+(6 rows)
+
+select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
+ id 
+----
+  1
+(1 row)
+
+-- test with nested loop join
+select disable_xform('CXformInnerJoin2HashJoin');
+             disable_xform             
+---------------------------------------
+ Server has been compiled without ORCA
+(1 row)
+
+set enable_hashjoin=off;
+explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..32.03 rows=4 width=8)
+   ->  Nested Loop  (cost=0.00..32.03 rows=2 width=8)
+         Join Filter: f.id = b.id
+         ->  Append-only Columnar Scan on foo f  (cost=0.00..31.01 rows=1 width=8)
+         ->  Seq Scan on bar b  (cost=0.00..1.01 rows=1 width=8)
+ Settings:  enable_hashjoin=off
+(6 rows)
+
+select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
+ id 
+----
+  1
+(1 row)
+
+-- test with nested loop join and index scan
+set enable_seqscan = off;
+-- start_ignore
+-- Known_opt_diff: OPT-929
+-- end_ignore
+explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)  (cost=100.26..201.29 rows=4 width=8)
+   ->  Nested Loop  (cost=100.26..201.29 rows=2 width=8)
+         Join Filter: f.id = b.id
+         ->  Bitmap Append-Only Column-Oriented Scan on foo f  (cost=100.26..200.27 rows=1 width=8)
+               ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..100.26 rows=1 width=0)
+         ->  Seq Scan on bar b  (cost=0.00..1.01 rows=1 width=8)
+ Settings:  enable_hashjoin=off; enable_seqscan=off
+(7 rows)
+
+select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
+ id 
+----
+  1
+(1 row)
+
+select enable_xform('CXformInnerJoin2HashJoin');
+             enable_xform              
+---------------------------------------
+ Server has been compiled without ORCA
+(1 row)
+
+drop schema co_nestloop_idxscan cascade;
+NOTICE:  drop cascades to table co_nestloop_idxscan.bar
+NOTICE:  drop cascades to append only columnar table co_nestloop_idxscan.foo
