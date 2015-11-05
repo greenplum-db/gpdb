@@ -84,6 +84,7 @@ oid				objid_gpdbAlertSqlStmt[] = { 1, 3, 6, 1, 4, 1, 31327, 1, 5 };
 oid				objid_gpdbAlertSystemName[] = { 1, 3, 6, 1, 4, 1, 31327, 1, 6 };
 #endif
 
+#ifdef USE_CURL
 /* state information for messagebody_cb function */
 typedef struct
 {
@@ -95,9 +96,10 @@ static size_t messagebody_cb(void *ptr, size_t size, size_t nmemb, void *userp);
 static void build_messagebody(StringInfo buf, const GpErrorData *errorData,
 				  const char *subject, const char *email_priority);
 
-#ifdef USE_CURL
 static void send_alert_via_email(const GpErrorData * errorData,
 					 const char * subject, const char * email_priority);
+static char *extract_email_addr(char *str);
+static bool SplitMailString(char *rawstring, char delimiter, List **namelist);
 #endif
 
 #ifdef USE_SNMP
@@ -105,8 +107,6 @@ static int send_snmp_inform_or_trap();
 extern pg_time_t	MyStartTime;
 #endif
 
-static char *extract_email_addr(char *str);
-static bool SplitMailString(char *rawstring, char delimiter, List **namelist);
 
 int send_alert_from_chunks(const PipeProtoChunk *chunk,
 		const PipeProtoChunk * saved_chunks_in)
@@ -1022,6 +1022,11 @@ get_str_from_chunk(CSVChunkStr *chunkstr, const PipeProtoChunk *saved_chunks)
 	return out;
 }
 
+#ifdef USE_CURL
+/*
+ * Support functions for building an alert email.
+ */
+
 /*
  *  The message is read a line at a time and the newlines converted
  *  to \r\n.  Unfortunately, RFC 822 states that bare \n and \r are
@@ -1029,7 +1034,6 @@ get_str_from_chunk(CSVChunkStr *chunkstr, const PipeProtoChunk *saved_chunks)
  *  line termination.  This requirement cannot be reconciled with storing
  *  messages with Unix line terminations.  RFC 2822 rescues this situation
  *  slightly by prohibiting lone \r and \n in messages.
- *
  */
 static void
 add_to_message(StringInfo buf, const char *newstr_in)
@@ -1299,3 +1303,4 @@ SplitMailString(char *rawstring, char delimiter,
 
 	return true;
 }
+#endif /* USE_CURL */
