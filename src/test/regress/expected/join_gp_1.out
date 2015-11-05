@@ -1,0 +1,285 @@
+-- test numeric hash join
+set enable_hashjoin to on;
+set enable_mergejoin to off;
+set enable_nestloop to off;
+create table nhtest (i numeric(10, 2)) distributed by (i);
+insert into nhtest values(100000.22);
+insert into nhtest values(300000.19);
+explain select * from nhtest a join nhtest b using (i);
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)  (cost=1.02..2.07 rows=4 width=11)
+   ->  Hash Join  (cost=1.02..2.07 rows=2 width=11)
+         Hash Cond: a.i = b.i
+         ->  Seq Scan on nhtest a  (cost=0.00..1.01 rows=1 width=11)
+         ->  Hash  (cost=1.01..1.01 rows=1 width=11)
+               ->  Seq Scan on nhtest b  (cost=0.00..1.01 rows=1 width=11)
+ Settings:  enable_hashjoin=on; enable_mergejoin=off; enable_nestloop=off
+(7 rows)
+
+select * from nhtest a join nhtest b using (i);
+     i     
+-----------
+ 100000.22
+ 300000.19
+(2 rows)
+
+create temp table l(a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into l values (1), (1), (2);
+select * from l l1 join l l2 on l1.a = l2.a left join l l3 on l1.a = l3.a and l1.a = 2 order by 1,2,3;
+ a | a | a 
+---+---+---
+ 1 | 1 |  
+ 1 | 1 |  
+ 1 | 1 |  
+ 1 | 1 |  
+ 2 | 2 | 2
+(5 rows)
+
+--
+-- test hash join
+--
+create table hjtest (i int, j int) distributed by (i,j);
+insert into hjtest values(3, 4);
+select count(*) from hjtest a1, hjtest a2 where a2.i = least (a1.i,4) and a2.j = 4;
+ count 
+-------
+     1
+(1 row)
+
+--
+-- Predicate propagation over equality conditions
+--
+drop schema if exists pred;
+NOTICE:  schema "pred" does not exist, skipping
+create schema pred;
+set search_path=pred;
+create table t1 (x int, y int, z int) distributed by (y);
+create table t2 (x int, y int, z int) distributed by (x);
+insert into t1 select i, i, i from generate_series(1,100) i;
+insert into t2 select * from t1;
+analyze t1;
+analyze t2;
+--
+-- infer over equalities
+--
+explain select count(*) from t1,t2 where t1.x = 100 and t1.x = t2.x;
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=7.10..7.11 rows=1 width=8)
+   ->  Gather Motion 2:1  (slice2; segments: 2)  (cost=7.04..7.08 rows=1 width=8)
+         ->  Aggregate  (cost=7.04..7.05 rows=1 width=8)
+               ->  Nested Loop  (cost=0.00..7.03 rows=2 width=0)
+                     ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..3.52 rows=1 width=4)
+                           Hash Key: 100
+                           ->  Seq Scan on t1  (cost=0.00..3.50 rows=1 width=4)
+                                 Filter: x = 100 AND 100 = x
+                     ->  Seq Scan on t2  (cost=0.00..3.50 rows=1 width=4)
+                           Filter: 100 = x AND x = 100
+ Settings:  enable_hashjoin=on; enable_mergejoin=off; enable_nestloop=off
+(11 rows)
+
+select count(*) from t1,t2 where t1.x = 100 and t1.x = t2.x;
+ count 
+-------
+     1
+(1 row)
+
+--
+-- infer over >=
+--
+explain select * from t1,t2 where t1.x = 100 and t2.x >= t1.x;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice2; segments: 2)  (cost=3.28..6.58 rows=4 width=24)
+   ->  Nested Loop  (cost=3.28..6.58 rows=2 width=24)
+         Join Filter: t2.x >= t1.x
+         ->  Seq Scan on t1  (cost=0.00..3.25 rows=1 width=12)
+               Filter: x = 100
+         ->  Materialize  (cost=3.28..3.30 rows=1 width=12)
+               ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..3.28 rows=1 width=12)
+                     ->  Seq Scan on t2  (cost=0.00..3.25 rows=1 width=12)
+                           Filter: x >= 100
+ Settings:  enable_hashjoin=on; enable_mergejoin=off; enable_nestloop=off
+(10 rows)
+
+select * from t1,t2 where t1.x = 100 and t2.x >= t1.x;
+  x  |  y  |  z  |  x  |  y  |  z  
+-----+-----+-----+-----+-----+-----
+ 100 | 100 | 100 | 100 | 100 | 100
+(1 row)
+
+--
+-- multiple inferences
+--
+set optimizer_segments=2;
+explain select * from t1,t2 where t1.x = 100 and t1.x = t2.y and t1.x <= t2.x;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice2; segments: 2)  (cost=3.53..7.58 rows=4 width=24)
+   ->  Nested Loop  (cost=3.53..7.58 rows=2 width=24)
+         Join Filter: t1.x <= t2.x
+         ->  Seq Scan on t2  (cost=0.00..4.00 rows=1 width=12)
+               Filter: 100 = y AND y = 100 AND 100 <= x AND y <= x
+         ->  Materialize  (cost=3.53..3.55 rows=1 width=12)
+               ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..3.53 rows=1 width=12)
+                     ->  Seq Scan on t1  (cost=0.00..3.50 rows=1 width=12)
+                           Filter: x = 100 AND 100 = x
+ Settings:  enable_hashjoin=on; enable_mergejoin=off; enable_nestloop=off; optimizer_segments=2
+(10 rows)
+
+reset optimizer_segments;
+select * from t1,t2 where t1.x = 100 and t1.x = t2.y and t1.x <= t2.x;
+  x  |  y  |  z  |  x  |  y  |  z  
+-----+-----+-----+-----+-----+-----
+ 100 | 100 | 100 | 100 | 100 | 100
+(1 row)
+
+--
+-- MPP-18537: hash clause references a constant in outer child target list
+--
+create table hjn_test (i int, j int) distributed by (i,j);
+insert into hjn_test values(3, 4);
+create table int4_tbl (f1 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into int4_tbl values(123456), (-2147483647), (0), (-123456), (2147483647);
+select count(*) from hjn_test, (select 3 as bar) foo where hjn_test.i = least (foo.bar,4) and hjn_test.j = 4;
+ count 
+-------
+     1
+(1 row)
+
+select count(*) from hjn_test, (select 3 as bar) foo where hjn_test.i = least (foo.bar,(array[4])[1]) and hjn_test.j = (array[4])[1];
+ count 
+-------
+     1
+(1 row)
+
+select count(*) from hjn_test, (select 3 as bar) foo where least (foo.bar,(array[4])[1]) = hjn_test.i and hjn_test.j = (array[4])[1];
+ count 
+-------
+     1
+(1 row)
+
+select count(*) from hjn_test, (select 3 as bar) foo where hjn_test.i = least (foo.bar, least(4,10)) and hjn_test.j = least(4,10);
+ count 
+-------
+     1
+(1 row)
+
+select * from int4_tbl a join int4_tbl b on (a.f1 = (select f1 from int4_tbl c where c.f1=b.f1));
+     f1      |     f1      
+-------------+-------------
+           0 |           0
+     -123456 |     -123456
+  2147483647 |  2147483647
+      123456 |      123456
+ -2147483647 | -2147483647
+(5 rows)
+
+set enable_hashjoin to off;
+-- Disable hashjoin forms fo ORCA
+select disable_xform('CXformInnerJoin2HashJoin');
+             disable_xform             
+---------------------------------------
+ Server has been compiled without ORCA
+(1 row)
+
+select disable_xform('CXformLeftAntiSemiJoin2HashJoin');
+             disable_xform             
+---------------------------------------
+ Server has been compiled without ORCA
+(1 row)
+
+select disable_xform('CXformLeftAntiSemiJoinNotIn2HashJoinNotIn');
+             disable_xform             
+---------------------------------------
+ Server has been compiled without ORCA
+(1 row)
+
+select disable_xform('CXformLeftOuterJoin2HashJoin');
+             disable_xform             
+---------------------------------------
+ Server has been compiled without ORCA
+(1 row)
+
+select disable_xform('CXformLeftSemiJoin2HashJoin');
+             disable_xform             
+---------------------------------------
+ Server has been compiled without ORCA
+(1 row)
+
+select count(*) from hjn_test, (select 3 as bar) foo where hjn_test.i = least (foo.bar,4) and hjn_test.j = 4;
+ count 
+-------
+     1
+(1 row)
+
+select count(*) from hjn_test, (select 3 as bar) foo where hjn_test.i = least (foo.bar,(array[4])[1]) and hjn_test.j = (array[4])[1];
+ count 
+-------
+     1
+(1 row)
+
+select count(*) from hjn_test, (select 3 as bar) foo where least (foo.bar,(array[4])[1]) = hjn_test.i and hjn_test.j = (array[4])[1];
+ count 
+-------
+     1
+(1 row)
+
+select count(*) from hjn_test, (select 3 as bar) foo where hjn_test.i = least (foo.bar, least(4,10)) and hjn_test.j = least(4,10);
+ count 
+-------
+     1
+(1 row)
+
+select * from int4_tbl a join int4_tbl b on (a.f1 = (select f1 from int4_tbl c where c.f1=b.f1));
+     f1      |     f1      
+-------------+-------------
+ -2147483647 | -2147483647
+      123456 |      123456
+     -123456 |     -123456
+           0 |           0
+  2147483647 |  2147483647
+(5 rows)
+
+reset enable_hashjoin;
+-- Enable hashjoin forms fo ORCA
+select enable_xform('CXformInnerJoin2HashJoin');
+             enable_xform              
+---------------------------------------
+ Server has been compiled without ORCA
+(1 row)
+
+select enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+             enable_xform              
+---------------------------------------
+ Server has been compiled without ORCA
+(1 row)
+
+select enable_xform('CXformLeftAntiSemiJoinNotIn2HashJoinNotIn');
+             enable_xform              
+---------------------------------------
+ Server has been compiled without ORCA
+(1 row)
+
+select enable_xform('CXformLeftOuterJoin2HashJoin');
+             enable_xform              
+---------------------------------------
+ Server has been compiled without ORCA
+(1 row)
+
+select enable_xform('CXformLeftSemiJoin2HashJoin');
+             enable_xform              
+---------------------------------------
+ Server has been compiled without ORCA
+(1 row)
+
+drop schema pred cascade;
+NOTICE:  drop cascades to table int4_tbl
+NOTICE:  drop cascades to table hjn_test
+NOTICE:  drop cascades to table t2
+NOTICE:  drop cascades to table t1
