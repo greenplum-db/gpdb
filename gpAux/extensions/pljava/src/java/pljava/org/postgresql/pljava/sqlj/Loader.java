@@ -97,7 +97,7 @@ public class Loader extends ClassLoader
 			{
 				String path="file:///";
 				
-				// Current behaviour is to have path's relative to $GPHOME/lib/postgresql/java/
+				// Previous behaviour required that paths be relative to $GPHOME/lib/postgresql/java/
 				// if the user specifies a relative path we will respect that behaviour 
 				if (!m_classpath[i].startsWith("/"))
 				{
