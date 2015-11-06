@@ -55,8 +55,8 @@ msgstr ""
 
 #: pg_controldata.c:40
 #, c-format
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "报告错误至 <pgsql-bugs@postgresql.org>.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "报告错误至 <bugs@greenplum.org>.\n"
 
 #: pg_controldata.c:50
 msgid "starting up"

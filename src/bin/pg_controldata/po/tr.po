@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: pg_controldata-tr\n"
-"Report-Msgid-Bugs-To: pgsql-bugs@postgresql.org\n"
+"Report-Msgid-Bugs-To: bugs@greenplum.org\n"
 "POT-Creation-Date: 2009-04-29 07:08+0000\n"
 "PO-Revision-Date: 2009-04-29 16:29+0200\n"
 "Last-Translator: Devrim GÜNDÜZ <devrim@commandprompt.com>\n"
@@ -57,8 +57,8 @@ msgstr ""
 
 #: pg_controldata.c:38
 #, c-format
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "Hataları <pgsql-bugs@postgresql.org> adresine bildirebilirsiniz.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "Hataları <bugs@greenplum.org> adresine bildirebilirsiniz.\n"
 
 #: pg_controldata.c:48
 msgid "starting up"
