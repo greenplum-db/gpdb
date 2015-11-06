@@ -1,27 +1,3 @@
---start_ignore
-drop language plpgsql cascade;
-NOTICE:  drop cascades to function sirv_test17_fun2(integer,double precision,double precision)
-NOTICE:  drop cascades to function sirv_test17_fun1(integer,double precision,double precision)
-NOTICE:  drop cascades to function sirv_test12(integer,double precision,double precision)
-NOTICE:  drop cascades to function sirv_test11(integer,double precision,double precision)
-NOTICE:  drop cascades to function sirv_test10_srf2(text,integer,double precision,double precision)
-NOTICE:  drop cascades to function sirv_test10_srf1(integer,double precision,double precision)
-NOTICE:  drop cascades to function sirv_test9_fun2(text,integer,double precision,double precision)
-NOTICE:  drop cascades to function sirv_test9_fun1(integer,double precision,double precision)
-NOTICE:  drop cascades to function sirv_test6_fun4(double precision,integer)
-NOTICE:  drop cascades to function sirv_test6_fun3(integer,double precision,double precision)
-NOTICE:  drop cascades to function sirv_test6_fun2(integer,double precision,double precision)
-NOTICE:  drop cascades to function sirv_test6_fun1()
-NOTICE:  drop cascades to function sirv_test5_fun4(double precision,integer)
-NOTICE:  drop cascades to function sirv_test5_fun3(integer,double precision,double precision)
-NOTICE:  drop cascades to function sirv_test5_fun2(integer,double precision,double precision)
-NOTICE:  drop cascades to function sirv_test5_fun1()
-NOTICE:  drop cascades to function sirv_test4(double precision,integer)
-NOTICE:  drop cascades to function sirv_test3(integer,double precision,double precision)
-NOTICE:  drop cascades to function sirv_test2(integer,double precision,double precision)
-NOTICE:  drop cascades to function sirv_test1()
---end_ignore
-create language plpgsql;
 drop table if exists test cascade;
 create table test (d integer, a integer, b integer);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'd' as the Greenplum Database data distribution key for this table.
@@ -42,10 +18,6 @@ create trigger tg_bu before update
 update test set a=200 where a=10;
 drop trigger tg_bu on test;
 drop function bu();
---start_ignore
-drop language plpgsql;
---end_ignore
-create language plpgsql;
 drop table test;
 create table test (a integer, b integer, c integer);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -81,4 +53,3 @@ DETAIL:
          SQL statement " select * from test where a >  $1  and b >  $2 "
 PL/pgSQL function "refcursor" line 6 at open
 drop function refcursor(int, int);
---drop language plpgsql;

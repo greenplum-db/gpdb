@@ -1,9 +1,4 @@
 --start_ignore
-drop language plpgsql;
---end_ignore
-CREATE LANGUAGE plpgsql;
-
---start_ignore
 drop table if exists sirv_test1_result1;
 drop table if exists sirv_test1_result2;
 --end_ignore

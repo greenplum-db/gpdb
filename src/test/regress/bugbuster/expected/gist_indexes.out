@@ -569,35 +569,6 @@ CREATE TABLE GistTable13 (
  filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
  )
  DISTRIBUTED BY (id);
---start_ignore
-drop language plpgsql;
-NOTICE:  function fn_trig() depends on language plpgsql
-NOTICE:  trigger test_trig_1 on table test_trig depends on function fn_trig()
-NOTICE:  function sirv_test17_fun2(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test17_fun1(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test12(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test11(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test10_srf2(text,integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test10_srf1(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test9_fun2(text,integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test9_fun1(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test6_fun4(double precision,integer) depends on language plpgsql
-NOTICE:  function sirv_test6_fun3(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test6_fun2(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test6_fun1() depends on language plpgsql
-NOTICE:  function sirv_test5_fun4(double precision,integer) depends on language plpgsql
-NOTICE:  function sirv_test5_fun3(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test5_fun2(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test5_fun1() depends on language plpgsql
-NOTICE:  function sirv_test4(double precision,integer) depends on language plpgsql
-NOTICE:  function sirv_test3(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test2(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test1() depends on language plpgsql
-ERROR:  cannot drop language plpgsql because other objects depend on it
-HINT:  Use DROP ... CASCADE to drop the dependent objects too.
---end_ignore
-create language plpgsql;
-NOTICE:  language "plpgsql" already exists, skipping
 -- Register a function that converts TEXT to BOX data type.
 CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
   $$

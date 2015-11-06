@@ -2,33 +2,6 @@ DROP TABLE test_trig;
 ERROR:  table "test_trig" does not exist
 DROP FUNCTION fn_trig();
 ERROR:  function fn_trig() does not exist
---start_ignore
-drop language plpgsql;
-NOTICE:  function sirv_test17_fun2(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test17_fun1(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test12(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test11(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test10_srf2(text,integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test10_srf1(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test9_fun2(text,integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test9_fun1(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test6_fun4(double precision,integer) depends on language plpgsql
-NOTICE:  function sirv_test6_fun3(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test6_fun2(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test6_fun1() depends on language plpgsql
-NOTICE:  function sirv_test5_fun4(double precision,integer) depends on language plpgsql
-NOTICE:  function sirv_test5_fun3(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test5_fun2(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test5_fun1() depends on language plpgsql
-NOTICE:  function sirv_test4(double precision,integer) depends on language plpgsql
-NOTICE:  function sirv_test3(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test2(integer,double precision,double precision) depends on language plpgsql
-NOTICE:  function sirv_test1() depends on language plpgsql
-ERROR:  cannot drop language plpgsql because other objects depend on it
-HINT:  Use DROP ... CASCADE to drop the dependent objects too.
---end_ignore
-create language plpgsql;
-NOTICE:  language "plpgsql" already exists, skipping
 CREATE TABLE test_trig(id int, aaa text) DISTRIBUTED BY (id);
 CREATE OR REPLACE FUNCTION fn_trig() RETURNS TRIGGER LANGUAGE plpgsql NO SQL AS $$
 BEGIN

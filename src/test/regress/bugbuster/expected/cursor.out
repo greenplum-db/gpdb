@@ -369,11 +369,9 @@ COMMIT;
 DROP TABLE films;
 --end_ignore
 --start_ignore
-DROP LANGUAGE PLPGSQL CASCADE;
 DROP TABLE refcur1;
 ERROR:  table "refcur1" does not exist
 --end_ignore
-Create language PLPGSQL;
 CREATE FUNCTION reffunc(refcursor) RETURNS refcursor AS '
 BEGIN
     OPEN $1 FOR SELECT col FROM refcur1;
@@ -418,19 +416,14 @@ SELECT reffunc('funccursor2');
 (1 row)
 
 --start_ignore
-DROP LANGUAGE PLPGSQL CASCADE;
-NOTICE:  drop cascades to function reffunc(refcursor)
 DROP TABLE refcur1;
 --end_ignore
 --start_ignore
-DROP LANGUAGE PLPGSQL CASCADE;
-ERROR:  language "plpgsql" does not exist
 DROP TABLE table_1;
 ERROR:  table "table_1" does not exist
 DROP TABLE table_2;
 ERROR:  table "table_2" does not exist
 --end_ignore
-CREATE LANGUAGE PLPGSQL;
 CREATE FUNCTION myfunc(refcursor, refcursor) RETURNS SETOF refcursor AS $$
 BEGIN
     OPEN $1 FOR SELECT * FROM table_1;
@@ -468,8 +461,6 @@ FETCH ALL FROM b;
 
 COMMIT;
 --start_ignore
-DROP LANGUAGE PLPGSQL CASCADE;
-NOTICE:  drop cascades to function myfunc(refcursor,refcursor)
 DROP TABLE table_1;
 DROP TABLE table_2;
 --end_ignore
