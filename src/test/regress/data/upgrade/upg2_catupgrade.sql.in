@@ -35,13 +35,13 @@
 create language plpgsql;
 
 -- Use this pl/pgsql function to execute DML on cat tab on all segs
-create or replace function @gpupgradeschemaname@.catDML(stmt text) returns int as $$
+create or replace function upg_catalog.catDML(stmt text) returns int as $$
 declare
   contentid integer;
 begin
   SELECT INTO contentid current_setting('gp_contentid');
   IF contentid = -1 THEN
-    PERFORM @gpupgradeschemaname@.catDML(stmt) FROM gp_dist_random('gp_id');
+    PERFORM upg_catalog.catDML(stmt) FROM gp_dist_random('gp_id');
   END IF;
 
   execute stmt;
@@ -50,13 +50,13 @@ end;
 $$ language 'plpgsql';
 
 -- Use this pl/pgsql function to remove the default table privilege
-create or replace function @gpupgradeschemaname@.removeDefaultPrivilege(tablenm text) returns int as $$
+create or replace function upg_catalog.removeDefaultPrivilege(tablenm text) returns int as $$
 declare
   username name;
   stmt text;
 begin
   select rolname into username from pg_authid where oid = 10;
-  stmt := 'revoke all on table @gpupgradeschemaname@.' || tablenm || ' from ' || quote_ident(username);
+  stmt := 'revoke all on table upg_catalog.' || tablenm || ' from ' || quote_ident(username);
   execute stmt;
   return 1;
 end;
@@ -79,32 +79,32 @@ CREATE SCHEMA gp_toolkit ;
 --   add PIN dependency to newly created catalog objects
 --   drop temp helper routine
 ----------------------------------------
-select @gpupgradeschemaname@.catDML(
-'INSERT INTO @gpupgradeschemaname@.pg_depend SELECT 0,0,0, tableoid,oid,0, ''p'' FROM @gpupgradeschemaname@.pg_proc
-        where (tableoid,oid) not in (Select refclassid, refobjid from @gpupgradeschemaname@.pg_depend where deptype = ''p'')
+select upg_catalog.catDML(
+'INSERT INTO upg_catalog.pg_depend SELECT 0,0,0, tableoid,oid,0, ''p'' FROM upg_catalog.pg_proc
+        where (tableoid,oid) not in (Select refclassid, refobjid from upg_catalog.pg_depend where deptype = ''p'')
           and oid < 10000'
 );
-select @gpupgradeschemaname@.catDML(
-'INSERT INTO @gpupgradeschemaname@.pg_depend SELECT 0,0,0, tableoid,oid,0, ''p'' FROM @gpupgradeschemaname@.pg_class
-        where (tableoid,oid) not in (Select refclassid, refobjid from @gpupgradeschemaname@.pg_depend where deptype = ''p'')
+select upg_catalog.catDML(
+'INSERT INTO upg_catalog.pg_depend SELECT 0,0,0, tableoid,oid,0, ''p'' FROM upg_catalog.pg_class
+        where (tableoid,oid) not in (Select refclassid, refobjid from upg_catalog.pg_depend where deptype = ''p'')
           and oid < 10000'
 );
-select @gpupgradeschemaname@.catDML(
-'INSERT INTO @gpupgradeschemaname@.pg_depend SELECT 0,0,0, tableoid,oid,0, ''p'' FROM @gpupgradeschemaname@.pg_type
-        where (tableoid,oid) not in (Select refclassid, refobjid from @gpupgradeschemaname@.pg_depend where deptype = ''p'')
+select upg_catalog.catDML(
+'INSERT INTO upg_catalog.pg_depend SELECT 0,0,0, tableoid,oid,0, ''p'' FROM upg_catalog.pg_type
+        where (tableoid,oid) not in (Select refclassid, refobjid from upg_catalog.pg_depend where deptype = ''p'')
           and oid < 10000'
 );
-select @gpupgradeschemaname@.catDML(
-'INSERT INTO @gpupgradeschemaname@.pg_depend SELECT 0,0,0, tableoid,oid,0, ''p'' FROM @gpupgradeschemaname@.pg_operator
-        where (tableoid,oid) not in (Select refclassid, refobjid from @gpupgradeschemaname@.pg_depend where deptype = ''p'')
+select upg_catalog.catDML(
+'INSERT INTO upg_catalog.pg_depend SELECT 0,0,0, tableoid,oid,0, ''p'' FROM upg_catalog.pg_operator
+        where (tableoid,oid) not in (Select refclassid, refobjid from upg_catalog.pg_depend where deptype = ''p'')
           and oid < 10000'
 );
-select @gpupgradeschemaname@.catDML(
-'INSERT INTO @gpupgradeschemaname@.pg_depend SELECT 0,0,0, tableoid,oid,0, ''p'' FROM @gpupgradeschemaname@.pg_cast
-        where (tableoid,oid) not in (Select refclassid, refobjid from @gpupgradeschemaname@.pg_depend where deptype = ''p'')
+select upg_catalog.catDML(
+'INSERT INTO upg_catalog.pg_depend SELECT 0,0,0, tableoid,oid,0, ''p'' FROM upg_catalog.pg_cast
+        where (tableoid,oid) not in (Select refclassid, refobjid from upg_catalog.pg_depend where deptype = ''p'')
           and oid < 10000'
 );
 
-drop function @gpupgradeschemaname@.catDML(stmt text);
-drop function @gpupgradeschemaname@.removeDefaultPrivilege(tablenm text);
+drop function upg_catalog.catDML(stmt text);
+drop function upg_catalog.removeDefaultPrivilege(tablenm text);
 \unset ON_ERROR_STOP

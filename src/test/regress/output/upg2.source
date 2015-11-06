@@ -1852,7 +1852,7 @@ update public.pg_class set relnatts=relnatts+3 where oid='pg_catalog.pg_authid':
 -- fix up pg_partition_rule: we don't go through "alter" since this would create a toast table that doesn't normally exist.
 -- new entry already added to pg_attribute in the copy
 -- update attribute count in pg_class
-update @gpupgradeschemaname@.pg_class set relnatts=14 where oid='pg_catalog.pg_partition_rule'::regclass;
+update upg_catalog.pg_class set relnatts=14 where oid='pg_catalog.pg_partition_rule'::regclass;
 -- fix up pg_exttable: we don't go through "alter" since this would create a toast table that doesn't normally exist.
 -- new entry already added to pg_attribute in the copy
 -- fix relnatts in pg_class
@@ -1985,14 +1985,14 @@ SELECT public.gpviewcopy('public.gp_migrator_staging_view'::regclass, 'public.pg
 
 DROP VIEW public.gp_migrator_staging_view;
 -- pg_catalog.pg_roles
-CREATE VIEW @gpupgradeschemaname@.gp_migrator_staging_view AS select rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb, rolcatupdate, rolcanlogin, rolconnlimit, '********'::text as rolpassword, rolvaliduntil, rolconfig, rolresqueue, oid, rolcreaterextgpfd, rolcreaterexthttp, rolcreatewextgpfd FROM pg_authid;
-SELECT public.gpviewcopy('@gpupgradeschemaname@.gp_migrator_staging_view'::regclass, '@gpupgradeschemaname@.pg_roles'::regclass);
+CREATE VIEW upg_catalog.gp_migrator_staging_view AS select rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb, rolcatupdate, rolcanlogin, rolconnlimit, '********'::text as rolpassword, rolvaliduntil, rolconfig, rolresqueue, oid, rolcreaterextgpfd, rolcreaterexthttp, rolcreatewextgpfd FROM pg_authid;
+SELECT public.gpviewcopy('upg_catalog.gp_migrator_staging_view'::regclass, 'upg_catalog.pg_roles'::regclass);
  gpviewcopy 
 ------------
  
 (1 row)
 
-DROP VIEW @gpupgradeschemaname@.gp_migrator_staging_view;
+DROP VIEW upg_catalog.gp_migrator_staging_view;
 -- pg_catalog.pg_partition_templates
 CREATE VIEW public.gp_migrator_staging_view AS select schemaname, tablename, partitionname, partitiontype, partitionlevel, case when (partitiontype != 'range') then NULL when (partitionnodefault > 0) then partitionrank when (partitionrank = 1) then NULL else  partitionrank - 1 end as partitionrank, partitionposition, partitionlistvalues, partitionrangestart, case when (partitiontype = 'range') then partitionstartinclusive else NULL end as partitionstartinclusive, partitionrangeend, case when (partitiontype = 'range') then partitionendinclusive else NULL end as partitionendinclusive, partitioneveryclause, parisdefault as partitionisdefault, partitionboundary from ( select n.nspname as schemaname, cl.relname as tablename, pr1.parname as partitionname, p.parlevel as partitionlevel, pr1.parruleord as partitionposition, rank() over (partition by p.oid, cl.relname, p.parlevel order by pr1.parruleord) as partitionrank, pg_get_expr(pr1.parlistvalues, p.parrelid) as partitionlistvalues, pg_get_expr(pr1.parrangestart, p.parrelid) as partitionrangestart, pr1.parrangestartincl as partitionstartinclusive, pg_get_expr(pr1.parrangeend, p.parrelid) as partitionrangeend, pr1.parrangeendincl as partitionendinclusive, pg_get_expr(pr1.parrangeevery, p.parrelid) as partitioneveryclause, min(pr1.parruleord) over (partition by p.oid, cl.relname, p.parlevel order by pr1.parruleord) as partitionnodefault, pr1.parisdefault, case when p.parkind = 'h' then 'hash' when p.parkind = 'r' then 'range' when p.parkind = 'l' then 'list' else null end as partitiontype, pg_get_partition_rule_def(pr1.oid, true) as partitionboundary from pg_namespace n, pg_class cl, pg_partition p, pg_partition_rule pr1 where p.parrelid = cl.oid and pr1.paroid = p.oid and cl.relnamespace = n.oid and p.paristemplate = 't'  ) p1;
 SELECT public.gpviewcopy('public.gp_migrator_staging_view'::regclass, 'public.pg_partition_templates'::regclass);
