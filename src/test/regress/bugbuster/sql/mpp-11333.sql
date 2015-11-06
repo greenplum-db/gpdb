@@ -1,9 +1,5 @@
 DROP TABLE test_trig;
 DROP FUNCTION fn_trig();
---start_ignore
-drop language plpgsql;
---end_ignore
-create language plpgsql;
 CREATE TABLE test_trig(id int, aaa text) DISTRIBUTED BY (id);
 CREATE OR REPLACE FUNCTION fn_trig() RETURNS TRIGGER LANGUAGE plpgsql NO SQL AS $$
 BEGIN

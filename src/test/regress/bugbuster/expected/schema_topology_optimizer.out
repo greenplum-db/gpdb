@@ -391,14 +391,6 @@ create database create_objects_db;
     create view empvw1 as select * from employees1; drop view empvw1;
     --drop table employees1; 
     
---Create Language
-    \echo -- start_ignore
--- start_ignore
-    CREATE LANGUAGE plpgsql;
-NOTICE:  language "plpgsql" already exists, skipping
-    --DROP LANGUAGE plperl;
-    \echo -- end_ignore
--- end_ignore
 --Create Function
     
     CREATE FUNCTION add(integer,integer) RETURNS integer AS 'select $1 + $2;'
@@ -1006,8 +998,6 @@ NOTICE:  CREATE TABLE / UNIQUE will create implicit index "price_change_apn_key"
           insert into stock (stock_apn,stock_price) values ('b',766);
           insert into stock (stock_apn,stock_price) values ('c',767);
           --trigger function to insert records as required:
-          CREATE LANGUAGE plpgsql;
-NOTICE:  language "plpgsql" already exists, skipping
           CREATE OR REPLACE FUNCTION insert_price_change() RETURNS trigger AS '
           DECLARE
           changed boolean;
@@ -2544,12 +2534,6 @@ CREATE OR REPLACE FUNCTION add(integer, integer) RETURNS integer
     LANGUAGE SQL CONTAINS SQL
     STABLE 
     RETURNS NULL ON NULL INPUT; 
-\echo -- start_ignore
--- start_ignore
-CREATE LANGUAGE plpgsql;
-NOTICE:  language "plpgsql" already exists, skipping
-\echo -- end_ignore
--- end_ignore
 CREATE OR REPLACE FUNCTION increment(i integer) RETURNS 
 integer AS $$ 
         BEGIN 
