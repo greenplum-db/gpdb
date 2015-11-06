@@ -44,7 +44,6 @@ test: schema_topology
 test: gpmgmt1
 test: case
 test: bkup_pg
-test: bkup_gpcrondump
 test: cursor
 test: aggfunc
 test: tidscan
