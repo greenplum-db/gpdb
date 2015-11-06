@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: pg_dump-tr\n"
-"Report-Msgid-Bugs-To: pgsql-bugs@postgresql.org\n"
+"Report-Msgid-Bugs-To: bugs@greenplum.org\n"
 "POT-Creation-Date: 2009-08-15 21:14+0000\n"
 "PO-Revision-Date: 2009-08-17 01:30+0200\n"
 "Last-Translator: Devrim GÜNDÜZ <devrim@gunduz.org>\n"
@@ -378,8 +378,8 @@ msgstr ""
 #: pg_restore.c:449
 #: pg_dumpall.c:566
 #, c-format
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "Hataları <pgsql-bugs@postgresql.org> adresine bildirin.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "Hataları <bugs@greenplum.org> adresine bildirin.\n"
 
 #: pg_dump.c:847
 #: pg_backup_archiver.c:1361

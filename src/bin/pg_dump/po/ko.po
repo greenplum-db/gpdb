@@ -331,8 +331,8 @@ msgstr ""
 
 #: pg_dump.c:774 pg_restore.c:420 pg_dumpall.c:404
 #, c-format
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "오류보고: <pgsql-bugs@postgresql.org>.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "오류보고: <bugs@greenplum.org>.\n"
 
 #: pg_dump.c:782 pg_backup_archiver.c:1169
 msgid "*** aborted because of error\n"

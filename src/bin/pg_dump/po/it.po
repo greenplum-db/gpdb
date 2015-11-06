@@ -327,8 +327,8 @@ msgstr ""
 #: pg_dump.c:708
 #: pg_dumpall.c:346
 #: pg_restore.c:402
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "Segnalare bachi a <pgsql-bugs@postgresql.org>.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "Segnalare bachi a <bugs@greenplum.org>.\n"
 
 #: pg_backup_archiver.c:1208
 #: pg_dump.c:716
