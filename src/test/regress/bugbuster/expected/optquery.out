@@ -1,4 +1,32 @@
--- Test: Subqueries 2
+CREATE TABLE SUBSELECT_TBL1 (
+  f1 integer,
+  f2 integer,
+  f3 float
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+
+INSERT INTO SUBSELECT_TBL1 VALUES (1, 2, 3); 
+INSERT INTO SUBSELECT_TBL1 VALUES (2, 3, 4); 
+INSERT INTO SUBSELECT_TBL1 VALUES (3, 4, 5); 
+INSERT INTO SUBSELECT_TBL1 VALUES (1, 1, 1); 
+INSERT INTO SUBSELECT_TBL1 VALUES (2, 2, 2); 
+INSERT INTO SUBSELECT_TBL1 VALUES (3, 3, 3); 
+INSERT INTO SUBSELECT_TBL1 VALUES (6, 7, 8); 
+INSERT INTO SUBSELECT_TBL1 VALUES (8, 9, NULL); 
+SELECT '' AS eight, * FROM SUBSELECT_TBL1 ORDER BY 2,3,4;
+ eight | f1 | f2 | f3 
+-------+----+----+----
+       |  1 |  1 |  1
+       |  1 |  2 |  3
+       |  2 |  2 |  2
+       |  2 |  3 |  4
+       |  3 |  3 |  3
+       |  3 |  4 |  5
+       |  6 |  7 |  8
+       |  8 |  9 |   
+(8 rows)
+
 SELECT '' AS two, f1 AS "Constant Select" FROM SUBSELECT_TBL1
  					 WHERE f1 IN (SELECT 1) ORDER BY 2;
  two | Constant Select 
@@ -7,4 +35,3 @@ SELECT '' AS two, f1 AS "Constant Select" FROM SUBSELECT_TBL1
      |               1
 (2 rows)
 
-                        
