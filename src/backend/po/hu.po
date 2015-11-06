@@ -7236,7 +7236,7 @@ msgid ""
 "configuration settings and how to set them on the command line or in\n"
 "the configuration file.\n"
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
 "Kérjük olvassa el a dokumentációt, amelyben a konfigurációs lehetõségek\n"
@@ -7244,7 +7244,7 @@ msgstr ""
 "módban, akár a konfigurációs file segítségével hogyan finomhangolhatja\n"
 "a rendszert.\n"
 "\n"
-"A hibajelzéséket kérjük a <pgsql-bugs@postgresql.org> címre küldje.\n"
+"A hibajelzéséket kérjük a <bugs@greenplum.org> címre küldje.\n"
 
 #: ../postmaster/postmaster.c:938
 #, c-format

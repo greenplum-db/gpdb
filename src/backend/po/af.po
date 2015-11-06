@@ -5827,7 +5827,7 @@ msgid ""
 "configuration settings and how to set them on the command line or in\n"
 "the configuration file.\n"
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 
 #: postmaster/postmaster.c:1140
@@ -6725,7 +6725,7 @@ msgstr ""
 #, fuzzy
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
 "Rapporteer foute aan <bug-gnu-utils@gnu.org>.\n"

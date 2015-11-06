@@ -6514,14 +6514,14 @@ msgid ""
 "configuration settings and how to set them on the command line or in\n"
 "the configuration file.\n"
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
 "Prosím, preèítajte si dokumentáciu pre prehµad úplného zoznamu \n"
 "konfiguraèných nastavení a ako je mo¾né ich nastavi» cez povelový \n"
 "riadok alebo v konfiguraènom súbore.\n"
 "\n"
-"Chyby hláste na adresu <pgsql-bugs@postgresql.org>\n"
+"Chyby hláste na adresu <bugs@greenplum.org>\n"
 
 #: postmaster/postmaster.c:1160
 #, c-format
@@ -7448,10 +7448,10 @@ msgstr ""
 #: tcop/postgres.c:2140
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"Chyby hláste na adresu <pgsql-bugs@postgresql.org>.\n"
+"Chyby hláste na adresu <bugs@greenplum.org>.\n"
 
 #: tcop/postgres.c:2265
 msgid "assert checking is not compiled in"

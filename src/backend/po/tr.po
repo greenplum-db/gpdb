@@ -6,7 +6,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: postgres-tr\n"
-"Report-Msgid-Bugs-To: pgsql-bugs@postgresql.org\n"
+"Report-Msgid-Bugs-To: bugs@greenplum.org\n"
 "POT-Creation-Date: 2009-06-23 09:01+0000\n"
 "PO-Revision-Date: 2009-06-23 13:50+0200\n"
 "Last-Translator: Devrim GÜNDÜZ <devrim@gunduz.org>\n"
@@ -13160,14 +13160,14 @@ msgid ""
 "configuration settings and how to set them on the command line or in\n"
 "the configuration file.\n"
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
 "Çalıştırma zamanı parametrelerin tam listesi için ve onların komut \n"
 "satırı ve ayarlar dosyasında nasıl belirleyeceğinizi tam açıklaması için\n"
 "lütfen dokümanlara başvurun.\n"
 "\n"
-"Hata raporları <pgsql-bugs@postgresql.org> adresine iletin.\n"
+"Hata raporları <bugs@greenplum.org> adresine iletin.\n"
 
 #: main/main.c:333
 msgid ""
@@ -15745,8 +15745,8 @@ msgid "could not determine encoding for locale \"%s\": codeset is \"%s\""
 msgstr "\"%s\" için junction ayarlanamadı: %s"
 
 #: ../port/chklocale.c:327
-msgid "Please report this to <pgsql-bugs@postgresql.org>."
-msgstr "Bunu lütfen <pgsql-bugs@postgresql.org> adresine bildiriniz."
+msgid "Please report this to <bugs@greenplum.org>."
+msgstr "Bunu lütfen <bugs@greenplum.org> adresine bildiriniz."
 
 #: ../port/dirmod.c:75
 #: ../port/dirmod.c:88
