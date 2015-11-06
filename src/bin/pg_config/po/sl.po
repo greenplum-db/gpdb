@@ -87,8 +87,8 @@ msgstr ""
 "\n"
 
 #: pg_config.c:51
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "Napake sporoèajte na naslov <pgsql-bugs@postgresql.org>.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "Napake sporoèajte na naslov <bugs@greenplum.org>.\n"
 
 #: pg_config.c:57
 #, c-format

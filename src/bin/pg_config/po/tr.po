@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: pg_config-tr\n"
-"Report-Msgid-Bugs-To: pgsql-bugs@postgresql.org\n"
+"Report-Msgid-Bugs-To: bugs@greenplum.org\n"
 "POT-Creation-Date: 2009-04-29 07:09+0000\n"
 "PO-Revision-Date: 2009-04-29 16:28+0200\n"
 "Last-Translator: Devrim GÜNDÜZ <devrim@commandprompt.com>\n"
@@ -195,8 +195,8 @@ msgstr ""
 
 #: pg_config.c:441
 #, c-format
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "Hataları <pgsql-bugs@postgresql.org> adresine bildirebilirsiniz.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "Hataları <bugs@greenplum.org> adresine bildirebilirsiniz.\n"
 
 #: pg_config.c:447
 #, c-format
