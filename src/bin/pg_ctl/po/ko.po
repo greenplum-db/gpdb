@@ -484,10 +484,10 @@ msgstr "  -U USERNAME     이 서비스를 실행할 사용자 이름\n"
 #, c-format
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"오류보고: <pgsql-bugs@postgresql.org>.\n"
+"오류보고: <bugs@greenplum.org>.\n"
 
 #: pg_ctl.c:1488
 #, c-format

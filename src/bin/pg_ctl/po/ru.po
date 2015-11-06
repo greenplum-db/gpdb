@@ -525,10 +525,10 @@ msgstr "  -U ИМЯ-ПОЛЬЗОВАТЕЛЯ    имя пользователя для регистрации сервера Postgr
 #, c-format
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"Посылать сообщения об ошибках на адрес  <pgsql-bugs@postgresql.org>.\n"
+"Посылать сообщения об ошибках на адрес  <bugs@greenplum.org>.\n"
 
 #: pg_ctl.c:1588
 #, c-format

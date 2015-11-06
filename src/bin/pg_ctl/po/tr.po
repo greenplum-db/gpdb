@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: pg_ctl-tr\n"
-"Report-Msgid-Bugs-To: pgsql-bugs@postgresql.org\n"
+"Report-Msgid-Bugs-To: bugs@greenplum.org\n"
 "POT-Creation-Date: 2009-04-29 07:18+0000\n"
 "PO-Revision-Date: 2009-04-29 16:32+0200\n"
 "Last-Translator: Devrim GÜNDÜZ <devrim@commandprompt.com>\n"
@@ -523,10 +523,10 @@ msgstr "  -U USERNAME     PostgreSQL sunucusunu kaydetmek için gerekli kullanı
 #, c-format
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"Hataları <pgsql-bugs@postgresql.org> adresine bildiriniz.\n"
+"Hataları <bugs@greenplum.org> adresine bildiriniz.\n"
 
 #: pg_ctl.c:1597
 #, c-format
