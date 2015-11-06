@@ -679,13 +679,13 @@ msgid ""
 "(for SQL commands) from within psql, or consult the psql section in\n"
 "the PostgreSQL documentation.\n"
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>."
+"Report bugs to <bugs@greenplum.org>."
 msgstr ""
 "\n"
 "在 psql 裡鍵入\"\\?\"(用於內部指令)或者\"\\help\"(用於SQL命令)，\n"
 "或者參考PostgreSQL文件的psql章節以取得更多相關資訊。\n"
 "\n"
-"向<pgsql-bugs@postgresql.org>回報錯誤。"
+"向<bugs@greenplum.org>回報錯誤。"
 
 # help.c:174
 #: help.c:175

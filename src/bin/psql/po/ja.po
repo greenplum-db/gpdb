@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PostgreSQL 9.0 beta 3\n"
-"Report-Msgid-Bugs-To: pgsql-bugs@postgresql.org\n"
+"Report-Msgid-Bugs-To: bugs@greenplum.org\n"
 "POT-Creation-Date: 2010-07-19 21:46+0900\n"
 "PO-Revision-Date: 2010-07-21 18:49+0900\n"
 "Last-Translator: HOTTA Michihide <hotta@net-newbie.com>\n"
@@ -786,8 +786,8 @@ msgstr ""
 
 #: help.c:151
 #, c-format
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "不具合は<pgsql-bugs@postgresql.org>まで報告してください。\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "不具合は<bugs@greenplum.org>まで報告してください。\n"
 
 #: help.c:169
 #, c-format

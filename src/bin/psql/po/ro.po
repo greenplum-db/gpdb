@@ -612,14 +612,14 @@ msgid ""
 "(for SQL commands) from within psql, or consult the psql section in\n"
 "the PostgreSQL documentation.\n"
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>."
+"Report bugs to <bugs@greenplum.org>."
 msgstr ""
 "\n"
 "Pentru mai multe informaþii, tastaþi \"\\?\" (pentru comenzi interne) sau\n"
 "\"\\help\" (pentru comenzi SQL) din psql, sau consultaþi secþiunea psql din\n"
 "documentaþia de PostgreSQL.\n"
 "\n"
-"Raportaþi erorile la <pgsql-bugs@postgresql.org>."
+"Raportaþi erorile la <bugs@greenplum.org>."
 
 #: help.c:174
 #, c-format

@@ -613,13 +613,13 @@ msgid ""
 "(for SQL commands) from within psql, or consult the psql section in\n"
 "the PostgreSQL documentation.\n"
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>."
+"Report bugs to <bugs@greenplum.org>."
 msgstr ""
 "\n"
 "���� �ڼ��� d���� ���Ͻø�, psql ���� ���� \"\\?\" (���� ��� ����) �Ǵ�\n"
 "\"\\help\" �� �Է��ϰų�, PostgreSQL �����ȿ� psql �κ�; ��v�Ͻʽÿ�.\n"
 "\n"
-"��� ����: <pgsql-bugs@postgresql.org>."
+"��� ����: <bugs@greenplum.org>."
 
 #: help.c:172
 #, c-format
