@@ -11105,6 +11105,9 @@ fi
 pgac_save_LIBS="$LIBS"
 LIBS=`echo "$LIBS" | sed -e 's/-ledit//g' -e 's/-lreadline//g'`
 
+# net-snmp has the same problem..
+LIBS=`echo "$LIBS" | sed -e 's/-lnetsnmp//g'`
+
 ac_fn_c_check_func "$LINENO" "crypt" "ac_cv_func_crypt"
 if test "x$ac_cv_func_crypt" = xyes; then :
   $as_echo "#define HAVE_CRYPT 1" >>confdefs.h

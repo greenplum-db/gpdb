@@ -1344,6 +1344,9 @@ fi
 pgac_save_LIBS="$LIBS"
 LIBS=`echo "$LIBS" | sed -e 's/-ledit//g' -e 's/-lreadline//g'`
 
+# net-snmp has the same problem..
+LIBS=`echo "$LIBS" | sed -e 's/-lnetsnmp//g'`
+
 AC_REPLACE_FUNCS([crypt fseeko getopt getpeereid getrusage inet_aton random rint srandom strdup strerror strlcat strlcpy strtol strtoul unsetenv])
 
 case $host_os in
