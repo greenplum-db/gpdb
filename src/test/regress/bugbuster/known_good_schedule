@@ -42,7 +42,6 @@ ignore: gpcheckmirrorseg
 test: AOCO_Compression2
 test: schema_topology
 test: gpmgmt1
-test: case
 test: bkup_pg
 test: cursor
 test: aggfunc
