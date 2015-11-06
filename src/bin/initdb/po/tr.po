@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: initdb-tr\n"
-"Report-Msgid-Bugs-To: pgsql-bugs@postgresql.org\n"
+"Report-Msgid-Bugs-To: bugs@greenplum.org\n"
 "POT-Creation-Date: 2009-04-29 07:09+0000\n"
 "PO-Revision-Date: 2009-04-29 16:27+0200\n"
 "Last-Translator: Devrim GÜNDÜZ <devrim@commandprompt.com>\n"
@@ -454,10 +454,10 @@ msgstr ""
 #, c-format
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"Hataları <pgsql-bugs@postgresql.org> adresine bildirebilirsiniz.\n"
+"Hataları <bugs@greenplum.org> adresine bildirebilirsiniz.\n"
 
 #: initdb.c:2561
 #, c-format

@@ -341,10 +341,10 @@ msgstr ""
 #: initdb.c:1982
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"Chyby hláste na adresu <pgsql-bugs@postgresql.org>.\n"
+"Chyby hláste na adresu <bugs@greenplum.org>.\n"
 
 #: initdb.c:2073
 msgid "Running in debug mode.\n"
