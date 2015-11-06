@@ -7434,7 +7434,7 @@ msgid ""
 "configuration settings and how to set them on the command line or in\n"
 "the configuration file.\n"
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
 "Por favor leia a documentação para verificar a lista completa de parâmetros\n"
@@ -7442,7 +7442,7 @@ msgstr ""
 "comando\n"
 "ou no arquivo de configuração.\n"
 "\n"
-"Relate erros a <pgsql-bugs@postgresql.org>.\n"
+"Relate erros a <bugs@greenplum.org>.\n"
 
 #: /a/pgsql/HEAD/pgtst/src/backend/main/main.c:333
 msgid ""
@@ -15470,8 +15470,8 @@ msgstr ""
 "\"%s\""
 
 #: /a/pgsql/HEAD/pgtst/src/backend/../port/chklocale.c:324
-msgid "Please report this to <pgsql-bugs@postgresql.org>."
-msgstr "Por favor relate isto a <pgsql-bugs@postgresql.org>."
+msgid "Please report this to <bugs@greenplum.org>."
+msgstr "Por favor relate isto a <bugs@greenplum.org>."
 
 #: /a/pgsql/HEAD/pgtst/src/backend/../port/dirmod.c:75
 #: /a/pgsql/HEAD/pgtst/src/backend/../port/dirmod.c:88

@@ -511,10 +511,10 @@ msgstr "  -W NUM          等待 NUM 秒, 以便允许调试器加入调试\n"
 #, c-format
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"错误报告至 <pgsql-bugs@postgresql.org>.\n"
+"错误报告至 <bugs@greenplum.org>.\n"
 
 #: tcop/postgres.c:2314
 msgid "assert checking is not compiled in"
@@ -9988,13 +9988,13 @@ msgid ""
 "configuration settings and how to set them on the command line or in\n"
 "the configuration file.\n"
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
 "请阅读文档获取运行时配置设置的完整列表\n"
 "以及如何在命令行或者在配置文件里设置它们的详细信息.\n"
 "\n"
-"请向 <pgsql-bugs@postgresql.org> 报告臭虫.\n"
+"请向 <bugs@greenplum.org> 报告臭虫.\n"
 
 #: postmaster/postmaster.c:1159
 #, c-format

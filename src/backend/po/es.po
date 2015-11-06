@@ -38,7 +38,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PostgreSQL 8.4\n"
-"Report-Msgid-Bugs-To: pgsql-bugs@postgresql.org\n"
+"Report-Msgid-Bugs-To: bugs@greenplum.org\n"
 "POT-Creation-Date: 2009-06-23 04:41+0000\n"
 "PO-Revision-Date: 2009-06-23 10:04+0300\n"
 "Last-Translator: Álvaro Herrera <alvherre@alvh.no-ip.org>\n"
@@ -13164,14 +13164,14 @@ msgid ""
 "configuration settings and how to set them on the command line or in\n"
 "the configuration file.\n"
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
 "Por favor lea la documentación para obtener la lista completa de\n"
 "parámetros de configuración y cómo definirlos en la línea de órdenes\n"
 "y en el archivo de configuración.\n"
 "\n"
-"Reporte errores a <pgsql-bugs@postgresql.org>\n"
+"Reporte errores a <bugs@greenplum.org>\n"
 
 #: main/main.c:333
 msgid ""
@@ -15933,8 +15933,8 @@ msgstr ""
 "codeset es «%s»"
 
 #: ../port/chklocale.c:327
-msgid "Please report this to <pgsql-bugs@postgresql.org>."
-msgstr "Por favor reporte esto a <pgsql-bugs@postgresql.org>."
+msgid "Please report this to <bugs@greenplum.org>."
+msgstr "Por favor reporte esto a <bugs@greenplum.org>."
 
 #: ../port/dirmod.c:75 ../port/dirmod.c:88 ../port/dirmod.c:101
 #, c-format

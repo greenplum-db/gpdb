@@ -7780,13 +7780,13 @@ msgid ""
 "configuration settings and how to set them on the command line or in\n"
 "the configuration file.\n"
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
 "請參考說明文件取得執行時期參數設定的完整列表以及如\n"
 "何在命令列或者在設定檔裡設定它們的詳細資訊。\n"
 "\n"
-"回報錯誤給<pgsql-bugs@postgresql.org>。\n"
+"回報錯誤給<bugs@greenplum.org>。\n"
 
 # postmaster/postmaster.c:1105
 #: postmaster/postmaster.c:1159
@@ -8972,10 +8972,10 @@ msgstr "  -W NUM          等待NUM秒，讓除錯器可以連結\n"
 #: tcop/postgres.c:2150
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"回報錯誤給<pgsql-bugs@postgresql.org>。\n"
+"回報錯誤給<bugs@greenplum.org>。\n"
 
 # tcop/postgres.c:2262
 #: tcop/postgres.c:2314
