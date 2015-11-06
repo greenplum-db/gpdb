@@ -1,6 +1,161 @@
--- start_ignore
-drop table if exists genders;
--- end_ignore
+-- Additional CASE-WHEN tests
+
+
+--
+-- CASE ... WHEN IS NOT DISTINCT FROM ...
+--
+DROP TABLE IF EXISTS mytable CASCADE;
+CREATE TABLE mytable (a int, b int, c varchar(1));
+INSERT INTO mytable values (1,2,'t'),
+  (2,3,'e'),
+  (3,4,'o'),
+  (4,5,'o'),
+  (4,4,'o'),
+  (5,5,'t'),
+  (6,6,'t'),
+  (7,6,'a'),
+  (8,7,'t'),
+  (9,8,'a');
+
+CREATE OR REPLACE FUNCTION negate(int) RETURNS int 
+AS 'SELECT $1 * (-1)'
+LANGUAGE sql CONTAINS SQL
+IMMUTABLE
+RETURNS null ON null input;
+
+DROP VIEW IF EXISTS myview;
+CREATE VIEW myview AS 
+   SELECT a,b, CASE a WHEN IS NOT DISTINCT FROM b THEN b*10
+                      WHEN IS NOT DISTINCT FROM b+1 THEN b*100 
+                      WHEN b-1 THEN b*1000
+                      WHEN b*10 THEN b*10000
+                      WHEN negate(b) THEN b*(-1.0)
+                      ELSE b END AS newb
+     FROM mytable;
+SELECT * FROM myview ORDER BY a,b;
+
+-- Test deparse
+select pg_get_viewdef('myview',true); 
+
+DROP TABLE IF EXISTS products CASCADE;
+CREATE TABLE products (id serial, name text, price numeric);
+INSERT INTO products (name, price) values ('keyboard', 124.99);
+INSERT INTO products (name, price) values ('monitor', 299.99);
+INSERT INTO products (name, price) values ('mouse', 45.59);
+
+SELECT id,name,price as old_price,
+       CASE name WHEN IS NOT DISTINCT FROM 'keyboard' THEN products.price*1.5 
+                 WHEN IS NOT DISTINCT FROM 'monitor' THEN price*1.2
+                 WHEN 'keyboard tray' THEN price*.9 
+                 END AS new_price
+  FROM products;
+                            
+-- testexpr should be evaluated only once
+DROP FUNCTION IF EXISTS blip(int);
+DROP TABLE IF EXISTS calls_to_blip;
+
+CREATE TABLE calls_to_blip (n serial, v int) DISTRIBUTED RANDOMLY;
+CREATE OR REPLACE FUNCTION blip(int) RETURNS int
+LANGUAGE plpgsql MODIFIES SQL DATA
+VOLATILE
+AS $$
+DECLARE
+	x alias for $1;
+BEGIN
+	INSERT INTO calls_to_blip(v) VALUES (x);
+	RETURN x;
+END;
+$$;
+
+SELECT CASE blip(1) 
+			WHEN IS NOT DISTINCT FROM blip(2) THEN blip(20)
+			WHEN IS NOT DISTINCT FROM blip(3) THEN blip(30)
+			WHEN IS NOT DISTINCT FROM blip(4) THEN blip(40)
+			ELSE blip(666)
+			END AS answer;
+SELECT * FROM calls_to_blip ORDER BY 1;
+
+-- Negative test
+--   1. wrong syntax
+--   2. type mismatches
+SELECT a,b,CASE WHEN IS NOT DISTINCT FROM b THEN b*100 ELSE b*1000 END FROM mytable;
+SELECT a,b,c,CASE c WHEN IS NOT DISTINCT FROM b THEN a
+                    WHEN IS NOT DISTINCT FROM b+1 THEN a*100
+                    ELSE c END 
+  FROM mytable; 
+
+--
+-- DECODE(): Oracle compatibility
+--
+SELECT decode(null,null,true,false);
+SELECT decode(NULL, 1, 100, NULL, 200, 300);
+SELECT decode('1'::text, '1', 100, '2', 200);
+SELECT decode(2, 1, 'ABC', 2, 'DEF');
+SELECT decode('2009-02-05'::date, '2009-02-05', 'ok');
+SELECT decode('2009-02-05 01:02:03'::timestamp, '2009-02-05 01:02:03', 'ok');
+
+SELECT b,c,decode(c,'a',b*10,'e',b*100,'o',b*1000,'u',b*10000,'i',b*100000) as newb from mytable;
+SELECT b,c,decode(c,'a',ARRAY[1,2],'e',ARRAY[3,4],'o',ARRAY[5,6],'u',ARRAY[7,8],'i',ARRAY[9,10],ARRAY[0]) as newb from mytable;
+
+DROP VIEW IF EXISTS myview;
+CREATE VIEW myview as
+ SELECT id, name, price, DECODE(id, 1, 'Southlake',
+                                    2, 'San Francisco',
+                                    3, 'New Jersey',
+                                    4, 'Seattle',
+                                    5, 'Portland',
+                                    6, 'San Francisco',
+                                    7, 'Portland',
+                                       'Non domestic') Location
+  FROM products
+ WHERE id < 100;
+
+SELECT * FROM myview ORDER BY id, location;
+
+-- Test deparse
+select pg_get_viewdef('myview',true); 
+
+-- User-defined DECODE function
+CREATE OR REPLACE FUNCTION "decode"(int, int, int) RETURNS int
+AS 'select $1 * $2 - $3;'
+LANGUAGE sql CONTAINS SQL
+IMMUTABLE
+RETURNS null ON null input;
+
+SELECT decode(11,8,11);
+SELECT "decode"(11,8,11);
+SELECT public.decode(11,8,11);
+
+-- Test CASE x WHEN IS NOT DISTINCT FROM y with DECODE
+SELECT a,b,decode(a,1,1), 
+		CASE decode(a,1,1) WHEN IS NOT DISTINCT FROM 1 THEN b*100
+                  		   WHEN IS NOT DISTINCT FROM 4 THEN b*1000 ELSE b END as newb
+  FROM mytable ORDER BY a,b; 
+
+-- Test CASE WHEN x IS NOT DISTINCT FROM y with DECODE
+SELECT a,b,decode(a,1,1), 
+		CASE WHEN decode(a,1,1) IS NOT DISTINCT FROM 1 THEN b*100
+			 WHEN decode(a,1,1) IS NOT DISTINCT FROM 4 THEN b*1000 ELSE b END as newb
+  FROM mytable ORDER BY a,b; 
+
+SELECT a,b,"decode"(a,1,1), 
+			CASE WHEN "decode"(a,1,1) IS NOT DISTINCT FROM 1 THEN b*100
+                 WHEN "decode"(a,1,1) IS NOT DISTINCT FROM 4 THEN b*1000 ELSE b END as newb
+  FROM mytable ORDER BY a,b; 
+
+-- Negative test: type mismatches
+SELECT b,c,decode(c,'a',ARRAY[1,2],'e',ARRAY[3,4],'o',ARRAY[5,6],'u',ARRAY[7,8],'i',ARRAY[9,10],0) as newb from mytable;
+
+--
+-- Clean up
+--
+
+DROP TABLE mytable CASCADE;
+DROP TABLE products CASCADE;
+DROP TABLE calls_to_blip;
+DROP FUNCTION negate(int);
+DROP FUNCTION "decode"(int, int, int);
+DROP FUNCTION blip(int);
 
 select CASE 'M'
     WHEN IS NOT DISTINCT FROM 'M' THEN 'Male'
@@ -27,14 +182,14 @@ select CASE null
     WHEN IS NOT DISTINCT FROM null THEN 'Not Specified'
     END;
 
-create table genders (gid integer, gender char(1)) distributed by (gid);
+create table case_genders (gid integer, gender char(1)) distributed by (gid);
 
-insert into genders(gid, gender) values (1, 'F');
-insert into genders(gid, gender) values (2, 'M');
-insert into genders(gid, gender) values (3, 'Z');
-insert into genders(gid, gender) values (4, '');
-insert into genders(gid, gender) values (5, null);
-insert into genders(gid, gender) values (6, 'G');
+insert into case_genders(gid, gender) values (1, 'F');
+insert into case_genders(gid, gender) values (2, 'M');
+insert into case_genders(gid, gender) values (3, 'Z');
+insert into case_genders(gid, gender) values (4, '');
+insert into case_genders(gid, gender) values (5, null);
+insert into case_genders(gid, gender) values (6, 'G');
 
 select gender, CASE gender
     WHEN IS NOT DISTINCT FROM 'M' THEN 'Male'
@@ -42,11 +197,10 @@ select gender, CASE gender
     WHEN IS NOT DISTINCT FROM '' THEN 'Not Specified'
     WHEN IS NOT DISTINCT FROM null THEN 'Not Specified'
     END
-from genders
+from case_genders
 order by gid;
--- start_ignore
-drop table if exists genders;
--- end_ignore
+
+drop table case_genders;
 
 select CASE 'M'
     WHEN IS NOT DISTINCT FROM 'M' THEN 'Male'
@@ -61,14 +215,14 @@ select CASE null
     WHEN IS NOT DISTINCT FROM '' THEN 'Not Specified'
     ELSE 'Other' END;
 
-create table genders (gid integer, gender char(1)) distributed by (gid);
+create table case_genders (gid integer, gender char(1)) distributed by (gid);
 
-insert into genders(gid, gender) values (1, 'F');
-insert into genders(gid, gender) values (2, 'M');
-insert into genders(gid, gender) values (3, 'Z');
-insert into genders(gid, gender) values (4, '');
-insert into genders(gid, gender) values (5, null);
-insert into genders(gid, gender) values (6, 'G');
+insert into case_genders(gid, gender) values (1, 'F');
+insert into case_genders(gid, gender) values (2, 'M');
+insert into case_genders(gid, gender) values (3, 'Z');
+insert into case_genders(gid, gender) values (4, '');
+insert into case_genders(gid, gender) values (5, null);
+insert into case_genders(gid, gender) values (6, 'G');
 
 select gender, CASE gender
     WHEN IS NOT DISTINCT FROM 'M' THEN 'Male'
@@ -76,7 +230,7 @@ select gender, CASE gender
     WHEN IS NOT DISTINCT FROM '' THEN 'Not Specified'
     WHEN IS NOT DISTINCT FROM null THEN 'Not Specified'
     ELSE 'Other' END
-from genders
+from case_genders
 order by gid;
 select 'a' as lhs, CASE 'a'
        WHEN 'f' THEN 'WHEN: f'
@@ -110,11 +264,6 @@ select '2011-05-27'::date as lsh,  CASE '2011-05-27'::date
        WHEN IS NOT DISTINCT FROM '2011-05-27'::date THEN 'WHEN NEW: 2011-05-27'
     END as match; 
 
-
-
--- start_ignore 
-drop table if exists nomatch_case;
--- end_ignore
 
 create table nomatch_case
 (
@@ -179,10 +328,6 @@ select sid,
 from nomatch_case
 order by sid, name;
 
--- start_ignore 
-drop table if exists combined_when;
--- end_ignore
-
 create table combined_when 
 (
    sid integer, 
@@ -230,10 +375,6 @@ from combined_when
 order by sid, name) a
 group by case_yr_start_dt
 order by 2 desc, 1;
-
--- start_ignore 
-drop table if exists case_expr;
--- end_ignore
 
 create table case_expr
 (
@@ -306,9 +447,7 @@ select sid,
 from case_expr
 order by sid, name;
 
--- start_ignore 
 drop table if exists combined_when;
--- end_ignore
 
 create table combined_when 
 (
