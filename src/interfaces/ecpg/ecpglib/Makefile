@@ -27,7 +27,7 @@ override CPPFLAGS := -DFRONTEND \
 	-I../include -I$(top_srcdir)/src/interfaces/ecpg/include \
 	-I$(libpq_srcdir) -I$(top_builddir)/src/port $(CPPFLAGS)
 
-	
+
 ifeq ($(GCC), yes)
 override CFLAGS += -Wno-error
 endif
@@ -38,7 +38,7 @@ LIBS := $(filter-out -lpgport, $(LIBS))
 
 OBJS= execute.o typename.o descriptor.o data.o error.o prepare.o memory.o \
 	connect.o misc.o path.o pgstrcasecmp.o \
-	$(filter snprintf.o, $(LIBOBJS))
+	$(filter snprintf.o strlcpy.o, $(LIBOBJS))
 
 # thread.c is needed only for non-WIN32 implementation of path.c
 ifneq ($(PORTNAME), win32)
