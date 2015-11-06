@@ -10,53 +10,53 @@ set gp_before_persistence_work=true;
 -- issues.
 
 -- Reindex shared tables that were added during upgrade before we load data
-reindex table @gpupgradeschemaname@.pg_filespace;
-reindex table @gpupgradeschemaname@.pg_resourcetype;
+reindex table upg_catalog.pg_filespace;
+reindex table upg_catalog.pg_resourcetype;
 
 -- Copy in the shared data
-copy @gpupgradeschemaname@.pg_filespace from '@gpupgradedatadir@/upg2_pg_filespace_toadd33.data' null as E'\\N' csv delimiter '|' header oids;
-copy @gpupgradeschemaname@.pg_shdescription from '@gpupgradedatadir@/upg2_pg_shdescription_toadd33.data' null as E'\\N' csv delimiter '|' header;
-copy @gpupgradeschemaname@.pg_resqueue from '@gpupgradedatadir@/upg2_pg_resqueue_toadd33.data' null as E'\\N' csv delimiter '|' header oids;
+copy upg_catalog.pg_filespace from '@gpupgradedatadir@/upg2_pg_filespace_toadd33.data' null as E'\\N' csv delimiter '|' header oids;
+copy upg_catalog.pg_shdescription from '@gpupgradedatadir@/upg2_pg_shdescription_toadd33.data' null as E'\\N' csv delimiter '|' header;
+copy upg_catalog.pg_resqueue from '@gpupgradedatadir@/upg2_pg_resqueue_toadd33.data' null as E'\\N' csv delimiter '|' header oids;
 -- add resourcetype and resqueuecapability here if necessary
-copy @gpupgradeschemaname@.pg_resourcetype from '@gpupgradedatadir@/upg2_pg_resourcetype_toadd33.data' null as E'\\N' csv delimiter '|' header oids;
+copy upg_catalog.pg_resourcetype from '@gpupgradedatadir@/upg2_pg_resourcetype_toadd33.data' null as E'\\N' csv delimiter '|' header oids;
 
 -- Reindex shared tables
-reindex table @gpupgradeschemaname@.gp_configuration_history;
-reindex table @gpupgradeschemaname@.gp_db_interfaces;
-reindex table @gpupgradeschemaname@.gp_fault_strategy;
-reindex table @gpupgradeschemaname@.gp_interfaces;
-reindex table @gpupgradeschemaname@.gp_san_configuration;
-reindex table @gpupgradeschemaname@.gp_segment_configuration;
-reindex table @gpupgradeschemaname@.pg_authid;
-reindex table @gpupgradeschemaname@.pg_filespace;
-reindex table @gpupgradeschemaname@.pg_filespace_entry;
-reindex table @gpupgradeschemaname@.pg_resourcetype;
-reindex table @gpupgradeschemaname@.pg_resqueue;
-reindex table @gpupgradeschemaname@.pg_resqueuecapability;
-reindex table @gpupgradeschemaname@.pg_shdescription;
-reindex table @gpupgradeschemaname@.pg_stat_last_shoperation;
-reindex table @gpupgradeschemaname@.pg_tablespace;
+reindex table upg_catalog.gp_configuration_history;
+reindex table upg_catalog.gp_db_interfaces;
+reindex table upg_catalog.gp_fault_strategy;
+reindex table upg_catalog.gp_interfaces;
+reindex table upg_catalog.gp_san_configuration;
+reindex table upg_catalog.gp_segment_configuration;
+reindex table upg_catalog.pg_authid;
+reindex table upg_catalog.pg_filespace;
+reindex table upg_catalog.pg_filespace_entry;
+reindex table upg_catalog.pg_resourcetype;
+reindex table upg_catalog.pg_resqueue;
+reindex table upg_catalog.pg_resqueuecapability;
+reindex table upg_catalog.pg_shdescription;
+reindex table upg_catalog.pg_stat_last_shoperation;
+reindex table upg_catalog.pg_tablespace;
 
 -- Assign users without queues to the default queue
-update @gpupgradeschemaname@.pg_authid u set rolresqueue=q.oid from pg_catalog.pg_resqueue q where q.rsqname='pg_default' and u.rolresqueue is null;
+update upg_catalog.pg_authid u set rolresqueue=q.oid from pg_catalog.pg_resqueue q where q.rsqname='pg_default' and u.rolresqueue is null;
 
 -- Assign the system tablespaces to the system filespace
-update @gpupgradeschemaname@.pg_tablespace set spcfsoid=3052, spclocation=null, spcprilocations=null, spcmirlocations=null;
+update upg_catalog.pg_tablespace set spcfsoid=3052, spclocation=null, spcprilocations=null, spcmirlocations=null;
 
 -- Update configuration information, while this is executed on every segment
 -- it only really applies to the master since that's the only table with any
 -- rows in gp_configuration
-insert into @gpupgradeschemaname@.gp_segment_configuration(dbid, content, role, preferred_role, mode, status, port, hostname, address, replication_port, san_mounts) (select dbid, content, case when isprimary then 'p' else 'm' end as role, case when definedprimary then 'p' else 'm' end as preferred_role, 's' as mode, 'u' as status, port, hostname, hostname as address, null as replication_port, null as san_mounts from @gpupgradeschemaname@.gp_configuration);
+insert into upg_catalog.gp_segment_configuration(dbid, content, role, preferred_role, mode, status, port, hostname, address, replication_port, san_mounts) (select dbid, content, case when isprimary then 'p' else 'm' end as role, case when definedprimary then 'p' else 'm' end as preferred_role, 's' as mode, 'u' as status, port, hostname, hostname as address, null as replication_port, null as san_mounts from upg_catalog.gp_configuration);
 
-insert into @gpupgradeschemaname@.pg_filespace_entry(fsefsoid, fsedbid, fselocation) (select fs.oid, dbid, datadir from @gpupgradeschemaname@.gp_configuration, @gpupgradeschemaname@.pg_filespace fs where fsname = 'pg_system');
+insert into upg_catalog.pg_filespace_entry(fsefsoid, fsedbid, fselocation) (select fs.oid, dbid, datadir from upg_catalog.gp_configuration, upg_catalog.pg_filespace fs where fsname = 'pg_system');
 
-delete from @gpupgradeschemaname@.gp_configuration;
+delete from upg_catalog.gp_configuration;
 
 -- Add information for fault strategy
-insert into @gpupgradeschemaname@.gp_fault_strategy(fault_strategy) (select case when (select count(*)=0 from @gpupgradeschemaname@.gp_segment_configuration where content >= 0 and preferred_role='m') then 'n' else 'f' end);
+insert into upg_catalog.gp_fault_strategy(fault_strategy) (select case when (select count(*)=0 from upg_catalog.gp_segment_configuration where content >= 0 and preferred_role='m') then 'n' else 'f' end);
 
 -- Add priority=medium for all existing resource queues
-insert into @gpupgradeschemaname@.pg_resqueuecapability (select oid, 5, 'medium' from @gpupgradeschemaname@.pg_resqueue);
+insert into upg_catalog.pg_resqueuecapability (select oid, 5, 'medium' from upg_catalog.pg_resqueue);
 
 set gp_before_persistence_work=false;
 

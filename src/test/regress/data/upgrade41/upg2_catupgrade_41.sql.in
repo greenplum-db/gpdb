@@ -18,67 +18,67 @@
 
 
 -- Persistent Table
-alter table @gpupgradeschemaname@.gp_persistent_relation_node rename reserved to relation_bufpool_kind;
+alter table upg_catalog.gp_persistent_relation_node rename reserved to relation_bufpool_kind;
 
-create function @gpupgradeschemaname@.gp_persistent_build_all(
-     @gpupgradeschemaname@.bool)
-returns @gpupgradeschemaname@.int4
+create function upg_catalog.gp_persistent_build_all(
+     upg_catalog.bool)
+returns upg_catalog.int4
 language internal AS 'gp_persistent_build_all' volatile
 with (oid = 7179);
-select @gpupgradeschemaname@.addProcPIN(7179);
-comment on function @gpupgradeschemaname@.gp_persistent_build_all(
-     @gpupgradeschemaname@.bool)
+select upg_catalog.addProcPIN(7179);
+comment on function upg_catalog.gp_persistent_build_all(
+     upg_catalog.bool)
 is 'populate the persistent tables and gp_relation_node for the whole database instance';
 
-create function @gpupgradeschemaname@.gp_persistent_reset_all()
-returns @gpupgradeschemaname@.int4
+create function upg_catalog.gp_persistent_reset_all()
+returns upg_catalog.int4
 language internal AS 'gp_persistent_reset_all' volatile
 with (oid = 7180);
-select @gpupgradeschemaname@.addProcPIN(7180);
-comment on function @gpupgradeschemaname@.gp_persistent_reset_all()
+select upg_catalog.addProcPIN(7180);
+comment on function upg_catalog.gp_persistent_reset_all()
 is 'Remove the persistent tables and gp_relation_node for the whole database instance';
 
-create function @gpupgradeschemaname@.gp_persistent_repair_delete(
-    @gpupgradeschemaname@.int4,
-    @gpupgradeschemaname@.tid)
-returns @gpupgradeschemaname@.int4
+create function upg_catalog.gp_persistent_repair_delete(
+    upg_catalog.int4,
+    upg_catalog.tid)
+returns upg_catalog.int4
 language internal AS 'gp_persistent_repair_delete' volatile
 with (oid = 7181);
-select @gpupgradeschemaname@.addProcPIN(7181);
-comment on function @gpupgradeschemaname@.gp_persistent_repair_delete(
-    @gpupgradeschemaname@.int4,
-    @gpupgradeschemaname@.tid)
+select upg_catalog.addProcPIN(7181);
+comment on function upg_catalog.gp_persistent_repair_delete(
+    upg_catalog.int4,
+    upg_catalog.tid)
 is 'Remove an entry specified by TID from a persistent table for the current database instance';
 
-create function @gpupgradeschemaname@.gp_persistent_set_relation_bufpool_kind_all()
-returns @gpupgradeschemaname@.int4
+create function upg_catalog.gp_persistent_set_relation_bufpool_kind_all()
+returns upg_catalog.int4
 language internal AS 'gp_persistent_set_relation_bufpool_kind_all' volatile
 with (oid = 7182);
-select @gpupgradeschemaname@.addProcPIN(7182);
-comment on function @gpupgradeschemaname@.gp_persistent_set_relation_bufpool_kind_all()
+select upg_catalog.addProcPIN(7182);
+comment on function upg_catalog.gp_persistent_set_relation_bufpool_kind_all()
 is 'Populate the gp_persistent_relation_node table''s relation_bufpool_kind column for the whole database instance for upgrade from 4.0 to 4.1';
 
 select gp_persistent_set_relation_bufpool_kind_all();
 select gp_persistent_set_relation_bufpool_kind_all() from gp_dist_random('gp_id');
 
-update @gpupgradeschemaname@.pg_class set relhaspkey = true where oid = 5094;
-select catDML('update @gpupgradeschemaname@.pg_class set relhaspkey = true where oid = 5094') from gp_dist_random('gp_id');
+update upg_catalog.pg_class set relhaspkey = true where oid = 5094;
+select catDML('update upg_catalog.pg_class set relhaspkey = true where oid = 5094') from gp_dist_random('gp_id');
 --
 -- Ordered Aggregates
 --
-alter table @gpupgradeschemaname@.pg_aggregate add column aggordered boolean;
-update @gpupgradeschemaname@.pg_aggregate set aggordered = 'f';
-select catDML('update @gpupgradeschemaname@.pg_aggregate set aggordered = ''f''') from gp_dist_random('gp_id');
+alter table upg_catalog.pg_aggregate add column aggordered boolean;
+update upg_catalog.pg_aggregate set aggordered = 'f';
+select catDML('update upg_catalog.pg_aggregate set aggordered = ''f''') from gp_dist_random('gp_id');
 
 ---
 --- PL/Java template
 ---
-insert into @gpupgradeschemaname@.pg_pltemplate 
+insert into upg_catalog.pg_pltemplate 
   select 'pljava', false, 'pljava_call_handler', null, '$libdir/pljava', null
-  where (select count(*) from @gpupgradeschemaname@.pg_pltemplate where tmplname='pljava')=0;
-select catDML('insert into @gpupgradeschemaname@.pg_pltemplate 
+  where (select count(*) from upg_catalog.pg_pltemplate where tmplname='pljava')=0;
+select catDML('insert into upg_catalog.pg_pltemplate 
   select ''pljava'', false, ''pljava_call_handler'', null, ''$libdir/pljava'', null
-  where (select count(*) from @gpupgradeschemaname@.pg_pltemplate where tmplname=''pljava'')=0') from gp_dist_random('gp_id');
+  where (select count(*) from upg_catalog.pg_pltemplate where tmplname=''pljava'')=0') from gp_dist_random('gp_id');
 
 --------------------------------
 -- Re-create gp_toolkit
@@ -86,80 +86,80 @@ select catDML('insert into @gpupgradeschemaname@.pg_pltemplate
 --   2. remove the pin on gp_toolkit
 --   3. drop and recreate the schema gp_toolkit
 --------------------------------
-DROP VIEW if exists @gpupgradetoolkitschema@.__gp_is_append_only cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.__gp_fullname cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.__gp_user_namespaces cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.__gp_user_tables cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.__gp_user_data_tables cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.__gp_user_data_tables_readable cascade;
-DROP EXTERNAL WEB TABLE if exists @gpupgradetoolkitschema@.__gp_localid cascade;
-DROP EXTERNAL WEB TABLE if exists @gpupgradetoolkitschema@.__gp_masterid cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.__gp_number_of_segments cascade;
-DROP EXTERNAL WEB TABLE if exists @gpupgradetoolkitschema@.__gp_log_segment_ext cascade;
-DROP EXTERNAL WEB TABLE if exists @gpupgradetoolkitschema@.__gp_log_master_ext cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_log_system  cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_log_database  cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_log_master_concise cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_log_command_timings cascade;
-DROP TYPE if exists @gpupgradetoolkitschema@.gp_param_setting_t cascade;
-DROP FUNCTION if exists @gpupgradetoolkitschema@.__gp_param_local_setting(varchar) cascade;
-DROP FUNCTION if exists @gpupgradetoolkitschema@.gp_param_setting(varchar) cascade;
-DROP FUNCTION if exists @gpupgradetoolkitschema@.gp_param_settings()  cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_param_settings_seg_value_diffs cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_pgdatabase_invalid  cascade;
-DROP TYPE if exists @gpupgradetoolkitschema@.gp_skew_details_t cascade;
-DROP FUNCTION if exists @gpupgradetoolkitschema@.gp_skew_details(oid) cascade;
-DROP TYPE if exists @gpupgradetoolkitschema@.gp_skew_analysis_t cascade;
-DROP FUNCTION if exists @gpupgradetoolkitschema@.gp_skew_coefficient(targetoid oid, OUT skcoid oid, OUT skccoeff numeric) cascade;
-DROP FUNCTION if exists @gpupgradetoolkitschema@.__gp_skew_coefficients() cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_skew_coefficients cascade;
-DROP FUNCTION if exists @gpupgradetoolkitschema@.gp_skew_idle_fraction(targetoid oid, OUT sifoid oid, OUT siffraction numeric) cascade;
-DROP FUNCTION if exists @gpupgradetoolkitschema@.__gp_skew_idle_fractions() cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_skew_idle_fractions cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_stats_missing cascade;
-DROP EXTERNAL WEB TABLE if exists @gpupgradetoolkitschema@.gp_disk_free cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_bloat_expected_pages cascade;
-DROP FUNCTION if exists @gpupgradetoolkitschema@.gp_bloat_diag(btdrelpages int, btdexppages int, aotable bool, OUT bltidx int, OUT bltdiag text) cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_bloat_diag cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_resq_activity cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_resq_activity_by_queue cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_resq_priority_backend cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_resq_priority_statement cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_resq_role cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_locks_on_resqueue cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_locks_on_relation cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_roles_assigned cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_size_of_index cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_size_of_table_disk cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_size_of_table_uncompressed cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_table_indexes  cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_size_of_all_table_indexes cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_size_of_table_and_indexes_disk cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_size_of_table_and_indexes_licensing cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_size_of_partition_and_indexes_disk cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_size_of_schema_disk cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_size_of_database cascade;
-DROP FUNCTION if exists @gpupgradetoolkitschema@.__gp__seg_locks(segid int) cascade;
-DROP VIEW if exists @gpupgradetoolkitschema@.gp_locks cascade;
+DROP VIEW if exists upg_toolkit.__gp_is_append_only cascade;
+DROP VIEW if exists upg_toolkit.__gp_fullname cascade;
+DROP VIEW if exists upg_toolkit.__gp_user_namespaces cascade;
+DROP VIEW if exists upg_toolkit.__gp_user_tables cascade;
+DROP VIEW if exists upg_toolkit.__gp_user_data_tables cascade;
+DROP VIEW if exists upg_toolkit.__gp_user_data_tables_readable cascade;
+DROP EXTERNAL WEB TABLE if exists upg_toolkit.__gp_localid cascade;
+DROP EXTERNAL WEB TABLE if exists upg_toolkit.__gp_masterid cascade;
+DROP VIEW if exists upg_toolkit.__gp_number_of_segments cascade;
+DROP EXTERNAL WEB TABLE if exists upg_toolkit.__gp_log_segment_ext cascade;
+DROP EXTERNAL WEB TABLE if exists upg_toolkit.__gp_log_master_ext cascade;
+DROP VIEW if exists upg_toolkit.gp_log_system  cascade;
+DROP VIEW if exists upg_toolkit.gp_log_database  cascade;
+DROP VIEW if exists upg_toolkit.gp_log_master_concise cascade;
+DROP VIEW if exists upg_toolkit.gp_log_command_timings cascade;
+DROP TYPE if exists upg_toolkit.gp_param_setting_t cascade;
+DROP FUNCTION if exists upg_toolkit.__gp_param_local_setting(varchar) cascade;
+DROP FUNCTION if exists upg_toolkit.gp_param_setting(varchar) cascade;
+DROP FUNCTION if exists upg_toolkit.gp_param_settings()  cascade;
+DROP VIEW if exists upg_toolkit.gp_param_settings_seg_value_diffs cascade;
+DROP VIEW if exists upg_toolkit.gp_pgdatabase_invalid  cascade;
+DROP TYPE if exists upg_toolkit.gp_skew_details_t cascade;
+DROP FUNCTION if exists upg_toolkit.gp_skew_details(oid) cascade;
+DROP TYPE if exists upg_toolkit.gp_skew_analysis_t cascade;
+DROP FUNCTION if exists upg_toolkit.gp_skew_coefficient(targetoid oid, OUT skcoid oid, OUT skccoeff numeric) cascade;
+DROP FUNCTION if exists upg_toolkit.__gp_skew_coefficients() cascade;
+DROP VIEW if exists upg_toolkit.gp_skew_coefficients cascade;
+DROP FUNCTION if exists upg_toolkit.gp_skew_idle_fraction(targetoid oid, OUT sifoid oid, OUT siffraction numeric) cascade;
+DROP FUNCTION if exists upg_toolkit.__gp_skew_idle_fractions() cascade;
+DROP VIEW if exists upg_toolkit.gp_skew_idle_fractions cascade;
+DROP VIEW if exists upg_toolkit.gp_stats_missing cascade;
+DROP EXTERNAL WEB TABLE if exists upg_toolkit.gp_disk_free cascade;
+DROP VIEW if exists upg_toolkit.gp_bloat_expected_pages cascade;
+DROP FUNCTION if exists upg_toolkit.gp_bloat_diag(btdrelpages int, btdexppages int, aotable bool, OUT bltidx int, OUT bltdiag text) cascade;
+DROP VIEW if exists upg_toolkit.gp_bloat_diag cascade;
+DROP VIEW if exists upg_toolkit.gp_resq_activity cascade;
+DROP VIEW if exists upg_toolkit.gp_resq_activity_by_queue cascade;
+DROP VIEW if exists upg_toolkit.gp_resq_priority_backend cascade;
+DROP VIEW if exists upg_toolkit.gp_resq_priority_statement cascade;
+DROP VIEW if exists upg_toolkit.gp_resq_role cascade;
+DROP VIEW if exists upg_toolkit.gp_locks_on_resqueue cascade;
+DROP VIEW if exists upg_toolkit.gp_locks_on_relation cascade;
+DROP VIEW if exists upg_toolkit.gp_roles_assigned cascade;
+DROP VIEW if exists upg_toolkit.gp_size_of_index cascade;
+DROP VIEW if exists upg_toolkit.gp_size_of_table_disk cascade;
+DROP VIEW if exists upg_toolkit.gp_size_of_table_uncompressed cascade;
+DROP VIEW if exists upg_toolkit.gp_table_indexes  cascade;
+DROP VIEW if exists upg_toolkit.gp_size_of_all_table_indexes cascade;
+DROP VIEW if exists upg_toolkit.gp_size_of_table_and_indexes_disk cascade;
+DROP VIEW if exists upg_toolkit.gp_size_of_table_and_indexes_licensing cascade;
+DROP VIEW if exists upg_toolkit.gp_size_of_partition_and_indexes_disk cascade;
+DROP VIEW if exists upg_toolkit.gp_size_of_schema_disk cascade;
+DROP VIEW if exists upg_toolkit.gp_size_of_database cascade;
+DROP FUNCTION if exists upg_toolkit.__gp__seg_locks(segid int) cascade;
+DROP VIEW if exists upg_toolkit.gp_locks cascade;
 
 -- Verify that we successfully dropped all objects from the toolkit schema
-select 1/0 from pg_catalog.pg_class, pg_catalog.pg_namespace n where relnamespace = n.oid and n.nspname = '@gpupgradetoolkitschema@';
-select 1/0 from pg_catalog.pg_proc, pg_catalog.pg_namespace n where pronamespace = n.oid and n.nspname = '@gpupgradetoolkitschema@';
-select 1/0 from pg_catalog.pg_type, pg_catalog.pg_namespace n where typnamespace = n.oid and n.nspname = '@gpupgradetoolkitschema@';
+select 1/0 from pg_catalog.pg_class, pg_catalog.pg_namespace n where relnamespace = n.oid and n.nspname = 'upg_toolkit';
+select 1/0 from pg_catalog.pg_proc, pg_catalog.pg_namespace n where pronamespace = n.oid and n.nspname = 'upg_toolkit';
+select 1/0 from pg_catalog.pg_type, pg_catalog.pg_namespace n where typnamespace = n.oid and n.nspname = 'upg_toolkit';
 select 1/0 from pg_catalog.pg_constraint, pg_catalog.pg_namespace n where connamespace = n.oid and n.nspname = '@gupgradetoolkitschema@';
-select 1/0 from pg_catalog.pg_operator, pg_catalog.pg_namespace n where oprnamespace = n.oid and n.nspname = '@gpupgradetoolkitschema@';
-select 1/0 from pg_catalog.pg_opclass, pg_catalog.pg_namespace n where opcnamespace = n.oid and n.nspname = '@gpupgradetoolkitschema@';
-select 1/0 from pg_catalog.pg_conversion, pg_catalog.pg_namespace n where connamespace = n.oid and n.nspname = '@gpupgradetoolkitschema@';
+select 1/0 from pg_catalog.pg_operator, pg_catalog.pg_namespace n where oprnamespace = n.oid and n.nspname = 'upg_toolkit';
+select 1/0 from pg_catalog.pg_opclass, pg_catalog.pg_namespace n where opcnamespace = n.oid and n.nspname = 'upg_toolkit';
+select 1/0 from pg_catalog.pg_conversion, pg_catalog.pg_namespace n where connamespace = n.oid and n.nspname = 'upg_toolkit';
 
-delete from @gpupgradeschemaname@.pg_depend where refobjid=8001;
-select catDML('delete from @gpupgradeschemaname@.pg_depend where refobjid=8001') from gp_dist_random('gp_id');
+delete from upg_catalog.pg_depend where refobjid=8001;
+select catDML('delete from upg_catalog.pg_depend where refobjid=8001') from gp_dist_random('gp_id');
 
-drop schema if exists @gpupgradetoolkitschema@;
-create schema @gpupgradetoolkitschema@;
+drop schema if exists upg_toolkit;
+create schema upg_toolkit;
 
 
 -- MPP-11461, MPP-11127: fix tablespace
-CREATE OR REPLACE VIEW @gpupgradeschemaname@.pg_partitions AS
+CREATE OR REPLACE VIEW upg_catalog.pg_partitions AS
   select 
       schemaname, 
       tablename, 
@@ -263,13 +263,13 @@ CREATE OR REPLACE VIEW @gpupgradeschemaname@.pg_partitions AS
           cl2.relnamespace = n2.oid) p1;
 
 -- tstats & pvalues
-create function @gpupgradeschemaname@.float8_mregr_tstats(float8[]) 
+create function upg_catalog.float8_mregr_tstats(float8[]) 
     returns float8[] 
     language internal AS 'float8_mregr_tstats' strict immutable 
     with (oid = 3263);
-select @gpupgradeschemaname@.addProcPIN(3263);
+select upg_catalog.addProcPIN(3263);
 
-create aggregate @gpupgradeschemaname@.mregr_tstats(float8, float8[]) (
+create aggregate upg_catalog.mregr_tstats(float8, float8[]) (
     stype     = float8[],
     initcond  = '{0}',
     sfunc     = float8_mregr_accum, 
@@ -277,15 +277,15 @@ create aggregate @gpupgradeschemaname@.mregr_tstats(float8, float8[]) (
     finalfunc = float8_mregr_tstats,
     oid       = 3264
 );
-select @gpupgradeschemaname@.addProcPIN(3264);
+select upg_catalog.addProcPIN(3264);
 
-create function @gpupgradeschemaname@.float8_mregr_pvalues(float8[]) 
+create function upg_catalog.float8_mregr_pvalues(float8[]) 
     returns float8[] 
     language internal AS 'float8_mregr_pvalues' strict immutable 
     with (oid = 3265);
-select @gpupgradeschemaname@.addProcPIN(3265);
+select upg_catalog.addProcPIN(3265);
     
-create aggregate @gpupgradeschemaname@.mregr_pvalues(float8, float8[]) (
+create aggregate upg_catalog.mregr_pvalues(float8, float8[]) (
     stype     = float8[],
     initcond  = '{0}',
     sfunc     = float8_mregr_accum, 
@@ -293,22 +293,22 @@ create aggregate @gpupgradeschemaname@.mregr_pvalues(float8, float8[]) (
     finalfunc = float8_mregr_pvalues,
     oid       = 3266
 );
-select @gpupgradeschemaname@.addProcPIN(3266);
+select upg_catalog.addProcPIN(3266);
 
 -- naive bayes probability values
-create function @gpupgradeschemaname@.nb_classify_probabilities(nb_classification) 
+create function upg_catalog.nb_classify_probabilities(nb_classification) 
     returns float8[]
     language internal AS 'nb_classify_probabilities' strict immutable
     with (oid = 3267);
-select @gpupgradeschemaname@.addProcPIN(3267);
-create aggregate @gpupgradeschemaname@.nb_probabilities(text[], bigint, bigint[], bigint[]) (
+select upg_catalog.addProcPIN(3267);
+create aggregate upg_catalog.nb_probabilities(text[], bigint, bigint[], bigint[]) (
     stype     = nb_classification,
     sfunc     = nb_classify_accum,
     prefunc   = nb_classify_combine,
     finalfunc = nb_classify_probabilities,
     oid       = 3268
 );
-select @gpupgradeschemaname@.addProcPIN(3268);
+select upg_catalog.addProcPIN(3268);
 
 
 --
@@ -317,37 +317,37 @@ select @gpupgradeschemaname@.addProcPIN(3268);
 
 -- add catalog function
 
-create function @gpupgradeschemaname@.pg_resqueue_status_kv() 
+create function upg_catalog.pg_resqueue_status_kv() 
 	returns setof record 
 	language internal AS 'pg_resqueue_status_kv' strict volatile
 	with (oid = 6069);
-select @gpupgradeschemaname@.addProcPIN(6069);
-comment on  function @gpupgradeschemaname@.pg_resqueue_status_kv()
+select upg_catalog.addProcPIN(6069);
+comment on  function upg_catalog.pg_resqueue_status_kv()
 is 'Return resource queue information';
 
 -- add new resource type in pg_resourcetype. this table is maintained 
-create external web table @gpupgradeschemaname@.pg_resourcetype_insert(a text)
+create external web table upg_catalog.pg_resourcetype_insert(a text)
   execute 'echo "6459,memory_limit,6,false,true,true,-1,-1">$GP_SEG_DATADIR/gp_tmp;
-           PGOPTIONS=''-c gp_session_role=utility'' psql -p $GP_MASTER_PORT --command "copy @gpupgradeschemaname@.pg_resourcetype from ''$GP_SEG_DATADIR/gp_tmp'' with oids csv" template1 $GP_USER;
+           PGOPTIONS=''-c gp_session_role=utility'' psql -p $GP_MASTER_PORT --command "copy upg_catalog.pg_resourcetype from ''$GP_SEG_DATADIR/gp_tmp'' with oids csv" template1 $GP_USER;
            rm -rf $GP_SEG_DATADIR/gp_tmp'
   on master format 'text';
-select (select * from  @gpupgradeschemaname@.pg_resourcetype_insert)
-  where 6459 not in (select oid from @gpupgradeschemaname@.pg_resourcetype);
-drop external web table @gpupgradeschemaname@.pg_resourcetype_insert;
+select (select * from  upg_catalog.pg_resourcetype_insert)
+  where 6459 not in (select oid from upg_catalog.pg_resourcetype);
+drop external web table upg_catalog.pg_resourcetype_insert;
 
 
 -- for every existing queue, add default memory_limit of -1. This table is not maintained on the segments, so we don't do this on the segments.
 
-insert into @gpupgradeschemaname@.pg_resqueuecapability
+insert into upg_catalog.pg_resqueuecapability
 	select distinct resqueueid, 6, '-1'
-	from @gpupgradeschemaname@.pg_resqueuecapability
-	where resqueueid not in (select resqueueid from @gpupgradeschemaname@.pg_resqueuecapability where restypid = 6);
+	from upg_catalog.pg_resqueuecapability
+	where resqueueid not in (select resqueueid from upg_catalog.pg_resqueuecapability where restypid = 6);
 	
 --
 -- pg_stat_activity
 --
 
-create function @gpupgradeschemaname@.pg_stat_get_activity(
+create function upg_catalog.pg_stat_get_activity(
     pid integer, OUT datid oid, OUT procpid integer, OUT usesysid oid, OUT application_name text,
     OUT current_query text, OUT waiting boolean, OUT xact_start timestamp with time zone, 
     OUT query_start timestamp with time zone, OUT backend_start timestamp with time zone, 
@@ -355,8 +355,8 @@ create function @gpupgradeschemaname@.pg_stat_get_activity(
 	returns setof record 
 	language internal AS 'pg_stat_get_activity' stable
 	with (oid = 6071);
-select @gpupgradeschemaname@.addProcPIN(6071);
-comment on function @gpupgradeschemaname@.pg_stat_get_activity(
+select upg_catalog.addProcPIN(6071);
+comment on function upg_catalog.pg_stat_get_activity(
     pid integer, OUT datid oid, OUT procpid integer, OUT usesysid oid, OUT application_name text,
     OUT current_query text, OUT waiting boolean, OUT xact_start timestamp with time zone, 
     OUT query_start timestamp with time zone, OUT backend_start timestamp with time zone, 
@@ -364,7 +364,7 @@ comment on function @gpupgradeschemaname@.pg_stat_get_activity(
 is 'statistics: information about currently active backends';
 
 
-CREATE OR REPLACE VIEW @gpupgradeschemaname@.pg_stat_activity AS 
+CREATE OR REPLACE VIEW upg_catalog.pg_stat_activity AS 
     SELECT 
             S.datid AS datid,
             D.datname AS datname,
@@ -385,106 +385,106 @@ CREATE OR REPLACE VIEW @gpupgradeschemaname@.pg_stat_activity AS
             S.usesysid = U.oid;
 
 -- array_agg
-create function @gpupgradeschemaname@.array_agg_transfn(
-        @gpupgradeschemaname@.internal, 
-        @gpupgradeschemaname@.anyelement) 
-    returns @gpupgradeschemaname@.internal
+create function upg_catalog.array_agg_transfn(
+        upg_catalog.internal, 
+        upg_catalog.anyelement) 
+    returns upg_catalog.internal
     language internal AS 'array_agg_transfn' immutable
     with (oid = 2908);
-select @gpupgradeschemaname@.addProcPIN(2908);
-comment on function @gpupgradeschemaname@.array_agg_transfn(
-        @gpupgradeschemaname@.internal, 
-        @gpupgradeschemaname@.anyelement)
+select upg_catalog.addProcPIN(2908);
+comment on function upg_catalog.array_agg_transfn(
+        upg_catalog.internal, 
+        upg_catalog.anyelement)
 is 'array_agg transition function';
-create function @gpupgradeschemaname@.array_agg_finalfn(
-        @gpupgradeschemaname@.internal) 
-    returns @gpupgradeschemaname@.anyarray
+create function upg_catalog.array_agg_finalfn(
+        upg_catalog.internal) 
+    returns upg_catalog.anyarray
     language internal AS 'array_agg_finalfn' immutable
     with (oid = 2909);
-select @gpupgradeschemaname@.addProcPIN(2909);
-comment on function @gpupgradeschemaname@.array_agg_finalfn(
-        @gpupgradeschemaname@.internal)
+select upg_catalog.addProcPIN(2909);
+comment on function upg_catalog.array_agg_finalfn(
+        upg_catalog.internal)
 is 'array_agg final function';
-create ordered aggregate @gpupgradeschemaname@.array_agg(
-        @gpupgradeschemaname@.anyelement) 
+create ordered aggregate upg_catalog.array_agg(
+        upg_catalog.anyelement) 
     (
-        stype     = @gpupgradeschemaname@.internal,
-        sfunc     = @gpupgradeschemaname@.array_agg_transfn,
-        finalfunc = @gpupgradeschemaname@.array_agg_finalfn,
+        stype     = upg_catalog.internal,
+        sfunc     = upg_catalog.array_agg_transfn,
+        finalfunc = upg_catalog.array_agg_finalfn,
         oid       = 2910
     );
-select @gpupgradeschemaname@.addProcPIN(2910);
-comment on aggregate @gpupgradeschemaname@.array_agg(
-        @gpupgradeschemaname@.anyelement) 
+select upg_catalog.addProcPIN(2910);
+comment on aggregate upg_catalog.array_agg(
+        upg_catalog.anyelement) 
 is 'concatenate aggregate input into an array';
 
 
 -- string_agg
-create function @gpupgradeschemaname@.string_agg_transfn(
-        @gpupgradeschemaname@.internal, 
-        @gpupgradeschemaname@.text)
-    returns @gpupgradeschemaname@.internal
+create function upg_catalog.string_agg_transfn(
+        upg_catalog.internal, 
+        upg_catalog.text)
+    returns upg_catalog.internal
     language internal AS 'string_agg_transfn' immutable
     with (oid = 3534);
-select @gpupgradeschemaname@.addProcPIN(3534);
-comment on function @gpupgradeschemaname@.string_agg_transfn(
-        @gpupgradeschemaname@.internal, 
-        @gpupgradeschemaname@.text)
+select upg_catalog.addProcPIN(3534);
+comment on function upg_catalog.string_agg_transfn(
+        upg_catalog.internal, 
+        upg_catalog.text)
 is 'string_agg(text) transition function';
-create function @gpupgradeschemaname@.string_agg_delim_transfn(
-        @gpupgradeschemaname@.internal, 
-        @gpupgradeschemaname@.text, 
-        @gpupgradeschemaname@.text)
-    returns @gpupgradeschemaname@.internal
+create function upg_catalog.string_agg_delim_transfn(
+        upg_catalog.internal, 
+        upg_catalog.text, 
+        upg_catalog.text)
+    returns upg_catalog.internal
     language internal AS 'string_agg_delim_transfn' immutable
     with (oid = 3535);
-select @gpupgradeschemaname@.addProcPIN(3535);
-comment on function @gpupgradeschemaname@.string_agg_delim_transfn(
-        @gpupgradeschemaname@.internal, 
-        @gpupgradeschemaname@.text, 
-        @gpupgradeschemaname@.text)
+select upg_catalog.addProcPIN(3535);
+comment on function upg_catalog.string_agg_delim_transfn(
+        upg_catalog.internal, 
+        upg_catalog.text, 
+        upg_catalog.text)
 is 'string_agg(text, text) transition function';
-create function @gpupgradeschemaname@.string_agg_finalfn(
-        @gpupgradeschemaname@.internal)
-    returns @gpupgradeschemaname@.text
+create function upg_catalog.string_agg_finalfn(
+        upg_catalog.internal)
+    returns upg_catalog.text
     language internal AS 'string_agg_finalfn' immutable
     with (oid = 3536);
-select @gpupgradeschemaname@.addProcPIN(3536);
-comment on function @gpupgradeschemaname@.string_agg_finalfn(
-        @gpupgradeschemaname@.internal)
+select upg_catalog.addProcPIN(3536);
+comment on function upg_catalog.string_agg_finalfn(
+        upg_catalog.internal)
 is 'string_agg final function';
-create ordered aggregate @gpupgradeschemaname@.string_agg(
-        @gpupgradeschemaname@.text) 
+create ordered aggregate upg_catalog.string_agg(
+        upg_catalog.text) 
     (
-        stype     = @gpupgradeschemaname@.internal,
-        sfunc     = @gpupgradeschemaname@.string_agg_transfn,
-        finalfunc = @gpupgradeschemaname@.string_agg_finalfn,
+        stype     = upg_catalog.internal,
+        sfunc     = upg_catalog.string_agg_transfn,
+        finalfunc = upg_catalog.string_agg_finalfn,
         oid       = 3537
     );
-select @gpupgradeschemaname@.addProcPIN(3537);
-comment on aggregate @gpupgradeschemaname@.string_agg(
-        @gpupgradeschemaname@.text)
+select upg_catalog.addProcPIN(3537);
+comment on aggregate upg_catalog.string_agg(
+        upg_catalog.text)
 is 'concatenate aggregate input into an string';
 
-create ordered aggregate @gpupgradeschemaname@.string_agg(
-        @gpupgradeschemaname@.text, 
-        @gpupgradeschemaname@.text) 
+create ordered aggregate upg_catalog.string_agg(
+        upg_catalog.text, 
+        upg_catalog.text) 
     (
-        stype     = @gpupgradeschemaname@.internal,
-        sfunc     = @gpupgradeschemaname@.string_agg_delim_transfn,
-        finalfunc = @gpupgradeschemaname@.string_agg_finalfn,
+        stype     = upg_catalog.internal,
+        sfunc     = upg_catalog.string_agg_delim_transfn,
+        finalfunc = upg_catalog.string_agg_finalfn,
         oid       = 3538
     );
-select @gpupgradeschemaname@.addProcPIN(3538);
-comment on aggregate @gpupgradeschemaname@.string_agg(
-        @gpupgradeschemaname@.text, 
-        @gpupgradeschemaname@.text)
+select upg_catalog.addProcPIN(3538);
+comment on aggregate upg_catalog.string_agg(
+        upg_catalog.text, 
+        upg_catalog.text)
 is 'concatenate aggregate input into an string with delimiter';
 
 
 -- pg_locks
 
-CREATE OR REPLACE VIEW @gpupgradeschemaname@.pg_locks AS
+CREATE OR REPLACE VIEW upg_catalog.pg_locks AS
  SELECT l.locktype, l.database, l.relation, l.page, l.tuple, l.transactionid, 
         l.classid, l.objid, l.objsubid, l.transaction, l.pid, l.mode, l.granted, 
         l.mppsessionid, l.mppiswriter, l.gp_segment_id
@@ -504,48 +504,48 @@ CREATE OR REPLACE VIEW @gpupgradeschemaname@.pg_locks AS
 -- 3. for every rows in pg_resqueue, insert the row into the external table at every segment
 --
 
-create writable external web table @gpupgradeschemaname@.pg_resqueue_delete (s text)
-  execute 'PGOPTIONS=''-c gp_session_role=utility'' psql -p $GP_SEG_PORT --command "delete from @gpupgradeschemaname@.pg_resqueue" template1 $GP_USER'
+create writable external web table upg_catalog.pg_resqueue_delete (s text)
+  execute 'PGOPTIONS=''-c gp_session_role=utility'' psql -p $GP_SEG_PORT --command "delete from upg_catalog.pg_resqueue" template1 $GP_USER'
   format 'csv';
-select catDML('insert into @gpupgradeschemaname@.pg_resqueue_delete values(1)') from gp_dist_random('gp_id');
-drop external web table @gpupgradeschemaname@.pg_resqueue_delete;
+select catDML('insert into upg_catalog.pg_resqueue_delete values(1)') from gp_dist_random('gp_id');
+drop external web table upg_catalog.pg_resqueue_delete;
 
-create writable external web table @gpupgradeschemaname@.pg_resqueue_rebuilt (
+create writable external web table upg_catalog.pg_resqueue_rebuilt (
   rsqoid oid, rsqname name, cnt real, cost real, oc text, icost real)
   execute 'rm -f $GP_SEG_DATADIR/gp_tmp;
            tee -a $GP_SEG_DATADIR/gp_tmp;
-           PGOPTIONS=''-c gp_session_role=utility'' psql -p $GP_SEG_PORT --command "copy @gpupgradeschemaname@.pg_resqueue from ''$GP_SEG_DATADIR/gp_tmp'' with oids csv" template1 $GP_USER;
+           PGOPTIONS=''-c gp_session_role=utility'' psql -p $GP_SEG_PORT --command "copy upg_catalog.pg_resqueue from ''$GP_SEG_DATADIR/gp_tmp'' with oids csv" template1 $GP_USER;
            rm -f $GP_SEG_DATADIR/gp_tmp'
   format 'csv';
 
-create or replace function @gpupgradeschemaname@.insert_gp_tmp(
+create or replace function upg_catalog.insert_gp_tmp(
   rsqoid oid, rsqname name, cnt real, cost real, oc text, icost real
 ) returns int as $$
 begin
-  insert into @gpupgradeschemaname@.pg_resqueue_rebuilt values(rsqoid, rsqname, cnt, cost, oc, icost);
+  insert into upg_catalog.pg_resqueue_rebuilt values(rsqoid, rsqname, cnt, cost, oc, icost);
   return 1;
 end;
 $$ language 'plpgsql';
 
-create or replace function @gpupgradeschemaname@.distributed_insert_gp_tmp(
+create or replace function upg_catalog.distributed_insert_gp_tmp(
   rsqoid oid, rsqname name, cnt real, cost real, oc text, icost real
 ) returns int as $$
 begin
-  perform @gpupgradeschemaname@.insert_gp_tmp(rsqoid, rsqname, cnt, cost, oc, icost)
+  perform upg_catalog.insert_gp_tmp(rsqoid, rsqname, cnt, cost, oc, icost)
     from gp_dist_random('gp_id');
   return 1;
 end;
 $$ language 'plpgsql';
 
-select @gpupgradeschemaname@.distributed_insert_gp_tmp(
+select upg_catalog.distributed_insert_gp_tmp(
     oid,rsqname,rsqcountlimit,rsqcostlimit,
     case when rsqovercommit then 'true' else 'false' end,
     rsqignorecostlimit)
-from @gpupgradeschemaname@.pg_resqueue;
+from upg_catalog.pg_resqueue;
 
-drop external web table @gpupgradeschemaname@.pg_resqueue_rebuilt;
-drop function @gpupgradeschemaname@.insert_gp_tmp(oid, name, real, real, text, real);
-drop function @gpupgradeschemaname@.distributed_insert_gp_tmp(oid, name, real, real, text, real);
+drop external web table upg_catalog.pg_resqueue_rebuilt;
+drop function upg_catalog.insert_gp_tmp(oid, name, real, real, text, real);
+drop function upg_catalog.distributed_insert_gp_tmp(oid, name, real, real, text, real);
 
 
 -- 
@@ -559,46 +559,46 @@ drop function @gpupgradeschemaname@.distributed_insert_gp_tmp(oid, name, real, r
 -- 3. for every rows in pg_resqueuecapability, insert the row into the external table at every segment
 --
 
-create writable external web table @gpupgradeschemaname@.pg_resqueuecapability_delete (s text)
-  execute 'PGOPTIONS=''-c gp_session_role=utility'' psql -p $GP_SEG_PORT --command "delete from @gpupgradeschemaname@.pg_resqueuecapability" template1 $GP_USER'
+create writable external web table upg_catalog.pg_resqueuecapability_delete (s text)
+  execute 'PGOPTIONS=''-c gp_session_role=utility'' psql -p $GP_SEG_PORT --command "delete from upg_catalog.pg_resqueuecapability" template1 $GP_USER'
   format 'csv';
-select catDML('insert into @gpupgradeschemaname@.pg_resqueuecapability_delete values(1)') from gp_dist_random('gp_id');
-drop external web table @gpupgradeschemaname@.pg_resqueuecapability_delete;
+select catDML('insert into upg_catalog.pg_resqueuecapability_delete values(1)') from gp_dist_random('gp_id');
+drop external web table upg_catalog.pg_resqueuecapability_delete;
 
-create writable external web table @gpupgradeschemaname@.pg_resqueuecapability_rebuilt (
+create writable external web table upg_catalog.pg_resqueuecapability_rebuilt (
   rsqoid oid, resqueueid oid, restypid smallint, ressetting text)
   execute 'rm -f $GP_SEG_DATADIR/gp_tmp;
            tee -a $GP_SEG_DATADIR/gp_tmp;
-           PGOPTIONS=''-c gp_session_role=utility'' psql -p $GP_SEG_PORT --command "copy @gpupgradeschemaname@.pg_resqueuecapability from ''$GP_SEG_DATADIR/gp_tmp'' with oids csv" template1 $GP_USER;
+           PGOPTIONS=''-c gp_session_role=utility'' psql -p $GP_SEG_PORT --command "copy upg_catalog.pg_resqueuecapability from ''$GP_SEG_DATADIR/gp_tmp'' with oids csv" template1 $GP_USER;
            rm -f $GP_SEG_DATADIR/gp_tmp'
   format 'csv';
 
-create or replace function @gpupgradeschemaname@.insert_gp_tmp(
+create or replace function upg_catalog.insert_gp_tmp(
   rsqoid oid, resqueueid oid, restypid smallint, ressetting text)
 returns int as $$
 begin
-  insert into @gpupgradeschemaname@.pg_resqueuecapability_rebuilt values(rsqoid, resqueueid, restypid, ressetting);
+  insert into upg_catalog.pg_resqueuecapability_rebuilt values(rsqoid, resqueueid, restypid, ressetting);
   return 1;
 end;
 $$ language 'plpgsql';
 
-create or replace function @gpupgradeschemaname@.distributed_insert_gp_tmp(
+create or replace function upg_catalog.distributed_insert_gp_tmp(
   rsqoid oid, resqueueid oid, restypid smallint, ressetting text
 ) returns int as $$
 begin
-  perform @gpupgradeschemaname@.insert_gp_tmp(rsqoid, resqueueid, restypid, ressetting)
+  perform upg_catalog.insert_gp_tmp(rsqoid, resqueueid, restypid, ressetting)
     from gp_dist_random('gp_id');
   return 1;
 end;
 $$ language 'plpgsql';
 
-select @gpupgradeschemaname@.distributed_insert_gp_tmp(
+select upg_catalog.distributed_insert_gp_tmp(
     oid,resqueueid, restypid, ressetting)
-from @gpupgradeschemaname@.pg_resqueuecapability;
+from upg_catalog.pg_resqueuecapability;
 
-drop external web table @gpupgradeschemaname@.pg_resqueuecapability_rebuilt;
-drop function @gpupgradeschemaname@.insert_gp_tmp(rsqoid oid, resqueueid oid, restypid smallint, ressetting text);
-drop function @gpupgradeschemaname@.distributed_insert_gp_tmp(rsqoid oid, resqueueid oid, restypid smallint, ressetting text);
+drop external web table upg_catalog.pg_resqueuecapability_rebuilt;
+drop function upg_catalog.insert_gp_tmp(rsqoid oid, resqueueid oid, restypid smallint, ressetting text);
+drop function upg_catalog.distributed_insert_gp_tmp(rsqoid oid, resqueueid oid, restypid smallint, ressetting text);
 
 
 -- 
@@ -612,55 +612,55 @@ drop function @gpupgradeschemaname@.distributed_insert_gp_tmp(rsqoid oid, resque
 -- 3. for every rows in pg_resourcetype, insert the row into the external table at every segment
 --
 
-create writable external web table @gpupgradeschemaname@.pg_resourcetype_delete (s text)
-  execute 'PGOPTIONS=''-c gp_session_role=utility'' psql -p $GP_SEG_PORT --command "delete from @gpupgradeschemaname@.pg_resourcetype" template1 $GP_USER'
+create writable external web table upg_catalog.pg_resourcetype_delete (s text)
+  execute 'PGOPTIONS=''-c gp_session_role=utility'' psql -p $GP_SEG_PORT --command "delete from upg_catalog.pg_resourcetype" template1 $GP_USER'
   format 'csv';
-select catDML('insert into @gpupgradeschemaname@.pg_resourcetype_delete values(1)') from gp_dist_random('gp_id');
-drop external web table @gpupgradeschemaname@.pg_resourcetype_delete;
+select catDML('insert into upg_catalog.pg_resourcetype_delete values(1)') from gp_dist_random('gp_id');
+drop external web table upg_catalog.pg_resourcetype_delete;
 
-create writable external web table @gpupgradeschemaname@.pg_resourcetype_rebuilt (
+create writable external web table upg_catalog.pg_resourcetype_rebuilt (
   rsqoid oid, resname name, restypid smallint, resrequired boolean, reshasdefault boolean,
   reshasdisable boolean, resdefaultsetting text, resdisabledsetting text 
 )
   execute 'rm -f $GP_SEG_DATADIR/gp_tmp;
            tee -a $GP_SEG_DATADIR/gp_tmp;
-           PGOPTIONS=''-c gp_session_role=utility'' psql -p $GP_SEG_PORT --command "copy @gpupgradeschemaname@.pg_resourcetype from ''$GP_SEG_DATADIR/gp_tmp'' with oids csv" template1 $GP_USER;
+           PGOPTIONS=''-c gp_session_role=utility'' psql -p $GP_SEG_PORT --command "copy upg_catalog.pg_resourcetype from ''$GP_SEG_DATADIR/gp_tmp'' with oids csv" template1 $GP_USER;
            rm -f $GP_SEG_DATADIR/gp_tmp'
   format 'csv';
 
-create or replace function @gpupgradeschemaname@.insert_gp_tmp (
+create or replace function upg_catalog.insert_gp_tmp (
   rsqoid oid, resname name, restypid smallint, resrequired boolean, reshasdefault boolean,
   reshasdisable boolean, resdefaultsetting text, resdisabledsetting text 
 )
 returns int as $$
 begin
-  insert into @gpupgradeschemaname@.pg_resourcetype_rebuilt values(rsqoid, resname, restypid, resrequired, reshasdefault,
+  insert into upg_catalog.pg_resourcetype_rebuilt values(rsqoid, resname, restypid, resrequired, reshasdefault,
   reshasdisable, resdefaultsetting, resdisabledsetting);
   return 1;
 end;
 $$ language 'plpgsql';
 
-create or replace function @gpupgradeschemaname@.distributed_insert_gp_tmp(
+create or replace function upg_catalog.distributed_insert_gp_tmp(
   rsqoid oid, resname name, restypid smallint, resrequired boolean, reshasdefault boolean,
   reshasdisable boolean, resdefaultsetting text, resdisabledsetting text 
 ) returns int as $$
 begin
-  perform @gpupgradeschemaname@.insert_gp_tmp(rsqoid, resname, restypid, resrequired, reshasdefault,
+  perform upg_catalog.insert_gp_tmp(rsqoid, resname, restypid, resrequired, reshasdefault,
   reshasdisable, resdefaultsetting, resdisabledsetting)
     from gp_dist_random('gp_id');
   return 1;
 end;
 $$ language 'plpgsql';
 
-select @gpupgradeschemaname@.distributed_insert_gp_tmp(
+select upg_catalog.distributed_insert_gp_tmp(
     oid,resname, restypid, resrequired, reshasdefault,
   reshasdisable, resdefaultsetting, resdisabledsetting)
-from @gpupgradeschemaname@.pg_resourcetype;
+from upg_catalog.pg_resourcetype;
 
-drop external web table @gpupgradeschemaname@.pg_resourcetype_rebuilt;
-drop function @gpupgradeschemaname@.insert_gp_tmp(rsqoid oid, resname name, restypid smallint, resrequired boolean, reshasdefault boolean,
+drop external web table upg_catalog.pg_resourcetype_rebuilt;
+drop function upg_catalog.insert_gp_tmp(rsqoid oid, resname name, restypid smallint, resrequired boolean, reshasdefault boolean,
   reshasdisable boolean, resdefaultsetting text, resdisabledsetting text);
-drop function @gpupgradeschemaname@.distributed_insert_gp_tmp(rsqoid oid, resname name, restypid smallint, resrequired boolean, reshasdefault boolean,
+drop function upg_catalog.distributed_insert_gp_tmp(rsqoid oid, resname name, restypid smallint, resrequired boolean, reshasdefault boolean,
   reshasdisable boolean, resdefaultsetting text, resdisabledsetting text);
 
 --------------------------------
@@ -669,17 +669,17 @@ drop function @gpupgradeschemaname@.distributed_insert_gp_tmp(rsqoid oid, resnam
 --   2. set default privl of hdfs read/write to false
 --   3. add new columsn to pg_roles
 --------------------------------
-alter table @gpupgradeschemaname@.pg_authid add column rolcreaterexthdfs bool;
-alter table @gpupgradeschemaname@.pg_authid add column rolcreatewexthdfs bool;
-update @gpupgradeschemaname@.pg_authid set rolcreaterexthdfs = false, rolcreatewexthdfs = false;
-select catDML('update @gpupgradeschemaname@.pg_authid set rolcreaterexthdfs = false, rolcreatewexthdfs = false') from gp_dist_random('gp_id');
+alter table upg_catalog.pg_authid add column rolcreaterexthdfs bool;
+alter table upg_catalog.pg_authid add column rolcreatewexthdfs bool;
+update upg_catalog.pg_authid set rolcreaterexthdfs = false, rolcreatewexthdfs = false;
+select catDML('update upg_catalog.pg_authid set rolcreaterexthdfs = false, rolcreatewexthdfs = false') from gp_dist_random('gp_id');
 
 -- sync pg_authid.rolsequeue between master and seg
-select catDML('select catDML(''update @gpupgradeschemaname@.pg_authid set rolresqueue ='||rolresqueue||'
+select catDML('select catDML(''update upg_catalog.pg_authid set rolresqueue ='||rolresqueue||'
                                where oid = '||oid||''') from gp_dist_random(''gp_id'')')
 from pg_authid;
 
-CREATE OR REPLACE VIEW @gpupgradeschemaname@.pg_roles AS 
+CREATE OR REPLACE VIEW upg_catalog.pg_roles AS 
  SELECT pg_authid.rolname, pg_authid.rolsuper, pg_authid.rolinherit,
   pg_authid.rolcreaterole, pg_authid.rolcreatedb, pg_authid.rolcatupdate,
   pg_authid.rolcanlogin, pg_authid.rolconnlimit, '********'::text AS rolpassword,

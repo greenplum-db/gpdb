@@ -11,7 +11,7 @@
 -- Some operations can't be declared as DDL, such as populating a new catalog column,
 -- or replacing the on-disk representation of views. These must be done as DML.
 -- For example:
---   update @gpupgradeschemaname@.pg_aggregate set dummy = 123;
+--   update upg_catalog.pg_aggregate set dummy = 123;
 --   select catDML('update pg_catalog.pg_aggregate set dummy = 123') from gp_dist_random('gp_id');
 --
 -- make fundamental changes to pg_proc ...
@@ -45,28 +45,28 @@ SELECT catDML('DELETE FROM pg_type
 -- psql expands this for us
 \set pgtypedatafile `echo "'$GPHOME/share/postgresql/upgrade/pg_type.data'"`
 -- Add entries to the master
-COPY @gpupgradeschemaname@.pg_type FROM
+COPY upg_catalog.pg_type FROM
         :pgtypedatafile WITH OIDS CSV;
 
 -- Create a special schema for use by the pg_operator_load external table.
 -- We cannot use gpupgradeschemaname (pg_catalog), as that will see the external
 -- table executed on the master only.
-CREATE SCHEMA __@gpupgradeschemaname@_gpmigrator;
+CREATE SCHEMA __upg_catalog_gpmigrator;
 
 CREATE EXTERNAL WEB TABLE
-		__@gpupgradeschemaname@_gpmigrator.pg_type_load(database text,
+		__upg_catalog_gpmigrator.pg_type_load(database text,
 									port text,
 									status text)
 	execute ' PGOPTIONS=''-c gp_session_role=utility'' \\
 		psql -q --set ON_ERROR_STOP=ON -p $GP_SEG_PORT \\
-		--command "COPY @gpupgradeschemaname@.pg_type FROM \\
+		--command "COPY upg_catalog.pg_type FROM \\
 		''$GPHOME/share/postgresql/upgrade/pg_type.data'' \\
 		WITH OIDS CSV" $GP_DATABASE $GP_USER && echo "$GP_DATABASE, $GP_SEG_PORT, done";'
 format 'csv';
 
-SELECT * FROM __@gpupgradeschemaname@_gpmigrator.pg_type_load;
+SELECT * FROM __upg_catalog_gpmigrator.pg_type_load;
 
-DROP EXTERNAL WEB TABLE __@gpupgradeschemaname@_gpmigrator.pg_type_load;
+DROP EXTERNAL WEB TABLE __upg_catalog_gpmigrator.pg_type_load;
 \c
 
 -- Following code populates the prodataaccess field for functions
@@ -97,120 +97,120 @@ VACUUM FREEZE pg_proc;
 -- ... and the rest
 
 -- window frame maker for lead/lag
-CREATE FUNCTION @gpupgradeschemaname@.lead_lag_frame_maker(internal) RETURNS internal LANGUAGE internal VOLATILE STRICT
+CREATE FUNCTION upg_catalog.lead_lag_frame_maker(internal) RETURNS internal LANGUAGE internal VOLATILE STRICT
 	AS 'lead_lag_frame_maker' WITH (OID=5081);
 
 -- MPP-17860 add pg_window.winframemakerfunc
-ALTER TABLE @gpupgradeschemaname@.pg_window
+ALTER TABLE upg_catalog.pg_window
     ADD COLUMN winframemakerfunc regproc;
 SELECT catDML(
-'UPDATE @gpupgradeschemaname@.pg_window SET winframemakerfunc = 5081
+'UPDATE upg_catalog.pg_window SET winframemakerfunc = 5081
  FROM pg_proc WHERE pg_proc.oid = pg_window.winfnoid AND
       (pg_proc.proname = ''lead'' OR pg_proc.proname = ''lag'')
       AND pg_proc.oid < 10000'
 );
 SELECT catDML(
-'UPDATE @gpupgradeschemaname@.pg_window SET winframemakerfunc = 0
+'UPDATE upg_catalog.pg_window SET winframemakerfunc = 0
  WHERE winframemakerfunc IS NULL'
 );
-ALTER TABLE @gpupgradeschemaname@.pg_window
+ALTER TABLE upg_catalog.pg_window
     ALTER COLUMN winframemakerfunc SET NOT NULL;
 
-CREATE FUNCTION @gpupgradeschemaname@.generate_series("timestamp", "timestamp", "interval") RETURNS SETOF "timestamp" LANGUAGE internal VOLATILE STRICT AS 'generate_series_timestamp' WITH (OID=2916);
-COMMENT ON FUNCTION  @gpupgradeschemaname@.generate_series("timestamp", "timestamp", "interval") IS 'non-persistent series generator';
+CREATE FUNCTION upg_catalog.generate_series("timestamp", "timestamp", "interval") RETURNS SETOF "timestamp" LANGUAGE internal VOLATILE STRICT AS 'generate_series_timestamp' WITH (OID=2916);
+COMMENT ON FUNCTION  upg_catalog.generate_series("timestamp", "timestamp", "interval") IS 'non-persistent series generator';
 
-CREATE FUNCTION @gpupgradeschemaname@.generate_series(timestamptz, timestamptz, "interval") RETURNS SETOF timestamptz LANGUAGE internal VOLATILE STRICT AS 'generate_series_timestamptz' WITH (OID=2917);
-COMMENT ON FUNCTION  @gpupgradeschemaname@.generate_series("timestamptz", "timestamptz", "interval") IS 'non-persistent series generator';
+CREATE FUNCTION upg_catalog.generate_series(timestamptz, timestamptz, "interval") RETURNS SETOF timestamptz LANGUAGE internal VOLATILE STRICT AS 'generate_series_timestamptz' WITH (OID=2917);
+COMMENT ON FUNCTION  upg_catalog.generate_series("timestamptz", "timestamptz", "interval") IS 'non-persistent series generator';
 
-CREATE FUNCTION @gpupgradeschemaname@.interval_bound("numeric", "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'numeric_interval_bound' WITH (OID=2991);
-COMMENT ON FUNCTION  @gpupgradeschemaname@.interval_bound(numeric, numeric) IS 'boundary of the interval containing the given value';
+CREATE FUNCTION upg_catalog.interval_bound("numeric", "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'numeric_interval_bound' WITH (OID=2991);
+COMMENT ON FUNCTION  upg_catalog.interval_bound(numeric, numeric) IS 'boundary of the interval containing the given value';
 
-CREATE FUNCTION @gpupgradeschemaname@.interval_bound("numeric", "numeric", int4) RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'numeric_interval_bound_shift' WITH (OID=2992);
-COMMENT ON FUNCTION  @gpupgradeschemaname@.interval_bound(numeric, numeric, int4) IS 'boundary of the interval containing the given value';
+CREATE FUNCTION upg_catalog.interval_bound("numeric", "numeric", int4) RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'numeric_interval_bound_shift' WITH (OID=2992);
+COMMENT ON FUNCTION  upg_catalog.interval_bound(numeric, numeric, int4) IS 'boundary of the interval containing the given value';
 
-CREATE FUNCTION @gpupgradeschemaname@.interval_bound("numeric", "numeric", int4, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'numeric_interval_bound_shift_rbound' WITH (OID=2993);
-COMMENT ON FUNCTION  @gpupgradeschemaname@.interval_bound(numeric, numeric, int4, numeric) IS 'boundary of the interval containing the given value';
+CREATE FUNCTION upg_catalog.interval_bound("numeric", "numeric", int4, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'numeric_interval_bound_shift_rbound' WITH (OID=2993);
+COMMENT ON FUNCTION  upg_catalog.interval_bound(numeric, numeric, int4, numeric) IS 'boundary of the interval containing the given value';
 
-CREATE FUNCTION @gpupgradeschemaname@.interval_bound("timestamp", "interval") RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'timestamp_interval_bound' WITH (OID=2994);
-COMMENT ON FUNCTION  @gpupgradeschemaname@.interval_bound(timestamp, "interval") IS 'boundary of the interval containing the given value';
+CREATE FUNCTION upg_catalog.interval_bound("timestamp", "interval") RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'timestamp_interval_bound' WITH (OID=2994);
+COMMENT ON FUNCTION  upg_catalog.interval_bound(timestamp, "interval") IS 'boundary of the interval containing the given value';
 
-CREATE FUNCTION @gpupgradeschemaname@.interval_bound("timestamp", "interval", int4) RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'timestamp_interval_bound_shift' WITH (OID=2995);
-COMMENT ON FUNCTION  @gpupgradeschemaname@.interval_bound(timestamp, "interval", int4) IS 'boundary of the interval containing the given value';
+CREATE FUNCTION upg_catalog.interval_bound("timestamp", "interval", int4) RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'timestamp_interval_bound_shift' WITH (OID=2995);
+COMMENT ON FUNCTION  upg_catalog.interval_bound(timestamp, "interval", int4) IS 'boundary of the interval containing the given value';
 
-CREATE FUNCTION @gpupgradeschemaname@.interval_bound("timestamp", "interval", int4, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'timestamp_interval_bound_shift_reg' WITH (OID=2996);
-COMMENT ON FUNCTION  @gpupgradeschemaname@.interval_bound(timestamp, "interval", int4, timestamp) IS 'boundary of the interval containing the given value';
+CREATE FUNCTION upg_catalog.interval_bound("timestamp", "interval", int4, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'timestamp_interval_bound_shift_reg' WITH (OID=2996);
+COMMENT ON FUNCTION  upg_catalog.interval_bound(timestamp, "interval", int4, timestamp) IS 'boundary of the interval containing the given value';
 
-CREATE FUNCTION @gpupgradeschemaname@.interval_bound(timestamptz, "interval") RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'timestamptz_interval_bound' WITH (OID=2997);
-COMMENT ON FUNCTION  @gpupgradeschemaname@.interval_bound(timestamptz, "interval") IS 'boundary of the interval containing the given value';
+CREATE FUNCTION upg_catalog.interval_bound(timestamptz, "interval") RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'timestamptz_interval_bound' WITH (OID=2997);
+COMMENT ON FUNCTION  upg_catalog.interval_bound(timestamptz, "interval") IS 'boundary of the interval containing the given value';
 
-CREATE FUNCTION @gpupgradeschemaname@.interval_bound(timestamptz, "interval", int4) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'timestamptz_interval_bound_shift' WITH (OID=2998);
-COMMENT ON FUNCTION  @gpupgradeschemaname@.interval_bound(timestamptz, "interval", int4) IS 'boundary of the interval containing the given value';
+CREATE FUNCTION upg_catalog.interval_bound(timestamptz, "interval", int4) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'timestamptz_interval_bound_shift' WITH (OID=2998);
+COMMENT ON FUNCTION  upg_catalog.interval_bound(timestamptz, "interval", int4) IS 'boundary of the interval containing the given value';
 
-CREATE FUNCTION @gpupgradeschemaname@.interval_bound(timestamptz, "interval", int4, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'timestamptz_interval_bound_shift_reg' WITH (OID=2999);
-COMMENT ON FUNCTION  @gpupgradeschemaname@.interval_bound(timestamptz, "interval", int4, timestamptz) IS 'boundary of the interval containing the given value';
+CREATE FUNCTION upg_catalog.interval_bound(timestamptz, "interval", int4, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'timestamptz_interval_bound_shift_reg' WITH (OID=2999);
+COMMENT ON FUNCTION  upg_catalog.interval_bound(timestamptz, "interval", int4, timestamptz) IS 'boundary of the interval containing the given value';
 
-CREATE FUNCTION @gpupgradeschemaname@.interval_interval_div("interval", "interval") RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'interval_interval_div' WITH (OID=2918);
-COMMENT ON FUNCTION  @gpupgradeschemaname@.interval_interval_div("interval", "interval") IS 'divide';
+CREATE FUNCTION upg_catalog.interval_interval_div("interval", "interval") RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'interval_interval_div' WITH (OID=2918);
+COMMENT ON FUNCTION  upg_catalog.interval_interval_div("interval", "interval") IS 'divide';
 
-CREATE FUNCTION @gpupgradeschemaname@.interval_interval_mod("interval", "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'interval_interval_mod' WITH (OID=2919);
-COMMENT ON FUNCTION  @gpupgradeschemaname@.interval_interval_mod("interval", "interval") IS 'modulus';
+CREATE FUNCTION upg_catalog.interval_interval_mod("interval", "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'interval_interval_mod' WITH (OID=2919);
+COMMENT ON FUNCTION  upg_catalog.interval_interval_mod("interval", "interval") IS 'modulus';
 
-CREATE FUNCTION @gpupgradeschemaname@.linear_interpolate(anyelement, anyelement, int8, anyelement, int8 ) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'linterp_int64' WITH (OID=6072);
-COMMENT ON FUNCTION @gpupgradeschemaname@.linear_interpolate(anyelement, anyelement, int8, anyelement, int8 ) IS 'linear interpolation: x, x0,y0, x1,y1';
+CREATE FUNCTION upg_catalog.linear_interpolate(anyelement, anyelement, int8, anyelement, int8 ) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'linterp_int64' WITH (OID=6072);
+COMMENT ON FUNCTION upg_catalog.linear_interpolate(anyelement, anyelement, int8, anyelement, int8 ) IS 'linear interpolation: x, x0,y0, x1,y1';
 
-CREATE FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, int4, anyelement, int4 ) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'linterp_int32' WITH (OID=6073);
-COMMENT ON FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, int4, anyelement, int4 ) IS 'linear interpolation: x, x0,y0, x1,y1';
+CREATE FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, int4, anyelement, int4 ) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'linterp_int32' WITH (OID=6073);
+COMMENT ON FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, int4, anyelement, int4 ) IS 'linear interpolation: x, x0,y0, x1,y1';
 
-CREATE FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, int2, anyelement, int2 ) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'linterp_int16' WITH (OID=6074);
-COMMENT ON FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, int2, anyelement, int2 ) IS 'linear interpolation: x, x0,y0, x1,y1';
+CREATE FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, int2, anyelement, int2 ) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'linterp_int16' WITH (OID=6074);
+COMMENT ON FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, int2, anyelement, int2 ) IS 'linear interpolation: x, x0,y0, x1,y1';
 
-CREATE FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, float8, anyelement, float8 ) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'linterp_float8' WITH (OID=6075);
-COMMENT ON FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, float8, anyelement, float8 ) IS 'linear interpolation: x, x0,y0, x1,y1';
+CREATE FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, float8, anyelement, float8 ) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'linterp_float8' WITH (OID=6075);
+COMMENT ON FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, float8, anyelement, float8 ) IS 'linear interpolation: x, x0,y0, x1,y1';
 
-CREATE FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, float4, anyelement, float4 ) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'linterp_float4' WITH (OID=6076);
-COMMENT ON FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, float4, anyelement, float4 ) IS 'linear interpolation: x, x0,y0, x1,y1';
+CREATE FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, float4, anyelement, float4 ) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'linterp_float4' WITH (OID=6076);
+COMMENT ON FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, float4, anyelement, float4 ) IS 'linear interpolation: x, x0,y0, x1,y1';
 
-CREATE FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, date, anyelement, date ) RETURNS date LANGUAGE internal IMMUTABLE STRICT AS 'linterp_DateADT' WITH (OID=6077);
-COMMENT ON FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, date, anyelement, date ) IS 'linear interpolation: x, x0,y0, x1,y1';
+CREATE FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, date, anyelement, date ) RETURNS date LANGUAGE internal IMMUTABLE STRICT AS 'linterp_DateADT' WITH (OID=6077);
+COMMENT ON FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, date, anyelement, date ) IS 'linear interpolation: x, x0,y0, x1,y1';
 
-CREATE FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, time, anyelement, time ) RETURNS time LANGUAGE internal IMMUTABLE STRICT AS 'linterp_TimeADT' WITH (OID=6078);
-COMMENT ON FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, time, anyelement, time ) IS 'linear interpolation: x, x0,y0, x1,y1';
+CREATE FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, time, anyelement, time ) RETURNS time LANGUAGE internal IMMUTABLE STRICT AS 'linterp_TimeADT' WITH (OID=6078);
+COMMENT ON FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, time, anyelement, time ) IS 'linear interpolation: x, x0,y0, x1,y1';
 
-CREATE FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, timestamp, anyelement, timestamp ) RETURNS timestamp LANGUAGE internal IMMUTABLE STRICT AS 'linterp_Timestamp' WITH (OID=6079);
-COMMENT ON FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, timestamp, anyelement, timestamp ) IS 'linear interpolation: x, x0,y0, x1,y1';
+CREATE FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, timestamp, anyelement, timestamp ) RETURNS timestamp LANGUAGE internal IMMUTABLE STRICT AS 'linterp_Timestamp' WITH (OID=6079);
+COMMENT ON FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, timestamp, anyelement, timestamp ) IS 'linear interpolation: x, x0,y0, x1,y1';
 
-CREATE FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, timestamptz, anyelement, timestamptz ) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'linterp_TimestampTz' WITH (OID=6080);
-COMMENT ON FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, timestamptz, anyelement, timestamptz ) IS 'linear interpolation: x, x0,y0, x1,y1';
+CREATE FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, timestamptz, anyelement, timestamptz ) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'linterp_TimestampTz' WITH (OID=6080);
+COMMENT ON FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, timestamptz, anyelement, timestamptz ) IS 'linear interpolation: x, x0,y0, x1,y1';
 
-CREATE FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, "interval", anyelement, "interval" ) RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'linterp_Interval' WITH (OID=6081);
-COMMENT ON FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, "interval", anyelement, "interval" ) IS 'linear interpolation: x, x0,y0, x1,y1';
+CREATE FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, "interval", anyelement, "interval" ) RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'linterp_Interval' WITH (OID=6081);
+COMMENT ON FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, "interval", anyelement, "interval" ) IS 'linear interpolation: x, x0,y0, x1,y1';
 
-CREATE FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, "numeric", anyelement, "numeric" ) RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'linterp_Numeric' WITH (OID=6082);
-COMMENT ON FUNCTION @gpupgradeschemaname@.linear_interpolate( anyelement, anyelement, "numeric", anyelement, "numeric" ) IS 'linear interpolation: x, x0,y0, x1,y1';
+CREATE FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, "numeric", anyelement, "numeric" ) RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'linterp_Numeric' WITH (OID=6082);
+COMMENT ON FUNCTION upg_catalog.linear_interpolate( anyelement, anyelement, "numeric", anyelement, "numeric" ) IS 'linear interpolation: x, x0,y0, x1,y1';
 
-CREATE FUNCTION @gpupgradeschemaname@.pg_stat_get_backend_waiting_reason(int4) RETURNS text LANGUAGE internal STABLE STRICT AS 'pg_stat_get_backend_waiting_reason' WITH (OID=2972);
-COMMENT ON FUNCTION @gpupgradeschemaname@.pg_stat_get_backend_waiting_reason(int4) IS 'Statistics: Reason backend is waiting for';
+CREATE FUNCTION upg_catalog.pg_stat_get_backend_waiting_reason(int4) RETURNS text LANGUAGE internal STABLE STRICT AS 'pg_stat_get_backend_waiting_reason' WITH (OID=2972);
+COMMENT ON FUNCTION upg_catalog.pg_stat_get_backend_waiting_reason(int4) IS 'Statistics: Reason backend is waiting for';
 
-CREATE FUNCTION @gpupgradeschemaname@.pg_stat_get_wal_senders(OUT pid int4, OUT state text, OUT sent_location text, OUT write_location text, OUT flush_location text, OUT replay_location text, OUT sync_priority int4, OUT sync_state text) RETURNS SETOF @gpupgradeschemaname@.record LANGUAGE internal STABLE AS 'pg_stat_get_wal_senders' WITH (OID=3099);
-COMMENT ON FUNCTION @gpupgradeschemaname@.pg_stat_get_wal_senders() IS 'statistics: information about currently active replication';
+CREATE FUNCTION upg_catalog.pg_stat_get_wal_senders(OUT pid int4, OUT state text, OUT sent_location text, OUT write_location text, OUT flush_location text, OUT replay_location text, OUT sync_priority int4, OUT sync_state text) RETURNS SETOF upg_catalog.record LANGUAGE internal STABLE AS 'pg_stat_get_wal_senders' WITH (OID=3099);
+COMMENT ON FUNCTION upg_catalog.pg_stat_get_wal_senders() IS 'statistics: information about currently active replication';
 
-CREATE FUNCTION @gpupgradeschemaname@.gp_dbspecific_ptcat_verification() RETURNS bool LANGUAGE internal VOLATILE AS 'gp_dbspecific_ptcat_verification' WITH (OID=5075);
+CREATE FUNCTION upg_catalog.gp_dbspecific_ptcat_verification() RETURNS bool LANGUAGE internal VOLATILE AS 'gp_dbspecific_ptcat_verification' WITH (OID=5075);
 COMMENT ON FUNCTION pg_catalog.gp_dbspecific_ptcat_verification() IS 'perform database specific PersistentTables-Catalog verification';
 
-CREATE FUNCTION @gpupgradeschemaname@.gp_nondbspecific_ptcat_verification() RETURNS bool LANGUAGE internal VOLATILE AS 'gp_nondbspecific_ptcat_verification' WITH (OID=5080);
+CREATE FUNCTION upg_catalog.gp_nondbspecific_ptcat_verification() RETURNS bool LANGUAGE internal VOLATILE AS 'gp_nondbspecific_ptcat_verification' WITH (OID=5080);
 COMMENT ON FUNCTION pg_catalog.gp_nondbspecific_ptcat_verification() IS 'perform non-database specific PersistentTables-Catalog verification';
 
 -- pg_stat_get_activity adds a new column.
 -- we cannot use CREATE OR REPLACE FUNCTION as the object is pinned.
-SELECT catDML('UPDATE @gpupgradeschemaname@.pg_proc SET
+SELECT catDML('UPDATE upg_catalog.pg_proc SET
 	proallargtypes = ''{23,26,23,26,25,25,16,1184,1184,1184,869,23,23,25}'',
 	proargmodes = ''{i,o,o,o,o,o,o,o,o,o,o,o,o,o}'',
 	proargnames = ''{pid,datid,procpid,usesysid,application_name,current_query,waiting,xact_start,query_start,backend_start,client_addr,client_port,sess_id,waiting_reason}'',
 	provolatile = ''v''
 	WHERE oid = 6071');
 
-CREATE FUNCTION @gpupgradeschemaname@.gp_add_master_standby(text, text, _text, int4) RETURNS int2 LANGUAGE internal VOLATILE AS 'gp_add_master_standby_port' WITH (OID=5038);
-COMMENT ON FUNCTION @gpupgradeschemaname@.gp_add_master_standby(text, text, _text, int4) IS 'Perform the catalog operations necessary for adding a new standby';
+CREATE FUNCTION upg_catalog.gp_add_master_standby(text, text, _text, int4) RETURNS int2 LANGUAGE internal VOLATILE AS 'gp_add_master_standby_port' WITH (OID=5038);
+COMMENT ON FUNCTION upg_catalog.gp_add_master_standby(text, text, _text, int4) IS 'Perform the catalog operations necessary for adding a new standby';
 
 -- add new operators
 
@@ -218,25 +218,25 @@ COMMENT ON FUNCTION @gpupgradeschemaname@.gp_add_master_standby(text, text, _tex
 \set pgoperatordatafile `echo "'$GPHOME/share/postgresql/upgrade/pg_operator.data'"`
 
 -- Add entries to the master
-COPY @gpupgradeschemaname@.pg_operator FROM
+COPY upg_catalog.pg_operator FROM
         :pgoperatordatafile WITH OIDS DELIMITER ',';
 
 CREATE EXTERNAL WEB TABLE
-		__@gpupgradeschemaname@_gpmigrator.pg_operator_load(database text,
+		__upg_catalog_gpmigrator.pg_operator_load(database text,
 									port text,
 									status text)
 	execute ' PGOPTIONS=''-c gp_session_role=utility'' \\
 		psql -q --set ON_ERROR_STOP=ON -p $GP_SEG_PORT \\
-		--command "copy @gpupgradeschemaname@.pg_operator from \\
+		--command "copy upg_catalog.pg_operator from \\
 		''$GPHOME/share/postgresql/upgrade/pg_operator.data'' \\
 		with oids csv" $GP_DATABASE $GP_USER && echo "$GP_DATABASE, $GP_SEG_PORT, done";'
 format 'csv';
 
-SELECT * FROM __@gpupgradeschemaname@_gpmigrator.pg_operator_load;
+SELECT * FROM __upg_catalog_gpmigrator.pg_operator_load;
 
-DROP EXTERNAL WEB TABLE __@gpupgradeschemaname@_gpmigrator.pg_operator_load;
+DROP EXTERNAL WEB TABLE __upg_catalog_gpmigrator.pg_operator_load;
 
-CREATE OR REPLACE FUNCTION __@gpupgradeschemaname@_gpmigrator.gp_add_truncate_priv_for_owner(aclitem[], oid) RETURNS aclitem[] AS
+CREATE OR REPLACE FUNCTION __upg_catalog_gpmigrator.gp_add_truncate_priv_for_owner(aclitem[], oid) RETURNS aclitem[] AS
 '$libdir/gpupgrade' LANGUAGE C IMMUTABLE STRICT;
 
 
@@ -252,49 +252,49 @@ CREATE OR REPLACE FUNCTION __@gpupgradeschemaname@_gpmigrator.gp_add_truncate_pr
 -- We don't want to do this for catalog tables, though, as fresh install
 -- wouldn't allow truncate on these tables.
 SELECT catDML($$
-	UPDATE pg_catalog.pg_class SET relacl = __@gpupgradeschemaname@_gpmigrator.gp_add_truncate_priv_for_owner(relacl, relowner)
+	UPDATE pg_catalog.pg_class SET relacl = __upg_catalog_gpmigrator.gp_add_truncate_priv_for_owner(relacl, relowner)
 	WHERE oid > 10000
 		AND relnamespace <> (SELECT oid FROM pg_namespace WHERE nspname = 'pg_catalog')
 		AND relkind = 'r'
 		AND relacl IS NOT NULL;
 $$);
 
-DROP FUNCTION __@gpupgradeschemaname@_gpmigrator.gp_add_truncate_priv_for_owner(aclitem[], oid);
+DROP FUNCTION __upg_catalog_gpmigrator.gp_add_truncate_priv_for_owner(aclitem[], oid);
 
-DROP SCHEMA __@gpupgradeschemaname@_gpmigrator;
+DROP SCHEMA __upg_catalog_gpmigrator;
 --
 -- Partition management functions for the optimizer
 --
-CREATE FUNCTION @gpupgradeschemaname@.gp_partition_propagation(int4, oid) RETURNS void  LANGUAGE internal VOLATILE STRICT AS 'gp_partition_propagation' WITH (OID=6083);
-COMMENT ON FUNCTION @gpupgradeschemaname@.gp_partition_propagation(int4, oid) IS  'inserts a partition oid into specified pid-index';
+CREATE FUNCTION upg_catalog.gp_partition_propagation(int4, oid) RETURNS void  LANGUAGE internal VOLATILE STRICT AS 'gp_partition_propagation' WITH (OID=6083);
+COMMENT ON FUNCTION upg_catalog.gp_partition_propagation(int4, oid) IS  'inserts a partition oid into specified pid-index';
 
-CREATE FUNCTION @gpupgradeschemaname@.gp_partition_selection(oid, anyelement) RETURNS oid LANGUAGE internal STABLE STRICT AS 'gp_partition_selection' WITH (OID=6084);
-COMMENT ON FUNCTION @gpupgradeschemaname@.gp_partition_selection(oid, anyelement)  IS 'selects the child partition oid which satisfies a given partition key value';
+CREATE FUNCTION upg_catalog.gp_partition_selection(oid, anyelement) RETURNS oid LANGUAGE internal STABLE STRICT AS 'gp_partition_selection' WITH (OID=6084);
+COMMENT ON FUNCTION upg_catalog.gp_partition_selection(oid, anyelement)  IS 'selects the child partition oid which satisfies a given partition key value';
 
-CREATE FUNCTION @gpupgradeschemaname@.gp_partition_expansion(oid) RETURNS setof oid LANGUAGE internal STABLE STRICT AS 'gp_partition_expansion' WITH (OID=6085);
-COMMENT ON FUNCTION @gpupgradeschemaname@.gp_partition_expansion(oid) IS 'finds all child partition oids for the given parent oid';
+CREATE FUNCTION upg_catalog.gp_partition_expansion(oid) RETURNS setof oid LANGUAGE internal STABLE STRICT AS 'gp_partition_expansion' WITH (OID=6085);
+COMMENT ON FUNCTION upg_catalog.gp_partition_expansion(oid) IS 'finds all child partition oids for the given parent oid';
 
-CREATE FUNCTION @gpupgradeschemaname@.gp_partition_inverse(oid) RETURNS setof record LANGUAGE internal STABLE STRICT AS 'gp_partition_inverse' WITH (OID=6086);
-COMMENT ON FUNCTION @gpupgradeschemaname@.gp_partition_inverse(oid) IS 'returns all child partitition oids with their constraints for a given parent oid';
+CREATE FUNCTION upg_catalog.gp_partition_inverse(oid) RETURNS setof record LANGUAGE internal STABLE STRICT AS 'gp_partition_inverse' WITH (OID=6086);
+COMMENT ON FUNCTION upg_catalog.gp_partition_inverse(oid) IS 'returns all child partitition oids with their constraints for a given parent oid';
 
 --
 -- Functions for enabling and disabling transformations
 --
-CREATE FUNCTION @gpupgradeschemaname@.disable_xform(text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'disable_xform' WITH (OID=6087);
-COMMENT ON FUNCTION @gpupgradeschemaname@.disable_xform(text) IS 'disables transformations in the optimizer';
+CREATE FUNCTION upg_catalog.disable_xform(text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'disable_xform' WITH (OID=6087);
+COMMENT ON FUNCTION upg_catalog.disable_xform(text) IS 'disables transformations in the optimizer';
 
-CREATE FUNCTION @gpupgradeschemaname@.enable_xform(text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'enable_xform' WITH (OID=6088);
-COMMENT ON FUNCTION @gpupgradeschemaname@.enable_xform(text) IS 'enables transformations in the optimizer';
+CREATE FUNCTION upg_catalog.enable_xform(text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'enable_xform' WITH (OID=6088);
+COMMENT ON FUNCTION upg_catalog.enable_xform(text) IS 'enables transformations in the optimizer';
 
 --
 -- Show Optimizer's version
 --
-CREATE FUNCTION @gpupgradeschemaname@.gp_opt_version() RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'gp_opt_version' WITH (OID=6089);
-COMMENT ON FUNCTION @gpupgradeschemaname@.gp_opt_version() IS 'Returns the optimizer and gpos library versions';
+CREATE FUNCTION upg_catalog.gp_opt_version() RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'gp_opt_version' WITH (OID=6089);
+COMMENT ON FUNCTION upg_catalog.gp_opt_version() IS 'Returns the optimizer and gpos library versions';
 
 -- pg_stat_activity adds a new column derived from pg_stat_get_activity.
 -- CREATE OR REPLACE with extra column is allowed only in upgrade mode.
-CREATE OR REPLACE VIEW @gpupgradeschemaname@.pg_stat_activity AS
+CREATE OR REPLACE VIEW upg_catalog.pg_stat_activity AS
     SELECT
             S.datid AS datid,
             D.datname AS datname,
@@ -311,7 +311,7 @@ CREATE OR REPLACE VIEW @gpupgradeschemaname@.pg_stat_activity AS
             S.application_name,
             S.xact_start,
             S.waiting_reason
-    FROM @gpupgradeschemaname@.pg_database D, @gpupgradeschemaname@.pg_stat_get_activity(NULL) AS S, @gpupgradeschemaname@.pg_authid U
+    FROM upg_catalog.pg_database D, upg_catalog.pg_stat_get_activity(NULL) AS S, upg_catalog.pg_authid U
     WHERE S.datid = D.oid AND
             S.usesysid = U.oid;
 
@@ -321,7 +321,7 @@ SELECT catDML('
   INSERT INTO pg_catalog.pg_depend VALUES(0, 0, 0, ''pg_catalog.pg_proc''::regclass, 3099, 0, ''p'')');
 -- A new system view.  Although the initdb rule of system view is it has oid
 -- less than FirstNormalObjectId, during upgrade we create one above that.
-CREATE VIEW @gpupgradeschemaname@.pg_stat_replication AS
+CREATE VIEW upg_catalog.pg_stat_replication AS
     SELECT
             S.procpid,
             S.usesysid,
@@ -337,17 +337,17 @@ CREATE VIEW @gpupgradeschemaname@.pg_stat_replication AS
             W.replay_location,
             W.sync_priority,
             W.sync_state
-    FROM @gpupgradeschemaname@.pg_stat_get_activity(NULL) AS S, @gpupgradeschemaname@.pg_authid U,
-            @gpupgradeschemaname@.pg_stat_get_wal_senders() AS W
+    FROM upg_catalog.pg_stat_get_activity(NULL) AS S, upg_catalog.pg_authid U,
+            upg_catalog.pg_stat_get_wal_senders() AS W
     WHERE S.usesysid = U.oid AND
             S.procpid = W.pid;
 
 -- Set permission to the same as pg_stat_activity.
 SELECT catDML('
-UPDATE @gpupgradeschemaname@.pg_class
+UPDATE upg_catalog.pg_class
   SET relacl = (
     SELECT relacl
-    FROM @gpupgradeschemaname@.pg_class
+    FROM upg_catalog.pg_class
     WHERE relnamespace = 11 AND relname = ''pg_stat_activity'')
 WHERE relnamespace = 11 AND relname = ''pg_stat_replication''');
 
@@ -358,49 +358,49 @@ WHERE relnamespace = 11 AND relname = ''pg_stat_replication''');
 -- second time, since persistent table will get confused as relfile has gone.
 -- So we delete pg_attribute, pg_class and gp_relation_node entries by DELETE.
 -- To touch gp_relation_node, we need set gp_permit_relation_node_change.
-CREATE FUNCTION @gpupgradeschemaname@.drop_shared_relation(the_oid oid) RETURNS void AS $$
+CREATE FUNCTION upg_catalog.drop_shared_relation(the_oid oid) RETURNS void AS $$
 DECLARE
     cnt         int8;
     the_relname name;
 BEGIN
     SELECT INTO cnt count(*)
-        FROM @gpupgradeschemaname@.gp_persistent_relation_node
+        FROM upg_catalog.gp_persistent_relation_node
         WHERE database_oid = 0 AND relfilenode_oid = the_oid;
     SELECT INTO the_relname relname
-        FROM @gpupgradeschemaname@.pg_class WHERE oid = the_oid;
+        FROM upg_catalog.pg_class WHERE oid = the_oid;
 
     -- just for safety
     IF the_relname IS NULL THEN
         RAISE EXCEPTION 'could not find relation for %', the_oid;
     END IF;
 
-    PERFORM @gpupgradeschemaname@.catDML('
-        DELETE FROM @gpupgradeschemaname@.pg_depend
+    PERFORM upg_catalog.catDML('
+        DELETE FROM upg_catalog.pg_depend
             WHERE refclassid = 1259 AND refobjid = ' || the_oid);
-    PERFORM @gpupgradeschemaname@.catDML('
-        DELETE FROM @gpupgradeschemaname@.pg_depend
+    PERFORM upg_catalog.catDML('
+        DELETE FROM upg_catalog.pg_depend
             WHERE refclassid = 1247 AND refobjid =
-            (SELECT oid FROM @gpupgradeschemaname@.pg_type
+            (SELECT oid FROM upg_catalog.pg_type
                 WHERE oid =
-                    (SELECT reltype FROM @gpupgradeschemaname@.pg_class
+                    (SELECT reltype FROM upg_catalog.pg_class
                         WHERE oid = ' || the_oid || '))');
-    PERFORM @gpupgradeschemaname@.catDML('
-        DELETE FROM @gpupgradeschemaname@.pg_type WHERE oid =
-            (SELECT reltype FROM @gpupgradeschemaname@.pg_class
+    PERFORM upg_catalog.catDML('
+        DELETE FROM upg_catalog.pg_type WHERE oid =
+            (SELECT reltype FROM upg_catalog.pg_class
                 WHERE oid = ' || the_oid || ')');
     IF cnt > 0 THEN
         -- The first database will drop it via DROP TABLE.
         EXECUTE 'DROP TABLE ' || the_relname;
     ELSE
         -- The 2nd and later, we delete rows from catalog by DELETE.
-        PERFORM @gpupgradeschemaname@.catDML('
-            DELETE FROM @gpupgradeschemaname@.pg_attribute
+        PERFORM upg_catalog.catDML('
+            DELETE FROM upg_catalog.pg_attribute
             WHERE attrelid = ' || the_oid);
-        PERFORM @gpupgradeschemaname@.catDML('
-            DELETE FROM @gpupgradeschemaname@.pg_class
+        PERFORM upg_catalog.catDML('
+            DELETE FROM upg_catalog.pg_class
             WHERE oid = ' || the_oid);
-        PERFORM @gpupgradeschemaname@.catDML('
-            DELETE FROM @gpupgradeschemaname@.gp_relation_node
+        PERFORM upg_catalog.catDML('
+            DELETE FROM upg_catalog.gp_relation_node
             WHERE relfilenode_oid = ' || the_oid);
     END IF;
 END;
@@ -409,28 +409,28 @@ $$ LANGUAGE plpgsql;
 -- To delete gp_relation_node, this GUC needs to be set.  Otherwise, it reports
 -- permission error even under allow_system_table_mods=ALL.
 SET gp_permit_relation_node_change = on;
-SELECT @gpupgradeschemaname@.drop_shared_relation(5008);
+SELECT upg_catalog.drop_shared_relation(5008);
 RESET gp_permit_relation_node_change;
 
-DROP FUNCTION @gpupgradeschemaname@.drop_shared_relation(oid);
+DROP FUNCTION upg_catalog.drop_shared_relation(oid);
 -- updatable AO
 -- The relid and idx id are set InvalidOid. This is not a
 -- valid state.
 ALTER TABLE pg_catalog.pg_appendonly
     ADD COLUMN visimaprelid oid,
     ADD COLUMN visimapidxid oid;
-SELECT @gpupgradeschemaname@.catDML(
+SELECT upg_catalog.catDML(
      'UPDATE pg_catalog.pg_appendonly SET visimaprelid = 0::oid, visimapidxid = 0::oid, minorversion = 1;'
 );
 
-DROP SCHEMA IF EXISTS __@gpupgradeschemaname@_gpmigrator_uao;
-CREATE SCHEMA __@gpupgradeschemaname@_gpmigrator_uao;
+DROP SCHEMA IF EXISTS __upg_catalog_gpmigrator_uao;
+CREATE SCHEMA __upg_catalog_gpmigrator_uao;
 -- Upgrade catalog tables for append-only tables.
 -- 1) add visimap
 -- 2) drop toast relation
 -- 3) record visimap as dependent on parent appendonly table
 -- 4) add state column to pg_ao(cs)seg
-CREATE FUNCTION @gpupgradeschemaname@.upgrade_appendonly_aux(aoRelId oid) RETURNS int AS $$
+CREATE FUNCTION upg_catalog.upgrade_appendonly_aux(aoRelId oid) RETURNS int AS $$
 DECLARE
   aoSegRelName name;
   aoRelFileId oid;
@@ -453,7 +453,7 @@ BEGIN
   EXECUTE 'ALTER TABLE pg_aoseg.pg_aovisimap_' || aoRelFileId  ||
     ' OWNER TO ' || aoRelOwner || ', ALTER visimap SET STORAGE PLAIN';
   DELETE FROM gp_distribution_policy WHERE localoid = visimapRow.oid;
-  PERFORM @gpupgradeschemaname@.catDML(
+  PERFORM upg_catalog.catDML(
     'DELETE FROM pg_catalog.pg_depend WHERE refclassid=1259 and classid=1259 and
      objid=' || visimapRow.reltoastrelid || ' and
      refobjid=' || visimapRow.oid);
@@ -461,17 +461,17 @@ BEGIN
   -- change relkind so it looks like a normal heap table.  Otherwise, DROP would
   -- refuse to delete a toast table directly.
   SELECT INTO tempNameSpaceOid oid FROM pg_namespace
-    WHERE nspname = '__@gpupgradeschemaname@_gpmigrator_uao';
-  PERFORM @gpupgradeschemaname@.catDML(
+    WHERE nspname = '__upg_catalog_gpmigrator_uao';
+  PERFORM upg_catalog.catDML(
     'UPDATE pg_catalog.pg_class SET relkind=''r'', relnamespace=' || tempNameSpaceOid ||
     ' WHERE oid = ' || visimapRow.reltoastrelid);
   SELECT INTO toastRelName relname FROM pg_class
     WHERE oid = visimapRow.reltoastrelid;
-  EXECUTE 'DROP TABLE __@gpupgradeschemaname@_gpmigrator_uao.' || toastRelName;
-  PERFORM @gpupgradeschemaname@.catDML(
+  EXECUTE 'DROP TABLE __upg_catalog_gpmigrator_uao.' || toastRelName;
+  PERFORM upg_catalog.catDML(
     'INSERT INTO pg_catalog.pg_depend VALUES (1259, ' || visimapRow.oid
      || ', 0, 1259, ' || aoRelId || ', 0, ''i'')');
-  PERFORM @gpupgradeschemaname@.catDML(
+  PERFORM upg_catalog.catDML(
     'UPDATE pg_catalog.pg_appendonly
      SET visimaprelid = (SELECT oid FROM pg_catalog.pg_class
            WHERE relname = ''pg_aovisimap_' || aoRelFileId || '''
@@ -479,7 +479,7 @@ BEGIN
          visimapidxid = (SELECT oid FROM pg_catalog.pg_class
            WHERE relname = ''pg_aovisimap_' || aoRelFileId || '_index''
              AND relnamespace = 6104) WHERE relid = ' || aoRelId);
-  PERFORM @gpupgradeschemaname@.catDML(
+  PERFORM upg_catalog.catDML(
     'UPDATE pg_catalog.pg_class SET relkind=''m'', reltoastrelid=0
        WHERE relname = ''pg_aovisimap_' || aoRelFileId || '''
          AND relnamespace = 6104');
@@ -490,7 +490,7 @@ BEGIN
     WHERE pg_appendonly.relid = aoRelId;
   EXECUTE 'ALTER TABLE pg_aoseg.' || aoSegRelName ||
     ' ADD COLUMN modcount bigint, ADD COLUMN state smallint';
-  PERFORM @gpupgradeschemaname@.catDML(
+  PERFORM upg_catalog.catDML(
     'UPDATE pg_aoseg.' || aoSegRelName || ' SET state = 1, modcount = tupcount');
 
   RETURN 1;
@@ -501,7 +501,7 @@ $$ LANGUAGE plpgsql;
 -- memory for table locks.  Output to a SQL file and execute it with \i.
 \o appendonly_upgrade.sql
 \t
-SELECT 'select @gpupgradeschemaname@.upgrade_appendonly_aux(' || relid::text || ');'
+SELECT 'select upg_catalog.upgrade_appendonly_aux(' || relid::text || ');'
   FROM pg_catalog.pg_appendonly;
 \o
 \t
@@ -509,5 +509,5 @@ SELECT 'select @gpupgradeschemaname@.upgrade_appendonly_aux(' || relid::text || 
 \i appendonly_upgrade.sql
 \! rm appendonly_upgrade.sql
 
-DROP FUNCTION @gpupgradeschemaname@.upgrade_appendonly_aux(oid);
-DROP SCHEMA __@gpupgradeschemaname@_gpmigrator_uao;
+DROP FUNCTION upg_catalog.upgrade_appendonly_aux(oid);
+DROP SCHEMA __upg_catalog_gpmigrator_uao;
