@@ -95,7 +95,20 @@ public class Loader extends ClassLoader
 		{
 			try 
 			{
-				URL url = new URL("file:///" + jarpath + "/" + m_classpath[i]);
+				String path="file:///";
+
+				// Previous behaviour required that paths be relative to $GPHOME/lib/postgresql/java/
+				// if the user specifies a relative path we will respect that behaviour
+				if (!m_classpath[i].startsWith("/"))
+				{
+					path += jarpath + '/';
+				}
+
+				// add the classpath, note from above that if the path starts with /
+				// then the classpath will be absolute.
+				path += m_classpath[i];
+
+				URL url = new URL(path);
 				JarLoader loader = new JarLoader(this, url);
 				m_jarloaders.add(loader);
 			}
