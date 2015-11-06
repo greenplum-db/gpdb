@@ -4002,6 +4002,22 @@ Feature: Validate command line arguments
         And verify that there is a "heap" table "heap_table" in "fullbkdb"
         And verify that there is a "ao" table "ao_table" in "fullbkdb"
         And verify that there is a "ao" table "ao_part_table" in "fullbkdb"
+
+    Scenario: Backup and Restore of schema table with -C option redirected to empty database
+        Given the database is running
+        And the database "fullbkdb" does not exist
+        And the database "fullbkdb2" does not exist
+        And database "fullbkdb" exists
+        And database "fullbkdb2" exists
+        And there are no backup files
+        And there is schema "testschema" exists in "fullbkdb"
+        And there is a "heap" table "testschema.schema_heap_table" with compression "None" in "fullbkdb" with data
+        When the user runs "gpcrondump -a -x fullbkdb -C"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        When the user runs "gpdbrestore -a --redirect fullbkdb2" with the stored timestamp
+        Then gpdbrestore should return a return code of 0
+        And verify that there is a "heap" table "testschema.schema_heap_table" in "fullbkdb2"
     
     Scenario: Incremental Backup with -C option
         Given the database is running
