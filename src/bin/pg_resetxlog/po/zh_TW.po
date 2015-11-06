@@ -331,8 +331,8 @@ msgstr "  --version       顯示版本資訊然後結束\n"
 #: pg_resetxlog.c:725
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"回報錯誤至 <pgsql-bugs@postgresql.org>。\n"
+"回報錯誤至 <bugs@greenplum.org>。\n"
 

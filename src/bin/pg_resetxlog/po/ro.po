@@ -419,8 +419,8 @@ msgstr "  --version       afiºeazã informaþiile despre versiune, apoi iese\n"
 #, c-format
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"Raportaþi erorile la <pgsql-bugs@postgresql.org>.\n"
+"Raportaþi erorile la <bugs@greenplum.org>.\n"
 

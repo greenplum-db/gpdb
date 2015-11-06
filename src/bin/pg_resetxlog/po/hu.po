@@ -316,7 +316,7 @@ msgstr "  --version       verzió kijelzése, majd kilép\n"
 
 #: pg_resetxlog.c:704
 msgid "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr "\n"
-"Hibajelzéseket a <pgsql-bugs@postgresql.org> címre.\n"
+"Hibajelzéseket a <bugs@greenplum.org> címre.\n"
 

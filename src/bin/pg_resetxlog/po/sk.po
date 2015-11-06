@@ -338,8 +338,8 @@ msgstr "  --version          zobraziť informácie o verzii, potom koniec\n"
 #: pg_resetxlog.c:725
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"Chyby hláste na adresu <pgsql-bugs@postgresql.org>.\n"
+"Chyby hláste na adresu <bugs@greenplum.org>.\n"
 

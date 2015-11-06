@@ -344,10 +344,10 @@ msgstr "  --version         输出版本信息, 然后退出\n"
 #, c-format
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"报告错误至 <pgsql-bugs@postgresql.org>.\n"
+"报告错误至 <bugs@greenplum.org>.\n"
 
 #~ msgid "Latest checkpoint's StartUpID:        %u\n"
 #~ msgstr "最新检查点的 StartUpID:               %u\n"
