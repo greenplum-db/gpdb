@@ -31,7 +31,6 @@ catcore_REAL_OBJS= \
 	$(top_srcdir)/src/backend/utils/mb/wchar.o \
 	$(top_srcdir)/src/backend/utils/misc/guc.o \
 	$(top_srcdir)/src/backend/utils/init/globals.o \
-	$(top_srcdir)/src/port/strlcpy.o \
 	$(top_srcdir)/src/port/pgsleep.o \
 	$(top_srcdir)/src/port/path.o \
 	$(top_srcdir)/src/port/pgstrcasecmp.o \

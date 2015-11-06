@@ -30,7 +30,6 @@ nodeSubplan_REAL_OBJS=\
         $(top_srcdir)/src/port/pgsleep.o \
         $(top_srcdir)/src/port/pgstrcasecmp.o \
         $(top_srcdir)/src/port/qsort.o \
-        $(top_srcdir)/src/port/strlcpy.o \
         $(top_srcdir)/src/port/thread.o \
         $(top_srcdir)/src/timezone/localtime.o \
         $(top_srcdir)/src/timezone/pgtz.o
@@ -59,7 +58,6 @@ nodeShareInputScan_REAL_OBJS=\
         $(top_srcdir)/src/port/pgsleep.o \
         $(top_srcdir)/src/port/pgstrcasecmp.o \
         $(top_srcdir)/src/port/qsort.o \
-        $(top_srcdir)/src/port/strlcpy.o \
         $(top_srcdir)/src/port/thread.o \
         $(top_srcdir)/src/timezone/localtime.o \
         $(top_srcdir)/src/timezone/pgtz.o
@@ -88,7 +86,6 @@ execAmi_REAL_OBJS=\
         $(top_srcdir)/src/port/pgsleep.o \
         $(top_srcdir)/src/port/pgstrcasecmp.o \
         $(top_srcdir)/src/port/qsort.o \
-        $(top_srcdir)/src/port/strlcpy.o \
         $(top_srcdir)/src/port/thread.o \
         $(top_srcdir)/src/timezone/localtime.o \
         $(top_srcdir)/src/timezone/pgtz.o
@@ -117,7 +114,6 @@ execWorkfile_REAL_OBJS=\
         $(top_srcdir)/src/port/pgsleep.o \
         $(top_srcdir)/src/port/pgstrcasecmp.o \
         $(top_srcdir)/src/port/qsort.o \
-        $(top_srcdir)/src/port/strlcpy.o \
         $(top_srcdir)/src/port/thread.o \
         $(top_srcdir)/src/timezone/localtime.o \
         $(top_srcdir)/src/timezone/pgtz.o
@@ -147,7 +143,6 @@ execHHashagg_REAL_OBJS=\
         $(top_srcdir)/src/port/pgsleep.o \
         $(top_srcdir)/src/port/pgstrcasecmp.o \
         $(top_srcdir)/src/port/qsort.o \
-        $(top_srcdir)/src/port/strlcpy.o \
         $(top_srcdir)/src/port/thread.o \
         $(top_srcdir)/src/timezone/localtime.o \
         $(top_srcdir)/src/timezone/pgtz.o
