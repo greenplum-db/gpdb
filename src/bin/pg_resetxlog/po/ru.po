@@ -460,10 +460,10 @@ msgstr "  --version       показать версию и выйти\n"
 #, c-format
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"Сообщения об ошибках: <pgsql-bugs@postgresql.org>.\n"
+"Сообщения об ошибках: <bugs@greenplum.org>.\n"
 
 #~ msgid "Maximum number of function arguments: %u\n"
 #~ msgstr "Максимальное число аргументов функции:       %u\n"

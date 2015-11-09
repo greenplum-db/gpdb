@@ -43,8 +43,8 @@ msgstr ""
 "\n"
 
 #: pg_controldata.c:31
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "Hibajelzéseket a <pgsql-bugs@postgresql.org> címre.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "Hibajelzéseket a <bugs@greenplum.org> címre.\n"
 
 #: pg_controldata.c:41
 msgid "starting up"

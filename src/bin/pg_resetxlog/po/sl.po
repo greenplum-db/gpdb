@@ -352,8 +352,8 @@ msgstr "  --version       izpi¹i podatke o razlièici, nato konèaj program\n"
 #: pg_resetxlog.c:760
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"Napake sporoèajte na naslov <pgsql-bugs@postgresql.org>.\n"
+"Napake sporoèajte na naslov <bugs@greenplum.org>.\n"
 

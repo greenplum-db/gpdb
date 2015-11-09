@@ -9,7 +9,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PostgreSQL 8.4\n"
-"Report-Msgid-Bugs-To: pgsql-bugs@postgresql.org\n"
+"Report-Msgid-Bugs-To: bugs@greenplum.org\n"
 "POT-Creation-Date: 2010-07-01 15:17+0000\n"
 "PO-Revision-Date: 2010-07-02 21:48-0400\n"
 "Last-Translator: Peter Eisentraut <peter_e@gmx.net>\n"
@@ -780,8 +780,8 @@ msgstr ""
 
 #: help.c:151
 #, c-format
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "Rapportera fel till <pgsql-bugs@postgresql.org>.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "Rapportera fel till <bugs@greenplum.org>.\n"
 
 #: help.c:169
 #, c-format

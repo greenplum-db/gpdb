@@ -450,10 +450,10 @@ msgstr "  -U 用户名       注册到 PostgreSQL 服务器帐户的用户名\n"
 #, c-format
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"臭虫报告至 <pgsql-bugs@postgresql.org>.\n"
+"臭虫报告至 <bugs@greenplum.org>.\n"
 
 #: pg_ctl.c:1167
 #, c-format

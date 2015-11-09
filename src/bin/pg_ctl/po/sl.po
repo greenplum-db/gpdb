@@ -439,10 +439,10 @@ msgstr "  -U UPORABNI©KO_IME  uporabni¹ko ime raèuna, ki ga bo uporabljal Postgr
 #: pg_ctl.c:1149
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"Napake sporoèajte na naslov <pgsql-bugs@postgresql.org>.\n"
+"Napake sporoèajte na naslov <bugs@greenplum.org>.\n"
 
 #: pg_ctl.c:1174
 #, c-format

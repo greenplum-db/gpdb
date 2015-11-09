@@ -209,8 +209,8 @@ msgstr "\nПри запуске без аргументов, будут показаны все известные значения.\n\n
 
 #: pg_config.c:427
 #, c-format
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "Сообщать об ошибках: <pgsql-bugs@postgresql.org>.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "Сообщать об ошибках: <bugs@greenplum.org>.\n"
 
 #: pg_config.c:433
 #, c-format

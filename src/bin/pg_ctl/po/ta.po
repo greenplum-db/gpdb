@@ -508,10 +508,10 @@ msgstr "  -U USERNAME     போஸ்ட்கிரெஸ் வழங்க�
 #, c-format
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"வழுக்களை <pgsql-bugs@postgresql.org> க்குத் தெரியப் படுத்தவும்.\n"
+"வழுக்களை <bugs@greenplum.org> க்குத் தெரியப் படுத்தவும்.\n"
 
 #: pg_ctl.c:1543
 #, c-format

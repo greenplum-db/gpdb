@@ -196,8 +196,8 @@ msgstr ""
 
 #: pg_config.c:427
 #, c-format
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "오류보고: <pgsql-bugs@postgresql.org>.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "오류보고: <bugs@greenplum.org>.\n"
 
 #: pg_config.c:433
 #, c-format

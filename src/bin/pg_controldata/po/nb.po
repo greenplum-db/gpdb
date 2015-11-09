@@ -52,8 +52,8 @@ msgid ""
 msgstr "\nDersom ingen datakatalog er angitt så blir miljøvariabelen PGDATA benyttet.\n\n"
 
 #: pg_controldata.c:42
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "Rapporter bugs til <pgsql-bugs@postgresql.org>.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "Rapporter bugs til <bugs@greenplum.org>.\n"
 
 #: pg_controldata.c:52
 msgid "starting up"

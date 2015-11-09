@@ -333,8 +333,8 @@ msgstr ""
 
 #: pg_dump.c:711 pg_restore.c:402 pg_dumpall.c:371
 #, c-format
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "Chyby hlaste na adresu <pgsql-bugs@postgresql.org>.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "Chyby hlaste na adresu <bugs@greenplum.org>.\n"
 
 #: pg_dump.c:719 pg_backup_archiver.c:1209
 msgid "*** aborted because of error\n"

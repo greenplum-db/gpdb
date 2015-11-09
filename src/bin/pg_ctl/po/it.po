@@ -22,7 +22,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PostgreSQL 8.4\n"
-"Report-Msgid-Bugs-To: pgsql-bugs@postgresql.org\n"
+"Report-Msgid-Bugs-To: bugs@greenplum.org\n"
 "POT-Creation-Date: 2009-07-11 05:56+0000\n"
 "PO-Revision-Date: 2009-07-23 23:17:10+0200\n"
 "Last-Translator: Emanuele Zamprogno <ez@medicinaopen.info>\n"
@@ -543,10 +543,10 @@ msgstr "  -U USERNAME     user name dell'account con cui ci si registra sul serv
 #, c-format
 msgid ""
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>.\n"
+"Report bugs to <bugs@greenplum.org>.\n"
 msgstr ""
 "\n"
-"Segnalare bachi a <pgsql-bugs@postgresql.org>.\n"
+"Segnalare bachi a <bugs@greenplum.org>.\n"
 
 #: pg_ctl.c:1600
 #, c-format

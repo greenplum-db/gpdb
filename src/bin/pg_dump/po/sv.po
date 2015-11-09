@@ -9,7 +9,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PostgreSQL 8.4\n"
-"Report-Msgid-Bugs-To: pgsql-bugs@postgresql.org\n"
+"Report-Msgid-Bugs-To: bugs@greenplum.org\n"
 "POT-Creation-Date: 2009-06-13 17:14+0000\n"
 "PO-Revision-Date: 2009-06-13 23:05+0300\n"
 "Last-Translator: Peter Eisentraut <peter_e@gmx.net>\n"
@@ -362,8 +362,8 @@ msgstr ""
 
 #: pg_dump.c:838 pg_restore.c:449 pg_dumpall.c:566
 #, c-format
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "Rapportera fel till <pgsql-bugs@postgresql.org>.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "Rapportera fel till <bugs@greenplum.org>.\n"
 
 #: pg_dump.c:846 pg_backup_archiver.c:1361
 msgid "*** aborted because of error\n"

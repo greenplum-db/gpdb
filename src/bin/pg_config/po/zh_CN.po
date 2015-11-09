@@ -104,8 +104,8 @@ msgstr ""
 
 #: pg_config.c:51
 #, c-format
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "臭虫报告至 <pgsql-bugs@postgresql.org>.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "臭虫报告至 <bugs@greenplum.org>.\n"
 
 #: pg_config.c:57
 #, c-format

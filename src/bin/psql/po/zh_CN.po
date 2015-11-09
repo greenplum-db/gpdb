@@ -549,13 +549,13 @@ msgid ""
 "(for SQL commands) from within psql, or consult the psql section in\n"
 "the PostgreSQL documentation.\n"
 "\n"
-"Report bugs to <pgsql-bugs@postgresql.org>."
+"Report bugs to <bugs@greenplum.org>."
 msgstr ""
 "\n"
 "更多的相关信息, 在 psql 里键入 \"\\?\" (用于内部命令) 或者 \"\\help\"\n"
 "(用于 SQL 命令), 或者参考 PostgreSQL 文档里的 psql 节\n"
 "\n"
-"向 <pgsql-bugs@postgresql.org> 汇报臭虫."
+"向 <bugs@greenplum.org> 汇报臭虫."
 
 #: help.c:175
 #, c-format

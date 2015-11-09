@@ -276,8 +276,8 @@ msgstr ""
 "\n"
 
 #: pg_dump.c:708 pg_dumpall.c:371 pg_restore.c:402
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "回報錯誤至<pgsql-bugs@postgresql.org>。\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "回報錯誤至<bugs@greenplum.org>。\n"
 
 #: pg_backup_archiver.c:1219 pg_dump.c:716
 msgid "*** aborted because of error\n"

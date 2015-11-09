@@ -436,8 +436,8 @@ msgstr ""
 "\n"
 
 #: pg_ctl.c:1061
-msgid "Report bugs to <pgsql-bugs@postgresql.org>.\n"
-msgstr "Chyby hláste na adresu <pgsql-bugs@postgresql.org>.\n"
+msgid "Report bugs to <bugs@greenplum.org>.\n"
+msgstr "Chyby hláste na adresu <bugs@greenplum.org>.\n"
 
 #: pg_ctl.c:1086
 #, c-format
