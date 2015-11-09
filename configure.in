@@ -157,16 +157,24 @@ AC_MSG_RESULT([$enable_integer_datetimes])
 #
 # NLS
 #
-AC_MSG_CHECKING([whether NLS is wanted])
-PGAC_ARG_OPTARG(enable, nls,
-                [[  --enable-nls[=LANGUAGES]  enable Native Language Support]],
-                [],
-                [WANTED_LANGUAGES=$enableval],
-                [AC_DEFINE(ENABLE_NLS, 1,
-                           [Define to 1 if you want National Language Support. (--enable-nls)])])
-AC_MSG_RESULT([$enable_nls])
-AC_SUBST(enable_nls)
-AC_SUBST(WANTED_LANGUAGES)
+# NLS is not supported in Greenplum. There's no fundamental reason for it,
+# but no-one's kept the translations up-to-date. The .po files have been
+# removed from the repository, so it won't work if you just uncomment the
+# below block. If we wanted to enable NLS support, we should come up with a
+# scheme to use the upstream PostgreSQL .po files as is, to make merging
+# easier, and provide additional .po files for all the Greenplum-specific
+# strings.
+# to the users to let them build with very incomplete translations.
+#AC_MSG_CHECKING([whether NLS is wanted])
+#PGAC_ARG_OPTARG(enable, nls,
+#                [[  --enable-nls[=LANGUAGES]  enable Native Language Support]],
+#                [],
+#                [WANTED_LANGUAGES=$enableval],
+#                [AC_DEFINE(ENABLE_NLS, 1,
+#                           [Define to 1 if you want National Language Support. (--enable-nls)])])
+#AC_MSG_RESULT([$enable_nls])
+#AC_SUBST(enable_nls)
+#AC_SUBST(WANTED_LANGUAGES)
 
 #
 # Default port number (--with-pgport), default 5432

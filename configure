@@ -745,8 +745,6 @@ enable_debug
 enable_rpath
 enable_shared
 default_port
-WANTED_LANGUAGES
-enable_nls
 PORTNAME
 host_os
 host_vendor
@@ -805,7 +803,6 @@ with_includes
 with_libraries
 with_libs
 enable_integer_datetimes
-enable_nls
 with_pgport
 enable_shared
 enable_rpath
@@ -1475,7 +1472,6 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
 disable 64-bit integer date/time support
-  --enable-nls[=LANGUAGES]  enable Native Language Support
   --disable-shared        do not build shared libraries
   --disable-rpath         do not embed shared library search path in executables
   --disable-spinlocks     do not use spinlocks
@@ -3037,43 +3033,24 @@ $as_echo "$enable_integer_datetimes" >&6; }
 #
 # NLS
 #
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether NLS is wanted" >&5
-$as_echo_n "checking whether NLS is wanted... " >&6; }
-
-pgac_args="$pgac_args enable_nls"
-
-# Check whether --enable-nls was given.
-if test "${enable_nls+set}" = set; then :
-  enableval=$enable_nls;
-  case $enableval in
-    yes)
-      :
-      ;;
-    no)
-      :
-      ;;
-    *)
-      enable_nls=yes
-WANTED_LANGUAGES=$enableval
-      ;;
-  esac
-
-else
-  enable_nls=no
-fi
-
-
-
-if test "$enable_nls" = yes; then
-
-$as_echo "#define ENABLE_NLS 1" >>confdefs.h
-
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $enable_nls" >&5
-$as_echo "$enable_nls" >&6; }
-
-
+# NLS is not supported in Greenplum. There's no fundamental reason for it,
+# but no-one's kept the translations up-to-date. The .po files have been
+# removed from the repository, so it won't work if you just uncomment the
+# below block. If we wanted to enable NLS support, we should come up with a
+# scheme to use the upstream PostgreSQL .po files as is, to make merging
+# easier, and provide additional .po files for all the Greenplum-specific
+# strings.
+# to the users to let them build with very incomplete translations.
+#AC_MSG_CHECKING([whether NLS is wanted])
+#PGAC_ARG_OPTARG(enable, nls,
+#                [[  --enable-nls[=LANGUAGES]  enable Native Language Support]],
+#                [],
+#                [WANTED_LANGUAGES=$enableval],
+#                [AC_DEFINE(ENABLE_NLS, 1,
+#                           [Define to 1 if you want National Language Support. (--enable-nls)])])
+#AC_MSG_RESULT([$enable_nls])
+#AC_SUBST(enable_nls)
+#AC_SUBST(WANTED_LANGUAGES)
 
 #
 # Default port number (--with-pgport), default 5432
