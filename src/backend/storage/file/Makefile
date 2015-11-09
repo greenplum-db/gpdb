@@ -12,7 +12,7 @@ subdir = src/backend/storage/file
 top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 
-OBJS = fd.o buffile.o bfz.o pipe.o compress_nothing.o compress_zlib.o \
+OBJS = fd.o buffile.o bfz.o compress_nothing.o compress_zlib.o \
 	   gp_compress.o
 
 include $(top_srcdir)/src/backend/common.mk

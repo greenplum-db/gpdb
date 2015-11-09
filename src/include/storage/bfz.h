@@ -2,7 +2,6 @@
 #define BFZ_H
 
 #include <postgres.h>
-#include "pipe.h"
 
 #define BFZ_MODE_CLOSED		0
 #define BFZ_MODE_APPEND		1
