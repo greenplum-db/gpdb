@@ -1026,7 +1026,7 @@ SELECT relname, linenum, errmsg FROM gp_read_error_log('tableless_ext');
 (0 rows)
 
 select * from tableless_ext;
-NOTICE:  Found 3 data formatting errors (3 or more input rows). Rejected related input data.
+NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
  a | b 
 ---+---
  1 |  
@@ -1040,7 +1040,7 @@ SELECT gp_truncate_error_log('*');
 (1 row)
 
 select * from tableless_ext;
-NOTICE:  Found 3 data formatting errors (3 or more input rows). Rejected related input data.
+NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
  a | b 
 ---+---
  1 |  

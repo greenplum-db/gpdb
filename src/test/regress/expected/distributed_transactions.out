@@ -90,7 +90,7 @@ SET debug_dtm_action_target = "protocol";
 SET debug_dtm_action_protocol = "commit_prepared";
 COMMIT;
 WARNING:  The distributed transaction 'Commit Prepared' broadcast failed to one or more segments for gid = 1259106572-0000015090.
-NOTICE:  Releasing gangs for retry broadcast.
+NOTICE:  Releasing segworker group to retry broadcast.
 NOTICE:  Retry of the distributed transaction 'Commit Prepared' broadcast succeeded to the segments for gid = 1259106572-0000015090.
 SELECT * FROM distxact1_3;
  a  
@@ -131,7 +131,7 @@ SET debug_dtm_action_target = "protocol";
 SET debug_dtm_action_protocol = "abort_prepared";
 COMMIT;
 WARNING:  The distributed transaction 'Abort Prepared' broadcast failed to one or more segments for gid = 1259106572-0000015097.
-NOTICE:  Releasing gangs for retry broadcast.
+NOTICE:  Releasing segworker groups to retry broadcast.
 NOTICE:  Retry of the distributed transaction 'Abort Prepared' broadcast succeeded to the segments for gid = 1259106572-0000015097.
 ERROR:  Raise an error as directed by Debug_abort_after_distributed_prepared (xact.c:2419)
 SELECT * FROM distxact1_4;

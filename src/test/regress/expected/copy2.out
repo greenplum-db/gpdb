@@ -6,6 +6,7 @@ CREATE TABLE x (
 	e text
 ) WITH OIDS;
 NOTICE:  CREATE TABLE will create implicit sequence "x_a_seq" for serial column "x.a"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
 CREATE FUNCTION fn_x_before () RETURNS TRIGGER AS '
   BEGIN
 		NEW.e := ''before trigger fired''::text;
