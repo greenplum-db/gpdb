@@ -440,16 +440,16 @@ ERROR_CHK () {
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"	
 }
 
-ED_PG_CONF () {
+SED_PG_CONF () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-	ED_TMP_FILE=/tmp/ed_text.$$
+	SED_TMP_FILE=/tmp/sed_text.$$
 	APPEND=0
 	FILENAME=$1;shift
 	SEARCH_TXT=$1;shift
 	SUB_TXT="$1";shift
 	KEEP_PREV=$1;shift
-	ED_HOST=$1
-	if [ x"" == x"$ED_HOST" ]; then
+	SED_HOST=$1
+	if [ x"" == x"$SED_HOST" ]; then
 			if [ `$GREP -c "${SEARCH_TXT}[ ]*=" $FILENAME` -gt 1 ]; then
 				LOG_MSG "[INFO]:-Found more than 1 instance of $SEARCH_TXT in $FILENAME, will append" 1
 				APPEND=1
@@ -463,34 +463,11 @@ ED_PG_CONF () {
 					LOG_MSG "[INFO]:-Appended line $SUB_TXT to $FILENAME" 
 				fi
 			else
-if [ $KEEP_PREV -eq 0 ];then
-ed $FILENAME << _EOF_ > /dev/null 2>&1
-1
-/${SEARCH_TXT}
-.
-i
-$SUB_TXT #
-.
-.,.+1j
-.
-w
-q
-_EOF_
-else
-ed $FILENAME << _EOF_ > /dev/null 2>&1
-1
-/${SEARCH_TXT}
-.
-d
-.
--1
-a
-$SUB_TXT
-.
-w
-q
-_EOF_
-fi
+                if [ $KEEP_PREV -eq 0 ];then
+                    $SED -i'' "s/${SEARCH_TXT}/${SUB_TXT} #/g" $FILENAME
+                else
+                    $SED -i'' "s/^${SEARCH_TXT}.*/${SUB_TXT}/g" $FILENAME
+                fi
 				RETVAL=$?
 				if [ $RETVAL -ne 0 ]; then
 					LOG_MSG "[WARN]:-Failed to replace $SEARCH_TXT in $FILENAME"
@@ -498,53 +475,39 @@ fi
 				else
 					LOG_MSG "[INFO]:-Replaced line in $FILENAME"
 				fi
-		fi
+		    fi
 	else
-		if [ `$TRUSTED_SHELL $ED_HOST "$GREP -c \"${SEARCH_TXT}\" $FILENAME"` -gt 1 ]; then
-			LOG_MSG "[INFO]:-Found more than 1 instance of $SEARCH_TXT in $FILENAME on $ED_HOST, will append" 1
+		if [ `$TRUSTED_SHELL $SED_HOST "$GREP -c \"${SEARCH_TXT}\" $FILENAME"` -gt 1 ]; then
+			LOG_MSG "[INFO]:-Found more than 1 instance of $SEARCH_TXT in $FILENAME on $SED_HOST, will append" 1
 			APPEND=1
 		fi
-		if [ `$TRUSTED_SHELL $ED_HOST "$GREP -c \"${SEARCH_TXT}\" $FILENAME"` -eq 0 ] || [ $APPEND -eq 1 ]; then
-			$TRUSTED_SHELL $ED_HOST "$ECHO \"$SUB_TXT\" >> $FILENAME"
+		if [ `$TRUSTED_SHELL $SED_HOST "$GREP -c \"${SEARCH_TXT}\" $FILENAME"` -eq 0 ] || [ $APPEND -eq 1 ]; then
+			$TRUSTED_SHELL $SED_HOST "$ECHO \"$SUB_TXT\" >> $FILENAME"
 			RETVAL=$?
 			if [ $RETVAL -ne 0 ]; then
-				LOG_MSG "[WARN]:-Failed to append line $SUB_TXT to $FILENAME on $ED_HOST"
+				LOG_MSG "[WARN]:-Failed to append line $SUB_TXT to $FILENAME on $SED_HOST"
 				ERROR_EXIT=1
 			else
-				LOG_MSG "[INFO]:-Appended line $SUB_TXT to $FILENAME on $ED_HOST" 1
+				LOG_MSG "[INFO]:-Appended line $SUB_TXT to $FILENAME on $SED_HOST" 1
 			fi
 		else
-			$ECHO 1 > $ED_TMP_FILE
-			$ECHO "/${SEARCH_TXT}" >>  $ED_TMP_FILE
-			$ECHO . >>  $ED_TMP_FILE
 			if [ $KEEP_PREV -eq 0 ];then
-			$ECHO i >> $ED_TMP_FILE
-			$ECHO "$SUB_TXT #" >>  $ED_TMP_FILE
-			$ECHO . >>  $ED_TMP_FILE
-			$ECHO ".,.+1j" >> $ED_TMP_FILE
-			$ECHO . >>  $ED_TMP_FILE
+            $ECHO "s/${SEARCH_TXT}/${SUB_TXT} #/g" > $SED_TMP_FILE
 			else
-			$ECHO d >> $ED_TMP_FILE
-			$ECHO . >>  $ED_TMP_FILE
-			$ECHO -1 >> $ED_TMP_FILE
-			$ECHO a >> $ED_TMP_FILE
-			$ECHO "$SUB_TXT" >>  $ED_TMP_FILE
-			$ECHO . >>  $ED_TMP_FILE
+            $ECHO "s/^${SEARCH_TXT}.*/${SUB_TXT}/g" > $SED_TMP_FILE
 			fi
-			$ECHO w >>  $ED_TMP_FILE
-			$ECHO q >>  $ED_TMP_FILE
-			#$SCP $ED_TMP_FILE ${ED_HOST}:/tmp > /dev/null 2>&1
-			$CAT $ED_TMP_FILE | $TRUSTED_SHELL ${ED_HOST} $DD of=$ED_TMP_FILE > /dev/null 2>&1
-			$TRUSTED_SHELL $ED_HOST "ed $FILENAME < $ED_TMP_FILE" > /dev/null 2>&1
+			#$SCP $SED_TMP_FILE ${SED_HOST}:/tmp > /dev/null 2>&1
+			$CAT $SED_TMP_FILE | $TRUSTED_SHELL ${SED_HOST} $DD of=$SED_TMP_FILE > /dev/null 2>&1
+			$TRUSTED_SHELL $SED_HOST "sed -i'' -f $SED_TMP_FILE $FILENAME" > /dev/null 2>&1
 			RETVAL=$?
 			if [ $RETVAL -ne 0 ]; then
-				LOG_MSG "[WARN]:-Failed to insert $SUB_TXT in $FILENAME on $ED_HOST"
+				LOG_MSG "[WARN]:-Failed to insert $SUB_TXT in $FILENAME on $SED_HOST"
 				ERROR_EXIT=1
 			else
-				LOG_MSG "[INFO]:-Replaced line in $FILENAME on $ED_HOST"
+				LOG_MSG "[INFO]:-Replaced line in $FILENAME on $SED_HOST"
 			fi
-			$TRUSTED_SHELL $ED_HOST "$RM -f $ED_TMP_FILE"
-			$RM -f $ED_TMP_FILE
+			$TRUSTED_SHELL $SED_HOST "$RM -f $SED_TMP_FILE"
+			$RM -f $SED_TMP_FILE
 		fi
 	fi
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
