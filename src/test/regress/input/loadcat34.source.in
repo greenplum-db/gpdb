@@ -26,11 +26,6 @@ copy upg_catalog.pg_opclass from'@gpupgradedatadir@/upg2_pg_opclass_toadd33.data
 copy upg_catalog.pg_amop from'@gpupgradedatadir@/upg2_pg_amop_toadd33.data' null E'\\N' csv delimiter '|' header;
 copy upg_catalog.pg_amproc from '@gpupgradedatadir@/upg2_pg_amproc_toadd33.data' null E'\\N' csv delimiter '|' header;
 
--- plpgsql is now always installed by default.
---
--- We have special hooks around plpgsql to allow the create NOT to error even if the language already exists.
-CREATE LANGUAGE plpgsql;
-
 
 -- fix up pg_tablespace, this is a shared table so the data changes are handled
 -- in loadcat34_sh, but the schema changes are stored in pg_class and pg_attribute

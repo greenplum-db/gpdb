@@ -249,8 +249,6 @@ select a.c1 from t1234 a, t3456 b where a.c1 = b.c1 order by b.c1;
   4
 (4 rows)
 
-create language plpgsql;
-NOTICE:  language "plpgsql" already exists, skipping
 drop table if exists dtm_plpg_foo;
 NOTICE:  table "dtm_plpg_foo" does not exist, skipping
 drop table if exists dtm_plpg_bar;

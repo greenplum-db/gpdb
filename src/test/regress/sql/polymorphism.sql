@@ -398,8 +398,15 @@ end$$ language plpgsql;
 create function sql_if(bool, anyelement, anyelement) returns anyelement as $$
 select case when $1 then $2 else $3 end $$ language sql;
 
+-- create a table with two columns and insert all the rows into the same segment
+-- by having the same value for the distributed column for multiple rows.
+-- We need this to ensure that the NOTICE raised by bleat function gets returned
+-- in the same order.
+create table int4_tbl_new(f1 int, f2 int) distributed by(f1);
+insert into int4_tbl_new values(1, 123456), (1, -2147483647), (1, 0), (1, -123456), (1, 2147483647);
+
 -- Note this would fail with integer overflow, never mind wrong bleat() output,
 -- if the CASE expression were not successfully inlined
-select f1, sql_if(f1 > 0, bleat(f1), bleat(f1 + 1)) from int4_tbl;
+select f2, sql_if(f2 > 0, bleat(f2), bleat(f2 + 1)) from int4_tbl_new;
 
 select q2, sql_if(q2 > 0, q2, q2 + 1) from int8_tbl;

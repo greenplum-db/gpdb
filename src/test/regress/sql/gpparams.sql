@@ -409,7 +409,6 @@ ALTER TABLE ONLY module_job_parameters
 --
 -- Name: create_target_list(integer, integer); Type: FUNCTION; Schema: public; Owner: gpadmin
 --
-create language plpgsql;
 
 CREATE OR REPLACE FUNCTION create_target_list(integer, integer) RETURNS SETOF integer
     AS $_$

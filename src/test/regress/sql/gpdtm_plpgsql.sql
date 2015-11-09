@@ -143,8 +143,6 @@ ABORT;
 select a.c1 from t1234 a, t3456 b where a.c1 = b.c1 order by b.c1;
 
 
-create language plpgsql;
-
 drop table if exists dtm_plpg_foo;
 drop table if exists dtm_plpg_bar;
 drop table if exists dtm_plpg_baz;

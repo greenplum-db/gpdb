@@ -25,8 +25,8 @@ select * from nhtest a join nhtest b using (i);
 (2 rows)
 
 create temp table l(a int);
-NOTICE:  Using default RANDOM distribution since no distribution was specified.
-HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into l values (1), (1), (2);
 select * from l l1 join l l2 on l1.a = l2.a left join l l3 on l1.a = l3.a and l1.a = 2 order by 1,2,3;
  a | a | a 
@@ -147,8 +147,8 @@ select * from t1,t2 where t1.x = 100 and t1.x = t2.y and t1.x <= t2.x;
 create table hjn_test (i int, j int) distributed by (i,j);
 insert into hjn_test values(3, 4);
 create table int4_tbl (f1 int);
-NOTICE:  Using default RANDOM distribution since no distribution was specified.
-HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into int4_tbl values(123456), (-2147483647), (0), (-123456), (2147483647);
 select count(*) from hjn_test, (select 3 as bar) foo where hjn_test.i = least (foo.bar,4) and hjn_test.j = 4;
  count 

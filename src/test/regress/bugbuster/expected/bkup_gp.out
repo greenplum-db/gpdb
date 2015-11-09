@@ -6,6 +6,7 @@ DROP INDEX IF EXISTS idx_lineitem_keys;
 DROP INDEX IF EXISTS idx_linenumber;
 DROP TRIGGER IF EXISTS before_heap_ins_trig ON customer;
 DROP FUNCTION IF EXISTS trigger_func();
+NOTICE:  function trigger_func() does not exist, skipping
 \echo -- end_ignore
 -- end_ignore
 -- Create indexes on customer table

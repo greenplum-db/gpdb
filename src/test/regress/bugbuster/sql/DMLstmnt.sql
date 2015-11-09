@@ -118,7 +118,6 @@ DROP GROUP market;
 DROP USER jona11;
 DROP USER jona12;
 
-CREATE LANGUAGE plpgsql; 
 ALTER LANGUAGE plpgsql  RENAME TO plsamples;
 ALTER LANGUAGE plsamples  RENAME TO plpgsql;
 -- commentting the drop in the test case. Since jetpack is made implicit we cannot drop language plpgsql

@@ -9866,6 +9866,7 @@ NOTICE:  drop cascades to table orca.t_employee_1_prt_part1
 NOTICE:  drop cascades to constraint t_employee_1_prt_part1_check on table orca.t_employee_1_prt_part1
 NOTICE:  drop cascades to table orca.t_employee
 NOTICE:  drop cascades to operator class orca.employee_op_class for access method btree
+NOTICE:  drop cascades to operator family orca.employee_op_class for access method btree
 NOTICE:  drop cascades to function orca.emp_equal(orca.employee,orca.employee)
 NOTICE:  drop cascades to operator =(orca.employee,orca.employee)
 NOTICE:  drop cascades to type orca.employee

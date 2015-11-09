@@ -85,8 +85,6 @@ NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "module_job_pa
 --
 -- Name: create_target_list(integer, integer); Type: FUNCTION; Schema: public; Owner: gpadmin
 --
-create language plpgsql;
-NOTICE:  language "plpgsql" already exists, skipping
 CREATE OR REPLACE FUNCTION create_target_list(integer, integer) RETURNS SETOF integer
     AS $_$
 DECLARE 

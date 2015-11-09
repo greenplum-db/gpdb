@@ -57,13 +57,13 @@ COPY country (code, name, continent, region, surfacearea, indepyear, population,
 COPY countrylanguage (countrycode, "language", isofficial, percentage) FROM stdin;
 ALTER TABLE ONLY city
     ADD CONSTRAINT city_pkey PRIMARY KEY (id);
-psql:/home/balasr3/Perforce/cdbfast/private/suchitra/with_clause/world.sql:5384: NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "city_pkey" for table "city"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "city_pkey" for table "city"
 ALTER TABLE ONLY country
     ADD CONSTRAINT country_pkey PRIMARY KEY (code);
-psql:/home/balasr3/Perforce/cdbfast/private/suchitra/with_clause/world.sql:5387: NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "country_pkey" for table "country"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "country_pkey" for table "country"
 ALTER TABLE ONLY countrylanguage
     ADD CONSTRAINT countrylanguage_pkey PRIMARY KEY (countrycode, "language");
-psql:/home/balasr3/Perforce/cdbfast/private/suchitra/with_clause/world.sql:5390: NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "countrylanguage_pkey" for table "countrylanguage"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "countrylanguage_pkey" for table "countrylanguage"
 COMMIT;
 ANALYZE city;
 ANALYZE country;
