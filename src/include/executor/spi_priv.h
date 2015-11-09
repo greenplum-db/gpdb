@@ -47,8 +47,7 @@ typedef struct _SPI_plan
 	/* Argument types, if a prepared plan */
 	int			nargs;			/* number of plan arguments */
 	Oid		   *argtypes;		/* Argument types (NULL if nargs is 0) */
-	
-	bool		run_via_callback_to_qd;
+
 	unsigned long	use_count;
 } _SPI_plan;
 
