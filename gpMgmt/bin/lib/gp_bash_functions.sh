@@ -464,9 +464,9 @@ SED_PG_CONF () {
 				fi
 			else
                 if [ $KEEP_PREV -eq 0 ];then
-                    $SED -i'' "s/${SEARCH_TXT}/${SUB_TXT} #/g" $FILENAME
+                    $SED -i'.bak' -e "s/${SEARCH_TXT}/${SUB_TXT} #/g" $FILENAME
                 else
-                    $SED -i'' "s/^${SEARCH_TXT}.*/${SUB_TXT}/g" $FILENAME
+                    $SED -i'.bak' -e "s/^${SEARCH_TXT}.*/${SUB_TXT}/g" $FILENAME
                 fi
 				RETVAL=$?
 				if [ $RETVAL -ne 0 ]; then
@@ -498,7 +498,7 @@ SED_PG_CONF () {
 			fi
 			#$SCP $SED_TMP_FILE ${SED_HOST}:/tmp > /dev/null 2>&1
 			$CAT $SED_TMP_FILE | $TRUSTED_SHELL ${SED_HOST} $DD of=$SED_TMP_FILE > /dev/null 2>&1
-			$TRUSTED_SHELL $SED_HOST "sed -i'' -f $SED_TMP_FILE $FILENAME" > /dev/null 2>&1
+			$TRUSTED_SHELL $SED_HOST "sed -i'.bak' -f $SED_TMP_FILE $FILENAME" > /dev/null 2>&1
 			RETVAL=$?
 			if [ $RETVAL -ne 0 ]; then
 				LOG_MSG "[WARN]:-Failed to insert $SUB_TXT in $FILENAME on $SED_HOST"
