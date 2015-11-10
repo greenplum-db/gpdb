@@ -1520,8 +1520,6 @@ heap_endscan(HeapScanDesc scan)
 #endif   /* !defined(HEAPDEBUGALL) */
 
 
-
-
 HeapTuple
 heap_getnext(HeapScanDesc scan, ScanDirection direction)
 {

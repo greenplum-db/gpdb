@@ -18,7 +18,7 @@
 
 #include "fmgr.h"
 #include "access/tupdesc.h"
-#include "executor/execdesc.h"
+#include "executor/executor.h"
 #include "executor/tuptable.h"
 
 

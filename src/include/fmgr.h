@@ -21,19 +21,8 @@
 /* We don't want to include primnodes.h here, so make a stub reference */
 typedef struct Node *fmNodePtr;
 
-/* We are really stretching to avoid including nodes.h */
-typedef enum fmNodeTag
-{
-    fmT_ReturnSetInfo = 901
-} fmNodeTag;
-
 /* Likewise, avoid including stringinfo.h here */
 typedef struct StringInfoData *fmStringInfo;
-
-struct ExprContext;                     /* #include "nodes/execnodes.h" */
-struct tupleDesc;                       /* #include "access/tupdesc.h" */
-struct Tuplestorestate;                 /* #include "utils/tuplestore.h" */
-struct TuplestorePos;                   /* #include "utils/tuplestore.h" */
 
 
 /*
@@ -311,55 +300,6 @@ extern struct varlena *pg_detoast_datum_packed(struct varlena * datum);
 #define PG_RETURN_HEAPTUPLEHEADER(x)  PG_RETURN_POINTER(x)
 #define PG_RETURN_XID(x)	 return TransactionIdGetDatum(x)
 
-/*-------------------------------------------------------------------------
- *		Support for functions that might return sets (multiple rows)
- *
- * CDB: Moved these declarations to "fmgr.h" from "executor/execnodes.h"
- *-------------------------------------------------------------------------
- */
-
-/*
- * Set-result status returned by ExecEvalExpr()
- */
-typedef enum
-{
-	ExprSingleResult,			/* expression does not return a set */
-	ExprMultipleResult,			/* this result is an element of a set */
-	ExprEndResult				/* there are no more elements in the set */
-} ExprDoneCond;
-
-/*
- * Return modes for functions returning sets.  Note values must be chosen
- * as separate bits so that a bitmask can be formed to indicate supported
- * modes.
- */
-typedef enum
-{
-	SFRM_ValuePerCall = 0x01,	/* one value returned per call */
-	SFRM_Materialize = 0x02		/* result set instantiated in Tuplestore */
-} SetFunctionReturnMode;
-
-/*
- * When calling a function that might return a set (multiple rows),
- * a node of this type is passed as fcinfo->resultinfo to allow
- * return status to be passed back.  A function returning set should
- * raise an error if no such resultinfo is provided.
- */
-typedef struct ReturnSetInfo
-{
-	fmNodeTag           type;           /* enum NodeTag {T_ReturnSetInfo = 901} */
-	/* values set by caller: */
-	struct ExprContext *econtext;	    /* context function is being called in */
-	struct tupleDesc   *expectedDesc;	/* tuple descriptor expected by caller */
-	int			        allowedModes;	/* bitmask: return modes caller can handle */
-	/* result status from function (but pre-initialized by caller): */
-	SetFunctionReturnMode returnMode;	/* actual return mode */
-	ExprDoneCond        isDone;		    /* status for ValuePerCall mode */
-	/* fields filled by function in Materialize return mode: */
-	struct Tuplestorestate *setResult;  /* holds the complete returned tuple set */
-	struct tupleDesc   *setDesc;        /* actual descriptor for returned tuples */
-} ReturnSetInfo;
-
 
 /*-------------------------------------------------------------------------
  *		Support for detecting call convention of dynamically-loaded functions
@@ -632,5 +572,3 @@ extern void **find_rendezvous_variable(const char *varName);
 
 
 #endif   /* FMGR_H */
-
-
