@@ -15,19 +15,14 @@
 #ifndef EXECNODES_H
 #define EXECNODES_H
 
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
-
-#include "executor/tuptable.h"
+#include "access/relscan.h"
 #include "nodes/params.h"
 #include "nodes/plannodes.h"
 #include "nodes/relation.h"
+#include "nodes/tidbitmap.h"
 #include "utils/hsearch.h"
-#include "access/tupdesc.h"
-#include "utils/relcache.h"
 #include "gpmon/gpmon.h"                /* gpmon_packet_t */
-#include "utils/memaccounting.h"
+#include "utils/tuplestore.h"
 
 /*
  * partition selector ids start from 1. Sometimes we use 0 to initialize variables
@@ -38,16 +33,11 @@ struct CdbDispatchResults;              /* in cdbdispatchresult.h */
 struct CdbExplain_ShowStatCtx;          /* private, in "cdb/cdbexplain.c" */
 struct ChunkTransportState;             /* #include "cdb/cdbinterconnect.h" */
 struct StringInfoData;                  /* #include "lib/stringinfo.h" */
-struct Tuplestorestate;                 /* #include "utils/tuplestore.h" */
-struct TupleTableData;
 struct MemTupleBinding;
-struct SnapshotData;
 struct MemTupleData;
 struct HeapScanDescData;
 struct IndexScanDescData;
 struct FileScanDescData;
-struct TBMIterateResult;
-struct TriggerDesc;
 struct MirroredBufferPoolBulkLoadInfo;
 struct SliceTable;
 
@@ -223,7 +213,7 @@ typedef struct ReturnSetInfo
 	SetFunctionReturnMode returnMode;	/* actual return mode */
 	ExprDoneCond isDone;		/* status for ValuePerCall mode */
 	/* fields filled by function in Materialize return mode: */
-	struct Tuplestorestate *setResult; /* holds the complete returned tuple set */
+	Tuplestorestate *setResult; /* holds the complete returned tuple set */
 	TupleDesc	setDesc;		/* actual descriptor for returned tuples */
 } ReturnSetInfo;
 
@@ -347,7 +337,7 @@ typedef struct ResultRelInfo
 	int			ri_NumIndices;
 	RelationPtr ri_IndexRelationDescs;
 	IndexInfo **ri_IndexRelationInfo;
-	struct TriggerDesc *ri_TrigDesc;
+	TriggerDesc *ri_TrigDesc;
 	FmgrInfo   *ri_TrigFunctions;
 	struct Instrumentation *ri_TrigInstrument;
 	List	  **ri_ConstraintExprs;
@@ -534,8 +524,8 @@ typedef struct EState
 
 	/* Basic state for all query types: */
 	ScanDirection es_direction; /* current scan direction */
-	struct SnapshotData *es_snapshot;        /* time qual to use */
-	struct SnapshotData *es_crosscheck_snapshot; /* crosscheck time qual for RI */
+	Snapshot	es_snapshot;	/* time qual to use */
+	Snapshot	es_crosscheck_snapshot; /* crosscheck time qual for RI */
 	List	   *es_range_table; /* List of RangeTableEntrys */
 
 	/* Info about target table for insert/update/delete queries: */
@@ -561,13 +551,13 @@ typedef struct EState
 	struct MirroredBufferPoolBulkLoadInfo *es_into_relation_bulkloadinfo;
 
 	/* Parameter info: */
-	ParamListInfo es_param_list_info;        /* values of external params */
-	ParamExecData *es_param_exec_vals;        /* values of internal params */
+	ParamListInfo es_param_list_info;	/* values of external params */
+	ParamExecData *es_param_exec_vals;	/* values of internal params */
 
 	/* Other working state: */
 	MemoryContext es_query_cxt; /* per-query context in which EState lives */
 
-	struct TupleTableData        *es_tupleTable;        /* Array of TupleTableSlots */
+	TupleTable	es_tupleTable;	/* Array of TupleTableSlots */
 
 	uint64		es_processed;	/* # of tuples processed */
 	Oid			es_lastoid;		/* last oid processed (by INSERT) */
@@ -590,10 +580,10 @@ typedef struct EState
 
 	/* Below is to re-evaluate plan qual in READ COMMITTED mode */
 	PlannedStmt *es_plannedstmt;	/* link to top of plan tree */
-	struct evalPlanQual *es_evalPlanQual;                /* chain of PlanQual states */
-	bool           *es_evTupleNull; /* local array of EPQ status */
-	HeapTuple  *es_evTuple;                /* shared array of EPQ substitute tuples */
-	bool                es_useEvalPlan; /* evaluating EPQ tuples? */
+	struct evalPlanQual *es_evalPlanQual;		/* chain of PlanQual states */
+	bool	   *es_evTupleNull; /* local array of EPQ status */
+	HeapTuple  *es_evTuple;		/* shared array of EPQ substitute tuples */
+	bool		es_useEvalPlan; /* evaluating EPQ tuples? */
 
 	/* Additions for MPP plan slicing. */
 	struct SliceTable *es_sliceTable;
@@ -894,7 +884,7 @@ typedef struct FuncExprState
 	 * keep the tuplestore here and dole out the result rows one at a time.
 	 * The slot holds the row currently being returned.
 	 */
-	struct Tuplestorestate *funcResultStore;
+	Tuplestorestate *funcResultStore;
 	TupleTableSlot *funcResultSlot;
 
 	/*
@@ -1712,7 +1702,7 @@ typedef struct BitmapAppendOnlyScanState
 	struct AOCSFetchDescData *baos_currentAOCSFetchDesc;
 	List	   *baos_bitmapqualorig;
 	Node  		*baos_tbm;
-	struct TBMIterateResult *baos_tbmres;
+	TBMIterateResult *baos_tbmres;
 	bool		baos_gotpage;
 	int			baos_cindex;
 	bool		baos_lossy;
@@ -1740,7 +1730,7 @@ typedef struct BitmapTableScanState
 	void 						*scanDesc;
 	List           				*bitmapqualorig;
 	Node  						*tbm;
-	struct TBMIterateResult 	*tbmres;
+	TBMIterateResult 	*tbmres;
 	bool						isLossyBitmapPage;
 	bool						recheckTuples;
 	bool						needNewBitmapPage;
@@ -1803,7 +1793,7 @@ typedef struct FunctionScanState
 {
 	ScanState	ss;				/* its first field is NodeTag */
 	TupleDesc	tupdesc;
-	struct Tuplestorestate *tuplestorestate;
+	Tuplestorestate *tuplestorestate;
 	ExprState  *funcexpr;
 	bool		cdb_want_ctid;
 	ItemPointerData cdb_fake_ctid;
