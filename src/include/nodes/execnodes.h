@@ -185,15 +185,47 @@ typedef struct ExprContext
 	uint32      group_id;
 } ExprContext;
 
-/* ----------------
- *	 Support for functions that might return sets (multiple rows)
- *
- *      CDB: Moved these declarations into "fmgr.h" from "nodes/execnodes.h"...
- *          enum ExprDoneCond;
- *          enum SetFunctionReturnMode;
- *          struct ReturnSetInfo;
- * ----------------
+/*
+ * Set-result status returned by ExecEvalExpr()
  */
+typedef enum
+{
+	ExprSingleResult,			/* expression does not return a set */
+	ExprMultipleResult,			/* this result is an element of a set */
+	ExprEndResult				/* there are no more elements in the set */
+} ExprDoneCond;
+
+/*
+ * Return modes for functions returning sets.  Note values must be chosen
+ * as separate bits so that a bitmask can be formed to indicate supported
+ * modes.
+ */
+typedef enum
+{
+	SFRM_ValuePerCall = 0x01,	/* one value returned per call */
+	SFRM_Materialize = 0x02		/* result set instantiated in Tuplestore */
+} SetFunctionReturnMode;
+
+/*
+ * When calling a function that might return a set (multiple rows),
+ * a node of this type is passed as fcinfo->resultinfo to allow
+ * return status to be passed back.  A function returning set should
+ * raise an error if no such resultinfo is provided.
+ */
+typedef struct ReturnSetInfo
+{
+	NodeTag		type;
+	/* values set by caller: */
+	ExprContext *econtext;		/* context function is being called in */
+	TupleDesc	expectedDesc;	/* tuple descriptor expected by caller */
+	int			allowedModes;	/* bitmask: return modes caller can handle */
+	/* result status from function (but pre-initialized by caller): */
+	SetFunctionReturnMode returnMode;	/* actual return mode */
+	ExprDoneCond isDone;		/* status for ValuePerCall mode */
+	/* fields filled by function in Materialize return mode: */
+	struct Tuplestorestate *setResult; /* holds the complete returned tuple set */
+	TupleDesc	setDesc;		/* actual descriptor for returned tuples */
+} ReturnSetInfo;
 
 /* ----------------
  *		ProjectionInfo node information
