@@ -415,7 +415,10 @@ def truncate_restore_tables(restore_tables, master_port, dbname):
                 qry = 'Truncate %s' % t
                 execSQL(conn, qry)
             except Exception as e:
-                raise Exception("Could not truncate table %s.%s: %s" % (dbname, t, str(e).replace('\n', '')))
+                if 'relation "%s" does not exist' % t in str(e).replace('\n', ''):
+                    logger.warning("Skipping truncate of %s.%s because the relation does not exist." % (dbname, t))
+                else:
+                    raise Exception("Could not truncate table %s.%s: %s" % (dbname, t, str(e).replace('\n', '')))
 
         conn.commit()
     except Exception as e:
