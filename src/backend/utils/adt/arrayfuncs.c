@@ -4923,7 +4923,7 @@ array_fill_internal(ArrayType *dims, ArrayType *lbs,
 
 
 /*
- * UNNEST 
+ * UNNEST
  *    function name array_unnest() in Postgres.  Different in GP because we
  * added the function before we merged in the postgres function.
  */

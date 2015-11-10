@@ -459,7 +459,7 @@ RegisterSmgrInvalidation(RelFileNode rnode)
 {
 	AddSmgrInvalidationMessage(&transInvalInfo->CurrentCmdInvalidMsgs,
 							   rnode);
-							   
+
 	/*
 	 * As above, just in case there is not an associated catalog change.
 	 */

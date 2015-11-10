@@ -105,86 +105,88 @@ typedef uint32 AclMode;			/* a bitmask of privilege bits */
  */
 typedef struct Query
 {
-		NodeTag		type;
-		
-		CmdType		commandType;	/* select|insert|update|delete|utility */
-		
-		QuerySource querySource;	/* where did I come from? */
-		
-		bool		canSetTag;		/* do I set the command result tag? */
-		
-		Node	   *utilityStmt;	/* non-null if this is DECLARE CURSOR or a
+	NodeTag		type;
+
+	CmdType		commandType;	/* select|insert|update|delete|utility */
+
+	QuerySource querySource;	/* where did I come from? */
+
+	bool		canSetTag;		/* do I set the command result tag? */
+
+	Node	   *utilityStmt;	/* non-null if this is DECLARE CURSOR or a
 								 * non-optimizable statement */
-		
-		int			resultRelation; /* rtable index of target relation for
-									 * INSERT/UPDATE/DELETE; 0 for SELECT */
-		
-		IntoClause *intoClause;		/* target for SELECT INTO / CREATE TABLE AS */
-		
-		bool		hasAggs;		/* has aggregates in tlist or havingQual */
-		bool		hasWindFuncs;	/* has window function(s) in target list */
-		bool		hasSubLinks;	/* has subquery SubLink */
-		
-		List	   *rtable;			/* list of range table entries */
-		FromExpr   *jointree;		/* table join tree (FROM and WHERE clauses) */
-		
-		List	   *targetList;		/* target list (of TargetEntry) */
-		
-		List	   *returningList;	/* return-values list (of TargetEntry) */
-		
-		/*
-		 * A list of GroupClauses or GroupingClauses.  The order of
-		 * GroupClauses or GroupingClauses are based on input
-		 * queries. However, in each grouping set, all GroupClauses will
-		 * appear in front of GroupingClauses. See the following GROUP BY
-		 * clause:
-		 *
-		 *   GROUP BY ROLLUP(b,c),a, CUBE(e,d)
-		 *
-		 * the result list can be roughly represented as follows.
-		 *
-		 *    GroupClause(a) -->
-		 *    GroupingClause( ROLLUP, groupsets (GroupClause(b) --> GroupClause(c) ) ) -->
-		 *    GroupingClause( CUBE, groupsets (GroupClause(e) --> GroupClause(d) ) )
-		 */
-		List	   *groupClause;
-		
-		Node	   *havingQual;		/* qualifications applied to groups */
-		
-		List	   *windowClause;	/* defined window specifications */
-		
-		List	   *distinctClause; /* a list of SortGroupClause's */
-		
-		List	   *sortClause;		/* a list of SortGroupClause's */
 
-		List	   *scatterClause;  /* a list of tle's */
+	int			resultRelation; /* rtable index of target relation for
+								 * INSERT/UPDATE/DELETE; 0 for SELECT */
 
-		List	   *cteList; /* a list of CommonTableExprs in WITH clause */
-		bool 	   hasRecursive; /* Whether this query has a recursive WITH clause */
-		bool 	   hasModifyingCTE; /* has INSERT/UPDATE/DELETE in WITH clause */
+	IntoClause *intoClause;		/* target for SELECT INTO / CREATE TABLE AS */
 
-		Node	   *limitOffset;	/* # of result tuples to skip (int8 expr) */
-		Node	   *limitCount;		/* # of result tuples to return (int8 expr) */
-		
-		List	   *rowMarks;		/* a list of RowMarkClause's */
-		
-		Node	   *setOperations;	/* set-operation tree if this is top level of
-									 * a UNION/INTERSECT/EXCEPT query */
+	bool		hasAggs;		/* has aggregates in tlist or havingQual */
+	bool		hasWindFuncs;	/* has window function(s) in target list */
+	bool		hasSubLinks;	/* has subquery SubLink */
 
-	/* TODO Eventually we should remove these 4 members because they're not used here.
-	 *      Instead they're in PlannedStmt.  However, we need to read old formats, e.g.
-	 *      for catalog upgrade. So for now, it's easier to leave them here.
-	 */		
-		List	   *resultRelations;		/* Unused. Now in PlannedStmt. */
-		PartitionNode *result_partitions;	/* Unused. Now in PlannedStmt. */
-		List	   *result_aosegnos;		/* Unused. Now in PlannedStmt. */
-		List	   *returningLists; 		/* Unused. Now in PlannedStmt. */
-		
-		/* MPP: Used only on QD. Don't serialize.
-		 *      Holds the result distribution policy for SELECT ... INTO and
-		 *      set operations.
-		 */
-		struct GpPolicy  *intoPolicy;
+	List	   *rtable;			/* list of range table entries */
+	FromExpr   *jointree;		/* table join tree (FROM and WHERE clauses) */
+
+	List	   *targetList;		/* target list (of TargetEntry) */
+
+	List	   *returningList;	/* return-values list (of TargetEntry) */
+
+	/*
+	 * A list of GroupClauses or GroupingClauses.  The order of GroupClauses
+	 * or GroupingClauses are based on input queries. However, in each
+	 * grouping set, all GroupClauses will appear in front of GroupingClauses.
+	 * See the following GROUP BY clause:
+	 *
+	 * GROUP BY ROLLUP(b,c),a, CUBE(e,d)
+	 *
+	 * the result list can be roughly represented as follows.
+	 *
+	 * GroupClause(a) --> GroupingClause( ROLLUP, groupsets (GroupClause(b)
+	 * --> GroupClause(c) ) ) --> GroupingClause( CUBE, groupsets
+	 * (GroupClause(e) --> GroupClause(d) ) )
+	 */
+	List	   *groupClause;
+
+	Node	   *havingQual;		/* qualifications applied to groups */
+
+	List	   *windowClause;	/* defined window specifications */
+
+	List	   *distinctClause; /* a list of SortGroupClause's */
+
+	List	   *sortClause;		/* a list of SortGroupClause's */
+
+	List	   *scatterClause;	/* a list of tle's */
+
+	List	   *cteList;		/* a list of CommonTableExprs in WITH clause */
+	bool		hasRecursive;	/* Whether this query has a recursive WITH
+								 * clause */
+	bool		hasModifyingCTE;	/* has INSERT/UPDATE/DELETE in WITH clause */
+
+	Node	   *limitOffset;	/* # of result tuples to skip (int8 expr) */
+	Node	   *limitCount;		/* # of result tuples to return (int8 expr) */
+
+	List	   *rowMarks;		/* a list of RowMarkClause's */
+
+	Node	   *setOperations;	/* set-operation tree if this is top level of
+								 * a UNION/INTERSECT/EXCEPT query */
+
+	/*
+	 * TODO Eventually we should remove these 4 members because they're not
+	 * used here. Instead they're in PlannedStmt.  However, we need to read
+	 * old formats, e.g. for catalog upgrade. So for now, it's easier to leave
+	 * them here.
+	 */
+	List	   *resultRelations;	/* Unused. Now in PlannedStmt. */
+	PartitionNode *result_partitions;	/* Unused. Now in PlannedStmt. */
+	List	   *result_aosegnos;	/* Unused. Now in PlannedStmt. */
+	List	   *returningLists; /* Unused. Now in PlannedStmt. */
+
+	/*
+	 * MPP: Used only on QD. Don't serialize. Holds the result distribution
+	 * policy for SELECT ... INTO and set operations.
+	 */
+	struct GpPolicy *intoPolicy;
 } Query;
 
 /****************************************************************************
@@ -1114,12 +1116,12 @@ typedef struct AlterTableStmt
 	ObjectType	relkind;		/* type of object */
 
 	/* Workspace for use during AT processing/dispatch.  It might be better
-	 * to package there in a "context" node than to lay them out here. 
+	 * to package there in a "context" node than to lay them out here.
 	 */
 	List		 *oidmap;		/* For reindex_relation */
 	int			oidInfoCount;	/* Vector of TableOidInfo pointers: */
 	TableOidInfo *oidInfo;		/* MPP Allow for hierarchy of tables to alter */
-	
+
 } AlterTableStmt;
 
 typedef enum AlterTableType
@@ -1401,10 +1403,10 @@ typedef struct CreateStmt
 	char		relStorage;
 	struct GpPolicy  *policy;
 	Node       *postCreate;      /* CDB: parse and process after the CREATE */
-	List	   *deferredStmts;	/* CDB: Statements, e.g., partial indexes, that can't be 
+	List	   *deferredStmts;	/* CDB: Statements, e.g., partial indexes, that can't be
 								 * analyzed until after CREATE (until the target table
 								 * is created and visible). */
-	bool		is_part_child;	/* CDB: child table in a partition? Marked during analysis for 
+	bool		is_part_child;	/* CDB: child table in a partition? Marked during analysis for
 								 * interior or leaf parts of the new table.  Not marked for a
 								 * a partition root or ordinary table.
 								 */
@@ -1450,7 +1452,7 @@ typedef struct CreateExternalStmt
 								   data encoding */
 	List       *distributedBy;   /* what columns we distribute the data by */
 	struct GpPolicy  *policy;	/* used for writable tables */
-	
+
 } CreateExternalStmt;
 
 /* ----------------------
@@ -2022,7 +2024,7 @@ typedef struct CreateOpClassItem
 
 /* ----------------------
  *		DROP Statement, applies to:
- *        Table, External Table, Sequence, View, Index, Type, Domain, 
+ *        Table, External Table, Sequence, View, Index, Type, Domain,
  *        Conversion, Schema, Filespace
  * ----------------------
  */
@@ -2501,7 +2503,7 @@ typedef struct VacuumStmt
 
 	/*
 	 * AO segment file num to compact (integer).
-	 */ 
+	 */
 	List *appendonly_compaction_segno;
 
 	/*

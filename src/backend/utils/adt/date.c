@@ -881,7 +881,6 @@ text_date(PG_FUNCTION_ARGS)
 				 errmsg("invalid input syntax for type date: \"%s\"",
 						DatumGetCString(DirectFunctionCall1(textout,
 													PointerGetDatum(str))))));
-	
 	sp = VARDATA(str);
 	dp = dstr;
 	for (i = 0; i < (VARSIZE(str) - VARHDRSZ); i++)

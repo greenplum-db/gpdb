@@ -1422,6 +1422,7 @@ convert_priv_string(text *priv_type_text)
 	return ACL_NO_RIGHTS;		/* keep compiler quiet */
 }
 
+
 /*
  * convert_any_priv_string: recognize privilege strings for has_foo_privilege
  *
@@ -1490,7 +1491,6 @@ convert_any_priv_string(text *priv_type_text,
  *		return NULL if the OID doesn't exist (rather than failing, as
  *		they did before Postgres 8.4).
  */
-
 
 /*
  * has_table_privilege_name_name
