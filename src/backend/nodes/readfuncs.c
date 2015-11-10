@@ -2985,39 +2985,6 @@ _readAlterTypeStmt(void)
 	READ_DONE();
 }
 
-static TupleDescNode *
-_readTupleDescNode(const char **str)
-{
-	READ_LOCALS(TupleDescNode);
-	READ_INT_FIELD(natts);
-
-	local_node->tuple = CreateTemplateTupleDesc(local_node->natts, false);
-
-	READ_INT_FIELD(tuple->natts);
-	if (local_node->tuple->natts > 0)
-	{
-		int i = 0;
-		for (; i < local_node->tuple->natts; i++)
-		{
-			memcpy(local_node->tuple->attrs[i], *str, ATTRIBUTE_FIXED_PART_SIZE);
-			(*str)+=ATTRIBUTE_FIXED_PART_SIZE;
-		}
-	}
-
-	READ_OID_FIELD(tuple->tdtypeid);
-	READ_INT_FIELD(tuple->tdtypmod);
-	READ_INT_FIELD(tuple->tdqdtypmod);
-	READ_BOOL_FIELD(tuple->tdhasoid);
-	READ_INT_FIELD(tuple->tdrefcount);
-
-	// Transient type don't have constraint.
-	local_node->tuple->constr = NULL;
-
-	Assert(local_node->tuple->tdtypeid == RECORDOID);
-
-	READ_DONE();
-}
-
 /*
  * Greenplum Database developers added code to improve performance over the
  * linear searching that existed in the postgres version of
@@ -3185,7 +3152,6 @@ static ParseNodeInfo infoAr[] =
 	{"TABLEVALUEEXPR", (ReadFn)_readTableValueExpr},
 	{"TARGETENTRY", (ReadFn)_readTargetEntry},
 	{"TRUNCATESTMT", (ReadFn)_readTruncateStmt},
-	{"TUPLEDESCNODE", (ReadFn)_readTupleDescNode},
 	{"TYPECAST", (ReadFn)_readTypeCast},
 	{"TYPENAME", (ReadFn)_readTypeName},
 	{"VACUUMSTMT", (ReadFn)_readVacuumStmt},

@@ -372,46 +372,6 @@ _outJoinPlanInfo(StringInfo str, Join *node)
 }
 
 static void
-_outPlannedStmt(StringInfo str, PlannedStmt *node)
-{
-	WRITE_NODE_TYPE("PLANNEDSTMT");
-	
-	WRITE_ENUM_FIELD(commandType, CmdType);
-	WRITE_ENUM_FIELD(planGen, PlanGenerator);
-	WRITE_BOOL_FIELD(canSetTag);
-	WRITE_BOOL_FIELD(transientPlan);
-	
-	WRITE_NODE_FIELD(planTree);
-	
-	WRITE_NODE_FIELD(rtable);
-	
-	WRITE_NODE_FIELD(resultRelations);
-	WRITE_NODE_FIELD(utilityStmt);
-	WRITE_NODE_FIELD(intoClause);
-	WRITE_NODE_FIELD(subplans);
-	WRITE_NODE_FIELD(rewindPlanIDs);
-	WRITE_NODE_FIELD(returningLists);
-	
-	WRITE_NODE_FIELD(result_partitions);
-	WRITE_NODE_FIELD(result_aosegnos);
-	WRITE_NODE_FIELD(queryPartOids);
-	WRITE_NODE_FIELD(queryPartsMetadata);
-	WRITE_NODE_FIELD(numSelectorsPerScanId);
-	WRITE_NODE_FIELD(rowMarks);
-	WRITE_NODE_FIELD(relationOids);
-	WRITE_NODE_FIELD(invalItems);
-	WRITE_INT_FIELD(nCrossLevelParams);
-	WRITE_INT_FIELD(nMotionNodes);
-	WRITE_INT_FIELD(nInitPlans);
-	
-	/* Don't serialize policy */
-	WRITE_NODE_FIELD(sliceTable);
-	
-	WRITE_UINT64_FIELD(query_mem);
-	WRITE_NODE_FIELD(transientTypeRecords);
-}
-
-static void
 _outPlan(StringInfo str, Plan *node)
 {
 	WRITE_NODE_TYPE("PLAN");
@@ -4046,28 +4006,6 @@ _outAlterTypeStmt(StringInfo str, AlterTypeStmt *node)
 	WRITE_NODE_FIELD(encoding);
 }
 
-static void
-_outTupleDescNode(StringInfo str, TupleDescNode *node)
-{
-	Assert(node->tuple->tdtypeid == RECORDOID);
-
-	WRITE_NODE_TYPE("TUPLEDESCNODE");
-	WRITE_INT_FIELD(natts);
-	WRITE_INT_FIELD(tuple->natts);
-
-	int i = 0;
-	for (; i < node->tuple->natts; i++)
-		appendBinaryStringInfo(str, node->tuple->attrs[i], ATTRIBUTE_FIXED_PART_SIZE);
-
-	Assert(node->tuple->constr == NULL);
-
-	WRITE_OID_FIELD(tuple->tdtypeid);
-	WRITE_INT_FIELD(tuple->tdtypmod);
-	WRITE_INT_FIELD(tuple->tdqdtypmod);
-	WRITE_BOOL_FIELD(tuple->tdhasoid);
-	WRITE_INT_FIELD(tuple->tdrefcount);
-}
-
 /*
  * _outNode -
  *	  converts a Node into ascii string and append it to 'str'
@@ -4092,9 +4030,6 @@ _outNode(StringInfo str, void *obj)
 		appendStringInfoChar(str, '{');
 		switch (nodeTag(obj))
 		{
-			case T_PlannedStmt:
-				_outPlannedStmt(str,obj);
-				break;
 			case T_Plan:
 				_outPlan(str, obj);
 				break;
@@ -4893,9 +4828,6 @@ _outNode(StringInfo str, void *obj)
 			case T_AlterTypeStmt:
 				_outAlterTypeStmt(str, obj);
 				break;
-            case T_TupleDescNode:
-                _outTupleDescNode(str, obj);
-                break;
 
 			default:
 

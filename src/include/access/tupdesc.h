@@ -79,6 +79,15 @@ typedef struct tupleDesc
 	int			tdrefcount;		/* reference count, or -1 if not counting */
 }	*TupleDesc;
 
+/*
+ * When dispatching a planned statement from QD to QEs, we need to be able
+ * to transmit TupleDescs. TupleDesc doesn't have the Node header, so for
+ * convenience of the read and out functions, we wrap them in TupleDescNode
+ * structs, which do.
+ *
+ * These are never serialized on disk, only in the read/outfast protocol,
+ * as part of PlannedStmts.
+ */
 typedef struct tupleDescNode
 {
 	NodeTag		type;
