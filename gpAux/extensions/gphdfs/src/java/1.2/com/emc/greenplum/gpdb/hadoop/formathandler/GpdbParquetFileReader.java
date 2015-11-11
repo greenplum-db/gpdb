@@ -52,8 +52,6 @@ import com.emc.greenplum.gpdb.hdfsconnector.ColumnSchema;
 public class GpdbParquetFileReader {
 	private static final Object HIVE_SCHEMA_NAME = "hive_schema";
 
-	private static final String DECIMAL_NULL_STRING = "NaN";
-
 	boolean DATA_TIME_ANNOTATION_ON = false;
 
 	Configuration conf;
@@ -144,11 +142,7 @@ public class GpdbParquetFileReader {
 					List<Type> types = schema.getFields();
 					for (int column = 0; column < types.size(); column++) {
 						if (g.getFieldRepetitionCount(column) == 0) {
-							if ( isSingleByteDecimal(types.get(column)) ) {
-								writable.setString(column, DECIMAL_NULL_STRING);
-							}else {
-								writable.setNull(column);
-							}
+							writable.setNull(column);
 						}else {
 							generateRecord(column, schema.getFields().get(column), g, writable);
 						}
@@ -162,13 +156,6 @@ public class GpdbParquetFileReader {
 		}
 
 		dos.close();
-	}
-
-	private boolean isSingleByteDecimal(Type type) {
-		return type.getOriginalType() == OriginalType.DECIMAL &&
-				type.getRepetition() != Repetition.REPEATED &&
-				(type.asPrimitiveType().getPrimitiveTypeName() == PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY
-				|| type.asPrimitiveType().getPrimitiveTypeName() == PrimitiveTypeName.BINARY);
 	}
 
 	private boolean checkWhetherHive(MessageType schema) {
