@@ -50,7 +50,7 @@ import com.emc.greenplum.gpdb.hadoop.io.GPDBWritable;
 import com.emc.greenplum.gpdb.hdfsconnector.ColumnSchema;
 
 public class GpdbParquetFileReader {
-	private static final Object HIVE_SCHEMA_NAME = "hive_schema";
+	private static final String HIVE_SCHEMA_NAME = "hive_schema";
 
 	boolean DATA_TIME_ANNOTATION_ON = false;
 
