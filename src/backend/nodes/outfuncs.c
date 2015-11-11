@@ -38,6 +38,15 @@
 #include "utils/workfile_mgr.h"
 #include "parser/parsetree.h"
 
+
+/*
+ * outfuncs.c is compiled normally into outfuncs.o, but it's also
+ * #included from outfast.c. When #included, outfast.c defines
+ * COMPILING_BINARY_FUNCS, and provides replacements WRITE_* macros. See
+ * comments at top of readfast.c.
+ */
+#ifndef COMPILING_BINARY_FUNCS
+
 /*
  * Macros to simplify output of different kinds of fields.	Use these
  * wherever possible to reduce the chance for silly typos.	Note that these
@@ -129,6 +138,7 @@
 #define booltostr(x)  ((x) ? "true" : "false")
 
 static void _outNode(StringInfo str, void *obj);
+
 
 /* When serializing a plan for workfile caching, we want to leave out
  * all variable fields by setting this to false */
@@ -270,11 +280,16 @@ _outDatum(StringInfo str, Datum value, int typlen, bool typbyval)
 	}
 }
 
+#endif /* COMPILING_BINARY_FUNCS */
+
+static void _outPlanInfo(StringInfo str, Plan *node);
+static void outLogicalIndexInfo(StringInfo str, LogicalIndexInfo *node);
 
 /*
  *	Stuff from plannodes.h
  */
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outPlannedStmt(StringInfo str, PlannedStmt *node)
 {
@@ -311,14 +326,15 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_UINT64_FIELD(query_mem);
 	WRITE_NODE_FIELD(transientTypeRecords);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * print the basic stuff of all nodes that inherit from Plan
  */
 static void
 _outPlanInfo(StringInfo str, Plan *node)
 {
-
 	if (print_variable_fields)
 	{
 		WRITE_INT_FIELD(plan_node_id);
@@ -350,12 +366,13 @@ _outPlanInfo(StringInfo str, Plan *node)
 	WRITE_NODE_FIELD(lefttree);
 	WRITE_NODE_FIELD(righttree);
 	WRITE_NODE_FIELD(initPlan);
-	
+
 	if (print_variable_fields)
 	{
 		WRITE_UINT64_FIELD(operatorMemKB);
 	}
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * print the basic stuff of all nodes that inherit from Scan
@@ -547,6 +564,7 @@ _outExternalScan(StringInfo str, ExternalScan *node)
 	WRITE_INT_FIELD(scancounter);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 outLogicalIndexInfo(StringInfo str, LogicalIndexInfo *node)
 {
@@ -564,6 +582,7 @@ outLogicalIndexInfo(StringInfo str, LogicalIndexInfo *node)
 	WRITE_NODE_FIELD(partCons);
 	WRITE_NODE_FIELD(defaultLevels);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 outIndexScanFields(StringInfo str, IndexScan *node)
@@ -653,6 +672,7 @@ _outTidScan(StringInfo str, TidScan *node)
 	WRITE_NODE_FIELD(tidquals);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outSubqueryScan(StringInfo str, SubqueryScan *node)
 {
@@ -663,6 +683,7 @@ _outSubqueryScan(StringInfo str, SubqueryScan *node)
 	WRITE_NODE_FIELD(subplan);
 	WRITE_NODE_FIELD(subrtable); /* debugging convenience */
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outFunctionScan(StringInfo str, FunctionScan *node)
@@ -722,6 +743,7 @@ _outHashJoin(StringInfo str, HashJoin *node)
 	WRITE_NODE_FIELD(hashqualclauses);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outAgg(StringInfo str, Agg *node)
 {
@@ -751,7 +773,9 @@ _outAgg(StringInfo str, Agg *node)
 	WRITE_BOOL_FIELD(lastAgg);
 	WRITE_BOOL_FIELD(streaming);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outWindowKey(StringInfo str, WindowKey *node)
 {
@@ -770,8 +794,9 @@ _outWindowKey(StringInfo str, WindowKey *node)
 
 	WRITE_NODE_FIELD(frame);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
-
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outWindow(StringInfo str, Window *node)
 {
@@ -789,6 +814,7 @@ _outWindow(StringInfo str, Window *node)
 
 	WRITE_NODE_FIELD(windowKeys);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outTableFunctionScan(StringInfo str, TableFunctionScan *node)
@@ -826,6 +852,7 @@ _outShareInputScan(StringInfo str, ShareInputScan *node)
 	_outPlanInfo(str, (Plan *) node);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outSort(StringInfo str, Sort *node)
 {
@@ -856,7 +883,9 @@ _outSort(StringInfo str, Sort *node)
 	WRITE_INT_FIELD(nsharer);
 	WRITE_INT_FIELD(nsharer_xslice);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outUnique(StringInfo str, Unique *node)
 {
@@ -872,7 +901,9 @@ _outUnique(StringInfo str, Unique *node)
 	for (i = 0; i < node->numCols; i++)
 		appendStringInfo(str, " %d", node->uniqColIdx[i]);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outSetOp(StringInfo str, SetOp *node)
 {
@@ -891,6 +922,7 @@ _outSetOp(StringInfo str, SetOp *node)
 
 	WRITE_INT_FIELD(flagColIdx);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outLimit(StringInfo str, Limit *node)
@@ -912,6 +944,7 @@ _outHash(StringInfo str, Hash *node)
     WRITE_BOOL_FIELD(rescannable);          /*CDB*/
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outMotion(StringInfo str, Motion *node)
 {
@@ -945,6 +978,7 @@ _outMotion(StringInfo str, Motion *node)
 
 	_outPlanInfo(str, (Plan *) node);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _outDML
@@ -1112,6 +1146,7 @@ _outVar(StringInfo str, Var *node)
 	WRITE_INT_FIELD(varoattno);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outConst(StringInfo str, Const *node)
 {
@@ -1128,6 +1163,7 @@ _outConst(StringInfo str, Const *node)
 	else
 		_outDatum(str, node->constvalue, node->constlen, node->constbyval);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outParam(StringInfo str, Param *node)
@@ -1139,6 +1175,7 @@ _outParam(StringInfo str, Param *node)
 	WRITE_OID_FIELD(paramtype);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outAggref(StringInfo str, Aggref *node)
 {
@@ -1167,6 +1204,7 @@ _outAggref(StringInfo str, Aggref *node)
     if (node->aggorder != NULL)
         WRITE_NODE_FIELD(aggorder);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outAggOrder(StringInfo str, AggOrder *node)
@@ -1208,6 +1246,7 @@ _outArrayRef(StringInfo str, ArrayRef *node)
 	WRITE_NODE_FIELD(refassgnexpr);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outFuncExpr(StringInfo str, FuncExpr *node)
 {
@@ -1224,6 +1263,7 @@ _outFuncExpr(StringInfo str, FuncExpr *node)
 		WRITE_BOOL_FIELD(is_tablefunc);  /* GPDB */
 	}
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outOpExpr(StringInfo str, OpExpr *node)
@@ -1260,6 +1300,7 @@ _outScalarArrayOpExpr(StringInfo str, ScalarArrayOpExpr *node)
 	WRITE_NODE_FIELD(args);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outBoolExpr(StringInfo str, BoolExpr *node)
 {
@@ -1285,7 +1326,9 @@ _outBoolExpr(StringInfo str, BoolExpr *node)
 
 	WRITE_NODE_FIELD(args);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outSubLink(StringInfo str, SubLink *node)
 {
@@ -1302,6 +1345,7 @@ _outSubLink(StringInfo str, SubLink *node)
      */
 	WRITE_NODE_FIELD(subselect);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outSubPlan(StringInfo str, SubPlan *node)
@@ -1508,6 +1552,7 @@ _outSetToDefault(StringInfo str, SetToDefault *node)
 	WRITE_INT_FIELD(typeMod);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outCurrentOfExpr(StringInfo str, CurrentOfExpr *node)
 {
@@ -1519,6 +1564,7 @@ _outCurrentOfExpr(StringInfo str, CurrentOfExpr *node)
 
 	/* some attributes omitted as they're bound only just before executor dispatch */
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outTargetEntry(StringInfo str, TargetEntry *node)
@@ -1542,6 +1588,7 @@ _outRangeTblRef(StringInfo str, RangeTblRef *node)
 	WRITE_INT_FIELD(rtindex);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outJoinExpr(StringInfo str, JoinExpr *node)
 {
@@ -1558,6 +1605,7 @@ _outJoinExpr(StringInfo str, JoinExpr *node)
 	WRITE_NODE_FIELD(alias);
 	WRITE_INT_FIELD(rtindex);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outFromExpr(StringInfo str, FromExpr *node)
@@ -1568,6 +1616,7 @@ _outFromExpr(StringInfo str, FromExpr *node)
 	WRITE_NODE_FIELD(quals);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outFlow(StringInfo str, Flow *node)
 {
@@ -1605,6 +1654,7 @@ _outFlow(StringInfo str, Flow *node)
 
 	WRITE_NODE_FIELD(flow_before_req_move);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*****************************************************************************
  *
@@ -1768,7 +1818,6 @@ _outAOCSPath(StringInfo str, AOCSPath *node)
 	_outPathInfo(str, (Path *) node);
 }
 
-
 static void
 _outResultPath(StringInfo str, ResultPath *node)
 {
@@ -1845,6 +1894,7 @@ _outCdbMotionPath(StringInfo str, CdbMotionPath *node)
     WRITE_NODE_FIELD(subpath);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outPlannerGlobal(StringInfo str, PlannerGlobal *node)
 {
@@ -1867,6 +1917,7 @@ _outPlannerGlobal(StringInfo str, PlannerGlobal *node)
 	WRITE_NODE_FIELD(share.planNodes);
 	WRITE_INT_FIELD(share.nextPlanId);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outPlannerInfo(StringInfo str, PlannerInfo *node)
@@ -1935,6 +1986,7 @@ _outRelOptInfo(StringInfo str, RelOptInfo *node)
 	/* WRITE_NODE_FIELD(index_inner_paths);     */
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outIndexOptInfo(StringInfo str, IndexOptInfo *node)
 {
@@ -1970,7 +2022,9 @@ _outIndexOptInfo(StringInfo str, IndexOptInfo *node)
 	WRITE_BOOL_FIELD(amoptionalkey);
 	WRITE_BOOL_FIELD(cdb_default_stats_used);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outCdbRelColumnInfo(StringInfo str, CdbRelColumnInfo *node)
 {
@@ -1983,6 +2037,7 @@ _outCdbRelColumnInfo(StringInfo str, CdbRelColumnInfo *node)
     WRITE_STRING_FIELD(colname);
 	WRITE_NODE_FIELD(defexpr);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outCdbRelDedupInfo(StringInfo str, CdbRelDedupInfo *node)
@@ -2043,6 +2098,7 @@ _outInnerIndexscanInfo(StringInfo str, InnerIndexscanInfo *node)
 	WRITE_NODE_FIELD(cheapest_total_innerpath);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outOuterJoinInfo(StringInfo str, OuterJoinInfo *node)
 {
@@ -2058,6 +2114,7 @@ _outOuterJoinInfo(StringInfo str, OuterJoinInfo *node)
     WRITE_NODE_FIELD(left_equi_key_list);
     WRITE_NODE_FIELD(right_equi_key_list);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outInClauseInfo(StringInfo str, InClauseInfo *node)
@@ -2089,6 +2146,7 @@ _outAppendRelInfo(StringInfo str, AppendRelInfo *node)
  *
  *****************************************************************************/
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outCreateStmt(StringInfo str, CreateStmt *node)
 {
@@ -2131,6 +2189,7 @@ _outCreateStmt(StringInfo str, CreateStmt *node)
 	WRITE_BOOL_FIELD(buildAoBlkdir);
 	WRITE_NODE_FIELD(attr_encodings);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outColumnReferenceStorageDirective(StringInfo str, ColumnReferenceStorageDirective *node)
@@ -2259,8 +2318,6 @@ _outDropStmt(StringInfo str, DropStmt *node)
 	WRITE_ENUM_FIELD(behavior, DropBehavior);
 	WRITE_BOOL_FIELD(missing_ok);
 	WRITE_BOOL_FIELD(bAllowPartn);
-
-
 }
 
 static void
@@ -2273,7 +2330,6 @@ _outDropPropertyStmt(StringInfo str, DropPropertyStmt *node)
 	WRITE_ENUM_FIELD(removeType, ObjectType);
 	WRITE_ENUM_FIELD(behavior, DropBehavior);
 	WRITE_BOOL_FIELD(missing_ok);
-
 }
 
 static void
@@ -2362,6 +2418,7 @@ _outInheritPartitionCmd(StringInfo str, InheritPartitionCmd *node)
 	WRITE_NODE_FIELD(parent);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outAlterPartitionCmd(StringInfo str, AlterPartitionCmd *node)
 {
@@ -2371,6 +2428,7 @@ _outAlterPartitionCmd(StringInfo str, AlterPartitionCmd *node)
 	WRITE_NODE_FIELD(arg1);
 	WRITE_NODE_FIELD(arg2);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outAlterPartitionId(StringInfo str, AlterPartitionId *node)
@@ -2390,7 +2448,6 @@ _outCreateRoleStmt(StringInfo str, CreateRoleStmt *node)
 	WRITE_STRING_FIELD(role);
 	WRITE_NODE_FIELD(options);
 	WRITE_OID_FIELD(roleOid);
-
 }
 
 static void
@@ -2452,7 +2509,6 @@ _outAlterOwnerStmt(StringInfo str, AlterOwnerStmt *node)
 	WRITE_NODE_FIELD(objarg);
 	WRITE_STRING_FIELD(addname);
 	WRITE_STRING_FIELD(newowner);
-
 }
 
 
@@ -2469,7 +2525,6 @@ _outRenameStmt(StringInfo str, RenameStmt *node)
 	WRITE_STRING_FIELD(newname);
 	WRITE_ENUM_FIELD(renameType,ObjectType);
 	WRITE_BOOL_FIELD(bAllowPartn);
-
 }
 
 static void
@@ -2544,6 +2599,7 @@ _outDropdbStmt(StringInfo str, DropdbStmt *node)
 	WRITE_BOOL_FIELD(missing_ok);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outCreateDomainStmt(StringInfo str, CreateDomainStmt *node)
 {
@@ -2553,7 +2609,9 @@ _outCreateDomainStmt(StringInfo str, CreateDomainStmt *node)
 	WRITE_NODE_FIELD(constraints);
 	WRITE_OID_FIELD(domainOid);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outAlterDomainStmt(StringInfo str, AlterDomainStmt *node)
 {
@@ -2564,6 +2622,7 @@ _outAlterDomainStmt(StringInfo str, AlterDomainStmt *node)
 	WRITE_NODE_FIELD(def);
 	WRITE_ENUM_FIELD(behavior, DropBehavior);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outCreateFdwStmt(StringInfo str, CreateFdwStmt *node)
@@ -2671,7 +2730,6 @@ _outFunctionParameter(StringInfo str, FunctionParameter *node)
 	WRITE_STRING_FIELD(name);
 	WRITE_NODE_FIELD(argType);
 	WRITE_ENUM_FIELD(mode, FunctionParameterMode);
-
 }
 
 static void
@@ -2708,6 +2766,7 @@ _outPartitionBy(StringInfo str, PartitionBy *node)
 	WRITE_INT_FIELD(location);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outPartitionSpec(StringInfo str, PartitionSpec *node)
 {
@@ -2717,6 +2776,7 @@ _outPartitionSpec(StringInfo str, PartitionSpec *node)
 	WRITE_BOOL_FIELD(istemplate);
 	WRITE_INT_FIELD(location);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outPartitionElem(StringInfo str, PartitionElem *node)
@@ -2742,6 +2802,7 @@ _outPartitionRangeItem(StringInfo str, PartitionRangeItem *node)
 	WRITE_INT_FIELD(location);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outPartitionBoundSpec(StringInfo str, PartitionBoundSpec *node)
 {
@@ -2753,6 +2814,7 @@ _outPartitionBoundSpec(StringInfo str, PartitionBoundSpec *node)
 	WRITE_STRING_FIELD(pWithTnameStr);
 	WRITE_INT_FIELD(location);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outPartitionValuesSpec(StringInfo str, PartitionValuesSpec *node)
@@ -2762,6 +2824,7 @@ _outPartitionValuesSpec(StringInfo str, PartitionValuesSpec *node)
 	WRITE_INT_FIELD(location);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outInhRelation(StringInfo str, InhRelation *node)
 {
@@ -2769,7 +2832,9 @@ _outInhRelation(StringInfo str, InhRelation *node)
 	WRITE_NODE_FIELD(relation);
 	WRITE_NODE_FIELD(options);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outPartition(StringInfo str, Partition *node)
 {
@@ -2791,7 +2856,9 @@ _outPartition(StringInfo str, Partition *node)
 	for (i = 0; i < node->parnatts; i++)
 		appendStringInfo(str, " %d", node->parclass[i]);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outPartitionRule(StringInfo str, PartitionRule *node)
 {
@@ -2813,6 +2880,7 @@ _outPartitionRule(StringInfo str, PartitionRule *node)
 	WRITE_OID_FIELD(partemplatespaceId);
 	WRITE_NODE_FIELD(children);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outPartitionNode(StringInfo str, PartitionNode *node)
@@ -2860,7 +2928,6 @@ _outDefineStmt(StringInfo str, DefineStmt *node)
 	WRITE_OID_FIELD(shadowOid);
 	WRITE_BOOL_FIELD(ordered);  /* CDB */
 	WRITE_BOOL_FIELD(trusted);  /* CDB */
-
 }
 
 static void
@@ -2872,7 +2939,6 @@ _outCompositeTypeStmt(StringInfo str, CompositeTypeStmt *node)
 	WRITE_NODE_FIELD(coldeflist);
 	WRITE_OID_FIELD(relOid);
 	WRITE_OID_FIELD(comptypeOid);
-
 }
 
 static void
@@ -2949,7 +3015,6 @@ _outTransactionStmt(StringInfo str, TransactionStmt *node)
 
 	WRITE_ENUM_FIELD(kind, TransactionStmtKind);
 	WRITE_NODE_FIELD(options);
-
 }
 
 static void
@@ -3057,6 +3122,7 @@ _outConstraintsSetStmt(StringInfo str, ConstraintsSetStmt *node)
 	WRITE_BOOL_FIELD(deferred);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outInsertStmt(StringInfo str, InsertStmt *node)
 {
@@ -3067,8 +3133,9 @@ _outInsertStmt(StringInfo str, InsertStmt *node)
 	WRITE_NODE_FIELD(selectStmt);
 	WRITE_NODE_FIELD(returningList);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
-
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * SelectStmt's are never written to the catalog, they only exist
  * between parse and parseTransform.  The only use of this function
@@ -3103,6 +3170,7 @@ _outSelectStmt(StringInfo str, SelectStmt *node)
 	WRITE_NODE_FIELD(rarg);
 	WRITE_NODE_FIELD(distributedBy);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outFuncCall(StringInfo str, FuncCall *node)
@@ -3189,6 +3257,7 @@ _outPartBoundOpenExpr(StringInfo str, PartBoundOpenExpr *node)
 	WRITE_BOOL_FIELD(isLowerBound);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outColumnDef(StringInfo str, ColumnDef *node)
 {
@@ -3207,7 +3276,9 @@ _outColumnDef(StringInfo str, ColumnDef *node)
 	WRITE_NODE_FIELD(constraints);
 	WRITE_NODE_FIELD(encoding);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outTypeName(StringInfo str, TypeName *node)
 {
@@ -3222,7 +3293,9 @@ _outTypeName(StringInfo str, TypeName *node)
 	WRITE_NODE_FIELD(arrayBounds);
 	WRITE_INT_FIELD(location);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outTypeCast(StringInfo str, TypeCast *node)
 {
@@ -3231,6 +3304,7 @@ _outTypeCast(StringInfo str, TypeCast *node)
 	WRITE_NODE_FIELD(arg);
 	WRITE_NODE_FIELD_AS(typname, typename);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outIndexElem(StringInfo str, IndexElem *node)
@@ -3246,9 +3320,11 @@ static void
 _outVariableResetStmt(StringInfo str, VariableResetStmt *node)
 {
 	WRITE_NODE_TYPE("VARIABLERESETSTMT");
+
 	WRITE_STRING_FIELD(name);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outQuery(StringInfo str, Query *node)
 {
@@ -3379,6 +3455,7 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_NODE_FIELD(returningLists); /* TODO Merge issue */
 	/* Don't serialize policy */
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outSortClause(StringInfo str, SortClause *node)
@@ -3535,6 +3612,7 @@ _outSetOperationStmt(StringInfo str, SetOperationStmt *node)
 	WRITE_NODE_FIELD(colTypmods);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outRangeTblEntry(StringInfo str, RangeTblEntry *node)
 {
@@ -3599,7 +3677,9 @@ _outRangeTblEntry(StringInfo str, RangeTblEntry *node)
 	WRITE_BOOL_FIELD(forceDistRandom);
     WRITE_NODE_FIELD(pseudocols);                                       /*CDB*/
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outAExpr(StringInfo str, A_Expr *node)
 {
@@ -3655,7 +3735,9 @@ _outAExpr(StringInfo str, A_Expr *node)
 	WRITE_NODE_FIELD(rexpr);
 	WRITE_INT_FIELD(location);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outValue(StringInfo str, Value *value)
 {
@@ -3690,12 +3772,15 @@ _outValue(StringInfo str, Value *value)
 			break;
 	}
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outNull(StringInfo str, Node *n __attribute__((unused)))
 {
 	WRITE_NODE_TYPE("NULL");
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outColumnRef(StringInfo str, ColumnRef *node)
@@ -3715,6 +3800,7 @@ _outParamRef(StringInfo str, ParamRef *node)
 	WRITE_INT_FIELD(location);  /*CDB*/
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outAConst(StringInfo str, A_Const *node)
 {
@@ -3731,6 +3817,7 @@ _outAConst(StringInfo str, A_Const *node)
      * view or rule definition is stored in the catalog.
      */
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outA_Indices(StringInfo str, A_Indices *node)
@@ -3761,6 +3848,7 @@ _outResTarget(StringInfo str, ResTarget *node)
 	WRITE_INT_FIELD(location);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outConstraint(StringInfo str, Constraint *node)
 {
@@ -3807,6 +3895,7 @@ _outConstraint(StringInfo str, Constraint *node)
 			break;
 	}
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outFkConstraint(StringInfo str, FkConstraint *node)
@@ -3839,7 +3928,6 @@ _outCreateSchemaStmt(StringInfo str, CreateSchemaStmt *node)
 	WRITE_STRING_FIELD(authid);
 	WRITE_BOOL_FIELD(istemp);
 	WRITE_OID_FIELD(schemaOid);
-
 }
 
 static void
@@ -3854,7 +3942,6 @@ _outCreatePLangStmt(StringInfo str, CreatePLangStmt *node)
 	WRITE_OID_FIELD(plangOid);
 	WRITE_OID_FIELD(plhandlerOid);
 	WRITE_OID_FIELD(plvalidatorOid);
-
 }
 
 static void
@@ -3889,7 +3976,6 @@ _outVacuumStmt(StringInfo str, VacuumStmt *node)
 	WRITE_BOOL_FIELD(appendonly_compaction_vacuum_prepare);
 	WRITE_BOOL_FIELD(heap_truncate);
 }
-
 
 static void
 _outCdbProcess(StringInfo str, CdbProcess *node)
@@ -3931,8 +4017,6 @@ _outSliceTable(StringInfo str, SliceTable *node)
 	WRITE_INT_FIELD(ic_instance_id);
 }
 
-
-
 static void
 _outCreateTrigStmt(StringInfo str, CreateTrigStmt *node)
 {
@@ -3950,7 +4034,6 @@ _outCreateTrigStmt(StringInfo str, CreateTrigStmt *node)
 	WRITE_BOOL_FIELD(initdeferred);
 	WRITE_NODE_FIELD(constrrel);
 	WRITE_OID_FIELD(trigOid);
-
 }
 
 static void
@@ -3986,7 +4069,7 @@ _outCreateTableSpaceStmt(StringInfo str, CreateTableSpaceStmt *node)
 	WRITE_OID_FIELD(tsoid);
 }
 
-
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outCreateQueueStmt(StringInfo str, CreateQueueStmt *node)
 {
@@ -3996,7 +4079,9 @@ _outCreateQueueStmt(StringInfo str, CreateQueueStmt *node)
 	WRITE_NODE_FIELD(options); /* List of DefElem nodes */
 	WRITE_OID_FIELD(queueOid); 
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outAlterQueueStmt(StringInfo str, AlterQueueStmt *node)
 {
@@ -4005,6 +4090,7 @@ _outAlterQueueStmt(StringInfo str, AlterQueueStmt *node)
 	WRITE_STRING_FIELD(queue);
 	WRITE_NODE_FIELD(options); /* List of DefElem nodes */
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outDropQueueStmt(StringInfo str, DropQueueStmt *node)
@@ -4043,6 +4129,7 @@ _outAlterTypeStmt(StringInfo str, AlterTypeStmt *node)
 	WRITE_NODE_FIELD(encoding);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outTupleDescNode(StringInfo str, TupleDescNode *node)
 {
@@ -4065,7 +4152,9 @@ _outTupleDescNode(StringInfo str, TupleDescNode *node)
 	WRITE_BOOL_FIELD(tuple->tdhasoid);
 	WRITE_INT_FIELD(tuple->tdrefcount);
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _outNode -
  *	  converts a Node into ascii string and append it to 'str'
@@ -4952,3 +5041,5 @@ nodeToString(void *obj)
 	_outNode(&str, obj);
 	return str.data;
 }
+
+#endif /* COMPILING_BINARY_FUNCS */

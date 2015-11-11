@@ -34,6 +34,13 @@
 #include "utils/lsyscache.h"  /* For get_typlenbyval */
 #include "cdb/cdbgang.h"
 
+/*
+ * readfuncs.c is compiled normally into readfuncs.o, but it's also
+ * #included from readfast.c. When #included, readfuncs.c defines
+ * COMPILING_BINARY_FUNCS, and provides replacements READ_* macros. See
+ * comments at top of readfast.c.
+ */
+#ifndef COMPILING_BINARY_FUNCS
 
 /*
  * Macros to simplify reading of different kinds of fields.  Use these
@@ -290,10 +297,12 @@ inline static char extended_char(char* token, size_t length)
 		nodeRead(NULL, 0) \
 	)
 
+#endif /* COMPILING_BINARY_FUNCS */
 
 static Datum readDatum(bool typbyval);
 
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readQuery
  */
@@ -435,6 +444,7 @@ _readQuery(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readNotifyStmt
@@ -465,6 +475,7 @@ _readDeclareCursorStmt(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readCurrentOfExpr
  */
@@ -481,6 +492,7 @@ _readCurrentOfExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readSingleRowErrorDesc
@@ -580,6 +592,7 @@ _readWindowSpecParse(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static WindowSpec *
 _readWindowSpec(void)
 {
@@ -599,6 +612,7 @@ _readWindowSpec(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static WindowFrame *
 _readWindowFrame(void)
@@ -720,6 +734,7 @@ _readAlias(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static RangeVar *
 _readRangeVar(void)
 {
@@ -742,7 +757,9 @@ _readRangeVar(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static IntoClause *
 _readIntoClause(void)
 {
@@ -800,6 +817,7 @@ _readIntoClause(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readVar
@@ -820,6 +838,7 @@ _readVar(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readConst
  */
@@ -841,7 +860,9 @@ _readConst(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readConstraint
  */
@@ -893,6 +914,7 @@ _readConstraint(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static IndexStmt *
 _readIndexStmt(void)
@@ -931,6 +953,7 @@ _readIndexElem(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static ReindexStmt *
 _readReindexStmt(void)
 {
@@ -945,8 +968,8 @@ _readReindexStmt(void)
 	READ_OID_FIELD(relid);
 
 	READ_DONE();
-
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static ViewStmt *
 _readViewStmt(void)
@@ -981,6 +1004,7 @@ _readRuleStmt(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static DropStmt *
 _readDropStmt(void)
 {
@@ -995,7 +1019,9 @@ _readDropStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static DropPropertyStmt *
 _readDropPropertyStmt(void)
 {
@@ -1009,7 +1035,9 @@ _readDropPropertyStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static TruncateStmt *
 _readTruncateStmt(void)
 {
@@ -1020,7 +1048,9 @@ _readTruncateStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static AlterTableStmt *
 _readAlterTableStmt(void)
 {
@@ -1057,7 +1087,9 @@ _readAlterTableStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static AlterTableCmd *
 _readAlterTableCmd(void)
 {
@@ -1073,6 +1105,7 @@ _readAlterTableCmd(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static InheritPartitionCmd *
 _readInheritPartitionCmd(void)
@@ -1084,6 +1117,7 @@ _readInheritPartitionCmd(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static AlterPartitionCmd *
 _readAlterPartitionCmd(void)
 {
@@ -1095,6 +1129,7 @@ _readAlterPartitionCmd(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static AlterPartitionId *
 _readAlterPartitionId(void)
@@ -1177,6 +1212,7 @@ _readAlterRoleSetStmt(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static AlterObjectSchemaStmt *
 _readAlterObjectSchemaStmt(void)
 {
@@ -1191,9 +1227,9 @@ _readAlterObjectSchemaStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
-
-
+#ifndef COMPILING_BINARY_FUNCS
 static AlterOwnerStmt *
 _readAlterOwnerStmt(void)
 {
@@ -1208,7 +1244,7 @@ _readAlterOwnerStmt(void)
 
 	READ_DONE();
 }
-
+#endif /* COMPILING_BINARY_FUNCS */
 
 static RenameStmt *
 _readRenameStmt(void)
@@ -1228,6 +1264,7 @@ _readRenameStmt(void)
 }
 
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readFuncCall
  *
@@ -1251,6 +1288,7 @@ _readFuncCall(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static DefElem *
 _readDefElem(void)
@@ -1260,9 +1298,11 @@ _readDefElem(void)
 	READ_STRING_FIELD(defname);
 	READ_NODE_FIELD(arg);
 	READ_ENUM_FIELD(defaction, DefElemAction);
+
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static A_Const *
 _readAConst(void)
 {
@@ -1328,8 +1368,9 @@ _readAConst(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
-
+#ifndef COMPILING_BINARY_FUNCS
 static A_Expr *
 _readAExpr(void)
 {
@@ -1395,6 +1436,7 @@ _readAExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readParam
@@ -1411,6 +1453,7 @@ _readParam(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readAggref
  */
@@ -1448,6 +1491,7 @@ _readAggref(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _outAggOrder
@@ -1505,6 +1549,7 @@ _readArrayRef(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readFuncExpr
  */
@@ -1526,7 +1571,9 @@ _readFuncExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readOpExpr
  */
@@ -1554,7 +1601,9 @@ _readOpExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readDistinctExpr
  */
@@ -1582,7 +1631,9 @@ _readDistinctExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readScalarArrayOpExpr
  */
@@ -1609,7 +1660,9 @@ _readScalarArrayOpExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readBoolExpr
  */
@@ -1634,7 +1687,9 @@ _readBoolExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readSubLink
  */
@@ -1654,6 +1709,7 @@ _readSubLink(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readFieldSelect
@@ -1839,6 +1895,7 @@ _readMinMaxExpr(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readNullIfExpr
  */
@@ -1866,6 +1923,7 @@ _readNullIfExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readNullTest
@@ -1971,6 +2029,7 @@ _readRangeTblRef(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readJoinExpr
  */
@@ -1991,6 +2050,7 @@ _readJoinExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readFromExpr
@@ -2072,6 +2132,7 @@ _readTypeCast(void)
 }
 
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readRangeTblEntry
  */
@@ -2140,6 +2201,7 @@ _readRangeTblEntry(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * Greenplum Database additions for serialization support
@@ -2147,6 +2209,7 @@ _readRangeTblEntry(void)
  */
 #include "nodes/plannodes.h"
 
+#ifndef COMPILING_BINARY_FUNCS
 static CreateStmt *
 _readCreateStmt(void)
 {
@@ -2195,7 +2258,9 @@ _readCreateStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static Partition *
 _readPartition(void)
 {
@@ -2212,7 +2277,9 @@ _readPartition(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static PartitionRule *
 _readPartitionRule(void)
 {
@@ -2236,7 +2303,9 @@ _readPartitionRule(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static PartitionNode *
 _readPartitionNode(void)
 {
@@ -2247,6 +2316,7 @@ _readPartitionNode(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static PgPartRule *
 _readPgPartRule(void)
@@ -2287,6 +2357,7 @@ _readExtTableTypeDesc(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static CreateExternalStmt *
 _readCreateExternalStmt(void)
 {
@@ -2306,6 +2377,7 @@ _readCreateExternalStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static CreateForeignStmt *
 _readCreateForeignStmt(void)
@@ -2373,9 +2445,9 @@ _readCreatePLangStmt(void)
 	READ_OID_FIELD(plvalidatorOid);
 
 	READ_DONE();
-
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static DropPLangStmt *
 _readDropPLangStmt(void)
 {
@@ -2386,8 +2458,8 @@ _readDropPLangStmt(void)
 	READ_BOOL_FIELD(missing_ok);
 
 	READ_DONE();
-
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static CreateSeqStmt *
 _readCreateSeqStmt(void)
@@ -2406,6 +2478,7 @@ static AlterSeqStmt *
 _readAlterSeqStmt(void)
 {
 	READ_LOCALS(AlterSeqStmt);
+
 	READ_NODE_FIELD(sequence);
 	READ_NODE_FIELD(options);
 
@@ -2442,9 +2515,9 @@ static CreatedbStmt *
 _readCreatedbStmt(void)
 {
 	READ_LOCALS(CreatedbStmt);
+
 	READ_STRING_FIELD(dbname);
 	READ_NODE_FIELD(options);
-
 	READ_OID_FIELD(dbOid);
 
 	READ_DONE();
@@ -2474,6 +2547,7 @@ _readCreateDomainStmt(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static AlterDomainStmt *
 _readAlterDomainStmt(void)
 {
@@ -2487,6 +2561,7 @@ _readAlterDomainStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static CreateFdwStmt *
 _readCreateFdwStmt(void)
@@ -2604,6 +2679,7 @@ static CreateFunctionStmt *
 _readCreateFunctionStmt(void)
 {
 	READ_LOCALS(CreateFunctionStmt);
+
 	READ_BOOL_FIELD(replace);
 	READ_NODE_FIELD(funcname);
 	READ_NODE_FIELD(parameters);
@@ -2620,6 +2696,7 @@ static FunctionParameter *
 _readFunctionParameter(void)
 {
 	READ_LOCALS(FunctionParameter);
+
 	READ_STRING_FIELD(name);
 	READ_NODE_FIELD(argType);
 	READ_ENUM_FIELD(mode, FunctionParameterMode);
@@ -2627,10 +2704,12 @@ _readFunctionParameter(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static RemoveFuncStmt *
 _readRemoveFuncStmt(void)
 {
 	READ_LOCALS(RemoveFuncStmt);
+
 	READ_ENUM_FIELD(kind,ObjectType);
 	READ_NODE_FIELD(name);
 	READ_NODE_FIELD(args);
@@ -2639,6 +2718,7 @@ _readRemoveFuncStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static AlterFunctionStmt *
 _readAlterFunctionStmt(void)
@@ -2651,6 +2731,7 @@ _readAlterFunctionStmt(void)
 }
 
 
+#ifndef COMPILING_BINARY_FUNCS
 static DefineStmt *
 _readDefineStmt(void)
 {
@@ -2666,8 +2747,8 @@ _readDefineStmt(void)
 	READ_BOOL_FIELD(trusted);   /* CDB */
 
 	READ_DONE();
-
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static CompositeTypeStmt *
 _readCompositeTypeStmt(void)
@@ -2679,13 +2760,13 @@ _readCompositeTypeStmt(void)
 	READ_OID_FIELD(comptypeOid);
 
 	READ_DONE();
-
 }
 
 static CreateCastStmt *
 _readCreateCastStmt(void)
 {
 	READ_LOCALS(CreateCastStmt);
+
 	READ_NODE_FIELD(sourcetype);
 	READ_NODE_FIELD(targettype);
 	READ_NODE_FIELD(func);
@@ -2695,10 +2776,12 @@ _readCreateCastStmt(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static DropCastStmt *
 _readDropCastStmt(void)
 {
 	READ_LOCALS(DropCastStmt);
+
 	READ_NODE_FIELD(sourcetype);
 	READ_NODE_FIELD(targettype);
 	READ_ENUM_FIELD(behavior, DropBehavior);
@@ -2706,11 +2789,13 @@ _readDropCastStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static CreateOpClassStmt *
 _readCreateOpClassStmt(void)
 {
 	READ_LOCALS(CreateOpClassStmt);
+
 	READ_NODE_FIELD(opclassname);
 	READ_STRING_FIELD(amname);
 	READ_NODE_FIELD(datatype);
@@ -2735,6 +2820,7 @@ _readCreateOpClassItem(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static RemoveOpClassStmt *
 _readRemoveOpClassStmt(void)
 {
@@ -2746,11 +2832,13 @@ _readRemoveOpClassStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static CreateConversionStmt *
 _readCreateConversionStmt(void)
 {
 	READ_LOCALS(CreateConversionStmt);
+
 	READ_NODE_FIELD(conversion_name);
 	READ_STRING_FIELD(for_encoding_name);
 	READ_STRING_FIELD(to_encoding_name);
@@ -2761,6 +2849,7 @@ _readCreateConversionStmt(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static GrantStmt *
 _readGrantStmt(void)
 {
@@ -2777,6 +2866,7 @@ _readGrantStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static PrivGrantee *
 _readPrivGrantee(void)
@@ -2799,6 +2889,7 @@ _readFuncWithArgs(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static GrantRoleStmt *
 _readGrantRoleStmt(void)
 {
@@ -2813,6 +2904,7 @@ _readGrantRoleStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static LockStmt *
 _readLockStmt(void)
@@ -2837,6 +2929,7 @@ _readConstraintsSetStmt(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readWindowKey
  */
@@ -2852,6 +2945,7 @@ _readWindowKey(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readVacuumStmt
@@ -2871,6 +2965,7 @@ _readVacuumStmt(void)
 	READ_NODE_FIELD(va_cols);
 	READ_NODE_FIELD(expanded_relids);
 	READ_NODE_FIELD(extra_oids);
+
 	READ_NODE_FIELD(appendonly_compaction_segno);
 	READ_NODE_FIELD(appendonly_compaction_insert_segno);
 	READ_BOOL_FIELD(appendonly_compaction_vacuum_cleanup);
@@ -2894,6 +2989,7 @@ _readCdbProcess(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static Slice *
 _readSlice(void)
 {
@@ -2914,6 +3010,7 @@ _readSlice(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static SliceTable *
 _readSliceTable(void)
@@ -2941,6 +3038,7 @@ _readVariableResetStmt(void)
 }
 
 
+#ifndef COMPILING_BINARY_FUNCS
 static CreateTrigStmt *
 _readCreateTrigStmt(void)
 {
@@ -2962,8 +3060,8 @@ _readCreateTrigStmt(void)
 	READ_OID_FIELD(trigOid);
 
 	READ_DONE();
-
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 
 static TableValueExpr *
@@ -2987,6 +3085,7 @@ _readAlterTypeStmt(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * Greenplum Database developers added code to improve performance over the
  * linear searching that existed in the postgres version of
@@ -3309,3 +3408,4 @@ readDatum(bool typbyval)
 
 	return res;
 }
+#endif /* COMPILING_BINARY_FUNCS */

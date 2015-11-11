@@ -17,6 +17,8 @@ MOCK_LIBS := -ldl $(filter-out -lpgport -ledit, $(LIBS))
 EXCL_OBJS=src/backend/bootstrap/bootparse.o \
 			src/backend/catalog/caql/gram.o \
 			src/backend/parser/gram.o \
+			src/backend/nodes/readfast.o \
+			src/backend/nodes/outfast.o \
 			src/backend/regex/regcomp.o \
 			src/backend/regex/regexec.o \
 			src/backend/utils/adt/like.o \
