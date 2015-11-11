@@ -99,10 +99,10 @@
 inline static char extended_char(char* token, size_t length)
 {
 	char c, *s;
-	
+
 	if ( length == 1 )
 		return *token;
-	
+
 	s = debackslash(token, length);
 	if ( strlen(s) == 1 )
 		c = s[0];
@@ -262,10 +262,10 @@ inline static char extended_char(char* token, size_t length)
 	((length) == 0 ? NULL : debackslash(token, length))
 
 /* The following READ_..._VALUE macros mimic the corresponding READ_..._FIELD
- * macros above, but produce the value read (with appropriate type) instead of 
- * assigning it to a field of local_node.  They are expressions, not statements.  
+ * macros above, but produce the value read (with appropriate type) instead of
+ * assigning it to a field of local_node.  They are expressions, not statements.
  *
- * Note that the fldname parameter is not used, but retained is for symmetry. 
+ * Note that the fldname parameter is not used, but retained is for symmetry.
  * These macros exist only to simplify supporting old node formats.
  */
 
@@ -307,7 +307,7 @@ _readQuery(void)
 	READ_BOOL_FIELD(canSetTag);
 	READ_NODE_FIELD(utilityStmt);
 	READ_INT_FIELD(resultRelation);
-	
+
 	if ( ! pg_strtok_peek_fldname("intoClause"))
 	{
 		/* If the Query node was written with 3.3 or earlier, there is no intoClause,
@@ -320,7 +320,7 @@ _readQuery(void)
 		List *op = READ_NODE_VALUE(intoOptions);
 		OnCommitAction oc = READ_ENUM_VALUE(intoOnCommit, OnCommitAction);
 		char * ts = READ_STRING_VALUE(intoTableSpaceName);
-		
+
 		if ( rv == NULL && op == NIL && oc == ONCOMMIT_NOOP && ts == NULL )
 		{
 			/* Nothing to say. */
@@ -354,7 +354,7 @@ _readQuery(void)
 		/* Post 3.3, it's easier. */
 		READ_NODE_FIELD(intoClause);
 	}
-	
+
 	READ_BOOL_FIELD(hasAggs);
 	READ_BOOL_FIELD(hasWindFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
@@ -392,7 +392,7 @@ _readQuery(void)
 		READ_BOOL_FIELD(hasRecursive);
 		READ_BOOL_FIELD(hasModifyingCTE);
 	}
-	
+
 	READ_NODE_FIELD(limitOffset);
 	READ_NODE_FIELD(limitCount);
 	READ_NODE_FIELD(rowMarks);
@@ -402,12 +402,12 @@ _readQuery(void)
 	READ_NODE_FIELD(result_aosegnos);
 	READ_NODE_FIELD(returningLists);
 
-    /* In some earlier releases (including 3.3) a TableOidInfo was held in the 
-     * Query node.  Maybe some values got stored in the catalog as part of a 
-     * rule (possible?)  Maybe the Query was a CTAS. In any case, we don't want 
+    /* In some earlier releases (including 3.3) a TableOidInfo was held in the
+     * Query node.  Maybe some values got stored in the catalog as part of a
+     * rule (possible?)  Maybe the Query was a CTAS. In any case, we don't want
      * to remember the OIDs assigned in the past.
      *
-     * Now TableOidInfo is in the node's intoClause. As noted, we don't actually 
+     * Now TableOidInfo is in the node's intoClause. As noted, we don't actually
      * need the values but, if they exist, we need scan over them.
      */
     if (pg_strtok_peek_fldname("intoOidInfo.relOid"))
@@ -528,6 +528,9 @@ _readGroupClause(void)
 	READ_DONE();
 }
 
+/*
+ * _readGroupingClause
+ */
 static GroupingClause *
 _readGroupingClause(void)
 {
@@ -567,7 +570,7 @@ _readGroupId(void)
 }
 
 static WindowSpecParse *
-_readWindowSpecParse(const char ** str)
+_readWindowSpecParse(void)
 {
 	READ_LOCALS(WindowSpecParse);
 
@@ -578,7 +581,7 @@ _readWindowSpecParse(const char ** str)
 }
 
 static WindowSpec *
-_readWindowSpec(const char ** str)
+_readWindowSpec(void)
 {
 	READ_LOCALS(WindowSpec);
 
@@ -598,7 +601,7 @@ _readWindowSpec(const char ** str)
 }
 
 static WindowFrame *
-_readWindowFrame(const char ** str)
+_readWindowFrame(void)
 {
 	READ_LOCALS(WindowFrame);
 
@@ -612,7 +615,7 @@ _readWindowFrame(const char ** str)
 }
 
 static WindowFrameEdge *
-_readWindowFrameEdge(const char ** str)
+_readWindowFrameEdge(void)
 {
 	READ_LOCALS(WindowFrameEdge);
 
@@ -623,7 +626,7 @@ _readWindowFrameEdge(const char ** str)
 }
 
 static PercentileExpr *
-_readPercentileExpr(const char ** str)
+_readPercentileExpr(void)
 {
 	READ_LOCALS(PercentileExpr);
 
@@ -657,11 +660,11 @@ static WithClause *
 _readWithClause(void)
 {
 	READ_LOCALS(WithClause);
-	
+
 	READ_NODE_FIELD(ctes);
 	READ_BOOL_FIELD(recursive);
 	READ_INT_FIELD(location);
-	
+
 	READ_DONE();
 }
 
@@ -669,7 +672,7 @@ static CommonTableExpr *
 _readCommonTableExpr(void)
 {
 	READ_LOCALS(CommonTableExpr);
-	
+
 	READ_STRING_FIELD(ctename);
 	READ_NODE_FIELD(aliascolnames);
 	READ_NODE_FIELD(ctequery);
@@ -744,14 +747,14 @@ static IntoClause *
 _readIntoClause(void)
 {
 	READ_LOCALS(IntoClause);
-	
+
 	READ_NODE_FIELD(rel);
 	READ_NODE_FIELD(colNames);
 	READ_NODE_FIELD(options);
 	READ_ENUM_FIELD(onCommit, OnCommitAction);
 	READ_STRING_FIELD(tableSpaceName);
 	READ_OID_FIELD(oidInfo.relOid);
-    READ_OID_FIELD(oidInfo.comptypeOid); 
+    READ_OID_FIELD(oidInfo.comptypeOid);
     READ_OID_FIELD(oidInfo.toastOid);
     READ_OID_FIELD(oidInfo.toastIndexOid);
     READ_OID_FIELD(oidInfo.toastComptypeOid);
@@ -769,15 +772,15 @@ _readIntoClause(void)
         READ_OID_FIELD(oidInfo.aoblkdirComptypeOid);
     }
 	/* policy not serialized */
-	
+
 	/* Is this code, carried over from 3.3, actually needed?
 	 *
-	 * If the Query was a CTAS, and the CTAS was stored in the catalog 
-	 * as part of a rule, we don't want to remember the OIDs assigned 
+	 * If the Query was a CTAS, and the CTAS was stored in the catalog
+	 * as part of a rule, we don't want to remember the OIDs assigned
 	 * in the past.  Not sure we can ever have that happen.
 	 */
 	Assert(local_node->oidInfo.relOid == InvalidOid);
-	
+
 	local_node->oidInfo.relOid = InvalidOid;
 	local_node->oidInfo.comptypeOid = InvalidOid;
 	local_node->oidInfo.toastOid = InvalidOid;
@@ -794,7 +797,7 @@ _readIntoClause(void)
 	local_node->oidInfo.aovisimapComptypeOid = InvalidOid;
 
 	/* policy not serialized */
-	
+
 	READ_DONE();
 }
 
@@ -845,7 +848,6 @@ _readConst(void)
 static Constraint *
 _readConstraint(void)
 {
-
 	READ_LOCALS(Constraint);
 
 	READ_OID_FIELD(conoid);
@@ -889,7 +891,6 @@ _readConstraint(void)
 		local_node->contype = CONSTR_NOTNULL;
 	}
 
-
 	READ_DONE();
 }
 
@@ -926,7 +927,6 @@ _readIndexElem(void)
 	READ_STRING_FIELD(name);
 	READ_NODE_FIELD(expr);
 	READ_NODE_FIELD(opclass);
-
 
 	READ_DONE();
 }
@@ -1052,7 +1052,6 @@ _readAlterTableStmt(void)
 			READ_OID_FIELD(oidInfo[m].aoblkdirOid);
 			READ_OID_FIELD(oidInfo[m].aoblkdirIndexOid);
 			READ_OID_FIELD(oidInfo[m].aoblkdirComptypeOid);
-
 		}
 	}
 
@@ -1122,10 +1121,10 @@ _readCreateRoleStmt(void)
 }
 
 static DenyLoginInterval *
-_readDenyLoginInterval(const char ** str)
+_readDenyLoginInterval(void)
 {
 	READ_LOCALS(DenyLoginInterval);
-	
+
 	READ_NODE_FIELD(start);
 	READ_NODE_FIELD(end);
 
@@ -1133,13 +1132,13 @@ _readDenyLoginInterval(const char ** str)
 }
 
 static DenyLoginPoint *
-_readDenyLoginPoint(const char ** str)
+_readDenyLoginPoint(void)
 {
 	READ_LOCALS(DenyLoginPoint);
-	
+
 	READ_NODE_FIELD(day);
 	READ_NODE_FIELD(time);
-	
+
 	READ_DONE();
 }
 
@@ -1152,10 +1151,9 @@ _readDropRoleStmt(void)
 	READ_BOOL_FIELD(missing_ok);
 
 	READ_DONE();
-
 }
 
-static  AlterRoleStmt *
+static AlterRoleStmt *
 _readAlterRoleStmt(void)
 {
 	READ_LOCALS(AlterRoleStmt);
@@ -1163,11 +1161,11 @@ _readAlterRoleStmt(void)
 	READ_STRING_FIELD(role);
 	READ_NODE_FIELD(options);
 	READ_INT_FIELD(action);
-	READ_DONE();
 
+	READ_DONE();
 }
 
-static  AlterRoleSetStmt *
+static AlterRoleSetStmt *
 _readAlterRoleSetStmt(void)
 {
 	READ_LOCALS(AlterRoleSetStmt);
@@ -1177,7 +1175,6 @@ _readAlterRoleSetStmt(void)
 	READ_NODE_FIELD(value);
 
 	READ_DONE();
-
 }
 
 static AlterObjectSchemaStmt *
@@ -1249,8 +1246,8 @@ _readFuncCall(void)
 	READ_BOOL_FIELD(agg_distinct);
     READ_INT_FIELD(location);
 
-    READ_NODE_FIELD(over);          /*CDB*/
-    READ_NODE_FIELD(agg_filter);    /*CDB*/
+	READ_NODE_FIELD(over);          /*CDB*/
+	READ_NODE_FIELD(agg_filter);    /*CDB*/
 
 	READ_DONE();
 }
@@ -1392,7 +1389,6 @@ _readAExpr(void)
 		elog(ERROR,"Unable to understand A_Expr node %.30s",token);
 	}
 
-
 	READ_NODE_FIELD(lexpr);
 	READ_NODE_FIELD(rexpr);
 	READ_INT_FIELD(location);
@@ -1484,7 +1480,7 @@ _readWindowRef(void)
 	READ_BOOL_FIELD(windistinct);
 	READ_UINT_FIELD(winspec);
 	READ_UINT_FIELD(winindex);
-    READ_ENUM_FIELD(winstage, WinStage);
+	READ_ENUM_FIELD(winstage, WinStage);
 	READ_UINT_FIELD(winlevel);
 
 	READ_DONE();
@@ -1988,7 +1984,7 @@ _readJoinExpr(void)
 	READ_NODE_FIELD(larg);
 	READ_NODE_FIELD(rarg);
     /* CDB: subqfromlist is used only within planner; don't need to read it */
-    READ_NODE_FIELD(usingClause);   /*CDB*/
+	READ_NODE_FIELD(usingClause);   /*CDB*/
 	READ_NODE_FIELD(quals);
 	READ_NODE_FIELD(alias);
 	READ_INT_FIELD(rtindex);
@@ -2201,7 +2197,7 @@ _readCreateStmt(void)
 }
 
 static Partition *
-_readPartition(const char **str)
+_readPartition(void)
 {
 	READ_LOCALS(Partition);
 
@@ -2218,7 +2214,7 @@ _readPartition(const char **str)
 }
 
 static PartitionRule *
-_readPartitionRule(const char **str)
+_readPartitionRule(void)
 {
 	READ_LOCALS(PartitionRule);
 
@@ -2242,7 +2238,7 @@ _readPartitionRule(const char **str)
 }
 
 static PartitionNode *
-_readPartitionNode(const char **str)
+_readPartitionNode(void)
 {
 	READ_LOCALS(PartitionNode);
 
@@ -2253,7 +2249,7 @@ _readPartitionNode(const char **str)
 }
 
 static PgPartRule *
-_readPgPartRule(const char **str)
+_readPgPartRule(void)
 {
 	READ_LOCALS(PgPartRule);
 
@@ -2268,7 +2264,7 @@ _readPgPartRule(const char **str)
 }
 
 static SegfileMapNode *
-_readSegfileMapNode(const char **str)
+_readSegfileMapNode(void)
 {
 	READ_LOCALS(SegfileMapNode);
 
@@ -2307,7 +2303,7 @@ _readCreateExternalStmt(void)
 	READ_NODE_FIELD(encoding);
 	READ_NODE_FIELD(distributedBy);
 	local_node->policy = NULL;
-	
+
 	READ_DONE();
 }
 
@@ -2320,12 +2316,12 @@ _readCreateForeignStmt(void)
 	READ_NODE_FIELD(tableElts);
 	READ_STRING_FIELD(srvname);
 	READ_NODE_FIELD(options);
-	
+
 	READ_DONE();
 }
 
 static FkConstraint *
-_outFkConstraint(void)
+_readFkConstraint(void)
 {
 	READ_LOCALS(FkConstraint);
 
@@ -2496,11 +2492,11 @@ static CreateFdwStmt *
 _readCreateFdwStmt(void)
 {
 	READ_LOCALS(CreateFdwStmt);
-	
+
 	READ_STRING_FIELD(fdwname);
 	READ_NODE_FIELD(validator);
 	READ_NODE_FIELD(options);
-	
+
 	READ_DONE();
 }
 
@@ -2508,7 +2504,7 @@ static AlterFdwStmt *
 _readAlterFdwStmt(void)
 {
 	READ_LOCALS(AlterFdwStmt);
-	
+
 	READ_STRING_FIELD(fdwname);
 	READ_NODE_FIELD(validator);
 	READ_BOOL_FIELD(change_validator);
@@ -2521,7 +2517,7 @@ static DropFdwStmt *
 _readDropFdwStmt(void)
 {
 	READ_LOCALS(DropFdwStmt);
-	
+
 	READ_STRING_FIELD(fdwname);
 	READ_BOOL_FIELD(missing_ok);
 	READ_ENUM_FIELD(behavior, DropBehavior);
@@ -2533,7 +2529,7 @@ static CreateForeignServerStmt *
 _readCreateForeignServerStmt(void)
 {
 	READ_LOCALS(CreateForeignServerStmt);
-	
+
 	READ_STRING_FIELD(servername);
 	READ_STRING_FIELD(servertype);
 	READ_STRING_FIELD(version);
@@ -2547,7 +2543,7 @@ static AlterForeignServerStmt *
 _readAlterForeignServerStmt(void)
 {
 	READ_LOCALS(AlterForeignServerStmt);
-	
+
 	READ_STRING_FIELD(servername);
 	READ_STRING_FIELD(version);
 	READ_NODE_FIELD(options);
@@ -2560,7 +2556,7 @@ static DropForeignServerStmt *
 _readDropForeignServerStmt(void)
 {
 	READ_LOCALS(DropForeignServerStmt);
-	
+
 	READ_STRING_FIELD(servername);
 	READ_BOOL_FIELD(missing_ok);
 	READ_ENUM_FIELD(behavior, DropBehavior);
@@ -2572,7 +2568,7 @@ static CreateUserMappingStmt *
 _readCreateUserMappingStmt(void)
 {
 	READ_LOCALS(CreateUserMappingStmt);
-	
+
 	READ_STRING_FIELD(username);
 	READ_STRING_FIELD(servername);
 	READ_NODE_FIELD(options);
@@ -2584,7 +2580,7 @@ static AlterUserMappingStmt *
 _readAlterUserMappingStmt(void)
 {
 	READ_LOCALS(AlterUserMappingStmt);
-	
+
 	READ_STRING_FIELD(username);
 	READ_STRING_FIELD(servername);
 	READ_NODE_FIELD(options);
@@ -2596,7 +2592,7 @@ static DropUserMappingStmt *
 _readDropUserMappingStmt(void)
 {
 	READ_LOCALS(DropUserMappingStmt);
-	
+
 	READ_STRING_FIELD(username);
 	READ_STRING_FIELD(servername);
 	READ_BOOL_FIELD(missing_ok);
@@ -2786,6 +2782,7 @@ static PrivGrantee *
 _readPrivGrantee(void)
 {
 	READ_LOCALS(PrivGrantee);
+
 	READ_STRING_FIELD(rolname);
 
 	READ_DONE();
@@ -2795,6 +2792,7 @@ static FuncWithArgs *
 _readFuncWithArgs(void)
 {
 	READ_LOCALS(FuncWithArgs);
+
 	READ_NODE_FIELD(funcname);
 	READ_NODE_FIELD(funcargs);
 
@@ -2805,6 +2803,7 @@ static GrantRoleStmt *
 _readGrantRoleStmt(void)
 {
 	READ_LOCALS(GrantRoleStmt);
+
 	READ_NODE_FIELD(granted_roles);
 	READ_NODE_FIELD(grantee_roles);
 	READ_BOOL_FIELD(is_grant);
@@ -2819,6 +2818,7 @@ static LockStmt *
 _readLockStmt(void)
 {
 	READ_LOCALS(LockStmt);
+
 	READ_NODE_FIELD(relations);
 	READ_INT_FIELD(mode);
 	READ_BOOL_FIELD(nowait);
@@ -2830,6 +2830,7 @@ static ConstraintsSetStmt *
 _readConstraintsSetStmt(void)
 {
 	READ_LOCALS(ConstraintsSetStmt);
+
 	READ_NODE_FIELD(constraints);
 	READ_BOOL_FIELD(deferred);
 
@@ -2933,6 +2934,7 @@ static VariableResetStmt *
 _readVariableResetStmt(void)
 {
 	READ_LOCALS(VariableResetStmt);
+
 	READ_STRING_FIELD(name);
 
 	READ_DONE();
@@ -3066,7 +3068,7 @@ static ParseNodeInfo infoAr[] =
 	{"CREATEEXTERNALSTMT", (ReadFn)_readCreateExternalStmt},
 	{"CREATEFDWSTMT", (ReadFn)_readCreateFdwStmt},
 	{"CREATEFOREIGNSERVERSTMT", (ReadFn)_readCreateForeignServerStmt},
-	{"CREATEFOREIGNSTMT", (ReadFn)_readCreateForeignStmt},	
+	{"CREATEFOREIGNSTMT", (ReadFn)_readCreateForeignStmt},
 	{"CREATEUSERMAPPINGSTMT", (ReadFn)_readCreateUserMappingStmt},
 	{"CREATEFUNCSTMT", (ReadFn)_readCreateFunctionStmt},
 	{"CREATEOPCLASS", (ReadFn)_readCreateOpClassStmt},
@@ -3096,7 +3098,7 @@ static ParseNodeInfo infoAr[] =
 	{"EXTTABLETYPEDESC", (ReadFn)_readExtTableTypeDesc},
 	{"FIELDSELECT", (ReadFn)_readFieldSelect},
 	{"FIELDSTORE", (ReadFn)_readFieldStore},
-	{"FKCONSTRAINT", (ReadFn)_outFkConstraint},
+	{"FKCONSTRAINT", (ReadFn)_readFkConstraint},
 	{"FROMEXPR", (ReadFn)_readFromExpr},
 	{"FUNCCALL", (ReadFn)_readFuncCall},
 	{"FUNCEXPR", (ReadFn)_readFuncExpr},
