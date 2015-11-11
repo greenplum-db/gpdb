@@ -86,6 +86,7 @@ class GpdbRestore(Operation):
         self.truncate = options.truncate
         self.change_schema = options.change_schema
         self.restore_stats = options.restore_stats
+        self.metadata_only = options.metadata_only
 
         if self.restore_stats:
             self.no_analyze = True
@@ -112,6 +113,12 @@ class GpdbRestore(Operation):
 
         if self.list_backup and self.restore_tables:
             raise Exception('Cannot specify -T and --list-backup together')
+
+        if self.metadata_only and self.no_plan:
+            raise Exception('Cannot specify --noplan and -m together.')
+
+        if self.metadata_only and self.no_analyze:
+            raise Exception('Cannot specify --noanalyze and -m together.')
 
         if self.change_schema and not (self.restore_tables or self.table_file):
             raise Exception('-T or --table-file option must be specified with the --change-schema option')
@@ -198,8 +205,13 @@ class GpdbRestore(Operation):
             return self._list_dump_tables()
 
         info = self._gather_info()
+
         if self.restore_stats == "only":
             restore_type = "Statistics-Only Restore"
+
+        if self.metadata_only:
+            restore_type = "Metadata-Only Restore"
+
         elif is_incremental_restore(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, info['restore_timestamp']):
             if self.restore_tables is not None:
                 restore_type = "Incremental Table Restore"
@@ -274,6 +286,7 @@ class GpdbRestore(Operation):
                         redirected_restore_db = self.redirected_restore_db,
                         report_status_dir = self.report_status_dir,
                         restore_stats = self.restore_stats,
+                        metadata_only = self.metadata_only,
                         netbackup_service_host = self.netbackup_service_host,
                         netbackup_block_size = self.netbackup_block_size,
                         change_schema = self.change_schema).run()
@@ -603,6 +616,8 @@ def create_parser():
                      help="Restore a single table from a backup set. For multiple tables, supply a comma separated list of schema.tablenames. Note, table schema must exist in target database.")
     addTo.add_option('-K', action='store_true', dest='keep_dump_files', default=False,
                      help="Retain temporary generated table dump files.")
+    addTo.add_option('-m', action='store_true', dest='metadata_only', default=False,
+                     help="Only restore database metadata")
     addTo.add_option('--noanalyze', action='store_true', dest='no_analyze', default=False,
                      help="Suppress the ANALYZE run following a successful restore. The user is responsible for running ANALYZE on any restored tables; failure to run ANALYZE following a restore may result in poor databse performance.")
     addTo.add_option('--noplan', action='store_true', dest='no_plan', default=False)

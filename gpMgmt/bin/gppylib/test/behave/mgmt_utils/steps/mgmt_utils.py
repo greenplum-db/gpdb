@@ -245,6 +245,7 @@ def impl(context, env_var):
     del context.orig_env[env_var]
 
 @when('the table names in "{dbname}" is stored')
+@then('the table names in "{dbname}" is stored')
 def impl(context, dbname):
     context.table_names = get_table_names(dbname)
    

@@ -520,6 +520,42 @@ Feature: Validate command line arguments
         And verify that there is a "heap" table "heap_table" in "fullbkdb" with data
         And verify that there is a "ao" table "ao_part_table" in "fullbkdb" with data
 
+    @meta
+    Scenario: Metadata-only restore
+        Given the database is running
+        And database "fullbkdb" is created if not exists
+        And there is schema "schema_heap" exists in "fullbkdb"
+        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "fullbkdb" with data
+        When the user runs "gpcrondump -a -x fullbkdb"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        And the schemas "schema_heap" do not exist in "fullbkdb"
+        And the user runs gpdbrestore with the stored timestamp and options "-m"
+        And gpdbrestore should return a return code of 0
+        And verify that there is a "heap" table "schema_heap.heap_table" in "fullbkdb"
+        And the table names in "fullbkdb" is stored
+        And tables in "fullbkdb" should not contain any data
+
+    @meta
+    Scenario: Metadata-only restore with global objects (-G)
+        Given the database is running
+        And database "fullbkdb" is created if not exists
+        And there is schema "schema_heap" exists in "fullbkdb"
+        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "fullbkdb" with data
+        And the user runs "psql -c 'CREATE ROLE foo_user' fullbkdb"
+        When the user runs "gpcrondump -a -x fullbkdb -G"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        And the user runs "psql -c 'DROP ROLE foo_user' fullbkdb"
+        And the schemas "schema_heap" do not exist in "fullbkdb"
+        And the user runs gpdbrestore with the stored timestamp and options "-m -G"
+        And gpdbrestore should return a return code of 0
+        And verify that there is a "heap" table "schema_heap.heap_table" in "fullbkdb"
+        And the table names in "fullbkdb" is stored
+        And tables in "fullbkdb" should not contain any data
+        And verify that a role "foo_user" exists in database "fullbkdb"
+        And the user runs "psql -c 'DROP ROLE foo_user' fullbkdb"
+
     @backupfire
     Scenario: Full Backup and Restore with -y
         Given the database is running

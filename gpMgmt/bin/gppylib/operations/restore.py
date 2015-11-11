@@ -430,7 +430,8 @@ def validate_tablenames(table_list):
 class RestoreDatabase(Operation):
     def __init__(self, restore_timestamp, no_analyze, drop_db, restore_global, master_datadir, backup_dir,
                  master_port, dump_dir, dump_prefix, no_plan, restore_tables, batch_default, no_ao_stats,
-                 redirected_restore_db, report_status_dir, restore_stats, ddboost, netbackup_service_host, netbackup_block_size, change_schema):
+                 redirected_restore_db, report_status_dir, restore_stats, metadata_only, ddboost,
+                 netbackup_service_host, netbackup_block_size, change_schema):
         self.restore_timestamp = restore_timestamp
         self.no_analyze = no_analyze
         self.drop_db = drop_db
@@ -447,6 +448,7 @@ class RestoreDatabase(Operation):
         self.redirected_restore_db = redirected_restore_db
         self.report_status_dir = report_status_dir
         self.restore_stats = restore_stats
+        self.metadata_only = metadata_only
         self.ddboost = ddboost
         self.netbackup_service_host = netbackup_service_host
         self.netbackup_block_size = netbackup_block_size
@@ -496,7 +498,7 @@ class RestoreDatabase(Operation):
         full_restore = is_full_restore(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.restore_timestamp, self.ddboost)
         begin_incremental = is_begin_incremental_run(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.restore_timestamp, self.no_plan, self.ddboost)
 
-        if (full_restore and self.restore_tables is not None and not self.no_plan) or begin_incremental:
+        if (full_restore and self.restore_tables is not None and not self.no_plan) or begin_incremental or self.metadata_only:
             if full_restore and not self.no_plan:
                 full_restore_with_filter = True
 
@@ -521,14 +523,15 @@ class RestoreDatabase(Operation):
         else:
             table_filter_file = self.create_filter_file() # returns None if nothing to filter
 
-            restore_line = self._build_restore_line(restore_timestamp,
-                                                    restore_db, compress,
-                                                    self.master_port,
-                                                    self.no_plan, table_filter_file,
-                                                    self.no_ao_stats, full_restore_with_filter,
-                                                    self.change_schema)
-            logger.info('gp_restore commandline: %s: ' % restore_line)
-            Command('Invoking gp_restore', restore_line).run(validateAfter=True)
+            if not self.metadata_only:
+                restore_line = self._build_restore_line(restore_timestamp,
+                                                        restore_db, compress,
+                                                        self.master_port,
+                                                        self.no_plan, table_filter_file,
+                                                        self.no_ao_stats, full_restore_with_filter,
+                                                        self.change_schema)
+                logger.info('gp_restore commandline: %s: ' % restore_line)
+                Command('Invoking gp_restore', restore_line).run(validateAfter=True)
 
             if full_restore_with_filter:
                 restore_line = self._build_post_data_schema_only_restore_line(restore_timestamp,
@@ -543,10 +546,11 @@ class RestoreDatabase(Operation):
             if table_filter_file:
                 self.remove_filter_file(table_filter_file)
 
-        if (not self.no_analyze) and (self.restore_tables is None):
-            self._analyze(restore_db, self.master_port)
-        elif (not self.no_analyze) and self.restore_tables:
-            self._analyze_restore_tables(restore_db, self.restore_tables, self.change_schema)
+        if not self.metadata_only:
+            if (not self.no_analyze) and (self.restore_tables is None):
+                self._analyze(restore_db, self.master_port)
+            elif (not self.no_analyze) and self.restore_tables:
+                self._analyze_restore_tables(restore_db, self.restore_tables, self.change_schema)
         if self.restore_stats:
             self._restore_stats(restore_timestamp, self.master_datadir, self.backup_dir, self.master_port, restore_db, self.restore_tables)
 

@@ -31,7 +31,7 @@ class restoreTestCase(unittest.TestCase):
                                        restore_global = False,
                                        master_datadir = 'foo',
                                        backup_dir = None,
-                                       master_port = 0,
+                                       master_port = 1234,
                                        dump_dir = "db_dumps",
                                        dump_prefix = "",
                                        no_plan = False,
@@ -41,6 +41,7 @@ class restoreTestCase(unittest.TestCase):
                                        redirected_restore_db = None,
                                        report_status_dir = None,
                                        restore_stats = None,
+                                       metadata_only = None,
                                        ddboost = False,
                                        netbackup_service_host = None,
                                        netbackup_block_size = None,
@@ -107,13 +108,11 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('gppylib.operations.restore.RestoreDatabase._process_createdb', side_effect=ExceptionNoStackTraceNeeded('Failed to create database'))
     @patch('time.sleep')
     def test_multitry_createdb_1(self, mock1, mock2):
-        r = RestoreDatabase('20121219', True, True, False, 'FOO', None, 1234, False, False, None, None, 'db_dumps', '', None, False, None, None, None, None, None)
-        self.assertRaises(ExceptionNoStackTraceNeeded, r._multitry_createdb, '20121219', 'fullbkdb', None, 'FOO', None, 1234)
+        self.assertRaises(ExceptionNoStackTraceNeeded, self.restore._multitry_createdb, '20121212121212', 'fullbkdb', None, 'foo', None, 1234)
 
     @patch('gppylib.operations.restore.RestoreDatabase._process_createdb')
     def test_multitry_createdb_2(self, mock):
-        r = RestoreDatabase('20121219', True, True, False, 'FOO', None, 1234, False, False, None, None, 'db_dumps', '', None, False, None, None, None, None, None)
-        r._multitry_createdb('20121219', 'fullbkdb', None, 'FOO', None, 1234)
+        self.restore._multitry_createdb('20121212121212', 'fullbkdb', None, 'foo', None, 1234)
 
     @patch('gppylib.operations.restore.get_partition_list', return_value=[('public', 't1'), ('public', 't2'), ('public', 't3')])
     @patch('gppylib.operations.restore.get_full_timestamp_for_incremental', return_value='123456789')
@@ -1528,8 +1527,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         db_name = 'FOO'
         port = 1234
         restore_tables = ['public.t1', 'public.t2']
-        restoredb = RestoreDatabase('20121219', False, True, False, 'FOO', None, 1234, 'db_dumps', '', False, False, None, None, None, False, None, None, None, None, None)
-        restoredb._analyze_restore_tables(db_name, restore_tables, None)
+        self.restore._analyze_restore_tables(db_name, restore_tables, None)
 
     @patch('gppylib.operations.restore.execSQL', side_effect=Exception('analyze failed'))
     @patch('gppylib.operations.backup_utils.dbconn.DbURL')
@@ -1538,8 +1536,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         db_name = 'FOO'
         port = 1234
         restore_tables = ['public.t1', 'public.t2']
-        restoredb = RestoreDatabase('20121219', False, True, False, 'FOO', None, 1234, 'db_dumps', '', False, False, None, None, None, False, None, None, None, None, None)
-        self.assertRaises(Exception, restoredb._analyze_restore_tables, db_name, restore_tables, None)
+        self.assertRaises(Exception, self.restore._analyze_restore_tables, db_name, restore_tables, None)
 
     @patch('gppylib.operations.backup_utils.execSQL')
     @patch('gppylib.operations.backup_utils.dbconn.DbURL', side_effect=Exception('Failed'))
@@ -1548,8 +1545,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         db_name = 'FOO'
         port = 1234
         restore_tables = ['public.t1', 'public.t2']
-        restoredb = RestoreDatabase('20121219', False, True, False, 'FOO', None, 1234, 'db_dumps', '', False, False, None, None, None, False, None, None, None, None, None)
-        self.assertRaises(Exception, restoredb._analyze_restore_tables, db_name, restore_tables, None)
+        self.assertRaises(Exception, self.restore._analyze_restore_tables, db_name, restore_tables, None)
 
     @patch('gppylib.operations.backup_utils.execSQL')
     @patch('gppylib.operations.backup_utils.dbconn.DbURL')
@@ -1558,8 +1554,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         db_name = 'FOO'
         port = 1234
         restore_tables = ['public.t1', 'public.t2']
-        restoredb = RestoreDatabase('20121219', False, True, False, 'FOO', None, 1234, 'db_dumps', '', False, False, None, None, None, False, None, None, None, None, None)
-        self.assertRaises(Exception, restoredb._analyze_restore_tables, db_name, restore_tables, None)
+        self.assertRaises(Exception, self.restore._analyze_restore_tables, db_name, restore_tables, None)
 
     @patch('gppylib.operations.backup_utils.dbconn.DbURL')
     @patch('gppylib.operations.backup_utils.dbconn.connect')
@@ -1569,8 +1564,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         port = 1234
         restore_tables = ['public.t%d' % i for i in range(3002)]
         expected_batch_count = 3
-        restoredb = RestoreDatabase('20121219', False, True, False, 'FOO', None, 1234, 'db_dumps', '', False, False, None, None, None, False, None, None, None, None, None)
-        batch_count = restoredb._analyze_restore_tables(db_name, restore_tables, None)
+        batch_count = self.restore._analyze_restore_tables(db_name, restore_tables, None)
         self.assertEqual(batch_count, expected_batch_count)
 
     @patch('gppylib.operations.backup_utils.dbconn.DbURL')
@@ -1581,8 +1575,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         port = 1234
         restore_tables = ['public.t1', 'public.t2']
         change_schema = 'newschema'
-        restoredb = RestoreDatabase('20121219', False, True, False, 'FOO', None, 1234, 'db_dumps', '', False, False, None, None, None, False, None, None, None, None, None)
-        restoredb._analyze_restore_tables(db_name, restore_tables, change_schema)
+        self.restore._analyze_restore_tables(db_name, restore_tables, change_schema)
 
     @patch('gppylib.operations.backup_utils.dbconn.DbURL')
     @patch('gppylib.operations.backup_utils.dbconn.connect')
@@ -1592,8 +1585,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         port = 1234
         restore_tables = ['public.t1', 'public.t2']
         change_schema = 'newschema'
-        restoredb = RestoreDatabase('20121219', False, True, False, 'FOO', None, 1234, 'db_dumps', '', False, False, None, None, None, False, None, None, None, None, None)
-        restoredb._analyze_restore_tables(db_name, restore_tables, change_schema)
+        self.restore._analyze_restore_tables(db_name, restore_tables, change_schema)
 
 class ValidateTimestampTestCase(unittest.TestCase):
 

@@ -215,6 +215,17 @@ OPTIONS
  When used with the -t option, lists the table names that exist in the 
  named backup set and exits. Does not perform a restore. 
 
+
+-m (restore metadata only)
+
+ Performs a restore of database metadata (schema and table definitions, SET
+ statements, and so forth) without restoring data.  If the --restore-stats or
+ -G options are provided as well, statistics or globals will also be restored.
+
+ The --noplan and --noanalyze options are not supported in conjunction with
+ this option, as they affect the restoration of data and no data is restored.
+
+
 --netbackup-block-size <size>
 
  Specify the block size, in bytes, of data being transferred from the 
