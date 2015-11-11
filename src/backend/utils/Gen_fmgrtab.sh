@@ -45,7 +45,7 @@ do
             echo "The environment variable AWK determines which Awk program"
             echo "to use. The default is \`awk'."
             echo
-            echo "Report bugs to <pgsql-bugs@postgresql.org>."
+            echo "Report bugs to <bugs@greenplum.org>."
             exit 0
             ;;
         -*)
