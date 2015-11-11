@@ -40,7 +40,7 @@ test: sublink sirv_functions table_functions
 #test: gpic_bigtup
 
 ignore: gp_portal_error
-test: notin with_clause eagerfree toast mapred gpparams tidycat tidycat2 aocs
+test: notin with_clause eagerfree toast mapred gpparams tidycat aocs
 test: ic gp_numeric_agg foreign_data gp_toolkit
 ignore: icudp_full
 ignore: upgrade

@@ -58,7 +58,7 @@ Options:
 
 =item B<-prochdr> <filename> (Required)
 
-    header file to modify (normally pg_proc.h).  The original file is copied to a .backup copy.
+    header file to modify (normally pg_proc_gp.h).  The original file is copied to a .backup copy.
 
 =item B<-typedef> <filename> (Required)
 
@@ -74,7 +74,7 @@ Options:
 =head1 DESCRIPTION
 
 catullus.pl converts annotated sql CREATE FUNCTION and CREATE TYPE
-statements into pg_proc and pg_type entries and updates pg_proc.h and
+statements into pg_proc and pg_type entries and updates pg_proc_gp.h and
 pg_type.h.
 
 The pg_type definitions are stored in pg_type.sql.  catullus reads
@@ -86,7 +86,7 @@ substitutes the new generated code for the previous contents.
 The pg_proc definitions are stored in pg_proc.sql.  catullus reads
 these definitions and, using type information from pg_type.sql,
 generates DATA statements for loading the pg_proc table.  In
-pg_proc.h, it looks for a block of code delimited by the tokens
+pg_proc_gp.h, it looks for a block of code delimited by the tokens
 TIDYCAT_BEGIN_PG_PROC_GEN and TIDYCAT_END_PG_PROC_GEN and substitutes
 the new generated code for the previous contents.
 
@@ -2158,7 +2158,7 @@ if (0)
       },
       {
          "alias" : "proheader|procheader|prohdr",
-         "long" : "header file to modify (normally pg_proc.h).  The original file is copied to a .backup copy.",
+         "long" : "header file to modify (normally pg_proc_gp.h).  The original file is copied to a .backup copy.",
          "name" : "prochdr",
          "required" : "1",
          "short" : "header file to modify (procedures)",
@@ -2199,7 +2199,7 @@ if (0)
 {
 	my $toplong = <<'EOF_toplong';
 catullus.pl converts annotated sql CREATE FUNCTION and CREATE TYPE
-statements into pg_proc and pg_type entries and updates pg_proc.h and
+statements into pg_proc and pg_type entries and updates pg_proc_gp.h and
 pg_type.h.
 
 The pg_type definitions are stored in pg_type.sql.  catullus reads
@@ -2211,7 +2211,7 @@ substitutes the new generated code for the previous contents.
 The pg_proc definitions are stored in pg_proc.sql.  catullus reads
 these definitions and, using type information from pg_type.sql,
 generates DATA statements for loading the pg_proc table.  In
-pg_proc.h, it looks for a block of code delimited by the tokens
+pg_proc_gp.h, it looks for a block of code delimited by the tokens
 TIDYCAT_BEGIN_PG_PROC_GEN and TIDYCAT_END_PG_PROC_GEN and substitutes
 the new generated code for the previous contents.
 

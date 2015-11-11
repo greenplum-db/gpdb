@@ -88,9 +88,11 @@ TIDYCAT_BKI_SRCS := \
 # Note: there are some undocumented dependencies on the ordering in which
 # the catalog header files are assembled into postgres.bki.  In particular,
 # indexing.h had better be last, and toasting.h just before it.
+# And pg_proc_gp.h must be immediately after pg_proc.h
 
-POSTGRES_BKI_SRCS := $(addprefix $(top_srcdir)/src/include/catalog/,\
-	pg_proc.h pg_type.h pg_attribute.h pg_class.h pg_autovacuum.h \
+POSTGRES_BKI_SRCS := $(addprefix $(top_srcdir)/src/include/catalog/, \
+	pg_proc.h pg_proc_gp.h \
+	pg_type.h pg_attribute.h pg_class.h pg_autovacuum.h \
 	pg_attrdef.h pg_constraint.h pg_inherits.h pg_index.h \
 	pg_operator.h pg_opclass.h pg_am.h pg_amop.h pg_amproc.h \
 	pg_language.h pg_largeobject.h pg_aggregate.h pg_statistic.h \
@@ -117,9 +119,23 @@ postgres.description: postgres.bki ;
 
 postgres.shdescription: postgres.bki ;
 
-postgres.bki: genbki.sh $(POSTGRES_BKI_SRCS) \
+# In Greenplum, we have added extra columns to some catalog tables. To avoid
+# having to change every single DATA row in those header files, which would
+# create massive merge conflicts when merging with upstream, the extra
+# columns are marked with GPDB_COLUMN_DEFAULT() lines in the header files,
+# which provides a default for every data row that's missing the column. That
+# way, new rows can have all the columns, but there's no need to modify rows
+# inherited from upstream.
+#
+# process_col_defaults.pl reads the catalog headers, and creates a modified
+# source file (postgres_bki_srcs) that has all the defaults injected into
+# the DATA rows. That is fed to genbki.sh, instead of the original headers.
+postgres_bki_srcs: process_col_defaults.pl $(POSTGRES_BKI_SRCS)
+	cat $(POSTGRES_BKI_SRCS) | $(PERL) process_col_defaults.pl > postgres_bki_srcs
+
+postgres.bki: genbki.sh postgres_bki_srcs \
     $(top_srcdir)/src/include/postgres_ext.h $(top_builddir)/src/include/pg_config_manual.h
-	AWK='$(AWK)' $(SHELL) $< $(pg_includes) --set-version=$(VERSION) -o postgres $(POSTGRES_BKI_SRCS)
+	AWK='$(AWK)' $(SHELL) $< $(pg_includes) --set-version=$(VERSION) -o postgres postgres_bki_srcs
 
 .PHONY: install-data
 install-data: $(BKIFILES) installdirs
@@ -141,5 +157,9 @@ installdirs:
 uninstall-data:
 	rm -f $(addprefix '$(DESTDIR)$(datadir)'/, $(BKIFILES) system_views.sql information_schema.sql cdb_init.d/cdb_schema.sql sql_features.txt)
 
+# postgres_bki_srcs is in the distribution tarball, so it is not cleaned here.
 clean:
 	rm -f SUBSYS.o $(OBJS) $(BKIFILES) gp_toolkit_test.sql gp_toolkit.sql
+
+maintainer-clean: clean
+	rm -f postgres_bki_srcs

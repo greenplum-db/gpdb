@@ -164,7 +164,7 @@ postgres.o: $(OBJS)
 $(srcdir)/parser/gram.h: parser/gram.y
 	$(MAKE) -C parser gram.h
 
-utils/fmgroids.h: utils/Gen_fmgrtab.sh $(top_srcdir)/src/include/catalog/pg_proc.h
+utils/fmgroids.h: utils/Gen_fmgrtab.sh $(top_srcdir)/src/include/catalog/pg_proc.h $(top_srcdir)/src/include/catalog/pg_proc_gp.h
 	$(MAKE) -C utils fmgroids.h
 
 utils/probes.h: utils/probes.d
