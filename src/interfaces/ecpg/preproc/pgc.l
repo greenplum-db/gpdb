@@ -1172,7 +1172,7 @@ cppline			{space}*#(.*\\{space})*.*{newline}
 						
 			  		}
 				}
-<INITIAL>{other}|\n     	{ mmerror(PARSE_ERROR, ET_FATAL, "internal error: unreachable state; please report this to <pgsql-bugs@postgresql.org>"); }
+<INITIAL>{other}|\n     	{ mmerror(PARSE_ERROR, ET_FATAL, "internal error: unreachable state; please report this to <bugs@greenplum.org>"); }
 %%
 void
 lex_init(void)
