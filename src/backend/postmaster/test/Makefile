@@ -21,6 +21,7 @@ backoff_REAL_OBJS=\
 		$(top_srcdir)/src/backend/storage/page/itemptr.o \
 		$(top_srcdir)/src/backend/utils/adt/datum.o \
 		$(top_srcdir)/src/backend/utils/adt/like.o \
+		$(top_srcdir)/src/backend/utils/error/elog.o \
 		$(top_srcdir)/src/backend/utils/hash/hashfn.o \
 		$(top_srcdir)/src/backend/utils/mb/mbutils.o \
 		$(top_srcdir)/src/backend/utils/mb/wchar.o \
