@@ -110,7 +110,7 @@ while (<>)
 		print "/* original: $middle */\n";
 
 		# Splice the defaults into the array.
-		foreach my $colnum (sort keys %coldefaults) {
+		foreach my $colnum (sort { $a <=> $b } keys %coldefaults) {
 		    splice @cols, ($colnum - 1), 0, $coldefaults{$colnum};
 		}
 		$middle = join(' ', @cols);
