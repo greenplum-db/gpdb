@@ -1,3 +1,9 @@
+-- All GPDB-added functions are here, instead of pg_proc.h. pg_proc.h should
+-- kept as close as possible to the upstream version, to make merging easier.
+--
+-- This file is translated into DATA rows by catullus.pl. See
+-- README.add_catalog_function for instructions on how to run it.
+
  CREATE FUNCTION float4_decum(_float8, float4) RETURNS _float8 LANGUAGE internal IMMUTABLE STRICT AS 'float4_decum' WITH (OID=6024, DESCRIPTION="aggregate inverse transition function");
  CREATE FUNCTION float4_avg_accum(bytea, float4) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'float4_avg_accum' WITH (OID=3106, DESCRIPTION="aggregate transition function");
  CREATE FUNCTION float4_avg_decum(bytea, float4) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'float4_avg_decum' WITH (OID=3107, DESCRIPTION="aggregate inverse transition function");
