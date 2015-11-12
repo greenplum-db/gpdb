@@ -12,7 +12,7 @@ void
 test__FileRep_StartChildProcess(void **state)
 {
 	pid_t		pid;
-	FileRepSubProc FileRepSubProcListLocal[FileRepProcessTypeMirrorVerification+1];
+	FileRepSubProc FileRepSubProcListLocal[FileRepProcessType__EnumerationCount];
 
 	FileRepSubProcList = &FileRepSubProcListLocal;
 	memcpy(FileRepSubProcList, FileRepSubProcListInitial,

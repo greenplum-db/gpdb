@@ -1,8 +1,0 @@
-#!/usr/bin/env python
-
-from gppylib.mainUtils import simple_main
-from gppylib.programs.verify import GpVerifyProgram
-
-#-------------------------------------------------------------------------
-if __name__ == '__main__':
-    simple_main(GpVerifyProgram.createParser, GpVerifyProgram)

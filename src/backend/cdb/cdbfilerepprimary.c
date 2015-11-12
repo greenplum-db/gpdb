@@ -207,11 +207,6 @@ FileRepPrimary_IsMirroringRequired(
 						break;
 					}
 				}
-				/* online verification is not allowed during resync and during change tracking */
-				if (fileRepOperation == FileRepOperationVerify)
-				{
-					break;	
-				}
 				/* no break */
 			case DataStateInSync:
 				/*
@@ -365,14 +360,11 @@ FileRepPrimary_ConstructAndInsertMessage(
 	 * Prevent cancel/die interrupt while doing this multi-step in order to  
 	 * insert message and update message state atomically with respect to 
 	 * cancel/die interrupts. See MPP-10040.
-	 *
-	 * FileRepOperationVerify does not get inserted into ack hash shared memory structure
-	 * since it is using dedicated ack shared memory slot.
 	 */
 	HOLD_INTERRUPTS();
 
-	if (FileRep_IsOperationSynchronous(fileRepOperation) == TRUE &&
-		fileRepOperation != FileRepOperationVerify) { 
+	if (FileRep_IsOperationSynchronous(fileRepOperation) == TRUE) 
+	{ 
 		
 		status = FileRepAckPrimary_NewHashEntry(
 												fileRepIdentifier,
@@ -480,8 +472,6 @@ FileRepPrimary_ConstructAndInsertMessage(
 		case FileRepOperationCreateAndOpen:
 		case FileRepOperationCreate:
 		case FileRepOperationValidation:
-		case FileRepOperationVerify:
-			
 			fileRepMessageHeader->fileRepOperationDescription = fileRepOperationDescription;
 			break;
 			
@@ -1448,79 +1438,6 @@ FileRepPrimary_MirrorHeartBeat(FileRepConsumerProcIndex_e index)
 	return;
 }
 
-/*
- * FileRepPrimary_MirrorVerify
- * verify data integrity between primary and mirror
- */
-int 
-FileRepPrimary_MirrorVerify(
-							FileRepIdentifier_u				fileRepIdentifier,
-							FileRepRelationType_e			fileRepRelationType,
-							FileRepOperationDescription_u	fileRepOperationDescription,
-							char							*data, 
-							uint32							dataLength,
-							void							**responseData, 
-							uint32							*responseDataLength, 
-							FileRepOperationDescription_u	*responseDesc)
-{
-	int				status = STATUS_ERROR;
-	GpMonotonicTime	beginTime;
-	
-	if (Debug_filerep_verify_performance_print)
-	{
-		gp_set_monotonic_begin_time(&beginTime);
-	}
-	
-	if (FileRepPrimary_IsMirroringRequired(fileRepRelationType, FileRepOperationVerify)) 
-	{
-		status = FileRepPrimary_ConstructAndInsertMessage(
-														  fileRepIdentifier,
-														  fileRepRelationType,
-														  FileRepOperationVerify,
-														  fileRepOperationDescription,
-														  data,
-														  dataLength);
-		if (status != STATUS_OK)
-			return status;
-	
-		status = FileRepAckPrimary_RunConsumerVerification(
-														   &*responseData, 
-														   &*responseDataLength, 
-														   &*responseDesc);
-														  
-		if (status != STATUS_OK && 
-			dataState != DataStateInChangeTracking &&
-			! primaryMirrorIsIOSuspended())
-		{
-			ereport(WARNING,
-					(errmsg("mirror failure, "
-							"could not complete operation on mirror, "
-							"failover requested"), 
-					 errhint("run gprecoverseg to re-establish mirror connectivity"),
-					 FileRep_errdetail(fileRepIdentifier,
-									   fileRepRelationType,
-									   FileRepOperationVerify,
-									   FILEREP_UNDEFINED), 
-					 FileRep_errdetail_Shmem(),
-					 FileRep_errdetail_ShmemAck(),
-					 FileRep_errcontext()));				
-		}
-	}
-	
-	if (Debug_filerep_verify_performance_print)
-	{
-		ereport(LOG,
-				(errmsg("verification round trip elapsed time ' " INT64_FORMAT " ' miliseconds  ",
-						gp_get_elapsed_ms(&beginTime)),
-				 FileRep_errdetail(fileRepIdentifier,
-								   fileRepRelationType,
-								   FileRepOperationVerify,
-								   FILEREP_UNDEFINED)));
-	}		
-	
-	return status;
-}
-
 bool
 FileRepPrimary_IsOperationCompleted(
 			   FileRepIdentifier_u	 fileRepIdentifier,
@@ -1906,11 +1823,6 @@ FileRepPrimary_RunSender(void)
 
 				status = STATUS_ERROR;		
 				break;
-		}
-		
-		if (fileRepMessageHeader->fileRepOperation == FileRepOperationVerify)
-		{
-			messageType = FileRepMessageTypeVerify;
 		}
 		
 		if (! FileRepConnClient_SendMessage(

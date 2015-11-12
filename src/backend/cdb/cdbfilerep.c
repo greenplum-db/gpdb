@@ -198,8 +198,6 @@ static FileRepSubProc FileRepSubProcListInitial[MaxFileRepSubProc] =
 	{0, FileRepProcessTypeResyncWorker2},
 	{0, FileRepProcessTypeResyncWorker3},
 	{0, FileRepProcessTypeResyncWorker4},
-	{0, FileRepProcessTypePrimaryVerification},
-    {0, FileRepProcessTypeMirrorVerification},
 }, *FileRepSubProcList;
 
 
@@ -232,9 +230,6 @@ FileRepProcessTypeToString[] = {
 	_("primary resync worker #2 process"),
 	_("primary resync worker #3 process"),
 	_("primary resync worker #4 process"),
-
-	_("primary verification process"),
-	_("mirror verification process"),
 
 };
 
@@ -298,7 +293,6 @@ FileRepOperationToString[] = {
 	_("validation filespace dir or existence"),
 	_("drop files from dir"),
 	_("drop temporary files"),
-	_("online verification"),
 	_("not specified"),
 
 };
@@ -325,7 +319,6 @@ FileRepAckStateToString[] = {
 const char*
 FileRepConsumerProcIndexToString[] = {
 	_("xlog"),
-	_("verify"),
 	_("append only"),
 	_("writer"),
 	_("shutdown"),
@@ -2349,7 +2342,6 @@ FileRepIsBackendSubProcess(FileRepProcessType_e processType)
 	    case FileRepProcessTypePrimaryConsumerAck:
 	    case FileRepProcessTypeMirrorConsumerWriter:
         case FileRepProcessTypeMirrorConsumerAppendOnly1:
-		case FileRepProcessTypeMirrorVerification:
             return false;
 		case FileRepProcessTypePrimaryRecovery:
         case FileRepProcessTypeResyncManager:
@@ -2357,7 +2349,6 @@ FileRepIsBackendSubProcess(FileRepProcessType_e processType)
         case FileRepProcessTypeResyncWorker2:
         case FileRepProcessTypeResyncWorker3:
         case FileRepProcessTypeResyncWorker4:
-		case FileRepProcessTypePrimaryVerification:
             return true;
         default:
             Assert(!"unknown process type in 'FileRepIsBackendSubProcess' ");
@@ -2895,7 +2886,6 @@ FileRep_IsOperationSynchronous(FileRepOperation_e fileRepOperation)
 		case FileRepOperationHeartBeat:
 		case FileRepOperationCreateAndOpen:
 		case FileRepOperationValidation:
-		case FileRepOperationVerify:
 			return TRUE;
 
 		case FileRepOperationOpen:
@@ -3377,7 +3367,6 @@ void FileRep_Main(void)
     COMPILE_ASSERT(ARRAY_SIZE(FileRepAckStateToString) == FileRepAckState__EnumerationCount);
     COMPILE_ASSERT(ARRAY_SIZE(FileRepConsumerProcIndexToString) == FileRepMessageType__EnumerationCount);
 	COMPILE_ASSERT(ARRAY_SIZE(FileRepStatusToString) == FileRepStatus__EnumerationCount);
-	COMPILE_ASSERT(ARRAY_SIZE(FileRepOperationVerificationTypeToString) == 	FileRepOpVerifyType__EnumerationCount);
 	Insist(IsUnderPostmaster == TRUE);
 
 	fileRepProcessType = FileRepProcessTypeMain;
@@ -3536,11 +3525,6 @@ void FileRep_Main(void)
 				break;
 			}
 
-			if (FileRep_StartChildProcess(FileRepProcessTypePrimaryVerification) < 0) {
-				status = STATUS_ERROR;
-				break;
-			}
-
 			if (dataState == DataStateInResync)
 			{
 				if (FileRep_StartChildProcess(FileRepProcessTypeResyncManager) < 0) {
@@ -3598,11 +3582,6 @@ void FileRep_Main(void)
 			}
 
 			if (FileRep_StartChildProcess(FileRepProcessTypeMirrorSenderAck) < 0) {
-				status = STATUS_ERROR;
-				break;
-			}
-
-			if (FileRep_StartChildProcess(FileRepProcessTypeMirrorVerification) < 0) {
 				status = STATUS_ERROR;
 				break;
 			}

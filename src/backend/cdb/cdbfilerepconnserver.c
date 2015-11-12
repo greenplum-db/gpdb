@@ -306,14 +306,10 @@ FileRepConnServer_ReceiveMessageType(
 			 break;
 
 		 case '2':
-			 *fileRepMessageType = FileRepMessageTypeVerify;
-			 break;
-	 			 
-		 case '3':
 			 *fileRepMessageType = FileRepMessageTypeAO01;
 			 break;
 
-		case '4':
+		case '3':
 			 *fileRepMessageType = FileRepMessageTypeWriter;
 			 break;
 		 		 

@@ -131,7 +131,6 @@ print <<"END_MESSAGE";
 #include "catalog/gp_policy.h"
 #include "catalog/gp_san_config.h"
 #include "catalog/gp_segment_config.h"
-#include "catalog/gp_verification_history.h"
 #include "catalog/gp_version.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_aggregate.h"

@@ -43,7 +43,6 @@
 #include "catalog/gp_configuration.h"
 #include "catalog/gp_segment_config.h"
 #include "catalog/gp_san_config.h"
-#include "catalog/gp_verification_history.h"
 
 #include "catalog/gp_persistent.h"
 #include "catalog/gp_global_sequence.h"
@@ -765,8 +764,6 @@ relationId == GpSegmentConfigRelationId ||
 /* relation id: 5033 - pg_filespace_entry 20101122 */
 relationId == FileSpaceEntryRelationId || 
 
-/* relation id: 6429 - gp_verification_history 20110609 */
-relationId == GpVerificationHistoryRelationId || 
 /* relation id: 2914 - pg_auth_time_constraint 20110908 */
 relationId == AuthTimeConstraintRelationId ||
 /* TIDYCAT_END_CODEGEN */
@@ -841,9 +838,6 @@ relationId == FileSpaceEntryFsefsoidIndexId ||
 /* relation id: 5033 - pg_filespace_entry 20101122 */
 relationId == FileSpaceEntryFsefsoidFsedbidIndexId || 
 
-
-/* relation id: 6429 - gp_verification_history 20110609 */
-relationId == GpVerificationHistoryVertokenIndexId || 
 
 /* TIDYCAT_END_CODEGEN */
 		0 /* OR ZERO */

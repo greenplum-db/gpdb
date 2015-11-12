@@ -67,7 +67,6 @@ POSTGRES_BKI_SRCS := $(addprefix $(top_srcdir)/src/include/catalog/, \
 	pg_authid.h pg_auth_members.h pg_shdepend.h pg_shdescription.h pg_resqueue.h \
 	gp_configuration.h gp_id.h gp_policy.h gp_version.h \
 	gp_segment_config.h gp_san_config.h \
-	gp_verification_history.h \
 	pg_window.h \
 	pg_exttable.h pg_appendonly.h pg_appendonly_alter_column.h aoseg.h \
 	gp_fastsequence.h pg_extprotocol.h \

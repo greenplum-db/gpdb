@@ -33,7 +33,6 @@
 #include "catalog/gp_fastsequence.h"
 #include "catalog/gp_san_config.h"
 #include "catalog/gp_segment_config.h"
-#include "catalog/gp_verification_history.h"
 #include "catalog/heap.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_appendonly_alter_column.h"

@@ -153,7 +153,6 @@
 #include "cdb/cdbvars.h"
 
 #include "cdb/cdbfilerep.h"
-#include "cdb/cdbfilerepverify.h"
 
 #ifdef EXEC_BACKEND
 #include "storage/spin.h"
@@ -563,7 +562,6 @@ static long PostmasterRandom(void);
 static void RandomSalt(char *md5Salt);
 static void signal_child(pid_t pid, int signal);
 static bool SignalSomeChildren(int signal, int target);
-static void processFilerepVerifyRequest(void * inputBuf, int *offsetPtr, int length);
 
 #define SignalChildren(sig)			SignalSomeChildren(sig, BACKEND_TYPE_ALL)
 #define SignalAutovacWorkers(sig)	SignalSomeChildren(sig, BACKEND_TYPE_AUTOVAC)
@@ -701,17 +699,6 @@ extern int64 FileRepResync_GetBlocksSynchronized(void);
 extern int64 FileRepResync_GetTotalBlocksToSynchronize(void);
 extern int FileRepResync_GetCurFsobjCount(void);
 extern int FileRepResync_GetTotalFsobjCount(void);
-
-/** verification status info from cdbfilerepverify.h **/
-/*
-extern struct timeval FileRepVerify_GetEstimateVerifyCompletionTime(void);
-extern struct timeval FileRepVerify_GetVerifyRequestStartTime(void);
-extern float FileRepVerify_GetTotalGBsVerified(void);
-extern float FileRepVerify_GetTotalGBsToVerify(void);
-extern char* FileRepverify_GetVerifyRequestState(void);
-extern char* FileRepVerify_GetVerifyRequestMode(void);
-extern char* FileRepVerify_GetCurrentToken(void);
-*/
 
 /* changetracking size info from cdbresynchronizechangetracking.h */
 extern int64 ChangeTracking_GetTotalSpaceUsedOnDisk(void);
@@ -3164,10 +3151,6 @@ processTransitionRequest_getMirrorStatus(void)
 	int64 resyncTotalToComplete = FileRepResync_GetTotalBlocksToSynchronize();
 	int64 changeTrackingBytesUsed = ChangeTracking_GetTotalSpaceUsedOnDisk();
 
-	float totalGBsVerified = FileRepVerify_GetTotalGBsVerified();
-	float totalGBsToVerify = FileRepVerify_GetTotalGBsToVerify();
-	struct timeval estimateVerifyCompletionTime = FileRepVerify_GetEstimateVerifyCompletionTime();
-	struct timeval verificationStartTime = FileRepVerify_GetVerifyRequestStartTime();
 	int fsobjCount = FileRepResync_GetCurFsobjCount();
 	int totalFsobjCount = FileRepResync_GetTotalFsobjCount();
 
@@ -3180,9 +3163,6 @@ processTransitionRequest_getMirrorStatus(void)
 
 	bool isIOSuspended = primaryMirrorIsIOSuspended();
 	char *databaseStatus;
-	char *verificationStatus = FileRepVerify_GetVerifyRequestState();
-	char *verificationMode = FileRepVerify_GetVerifyRequestMode();
-	char *verificationToken = FileRepVerify_GetCurrentToken();
 
 	/** Note: some of these status field results are used in python to determine whether there is a warning or not */
 	if ( pm_mode == PMModeMirrorSegment)
@@ -3226,14 +3206,7 @@ processTransitionRequest_getMirrorStatus(void)
 							  "changeTrackingBytesUsed:" INT64_FORMAT "\n"
 							  "estimatedCompletionTimeSecondsSinceEpoch:" INT64_FORMAT "\n"
 							  "totalResyncObjectCount:%d\n"
-							  "curResyncObjectCount:%d\n"
-							  "verificationStatus:%s\n"
-							  "verificationMode:%s\n"
-							  "verificationStartTimeSecondsSinceEpoch:" INT64_FORMAT "\n"
-							  "verificationTotalCount:%0.2f\n"
-							  "verificationCompletedCount:%0.2f\n"
-							  "estimatedCompletionVerificationTimeSecondsSinceEpoch:" INT64_FORMAT "\n"
-							  "verificationToken:%s\n",
+							  "curResyncObjectCount:%d\n",
 			 getMirrorModeLabel(pm_mode), 
 			 getSegmentStateLabel(s_state), 
 			 getDataStateLabel(d_state),
@@ -3246,14 +3219,7 @@ processTransitionRequest_getMirrorStatus(void)
 			 changeTrackingBytesUsed,
 			 (int64)estimateResyncCompletionTime.tv_sec,
 			 totalFsobjCount,
-			 fsobjCount,
-			 verificationStatus,
-			 verificationMode,
-			 (int64)verificationStartTime.tv_sec,
-			 totalGBsToVerify,
-			 totalGBsVerified,
-			 (int64)estimateVerifyCompletionTime.tv_sec,
-			 verificationToken);
+			 fsobjCount);
 
 	sendPrimaryMirrorTransitionResult(statusBuf);
 }
@@ -3418,234 +3384,6 @@ exit:
 }
 
 /**
- * Send a verification request.
- * No validation of request is performed here.
- * The check to verify if this is a valid request is done in the verification thread.	
- * 
- * TODO: Remove the logs after verification
- */
-static void
-processFilerepVerifyRequest(void * inputBuf, int *offsetPtr, int length)
-{
-	char *fullVerify = readNextStringFromString(inputBuf, offsetPtr, length);
-	char *file = readNextStringFromString(inputBuf, offsetPtr, length);
-	char *directoryTree = readNextStringFromString(inputBuf, offsetPtr, length);
-	char *token = readNextStringFromString(inputBuf, offsetPtr, length);
-
-
-	//char *estimateOnly = readNextStringFromString(inputBuf, offsetPtr, length);
-	//char *contentNumber = readNextStringFromString(inputBuf, offsetPtr, length);
-
-	char *abort = readNextStringFromString(inputBuf, offsetPtr, length);
-	char *suspend = readNextStringFromString(inputBuf, offsetPtr, length);
-	char *resume = readNextStringFromString(inputBuf, offsetPtr, length);
-	char *dirIgnorePath = readNextStringFromString(inputBuf, offsetPtr, length);
-	char *ignorePattern = readNextStringFromString(inputBuf, offsetPtr, length);
-
-	char *logLevel = readNextStringFromString(inputBuf, offsetPtr, length);
-
-	//char *history = readNextStringFromString(inputBuf, offsetPtr, length);
-
-	//char *state = readNextStringFromString(inputBuf, offsetPtr, length);
-
-	int status = STATUS_OK;
-
-	FileRepVerifyArguments *args;
-	args = createNewFileRepVerifyArguments();
-
-	if (NULL == args){
-	  elog(LOG, "Memory allocation failure in createNewFileRepVerifyArguments");
-	  return;
-	}
-#define RESPONSE_LEN 1000
-	char statusBuf[RESPONSE_LEN+50];
-	char responseMsg[RESPONSE_LEN+1];
-
-
-	if(fullVerify == NULL || (strlen(fullVerify) == 0))
-	{
-		//elog(LOG, "fullVerify is NULL");
-		args->fullVerify = false;
-	}
-	else
-	{
-		//elog(LOG, "fullverify %s\n", fullVerify);
-		args->fullVerify = true;
-	}
-
-	if(file == NULL || (strlen(file) == 0))
-	{
-		//elog(LOG, "file is NULL");
-	}
-	else
-	{
-		//elog(LOG, "file is %s\n", file);
-		strncpy(args->compareFile, file, strlen(file)+1);
-	}
-
-#if 0
-	if(history == NULL || (strlen(history) == 0))
-	{
-		//elog(LOG, "history is NULL");
-		args->printHistory = false;
-	}
-
-	else
-	{
-		//elog(LOG, "history is %s", history);
-		args->printHistory = true;
-	}
-#endif
-	if(token == NULL || (strlen(token) == 0))
-	{
-		//elog(LOG, "Token is NULL");
-	}
-	else
-	{
-		//elog(LOG, "Token is %s\n", Token);
-		strncpy(args->token, token, strlen(token)+1);
-	}
-
-	if(logLevel == NULL || (strlen(logLevel) == 0))
-	{
-		//elog(LOG, "logLevel is NULL\n");
-	}
-	else
-	{
-		//elog(LOG, "logLevel is %s\n", logLevel);
-		strcpy(args->logLevel, logLevel);
-	}
-
-#if 0
-	if(estimateOnly == NULL || (strlen(estimateOnly) == 0))
-	{
-		//elog(LOG, "estimateOnly is NULL");
-	}
-	else
-	{
-		//elog(LOG, "estimate is %s\n", estimateOnly);
-		args->estimateOnly = true;
-	}
-
-	if(contentNumber == NULL || (strlen(contentNumber) == 0))
-	{
-		//elog(LOG, "contentNumber is NULL");
-	}
-	else
-	{
-		//elog(LOG, "contentNumber is %s\n", contentNumber);
-		strncpy(args->contentNumber, contentNumber, strlen(contentNumber) + 1);
-	}
-
-#endif
-
-
-
-	if(directoryTree == NULL || (strlen(directoryTree) == 0))
-	{
-		//elog(LOG, "directoryTree is NULL");
-	}
-	else
-	{
-		//elog(LOG, "directoryTree is %s\n", directoryTree);
-		strncpy(args->directoryTree, directoryTree, strlen(directoryTree)+1);
-	}
-
-	if(abort == NULL || (strlen(abort) == 0))
-	{
-	  ///		elog(LOG, "abort is NULL");
-		args->abort = false;
-	}
-	else
-	{
-	  //		elog(LOG, "abort is %s\n", abort);
-		args->abort = true;
-	}
-
-	if(resume == NULL || (strlen(resume) == 0))
-	{
-		args->resume = false;
-		//elog(LOG, "resume is NULL");
-	}
-	else
-	{
-		//elog(LOG, "resume is %s\n", resume);
-		args->resume = true;
-	}
-
-	if(suspend == NULL || (strlen(suspend) == 0))
-	{
-		//elog(LOG, "suspend is NULL");
-		args->suspend = false;
-	}
-	else
-	{
-		//elog(LOG, "suspend is %s\n", suspend);
-		args->suspend = true;
-	}
-
-	if(ignorePattern == NULL || (strlen(ignorePattern) == 0))
-	{
-		//elog(LOG, "ignorePattern is NULL");
-	}
-	else
-	{
-		//elog(LOG, "ignorePattern is %s\n", ignorePattern);
-		if (strlen(ignorePattern)+1 >  IGNORE_PATTERN_LENGTH){
-			snprintf(statusBuf, RESPONSE_LEN+50, "Failure: ignore file list exceeds max length of %d chars\n", IGNORE_PATTERN_LENGTH);
-			sendPrimaryMirrorTransitionResult(responseMsg);
-			return;
-
-		}
-		strncpy(args->ignorePattern, ignorePattern, strlen(ignorePattern)+1);
-	
-	}
-
-	if(dirIgnorePath == NULL || (strlen(dirIgnorePath) == 0))
-	{
-		//elog(LOG, "dirIgnorePath is NULL");
-	}
-	else
-	{
-		//elog(LOG, "dirIgnorePath is %s\n", dirIgnorePath);
-		if (strlen(dirIgnorePath)+1 >  DIR_IGNOREPATH_LENGTH ){
-			snprintf(statusBuf, RESPONSE_LEN+50, "Failure: ignore directory list exceeds max length of %d chars\n", DIR_IGNOREPATH_LENGTH );
-			sendPrimaryMirrorTransitionResult(responseMsg);
-			return;
-
-		}
-		strncpy(args->dirIgnorePath, dirIgnorePath, strlen(dirIgnorePath)+1);
-
-	}
-
-#if 0
-	if((state == NULL) || (strlen(state) == 0))
-	{
-		//elog(LOG, "state is NULL");
-		args->reportState = false;
-	}
-	else
-	{
-		elog(LOG, "state is %s\n", state);
-		args->reportState = true;
-	}
-#endif
-
-	responseMsg[0] = '\0';
-	status = processVerifyRequest(args, responseMsg, RESPONSE_LEN);
-
-	if(status == STATUS_OK){
-	  snprintf(statusBuf, RESPONSE_LEN+50, "Success: %s\n", responseMsg);
-	  sendPrimaryMirrorTransitionResult("Success:\n");
-	} else{
-	  snprintf(statusBuf, RESPONSE_LEN+50, "Failure: %s\n", responseMsg);
-	  sendPrimaryMirrorTransitionResult(responseMsg);
-	}
-
-	pfree(args);
-}
-
-/**
  * Called during startup packet processing.
  *
  * Note that we don't worry about freeing memory here because this is
@@ -3725,10 +3463,6 @@ processPrimaryMirrorTransitionRequest(Port *port, void *pkt)
 	else if (strcmp("faultInject", targetModeStr) == 0)
 	{
 		processTransitionRequest_faultInject(buf, &offset, length);
-	}
-	else if(strcmp("gp_verify", targetModeStr) == 0)
-	{
-		processFilerepVerifyRequest(buf, &offset, length);
 	}
 	else
 	{

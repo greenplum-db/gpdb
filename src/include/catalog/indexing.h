@@ -368,9 +368,6 @@ DECLARE_UNIQUE_INDEX(pg_attribute_encoding_attrelid_attnum_index, 3237, on pg_at
 /* relation id: 3220 - pg_type_encoding 20110727 */
 DECLARE_UNIQUE_INDEX(pg_type_encoding_typid_index, 3207, on pg_type_encoding using btree(typid oid_ops));
 #define TypeEncodingTypidIndexId	3207
-/* relation id: 6429 - gp_verification_history 20110609 */
-DECLARE_UNIQUE_INDEX(gp_verification_history_vertoken_index, 6431, on gp_verification_history using btree(vertoken name_ops));
-#define GpVerificationHistoryVertokenIndexId	6431
 /* relation id: 9903 - pg_partition_encoding 20110814 */
 DECLARE_UNIQUE_INDEX(pg_partition_encoding_parencoid_parencattnum_index, 9908, on pg_partition_encoding using btree(parencoid oid_ops, parencattnum int2_ops));
 #define PartitionEncodingParencoidAttnumIndexId	9908

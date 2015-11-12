@@ -429,15 +429,7 @@ FileRepPrimary_RunHeartBeat(void)
 		if (retry == 1202) /* 1200 * 50 ms = 60 sec */
 		{
 			FileRepPrimary_MirrorHeartBeat(FileRepMessageTypeAO01);
-			continue;
-		}
-
-		if (retry == 1203) /* 1200 * 50 ms = 60 sec */
-		{
-			FileRepPrimary_MirrorHeartBeat(FileRepMessageTypeVerify);
 			retry = 0;
 		}
-		
 	} // while(1)	
-	
 }
