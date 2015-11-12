@@ -193,7 +193,7 @@ ProcedureCreate(const char *procedureName,
 	 * and we'll bypass this check for those functions.
 	 */
 	if ((returnType == ANYARRAYOID || returnType == ANYELEMENTOID ||
-		 genericOutParam) && !genericInParam && !gp_upgrade_mode)
+		 genericOutParam) && !genericInParam)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 				 errmsg("cannot determine result data type"),

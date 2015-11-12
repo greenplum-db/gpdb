@@ -36,13 +36,13 @@ static StdRdOptions ao_storage_opts;
 inline bool
 isDefaultAOCS(void)
 {
-	return ao_storage_opts.columnstore && !gp_upgrade_mode;
+	return ao_storage_opts.columnstore;
 }
 
 inline bool
 isDefaultAO(void)
 {
-	return ao_storage_opts.appendonly && !gp_upgrade_mode;
+	return ao_storage_opts.appendonly;
 }
 
 /*

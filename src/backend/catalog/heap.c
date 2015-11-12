@@ -345,9 +345,6 @@ heap_create(const char *relname,
 		 * For shared table (that we created during upgrade), we create it once in every
 		 * database, but they will all point to the same file. So, the file might have already
 		 * been created.
-		 * So, if we're in upgrade and we're creating shared table, we scan for existences.
-		 * (We don't need to scan when we're creating shared table during initdb.)
-		 * If it exists, we reuse the Tid and SerialNum and mark the isPresent to true.
 		 *
 		 * Note that we have not tried creating shared AO table.
 		 *
@@ -355,19 +352,6 @@ heap_create(const char *relname,
 		 */
 		// WARNING: Do not use the rel structure -- it doesn't have relstorage set...
 		isAppendOnly = (relstorage == RELSTORAGE_AOROWS || relstorage == RELSTORAGE_AOCOLS);
-
-		if (shared_relation && gp_upgrade_mode)
-		{
-			skipCreatingSharedTable = PersistentFileSysObj_ScanForRelation(
-							&rel->rd_node,
-							/* segmentFileNum */ 0,
-							&rel->rd_segfile0_relationnodeinfo.persistentTid,
-							&rel->rd_segfile0_relationnodeinfo.persistentSerialNum);
-
-			if (Debug_persistent_print && skipCreatingSharedTable)
-				elog(Persistent_DebugPrintLevel(),
-						"heap_create: file for shared relation '%s' already exists", relname);
-		}
 
 		if (!skipCreatingSharedTable)
 		{
@@ -1376,7 +1360,7 @@ heap_create_with_catalog(const char *relname,
 	 * During upgrade, do not validate because we accept tidycat options as well.
 	 */
 	stdRdOptions = (StdRdOptions*) heap_reloptions(
-			relkind, reloptions, valid_opts ? false : !gp_upgrade_mode);
+			relkind, reloptions, !valid_opts);
 	heap_test_override_reloptions(relkind, stdRdOptions, &safefswritesize);
 	appendOnlyRel = stdRdOptions->appendonly;
 	validateAppendOnlyRelOptions(appendOnlyRel,

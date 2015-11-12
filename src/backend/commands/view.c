@@ -202,17 +202,6 @@ DefineVirtualRelation(const RangeVar *relation, List *tlist, bool replace, Oid v
 		descriptor = BuildDescForRelation(attrList);
 		checkViewTupleDesc(descriptor, rel->rd_att);
 
-		/* During upgrade mode, use the "alter table add column" code to add new
-		 * columns to the view definition.
-		 */
-		if (gp_upgrade_mode && descriptor->natts > rel->rd_att->natts)
-		{
-			int i = 0;
-			foreach_with_count(t, attrList, i)
-				if (i >= rel->rd_att->natts)
-					ATAddColumn(rel, (ColumnDef*)lfirst(t));
-		}
-
 		/*
 		 * Seems okay, so return the OID of the pre-existing view.
 		 */
@@ -260,22 +249,13 @@ checkViewTupleDesc(TupleDesc newdesc, TupleDesc olddesc)
 {
 	int			i;
 
-	/* The number of columns in the view can't change,
-	 * except during upgrade where the number of col
-	 * can increase.
-	 */
-	if (!gp_upgrade_mode && newdesc->natts != olddesc->natts)
+	if (newdesc->natts != olddesc->natts)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 				 errmsg("cannot change number of columns in view")));
-	if (gp_upgrade_mode && newdesc->natts < olddesc->natts)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("cannot reduce the number of columns in view")));
-
 	/* we can ignore tdhasoid */
 
-	for (i = 0; i < olddesc->natts; i++)
+	for (i = 0; i < newdesc->natts; i++)
 	{
 		Form_pg_attribute newattr = newdesc->attrs[i];
 		Form_pg_attribute oldattr = olddesc->attrs[i];

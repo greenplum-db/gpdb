@@ -106,12 +106,6 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 			initval = defGetString(defel, &need_free_value);
 		else if (pg_strcasecmp(defel->defname, "prefunc") == 0) /* MPP */
 			prelimfuncName = defGetQualifiedName(defel);
-		else if (gp_upgrade_mode && pg_strcasecmp(defel->defname, "oid") == 0) /* OID */
-		{
-			int64 oid = defGetInt64(defel);
-			Assert(oid < FirstBootstrapObjectId);
-			newOid = (Oid)oid;
-		}
 		else
 			ereport(WARNING,
 					(errcode(ERRCODE_SYNTAX_ERROR),
@@ -200,8 +194,7 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 	 * (AggregateCreate will check).
 	 */
 	transTypeId = typenameTypeId(NULL, transType);
-	if (!gp_upgrade_mode &&
-		(get_typtype(transTypeId) == 'p' &&
+	if ((get_typtype(transTypeId) == 'p' &&
 		 transTypeId != ANYARRAYOID &&
 		 transTypeId != ANYELEMENTOID))
 		ereport(ERROR,

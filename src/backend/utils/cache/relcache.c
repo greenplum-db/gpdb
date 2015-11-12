@@ -3204,33 +3204,15 @@ RelationCacheInitializePhase3(void)
 				pfree(relation->rd_options);
 			RelationParseRelOptions(relation, htup);
 
-#if GP_VERSION_NUM >= 40300 && GP_VERSION_NUM < 40400
 			/*
-			 * In 4.3, we fix row type oid for these shared relations.  They are
-			 * fixed by catalog upgrade SQL, but in order to execute that SQL,
-			 * we have to fake it.  Make sure gpmigrator starts the database with
-			 * the upgrade option.
+			 * Check the values in rd_att were set up correctly.  (We cannot
+			 * just copy them over now: formrdesc must have set up the rd_att
+			 * data correctly to start with, because it may already have been
+			 * copied into one or more catcache entries.)
 			 */
-			if (gp_upgrade_mode &&
-				(relation->rd_att->tdtypeid == PG_DATABASE_RELTYPE_OID ||
-				 relation->rd_att->tdtypeid == PG_AUTHID_RELTYPE_OID ||
-				 relation->rd_att->tdtypeid == PG_AUTH_MEMBERS_RELTYPE_OID))
-			{
-				relation->rd_rel->reltype = relation->rd_att->tdtypeid;
-			}
-			else
-#endif
-			{
-				/*
-				 * Check the values in rd_att were set up correctly.  (We cannot
-				 * just copy them over now: formrdesc must have set up the rd_att
-				 * data correctly to start with, because it may already have been
-				 * copied into one or more catcache entries.)
-				 */
-				Assert(relation->rd_att->tdtypeid == relp->reltype);
-				Assert(relation->rd_att->tdtypmod == -1);
-				Assert(relation->rd_att->tdhasoid == relp->relhasoids);
-			}
+			Assert(relation->rd_att->tdtypeid == relp->reltype);
+			Assert(relation->rd_att->tdtypmod == -1);
+			Assert(relation->rd_att->tdhasoid == relp->relhasoids);
 
 			ReleaseSysCache(htup);
 

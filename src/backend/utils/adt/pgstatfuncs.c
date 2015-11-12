@@ -343,39 +343,6 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
-#if GP_VERSION_NUM >= 40300 && GP_VERSION_NUM < 40400
-		/*
-		 * During upgrade, we use normal gpstart/gpstop, which invokes this
-		 * via pg_stat_activity view.  If catalog has not upgraded yet, SQL
-		 * ends up with ERROR about discrepancy of output and definition.
-		 * so we need to check the catalog definition before deciding the
-		 * number of output column.
-		 */
-		if (gp_upgrade_mode)
-		{
-			HeapTuple	procTup;
-			Oid	   *argtypes;
-			char  **argnames;
-			char   *argmodes;
-			int		nargs;
-
-			procTup = SearchSysCache(PROCOID,
-									 ObjectIdGetDatum(F_PG_STAT_GET_ACTIVITY), 0, 0, 0);
-			if (!HeapTupleIsValid(procTup))
-				elog(ERROR, "cache lookup failed for %u", F_PG_STAT_GET_ACTIVITY);
-			nargs = get_func_arg_info(procTup, &argtypes, &argnames, &argmodes);
-			if (nargs == 13)
-				nattr = 12;
-			else
-				nattr = 13;
-
-			pfree(argtypes);
-			pfree(argnames);
-			pfree(argmodes);
-			ReleaseSysCache(procTup);
-		}
-#endif
-
 		tupdesc = CreateTemplateTupleDesc(nattr, false);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "datid", OIDOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "procpid", INT4OID, -1, 0);

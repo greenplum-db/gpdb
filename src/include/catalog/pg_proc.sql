@@ -1558,8 +1558,6 @@
 
  CREATE FUNCTION gp_persistent_repair_delete(int4, tid) RETURNS int4 LANGUAGE internal VOLATILE AS 'gp_persistent_repair_delete' WITH (OID=7181, DESCRIPTION="Remove an entry specified by TID from a persistent table for the current database instance");
 
- CREATE FUNCTION gp_persistent_set_relation_bufpool_kind_all() RETURNS int4 LANGUAGE internal VOLATILE AS 'gp_persistent_set_relation_bufpool_kind_all' WITH (OID=7182, DESCRIPTION="Populate the gp_persistent_relation_node table's relation_bufpool_kind column for the whole database instance for upgrade from 4.0 to 4.1");
-
 -- xml functions
  CREATE FUNCTION xml_in(cstring) RETURNS xml LANGUAGE internal IMMUTABLE STRICT AS 'xml_in' WITH (OID=2973, DESCRIPTION="I/O");
 

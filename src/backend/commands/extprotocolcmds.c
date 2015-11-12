@@ -59,12 +59,6 @@ DefineExtProtocol(List *name, List *parameters, Oid newOid, bool trusted)
 			writefuncName = defGetQualifiedName(defel);
 		else if (pg_strcasecmp(defel->defname, "validatorfunc") == 0)
 			validatorfuncName = defGetQualifiedName(defel);
-		else if (gp_upgrade_mode && pg_strcasecmp(defel->defname, "oid") == 0) /* OID */
-		{
-			int64 oid = defGetInt64(defel);
-			Assert(oid < FirstBootstrapObjectId);
-			newOid = (Oid)oid;
-		}
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),

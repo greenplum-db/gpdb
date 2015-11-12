@@ -43,8 +43,6 @@ ignore: gp_portal_error
 test: notin with_clause eagerfree toast mapred gpparams tidycat aocs
 test: ic gp_numeric_agg gp_toolkit
 ignore: icudp_full
-ignore: upgrade
-ignore: upg2
 ignore: gp_delete_as_trunc
 
 test: filespace trig xml auth_constraint role rle portals_updatable plpgsql_cache percentile timeseries resource_queue_function gp_optimizer co_nestloop_idxscan pg_stat_last_operation

@@ -207,13 +207,6 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 		return false;
 
 	/*
-	 * If we're in upgrade mode, and we say we don't want a toast table
-	 * (by having an InvalidOid for toast Oid).
-	 */
-	if (gp_upgrade_mode && toastOid==InvalidOid)
-		return false;
-
-	/*
 	 * Toast table is shared if and only if its parent is.
 	 *
 	 * We cannot allow toasting a shared relation after initdb (because

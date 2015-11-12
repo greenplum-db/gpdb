@@ -137,23 +137,9 @@ main(int argc, char *argv[])
 	crc32cFinish(crc);
 
 	if (!EQ_CRC32(crc, ControlFile.crc))
-	{
-		/*
-		 * Well, the crc doesn't match our computed crc32c value.
-		 * But it might be an old crc32, using the old polynomial.
-		 * If it is, it's OK.
-		 */
-		INIT_CRC32(crc);
-		COMP_CRC32(crc,
-				   (char *) &ControlFile,
-				   offsetof(ControlFileData, crc));
-		FIN_CRC32(crc);
-
-		if (!EQ_CRC32(crc, ControlFile.crc))
-			printf(_("WARNING: Calculated CRC checksum does not match value stored in file.\n"
-					 "Either the file is corrupt, or it has a different layout than this program\n"
-					 "is expecting.  The results below are untrustworthy.\n\n"));
-	}
+		printf(_("WARNING: Calculated CRC checksum does not match value stored in file.\n"
+				 "Either the file is corrupt, or it has a different layout than this program\n"
+				 "is expecting.  The results below are untrustworthy.\n\n"));
 
 	/*
 	 * Use variable for format to suppress overly-anal-retentive gcc warning

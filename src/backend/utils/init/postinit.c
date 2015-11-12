@@ -354,10 +354,7 @@ CheckMyDatabase(const char *name, bool am_superuser)
 		/*
 		 * Check that the database is currently allowing connections.
 		 */
-		if (gp_upgrade_mode && !dbform->datallowconn)
-			elog(INFO, "Connecting to no-connection db in upgrade mode.");
-
-		if (!dbform->datallowconn && !gp_upgrade_mode)
+		if (!dbform->datallowconn)
 			ereport(FATAL,
 					(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 			 errmsg("database \"%s\" is not currently accepting connections",
@@ -894,20 +891,6 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 */
 	if (MyProcPort != NULL)
 		process_startup_options(MyProcPort, am_superuser);
-
-	/*
-	 * In Upgrade Mode, normal connection (i.e. dispatch mode)
-	 * is disallowed unless it's the bootstrap user and
-	 * gp_maintenance_conn GUC is set.  We cannot check it until
-	 * process_startup_options parses the GUC.
-	 */
-	if (gp_upgrade_mode && Gp_role == GP_ROLE_DISPATCH &&
-		!(GetAuthenticatedUserId() == BOOTSTRAP_SUPERUSERID &&
-			gp_maintenance_conn))
-		ereport(FATAL,
-				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 errmsg("upgrade in progress, connection refused"),
-				 errSendAlert(false)));
 
 	/*
 	 * Maintenance Mode: allow superuser to connect when

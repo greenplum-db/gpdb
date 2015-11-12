@@ -1,8 +1,0 @@
-relname|relnamespace|reltype|relowner|relam|relfilenode|reltablespace|relpages|reltuples|reltoastrelid|reltoastidxid|relaosegrelid|relaosegidxid|relhasindex|relisshared|relkind|relstorage|relnatts|relchecks|reltriggers|relukeys|relfkeys|relrefs|relhasoids|relhaspkey|relhasrules|relhassubclass|relfrozenxid|relacl|reloptions
-5006|gp_configuration_history|11|6434|10|0|5006|1664|0|0|0|0|0|0|f|t|r|h|3|0|0|0|0|0|f|f|f|f|607|{=r/@gpcurusername@}|\N
-5029|gp_db_interfaces|11|6436|10|0|5029|1664|0|0|0|0|0|0|t|t|r|h|3|0|0|0|0|0|f|f|f|f|607|{=r/@gpcurusername@}|\N
-5030|gp_interfaces|11|6433|10|0|5030|1664|0|0|0|0|0|0|t|t|r|h|3|0|0|0|0|0|f|f|f|f|607|{=r/@gpcurusername@}|\N
-6108|gp_db_interfaces_dbid_index|11|0|10|403|6108|1664|1|0|0|0|0|0|f|t|i|h|1|0|0|0|0|0|f|f|f|f|0|\N|\N
-6109|gp_interfaces_interface_index|11|0|10|403|6109|1664|1|0|0|0|0|0|f|t|i|h|1|0|0|0|0|0|f|f|f|f|0|\N|\N
-6110|pg_appendonly_alter_column|11|6437|10|0|6110|0|0|0|0|0|0|0|t|f|r|h|4|0|0|0|0|0|f|f|f|f|877|{=r/@gpcurusername@}|\N
-5031|pg_appendonly_alter_column_relid_index|11|0|10|403|5031|0|1|0|0|0|0|0|f|f|i|h|2|0|0|0|0|0|f|f|f|f|0|\N|\N
