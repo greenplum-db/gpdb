@@ -344,7 +344,8 @@ DATA(insert ( 1247 gp_segment_id   23 0  4  -8 0 -1 -1 t p i t f f t 0));
 { 1255, {"prosrc"},				25, -1, -1, 17, 0, -1, -1, false, 'x', 'i', false, false, false, true, 0 }, \
 { 1255, {"probin"},				17, -1, -1, 18, 0, -1, -1, false, 'x', 'i', false, false, false, true, 0 }, \
 { 1255, {"proacl"},			  1034, -1, -1, 19, 1, -1, -1, false, 'x', 'i', false, false, false, true, 0 }, \
-{ 1255, {"prodataaccess"},		18, -1, 1, 20, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }
+{ 1255, {"prodataaccess"},		18, -1, 1, 20, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
+{ 1255, {"provariadic"},        26, -1, 4,  21, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }
 
 DATA(insert ( 1255 proname			19 -1 NAMEDATALEN	1 0 -1 -1 f p i t f f t 0));
 DATA(insert ( 1255 pronamespace		26 -1 4   2 0 -1 -1 t p i t f f t 0));
@@ -366,6 +367,7 @@ DATA(insert ( 1255 prosrc			25 -1 -1 17 0 -1 -1 f x i f f f t 0));
 DATA(insert ( 1255 probin			17 -1 -1 18 0 -1 -1 f x i f f f t 0));
 DATA(insert ( 1255 proacl		  1034 -1 -1 19 1 -1 -1 f x i f f f t 0));
 DATA(insert ( 1255 prodataaccess	18 -1 1 20 0 -1 -1 t p c t f f t 0));
+DATA(insert ( 1255 provariadic      26 -1 4  21 0 -1 -1 t p i t f f t 0));
 DATA(insert ( 1255 ctid				27 0  6  -1 0 -1 -1 f p s t f f t 0));
 DATA(insert ( 1255 oid				26 0  4  -2 0 -1 -1 t p i t f f t 0));
 DATA(insert ( 1255 xmin				28 0  4  -3 0 -1 -1 t p i t f f t 0));

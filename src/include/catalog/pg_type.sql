@@ -461,6 +461,8 @@
 -- ARRAY TYPE tid
 -- ARRAY TYPE xid
 -- ARRAY TYPE cid
+-- ARRAY TYPE cstring
+-- #define CSTRINGARRAYOID	2926
 -- ARRAY TYPE oidvector
 -- ARRAY TYPE bpchar
 -- ARRAY TYPE varchar
@@ -761,7 +763,7 @@
    INTERNALLENGTH = -2,
    STORAGE = plain,
    ALIGNMENT = char
- ) WITH (OID=2275, TYPTYPE=PSEUDO);
+ ) WITH (OID=2275, ARRAYOID=2926, TYPTYPE=PSEUDO);
 -- #define CSTRINGOID		2275
 
  CREATE TYPE "any"(
