@@ -1,6 +1,6 @@
 [submodule "gpAux/client"]
 	path = gpAux/client
-	url = ssh://git@stash.greenplum.com:2222/gpdb/clients.git
+	url = ssh://git@stash.eng.pivotal.io:2222/gpdb/clients.git
 	branch = master
 [submodule "gpAux/extensions/plr/source"]
 	path = gpAux/extensions/plr/source
