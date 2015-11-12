@@ -1171,9 +1171,9 @@ sub printfndef
 		($tup->{proargnames} ? '"' . $tup->{proargnames} . '"' : "_null_") . " " .
 		(exists($fndef->{with}->{prosrc}) ? $fndef->{with}->{prosrc} :
 		 ($tup->{prosrc} ? $tup->{prosrc} : "_null_" )) . " " .
-		($tup->{probin} ? $tup->{probin} : "-") . " " .
+		($tup->{probin} ? $tup->{probin} : "_null_") . " " .
 		($tup->{proacl} ? $tup->{proacl} : "_null_") . " " . 
-		$tup->{prodataaccess} . " " .
+		$tup->{prodataaccess} . " " . 0 .
 		"));\n";
 	$bigstr .= "DESCR(" . $fndef->{with}->{description} . ");\n"
 		if (exists($fndef->{with}->{description}));

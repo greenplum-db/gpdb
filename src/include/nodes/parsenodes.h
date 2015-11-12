@@ -329,6 +329,7 @@ typedef struct FuncCall
     List       *agg_order;      /* ORDER BY (list of SortBy) */
 	bool		agg_star;		/* argument was really '*' */
 	bool		agg_distinct;	/* arguments were labeled DISTINCT */
+	bool		func_variadic;	/* last argument was labeled VARIADIC */
 	int			location;		/* token location, or -1 if unknown */
 	Node	   *over;			/* over clause */
     Node       *agg_filter;     /* aggregation filter clause */
@@ -2207,7 +2208,7 @@ typedef struct FunctionParameter
 	NodeTag		type;
 	char	   *name;			/* parameter name, or NULL if not given */
 	TypeName   *argType;		/* TypeName for parameter type */
-	FunctionParameterMode mode; /* IN/OUT/INOUT */
+	FunctionParameterMode mode; /* IN/OUT/INOUT/VARIADIC/TABLE */
 } FunctionParameter;
 
 typedef struct AlterFunctionStmt

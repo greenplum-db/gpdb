@@ -559,7 +559,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	UNBOUNDED UNCOMMITTED UNENCRYPTED UNION UNIQUE UNKNOWN UNLISTEN UNTIL
 	UPDATE USER USING
 
-	VACUUM VALID VALIDATION VALIDATOR VALUE_P VALUES VARCHAR VARYING
+	VACUUM VALID VALIDATION VALIDATOR VALUE_P VALUES VARCHAR VARIADIC VARYING
 	VERBOSE VERSION_P VIEW VOLATILE
 
 	WEB WHEN WHERE WINDOW WITH WITHIN WITHOUT WORK WRAPPER WRITABLE WRITE
@@ -6892,6 +6892,7 @@ arg_class:	IN_P									{ $$ = FUNC_PARAM_IN; }
 			| OUT_P									{ $$ = FUNC_PARAM_OUT; }
 			| INOUT									{ $$ = FUNC_PARAM_INOUT; }
 			| IN_P OUT_P							{ $$ = FUNC_PARAM_INOUT; }
+			| VARIADIC								{ $$ = FUNC_PARAM_VARIADIC; }
 		;
 
 /*
@@ -10434,6 +10435,7 @@ a_expr:		c_expr									{ $$ = $1; }
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @2;
 					$$ = (Node *) n;
@@ -10494,6 +10496,7 @@ a_expr:		c_expr									{ $$ = $1; }
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @4;
 					$$ = (Node *) makeSimpleA_Expr(AEXPR_OP, "~~", $1, (Node *) n, @2);
@@ -10508,6 +10511,7 @@ a_expr:		c_expr									{ $$ = $1; }
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @5;
 					$$ = (Node *) makeSimpleA_Expr(AEXPR_OP, "!~~", $1, (Node *) n, @2);
@@ -10522,6 +10526,7 @@ a_expr:		c_expr									{ $$ = $1; }
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @4;
 					$$ = (Node *) makeSimpleA_Expr(AEXPR_OP, "~~*", $1, (Node *) n, @2);
@@ -10536,6 +10541,7 @@ a_expr:		c_expr									{ $$ = $1; }
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @5;
 					$$ = (Node *) makeSimpleA_Expr(AEXPR_OP, "!~~*", $1, (Node *) n, @2);
@@ -10551,6 +10557,7 @@ a_expr:		c_expr									{ $$ = $1; }
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @2;
 					$$ = (Node *) makeSimpleA_Expr(AEXPR_OP, "~", $1, (Node *) n, @2);
@@ -10563,6 +10570,7 @@ a_expr:		c_expr									{ $$ = $1; }
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @5;
 					$$ = (Node *) makeSimpleA_Expr(AEXPR_OP, "~", $1, (Node *) n, @2);
@@ -10577,6 +10585,7 @@ a_expr:		c_expr									{ $$ = $1; }
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @5;
 					$$ = (Node *) makeSimpleA_Expr(AEXPR_OP, "!~", $1, (Node *) n, @2);
@@ -10589,6 +10598,7 @@ a_expr:		c_expr									{ $$ = $1; }
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @6;
 					$$ = (Node *) makeSimpleA_Expr(AEXPR_OP, "!~", $1, (Node *) n, @2);
@@ -11017,9 +11027,32 @@ simple_func: 	func_name '(' ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->agg_filter = NULL;
 					n->location = @1;
 					n->over = NULL;
+					$$ = (Node *)n;
+				}
+			| func_name '(' VARIADIC a_expr ')'
+				{
+					FuncCall *n = makeNode(FuncCall);
+					n->funcname = $1;
+					n->args = list_make1($4);
+					n->agg_star = FALSE;
+					n->agg_distinct = FALSE;
+					n->func_variadic = TRUE;
+					n->location = @1;
+					$$ = (Node *)n;
+				}
+			| func_name '(' expr_list ',' VARIADIC a_expr ')'
+				{
+					FuncCall *n = makeNode(FuncCall);
+					n->funcname = $1;
+					n->args = lappend($3, $6);
+					n->agg_star = FALSE;
+					n->agg_distinct = FALSE;
+					n->func_variadic = TRUE;
+					n->location = @1;
 					$$ = (Node *)n;
 				}
 			| func_name '(' expr_list opt_sort_clause ')'
@@ -11030,6 +11063,7 @@ simple_func: 	func_name '(' ')'
                     n->agg_order = $4;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->agg_filter = NULL;
 					n->location = @1;
 					n->over = NULL;
@@ -11043,6 +11077,7 @@ simple_func: 	func_name '(' ')'
                     n->agg_order = $5;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->agg_filter = NULL;
 					/* Ideally we'd mark the FuncCall node to indicate
 					 * "must be an aggregate", but there's no provision
@@ -11083,6 +11118,7 @@ simple_func: 	func_name '(' ')'
                     n->agg_order = NIL;
 					n->agg_star = TRUE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->agg_filter = NULL;
 					n->location = @1;
 					n->over = NULL;
@@ -11193,6 +11229,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11331,6 +11368,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11343,6 +11381,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11355,6 +11394,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11367,6 +11407,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11379,7 +11420,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
-					/*n->func_variadic = FALSE;*/
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11392,7 +11433,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
-					/*n->func_variadic = FALSE;*/
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11407,6 +11448,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11424,6 +11466,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11437,6 +11480,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11452,6 +11496,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11473,6 +11518,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11488,6 +11534,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11500,6 +11547,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11512,6 +11560,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11524,6 +11573,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11541,6 +11591,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11553,6 +11604,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->over = NULL;
 					n->location = @1;
 					$$ = (Node *)n;
@@ -11647,6 +11699,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
                     n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
+					n->func_variadic = FALSE;
 					n->agg_filter = NULL;
 					n->location = @1;
 					n->over = NULL;
@@ -13179,6 +13232,7 @@ reserved_keyword:
 			| UNIQUE
 			| USER
 			| USING
+			| VARIADIC
 			| WHEN
 			| WHERE
 			| WINDOW
@@ -13429,6 +13483,7 @@ makeOverlaps(List *largs, List *rargs, int location)
     n->agg_order = NIL;
 	n->agg_star = FALSE;
 	n->agg_distinct = FALSE;
+	n->func_variadic = FALSE;
 	n->over = NULL;
 	n->location = location;
 	return n;
@@ -13489,7 +13544,7 @@ extractArgTypes(List *parameters)
 	{
 		FunctionParameter *p = (FunctionParameter *) lfirst(i);
 
-		/* keep if IN or INOUT */
+		/* keep if IN or INOUT or VARIADIC*/
 		if (p->mode != FUNC_PARAM_OUT && p->mode != FUNC_PARAM_TABLE)
 			result = lappend(result, p->argType);
 	}
