@@ -514,6 +514,21 @@ class GpdbRestore(Operation):
         date, time = dates_and_times[choice]
         return "%s%s" % (date, time)
 
+def restore_global_callback(option, opt_str, value, parser):
+    assert value is None
+    if len(parser.rargs) > 0:
+        value = parser.rargs[0]
+        if value[:1] == "-":
+            value = "include"
+        else:
+            del parser.rargs[:1]
+
+    if value == None:
+        value = "include"
+    elif value not in ("include", "only"):
+        raise OptionValueError('%s is not a valid argument for -G.  Valid arguments are "include" and "only".' % value)
+    setattr(parser.values, option.dest, value)
+
 def create_parser():
     parser = OptParser(option_class=OptChecker,
                        version='%prog version $Revision$',
@@ -541,8 +556,8 @@ def create_parser():
                      help="Drop (erase) target database before recovery commences")
     addTo.add_option('-B', dest='batch_default', type='int', default=DEFAULT_NUM_WORKERS, metavar="<number>",
                      help="Dispatches work to segment hosts in batches of specified size [default: %s]" % DEFAULT_NUM_WORKERS)
-    addTo.add_option('-G', action='store_true', dest='restore_global', default=False,
-                     help="Restore global objects dump file if found in target dumpset. The global objects file is secured via the gpcrondump -G options, and has a filename of the form gp_global_1_1_<timestamp>")
+    addTo.add_option('-G', dest='restore_global', action="callback", callback=restore_global_callback,
+                     help="Restore global objects dump file if found in target dumpset. The global objects file is secured via the gpcrondump -G options, and has a filename of the form gp_global_1_1_<timestamp>. Specify \"-G only\" to only restore the global objects dump file or \"-G include\" to restore globals objects along with a normal restore. Defaults to \"include\" if neither argument is provided.")
     addTo.add_option('-T', dest='restore_tables', metavar='<schema.tablename>',
                      help="Restore a single table from a backup set. For multiple tables, supply a comma separated list of schema.tablenames. Note, table schema must exist in target database.")
     addTo.add_option('-K', action='store_true', dest='keep_dump_files', default=False,

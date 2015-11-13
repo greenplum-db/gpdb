@@ -476,6 +476,8 @@ class RestoreDatabase(Operation):
 
         if self.restore_global:
             self._restore_global(restore_timestamp, self.master_datadir, self.backup_dir)
+            if self.restore_global == "only":
+                return
 
         """
         For full restore with table filter or for the first recurssion of the incremental restore

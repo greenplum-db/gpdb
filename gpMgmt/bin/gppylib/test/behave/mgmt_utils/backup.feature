@@ -656,6 +656,24 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And "global" file should be created under " "
 
+    @Gonly
+    Scenario: Backup and restore with -G only
+        Given the database is running
+        And there are no backup files
+        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
+        And the user runs "psql -c 'CREATE ROLE foo_user' fullbkdb"
+        And verify that a role "foo_user" exists in database "fullbkdb"
+        When the user runs "gpcrondump -a -x fullbkdb -G"
+        And the timestamp from gpcrondump is stored
+        Then gpcrondump should return a return code of 0
+        And "global" file should be created under " "
+        And the user runs "psql -c 'DROP ROLE foo_user' fullbkdb"
+        And the user runs gpdbrestore with the stored timestamp and options "-G only" 
+        And gpdbrestore should return a return code of 0
+        And verify that a role "foo_user" exists in database "fullbkdb"
+        And verify that there is no table "heap_table" in "fullbkdb"
+        And the user runs "psql -c 'DROP ROLE foo_user' fullbkdb"
+
     @valgrind
     Scenario: Valgrind test of gp_dump incremental
         Given the database is running

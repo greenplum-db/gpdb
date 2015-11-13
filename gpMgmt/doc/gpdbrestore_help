@@ -170,11 +170,15 @@ OPTIONS
  it. 
 
 
--G (restore global objects) 
+-G [include|only]
 
  Restores global objects such as roles and tablespaces if the global 
  object dump file db_dumps/<date>/gp_global_1_1_<timestamp> is found in 
- the master data directory. 
+ the master data directory.
+
+ Specify either "-G only" to only restore the global objects dump file
+ or "-G include" to restore global objects along with a normal restore.
+ Defaults to "include" if neither argument is provided.
 
 
 -l <logfile_directory>
