@@ -86,7 +86,7 @@ where ordinal_position = 20;
  pg_catalog         | pg_type       | typnotnull         |               20
  pg_catalog         | pg_class      | reltriggers        |               20
  pg_catalog         | pg_am         | amrestrpos         |               20
- pg_catalog         | pg_proc       | prodataaccess      |               20
+ pg_catalog         | pg_proc       | proacl             |               20
 (12 rows)
 
 -- MPP-25724

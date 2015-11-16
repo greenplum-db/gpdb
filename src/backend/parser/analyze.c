@@ -2431,6 +2431,7 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 		funccallnode->args = list_make1(snamenode);
 		funccallnode->agg_star = false;
 		funccallnode->agg_distinct = false;
+		funccallnode->func_variadic = false;
 		funccallnode->location = -1;
 
 		constraint = makeNode(Constraint);

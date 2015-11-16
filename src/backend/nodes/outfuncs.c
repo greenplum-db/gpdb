@@ -3180,6 +3180,7 @@ _outFuncCall(StringInfo str, FuncCall *node)
     WRITE_NODE_FIELD(agg_order);
 	WRITE_BOOL_FIELD(agg_star);
 	WRITE_BOOL_FIELD(agg_distinct);
+	WRITE_BOOL_FIELD(func_variadic);
 	WRITE_NODE_FIELD(over);
 	WRITE_INT_FIELD(location);
 	WRITE_NODE_FIELD(agg_filter);

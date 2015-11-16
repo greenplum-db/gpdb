@@ -243,7 +243,21 @@ examine_parameter_list(List *parameters, Oid languageOid,
 
 				/* Other input parameters cannot follow VARIADIC parameter */
 				if (fp->mode == FUNC_PARAM_VARIADIC)
+				{
 					varCount++;
+					switch (toid)
+					{
+						case ANYARRAYOID:
+						case ANYOID:
+							break;
+						default:
+							if (!OidIsValid(get_element_type(toid)))
+								ereport(ERROR,
+										(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+										 errmsg("VARIADIC parameter must be an array")));
+							break;
+					}
+				}
 				else if (varCount > 0)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
@@ -638,7 +652,8 @@ compute_attributes_with_style(List *parameters,
  *	   AS <object reference, or sql code>
  */
 static void
-interpret_AS_clause(Oid languageOid, const char *languageName, List *as,
+interpret_AS_clause(Oid languageOid, const char *languageName,
+					char *funcname, List *as,
 					char **prosrc_str_p, char **probin_str_p)
 {
 	Assert(as != NIL);
@@ -647,25 +662,47 @@ interpret_AS_clause(Oid languageOid, const char *languageName, List *as,
 	{
 		/*
 		 * For "C" language, store the file name in probin and, when given,
-		 * the link symbol name in prosrc.
+		 * the link symbol name in prosrc. If link symbol is omitted,
+		 * substitute procedure name.  We also allow link symbol to be
+		 * specified as "-", since that was the habit in GPDB versions before
+		 * Paris, and there might be dump files out there that don't translate
+		 * that back to "omitted". 
 		 */
 		*probin_str_p = strVal(linitial(as));
 		if (list_length(as) == 1)
-			*prosrc_str_p = "-";
+			*prosrc_str_p = funcname;
 		else
+		{
 			*prosrc_str_p = strVal(lsecond(as));
+			if (strcmp(*prosrc_str_p, "-") == 0)
+				*prosrc_str_p = funcname;
+		}
 	}
 	else
 	{
 		/* Everything else wants the given string in prosrc. */
 		*prosrc_str_p = strVal(linitial(as));
-		*probin_str_p = "-";
+		*probin_str_p = NULL;
 
 		if (list_length(as) != 1)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 					 errmsg("only one AS item needed for language \"%s\"",
 							languageName)));
+	}
+
+	if (languageOid == INTERNALlanguageId)
+	{
+		/*
+		 * In PostgreSQL versions before 6.5, the SQL name of the created
+		 * function could not be different from the internal name, and
+		 * "prosrc" wasn't used.  So there is code out there that does
+		 * CREATE FUNCTION xyz AS '' LANGUAGE internal. To preserve some
+		 * modicum of backwards compatibility, accept an empty "prosrc"
+		 * value as meaning the supplied SQL function name.
+		 */
+		if (strlen(*prosrc_str_p) == 0)
+			*prosrc_str_p = funcname;
 	}
 }
 
@@ -739,17 +776,19 @@ validate_describe_callback(List *describeQualName,
 			}
 		}
 	}
-
+	int nvargs;
 	/* Lookup the function in the catalog */
 	fdResult = func_get_detail(describeQualName,
 							   NIL,   /* argument expressions */
 							   nargs, 
 							   inputTypeOids,
+							   false,
 							   &describeFuncOid,
 							   &describeReturnTypeOid, 
 							   &describeReturnsSet,
 							   &describeIsStrict, 
 							   &describeIsOrdered, 
+							   &nvargs,	
 							   &actualInputTypeOids);
 
 	if (fdResult != FUNCDETAIL_NORMAL || !OidIsValid(describeFuncOid))
@@ -915,29 +954,8 @@ CreateFunction(CreateFunctionStmt *stmt)
 	compute_attributes_with_style(stmt->withClause, &isStrict, &volatility,
 								  &stmt->funcOid, &describeQualName);
 
-	interpret_AS_clause(languageOid, languageName, as_clause,
+	interpret_AS_clause(languageOid, languageName, funcname, as_clause,
 						&prosrc_str, &probin_str);
-
-	if (languageOid == INTERNALlanguageId)
-	{
-		/*
-		 * In PostgreSQL versions before 6.5, the SQL name of the created
-		 * function could not be different from the internal name, and
-		 * "prosrc" wasn't used.  So there is code out there that does CREATE
-		 * FUNCTION xyz AS '' LANGUAGE internal. To preserve some modicum of
-		 * backwards compatibility, accept an empty "prosrc" value as meaning
-		 * the supplied SQL function name.
-		 */
-		if (strlen(prosrc_str) == 0)
-			prosrc_str = funcname;
-	}
-
-	if (languageOid == ClanguageId)
-	{
-		/* If link symbol is specified as "-", substitute procedure name */
-		if (strcmp(prosrc_str, "-") == 0)
-			prosrc_str = funcname;
-	}
 	
 	/* double check that we really have a function body */
 	if (prosrc_str == NULL)

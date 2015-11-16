@@ -75,8 +75,8 @@ checkTableFunctions_walker(Node *node, check_table_func_context *context);
 Node *
 ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
                   List *agg_order, bool agg_star, bool agg_distinct, 
-                  bool is_column, WindowSpec *over, int location, 
-                  Node *agg_filter)
+                  bool func_variadic, bool is_column, WindowSpec *over,
+				  int location, Node *agg_filter)
 {
 	Oid			rettype = InvalidOid;
 	Oid			funcid = InvalidOid;
@@ -84,6 +84,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 	ListCell   *nextl;
 	Node	   *first_arg = NULL;
 	int			nargs;
+	int			nvargs = 0;
 	Oid			actual_arg_types[FUNC_MAX_ARGS];
 	Oid		   *declared_arg_types = NULL;
 	Node	   *retval = NULL;
@@ -209,10 +210,10 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 	 * Check for column projection: if function has one argument, and that
 	 * argument is of complex type, and function name is not qualified, then
 	 * the "function call" could be a projection.  We also check that there
-	 * wasn't any aggregate decoration.
+	 * wasn't any aggregate or variadic decoration.
 	 */
-	if (nargs == 1 && agg_order == NIL && !agg_star && !agg_distinct && 
-        !agg_filter && list_length(funcname) == 1)
+	if (nargs == 1 && agg_order == NIL && !agg_star && !agg_distinct &&
+		!func_variadic && !agg_filter && list_length(funcname) == 1)
 	{
 		Oid			argtype = actual_arg_types[0];
 
@@ -238,11 +239,15 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 	 * disambiguation for polymorphic functions, handles inheritance, and
 	 * returns the funcid and type and set or singleton status of the
 	 * function's return value.  it also returns the true argument types to
-	 * the function.
+	 * the function. (In the case of a variadic function call, the reported
+	 * "true" types aren't really what is in pg_proc: the variadic argument is
+	 * replaced by a suitable number of copies of its element type. We'll fix
+	 * it up below.)
 	 */
-	fdresult = func_get_detail(funcname, fargs, nargs, actual_arg_types,
+	fdresult = func_get_detail(funcname, fargs, nargs,
+							   actual_arg_types, !func_variadic,
 							   &funcid, &rettype, &retset, &retstrict,
-							   &retordered, &declared_arg_types);
+							   &retordered, &nvargs, &declared_arg_types);
 	if (fdresult == FUNCDETAIL_COERCION)
 	{
 		/*
@@ -353,6 +358,35 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 
 	/* perform the necessary typecasting of arguments */
 	make_fn_arguments(pstate, fargs, actual_arg_types, declared_arg_types);
+
+	/*
+	 * If it's a variadic function call, transform the last nvargs arguments
+	 * into an array -- unless it's an "any" variadic.
+	 */
+	if (nvargs > 0 && declared_arg_types[nargs - 1] != ANYOID)
+	{
+		ArrayExpr	*newa = makeNode(ArrayExpr);
+		int     	non_var_args = nargs - nvargs;
+		List    	*vargs;
+
+		Assert(non_var_args >= 0);
+		vargs = list_copy_tail(fargs, non_var_args);
+		fargs = list_truncate(fargs, non_var_args);
+
+		newa->elements = vargs;
+		/* assume all the variadic arguments were coerced to the same type */
+		newa->element_typeid = exprType((Node *) linitial(vargs));
+		newa->array_typeid = get_array_type(newa->element_typeid);
+
+		if (!OidIsValid(newa->array_typeid))
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					errmsg("could not find array type for data type %s",
+						   format_type_be(newa->element_typeid))));
+		newa->multidims = false;
+
+		fargs = lappend(fargs, newa);
+	}
 
 	/* build the appropriate output structure */
 	if (fdresult == FUNCDETAIL_NORMAL && over == NULL)
@@ -943,8 +977,8 @@ func_select_candidate(int nargs,
  * Find the named function in the system catalogs.
  *
  * Attempt to find the named function in the system catalogs with
- *	arguments exactly as specified, so that the normal case
- *	(exact match) is as quick as possible.
+ * arguments exactly as specified, so that the normal case (exact match)
+ * is as quick as possible.
  *
  * If an exact match isn't found:
  *	1) check for possible interpretation as a trivial type coercion
@@ -969,18 +1003,20 @@ func_get_detail(List *funcname,
 				List *fargs,
 				int nargs,
 				Oid *argtypes,
+				bool expand_variadic,
 				Oid *funcid,	/* return value */
 				Oid *rettype,	/* return value */
 				bool *retset,	/* return value */
 				bool *retstrict, /* return value */
 				bool *retordered, /* return value */
+				int	 *nvargs,	/* return value */
 				Oid **true_typeids)		/* return value */
 {
 	FuncCandidateList raw_candidates;
 	FuncCandidateList best_candidate;
 
 	/* Get list of possible candidates from namespace search */
-	raw_candidates = FuncnameGetCandidates(funcname, nargs);
+	raw_candidates = FuncnameGetCandidates(funcname, nargs, expand_variadic);
 
 	/*
 	 * Quickly check if there is an exact match to the input datatypes (there
@@ -1048,6 +1084,7 @@ func_get_detail(List *funcname,
 					*retset = false;
 					*retstrict = false;
 					*retordered = false;
+					*nvargs = 0;
 					*true_typeids = argtypes;
 					return FUNCDETAIL_COERCION;
 				}
@@ -1098,6 +1135,7 @@ func_get_detail(List *funcname,
 		cqContext	*procqCtx;
 
 		*funcid = best_candidate->oid;
+		*nvargs = best_candidate->nvargs;
 		*true_typeids = best_candidate->args;
 
 		procqCtx = caql_beginscan(
@@ -1475,7 +1513,7 @@ LookupFuncName(List *funcname, int nargs, const Oid *argtypes, bool noError)
 {
 	FuncCandidateList clist;
 
-	clist = FuncnameGetCandidates(funcname, nargs);
+	clist = FuncnameGetCandidates(funcname, nargs, false);
 
 	while (clist)
 	{

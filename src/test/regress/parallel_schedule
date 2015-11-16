@@ -132,3 +132,4 @@ test: limit copy2 temp domain rangefuncs prepare without_oid conversion truncate
 # Disabled because tablespaces live in filespaces in GPDB, so the syntax
 # is quite different.
 #test: tablespace
+test: variadic_parameters

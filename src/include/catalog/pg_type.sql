@@ -466,6 +466,7 @@
 -- ARRAY TYPE tid
 -- ARRAY TYPE xid
 -- ARRAY TYPE cid
+-- ARRAY TYPE cstring
 -- ARRAY TYPE oidvector
 -- ARRAY TYPE bpchar
 -- ARRAY TYPE varchar
