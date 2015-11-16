@@ -418,8 +418,8 @@ public class GPDBWritable implements Writable {
 					 * at the beginning and add a "\0" at the end */
 					default: {
 						String outStr = (String)colValue[i]+"\0";
-						out.writeInt(outStr.length());
 						byte[] data = (outStr).getBytes(CHARSET);
+						out.writeInt(data.length);
 						out.write(data);
 						break;
 					}
