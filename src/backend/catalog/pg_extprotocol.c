@@ -221,6 +221,7 @@ ValidateProtocolFunction(List *fnName, ExtPtcFuncType fntype)
 	AclResult	aclresult;
 	Oid 		inputTypes[1] = {InvalidOid}; /* dummy */
 	int			nargs = 0; /* true for all 3 function types at the moment */
+	int			nvargs;
 	
 	if (fntype == EXTPTC_FUNC_VALIDATOR)
 		desired_rettype = VOIDOID;
@@ -234,9 +235,9 @@ ValidateProtocolFunction(List *fnName, ExtPtcFuncType fntype)
 	 * function's return value.  it also returns the true argument types to
 	 * the function.
 	 */
-	fdresult = func_get_detail(fnName, NIL, nargs, inputTypes,
+	fdresult = func_get_detail(fnName, NIL, nargs, inputTypes, false,
 							   &fnOid, &actual_rettype, &retset, &retstrict,
-							   &retordered, &true_oid_array);
+							   &retordered, &nvargs, &true_oid_array);
 
 	/* only valid case is a normal function not returning a set */
 	if (fdresult != FUNCDETAIL_NORMAL || !OidIsValid(fnOid))

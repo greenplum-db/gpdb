@@ -423,7 +423,8 @@ do_compile(FunctionCallInfo fcinfo,
 				{
 					argitemtype = PLPGSQL_NSTYPE_VAR;
 					/* input argument vars are forced to be CONSTANT */
-					if (argmode == PROARGMODE_IN)
+					if (argmode == PROARGMODE_IN ||
+						argmode == PROARGMODE_VARIADIC)
 						((PLpgSQL_var *) argvariable)->isconst = true;
 				}
 				else

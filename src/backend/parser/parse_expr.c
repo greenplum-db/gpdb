@@ -624,7 +624,7 @@ transformIndirection(ParseState *pstate, Node *basenode, List *indirection)
 			result = ParseFuncOrColumn(pstate,
 									   list_make1(n),
 									   list_make1(result),
-                                       NIL, false, false, true,
+                                       NIL, false, false, false, true,
                                        NULL, -1, NULL);
 		}
 	}
@@ -758,7 +758,7 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
 					node = ParseFuncOrColumn(pstate,
 											 list_make1(makeString(name2)),
 											 list_make1(node),
-											 NIL, false, false, true, NULL,
+											 NIL, false, false, false, true, NULL,
 											 cref->location, NULL);
 				}
 				break;
@@ -788,7 +788,7 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
 					node = ParseFuncOrColumn(pstate,
 											 list_make1(makeString(name3)),
 											 list_make1(node),
-											 NIL, false, false, true, NULL,
+											 NIL, false, false, false, true, NULL,
 											 cref->location, NULL);
 				}
 				break;
@@ -829,7 +829,7 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
 					node = ParseFuncOrColumn(pstate,
 											 list_make1(makeString(name4)),
 											 list_make1(node),
-											 NIL, false, false, true, NULL,
+											 NIL, false, false, false, true, NULL,
 											 cref->location, NULL);
 				}
 				break;
@@ -1281,17 +1281,13 @@ transformFuncCall(ParseState *pstate, FuncCall *fn)
 	ListCell   *args;
 
 	/*
-	 * Transform the list of arguments.  We use a shallow list copy and then
-	 * transform-in-place to avoid O(N^2) behavior from repeated lappend's.
-	 *
-	 * XXX: repeated lappend() would no longer result in O(n^2) behavior;
-	 * worth reconsidering this design?
+	 * Transform the list of arguments.
 	 */
-	targs = list_copy(fn->args);
-	foreach(args, targs)
+	targs = NIL;
+	foreach(args, fn->args)
 	{
-		lfirst(args) = transformExpr(pstate,
-									 (Node *) lfirst(args));
+		targs = lappend(targs, transformExpr(pstate,
+											 (Node *) lfirst(args)));
 	}
 
 	/* CDB: Drop a breadcrumb in case of error. */
@@ -1303,6 +1299,7 @@ transformFuncCall(ParseState *pstate, FuncCall *fn)
                              fn->agg_order,
 							 fn->agg_star,
 							 fn->agg_distinct,
+							 fn->func_variadic,
 							 false,
 							 (WindowSpec *)fn->over,
 							 fn->location, 
