@@ -873,7 +873,20 @@ nextval_internal(Oid relid)
                              &is_overflow);
 	last_used_seq = elm;
 
-    relation_close(seqrel, NoLock);
+        if(is_overflow)
+        {
+                StringInfo str = makeStringInfo();
+                appendStringInfo(str, "%s", RelationGetRelationName(seqrel));
+                relation_close(seqrel, NoLock);
+
+                ereport(ERROR,
+                        (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+                        errmsg("nextval: reached %s value of sequence \"%s\" (" INT64_FORMAT ")",
+                        elm->increment>0 ? "maximum":"minimum",
+                        str->data, elm->last)));
+        }
+
+	relation_close(seqrel, NoLock);
 	return elm->last;
 }
 
