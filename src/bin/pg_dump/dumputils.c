@@ -682,10 +682,6 @@ do { \
 	}
 	else if (strcmp(type, "TABLESPACE") == 0)
 		CONVERT_PRIV('C', "CREATE");
-	else if (strcmp(type, "FOREIGN DATA WRAPPER") == 0)
-		CONVERT_PRIV('U', "USAGE");
-	else if (strcmp(type, "SERVER") == 0)
-		CONVERT_PRIV('U', "USAGE");
 	else if (strcmp(type, "PROTOCOL") == 0)
 	{
 		CONVERT_PRIV('r', "SELECT");

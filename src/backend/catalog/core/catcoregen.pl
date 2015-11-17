@@ -172,7 +172,6 @@ print <<"END_MESSAGE";
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_trigger.h"
-#include "catalog/pg_user_mapping.h"
 #include "catalog/pg_window.h"
 #include "catalog/pg_tidycat.h"
 #include "utils/fmgroids.h"

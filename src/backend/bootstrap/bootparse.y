@@ -50,7 +50,6 @@
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_type.h"
-#include "catalog/pg_user_mapping.h"
 #include "catalog/pg_tidycat.h"
 #include "catalog/toasting.h"
 #include "commands/defrem.h"
@@ -250,20 +249,6 @@ Boot_CreateStmt:
 							case StatLastShOpRelationId: 
 								/* MPP-6929: metadata tracking */
 								typid = PG_STAT_LAST_SHOPERATION_OID;
-								break;
-
-							/* Four new tables in 4.0 for foreign data */
-							case ForeignDataWrapperRelationId:
-								typid = PG_FOREIGN_DATA_WRAPPER_OID;
-								break;
-							case ForeignServerRelationId:
-								typid = PG_FOREIGN_SERVER_OID;
-								break;
-							case UserMappingRelationId:
-								typid = PG_USER_MAPPING_OID;
-								break;
-							case ForeignTableRelationId:
-								typid = PG_FOREIGN_TABLE_OID;
 								break;
 
 							/* new tables in 4.0 for persistent file ops */

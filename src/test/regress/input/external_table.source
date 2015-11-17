@@ -25,7 +25,6 @@
 -- s/cat\: cannot open (.*)$/cat\: $1\: NO SUCH FILE/
 --
 -- end_matchsubs
-SET gp_foreign_data_access = true;
 set optimizer_disable_missing_stats_collection = on;
 CREATE TABLE REG_REGION (R_REGIONKEY INT, R_NAME CHAR(25), R_COMMENT VARCHAR(152)) DISTRIBUTED BY (R_REGIONKEY);
 
@@ -110,7 +109,6 @@ format 'text' (delimiter '|');
 create external table ext (a int, x text) 
 location ('file://@hostname@@abs_srcdir@/data/no/such/place/badt1.tbl' )
 format 'text';
-alter foreign table ext drop column a; -- should fail (wrong object)
 alter table ext drop column a; -- should pass with warning
 alter external table ext add column a int; -- pass
 alter external table ext drop column a; -- pass
@@ -126,7 +124,6 @@ delete from ext;
 update ext set x='1' where x='2';
 insert into ext(x) values('a');
 drop table ext; -- should fail (wrong object)
-drop foreign table ext; -- should fail (wrong object)
 drop external table ext;
 
 ----------------------------------------------------------------------
@@ -251,7 +248,6 @@ FORMAT 'text' (delimiter '|');
 select count(*) from pg_catalog.pg_exttable where reloid in (select r.oid from pg_class r where r.relname in ('ext_nation', 'ext_whois', 'exttab1_gpfdist_status'));
 drop schema exttabletest cascade;
 select count(*) from pg_catalog.pg_exttable where reloid in (select r.oid from pg_class r where r.relname in ('ext_nation', 'ext_whois', 'exttab1_gpfdist_status'));
-SET gp_foreign_data_access = false;
 
 -- Tests for MPP17980: generating artificial CTIDs for external table scans
 -- This is necessary because the planner currently generates plans that include

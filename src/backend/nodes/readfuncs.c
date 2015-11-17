@@ -2380,19 +2380,6 @@ _readCreateExternalStmt(void)
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
-static CreateForeignStmt *
-_readCreateForeignStmt(void)
-{
-	READ_LOCALS(CreateForeignStmt);
-
-	READ_NODE_FIELD(relation);
-	READ_NODE_FIELD(tableElts);
-	READ_STRING_FIELD(srvname);
-	READ_NODE_FIELD(options);
-
-	READ_DONE();
-}
-
 static FkConstraint *
 _readFkConstraint(void)
 {
@@ -2563,118 +2550,6 @@ _readAlterDomainStmt(void)
 	READ_DONE();
 }
 #endif /* COMPILING_BINARY_FUNCS */
-
-static CreateFdwStmt *
-_readCreateFdwStmt(void)
-{
-	READ_LOCALS(CreateFdwStmt);
-
-	READ_STRING_FIELD(fdwname);
-	READ_NODE_FIELD(validator);
-	READ_NODE_FIELD(options);
-
-	READ_DONE();
-}
-
-static AlterFdwStmt *
-_readAlterFdwStmt(void)
-{
-	READ_LOCALS(AlterFdwStmt);
-
-	READ_STRING_FIELD(fdwname);
-	READ_NODE_FIELD(validator);
-	READ_BOOL_FIELD(change_validator);
-	READ_NODE_FIELD(options);
-
-	READ_DONE();
-}
-
-static DropFdwStmt *
-_readDropFdwStmt(void)
-{
-	READ_LOCALS(DropFdwStmt);
-
-	READ_STRING_FIELD(fdwname);
-	READ_BOOL_FIELD(missing_ok);
-	READ_ENUM_FIELD(behavior, DropBehavior);
-
-	READ_DONE();
-}
-
-static CreateForeignServerStmt *
-_readCreateForeignServerStmt(void)
-{
-	READ_LOCALS(CreateForeignServerStmt);
-
-	READ_STRING_FIELD(servername);
-	READ_STRING_FIELD(servertype);
-	READ_STRING_FIELD(version);
-	READ_STRING_FIELD(fdwname);
-	READ_NODE_FIELD(options);
-
-	READ_DONE();
-}
-
-static AlterForeignServerStmt *
-_readAlterForeignServerStmt(void)
-{
-	READ_LOCALS(AlterForeignServerStmt);
-
-	READ_STRING_FIELD(servername);
-	READ_STRING_FIELD(version);
-	READ_NODE_FIELD(options);
-	READ_BOOL_FIELD(has_version);
-
-	READ_DONE();
-}
-
-static DropForeignServerStmt *
-_readDropForeignServerStmt(void)
-{
-	READ_LOCALS(DropForeignServerStmt);
-
-	READ_STRING_FIELD(servername);
-	READ_BOOL_FIELD(missing_ok);
-	READ_ENUM_FIELD(behavior, DropBehavior);
-
-	READ_DONE();
-}
-
-static CreateUserMappingStmt *
-_readCreateUserMappingStmt(void)
-{
-	READ_LOCALS(CreateUserMappingStmt);
-
-	READ_STRING_FIELD(username);
-	READ_STRING_FIELD(servername);
-	READ_NODE_FIELD(options);
-
-	READ_DONE();
-}
-
-static AlterUserMappingStmt *
-_readAlterUserMappingStmt(void)
-{
-	READ_LOCALS(AlterUserMappingStmt);
-
-	READ_STRING_FIELD(username);
-	READ_STRING_FIELD(servername);
-	READ_NODE_FIELD(options);
-
-	READ_DONE();
-}
-
-static DropUserMappingStmt *
-_readDropUserMappingStmt(void)
-{
-	READ_LOCALS(DropUserMappingStmt);
-
-	READ_STRING_FIELD(username);
-	READ_STRING_FIELD(servername);
-	READ_BOOL_FIELD(missing_ok);
-
-	READ_DONE();
-}
 
 static CreateFunctionStmt *
 _readCreateFunctionStmt(void)
@@ -3127,8 +3002,6 @@ static ParseNodeInfo infoAr[] =
 	{"AGGREF", (ReadFn)_readAggref},
 	{"ALIAS", (ReadFn)_readAlias},
 	{"ALTERDOMAINSTMT", (ReadFn)_readAlterDomainStmt},
-	{"ALTERFDWSTMT", (ReadFn)_readAlterFdwStmt},
-	{"ALTERFOREIGNSERVERSTMT", (ReadFn)_readAlterForeignServerStmt},
 	{"ALTERFUNCTIONSTMT", (ReadFn)_readAlterFunctionStmt},
 	{"ALTEROBJECTSCHEMASTMT", (ReadFn)_readAlterObjectSchemaStmt},
 	{"ALTEROWNERSTMT", (ReadFn)_readAlterOwnerStmt},
@@ -3140,7 +3013,6 @@ static ParseNodeInfo infoAr[] =
 	{"ALTERTABLECMD", (ReadFn)_readAlterTableCmd},
 	{"ALTERTABLESTMT", (ReadFn)_readAlterTableStmt},
 	{"ALTERTYPESTMT", (ReadFn)_readAlterTypeStmt},
-	{"ALTERUSERMAPPINGSTMT", (ReadFn)_readAlterUserMappingStmt},
 	{"ARRAY", (ReadFn)_readArrayExpr},
 	{"ARRAYREF", (ReadFn)_readArrayRef},
 	{"A_CONST", (ReadFn)_readAConst},
@@ -3166,10 +3038,6 @@ static ParseNodeInfo infoAr[] =
 	{"CREATEDBSTMT", (ReadFn)_readCreatedbStmt},
 	{"CREATEDOMAINSTMT", (ReadFn)_readCreateDomainStmt},
 	{"CREATEEXTERNALSTMT", (ReadFn)_readCreateExternalStmt},
-	{"CREATEFDWSTMT", (ReadFn)_readCreateFdwStmt},
-	{"CREATEFOREIGNSERVERSTMT", (ReadFn)_readCreateForeignServerStmt},
-	{"CREATEFOREIGNSTMT", (ReadFn)_readCreateForeignStmt},
-	{"CREATEUSERMAPPINGSTMT", (ReadFn)_readCreateUserMappingStmt},
 	{"CREATEFUNCSTMT", (ReadFn)_readCreateFunctionStmt},
 	{"CREATEOPCLASS", (ReadFn)_readCreateOpClassStmt},
 	{"CREATEOPCLASSITEM", (ReadFn)_readCreateOpClassItem},
@@ -3187,9 +3055,6 @@ static ParseNodeInfo infoAr[] =
 	{"DENYLOGINPOINT", (ReadFn)_readDenyLoginPoint},
 	{"DISTINCTEXPR", (ReadFn)_readDistinctExpr},
 	{"DROPCAST", (ReadFn)_readDropCastStmt},
-	{"DROPFDWCAST", (ReadFn)_readDropFdwStmt},
-	{"DROPFOREIGNSERVERCAST", (ReadFn)_readDropForeignServerStmt},
-	{"DROPUSERMAPPINGCAST", (ReadFn)_readDropUserMappingStmt},
 	{"DROPDBSTMT", (ReadFn)_readDropdbStmt},
 	{"DROPPLANGSTMT", (ReadFn)_readDropPLangStmt},
 	{"DROPPROPSTMT", (ReadFn)_readDropPropertyStmt},

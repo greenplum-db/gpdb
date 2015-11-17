@@ -45,8 +45,6 @@
 #include "catalog/pg_depend.h"
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_extprotocol.h"
-#include "catalog/pg_foreign_table.h"
-#include "catalog/pg_foreign_server.h"
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_operator.h"
@@ -69,7 +67,6 @@
 #include "commands/trigger.h"
 #include "commands/typecmds.h"
 #include "executor/executor.h"
-#include "foreign/foreign.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "nodes/print.h"
@@ -1325,111 +1322,6 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	if(customProtName)
 		pfree(customProtName);
 	
-}
-
-extern void
-DefineForeignRelation(CreateForeignStmt *createForeignStmt)
-{
-	CdbDispatcherState		  ds = {NULL, NULL};
-	CreateStmt				  *createStmt = makeNode(CreateStmt);
-	Oid						  reloid = 0;
-	bool					  shouldDispatch = (Gp_role == GP_ROLE_DISPATCH &&
-												IsNormalProcessingMode());
-	
-	/*
-	 * now set the parameters for keys/inheritance etc. Most of these are
-	 * uninteresting for external relations...
-	 */
-	createStmt->relation = createForeignStmt->relation;
-	createStmt->tableElts = createForeignStmt->tableElts;
-	createStmt->inhRelations = NIL;
-	createStmt->constraints = NIL;
-	createStmt->options = NIL;
-	createStmt->oncommit = ONCOMMIT_NOOP;
-	createStmt->tablespacename = NULL;
-	createStmt->policy = NULL; /* for now, we use "master only" type of distribution */
-	
-	/* (permissions are checked in foreigncmd.c:InsertForeignTableEntry() ) */
-
-    /*
-	 * First, create the pg_class and other regular relation catalog entries.
-	 * Under the covers this will dispatch a CREATE TABLE statement to all the
-	 * QEs.
-	 */
-	if(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY)
-		reloid = DefineRelation(createStmt, RELKIND_RELATION, RELSTORAGE_FOREIGN);
-
-	/*
-	 * Now we take care of pg_foreign_table
-	 */
-    PG_TRY();
-    {
-    	ObjectAddress myself;
-    	ObjectAddress referenced;
-    	Oid	ownerId = GetUserId();
-    	ForeignServer *srv = GetForeignServerByName(createForeignStmt->srvname, false);
-    	
-		/*
-		 * get our pg_class foreign rel OID. If we're the QD we just created
-		 * it above. If we're a QE DefineRelation() was already dispatched to
-		 * us and therefore we have a local entry in pg_class. get the OID
-		 * from cache.
-		 */
-		if(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY)
-			Assert(reloid != InvalidOid);
-		else
-			reloid = RangeVarGetRelid(createForeignStmt->relation, true);
-
-		/* Add dependency on SERVER and owner */
-		myself.classId = RelationRelationId;
-		myself.objectId = reloid;
-		myself.objectSubId = 0;
-
-		referenced.classId = ForeignServerRelationId;
-		referenced.objectId = srv->serverid;
-		referenced.objectSubId = 0;
-		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
-
-		recordDependencyOnOwner(RelationRelationId, reloid, ownerId);
-
-		/* create a pg_exttable entry for this foreign table.*/
-		InsertForeignTableEntry(reloid, 
-								createForeignStmt->srvname, 
-								createForeignStmt->options);
-				
-
-		if (shouldDispatch)
-		{
-
-			/* Dispatch the statement tree to all primary and mirror segdbs.
-			 * Doesn't wait for the QEs to finish execution.
-			 */
-			cdbdisp_dispatchUtilityStatement((Node *)createForeignStmt,
-											 true,      /* cancelOnError */
-											 true,      /* startTransaction */
-											 true,      /* withSnapshot */
-											 &ds,
-											 "DefineForeignRelation");
-		}
-    }
-	PG_CATCH();
-	{
-        /* If dispatched, stop QEs and clean up after them. */
-        if (ds.primaryResults)
-            cdbdisp_handleError(&ds);
-
-        /* Carry on with error handling. */
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
-
-	/*
-	 * We successfully completed our work.	Now check the results from the
-	 * qExecs, if dispatched.  This waits for them to all finish, and exits
-	 * via ereport(ERROR,...) if unsuccessful.
-	 */
-	cdbdisp_finishCommand(&ds, NULL, NULL);
-
 }
 
 /* ----------------------------------------------------------------
@@ -3764,14 +3656,7 @@ ATVerifyObject(AlterTableStmt *stmt, Relation rel)
 	 * Verify the object specified against relstorage in the catalog.
 	 * Enforce correct syntax usage. 
 	 */
-	if (RelationIsForeign(rel) && stmt->relkind != OBJECT_FOREIGNTABLE)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("\"%s\" is a foreign table", RelationGetRelationName(rel)),
-				 errhint("Use ALTER FOREIGN TABLE instead")));
-	}
-	else if (RelationIsExternal(rel) && stmt->relkind != OBJECT_EXTTABLE)
+	if (RelationIsExternal(rel) && stmt->relkind != OBJECT_EXTTABLE)
 	{
 		/*
 		 * special case: in order to support 3.3 dumps with ALTER TABLE OWNER of
@@ -3795,7 +3680,7 @@ ATVerifyObject(AlterTableStmt *stmt, Relation rel)
 					 errhint("Use ALTER EXTERNAL TABLE instead")));
 		}
 	}
-	else if (!RelationIsExternal(rel) && !RelationIsForeign(rel) && stmt->relkind != OBJECT_TABLE)
+	else if (!RelationIsExternal(rel) && stmt->relkind != OBJECT_TABLE)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
@@ -3806,7 +3691,7 @@ ATVerifyObject(AlterTableStmt *stmt, Relation rel)
 	/*
 	 * Check the ALTER command type is supported for this object
 	 */
-	if (RelationIsForeign(rel) || RelationIsExternal(rel))
+	if (RelationIsExternal(rel))
 	{
 		ListCell *lcmd;
 
@@ -3816,7 +3701,7 @@ ATVerifyObject(AlterTableStmt *stmt, Relation rel)
 
 			switch(cmd->subtype)
 			{
-				/* FOREIGN and EXTERNAL tables doesn't support the following AT */
+				/* EXTERNAL tables don't support the following AT */
 				case AT_ColumnDefault:
 				case AT_ColumnDefaultRecurse:
 				case AT_DropNotNull:
@@ -3860,7 +3745,7 @@ ATVerifyObject(AlterTableStmt *stmt, Relation rel)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_COLUMN_DEFINITION),
 							 errmsg("Unsupported ALTER command for table type %s",
-									 (RelationIsExternal(rel) ? "external" : "foreign"))));
+									"external")));
 					break;
 
 				case AT_AddColumn: /* check no constraint is added too */
@@ -3870,7 +3755,7 @@ ATVerifyObject(AlterTableStmt *stmt, Relation rel)
 						ereport(ERROR,
 								(errcode(ERRCODE_INVALID_COLUMN_DEFINITION),
 								 errmsg("Unsupported ALTER command for table type %s. No constraints allowed.",
-										 (RelationIsExternal(rel) ? "external" : "foreign"))));
+										 "external")));
 					break;
 
 				default:
@@ -4024,7 +3909,7 @@ ATController(Relation rel, List *cmds, bool recurse,
 	int			ocount = 0;
 	TableOidInfo * oids = NULL;
 	bool is_partition = false;
-	bool is_data_remote = (RelationIsExternal(rel) || RelationIsForeign(rel));
+	bool is_data_remote = RelationIsExternal(rel);
 #ifdef USE_ASSERT_CHECKING
 	Oid			relid = RelationGetRelid(rel);
 #endif
@@ -5644,7 +5529,7 @@ ATRewriteTables(List **wqueue,
 
 		/* We will lock the table iff we decide to actually rewrite it */
 		rel = relation_open(tab->relid, NoLock);
-		if (RelationIsExternal(rel) || RelationIsForeign(rel))
+		if (RelationIsExternal(rel))
 		{
 			heap_close(rel, NoLock);
 			continue;

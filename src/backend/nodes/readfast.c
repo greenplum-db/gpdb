@@ -2926,9 +2926,6 @@ readNodeBinary(void)
 			case T_CreateExternalStmt:
 				return_value = _readCreateExternalStmt();
 				break;
-			case T_CreateForeignStmt:
-				return_value = _readCreateForeignStmt();
-				break;
 			case T_IndexStmt:
 				return_value = _readIndexStmt();
 				break;
@@ -3067,33 +3064,6 @@ readNodeBinary(void)
 				return_value = _readAlterDomainStmt();
 				break;
 
-			case T_CreateFdwStmt:
-				return_value = _readCreateFdwStmt();
-				break;
-			case T_AlterFdwStmt:
-				return_value = _readAlterFdwStmt();
-				break;
-			case T_DropFdwStmt:
-				return_value = _readDropFdwStmt();
-				break;
-			case T_CreateForeignServerStmt:
-				return_value = _readCreateForeignServerStmt();
-				break;
-			case T_AlterForeignServerStmt:
-				return_value = _readAlterForeignServerStmt();
-				break;
-			case T_DropForeignServerStmt:
-				return_value = _readDropForeignServerStmt();
-				break;
-			case T_CreateUserMappingStmt:
-				return_value = _readCreateUserMappingStmt();
-				break;
-			case T_AlterUserMappingStmt:
-				return_value = _readAlterUserMappingStmt();
-				break;
-			case T_DropUserMappingStmt:
-				return_value = _readDropUserMappingStmt();
-				break;
 			case T_NotifyStmt:
 				return_value = _readNotifyStmt();
 				break;

@@ -35,8 +35,6 @@
 #include "catalog/pg_depend.h"
 #include "catalog/pg_extprotocol.h"
 #include "catalog/pg_filespace.h"
-#include "catalog/pg_foreign_data_wrapper.h"
-#include "catalog/pg_foreign_server.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
@@ -48,7 +46,6 @@
 #include "catalog/pg_trigger.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_type_encoding.h"
-#include "catalog/pg_user_mapping.h"
 #include "cdb/cdbpartition.h"
 #include "commands/comment.h"
 #include "commands/dbcommands.h"
@@ -60,7 +57,6 @@
 #include "commands/tablespace.h"
 #include "commands/trigger.h"
 #include "commands/typecmds.h"
-#include "foreign/foreign.h"
 #include "miscadmin.h"
 #include "optimizer/clauses.h"
 #include "parser/parsetree.h"
@@ -112,9 +108,6 @@ static const Oid object_classes[MAX_OCLASS] = {
 	DatabaseRelationId,         /* OCLASS_DATABASE */
 	TableSpaceRelationId,       /* OCLASS_TBLSPACE */
 	FileSpaceRelationId,        /* OCLASS_FILESPACE */
-	ForeignDataWrapperRelationId,	/* OCLASS_FDW */
-	ForeignServerRelationId,	/* OCLASS_FOREIGN_SERVER */
-	UserMappingRelationId,		/* OCLASS_USER_MAPPING */
 	ExtprotocolRelationId,		/* OCLASS_EXTPROTOCOL */
 	CompressionRelationId		/* OCLASS_COMPRESSION */
 };
@@ -1039,18 +1032,6 @@ doDeletion(const ObjectAddress *object)
 			 * not handled here
 			 */
 
-		case OCLASS_FDW:
-			RemoveForeignDataWrapperById(object->objectId);
-			break;
-
-		case OCLASS_FOREIGN_SERVER:
-			RemoveForeignServerById(object->objectId);
-			break;
-
-		case OCLASS_USER_MAPPING:
-			RemoveUserMappingById(object->objectId);
-			break;
-
 		case OCLASS_EXTPROTOCOL:
 			RemoveExtProtocolById(object->objectId);
 			break;
@@ -1762,18 +1743,6 @@ getObjectClass(const ObjectAddress *object)
 			Assert(object->objectSubId == 0);
 			return OCLASS_FILESPACE;
 			
-		case ForeignDataWrapperRelationId:
-			Assert(object->objectSubId == 0);
-			return OCLASS_FDW;
-
-		case ForeignServerRelationId:
-			Assert(object->objectSubId == 0);
-			return OCLASS_FOREIGN_SERVER;
-
-		case UserMappingRelationId:
-			Assert(object->objectSubId == 0);
-			return OCLASS_USER_MAPPING;
-
 		case ExtprotocolRelationId:
 			Assert(object->objectSubId == 0);
 			return OCLASS_EXTPROTOCOL;
@@ -2102,24 +2071,6 @@ getObjectDescription(const ObjectAddress *object)
 				break;
 			}
 			
-		case OCLASS_FDW:
-			{
-				ForeignDataWrapper *fdw;
-
-				fdw = GetForeignDataWrapper(object->objectId);
-				appendStringInfo(&buffer, _("foreign-data wrapper %s"), fdw->fdwname);
-				break;
-			}
-
-		case OCLASS_FOREIGN_SERVER:
-			{
-				ForeignServer *srv;
-
-				srv = GetForeignServer(object->objectId);
-				appendStringInfo(&buffer, _("server %s"), srv->servername);
-				break;
-			}
-
 		case OCLASS_FILESPACE:
 			{
 				char       *fsname;
@@ -2131,33 +2082,6 @@ getObjectDescription(const ObjectAddress *object)
 				appendStringInfo(&buffer, _("filespace %s"), fsname);
 				break;
 			}				
-
-		case OCLASS_USER_MAPPING:
-			{
-				Oid			useid;
-				char	   *usename;
-				int			fetchCount;
-
-				useid  = caql_getoid_plus(
-						NULL,
-						&fetchCount,
-						NULL,
-						cql("SELECT umuser FROM pg_user_mapping "
-							" WHERE oid = :1 ",
-							ObjectIdGetDatum(object->objectId)));
-
-				if (!fetchCount)
-					elog(ERROR, "cache lookup failed for user mapping %u",
-						 object->objectId);
-
-				if (OidIsValid(useid))
-					usename = GetUserNameFromId(useid);
-				else
-					usename = "public";
-
-				appendStringInfo(&buffer, _("user mapping for %s"), usename);
-				break;
-			}
 
 		case OCLASS_EXTPROTOCOL:
 			{

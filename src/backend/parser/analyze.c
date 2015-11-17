@@ -201,8 +201,6 @@ static Query *transformPrepareStmt(ParseState *pstate, PrepareStmt *stmt);
 static Query *transformExecuteStmt(ParseState *pstate, ExecuteStmt *stmt);
 static Query *transformCreateExternalStmt(ParseState *pstate, CreateExternalStmt *stmt,
 										  List **extras_before, List **extras_after);
-static Query *transformCreateForeignStmt(ParseState *pstate, CreateForeignStmt *stmt,
-										 List **extras_before, List **extras_after);
 static Query *transformAlterTableStmt(ParseState *pstate, AlterTableStmt *stmt,
 						List **extras_before, List **extras_after);
 static void transformColumnDefinition(ParseState *pstate,
@@ -660,11 +658,6 @@ transformStmt(ParseState *pstate, Node *parseTree,
 		case T_CreateExternalStmt:
 			result = transformCreateExternalStmt(pstate, (CreateExternalStmt *) parseTree,
 												 extras_before, extras_after);
-			break;
-
-		case T_CreateForeignStmt:
-			result = transformCreateForeignStmt(pstate, (CreateForeignStmt *) parseTree,
-												extras_before, extras_after);
 			break;
 
 		case T_IndexStmt:
@@ -2307,82 +2300,6 @@ transformCreateExternalStmt(ParseState *pstate, CreateExternalStmt *stmt,
 
 	transformETDistributedBy(pstate, &cxt, stmt->distributedBy, &stmt->policy,
 							 likeDistributedBy, bQuiet, iswritable, onmaster);
-
-	Assert(cxt.ckconstraints == NIL);
-	Assert(cxt.fkconstraints == NIL);
-	Assert(cxt.ixconstraints == NIL);
-
-	/*
-	 * Output results.
-	 */
-	q = makeNode(Query);
-	q->commandType = CMD_UTILITY;
-	q->utilityStmt = (Node *) stmt;
-	stmt->tableElts = cxt.columns;
-	*extras_before = list_concat(*extras_before, cxt.blist);
-	*extras_after = list_concat(cxt.alist, *extras_after);
-
-	return q;
-}
-
-static Query *
-transformCreateForeignStmt(ParseState *pstate, CreateForeignStmt *stmt,
-						   List **extras_before, List **extras_after)
-{
-	CreateStmtContext cxt;
-	Query	   *q;
-	ListCell   *elements;
-
-	cxt.stmtType = "CREATE FOREIGN TABLE";
-	cxt.relation = stmt->relation;
-	cxt.inhRelations = NIL;
-	cxt.hasoids = false;
-	cxt.isalter = false;
-	cxt.columns = NIL;
-	cxt.ckconstraints = NIL;
-	cxt.fkconstraints = NIL;
-	cxt.ixconstraints = NIL;
-	cxt.pkey = NULL;
-
-	cxt.blist = NIL;
-	cxt.alist = NIL;
-
-	/*
-	 * Run through each primary element in the table creation clause. Separate
-	 * column defs from constraints, and do preliminary analysis.
-	 */
-	foreach(elements, stmt->tableElts)
-	{
-		Node	   *element = lfirst(elements);
-
-		switch (nodeTag(element))
-		{
-			case T_ColumnDef:
-				transformColumnDefinition(pstate, &cxt,
-										  (ColumnDef *) element);
-				break;
-
-			case T_Constraint:
-			case T_FkConstraint:
-				/* should never happen. If it does fix gram.y */
-				elog(ERROR, "node type %d not supported for foreign tables",
-					 (int) nodeTag(element));
-				break;
-
-			case T_InhRelation:
-				{
-					/* LIKE */
-					transformInhRelation(pstate, &cxt,
-										 (InhRelation *) element, true);
-				}
-				break;
-
-			default:
-				elog(ERROR, "unrecognized node type: %d",
-					 (int) nodeTag(element));
-				break;
-		}
-	}
 
 	Assert(cxt.ckconstraints == NIL);
 	Assert(cxt.fkconstraints == NIL);
@@ -12283,16 +12200,6 @@ analyzeCreateSchemaStmt(CreateSchemaStmt *stmt)
 			case T_CreateExternalStmt:
 				{
 					CreateExternalStmt *elp = (CreateExternalStmt *) element;
-
-					setSchemaName(cxt.schemaname, &elp->relation->schemaname);
-
-					cxt.tables = lappend(cxt.tables, element);
-				}
-				break;
-
-			case T_CreateForeignStmt:
-				{
-					CreateForeignStmt *elp = (CreateForeignStmt *) element;
 
 					setSchemaName(cxt.schemaname, &elp->relation->schemaname);
 

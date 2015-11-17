@@ -76,9 +76,6 @@ TIDYCAT_BKI_SRCS := \
 	pg_attribute_encoding.h \
 	pg_auth_time_constraint.h \
 	pg_compression.h \
-	pg_foreign_data_wrapper.h \
-	pg_foreign_server.h \
-	pg_foreign_table.h \
 	pg_proc_callback.h \
 	pg_partition_encoding.h \
 	pg_type_encoding.h
@@ -109,7 +106,7 @@ POSTGRES_BKI_SRCS := $(addprefix $(top_srcdir)/src/include/catalog/, \
 	pg_partition.h pg_partition_rule.h pg_filespace.h pg_filespace_entry.h \
 	gp_global_sequence.h gp_persistent.h \
 	$(TIDYCAT_BKI_SRCS) \
-	pg_user_mapping.h toasting.h indexing.h \
+	toasting.h indexing.h \
     )
 
 pg_includes = $(sort -I$(top_srcdir)/src/include -I$(top_builddir)/src/include)
