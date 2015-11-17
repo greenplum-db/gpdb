@@ -125,6 +125,9 @@ build_simple_rel(PlannerInfo *root, int relid, RelOptKind reloptkind)
 				rel->cdbpolicy->ptype = POLICYTYPE_PARTITIONED;
 				rel->cdbpolicy->nattrs = 0;
 				rel->cdbpolicy->attrs[0] = 1;
+
+				/* Scribble the tuple number of rel to reflect the real size */
+				rel->tuples = rel->tuples * planner_segment_count();
 			}
 			break;
 		case RTE_SUBQUERY:
