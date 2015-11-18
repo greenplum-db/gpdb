@@ -111,12 +111,4 @@ s/\(cdbdisp\.c:\d+\)//
 m/^NOTICE:.*drop cascades to.*/
 s/^NOTICE:.*drop cascades to.*/^NOTICE: drop cascades to /
 
-#When running vacuum_gp tests, some test cases emit NOTICE message like the
-#following
-#relation "pg_aoseg_395635" TID 0/1: DeleteTransactionInProgress 65522 --- can't shrink relation
-#The message has OID and Transaction ID embedded in it which can change with
-#test runs. We want to remove these and diff the rest of the message.
-m/^NOTICE:.*relation ".*" TID .*TransactionInProgress .* --- can't shrink relation/
-s/^NOTICE:.*relation ".*" TID .*TransactionInProgress .* --- can't shrink relation/^NOTICE: relation TransactionInProgress cant shrink relation/
-
 -- end_matchsubs

@@ -1900,8 +1900,18 @@ vacuum_rel(Relation onerel, VacuumStmt *vacstmt, LOCKMODE lmode, List *updated_s
 		}
 	}
 
+	/*
+	 * If an AO/CO table is empty on a segment,
+	 * vacstmt->appendonly_relation_empty will get set to true even in the
+	 * compaction phase. In such a case, we end up updating the auxiliary
+	 * tables and try to vacuum them all in the same transaction. This causes
+	 * the auxiliary relation to not get vacuumed and it generates a notice to
+	 * the user saying that transaction is already in progress. Hence we want
+	 * to vacuum the auxliary relations only in cleanup phase or if we are in
+	 * the prepare phase and the AO/CO table is empty.
+	 */
 	if (vacstmt->appendonly_compaction_vacuum_cleanup ||
-		vacstmt->appendonly_relation_empty)
+		(vacstmt->appendonly_relation_empty && vacstmt->appendonly_compaction_vacuum_prepare))
 	{
 		/* do the same for an AO segments table, if any */
 		if (aoseg_relid != InvalidOid)
