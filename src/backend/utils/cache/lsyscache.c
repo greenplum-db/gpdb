@@ -1646,14 +1646,6 @@ func_data_access(Oid funcid)
 			caql_getattr(pcqCtx, Anum_pg_proc_prodataaccess, &isnull));
 	caql_endscan(pcqCtx);
 
-	/*
-	 * In upgrade mode, allow prodataaccess to be NULL, to handle the
-	 * case where prodataaccess column has not been added to pg_proc
-	 * yet. This is specifically to handle catDML().
-	 */
-	if (gp_upgrade_mode && isnull)
-		return PRODATAACCESS_NONE;
-
 	Assert(!isnull);
 	return result;
 }

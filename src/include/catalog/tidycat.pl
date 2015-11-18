@@ -97,7 +97,7 @@ fresh, clean scent.  Catalog tables require several sets of
 co-ordinated modifications to multiple source files to define the
 table and indexes, and (under some circumstances) the toast tables and
 indexes (in toasting.h and toasting.c), as well as some special code
-in catalog.c and bootparse.y to aid in bootstrap and upgrade.  tidycat
+in catalog.c to aid in bootstrap and upgrade.  tidycat
 also updates a generated list of headers in pg_tidycat.h and the
 catalog Makefile.  The original files are copied to a special
 tidycat_backup directory in /tmp, and all generated files are written
@@ -108,7 +108,7 @@ definition for the fictional pg_foobar.h follows:
   /* TIDYCAT_BEGINDEF
 
    CREATE TABLE pg_foobar
-   with (camelcase=FooBar, shared=true, oid=true, relid=9991, reltype_oid=9992)
+   with (camelcase=FooBar, shared=true, oid=true, relid=9991)
    (
    fooname name, -- name of foo bar
    foolimit real, -- max active count limit
@@ -125,7 +125,7 @@ The definition must begin and end with the
 TIDYCAT_BEGINDEF/TIDYCAT_ENDDEF exactly as shown.  The CREATE TABLE
 statement is almost identical to standard SQL, with the addition of a
 special WITH clause for implementation-specific features of the
-catalog entry.  Currently, the relid and reltype_oid must be specified
+catalog entry.  Currently, the relid must be specified
 using unassigned oids from the unused_oids script.  The options are:
 
 =over 8
@@ -149,11 +149,6 @@ Whether the table has an auto-generated oid column.
 
 The relid of the table in pg_class.  Use unused_oids to find one.
 
-=item reltype_oid: (required for all post-3.3 tables)
-
-The static reltype in pg_type (necessary for upgrade).  Use
-unused_oids to find one.
-
 =item toast_oid: (required for all tables with text or array columns)
 
 The oid of the toast table (see toasting.h).  Use unused_oids to find
@@ -164,11 +159,6 @@ requires a toast table and return an error if it is not specified.
 
 The oid of the index of the toast table (see toasting.h).  Use
 unused_oids to find one.
-
-=item toast_reltype: (required for all toast tables post-3.3)
-
-The static reltype of the toast table in pg_type (necessary for
-upgrade). Use unused_oids to find one.
 
 =item content: (optional)
 
@@ -266,26 +256,6 @@ And the function IsSharedRelation() in catalog.c:
   relationId == FooBarRelationId ||
 
 Note that IsSharedRelation is only updated for shared tables.
-
-And Boot_CreateStmt in bootparse.y:
-
-  Boot_CreateStmt:
-	  	  XCREATE optbootstrap optsharedrelation optwithoutoids boot_ident oidspec LPAREN
-				{
-	(...much code...)
-  /* relation id: 9991 - pg_foobar 20100105 */
-                            case FooBarRelationId:
-                                typid = PG_FOOBAR_RELTYPE_OID;
-                                break;
-
-And pg_type.h:
-
-  /* relation id: 9991 - pg_foobar 20100105 */
-  DATA(insert OID = 9992 ( pg_foobar      PGNSP PGUID -1 f c t \054 9991 0 
-	   record_in record_out record_recv record_send - d x f 0 -1 0 
-       _null_ _null_ ));
-  #define PG_FOOBAR_RELTYPE_OID 9992
-
 
 =head2 JSON document
 
@@ -406,68 +376,6 @@ BEGIN {
 }
 # SLZY_CMDLINE_END
 
-
-
-# DO NOT extend this list!  To ensure smooth upgrade, all new tables
-# must have a static reltype_oid
-my %dynamic_reltype_h = 
-	(
- 5000 => "gp_configuration",
- 5002 => "gp_distribution_policy",
- 5001 => "gp_id",
- 5008 => "gp_master_mirroring",
- 5003 => "gp_version_at_initdb",
- 2600 => "pg_aggregate",
- 2601 => "pg_am",
- 2602 => "pg_amop",
- 2603 => "pg_amproc",
- 6105 => "pg_appendonly",
- 2604 => "pg_attrdef",
- 1249 => "pg_attribute", # special bootstrap case
- 1261 => "pg_auth_members",
- 1260 => "pg_authid",
- 1248 => "pg_autovacuum",
- 2605 => "pg_cast",
- 1259 => "pg_class", # special bootstrap case
- 2606 => "pg_constraint",
- 2607 => "pg_conversion",
- 1262 => "pg_database",
- 2608 => "pg_depend",
- 2609 => "pg_description",
- 6040 => "pg_exttable",
- 2610 => "pg_index",
- 2611 => "pg_inherits",
- 2612 => "pg_language",
- 2613 => "pg_largeobject",
- 2614 => "pg_listener",
- 2615 => "pg_namespace",
- 2616 => "pg_opclass",
- 2617 => "pg_operator",
- 5010 => "pg_partition",
- 5011 => "pg_partition_rule",
- 1136 => "pg_pltemplate",
- 1255 => "pg_proc", # special bootstrap case
- 6026 => "pg_resqueue",
- 2618 => "pg_rewrite",
- 1214 => "pg_shdepend",
- 2396 => "pg_shdescription",
- 2619 => "pg_statistic",
- 1213 => "pg_tablespace",
- 2836 => "pg_toast_1255",
- 2842 => "pg_toast_1260",
- 2844 => "pg_toast_1262",
- 2846 => "pg_toast_2396",
- 2830 => "pg_toast_2604",
- 2832 => "pg_toast_2606",
- 2834 => "pg_toast_2609",
- 2838 => "pg_toast_2618",
- 2840 => "pg_toast_2619",
- 2620 => "pg_trigger",
- 1247 => "pg_type", # special bootstrap case
- 5004 => "pg_window"
-	);
-
-
 # DO NOT extend this list!  To ensure smooth upgrade, all new tables
 # with text or array columns must have toast tables and indexes
 my %toast_tab_exception_h = 
@@ -493,21 +401,6 @@ my %toast_tab_exception_h =
 	 "pg_stat_last_shoperation" => 1,
 	 "pg_tablespace" => 1,
 	 "pg_type" => 1,
-	);
-
-# DO NOT extend this list!  To ensure smooth upgrade, all new toast
-# tables must have a fixed reltype in pg_type.h
-my %toast_reltype_exception_h = 
-	(
-	 "pg_attrdef" => 1,
-	 "pg_constraint" => 1,
-	 "pg_description" => 1,
-	 "pg_proc" => 1,
-	 "pg_rewrite" => 1,
-	 "pg_statistic"=> 1,
-	 "pg_authid" => 1,
-	 "pg_database" => 1,
-	 "pg_shdescription" => 1
 	);
 
 # DO NOT extend this list!  All new tidycat files should get
@@ -1181,21 +1074,6 @@ sub parsetab
 			$alltabs->{$tname}->{with}->{camelcase} = $cc1;
 		}
 
-		if (exists($alltabs->{$tname}->{with}->{reltype_oid}))
-		{
-			my $relid = $alltabs->{$tname}->{with}->{relid};
-
-			die "table $tname has a dynamic reltype oid -- cannot redefine to static!!"
-				if (exists($dynamic_reltype_h{$relid}));
-		}
-		else
-		{
-			my $relid = $alltabs->{$tname}->{with}->{relid};
-
-			die "table $tname must have a static reltype oid"
-				unless (exists($dynamic_reltype_h{$relid}));
-		}
-
 	} # end if with
 
 
@@ -1224,20 +1102,6 @@ sub parsetab
 	if (exists($alltabs->{$tname}->{with}->{toast_index}))
 	{
 		die "toast index for $tname must have table (toast_oid)"
-			unless (exists($alltabs->{$tname}->{with}->{toast_oid}));
-	}
-	if (exists($alltabs->{$tname}->{with}->{toast_oid}))
-	{
-		die "toast table for $tname must have static reltype (toast_reltype)"
-			unless (exists($alltabs->{$tname}->{with}->{toast_reltype}) ||
-					exists($toast_reltype_exception_h{$tname}));
-	}
-	if (exists($alltabs->{$tname}->{with}->{toast_reltype}))
-	{
-		die "toast table for $tname has dynamic reltype -- cannot redefine to static!!"
-			if (exists($toast_reltype_exception_h{$tname}));
-
-		die "toast table static reltype for $tname must have table (toast_oid)"
 			unless (exists($alltabs->{$tname}->{with}->{toast_oid}));
 	}
 
@@ -1802,117 +1666,6 @@ sub fix_issharedrelation_function
 	return [$bigstr, $indstr, $toaststr];
 } # end fix_issharedrelation_function
 
-sub bootparse_str
-{
-	my ($ccrelid, $ucreltypid) = @_;
-
-	my $bigstr = <<"EOF_bigstr";
-SEVENTABScase CAMELCASERELATIONID:
-EIGHTTABStypid = UPPERCASERELTYPID;
-EIGHTTABSbreak;
-EOF_bigstr
-
-	my $seventabs = $glob_tabstr x 7;
-	my $eighttabs = $glob_tabstr x 8;
-
-	$bigstr =~ s/SEVENTABS/$seventabs/gm;
-	$bigstr =~ s/EIGHTTABS/$eighttabs/gm;
-
-	$bigstr =~ s/CAMELCASERELATIONID/$ccrelid/gm;
-	$bigstr =~ s/UPPERCASERELTYPID/$ucreltypid/gm;
-
-	return $bigstr;
-}
-
-sub fix_bootparse
-{
-	my $alltabs = shift;
-	my $bigstr = "";
-	my %relidh;
-
-	# nicer to sort by relid (vs tablename)
-	while (my ($jj, $ww) = each(%{$alltabs}))
-	{
-		$relidh{$ww->{with}->{relid}} = $jj;
-	}
-
-#	for my $kk (sort (keys (%{$alltabs})))
-	for my $jj (sort {$a <=> $b} (keys (%relidh)))
-	{
-		my $kk = $relidh{$jj};
-		my $vv = $alltabs->{$kk};
-		my $relid = $vv->{with}->{relid};
-		my $rct   = $vv->{relid_comment_tag}; # standard comment
-
-		next
-			unless (exists($vv->{with}->{reltype_oid}));
-
-		$bigstr .= "\n\n";
-		$bigstr .= $rct;
-		$bigstr .=  bootparse_str($vv->{CamelCaseRelationId}, 
-								  $vv->{UppercaseReltypeOid});
-		$bigstr .= "\n\n";
-	}
-
-	return $bigstr;
-
-} # end fix_bootparse
-
-sub toastbootstrap_str
-{
-	my ($cctoastid, $ucreltypid) = @_;
-
-	my $bigstr = <<"EOF_bigstr";
-TWOTABScase CAMELCASETOASTID:
-THREETABStypid = UPPERCASERELTYPID;
-THREETABSbreak;
-EOF_bigstr
-
-	my $twotabs   = $glob_tabstr x 2;
-	my $threetabs = $glob_tabstr x 3;
-
-	$bigstr =~ s/TWOTABS/$twotabs/gm;
-	$bigstr =~ s/THREETABS/$threetabs/gm;
-
-	$bigstr =~ s/CAMELCASETOASTID/$cctoastid/gm;
-	$bigstr =~ s/UPPERCASERELTYPID/$ucreltypid/gm;
-
-	return $bigstr;
-}
-
-sub fix_toastbootstrap
-{
-	my $alltabs = shift;
-	my $bigstr = "";
-	my %relidh;
-
-	# nicer to sort by relid (vs tablename)
-	while (my ($jj, $ww) = each(%{$alltabs}))
-	{
-		$relidh{$ww->{with}->{relid}} = $jj;
-	}
-
-#	for my $kk (sort (keys (%{$alltabs})))
-	for my $jj (sort {$a <=> $b} (keys (%relidh)))
-	{
-		my $kk = $relidh{$jj};
-		my $vv = $alltabs->{$kk};
-		my $rct   = $vv->{relid_comment_tag}; # standard comment
-
-		next
-			unless (exists($vv->{with}->{toast_reltype}));
-
-		$bigstr .= "\n\n";
-		$bigstr .= $rct;
-		$bigstr .=  toastbootstrap_str($vv->{CamelCaseToastTab}, 
-									   $vv->{UppercaseToastReltypeOid});
-		$bigstr .= "\n\n";
-	}
-
-	return $bigstr;
-
-} # end fix_toastbootstrap
-
 sub get_all_filenames
 {
 	my ($alltabs, $h_allfiles) = @_;
@@ -1937,7 +1690,7 @@ sub formattypedata
 	my ($oid, $tname, $reltype_oid) = @_;
 
 	my $bigstr = <<'EOF_bigstr';
-DATA(insert OID = RELTYPE_OID ( TABLENAME	    PGNSP PGUID -1 f c t \054 THEE_OID 0 record_in record_out record_recv record_send - d x f 0 -1 0 _null_ _null_ ));	
+DATA(insert OID = RELTYPE_OID ( TABLENAME	    PGNSP PGUID -1 f c t \054 THEE_OID 0 record_in record_out record_recv record_send - d x f 0 -1 0 _null_ _null_ ));
 EOF_bigstr
 
 $bigstr =~ s/TABLENAME/$tname/gm;
@@ -1975,44 +1728,6 @@ sub formattypes
 	while (my ($jj, $ww) = each(%{$alltabs}))
 	{
 		$relidh{$ww->{with}->{relid}} = $jj;
-	}
-
-#	for my $kk (sort (keys (%{$alltabs})))
-	for my $jj (sort {$a <=> $b} (keys (%relidh)))
-	{
-		my $kk = $relidh{$jj};
-		my $vv = $alltabs->{$kk};
-		my $relid = $vv->{with}->{relid};
-		my $rct   = $vv->{relid_comment_tag}; # standard comment
-
-		next
-			unless (exists($vv->{with}->{reltype_oid}));
-
-		my $reltype_oid = $vv->{with}->{reltype_oid};
-
-		my $uc_tname = uc($kk);
-
-		$vv->{UppercaseReltypeOid} = $uc_tname . "_RELTYPE_OID";
-
-		$bigstr .= $rct;
-		$bigstr .= formattypedata($relid, $kk, $reltype_oid);
-		$bigstr .= 
-			"#define " . $uc_tname . "_RELTYPE_OID " . $reltype_oid . "\n\n\n";
-
-		# do TOAST
-		next
-			unless (exists($vv->{with}->{toast_reltype}) &&
-					exists($vv->{with}->{toast_oid}));
-
-		$vv->{UppercaseToastReltypeOid} = $uc_tname . "_TOAST_RELTYPE_OID";
-		$bigstr .= $rct;
-		$bigstr .= formattoasttypedata($relid, $kk, $reltype_oid, 
-									   $vv->{with}->{toast_oid},
-									   $vv->{with}->{toast_reltype}
-			);
-		$bigstr .= 
-			"#define " . $vv->{UppercaseToastReltypeOid} . " " .
-			$vv->{with}->{toast_reltype} . "\n\n\n";
 	}
 
 	return $bigstr;
@@ -2493,28 +2208,11 @@ sub formattab
 		{
 			$bigstr .= "  Table does not have an Oid column.\n";
 		}
-		if (exists($vv->{with}->{reltype_oid}))
-		{
-			$bigstr .= "  Table has static type (see pg_types.h).\n"; 
-		}
-		else
-		{
-			$bigstr .= "  Table does not have static type " .
-				"(only legal for pre-3.3 tables). \n"; 
-		}
 
 		# TOAST comments
 		if (exists($vv->{with}->{toast_oid}))
 		{
 			$bigstr .= "  Table has TOASTable columns,";
-			if (exists($toast_reltype_exception_h{$kk}))
-			{
-				$bigstr .= " but TOAST table does not have static type.\n"; 
-			}
-			else
-			{
-				$bigstr .= " and TOAST table has static type.\n"; 
-			}
 		}
 		else
 		{
@@ -2800,7 +2498,7 @@ sub clean_duplicate_entries
 
 	# NOTE: list the names of special files with generated code
 	return $gen_code
-		unless ($basename =~ m/^(indexing\.h|toasting\.h|toasting\.c|catalog\.c toast|catalog\.c ind|catalog\.c tab|bootparse\.y|pg\_type\.h)$/);
+		unless ($basename =~ m/^(indexing\.h|toasting\.h|toasting\.c|catalog\.c toast|catalog\.c ind|catalog\.c tab|pg\_type\.h)$/);
 
 	my $skiplines = 0;
 
@@ -2819,8 +2517,6 @@ sub clean_duplicate_entries
 		if ($basename =~ m/catalog.*tab/);
 	$skiplines = 2
 		if ($basename =~ m/catalog.*toast/);
-	$skiplines = 3
-		if ($basename =~ m/bootparse/);
 
 	for my $kk (sort (keys (%{$alltabs})))
 	{
@@ -3176,15 +2872,6 @@ if (1)
 
 	push @backup_files, $fil_toastingc;
 
-	# src/backend/bootstrap
-	my $tmp_bootparse = File::Spec->catfile($glob_tmpdir, "bootparse.y");
-	my $fil_bootparse = File::Spec->catfile(
-		File::Spec->catdir(@srcdirs, "backend", "bootstrap"), "bootparse.y");
-	my $buf_bootparse;
-	my @arr_bootparse;
-
-	push @backup_files, $fil_bootparse;
-
 	# src/backend/catalog/Makefile
 	my $tmp_catmakem = File::Spec->catfile($glob_tmpdir, "Makefile");
 	my $fil_catmakem = File::Spec->catfile(
@@ -3300,7 +2987,6 @@ if (1)
 		push @arr_toastingh, formattoastheaders(\%alltabs);
 		
 		push @arr_pg_type, formattypes(\%alltabs);
-		push @arr_toastingc, fix_toastbootstrap(\%alltabs);
 
 		my $tab_ind = fix_issharedrelation_function(\%alltabs);
 
@@ -3318,8 +3004,6 @@ if (1)
 				if ((2 < scalar(@{$tab_ind})) && (length($tab_ind->[2])));
 		}
 
-		push @arr_bootparse, fix_bootparse(\%alltabs);
-		
 		# store the filenames for pg_tidycat and Makefile fixup
 		get_all_filenames(\%alltabs, \%h_pg_tidy);
 
@@ -3511,12 +3195,6 @@ if (1)
 						  \@arr_catalogc_tab, $verzion, $nnow, $catc_ref)
 		if (scalar(@arr_catalogc_tab));
 
-	# bootparse.y static type entries
-	fixup_generated_code (\%alltabs, 
-						  "bootparse.y", $fil_bootparse, $tmp_bootparse,
-						  \@arr_bootparse, $verzion, $nnow)
-		if (scalar(@arr_bootparse));
-	
 	if (scalar(keys(%h_pg_tidy)))
 	{
 		fixup_pg_tidy (\%h_pg_tidy, $fil_pg_tidy, $tmp_pg_tidy,
@@ -3630,7 +3308,7 @@ fresh, clean scent.  Catalog tables require several sets of
 co-ordinated modifications to multiple source files to define the
 table and indexes, and (under some circumstances) the toast tables and
 indexes (in toasting.h and toasting.c), as well as some special code
-in catalog.c and bootparse.y to aid in bootstrap and upgrade.  tidycat
+in catalog.c to aid in bootstrap and upgrade.  tidycat
 also updates a generated list of headers in pg_tidycat.h and the
 catalog Makefile.  The original files are copied to a special
 tidycat_backup directory in /tmp, and all generated files are written
@@ -3641,7 +3319,7 @@ definition for the fictional pg_foobar.h follows:
   /* TIDYCAT_BEGINDEF
 
    CREATE TABLE pg_foobar
-   with (camelcase=FooBar, shared=true, oid=true, relid=9991, reltype_oid=9992)
+   with (camelcase=FooBar, shared=true, oid=true, relid=9991)
    (
    fooname name, -- name of foo bar
    foolimit real, -- max active count limit
@@ -3658,7 +3336,7 @@ The definition must begin and end with the
 TIDYCAT_BEGINDEF/TIDYCAT_ENDDEF exactly as shown.  The CREATE TABLE
 statement is almost identical to standard SQL, with the addition of a
 special WITH clause for implementation-specific features of the
-catalog entry.  Currently, the relid and reltype_oid must be specified
+catalog entry.  Currently, the relid must be specified
 using unassigned oids from the unused_oids script.  The options are:
 
 {PODOVER8}
@@ -3682,11 +3360,6 @@ Whether the table has an auto-generated oid column.
 
 The relid of the table in pg_class.  Use unused_oids to find one.
 
-{ITEM} reltype_oid: (required for all post-3.3 tables)
-
-The static reltype in pg_type (necessary for upgrade).  Use
-unused_oids to find one.
-
 {ITEM} toast_oid: (required for all tables with text or array columns)
 
 The oid of the toast table (see toasting.h).  Use unused_oids to find
@@ -3697,11 +3370,6 @@ requires a toast table and return an error if it is not specified.
 
 The oid of the index of the toast table (see toasting.h).  Use
 unused_oids to find one.
-
-{ITEM} toast_reltype: (required for all toast tables post-3.3)
-
-The static reltype of the toast table in pg_type (necessary for
-upgrade). Use unused_oids to find one.
 
 {ITEM} content: (optional)
 
@@ -3799,26 +3467,6 @@ And the function IsSharedRelation() in catalog.c:
   relationId == FooBarRelationId ||
 
 Note that IsSharedRelation is only updated for shared tables.
-
-And Boot_CreateStmt in bootparse.y:
-
-  Boot_CreateStmt:
-	  	  XCREATE optbootstrap optsharedrelation optwithoutoids boot_ident oidspec LPAREN
-				{
-	(...much code...)
-  /* relation id: 9991 - pg_foobar 20100105 */
-                            case FooBarRelationId:
-                                typid = PG_FOOBAR_RELTYPE_OID;
-                                break;
-
-And pg_type.h:
-
-  /* relation id: 9991 - pg_foobar 20100105 */
-  DATA(insert OID = 9992 ( pg_foobar      PGNSP PGUID -1 f c t \054 9991 0 
-	   record_in record_out record_recv record_send - d x f 0 -1 0 
-       _null_ _null_ ));
-  #define PG_FOOBAR_RELTYPE_OID 9992
-
 
 {HEAD2} JSON document
 

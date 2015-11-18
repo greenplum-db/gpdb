@@ -3367,45 +3367,6 @@ RecordIsValid(XLogRecord *record, XLogRecPtr recptr, int emode)
 
 	if (!EQ_CRC32(record->xl_crc, crc))
 	{
-		/*
-		 * Ok, the crc failed, but it may be that we have a record using the old crc algorithm.
-		 * Re-compute the crc using the old algorithm, and check that.
-		 */
-
-		/* First the rmgr data */
-		INIT_CRC32(crc);
-		COMP_CRC32(crc, XLogRecGetData(record), len);
-
-		/* Add in the backup blocks, if any */
-		blk = (char *) XLogRecGetData(record) + len;
-		for (i = 0; i < XLR_MAX_BKP_BLOCKS; i++)
-		{
-			uint32		blen;
-
-			if (!(record->xl_info & XLR_SET_BKP_BLOCK(i)))
-				continue;
-
-			memcpy(&bkpb, blk, sizeof(BkpBlock));
-			if (bkpb.hole_offset + bkpb.hole_length > BLCKSZ)
-			{
-				ereport(emode,
-						(errmsg("incorrect hole size in record at %X/%X",
-								recptr.xlogid, recptr.xrecoff)));
-				return false;
-			}
-			blen = sizeof(BkpBlock) + BLCKSZ - bkpb.hole_length;
-			COMP_CRC32(crc, blk, blen);
-			blk += blen;
-		}
-
-		/* Finally include the record header */
-		COMP_CRC32(crc, (char *) record + sizeof(pg_crc32),
-				   SizeOfXLogRecord - sizeof(pg_crc32));
-		FIN_CRC32(crc);
-	}
-
-	if (!EQ_CRC32(record->xl_crc, crc))
-	{
 		ereport(emode,
 		(errmsg("incorrect resource manager data checksum in record at %X/%X",
 				recptr.xlogid, recptr.xrecoff)));
@@ -5057,17 +5018,8 @@ ReadControlFile(void)
 	crc32cFinish(crc);
 
 	if (!EQ_CRC32(crc, ControlFile->crc))
-	{
-		/* We might have an old record.  Recompute using old crc algorithm, and re-check. */
-		INIT_CRC32(crc);
-		COMP_CRC32(crc,
-				   (char *) ControlFile,
-				   offsetof(ControlFileData, crc));
-		FIN_CRC32(crc);
-		if (!EQ_CRC32(crc, ControlFile->crc))
-				ereport(FATAL,
-						(errmsg("incorrect checksum in control file")));
-	}
+		ereport(FATAL,
+				(errmsg("incorrect checksum in control file")));
 
 	/*
 	 * Do compatibility checking immediately, except during upgrade.
@@ -5081,8 +5033,7 @@ ReadControlFile(void)
 	 * themselves.	(These locale settings are considered critical
 	 * compatibility items because they can affect sort order of indexes.)
 	 */
-	if (ControlFile->catalog_version_no != CATALOG_VERSION_NO &&
-		!gp_upgrade_mode)
+	if (ControlFile->catalog_version_no != CATALOG_VERSION_NO)
 		ereport(FATAL,
 				(errmsg("database files are incompatible with server"),
 				 errdetail("The database cluster was initialized with CATALOG_VERSION_NO %d,"

@@ -1,3 +1,0 @@
-2922,pg_authid,11,10,-1,f,c,t,",",1260,0,record_in,record_out,record_recv,record_send,-,d,x,f,0,-1,0,,
-2923,pg_auth_members,11,10,-1,f,c,t,",",1261,0,record_in,record_out,record_recv,record_send,-,d,x,f,0,-1,0,,
-2924,pg_database,11,10,-1,f,c,t,",",1262,0,record_in,record_out,record_recv,record_send,-,d,x,f,0,-1,0,,

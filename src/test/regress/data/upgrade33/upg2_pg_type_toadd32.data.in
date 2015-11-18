@@ -1,6 +1,0 @@
-oid|typname|typnamespace|typowner|typlen|typbyval|typtype|typisdefined|typdelim|typrelid|typelem|typinput|typoutput|typreceive|typsend|typanalyze|typalign|typstorage|typnotnull|typbasetype|typtypmod|typndims|typdefaultbin|typdefault
-6434|gp_configuration_history|11|10|-1|f|c|t|,|5006|0|record_in|record_out|record_recv|record_send|-|d|x|f|0|-1|0|\N|\N
-6436|gp_db_interfaces|11|10|-1|f|c|t|,|5029|0|record_in|record_out|record_recv|record_send|-|d|x|f|0|-1|0|\N|\N
-6433|gp_interfaces|11|10|-1|f|c|t|,|5030|0|record_in|record_out|record_recv|record_send|-|d|x|f|0|-1|0|\N|\N
-6437|pg_appendonly_alter_column|11|10|-1|f|c|t|,|6110|0|record_in|record_out|record_recv|record_send|-|d|x|f|0|-1|0|\N|\N
-\.

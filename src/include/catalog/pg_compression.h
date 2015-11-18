@@ -20,7 +20,7 @@
 /* TIDYCAT_BEGINDEF
 
    CREATE TABLE pg_compression
-   with (relid=3056, reltype_oid=3057, CamelCase=Compression)
+   with (relid=3056, CamelCase=Compression)
    (
    compname				name, 
    compconstructor		regproc,

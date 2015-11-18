@@ -2086,21 +2086,21 @@ initResultRelInfo(ResultRelInfo *resultRelInfo,
 							RelationGetRelationName(resultRelationDesc))));
 			break;
 		case RELKIND_AOSEGMENTS:
-			if (!gp_upgrade_mode && !allowSystemTableModsDML)
+			if (!allowSystemTableModsDML)
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("cannot change AO segment listing relation \"%s\"",
 								RelationGetRelationName(resultRelationDesc))));
 			break;
 		case RELKIND_AOBLOCKDIR:
-			if (!gp_upgrade_mode && !allowSystemTableModsDML)
+			if (!allowSystemTableModsDML)
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("cannot change AO block directory relation \"%s\"",
 								RelationGetRelationName(resultRelationDesc))));
 			break;
 		case RELKIND_AOVISIMAP:
-			if (!gp_upgrade_mode && !allowSystemTableModsDML)
+			if (!allowSystemTableModsDML)
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("cannot change AO visibility map relation \"%s\"",

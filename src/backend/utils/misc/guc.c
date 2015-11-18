@@ -7423,11 +7423,9 @@ assign_allow_system_table_mods(const char *newval,
 		!pg_strcasecmp("none", newval));
 	else if (!pg_strcasecmp("dml", newval))
 		valueDML = true;
-	else if (!pg_strcasecmp("ddl", newval) &&
-			 (gp_upgrade_mode || !IsUnderPostmaster))
+	else if (!pg_strcasecmp("ddl", newval) && !IsUnderPostmaster)
 		valueDDL = true;
-	else if (!pg_strcasecmp("all", newval) &&
-			 (gp_upgrade_mode || !IsUnderPostmaster))
+	else if (!pg_strcasecmp("all", newval) && !IsUnderPostmaster)
 	{
 		valueDML = true;
 		valueDDL = true;

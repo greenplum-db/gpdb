@@ -166,18 +166,6 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 		 * to create shell type.
 		 */
 		bool createShellOnly = (parameters==NIL);
-		if (gp_upgrade_mode)
-		{
-			foreach(pl, parameters)
-			{
-				DefElem *defel = (DefElem *) lfirst(pl);
-				if (pg_strcasecmp(defel->defname, "oid") == 0)
-				{
-					newOid = intVal(defel->arg);
-					createShellOnly = true;
-				}
-			}
-		}
 		typoid = TypeShellMake(typeName, typeNamespace, GetUserId(), newOid);
 
 		/* Make new shell type visible for modification below */
@@ -296,24 +284,6 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 						 errmsg("storage \"%s\" not recognized", a)));
-		}
-		else if (gp_upgrade_mode && pg_strcasecmp(defel->defname, "typtype") == 0)
-		{
-			/* upgrade only option..!!!!
-			 *
-			 * Normally, type are created with type "b".
-			 * During upgrade, we need to create "build-in" psudue type with 'p'.
-			 *
-			 */
-			typtype = defGetString(defel, &need_free_value)[0];
-		}
-		else if (gp_upgrade_mode && pg_strcasecmp(defel->defname, "shadowoid") == 0)
-		{
-			/* upgrade only option..!!!!
-			 *
-			 * Need to specify the shadowtype oid.
-			 */
-			shadowOid = (int)defGetInt64(defel);
 		}
 		else if (is_storage_encoding_directive(defel->defname))
 		{

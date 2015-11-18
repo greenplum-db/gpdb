@@ -413,7 +413,6 @@ bool		gp_partitioning_dynamic_selection_log;
 int			gp_max_partition_level;
 
 /* Upgrade & maintenance GUCs */
-bool		gp_upgrade_mode;
 bool		gp_maintenance_mode;
 bool		gp_maintenance_conn;
 bool		allow_segment_DML;
@@ -586,16 +585,6 @@ char	   *gp_default_storage_options = NULL;
 
 struct config_bool ConfigureNamesBool_gp[] =
 {
-	{
-		{"upgrade_mode", PGC_POSTMASTER, CUSTOM_OPTIONS,
-			gettext_noop("Upgrade Mode"),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_upgrade_mode,
-		false, NULL, NULL
-	},
-
 	{
 		{"maintenance_mode", PGC_POSTMASTER, CUSTOM_OPTIONS,
 			gettext_noop("Maintenance Mode"),

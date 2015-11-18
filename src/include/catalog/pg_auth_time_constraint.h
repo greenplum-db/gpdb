@@ -22,7 +22,7 @@
 /* TIDYCAT_BEGINDEF
 
    CREATE TABLE pg_auth_time_constraint
-   with (CamelCase=AuthTimeConstraint, shared=true, oid=false, relid=2914, reltype_oid=2915)
+   with (CamelCase=AuthTimeConstraint, shared=true, oid=false, relid=2914)
    (
    authid oid, -- foreign key to pg_authid.oid,
    start_day smallint, -- [0,6] denoting start of interval

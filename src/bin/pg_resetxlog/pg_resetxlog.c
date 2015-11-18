@@ -436,20 +436,6 @@ ReadControlFile(void)
 			return true;
 		}
 
-		/* Check the CRC using old algorithm. */
-		INIT_CRC32(crc);
-		COMP_CRC32(crc,
-				   buffer,
-				   offsetof(ControlFileData, crc));
-		FIN_CRC32(crc);
-
-		if (EQ_CRC32(crc, ((ControlFileData *) buffer)->crc))
-		{
-			/* Valid data... */
-			memcpy(&ControlFile, buffer, sizeof(ControlFile));
-			return true;
-		}
-
 		fprintf(stderr, _("%s: pg_control exists but has invalid CRC; proceed with caution\n"),
 				progname);
 		/* We will use the data anyway, but treat it as guessed. */

@@ -18,7 +18,7 @@
 /* TIDYCAT_BEGINDEF
 
    CREATE TABLE pg_proc_callback
-   with (relid=3124, reltype_oid=3125, oid=false, CamelCase=ProcCallback)
+   with (relid=3124, oid=false, CamelCase=ProcCallback)
    (
    profnoid     regproc,   -- oid of the main function
    procallback  regproc,   -- oid of the callback function

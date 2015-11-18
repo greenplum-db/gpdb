@@ -1,8 +1,0 @@
-oprname|oprnamespace|oprowner|oprkind|oprcanhash|oprleft|oprright|oprresult|oprcom|oprnegate|oprlsortop|oprrsortop|oprltcmpop|oprgtcmpop|oprcode|oprrest|oprjoin
-3325|=|11|10|b|f|3310|3310|16|3325|3326|3327|3327|3327|3328|gpxlogloceq|eqsel|eqjoinsel
-3326|<>|11|10|b|f|3310|3310|16|3326|3325|0|0|0|0|gpxloglocne|neqsel|neqjoinsel
-3327|<|11|10|b|f|3310|3310|16|3328|3330|0|0|0|0|gpxlogloclt|scalarltsel|scalarltjoinsel
-3328|>|11|10|b|f|3310|3310|16|3327|3329|0|0|0|0|gpxloglocgt|scalargtsel|scalargtjoinsel
-3329|<=|11|10|b|f|3310|3310|16|3330|3328|0|0|0|0|gpxloglocle|scalarltsel|scalarltjoinsel
-3330|>=|11|10|b|f|3310|3310|16|3329|3327|0|0|0|0|gpxloglocge|scalargtsel|scalargtjoinsel
-\.

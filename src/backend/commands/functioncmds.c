@@ -617,13 +617,6 @@ compute_attributes_with_style(List *parameters,
 		{
 			*describeQualName_p = defGetQualifiedName(param);
 		}
-		else if (gp_upgrade_mode && pg_strcasecmp(param->defname, "OID")==0)
-		{
-			/* Catalog obj's OID must be less than FirstBootstrapObjectId */
-			int64 oid = defGetInt64(param);
-			Assert(oid < FirstBootstrapObjectId);
-			*oid_p = (Oid) oid;
-		}
 		else
 		{
 			ereport(WARNING,
@@ -2054,14 +2047,6 @@ GetFuncSQLDataAccess(Oid funcOid)
 
 	heap_freetuple(procTuple);
 	heap_close(procRelation, AccessShareLock);
-
-	/*
-	 * In upgrade mode, allow prodataaccess to be NULL, to handle the case
-	 * where prodataaccess column has not been added to pg_proc yet. This is
-	 * specifically to handle catDML()
-	 */
-	if (gp_upgrade_mode && isnull)
-		return SDA_NO_SQL;
 
 	Assert(!isnull);
 
