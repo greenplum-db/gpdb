@@ -304,7 +304,17 @@ rloop:
 	{
 		prepare_for_client_read();
 
+		bool saved_ImmediateInterruptOK = ImmediateInterruptOK;
+		ImmediateInterruptOK = true;
+
+		if (ProcDiePending)
+		{
+			CHECK_FOR_INTERRUPTS();
+		}
+
 		n = recv(port->sock, ptr, len, 0);
+
+		ImmediateInterruptOK = saved_ImmediateInterruptOK;
 
 		client_read_ended();
 	}
