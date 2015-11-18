@@ -379,6 +379,9 @@ def generate_dbdump_prefix(dump_prefix):
 def generate_createdb_prefix(dump_prefix):
     return '%sgp_cdatabase_1_1_' % (dump_prefix)
 
+def generate_stats_prefix(dump_prefix):
+    return '%sgp_statistics_1_1_' % (dump_prefix)
+
 def generate_createdb_filename(master_data_dir, backup_dir, dump_dir, dump_prefix, timestamp, ddboost=False):
     if ddboost:
         return '%s/%s/%s/%s%s' % (master_data_dir, dump_dir, timestamp[0:8], generate_createdb_prefix(dump_prefix), timestamp)
@@ -569,6 +572,14 @@ def generate_global_filename(master_data_dir, backup_dir, dump_dir, dump_prefix,
 def generate_cdatabase_filename(master_data_dir, backup_dir, dump_dir, dump_prefix, timestamp):
     use_dir = get_backup_directory(master_data_dir, backup_dir, dump_dir, timestamp)
     return "%s/%sgp_cdatabase_1_1_%s" % (use_dir, dump_prefix, timestamp)
+
+def generate_stats_filename(master_data_dir, backup_dir, dump_dir, dump_prefix, dump_date, timestamp):
+    if backup_dir is not None:
+        dir_path = backup_dir
+    else:
+        dir_path = master_data_dir
+
+    return os.path.join(dir_path, dump_dir, dump_date, "%s%s" % (generate_stats_prefix(dump_prefix), timestamp))
 
 def get_full_timestamp_for_incremental_with_nbu(dump_prefix, incremental_timestamp, netbackup_service_host, netbackup_block_size):
     if dump_prefix:

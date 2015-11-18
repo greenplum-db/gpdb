@@ -185,6 +185,7 @@ def impl(context, tabletype, table_name, compression_type, indexname, dbname):
     create_indexes(context, table_name, indexname, dbname)
 
 @given('there is a "{tabletype}" partition table "{table_name}" with compression "{compression_type}" in "{dbname}" with data')
+@then('there is a "{tabletype}" partition table "{table_name}" with compression "{compression_type}" in "{dbname}" with data')
 def impl(context, tabletype, table_name, compression_type, dbname):
     create_database_if_not_exists(context, dbname)
     drop_table_if_exists(context, table_name=table_name, dbname=dbname)
@@ -1070,6 +1071,8 @@ def verify_file_contents(context, file_type, file_dir, text_find, should_contain
         fn = '%sgp_dump_status_1_1_%s' % (context.dump_prefix, context.backup_timestamp)
     elif file_type == 'filter':
         fn = '%sgp_dump_%s_filter' % (context.dump_prefix, context.backup_timestamp)
+    elif file_type == "statistics":
+        fn = '%sgp_statistics_1_1_%s' % (context.dump_prefix, context.backup_timestamp)
 
     subdirectory = context.backup_timestamp[0:8]
     
@@ -1302,6 +1305,8 @@ def impl(context, filetype, dir):
         filename = 'gp_restore_%s_plan' % context.backup_timestamp
     elif filetype == "global":
         filename = 'gp_global_1_1_%s' % context.backup_timestamp
+    elif filetype == "statistics":
+        filename = 'gp_statistics_1_1_%s' % context.backup_timestamp
     elif filetype == 'pipes':
         filename = 'gp_dump_%s_pipes' % context.backup_timestamp
     elif filetype == 'regular_files':
@@ -3725,4 +3730,11 @@ def impl(context, filepath):
 
     if found != len(split_message):
         raise Exception("expected to find %s tables in order and only found %s in order" % (len(split_message), found))
+
+@given('database "{dbname}" is dropped and recreated')
+@when('database "{dbname}" is dropped and recreated')
+@then('database "{dbname}" is dropped and recreated')
+def impl(context, dbname):
+    drop_database_if_exists(context, dbname)
+    create_database(context, dbname)
 

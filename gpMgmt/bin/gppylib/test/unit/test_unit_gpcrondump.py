@@ -56,6 +56,7 @@ class GpCronDumpTestCase(unittest.TestCase):
             self.include_schema_file = None
             self.exclude_schema_file = None
             self.exclude_dump_schema = None
+            self.dump_stats = None
 
             ## Enterprise init
             self.incremental = False

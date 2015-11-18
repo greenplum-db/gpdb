@@ -28,9 +28,9 @@ try:
     from gppylib.operations.restore import GetDbName, GetDumpTables, RecoverRemoteDumps, RestoreDatabase, ValidateTimestamp, \
                                            config_files_dumped, create_restore_plan, get_restore_dir, get_restore_tables_from_table_file, \
                                            global_file_dumped, is_begin_incremental_run, is_incremental_restore, restore_cdatabase_file_with_nbu, \
-                                           restore_config_files_with_nbu, restore_global_file_with_nbu, restore_increments_file_with_nbu, \
-                                           restore_partition_list_file_with_nbu, restore_report_file_with_nbu, restore_state_files_with_nbu, \
-                                           truncate_restore_tables, validate_tablenames
+                                           restore_config_files_with_nbu, restore_global_file_with_nbu, restore_statistics_file_with_nbu, \
+                                           restore_increments_file_with_nbu, restore_partition_list_file_with_nbu, restore_report_file_with_nbu, \
+                                           restore_state_files_with_nbu, truncate_restore_tables, validate_tablenames
     from gppylib.operations.utils import DEFAULT_NUM_WORKERS
     from gppylib.operations.unix import CheckFile, CheckRemoteFile, ListFilesByPattern, ListRemoteFilesByPattern
 except ImportError, e:
@@ -85,6 +85,11 @@ class GpdbRestore(Operation):
         self.report_status_dir = options.report_status_dir
         self.truncate = options.truncate
         self.change_schema = options.change_schema
+        self.restore_stats = options.restore_stats
+
+        if self.restore_stats:
+            self.no_analyze = True
+
         # NetBackup params
         self.netbackup_service_host = options.netbackup_service_host
         self.netbackup_block_size = options.netbackup_block_size
@@ -98,6 +103,9 @@ class GpdbRestore(Operation):
 
         if self.truncate and self.drop_db:
             raise Exception('Cannot specify --truncate and -e together')
+
+        if self.restore_stats == "only" and self.drop_db:
+            raise Exception('Cannot specify --restore-stats only and -e together')
 
         if self.table_file and self.restore_tables:
             raise Exception('Cannot specify -T and --table-file together')
@@ -183,12 +191,16 @@ class GpdbRestore(Operation):
                 restore_config_files_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.db_timestamp, self.master_port, self.netbackup_service_host, self.netbackup_block_size)
             if global_file_dumped(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.db_timestamp, self.netbackup_service_host):
                 restore_global_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.db_timestamp, self.netbackup_service_host, self.netbackup_block_size)
+            if statistics_file_dumped(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.db_timestamp, self.netbackup_service_host):
+                restore_statistics_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.db_timestamp, self.netbackup_service_host, self.netbackup_block_size)
 
         if self.list_tables and self.db_timestamp is not None:
             return self._list_dump_tables()
 
         info = self._gather_info()
-        if is_incremental_restore(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, info['restore_timestamp']):
+        if self.restore_stats == "only":
+            restore_type = "Statistics-Only Restore"
+        elif is_incremental_restore(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, info['restore_timestamp']):
             if self.restore_tables is not None:
                 restore_type = "Incremental Table Restore"
             else:
@@ -261,11 +273,12 @@ class GpdbRestore(Operation):
                         no_ao_stats = self.no_ao_stats,
                         redirected_restore_db = self.redirected_restore_db,
                         report_status_dir = self.report_status_dir,
+                        restore_stats = self.restore_stats,
                         netbackup_service_host = self.netbackup_service_host,
                         netbackup_block_size = self.netbackup_block_size,
                         change_schema = self.change_schema).run()
 
-        if self.no_analyze:
+        if self.no_analyze and not self.restore_stats:
             logger.warn('--------------------------------------------------------------------------------------------------')
             logger.warn('Analyze bypassed on request; database performance may be adversely impacted until analyze is done.')
             logger.warn('--------------------------------------------------------------------------------------------------')
@@ -542,6 +555,21 @@ def restore_global_callback(option, opt_str, value, parser):
         raise OptionValueError('%s is not a valid argument for -G.  Valid arguments are "include" and "only".' % value)
     setattr(parser.values, option.dest, value)
 
+def restore_stats_callback(option, opt_str, value, parser):
+    assert value is None
+    if len(parser.rargs) > 0:
+        value = parser.rargs[0]
+        if value[:1] == "-":
+            value = "include"
+        else:
+            del parser.rargs[:1]
+
+    if value == None:
+        value = "include"
+    elif value not in ("include", "only"):
+        raise OptionValueError('%s is not a valid argument for --restore-stats.  Valid arguments are "include" and "only".' % value)
+    setattr(parser.values, option.dest, value)
+
 def create_parser():
     parser = OptParser(option_class=OptChecker,
                        version='%prog version $Revision$',
@@ -593,6 +621,8 @@ def create_parser():
                      help="Truncate's the restore tables specified using -T and --table-file option")
     addTo.add_option('--change-schema', dest='change_schema', metavar="<change schema>",
                      help="Different schema name to which tables will be restored")
+    addTo.add_option('--restore-stats', dest='restore_stats', action="callback", callback=restore_stats_callback,
+                     help="Restore database statistics. Analysis is skipped as if the --noanalyze flag were set.")
     parser.add_option_group(addTo)
 
     # For Incremental Restore

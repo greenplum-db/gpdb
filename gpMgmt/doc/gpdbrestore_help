@@ -303,6 +303,22 @@ OPTIONS
  directories. 
 
 
+--restore-stats [include|only]
+
+ Restores optimizer statistics if the statistics dump file
+ db_dumps/<date>/gp_statistics_1_1_<timestamp> is found in the master data
+ directory. Setting this option automatically skips the final analyze step,
+ so it is not necessary to also set the --noanalyze flag in conjunction with
+ this one.
+
+ Specify "--restore-stats only" to only restore the statistics dump file or
+ "--restore-stats include" to restore statistics along with a normal restore.
+ Defaults to "include" if neither argument is provided.
+ 
+ If "--restore-stats only" is specified along with the -e option, an error
+ is returned.
+
+
 -s <database_name>
 
  Looks for latest set of dump files for the given database name in the 

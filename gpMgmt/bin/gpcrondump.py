@@ -33,16 +33,16 @@ try:
                                                 generate_files_filename, generate_pipes_filename, generate_schema_filename, get_backup_directory, \
                                                 get_latest_full_dump_timestamp, get_latest_full_ts_with_nbu, get_lines_from_file, remove_file_from_segments, \
                                                 validate_timestamp, verify_lines_in_file, write_lines_to_file
-    from gppylib.operations.dump import CreateIncrementsFile, DeleteCurrentDump, DeleteOldestDumps, DumpConfig, DumpDatabase, DumpGlobal, \
+    from gppylib.operations.dump import CreateIncrementsFile, DeleteCurrentDump, DeleteOldestDumps, DumpConfig, DumpDatabase, DumpGlobal, DumpStats, \
                                         MailDumpEvent, PostDumpDatabase, UpdateHistoryTable, VacuumDatabase, ValidateDatabaseExists, ValidateGpToolkit, \
                                         ValidateSchemaExists, backup_cdatabase_file_with_nbu, backup_config_files_with_nbu, backup_dirty_file_with_nbu, \
-                                        backup_global_file_with_nbu, backup_increments_file_with_ddboost, backup_increments_file_with_nbu, \
-                                        backup_partition_list_file_with_nbu, backup_report_file_with_ddboost, backup_report_file_with_nbu, \
-                                        backup_schema_file_with_ddboost, backup_schema_file_with_nbu, backup_state_files_with_nbu, filter_dirty_tables, \
-                                        generate_dump_timestamp, get_ao_partition_state, get_co_partition_state, get_dirty_heap_tables, get_dirty_tables, \
-                                        get_filter_file, get_include_schema_list_from_exclude_schema, get_last_operation_data, get_user_table_list_for_schema, \
-                                        update_filter_file, validate_current_timestamp, write_dirty_file, write_dirty_file_to_temp, write_last_operation_file, \
-                                        write_partition_list_file, write_state_file
+                                        backup_global_file_with_nbu, backup_statistics_file_with_nbu, backup_increments_file_with_ddboost, \
+                                        backup_increments_file_with_nbu, backup_partition_list_file_with_nbu, backup_report_file_with_ddboost, \
+                                        backup_report_file_with_nbu, backup_schema_file_with_ddboost, backup_schema_file_with_nbu, backup_state_files_with_nbu, \
+                                        filter_dirty_tables, generate_dump_timestamp, get_ao_partition_state, get_co_partition_state, get_dirty_heap_tables, \
+                                        get_dirty_tables, get_filter_file, get_include_schema_list_from_exclude_schema, get_last_operation_data, \
+                                        get_user_table_list_for_schema, update_filter_file, validate_current_timestamp, write_dirty_file, write_dirty_file_to_temp, \
+                                        write_last_operation_file, write_partition_list_file, write_state_file
     from gppylib.operations.utils import DEFAULT_NUM_WORKERS
 except ImportError, e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
@@ -117,6 +117,7 @@ class GpCronDump(Operation):
 
         self.include_email_file = options.include_email_file
         self.email_details = None
+        self.dump_stats = options.dump_stats
         self.ddboost_hosts = options.ddboost_hosts
         self.ddboost_user = options.ddboost_user
         self.ddboost_config_remove = options.ddboost_config_remove
@@ -862,6 +863,27 @@ class GpCronDump(Operation):
                                                      ddboost = self.ddboost,
                                                      netbackup_service_host = self.netbackup_service_host,
                                                      incremental = self.incremental).run()
+
+                if self.dump_stats:
+                    if current_exit_status == 0:
+                        DumpStats(timestamp = post_dump_outcome['timestamp'],
+                                   master_datadir = self.master_datadir,
+                                   dump_database = dump_database,
+                                   master_port = self.master_port,
+                                   backup_dir = self.backup_dir,
+                                   dump_dir = self.dump_dir,
+                                   dump_prefix = self.dump_prefix,
+                                   include_table_file = include_file,
+                                   exclude_table_file = exclude_file,
+                                   include_schema_file = schema_file,
+                                   ddboost = self.ddboost
+                                   ).run()
+                        if self.netbackup_service_host and self.netbackup_policy and self.netbackup_schedule:
+                            backup_statistics_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.netbackup_service_host,
+                                                            self.netbackup_policy, self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
+                    else:
+                        logger.info("Skipping statistics dump due to issues during post-dump checks.")
+
                 if self.netbackup_service_host and self.netbackup_policy and self.netbackup_schedule:
                     backup_cdatabase_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.netbackup_service_host, self.netbackup_policy, self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
                     backup_report_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.netbackup_service_host, self.netbackup_policy, self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
@@ -969,8 +991,8 @@ class GpCronDump(Operation):
                                dump_prefix = self.dump_prefix,
                                ddboost = self.ddboost).run()
                     if self.netbackup_service_host and self.netbackup_policy and self.netbackup_schedule:
-                        backup_global_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix,
-                                                    self.netbackup_service_host, self.netbackup_policy, self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
+                        backup_global_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.netbackup_service_host,
+                                                    self.netbackup_policy, self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
                 else:
                     logger.info("Skipping global dump due to issues during post-dump checks.")
 
@@ -1526,6 +1548,8 @@ def create_parser():
                      help="Exclude the tables named in this file from the dump. Option can be used only once.")
     addTo.add_option('--email-file', dest='include_email_file', metavar="<filename>",
                      help="Customize the 'Sender' and 'Subject' of the email to be sent after backup")
+    addTo.add_option('--dump-stats', action="store_true", dest='dump_stats', default=False,
+                     help="Dump database statistics")
 
     parser.add_option_group(addTo)
 

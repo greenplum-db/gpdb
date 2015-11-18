@@ -319,6 +319,16 @@ OPTIONS
  block ICMP ping probes, specify this option. 
 
  
+--dump-stats
+
+ Dump optimizer statistics from pg_statistic. Statistics are dumped in the
+ master data directory to db_dumps/YYYYMMDD/gp_statistics_1_1_<timestamp>.
+
+ If --ddboost is specified, the backup is located on the default storage
+ unit in the directory specified by --ddboost-backupdir when the Data
+ Domain Boost credentials were set.
+
+
 -E <encoding> 
 
  Character set encoding of dumped data. Defaults to the encoding of the 

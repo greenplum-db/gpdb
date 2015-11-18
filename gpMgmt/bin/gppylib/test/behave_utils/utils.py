@@ -1323,8 +1323,9 @@ def check_dump_dir_exists(context, dbname):
 def verify_restored_table_is_analyzed(context, table_name, dbname):
     ROW_COUNT_SQL = """SELECT count(*) FROM %s""" % table_name
     if table_name.find('.') != -1:
-        table_name = table_name.split(".")[1]
-    ROW_COUNT_PG_CLASS_SQL = """SELECT reltuples FROM pg_class WHERE relname = '%s'""" % (table_name)
+        schema_name,table_name = table_name.split(".")
+    ROW_COUNT_PG_CLASS_SQL = """SELECT reltuples FROM pg_class WHERE relname = '%s'
+                                AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = '%s')""" % (table_name, schema_name)
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
         curs = dbconn.execSQL(conn, ROW_COUNT_SQL)
         rows = curs.fetchall()

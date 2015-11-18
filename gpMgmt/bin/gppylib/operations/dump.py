@@ -16,11 +16,13 @@ from gppylib.operations.utils import RemoteOperation, ParallelOperation
 from gppylib.operations.backup_utils import backup_file_with_nbu, check_file_dumped_with_nbu, create_temp_file_from_list, execute_sql, \
                                             generate_ao_state_filename, generate_cdatabase_filename, generate_co_state_filename, generate_dirtytable_filename, \
                                             generate_filter_filename, generate_global_filename, generate_global_prefix, generate_increments_filename, \
-                                            generate_master_config_filename, generate_master_dbdump_prefix, generate_master_status_prefix, generate_partition_list_filename, \
+                                            generate_master_config_filename, generate_master_dbdump_prefix, generate_master_status_prefix, \
+                                            generate_partition_list_filename, generate_stats_filename, \
                                             generate_pgstatlastoperation_filename, generate_report_filename, generate_schema_filename, generate_seg_dbdump_prefix, \
                                             generate_seg_status_prefix, generate_segment_config_filename, get_incremental_ts_from_report_file, \
                                             get_latest_full_dump_timestamp, get_latest_full_ts_with_nbu, get_latest_report_timestamp, get_lines_from_file, \
                                             restore_file_with_nbu, validate_timestamp, verify_lines_in_file, write_lines_to_file
+from pygresql import pg
 
 logger = gplog.get_default_logger()
 
@@ -602,6 +604,17 @@ def backup_global_file_with_nbu(master_datadir, backup_dir, dump_dir, dump_prefi
 
     backup_file_with_nbu(netbackup_service_host, netbackup_policy, netbackup_schedule, netbackup_block_size, netbackup_keyword,
                          generate_global_filename(master_datadir, backup_dir, dump_dir, dump_prefix, DUMP_DATE, timestamp_key))
+
+def backup_statistics_file_with_nbu(master_datadir, backup_dir, dump_dir, dump_prefix, netbackup_service_host, netbackup_policy, netbackup_schedule,
+                                    netbackup_block_size, netbackup_keyword, timestamp_key=None):
+    logger.debug("Inside backup_statistics_file_with_nbu\n")
+    if (master_datadir is None) and (backup_dir is None):
+        raise Exception('Master data directory and backup directory are both none.')
+    if timestamp_key is None:
+        timestamp_key = TIMESTAMP_KEY
+
+    backup_file_with_nbu(netbackup_service_host, netbackup_policy, netbackup_schedule, netbackup_block_size, netbackup_keyword,
+                         generate_statistics_filename(master_datadir, backup_dir, dump_dir, dump_prefix, DUMP_DATE, timestamp_key))
 
 def backup_config_files_with_nbu(master_datadir, backup_dir, dump_dir, dump_prefix, master_port, netbackup_service_host, netbackup_policy,
                                  netbackup_schedule, netbackup_block_size, netbackup_keyword, timestamp_key=None):
@@ -1794,3 +1807,178 @@ class MailEvent(Operation):
             command_str = 'echo "%s" | %s -s "%s" %s -- -f %s' % (self.message, cmd, self.subject, " ".join(self.to_addrs), self.sender)
         logger.debug("Email command string= %s" % command_str)
         Command('Sending email', command_str).run(validateAfter=True)
+
+class DumpStats(Operation):
+    def __init__(self, timestamp, master_datadir, dump_database, master_port, backup_dir, dump_dir, dump_prefix,
+                 include_table_file, exclude_table_file, include_schema_file, ddboost):
+        self.timestamp = timestamp
+        self.master_datadir = master_datadir
+        self.dump_database = dump_database
+        self.master_port = master_port
+        self.backup_dir = backup_dir
+        self.dump_dir = dump_dir
+        self.dump_prefix = dump_prefix
+        self.include_table_file = include_table_file
+        self.exclude_table_file = exclude_table_file
+        self.include_schema_file = include_schema_file
+        self.ddboost = ddboost
+        self.stats_filename = generate_stats_filename(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, DUMP_DATE, self.timestamp)
+
+    def execute(self):
+        logger.info("Commencing pg_statistic dump")
+
+        include_tables = []
+        if self.exclude_table_file:
+            exclude_tables = get_lines_from_file(self.exclude_table_file)
+            user_tables = get_user_table_list(self.master_port, self.dump_database)
+            tables = []
+            for table in user_tables:
+                tables.append("%s.%s" % (table[0], table[1]))
+            include_tables = list(set(tables) - set(exclude_tables))
+        elif self.include_table_file:
+            include_tables = get_lines_from_file(self.include_table_file)
+        elif self.include_schema_file:
+            include_schemas = get_lines_from_file(self.include_schema_file)
+            for schema in include_schemas:
+                user_tables = get_user_table_list_for_schema(self.master_port, self.dump_database, schema)
+                tables = []
+                for table in user_tables:
+                    tables.append("%s.%s" % (table[0], table[1]))
+                include_tables.extend(tables)
+        else:
+            user_tables = get_user_table_list(self.master_port, self.dump_database)
+            for table in user_tables:
+                include_tables.append("%s.%s" % (table[0], table[1]))
+
+        with open(self.stats_filename, "w") as outfile:
+            outfile.write("""--
+-- Allow system table modifications
+--
+set allow_system_table_mods="DML";
+
+""")
+        for table in sorted(include_tables):
+            self.dump_table(table)
+
+        if self.ddboost:
+            abspath = self.stats_filename
+            relpath = os.path.join(self.dump_dir, DUMP_DATE, "%s%s" % (generate_global_prefix(self.dump_prefix), self.timestamp))
+            logger.debug('Copying %s to DDBoost' % abspath)
+            cmd = Command('DDBoost copy of %s' % abspath,
+                          'gpddboost --copyToDDBoost --from-file=%s --to-file=%s' % (abspath, relpath))
+            cmd.run(validateAfter=True)
+
+    def dump_table(self, table):
+        schemaname, tablename = table.split(".")
+        schemaname = pg.escape_string(schemaname)
+        tablename = pg.escape_string(tablename)
+        tuples_query = """SELECT pgc.relname, pgn.nspname, pgc.relpages, pgc.reltuples
+                          FROM pg_class pgc, pg_namespace pgn
+                          WHERE pgc.relnamespace = pgn.oid
+                              and pgn.nspname = '%s'
+                              and pgc.relname = '%s'""" % (schemaname, tablename)
+        stats_query = """SELECT pgc.relname, pgn.nspname, pga.attname, pgt.typname, pgs.*
+                         FROM pg_class pgc, pg_statistic pgs, pg_namespace pgn, pg_attribute pga, pg_type pgt
+                         WHERE pgc.relnamespace = pgn.oid
+                             and pgn.nspname = '%s'
+                             and pgc.relname = '%s'
+                             and pgc.oid = pgs.starelid
+                             and pga.attrelid = pgc.oid
+                             and pga.attnum = pgs.staattnum
+                             and pga.atttypid = pgt.oid""" % (schemaname, tablename)
+        self.dump_tuples(tuples_query)
+        self.dump_stats(stats_query)
+
+    def dump_tuples(self, query):
+        rows = execute_sql(query, self.master_port, self.dump_database)
+        for row in rows:
+            if len(row) != 4:
+                raise Exception("Invalid return from query: Expected 4 columns, got % columns" % (len(row)))
+            self.print_tuples(row)
+
+    def dump_stats(self, query):
+        rows = execute_sql(query, self.master_port, self.dump_database)
+        for row in rows:
+            if len(row) != 25:
+                raise Exception("Invalid return from query: Expected 25 columns, got % columns" % (len(row)))
+            self.print_stats(row)
+
+    def print_tuples(self, row):
+        relname, relnsp, relpages, reltup = row
+        with open(self.stats_filename, "a") as outfile:
+            outfile.write("""--
+-- Schema: %s, Table: %s
+--
+UPDATE pg_class
+SET
+    relpages = %s::int,
+    reltuples = %d::real
+WHERE relname = '%s' AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = '%s');
+
+""" % (relnsp, relname, relpages, int(reltup), relname, relnsp))
+
+    def print_stats(self, row):
+        relname, nspname, attname, typname, starelid, staattnum, stanullfrac, stawidth, stadistinct, stakind1, stakind2, \
+            stakind3, stakind4, staop1, staop2, staop3, staop4, stanumbers1, stanumbers2, stanumbers3, stanumbers4, stavalues1, \
+            stavalues2, stavalues3, stavalues4 = row
+        smallints = [stakind1, stakind2, stakind3, stakind4]
+        oids = [staop1, staop2, staop3, staop4]
+        reals = [stanumbers1, stanumbers2, stanumbers3, stanumbers4]
+        anyarrays = [stavalues1, stavalues2, stavalues3, stavalues4]
+
+        with open(self.stats_filename, "a") as outfile:
+            outfile.write("""--
+-- Schema: %s, Table: %s, Attribute: %s
+--
+INSERT INTO pg_statistic VALUES (
+    %d::oid,
+    %d::smallint,
+    %f::real,
+    %d::integer,
+    %f::real,
+""" % (nspname, relname, attname, starelid, staattnum, stanullfrac, stawidth, stadistinct))
+
+            # If a typname starts with exactly one it describes an array type
+            # We can't restore statistics of array columns, so we'll zero and NULL everything out
+            if typname[0] == '_' and typname[1] != '_':
+                arrayformat = """    0::smallint,
+            0::smallint,
+            0::smallint,
+            0::smallint,
+            0::oid,
+            0::oid,
+            0::oid,
+            0::oid,
+            NULL::real[],
+            NULL::real[],
+            NULL::real[],
+            NULL::real[],
+            NULL,
+            NULL,
+            NULL,
+            NULL
+        );"""
+                outfile.write(arrayformat)
+            else:
+                for s in smallints:
+                    outfile.write("    %d::smallint,\n" % s)
+                for o in oids:
+                    outfile.write("    %d::oid,\n" % o)
+                for r in reals:
+                    if r is None:
+                        outfile.write("    NULL::real[],\n")
+                    else:
+                        strR = str(r)
+                        outfile.write("    '{%s}'::real[],\n" % strR[1:len(strR)-1])
+                for l in range(len(anyarrays)):
+                    a = anyarrays[l]
+                    if a is None:
+                        outfile.write("    NULL::%s[]" % typname)
+                    else:
+                        strA = str(a)
+                        outfile.write("    '{%s}'::%s[]" % (strA[1:len(strA)-1], typname))
+                    if l < len(anyarrays)-1:
+                        outfile.write(",")
+                    outfile.write("\n")
+                outfile.write(");")
+            outfile.write("\n\n")

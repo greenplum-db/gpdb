@@ -6101,6 +6101,51 @@ Feature: Validate command line arguments
         And verify that there is a table "schema_new1.heap_table" of "heap" type in "fullbkdb" with same data as table "schema_heap.heap_table"
         And verify that there is a table "schema_new1.ao_part_table" of "ao" type in "fullbkdb" with same data as table "schema_ao.ao_part_table"
 
+    Scenario: Full backup and restore with statistics
+        Given database "fullbkdb" is dropped and recreated
+        And the database is running
+        And there are no backup files
+        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
+        And the database "fullbkdb" is analyzed
+        When the user runs "gpcrondump -a -x fullbkdb --dump-stats"
+        And the timestamp from gpcrondump is stored
+        Then gpcrondump should return a return code of 0
+        And "statistics" file should be created under " "
+        When the user runs gpdbrestore with the stored timestamp and options "--restore-stats"
+        Then gpdbrestore should return a return code of 0
+        And verify that the restored table "public.heap_table" in database "fullbkdb" is analyzed
+        And verify that the restored table "public.ao_part_table" in database "fullbkdb" is analyzed
+        And database "fullbkdb" is dropped and recreated
+        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
+        When the user runs gpdbrestore with the stored timestamp and options "--restore-stats only"
+        Then gpdbrestore should return a return code of 2
+        When the user runs gpdbrestore with the stored timestamp and options "--restore-stats only" without -e option
+        Then gpdbrestore should return a return code of 0
+        And verify that the restored table "public.heap_table" in database "fullbkdb" is analyzed
+        And verify that the restored table "public.ao_part_table" in database "fullbkdb" is analyzed
+
+    Scenario: Backup and restore with statistics and table filters
+        Given the database is running
+        And there are no backup files
+        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
+        And there is a "heap" table "heap_table2" with compression "None" in "fullbkdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
+        And the database "fullbkdb" is analyzed
+        When the user runs "gpcrondump -a -x fullbkdb --dump-stats -t public.heap_table -t public.heap_table2"
+        And the timestamp from gpcrondump is stored
+        Then gpcrondump should return a return code of 0
+        And "statistics" file should be created under " "
+        And verify that the "statistics" file in " " dir does not contain "Schema: public, Table: ao_part_table"
+        And database "fullbkdb" is dropped and recreated
+        When the user runs gpdbrestore with the stored timestamp and options "-T public.heap_table2 --noanalyze"
+        Then gpdbrestore should return a return code of 0
+        When the user runs gpdbrestore with the stored timestamp and options "--restore-stats -T public.heap_table" without -e option
+        Then gpdbrestore should return a return code of 0
+        And verify that the table "public.heap_table2" in database "fullbkdb" is not analyzed
+        And verify that the restored table "public.heap_table" in database "fullbkdb" is analyzed
+
     # THIS SHOULD BE THE LAST TEST
     @backupfire
     Scenario: cleanup for backup feature

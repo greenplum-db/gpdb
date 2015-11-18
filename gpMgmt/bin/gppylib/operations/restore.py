@@ -19,11 +19,13 @@ from gppylib.operations.backup_utils import check_backup_type, check_dir_writabl
                                             execute_sql, expand_partition_tables, generate_ao_state_filename, generate_cdatabase_filename, \
                                             generate_co_state_filename, generate_createdb_filename, generate_createdb_prefix, generate_dbdump_prefix, \
                                             generate_dirtytable_filename, generate_global_filename, generate_global_prefix, generate_increments_filename, \
-                                            generate_master_config_filename, generate_master_dbdump_prefix, generate_metadata_filename, generate_partition_list_filename, \
-                                            generate_pgstatlastoperation_filename, generate_plan_filename, generate_report_filename, generate_segment_config_filename, \
-                                            get_all_segment_addresses, get_backup_directory, get_full_timestamp_for_incremental, get_full_timestamp_for_incremental_with_nbu, \
-                                            get_lines_from_file, restore_file_with_nbu, run_pool_command, scp_file_to_hosts, verify_lines_in_file, write_lines_to_file
+                                            generate_master_config_filename, generate_master_dbdump_prefix, generate_stats_prefix, generate_metadata_filename, \
+                                            generate_partition_list_filename, generate_pgstatlastoperation_filename, generate_plan_filename, generate_report_filename, \
+                                            generate_segment_config_filename, get_all_segment_addresses, get_backup_directory, get_full_timestamp_for_incremental, \
+                                            get_full_timestamp_for_incremental_with_nbu, get_lines_from_file, restore_file_with_nbu, run_pool_command, scp_file_to_hosts, \
+                                            verify_lines_in_file, write_lines_to_file
 from gppylib.operations.unix import CheckFile, CheckRemoteDir, MakeRemoteDir, CheckRemotePath
+from re import compile, search, sub
 
 """
 TODO: partial restore. In 4.x, dump will only occur on primaries.
@@ -305,6 +307,15 @@ def restore_global_file_with_nbu(master_datadir, backup_dir, dump_dir, dump_pref
         raise Exception('Netbackup service hostname is None.')
     restore_file_with_nbu(netbackup_service_host, netbackup_block_size, generate_global_filename(master_datadir, backup_dir, dump_dir, dump_prefix, restore_timestamp[0:8], restore_timestamp))
 
+def restore_statistics_file_with_nbu(master_datadir, backup_dir, dump_dir, dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size):
+    if (master_datadir is None) and (backup_dir is None):
+        raise Exception('Master data directory and backup directory are both none.')
+    if restore_timestamp is None:
+        raise Exception('Restore timestamp is None.')
+    if netbackup_service_host is None:
+        raise Exception('Netbackup service hostname is None.')
+    restore_file_with_nbu(netbackup_service_host, netbackup_block_size, generate_statistics_filename(master_datadir, backup_dir, dump_dir, dump_prefix, restore_timestamp[0:8], restore_timestamp))
+
 def restore_partition_list_file_with_nbu(master_datadir, backup_dir, dump_dir, dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size):
     if (master_datadir is None) and (backup_dir is None):
         raise Exception('Master data directory and backup directory are both none.')
@@ -347,6 +358,16 @@ def global_file_dumped(master_datadir, backup_dir, dump_dir, dump_prefix, restor
         raise Exception('Netbackup service hostname is None.')
     global_filename = generate_global_filename(master_datadir, backup_dir, dump_dir, dump_prefix, restore_timestamp[0:8], restore_timestamp)
     return check_file_dumped_with_nbu(netbackup_service_host, global_filename)
+
+def statistics_file_dumped(master_datadir, backup_dir, dump_dir, dump_prefix, restore_timestamp, netbackup_service_host):
+    if (master_datadir is None) and (backup_dir is None):
+        raise Exception('Master data directory and backup directory are both none.')
+    if restore_timestamp is None:
+        raise Exception('Restore timestamp is None.')
+    if netbackup_service_host is None:
+        raise Exception('Netbackup service hostname is None.')
+    statistics_filename = generate_statistics_filename(master_datadir, backup_dir, dump_dir, dump_prefix, restore_timestamp[0:8], restore_timestamp)
+    return check_file_dumped_with_nbu(netbackup_service_host, statistics_filename)
 
 def _build_gpdbrestore_cmd_line(ts, table_file, backup_dir, redirected_restore_db, report_status_dir, dump_prefix, ddboost=False, netbackup_service_host=None,
                                 netbackup_block_size=None, change_schema=None):
@@ -409,7 +430,7 @@ def validate_tablenames(table_list):
 class RestoreDatabase(Operation):
     def __init__(self, restore_timestamp, no_analyze, drop_db, restore_global, master_datadir, backup_dir,
                  master_port, dump_dir, dump_prefix, no_plan, restore_tables, batch_default, no_ao_stats,
-                 redirected_restore_db, report_status_dir, ddboost, netbackup_service_host, netbackup_block_size, change_schema):
+                 redirected_restore_db, report_status_dir, restore_stats, ddboost, netbackup_service_host, netbackup_block_size, change_schema):
         self.restore_timestamp = restore_timestamp
         self.no_analyze = no_analyze
         self.drop_db = drop_db
@@ -425,6 +446,7 @@ class RestoreDatabase(Operation):
         self.no_ao_stats = no_ao_stats
         self.redirected_restore_db = redirected_restore_db
         self.report_status_dir = report_status_dir
+        self.restore_stats = restore_stats
         self.ddboost = ddboost
         self.netbackup_service_host = netbackup_service_host
         self.netbackup_block_size = netbackup_block_size
@@ -446,6 +468,10 @@ class RestoreDatabase(Operation):
             self.create_gp_toolkit(self.redirected_restore_db)
         elif self.redirected_restore_db:
             restore_db = self.redirected_restore_db
+
+        if self.restore_stats == "only":
+            self._restore_stats(restore_timestamp, self.master_datadir, self.backup_dir, self.master_port, restore_db, self.restore_tables)
+            return
 
         if self.drop_db:
             self._multitry_createdb(restore_timestamp,
@@ -521,6 +547,8 @@ class RestoreDatabase(Operation):
             self._analyze(restore_db, self.master_port)
         elif (not self.no_analyze) and self.restore_tables:
             self._analyze_restore_tables(restore_db, self.restore_tables, self.change_schema)
+        if self.restore_stats:
+            self._restore_stats(restore_timestamp, self.master_datadir, self.backup_dir, self.master_port, restore_db, self.restore_tables)
 
     def _analyze(self, restore_db, master_port):
         conn = None
@@ -652,6 +680,57 @@ class RestoreDatabase(Operation):
         if not os.path.exists(global_file):
             raise Exception('Unable to locate global file %s%s in dump set' % (generate_global_prefix(self.dump_prefix), restore_timestamp))
         Psql('Invoking global dump', filename=global_file).run(validateAfter=True)
+
+    def _restore_stats(self, restore_timestamp, master_datadir, backup_dir, master_port, restore_db, restore_tables):
+        logger.info('Commencing restore of statistics')
+        stats_filename = "%s%s" % (generate_stats_prefix(self.dump_prefix), restore_timestamp)
+        stats_path = os.path.join(get_restore_dir(master_datadir, backup_dir), self.dump_dir, restore_timestamp[0:8], stats_filename)
+        if not os.path.exists(stats_path):
+            raise Exception('Unable to locate statistics file %s in dump set' % stats_filename)
+
+        # We need to replace existing starelid's in file to match starelid of tables in database in case they're different
+        # First, map each schemaname.tablename to its corresponding starelid
+        query = """SELECT t.schemaname || '.' || t.tablename, c.oid FROM pg_class c join pg_tables t ON c.relname = t.tablename
+                         WHERE t.schemaname NOT IN ('pg_toast', 'pg_bitmapindex', 'pg_temp_1', 'pg_catalog', 'information_schema', 'gp_toolkit')"""
+        relids = {}
+        rows = execute_sql(query, master_port, restore_db)
+        file = []
+        for row in rows:
+            if len(row) != 2:
+                raise Exception("Invalid return from query: Expected 2 columns, got % columns" % (len(row)))
+            relids[row[0]] = str(row[1])
+
+        # Read in the statistics dump file, find each schemaname.tablename section, and replace the corresponding starelid
+        # This section is also where we filter out tables that are not in restore_tables
+        with open("/tmp/%s" % stats_filename, "w") as outfile:
+            with open(stats_path, "r") as infile:
+                table_pattern = compile("-- Schema: (\w+), Table: (\w+)")
+                print_toggle = True
+                starelid_toggle = False
+                new_oid = ""
+                for line in infile:
+                    matches = search(table_pattern, line)
+                    if matches:
+                        tablename = "%s.%s" % (matches.group(1), matches.group(2))
+                        if not restore_tables or tablename in restore_tables:
+                            try:
+                                new_oid = relids[tablename]
+                                print_toggle = True
+                                starelid_toggle = True
+                            except KeyError as e:
+                                if "Attribute" not in line: # Only print a warning once per table, at the tuple count restore section
+                                    logger.warning("Cannot restore statistics for table %s: Table does not exist.  Skipping...", tablename)
+                                print_toggle = False
+                                starelid_toggle = False
+                        else:
+                            print_toggle = False
+                    if starelid_toggle and "::oid" in line:
+                        line = "    %s::oid,\n" % new_oid
+                        starelid_toggle = False
+                    if print_toggle:
+                        outfile.write(line)
+
+        Psql('Invoking statistics restore', filename="/tmp/%s" % stats_filename, database=restore_db).run(validateAfter=True)
 
     def _multitry_createdb(self, restore_timestamp, restore_db, redirected_restore_db, master_datadir, backup_dir, master_port):
         no_of_trys = 600
