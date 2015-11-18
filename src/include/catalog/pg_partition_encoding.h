@@ -15,7 +15,7 @@
 /* TIDYCAT_BEGINDEF
 
    CREATE TABLE pg_partition_encoding
-   with (relid=9903, reltype_oid=9904, toast_oid=9905, toast_index=9906, toast_reltype=9907, CamelCase=PartitionEncoding, oid=false)
+   with (relid=9903, toast_oid=9905, toast_index=9906, CamelCase=PartitionEncoding, oid=false)
    (
    parencoid     oid, 
    parencattnum	 smallint,

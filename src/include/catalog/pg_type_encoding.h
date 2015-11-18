@@ -15,7 +15,7 @@
 /* TIDYCAT_BEGINDEF
 
    CREATE TABLE pg_type_encoding
-   with (relid=3220, reltype_oid=3221, toast_oid=3222, toast_index=3223, toast_reltype=3224, CamelCase=TypeEncoding, oid=false)
+   with (relid=3220, toast_oid=3222, toast_index=3223, CamelCase=TypeEncoding, oid=false)
    (
    typid     oid, 
    typoptions   text[]

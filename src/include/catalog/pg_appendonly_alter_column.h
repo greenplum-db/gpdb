@@ -17,7 +17,7 @@
 /* TIDYCAT_BEGINFAKEDEF
 
    CREATE TABLE pg_appendonly_alter_column
-   with (camelcase=AppendOnlyAlterColumn, oid=false, relid=6110, reltype_oid=6437)
+   with (camelcase=AppendOnlyAlterColumn, oid=false, relid=6110)
    (
    relid             oid, 
    changenum         integer, 

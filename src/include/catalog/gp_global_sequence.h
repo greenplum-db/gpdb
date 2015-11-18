@@ -19,7 +19,7 @@
 /* TIDYCAT_BEGINFAKEDEF
 
    CREATE TABLE gp_global_sequence
-   with (camelcase=GpGlobalSequence, oid=false, relid=5096, reltype_oid=6995, content=PERSISTENT)
+   with (camelcase=GpGlobalSequence, oid=false, relid=5096, content=PERSISTENT)
    (
    sequence_num bigint
    );

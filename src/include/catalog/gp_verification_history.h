@@ -28,7 +28,7 @@
 /* TIDYCAT_BEGINDEF
 
    CREATE TABLE gp_verification_history
-   with (camelcase=GpVerificationHistory, shared=true, oid=false, relid=6429, reltype_oid=6430, content=MASTER_ONLY)
+   with (camelcase=GpVerificationHistory, shared=true, oid=false, relid=6429, content=MASTER_ONLY)
    (
 
    vertoken             name       ,    -- token of the verification request, 63 characters or less

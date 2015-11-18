@@ -272,7 +272,7 @@ typedef FormData_pg_statistic *Form_pg_statistic;
 /* TIDYCAT_BEGINFAKEDEF
 
    CREATE TABLE pg_stat_last_operation
-   with (camelcase=StatLastOp, oid=false, relid=6052, reltype_oid=6440, content=MASTER_ONLY)
+   with (camelcase=StatLastOp, oid=false, relid=6052, content=MASTER_ONLY)
    (
    classid        oid, 
    objid          oid, 
@@ -350,7 +350,7 @@ typedef FormData_pg_statlastop *Form_pg_statlastop;
 /* TIDYCAT_BEGINFAKEDEF
 
    CREATE TABLE pg_stat_last_shoperation
-   with (camelcase=StatLastShOp, shared=true, oid=false, relid=6056, reltype_oid=6441, content=MASTER_ONLY)
+   with (camelcase=StatLastShOp, shared=true, oid=false, relid=6056, content=MASTER_ONLY)
    (
    classid        oid, 
    objid          oid, 

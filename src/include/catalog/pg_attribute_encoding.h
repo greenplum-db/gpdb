@@ -15,7 +15,7 @@
 /* TIDYCAT_BEGINDEF
 
    CREATE TABLE pg_attribute_encoding
-   with (relid=3231, reltype_oid=3232, toast_oid=3233, toast_index=3234, toast_reltype=3235, CamelCase=AttributeEncoding, oid=false)
+   with (relid=3231, toast_oid=3233, toast_index=3234, CamelCase=AttributeEncoding, oid=false)
    (
    attrelid     oid, 
    attnum		smallint, 
