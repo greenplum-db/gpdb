@@ -3140,19 +3140,6 @@ _copyCreateExternalStmt(CreateExternalStmt *from)
 	return newnode;
 }
 
-static CreateForeignStmt *
-_copyCreateForeignStmt(CreateForeignStmt *from)
-{
-	CreateForeignStmt *newnode = makeNode(CreateForeignStmt);
-
-	COPY_NODE_FIELD(relation);
-	COPY_NODE_FIELD(tableElts);
-	COPY_STRING_FIELD(srvname);
-	COPY_NODE_FIELD(options);
-
-	return newnode;
-}
-
 static InhRelation *
 _copyInhRelation(InhRelation *from)
 {
@@ -3681,118 +3668,6 @@ _copyCreateTableSpaceStmt(CreateTableSpaceStmt *from)
 	COPY_STRING_FIELD(owner);
 	COPY_STRING_FIELD(filespacename);
 	COPY_SCALAR_FIELD(tsoid);
-
-	return newnode;
-}
-
-static CreateFdwStmt *
-_copyCreateFdwStmt(CreateFdwStmt *from)
-{
-	CreateFdwStmt *newnode = makeNode(CreateFdwStmt);
-
-	COPY_STRING_FIELD(fdwname);
-	COPY_NODE_FIELD(validator);
-	COPY_NODE_FIELD(options);
-
-	return newnode;
-}
-
-static AlterFdwStmt *
-_copyAlterFdwStmt(AlterFdwStmt *from)
-{
-	AlterFdwStmt *newnode = makeNode(AlterFdwStmt);
-
-	COPY_STRING_FIELD(fdwname);
-	COPY_NODE_FIELD(validator);
-	COPY_SCALAR_FIELD(change_validator);
-	COPY_NODE_FIELD(options);
-
-	return newnode;
-}
-
-static DropFdwStmt *
-_copyDropFdwStmt(DropFdwStmt *from)
-{
-	DropFdwStmt *newnode = makeNode(DropFdwStmt);
-
-	COPY_STRING_FIELD(fdwname);
-	COPY_SCALAR_FIELD(missing_ok);
-	COPY_SCALAR_FIELD(behavior);
-
-	return newnode;
-}
-
-static CreateForeignServerStmt *
-_copyCreateForeignServerStmt(CreateForeignServerStmt *from)
-{
-	CreateForeignServerStmt *newnode = makeNode(CreateForeignServerStmt);
-
-	COPY_STRING_FIELD(servername);
-	COPY_STRING_FIELD(servertype);
-	COPY_STRING_FIELD(version);
-	COPY_STRING_FIELD(fdwname);
-	COPY_NODE_FIELD(options);
-
-	return newnode;
-}
-
-static AlterForeignServerStmt *
-_copyAlterForeignServerStmt(AlterForeignServerStmt *from)
-{
-	AlterForeignServerStmt *newnode = makeNode(AlterForeignServerStmt);
-
-	COPY_STRING_FIELD(servername);
-	COPY_STRING_FIELD(version);
-	COPY_NODE_FIELD(options);
-	COPY_SCALAR_FIELD(has_version);
-
-	return newnode;
-}
-
-static DropForeignServerStmt *
-_copyDropForeignServerStmt(DropForeignServerStmt *from)
-{
-	DropForeignServerStmt *newnode = makeNode(DropForeignServerStmt);
-
-	COPY_STRING_FIELD(servername);
-	COPY_SCALAR_FIELD(missing_ok);
-	COPY_SCALAR_FIELD(behavior);
-
-	return newnode;
-}
-
-static CreateUserMappingStmt *
-_copyCreateUserMappingStmt(CreateUserMappingStmt *from)
-{
-	CreateUserMappingStmt *newnode = makeNode(CreateUserMappingStmt);
-
-	COPY_STRING_FIELD(username);
-	COPY_STRING_FIELD(servername);
-	COPY_NODE_FIELD(options);
-
-	return newnode;
-}
-
-static AlterUserMappingStmt *
-_copyAlterUserMappingStmt(AlterUserMappingStmt *from)
-{
-	AlterUserMappingStmt *newnode = makeNode(AlterUserMappingStmt);
-
-	COPY_STRING_FIELD(username);
-	COPY_STRING_FIELD(servername);
-	COPY_NODE_FIELD(options);
-
-	return newnode;
-}
-
-static DropUserMappingStmt *
-_copyDropUserMappingStmt(DropUserMappingStmt *from)
-{
-	DropUserMappingStmt *newnode = makeNode(DropUserMappingStmt);
-
-	COPY_STRING_FIELD(username);
-	COPY_STRING_FIELD(servername);
-	COPY_SCALAR_FIELD(missing_ok);
 
 	return newnode;
 }
@@ -4746,9 +4621,6 @@ copyObject(void *from)
 		case T_CreateExternalStmt:
 			retval = _copyCreateExternalStmt(from);
 			break;
-		case T_CreateForeignStmt:
-			retval = _copyCreateForeignStmt(from);
-			break;			
 		case T_InhRelation:
 			retval = _copyInhRelation(from);
 			break;
@@ -4868,33 +4740,6 @@ copyObject(void *from)
 			break;
 		case T_CreateTableSpaceStmt:
 			retval = _copyCreateTableSpaceStmt(from);
-			break;
-		case T_CreateFdwStmt:
-			retval = _copyCreateFdwStmt(from);
-			break;
-		case T_AlterFdwStmt:
-			retval = _copyAlterFdwStmt(from);
-			break;
-		case T_DropFdwStmt:
-			retval = _copyDropFdwStmt(from);
-			break;
-		case T_CreateForeignServerStmt:
-			retval = _copyCreateForeignServerStmt(from);
-			break;
-		case T_AlterForeignServerStmt:
-			retval = _copyAlterForeignServerStmt(from);
-			break;
-		case T_DropForeignServerStmt:
-			retval = _copyDropForeignServerStmt(from);
-			break;
-		case T_CreateUserMappingStmt:
-			retval = _copyCreateUserMappingStmt(from);
-			break;
-		case T_AlterUserMappingStmt:
-			retval = _copyAlterUserMappingStmt(from);
-			break;
-		case T_DropUserMappingStmt:
-			retval = _copyDropUserMappingStmt(from);
 			break;
 		case T_CreateTrigStmt:
 			retval = _copyCreateTrigStmt(from);

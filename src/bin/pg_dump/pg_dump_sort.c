@@ -45,8 +45,6 @@ static const int oldObjectTypePriority[] =
 	2,							/* DO_CAST */
 	9,							/* DO_TABLE_DATA */
 	7,							/* DO_TABLE_TYPE */
-	3,							/* DO_FDW */
-	4,							/* DO_FOREIGN_SERVER */
 	10,							/* DO_BLOBS */
 	11,							/* DO_BLOB_COMMENTS */
 	3,							/* DO_EXTPROTOCOL */
@@ -77,8 +75,6 @@ static const int newObjectTypePriority[] =
 	8,							/* DO_CAST */
 	13,							/* DO_TABLE_DATA */
 	11,							/* DO_TABLE_TYPE */
-	14,							/* DO_FDW */
-	15,							/* DO_FOREIGN_SERVER */
 	14,							/* DO_BLOBS */
 	15,							/* DO_BLOB_COMMENTS */
 	8,							/* DO_EXTPROTOCOL */
@@ -1075,16 +1071,6 @@ describeDumpableObject(DumpableObject *obj, char *buf, int bufsize)
 		case DO_TABLE_TYPE:
 			snprintf(buf, bufsize,
 					 "TABLE TYPE %s  (ID %d OID %u)",
-					 obj->name, obj->dumpId, obj->catId.oid);
-			return;
-		case DO_FDW:
-			snprintf(buf, bufsize,
-					 "FOREIGN DATA WRAPPER %s  (ID %d OID %u)",
-					 obj->name, obj->dumpId, obj->catId.oid);
-			return;
-		case DO_FOREIGN_SERVER:
-			snprintf(buf, bufsize,
-					 "FOREIGN SERVER %s  (ID %d OID %u)",
 					 obj->name, obj->dumpId, obj->catId.oid);
 			return;
 		case DO_BLOBS:

@@ -24,7 +24,6 @@
 #include "cdb/cdbvars.h"
 #include "commands/dbcommands.h"
 #include "commands/tablespace.h"
-#include "foreign/foreign.h"
 #include "miscadmin.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
@@ -84,23 +83,17 @@ static Acl *recursive_revoke(Acl *acl, Oid grantee, AclMode revoke_privs,
 static int	oidComparator(const void *arg1, const void *arg2);
 
 static AclMode convert_priv_string(text *priv_type_text);
-static AclMode convert_any_priv_string(text *priv_type_text,
-						const priv_map *privileges);
 
 static Oid	try_convert_table_name(text *tablename);
 static AclMode convert_table_priv_string(text *priv_type_text);
 static Oid	convert_database_name(text *databasename);
 static AclMode convert_database_priv_string(text *priv_type_text);
-static Oid	convert_foreign_data_wrapper_name(text *fdwname);
-static AclMode convert_foreign_data_wrapper_priv_string(text *priv_type_text);
 static Oid	convert_function_name(text *functionname);
 static AclMode convert_function_priv_string(text *priv_type_text);
 static Oid	convert_language_name(text *languagename);
 static AclMode convert_language_priv_string(text *priv_type_text);
 static Oid	convert_schema_name(text *schemaname);
 static AclMode convert_schema_priv_string(text *priv_type_text);
-static Oid	convert_server_name(text *servername);
-static AclMode convert_server_priv_string(text *priv_type_text);
 static Oid	convert_tablespace_name(text *tablespacename);
 static AclMode convert_tablespace_priv_string(text *priv_type_text);
 static AclMode convert_role_priv_string(text *priv_type_text);
@@ -604,14 +597,6 @@ acldefault(GrantObjectType objtype, Oid ownerId)
 		case ACL_OBJECT_TABLESPACE:
 			world_default = ACL_NO_RIGHTS;
 			owner_default = ACL_ALL_RIGHTS_TABLESPACE;
-			break;
-		case ACL_OBJECT_FDW:
-			world_default = ACL_NO_RIGHTS;
-			owner_default = ACL_ALL_RIGHTS_FDW;
-			break;
-		case ACL_OBJECT_FOREIGN_SERVER:
-			world_default = ACL_NO_RIGHTS;
-			owner_default = ACL_ALL_RIGHTS_FOREIGN_SERVER;
 			break;
 		case ACL_OBJECT_EXTPROTOCOL:
 			world_default = ACL_NO_RIGHTS;
@@ -1422,64 +1407,6 @@ convert_priv_string(text *priv_type_text)
 	return ACL_NO_RIGHTS;		/* keep compiler quiet */
 }
 
-
-/*
- * convert_any_priv_string: recognize privilege strings for has_foo_privilege
- *
- * We accept a comma-separated list of case-insensitive privilege names,
- * producing a bitmask of the OR'd privilege bits.  We are liberal about
- * whitespace between items, not so much about whitespace within items.
- * The allowed privilege names are given as an array of priv_map structs,
- * terminated by one with a NULL name pointer.
- */
-static AclMode
-convert_any_priv_string(text *priv_type_text,
-						const priv_map *privileges)
-{
-	AclMode		result = 0;
-	char	   *priv_type = text_to_cstring(priv_type_text);
-	char	   *chunk;
-	char	   *next_chunk;
-
-	/* We rely on priv_type being a private, modifiable string */
-	for (chunk = priv_type; chunk; chunk = next_chunk)
-	{
-		int			chunk_len;
-		const priv_map *this_priv;
-
-		/* Split string at commas */
-		next_chunk = strchr(chunk, ',');
-		if (next_chunk)
-			*next_chunk++ = '\0';
-
-		/* Drop leading/trailing whitespace in this chunk */
-		while (*chunk && isspace((unsigned char) *chunk))
-			chunk++;
-		chunk_len = strlen(chunk);
-		while (chunk_len > 0 && isspace((unsigned char) chunk[chunk_len - 1]))
-			chunk_len--;
-		chunk[chunk_len] = '\0';
-
-		/* Match to the privileges list */
-		for (this_priv = privileges; this_priv->name; this_priv++)
-		{
-			if (pg_strcasecmp(this_priv->name, chunk) == 0)
-			{
-				result |= this_priv->value;
-				break;
-			}
-		}
-		if (!this_priv->name)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("unrecognized privilege type: \"%s\"", chunk)));
-	}
-
-	pfree(priv_type);
-	return result;
-}
-
-
 /*
  * has_table_privilege variants
  *		These are all named "has_table_privilege" at the SQL level.
@@ -1994,187 +1921,6 @@ convert_database_priv_string(text *priv_type_text)
 			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 			 errmsg("unrecognized privilege type: \"%s\"", priv_type)));
 	return ACL_NO_RIGHTS;		/* keep compiler quiet */
-}
-
-/*
- * has_foreign_data_wrapper_privilege variants
- *		These are all named "has_foreign_data_wrapper_privilege" at the SQL level.
- *		They take various combinations of foreign-data wrapper name,
- *		fdw OID, user name, user OID, or implicit user = current_user.
- *
- *		The result is a boolean value: true if user has the indicated
- *		privilege, false if not, or NULL if object doesn't exist.
- */
-
-/*
- * has_foreign_data_wrapper_privilege_name_name
- *		Check user privileges on a foreign-data wrapper given
- *		name username, text fdwname, and text priv name.
- */
-Datum
-has_foreign_data_wrapper_privilege_name_name(PG_FUNCTION_ARGS)
-{
-	Name		username = PG_GETARG_NAME(0);
-	text	   *fdwname = PG_GETARG_TEXT_P(1);
-	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
-	Oid			roleid;
-	Oid			fdwid;
-	AclMode		mode;
-	AclResult	aclresult;
-
-	roleid = get_roleid_checked(NameStr(*username));
-	fdwid = convert_foreign_data_wrapper_name(fdwname);
-	mode = convert_foreign_data_wrapper_priv_string(priv_type_text);
-
-	aclresult = pg_foreign_data_wrapper_aclcheck(fdwid, roleid, mode);
-
-	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
-}
-
-/*
- * has_foreign_data_wrapper_privilege_name
- *		Check user privileges on a foreign-data wrapper given
- *		text fdwname and text priv name.
- *		current_user is assumed
- */
-Datum
-has_foreign_data_wrapper_privilege_name(PG_FUNCTION_ARGS)
-{
-	text	   *fdwname = PG_GETARG_TEXT_P(0);
-	text	   *priv_type_text = PG_GETARG_TEXT_P(1);
-	Oid			roleid;
-	Oid			fdwid;
-	AclMode		mode;
-	AclResult	aclresult;
-
-	roleid = GetUserId();
-	fdwid = convert_foreign_data_wrapper_name(fdwname);
-	mode = convert_foreign_data_wrapper_priv_string(priv_type_text);
-
-	aclresult = pg_foreign_data_wrapper_aclcheck(fdwid, roleid, mode);
-
-	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
-}
-
-/*
- * has_foreign_data_wrapper_privilege_name_id
- *		Check user privileges on a foreign-data wrapper given
- *		name usename, foreign-data wrapper oid, and text priv name.
- */
-Datum
-has_foreign_data_wrapper_privilege_name_id(PG_FUNCTION_ARGS)
-{
-	Name		username = PG_GETARG_NAME(0);
-	Oid			fdwid = PG_GETARG_OID(1);
-	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
-	Oid			roleid;
-	AclMode		mode;
-	AclResult	aclresult;
-
-	roleid = get_roleid_checked(NameStr(*username));
-	mode = convert_foreign_data_wrapper_priv_string(priv_type_text);
-
-	aclresult = pg_foreign_data_wrapper_aclcheck(fdwid, roleid, mode);
-
-	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
-}
-
-/*
- * has_foreign_data_wrapper_privilege_id
- *		Check user privileges on a foreign-data wrapper given
- *		foreign-data wrapper oid, and text priv name.
- *		current_user is assumed
- */
-Datum
-has_foreign_data_wrapper_privilege_id(PG_FUNCTION_ARGS)
-{
-	Oid			fdwid = PG_GETARG_OID(0);
-	text	   *priv_type_text = PG_GETARG_TEXT_P(1);
-	Oid			roleid;
-	AclMode		mode;
-	AclResult	aclresult;
-
-	roleid = GetUserId();
-	mode = convert_foreign_data_wrapper_priv_string(priv_type_text);
-
-	aclresult = pg_foreign_data_wrapper_aclcheck(fdwid, roleid, mode);
-
-	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
-}
-
-/*
- * has_foreign_data_wrapper_privilege_id_name
- *		Check user privileges on a foreign-data wrapper given
- *		roleid, text fdwname, and text priv name.
- */
-Datum
-has_foreign_data_wrapper_privilege_id_name(PG_FUNCTION_ARGS)
-{
-	Oid			roleid = PG_GETARG_OID(0);
-	text	   *fdwname = PG_GETARG_TEXT_P(1);
-	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
-	Oid			fdwid;
-	AclMode		mode;
-	AclResult	aclresult;
-
-	fdwid = convert_foreign_data_wrapper_name(fdwname);
-	mode = convert_foreign_data_wrapper_priv_string(priv_type_text);
-
-	aclresult = pg_foreign_data_wrapper_aclcheck(fdwid, roleid, mode);
-
-	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
-}
-
-/*
- * has_foreign_data_wrapper_privilege_id_id
- *		Check user privileges on a foreign-data wrapper given
- *		roleid, fdw oid, and text priv name.
- */
-Datum
-has_foreign_data_wrapper_privilege_id_id(PG_FUNCTION_ARGS)
-{
-	Oid			roleid = PG_GETARG_OID(0);
-	Oid			fdwid = PG_GETARG_OID(1);
-	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
-	AclMode		mode;
-	AclResult	aclresult;
-
-	mode = convert_foreign_data_wrapper_priv_string(priv_type_text);
-
-	aclresult = pg_foreign_data_wrapper_aclcheck(fdwid, roleid, mode);
-
-	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
-}
-
-/*
- *		Support routines for has_foreign_data_wrapper_privilege family.
- */
-
-/*
- * Given a FDW name expressed as a string, look it up and return Oid
- */
-static Oid
-convert_foreign_data_wrapper_name(text *fdwname)
-{
-	char	   *fdwstr = text_to_cstring(fdwname);
-
-	return GetForeignDataWrapperOidByName(fdwstr, false);
-}
-
-/*
- * convert_foreign_data_wrapper_priv_string
- *		Convert text string to AclMode value.
- */
-static AclMode
-convert_foreign_data_wrapper_priv_string(text *priv_type_text)
-{
-	static const priv_map foreign_data_wrapper_priv_map[] = {
-		{"USAGE", ACL_USAGE},
-		{"USAGE WITH GRANT OPTION", ACL_GRANT_OPTION_FOR(ACL_USAGE)},
-		{NULL, 0}
-	};
-
-	return convert_any_priv_string(priv_type_text, foreign_data_wrapper_priv_map);
 }
 
 /*
@@ -2861,188 +2607,6 @@ convert_schema_priv_string(text *priv_type_text)
 			 errmsg("unrecognized privilege type: \"%s\"", priv_type)));
 	return ACL_NO_RIGHTS;		/* keep compiler quiet */
 }
-
-/*
- * has_server_privilege variants
- *		These are all named "has_server_privilege" at the SQL level.
- *		They take various combinations of foreign server name,
- *		server OID, user name, user OID, or implicit user = current_user.
- *
- *		The result is a boolean value: true if user has the indicated
- *		privilege, false if not.
- */
-
-/*
- * has_server_privilege_name_name
- *		Check user privileges on a foreign server given
- *		name username, text servername, and text priv name.
- */
-Datum
-has_server_privilege_name_name(PG_FUNCTION_ARGS)
-{
-	Name		username = PG_GETARG_NAME(0);
-	text	   *servername = PG_GETARG_TEXT_P(1);
-	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
-	Oid			roleid;
-	Oid			serverid;
-	AclMode		mode;
-	AclResult	aclresult;
-
-	roleid = get_roleid_checked(NameStr(*username));
-	serverid = convert_server_name(servername);
-	mode = convert_server_priv_string(priv_type_text);
-
-	aclresult = pg_foreign_server_aclcheck(serverid, roleid, mode);
-
-	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
-}
-
-/*
- * has_server_privilege_name
- *		Check user privileges on a foreign server given
- *		text servername and text priv name.
- *		current_user is assumed
- */
-Datum
-has_server_privilege_name(PG_FUNCTION_ARGS)
-{
-	text	   *servername = PG_GETARG_TEXT_P(0);
-	text	   *priv_type_text = PG_GETARG_TEXT_P(1);
-	Oid			roleid;
-	Oid			serverid;
-	AclMode		mode;
-	AclResult	aclresult;
-
-	roleid = GetUserId();
-	serverid = convert_server_name(servername);
-	mode = convert_server_priv_string(priv_type_text);
-
-	aclresult = pg_foreign_server_aclcheck(serverid, roleid, mode);
-
-	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
-}
-
-/*
- * has_server_privilege_name_id
- *		Check user privileges on a foreign server given
- *		name usename, foreign server oid, and text priv name.
- */
-Datum
-has_server_privilege_name_id(PG_FUNCTION_ARGS)
-{
-	Name		username = PG_GETARG_NAME(0);
-	Oid			serverid = PG_GETARG_OID(1);
-	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
-	Oid			roleid;
-	AclMode		mode;
-	AclResult	aclresult;
-
-	roleid = get_roleid_checked(NameStr(*username));
-	mode = convert_server_priv_string(priv_type_text);
-
-	aclresult = pg_foreign_server_aclcheck(serverid, roleid, mode);
-
-	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
-}
-
-/*
- * has_server_privilege_id
- *		Check user privileges on a foreign server given
- *		server oid, and text priv name.
- *		current_user is assumed
- */
-Datum
-has_server_privilege_id(PG_FUNCTION_ARGS)
-{
-	Oid			serverid = PG_GETARG_OID(0);
-	text	   *priv_type_text = PG_GETARG_TEXT_P(1);
-	Oid			roleid;
-	AclMode		mode;
-	AclResult	aclresult;
-
-	roleid = GetUserId();
-	mode = convert_server_priv_string(priv_type_text);
-
-	aclresult = pg_foreign_server_aclcheck(serverid, roleid, mode);
-
-	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
-}
-
-/*
- * has_server_privilege_id_name
- *		Check user privileges on a foreign server given
- *		roleid, text servername, and text priv name.
- */
-Datum
-has_server_privilege_id_name(PG_FUNCTION_ARGS)
-{
-	Oid			roleid = PG_GETARG_OID(0);
-	text	   *servername = PG_GETARG_TEXT_P(1);
-	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
-	Oid			serverid;
-	AclMode		mode;
-	AclResult	aclresult;
-
-	serverid = convert_server_name(servername);
-	mode = convert_server_priv_string(priv_type_text);
-
-	aclresult = pg_foreign_server_aclcheck(serverid, roleid, mode);
-
-	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
-}
-
-/*
- * has_server_privilege_id_id
- *		Check user privileges on a foreign server given
- *		roleid, server oid, and text priv name.
- */
-Datum
-has_server_privilege_id_id(PG_FUNCTION_ARGS)
-{
-	Oid			roleid = PG_GETARG_OID(0);
-	Oid			serverid = PG_GETARG_OID(1);
-	text	   *priv_type_text = PG_GETARG_TEXT_P(2);
-	AclMode		mode;
-	AclResult	aclresult;
-
-	mode = convert_server_priv_string(priv_type_text);
-
-	aclresult = pg_foreign_server_aclcheck(serverid, roleid, mode);
-
-	PG_RETURN_BOOL(aclresult == ACLCHECK_OK);
-}
-
-/*
- *		Support routines for has_server_privilege family.
- */
-
-/*
- * Given a server name expressed as a string, look it up and return Oid
- */
-static Oid
-convert_server_name(text *servername)
-{
-	char	   *serverstr = text_to_cstring(servername);
-
-	return GetForeignServerOidByName(serverstr, false);
-}
-
-/*
- * convert_server_priv_string
- *		Convert text string to AclMode value.
- */
-static AclMode
-convert_server_priv_string(text *priv_type_text)
-{
-	static const priv_map server_priv_map[] = {
-		{"USAGE", ACL_USAGE},
-		{"USAGE WITH GRANT OPTION", ACL_GRANT_OPTION_FOR(ACL_USAGE)},
-		{NULL, 0}
-	};
-
-	return convert_any_priv_string(priv_type_text, server_priv_map);
-}
-
 
 /*
  * has_tablespace_privilege variants

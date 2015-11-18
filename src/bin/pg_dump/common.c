@@ -84,9 +84,7 @@ getSchemaData(int *numTablesPtr)
 	CastInfo   *castinfo;
 	OpclassInfo *opcinfo;
 	ConvInfo   *convinfo;
-	FdwInfo    *fdwinfo;
 	ExtProtInfo *ptcinfo;
-	ForeignServerInfo *srvinfo;
 	int			numNamespaces;
 	int			numAggregates;
 	int			numInherits;
@@ -142,24 +140,6 @@ getSchemaData(int *numTablesPtr)
 	if(is_gpdump || g_verbose)
 		status_log_msg(LOGGER_INFO, progname, "reading user-defined operator classes\n");
 	opcinfo = getOpclasses(&numOpclasses);
-
-	if (testSqlMedSupport())
-	{
-		if(is_gpdump || g_verbose)
-			status_log_msg(LOGGER_INFO, progname, "reading user-defined foreign-data wrappers\n");
-		fdwinfo = getForeignDataWrappers(&numForeignDataWrappers);
-
-		if(is_gpdump || g_verbose)
-			status_log_msg(LOGGER_INFO, progname, "reading user-defined foreign servers\n");
-		srvinfo = getForeignServers(&numForeignServers);
-	}
-	else
-	{
-		fdwinfo = NULL;
-		srvinfo = NULL;
-		numForeignDataWrappers = 0;
-		numForeignServers = 0;
-	}
 
 	if(is_gpdump || g_verbose)
 		status_log_msg(LOGGER_INFO, progname, "reading user-defined conversions\n");

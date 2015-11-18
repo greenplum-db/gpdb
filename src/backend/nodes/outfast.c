@@ -1574,10 +1574,6 @@ _outNode(StringInfo str, void *obj)
 				_outCreateExternalStmt(str, obj);
 				break;
 
-            case T_CreateForeignStmt:
-				_outCreateForeignStmt(str, obj);
-				break;
-
 			case T_IndexStmt:
 				_outIndexStmt(str, obj);
 				break;
@@ -1712,34 +1708,6 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_AlterDomainStmt:
 				_outAlterDomainStmt(str, obj);
-				break;
-
-			case T_CreateFdwStmt:
-				_outCreateFdwStmt(str, obj);
-				break;
-			case T_AlterFdwStmt:
-				_outAlterFdwStmt(str, obj);
-				break;
-			case T_DropFdwStmt:
-				_outDropFdwStmt(str, obj);
-				break;
-			case T_CreateForeignServerStmt:
-				_outCreateForeignServerStmt(str, obj);
-				break;
-			case T_AlterForeignServerStmt:
-				_outAlterForeignServerStmt(str, obj);
-				break;
-			case T_DropForeignServerStmt:
-				_outDropForeignServerStmt(str, obj);
-				break;
-			case T_CreateUserMappingStmt:
-				_outCreateUserMappingStmt(str, obj);
-				break;
-			case T_AlterUserMappingStmt:
-				_outAlterUserMappingStmt(str, obj);
-				break;
-			case T_DropUserMappingStmt:
-				_outDropUserMappingStmt(str, obj);
 				break;
 
 			case T_TransactionStmt:

@@ -138,9 +138,6 @@ typedef enum ObjectClass
 	OCLASS_DATABASE,			/* pg_database */
 	OCLASS_TBLSPACE,			/* pg_tablespace */
 	OCLASS_FILESPACE,           /* pg_filespace */
-	OCLASS_FDW,					/* pg_foreign_data_wrapper */
-	OCLASS_FOREIGN_SERVER,		/* pg_foreign_server */
-	OCLASS_USER_MAPPING,		/* pg_user_mapping */
 	OCLASS_EXTPROTOCOL,			/* pg_extprotocol */
 	OCLASS_COMPRESSION,			/* pg_compression */
 	MAX_OCLASS					/* MUST BE LAST */

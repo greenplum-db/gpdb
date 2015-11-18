@@ -51,7 +51,6 @@
 #include "catalog/pg_authid.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_exttable.h"
-#include "catalog/pg_foreign_table.h"
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_partition.h"
@@ -2174,7 +2173,6 @@ heap_drop_with_catalog(Oid relid)
 	bool		is_part_child = false;
 	bool		is_appendonly_rel;
 	bool		is_external_rel;
-	bool		is_foreign_rel;
 	char		relkind;
 
 	/*
@@ -2186,7 +2184,6 @@ heap_drop_with_catalog(Oid relid)
 
 	is_appendonly_rel = (RelationIsAoRows(rel) || RelationIsAoCols(rel));
 	is_external_rel = RelationIsExternal(rel);
-	is_foreign_rel = RelationIsForeign(rel);
 
 	/*
  	 * Get the distribution policy and figure out if it is to be removed.
@@ -2275,9 +2272,6 @@ heap_drop_with_catalog(Oid relid)
 	if (is_external_rel)
 		RemoveExtTableEntry(relid);
 
-	if (is_foreign_rel)
-		RemoveForeignTableEntry(relid);
-	
 	/*
  	 * delete distribution policy if present
  	 */

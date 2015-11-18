@@ -173,23 +173,23 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 }
 
 %type <node>	stmt schema_stmt
-		AlterDatabaseStmt AlterDatabaseSetStmt AlterDomainStmt AlterFdwStmt
-		AlterForeignServerStmt AlterGroupStmt
+		AlterDatabaseStmt AlterDatabaseSetStmt AlterDomainStmt
+		AlterGroupStmt
 		AlterObjectSchemaStmt AlterOwnerStmt AlterQueueStmt AlterSeqStmt 
-		AlterTableStmt AlterUserStmt AlterUserMappingStmt AlterUserSetStmt AlterRoleStmt 
+		AlterTableStmt AlterUserStmt AlterUserSetStmt AlterRoleStmt
 		AlterRoleSetStmt AnalyzeStmt ClosePortalStmt ClusterStmt 
 		CommentStmt ConstraintsSetStmt CopyStmt CreateAsStmt CreateCastStmt
 		CreateDomainStmt CreateExternalStmt CreateFileSpaceStmt CreateGroupStmt
 		CreateOpClassStmt CreatePLangStmt
 		CreateQueueStmt CreateSchemaStmt CreateSeqStmt CreateStmt 
-		CreateTableSpaceStmt CreateFdwStmt CreateForeignServerStmt CreateForeignStmt 
+		CreateTableSpaceStmt
 		CreateAssertStmt CreateTrigStmt 
-		CreateUserStmt CreateUserMappingStmt CreateRoleStmt
+		CreateUserStmt CreateRoleStmt
 		CreatedbStmt DeclareCursorStmt DefineStmt DeleteStmt
 		DropGroupStmt DropOpClassStmt DropPLangStmt DropQueueStmt DropStmt
 		DropAssertStmt DropTrigStmt DropRuleStmt DropCastStmt DropRoleStmt
-		DropUserStmt DropdbStmt DropFdwStmt
-		DropForeignServerStmt DropUserMappingStmt ExplainStmt 
+		DropUserStmt DropdbStmt
+		ExplainStmt
 		ExtTypedesc FetchStmt
 		GrantStmt GrantRoleStmt IndexStmt InsertStmt ListenStmt LoadStmt
 		LockStmt NotifyStmt OptSingleRowErrorHandling ExplainableStmt PreparableStmt
@@ -243,10 +243,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <list>	OptQueueList
 %type <defelt>	OptQueueElem
 
-%type <str>		opt_type
-%type <str>		foreign_server_version opt_foreign_server_version
-%type <str>		auth_ident
-
 %type <str>		OptSchemaName
 %type <list>	OptSchemaEltList
 
@@ -299,7 +295,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 				transaction_mode_list_or_empty
 				TableFuncElementList
 				prep_type_clause prep_type_list
-				create_generic_options alter_generic_options
 				execute_param_clause using_clause returning_clause
 				table_func_column_list scatter_clause
 
@@ -387,11 +382,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <range>	relation_expr
 %type <range>	relation_expr_opt_alias
 %type <target>	target_el single_set_clause set_target insert_column_item
-
-%type <str>		generic_option_name
-%type <node>	generic_option_arg
-%type <defelt>  generic_option_elem alter_generic_option_elem
-%type <list>	generic_option_list alter_generic_option_list
 
 %type <typnam>	Typename SimpleTypename ConstTypename
 				GenericType Numeric opt_float
@@ -521,7 +511,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	LIKE LIMIT LIST LISTEN LOAD LOCAL LOCALTIME LOCALTIMESTAMP LOCATION
 	LOCK_P LOG_P LOGIN_P
 
-	MAPPING MASTER MATCH MAXVALUE MEDIAN MERGE MINUTE_P MINVALUE MIRROR
+	MASTER MATCH MAXVALUE MEDIAN MERGE MINUTE_P MINVALUE MIRROR
 	MISSING MODE MODIFIES MODIFY MONTH_P MOVE
 
 	NAME_P NAMES NATIONAL NATURAL NCHAR NEW NEWLINE NEXT NO NOCREATEDB NOCREATEEXTTABLE
@@ -735,7 +725,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc LOCK_P
 			%nonassoc LOGIN_P
 			%nonassoc MASTER
-			%nonassoc MAPPING
 			%nonassoc MATCH
 			%nonassoc MAXVALUE
 			%nonassoc MERGE
@@ -981,8 +970,6 @@ stmt :
 			AlterDatabaseStmt
 			| AlterDatabaseSetStmt
 			| AlterDomainStmt
-			| AlterFdwStmt
-			| AlterForeignServerStmt
 			| AlterFunctionStmt
 			| AlterGroupStmt
 			| AlterObjectSchemaStmt
@@ -993,7 +980,6 @@ stmt :
 			| AlterSeqStmt
 			| AlterTableStmt
 			| AlterTypeStmt
-			| AlterUserMappingStmt
 			| AlterUserSetStmt
 			| AlterUserStmt
 			| AnalyzeStmt
@@ -1009,10 +995,7 @@ stmt :
 			| CreateConversionStmt
 			| CreateDomainStmt
 			| CreateExternalStmt
-			| CreateFdwStmt
 			| CreateFileSpaceStmt
-			| CreateForeignServerStmt
-			| CreateForeignStmt
 			| CreateFunctionStmt
 			| CreateGroupStmt
 			| CreateOpClassStmt
@@ -1025,7 +1008,6 @@ stmt :
 			| CreateTrigStmt
 			| CreateRoleStmt
 			| CreateUserStmt
-			| CreateUserMappingStmt
 			| CreatedbStmt
 			| DeallocateStmt
 			| DeclareCursorStmt
@@ -1033,8 +1015,6 @@ stmt :
 			| DeleteStmt
 			| DropAssertStmt
 			| DropCastStmt
-			| DropFdwStmt
-			| DropForeignServerStmt
 			| DropGroupStmt
 			| DropOpClassStmt
 			| DropOwnedStmt
@@ -1044,7 +1024,6 @@ stmt :
 			| DropStmt
 			| DropTrigStmt
 			| DropRoleStmt
-			| DropUserMappingStmt
 			| DropUserStmt
 			| DropdbStmt
 			| ExecuteStmt
@@ -2039,19 +2018,6 @@ AlterTableStmt:
 					n->relation = $4;
 					n->cmds = $5;
 					n->relkind = OBJECT_EXTTABLE;
-					$$ = (Node *)n;
-				}
-		|	ALTER FOREIGN TABLE relation_expr alter_table_cmds
-				{
-					AlterTableStmt *n = makeNode(AlterTableStmt);
-					
-					if (!gp_foreign_data_access)
-                    {
-                        yyerror("syntax error");
-                    }
-					n->relation = $4;
-					n->cmds = $5;
-					n->relkind = OBJECT_FOREIGNTABLE;
 					$$ = (Node *)n;
 				}
 		|	ALTER INDEX relation_expr alter_rel_cmds
@@ -4502,32 +4468,6 @@ opt_with_data:
 
 /*****************************************************************************
  *
- * 		QUERY:
- *             CREATE FOREIGN TABLE relname SERVER srvname [OPTIONS]
- * 		
- *		NOTE: we use OptExtTableElementList, to enforce no constraints.
- *****************************************************************************/
-
-CreateForeignStmt: CREATE FOREIGN OptTemp TABLE qualified_name '(' OptExtTableElementList ')' 
-				   SERVER name create_generic_options
-				{
-					CreateForeignStmt *n = makeNode(CreateForeignStmt);
-					
-					if (!gp_foreign_data_access)
-                    {
-                        yyerror("syntax error");
-                    }		
-					n->relation = $5;
-					$5->istemp = $3;
-					n->tableElts = $7;
-					n->srvname = $10;
-					n->options = $11;
-					$$ = (Node *) n;
-				}
-		;
-
-/*****************************************************************************
- *
  *		QUERY :
  *				CREATE EXTERNAL [WEB] TABLE relname
  *
@@ -5087,371 +5027,6 @@ CreateTableSpaceStmt: CREATE TABLESPACE name OptOwner FILESPACE name
 					n->owner = $4;
 					n->filespacename = $6;
 					n->tsoid = 0;
-					$$ = (Node *) n;
-				}
-		;
-
-/*****************************************************************************
- *
- * 		QUERY:
- *             CREATE FOREIGN DATA WRAPPER name [ VALIDATOR name ]
- *
- *****************************************************************************/
-
-CreateFdwStmt: CREATE FOREIGN DATA_P WRAPPER name opt_validator create_generic_options
-				{
-					CreateFdwStmt *n = makeNode(CreateFdwStmt);
-					
-					if (!gp_foreign_data_access)
-                    {
-                        yyerror("syntax error");
-                    }
-					n->fdwname = $5;
-					n->validator = $6;
-					n->options = $7;
-					$$ = (Node *) n;
-				}
-		;
-
-/*****************************************************************************
- *
- * 		QUERY :
- *				DROP FOREIGN DATA WRAPPER name
- *
- ****************************************************************************/
-
-DropFdwStmt: DROP FOREIGN DATA_P WRAPPER name opt_drop_behavior
-				{
-					DropFdwStmt *n = makeNode(DropFdwStmt);
-					
-					if (!gp_foreign_data_access)
-                    {
-                        yyerror("syntax error");
-                    }
-					n->fdwname = $5;
-					n->missing_ok = false;
-					n->behavior = $6;
-					$$ = (Node *) n;
-				}
-				|  DROP FOREIGN DATA_P WRAPPER IF_P EXISTS name opt_drop_behavior
-                {
-					DropFdwStmt *n = makeNode(DropFdwStmt);
-					
-					if (!gp_foreign_data_access)
-                    {
-                        yyerror("syntax error");
-                    }
-					n->fdwname = $7;
-					n->missing_ok = true;
-					n->behavior = $8;
-					$$ = (Node *) n;
-				}
-		;
-
-/*****************************************************************************
- *
- * 		QUERY :
- *				ALTER FOREIGN DATA WRAPPER name
- *
- ****************************************************************************/
-
-AlterFdwStmt: ALTER FOREIGN DATA_P WRAPPER name validator_clause alter_generic_options
-				{
-					AlterFdwStmt *n = makeNode(AlterFdwStmt);
-					
-					if (!gp_foreign_data_access)
-                    {
-                        yyerror("syntax error");
-                    }					
-					n->fdwname = $5;
-					n->validator = $6;
-					n->change_validator = true;
-					n->options = $7;
-					$$ = (Node *) n;
-				}
-			| ALTER FOREIGN DATA_P WRAPPER name validator_clause
-				{
-					AlterFdwStmt *n = makeNode(AlterFdwStmt);
-
-					if (!gp_foreign_data_access)
-                    {
-                        yyerror("syntax error");
-                    }
-					n->fdwname = $5;
-					n->validator = $6;
-					n->change_validator = true;
-					$$ = (Node *) n;
-				}
-			| ALTER FOREIGN DATA_P WRAPPER name alter_generic_options
-				{
-					AlterFdwStmt *n = makeNode(AlterFdwStmt);
-
-					if (!gp_foreign_data_access)
-                    {
-                        yyerror("syntax error");
-                    }
-					n->fdwname = $5;
-					n->options = $6;
-					$$ = (Node *) n;
-				}
-		;
-
-/* Options definition for CREATE FDW, SERVER, USER MAPPING and FOREIGN TABLE */
-create_generic_options:
-			OPTIONS '(' generic_option_list ')'			{ $$ = $3; }
-			| /*EMPTY*/									{ $$ = NIL; }
-		;
-
-generic_option_list:
-			generic_option_elem
-				{
-					$$ = list_make1($1);
-				}
-			| generic_option_list ',' generic_option_elem
-				{
-					$$ = lappend($1, $3);
-				}
-		;
-
-/* Options definition for ALTER FDW, SERVER, USER MAPPING and FOREIGN TABLE */
-alter_generic_options:
-			OPTIONS	'(' alter_generic_option_list ')'		{ $$ = $3; }
-		;
-
-alter_generic_option_list:
-			alter_generic_option_elem
-				{
-					$$ = list_make1($1);
-				}
-			| alter_generic_option_list ',' alter_generic_option_elem
-				{
-					$$ = lappend($1, $3);
-				}
-		;
-
-alter_generic_option_elem:
-			generic_option_elem
-				{
-					$$ = $1;
-				}
-			| SET generic_option_elem
-				{
-					$$ = $2;
-					$$->defaction = DEFELEM_SET;
-				}
-			| ADD_P generic_option_elem
-				{
-					$$ = $2;
-					$$->defaction = DEFELEM_ADD;
-				}
-			| DROP generic_option_name
-				{
-					$$ = makeDefElemExtended($2, NULL, DEFELEM_DROP);
-				}
-		;
-
-generic_option_elem:
-			generic_option_name generic_option_arg
-				{
-					$$ = makeDefElem($1, $2);
-				}
-		;
-
-generic_option_name:
-				ColLabel			{ $$ = $1; }
-		;
-
-/* We could use def_arg here, but the spec only requires string literals */
-generic_option_arg:
-				Sconst				{ $$ = (Node *) makeString($1); }
-		;
-
-/*****************************************************************************
- *
- * 		QUERY:
- *             CREATE SERVER name [TYPE] [VERSION] [OPTIONS]
- *
- *****************************************************************************/
-
-CreateForeignServerStmt: CREATE SERVER name opt_type opt_foreign_server_version
-						 FOREIGN DATA_P WRAPPER name create_generic_options
-				{
-					CreateForeignServerStmt *n = makeNode(CreateForeignServerStmt);
-					
-					if (!gp_foreign_data_access)
-                    {
-                        yyerror("syntax error");
-                    }
-					n->servername = $3;
-					n->servertype = $4;
-					n->version = $5;
-					n->fdwname = $9;
-					n->options = $10;
-					$$ = (Node *) n;
-				}
-		;
-
-opt_type:
-			TYPE_P Sconst			{ $$ = $2; }
-			| /*EMPTY*/				{ $$ = NULL; }
-		;
-
-
-foreign_server_version:
-			VERSION_P Sconst		{ $$ = $2; }
-		|	VERSION_P NULL_P		{ $$ = NULL; }
-		;
-
-opt_foreign_server_version:
-			foreign_server_version 	{ $$ = $1; }
-			| /*EMPTY*/				{ $$ = NULL; }
-		;
-
-/*****************************************************************************
- *
- * 		QUERY :
- *				DROP SERVER name
- *
- ****************************************************************************/
-
-DropForeignServerStmt: DROP SERVER name opt_drop_behavior
-				{
-					DropForeignServerStmt *n = makeNode(DropForeignServerStmt);
-					
-					if (!gp_foreign_data_access)
-                    {
-                        yyerror("syntax error");
-                    }
-					n->servername = $3;
-					n->missing_ok = false;
-					n->behavior = $4;
-					$$ = (Node *) n;
-				}
-				|  DROP SERVER IF_P EXISTS name opt_drop_behavior
-                {
-					DropForeignServerStmt *n = makeNode(DropForeignServerStmt);
-					
-					if (!gp_foreign_data_access)
-                    {
-                        yyerror("syntax error");
-                    }
-					n->servername = $5;
-					n->missing_ok = true;
-					n->behavior = $6;
-					$$ = (Node *) n;
-				}
-		;
-
-/*****************************************************************************
- *
- * 		QUERY :
- *				ALTER SERVER name [VERSION] [OPTIONS]
- *
- ****************************************************************************/
-
-AlterForeignServerStmt: ALTER SERVER name foreign_server_version alter_generic_options
-				{
-					AlterForeignServerStmt *n = makeNode(AlterForeignServerStmt);
-					
-					if (!gp_foreign_data_access)
-                    {
-                        yyerror("syntax error");
-                    }
-					n->servername = $3;
-					n->version = $4;
-					n->options = $5;
-					n->has_version = true;
-					$$ = (Node *) n;
-				}
-			| ALTER SERVER name foreign_server_version
-				{
-					AlterForeignServerStmt *n = makeNode(AlterForeignServerStmt);
-					
-					if (!gp_foreign_data_access)
-                    {
-                        yyerror("syntax error");
-                    }
-					n->servername = $3;
-					n->version = $4;
-					n->has_version = true;
-					$$ = (Node *) n;
-				}
-			| ALTER SERVER name alter_generic_options
-				{
-					AlterForeignServerStmt *n = makeNode(AlterForeignServerStmt);
-					
-					if (!gp_foreign_data_access)
-                    {
-                        yyerror("syntax error");
-                    }
-					n->servername = $3;
-					n->options = $4;
-					$$ = (Node *) n;
-				}
-		;
-
-/*****************************************************************************
- *
- * 		QUERY:
- *             CREATE USER MAPPING FOR auth_ident SERVER name [OPTIONS]
- *
- *****************************************************************************/
-
-CreateUserMappingStmt: CREATE USER MAPPING FOR auth_ident SERVER name create_generic_options
-				{
-					CreateUserMappingStmt *n = makeNode(CreateUserMappingStmt);
-					n->username = $5;
-					n->servername = $7;
-					n->options = $8;
-					$$ = (Node *) n;
-				}
-		;
-
-/* User mapping authorization identifier */
-auth_ident:
-			CURRENT_USER 	{ $$ = "current_user"; }
-		|	USER			{ $$ = "current_user"; }
-		|	RoleId 			{ $$ = (strcmp($1, "public") == 0) ? NULL : $1; }
-		;
-
-/*****************************************************************************
- *
- * 		QUERY :
- *				DROP USER MAPPING FOR auth_ident SERVER name
- *
- ****************************************************************************/
-
-DropUserMappingStmt: DROP USER MAPPING FOR auth_ident SERVER name
-				{
-					DropUserMappingStmt *n = makeNode(DropUserMappingStmt);
-					n->username = $5;
-					n->servername = $7;
-					n->missing_ok = false;
-					$$ = (Node *) n;
-				}
-				|  DROP USER MAPPING IF_P EXISTS FOR auth_ident SERVER name
-                {
-					DropUserMappingStmt *n = makeNode(DropUserMappingStmt);
-					n->username = $7;
-					n->servername = $9;
-					n->missing_ok = true;
-					$$ = (Node *) n;
-				}
-		;
-
-/*****************************************************************************
- *
- * 		QUERY :
- *				ALTER USER MAPPING FOR auth_ident SERVER name OPTIONS
- *
- ****************************************************************************/
-
-AlterUserMappingStmt: ALTER USER MAPPING FOR auth_ident SERVER name alter_generic_options
-				{
-					AlterUserMappingStmt *n = makeNode(AlterUserMappingStmt);
-					n->username = $5;
-					n->servername = $7;
-					n->options = $8;
 					$$ = (Node *) n;
 				}
 		;
@@ -6049,7 +5624,6 @@ drop_type:	TABLE									{ $$ = OBJECT_TABLE; }
 			| SCHEMA								{ $$ = OBJECT_SCHEMA; }
 			| FILESPACE								{ $$ = OBJECT_FILESPACE; }
 			| TABLESPACE							{ $$ = OBJECT_TABLESPACE; }
-			| FOREIGN TABLE							{ $$ = OBJECT_FOREIGNTABLE; }
 			| PROTOCOL								{ $$ = OBJECT_EXTPROTOCOL; }
 		;
 
@@ -6497,20 +6071,6 @@ privilege_target:
 					PrivTarget *n = makeNode(PrivTarget);
 					n->objtype = ACL_OBJECT_SEQUENCE;
 					n->objs = $2;
-					$$ = n;
-				}
-			| FOREIGN DATA_P WRAPPER name_list
-				{
-					PrivTarget *n = makeNode(PrivTarget);
-					n->objtype = ACL_OBJECT_FDW;
-					n->objs = $4;
-					$$ = n;
-				}
-			| FOREIGN SERVER name_list
-				{
-					PrivTarget *n = makeNode(PrivTarget);
-					n->objtype = ACL_OBJECT_FOREIGN_SERVER;
-					n->objs = $3;
 					$$ = n;
 				}
 			| FUNCTION function_with_argtypes_list
@@ -7610,22 +7170,6 @@ AlterOwnerStmt: ALTER AGGREGATE func_name aggr_args OWNER TO RoleId
 				{
 					AlterOwnerStmt *n = makeNode(AlterOwnerStmt);
 					n->objectType = OBJECT_TABLESPACE;
-					n->object = list_make1(makeString($3));
-					n->newowner = $6;
-					$$ = (Node *)n;
-				}
-			| ALTER FOREIGN DATA_P WRAPPER name OWNER TO RoleId
-				{
-					AlterOwnerStmt *n = makeNode(AlterOwnerStmt);
-					n->objectType = OBJECT_FDW;
-					n->object = list_make1(makeString($5));
-					n->newowner = $8;
-					$$ = (Node *)n;
-				}
-			| ALTER SERVER name OWNER TO RoleId
-				{
-					AlterOwnerStmt *n = makeNode(AlterOwnerStmt);
-					n->objectType = OBJECT_FOREIGN_SERVER;
 					n->object = list_make1(makeString($3));
 					n->newowner = $6;
 					$$ = (Node *)n;
@@ -12540,7 +12084,6 @@ unreserved_keyword:
 			| LOCATION
 			| LOCK_P
 			| LOGIN_P
-			| MAPPING
 			| MASTER
 			| MATCH
 			| MAXVALUE

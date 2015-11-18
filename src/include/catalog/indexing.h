@@ -232,27 +232,6 @@ DECLARE_INDEX(pg_statlastshop_classid_objid_index, 6057, on pg_stat_last_shopera
 DECLARE_UNIQUE_INDEX(pg_statlastshop_classid_objid_staactionname_index, 6058, on pg_stat_last_shoperation using btree(classid oid_ops, objid oid_ops, staactionname name_ops));
 #define StatLastShOpClassidObjidStaactionnameIndexId  6058
 
-DECLARE_UNIQUE_INDEX(pg_foreign_data_wrapper_oid_index, 3306, on pg_foreign_data_wrapper using btree(oid oid_ops));
-#define ForeignDataWrapperOidIndexId	3306
-
-DECLARE_UNIQUE_INDEX(pg_foreign_data_wrapper_name_index, 3307, on pg_foreign_data_wrapper using btree(fdwname name_ops));
-#define ForeignDataWrapperNameIndexId	3307
-
-DECLARE_UNIQUE_INDEX(pg_foreign_server_oid_index, 3308, on pg_foreign_server using btree(oid oid_ops));
-#define ForeignServerOidIndexId 3308
-
-DECLARE_UNIQUE_INDEX(pg_foreign_server_name_index, 3309, on pg_foreign_server using btree(srvname name_ops));
-#define ForeignServerNameIndexId	3309
-
-DECLARE_UNIQUE_INDEX(pg_user_mapping_oid_index, 3316, on pg_user_mapping using btree(oid oid_ops));
-#define UserMappingOidIndexId	3316
-
-DECLARE_UNIQUE_INDEX(pg_user_mapping_user_server_index, 3317, on pg_user_mapping using btree(umuser oid_ops, umserver oid_ops));
-#define UserMappingUserServerIndexId	3317
-
-DECLARE_UNIQUE_INDEX(pg_foreign_table_reloid_index, 3049, on pg_foreign_table using btree(reloid oid_ops));
-#define ForeignTableRelOidIndexId  3049
-
 /* TIDYCAT_BEGIN_CODEGEN 
 */
 /*

@@ -254,15 +254,6 @@ ExecAlterOwnerStmt(AlterOwnerStmt *stmt)
 		case OBJECT_DOMAIN:		/* same as TYPE */
 			AlterTypeOwner(stmt->object, newowner);
 			break;
-
-		case OBJECT_FDW:
-			AlterForeignDataWrapperOwner(strVal(linitial(stmt->object)),
-										 newowner);
-			break;
-
-		case OBJECT_FOREIGN_SERVER:
-			AlterForeignServerOwner(strVal(linitial(stmt->object)), newowner);
-			break;
 		
 		case OBJECT_EXTPROTOCOL:
 			AlterExtProtocolOwner(strVal(linitial(stmt->object)), newowner);

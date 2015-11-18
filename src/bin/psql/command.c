@@ -475,23 +475,6 @@ exec_command(const char *cmd,
 						break;
 				}
 				break;
-			case 'e':			/* SQL/MED subsystem */
-				switch (cmd[2])
-				{
-					case 's':
-						success = listForeignServers(pattern, show_verbose);
-						break;
-					case 'u':
-						success = listUserMappings(pattern, show_verbose);
-						break;
-					case 'w':
-						success = listForeignDataWrappers(pattern, show_verbose);
-						break;
-					default:
-						status = PSQL_CMD_UNKNOWN;
-						break;
-				}
-				break;
 			default:
 				status = PSQL_CMD_UNKNOWN;
 		}

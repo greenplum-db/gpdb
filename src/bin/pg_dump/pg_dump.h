@@ -128,8 +128,6 @@ typedef enum
 	DO_CAST,
 	DO_TABLE_DATA,
 	DO_TABLE_TYPE,
-	DO_FDW,
-	DO_FOREIGN_SERVER,
 	DO_BLOBS,
 	DO_BLOB_COMMENTS,
 	DO_EXTPROTOCOL,
@@ -410,26 +408,6 @@ typedef struct _inhInfo
 	Oid			inhparent;		/* OID of its parent */
 } InhInfo;
 
-typedef struct _fdwInfo
-{
-	DumpableObject dobj;
-	char	   *rolname;
-	char	   *fdwvalidator;
-	char	   *fdwoptions;
-	char	   *fdwacl;
-} FdwInfo;
-
-typedef struct _foreignServerInfo
-{
-	DumpableObject dobj;
-	char	   *rolname;
-	Oid			srvfdw;
-	char	   *srvtype;
-	char	   *srvversion;
-	char	   *srvacl;
-	char	   *srvoptions;
-} ForeignServerInfo;
-
 
 /* global decls */
 extern bool force_quotes;		/* double-quotes for identifiers flag */
@@ -514,10 +492,7 @@ extern void getTriggers(TableInfo tblinfo[], int numTables);
 extern ProcLangInfo *getProcLangs(int *numProcLangs);
 extern CastInfo *getCasts(int *numCasts);
 extern void getTableAttrs(TableInfo *tbinfo, int numTables);
-extern FdwInfo *getForeignDataWrappers(int *numForeignDataWrappers);
-extern ForeignServerInfo *getForeignServers(int *numForeignServers);
 
-extern bool testSqlMedSupport(void);
 extern bool	testExtProtocolSupport(void);
 
 

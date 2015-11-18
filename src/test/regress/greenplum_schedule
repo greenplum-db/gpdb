@@ -41,7 +41,7 @@ test: sublink sirv_functions table_functions
 
 ignore: gp_portal_error
 test: notin with_clause eagerfree toast mapred gpparams tidycat aocs
-test: ic gp_numeric_agg foreign_data gp_toolkit
+test: ic gp_numeric_agg gp_toolkit
 ignore: icudp_full
 ignore: upgrade
 ignore: upg2

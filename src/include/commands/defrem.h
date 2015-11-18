@@ -88,24 +88,6 @@ extern void RemoveOpClassById(Oid opclassOid);
 extern void RenameOpClass(List *name, const char *access_method, const char *newname);
 extern void AlterOpClassOwner(List *name, const char *access_method, Oid newOwnerId);
 
-/* commands/foreigncmds.c */
-extern void AlterForeignServerOwner(const char *name, Oid newOwnerId);
-extern void AlterForeignDataWrapperOwner(const char *name, Oid newOwnerId);
-extern void CreateForeignDataWrapper(CreateFdwStmt *stmt);
-extern void AlterForeignDataWrapper(AlterFdwStmt *stmt);
-extern void RemoveForeignDataWrapper(DropFdwStmt *stmt);
-extern void RemoveForeignDataWrapperById(Oid fdwId);
-extern void CreateForeignServer(CreateForeignServerStmt *stmt);
-extern void AlterForeignServer(AlterForeignServerStmt *stmt);
-extern void RemoveForeignServer(DropForeignServerStmt *stmt);
-extern void RemoveForeignServerById(Oid srvId);
-extern void CreateUserMapping(CreateUserMappingStmt *stmt);
-extern void AlterUserMapping(AlterUserMappingStmt *stmt);
-extern void RemoveUserMapping(DropUserMappingStmt *stmt);
-extern void RemoveUserMappingById(Oid umId);
-//extern void InsertForeignTableEntry(Oid relid, Oid serverid, Oid fdwid, List *options);
-//extern void RemoveForeignTableEntry(Oid relid);
-
 /* support routines in commands/define.c */
 
 extern char *case_translate_language_name(const char *input);

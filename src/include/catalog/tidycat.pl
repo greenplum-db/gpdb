@@ -484,9 +484,6 @@ my %toast_tab_exception_h =
 	 "pg_appendonly_alter_column" => 1,
 	 "pg_class" => 1,
 	 "pg_exttable" => 1,
-	 "pg_foreign_data_wrapper" => 1,
-	 "pg_foreign_server" => 1,
-	 "pg_foreign_table" => 1,
 	 "pg_index" => 1,
 	 "pg_partition_rule" => 1,
 	 "pg_pltemplate" => 1,
@@ -496,7 +493,6 @@ my %toast_tab_exception_h =
 	 "pg_stat_last_shoperation" => 1,
 	 "pg_tablespace" => 1,
 	 "pg_type" => 1,
-	 "pg_user_mapping" => 1
 	);
 
 # DO NOT extend this list!  To ensure smooth upgrade, all new toast

@@ -763,42 +763,6 @@
 
  CREATE FUNCTION lead(box, int8, box) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7264, proiswin="t");
 
-
----
-
- CREATE FUNCTION pg_options_to_table(IN options_array _text, OUT option_name text, OUT option_value text) RETURNS SETOF pg_catalog.record LANGUAGE internal STABLE STRICT AS 'pg_options_to_table' WITH (OID=2896, DESCRIPTION="convert generic options array to name/value table");
-
----
-
- CREATE FUNCTION has_foreign_data_wrapper_privilege(name, text, text) RETURNS bool LANGUAGE internal STABLE STRICT AS 'has_foreign_data_wrapper_privilege_name_name' WITH (OID=3112, DESCRIPTION="user privilege on foreign data wrapper by username, foreign data wrapper name");
-
- CREATE FUNCTION has_foreign_data_wrapper_privilege(name, oid, text) RETURNS bool LANGUAGE internal STABLE STRICT AS 'has_foreign_data_wrapper_privilege_name_id' WITH (OID=3113, DESCRIPTION="user privilege on foreign data wrapper by username, foreign data wrapper oid");
-
- CREATE FUNCTION has_foreign_data_wrapper_privilege(oid, text, text) RETURNS bool LANGUAGE internal STABLE STRICT AS 'has_foreign_data_wrapper_privilege_id_name' WITH (OID=3114, DESCRIPTION="user privilege on foreign data wrapper by user oid, foreign data wrapper name");
-
- CREATE FUNCTION has_foreign_data_wrapper_privilege(oid, oid, text) RETURNS bool LANGUAGE internal STABLE STRICT AS 'has_foreign_data_wrapper_privilege_id_id' WITH (OID=3115, DESCRIPTION="user privilege on foreign data wrapper by user oid, foreign data wrapper oid");
-
- CREATE FUNCTION has_foreign_data_wrapper_privilege(text, text) RETURNS bool LANGUAGE internal STABLE STRICT AS 'has_foreign_data_wrapper_privilege_name' WITH (OID=3116, DESCRIPTION="current user privilege on foreign data wrapper by foreign data wrapper name");
-
- CREATE FUNCTION has_foreign_data_wrapper_privilege(oid, text) RETURNS bool LANGUAGE internal STABLE STRICT AS 'has_foreign_data_wrapper_privilege_id' WITH (OID=3117, DESCRIPTION="current user privilege on foreign data wrapper by foreign data wrapper oid");
-
- CREATE FUNCTION has_server_privilege(name, text, text) RETURNS bool LANGUAGE internal STABLE STRICT AS 'has_server_privilege_name_name' WITH (OID=3118, DESCRIPTION="user privilege on server by username, server name");
-
- CREATE FUNCTION has_server_privilege(name, oid, text) RETURNS bool LANGUAGE internal STABLE STRICT AS 'has_server_privilege_name_id' WITH (OID=3119, DESCRIPTION="user privilege on server by username, server oid");
-
- CREATE FUNCTION has_server_privilege(oid, text, text) RETURNS bool LANGUAGE internal STABLE STRICT AS 'has_server_privilege_id_name' WITH (OID=3120, DESCRIPTION="user privilege on server by user oid, server name");
-
- CREATE FUNCTION has_server_privilege(oid, oid, text) RETURNS bool LANGUAGE internal STABLE STRICT AS 'has_server_privilege_id_id' WITH (OID=3121, DESCRIPTION="user privilege on server by user oid, server oid");
-
- CREATE FUNCTION has_server_privilege(text, text) RETURNS bool LANGUAGE internal STABLE STRICT AS 'has_server_privilege_name' WITH (OID=3122, DESCRIPTION="current user privilege on server by server name");
-
- CREATE FUNCTION has_server_privilege(oid, text) RETURNS bool LANGUAGE internal STABLE STRICT AS 'has_server_privilege_id' WITH (OID=3123, DESCRIPTION="current user privilege on server by server oid");
-
-
-
-
- CREATE FUNCTION gpdb_fdw_validator(_text, oid) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'gpdb_fdw_validator' WITH (OID=2897);
-
 ---
 
  CREATE FUNCTION generate_series("timestamp", "timestamp", "interval") RETURNS SETOF "timestamp" LANGUAGE internal VOLATILE STRICT AS 'generate_series_timestamp' WITH (OID=2916, DESCRIPTION="non-persistent series generator");

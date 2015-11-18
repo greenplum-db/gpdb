@@ -610,28 +610,6 @@ where
  cl.relnamespace = n.oid and
  p.paristemplate = 't'
  ) p1;
- 
- CREATE VIEW pg_user_mappings AS
-    SELECT
-        U.oid       AS umid,
-        S.oid       AS srvid,
-        S.srvname   AS srvname,
-        U.umuser    AS umuser,
-        CASE WHEN U.umuser = 0 THEN
-            'public'
-        ELSE
-            A.rolname
-        END AS usename,
-        CASE WHEN pg_has_role(S.srvowner, 'USAGE') OR has_server_privilege(S.oid, 'USAGE') THEN
-            U.umoptions
-        ELSE
-            NULL
-        END AS umoptions
-    FROM pg_user_mapping U
-         LEFT JOIN pg_authid A ON (A.oid = U.umuser) JOIN
-        pg_foreign_server S ON (U.umserver = S.oid);
-
-REVOKE ALL on pg_user_mapping FROM public;
 
 -- metadata tracking
 CREATE VIEW pg_stat_operations

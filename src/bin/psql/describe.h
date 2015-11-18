@@ -72,15 +72,4 @@ extern bool listCasts(const char *pattern);
 /* \dn */
 extern bool listSchemas(const char *pattern, bool verbose);
 
-/* \dew */
-extern bool listForeignDataWrappers(const char *pattern, bool verbose);
-
-/* \des */
-extern bool listForeignServers(const char *pattern, bool verbose);
-
-/* \deu */
-extern bool listUserMappings(const char *pattern, bool verbose);
-
-
-
 #endif   /* DESCRIBE_H */
