@@ -759,6 +759,7 @@ AppendOnlyCompaction_IsRelationEmpty(Relation aorel)
 	TupleDesc		pg_aoseg_dsc;
 	HeapTuple		tuple;
 	HeapScanDesc	aoscan;
+	int				Anum_tupcount;
 	bool empty = true;
 
 	Assert(RelationIsAoRows(aorel) || RelationIsAoCols(aorel));
@@ -767,10 +768,11 @@ AppendOnlyCompaction_IsRelationEmpty(Relation aorel)
 	pg_aoseg_rel = heap_open(aoEntry->segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 	aoscan = heap_beginscan(pg_aoseg_rel, SnapshotNow, 0, NULL);
+	Anum_tupcount = RelationIsAoRows(aorel)? Anum_pg_aoseg_tupcount: Anum_pg_aocs_tupcount;
 	while ((tuple = heap_getnext(aoscan, ForwardScanDirection)) != NULL &&
 		   empty)
 	{
-		if (0 < fastgetattr(tuple, Anum_pg_aoseg_tupcount,
+		if (0 < fastgetattr(tuple, Anum_tupcount,
 							pg_aoseg_dsc, NULL))
 			empty = false;
 	}
