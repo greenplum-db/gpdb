@@ -574,18 +574,21 @@ ReadCommand(StringInfo inBuf)
 void
 prepare_for_client_read(void)
 {
+	ImmediateInterruptOK = true;
+
 	if (DoingCommandRead)
 	{
 		/* Enable immediate processing of asynchronous signals */
 		EnableNotifyInterrupt();
 		EnableCatchupInterrupt();
 
-		/* Allow "die" interrupt to be processed while waiting */
-		ImmediateInterruptOK = true;
-
 		/* And don't forget to detect one that already arrived */
 		QueryCancelPending = false;
 		QueryFinishPending = false;
+		CHECK_FOR_INTERRUPTS();
+	}
+	else if (ProcDiePending)
+	{
 		CHECK_FOR_INTERRUPTS();
 	}
 }
@@ -598,13 +601,14 @@ client_read_ended(void)
 {
 	if (DoingCommandRead)
 	{
-		ImmediateInterruptOK = false;
 		QueryCancelPending = false;		/* forget any CANCEL signal */
 		QueryFinishPending = false;		/* forget any FINISH signal too */
 
 		DisableNotifyInterrupt();
 		DisableCatchupInterrupt();
 	}
+
+	ImmediateInterruptOK = false;
 }
 
 
