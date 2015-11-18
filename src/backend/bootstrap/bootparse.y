@@ -236,21 +236,6 @@ Boot_CreateStmt:
 						/* boot strap new table types for 3.3 */
 						switch ($6)
 						{
-							case AppendOnlyAlterColumnRelationId:
-								typid = PG_APPENDONLY_ALTER_COLUMN_OID;
-								break;
-							case FileSpaceRelationId:
-								typid = PG_FILESPACE_OID;
-								break;
-							case StatLastOpRelationId: 
-								/* MPP-6929: metadata tracking */
-								typid = PG_STAT_LAST_OPERATION_OID;
-								break;
-							case StatLastShOpRelationId: 
-								/* MPP-6929: metadata tracking */
-								typid = PG_STAT_LAST_SHOPERATION_OID;
-								break;
-
 							/* new tables in 4.0 for persistent file ops */
 							case GpPersistentRelationNodeRelationId:
 								typid = GP_PERSISTENT_RELATION_NODE_OID;
