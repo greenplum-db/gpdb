@@ -17,6 +17,8 @@ test: column_compression rangefuncs_cdb
 
 test: gpcopy appendonly filter gpctas gpdist matrix gpdtm_plpgsql
 
+test: sequence_gp
+
 # FIXME: Temporarily disabled, because it trips an assertion. It's probably
 # harmless, but need to investigate and fix. Also, the number of errors put
 # in the error table, and hence the output, varies between runs.
