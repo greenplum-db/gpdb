@@ -10,7 +10,7 @@ phone_num bigint
 )
 distributed by (lname);
 
-\copy public.phone_book from 'bugbuster/data/phone_book.txt' delimiter as '|'
+\copy public.phone_book from 'data/phone_book.txt' delimiter as '|'
 
 drop table if exists phone_book_substr;
 

@@ -28,7 +28,7 @@ test: dispatch
 test: partition appendonly
 test: vacuum_gp
 
-test: column_compression rangefuncs_cdb gp_hashagg gp_dqa external_table gpdiffcheck gptokencheck information_schema subselect_gp indexjoin distributed_transactions olap_group olap_window_seq with_clause sequence_gp
+test: column_compression rangefuncs_cdb gp_hashagg gp_dqa external_table gpdiffcheck gptokencheck information_schema subselect_gp indexjoin distributed_transactions olap_group olap_window_seq with_clause sequence_gp as_alias regex_gp tidscan
 
 # FIXME: Temporarily disabled, because it trips an assertion. It's probably
 # harmless, but need to investigate and fix. Also, the number of errors put

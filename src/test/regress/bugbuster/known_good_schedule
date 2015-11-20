@@ -7,8 +7,6 @@ test: golden_query
 test: heapscan1
 test: indexscan
 test: spilltodisk
-test: as_alias
-test: regexp
 test: tiny
 test: subquery
 test: wrkloadadmin
@@ -45,7 +43,6 @@ test: gpmgmt1
 test: bkup_pg
 test: cursor
 test: aggfunc
-test: tidscan
 test: memory_quota
 test: TestPSQL
 test: table_statistics

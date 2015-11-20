@@ -1,39 +1,3 @@
--- start_ignore
-DROP TABLE IF EXISTS xyz_ctas1;
-NOTICE:  table "xyz_ctas1" does not exist, skipping
-DROP TABLE IF EXISTS xyz_ctas2;
-NOTICE:  table "xyz_ctas2" does not exist, skipping
-DROP TABLE IF EXISTS xyz;
-NOTICE:  table "xyz" does not exist, skipping
-DROP TABLE IF EXISTS xyz1;
-NOTICE:  table "xyz1" does not exist, skipping
-DROP TABLE IF EXISTS xyz2;
-NOTICE:  table "xyz2" does not exist, skipping
-DROP TABLE IF EXISTS supplier;
-NOTICE:  table "supplier" does not exist, skipping
-DROP TABLE IF EXISTS test_having; 
-NOTICE:  table "test_having" does not exist, skipping
-DROP TABLE IF EXISTS subselect_tbl; 
-NOTICE:  table "subselect_tbl" does not exist, skipping
-DROP TABLE IF EXISTS timestamp_tbl;
-NOTICE:  table "timestamp_tbl" does not exist, skipping
-DROP TABLE IF EXISTS test;
-NOTICE:  table "test" does not exist, skipping
-DROP TABLE IF EXISTS vendor;
-NOTICE:  table "vendor" does not exist, skipping
-DROP TABLE IF EXISTS product;
-NOTICE:  table "product" does not exist, skipping
-DROP TABLE IF EXISTS sale;
-NOTICE:  table "sale" does not exist, skipping
-DROP TABLE IF EXISTS sale_ord;
-NOTICE:  table "sale_ord" does not exist, skipping
-DROP TABLE IF EXISTS util;
-NOTICE:  table "util" does not exist, skipping
-DROP TABLE IF EXISTS customer;
-NOTICE:  table "customer" does not exist, skipping
-DROP TABLE IF EXISTS TIMESTAMP_TBL;
-NOTICE:  table "timestamp_tbl" does not exist, skipping
--- end_ignore
 create table xyz ("B B" int, "C" int, "D+1" int) DISTRIBUTED RANDOMLY;
 -- start_equiv
 create table xyz_ctas1 as (select "B B" AS "B+1", "C" AS "_%A", "D+1" AS "D" from xyz) DISTRIBUTED RANDOMLY;
@@ -273,21 +237,21 @@ SELECT 1 zero WHERE 1 IN (SELECT 2);
 (0 rows)
 
 -- end_equiv
-CREATE TABLE SUBSELECT_TBL (
+CREATE TABLE SUBSELECT_TBL_AS_TEST (
    f1 integer,
    f2 integer,
    f3 float
  ) DISTRIBUTED RANDOMLY;
-INSERT INTO SUBSELECT_TBL VALUES (1, 2, 3);
-INSERT INTO SUBSELECT_TBL VALUES (2, 3, 4);
-INSERT INTO SUBSELECT_TBL VALUES (3, 4, 5);
-INSERT INTO SUBSELECT_TBL VALUES (1, 1, 1);
-INSERT INTO SUBSELECT_TBL VALUES (2, 2, 2);
-INSERT INTO SUBSELECT_TBL VALUES (3, 3, 3);
-INSERT INTO SUBSELECT_TBL VALUES (6, 7, 8);
-INSERT INTO SUBSELECT_TBL VALUES (8, 9, NULL);
+INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (1, 2, 3);
+INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (2, 3, 4);
+INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (3, 4, 5);
+INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (1, 1, 1);
+INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (2, 2, 2);
+INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (3, 3, 3);
+INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (6, 7, 8);
+INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (8, 9, NULL);
 -- start_equiv
-SELECT '' AS eight, * FROM SUBSELECT_TBL ORDER BY 2,3,4;
+SELECT '' AS eight, * FROM SUBSELECT_TBL_AS_TEST ORDER BY 2,3,4;
  eight | f1 | f2 | f3 
 -------+----+----+----
        |  1 |  1 |  1
@@ -300,7 +264,7 @@ SELECT '' AS eight, * FROM SUBSELECT_TBL ORDER BY 2,3,4;
        |  8 |  9 |   
 (8 rows)
 
-SELECT '' eight, * FROM SUBSELECT_TBL ORDER BY 2,3,4;
+SELECT '' eight, * FROM SUBSELECT_TBL_AS_TEST ORDER BY 2,3,4;
  eight | f1 | f2 | f3 
 -------+----+----+----
        |  1 |  1 |  1
@@ -315,7 +279,7 @@ SELECT '' eight, * FROM SUBSELECT_TBL ORDER BY 2,3,4;
 
 -- end_equiv
 -- start_equiv
-SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL) ORDER BY 2;
+SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL_AS_TEST  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL_AS_TEST) ORDER BY 2;
  six | Uncorrelated Field 
 -----+--------------------
      |                  1
@@ -326,7 +290,7 @@ SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL  WHERE f1 IN (SE
      |                  3
 (6 rows)
 
-SELECT '' six, f1 "Uncorrelated Field" FROM SUBSELECT_TBL  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL) ORDER BY 2;
+SELECT '' six, f1 "Uncorrelated Field" FROM SUBSELECT_TBL_AS_TEST  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL_AS_TEST) ORDER BY 2;
  six | Uncorrelated Field 
 -----+--------------------
      |                  1
@@ -339,7 +303,7 @@ SELECT '' six, f1 "Uncorrelated Field" FROM SUBSELECT_TBL  WHERE f1 IN (SELECT f
 
 -- end_equiv
 -- start_equiv
-SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f2 IN (SELECT f1 FROM SUBSELECT_TBL)) ORDER BY 2;
+SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL_AS_TEST  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL_AS_TEST WHERE f2 IN (SELECT f1 FROM SUBSELECT_TBL_AS_TEST)) ORDER BY 2;
  six | Uncorrelated Field 
 -----+--------------------
      |                  1
@@ -350,7 +314,7 @@ SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL  WHERE f1 IN (SE
      |                  3
 (6 rows)
 
-SELECT '' six, f1 "Uncorrelated Field" FROM SUBSELECT_TBL  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f2 IN (SELECT f1 FROM SUBSELECT_TBL)) ORDER BY 
+SELECT '' six, f1 "Uncorrelated Field" FROM SUBSELECT_TBL_AS_TEST  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL_AS_TEST WHERE f2 IN (SELECT f1 FROM SUBSELECT_TBL_AS_TEST)) ORDER BY 
 2;
  six | Uncorrelated Field 
 -----+--------------------
@@ -364,7 +328,7 @@ SELECT '' six, f1 "Uncorrelated Field" FROM SUBSELECT_TBL  WHERE f1 IN (SELECT f
 
 -- end_equiv
 -- start_equiv
-SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"  FROM SUBSELECT_TBL upper  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1) ORDER BY 2,3;
+SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"  FROM SUBSELECT_TBL_AS_TEST upper  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL_AS_TEST WHERE f1 = upper.f1) ORDER BY 2,3;
  six | Correlated Field | Second Field 
 -----+------------------+--------------
      |                1 |            1
@@ -375,7 +339,7 @@ SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"  FROM SUBSELECT
      |                3 |            4
 (6 rows)
 
-SELECT '' six, f1 "Correlated Field", f2 "Second Field"  FROM SUBSELECT_TBL upper  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1) ORDER
+SELECT '' six, f1 "Correlated Field", f2 "Second Field"  FROM SUBSELECT_TBL_AS_TEST upper  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL_AS_TEST WHERE f1 = upper.f1) ORDER
  BY 2,3;
  six | Correlated Field | Second Field 
 -----+------------------+--------------
@@ -543,22 +507,22 @@ select "B B"+1 "(B B)","C" "[C]", "D+1" "{D+1}" from xyz2;
 (3 rows)
 
 -- end_equiv
-CREATE TABLE TIMESTAMP_TBL (d1 timestamp(2) without time zone) DISTRIBUTED RANDOMLY;
-INSERT INTO TIMESTAMP_TBL VALUES ('now');
-INSERT INTO TIMESTAMP_TBL VALUES ('now');
-INSERT INTO TIMESTAMP_TBL VALUES ('today');
-INSERT INTO TIMESTAMP_TBL VALUES ('yesterday');
-INSERT INTO TIMESTAMP_TBL VALUES ('tomorrow');
-INSERT INTO TIMESTAMP_TBL VALUES ('tomorrow EST');
-INSERT INTO TIMESTAMP_TBL VALUES ('tomorrow zulu');
+CREATE TABLE TIMESTAMP_TBL_AS_TEST (d1 timestamp(2) without time zone) DISTRIBUTED RANDOMLY;
+INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('now');
+INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('now');
+INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('today');
+INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('yesterday');
+INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('tomorrow');
+INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('tomorrow EST');
+INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('tomorrow zulu');
 -- start_equiv
-SELECT count(*) AS One FROM TIMESTAMP_TBL WHERE d1 = timestamp without time zone 'today';
+SELECT count(*) AS One FROM TIMESTAMP_TBL_AS_TEST WHERE d1 = timestamp without time zone 'today';
  one 
 -----
    1
 (1 row)
 
-SELECT count(*) One FROM TIMESTAMP_TBL WHERE d1 = timestamp without time zone 'today';
+SELECT count(*) One FROM TIMESTAMP_TBL_AS_TEST WHERE d1 = timestamp without time zone 'today';
  one 
 -----
    1
@@ -566,13 +530,13 @@ SELECT count(*) One FROM TIMESTAMP_TBL WHERE d1 = timestamp without time zone 't
 
 -- end_equiv
 -- start_equiv
-SELECT count(*) AS Three FROM TIMESTAMP_TBL WHERE d1 = timestamp without time zone 'tomorrow';
+SELECT count(*) AS Three FROM TIMESTAMP_TBL_AS_TEST WHERE d1 = timestamp without time zone 'tomorrow';
  three 
 -------
      3
 (1 row)
 
-SELECT count(*) Three FROM TIMESTAMP_TBL WHERE d1 = timestamp without time zone 'tomorrow';
+SELECT count(*) Three FROM TIMESTAMP_TBL_AS_TEST WHERE d1 = timestamp without time zone 'tomorrow';
  three 
 -------
      3
@@ -580,13 +544,13 @@ SELECT count(*) Three FROM TIMESTAMP_TBL WHERE d1 = timestamp without time zone 
 
 -- end_equiv
 -- start_equiv
-SELECT count(*) AS One FROM TIMESTAMP_TBL WHERE d1 = timestamp without time zone 'yesterday';
+SELECT count(*) AS One FROM TIMESTAMP_TBL_AS_TEST WHERE d1 = timestamp without time zone 'yesterday';
  one 
 -----
    1
 (1 row)
 
-SELECT count(*) One FROM TIMESTAMP_TBL WHERE d1 = timestamp without time zone 'yesterday';
+SELECT count(*) One FROM TIMESTAMP_TBL_AS_TEST WHERE d1 = timestamp without time zone 'yesterday';
  one 
 -----
    1
@@ -594,27 +558,27 @@ SELECT count(*) One FROM TIMESTAMP_TBL WHERE d1 = timestamp without time zone 'y
 
 -- end_equiv
 -- start_equiv
-SELECT count(*) AS One FROM TIMESTAMP_TBL WHERE d1 = timestamp(2) without time zone 'now';
+SELECT count(*) AS One FROM TIMESTAMP_TBL_AS_TEST WHERE d1 = timestamp(2) without time zone 'now';
  one 
 -----
    0
 (1 row)
 
-SELECT count(*) One FROM TIMESTAMP_TBL WHERE d1 = timestamp(2) without time zone 'now';
+SELECT count(*) One FROM TIMESTAMP_TBL_AS_TEST WHERE d1 = timestamp(2) without time zone 'now';
  one 
 -----
    0
 (1 row)
 
 -- end_equiv
-DELETE FROM TIMESTAMP_TBL;
-INSERT INTO TIMESTAMP_TBL VALUES ('2009-09-09 00:16:07');
-INSERT INTO TIMESTAMP_TBL VALUES ('2009-03-28 01:09:00');
-INSERT INTO TIMESTAMP_TBL VALUES ('2009-03-27 15:31:50.06');
-INSERT INTO TIMESTAMP_TBL VALUES ('2010-05-15');
-INSERT INTO TIMESTAMP_TBL VALUES ('Mon Feb 10 17:32:01 1997 PST');
+DELETE FROM TIMESTAMP_TBL_AS_TEST;
+INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('2009-09-09 00:16:07');
+INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('2009-03-28 01:09:00');
+INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('2009-03-27 15:31:50.06');
+INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('2010-05-15');
+INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('Mon Feb 10 17:32:01 1997 PST');
 -- start_equiv
-SELECT '' AS "day", date_trunc('day',d1) AS date_trunc  FROM TIMESTAMP_TBL WHERE d1 > timestamp without time zone '2009-03-27';
+SELECT '' AS "day", date_trunc('day',d1) AS date_trunc  FROM TIMESTAMP_TBL_AS_TEST WHERE d1 > timestamp without time zone '2009-03-27';
  day |        date_trunc        
 -----+--------------------------
      | Fri Mar 27 00:00:00 2009
@@ -623,7 +587,7 @@ SELECT '' AS "day", date_trunc('day',d1) AS date_trunc  FROM TIMESTAMP_TBL WHERE
      | Sat May 15 00:00:00 2010
 (4 rows)
 
-SELECT '' "day", date_trunc('day',d1) date_trunc  FROM TIMESTAMP_TBL WHERE d1 > timestamp without time zone '2009-03-27';
+SELECT '' "day", date_trunc('day',d1) date_trunc  FROM TIMESTAMP_TBL_AS_TEST WHERE d1 > timestamp without time zone '2009-03-27';
  day |        date_trunc        
 -----+--------------------------
      | Wed Sep 09 00:00:00 2009
@@ -634,7 +598,7 @@ SELECT '' "day", date_trunc('day',d1) date_trunc  FROM TIMESTAMP_TBL WHERE d1 > 
 
 -- end_equiv
 -- start_equiv
-SELECT '' AS "5", d1 FROM TIMESTAMP_TBL  WHERE d1 <= timestamp without time zone '2010-05-15';
+SELECT '' AS "5", d1 FROM TIMESTAMP_TBL_AS_TEST  WHERE d1 <= timestamp without time zone '2010-05-15';
  5 |             d1              
 ---+-----------------------------
    | Fri Mar 27 15:31:50.06 2009
@@ -644,7 +608,7 @@ SELECT '' AS "5", d1 FROM TIMESTAMP_TBL  WHERE d1 <= timestamp without time zone
    | Mon Feb 10 17:32:01 1997
 (5 rows)
 
-SELECT '' "5", d1 FROM TIMESTAMP_TBL  WHERE d1 <= timestamp without time zone '2010-05-15';
+SELECT '' "5", d1 FROM TIMESTAMP_TBL_AS_TEST  WHERE d1 <= timestamp without time zone '2010-05-15';
  5 |             d1              
 ---+-----------------------------
    | Fri Mar 27 15:31:50.06 2009
@@ -670,7 +634,7 @@ SELECT '' date_trunc_week, date_trunc( 'week', timestamp '2004-02-29 15:44:17.71
 
 -- end_equiv
 -- start_equiv
-SELECT '' AS to_char_1, to_char(d1, 'DAY Day day DY Dy dy MONTH Month month RM MON Mon mon')  FROM TIMESTAMP_TBL;
+SELECT '' AS to_char_1, to_char(d1, 'DAY Day day DY Dy dy MONTH Month month RM MON Mon mon')  FROM TIMESTAMP_TBL_AS_TEST;
  to_char_1 |                                         to_char                                          
 -----------+------------------------------------------------------------------------------------------
            | FRIDAY    Friday    friday    FRI Fri fri MARCH     March     march     III  MAR Mar mar
@@ -680,7 +644,7 @@ SELECT '' AS to_char_1, to_char(d1, 'DAY Day day DY Dy dy MONTH Month month RM M
            | MONDAY    Monday    monday    MON Mon mon FEBRUARY  February  february  II   FEB Feb feb
 (5 rows)
 
-SELECT '' to_char_1, to_char(d1, 'DAY Day day DY Dy dy MONTH Month month RM MON Mon mon')  FROM TIMESTAMP_TBL;
+SELECT '' to_char_1, to_char(d1, 'DAY Day day DY Dy dy MONTH Month month RM MON Mon mon')  FROM TIMESTAMP_TBL_AS_TEST;
  to_char_1 |                                         to_char                                          
 -----------+------------------------------------------------------------------------------------------
            | FRIDAY    Friday    friday    FRI Fri fri MARCH     March     march     III  MAR Mar mar
@@ -821,7 +785,7 @@ select upper("B B") "B_B", lower ("C") C, ("D+1"||'9_nine') "D+1" from xyz1;
 (3 rows)
 
 -- end_equiv
-CREATE TABLE test (a integer, b integer) DISTRIBUTED RANDOMLY;
+CREATE TABLE test_as_alias (a integer, b integer) DISTRIBUTED RANDOMLY;
 -- start_equiv
 CREATE OR REPLACE FUNCTION one() returns integer as $$ select 1 AS result; $$ language sql;
 CREATE OR REPLACE FUNCTION one() returns integer as $$ select 1 result; $$ language sql;
@@ -831,6 +795,6 @@ CREATE OR REPLACE FUNCTION add_em(integer, integer) RETURNS integer as $$ SELECT
 CREATE OR REPLACE FUNCTION add_em(integer, integer) RETURNS integer as $$ SELECT $1 + $2 sum; $$ LANGUAGE SQL CONTAINS SQL;
 -- end_equiv
 -- start_equiv
-INSERT INTO test select a, a%25 from generate_series(1,100) AS a;
-INSERT INTO test select a, a%25 from generate_series(1,100) a;
+INSERT INTO test_as_alias select a, a%25 from generate_series(1,100) AS a;
+INSERT INTO test_as_alias select a, a%25 from generate_series(1,100) a;
 -- end_equiv
