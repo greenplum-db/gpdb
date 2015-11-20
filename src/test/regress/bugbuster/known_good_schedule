@@ -13,11 +13,10 @@ test: wrkloadadmin
 test: xpath
 ignore: jdbc
 test: world
-test: sirv_functions
 test: jetpack
 test: spi
 test: security
-test: load_tpch
+test: load_tpch sirv_functions
 test: hashagg
 test: tpch_query
 test: gpsort
@@ -36,14 +35,10 @@ test: metadata_track
 test: gp_persistent_table
 #mpp23872: Disabling gpcheckmirrorseg as it is erroring out bugbuster on some platforms.
 ignore: gpcheckmirrorseg
-test: AOCO_Compression2
-test: schema_topology
-test: gpmgmt1
-test: bkup_pg
-test: cursor
+test: AOCO_Compression2 schema_topology table_statistics
+test: bkup_pg gpmgmt1 cursor
 test: aggfunc
 test: memory_quota
 test: TestPSQL
-test: table_statistics
 test: opperf
 # end of tests
