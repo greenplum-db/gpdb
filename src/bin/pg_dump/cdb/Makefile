@@ -118,3 +118,4 @@ clean distclean maintainer-clean:
 	cdb_bsa_query_agent$(X) cdb_bsa_delete_agent$(X) $(OBJS) $(OBJS) cdb_dump.o cdb_restore.o cdb_dump_agent.o cdb_restore_agent.o $(PGDUMP_DIR)/common.o cdb_backup_status.o cdb_dump_include.o cdb_seginst.o \
 	cdb_backup_state.o cdb_table.o cdb_dump_util.o cdb_backup_archiver.o cdbheadsync.o cdbheadmakeactive.o kwlookup.c cdb_ddboost_util.o cdb_bsa_dump_agent.o cdb_bsa_query_agent.o \
 	cdb_bsa_restore_agent.o cdb_bsa_delete_agent.o libgpbsa.so libgpbsa71.so libgpbsa75.so $(KEYWRDOBJS)
+	$(MAKE) -C test clean

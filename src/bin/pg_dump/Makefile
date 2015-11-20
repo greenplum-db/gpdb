@@ -65,4 +65,5 @@ uninstall:
 
 clean distclean maintainer-clean:
 	$(MAKE) -C cdb clean
+	$(MAKE) -C test clean
 	rm -f pg_dump$(X) pg_restore$(X) pg_dumpall$(X) $(OBJS) pg_dump.o common.o pg_dump_sort.o pg_restore.o pg_dumpall.o kwlookup.c $(KEYWRDOBJS)
