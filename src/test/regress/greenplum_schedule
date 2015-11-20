@@ -1,39 +1,44 @@
 # Greenplum-specific tests
+#
+# The order of the tests is fairly random, but there are a couple of things
+# to consider when placing a new test:
+#
+# * Keep long-running tests in the same group with other tests with a similar
+#   runtime. That way, on a multi-processor system, the tests will finish
+#   roughly at the same time, which maximizes parallelism.
+# * Keep tests together with other tests for similar functionality.
+# * There are some dependencies between tests, and some tests cannot run
+#   in parallel with other tests.
+# * The maximum size of a group is about 20, like in the Postgres
+#   parallel_schedule. However, some queries can dispatch a lot of workers
+#   to the segments, and therefore has to run in smaller groups to avoid
+#   hitting max_connections limit on segments.
+#
 
 ignore: leastsquares
-test: decode_expr bitmapscan case_gp limit_gp
+test: decode_expr bitmapscan case_gp limit_gp notin percentile naivebayes join_gp gpcopy
+test: filter gpctas gpdist matrix toast sublink sirv_functions table_functions olap_setup
 
 test: dispatch
 
-test: alter_table_aocs
-test: gpdiffcheck gptokencheck olap_setup
-
-test: partition
+# 'partition' runs for a long time, so try to keep it together with other
+# long-running tests. Unfortunately, 'partition' also assumes that there
+# are no other partitioned tables present in the database, so it cannot run
+# in parallel with tests that use partitions.
+test: partition appendonly
 test: vacuum_gp
 
-test: gp_hashagg gp_dqa external_table
-
-test: column_compression rangefuncs_cdb
-
-test: gpcopy appendonly filter gpctas gpdist matrix gpdtm_plpgsql
-
-test: sequence_gp
+test: column_compression rangefuncs_cdb gp_hashagg gp_dqa external_table gpdiffcheck gptokencheck information_schema subselect_gp indexjoin distributed_transactions olap_group olap_window_seq with_clause sequence_gp
 
 # FIXME: Temporarily disabled, because it trips an assertion. It's probably
 # harmless, but need to investigate and fix. Also, the number of errors put
 # in the error table, and hence the output, varies between runs.
 #test: sreh
 
-test: olap_group olap_window_seq
-
 # Disabled tests. XXX: Why are these disabled?
 #test: olap_window
 #test: tpch500GB
 #ignore: dpe
-
-test: information_schema naivebayes join_gp subselect_gp indexjoin distributed_transactions
-
-test: sublink sirv_functions table_functions
 
 # FIXME: These tests no longer work, because they try to set
 # gp_interconnect_type, which doesn't work:
@@ -42,20 +47,15 @@ test: sublink sirv_functions table_functions
 #test: gpic_bigtup
 
 ignore: gp_portal_error
-test: notin with_clause eagerfree toast mapred gpparams tidycat aocs
-test: ic gp_numeric_agg gp_toolkit
+test: eagerfree mapred gpparams tidycat aocs gp_optimizer co_nestloop_idxscan  gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic
 ignore: icudp_full
 ignore: gp_delete_as_trunc
 
-test: filespace trig auth_constraint role rle portals_updatable plpgsql_cache percentile timeseries resource_queue_function gp_optimizer co_nestloop_idxscan pg_stat_last_operation
-
 test: resource_queue
 
+test: filespace trig auth_constraint role rle portals_updatable plpgsql_cache timeseries resource_queue_function pg_stat_last_operation gp_numeric_agg gp_toolkit plan_size partindex_test direct_dispatch partition_pruning_with_fn dsp
+
 ignore: tpch500GB_orca
-
-test: alter_distribution_policy
-
-test: plan_size partindex_test direct_dispatch partition_pruning_with_fn dsp
 
 # XXX: This test depends on libgpoptudfs library, which includes ORCA helper
 # functions from src/backend/gpopt/utils/funcs.cpp. But those functions are

@@ -8789,21 +8789,17 @@ drop table mpp6979part;
 drop table mpp6979dummy.mpp6979tab;
 drop schema mpp6979dummy;
 -- MPP-7898:
-drop table if exists r cascade; --ignore
-NOTICE:  table "r" does not exist, skipping
-drop table if exists s cascade; --ignore
-NOTICE:  table "s" does not exist, skipping
-create table s 
+create table parent_s
     (a int, b text) 
     distributed by (a);
     
-insert into s values 
+insert into parent_s values
     (1, 'one');
 -- Try to create a table that mixes inheritance and partitioning.
 -- Correct behavior: ERROR
-create table r 
+create table child_r
     ( c int, d int) 
-    inherits (s)
+    inherits (parent_s)
     partition by range(d) 
     (
         start (0) 
@@ -8814,14 +8810,14 @@ ERROR:  cannot mix inheritance with partitioning
  -- If (incorrectly) the previous statement works, the next one is 
  -- likely to fail with in unexpected internal error.  This is residual 
  -- issue MPP-7898.
-insert into r values 
+insert into child_r values
     (0, 'from r', 0, 0);
-ERROR:  relation "r" does not exist
+ERROR:  relation "child_r" does not exist
     
-drop table if exists s cascade; --ignore
-drop table if exists r cascade; --ignore
-NOTICE:  table "r" does not exist, skipping
-create table r 
+drop table if exists parent_s cascade; --ignore
+drop table if exists child_r cascade; --ignore
+NOTICE:  table "child_r" does not exist, skipping
+create table parent_r
     ( a int, b text, c int, d int ) 
     distributed by (a)
     partition by range(d) 
@@ -8830,32 +8826,32 @@ create table r
         end (2) 
         every (1)
     );
-NOTICE:  CREATE TABLE will create partition "r_1_prt_1" for table "r"
-NOTICE:  CREATE TABLE will create partition "r_1_prt_2" for table "r"
+NOTICE:  CREATE TABLE will create partition "parent_r_1_prt_1" for table "parent_r"
+NOTICE:  CREATE TABLE will create partition "parent_r_1_prt_2" for table "parent_r"
  
-insert into r values 
+insert into parent_r values
     (0, 'from r', 0, 0);
-create table s 
+create table parent_s
     ( a int, b text, c int, d int ) 
     distributed by (a);
     
-insert into s values 
+insert into parent_s values
     (1, 'from s', 555, 555);
-create table t
+create table child_t
     ( )
-    inherits (s)
+    inherits (parent_s)
     distributed by (a);
-insert into t values
+insert into child_t values
     (0, 'from t', 666, 666);
 -- Try to exchange in the child and parent.  
 -- Correct behavior: ERROR in both cases.
-alter table r exchange partition for (1) with table t;
-ERROR:  cannot exchange table "t" as it inherits other table(s)
-alter table r exchange partition for (1) with table s;
-ERROR:  cannot EXCHANGE table "s" as it has child table(s)
-drop table t cascade; --ignore
-drop table s cascade; --ignore
-drop table r cascade; --ignore
+alter table parent_r exchange partition for (1) with table child_t;
+ERROR:  cannot exchange table "child_t" as it inherits other table(s)
+alter table parent_r exchange partition for (1) with table parent_s;
+ERROR:  cannot EXCHANGE table "parent_s" as it has child table(s)
+drop table child_t cascade; --ignore
+drop table parent_s cascade; --ignore
+drop table parent_r cascade; --ignore
 -- MPP-7898 end.
 -- ( MPP-13750 
 CREATE TABLE s (id int, date date, amt decimal(10,2), units int) 
@@ -9676,9 +9672,7 @@ where x = 9;
 -- MPP-18359 end
 -- MPP-19105
 -- Base partitions with trailing dropped columns
-drop table if exists t;
-NOTICE:  table "t" does not exist, skipping
-create table t (
+create table parttest_t (
 	a int,
 	b int,
 	c char,
@@ -9689,18 +9683,18 @@ partition by range (a)
 	partition p1 start(1) end(5),
 	partition p2 start(5)
 );
-NOTICE:  CREATE TABLE will create partition "t_1_prt_p1" for table "t"
-NOTICE:  CREATE TABLE will create partition "t_1_prt_p2" for table "t"
+NOTICE:  CREATE TABLE will create partition "parttest_t_1_prt_p1" for table "parttest_t"
+NOTICE:  CREATE TABLE will create partition "parttest_t_1_prt_p2" for table "parttest_t"
 -- Drop column
-alter table t drop column d;
+alter table parttest_t drop column d;
 -- Alter table split partition
-alter table t split partition for(1) at (2) into (partition p11, partition p22);
-NOTICE:  exchanged partition "p1" of relation "t" with relation "pg_temp_2867290"
-NOTICE:  dropped partition "p1" for relation "t"
-NOTICE:  CREATE TABLE will create partition "t_1_prt_p11" for table "t"
-NOTICE:  CREATE TABLE will create partition "t_1_prt_p22" for table "t"
-insert into  t values(1,2,'a');
-select * from t;
+alter table parttest_t split partition for(1) at (2) into (partition p11, partition p22);
+NOTICE:  exchanged partition "p1" of relation "parttest_t" with relation "pg_temp_2867290"
+NOTICE:  dropped partition "p1" for relation "parttest_t"
+NOTICE:  CREATE TABLE will create partition "parttest_t_1_prt_p11" for table "parttest_t"
+NOTICE:  CREATE TABLE will create partition "parttest_t_1_prt_p22" for table "parttest_t"
+insert into  parttest_t values(1,2,'a');
+select * from parttest_t;
  a | b | c 
 ---+---+---
  1 | 2 | a
