@@ -957,7 +957,21 @@ def validate_tuple_count(dbname, schemaname, partition_name, tuple_count):
     row_count = getRows(dbname, sql)[0][0]
     if int(row_count) != int(tuple_count):
         raise Exception('Stats for the table %s.%s does not match. Stat count "%s" does not match the actual tuple count "%s"' % (schemaname, partition_name, tuple_count, row_count))
-    
+
+def validate_aoco_stats(context, dbname, table, expected_tupcount):
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        schema, table = table.split('.')
+        sql = "SELECT relname FROM pg_class \
+               WHERE oid in (SELECT segrelid FROM pg_appendonly \
+                             WHERE relid in (SELECT oid FROM pg_class \
+                                             WHERE relname = '%s' AND relnamespace = (SELECT oid FROM pg_namespace \
+                                                                                      WHERE nspname = '%s')))" % (table, schema)
+        tname = dbconn.execSQLForSingleton(conn, sql)
+        sql = "select sum(tupcount) from pg_aoseg.%s" % tname.strip()
+        rows = getRows(dbname, sql)
+        tupcount = int(rows[0][0])
+        if tupcount != int(expected_tupcount):
+            raise Exception("%s has stats of %d rows in %s table and should have %s" % (table, tupcount, tname, expected_tupcount))
     
 def validate_no_aoco_stats(context, dbname, table):
 

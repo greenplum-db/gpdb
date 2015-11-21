@@ -1072,6 +1072,28 @@ Feature: Validate command line arguments
         And verify that the tuple count of all appendonly tables are consistent in "schematestdb"
         And verify that the plan file is created for the latest timestamp 
 
+    Scenario: Simple Incremental Backup with AO/CO statistics w/ filter
+        Given the database is running
+        And there are no backup files
+        And the database "bkdb" does not exist
+        And database "bkdb" exists
+        And there is a "ao" table "public.ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "public.ao_table2" with compression "None" in "bkdb" with data
+        When the user runs "gpcrondump -a -x bkdb"
+        Then gpcrondump should return a return code of 0
+        And table "public.ao_table" is assumed to be in dirty state in "bkdb"
+        And the user runs "gpcrondump -a --incremental -x bkdb"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        When the user runs gpdbrestore with the stored timestamp and options "--noaostats"
+        Then gpdbrestore should return a return code of 0
+        And verify that there are "0" tuples in "bkdb" for table "public.ao_table2"
+        And verify that there are "0" tuples in "bkdb" for table "public.ao_table"
+        When the user runs gpdbrestore with the stored timestamp and options "-T public.ao_table" without -e option
+        Then gpdbrestore should return a return code of 0
+        And verify that there are "0" tuples in "bkdb" for table "public.ao_table2"
+        And verify that there are "8760" tuples in "bkdb" for table "public.ao_table"
+
     @backupsmoke
     Scenario: Simple Incremental Backup for Multiple Schemas with common tablenames
         Given the database is running

@@ -9,8 +9,8 @@ import unittest2 as unittest
 import tempfile, os, shutil
 from gppylib.commands.base import CommandResult
 from gppylib.operations.restore import RestoreDatabase, create_restore_plan, get_plan_file_contents, \
-        get_restore_tables_from_table_file, restore_incremental_data_only, write_to_plan_file, \
-        validate_tablenames, create_plan_file_contents, GetDbName, get_dirty_table_file_contents, \
+        get_restore_tables_from_table_file, write_to_plan_file, validate_tablenames, \
+        create_plan_file_contents, GetDbName, get_dirty_table_file_contents, \
         get_incremental_restore_timestamps, get_partition_list, get_restore_dir, is_begin_incremental_run, \
         is_incremental_restore, get_restore_table_list, validate_restore_tables_list, \
         update_ao_stat_func, update_ao_statistics, _build_gpdbrestore_cmd_line, ValidateTimestamp, \
@@ -1230,62 +1230,42 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
 
     @patch('gppylib.operations.restore.get_plan_file_contents', return_value=[('20121212121212', 't1,t2'), ('20121212121211', 't3,t4'), ('20121212121210', 't5,t6,t7')])
     @patch('gppylib.operations.restore.Command.run')
-    def test_restore_incremental_data_only_00(self, mock1, mock2):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
-        restore_tables = None
-        netbackup_service_host = None
-        netbackup_block_size = None
-        results = restore_incremental_data_only(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp, restore_tables, None, None, netbackup_service_host, netbackup_block_size)
+    @patch('gppylib.operations.restore.update_ao_statistics')
+    def test_restore_incremental_data_only_00(self, mock1, mock2, mock3):
+        restore_db = None
+        results = self.restore.restore_incremental_data_only(restore_db)
         self.assertTrue(results)
 
     @patch('gppylib.operations.restore.get_plan_file_contents', return_value=[('20121212121212', 't1,t2'), ('20121212121211', 't3,t4'), ('20121212121210', 't5,t6,t7')])
     @patch('gppylib.operations.restore.Command.run')
-    def redirected_restore_test_restore_incremental_data_only_00(self, mock1, mock2):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
-        restore_tables = None
-        netbackup_service_host = None
-        netbackup_block_size = None
-        results = restore_incremental_data_only(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp, restore_tables, 'redb', None, netbackup_service_host, netbackup_block_size)
+    @patch('gppylib.operations.restore.update_ao_statistics')
+    def redirected_restore_test_restore_incremental_data_only_00(self, mock1, mock2, mock3):
+        restore_db = None
+        results = self.restore.restore_incremental_data_only(restore_db)
         self.assertTrue(results)
 
     @patch('gppylib.operations.restore.get_plan_file_contents', return_value=[('20121212121212', ''), ('20121212121211', ''), ('20121212121210', '')])
     @patch('os.path.isfile', return_value=True)
-    def test_restore_incremental_data_only_01(self, mock1, mock2):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
-        restore_tables = None
-        netbackup_service_host = None
-        netbackup_block_size = None
-        with self.assertRaisesRegexp(Exception, 'There were no tables to restore. Check the plan file contents for restore timestamp %s' % timestamp):
-            restore_incremental_data_only(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp, restore_tables, 'redb', None, netbackup_service_host, netbackup_block_size)
+    @patch('gppylib.operations.restore.update_ao_statistics')
+    def test_restore_incremental_data_only_01(self, mock1, mock2, mock3):
+        restore_db = None
+        with self.assertRaisesRegexp(Exception, 'There were no tables to restore. Check the plan file contents for restore timestamp 20121212121212'):
+            self.restore.restore_incremental_data_only(restore_db)
 
     @patch('gppylib.operations.restore.get_plan_file_contents', return_value=[('20121212121212', 't1,t2'), ('20121212121211', 't3,t4'), ('20121212121210', 't5,t6,t7')])
     @patch('gppylib.operations.restore.Command.run')
-    def test_restore_incremental_data_only_02(self, mock1, mock2):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
-        restore_tables = None
-        netbackup_service_host = None
-        netbackup_block_size = None
-        self.assertTrue(restore_incremental_data_only(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp, restore_tables, 'redb', None, netbackup_service_host, netbackup_block_size))
+    @patch('gppylib.operations.restore.update_ao_statistics')
+    def test_restore_incremental_data_only_02(self, mock1, mock2, mock3):
+        restore_db = None
+        self.assertTrue(self.restore.restore_incremental_data_only(restore_db))
 
     @patch('gppylib.operations.restore.get_plan_file_contents', return_value=[('20121212121212', 't1,t2'), ('20121212121211', 't3,t4'), ('20121212121210', 't5,t6,t7')])
     @patch('gppylib.operations.restore.Command.run', side_effect=Exception('Error executing gpdbrestore'))
-    def test_restore_incremental_data_only_04(self, mock1, mock2):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
-        restore_tables = None
-        netbackup_service_host = None
-        netbackup_block_size = None
+    @patch('gppylib.operations.restore.update_ao_statistics')
+    def test_restore_incremental_data_only_04(self, mock1, mock2, mock3):
+        restore_db = None
         with self.assertRaisesRegexp(Exception, 'Error executing gpdbrestore'):
-            restore_incremental_data_only(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp, restore_tables, 'redb', None, netbackup_service_host, netbackup_block_size)
+            self.restore.restore_incremental_data_only(restore_db)
 
     def test_get_restore_dir_00(self):
         master_datadir = '/foo'
@@ -1476,54 +1456,48 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('pygresql.pgdb.pgdbCnx.commit')
     def test_update_ao_stat_func_00(self, m1, m2):
         conn = None
-        schema = None
-        table = None
+        ao_table = None
         counter = 1
         batch_size = 1000
-        update_ao_stat_func(conn, schema, table, counter, batch_size)
+        update_ao_stat_func(conn, ao_table, counter, batch_size)
 
     @patch('pygresql.pgdb.pgdbCnx.commit')
     @patch('gppylib.operations.restore.execSQLForSingleton')
     def test_update_ao_stat_func_01(self, m1, m2):
         conn = None
-        schema = None
-        table = None
+        ao_table = None
         counter = 999
         batch_size = 1000
-        update_ao_stat_func(conn, schema, table, counter, batch_size)
+        update_ao_stat_func(conn, ao_table, counter, batch_size)
 
     @patch('gppylib.operations.restore.execSQLForSingleton')
     @patch('pygresql.pgdb.pgdbCnx.commit')
     def test_update_ao_stat_func_02(self, m1, m2):
         conn = None
-        schema = None
-        table = None
+        ao_table = None
         counter = 1000
         batch_size = 1000
         with self.assertRaisesRegexp(AttributeError, "'NoneType' object has no attribute 'commit'"):
-            update_ao_stat_func(conn, schema, table, counter, batch_size)
+            update_ao_stat_func(conn, ao_table, counter, batch_size)
 
     @patch('gppylib.operations.restore.execSQLForSingleton')
     @patch('pygresql.pgdb.pgdbCnx.commit')
     def test_update_ao_stat_func_03(self, m1, m2):
         conn = None
-        schema = None
-        table = None
+        ao_table = None
         counter = 1001
         batch_size = 1000
-        update_ao_stat_func(conn, schema, table, counter, batch_size)
+        update_ao_stat_func(conn, ao_table, counter, batch_size)
 
     @patch('gppylib.operations.restore.execSQLForSingleton')
     @patch('pygresql.pgdb.pgdbCnx.commit')
     def test_update_ao_stat_func_04(self, m1, m2):
         conn = None
-        schema = None
-        table = None
+        ao_table = None
         counter = 2000
         batch_size = 1000
         with self.assertRaisesRegexp(AttributeError, "'NoneType' object has no attribute 'commit'"):
-            update_ao_stat_func(conn, schema, table, counter, batch_size)
-
+            update_ao_stat_func(conn, ao_table, counter, batch_size)
 
     @patch('gppylib.operations.restore.execute_sql', return_value=[['t1', 'public']])
     @patch('gppylib.operations.restore.dbconn.connect')
@@ -1531,7 +1505,8 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     def test_update_ao_statistics_00(self, m1, m2, m3):
         port = 28888
         db = 'testdb'
-        update_ao_statistics(port, db)
+        restored_tables = []
+        update_ao_statistics(port, db, restored_tables)
 
     @patch('gppylib.operations.restore.dbconn.connect')
     @patch('gppylib.db.dbconn.execSQLForSingleton', return_value=5)
