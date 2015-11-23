@@ -705,7 +705,7 @@ def verifyVersionAtPath(usepath):
         items = pool.getCompletedItems()
         for i in items:
             if i.results.rc:
-                logger.error("error on host with command: %s" % (i.remoteHost, cmdStr))
+                logger.error("error on host %s with command: %s" % (i.remoteHost, cmdStr))
                 return True
             if not i.results.stdout:
                 logger.error("could not find version string from host %s with command: %s" % (i.remoteHost, cmdStr))
