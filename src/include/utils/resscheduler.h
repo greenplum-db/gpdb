@@ -24,6 +24,7 @@
  * GUC variables.
  */
 extern bool	ResourceScheduler;
+extern bool	ResourceSchedulerUtility;
 extern int	MaxResourceQueues;
 extern int	MaxResourcePortalsPerXact;
 extern bool	ResourceSelectOnly;
