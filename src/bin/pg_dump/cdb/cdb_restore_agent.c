@@ -104,13 +104,10 @@ typedef struct option optType;
 extern void makeSureMonitorThreadEnds(int TaskRC, char *pszErrorMsg);
 static void myChildHandler(int signo);
 static void psqlHandler(int signo);
-static void myHandler(int signo);
 static void *monitorThreadProc(void *arg __attribute__((unused)));
-static void _check_database_version(ArchiveHandle *AH);
 /* static bool execMPPCatalogFunction(PGconn* pConn); */
 static char *testProgramExists(char *pszProgramName);
 
-static bool bUsePSQL = false;
 static volatile sig_atomic_t bPSQLDone = false;
 static volatile sig_atomic_t bKillPsql = false;
 static bool bCompUsed = false;	/* de-compression is used */
@@ -157,7 +154,6 @@ main(int argc, char **argv)
 	RestoreOptions *opts;
 	int			c;
 	int			exit_code = 0;
-	Archive    *AH;
 	char	   *inputFileSpec = NULL;
 	extern int	optind;
 	extern char *optarg;
@@ -174,7 +170,6 @@ main(int argc, char **argv)
 	int			status;
 	int			rc;
 	char	   *pszErrorMsg;
-	ArchiveHandle *pAH;
 	int 		postDataSchemaOnly = 0;
 
 #ifdef USE_DDBOOST
@@ -189,7 +184,6 @@ main(int argc, char **argv)
 		{"dbname", 1, NULL, 'd'},
 		{"exit-on-error", 0, NULL, 'e'},
 		{"file", 1, NULL, 'f'},
-		{"format", 1, NULL, 'F'},
 		{"function", 1, NULL, 'P'},
 		{"host", 1, NULL, 'h'},
 		{"ignore-version", 0, NULL, 'i'},
@@ -285,10 +279,6 @@ main(int argc, char **argv)
 				break;
 			case 'f':			/* output file name */
 				opts->filename = strdup(optarg);
-				break;
-			case 'F':
-				if (strlen(optarg) != 0)
-					opts->formatName = strdup(optarg);
 				break;
 			case 'h':
 				if (strlen(optarg) != 0)
@@ -471,39 +461,6 @@ main(int argc, char **argv)
 	opts->disable_triggers = disable_triggers;
 	opts->use_setsessauth = use_setsessauth;
 
-	if (opts->formatName)
-	{
-
-		switch (opts->formatName[0])
-		{
-
-			case 'c':
-			case 'C':
-				opts->format = archCustom;
-				break;
-
-			case 'f':
-			case 'F':
-				opts->format = archFiles;
-				break;
-
-			case 't':
-			case 'T':
-				opts->format = archTar;
-				break;
-
-			case 'p':
-			case 'P':
-				bUsePSQL = true;
-				break;
-
-			default:
-				mpp_err_msg(logInfo, progname, "unrecognized archive format '%s'; please specify 't' or 'c'\n",
-							opts->formatName);
-				exit(1);
-		}
-	}
-
 	if (g_gpdumpInfo == NULL)
 	{
 		mpp_err_msg(logInfo, progname, "missing required parameter gp-k (backup key)\n");
@@ -610,36 +567,11 @@ main(int argc, char **argv)
 		 * being blocked by locks held by library routines (__tz_convert, for
 		 * example).
 		 */
-		if (bUsePSQL)
-		{
-			pthread_mutex_lock(&g_threadSyncPoint);
-		}
+		pthread_mutex_lock(&g_threadSyncPoint);
 		pthread_create(&g_monitor_tid,
 					   NULL,
 					   monitorThreadProc,
 					   NULL);
-
-		/* Install Ctrl-C interrupt handler, now that we have a connection */
-		if (!bUsePSQL)
-		{
-			act.sa_handler = myHandler;
-			sigemptyset(&act.sa_mask);
-			act.sa_flags = 0;
-			act.sa_flags |= SA_RESTART;
-			if (sigaction(SIGINT, &act, NULL) < 0)
-			{
-				mpp_err_msg(logInfo, progname, "Error trying to set SIGINT interrupt handler\n");
-			}
-
-			act.sa_handler = myHandler;
-			sigemptyset(&act.sa_mask);
-			act.sa_flags = 0;
-			act.sa_flags |= SA_RESTART;
-			if (sigaction(SIGTERM, &act, NULL) < 0)
-			{
-				mpp_err_msg(logInfo, progname, "Error trying to set SIGTERM interrupt handler\n");
-			}
-		}
 
 		pOp = CreateStatusOp(TASK_START, TASK_RC_SUCCESS, SUFFIX_START, TASK_MSG_SUCCESS);
 		if (pOp == NULL)
@@ -650,344 +582,286 @@ main(int argc, char **argv)
 	}
 	/* end cdb additions */
 
-	if (bUsePSQL)
+	/* Install Ctrl-C interrupt handler, now that we have a connection */
+	act.sa_handler = psqlHandler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	act.sa_flags |= SA_RESTART;
+	if (sigaction(SIGINT, &act, NULL) < 0)
 	{
-		/* Install Ctrl-C interrupt handler, now that we have a connection */
-		act.sa_handler = psqlHandler;
-		sigemptyset(&act.sa_mask);
-		act.sa_flags = 0;
-		act.sa_flags |= SA_RESTART;
-		if (sigaction(SIGINT, &act, NULL) < 0)
-		{
-			mpp_err_msg(logInfo, progname, "Error trying to set SIGINT interrupt handler\n");
-		}
+		mpp_err_msg(logInfo, progname, "Error trying to set SIGINT interrupt handler\n");
+	}
 
-		act.sa_handler = psqlHandler;
-		sigemptyset(&act.sa_mask);
-		act.sa_flags = 0;
-		act.sa_flags |= SA_RESTART;
-		if (sigaction(SIGTERM, &act, NULL) < 0)
-		{
-			mpp_err_msg(logInfo, progname, "Error trying to set SIGTERM interrupt handler\n");
-		}
+	act.sa_handler = psqlHandler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	act.sa_flags |= SA_RESTART;
+	if (sigaction(SIGTERM, &act, NULL) < 0)
+	{
+		mpp_err_msg(logInfo, progname, "Error trying to set SIGTERM interrupt handler\n");
+	}
 
-		/* Establish a SIGCHLD handler to catch termination the psql process */
-		act.sa_handler = myChildHandler;
-		sigemptyset(&act.sa_mask);
-		act.sa_flags = 0;
-		act.sa_flags |= SA_RESTART;
-		if (sigaction(SIGCHLD, &act, NULL) < 0)
+	/* Establish a SIGCHLD handler to catch termination the psql process */
+	act.sa_handler = myChildHandler;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	act.sa_flags |= SA_RESTART;
+	if (sigaction(SIGCHLD, &act, NULL) < 0)
+	{
+		mpp_err_msg(logInfo, progname, "Error trying to set SIGCHLD interrupt handler\n");
+		exit(1);
+	}
+
+	mpp_err_msg(logInfo, progname, "Before fork of gp_restore_agent\n");
+
+	newpid = fork();
+	if (newpid < 0)
+	{
+		mpp_err_msg(logError, progname, "Failed to fork\n");
+	}
+	else if (newpid == 0)
+	{
+		char	   *psqlPg = NULL;
+		char	   *filterScript = NULL;
+		char	   *postDataFilterScript = NULL;
+		char	   *catPg = NULL;
+		char	   *gpNBURestorePg = NULL;
+
+		pszOnErrorStop = "-v ON_ERROR_STOP=";
+
+		/* Child Process */
+		/* launch psql, wait for it to finish */
+
+		/* find psql in PATH or PGPATH */
+		if ((psqlPg = testProgramExists("psql")) == NULL)
 		{
-			mpp_err_msg(logInfo, progname, "Error trying to set SIGCHLD interrupt handler\n");
+			mpp_err_msg(logError, progname, "psql not found in path");
 			exit(1);
 		}
 
-		mpp_err_msg(logInfo, progname, "Before fork of gp_restore_agent\n");
-
-		newpid = fork();
-		if (newpid < 0)
+		if ((filterScript = testProgramExists("gprestore_filter.py")) == NULL)
 		{
-			mpp_err_msg(logError, progname, "Failed to fork\n");
+			mpp_err_msg(logError, progname, "Restore filter script not found in path");
+			exit(1);
 		}
-		else if (newpid == 0)
+
+		if ((postDataFilterScript = testProgramExists("gprestore_post_data_filter.py")) == NULL)
 		{
-			char	   *psqlPg = NULL;
-			char	   *filterScript = NULL;
-			char	   *postDataFilterScript = NULL;
-			char	   *catPg = NULL;
-			char	   *gpNBURestorePg = NULL;
+			mpp_err_msg(logError, progname, "Restore post data filter script not found in path");
+			exit(1);
+		}
 
-			pszOnErrorStop = "-v ON_ERROR_STOP=";
+		if ((catPg = testProgramExists("cat")) == NULL)
+		{
+			mpp_err_msg(logError, progname, "cat program not found in path");
+			exit(1);
+		}
 
-			/* Child Process */
-			/* launch psql, wait for it to finish */
+		if ((gpNBURestorePg = testProgramExists("gp_bsa_restore_agent")) == NULL)
+		{
+			mpp_err_msg(logError, progname, "NetBackup restore agent \"gp_bsa_restore_agent\" not found in path");
+			exit(1);
+		}
 
-			/* find psql in PATH or PGPATH */
-			if ((psqlPg = testProgramExists("psql")) == NULL)
+		if (bCompUsed)
+		{
+			g_compPg = formCompressionProgramString(g_compPg);
+			if (!g_compPg)
 			{
-				mpp_err_msg(logError, progname, "psql not found in path");
+				mpp_err_msg(logError, progname, "Could not allocate memory %s:%d", __FILE__, __LINE__);
 				exit(1);
 			}
+		}
 
-			if ((filterScript = testProgramExists("gprestore_filter.py")) == NULL)
+		/* backup file name */
+
+		/* TODO: use findAcceptableBackupFilePathName(...) to look for the file name
+		 *       if user invoked gp_restore_agent directly without supplying a file name.
+		 *       If the agent is invoked from gp_restore_launch, then we are ok.
+		 */
+		if (optind < argc)
+		{
+			char *rawInputFile = argv[optind];
+
+			valueBuf = createPQExpBuffer();
+			inputFileSpec = shellEscape(rawInputFile, valueBuf);
+
+		}
+
+		if (inputFileSpec == NULL || inputFileSpec[0] == '\0')
+		{
+			mpp_err_msg(logError, progname, "dump file path is empty");
+			exit(1);
+		}
+
+		if (postDataSchemaOnly)
+		{
+			if (strstr(inputFileSpec,"_post_data") == NULL)
 			{
-				mpp_err_msg(logError, progname, "Restore filter script not found in path");
-				exit(1);
+				fprintf(stderr,"Adding _post_data to the end of the file name?\n");
+				char * newFS = malloc(strlen(inputFileSpec) + strlen("_post_data") + 1);
+				strcpy(newFS, inputFileSpec);
+				strcat(newFS, "_post_data");
+				inputFileSpec = newFS;
 			}
-
-			if ((postDataFilterScript = testProgramExists("gprestore_post_data_filter.py")) == NULL)
-			{
-				mpp_err_msg(logError, progname, "Restore post data filter script not found in path");
-				exit(1);
-			}
-
-			if ((catPg = testProgramExists("cat")) == NULL)
-			{
-				mpp_err_msg(logError, progname, "cat program not found in path");
-				exit(1);
-			}
-
-			if ((gpNBURestorePg = testProgramExists("gp_bsa_restore_agent")) == NULL)
-			{
-				mpp_err_msg(logError, progname, "NetBackup restore agent \"gp_bsa_restore_agent\" not found in path");
-				exit(1);
-			}
-
-			if (bCompUsed)
-			{
-				g_compPg = formCompressionProgramString(g_compPg);
-				if (!g_compPg)
-				{
-					mpp_err_msg(logError, progname, "Could not allocate memory %s:%d", __FILE__, __LINE__);
-					exit(1);
-				}
-			}
-
-			/* backup file name */
-
-			/* TODO: use findAcceptableBackupFilePathName(...) to look for the file name
-			 *       if user invoked gp_restore_agent directly without supplying a file name.
-			 *       If the agent is invoked from gp_restore_launch, then we are ok.
-			 */
-			if (optind < argc)
-			{
-				char *rawInputFile = argv[optind];
-
-				valueBuf = createPQExpBuffer();
-				inputFileSpec = shellEscape(rawInputFile, valueBuf);
-
-			}
-
-			if (inputFileSpec == NULL || inputFileSpec[0] == '\0')
-			{
-				mpp_err_msg(logError, progname, "dump file path is empty");
-				exit(1);
-			}
-
-			if (postDataSchemaOnly)
-			{
-				if (strstr(inputFileSpec,"_post_data") == NULL)
-				{
-					fprintf(stderr,"Adding _post_data to the end of the file name?\n");
-					char * newFS = malloc(strlen(inputFileSpec) + strlen("_post_data") + 1);
-					strcpy(newFS, inputFileSpec);
-					strcat(newFS, "_post_data");
-					inputFileSpec = newFS;
-				}
-			}
+		}
 
 #ifdef USE_DDBOOST
-			/* find if gpddboost is present in PATH or PGPATH */
-			if ((ddboostPg = testProgramExists("gpddboost")) == NULL)
-			{
-				mpp_err_msg(logError, progname, "gpddboost not found in path\n");
-			}
+		/* find if gpddboost is present in PATH or PGPATH */
+		if ((ddboostPg = testProgramExists("gpddboost")) == NULL)
+		{
+			mpp_err_msg(logError, progname, "gpddboost not found in path\n");
+		}
 #endif
 
-			/* add all the psql args to the command string */
-			/* Its too error prone to pre-calc the exact command line length
-			   just allocate a chunk of memory that is not likely to be exceeded. */
+		/* add all the psql args to the command string */
+		/* Its too error prone to pre-calc the exact command line length
+		   just allocate a chunk of memory that is not likely to be exceeded. */
 
-			pszCmdLine = (char *) calloc(MAX_COMMANDLINE_LEN, 1);
+		pszCmdLine = (char *) calloc(MAX_COMMANDLINE_LEN, 1);
 #ifdef USE_DDBOOST
-			if (dd_boost_enabled)
-			{
-				formDDBoostPsqlCommandLine(&pszCmdLine, bCompUsed, ddboostPg, g_compPg,
-						ddp_file_name, dd_boost_buf_size,
-						filterScript, table_filter_file,
-						g_role, psqlPg, postDataSchemaOnly);
-			}
-			else
-			{
-#endif
-				if(postDataSchemaOnly)
-				{
-					formPostDataSchemaOnlyPsqlCommandLine(&pszCmdLine, inputFileSpec, bCompUsed, g_compPg,
-							postDataFilterScript, table_filter_file, psqlPg, catPg,
-							gpNBURestorePg, netbackup_service_host, netbackup_block_size);
-				}
-				else
-				{
-					/* Non ddboost restore */
-					formSegmentPsqlCommandLine(&pszCmdLine, inputFileSpec, bCompUsed, g_compPg,
-							filterScript, table_filter_file,
-							g_role, psqlPg, catPg,
-							gpNBURestorePg, netbackup_service_host, netbackup_block_size);
-				}
-#ifdef USE_DDBOOST
-			}
-#endif
-
-			strcat(pszCmdLine, " -h ");
-			strcat(pszCmdLine, g_targetHost);
-			strcat(pszCmdLine, " -p ");
-			strcat(pszCmdLine, g_targetPort);
-			strcat(pszCmdLine, " -U ");
-			strcat(pszCmdLine, SegDB.pszDBUser);
-			strcat(pszCmdLine, " -d ");
-			strcat(pszCmdLine, SegDB.pszDBName);
-			strcat(pszCmdLine, " -a ");
-
-			if (g_bOnErrorStop)
-			{
-				strcat(pszCmdLine, " ");
-				strcat(pszCmdLine, pszOnErrorStop);
-			}
-
-			if (g_role == ROLE_SEGDB)
-				putenv("PGOPTIONS=-c gp_session_role=UTILITY");
-			if (g_role == ROLE_MASTER)
-				putenv("PGOPTIONS=-c gp_session_role=DISPATCH");
-
-			mpp_err_msg(logInfo, progname, "Command Line: %s\n", pszCmdLine);
-
-			/*
-			 * Make this new process the process group leader of the children
-			 * being launched.	This allows a signal to be sent to all
-			 * processes in the group simultaneously.
-			 */
-			setpgid(newpid, newpid);
-
-			execl("/bin/sh", "sh", "-c", pszCmdLine, NULL);
-
-			mpp_err_msg(logInfo, progname, "Error in gp_restore_agent - execl of %s with Command Line %s failed",
-						"/bin/sh", pszCmdLine);
-
-			_exit(127);
+		if (dd_boost_enabled)
+		{
+			formDDBoostPsqlCommandLine(&pszCmdLine, bCompUsed, ddboostPg, g_compPg,
+					ddp_file_name, dd_boost_buf_size,
+					filterScript, table_filter_file,
+					g_role, psqlPg, postDataSchemaOnly);
 		}
 		else
 		{
-			/*
-			 * Make the new child process the process group leader of the
-			 * children being launched.  This allows a signal to be sent to
-			 * all processes in the group simultaneously.
-			 *
-			 * This is a redundant call to avoid a race condition suggested by
-			 * Stevens.
-			 */
-			setpgid(newpid, newpid);
-
-			/* Allow the monitor thread to begin execution. */
-			pthread_mutex_unlock(&g_threadSyncPoint);
-
-			/* Parent .  Lets sleep and wake up until we see it's done */
-			while (!bPSQLDone)
+#endif
+			if(postDataSchemaOnly)
 			{
-				sleep(5);
-			}
-
-			/*
-			 * If this process has been sent a SIGINT or SIGTERM, we need to
-			 * send a SIGINT to the psql process GROUP.
-			 */
-			if (bKillPsql)
-			{
-				mpp_err_msg(logInfo, progname, "Terminating psql due to signal.\n");
-				kill(-newpid, SIGINT);
-			}
-
-			waitpid(newpid, &status, 0);
-			if (WIFEXITED(status))
-			{
-				rc = WEXITSTATUS(status);
-				if (rc == 0)
-				{
-					mpp_err_msg(logInfo, progname, "psql finished with rc %d.\n", rc);
-					/* Normal completion falls to end of routine. */
-				}
-				else
-				{
-					if (rc >= 128)
-					{
-						/*
-						 * If the exit code has the 128-bit set, the exit code
-						 * represents a shell exited by signal where the
-						 * signal number is exitCode - 128.
-						 */
-						rc -= 128;
-						pszErrorMsg = MakeString("psql finished abnormally with signal number %d.\n", rc);
-					}
-					else
-					{
-						pszErrorMsg = MakeString("psql finished abnormally with return code %d.\n", rc);
-					}
-					makeSureMonitorThreadEnds(TASK_RC_FAILURE, pszErrorMsg);
-					free(pszErrorMsg);
-					exit_code = 2;
-				}
-			}
-			else if (WIFSIGNALED(status))
-			{
-				pszErrorMsg = MakeString("psql finished abnormally with signal number %d.\n", WTERMSIG(status));
-				mpp_err_msg(logError, progname, pszErrorMsg);
-				makeSureMonitorThreadEnds(TASK_RC_FAILURE, pszErrorMsg);
-				free(pszErrorMsg);
-				exit_code = 2;
+				formPostDataSchemaOnlyPsqlCommandLine(&pszCmdLine, inputFileSpec, bCompUsed, g_compPg,
+						postDataFilterScript, table_filter_file, psqlPg, catPg,
+						gpNBURestorePg, netbackup_service_host, netbackup_block_size);
 			}
 			else
 			{
-				pszErrorMsg = MakeString("psql crashed or finished badly; status=%#x.\n", status);
-				mpp_err_msg(logError, progname, pszErrorMsg);
-				makeSureMonitorThreadEnds(TASK_RC_FAILURE, pszErrorMsg);
-				free(pszErrorMsg);
-				exit_code = 2;
+				/* Non ddboost restore */
+				formSegmentPsqlCommandLine(&pszCmdLine, inputFileSpec, bCompUsed, g_compPg,
+						filterScript, table_filter_file,
+						g_role, psqlPg, catPg,
+						gpNBURestorePg, netbackup_service_host, netbackup_block_size);
 			}
+#ifdef USE_DDBOOST
 		}
+#endif
+
+		strcat(pszCmdLine, " -h ");
+		strcat(pszCmdLine, g_targetHost);
+		strcat(pszCmdLine, " -p ");
+		strcat(pszCmdLine, g_targetPort);
+		strcat(pszCmdLine, " -U ");
+		strcat(pszCmdLine, SegDB.pszDBUser);
+		strcat(pszCmdLine, " -d ");
+		strcat(pszCmdLine, SegDB.pszDBName);
+		strcat(pszCmdLine, " -a ");
+
+		if (g_bOnErrorStop)
+		{
+			strcat(pszCmdLine, " ");
+			strcat(pszCmdLine, pszOnErrorStop);
+		}
+
+		if (g_role == ROLE_SEGDB)
+			putenv("PGOPTIONS=-c gp_session_role=UTILITY");
+		if (g_role == ROLE_MASTER)
+			putenv("PGOPTIONS=-c gp_session_role=DISPATCH");
+
+		mpp_err_msg(logInfo, progname, "Command Line: %s\n", pszCmdLine);
+
+		/*
+		 * Make this new process the process group leader of the children
+		 * being launched.	This allows a signal to be sent to all
+		 * processes in the group simultaneously.
+		 */
+		setpgid(newpid, newpid);
+
+		execl("/bin/sh", "sh", "-c", pszCmdLine, NULL);
+
+		mpp_err_msg(logInfo, progname, "Error in gp_restore_agent - execl of %s with Command Line %s failed",
+					"/bin/sh", pszCmdLine);
+
+		_exit(127);
 	}
 	else
 	{
-		AH = OpenArchive(inputFileSpec, opts->format);
-
-		/* Let the archiver know how noisy to be */
-		AH->verbose = opts->verbose;
-
 		/*
-	     * Whether to keep submitting sql commands as "pg_restore ... | psql ... "
+		 * Make the new child process the process group leader of the
+		 * children being launched.  This allows a signal to be sent to
+		 * all processes in the group simultaneously.
+		 *
+		 * This is a redundant call to avoid a race condition suggested by
+		 * Stevens.
 		 */
-		AH->exit_on_error = opts->exit_on_error;
+		setpgid(newpid, newpid);
 
-		if (opts->tocFile)
-			SortTocFromFile(AH, opts);
+		/* Allow the monitor thread to begin execution. */
+		pthread_mutex_unlock(&g_threadSyncPoint);
 
-		if (opts->tocSummary)
-			PrintTOCSummary(AH, opts);
-		else
+		/* Parent .  Lets sleep and wake up until we see it's done */
+		while (!bPSQLDone)
 		{
-			pAH = (ArchiveHandle *) AH;
-
-			if (opts->useDB)
-			{
-				/* check for version mismatch */
-				if (pAH->version < K_VERS_1_3)
-					die_horribly(NULL, NULL, "direct database connections are not supported in pre-1.3 archives\n");
-
-				pAH->connection = g_conn;
-				/* XXX Should get this from the archive */
-				AH->minRemoteVersion = 070100;
-				AH->maxRemoteVersion = 999999;
-
-				_check_database_version(pAH);
-			}
-
-			RestoreArchive(AH, opts);
-
-			/*
-			 * The following is necessary when the -C option is used.  A new
-			 * connection is gotten to the database within RestoreArchive
-			 */
-			if (pAH->connection != g_conn)
-				g_conn = pAH->connection;
+			sleep(5);
 		}
 
-		/* done, print a summary of ignored errors */
-		if (AH->n_errors)
-			fprintf(stderr, _("WARNING: errors ignored on restore: %d\n"),
-					AH->n_errors);
+		/*
+		 * If this process has been sent a SIGINT or SIGTERM, we need to
+		 * send a SIGINT to the psql process GROUP.
+		 */
+		if (bKillPsql)
+		{
+			mpp_err_msg(logInfo, progname, "Terminating psql due to signal.\n");
+			kill(-newpid, SIGINT);
+		}
 
-		/* AH may be freed in CloseArchive? */
-		exit_code = AH->n_errors ? 1 : 0;
-
-		CloseArchive(AH);
+		waitpid(newpid, &status, 0);
+		if (WIFEXITED(status))
+		{
+			rc = WEXITSTATUS(status);
+			if (rc == 0)
+			{
+				mpp_err_msg(logInfo, progname, "psql finished with rc %d.\n", rc);
+				/* Normal completion falls to end of routine. */
+			}
+			else
+			{
+				if (rc >= 128)
+				{
+					/*
+					 * If the exit code has the 128-bit set, the exit code
+					 * represents a shell exited by signal where the
+					 * signal number is exitCode - 128.
+					 */
+					rc -= 128;
+					pszErrorMsg = MakeString("psql finished abnormally with signal number %d.\n", rc);
+				}
+				else
+				{
+					pszErrorMsg = MakeString("psql finished abnormally with return code %d.\n", rc);
+				}
+				makeSureMonitorThreadEnds(TASK_RC_FAILURE, pszErrorMsg);
+				free(pszErrorMsg);
+				exit_code = 2;
+			}
+		}
+		else if (WIFSIGNALED(status))
+		{
+			pszErrorMsg = MakeString("psql finished abnormally with signal number %d.\n", WTERMSIG(status));
+			mpp_err_msg(logError, progname, pszErrorMsg);
+			makeSureMonitorThreadEnds(TASK_RC_FAILURE, pszErrorMsg);
+			free(pszErrorMsg);
+			exit_code = 2;
+		}
+		else
+		{
+			pszErrorMsg = MakeString("psql crashed or finished badly; status=%#x.\n", status);
+			mpp_err_msg(logError, progname, pszErrorMsg);
+			makeSureMonitorThreadEnds(TASK_RC_FAILURE, pszErrorMsg);
+			free(pszErrorMsg);
+			exit_code = 2;
+		}
 	}
 
 #ifdef USE_DDBOOST
@@ -1028,7 +902,6 @@ usage(const char *progname)
 	printf(_("\nGeneral options:\n"));
 	printf(_("  -d, --dbname=NAME        connect to database name\n"));
 	printf(_("  -f, --file=FILENAME      output file name\n"));
-	printf(_("  -F, --format=c|t         specify backup file format\n"));
 	printf(_("  -i, --ignore-version     proceed even when server version mismatches\n"));
 	printf(_("  -l, --list               print summarized TOC of the archive\n"));
 	printf(_("  -v, --verbose            verbose mode\n"));
@@ -1274,64 +1147,6 @@ monitorThreadProc(void *arg __attribute__((unused)))
 	return NULL;
 }
 
-
-/*
- * my_handler: This function is the signal handler for both SIGINT and SIGTERM signals.
- * It checks to see whether there is an active transaction running on the g_conn connection
- * If so, it issues a PQrequestCancel.	This will cause the current statement to fail, which will
- * cause gp_dump to terminate gracefully.
- * If there's no active transaction, it does nothing.
- * This is set up to always run in the context of the main thread.
- */
-void
-myHandler(int signo)
-{
-	if (g_conn != NULL && PQtransactionStatus(g_conn) == PQTRANS_ACTIVE)
-	{
-		mpp_err_msg(logInfo, progname, "in my_handler before PQrequestCancel\n");
-		PQrequestCancel(g_conn);
-	}
-	else
-	{
-		mpp_err_msg(logInfo, progname, "in my_handler not in active transaction\n");
-	}
-}
-
-/*
- * _check_database_version: This was copied here from pg_backup_db.c because it's declared static there.
- * We need to call it directly because in pg_dump.c it's called from ConnectDatabase
- * which we are not using.
- */
-void
-_check_database_version(ArchiveHandle *AH)
-{
-	int			myversion;
-	const char *remoteversion_str;
-	int			remoteversion;
-
-	myversion = parse_version(PG_VERSION);
-	if (myversion < 0)
-		die_horribly(AH, NULL, "could not parse version string \"%s\"\n", PG_VERSION);
-
-	remoteversion_str = PQparameterStatus(AH->connection, "server_version");
-	if (!remoteversion_str)
-		die_horribly(AH, NULL, "could not get server_version from libpq\n");
-
-	remoteversion = parse_version(remoteversion_str);
-	if (remoteversion < 0)
-		die_horribly(AH, NULL, "could not parse version string \"%s\"\n", remoteversion_str);
-
-	AH->public.remoteVersion = remoteversion;
-
-	if (myversion != remoteversion
-		&& (remoteversion < AH->public.minRemoteVersion ||
-			remoteversion > AH->public.maxRemoteVersion))
-	{
-		mpp_err_msg(logWarn, progname, "server version: %s; %s version: %s\n",
-					remoteversion_str, progname, PG_VERSION);
-		die_horribly(AH, NULL, "aborting because of version mismatch\n");
-	}
-}
 
 /*
  * execMPPCatalogFunction:

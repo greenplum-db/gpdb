@@ -2105,43 +2105,6 @@ _tocEntryRequired(TocEntry *te, RestoreOptions *ropt, bool include_acls)
 			return 0;
 	}
 
-	if (ropt->selTypes)
-	{
-		if (strcmp(te->desc, "TABLE") == 0 ||
-			strcmp(te->desc, "EXTNRNAL TABLE") == 0 ||
-			strcmp(te->desc, "FOREIGN TABLE") == 0 ||
-			strcmp(te->desc, "TABLE DATA") == 0)
-		{
-			if (!ropt->selTable)
-				return 0;
-			if (ropt->tableNames && strcmp(ropt->tableNames, te->tag) != 0)
-				return 0;
-		}
-		else if (strcmp(te->desc, "INDEX") == 0)
-		{
-			if (!ropt->selIndex)
-				return 0;
-			if (ropt->indexNames && strcmp(ropt->indexNames, te->tag) != 0)
-				return 0;
-		}
-		else if (strcmp(te->desc, "FUNCTION") == 0)
-		{
-			if (!ropt->selFunction)
-				return 0;
-			if (ropt->functionNames && strcmp(ropt->functionNames, te->tag) != 0)
-				return 0;
-		}
-		else if (strcmp(te->desc, "TRIGGER") == 0)
-		{
-			if (!ropt->selTrigger)
-				return 0;
-			if (ropt->triggerNames && strcmp(ropt->triggerNames, te->tag) != 0)
-				return 0;
-		}
-		else
-			return 0;
-	}
-
 	/*
 	 * Check if we had a dataDumper. Indicates if the entry is schema or data
 	 */
