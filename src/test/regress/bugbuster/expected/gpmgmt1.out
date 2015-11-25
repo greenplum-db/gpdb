@@ -9,5 +9,4 @@
 \! gpcheckperf -h localhost -d /tmp/  -r s  &>  /dev/null
 \! gpstate -v &> /dev/null
 \! gpstate -b &> /dev/null
-\! gpstate -f &> /dev/null
 \! gpstate -e &> /dev/null
