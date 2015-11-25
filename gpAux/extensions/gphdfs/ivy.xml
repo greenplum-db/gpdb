@@ -42,13 +42,13 @@
       <dependency org="apache" name="parquet-format" rev="2.3.0-incubating" conf="hadoop2->master"/>
 
       <!-- dependency for UT -->
-      <dependency org="apache" name="hadoop-client" rev="2.0.5-alpha" conf="ut->*"/>
-      <dependency org="apache" name="hadoop-common" rev="2.0.5-alpha" conf="ut->*">
+      <dependency org="org.apache.hadoop" name="hadoop-client" rev="2.4.0" conf="ut->*"/>
+      <dependency org="org.apache.hadoop" name="hadoop-common" rev="2.4.0" conf="ut->*">
         <artifact name="hadoop-common" type="jar"/>
         <artifact name="hadoop-common" type="test-jar" ext="jar" e:classifier="tests" />
       </dependency>
 
-      <dependency org="apache" name="hadoop-hdfs" rev="2.0.5-alpha" conf="ut->*">
+      <dependency org="org.apache.hadoop" name="hadoop-hdfs" rev="2.4.0" conf="ut->*">
           <artifact name="hadoop-hdfs" type="jar"/>
           <artifact name="hadoop-hdfs" type="test-jar" ext="jar" e:classifier="tests" />
       </dependency>
@@ -60,11 +60,12 @@
       <dependency org="apache" name="avro" rev="1.7.7" conf="ut->*"/>
       <dependency org="apache" name="avro-mapred" rev="1.7.7" conf="ut->*"/>
       <dependency org="codehaus" name="jackson-core-asl" rev="1.9.3" conf="ut->*"/>
+
       <dependency org="apache" name="parquet-column"        rev="1.7.0"               conf="ut->*"/>
       <dependency org="apache" name="parquet-common"        rev="1.7.0"               conf="ut->*"/>
       <dependency org="apache" name="parquet-hadoop"        rev="1.7.0"               conf="ut->*"/>
       <dependency org="apache" name="parquet-encoding"        rev="1.7.0"               conf="ut->*"/>
       <dependency org="apache" name="parquet-generator"        rev="1.7.0"               conf="ut->*"/>
       <dependency org="apache" name="parquet-format" rev="2.3.0-incubating" conf="ut->*"/>
-    </dependencies>
+  </dependencies>
 </ivy-module>

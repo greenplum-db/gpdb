@@ -2,6 +2,7 @@ package com.emc.greenplum.gpdb.hadoop.formathandler;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -68,8 +69,10 @@ public class AvroFileReader {
 	DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
 	TransformerFactory tf = TransformerFactory.newInstance();
 
-	public AvroFileReader(Configuration conf, int segid, int totalseg,
-			String inputpath, List<ColumnSchema> tableSchema, String schemaFile, boolean schemaComplete, boolean autoSelect) {
+	OutputStream out = System.out;
+
+	public AvroFileReader(Configuration conf, int segid, int totalseg,String inputpath, List<ColumnSchema> tableSchema,
+			String schemaFile, boolean schemaComplete, boolean autoSelect, OutputStream out) {
 		this.conf = conf;
 		this.segid = segid;
 		this.totalseg = totalseg;
@@ -78,6 +81,7 @@ public class AvroFileReader {
 		this.schemaFile = schemaFile;
 		this.schemaComplete = schemaComplete;
 		this.autoSelect = autoSelect;
+		this.out = out;
 	}
 
 	/**
@@ -111,7 +115,7 @@ public class AvroFileReader {
 		GpdbAvroInputFormat.setInputPaths(jconf, files);
 		InputSplit[] splits = (new GpdbAvroInputFormat()).getSplits(jconf, totalseg);
 
-		DataOutputStream dos = new DataOutputStream(System.out);
+		DataOutputStream dos = new DataOutputStream(out);
 
 		AvroWrapper<GenericRecord> avroWrapper = new AvroWrapper<GenericRecord>();
 

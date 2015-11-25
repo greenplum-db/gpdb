@@ -159,11 +159,11 @@ public class HDFSReader
 			readTextFormat();
 		}
 		else if (isAvroFormat) {
-			AvroFileReader avroReader = new AvroFileReader(conf, segid, totalseg, inputpath, tableSchema, schemaFile, schemaComplete, autoSelect);
+			AvroFileReader avroReader = new AvroFileReader(conf, segid, totalseg, inputpath, tableSchema, schemaFile, schemaComplete, autoSelect, System.out);
 			avroReader.readAvroFormat();
 		}
 		else if (isParquetFormat) {
-			GpdbParquetFileReader parquetReader = new GpdbParquetFileReader(conf, segid, totalseg, inputpath, tableSchema, schemaComplete, autoSelect);
+			GpdbParquetFileReader parquetReader = new GpdbParquetFileReader(conf, segid, totalseg, inputpath, tableSchema, schemaComplete, autoSelect, System.out);
 			parquetReader.readParquetFormat();
 		}
 		else {
