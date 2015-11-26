@@ -3,6 +3,8 @@ package com.emc.greenplum.gpdb.hadoop.formathandler;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -36,6 +38,7 @@ import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.Type;
+import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName;
 import org.apache.parquet.schema.Type.Repetition;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
@@ -47,6 +50,8 @@ import com.emc.greenplum.gpdb.hadoop.io.GPDBWritable;
 import com.emc.greenplum.gpdb.hdfsconnector.ColumnSchema;
 
 public class GpdbParquetFileReader {
+	private static final String HIVE_SCHEMA_NAME = "hive_schema";
+
 	boolean DATA_TIME_ANNOTATION_ON = false;
 
 	Configuration conf;
@@ -63,6 +68,8 @@ public class GpdbParquetFileReader {
 	boolean schemaComplete = false;
 
 	boolean autoSelect = false;
+
+	boolean isHiveFile = false;
 
 	DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
 	TransformerFactory tf = TransformerFactory.newInstance();
@@ -103,7 +110,7 @@ public class GpdbParquetFileReader {
 				schema = metadata.getFileMetaData().getSchema();
 				columnDescriptors = schema.getColumns();
 				generateTypeArray(schema.getFields());
-
+				isHiveFile = checkWhetherHive(schema);
 				if (tableSchemas != null) {
 					checkTypeMisMatch(schema, tableSchemas);
 				}
@@ -149,6 +156,13 @@ public class GpdbParquetFileReader {
 		}
 
 		dos.close();
+	}
+
+	private boolean checkWhetherHive(MessageType schema) {
+		if (schema.getName() != null && schema.getName().equals(HIVE_SCHEMA_NAME)) {
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -321,8 +335,17 @@ public class GpdbParquetFileReader {
 			writable.setDouble(index, g.getDouble(index, 0));
 			break;
 
-		case INT96:
-		case FIXED_LEN_BYTE_ARRAY://fixed_len_byte_array, decimal, interval
+		case INT96://timestamp in hive
+			writable.setBytes(index, g.getInt96(index, 0).getBytes());
+			break;
+
+		case FIXED_LEN_BYTE_ARRAY://fixed_len_byte_array, decimal, interval, decimal in hive
+			if (isHiveFile && oType == OriginalType.DECIMAL) {
+				int scale = type.asPrimitiveType().getDecimalMetadata().getScale();
+				BigDecimal bd = new BigDecimal(new BigInteger(g.getBinary(index, 0).getBytes()), scale);
+				writable.setString(index, bd.toString());
+				break;
+			}
 		case BINARY://utf8, json, bson, decimal
 //			although parquet schema is bytea, but we will see whether user wants a 'text' field
 			if (oType == OriginalType.UTF8 || oType == OriginalType.JSON || oType == OriginalType.DECIMAL
@@ -476,6 +499,9 @@ public class GpdbParquetFileReader {
 			break;
 
 		case INT96:
+			FormatHandlerUtil.byteArray2OctString(g.getInt96(fieldIndex, elementIndex).getBytes(), sb);
+			break;
+
 		case FIXED_LEN_BYTE_ARRAY:
 			if (oType == OriginalType.INTERVAL && DATA_TIME_ANNOTATION_ON) {
 				sb.append( FormatHandlerUtil.buildParquetInterval(g.getBinary(fieldIndex, elementIndex).getBytes()) );
