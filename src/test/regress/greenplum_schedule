@@ -26,6 +26,9 @@ test: dispatch
 # are no other partitioned tables present in the database, so it cannot run
 # in parallel with tests that use partitions.
 test: partition appendonly
+# 'partition_locking' gets confused if other backends run concurrently and
+# hold locks.
+test: partition_locking
 test: vacuum_gp
 
 test: column_compression rangefuncs_cdb gp_hashagg gp_dqa external_table gpdiffcheck gptokencheck information_schema subselect_gp indexjoin distributed_transactions olap_group olap_window_seq with_clause sequence_gp as_alias regex_gp tidscan
