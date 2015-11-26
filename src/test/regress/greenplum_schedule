@@ -21,6 +21,10 @@ test: filter gpctas gpdist matrix toast sublink sirv_functions table_functions o
 
 test: dispatch
 
+test: gpdiffcheck gptokencheck information_schema gp_hashagg sequence_gp tidscan
+
+test: rangefuncs_cdb gp_dqa external_table subselect_gp indexjoin distributed_transactions olap_group olap_window_seq with_clause as_alias regex_gp partition1
+
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests. Unfortunately, 'partition' also assumes that there
 # are no other partitioned tables present in the database, so it cannot run
@@ -30,8 +34,6 @@ test: partition appendonly
 # hold locks.
 test: partition_locking
 test: vacuum_gp
-
-test: column_compression rangefuncs_cdb gp_hashagg gp_dqa external_table gpdiffcheck gptokencheck information_schema subselect_gp indexjoin distributed_transactions olap_group olap_window_seq with_clause sequence_gp as_alias regex_gp tidscan
 
 # FIXME: Temporarily disabled, because it trips an assertion. It's probably
 # harmless, but need to investigate and fix. Also, the number of errors put
@@ -50,7 +52,7 @@ test: column_compression rangefuncs_cdb gp_hashagg gp_dqa external_table gpdiffc
 #test: gpic_bigtup
 
 ignore: gp_portal_error
-test: eagerfree mapred gpparams tidycat aocs gp_optimizer co_nestloop_idxscan  gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic
+test: column_compression eagerfree mapred gpparams tidycat aocs gp_optimizer co_nestloop_idxscan  gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic
 ignore: icudp_full
 ignore: gp_delete_as_trunc
 
