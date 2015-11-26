@@ -692,43 +692,6 @@ partitions 3;
 
 drop table ggg cascade;
 
-create table ggg (a char(1), b char(2), d char(3))
-distributed by (a)
-partition by hash (b)
-(
-partition aa (subpartition cc, subpartition dd),
-partition bb (subpartition cc, subpartition dd)
-);
-
-drop table ggg cascade;
-
-create table ggg (a char(1), b char(2), d char(3))
-distributed by (a)
-partition by hash (b)
-subpartition by hash (d) 
-(
-partition aa (subpartition cc, subpartition dd),
-partition bb (subpartition cc, subpartition dd)
-);
-
-drop table ggg cascade;
-
-create table fff (a char(1), b char(2), d char(3)) distributed by (a)
-partition by list (b) (partition aa values ('2'));
-
-drop table fff cascade;
-
-create table ggg (a char(1), b numeric, d numeric)
-distributed by (a)
-partition by range (b,d)
-(
-partition aa start (2007,1) end (2008,2),
-partition bb start (2008,2) end (2009,3)
-);
-
-
-drop table ggg cascade;
-
 create table ggg (a char(1), b date, d char(3), e numeric)
 distributed by (a)
 partition by range (b)
@@ -744,16 +707,6 @@ start  (date '2008-01-01')
 end (date '2009-01-01') 
        (subpartition dd values (1,2,3), subpartition ee values (4,5,6))
 
-);
-
-drop table ggg cascade;
-
-create table ggg (a char(1), b date, d char(3)) 
-distributed by (a)
-partition by range (b)
-(
-partition bb start (date '2008-01-01') end (date '2009-01-01'),
-partition aa start (date '2007-01-01') end (date '2006-01-01')
 );
 
 drop table ggg cascade;
