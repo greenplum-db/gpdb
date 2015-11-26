@@ -959,7 +959,7 @@ shareinput_writer_waitdone(void *ctxt, int share_id, int nsharer_xslice)
 		 */
 		if (IsAbortInProgress())
 		{
-			elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): skip to wait remaining %d done notifications since transaction is aborting",
+			elog(DEBUG1, "SISC WRITER (shareid=%d, slice=%d): do not wait for data-reading-done notification from readers, if the transaction is aborting",
 				 share_id, currentSliceId, ack_needed);
 			break;
 		}
