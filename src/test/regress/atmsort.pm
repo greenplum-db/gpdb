@@ -20,8 +20,11 @@ use Getopt::Long;
 #use Data::Dumper; # only used by commented-out debug statements.
 use strict;
 use warnings;
-
 use File::Spec;
+
+# Load explain.pm from the same directory where atmsort.pm is.
+use FindBin;
+use explain "$FindBin::Bin";
 
 # Calls pod2usage, but lodas the module first.
 sub lazy_pod2usage
@@ -120,27 +123,13 @@ sub atmsort_init
 
     $glob_ignore_whitespace   = $ignore_headers; # XXX XXX: for now
 
-	# ENGINF-200: allow multiple init files
     @glob_init = @{$args{INIT_FILES}};
 
 	$glob_orderwarn           = $args{ORDER_WARN};
     $glob_verbose      		  = $args{VERBOSE};
 
-    init_explain_pl();
     init_match_subs();
     init_matchignores();
-}
-
-our $EXPLAIN_PL;
-
-# assume explain.pl is in the same directory
-sub init_explain_pl
-{
-    my $plname = $0;
-    my @foo = File::Spec->splitpath(File::Spec->rel2abs($plname));
-    return 0 unless (scalar(@foo));
-    pop @foo;
-    $EXPLAIN_PL = File::Spec->catfile( @foo, "explain.pl");
 }
 
 my $glob_match_then_sub_fnlist;
@@ -552,7 +541,6 @@ sub format_explain
     my ($outarr, $directive) = @_;
     my $prefix = "";
 	my $xopt = "perl"; # normal case
-	my $psuffix = "";
 
     $directive = {} unless (defined($directive));
     
@@ -561,72 +549,71 @@ sub format_explain
     $prefix = "GP_IGNORE:"
          if (exists($directive->{ignore})) || ($glob_ignore_plans);
 
-    {
-        use IO::File;
-        use POSIX qw(tmpnam);
+	my @tmp_lines;
+	my $sort = 0;
 
-        my ($tmpnam, $tmpfh);
-
-        for (;;) {
-            $tmpnam = tmpnam();
-            sysopen($tmpfh, $tmpnam, O_RDWR | O_CREAT | O_EXCL) && last;
-        }
-
-        if (scalar(@{$outarr}))
-        {
-            print $tmpfh "QUERY PLAN\n";
-            # explain.pl expects a long string of dashes
-            print $tmpfh "-" x 71, "\n";
-            for my $lin (@{$outarr})
-            {
-                print $tmpfh $lin;
-            }
-            print $tmpfh "(111 rows)\n";
-        }
-
-        close $tmpfh;
+	if (scalar(@{$outarr}))
+	{
+		@tmp_lines = (
+			"QUERY PLAN\n",
+			("-" x 71) . "\n",
+			@{$outarr},
+			"(111 rows)\n"
+			);
+	}
 		
-        if (exists($directive->{explain})
-			&& ($directive->{explain} =~ m/operator/i))
+	if (exists($directive->{explain})
+		&& ($directive->{explain} =~ m/operator/i))
+	{
+		$xopt = "operator";
+		$sort = 1;
+	}
+
+	my $xplan = '';
+
+	open(my $xplan_fh, ">", \$xplan)
+		or die "Can't open in-memory file handle to variable: $!";
+
+	explain::explain_init(OPERATION => $xopt,
+				  PRUNE => 'heavily',
+				  INPUT_LINES => \@tmp_lines,
+				  OUTPUT_FH => $xplan_fh);
+
+	explain::run();
+
+	close $xplan_fh;
+
+	my @lines = split /\n/, $xplan;
+
+	if ($sort && scalar(@lines) > 0)
+	{
+		@lines = sort @lines;
+	}
+
+	# Apply prefix to each line, if requested.
+	if (defined($prefix) && length($prefix))
+	{
+		my @prefixedlines;
+	
+		foreach my $line (@lines)
 		{
-			$xopt = "operator";
-			$psuffix = " | sort ";
+			$line = $prefix . $line;
 		}
+	}
 
-		my $plantxt = "$EXPLAIN_PL -opt $xopt -prune heavily < $tmpnam $psuffix";
+	# Put back newlines
+	foreach my $line (@lines)
+	{
+		$line .= "\n";
+	}
 
-                
-		my $xplan = `$plantxt`;
+	# Print it
+	foreach my $line (@lines)
+	{
+		print $atmsort_outfh $line;
+	}
 
-
-        unlink $tmpnam;
-
-        if (defined($prefix) && length($prefix))
-        {
-            $xplan =~ s/^/$prefix/gm;
-        }
-
-
-		print $atmsort_outfh $xplan;
-
-		# for "force_explain operator", replace the outarr with the
-		# processed output (for equivalence regions )
-        if (scalar(@{$outarr}) 
-			&& exists($directive->{explain})
-			&& ($directive->{explain} =~ m/operator/i))
-		{
-			my @foo = split (/\n/, $xplan);
-
-			# gross -- need to add the carriage return back!
-			for my $ii (0..(scalar(@foo)-1))
-			{
-				$foo[$ii] .= "\n";
-			}
-
-			return  \@foo;
-		}
-
-    }
+	return  \@lines;
 }    
 
 # reformat the query output according to the directive hash
@@ -1196,7 +1183,7 @@ EOF_formatfix
     # indenting due to comment char in Q expression...
 
     $verzion = $0 . " version " . $verzion;
-    print "GP_IGNORE: formatted by $verzion\n";
+    print $atmsort_outfh "GP_IGNORE: formatted by $verzion\n";
 
     my $do_equiv = $glob_compare_equiv || $glob_make_equiv_expected;
 
@@ -1273,7 +1260,7 @@ EOF_formatfix
             { 
                 $big_ignore -= 1;
             }
-            print "GP_IGNORE:", $ini;
+            print $atmsort_outfh "GP_IGNORE:", $ini;
             next;
         }
         elsif (($ini =~ m/\-\-\s*end\_equiv\s*$/i) && $do_equiv)
@@ -1300,7 +1287,7 @@ EOF_formatfix
                 my @ggg= sort @outarr;
                 for my $line (@ggg)
                 {
-		    print $bpref, $line;
+		    print $atmsort_outfh $bpref, $line;
                 }
 
                 @outarr = ();
@@ -1347,11 +1334,11 @@ EOF_formatfix
 
                 for my $line (@outarr)
                 {
-                    print $apref, $line;
+                    print $atmsort_outfh $apref, $line;
                 }
                 @outarr = ();
 
-                print "GP_IGNORE:", $ini;
+                print $atmsort_outfh "GP_IGNORE:", $ini;
                 next;
             }
             elsif (($ini =~ m/\-\-\s*start\_equiv\s*$/i) && 
@@ -1523,7 +1510,7 @@ EOF_formatfix
 
                 for my $line (@outarr)
                 {
-                    print $apref, $line;
+                    print $atmsort_outfh $apref, $line;
                 }
                 @outarr = ();
 
@@ -1535,7 +1522,7 @@ EOF_formatfix
                     $ini = "GP_IGNORE:" . $ini;
                 }
                 
-                print $apref, $ini;
+                print $atmsort_outfh $apref, $ini;
 
                 if (defined($sql_statement)
                     && length($sql_statement)
@@ -1575,7 +1562,7 @@ EOF_formatfix
              # MPP-1557,AUTO-3: horrific ERROR DETAIL External Table trifecta
 			if ($glob_verbose)
 			{
-				print "GP_IGNORE: External Table ERROR DETAIL fixup\n";
+				print $atmsort_outfh "GP_IGNORE: External Table ERROR DETAIL fixup\n";
 			}
              if ($ini !~ m/^DETAIL/)
              {
@@ -1612,7 +1599,7 @@ L_push_outarr:
 
     for my $line (@outarr)
     {
-        print $cpref, $line;
+        print $atmsort_outfh $cpref, $line;
     }
 } # end bigloop
 

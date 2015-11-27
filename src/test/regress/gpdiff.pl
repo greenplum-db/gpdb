@@ -177,18 +177,19 @@ sub gpdiff_files
     if (defined($d2d) && exists($d2d->{equiv}))
     {
         # assume f1 and f2 are the same...
-	atmsort::atmsort_init(DO_EQUIV => 'compare');
+	atmsort::atmsort_init(%glob_atmsort_args, DO_EQUIV => 'compare');
 	atmsort::run($f1, $newf1);
 
-	atmsort::atmsort_init(DO_EQUIV => 'make');
+	atmsort::atmsort_init(%glob_atmsort_args, DO_EQUIV => 'make');
 	atmsort::run($f2, $newf2);
     }
     else
     {
-	atmsort::atmsort_init();
+	atmsort::atmsort_init(%glob_atmsort_args);
 	atmsort::run($f1, $newf1);
-
+	print "$f1 - $newf1\n";
 	atmsort::run($f2, $newf2);
+	print "$f2 - $newf2\n";
     }
 
     my $args = join(" ", @ARGV, $newf1, $newf2);
@@ -544,7 +545,7 @@ if (1)
 			die "no such file: $init_file"
 				unless (-e $init_file);
 		}
-		@{$glob_atmsort_args{INIT_FILES}} = $glob_init_file;
+		@{$glob_atmsort_args{INIT_FILES}} = @{$glob_init_file};
 	}
 
 
