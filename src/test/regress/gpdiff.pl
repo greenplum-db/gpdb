@@ -18,6 +18,10 @@ use POSIX;
 use File::Spec;
 use Config;
 
+# Load atmsort module from the same dir as this script
+use FindBin;
+use atmsort "$FindBin::Bin";
+
 =head1 NAME
 
 B<gpdiff.pl> - GreenPlum diff 
@@ -128,24 +132,12 @@ sub lazy_pod2usage
     Pod::Usage::pod2usage(@_);
 }
 
-our $ATMSORT;
+my %glob_atmsort_args;
 our $ATMDIFF = "diff";
 
 my $glob_ignore_headers;
 my $glob_ignore_plans;
 my $glob_init_file = [];
-
-# assume atmsort.pl in same directory
-BEGIN 
-{
-    my $plname = $0;
-    my @foo = File::Spec->splitpath(File::Spec->rel2abs($plname));
-    return 0 unless (scalar(@foo));
-    pop @foo;
-    $ATMSORT = File::Spec->catfile( @foo, "atmsort.pl"); 
-
-	$glob_init_file = [];
-}
 
 sub gpdiff_files
 {
@@ -180,18 +172,23 @@ sub gpdiff_files
     my $newf1 = shift @tmpfils;
     my $newf2 = shift @tmpfils;
 
-#    print $ATMSORT, "\n";
+#    print $glob_atmsort_args, "\n";
 
     if (defined($d2d) && exists($d2d->{equiv}))
     {
         # assume f1 and f2 are the same...
-        system "$ATMSORT --do_equiv=compare < $f1 > $newf1";
-        system "$ATMSORT --do_equiv=make    < $f2 > $newf2";
+	atmsort::atmsort_init(DO_EQUIV => 'compare');
+	atmsort::run($f1, $newf1);
+
+	atmsort::atmsort_init(DO_EQUIV => 'make');
+	atmsort::run($f2, $newf2);
     }
     else
     {
-        system "$ATMSORT < $f1 > $newf1";
-        system "$ATMSORT < $f2 > $newf2";
+	atmsort::atmsort_init();
+	atmsort::run($f1, $newf1);
+
+	atmsort::run($f2, $newf2);
     }
 
     my $args = join(" ", @ARGV, $newf1, $newf2);
@@ -529,14 +526,14 @@ if (1)
 	# ENGINF-180: tell atmsort to ignore header formatting (globally)
 	if ($glob_ignore_headers)
 	{
-		$ATMSORT .= " --ignore_headers ";
+	    $glob_atmsort_args{IGNORE_HEADERS} = 1;
 	}
 
-        # Tell atmsort to ignore plan content if -gpd_ignore_plans is set
-        if ($glob_ignore_plans)
-        {
-            $ATMSORT .= " --ignore_plans ";
-        }
+	# Tell atmsort to ignore plan content if -gpd_ignore_plans is set
+	if ($glob_ignore_plans)
+	{
+	    $glob_atmsort_args{IGNORE_PLANS} = 1;
+	}
 
 	# ENGINF-200: allow multiple init files
 	if (defined($glob_init_file) && scalar(@{$glob_init_file}))
@@ -547,8 +544,7 @@ if (1)
 			die "no such file: $init_file"
 				unless (-e $init_file);
 		}
-
-		$ATMSORT .= " --init=". join(" --init=", @{$glob_init_file}) . " ";
+		@{$glob_atmsort_args{INIT_FILES}} = $glob_init_file;
 	}
 
 
