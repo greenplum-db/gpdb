@@ -666,6 +666,106 @@ select * from ggg order by 1, 2, 3, 4;
 
 drop table ggg cascade;
 
+
+create table ggg (a char(1), b char(2), d char(3))
+distributed by (a)
+partItion by hash(b)
+partitions 3;
+
+drop table ggg cascade;
+
+create table ggg (a char(1), b char(2), d char(3))
+distributed by (a)
+partition by hash (b)
+(
+partition aa (subpartition cc, subpartition dd),
+partition bb (subpartition cc, subpartition dd)
+);
+
+drop table ggg cascade;
+
+create table ggg (a char(1), b char(2), d char(3))
+distributed by (a)
+partition by hash (b)
+subpartition by hash (d) 
+(
+partition aa (subpartition cc, subpartition dd),
+partition bb (subpartition cc, subpartition dd)
+);
+
+drop table ggg cascade;
+
+create table fff (a char(1), b char(2), d char(3)) distributed by (a)
+partition by list (b) (partition aa values ('2'));
+
+drop table fff cascade;
+
+create table ggg (a char(1), b numeric, d numeric)
+distributed by (a)
+partition by range (b,d)
+(
+partition aa start (2007,1) end (2008,2),
+partition bb start (2008,2) end (2009,3)
+);
+
+
+drop table ggg cascade;
+
+create table ggg (a char(1), b date, d char(3), e numeric)
+distributed by (a)
+partition by range (b)
+subpartition by list(d),
+subpartition by hash(e) subpartitions 3
+(
+partition aa 
+start  (date '2007-01-01') 
+end (date '2008-01-01') 
+       (subpartition dd values (1,2,3), subpartition ee values (4,5,6)),
+partition bb
+start  (date '2008-01-01') 
+end (date '2009-01-01') 
+       (subpartition dd values (1,2,3), subpartition ee values (4,5,6))
+
+);
+
+drop table ggg cascade;
+
+create table ggg (a char(1), b date, d char(3)) 
+distributed by (a)
+partition by range (b)
+(
+partition bb start (date '2008-01-01') end (date '2009-01-01'),
+partition aa start (date '2007-01-01') end (date '2006-01-01')
+);
+
+drop table ggg cascade;
+
+create table ggg (a char(1), b varchar(2), d varchar(2))
+distributed by (a)
+partition by hash(b)
+partitions 3;
+
+insert into ggg values (1,1,1);
+insert into ggg values (2,2,1);
+insert into ggg values (1,3,1);
+insert into ggg values (2,2,3);
+insert into ggg values (1,4,5);
+insert into ggg values (2,2,4);
+insert into ggg values (1,5,6);
+insert into ggg values (2,7,3);
+insert into ggg values (1,'a','b');
+insert into ggg values (2,'c','c');
+
+select * from ggg;
+
+select * from ggg_1_prt_1;
+select * from ggg_1_prt_2;
+select * from ggg_1_prt_3;
+
+drop table ggg cascade;
+
+
+
 -- append only tests
 create table foz (i int, d date) with (appendonly = true) distributed by (i)
 partition by range (d) (start (date '2001-01-01') end (date '2005-01-01')
