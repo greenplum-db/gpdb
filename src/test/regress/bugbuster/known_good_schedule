@@ -16,7 +16,7 @@ test: world
 test: jetpack
 test: spi
 test: security
-test: load_tpch sirv_functions view partition
+test: load_tpch sirv_functions view
 test: hashagg
 test: tpch_query
 test: gpsort

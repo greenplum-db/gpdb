@@ -52,7 +52,7 @@ test: vacuum_gp
 #test: gpic_bigtup
 
 ignore: gp_portal_error
-test: column_compression eagerfree mapred gpparams tidycat aocs gp_optimizer co_nestloop_idxscan  gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic
+test: partition_indexing column_compression eagerfree mapred gpparams tidycat aocs gp_optimizer co_nestloop_idxscan  gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic
 ignore: icudp_full
 ignore: gp_delete_as_trunc
 

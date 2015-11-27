@@ -1,8 +1,5 @@
 set enable_partition_rules = off;
 set gp_enable_hash_partitioned_tables = true;
-DROP TABLE if exists mpp3033;
-DROP TABLE if exists mpp3033a;
-DROP TABLE if exists mpp3033b;
 
 CREATE TABLE mpp3033 (
         unique1         int4,
@@ -22,9 +19,7 @@ CREATE TABLE mpp3033 (
         stringu2        name,
         string4         name
 );
-\echo -- start_ignore
 \copy mpp3033 from 'data/onek.data';
-\echo -- end_ignore
 
 CREATE TABLE mpp3033a (
         unique1         int4,
@@ -254,9 +249,7 @@ CREATE TABLE mpp3033 (
         stringu2        name,
         string4         name
 );
-\echo -- start_ignore
 \copy mpp3033 from 'data/onek.data';
-\echo -- end_ignore
 
 CREATE TABLE mpp3033a (
         unique1         int4,
@@ -482,9 +475,7 @@ CREATE TABLE mpp3033 (
         stringu2        name,
         string4         name
 );
-\echo -- start_ignore
 \copy mpp3033 from 'data/onek.data';
-\echo -- end_ignore
 
 CREATE TABLE mpp3033a (
         unique1         int4,
