@@ -24,7 +24,6 @@ JAR_FILES = dist/gphd-1.0-gnet-1.0.0.1.jar \
 
 JAVADOC_TARS = gnet-1.1-javadoc.tar gnet-1.0-javadoc.tar
 
-#all: $(JAR_FILES) $(JAVADOC_TARS) unittest
 all: $(JAR_FILES) unittest $(JAVADOC_TARS)
 
 dist/gphd-1.0-gnet-1.0.0.1.jar:
