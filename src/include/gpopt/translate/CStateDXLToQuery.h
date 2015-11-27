@@ -18,8 +18,8 @@
 #define GPDXL_CStateDXLToQuery_H
 
 #include "gpos/base.h"
-#include "dxl/gpdb_types.h"
-#include "dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/gpdb_types.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
 
 // fwd decl
 struct TargetEntry;

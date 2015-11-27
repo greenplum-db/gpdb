@@ -196,3 +196,10 @@ SELECT '' AS twentyfour, c1.f1 AS circle, p1.f1 AS point, (p1.f1 <-> c1.f1) AS d
    WHERE (p1.f1 <-> c1.f1) > 0
    ORDER BY distance, area(c1.f1), p1.f1[0];
 
+-- Clean up GPDB-added tables
+DROP TABLE box_geom_tbl;
+DROP TABLE circle_geom_tbl;
+DROP TABLE lseg_geom_tbl;
+DROP TABLE path_geom_tbl;
+DROP TABLE polygon_geom_tbl;
+DROP TABLE point_geom_tbl;

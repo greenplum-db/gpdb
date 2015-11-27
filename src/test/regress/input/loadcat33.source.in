@@ -1,40 +1,40 @@
 begin;
-copy @gpupgradeschemaname@.pg_class from '@gpupgradedatadir@/upg2_pg_class_toadd32.data' oids null E'\\N' csv delimiter '|' header;
-copy @gpupgradeschemaname@.pg_attribute from '@gpupgradedatadir@/upg2_pg_attribute_toadd32.data' csv delimiter '|' header;
-copy @gpupgradeschemaname@.pg_index from '@gpupgradedatadir@/upg2_pg_index_toadd32.data' null as E'\\N' csv delimiter '|' header;
-copy @gpupgradeschemaname@.pg_type from '@gpupgradedatadir@/upg2_pg_type_toadd32.data' oids null as E'\\N' csv delimiter '|' header;
-copy @gpupgradeschemaname@.pg_proc from '@gpupgradedatadir@/upg2_pg_proc_toadd32.data' oids null as E'\\N' csv delimiter '|' header;
-copy @gpupgradeschemaname@.pg_namespace from '@gpupgradedatadir@/upg2_pg_namespace_toadd32.data' oids null as E'\\N' csv delimiter '|' header;
-copy @gpupgradeschemaname@.pg_description from '@gpupgradedatadir@/upg2_pg_description_toadd32.data' null as E'\\N' csv delimiter '|' header;
-copy @gpupgradeschemaname@.pg_depend from '@gpupgradedatadir@/upg2_pg_depend_toadd32.data' null as E'\\N' csv delimiter '|' header;
+copy upg_catalog.pg_class from '@gpupgradedatadir@/upg2_pg_class_toadd32.data' oids null E'\\N' csv delimiter '|' header;
+copy upg_catalog.pg_attribute from '@gpupgradedatadir@/upg2_pg_attribute_toadd32.data' csv delimiter '|' header;
+copy upg_catalog.pg_index from '@gpupgradedatadir@/upg2_pg_index_toadd32.data' null as E'\\N' csv delimiter '|' header;
+copy upg_catalog.pg_type from '@gpupgradedatadir@/upg2_pg_type_toadd32.data' oids null as E'\\N' csv delimiter '|' header;
+copy upg_catalog.pg_proc from '@gpupgradedatadir@/upg2_pg_proc_toadd32.data' oids null as E'\\N' csv delimiter '|' header;
+copy upg_catalog.pg_namespace from '@gpupgradedatadir@/upg2_pg_namespace_toadd32.data' oids null as E'\\N' csv delimiter '|' header;
+copy upg_catalog.pg_description from '@gpupgradedatadir@/upg2_pg_description_toadd32.data' null as E'\\N' csv delimiter '|' header;
+copy upg_catalog.pg_depend from '@gpupgradedatadir@/upg2_pg_depend_toadd32.data' null as E'\\N' csv delimiter '|' header;
 
 -- fix up pg_appendonly
-alter table @gpupgradeschemaname@.pg_appendonly add column compresstype text;
+alter table upg_catalog.pg_appendonly add column compresstype text;
 
 -- adjust 3.2 quicklz
-update @gpupgradeschemaname@.pg_appendonly set compresstype = 'quicklz', compresslevel = compresslevel - 10 where compresslevel > 10;
-update @gpupgradeschemaname@.pg_appendonly set compresstype = 'zlib' where compresslevel between 1 and 10;
+update upg_catalog.pg_appendonly set compresstype = 'quicklz', compresslevel = compresslevel - 10 where compresslevel > 10;
+update upg_catalog.pg_appendonly set compresstype = 'zlib' where compresslevel between 1 and 10;
 
 -- upgrade views to account for the new Range Table Entry (RTE) Format.
 --   ":forceDistRandom" only ever occurs in RTEs and is the last field
 --   NOTE: this effects All views, including user views
-update @gpupgradeschemaname@.pg_rewrite set ev_action = regexp_replace(ev_action, ':forceDistRandom (true|false)}', E':forceDistRandom \\1 :pseudocols <>}', 'g'), ev_qual = regexp_replace(ev_qual, ':forceDistRandom (true|false)}', E':forceDistRandom \\1 :pseudocols <>}', 'g');
+update upg_catalog.pg_rewrite set ev_action = regexp_replace(ev_action, ':forceDistRandom (true|false)}', E':forceDistRandom \\1 :pseudocols <>}', 'g'), ev_qual = regexp_replace(ev_qual, ':forceDistRandom (true|false)}', E':forceDistRandom \\1 :pseudocols <>}', 'g');
 
 -- upgrade pg_partitions.parentpartitioname
-update @gpupgradeschemaname@.pg_rewrite set ev_action = replace(ev_action, 'parentpartitioname','parentpartitionname') where ev_class = '@gpupgradeschemaname@.pg_partitions'::regclass;
-update @gpupgradeschemaname@.pg_attribute set attname = 'parentpartitionname' where attname = 'parentpartitioname' and attrelid = '@gpupgradeschemaname@.pg_partitions'::regclass;
+update upg_catalog.pg_rewrite set ev_action = replace(ev_action, 'parentpartitioname','parentpartitionname') where ev_class = 'upg_catalog.pg_partitions'::regclass;
+update upg_catalog.pg_attribute set attname = 'parentpartitionname' where attname = 'parentpartitioname' and attrelid = 'upg_catalog.pg_partitions'::regclass;
 
 -- fixup attislocal
-update @gpupgradeschemaname@.pg_attribute set attislocal = 'f' from pg_catalog.pg_partitions where attislocal = 't' and attrelid = (quote_ident(partitionschemaname) || '.' || quote_ident(partitiontablename))::regclass and attnum > 0;
+update upg_catalog.pg_attribute set attislocal = 'f' from pg_catalog.pg_partitions where attislocal = 't' and attrelid = (quote_ident(partitionschemaname) || '.' || quote_ident(partitiontablename))::regclass and attnum > 0;
 
 -- Drop the old function "gp_update_ao_master_stats" (oid 7156)
-delete from @gpupgradeschemaname@.pg_proc where oid = 7156;
-delete from @gpupgradeschemaname@.pg_description where objoid = 7156;
-delete from @gpupgradeschemaname@.pg_depend where refobjid = 7156;
+delete from upg_catalog.pg_proc where oid = 7156;
+delete from upg_catalog.pg_description where objoid = 7156;
+delete from upg_catalog.pg_depend where refobjid = 7156;
 
 -- We no longer track dependencies on table implementation types, toast tables or indices
-delete from @gpupgradeschemaname@.pg_shdepend using @gpupgradeschemaname@.pg_class c where classid='pg_type'::regclass and objid = reltype and relkind != 'c';
-delete from @gpupgradeschemaname@.pg_shdepend using @gpupgradeschemaname@.pg_class c where classid='pg_class'::regclass and objid = c.oid and relkind in ('t', 'i');
+delete from upg_catalog.pg_shdepend using upg_catalog.pg_class c where classid='pg_type'::regclass and objid = reltype and relkind != 'c';
+delete from upg_catalog.pg_shdepend using upg_catalog.pg_class c where classid='pg_class'::regclass and objid = c.oid and relkind in ('t', 'i');
 
 commit;
 

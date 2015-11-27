@@ -54,8 +54,8 @@ all: submake-libpq submake-libpgport cdb_dump cdb_dump_agent cdb_restore cdb_res
 cdb_dump: cdb_dump.o cdb_backup_status.o cdb_seginst.o cdb_backup_state.o cdb_table.o cdb_backup_archiver.o cdb_dump_util.o cdb_dump_include.o $(PGDUMP_DIR)/common.o $(OBJS) $(KEYWRDOBJS) $(libpq_builddir)/libpq.a $(EXTRA_OBJS) 
 	$(CC) $(CFLAGS) cdb_dump.o cdb_backup_status.o cdb_seginst.o cdb_backup_state.o cdb_table.o cdb_backup_archiver.o cdb_dump_util.o cdb_dump_include.o $(PGDUMP_DIR)/common.o $(OBJS) $(KEYWRDOBJS)  $(libpq) $(LDFLAGS) $(LIBS) $(DDBOOSTLIB) -o $@
 
-cdb_dump_agent: cdb_dump_agent.o $(PGDUMP_DIR)/common.o $(PGDUMP_DIR)/pg_dump_sort.o cdb_backup_archiver.o cdb_dump_util.o cdb_seginst.o cdb_table.o cdb_backup_status.o cdb_dump_include.o $(OBJS) $(KEYWRDOBJS) $(libpq_builddir)/libpq.a 
-	$(CC) $(CFLAGS) cdb_dump_agent.o $(PGDUMP_DIR)/common.o $(PGDUMP_DIR)/pg_dump_sort.o cdb_dump_util.o cdb_seginst.o cdb_table.o cdb_backup_archiver.o cdb_backup_status.o cdb_dump_include.o $(OBJS) $(KEYWRDOBJS)  $(libpq) $(LDFLAGS) $(LIBS) $(DDBOOSTLIB) -o $@
+cdb_dump_agent: cdb_dump_agent.o $(PGDUMP_DIR)/common.o $(PGDUMP_DIR)/pg_dump_sort.o cdb_backup_archiver.o cdb_dump_util.o cdb_seginst.o cdb_table.o cdb_backup_status.o cdb_backup_state.o cdb_dump_include.o $(OBJS) $(KEYWRDOBJS) $(libpq_builddir)/libpq.a
+	$(CC) $(CFLAGS) cdb_dump_agent.o $(PGDUMP_DIR)/common.o $(PGDUMP_DIR)/pg_dump_sort.o cdb_dump_util.o cdb_seginst.o cdb_table.o cdb_backup_archiver.o cdb_backup_status.o cdb_backup_state.o cdb_dump_include.o $(OBJS) $(KEYWRDOBJS)  $(libpq) $(LDFLAGS) $(LIBS) $(DDBOOSTLIB) -o $@
 
 #cdb_dumpall_agent: cdb_dumpall_agent.o ../common.o cdb_backup_archiver.o cdb_dump_util.o cdb_seginst.o cdb_table.o cdb_backup_status.o $(OBJS) $(KEYWRDOBJS) $(libpq_builddir)/libpq.a 
 #	$(CC) $(CFLAGS) cdb_dumpall_agent.o cdb_backup_archiver.o $(OBJS) $(KEYWRDOBJS)  $(libpq) $(LDFLAGS) $(LIBS) -o $@

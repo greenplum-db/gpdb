@@ -39,8 +39,8 @@ class SshUtilsTestCase(unittest.TestCase):
 
         s = Session()
         s.login(['localhost', 'fakehost'], uname)
-
-
+        pxssh_hosts = [pxssh_session.x_peer for pxssh_session in s.pxssh_list]
+        self.assertEqual(pxssh_hosts, ['localhost'])
  
 if __name__ == "__main__":
     unittest.main()

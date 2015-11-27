@@ -1,0 +1,20 @@
+gpdb_top=@gpdb_top@/..
+prefix := @prefix@
+
+default: installcheck
+
+REGRESS = exttab1 custom_format
+PSQLDIR = $(prefix)/bin
+
+installcheck:
+	$(gpdb_top)/src/test/regress/pg_regress --psqldir=$(PSQLDIR) $(REGRESS)
+
+clean:
+	rm -rf regression.* sql results expected
+
+distclean:
+	rm -f GNUmakefile
+
+.PHONY: clean distclean
+
+

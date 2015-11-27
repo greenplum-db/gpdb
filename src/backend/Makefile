@@ -25,7 +25,7 @@ include $(BLD_TOP)/$(ADDON_DIR)/src/Makefile
 endif
 
 
-SUBDIRS = access bootstrap catalog parser commands executor foreign \
+SUBDIRS = access bootstrap catalog parser commands executor \
 	fts lib libpq gp_libpq_fe main nodes optimizer port postmaster regex \
 	replication rewrite storage tcop utils $(top_builddir)/src/timezone cdb \
 	$(ADDON_SUBDIR)
@@ -164,7 +164,7 @@ postgres.o: $(OBJS)
 $(srcdir)/parser/gram.h: parser/gram.y
 	$(MAKE) -C parser gram.h
 
-utils/fmgroids.h: utils/Gen_fmgrtab.sh $(top_srcdir)/src/include/catalog/pg_proc.h
+utils/fmgroids.h: utils/Gen_fmgrtab.sh $(top_srcdir)/src/include/catalog/pg_proc.h $(top_srcdir)/src/include/catalog/pg_proc_gp.h
 	$(MAKE) -C utils fmgroids.h
 
 utils/probes.h: utils/probes.d

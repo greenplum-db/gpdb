@@ -1,7 +1,0 @@
-oid,nspname,nspowner,nspacl
-99,pg_toast,10,
-3012,pg_bitmapindex,10,
-6104,pg_aoseg,10,
-11,pg_catalog,10,"{@gpcurusername@=UC/@gpcurusername@,=U/@gpcurusername@}"
-2200,public,10,"{@gpcurusername@=UC/@gpcurusername@,=UC/@gpcurusername@}"
-10643,information_schema,10,"{@gpcurusername@=UC/@gpcurusername@,=U/@gpcurusername@}"

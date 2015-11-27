@@ -21,7 +21,7 @@
 /* TIDYCAT_BEGINDEF
 
   CREATE TABLE pg_extprotocol
-  with (shared=false, oid=true, relid=7175, reltype_oid=7176)
+  with (shared=false, oid=true, relid=7175)
   (
    ptcname        name,
    ptcreadfn      Oid,

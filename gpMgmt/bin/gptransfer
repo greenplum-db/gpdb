@@ -41,12 +41,14 @@ try:
     from gppylib.commands.unix import MakeDirectory, RemoveDirectory, \
         RemoveFiles, FileDirExists, Scp, LINUX, curr_platform
     from gppylib.commands.gp import get_gphome
+    from gppylib.db import dbconn
     from gppylib.db.dbconn import connect, DbURL, execSQL, \
         execSQLForSingletonRow
     from gppylib.db.catalog import getUserDatabaseList, doesSchemaExist, dropSchemaIfExist
     from gppylib.gparray import GpArray
     from gppylib.userinput import ask_yesno
     from pygresql.pg import DB
+    from pygresql import pg
 except ImportError, import_exception:
     sys.exit('Cannot import modules.  Please check that you have sourced'
              ' greenplum_path.sh.  Detail: %s' % str(import_exception))
@@ -550,6 +552,14 @@ def create_parser():
         help='Method to validate source and destination tables. '
              '[Available validators: %s]' %
              ', '.join(validator_factory.get_available_validators())
+    )
+
+    validation_option_group.add_option(
+        '--no-final-count',
+        dest='no_final_count_validation',
+        default=False,
+        action='store_true',
+        help='Do not run final count validation'
     )
 
     parser.add_option_group(validation_option_group)
@@ -2369,6 +2379,11 @@ class GpTransfer(object):
         if self._options.exclusive_lock:
             logger.info("Exclusive locks will be used during table transfers.")
 
+        if not self._options.no_final_count_validation:
+            self._validator_class = validator_factory.get_validator('count')
+        else:
+            self._validator_class = None
+
         # Get number of gpfdists per source host
         source_host_count = len(self._host_map.keys())
         self._gpfdist_instance_count = \
@@ -2381,6 +2396,10 @@ class GpTransfer(object):
         self._validate_host_map()
 
         self._validate_table_transfer_set()
+
+        self._validate_filespace(self._options.source_host, self._options.source_port, self._options.source_user,
+                                 self._options.dest_host, self._options.dest_port, self._options.dest_user,
+                                 self._options.full)
 
         # At most we'll execute primary segment count of commands in the subbatches
         # so we can reduce it if the value exceeds the number of primary segs.
@@ -2480,6 +2499,9 @@ class GpTransfer(object):
                     'This file can be used with the -f option to continue')
                 logger.warn('the data transfer.')
                 return 1
+            else:
+                if self._validator_class:
+                   self._final_count_validation()
         else:
             # dry run
             self._dry_run()
@@ -2492,7 +2514,7 @@ class GpTransfer(object):
         initializes the validator if needed.
         """
         # create base pipe directory on each source system
-        logger.info('Creating work directory...')
+        logger.info("Creating work directory '%s'" % self._work_dir)
 
         for host in self._host_map.keys():
             address = iter(self._host_map[host]).next()
@@ -2924,6 +2946,72 @@ class GpTransfer(object):
         if self._options.delimiter == ',' and self._options.format.lower() == 'text':
             raise ProgramArgumentValidationException(
                 'Invalid --delimiter. Default delimiter "," is not allowed in TEXT format. Specify --delimiter option for TEXT')
+
+    def _final_count_validation(self):
+        logger.info('Running final table row count validation on destination tables...')
+        for table_pair in self._table_transfer_set:
+            try:
+                url = DbURL(self._options.source_host, self._options.source_port, table_pair.source.database, self._options.source_user)
+                src_conn = connect(url)
+                url = DbURL(self._options.dest_host, self._options.dest_port, table_pair.dest.database, self._options.dest_user)
+                dest_conn = connect(url)
+                validator = self._validator_class(self._work_dir,
+                                                  table_pair,
+                                                  src_conn,
+                                                  dest_conn)
+                if not validator.validate():
+                   logger.error('Validation failed for %s', table_pair.dest)
+                else:
+                   logger.info('Validation of %s successful', table_pair.dest)
+            except Exception, e:
+                raise Exception("Final count validation failed for %s" % e)
+            finally:
+                if src_conn:
+                    src_conn.close()
+                if dest_conn:
+                    dest_conn.close()
+
+    # Validate if destination system is missing required filespaces
+    def _validate_filespace(self, source_host, source_port, source_user, dest_host, dest_port, dest_user, full):
+        # Get all the filespaces of destination system
+        list_dest_fs = self._get_destination_filespaces(dest_host, dest_port, 'template1', dest_user)
+
+        # Check if source filespace exists in destination system
+        if full:
+            # For transferring in full mode
+            source_fs_sql = """SELECT fsname FROM pg_catalog.pg_filespace"""
+            self._check_filespace(source_host, source_port, 'template1', source_user, list_dest_fs, source_fs_sql)
+        else:
+            # For transferring in table mode
+            template_source_fs_sql = """SELECT fsname FROM pg_catalog.pg_filespace WHERE oid IN
+                                        (SELECT spcfsoid FROM pg_catalog.pg_tablespace
+                                        WHERE oid IN (SELECT dattablespace FROM pg_catalog.pg_database WHERE datname = '%s')
+                                        OR oid IN (SELECT reltablespace FROM pg_catalog.pg_class where relname = '%s'));"""
+            for table_pair in self._table_transfer_set:
+                dbname = pg.escape_string(table_pair.source.database)
+                tablename = pg.escape_string(table_pair.source.table)
+                source_fs_sql = template_source_fs_sql % (dbname, tablename)
+                self._check_filespace(source_host, source_port, table_pair.source.database, source_user, list_dest_fs, source_fs_sql)
+
+    def _get_destination_filespaces(self, dest_host, dest_port, database, dest_user):
+        list_dest_fs = []
+        dest_fs_sql = """SELECT fsname FROM pg_catalog.pg_filespace"""
+        with dbconn.connect(dbconn.DbURL(dest_host, dest_port, database, dest_user)) as dest_conn:
+            dest_cur = execSQL(dest_conn, dest_fs_sql)
+            for row in dest_cur:
+                list_dest_fs.append(row[0])
+            dest_cur.close()
+        return list_dest_fs
+
+    def _check_filespace(self, source_host, source_port, database, source_user, list_dest_fs, source_fs_sql):
+        with dbconn.connect(dbconn.DbURL(source_host, source_port, database, source_user)) as source_conn:
+            source_cur = execSQL(source_conn, source_fs_sql)
+            for row in source_cur:
+                fs = row[0]
+                if fs not in list_dest_fs:
+                    source_cur.close()
+                    raise Exception("Filespace '%s' does not exist on destination. Please create the filespace to run gptransfer" % fs)
+            source_cur.close()
 
     def _get_configurations(self):
         """

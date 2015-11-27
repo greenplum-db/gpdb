@@ -286,7 +286,7 @@ get_opclass(Oid opclass, Oid actual_datatype)
 		elog(ERROR, "cache lookup failed for opclass %u", opclass);
 	opc_rec = (Form_pg_opclass) GETSTRUCT(ht_opc);
 
-	if (GetDefaultOpClass(actual_datatype, opc_rec->opcamid) != opclass)
+	if (GetDefaultOpClass(actual_datatype, opc_rec->opcmethod) != opclass)
 	{
 		/* For simplicity, we always schema-qualify the name */
 		char	   *nsp_name = get_namespace_name(opc_rec->opcnamespace);

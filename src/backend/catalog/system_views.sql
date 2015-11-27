@@ -4,7 +4,7 @@
  * Copyright (c) 2006-2010, Greenplum inc.
  * Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/backend/catalog/system_views.sql,v 1.32 2006/11/24 21:18:42 tgl Exp $
+ * $PostgreSQL: pgsql/src/backend/catalog/system_views.sql,v 1.34 2007/01/02 20:59:31 momjian Exp $
  */
 
 CREATE VIEW pg_roles AS 
@@ -210,10 +210,12 @@ CREATE VIEW pg_stat_all_tables AS
             pg_stat_get_tuples_returned(C.oid) AS seq_tup_read, 
             sum(pg_stat_get_numscans(I.indexrelid))::bigint AS idx_scan, 
             sum(pg_stat_get_tuples_fetched(I.indexrelid))::bigint +
-                    pg_stat_get_tuples_fetched(C.oid) AS idx_tup_fetch, 
+            pg_stat_get_tuples_fetched(C.oid) AS idx_tup_fetch, 
             pg_stat_get_tuples_inserted(C.oid) AS n_tup_ins, 
             pg_stat_get_tuples_updated(C.oid) AS n_tup_upd, 
             pg_stat_get_tuples_deleted(C.oid) AS n_tup_del,
+            pg_stat_get_live_tuples(C.oid) AS n_live_tup, 
+            pg_stat_get_dead_tuples(C.oid) AS n_dead_tup,
             pg_stat_get_last_vacuum_time(C.oid) as last_vacuum,
             pg_stat_get_last_autovacuum_time(C.oid) as last_autovacuum,
             pg_stat_get_last_analyze_time(C.oid) as last_analyze,
@@ -610,28 +612,6 @@ where
  cl.relnamespace = n.oid and
  p.paristemplate = 't'
  ) p1;
- 
- CREATE VIEW pg_user_mappings AS
-    SELECT
-        U.oid       AS umid,
-        S.oid       AS srvid,
-        S.srvname   AS srvname,
-        U.umuser    AS umuser,
-        CASE WHEN U.umuser = 0 THEN
-            'public'
-        ELSE
-            A.rolname
-        END AS usename,
-        CASE WHEN pg_has_role(S.srvowner, 'USAGE') OR has_server_privilege(S.oid, 'USAGE') THEN
-            U.umoptions
-        ELSE
-            NULL
-        END AS umoptions
-    FROM pg_user_mapping U
-         LEFT JOIN pg_authid A ON (A.oid = U.umuser) JOIN
-        pg_foreign_server S ON (U.umserver = S.oid);
-
-REVOKE ALL on pg_user_mapping FROM public;
 
 -- metadata tracking
 CREATE VIEW pg_stat_operations

@@ -12,7 +12,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/mmgr/aset.c,v 1.69 2006/11/08 19:27:24 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/mmgr/aset.c,v 1.70 2006/12/27 22:30:48 tgl Exp $
  *
  * NOTE:
  *	This is a new (Feb. 05, 1999) implementation of the allocation set
@@ -823,6 +823,20 @@ AllocSetContextCreate(MemoryContext parent,
 #endif
 
 	/*
+	 * Compute the allocation chunk size limit for this context.  It can't
+	 * be more than ALLOC_CHUNK_LIMIT because of the fixed number of
+	 * freelists.  If maxBlockSize is small then requests exceeding the
+	 * maxBlockSize should be treated as large chunks, too.  We have to
+	 * have allocChunkLimit a power of two, because the requested and
+	 * actually-allocated sizes of any chunk must be on the same side of
+	 * the limit, else we get confused about whether the chunk is "big".
+	 */
+	context->allocChunkLimit = ALLOC_CHUNK_LIMIT;
+	while (context->allocChunkLimit >
+		   (Size) (maxBlockSize - ALLOC_BLOCKHDRSZ - ALLOC_CHUNKHDRSZ))
+		context->allocChunkLimit >>= 1;
+
+	/*
 	 * Grab always-allocated space, if requested
 	 */
 	if (minContextSize > ALLOC_BLOCKHDRSZ + ALLOC_CHUNKHDRSZ)
@@ -1123,7 +1137,7 @@ AllocSetAllocImpl(MemoryContext context, Size size, bool isHeader)
 	 * If requested size exceeds maximum for chunks, allocate an entire block
 	 * for this request.
 	 */
-	if (size > ALLOC_CHUNK_LIMIT)
+	if (size > set->allocChunkLimit)
 	{
 		chunk_size = MAXALIGN(size);
 		blksize = chunk_size + ALLOC_BLOCKHDRSZ + ALLOC_CHUNKHDRSZ;
@@ -1444,7 +1458,7 @@ AllocSetFreeImpl(MemoryContext context, void *pointer, bool isHeader)
 	}
 #endif
 
-	if (chunk->size > ALLOC_CHUNK_LIMIT)
+	if (chunk->size > set->allocChunkLimit)
 	{
 		/*
 		 * Big chunks are certain to have been allocated as single-chunk
@@ -1600,7 +1614,7 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
 		return pointer;
 	}
 
-	if (oldsize > ALLOC_CHUNK_LIMIT)
+	if (oldsize > set->allocChunkLimit)
 	{
 		/*
 		 * The chunk must have been allocated as a single-chunk block.	Find
@@ -1868,11 +1882,12 @@ AllocSetCheck(MemoryContext context)
 			}
 
 			/* single-chunk block? */
-			if (chsize > ALLOC_CHUNK_LIMIT && chsize + ALLOC_CHUNKHDRSZ != blk_used)
+			if (chsize > set->allocChunkLimit &&
+				chsize + ALLOC_CHUNKHDRSZ != blk_used)
 			{
 				Assert(!"Memory context error");
-				elog(WARNING, "problem in alloc set %s: bad single-chunk %p in block %p (%s:%d)",
-						name, chunk, block, CDB_MCXT_WHERE(&set->header));
+				elog(WARNING, "problem in alloc set %s: bad single-chunk %p in block %p",
+					 name, chunk, block);
 			}
 
 			/*

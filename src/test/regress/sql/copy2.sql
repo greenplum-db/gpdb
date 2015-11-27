@@ -11,14 +11,14 @@ CREATE FUNCTION fn_x_before () RETURNS TRIGGER AS '
 		NEW.e := ''before trigger fired''::text;
 		return NEW;
 	END;
-' language plpgsql immutable NO SQL;
+' LANGUAGE plpgsql;
 
 CREATE FUNCTION fn_x_after () RETURNS TRIGGER AS '
   BEGIN
 		UPDATE x set e=''after trigger fired'' where c=''stuff'';
 		return NULL;
 	END;
-' LANGUAGE plpgsql MODIFIES SQL DATA;
+' LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_x_after AFTER INSERT ON x
 FOR EACH ROW EXECUTE PROCEDURE fn_x_after();
@@ -96,7 +96,7 @@ COPY x from stdin WITH DELIMITER AS ':' NULL AS E'\\X';
 \.
 
 -- check results of copy in
-SELECT * FROM x ORDER BY 1,2,3,4,5;
+SELECT * FROM x;
 
 -- COPY w/ oids on a table w/o oids should fail
 CREATE TABLE no_oids (

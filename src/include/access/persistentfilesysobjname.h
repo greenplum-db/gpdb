@@ -280,8 +280,5 @@ extern char *PersistentFileSysRelStorageMgr_Name(
 extern char *MirroredRelDataSynchronizationState_Name(
 	MirroredRelDataSynchronizationState relDataSynchronizationState);
 
-extern char *PersistentFileSysRelBufpoolKind_Name(
-		PersistentFileSysRelBufpoolKind relBufpoolKind);
-
 #endif   /* PERSISTENTFILESYSOBJNAME_H */
 

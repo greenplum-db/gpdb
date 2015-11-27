@@ -1,4 +1,3 @@
-drop language plpgsql cascade;
 drop function add_em(integer,integer);
 drop function add_em(integer,integer,integer);
 drop function add_num(x integer, y integer, OUT sum integer, OUT product integer);
@@ -10,7 +9,6 @@ drop table tab_sour cascade;
 drop table fun_tree;
 drop table logtable;
 drop table db;
-drop language plpgsql cascade;
 
 drop table stress_source;
 drop table stress_table;

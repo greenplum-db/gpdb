@@ -20,11 +20,11 @@
 
 
 #include "gpos/base.h"
-
-#include "postgres.h"	// Index
-#include "dxl/gpdb_types.h"
 #include "gpos/common/CHashMap.h"
 
+#include "postgres.h"	// Index
+
+#include "naucrates/dxl/gpdb_types.h"
 
 namespace gpdxl
 {

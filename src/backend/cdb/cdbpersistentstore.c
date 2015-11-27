@@ -859,13 +859,26 @@ static void PersistentStore_DoInsertTuple(
 		     storeData->tableName);
 
 	/*
-	 * (We have an exclusive lock (higher up) here so we can direct the insert to the last page.)
+	 * (We have an exclusive lock (higher up) here so we can direct the insert
+	 * to the last page.)
 	 */
 	{
-		// Do not assert valid ItemPointer -- it is ok if it is (0,0)...
-		BlockNumber blockNumber = 
-						BlockIdGetBlockNumber(
-								&storeSharedData->maxTid.ip_blkid);
+		BlockNumber blockNumber;
+
+		/*
+		 * If we don't have a previous maxTid, we don't know the size of the
+		 * table. Call RelationGetNumberOfBlocks() to find out.
+		 */
+		if (!ItemPointerIsValid(&storeSharedData->maxTid))
+		{
+			blockNumber = RelationGetNumberOfBlocks(persistentRel);
+			if (blockNumber == 0)
+				blockNumber = InvalidBlockNumber;
+			else
+				blockNumber--;
+		}
+		else
+			blockNumber = ItemPointerGetBlockNumber(&storeSharedData->maxTid);
 		
 		frozen_heap_insert_directed(
 							persistentRel, 

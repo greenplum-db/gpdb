@@ -205,6 +205,10 @@
  ) WITH (OID=2924, RELID=1262);
 -- #define PG_DATABASE_RELTYPE_OID 2924
 
+ CREATE TYPE gp_global_sequence(
+ ) WITH (OID=6995, RELID=5096);
+-- #define GP_GLOBAL_SEQUENCE_RELTYPE_OID 6995
+
 -- OIDS 100 - 199 
  CREATE TYPE xml(
    INPUT = xml_in,
@@ -400,9 +404,9 @@
    OUTPUT = cash_out,
    RECEIVE = cash_recv,
    SEND = cash_send,
-   INTERNALLENGTH = 4,
+   INTERNALLENGTH = 8,
    STORAGE = plain,
-   ALIGNMENT = int4
+   ALIGNMENT = double
  ) WITH (OID=790, ARRAYOID=791, DESCRIPTION="monetary amounts, $d,ddd.cc");
 -- #define CASHOID 790
 
@@ -458,6 +462,7 @@
 -- ARRAY TYPE text
 -- #define TEXTARRAYOID		1009
 -- ARRAY TYPE oid
+-- #define OIDARRAYOID		1028
 -- ARRAY TYPE tid
 -- ARRAY TYPE xid
 -- ARRAY TYPE cid
@@ -496,6 +501,8 @@
    OUTPUT = bpcharout,
    RECEIVE = bpcharrecv,
    SEND = bpcharsend,
+   TYPMODIN = bpchartypmodin,
+   TYPMODOUT = bpchartypmodout,
    INTERNALLENGTH = VARIABLE,
    STORAGE = extended,
    ALIGNMENT = int4
@@ -507,6 +514,8 @@
    OUTPUT = varcharout,
    RECEIVE = varcharrecv,
    SEND = varcharsend,
+   TYPMODIN = varchartypmodin,
+   TYPMODOUT = varchartypmodout,
    INTERNALLENGTH = VARIABLE,
    STORAGE = extended,
    ALIGNMENT = int4
@@ -530,6 +539,8 @@
    OUTPUT = time_out,
    RECEIVE = time_recv,
    SEND = time_send,
+   TYPMODIN = timetypmodin,
+   TYPMODOUT = timetypmodout,
    INTERNALLENGTH = 8,
    PASSEDBYVALUE,
    STORAGE = plain,
@@ -543,6 +554,8 @@
    OUTPUT = timestamp_out,
    RECEIVE = timestamp_recv,
    SEND = timestamp_send,
+   TYPMODIN = timestamptypmodin,
+   TYPMODOUT = timestamptypmodout,
    INTERNALLENGTH = 8,
    PASSEDBYVALUE,
    STORAGE = plain,
@@ -558,6 +571,8 @@
    OUTPUT = timestamptz_out,
    RECEIVE = timestamptz_recv,
    SEND = timestamptz_send,
+   TYPMODIN = timestamptztypmodin,
+   TYPMODOUT = timestamptztypmodout,
    INTERNALLENGTH = 8,
    PASSEDBYVALUE,
    STORAGE = plain,
@@ -570,6 +585,8 @@
    OUTPUT = interval_out,
    RECEIVE = interval_recv,
    SEND = interval_send,
+   TYPMODIN = intervaltypmodin,
+   TYPMODOUT = intervaltypmodout,
    INTERNALLENGTH = 16,
    STORAGE = plain,
    ALIGNMENT = double
@@ -584,6 +601,8 @@
    OUTPUT = timetz_out,
    RECEIVE = timetz_recv,
    SEND = timetz_send,
+   TYPMODIN = timetztypmodin,
+   TYPMODOUT = timetztypmodout,
    INTERNALLENGTH = 12,
    STORAGE = plain,
    ALIGNMENT = double
@@ -596,6 +615,8 @@
    OUTPUT = bit_out,
    RECEIVE = bit_recv,
    SEND = bit_send,
+   TYPMODIN = bittypmodin,
+   TYPMODOUT = bittypmodout,
    INTERNALLENGTH = VARIABLE,
    STORAGE = extended,
    ALIGNMENT = int4
@@ -607,6 +628,8 @@
    OUTPUT = varbit_out,
    RECEIVE = varbit_recv,
    SEND = varbit_send,
+   TYPMODIN = varbittypmodin,
+   TYPMODOUT = varbittypmodout,
    INTERNALLENGTH = VARIABLE,
    STORAGE = extended,
    ALIGNMENT = int4
@@ -621,6 +644,8 @@
    OUTPUT = numeric_out,
    RECEIVE = numeric_recv,
    SEND = numeric_send,
+   TYPMODIN = numerictypmodin,
+   TYPMODOUT = numerictypmodout,
    INTERNALLENGTH = VARIABLE,
    STORAGE = main,
    ALIGNMENT = int4
@@ -741,6 +766,11 @@
 -- These cannot be used to define table columns, but are valid as function
 -- argument and result types (if supported by the function's implementation
 -- language).
+--
+-- Note: cstring is a borderline case; it is still considered a pseudo-type,
+-- but there is now support for it in records and arrays.  Perhaps we should
+-- just treat it as a regular base type?
+
 
  CREATE TYPE record(
    INPUT = record_in,
@@ -761,8 +791,9 @@
    INTERNALLENGTH = -2,
    STORAGE = plain,
    ALIGNMENT = char
- ) WITH (OID=2275, TYPTYPE=PSEUDO);
+ ) WITH (OID=2275, ARRAYOID=1263, TYPTYPE=PSEUDO);
 -- #define CSTRINGOID		2275
+-- #define CSTRINGARRAYOID	1263
 
  CREATE TYPE "any"(
    INPUT = any_in,

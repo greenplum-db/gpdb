@@ -21,10 +21,9 @@
 #include "gpopt/translate/CDXLTranslateContextBaseTable.h"
 #include "gpos/base.h"
 
-#include "dxl/operators/CDXLScalarIdent.h"
-#include "dxl/gpdb_types.h"
-
-#include "dxl/CIdGenerator.h"
+#include "naucrates/dxl/gpdb_types.h"
+#include "naucrates/dxl/CIdGenerator.h"
+#include "naucrates/dxl/operators/CDXLScalarIdent.h"
 
 #include "gpopt/gpdbwrappers.h"
 

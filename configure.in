@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-dnl $PostgreSQL: pgsql/configure.in,v 1.546.2.11 2009/01/30 02:59:28 scrappy Exp $
+dnl $PostgreSQL: pgsql/configure.in,v 1.494 2007/01/02 21:25:50 momjian Exp $
 dnl
 dnl Developers, please strive to achieve this order:
 dnl
@@ -17,7 +17,7 @@ dnl Read the Autoconf manual for details.
 dnl
 m4_pattern_forbid(^PGAC_)dnl to catch undefined macros
 
-AC_INIT([Greenplum Database], [8.2.15], [support@greenplum.com])
+AC_INIT([Greenplum Database], [8.3devel], [support@greenplum.com])
 
 AC_PREREQ(2.63)
 dnl m4_if(m4_defn([m4_PACKAGE_VERSION]), [2.63], [], [m4_fatal([Autoconf version 2.63 is required.
@@ -157,16 +157,24 @@ AC_MSG_RESULT([$enable_integer_datetimes])
 #
 # NLS
 #
-AC_MSG_CHECKING([whether NLS is wanted])
-PGAC_ARG_OPTARG(enable, nls,
-                [[  --enable-nls[=LANGUAGES]  enable Native Language Support]],
-                [],
-                [WANTED_LANGUAGES=$enableval],
-                [AC_DEFINE(ENABLE_NLS, 1,
-                           [Define to 1 if you want National Language Support. (--enable-nls)])])
-AC_MSG_RESULT([$enable_nls])
-AC_SUBST(enable_nls)
-AC_SUBST(WANTED_LANGUAGES)
+# NLS is not supported in Greenplum. There's no fundamental reason for it,
+# but no-one's kept the translations up-to-date. The .po files have been
+# removed from the repository, so it won't work if you just uncomment the
+# below block. If we wanted to enable NLS support, we should come up with a
+# scheme to use the upstream PostgreSQL .po files as is, to make merging
+# easier, and provide additional .po files for all the Greenplum-specific
+# strings.
+# to the users to let them build with very incomplete translations.
+#AC_MSG_CHECKING([whether NLS is wanted])
+#PGAC_ARG_OPTARG(enable, nls,
+#                [[  --enable-nls[=LANGUAGES]  enable Native Language Support]],
+#                [],
+#                [WANTED_LANGUAGES=$enableval],
+#                [AC_DEFINE(ENABLE_NLS, 1,
+#                           [Define to 1 if you want National Language Support. (--enable-nls)])])
+#AC_MSG_RESULT([$enable_nls])
+#AC_SUBST(enable_nls)
+#AC_SUBST(WANTED_LANGUAGES)
 
 #
 # Default port number (--with-pgport), default 5432
@@ -575,13 +583,6 @@ AC_SUBST(autodepend)
 PGAC_ARG_BOOL(enable, cassert, no, [  --enable-cassert        enable assertion checks (for debugging)],
               [AC_DEFINE([USE_ASSERT_CHECKING], 1,
                          [Define to 1 to build with assertion checks. (--enable-cassert)])])
-
-#
-# Enable forced plans
-#
-PGAC_ARG_BOOL(enable, forceplan, no, [  --enable-forceplan        enable forcing of plans via EXPLAIN FORCE (for debugging)],
-              [AC_DEFINE([USE_FORCE_PLAN], 1,
-                         [Define to 1 to build with plan forcing capabilities. (--enable-forceplan)])])
 
 #
 # Enable debug_break
@@ -1120,6 +1121,13 @@ fi
 ## Header files
 ##
 
+# Check for Greenplum Query Optimizer (orca) and supporting Greenplum OS header files.
+AS_IF([test "$enable_orca" = yes],
+[ # then
+  AC_CHECK_HEADERS(gpopt/init.h,  [], [AC_MSG_ERROR([gpopt/init.h GPOPT header file is required for Greenplum Query Optimizer (orca)])])
+  AC_CHECK_HEADERS(gpos/assert.h, [], [AC_MSG_ERROR([gpos/assert.h GPOS header file is required for Greenplum Query Optimizer (orca)])])
+]) # fi
+
 dnl sys/socket.h is required by AC_FUNC_ACCEPT_ARGTYPES
 AC_CHECK_HEADERS([crypt.h dld.h endian.h fp_class.h getopt.h ieeefp.h ifaddrs.h langinfo.h poll.h pwd.h sys/ioctl.h sys/ipc.h sys/poll.h sys/pstat.h sys/resource.h sys/select.h sys/sem.h sys/shm.h sys/socket.h sys/sockio.h sys/tas.h sys/time.h sys/un.h termios.h ucred.h utime.h wchar.h wctype.h kernel/OS.h kernel/image.h SupportDefs.h])
 
@@ -1441,6 +1449,9 @@ fi
 pgac_save_LIBS="$LIBS"
 LIBS=`echo "$LIBS" | sed -e 's/-ledit//g' -e 's/-lreadline//g'`
 
+# net-snmp has the same problem..
+LIBS=`echo "$LIBS" | sed -e 's/-lnetsnmp//g'`
+
 AC_REPLACE_FUNCS([crypt fseeko getopt getpeereid getrusage inet_aton random rint srandom strdup strerror strlcat strlcpy strtol strtoul unsetenv])
 
 case $host_os in
@@ -1498,17 +1509,6 @@ if test "$with_readline" = yes; then
   AC_CHECK_FUNCS([replace_history_entry])
 fi
 
-
-dnl Cannot use AC_CHECK_FUNC because finite may be a macro
-AC_MSG_CHECKING(for finite)
-AC_TRY_LINK([
-#include <math.h>
-double glob_double;
-],
-            [return finite(glob_double) ? 0 : 1;],
-            [AC_DEFINE(HAVE_FINITE, 1, [Define to 1 if you have finite().])
-AC_MSG_RESULT(yes)],
-            [AC_MSG_RESULT(no)])
 
 dnl Cannot use AC_CHECK_FUNC because sigsetjmp may be a macro
 dnl (especially on GNU libc)
@@ -1635,7 +1635,7 @@ if test "$with_ldap" = yes ; then
       # on some platforms ldap_r fails to link without PTHREAD_LIBS
       AC_CHECK_LIB(ldap_r, ldap_simple_bind, [],
 		   [AC_MSG_ERROR([library 'ldap_r' is required for LDAP])],
-		   [$PTHREAD_CFLAGS $PTHREAD_LIBS $EXTRA_LDAP_LIBS])
+		   [$PTHREAD_LIBS $EXTRA_LDAP_LIBS])
       LDAP_LIBS_FE="-lldap_r $EXTRA_LDAP_LIBS"
     else
       LDAP_LIBS_FE="-lldap $EXTRA_LDAP_LIBS"

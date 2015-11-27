@@ -21,11 +21,10 @@
 #include "gpos/base.h"
 #include "gpos/string/CWStringBase.h"
 
-#include "md/IMDId.h"
-#include "md/IMDCacheObject.h"
-#include "md/CSystemId.h"
-
-#include "md/IMDProvider.h"
+#include "naucrates/md/CSystemId.h"
+#include "naucrates/md/IMDId.h"
+#include "naucrates/md/IMDCacheObject.h"
+#include "naucrates/md/IMDProvider.h"
 
 // fwd decl
 namespace gpopt

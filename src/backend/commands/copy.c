@@ -1755,6 +1755,7 @@ static void CopyToCreateDispatchCommand(CopyState cstate,
 {
 	ListCell   *cur;
 	bool		is_first_col = true;
+	int			i;
 
 	/* append schema and tablename */
 	appendStringInfo(cdbcopy_cmd, "COPY %s.%s",
@@ -1803,6 +1804,23 @@ static void CopyToCreateDispatchCommand(CopyState cstate,
 		appendStringInfo(cdbcopy_cmd, " CSV");
 		appendStringInfo(cdbcopy_cmd, " QUOTE AS E'%s'", escape_quotes(cstate->quote));
 		appendStringInfo(cdbcopy_cmd, " ESCAPE AS E'%s'", escape_quotes(cstate->escape));
+
+		/* Create list of FORCE QUOTE columns */
+		is_first_col = true;
+		for (i = 0; i < num_phys_attrs; i++)
+		{
+			if (cstate->force_quote_flags[i])
+			{
+				if (is_first_col)
+					appendStringInfoString(cdbcopy_cmd, "FORCE QUOTE ");
+				else
+					appendStringInfoString(cdbcopy_cmd, ", ");
+				is_first_col = false;
+
+				appendStringInfoString(cdbcopy_cmd,
+									   quote_identifier(NameStr(attr[i]->attname)));
+			}
+		}
 
 		/* do NOT include HEADER. Header row is created by dispatcher COPY */
 	}
@@ -2296,6 +2314,8 @@ CopyOneRowTo(CopyState cstate, Oid tupleOid, Datum *values, bool *isnulls)
 		}
 		else
 		{
+			char		quotec = cstate->quote ? cstate->quote[0] : '\0';
+
 			/* int2out or int4out ? */
 			if (out_functions[attnum -1].fn_oid == 39 ||  /* int2out or int4out */
 				out_functions[attnum -1].fn_oid == 43 )
@@ -2313,18 +2333,28 @@ CopyOneRowTo(CopyState cstate, Oid tupleOid, Datum *values, bool *isnulls)
 					pg_ltoa(DatumGetInt32(value),tmp);
 
 				/*
-				 * integers shouldn't need quoting, and shouldn't need transcoding to client char set
+				 * Integers don't need quoting, or transcoding to client char
+				 * set. We still quote them if FORCE QUOTE was used, though.
 				 */
+				if (cstate->force_quote_flags[attnum - 1])
+					CopySendChar(cstate, quotec);
 				CopySendData(cstate, tmp, strlen(tmp));
+				if (cstate->force_quote_flags[attnum - 1])
+					CopySendChar(cstate, quotec);
 			}
 			else if (out_functions[attnum -1].fn_oid == 1702)   /* numeric_out */
 			{
 				string = OutputFunctionCall(&out_functions[attnum - 1],
 																value);
 				/*
-				 * numeric shouldn't need quoting, and shouldn't need transcoding to client char set
+				 * Numerics don't need quoting, or transcoding to client char
+				 * set. We still quote them if FORCE QUOTE was used, though.
 				 */
+				if (cstate->force_quote_flags[attnum - 1])
+					CopySendChar(cstate, quotec);
 				CopySendData(cstate, string, strlen(string));
+				if (cstate->force_quote_flags[attnum - 1])
+					CopySendChar(cstate, quotec);
 			}
 			else
 			{

@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/tablecmds.c,v 1.206.2.8 2009/12/09 21:58:28 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/tablecmds.c,v 1.209 2007/01/03 18:11:01 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -45,8 +45,6 @@
 #include "catalog/pg_depend.h"
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_extprotocol.h"
-#include "catalog/pg_foreign_table.h"
-#include "catalog/pg_foreign_server.h"
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_operator.h"
@@ -69,7 +67,6 @@
 #include "commands/trigger.h"
 #include "commands/typecmds.h"
 #include "executor/executor.h"
-#include "foreign/foreign.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "nodes/print.h"
@@ -458,8 +455,6 @@ DefineRelation_int(CreateStmt *stmt,
 	ItemPointerData	persistentTid;
 	int64			persistentSerialNum;
 
-	TidycatOptions *tidycatOptions = NULL;
-
 	bool		shouldDispatch = Gp_role == GP_ROLE_DISPATCH &&
                                  IsNormalProcessingMode() &&
                                  relkind != RELKIND_SEQUENCE &&
@@ -568,23 +563,6 @@ DefineRelation_int(CreateStmt *stmt,
 	 */
 	reloptions = transformRelOptions((Datum) 0, stmt->options, true, false);
 
-	/*
-	 * Accept and only accept tidycat option during upgrade.
-	 *
-	 * All other storage option will be discarded during upgrade.
-	 * During bootstrap, we don't have any storage option. So, during
-	 * upgrade, we don't need it as well because we're just creating
-	 * catalog objects. Further, we overload the WITH clause to pass-in
-	 * the index oid. So, if we don't strip it out, it'll appear in
-	 * the pg_class.reloptions, and we don't want that.
-	 *
-	 */
-	if (gp_upgrade_mode)
-	{
-		tidycatOptions = tidycat_reloptions(reloptions);
-		reloptions = 0;
-	}
-
 	/* Check permissions except when using database's default */
 	if (OidIsValid(tablespaceId) && tablespaceId != MyDatabaseTableSpace)
 	{
@@ -678,37 +656,21 @@ DefineRelation_int(CreateStmt *stmt,
 		 *
 		 * The OID will be the relfilenode as well, so make sure it doesn't collide
 		 * with either pg_class OIDs or existing physical files.
-		 *
-		 * For upgrade, use the tidycat OIDs if specified. Also, remove the distribution
-		 * policy because catalog table does not have distribution.
 		 */
-		if (gp_upgrade_mode && (tidycatOptions->relid != InvalidOid))
-		{
-			relationId       = tidycatOptions->relid;
-			comptypeOid      = tidycatOptions->reltype_oid;
-			toastRelationId  = tidycatOptions->toast_oid;
-			toastIndexId     = tidycatOptions->toast_index;
-			toastComptypeOid = tidycatOptions->toast_reltype;
-			stmt->policy = NULL;
-		}
-		else
-		{
-			relationId          = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
-			comptypeOid         = GetNewRelFileNode(tablespaceId, false,  pg_type_desc);
-			toastRelationId     = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
-			toastIndexId        = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
-			toastComptypeOid    = GetNewRelFileNode(tablespaceId, false,  pg_type_desc);
-			aosegRelationId     = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
-			aosegIndexId        = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
-			aoblkdirRelationId  = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
-			aoblkdirIndexId     = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
-			aosegComptypeOid    = GetNewRelFileNode(tablespaceId, false,  pg_type_desc);
-			aoblkdirComptypeOid = GetNewRelFileNode(tablespaceId, false,  pg_type_desc);
-			aovisimapRelationId = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
-			aovisimapIndexId    = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
-			aovisimapComptypeOid = GetNewRelFileNode(tablespaceId, false, pg_type_desc);
-
-		}
+		relationId          = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
+		comptypeOid         = GetNewRelFileNode(tablespaceId, false,  pg_type_desc);
+		toastRelationId     = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
+		toastIndexId        = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
+		toastComptypeOid    = GetNewRelFileNode(tablespaceId, false,  pg_type_desc);
+		aosegRelationId     = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
+		aosegIndexId        = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
+		aoblkdirRelationId  = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
+		aoblkdirIndexId     = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
+		aosegComptypeOid    = GetNewRelFileNode(tablespaceId, false,  pg_type_desc);
+		aoblkdirComptypeOid = GetNewRelFileNode(tablespaceId, false,  pg_type_desc);
+		aovisimapRelationId = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
+		aovisimapIndexId    = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
+		aovisimapComptypeOid = GetNewRelFileNode(tablespaceId, false, pg_type_desc);
 
 		heap_close(pg_class_desc, NoLock);  /* gonna update, so don't unlock */
 
@@ -1327,111 +1289,6 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	
 }
 
-extern void
-DefineForeignRelation(CreateForeignStmt *createForeignStmt)
-{
-	CdbDispatcherState		  ds = {NULL, NULL};
-	CreateStmt				  *createStmt = makeNode(CreateStmt);
-	Oid						  reloid = 0;
-	bool					  shouldDispatch = (Gp_role == GP_ROLE_DISPATCH &&
-												IsNormalProcessingMode());
-	
-	/*
-	 * now set the parameters for keys/inheritance etc. Most of these are
-	 * uninteresting for external relations...
-	 */
-	createStmt->relation = createForeignStmt->relation;
-	createStmt->tableElts = createForeignStmt->tableElts;
-	createStmt->inhRelations = NIL;
-	createStmt->constraints = NIL;
-	createStmt->options = NIL;
-	createStmt->oncommit = ONCOMMIT_NOOP;
-	createStmt->tablespacename = NULL;
-	createStmt->policy = NULL; /* for now, we use "master only" type of distribution */
-	
-	/* (permissions are checked in foreigncmd.c:InsertForeignTableEntry() ) */
-
-    /*
-	 * First, create the pg_class and other regular relation catalog entries.
-	 * Under the covers this will dispatch a CREATE TABLE statement to all the
-	 * QEs.
-	 */
-	if(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY)
-		reloid = DefineRelation(createStmt, RELKIND_RELATION, RELSTORAGE_FOREIGN);
-
-	/*
-	 * Now we take care of pg_foreign_table
-	 */
-    PG_TRY();
-    {
-    	ObjectAddress myself;
-    	ObjectAddress referenced;
-    	Oid	ownerId = GetUserId();
-    	ForeignServer *srv = GetForeignServerByName(createForeignStmt->srvname, false);
-    	
-		/*
-		 * get our pg_class foreign rel OID. If we're the QD we just created
-		 * it above. If we're a QE DefineRelation() was already dispatched to
-		 * us and therefore we have a local entry in pg_class. get the OID
-		 * from cache.
-		 */
-		if(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY)
-			Assert(reloid != InvalidOid);
-		else
-			reloid = RangeVarGetRelid(createForeignStmt->relation, true);
-
-		/* Add dependency on SERVER and owner */
-		myself.classId = RelationRelationId;
-		myself.objectId = reloid;
-		myself.objectSubId = 0;
-
-		referenced.classId = ForeignServerRelationId;
-		referenced.objectId = srv->serverid;
-		referenced.objectSubId = 0;
-		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
-
-		recordDependencyOnOwner(RelationRelationId, reloid, ownerId);
-
-		/* create a pg_exttable entry for this foreign table.*/
-		InsertForeignTableEntry(reloid, 
-								createForeignStmt->srvname, 
-								createForeignStmt->options);
-				
-
-		if (shouldDispatch)
-		{
-
-			/* Dispatch the statement tree to all primary and mirror segdbs.
-			 * Doesn't wait for the QEs to finish execution.
-			 */
-			cdbdisp_dispatchUtilityStatement((Node *)createForeignStmt,
-											 true,      /* cancelOnError */
-											 true,      /* startTransaction */
-											 true,      /* withSnapshot */
-											 &ds,
-											 "DefineForeignRelation");
-		}
-    }
-	PG_CATCH();
-	{
-        /* If dispatched, stop QEs and clean up after them. */
-        if (ds.primaryResults)
-            cdbdisp_handleError(&ds);
-
-        /* Carry on with error handling. */
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
-
-	/*
-	 * We successfully completed our work.	Now check the results from the
-	 * qExecs, if dispatched.  This waits for them to all finish, and exits
-	 * via ereport(ERROR,...) if unsuccessful.
-	 */
-	cdbdisp_finishCommand(&ds, NULL, NULL);
-
-}
-
 /* ----------------------------------------------------------------
 *		DefinePartitionedRelation
 *				Create the rewrite rule for a partitioned table
@@ -1561,9 +1418,9 @@ MetaTrackValidKindNsp(Form_pg_class rd_rel)
  * RemoveRelation
  *		Deletes a relation.
  */
-void
+bool
 RemoveRelation(const RangeVar *relation, DropBehavior behavior,
-			   DropStmt *stmt)
+			   DropStmt *stmt, char relkind)
 {
 	Oid			relOid;
 	ObjectAddress object;
@@ -1572,8 +1429,6 @@ RemoveRelation(const RangeVar *relation, DropBehavior behavior,
 
 	AcceptInvalidationMessages();
 
-	relOid = RangeVarGetRelid(relation, false);
-
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		LockRelationOid(RelationRelationId, RowExclusiveLock);
@@ -1581,7 +1436,34 @@ RemoveRelation(const RangeVar *relation, DropBehavior behavior,
 		LockRelationOid(DependRelationId, RowExclusiveLock);
 	}
 
-	LockRelationOid(relOid, AccessExclusiveLock);
+	/*
+	 * Perform name lookup again if we had to wait to acquire lock on
+	 * OID of the relation.  The relation's name could have been
+	 * altered while we were waiting.
+	 */
+	relOid = RangeVarGetRelidExtended(
+			relation, AccessExclusiveLock, stmt?stmt->missing_ok:false,
+			false /* nowait */, NULL /* callback */,
+			NULL /* callback_arg */);
+
+	if (!OidIsValid(relOid))
+	{
+		/*
+		 * Missed to find the object to be dropped.
+		 * Drop with "if exists" just notify the same, unlock as not performing
+		 * any operation and return back to convey didn't drop the relation.
+		 * Drop without "if exists" won't even come here, as would error
+		 * inside RangeVarGetRelidExtended.
+		 */
+		DropErrorMsgNonExistent(relation, relkind, stmt?stmt->missing_ok:false);
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			UnlockRelationOid(DependRelationId, RowExclusiveLock);
+			UnlockRelationOid(TypeRelationId, RowExclusiveLock);
+			UnlockRelationOid(RelationRelationId, RowExclusiveLock);
+		}
+		return false;
+	}
 
 	pcqCtx = caql_beginscan(
 			NULL,
@@ -1622,6 +1504,7 @@ RemoveRelation(const RangeVar *relation, DropBehavior behavior,
 
 	/* if we got here then we should proceed. */
 	performDeletion(&object, behavior);
+	return true;
 }
 
 /*
@@ -2397,6 +2280,9 @@ MergeAttributes(List *schema, List *supers, bool istemp, bool isPartitioned,
 			exist_attno = findAttrByName(attributeName, inhSchema);
 			if (exist_attno > 0)
 			{
+				Oid			defTypeId;
+				int32		deftypmod;
+
 				/*
 				 * Yes, try to merge the two column definitions. They must
 				 * have the same type and typmod.
@@ -2412,8 +2298,10 @@ MergeAttributes(List *schema, List *supers, bool istemp, bool isPartitioned,
 						(errmsg("merging multiple inherited definitions of column \"%s\"",
 								attributeName)));
 				def = (ColumnDef *) list_nth(inhSchema, exist_attno - 1);
-				if (typenameTypeId(NULL, def->typname) != attribute->atttypid ||
-					def->typname->typmod != attribute->atttypmod)
+				defTypeId = typenameTypeId(NULL, def->typname);
+				deftypmod = typenameTypeMod(NULL, def->typname, defTypeId);
+				if (defTypeId != attribute->atttypid ||
+					deftypmod != attribute->atttypmod)
 					ereport(ERROR,
 							(errcode(ERRCODE_DATATYPE_MISMATCH),
 						errmsg("inherited column \"%s\" has a type conflict",
@@ -2566,6 +2454,8 @@ MergeAttributes(List *schema, List *supers, bool istemp, bool isPartitioned,
 			if (exist_attno > 0)
 			{
 				ColumnDef  *def;
+				Oid			defTypeId, newTypeId;
+				int32		deftypmod, newtypmod;
 
 				/*
 				 * Yes, try to merge the two column definitions. They must
@@ -2582,8 +2472,11 @@ MergeAttributes(List *schema, List *supers, bool istemp, bool isPartitioned,
 				   (errmsg("merging column \"%s\" with inherited definition",
 						   attributeName)));
 				def = (ColumnDef *) list_nth(inhSchema, exist_attno - 1);
-				if (typenameTypeId(NULL, def->typname) != typenameTypeId(NULL, newdef->typname) ||
-					def->typname->typmod != newdef->typname->typmod)
+				defTypeId = typenameTypeId(NULL, def->typname);
+				deftypmod = typenameTypeMod(NULL, def->typname, defTypeId);
+				newTypeId = typenameTypeId(NULL, newdef->typname);
+				newtypmod = typenameTypeMod(NULL, newdef->typname, newTypeId);
+				if (defTypeId != newTypeId || deftypmod != newtypmod)
 					ereport(ERROR,
 							(errcode(ERRCODE_DATATYPE_MISMATCH),
 							 errmsg("column \"%s\" has a type conflict",
@@ -3738,14 +3631,7 @@ ATVerifyObject(AlterTableStmt *stmt, Relation rel)
 	 * Verify the object specified against relstorage in the catalog.
 	 * Enforce correct syntax usage. 
 	 */
-	if (RelationIsForeign(rel) && stmt->relkind != OBJECT_FOREIGNTABLE)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("\"%s\" is a foreign table", RelationGetRelationName(rel)),
-				 errhint("Use ALTER FOREIGN TABLE instead")));
-	}
-	else if (RelationIsExternal(rel) && stmt->relkind != OBJECT_EXTTABLE)
+	if (RelationIsExternal(rel) && stmt->relkind != OBJECT_EXTTABLE)
 	{
 		/*
 		 * special case: in order to support 3.3 dumps with ALTER TABLE OWNER of
@@ -3769,7 +3655,7 @@ ATVerifyObject(AlterTableStmt *stmt, Relation rel)
 					 errhint("Use ALTER EXTERNAL TABLE instead")));
 		}
 	}
-	else if (!RelationIsExternal(rel) && !RelationIsForeign(rel) && stmt->relkind != OBJECT_TABLE)
+	else if (!RelationIsExternal(rel) && stmt->relkind != OBJECT_TABLE)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
@@ -3780,7 +3666,7 @@ ATVerifyObject(AlterTableStmt *stmt, Relation rel)
 	/*
 	 * Check the ALTER command type is supported for this object
 	 */
-	if (RelationIsForeign(rel) || RelationIsExternal(rel))
+	if (RelationIsExternal(rel))
 	{
 		ListCell *lcmd;
 
@@ -3790,7 +3676,7 @@ ATVerifyObject(AlterTableStmt *stmt, Relation rel)
 
 			switch(cmd->subtype)
 			{
-				/* FOREIGN and EXTERNAL tables doesn't support the following AT */
+				/* EXTERNAL tables don't support the following AT */
 				case AT_ColumnDefault:
 				case AT_ColumnDefaultRecurse:
 				case AT_DropNotNull:
@@ -3834,7 +3720,7 @@ ATVerifyObject(AlterTableStmt *stmt, Relation rel)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_COLUMN_DEFINITION),
 							 errmsg("Unsupported ALTER command for table type %s",
-									 (RelationIsExternal(rel) ? "external" : "foreign"))));
+									"external")));
 					break;
 
 				case AT_AddColumn: /* check no constraint is added too */
@@ -3844,7 +3730,7 @@ ATVerifyObject(AlterTableStmt *stmt, Relation rel)
 						ereport(ERROR,
 								(errcode(ERRCODE_INVALID_COLUMN_DEFINITION),
 								 errmsg("Unsupported ALTER command for table type %s. No constraints allowed.",
-										 (RelationIsExternal(rel) ? "external" : "foreign"))));
+										 "external")));
 					break;
 
 				default:
@@ -3998,7 +3884,7 @@ ATController(Relation rel, List *cmds, bool recurse,
 	int			ocount = 0;
 	TableOidInfo * oids = NULL;
 	bool is_partition = false;
-	bool is_data_remote = (RelationIsExternal(rel) || RelationIsForeign(rel));
+	bool is_data_remote = RelationIsExternal(rel);
 #ifdef USE_ASSERT_CHECKING
 	Oid			relid = RelationGetRelid(rel);
 #endif
@@ -4935,14 +4821,22 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 
 								for (parcol = 0; parcol < nkeys; parcol++)
 								{
-									Oid opclass =
-										prule1->pNode->part->parclass[parcol];
-									Oid funcid = get_opclass_proc(opclass, 0,
-																 BTORDER_PROC);
-									Const *v = lfirst(lcv);
-									Const *c = lfirst(lcc);
-									Datum d;
+									Oid			opclass;
+									Oid			opfam;
+									Oid			funcid;
+									Const	   *v;
+									Const	   *c;
+									Datum		d;
+									Oid			intype;
 
+									opclass =  prule1->pNode->part->parclass[parcol];
+									intype = get_opclass_input_type(opclass);
+									opfam = get_opclass_family(opclass);
+									funcid = get_opfamily_proc(opfam, intype, intype,
+															   BTORDER_PROC);
+
+									v = lfirst(lcv);
+									c = lfirst(lcc);
 									if (v->constisnull && c->constisnull)
 										continue;
 									else if (v->constisnull || c->constisnull)
@@ -5004,16 +4898,23 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 					else
 					{
 						/* at must be in range */
-						Const	*start	  = NULL;
-						Const	*end	  = NULL;
-						Const	*atval	  = NULL;
-						Oid		 opclass  = prule1->pNode->part->parclass[0];
-						Oid		 funcid	  = get_opclass_proc(opclass, 0,
-															 BTORDER_PROC);
-						Node	*n;
-						Datum	 res;
-						int32	 ret;
-						bool	 in_range = true;
+						Const	   *start	  = NULL;
+						Const	   *end	  = NULL;
+						Const	   *atval;
+						Oid			opclass;
+						Oid			opfam;
+						Oid			funcid;
+						Oid			intype;
+						Node	   *n;
+						Datum		res;
+						int32		ret;
+						bool		in_range = true;
+
+						opclass =  prule1->pNode->part->parclass[0];
+						intype = get_opclass_input_type(opclass);
+						opfam = get_opclass_family(opclass);
+						funcid = get_opfamily_proc(opfam, intype, intype,
+												   BTORDER_PROC);
 
 						n = (Node *)linitial((List *)at);
 
@@ -5342,12 +5243,6 @@ ATAddToastIfNeeded(List **wqueue,
 			Relation rel;
 			Oid reltablespace;
 
-			/*
-			 * For upgrade, don't create a toast table.
-			 */
-			if (gp_upgrade_mode)
-				continue;
-
 			/* 
 			 * Determine if we need to create a toast table.
 			 */
@@ -5618,7 +5513,7 @@ ATRewriteTables(List **wqueue,
 
 		/* We will lock the table iff we decide to actually rewrite it */
 		rel = relation_open(tab->relid, NoLock);
-		if (RelationIsExternal(rel) || RelationIsForeign(rel))
+		if (RelationIsExternal(rel))
 		{
 			heap_close(rel, NoLock);
 			continue;
@@ -6800,7 +6695,7 @@ ATSimplePermissions(Relation rel, bool allowView)
 						 errmsg("\"%s\" is not a table or view",
 								RelationGetRelationName(rel))));
 		}
-		else if ((!IsUnderPostmaster || gp_upgrade_mode) &&
+		else if (!IsUnderPostmaster &&
 				 (rel->rd_rel->relkind == RELKIND_AOSEGMENTS ||
 				  rel->rd_rel->relkind == RELKIND_AOBLOCKDIR ||
 				  rel->rd_rel->relkind == RELKIND_AOVISIMAP))
@@ -6810,17 +6705,6 @@ ATSimplePermissions(Relation rel, bool allowView)
 			 * AO segment tables.
 			 */
 		}
-#if GP_VERSION_NUM >= 40300 && GP_VERSION_NUM < 40400
-		else if (gp_upgrade_mode &&
-				 (rel->rd_rel->relkind == RELKIND_AOSEGMENTS ||
-				  rel->rd_rel->relkind == RELKIND_AOBLOCKDIR ||
-				  rel->rd_rel->relkind == RELKIND_AOVISIMAP))
-		{
-			/*
-			 * We add columns to pg_aoseg.  Allow it in upgrade mode.
-			 */
-		}
-#endif
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
@@ -7151,6 +7035,7 @@ ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 				maxatts;
 	HeapTuple	typeTuple;
 	Oid			typeOid;
+	int32		typmod;
 	Form_pg_type tform;
 	Expr	   *defval;
 	cqContext	cqc;
@@ -7206,10 +7091,15 @@ ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 		if (HeapTupleIsValid(tuple))
 		{
 			Form_pg_attribute childatt = (Form_pg_attribute) GETSTRUCT(tuple);
+			Oid			ctypeId;
+			int32		ctypmod;
 
 			/* Okay if child matches by type */
-			if (typenameTypeId(NULL, colDef->typname) != childatt->atttypid ||
-				colDef->typname->typmod != childatt->atttypmod)
+			ctypeId = typenameTypeId(NULL, colDef->typname);
+			ctypmod = typenameTypeMod(NULL, colDef->typname, ctypeId);
+
+			if (ctypeId != childatt->atttypid ||
+				ctypmod != childatt->atttypmod)
 				ereport(ERROR,
 						(errcode(ERRCODE_DATATYPE_MISMATCH),
 						 errmsg("child table \"%s\" has different type for column \"%s\"",
@@ -7294,6 +7184,7 @@ ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 	typeTuple = typenameType(NULL, colDef->typname);
 	tform = (Form_pg_type) GETSTRUCT(typeTuple);
 	typeOid = HeapTupleGetOid(typeTuple);
+	typmod = typenameTypeMod(NULL, colDef->typname, typeOid);
 
 	/* make sure datatype is legal for a column */
 	CheckAttributeType(colDef->colname, typeOid);
@@ -7311,7 +7202,7 @@ ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 	attribute->attstattarget = -1;
 	attribute->attlen = tform->typlen;
 	attribute->attcacheoff = -1;
-	attribute->atttypmod = colDef->typname->typmod;
+	attribute->atttypmod = typmod;
 	attribute->attnum = i;
 	attribute->attbyval = tform->typbyval;
 	attribute->attndims = list_length(colDef->typname->arrayBounds);
@@ -7393,7 +7284,7 @@ ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 												(Node *) defval,
 												basetype,
 												typeOid,
-												colDef->typname->typmod,
+												typmod,
 												COERCION_ASSIGNMENT,
 												COERCE_IMPLICIT_CAST,
 												-1);
@@ -8727,7 +8618,8 @@ ATAddForeignKeyConstraint(AlteredTableInfo *tab, Relation rel,
 		 * generate a warning if not, since otherwise costly seqscans will be
 		 * incurred to check FK validity.
 		 */
-		if (Gp_role != GP_ROLE_EXECUTE && !op_in_opclass(oprid(o), opclasses[i]))
+		if (Gp_role != GP_ROLE_EXECUTE &&
+			!op_in_opfamily(oprid(o), get_opclass_family(opclasses[i])))
 			ereport(WARNING,
 					(errmsg("foreign key constraint \"%s\" "
 							"will require costly sequential scans",
@@ -9519,6 +9411,7 @@ ATPrepAlterColumnType(List **wqueue,
 	Form_pg_attribute attTup;
 	AttrNumber	attnum;
 	Oid			targettype;
+	int32		targettypmod;
 	Node	   *transform;
 	NewColumnValue *newval;
 	ParseState *pstate = make_parsestate(NULL);
@@ -9553,6 +9446,7 @@ ATPrepAlterColumnType(List **wqueue,
 
 	/* Look up the target type */
 	targettype = typenameTypeId(NULL, typname);
+	targettypmod = typenameTypeMod(NULL, typname, targettype);
 
 	/* make sure datatype is legal for a column */
 	CheckAttributeType(colName, targettype);
@@ -9612,7 +9506,7 @@ ATPrepAlterColumnType(List **wqueue,
 
 	transform = coerce_to_target_type(pstate,
 									  transform, exprType(transform),
-									  targettype, typname->typmod,
+									  targettype, targettypmod,
 									  COERCION_ASSIGNMENT,
 									  COERCE_IMPLICIT_CAST,
 									  -1);
@@ -9661,6 +9555,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	HeapTuple	typeTuple;
 	Form_pg_type tform;
 	Oid			targettype;
+	int32		targettypmod;
 	Node	   *defaultexpr;
 	Relation	attrelation;
 	Relation	depRel;
@@ -9703,6 +9598,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	typeTuple = typenameType(NULL, typname);
 	tform = (Form_pg_type) GETSTRUCT(typeTuple);
 	targettype = HeapTupleGetOid(typeTuple);
+	targettypmod = typenameTypeMod(NULL, typname, targettype);
 
 	if (targettype == INT4OID ||
 		targettype == INT2OID ||
@@ -9748,7 +9644,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		defaultexpr = strip_implicit_coercions(defaultexpr);
 		defaultexpr = coerce_to_target_type(NULL,		/* no UNKNOWN params */
 										  defaultexpr, exprType(defaultexpr),
-											targettype, typname->typmod,
+											targettype, targettypmod,
 											COERCION_ASSIGNMENT,
 											COERCE_IMPLICIT_CAST,
 											-1);
@@ -10035,7 +9931,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	 * copy of the syscache entry, so okay to scribble on.)
 	 */
 	attTup->atttypid = targettype;
-	attTup->atttypmod = typname->typmod;
+	attTup->atttypmod = targettypmod;
 	attTup->attndims = list_length(typname->arrayBounds);
 	attTup->attlen = tform->typlen;
 	attTup->attbyval = tform->typbyval;
@@ -11785,7 +11681,7 @@ copy_buffer_pool_data(
 		 * rel, because there's no need for smgr to schedule an fsync for this
 		 * write; we'll do it ourselves below.
 		 */
-		smgrwrite(dst, blkno, buf, true);
+		smgrextend(dst, blkno, buf, true);
 		
 		LWLockRelease(MirroredLock);
 		// -------- MirroredLock ----------
@@ -12972,7 +12868,7 @@ make_typname(Form_pg_attribute att, bool *built)
 
 	Assert(att->attisdropped); /* better not be here unless */
 
-	tname->typmod = att->atttypmod;
+	tname->typemod = att->atttypmod;
 
 	if (attlen == -1)
 	{
@@ -12994,7 +12890,7 @@ make_typname(Form_pg_attribute att, bool *built)
 			 * XXX: there may be occassions where tables with dropped TOASTable
 			 * columns do still have TOAST tables. Need to explore those.
 			 */
-			tname->typmod = 1 + Max(NUMERIC_HDRSZ, VARHDRSZ);
+			tname->typemod = 1 + Max(NUMERIC_HDRSZ, VARHDRSZ);
 		}
 		else if (att->attalign == 'd')
 			typname = makeString(pstrdup("path"));
@@ -13223,7 +13119,7 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, List *distro, List *opts,
 				tname->names = list_make2(makeString(nspname),
 										  makeString(typstr));
 				ReleaseType(typ);
-				tname->typmod = att->atttypmod;
+				tname->typemod = att->atttypmod;
 
 				/*
 				 * If this is a built in array type, like _int4, then reduce
@@ -14945,7 +14841,9 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 		 * We do not allow EXCHANGE PARTITION for the default partition, so let's check for that
 		 * and error out.
 		 */
-		if (!is_split && rel_is_default_partition(oldrelid))
+		bool fExchangeDefaultPart = !is_split && rel_is_default_partition(oldrelid);
+
+		if (fExchangeDefaultPart && !gp_enable_exchange_default_partition)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
@@ -14963,6 +14861,12 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 		pc->partid = (Node *)oldrelrv;
 		pc2 = (AlterPartitionCmd *)pc->arg2;
 		pc2->arg2 = (Node *)pcols; /* for execute nodes */
+
+		if (fExchangeDefaultPart)
+		{
+			elog(WARNING, "Exchanging default partition may result in unexpected query results if "
+					"the data being exchanged should have been inserted into a different partition");
+		}
 
 		/* MPP-6929: metadata tracking */
 		MetaTrackUpdObject(RelationRelationId,
@@ -16839,13 +16743,19 @@ ATPExecPartSplit(Relation *rel,
 
 								for (parcol = 0; parcol < nkeys; parcol++)
 								{
-									Oid opclass =
-										prule->pNode->part->parclass[parcol];
-									Oid funcid = get_opclass_proc(opclass, 0,
-																  BTORDER_PROC);
+									Oid			opclass;
+									Oid			opfam;
+									Oid			intype;
+									Oid			funcid;
 									Const *v = lfirst(lcv);
 									Const *c = lfirst(lcc);
 									Datum d;
+
+									opclass =  prule->pNode->part->parclass[parcol];
+									intype = get_opclass_input_type(opclass);
+									opfam = get_opclass_family(opclass);
+									funcid = get_opfamily_proc(opfam, intype, intype,
+															   BTORDER_PROC);
 
 									if (v->constisnull && c->constisnull)
 										continue;

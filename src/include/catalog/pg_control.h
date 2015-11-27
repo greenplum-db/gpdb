@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_control.h,v 1.33 2006/10/04 00:30:07 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_control.h,v 1.34 2006/12/08 19:50:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -23,10 +23,11 @@
 
 /*
  * Version identifier for this pg_control format.
- * For historical reason, we use "8220" as a prefix. GPDB version comes
- * after these 4 digits.
+ *
+ * The first three digits is the PostgreSQL version number. The last
+ * four digits indicates the GPDB version.
  */
-#define PG_CONTROL_VERSION	8220430
+#define PG_CONTROL_VERSION	8310500
 
 /*
  * Body of CheckPoint XLOG records.  This is declared here because we keep
@@ -112,8 +113,6 @@ typedef struct ControlFileData
 	 */
 	DBState		state;			/* see enum above */
 	time_t		time;			/* time stamp of last pg_control update */
-	uint32		logId;			/* current log file id */
-	uint32		logSeg;			/* current log file segment, + 1 */
 	XLogRecPtr	checkPoint;		/* last check point record ptr */
 	XLogRecPtr	prevCheckPoint; /* previous check point record ptr */
 

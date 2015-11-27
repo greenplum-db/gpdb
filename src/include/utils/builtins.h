@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/builtins.h,v 1.282.2.2 2007/05/17 23:31:59 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/utils/builtins.h,v 1.284 2007/01/03 22:39:26 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -897,7 +897,7 @@ extern Datum numeric_recv(PG_FUNCTION_ARGS);
 extern Datum numeric_send(PG_FUNCTION_ARGS);
 extern Datum numerictypmodin(PG_FUNCTION_ARGS);
 extern Datum numerictypmodout(PG_FUNCTION_ARGS);
-extern Datum numeric (PG_FUNCTION_ARGS);
+extern Datum numeric(PG_FUNCTION_ARGS);
 extern Datum numeric_abs(PG_FUNCTION_ARGS);
 extern Datum numeric_uminus(PG_FUNCTION_ARGS);
 extern Datum numeric_uplus(PG_FUNCTION_ARGS);
@@ -1104,7 +1104,6 @@ Datum gp_persistent_build_db(PG_FUNCTION_ARGS);
 Datum gp_persistent_build_all(PG_FUNCTION_ARGS);
 Datum gp_persistent_reset_all(PG_FUNCTION_ARGS);
 Datum gp_persistent_repair_delete(PG_FUNCTION_ARGS);
-Datum gp_persistent_set_relation_bufpool_kind_all(PG_FUNCTION_ARGS);
 
 Datum gp_dbspecific_ptcat_verification(PG_FUNCTION_ARGS);
 Datum gp_nondbspecific_ptcat_verification(PG_FUNCTION_ARGS);

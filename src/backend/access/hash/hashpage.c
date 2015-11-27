@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hashpage.c,v 1.61.2.1 2007/04/19 20:24:10 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hashpage.c,v 1.62 2007/01/03 18:11:01 tgl Exp $
  *
  * NOTES
  *	  Postgres hash pages look like ordinary relation pages.  The opaque
@@ -614,10 +614,8 @@ fail:
  *
  * This does not need to initialize the new bucket pages; we'll do that as
  * each one is used by _hash_expandtable().  But we have to extend the logical
- * EOF to the end of the splitpoint; otherwise the first overflow page
- * allocated beyond the splitpoint will represent a noncontiguous access,
- * which can confuse md.c (and will probably be forbidden by future changes
- * to md.c).
+ * EOF to the end of the splitpoint; this keeps smgr's idea of the EOF in
+ * sync with ours, so that overflow-page allocation works correctly.
  *
  * We do this by writing a page of zeroes at the end of the splitpoint range.
  * We expect that the filesystem will ensure that the intervening pages read
@@ -639,7 +637,6 @@ static bool
 _hash_alloc_buckets(Relation rel, BlockNumber firstblock, uint32 nblocks)
 {
 	BlockNumber	lastblock;
-	BlockNumber	endblock;
 	char		zerobuf[BLCKSZ];
 
 	lastblock = firstblock + nblocks - 1;
@@ -654,21 +651,6 @@ _hash_alloc_buckets(Relation rel, BlockNumber firstblock, uint32 nblocks)
 	MemSet(zerobuf, 0, sizeof(zerobuf));
 
 	RelationOpenSmgr(rel);
-
-	/*
-	 * XXX If the extension results in creation of new segment files,
-	 * we have to make sure that each non-last file is correctly filled out to
-	 * RELSEG_SIZE blocks.  This ought to be done inside mdextend, but
-	 * changing the smgr API seems best left for development cycle not late
-	 * beta.  Temporary fix for bug #2737.
-	 */
-#ifndef LET_OS_MANAGE_FILESIZE
-	for (endblock = firstblock | (RELSEG_SIZE - 1);
-		 endblock < lastblock;
-		 endblock += RELSEG_SIZE)
-		smgrextend(rel->rd_smgr, endblock, zerobuf, rel->rd_istemp);
-#endif
-
 	smgrextend(rel->rd_smgr, lastblock, zerobuf, rel->rd_istemp);
 
 	return true;

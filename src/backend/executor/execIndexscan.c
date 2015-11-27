@@ -303,9 +303,10 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 				int			flags = SK_ROW_MEMBER;
 				Datum		scanvalue;
 				Oid			opno;
-				Oid			opclass;
+				Oid			opfamily;
 				int			op_strategy;
-				Oid			op_subtype;
+				Oid			op_lefttype;
+				Oid			op_righttype;
 				bool		op_recheck;
 
 				/*
@@ -363,14 +364,14 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 				if (index->rd_rel->relam != BTREE_AM_OID ||
 					varattno < 1 || varattno > index->rd_index->indnatts)
 					insist_log(false, "bogus RowCompare index qualification");
-				opclass = index->rd_indclass->values[varattno - 1];
+				opfamily = index->rd_opfamily[varattno - 1];
 
-				get_op_opclass_properties(opno, opclass,
-									 &op_strategy, &op_subtype, &op_recheck);
+				get_op_opfamily_properties(opno, opfamily,
+										   &op_strategy, &op_lefttype, &op_righttype, &op_recheck);
 
 				insist_log(op_strategy == rc->rctype, "RowCompare index qualification contains wrong operator");
 
-				opfuncid = get_opclass_proc(opclass, op_subtype, BTORDER_PROC);
+				opfuncid = get_opfamily_proc(opfamily, op_lefttype, op_righttype, BTORDER_PROC);
 
 				/*
 				 * initialize the subsidiary scan key's fields appropriately
@@ -379,7 +380,7 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 									   flags,
 									   varattno,		/* attribute number */
 									   op_strategy,		/* op's strategy */
-									   op_subtype,		/* strategy subtype */
+									   op_lefttype,		/* strategy subtype */
 									   opfuncid,		/* reg proc to use */
 									   scanvalue);		/* constant */
 				extra_scan_keys++;

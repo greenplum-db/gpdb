@@ -1071,8 +1071,10 @@ class ValidatePersistentBackupTestCase(unittest.TestCase):
         d1 = DbIdInfo(1, 'p', 2, 5001, 'h1', {1000: '/tmp/p1', 3052: '/tmp/p2'}, {1000: [2000], 3052: [2001]}, {2000: [123], 2001: [234]})
         m1 = Mock()
         m1.get_results.return_value = CommandResult(0, '/tmp/f1', '', True, False)
+        m1.cmdStr = "find /tmp/f1 -name pt_rebuild_bk_"
         m2 = Mock()
         m2.get_results.return_value = CommandResult(0, '/tmp/f1', '', True, False)
+        m2.cmdStr = "find /tmp/f1 -name pt_rebuild_bk_"
         m = Mock()
         m.getCompletedItems.return_value = [m1, m2]
         self.validate_persistent_backup._process_results(d1, m)
@@ -1081,8 +1083,10 @@ class ValidatePersistentBackupTestCase(unittest.TestCase):
         d1 = DbIdInfo(1, 'p', 2, 5001, 'h1', {1000: '/tmp/p1', 3052: '/tmp/p2'}, {1000: [2000], 3052: [2001]}, {2000: [123], 2001: [234]})
         m1 = Mock()
         m1.get_results.return_value = CommandResult(0, '/tmp/f1', '', True, False)
+        m1.cmdStr = "find /tmp/f1 -name pt_rebuild_bk_"
         m2 = Mock()
         m2.get_results.return_value = CommandResult(1, '/tmp/f1', '', True, False)
+        m2.cmdStr = "find /tmp/f1 -name pt_rebuild_bk_"
         m = Mock()
         m.getCompletedItems.return_value = [m1, m2]
         with self.assertRaisesRegexp(Exception, 'Failed to validate backups'):
@@ -1092,8 +1096,10 @@ class ValidatePersistentBackupTestCase(unittest.TestCase):
         d1 = DbIdInfo(1, 'p', 2, 5001, 'h1', {1000: '/tmp/p1', 3052: '/tmp/p2'}, {1000: [2000], 3052: [2001]}, {2000: [123], 2001: [234]})
         m1 = Mock()
         m1.get_results.return_value = CommandResult(0, '/tmp/f1', '', True, False)
+        m1.cmdStr = "find /tmp/f1 -name pt_rebuild_bk_"
         m2 = Mock()
         m2.get_results.return_value = CommandResult(0, '', '', True, False)
+        m2.cmdStr = "find /foo/bar -name pt_rebuild_bk_"
         m = Mock()
         m.getCompletedItems.return_value = [m1, m2]
         with self.assertRaisesRegexp(Exception, 'Failed to validate backups'):

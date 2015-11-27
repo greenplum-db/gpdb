@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/selfuncs.h,v 1.36.2.1 2007/08/31 23:35:30 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/utils/selfuncs.h,v 1.37 2006/12/23 00:43:13 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -162,6 +162,7 @@ extern Selectivity rowcomparesel(PlannerInfo *root,
 			  int varRelid, JoinType jointype);
 
 extern void mergejoinscansel(PlannerInfo *root, Node *clause,
+				 Oid opfamily, int strategy,
 				 Selectivity *leftscan,
 				 Selectivity *rightscan);
 

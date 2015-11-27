@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/pgstatfuncs.c,v 1.34.2.1 2007/05/17 23:31:59 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/pgstatfuncs.c,v 1.36 2007/01/02 20:59:31 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -33,6 +33,8 @@ extern Datum pg_stat_get_tuples_fetched(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_tuples_inserted(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_tuples_updated(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_tuples_deleted(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_live_tuples(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_dead_tuples(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_blocks_fetched(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_blocks_hit(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_last_vacuum_time(PG_FUNCTION_ARGS);
@@ -50,6 +52,7 @@ extern Datum pg_stat_get_backend_userid(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_backend_activity(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_backend_waiting(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_backend_activity_start(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_backend_xact_start(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_backend_start(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_backend_client_addr(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_backend_client_port(PG_FUNCTION_ARGS);
@@ -180,6 +183,38 @@ pg_stat_get_tuples_deleted(PG_FUNCTION_ARGS)
 	else
 		result = (int64) (tabentry->tuples_deleted);
 
+	PG_RETURN_INT64(result);
+}
+
+
+Datum
+pg_stat_get_live_tuples(PG_FUNCTION_ARGS)
+{ 
+	Oid		relid = PG_GETARG_OID(0);
+	int64	result;
+	PgStat_StatTabEntry	*tabentry;
+ 
+	if ((tabentry = pgstat_fetch_stat_tabentry(relid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (tabentry->n_live_tuples);
+        
+	PG_RETURN_INT64(result);
+}
+
+        
+Datum
+pg_stat_get_dead_tuples(PG_FUNCTION_ARGS)
+{
+	Oid		relid = PG_GETARG_OID(0);
+	int64	result;
+	PgStat_StatTabEntry	*tabentry;
+
+	if ((tabentry = pgstat_fetch_stat_tabentry(relid)) == NULL)
+		result = 0;
+	else
+		result = (int64) (tabentry->n_dead_tuples);
+        
 	PG_RETURN_INT64(result);
 }
 
@@ -341,39 +376,6 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 		funcctx = SRF_FIRSTCALL_INIT();
 
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
-
-#if GP_VERSION_NUM >= 40300 && GP_VERSION_NUM < 40400
-		/*
-		 * During upgrade, we use normal gpstart/gpstop, which invokes this
-		 * via pg_stat_activity view.  If catalog has not upgraded yet, SQL
-		 * ends up with ERROR about discrepancy of output and definition.
-		 * so we need to check the catalog definition before deciding the
-		 * number of output column.
-		 */
-		if (gp_upgrade_mode)
-		{
-			HeapTuple	procTup;
-			Oid	   *argtypes;
-			char  **argnames;
-			char   *argmodes;
-			int		nargs;
-
-			procTup = SearchSysCache(PROCOID,
-									 ObjectIdGetDatum(F_PG_STAT_GET_ACTIVITY), 0, 0, 0);
-			if (!HeapTupleIsValid(procTup))
-				elog(ERROR, "cache lookup failed for %u", F_PG_STAT_GET_ACTIVITY);
-			nargs = get_func_arg_info(procTup, &argtypes, &argnames, &argmodes);
-			if (nargs == 13)
-				nattr = 12;
-			else
-				nattr = 13;
-
-			pfree(argtypes);
-			pfree(argnames);
-			pfree(argmodes);
-			ReleaseSysCache(procTup);
-		}
-#endif
 
 		tupdesc = CreateTemplateTupleDesc(nattr, false);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "datid", OIDOID, -1, 0);
@@ -748,6 +750,29 @@ pg_stat_get_backend_activity_start(PG_FUNCTION_ARGS)
 
 	PG_RETURN_TIMESTAMPTZ(result);
 }
+
+
+Datum
+pg_stat_get_backend_xact_start(PG_FUNCTION_ARGS)
+{
+	int32		beid = PG_GETARG_INT32(0);
+	TimestampTz result;
+	PgBackendStatus *beentry;
+
+	if ((beentry = pgstat_fetch_stat_beentry(beid)) == NULL)
+		PG_RETURN_NULL();
+
+	if (!superuser() && beentry->st_userid != GetUserId())
+		PG_RETURN_NULL();
+
+	result = beentry->st_xact_start_timestamp;
+
+	if (result == 0)			/* not in a transaction */
+		PG_RETURN_NULL();
+
+	PG_RETURN_TIMESTAMPTZ(result);
+}
+
 
 Datum
 pg_stat_get_backend_start(PG_FUNCTION_ARGS)

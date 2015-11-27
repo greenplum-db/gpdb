@@ -1624,6 +1624,7 @@ cdb_make_pathkey_for_expr_non_canonical(PlannerInfo    *root,
 					      Node     *expr,
                           List     *eqopname)
 {
+    Oid             opfamily = InvalidOid;
     Oid             typeoid = InvalidOid;
     Oid	            eqopoid = InvalidOid;
     Oid             leftsortop = InvalidOid;
@@ -1639,10 +1640,13 @@ cdb_make_pathkey_for_expr_non_canonical(PlannerInfo    *root,
     /* Get oid of the sort operator that would be used for a
      * sort-merge equijoin on a pair of exprs of the same type.
      */
-    if (eqopoid != InvalidOid &&
-    		op_mergejoinable(eqopoid, &leftsortop, &rightsortop))
+    if (eqopoid != InvalidOid && op_mergejoinable(eqopoid))
     {
-    	item = makePathKeyItem((Node *)expr, leftsortop, true);
+		/* XXX for the moment, continue to force use of particular sortops */
+		if (get_op_mergejoin_info(eqopoid, &leftsortop, &rightsortop, &opfamily))
+		{
+			item = makePathKeyItem((Node *)expr, leftsortop, true);
+		}
     }
     else
     {

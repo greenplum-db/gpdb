@@ -93,7 +93,7 @@ test__GUCArrayReset__all_non_userset_guc(void **state)
 
 	/* construct text array */
 	elems = 3;
-	guc_list = list_make3("log_error_verbosity=terse", "gp_log_format=csv", "upgrade_mode=true");
+	guc_list = list_make3("log_error_verbosity=terse", "gp_log_format=csv", "maintenance_mode=true");
 	in = create_guc_array(guc_list, elems);
 
 	out = GUCArrayReset(in);
@@ -118,8 +118,8 @@ test__GUCArrayReset__all_non_userset_guc(void **state)
 	i = 3;
 	d = array_ref(out, 1, &i, -1, TEXT_TYPLEN, TEXT_TYPBYVAL, TEXT_TYPALIGN, &isnull);
 	assert_false(isnull);
-	assert_int_equal(strlen("upgrade_mode=true"), VARLEN(d));
-	assert_memory_equal(VARDATA(d), "upgrade_mode=true", VARLEN(d));
+	assert_int_equal(strlen("maintenance_mode=true"), VARLEN(d));
+	assert_memory_equal(VARDATA(d), "maintenance_mode=true", VARLEN(d));
 
 	list_free(guc_list);
 	pfree(in);

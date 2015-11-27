@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/varchar.c,v 1.119 2006/10/04 00:30:00 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/varchar.c,v 1.120 2006/12/30 21:21:54 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -651,6 +651,7 @@ varchartypmodout(PG_FUNCTION_ARGS)
 
 	PG_RETURN_CSTRING(anychar_typmodout(typmod));
 }
+
 
 /*****************************************************************************
  * Exported functions

@@ -231,6 +231,7 @@ extern bool gp_crash_recovery_suppress_ao_eof;
 extern bool Debug_check_for_invalid_persistent_tid;
 extern bool gp_create_table_random_default_distribution;
 extern bool gp_allow_non_uniform_partitioning_ddl;
+extern bool gp_enable_exchange_default_partition;
 
 /* WAL replication debug gucs */
 extern bool debug_walrepl_snd;
@@ -444,6 +445,7 @@ extern bool optimizer_direct_dispatch;
 extern bool optimizer_control;	/* controls whether the user can change the setting of the "optimizer" guc */
 extern bool optimizer_enable_master_only_queries;
 extern bool optimizer_multilevel_partitioning;
+extern bool optimizer_enable_derive_stats_all_groups;
 extern bool optimizer_explain_show_status;
 
 /**

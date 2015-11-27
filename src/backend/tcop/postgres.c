@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tcop/postgres.c,v 1.518.2.1 2007/01/04 00:58:01 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tcop/postgres.c,v 1.520 2007/01/04 00:57:51 tgl Exp $
  *
  * NOTES
  *	  this is the "main" module of the postgres backend and
@@ -223,6 +223,7 @@ extern bool ResourceScheduler;
 static int	InteractiveBackend(StringInfo inBuf);
 static int	SocketBackend(StringInfo inBuf);
 static int	ReadCommand(StringInfo inBuf);
+static void forbidden_in_wal_sender(char firstchar);
 static List *pg_rewrite_queries(List *querytree_list);
 static bool check_log_statement(List *stmt_list);
 static int	errdetail_execute(List *raw_parsetree_list);
@@ -3109,8 +3110,7 @@ finish_xact_command(void)
 
 #ifdef SHOW_MEMORY_STATS
 		/* Print mem stats after each commit for leak tracking */
-		if (ShowStats)
-			MemoryContextStats(TopMemoryContext);
+		MemoryContextStats(TopMemoryContext);
 #endif
 
 		xact_started = false;
@@ -4314,8 +4314,7 @@ PostgresMain(int argc, char *argv[],
 
 	/* If this is a WAL sender process, we're done with initialization. */
 	if (am_walsender)
-		proc_exit(WalSenderMain());
-
+		InitWalSender();
 	/*
 	 * process any libraries that should be preloaded at backend start (this
 	 * likewise can't be done until GUC settings are complete)
@@ -4424,6 +4423,9 @@ PostgresMain(int argc, char *argv[],
 		 * Abort the current transaction in order to recover.
 		 */
 		AbortCurrentTransaction();
+
+		if (am_walsender)
+			WalSndErrorCleanup();
 
 		topErrLevel = elog_getelevel();
 		if (topErrLevel <= ERROR)
@@ -4646,7 +4648,10 @@ PostgresMain(int argc, char *argv[],
 
 					setupRegularDtxContext();
 
-					exec_simple_query(query_string, NULL, -1);
+					if (am_walsender)
+						exec_replication_command(query_string);
+					else
+						exec_simple_query(query_string, NULL, -1);
 
 					send_ready_for_query = true;
 				}
@@ -4904,6 +4909,8 @@ PostgresMain(int argc, char *argv[],
 					int			numParams;
 					Oid		   *paramTypes = NULL;
 
+					forbidden_in_wal_sender(firstchar);
+
 					/* Set statement_timestamp() */
 					SetCurrentStatementStartTimestamp();
 
@@ -4934,8 +4941,10 @@ PostgresMain(int argc, char *argv[],
 					pq_flush();
 				}
 				break;
-				
+
 			case 'B':			/* bind */
+				forbidden_in_wal_sender(firstchar);
+
 				/* Set statement_timestamp() */
 				SetCurrentStatementStartTimestamp();
 
@@ -4952,6 +4961,8 @@ PostgresMain(int argc, char *argv[],
 				{
 					const char *portal_name;
 					int64			max_rows;
+
+					forbidden_in_wal_sender(firstchar);
 
 					/* Set statement_timestamp() */
 					SetCurrentStatementStartTimestamp();
@@ -4971,7 +4982,9 @@ PostgresMain(int argc, char *argv[],
 				break;
 
 			case 'F':			/* fastpath function call */
-                    
+
+				forbidden_in_wal_sender(firstchar);
+
                 /* Set statement_timestamp() */
  				SetCurrentStatementStartTimestamp();
 
@@ -5022,6 +5035,8 @@ PostgresMain(int argc, char *argv[],
 					int			close_type;
 					const char *close_target;
 
+					forbidden_in_wal_sender(firstchar);
+
 					close_type = pq_getmsgbyte(&input_message);
 					close_target = pq_getmsgstring(&input_message);
 					pq_getmsgend(&input_message);
@@ -5069,6 +5084,8 @@ PostgresMain(int argc, char *argv[],
 				{
 					int			describe_type;
 					const char *describe_target;
+
+					forbidden_in_wal_sender(firstchar);
 
 					/* Set statement_timestamp() (needed for xact) */
 					SetCurrentStatementStartTimestamp();
@@ -5160,6 +5177,28 @@ PostgresMain(int argc, char *argv[],
 	return 1;					/* keep compiler quiet */
 }
 
+/*
+ * Throw an error if we're a WAL sender process.
+ *
+ * This is used to forbid anything else than simple query protocol messages
+ * in a WAL sender process.  'firstchar' specifies what kind of a forbidden
+ * message was received, and is used to construct the error message.
+ */
+static void
+forbidden_in_wal_sender(char firstchar)
+{
+	if (am_walsender)
+	{
+		if (firstchar == 'F')
+			ereport(ERROR,
+					(errcode(ERRCODE_PROTOCOL_VIOLATION),
+					 errmsg("fastpath function calls not supported in a replication connection")));
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_PROTOCOL_VIOLATION),
+					 errmsg("extended query protocol not supported in a replication connection")));
+	}
+}
 
 /*
  * Obtain platform stack depth limit (in bytes)

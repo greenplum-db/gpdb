@@ -282,6 +282,7 @@ Relation DirectOpen_Open(
 			int pgIndexFixedLen = offsetof(FormData_pg_index, indkey);
 			int indKeyVectorLen = Int2VectorSize(natts);
 			int2vector *indKeyVector;
+			oidvector  *indClassVector;
 
 			uint16		amstrategies;
 			uint16		amsupport;
@@ -313,14 +314,6 @@ Relation DirectOpen_Open(
 
 			pfree(indKeyVector);
 
-			/*
-			 * Create oidvector in rd_indclass with values from indClassArray.
-			 */
-			direct->relationData.rd_indclass = 
-									buildoidvector(
-											indClassArray, 
-											natts);
-
 			direct->relationData.rd_am = pgAm;
 
 			amstrategies = pgAm->amstrategies;
@@ -333,6 +326,11 @@ Relation DirectOpen_Open(
 			 */
 			direct->relationData.rd_aminfo = (RelationAmInfo *)
 				MemoryContextAllocZero(TopMemoryContext, sizeof(RelationAmInfo));
+
+			direct->relationData.rd_opfamily = (Oid *)
+				MemoryContextAllocZero(TopMemoryContext, natts * sizeof(Oid));
+			direct->relationData.rd_opcintype = (Oid *)
+				MemoryContextAllocZero(TopMemoryContext, natts * sizeof(Oid));
 
 			if (amstrategies > 0)
 				operator = (Oid *)
@@ -361,11 +359,18 @@ Relation DirectOpen_Open(
 			direct->relationData.rd_supportinfo = supportinfo;
 
 			/*
+			 * Create oidvector in rd_indclass with values from indClassArray.
+			 */
+			indClassVector = buildoidvector(indClassArray, natts);
+ 
+			/*
 			 * Fill the operator and support procedure OID arrays.	(aminfo and
 			 * supportinfo are left as zeroes, and are filled on-the-fly when used)
 			 */
-			IndexSupportInitialize(direct->relationData.rd_indclass,
+			IndexSupportInitialize(indClassVector,
 								   operator, support,
+								   direct->relationData.rd_opfamily,
+								   direct->relationData.rd_opcintype,
 								   amstrategies, amsupport, natts);
 
 			/*
@@ -427,6 +432,8 @@ Relation DirectOpen_Open(
 	direct->relationData.rd_node.spcNode = tablespace;
 	direct->relationData.rd_node.dbNode = database;
 	direct->relationData.rd_node.relNode = relfilenode;
+
+	direct->relationData.rd_targblock = InvalidBlockNumber;
 
 	for (i = 0; i < direct->relationData.rd_rel->relnatts; i++)
 	{

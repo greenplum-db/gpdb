@@ -320,13 +320,13 @@ DATA(insert ( 3266  float8_mregr_accum    - float8_mregr_combine  - float8_mregr
 DATA(insert ( 2981  xmlconcat2	             - - - - 				  0	142  _null_ t));
 
 /* array */
-DATA(insert ( 2910	array_agg_transfn        - - - array_agg_finalfn  0 2281 _null_ t));
+DATA(insert ( 6098	array_agg_transfn        - - - array_agg_finalfn  0 2281 _null_ t));
 
 /* text */
 DATA(insert ( 3537	string_agg_transfn       - - - string_agg_finalfn 0 2281 _null_ t));
 DATA(insert ( 3538	string_agg_delim_transfn - - - string_agg_finalfn 0 2281 _null_ t));
 
-DATA(insert ( 2913	pg_partition_oid_transfn      - - - pg_partition_oid_finalfn 0 2281 _null_ f));
+DATA(insert ( 6112	pg_partition_oid_transfn      - - - pg_partition_oid_finalfn 0 2281 _null_ f));
 
 
 

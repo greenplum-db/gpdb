@@ -20,8 +20,11 @@ all: fmgroids.h probes.h
 $(SUBDIRS:%=%-recursive): fmgroids.h
 
 
-fmgroids.h fmgrtab.c: Gen_fmgrtab.sh $(top_srcdir)/src/include/catalog/pg_proc.h
-	AWK='$(AWK)' $(SHELL) $< $(top_srcdir)/src/include/catalog/pg_proc.h
+# Like when creating postgres.bki, we need to inject missing columns before
+# feeding pg_proc.h to Gen_fmgrtab.sh. See also src/backend/catalog/Makefile.
+fmgroids.h fmgrtab.c: Gen_fmgrtab.sh $(top_srcdir)/src/include/catalog/pg_proc.h $(top_srcdir)/src/include/catalog/pg_proc_gp.h $(top_builddir)/src/include/catalog/pg_proc_gp.h $(top_srcdir)/src/backend/catalog/process_col_defaults.pl
+	cat $(top_srcdir)/src/include/catalog/pg_proc.h $(top_srcdir)/src/include/catalog/pg_proc_gp.h | $(top_srcdir)/src/backend/catalog/process_col_defaults.pl > pg_proc_combined.h.tmp
+	AWK='$(AWK)' $(SHELL) $< pg_proc_combined.h.tmp
 
 ifneq ($(enable_dtrace), yes)
 probes.h: Gen_dummy_probes.sed

@@ -247,7 +247,7 @@ void test__formSegmentPsqlCommandLine1(void **state)
 	formSegmentPsqlCommandLine(&cmdLine, inputFileSpec, compUsed, compProg, 
 							   filter_script, table_filter_file, role,
 							   psqlPg, catPg, gpNBURestorePg,
-							   netbackupServiceHost, netbackupBlockSize);
+							   netbackupServiceHost, netbackupBlockSize, NULL);
 
 	char *expected_output = "cat fileSpec | gzip -c | filter.py -t filter.conf | psql";
 	assert_string_equal(cmdLine, expected_output);
@@ -270,7 +270,7 @@ void test__formSegmentPsqlCommandLine2(void **state)
 	formSegmentPsqlCommandLine(&cmdLine, inputFileSpec, compUsed, compProg, 
 							   NULL, NULL, role,
 							   psqlPg, catPg, gpNBURestorePg,
-							   netbackupServiceHost, netbackupBlockSize);
+							   netbackupServiceHost, netbackupBlockSize, NULL);
 
 	char *expected_output = "cat fileSpec | gzip -c | psql";
 	assert_string_equal(cmdLine, expected_output);
@@ -295,7 +295,7 @@ void test__formSegmentPsqlCommandLine3(void **state)
 	formSegmentPsqlCommandLine(&cmdLine, inputFileSpec, compUsed, compProg, 
 							   filter_script, table_filter_file, role,
 							   psqlPg, catPg, gpNBURestorePg,
-							   netbackupServiceHost, netbackupBlockSize);
+							   netbackupServiceHost, netbackupBlockSize, NULL);
 
 	char *expected_output = "cat fileSpec | filter.py -t filter.conf | psql";
 	assert_string_equal(cmdLine, expected_output);
@@ -318,7 +318,7 @@ void test__formSegmentPsqlCommandLine4(void **state)
 	formSegmentPsqlCommandLine(&cmdLine, inputFileSpec, compUsed, compProg, 
 							   NULL, NULL, role,
 							   psqlPg, catPg, gpNBURestorePg,
-							   netbackupServiceHost, netbackupBlockSize);
+							   netbackupServiceHost, netbackupBlockSize, NULL);
 
 	char *expected_output = "cat fileSpec | psql";
 	assert_string_equal(cmdLine, expected_output);
@@ -343,7 +343,7 @@ void test__formSegmentPsqlCommandLine5(void **state)
 	formSegmentPsqlCommandLine(&cmdLine, inputFileSpec, compUsed, compProg, 
 							   filter_script, table_filter_file, role,
 							   psqlPg, catPg, gpNBURestorePg,
-							   netbackupServiceHost, netbackupBlockSize);
+							   netbackupServiceHost, netbackupBlockSize, NULL);
 
 	char *expected_output = "cat fileSpec | gzip -c | filter.py -m -t filter.conf | psql";
 	assert_string_equal(cmdLine, expected_output);
@@ -366,7 +366,7 @@ void test__formSegmentPsqlCommandLine6(void **state)
 	formSegmentPsqlCommandLine(&cmdLine, inputFileSpec, compUsed, compProg, 
 							   NULL, NULL, role,
 							   psqlPg, catPg, gpNBURestorePg,
-							   netbackupServiceHost, netbackupBlockSize);
+							   netbackupServiceHost, netbackupBlockSize, NULL);
 
 	char *expected_output = "cat fileSpec | gzip -c | psql";
 	assert_string_equal(cmdLine, expected_output);
@@ -391,7 +391,7 @@ void test__formSegmentPsqlCommandLine7(void **state)
 	formSegmentPsqlCommandLine(&cmdLine, inputFileSpec, compUsed, compProg, 
 							   filter_script, table_filter_file, role,
 							   psqlPg, catPg, gpNBURestorePg,
-							   netbackupServiceHost, netbackupBlockSize);
+							   netbackupServiceHost, netbackupBlockSize, NULL);
 
 	char *expected_output = "cat fileSpec | filter.py -m -t filter.conf | psql";
 	assert_string_equal(cmdLine, expected_output);
@@ -414,7 +414,7 @@ void test__formSegmentPsqlCommandLine8(void **state)
 	formSegmentPsqlCommandLine(&cmdLine, inputFileSpec, compUsed, compProg, 
 							   NULL, NULL, role,
 							   psqlPg, catPg, gpNBURestorePg,
-							   netbackupServiceHost, netbackupBlockSize);
+							   netbackupServiceHost, netbackupBlockSize, NULL);
 
 	char *expected_output = "cat fileSpec | psql";
 	assert_string_equal(cmdLine, expected_output);
@@ -439,7 +439,7 @@ void test__formSegmentPsqlCommandLine9(void **state)
 	formSegmentPsqlCommandLine(&cmdLine, inputFileSpec, compUsed, compProg,
 							   filter_script, table_filter_file, role,
 							   psqlPg, catPg, gpNBURestorePg,
-							   netbackupServiceHost, netbackupBlockSize);
+							   netbackupServiceHost, netbackupBlockSize, NULL);
 
 	char *expected_output = "gp_bsa_restore_agent --netbackup-service-host mdw --netbackup-filename fileSpec --netbackup-block-size 1024 | filter.py -t filter.conf | psql";
 	assert_string_equal(cmdLine, expected_output);
@@ -462,7 +462,7 @@ void test__formSegmentPsqlCommandLine10(void **state)
 	formSegmentPsqlCommandLine(&cmdLine, inputFileSpec, compUsed, compProg,
 							   NULL, NULL, role,
 							   psqlPg, catPg, gpNBURestorePg,
-							   netbackupServiceHost, netbackupBlockSize);
+							   netbackupServiceHost, netbackupBlockSize, NULL);
 
 	char *expected_output = "gp_bsa_restore_agent --netbackup-service-host mdw --netbackup-filename fileSpec --netbackup-block-size 1024 | psql";
 	assert_string_equal(cmdLine, expected_output);
@@ -487,7 +487,7 @@ void test__formSegmentPsqlCommandLine11(void **state)
 	formSegmentPsqlCommandLine(&cmdLine, inputFileSpec, compUsed, compProg,
 							   filter_script, table_filter_file, role,
 							   psqlPg, catPg, gpNBURestorePg,
-							   netbackupServiceHost, netbackupBlockSize);
+							   netbackupServiceHost, netbackupBlockSize, NULL);
 
 	char *expected_output = "gp_bsa_restore_agent --netbackup-service-host mdw --netbackup-filename fileSpec | filter.py -m -t filter.conf | psql";
 	assert_string_equal(cmdLine, expected_output);
@@ -510,9 +510,61 @@ void test__formSegmentPsqlCommandLine12(void **state)
 	formSegmentPsqlCommandLine(&cmdLine, inputFileSpec, compUsed, compProg,
 							   NULL, NULL, role,
 							   psqlPg, catPg, gpNBURestorePg,
-							   netbackupServiceHost, netbackupBlockSize);
+							   netbackupServiceHost, netbackupBlockSize, NULL);
 
 	char *expected_output = "gp_bsa_restore_agent --netbackup-service-host mdw --netbackup-filename fileSpec --netbackup-block-size 1024 | psql";
+	assert_string_equal(cmdLine, expected_output);
+	free(cmdLine);
+}
+
+/* Test to verify command line for gp_restore_agent */
+void test__formSegmentPsqlCommandLine13(void **state)
+{
+	char *cmdLine = calloc(1000000, 1);
+	char *inputFileSpec = "fileSpec";
+	bool compUsed = false;
+	const char* compProg = "gzip -c ";
+	int role = ROLE_MASTER;
+	const char* filter_script = "filter.py"; 
+	const char* table_filter_file = "filter.conf";
+	const char* psqlPg = "psql";
+	const char* catPg = "cat";
+	const char* gpNBURestorePg = "gp_bsa_restore_agent";
+	const char* netbackupServiceHost = "mdw";
+	const char* netbackupBlockSize = "1024";
+	const char* change_schema = "newschema";
+
+	formSegmentPsqlCommandLine(&cmdLine, inputFileSpec, compUsed, compProg,
+							   filter_script, table_filter_file, role,
+							   psqlPg, catPg, gpNBURestorePg,
+							   netbackupServiceHost, netbackupBlockSize, change_schema);
+
+	char *expected_output = "gp_bsa_restore_agent --netbackup-service-host mdw --netbackup-filename fileSpec --netbackup-block-size 1024 | filter.py -m -t filter.conf -c newschema | psql";
+	assert_string_equal(cmdLine, expected_output);
+	free(cmdLine);
+}
+
+/* Test to verify command line for restore filter */
+void test__formSegmentPsqlCommandLine14(void **state)
+{
+	char *cmdLine = calloc(1000000, 1);
+	char *inputFileSpec = "fileSpec";
+	bool compUsed = false;
+	const char* compProg = "gzip -c ";
+	int role = ROLE_MASTER;
+	const char* filter_script = "filter.py"; 
+	const char* table_filter_file = "filter.conf";
+	const char* psqlPg = "psql";
+	const char* catPg = "cat";
+	const char* gpNBURestorePg = "gp_bsa_restore_agent";
+	const char* change_schema = "newschema";
+
+	formSegmentPsqlCommandLine(&cmdLine, inputFileSpec, compUsed, compProg,
+							   filter_script, table_filter_file, role,
+							   psqlPg, catPg, gpNBURestorePg,
+							   NULL, NULL, change_schema);
+
+	char *expected_output = "cat fileSpec | filter.py -m -t filter.conf -c newschema | psql";
 	assert_string_equal(cmdLine, expected_output);
 	free(cmdLine);
 }
@@ -531,11 +583,12 @@ void test__formDDBoostPsqlCommandLine1(void **state)
 	const char* ddboostPg = "ddboostPg";
 	const char* ddp_file_name = "ddb_filename";
 	const char* dd_boost_buf_size = "512MB";
+	bool postSchemaOnly = false;
 
 	formDDBoostPsqlCommandLine(&cmdLine, compUsed, ddboostPg, compProg, 
 							   ddp_file_name, dd_boost_buf_size, 
 							   filter_script, table_filter_file,
-							   role, psqlPg);
+							   role, psqlPg, postSchemaOnly);
 
     char *e = "ddboostPg --readFile --from-file=ddb_filename.gz --dd_boost_buf_size=512MB | gzip -c | filter.py -t filter.conf | psql";
 	assert_string_equal(cmdLine, e);
@@ -553,11 +606,12 @@ void test__formDDBoostPsqlCommandLine2(void **state)
 	const char* ddboostPg = "ddboostPg";
 	const char* ddp_file_name = "ddb_filename";
 	const char* dd_boost_buf_size = "512MB";
+	bool postSchemaOnly = false;
 
 	formDDBoostPsqlCommandLine(&cmdLine, compUsed, ddboostPg, compProg, 
 							   ddp_file_name, dd_boost_buf_size, 
 							   NULL, NULL,
-							   role, psqlPg);
+							   role, psqlPg, postSchemaOnly);
 
     char *e = "ddboostPg --readFile --from-file=ddb_filename.gz --dd_boost_buf_size=512MB | gzip -c | psql";
 	printf("cmdLine is %s", cmdLine);
@@ -579,11 +633,12 @@ void test__formDDBoostPsqlCommandLine3(void **state)
 	const char* ddboostPg = "ddboostPg";
 	const char* ddp_file_name = "ddb_filename";
 	const char* dd_boost_buf_size = "512MB";
+	bool postSchemaOnly = false;
 
 	formDDBoostPsqlCommandLine(&cmdLine, compUsed, ddboostPg, compProg, 
 							   ddp_file_name, dd_boost_buf_size, 
 							   filter_script, table_filter_file,
-							   role, psqlPg);
+							   role, psqlPg, postSchemaOnly);
 
     char *e = "ddboostPg --readFile --from-file=ddb_filename --dd_boost_buf_size=512MB | filter.py -t filter.conf | psql";
 
@@ -602,11 +657,12 @@ void test__formDDBoostPsqlCommandLine4(void **state)
 	const char* ddboostPg = "ddboostPg";
 	const char* ddp_file_name = "ddb_filename";
 	const char* dd_boost_buf_size = "512MB";
+	bool postSchemaOnly = false;
 
 	formDDBoostPsqlCommandLine(&cmdLine, compUsed, ddboostPg, compProg, 
 							   ddp_file_name, dd_boost_buf_size, 
 							   NULL, NULL,
-							   role, psqlPg);
+							   role, psqlPg, postSchemaOnly);
 
     char *e = "ddboostPg --readFile --from-file=ddb_filename --dd_boost_buf_size=512MB | psql";
 	assert_string_equal(cmdLine, e);
@@ -626,11 +682,12 @@ void test__formDDBoostPsqlCommandLine5(void **state)
 	const char* ddboostPg = "ddboostPg";
 	const char* ddp_file_name = "ddb_filename";
 	const char* dd_boost_buf_size = "512MB";
+	bool postSchemaOnly = false;
 
 	formDDBoostPsqlCommandLine(&cmdLine, compUsed, ddboostPg, compProg, 
 							   ddp_file_name, dd_boost_buf_size, 
 							   filter_script, table_filter_file,
-							   role, psqlPg);
+							   role, psqlPg, postSchemaOnly);
 
     char *e = "ddboostPg --readFile --from-file=ddb_filename.gz --dd_boost_buf_size=512MB | gzip -c | filter.py -m -t filter.conf | psql";
 	assert_string_equal(cmdLine, e);
@@ -648,11 +705,12 @@ void test__formDDBoostPsqlCommandLine6(void **state)
 	const char* ddboostPg = "ddboostPg";
 	const char* ddp_file_name = "ddb_filename";
 	const char* dd_boost_buf_size = "512MB";
+	bool postSchemaOnly = false;
 
 	formDDBoostPsqlCommandLine(&cmdLine, compUsed, ddboostPg, compProg, 
 							   ddp_file_name, dd_boost_buf_size, 
 							   NULL, NULL,
-							   role, psqlPg);
+							   role, psqlPg, postSchemaOnly);
 
     char *e = "ddboostPg --readFile --from-file=ddb_filename.gz --dd_boost_buf_size=512MB | gzip -c | psql";
 	assert_string_equal(cmdLine, e);
@@ -672,11 +730,12 @@ void test__formDDBoostPsqlCommandLine7(void **state)
 	const char* ddboostPg = "ddboostPg";
 	const char* ddp_file_name = "ddb_filename";
 	const char* dd_boost_buf_size = "512MB";
+	bool postSchemaOnly =false;
 
 	formDDBoostPsqlCommandLine(&cmdLine, compUsed, ddboostPg, compProg, 
 							   ddp_file_name, dd_boost_buf_size, 
 							   filter_script, table_filter_file,
-							   role, psqlPg);
+							   role, psqlPg, postSchemaOnly);
 
     char *e = "ddboostPg --readFile --from-file=ddb_filename --dd_boost_buf_size=512MB | filter.py -m -t filter.conf | psql";
 	assert_string_equal(cmdLine, e);
@@ -694,16 +753,43 @@ void test__formDDBoostPsqlCommandLine8(void **state)
 	const char* ddboostPg = "ddboostPg";
 	const char* ddp_file_name = "ddb_filename";
 	const char* dd_boost_buf_size = "512MB";
+	bool postSchemaOnly = false;
 
 	formDDBoostPsqlCommandLine(&cmdLine, compUsed, ddboostPg, compProg, 
 							   ddp_file_name, dd_boost_buf_size, 
 							   NULL, NULL,
-							   role, psqlPg);
+							   role, psqlPg, postSchemaOnly);
 
     char *e = "ddboostPg --readFile --from-file=ddb_filename --dd_boost_buf_size=512MB | psql";
 	assert_string_equal(cmdLine, e);
 	free(cmdLine);
 }
+
+void test__formDDBoostPsqlCommandLine_with_postSchemaOnly_and_master_role(void **state)
+{
+	char *cmdLine = calloc(1000000, 1);
+	char *inputFileSpec = "fileSpec";
+	bool compUsed = false;
+	const char* compProg = "gzip -c";
+	int role = ROLE_MASTER;
+	const char* psqlPg = "psql";
+	const char* ddboostPg = "ddboostPg";
+	const char* ddp_file_name = "ddb_filename";
+	const char* postDataFilterScript = "gprestore_post_data_filter.py";
+	const char* tableFilterFile = "tablefilter";
+	const char* dd_boost_buf_size = "512MB";
+	bool postSchemaOnly = true;
+
+	formDDBoostPsqlCommandLine(&cmdLine, compUsed, ddboostPg, compProg,
+							   ddp_file_name, dd_boost_buf_size,
+							   postDataFilterScript, tableFilterFile,
+							   role, psqlPg, postSchemaOnly);
+
+    char *e = "ddboostPg --readFile --from-file=ddb_filename --dd_boost_buf_size=512MB | gprestore_post_data_filter.py -t tablefilter | psql";
+	assert_string_equal(cmdLine, e);
+	free(cmdLine);
+}
+
 #endif
 
 void test__shouldExpandChildren1(void **state)
@@ -1044,6 +1130,8 @@ main(int argc, char* argv[])
 			unit_test(test__formSegmentPsqlCommandLine10),
 			unit_test(test__formSegmentPsqlCommandLine11),
 			unit_test(test__formSegmentPsqlCommandLine12),
+			unit_test(test__formSegmentPsqlCommandLine13),
+			unit_test(test__formSegmentPsqlCommandLine14),
             #ifdef USE_DDBOOST
 			unit_test(test__formDDBoostPsqlCommandLine1),
 			unit_test(test__formDDBoostPsqlCommandLine2),
@@ -1053,6 +1141,7 @@ main(int argc, char* argv[])
 			unit_test(test__formDDBoostPsqlCommandLine6),
 			unit_test(test__formDDBoostPsqlCommandLine7),
 			unit_test(test__formDDBoostPsqlCommandLine8),
+			unit_test(test__formDDBoostPsqlCommandLine_with_postSchemaOnly_and_master_role),
             #endif
 			unit_test(test__shouldExpandChildren1),
 			unit_test(test__shouldExpandChildren2),
@@ -1076,7 +1165,7 @@ main(int argc, char* argv[])
             unit_test(test__remove_node),       
             unit_test(test__remove_node_not_present),       
             unit_test(test__remove_node_not_present_in_list),       
-            unit_test(test__clean_up_table),       
+            unit_test(test__clean_up_table),
 	};
 	return run_tests(tests);
 }

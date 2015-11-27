@@ -35,40 +35,39 @@
 #include "gpopt/translate/CTranslatorUtils.h"
 #include "gpopt/translate/CDXLTranslateContext.h"
 
-#include "dxl/CDXLUtils.h"
-#include "dxl/xml/dxltokens.h"
-#include "dxl/operators/CDXLDatumOid.h"
-#include "dxl/operators/CDXLDatumInt4.h"
-#include "dxl/operators/CDXLNode.h"
-#include "dxl/operators/CDXLSpoolInfo.h"
-#include "dxl/operators/CDXLColDescr.h"
-#include "dxl/gpdb_types.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/xml/dxltokens.h"
+#include "naucrates/dxl/operators/CDXLDatumOid.h"
+#include "naucrates/dxl/operators/CDXLDatumInt4.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/operators/CDXLSpoolInfo.h"
+#include "naucrates/dxl/operators/CDXLColDescr.h"
+#include "naucrates/dxl/gpdb_types.h"
 
-#include "gpopt/mdcache/CMDAccessor.h"
-#include "gpopt/base/CUtils.h"
+#include "naucrates/md/CMDIdColStats.h"
+#include "naucrates/md/CMDIdRelStats.h"
+#include "naucrates/md/IMDAggregate.h"
+#include "naucrates/md/IMDRelation.h"
+#include "naucrates/md/IMDTrigger.h"
+#include "naucrates/md/IMDIndex.h"
+#include "naucrates/md/IMDTypeBool.h"
+#include "naucrates/md/IMDTypeInt2.h"
+#include "naucrates/md/IMDTypeInt4.h"
+#include "naucrates/md/IMDTypeInt8.h"
+#include "naucrates/md/IMDTypeOid.h"
+#include "naucrates/md/CMDTypeGenericGPDB.h"
 
-#include "md/CMDIdColStats.h"
-#include "md/CMDIdRelStats.h"
-#include "md/IMDAggregate.h"
-#include "md/IMDRelation.h"
-#include "md/IMDTrigger.h"
-#include "md/IMDIndex.h"
-#include "md/IMDTypeBool.h"
-#include "md/IMDTypeInt2.h"
-#include "md/IMDTypeInt4.h"
-#include "md/IMDTypeInt8.h"
-#include "md/IMDTypeOid.h"
-#include "md/CMDTypeGenericGPDB.h"
+#include "naucrates/dxl/operators/CDXLDatumInt2.h"
+#include "naucrates/dxl/operators/CDXLDatumInt4.h"
+#include "naucrates/dxl/operators/CDXLDatumInt8.h"
+#include "naucrates/dxl/operators/CDXLDatumBool.h"
+#include "naucrates/dxl/operators/CDXLDatumOid.h"
 
-#include "dxl/operators/CDXLDatumInt2.h"
-#include "dxl/operators/CDXLDatumInt4.h"
-#include "dxl/operators/CDXLDatumInt8.h"
-#include "dxl/operators/CDXLDatumBool.h"
-#include "dxl/operators/CDXLDatumOid.h"
-
-#include "traceflags/traceflags.h"
+#include "naucrates/traceflags/traceflags.h"
 
 #include "gpopt/gpdbwrappers.h"
+#include "gpopt/base/CUtils.h"
+#include "gpopt/mdcache/CMDAccessor.h"
 
 using namespace gpdxl;
 using namespace gpmd;
@@ -1168,6 +1167,10 @@ CTranslatorUtils::OidCmpOperator
 //	@doc:
 //		Extract comparison operator from an OpExpr, ScalarArrayOpExpr or RowCompareExpr
 //
+//	FIXME: This function comment is completely bogus.
+//	FIXME: This actually returns the operator family, not operator
+//	class!
+//
 //---------------------------------------------------------------------------
 OID
 CTranslatorUtils::OidIndexQualOpclass
@@ -1180,10 +1183,10 @@ CTranslatorUtils::OidIndexQualOpclass
 	GPOS_ASSERT(NULL != relIndex);
 	GPOS_ASSERT(iAttno <= relIndex->rd_index->indnatts);
 	
-	OID oidOpclass = relIndex->rd_indclass->values[iAttno - 1];
+	OID oidOpfamily = relIndex->rd_opfamily[iAttno - 1];
 	gpdb::CloseRelation(relIndex);
 	
-	return oidOpclass;
+	return oidOpfamily;
 }
 
 //---------------------------------------------------------------------------

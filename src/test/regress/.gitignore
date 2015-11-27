@@ -12,3 +12,4 @@ regression.out
 config.ini
 pgbouncer.log
 pgbouncer.pid
+tmp_check

@@ -51,9 +51,6 @@
 #include "gpos/task/CAutoTraceFlag.h"
 #include "gpos/common/CAutoP.h"
 
-#include "init.h"
-#include "traceflags/traceflags.h"
-
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
 #include "gpopt/translate/CTranslatorExprToDXL.h"
 
@@ -77,29 +74,32 @@
 #include "gpopt/xforms/CXformFactory.h"
 #include "gpopt/exception.h"
 
-#include "base/CQueryToDXLResult.h"
+#include "naucrates/init.h"
+#include "naucrates/traceflags/traceflags.h"
 
-#include "md/IMDId.h"
-#include "md/CMDRelationGPDB.h"
-#include "md/CMDIdRelStats.h"
-#include "md/CMDIdColStats.h"
+#include "naucrates/base/CQueryToDXLResult.h"
 
-#include "md/CSystemId.h"
-#include "md/IMDRelStats.h"
-#include "md/IMDColStats.h"
-#include "md/IMDTypeInt8.h"
-#include "md/CMDIdCast.h"
-#include "md/CMDIdScCmp.h"
-#include "md/CMDTypeInt8GPDB.h"
+#include "naucrates/md/IMDId.h"
+#include "naucrates/md/CMDRelationGPDB.h"
+#include "naucrates/md/CMDIdRelStats.h"
+#include "naucrates/md/CMDIdColStats.h"
 
-#include "dxl/operators/CDXLNode.h"
-#include "dxl/parser/CParseHandlerDXL.h"
-#include "dxl/CDXLUtils.h"
-#include "dxl/CIdGenerator.h"
-#include "exception.h"
+#include "naucrates/md/CSystemId.h"
+#include "naucrates/md/IMDRelStats.h"
+#include "naucrates/md/IMDColStats.h"
+#include "naucrates/md/IMDTypeInt8.h"
+#include "naucrates/md/CMDIdCast.h"
+#include "naucrates/md/CMDIdScCmp.h"
+#include "naucrates/md/CMDTypeInt8GPDB.h"
 
-#include "CCostModelGPDB.h"
-#include "CCostModelGPDBLegacy.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/parser/CParseHandlerDXL.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/CIdGenerator.h"
+#include "naucrates/exception.h"
+
+#include "gpdbcost/CCostModelGPDB.h"
+#include "gpdbcost/CCostModelGPDBLegacy.h"
 
 
 #include "gpopt/gpdbwrappers.h"

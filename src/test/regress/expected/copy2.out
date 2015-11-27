@@ -6,14 +6,12 @@ CREATE TABLE x (
 	e text
 ) WITH OIDS;
 NOTICE:  CREATE TABLE will create implicit sequence "x_a_seq" for serial column "x.a"
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 CREATE FUNCTION fn_x_before () RETURNS TRIGGER AS '
   BEGIN
 		NEW.e := ''before trigger fired''::text;
 		return NEW;
 	END;
-' language plpgsql immutable;
+' LANGUAGE plpgsql;
 CREATE FUNCTION fn_x_after () RETURNS TRIGGER AS '
   BEGIN
 		UPDATE x set e=''after trigger fired'' where c=''stuff'';
@@ -25,19 +23,19 @@ FOR EACH ROW EXECUTE PROCEDURE fn_x_after();
 CREATE TRIGGER trg_x_before BEFORE INSERT ON x
 FOR EACH ROW EXECUTE PROCEDURE fn_x_before();
 COPY x (a, b, c, d, e) from stdin;
-ERROR:  Functions that execute SQL statements from the segDBs are not yet supported (spi.c:183)  (seg0 jbook.local:12002 pid=17255)
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
 PL/pgSQL function "fn_x_after" line 2 at SQL statement
 COPY x (b, d) from stdin;
-ERROR:  Functions that execute SQL statements from the segDBs are not yet supported (spi.c:183)  (seg0 jbook.local:12002 pid=17255)
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
 PL/pgSQL function "fn_x_after" line 2 at SQL statement
 COPY x (b, d) from stdin;
-ERROR:  Functions that execute SQL statements from the segDBs are not yet supported (spi.c:183)  (seg0 jbook.local:12002 pid=17255)
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
 PL/pgSQL function "fn_x_after" line 2 at SQL statement
 COPY x (a, b, c, d, e) from stdin;
-ERROR:  Functions that execute SQL statements from the segDBs are not yet supported (spi.c:183)  (seg0 jbook.local:12002 pid=17255)
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
 PL/pgSQL function "fn_x_after" line 2 at SQL statement
 -- non-existent column in column list: should fail
@@ -48,7 +46,7 @@ COPY x (a, b, c, d, e, d, c) from stdin;
 ERROR:  column "d" specified more than once
 -- missing data: should fail
 COPY x from stdin;
-ERROR:  invalid input syntax for integer: ""
+ERROR:  missing data for column "b"
 CONTEXT:  COPY x, line 1, column a: ""
 COPY x from stdin;
 ERROR:  missing data for column "e"
@@ -58,23 +56,23 @@ ERROR:  missing data for column "e"
 CONTEXT:  COPY x, line 1: "2001	231	\N	\N"
 -- extra data: should fail
 COPY x from stdin;
-ERROR:  extra data after last expected column  
-CONTEXT:  COPY x, line 1 of this segment db input data: "2002	232	40	50	60	70	80"
+ERROR:  extra data after last expected column
+CONTEXT:  COPY x, line 1: "2002	232	40	50	60	70	80"
 -- various COPY options: delimiters, oids, NULL string
 COPY x (b, c, d, e) from stdin with oids delimiter ',' null 'x';
-ERROR:  Functions that execute SQL statements from the segDBs are not yet supported (spi.c:183)  (seg0 jbook.local:12002 pid=17255)
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
 PL/pgSQL function "fn_x_after" line 2 at SQL statement
 COPY x from stdin WITH DELIMITER AS ';' NULL AS '';
-ERROR:  Functions that execute SQL statements from the segDBs are not yet supported (spi.c:183)  (seg0 jbook.local:12002 pid=17255)
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
 PL/pgSQL function "fn_x_after" line 2 at SQL statement
 COPY x from stdin WITH DELIMITER AS ':' NULL AS E'\\X';
-ERROR:  Functions that execute SQL statements from the segDBs are not yet supported (spi.c:183)  (seg0 jbook.local:12002 pid=17255)
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement
 CONTEXT:  SQL statement "UPDATE x set e='after trigger fired' where c='stuff'"
 PL/pgSQL function "fn_x_after" line 2 at SQL statement
 -- check results of copy in
-SELECT * FROM x ORDER BY 1,2,3,4,5;
+SELECT * FROM x;
  a | b | c | d | e 
 ---+---+---+---+---
 (0 rows)

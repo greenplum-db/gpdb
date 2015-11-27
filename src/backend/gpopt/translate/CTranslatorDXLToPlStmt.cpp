@@ -26,22 +26,22 @@
 #include "utils/uri.h"
 #include "gpos/base.h"
 
-#include "dxl/operators/CDXLNode.h"
-#include "dxl/operators/CDXLDirectDispatchInfo.h"
-
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/translate/CTranslatorDXLToPlStmt.h"
 #include "gpopt/translate/CTranslatorUtils.h"
 #include "gpopt/translate/CIndexQualInfo.h"
 
-#include "md/IMDFunction.h"
-#include "md/IMDScalarOp.h"
-#include "md/IMDAggregate.h"
-#include "md/IMDType.h"
-#include "md/IMDTypeBool.h"
-#include "md/IMDTypeInt4.h"
-#include "md/IMDIndex.h"
-#include "md/IMDRelationExternal.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/operators/CDXLDirectDispatchInfo.h"
+
+#include "naucrates/md/IMDFunction.h"
+#include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDAggregate.h"
+#include "naucrates/md/IMDType.h"
+#include "naucrates/md/IMDTypeBool.h"
+#include "naucrates/md/IMDTypeInt4.h"
+#include "naucrates/md/IMDIndex.h"
+#include "naucrates/md/IMDRelationExternal.h"
 
 #include "gpopt/gpdbwrappers.h"
 

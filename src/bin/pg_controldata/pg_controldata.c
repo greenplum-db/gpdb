@@ -6,7 +6,7 @@
  * copyright (c) Oliver Elphick <olly@lfix.co.uk>, 2001;
  * licence: BSD
  *
- * $PostgreSQL: pgsql/src/bin/pg_controldata/pg_controldata.c,v 1.31.2.1 2008/09/24 08:59:44 mha Exp $
+ * $PostgreSQL: pgsql/src/bin/pg_controldata/pg_controldata.c,v 1.32 2006/12/08 19:50:53 tgl Exp $
  */
 #include "postgres_fe.h"
 
@@ -137,23 +137,9 @@ main(int argc, char *argv[])
 	FIN_CRC32C(crc);
 
 	if (!EQ_LEGACY_CRC32(crc, ControlFile.crc))
-	{
-		/*
-		 * Well, the crc doesn't match our computed crc32c value.
-		 * But it might be an old crc32, using the old polynomial.
-		 * If it is, it's OK.
-		 */
-		INIT_LEGACY_CRC32(crc);
-		COMP_LEGACY_CRC32(crc,
-				   (char *) &ControlFile,
-				   offsetof(ControlFileData, crc));
-		FIN_LEGACY_CRC32(crc);
-
-		if (!EQ_LEGACY_CRC32(crc, ControlFile.crc))
-			printf(_("WARNING: Calculated CRC checksum does not match value stored in file.\n"
-					 "Either the file is corrupt, or it has a different layout than this program\n"
-					 "is expecting.  The results below are untrustworthy.\n\n"));
-	}
+		printf(_("WARNING: Calculated CRC checksum does not match value stored in file.\n"
+				 "Either the file is corrupt, or it has a different layout than this program\n"
+				 "is expecting.  The results below are untrustworthy.\n\n"));
 
 	/*
 	 * Use variable for format to suppress overly-anal-retentive gcc warning
@@ -186,10 +172,6 @@ main(int argc, char *argv[])
 		   dbState(ControlFile.state));
 	printf(_("pg_control last modified:             %s\n"),
 		   pgctime_str);
-	printf(_("Current log file ID:                  %u\n"),
-		   ControlFile.logId);
-	printf(_("Next log file segment:                %u\n"),
-		   ControlFile.logSeg);
 	printf(_("Latest checkpoint location:           %X/%X\n"),
 		   ControlFile.checkPoint.xlogid,
 		   ControlFile.checkPoint.xrecoff);

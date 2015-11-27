@@ -34,18 +34,20 @@ typedef enum backup_state
  */
 typedef struct backup_state_machine
 {
-	BackupState currentState;
+	BackupState	currentState;
 	int			nWaits;
 	bool		bStatus;
 	bool		bReceivedSetSerializable;
 	bool		bReceivedGotLocks;
-	char	   *pszNotifyRelName;		/* "N<backupkey>_<contentid>_<dbid>" */
-	char	   *pszNotifyRelNameStart;	/* "<pszNotifyRelName>_Start" */
-	char*		pszNotifyRelNameSetSerializable; /* "<pszNotifyRelName>_SetSerializable" */
-	char*		pszNotifyRelNameGotLocks; /* "<pszNotifyRelName>_SetGotLocks" */	
-	char*		pszNotifyRelNameSucceed; /* "<pszNotifyRelName>_Success" */
-	char	   *pszNotifyRelNameFail;	/* "<pszNotifyRelName>_Fail" */
-	PGnotify  **ppNotifyAr;
+	char		*pszNotifyRelName;		/* "N<backupkey>_<contentid>_<dbid>" */
+	char		*pszNotifyRelNameStart;	/* "<pszNotifyRelName>_Start" */
+	char		*pszNotifyRelNameSetSerializable; /* "<pszNotifyRelName>_SetSerializable" */
+	char		*pszNotifyRelNameGotLocks; /* "<pszNotifyRelName>_SetGotLocks" */
+	char		*pszNotifyRelNameSucceed; /* "<pszNotifyRelName>_Success" */
+	char		*pszNotifyRelNameFail;	/* "<pszNotifyRelName>_Fail" */
+	char		*pszNotifyRelNameMasterProbe;	/* "<pszNotifyRelName>_MasterProbe" */
+	char		*pszNotifyRelNameSegmentProbe;	/* "<pszNotifyRelName>_SegmentProbe" */
+	PGnotify	**ppNotifyAr;
 	int			nArSize;
 	int			nArCount;
 }	BackupStateMachine;

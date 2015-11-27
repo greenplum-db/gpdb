@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/smgr.h,v 1.55.2.1 2007/01/27 20:15:47 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/storage/smgr.h,v 1.56 2007/01/03 18:11:01 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -223,8 +223,6 @@ extern void smgrcreate(
 	
 	bool						ignoreAlreadyExists,
 
-	int 						*primaryError,
-
 	bool						*mirrorDataLossOccurred);
 extern void smgrrecreate(
 	RelFileNode 				*relFileNode,
@@ -332,7 +330,7 @@ extern void smgrread(SMgrRelation reln, BlockNumber blocknum, char *buffer);
 extern void smgrwrite(SMgrRelation reln, BlockNumber blocknum, char *buffer,
 		  bool isTemp);
 extern BlockNumber smgrnblocks(SMgrRelation reln);
-extern BlockNumber smgrtruncate(SMgrRelation reln, BlockNumber nblocks,
+extern void smgrtruncate(SMgrRelation reln, BlockNumber nblocks,
 			 bool isTemp, bool isLocalBuf, ItemPointer persistentTid, int64 persistentSerialNum);
 extern bool smgrgetpersistentinfo(	
 	XLogRecord		*record,
@@ -400,8 +398,8 @@ extern void smgr_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
 /* internals: move me elsewhere -- ay 7/94 */
 
 /* in md.c */
-extern bool mdinit(void);
-extern bool mdclose(SMgrRelation reln);
+extern void mdinit(void);
+extern void mdclose(SMgrRelation reln);
 extern void mdcreatefilespacedir(
 	Oid 						filespaceOid,
 
@@ -454,10 +452,8 @@ extern void mdcreate(
 	
 	bool						ignoreAlreadyExists,
 
-	int 						*primaryError,
-
 	bool						*mirrorDataLossOccurred);
-extern bool mdunlink(
+extern void mdunlink(
 	RelFileNode 				rnode, 
 
 	char						*relationName,
@@ -508,16 +504,16 @@ extern bool mdrmdbdir(
 	bool 						ignoreNonExistence,
 
 	bool						*mirrorDataLossOccurred);
-extern bool mdextend(SMgrRelation reln, BlockNumber blocknum, char *buffer,
+extern void mdextend(SMgrRelation reln, BlockNumber blocknum, char *buffer,
 		 bool isTemp);
-extern bool mdread(SMgrRelation reln, BlockNumber blocknum, char *buffer);
-extern bool mdwrite(SMgrRelation reln, BlockNumber blocknum, char *buffer,
+extern void mdread(SMgrRelation reln, BlockNumber blocknum, char *buffer);
+extern void mdwrite(SMgrRelation reln, BlockNumber blocknum, char *buffer,
 		bool isTemp);
-extern BlockNumber mdnblocks(SMgrRelation reln, bool allowedNotFound);
-extern BlockNumber mdtruncate(SMgrRelation reln, BlockNumber nblocks,
+extern BlockNumber mdnblocks(SMgrRelation reln);
+extern void mdtruncate(SMgrRelation reln, BlockNumber nblocks,
 		   bool isTemp, bool allowedNotFound);
-extern bool mdimmedsync(SMgrRelation reln);
-extern bool mdsync(void);
+extern void mdimmedsync(SMgrRelation reln);
+extern void mdsync(void);
 
 /*
  * MPP-18228 - to make addition to pending delete list atomic with adding

@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_type.c,v 1.85 2006/10/04 00:29:56 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_type.c,v 1.86 2006/12/30 21:21:54 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -22,6 +22,7 @@
 #include "nodes/makefuncs.h"
 #include "parser/parser.h"
 #include "parser/parse_type.h"
+#include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
@@ -251,7 +252,106 @@ typenameTypeId(ParseState *pstate, const TypeName *typname)
 				 errmsg("type \"%s\" is only a shell",
 						TypeNameToString(typname)),
 				 parser_errposition(pstate, typname->location)));
+
 	return typoid;
+}
+
+/*
+ * typenameTypeMod - given a TypeName, return the internal typmod value
+ *
+ * This will throw an error if the TypeName includes type modifiers that are
+ * illegal for the data type.
+ *
+ * The actual type OID represented by the TypeName must already have been
+ * determined (usually by typenameTypeId()), and is passed as typeId.
+ *
+ * pstate is only used for error location info, and may be NULL.
+ */
+int32
+typenameTypeMod(ParseState *pstate, const TypeName *typename,
+				Oid typeId)
+{
+	int32		result;
+	Oid			typmodin;
+	Datum	   *datums;
+	int			n;
+	ListCell   *l;
+	ArrayType  *arrtypmod;
+
+	Assert(OidIsValid(typeId));
+
+	/* Return prespecified typmod if no typmod expressions */
+	if (typename->typmods == NIL)
+		return typename->typemod;
+
+	/* Else, type had better accept typmods */
+	typmodin = get_typmodin(typeId);
+
+	if (typmodin == InvalidOid)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("type modifier is not allowed for type \"%s\"",
+						TypeNameToString(typename)),
+				 parser_errposition(pstate, typename->location)));
+
+	/*
+	 * Convert the list of raw-grammar-output  expressions to a cstring array.
+	 * Currently, we only allow simple integer constants, string literals, and
+	 * identifiers; possibly this could be extended.
+	 */
+	datums = (Datum *) palloc(list_length(typename->typmods) * sizeof(Datum));
+	n = 0;
+	foreach(l, typename->typmods)
+	{
+		Node	   *tm = (Node *) lfirst(l);
+		char	   *cstr = NULL;
+
+		if (IsA(tm, A_Const))
+		{
+			A_Const    *ac = (A_Const *) tm;
+
+			/*
+			 * The grammar hands back some integers with ::int4 attached, so
+			 * allow a cast decoration if it's an Integer value, but not
+			 * otherwise.
+			 */
+			if (IsA(&ac->val, Integer))
+			{
+				cstr = (char *) palloc(32);
+				snprintf(cstr, 32, "%ld", (long) ac->val.val.ival);
+			}
+			else if (ac->typname == NULL)		/* no casts allowed */
+			{
+				/* otherwise we can just use the str field directly. */
+				cstr = ac->val.val.str;
+			}
+		}
+		else if (IsA(tm, ColumnRef))
+		{
+			ColumnRef  *cr = (ColumnRef *) tm;
+
+			if (list_length(cr->fields) == 1)
+				cstr = strVal(linitial(cr->fields));
+		}
+		if (!cstr)
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+			errmsg("type modifiers must be simple constants or identifiers"),
+					 parser_errposition(pstate, typename->location)));
+		datums[n++] = CStringGetDatum(cstr);
+	}
+
+	/* hardwired knowledge about cstring's representation details here */
+	arrtypmod = construct_array(datums, n, CSTRINGOID,
+								-2, false, 'c');
+
+	result = DatumGetInt32(OidFunctionCall1(typmodin,
+											PointerGetDatum(arrtypmod)));
+
+	pfree(datums);
+	pfree(arrtypmod);
+
+	return result;
 }
 
 /*
@@ -497,7 +597,7 @@ parseTypeString(const char *str, Oid *type_id, int32 *typmod)
 		goto fail;
 
 	*type_id = typenameTypeId(NULL, typname);
-	*typmod = typname->typmod;
+	*typmod = typenameTypeMod(NULL, typname, *type_id);
 
 	pfree(buf.data);
 

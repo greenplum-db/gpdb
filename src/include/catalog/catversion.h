@@ -37,7 +37,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/catversion.h,v 1.531 2009/06/11 14:49:09 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/catversion.h,v 1.369 2007/01/02 20:59:32 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -50,9 +50,12 @@
  * YYYYMMDD are the date of the change, and N is the number of the change
  * on that day.  (Hopefully we'll never commit ten independent sets of
  * catalog changes on the same day...)
+ *
+ * For Greenplum, use 3 as the first digit, to distinguish PostgreSQL
+ * catalog versions from Greenplum.
  */
 
-/*                              yyyymmddN */
-#define CATALOG_VERSION_NO      201310150
+/*							3yyymmddN */
+#define CATALOG_VERSION_NO	300701021
 
 #endif

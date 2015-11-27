@@ -55,7 +55,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/costsize.c,v 1.169.2.2 2007/01/08 16:09:31 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/costsize.c,v 1.171 2006/12/23 00:43:10 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1701,6 +1701,8 @@ cost_mergejoin(MergePath *path, PlannerInfo *root)
 	Path	   *outer_path = path->jpath.outerjoinpath;
 	Path	   *inner_path = path->jpath.innerjoinpath;
 	List	   *mergeclauses = path->path_mergeclauses;
+	List	   *mergefamilies = path->path_mergefamilies;
+	List	   *mergestrategies = path->path_mergestrategies;
 	List	   *outersortkeys = path->outersortkeys;
 	List	   *innersortkeys = path->innersortkeys;
 	Cost		startup_cost = 0;
@@ -1787,13 +1789,16 @@ cost_mergejoin(MergePath *path, PlannerInfo *root)
 	 *
 	 * Since this calculation is somewhat expensive, and will be the same for
 	 * all mergejoin paths associated with the merge clause, we cache the
-	 * results in the RestrictInfo node.
+	 * results in the RestrictInfo node.  XXX that won't work anymore once
+	 * we support multiple possible orderings!
 	 */
 	if (mergeclauses && path->jpath.jointype != JOIN_FULL)
 	{
 		firstclause = (RestrictInfo *) linitial(mergeclauses);
 		if (firstclause->left_mergescansel < 0) /* not computed yet? */
 			mergejoinscansel(root, (Node *) firstclause->clause,
+							 linitial_oid(mergefamilies),
+							 linitial_int(mergestrategies),
 							 &firstclause->left_mergescansel,
 							 &firstclause->right_mergescansel);
 

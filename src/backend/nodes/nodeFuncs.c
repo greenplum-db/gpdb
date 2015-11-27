@@ -188,6 +188,15 @@ exprLocation(Node *expr)
 			/* GREATEST/LEAST keyword should always be the first thing */
 			loc = ((MinMaxExpr *) expr)->location;
 			break;
+		case T_XmlExpr:
+			{
+				XmlExpr    *xexpr = (XmlExpr *) expr;
+
+				/* consider both function name and leftmost arg */
+				loc = leftmostLoc(xexpr->location,
+								  exprLocation((Node *) xexpr->args));
+			}
+			break;
 		case T_NullTest:
 			/* just use argument's location */
 			loc = exprLocation((Node *) ((NullTest *) expr)->arg);
@@ -284,6 +293,10 @@ exprLocation(Node *expr)
 			break;
 		case T_TypeName:
 			loc = ((TypeName *) expr)->location;
+			break;
+		case T_XmlSerialize:
+			/* XMLSERIALIZE keyword should always be the first thing */
+			loc = ((XmlSerialize *) expr)->location;
 			break;
 		case T_WithClause:
 			loc = ((WithClause *) expr)->location;

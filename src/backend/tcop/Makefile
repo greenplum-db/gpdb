@@ -4,7 +4,7 @@
 #    Makefile for tcop
 #
 # IDENTIFICATION
-#    $PostgreSQL: pgsql/src/backend/tcop/Makefile,v 1.29 2008/02/19 10:30:08 petere Exp $
+#    $PostgreSQL: pgsql/src/backend/tcop/Makefile,v 1.27 2006/12/14 20:51:14 petere Exp $
 #
 #-------------------------------------------------------------------------
 

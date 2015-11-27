@@ -181,7 +181,7 @@ fi
 AC_SUBST(vpath_build)
 
 
-AC_CONFIG_FILES([GNUmakefile])
+AC_CONFIG_FILES([GNUmakefile regress/GNUmakefile])
 
 #AC_CONFIG_HEADERS([config.h],
 

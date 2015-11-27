@@ -15,7 +15,7 @@
 #ifndef COptServer_H
 #define COptServer_H
 
-#include "md/CSystemId.h"
+#include "naucrates/md/CSystemId.h"
 
 #include "gpos/base.h"
 #include "gpos/common/CSyncHashtable.h"

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_coerce.c,v 2.146 2006/11/28 12:54:41 petere Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_coerce.c,v 2.149 2006/12/24 00:29:19 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -19,6 +19,7 @@
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "parser/parsetree.h"               /* get_tle_by_resno */
 #include "parser/parse_coerce.h"
@@ -296,6 +297,14 @@ coerce_type(ParseState *pstate, Node *node,
 		}
 
 		param->paramtype = targetTypeId;
+		/*
+		 * Note: it is tempting here to set the Param's paramtypmod to
+		 * targetTypeMod, but that is probably unwise because we have no
+		 * infrastructure that enforces that the value delivered for a
+		 * Param will match any particular typmod.  Leaving it -1 ensures
+		 * that a run-time length check/coercion will occur if needed.
+		 */
+		param->paramtypmod = -1;
 
 		return (Node *) param;
 	}
@@ -1211,8 +1220,8 @@ coerce_to_boolean(ParseState *pstate, Node *node,
 }
 
 /*
- * coerce_to_integer()
- *		Coerce an argument of a construct that requires integer input.
+ * coerce_to_specific_type()
+ *		Coerce an argument of a construct that requires a specific data type.
  *		Also check that input is not a set.
  *
  * Returns the possibly-transformed node tree.
@@ -1221,24 +1230,31 @@ coerce_to_boolean(ParseState *pstate, Node *node,
  * processing is wanted.
  */
 Node *
-coerce_to_integer(ParseState *pstate, Node *node,
-				  const char *constructName)
+coerce_to_specific_type(ParseState *pstate, Node *node,
+						Oid targetTypeId,
+						const char *constructName)
 {
 	Oid			inputTypeId = exprType(node);
 
-	if (inputTypeId != INT4OID)
+	if (inputTypeId != targetTypeId)
 	{
-		node = coerce_to_target_type(pstate, node, inputTypeId,
-									 INT4OID, -1,
-									 COERCION_ASSIGNMENT,
-									 COERCE_IMPLICIT_CAST,
-									 -1);
-		if (node == NULL)
+		Node	   *newnode;
+
+		newnode = coerce_to_target_type(pstate, node, inputTypeId,
+										targetTypeId, -1,
+										COERCION_ASSIGNMENT,
+										COERCE_IMPLICIT_CAST,
+										-1);
+		if (newnode == NULL)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATATYPE_MISMATCH),
 			/* translator: first %s is name of a SQL construct, eg LIMIT */
-				   errmsg("argument of %s must be type integer, not type %s",
-						  constructName, format_type_be(inputTypeId))));
+					 errmsg("argument of %s must be type %s, not type %s",
+							constructName,
+							format_type_be(targetTypeId),
+							format_type_be(inputTypeId)),
+					 parser_errposition(pstate, exprLocation(node))));
+		node = newnode;
 	}
 
 	if (expression_returns_set(node))
@@ -1246,52 +1262,11 @@ coerce_to_integer(ParseState *pstate, Node *node,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
 		/* translator: %s is name of a SQL construct, eg LIMIT */
 				 errmsg("argument of %s must not return a set",
-						constructName)));
+						constructName),
+				 parser_errposition(pstate, exprLocation(node))));
 
 	return node;
 }
-
-/*
- * coerce_to_bigint()
- *		Coerce an argument of a construct that requires int8 input.
- *		Also check that input is not a set.
- *
- * Returns the possibly-transformed node tree.
- *
- * As with coerce_type, pstate may be NULL if no special unknown-Param
- * processing is wanted.
- */
-Node *
-coerce_to_bigint(ParseState *pstate, Node *node,
-				 const char *constructName)
-{
-	Oid			inputTypeId = exprType(node);
-
-	if (inputTypeId != INT8OID)
-	{
-		node = coerce_to_target_type(pstate, node, inputTypeId,
-									 INT8OID, -1,
-									 COERCION_ASSIGNMENT,
-									 COERCE_IMPLICIT_CAST,
-									 -1);
-		if (node == NULL)
-			ereport(ERROR,
-					(errcode(ERRCODE_DATATYPE_MISMATCH),
-			/* translator: first %s is name of a SQL construct, eg LIMIT */
-					 errmsg("argument of %s must be type bigint, not type %s",
-							constructName, format_type_be(inputTypeId))));
-	}
-
-	if (expression_returns_set(node))
-		ereport(ERROR,
-				(errcode(ERRCODE_DATATYPE_MISMATCH),
-		/* translator: %s is name of a SQL construct, eg LIMIT */
-				 errmsg("argument of %s must not return a set",
-						constructName)));
-
-	return node;
-}
-
 
 /* select_common_type()
  *		Determine the common supertype of a list of input expression types.

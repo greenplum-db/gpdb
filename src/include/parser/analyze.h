@@ -31,8 +31,6 @@ extern void CheckSelectLocking(Query *qry);
 extern void applyLockingClause(Query *qry, Index rtindex,
 				   bool forUpdate, bool noWait);
 
-Datum partition_arg_get_val(Node *node, bool *isnull);
-
 /* State shared by transformCreateStmt and its subroutines */
 typedef struct
 {

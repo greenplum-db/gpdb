@@ -278,27 +278,3 @@ char *MirroredRelDataSynchronizationState_Name(
 		return "Unknown";
 	}
 }
-
-char *PersistentFileSysRelBufpoolKind_Name(
-	PersistentFileSysRelBufpoolKind relBufpoolKind)
-{
-	switch (relBufpoolKind)
-	{
-	case PersistentFileSysRelBufpoolKind_None:						return "None";
-	case PersistentFileSysRelBufpoolKind_Heap:						return "Heap";
-	case PersistentFileSysRelBufpoolKind_UnknownRelStorage:			return "UnknownRelStorage";
-	case PersistentFileSysRelBufpoolKind_AppendOnlySeginfo:			return "AppendOnlySeginfo";
-	case PersistentFileSysRelBufpoolKind_AppendOnlyBlockDirectory:	return "AppendOnlyBlockDirectory";
-	case PersistentFileSysRelBufpoolKind_AppendOnlyVisibilityMap:   return "AppendOnlyVisibilityMap";
-	case PersistentFileSysRelBufpoolKind_Btree:						return "Btree";
-	case PersistentFileSysRelBufpoolKind_BitMap:					return "BitMap";
-	case PersistentFileSysRelBufpoolKind_UnknownIndex:				return "UnknownIndex";
-	case PersistentFileSysRelBufpoolKind_Sequence:					return "Sequence";
-	case PersistentFileSysRelBufpoolKind_Toast:						return "Toast";
-	case PersistentFileSysRelBufpoolKind_UncatalogedHeap:			return "UncatalogedHeap";
-	case PersistentFileSysRelBufpoolKind_UnknownRelKind:			return "UnknownRelKind";
-
-	default:
-		return "Unknown";
-	}
-}

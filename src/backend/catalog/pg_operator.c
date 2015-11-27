@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_operator.c,v 1.98 2006/07/14 14:52:18 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_operator.c,v 1.99 2006/12/23 00:43:09 tgl Exp $
  *
  * NOTES
  *	  these routines moved here from commands/define.c and somewhat cleaned up.
@@ -250,16 +250,13 @@ OperatorShellMake(const char *operatorName,
 	values[i++] = ObjectIdGetDatum(operatorNamespace);	/* oprnamespace */
 	values[i++] = ObjectIdGetDatum(GetUserId());		/* oprowner */
 	values[i++] = CharGetDatum(leftTypeId ? (rightTypeId ? 'b' : 'r') : 'l');	/* oprkind */
+	values[i++] = BoolGetDatum(false);	/* oprcanmerge */
 	values[i++] = BoolGetDatum(false);	/* oprcanhash */
 	values[i++] = ObjectIdGetDatum(leftTypeId); /* oprleft */
 	values[i++] = ObjectIdGetDatum(rightTypeId);		/* oprright */
 	values[i++] = ObjectIdGetDatum(InvalidOid); /* oprresult */
 	values[i++] = ObjectIdGetDatum(InvalidOid); /* oprcom */
 	values[i++] = ObjectIdGetDatum(InvalidOid); /* oprnegate */
-	values[i++] = ObjectIdGetDatum(InvalidOid); /* oprlsortop */
-	values[i++] = ObjectIdGetDatum(InvalidOid); /* oprrsortop */
-	values[i++] = ObjectIdGetDatum(InvalidOid); /* oprltcmpop */
-	values[i++] = ObjectIdGetDatum(InvalidOid); /* oprgtcmpop */
 	values[i++] = ObjectIdGetDatum(InvalidOid); /* oprcode */
 	values[i++] = ObjectIdGetDatum(InvalidOid); /* oprrest */
 	values[i++] = ObjectIdGetDatum(InvalidOid); /* oprjoin */
@@ -309,11 +306,8 @@ OperatorShellMake(const char *operatorName,
  *		negatorName				X negator operator
  *		restrictionName			X restriction sel. procedure
  *		joinName				X join sel. procedure
+ *		canMerge				merge join can be used with this operator
  *		canHash					hash join can be used with this operator
- *		leftSortName			X left sort operator (for merge join)
- *		rightSortName			X right sort operator (for merge join)
- *		ltCompareName			X L<R compare operator (for merge join)
- *		gtCompareName			X L>R compare operator (for merge join)
  *
  * This routine gets complicated because it allows the user to
  * specify operators that do not exist.  For example, if operator
@@ -339,6 +333,7 @@ OperatorShellMake(const char *operatorName,
  *	 operatorName
  *	 owner id (simply the user id of the caller)
  *	 operator "kind" either "b" for binary or "l" for left unary
+ *	 canMerge boolean
  *	 canHash boolean
  *	 leftTypeObjectId -- type must already be defined
  *	 rightTypeObjectId -- this is optional, enter ObjectId=0 if none specified
@@ -354,8 +349,6 @@ OperatorShellMake(const char *operatorName,
  *						(We are creating a self-commutating operator.)
  *						The link will be fixed later by OperatorUpd.
  *	 negatorObjectId   -- same as for commutatorObjectId
- *	 leftSortObjectId  -- same as for commutatorObjectId
- *	 rightSortObjectId -- same as for commutatorObjectId
  *	 operatorProcedure -- must access the pg_procedure catalog to get the
  *				   ObjectId of the procedure that actually does the operator
  *				   actions this is required.  Do a lookup to find out the
@@ -382,11 +375,8 @@ OperatorCreate(const char *operatorName,
 			   List *negatorName,
 			   List *restrictionName,
 			   List *joinName,
-			   bool canHash,
-			   List *leftSortName,
-			   List *rightSortName,
-			   List *ltCompareName,
-			   List *gtCompareName)
+			   bool canMerge,
+			   bool canHash)
 {
 	return
 	OperatorCreateWithOid(operatorName,
@@ -398,15 +388,10 @@ OperatorCreate(const char *operatorName,
 			   negatorName,
 			   restrictionName,
 			   joinName,
+			   canMerge,
 			   canHash,
-			   leftSortName,
-			   rightSortName,
-			   ltCompareName,
-			   gtCompareName,
 			   0);
 }
-			   
-			   
 			   
 Oid
 OperatorCreateWithOid(const char *operatorName,
@@ -418,11 +403,8 @@ OperatorCreateWithOid(const char *operatorName,
 			   List *negatorName,
 			   List *restrictionName,
 			   List *joinName,
+			   bool canMerge,
 			   bool canHash,
-			   List *leftSortName,
-			   List *rightSortName,
-			   List *ltCompareName,
-			   List *gtCompareName,
 			   Oid newOid)
 {
 	Relation	pg_operator_desc;
@@ -436,10 +418,6 @@ OperatorCreateWithOid(const char *operatorName,
 	Oid			operResultType;
 	Oid			commutatorId,
 				negatorId,
-				leftSortId,
-				rightSortId,
-				ltCompareId,
-				gtCompareId,
 				restOid,
 				joinOid;
 	bool		selfCommutator = false;
@@ -475,14 +453,14 @@ OperatorCreateWithOid(const char *operatorName,
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 				 errmsg("only binary operators can have join selectivity")));
+		if (canMerge)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+					 errmsg("only binary operators can merge join")));
 		if (canHash)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 					 errmsg("only binary operators can hash")));
-		if (leftSortName || rightSortName || ltCompareName || gtCompareName)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-					 errmsg("only binary operators can merge join")));
 	}
 
 	operatorObjectId = OperatorGet(operatorName,
@@ -573,6 +551,7 @@ OperatorCreateWithOid(const char *operatorName,
 	values[i++] = ObjectIdGetDatum(operatorNamespace);	/* oprnamespace */
 	values[i++] = ObjectIdGetDatum(GetUserId());		/* oprowner */
 	values[i++] = CharGetDatum(leftTypeId ? (rightTypeId ? 'b' : 'r') : 'l');	/* oprkind */
+	values[i++] = BoolGetDatum(canMerge);		/* oprcanmerge */
 	values[i++] = BoolGetDatum(canHash);		/* oprcanhash */
 	values[i++] = ObjectIdGetDatum(leftTypeId); /* oprleft */
 	values[i++] = ObjectIdGetDatum(rightTypeId);		/* oprright */
@@ -615,58 +594,6 @@ OperatorCreateWithOid(const char *operatorName,
 	else
 		negatorId = InvalidOid;
 	values[i++] = ObjectIdGetDatum(negatorId);	/* oprnegate */
-
-	if (leftSortName)
-	{
-		/* left sort op takes left-side data type */
-		leftSortId = get_other_operator(leftSortName,
-										leftTypeId, leftTypeId,
-										operatorName, operatorNamespace,
-										leftTypeId, rightTypeId,
-										false);
-	}
-	else
-		leftSortId = InvalidOid;
-	values[i++] = ObjectIdGetDatum(leftSortId); /* oprlsortop */
-
-	if (rightSortName)
-	{
-		/* right sort op takes right-side data type */
-		rightSortId = get_other_operator(rightSortName,
-										 rightTypeId, rightTypeId,
-										 operatorName, operatorNamespace,
-										 leftTypeId, rightTypeId,
-										 false);
-	}
-	else
-		rightSortId = InvalidOid;
-	values[i++] = ObjectIdGetDatum(rightSortId);		/* oprrsortop */
-
-	if (ltCompareName)
-	{
-		/* comparator has same arg types */
-		ltCompareId = get_other_operator(ltCompareName,
-										 leftTypeId, rightTypeId,
-										 operatorName, operatorNamespace,
-										 leftTypeId, rightTypeId,
-										 false);
-	}
-	else
-		ltCompareId = InvalidOid;
-	values[i++] = ObjectIdGetDatum(ltCompareId);		/* oprltcmpop */
-
-	if (gtCompareName)
-	{
-		/* comparator has same arg types */
-		gtCompareId = get_other_operator(gtCompareName,
-										 leftTypeId, rightTypeId,
-										 operatorName, operatorNamespace,
-										 leftTypeId, rightTypeId,
-										 false);
-	}
-	else
-		gtCompareId = InvalidOid;
-	values[i++] = ObjectIdGetDatum(gtCompareId);		/* oprgtcmpop */
 
 	values[i++] = ObjectIdGetDatum(procOid);	/* oprcode */
 	values[i++] = ObjectIdGetDatum(restOid);	/* oprrest */
@@ -1002,12 +929,11 @@ makeOperatorDependencies(HeapTuple tuple)
 
 	/*
 	 * NOTE: we do not consider the operator to depend on the associated
-	 * operators oprcom, oprnegate, oprlsortop, oprrsortop, oprltcmpop,
-	 * oprgtcmpop.	We would not want to delete this operator if those go
-	 * away, but only reset the link fields; which is not a function that the
-	 * dependency code can presently handle.  (Something could perhaps be done
-	 * with objectSubId though.)  For now, it's okay to let those links dangle
-	 * if a referenced operator is removed.
+	 * operators oprcom and oprnegate. We would not want to delete this
+	 * operator if those go away, but only reset the link fields; which is not
+	 * a function that the dependency code can presently handle.  (Something
+	 * could perhaps be done with objectSubId though.)  For now, it's okay to
+	 * let those links dangle if a referenced operator is removed.
 	 */
 
 	/* Dependency on implementation function */

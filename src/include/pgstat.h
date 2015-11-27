@@ -5,7 +5,7 @@
  *
  *	Copyright (c) 2001-2009, PostgreSQL Global Development Group
  *
- *	$PostgreSQL: pgsql/src/include/pgstat.h,v 1.50.2.1 2007/07/08 22:23:25 tgl Exp $
+ *	$PostgreSQL: pgsql/src/include/pgstat.h,v 1.51 2006/12/06 18:06:47 neilc Exp $
  * ----------
  */
 #ifndef PGSTAT_H
@@ -719,11 +719,12 @@ extern void pgstat_report_analyze(Relation rel,
 
 extern void pgstat_initialize(void);
 extern void pgstat_bestart(void);
+extern void pgstat_report_activity(const char *what);
+extern void pgstat_report_txn_timestamp(TimestampTz tstamp);
+extern void pgstat_report_waiting(char reason);
 
-extern void pgstat_report_activity(const char *cmd_str);
 extern void pgstat_report_appname(const char *appname);
 extern void pgstat_report_xact_timestamp(TimestampTz tstamp);
-extern void pgstat_report_waiting(char reason);
 extern const char *pgstat_get_backend_current_activity(int pid, bool checkUser);
 
 extern void pgstat_initstats(Relation rel);

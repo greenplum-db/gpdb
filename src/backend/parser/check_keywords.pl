@@ -26,12 +26,7 @@ $\ = "\n";    # set output record separator
 my %keyword_categories;
 $keyword_categories{'unreserved_keyword'}     = 'UNRESERVED_KEYWORD';
 $keyword_categories{'col_name_keyword'}       = 'COL_NAME_KEYWORD';
-# In 8.2, the category is called "func_name_keyword". In 8.3 and above, it's
-# called type_func_name_keyword. In upstream 8.2, kwlist.h didn't list the
-# categories at all, but we've backpatched that from 8.3. Hence we use the
-# 8.3 name TYPE_FUNC_NAME_KEYWORD in kwlist.h, but the 8.2 name
-# "func_name_keyword" in gram.y
-$keyword_categories{'func_name_keyword'} = 'TYPE_FUNC_NAME_KEYWORD';
+$keyword_categories{'type_func_name_keyword'} = 'TYPE_FUNC_NAME_KEYWORD';
 $keyword_categories{'reserved_keyword'}       = 'RESERVED_KEYWORD';
 
 open(GRAM, $gram_filename) || die("Could not open : $gram_filename");

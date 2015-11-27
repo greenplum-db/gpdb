@@ -26,9 +26,9 @@
 #include "gpopt/translate/CQueryMutators.h"
 #include "gpopt/translate/CTranslatorDXLToPlStmt.h"
 
-#include "md/IMDScalarOp.h"
-#include "md/IMDAggregate.h"
-#include "md/IMDTypeBool.h"
+#include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDAggregate.h"
+#include "naucrates/md/IMDTypeBool.h"
 
 #include "gpopt/gpdbwrappers.h"
 

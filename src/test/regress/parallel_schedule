@@ -1,6 +1,6 @@
 # ----------
 # The first group of parallel test
-# $PostgreSQL: pgsql/src/test/regress/parallel_schedule,v 1.35 2006/08/30 23:34:22 tgl Exp $
+# $PostgreSQL: pgsql/src/test/regress/parallel_schedule,v 1.36 2006/12/21 16:05:16 petere Exp $
 # ----------
 test: boolean char name varchar text int2 int4 int8 oid float4 float8 bit numeric
 
@@ -88,9 +88,7 @@ test: namespace
 #test: transactions
 
 test: privileges
-
-# misc test is temporarily disabled in GPDB.
-#test: misc
+test: misc
 
 # ----------
 # The fifth group of parallel test
@@ -114,14 +112,11 @@ test: select_views portals_p2 cluster dependency guc
 # The sixth group of parallel test
 # ----------
 # "plpgsql" cannot run concurrently with "rules"
-test: limit temp domain rangefuncs prepare without_oid conversion truncate alter_table sequence polymorphism rowtypes
+test: limit copy2 temp domain rangefuncs prepare without_oid conversion truncate alter_table sequence polymorphism rowtypes xml
 
 # 'plpgsql' test is disabled in GPDB, because it produces a lot of errors on
 # because of cross-segment accesses in functions.
 #test: plpgsql
-
-# 'copy2' is temporarily disabled in GPDB
-#test: copy2
 
 # INSERT RETURNING is not supported by GPDB
 #test: returning

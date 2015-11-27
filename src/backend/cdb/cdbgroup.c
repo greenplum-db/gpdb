@@ -30,8 +30,10 @@
 #include "optimizer/paths.h"
 #include "optimizer/planmain.h"
 #include "optimizer/planner.h"
+#include "optimizer/planpartition.h"
 #include "optimizer/planshare.h"
 #include "optimizer/prep.h"
+#include "optimizer/restrictinfo.h"
 #include "optimizer/subselect.h"
 #include "optimizer/tlist.h"
 #include "optimizer/var.h"
@@ -2288,9 +2290,10 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 		 */
 		for ( attrno = 1; attrno <= ctx->numGroupCols; attrno++ )
 		{
-			Expr *qual;
-			Var *outer_var;
-			Var *inner_var;
+			Expr	   *qual;
+			Var	   	   *outer_var;
+			Var		   *inner_var;
+			RestrictInfo *rinfo;
 			TargetEntry *tle = get_tle_by_resno(outer->targetlist, attrno);
 			
 			Assert( tle && IsA(tle->expr, Var) );
@@ -2304,18 +2307,16 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 			inner_var->varnoold = inner_varno;
 			
 			/* outer should always be on the left */
-			qual = make_op(NULL, list_make1(makeString("=")), 
-						 (Node*) outer_var, 
-						 (Node*) inner_var, -1);
-			
-			if ( ctx->join_strategy == DqaJoinHash )
+			if (ctx->join_strategy == DqaJoinHash)
 			{
+				qual = make_op(NULL, list_make1(makeString("=")),
+							   (Node *) outer_var,
+							   (Node *) inner_var, -1);
 				hashclause = lappend(hashclause, copyObject(qual));
 			}
-						 
-			qual->type = T_DistinctExpr;
-			qual = make_notclause(qual);
-			joinclause = lappend(joinclause, qual);
+			rinfo = make_mergeclause((Node *) outer_var, (Node *) inner_var);
+
+			joinclause = lappend(joinclause, rinfo);
 		}
 		
 		if ( ctx->join_strategy == DqaJoinHash )
@@ -2335,6 +2336,7 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 			
 			Hash *hash_plan = make_hash(inner);
 
+			joinclause = get_actual_clauses(joinclause);
 			join_plan = (Plan*)make_hashjoin(join_tlist,
 											 NIL, /* joinclauses */
 											 NIL, /* otherclauses */
@@ -2350,10 +2352,17 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 			 * distinct in the join key.  (So does the inner, for that matter,
 			 * but the MJ algorithm is only sensitive to the outer.)
 			 */
-			
+			List	   *mergefamilies;
+			List	   *mergestrategies;
+			build_mergejoin_strat_lists(joinclause, &mergefamilies,
+										&mergestrategies);
+
+			joinclause = get_actual_clauses(joinclause);
 			join_plan = (Plan*)make_mergejoin(join_tlist,
 											  NIL, NIL,
 											  joinclause,
+											  mergefamilies,
+											  mergestrategies,
 											  outer, inner,
 											  JOIN_INNER);
 			((MergeJoin*)join_plan)->unique_outer = true;
@@ -5846,7 +5855,7 @@ within_agg_construct_inner(PlannerInfo *root,
 	pc_tle = get_tle_by_resno(inner_plan->targetlist, wag_context->pc_pos);
 	tc_expr = (Expr *) makeAggrefByOid(AGGFNOID_SUM_BIGINT,
 									   list_make1(pc_tle->expr));
-	tc_expr = (Expr *) coerce_to_bigint(NULL, (Node *) tc_expr, "sum_to_bigint");
+	tc_expr = (Expr *) coerce_to_specific_type(NULL, (Node *) tc_expr, INT8OID, "sum_to_bigint");
 	wag_context->tc_pos = list_length(tlist) + 1;
 	tlist = lappend(tlist, makeTargetEntry((Expr *) tc_expr,
 										   wag_context->tc_pos,
@@ -5987,8 +5996,9 @@ within_agg_join_plans(PlannerInfo *root,
 	{
 		GroupClause	   *gc = (GroupClause*) lfirst(l);
 		TargetEntry	   *tle;
-		Var			   *outer_var, *inner_var;
-		Expr		   *qual;
+		Var			   *outer_var,
+					   *inner_var;
+		RestrictInfo   *rinfo;
 
 		/*
 		 * Construct outer group keys.
@@ -6011,11 +6021,8 @@ within_agg_join_plans(PlannerInfo *root,
 		/*
 		 * Make join clause for group keys.
 		 */
-		qual = make_op(NULL, list_make1(makeString("=")),
-					   (Node *) outer_var, (Node *) inner_var, -1);
-		qual->type = T_DistinctExpr;
-		qual = make_notclause(qual);
-		join_clause = lappend(join_clause, qual);
+		rinfo = make_mergeclause((Node *) outer_var, (Node *) inner_var);
+		join_clause = lappend(join_clause, rinfo);
 	}
 
 	/*
@@ -6101,13 +6108,22 @@ within_agg_join_plans(PlannerInfo *root,
 	 * no grouping happens.
 	 */
 	if (list_length(join_clause) > 0)
+	{
+		List	   *mergefamilies;
+		List	   *mergestrategies;
+		build_mergejoin_strat_lists(join_clause, &mergefamilies,
+									&mergestrategies);
+		join_clause = get_actual_clauses(join_clause);
 		result_plan = (Plan *) make_mergejoin(join_tlist,
 											  NIL,
 											  NIL,
 											  join_clause,
+											  mergefamilies,
+											  mergestrategies,
 											  outer_plan,
 											  inner_plan,
 											  JOIN_INNER);
+	}
 	else
 		result_plan = (Plan *) make_nestloop(join_tlist,
 											 NIL,

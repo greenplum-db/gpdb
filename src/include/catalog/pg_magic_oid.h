@@ -36,6 +36,6 @@
  * won't conflict between GPDB and GPSQL.  If two merge into one in some day,
  * this boundary will disappear.
  */
-#define LowestGPSQLBootstrapObjectId 6112
+#define LowestGPSQLBootstrapObjectId 7500
 
 #endif

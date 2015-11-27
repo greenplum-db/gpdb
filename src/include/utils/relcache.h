@@ -96,6 +96,8 @@ extern void RelationCacheInitFileRemove(void);
 extern void IndexSupportInitialize(oidvector *indclass,
 					   Oid *indexOperator,
 					   RegProcedure *indexSupport,
+					   Oid *opFamily,
+					   Oid *opcInType,
 					   StrategyNumber maxStrategyNumber,
 					   StrategyNumber maxSupportNumber,
 					   AttrNumber maxAttributeNumber);

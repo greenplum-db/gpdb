@@ -39,7 +39,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeResult.c,v 1.34.2.4 2007/02/16 03:49:10 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeResult.c,v 1.35 2006/12/26 19:26:45 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -388,6 +388,8 @@ ExecInitResult(Result *node, EState *estate, int eflags)
 	ExecAssignExprContext(estate, &resstate->ps);
 
 	resstate->isSRF = false;
+
+	/*resstate->ps.ps_TupFromTlist = false;*/
 
 #define RESULT_NSLOTS 1
 

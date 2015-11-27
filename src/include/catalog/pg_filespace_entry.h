@@ -39,15 +39,15 @@
 /* TIDYCAT_BEGINDEF
 
    CREATE TABLE pg_filespace_entry
-   with (camelcase=FileSpaceEntry, shared=true, oid=false, relid=5033, reltype_oid=6439, toast_oid=2902, toast_index=2903, toast_reltype=2907, content=MASTER_ONLY)
+   with (camelcase=FileSpaceEntry, shared=true, oid=false, relid=5033, toast_oid=6094, toast_index=6095, content=MASTER_ONLY)
    (
    fsefsoid     oid, -- foreign key to pg_filespace 
    fsedbid      smallint, -- segment dbid this refers to 
    fselocation  text -- location of filespace directory
    );
 
-   create index on pg_filespace_entry(fsefsoid) with (indexid=2893, indexname=pg_filespace_entry_fs_index);
-   create unique index on pg_filespace_entry(fsefsoid, fsedbid) with (indexid=2894, indexname=pg_filespace_entry_fsdb_index);
+   create index on pg_filespace_entry(fsefsoid) with (indexid=6090, indexname=pg_filespace_entry_fs_index);
+   create unique index on pg_filespace_entry(fsefsoid, fsedbid) with (indexid=6091, indexname=pg_filespace_entry_fsdb_index);
 
    alter table pg_filespace_entry add fk fsefsoid on pg_filespace(oid);
 

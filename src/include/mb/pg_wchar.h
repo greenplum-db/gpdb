@@ -367,8 +367,8 @@ extern pg_encname *pg_char_to_encname_struct(const char *name);
 
 extern int	pg_mb2wchar(const char *from, pg_wchar *to);
 extern int	pg_mb2wchar_with_len(const char *from, pg_wchar *to, int len);
-extern int pg_encoding_mb2wchar_with_len(int encoding,
-							  const char *from, pg_wchar *to, int len);
+extern int	pg_encoding_mb2wchar_with_len(int encoding,
+									const char *from, pg_wchar *to, int len);
 extern int	pg_char_and_wchar_strcmp(const char *s1, const pg_wchar *s2);
 extern int	pg_wchar_strncmp(const pg_wchar *s1, const pg_wchar *s2, size_t n);
 extern int	pg_char_and_wchar_strncmp(const char *s1, const pg_wchar *s2, size_t n);

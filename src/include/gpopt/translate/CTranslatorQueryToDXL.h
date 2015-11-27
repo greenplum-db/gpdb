@@ -27,8 +27,9 @@
 #include "gpopt/translate/CCTEListEntry.h"
 
 #include "gpos/base.h"
-#include "dxl/operators/CDXLNode.h"
-#include "md/IMDType.h"
+
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/md/IMDType.h"
 
 // fwd declarations
 namespace gpopt

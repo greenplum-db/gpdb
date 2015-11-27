@@ -805,27 +805,45 @@ class ValidatePersistentBackup:
 
     def _process_results(self, di, pool):
         err = False
-        global_datadir = di.filespace_dirs[SYSTEM_FSOID]
+        datadir = di.filespace_dirs[SYSTEM_FSOID]
+
         for item in pool.getCompletedItems():
             results = item.get_results()
+
+            for fsoid, fsdir in di.filespace_dirs.iteritems():
+                if fsdir in item.cmdStr:
+                    datadir = fsdir
+                    break
+
             if not results.wasSuccessful():
                 err = True
-                logger.error('marking failure for content id %s:%s since it was not successful: %s' % (di.content, global_datadir, results))
+                logger.error('marking failure for content id %s:%s since it was not successful: %s' % (di.content, datadir, results))
             elif not results.stdout.strip():
                 err = True
-                logger.error('marking failure for content id %s:%s since backup was not found: %s' % (di.content, global_datadir, results))
+                logger.error('marking failure for content id %s:%s since backup was not found: %s' % (di.content, datadir, results))
         if err:
             raise Exception('Failed to validate backups')
 
     def validate_backups(self):
         try:
             self.pool = WorkerPool(self.batch_size)
-           
+
             for di in self.dbid_info:
-                for _, fsdir in di.filespace_dirs.items():
-                    cmd = Command('Check if pt backup exists', cmdStr='find %s -name %s%s' %
-                                 (self.backup_dir if self.backup_dir else fsdir, DEFAULT_BACKUP_DIR_PREFIX, self.timestamp))
-                    self.pool.addCommand(cmd)
+                for fsoid, fsdir in di.filespace_dirs.items():
+                    if fsoid not in di.fs_to_ts_map:
+                        continue
+
+                    is_filespace_empty = True
+                    for tsoid in di.fs_to_ts_map[fsoid]:
+                        if tsoid in di.ts_to_dboid_map and di.ts_to_dboid_map[tsoid]:
+                            is_filespace_empty = False
+                            break
+
+                    if not is_filespace_empty:
+                        cmd = Command('Check if pt backup exists', cmdStr='find %s -name %s%s' %
+                                     (self.backup_dir if self.backup_dir else fsdir, DEFAULT_BACKUP_DIR_PREFIX, self.timestamp))
+                        self.pool.addCommand(cmd)
+
                 self.pool.join()
                 self._process_results(di, self.pool)
         finally:

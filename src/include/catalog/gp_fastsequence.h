@@ -25,7 +25,7 @@
 /* TIDYCAT_BEGINFAKEDEF
 
    CREATE TABLE gp_fastsequence
-   with (camelcase=FastSequence, oid=false, relid=5043, reltype_oid=6453, content=SEGMENT_LOCAL)
+   with (camelcase=FastSequence, oid=false, relid=5043, content=SEGMENT_LOCAL)
    (
    objid   oid,
    objmod  bigint,

@@ -564,3 +564,18 @@ COPY copy_regression_newline from stdin with delimiter '|' newline 'blah';
 COPY copy_regression_newline to stdout with delimiter '|' newline 'blah';
 
 DROP TABLE copy_regression_newline;
+
+-- Test that FORCE QUOTE option works with the fastpath for integers and
+-- numerics
+COPY (
+  SELECT 123::integer as intcol, 456::numeric as numcol, 'foo' as textcol
+) TO stdout CSV FORCE QUOTE intcol, numcol, textcol;
+
+-- Do the same with a real table, to test that the option also works when
+-- doing a "dispatched" COPY, i.e. when the COPY output is produced in
+-- segments
+CREATE TABLE force_quotes_tbl(intcol integer, numcol numeric, textcol text) DISTRIBUTED BY (intcol);
+INSERT INTO force_quotes_tbl VALUES (123, 456, 'foo');
+
+COPY force_quotes_tbl TO stdout CSV FORCE QUOTE intcol, numcol, textcol;
+DROP TABLE force_quotes_tbl;

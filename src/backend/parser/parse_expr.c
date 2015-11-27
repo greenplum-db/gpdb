@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_expr.c,v 1.198 2006/10/04 00:29:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_expr.c,v 1.203 2006/12/30 21:21:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -38,6 +38,7 @@
 #include "rewrite/rewriteManip.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
+#include "utils/xml.h"
 
 
 bool		Transform_null_equals = false;
@@ -60,6 +61,8 @@ static Node *transformRowExpr(ParseState *pstate, RowExpr *r);
 static Node *transformTableValueExpr(ParseState *pstate, TableValueExpr *t);
 static Node *transformCoalesceExpr(ParseState *pstate, CoalesceExpr *c);
 static Node *transformMinMaxExpr(ParseState *pstate, MinMaxExpr *m);
+static Node *transformXmlExpr(ParseState *pstate, XmlExpr *x);
+static Node *transformXmlSerialize(ParseState *pstate, XmlSerialize *xs);
 static Node *transformBooleanTest(ParseState *pstate, BooleanTest *b);
 static Node *transformColumnRef(ParseState *pstate, ColumnRef *cref);
 static Node *transformWholeRowRef(ParseState *pstate, char *schemaname,
@@ -243,6 +246,14 @@ transformExpr(ParseState *pstate, Node *expr)
 
 		case T_MinMaxExpr:
 			result = transformMinMaxExpr(pstate, (MinMaxExpr *) expr);
+			break;
+
+		case T_XmlExpr:
+			result = transformXmlExpr(pstate, (XmlExpr *) expr);
+			break;
+
+		case T_XmlSerialize:
+			result = transformXmlSerialize(pstate, (XmlSerialize *) expr);
 			break;
 
 		case T_NullTest:
@@ -902,6 +913,7 @@ transformParamRef(ParseState *pstate, ParamRef *pref)
 	param->paramkind = PARAM_EXTERN;
 	param->paramid = paramno;
 	param->paramtype = toppstate->p_paramtypes[paramno - 1];
+	param->paramtypmod = -1;
 
 	return (Node *) param;
 }
@@ -1576,6 +1588,7 @@ transformSubLink(ParseState *pstate, SubLink *sublink)
 			param->paramkind = PARAM_SUBLINK;
 			param->paramid = tent->resno;
 			param->paramtype = exprType((Node *) tent->expr);
+			param->paramtypmod = exprTypmod((Node *) tent->expr);
 
 			right_list = lappend(right_list, param);
 		}
@@ -1858,6 +1871,189 @@ transformBooleanTest(ParseState *pstate, BooleanTest *b)
 										clausename);
 
 	return (Node *) b;
+}
+
+static Node *
+transformXmlExpr(ParseState *pstate, XmlExpr *x)
+{
+	XmlExpr    *newx;
+	ListCell   *lc;
+	int			i;
+
+	/* If we already transformed this node, do nothing */
+	if (OidIsValid(x->type))
+		return (Node *) x;
+
+	newx = makeNode(XmlExpr);
+	newx->op = x->op;
+	if (x->name)
+		newx->name = map_sql_identifier_to_xml_name(x->name, false, false);
+	else
+		newx->name = NULL;
+	newx->xmloption = x->xmloption;
+	newx->type = XMLOID;		/* this just marks the node as transformed */
+	newx->typmod = -1;
+	newx->location = x->location;
+
+	/*
+	 * gram.y built the named args as a list of ResTarget.  Transform each,
+	 * and break the names out as a separate list.
+	 */
+	newx->named_args = NIL;
+	newx->arg_names = NIL;
+
+	foreach(lc, x->named_args)
+	{
+		ResTarget  *r = (ResTarget *) lfirst(lc);
+		Node	   *expr;
+		char	   *argname;
+
+		Assert(IsA(r, ResTarget));
+
+		expr = transformExpr(pstate, r->val);
+
+		if (r->name)
+			argname = map_sql_identifier_to_xml_name(r->name, false, false);
+		else if (IsA(r->val, ColumnRef))
+			argname = map_sql_identifier_to_xml_name(FigureColname(r->val),
+													 true, false);
+		else
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 x->op == IS_XMLELEMENT
+			? errmsg("unnamed XML attribute value must be a column reference")
+			: errmsg("unnamed XML element value must be a column reference"),
+					 parser_errposition(pstate, r->location)));
+			argname = NULL;		/* keep compiler quiet */
+		}
+
+		/* reject duplicate argnames in XMLELEMENT only */
+		if (x->op == IS_XMLELEMENT)
+		{
+			ListCell   *lc2;
+
+			foreach(lc2, newx->arg_names)
+			{
+				if (strcmp(argname, strVal(lfirst(lc2))) == 0)
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+					errmsg("XML attribute name \"%s\" appears more than once",
+						   argname),
+							 parser_errposition(pstate, r->location)));
+			}
+		}
+
+		newx->named_args = lappend(newx->named_args, expr);
+		newx->arg_names = lappend(newx->arg_names, makeString(argname));
+	}
+
+	/* The other arguments are of varying types depending on the function */
+	newx->args = NIL;
+	i = 0;
+	foreach(lc, x->args)
+	{
+		Node	   *e = (Node *) lfirst(lc);
+		Node	   *newe;
+
+		newe = transformExpr(pstate, e);
+		switch (x->op)
+		{
+			case IS_XMLCONCAT:
+				newe = coerce_to_specific_type(pstate, newe, XMLOID,
+											   "XMLCONCAT");
+				break;
+			case IS_XMLELEMENT:
+				/* no coercion necessary */
+				break;
+			case IS_XMLFOREST:
+				newe = coerce_to_specific_type(pstate, newe, XMLOID,
+											   "XMLFOREST");
+				break;
+			case IS_XMLPARSE:
+				if (i == 0)
+					newe = coerce_to_specific_type(pstate, newe, TEXTOID,
+												   "XMLPARSE");
+				else
+					newe = coerce_to_boolean(pstate, newe, "XMLPARSE");
+				break;
+			case IS_XMLPI:
+				newe = coerce_to_specific_type(pstate, newe, TEXTOID,
+											   "XMLPI");
+				break;
+			case IS_XMLROOT:
+				if (i == 0)
+					newe = coerce_to_specific_type(pstate, newe, XMLOID,
+												   "XMLROOT");
+				else if (i == 1)
+					newe = coerce_to_specific_type(pstate, newe, TEXTOID,
+												   "XMLROOT");
+				else
+					newe = coerce_to_specific_type(pstate, newe, INT4OID,
+												   "XMLROOT");
+				break;
+			case IS_XMLSERIALIZE:
+				/* not handled here */
+				Assert(false);
+				break;
+			case IS_DOCUMENT:
+				newe = coerce_to_specific_type(pstate, newe, XMLOID,
+											   "IS DOCUMENT");
+				break;
+		}
+		newx->args = lappend(newx->args, newe);
+		i++;
+	}
+
+	return (Node *) newx;
+}
+
+static Node *
+transformXmlSerialize(ParseState *pstate, XmlSerialize *xs)
+{
+	Node	   *result;
+	XmlExpr    *xexpr;
+	Oid			targetType;
+	int32		targetTypmod;
+
+	xexpr = makeNode(XmlExpr);
+	xexpr->op = IS_XMLSERIALIZE;
+	xexpr->args = list_make1(coerce_to_specific_type(pstate,
+											 transformExpr(pstate, xs->expr),
+													 XMLOID,
+													 "XMLSERIALIZE"));
+
+	targetType = typenameTypeId(pstate, xs->typeName);
+	/*
+	 * 83MERGE_FIXME: use -1, until we merge the 8.3 patch to support typmods
+	 * for user-defined types.
+	 */
+	targetTypmod = -1;
+
+	xexpr->xmloption = xs->xmloption;
+	xexpr->location = xs->location;
+	/* We actually only need these to be able to parse back the expression. */
+	xexpr->type = targetType;
+	xexpr->typmod = targetTypmod;
+
+	/*
+	 * The actual target type is determined this way.  SQL allows char and
+	 * varchar as target types.  We allow anything that can be cast implicitly
+	 * from text.  This way, user-defined text-like data types automatically
+	 * fit in.
+	 */
+	result = coerce_to_target_type(pstate, (Node *) xexpr,
+								   TEXTOID, targetType, targetTypmod,
+								   COERCION_IMPLICIT,
+								   COERCE_IMPLICIT_CAST,
+								   -1);
+	if (result == NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_CANNOT_COERCE),
+				 errmsg("cannot cast XMLSERIALIZE result to %s",
+						format_type_be(targetType)),
+				 parser_errposition(pstate, xexpr->location)));
+	return result;
 }
 
 /*
@@ -2450,6 +2646,14 @@ exprType(Node *expr)
 		case T_BooleanTest:
 			type = BOOLOID;
 			break;
+		case T_XmlExpr:
+			if (((XmlExpr *) expr)->op == IS_DOCUMENT)
+				type = BOOLOID;
+			else if (((XmlExpr *) expr)->op == IS_XMLSERIALIZE)
+				type = TEXTOID;
+			else
+				type = XMLOID;
+			break;
 		case T_CoerceToDomain:
 			type = ((CoerceToDomain *) expr)->resulttype;
 			break;
@@ -2515,29 +2719,8 @@ exprTypmod(Node *expr)
 	{
 		case T_Var:
 			return ((Var *) expr)->vartypmod;
-		case T_Const:
-			{
-				/* Be smart about string constants... */
-				Const	   *con = (Const *) expr;
-
-				switch (con->consttype)
-				{
-					case BPCHAROID:
-						if (!con->constisnull)
-						{
-							int32		len = VARSIZE(DatumGetPointer(con->constvalue)) - VARHDRSZ;
-
-							/* if multi-byte, take len and find # characters */
-							if (pg_database_encoding_max_length() > 1)
-								len = pg_mbstrlen_with_len(VARDATA(DatumGetPointer(con->constvalue)), len);
-							return len + VARHDRSZ;
-						}
-						break;
-					default:
-						break;
-				}
-			}
-			break;
+		case T_Param:
+			return ((Param *) expr)->paramtypmod;
 		case T_FuncExpr:
 			{
 				int32		coercedTypmod;
@@ -2727,14 +2910,16 @@ typecast_expression(ParseState *pstate, Node *expr, TypeName *typname)
 {
 	Oid			inputType = exprType(expr);
 	Oid			targetType;
+	int32		targetTypmod;
 
 	targetType = typenameTypeId(pstate, typname);
+	targetTypmod = typenameTypeMod(pstate, typname, targetType);
 
 	if (inputType == InvalidOid)
 		return expr;			/* do nothing if NULL input */
 
 	expr = coerce_to_target_type(pstate, expr, inputType,
-								 targetType, typname->typmod,
+								 targetType, targetTypmod,
 								 COERCION_EXPLICIT,
 								 COERCE_EXPLICIT_CAST,
 								 -1);
@@ -2769,10 +2954,10 @@ make_row_comparison_op(ParseState *pstate, List *opname,
 	RowCompareType rctype;
 	List	   *opexprs;
 	List	   *opnos;
-	List	   *opclasses;
+	List	   *opfamilies;
 	ListCell   *l,
 			   *r;
-	List	  **opclass_lists;
+	List	  **opfamily_lists;
 	List	  **opstrat_lists;
 	Bitmapset  *strats;
 	int			nopers;
@@ -2812,7 +2997,7 @@ make_row_comparison_op(ParseState *pstate, List *opname,
 		/*
 		 * We don't use coerce_to_boolean here because we insist on the
 		 * operator yielding boolean directly, not via coercion.  If it
-		 * doesn't yield bool it won't be in any index opclasses...
+		 * doesn't yield bool it won't be in any index opfamilies...
 		 */
 		if (cmp->opresulttype != BOOLOID)
 			ereport(ERROR,
@@ -2839,21 +3024,22 @@ make_row_comparison_op(ParseState *pstate, List *opname,
 
 	/*
 	 * Now we must determine which row comparison semantics (= <> < <= > >=)
-	 * apply to this set of operators.	We look for btree opclasses containing
+	 * apply to this set of operators.	We look for btree opfamilies containing
 	 * the operators, and see which interpretations (strategy numbers) exist
 	 * for each operator.
 	 */
-	opclass_lists = (List **) palloc(nopers * sizeof(List *));
+	opfamily_lists = (List **) palloc(nopers * sizeof(List *));
 	opstrat_lists = (List **) palloc(nopers * sizeof(List *));
 	strats = NULL;
 	i = 0;
 	foreach(l, opexprs)
 	{
+		Oid			opno = ((OpExpr *) lfirst(l))->opno;
 		Bitmapset  *this_strats;
 		ListCell   *j;
 
-		get_op_btree_interpretation(((OpExpr *) lfirst(l))->opno,
-									&opclass_lists[i], &opstrat_lists[i]);
+		get_op_btree_interpretation(opno,
+									&opfamily_lists[i], &opstrat_lists[i]);
 
 		/*
 		 * convert strategy number list to a Bitmapset to make the
@@ -2871,68 +3057,23 @@ make_row_comparison_op(ParseState *pstate, List *opname,
 		i++;
 	}
 
-	switch (bms_membership(strats))
+	/*
+	 * If there are multiple common interpretations, we may use any one of
+	 * them ... this coding arbitrarily picks the lowest btree strategy
+	 * number.
+	 */
+	i = bms_first_member(strats);
+	if (i < 0)
 	{
-		case BMS_EMPTY_SET:
-			/* No common interpretation, so fail */
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("could not determine interpretation of row comparison operator %s",
-							strVal(llast(opname))),
-					 errhint("Row comparison operators must be associated with btree operator classes."),
-					 parser_errposition(pstate, location)));
-			rctype = 0;			/* keep compiler quiet */
-			break;
-		case BMS_SINGLETON:
-			/* Simple case: just one possible interpretation */
-			rctype = bms_singleton_member(strats);
-			break;
-		case BMS_MULTIPLE:
-		default:				/* keep compiler quiet */
-			{
-				/*
-				 * Prefer the interpretation with the most default opclasses.
-				 */
-				int			best_defaults = 0;
-				bool		multiple_best = false;
-				int			this_rctype;
-
-				rctype = 0;		/* keep compiler quiet */
-				while ((this_rctype = bms_first_member(strats)) >= 0)
-				{
-					int			ndefaults = 0;
-
-					for (i = 0; i < nopers; i++)
-					{
-						forboth(l, opclass_lists[i], r, opstrat_lists[i])
-						{
-							Oid			opclass = lfirst_oid(l);
-							int			opstrat = lfirst_int(r);
-
-							if (opstrat == this_rctype &&
-								opclass_is_default(opclass))
-								ndefaults++;
-						}
-					}
-					if (ndefaults > best_defaults)
-					{
-						best_defaults = ndefaults;
-						rctype = this_rctype;
-						multiple_best = false;
-					}
-					else if (ndefaults == best_defaults)
-						multiple_best = true;
-				}
-				if (best_defaults == 0 || multiple_best)
-					ereport(ERROR,
-							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("could not determine interpretation of row comparison operator %s",
-									strVal(llast(opname))),
-							 errdetail("There are multiple equally-plausible candidates."),
-							 parser_errposition(pstate, location)));
-				break;
-			}
+		/* No common interpretation, so fail */
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("could not determine interpretation of row comparison operator %s",
+						strVal(llast(opname))),
+				 errhint("Row comparison operators must be associated with btree operator families."),
+				 parser_errposition(pstate, location)));
 	}
+	rctype = (RowCompareType) i;
 
 	/*
 	 * For = and <> cases, we just combine the pairwise operators with AND or
@@ -2948,34 +3089,27 @@ make_row_comparison_op(ParseState *pstate, List *opname,
 		return (Node *) makeBoolExpr(OR_EXPR, opexprs, location);
 
 	/*
-	 * Otherwise we need to determine exactly which opclass to associate with
+	 * Otherwise we need to choose exactly which opfamily to associate with
 	 * each operator.
 	 */
-	opclasses = NIL;
+	opfamilies = NIL;
 	for (i = 0; i < nopers; i++)
 	{
-		Oid			best_opclass = 0;
-		int			ndefault = 0;
-		int			nmatch = 0;
+		Oid			opfamily = InvalidOid;
 
-		forboth(l, opclass_lists[i], r, opstrat_lists[i])
+		forboth(l, opfamily_lists[i], r, opstrat_lists[i])
 		{
-			Oid			opclass = lfirst_oid(l);
 			int			opstrat = lfirst_int(r);
 
 			if (opstrat == rctype)
 			{
-				if (ndefault == 0)
-					best_opclass = opclass;
-				if (opclass_is_default(opclass))
-					ndefault++;
-				else
-					nmatch++;
+				opfamily = lfirst_oid(l);
+				break;
 			}
 		}
-		if (ndefault == 1 || (ndefault == 0 && nmatch == 1))
-			opclasses = lappend_oid(opclasses, best_opclass);
-		else
+		if (OidIsValid(opfamily))
+			opfamilies = lappend_oid(opfamilies, opfamily);
+		else					/* should not happen */
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("could not determine interpretation of row comparison operator %s",
@@ -3005,7 +3139,7 @@ make_row_comparison_op(ParseState *pstate, List *opname,
 	rcexpr = makeNode(RowCompareExpr);
 	rcexpr->rctype = rctype;
 	rcexpr->opnos = opnos;
-	rcexpr->opclasses = opclasses;
+	rcexpr->opfamilies = opfamilies;
 	rcexpr->largs = largs;
 	rcexpr->rargs = rargs;
 

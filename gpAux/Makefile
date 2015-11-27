@@ -1,6 +1,5 @@
 #---------------------------------------------------------------------
 # Makefile for Greenplum Database
-#
 #---------------------------------------------------------------------
 
 # keep the default target above any targets from included makefiles
@@ -178,11 +177,10 @@ DEFPORT=5432
 
 ORCA_CONFIG=--enable-orca
 win32_CONFIGFLAGS=--with-gssapi --without-libcurl
-rhel5_x86_32_CONFIGFLAGS=--host=i686-pc-linux-gnu --enable-snmp --enable-ddboost --with-gssapi --enable-netbackup ${ORCA_CONFIG} --with-libxml
+rhel5_x86_32_CONFIGFLAGS=--host=i686-pc-linux-gnu --enable-snmp --enable-ddboost --with-gssapi --enable-netbackup --with-libxml
 rhel5_x86_64_CONFIGFLAGS=--enable-snmp --enable-connectemc --enable-ddboost --with-gssapi --enable-netbackup ${ORCA_CONFIG} --with-libxml
 rhel6_x86_64_CONFIGFLAGS=--enable-snmp --enable-connectemc --enable-ddboost --with-gssapi --enable-netbackup ${ORCA_CONFIG} --with-libxml
-sol10_x86_64_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} --with-libxml
-sol_x86_64_CONFIGFLAGS=--without-libcurl
+sol10_x86_64_CONFIGFLAGS=--enable-snmp --with-libxml
 suse10_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost ${ORCA_CONFIG} --with-libxml
 suse11_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost ${ORCA_CONFIG} --with-libxml
 linux_x86_64_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} --with-libxml
@@ -222,9 +220,8 @@ ifdef ADDON_DIR
 ADDON_CONFIG_INCLUDES=$(BLD_TOP)/$(ADDON_DIR)/src/include
 endif
 
-
 # Configure in thirdparty libraries from the ext/ directory
-CONFIG_INCLUDES=$(BLD_THIRDPARTY_INCLUDE_DIR) $(BLD_THIRDPARTY_INCLUDE_DIR)/libxml2 $(ADDON_CONFIG_INCLUDES)
+CONFIG_INCLUDES=$(BLD_THIRDPARTY_INCLUDE_DIR) $(BLD_THIRDPARTY_INCLUDE_DIR)/libxml2 $(BLD_THIRDPARTY_DIR)/libgpopt/include $(BLD_THIRDPARTY_DIR)/libgpos/include $(ADDON_CONFIG_INCLUDES)
 CONFIG_LIBRARIES=$(strip $(BLD_THIRDPARTY_LIB_DIR) $(BLD_CXX_LIB_DIR) $(BLD_PTHREADS_LIB_DIR))
 CONFIGFLAGS+= --with-includes="$(CONFIG_INCLUDES)" --with-libraries="$(CONFIG_LIBRARIES)"
 
@@ -256,7 +253,6 @@ ifdef ADDON_DIR
 CONFIGFLAGS+=ADDON_DIR=$(ADDON_DIR)
 endif
 
-
 RECONFIG :
 	rm -f Debug/GNUmakefile
 	rm -f Release/GNUmakefile
@@ -270,17 +266,32 @@ BLD_CONFIG_SHELL=$($(BLD_ARCH)_CONFIG_SHELL)
 $(GPPGDIR)/GNUmakefile : $(GPPGDIR)/configure  env.sh
 	rm -rf $(INSTLOC)
 	mkdir -p $(GPPGDIR) 
-	cd $(GPPGDIR) && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))" CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL) ./configure $(CONFIGFLAGS) --prefix=$(INSTLOC) --with-docdir=$(INSTLOC)/doc --mandir=$(INSTLOC)/man
+	cd $(GPPGDIR) && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))"    \
+                     CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL) \
+                     ./configure $(CONFIGFLAGS)               \
+                         --prefix=$(INSTLOC)                  \
+                         --with-docdir=$(INSTLOC)/doc         \
+                         --mandir=$(INSTLOC)/man
 
 Debug/GNUmakefile : $(GPPGDIR)/configure  env.sh
 	rm -rf $(INSTLOC)
 	mkdir -p Debug 
-	cd Debug && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))" CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL) ./configure $(CONFIGFLAGS) --prefix=$(INSTLOC) --with-docdir=$(INSTLOC)/doc --mandir=$(INSTLOC)/man
+	cd Debug && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))"        \
+                CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL)     \
+                ./configure $(CONFIGFLAGS)                   \
+                    --prefix=$(INSTLOC)                      \
+                    --with-docdir=$(INSTLOC)/doc             \
+                    --mandir=$(INSTLOC)/man
 
 Release/GNUmakefile : $(GPPGDIR)/configure  env.sh
 	rm -rf $(INSTLOC)
 	mkdir -p Release 
-	cd Release && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))" CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL) ./configure $(CONFIGFLAGS) --prefix=$(INSTLOC) --with-docdir=$(INSTLOC)/doc --mandir=$(INSTLOC)/man
+	cd Release && CC="$(strip $(BLD_CC) $(BLD_CFLAGS))"     \
+                  CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL)  \
+                  ./configure $(CONFIGFLAGS)                \
+                      --prefix=$(INSTLOC)                   \
+                      --with-docdir=$(INSTLOC)/doc          \
+                      --mandir=$(INSTLOC)/man
 
 ## ======================================================================
 ## Generate json catalog file

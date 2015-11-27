@@ -32,7 +32,7 @@
 /* TIDYCAT_BEGINFAKEDEF
 
    CREATE TABLE pg_filespace
-   with (camelcase=FileSpace, shared=true, relid=5009, reltype_oid=6438)
+   with (camelcase=FileSpace, shared=true, relid=5009)
    (
    fsname name, -- filespace name
    fsowner oid -- owner of filespace

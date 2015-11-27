@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/joininfo.h,v 1.37 2009/01/01 17:24:00 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/joininfo.h,v 1.32 2006/12/12 21:31:02 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

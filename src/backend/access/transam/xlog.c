@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/access/transam/xlog.c,v 1.258.2.3 2008/04/17 00:00:00 tgl Exp $
+ * $PostgreSQL: pgsql/src/backend/access/transam/xlog.c,v 1.259 2006/12/08 19:50:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -15,9 +15,9 @@
 #include "postgres.h"
 
 #include <ctype.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <time.h>
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/wait.h>
@@ -217,7 +217,7 @@ bool am_startup = false;
  */
 TimeLineID	ThisTimeLineID = 0;
 
-/* Are we doing recovery from XLOG */
+/* Are we doing recovery from XLOG? */
 bool		InRecovery = false;
 
 /*
@@ -713,6 +713,7 @@ static void XLogFileInit(
 static bool InstallXLogFileSegment(uint32 *log, uint32 *seg, char *tmppath,
 					   bool find_free, int *max_advance,
 					   bool use_lock, char *tmpsimpleFileName);
+static void XLogFileClose(void);
 static void XLogFileOpen(
 				MirroredFlatFileOpen *mirroredOpen,
 				uint32 log,
@@ -731,6 +732,7 @@ static void UpdateLastRemovedPtr(char *filename);
 static void MoveOfflineLogs(uint32 log, uint32 seg, XLogRecPtr endptr,
 				int *nsegsremoved, int *nsegsrecycled);
 static void CleanupBackupHistory(void);
+static XLogRecord *ReadCheckpointRecord(XLogRecPtr RecPtr, int whichChkpt);
 static bool ValidXLOGHeader(XLogPageHeader hdr, int emode, bool segmentonly);
 static void UnpackCheckPointRecord(
 	XLogRecord			*record,
@@ -757,6 +759,7 @@ static char *str_time(pg_time_t tnow);
 #ifdef suppress
 static void issue_xlog_fsync(void);
 #endif
+static void xlog_outrec(StringInfo buf, XLogRecord *record);
 static void pg_start_backup_callback(int code, Datum arg);
 static bool read_backup_label(XLogRecPtr *checkPointLoc, bool *backupEndRequired);
 static void ValidateXLOGDirectoryStructure(void);
@@ -1191,7 +1194,6 @@ begin:;
 	{
 		/* Oops, must redo it with full-page data */
 		LWLockRelease(WALInsertLock);
-
 		END_CRIT_SECTION();
 		goto begin;
 	}
@@ -1280,6 +1282,7 @@ begin:;
 	if (isLogSwitch &&
 		(RecPtr.xrecoff % XLogSegSize) == SizeOfXLogLongPHD)
 	{
+		/* We can release insert lock immediately */
 		LWLockRelease(WALInsertLock);
 
 		RecPtr.xrecoff -= SizeOfXLogLongPHD;
@@ -1346,7 +1349,7 @@ begin:;
 						 XLogLocationToString(&RecPtr),
 						 ProcLastRecTotalLen,
 						 ProcLastRecDataLen);
-		XLog_OutRec(&buf, record);
+		xlog_outrec(&buf, record);
 
 		contiguousCopy = XLogContiguousCopy(record, rdata);
 		appendStringInfo(&buf, " - ");
@@ -1956,12 +1959,6 @@ AdvanceXLInsertBuffer(bool new_segment)
 	return update_needed;
 }
 
-void XLogGetBuffer(int startidx, int npages, char **from, Size *nbytes)
-{
-	*from = XLogCtl->pages + startidx * (Size) XLOG_BLCKSZ;
-	*nbytes = npages * (Size) XLOG_BLCKSZ;
-}
-
 /*
  * Write and/or fsync the log at least as far as WriteRqst indicates.
  *
@@ -2057,56 +2054,6 @@ XLogWrite(XLogwrtRqst WriteRqst, bool flexible, bool xlog_switch)
 					openLogId, openLogSeg,
 					&use_existent, true);
 			openLogOff = 0;
-
-			/* update pg_control, unless someone else already did */
-			LWLockAcquire(ControlFileLock, LW_EXCLUSIVE);
-			if (ControlFile->logId < openLogId ||
-				(ControlFile->logId == openLogId &&
-				 ControlFile->logSeg < openLogSeg + 1))
-			{
-				ControlFile->logId = openLogId;
-				ControlFile->logSeg = openLogSeg + 1;
-				ControlFile->time = time(NULL);
-				UpdateControlFile();
-
-				/*
-				 * Signal bgwriter to start a checkpoint if it's been too long
-				 * since the last one.	(We look at local copy of RedoRecPtr
-				 * which might be a little out of date, but should be close
-				 * enough for this purpose.)
-				 *
-				 * A straight computation of segment number could overflow 32
-				 * bits.  Rather than assuming we have working 64-bit
-				 * arithmetic, we compare the highest-order bits separately,
-				 * and force a checkpoint immediately when they change.
-				 */
-				if (IsUnderPostmaster)
-				{
-					uint32		old_segno,
-								new_segno;
-					uint32		old_highbits,
-								new_highbits;
-
-					old_segno = (RedoRecPtr.xlogid % XLogSegSize) * XLogSegsPerFile +
-						(RedoRecPtr.xrecoff / XLogSegSize);
-					old_highbits = RedoRecPtr.xlogid / XLogSegSize;
-					new_segno = (openLogId % XLogSegSize) * XLogSegsPerFile +
-						openLogSeg;
-					new_highbits = openLogId / XLogSegSize;
-					if (new_highbits != old_highbits ||
-						new_segno >= old_segno + (uint32) CheckPointSegments)
-					{
-#ifdef WAL_DEBUG
-						if (XLOG_DEBUG)
-							elog(LOG, "time for a checkpoint, signaling bgwriter");
-#endif
-						if (Debug_print_qd_mirroring)
-							elog(LOG, "time for a checkpoint, signaling bgwriter");
-						RequestCheckpoint(false, true);
-					}
-				}
-			}
-			LWLockRelease(ControlFileLock);
 		}
 
 		/* Make sure we have the current logfile open */
@@ -2209,7 +2156,9 @@ XLogWrite(XLogwrtRqst WriteRqst, bool flexible, bool xlog_switch)
 			 *
 			 * This is also the right place to notify the Archiver that the
 			 * segment is ready to copy to archival storage, and to update the
-			 * timer for archive_timeout.
+			 * timer for archive_timeout, and to signal for a checkpoint if
+			 * too many logfile segments have been used since the last
+			 * checkpoint.
 			 */
 			if (finishing_seg || (xlog_switch && last_iteration))
 			{
@@ -2229,6 +2178,43 @@ XLogWrite(XLogwrtRqst WriteRqst, bool flexible, bool xlog_switch)
 					XLogArchiveNotifySeg(openLogId, openLogSeg);
 
 				Write->lastSegSwitchTime = time(NULL);
+
+				/*
+				 * Signal bgwriter to start a checkpoint if it's been too long
+				 * since the last one.	(We look at local copy of RedoRecPtr
+				 * which might be a little out of date, but should be close
+				 * enough for this purpose.)
+				 *
+				 * A straight computation of segment number could overflow 32
+				 * bits.  Rather than assuming we have working 64-bit
+				 * arithmetic, we compare the highest-order bits separately,
+				 * and force a checkpoint immediately when they change.
+				 */
+				if (IsUnderPostmaster)
+				{
+					uint32		old_segno,
+								new_segno;
+					uint32		old_highbits,
+								new_highbits;
+
+					old_segno = (RedoRecPtr.xlogid % XLogSegSize) * XLogSegsPerFile +
+						(RedoRecPtr.xrecoff / XLogSegSize);
+					old_highbits = RedoRecPtr.xlogid / XLogSegSize;
+					new_segno = (openLogId % XLogSegSize) * XLogSegsPerFile +
+						openLogSeg;
+					new_highbits = openLogId / XLogSegSize;
+					if (new_highbits != old_highbits ||
+						new_segno >= old_segno + (uint32) (CheckPointSegments-1))
+					{
+#ifdef WAL_DEBUG
+						if (XLOG_DEBUG)
+							elog(LOG, "time for a checkpoint, signaling bgwriter");
+#endif
+						if (Debug_print_qd_mirroring)
+							elog(LOG, "time for a checkpoint, signaling bgwriter");
+						RequestCheckpoint(false, true);
+					}
+				}
 			}
 		}
 
@@ -2947,7 +2933,7 @@ XLogFileOpen(
 /*
  * Close the current logfile segment for writing.
  */
-void
+static void
 XLogFileClose(void)
 {
 	Assert(MirroredFlatFile_IsActive(&mirroredLogFileOpen));
@@ -3375,45 +3361,6 @@ RecordIsValid(XLogRecord *record, XLogRecPtr recptr, int emode)
 	COMP_CRC32C(crc, (char *) record + sizeof(pg_crc32),
 			   SizeOfXLogRecord - sizeof(pg_crc32));
 	FIN_CRC32C(crc);
-
-	if (!EQ_LEGACY_CRC32(record->xl_crc, crc))
-	{
-		/*
-		 * Ok, the crc failed, but it may be that we have a record using the old crc algorithm.
-		 * Re-compute the crc using the old algorithm, and check that.
-		 */
-
-		/* First the rmgr data */
-		INIT_LEGACY_CRC32(crc);
-		COMP_LEGACY_CRC32(crc, XLogRecGetData(record), len);
-
-		/* Add in the backup blocks, if any */
-		blk = (char *) XLogRecGetData(record) + len;
-		for (i = 0; i < XLR_MAX_BKP_BLOCKS; i++)
-		{
-			uint32		blen;
-
-			if (!(record->xl_info & XLR_SET_BKP_BLOCK(i)))
-				continue;
-
-			memcpy(&bkpb, blk, sizeof(BkpBlock));
-			if (bkpb.hole_offset + bkpb.hole_length > BLCKSZ)
-			{
-				ereport(emode,
-						(errmsg("incorrect hole size in record at %X/%X",
-								recptr.xlogid, recptr.xrecoff)));
-				return false;
-			}
-			blen = sizeof(BkpBlock) + BLCKSZ - bkpb.hole_length;
-			COMP_LEGACY_CRC32(crc, blk, blen);
-			blk += blen;
-		}
-
-		/* Finally include the record header */
-		COMP_LEGACY_CRC32(crc, (char *) record + sizeof(pg_crc32),
-				   SizeOfXLogRecord - sizeof(pg_crc32));
-		FIN_LEGACY_CRC32(crc);
-	}
 
 	if (!EQ_LEGACY_CRC32(record->xl_crc, crc))
 	{
@@ -5070,17 +5017,8 @@ ReadControlFile(void)
 	FIN_CRC32C(crc);
 
 	if (!EQ_LEGACY_CRC32(crc, ControlFile->crc))
-	{
-		/* We might have an old record.  Recompute using old crc algorithm, and re-check. */
-		INIT_LEGACY_CRC32(crc);
-		COMP_LEGACY_CRC32(crc,
-				   (char *) ControlFile,
-				   offsetof(ControlFileData, crc));
-		FIN_LEGACY_CRC32(crc);
-		if (!EQ_LEGACY_CRC32(crc, ControlFile->crc))
-				ereport(FATAL,
-						(errmsg("incorrect checksum in control file")));
-	}
+		ereport(FATAL,
+				(errmsg("incorrect checksum in control file")));
 
 	/*
 	 * Do compatibility checking immediately, except during upgrade.
@@ -5094,8 +5032,7 @@ ReadControlFile(void)
 	 * themselves.	(These locale settings are considered critical
 	 * compatibility items because they can affect sort order of indexes.)
 	 */
-	if (ControlFile->catalog_version_no != CATALOG_VERSION_NO &&
-		!gp_upgrade_mode)
+	if (ControlFile->catalog_version_no != CATALOG_VERSION_NO)
 		ereport(FATAL,
 				(errmsg("database files are incompatible with server"),
 				 errdetail("The database cluster was initialized with CATALOG_VERSION_NO %d,"
@@ -5599,8 +5536,6 @@ BootStrapXLOG(void)
 	ControlFile->system_identifier = sysidentifier;
 	ControlFile->state = DB_SHUTDOWNED;
 	ControlFile->time = checkPoint.time;
-	ControlFile->logId = 0;
-	ControlFile->logSeg = 1;
 	ControlFile->checkPoint = checkPoint.redo;
 	ControlFile->checkPointCopy = checkPoint;
 	/* some additional ControlFile fields are set in WriteControlFile() */
@@ -6129,7 +6064,7 @@ StartupXLOG_RedoPass1Context(void *arg)
 	appendStringInfo(&buf, "REDO PASS 1 @ %s; LSN %s: ",
 					 XLogLocationToString(&ReadRecPtr),
 					 XLogLocationToString2(&EndRecPtr));
-	XLog_OutRec(&buf, record);
+	xlog_outrec(&buf, record);
 	appendStringInfo(&buf, " - ");
 	RmgrTable[record->xl_rmid].rm_desc(&buf,
 									   ReadRecPtr,
@@ -6154,7 +6089,7 @@ StartupXLOG_RedoPass3Context(void *arg)
 	appendStringInfo(&buf, "REDO PASS 3 @ %s; LSN %s: ",
 					 XLogLocationToString(&ReadRecPtr),
 					 XLogLocationToString2(&EndRecPtr));
-	XLog_OutRec(&buf, record);
+	xlog_outrec(&buf, record);
 	appendStringInfo(&buf, " - ");
 	RmgrTable[record->xl_rmid].rm_desc(&buf,
 									   ReadRecPtr,
@@ -6360,8 +6295,7 @@ StartupXLOG(void)
 	 */
 	ReadControlFile();
 
-	if (ControlFile->logSeg == 0 ||
-		ControlFile->state < DB_SHUTDOWNED ||
+	if (ControlFile->state < DB_SHUTDOWNED ||
 		ControlFile->state > DB_IN_PRODUCTION ||
 		!XRecOffIsValid(ControlFile->checkPoint.xrecoff))
 		ereport(FATAL,
@@ -6373,7 +6307,7 @@ StartupXLOG(void)
 						str_time(ControlFile->time))));
 	else if (ControlFile->state == DB_SHUTDOWNING)
 		ereport(LOG,
-				(errmsg("database system shutdown was interrupted at %s",
+				(errmsg("database system shutdown was interrupted; last known up at %s",
 						str_time(ControlFile->time))));
 	else if (ControlFile->state == DB_IN_CRASH_RECOVERY)
 		ereport(LOG,
@@ -6405,7 +6339,7 @@ StartupXLOG(void)
 				 errSendAlert(true)));
 	else if (ControlFile->state == DB_IN_PRODUCTION)
 		ereport(LOG,
-				(errmsg("database system was interrupted at %s",
+				(errmsg("database system was interrupted; last known up at %s",
 						str_time(ControlFile->time))));
 
 	/* This is just to allow attaching to startup process with a debugger */
@@ -6993,7 +6927,7 @@ StartupXLOG(void)
 
 	/*
 	 * Complain if we did not roll forward far enough to render the backup
-	 * dump consistent
+	 * dump consistent.
 	 */
 	if (InRecovery &&
 		(XLByteLT(EndOfLog, ControlFile->minRecoveryPoint) ||
@@ -7039,8 +6973,6 @@ StartupXLOG(void)
 			openLogId,
 			openLogSeg);
 	openLogOff = 0;
-	ControlFile->logId = openLogId;
-	ControlFile->logSeg = openLogSeg + 1;
 	Insert = &XLogCtl->Insert;
 	Insert->PrevRecord = LastRec;
 	XLogCtl->xlblocks[0].xlogid = openLogId;
@@ -7310,8 +7242,7 @@ StartupXLOG_Pass2(void)
 	 */
 	ReadControlFile();
 
-	if (ControlFile->logSeg == 0 ||
-		ControlFile->state < DB_SHUTDOWNED ||
+	if (ControlFile->state < DB_SHUTDOWNED ||
 		ControlFile->state > DB_IN_PRODUCTION ||
 		!XRecOffIsValid(ControlFile->checkPoint.xrecoff))
 		ereport(FATAL,
@@ -7425,8 +7356,7 @@ StartupXLOG_Pass3(void)
 	 */
 	ReadControlFile();
 
-	if (ControlFile->logSeg == 0 ||
-		ControlFile->state < DB_SHUTDOWNED ||
+	if (ControlFile->state < DB_SHUTDOWNED ||
 		ControlFile->state > DB_IN_PRODUCTION ||
 		!XRecOffIsValid(ControlFile->checkPoint.xrecoff))
 		ereport(FATAL,
@@ -7887,8 +7817,7 @@ XLogGetRecoveryStart(char *callerStr, char *reasonStr, XLogRecPtr *redoCheckPoin
 	 */
 	ReadControlFile();
 
-	if (ControlFile->logSeg == 0 ||
-		ControlFile->state < DB_SHUTDOWNED ||
+	if (ControlFile->state < DB_SHUTDOWNED ||
 		ControlFile->state > DB_IN_PRODUCTION ||
 		!XRecOffIsValid(ControlFile->checkPoint.xrecoff))
 		ereport(FATAL,
@@ -8050,7 +7979,7 @@ RecoveryInProgress(void)
  * whichChkpt identifies the checkpoint (merely for reporting purposes).
  * 1 for "primary", 2 for "secondary", 0 for "other" (backup_label)
  */
-XLogRecord *
+static XLogRecord *
 ReadCheckpointRecord(XLogRecPtr RecPtr, int whichChkpt)
 {
 	XLogRecord *record;
@@ -9619,8 +9548,8 @@ xlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 		appendStringInfo(buf, "UNKNOWN");
 }
 
-void
-XLog_OutRec(StringInfo buf, XLogRecord *record)
+static void
+xlog_outrec(StringInfo buf, XLogRecord *record)
 {
 	int			i;
 

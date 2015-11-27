@@ -1725,6 +1725,9 @@ default partition abc);
 
 create table exh_abc (like d);
 alter table d exchange default partition with table exh_abc;
+set gp_enable_exchange_default_partition = on;
+alter table d exchange default partition with table exh_abc;
+reset gp_enable_exchange_default_partition;
 
 drop table d;
 drop table exh_abc;
@@ -1745,6 +1748,9 @@ create table exh_ao_ao (like sto_ao_ao) with (appendonly=true);
 
 -- Exchange default sub-partition, should fail
 alter table sto_ao_ao alter partition for (rank(3)) exchange default partition with table exh_ao_ao;
+set gp_enable_exchange_default_partition = on;
+alter table sto_ao_ao alter partition for (rank(3)) exchange default partition with table exh_ao_ao;
+reset gp_enable_exchange_default_partition;
 
 -- Exchange a non-default sub-partition of a default partition, should fail
 alter table sto_ao_ao alter default partition exchange partition for ('one') with table exh_ao_ao;
@@ -4315,22 +4321,19 @@ drop schema mpp6979dummy;
 
 -- MPP-7898:
 
-drop table if exists r cascade; --ignore
-drop table if exists s cascade; --ignore
-
-create table s 
+create table parent_s
     (a int, b text) 
     distributed by (a);
     
-insert into s values 
+insert into parent_s values
     (1, 'one');
 
 -- Try to create a table that mixes inheritance and partitioning.
 -- Correct behavior: ERROR
 
-create table r 
+create table child_r
     ( c int, d int) 
-    inherits (s)
+    inherits (parent_s)
     partition by range(d) 
     (
         start (0) 
@@ -4341,13 +4344,13 @@ create table r
  -- If (incorrectly) the previous statement works, the next one is 
  -- likely to fail with in unexpected internal error.  This is residual 
  -- issue MPP-7898.
-insert into r values 
+insert into child_r values
     (0, 'from r', 0, 0);
     
-drop table if exists s cascade; --ignore
-drop table if exists r cascade; --ignore
+drop table if exists parent_s cascade; --ignore
+drop table if exists child_r cascade; --ignore
 
-create table r 
+create table parent_r
     ( a int, b text, c int, d int ) 
     distributed by (a)
     partition by range(d) 
@@ -4357,33 +4360,33 @@ create table r
         every (1)
     );
  
-insert into r values 
+insert into parent_r values
     (0, 'from r', 0, 0);
 
-create table s 
+create table parent_s
     ( a int, b text, c int, d int ) 
     distributed by (a);
     
-insert into s values 
+insert into parent_s values
     (1, 'from s', 555, 555);
 
-create table t
+create table child_t
     ( )
-    inherits (s)
+    inherits (parent_s)
     distributed by (a);
 
-insert into t values
+insert into child_t values
     (0, 'from t', 666, 666);
 
 -- Try to exchange in the child and parent.  
 -- Correct behavior: ERROR in both cases.
 
-alter table r exchange partition for (1) with table t;
-alter table r exchange partition for (1) with table s;
+alter table parent_r exchange partition for (1) with table child_t;
+alter table parent_r exchange partition for (1) with table parent_s;
 
-drop table t cascade; --ignore
-drop table s cascade; --ignore
-drop table r cascade; --ignore
+drop table child_t cascade; --ignore
+drop table parent_s cascade; --ignore
+drop table parent_r cascade; --ignore
 
 -- MPP-7898 end.
 
@@ -4967,8 +4970,7 @@ where x = 9;
 
 -- MPP-19105
 -- Base partitions with trailing dropped columns
-drop table if exists t;
-create table t (
+create table parttest_t (
 	a int,
 	b int,
 	c char,
@@ -4981,13 +4983,13 @@ partition by range (a)
 );
 
 -- Drop column
-alter table t drop column d;
+alter table parttest_t drop column d;
 
 -- Alter table split partition
-alter table t split partition for(1) at (2) into (partition p11, partition p22);
+alter table parttest_t split partition for(1) at (2) into (partition p11, partition p22);
 
-insert into  t values(1,2,'a');
-select * from t;
+insert into  parttest_t values(1,2,'a');
+select * from parttest_t;
 -- END MPP-19105
 reset optimizer_nestloop_factor;
 

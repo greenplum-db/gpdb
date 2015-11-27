@@ -179,6 +179,10 @@ s{PG_VERSION_STR "[^"]+"}{__STRINGIFY(x) #x\n#define __STRINGIFY2(z) __STRINGIFY
         print O "#define GP_VERSION \"unknown\"\n";
         print O "#define PG_MAJORVERSION \"$self->{majorver}\"\n";
         print O "#define LOCALEDIR \"/share/locale\"\n" if ($self->{options}->{nls});
+	if ($self->{options}->{xml}) {
+	    print O "#define HAVE_LIBXML2\n";
+	    print O "#define USE_LIBXML\n";
+	}
         print O "/* defines added by config steps */\n";
         print O "#ifndef IGNORE_CONFIGURED_SETTINGS\n";
         print O "#define USE_ASSERT_CHECKING 1\n" if ($self->{options}->{asserts});
@@ -459,6 +463,12 @@ sub AddProject
         $proj->AddLibrary($self->{options}->{krb5} . '\lib\i386\comerr32.lib');
         $proj->AddLibrary($self->{options}->{krb5} . '\lib\i386\gssapi32.lib');
     }
+    if ($self->{options}->{xml}) {
+	$proj->AddIncludeDir($self->{options}->{xml} . '\include');
+	$proj->AddIncludeDir($self->{options}->{iconv} . '\include');
+	$proj->AddLibrary($self->{options}->{xml} . '\lib\libxml2.lib');
+    }
+
     if ($self->{options}->{iconv})
     {
         $proj->AddIncludeDir($self->{options}->{iconv} . '\include');

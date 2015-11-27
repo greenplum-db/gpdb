@@ -2,7 +2,6 @@ restore_restoredb.sql
 sreh.sql
 tablespace.sql
 upg2.sql
-exttab1.sql
 gptokencheck.sql
 loadcat33.sql
 loadcat34.sql
@@ -24,9 +23,9 @@ filespace.sql
 upgrade.sql
 auth_constraint.sql
 catversion.sql
-custom_format.sql
 resource_queue_function.sql
 table_functions.sql
 tidycat2.sql
 tpch500GB.sql
 partindex_test.sql
+external_table.sql

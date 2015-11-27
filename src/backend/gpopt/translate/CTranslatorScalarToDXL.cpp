@@ -32,22 +32,22 @@
 #include "gpos/common/CAutoP.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "dxl/operators/CDXLDatumBool.h"
-#include "dxl/operators/CDXLDatumInt2.h"
-#include "dxl/operators/CDXLDatumInt4.h"
-#include "dxl/operators/CDXLDatumInt8.h"
-#include "dxl/operators/CDXLDatumOid.h"
-
-#include "dxl/CDXLUtils.h"
-#include "dxl/xml/dxltokens.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/xml/dxltokens.h"
 
 #include "gpopt/base/CUtils.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 
-#include "md/IMDAggregate.h"
-#include "md/IMDScalarOp.h"
-#include "md/IMDType.h"
-#include "md/CMDTypeGenericGPDB.h"
+#include "naucrates/dxl/operators/CDXLDatumBool.h"
+#include "naucrates/dxl/operators/CDXLDatumInt2.h"
+#include "naucrates/dxl/operators/CDXLDatumInt4.h"
+#include "naucrates/dxl/operators/CDXLDatumInt8.h"
+#include "naucrates/dxl/operators/CDXLDatumOid.h"
+
+#include "naucrates/md/IMDAggregate.h"
+#include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDType.h"
+#include "naucrates/md/CMDTypeGenericGPDB.h"
 
 #include "gpopt/gpdbwrappers.h"
 

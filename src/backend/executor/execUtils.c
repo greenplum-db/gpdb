@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execUtils.c,v 1.140.2.3 2007/02/06 17:35:27 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execUtils.c,v 1.141 2006/12/26 21:37:19 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -185,7 +185,6 @@ CreateExecutorState(void)
 									 ALLOCSET_DEFAULT_MINSIZE,
 									 ALLOCSET_DEFAULT_INITSIZE,
 									 ALLOCSET_DEFAULT_MAXSIZE);
-
 	EState *estate = InternalCreateExecutorState(qcontext, false);
 
 	/*

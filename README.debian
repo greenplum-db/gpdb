@@ -21,7 +21,6 @@ libcurl4-openssl-dev 7.38.0-4+deb8u2
 libcurl4-nss-dev 7.38.0-4+deb8u2
 libcurl4-gnutls-dev 7.38.0-4+deb8u2
 
-apt-get install -y ed 
 apt-get install -y python-pip
 
 pip install lockfile

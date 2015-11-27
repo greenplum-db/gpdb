@@ -25,12 +25,11 @@
 #include "gpos/base.h"
 #include "gpos/common/CBitSet.h"
 
-#include "dxl/CDXLUtils.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/md/IMDColumn.h"
+#include "naucrates/md/IMDRelation.h"
 
 #include "gpopt/mdcache/CMDAccessor.h"
-
-#include "md/IMDColumn.h"
-#include "md/IMDRelation.h"
 
 #include "gpopt/gpdbwrappers.h"
 

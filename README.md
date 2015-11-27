@@ -1,3 +1,7 @@
+[![Build Status](https://travis-ci.org/greenplum-db/gpdb.svg?branch=master)](https://travis-ci.org/greenplum-db/gpdb)
+
+----------------------------------------------------------------------
+
 ![Greenplum](/gpAux/releng/images/logo-greenplum.png)
 
 The Greenplum Database (GPDB) is an advanced, fully featured, open
@@ -42,10 +46,6 @@ to the segments, and collects the results.
   * setuptools
   * epydoc
 
-   Ensure the ed text-editor is installed for gpinitsystem. For RHEL/Centos:
-   ```
-   sudo yum install ed
-   ```
 
 ## Code layout
 

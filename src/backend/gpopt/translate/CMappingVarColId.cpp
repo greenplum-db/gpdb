@@ -20,10 +20,10 @@
 #include "nodes/value.h"
 
 
-#include "dxl/CDXLUtils.h"
-#include "gpos/error/CAutoTrace.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/md/IMDIndex.h"
 
-#include "md/IMDIndex.h"
+#include "gpos/error/CAutoTrace.h"
 
 #include "gpopt/gpdbwrappers.h"
 

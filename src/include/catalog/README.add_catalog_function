@@ -7,7 +7,7 @@ that will expose the backend function, fn_be() as a built_in function,
 the following steps are needed. Note, the same set of steps need to be 
 followed if adding a new type.
 
-1. Get an unused OID by running the script unused_oids located in 
+1. Get an unused OID by running the script unused_oids located in
    cdb-pg/src/include/catalog/unused_oids. Claim an unused OID. For eg, for our
    example we are claiming 5075.
 
@@ -18,17 +18,11 @@ followed if adding a new type.
 		WITH (OID=5075, DESCRIPTION="Description of the function");
    If adding a new type, the type definition needs to be added to pg_type.sql.
 
-3. In cdb-pg/src/include/catalog make pg_type.h and pg_proc.h writable 
-   by opening them 
-	p4 edit pg_type.h
-	p4 edit pg_proc.h 
-   Note, the above step needs to be done when adding a type, or a function, or both.
+3. Run the following command in cdb-pg/src/include/catalog:
 
-4. Run the following command in cdb-pg/src/include/catalog:
+   $ perl catullus.pl -procdef pg_proc.sql -prochdr pg_proc_gp.h -typedef pg_type.sql -typehdr pg_type.h
 
-   $ perl catullus.pl -procdef pg_proc.sql -prochdr pg_proc.h -typedef pg_type.sql -typehdr pg_type.h
-
-  catullus.pl will re-generate the pg_proc.h file with the appropriate 
+  catullus.pl will re-generate the pg_proc_gp.h file with the appropriate
   DATA statement for the fn_sql function definition. If a new type 
   was being added in pg_type.sql, pg_type.h would be updated with the 
   appropriate DATA statements. 
@@ -36,7 +30,7 @@ followed if adding a new type.
   For more information on catullus.pl, please refer to 
   cdb-pg/src/include/catalog/README.tidycat.
 
-5. Since the catalogs are being modified, the catalog number in 
+4. Since the catalogs are being modified, the catalog number in
    cdb-pg/src/include/catalog/catversion.h should be bumped up. This is to 
    indicate an initdb is required so the version number in the backend matches
    the version number on disk.
@@ -50,7 +44,7 @@ followed if adding a new type.
    and move it to gpMgmt/bin/gppylib/data/
 
 
-6. Adding a new function to the catalog has an impact on upgrade. Add a new 
+5. Adding a new function to the catalog has an impact on upgrade. Add a new
    entry to the appropriate upgrade script. For instance if the new function 
    was being added in 4.2, modify the 
    cdb-pg/src/test/regress/data/upgrade42/upg2_catupgrade_42.sql.in
@@ -63,12 +57,12 @@ followed if adding a new type.
 	COMMENT ON FUNCTION @gpupgradeschemaname@.fn_sql(int4, int4) 
 		IS 'Description of the function';
 
-7. Run make distclean, make, gpinitsystem and you should be able to see your 
+6. Run make distclean, make, gpinitsystem and you should be able to see your
    newly added function in pg_proc. Newly added types will be visible in
    pg_type.
 
-8. Make sure you run and possibly repair the upgrade regression test in 
-   install-chek.
+7. Make sure you run and possibly repair the upgrade regression test in
+   install-check.
 
-9. Don't forget to checkin the generated files, pg_type.h and pg_proc.h, along
-   with any modified files. 
+8. Don't forget to "git add" and commit the generated files, pg_type.h and
+   pg_proc_gp.h, along with any modified files.

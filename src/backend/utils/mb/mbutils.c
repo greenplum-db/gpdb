@@ -4,7 +4,7 @@
  *
  * Tatsuo Ishii
  *
- * $PostgreSQL: pgsql/src/backend/utils/mb/mbutils.c,v 1.59 2006/10/04 00:30:02 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/mb/mbutils.c,v 1.61 2006/12/24 00:57:48 tgl Exp $
  */
 #include "postgres.h"
 
@@ -895,7 +895,7 @@ pg_encoding_mb2wchar_with_len(int encoding,
 	return (*pg_wchar_table[encoding].mb2wchar_with_len) ((const unsigned char *) from, to, len);
 }
 
-/* returns the byte length of a multibyte character */
+/* returns the byte length of a multibyte word */
 int
 pg_mblen(const char *mbstr)
 {

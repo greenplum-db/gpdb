@@ -23,9 +23,10 @@
 #include "gpopt/translate/CMappingElementColIdParamId.h"
 
 #include "gpos/base.h"
-#include "dxl/operators/CDXLNode.h"
-#include "dxl/operators/CDXLDatum.h"
-#include "dxl/operators/CDXLScalarArrayRefIndexList.h"
+
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/operators/CDXLDatum.h"
+#include "naucrates/dxl/operators/CDXLScalarArrayRefIndexList.h"
 
 // fwd declarations
 namespace gpopt

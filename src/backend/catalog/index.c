@@ -589,7 +589,7 @@ index_create(Oid heapRelationId,
 	 * there's no way to make the entry in other databases' pg_class),
 	 * except during upgrade.
 	 */
-	if (shared_relation &&  !(IsBootstrapProcessingMode() || gp_upgrade_mode))
+	if (shared_relation &&  !IsBootstrapProcessingMode())
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 				 errmsg("shared indexes cannot be created after initdb")));
@@ -919,13 +919,6 @@ index_create(Oid heapRelationId,
 		RelationInitIndexAccessInfo(indexRelation);
 	else
 		Assert(indexRelation->rd_indexcxt != NULL);
-
-	/*
-	 * For upgrade, if we've already created the index in another database,
-	 * we don't need or want to recreate it.
-	 */
-	 if (gp_upgrade_mode && (RelationGetNumberOfBlocks(indexRelation) > 0))
-	 	skip_build = true;
 
 	/*
 	 * If this is bootstrap (initdb) time, then we don't actually fill in the

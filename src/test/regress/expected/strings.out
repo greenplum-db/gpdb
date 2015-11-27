@@ -1369,3 +1369,7 @@ select E'\uD834';
 ERROR:  invalid Unicode surrogate pair at or near "E'\uD834'"
 LINE 1: select E'\uD834';
                ^
+-- Clean up GPDB-added tables
+DROP TABLE char_strings_tbl;
+DROP TABLE varchar_strings_tbl;
+DROP TABLE text_strings_tbl;

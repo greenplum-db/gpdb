@@ -628,6 +628,20 @@ fmgr_internal_function(const char *proname)
 static Datum
 fmgr_oldstyle(PG_FUNCTION_ARGS)
 {
+	/*
+	 * V0 functions are not supported in Greenplum. The immediate reason
+	 * for that is that a Datum is always 8 bytes on Greenplum, which
+	 * breaks V0 functions using e.g. int arguments, on 32-bit platforms
+	 * where an int is normally 4 bytes. But this is no great loss; no-one
+	 * should be using V0 calling convention anymore anyway.
+	 */
+	ereport(ERROR,
+			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+			 errmsg("Old style C function (API version 0) are no longer supported by Greenplum")
+				));
+	return (Datum) 0; /* keep compiler quiet */
+
+#ifdef NOT_USED
 	Oldstyle_fnextra *fnextra;
 	int			n_arguments = fcinfo->nargs;
 	int			i;
@@ -858,6 +872,7 @@ fmgr_oldstyle(PG_FUNCTION_ARGS)
 	}
 
 	return PointerGetDatum(returnValue);
+#endif
 }
 
 

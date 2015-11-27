@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/contrib/tsearch2/dict_syn.c,v 1.14 2007/03/28 01:28:34 tgl Exp $ */
+/* $PostgreSQL: pgsql/contrib/tsearch2/dict_syn.c,v 1.11 2006/12/04 09:26:57 teodor Exp $ */
 
 /*
  * ISpell interface

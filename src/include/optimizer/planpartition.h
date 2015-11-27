@@ -20,4 +20,6 @@
  */
 extern Plan *apply_dyn_partition_transforms(PlannerInfo *root, Plan *plan);
 
+extern RestrictInfo *make_mergeclause(Node *outer, Node *inner);
+
 #endif /* PLANPARTITION_H */

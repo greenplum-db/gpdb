@@ -19,14 +19,13 @@
 
 #include "gpopt/translate/CMappingColIdVarPlStmt.h"
 #include "gpopt/translate/CDXLTranslateContextBaseTable.h"
-#include "exception.h"
+
+#include "naucrates/exception.h"
+#include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/dxl/operators/CDXLScalarIdent.h"
 
 #include "gpos/base.h"
 #include "gpos/common/CAutoP.h"
-
-#include "dxl/operators/CDXLScalarIdent.h"
-
-#include "md/CMDIdGPDB.h"
 
 #include "gpopt/gpdbwrappers.h"
 

@@ -279,13 +279,6 @@ according to the standard query formatting rules.
 
   Ends the equivalent region that started with "start_equiv"
 
-=item -- copy_stdout
-
-Marks the start of a "copy" command that writes to stdout.  In this
-case, the directive must be on the same line as the command, e.g:
-
-  copy mystuff to stdout ; -- copy_stdout
-
 =item -- start_matchsubs
 
 Starts a list of match/substitution expressions, where the match and
@@ -1518,7 +1511,7 @@ sub bigloop
     my $getrows = 0;
     my $getstatement = 0;
     my $has_order = 0;
-    my $copy_select = 0;
+    my $copy_to_stdout_result = 0;
     my $directive = {};
     my $big_ignore = 0;
     my $define_match_expression = undef;
@@ -1543,6 +1536,7 @@ EOF_formatfix
   L_bigwhile:
     while (<>) # big while
     {
+      reprocess_row:
         my $ini = $_;
 
         if ($error_detail_exttab_trifecta_skip)
@@ -1627,29 +1621,34 @@ EOF_formatfix
 
         if ($getrows) # getting rows from SELECT output
         {
-            # special case for copy select
-            if ($copy_select &&
-                ($ini =~ m/(\-\-)|(ERROR)/))
+	    # The end of "result set" for a COPY TO STDOUT is a bit tricky
+	    # to find. There is no explicit marker for it. We look for a
+	    # line that looks like a SQL comment or a new query, or an ERROR.
+	    # This is not bullet-proof, but works for the current tests.
+            if ($copy_to_stdout_result &&
+                ($ini =~ m/\-\-/ ||
+                 $ini =~ m/ERROR/ ||
+		 $ini =~ m/(copy)|(create)|(drop)|(select)|(insert)|(update)/i))
             {
                 my @ggg= sort @outarr;
                 for my $line (@ggg)
                 {
-                    print $bpref, $line;
+		    print $bpref, $line;
                 }
 
                 @outarr = ();
                 $getrows = 0;
                 $has_order = 0;
-                $copy_select = 0;
-                next;
-            }
+                $copy_to_stdout_result = 0;
 
+		# Process the row again, in case it begins another
+		# COPY TO STDOUT statement, or another query.
+		goto reprocess_row;
+            }
 
             # regex example: (5 rows)
             if ($ini =~ m/^\s*\(\d+\s+row(s)*\)\s*$/)
             {
-
-
                 format_query_output($glob_fqo,
 									$has_order, \@outarr, $directive);
           
@@ -1703,7 +1702,7 @@ EOF_formatfix
             # Note: \d is for the psql "describe"
             if ($ini =~ m/(insert|update|delete|select|\\d|copy)/i)
             {                
-                $copy_select = 0;
+                $copy_to_stdout_result = 0;
                 $has_order = 0;
                 $sql_statement = "";
 
@@ -1804,18 +1803,17 @@ EOF_formatfix
             # and special case these guys:
             #  copy test1 to stdout
             #  \copy test1 to stdout
-            #
-            # ENGINF-129:
-            # and "copy...;  -- copy_stdout " for copy.out
-            my $copysel_regex = 
-            '^\s*((.copy.*test1.*to stdout)|(copy.*test1.*to stdout\;)|(copy.*\;\s*\-\-\s*copy\_stdout))';
-
+	    my $matches_copy_to_stdout = 0;
+            if ($ini =~ m/^copy\s+((\(select.*\))|\w+)\s+to stdout.*;$/i ||
+                $ini =~ m/^\\copy\s+((\(select.*\))|\w+)\s+to stdout.*$/i)
+            {
+	        $matches_copy_to_stdout = 1;
+            }
             # regex example: ---- or ---+---
             # need at least 3 dashes to avoid confusion with "--" comments
             if (($ini =~ m/^\s*((\-\-)(\-)+(\+(\-)+)*)+\s*$/)
                 # special case for copy select
-                || (($ini =~ m/$copysel_regex/i)
-                    && ($ini !~ m/order\s+by/i)))
+                || ($matches_copy_to_stdout && ($ini !~ m/order\s+by/i)))
             { # sort this region
 
                 $directive->{firstline} = $outarr[-1];
@@ -1827,10 +1825,9 @@ EOF_formatfix
                 }
 
                 # special case for copy select
-                if ($ini =~ m/$copysel_regex/i)
+                if ($matches_copy_to_stdout)
                 {
-#                    print "copy select: $ini\n";
-                    $copy_select = 1;
+                    $copy_to_stdout_result = 1;
                     $sql_statement = "";
                 }
                 # special case for explain

@@ -366,24 +366,24 @@ static bool IsCorrelatedOpExpr(OpExpr *opexp, Expr **innerExpr)
  */
 static bool IsCorrelatedEqualityOpExpr(	OpExpr *opexp, Expr **innerExpr, Oid *sortOp )
 {
+	Oid			opfamily;
+	Oid			lsortOp;
+	Oid			rsortOp;
+
 	Assert(opexp);
 	Assert(list_length(opexp->args) > 1);
 	Assert(innerExpr);
 	Assert(sortOp);
 
-	Oid lsortOp = InvalidOid;
-	Oid rsortOp = InvalidOid;
-
-	/**
-	 * If this is an expression of the form a = b, then we want to know about the vars involved.
+	/*
+	 * If this is an expression of the form a = b, then we want to know about
+	 * the vars involved.
 	 */
-
-	bool isEqualityOp = op_mergejoinable(opexp->opno, &lsortOp, &rsortOp);
-
-	if (!isEqualityOp)
-	{
+	if (!op_mergejoinable(opexp->opno))
 		return false;
-	}
+
+	if (!get_op_mergejoin_info(opexp->opno, &lsortOp, &rsortOp, &opfamily))
+		return false;
 
 	Assert(lsortOp == rsortOp);
 	Assert(lsortOp != InvalidOid);
@@ -391,9 +391,7 @@ static bool IsCorrelatedEqualityOpExpr(	OpExpr *opexp, Expr **innerExpr, Oid *so
 	*sortOp = lsortOp;
 
 	if (!IsCorrelatedOpExpr(opexp, innerExpr))
-	{
 		return false;
-	}
 
 	return true;
 }
@@ -1113,11 +1111,11 @@ convert_IN_to_join(PlannerInfo *root, List** rtrlist_inout, SubLink *sublink)
     {
         if (IsA(sublink->testexpr, OpExpr))
 	    {
-		    List	   *opclasses;
+		    List	   *opfamilies;
 		    List	   *opstrats;
 
 		    get_op_btree_interpretation(((OpExpr *) sublink->testexpr)->opno,
-									    &opclasses, &opstrats);
+									    &opfamilies, &opstrats);
 		    if (list_member_int(opstrats, ROWCOMPARE_EQ))
 			    ininfo->try_join_unique = true;
 	    }

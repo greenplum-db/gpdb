@@ -58,7 +58,7 @@ Options:
 
 =item B<-prochdr> <filename> (Required)
 
-    header file to modify (normally pg_proc.h).  The original file is copied to a .backup copy.
+    header file to modify (normally pg_proc_gp.h).  The original file is copied to a .backup copy.
 
 =item B<-typedef> <filename> (Required)
 
@@ -74,7 +74,7 @@ Options:
 =head1 DESCRIPTION
 
 catullus.pl converts annotated sql CREATE FUNCTION and CREATE TYPE
-statements into pg_proc and pg_type entries and updates pg_proc.h and
+statements into pg_proc and pg_type entries and updates pg_proc_gp.h and
 pg_type.h.
 
 The pg_type definitions are stored in pg_type.sql.  catullus reads
@@ -86,7 +86,7 @@ substitutes the new generated code for the previous contents.
 The pg_proc definitions are stored in pg_proc.sql.  catullus reads
 these definitions and, using type information from pg_type.sql,
 generates DATA statements for loading the pg_proc table.  In
-pg_proc.h, it looks for a block of code delimited by the tokens
+pg_proc_gp.h, it looks for a block of code delimited by the tokens
 TIDYCAT_BEGIN_PG_PROC_GEN and TIDYCAT_END_PG_PROC_GEN and substitutes
 the new generated code for the previous contents.
 
@@ -203,6 +203,7 @@ my %array_type_exception_h =
 	 pg_authid => 1,
 	 pg_auth_members => 1,
 	 pg_database => 1,
+	 gp_global_sequence => 1,
 	 smgr => 1,
 	 unknown => 1,
 	 nb_classification => 1
@@ -1486,6 +1487,7 @@ sub make_type
 	# treat bootstrap tables (and nb_classification) special
 	if (($h1{tuple}->{typname} =~ 
 		m/^pg\_(type|attribute|proc|class|authid|auth_members|database)$/) ||
+		($h1{tuple}->{typname} eq "gp_global_sequence") ||
 		($h1{tuple}->{typname} eq "nb_classification"))
 	{
 		my %boottabdef = (
@@ -1502,6 +1504,8 @@ sub make_type
 			typoutput      => "record_out",
 			typreceive     => "record_recv",
 			typsend        => "record_send",
+			typmodin       => '-',
+			typmodout      => '-',
 			typanalyze     => undef,
 			typalign       => "d",
 			typstorage     => "x",
@@ -1546,6 +1550,9 @@ sub make_type
 	# byvalue is false, unless passedbyvalue is set
 	$h1{tuple}->{typbyval} = "f";
 
+	$h1{tuple}->{typmodin} = '-';
+	$h1{tuple}->{typmodout} = '-';
+
 	for my $def (@deflist)
 	{
 		if ($def =~ m/passedbyvalue/i)
@@ -1575,6 +1582,12 @@ sub make_type
 			# XXX XXX: fixup dummy_cast_functions
 			$vv =~ s/dummy\_cast\_functions\.//;
 
+			$h1{tuple}->{$rproc} = $vv;
+		}
+
+		if ($kk =~ m/^(typmodin|typmodout)$/i)
+		{
+			my $rproc = lc($kk); # regproc name
 			$h1{tuple}->{$rproc} = $vv;
 		}
 
@@ -1667,12 +1680,10 @@ sub print_arr_type
 		"-1 f b t " .
 		"{typdelim} 0\t" . 
 		"{oid} array_in array_out array_recv array_send " .
-		"- {typalign} x f 0 -1 0 _null_ _null_ ));";
+		"{typmodin} {typmodout} - {typalign} x f 0 -1 0 _null_ _null_ ));";
 
 	my $t2def = {oid => $tdef->{with}->{oid}};
 	$t2def->{arrayoid} = $tdef->{with}->{arrayoid};
-
-#	print Data::Dumper->Dump([$tdef]);
 
 	while (my ($kk, $vv) = each(%{$tdef->{tuple}}))
 	{
@@ -1690,7 +1701,7 @@ sub print_arr_type
 				unless ($vv eq "d");
 		}
 	}
-	
+
 	my $fmt = doformat($bigstr, $t2def);
 
 	return $fmt;
@@ -1701,11 +1712,12 @@ sub print_type
 {
 	my $tdef = shift;
 
-	my $bigstr = 
+	my $bigstr =
 		"DATA(insert OID = {oid} (\t{typname}\t   {typnamespace} {typowner} " .
 		"{typlen} {typbyval} {typtype} {typisdefined} " .
 		"{typdelim} {typrelid}\t" .
 		"{typelem} {typinput} {typoutput} {typreceive} {typsend} " .
+		"{typmodin} {typmodout} " .
 		"{typanalyze} {typalign} {typstorage} {typnotnull} {typbasetype} " .
 		"{typtypmod} {typndims} {typdefaultbin} {typdefault} ));";
 
@@ -1938,6 +1950,8 @@ sub dotypes
 			typoutput      => undef,
 			typreceive     => undef,
 			typsend        => undef,
+			typmodin       => undef,
+			typmodout      => undef,
 			typanalyze     => undef,
 #			typalign       => 0,
 #			typstorage     => 0,
@@ -2158,7 +2172,7 @@ if (0)
       },
       {
          "alias" : "proheader|procheader|prohdr",
-         "long" : "header file to modify (normally pg_proc.h).  The original file is copied to a .backup copy.",
+         "long" : "header file to modify (normally pg_proc_gp.h).  The original file is copied to a .backup copy.",
          "name" : "prochdr",
          "required" : "1",
          "short" : "header file to modify (procedures)",
@@ -2199,7 +2213,7 @@ if (0)
 {
 	my $toplong = <<'EOF_toplong';
 catullus.pl converts annotated sql CREATE FUNCTION and CREATE TYPE
-statements into pg_proc and pg_type entries and updates pg_proc.h and
+statements into pg_proc and pg_type entries and updates pg_proc_gp.h and
 pg_type.h.
 
 The pg_type definitions are stored in pg_type.sql.  catullus reads
@@ -2211,7 +2225,7 @@ substitutes the new generated code for the previous contents.
 The pg_proc definitions are stored in pg_proc.sql.  catullus reads
 these definitions and, using type information from pg_type.sql,
 generates DATA statements for loading the pg_proc table.  In
-pg_proc.h, it looks for a block of code delimited by the tokens
+pg_proc_gp.h, it looks for a block of code delimited by the tokens
 TIDYCAT_BEGIN_PG_PROC_GEN and TIDYCAT_END_PG_PROC_GEN and substitutes
 the new generated code for the previous contents.
 

@@ -52,6 +52,10 @@ clean:
 distclean: clean
 	rm -f fstream.c gfile.c GNUmakefile config.log config.status
 	rm -rf autom4te.cache
+	$(MAKE) -C regress clean
 
 install:
 	$(INSTALL) gpfdist$(EXEEXT) $(prefix)/bin
+
+installcheck:
+	$(MAKE) -C regress installcheck

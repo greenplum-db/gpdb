@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_type.c,v 1.108 2006/10/04 00:29:50 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_type.c,v 1.109 2006/12/30 21:21:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -135,6 +135,8 @@ TypeShellMakeWithOid(const char *typeName, Oid typeNamespace, Oid ownerId,
 	values[i++] = ObjectIdGetDatum(F_SHELL_OUT);		/* typoutput */
 	values[i++] = ObjectIdGetDatum(InvalidOid); /* typreceive */
 	values[i++] = ObjectIdGetDatum(InvalidOid); /* typsend */
+	values[i++] = ObjectIdGetDatum(InvalidOid); /* typmodin */
+	values[i++] = ObjectIdGetDatum(InvalidOid); /* typmodout */
 	values[i++] = ObjectIdGetDatum(InvalidOid); /* typanalyze */
 	values[i++] = CharGetDatum('i');	/* typalign */
 	values[i++] = CharGetDatum('p');	/* typstorage */
@@ -176,6 +178,8 @@ TypeShellMakeWithOid(const char *typeName, Oid typeNamespace, Oid ownerId,
 								 InvalidOid,
 								 InvalidOid,
 								 InvalidOid,
+								 InvalidOid,
+								 InvalidOid,
 								 NULL,
 								 false);
 
@@ -209,6 +213,8 @@ TypeCreateWithOid(const char *typeName,
 		   Oid outputProcedure,
 		   Oid receiveProcedure,
 		   Oid sendProcedure,
+		   Oid typmodinProcedure,
+		   Oid typmodoutProcedure,
 		   Oid analyzeProcedure,
 		   Oid elementType,
 		   Oid baseType,
@@ -292,6 +298,8 @@ TypeCreateWithOid(const char *typeName,
 	values[i++] = ObjectIdGetDatum(outputProcedure);	/* typoutput */
 	values[i++] = ObjectIdGetDatum(receiveProcedure);	/* typreceive */
 	values[i++] = ObjectIdGetDatum(sendProcedure);		/* typsend */
+	values[i++] = ObjectIdGetDatum(typmodinProcedure);	/* typmodin */
+	values[i++] = ObjectIdGetDatum(typmodoutProcedure);	/* typmodout */
 	values[i++] = ObjectIdGetDatum(analyzeProcedure);	/* typanalyze */
 	values[i++] = CharGetDatum(alignment);		/* typalign */
 	values[i++] = CharGetDatum(storage);		/* typstorage */
@@ -399,6 +407,8 @@ TypeCreateWithOid(const char *typeName,
 								 outputProcedure,
 								 receiveProcedure,
 								 sendProcedure,
+								 typmodinProcedure,
+								 typmodoutProcedure,
 								 analyzeProcedure,
 								 elementType,
 								 baseType,
@@ -431,6 +441,8 @@ Oid TypeCreate(const char *typeName,
 		   Oid outputProcedure,
 		   Oid receiveProcedure,
 		   Oid sendProcedure,
+		   Oid typmodinProcedure,
+		   Oid typmodoutProcedure,
 		   Oid analyzeProcedure,
 		   Oid elementType,
 		   Oid baseType,
@@ -450,6 +462,8 @@ Oid TypeCreate(const char *typeName,
 		   outputProcedure,
 		   receiveProcedure,
 		   sendProcedure,
+		   typmodinProcedure,
+		   typmodoutProcedure,
 		   analyzeProcedure,
 		   elementType,
 		   baseType,
@@ -482,6 +496,8 @@ GenerateTypeDependencies(Oid typeNamespace,
 						 Oid outputProcedure,
 						 Oid receiveProcedure,
 						 Oid sendProcedure,
+						 Oid typmodinProcedure,
+						 Oid typmodoutProcedure,
 						 Oid analyzeProcedure,
 						 Oid elementType,
 						 Oid baseType,
@@ -542,6 +558,22 @@ GenerateTypeDependencies(Oid typeNamespace,
 	{
 		referenced.classId = ProcedureRelationId;
 		referenced.objectId = sendProcedure;
+		referenced.objectSubId = 0;
+		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
+	}
+
+	if (OidIsValid(typmodinProcedure))
+	{
+		referenced.classId = ProcedureRelationId;
+		referenced.objectId = typmodinProcedure;
+		referenced.objectSubId = 0;
+		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
+	}
+
+	if (OidIsValid(typmodoutProcedure))
+	{
+		referenced.classId = ProcedureRelationId;
+		referenced.objectId = typmodoutProcedure;
 		referenced.objectSubId = 0;
 		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 	}

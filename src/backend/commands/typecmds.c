@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/typecmds.c,v 1.97.2.2 2007/06/20 18:15:57 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/typecmds.c,v 1.98 2006/12/30 21:21:53 tgl Exp $
  *
  * DESCRIPTION
  *	  The "DefineFoo" routines take the parse tree and pick out the
@@ -82,6 +82,8 @@ static Oid	findTypeInputFunction(List *procname, Oid typeOid);
 static Oid	findTypeOutputFunction(List *procname, Oid typeOid);
 static Oid	findTypeReceiveFunction(List *procname, Oid typeOid);
 static Oid	findTypeSendFunction(List *procname, Oid typeOid);
+static Oid	findTypeTypmodinFunction(List *procname);
+static Oid	findTypeTypmodoutFunction(List *procname);
 static Oid	findTypeAnalyzeFunction(List *procname, Oid typeOid);
 static List *get_rels_with_domain(Oid domainOid, LOCKMODE lockmode);
 static void checkDomainOwner(HeapTuple tup, TypeName *typename);
@@ -107,6 +109,8 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 	List	   *outputName = NIL;
 	List	   *receiveName = NIL;
 	List	   *sendName = NIL;
+	List	   *typmodinName = NIL;
+	List	   *typmodoutName = NIL;
 	List	   *analyzeName = NIL;
 	char	   *defaultValue = NULL;
 	bool		byValue = false;
@@ -118,6 +122,8 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 	Oid			outputOid;
 	Oid			receiveOid = InvalidOid;
 	Oid			sendOid = InvalidOid;
+	Oid			typmodinOid = InvalidOid;
+	Oid			typmodoutOid = InvalidOid;
 	Oid			analyzeOid = InvalidOid;
 	char	   *shadow_type;
 	ListCell   *pl;
@@ -166,18 +172,6 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 		 * to create shell type.
 		 */
 		bool createShellOnly = (parameters==NIL);
-		if (gp_upgrade_mode)
-		{
-			foreach(pl, parameters)
-			{
-				DefElem *defel = (DefElem *) lfirst(pl);
-				if (pg_strcasecmp(defel->defname, "oid") == 0)
-				{
-					newOid = intVal(defel->arg);
-					createShellOnly = true;
-				}
-			}
-		}
 		typoid = TypeShellMake(typeName, typeNamespace, GetUserId(), newOid);
 
 		/* Make new shell type visible for modification below */
@@ -230,6 +224,10 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 			receiveName = defGetQualifiedName(defel);
 		else if (pg_strcasecmp(defel->defname, "send") == 0)
 			sendName = defGetQualifiedName(defel);
+		else if (pg_strcasecmp(defel->defname, "typmod_in") == 0)
+			typmodinName = defGetQualifiedName(defel);
+		else if (pg_strcasecmp(defel->defname, "typmod_out") == 0)
+			typmodoutName = defGetQualifiedName(defel);
 		else if (pg_strcasecmp(defel->defname, "analyze") == 0 ||
 				 pg_strcasecmp(defel->defname, "analyse") == 0)
 			analyzeName = defGetQualifiedName(defel);
@@ -297,24 +295,6 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 						 errmsg("storage \"%s\" not recognized", a)));
 		}
-		else if (gp_upgrade_mode && pg_strcasecmp(defel->defname, "typtype") == 0)
-		{
-			/* upgrade only option..!!!!
-			 *
-			 * Normally, type are created with type "b".
-			 * During upgrade, we need to create "build-in" psudue type with 'p'.
-			 *
-			 */
-			typtype = defGetString(defel, &need_free_value)[0];
-		}
-		else if (gp_upgrade_mode && pg_strcasecmp(defel->defname, "shadowoid") == 0)
-		{
-			/* upgrade only option..!!!!
-			 *
-			 * Need to specify the shadowtype oid.
-			 */
-			shadowOid = (int)defGetInt64(defel);
-		}
 		else if (is_storage_encoding_directive(defel->defname))
 		{
 			encoding = lappend(encoding, defel);
@@ -343,6 +323,11 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 				 errmsg("type output function must be specified")));
+
+	if (typmodinName == NIL && typmodoutName != NIL)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+				 errmsg("type modifier output function is useless without a type modifier input function")));
 
 	/*
 	 * Convert I/O proc names to OIDs
@@ -412,6 +397,14 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 	}
 
 	/*
+	 * Convert typmodin/out function proc names to OIDs.
+	 */
+	if (typmodinName)
+		typmodinOid = findTypeTypmodinFunction(typmodinName);
+	if (typmodoutName)
+		typmodoutOid = findTypeTypmodoutFunction(typmodoutName);
+
+	/*
 	 * Convert analysis function proc name to an OID. If no analysis function
 	 * is specified, we'll use zero to select the built-in default algorithm.
 	 */
@@ -438,6 +431,12 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 	if (sendOid && !pg_proc_ownercheck(sendOid, GetUserId()))
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_PROC,
 					   NameListToString(sendName));
+	if (typmodinOid && !pg_proc_ownercheck(typmodinOid, GetUserId()))
+		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_PROC,
+					   NameListToString(typmodinName));
+	if (typmodoutOid && !pg_proc_ownercheck(typmodoutOid, GetUserId()))
+		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_PROC,
+					   NameListToString(typmodoutName));
 	if (analyzeOid && !pg_proc_ownercheck(analyzeOid, GetUserId()))
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_PROC,
 					   NameListToString(analyzeName));
@@ -458,6 +457,8 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 				   outputOid,	/* output procedure */
 				   receiveOid,	/* receive procedure */
 				   sendOid,		/* send procedure */
+				   typmodinOid, /* typmodin procedure */
+				   typmodoutOid,/* typmodout procedure */
 				   analyzeOid,	/* analyze procedure */
 				   elemType,	/* element type ID */
 				   InvalidOid,	/* base type ID (only for domains) */
@@ -497,6 +498,8 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 			   F_ARRAY_OUT,		/* output procedure */
 			   F_ARRAY_RECV,	/* receive procedure */
 			   F_ARRAY_SEND,	/* send procedure */
+			   typmodinOid,		/* typmodin procedure */
+			   typmodoutOid,	/* typmodout procedure */
 			   InvalidOid,		/* analyze procedure - default */
 			   typoid,			/* element type ID */
 			   InvalidOid,		/* base type ID */
@@ -670,6 +673,7 @@ DefineDomain(CreateDomainStmt *stmt)
 	Oid			basetypeoid;
 	Oid			domainoid;
 	Form_pg_type baseType;
+	int32		basetypeMod;
 
 	/* Convert list of names to a name and namespace */
 	domainNamespace = QualifiedNameGetCreationNamespace(stmt->domainname,
@@ -699,9 +703,9 @@ DefineDomain(CreateDomainStmt *stmt)
 	 * Look up the base type.
 	 */
 	typeTup = typenameType(NULL, stmt->typname);
-
 	baseType = (Form_pg_type) GETSTRUCT(typeTup);
 	basetypeoid = HeapTupleGetOid(typeTup);
+	basetypeMod = typenameTypeMod(NULL, stmt->typname, basetypeoid);
 
 	/*
 	 * Base type must be a plain base type or another domain.  Domains over
@@ -738,6 +742,8 @@ DefineDomain(CreateDomainStmt *stmt)
 	outputProcedure = baseType->typoutput;
 	receiveProcedure = F_DOMAIN_RECV;
 	sendProcedure = baseType->typsend;
+
+	/* Domains never accept typmods, so no typmodin/typmodout needed */
 
 	/* Analysis function */
 	analyzeProcedure = baseType->typanalyze;
@@ -804,7 +810,7 @@ DefineDomain(CreateDomainStmt *stmt)
 					 */
 					defaultExpr = cookDefault(pstate, constr->raw_expr,
 											  basetypeoid,
-											  stmt->typname->typmod,
+											  basetypeMod,
 											  domainName);
 
 					free_parsestate(pstate);
@@ -902,6 +908,8 @@ DefineDomain(CreateDomainStmt *stmt)
 				   outputProcedure,		/* output procedure */
 				   receiveProcedure,	/* receive procedure */
 				   sendProcedure,		/* send procedure */
+				   InvalidOid,			/* typmodin procedure - none */
+				   InvalidOid,			/* typmodout procedure - none */
 				   analyzeProcedure,	/* analyze procedure */
 				   typelem,		/* element type ID */
 				   basetypeoid, /* base type ID */
@@ -910,7 +918,7 @@ DefineDomain(CreateDomainStmt *stmt)
 				   byValue,		/* passed by value */
 				   alignment,	/* required alignment */
 				   storage,		/* TOAST strategy */
-				   stmt->typname->typmod,		/* typeMod value */
+				   basetypeMod, /* typeMod value */
 				   typNDims,	/* Array dimensions for base type */
 				   typNotNull,	/* Type NOT NULL */
 				   stmt->domainOid,
@@ -930,7 +938,7 @@ DefineDomain(CreateDomainStmt *stmt)
 		{
 			case CONSTR_CHECK:
 				domainAddConstraint(domainoid, domainNamespace,
-									basetypeoid, stmt->typname->typmod,
+									basetypeoid, basetypeMod,
 									constr, domainName);
 				break;
 
@@ -1218,6 +1226,60 @@ findTypeSendFunction(List *procname, Oid typeOid)
 }
 
 static Oid
+findTypeTypmodinFunction(List *procname)
+{
+	Oid			argList[1];
+	Oid			procOid;
+
+	/*
+	 * typmodin functions always take one cstring[] argument and return int4.
+	 */
+	argList[0] = CSTRINGARRAYOID;
+
+	procOid = LookupFuncName(procname, 1, argList, true);
+	if (!OidIsValid(procOid))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_FUNCTION),
+				 errmsg("function %s does not exist",
+						func_signature_string(procname, 1, argList))));
+
+	if (get_func_rettype(procOid) != INT4OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+				 errmsg("typmod_in function %s must return type \"integer\"",
+						NameListToString(procname))));
+
+	return procOid;
+}
+
+static Oid
+findTypeTypmodoutFunction(List *procname)
+{
+	Oid			argList[1];
+	Oid			procOid;
+
+	/*
+	 * typmodout functions always take one int4 argument and return cstring.
+	 */
+	argList[0] = INT4OID;
+
+	procOid = LookupFuncName(procname, 1, argList, true);
+	if (!OidIsValid(procOid))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_FUNCTION),
+				 errmsg("function %s does not exist",
+						func_signature_string(procname, 1, argList))));
+
+	if (get_func_rettype(procOid) != CSTRINGOID)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+				 errmsg("typmod_out function %s must return type \"cstring\"",
+						NameListToString(procname))));
+
+	return procOid;
+}
+
+static Oid
 findTypeAnalyzeFunction(List *procname, Oid typeOid)
 {
 	Oid			argList[1];
@@ -1429,6 +1491,8 @@ AlterDomainDefault(List *names, Node *defaultRaw)
 							 typTup->typoutput,
 							 typTup->typreceive,
 							 typTup->typsend,
+							 typTup->typmodin,
+							 typTup->typmodout,
 							 typTup->typanalyze,
 							 typTup->typelem,
 							 typTup->typbasetype,
@@ -2616,7 +2680,10 @@ AlterType(AlterTypeStmt *stmt)
 		 * for character, the user specified character (N) if typmod is not
 		 * VARHDRSZ + 1.
 		 */
-		if (typname->typmod != VARHDRSZ + 1)
+		int32		typmod;
+
+		typmod = typenameTypeMod(NULL, typname, typid);
+		if (typmod != VARHDRSZ + 1)
 			typmod_set = true;
 	}
 	else if (typid == BITOID)
@@ -2625,10 +2692,13 @@ AlterType(AlterTypeStmt *stmt)
 		 * For bit, we assume bit(1) in the parser. So only reject cases where
 		 * the typmod is not 1.
 		 */
-		if (typname->typmod != 1)
+		int32		typmod;
+
+		typmod = typenameTypeMod(NULL, typname, typid);
+		if (typmod != 1)
 			typmod_set = true;
 	}
-	else if (typname->typmods || typname->typmod != -1)
+	else if (typname->typmods || typname->typemod != -1)
 		typmod_set = true;
 
 	if (typmod_set)

@@ -21,15 +21,6 @@
 
 #include "gpos/base.h"
 
-#include "dxl/CDXLUtils.h"
-#include "dxl/operators/CDXLDatumBool.h"
-#include "dxl/operators/CDXLDatumInt2.h"
-#include "dxl/operators/CDXLDatumInt4.h"
-#include "dxl/operators/CDXLDatumInt8.h"
-#include "dxl/operators/CDXLDatumGeneric.h"
-#include "dxl/operators/CDXLDatumOid.h"
-#include "dxl/xml/dxltokens.h"
-
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/mdcache/CMDAccessorUtils.h"
 #include "gpopt/base/COptCtxt.h"
@@ -39,10 +30,19 @@
 #include "gpopt/translate/CTranslatorUtils.h"
 #include "gpopt/translate/CMappingColIdVarPlStmt.h"
 
-#include "md/IMDAggregate.h"
-#include "md/IMDFunction.h"
-#include "md/IMDScalarOp.h"
-#include "md/IMDTypeBool.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/CDXLDatumBool.h"
+#include "naucrates/dxl/operators/CDXLDatumInt2.h"
+#include "naucrates/dxl/operators/CDXLDatumInt4.h"
+#include "naucrates/dxl/operators/CDXLDatumInt8.h"
+#include "naucrates/dxl/operators/CDXLDatumGeneric.h"
+#include "naucrates/dxl/operators/CDXLDatumOid.h"
+#include "naucrates/dxl/xml/dxltokens.h"
+
+#include "naucrates/md/IMDAggregate.h"
+#include "naucrates/md/IMDFunction.h"
+#include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDTypeBool.h"
 
 #include "gpopt/gpdbwrappers.h"
 

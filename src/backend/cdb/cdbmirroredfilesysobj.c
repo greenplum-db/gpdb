@@ -924,7 +924,6 @@ void MirroredFileSysObj_TransactionCreateBufferPoolFile(
 	MirroredRelDataSynchronizationState relDataSynchronizationState = MirroredRelDataSynchronizationState_None;
 	StorageManagerMirrorMode mirrorMode = StorageManagerMirrorMode_None;
 
-	int primaryError;
 	bool mirrorDataLossOccurred;
 
 	Assert(relationName != NULL);
@@ -989,18 +988,7 @@ void MirroredFileSysObj_TransactionCreateBufferPoolFile(
 			mirrorDataLossTrackingState,
 			mirrorDataLossTrackingSessionNum,
 			/* ignoreAlreadyExists */ false,
-			&primaryError,
 			&mirrorDataLossOccurred);
-	if (primaryError != 0)
-	{
-		LWLockRelease(MirroredLock);
-		ereport(ERROR,
-			(errcode_for_file_access(),
-			 errmsg("could not create relation file '%s', relation name '%s': %s",
-					relpath(smgrOpen->smgr_rnode),
-					relationName,
-					strerror(primaryError))));
-	}
 
 	MirroredFileSysObj_FinishMirroredCreate(
 									&fsObjName,

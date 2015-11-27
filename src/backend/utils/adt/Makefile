@@ -1,7 +1,7 @@
 #
 # Makefile for utils/adt
 #
-# $PostgreSQL: pgsql/src/backend/utils/adt/Makefile,v 1.60 2006/04/05 22:11:55 tgl Exp $
+# $PostgreSQL: pgsql/src/backend/utils/adt/Makefile,v 1.61 2006/12/21 16:05:15 petere Exp $
 #
 
 subdir = src/backend/utils/adt
@@ -15,7 +15,6 @@ ifeq "$(GCC)" "yes"
 override CFLAGS+= -mieee
 endif
 endif
-
 
 OBJS = acl.o array_userfuncs.o arrayfuncs.o arrayutils.o ascii.o \
 	bool.o cash.o char.o date.o datetime.o datum.o dbsize.o \

@@ -328,6 +328,17 @@ expression_tree_walker(Node *node,
 			return walker(((CoalesceExpr *) node)->args, context);
 		case T_MinMaxExpr:
 			return walker(((MinMaxExpr *) node)->args, context);
+		case T_XmlExpr:
+			{
+				XmlExpr    *xexpr = (XmlExpr *) node;
+
+				if (walker(xexpr->named_args, context))
+					return true;
+				/* we assume walker doesn't care about arg_names */
+				if (walker(xexpr->args, context))
+					return true;
+			}
+			break;
 		case T_NullIfExpr:
 			return walker(((NullIfExpr *) node)->args, context);
 		case T_NullTest:

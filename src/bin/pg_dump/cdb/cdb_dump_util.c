@@ -549,7 +549,14 @@ Safe_strdup(const char *s)
 	if (s == NULL)
 		return NULL;
 
-	return (strdup(s));
+	char *res = strdup(s);
+	if(res == NULL)
+	{
+		mpp_err_msg("ERROR", "Safe_strdup", "Out of memory\n");
+		exit(1);
+	}
+
+	return res;
 }
 
 /* stringNotNull: This function simply returns either the Input parameter if not NULL, or the
@@ -1031,11 +1038,14 @@ formPostDataSchemaOnlyPsqlCommandLine(char** retVal, const char* inputFileSpec, 
 	} 
 }
 
+
+/* Build command line for gp_restore_agent */
 void 
 formSegmentPsqlCommandLine(char** retVal, const char* inputFileSpec, bool compUsed, const char* compProg,
 							const char* filter_script, const char* table_filter_file, 
 							int role, const char* psqlPg, const char* catPg,
-							const char* gpNBURestorePg, const char* netbackupServiceHost, const char* netbackupBlockSize)
+							const char* gpNBURestorePg, const char* netbackupServiceHost, const char* netbackupBlockSize,
+							const char* change_schema)
 {
 	char* pszCmdLine = *retVal;
 	if (compUsed)
@@ -1053,11 +1063,11 @@ formSegmentPsqlCommandLine(char** retVal, const char* inputFileSpec, bool compUs
 				strncat(pszCmdLine, netbackupBlockSize, strlen(netbackupBlockSize));
 			}
 			strncat(pszCmdLine, " | ", strlen(" | "));
-			strncat(pszCmdLine, compProg, strlen(compProg));
+			strncat(pszCmdLine, compProg, strlen(compProg));	/* add compression program */
 		}
 		else
 		{
-			strcpy(pszCmdLine, catPg);
+			strcpy(pszCmdLine, catPg);	/* add 'cat' command */
 			strcat(pszCmdLine, " ");
 			strcat(pszCmdLine, inputFileSpec);
 			strcat(pszCmdLine, " | ");
@@ -1091,10 +1101,21 @@ formSegmentPsqlCommandLine(char** retVal, const char* inputFileSpec, bool compUs
 	{
 		strcat(pszCmdLine, " | ");
 		strcat(pszCmdLine, filter_script);
+
+		/* Add filter option for gprestore_filter.py to
+		 * process schemas only (no data) on master.
+		 */
 		if (role == ROLE_MASTER)
 			strcat(pszCmdLine, " -m");
+
+		/* Add filter option with table file to filter data only for specified tables. */
 		strcat(pszCmdLine, " -t ");
 		strcat(pszCmdLine, table_filter_file);
+		if (change_schema)
+		{
+			strcat(pszCmdLine, " -c ");
+			strcat(pszCmdLine, change_schema);
+		}
 	}
 
     strcat(pszCmdLine, " | ");
@@ -1738,7 +1759,7 @@ void
 formDDBoostPsqlCommandLine(char** retVal, bool compUsed, const char* ddboostPg, const char* compProg, 
 							const char* ddp_file_name, const char* dd_boost_buf_size,
 							const char* filter_script, const char* table_filter_file, 
-							int role, const char* psqlPg)
+							int role, const char* psqlPg, bool postSchemaOnly)
 {
 	char* pszCmdLine = *retVal;
 
@@ -1765,7 +1786,7 @@ formDDBoostPsqlCommandLine(char** retVal, bool compUsed, const char* ddboostPg, 
 	{
 		strcat(pszCmdLine, " | ");
 		strcat(pszCmdLine, filter_script);
-		if (role == ROLE_MASTER)
+		if (role == ROLE_MASTER && !postSchemaOnly)
 		{
 			strcat(pszCmdLine, " -m");
 		}
@@ -1922,3 +1943,44 @@ void cleanUpTable()
 
 }
 
+/*
+ * shellEscape: Returns a string in which the shell-significant quoted-string characters are
+ * escaped.  The resulting string, if used as a SQL statement component, should be quoted
+ * using the PG $$ delimiter (or as an E-string with the '\' characters escaped again).
+ *
+ * This function escapes the following characters: '"', '$', '`', '\', '!'.
+ *
+ * The PQExpBuffer escapeBuf is used for assembling the escaped string and is reset at the
+ * start of this function.
+ *
+ * The return value of this function is the data area from excapeBuf.
+ */
+char *
+shellEscape(const char *shellArg, PQExpBuffer escapeBuf)
+{
+        const char *s = shellArg;
+        const char      escape = '\\';
+
+        resetPQExpBuffer(escapeBuf);
+
+        /*
+         * Copy the shellArg into the escapeBuf prepending any characters
+         * requiring an escape with the escape character.
+         */
+        while (*s != '\0')
+        {
+                switch (*s)
+                {
+                        case '"':
+                        case '$':
+                        case '\\':
+                        case '`':
+                        case '!':
+                                appendPQExpBufferChar(escapeBuf, escape);
+                }
+                appendPQExpBufferChar(escapeBuf, *s);
+                s++;
+        }
+
+        return escapeBuf->data;
+}

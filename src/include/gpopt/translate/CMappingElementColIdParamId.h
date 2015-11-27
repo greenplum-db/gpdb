@@ -18,9 +18,8 @@
 
 #include "gpos/base.h"
 
-#include "dxl/operators/CDXLNode.h"
-
-#include "md/IMDId.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/md/IMDId.h"
 
 namespace gpdxl
 {

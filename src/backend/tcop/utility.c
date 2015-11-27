@@ -149,8 +149,8 @@ DropErrorMsgWrongType(char *relname, char wrongkind, char rightkind)
  * Emit the right error message for a "DROP" command issued on a
  * non-existent relation
  */
-static void
-DropErrorMsgNonExistent(RangeVar *rel, char rightkind, bool missing_ok)
+void
+DropErrorMsgNonExistent(const RangeVar *rel, char rightkind, bool missing_ok)
 {
 	const struct msgstrings *rentry;
 
@@ -275,7 +275,6 @@ CheckDropRelStorage(RangeVar *rel, ObjectType removeType)
 		return true;
 
 	if ((removeType == OBJECT_EXTTABLE && relstorage != RELSTORAGE_EXTERNAL) ||
-		(removeType == OBJECT_FOREIGNTABLE && relstorage != RELSTORAGE_FOREIGN) ||
 		(removeType == OBJECT_TABLE && (relstorage == RELSTORAGE_EXTERNAL ||
 										relstorage == RELSTORAGE_FOREIGN)))
 	{
@@ -286,8 +285,6 @@ CheckDropRelStorage(RangeVar *rel, ObjectType removeType)
 		
 		if (removeType == OBJECT_EXTTABLE)
 			want_type = pstrdup("an external");
-		else if (removeType == OBJECT_FOREIGNTABLE)
-			want_type = pstrdup("a foreign");
 		else
 			want_type = pstrdup("a base");
 
@@ -534,15 +531,6 @@ check_xact_readonly(Node *parsetree)
 		case T_TruncateStmt:
 		case T_DropOwnedStmt:
 		case T_ReassignOwnedStmt:
-		case T_CreateFdwStmt:
-		case T_AlterFdwStmt:
-		case T_DropFdwStmt:
-		case T_CreateForeignServerStmt:
-		case T_AlterForeignServerStmt:
-		case T_DropForeignServerStmt:
-		case T_CreateUserMappingStmt:
-		case T_AlterUserMappingStmt:
-		case T_DropUserMappingStmt:
 			ereport(ERROR,
 					(errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION),
 					 errmsg("transaction is read-only")));
@@ -581,12 +569,17 @@ ProcessDropStatement(DropStmt *stmt)
 		{
 			case OBJECT_TABLE:
 			case OBJECT_EXTTABLE:
-			case OBJECT_FOREIGNTABLE:
 				rel = makeRangeVarFromNameList(names);
 				if (CheckDropPermissions(rel, RELKIND_RELATION,
 										 stmt->missing_ok) &&
 						CheckDropRelStorage(rel, stmt->removeType))
-					RemoveRelation(rel, stmt->behavior, stmt);
+				{
+					/*
+					 * RemoveRelation fails to find the relation on QD, will return false.
+					 * Should not dispatch the drop to segments as not holding Exclusive Lock.
+					 */
+					dispatchDrop = RemoveRelation(rel, stmt->behavior, stmt, RELKIND_RELATION);
+				}
 				else
 					dispatchDrop = false;
 				break;
@@ -595,7 +588,7 @@ ProcessDropStatement(DropStmt *stmt)
 				rel = makeRangeVarFromNameList(names);
 				if (CheckDropPermissions(rel, RELKIND_SEQUENCE,
 										 stmt->missing_ok))
-					RemoveRelation(rel, stmt->behavior, stmt);
+					dispatchDrop = RemoveRelation(rel, stmt->behavior, stmt, RELKIND_SEQUENCE);
 				else
 					dispatchDrop = false;
 				break;
@@ -1020,52 +1013,12 @@ ProcessUtility(Node *parsetree,
 			DefineExternalRelation((CreateExternalStmt *) parsetree);
 			break;
 
-		case T_CreateForeignStmt:
-			DefineForeignRelation((CreateForeignStmt *) parsetree);
-			break;
-			
 		case T_CreateFileSpaceStmt:
 			CreateFileSpace((CreateFileSpaceStmt *) parsetree);
 			break;
 
 		case T_CreateTableSpaceStmt:
 			CreateTableSpace((CreateTableSpaceStmt *) parsetree);
-			break;
-
-		case T_CreateFdwStmt:
-			CreateForeignDataWrapper((CreateFdwStmt *) parsetree);
-			break;
-
-		case T_AlterFdwStmt:
-			AlterForeignDataWrapper((AlterFdwStmt *) parsetree);
-			break;
-
-		case T_DropFdwStmt:
-			RemoveForeignDataWrapper((DropFdwStmt *) parsetree);
-			break;
-
-		case T_CreateForeignServerStmt:
-			CreateForeignServer((CreateForeignServerStmt *) parsetree);
-			break;
-
-		case T_AlterForeignServerStmt:
-			AlterForeignServer((AlterForeignServerStmt *) parsetree);
-			break;
-
-		case T_DropForeignServerStmt:
-			RemoveForeignServer((DropForeignServerStmt *) parsetree);
-			break;
-
-		case T_CreateUserMappingStmt:
-			CreateUserMapping((CreateUserMappingStmt *) parsetree);
-			break;
-
-		case T_AlterUserMappingStmt:
-			AlterUserMapping((AlterUserMappingStmt *) parsetree);
-			break;
-
-		case T_DropUserMappingStmt:
-			RemoveUserMapping((DropUserMappingStmt *) parsetree);
 			break;
 
 		case T_DropStmt:
@@ -1090,12 +1043,9 @@ ProcessUtility(Node *parsetree,
 					{
 						/*
 						 * If we are the QD, dispatch this DROP command to all the QEs
-						 * NOTE: on the segments we convert all drop-statements into
-						 * drop-if-exists.
 						 */
 						if (Gp_role == GP_ROLE_DISPATCH)
 						{
-							stmt->missing_ok = true;
 							CdbDispatchUtilityStatement((Node *) stmt, "ProcessUtility");
 						}
 					}
@@ -1961,52 +1911,12 @@ CreateCommandTag(Node *parsetree)
 			tag = "CREATE EXTERNAL TABLE";
 			break;
 
-		case T_CreateForeignStmt:
-			tag = "CREATE FOREIGN TABLE";
-			break;
-		
 		case T_CreateFileSpaceStmt:
 			tag = "CREATE FILESPACE";
 			break;
 
 		case T_CreateTableSpaceStmt:
 			tag = "CREATE TABLESPACE";
-			break;
-
-		case T_CreateFdwStmt:
-			tag = "CREATE FOREIGN DATA WRAPPER";
-			break;
-
-		case T_AlterFdwStmt:
-			tag = "ALTER FOREIGN DATA WRAPPER";
-			break;
-
-		case T_DropFdwStmt:
-			tag = "DROP FOREIGN DATA WRAPPER";
-			break;
-
-		case T_CreateForeignServerStmt:
-			tag = "CREATE SERVER";
-			break;
-
-		case T_AlterForeignServerStmt:
-			tag = "ALTER SERVER";
-			break;
-
-		case T_DropForeignServerStmt:
-			tag = "DROP SERVER";
-			break;
-
-		case T_CreateUserMappingStmt:
-			tag = "CREATE USER MAPPING";
-			break;
-
-		case T_AlterUserMappingStmt:
-			tag = "ALTER USER MAPPING";
-			break;
-
-		case T_DropUserMappingStmt:
-			tag = "DROP USER MAPPING";
 			break;
 
 		case T_DropStmt:
@@ -2018,9 +1928,6 @@ CreateCommandTag(Node *parsetree)
 				case OBJECT_EXTTABLE:
 					tag = "DROP EXTERNAL TABLE";
 					break;
-				case OBJECT_FOREIGNTABLE:
-					tag = "DROP FOREIGN TABLE";
-					break;					
 				case OBJECT_SEQUENCE:
 					tag = "DROP SEQUENCE";
 					break;
@@ -2183,12 +2090,6 @@ CreateCommandTag(Node *parsetree)
 				case OBJECT_TYPE:
 					tag = "ALTER TYPE";
 					break;
-				case OBJECT_FDW:
-					tag = "ALTER FOREIGN DATA WRAPPER";
-					break;
-				case OBJECT_FOREIGN_SERVER:
-					tag = "ALTER SERVER";
-					break;
 				case OBJECT_EXTPROTOCOL:
 					tag = "ALTER PROTOCOL";
 					break;
@@ -2210,8 +2111,6 @@ CreateCommandTag(Node *parsetree)
 
 				if (stmt->relkind == OBJECT_INDEX)
 					tag = "ALTER INDEX";
-				else if (stmt->relkind == OBJECT_FOREIGNTABLE)
-					tag = "ALTER FOREIGN TABLE";
 				else if (stmt->relkind == OBJECT_EXTTABLE)
 					tag = "ALTER EXTERNAL TABLE";
 				else
@@ -2596,7 +2495,6 @@ GetCommandLogLevel(Node *parsetree)
 			break;
 
 		case T_CreateExternalStmt:
-		case T_CreateForeignStmt:
 			lev = LOGSTMT_DDL;
 			break;
 
@@ -2605,18 +2503,6 @@ GetCommandLogLevel(Node *parsetree)
 			break;
 
 		case T_CreateTableSpaceStmt:
-			lev = LOGSTMT_DDL;
-			break;
-
-		case T_CreateFdwStmt:
-		case T_AlterFdwStmt:
-		case T_DropFdwStmt:
-		case T_CreateForeignServerStmt:
-		case T_AlterForeignServerStmt:
-		case T_DropForeignServerStmt:
-		case T_CreateUserMappingStmt:
-		case T_AlterUserMappingStmt:
-		case T_DropUserMappingStmt:
 			lev = LOGSTMT_DDL;
 			break;
 

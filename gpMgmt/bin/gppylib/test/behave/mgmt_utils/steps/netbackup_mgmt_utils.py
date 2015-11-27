@@ -205,7 +205,7 @@ def impl(context, filetype):
         dump_dir = os.path.join(master_data_dir, 'db_dumps')
 
     if filetype == 'report':
-        filename = generate_report_filename(master_data_dir, backup_dir, backup_timestamp)
+        filename = generate_report_filename(master_data_dir, backup_dir, 'db_dumps', '', backup_timestamp)
         cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
         cmd = Command("Querying NetBackup server for report file", cmd_str)
         cmd.run(validateAfter=True)
@@ -213,7 +213,7 @@ def impl(context, filetype):
             raise Exception('Report file %s was not backup up to NetBackup server %s successfully' % (filename, netbackup_service_host))
 
     elif filetype == 'global':
-        filename = generate_global_filename(master_data_dir, backup_dir, dump_dir, backup_timestamp[0:8], backup_timestamp)
+        filename = generate_global_filename(master_data_dir, backup_dir, 'db_dumps', '', backup_timestamp[0:8], backup_timestamp)
         cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
         cmd = Command("Querying NetBackup server for global file", cmd_str)
         cmd.run(validateAfter=True)
@@ -221,8 +221,8 @@ def impl(context, filetype):
             raise Exception('Global file %s was not backup up to NetBackup server %s successfully' % (filename, netbackup_service_host))
 
     elif filetype == 'config':
-        use_dir = get_backup_directory(master_data_dir, backup_dir, backup_timestamp)
-        master_config_filename = os.path.join(use_dir, "%s" % generate_master_config_filename(backup_timestamp))
+        use_dir = get_backup_directory(master_data_dir, backup_dir, 'db_dumps', backup_timestamp)
+        master_config_filename = os.path.join(use_dir, "%s" % generate_master_config_filename('', backup_timestamp))
         cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, master_config_filename)
         cmd = Command("Querying NetBackup server for master config file", cmd_str)
         cmd.run(validateAfter=True)
@@ -233,8 +233,8 @@ def impl(context, filetype):
         gparray = GpArray.initFromCatalog(dbconn.DbURL(port = master_port), utility=True)
         segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
         for seg in segs:
-            use_dir = get_backup_directory(seg.getSegmentDataDirectory(), backup_dir, backup_timestamp)
-            seg_config_filename = os.path.join(use_dir, "%s" % generate_segment_config_filename(seg.getSegmentDbId(), backup_timestamp))
+            use_dir = get_backup_directory(seg.getSegmentDataDirectory(), backup_dir, 'db_dumps', backup_timestamp)
+            seg_config_filename = os.path.join(use_dir, "%s" % generate_segment_config_filename('', seg.getSegmentDbId(), backup_timestamp))
             seg_host = seg.getSegmentHostName()
             cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, seg_config_filename) 
             cmd = Command("Querying NetBackup server for segment config file", cmd_str, ctxt=REMOTE, remoteHost=seg_host)
@@ -243,21 +243,21 @@ def impl(context, filetype):
                 raise Exception('Segment config file %s was not backup up to NetBackup server %s successfully' % (seg_config_filename, netbackup_service_host))
 
     elif filetype == 'state':
-        filename = generate_ao_state_filename(master_data_dir, backup_dir, backup_timestamp)
+        filename = generate_ao_state_filename(master_data_dir, backup_dir, 'db_dumps', '', backup_timestamp)
         cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
         cmd = Command("Querying NetBackup server for AO state file", cmd_str)
         cmd.run(validateAfter=True)
         if cmd.get_results().stdout.strip() != filename:
             raise Exception('AO state file %s was not backup up to NetBackup server %s successfully' % (filename, netbackup_service_host))
 
-        filename = generate_co_state_filename(master_data_dir, backup_dir, backup_timestamp)
+        filename = generate_co_state_filename(master_data_dir, backup_dir, 'db_dumps', '', backup_timestamp)
         cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
         cmd = Command("Querying NetBackup server for CO state file", cmd_str)
         cmd.run(validateAfter=True)
         if cmd.get_results().stdout.strip() != filename:
             raise Exception('CO state file %s was not backup up to NetBackup server %s successfully' % (filename, netbackup_service_host))
 
-        filename = generate_pgstatlastoperation_filename(master_data_dir, backup_dir, backup_timestamp)
+        filename = generate_pgstatlastoperation_filename(master_data_dir, backup_dir, 'db_dumps', '', backup_timestamp)
         cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
         cmd = Command("Querying NetBackup server for last operation state file", cmd_str)
         cmd.run(validateAfter=True)
@@ -265,7 +265,7 @@ def impl(context, filetype):
             raise Exception('Last operation state file %s was not backup up to NetBackup server %s successfully' % (filename, netbackup_service_host))
 
     elif filetype == 'cdatabase':
-        filename = generate_cdatabase_filename(master_data_dir, backup_dir, backup_timestamp)
+        filename = generate_cdatabase_filename(master_data_dir, backup_dir, 'db_dumps', '', backup_timestamp)
         cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
         cmd = Command("Querying NetBackup server for cdatabase file", cmd_str)
         cmd.run(validateAfter=True)
@@ -339,7 +339,7 @@ def impl(context, filetype, prefix, subdir):
         prefix = prefix + '_'
 
     if filetype == 'report':
-        #use_dir = get_backup_directory(master_data_dir, subdir, backup_timestamp)
+        #use_dir = get_backup_directory(master_data_dir, subdir, 'db_dumps', backup_timestamp)
         filename =  "%s/%sgp_dump_%s.rpt" % (dump_dir, prefix, backup_timestamp)
         cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
         cmd = Command("Querying NetBackup server for report file", cmd_str)
@@ -356,7 +356,7 @@ def impl(context, filetype, prefix, subdir):
             raise Exception('Global file %s was not backup up to NetBackup server %s successfully' % (filename, netbackup_service_host))
 
     elif filetype == 'config':
-        use_dir = get_backup_directory(master_data_dir, subdir, backup_timestamp)
+        use_dir = get_backup_directory(master_data_dir, subdir, 'db_dumps', backup_timestamp)
         master_config_filename = os.path.join(dump_dir, "%sgp_master_config_files_%s.tar" % (prefix, backup_timestamp))
         cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, master_config_filename) 
         cmd = Command("Querying NetBackup server for master config file", cmd_str)
@@ -368,7 +368,7 @@ def impl(context, filetype, prefix, subdir):
         gparray = GpArray.initFromCatalog(dbconn.DbURL(port = master_port), utility=True)
         segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
         for seg in segs:
-            use_dir = get_backup_directory(seg.getSegmentDataDirectory(), subdir, backup_timestamp)
+            use_dir = get_backup_directory(seg.getSegmentDataDirectory(), subdir, 'db_dumps', backup_timestamp)
             seg_config_filename = os.path.join(use_dir, "%sgp_segment_config_files_0_%d_%s.tar" % (prefix, seg.getSegmentDbId(), backup_timestamp))
             seg_host = seg.getSegmentHostName()
             cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, seg_config_filename) 

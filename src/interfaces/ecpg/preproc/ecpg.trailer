@@ -1453,7 +1453,7 @@ ColLabel:  ECPGColLabel				{ $$ = $1; }
 
 ECPGColLabelCommon:  ecpg_ident			{ $$ = $1; }
 		| col_name_keyword		{ $$ = $1; }
-		| func_name_keyword	{ $$ = $1; }
+		| type_func_name_keyword	{ $$ = $1; }
 		| ECPGKeywords_vanames		{ $$ = $1; }
 		;
 

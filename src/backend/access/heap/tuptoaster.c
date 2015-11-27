@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/heap/tuptoaster.c,v 1.66.2.1 2007/02/04 20:00:49 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/heap/tuptoaster.c,v 1.67 2007/01/04 16:29:41 tgl Exp $
  *
  *
  * INTERFACE ROUTINES

@@ -24,6 +24,8 @@
 static uint32 fakeIsRunawayDetector = 0;
 extern bool sessionStateInited;
 
+#define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
+
 /*
  * This method will emulate the real ExceptionalCondition
  * function by re-throwing the exception, essentially falling

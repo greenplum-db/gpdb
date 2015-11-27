@@ -244,7 +244,7 @@ CopyRelPath(char *target, int targetMaxLen, RelFileNode rnode)
 char *
 GetDatabasePath(Oid dbNode, Oid spcNode)
 {
-	int 		pathlen;
+	int			pathlen;
 	char	   *path;
 	int 		snprintfResult;
 

@@ -1,61 +1,41 @@
 ##
 ## TODO: list test sequence and test dependencies.
 ##
-test: bitmapscan
 test: executor
 test: functions
 test: golden_query
 test: heapscan1
 test: indexscan
 test: spilltodisk
-test: as_alias
-test: regexp
 test: tiny
 test: subquery
 test: wrkloadadmin
 test: xpath
-test: initdb
 ignore: jdbc
 test: world
-test: sirv_functions
 test: jetpack
 test: spi
 test: security
-test: load_tpch
+test: load_tpch sirv_functions view partition
 test: hashagg
 test: tpch_query
 test: gpsort
-test: resource_queue
 test: bkup_gp
 test: mpp-11333
-test: view
 test: DMLstmnt
-test: setupoptquery
 test: optquery
 test: with_clause
 test: codecoverage
 test: gist_indexes
 ignore: failover
-test: partition
 test: launch_oid_inconsistency
-test: metadata_track
 test: gp_persistent_table
 #mpp23872: Disabling gpcheckmirrorseg as it is erroring out bugbuster on some platforms.
 ignore: gpcheckmirrorseg
-test: AOCO_Compression2
-test: schema_topology
-test: gpmgmt1
-test: limit
-test: case
-test: bkup_pg
-test: bkup_gpcrondump
-test: cursor
+test: AOCO_Compression2 schema_topology table_statistics
+test: bkup_pg gpmgmt1 cursor metadata_track
 test: aggfunc
-test: visibility
-test: tidscan
-test: functional
 test: memory_quota
 test: TestPSQL
-test: table_statistics
 test: opperf
 # end of tests

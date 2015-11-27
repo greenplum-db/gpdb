@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/restrictinfo.c,v 1.49.2.1 2007/07/31 19:53:50 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/restrictinfo.c,v 1.50 2006/12/23 00:43:11 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -357,6 +357,7 @@ make_restrictinfo_internal(Expr *clause,
 	restrictinfo->mergejoinoperator = InvalidOid;
 	restrictinfo->left_sortop = InvalidOid;
 	restrictinfo->right_sortop = InvalidOid;
+	restrictinfo->mergeopfamily = InvalidOid;
 
 	restrictinfo->left_pathkey = NIL;
 	restrictinfo->right_pathkey = NIL;

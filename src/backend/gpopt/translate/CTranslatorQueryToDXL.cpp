@@ -25,15 +25,6 @@
 #include "gpos/base.h"
 #include "gpos/common/CAutoTimer.h"
 
-#include "exception.h"
-
-#include "dxl/CDXLUtils.h"
-#include "dxl/operators/dxlops.h"
-#include "dxl/operators/CDXLScalarBooleanTest.h"
-#include "dxl/operators/CDXLDatumInt8.h"
-
-#include "dxl/xml/dxltokens.h"
-
 #include "gpopt/base/CUtils.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/translate/CCTEListEntry.h"
@@ -44,13 +35,21 @@
 #include "gpopt/translate/CTranslatorDXLToPlStmt.h"
 #include "gpopt/translate/CTranslatorRelcacheToDXL.h"
 
-#include "md/IMDScalarOp.h"
-#include "md/IMDAggregate.h"
-#include "md/IMDTypeBool.h"
-#include "md/IMDTypeInt8.h"
-#include "md/CMDIdGPDBCtas.h"
+#include "naucrates/exception.h"
 
-#include "traceflags/traceflags.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/operators/dxlops.h"
+#include "naucrates/dxl/operators/CDXLScalarBooleanTest.h"
+#include "naucrates/dxl/operators/CDXLDatumInt8.h"
+#include "naucrates/dxl/xml/dxltokens.h"
+
+#include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDAggregate.h"
+#include "naucrates/md/IMDTypeBool.h"
+#include "naucrates/md/IMDTypeInt8.h"
+#include "naucrates/md/CMDIdGPDBCtas.h"
+
+#include "naucrates/traceflags/traceflags.h"
 
 #include "gpopt/gpdbwrappers.h"
 

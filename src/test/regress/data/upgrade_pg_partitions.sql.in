@@ -1,2 +1,0 @@
-update pg_rewrite set ev_action = replace(ev_action, 'parentpartitioname','parentpartitionname') where ev_class = '@gpupgradeschemaname@.pg_partitions'::regclass;
-update pg_attribute set attname = 'parentpartitionname' where attname = 'parentpartitioname' and attrelid = '@gpupgradeschemaname@.pg_partitions'::regclass;

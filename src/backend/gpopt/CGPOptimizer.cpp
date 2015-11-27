@@ -18,7 +18,7 @@
 #include "gpopt/utils/COptTasks.h"
 
 // the following headers are needed to reference optimizer library initializers
-#include "init.h"
+#include "naucrates/init.h"
 #include "gpopt/init.h"
 #include "gpos/_api.h"
 

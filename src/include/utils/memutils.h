@@ -157,6 +157,7 @@ typedef struct AllocSetContext
 	Size		initBlockSize;	/* initial block size */
 	Size		maxBlockSize;	/* maximum block size */
 	Size		nextBlockSize;	/* next block size to allocate */
+	Size		allocChunkLimit; /* effective chunk size limit */
 	AllocBlock	keeper;			/* if not NULL, keep this block over resets */
 
 	/* Points to the head of the sharedHeaderList */

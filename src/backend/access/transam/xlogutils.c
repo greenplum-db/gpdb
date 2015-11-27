@@ -582,6 +582,15 @@ XLogOpenRelation(RelFileNode rnode)
 		res->reldata.rd_smgr = NULL;
 		RelationOpenSmgr(&(res->reldata));
 
+		/*
+		 * Create the target file if it doesn't already exist.  This lets us
+		 * cope if the replay sequence contains writes to a relation that is
+		 * later deleted.  (The original coding of this routine would instead
+		 * return NULL, causing the writes to be suppressed. But that seems
+		 * like it risks losing valuable data if the filesystem loses an inode
+		 * during a crash.	Better to write the data until we are actually
+		 * told to delete the file.)
+		 */
 		// NOTE: We no longer re-create files automatically because
 		// new FileRep persistent objects will ensure files exist.
 
@@ -589,19 +598,8 @@ XLogOpenRelation(RelFileNode rnode)
 		{
 			MirrorDataLossTrackingState mirrorDataLossTrackingState;
 			int64 mirrorDataLossTrackingSessionNum;
-			
-			int primaryError;
 			bool mirrorDataLossOccurred;
 			
-			/*
-			 * Create the target file if it doesn't already exist.  This lets us
-			 * cope if the replay sequence contains writes to a relation that is
-			 * later deleted.  (The original coding of this routine would instead
-			 * return NULL, causing the writes to be suppressed. But that seems
-			 * like it risks losing valuable data if the filesystem loses an inode
-			 * during a crash.	Better to write the data until we are actually
-			 * told to delete the file.)
-			 */
 			// UNDONE: What about the persistent rel files table???
 			// UNDONE: This condition should not occur anymore.
 			// UNDONE: segmentFileNum and AO?
@@ -615,7 +613,6 @@ XLogOpenRelation(RelFileNode rnode)
 				mirrorDataLossTrackingState,
 				mirrorDataLossTrackingSessionNum,
 				/* ignoreAlreadyExists */ true,
-				&primaryError,
 				&mirrorDataLossOccurred);
 			
 		}

@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/clauses.c,v 1.223.2.1 2007/02/02 00:03:17 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/clauses.c,v 1.225 2006/12/23 00:43:10 tgl Exp $
  *
  * HISTORY
  *	  AUTHOR			DATE			MAJOR EVENT
@@ -970,6 +970,8 @@ contain_nonstrict_functions_walker(Node *node, void *context)
 		return true;
 	if (IsA(node, BooleanTest))
 		return true;
+	if (IsA(node, XmlExpr))
+		return true;
 	return expression_tree_walker(node, contain_nonstrict_functions_walker,
 								  context);
 }
@@ -1385,13 +1387,9 @@ CommuteRowCompareExpr(RowCompareExpr *clause)
 	clause->opnos = newops;
 
 	/*
-	 * Note: we don't bother to update the opclasses list, but just set it to
-	 * empty.  This is OK since this routine is currently only used for index
-	 * quals, and the index machinery won't use the opclass information.  The
-	 * original opclass list is NOT valid if we have commuted any cross-type
-	 * comparisons, so don't leave it in place.
+	 * Note: we need not change the opfamilies list; we assume any btree
+	 * opfamily containing an operator will also contain its commutator.
 	 */
-	clause->opclasses = NIL;	/* XXX */
 
 	temp = clause->largs;
 	clause->largs = clause->rargs;
@@ -3859,6 +3857,17 @@ expression_tree_mutator(Node *node,
 
 				FLATCOPY(newnode, minmaxexpr, MinMaxExpr);
 				MUTATE(newnode->args, minmaxexpr->args, List *);
+				return (Node *) newnode;
+			}
+			break;
+		case T_XmlExpr:
+			{
+				XmlExpr *xexpr = (XmlExpr *) node;
+				XmlExpr *newnode;
+
+				FLATCOPY(newnode, xexpr, XmlExpr);
+				MUTATE(newnode->named_args, xexpr->named_args, List *);
+				MUTATE(newnode->args, xexpr->args, List *);
 				return (Node *) newnode;
 			}
 			break;

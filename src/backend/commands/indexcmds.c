@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/indexcmds.c,v 1.149.2.2 2007/09/10 22:02:05 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/indexcmds.c,v 1.150 2006/12/23 00:43:09 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -485,23 +485,9 @@ DefineIndex(RangeVar *heapRelation,
 
 	/*
 	 * Parse AM-specific options, convert to text array form, validate
-	 *
-	 * However, accept and only accept tidycat option during upgrade.
-	 * During bootstrap, we don't have any storage option. So, during
-	 * upgrade, we don't need it as well because we're just creating
-	 * catalog objects. Further, we overload the WITH clause to pass-in
-	 * the index oid. So, if we don't strip it out, it'll appear in
-	 * the pg_class.reloptions, and we don't want that.
 	 */
 	reloptions = transformRelOptions((Datum) 0, options, false, false);
-	if (gp_upgrade_mode)
- 	{
- 		TidycatOptions *tidycatoptions = (TidycatOptions*) tidycat_reloptions(reloptions);
- 		indexRelationId = tidycatoptions->indexid;
- 		reloptions = 0;
- 	}
- 	else
- 		(void) index_reloptions(amoptions, reloptions, true);
+	(void) index_reloptions(amoptions, reloptions, true);
 
 	/*
 	 * Prepare arguments for index_create, primarily an IndexInfo structure.
@@ -565,25 +551,20 @@ DefineIndex(RangeVar *heapRelation,
 			iio->blkdirComptypeOid = lfirst_oid(lnext(lnext(lcfifth(stmt->idxOids))));
 
 
-			/* Not all Oids are used (and therefore unset) during upgrade index
-			 * creation. So, skip the Oid assert during upgrade.
-			 *
+			/*
 			 * In normal operations we proactively allocate a bunch of oids to support
-			 * bitmap indexes and ao indexes, however in bootstrap/upgrade mode when we
+			 * bitmap indexes and ao indexes, however in bootstrap mode when we
 			 * create an index using a supplied oid we do not allocate all these
 			 * additional oids. (See the "ShouldDispatch" block below). This implies that
 			 * we cannot currently support bitmap indexes or ao indexes as part of the catalog.
 			 */
 			Insist(OidIsValid(indexRelationId));
-			if (!gp_upgrade_mode)
-			{
-	 			Insist(OidIsValid(iio->comptypeOid));
-	 			Insist(OidIsValid(iio->heapOid));
-	 			Insist(OidIsValid(iio->indexOid));
-	 			Insist(OidIsValid(iio->blkdirRelOid));
-	 			Insist(OidIsValid(iio->blkdirIdxOid));
-	 			Insist(OidIsValid(iio->blkdirComptypeOid));
-			}
+			Insist(OidIsValid(iio->comptypeOid));
+			Insist(OidIsValid(iio->heapOid));
+			Insist(OidIsValid(iio->indexOid));
+			Insist(OidIsValid(iio->blkdirRelOid));
+			Insist(OidIsValid(iio->blkdirIdxOid));
+			Insist(OidIsValid(iio->blkdirComptypeOid));
 
 			quiet = true;
 		}
@@ -1124,61 +1105,86 @@ GetIndexOpClass(List *opclass, Oid attrType,
 Oid
 GetDefaultOpClass(Oid type_id, Oid am_id)
 {
+	Oid			result = InvalidOid;
 	int			nexact = 0;
 	int			ncompatible = 0;
-	Oid			exactOid = InvalidOid;
-	Oid			compatibleOid = InvalidOid;
-	cqContext  *pcqCtx;
+	int			ncompatiblepreferred = 0;
+	Relation	rel;
+	ScanKeyData skey[1];
+	SysScanDesc scan;
 	HeapTuple	tup;
+	CATEGORY	tcategory;
 
 	/* If it's a domain, look at the base type instead */
 	type_id = getBaseType(type_id);
+
+	tcategory = TypeCategory(type_id);
 
 	/*
 	 * We scan through all the opclasses available for the access method,
 	 * looking for one that is marked default and matches the target type
 	 * (either exactly or binary-compatibly, but prefer an exact match).
 	 *
-	 * We could find more than one binary-compatible match, in which case we
-	 * require the user to specify which one he wants.	If we find more than
-	 * one exact match, then someone put bogus entries in pg_opclass.
+	 * We could find more than one binary-compatible match.  If just one is
+	 * for a preferred type, use that one; otherwise we fail, forcing the user
+	 * to specify which one he wants.  (The preferred-type special case is a
+	 * kluge for varchar: it's binary-compatible to both text and bpchar, so
+	 * we need a tiebreaker.)  If we find more than one exact match, then
+	 * someone put bogus entries in pg_opclass.
 	 */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_opclass "
-				" WHERE opcamid = :1 ",
-				ObjectIdGetDatum(am_id)));
+	rel = heap_open(OperatorClassRelationId, AccessShareLock);
 
-	while (HeapTupleIsValid(tup = caql_getnext(pcqCtx)))
+	ScanKeyInit(&skey[0],
+				Anum_pg_opclass_opcmethod,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(am_id));
+
+	scan = systable_beginscan(rel, OpclassAmNameNspIndexId, true,
+							  SnapshotNow, 1, skey);
+
+	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
 		Form_pg_opclass opclass = (Form_pg_opclass) GETSTRUCT(tup);
 
-		if (opclass->opcdefault)
+		/* ignore altogether if not a default opclass */
+		if (!opclass->opcdefault)
+			continue;
+		if (opclass->opcintype == type_id)
 		{
-			if (opclass->opcintype == type_id)
+			nexact++;
+			result = HeapTupleGetOid(tup);
+		}
+		else if (nexact == 0 &&
+				 IsBinaryCoercible(type_id, opclass->opcintype))
+		{
+			if (IsPreferredType(tcategory, opclass->opcintype))
 			{
-				nexact++;
-				exactOid = HeapTupleGetOid(tup);
+				ncompatiblepreferred++;
+				result = HeapTupleGetOid(tup);
 			}
-			else if (IsBinaryCoercible(type_id, opclass->opcintype))
+			else if (ncompatiblepreferred == 0)
 			{
 				ncompatible++;
-				compatibleOid = HeapTupleGetOid(tup);
+				result = HeapTupleGetOid(tup);
 			}
 		}
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(scan);
 
-	if (nexact == 1)
-		return exactOid;
-	if (nexact != 0)
+	heap_close(rel, AccessShareLock);
+
+	/* raise error if pg_opclass contains inconsistent data */
+	if (nexact > 1)
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
 		errmsg("there are multiple default operator classes for data type %s",
 			   format_type_be(type_id))));
-	if (ncompatible == 1)
-		return compatibleOid;
+
+	if (nexact == 1 ||
+		ncompatiblepreferred == 1 ||
+		(ncompatiblepreferred == 0 && ncompatible == 1))
+		return result;
 
 	return InvalidOid;
 }

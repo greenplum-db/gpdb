@@ -4350,7 +4350,10 @@ selectHashPartition(PartitionNode *partnode, Datum *values, bool *isnull,
 		else
 		{
 			Oid opclass = partnode->part->parclass[i];
-			Oid hashfunc = get_opclass_proc(opclass, 0, HASHPROC);
+			Oid inctype = get_opclass_input_type(opclass);
+			Oid opfamily = get_opclass_family(opclass);
+
+			Oid hashfunc = get_opfamily_proc(opfamily, inctype, inctype, HASHPROC);
 			Datum d = values[attnum - 1];
 			hash ^= DatumGetUInt32(OidFunctionCall1(hashfunc, d));
 		}

@@ -1,5 +1,5 @@
 PROGRAM = changetrackingdump
-OBJS    = changetrackingdump.o ../../src/port/sprompt.o ../../src/backend/utils/hash/pg_crc.o
+OBJS    = changetrackingdump.o ../../src/port/sprompt.o
 
 PG_CPPFLAGS = -I$(libpq_srcdir)
 PG_LIBS = $(libpq_pgport)

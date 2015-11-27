@@ -196,7 +196,7 @@
 #include "gpos/error/CException.h"
 #include "gpos/error/CAutoExceptionStack.h"
 
-#include "exception.h"
+#include "naucrates/exception.h"
 
 #include "gpopt/gpdbwrappers.h"
 
@@ -2089,7 +2089,16 @@ gpdb::FOpMergeJoinable
 {
 	GP_WRAP_START;
 	{
-		return op_mergejoinable(opno, leftOp, rightOp);
+		if (op_mergejoinable(opno))
+		{
+			/*
+			 * XXX Like in check_mergejoinable, for the moment, continue to
+			 * force use of particular sortops
+			 */
+			Oid opfamily;
+			if (get_op_mergejoin_info(opno, leftOp, rightOp, &opfamily))
+				return true;
+		}
 	}
 	GP_WRAP_END;
 	return false;
@@ -2802,7 +2811,12 @@ gpdb::IndexOpProperties
 {
 	GP_WRAP_START;
 	{
-		get_op_opclass_properties(opno, opclass, strategy, subtype, recheck);	
+		// FIXME: We assume the 'opclass' arg is actually an opfamily
+		// Also, only the right type is returned to the caller, the left
+		// type is simply ignored.
+		Oid	lefttype;
+
+		get_op_opfamily_properties(opno, opclass, strategy, &lefttype, subtype, recheck);
 		return;
 	}
 	GP_WRAP_END;
@@ -2817,7 +2831,10 @@ gpdb::PlIndexOpClasses
 {
 	GP_WRAP_START;
 	{
-		return get_index_opclasses(oidIndex);	
+		// FIXME: We actually return the operator *families* of the index keys.
+		// As long as we do the same for operators below, i.e. fetch the
+		// operator families that an operator belons to, this works.
+		return get_index_opfamilies(oidIndex);
 	}
 	GP_WRAP_END;
 	
@@ -2833,7 +2850,10 @@ gpdb::PlScOpOpClasses
 {
 	GP_WRAP_START;
 	{
-		return get_operator_opclasses(opno);	
+		// FIXME: We actually return the operator *families* this operator
+		// belongs to. As long as we do the same for index columns above,
+		// this works.
+		return get_operator_opfamilies(opno);
 	}
 	GP_WRAP_END;
 	

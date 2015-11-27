@@ -25,19 +25,19 @@
 #include "gpos/base.h"
 #include "gpos/string/CWStringDynamic.h"
 
-#include "dxl/CDXLUtils.h"
-#include "dxl/xml/dxltokens.h"
-#include "dxl/operators/CDXLNode.h"
-#include "dxl/gpdb_types.h"
-
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/translate/CTranslatorPlStmtToDXL.h"
 #include "gpopt/translate/CTranslatorUtils.h"
 #include "gpopt/translate/CMappingVarColId.h"
 
-#include "md/IMDScalarOp.h"
-#include "md/IMDRelation.h"
-#include "md/IMDIndex.h"
+#include "naucrates/dxl/CDXLUtils.h"
+#include "naucrates/dxl/xml/dxltokens.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/gpdb_types.h"
+
+#include "naucrates/md/IMDScalarOp.h"
+#include "naucrates/md/IMDRelation.h"
+#include "naucrates/md/IMDIndex.h"
 
 #include "gpopt/gpdbwrappers.h"
 

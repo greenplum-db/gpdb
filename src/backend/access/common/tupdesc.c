@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/tupdesc.c,v 1.126 2009/06/11 14:48:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/common/tupdesc.c,v 1.119 2006/12/30 21:21:52 tgl Exp $
  *
  * NOTES
  *	  some of the executor utility code such as "ExecTypeFromTL" should be
@@ -535,6 +535,7 @@ BuildDescForRelation(List *schema)
 	TupleDesc	desc;
 	TupleConstr *constr = (TupleConstr *) palloc0(sizeof(TupleConstr));
 	char	   *attname;
+	Oid			atttypid;
 	int32		atttypmod;
 	int			attdim;
 
@@ -559,7 +560,8 @@ BuildDescForRelation(List *schema)
 		attnum++;
 
 		attname = entry->colname;
-		atttypmod = entry->typname->typmod;
+		atttypid = typenameTypeId(NULL, entry->typname);
+		atttypmod = typenameTypeMod(NULL, entry->typname, atttypid);
 		attdim = list_length(entry->typname->arrayBounds);
 
 		if (entry->typname->setof)
@@ -569,8 +571,7 @@ BuildDescForRelation(List *schema)
 							attname)));
 
 		TupleDescInitEntry(desc, attnum, attname,
-						   typenameTypeId(NULL, entry->typname),
-						   atttypmod, attdim);
+						   atttypid, atttypmod, attdim);
 
 		/* Fill in additional stuff not handled by TupleDescInitEntry */
 		if (entry->is_not_null)

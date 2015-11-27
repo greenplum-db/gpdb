@@ -1,6 +1,8 @@
 MODULE_big = gphdfs
 OBJS       = gphdfsformatter.o gphdfsprotocol.o
 
+REGRESS = basic privileges
+
 PG_CPPFLAGS = -I$(libpq_srcdir)
 PG_LIBS = $(libpq_pgport)
 

@@ -219,11 +219,9 @@ DROP TABLE films;
 
 
 --start_ignore
-DROP LANGUAGE PLPGSQL CASCADE;
 DROP TABLE refcur1;
 --end_ignore
 
-Create language PLPGSQL;
 CREATE FUNCTION reffunc(refcursor) RETURNS refcursor AS '
 BEGIN
     OPEN $1 FOR SELECT col FROM refcur1;
@@ -247,16 +245,14 @@ SELECT reffunc('funccursor2');
 COMMIT;
 SELECT reffunc('funccursor2');
 --start_ignore
-DROP LANGUAGE PLPGSQL CASCADE;
 DROP TABLE refcur1;
 --end_ignore
 
 --start_ignore
-DROP LANGUAGE PLPGSQL CASCADE;
 DROP TABLE table_1;
 DROP TABLE table_2;
 --end_ignore
-CREATE LANGUAGE PLPGSQL;
+
 CREATE FUNCTION myfunc(refcursor, refcursor) RETURNS SETOF refcursor AS $$
 BEGIN
     OPEN $1 FOR SELECT * FROM table_1;
@@ -278,7 +274,6 @@ FETCH ALL FROM a;
 FETCH ALL FROM b;
 COMMIT;
 --start_ignore
-DROP LANGUAGE PLPGSQL CASCADE;
 DROP TABLE table_1;
 DROP TABLE table_2;
 --end_ignore

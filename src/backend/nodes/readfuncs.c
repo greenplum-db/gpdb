@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/readfuncs.c,v 1.195 2006/08/12 02:52:04 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/readfuncs.c,v 1.199 2006/12/24 00:29:18 tgl Exp $
  *
  * NOTES
  *	  Path and Plan nodes do not need to have any readfuncs support, because we
@@ -34,6 +34,13 @@
 #include "utils/lsyscache.h"  /* For get_typlenbyval */
 #include "cdb/cdbgang.h"
 
+/*
+ * readfuncs.c is compiled normally into readfuncs.o, but it's also
+ * #included from readfast.c. When #included, readfuncs.c defines
+ * COMPILING_BINARY_FUNCS, and provides replacements READ_* macros. See
+ * comments at top of readfast.c.
+ */
+#ifndef COMPILING_BINARY_FUNCS
 
 /*
  * Macros to simplify reading of different kinds of fields.  Use these
@@ -99,10 +106,10 @@
 inline static char extended_char(char* token, size_t length)
 {
 	char c, *s;
-	
+
 	if ( length == 1 )
 		return *token;
-	
+
 	s = debackslash(token, length);
 	if ( strlen(s) == 1 )
 		c = s[0];
@@ -262,10 +269,10 @@ inline static char extended_char(char* token, size_t length)
 	((length) == 0 ? NULL : debackslash(token, length))
 
 /* The following READ_..._VALUE macros mimic the corresponding READ_..._FIELD
- * macros above, but produce the value read (with appropriate type) instead of 
- * assigning it to a field of local_node.  They are expressions, not statements.  
+ * macros above, but produce the value read (with appropriate type) instead of
+ * assigning it to a field of local_node.  They are expressions, not statements.
  *
- * Note that the fldname parameter is not used, but retained is for symmetry. 
+ * Note that the fldname parameter is not used, but retained is for symmetry.
  * These macros exist only to simplify supporting old node formats.
  */
 
@@ -290,10 +297,12 @@ inline static char extended_char(char* token, size_t length)
 		nodeRead(NULL, 0) \
 	)
 
+#endif /* COMPILING_BINARY_FUNCS */
 
 static Datum readDatum(bool typbyval);
 
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readQuery
  */
@@ -307,7 +316,7 @@ _readQuery(void)
 	READ_BOOL_FIELD(canSetTag);
 	READ_NODE_FIELD(utilityStmt);
 	READ_INT_FIELD(resultRelation);
-	
+
 	if ( ! pg_strtok_peek_fldname("intoClause"))
 	{
 		/* If the Query node was written with 3.3 or earlier, there is no intoClause,
@@ -320,7 +329,7 @@ _readQuery(void)
 		List *op = READ_NODE_VALUE(intoOptions);
 		OnCommitAction oc = READ_ENUM_VALUE(intoOnCommit, OnCommitAction);
 		char * ts = READ_STRING_VALUE(intoTableSpaceName);
-		
+
 		if ( rv == NULL && op == NIL && oc == ONCOMMIT_NOOP && ts == NULL )
 		{
 			/* Nothing to say. */
@@ -354,7 +363,7 @@ _readQuery(void)
 		/* Post 3.3, it's easier. */
 		READ_NODE_FIELD(intoClause);
 	}
-	
+
 	READ_BOOL_FIELD(hasAggs);
 	READ_BOOL_FIELD(hasWindFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
@@ -392,7 +401,7 @@ _readQuery(void)
 		READ_BOOL_FIELD(hasRecursive);
 		READ_BOOL_FIELD(hasModifyingCTE);
 	}
-	
+
 	READ_NODE_FIELD(limitOffset);
 	READ_NODE_FIELD(limitCount);
 	READ_NODE_FIELD(rowMarks);
@@ -402,12 +411,12 @@ _readQuery(void)
 	READ_NODE_FIELD(result_aosegnos);
 	READ_NODE_FIELD(returningLists);
 
-    /* In some earlier releases (including 3.3) a TableOidInfo was held in the 
-     * Query node.  Maybe some values got stored in the catalog as part of a 
-     * rule (possible?)  Maybe the Query was a CTAS. In any case, we don't want 
+    /* In some earlier releases (including 3.3) a TableOidInfo was held in the
+     * Query node.  Maybe some values got stored in the catalog as part of a
+     * rule (possible?)  Maybe the Query was a CTAS. In any case, we don't want
      * to remember the OIDs assigned in the past.
      *
-     * Now TableOidInfo is in the node's intoClause. As noted, we don't actually 
+     * Now TableOidInfo is in the node's intoClause. As noted, we don't actually
      * need the values but, if they exist, we need scan over them.
      */
     if (pg_strtok_peek_fldname("intoOidInfo.relOid"))
@@ -435,6 +444,7 @@ _readQuery(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readNotifyStmt
@@ -465,6 +475,7 @@ _readDeclareCursorStmt(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readCurrentOfExpr
  */
@@ -481,6 +492,7 @@ _readCurrentOfExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readSingleRowErrorDesc
@@ -528,6 +540,9 @@ _readGroupClause(void)
 	READ_DONE();
 }
 
+/*
+ * _readGroupingClause
+ */
 static GroupingClause *
 _readGroupingClause(void)
 {
@@ -567,7 +582,7 @@ _readGroupId(void)
 }
 
 static WindowSpecParse *
-_readWindowSpecParse(const char ** str)
+_readWindowSpecParse(void)
 {
 	READ_LOCALS(WindowSpecParse);
 
@@ -577,8 +592,9 @@ _readWindowSpecParse(const char ** str)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static WindowSpec *
-_readWindowSpec(const char ** str)
+_readWindowSpec(void)
 {
 	READ_LOCALS(WindowSpec);
 
@@ -596,9 +612,10 @@ _readWindowSpec(const char ** str)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static WindowFrame *
-_readWindowFrame(const char ** str)
+_readWindowFrame(void)
 {
 	READ_LOCALS(WindowFrame);
 
@@ -612,7 +629,7 @@ _readWindowFrame(const char ** str)
 }
 
 static WindowFrameEdge *
-_readWindowFrameEdge(const char ** str)
+_readWindowFrameEdge(void)
 {
 	READ_LOCALS(WindowFrameEdge);
 
@@ -623,7 +640,7 @@ _readWindowFrameEdge(const char ** str)
 }
 
 static PercentileExpr *
-_readPercentileExpr(const char ** str)
+_readPercentileExpr(void)
 {
 	READ_LOCALS(PercentileExpr);
 
@@ -657,11 +674,11 @@ static WithClause *
 _readWithClause(void)
 {
 	READ_LOCALS(WithClause);
-	
+
 	READ_NODE_FIELD(ctes);
 	READ_BOOL_FIELD(recursive);
 	READ_INT_FIELD(location);
-	
+
 	READ_DONE();
 }
 
@@ -669,7 +686,7 @@ static CommonTableExpr *
 _readCommonTableExpr(void)
 {
 	READ_LOCALS(CommonTableExpr);
-	
+
 	READ_STRING_FIELD(ctename);
 	READ_NODE_FIELD(aliascolnames);
 	READ_NODE_FIELD(ctequery);
@@ -717,6 +734,7 @@ _readAlias(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static RangeVar *
 _readRangeVar(void)
 {
@@ -739,19 +757,21 @@ _readRangeVar(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static IntoClause *
 _readIntoClause(void)
 {
 	READ_LOCALS(IntoClause);
-	
+
 	READ_NODE_FIELD(rel);
 	READ_NODE_FIELD(colNames);
 	READ_NODE_FIELD(options);
 	READ_ENUM_FIELD(onCommit, OnCommitAction);
 	READ_STRING_FIELD(tableSpaceName);
 	READ_OID_FIELD(oidInfo.relOid);
-    READ_OID_FIELD(oidInfo.comptypeOid); 
+    READ_OID_FIELD(oidInfo.comptypeOid);
     READ_OID_FIELD(oidInfo.toastOid);
     READ_OID_FIELD(oidInfo.toastIndexOid);
     READ_OID_FIELD(oidInfo.toastComptypeOid);
@@ -769,15 +789,15 @@ _readIntoClause(void)
         READ_OID_FIELD(oidInfo.aoblkdirComptypeOid);
     }
 	/* policy not serialized */
-	
+
 	/* Is this code, carried over from 3.3, actually needed?
 	 *
-	 * If the Query was a CTAS, and the CTAS was stored in the catalog 
-	 * as part of a rule, we don't want to remember the OIDs assigned 
+	 * If the Query was a CTAS, and the CTAS was stored in the catalog
+	 * as part of a rule, we don't want to remember the OIDs assigned
 	 * in the past.  Not sure we can ever have that happen.
 	 */
 	Assert(local_node->oidInfo.relOid == InvalidOid);
-	
+
 	local_node->oidInfo.relOid = InvalidOid;
 	local_node->oidInfo.comptypeOid = InvalidOid;
 	local_node->oidInfo.toastOid = InvalidOid;
@@ -794,9 +814,10 @@ _readIntoClause(void)
 	local_node->oidInfo.aovisimapComptypeOid = InvalidOid;
 
 	/* policy not serialized */
-	
+
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readVar
@@ -817,6 +838,7 @@ _readVar(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readConst
  */
@@ -838,14 +860,15 @@ _readConst(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readConstraint
  */
 static Constraint *
 _readConstraint(void)
 {
-
 	READ_LOCALS(Constraint);
 
 	READ_OID_FIELD(conoid);
@@ -889,9 +912,9 @@ _readConstraint(void)
 		local_node->contype = CONSTR_NOTNULL;
 	}
 
-
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static IndexStmt *
 _readIndexStmt(void)
@@ -927,10 +950,10 @@ _readIndexElem(void)
 	READ_NODE_FIELD(expr);
 	READ_NODE_FIELD(opclass);
 
-
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static ReindexStmt *
 _readReindexStmt(void)
 {
@@ -945,8 +968,8 @@ _readReindexStmt(void)
 	READ_OID_FIELD(relid);
 
 	READ_DONE();
-
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static ViewStmt *
 _readViewStmt(void)
@@ -981,6 +1004,7 @@ _readRuleStmt(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static DropStmt *
 _readDropStmt(void)
 {
@@ -995,7 +1019,9 @@ _readDropStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static DropPropertyStmt *
 _readDropPropertyStmt(void)
 {
@@ -1009,7 +1035,9 @@ _readDropPropertyStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static TruncateStmt *
 _readTruncateStmt(void)
 {
@@ -1020,7 +1048,9 @@ _readTruncateStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static AlterTableStmt *
 _readAlterTableStmt(void)
 {
@@ -1052,13 +1082,14 @@ _readAlterTableStmt(void)
 			READ_OID_FIELD(oidInfo[m].aoblkdirOid);
 			READ_OID_FIELD(oidInfo[m].aoblkdirIndexOid);
 			READ_OID_FIELD(oidInfo[m].aoblkdirComptypeOid);
-
 		}
 	}
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static AlterTableCmd *
 _readAlterTableCmd(void)
 {
@@ -1074,6 +1105,7 @@ _readAlterTableCmd(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static InheritPartitionCmd *
 _readInheritPartitionCmd(void)
@@ -1085,6 +1117,7 @@ _readInheritPartitionCmd(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static AlterPartitionCmd *
 _readAlterPartitionCmd(void)
 {
@@ -1096,6 +1129,7 @@ _readAlterPartitionCmd(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static AlterPartitionId *
 _readAlterPartitionId(void)
@@ -1122,10 +1156,10 @@ _readCreateRoleStmt(void)
 }
 
 static DenyLoginInterval *
-_readDenyLoginInterval(const char ** str)
+_readDenyLoginInterval(void)
 {
 	READ_LOCALS(DenyLoginInterval);
-	
+
 	READ_NODE_FIELD(start);
 	READ_NODE_FIELD(end);
 
@@ -1133,13 +1167,13 @@ _readDenyLoginInterval(const char ** str)
 }
 
 static DenyLoginPoint *
-_readDenyLoginPoint(const char ** str)
+_readDenyLoginPoint(void)
 {
 	READ_LOCALS(DenyLoginPoint);
-	
+
 	READ_NODE_FIELD(day);
 	READ_NODE_FIELD(time);
-	
+
 	READ_DONE();
 }
 
@@ -1152,10 +1186,9 @@ _readDropRoleStmt(void)
 	READ_BOOL_FIELD(missing_ok);
 
 	READ_DONE();
-
 }
 
-static  AlterRoleStmt *
+static AlterRoleStmt *
 _readAlterRoleStmt(void)
 {
 	READ_LOCALS(AlterRoleStmt);
@@ -1163,11 +1196,11 @@ _readAlterRoleStmt(void)
 	READ_STRING_FIELD(role);
 	READ_NODE_FIELD(options);
 	READ_INT_FIELD(action);
-	READ_DONE();
 
+	READ_DONE();
 }
 
-static  AlterRoleSetStmt *
+static AlterRoleSetStmt *
 _readAlterRoleSetStmt(void)
 {
 	READ_LOCALS(AlterRoleSetStmt);
@@ -1177,9 +1210,9 @@ _readAlterRoleSetStmt(void)
 	READ_NODE_FIELD(value);
 
 	READ_DONE();
-
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static AlterObjectSchemaStmt *
 _readAlterObjectSchemaStmt(void)
 {
@@ -1194,9 +1227,9 @@ _readAlterObjectSchemaStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
-
-
+#ifndef COMPILING_BINARY_FUNCS
 static AlterOwnerStmt *
 _readAlterOwnerStmt(void)
 {
@@ -1211,7 +1244,7 @@ _readAlterOwnerStmt(void)
 
 	READ_DONE();
 }
-
+#endif /* COMPILING_BINARY_FUNCS */
 
 static RenameStmt *
 _readRenameStmt(void)
@@ -1231,6 +1264,7 @@ _readRenameStmt(void)
 }
 
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readFuncCall
  *
@@ -1249,11 +1283,12 @@ _readFuncCall(void)
 	READ_BOOL_FIELD(agg_distinct);
     READ_INT_FIELD(location);
 
-    READ_NODE_FIELD(over);          /*CDB*/
-    READ_NODE_FIELD(agg_filter);    /*CDB*/
+	READ_NODE_FIELD(over);          /*CDB*/
+	READ_NODE_FIELD(agg_filter);    /*CDB*/
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static DefElem *
 _readDefElem(void)
@@ -1263,9 +1298,11 @@ _readDefElem(void)
 	READ_STRING_FIELD(defname);
 	READ_NODE_FIELD(arg);
 	READ_ENUM_FIELD(defaction, DefElemAction);
+
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static A_Const *
 _readAConst(void)
 {
@@ -1331,8 +1368,9 @@ _readAConst(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
-
+#ifndef COMPILING_BINARY_FUNCS
 static A_Expr *
 _readAExpr(void)
 {
@@ -1392,13 +1430,13 @@ _readAExpr(void)
 		elog(ERROR,"Unable to understand A_Expr node %.30s",token);
 	}
 
-
 	READ_NODE_FIELD(lexpr);
 	READ_NODE_FIELD(rexpr);
 	READ_INT_FIELD(location);
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readParam
@@ -1411,10 +1449,12 @@ _readParam(void)
 	READ_ENUM_FIELD(paramkind, ParamKind);
 	READ_INT_FIELD(paramid);
 	READ_OID_FIELD(paramtype);
+	READ_INT_FIELD(paramtypmod);
 
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readAggref
  */
@@ -1452,6 +1492,7 @@ _readAggref(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _outAggOrder
@@ -1484,7 +1525,7 @@ _readWindowRef(void)
 	READ_BOOL_FIELD(windistinct);
 	READ_UINT_FIELD(winspec);
 	READ_UINT_FIELD(winindex);
-    READ_ENUM_FIELD(winstage, WinStage);
+	READ_ENUM_FIELD(winstage, WinStage);
 	READ_UINT_FIELD(winlevel);
 
 	READ_DONE();
@@ -1509,6 +1550,7 @@ _readArrayRef(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readFuncExpr
  */
@@ -1530,7 +1572,9 @@ _readFuncExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readOpExpr
  */
@@ -1558,7 +1602,9 @@ _readOpExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readDistinctExpr
  */
@@ -1586,7 +1632,9 @@ _readDistinctExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readScalarArrayOpExpr
  */
@@ -1613,7 +1661,9 @@ _readScalarArrayOpExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readBoolExpr
  */
@@ -1638,7 +1688,9 @@ _readBoolExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readSubLink
  */
@@ -1658,6 +1710,7 @@ _readSubLink(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readFieldSelect
@@ -1807,7 +1860,7 @@ _readRowCompareExpr(void)
 
 	READ_ENUM_FIELD(rctype, RowCompareType);
 	READ_NODE_FIELD(opnos);
-	READ_NODE_FIELD(opclasses);
+	READ_NODE_FIELD(opfamilies);
 	READ_NODE_FIELD(largs);
 	READ_NODE_FIELD(rargs);
 
@@ -1844,6 +1897,28 @@ _readMinMaxExpr(void)
 }
 
 /*
+ * _readXmlExpr
+ */
+static XmlExpr *
+_readXmlExpr(void)
+{
+	READ_LOCALS(XmlExpr);
+
+	READ_ENUM_FIELD(op, XmlExprOp);
+	READ_STRING_FIELD(name);
+	READ_NODE_FIELD(named_args);
+	READ_NODE_FIELD(arg_names);
+	READ_NODE_FIELD(args);
+	READ_ENUM_FIELD(xmloption, XmlOptionType);
+	READ_OID_FIELD(type);
+	READ_INT_FIELD(typmod);
+	/*READ_LOCATION_FIELD(location);*/
+
+	READ_DONE();
+}
+
+#ifndef COMPILING_BINARY_FUNCS
+/*
  * _readNullIfExpr
  */
 static NullIfExpr *
@@ -1870,6 +1945,7 @@ _readNullIfExpr(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readNullTest
@@ -1975,6 +2051,7 @@ _readRangeTblRef(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readJoinExpr
  */
@@ -1988,13 +2065,14 @@ _readJoinExpr(void)
 	READ_NODE_FIELD(larg);
 	READ_NODE_FIELD(rarg);
     /* CDB: subqfromlist is used only within planner; don't need to read it */
-    READ_NODE_FIELD(usingClause);   /*CDB*/
+	READ_NODE_FIELD(usingClause);   /*CDB*/
 	READ_NODE_FIELD(quals);
 	READ_NODE_FIELD(alias);
 	READ_INT_FIELD(rtindex);
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readFromExpr
@@ -2057,7 +2135,8 @@ _readTypeName(void)
 	READ_BOOL_FIELD(timezone);
 	READ_BOOL_FIELD(setof);
 	READ_BOOL_FIELD(pct_type);
-	READ_INT_FIELD(typmod);
+	READ_NODE_FIELD(typmods);
+	READ_INT_FIELD(typemod);
 	READ_NODE_FIELD(arrayBounds);
 	READ_INT_FIELD(location);
 
@@ -2076,6 +2155,7 @@ _readTypeCast(void)
 }
 
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readRangeTblEntry
  */
@@ -2144,6 +2224,7 @@ _readRangeTblEntry(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * Greenplum Database additions for serialization support
@@ -2151,6 +2232,7 @@ _readRangeTblEntry(void)
  */
 #include "nodes/plannodes.h"
 
+#ifndef COMPILING_BINARY_FUNCS
 static CreateStmt *
 _readCreateStmt(void)
 {
@@ -2199,9 +2281,11 @@ _readCreateStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static Partition *
-_readPartition(const char **str)
+_readPartition(void)
 {
 	READ_LOCALS(Partition);
 
@@ -2216,9 +2300,11 @@ _readPartition(const char **str)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static PartitionRule *
-_readPartitionRule(const char **str)
+_readPartitionRule(void)
 {
 	READ_LOCALS(PartitionRule);
 
@@ -2240,9 +2326,11 @@ _readPartitionRule(const char **str)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
 static PartitionNode *
-_readPartitionNode(const char **str)
+_readPartitionNode(void)
 {
 	READ_LOCALS(PartitionNode);
 
@@ -2251,9 +2339,10 @@ _readPartitionNode(const char **str)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static PgPartRule *
-_readPgPartRule(const char **str)
+_readPgPartRule(void)
 {
 	READ_LOCALS(PgPartRule);
 
@@ -2268,7 +2357,7 @@ _readPgPartRule(const char **str)
 }
 
 static SegfileMapNode *
-_readSegfileMapNode(const char **str)
+_readSegfileMapNode(void)
 {
 	READ_LOCALS(SegfileMapNode);
 
@@ -2291,6 +2380,7 @@ _readExtTableTypeDesc(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static CreateExternalStmt *
 _readCreateExternalStmt(void)
 {
@@ -2307,25 +2397,13 @@ _readCreateExternalStmt(void)
 	READ_NODE_FIELD(encoding);
 	READ_NODE_FIELD(distributedBy);
 	local_node->policy = NULL;
-	
+
 	READ_DONE();
 }
-
-static CreateForeignStmt *
-_readCreateForeignStmt(void)
-{
-	READ_LOCALS(CreateForeignStmt);
-
-	READ_NODE_FIELD(relation);
-	READ_NODE_FIELD(tableElts);
-	READ_STRING_FIELD(srvname);
-	READ_NODE_FIELD(options);
-	
-	READ_DONE();
-}
+#endif /* COMPILING_BINARY_FUNCS */
 
 static FkConstraint *
-_outFkConstraint(void)
+_readFkConstraint(void)
 {
 	READ_LOCALS(FkConstraint);
 
@@ -2377,9 +2455,9 @@ _readCreatePLangStmt(void)
 	READ_OID_FIELD(plvalidatorOid);
 
 	READ_DONE();
-
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static DropPLangStmt *
 _readDropPLangStmt(void)
 {
@@ -2390,8 +2468,8 @@ _readDropPLangStmt(void)
 	READ_BOOL_FIELD(missing_ok);
 
 	READ_DONE();
-
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static CreateSeqStmt *
 _readCreateSeqStmt(void)
@@ -2410,6 +2488,7 @@ static AlterSeqStmt *
 _readAlterSeqStmt(void)
 {
 	READ_LOCALS(AlterSeqStmt);
+
 	READ_NODE_FIELD(sequence);
 	READ_NODE_FIELD(options);
 
@@ -2446,9 +2525,9 @@ static CreatedbStmt *
 _readCreatedbStmt(void)
 {
 	READ_LOCALS(CreatedbStmt);
+
 	READ_STRING_FIELD(dbname);
 	READ_NODE_FIELD(options);
-
 	READ_OID_FIELD(dbOid);
 
 	READ_DONE();
@@ -2478,6 +2557,7 @@ _readCreateDomainStmt(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static AlterDomainStmt *
 _readAlterDomainStmt(void)
 {
@@ -2491,123 +2571,13 @@ _readAlterDomainStmt(void)
 
 	READ_DONE();
 }
-
-static CreateFdwStmt *
-_readCreateFdwStmt(void)
-{
-	READ_LOCALS(CreateFdwStmt);
-	
-	READ_STRING_FIELD(fdwname);
-	READ_NODE_FIELD(validator);
-	READ_NODE_FIELD(options);
-	
-	READ_DONE();
-}
-
-static AlterFdwStmt *
-_readAlterFdwStmt(void)
-{
-	READ_LOCALS(AlterFdwStmt);
-	
-	READ_STRING_FIELD(fdwname);
-	READ_NODE_FIELD(validator);
-	READ_BOOL_FIELD(change_validator);
-	READ_NODE_FIELD(options);
-
-	READ_DONE();
-}
-
-static DropFdwStmt *
-_readDropFdwStmt(void)
-{
-	READ_LOCALS(DropFdwStmt);
-	
-	READ_STRING_FIELD(fdwname);
-	READ_BOOL_FIELD(missing_ok);
-	READ_ENUM_FIELD(behavior, DropBehavior);
-
-	READ_DONE();
-}
-
-static CreateForeignServerStmt *
-_readCreateForeignServerStmt(void)
-{
-	READ_LOCALS(CreateForeignServerStmt);
-	
-	READ_STRING_FIELD(servername);
-	READ_STRING_FIELD(servertype);
-	READ_STRING_FIELD(version);
-	READ_STRING_FIELD(fdwname);
-	READ_NODE_FIELD(options);
-
-	READ_DONE();
-}
-
-static AlterForeignServerStmt *
-_readAlterForeignServerStmt(void)
-{
-	READ_LOCALS(AlterForeignServerStmt);
-	
-	READ_STRING_FIELD(servername);
-	READ_STRING_FIELD(version);
-	READ_NODE_FIELD(options);
-	READ_BOOL_FIELD(has_version);
-
-	READ_DONE();
-}
-
-static DropForeignServerStmt *
-_readDropForeignServerStmt(void)
-{
-	READ_LOCALS(DropForeignServerStmt);
-	
-	READ_STRING_FIELD(servername);
-	READ_BOOL_FIELD(missing_ok);
-	READ_ENUM_FIELD(behavior, DropBehavior);
-
-	READ_DONE();
-}
-
-static CreateUserMappingStmt *
-_readCreateUserMappingStmt(void)
-{
-	READ_LOCALS(CreateUserMappingStmt);
-	
-	READ_STRING_FIELD(username);
-	READ_STRING_FIELD(servername);
-	READ_NODE_FIELD(options);
-
-	READ_DONE();
-}
-
-static AlterUserMappingStmt *
-_readAlterUserMappingStmt(void)
-{
-	READ_LOCALS(AlterUserMappingStmt);
-	
-	READ_STRING_FIELD(username);
-	READ_STRING_FIELD(servername);
-	READ_NODE_FIELD(options);
-
-	READ_DONE();
-}
-
-static DropUserMappingStmt *
-_readDropUserMappingStmt(void)
-{
-	READ_LOCALS(DropUserMappingStmt);
-	
-	READ_STRING_FIELD(username);
-	READ_STRING_FIELD(servername);
-	READ_BOOL_FIELD(missing_ok);
-
-	READ_DONE();
-}
+#endif /* COMPILING_BINARY_FUNCS */
 
 static CreateFunctionStmt *
 _readCreateFunctionStmt(void)
 {
 	READ_LOCALS(CreateFunctionStmt);
+
 	READ_BOOL_FIELD(replace);
 	READ_NODE_FIELD(funcname);
 	READ_NODE_FIELD(parameters);
@@ -2624,6 +2594,7 @@ static FunctionParameter *
 _readFunctionParameter(void)
 {
 	READ_LOCALS(FunctionParameter);
+
 	READ_STRING_FIELD(name);
 	READ_NODE_FIELD(argType);
 	READ_ENUM_FIELD(mode, FunctionParameterMode);
@@ -2631,10 +2602,12 @@ _readFunctionParameter(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static RemoveFuncStmt *
 _readRemoveFuncStmt(void)
 {
 	READ_LOCALS(RemoveFuncStmt);
+
 	READ_ENUM_FIELD(kind,ObjectType);
 	READ_NODE_FIELD(name);
 	READ_NODE_FIELD(args);
@@ -2643,6 +2616,7 @@ _readRemoveFuncStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static AlterFunctionStmt *
 _readAlterFunctionStmt(void)
@@ -2655,6 +2629,7 @@ _readAlterFunctionStmt(void)
 }
 
 
+#ifndef COMPILING_BINARY_FUNCS
 static DefineStmt *
 _readDefineStmt(void)
 {
@@ -2670,8 +2645,8 @@ _readDefineStmt(void)
 	READ_BOOL_FIELD(trusted);   /* CDB */
 
 	READ_DONE();
-
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static CompositeTypeStmt *
 _readCompositeTypeStmt(void)
@@ -2683,13 +2658,13 @@ _readCompositeTypeStmt(void)
 	READ_OID_FIELD(comptypeOid);
 
 	READ_DONE();
-
 }
 
 static CreateCastStmt *
 _readCreateCastStmt(void)
 {
 	READ_LOCALS(CreateCastStmt);
+
 	READ_NODE_FIELD(sourcetype);
 	READ_NODE_FIELD(targettype);
 	READ_NODE_FIELD(func);
@@ -2699,10 +2674,12 @@ _readCreateCastStmt(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static DropCastStmt *
 _readDropCastStmt(void)
 {
 	READ_LOCALS(DropCastStmt);
+
 	READ_NODE_FIELD(sourcetype);
 	READ_NODE_FIELD(targettype);
 	READ_ENUM_FIELD(behavior, DropBehavior);
@@ -2710,11 +2687,13 @@ _readDropCastStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static CreateOpClassStmt *
 _readCreateOpClassStmt(void)
 {
 	READ_LOCALS(CreateOpClassStmt);
+
 	READ_NODE_FIELD(opclassname);
 	READ_STRING_FIELD(amname);
 	READ_NODE_FIELD(datatype);
@@ -2739,6 +2718,7 @@ _readCreateOpClassItem(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static RemoveOpClassStmt *
 _readRemoveOpClassStmt(void)
 {
@@ -2750,11 +2730,13 @@ _readRemoveOpClassStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static CreateConversionStmt *
 _readCreateConversionStmt(void)
 {
 	READ_LOCALS(CreateConversionStmt);
+
 	READ_NODE_FIELD(conversion_name);
 	READ_STRING_FIELD(for_encoding_name);
 	READ_STRING_FIELD(to_encoding_name);
@@ -2765,6 +2747,7 @@ _readCreateConversionStmt(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static GrantStmt *
 _readGrantStmt(void)
 {
@@ -2781,11 +2764,13 @@ _readGrantStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static PrivGrantee *
 _readPrivGrantee(void)
 {
 	READ_LOCALS(PrivGrantee);
+
 	READ_STRING_FIELD(rolname);
 
 	READ_DONE();
@@ -2795,16 +2780,19 @@ static FuncWithArgs *
 _readFuncWithArgs(void)
 {
 	READ_LOCALS(FuncWithArgs);
+
 	READ_NODE_FIELD(funcname);
 	READ_NODE_FIELD(funcargs);
 
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static GrantRoleStmt *
 _readGrantRoleStmt(void)
 {
 	READ_LOCALS(GrantRoleStmt);
+
 	READ_NODE_FIELD(granted_roles);
 	READ_NODE_FIELD(grantee_roles);
 	READ_BOOL_FIELD(is_grant);
@@ -2814,11 +2802,13 @@ _readGrantRoleStmt(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static LockStmt *
 _readLockStmt(void)
 {
 	READ_LOCALS(LockStmt);
+
 	READ_NODE_FIELD(relations);
 	READ_INT_FIELD(mode);
 	READ_BOOL_FIELD(nowait);
@@ -2830,12 +2820,14 @@ static ConstraintsSetStmt *
 _readConstraintsSetStmt(void)
 {
 	READ_LOCALS(ConstraintsSetStmt);
+
 	READ_NODE_FIELD(constraints);
 	READ_BOOL_FIELD(deferred);
 
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * _readWindowKey
  */
@@ -2851,6 +2843,7 @@ _readWindowKey(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 /*
  * _readVacuumStmt
@@ -2870,6 +2863,7 @@ _readVacuumStmt(void)
 	READ_NODE_FIELD(va_cols);
 	READ_NODE_FIELD(expanded_relids);
 	READ_NODE_FIELD(extra_oids);
+
 	READ_NODE_FIELD(appendonly_compaction_segno);
 	READ_NODE_FIELD(appendonly_compaction_insert_segno);
 	READ_BOOL_FIELD(appendonly_compaction_vacuum_cleanup);
@@ -2893,6 +2887,7 @@ _readCdbProcess(void)
 	READ_DONE();
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static Slice *
 _readSlice(void)
 {
@@ -2913,6 +2908,7 @@ _readSlice(void)
 
 	READ_DONE();
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 static SliceTable *
 _readSliceTable(void)
@@ -2933,12 +2929,14 @@ static VariableResetStmt *
 _readVariableResetStmt(void)
 {
 	READ_LOCALS(VariableResetStmt);
+
 	READ_STRING_FIELD(name);
 
 	READ_DONE();
 }
 
 
+#ifndef COMPILING_BINARY_FUNCS
 static CreateTrigStmt *
 _readCreateTrigStmt(void)
 {
@@ -2960,8 +2958,8 @@ _readCreateTrigStmt(void)
 	READ_OID_FIELD(trigOid);
 
 	READ_DONE();
-
 }
+#endif /* COMPILING_BINARY_FUNCS */
 
 
 static TableValueExpr *
@@ -2985,39 +2983,7 @@ _readAlterTypeStmt(void)
 	READ_DONE();
 }
 
-static TupleDescNode *
-_readTupleDescNode(const char **str)
-{
-	READ_LOCALS(TupleDescNode);
-	READ_INT_FIELD(natts);
-
-	local_node->tuple = CreateTemplateTupleDesc(local_node->natts, false);
-
-	READ_INT_FIELD(tuple->natts);
-	if (local_node->tuple->natts > 0)
-	{
-		int i = 0;
-		for (; i < local_node->tuple->natts; i++)
-		{
-			memcpy(local_node->tuple->attrs[i], *str, ATTRIBUTE_FIXED_PART_SIZE);
-			(*str)+=ATTRIBUTE_FIXED_PART_SIZE;
-		}
-	}
-
-	READ_OID_FIELD(tuple->tdtypeid);
-	READ_INT_FIELD(tuple->tdtypmod);
-	READ_INT_FIELD(tuple->tdqdtypmod);
-	READ_BOOL_FIELD(tuple->tdhasoid);
-	READ_INT_FIELD(tuple->tdrefcount);
-
-	// Transient type don't have constraint.
-	local_node->tuple->constr = NULL;
-
-	Assert(local_node->tuple->tdtypeid == RECORDOID);
-
-	READ_DONE();
-}
-
+#ifndef COMPILING_BINARY_FUNCS
 /*
  * Greenplum Database developers added code to improve performance over the
  * linear searching that existed in the postgres version of
@@ -3058,8 +3024,6 @@ static ParseNodeInfo infoAr[] =
 	{"AGGREF", (ReadFn)_readAggref},
 	{"ALIAS", (ReadFn)_readAlias},
 	{"ALTERDOMAINSTMT", (ReadFn)_readAlterDomainStmt},
-	{"ALTERFDWSTMT", (ReadFn)_readAlterFdwStmt},
-	{"ALTERFOREIGNSERVERSTMT", (ReadFn)_readAlterForeignServerStmt},
 	{"ALTERFUNCTIONSTMT", (ReadFn)_readAlterFunctionStmt},
 	{"ALTEROBJECTSCHEMASTMT", (ReadFn)_readAlterObjectSchemaStmt},
 	{"ALTEROWNERSTMT", (ReadFn)_readAlterOwnerStmt},
@@ -3071,7 +3035,6 @@ static ParseNodeInfo infoAr[] =
 	{"ALTERTABLECMD", (ReadFn)_readAlterTableCmd},
 	{"ALTERTABLESTMT", (ReadFn)_readAlterTableStmt},
 	{"ALTERTYPESTMT", (ReadFn)_readAlterTypeStmt},
-	{"ALTERUSERMAPPINGSTMT", (ReadFn)_readAlterUserMappingStmt},
 	{"ARRAY", (ReadFn)_readArrayExpr},
 	{"ARRAYREF", (ReadFn)_readArrayRef},
 	{"A_CONST", (ReadFn)_readAConst},
@@ -3097,10 +3060,6 @@ static ParseNodeInfo infoAr[] =
 	{"CREATEDBSTMT", (ReadFn)_readCreatedbStmt},
 	{"CREATEDOMAINSTMT", (ReadFn)_readCreateDomainStmt},
 	{"CREATEEXTERNALSTMT", (ReadFn)_readCreateExternalStmt},
-	{"CREATEFDWSTMT", (ReadFn)_readCreateFdwStmt},
-	{"CREATEFOREIGNSERVERSTMT", (ReadFn)_readCreateForeignServerStmt},
-	{"CREATEFOREIGNSTMT", (ReadFn)_readCreateForeignStmt},	
-	{"CREATEUSERMAPPINGSTMT", (ReadFn)_readCreateUserMappingStmt},
 	{"CREATEFUNCSTMT", (ReadFn)_readCreateFunctionStmt},
 	{"CREATEOPCLASS", (ReadFn)_readCreateOpClassStmt},
 	{"CREATEOPCLASSITEM", (ReadFn)_readCreateOpClassItem},
@@ -3118,9 +3077,6 @@ static ParseNodeInfo infoAr[] =
 	{"DENYLOGINPOINT", (ReadFn)_readDenyLoginPoint},
 	{"DISTINCTEXPR", (ReadFn)_readDistinctExpr},
 	{"DROPCAST", (ReadFn)_readDropCastStmt},
-	{"DROPFDWCAST", (ReadFn)_readDropFdwStmt},
-	{"DROPFOREIGNSERVERCAST", (ReadFn)_readDropForeignServerStmt},
-	{"DROPUSERMAPPINGCAST", (ReadFn)_readDropUserMappingStmt},
 	{"DROPDBSTMT", (ReadFn)_readDropdbStmt},
 	{"DROPPLANGSTMT", (ReadFn)_readDropPLangStmt},
 	{"DROPPROPSTMT", (ReadFn)_readDropPropertyStmt},
@@ -3129,7 +3085,7 @@ static ParseNodeInfo infoAr[] =
 	{"EXTTABLETYPEDESC", (ReadFn)_readExtTableTypeDesc},
 	{"FIELDSELECT", (ReadFn)_readFieldSelect},
 	{"FIELDSTORE", (ReadFn)_readFieldStore},
-	{"FKCONSTRAINT", (ReadFn)_outFkConstraint},
+	{"FKCONSTRAINT", (ReadFn)_readFkConstraint},
 	{"FROMEXPR", (ReadFn)_readFromExpr},
 	{"FUNCCALL", (ReadFn)_readFuncCall},
 	{"FUNCEXPR", (ReadFn)_readFuncExpr},
@@ -3185,7 +3141,6 @@ static ParseNodeInfo infoAr[] =
 	{"TABLEVALUEEXPR", (ReadFn)_readTableValueExpr},
 	{"TARGETENTRY", (ReadFn)_readTargetEntry},
 	{"TRUNCATESTMT", (ReadFn)_readTruncateStmt},
-	{"TUPLEDESCNODE", (ReadFn)_readTupleDescNode},
 	{"TYPECAST", (ReadFn)_readTypeCast},
 	{"TYPENAME", (ReadFn)_readTypeName},
 	{"VACUUMSTMT", (ReadFn)_readVacuumStmt},
@@ -3200,6 +3155,7 @@ static ParseNodeInfo infoAr[] =
 	{"WINDOWSPEC", (ReadFn)_readWindowSpec},
 	{"WINDOWSPECPARSE", (ReadFn)_readWindowSpecParse},
 	{"WITHCLAUSE", (ReadFn)_readWithClause},
+	{"XMLEXPR", (ReadFn)_readXmlExpr},
 };
 
 /*
@@ -3341,3 +3297,4 @@ readDatum(bool typbyval)
 
 	return res;
 }
+#endif /* COMPILING_BINARY_FUNCS */

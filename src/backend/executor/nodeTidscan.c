@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeTidscan.c,v 1.51.2.1 2006/12/26 19:26:56 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeTidscan.c,v 1.52 2006/12/26 19:26:46 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -56,15 +56,24 @@ TidListCreate(TidScanState *tidstate)
 {
 	List	   *evalList = tidstate->tss_tidquals;
 	ExprContext *econtext = tidstate->ss.ps.ps_ExprContext;
+	BlockNumber nblocks;
 	ItemPointerData *tidList;
 	int			numAllocTids;
 	int			numTids;
 	ListCell   *l;
 
 	/*
+	 * We silently discard any TIDs that are out of range at the time of
+	 * scan start.  (Since we hold at least AccessShareLock on the table,
+	 * it won't be possible for someone to truncate away the blocks we
+	 * intend to visit.)
+	 */
+	nblocks = RelationGetNumberOfBlocks(tidstate->ss.ss_currentRelation);
+
+	/*
 	 * We initialize the array with enough slots for the case that all quals
-	 * are simple OpExprs, or just one CurrentOfExpr. If there's any ScalarArrayOpExprs, 
-	 * we may have to enlarge the array.
+	 * are simple OpExprs or CurrentOfExprs.  If there are any
+	 * ScalarArrayOpExprs, we may have to enlarge the array.
 	 */
 	numAllocTids = list_length(evalList);
 	tidList = (ItemPointerData *)
@@ -98,7 +107,9 @@ TidListCreate(TidScanState *tidstate)
 														  econtext,
 														  &isNull,
 														  NULL));
-			if (!isNull && ItemPointerIsValid(itemptr))
+			if (!isNull &&
+				ItemPointerIsValid(itemptr) &&
+				ItemPointerGetBlockNumber(itemptr) < nblocks)
 			{
 				if (numTids >= numAllocTids)
 				{
@@ -143,7 +154,8 @@ TidListCreate(TidScanState *tidstate)
 				if (!ipnulls[i])
 				{
 					itemptr = (ItemPointer) DatumGetPointer(ipdatums[i]);
-					if (ItemPointerIsValid(itemptr))
+					if (ItemPointerIsValid(itemptr) &&
+						ItemPointerGetBlockNumber(itemptr) < nblocks)
 						tidList[numTids++] = *itemptr;
 				}
 			}
@@ -158,7 +170,19 @@ TidListCreate(TidScanState *tidstate)
 			 */
 			Insist(list_length(evalList) == 1);	
 			CurrentOfExpr *cexpr = (CurrentOfExpr *) expr;
-			tidList[numTids++] = cexpr->ctid;
+
+			if (cexpr->gp_segment_id == Gp_segment)
+			{
+				/*
+				 * If tableoid is InvalidOid, this implies that constant
+				 * folding had determined tableoid was not necessary in
+				 * uniquely identifying a tuple. Otherwise, the given tuple's
+				 * tableoid must match the CURRENT OF tableoid.
+				 */
+				if (!OidIsValid(cexpr->tableoid) ||
+					cexpr->tableoid == RelationGetRelid(tidstate->ss.ss_currentRelation))
+					tidList[numTids++] = cexpr->ctid;
+			}
 		} 
 		else
 			elog(ERROR, "could not identify CTID expression");

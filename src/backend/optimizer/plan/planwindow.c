@@ -27,8 +27,10 @@
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
 #include "optimizer/planmain.h"
+#include "optimizer/restrictinfo.h"
 #include "optimizer/subselect.h"
 #include "optimizer/tlist.h"
+#include "optimizer/planpartition.h"
 #include "optimizer/planshare.h"
 #include "optimizer/var.h"
 #include "parser/parse_clause.h"
@@ -263,7 +265,6 @@ static Plan *plan_sequential_stage(PlannerInfo *root, WindowContext *context,
 		int hi_windex, int lo_windex,
 		Plan *input_plan, CdbPathLocus *locus_ptr, List **pathkeys_ptr);
 static Plan *assure_order(PlannerInfo *root, Plan *input_plan, List *sortclause, List **pathkeys_ptr);
-static Expr * make_mergeclause(Index lftvarno, AttrNumber lftattrno, Node *rgtexpr);
 static List *translate_upper_tlist_sequential(List *orig_tlist, List *window_tlist, WindowContext *context);
 static Plan *plan_parallel_window_query(PlannerInfo *root, WindowContext *context, List **pathkeys_ptr);
 static void plan_windowinfo_coplans(PlannerInfo *root, WindowContext *context, int window_index);
@@ -1956,20 +1957,6 @@ Plan *assure_order(
 	return result_plan;
 }
 
-
-Expr *make_mergeclause(Index varno, AttrNumber attrno, Node *expr)
-{
-	Oid type = exprType(expr);
-	Node *lft = (Node*)makeVar(varno, attrno, type, -1, 0);
-	Node *rgt = copyObject(expr);
-	Expr *xpr = make_op(NULL, list_make1(makeString("=")), lft, rgt, -1);
-	
-	xpr->type = T_DistinctExpr;
-	
-	return make_notclause(xpr);
-}
-
-
 /* Plan a window query that can be implemented without any joins or 
  * input sharing, i.e., it involves one scan of the input plan result
  * and a single Window node.
@@ -2630,7 +2617,9 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 	
 	if ( hasagg )
 	{
-		Plan *join_plan = NULL;	
+		Plan *join_plan = NULL;
+		List	   *mergefamilies;
+		List	   *mergestrategies;
 		
 		agg_plan = add_join_to_wrapper(root, agg_plan, agg_subquery, join_tlist,
 									   winfo->partkey_len,
@@ -2657,21 +2646,31 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 			for ( i = 0; i < winfo->partkey_len; i++ )
 			{
 				TargetEntry *tle;
-				Expr *mc;
-				Node *rgt;
-				
-				tle = get_tle_by_resno(window_plan->targetlist, winfo->partkey_attrs[i]);
-				rgt = (Node*)tle->expr;
+				RestrictInfo *mc;
+				Node	   *rgt;
+				Node	   *lft;
 
-				mc = make_mergeclause(agg_varno, i+1, copyObject(rgt));
+				tle = get_tle_by_resno(window_plan->targetlist, winfo->partkey_attrs[i]);
+				rgt = copyObject((Node *) tle->expr);
+				lft = (Node *) makeVar(agg_varno, i + 1,
+									   exprType((Node *) tle->expr), -1,
+									   0);
+
+				mc = make_mergeclause(lft, rgt);
 				mergeclauses = lappend(mergeclauses, mc);
 			}
-			
-			join_plan = (Plan *)make_mergejoin(join_tlist,
-											   NIL, NIL,
-											   mergeclauses,
-											   agg_plan, window_plan,
-											   JOIN_INNER);
+
+			build_mergejoin_strat_lists(mergeclauses, &mergefamilies,
+										&mergestrategies);
+
+			mergeclauses = get_actual_clauses(mergeclauses);
+			join_plan = (Plan *) make_mergejoin(join_tlist,
+												NIL, NIL,
+												mergeclauses,
+												mergefamilies,
+												mergestrategies,
+												agg_plan, window_plan,
+												JOIN_INNER);
 			((MergeJoin*)join_plan)->unique_outer = true;
 		 }
 		 else

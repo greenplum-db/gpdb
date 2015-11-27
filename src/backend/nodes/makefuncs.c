@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/makefuncs.c,v 1.52 2006/10/04 00:29:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/makefuncs.c,v 1.53 2006/12/30 21:21:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -277,12 +277,7 @@ makeRangeVar(char *schemaname, char *relname, int location)
 TypeName *
 makeTypeName(char *typnam)
 {
-	TypeName   *n = makeNode(TypeName);
-
-	n->names = list_make1(makeString(typnam));
-	n->typmod = -1;
-	n->location = -1;
-	return n;
+	return makeTypeNameFromNameList(list_make1(makeString(typnam)));
 }
 
 /*
@@ -298,14 +293,14 @@ makeTypeNameFromNameList(List *names)
 
 	n->names = names;
 	n->typmods = NIL;
-	n->typmod = -1;
+	n->typemod = -1;
 	n->location = -1;
 	return n;
 }
 
 /*
  * makeTypeNameFromOid -
- *	build a TypeName node to represent a type already known by OID.
+ *	build a TypeName node to represent a type already known by OID/typmod.
  */
 TypeName *
 makeTypeNameFromOid(Oid typid, int32 typmod)
@@ -313,7 +308,7 @@ makeTypeNameFromOid(Oid typid, int32 typmod)
 	TypeName   *n = makeNode(TypeName);
 
 	n->typid = typid;
-	n->typmod = typmod;
+	n->typemod = typmod;
 	n->location = -1;
 	return n;
 }

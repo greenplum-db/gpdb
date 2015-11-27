@@ -24,12 +24,15 @@
 
 #include "gpopt/utils/CConstExprEvaluatorProxy.h"
 
-#include "dxl/operators/CDXLNode.h"
-#include "exception.h"
 #include "gpopt/gpdbwrappers.h"
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
-#include "md/CMDIdGPDB.h"
-#include "md/IMDType.h"
+
+#include "naucrates/exception.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
+
+#include "naucrates/md/CMDIdGPDB.h"
+#include "naucrates/md/IMDType.h"
+
 #include "utils/guc.h"
 
 using namespace gpdxl;

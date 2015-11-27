@@ -23,7 +23,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.287.2.2 2007/08/31 01:44:14 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.292 2006/12/30 21:21:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -197,6 +197,7 @@ _equalParam(Param *a, Param *b)
 	COMPARE_SCALAR_FIELD(paramkind);
 	COMPARE_SCALAR_FIELD(paramid);
 	COMPARE_SCALAR_FIELD(paramtype);
+	COMPARE_SCALAR_FIELD(paramtypmod);
 
 	return true;
 }
@@ -510,7 +511,7 @@ _equalRowCompareExpr(RowCompareExpr *a, RowCompareExpr *b)
 {
 	COMPARE_SCALAR_FIELD(rctype);
 	COMPARE_NODE_FIELD(opnos);
-	COMPARE_NODE_FIELD(opclasses);
+	COMPARE_NODE_FIELD(opfamilies);
 	COMPARE_NODE_FIELD(largs);
 	COMPARE_NODE_FIELD(rargs);
 
@@ -532,6 +533,22 @@ _equalMinMaxExpr(MinMaxExpr *a, MinMaxExpr *b)
 	COMPARE_SCALAR_FIELD(minmaxtype);
 	COMPARE_SCALAR_FIELD(op);
 	COMPARE_NODE_FIELD(args);
+
+	return true;
+}
+
+static bool
+_equalXmlExpr(XmlExpr *a, XmlExpr *b)
+{
+	COMPARE_SCALAR_FIELD(op);
+	COMPARE_STRING_FIELD(name);
+	COMPARE_NODE_FIELD(named_args);
+	COMPARE_NODE_FIELD(arg_names);
+	COMPARE_NODE_FIELD(args);
+	COMPARE_SCALAR_FIELD(xmloption);
+	COMPARE_SCALAR_FIELD(type);
+	COMPARE_SCALAR_FIELD(typmod);
+	COMPARE_LOCATION_FIELD(location);
 
 	return true;
 }
@@ -1143,17 +1160,6 @@ _equalCreateExternalStmt(CreateExternalStmt *a, CreateExternalStmt *b)
 }
 
 static bool
-_equalCreateForeignStmt(CreateForeignStmt *a, CreateForeignStmt *b)
-{
-	COMPARE_NODE_FIELD(relation);
-	COMPARE_NODE_FIELD(tableElts);
-	COMPARE_STRING_FIELD(srvname);
-	COMPARE_NODE_FIELD(options);
-
-	return true;
-}
-
-static bool
 _equalInhRelation(InhRelation *a, InhRelation *b)
 {
 	COMPARE_NODE_FIELD(relation);
@@ -1437,6 +1443,7 @@ static bool
 _equalCreateOpClassStmt(CreateOpClassStmt *a, CreateOpClassStmt *b)
 {
 	COMPARE_NODE_FIELD(opclassname);
+	COMPARE_NODE_FIELD(opfamilyname);
 	COMPARE_STRING_FIELD(amname);
 	COMPARE_NODE_FIELD(datatype);
 	COMPARE_NODE_FIELD(items);
@@ -1594,100 +1601,6 @@ _equalCreateTableSpaceStmt(CreateTableSpaceStmt *a, CreateTableSpaceStmt *b)
 	COMPARE_STRING_FIELD(tablespacename);
 	COMPARE_STRING_FIELD(owner);
 	COMPARE_STRING_FIELD(filespacename);
-
-	return true;
-}
-
-static bool
-_equalCreateFdwStmt(CreateFdwStmt *a, CreateFdwStmt *b)
-{
-	COMPARE_STRING_FIELD(fdwname);
-	COMPARE_NODE_FIELD(validator);
-	COMPARE_NODE_FIELD(options);
-
-	return true;
-}
-
-static bool
-_equalAlterFdwStmt(AlterFdwStmt *a, AlterFdwStmt *b)
-{
-	COMPARE_STRING_FIELD(fdwname);
-	COMPARE_NODE_FIELD(validator);
-	COMPARE_SCALAR_FIELD(change_validator);
-	COMPARE_NODE_FIELD(options);
-
-	return true;
-}
-
-static bool
-_equalDropFdwStmt(DropFdwStmt *a, DropFdwStmt *b)
-{
-	COMPARE_STRING_FIELD(fdwname);
-	COMPARE_SCALAR_FIELD(missing_ok);
-	COMPARE_SCALAR_FIELD(behavior);
-
-	return true;
-}
-
-static bool
-_equalCreateForeignServerStmt(CreateForeignServerStmt *a, CreateForeignServerStmt *b)
-{
-	COMPARE_STRING_FIELD(servername);
-	COMPARE_STRING_FIELD(servertype);
-	COMPARE_STRING_FIELD(version);
-	COMPARE_STRING_FIELD(fdwname);
-	COMPARE_NODE_FIELD(options);
-
-	return true;
-}
-
-static bool
-_equalAlterForeignServerStmt(AlterForeignServerStmt *a, AlterForeignServerStmt *b)
-{
-	COMPARE_STRING_FIELD(servername);
-	COMPARE_STRING_FIELD(version);
-	COMPARE_NODE_FIELD(options);
-	COMPARE_SCALAR_FIELD(has_version);
-
-	return true;
-}
-
-static bool
-_equalDropForeignServerStmt(DropForeignServerStmt *a, DropForeignServerStmt *b)
-{
-	COMPARE_STRING_FIELD(servername);
-	COMPARE_SCALAR_FIELD(missing_ok);
-	COMPARE_SCALAR_FIELD(behavior);
-
-	return true;
-}
-
-static bool
-_equalCreateUserMappingStmt(CreateUserMappingStmt *a, CreateUserMappingStmt *b)
-{
-	COMPARE_STRING_FIELD(username);
-	COMPARE_STRING_FIELD(servername);
-	COMPARE_NODE_FIELD(options);
-
-	return true;
-}
-
-static bool
-_equalAlterUserMappingStmt(AlterUserMappingStmt *a, AlterUserMappingStmt *b)
-{
-	COMPARE_STRING_FIELD(username);
-	COMPARE_STRING_FIELD(servername);
-	COMPARE_NODE_FIELD(options);
-
-	return true;
-}
-
-static bool
-_equalDropUserMappingStmt(DropUserMappingStmt *a, DropUserMappingStmt *b)
-{
-	COMPARE_STRING_FIELD(username);
-	COMPARE_STRING_FIELD(servername);
-	COMPARE_SCALAR_FIELD(missing_ok);
 
 	return true;
 }
@@ -2052,7 +1965,8 @@ _equalTypeName(TypeName *a, TypeName *b)
 	COMPARE_SCALAR_FIELD(timezone);
 	COMPARE_SCALAR_FIELD(setof);
 	COMPARE_SCALAR_FIELD(pct_type);
-	COMPARE_SCALAR_FIELD(typmod);
+	COMPARE_NODE_FIELD(typmods);
+	COMPARE_SCALAR_FIELD(typemod);
 	COMPARE_NODE_FIELD(arrayBounds);
 	COMPARE_SCALAR_FIELD(location);
 
@@ -2361,6 +2275,17 @@ _equalAlterTypeStmt(AlterTypeStmt *a, AlterTypeStmt *b)
 	return true;
 }
 
+static bool
+_equalXmlSerialize(XmlSerialize *a, XmlSerialize *b)
+{
+	COMPARE_SCALAR_FIELD(xmloption);
+	COMPARE_NODE_FIELD(expr);
+	COMPARE_NODE_FIELD(typeName);
+	COMPARE_LOCATION_FIELD(location);
+
+	return true;
+}
+
 /*
  * Stuff from pg_list.h
  */
@@ -2566,6 +2491,9 @@ equal(void *a, void *b)
 		case T_MinMaxExpr:
 			retval = _equalMinMaxExpr(a, b);
 			break;
+		case T_XmlExpr:
+			retval = _equalXmlExpr(a, b);
+			break;
 		case T_NullIfExpr:
 			retval = _equalNullIfExpr(a, b);
 			break;
@@ -2710,9 +2638,6 @@ equal(void *a, void *b)
 		case T_CreateExternalStmt:
 			retval = _equalCreateExternalStmt(a, b);
 			break;
-		case T_CreateForeignStmt:
-			retval = _equalCreateForeignStmt(a, b);
-			break;			
 		case T_InhRelation:
 			retval = _equalInhRelation(a, b);
 			break;
@@ -2832,33 +2757,6 @@ equal(void *a, void *b)
 			break;
 		case T_CreateTableSpaceStmt:
 			retval = _equalCreateTableSpaceStmt(a, b);
-			break;
-		case T_CreateFdwStmt:
-			retval = _equalCreateFdwStmt(a, b);
-			break;
-		case T_AlterFdwStmt:
-			retval = _equalAlterFdwStmt(a, b);
-			break;
-		case T_DropFdwStmt:
-			retval = _equalDropFdwStmt(a, b);
-			break;
-		case T_CreateForeignServerStmt:
-			retval = _equalCreateForeignServerStmt(a, b);
-			break;
-		case T_AlterForeignServerStmt:
-			retval = _equalAlterForeignServerStmt(a, b);
-			break;
-		case T_DropForeignServerStmt:
-			retval = _equalDropForeignServerStmt(a, b);
-			break;
-		case T_CreateUserMappingStmt:
-			retval = _equalCreateUserMappingStmt(a, b);
-			break;
-		case T_AlterUserMappingStmt:
-			retval = _equalAlterUserMappingStmt(a, b);
-			break;
-		case T_DropUserMappingStmt:
-			retval = _equalDropUserMappingStmt(a, b);
 			break;
 		case T_CreateTrigStmt:
 			retval = _equalCreateTrigStmt(a, b);
@@ -3042,6 +2940,9 @@ equal(void *a, void *b)
 			break;
 		case T_FuncWithArgs:
 			retval = _equalFuncWithArgs(a, b);
+			break;
+		case T_XmlSerialize:
+			retval = _equalXmlSerialize(a, b);
 			break;
 		case T_TableValueExpr:
 			retval = _equalTableValueExpr(a, b);

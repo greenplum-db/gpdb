@@ -651,3 +651,13 @@ SELECT to_timestamp('199711xy', 'YYYYMMDD');
 
 -- Input that doesn't fit in an int:
 SELECT to_timestamp('10000000000', 'FMYYYY');
+
+
+-- Clean up
+DROP TABLE abstime_horology_tbl;
+DROP TABLE interval_horology_tbl;
+DROP TABLE reltime_horology_tbl;
+DROP TABLE time_horology_tbl;
+DROP TABLE timestamp_horology_tbl;
+DROP TABLE timestamptz_horology_tbl;
+DROP TABLE timetz_horology_tbl;

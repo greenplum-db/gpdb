@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/catcache.c,v 1.134 2006/10/06 18:23:35 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/catcache.c,v 1.135 2006/12/23 00:43:11 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -990,17 +990,6 @@ IndexScanOK(CatCache *cache, ScanKey cur_skey)
 				return false;
 			break;
 
-		case OPEROID:
-		
-			if (!criticalRelcachesBuilt)
-			{
-				/* Looking for an OID comparison function? */
-				Oid			lookup_oid = DatumGetObjectId(cur_skey[0].sk_argument);
-
-				if (lookup_oid >= MIN_OIDCMP && lookup_oid <= MAX_OIDCMP)
-					return false;
-			}
-		
 		default:
 			break;
 	}

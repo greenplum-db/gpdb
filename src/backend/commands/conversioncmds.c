@@ -154,16 +154,6 @@ DropConversionCommand(List *name, DropBehavior behavior, bool missing_ok)
 	}
 
 	ConversionDrop(conversionOid, behavior);
-	
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		DropStmt * stmt = makeNode(DropStmt);
-		stmt->objects = list_make1(name);
-		stmt->removeType = OBJECT_CONVERSION;
-		stmt->behavior=behavior;
-		stmt->missing_ok = true;
-		CdbDispatchUtilityStatement((Node *) stmt, "DropConversionCommand");
-	}
 }
 
 /*

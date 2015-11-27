@@ -11,7 +11,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.117 2006/10/04 00:30:09 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.121 2006/12/24 00:29:20 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -883,7 +883,7 @@ typedef struct RowExpr
  *
  * We support row comparison for any operator that can be determined to
  * act like =, <>, <, <=, >, or >= (we determine this by looking for the
- * operator in btree opclasses).  Note that the same operator name might
+ * operator in btree opfamilies).  Note that the same operator name might
  * map to a different operator for each pair of row elements, since the
  * element datatypes can vary.
  *
@@ -908,7 +908,7 @@ typedef struct RowCompareExpr
 	Expr		xpr;
 	RowCompareType rctype;		/* LT LE GE or GT, never EQ or NE */
 	List	   *opnos;			/* OID list of pairwise comparison ops */
-	List	   *opclasses;		/* OID list of containing operator classes */
+	List	   *opfamilies;		/* OID list of containing operator families */
 	List	   *largs;			/* the left-hand input arguments */
 	List	   *rargs;			/* the right-hand input arguments */
 } RowCompareExpr;
@@ -995,6 +995,50 @@ typedef struct BooleanTest
 	Expr	   *arg;			/* input expression */
 	BoolTestType booltesttype;	/* test type */
 } BooleanTest;
+
+/*
+ * XmlExpr - various SQL/XML functions requiring special grammar productions
+ *
+ * 'name' carries the "NAME foo" argument (already XML-escaped).
+ * 'named_args' and 'arg_names' represent an xml_attribute list.
+ * 'args' carries all other arguments.
+ *
+ * Note: result type/typmod/collation are not stored, but can be deduced
+ * from the XmlExprOp.  The type/typmod fields are just used for display
+ * purposes, and are NOT necessarily the true result type of the node.
+ * (We also use type == InvalidOid to mark a not-yet-parse-analyzed XmlExpr.)
+ */
+typedef enum XmlExprOp
+{
+	IS_XMLCONCAT,				/* XMLCONCAT(args) */
+	IS_XMLELEMENT,				/* XMLELEMENT(name, xml_attributes, args) */
+	IS_XMLFOREST,				/* XMLFOREST(xml_attributes) */
+	IS_XMLPARSE,				/* XMLPARSE(text, is_doc, preserve_ws) */
+	IS_XMLPI,					/* XMLPI(name [, args]) */
+	IS_XMLROOT,					/* XMLROOT(xml, version, standalone) */
+	IS_XMLSERIALIZE,			/* XMLSERIALIZE(is_document, xmlval) */
+	IS_DOCUMENT					/* xmlval IS DOCUMENT */
+} XmlExprOp;
+
+typedef enum
+{
+	XMLOPTION_DOCUMENT,
+	XMLOPTION_CONTENT
+} XmlOptionType;
+
+typedef struct XmlExpr
+{
+	Expr		xpr;
+	XmlExprOp	op;				/* xml function ID */
+	char	   *name;			/* name in xml(NAME foo ...) syntaxes */
+	List	   *named_args;		/* non-XML expressions for xml_attributes */
+	List	   *arg_names;		/* parallel list of Value strings */
+	List	   *args;			/* list of expressions */
+	XmlOptionType xmloption;	/* DOCUMENT or CONTENT */
+	Oid			type;			/* target type/typmod for XMLSERIALIZE */
+	int32		typmod;
+	int			location;		/* token location, or -1 if unknown */
+} XmlExpr;
 
 /*
  * CoerceToDomain

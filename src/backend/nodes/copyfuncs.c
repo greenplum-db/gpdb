@@ -16,7 +16,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/copyfuncs.c,v 1.353.2.2 2007/08/31 01:44:14 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/copyfuncs.c,v 1.358 2006/12/30 21:21:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -748,6 +748,8 @@ _copyMergeJoin(MergeJoin *from)
 	 * copy remainder of node
 	 */
 	COPY_NODE_FIELD(mergeclauses);
+	COPY_NODE_FIELD(mergefamilies);
+	COPY_NODE_FIELD(mergestrategies);
 	COPY_SCALAR_FIELD(unique_outer);
 
 	return newnode;
@@ -1294,6 +1296,7 @@ _copyParam(Param *from)
 	COPY_SCALAR_FIELD(paramkind);
 	COPY_SCALAR_FIELD(paramid);
 	COPY_SCALAR_FIELD(paramtype);
+	COPY_SCALAR_FIELD(paramtypmod);
 
 	return newnode;
 }
@@ -1648,7 +1651,7 @@ _copyRowCompareExpr(RowCompareExpr *from)
 
 	COPY_SCALAR_FIELD(rctype);
 	COPY_NODE_FIELD(opnos);
-	COPY_NODE_FIELD(opclasses);
+	COPY_NODE_FIELD(opfamilies);
 	COPY_NODE_FIELD(largs);
 	COPY_NODE_FIELD(rargs);
 
@@ -1680,6 +1683,27 @@ _copyMinMaxExpr(MinMaxExpr *from)
 	COPY_SCALAR_FIELD(minmaxtype);
 	COPY_SCALAR_FIELD(op);
 	COPY_NODE_FIELD(args);
+
+	return newnode;
+}
+
+/*
+ * _copyXmlExpr
+ */
+static XmlExpr *
+_copyXmlExpr(XmlExpr *from)
+{
+	XmlExpr *newnode = makeNode(XmlExpr);
+
+	COPY_SCALAR_FIELD(op);
+	COPY_STRING_FIELD(name);
+	COPY_NODE_FIELD(named_args);
+	COPY_NODE_FIELD(arg_names);
+	COPY_NODE_FIELD(args);
+	COPY_SCALAR_FIELD(xmloption);
+	COPY_SCALAR_FIELD(type);
+	COPY_SCALAR_FIELD(typmod);
+	COPY_LOCATION_FIELD(location);
 
 	return newnode;
 }
@@ -1945,6 +1969,7 @@ _copyRestrictInfo(RestrictInfo *from)
 	COPY_SCALAR_FIELD(mergejoinoperator);
 	COPY_SCALAR_FIELD(left_sortop);
 	COPY_SCALAR_FIELD(right_sortop);
+	COPY_SCALAR_FIELD(mergeopfamily);
 
 	/*
 	 * Do not copy pathkeys, since they'd not be canonical in a copied query
@@ -2378,7 +2403,8 @@ _copyTypeName(TypeName *from)
 	COPY_SCALAR_FIELD(timezone);
 	COPY_SCALAR_FIELD(setof);
 	COPY_SCALAR_FIELD(pct_type);
-	COPY_SCALAR_FIELD(typmod);
+	COPY_NODE_FIELD(typmods);
+	COPY_SCALAR_FIELD(typemod);
 	COPY_NODE_FIELD(arrayBounds);
 	COPY_SCALAR_FIELD(location);
 
@@ -2514,6 +2540,19 @@ _copyLockingClause(LockingClause *from)
 	COPY_NODE_FIELD(lockedRels);
 	COPY_SCALAR_FIELD(forUpdate);
 	COPY_SCALAR_FIELD(noWait);
+
+	return newnode;
+}
+
+static XmlSerialize *
+_copyXmlSerialize(XmlSerialize *from)
+{
+	XmlSerialize *newnode = makeNode(XmlSerialize);
+
+	COPY_SCALAR_FIELD(xmloption);
+	COPY_NODE_FIELD(expr);
+	COPY_NODE_FIELD(typeName);
+	COPY_LOCATION_FIELD(location);
 
 	return newnode;
 }
@@ -3139,19 +3178,6 @@ _copyCreateExternalStmt(CreateExternalStmt *from)
 	return newnode;
 }
 
-static CreateForeignStmt *
-_copyCreateForeignStmt(CreateForeignStmt *from)
-{
-	CreateForeignStmt *newnode = makeNode(CreateForeignStmt);
-
-	COPY_NODE_FIELD(relation);
-	COPY_NODE_FIELD(tableElts);
-	COPY_STRING_FIELD(srvname);
-	COPY_NODE_FIELD(options);
-
-	return newnode;
-}
-
 static InhRelation *
 _copyInhRelation(InhRelation *from)
 {
@@ -3489,6 +3515,7 @@ _copyCreateOpClassStmt(CreateOpClassStmt *from)
 	CreateOpClassStmt *newnode = makeNode(CreateOpClassStmt);
 
 	COPY_NODE_FIELD(opclassname);
+	COPY_NODE_FIELD(opfamilyname);
 	COPY_STRING_FIELD(amname);
 	COPY_NODE_FIELD(datatype);
 	COPY_NODE_FIELD(items);
@@ -3680,118 +3707,6 @@ _copyCreateTableSpaceStmt(CreateTableSpaceStmt *from)
 	COPY_STRING_FIELD(owner);
 	COPY_STRING_FIELD(filespacename);
 	COPY_SCALAR_FIELD(tsoid);
-
-	return newnode;
-}
-
-static CreateFdwStmt *
-_copyCreateFdwStmt(CreateFdwStmt *from)
-{
-	CreateFdwStmt *newnode = makeNode(CreateFdwStmt);
-
-	COPY_STRING_FIELD(fdwname);
-	COPY_NODE_FIELD(validator);
-	COPY_NODE_FIELD(options);
-
-	return newnode;
-}
-
-static AlterFdwStmt *
-_copyAlterFdwStmt(AlterFdwStmt *from)
-{
-	AlterFdwStmt *newnode = makeNode(AlterFdwStmt);
-
-	COPY_STRING_FIELD(fdwname);
-	COPY_NODE_FIELD(validator);
-	COPY_SCALAR_FIELD(change_validator);
-	COPY_NODE_FIELD(options);
-
-	return newnode;
-}
-
-static DropFdwStmt *
-_copyDropFdwStmt(DropFdwStmt *from)
-{
-	DropFdwStmt *newnode = makeNode(DropFdwStmt);
-
-	COPY_STRING_FIELD(fdwname);
-	COPY_SCALAR_FIELD(missing_ok);
-	COPY_SCALAR_FIELD(behavior);
-
-	return newnode;
-}
-
-static CreateForeignServerStmt *
-_copyCreateForeignServerStmt(CreateForeignServerStmt *from)
-{
-	CreateForeignServerStmt *newnode = makeNode(CreateForeignServerStmt);
-
-	COPY_STRING_FIELD(servername);
-	COPY_STRING_FIELD(servertype);
-	COPY_STRING_FIELD(version);
-	COPY_STRING_FIELD(fdwname);
-	COPY_NODE_FIELD(options);
-
-	return newnode;
-}
-
-static AlterForeignServerStmt *
-_copyAlterForeignServerStmt(AlterForeignServerStmt *from)
-{
-	AlterForeignServerStmt *newnode = makeNode(AlterForeignServerStmt);
-
-	COPY_STRING_FIELD(servername);
-	COPY_STRING_FIELD(version);
-	COPY_NODE_FIELD(options);
-	COPY_SCALAR_FIELD(has_version);
-
-	return newnode;
-}
-
-static DropForeignServerStmt *
-_copyDropForeignServerStmt(DropForeignServerStmt *from)
-{
-	DropForeignServerStmt *newnode = makeNode(DropForeignServerStmt);
-
-	COPY_STRING_FIELD(servername);
-	COPY_SCALAR_FIELD(missing_ok);
-	COPY_SCALAR_FIELD(behavior);
-
-	return newnode;
-}
-
-static CreateUserMappingStmt *
-_copyCreateUserMappingStmt(CreateUserMappingStmt *from)
-{
-	CreateUserMappingStmt *newnode = makeNode(CreateUserMappingStmt);
-
-	COPY_STRING_FIELD(username);
-	COPY_STRING_FIELD(servername);
-	COPY_NODE_FIELD(options);
-
-	return newnode;
-}
-
-static AlterUserMappingStmt *
-_copyAlterUserMappingStmt(AlterUserMappingStmt *from)
-{
-	AlterUserMappingStmt *newnode = makeNode(AlterUserMappingStmt);
-
-	COPY_STRING_FIELD(username);
-	COPY_STRING_FIELD(servername);
-	COPY_NODE_FIELD(options);
-
-	return newnode;
-}
-
-static DropUserMappingStmt *
-_copyDropUserMappingStmt(DropUserMappingStmt *from)
-{
-	DropUserMappingStmt *newnode = makeNode(DropUserMappingStmt);
-
-	COPY_STRING_FIELD(username);
-	COPY_STRING_FIELD(servername);
-	COPY_SCALAR_FIELD(missing_ok);
 
 	return newnode;
 }
@@ -4560,6 +4475,9 @@ copyObject(void *from)
 		case T_MinMaxExpr:
 			retval = _copyMinMaxExpr(from);
 			break;
+		case T_XmlExpr:
+			retval = _copyXmlExpr(from);
+			break;
 		case T_NullIfExpr:
 			retval = _copyNullIfExpr(from);
 			break;
@@ -4745,9 +4663,6 @@ copyObject(void *from)
 		case T_CreateExternalStmt:
 			retval = _copyCreateExternalStmt(from);
 			break;
-		case T_CreateForeignStmt:
-			retval = _copyCreateForeignStmt(from);
-			break;			
 		case T_InhRelation:
 			retval = _copyInhRelation(from);
 			break;
@@ -4867,33 +4782,6 @@ copyObject(void *from)
 			break;
 		case T_CreateTableSpaceStmt:
 			retval = _copyCreateTableSpaceStmt(from);
-			break;
-		case T_CreateFdwStmt:
-			retval = _copyCreateFdwStmt(from);
-			break;
-		case T_AlterFdwStmt:
-			retval = _copyAlterFdwStmt(from);
-			break;
-		case T_DropFdwStmt:
-			retval = _copyDropFdwStmt(from);
-			break;
-		case T_CreateForeignServerStmt:
-			retval = _copyCreateForeignServerStmt(from);
-			break;
-		case T_AlterForeignServerStmt:
-			retval = _copyAlterForeignServerStmt(from);
-			break;
-		case T_DropForeignServerStmt:
-			retval = _copyDropForeignServerStmt(from);
-			break;
-		case T_CreateUserMappingStmt:
-			retval = _copyCreateUserMappingStmt(from);
-			break;
-		case T_AlterUserMappingStmt:
-			retval = _copyAlterUserMappingStmt(from);
-			break;
-		case T_DropUserMappingStmt:
-			retval = _copyDropUserMappingStmt(from);
 			break;
 		case T_CreateTrigStmt:
 			retval = _copyCreateTrigStmt(from);
@@ -5097,6 +4985,10 @@ copyObject(void *from)
 		case T_FuncWithArgs:
 			retval = _copyFuncWithArgs(from);
 			break;
+		case T_XmlSerialize:
+			retval = _copyXmlSerialize(from);
+			break;
+
 		case T_CdbProcess:
 			retval = _copyCdbProcess(from);
 			break;

@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/subselect.c,v 1.112.2.2 2007/07/18 21:41:14 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/subselect.c,v 1.115 2006/12/23 00:43:10 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -735,7 +735,7 @@ convert_testexpr_mutator(Node *node,
 				newvar = makeVar(context->rtindex,
 								 param->paramid,
 								 param->paramtype,
-								 exprTypmod((Node *) ste->expr),
+								 param->paramtypmod,
 								 0);
 
 				/*
@@ -751,7 +751,9 @@ convert_testexpr_mutator(Node *node,
 				/* Make the Param node representing the subplan's result */
 				Param	   *newparam;
 
-				newparam = generate_new_param(context->root, param->paramtype, -1);
+				newparam = generate_new_param(context->root,
+											  param->paramtype,
+											  param->paramtypmod);
 				/* Record its ID */
 				context->righthandIds = lappend_int(context->righthandIds,
 													newparam->paramid);

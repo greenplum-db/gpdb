@@ -27,7 +27,7 @@ override CPPFLAGS := -DFRONTEND \
 	-I../include -I$(top_srcdir)/src/interfaces/ecpg/include \
 	-I$(libpq_srcdir) -I$(top_builddir)/src/port $(CPPFLAGS)
 
-	
+
 ifeq ($(GCC), yes)
 override CFLAGS += -Wno-error
 endif
@@ -36,12 +36,9 @@ override CFLAGS += $(PTHREAD_CFLAGS)
 # Need to recompile any libpgport object files
 LIBS := $(filter-out -lpgport, $(LIBS))
 
-# due to a bug in configure running on our (GPDB) linux systems,
-# configure thinks strlcpy is a built-in on linux, which it is not
-# (it is a BSD thing) so force the use of our strlcpy here.
 OBJS= execute.o typename.o descriptor.o data.o error.o prepare.o memory.o \
-	connect.o misc.o path.o pgstrcasecmp.o strlcpy.o \
-	$(filter snprintf.o, $(LIBOBJS))
+	connect.o misc.o path.o pgstrcasecmp.o \
+	$(filter snprintf.o strlcpy.o, $(LIBOBJS))
 
 # thread.c is needed only for non-WIN32 implementation of path.c
 ifneq ($(PORTNAME), win32)

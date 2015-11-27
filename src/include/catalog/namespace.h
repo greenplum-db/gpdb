@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/namespace.h,v 1.42 2006/05/01 23:22:43 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/namespace.h,v 1.43 2006/12/23 00:43:12 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -15,7 +15,7 @@
 #define NAMESPACE_H
 
 #include "nodes/primnodes.h"
-
+#include "storage/lock.h"
 
 /*
  *	This structure holds a list of possible functions or operators
@@ -32,8 +32,14 @@ typedef struct _FuncCandidateList
 	Oid			args[1];		/* arg types --- VARIABLE LENGTH ARRAY */
 }	*FuncCandidateList;	/* VARIABLE LENGTH STRUCT */
 
+typedef void (*RangeVarGetRelidCallback) (const RangeVar *relation, Oid relId,
+										   Oid oldRelId, void *callback_arg);
 
 extern Oid	RangeVarGetRelid(const RangeVar *relation, bool failOK);
+extern Oid  RangeVarGetRelidExtended(const RangeVar *relation,
+						 LOCKMODE lockmode, bool missing_ok, bool nowait,
+						 RangeVarGetRelidCallback callback,
+						 void *callback_arg);
 extern Oid	RangeVarGetCreationNamespace(const RangeVar *newRelation);
 extern Oid	RelnameGetRelid(const char *relname);
 extern bool RelationIsVisible(Oid relid);
@@ -50,6 +56,9 @@ extern bool OperatorIsVisible(Oid oprid);
 
 extern Oid	OpclassnameGetOpcid(Oid amid, const char *opcname);
 extern bool OpclassIsVisible(Oid opcid);
+
+extern Oid	OpfamilynameGetOpfid(Oid amid, const char *opfname);
+extern bool OpfamilyIsVisible(Oid opfid);
 
 extern Oid	ConversionGetConid(const char *conname);
 extern bool ConversionIsVisible(Oid conid);

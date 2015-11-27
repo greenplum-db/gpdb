@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.188 2006/09/28 20:51:42 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.190 2006/12/24 00:29:20 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -190,6 +190,7 @@ typedef enum NodeTag
 	T_RowCompareExpr,
 	T_CoalesceExpr,
 	T_MinMaxExpr,
+	T_XmlExpr,
 	T_NullIfExpr,
 	T_NullTest,
 	T_BooleanTest,
@@ -241,6 +242,7 @@ typedef enum NodeTag
 	T_RowCompareExprState,
 	T_CoalesceExprState,
 	T_MinMaxExprState,
+	T_XmlExprState,
 	T_NullTestState,
 	T_CoerceToDomainState,
 	T_DomainConstraintState,
@@ -419,16 +421,6 @@ typedef enum NodeTag
 	T_AlterPartitionCmd,
 	T_InheritPartitionCmd,
 	T_CreateFileSpaceStmt,
-	T_CreateFdwStmt,
-	T_AlterFdwStmt,
-	T_DropFdwStmt,
-	T_CreateForeignServerStmt,
-	T_AlterForeignServerStmt,
-	T_DropForeignServerStmt,
-	T_CreateUserMappingStmt,
-	T_AlterUserMappingStmt,
-	T_DropUserMappingStmt, 
-	T_CreateForeignStmt,
 	T_FileSpaceEntry,
 	T_TableValueExpr,
 	T_DenyLoginInterval,
@@ -469,6 +461,7 @@ typedef enum NodeTag
 	T_FunctionParameter,
 	T_LockingClause,
 	T_RowMarkClause,
+	T_XmlSerialize,
 	T_WithClause,
 	T_CommonTableExpr,
 	T_ColumnReferenceStorageDirective,

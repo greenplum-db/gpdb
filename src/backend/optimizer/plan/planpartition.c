@@ -10,9 +10,12 @@
 
 #include "postgres.h"
 #include "catalog/catquery.h"
+#include "catalog/pg_proc.h"
+#include "catalog/pg_type.h"
 #include "optimizer/planpartition.h"
 #include "optimizer/walkers.h"
 #include "optimizer/clauses.h"
+#include "optimizer/restrictinfo.h"
 #include "cdb/cdbplan.h"
 #include "parser/parsetree.h"
 #include "cdb/cdbpartition.h"
@@ -26,8 +29,8 @@
 #include "cdb/cdbvars.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_coerce.h"
+#include "parser/parse_oper.h"
 
-extern bool op_mergejoinable(Oid opno, Oid *leftOp, Oid *rightOp);
 extern PartitionNode *RelationBuildPartitionDescByOid(Oid relid,
 												 bool inctemplate);
 extern Result *make_result(List *tlist, Node *resconstantqual, Plan *subplan);
@@ -284,11 +287,7 @@ static void MatchEqualityOpExpr(OpExpr *opexp, PartitionJoinMutatorContext *ctx)
 	Assert(ctx);
 	Assert(opexp);
 	Assert(list_length(opexp->args) > 1);
-
-	Oid lsortOp = InvalidOid;
-	Oid rsortOp = InvalidOid;
-
-	bool isEqualityOp = op_mergejoinable(opexp->opno, &lsortOp, &rsortOp);
+	bool isEqualityOp = op_mergejoinable(opexp->opno);
 
 	/**
 	 * If this is not an equijoin, then bail out early.
@@ -299,9 +298,6 @@ static void MatchEqualityOpExpr(OpExpr *opexp, PartitionJoinMutatorContext *ctx)
 	{
 		return;
 	}
-
-	Assert(lsortOp == rsortOp);
-	Assert(lsortOp != InvalidOid);
 
 	Expr *expr1 = (Expr *) list_nth(opexp->args, 0);
 	Expr *expr2 = (Expr *) list_nth(opexp->args, 1);
@@ -699,8 +695,8 @@ static TargetEntry *ConstructAggTLE(PartitionJoinMutatorContext *ctx)
 
 	Aggref *aggref = makeNode(Aggref);
 
-	aggref->aggfnoid = 2913; /* TODO look up function Oid by name */
-	aggref->aggtype = 1028;
+	aggref->aggfnoid = PG_PARTITION_OID_OID;
+	aggref->aggtype = OIDARRAYOID;
 	aggref->args = aggRefArgs;
 	aggref->agglevelsup = 0;
 	aggref->aggstar = false;
@@ -1302,4 +1298,35 @@ pg_partition_oid_finalfn(PG_FUNCTION_ARGS)
 		FreeRecordPMI(pmi);
 		return result;
 	}
+}
+
+RestrictInfo *
+make_mergeclause(Node *outer, Node *inner)
+{
+	OpExpr	   *opxpr;
+	Expr	   *xpr;
+	RestrictInfo *rinfo;
+	Oid			leftOp;
+	Oid			rightOp;
+	Oid			opfamily;
+
+	opxpr = (OpExpr *) make_op(NULL, list_make1(makeString("=")),
+							   outer,
+							   inner, -1);
+	opxpr->xpr.type = T_DistinctExpr;
+
+	xpr = make_notclause((Expr *) opxpr);
+
+	rinfo = make_restrictinfo(xpr, false, false, false, NULL);
+	/* fill in opfamily and other fields, like check_mergejoinable does */
+	if (get_op_mergejoin_info(opxpr->opno, &leftOp, &rightOp, &opfamily))
+	{
+		rinfo->mergejoinoperator = opxpr->opno;
+		rinfo->left_sortop = leftOp;
+		rinfo->right_sortop = rightOp;
+		rinfo->mergeopfamily = opfamily;
+	}
+	else
+		elog(ERROR, "partition key not mergejoinable");
+	return rinfo;
 }

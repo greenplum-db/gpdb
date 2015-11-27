@@ -2,7 +2,7 @@
  * ruleutils.c	- Functions to convert stored expressions/querytrees
  *				back to source text
  *
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/ruleutils.c,v 1.235.2.5 2008/05/03 23:19:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/ruleutils.c,v 1.237 2006/12/23 00:43:11 tgl Exp $
  **********************************************************************/
 
 #include "postgres.h"
@@ -25,6 +25,7 @@
 #include "catalog/pg_operator.h"
 #include "catalog/pg_trigger.h"
 #include "cdb/cdbpartition.h"
+#include "commands/defrem.h"
 #include "commands/tablecmds.h"
 #include "commands/tablespace.h"
 #include "executor/spi.h"
@@ -45,6 +46,7 @@
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/typcache.h"
+#include "utils/xml.h"
 
 
 /* ----------
@@ -3427,6 +3429,7 @@ isSimpleNode(Node *node, Node *parentNode, int prettyFlags)
 		case T_CoalesceExpr:
 		case T_MinMaxExpr:
 		case T_NullIfExpr:
+		case T_XmlExpr:
 		case T_Aggref:
 		case T_FuncExpr:
 		case T_PercentileExpr:
@@ -3536,6 +3539,7 @@ isSimpleNode(Node *node, Node *parentNode, int prettyFlags)
 				case T_CoalesceExpr:	/* own parentheses */
 				case T_MinMaxExpr:		/* own parentheses */
 				case T_NullIfExpr:		/* other separators */
+				case T_XmlExpr:			/* own parentheses */
 				case T_Aggref:	/* own parentheses */
 				case T_CaseExpr:		/* other separators */
 					return true;
@@ -3584,6 +3588,7 @@ isSimpleNode(Node *node, Node *parentNode, int prettyFlags)
 				case T_CoalesceExpr:	/* own parentheses */
 				case T_MinMaxExpr:		/* own parentheses */
 				case T_NullIfExpr:		/* other separators */
+				case T_XmlExpr:			/* own parentheses */
 				case T_Aggref:	/* own parentheses */
 				case T_CaseExpr:		/* other separators */
 					return true;
@@ -4327,6 +4332,163 @@ get_rule_expr(Node *node, deparse_context *context,
 			}
 			break;
 
+		case T_XmlExpr:
+			{
+				XmlExpr    *xexpr = (XmlExpr *) node;
+				bool		needcomma = false;
+				ListCell   *arg;
+				ListCell   *narg;
+				Const	   *con;
+
+				switch (xexpr->op)
+				{
+					case IS_XMLCONCAT:
+						appendStringInfoString(buf, "XMLCONCAT(");
+						break;
+					case IS_XMLELEMENT:
+						appendStringInfoString(buf, "XMLELEMENT(");
+						break;
+					case IS_XMLFOREST:
+						appendStringInfoString(buf, "XMLFOREST(");
+						break;
+					case IS_XMLPARSE:
+						appendStringInfoString(buf, "XMLPARSE(");
+						break;
+					case IS_XMLPI:
+						appendStringInfoString(buf, "XMLPI(");
+						break;
+					case IS_XMLROOT:
+						appendStringInfoString(buf, "XMLROOT(");
+						break;
+					case IS_XMLSERIALIZE:
+						appendStringInfoString(buf, "XMLSERIALIZE(");
+						break;
+					case IS_DOCUMENT:
+						break;
+				}
+				if (xexpr->op == IS_XMLPARSE || xexpr->op == IS_XMLSERIALIZE)
+				{
+					if (xexpr->xmloption == XMLOPTION_DOCUMENT)
+						appendStringInfoString(buf, "DOCUMENT ");
+					else
+						appendStringInfoString(buf, "CONTENT ");
+				}
+				if (xexpr->name)
+				{
+					appendStringInfo(buf, "NAME %s",
+									 quote_identifier(map_xml_name_to_sql_identifier(xexpr->name)));
+					needcomma = true;
+				}
+				if (xexpr->named_args)
+				{
+					if (xexpr->op != IS_XMLFOREST)
+					{
+						if (needcomma)
+							appendStringInfoString(buf, ", ");
+						appendStringInfoString(buf, "XMLATTRIBUTES(");
+						needcomma = false;
+					}
+					forboth(arg, xexpr->named_args, narg, xexpr->arg_names)
+					{
+						Node	   *e = (Node *) lfirst(arg);
+						char	   *argname = strVal(lfirst(narg));
+
+						if (needcomma)
+							appendStringInfoString(buf, ", ");
+						get_rule_expr((Node *) e, context, true);
+						appendStringInfo(buf, " AS %s",
+										 quote_identifier(map_xml_name_to_sql_identifier(argname)));
+						needcomma = true;
+					}
+					if (xexpr->op != IS_XMLFOREST)
+						appendStringInfoChar(buf, ')');
+				}
+				if (xexpr->args)
+				{
+					if (needcomma)
+						appendStringInfoString(buf, ", ");
+					switch (xexpr->op)
+					{
+						case IS_XMLCONCAT:
+						case IS_XMLELEMENT:
+						case IS_XMLFOREST:
+						case IS_XMLPI:
+						case IS_XMLSERIALIZE:
+							/* no extra decoration needed */
+							get_rule_expr((Node *) xexpr->args, context, true);
+							break;
+						case IS_XMLPARSE:
+							Assert(list_length(xexpr->args) == 2);
+
+							get_rule_expr((Node *) linitial(xexpr->args),
+										  context, true);
+
+							con = (Const *) lsecond(xexpr->args);
+							Assert(IsA(con, Const));
+							Assert(!con->constisnull);
+							if (DatumGetBool(con->constvalue))
+								appendStringInfoString(buf,
+													 " PRESERVE WHITESPACE");
+							else
+								appendStringInfoString(buf,
+													   " STRIP WHITESPACE");
+							break;
+						case IS_XMLROOT:
+							Assert(list_length(xexpr->args) == 3);
+
+							get_rule_expr((Node *) linitial(xexpr->args),
+										  context, true);
+
+							appendStringInfoString(buf, ", VERSION ");
+							con = (Const *) lsecond(xexpr->args);
+							if (IsA(con, Const) &&
+								con->constisnull)
+								appendStringInfoString(buf, "NO VALUE");
+							else
+								get_rule_expr((Node *) con, context, false);
+
+							con = (Const *) lthird(xexpr->args);
+							Assert(IsA(con, Const));
+							if (con->constisnull)
+								 /* suppress STANDALONE NO VALUE */ ;
+							else
+							{
+								switch (DatumGetInt32(con->constvalue))
+								{
+									case XML_STANDALONE_YES:
+										appendStringInfoString(buf,
+														 ", STANDALONE YES");
+										break;
+									case XML_STANDALONE_NO:
+										appendStringInfoString(buf,
+														  ", STANDALONE NO");
+										break;
+									case XML_STANDALONE_NO_VALUE:
+										appendStringInfoString(buf,
+													", STANDALONE NO VALUE");
+										break;
+									default:
+										break;
+								}
+							}
+							break;
+						case IS_DOCUMENT:
+							get_rule_expr_paren((Node *) xexpr->args, context, false, node);
+							break;
+					}
+
+				}
+				if (xexpr->op == IS_XMLSERIALIZE)
+					appendStringInfo(buf, " AS %s",
+									 format_type_with_typemod(xexpr->type,
+															  xexpr->typmod));
+				if (xexpr->op == IS_DOCUMENT)
+					appendStringInfoString(buf, " IS DOCUMENT");
+				else
+					appendStringInfoChar(buf, ')');
+			}
+			break;
+
 		case T_CoerceToDomain:
 			{
 				CoerceToDomain *ctest = (CoerceToDomain *) node;
@@ -4391,10 +4553,11 @@ get_rule_expr(Node *node, deparse_context *context,
 					else
 						Assert(false);
 					get_rule_expr((Node *) p->args, context, true);
-					appendStringInfoString(buf, ") WITHIN GROUP ");
+					appendStringInfoString(buf, ") WITHIN GROUP (");
 					get_sortlist_expr(p->sortClause,
 									  p->sortTargets,
 									  false, context, "ORDER BY ");
+					appendStringInfoString(buf, ") ");
 				}
 			}
 			break;
@@ -5567,12 +5730,7 @@ get_opclass_name(Oid opclass, Oid actual_datatype,
 	Form_pg_opclass opcrec;
 	char	   *opcname;
 	char	   *nspname;
-	bool		isvisible;
 	cqContext  *pcqCtx;
-
-	/* Domains use their base type's default opclass */
-	if (OidIsValid(actual_datatype))
-		actual_datatype = getBaseType(actual_datatype);
 
 	pcqCtx = caql_beginscan(
 			NULL,
@@ -5586,25 +5744,12 @@ get_opclass_name(Oid opclass, Oid actual_datatype,
 		elog(ERROR, "cache lookup failed for opclass %u", opclass);
 	opcrec = (Form_pg_opclass) GETSTRUCT(ht_opc);
 
-	/*
-	 * Special case for ARRAY_OPS: pretend it is default for any array type
-	 */
-	if (OidIsValid(actual_datatype))
-	{
-		if (opcrec->opcintype == ANYARRAYOID &&
-			OidIsValid(get_element_type(actual_datatype)))
-			actual_datatype = opcrec->opcintype;
-	}
-
-	/* Must force use of opclass name if not in search path */
-	isvisible = OpclassIsVisible(opclass);
-
-	if (actual_datatype != opcrec->opcintype || !opcrec->opcdefault ||
-		!isvisible)
+	if (!OidIsValid(actual_datatype) ||
+		GetDefaultOpClass(actual_datatype, opcrec->opcmethod) != opclass)
 	{
 		/* Okay, we need the opclass name.	Do we need to qualify it? */
 		opcname = NameStr(opcrec->opcname);
-		if (isvisible)
+		if (OpclassIsVisible(opclass))
 			appendStringInfo(buf, " %s", quote_identifier(opcname));
 		else
 		{

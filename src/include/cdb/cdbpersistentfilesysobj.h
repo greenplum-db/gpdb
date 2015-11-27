@@ -242,13 +242,6 @@ extern void PersistentFileSysObj_UpdateAppendOnlyMirrorResyncEofs(
 	bool						recovery,
 	bool						flushToXLog);
 
-extern void PersistentFileSysObj_UpdateRelationBufpoolKind(
-	RelFileNode							*relFileNode,
-	int32								segmentFileNum,
-	ItemPointer 						persistentTid,
-	int64								persistentSerialNum,
-	PersistentFileSysRelBufpoolKind 	relBufpoolKind);
-
 extern bool PersistentFileSysObj_CanAppendOnlyCatchupDuringResync(
 		RelFileNode 				*relFileNode,
 		int32						segmentFileNum,

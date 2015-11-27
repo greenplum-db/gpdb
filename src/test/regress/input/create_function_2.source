@@ -15,7 +15,9 @@ CREATE FUNCTION hobby_construct(text, text)
 
 CREATE FUNCTION hobbies_by_name(hobbies_r.name%TYPE)
    RETURNS hobbies_r.person%TYPE
-   AS 'select person from hobbies_r where name = $1'
+   -- GPDB: use an order by to force the later test in 'misc' to return
+   -- a particular person, when multiple persons have the same hobby.
+   AS 'select person from hobbies_r where name = $1 order by person'
    LANGUAGE SQL READS SQL DATA;
 
 

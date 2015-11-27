@@ -27,7 +27,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execMain.c,v 1.280.2.4 2009/12/09 21:58:29 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execMain.c,v 1.282 2006/12/26 21:37:19 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1689,7 +1689,8 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		erm->rti = rc->rti;
 		erm->forUpdate = rc->forUpdate;
 		erm->noWait = rc->noWait;
-		snprintf(erm->resname, sizeof(erm->resname), "ctid%u", rc->rti);
+		/* We'll set up ctidAttno below */
+		erm->ctidAttNo = InvalidAttrNumber;
 		estate->es_rowMarks = lappend(estate->es_rowMarks, erm);
 	}
 
@@ -1841,6 +1842,16 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 					j = ExecInitJunkFilter(subplan->targetlist,
 							       cleanTupType,
 							       ExecAllocTableSlot(estate->es_tupleTable));
+					/*
+					 * Since it must be UPDATE/DELETE, there had better be
+					 * a "ctid" junk attribute in the tlist ... but ctid could
+					 * be at a different resno for each result relation.
+					 * We look up the ctid resnos now and save them in the
+					 * junkfilters.
+					 */
+					j->jf_junkAttNo = ExecFindJunkAttribute(j, "ctid");
+					if (!AttributeNumberIsValid(j->jf_junkAttNo))
+						elog(ERROR, "could not find junk ctid column");
 					resultRelInfo->ri_junkFilter = j;
 					resultRelInfo++;
 				}
@@ -1873,9 +1884,36 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 				if (estate->es_result_relation_info)
 					estate->es_result_relation_info->ri_junkFilter = j;
 
-				/* For SELECT, want to return the cleaned tuple type */
 				if (operation == CMD_SELECT)
+				{
+					/* For SELECT, want to return the cleaned tuple type */
 					tupType = j->jf_cleanTupType;
+					/* For SELECT FOR UPDATE/SHARE, find the ctid attrs now */
+					foreach(l, estate->es_rowMarks)
+					{
+						ExecRowMark *erm = (ExecRowMark *) lfirst(l);
+						char		resname[32];
+
+						/* CDB: CTIDs were not fetched for distributed relation. */
+						Relation relation = erm->relation;
+						if (relation->rd_cdbpolicy &&
+							relation->rd_cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
+							continue;
+
+						snprintf(resname, sizeof(resname), "ctid%u", erm->rti);
+						erm->ctidAttNo = ExecFindJunkAttribute(j, resname);
+						if (!AttributeNumberIsValid(erm->ctidAttNo))
+							elog(ERROR, "could not find junk \"%s\" column",
+								 resname);
+					}
+				}
+				else if (operation == CMD_UPDATE || operation == CMD_DELETE)
+				{
+					/* For UPDATE/DELETE, find the ctid junk attr now */
+					j->jf_junkAttNo = ExecFindJunkAttribute(j, "ctid");
+					if (!AttributeNumberIsValid(j->jf_junkAttNo))
+						elog(ERROR, "could not find junk ctid column");
+				}
 			}
 		}
 		else
@@ -2048,21 +2086,21 @@ initResultRelInfo(ResultRelInfo *resultRelInfo,
 							RelationGetRelationName(resultRelationDesc))));
 			break;
 		case RELKIND_AOSEGMENTS:
-			if (!gp_upgrade_mode && !allowSystemTableModsDML)
+			if (!allowSystemTableModsDML)
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("cannot change AO segment listing relation \"%s\"",
 								RelationGetRelationName(resultRelationDesc))));
 			break;
 		case RELKIND_AOBLOCKDIR:
-			if (!gp_upgrade_mode && !allowSystemTableModsDML)
+			if (!allowSystemTableModsDML)
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("cannot change AO block directory relation \"%s\"",
 								RelationGetRelationName(resultRelationDesc))));
 			break;
 		case RELKIND_AOVISIMAP:
-			if (!gp_upgrade_mode && !allowSystemTableModsDML)
+			if (!allowSystemTableModsDML)
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("cannot change AO visibility map relation \"%s\"",
@@ -2596,14 +2634,8 @@ lnext:	;
 				 */
 				if (operation == CMD_UPDATE || operation == CMD_DELETE)
 				{
-
-					if (!ExecGetJunkAttribute(junkfilter,
-											  slot,
-											  "ctid",
-											  &datum,
-											  &isNull))
-						elog(ERROR, "could not find junk ctid column");
-
+					datum = ExecGetJunkAttribute(slot, junkfilter->jf_junkAttNo,
+												 &isNull);
 					/* shouldn't ever get a null result... */
 					if (isNull)
 						elog(ERROR, "ctid is NULL");
@@ -2638,17 +2670,12 @@ lnext:	;
 							relation->rd_cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
 							continue;
 
-						if (!ExecGetJunkAttribute(junkfilter,
-												  slot,
-												  erm->resname,
-												  &datum,
-												  &isNull))
-							elog(ERROR, "could not find junk \"%s\" column",
-								 erm->resname);
-
+						datum = ExecGetJunkAttribute(slot,
+													 erm->ctidAttNo,
+													 &isNull);
 						/* shouldn't ever get a null result... */
 						if (isNull)
-							elog(ERROR, "\"%s\" is NULL", erm->resname);
+							elog(ERROR, "ctid is NULL");
 
 						tuple.t_self = *((ItemPointer) DatumGetPointer(datum));
 

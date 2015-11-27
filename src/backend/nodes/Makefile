@@ -17,4 +17,8 @@ OBJS = nodeFuncs.o nodes.o list.o bitmapset.o tidbitmap.o \
        outfuncs.o readfuncs.o print.o read.o params.o value.o \
 	   outfast.o readfast.o
 
+# readfast.c #includes readfuncs.c. Same with outfast.c and outfast.c
+readfast.o: readfuncs.c
+outfast.o: outfuncs.c
+
 include $(top_srcdir)/src/backend/common.mk

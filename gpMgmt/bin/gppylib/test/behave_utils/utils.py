@@ -257,11 +257,14 @@ def diff_backup_restore_data(context, backup_file, restore_file):
     if not filecmp.cmp(backup_file, restore_file):
         raise Exception('%s and %s do not match' % (backup_file, restore_file))
     
-def validate_restore_data(context, tablename, dbname):
+def validate_restore_data(context, tablename, dbname, backedup_table=None):
     filename = tablename.strip() + "_restore"
     get_table_data_to_file(filename, tablename, dbname)
     current_dir = os.getcwd()
-    backup_file = os.path.join(current_dir, './gppylib/test/data', tablename.strip() + "_backup")
+    if backedup_table != None:
+        backup_file = os.path.join(current_dir, './gppylib/test/data', backedup_table.strip() + "_backup")
+    else:
+        backup_file = os.path.join(current_dir, './gppylib/test/data', tablename.strip() + "_backup")
     restore_file = os.path.join(current_dir, './gppylib/test/data', tablename.strip() + "_restore")
     diff_backup_restore_data(context, backup_file, restore_file)
 

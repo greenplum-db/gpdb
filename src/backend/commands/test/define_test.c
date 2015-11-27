@@ -38,7 +38,7 @@ test__DefGetString_NeedFreeFlag(void **state)
 	need_free = false;
 	TypeName   *tName = makeNode(TypeName);
 	tName->names = list_make2(makeString("pg_catalog"), makeString("unknown"));
-	tName->typmod = -1;
+	tName->typemod = -1;
 	tName->location = -1;
 	DefElem *e4 = makeDefElem("def_typename", (Node *) tName);
 	value = defGetString(e4, &need_free);

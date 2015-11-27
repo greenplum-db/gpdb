@@ -11,6 +11,7 @@
 #include "postgres_fe.h"
 #include <assert.h>
 #include "libpq-fe.h"
+#include "pqexpbuffer.h"
 #include "cdb_backup_status.h"
 #include "cdb_dump_util.h"
 #include "cdb_backup_state.h"
@@ -92,6 +93,8 @@ CreateBackupStateMachine(const char *pszKey, int instid, int segid)
 	pStateMachine->pszNotifyRelNameGotLocks = MakeString("%s_%s", pStateMachine->pszNotifyRelName, SUFFIX_GOTLOCKS);
 	pStateMachine->pszNotifyRelNameSucceed = MakeString("%s_%s", pStateMachine->pszNotifyRelName, SUFFIX_SUCCEED);
 	pStateMachine->pszNotifyRelNameFail = MakeString("%s_%s", pStateMachine->pszNotifyRelName, SUFFIX_FAIL);
+	pStateMachine->pszNotifyRelNameMasterProbe = MakeString("%s_%s", pStateMachine->pszNotifyRelName, SUFFIX_MASTER_PROBE);
+	pStateMachine->pszNotifyRelNameSegmentProbe = MakeString("%s_%s", pStateMachine->pszNotifyRelName, SUFFIX_SEGMENT_PROBE);
 
 	pStateMachine->nArCount = 0;
 	pStateMachine->nArSize = 10;

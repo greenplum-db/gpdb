@@ -973,8 +973,8 @@ select * from percv;
 reset gp_idf_deduplicate;
 select pg_get_viewdef('percv');
                                                                                                                                                        pg_get_viewdef                                                                                                                                                        
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- SELECT percentile_cont(float8(0.4)) WITHIN GROUP ORDER BY float8((perct.a / 10)) AS "percentile_cont", median(float8(perct.a)) AS "median", percentile_disc(float8(0.51)) WITHIN GROUP ORDER BY float8(perct.a) DESC AS "percentile_disc" FROM perct GROUP BY perct.b ORDER BY perct.b;
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ SELECT percentile_cont(float8(0.4)) WITHIN GROUP (ORDER BY float8((perct.a / 10))) AS "percentile_cont", median(float8(perct.a)) AS "median", percentile_disc(float8(0.51)) WITHIN GROUP (ORDER BY float8(perct.a) DESC) AS "percentile_disc" FROM perct GROUP BY perct.b ORDER BY perct.b;
 (1 row)
 
 select pg_get_viewdef('percv2');

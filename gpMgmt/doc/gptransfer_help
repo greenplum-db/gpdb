@@ -18,6 +18,7 @@ gptransfer
    [--skip-existing | --truncate | --drop] 
    [--analyze] [--validate=<type> ] [-x] [--dry-run] 
    [--schema-only ]
+   [--no-final-count]
 
    [--source-host=<source_host> [--source-port=<source_port>] 
    [--source-user=<source_user>] ]
@@ -432,6 +433,14 @@ OPTIONS
  Should be used when user data includes very wide rows (or when line too 
  long error message occurs). Should not be used otherwise as it increases 
  resource allocation. 
+
+
+--no-final-count
+
+ Disable table row count validation that is performed after gptransfer 
+ completes copying database objects to the target database. 
+ The default is to compare the row count of tables copied to the destination 
+ databases with the tables in the source database.
 
 
 -q | --quiet

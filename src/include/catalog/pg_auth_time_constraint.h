@@ -22,7 +22,7 @@
 /* TIDYCAT_BEGINDEF
 
    CREATE TABLE pg_auth_time_constraint
-   with (CamelCase=AuthTimeConstraint, shared=true, oid=false, relid=2914, reltype_oid=2915)
+   with (CamelCase=AuthTimeConstraint, shared=true, oid=false, relid=6070)
    (
    authid oid, -- foreign key to pg_authid.oid,
    start_day smallint, -- [0,6] denoting start of interval
@@ -67,9 +67,9 @@
  *		typedef struct FormData_pg_auth_time_constraint
  * ----------------
  */
-#define AuthTimeConstraintRelationId	2914
+#define AuthTimeConstraintRelationId	6070
 
-CATALOG(pg_auth_time_constraint,2914) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
+CATALOG(pg_auth_time_constraint,6070) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 {
 	Oid		authid;		/* foreign key to pg_authid.oid, */
 	int2	start_day;	/* [0,6] denoting start of interval */

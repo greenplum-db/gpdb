@@ -1,0 +1,111 @@
+## ======================================================================
+##   ____ ____  ____  ____     ____                         
+##  / ___|  _ \|  _ \| __ )   / ___|_   _ _ __  _ __  _   _ 
+## | |  _| |_) | | | |  _ \  | |  _| | | | '_ \| '_ \| | | |
+## | |_| |  __/| |_| | |_) | | |_| | |_| | | | | | | | |_| |
+##  \____|_|   |____/|____/   \____|\__,_|_| |_|_| |_|\__, |
+##                                                    |___/ 
+## ----------------------------------------------------------------------
+## Travis CI build script for GPDB Open Source Project.
+## 
+## Reference:
+##   o Travis CI Docs: http://docs.travis-ci.com
+## ----------------------------------------------------------------------
+##
+## This project builds the core Greenplum Database Open Source
+## project.
+##
+## ======================================================================
+
+language: c
+sudo: false
+
+git:
+  submodules: false
+
+## ----------------------------------------------------------------------
+## Build tools
+## ----------------------------------------------------------------------
+
+compiler:
+  - gcc
+
+python:
+  - "2.7"
+
+## ----------------------------------------------------------------------
+## Install supporting Python modules
+## ----------------------------------------------------------------------
+
+install:
+  - pip install --user psi
+  - pip install --user lockfile
+  - pip install --user paramiko
+  - pip install --user setuptools
+  - pip install --user epydoc
+
+## ----------------------------------------------------------------------
+## Build APR & APR-UTIL used to build gpfdist
+## ----------------------------------------------------------------------
+
+env:
+  - APR=apr-1.5.2
+    APR_UTIL=apr-util-1.5.4
+    APR_TAR=${APR}.tar.gz
+    APR_UTIL_TAR=${APR_UTIL}.tar.gz
+
+before_script:
+  - export PATH=${TRAVIS_BUILD_DIR}/tools/bin:$PATH
+  - cd ${TRAVIS_BUILD_DIR}
+  - wget http://ftp.jaist.ac.jp/pub/apache/apr/${APR_TAR}
+  - wget http://ftp.jaist.ac.jp/pub/apache/apr/${APR_UTIL_TAR}
+  - tar xf ${APR_TAR}
+  - tar xf ${APR_UTIL_TAR}
+  - cd ${TRAVIS_BUILD_DIR}/${APR}
+  - ./configure --prefix=${TRAVIS_BUILD_DIR}/tools
+  - make install
+  - cd ${TRAVIS_BUILD_DIR}/${APR_UTIL}
+  - ./configure --prefix=${TRAVIS_BUILD_DIR}/tools --with-apr=${TRAVIS_BUILD_DIR}/${APR}
+  - make install
+
+## ----------------------------------------------------------------------
+## Perform build:
+##   GPDB
+##   gpmapreduce
+##   orafce
+##   gpfdist
+## ----------------------------------------------------------------------
+
+script:
+  - cd ${TRAVIS_BUILD_DIR}
+  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql
+  - make
+  - make install
+  - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
+  - cd ${TRAVIS_BUILD_DIR}/gpAux/extensions/orafce
+  - make install USE_PGXS=1
+  - cd ${TRAVIS_BUILD_DIR}/gpAux/extensions/gpmapreduce
+  - make install
+  - cd ${TRAVIS_BUILD_DIR}/gpAux/extensions/gpfdist
+  - CFLAGS=-w ./configure --enable-transformations --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config
+  - make
+  - make install
+  - postgres --version
+  - initdb --version
+  - createdb --version
+  - psql --version
+  - gpmigrator --version
+  - gpssh --version
+  - gpmapreduce --version
+  - gpfdist --version
+
+## ----------------------------------------------------------------------
+## Notification
+## ----------------------------------------------------------------------
+
+notifications:
+  email:
+    recipients:
+      - releng@pivotal.io
+    on_success: change
+    on_failure: always

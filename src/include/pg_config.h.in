@@ -45,9 +45,6 @@
 /* Define to build with GSSAPI support. (--with-gssapi) */
 #undef ENABLE_GSS
 
-/* Define to 1 if you want National Language Support. (--enable-nls) */
-#undef ENABLE_NLS
-
 /* Define to 1 to build client libraries as thread-safe code.
    (--enable-thread-safety) */
 #undef ENABLE_THREAD_SAFETY
@@ -142,9 +139,6 @@
 /* Define to 1 if you have the `fdatasync' function. */
 #undef HAVE_FDATASYNC
 
-/* Define to 1 if you have finite(). */
-#undef HAVE_FINITE
-
 /* Define to 1 if you have the `fpclass' function. */
 #undef HAVE_FPCLASS
 
@@ -201,6 +195,12 @@
 
 /* Define to 1 if you have the `gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
+
+/* Define to 1 if you have the <gpopt/init.h> header file. */
+#undef HAVE_GPOPT_INIT_H
+
+/* Define to 1 if you have the <gpos/assert.h> header file. */
+#undef HAVE_GPOS_ASSERT_H
 
 /* Define to 1 if you have the <gssapi/gssapi.h> header file. */
 #undef HAVE_GSSAPI_GSSAPI_H
@@ -762,10 +762,6 @@
 
 /* Define to 1 to build with debug_ntuplestore. (--enable-ntuplestore) */
 #undef USE_DEBUG_NTUPLESTORE
-
-/* Define to 1 to build with plan forcing capabilities. (--enable-forceplan)
-   */
-#undef USE_FORCE_PLAN
 
 /* Define to 1 if you want 64-bit integer timestamp and interval support.
    (--enable-integer-datetimes) */

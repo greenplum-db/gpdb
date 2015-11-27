@@ -2,20 +2,20 @@
 -- FLOAT4
 --
 CREATE TABLE FLOAT4_TBL (f1  float4);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO FLOAT4_TBL(f1) VALUES ('    0.0');
 INSERT INTO FLOAT4_TBL(f1) VALUES ('1004.30   ');
 INSERT INTO FLOAT4_TBL(f1) VALUES ('     -34.84    ');
 INSERT INTO FLOAT4_TBL(f1) VALUES ('1.2345678901234e+20');
 INSERT INTO FLOAT4_TBL(f1) VALUES ('1.2345678901234e-20');
 -- test for over and under flow 
-INSERT INTO FLOAT4_TBL(f1) VALUES ('10e40');
+INSERT INTO FLOAT4_TBL(f1) VALUES ('10e70');
 ERROR:  value out of range: overflow
-INSERT INTO FLOAT4_TBL(f1) VALUES ('-10e40');
+INSERT INTO FLOAT4_TBL(f1) VALUES ('-10e70');
 ERROR:  value out of range: overflow
-INSERT INTO FLOAT4_TBL(f1) VALUES ('10e-40');
-INSERT INTO FLOAT4_TBL(f1) VALUES ('-10e-40');
+INSERT INTO FLOAT4_TBL(f1) VALUES ('10e-70');
+ERROR:  value out of range: underflow
+INSERT INTO FLOAT4_TBL(f1) VALUES ('-10e-70');
+ERROR:  value out of range: underflow
 -- bad input
 INSERT INTO FLOAT4_TBL(f1) VALUES ('');
 ERROR:  invalid input syntax for type real: ""
@@ -95,147 +95,127 @@ SELECT 'nan'::float4 / 'nan'::float4;
       NaN
 (1 row)
 
-SELECT '' AS five, * FROM FLOAT4_TBL ORDER BY 2;
+SELECT '' AS five, * FROM FLOAT4_TBL;
  five |     f1      
 ------+-------------
-      |      -34.84
-      |      -1e-39
       |           0
-      |       1e-39
-      | 1.23457e-20
       |      1004.3
+      |      -34.84
       | 1.23457e+20
-(7 rows)
+      | 1.23457e-20
+(5 rows)
 
-SELECT '' AS four, f.* FROM FLOAT4_TBL f WHERE f.f1 <> '1004.3' ORDER BY 2;
+SELECT '' AS four, f.* FROM FLOAT4_TBL f WHERE f.f1 <> '1004.3';
  four |     f1      
 ------+-------------
-      |      -34.84
-      |      -1e-39
       |           0
-      |       1e-39
-      | 1.23457e-20
+      |      -34.84
       | 1.23457e+20
-(6 rows)
+      | 1.23457e-20
+(4 rows)
 
-SELECT '' AS one, f.* FROM FLOAT4_TBL f WHERE f.f1 = '1004.3' ORDER BY 2;
+SELECT '' AS one, f.* FROM FLOAT4_TBL f WHERE f.f1 = '1004.3';
  one |   f1   
 -----+--------
      | 1004.3
 (1 row)
 
-SELECT '' AS three, f.* FROM FLOAT4_TBL f WHERE '1004.3' > f.f1 ORDER BY 2;
+SELECT '' AS three, f.* FROM FLOAT4_TBL f WHERE '1004.3' > f.f1;
  three |     f1      
 -------+-------------
-       |      -34.84
-       |      -1e-39
        |           0
-       |       1e-39
+       |      -34.84
        | 1.23457e-20
-(5 rows)
+(3 rows)
 
-SELECT '' AS three, f.* FROM FLOAT4_TBL f WHERE  f.f1 < '1004.3' ORDER BY 2;
+SELECT '' AS three, f.* FROM FLOAT4_TBL f WHERE  f.f1 < '1004.3';
  three |     f1      
 -------+-------------
-       |      -34.84
-       |      -1e-39
        |           0
-       |       1e-39
+       |      -34.84
        | 1.23457e-20
-(5 rows)
+(3 rows)
 
-SELECT '' AS four, f.* FROM FLOAT4_TBL f WHERE '1004.3' >= f.f1 ORDER BY 2;
+SELECT '' AS four, f.* FROM FLOAT4_TBL f WHERE '1004.3' >= f.f1;
  four |     f1      
 ------+-------------
-      |      -34.84
-      |      -1e-39
       |           0
-      |       1e-39
-      | 1.23457e-20
       |      1004.3
-(6 rows)
+      |      -34.84
+      | 1.23457e-20
+(4 rows)
 
-SELECT '' AS four, f.* FROM FLOAT4_TBL f WHERE  f.f1 <= '1004.3' ORDER BY 2;
+SELECT '' AS four, f.* FROM FLOAT4_TBL f WHERE  f.f1 <= '1004.3';
  four |     f1      
 ------+-------------
-      |      -34.84
-      |      -1e-39
       |           0
-      |       1e-39
-      | 1.23457e-20
       |      1004.3
-(6 rows)
+      |      -34.84
+      | 1.23457e-20
+(4 rows)
 
 SELECT '' AS three, f.f1, f.f1 * '-10' AS x FROM FLOAT4_TBL f
-   WHERE f.f1 > '0.0' ORDER BY 2;
+   WHERE f.f1 > '0.0';
  three |     f1      |      x       
 -------+-------------+--------------
-       |       1e-39 |       -1e-38
-       | 1.23457e-20 | -1.23457e-19
        |      1004.3 |       -10043
        | 1.23457e+20 | -1.23457e+21
-(4 rows)
+       | 1.23457e-20 | -1.23457e-19
+(3 rows)
 
 SELECT '' AS three, f.f1, f.f1 + '-10' AS x FROM FLOAT4_TBL f
-   WHERE f.f1 > '0.0' ORDER BY 2;
+   WHERE f.f1 > '0.0';
  three |     f1      |      x      
 -------+-------------+-------------
-       |       1e-39 |         -10
-       | 1.23457e-20 |         -10
        |      1004.3 |       994.3
        | 1.23457e+20 | 1.23457e+20
-(4 rows)
+       | 1.23457e-20 |         -10
+(3 rows)
 
 SELECT '' AS three, f.f1, f.f1 / '-10' AS x FROM FLOAT4_TBL f
-   WHERE f.f1 > '0.0' ORDER BY 2;
+   WHERE f.f1 > '0.0';
  three |     f1      |      x       
 -------+-------------+--------------
-       |       1e-39 | -9.99995e-41
-       | 1.23457e-20 | -1.23457e-21
        |      1004.3 |      -100.43
        | 1.23457e+20 | -1.23457e+19
-(4 rows)
+       | 1.23457e-20 | -1.23457e-21
+(3 rows)
 
 SELECT '' AS three, f.f1, f.f1 - '-10' AS x FROM FLOAT4_TBL f
-   WHERE f.f1 > '0.0' ORDER BY 2;
+   WHERE f.f1 > '0.0';
  three |     f1      |      x      
 -------+-------------+-------------
-       |       1e-39 |          10
-       | 1.23457e-20 |          10
        |      1004.3 |      1014.3
        | 1.23457e+20 | 1.23457e+20
-(4 rows)
+       | 1.23457e-20 |          10
+(3 rows)
 
 -- test divide by zero
 SELECT '' AS bad, f.f1 / '0.0' from FLOAT4_TBL f;
-ERROR:  division by zero  (seg0 slice1 localhost:50001 pid=1829)
-SELECT '' AS five, * FROM FLOAT4_TBL ORDER BY 2;
+ERROR:  division by zero
+SELECT '' AS five, * FROM FLOAT4_TBL;
  five |     f1      
 ------+-------------
-      |      -34.84
-      |      -1e-39
       |           0
-      |       1e-39
-      | 1.23457e-20
       |      1004.3
+      |      -34.84
       | 1.23457e+20
-(7 rows)
+      | 1.23457e-20
+(5 rows)
 
 -- test the unary float4abs operator 
-SELECT '' AS five, f.f1, @f.f1 AS abs_f1 FROM FLOAT4_TBL f ORDER BY 2;
+SELECT '' AS five, f.f1, @f.f1 AS abs_f1 FROM FLOAT4_TBL f;
  five |     f1      |   abs_f1    
 ------+-------------+-------------
-      |      -34.84 |       34.84
-      |      -1e-39 |       1e-39
       |           0 |           0
-      |       1e-39 |       1e-39
-      | 1.23457e-20 | 1.23457e-20
       |      1004.3 |      1004.3
+      |      -34.84 |       34.84
       | 1.23457e+20 | 1.23457e+20
-(7 rows)
+      | 1.23457e-20 | 1.23457e-20
+(5 rows)
 
 -- MPP doesn't support this yet.
 --UPDATE FLOAT4_TBL
 --   SET f1 = FLOAT4_TBL.f1 * '-1'
 --   WHERE FLOAT4_TBL.f1 > '0.0';
---SELECT '' AS five, * FROM FLOAT4_TBL ORDER BY 2;
+--SELECT '' AS five, * FROM FLOAT4_TBL;

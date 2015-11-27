@@ -13,7 +13,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeSubqueryscan.c,v 1.32.2.2 2006/12/26 21:37:28 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeSubqueryscan.c,v 1.34 2006/12/26 21:37:19 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -230,6 +230,7 @@ ExecInitSubqueryScan(SubqueryScan *node, EState *estate, int eflags)
 
 	/* return borrowed share node list */
 	estate->es_sharenode = sp_estate->es_sharenode;
+	/*subquerystate->ss.ps.ps_TupFromTlist = false;*/
 
 	/*
 	 * Initialize scan tuple type (needed by ExecAssignScanProjectionInfo).

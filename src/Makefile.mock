@@ -17,10 +17,13 @@ MOCK_LIBS := -ldl $(filter-out -lpgport -ledit, $(LIBS))
 EXCL_OBJS=src/backend/bootstrap/bootparse.o \
 			src/backend/catalog/caql/gram.o \
 			src/backend/parser/gram.o \
+			src/backend/nodes/readfast.o \
+			src/backend/nodes/outfast.o \
 			src/backend/regex/regcomp.o \
 			src/backend/regex/regexec.o \
 			src/backend/utils/adt/like.o \
 			src/backend/utils/misc/guc.o \
+			src/backend/utils/misc/guc_gp.o \
 			src/backend/replication/repl_gram.o \
 			src/timezone/%.o \
             src/backend/main/%.o \

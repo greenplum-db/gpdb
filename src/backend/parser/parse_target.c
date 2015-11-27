@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_target.c,v 1.149 2006/10/04 00:29:56 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_target.c,v 1.151 2006/12/24 00:29:19 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1409,6 +1409,39 @@ FigureColnameInternal(Node *node, char **name)
 					return 2;
 			}
 			break;
+		case T_XmlExpr:
+			/* make SQL/XML functions act like a regular function */
+			switch (((XmlExpr*) node)->op)
+			{
+				case IS_XMLCONCAT:
+					*name = "xmlconcat";
+					return 2;
+				case IS_XMLELEMENT:
+					*name = "xmlelement";
+					return 2;
+				case IS_XMLFOREST:
+					*name = "xmlforest";
+					return 2;
+				case IS_XMLPARSE:
+					*name = "xmlparse";
+					return 2;
+				case IS_XMLPI:
+					*name = "xmlpi";
+					return 2;
+				case IS_XMLROOT:
+					*name = "xmlroot";
+					return 2;
+				case IS_XMLSERIALIZE:
+					*name = "xmlserialize";
+					return 2;
+				case IS_DOCUMENT:
+					/* nothing */
+					break;
+			}
+			break;
+		case T_XmlSerialize:
+			*name = "xmlserialize";
+			return 2;
 		case T_GroupingFunc:
 			*name = "grouping";
 			return 2;

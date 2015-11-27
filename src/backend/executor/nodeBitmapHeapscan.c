@@ -21,7 +21,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapHeapscan.c,v 1.14.2.1 2006/12/26 19:26:56 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapHeapscan.c,v 1.15 2006/12/26 19:26:45 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -627,7 +627,7 @@ ExecInitBitmapHeapScan(BitmapHeapScan *node, EState *estate, int eflags)
 	 */
 	ExecAssignExprContext(estate, &scanstate->ss.ps);
 
-	/* scanstate->ss.ps.ps_TupFromTlist = false;*/
+	/* scanstate->ss.ps.ps_TupFromTlist = false; */
 
 	/*
 	 * initialize child expressions

@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/defrem.h,v 1.77 2006/10/04 00:30:08 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/commands/defrem.h,v 1.78 2006/12/23 00:43:12 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -85,26 +85,11 @@ extern void AlterAggregateOwner(List *name, List *args, Oid newOwnerId);
 extern void DefineOpClass(CreateOpClassStmt *stmt);
 extern void RemoveOpClass(RemoveOpClassStmt *stmt);
 extern void RemoveOpClassById(Oid opclassOid);
+extern void RemoveOpFamilyById(Oid opfamilyOid);
+extern void RemoveAmOpEntryById(Oid entryOid);
+extern void RemoveAmProcEntryById(Oid entryOid);
 extern void RenameOpClass(List *name, const char *access_method, const char *newname);
 extern void AlterOpClassOwner(List *name, const char *access_method, Oid newOwnerId);
-
-/* commands/foreigncmds.c */
-extern void AlterForeignServerOwner(const char *name, Oid newOwnerId);
-extern void AlterForeignDataWrapperOwner(const char *name, Oid newOwnerId);
-extern void CreateForeignDataWrapper(CreateFdwStmt *stmt);
-extern void AlterForeignDataWrapper(AlterFdwStmt *stmt);
-extern void RemoveForeignDataWrapper(DropFdwStmt *stmt);
-extern void RemoveForeignDataWrapperById(Oid fdwId);
-extern void CreateForeignServer(CreateForeignServerStmt *stmt);
-extern void AlterForeignServer(AlterForeignServerStmt *stmt);
-extern void RemoveForeignServer(DropForeignServerStmt *stmt);
-extern void RemoveForeignServerById(Oid srvId);
-extern void CreateUserMapping(CreateUserMappingStmt *stmt);
-extern void AlterUserMapping(AlterUserMappingStmt *stmt);
-extern void RemoveUserMapping(DropUserMappingStmt *stmt);
-extern void RemoveUserMappingById(Oid umId);
-//extern void InsertForeignTableEntry(Oid relid, Oid serverid, Oid fdwid, List *options);
-//extern void RemoveForeignTableEntry(Oid relid);
 
 /* support routines in commands/define.c */
 

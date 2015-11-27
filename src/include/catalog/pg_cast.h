@@ -11,7 +11,7 @@
  * Portions Copyright (c) 2006-2010, Greenplum inc
  * Copyright (c) 2002-2008, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_cast.h,v 1.26 2006/03/05 15:58:54 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_cast.h,v 1.27 2006/12/21 16:05:15 petere Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -324,11 +324,13 @@ DATA(insert (	25 1114 2022 e ));
 DATA(insert ( 1184	 25 1192 i ));
 DATA(insert (	25 1184 1191 e ));
 DATA(insert ( 1186	 25 1193 i ));
-DATA(insert (	25 1186 1263 e ));
+DATA(insert (	25 1186 6117 e ));
 DATA(insert ( 1266	 25  939 i ));
 DATA(insert (	25 1266  938 e ));
 DATA(insert ( 1700	 25 1688 i ));
 DATA(insert (	25 1700 1686 e ));
+DATA(insert (  142   25    0 e ));
+DATA(insert (   25  142	2896 e ));
 
 /*
  * Cross-category casts to and from VARCHAR
@@ -362,11 +364,13 @@ DATA(insert ( 1043 1114 2022 e ));
 DATA(insert ( 1184 1043 1192 a ));
 DATA(insert ( 1043 1184 1191 e ));
 DATA(insert ( 1186 1043 1193 a ));
-DATA(insert ( 1043 1186 1263 e ));
+DATA(insert ( 1043 1186 6117 e ));
 DATA(insert ( 1266 1043  939 a ));
 DATA(insert ( 1043 1266  938 e ));
 DATA(insert ( 1700 1043 1688 a ));
 DATA(insert ( 1043 1700 1686 e ));
+DATA(insert (  142 1043    0 e ));
+DATA(insert ( 1043  142 2896 e ));
 
 /*
  * Cross-category casts to and from BPCHAR
@@ -401,11 +405,12 @@ DATA(insert ( 1042 1114 2022 e ));
 DATA(insert ( 1184 1042 1192 a ));
 DATA(insert ( 1042 1184 1191 e ));
 DATA(insert ( 1186 1042 1193 a ));
-DATA(insert ( 1042 1186 1263 e ));
+DATA(insert ( 1042 1186 6117 e ));
 DATA(insert ( 1266 1042  939 a ));
 DATA(insert ( 1042 1266  938 e ));
 DATA(insert ( 1700 1042 1688 a ));
 DATA(insert ( 1042 1700 1686 e ));
+DATA(insert (  142 1042    0 e ));
 
 /*
  * Length-coercion functions

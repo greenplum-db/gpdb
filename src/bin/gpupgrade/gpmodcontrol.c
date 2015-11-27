@@ -550,20 +550,34 @@ ModifyControlFile(const char *progname, char *ControlFilePath, bool downgrade)
 	/* We have checked it was shutdowned. */
 	ToControlFile.common.state = ToDBStateShutdowned;
 	ASSIGN_FIELD(time);
-	ASSIGN_FIELD(logId);
-	ASSIGN_FIELD(logSeg);
+	if (downgrade)
+	{
+		/*
+		 * The logId/logSeg fields were removed in commit
+		 * 0cb91ccba93038c57a7dda6388c9f6bcd5cc52c0. At a clean shutdown,
+		 * the last record in the WAL is the shutdown checkpoint record, so
+		 * we can use its logId/logSeg to initialize.
+		 */
+		ToControlFile.older.logId = FromControlFile.newer.checkPoint.xlogid;
+		ToControlFile.older.logSeg = FromControlFile.newer.checkPoint.xrecoff % XLOG_SEG_SIZE;
+	}
 	ASSIGN_FIELD(checkPoint);
 	ASSIGN_FIELD(prevCheckPoint);
 	ASSIGN_FIELD(checkPointCopy);
 	/*
 	 * In 8220430, we bumped the initial log from 0 to 1.  See BootStrapXLOG.
+	 *
+	 * XXX: has this ever worked? The checkpoint record move to the new
+	 * location just because we update the pointer to it in pg_control. Doesn't
+	 * really matter anyway - there's no point in migrating a cluster where
+	 * so little has happened that less than 16 MB of WAL has been generated
+	 * throughout its lifetime.
 	 */
 	if (!downgrade &&
-		ToControlFile.newer.logId == 0 && ToControlFile.newer.logSeg == 0)
+		ToControlFile.newer.checkPoint.xlogid == 0 &&
+		ToControlFile.newer.checkPoint.xrecoff % XLOG_SEG_SIZE == 0)
 	{
 		NewControlFileData *tofile = (NewControlFileData *) &ToControlFile;
-		tofile->logId = 0;
-		tofile->logSeg = 1;
 		tofile->checkPoint.xlogid = 0;
 		tofile->checkPoint.xrecoff = XLogSegSize + SizeOfXLogLongPHD;
 		tofile->checkPointCopy.redo = tofile->checkPoint;

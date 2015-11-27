@@ -57,7 +57,7 @@ GP_FAILOVER_CONFIG_TBL=gp_fault_strategy
 unset PG_CONF_ADD_FILE
 #unset QD_PRIMARY_ARRAY QE_PRIMARY_ARRAY QE_MIRROR_ARRAY
 EXIT_STATUS=0
-# ED_PG_CONF search text values
+# SED_PG_CONF search text values
 PORT_TXT="#port"
 LOG_STATEMENT_TXT="#log_statement ="
 LISTEN_ADR_TXT="listen_addresses"
@@ -1239,14 +1239,14 @@ CREATE_QD_DB () {
 		$ECHO "#Greenplum specific configuration parameters for Master instance database" >> ${GP_DIR}/$PG_CONF
 		$ECHO "#------------------------------------------------------------------------" >> ${GP_DIR}/$PG_CONF
 		LOG_MSG "[INFO]:-Setting the Master port to $GP_PORT"
-		ED_PG_CONF ${GP_DIR}/$PG_CONF "$PORT_TXT" port=$GP_PORT 0
+		SED_PG_CONF ${GP_DIR}/$PG_CONF "$PORT_TXT" port=$GP_PORT 0
 		ERROR_CHK $? "set Master port=$GP_PORT in $PG_CONF" 2
 		LOG_MSG "[INFO]:-Completed setting the Master port to $MASTER_PORT"
 		LOG_MSG "[INFO]:-Setting Master logging option"
-		ED_PG_CONF ${GP_DIR}/$PG_CONF "$LOG_STATEMENT_TXT" log_statement=all 0
+		SED_PG_CONF ${GP_DIR}/$PG_CONF "$LOG_STATEMENT_TXT" log_statement=all 0
 		ERROR_CHK $? "set log_statement=all in ${GP_DIR}/$PG_CONF" 1
 		LOG_MSG "[INFO]:-Setting Master instance check point segments"
-		ED_PG_CONF ${GP_DIR}/$PG_CONF "$CHKPOINT_SEG_TXT" "checkpoint_segments=$CHECK_POINT_SEGMENTS" 0
+		SED_PG_CONF ${GP_DIR}/$PG_CONF "$CHKPOINT_SEG_TXT" "checkpoint_segments=$CHECK_POINT_SEGMENTS" 0
 		ERROR_CHK $? "set checkpoint_segments=$CHECK_POINT_SEGMENTS in ${GP_DIR}/$PG_CONF" 1
 		
 		if [  x"" != x"$PG_CONF_ADD_FILE" ]; then
@@ -1255,7 +1255,7 @@ CREATE_QD_DB () {
 						do
 						LOG_MSG "[INFO]:-Adding config $NEW_PARAM to Master"
 						SEARCH_TXT=`$ECHO $NEW_PARAM |$CUT -d"=" -f1`
-						ED_PG_CONF ${GP_DIR}/$PG_CONF $SEARCH_TXT $NEW_PARAM 0
+						SED_PG_CONF ${GP_DIR}/$PG_CONF $SEARCH_TXT $NEW_PARAM 0
 						ERROR_CHK $? "set $NEW_PARAM ${GP_DIR}/$PG_CONF" 1
 				done
 		fi

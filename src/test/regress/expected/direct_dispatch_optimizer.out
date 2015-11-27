@@ -684,7 +684,7 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE c
 -- Known_opt_diff: MPP-21346
 -- end_ignore
 select 1 from direct_test_type_tinterval where x = '["2008-08-08" "2010-10-10"]';
-INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to SINGLE content
  ?column? 
 ----------
         1

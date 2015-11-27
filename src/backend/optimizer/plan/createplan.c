@@ -11,7 +11,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.217.2.1 2007/07/31 19:53:49 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.218 2006/12/23 00:43:10 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -105,7 +105,7 @@ static void fix_indexqual_references(List *indexquals, IndexPath *index_path,
 						 List **indexstrategy,
 						 List **indexsubtype);
 static Node *fix_indexqual_operand(Node *node, IndexOptInfo *index,
-					  Oid *opclass);
+					  Oid *opfamily);
 static List *get_switched_clauses(Relids innerrelids, List *clauses);
 static List *order_qual_clauses(PlannerInfo *root, List *clauses);
 static void copy_path_costsize(PlannerInfo *root, Plan *dest, Path *src);
@@ -2924,6 +2924,8 @@ create_mergejoin_plan(PlannerInfo *root,
 							   joinclauses,
 							   otherclauses,
 							   mergeclauses,
+							   best_path->path_mergefamilies,
+							   best_path->path_mergestrategies,
 							   outer_plan,
 							   inner_plan,
 							   best_path->jpath.jointype);
@@ -3087,9 +3089,10 @@ fix_indexqual_references(List *indexquals, IndexPath *index_path,
 		RestrictInfo *rinfo = (RestrictInfo *) lfirst(l);
 		Expr	   *clause;
 		Oid			clause_op;
-		Oid			opclass = 0;
+		Oid			opfamily;
 		int			stratno;
-		Oid			stratsubtype;
+		Oid			stratlefttype;
+		Oid			stratrighttype;
 		bool		recheck;
 
 		Assert(IsA(rinfo, RestrictInfo));
@@ -3120,11 +3123,11 @@ fix_indexqual_references(List *indexquals, IndexPath *index_path,
 
 			/*
 			 * Now, determine which index attribute this is, change the
-			 * indexkey operand as needed, and get the index opclass.
+			 * indexkey operand as needed, and get the index opfamily.
 			 */
 			linitial(op->args) = fix_indexqual_operand(linitial(op->args),
 													   index,
-													   &opclass);
+													   &opfamily);
 			clause_op = op->opno;
 		}
 		else if (IsA(clause, RowCompareExpr))
@@ -3145,20 +3148,20 @@ fix_indexqual_references(List *indexquals, IndexPath *index_path,
 			 * For each column in the row comparison, determine which index
 			 * attribute this is and change the indexkey operand as needed.
 			 *
-			 * Save the index opclass for only the first column.  We will
-			 * return the operator and opclass info for just the first column
+			 * Save the index opfamily for only the first column.  We will
+			 * return the operator and opfamily info for just the first column
 			 * of the row comparison; the executor will have to look up the
 			 * rest if it needs them.
 			 */
 			foreach(lc, rc->largs)
 			{
-				Oid			tmp_opclass;
+				Oid			tmp_opfamily;
 
 				lfirst(lc) = fix_indexqual_operand(lfirst(lc),
 												   index,
-												   &tmp_opclass);
+												   &tmp_opfamily);
 				if (lc == list_head(rc->largs))
-					opclass = tmp_opclass;
+					opfamily = tmp_opfamily;
 			}
 			clause_op = linitial_oid(rc->opnos);
 		}
@@ -3170,11 +3173,11 @@ fix_indexqual_references(List *indexquals, IndexPath *index_path,
 
 			/*
 			 * Now, determine which index attribute this is, change the
-			 * indexkey operand as needed, and get the index opclass.
+			 * indexkey operand as needed, and get the index opfamily.
 			 */
 			linitial(saop->args) = fix_indexqual_operand(linitial(saop->args),
 														 index,
-														 &opclass);
+														 &opfamily);
 			clause_op = saop->opno;
 		}
 		else
@@ -3187,15 +3190,18 @@ fix_indexqual_references(List *indexquals, IndexPath *index_path,
 		*fixed_indexquals = lappend(*fixed_indexquals, clause);
 
 		/*
-		 * Look up the (possibly commuted) operator in the operator class to
-		 * get its strategy numbers and the recheck indicator.	This also
+		 * Look up the (possibly commuted) operator in the operator family to
+		 * get its strategy number and the recheck indicator.	This also
 		 * double-checks that we found an operator matching the index.
 		 */
-		get_op_opclass_properties(clause_op, opclass,
-								  &stratno, &stratsubtype, &recheck);
+		get_op_opfamily_properties(clause_op, opfamily,
+								   &stratno,
+								   &stratlefttype,
+								   &stratrighttype,
+								   &recheck);
 
 		*indexstrategy = lappend_int(*indexstrategy, stratno);
-		*indexsubtype = lappend_oid(*indexsubtype, stratsubtype);
+		*indexsubtype = lappend_oid(*indexsubtype, stratrighttype);
 
 		/* If it's not lossy, add to nonlossy_indexquals */
 		if (!recheck)
@@ -3204,7 +3210,7 @@ fix_indexqual_references(List *indexquals, IndexPath *index_path,
 }
 
 static Node *
-fix_indexqual_operand(Node *node, IndexOptInfo *index, Oid *opclass)
+fix_indexqual_operand(Node *node, IndexOptInfo *index, Oid *opfamily)
 {
 	/*
 	 * We represent index keys by Var nodes having the varno of the base table
@@ -3237,8 +3243,8 @@ fix_indexqual_operand(Node *node, IndexOptInfo *index, Oid *opclass)
 				{
 					result = (Var *) copyObject(node);
 					result->varattno = pos + 1;
-					/* return the correct opclass, too */
-					*opclass = index->classlist[pos];
+					/* return the correct opfamily, too */
+					*opfamily = index->opfamily[pos];
 					return (Node *) result;
 				}
 			}
@@ -3264,8 +3270,8 @@ fix_indexqual_operand(Node *node, IndexOptInfo *index, Oid *opclass)
 				result = makeVar(index->rel->relid, pos + 1,
 								 exprType(lfirst(indexpr_item)), -1,
 								 0);
-				/* return the correct opclass, too */
-				*opclass = index->classlist[pos];
+				/* return the correct opfamily, too */
+				*opfamily = index->opfamily[pos];
 				return (Node *) result;
 			}
 			indexpr_item = lnext(indexpr_item);
@@ -3274,7 +3280,7 @@ fix_indexqual_operand(Node *node, IndexOptInfo *index, Oid *opclass)
 
 	/* Ooops... */
 	elog(ERROR, "node is not an index attribute");
-	*opclass = InvalidOid;		/* keep compiler quiet */
+	*opfamily = InvalidOid;		/* keep compiler quiet */
 	return NULL;
 }
 
@@ -3885,6 +3891,8 @@ make_mergejoin(List *tlist,
 			   List *joinclauses,
 			   List *otherclauses,
 			   List *mergeclauses,
+			   List *mergefamilies,
+			   List *mergestrategies,
 			   Plan *lefttree,
 			   Plan *righttree,
 			   JoinType jointype)
@@ -3898,6 +3906,8 @@ make_mergejoin(List *tlist,
 	plan->lefttree = lefttree;
 	plan->righttree = righttree;
 	node->mergeclauses = mergeclauses;
+	node->mergefamilies = mergefamilies;
+	node->mergestrategies = mergestrategies;
 	node->join.jointype = jointype;
 	node->join.joinqual = joinclauses;
 

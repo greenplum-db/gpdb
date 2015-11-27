@@ -1237,13 +1237,24 @@ productid int,
 comment character varying(40)
 );
 
+-- Have more rows in one table, so that the planner will
+-- choose to make that the outer side of the join.
 insert into idxscan_outer values (1, 'a', 'aaa');
 insert into idxscan_outer values (2, 'b', 'bbb');
 insert into idxscan_outer values (3, 'c', 'ccc');
+insert into idxscan_outer values (4, 'd', 'ddd');
+insert into idxscan_outer values (5, 'e', 'eee');
+insert into idxscan_outer values (6, 'f', 'fff');
+insert into idxscan_outer values (7, 'g', 'ggg');
+insert into idxscan_outer values (8, 'h', 'hhh');
+insert into idxscan_outer values (9, 'i', 'iii');
 
 insert into idxscan_inner values (11, 1, 'xxxx');
 insert into idxscan_inner values (24, 2, 'yyyy');
 insert into idxscan_inner values (13, 3, 'zzzz');
+
+analyze idxscan_outer;
+analyze idxscan_inner;
 
 select disable_xform('CXformInnerJoin2HashJoin');
 select disable_xform('CXformLeftSemiJoin2HashJoin');

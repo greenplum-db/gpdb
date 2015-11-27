@@ -167,7 +167,7 @@ extern NestLoop *make_nestloop(List *tlist,
 							   JoinType jointype);
 extern MergeJoin *make_mergejoin(List *tlist,
 			   List *joinclauses, List *otherclauses,
-			   List *mergeclauses,
+			   List *mergeclauses, List *mergefamilies, List *mergestrategies,
 			   Plan *lefttree, Plan *righttree,
 			   JoinType jointype);
 extern Window *make_window(PlannerInfo *root, List *tlist,

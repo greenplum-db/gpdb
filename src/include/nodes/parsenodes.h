@@ -14,7 +14,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/parsenodes.h,v 1.334 2006/11/05 22:42:10 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/parsenodes.h,v 1.336 2006/12/30 21:21:55 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -72,7 +72,7 @@ typedef uint32 AclMode;			/* a bitmask of privilege bits */
 #define ACL_REFERENCES	(1<<5)
 #define ACL_TRIGGER		(1<<6)
 #define ACL_EXECUTE		(1<<7)	/* for functions */
-#define ACL_USAGE		(1<<8)	/* for languages, namespaces, FDWs, servers
+#define ACL_USAGE		(1<<8)	/* for languages, namespaces
 								 * and external protocols */
 #define ACL_CREATE		(1<<9)	/* for namespaces and databases */
 #define ACL_CREATE_TEMP (1<<10) /* for databases */
@@ -105,86 +105,88 @@ typedef uint32 AclMode;			/* a bitmask of privilege bits */
  */
 typedef struct Query
 {
-		NodeTag		type;
-		
-		CmdType		commandType;	/* select|insert|update|delete|utility */
-		
-		QuerySource querySource;	/* where did I come from? */
-		
-		bool		canSetTag;		/* do I set the command result tag? */
-		
-		Node	   *utilityStmt;	/* non-null if this is DECLARE CURSOR or a
+	NodeTag		type;
+
+	CmdType		commandType;	/* select|insert|update|delete|utility */
+
+	QuerySource querySource;	/* where did I come from? */
+
+	bool		canSetTag;		/* do I set the command result tag? */
+
+	Node	   *utilityStmt;	/* non-null if this is DECLARE CURSOR or a
 								 * non-optimizable statement */
-		
-		int			resultRelation; /* rtable index of target relation for
-									 * INSERT/UPDATE/DELETE; 0 for SELECT */
-		
-		IntoClause *intoClause;		/* target for SELECT INTO / CREATE TABLE AS */
-		
-		bool		hasAggs;		/* has aggregates in tlist or havingQual */
-		bool		hasWindFuncs;	/* has window function(s) in target list */
-		bool		hasSubLinks;	/* has subquery SubLink */
-		
-		List	   *rtable;			/* list of range table entries */
-		FromExpr   *jointree;		/* table join tree (FROM and WHERE clauses) */
-		
-		List	   *targetList;		/* target list (of TargetEntry) */
-		
-		List	   *returningList;	/* return-values list (of TargetEntry) */
-		
-		/*
-		 * A list of GroupClauses or GroupingClauses.  The order of
-		 * GroupClauses or GroupingClauses are based on input
-		 * queries. However, in each grouping set, all GroupClauses will
-		 * appear in front of GroupingClauses. See the following GROUP BY
-		 * clause:
-		 *
-		 *   GROUP BY ROLLUP(b,c),a, CUBE(e,d)
-		 *
-		 * the result list can be roughly represented as follows.
-		 *
-		 *    GroupClause(a) -->
-		 *    GroupingClause( ROLLUP, groupsets (GroupClause(b) --> GroupClause(c) ) ) -->
-		 *    GroupingClause( CUBE, groupsets (GroupClause(e) --> GroupClause(d) ) )
-		 */
-		List	   *groupClause;
-		
-		Node	   *havingQual;		/* qualifications applied to groups */
-		
-		List	   *windowClause;	/* defined window specifications */
-		
-		List	   *distinctClause; /* a list of SortGroupClause's */
-		
-		List	   *sortClause;		/* a list of SortGroupClause's */
 
-		List	   *scatterClause;  /* a list of tle's */
+	int			resultRelation; /* rtable index of target relation for
+								 * INSERT/UPDATE/DELETE; 0 for SELECT */
 
-		List	   *cteList; /* a list of CommonTableExprs in WITH clause */
-		bool 	   hasRecursive; /* Whether this query has a recursive WITH clause */
-		bool 	   hasModifyingCTE; /* has INSERT/UPDATE/DELETE in WITH clause */
+	IntoClause *intoClause;		/* target for SELECT INTO / CREATE TABLE AS */
 
-		Node	   *limitOffset;	/* # of result tuples to skip (int8 expr) */
-		Node	   *limitCount;		/* # of result tuples to return (int8 expr) */
-		
-		List	   *rowMarks;		/* a list of RowMarkClause's */
-		
-		Node	   *setOperations;	/* set-operation tree if this is top level of
-									 * a UNION/INTERSECT/EXCEPT query */
+	bool		hasAggs;		/* has aggregates in tlist or havingQual */
+	bool		hasWindFuncs;	/* has window function(s) in target list */
+	bool		hasSubLinks;	/* has subquery SubLink */
 
-	/* TODO Eventually we should remove these 4 members because they're not used here.
-	 *      Instead they're in PlannedStmt.  However, we need to read old formats, e.g.
-	 *      for catalog upgrade. So for now, it's easier to leave them here.
-	 */		
-		List	   *resultRelations;		/* Unused. Now in PlannedStmt. */
-		PartitionNode *result_partitions;	/* Unused. Now in PlannedStmt. */
-		List	   *result_aosegnos;		/* Unused. Now in PlannedStmt. */
-		List	   *returningLists; 		/* Unused. Now in PlannedStmt. */
-		
-		/* MPP: Used only on QD. Don't serialize.
-		 *      Holds the result distribution policy for SELECT ... INTO and
-		 *      set operations.
-		 */
-		struct GpPolicy  *intoPolicy;
+	List	   *rtable;			/* list of range table entries */
+	FromExpr   *jointree;		/* table join tree (FROM and WHERE clauses) */
+
+	List	   *targetList;		/* target list (of TargetEntry) */
+
+	List	   *returningList;	/* return-values list (of TargetEntry) */
+
+	/*
+	 * A list of GroupClauses or GroupingClauses.  The order of GroupClauses
+	 * or GroupingClauses are based on input queries. However, in each
+	 * grouping set, all GroupClauses will appear in front of GroupingClauses.
+	 * See the following GROUP BY clause:
+	 *
+	 * GROUP BY ROLLUP(b,c),a, CUBE(e,d)
+	 *
+	 * the result list can be roughly represented as follows.
+	 *
+	 * GroupClause(a) --> GroupingClause( ROLLUP, groupsets (GroupClause(b)
+	 * --> GroupClause(c) ) ) --> GroupingClause( CUBE, groupsets
+	 * (GroupClause(e) --> GroupClause(d) ) )
+	 */
+	List	   *groupClause;
+
+	Node	   *havingQual;		/* qualifications applied to groups */
+
+	List	   *windowClause;	/* defined window specifications */
+
+	List	   *distinctClause; /* a list of SortGroupClause's */
+
+	List	   *sortClause;		/* a list of SortGroupClause's */
+
+	List	   *scatterClause;	/* a list of tle's */
+
+	List	   *cteList;		/* a list of CommonTableExprs in WITH clause */
+	bool		hasRecursive;	/* Whether this query has a recursive WITH
+								 * clause */
+	bool		hasModifyingCTE;	/* has INSERT/UPDATE/DELETE in WITH clause */
+
+	Node	   *limitOffset;	/* # of result tuples to skip (int8 expr) */
+	Node	   *limitCount;		/* # of result tuples to return (int8 expr) */
+
+	List	   *rowMarks;		/* a list of RowMarkClause's */
+
+	Node	   *setOperations;	/* set-operation tree if this is top level of
+								 * a UNION/INTERSECT/EXCEPT query */
+
+	/*
+	 * TODO Eventually we should remove these 4 members because they're not
+	 * used here. Instead they're in PlannedStmt.  However, we need to read
+	 * old formats, e.g. for catalog upgrade. So for now, it's easier to leave
+	 * them here.
+	 */
+	List	   *resultRelations;	/* Unused. Now in PlannedStmt. */
+	PartitionNode *result_partitions;	/* Unused. Now in PlannedStmt. */
+	List	   *result_aosegnos;	/* Unused. Now in PlannedStmt. */
+	List	   *returningLists; /* Unused. Now in PlannedStmt. */
+
+	/*
+	 * MPP: Used only on QD. Don't serialize. Holds the result distribution
+	 * policy for SELECT ... INTO and set operations.
+	 */
+	struct GpPolicy *intoPolicy;
 } Query;
 
 /****************************************************************************
@@ -222,7 +224,7 @@ typedef struct TypeName
 	bool		setof;			/* is a set? */
 	bool		pct_type;		/* %TYPE specified? */
 	List	   *typmods;		/* type modifier expression(s) */
-	int32		typmod;			/* prespecified type modifier */
+	int32		typemod;		/* prespecified type modifier */
 	List	   *arrayBounds;	/* array bounds */
 	int			location;		/* token location, or -1 if unknown */
 } TypeName;
@@ -555,6 +557,18 @@ typedef struct LockingClause
 	bool		forUpdate;		/* true = FOR UPDATE, false = FOR SHARE */
 	bool		noWait;			/* NOWAIT option */
 } LockingClause;
+
+/*
+ * XMLSERIALIZE (in raw parse tree only)
+ */
+typedef struct XmlSerialize
+{
+	NodeTag		type;
+	XmlOptionType xmloption;	/* DOCUMENT or CONTENT */
+	Node	   *expr;
+	TypeName   *typeName;
+	int			location;		/* token location, or -1 if unknown */
+} XmlSerialize;
 
 
 /****************************************************************************
@@ -1054,9 +1068,6 @@ typedef enum ObjectType
 	OBJECT_CONVERSION,
 	OBJECT_DATABASE,
 	OBJECT_DOMAIN,
-	OBJECT_FDW,
-	OBJECT_FOREIGN_SERVER,
-	OBJECT_FOREIGNTABLE,
 	OBJECT_FUNCTION,
 	OBJECT_INDEX,
 	OBJECT_LANGUAGE,
@@ -1114,12 +1125,12 @@ typedef struct AlterTableStmt
 	ObjectType	relkind;		/* type of object */
 
 	/* Workspace for use during AT processing/dispatch.  It might be better
-	 * to package there in a "context" node than to lay them out here. 
+	 * to package there in a "context" node than to lay them out here.
 	 */
 	List		 *oidmap;		/* For reindex_relation */
 	int			oidInfoCount;	/* Vector of TableOidInfo pointers: */
 	TableOidInfo *oidInfo;		/* MPP Allow for hierarchy of tables to alter */
-	
+
 } AlterTableStmt;
 
 typedef enum AlterTableType
@@ -1260,8 +1271,6 @@ typedef enum GrantObjectType
 	ACL_OBJECT_SEQUENCE,		/* sequence */
 	ACL_OBJECT_DATABASE,		/* database */
 	ACL_OBJECT_EXTPROTOCOL,		/* external table protocol */
-	ACL_OBJECT_FDW,				/* foreign-data wrapper */
-	ACL_OBJECT_FOREIGN_SERVER,	/* foreign server */
 	ACL_OBJECT_FUNCTION,		/* function */
 	ACL_OBJECT_LANGUAGE,		/* procedural language */
 	ACL_OBJECT_NAMESPACE,		/* namespace */
@@ -1401,10 +1410,10 @@ typedef struct CreateStmt
 	char		relStorage;
 	struct GpPolicy  *policy;
 	Node       *postCreate;      /* CDB: parse and process after the CREATE */
-	List	   *deferredStmts;	/* CDB: Statements, e.g., partial indexes, that can't be 
+	List	   *deferredStmts;	/* CDB: Statements, e.g., partial indexes, that can't be
 								 * analyzed until after CREATE (until the target table
 								 * is created and visible). */
-	bool		is_part_child;	/* CDB: child table in a partition? Marked during analysis for 
+	bool		is_part_child;	/* CDB: child table in a partition? Marked during analysis for
 								 * interior or leaf parts of the new table.  Not marked for a
 								 * a partition root or ordinary table.
 								 */
@@ -1450,7 +1459,7 @@ typedef struct CreateExternalStmt
 								   data encoding */
 	List       *distributedBy;   /* what columns we distribute the data by */
 	struct GpPolicy  *policy;	/* used for writable tables */
-	
+
 } CreateExternalStmt;
 
 /* ----------------------
@@ -1707,97 +1716,6 @@ typedef struct CreateTableSpaceStmt
 } CreateTableSpaceStmt;
 
 /* ----------------------
- *		Create/Drop FOREIGN DATA WRAPPER Statements
- * ----------------------
- */
-
-typedef struct CreateFdwStmt
-{
-	NodeTag		type;
-	char	   *fdwname;		/* foreign-data wrapper name */
-	List	   *validator;		/* optional validator function (qual. name) */
-	List	   *options;		/* generic options to FDW */
-} CreateFdwStmt;
-
-typedef struct AlterFdwStmt
-{
-	NodeTag		type;
-	char	   *fdwname;		/* foreign-data wrapper name */
-	List	   *validator;		/* optional validator function (qual. name) */
-	bool		change_validator;
-	List	   *options;		/* generic options to FDW */
-} AlterFdwStmt;
-
-typedef struct DropFdwStmt
-{
-	NodeTag		type;
-	char	   *fdwname;		/* foreign-data wrapper name */
-	bool		missing_ok;		/* don't complain if missing */
-	DropBehavior behavior;		/* drop behavior - cascade/restrict */
-} DropFdwStmt;
-
-/* ----------------------
- *		Create/Drop FOREIGN SERVER Statements
- * ----------------------
- */
-
-typedef struct CreateForeignServerStmt
-{
-	NodeTag		type;
-	char	   *servername;		/* server name */
-	char	   *servertype;		/* optional server type */
-	char	   *version;		/* optional server version */
-	char	   *fdwname;		/* FDW name */
-	List	   *options;		/* generic options to server */
-} CreateForeignServerStmt;
-
-typedef struct AlterForeignServerStmt
-{
-	NodeTag		type;
-	char	   *servername;		/* server name */
-	char	   *version;		/* optional server version */
-	List	   *options;		/* generic options to server */
-	bool		has_version;	/* version specified */
-} AlterForeignServerStmt;
-
-typedef struct DropForeignServerStmt
-{
-	NodeTag		type;
-	char	   *servername;		/* server name */
-	bool		missing_ok;		/* ignore missing servers */
-	DropBehavior behavior;		/* drop behavior - cascade/restrict */
-} DropForeignServerStmt;
-
-/* ----------------------
- *		Create/Drop USER MAPPING Statements
- * ----------------------
- */
-
-typedef struct CreateUserMappingStmt
-{
-	NodeTag		type;
-	char	   *username;		/* username or PUBLIC/CURRENT_USER */
-	char	   *servername;		/* server name */
-	List	   *options;		/* generic options to server */
-} CreateUserMappingStmt;
-
-typedef struct AlterUserMappingStmt
-{
-	NodeTag		type;
-	char	   *username;		/* username or PUBLIC/CURRENT_USER */
-	char	   *servername;		/* server name */
-	List	   *options;		/* generic options to server */
-} AlterUserMappingStmt;
-
-typedef struct DropUserMappingStmt
-{
-	NodeTag		type;
-	char	   *username;		/* username or PUBLIC/CURRENT_USER */
-	char	   *servername;		/* server name */
-	bool		missing_ok;		/* ignore missing mappings */
-} DropUserMappingStmt;
-
-/* ----------------------
  *		Create/Drop TRIGGER Statements
  * ----------------------
  */
@@ -1996,6 +1914,7 @@ typedef struct CreateOpClassStmt
 {
 	NodeTag		type;
 	List	   *opclassname;	/* qualified name (list of Value strings) */
+	List	   *opfamilyname;	/* qualified name (ditto); NIL if omitted */
 	char	   *amname;			/* name of index AM opclass is for */
 	TypeName   *datatype;		/* datatype of indexed column */
 	List	   *items;			/* List of CreateOpClassItem nodes */
@@ -2022,7 +1941,7 @@ typedef struct CreateOpClassItem
 
 /* ----------------------
  *		DROP Statement, applies to:
- *        Table, External Table, Sequence, View, Index, Type, Domain, 
+ *        Table, External Table, Sequence, View, Index, Type, Domain,
  *        Conversion, Schema, Filespace
  * ----------------------
  */
@@ -2501,7 +2420,7 @@ typedef struct VacuumStmt
 
 	/*
 	 * AO segment file num to compact (integer).
-	 */ 
+	 */
 	List *appendonly_compaction_segno;
 
 	/*

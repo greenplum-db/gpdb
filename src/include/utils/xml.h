@@ -1,37 +1,3 @@
-/*
- * xml.h
- *
- * This file is based on src/include/utils/xml.h from the PostgreSQL 9.1 
- * distribution whose original header is below.	 The primary differences
- * between this code and the original are as follows:
- * 
- * 1. The prototypes for the following functions we do not support were removed:
- *		table_to_xml
- *		query_to_xml
- *		cursor_to_xml
- *		table_to_xmlschema
- *		query_to_xmlschema
- *		cursor_to_xmlschema
- *		table_to_xml_and_xmlschema
- *		query_to_xml_and_xmlschema
- *		schema_to_xml
- *		schema_to_xmlschema
- *		schema_to_xml_and_xmlschema
- *		database_to_xml
- *		database_to_xmlschema
- *		database_to_xml_and_xmlschema
- *		map_sql_identifier_to_xml_name
- *		map_xml_name_to_sql_identifier
- *      xmlelement
- *
- * 2. The prototypes for functions we needed for GBDB were added:
- *      xmleq
- *      xmlne
- *
- * 3. XmlOptionType was added here from src/include/nodes/primnodes.h
- *
- */
-
 /*-------------------------------------------------------------------------
  *
  * xml.h
@@ -52,12 +18,6 @@
 #include "fmgr.h"
 #include "nodes/execnodes.h"
 #include "nodes/primnodes.h"
-
-typedef enum
-{
-	XMLOPTION_DOCUMENT,
-	XMLOPTION_CONTENT
-} XmlOptionType;
 
 typedef struct varlena xmltype;
 
@@ -83,6 +43,23 @@ extern Datum xml_is_well_formed(PG_FUNCTION_ARGS);
 extern Datum xml_is_well_formed_document(PG_FUNCTION_ARGS);
 extern Datum xml_is_well_formed_content(PG_FUNCTION_ARGS);
 
+extern Datum table_to_xml(PG_FUNCTION_ARGS);
+extern Datum query_to_xml(PG_FUNCTION_ARGS);
+extern Datum cursor_to_xml(PG_FUNCTION_ARGS);
+extern Datum table_to_xmlschema(PG_FUNCTION_ARGS);
+extern Datum query_to_xmlschema(PG_FUNCTION_ARGS);
+extern Datum cursor_to_xmlschema(PG_FUNCTION_ARGS);
+extern Datum table_to_xml_and_xmlschema(PG_FUNCTION_ARGS);
+extern Datum query_to_xml_and_xmlschema(PG_FUNCTION_ARGS);
+
+extern Datum schema_to_xml(PG_FUNCTION_ARGS);
+extern Datum schema_to_xmlschema(PG_FUNCTION_ARGS);
+extern Datum schema_to_xml_and_xmlschema(PG_FUNCTION_ARGS);
+
+extern Datum database_to_xml(PG_FUNCTION_ARGS);
+extern Datum database_to_xmlschema(PG_FUNCTION_ARGS);
+extern Datum database_to_xml_and_xmlschema(PG_FUNCTION_ARGS);
+
 typedef enum
 {
 	XML_STANDALONE_YES,
@@ -94,12 +71,17 @@ typedef enum
 extern void pg_xml_init(void);
 extern void xml_ereport(int level, int sqlcode, const char *msg);
 extern xmltype *xmlconcat(List *args);
+extern xmltype *xmlelement(XmlExprState *xmlExpr, ExprContext *econtext);
 extern xmltype *xmlparse(text *data, XmlOptionType xmloption, bool preserve_whitespace);
 extern xmltype *xmlpi(char *target, text *arg, bool arg_is_null, bool *result_is_null);
 extern xmltype *xmlroot(xmltype *data, text *version, int standalone);
 extern bool xml_is_document(xmltype *arg);
 extern text *xmltotext_with_xmloption(xmltype *data, XmlOptionType xmloption_arg);
 extern char *escape_xml(const char *str);
+
+extern char *map_sql_identifier_to_xml_name(char *ident, bool fully_escaped, bool escape_period);
+extern char *map_xml_name_to_sql_identifier(char *name);
+extern char *map_sql_value_to_xml_value(Datum value, Oid type, bool xml_escape_strings);
 
 typedef enum
 {

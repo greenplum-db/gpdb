@@ -87,10 +87,6 @@ The tokens are:
 
  Replace @gpcurusername@ with the username of the user executing the script.
 
-=item gpupgradeschemaname
-
- Replace @gpupgradeschemaname@ with upg_catalog.
-
 =item gpupgradedatadir
 
  Replace @gpupgradedatadir@ with /path/to/regression/data/
@@ -344,8 +340,6 @@ if (1)
 
     my $hostexp = '\\@hostname\\@';
 	my $unexp = '\\@gpcurusername\\@';
-	my $schema = '\\@gpupgradeschemaname\\@';
-	my $upgtoolkit = '\\@gpupgradetoolkitschema\\@';
 	my $infoschema = '\\@gpinfoschemaname\\@';
 	my $ugdir = '\\@gpupgradedatadir\\@';
 	my $gpglobconn = '\\@gp_glob_connect\\@';
@@ -356,7 +350,7 @@ if (1)
 	chomp $curdir;
 
 #    print "$filnam\n";
-    system "perl -i -ple \' s/$hostexp/$hostname/gm; s/$unexp/$username/gm; s/$schema/upg_catalog/gm; s/$infoschema/upg_information/gm; s,$ugdir,$curdir/data/upgrade43,gm; s/$gpglobconn/$glob_connect/gm; s/$upgtoolkit/upg_toolkit/gm;   \' $filnam\n";
+    system "perl -i -ple \' s/$hostexp/$hostname/gm; s/$unexp/$username/gm; s/$infoschema/upg_information/gm; s,$ugdir,$curdir/data/upgrade43,gm; s/$gpglobconn/$glob_connect/gm; \' $filnam\n";
 
     # replace filespace
     if (defined($gpfspace_all) && length($gpfspace_all))

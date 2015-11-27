@@ -96,8 +96,10 @@ static int extssl_libcurldebug = 1;
 char extssl_key_full[MAXPGPATH] = {0};
 char extssl_cer_full[MAXPGPATH] = {0};
 char extssl_cas_full[MAXPGPATH] = {0};
-int readable_external_table_timeout = 0;
 #endif
+
+/* GUC */
+int readable_external_table_timeout = 0;
 
 /* Will hold the last curl error					*/
 /* Currently it is in use only for SSL connection,	*/

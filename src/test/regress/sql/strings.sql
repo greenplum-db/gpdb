@@ -507,3 +507,8 @@ select E'\udsfs';
 select E'\uD843\uE001';
 select E'\uDC01';
 select E'\uD834';
+
+-- Clean up GPDB-added tables
+DROP TABLE char_strings_tbl;
+DROP TABLE varchar_strings_tbl;
+DROP TABLE text_strings_tbl;

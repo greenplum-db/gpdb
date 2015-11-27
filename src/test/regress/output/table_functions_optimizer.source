@@ -2852,10 +2852,10 @@ SELECT * FROM project( TABLE( SELECT * FROM pg_am ),
   CASE 1 WHEN 2 THEN 1 ELSE GREATEST(1, COALESCE(1+1)) END);
  amstrategies 
 --------------
-            5
+            0
+            0
             1
-          100
-          100
+            5
             5
 (5 rows)
 
@@ -2863,10 +2863,10 @@ SELECT * FROM project( TABLE( SELECT * FROM pg_am ),
   CASE WHEN 3 IS NOT NULL AND 1 IN (1, 2) THEN floor(NULLIF(2, 3))::int END);
  amstrategies 
 --------------
-            5
+            0
+            0
             1
-          100
-          100
+            5
             5
 (5 rows)
 

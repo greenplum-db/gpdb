@@ -1,7 +1,3 @@
-\c regression
-drop database if exists gptest;
-create database gptest;
-
 drop table if exists testswapna;
 create table testswapna (a integer);
 insert into testswapna  select a from generate_series(1,10) a;

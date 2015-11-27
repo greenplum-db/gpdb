@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.314 2006/11/05 22:42:08 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.315 2006/12/30 21:21:52 tgl Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -51,7 +51,6 @@
 #include "catalog/pg_authid.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_exttable.h"
-#include "catalog/pg_foreign_table.h"
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_partition.h"
@@ -346,9 +345,6 @@ heap_create(const char *relname,
 		 * For shared table (that we created during upgrade), we create it once in every
 		 * database, but they will all point to the same file. So, the file might have already
 		 * been created.
-		 * So, if we're in upgrade and we're creating shared table, we scan for existences.
-		 * (We don't need to scan when we're creating shared table during initdb.)
-		 * If it exists, we reuse the Tid and SerialNum and mark the isPresent to true.
 		 *
 		 * Note that we have not tried creating shared AO table.
 		 *
@@ -356,19 +352,6 @@ heap_create(const char *relname,
 		 */
 		// WARNING: Do not use the rel structure -- it doesn't have relstorage set...
 		isAppendOnly = (relstorage == RELSTORAGE_AOROWS || relstorage == RELSTORAGE_AOCOLS);
-
-		if (shared_relation && gp_upgrade_mode)
-		{
-			skipCreatingSharedTable = PersistentFileSysObj_ScanForRelation(
-							&rel->rd_node,
-							/* segmentFileNum */ 0,
-							&rel->rd_segfile0_relationnodeinfo.persistentTid,
-							&rel->rd_segfile0_relationnodeinfo.persistentSerialNum);
-
-			if (Debug_persistent_print && skipCreatingSharedTable)
-				elog(Persistent_DebugPrintLevel(),
-						"heap_create: file for shared relation '%s' already exists", relname);
-		}
 
 		if (!skipCreatingSharedTable)
 		{
@@ -1155,6 +1138,8 @@ AddNewRelationType(const char *typeName,
 				   F_RECORD_OUT,	/* output procedure */
 				   F_RECORD_RECV,		/* receive procedure */
 				   F_RECORD_SEND,		/* send procedure */
+				   InvalidOid,	/* typmodin procedure - none */
+				   InvalidOid,	/* typmodout procedure - none */
 				   InvalidOid,	/* analyze procedure - default */
 				   InvalidOid,	/* array element type - irrelevant */
 				   InvalidOid,	/* domain base type - irrelevant */
@@ -1377,7 +1362,7 @@ heap_create_with_catalog(const char *relname,
 	 * During upgrade, do not validate because we accept tidycat options as well.
 	 */
 	stdRdOptions = (StdRdOptions*) heap_reloptions(
-			relkind, reloptions, valid_opts ? false : !gp_upgrade_mode);
+			relkind, reloptions, !valid_opts);
 	heap_test_override_reloptions(relkind, stdRdOptions, &safefswritesize);
 	appendOnlyRel = stdRdOptions->appendonly;
 	validateAppendOnlyRelOptions(appendOnlyRel,
@@ -1503,6 +1488,8 @@ heap_create_with_catalog(const char *relname,
 					   F_RECORD_OUT,	/* output procedure */
 					   F_RECORD_RECV,		/* receive procedure */
 					   F_RECORD_SEND,		/* send procedure */
+					   InvalidOid,	/* typmodin procedure - none */
+					   InvalidOid,	/* typmodout procedure - none */
 					   InvalidOid,	/* analyze procedure - default */
 					   InvalidOid,	/* array element type - irrelevant */
 					   InvalidOid,	/* domain base type - irrelevant */
@@ -2174,7 +2161,6 @@ heap_drop_with_catalog(Oid relid)
 	bool		is_part_child = false;
 	bool		is_appendonly_rel;
 	bool		is_external_rel;
-	bool		is_foreign_rel;
 	char		relkind;
 
 	/*
@@ -2186,7 +2172,6 @@ heap_drop_with_catalog(Oid relid)
 
 	is_appendonly_rel = (RelationIsAoRows(rel) || RelationIsAoCols(rel));
 	is_external_rel = RelationIsExternal(rel);
-	is_foreign_rel = RelationIsForeign(rel);
 
 	/*
  	 * Get the distribution policy and figure out if it is to be removed.
@@ -2275,9 +2260,6 @@ heap_drop_with_catalog(Oid relid)
 	if (is_external_rel)
 		RemoveExtTableEntry(relid);
 
-	if (is_foreign_rel)
-		RemoveForeignTableEntry(relid);
-	
 	/*
  	 * delete distribution policy if present
  	 */

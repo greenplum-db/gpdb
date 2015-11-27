@@ -21,14 +21,16 @@
 #include "postgres.h"
 #include "nodes/primnodes.h"
 
-#include "dxl/operators/CDXLScalarBoolExpr.h"
-#include "dxl/CIdGenerator.h"
 #include "gpopt/translate/CMappingVarColId.h"
 #include "gpopt/translate/CMappingParamIdScalarId.h"
 #include "gpopt/translate/CCTEListEntry.h"
-#include "base/IDatum.h"
 
-#include "md/IMDType.h"
+#include "naucrates/dxl/operators/CDXLScalarBoolExpr.h"
+#include "naucrates/dxl/CIdGenerator.h"
+
+#include "naucrates/base/IDatum.h"
+
+#include "naucrates/md/IMDType.h"
 
 // fwd declarations
 namespace gpopt

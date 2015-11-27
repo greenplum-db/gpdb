@@ -192,6 +192,12 @@ struct config_generic
 #define GUC_HAVE_LOCAL		0x0002		/* a SET LOCAL has been executed */
 #define GUC_HAVE_STACK		0x0004		/* we have stacked prior value(s) */
 
+/* upper limit for GUC variables measured in kilobytes of memory */
+#if SIZEOF_SIZE_T > 4
+#define MAX_KILOBYTES	INT_MAX
+#else
+#define MAX_KILOBYTES	(INT_MAX / 1024)
+#endif
 
 /* GUC records for specific variable types */
 
@@ -265,4 +271,14 @@ extern int get_num_guc_variables(void);
 extern void build_guc_variables(void);
 
 extern bool parse_int(const char *value, int *result, int flags, const char **hintmsg);
+
+/* guc_gp.c needs this from guc.c */
+const char *assign_msglvl(int *var, const char *newval, bool doit, GucSource source);
+
+/* guc_gp.c exports these for guc.c */
+extern struct config_bool ConfigureNamesBool_gp[];
+extern struct config_int ConfigureNamesInt_gp[];
+extern struct config_real ConfigureNamesReal_gp[];
+extern struct config_string ConfigureNamesString_gp[];
+
 #endif   /* GUC_TABLES_H */

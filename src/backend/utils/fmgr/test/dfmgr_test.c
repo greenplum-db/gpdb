@@ -21,6 +21,11 @@
  * expectation. Note, an error is the success case
  */
 #define errfinish errfinish_impl
+/*
+ * Mock PG_RE_THROW as well, because we are not using real elog.o.
+ * The closest mockery is to call siglongjmp().
+ */
+#define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
 
 /* Buffer to store the last error mesage from errdetail */
 static char lastErrorMsg[ERROR_MESSAGE_MAX_LEN];

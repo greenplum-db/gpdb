@@ -47,6 +47,8 @@ static Size mul_size(Size s1, Size s2);
     	will_return_with_sideeffect(errstart, false, &_ExceptionalCondition, NULL);\
     } \
 
+#define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
+
 /*
  * This method will emulate the real ExceptionalCondition
  * function by re-throwing the exception, essentially falling

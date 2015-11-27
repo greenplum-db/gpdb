@@ -3173,7 +3173,10 @@ bindCurrentOfParams(char *cursor_name, Oid target_relid, ItemPointer ctid, int *
 	char 			*table_name;
 	Portal			portal;
 	QueryDesc		*queryDesc;
-	bool			found_attribute, isnull;
+	AttrNumber		gp_segment_id_attno;
+	AttrNumber		ctid_attno;
+	AttrNumber		tableoid_attno;
+	bool			isnull;
 	Datum			value;
 
 	portal = GetPortalByName(cursor_name);
@@ -3239,23 +3242,21 @@ bindCurrentOfParams(char *cursor_name, Oid target_relid, ItemPointer ctid, int *
 	Assert(queryDesc->estate->es_junkFilter);
 
 	/* extract gp_segment_id metadata */
-	found_attribute = ExecGetJunkAttribute(queryDesc->estate->es_junkFilter,
-										   slot,
-						 				   "gp_segment_id",
-						 				   &value,
-						 				   &isnull);
-	Insist(found_attribute);
-	Assert(!isnull);
+	gp_segment_id_attno = ExecFindJunkAttribute(queryDesc->estate->es_junkFilter, "gp_segment_id");
+	if (!AttributeNumberIsValid(gp_segment_id_attno))
+		elog(ERROR, "could not find junk gp_segment_id column");
+	value = ExecGetJunkAttribute(slot, gp_segment_id_attno, &isnull);
+	if (isnull)
+		elog(ERROR, "gp_segment_id is NULL");
 	*gp_segment_id = DatumGetInt32(value);
 
 	/* extract ctid metadata */
-	found_attribute = ExecGetJunkAttribute(queryDesc->estate->es_junkFilter,
-						 				   slot,
-						 				   "ctid",
-						 				   &value,
-						 				   &isnull);
-	Insist(found_attribute);
-	Assert(!isnull);
+	ctid_attno = ExecFindJunkAttribute(queryDesc->estate->es_junkFilter, "ctid");
+	if (!AttributeNumberIsValid(ctid_attno))
+		elog(ERROR, "could not find junk ctid column");
+	value = ExecGetJunkAttribute(slot, ctid_attno, &isnull);
+	if (isnull)
+		elog(ERROR, "ctid is NULL");
 	ItemPointerCopy(DatumGetItemPointer(value), ctid);
 
 	/* 
@@ -3265,16 +3266,15 @@ bindCurrentOfParams(char *cursor_name, Oid target_relid, ItemPointer ctid, int *
 	 * scrolling a partitioned table, as this is the only case in which
 	 * gp_segment_id/ctid alone do not suffice to uniquely identify a tuple.
 	 */
-	found_attribute = ExecGetJunkAttribute(queryDesc->estate->es_junkFilter,
-										   slot,
-						 				   "tableoid",
-						 				   &value,
-						 				   &isnull);
-	if (found_attribute)
+	tableoid_attno = ExecFindJunkAttribute(queryDesc->estate->es_junkFilter,
+										   "tableoid");
+	if (AttributeNumberIsValid(tableoid_attno))
 	{
-		Assert(!isnull);	
+		value = ExecGetJunkAttribute(slot, tableoid_attno, &isnull);
+		if (isnull)
+			elog(ERROR, "tableoid is NULL");
 		*tableoid = DatumGetObjectId(value);
-		
+
 		/*
 		 * This is our last opportunity to verify that the physical table given
 		 * by tableoid is, indeed, simply updatable.

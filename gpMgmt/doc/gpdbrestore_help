@@ -138,6 +138,20 @@ OPTIONS
  validation. If not specified, the utility will start up to 60 parallel 
  processes depending on how many segment instances it needs to restore. 
 
+
+--change-schema=schema-name
+
+ Optional. Restores tables from a backup created with gpcrondump to a
+ different schema. The specified schema must exist in the database.
+ If the schema does not exist, the utility returns an error. System
+ catalog schemas are not supported.
+
+ You must specify tables to restore with the -T and --table-file options.
+ If a table that is being restored exists in schema-name, the utility
+ returns a warning and attempts to append the data to the table from the
+ backup. You can specify the --trunctate option to truncate table data
+ before restoring data to the table from the backup.
+
  
 -d <master_data_directory>
 
@@ -170,11 +184,15 @@ OPTIONS
  it. 
 
 
--G (restore global objects) 
+-G [include|only]
 
  Restores global objects such as roles and tablespaces if the global 
  object dump file db_dumps/<date>/gp_global_1_1_<timestamp> is found in 
- the master data directory. 
+ the master data directory.
+
+ Specify either "-G only" to only restore the global objects dump file
+ or "-G include" to restore global objects along with a normal restore.
+ Defaults to "include" if neither argument is provided.
 
 
 -l <logfile_directory>

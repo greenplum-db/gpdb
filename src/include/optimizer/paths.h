@@ -100,11 +100,13 @@ hashclauses_for_join(List *restrictlist,
 					 RelOptInfo *outerrel,
 					 RelOptInfo *innerrel,
 					 JoinType jointype);
-List *
-select_mergejoin_clauses(RelOptInfo *outerrel,
+List *select_mergejoin_clauses(RelOptInfo *joinrel,
+						 RelOptInfo *outerrel,
 						 RelOptInfo *innerrel,
 						 List *restrictlist,
 						 JoinType jointype);
+extern void build_mergejoin_strat_lists(List *mergeclauses,
+							List **mergefamilies, List **mergestrategies);
 
 /*
  * joinrels.c

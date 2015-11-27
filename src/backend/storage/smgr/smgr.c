@@ -12,7 +12,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/smgr/smgr.c,v 1.101.2.2 2007/07/20 16:29:59 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/smgr/smgr.c,v 1.102 2007/01/03 18:11:01 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -467,13 +467,7 @@ smgrclose(SMgrRelation reln)
 {
 	SMgrRelation *owner;
 
-	if (!mdclose(reln))
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not close relation %u/%u/%u: %m",
-						reln->smgr_rnode.spcNode,
-						reln->smgr_rnode.dbNode,
-						reln->smgr_rnode.relNode)));
+	mdclose(reln);
 
 	owner = reln->smgr_owner;
 
@@ -815,9 +809,7 @@ smgrcreate(
 
 	bool						ignoreAlreadyExists,
 
-	int							*primaryError,
-
-	bool						*mirrorDataLossOccurred)
+	bool						*mirrorDataLossOccurred) /* FIXME: is this arg still needed? */
 {
 	mdcreate(
 			reln,
@@ -826,7 +818,6 @@ smgrcreate(
 			mirrorDataLossTrackingState,
 			mirrorDataLossTrackingSessionNum,
 			ignoreAlreadyExists,
-			primaryError,
 			mirrorDataLossOccurred);
 }
 
@@ -987,27 +978,11 @@ smgr_internal_unlink(
 	/*
 	 * And delete the physical files.
 	 *
-	 * Note: we treat deletion failure as a WARNING, not an error, because
-	 * we've already decided to commit or abort the current xact.
+	 * Note: smgr_unlink must treat deletion failure as a WARNING, not an
+	 * ERROR, because we've already decided to commit or abort the current
+	 * xact.
 	 */
-	if (!mdunlink(rnode, relationName, primaryOnly, isRedo, ignoreNonExistence, mirrorDataLossOccurred))
-	{
-		if (relationName == NULL)
-			ereport(WARNING,
-					(errcode_for_file_access(),
-					 errmsg("could not remove relation %u/%u/%u: %m",
-							rnode.spcNode,
-							rnode.dbNode,
-							rnode.relNode)));
-		else
-			ereport(WARNING,
-					(errcode_for_file_access(),
-					 errmsg("could not remove relation %u/%u/%u '%s': %m",
-							rnode.spcNode,
-							rnode.dbNode,
-							rnode.relNode,
-							relationName)));
-	}
+	mdunlink(rnode, relationName, primaryOnly, isRedo, ignoreNonExistence, mirrorDataLossOccurred);
 }
 
 /*
@@ -1317,22 +1292,17 @@ smgrgetappendonlyinfo(
 /*
  *	smgrextend() -- Add a new block to a file.
  *
- *		The semantics are basically the same as smgrwrite(): write at the
- *		specified position.  However, we are expecting to extend the
- *		relation (ie, blocknum is the current EOF), and so in case of
+ *		The semantics are nearly the same as smgrwrite(): write at the
+ *		specified position.  However, this is to be used for the case of
+ *		extending a relation (i.e., blocknum is at or beyond the current
+ *		EOF).  Note that we assume writing a block beyond current EOF
+ *		causes intervening file space to become filled with zeroes.
  *		failure we clean up by truncating.
  */
 void
 smgrextend(SMgrRelation reln, BlockNumber blocknum, char *buffer, bool isTemp)
 {
-	if (!mdextend(reln, blocknum, buffer, isTemp))
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not extend relation %u/%u/%u: %m",
-						reln->smgr_rnode.spcNode,
-						reln->smgr_rnode.dbNode,
-						reln->smgr_rnode.relNode),
-				 errhint("Check free disk space.")));
+	mdextend(reln, blocknum, buffer, isTemp);
 }
 
 /*
@@ -1346,18 +1316,15 @@ smgrextend(SMgrRelation reln, BlockNumber blocknum, char *buffer, bool isTemp)
 void
 smgrread(SMgrRelation reln, BlockNumber blocknum, char *buffer)
 {
-	if (!mdread(reln, blocknum, buffer))
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not read block %u of relation %u/%u/%u: %m",
-						blocknum,
-						reln->smgr_rnode.spcNode,
-						reln->smgr_rnode.dbNode,
-						reln->smgr_rnode.relNode)));
+	mdread(reln, blocknum, buffer);
 }
 
 /*
  *	smgrwrite() -- Write the supplied buffer out.
+ *
+ *		This is to be used only for updating already-existing blocks of a
+ *		relation (ie, those before the current EOF).  To extend a relation,
+ *		use smgrextend().
  *
  *		This is not a synchronous write -- the block is not necessarily
  *		on disk at return, only dumped out to the kernel.  However,
@@ -1370,59 +1337,26 @@ smgrread(SMgrRelation reln, BlockNumber blocknum, char *buffer)
 void
 smgrwrite(SMgrRelation reln, BlockNumber blocknum, char *buffer, bool isTemp)
 {
-	if (!mdwrite(reln, blocknum, buffer, isTemp))
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not write block %u of relation %u/%u/%u: %m",
-						blocknum,
-						reln->smgr_rnode.spcNode,
-						reln->smgr_rnode.dbNode,
-						reln->smgr_rnode.relNode)));
+	mdwrite(reln, blocknum, buffer, isTemp);
 }
 
 /*
  *	smgrnblocks() -- Calculate the number of blocks in the
  *					 supplied relation.
- *
- *		Returns the number of blocks on success, aborts the current
- *		transaction on failure.
  */
 BlockNumber
 smgrnblocks(SMgrRelation reln)
 {
-	BlockNumber nblocks;
-
-	nblocks = mdnblocks(reln, false);
-
-	/*
-	 * NOTE: if a relation ever did grow to 2^32-1 blocks, this code would
-	 * fail --- but that's a good thing, because it would stop us from
-	 * extending the rel another block and having a block whose number
-	 * actually is InvalidBlockNumber.
-	 */
-	if (nblocks == InvalidBlockNumber)
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not count blocks of relation %u/%u/%u: %m",
-						reln->smgr_rnode.spcNode,
-						reln->smgr_rnode.dbNode,
-						reln->smgr_rnode.relNode)));
-
-	return nblocks;
+	return mdnblocks(reln);
 }
 
 /*
  *	smgrtruncate() -- Truncate supplied relation to the specified number
  *					  of blocks
- *
- *		Returns the number of blocks on success, aborts the current
- *		transaction on failure.
  */
-BlockNumber
+void
 smgrtruncate(SMgrRelation reln, BlockNumber nblocks, bool isTemp, bool isLocalBuf, ItemPointer persistentTid, int64 persistentSerialNum)
 {
-	BlockNumber newblks;
-
 	/*
 	 * Get rid of any buffers for the about-to-be-deleted blocks. bufmgr will
 	 * just drop them without bothering to write the contents.
@@ -1437,15 +1371,7 @@ smgrtruncate(SMgrRelation reln, BlockNumber nblocks, bool isTemp, bool isLocalBu
 	FreeSpaceMapTruncateRel(&reln->smgr_rnode, nblocks);
 
 	/* Do the truncation */
-	newblks = mdtruncate(reln, nblocks, isTemp, false);
-	if (newblks == InvalidBlockNumber)
-		ereport(ERROR,
-				(errcode_for_file_access(),
-			  errmsg("could not truncate relation %u/%u/%u to %u blocks: %m",
-					 reln->smgr_rnode.spcNode,
-					 reln->smgr_rnode.dbNode,
-					 reln->smgr_rnode.relNode,
-					 nblocks)));
+	mdtruncate(reln, nblocks, isTemp, false);
 
 	if (!isTemp)
 	{
@@ -1459,7 +1385,7 @@ smgrtruncate(SMgrRelation reln, BlockNumber nblocks, bool isTemp, bool isLocalBu
 		XLogRecData rdata;
 		xl_smgr_truncate xlrec;
 
-		xlrec.blkno = newblks;
+		xlrec.blkno = nblocks;
 		xlrec.rnode = reln->smgr_rnode;
 		xlrec.persistentTid = *persistentTid;
 		xlrec.persistentSerialNum = persistentSerialNum;
@@ -1472,8 +1398,6 @@ smgrtruncate(SMgrRelation reln, BlockNumber nblocks, bool isTemp, bool isLocalBu
 		lsn = XLogInsert(RM_SMGR_ID, XLOG_SMGR_TRUNCATE | XLOG_NO_TRAN,
 						 &rdata);
 	}
-
-	return newblks;
 }
 
 bool smgrgetpersistentinfo(
@@ -1530,13 +1454,7 @@ bool smgrgetpersistentinfo(
 void
 smgrimmedsync(SMgrRelation reln)
 {
-	if (!mdimmedsync(reln))
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not sync relation %u/%u/%u: %m",
-						reln->smgr_rnode.spcNode,
-						reln->smgr_rnode.dbNode,
-						reln->smgr_rnode.relNode)));
+	mdimmedsync(reln);
 }
 
 static void
@@ -3175,7 +3093,6 @@ void
 smgr_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 {
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
-	int primaryError = 0;
 	bool mirrorDataLossOccurred = false;
 
 	if (info == XLOG_SMGR_CREATE)
@@ -3198,14 +3115,12 @@ smgr_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 				mirrorDataLossTrackingState,
 				mirrorDataLossTrackingSessionNum,
 				/* ignoreAlreadyExists */ true,
-				&primaryError,
 				&mirrorDataLossOccurred);
 	}
 	else if (info == XLOG_SMGR_TRUNCATE)
 	{
 		xl_smgr_truncate *xlrec = (xl_smgr_truncate *) XLogRecGetData(record);
 		SMgrRelation reln;
-		BlockNumber newblks;
 
 		reln = smgropen(xlrec->rnode);
 
@@ -3231,18 +3146,10 @@ smgr_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		 * when replay of truncate redo log happen multiple times it acts as NOP, 
 		 * which makes redo truncate behavior is idempotent.
 		 */
-		newblks = mdtruncate(
-						reln,
-					   	xlrec->blkno,
-					   	false, true);
-		if (newblks == InvalidBlockNumber)
-			ereport(WARNING,
-					(errcode_for_file_access(),
-			  errmsg("could not truncate relation %u/%u/%u to %u blocks: %m",
-					 reln->smgr_rnode.spcNode,
-					 reln->smgr_rnode.dbNode,
-					 reln->smgr_rnode.relNode,
-					 xlrec->blkno)));
+		mdtruncate(reln,
+				   xlrec->blkno,
+				   false,
+				   true);
 
 		/* Also tell xlogutils.c about it */
 		XLogTruncateRelation(xlrec->rnode, xlrec->blkno);

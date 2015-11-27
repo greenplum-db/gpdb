@@ -53,7 +53,6 @@
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_trigger.h"
-#include "catalog/pg_user_mapping.h"
 #include "catalog/pg_window.h"
 #include "catalog/pg_tidycat.h"
 
@@ -126,10 +125,10 @@ is_builtin_object(cqContext *pCtx, HeapTuple tuple)
 				result = (Oid) ((Form_pg_aggregate) GETSTRUCT(tuple))->aggfnoid;
 				break;
 			case AccessMethodOperatorRelationId:
-				result = (Oid) ((Form_pg_amop) GETSTRUCT(tuple))->amopclaid;
+				result = (Oid) ((Form_pg_amop) GETSTRUCT(tuple))->amopfamily;
 				break;
 			case AccessMethodProcedureRelationId:
-				result = (Oid) ((Form_pg_amproc) GETSTRUCT(tuple))->amopclaid;
+				result = (Oid) ((Form_pg_amproc) GETSTRUCT(tuple))->amprocfamily;
 				break;
 			case AppendOnlyRelationId:
 				result = (Oid) ((Form_pg_appendonly) GETSTRUCT(tuple))->relid;
@@ -637,7 +636,7 @@ HeapTuple caql_getfirst_only(cqContext *pCtx0, bool *pbOnly, cq_list *pcql)
  * statement contains an equality predicate on *all* of the syscache
  * primary key index columns, eg: 
  *
- *   cql("SELECT * FROM pg_amop WHERE amopopr = :1 and amopclaid = :2 ")
+ *   cql("SELECT * FROM pg_amop WHERE amopopr = :1 and amopfamily = :2 ")
  *
  * will use the AMOPOPID syscache with index
  * AccessMethodOperatorIndexId.  However, the cql statement for a
@@ -646,7 +645,7 @@ HeapTuple caql_getfirst_only(cqContext *pCtx0, bool *pbOnly, cq_list *pcql)
  * specified in an ORDER BY clause, eg:
  *
  *   cql("SELECT * FROM pg_amop WHERE amopopr = :1 "
- *       " ORDER BY amopopr, amopclaid ")
+ *       " ORDER BY amopopr, amopfamily ")
  *
  * will use a syscache list-search if this cql statement is an
  * argument to caql_begin_CacheList().  However, the syscache will

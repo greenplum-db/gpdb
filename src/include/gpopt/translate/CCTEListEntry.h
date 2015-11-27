@@ -21,7 +21,7 @@
 #include "gpos/common/CHashMap.h"
 #include "gpos/string/CWStringBase.h"
 
-#include "dxl/operators/CDXLNode.h"
+#include "naucrates/dxl/operators/CDXLNode.h"
 
 // fwd declaration
 struct Query;

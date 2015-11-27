@@ -1049,11 +1049,11 @@ SELECT time '03:30' + interval '1 month 04:01' AS "07:31:00";
 SELECT CAST(time with time zone '01:02-08' AS interval) AS "+00:01";
 ERROR:  cannot cast type time with time zone to interval
 LINE 1: SELECT CAST(time with time zone '01:02-08' AS interval) AS "...
-                                        ^
+                                                      ^
 SELECT CAST(interval '02:03' AS time with time zone) AS "02:03:00-08";
 ERROR:  cannot cast type interval to time with time zone
 LINE 1: SELECT CAST(interval '02:03' AS time with time zone) AS "02:...
-                             ^
+                                        ^
 SELECT time with time zone '01:30-08' - interval '02:01' AS "23:29:00-08";
  23:29:00-08 
 -------------
@@ -3427,3 +3427,11 @@ DETAIL:  Value must be an integer.
 SELECT to_timestamp('10000000000', 'FMYYYY');
 ERROR:  value for "YYYY" in source string is out of range
 DETAIL:  Value must be in the range -2147483648 to 2147483647.
+-- Clean up
+DROP TABLE abstime_horology_tbl;
+DROP TABLE interval_horology_tbl;
+DROP TABLE reltime_horology_tbl;
+DROP TABLE time_horology_tbl;
+DROP TABLE timestamp_horology_tbl;
+DROP TABLE timestamptz_horology_tbl;
+DROP TABLE timetz_horology_tbl;

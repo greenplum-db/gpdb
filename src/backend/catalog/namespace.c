@@ -13,7 +13,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/namespace.c,v 1.88.2.1 2007/04/20 02:37:48 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/namespace.c,v 1.89 2006/12/23 00:43:09 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -30,6 +30,7 @@
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_operator.h"
+#include "catalog/pg_opfamily.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 #include "commands/dbcommands.h"
@@ -38,6 +39,7 @@
 #include "nodes/makefuncs.h"
 #include "storage/backendid.h"
 #include "storage/ipc.h"
+#include "storage/sinval.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
@@ -218,6 +220,180 @@ RangeVarGetRelid(const RangeVar *relation, bool failOK)
 	}
 
 	if (!OidIsValid(relId) && !failOK)
+	{
+		if (relation->schemaname)
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_TABLE),
+					 errmsg("relation \"%s.%s\" does not exist",
+							relation->schemaname, relation->relname)));
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_TABLE),
+					 errmsg("relation \"%s\" does not exist",
+							relation->relname)));
+	}
+	return relId;
+}
+
+/*
+ * RangeVarGetRelid
+ *		Given a RangeVar describing an existing relation,
+ *		select the proper namespace and look up the relation OID.
+ *
+ * If the schema or relation is not found, return InvalidOid if missing_ok
+ * = true, otherwise raise an error.
+ *
+ * If nowait = true, throw an error if we'd have to wait for a lock.
+ *
+ * Callback allows caller to check permissions or acquire additional locks
+ * prior to grabbing the relation lock.
+ */
+Oid
+RangeVarGetRelidExtended(const RangeVar *relation, LOCKMODE lockmode,
+						 bool missing_ok, bool nowait,
+					   RangeVarGetRelidCallback callback, void *callback_arg)
+{
+	uint64		inval_count;
+	Oid			relId;
+	Oid			oldRelId = InvalidOid;
+	bool		retry = false;
+
+	/*
+	 * We check the catalog name and then ignore it.
+	 */
+	if (relation->catalogname)
+	{
+		if (strcmp(relation->catalogname, get_database_name(MyDatabaseId)) != 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("cross-database references are not implemented: \"%s.%s.%s\"",
+							relation->catalogname, relation->schemaname,
+							relation->relname)));
+	}
+
+	/*
+	 * DDL operations can change the results of a name lookup.  Since all such
+	 * operations will generate invalidation messages, we keep track of
+	 * whether any such messages show up while we're performing the operation,
+	 * and retry until either (1) no more invalidation messages show up or (2)
+	 * the answer doesn't change.
+	 *
+	 * But if lockmode = NoLock, then we assume that either the caller is OK
+	 * with the answer changing under them, or that they already hold some
+	 * appropriate lock, and therefore return the first answer we get without
+	 * checking for invalidation messages.  Also, if the requested lock is
+	 * already held, no LockRelationOid will not AcceptInvalidationMessages,
+	 * so we may fail to notice a change.  We could protect against that case
+	 * by calling AcceptInvalidationMessages() before beginning this loop, but
+	 * that would add a significant amount overhead, so for now we don't.
+	 */
+	for (;;)
+	{
+		/*
+		 * Remember this value, so that, after looking up the relation name
+		 * and locking its OID, we can check whether any invalidation messages
+		 * have been processed that might require a do-over.
+		 */
+		inval_count = SharedInvalidMessageCounter;
+
+		if (relation->schemaname)
+		{
+			Oid			namespaceId;
+
+			/* use exact schema given */
+			namespaceId = LookupExplicitNamespace(relation->schemaname);
+			if (missing_ok && !OidIsValid(namespaceId))
+				relId = InvalidOid;
+			else
+				relId = get_relname_relid(relation->relname, namespaceId);
+		}
+		else
+		{
+			/* search the namespace path */
+			relId = RelnameGetRelid(relation->relname);
+		}
+
+		/*
+		 * Invoke caller-supplied callback, if any.
+		 *
+		 * This callback is a good place to check permissions: we haven't
+		 * taken the table lock yet (and it's really best to check permissions
+		 * before locking anything!), but we've gotten far enough to know what
+		 * OID we think we should lock.  Of course, concurrent DDL might
+		 * change things while we're waiting for the lock, but in that case
+		 * the callback will be invoked again for the new OID.
+		 */
+		if (callback)
+			callback(relation, relId, oldRelId, callback_arg);
+
+		/*
+		 * If no lock requested, we assume the caller knows what they're
+		 * doing.  They should have already acquired a heavyweight lock on
+		 * this relation earlier in the processing of this same statement, so
+		 * it wouldn't be appropriate to AcceptInvalidationMessages() here, as
+		 * that might pull the rug out from under them.
+		 */
+		if (lockmode == NoLock)
+			break;
+
+		/*
+		 * If, upon retry, we get back the same OID we did last time, then the
+		 * invalidation messages we processed did not change the final answer.
+		 * So we're done.
+		 *
+		 * If we got a different OID, we've locked the relation that used to
+		 * have this name rather than the one that does now.  So release the
+		 * lock.
+		 */
+		if (retry)
+		{
+			if (relId == oldRelId)
+				break;
+			if (OidIsValid(oldRelId))
+				UnlockRelationOid(oldRelId, lockmode);
+		}
+
+		/*
+		 * Lock relation.  This will also accept any pending invalidation
+		 * messages.  If we got back InvalidOid, indicating not found, then
+		 * there's nothing to lock, but we accept invalidation messages
+		 * anyway, to flush any negative catcache entries that may be
+		 * lingering.
+		 */
+		if (!OidIsValid(relId))
+			AcceptInvalidationMessages();
+		else if (!nowait)
+			LockRelationOid(relId, lockmode);
+		else if (!ConditionalLockRelationOid(relId, lockmode))
+		{
+			if (relation->schemaname)
+				ereport(ERROR,
+						(errcode(ERRCODE_LOCK_NOT_AVAILABLE),
+						 errmsg("could not obtain lock on relation \"%s.%s\"",
+								relation->schemaname, relation->relname)));
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_LOCK_NOT_AVAILABLE),
+						 errmsg("could not obtain lock on relation \"%s\"",
+								relation->relname)));
+		}
+
+		/*
+		 * If no invalidation message were processed, we're done!
+		 */
+		if (inval_count == SharedInvalidMessageCounter)
+			break;
+
+		/*
+		 * Something may have changed.  Let's repeat the name lookup, to make
+		 * sure this name still references the same relation it did
+		 * previously.
+		 */
+		retry = true;
+		oldRelId = relId;
+	}
+
+	if (!OidIsValid(relId) && !missing_ok)
 	{
 		if (relation->schemaname)
 			ereport(ERROR,
@@ -1137,16 +1313,11 @@ OpclassnameGetOpcid(Oid amid, const char *opcname)
 		if (namespaceId == myTempNamespace)
 			continue;			/* do not look in temp namespace */
 
-		opcid = caql_getoid(
-				NULL,
-				cql("SELECT oid FROM pg_opclass "
-					" WHERE opcamid = :1 "
-					" AND opcname = :2 "
-					" AND opcnamespace = :3 ",
-					ObjectIdGetDatum(amid),
-					CStringGetDatum((char *) opcname),
-					ObjectIdGetDatum(namespaceId)));
-
+		opcid = GetSysCacheOid(CLAAMNAMENSP,
+							   ObjectIdGetDatum(amid),
+							   PointerGetDatum(opcname),
+							   ObjectIdGetDatum(namespaceId),
+							   0);
 		if (OidIsValid(opcid))
 			return opcid;
 	}
@@ -1203,10 +1374,93 @@ OpclassIsVisible(Oid opcid)
 		 */
 		char	   *opcname = NameStr(opcform->opcname);
 
-		visible = (OpclassnameGetOpcid(opcform->opcamid, opcname) == opcid);
+		visible = (OpclassnameGetOpcid(opcform->opcmethod, opcname) == opcid);
 	}
 
 	caql_endscan(pcqCtx);
+
+	return visible;
+}
+
+/*
+ * OpfamilynameGetOpfid
+ *		Try to resolve an unqualified index opfamily name.
+ *		Returns OID if opfamily found in search path, else InvalidOid.
+ *
+ * This is essentially the same as TypenameGetTypid, but we have to have
+ * an extra argument for the index AM OID.
+ */
+Oid
+OpfamilynameGetOpfid(Oid amid, const char *opfname)
+{
+	Oid			opfid;
+	ListCell   *l;
+
+	recomputeNamespacePath();
+
+	foreach(l, namespaceSearchPath)
+	{
+		Oid			namespaceId = lfirst_oid(l);
+
+		opfid = GetSysCacheOid(OPFAMILYAMNAMENSP,
+							   ObjectIdGetDatum(amid),
+							   PointerGetDatum(opfname),
+							   ObjectIdGetDatum(namespaceId),
+							   0);
+		if (OidIsValid(opfid))
+			return opfid;
+	}
+
+	/* Not found in path */
+	return InvalidOid;
+}
+
+/*
+ * OpfamilyIsVisible
+ *		Determine whether an opfamily (identified by OID) is visible in the
+ *		current search path.  Visible means "would be found by searching
+ *		for the unqualified opfamily name".
+ */
+bool
+OpfamilyIsVisible(Oid opfid)
+{
+	HeapTuple	opftup;
+	Form_pg_opfamily opfform;
+	Oid			opfnamespace;
+	bool		visible;
+
+	opftup = SearchSysCache(OPFAMILYOID,
+							ObjectIdGetDatum(opfid),
+							0, 0, 0);
+	if (!HeapTupleIsValid(opftup))
+		elog(ERROR, "cache lookup failed for opfamily %u", opfid);
+	opfform = (Form_pg_opfamily) GETSTRUCT(opftup);
+
+	recomputeNamespacePath();
+
+	/*
+	 * Quick check: if it ain't in the path at all, it ain't visible. Items in
+	 * the system namespace are surely in the path and so we needn't even do
+	 * list_member_oid() for them.
+	 */
+	opfnamespace = opfform->opfnamespace;
+	if (opfnamespace != PG_CATALOG_NAMESPACE &&
+		!list_member_oid(namespaceSearchPath, opfnamespace))
+		visible = false;
+	else
+	{
+		/*
+		 * If it is in the path, it might still not be visible; it could be
+		 * hidden by another opfamily of the same name earlier in the path. So
+		 * we must do a slow check to see if this opfamily would be found by
+		 * OpfamilynameGetOpfid.
+		 */
+		char	   *opfname = NameStr(opfform->opfname);
+
+		visible = (OpfamilynameGetOpfid(opfform->opfmethod, opfname) == opfid);
+	}
+
+	ReleaseSysCache(opftup);
 
 	return visible;
 }

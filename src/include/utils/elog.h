@@ -359,8 +359,17 @@ extern PGDLLIMPORT ErrorContextCallback *error_context_stack;
 		error_context_stack = save_context_stack; \
 	} while (0)
 
+/*
+ * gcc understands __attribute__((noreturn)); for other compilers, insert
+ * pg_unreachable() so that the compiler gets the point.
+ */
+#ifdef __GNUC__
 #define PG_RE_THROW()  \
-	siglongjmp(*PG_exception_stack, 1)
+	pg_re_throw()
+#else
+#define PG_RE_THROW()  \
+	(pg_re_throw(), pg_unreachable())
+#endif
 
 extern PGDLLIMPORT sigjmp_buf *PG_exception_stack;
 

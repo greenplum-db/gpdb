@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/contrib/tsearch2/dict_thesaurus.c,v 1.9 2007/07/15 22:57:48 tgl Exp $ */
+/* $PostgreSQL: pgsql/contrib/tsearch2/dict_thesaurus.c,v 1.7 2006/12/26 14:54:24 teodor Exp $ */
 
 /*
  * thesaurus

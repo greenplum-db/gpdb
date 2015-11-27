@@ -36,9 +36,9 @@
  * that is of no value (since other backends have no interest in them yet)
  * and it created locking problems for CHECKPOINT, because the upper-level
  * pages were held exclusive-locked for long periods.  Now we just build
- * the pages in local memory and smgrwrite() them as we finish them.  They
- * will need to be re-read into shared buffers on first use after the build
- * finishes.
+ * the pages in local memory and smgrwrite or smgrextend them as we finish
+ * them.  They will need to be re-read into shared buffers on first use after
+ * the build finishes.
  *
  * Since the index will never be used unless it is completely built,
  * from a crash-recovery point of view there is no need to WAL-log the
@@ -57,7 +57,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsort.c,v 1.107 2006/10/04 00:29:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsort.c,v 1.108 2007/01/03 18:11:01 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -308,14 +308,13 @@ _bt_blwritepage(BTWriteState *wstate, Page page, BlockNumber blkno)
 		if (!wstate->btws_zeropage)
 			wstate->btws_zeropage = (Page) palloc0(BLCKSZ);
 
-
 		// -------- MirroredLock ----------
 		// UNDONE: Unfortunately, I think we write temp relations to the mirror...
 		LWLockAcquire(MirroredLock, LW_SHARED);
 
-		smgrwrite(wstate->index->rd_smgr, wstate->btws_pages_written++,
-				  (char *) wstate->btws_zeropage,
-				  true);
+		smgrextend(wstate->index->rd_smgr, wstate->btws_pages_written++,
+				   (char *) wstate->btws_zeropage,
+				   true);
 
 		LWLockRelease(MirroredLock);
 		// -------- MirroredLock ----------
@@ -325,7 +324,7 @@ _bt_blwritepage(BTWriteState *wstate, Page page, BlockNumber blkno)
 	// -------- MirroredLock ----------
 	// UNDONE: Unfortunately, I think we write temp relations to the mirror...
 	LWLockAcquire(MirroredLock, LW_SHARED);
-	
+
 	/*
 	 * Now write the page.	We say isTemp = true even if it's not a temp
 	 * index, because there's no need for smgr to schedule an fsync for this
@@ -333,7 +332,7 @@ _bt_blwritepage(BTWriteState *wstate, Page page, BlockNumber blkno)
 	 */
 	if (blkno == wstate->btws_pages_written)
 	{
-		/* extending the file ... */
+		/* extending the file... */
 		smgrextend(wstate->index->rd_smgr, blkno, (char *) page, true);
 		wstate->btws_pages_written++;
 	}

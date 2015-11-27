@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/keywords.c,v 1.212 2009/03/08 16:53:30 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/keywords.c,v 1.179 2006/12/24 00:29:18 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

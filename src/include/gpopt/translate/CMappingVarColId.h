@@ -23,13 +23,12 @@
 #include "gpopt/translate/CGPDBAttInfo.h"
 #include "gpopt/translate/CGPDBAttOptCol.h"
 
-
-#include "dxl/operators/dxlops.h"
 #include "gpos/common/CHashMap.h"
 #include "gpos/common/CHashMapIter.h"
-#include "dxl/operators/dxlops.h"
 
-#include "dxl/CIdGenerator.h"
+#include "naucrates/dxl/operators/dxlops.h"
+#include "naucrates/dxl/operators/dxlops.h"
+#include "naucrates/dxl/CIdGenerator.h"
 
 //fwd decl
 struct Var;

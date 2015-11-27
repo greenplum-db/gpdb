@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/dependency.h,v 1.27 2006/08/21 00:57:26 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/dependency.h,v 1.28 2006/12/23 00:43:12 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -131,6 +131,9 @@ typedef enum ObjectClass
 	OCLASS_LANGUAGE,			/* pg_language */
 	OCLASS_OPERATOR,			/* pg_operator */
 	OCLASS_OPCLASS,				/* pg_opclass */
+	OCLASS_OPFAMILY,			/* pg_opfamily */
+	OCLASS_AMOP,				/* pg_amop */
+	OCLASS_AMPROC,				/* pg_amproc */
 	OCLASS_REWRITE,				/* pg_rewrite */
 	OCLASS_TRIGGER,				/* pg_trigger */
 	OCLASS_SCHEMA,				/* pg_namespace */
@@ -138,9 +141,6 @@ typedef enum ObjectClass
 	OCLASS_DATABASE,			/* pg_database */
 	OCLASS_TBLSPACE,			/* pg_tablespace */
 	OCLASS_FILESPACE,           /* pg_filespace */
-	OCLASS_FDW,					/* pg_foreign_data_wrapper */
-	OCLASS_FOREIGN_SERVER,		/* pg_foreign_server */
-	OCLASS_USER_MAPPING,		/* pg_user_mapping */
 	OCLASS_EXTPROTOCOL,			/* pg_extprotocol */
 	OCLASS_COMPRESSION,			/* pg_compression */
 	MAX_OCLASS					/* MUST BE LAST */

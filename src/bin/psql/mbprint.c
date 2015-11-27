@@ -3,11 +3,7 @@
  *
  * Copyright (c) 2000-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/psql/mbprint.c,v 1.38.6.1 2010/08/16 00:06:24 tgl Exp $
- *
- * XXX this file does not really belong in psql/.  Perhaps move to libpq?
- * It also seems that the mbvalidate function is redundant with existing
- * functionality.
+ * $PostgreSQL: pgsql/src/bin/psql/mbprint.c,v 1.24 2006/12/27 19:45:36 tgl Exp $
  */
 
 #include "postgres_fe.h"
@@ -249,7 +245,7 @@ pg_wcssize(unsigned char *pwcs, size_t len, int encoding,
 				linewidth += 4;
 				format_size += 4;
 			}
-			else	/* Output it as-is */
+			else				/* Output it as-is */
 			{
 				linewidth += w;
 				format_size += 1;
@@ -260,7 +256,7 @@ pg_wcssize(unsigned char *pwcs, size_t len, int encoding,
 			linewidth += 6;		/* \u0000 */
 			format_size += 6;
 		}
-		else	/* All other chars */
+		else					/* All other chars */
 		{
 			linewidth += w;
 			format_size += chlen;
@@ -337,7 +333,7 @@ pg_wcsformat(unsigned char *pwcs, size_t len, int encoding,
 				linewidth += 4;
 				ptr += 4;
 			}
-			else	/* Output it as-is */
+			else				/* Output it as-is */
 			{
 				linewidth += w;
 				*ptr++ = *pwcs;
@@ -359,7 +355,7 @@ pg_wcsformat(unsigned char *pwcs, size_t len, int encoding,
 			ptr += 6;
 			linewidth += 6;
 		}
-		else	/* All other chars */
+		else					/* All other chars */
 		{
 			int			i;
 

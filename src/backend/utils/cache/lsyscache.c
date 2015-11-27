@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/lsyscache.c,v 1.138.2.1 2007/03/19 16:30:40 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/lsyscache.c,v 1.140 2006/12/30 21:21:54 tgl Exp $
  *
  * NOTES
  *	  Eventually, the index information should go through here, too.
@@ -18,10 +18,9 @@
 
 #include "access/hash.h"
 
-#include "access/genam.h" 
 #include "bootstrap/bootstrap.h"
 #include "catalog/catquery.h"
-#include "catalog/heap.h"                   /* SystemAttributeDefinition() */    
+#include "catalog/heap.h"                   /* SystemAttributeDefinition() */
 #include "catalog/pg_amop.h"
 #include "catalog/pg_amproc.h"
 #include "catalog/pg_namespace.h"
@@ -60,130 +59,260 @@ attstatsslot_getattr(cqContext	*pcqCtx,
 /*				---------- AMOP CACHES ----------						 */
 
 /*
- * op_in_opclass
+ * op_in_opfamily
  *
- *		Return t iff operator 'opno' is in operator class 'opclass'.
+ *		Return t iff operator 'opno' is in operator family 'opfamily'.
  */
 bool
-op_in_opclass(Oid opno, Oid opclass)
+op_in_opfamily(Oid opno, Oid opfamily)
 {
-	return (caql_getcount(
-					NULL,
-					cql("SELECT COUNT(*) FROM pg_amop "
-						" WHERE amopopr = :1 "
-						" AND amopclaid = :2 ",
-						ObjectIdGetDatum(opno),
-						ObjectIdGetDatum(opclass))) > 0);
+	return SearchSysCacheExists(AMOPOPID,
+								ObjectIdGetDatum(opno),
+								ObjectIdGetDatum(opfamily),
+								0, 0);
 }
 
 /*
- * get_op_opclass_strategy
+ * get_op_opfamily_strategy
  *
- *		Get the operator's strategy number within the specified opclass,
- *		or 0 if it's not a member of the opclass.
+ *		Get the operator's strategy number within the specified opfamily,
+ *		or 0 if it's not a member of the opfamily.
  */
 int
-get_op_opclass_strategy(Oid opno, Oid opclass)
+get_op_opfamily_strategy(Oid opno, Oid opfamily)
 {
 	HeapTuple	tp;
 	Form_pg_amop amop_tup;
 	int			result;
-	cqContext  *pcqCtx;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_amop "
-				" WHERE amopopr = :1 "
-				" AND amopclaid = :2 ",
-				ObjectIdGetDatum(opno),
-				ObjectIdGetDatum(opclass)));
-
-	tp = caql_getnext(pcqCtx);
-
+	tp = SearchSysCache(AMOPOPID,
+						ObjectIdGetDatum(opno),
+						ObjectIdGetDatum(opfamily),
+						0, 0);
 	if (!HeapTupleIsValid(tp))
 		return 0;
 	amop_tup = (Form_pg_amop) GETSTRUCT(tp);
 	result = amop_tup->amopstrategy;
-
-	caql_endscan(pcqCtx);
-
+	ReleaseSysCache(tp);
 	return result;
 }
 
 /*
- * get_op_opclass_properties
+ * get_op_opfamily_properties
  *
- *		Get the operator's strategy number, subtype, and recheck (lossy) flag
- *		within the specified opclass.
+ *		Get the operator's strategy number, input types, and recheck (lossy)
+ *		flag within the specified opfamily.
  *
- * Caller should already have verified that opno is a member of opclass,
+ * Caller should already have verified that opno is a member of opfamily,
  * therefore we raise an error if the tuple is not found.
  */
 void
-get_op_opclass_properties(Oid opno, Oid opclass,
-						  int *strategy, Oid *subtype, bool *recheck)
+get_op_opfamily_properties(Oid opno, Oid opfamily,
+						   int *strategy,
+						   Oid *lefttype,
+						   Oid *righttype,
+						   bool *recheck)
 {
 	HeapTuple	tp;
 	Form_pg_amop amop_tup;
-	cqContext  *pcqCtx;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_amop "
-				" WHERE amopopr = :1 "
-				" AND amopclaid = :2 ",
-				ObjectIdGetDatum(opno),
-				ObjectIdGetDatum(opclass)));
-
-	tp = caql_getnext(pcqCtx);
-
+	tp = SearchSysCache(AMOPOPID,
+						ObjectIdGetDatum(opno),
+						ObjectIdGetDatum(opfamily),
+						0, 0);
 	if (!HeapTupleIsValid(tp))
-		elog(ERROR, "operator %u is not a member of opclass %u",
-			 opno, opclass);
+		elog(ERROR, "operator %u is not a member of opfamily %u",
+			 opno, opfamily);
 	amop_tup = (Form_pg_amop) GETSTRUCT(tp);
 	*strategy = amop_tup->amopstrategy;
-	*subtype = amop_tup->amopsubtype;
+	*lefttype = amop_tup->amoplefttype;
+	*righttype = amop_tup->amoprighttype;
 	*recheck = amop_tup->amopreqcheck;
-
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(tp);
 }
 
 /*
- * get_opclass_member
+ * get_opfamily_member
  *		Get the OID of the operator that implements the specified strategy
- *		with the specified subtype for the specified opclass.
+ *		with the specified datatypes for the specified opfamily.
  *
  * Returns InvalidOid if there is no pg_amop entry for the given keys.
  */
 Oid
-get_opclass_member(Oid opclass, Oid subtype, int16 strategy)
+get_opfamily_member(Oid opfamily, Oid lefttype, Oid righttype,
+					int16 strategy)
 {
+	HeapTuple	tp;
+	Form_pg_amop amop_tup;
 	Oid			result;
-	int			fetchCount;
 
-	result  = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT amopopr FROM pg_amop "
-				" WHERE amopclaid = :1 "
-				" AND amopsubtype = :2 "
-				" AND amopstrategy = :3 ",
-				ObjectIdGetDatum(opclass),
-				ObjectIdGetDatum(subtype),
-				Int16GetDatum(strategy)
-					));
-
-	if (!fetchCount)
+	tp = SearchSysCache(AMOPSTRATEGY,
+						ObjectIdGetDatum(opfamily),
+						ObjectIdGetDatum(lefttype),
+						ObjectIdGetDatum(righttype),
+						Int16GetDatum(strategy));
+	if (!HeapTupleIsValid(tp))
 		return InvalidOid;
+	amop_tup = (Form_pg_amop) GETSTRUCT(tp);
+	result = amop_tup->amopopr;
+	ReleaseSysCache(tp);
+	return result;
+}
+
+/*
+ * get_op_mergejoin_info
+ *		Given the OIDs of a (putatively) mergejoinable equality operator
+ *		and a sortop defining the sort ordering of the lefthand input of
+ *		the merge clause, determine whether this sort ordering is actually
+ *		usable for merging.  If so, return the required sort ordering op
+ *		for the righthand input, as well as the btree opfamily OID containing
+ *		these operators and the operator strategy number of the two sortops
+ *		(either BTLessStrategyNumber or BTGreaterStrategyNumber).
+ *
+ * We can mergejoin if we find the two operators in the same opfamily as
+ * equality and either less-than or greater-than respectively.  If there
+ * are multiple such opfamilies, assume we can use any one.
+ */
+#ifdef NOT_YET
+/* eventually should look like this */
+bool
+get_op_mergejoin_info(Oid eq_op, Oid left_sortop,
+					  Oid *right_sortop, Oid *opfamily, int *opstrategy)
+{
+	bool		result = false;
+	Oid			lefttype;
+	Oid			righttype;
+	CatCList   *catlist;
+	int			i;
+
+	/* Make sure output args are initialized even on failure */
+	*right_sortop = InvalidOid;
+	*opfamily = InvalidOid;
+	*opstrategy = 0;
+
+	/* Need the righthand input datatype */
+	op_input_types(eq_op, &lefttype, &righttype);
+
+	/*
+	 * Search through all the pg_amop entries containing the equality operator
+	 */
+	catlist = SearchSysCacheList(AMOPOPID, 1,
+								 ObjectIdGetDatum(eq_op),
+								 0, 0, 0);
+
+	for (i = 0; i < catlist->n_members; i++)
+	{
+		HeapTuple	op_tuple = &catlist->members[i]->tuple;
+		Form_pg_amop op_form = (Form_pg_amop) GETSTRUCT(op_tuple);
+		Oid			opfamily_id;
+		StrategyNumber op_strategy;
+
+		/* must be btree */
+		if (op_form->amopmethod != BTREE_AM_OID)
+			continue;
+		/* must use the operator as equality */
+		if (op_form->amopstrategy != BTEqualStrategyNumber)
+			continue;
+
+		/* See if sort operator is also in this opclass with OK semantics */
+		opfamily_id = op_form->amopfamily;
+		op_strategy = get_op_opfamily_strategy(left_sortop, opfamily_id);
+		if (op_strategy == BTLessStrategyNumber ||
+			op_strategy == BTGreaterStrategyNumber)
+		{
+			/* Yes, so find the corresponding righthand sortop */
+			*right_sortop = get_opfamily_member(opfamily_id,
+												righttype,
+												righttype,
+												op_strategy);
+			if (OidIsValid(*right_sortop))
+			{
+				/* Found a workable mergejoin semantics */
+				*opfamily = opfamily_id;
+				*opstrategy = op_strategy;
+				result = true;
+				break;
+			}
+		}
+	}
+
+	ReleaseSysCacheList(catlist);
 
 	return result;
 }
+#else
+/* temp implementation until planner gets smarter: left_sortop is output */
+bool
+get_op_mergejoin_info(Oid eq_op, Oid *left_sortop,
+					  Oid *right_sortop, Oid *opfamily)
+{
+	bool		result = false;
+	Oid			lefttype;
+	Oid			righttype;
+	CatCList   *catlist;
+	int			i;
+
+	/* Make sure output args are initialized even on failure */
+	*left_sortop = InvalidOid;
+	*right_sortop = InvalidOid;
+	*opfamily = InvalidOid;
+
+	/* Need the input datatypes */
+	op_input_types(eq_op, &lefttype, &righttype);
+
+	/*
+	 * Search through all the pg_amop entries containing the equality operator
+	 */
+	catlist = SearchSysCacheList(AMOPOPID, 1,
+								 ObjectIdGetDatum(eq_op),
+								 0, 0, 0);
+
+	for (i = 0; i < catlist->n_members; i++)
+	{
+		HeapTuple	op_tuple = &catlist->members[i]->tuple;
+		Form_pg_amop op_form = (Form_pg_amop) GETSTRUCT(op_tuple);
+		Oid			opfamily_id;
+
+		/* must be btree */
+		if (op_form->amopmethod != BTREE_AM_OID)
+			continue;
+		/* must use the operator as equality */
+		if (op_form->amopstrategy != BTEqualStrategyNumber)
+			continue;
+
+		opfamily_id = op_form->amopfamily;
+
+		/* Find the matching sortops */
+		*left_sortop = get_opfamily_member(opfamily_id,
+										   lefttype,
+										   lefttype,
+										   BTLessStrategyNumber);
+		*right_sortop = get_opfamily_member(opfamily_id,
+											righttype,
+											righttype,
+											BTLessStrategyNumber);
+		if (OidIsValid(*left_sortop) && OidIsValid(*right_sortop))
+		{
+			/* Found a workable mergejoin semantics */
+			*opfamily = opfamily_id;
+			result = true;
+			break;
+		}
+	}
+
+	ReleaseSysCacheList(catlist);
+
+	return result;
+}
+#endif
 
 /*
  * get_op_hash_function
  *		Get the OID of the datatype-specific hash function associated with
  *		a hashable equality operator.
+ *
+ * XXX API needs to be generalized for the case of different left and right
+ * datatypes.
  *
  * Returns InvalidOid if no hash function can be found.  (This indicates
  * that the operator should not have been marked oprcanhash.)
@@ -193,93 +322,70 @@ get_op_hash_function(Oid opno)
 {
 	CatCList   *catlist;
 	int			i;
-	Oid			opclass = InvalidOid;
+	Oid			result = InvalidOid;
 
 	/*
 	 * Search pg_amop to see if the target operator is registered as the "="
-	 * operator of any hash opclass.  If the operator is registered in
-	 * multiple opclasses, assume we can use the associated hash function from
+	 * operator of any hash opfamily.  If the operator is registered in
+	 * multiple opfamilies, assume we can use the associated hash function from
 	 * any one.
 	 */
-	catlist = caql_begin_CacheList(
-			NULL,
-			cql("SELECT * FROM pg_amop "
-				" WHERE amopopr = :1 "
-				" ORDER BY amopopr, "
-				" amopclaid ",
-				ObjectIdGetDatum(opno)));
+	catlist = SearchSysCacheList(AMOPOPID, 1,
+								 ObjectIdGetDatum(opno),
+								 0, 0, 0);
 
 	for (i = 0; i < catlist->n_members; i++)
 	{
 		HeapTuple	tuple = &catlist->members[i]->tuple;
 		Form_pg_amop aform = (Form_pg_amop) GETSTRUCT(tuple);
 
-		if (aform->amopstrategy == HTEqualStrategyNumber &&
-			opclass_is_hash(aform->amopclaid))
+		if (aform->amopmethod == HASH_AM_OID &&
+			aform->amopstrategy == HTEqualStrategyNumber)
 		{
-			opclass = aform->amopclaid;
+			/* Found a suitable opfamily, get matching hash support function */
+			result = get_opfamily_proc(aform->amopfamily,
+									   aform->amoplefttype,
+									   aform->amoprighttype,
+									   HASHPROC);
 			break;
 		}
 	}
 
-	caql_end_CacheList(catlist);
+	ReleaseSysCacheList(catlist);
 
-	if (OidIsValid(opclass))
-	{
-		/* Found a suitable opclass, get its default hash support function */
-		return get_opclass_proc(opclass, InvalidOid, HASHPROC);
-	}
-
-	/* Didn't find a match... */
-	return InvalidOid;
+	return result;
 }
 
 /*
  * get_op_btree_interpretation
- *		Given an operator's OID, find out which btree opclasses it belongs to,
+ *		Given an operator's OID, find out which btree opfamilies it belongs to,
  *		and what strategy number it has within each one.  The results are
  *		returned as an OID list and a parallel integer list.
  *
  * In addition to the normal btree operators, we consider a <> operator to be
- * a "member" of an opclass if its negator is the opclass' equality operator.
- * ROWCOMPARE_NE is returned as the strategy number for this case.
+ * a "member" of an opfamily if its negator is an equality operator of the
+ * opfamily.  ROWCOMPARE_NE is returned as the strategy number for this case.
  */
 void
-get_op_btree_interpretation(Oid opno, List **opclasses, List **opstrats)
+get_op_btree_interpretation(Oid opno, List **opfamilies, List **opstrats)
 {
-	Oid			lefttype,
-				righttype;
 	CatCList   *catlist;
 	bool		op_negated;
 	int			i;
 
-	*opclasses = NIL;
+	*opfamilies = NIL;
 	*opstrats = NIL;
-
-	/*
-	 * Get the nominal left-hand input type of the operator; we will ignore
-	 * opclasses that don't have that as the expected input datatype.  This is
-	 * a kluge to avoid being confused by binary-compatible opclasses (such as
-	 * text_ops and varchar_ops, which share the same operators).
-	 */
-	op_input_types(opno, &lefttype, &righttype);
-	Assert(OidIsValid(lefttype));
 
 	/*
 	 * Find all the pg_amop entries containing the operator.
 	 */
-
-	catlist = caql_begin_CacheList(
-			NULL,
-			cql("SELECT * FROM pg_amop "
-				" WHERE amopopr = :1 "
-				" ORDER BY amopopr, "
-				" amopclaid ",
-				ObjectIdGetDatum(opno)));
+	catlist = SearchSysCacheList(AMOPOPID, 1,
+								 ObjectIdGetDatum(opno),
+								 0, 0, 0);
 
 	/*
-	 * If we can't find any opclass containing the op, perhaps it is a <>
-	 * operator.  See if it has a negator that is in an opclass.
+	 * If we can't find any opfamily containing the op, perhaps it is a <>
+	 * operator.  See if it has a negator that is in an opfamily.
 	 */
 	op_negated = false;
 	if (catlist->n_members == 0)
@@ -289,37 +395,27 @@ get_op_btree_interpretation(Oid opno, List **opclasses, List **opstrats)
 		if (OidIsValid(op_negator))
 		{
 			op_negated = true;
-			caql_end_CacheList(catlist);
-
-			catlist = caql_begin_CacheList(
-					NULL,
-					cql("SELECT * FROM pg_amop "
-						" WHERE amopopr = :1 "
-						" ORDER BY amopopr, "
-						" amopclaid ",
-						ObjectIdGetDatum(op_negator)));
+			ReleaseSysCacheList(catlist);
+			catlist = SearchSysCacheList(AMOPOPID, 1,
+										 ObjectIdGetDatum(op_negator),
+										 0, 0, 0);
 		}
 	}
 
-	/* Now search the opclasses */
+	/* Now search the opfamilies */
 	for (i = 0; i < catlist->n_members; i++)
 	{
 		HeapTuple	op_tuple = &catlist->members[i]->tuple;
 		Form_pg_amop op_form = (Form_pg_amop) GETSTRUCT(op_tuple);
-		Oid			opclass_id;
+		Oid			opfamily_id;
 		StrategyNumber op_strategy;
 
-		opclass_id = op_form->amopclaid;
-
 		/* must be btree */
-		if (!opclass_is_btree(opclass_id))
-			continue;
-
-		/* must match operator input type exactly */
-		if (get_opclass_input_type(opclass_id) != lefttype)
+		if (op_form->amopmethod != BTREE_AM_OID)
 			continue;
 
 		/* Get the operator's btree strategy number */
+		opfamily_id = op_form->amopfamily;
 		op_strategy = (StrategyNumber) op_form->amopstrategy;
 		Assert(op_strategy >= 1 && op_strategy <= 5);
 
@@ -331,44 +427,40 @@ get_op_btree_interpretation(Oid opno, List **opclasses, List **opstrats)
 			op_strategy = ROWCOMPARE_NE;
 		}
 
-		*opclasses = lappend_oid(*opclasses, opclass_id);
+		*opfamilies = lappend_oid(*opfamilies, opfamily_id);
 		*opstrats = lappend_int(*opstrats, op_strategy);
 	}
 
-	caql_end_CacheList(catlist);
+	ReleaseSysCacheList(catlist);
 }
 
 
 /*				---------- AMPROC CACHES ----------						 */
 
 /*
- * get_opclass_proc
+ * get_opfamily_proc
  *		Get the OID of the specified support function
- *		for the specified opclass and subtype.
+ *		for the specified opfamily and datatypes.
  *
  * Returns InvalidOid if there is no pg_amproc entry for the given keys.
  */
 Oid
-get_opclass_proc(Oid opclass, Oid subtype, int16 procnum)
+get_opfamily_proc(Oid opfamily, Oid lefttype, Oid righttype, int16 procnum)
 {
-	Oid			result;
-	int			fetchCount;
+	HeapTuple	tp;
+	Form_pg_amproc amproc_tup;
+	RegProcedure result;
 
-	result  = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT amproc FROM pg_amproc "
-				" WHERE amopclaid = :1 "
-				" AND amprocsubtype = :2 "
-				" AND amprocnum = :3 ",
-				ObjectIdGetDatum(opclass),
-				ObjectIdGetDatum(subtype),
-				Int16GetDatum(procnum)));
-
-	if (!fetchCount)
+	tp = SearchSysCache(AMPROCNUM,
+						ObjectIdGetDatum(opfamily),
+						ObjectIdGetDatum(lefttype),
+						ObjectIdGetDatum(righttype),
+						Int16GetDatum(procnum));
+	if (!HeapTupleIsValid(tp))
 		return InvalidOid;
-
+	amproc_tup = (Form_pg_amproc) GETSTRUCT(tp);
+	result = amproc_tup->amproc;
+	ReleaseSysCache(tp);
 	return result;
 }
 
@@ -555,92 +647,26 @@ get_atttypetypmod(Oid relid, AttrNumber attnum,
 /*				---------- OPCLASS CACHE ----------						 */
 
 /*
- * opclass_is_btree
+ * get_opclass_family
  *
- *		Returns TRUE iff the specified opclass is associated with the
- *		btree index access method.
+ *		Returns the OID of the operator family the opclass belongs to.
  */
-bool
-opclass_is_btree(Oid opclass)
-{
-	bool		result;
-	Oid			amoid;
-	int			fetchCount;
-
-	amoid = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT opcamid FROM pg_opclass "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(opclass)));
-
-	if (!fetchCount)
-		elog(ERROR, "cache lookup failed for opclass %u", opclass);
-
-	result = (amoid == BTREE_AM_OID);
-
-	return result;
-}
-
-/*
- * opclass_is_hash
- *
- *		Returns TRUE iff the specified opclass is associated with the
- *		hash index access method.
- */
-bool
-opclass_is_hash(Oid opclass)
-{
-	bool		result;
-	Oid			amoid;
-	int			fetchCount;
-
-	amoid = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT opcamid FROM pg_opclass "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(opclass)));
-
-	if (!fetchCount)
-		elog(ERROR, "cache lookup failed for opclass %u", opclass);
-
-	result = (amoid == HASH_AM_OID);
-
-	return result;
-}
-
-/*
- * opclass_is_default
- *
- *		Returns TRUE iff the specified opclass is the default for its
- *		index access method and input data type.
- */
-bool
-opclass_is_default(Oid opclass)
+Oid
+get_opclass_family(Oid opclass)
 {
 	HeapTuple	tp;
 	Form_pg_opclass cla_tup;
-	bool		result;
-	cqContext  *pcqCtx;
+	Oid			result;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_opclass "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(opclass)));
-
-	tp = caql_getnext(pcqCtx);
-
+	tp = SearchSysCache(CLAOID,
+						ObjectIdGetDatum(opclass),
+						0, 0, 0);
 	if (!HeapTupleIsValid(tp))
 		elog(ERROR, "cache lookup failed for opclass %u", opclass);
 	cla_tup = (Form_pg_opclass) GETSTRUCT(tp);
 
-	result = cla_tup->opcdefault;
-
-	caql_endscan(pcqCtx);
+	result = cla_tup->opcfamily;
+	ReleaseSysCache(tp);
 	return result;
 }
 
@@ -759,122 +785,52 @@ op_input_types(Oid opno, Oid *lefttype, Oid *righttype)
 /*
  * op_mergejoinable
  *
- *		Returns the left and right sort operators corresponding to a
- *		mergejoinable operator, or false if the operator is not mergejoinable.
+ * Returns true if the operator is potentially mergejoinable.  (The planner
+ * will fail to find any mergejoin plans unless there are suitable btree
+ * opfamily entries for this operator and associated sortops.  The pg_operator
+ * flag is just a hint to tell the planner whether to bother looking.)
  */
 bool
-op_mergejoinable(Oid opno, Oid *leftOp, Oid *rightOp)
+op_mergejoinable(Oid opno)
 {
 	HeapTuple	tp;
 	bool		result = false;
-	cqContext  *pcqCtx;
 
-	if (!sort_op_can_sort(opno, true))
-		return result;
-
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_operator "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(opno)));
-
-	tp = caql_getnext(pcqCtx);
-
+	tp = SearchSysCache(OPEROID,
+						ObjectIdGetDatum(opno),
+						0, 0, 0);
 	if (HeapTupleIsValid(tp))
 	{
 		Form_pg_operator optup = (Form_pg_operator) GETSTRUCT(tp);
 
-		if (optup->oprlsortop &&
-			optup->oprrsortop)
-		{
-			*leftOp = optup->oprlsortop;
-			*rightOp = optup->oprrsortop;
-			result = true;
-		}
+		result = optup->oprcanmerge;
+		ReleaseSysCache(tp);
 	}
-
-	caql_endscan(pcqCtx);
 	return result;
-}
-
-/*
- * op_mergejoin_crossops
- *
- *		Returns the cross-type comparison operators (ltype "<" rtype and
- *		ltype ">" rtype) for an operator previously determined to be
- *		mergejoinable.	Optionally, fetches the regproc ids of these
- *		operators, as well as their operator OIDs.
- */
-void
-op_mergejoin_crossops(Oid opno, Oid *ltop, Oid *gtop,
-					  RegProcedure *ltproc, RegProcedure *gtproc)
-{
-	HeapTuple	tp;
-	Form_pg_operator optup;
-	cqContext  *pcqCtx;
-
-	/*
-	 * Get the declared comparison operators of the operator.
-	 */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_operator "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(opno)));
-
-	tp = caql_getnext(pcqCtx);
-
-	if (!HeapTupleIsValid(tp))	/* shouldn't happen */
-		elog(ERROR, "cache lookup failed for operator %u", opno);
-	optup = (Form_pg_operator) GETSTRUCT(tp);
-	*ltop = optup->oprltcmpop;
-	*gtop = optup->oprgtcmpop;
-
-	caql_endscan(pcqCtx);
-
-	/* Check < op provided */
-	if (!OidIsValid(*ltop))
-		elog(ERROR, "mergejoin operator %u has no matching < operator",
-			 opno);
-	if (ltproc)
-		*ltproc = get_opcode(*ltop);
-
-	/* Check > op provided */
-	if (!OidIsValid(*gtop))
-		elog(ERROR, "mergejoin operator %u has no matching > operator",
-			 opno);
-	if (gtproc)
-		*gtproc = get_opcode(*gtop);
 }
 
 /*
  * op_hashjoinable
  *
- * Returns true if the operator is hashjoinable.
+ * Returns true if the operator is hashjoinable.  (There must be a suitable
+ * hash opfamily entry for this operator if it is so marked.)
  */
 bool
 op_hashjoinable(Oid opno)
 {
 	HeapTuple	tp;
 	bool		result = false;
-	cqContext  *pcqCtx;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_operator "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(opno)));
-
-	tp = caql_getnext(pcqCtx);
-
+	tp = SearchSysCache(OPEROID,
+						ObjectIdGetDatum(opno),
+						0, 0, 0);
 	if (HeapTupleIsValid(tp))
 	{
 		Form_pg_operator optup = (Form_pg_operator) GETSTRUCT(tp);
 
 		result = optup->oprcanhash;
+		ReleaseSysCache(tp);
 	}
-
-	caql_endscan(pcqCtx);
 	return result;
 }
 
@@ -1645,14 +1601,6 @@ func_data_access(Oid funcid)
 	result = DatumGetChar(
 			caql_getattr(pcqCtx, Anum_pg_proc_prodataaccess, &isnull));
 	caql_endscan(pcqCtx);
-
-	/*
-	 * In upgrade mode, allow prodataaccess to be NULL, to handle the
-	 * case where prodataaccess column has not been added to pg_proc
-	 * yet. This is specifically to handle catDML().
-	 */
-	if (gp_upgrade_mode && isnull)
-		return PRODATAACCESS_NONE;
 
 	Assert(!isnull);
 	return result;
@@ -2894,6 +2842,60 @@ getTypeBinaryOutputInfo(Oid type, Oid *typSend, bool *typIsVarlena)
 	caql_endscan(pcqCtx);
 }
 
+/*
+ * get_typmodin
+ *
+ *		Given the type OID, return the type's typmodin procedure, if any.
+ */
+Oid
+get_typmodin(Oid typid)
+{
+	HeapTuple	tp;
+
+	tp = SearchSysCache(TYPEOID,
+						ObjectIdGetDatum(typid),
+						0, 0, 0);
+	if (HeapTupleIsValid(tp))
+	{
+		Form_pg_type typtup = (Form_pg_type) GETSTRUCT(tp);
+		Oid			result;
+
+		result = typtup->typmodin;
+		ReleaseSysCache(tp);
+		return result;
+	}
+	else
+		return InvalidOid;
+}
+
+#ifdef NOT_USED
+/*
+ * get_typmodout
+ *
+ *		Given the type OID, return the type's typmodout procedure, if any.
+ */
+Oid
+get_typmodout(Oid typid)
+{
+	HeapTuple	tp;
+
+	tp = SearchSysCache(TYPEOID,
+						ObjectIdGetDatum(typid),
+						0, 0, 0);
+	if (HeapTupleIsValid(tp))
+	{
+		Form_pg_type typtup = (Form_pg_type) GETSTRUCT(tp);
+		Oid			result;
+
+		result = typtup->typmodout;
+		ReleaseSysCache(tp);
+		return result;
+	}
+	else
+		return InvalidOid;
+}
+#endif /* NOT_USED */
+
 
 /*				---------- STATISTICS CACHE ----------					 */
 
@@ -3725,67 +3727,49 @@ get_cast_func(Oid oidSrc, Oid oidDest, bool *is_binary_coercible, Oid *oidCastFu
  *      Retrieve comparison type  
  */
 CmpType
-get_comparison_type
-	(
-	Oid oidOp,
-	Oid oidLeft,
-	Oid oidRight
-	)
+get_comparison_type(Oid oidOp, Oid oidLeft, Oid oidRight)
 {
-	// find the equality comparison between the operands
-	
-	cqContext *pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_operator "
-				" WHERE oprleft = :1 and oprright = :2",
-				ObjectIdGetDatum(oidLeft),
-				ObjectIdGetDatum(oidRight)));
+	List	   *opfamilies;
+	List	   *opstrats;
+	int			opstrat;
 
-	Oid	oidEq = InvalidOid;
-	
-	HeapTuple ht = NULL;
-	Form_pg_operator optup = NULL;
-	
-	while (HeapTupleIsValid(ht = caql_getnext(pcqCtx)))
-	{		
-		optup = (Form_pg_operator) GETSTRUCT(ht);
+	get_op_btree_interpretation(oidOp, &opfamilies, &opstrats);
 
-		if (optup->oprrest == F_EQSEL)
-		{
-			oidEq = HeapTupleGetOid(ht);
-			break;
-		}
-	}
-	
-	if (InvalidOid == oidEq)
+	if (opfamilies == NIL)
 	{
-		// no equality found between specified types, hence not a special comparison operator
-		caql_endscan(pcqCtx);
+		/* The operator does not belong to any B-tree operator family */
 		return CmptOther;
 	}
-	
-	int cmp_oids[][2] = 
-	{
-	{oidEq, CmptEq},
-	{get_negator(oidEq), CmptNEq},
-	{optup->oprltcmpop, CmptLT},
-	{optup->oprgtcmpop, CmptGT},
-	{get_negator(optup->oprltcmpop), CmptGEq},
-	{get_negator(optup->oprgtcmpop), CmptLEq}
-	};
-	
-	for (int ul = 0; ul < 6; ul++)
-	{
-		int *map_elem = cmp_oids[ul];
-		if (map_elem[0] == oidOp)
-		{
-			caql_endscan(pcqCtx);
-			return map_elem[1];
-		}
-	}
 
-	caql_endscan(pcqCtx);
-	return CmptOther;
+	Assert(opstrats);
+
+	/*
+	 * XXX: Arbitrarily use the first found operator family. Usually
+	 * there is only one, but e.g. if someone has created a reverse ordering
+	 * family that sorts in descending order, it is ambiguous whether a
+	 * < operator stands for the less than operator of the ascending opfamily,
+	 * or the greater than operator for the descending opfamily.
+	 */
+	opstrat = linitial_int(opstrats);
+
+	switch(opstrat)
+	{
+		case BTLessStrategyNumber:
+			return CmptLT;
+		case BTLessEqualStrategyNumber:
+			return CmptLEq;
+		case BTEqualStrategyNumber:
+			return CmptEq;
+		case BTGreaterEqualStrategyNumber:
+			return CmptGEq;
+		case BTGreaterStrategyNumber:
+			return CmptGT;
+		case ROWCOMPARE_NE:
+			return CmptNEq;
+		default:
+			elog(ERROR, "unknown B-tree strategy: %d", opstrat);
+			return CmptOther;
+	}
 }
 
 /*
@@ -3793,67 +3777,56 @@ get_comparison_type
  *      Retrieve comparison operator between given types  
  */
 Oid
-get_comparison_operator
-	(
-	Oid oidLeft,
-	Oid oidRight,
-	CmpType cmpt
-	)
+get_comparison_operator(Oid oidLeft, Oid oidRight, CmpType cmpt)
 {
-	// find the equality comparison between the operands
-	cqContext *pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_operator "
-				" WHERE oprleft = :1 and oprright = :2",
-				ObjectIdGetDatum(oidLeft),
-				ObjectIdGetDatum(oidRight)));
+	int			opstrat;
+	cqContext  *pcqCtx;
+	HeapTuple	ht;
+	Oid			result = InvalidOid;
 
-	Oid	oidEq = InvalidOid;
-	
-	HeapTuple ht = NULL;
-	Form_pg_operator optup = NULL;
-	
-	while (HeapTupleIsValid(ht = caql_getnext(pcqCtx)))
-	{		
-		optup = (Form_pg_operator) GETSTRUCT(ht);
-
-		if (optup->oprrest == F_EQSEL)
-		{
-			oidEq = HeapTupleGetOid(ht);
+	switch(cmpt)
+	{
+		case CmptLT:
+			opstrat = BTLessStrategyNumber;
 			break;
-		}
+		case CmptLEq:
+			opstrat = BTLessEqualStrategyNumber;
+			break;
+		case CmptEq:
+			opstrat = BTEqualStrategyNumber;
+			break;
+		case CmptGEq:
+			opstrat = BTGreaterEqualStrategyNumber;
+			break;
+		case CmptGT:
+			opstrat = BTGreaterStrategyNumber;
+			break;
+		default:
+			return InvalidOid;
 	}
-	
-	if (InvalidOid == oidEq)
+
+	/* XXX: There is no index for this, so this is slow! */
+	pcqCtx = caql_beginscan(
+			NULL,
+			cql("SELECT * FROM pg_amop "
+				" WHERE amoplefttype = :1 and amoprighttype = :2 and amopmethod = :3 and amopstrategy = :4 ",
+				ObjectIdGetDatum(oidLeft),
+				ObjectIdGetDatum(oidRight),
+				ObjectIdGetDatum(BTREE_AM_OID),
+				Int32GetDatum(opstrat)));
+
+	/* XXX: There can be multiple results. Arbitrarily use the first one */
+	while (HeapTupleIsValid(ht = caql_getnext(pcqCtx)))
 	{
-		// no equality found between specified types, hence not a special comparison operator
-		caql_endscan(pcqCtx);
-		return CmptOther;
-	}
-	
-	int cmp_oids[][2] = 
-	{
-	{oidEq, CmptEq},
-	{get_negator(oidEq), CmptNEq},
-	{optup->oprltcmpop, CmptLT},
-	{optup->oprgtcmpop, CmptGT},
-	{get_negator(optup->oprltcmpop), CmptGEq},
-	{get_negator(optup->oprgtcmpop), CmptLEq}
-	};
-	
-	for (int ul = 0; ul < 6; ul++)
-	{
-		int *map_elem = cmp_oids[ul];
-		if (map_elem[1] == cmpt)
-		{
-			caql_endscan(pcqCtx);
-			return map_elem[0];
-		}
+		Form_pg_amop amoptup = (Form_pg_amop) GETSTRUCT(ht);
+
+		result = amoptup->amopopr;
+		break;
 	}
 
 	caql_endscan(pcqCtx);
-	
-	return InvalidOid;
+
+	return result;
 }
 
 /*
@@ -3916,76 +3889,83 @@ has_subclass(Oid relationId)
 }
 
 /*
- * get_operator_opclasses
- *		Get the oid of classes the given operator belongs to
+ * get_operator_opfamilies
+ *		Get the oid of operator families the given operator belongs to
+ *
+ * ORCA calls this.
  */
 List *
-get_operator_opclasses(Oid opno)
+get_operator_opfamilies(Oid opno)
 {
-	cqContext *pcqCtx = caql_beginscan(
-							NULL,
+	HeapTuple	htup;
+	List	   *opfam_oids;
+	cqContext  *pcqCtx;
+
+	pcqCtx = caql_beginscan(NULL,
 							cql("SELECT * FROM pg_amop "
 								" WHERE amopopr = :1 ",
 								ObjectIdGetDatum(opno)));
 
-	HeapTuple htup = NULL;
-	List *opclass_oids = NIL;
+	opfam_oids = NIL;
 	while (HeapTupleIsValid(htup = caql_getnext(pcqCtx)))
 	{		
 		Form_pg_amop amop_tuple = (Form_pg_amop) GETSTRUCT(htup);
 
-		opclass_oids = lappend_oid(opclass_oids, amop_tuple->amopclaid);
+		opfam_oids = lappend_oid(opfam_oids, amop_tuple->amopfamily);
 	}
-	
+
 	caql_endscan(pcqCtx);
-	
-	return opclass_oids;
+
+	return opfam_oids;
 } 
 
 /*
- * get_index_opclasses
- *		Get the oid of classes for the index keys
+ * get_index_opfamilies
+ *		Get the oid of operator families for the index keys
  */
 List *
-get_index_opclasses(Oid oidIndex)
+get_index_opfamilies(Oid oidIndex)
 {
-	cqContext *pcqCtx = caql_beginscan(
+	cqContext  *pcqCtx;
+	HeapTuple	htup;
+	List	   *opfam_oids;
+    bool		isnull = false;
+	int			indnatts;
+	Datum		indclassDatum;
+	oidvector  *indclass;
+
+	pcqCtx = caql_beginscan(
 							NULL,
 							cql("SELECT * FROM pg_index "
 								" WHERE indexrelid = :1 ",
 								ObjectIdGetDatum(oidIndex)));
-
-	HeapTuple htup = caql_getnext(pcqCtx);
-
+	htup = caql_getnext(pcqCtx);
 	if (!HeapTupleIsValid(htup))
-	{
 		elog(ERROR, "Index %u not found", oidIndex);
-	}
-	
-	List *opclass_oids = NIL;
+
     /*
-     * use caql_getattr() to retrieve number of index attributes, and the oid vector of indclass
+     * use caql_getattr() to retrieve number of index attributes, and the oid
+	 * vector of indclass
      */
-    bool isnull = false;
-    int indnatts = DatumGetInt16(caql_getattr(pcqCtx, Anum_pg_index_indnatts, &isnull));
+    indnatts = DatumGetInt16(caql_getattr(pcqCtx, Anum_pg_index_indnatts, &isnull));
 	Assert(!isnull);
 
-    Datum indclassDatum = caql_getattr(pcqCtx, Anum_pg_index_indclass, &isnull);
+    indclassDatum = caql_getattr(pcqCtx, Anum_pg_index_indclass, &isnull);
     if (isnull)
-    {
-            return opclass_oids;
-    }
-    oidvector *indclass = (oidvector *) DatumGetPointer(indclassDatum);
+		return NIL;
+    indclass = (oidvector *) DatumGetPointer(indclassDatum);
 
-
+	opfam_oids = NIL;
 	for (int i = 0; i < indnatts; i++)
 	{
-		Oid oidOpClass = indclass->values[i];
-		opclass_oids = lappend_oid(opclass_oids, oidOpClass);
+		Oid			oidOpClass = indclass->values[i];
+		Oid 		opfam = get_opclass_family(oidOpClass);
+
+		opfam_oids = lappend_oid(opfam_oids, opfam);
 	}
-	
+
 	caql_endscan(pcqCtx);
-	return opclass_oids;
+	return opfam_oids;
 }
 
 /*

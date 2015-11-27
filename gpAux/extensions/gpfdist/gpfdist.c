@@ -2929,7 +2929,7 @@ static void handle_post_request(request_t *r, int header_end)
 		ssize_t n;
 		size_t buf_space_left = r->in.dbufmax - r->in.dbuftop;
 
-		if (r->in.davailable - buf_space_left >= 0)
+		if (r->in.davailable > buf_space_left)
 			want = buf_space_left;
 		else
 			want = r->in.davailable;

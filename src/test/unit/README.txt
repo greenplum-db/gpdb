@@ -39,76 +39,22 @@ The development of a new test consists of multiple steps:
 	  file(s) and add a Makefile. The directory template contains template files
 	  for the Makefile and the README file.
 	  
-	  > BIN=SOMETHING_test
+	  > TARGETS=SOMETHING_test
 	  > include ../Makefile.all
       > include ${CMOCKERY_DIR}/Makefile
       > include ${MOCK_DIR}/Makefile
 
-      > TEST_OBJS=SOMETHING_test.o
-      > SUT_OBJS=$(CDB_BACKEND_DIR)/SOMETHING.o
       > MOCK_OBJS=
 	
       > include ../Makefile.all2
 	  
-	- Change the BIN, TEST_OBJ, SUT_OBJS and MOCK_OBJS variables in the mock 
-	  file. BIN, TEST_OBJ, and SUT_OBJS are usually straightforward to set. 
+	- Change the TARGETS, and <testname>_REAL_OBJS variables in the
+	  Makefile. TARGETS is usually straightforward to set.
 	  
-	  MOCK_OBJS needs to contain the mock function object files for all function 
-	  calls that are done from the SUT to functions not contained in the SUT. 
-	  The easiest way is to create the Makefile with TEST_OBJ, SUT_OBJECT set
-	  and MOCK_OBTS empty. Then the following call helps locating all the needed 
-	  mock files. 
-	  
-	  make 2>&1 | python ../../find_mock_objs.py
-	  
-	  Here is a sample output:
-	  
-	  > Mock Source Files
-	  > aset_mock.c
-	  [...]
-	  > transam_mock.c
-	  > tuptoaster_mock.c
-	  > xact_mock.c
-	  > xlog_mock.c
-	  > xlogutils_mock.c
-      > 
-	  > Prepared for Makefile
-	  > $(MOCK_DIR)/aset_mock.o \
-	  [...]
-	  > 	$(MOCK_DIR)/transam_mock.o \
-	  > 	$(MOCK_DIR)/tuptoaster_mock.o \
-	  > 	$(MOCK_DIR)/xact_mock.o \
-	  > 	$(MOCK_DIR)/xlog_mock.o \
-	  > 	$(MOCK_DIR)/xlogutils_mock.o
-	  
-	  The output is a list of mock object files ready to be copied into the 
-	  Makefile. The output also may contain "Skipped References". Usually, these 
-	  are references for which no much functions are generated.
-	  
-	  The Makefile could look like this in the end:
-	  
-	  > BIN=foo_test
-	  > include ../Makefile.all
-      > include ${CMOCKERY_DIR}/Makefile
-      > include ${MOCK_DIR}/Makefile
-      > 
-      > TEST_OBJS=foo_test.o
-      > SUT_OBJS=$(CDB_BACKEND_DIR)/foo/foo.o
-      > MOCK_OBJS=$(MOCK_DIR)/aset_mock.o \
-	  [...]
-	  > 	$(MOCK_DIR)/transam_mock.o \
-	  > 	$(MOCK_DIR)/tuptoaster_mock.o \
-	  > 	$(MOCK_DIR)/xact_mock.o \
-	  > 	$(MOCK_DIR)/xlog_mock.o \
-	  > 	$(MOCK_DIR)/xlogutils_mock.o
-      > 	
-      > include ../Makefile.all2	  
-	  
-	- If there are functions calls for which currently no mock function exists, 
-	  we need to generate the mock function. For this, the filename (only the 
-	  last filename, not the full path) of the mock function should be added to 
-	  mock/mock_autogen/mock_source and generate_mocks.py should be called. 
-	  After this the mock function should exists in the mock directory.
+	  By default, the test program is linked with mock versions of most
+	  backend files. The <testname>_REAL_OBJS needs to list any files
+	  that should *not* be mocked, for which the real file should linked
+	  in instead.
 	  
 	- Create a new test source file, also usually named after the SUT. An 
 	  example is heapam_test.c in the heapam SUT directory. In the beginning 
