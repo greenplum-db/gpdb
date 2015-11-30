@@ -39,7 +39,7 @@ POST_DATA_SUFFIX = '_post_data'
 # TODO: use CLI-agnostic custom exceptions instead of ExceptionNoStackTraceNeeded
 
 def update_ao_stat_func(conn, ao_table, counter, batch_size):
-    qry = "SELECT * FROM gp_update_ao_master_stats('%s')" % ao_table
+    qry = "SELECT * FROM gp_update_ao_master_stats('%s')" % pg.escape_string(ao_table)
     rows = execSQLForSingleton(conn, qry)
     if counter % batch_size == 0:
         conn.commit()
