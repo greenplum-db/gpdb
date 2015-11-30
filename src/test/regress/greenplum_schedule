@@ -55,6 +55,9 @@ test: resource_queue
 
 test: filespace trig auth_constraint role rle portals_updatable plpgsql_cache timeseries resource_queue_function pg_stat_last_operation gp_numeric_agg gp_toolkit plan_size partindex_test direct_dispatch partition_pruning_with_fn dsp
 
+#Aggregate function
+test: aggregate_with_rollup
+
 ignore: tpch500GB_orca
 
 # XXX: This test depends on libgpoptudfs library, which includes ORCA helper
