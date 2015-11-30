@@ -380,18 +380,24 @@ public class GPDBWritable implements Writable {
 		int endpadding = roundUpAlignment(datlen, 8) - datlen;
 		datlen += endpadding;
 
+		/* the output data length, it should be eaqual to datlen, for safeguard*/
+		int realLen = 0;
+
 		/* Construct the packet header */
 		out.writeInt(datlen);
 		out.writeShort(DATA_VERSION);
 		out.writeShort(numCol);
+		realLen += 4 + 2 + 2;
 
 		/* Write col type */
 		for(int i=0; i<numCol; i++)
 			out.writeByte(enumType[i]);
+		realLen += numCol;
 
 		/* Nullness */
 		byte[] nullBytes = boolArrayToByteArray(nullBits);
 		out.write(nullBytes);
+		realLen += nullBytes.length;
 
 		/* Column Value */
 		for(int i=0; i<numCol; i++) {
@@ -399,20 +405,22 @@ public class GPDBWritable implements Writable {
 				/* Pad the alignment byte first */
 				if (padLength[i] > 0) {
 					out.write(padbytes, 0, padLength[i]);
+					realLen += padLength[i];
 				}
 
 				/* Now, write the actual column value */
 				switch(colType[i]) {
-					case BIGINT:   out.writeLong(   ((Long)   colValue[i]).longValue());    break;
-					case BOOLEAN:  out.writeBoolean(((Boolean)colValue[i]).booleanValue()); break;
-					case FLOAT8:   out.writeDouble( ((Double) colValue[i]).doubleValue());  break;
-					case INTEGER:  out.writeInt(    ((Integer)colValue[i]).intValue());     break;
-					case REAL:     out.writeFloat(  ((Float)  colValue[i]).floatValue());   break;
-					case SMALLINT: out.writeShort(  ((Short)  colValue[i]).shortValue());   break;
+					case BIGINT:   out.writeLong(   ((Long)   colValue[i]).longValue()); realLen += 8;   break;
+					case BOOLEAN:  out.writeBoolean(((Boolean)colValue[i]).booleanValue()); realLen += 1; break;
+					case FLOAT8:   out.writeDouble( ((Double) colValue[i]).doubleValue()); realLen += 8; break;
+					case INTEGER:  out.writeInt(    ((Integer)colValue[i]).intValue()); realLen += 4;   break;
+					case REAL:     out.writeFloat(  ((Float)  colValue[i]).floatValue()); realLen += 4;  break;
+					case SMALLINT: out.writeShort(  ((Short)  colValue[i]).shortValue()); realLen += 2;  break;
 					/* For BYTEA format, add 4byte length header at the beginning  */
 					case BYTEA:
 						out.writeInt(((byte[])colValue[i]).length);
 						out.write((byte[])colValue[i]);
+						realLen += 4 + ((byte[])colValue[i]).length;
 						break;
 					/* For text format, add 4byte length header (length include the "\0" at the end)
 					 * at the beginning and add a "\0" at the end */
@@ -421,6 +429,7 @@ public class GPDBWritable implements Writable {
 						byte[] data = (outStr).getBytes(CHARSET);
 						out.writeInt(data.length);
 						out.write(data);
+						realLen += 4 + data.length;
 						break;
 					}
 				}
@@ -429,6 +438,12 @@ public class GPDBWritable implements Writable {
 
 		/* End padding */
 		out.write(padbytes, 0, endpadding);
+		realLen += endpadding;
+
+		/* safeguard */
+		if (datlen != realLen) {
+			throw new IOException("data length error, data output size is not what expected");
+		}
 	}
 
 	/**
