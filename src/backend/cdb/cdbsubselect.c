@@ -1131,8 +1131,7 @@ convert_IN_to_join(PlannerInfo *root, List** rtrlist_inout, SubLink *sublink)
 	return convert_testexpr(root,
 							sublink->testexpr,
 							rtindex,
-							&ininfo->sub_targetlist,
-							subselect->targetList);
+							&ininfo->sub_targetlist);
 }                               /* convert_IN_to_join */
 
 
@@ -1417,7 +1416,6 @@ static Node *
 make_lasj_quals(PlannerInfo *root, SubLink * sublink, int subquery_indx)
 {
 	Expr	   *join_pred;
-	Query	   *subselect = (Query *) sublink->subselect;
 	List	   *subtlist = NIL;
 
 	Assert(sublink->subLinkType == ALL_SUBLINK);
@@ -1425,8 +1423,7 @@ make_lasj_quals(PlannerInfo *root, SubLink * sublink, int subquery_indx)
 	join_pred = (Expr *) convert_testexpr(root,
 			sublink->testexpr,
 			subquery_indx,
-			&subtlist,
-			subselect->targetList);
+			&subtlist);
 
 	join_pred = canonicalize_qual(make_notclause(join_pred));
 	

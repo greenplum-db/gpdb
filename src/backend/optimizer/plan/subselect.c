@@ -42,7 +42,6 @@ typedef struct convert_testexpr_context
 	PlannerInfo *root;
 	int			rtindex;		/* RT index for Vars, or 0 for Params */
 	List	   *righthandIds;	/* accumulated list of Vars or Param IDs */
-	List	   *sub_tlist;		/* subselect targetlist (if given) */
 } convert_testexpr_context;
 
 typedef struct process_sublinks_context
@@ -561,8 +560,7 @@ build_subplan(PlannerInfo *root, Plan *plan, List *rtable,
 		result = convert_testexpr(root,
 								  testexpr,
 								  0,
-								  &splan->paramIds,
-								  NIL);
+								  &splan->paramIds);
 		splan->setParam = list_copy(splan->paramIds);
 		splan->is_initplan = true;
 
@@ -596,8 +594,7 @@ build_subplan(PlannerInfo *root, Plan *plan, List *rtable,
 		splan->testexpr = convert_testexpr(root,
 										   testexpr,
 										   0,
-										   &splan->paramIds,
-										   NIL);
+										   &splan->paramIds);
 
 		result = (Node *) splan;
 
@@ -666,10 +663,6 @@ build_subplan(PlannerInfo *root, Plan *plan, List *rtable,
  * of the Var nodes are returned in *righthandIds (this is a bit of a type
  * cheat, but we can get away with it).
  *
- * The subquery targetlist need be supplied only if rtindex is not 0.
- * We consult it to extract the correct typmods for the created Vars.
- * (XXX this is a kluge that could go away if Params carried typmod.)
- *
  * The given testexpr has already been recursively processed by
  * process_sublinks_mutator.  Hence it can no longer contain any
  * PARAM_SUBLINK Params for lower SubLink nodes; we can safely assume that
@@ -678,8 +671,7 @@ build_subplan(PlannerInfo *root, Plan *plan, List *rtable,
 Node *
 convert_testexpr(PlannerInfo *root, Node *testexpr,
 				 int rtindex,
-				 List **righthandIds,
-				 List *sub_tlist)
+				 List **righthandIds)
 {
 	Node	   *result;
 	convert_testexpr_context context;
@@ -687,7 +679,6 @@ convert_testexpr(PlannerInfo *root, Node *testexpr,
 	context.root = root;
 	context.rtindex = rtindex;
 	context.righthandIds = NIL;
-	context.sub_tlist = sub_tlist;
 	result = convert_testexpr_mutator(testexpr, &context);
 	*righthandIds = context.righthandIds;
 	return result;
@@ -718,19 +709,6 @@ convert_testexpr_mutator(Node *node,
 			{
 				/* Make the Var node representing the subplan's result */
 				Var		   *newvar;
-
-				/*
-				 * XXX kluge: since Params don't carry typmod, we have to
-				 * look into the subquery targetlist to find out the right
-				 * typmod to assign to the Var.
-				 */
-				TargetEntry *ste = get_tle_by_resno(context->sub_tlist,
-													param->paramid);
-
-				if (ste == NULL || ste->resjunk)
-					elog(ERROR, "subquery output %d not found",
-						 param->paramid);
-				Assert(param->paramtype == exprType((Node *) ste->expr));
 
 				newvar = makeVar(context->rtindex,
 								 param->paramid,
