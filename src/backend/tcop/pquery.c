@@ -1507,7 +1507,10 @@ PortalRunUtility(Portal portal, Node *utilityStmt, bool isTopLevel,
 
 	/* check if this utility statement need to be involved into resoure queue
 	 * mgmt */
-	ResHandleUtilityStmt(portal, utilityStmt);
+	if (ResourceSchedulerUtility && Gp_role == GP_ROLE_DISPATCH && !superuser())
+	{
+		ResHandleUtilityStmt(portal, utilityStmt);
+	}
 
 	if ( isTopLevel )
 	{

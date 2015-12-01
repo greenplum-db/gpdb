@@ -123,6 +123,10 @@ static const char *assign_password_hash_algorithm(const char *newval,
 static const char *assign_gp_default_storage_options(
 							const char *newval, bool doit, GucSource source);
 
+static bool assign_resource_scheduler(bool newval, bool doit, GucSource source);
+static bool assign_resource_select_only(bool newval, bool doit, GucSource source);
+static bool assign_resource_scheduler_utility(bool newval, bool doit, GucSource source);
+
 extern bool enable_partition_rules;
 
 extern bool gp_hash_index;
@@ -1449,7 +1453,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&ResourceScheduler,
-		true, NULL, NULL
+		true, assign_resource_scheduler, NULL
 	},
 	{
 		{"resource_select_only", PGC_POSTMASTER, RESOURCES_MGM,
@@ -1457,7 +1461,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 			NULL
 		},
 		&ResourceSelectOnly,
-		false, NULL, NULL
+		false, assign_resource_select_only, NULL
+	},
+	{
+		{"resource_scheduler_utility", PGC_POSTMASTER, RESOURCES_MGM,
+			gettext_noop("Enable resource locking on utility statements."),
+			gettext_noop("Get utility statements COPY, ANALYZE, VACUUM, CLUSTER "
+					"and REINDEX involved in resource management.")
+		},
+		&ResourceSchedulerUtility,
+		false, assign_resource_scheduler_utility, NULL
 	},
 	{
 		{"resource_cleanup_gangs_on_wait", PGC_USERSET, RESOURCES_MGM,
@@ -6128,4 +6141,43 @@ assign_gp_default_storage_options(const char *newval,
 		PG_END_TRY();
 	}
 	return doit ? storageOptToString() : newval;
+}
+
+static bool
+assign_resource_scheduler(bool newval, bool doit, GucSource source)
+{
+	if (!newval && Gp_role == GP_ROLE_DISPATCH
+		&& (ResourceSelectOnly || ResourceSchedulerUtility))
+	{
+		/* since the source can only be PGC_S_FILE or PGC_S_DEFAULT, we do not report error;
+		 * and the false return value would leave the guc to be default */
+		return false;
+	}
+	return true;
+}
+
+static bool
+assign_resource_select_only(bool newval, bool doit, GucSource source)
+{
+	if (newval && Gp_role == GP_ROLE_DISPATCH
+		&& (!ResourceScheduler || ResourceSchedulerUtility))
+	{
+		/* since the source can only be PGC_S_FILE or PGC_S_DEFAULT, we do not report error;
+		 * and the false return value would leave the guc to be default */
+		return false;
+	}
+	return true;
+}
+
+static bool
+assign_resource_scheduler_utility(bool newval, bool doit, GucSource source)
+{
+	if (newval && Gp_role == GP_ROLE_DISPATCH
+		&& (!ResourceScheduler || ResourceSelectOnly))
+	{
+		/* since the source can only be PGC_S_FILE or PGC_S_DEFAULT, we do not report error;
+		 * and the false return value would leave the guc to be default */
+		return false;
+	}
+	return true;
 }

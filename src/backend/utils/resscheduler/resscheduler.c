@@ -44,6 +44,7 @@
  * GUC variables.
  */
 bool	ResourceScheduler;						/* Is scheduling enabled? */
+bool	ResourceSchedulerUtility;					/* Is scheduling enabled for utility statements? */
 int		MaxResourceQueues;						/* Max # of queues. */
 int		MaxResourcePortalsPerXact;				/* Max # tracked portals -
 												 * per backend . */
@@ -1056,30 +1057,33 @@ AtAbort_ResScheduler(void)
 void
 ResHandleUtilityStmt(Portal portal, Node *stmt)
 {
-	if (!IsA(stmt, CopyStmt))
+	Assert(Gp_role == GP_ROLE_DISPATCH
+		&& ResourceScheduler
+		&& ResourceSchedulerUtility
+		&& !ResourceSelectOnly
+		&& !superuser());
+
+	if (!IsA(stmt, CopyStmt) &&
+	    !IsA(stmt, VacuumStmt) &&
+	    !IsA(stmt, ClusterStmt) &&
+	    !IsA(stmt, ReindexStmt))
 	{
 		return;
 	}
 
-	if (Gp_role == GP_ROLE_DISPATCH
-		&& ResourceScheduler
-		&& (!ResourceSelectOnly)
-		&& !superuser())
+	Assert(!LWLockHeldExclusiveByMe(ResQueueLock));
+	LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
+	ResQueue resQueue = ResQueueHashFind(portal->queueId);
+	LWLockRelease(ResQueueLock);
+
+	Assert(resQueue);
+	int numSlots = (int) ceil(resQueue->limits[RES_COUNT_LIMIT].threshold_value);
+
+	if (numSlots >= 1) /* statement limit exists */
 	{
-		Assert(!LWLockHeldExclusiveByMe(ResQueueLock));
-		LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
-		ResQueue resQueue = ResQueueHashFind(portal->queueId);
-		LWLockRelease(ResQueueLock);
+		PortalSetStatus(portal, PORTAL_QUEUE);
 
-		Assert(resQueue);
-		int numSlots = (int) ceil(resQueue->limits[RES_COUNT_LIMIT].threshold_value);
-
-		if (numSlots >= 1) /* statement limit exists */
-		{
-			PortalSetStatus(portal, PORTAL_QUEUE);
-
-			portal->releaseResLock = ResLockUtilityPortal(portal, resQueue->ignorecostlimit);
-		}
-		PortalSetStatus(portal, PORTAL_ACTIVE);
+		portal->releaseResLock = ResLockUtilityPortal(portal, resQueue->ignorecostlimit);
 	}
+	PortalSetStatus(portal, PORTAL_ACTIVE);
 }
