@@ -1456,7 +1456,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('pygresql.pgdb.pgdbCnx.commit')
     def test_update_ao_stat_func_00(self, m1, m2):
         conn = None
-        ao_table = None
+        ao_table = 'schema.table'
         counter = 1
         batch_size = 1000
         update_ao_stat_func(conn, ao_table, counter, batch_size)
@@ -1465,7 +1465,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('gppylib.operations.restore.execSQLForSingleton')
     def test_update_ao_stat_func_01(self, m1, m2):
         conn = None
-        ao_table = None
+        ao_table = 'schema.table'
         counter = 999
         batch_size = 1000
         update_ao_stat_func(conn, ao_table, counter, batch_size)
@@ -1474,7 +1474,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('pygresql.pgdb.pgdbCnx.commit')
     def test_update_ao_stat_func_02(self, m1, m2):
         conn = None
-        ao_table = None
+        ao_table = 'schema.table'
         counter = 1000
         batch_size = 1000
         with self.assertRaisesRegexp(AttributeError, "'NoneType' object has no attribute 'commit'"):
@@ -1484,7 +1484,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('pygresql.pgdb.pgdbCnx.commit')
     def test_update_ao_stat_func_03(self, m1, m2):
         conn = None
-        ao_table = None
+        ao_table = 'schema.table'
         counter = 1001
         batch_size = 1000
         update_ao_stat_func(conn, ao_table, counter, batch_size)
@@ -1493,7 +1493,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('pygresql.pgdb.pgdbCnx.commit')
     def test_update_ao_stat_func_04(self, m1, m2):
         conn = None
-        ao_table = None
+        ao_table = 'schema.table'
         counter = 2000
         batch_size = 1000
         with self.assertRaisesRegexp(AttributeError, "'NoneType' object has no attribute 'commit'"):
