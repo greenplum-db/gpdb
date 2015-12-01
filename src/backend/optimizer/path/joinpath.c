@@ -45,7 +45,16 @@ hash_inner_and_outer(PlannerInfo *root,
                      JoinType jointype);
 static Path *best_appendrel_indexscan(PlannerInfo *root, RelOptInfo *rel,
 						 RelOptInfo *outer_rel, JoinType jointype);
+static List *select_mergejoin_clauses(RelOptInfo *joinrel,
+						 RelOptInfo *outerrel,
+						 RelOptInfo *innerrel,
+						 List *restrictlist,
+						 JoinType jointype);
 
+static List *hashclauses_for_join(List *restrictlist,
+					 RelOptInfo *outerrel,
+					 RelOptInfo *innerrel,
+					 JoinType jointype);
 
 /*
  * add_paths_to_joinrel
@@ -76,7 +85,7 @@ add_paths_to_joinrel(PlannerInfo *root,
            innerrel->cheapest_startup_path &&
            innerrel->cheapest_total_path);
 
-    /*
+	/*
 	 * Find potential mergejoin clauses.  We can skip this if we are not
 	 * interested in doing a mergejoin.  However, mergejoin is currently our
 	 * only way of implementing full outer joins, so override mergejoin
@@ -328,7 +337,6 @@ sort_inner_and_outer(PlannerInfo *root,
 	}
 }
 
-
 /*
  * match_unsorted_outer
  *	  Creates possible join paths for processing a single join relation
@@ -498,7 +506,7 @@ match_unsorted_outer(PlannerInfo *root,
                                           mergeclause_list,         /*CDB*/
 										  merge_pathkeys));
 			if (matpath != NULL)
-		        add_path(root, joinrel, (Path *)
+				add_path(root, joinrel, (Path *)
 						 create_nestloop_path(root,
 											  joinrel,
 											  jointype,
@@ -508,7 +516,7 @@ match_unsorted_outer(PlannerInfo *root,
                                               mergeclause_list,     /*CDB*/
 											  merge_pathkeys));
 			if (inner_cheapest_startup != inner_cheapest_total)
-		        add_path(root, joinrel, (Path *)
+				add_path(root, joinrel, (Path *)
 						 create_nestloop_path(root,
 											  joinrel,
 											  jointype,
@@ -518,7 +526,7 @@ match_unsorted_outer(PlannerInfo *root,
                                               mergeclause_list,     /*CDB*/
 											  merge_pathkeys));
 			if (index_cheapest_total != NULL)
-		        add_path(root, joinrel, (Path *)
+				add_path(root, joinrel, (Path *)
 						 create_nestloop_path(root,
 											  joinrel,
 											  jointype,
@@ -739,15 +747,15 @@ match_unsorted_outer(PlannerInfo *root,
 	}
 }
 
-List *
+static List *
 hashclauses_for_join(List *restrictlist,
 					 RelOptInfo *outerrel,
 					 RelOptInfo *innerrel,
 					 JoinType jointype)
 {
 	bool		isouterjoin;
-	ListCell	*l;
-	List		*clauses = NIL;
+	ListCell   *l;
+	List	   *clauses = NIL;
 
 	/*
 	 * Hash only supports inner and left joins.
@@ -848,8 +856,7 @@ hash_inner_and_outer(PlannerInfo *root,
 								  innerpath,
 								  restrictlist,
                                   mergeclause_list,
-								  hashclause_list,
-                                  false);
+								  hashclause_list);
     if (!hjpath)
         return;
 
@@ -876,7 +883,6 @@ hash_inner_and_outer(PlannerInfo *root,
     else
         add_path(root, joinrel, (Path *)hjpath);
 }                               /* hash_inner_and_outer */
-
 
 /*
  * best_appendrel_indexscan
@@ -958,7 +964,7 @@ best_appendrel_indexscan(PlannerInfo *root, RelOptInfo *rel,
  * if it is mergejoinable and involves vars from the two sub-relations
  * currently of interest.
  */
-List *
+static List *
 select_mergejoin_clauses(RelOptInfo *joinrel,
 						 RelOptInfo *outerrel,
 						 RelOptInfo *innerrel,

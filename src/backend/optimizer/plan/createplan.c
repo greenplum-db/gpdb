@@ -621,10 +621,10 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 												 inner_plan);
 			break;
 		case T_NestLoop:
-			plan = create_nestloop_plan(root,
-										(NestPath *) best_path,
-										outer_plan,
-										inner_plan);
+			plan = (Plan *) create_nestloop_plan(root,
+												 (NestPath *) best_path,
+												 outer_plan,
+												 inner_plan);
 			break;
 		default:
 			elog(ERROR, "unrecognized node type: %d",
@@ -736,18 +736,15 @@ create_result_plan(PlannerInfo *root, ResultPath *best_path)
 {
 	List	   *tlist;
 	List	   *quals;
-	Plan	   *subplan;
 
 	if (best_path->path.parent)
 		tlist = build_relation_tlist(best_path->path.parent);
 	else
 		tlist = NIL;			/* will be filled in later */
 
-	subplan = NULL;
-
 	quals = order_qual_clauses(root, best_path->quals);
 
-	return make_result(tlist, (Node *) quals, subplan);
+	return make_result(tlist, (Node *) quals, NULL);
 }
 
 /*
@@ -3760,9 +3757,9 @@ make_append(List *appendplans, bool isTarget, List *tlist)
 	plan->plan_width = 0;
 	foreach(subnode, appendplans)
 	{
-		Plan *subplan = (Plan *) lfirst(subnode);
+		Plan	   *subplan = (Plan *) lfirst(subnode);
 
-		if (subnode == list_head(appendplans)) 	/* first node? */
+		if (subnode == list_head(appendplans))	/* first node? */
 			plan->startup_cost = subplan->startup_cost;
 		plan->total_cost += subplan->total_cost;
 		plan->plan_rows += subplan->plan_rows;
@@ -4587,7 +4584,6 @@ Plan *add_agg_cost(PlannerInfo *root, Plan *plan,
 
 	plan->startup_cost = agg_path.startup_cost;
 	plan->total_cost = agg_path.total_cost;
-
 
 	/*
 	 * We will produce a single output tuple if not grouping, and a tuple per

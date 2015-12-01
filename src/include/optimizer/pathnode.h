@@ -23,21 +23,9 @@
  * prototypes for pathnode.c
  */
 
-Path *
-pathnode_copy_node(const Path *s);
-
-CdbVisitOpt
-pathnode_walk_node(Path            *path,
-			       CdbVisitOpt    (*walker)(Path *path, void *context),
-			       void            *context);
-CdbVisitOpt
-pathnode_walk_kids(Path            *path,
-			       CdbVisitOpt    (*walker)(Path *path, void *context),
-			       void            *context);
-CdbVisitOpt
-pathnode_walk_list(List            *pathlist,
-			       CdbVisitOpt    (*walker)(Path *path, void *context),
-			       void            *context);
+extern CdbVisitOpt pathnode_walk_node(Path *path,
+			       CdbVisitOpt (*walker)(Path *path, void *context),
+			       void *context);
 
 extern int compare_path_costs(Path *path1, Path *path2,
 				   CostSelector criterion);
@@ -80,12 +68,6 @@ extern TidPath *create_tidscan_path(PlannerInfo *root, RelOptInfo *rel,
 extern AppendPath *create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths);
 extern ResultPath *create_result_path(List *quals);
 extern MaterialPath *create_material_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath);
-UniquePath *create_unique_exprlist_path(PlannerInfo    *root,
-                                        Path           *subpath,
-                                        List           *distinct_on_exprs);
-UniquePath *create_unique_rowid_path(PlannerInfo *root,
-                                     Path        *subpath,
-                                     Relids       dedup_relids);
 extern Path *create_subqueryscan_path(PlannerInfo *root, RelOptInfo *rel, List *pathkeys);
 extern Path *create_functionscan_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte);
 extern Path *create_tablefunction_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte);
@@ -122,8 +104,7 @@ extern HashPath *create_hashjoin_path(PlannerInfo *root,
 					 Path *inner_path,
 					 List *restrict_clauses,
                      List *mergeclause_list,    /*CDB*/
-					 List *hashclauses,
-                     bool  freeze_outer_path);
+					 List *hashclauses);
 
 /*
  * prototypes for relnode.c

@@ -34,94 +34,28 @@
 #include "utils/selfuncs.h"
 #include "utils/syscache.h"
 
-#include "cdb/cdbpath.h"        /* cdb_join_motion() etc */
+#include "cdb/cdbpath.h"        /* cdb_create_motion_path() etc */
 
 static void     cdb_set_cheapest_dedup(PlannerInfo *root, RelOptInfo *rel);
 static bool     cdb_is_path_deduped(Path *path);
 static bool     cdb_subpath_tried_postjoin_dedup(Path *path, Relids subqrelids);
 static UniquePath  *create_limit1_path(PlannerInfo *root, Path *subpath);
+static UniquePath *create_unique_exprlist_path(PlannerInfo *root,
+							Path*subpath, List *distinct_on_exprs);
+static UniquePath *create_unique_rowid_path(PlannerInfo *root,
+						 Path *subpath, Relids dedup_relids);
 static UniquePath  *make_limit1_path(Path *subpath);
 static UniquePath  *make_unique_path(Path *subpath);
 static List *translate_sub_tlist(List *tlist, int relid);
 static bool query_is_distinct_for(Query *query, List *colnos);
 static bool hash_safe_tlist(List *tlist);
 
-#define FLATCOPY(newnode, node, nodetype)  \
-	( (newnode) = makeNode(nodetype), \
-	  memcpy((newnode), (node), sizeof(nodetype)) )
-
-
-/*
- * pathnode_copy_node
- *    Returns a flat copy of the given Path node.
- */
-Path *
-pathnode_copy_node(const Path *s)
-{
-    MemoryContext   oldcontext;
-    void           *t;
-
-    if (!s)
-        return NULL;
-
-	/* Allocate in same context as parent rel for GEQO safety. */
-	oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(s->parent));
-
-    switch (s->type)
-	{
-	    case T_Path:
-            FLATCOPY(t, s, Path);
-            break;
-	    case T_IndexPath:
-            FLATCOPY(t, s, IndexPath);
-            break;
-	    case T_BitmapHeapPath:
-            FLATCOPY(t, s, BitmapHeapPath);
-            break;
-		case T_BitmapAppendOnlyPath:
-			FLATCOPY(t, s, BitmapAppendOnlyPath);
-			break;
-	    case T_BitmapAndPath:
-            FLATCOPY(t, s, BitmapAndPath);
-            break;
-	    case T_BitmapOrPath:
-            FLATCOPY(t, s, BitmapOrPath);
-            break;
-	    case T_TidPath:
-            FLATCOPY(t, s, TidPath);
-            break;
-	    case T_AppendPath:
-            FLATCOPY(t, s, AppendPath);
-            break;
-	    case T_ResultPath:
-            FLATCOPY(t, s, ResultPath);
-            break;
-	    case T_MaterialPath:
-            FLATCOPY(t, s, MaterialPath);
-            break;
-	    case T_UniquePath:
-            FLATCOPY(t, s, UniquePath);
-            break;
-	    case T_NestPath:
-            FLATCOPY(t, s, NestPath);
-            break;
-	    case T_MergePath:
-            FLATCOPY(t, s, MergePath);
-            break;
-	    case T_HashPath:
-            FLATCOPY(t, s, HashPath);
-            break;
-	    case T_CdbMotionPath:
-            FLATCOPY(t, s, CdbMotionPath);
-            break;
-        default:
-            t = NULL;           /* keep compiler quiet */
-		    elog(ERROR, "unrecognized pathnode: %d", (int)s->type);
-	}
-    MemoryContextSwitchTo(oldcontext);
-    return (Path *)t;
-}                               /* pathnode_copy_node */
-
+static CdbVisitOpt pathnode_walk_list(List *pathlist,
+				   CdbVisitOpt (*walker)(Path *path, void *context),
+				   void *context);
+static CdbVisitOpt pathnode_walk_kids(Path *path,
+				   CdbVisitOpt (*walker)(Path *path, void *context),
+				   void *context);
 
 /*
  * pathnode_walk_node
@@ -171,7 +105,6 @@ pathnode_copy_node(const Path *s)
  * a couple of alternative stopping codes are predefined for walkers to use at
  * their discretion: CdbVisit_Failure and CdbVisit_Success.
  */
-// inline
 CdbVisitOpt
 pathnode_walk_node(Path            *path,
 			       CdbVisitOpt    (*walker)(Path *path, void *context),
@@ -193,7 +126,7 @@ pathnode_walk_node(Path            *path,
     return whatnext;
 }	                            /* pathnode_walk_node */
 
-CdbVisitOpt
+static CdbVisitOpt
 pathnode_walk_list(List            *pathlist,
 			       CdbVisitOpt    (*walker)(Path *path, void *context),
 			       void            *context)
@@ -212,7 +145,7 @@ pathnode_walk_list(List            *pathlist,
 	return v;
 }	                            /* pathnode_walk_list */
 
-CdbVisitOpt
+static CdbVisitOpt
 pathnode_walk_kids(Path            *path,
 			       CdbVisitOpt    (*walker)(Path *path, void *context),
 			       void            *context)
@@ -909,7 +842,8 @@ cdb_subpath_tried_postjoin_dedup(Path *path, Relids subqrelids)
  *
  * Returns nothing, but modifies parent_rel->pathlist.
  */
-void add_path(PlannerInfo *root, RelOptInfo *parent_rel, Path *new_path)
+void
+add_path(PlannerInfo *root, RelOptInfo *parent_rel, Path *new_path)
 {
 	bool		accept_new = true;		/* unless we find a superior old path */
 	ListCell   *insert_after = NULL;	/* where to insert new item */
@@ -968,7 +902,7 @@ void add_path(PlannerInfo *root, RelOptInfo *parent_rel, Path *new_path)
         pathlist = *which_pathlist;
     }
 
-    /*
+	/*
 	 * Loop to check proposed new path against old paths.  Note it is possible
 	 * for more than one old path to be tossed out because new_path dominates
 	 * it.
@@ -1000,8 +934,8 @@ void add_path(PlannerInfo *root, RelOptInfo *parent_rel, Path *new_path)
 			costcmp == compare_fuzzy_path_costs(new_path, old_path,
 												STARTUP_COST))
 		{
-            /* Still a tie?  See which path has better pathkeys. */
-            switch (compare_pathkeys(new_path->pathkeys, old_path->pathkeys))
+			/* Still a tie?  See which path has better pathkeys. */
+			switch (compare_pathkeys(new_path->pathkeys, old_path->pathkeys))
 			{
 				case PATHKEYS_EQUAL:
 					if (costcmp < 0)
@@ -1041,13 +975,13 @@ void add_path(PlannerInfo *root, RelOptInfo *parent_rel, Path *new_path)
 		 */
 		if (remove_old)
 		{
-			pathlist = list_delete_cell(pathlist, p1, p1_prev);			
-			
+			pathlist = list_delete_cell(pathlist, p1, p1_prev);
+
 			/*
 			 * Delete the data pointed-to by the deleted cell, if possible
 			 */
 			if (!IsA(old_path, IndexPath))
-			          pfree(old_path);
+				pfree(old_path);
 
 			/* Advance list pointer */
 			if (p1_prev)
@@ -1128,17 +1062,17 @@ AppendOnlyPath *
 create_appendonly_path(PlannerInfo *root, RelOptInfo *rel)
 {
 	AppendOnlyPath	   *pathnode = makeNode(AppendOnlyPath);
-	
+
 	pathnode->path.pathtype = T_AppendOnlyScan;
 	pathnode->path.parent = rel;
 	pathnode->path.pathkeys = NIL;	/* seqscan has unordered result */
-	
+
     pathnode->path.locus = cdbpathlocus_from_baserel(root, rel);
     pathnode->path.motionHazard = false;
 	pathnode->path.rescannable = true;
-	
+
 	cost_appendonlyscan(pathnode, root, rel);
-	
+
 	return pathnode;
 }
 
@@ -1501,36 +1435,36 @@ create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths)
 {
 	AppendPath *pathnode = makeNode(AppendPath);
 	ListCell   *l;
-	
+
 	pathnode->path.pathtype = T_Append;
 	pathnode->path.parent = rel;
 	pathnode->path.pathkeys = NIL;		/* result is always considered
 										 * unsorted */
 	pathnode->subpaths = NIL;
-	
+
     pathnode->path.motionHazard = false;
     pathnode->path.rescannable = true;
-	
+
 	pathnode->path.startup_cost = 0;
 	pathnode->path.total_cost = 0;
-	
+
     /* If no subpath, any worker can execute this Append.  Result has 0 rows. */
     if (!subpaths)
         CdbPathLocus_MakeGeneral(&pathnode->path.locus);
-	
     else
 	{
 		bool fIsNotPartitioned = false;
 		bool fIsPartitionInEntry = false;
-		
+
 		/*
 		 * Do a first pass over the children to determine if
-		 * there's any child which is not partitioned, i.e. a bottleneck or replicated
+		 * there's any child which is not partitioned, i.e. a bottleneck or
+		 * replicated.
 		 */
 		foreach(l, subpaths)
 		{
 			Path *subpath = (Path *) lfirst(l);
-			
+
 			if (CdbPathLocus_IsBottleneck(subpath->locus) ||
 				CdbPathLocus_IsReplicated(subpath->locus))
 			{
@@ -1544,20 +1478,22 @@ create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths)
 				}
 			}
 		}
-		
-		
+
 		foreach(l, subpaths)
 		{
 			Path	       *subpath = (Path *) lfirst(l);
 			CdbPathLocus    projectedlocus;
-			
+
 			/*
-			 * In case any of the children is not partitioned convert all children
-			 * to have singleQE locus
+			 * In case any of the children is not partitioned convert all
+			 * children to have singleQE locus
 			 */
 			if (fIsNotPartitioned)
 			{
-				/* if any partition is on entry db, we should gather all the partitions to QD to do the append */
+				/*
+				 * if any partition is on entry db, we should gather all the
+				 * partitions to QD to do the append
+				 */
 				if (fIsPartitionInEntry)
 				{
 					if (!CdbPathLocus_IsEntry(subpath->locus))
@@ -1579,7 +1515,7 @@ create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths)
 					}
 				}
 			}
-			
+
 			/* Transform subpath locus into the appendrel's space for comparison. */
 			if (subpath->parent == rel ||
 				subpath->parent->reloptkind != RELOPT_OTHER_MEMBER_REL)
@@ -1592,12 +1528,11 @@ create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths)
 													   subpath->parent->reltargetlist,
 													   rel->reltargetlist,
 													   rel->relid);
-			
-			
+
 			if (l == list_head(subpaths))	/* first node? */
 				pathnode->path.startup_cost = subpath->startup_cost;
 			pathnode->path.total_cost += subpath->total_cost;
-			
+
 			/*
 			 * CDB: If all the scans are distributed alike, set
 			 * the result locus to match.  Otherwise, if all are partitioned,
@@ -1621,16 +1556,16 @@ create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths)
 				ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
 								errmsg_internal("Cannot append paths with "
 												"incompatible distribution")));
-			
+
 			if (subpath->motionHazard)
 				pathnode->path.motionHazard = true;
-			
-			if ( !subpath->rescannable )
+
+			if (!subpath->rescannable)
 				pathnode->path.rescannable = false;
-			
+
 			pathnode->subpaths = lappend(pathnode->subpaths, subpath);
 		}
-		
+
 		/*
 		 * CDB: If there is exactly one subpath, its ordering is preserved.
 		 * Child rel's pathkey exprs are already expressed in terms of the
@@ -1711,7 +1646,6 @@ create_material_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath)
 
 	return pathnode;
 }
-
 
 /*
  * create_unique_path
@@ -1871,7 +1805,7 @@ create_unique_path(PlannerInfo *root,
  * Just estimate what the cost would be, and assign a dummy locus; leave
  * the real work for create_plan().
  */
-UniquePath *
+static UniquePath *
 create_unique_exprlist_path(PlannerInfo    *root,
                             Path           *subpath,
                             List           *distinct_on_exprs)
@@ -1949,7 +1883,7 @@ create_unique_exprlist_path(PlannerInfo    *root,
  * Just estimate what the cost would be, and assign a dummy locus; leave
  * the real work for create_plan().
  */
-UniquePath *
+static UniquePath *
 create_unique_rowid_path(PlannerInfo *root,
                          Path        *subpath,
                          Relids       distinct_relids)
@@ -2749,8 +2683,6 @@ create_mergejoin_path(PlannerInfo *root,
  * 'restrict_clauses' are the RestrictInfo nodes to apply at the join
  * 'hashclauses' are the RestrictInfo nodes to use as hash clauses
  *		(this should be a subset of the restrict_clauses list)
- * 'freeze_outer_path' is true if the outer_path should be used exactly as
- *      given, without adding other operators such as Motion.
  */
 HashPath *
 create_hashjoin_path(PlannerInfo *root,
@@ -2760,8 +2692,7 @@ create_hashjoin_path(PlannerInfo *root,
 					 Path *inner_path,
 					 List *restrict_clauses,
                      List *mergeclause_list,    /*CDB*/
-					 List *hashclauses,
-                     bool  freeze_outer_path)
+					 List *hashclauses)
 {
     HashPath       *pathnode;
     CdbPathLocus    join_locus;
@@ -2778,7 +2709,7 @@ create_hashjoin_path(PlannerInfo *root,
                                          mergeclause_list,
                                          NIL,   /* don't care about ordering */
                                          NIL,
-                                         freeze_outer_path,
+                                         false,
                                          false);
     if (CdbPathLocus_IsNull(join_locus))
         return NULL;
@@ -2811,8 +2742,7 @@ create_hashjoin_path(PlannerInfo *root,
 	else
 		pathnode->jpath.path.motionHazard = outer_path->motionHazard || inner_path->motionHazard;
 
-    cost_hashjoin(pathnode, root);
+	cost_hashjoin(pathnode, root);
 
 	return pathnode;
 }
-
