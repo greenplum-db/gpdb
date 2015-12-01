@@ -1,7 +1,7 @@
 # $PostgreSQL: pgsql/contrib/pgbench/Makefile,v 1.14 2005/09/27 17:13:08 tgl Exp $
 
 PROGRAM = xlogdump
-OBJS    = xlogdump.o ../../src/port/sprompt.o ../../src/backend/utils/hash/pg_crc.o ../../src/backend/utils/hash/crc32c.o
+OBJS    = xlogdump.o ../../src/port/sprompt.o ../../src/backend/utils/hash/pg_crc.o
 
 PG_CPPFLAGS = -I$(libpq_srcdir)
 PG_LIBS = $(libpq_pgport) -pthread  $(libpq)

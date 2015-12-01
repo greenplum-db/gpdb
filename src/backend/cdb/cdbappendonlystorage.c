@@ -11,6 +11,7 @@
 #include "cdb/cdbappendonlystorage_int.h"
 #include "cdb/cdbappendonlystorage.h"
 #include "utils/pg_crc.h"
+#include "port/pg_crc32c.h"
 #include "utils/guc.h"
 
 int32 AppendOnlyStorage_GetUsableBlockSize(int32 configBlockSize)

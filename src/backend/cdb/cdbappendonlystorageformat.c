@@ -12,6 +12,7 @@
 #include "cdb/cdbappendonlystorage.h"
 #include "cdb/cdbappendonlystorageformat.h"
 #include "utils/pg_crc.h"
+#include "port/pg_crc32c.h"
 #include "utils/guc.h"
 
 static pg_crc32
@@ -27,8 +28,9 @@ AppendOnlyStorageFormat_ComputeHeaderChecksum(
 	 * Compute CRC of the header. The header length does not include the
 	 * header checksum.
 	 */
-        crc = crc32c(crc32cInit(), headerPtr, headerLen);
-        crc32cFinish(crc);
+    INIT_CRC32C(crc);  
+	COMP_CRC32C(crc, headerPtr, headerLen);
+	FIN_CRC32C(crc);
 
 	return crc;
 }
@@ -51,8 +53,9 @@ AppendOnlyStorageFormat_ComputeBlockChecksum(
 	dataOffset = headerLen + sizeof(pg_crc32);
 
 	/* Compute CRC of the header. */
-        crc = crc32c(crc32cInit(), headerPtr + dataOffset, overallBlockLen - dataOffset);
-        crc32cFinish(crc);
+	INIT_CRC32C(crc);
+	COMP_CRC32C(crc, headerPtr + dataOffset, overallBlockLen - dataOffset);
+	FIN_CRC32C(crc);
 
 	return crc;
 }

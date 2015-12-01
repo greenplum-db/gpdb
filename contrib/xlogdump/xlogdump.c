@@ -191,7 +191,8 @@ RecordIsValid(XLogRecord *record, XLogRecPtr recptr)
 	char	   *blk;
 
 	/* First the rmgr data */
-	crc = crc32c(crc32cInit(), XLogRecGetData(record), len);
+	INIT_CRC32C(crc);
+	COMP_CRC32C(crc, XLogRecGetData(record), len);
 
 	/* Add in the backup blocks, if any */
 	blk = (char *) XLogRecGetData(record) + len;
@@ -210,7 +211,7 @@ RecordIsValid(XLogRecord *record, XLogRecPtr recptr)
 			return false;
 		}
 		blen = sizeof(BkpBlock) + BLCKSZ - bkpb.hole_length;
-		crc = crc32c(crc, blk, blen);
+		COMP_CRC32C(crc, blk, blen);
 		blk += blen;
 	}
 
@@ -228,19 +229,18 @@ RecordIsValid(XLogRecord *record, XLogRecPtr recptr)
 	}
 
 	/* Finally include the record header */
-	crc = crc32c(crc, (char *) record + sizeof(pg_crc32),
-			   SizeOfXLogRecord - sizeof(pg_crc32));
-	crc32cFinish(crc);
+	COMP_CRC32C(crc, (char *) record + sizeof(pg_crc32), SizeOfXLogRecord - sizeof(pg_crc32));
+	FIN_CRC32C(crc);
 
-	if (!EQ_CRC32(record->xl_crc, crc))
+	if (!EQ_LEGACY_CRC32(record->xl_crc, crc))
 	{
 		/*
 		 * It may be that this record uses the old crc algorithm.  Recompute.
 		 */
 
 		/* First the rmgr data */
-		INIT_CRC32(crc);
-		COMP_CRC32(crc, XLogRecGetData(record), len);
+		INIT_LEGACY_CRC32(crc);
+		COMP_LEGACY_CRC32(crc, XLogRecGetData(record), len);
 
 		/* Add in the backup blocks, if any */
 		blk = (char *) XLogRecGetData(record) + len;
@@ -259,18 +259,18 @@ RecordIsValid(XLogRecord *record, XLogRecPtr recptr)
 				return false;
 			}
 			blen = sizeof(BkpBlock) + BLCKSZ - bkpb.hole_length;
-			COMP_CRC32(crc, blk, blen);
+			COMP_LEGACY_CRC32(crc, blk, blen);
 			blk += blen;
 		}
 
 		/* Finally include the record header */
-		COMP_CRC32(crc, (char *) record + sizeof(pg_crc32),
+		COMP_LEGACY_CRC32(crc, (char *) record + sizeof(pg_crc32),
 				   SizeOfXLogRecord - sizeof(pg_crc32));
-		FIN_CRC32(crc);
+		FIN_LEGACY_CRC32(crc);
 
 	}
 
-	if (!EQ_CRC32(record->xl_crc, crc))
+	if (!EQ_LEGACY_CRC32(record->xl_crc, crc))
 	{
 		printf("incorrect resource manager data checksum in record at %X/%X\n",
 			   recptr.xlogid, recptr.xrecoff);
