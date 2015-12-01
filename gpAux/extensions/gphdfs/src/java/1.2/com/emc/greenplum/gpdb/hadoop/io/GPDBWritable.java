@@ -387,13 +387,13 @@ public class GPDBWritable implements Writable {
 		out.writeInt(datlen);
 		out.writeShort(DATA_VERSION);
 		out.writeShort(numCol);
-		realLen += 4 + 2 + 2;
-
+		realLen += 4 + 2 + 2;/*realLen += length of (datlen + DATA_VERSION + numCol)*/
+		
 		/* Write col type */
 		for(int i=0; i<numCol; i++)
 			out.writeByte(enumType[i]);
 		realLen += numCol;
-
+		
 		/* Nullness */
 		byte[] nullBytes = boolArrayToByteArray(nullBits);
 		out.write(nullBytes);
@@ -410,17 +410,17 @@ public class GPDBWritable implements Writable {
 
 				/* Now, write the actual column value */
 				switch(colType[i]) {
-					case BIGINT:   out.writeLong(   ((Long)   colValue[i]).longValue()); realLen += 8;   break;
-					case BOOLEAN:  out.writeBoolean(((Boolean)colValue[i]).booleanValue()); realLen += 1; break;
-					case FLOAT8:   out.writeDouble( ((Double) colValue[i]).doubleValue()); realLen += 8; break;
-					case INTEGER:  out.writeInt(    ((Integer)colValue[i]).intValue()); realLen += 4;   break;
-					case REAL:     out.writeFloat(  ((Float)  colValue[i]).floatValue()); realLen += 4;  break;
-					case SMALLINT: out.writeShort(  ((Short)  colValue[i]).shortValue()); realLen += 2;  break;
+					case BIGINT:   out.writeLong(   ((Long)   colValue[i]).longValue()); realLen += 8; /*add length of long*/  break;
+					case BOOLEAN:  out.writeBoolean(((Boolean)colValue[i]).booleanValue()); realLen += 1; /*add length of boolean*/ break;
+					case FLOAT8:   out.writeDouble( ((Double) colValue[i]).doubleValue()); realLen += 8; /*add length of double*/ break;
+					case INTEGER:  out.writeInt(    ((Integer)colValue[i]).intValue()); realLen += 4; /*add length of int*/ break;
+					case REAL:     out.writeFloat(  ((Float)  colValue[i]).floatValue()); realLen += 4; /*add length of float*/ break;
+					case SMALLINT: out.writeShort(  ((Short)  colValue[i]).shortValue()); realLen += 2; /*add length of short*/ break;
 					/* For BYTEA format, add 4byte length header at the beginning  */
 					case BYTEA:
 						out.writeInt(((byte[])colValue[i]).length);
 						out.write((byte[])colValue[i]);
-						realLen += 4 + ((byte[])colValue[i]).length;
+						realLen += 4 + ((byte[])colValue[i]).length; /*realLen += length of (length + data)*/
 						break;
 					/* For text format, add 4byte length header (length include the "\0" at the end)
 					 * at the beginning and add a "\0" at the end */
@@ -429,7 +429,7 @@ public class GPDBWritable implements Writable {
 						byte[] data = (outStr).getBytes(CHARSET);
 						out.writeInt(data.length);
 						out.write(data);
-						realLen += 4 + data.length;
+						realLen += 4 + data.length;/*realLen += length of (length + data)*/
 						break;
 					}
 				}
