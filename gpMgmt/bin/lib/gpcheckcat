@@ -4695,8 +4695,10 @@ def checkcatReport():
     myprint('')
     myprint('SUMMARY REPORT')
     myprint('===================================================================')
-    elapsed = str(datetime.timedelta(seconds=GV.elapsedTime))[:-4]
-    myprint('Total runtime for %d test(s): %s' % (GV.totalTestRun, elapsed))
+    elapsed = datetime.timedelta(seconds=int(GV.elapsedTime))
+    endTime = datetime.datetime.now().strftime('%Y-%m-%d %H:%I:%S')
+    myprint('Completed %d test(s) on database \'%s\' at %s with elapsed time %s' \
+            % (GV.totalTestRun, GV.dbname, endTime, elapsed))
 
     if len(GPObjectGraph) == 0 and len(GV.failedTest) == 0:
         myprint('Found no catalog issue\n')
