@@ -1272,6 +1272,7 @@ drop table idxscan_outer;
 drop table idxscan_inner;
 
 drop table if exists ggg;
+set gp_metadata_lite=on;
 set optimizer_release_mdcache=off;
 
 create table ggg (a char(1), b char(2), d char(3));

@@ -34,7 +34,7 @@
 #include "utils/rel.h"
 #include "utils/resowner.h"
 #include "utils/syscache.h"
-
+#include "utils/mdlite.h"
 
  /* #define CACHEDEBUG */	/* turns DEBUG elogs on */
 
@@ -1702,6 +1702,9 @@ PrepareToInvalidateCacheTuple(Relation relation,
 	Assert(CacheHdr != NULL);
 
 	reloid = RelationGetRelid(relation);
+        
+        /* Add corresponding Metadata Lite translation for this action */
+	mdlite_inv_translator(relation);
 
 	/* ----------------
 	 *	for each cache

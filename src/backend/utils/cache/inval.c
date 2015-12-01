@@ -98,7 +98,7 @@
 #include "utils/relcache.h"
 #include "utils/simex.h"
 #include "utils/syscache.h"
-
+#include "utils/mdlite.h"
 
 /*
  * To minimize palloc traffic, we keep pending requests in successively-
@@ -156,6 +156,7 @@ typedef struct TransInvalidationInfo
 } TransInvalidationInfo;
 
 static TransInvalidationInfo *transInvalInfo = NULL;
+static mdlite_local *local_mdlite = NULL;
 
 /*
  * Dynamically-registered callback functions.  Current implementation
@@ -797,6 +798,17 @@ AtStart_Inval(void)
 		MemoryContextAllocZero(TopTransactionContext,
 							   sizeof(TransInvalidationInfo));
 	transInvalInfo->my_level = GetCurrentTransactionNestLevel();
+        
+        if (mdlite_enabled())
+        {
+            /*
+		 * Since we create the TransInvalidationInfo in the TopTransactionContext,
+		 * we should create the local mdlite in the same context as well.
+		 */
+		MemoryContext oldcxt = MemoryContextSwitchTo(TopTransactionContext);
+		local_mdlite = mdlite_create_local();
+		MemoryContextSwitchTo(oldcxt);
+        }
 }
 
 /*
@@ -968,6 +980,7 @@ AtEOXact_Inval(bool isCommit)
 
 	/* Need not free anything explicitly */
 	transInvalInfo = NULL;
+        local_mdlite = NULL;
 }
 
 /*
@@ -1199,4 +1212,12 @@ CacheRegisterRelcacheCallback(CacheCallbackFunction func,
 	cache_callback_list[cache_callback_count].arg = arg;
 
 	++cache_callback_count;
+}
+
+/*
+ * Return the local mdlite
+ */
+mdlite_local* GetCurrentLocalMDLite(void)
+{
+    return local_mdlite;
 }

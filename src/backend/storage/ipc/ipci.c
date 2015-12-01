@@ -69,6 +69,8 @@
 #include "executor/spi.h"
 #include "utils/workfile_mgr.h"
 #include "utils/session_state.h"
+#include "utils/mdlite.h"
+#include "catalog/gp_verification_history.h"
 
 shmem_startup_hook_type shmem_startup_hook = NULL;
 
@@ -148,6 +150,16 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 				size = add_size(size, ResPortalIncrementShmemSize());				
 			}
 		}
+                
+                /*
+                * On the master and standby master, we also allocate the
+                * Global Metadata Versioning shared cache
+                */
+                
+                if (GpIdentity.segindex == MASTER_CONTENT_ID) {
+                    size = add_size(size, mdlite_shmem_size());
+                }
+                
 		size = add_size(size, ProcGlobalShmemSize());
 		size = add_size(size, LocalDistribXact_ShmemSize());
 		size = add_size(size, XLOGShmemSize());
@@ -412,7 +424,16 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	 */
 	BTreeShmemInit();
 	workfile_mgr_cache_init();
-
+            
+        /*
+        * On the master and standby master, we also allocate the
+        * Global Metadata Versioning shared cache
+        */
+        
+        if (GpIdentity.segindex == MASTER_CONTENT_ID) {
+            mdlite_shmem_init();
+        }
+        
 #ifdef EXEC_BACKEND
 
 	/*

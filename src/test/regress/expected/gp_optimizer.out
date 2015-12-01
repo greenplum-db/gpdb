@@ -9733,6 +9733,7 @@ drop table idxscan_outer;
 drop table idxscan_inner;
 drop table if exists ggg;
 NOTICE:  table "ggg" does not exist, skipping
+set gp_metadata_lite=on;
 set optimizer_release_mdcache=off;
 create table ggg (a char(1), b char(2), d char(3));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
