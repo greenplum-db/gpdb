@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <assert.h>
+#include "access/tuptoaster.h"
 #include "utils/builtins.h"
 #include "catalog/pg_type.h"
 #include "parser/parse_type.h"
@@ -161,8 +162,6 @@ addToCdbHash(void *cdbHash, void *buf, size_t len)
 	CdbHash *h = (CdbHash*)cdbHash;
 	h->hash = (h->hashfn) (buf, len, h->hash);
 }
-
-extern void varattrib_untoast_ptr_len(Datum d, char **datastart, int *len, void **tofree);
 
 /*
  * Add an attribute to the CdbHash calculation.

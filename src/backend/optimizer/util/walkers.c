@@ -6,11 +6,10 @@
  */
 
 #include "postgres.h"
+
+#include "miscadmin.h"
 #include "optimizer/walkers.h"
 #include "optimizer/var.h"
-
-/* in tcop/postgres.c */
-extern void check_stack_depth(void);
 
 /*
  * Standard expression-tree walking support

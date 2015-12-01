@@ -60,11 +60,6 @@ typedef struct ApplyMotionState
 }	ApplyMotionState;
 
 /*
- * External functions
- */
-bool is_dummy_plan(Plan *plan);
-
-/*
  * Forward Declarations
  */
 static void assignMotionID(Node *newnode, ApplyMotionState * context, Node *oldnode);

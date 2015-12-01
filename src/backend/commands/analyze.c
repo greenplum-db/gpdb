@@ -48,6 +48,7 @@
 #include "libpq/pqformat.h"             /* pq_beginmessage() etc. */
 #include "miscadmin.h"
 #include "parser/parse_expr.h"
+#include "parser/parse_func.h"
 #include "parser/parse_oper.h"
 #include "parser/parse_relation.h"
 #include "pgstat.h"
@@ -217,10 +218,6 @@ static void spiCallback_getSingleResultRowColumnAsFloat4(void *clientData);
 /**
  * Extern stuff.
  */
-
-extern List 		*find_all_inheritors(Oid parentrel);
-extern BlockNumber RelationGuessNumberOfBlocks(double totalbytes);
-extern Oid	LookupFuncName(List *funcname, int nargs, const Oid *argtypes, bool noError);
 extern bool	optimizer; /* status of the new optimizer */
 extern bool optimizer_analyze_root_partition; /* GUC for stats collection on root partitions */
 /*

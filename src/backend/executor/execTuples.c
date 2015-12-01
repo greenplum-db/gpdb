@@ -94,6 +94,7 @@
 #include "funcapi.h"
 #include "access/heapam.h"
 #include "access/htup.h"
+#include "access/tuptoaster.h"
 #include "catalog/pg_type.h"
 #include "executor/executor.h"
 #include "parser/parse_expr.h"
@@ -703,7 +704,6 @@ MemTuple ExecCopySlotMemTuple(TupleTableSlot *slot)
 	return memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot), NULL, 0, false);
 }
 
-extern Datum toast_flatten_tuple_attribute(Datum value, Oid typeId, int32 typeMod);
 MemTuple ExecCopySlotMemTupleTo(TupleTableSlot *slot, MemoryContext pctxt, char *dest, unsigned int *len)
 {
 	uint32 dumlen;

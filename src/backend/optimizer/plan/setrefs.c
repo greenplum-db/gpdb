@@ -152,9 +152,6 @@ static void fix_projection_incapable_nodes(Plan *plan);
 /* fix the target lists of  projection-incapable nodes in subplans to use the target list of the child node */
 static void fix_projection_incapable_nodes_in_subplans(PlannerGlobal *context, Plan *plan);
 
-
-extern bool is_plan_node(Node *node);
-
 #ifdef USE_ASSERT_CHECKING
 #include "cdb/cdbplan.h"
 

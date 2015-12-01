@@ -6397,8 +6397,6 @@ numeric_demalg(PG_FUNCTION_ARGS)
  * Convert numeric to positive int64 by truncation, if invalid return
  * -1 (negative num) or 0 (out of range num).
  */
-extern int64 numeric_to_pos_int8_trunc(Numeric num);
-
 int64
 numeric_to_pos_int8_trunc(Numeric num)
 {

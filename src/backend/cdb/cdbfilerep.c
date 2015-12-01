@@ -47,13 +47,11 @@
 #include "storage/pmsignal.h"
 #include "storage/proc.h"
 #include "storage/shmem.h"
+#include "tcop/tcopprot.h"
 #include "utils/guc.h"
 #include "utils/ps_status.h"
 #include "utils/memutils.h"
 #include "utils/faultinjector.h"
-
-
-extern void quickdie(SIGNAL_ARGS); /* is in tcopprot.h */
 
 /****************************************************************
  * FILEREP PROCESS definitions

@@ -12,13 +12,18 @@
 #include "catalog/catquery.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
+#include "commands/tablecmds.h"
+#include "optimizer/planmain.h"
 #include "optimizer/planpartition.h"
 #include "optimizer/walkers.h"
 #include "optimizer/clauses.h"
 #include "optimizer/restrictinfo.h"
-#include "cdb/cdbplan.h"
-#include "parser/parsetree.h"
+#include "optimizer/subselect.h"
+#include "cdb/cdbllize.h"
 #include "cdb/cdbpartition.h"
+#include "cdb/cdbplan.h"
+#include "cdb/cdbsetop.h"
+#include "parser/parsetree.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
@@ -30,26 +35,6 @@
 #include "parser/parse_expr.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_oper.h"
-
-extern PartitionNode *RelationBuildPartitionDescByOid(Oid relid,
-												 bool inctemplate);
-extern Result *make_result(List *tlist, Node *resconstantqual, Plan *subplan);
-extern bool is_plan_node(Node *node);
-extern Motion* make_motion_gather_to_QD(Plan *subplan, bool keep_ordering);
-extern Agg *make_agg(PlannerInfo *root, List *tlist, List *qual,
-					 AggStrategy aggstrategy, bool streaming,
-					 int numGroupCols, AttrNumber *grpColIdx,
-					 long numGroups, int numNullCols,
-					 uint64 inputGrouping, uint64 grouping,
-					 int rollupGSTimes,
-					 int numAggs, int transSpace,
-					 Plan *lefttree);
-extern Flow *pull_up_Flow(Plan *plan, Plan *subplan, bool withSort);
-extern Param *SS_make_initplan_from_plan(PlannerInfo *root, Plan *plan,
-						   Oid resulttype, int32 resulttypmod);
-extern Oid exprType(Node *expr);
-extern void mark_plan_strewn(Plan* plan);
-extern Plan * plan_pushdown_tlist(Plan *plan, List *tlist);
 
 extern bool	gp_log_dynamic_partition_pruning;
 

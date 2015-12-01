@@ -14,6 +14,7 @@
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/subselect.h"        /* convert_testexpr() */
+#include "optimizer/tlist.h"
 #include "optimizer/prep.h"              /* canonicalize_qual() */
 #include "optimizer/var.h"              /* contain_vars_of_level_or_above() */
 #include "parser/parse_oper.h"          /* make_op() */
@@ -26,9 +27,6 @@
 #include "cdb/cdbsubselect.h"           /* me */
 #include "lib/stringinfo.h"
 #include "cdb/cdbpullup.h"
-
-extern bool sort_op_can_sort(Oid opid, bool mergejoin);
-extern List *add_to_flat_tlist(List *tlist, List *exprs, bool resjunk);
 
 static Node *
 pull_up_IN_clauses(PlannerInfo *root, List** rtrlist_inout, Node *clause);

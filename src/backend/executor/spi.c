@@ -2309,7 +2309,8 @@ bool SPI_IsMemoryReserved(void)
 /**
   * Are we in SPI context 
   */
-extern bool SPI_context(void) 
+bool
+SPI_context(void)
 { 
 	return (_SPI_connected != -1); 
 }

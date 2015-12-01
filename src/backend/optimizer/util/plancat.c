@@ -48,6 +48,7 @@
 #include "catalog/catalog.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
+#include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbrelsize.h"
 #include "mb/pg_wchar.h"
@@ -77,8 +78,6 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
 
 static void
 cdb_default_stats_warning_for_index(Oid reloid, Oid indexoid);
-
-extern BlockNumber RelationGuessNumberOfBlocks(double totalbytes);
 
 /*
  * get_relation_info -

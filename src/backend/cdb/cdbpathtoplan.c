@@ -11,6 +11,7 @@
 #include "nodes/relation.h"     /* RelOptInfo */
 #include "optimizer/pathnode.h" /* Path */
 #include "optimizer/planmain.h" /* make_sort_from_pathkeys() */
+#include "optimizer/tlist.h"
 
 #include "cdb/cdbllize.h"       /* makeFlow() */
 #include "cdb/cdbmutate.h"      /* make_*_motion() */
@@ -18,8 +19,6 @@
 #include "cdb/cdbvars.h"        /* gp_singleton_segindex */
 
 #include "cdb/cdbpathtoplan.h"  /* me */
-
-extern List *add_to_flat_tlist(List *tlist, List *exprs, bool resjunk);
 
 /*
  * cdbpathtoplan_create_flow

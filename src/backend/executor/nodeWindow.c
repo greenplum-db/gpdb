@@ -6519,9 +6519,6 @@ cume_dist_final(PG_FUNCTION_ARGS)
  * ntile_final(bigint[],bigint) --> bigint
  */
 
-/* Helper defined in src/backend/util/adt/numeric.c. */
-extern int64 numeric_to_pos_int8_trunc(Numeric num);
-
 /* Helper. */
 static ArrayType *
 do_ntile_prelim(WindowRefExprState * ref_state, int64 num_tiles)
