@@ -141,9 +141,6 @@ extern RelOptInfo *build_join_rel(PlannerInfo *root,
 void
 build_joinrel_tlist(PlannerInfo *root, RelOptInfo *joinrel, List *input_tlist);
 
-void
-add_vars_to_targetlist(PlannerInfo *root, List *vars, Relids where_needed);
-
 extern List *build_relation_tlist(RelOptInfo *rel);
 
 Var *

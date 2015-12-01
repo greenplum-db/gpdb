@@ -226,6 +226,8 @@ extern void distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 						Relids outerjoin_nonnullable,
 						List **ptrToLocalEquiKeyList,
 						List **postponed_qual_list);
+extern void add_vars_to_targetlist(PlannerInfo *root, List *vars,
+					   Relids where_needed);
 
 
 /*

@@ -182,8 +182,56 @@ add_IN_vars_to_tlists(PlannerInfo *root)
 
 /*
  * add_vars_to_targetlist
- *    CDB: This function has been moved to relnode.c
+ *	  For each variable appearing in the list, add it to the owning
+ *	  relation's targetlist if not already present, and mark the variable
+ *	  as being needed for the indicated join (or for final output if
+ *	  where_needed includes "relation 0").
  */
+void
+add_vars_to_targetlist(PlannerInfo *root, List *vars, Relids where_needed)
+{
+	ListCell   *temp;
+
+	Assert(!bms_is_empty(where_needed));
+
+	foreach(temp, vars)
+	{
+		Var		   *var = (Var *) lfirst(temp);
+		RelOptInfo *rel = find_base_rel(root, var->varno);
+		int			attrno = var->varattno;
+
+		/* Pseudo column? */
+		if (attrno <= FirstLowInvalidHeapAttributeNumber)
+		{
+			CdbRelColumnInfo *rci = cdb_find_pseudo_column(root, var);
+
+			/* Add to targetlist. */
+			if (bms_is_empty(rci->where_needed))
+			{
+				Assert(rci->targetresno == 0);
+				rci->targetresno = list_length(rel->reltargetlist);
+				rel->reltargetlist = lappend(rel->reltargetlist, copyObject(var));
+			}
+
+			/* Note relids which are consumers of the data from this column. */
+			rci->where_needed = bms_add_members(rci->where_needed, where_needed);
+			continue;
+		}
+
+		/* System-defined attribute, whole row, or user-defined attribute */
+		Assert(attrno >= rel->min_attr && attrno <= rel->max_attr);
+		attrno -= rel->min_attr;
+		if (bms_is_empty(rel->attr_needed[attrno]))
+		{
+			/* Variable not yet requested, so add to reltargetlist */
+			/* XXX is copyObject necessary here? */
+			rel->reltargetlist = lappend(rel->reltargetlist, copyObject(var));
+		}
+		rel->attr_needed[attrno] = bms_add_members(rel->attr_needed[attrno],
+												   where_needed);
+	}
+}
+
 
 /*****************************************************************************
  *

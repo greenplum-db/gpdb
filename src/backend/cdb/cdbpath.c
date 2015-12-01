@@ -20,6 +20,7 @@ extern "C" {
 #include "optimizer/cost.h"     /* cpu_tuple_cost */
 #include "optimizer/pathnode.h" /* Path, pathnode_walker() */
 #include "optimizer/paths.h"    /* compare_pathkeys() */
+#include "optimizer/planmain.h"
 
 #include "parser/parse_expr.h"	/* exprType() */
 
