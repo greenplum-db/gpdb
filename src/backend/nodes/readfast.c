@@ -590,6 +590,19 @@ _readAlterTableCmd(void)
 	READ_DONE();
 }
 
+static SetDistributionCmd *
+_readSetDistributionCmd(void)
+{
+	READ_LOCALS(SetDistributionCmd);
+
+	READ_INT_FIELD(backendId);
+	READ_NODE_FIELD(relids);
+	READ_NODE_FIELD(indexOidMap);
+	READ_NODE_FIELD(hiddenTypes);
+
+	READ_DONE();
+}
+
 static AlterPartitionCmd *
 _readAlterPartitionCmd(void)
 {
@@ -3011,6 +3024,9 @@ readNodeBinary(void)
 				break;
 			case T_AlterTableCmd:
 				return_value = _readAlterTableCmd();
+				break;
+			case T_SetDistributionCmd:
+				return_value = _readSetDistributionCmd();
 				break;
 			case T_InheritPartitionCmd:
 				return_value = _readInheritPartitionCmd();

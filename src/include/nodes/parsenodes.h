@@ -1200,6 +1200,17 @@ typedef struct AlterTableCmd	/* one subcommand of an ALTER TABLE */
 	List	   *partoids;		/* If applicable, OIDs of partition part tables */
 } AlterTableCmd;
 
+
+typedef struct SetDistributionCmd 
+{
+	NodeTag		type;
+	int	        backendId;
+	List	   *relids;
+	List	   *indexOidMap;
+	List	   *hiddenTypes;
+} SetDistributionCmd;
+
+
 typedef enum AlterPartitionIdType
 {
 	AT_AP_IDNone,				/* no ID */

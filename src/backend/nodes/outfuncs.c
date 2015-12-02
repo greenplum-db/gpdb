@@ -2421,6 +2421,17 @@ _outAlterTableCmd(StringInfo str, AlterTableCmd *node)
 }
 
 static void
+_outSetDistributionCmd(StringInfo str, SetDistributionCmd*node)
+{
+	WRITE_NODE_TYPE("SETDISTRIBUTIONCMD");
+
+	WRITE_INT_FIELD(backendId);
+	WRITE_NODE_FIELD(relids);
+	WRITE_NODE_FIELD(indexOidMap);
+	WRITE_NODE_FIELD(hiddenTypes);
+}
+
+static void
 _outInheritPartitionCmd(StringInfo str, InheritPartitionCmd *node)
 {
 	WRITE_NODE_TYPE("INHERITPARTITION");
@@ -3288,6 +3299,7 @@ _outQuery(StringInfo str, Query *node)
 			case T_TruncateStmt:
 			case T_AlterTableStmt:
 			case T_AlterTableCmd:
+			case T_SetDistributionCmd:
 			case T_ViewStmt:
 			case T_RuleStmt:
 
@@ -4610,6 +4622,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_AlterTableCmd:
 				_outAlterTableCmd(str, obj);
+				break;
+			case T_SetDistributionCmd:
+				_outSetDistributionCmd(str, obj);
 				break;
 			case T_InheritPartitionCmd:
 				_outInheritPartitionCmd(str, obj);

@@ -2772,6 +2772,19 @@ _copyAlterTableCmd(AlterTableCmd *from)
 	return newnode;
 }
 
+static SetDistributionCmd*
+_copySetDistributionCmd(SetDistributionCmd *from)
+{
+	SetDistributionCmd *newnode = makeNode(SetDistributionCmd);
+
+	COPY_SCALAR_FIELD(backendId);
+	COPY_NODE_FIELD(relids);
+	COPY_NODE_FIELD(indexOidMap);
+	COPY_NODE_FIELD(hiddenTypes);
+
+	return newnode;
+}
+
 static InheritPartitionCmd *
 _copyInheritPartitionCmd(InheritPartitionCmd *from)
 {
@@ -4590,6 +4603,9 @@ copyObject(void *from)
 			break;
 		case T_AlterTableCmd:
 			retval = _copyAlterTableCmd(from);
+			break;
+		case T_SetDistributionCmd:
+			retval = _copySetDistributionCmd(from);
 			break;
 		case T_InheritPartitionCmd:
 			retval = _copyInheritPartitionCmd(from);

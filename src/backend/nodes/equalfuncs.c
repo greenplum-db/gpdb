@@ -926,6 +926,16 @@ _equalAlterTableCmd(AlterTableCmd *a, AlterTableCmd *b)
 }
 
 static bool
+_equalSetDistributionCmd(SetDistributionCmd *a, SetDistributionCmd *b)
+{
+	COMPARE_SCALAR_FIELD(backendId);
+	COMPARE_NODE_FIELD(relids);
+	COMPARE_NODE_FIELD(indexOidMap);
+	COMPARE_NODE_FIELD(hiddenTypes);
+
+	return true;
+}
+static bool
 _equalInheritPartitionCmd(InheritPartitionCmd *a, InheritPartitionCmd *b)
 {
 	COMPARE_NODE_FIELD(parent);
@@ -2589,6 +2599,9 @@ equal(void *a, void *b)
 			break;
 		case T_AlterTableCmd:
 			retval = _equalAlterTableCmd(a, b);
+			break;
+		case T_SetDistributionCmd:
+			retval = _equalSetDistributionCmd(a, b);
 			break;
 		case T_InheritPartitionCmd:
 			retval = _equalInheritPartitionCmd(a, b);

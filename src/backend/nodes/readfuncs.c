@@ -1107,6 +1107,21 @@ _readAlterTableCmd(void)
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
+#ifndef COMPILING_BINARY_FUNCS
+static SetDistributionCmd *
+_readSetDistributionCmd(void)
+{
+	READ_LOCALS(SetDistributionCmd);
+
+	READ_INT_FIELD(backendId);
+	READ_NODE_FIELD(relids);
+	READ_NODE_FIELD(indexOidMap);
+	READ_NODE_FIELD(hiddenTypes);
+
+	READ_DONE();
+}
+#endif /* COMPILING_BINARY_FUNCS */
+
 static InheritPartitionCmd *
 _readInheritPartitionCmd(void)
 {
@@ -3131,6 +3146,7 @@ static ParseNodeInfo infoAr[] =
 	{"RULESTMT", (ReadFn)_readRuleStmt},
 	{"SCALARARRAYOPEXPR", (ReadFn)_readScalarArrayOpExpr},
 	{"SEGFILEMAPNODE", (ReadFn)_readSegfileMapNode},
+	{"SETDISTRIBUTIONCMD", (ReadFn)_readSetDistributionCmd},
 	{"SETOPERATIONSTMT", (ReadFn)_readSetOperationStmt},
 	{"SETTODEFAULT", (ReadFn)_readSetToDefault},
 	{"SINGLEROWERRORDESC",(ReadFn)_readSingleRowErrorDesc},
