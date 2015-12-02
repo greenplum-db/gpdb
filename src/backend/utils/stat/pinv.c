@@ -284,6 +284,7 @@ pinv(int rows, int columns, double *A, double *Aplus)
 	{
 		for (j = 0; j < rows; j++)
 		{
+			Aplus[i * rows + j] = 0.0;
 			for (k = 0; k < minmn; k++)
 				Aplus[i * rows + j] += Vx(i, k) * Splus[k] * Ux(j, k);
 		}

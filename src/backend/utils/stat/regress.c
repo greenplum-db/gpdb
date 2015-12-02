@@ -476,7 +476,7 @@ float8_mregr_compute(MRegrState	*inState,
 	 * Precondition: inState->len * inState->len * sizeof(float8) < STATE_LEN(inState->len)
 	 *           and IS_FEASIBLE_STATE_LEN(STATE_LEN(inState->len))
 	 */
-	XtX_inv = palloc0((uint64) inState->len * inState->len * sizeof(float8));
+	XtX_inv = palloc((uint64) inState->len * inState->len * sizeof(float8));
 	pinv(inState->len, inState->len, inState->XtX, XtX_inv);
 	
 	/*
