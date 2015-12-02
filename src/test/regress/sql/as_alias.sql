@@ -4,10 +4,7 @@ create table xyz_ctas1 as (select "B B" AS "B+1", "C" AS "_%A", "D+1" AS "D" fro
 create table xyz_ctas2 as (select "B B" "B+1", "C" "_%A", "D+1" "D" from xyz) DISTRIBUTED RANDOMLY;
 -- end_equiv
 CREATE TEMP TABLE disttable (f1 integer) DISTRIBUTED RANDOMLY;
-INSERT INTO DISTTABLE VALUES(1);
-INSERT INTO DISTTABLE VALUES(2);
-INSERT INTO DISTTABLE VALUES(3);
-INSERT INTO DISTTABLE VALUES(NULL);
+INSERT INTO DISTTABLE VALUES (1), (2), (3), (NULL);
 
 -- start_equiv
 SELECT f1, f1 IS DISTINCT FROM 2 AS "not 2" FROM disttable ORDER BY 1;
@@ -50,16 +47,17 @@ SELECT null IS DISTINCT FROM null "no";
 -- end_equiv
 
 CREATE TABLE test_having (a int, b int, c char(8), d char) DISTRIBUTED RANDOMLY;
-INSERT INTO test_having VALUES (0, 1, 'XXXX', 'A');
-INSERT INTO test_having VALUES (1, 2, 'AAAA', 'b');
-INSERT INTO test_having VALUES (2, 2, 'AAAA', 'c');
-INSERT INTO test_having VALUES (3, 3, 'BBBB', 'D');
-INSERT INTO test_having VALUES (4, 3, 'BBBB', 'e');
-INSERT INTO test_having VALUES (5, 3, 'bbbb', 'F');
-INSERT INTO test_having VALUES (6, 4, 'cccc', 'g');
-INSERT INTO test_having VALUES (7, 4, 'cccc', 'h');
-INSERT INTO test_having VALUES (8, 4, 'CCCC', 'I');
-INSERT INTO test_having VALUES (9, 4, 'CCCC', 'j');
+INSERT INTO test_having VALUES
+  (0, 1, 'XXXX', 'A'),
+  (1, 2, 'AAAA', 'b'),
+  (2, 2, 'AAAA', 'c'),
+  (3, 3, 'BBBB', 'D'),
+  (4, 3, 'BBBB', 'e'),
+  (5, 3, 'bbbb', 'F'),
+  (6, 4, 'cccc', 'g'),
+  (7, 4, 'cccc', 'h'),
+  (8, 4, 'CCCC', 'I'),
+  (9, 4, 'CCCC', 'j');
 
 -- start_equiv
 SELECT 1 AS one FROM test_having WHERE 1/a = 1 HAVING 1 < 2;
@@ -95,14 +93,15 @@ CREATE TABLE SUBSELECT_TBL_AS_TEST (
    f2 integer,
    f3 float
  ) DISTRIBUTED RANDOMLY;
-INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (1, 2, 3);
-INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (2, 3, 4);
-INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (3, 4, 5);
-INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (1, 1, 1);
-INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (2, 2, 2);
-INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (3, 3, 3);
-INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (6, 7, 8);
-INSERT INTO SUBSELECT_TBL_AS_TEST VALUES (8, 9, NULL);
+INSERT INTO SUBSELECT_TBL_AS_TEST VALUES
+  (1, 2, 3),
+  (2, 3, 4),
+  (3, 4, 5),
+  (1, 1, 1),
+  (2, 2, 2),
+  (3, 3, 3),
+  (6, 7, 8),
+  (8, 9, NULL);
 
 -- start_equiv
 SELECT '' AS eight, * FROM SUBSELECT_TBL_AS_TEST ORDER BY 2,3,4;
@@ -130,9 +129,7 @@ SELECT '' six, f1 "Correlated Field", f2 "Second Field"  FROM SUBSELECT_TBL_AS_T
 CREATE TEMP TABLE foo (id integer) DISTRIBUTED RANDOMLY;
 CREATE TEMP TABLE bar (id1 integer, id2 integer) DISTRIBUTED RANDOMLY;
 INSERT INTO foo VALUES (1);
-INSERT INTO bar VALUES (1, 1);
-INSERT INTO bar VALUES (2, 2);
-INSERT INTO bar VALUES (3, 1);
+INSERT INTO bar VALUES (1, 1), (2, 2), (3, 1);
 
 -- start_equiv
 SELECT * FROM foo WHERE id IN (SELECT id2 FROM (SELECT DISTINCT id1, id2 FROM bar) AS s) ORDER BY 1;
@@ -181,13 +178,14 @@ select "B B"+1 "(B B)","C" "[C]", "D+1" "{D+1}" from xyz2;
 select "B B"+1 "(B B)","C" "[C]", "D+1" "{D+1}" from xyz2;
 -- end_equiv
 CREATE TABLE TIMESTAMP_TBL_AS_TEST (d1 timestamp(2) without time zone) DISTRIBUTED RANDOMLY;
-INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('now');
-INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('now');
-INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('today');
-INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('yesterday');
-INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('tomorrow');
-INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('tomorrow EST');
-INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('tomorrow zulu');
+INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES
+  ('now'),
+  ('now'),
+  ('today'),
+  ('yesterday'),
+  ('tomorrow'),
+  ('tomorrow EST'),
+  ('tomorrow zulu');
 
 -- start_equiv
 SELECT count(*) AS One FROM TIMESTAMP_TBL_AS_TEST WHERE d1 = timestamp without time zone 'today';
@@ -211,11 +209,12 @@ SELECT count(*) One FROM TIMESTAMP_TBL_AS_TEST WHERE d1 = timestamp(2) without t
 
 DELETE FROM TIMESTAMP_TBL_AS_TEST;
 
-INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('2009-09-09 00:16:07');
-INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('2009-03-28 01:09:00');
-INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('2009-03-27 15:31:50.06');
-INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('2010-05-15');
-INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES ('Mon Feb 10 17:32:01 1997 PST');
+INSERT INTO TIMESTAMP_TBL_AS_TEST VALUES
+  ('2009-09-09 00:16:07'),
+  ('2009-03-28 01:09:00'),
+  ('2009-03-27 15:31:50.06'),
+  ('2010-05-15'),
+  ('Mon Feb 10 17:32:01 1997 PST');
 
 -- start_equiv
 SELECT '' AS "day", date_trunc('day',d1) AS date_trunc  FROM TIMESTAMP_TBL_AS_TEST WHERE d1 > timestamp without time zone '2009-03-27';
@@ -237,9 +236,10 @@ SELECT '' AS to_char_1, to_char(d1, 'DAY Day day DY Dy dy MONTH Month month RM M
 SELECT '' to_char_1, to_char(d1, 'DAY Day day DY Dy dy MONTH Month month RM MON Mon mon')  FROM TIMESTAMP_TBL_AS_TEST;
 -- end_equiv
 create table xyz1 ("B B" text, "C" text, "D+1" text) DISTRIBUTED RANDOMLY;
-insert into xyz1 values ('0_zero','1_one','2_two');
-insert into xyz1 values ('3_three','4_four','5_five');
-insert into xyz1 values ('6_six','7_seven','8_eight');
+insert into xyz1 values
+  ('0_zero','1_one','2_two'),
+  ('3_three','4_four','5_five'),
+  ('6_six','7_seven','8_eight');
 
 -- start_equiv
 select upper("B B") AS "B_B", upper ("C") AS C, substr("D+1",1,1) AS "D" from xyz1;
@@ -288,6 +288,6 @@ CREATE OR REPLACE FUNCTION add_em(integer, integer) RETURNS integer as $$ SELECT
 -- end_equiv
 
 -- start_equiv
-INSERT INTO test_as_alias select a, a%25 from generate_series(1,100) AS a;
-INSERT INTO test_as_alias select a, a%25 from generate_series(1,100) a;
+INSERT INTO test_as_alias select a, a%5 from generate_series(1, 20) AS a;
+INSERT INTO test_as_alias select a, a%5 from generate_series(1, 20) a;
 -- end_equiv

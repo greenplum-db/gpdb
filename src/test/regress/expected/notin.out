@@ -50,29 +50,21 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 --
 insert into t1 values (generate_series (1,10));
 insert into t2 values (generate_series (1,5));
-insert into t3 values (1);
-insert into t3 values (2);
-insert into t3 values (3);
-insert into t4 values (1);
-insert into t4 values (2);
-insert into t1n values (1);
-insert into t1n values (2);
-insert into t1n values (3);
-insert into t1n values (null);
-insert into t1n values (5);
-insert into t1n values (6);
-insert into t1n values (7);
-insert into g1 values (1,1,1);
-insert into g1 values (1,1,2);
-insert into g1 values (1,2,2);
-insert into g1 values (2,2,2);
-insert into g1 values (2,2,3);
-insert into g1 values (2,3,3);
-insert into g1 values (3,3,3);
-insert into g1 values (3,3,3);
-insert into g1 values (3,3,4);
-insert into g1 values (3,4,4);
-insert into g1 values (4,4,4);
+insert into t3 values (1), (2), (3);
+insert into t4 values (1), (2);
+insert into t1n values (1), (2), (3), (null), (5), (6), (7);
+insert into g1 values
+  (1,1,1),
+  (1,1,2),
+  (1,2,2),
+  (2,2,2),
+  (2,2,3),
+  (2,3,3),
+  (3,3,3),
+  (3,3,3),
+  (3,3,4),
+  (3,4,4),
+  (4,4,4);
 insert into l1 values (generate_series (1,10), generate_series (1,10), generate_series (1,10), generate_series (1,10));
 --
 -- queries

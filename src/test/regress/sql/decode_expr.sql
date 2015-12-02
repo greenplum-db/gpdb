@@ -3,20 +3,21 @@
 begin;
 create table decodeint(a int, b int) distributed by (a);
 
-insert into decodeint values (0,0);
-insert into decodeint values (1,1);
-insert into decodeint values (2,2);
-insert into decodeint values (3,3);
-insert into decodeint values (4,4);
-insert into decodeint values (5,5);
-insert into decodeint values (6,6);
-insert into decodeint values (null,1);
-insert into decodeint values (1,1);
-insert into decodeint values (2,1);
-insert into decodeint values (3,1);
-insert into decodeint values (4,1);
-insert into decodeint values (5,1);
-insert into decodeint values (6,1);
+insert into decodeint values
+  (0,0),
+  (1,1),
+  (2,2),
+  (3,3),
+  (4,4),
+  (5,5),
+  (6,6),
+  (null,1),
+  (1,1),
+  (2,1),
+  (3,1),
+  (4,1),
+  (5,1),
+  (6,1);
 commit;
 
 select a, decode(a, 1, 'A', 2, 'B', 3, 'C', 4, 'D', 5, 'E') as decode from decodeint order by a, b;
@@ -41,14 +42,15 @@ distributed by (distcol) partition by range (ptcol)
   every (100)
 );
 
-insert into decodenum1 values(1.1, 100, 0, 'part0');
-insert into decodenum1 values(10.10, 100, 10, 'part1');
-insert into decodenum1 values(10.10, 200, 200, 'part2');
-insert into decodenum1 values(20.22, 200, 200, 'part2');
-insert into decodenum1 values(20.22, 100, 100, 'part1');
-insert into decodenum1 values(300.333, 300, 300, 'part3');
-insert into decodenum1 values(300.333, 300, 100, 'part1');
-insert into decodenum1 values(300.333, 300, 100, 'part1');
+insert into decodenum1 values
+  (1.1, 100, 0, 'part0'),
+  (10.10, 100, 10, 'part1'),
+  (10.10, 200, 200, 'part2'),
+  (20.22, 200, 200, 'part2'),
+  (20.22, 100, 100, 'part1'),
+  (300.333, 300, 300, 'part3'),
+  (300.333, 300, 100, 'part1'),
+  (300.333, 300, 100, 'part1');
 commit;
 
 select numcol, decode(numcol, 300.333, '300+') as "decode(numcol, 300.333, '300+')" from decodenum1 order by numcol, distcol;
@@ -70,15 +72,16 @@ end (501) exclusive
 every (100)
 );
 
-insert into decodenum2 values(1.1, 100, 0, 'part0');
-insert into decodenum2 values(2.2, 200, 0, 'part0');
-insert into decodenum2 values(10.10, 100, 10, 'part1');
-insert into decodenum2 values(10.10, 200, 200, 'part2');
-insert into decodenum2 values(20.22, 200, 200, 'part2');
-insert into decodenum2 values(20.22, 100, 100, 'part1');
-insert into decodenum2 values(100.311, 100, 100, 'part3');
-insert into decodenum2 values(100.322, 100, 100, 'part1');
-insert into decodenum2 values(100.333, 200, 200, 'part2');
+insert into decodenum2 values
+  (1.1, 100, 0, 'part0'),
+  (2.2, 200, 0, 'part0'),
+  (10.10, 100, 10, 'part1'),
+  (10.10, 200, 200, 'part2'),
+  (20.22, 200, 200, 'part2'),
+  (20.22, 100, 100, 'part1'),
+  (100.311, 100, 100, 'part3'),
+  (100.322, 100, 100, 'part1'),
+  (100.333, 200, 200, 'part2');
 commit;
 
 select numcol, decode(numcol, 10.10, 'Under 100', 20.22, 'Under 100', 100.311, '100+', 100.322, '100+', 100.333, '100+', 'None') from decodenum2 order by numcol, distcol;
@@ -93,10 +96,11 @@ CREATE TABLE decodecharao1 (country_code char(2), region text)
 WITH (appendonly=true)
 DISTRIBUTED BY (region);
 
-insert into decodecharao1 values('US', 'Americas');
-insert into decodecharao1 values('CA', 'Americas');
-insert into decodecharao1 values('UK', 'Europe');
-insert into decodecharao1 values ('FR', 'France');
+insert into decodecharao1 values
+  ('US', 'Americas'),
+  ('CA', 'Americas'),
+  ('UK', 'Europe'),
+  ('FR', 'France');
 commit;
 
 select country_code, decode(country_code, 'CA', 'Canada') as decode from decodecharao1 order by country_code, region;
@@ -109,12 +113,13 @@ CREATE TABLE decodecharao2
   (country_code char(2), country_name varchar(255), region text)
 WITH (appendonly=true) DISTRIBUTED BY (region);
 
-insert into regions(country_code, region) values('JP', 'Asia');
-insert into regions(country_code, region) values('US', 'Americas');
-insert into regions(country_code, region) values('CA', 'Americas');
-insert into regions(country_code, region) values('FR', 'Europe');
-insert into regions(country_code, region) values('UK', 'Europe');
-insert into regions(country_code, region) values('IT', 'Europe');
+insert into regions(country_code, region) values
+  ('JP', 'Asia'),
+  ('US', 'Americas'),
+  ('CA', 'Americas'),
+  ('FR', 'Europe'),
+  ('UK', 'Europe'),
+  ('IT', 'Europe');
 commit;
 
 insert into decodecharao2(country_code, country_name, region)
@@ -133,13 +138,14 @@ create table decodevarchar
   dayid int
 ) distributed by (dayid);
 
-insert into decodevarchar values('Monday', 1);
-insert into decodevarchar values('Tuesday', 2);
-insert into decodevarchar values('Wednesday', 3);
-insert into decodevarchar values('Thursday', 4);
-insert into decodevarchar values('Friday', 5);
-insert into decodevarchar values('Saturday', 6);
-insert into decodevarchar values('Sunday', 7);
+insert into decodevarchar values
+  ('Monday', 1),
+  ('Tuesday', 2),
+  ('Wednesday', 3),
+  ('Thursday', 4),
+  ('Friday', 5),
+  ('Saturday', 6),
+  ('Sunday', 7);
 commit;
 
 select dayname,
@@ -171,26 +177,28 @@ CREATE TABLE emp_start_dates
    startdate date
 ) distributed by (startdate);
 
-insert into employees(empid, name, gender) values(100, 'John Smith', 'M');
-insert into employees(empid, name, gender) values(101, 'John Deere', 'M');
-insert into employees(empid, name, gender) values(102, 'Jane Doe', 'F');
-insert into employees(empid, name, gender) values(103, 'Janet Jackson', 'F');
-insert into employees(empid, name, gender) values(104, 'Anne Smith', 'F');
-insert into employees(empid, name, gender) values(105, 'Ryan Goesling', 'M');
-insert into employees(empid, name, gender) values(106, 'George Clooney', 'M');
-insert into employees(empid, name, gender) values(107, 'Julia Roberts', 'F');
-insert into employees(empid, name, gender) values(108, 'Jennifer Aniston', 'F');
-insert into employees(empid, name, gender) values(109, 'Brad Pitt', 'M');
+insert into employees(empid, name, gender) values
+  (100, 'John Smith', 'M'),
+  (101, 'John Deere', 'M'),
+  (102, 'Jane Doe', 'F'),
+  (103, 'Janet Jackson', 'F'),
+  (104, 'Anne Smith', 'F'),
+  (105, 'Ryan Goesling', 'M'),
+  (106, 'George Clooney', 'M'),
+  (107, 'Julia Roberts', 'F'),
+  (108, 'Jennifer Aniston', 'F'),
+  (109, 'Brad Pitt', 'M');
 
-insert into emp_start_dates(empid, startdate) values(100, '2011-01-01'::date);
-insert into emp_start_dates(empid, startdate) values(101, '2010-01-15'::date);
-insert into emp_start_dates(empid, startdate) values(102, '2011-02-28'::date);
-insert into emp_start_dates(empid, startdate) values(103, '2009-02-01'::date);
-insert into emp_start_dates(empid, startdate) values(104, '2011-03-15'::date);
-insert into emp_start_dates(empid, startdate) values(105, '2011-05-01'::date);
-insert into emp_start_dates(empid, startdate) values(106, '2011-05-01'::date);
-insert into emp_start_dates(empid, startdate) values(107, '2010-01-15'::date);
-insert into emp_start_dates(empid, startdate) values(108, '2011-02-15'::date);
+insert into emp_start_dates(empid, startdate) values
+  (100, '2011-01-01'::date),
+  (101, '2010-01-15'::date),
+  (102, '2011-02-28'::date),
+  (103, '2009-02-01'::date),
+  (104, '2011-03-15'::date),
+  (105, '2011-05-01'::date),
+  (106, '2011-05-01'::date),
+  (107, '2010-01-15'::date),
+  (108, '2011-02-15'::date);
 insert into emp_start_dates(empid) values(109);
 commit;
 
@@ -214,16 +222,17 @@ create table decodetimestamptz
     decodetxt  text
 ) WITH (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1, blocksize=32768) distributed by (userid);
 
-insert into decodetimestamptz(lastlogin, username, userid) values('2011-12-19 10:30:54 PST'::timestamp with time zone, 'user1', 1000);
-insert into decodetimestamptz(lastlogin, username, userid) values('2011-12-15 11:20:14 PST'::timestamp with time zone, 'user2', 1010);
-insert into decodetimestamptz(lastlogin, username, userid) values('2011-12-19 07:25:15 PST'::timestamp with time zone, 'user3', 1020);
-insert into decodetimestamptz(lastlogin, username, userid) values('2011-12-19 08:20:54 PST'::timestamp with time zone, 'user4', 1030);
-insert into decodetimestamptz(lastlogin, username, userid) values('2011-12-15 11:20:14 PST'::timestamp with time zone, 'user5', 1040);
-insert into decodetimestamptz(lastlogin, username, userid) values('2011-12-19 10:30:54 PST'::timestamp with time zone, 'user6', 1050);
-insert into decodetimestamptz(lastlogin, username, userid) values('2011-12-19 10:30:54 PST'::timestamp with time zone, 'user7', 1060);
-insert into decodetimestamptz(lastlogin, username, userid) values('2011-12-15 11:20:14 PST'::timestamp with time zone, 'user8', 1070);
-insert into decodetimestamptz(lastlogin, username, userid) values('2011-12-19 10:30:54 PST'::timestamp with time zone, 'user9', 1080);
-insert into decodetimestamptz(lastlogin, username, userid) values('2011-01-19 10:30:54 PST'::timestamp with time zone, 'user10', 1090);
+insert into decodetimestamptz(lastlogin, username, userid) values
+  ('2011-12-19 10:30:54 PST'::timestamp with time zone, 'user1', 1000),
+  ('2011-12-15 11:20:14 PST'::timestamp with time zone, 'user2', 1010),
+  ('2011-12-19 07:25:15 PST'::timestamp with time zone, 'user3', 1020),
+  ('2011-12-19 08:20:54 PST'::timestamp with time zone, 'user4', 1030),
+  ('2011-12-15 11:20:14 PST'::timestamp with time zone, 'user5', 1040),
+  ('2011-12-19 10:30:54 PST'::timestamp with time zone, 'user6', 1050),
+  ('2011-12-19 10:30:54 PST'::timestamp with time zone, 'user7', 1060),
+  ('2011-12-15 11:20:14 PST'::timestamp with time zone, 'user8', 1070),
+  ('2011-12-19 10:30:54 PST'::timestamp with time zone, 'user9', 1080),
+  ('2011-01-19 10:30:54 PST'::timestamp with time zone, 'user10', 1090);
 commit;
 
 select * from decodetimestamptz order by userid;
@@ -264,25 +273,27 @@ CREATE TABLE emp_start_dates
    startdate date
 ) distributed by (startdate);
 
-insert into employees(empid, name, gender) values(100, 'John Smith', 'M');
-insert into employees(empid, name, gender) values(101, 'John Deere', 'M');
-insert into employees(empid, name, gender) values(102, 'Jane Doe', 'F');
-insert into employees(empid, name, gender) values(103, 'Janet Jackson', 'F');
-insert into employees(empid, name, gender) values(104, 'Anne Smith', 'F');
-insert into employees(empid, name, gender) values(105, 'Ryan Goesling', 'M');
-insert into employees(empid, name, gender) values(106, 'George Clooney', 'M');
-insert into employees(empid, name, gender) values(107, 'Julia Roberts', 'F');
-insert into employees(empid, name, gender) values(108, 'Jennifer Aniston', 'F');
+insert into employees(empid, name, gender) values
+  (100, 'John Smith', 'M'),
+  (101, 'John Deere', 'M'),
+  (102, 'Jane Doe', 'F'),
+  (103, 'Janet Jackson', 'F'),
+  (104, 'Anne Smith', 'F'),
+  (105, 'Ryan Goesling', 'M'),
+  (106, 'George Clooney', 'M'),
+  (107, 'Julia Roberts', 'F'),
+  (108, 'Jennifer Aniston', 'F');
 
-insert into emp_start_dates(empid, startdate) values(100, '2011-01-01'::date);
-insert into emp_start_dates(empid, startdate) values(101, '2010-01-15'::date);
-insert into emp_start_dates(empid, startdate) values(102, '2011-02-28'::date);
-insert into emp_start_dates(empid, startdate) values(103, '2009-02-01'::date);
-insert into emp_start_dates(empid, startdate) values(104, '2011-03-15'::date);
-insert into emp_start_dates(empid, startdate) values(105, '2011-05-01'::date);
-insert into emp_start_dates(empid, startdate) values(106, '2011-05-01'::date);
-insert into emp_start_dates(empid, startdate) values(107, '2010-01-15'::date);
-insert into emp_start_dates(empid, startdate) values(108, '2011-02-15'::date);
+insert into emp_start_dates(empid, startdate) values
+  (100, '2011-01-01'::date),
+  (101, '2010-01-15'::date),
+  (102, '2011-02-28'::date),
+  (103, '2009-02-01'::date),
+  (104, '2011-03-15'::date),
+  (105, '2011-05-01'::date),
+  (106, '2011-05-01'::date),
+  (107, '2010-01-15'::date),
+  (108, '2011-02-15'::date);
 commit;
 
 select e.empid as emp_id,
@@ -319,27 +330,29 @@ CREATE TABLE emp_start_dates
    startdate date
 ) distributed by (startdate);
 
-insert into employees(empid, name, gender) values(100, 'John Smith', 'M');
-insert into employees(empid, name, gender) values(101, 'John Deere', 'M');
-insert into employees(empid, name, gender) values(102, 'Jane Doe', 'F');
-insert into employees(empid, name, gender) values(103, 'Janet Jackson', 'F');
-insert into employees(empid, name, gender) values(104, 'Anne Smith', 'F');
-insert into employees(empid, name, gender) values(105, 'Ryan Goesling', 'M');
-insert into employees(empid, name, gender) values(106, 'George Clooney', 'M');
-insert into employees(empid, name, gender) values(107, 'Julia Roberts', 'F');
-insert into employees(empid, name, gender) values(108, 'Jennifer Aniston', 'F');
-insert into employees(empid, name, gender) values(109, 'Null Startdate', 'M');
+insert into employees(empid, name, gender) values
+  (100, 'John Smith', 'M'),
+  (101, 'John Deere', 'M'),
+  (102, 'Jane Doe', 'F'),
+  (103, 'Janet Jackson', 'F'),
+  (104, 'Anne Smith', 'F'),
+  (105, 'Ryan Goesling', 'M'),
+  (106, 'George Clooney', 'M'),
+  (107, 'Julia Roberts', 'F'),
+  (108, 'Jennifer Aniston', 'F'),
+  (109, 'Null Startdate', 'M');
 
-insert into emp_start_dates(empid, startdate) values(100, '2011-01-01'::date);
-insert into emp_start_dates(empid, startdate) values(101, '2010-01-15'::date);
-insert into emp_start_dates(empid, startdate) values(102, '2011-02-28'::date);
-insert into emp_start_dates(empid, startdate) values(103, '2009-02-01'::date);
-insert into emp_start_dates(empid, startdate) values(104, '2011-03-15'::date);
-insert into emp_start_dates(empid, startdate) values(105, '2011-05-01'::date);
-insert into emp_start_dates(empid, startdate) values(106, '2011-05-01'::date);
-insert into emp_start_dates(empid, startdate) values(107, '2010-01-15'::date);
-insert into emp_start_dates(empid, startdate) values(108, '2011-02-15'::date);
-insert into emp_start_dates(empid, startdate) values(109, null);
+insert into emp_start_dates(empid, startdate) values
+  (100, '2011-01-01'::date),
+  (101, '2010-01-15'::date),
+  (102, '2011-02-28'::date),
+  (103, '2009-02-01'::date),
+  (104, '2011-03-15'::date),
+  (105, '2011-05-01'::date),
+  (106, '2011-05-01'::date),
+  (107, '2010-01-15'::date),
+  (108, '2011-02-15'::date),
+  (109, null);
 commit;
 
 drop table if exists employees;
@@ -365,25 +378,27 @@ CREATE TABLE emp_start_dates
    startdate date
 ) distributed by (startdate);
 
-insert into employees(empid, name, gender) values(100, 'John Smith', 'M');
-insert into employees(empid, name, gender) values(101, 'John Deere', 'M');
-insert into employees(empid, name, gender) values(102, 'Jane Doe', 'F');
-insert into employees(empid, name, gender) values(103, 'Janet Jackson', 'F');
-insert into employees(empid, name, gender) values(104, 'Anne Smith', 'F');
-insert into employees(empid, name, gender) values(105, 'Ryan Goesling', 'M');
-insert into employees(empid, name, gender) values(106, 'George Clooney', 'M');
-insert into employees(empid, name, gender) values(107, 'Julia Roberts', 'F');
-insert into employees(empid, name, gender) values(108, 'Jennifer Aniston', 'F');
+insert into employees(empid, name, gender) values
+  (100, 'John Smith', 'M'),
+  (101, 'John Deere', 'M'),
+  (102, 'Jane Doe', 'F'),
+  (103, 'Janet Jackson', 'F'),
+  (104, 'Anne Smith', 'F'),
+  (105, 'Ryan Goesling', 'M'),
+  (106, 'George Clooney', 'M'),
+  (107, 'Julia Roberts', 'F'),
+  (108, 'Jennifer Aniston', 'F');
 
-insert into emp_start_dates(empid, startdate) values(100, '2012-01-01'::date);
-insert into emp_start_dates(empid, startdate) values(101, '2010-01-15'::date);
-insert into emp_start_dates(empid, startdate) values(102, '2008-02-28'::date);
-insert into emp_start_dates(empid, startdate) values(103, '2009-02-01'::date);
-insert into emp_start_dates(empid, startdate) values(104, '2007-03-15'::date);
-insert into emp_start_dates(empid, startdate) values(105, '2006-05-01'::date);
-insert into emp_start_dates(empid, startdate) values(106, '2011-05-01'::date);
-insert into emp_start_dates(empid, startdate) values(107, '2004-01-15'::date);
-insert into emp_start_dates(empid, startdate) values(108, '2000-02-15'::date);
+insert into emp_start_dates(empid, startdate) values
+  (100, '2012-01-01'::date),
+  (101, '2010-01-15'::date),
+  (102, '2008-02-28'::date),
+  (103, '2009-02-01'::date),
+  (104, '2007-03-15'::date),
+  (105, '2006-05-01'::date),
+  (106, '2011-05-01'::date),
+  (107, '2004-01-15'::date),
+  (108, '2000-02-15'::date);
 
 select e.empid as emp_id,
        e.name as emp_name,
@@ -473,27 +488,29 @@ CREATE TABLE emp_start_dates
    startdate date
 ) distributed by (startdate);
 
-insert into employees(empid, name, gender) values(100, 'John Smith', 'M');
-insert into employees(empid, name, gender) values(101, 'John Deere', 'M');
-insert into employees(empid, name, gender) values(102, 'Jane Doe', 'F');
-insert into employees(empid, name, gender) values(103, 'Janet Jackson', 'F');
-insert into employees(empid, name, gender) values(104, 'Anne Smith', 'F');
-insert into employees(empid, name, gender) values(105, 'Ryan Goesling', 'M');
-insert into employees(empid, name, gender) values(106, 'George Clooney', 'M');
-insert into employees(empid, name, gender) values(107, 'Julia Roberts', 'F');
-insert into employees(empid, name, gender) values(108, 'Jennifer Aniston', 'F');
-insert into employees(empid, name, gender) values(109, 'John Mayer', 'M');
+insert into employees(empid, name, gender) values
+  (100, 'John Smith', 'M'),
+  (101, 'John Deere', 'M'),
+  (102, 'Jane Doe', 'F'),
+  (103, 'Janet Jackson', 'F'),
+  (104, 'Anne Smith', 'F'),
+  (105, 'Ryan Goesling', 'M'),
+  (106, 'George Clooney', 'M'),
+  (107, 'Julia Roberts', 'F'),
+  (108, 'Jennifer Aniston', 'F'),
+  (109, 'John Mayer', 'M');
 
-insert into emp_start_dates(empid, startdate) values(100, '2012-01-01'::date);
-insert into emp_start_dates(empid, startdate) values(101, '2010-01-15'::date);
-insert into emp_start_dates(empid, startdate) values(102, '2008-02-28'::date);
-insert into emp_start_dates(empid, startdate) values(103, '2009-02-01'::date);
-insert into emp_start_dates(empid, startdate) values(104, '2007-03-15'::date);
-insert into emp_start_dates(empid, startdate) values(105, '2006-05-01'::date);
-insert into emp_start_dates(empid, startdate) values(106, '2011-05-01'::date);
-insert into emp_start_dates(empid, startdate) values(107, '2004-01-15'::date);
-insert into emp_start_dates(empid, startdate) values(108, '2000-02-15'::date);
-insert into emp_start_dates(empid, startdate) values(109, null);
+insert into emp_start_dates(empid, startdate) values
+  (100, '2012-01-01'::date),
+  (101, '2010-01-15'::date),
+  (102, '2008-02-28'::date),
+  (103, '2009-02-01'::date),
+  (104, '2007-03-15'::date),
+  (105, '2006-05-01'::date),
+  (106, '2011-05-01'::date),
+  (107, '2004-01-15'::date),
+  (108, '2000-02-15'::date),
+  (109, null);
 
 select e.empid as emp_id,
        e.name as emp_name,
@@ -536,27 +553,29 @@ CREATE TABLE emp_start_dates
    startdate date
 ) distributed by (startdate);
 
-insert into employees(empid, name, gender) values(100, 'John Smith', 'M');
-insert into employees(empid, name, gender) values(101, 'John Deere', 'M');
-insert into employees(empid, name, gender) values(102, 'Jane Doe', 'F');
-insert into employees(empid, name, gender) values(103, 'Janet Jackson', 'F');
-insert into employees(empid, name, gender) values(104, 'Anne Smith', 'F');
-insert into employees(empid, name, gender) values(105, 'Ryan Goesling', 'M');
-insert into employees(empid, name, gender) values(106, 'George Clooney', 'M');
-insert into employees(empid, name, gender) values(107, 'Julia Roberts', 'F');
-insert into employees(empid, name, gender) values(108, 'Jennifer Aniston', 'F');
-insert into employees(empid, name, gender) values(109, 'John Mayer', 'M');
+insert into employees(empid, name, gender) values
+  (100, 'John Smith', 'M'),
+  (101, 'John Deere', 'M'),
+  (102, 'Jane Doe', 'F'),
+  (103, 'Janet Jackson', 'F'),
+  (104, 'Anne Smith', 'F'),
+  (105, 'Ryan Goesling', 'M'),
+  (106, 'George Clooney', 'M'),
+  (107, 'Julia Roberts', 'F'),
+  (108, 'Jennifer Aniston', 'F'),
+  (109, 'John Mayer', 'M');
 
-insert into emp_start_dates(empid, startdate) values(100, '2012-01-01'::date);
-insert into emp_start_dates(empid, startdate) values(101, '2010-01-15'::date);
-insert into emp_start_dates(empid, startdate) values(102, '2008-02-28'::date);
-insert into emp_start_dates(empid, startdate) values(103, '2009-02-01'::date);
-insert into emp_start_dates(empid, startdate) values(104, '2007-03-15'::date);
-insert into emp_start_dates(empid, startdate) values(105, '2006-05-01'::date);
-insert into emp_start_dates(empid, startdate) values(106, '2011-05-01'::date);
-insert into emp_start_dates(empid, startdate) values(107, '2004-01-15'::date);
-insert into emp_start_dates(empid, startdate) values(108, '2000-02-15'::date);
-insert into emp_start_dates(empid, startdate) values(109, null);
+insert into emp_start_dates(empid, startdate) values
+  (100, '2012-01-01'::date),
+  (101, '2010-01-15'::date),
+  (102, '2008-02-28'::date),
+  (103, '2009-02-01'::date),
+  (104, '2007-03-15'::date),
+  (105, '2006-05-01'::date),
+  (106, '2011-05-01'::date),
+  (107, '2004-01-15'::date),
+  (108, '2000-02-15'::date),
+  (109, null);
 
 select e.empid as emp_id,
        e.name as emp_name,
@@ -613,14 +632,15 @@ begin;
 CREATE TABLE genders (gender char(1), student_id integer)
 WITH (appendonly=true) DISTRIBUTED BY (student_id);
 
-insert into genders values('M', 11111);
-insert into genders values('M', 12222);
-insert into genders values('F', 22222);
-insert into genders values('F', 33333);
-insert into genders values('F', 44444);
-insert into genders values('M', 55555);
-insert into genders values('F', 55555);
-insert into genders values('M', 66666);
+insert into genders values
+  ('M', 11111),
+  ('M', 12222),
+  ('F', 22222),
+  ('F', 33333),
+  ('F', 44444),
+  ('M', 55555),
+  ('F', 55555),
+  ('M', 66666);
 commit;
 
 select gender, decode(gender, 1, 'Unknown', 'M', 'Male', 'F', 'Female', 'Unknown')
@@ -718,11 +738,12 @@ create table locations
    country_code char(2)
 );
 
-insert into locations(locid, bus_name, country_code) values(1000, 'Test Solutions', 'CN');
-insert into locations(locid, bus_name, country_code) values(1011, 'Taing Consulting', 'US');
-insert into locations(locid, bus_name, country_code) values(2000, 'Parts Plus', 'IT');
-insert into locations(locid, bus_name, country_code) values(1055, 'Computers Unlimited', 'IL');
-insert into locations(locid, bus_name, country_code) values(2005, 'Kangaroos Inc.', 'AU');
+insert into locations(locid, bus_name, country_code) values
+  (1000, 'Test Solutions', 'CN'),
+  (1011, 'Taing Consulting', 'US'),
+  (2000, 'Parts Plus', 'IT'),
+  (1055, 'Computers Unlimited', 'IL'),
+  (2005, 'Kangaroos Inc.', 'AU');
 commit;
 
 create or replace view decode_view
@@ -748,11 +769,12 @@ create table office2
    country_code char(2)
 );
 
-insert into office2(locid, bus_name, country_code) values(1000, 'Test Solutions', 'CN');
-insert into office2(locid, bus_name, country_code) values(1011, 'Taing Consulting', 'US');
-insert into office2(locid, bus_name, country_code) values(2000, 'Parts Plus', 'IT');
-insert into office2(locid, bus_name, country_code) values(1055, 'Computers Unlimited', 'IL');
-insert into office2(locid, bus_name, country_code) values(2005, 'Kangaroos Inc.', 'AU');
+insert into office2(locid, bus_name, country_code) values
+  (1000, 'Test Solutions', 'CN'),
+  (1011, 'Taing Consulting', 'US'),
+  (2000, 'Parts Plus', 'IT'),
+  (1055, 'Computers Unlimited', 'IL'),
+  (2005, 'Kangaroos Inc.', 'AU');
 commit;
 
 select locid,
@@ -775,10 +797,11 @@ create table decode_sales
  currency char(1)
 ) distributed by (currency);
 
-insert into decode_sales values(2000000, 'e');
-insert into decode_sales values(10500000.25, 'd');
-insert into decode_sales values(789100.50, 'y');
-insert into decode_sales values(300685, 'p');
+insert into decode_sales values
+  (2000000, 'e'),
+  (10500000.25, 'd'),
+  (789100.50, 'y'),
+  (300685, 'p');
 
 select *
 from decode_sales

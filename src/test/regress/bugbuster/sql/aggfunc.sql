@@ -32,11 +32,12 @@ drop table testemp;
 create table product_agg(sale integer, product integer);
 
 -- inserting values into product_agg table
-insert into product_agg values (10, 20);
-insert into product_agg values (20, 25);
-insert into product_agg values (30, 30);
-insert into product_agg values (40, 35);
-insert into product_agg values (45, 40);
+insert into product_agg values
+  (10, 20),
+  (20, 25),
+  (30, 30),
+  (40, 35),
+  (45, 40);
 
 -- returning minimum of product_agg table
 select min(sale) from product_agg;
@@ -50,11 +51,12 @@ drop table product_agg;
 create table quantity (qty integer, price integer);
 
 -- inserting values into quantity table
-insert into quantity values (100, 50);
-insert into quantity values (200, 100);
-insert into quantity values (300, 200);
-insert into quantity values (400, 35);
-insert into quantity values (500, 40);
+insert into quantity values
+  (100, 50),
+  (200, 100),
+  (300, 200),
+  (400, 35),
+  (500, 40);
 
 -- returning maximum of quantity table
 select max(price) from quantity;
@@ -66,11 +68,12 @@ drop table quantity;-- Test Aggregate Functions
 create table product (sale integer, prod integer);
 
 -- inserting values into product table
-insert into product values (10, 20);
-insert into product values (20, 25);
-insert into product values (30, 30);
-insert into product values (40, 35);
-insert into product values (45, 40);
+insert into product values
+  (10, 20),
+  (20, 25),
+  (30, 30),
+  (40, 35),
+  (45, 40);
 
 -- returning minimum of product table
 select min(sale*prod) from product;
@@ -98,21 +101,23 @@ drop table quantity;-- Test Aggregate Functions
 create table prod_agg (sale integer, prod varchar);
 
 -- inserting values into prod_agg table
-insert into prod_agg values (100, 'shirts');
-insert into prod_agg values (200, 'pants');
-insert into prod_agg values (300, 't-shirts');
-insert into prod_agg values (400, 'caps');
-insert into prod_agg values (450, 'hats');
+insert into prod_agg values
+  (100, 'shirts'),
+  (200, 'pants'),
+  (300, 't-shirts'),
+  (400, 'caps'),
+  (450, 'hats');
 
 -- Create cust_agg table
 create table cust_agg (cusname varchar, sale integer, prod varchar);
 
 -- inserting values into customer table
-insert into cust_agg values ('aryan', 100, 'shirts');
-insert into cust_agg values ('jay', 200, 'pants');
-insert into cust_agg values ('mahi', 300, 't-shirts');
-insert into cust_agg values ('nitu', 400, 'caps');
-insert into cust_agg values ('verru', 450, 'hats');
+insert into cust_agg values
+  ('aryan', 100, 'shirts'),
+  ('jay', 200, 'pants'),
+  ('mahi', 300, 't-shirts'),
+  ('nitu', 400, 'caps'),
+  ('verru', 450, 'hats');
 
 -- returning customer name from cust_agg name with count of prod_add table 
 select cusname,(select count(*) from prod_agg) from cust_agg;
@@ -126,21 +131,23 @@ drop table cust_agg;
 create table prod7 (sale integer, prod varchar);
 
 -- inserting values into prod7 table
-insert into prod7 values (100, 'shirts');
-insert into prod7 values (200, 'pants');
-insert into prod7 values (300, 't-shirts');
-insert into prod7 values (400, 'caps');
-insert into prod7 values (450, 'hats');
+insert into prod7 values
+  (100, 'shirts'),
+  (200, 'pants'),
+  (300, 't-shirts'),
+  (400, 'caps'),
+  (450, 'hats');
 
 -- create cust7 table
 create table cust7 (cusname varchar, sale integer, prod varchar);
 
 -- inserting values into cust7 table
-insert into cust7 values ('jay', 100, 'shirts');
-insert into cust7 values ('aryan', 200, 'pants');
-insert into cust7 values ('mahi', 300, 't-shirts');
-insert into cust7 values ('veeru', 400, 'caps');
-insert into cust7 values ('jay', 450, 'hats');
+insert into cust7 values
+  ('jay', 100, 'shirts'),
+  ('aryan', 200, 'pants'),
+  ('mahi', 300, 't-shirts'),
+  ('veeru', 400, 'caps'),
+  ('jay', 450, 'hats');
 
 -- returning customer name with count using order by customer name
 \echo -- order 1
@@ -155,9 +162,10 @@ drop table cust7;
 create table prod8 (sale integer, prodnm varchar,price integer);
 
 -- inserting values into prod8 table
-insert into prod8 values (100, 'shirts', 500);
-insert into prod8 values (200, 'pants',800);
-insert into prod8 values (300, 't-shirts', 300);
+insert into prod8 values
+  (100, 'shirts', 500),
+  (200, 'pants',800),
+  (300, 't-shirts', 300);
 
 -- returning product and price using Havingand Group by clause
 
@@ -171,9 +179,10 @@ drop table prod8;
 create table prod9 (sale integer, prodnm varchar,price integer);
 
 -- inserting values into prod9 table
-insert into prod9 values (100, 'shirts', 500);
-insert into prod9 values (200, 'pants',800);
-insert into prod9 values (300, 't-shirts', 300);
+insert into prod9 values
+  (100, 'shirts', 500),
+  (200, 'pants',800),
+  (300, 't-shirts', 300);
 
 -- returning product and price using Havingand Group by clause
 
@@ -186,9 +195,10 @@ drop table prod9;-- Test Aggregate Functions
 create table prod10 (sale integer, prodnm varchar,price integer);
 
 -- inserting values into prod10 table
-insert into prod10 values (100, 'shirts', 500);
-insert into prod10 values (200, 'pants',800);
-insert into prod10 values (300, 't-shirts', 300);
+insert into prod10 values
+  (100, 'shirts', 500),
+  (200, 'pants',800),
+  (300, 't-shirts', 300);
 
 -- Returning product and price using HAVING and GROUP BY clauses.
 -- Note: we can get away with ORDER BY prodnm because for this data set 

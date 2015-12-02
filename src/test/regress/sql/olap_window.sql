@@ -927,19 +927,20 @@ CREATE TABLE fact_test_for_window
  TIME_KEY    INTEGER  NOT NULL,
  EVENT_TYPE  text  NOT NULL
 );
-insert into fact_test_for_window values (20070101, 'W', 100, 'c');
-insert into fact_test_for_window values (20070101, 'W', 100, 'p');
-insert into fact_test_for_window values (20070101, 'B', 100, 'c');
-insert into fact_test_for_window values (20070101, 'A', 10100101, 'p');
-insert into fact_test_for_window values (20070101, 'A', 20100101, 'p');
-insert into fact_test_for_window values (20070101, 'B', 101, 'p');
-insert into fact_test_for_window values (20070101, 'C', 105, 'p');
-insert into fact_test_for_window values (20070101, 'D', 107, 'p');
-insert into fact_test_for_window values (20070101, 'E', 10, 'c');
-insert into fact_test_for_window values (20070101, 'E', 10, 'p');
-insert into fact_test_for_window values (20070101, 'A', 101, 'c');
-insert into fact_test_for_window values (20070101, 'A', 101, 'p');
-insert into fact_test_for_window values (20070101, 'A', 10100101, 'p');
+insert into fact_test_for_window values
+  (20070101, 'W', 100, 'c'),
+  (20070101, 'W', 100, 'p'),
+  (20070101, 'B', 100, 'c'),
+  (20070101, 'A', 10100101, 'p'),
+  (20070101, 'A', 20100101, 'p'),
+  (20070101, 'B', 101, 'p'),
+  (20070101, 'C', 105, 'p'),
+  (20070101, 'D', 107, 'p'),
+  (20070101, 'E', 10, 'c'),
+  (20070101, 'E', 10, 'p'),
+  (20070101, 'A', 101, 'c'),
+  (20070101, 'A', 101, 'p'),
+  (20070101, 'A', 10100101, 'p');
 
 select date_key, bcookie, time_key, event_type, 
 (
@@ -1555,12 +1556,13 @@ select stddev(n) over(order by d range between current row and interval '1 day' 
 -- MPP-19244; push predicates below window functions
 drop table if exists window_preds;
 create table window_preds(i int, j int, k int);
-insert into window_preds values(1,2,3);
-insert into window_preds values(2,3,4);
-insert into window_preds values(3,4,5);
-insert into window_preds values(4,5,6);
-insert into window_preds values(5,6,7);
-insert into window_preds values(6,7,8);
+insert into window_preds values
+  (1,2,3),
+  (2,3,4),
+  (3,4,5),
+  (4,5,6),
+  (5,6,7),
+  (6,7,8);
 select * from (select i,j,k, sum(i) over(), row_number() over(order by i), rank() over(order by i) from window_preds) as foo where i>2 order by rank;
 select * from (select i,j,k, sum(i) over(), row_number() over(partition by i), rank() over(order by i) from window_preds) as foo where i>2 order by rank;
 select * from (select i,j,k, sum(i) over(partition by i), row_number() over(partition by i), rank() over(partition by i order by i) from window_preds) as foo where i>2 order by sum;
@@ -1573,12 +1575,13 @@ select * from (select i, sum(i) over(partition by j) from (select i,j, row_numbe
 -- MPP-19964
 drop table if exists customers_test;
 create table customers_test(name text, device_model text, device_id integer, ppp numeric) distributed by (device_id);
-INSERT INTO customers_test values ('n1', 'd1', 1, 1);
-INSERT INTO customers_test values ('n1', 'd1', 1, 3); 
-INSERT INTO customers_test values ('n2', 'd1', 1, 2); 
-INSERT INTO customers_test values ('n2', 'd1', 2, 1); 
-INSERT INTO customers_test values ('n2', 'd1', 2, 2); 
-INSERT INTO customers_test values ('n3', 'd3', 1, 0); 
+INSERT INTO customers_test values
+  ('n1', 'd1', 1, 1),
+  ('n1', 'd1', 1, 3),
+  ('n2', 'd1', 1, 2),
+  ('n2', 'd1', 2, 1),
+  ('n2', 'd1', 2, 2),
+  ('n3', 'd3', 1, 0);
 SELECT COUNT(*)
 FROM
 (

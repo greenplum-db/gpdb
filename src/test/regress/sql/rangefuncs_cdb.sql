@@ -5,14 +5,16 @@ DROP TABLE IF EXISTS foo;
 CREATE TABLE foo(
   fooid int, foosubid int, fooname text, primary key(fooid,foosubid)
   ) DISTRIBUTED BY (fooid, foosubid);
-INSERT INTO foo VALUES(1,1,'Joe');
-INSERT INTO foo VALUES(1,2,'Ed');
-INSERT INTO foo VALUES(2,1,'Mary');
+INSERT INTO foo VALUES
+  (1,1,'Joe'),
+  (1,2,'Ed'),
+  (2,1,'Mary');
 
 CREATE TABLE foo2(fooid int, f2 int) DISTRIBUTED BY (fooid);
-INSERT INTO foo2 VALUES(1, 11);
-INSERT INTO foo2 VALUES(2, 22);
-INSERT INTO foo2 VALUES(1, 111);
+INSERT INTO foo2 VALUES
+  (1, 11),
+  (2, 22),
+  (1, 111);
 
 -- In Greenplum we do not support functions which call SQL from the segments
 -- for this reason we have rewritten this test to use plperl functions rather

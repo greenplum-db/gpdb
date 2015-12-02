@@ -1,15 +1,16 @@
 DROP TABLE IF EXISTS filter_test;
 CREATE TABLE filter_test (i int, j int) DISTRIBUTED BY (i);
-INSERT INTO filter_test VALUES (1, 1);
-INSERT INTO filter_test VALUES (2, 1);
-INSERT INTO filter_test VALUES (3, 1);
-INSERT INTO filter_test VALUES (4, 2);
-INSERT INTO filter_test VALUES (NULL, 2);
-INSERT INTO filter_test VALUES (6, 2);
-INSERT INTO filter_test VALUES (7, 3);
-INSERT INTO filter_test VALUES (8, NULL);
-INSERT INTO filter_test VALUES (9, 3);
-INSERT INTO filter_test VALUES (10, NULL);
+INSERT INTO filter_test VALUES
+  (1, 1),
+  (2, 1),
+  (3, 1),
+  (4, 2),
+  (NULL, 2),
+  (6, 2),
+  (7, 3),
+  (8, NULL),
+  (9, 3),
+  (10, NULL);
 
 SELECT i,j FROM filter_test order by i;
 
