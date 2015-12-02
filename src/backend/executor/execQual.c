@@ -4624,6 +4624,8 @@ ExecEvalCurrentOfExpr(ExprState *exprstate, ExprContext *econtext,
 			 * If tableoid is InvalidOid, this implies that constant folding had
 			 * had determined tableoid was not necessary in uniquely identifying a tuple.
 			 * Otherwise, the given tuple's tableoid must match the CURRENT OF tableoid.
+			 * NOTE: If you are modifying this code, please modify corresponding code in
+			 * TidListCreate also.
 			 */
 			if (!OidIsValid(cexpr->tableoid) ||
 				cexpr->tableoid == slot->tts_tableOid)

@@ -178,6 +178,12 @@ TidListCreate(TidScanState *tidstate)
 				 * folding had determined tableoid was not necessary in
 				 * uniquely identifying a tuple. Otherwise, the given tuple's
 				 * tableoid must match the CURRENT OF tableoid.
+				 * The following code is similar to CurrentOfExpr node's evalfunc
+				 * ExecEvalCurrentOfExpr. This part only peeks into CurrentOfExpr
+				 * and gets the tableoid, gp_segment_id and ctid
+				 * whereas ExecEvalCurrentOfExpr is evaluated like any other WHERE clause.
+				 * We could potentially push down CURRENT OF predicate to TID Scan
+				 * but it seems not to be worth the effort.
 				 */
 				if (!OidIsValid(cexpr->tableoid) ||
 					cexpr->tableoid == RelationGetRelid(tidstate->ss.ss_currentRelation))
