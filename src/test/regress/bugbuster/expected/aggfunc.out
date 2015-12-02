@@ -41,19 +41,16 @@ select count(*) from testemp;
 -- drop table testemp
 drop table testemp;
 -- Test Aggregate Functions
-
 -- Create product_agg table 
 create table product_agg(sale integer, product integer);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'sale' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-
 -- inserting values into product_agg table
 insert into product_agg values (10, 20);
 insert into product_agg values (20, 25);
 insert into product_agg values (30, 30);
 insert into product_agg values (40, 35);
 insert into product_agg values (45, 40);
-
 -- returning minimum of product_agg table
 select min(sale) from product_agg;
  min 
@@ -61,24 +58,19 @@ select min(sale) from product_agg;
   10
 (1 row)
 
-
 -- dropt product_agg table
-
 drop table product_agg;
 -- Test Aggregate Functions
-
 -- Create quantity table
 create table quantity (qty integer, price integer);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'qty' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-
 -- inserting values into quantity table
 insert into quantity values (100, 50);
 insert into quantity values (200, 100);
 insert into quantity values (300, 200);
 insert into quantity values (400, 35);
 insert into quantity values (500, 40);
-
 -- returning maximum of quantity table
 select max(price) from quantity;
  max 
@@ -86,22 +78,18 @@ select max(price) from quantity;
  200
 (1 row)
 
-
 -- drop quantity table
 drop table quantity;-- Test Aggregate Functions
-
 -- Create product table 
 create table product (sale integer, prod integer);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'sale' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-
 -- inserting values into product table
 insert into product values (10, 20);
 insert into product values (20, 25);
 insert into product values (30, 30);
 insert into product values (40, 35);
 insert into product values (45, 40);
-
 -- returning minimum of product table
 select min(sale*prod) from product;
  min 
@@ -109,15 +97,12 @@ select min(sale*prod) from product;
  200
 (1 row)
 
-
 -- drop product table
 drop table product;-- Test Aggregate Functions
-
 -- Create quantity table
 create table quantity (qty integer, price integer, product character);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'qty' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-
 -- inserting values into quantity table
 insert into quantity values (100, 50, p1);
 ERROR:  column "p1" does not exist
@@ -139,7 +124,6 @@ insert into quantity values (500, 40, p5);
 ERROR:  column "p5" does not exist
 LINE 1: insert into quantity values (500, 40, p5);
                                               ^
-
 -- returning maximum of quantity table
 select max(qty*price) from quantity;
  max 
@@ -147,34 +131,28 @@ select max(qty*price) from quantity;
     
 (1 row)
 
-
 -- drop quantity table
 drop table quantity;-- Test Aggregate Functions
-
 -- Create product table 
 create table prod_agg (sale integer, prod varchar);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'sale' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-
 -- inserting values into prod_agg table
 insert into prod_agg values (100, 'shirts');
 insert into prod_agg values (200, 'pants');
 insert into prod_agg values (300, 't-shirts');
 insert into prod_agg values (400, 'caps');
 insert into prod_agg values (450, 'hats');
-
 -- Create cust_agg table
 create table cust_agg (cusname varchar, sale integer, prod varchar);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'cusname' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-
 -- inserting values into customer table
 insert into cust_agg values ('aryan', 100, 'shirts');
 insert into cust_agg values ('jay', 200, 'pants');
 insert into cust_agg values ('mahi', 300, 't-shirts');
 insert into cust_agg values ('nitu', 400, 'caps');
 insert into cust_agg values ('verru', 450, 'hats');
-
 -- returning customer name from cust_agg name with count of prod_add table 
 select cusname,(select count(*) from prod_agg) from cust_agg;
  cusname | ?column? 
@@ -186,36 +164,30 @@ select cusname,(select count(*) from prod_agg) from cust_agg;
  nitu    |        5
 (5 rows)
 
-
 -- drop prod_agg and cust_agg table
 drop table prod_agg;
 drop table cust_agg;
 -- Test Aggregate Functions
-
 -- create prod7 table 
 create table prod7 (sale integer, prod varchar);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'sale' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-
 -- inserting values into prod7 table
 insert into prod7 values (100, 'shirts');
 insert into prod7 values (200, 'pants');
 insert into prod7 values (300, 't-shirts');
 insert into prod7 values (400, 'caps');
 insert into prod7 values (450, 'hats');
-
 -- create cust7 table
 create table cust7 (cusname varchar, sale integer, prod varchar);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'cusname' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-
 -- inserting values into cust7 table
 insert into cust7 values ('jay', 100, 'shirts');
 insert into cust7 values ('aryan', 200, 'pants');
 insert into cust7 values ('mahi', 300, 't-shirts');
 insert into cust7 values ('veeru', 400, 'caps');
 insert into cust7 values ('jay', 450, 'hats');
-
 -- returning customer name with count using order by customer name
 \echo -- order 1
 -- order 1
@@ -229,24 +201,19 @@ select cusname, (select count(*) from prod7) from cust7 order by cusname;
  veeru   |        5
 (5 rows)
 
-
 -- drop prod7 and cust7 table
 drop table prod7;
 drop table cust7;
 -- Test Aggregate Functions
-
 -- create prod8 table 
 create table prod8 (sale integer, prodnm varchar,price integer);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'sale' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-
 -- inserting values into prod8 table
 insert into prod8 values (100, 'shirts', 500);
 insert into prod8 values (200, 'pants',800);
 insert into prod8 values (300, 't-shirts', 300);
-
 -- returning product and price using Havingand Group by clause
-
 select prodnm, price, count(*) from prod8 GROUP BY prodnm, price;
   prodnm  | price | count 
 ----------+-------+-------
@@ -255,23 +222,18 @@ select prodnm, price, count(*) from prod8 GROUP BY prodnm, price;
  t-shirts |   300 |     1
 (3 rows)
 
-
 -- drop prod8 table
 drop table prod8;
 -- Test Aggregate Functions
-
 -- create prod9 table 
 create table prod9 (sale integer, prodnm varchar,price integer);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'sale' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-
 -- inserting values into prod9 table
 insert into prod9 values (100, 'shirts', 500);
 insert into prod9 values (200, 'pants',800);
 insert into prod9 values (300, 't-shirts', 300);
-
 -- returning product and price using Havingand Group by clause
-
 select prodnm, price from prod9 GROUP BY prodnm, price HAVING price !=300;
  prodnm | price 
 --------+-------
@@ -279,20 +241,16 @@ select prodnm, price from prod9 GROUP BY prodnm, price HAVING price !=300;
  pants  |   800
 (2 rows)
 
-
 -- drop prod9 table
 drop table prod9;-- Test Aggregate Functions
-
 -- create prod10 table 
 create table prod10 (sale integer, prodnm varchar,price integer);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'sale' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-
 -- inserting values into prod10 table
 insert into prod10 values (100, 'shirts', 500);
 insert into prod10 values (200, 'pants',800);
 insert into prod10 values (300, 't-shirts', 300);
-
 -- Returning product and price using HAVING and GROUP BY clauses.
 -- Note: we can get away with ORDER BY prodnm because for this data set 
 -- all prodnm values are unique.
@@ -305,7 +263,6 @@ select prodnm, price from prod10 GROUP BY prodnm, price HAVING price !=400 ORDER
  shirts   |   500
  t-shirts |   300
 (3 rows)
-
 
 -- drop prod10 table
 drop table prod10;
