@@ -376,6 +376,7 @@ extern bool optimizer_print_query;
 extern bool optimizer_print_plan;
 extern bool optimizer_print_xform;
 extern bool optimizer_release_mdcache;
+extern int optimizer_mdcache_size;
 extern bool optimizer_disable_xform_result_printing;
 extern bool	optimizer_print_memo_after_exploration;
 extern bool	optimizer_print_memo_after_implementation;

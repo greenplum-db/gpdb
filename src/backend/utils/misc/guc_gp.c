@@ -498,6 +498,7 @@ bool		optimizer_print_query;
 bool		optimizer_print_plan;
 bool		optimizer_print_xform;
 bool		optimizer_release_mdcache;
+int		optimizer_mdcache_size;
 bool		optimizer_disable_xform_result_printing;
 bool		optimizer_print_memo_after_exploration;
 bool		optimizer_print_memo_after_implementation;
@@ -4703,6 +4704,17 @@ struct config_int ConfigureNamesInt_gp[] =
 		&optimizer_segments,
 		0, 0, INT_MAX, NULL, NULL
 	},
+
+	{
+		{"optimizer_mdcache_size", PGC_USERSET, RESOURCES_MEM,
+			gettext_noop("Sets the size of MDCache."),
+			NULL,
+			GUC_UNIT_KB | GUC_GPDB_ADDOPT
+		},
+		&optimizer_mdcache_size,
+		0, 0, INT_MAX, NULL, NULL
+	},
+
 	{
 		{"memory_profiler_dataset_size", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Set the size in GB"),
