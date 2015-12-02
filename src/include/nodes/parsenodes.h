@@ -1200,6 +1200,17 @@ typedef struct AlterTableCmd	/* one subcommand of an ALTER TABLE */
 	List	   *partoids;		/* If applicable, OIDs of partition part tables */
 } AlterTableCmd;
 
+
+typedef struct SetDistributionCmd 
+{
+	NodeTag		type;
+	int	        backendId;     /* backend ID on QD */
+	List	   *relids;            /* oid of relations(partitions) which have related temporary table */
+	List	   *indexOidMap;       /* the map between relation oid and index oid */
+	List	   *hiddenTypes;       /* the types need to build for dropped column */
+} SetDistributionCmd;
+
+
 typedef enum AlterPartitionIdType
 {
 	AT_AP_IDNone,				/* no ID */

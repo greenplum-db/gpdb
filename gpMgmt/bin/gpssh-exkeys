@@ -522,7 +522,11 @@ try:
     localhosts = []
     for hostname in (socket.gethostname(), socket.getfqdn()):
         if addHost(hostname, localhosts, True):
-            (primary, aliases, ipaddrs) = socket.gethostbyaddr(hostname)
+            try:
+                (primary, aliases, ipaddrs) = socket.gethostbyaddr(hostname)
+            except Exception, e:
+                print u'Problem getting hostname for {0}: {1}'.format(hostname, e)
+                raise
             addHost(primary, localhosts, True)
             for alias in aliases:
                 addHost(alias, localhosts, True)

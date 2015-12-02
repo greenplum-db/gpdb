@@ -1656,6 +1656,9 @@ _outNode(StringInfo str, void *obj)
 			case T_AlterTableCmd:
 				_outAlterTableCmd(str, obj);
 				break;
+			case T_SetDistributionCmd:
+				_outSetDistributionCmd(str, obj);
+				break;
 			case T_InheritPartitionCmd:
 				_outInheritPartitionCmd(str, obj);
 				break;

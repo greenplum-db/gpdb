@@ -10,7 +10,6 @@
 #include "storage/gp_compress.h"
 #include "cdb/cdbappendonlystorage_int.h"
 #include "cdb/cdbappendonlystorage.h"
-#include "utils/pg_crc.h"
 #include "utils/guc.h"
 
 int32 AppendOnlyStorage_GetUsableBlockSize(int32 configBlockSize)

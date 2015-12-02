@@ -426,10 +426,11 @@ ReadControlFile(void)
 	  ((ControlFileData *) buffer)->pg_control_version == PG_CONTROL_VERSION)
 	{
 		/* Check the CRC. */
-		crc = crc32c(crc32cInit(), buffer, offsetof(ControlFileData, crc));
-		crc32cFinish(crc);
+		INIT_CRC32C(crc);
+		COMP_CRC32C(crc, buffer, offsetof(ControlFileData, crc));
+		FIN_CRC32C(crc);
 
-		if (EQ_CRC32(crc, ((ControlFileData *) buffer)->crc))
+		if (EQ_CRC32C(crc, ((ControlFileData *) buffer)->crc))
 		{
 			/* Valid data... */
 			memcpy(&ControlFile, buffer, sizeof(ControlFile));
@@ -635,15 +636,9 @@ RewriteControlFile(void)
 	ControlFile.xlog_seg_size = XLogSegSize;
 
 	/* Contents are protected with a CRC */
-	ControlFile.crc = crc32c(crc32cInit(), &ControlFile, offsetof(ControlFileData, crc));
-	crc32cFinish(ControlFile.crc);
-	/*
-	INIT_CRC32(ControlFile.crc);
-	COMP_CRC32(ControlFile.crc,
-			   (char *) &ControlFile,
-			   offsetof(ControlFileData, crc));
-	FIN_CRC32(ControlFile.crc);
-	*/
+	INIT_CRC32C(ControlFile.crc);
+	COMP_CRC32C(ControlFile.crc, &ControlFile, offsetof(ControlFileData, crc));
+	FIN_CRC32C(ControlFile.crc);
 
 	/*
 	 * We write out PG_CONTROL_SIZE bytes into pg_control, zero-padding the
@@ -890,16 +885,10 @@ WriteEmptyXLOG(void)
 	memcpy(XLogRecGetData(record), &ControlFile.checkPointCopy,
 		   sizeof(CheckPoint));
 
-	crc = crc32c(crc32cInit(), &ControlFile.checkPointCopy, sizeof(CheckPoint));
-	crc = crc32c(crc, (char *) record + sizeof(pg_crc32), SizeOfXLogRecord - sizeof(pg_crc32));
-	crc32cFinish(crc);
-	/*
-	INIT_CRC32(crc);
-	COMP_CRC32(crc, &ControlFile.checkPointCopy, sizeof(CheckPoint));
-	COMP_CRC32(crc, (char *) record + sizeof(pg_crc32),
-			   SizeOfXLogRecord - sizeof(pg_crc32));
-	FIN_CRC32(crc);
-	*/
+	INIT_CRC32C(crc);
+	COMP_CRC32C(crc, &ControlFile.checkPointCopy, sizeof(CheckPoint));
+	COMP_CRC32C(crc, (char *) record + sizeof(pg_crc32), SizeOfXLogRecord - sizeof(pg_crc32));
+	FIN_CRC32C(crc);
 	record->xl_crc = crc;
 
 	/* 

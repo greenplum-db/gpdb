@@ -601,10 +601,8 @@ SELECT user_relns() AS user_relns
  timetz_tbl
  tinterval_tbl
  toyemp
- union_quals1
- union_quals2
  varchar_tbl
-(100 rows)
+(98 rows)
 
 SELECT name(equipment(hobby_construct(text 'skywalking', text 'mer')));
  name 

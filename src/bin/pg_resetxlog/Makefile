@@ -21,18 +21,12 @@ LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl
 
 override CPPFLAGS += -DFRONTEND
 
-OBJS= pg_resetxlog.o pg_crc.o crc32c.o $(WIN32RES)
+OBJS= pg_resetxlog.o $(WIN32RES)
 
 all: submake-libpgport pg_resetxlog
 
 pg_resetxlog: $(OBJS)
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) $(LIBS) -o $@$(X)
-
-pg_crc.c: $(top_srcdir)/src/backend/utils/hash/pg_crc.c
-	rm -f $@ && $(LN_S) $< .
-	
-crc32c.c: $(top_srcdir)/src/backend/utils/hash/crc32c.c
-	rm -f $@ && $(LN_S) $< .
 
 install: all installdirs
 	$(INSTALL_PROGRAM) pg_resetxlog$(X) '$(DESTDIR)$(bindir)/pg_resetxlog$(X)'
@@ -44,4 +38,4 @@ uninstall:
 	rm -f '$(DESTDIR)$(bindir)/pg_resetxlog$(X)'
 
 clean distclean maintainer-clean:
-	rm -f pg_resetxlog$(X) $(OBJS) pg_crc.c crc32c.c
+	rm -f pg_resetxlog$(X) $(OBJS)

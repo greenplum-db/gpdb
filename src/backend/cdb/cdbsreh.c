@@ -976,8 +976,9 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 	ErrorLogFileName(filename, MyDatabaseId, cdbsreh->relid);
 	tuple = FormErrorTuple(cdbsreh);
 
-	crc = crc32c(crc32cInit(), tuple->t_data, tuple->t_len);
-	crc32cFinish(crc);
+	INIT_CRC32C(crc);
+	COMP_CRC32C(crc, tuple->t_data, tuple->t_len);
+	FIN_CRC32C(crc);
 
 	LWLockAcquire(ErrorLogLock, LW_EXCLUSIVE);
 	fp = AllocateFile(filename, "a");
@@ -1208,10 +1209,11 @@ gp_read_error_log(PG_FUNCTION_ARGS)
 		 */
 		if (HeapTupleIsValid(tuple))
 		{
-			crc = crc32c(crc32cInit(), tuple->t_data, tuple->t_len);
-			crc32cFinish(crc);
+			INIT_CRC32C(crc);
+			COMP_CRC32C(crc, tuple->t_data, tuple->t_len);
+			FIN_CRC32C(crc);
 
-			if (!EQ_CRC32(crc, written_crc))
+			if (!EQ_CRC32C(crc, written_crc))
 			{
 				elog(LOG, "incorrect checksum in error log %s",
 						  context->filename);

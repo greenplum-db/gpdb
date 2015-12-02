@@ -11,7 +11,7 @@ dnl your responsibility whether the result works or not.])])
 AC_COPYRIGHT([Copyright (c) 1996-2010, PostgreSQL Global Development Group])
 AC_CONFIG_SRCDIR([gpfdist.c])
 AC_CONFIG_AUX_DIR(config)
-AC_PREFIX_DEFAULT(/usr/local/pgsql)
+AC_PREFIX_DEFAULT(/usr/local/gpdb)
 AC_SUBST(configure_args, [$ac_configure_args])
 AC_CANONICAL_HOST
 

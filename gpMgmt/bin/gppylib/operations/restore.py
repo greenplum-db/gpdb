@@ -38,25 +38,31 @@ POST_DATA_SUFFIX = '_post_data'
 
 # TODO: use CLI-agnostic custom exceptions instead of ExceptionNoStackTraceNeeded
 
-def update_ao_stat_func(conn, schema, table, counter, batch_size):
-    qry = "SELECT * FROM gp_update_ao_master_stats('%s.%s')" % (schema, table)
+def update_ao_stat_func(conn, ao_table, counter, batch_size):
+    qry = "SELECT * FROM gp_update_ao_master_stats('%s')" % pg.escape_string(ao_table)
     rows = execSQLForSingleton(conn, qry)
     if counter % batch_size == 0:
         conn.commit()
 
-def update_ao_statistics(master_port, dbname):
+def update_ao_statistics(master_port, dbname, restored_tables):
     qry = """SELECT c.relname,n.nspname
-                      FROM pg_class c, pg_namespace n
-                      WHERE c.relnamespace=n.oid
-                      AND (c.relstorage='a' OR c.relstorage='c')"""
+             FROM pg_class c, pg_namespace n
+             WHERE c.relnamespace=n.oid
+                 AND (c.relstorage='a' OR c.relstorage='c')"""
 
     conn = None
     counter = 1
     try:
         results = execute_sql(qry, master_port, dbname)
+        ao_tables = ['%s.%s' % (sch, tbl) for (tbl, sch) in results]
+        restored_ao_tables = set(ao_tables).intersection(restored_tables)
+        if not restored_ao_tables:
+            logger.info("No AO/CO tables restored, skipping statistics update...")
+            return
+
         with dbconn.connect(dbconn.DbURL(port=master_port, dbname=dbname)) as conn:
-            for (tbl, sch) in results:
-                update_ao_stat_func(conn, sch, tbl, counter, batch_size=1000)
+            for ao_table in sorted(restored_ao_tables):
+                update_ao_stat_func(conn, ao_table, counter, batch_size=1000)
                 counter = counter + 1
             conn.commit()
     except Exception as e:
@@ -238,38 +244,6 @@ def validate_restore_tables_list(plan_file_contents, restore_tables):
 
     if invalid_tables != []:
         raise Exception('Invalid tables for -T option: The following tables were not found in plan file : "%s"' % (invalid_tables))
-
-def restore_incremental_data_only(master_datadir, backup_dir, dump_dir, dump_prefix, timestamp,
-                                  restore_tables, redirected_restore_db, report_status_dir,
-                                  ddboost=False, netbackup_service_host=None, netbackup_block_size=None,
-                                  change_schema=None):
-    restore_data = False
-    plan_file_items = get_plan_file_contents(master_datadir, backup_dir, timestamp, dump_dir, dump_prefix)
-    table_file = None
-    table_files = []
-
-    validate_restore_tables_list(plan_file_items, restore_tables)
-
-    for (ts, table_list) in plan_file_items:
-        if table_list:
-            restore_data = True
-            table_file = get_restore_table_list(table_list.split(','), restore_tables)
-            if table_file is None:
-                continue
-            cmd = _build_gpdbrestore_cmd_line(ts, table_file, backup_dir, redirected_restore_db, report_status_dir, dump_prefix, ddboost, netbackup_service_host,
-                                              netbackup_block_size, change_schema)
-            logger.info('Invoking commandline: %s' % cmd)
-            Command('Invoking gpdbrestore', cmd).run(validateAfter=True)
-            table_files.append(table_file)
-
-    if not restore_data:
-        raise Exception('There were no tables to restore. Check the plan file contents for restore timestamp %s' % timestamp)
-
-    for table_file in table_files:
-        if table_file:
-            os.remove(table_file)
-
-    return True
 
 #NetBackup related functions
 def restore_state_files_with_nbu(master_datadir, backup_dir, dump_dir, dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size):
@@ -517,21 +491,7 @@ class RestoreDatabase(Operation):
 
         if begin_incremental:
             logger.info("Running data restore")
-            restore_incremental_data_only(self.master_datadir,
-                                          self.backup_dir,
-                                          self.dump_dir,
-                                          self.dump_prefix,
-                                          self.restore_timestamp,
-                                          self.restore_tables,
-                                          self.redirected_restore_db,
-                                          self.report_status_dir,
-                                          self.ddboost,
-                                          self.netbackup_service_host,
-                                          self.netbackup_block_size,
-                                          self.change_schema)
-
-            logger.info("Updating AO/CO statistics on master")
-            update_ao_statistics(self.master_port, restore_db)
+            self.restore_incremental_data_only(restore_db)
         else:
             table_filter_file = self.create_filter_file() # returns None if nothing to filter
 
@@ -643,6 +603,48 @@ class RestoreDatabase(Operation):
             run_pool_command(addresses, cmd, self.batch_default, check_results=False)
         except Exception as e:
             logger.info("cleaning up filter table list file failed: %s" % e.__str__())
+
+    def restore_incremental_data_only(self, restore_db):
+        restore_data = False
+        plan_file_items = get_plan_file_contents(self.master_datadir, self.backup_dir,
+                                                 self.restore_timestamp, self.dump_dir,
+                                                 self.dump_prefix)
+        table_file = None
+        table_files = []
+        restored_tables = []
+
+        validate_restore_tables_list(plan_file_items, self.restore_tables)
+
+        for (ts, table_list) in plan_file_items:
+            if table_list:
+                restore_data = True
+                table_file = get_restore_table_list(table_list.split(','), self.restore_tables)
+                if table_file is None:
+                    continue
+                cmd = _build_gpdbrestore_cmd_line(ts, table_file, self.backup_dir,
+                                                  self.redirected_restore_db,
+                                                  self.report_status_dir, self.dump_prefix,
+                                                  self.ddboost, self.netbackup_service_host,
+                                                  self.netbackup_block_size, self.change_schema)
+                logger.info('Invoking commandline: %s' % cmd)
+                Command('Invoking gpdbrestore', cmd).run(validateAfter=True)
+                table_files.append(table_file)
+                restored_tables.extend(get_restore_tables_from_table_file(table_file))
+
+        if not restore_data:
+            raise Exception('There were no tables to restore. Check the plan file contents for restore timestamp %s' % self.restore_timestamp)
+
+        if not self.no_ao_stats:
+            logger.info("Updating AO/CO statistics on master")
+            update_ao_statistics(self.master_port, restore_db, restored_tables)
+        else:
+            logger.info("noaostats enabled. Skipping update of AO/CO statistics on master.")
+
+        for table_file in table_files:
+            if table_file:
+                os.remove(table_file)
+
+        return True
 
     def _restore_global(self, restore_timestamp, master_datadir, backup_dir):
         logger.info('Commencing restore of global objects')

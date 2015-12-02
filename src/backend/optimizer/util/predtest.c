@@ -475,6 +475,8 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 	Node	   *not_arg;
 	bool		result;
 
+	CHECK_FOR_INTERRUPTS();
+
 	/* skip through RestrictInfo */
 	Assert(clause != NULL);
 	if (IsA(clause, RestrictInfo))

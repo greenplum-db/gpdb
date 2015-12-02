@@ -8198,3 +8198,28 @@ select count(*) from gp_distribution_policy
 reset enable_indexscan;
 reset enable_seqscan;
 drop table distrib_index_test;
+-- alter partitioned table crash
+-- Alter partitioned table set distributed by will crash when:
+--     1. reorganize = false.
+--     2. table have index.
+--     3. partition table have "with" option.
+drop index if exists distrib_part_test_idx;
+NOTICE:  index "distrib_part_test_idx" does not exist, skipping
+drop table if exists distrib_part_test;
+NOTICE:  table "distrib_part_test" does not exist, skipping
+CREATE TABLE distrib_part_test
+(
+  col1 int,
+  col2 decimal,
+  col3 text,
+  col4 bool
+)
+distributed by (col1)
+partition by list(col2)
+(
+    partition part1 values(1,2,3,4,5,6,7,8,9,10) WITH (appendonly=false )
+);
+NOTICE:  CREATE TABLE will create partition "distrib_part_test_1_prt_part1" for table "distrib_part_test"
+create index distrib_part_test_idx on distrib_part_test(col1);
+NOTICE:  building index for child partition "distrib_part_test_1_prt_part1"
+ALTER TABLE public.distrib_part_test SET with (reorganize=false) DISTRIBUTED RANDOMLY;

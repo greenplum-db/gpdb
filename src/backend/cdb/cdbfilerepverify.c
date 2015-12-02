@@ -6199,7 +6199,7 @@ int FileRepMirror_CompareSummaryItem(
 		if (doHash)
 		{
 			//NEW_HASH
-			hashcode = crc32cInit();
+			INIT_CRC32C(hashcode);
 		}
 
 		verifyLog(logControl,
@@ -6268,10 +6268,7 @@ int FileRepMirror_CompareSummaryItem(
 				if (doHash)
 				{
 					//NEW_HASH
-					hashcode = crc32c(
-						hashcode,
-						de->d_name,
-						strlen(de->d_name));
+					COMP_CRC32C(hashcode, de->d_name, strlen(de->d_name));
 				}
 
 			} else {
@@ -6283,7 +6280,7 @@ int FileRepMirror_CompareSummaryItem(
 		}
 
 		//NEW_HASH
-		hashcode = crc32cFinish(hashcode);
+		FIN_CRC32C(hashcode);
 
 		FreeDir(dir);
 
@@ -6803,13 +6800,9 @@ FileRepMirror_CompareEnhancedBlockHash(
 			}
 
 			//NEW_HASH
-			hashcode = crc32c(
-				crc32cInit(),
-				buf,
-				dataLength);
-
-			hashcode = crc32cFinish(hashcode);
-
+			INIT_CRC32C(hashcode);
+			COMP_CRC32C(hashcode, buf, dataLength);
+			FIN_CRC32C(hashcode);
 		}
 	}
 
@@ -8402,15 +8395,9 @@ FileRepPrimary_SendEnhancedBlockHashes(
 				}
 				dataToMirror = (char * ) page;
 
-
 				//NEW_HASH
-				hashcode = crc32c(
-					crc32cInit(),
-					dataToMirror,
-					dataLengthLocal);
-
-				hashcode = crc32cFinish(hashcode);
-
+				COMP_CRC32C(hashcode, dataToMirror, dataLengthLocal);
+				FIN_CRC32C(hashcode);
 
 				/*			   relinfo.primaryIdentifier.fileRepFlatFileIdentifier.blockId =
 				 *			   fileOffset;
@@ -8977,7 +8964,7 @@ int FileRepPrimary_ComputeSummaryItemsFromRelFileNodeInfoTable(
 				 * {
 				 * //if do this mirror is always 1 bigger than primary
 				 * for segment 1
-				 * INIT_CRC32(
+				 * INIT_LEGACY_CRC32(
 				 * summaryItemArray[row].summary.fileSummary.fileContentsHashcode);
 				 * }
 				 * else
@@ -9796,10 +9783,8 @@ FillBufferWithDirectoryTreeListing(
 
 	if (doDirectoryHash)
 	{
-
 		//NEW_HASH
-		directoryHashcode = crc32cInit();
-
+		INIT_CRC32C(directoryHashcode);
 	}
 
 	if (strlen(fromBasePath) == 0)
@@ -9967,14 +9952,8 @@ FillBufferWithDirectoryTreeListing(
 			numImmediateChildren++;
 			if (doDirectoryHash)
 			{
-
 				//NEW_HASH
-				directoryHashcode =
-					crc32c(
-						directoryHashcode,
-						de->d_name,
-						strlen(de->d_name));
-
+				COMP_CRC32C(directoryHashcode, de->d_name, strlen(de->d_name));
 			}
 
 			if (wasHandledAlready(
@@ -10065,13 +10044,8 @@ FillBufferWithDirectoryTreeListing(
 			numImmediateChildren++;
 			if (doDirectoryHash)
 			{
-
 				//NEW_HASH
-				directoryHashcode = crc32c(
-						directoryHashcode,
-						de->d_name,
-						strlen(de->d_name));
-
+				COMP_CRC32C(directoryHashcode, de->d_name, strlen(de->d_name));
 			}
 
 			/* TODO -disable this check to see that the database version
@@ -10251,7 +10225,7 @@ FillBufferWithDirectoryTreeListing(
 
 
 	//NEW_HASH
-	directoryHashcode = crc32cFinish(directoryHashcode);
+	FIN_CRC32C(directoryHashcode);
 
 	if (!justCount)
 	{
@@ -10598,7 +10572,7 @@ FileRepVerify_ComputeFileHash(
 	}
 
 	//NEW_HASH
-	*hashcode = crc32cInit();
+	INIT_CRC32C(*hashcode);
 
 	totalDataRead = 0;
 
@@ -10695,17 +10669,14 @@ FileRepVerify_ComputeFileHash(
 		if (dataToInclude > 0)
 		{
 			//NEW_HASH
-			*hashcode =
-				crc32c(*hashcode,
-					   buffer,
-					   dataToInclude);
+			COMP_CRC32C(*hashcode, buffer, dataToInclude);
 		}
 		totalDataRead += dataRead;
 
 	}
 
 	//NEW_HASH
-	*hashcode = crc32cFinish(*hashcode);
+	FIN_CRC32C(*hashcode);
 
 	fclose(f);
 	return STATUS_OK;

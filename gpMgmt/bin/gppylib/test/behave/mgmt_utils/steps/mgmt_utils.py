@@ -37,7 +37,7 @@ from gppylib.test.behave_utils.utils import bring_nic_down, bring_nic_up, run_cm
                                             get_distribution_policy, validate_distribution_policy, cleanup_backup_files, create_schema, drop_schema_if_exists, \
                                             create_mixed_storage_partition, create_external_partition, validate_mixed_partition_storage_types, validate_storage_type, truncate_table, \
                                             get_table_oid, verify_truncate_in_pg_stat_last_operation, verify_truncate_not_in_pg_stat_last_operation, insert_numbers, \
-                                            populate_partition_diff_data_same_eof, populate_partition_same_data, execute_sql, verify_integer_tuple_counts,  validate_no_aoco_stats, \
+                                            populate_partition_diff_data_same_eof, populate_partition_same_data, execute_sql, verify_integer_tuple_counts, validate_aoco_stats, validate_no_aoco_stats, \
                                             check_string_not_present_stdout, clear_all_saved_data_verify_files, copy_file_to_all_db_hosts, validate_num_restored_tables, \
                                             get_partition_list, verify_stats, drop_external_table_if_exists, get_all_hostnames_as_list, get_pid_for_segment, kill_process, get_num_segments, \
                                             check_user_permissions, get_change_tracking_segment_info, add_partition, drop_partition, check_pl_exists, check_constraint_exists, \
@@ -1875,6 +1875,12 @@ def impl(context, dbname, tables):
     tables = tables.split(',')
     for t in tables:
         validate_no_aoco_stats(context, dbname, t.strip())
+
+@then('verify that there are "{tupcount}" tuples in "{dbname}" for table "{tables}"')
+def impl(context, tupcount, dbname, tables):
+    tables = tables.split(',')
+    for t in tables:
+        validate_aoco_stats(context, dbname, t.strip(), tupcount)
 
 @when('the performance timer is started')
 def impl(context):

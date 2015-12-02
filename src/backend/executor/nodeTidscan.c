@@ -164,11 +164,17 @@ TidListCreate(TidScanState *tidstate)
 		}
 		else if (expr && IsA(expr, CurrentOfExpr))
 		{
-			/* 
+			/*
 			 * CURRENT OF must be the only expr. This allows us to avoid
-			 * a repalloc of the tidList. 
+			 * a repalloc of the tidList.
+			 * The following code is similar to CurrentOfExpr node's evalfunc
+			 * ExecEvalCurrentOfExpr. This part only peeks into CurrentOfExpr
+			 * and gets the tableoid, gp_segment_id and ctid whereas ExecEvalCurrentOfExpr is evaluated
+			 * like any other WHERE clause. We could potentially push down
+			 * CURRENT OF predicate to TID Scan but it seems not to be worth
+			 * the effort.
 			 */
-			Insist(list_length(evalList) == 1);	
+			Insist(list_length(evalList) == 1);
 			CurrentOfExpr *cexpr = (CurrentOfExpr *) expr;
 
 			if (cexpr->gp_segment_id == Gp_segment)
@@ -183,7 +189,7 @@ TidListCreate(TidScanState *tidstate)
 					cexpr->tableoid == RelationGetRelid(tidstate->ss.ss_currentRelation))
 					tidList[numTids++] = cexpr->ctid;
 			}
-		} 
+		}
 		else
 			elog(ERROR, "could not identify CTID expression");
 	}
@@ -594,15 +600,15 @@ void
 initGpmonPktForTidScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
 {
 	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, TidScan));
-	
+
 	{
 		RangeTblEntry *rte = rt_fetch(((TidScan *)planNode)->scan.scanrelid,
 									  estate->es_range_table);
 		char schema_rel_name[SCAN_REL_NAME_BUF_SIZE] = {0};
-		
+
 		Assert(GPMON_TIDSCAN_TOTAL <= (int)GPMON_QEXEC_M_COUNT);
 		InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate, PMNT_TidScan,
-							 (int64)planNode->plan_rows, 
+							 (int64)planNode->plan_rows,
 							 GetScanRelNameGpmon(rte->relid, schema_rel_name));
 	}
 }

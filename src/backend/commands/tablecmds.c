@@ -3935,10 +3935,9 @@ ATController(Relation rel, List *cmds, bool recurse,
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		List *umap = NIL; /* the full OID map for all relations */
-		ListCell *lc;
-		AlterTableCmd *mastercmd = NULL; /* the command which was expanded */
-
+		AlterTableCmd *masterCmd = NULL; /* the command which was expanded */
+		SetDistributionCmd *masterSetCmd = NULL; 
+		ListCell *lc = NULL;
 		/* 
 		 * Iterate over the work queue looking for SET WITH DISTRIBUTED
 		 * statements.
@@ -3957,49 +3956,38 @@ ATController(Relation rel, List *cmds, bool recurse,
 
 				if (cmd->subtype == AT_SetDistributedBy)
 				{
-					if (!mastercmd)
+					if (!masterCmd)
 					{
 						Assert(tab->relid == relid);
-						mastercmd = cmd;
+						masterCmd = cmd;
+						masterSetCmd = lsecond((List *)cmd->def);
+						continue;
 					}
 
 					/*
 					 * cmd->def stores the data we're sending to the QEs.
 					 * The second element is where we stash QE data to drive
-					 * the command. The second element of qe_data is our
-					 * OID map. See ATExecSetDistributedBy().
-					 *
-					 * Yes, this is begging to be improved.
+					 * the command.
 					 */
 					List *data = (List *)cmd->def;
-					List *qe_data = lsecond(data);
+					SetDistributionCmd *qeData = lsecond(data);
 
-					if (qe_data && list_length(qe_data) >= 2)
+					int qeBackendId = qeData->backendId;
+					if (qeBackendId != 0)
 					{
-						List *oidmap = lsecond(qe_data);
+						if(masterSetCmd->backendId == 0)
+						{
+							masterSetCmd->backendId = qeBackendId;
+						}
 
-						umap = list_concat(umap, oidmap);
+						List *qeRelids = qeData->relids;
+						masterSetCmd->relids = list_concat(masterSetCmd->relids, qeRelids);
+						List *qeIdxOidMap = qeData->indexOidMap;
+						masterSetCmd->indexOidMap = list_concat(masterSetCmd->indexOidMap, qeIdxOidMap);
+						List *qeHiddenTypes = qeData->hiddenTypes;
+						masterSetCmd->hiddenTypes = list_concat(masterSetCmd->hiddenTypes, qeHiddenTypes);
 					}
 				}
-			}
-		}
-
-		/* Finally, push it all back into the master command */
-		if (mastercmd && umap)
-		{
-			List *qe_data = lsecond((List *)mastercmd->def);
-
-			if (list_length(qe_data) >= 2)
-				lsecond(qe_data) = umap;
-			else if (list_length(qe_data) == 1)
-			{
-				qe_data = lappend(qe_data, umap);
-
-				/* 
-				 * We've changed the pointer, save it back to the master
-				 * definition.
-				 */
-				lsecond((List *)mastercmd->def) = qe_data;
 			}
 		}
 	}
@@ -13295,7 +13283,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	Oid			tmprelid;
 	Oid			tarrelid = RelationGetRelid(rel);
 	List	   *oid_map = NIL;
-	List	   *qe_data = NIL; /* data to pass to QEs */
 	bool        rand_pol = false;
 	bool        force_reorg = false;
 	Datum		newOptions = PointerGetDatum(NULL);
@@ -13306,6 +13293,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	List	   *hidden_types = NIL; /* types we need to build for dropped columns */
 	int         nattr; /* number of attributes */
 	bool useExistingColumnAttributes = true;
+	SetDistributionCmd *qe_data = NULL; 
 
 	/* Permissions checks */
 	if (!pg_class_ownercheck(RelationGetRelid(rel), GetUserId()))
@@ -13506,6 +13494,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 				 * (see the non-random distribution case below for why.
 				 */
 				heap_close(rel, NoLock);
+				lsecond(lprime) = makeNode(SetDistributionCmd); 
 				goto l_distro_fini;
 			}
 		}
@@ -13634,7 +13623,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 						heap_close(rel, NoLock);
 						/* Tell QEs to do nothing */
 						linitial(lprime) = NULL;
-						lsecond(lprime) = list_make1(NULL);
+						lsecond(lprime) = makeNode(SetDistributionCmd); 
 
 						return;
 						/* don't goto l_distro_fini -- didn't do anything! */
@@ -13688,7 +13677,9 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		 * Step (d) - tell the seg nodes about the temporary relation. This
 		 * involves stomping on the node we've been given
 		 */
-		qe_data = lappend(qe_data, makeInteger(MyBackendId));
+		qe_data = makeNode(SetDistributionCmd);
+		qe_data->backendId = MyBackendId;
+		qe_data->relids = list_make1_oid(tarrelid); 
 	}
 	else
 	{
@@ -13714,18 +13705,23 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			reorg = false;
 
 		/* Set to random distribution on master with no reorganisation */
-		if (!reorg && list_length(qe_data) == 1 && linitial(qe_data) == NULL)
+		if (!reorg && qe_data->backendId == 0)
 		{
 			/* caller expects rel to be closed for this AT type */
 			heap_close(rel, NoLock);
 			goto l_distro_fini;			
 		}
 
-		backend_id = intVal(linitial(qe_data));
+		if (list_find_oid(qe_data->relids, tarrelid) < 0)
+		{
+			heap_close(rel, NoLock);
+			goto l_distro_fini;			
+		}
+
+		backend_id = qe_data->backendId;
 		tmprv = make_temp_table_name(rel, backend_id);
-		oid_map = lsecond(qe_data);
-		if (list_length(qe_data) == 3)
-			hidden_types = lthird(qe_data);
+		oid_map = qe_data->indexOidMap;
+		hidden_types = qe_data->hiddenTypes;
 
 		if (list_length(lprime) == 3)
 		{
@@ -13846,10 +13842,10 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		if (change_policy)
 			GpPolicyReplace(tarrelid, policy);
 
-		qe_data = lappend(qe_data, oid_map);
+		qe_data->indexOidMap = oid_map;
 
 		if (hidden_types)
-			qe_data = lappend(qe_data, hidden_types);
+			qe_data->hiddenTypes = hidden_types;
 		linitial(lprime) = lwith;
 		lsecond(lprime) = qe_data;
 		lprime = lappend(lprime, makeInteger(is_ao ? (is_aocs ? 2 : 1) : 0));

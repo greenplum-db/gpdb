@@ -588,7 +588,7 @@ PACKAGE_BUGREPORT='support@greenplum.com'
 PACKAGE_URL=''
 
 ac_unique_file="gpfdist.c"
-ac_default_prefix=/usr/local/pgsql
+ac_default_prefix=/usr/local/gpdb
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>

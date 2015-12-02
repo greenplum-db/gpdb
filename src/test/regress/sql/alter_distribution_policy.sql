@@ -2134,3 +2134,25 @@ select count(*) from gp_distribution_policy
 reset enable_indexscan;
 reset enable_seqscan;
 drop table distrib_index_test;
+
+-- alter partitioned table crash
+-- Alter partitioned table set distributed by will crash when:
+--     1. reorganize = false.
+--     2. table have index.
+--     3. partition table have "with" option.
+drop index if exists distrib_part_test_idx;
+drop table if exists distrib_part_test;
+CREATE TABLE distrib_part_test 
+(
+  col1 int,
+  col2 decimal,
+  col3 text,
+  col4 bool
+)
+distributed by (col1)
+partition by list(col2)
+(
+    partition part1 values(1,2,3,4,5,6,7,8,9,10) WITH (appendonly=false )
+);
+create index distrib_part_test_idx on distrib_part_test(col1);
+ALTER TABLE public.distrib_part_test SET with (reorganize=false) DISTRIBUTED RANDOMLY;

@@ -14,6 +14,6 @@ include $(top_builddir)/src/Makefile.global
 
 #override CPPFLAGS :=-msse4.2 $(CPPFLAGS)
 
-OBJS = dynahash.o hashfn.o pg_crc.o crc32c.o
+OBJS = dynahash.o hashfn.o pg_crc.o
 
 include $(top_srcdir)/src/backend/common.mk

@@ -1,0 +1,200 @@
+-- Additional GPDB-added tests for UNION
+create temp table t_union1 (a int, b int);
+select distinct a, null as c from t_union1 union select a, b from t_union1;
+ a | c 
+---+---
+(0 rows)
+
+drop table t_union1;
+select null union select distinct null;
+ ?column? 
+----------
+ 
+(1 row)
+
+select 1 union select distinct null;
+ ?column? 
+----------
+         
+        1
+(2 rows)
+
+select 1 a, NULL b, NULL c UNION SELECT 2, 3, NULL UNION SELECT 3, NULL, 4;
+ a | b | c 
+---+---+---
+ 1 |   |  
+ 2 | 3 |  
+ 3 |   | 4
+(3 rows)
+
+select ARRAY[1, 2, 3] union select distinct null;
+  array  
+---------
+ 
+ {1,2,3}
+(2 rows)
+
+select 1 intersect (select 1, 2 union all select 3, 4);
+ERROR:  each INTERSECT query must have the same number of columns
+select 1 a, row_number() over (partition by 'a') union all (select 1 a , 2 b);
+ a | row_number 
+---+------------
+ 1 |          1
+ 1 |          2
+(2 rows)
+
+-- This can preserve domain types, but we keep compatibility for now
+-- See MPP-7509
+select pg_typeof(a) from (select 'a'::information_schema.sql_identifier a union all
+select 'b'::information_schema.sql_identifier)a;
+     pg_typeof     
+-------------------
+ character varying
+ character varying
+(2 rows)
+
+(select * from (
+     (select '1' as a union select null)
+     union
+     (select 1 union select distinct null)
+   )s) 
+  union
+  (select * from (
+     (select '1' union select null)
+     union
+     (select 1 union select distinct null)
+  )s2);
+ a 
+---
+  
+ 1
+(2 rows)
+
+-- Yet, we keep behaviors on text-like columns
+select pg_typeof(a) from(select 'foo' a union select 'foo'::name)s;
+ pg_typeof 
+-----------
+ name
+(1 row)
+
+select pg_typeof(a) from(select 1 x, 'foo' a union
+    select 1, 'foo' union select 1, 'foo'::name)s;
+ pg_typeof 
+-----------
+ text
+(1 row)
+
+select pg_typeof(a) from(select 1 x, 'foo' a union
+    (select 1, 'foo' union select 1, 'foo'::name))s;
+ pg_typeof 
+-----------
+ name
+(1 row)
+
+CREATE TABLE union_ctas (a, b) AS SELECT 1, 2 UNION SELECT 1, 1 UNION SELECT 1, 1;
+SELECT * FROM union_ctas;
+ a | b 
+---+---
+ 1 | 1
+ 1 | 2
+(2 rows)
+
+DROP TABLE union_ctas;
+-- MPP-21075: push quals below union
+CREATE TABLE union_quals1 (a, b) AS SELECT i, i%2 from generate_series(1,10) i;
+CREATE TABLE union_quals2 (a, b) AS SELECT i%2, i from generate_series(1,10) i;
+SELECT * FROM (SELECT a, b from union_quals1 UNION SELECT b, a from union_quals2) as foo(a,b) where a > b order by a;
+ a  | b 
+----+---
+  2 | 0
+  3 | 1
+  4 | 0
+  5 | 1
+  6 | 0
+  7 | 1
+  8 | 0
+  9 | 1
+ 10 | 0
+(9 rows)
+
+SELECT * FROM (SELECT a, max(b) over() from union_quals1 UNION SELECT * from union_quals2) as foo(a,b) where b > 6 order by a,b;
+ a | b  
+---+----
+ 0 |  8
+ 0 | 10
+ 1 |  7
+ 1 |  9
+(4 rows)
+
+-- MPP-22266: different combinations of set operations and distinct
+select * from ((select 1, 'A' from (select distinct 'B') as foo) union (select 1, 'C')) as bar;
+ ?column? | ?column? 
+----------+----------
+        1 | A
+        1 | C
+(2 rows)
+
+select 1 union (select distinct null union select '10');
+ ?column? 
+----------
+        1
+       10
+         
+(3 rows)
+
+select 1 union (select 2 from (select distinct null union select 1) as x);
+ ?column? 
+----------
+        1
+        2
+(2 rows)
+
+select 1 union (select distinct '10' from (select 1, 3.0 union select distinct 2, null) as foo);
+ ?column? 
+----------
+        1
+       10
+(2 rows)
+
+select distinct a from (select 'A' union select 'B') as foo(a);
+ a 
+---
+ A
+ B
+(2 rows)
+
+select distinct a from (select distinct 'A' union select 'B') as foo(a);
+ a 
+---
+ A
+ B
+(2 rows)
+
+select distinct a from (select distinct 'A' union select distinct 'B') as foo(a);
+ a 
+---
+ A
+ B
+(2 rows)
+
+select distinct a from (select  'A' from (select distinct 'C' ) as bar union select distinct 'B') as foo(a);
+ a 
+---
+ A
+ B
+(2 rows)
+
+select distinct a from (select  distinct 'A' from (select distinct 'C' ) as bar union select distinct 'B') as foo(a);
+ a 
+---
+ A
+ B
+(2 rows)
+
+select distinct a from (select  distinct 'A' from (select 'C' from (select distinct 'D') as bar1 ) as bar union select distinct 'B') as foo(a);
+ a 
+---
+ A
+ B
+(2 rows)
+

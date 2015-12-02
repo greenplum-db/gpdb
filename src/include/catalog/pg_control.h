@@ -18,7 +18,7 @@
 #include <time.h>
 
 #include "access/xlogdefs.h"
-#include "utils/pg_crc.h"
+#include "port/pg_crc32c.h"
 
 
 /*
@@ -184,7 +184,7 @@ typedef struct ControlFileData
 	char		lc_ctype[LOCALE_NAME_BUFLEN];
 
 	/* CRC of all above ... MUST BE LAST! */
-	pg_crc32	crc;
+	pg_crc32c	crc;
 } ControlFileData;
 
 /*
