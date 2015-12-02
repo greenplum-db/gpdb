@@ -5,6 +5,7 @@ from gppylib.commands.gp import GpStart, chk_local_db_running
 from gppylib.commands.base import Command, ExecutionError, REMOTE
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray, MODE_SYNCHRONIZED
+from pygresql import pg
 
 PARTITION_START_DATE = '2010-01-01'
 PARTITION_END_DATE = '2013-01-01'
@@ -1324,6 +1325,10 @@ def verify_restored_table_is_analyzed(context, table_name, dbname):
     ROW_COUNT_SQL = """SELECT count(*) FROM %s""" % table_name
     if table_name.find('.') != -1:
         schema_name,table_name = table_name.split(".")
+    else:
+        schema_name = 'public'
+    schema_name = pg.escape_string(schema_name)
+    table_name = pg.escape_string(table_name)
     ROW_COUNT_PG_CLASS_SQL = """SELECT reltuples FROM pg_class WHERE relname = '%s'
                                 AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = '%s')""" % (table_name, schema_name)
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
