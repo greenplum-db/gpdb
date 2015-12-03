@@ -417,6 +417,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 grant select on foo_p to part_role;
 revoke all on bar_p from part_role;
+NOTICE:  no privileges could be revoked from role part_role on object bar_p
 select has_table_privilege('part_role', 'foo_p_1_prt_6'::regclass, 'select');
  has_table_privilege 
 ---------------------
@@ -2728,6 +2729,10 @@ NOTICE:  CREATE TABLE will create partition "a_1_prt_g" for table "a"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_g_2_prt_h" for table "a_1_prt_g"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_g_2_prt_h_3_prt_i" for table "a_1_prt_g_2_prt_h"
 revoke all on a from public;
+NOTICE:  no privileges could be revoked from role PUBLIC on object a_1_prt_g
+NOTICE:  no privileges could be revoked from role PUBLIC on object a_1_prt_g_2_prt_h
+NOTICE:  no privileges could be revoked from role PUBLIC on object a_1_prt_g_2_prt_h_3_prt_i
+NOTICE:  no privileges could be revoked from role PUBLIC on object a
 grant insert on a to part_role;
 -- revoke it from one existing partition, to make sure we don't screw up
 -- existing permissions
@@ -2792,6 +2797,9 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 NOTICE:  CREATE TABLE will create partition "a_1_prt_f_1" for table "a"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_f_2" for table "a"
 revoke all on a from public;
+NOTICE:  no privileges could be revoked from role PUBLIC on object a_1_prt_f_1
+NOTICE:  no privileges could be revoked from role PUBLIC on object a_1_prt_f_2
+NOTICE:  no privileges could be revoked from role PUBLIC on object a
 grant insert on a to part_role;
 alter table a split partition for(rank(1)) at (date '2006-01-01')
   into (partition f, partition g);

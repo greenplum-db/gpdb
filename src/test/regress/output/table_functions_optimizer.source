@@ -3113,6 +3113,7 @@ DEALLOCATE p6;
 -- Cleanup
 -- =======
 DROP SCHEMA table_function CASCADE;
+NOTICE:  drop cascades to function noop_project(anytable)
 NOTICE:  drop cascades to function ud_project(anytable)
 NOTICE:  drop cascades to function ud_describe(internal)
 NOTICE:  drop cascades to function project(anytable,integer)
