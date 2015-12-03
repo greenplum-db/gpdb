@@ -41,10 +41,13 @@ to the segments, and collects the results.
   supported) into your installation
 
   * psi
-  * lockfile
+  * lockfile (>= 0.9.1)
   * paramiko
   * setuptools
   * epydoc
+
+  If necessary, upgrade modules using "pip install --upgrade".
+  pip should be at least version 7.x.x.
 
 
 ## Code layout
