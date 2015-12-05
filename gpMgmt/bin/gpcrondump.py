@@ -738,10 +738,12 @@ class GpCronDump(Operation):
                 raise ExceptionNoStackTraceNeeded('The option --ddboost-config-remove is standalone. It is NOT used in conjunction with any other gocrondump options.')
 
         if self.clear_dumps_only:
+            logger.info('Clearing dumps only...')
             generate_dump_timestamp(self._get_timestamp_object(self.timestamp_key))
             DeleteOldestDumps(master_datadir=self.master_datadir,
                               master_port=self.master_port,
                               dump_dir=self.dump_dir,
+                              clear_dump_num=self.clear_dumps_only,
                               ddboost=self.ddboost).run()
             return
 
@@ -1428,6 +1430,25 @@ class GpCronDump(Operation):
         if default_email is True:
             MailDumpEvent(default_subject, default_msg).run()
 
+def clear_dumps_callback(option, opt_str, value, parser):
+    assert value is None
+    if len(parser.rargs) > 0:
+        value = parser.rargs[0]
+        if value[:1] == "-":
+            value = "1"
+        else:
+            del parser.rargs[:1]
+
+    if value == None:
+        value = "1"
+
+    try:
+        isinstance(int(value), int)
+    except ValueError as e:
+        raise Exception('-o argument is not an integer: %s' % value)
+
+    setattr(parser.values, option.dest, value)
+
 def create_parser():
     parser = OptParser(option_class=OptChecker,
                        version='%prog version $Revision: #5 $',
@@ -1454,7 +1475,7 @@ def create_parser():
                      help="Percentage of disk space to ensure is reserved after dump.")
     addTo.add_option('-c', action='store_true', dest='clear_dumps', default=False,
                      help="Clear old dump directories [default: do not clear]. Will remove the oldest dump directory other than the current dump directory.")
-    addTo.add_option('-o', action='store_true', dest='clear_dumps_only', default=False,
+    addTo.add_option('-o', dest='clear_dumps_only', action="callback", callback=clear_dumps_callback,
                      help="Clear dump files only. Do not run a dump. Like -c, this will clear the oldest dump directory, other than the current dump directory.")
     addTo.add_option('-s', action='append', dest='dump_schema', metavar="<schema name>",
                      help="Dump the schema contained within the database name supplied via -x. Option can be used more than once")

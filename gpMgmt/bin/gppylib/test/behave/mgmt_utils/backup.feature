@@ -1479,22 +1479,55 @@ Feature: Validate command line arguments
         Then the get_partition_state result should contain "pepper, t1, 999999999999999"
 
     @backupfire
-    Scenario: Verify the gpcrondump -o option is not broken
+    Scenario: Test gpcrondump dump deletion (-o option)
         Given the database is running
-        And the database "schematestdb" does not exist
-        And database "schematestdb" exists
-        And there is schema "pepper" exists in "schematestdb"
-        And there is a "ao" table "pepper.ao_table" with compression "None" in "schematestdb" with data
-        And there is a "co" table "pepper.co_table" with compression "None" in "schematestdb" with data
+        And the database "deletedumpdb" does not exist
+        And database "deletedumpdb" exists
+        And there is a "heap" table "public.heap_table" with compression "None" in "deletedumpdb" with data
         And there are no backup files
-        And the user runs "gpcrondump -a -x schematestdb"
+        And the user runs "gpcrondump -a -x deletedumpdb"
         And the full backup timestamp from gpcrondump is stored
         And gpcrondump should return a return code of 0
         And older backup directories "20130101" exists
-        When the user runs "gpcrondump -o" 
+        When the user runs "gpcrondump -o"
         Then gpcrondump should return a return code of 0
         And the dump directories "20130101" should not exist
-        And the dump directory for the stored timestamp should exist 
+        And older backup directories "20130101" exists
+        When the user runs "gpcrondump -o 20130101"
+        Then gpcrondump should return a return code of 0
+        And the dump directories "20130101" should not exist
+        And older backup directories "20130101" exists
+        And older backup directories "20130102" exists
+        When the user runs "gpcrondump -o 2"
+        Then gpcrondump should return a return code of 0
+        And the dump directories "20130101" should not exist
+        And the dump directories "20130102" should not exist
+        And the dump directory for the stored timestamp should exist
+        And the database "deletedumpdb" does not exist
+
+    @backupfire
+    Scenario: Negative test gpcrondump dump deletion (-o option)
+        Given the database is running
+        And the database "deletedumpdb" does not exist
+        And database "deletedumpdb" exists
+        And there is a "heap" table "public.heap_table" with compression "None" in "deletedumpdb" with data
+        And there are no backup files
+        And the user runs "gpcrondump -a -x deletedumpdb"
+        And the full backup timestamp from gpcrondump is stored
+        And gpcrondump should return a return code of 0
+        When the user runs "gpcrondump -o"
+        Then gpcrondump should return a return code of 0
+        And gpcrondump should print No old backup sets to remove to stdout
+        And older backup directories "20130101" exists
+        When the user runs "gpcrondump -o 20130100"
+        Then gpcrondump should return a return code of 0
+        And gpcrondump should print Timestamp dump 20130100 does not exist. to stdout
+        When the user runs "gpcrondump -o 2"
+        Then gpcrondump should return a return code of 0
+        And gpcrondump should print Unable to delete 2 backups.  Only have 1 backups. to stdout
+        When the user runs "gpcrondump -o abc"
+        Then gpcrondump should return a return code of 2
+        And gpcrondump should print -o argument is not an integer: abc to stdout
 
     @backupfire
     Scenario: Verify the gpcrondump -c  option is not broken
