@@ -638,6 +638,10 @@ CREATE VIEW columns AS
            CAST(current_database() AS sql_identifier) AS udt_catalog,
            CAST(coalesce(nbt.nspname, nt.nspname) AS sql_identifier) AS udt_schema,
            CAST(coalesce(bt.typname, t.typname) AS sql_identifier) AS udt_name,
+           CAST(
+             format_type(a.atttypid,t.typtypmod)
+             AS character_data)
+             AS sql_data_type,
 
            CAST(null AS sql_identifier) AS scope_catalog,
            CAST(null AS sql_identifier) AS scope_schema,
