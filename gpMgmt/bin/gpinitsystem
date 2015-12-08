@@ -665,7 +665,7 @@ CHK_LOCALE_KNOWN () {
 			$LOCALE -a >> $LOG_FILE
 			LOG_MSG "[FATAL]:-Unable to locate locale value $LOCALE_SETTING on this host" 1
 			LOG_MSG "[INFO]:-Select another locale value via -n option to this utility" 1
-			LOG_MSG "[INFO]:-Avaliable locale values have been dumped to the log file" 1
+			LOG_MSG "[INFO]:-Available locale values have been dumped to the log file" 1
 			ERROR_EXIT "[FATAL]:-Unable to continue" 2
 		else
 			LOG_MSG "[INFO]:-Locale check passed on this host" 
@@ -677,7 +677,7 @@ CHK_LOCALE_KNOWN () {
 			`$TRUSTED_SHELL $1 "$LOCALE -a"` >> $LOG_FILE
 			LOG_MSG "[FATAL]:-Unable to locate locale value $LOCALE_SETTING on $1" 1
 			LOG_MSG "[INFO]:-Select another locale value via -n option to this utility" 1
-			LOG_MSG "[INFO]:-Avaliable locale values have been dumped to the log file" 1 
+			LOG_MSG "[INFO]:-Available locale values have been dumped to the log file" 1 
 			ERROR_EXIT "[FATAL]:-Unable to continue" 2
 		else
 			LOG_MSG "[INFO]:-Locale check passed on $1" 
