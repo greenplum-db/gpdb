@@ -1799,7 +1799,7 @@ atomic_test(void)
 		int64 result = 0;
 		int64 expected_result = base + inc;
 		elog(DEBUG1, "Before: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
-		result = gp_atomic_add_64(&base, inc);
+		result = gp_atomic_add_int64(&base, inc);
 		elog(DEBUG1, "After: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
 		unit_test_result(result == expected_result && base == expected_result);
 
@@ -1809,7 +1809,7 @@ atomic_test(void)
 		result = 0;
 		expected_result = base + inc;
 		elog(DEBUG1, "Before: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
-		result = gp_atomic_add_64(&base, inc);
+		result = gp_atomic_add_int64(&base, inc);
 		elog(DEBUG1, "After: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
 		unit_test_result(result == expected_result && base == expected_result);
 
@@ -1819,7 +1819,7 @@ atomic_test(void)
 		result = 0;
 		expected_result = base + inc;
 		elog(DEBUG1, "Before: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
-		result = gp_atomic_add_64(&base, inc);
+		result = gp_atomic_add_int64(&base, inc);
 		elog(DEBUG1, "After: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
 		unit_test_result(result == expected_result && base == expected_result);
 
@@ -1829,7 +1829,7 @@ atomic_test(void)
 		result = 0;
 		expected_result = base + inc;
 		elog(DEBUG1, "Before: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
-		result = gp_atomic_add_64(&base, inc);
+		result = gp_atomic_add_int64(&base, inc);
 		elog(DEBUG1, "After: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
 		unit_test_result(result == expected_result && base == expected_result);
 	}

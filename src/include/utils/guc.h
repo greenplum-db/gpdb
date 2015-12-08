@@ -450,6 +450,9 @@ extern bool optimizer_enable_derive_stats_all_groups;
 extern bool optimizer_explain_show_status;
 extern bool optimizer_prefer_scalar_dqa_multistage_agg;
 
+/* Metadata Versioning Guc Variables */
+extern int gp_mdver_loglevel;
+
 /**
  * Enable logging of DPE match in optimizer.
  */

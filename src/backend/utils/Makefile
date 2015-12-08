@@ -10,7 +10,7 @@ include $(top_builddir)/src/Makefile.global
 
 OBJS        = fmgrtab.o session_state.o
 SUBDIRS     = adt cache datumstream error fmgr hash init mb misc mmgr resowner \
-			   resscheduler sort stat time gpmon gp workfile_manager
+			   resscheduler sort stat time gpmon gp workfile_manager mdver
 
 include $(top_srcdir)/src/backend/common.mk
 

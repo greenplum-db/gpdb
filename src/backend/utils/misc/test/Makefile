@@ -2,7 +2,7 @@ subdir=src/backend/utils/misc
 top_builddir=../../../../..
 include $(top_builddir)/src/Makefile.global
 
-TARGETS=guc ps_status bitstream bitmap_compression
+TARGETS=guc ps_status bitstream bitmap_compression atomic
 
 # Objects from backend, which don't need to be mocked but need to be linked.
 common_REAL_OBJS=\
@@ -102,5 +102,10 @@ bitmap_compression_REAL_OBJS=\
 	$(top_srcdir)/src/timezone/strftime.o \
 	$(top_srcdir)/src/backend/utils/mb/wchar.o \
 	$(top_srcdir)/src/backend/utils/mb/mbutils.o
+	
+atomic_REAL_OBJS=$(common_REAL_OBJS) \
+	$(top_srcdir)/src/backend/utils/misc/guc.o \
+	$(top_srcdir)/src/backend/utils/misc/guc_gp.o
+
 
 include $(top_builddir)/src/Makefile.mock

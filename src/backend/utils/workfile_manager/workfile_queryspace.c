@@ -133,7 +133,7 @@ WorkfileQueryspace_Reserve(int64 bytes_to_reserve)
 		return true;
 	}
 
-	int64 total = gp_atomic_add_64(&queryEntry->queryDiskspace, bytes_to_reserve);
+	int64 total = gp_atomic_add_int64(&queryEntry->queryDiskspace, bytes_to_reserve);
 	Assert(total >= (int64) 0);
 
 	if (gp_workfile_limit_per_query == 0)
@@ -151,7 +151,7 @@ WorkfileQueryspace_Reserve(int64 bytes_to_reserve)
 			workfileError = WORKFILE_ERROR_LIMIT_PER_QUERY;
 
 			/* Revert the reserved space */
-			gp_atomic_add_64(&queryEntry->queryDiskspace, - bytes_to_reserve);
+			gp_atomic_add_int64(&queryEntry->queryDiskspace, - bytes_to_reserve);
 			/* Set diskfull to true to stop any further attempts to write more data */
 			WorkfileDiskspace_SetFull(true /* isFull */);
 		}
@@ -187,7 +187,7 @@ WorkfileQueryspace_Commit(int64 commit_bytes, int64 reserved_bytes)
 #if USE_ASSERT_CHECKING
 		int64 total =
 #endif
-		gp_atomic_add_64(&queryEntry->queryDiskspace, (commit_bytes - reserved_bytes));
+		gp_atomic_add_int64(&queryEntry->queryDiskspace, (commit_bytes - reserved_bytes));
 		Assert(total >= (int64) 0);
 	}
 }

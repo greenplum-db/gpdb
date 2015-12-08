@@ -58,7 +58,7 @@ WorkfileSegspace_Reserve(int64 bytes_to_reserve)
 {
 	Assert(NULL != used_segspace);
 
-	int64 total = gp_atomic_add_64(used_segspace, bytes_to_reserve);
+	int64 total = gp_atomic_add_int64(used_segspace, bytes_to_reserve);
 	Assert(total >= (int64) 0);
 
 	if (gp_workfile_limit_per_segment == 0)
@@ -81,7 +81,7 @@ WorkfileSegspace_Reserve(int64 bytes_to_reserve)
 		{
 
 			/* Revert the reserved space */
-			(void) gp_atomic_add_64(used_segspace, - bytes_to_reserve);
+			(void) gp_atomic_add_int64(used_segspace, - bytes_to_reserve);
 
 			CHECK_FOR_INTERRUPTS();
 
@@ -106,7 +106,7 @@ WorkfileSegspace_Reserve(int64 bytes_to_reserve)
 			}
 
 			/* Try to reserve again */
-			total = gp_atomic_add_64(used_segspace, bytes_to_reserve);
+			total = gp_atomic_add_int64(used_segspace, bytes_to_reserve);
 			Assert(total >= (int64) 0);
 
 			if (total <= max_allowed_diskspace)
@@ -150,7 +150,7 @@ WorkfileSegspace_Commit(int64 commit_bytes, int64 reserved_bytes)
 #if USE_ASSERT_CHECKING
 	int64 total = 
 #endif
-	gp_atomic_add_64(used_segspace, (commit_bytes - reserved_bytes));
+	gp_atomic_add_int64(used_segspace, (commit_bytes - reserved_bytes));
 	Assert(total >= (int64) 0);
 }
 

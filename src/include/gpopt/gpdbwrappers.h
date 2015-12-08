@@ -613,6 +613,9 @@ namespace gpdb {
 	// return the number of leaf partition for a given table oid
 	ULONG UlLeafPartitions(Oid oidRelation);
 
+	// Notify Metadata Versioning of a new command starting. Returns true if MDCache should be purged
+	bool FMDVersioningNewCommand(void);
+
 } //namespace gpdb
 
 #define ForEach(cell, l)	\

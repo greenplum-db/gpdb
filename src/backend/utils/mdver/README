@@ -1,0 +1,90 @@
+Metadata Versioning
+===================
+
+Objectives
+----------
+
+Metadata versioning is a component used by the Optimizer to maintain and
+invalidate the content of the Metadata Cache (MD Cache). 
+
+Different backends can check the global generation counter
+
+Overview
+--------
+A global "Generation" counter is stored in shared memory, which reflects the
+current "generation" of the catalog contents. Whenever a catalog change is
+committed by any transaction, the Generation counter is incremented. 
+
+The backend processes running the Optimizer (QDs) check this Generation
+counter at the beginning of each command. If the local Metadata Cache contains
+any cached entries from a different generation, all those entries are discarded.  
+
+Architecture
+------------
+
+Global Cache Generation (GG)
+   An integer counter stored in Shared Memory (SHM). This records the current
+   generation number, and can be read and written atomically by all backends. 
+
+Local Cache Generation (LG)
+   An integer stored inside the Metadata Cache component of a Backend
+   process. This holds the last global generation observed by the backend. This
+   is updated only when a command starts.  
+
+Transaction Dirty (TD)
+   A flag stored in the local memory of the Backend process. This flag
+   is set if the current transaction executed any commands that changed metadata.
+   The flag is reset at the end of the transaction.
+
+MDCache Dirty (MD)
+   A flag stored in the local memory of the backend process. This flag is set
+   when a command changes metadata. At the beginning of the next command, 
+   the entire contents of MDCache is flushed if this flag is set; the flag
+   is then reset. 
+
+Invalidation Translator (IT)
+   A new logical component. This component intercepts all changes to metadata
+   done by a query. When a relevant catalog update is detected, the IT component
+   takes action to record that a new generation id should be generated. 
+
+Functionality
+-------------
+
+Consider a transaction that reads and changes the schema of a table foo and a
+table bar. MDC is the Optimizer MDCache, and the actions described are reading
+schema information from the catalog, and storing them with the current
+version. 
+
+Cmd Id  | Cmd         | Flags       | MD Cache Actions            | LG, GG
+--------+-------------+-------------+-----------------------------+-----------
+cmdId=0 | BEGIN       | TD=f MD=f   |                             | LG=GG=5
+cmdId=1 | READ foo    | TD=f MD=f   | MDC <- (foo, MD(foo_t1))    | LG=GG=5
+cmdId=2 | CHANGE foo  | TD:=t MD:=t | Purge MDC                   | LG=GG=5
+cmdId=3 | CHANGE bar  | TD:=t MD:=t | Purge MDC                   | LG=GG=5
+cmdId=4 | READ foo    | TD=t MD:=f  | MDC <- (foo, MD(foo_t4))    | LG=GG=5
+cmdId=5 | COMMIT      | TD=f MD=f   |                             | GG++; GG=6
+
+1. At the beginning of a transaction, 
+  - set the TD flag to false
+  - set LG = GG. 
+
+2. At the beginning of each command, backend checks if LG != GG or MD = t. If true: 
+  - Purge the contents of MD Cache
+  - Assign LG = GG
+  - Reset MD = f
+
+3. When the Optimizer requests an object metadata, the MD Cache will go to the
+  catalog and request it. It will then store the metadata in the MD Cache.
+
+4. When the Invalidation Translator detects a change to metadata from a command: 
+  - set TD = true
+  - set MD = true
+
+6. When a new read request comes from the Optimizer for an object not in MDC, MD
+  Cache will again request the metadata from the catalog. The catalog will apply
+  the current visibility rules (MVCC, SnapshotNow, etc), and return the most
+  up-to-date visible version..  
+
+7. At commit time, if TD = true, this transaction changed the metadata. Atomically 
+   increment GG part of the commit.
+

@@ -1076,7 +1076,7 @@ void
 Cache_UpdatePerfCounter64(int64 *counter, int64 delta)
 {
 	Assert(counter + delta >= 0);
-	gp_atomic_add_64(counter, delta);
+	gp_atomic_add_int64(counter, delta);
 }
 
 /*
