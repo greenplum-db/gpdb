@@ -72,14 +72,18 @@ install: all installdirs
 	$(INSTALL_PROGRAM) gpdiff.pl '$(DESTDIR)$(pgxsdir)/$(subdir)/gpdiff.pl'
 	$(INSTALL_PROGRAM) gpstringsubs.pl '$(DESTDIR)$(pgxsdir)/$(subdir)/gpstringsubs.pl'
 	$(INSTALL_PROGRAM) atmsort.pl '$(DESTDIR)$(pgxsdir)/$(subdir)/atmsort.pl'
+	$(INSTALL_PROGRAM) atmsort.pm '$(DESTDIR)$(pgxsdir)/$(subdir)/atmsort.pm'
 	$(INSTALL_PROGRAM) explain.pl '$(DESTDIR)$(pgxsdir)/$(subdir)/explain.pl'
+	$(INSTALL_PROGRAM) explain.pm '$(DESTDIR)$(pgxsdir)/$(subdir)/explain.pm'
 
 uninstall:
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/pg_regress$(X)'
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/gpdiff.pl'
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/gpstringsubs.pl'
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/atmsort.pl'
+	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/atmsort.pm'
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/explain.pl'
+	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/explain.pm'
 
 
 # Build dynamically-loaded object file for CREATE FUNCTION ... LANGUAGE C.
