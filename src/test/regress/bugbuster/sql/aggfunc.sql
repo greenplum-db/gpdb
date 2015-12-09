@@ -47,8 +47,3 @@ insert into test values (0, 0), (0, 1), (0,2);
 select i,n,count(*), grouping(i), grouping(n), grouping(i,n) from test group by grouping sets((), (i,n)) having n is null;
 
 select x, y, count(*), grouping(x,y) from generate_series(1,1) x, generate_series(1,1) y group by grouping sets(x,y) having x is not null;
-
---start_ignore
-drop table if exists prod_agg ;
-drop table if exists cust_agg ;
---end_ignore

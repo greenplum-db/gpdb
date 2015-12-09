@@ -93,9 +93,3 @@ select x, y, count(*), grouping(x,y) from generate_series(1,1) x, generate_serie
  1 |   |     1 |        1
 (1 row)
 
---start_ignore
-drop table if exists prod_agg ;
-NOTICE:  table "prod_agg" does not exist, skipping
-drop table if exists cust_agg ;
-NOTICE:  table "cust_agg" does not exist, skipping
---end_ignore
