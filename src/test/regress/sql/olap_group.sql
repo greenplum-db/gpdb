@@ -596,3 +596,39 @@ select sum((select prc from sale where cn = s.cn and vn = s.vn and pn = s.pn)) f
 create temp table mpp14125 as select repeat('a', a) a, a % 10 b from generate_series(1, 100)a;
 explain select string_agg(a) from mpp14125 group by b;
 -- end MPP-14125
+
+-- Test COUNT in a subquery
+create table prod_agg (sale integer, prod varchar);
+insert into prod_agg values
+  (100, 'shirts'),
+  (200, 'pants'),
+  (300, 't-shirts'),
+  (400, 'caps'),
+  (450, 'hats');
+
+create table cust_agg (cusname varchar, sale integer, prod varchar);
+insert into cust_agg values
+  ('aryan', 100, 'shirts'),
+  ('jay', 200, 'pants'),
+  ('mahi', 300, 't-shirts'),
+  ('nitu', 400, 'caps'),
+  ('verru', 450, 'hats');
+
+-- return customer name from cust_agg with count of prod_agg table 
+select cusname,(select count(*) from prod_agg) from cust_agg;
+
+-- clean up
+drop table prod_agg;
+drop table cust_agg;
+
+
+-- Misc GROUPING SETS tests
+select x,y,count(*), grouping(x), grouping(y),grouping(x,y) from generate_series(1,1) x, generate_series(1,1) y group by cube(x,y);
+select x,y,count(*), grouping(x,y) from generate_series(1,1) x, generate_series(1,1) y group by grouping sets((x,y),(x),(y),());
+select x,y,count(*), grouping(x,y) from generate_series(1,2) x, generate_series(1,2) y group by cube(x,y);
+
+create table test_gsets (i int, n numeric);
+insert into test_gsets values (0, 0), (0, 1), (0,2);
+select i,n,count(*), grouping(i), grouping(n), grouping(i,n) from test_gsets group by grouping sets((), (i,n)) having n is null;
+
+select x, y, count(*), grouping(x,y) from generate_series(1,1) x, generate_series(1,1) y group by grouping sets(x,y) having x is not null;

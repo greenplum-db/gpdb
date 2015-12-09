@@ -23,7 +23,6 @@ test: gp_persistent_table
 ignore: gpcheckmirrorseg
 test: AOCO_Compression2 schema_topology table_statistics
 test: bkup_pg gpmgmt1 cursor metadata_track
-test: aggfunc
 test: memory_quota
 test: TestPSQL
 test: opperf

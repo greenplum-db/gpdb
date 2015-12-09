@@ -6022,3 +6022,84 @@ explain select string_agg(a) from mpp14125 group by b;
 (8 rows)
 
 -- end MPP-14125
+-- Test COUNT in a subquery
+create table prod_agg (sale integer, prod varchar);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'sale' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into prod_agg values
+  (100, 'shirts'),
+  (200, 'pants'),
+  (300, 't-shirts'),
+  (400, 'caps'),
+  (450, 'hats');
+create table cust_agg (cusname varchar, sale integer, prod varchar);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'cusname' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into cust_agg values
+  ('aryan', 100, 'shirts'),
+  ('jay', 200, 'pants'),
+  ('mahi', 300, 't-shirts'),
+  ('nitu', 400, 'caps'),
+  ('verru', 450, 'hats');
+-- return customer name from cust_agg with count of prod_agg table 
+select cusname,(select count(*) from prod_agg) from cust_agg;
+ cusname | ?column? 
+---------+----------
+ jay     |        5
+ mahi    |        5
+ verru   |        5
+ aryan   |        5
+ nitu    |        5
+(5 rows)
+
+-- clean up
+drop table prod_agg;
+drop table cust_agg;
+-- Misc GROUPING SETS tests
+select x,y,count(*), grouping(x), grouping(y),grouping(x,y) from generate_series(1,1) x, generate_series(1,1) y group by cube(x,y);
+ x | y | count | grouping | grouping | grouping 
+---+---+-------+----------+----------+----------
+ 1 | 1 |     1 |        0 |        0 |        0
+   | 1 |     1 |        1 |        0 |        2
+   |   |     1 |        1 |        0 |        2
+ 1 |   |     1 |        0 |        1 |        1
+(4 rows)
+
+select x,y,count(*), grouping(x,y) from generate_series(1,1) x, generate_series(1,1) y group by grouping sets((x,y),(x),(y),());
+ x | y | count | grouping 
+---+---+-------+----------
+ 1 | 1 |     1 |        0
+   | 1 |     1 |        2
+   |   |     1 |        2
+ 1 |   |     1 |        1
+(4 rows)
+
+select x,y,count(*), grouping(x,y) from generate_series(1,2) x, generate_series(1,2) y group by cube(x,y);
+ x | y | count | grouping 
+---+---+-------+----------
+ 1 | 1 |     1 |        0
+ 2 | 1 |     1 |        0
+   | 1 |     2 |        2
+ 1 | 2 |     1 |        0
+ 2 | 2 |     1 |        0
+   | 2 |     2 |        2
+   |   |     4 |        2
+ 1 |   |     2 |        1
+ 2 |   |     2 |        1
+(9 rows)
+
+create table test_gsets (i int, n numeric);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into test_gsets values (0, 0), (0, 1), (0,2);
+select i,n,count(*), grouping(i), grouping(n), grouping(i,n) from test_gsets group by grouping sets((), (i,n)) having n is null;
+ i | n | count | grouping | grouping | grouping 
+---+---+-------+----------+----------+----------
+(0 rows)
+
+select x, y, count(*), grouping(x,y) from generate_series(1,1) x, generate_series(1,1) y group by grouping sets(x,y) having x is not null;
+ x | y | count | grouping 
+---+---+-------+----------
+ 1 |   |     1 |        1
+(1 row)
+
