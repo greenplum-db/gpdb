@@ -14,7 +14,7 @@ if [ "$1" = '-?' -o "$1" = "--help" ]; then
     echo
     echo "Note: Since the utilities underlying this script are very different"
     echo "from platform to platform, chances are that it might not work on"
-    echo "yours. If that is the case, please write to <pgsql-bugs@postgresql.org>"
+    echo "yours. If that is the case, please write to <bugs@greenplum.org>"
     echo "so that your platform can be supported in the future."
     exit 0
 fi

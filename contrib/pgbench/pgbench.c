@@ -315,7 +315,7 @@ usage(const char *progname)
 		   "  --help       show this help, then exit\n"
 		   "  --version    output version information, then exit\n"
 		   "\n"
-		   "Report bugs to <pgsql-bugs@postgresql.org>.\n",
+		   "Report bugs to <bugs@greenplum.org>.\n",
 		   progname, progname);
 }
 

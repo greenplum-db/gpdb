@@ -36,7 +36,7 @@ PO_FILES = $(addprefix po/, $(addsuffix .po, $(LANGUAGES)))
 MO_FILES = $(addprefix po/, $(addsuffix .mo, $(LANGUAGES)))
 
 ifdef XGETTEXT
-XGETTEXT += -ctranslator --copyright-holder='PostgreSQL Global Development Group' --msgid-bugs-address=pgsql-bugs@postgresql.org
+XGETTEXT += -ctranslator --copyright-holder='Greenplum Project' --msgid-bugs-address=bugs@greenplum.org
 endif
 
 

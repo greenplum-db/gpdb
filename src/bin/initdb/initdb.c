@@ -2867,7 +2867,7 @@ usage(const char *progname)
 	printf(_("  -m, --formirror           only create data needed to start the backend in mirror mode\n"));
 	printf(_("\nIf the data directory is not specified, the environment variable PGDATA\n"
 			 "is used.\n"));
-	printf(_("\nReport bugs to <pgsql-bugs@postgresql.org>.\n"));
+	printf(_("\nReport bugs to <bugs@greenplum.org>.\n"));
 }
 
 int

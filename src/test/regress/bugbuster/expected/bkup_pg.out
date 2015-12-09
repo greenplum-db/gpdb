@@ -136,7 +136,7 @@ Connection options:
 
 If no input file name is supplied, then standard input is used.
 
-Report bugs to <pgsql-bugs@postgresql.org>.
+Report bugs to <bugs@greenplum.org>.
 \! pg_dump --help
 pg_dump dumps a database as a text file or to other formats.
 
@@ -189,6 +189,6 @@ Connection options:
 If no database name is supplied, then the PGDATABASE environment
 variable value is used.
 
-Report bugs to <pgsql-bugs@postgresql.org>.
+Report bugs to <bugs@greenplum.org>.
 \echo -- end_ignore
 -- end_ignore

@@ -255,7 +255,7 @@ ECPGdump_a_type(FILE *o, const char *name, struct ECPGtype * type,
 					break;
 				default:
 					if (!IS_SIMPLE_TYPE(type->u.element->type))
-						base_yyerror("internal error: unknown datatype, please report this to <pgsql-bugs@postgresql.org>");
+						base_yyerror("internal error: unknown datatype, please report this to <bugs@greenplum.org>");
 
 					ECPGdump_a_simple(o, name,
 									  type->u.element->type,
@@ -543,7 +543,7 @@ ECPGfree_type(struct ECPGtype * type)
 						break;
 					default:
 						if (!IS_SIMPLE_TYPE(type->u.element->type))
-							base_yyerror("internal error: unknown datatype, please report this to <pgsql-bugs@postgresql.org>");
+							base_yyerror("internal error: unknown datatype, please report this to <bugs@greenplum.org>");
 
 						free(type->u.element);
 				}

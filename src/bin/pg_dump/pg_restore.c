@@ -425,5 +425,5 @@ usage(const char *progname)
 	printf(_("  -e, --exit-on-error      exit on error, default is to continue\n"));
 
 	printf(_("\nIf no input file name is supplied, then standard input is used.\n\n"));
-	printf(_("Report bugs to <pgsql-bugs@postgresql.org>.\n"));
+	printf(_("Report bugs to <bugs@greenplum.org>.\n"));
 }

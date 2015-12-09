@@ -222,5 +222,5 @@ help(const char *progname)
 	printf(_("  -w, --no-password            never prompt for password\n"));
 	printf(_("  -W, --password               force password prompt\n"));
 	printf(_("\nBy default, a database with the same name as the current user is created.\n"));
-	printf(_("\nReport bugs to <pgsql-bugs@postgresql.org>.\n"));
+	printf(_("\nReport bugs to <bugs@greenplum.org>.\n"));
 }

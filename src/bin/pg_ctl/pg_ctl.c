@@ -1712,7 +1712,7 @@ do_help(void)
 	printf(_("  -U USERNAME     user name of account to register PostgreSQL server\n"));
 #endif
 
-	printf(_("\nReport bugs to <pgsql-bugs@postgresql.org>.\n"));
+	printf(_("\nReport bugs to <bugs@greenplum.org>.\n"));
 }
 
 

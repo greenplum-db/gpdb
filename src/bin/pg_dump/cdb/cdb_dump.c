@@ -1492,7 +1492,7 @@ help(const char *progname)
 
 	printf(("\nIf no database name is supplied, then the PGDATABASE environment\n"
 			"variable value is used.\n\n"));
-	/* printf(("Report bugs to <pgsql-bugs@postgresql.org>.\n")); */
+	/* printf(("Report bugs to <bugs@greenplum.org>.\n")); */
 }
 
 

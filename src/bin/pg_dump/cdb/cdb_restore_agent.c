@@ -1078,7 +1078,7 @@ usage(const char *progname)
 	printf(("   --post-data-schema-only restore schema only from special post-data file\n"));
 
 	printf(_("\nIf no input file name is supplied, then standard input is used.\n\n"));
-	printf(_("Report bugs to <pgsql-bugs@postgresql.org>.\n"));
+	printf(_("Report bugs to <bugs@greenplum.org>.\n"));
 }
 
 
