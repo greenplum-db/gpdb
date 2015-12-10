@@ -73,7 +73,7 @@ static Node *transformIndirection(ParseState *pstate, Node *basenode,
 static Node *transformGroupingFunc(ParseState *pstate, GroupingFunc *gf);
 static Node *transformPercentileExpr(ParseState *pstate, PercentileExpr *p);
 static Node *typecast_expression(ParseState *pstate, Node *expr,
-					TypeName *typname);
+					TypeName *typename);
 static Node *make_row_comparison_op(ParseState *pstate, List *opname,
 					   List *largs, List *rargs, int location);
 static Node *make_row_distinct_op(ParseState *pstate, List *opname,
@@ -2907,14 +2907,14 @@ exprIsLengthCoercion(Node *expr, int32 *coercedTypmod)
  * the type name and then apply any necessary coercion function(s).
  */
 static Node *
-typecast_expression(ParseState *pstate, Node *expr, TypeName *typname)
+typecast_expression(ParseState *pstate, Node *expr, TypeName *typename)
 {
 	Oid			inputType = exprType(expr);
 	Oid			targetType;
 	int32		targetTypmod;
 
-	targetType = typenameTypeId(pstate, typname);
-	targetTypmod = typenameTypeMod(pstate, typname, targetType);
+	targetType = typenameTypeId(pstate, typename);
+	targetTypmod = typenameTypeMod(pstate, typename, targetType);
 
 	if (inputType == InvalidOid)
 		return expr;			/* do nothing if NULL input */
@@ -2930,7 +2930,7 @@ typecast_expression(ParseState *pstate, Node *expr, TypeName *typname)
 				 errmsg("cannot cast type %s to %s",
 						format_type_be(inputType),
 						format_type_be(targetType)),
-				 parser_errposition(pstate, typname->location)));
+				 parser_errposition(pstate, typename->location)));
 
 	return expr;
 }

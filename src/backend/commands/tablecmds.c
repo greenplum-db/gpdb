@@ -290,7 +290,7 @@ static void ATPrepAlterColumnType(List **wqueue,
 					  bool recurse, bool recursing,
 					  AlterTableCmd *cmd);
 static void ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
-					  const char *colName, TypeName *typname);
+					  const char *colName, TypeName *typename);
 static void ATPostAlterTypeCleanup(List **wqueue, AlteredTableInfo *tab);
 static void ATPostAlterTypeParse(char *cmd, List **wqueue, Oid constrOid);
 static void change_owner_recurse_to_sequences(Oid relationOid,
@@ -9394,7 +9394,7 @@ ATPrepAlterColumnType(List **wqueue,
 					  AlterTableCmd *cmd)
 {
 	char	   *colName = cmd->name;
-	TypeName   *typname = (TypeName *) cmd->def;
+	TypeName   *typename = (TypeName *) cmd->def;
 	HeapTuple	tuple;
 	Form_pg_attribute attTup;
 	AttrNumber	attnum;
@@ -9433,8 +9433,8 @@ ATPrepAlterColumnType(List **wqueue,
 						colName)));
 
 	/* Look up the target type */
-	targettype = typenameTypeId(NULL, typname);
-	targettypmod = typenameTypeMod(NULL, typname, targettype);
+	targettype = typenameTypeId(NULL, typename);
+	targettypmod = typenameTypeMod(NULL, typename, targettype);
 
 	/* make sure datatype is legal for a column */
 	CheckAttributeType(colName, targettype);
@@ -9502,7 +9502,7 @@ ATPrepAlterColumnType(List **wqueue,
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
 				 errmsg("column \"%s\" cannot be cast to type \"%s\"",
-						colName, TypeNameToString(typname))));
+						colName, TypeNameToString(typename))));
 
 	free_parsestate(pstate);
 
@@ -9535,7 +9535,7 @@ ATPrepAlterColumnType(List **wqueue,
 
 static void
 ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
-					  const char *colName, TypeName *typname)
+					  const char *colName, TypeName *typename)
 {
 	HeapTuple	heapTup;
 	Form_pg_attribute attTup;
@@ -9583,10 +9583,10 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 						colName)));
 
 	/* Look up the target type (should not fail, since prep found it) */
-	typeTuple = typenameType(NULL, typname);
+	typeTuple = typenameType(NULL, typename);
 	tform = (Form_pg_type) GETSTRUCT(typeTuple);
 	targettype = HeapTupleGetOid(typeTuple);
-	targettypmod = typenameTypeMod(NULL, typname, targettype);
+	targettypmod = typenameTypeMod(NULL, typename, targettype);
 
 	if (targettype == INT4OID ||
 		targettype == INT2OID ||
@@ -9640,7 +9640,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 			ereport(ERROR,
 					(errcode(ERRCODE_DATATYPE_MISMATCH),
 			errmsg("default for column \"%s\" cannot be cast to type \"%s\"",
-				   colName, TypeNameToString(typname))));
+				   colName, TypeNameToString(typename))));
 	}
 	else
 		defaultexpr = NULL;
@@ -9920,7 +9920,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	 */
 	attTup->atttypid = targettype;
 	attTup->atttypmod = targettypmod;
-	attTup->attndims = list_length(typname->arrayBounds);
+	attTup->attndims = list_length(typename->arrayBounds);
 	attTup->attlen = tform->typlen;
 	attTup->attbyval = tform->typbyval;
 	attTup->attalign = tform->typalign;

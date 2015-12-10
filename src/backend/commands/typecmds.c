@@ -539,17 +539,17 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 void
 RemoveType(List *names, DropBehavior behavior, bool missing_ok)
 {
-	TypeName   *typname;
+	TypeName   *typename;
 	Oid			typeoid;
 	Oid			typeNsp;
 	ObjectAddress object;
 	int			 fetchCount;
 
 	/* Make a TypeName so we can use standard type lookup machinery */
-	typname = makeTypeNameFromNameList(names);
+	typename = makeTypeNameFromNameList(names);
 
 	/* Use LookupTypeName here so that shell types can be removed. */
-	typeoid = LookupTypeName(NULL, typname);
+	typeoid = LookupTypeName(NULL, typename);
 	if (!OidIsValid(typeoid))
 	{
 		if (!missing_ok)
@@ -557,7 +557,7 @@ RemoveType(List *names, DropBehavior behavior, bool missing_ok)
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("type \"%s\" does not exist",
-							TypeNameToString(typname))));
+							TypeNameToString(typename))));
 		}
 		else
 		{
@@ -565,7 +565,7 @@ RemoveType(List *names, DropBehavior behavior, bool missing_ok)
 			ereport(NOTICE,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("type \"%s\" does not exist, skipping",
-							TypeNameToString(typname))));
+							TypeNameToString(typename))));
 		}
 
 		return;
@@ -586,7 +586,7 @@ RemoveType(List *names, DropBehavior behavior, bool missing_ok)
 	if (!pg_type_ownercheck(typeoid, GetUserId()) &&
 		!pg_namespace_ownercheck(typeNsp, GetUserId()))
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_TYPE,
-					   TypeNameToString(typname));
+					   TypeNameToString(typename));
 
 
 	/*
@@ -973,7 +973,7 @@ DefineDomain(CreateDomainStmt *stmt)
 void
 RemoveDomain(List *names, DropBehavior behavior, bool missing_ok)
 {
-	TypeName   *typname;
+	TypeName   *typename;
 	Oid			typeoid;
 	HeapTuple	tup;
 	char		typtype;
@@ -981,10 +981,10 @@ RemoveDomain(List *names, DropBehavior behavior, bool missing_ok)
 	cqContext  *pcqCtx;
 
 	/* Make a TypeName so we can use standard type lookup machinery */
-	typname = makeTypeNameFromNameList(names);
+	typename = makeTypeNameFromNameList(names);
 
 	/* Use LookupTypeName here so that shell types can be removed. */
-	typeoid = LookupTypeName(NULL, typname);
+	typeoid = LookupTypeName(NULL, typename);
 	if (!OidIsValid(typeoid))
 	{
 		if (!missing_ok)
@@ -992,7 +992,7 @@ RemoveDomain(List *names, DropBehavior behavior, bool missing_ok)
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("type \"%s\" does not exist",
-							TypeNameToString(typname))));
+							TypeNameToString(typename))));
 		}
 		else
 		{
@@ -1000,7 +1000,7 @@ RemoveDomain(List *names, DropBehavior behavior, bool missing_ok)
 			ereport(NOTICE,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("type \"%s\" does not exist, skipping",
-							TypeNameToString(typname))));
+							TypeNameToString(typename))));
 		}
 
 		return;
@@ -1022,7 +1022,7 @@ RemoveDomain(List *names, DropBehavior behavior, bool missing_ok)
 	  !pg_namespace_ownercheck(((Form_pg_type) GETSTRUCT(tup))->typnamespace,
 							   GetUserId()))
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_TYPE,
-					   TypeNameToString(typname));
+					   TypeNameToString(typename));
 
 	/* Check that this is actually a domain */
 	typtype = ((Form_pg_type) GETSTRUCT(tup))->typtype;
@@ -1031,7 +1031,7 @@ RemoveDomain(List *names, DropBehavior behavior, bool missing_ok)
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("\"%s\" is not a domain",
-						TypeNameToString(typname))));
+						TypeNameToString(typename))));
 
 	caql_endscan(pcqCtx);
 
@@ -1384,7 +1384,7 @@ DefineCompositeType(const RangeVar *typevar, List *coldeflist, Oid relOid, Oid c
 void
 AlterDomainDefault(List *names, Node *defaultRaw)
 {
-	TypeName   *typname;
+	TypeName   *typename;
 	Oid			domainoid;
 	HeapTuple	tup;
 	ParseState *pstate;
@@ -1400,8 +1400,8 @@ AlterDomainDefault(List *names, Node *defaultRaw)
 	cqContext	 cqc;
 
 	/* Make a TypeName so we can use standard type lookup machinery */
-	typname = makeTypeNameFromNameList(names);
-	domainoid = typenameTypeId(NULL, typname);
+	typename = makeTypeNameFromNameList(names);
+	domainoid = typenameTypeId(NULL, typename);
 
 	/* Look up the domain in the type table */
 	rel = heap_open(TypeRelationId, RowExclusiveLock);
@@ -1420,7 +1420,7 @@ AlterDomainDefault(List *names, Node *defaultRaw)
 	typTup = (Form_pg_type) GETSTRUCT(tup);
 
 	/* Check it's a domain and check user has permission for ALTER DOMAIN */
-	checkDomainOwner(tup, typname);
+	checkDomainOwner(tup, typename);
 
 	/* Setup new tuple */
 	MemSet(new_record, (Datum) 0, sizeof(new_record));
@@ -1512,7 +1512,7 @@ AlterDomainDefault(List *names, Node *defaultRaw)
 void
 AlterDomainNotNull(List *names, bool notNull)
 {
-	TypeName   *typname;
+	TypeName   *typename;
 	Oid			domainoid;
 	Relation	typrel;
 	HeapTuple	tup;
@@ -1521,8 +1521,8 @@ AlterDomainNotNull(List *names, bool notNull)
 	cqContext	 cqc;
 
 	/* Make a TypeName so we can use standard type lookup machinery */
-	typname = makeTypeNameFromNameList(names);
-	domainoid = typenameTypeId(NULL, typname);
+	typename = makeTypeNameFromNameList(names);
+	domainoid = typenameTypeId(NULL, typename);
 
 	/* Look up the domain in the type table */
 	typrel = heap_open(TypeRelationId, RowExclusiveLock);
@@ -1541,7 +1541,7 @@ AlterDomainNotNull(List *names, bool notNull)
 	typTup = (Form_pg_type) GETSTRUCT(tup);
 
 	/* Check it's a domain and check user has permission for ALTER DOMAIN */
-	checkDomainOwner(tup, typname);
+	checkDomainOwner(tup, typename);
 
 	/* Is the domain already set to the desired constraint? */
 	if (typTup->typnotnull == notNull)
@@ -1617,7 +1617,7 @@ void
 AlterDomainDropConstraint(List *names, const char *constrName,
 						  DropBehavior behavior)
 {
-	TypeName   *typname;
+	TypeName   *typename;
 	Oid			domainoid;
 	HeapTuple	tup;
 	Relation	rel;
@@ -1626,8 +1626,8 @@ AlterDomainDropConstraint(List *names, const char *constrName,
 	HeapTuple	contup;
 
 	/* Make a TypeName so we can use standard type lookup machinery */
-	typname = makeTypeNameFromNameList(names);
-	domainoid = typenameTypeId(NULL, typname);
+	typename = makeTypeNameFromNameList(names);
+	domainoid = typenameTypeId(NULL, typename);
 
 	/* Look up the domain in the type table */
 	rel = heap_open(TypeRelationId, RowExclusiveLock);
@@ -1646,7 +1646,7 @@ AlterDomainDropConstraint(List *names, const char *constrName,
 		elog(ERROR, "cache lookup failed for type %u", domainoid);
 
 	/* Check it's a domain and check user has permission for ALTER DOMAIN */
-	checkDomainOwner(tup, typname);
+	checkDomainOwner(tup, typename);
 
 	/* Grab an appropriate lock on the pg_constraint relation */
 	/* Use the index to scan only constraints of the target relation */
@@ -1689,7 +1689,7 @@ AlterDomainDropConstraint(List *names, const char *constrName,
 void
 AlterDomainAddConstraint(List *names, Node *newConstraint)
 {
-	TypeName   *typname;
+	TypeName   *typename;
 	Oid			domainoid;
 	Relation	typrel;
 	HeapTuple	tup;
@@ -1705,8 +1705,8 @@ AlterDomainAddConstraint(List *names, Node *newConstraint)
 	cqContext	cqc;
 
 	/* Make a TypeName so we can use standard type lookup machinery */
-	typname = makeTypeNameFromNameList(names);
-	domainoid = typenameTypeId(NULL, typname);
+	typename = makeTypeNameFromNameList(names);
+	domainoid = typenameTypeId(NULL, typename);
 
 	/* Look up the domain in the type table */
 	typrel = heap_open(TypeRelationId, RowExclusiveLock);
@@ -1723,7 +1723,7 @@ AlterDomainAddConstraint(List *names, Node *newConstraint)
 	typTup = (Form_pg_type) GETSTRUCT(tup);
 
 	/* Check it's a domain and check user has permission for ALTER DOMAIN */
-	checkDomainOwner(tup, typname);
+	checkDomainOwner(tup, typename);
 
 	/* Check for unsupported constraint types */
 	if (IsA(newConstraint, FkConstraint))
@@ -2019,7 +2019,7 @@ get_rels_with_domain(Oid domainOid, LOCKMODE lockmode)
  * has permission to do ALTER DOMAIN on it.  Throw an error if not.
  */
 static void
-checkDomainOwner(HeapTuple tup, TypeName *typname)
+checkDomainOwner(HeapTuple tup, TypeName *typename)
 {
 	Form_pg_type typTup = (Form_pg_type) GETSTRUCT(tup);
 
@@ -2028,12 +2028,12 @@ checkDomainOwner(HeapTuple tup, TypeName *typname)
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("\"%s\" is not a domain",
-						TypeNameToString(typname))));
+						TypeNameToString(typename))));
 
 	/* Permission check: must own type */
 	if (!pg_type_ownercheck(HeapTupleGetOid(tup), GetUserId()))
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_TYPE,
-					   TypeNameToString(typname));
+					   TypeNameToString(typename));
 }
 
 /*
@@ -2313,7 +2313,7 @@ GetDomainConstraints(Oid typeOid)
 void
 AlterTypeOwner(List *names, Oid newOwnerId)
 {
-	TypeName   *typname;
+	TypeName   *typename;
 	Oid			typeOid;
 	Relation	rel;
 	HeapTuple	tup;
@@ -2323,15 +2323,15 @@ AlterTypeOwner(List *names, Oid newOwnerId)
 	cqContext	cqc;
 
 	/* Make a TypeName so we can use standard type lookup machinery */
-	typname = makeTypeNameFromNameList(names);
+	typename = makeTypeNameFromNameList(names);
 
 	/* Use LookupTypeName here so that shell types can be processed (why?) */
-	typeOid = LookupTypeName(NULL, typname);
+	typeOid = LookupTypeName(NULL, typename);
 	if (!OidIsValid(typeOid))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("type \"%s\" does not exist",
-						TypeNameToString(typname))));
+						TypeNameToString(typename))));
 
 	/* Look up the type in the type table */
 	rel = heap_open(TypeRelationId, RowExclusiveLock);
@@ -2359,7 +2359,7 @@ AlterTypeOwner(List *names, Oid newOwnerId)
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("\"%s\" is a table's row type",
-						TypeNameToString(typname))));
+						TypeNameToString(typename))));
 
 	/*
 	 * If the new owner is the same as the existing owner, consider the
@@ -2373,7 +2373,7 @@ AlterTypeOwner(List *names, Oid newOwnerId)
 			/* Otherwise, must be owner of the existing object */
 			if (!pg_type_ownercheck(HeapTupleGetOid(tup), GetUserId()))
 				aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_TYPE,
-							   TypeNameToString(typname));
+							   TypeNameToString(typename));
 
 			/* Must be able to become new owner */
 			check_is_member_of_role(GetUserId(), newOwnerId);
@@ -2471,13 +2471,13 @@ AlterTypeOwnerInternal(Oid typeOid, Oid newOwnerId,
 void
 AlterTypeNamespace(List *names, const char *newschema)
 {
-	TypeName   *typname;
+	TypeName   *typename;
 	Oid			typeOid;
 	Oid			nspOid;
 
 	/* Make a TypeName so we can use standard type lookup machinery */
-	typname = makeTypeNameFromNameList(names);
-	typeOid = typenameTypeId(NULL, typname);
+	typename = makeTypeNameFromNameList(names);
+	typeOid = typenameTypeId(NULL, typename);
 
 	/* check permissions on type */
 	if (!pg_type_ownercheck(typeOid, GetUserId()))

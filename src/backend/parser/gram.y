@@ -109,8 +109,8 @@ static bool QueryIsRule = FALSE;
 
 static Node *makeAddPartitionCreateStmt(Node *n, Node *subSpec);
 static Node *makeColumnRef(char *colname, List *indirection, int location);
-static Node *makeTypeCast(Node *arg, TypeName *typname, int location);
-static Node *makeStringConst(char *str, TypeName *typname, int location);
+static Node *makeTypeCast(Node *arg, TypeName *typename, int location);
+static Node *makeStringConst(char *str, TypeName *typename, int location);
 static Node *makeIntConst(int val, int location);
 static Node *makeFloatConst(char *str, int location);
 static Node *makeNullAConst(int location);
@@ -12971,7 +12971,7 @@ makeColumnRef(char *colname, List *indirection, int location)
 }
 
 static Node *
-makeTypeCast(Node *arg, TypeName *typname, int location)
+makeTypeCast(Node *arg, TypeName *typename, int location)
 {
 	/*
 	 * Simply generate a TypeCast node.
@@ -12982,7 +12982,7 @@ makeTypeCast(Node *arg, TypeName *typname, int location)
 	 */
 	TypeCast *n = makeNode(TypeCast);
 	n->arg = arg;
-	n->typname = typname;
+	n->typname = typename;
 	n->location = location;
 	return (Node *) n;
 }
