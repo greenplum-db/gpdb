@@ -196,16 +196,9 @@ PG_LANG=false
 endif
 
 ifneq (false, ${PG_LANG})
-ifeq "$(findstring win,$(BLD_ARCH))" "win"
 CONFIGFLAGS+= --with-perl --with-python 
-else
-CONFIGFLAGS+= --with-perl --with-python --with-java
-endif 
 ifdef TCL_CFG
 CONFIGFLAGS+= --with-tcl-config=${TCL_CFG}
-endif
-ifneq "$(wildcard $(R_HOME))" ""
-CONFIGFLAGS+= --with-r
 endif
 endif
 
