@@ -36,29 +36,24 @@
       <dependency org="NetBackup"       name="SDK-7.5"         rev="7.5"            conf="rhel5_x86_64->rhel5_x86_64" />
       <dependency org="R-Project"       name="R"               rev="3.1.0"          conf="osx106_x86->osx105_x86;rhel5_x86_64->rhel5_x86_64;rhel6_x86_64->rhel6_x86_64;suse10_x86_64->suse10_x86_64" /> 
       <dependency org="Apache"          name="maven"           rev="3.0.5"          conf="osx106_x86->osx106_x86" />
-      <dependency org="Brian_Stafford"  name="libesmtp"        rev="1.0.4-p1"       conf="osx106_x86->osx106_x86" />
       <dependency org="Hyperic"         name="sigar"           rev="1.6.3"          conf="osx106_x86->osx106_x86" />
       <dependency org="OpenLDAP"        name="openldap"        rev="2.3.38"         conf="osx106_x86->osx106_x86" />
       <dependency org="PROJ.4"          name="proj"            rev="4.7.0"          conf="osx106_x86->osx106_x86" />
       <dependency org="Pivotal"         name="libhdfs3"        rev="2.2.30"         conf="osx106_x86->osx106_x86" />
-      <dependency org="Pivotal"         name="libbm"           rev="1.0.1"          conf="osx106_x86->osx106_x86" />
       <dependency org="PyYAML"          name="yaml"            rev="0.1.1"          conf="osx106_x86->osx106_x86" />
       <dependency org="Python"          name="python"          rev="2.6.2"          conf="osx106_x86->osx106_x86" />
       <dependency org="apache"          name="apr"             rev="1.2.12"         conf="osx106_x86->osx106_x86" />
       <dependency org="apache"          name="apr-util"        rev="1.2.12"         conf="osx106_x86->osx106_x86" />
       <dependency org="bzip"            name="bzip2"           rev="1.0.6"          conf="osx106_x86->osx106_x86" />
       <dependency org="cURL"            name="curl"            rev="7.44.0"         conf="rhel6_x86_64->rhel5_x86_64;rhel5_x86_64->rhel5_x86_64;rhel5_x86_32->rhel5_x86_32;suse10_x86_64->suse10_x86_64;suse11_x86_64->suse10_x86_64;osx106_x86->osx106_x86;aix5_ppc_32->aix5_ppc_32;sol10_sparc_32->sol10_sparc_32;sol10_sparc_64->sol10_sparc_64;hpux_ia64->hpux_ia64;sol10_x86_32->sol10_x86_32;sol10_x86_64->sol10_x86_64" />
-      <dependency org="google"          name="protobuf"        rev="2.5.0"          conf="osx106_x86->osx106_x86" />
       <dependency org="libevent"        name="libevent"        rev="1.4.6"          conf="osx106_x86->osx106_x86" />
       <dependency org="metaparadigm"    name="json-c"          rev="0.6"            conf="osx106_x86->osx106_x86" />
       <dependency org="mit"             name="krb5"            rev="1.11.3"         conf="osx106_x86->osx106_x86" />
       <dependency org="net-snmp"        name="net-snmp"        rev="5.5"            conf="osx106_x86->osx106_x86" />
-      <dependency org="netlib"          name="clapack"         rev="3.1.1-p1"       conf="osx106_x86->osx106_x86" />
       <dependency org="pcre"            name="pcre"            rev="7.8"            conf="osx106_x86->osx106_x86" />
       <dependency org="xmlsoft"         name="libxml2"         rev="2.7.8"          conf="osx106_x86->osx106_x86" />
       <dependency org="xmlsoft"         name="libxslt"         rev="1.1.24"         conf="osx106_x86->osx109_x86_32" />
       <dependency org="zlib"            name="zlib"            rev="1.2.3"          conf="osx106_x86->osx106_x86" />
-      <dependency org="gnu"             name="libgsasl"        rev="1.8.0"          conf="osx106_x86->osx106_x86" />
       <dependency org="Samba"           name="ccache"          rev="3.2.3"          conf="osx106_x86->osx106_x86;rhel5_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64;suse10_x86_64->suse10_x86_64;suse11_x86_64->suse10_x86_64" />
     </dependencies>
 </ivy-module>
