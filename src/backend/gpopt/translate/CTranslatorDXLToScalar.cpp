@@ -448,7 +448,7 @@ CTranslatorDXLToScalar::PaggrefFromDXLNodeScAggref
 	paggref->agglevelsup = 0;
 	paggref->location = -1;
 
-	CMDIdGPDB *pmdidAgg = New(m_pmp) CMDIdGPDB(paggref->aggfnoid);
+	CMDIdGPDB *pmdidAgg = GPOS_NEW(m_pmp) CMDIdGPDB(paggref->aggfnoid);
 	const IMDAggregate *pmdagg = m_pmda->Pmdagg(pmdidAgg);
 	pmdidAgg->Release();
 
@@ -618,7 +618,7 @@ CTranslatorDXLToScalar::PparamFromDXLNodeScInitPlan
 	// Since an init plan is not a scalar node, we create a new DXLTranslator to handle its translation
 	CContextDXLToPlStmt *pctxdxltoplstmt = (dynamic_cast<CMappingColIdVarPlStmt*>(pmapcidvar))->Pctxdxltoplstmt();
 	CTranslatorDXLToPlStmt trdxltoplstmt(m_pmp, m_pmda, pctxdxltoplstmt, m_ulSegments);
-	DrgPdxltrctx *pdrgpdxltrctxPrevSiblings = New(m_pmp) DrgPdxltrctx(m_pmp);
+	DrgPdxltrctx *pdrgpdxltrctxPrevSiblings = GPOS_NEW(m_pmp) DrgPdxltrctx(m_pmp);
 	Plan *pplanChild = trdxltoplstmt.PplFromDXL(pdxlnChild, pdxltrctxOut, pplan, pdrgpdxltrctxPrevSiblings);
 	pdrgpdxltrctxPrevSiblings->Release();
 
@@ -695,7 +695,7 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
 		if (NULL == dxltrctxSubplan.Pmecolidparamid(ulColid))
 		{
 			// keep outer reference mapping to the original column for subsequent subplans
-			CMappingElementColIdParamId *pmecolidparamid = New (m_pmp) CMappingElementColIdParamId(ulColid, pctxdxltoplstmt->UlNextParamId(), pmdid);
+			CMappingElementColIdParamId *pmecolidparamid = GPOS_NEW(m_pmp) CMappingElementColIdParamId(ulColid, pctxdxltoplstmt->UlNextParamId(), pmdid);
 			
 #ifdef GPOS_DEBUG
 			BOOL fInserted =
@@ -728,7 +728,7 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
 							(dynamic_cast<CMappingColIdVarPlStmt*>(pmapcidvar))->Pctxdxltoplstmt(),
 							m_ulSegments
 							);
-	DrgPdxltrctx *pdrgpdxltrctxPrevSiblings = New(m_pmp) DrgPdxltrctx(m_pmp);
+	DrgPdxltrctx *pdrgpdxltrctxPrevSiblings = GPOS_NEW(m_pmp) DrgPdxltrctx(m_pmp);
 	Plan *pplanChild = trdxltoplstmt.PplFromDXL(pdxlnChild, &dxltrctxSubplan, pplan, pdrgpdxltrctxPrevSiblings);
 	pdrgpdxltrctxPrevSiblings->Release();
 
@@ -874,7 +874,7 @@ CTranslatorDXLToScalar::TranslateSubplanParams
                 IMDId *pmdidType = pmecolidparamid->PmdidType();
                 pmdidType->AddRef();
 
-                CDXLScalarIdent *pdxlopIdent = New(m_pmp) CDXLScalarIdent(m_pmp, pdxlcr, pmdidType);
+                CDXLScalarIdent *pdxlopIdent = GPOS_NEW(m_pmp) CDXLScalarIdent(m_pmp, pdxlcr, pmdidType);
                 Expr *parg = (Expr *) pmapcidvar->PvarFromDXLNodeScId(pdxlopIdent);
 
                 // not found in mapping, it must be an external parameter
@@ -935,7 +935,7 @@ CTranslatorDXLToScalar::SzSubplanAlias
 	ULONG ulPlanId
 	)
 {
-	CWStringDynamic *pstr = New (m_pmp) CWStringDynamic(m_pmp);
+	CWStringDynamic *pstr = GPOS_NEW(m_pmp) CWStringDynamic(m_pmp);
 	pstr->AppendFormat(GPOS_WSZ_LIT("SubPlan %d"), ulPlanId);
 	const WCHAR *wsz = pstr->Wsz();
 
@@ -943,7 +943,7 @@ CTranslatorDXLToScalar::SzSubplanAlias
 	CHAR *sz = (CHAR *) gpdb::GPDBAlloc(ulMaxLength);
 	gpos::clib::LWcsToMbs(sz, const_cast<WCHAR *>(wsz), ulMaxLength);
 	sz[ulMaxLength - 1] = '\0';
-	delete pstr;
+	GPOS_DELETE(pstr);
 
 	return sz;
 }
@@ -1010,10 +1010,10 @@ CTranslatorDXLToScalar::PsublinkFromDXLNodeSubqueryExists
 	CDXLNode *pdxlnChild = (*pdxlnSubqueryExists)[0];
 
 	CTranslatorDXLToQuery trdxlquery(m_pmp, m_pmda, m_ulSegments);
-	CStateDXLToQuery *pstatedxltoquery = New(m_pmp) CStateDXLToQuery(m_pmp);
+	CStateDXLToQuery *pstatedxltoquery = GPOS_NEW(m_pmp) CStateDXLToQuery(m_pmp);
 
 	// empty list of output columns
-	DrgPdxln *pdrgpdxlnOutputCols = New(m_pmp) DrgPdxln(m_pmp);
+	DrgPdxln *pdrgpdxlnOutputCols = GPOS_NEW(m_pmp) DrgPdxln(m_pmp);
 	CMappingColIdVarQuery *pmapcidvarquery = dynamic_cast<CMappingColIdVarQuery *>(pmapcidvar);
 	TEMap *ptemapCopy = CTranslatorUtils::PtemapCopy(m_pmp, pmapcidvarquery->Ptemap());
 
@@ -1028,7 +1028,7 @@ CTranslatorDXLToScalar::PsublinkFromDXLNodeSubqueryExists
 
 	// clean up
 	pdrgpdxlnOutputCols->Release();
-	delete pstatedxltoquery;
+	GPOS_DELETE(pstatedxltoquery);
 	CRefCount::SafeRelease(ptemapCopy);
 
 	SubLink *psublink = MakeNode(SubLink);
@@ -1090,7 +1090,7 @@ CTranslatorDXLToScalar::PsublinkFromDXLNodeQuantifiedSubquery
 	CTranslatorDXLToQuery trdxlquery(m_pmp, m_pmda, m_ulSegments);
 	CMappingColIdVarQuery *pmapcidvarquery = dynamic_cast<CMappingColIdVarQuery *>(pmapcidvar);
 
-	CStateDXLToQuery *pstatedxltoquery = New(m_pmp) CStateDXLToQuery(m_pmp);
+	CStateDXLToQuery *pstatedxltoquery = GPOS_NEW(m_pmp) CStateDXLToQuery(m_pmp);
 
 	TEMap *ptemapCopy = CTranslatorUtils::PtemapCopy(m_pmp, pmapcidvarquery->Ptemap());
 
@@ -1127,7 +1127,7 @@ CTranslatorDXLToScalar::PsublinkFromDXLNodeQuantifiedSubquery
 
 	// clean up
 	ptemapCopy->Release();
-	delete pstatedxltoquery;
+	GPOS_DELETE(pstatedxltoquery);
 
 	return psublink;
 }
@@ -1152,7 +1152,7 @@ CTranslatorDXLToScalar::PsublinkFromDXLNodeScalarSubquery
 	CDXLNode *pdxlnChild = (*pdxlnSubquery)[0];
 
 	CTranslatorDXLToQuery trdxlquery(m_pmp, m_pmda, m_ulSegments);
-	CStateDXLToQuery *pstatedxltoquery = New(m_pmp) CStateDXLToQuery(m_pmp);
+	CStateDXLToQuery *pstatedxltoquery = GPOS_NEW(m_pmp) CStateDXLToQuery(m_pmp);
 
 	CMappingColIdVarQuery *pmapcidvarquery = dynamic_cast<CMappingColIdVarQuery *>(pmapcidvar);
 	TEMap *ptemapCopy = CTranslatorUtils::PtemapCopy(m_pmp, pmapcidvarquery->Ptemap());
@@ -1168,7 +1168,7 @@ CTranslatorDXLToScalar::PsublinkFromDXLNodeScalarSubquery
 
 	// clean up
 	CRefCount::SafeRelease(ptemapCopy);
-	delete pstatedxltoquery;
+	GPOS_DELETE(pstatedxltoquery);
 
 	SubLink *psublink = MakeNode(SubLink);
 	psublink->subLinkType = EXPR_SUBLINK;

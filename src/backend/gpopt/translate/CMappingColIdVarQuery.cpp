@@ -88,10 +88,10 @@ CMappingColIdVarQuery::FInsertMapping
 	GPOS_ASSERT(NULL == m_ptemap->PtLookup(&ulColId));
 
 	// create mapping element
-	CMappingElementColIdTE *pmappingelement = New (m_pmp) CMappingElementColIdTE(ulColId, m_ulQueryLevel, pte);
+	CMappingElementColIdTE *pmappingelement = GPOS_NEW(m_pmp) CMappingElementColIdTE(ulColId, m_ulQueryLevel, pte);
 
 	// insert ColId->TE mapping
-	ULONG *pulKey1 = New(m_pmp) ULONG(ulColId);
+	ULONG *pulKey1 = GPOS_NEW(m_pmp) ULONG(ulColId);
 	BOOL fRes1 = m_ptemap->FInsert(pulKey1, pmappingelement);
 	GPOS_ASSERT(fRes1);
 

@@ -55,9 +55,9 @@ CContextDXLToPlStmt::CContextDXLToPlStmt
 	m_pintocl(NULL),
 	m_pdistrpolicy(NULL)
 {
-	m_phmuldxltrctxSharedScan = New(m_pmp) HMUlDxltrctx(m_pmp);
-	m_phmulcteconsumerinfo = New(m_pmp) HMUlCTEConsumerInfo(m_pmp);
-	m_pdrgpulNumSelectors = New(m_pmp) DrgPul(m_pmp);
+	m_phmuldxltrctxSharedScan = GPOS_NEW(m_pmp) HMUlDxltrctx(m_pmp);
+	m_phmulcteconsumerinfo = GPOS_NEW(m_pmp) HMUlCTEConsumerInfo(m_pmp);
+	m_pdrgpulNumSelectors = GPOS_NEW(m_pmp) DrgPul(m_pmp);
 }
 
 //---------------------------------------------------------------------------
@@ -171,11 +171,11 @@ CContextDXLToPlStmt::AddCTEConsumerInfo
 
 	List *plPlanCTE = ListMake1(pshscan);
 
-	ULONG *pulKey = New(m_pmp) ULONG(ulCteId);
+	ULONG *pulKey = GPOS_NEW(m_pmp) ULONG(ulCteId);
 #ifdef GPOS_DEBUG
 	BOOL fResult =
 #endif
-			m_phmulcteconsumerinfo->FInsert(pulKey, New(m_pmp) SCTEConsumerInfo(plPlanCTE));
+			m_phmulcteconsumerinfo->FInsert(pulKey, GPOS_NEW(m_pmp) SCTEConsumerInfo(plPlanCTE));
 
 	GPOS_ASSERT(fResult);
 }
@@ -297,7 +297,7 @@ CContextDXLToPlStmt::IncrementPartitionSelectors
 	const ULONG ulLen = m_pdrgpulNumSelectors->UlLength();
 	for (ULONG ul = ulLen; ul <= ulScanId; ul++)
 	{
-		ULONG *pul = New(m_pmp) ULONG(0);
+		ULONG *pul = GPOS_NEW(m_pmp) ULONG(0);
 		m_pdrgpulNumSelectors->Append(pul);
 	}
 
@@ -396,7 +396,7 @@ CContextDXLToPlStmt::AddSharedScanTranslationContext
 	CDXLTranslateContext *pdxltrctx
 	)
 {
-	ULONG *pul = New(m_pmp) ULONG(ulSpoolId);
+	ULONG *pul = GPOS_NEW(m_pmp) ULONG(ulSpoolId);
 
 #ifdef GPOS_DEBUG
 	BOOL fInserted =

@@ -42,7 +42,7 @@ CStateDXLToQuery::CStateDXLToQuery
 	m_plTEColumns(NIL),
 	m_plColumnNames(NIL)
 {
-	m_pdrgpulColIds = New(m_pmp) DrgPul(m_pmp);
+	m_pdrgpulColIds = GPOS_NEW(m_pmp) DrgPul(m_pmp);
 }
 
 
@@ -80,7 +80,7 @@ CStateDXLToQuery::AddOutputColumnEntry
 	GPOS_ASSERT((ULONG) gpdb::UlListLength(m_plTEColumns) == m_pdrgpulColIds->UlLength());
 	m_plTEColumns = gpdb::PlAppendElement(m_plTEColumns, pte);
 	m_plColumnNames = gpdb::PlAppendElement(m_plColumnNames, szColumnName);
-	m_pdrgpulColIds->Append(New(m_pmp) ULONG(ulColId));
+	m_pdrgpulColIds->Append(GPOS_NEW(m_pmp) ULONG(ulColId));
 }
 
 

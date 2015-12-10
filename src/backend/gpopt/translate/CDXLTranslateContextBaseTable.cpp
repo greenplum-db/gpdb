@@ -37,7 +37,7 @@ CDXLTranslateContextBaseTable::CDXLTranslateContextBaseTable
 	m_iRel(0)
 {
 	// initialize hash table
-	m_phmuli = New(m_pmp) HMUlI(m_pmp);
+	m_phmuli = GPOS_NEW(m_pmp) HMUlI(m_pmp);
 }
 
 //---------------------------------------------------------------------------
@@ -162,8 +162,8 @@ CDXLTranslateContextBaseTable::FInsertMapping
 	)
 {
 	// copy key and value
-	ULONG *pulKey = New(m_pmp) ULONG(ulDXLColId);
-	INT *piValue = New(m_pmp) INT(iAttno);
+	ULONG *pulKey = GPOS_NEW(m_pmp) ULONG(ulDXLColId);
+	INT *piValue = GPOS_NEW(m_pmp) INT(iAttno);
 
 	// insert colid-idx mapping in the hash map
 

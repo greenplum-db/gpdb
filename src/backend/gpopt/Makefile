@@ -19,12 +19,12 @@ include $(top_builddir)/src/backend/gpopt/gpopt.mk
 
 SUBDIRS = config translate relcache utils
 
-OBJS = Allocators.o CGPOptimizer.o gpdbwrappers.o
+OBJS = CGPOptimizer.o gpdbwrappers.o
 
 include $(top_srcdir)/src/backend/common.mk
 
 ifeq (Darwin, $(UNAME))
-	LDLIBFLAGS = -dynamiclib -flat_namespace -undefined dynamic_lookup -Wl,-unexported_symbols_list -Wl,unexported_symbols_list.txt
+	LDLIBFLAGS = -dynamiclib -flat_namespace -undefined dynamic_lookup -Wl
 endif
 
 ifeq (Linux, $(UNAME))

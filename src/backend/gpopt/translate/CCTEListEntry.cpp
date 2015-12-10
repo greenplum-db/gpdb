@@ -44,13 +44,13 @@ CCTEListEntry::CCTEListEntry
 {
 	GPOS_ASSERT(NULL != pcte && NULL != pdxlnCTEProducer);
 	
-	m_phmszcteinfo = New(pmp) HMSzCTEInfo(pmp);
+	m_phmszcteinfo = GPOS_NEW(pmp) HMSzCTEInfo(pmp);
 	Query *pqueryCTE = (Query*) pcte->ctequery;
 		
 #ifdef GPOS_DEBUG
 		BOOL fResult =
 #endif
-	m_phmszcteinfo->FInsert(pcte->ctename, New(pmp) SCTEProducerInfo(pdxlnCTEProducer, pqueryCTE->targetList));
+	m_phmszcteinfo->FInsert(pcte->ctename, GPOS_NEW(pmp) SCTEProducerInfo(pdxlnCTEProducer, pqueryCTE->targetList));
 		
 	GPOS_ASSERT(fResult);
 }
@@ -77,7 +77,7 @@ CCTEListEntry::CCTEListEntry
 	GPOS_ASSERT(NULL != pdrgpdxln);
 	GPOS_ASSERT(pdrgpdxln->UlLength() == gpdb::UlListLength(plCTE));
 	
-	m_phmszcteinfo = New(pmp) HMSzCTEInfo(pmp);
+	m_phmszcteinfo = GPOS_NEW(pmp) HMSzCTEInfo(pmp);
 	const ULONG ulCTEs = pdrgpdxln->UlLength();
 	
 	for (ULONG ul = 0; ul < ulCTEs; ul++)
@@ -89,7 +89,7 @@ CCTEListEntry::CCTEListEntry
 #ifdef GPOS_DEBUG
 		BOOL fResult =
 #endif
-		m_phmszcteinfo->FInsert(pcte->ctename, New(pmp) SCTEProducerInfo(pdxlnCTEProducer, pqueryCTE->targetList));
+		m_phmszcteinfo->FInsert(pcte->ctename, GPOS_NEW(pmp) SCTEProducerInfo(pdxlnCTEProducer, pqueryCTE->targetList));
 		
 		GPOS_ASSERT(fResult);
 		GPOS_ASSERT(NULL != m_phmszcteinfo->PtLookup(pcte->ctename));
@@ -166,7 +166,7 @@ CCTEListEntry::AddCTEProducer
 #ifdef GPOS_DEBUG
 	BOOL fResult =
 #endif
-	m_phmszcteinfo->FInsert(pcte->ctename, New(pmp) SCTEProducerInfo(pdxlnCTEProducer, pqueryCTE->targetList));
+	m_phmszcteinfo->FInsert(pcte->ctename, GPOS_NEW(pmp) SCTEProducerInfo(pdxlnCTEProducer, pqueryCTE->targetList));
 	
 	GPOS_ASSERT(fResult);
 }

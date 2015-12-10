@@ -266,8 +266,8 @@ CTranslatorRelcacheToDXL::PmdnameRel
 	GPOS_ASSERT(NULL != rel);
 	CHAR *szRelName = NameStr(rel->rd_rel->relname);
 	CWStringDynamic *pstrRelName = CDXLUtils::PstrFromSz(pmp, szRelName);
-	CMDName *pmdname = New(pmp) CMDName(pmp, pstrRelName);
-	delete pstrRelName;
+	CMDName *pmdname = GPOS_NEW(pmp) CMDName(pmp, pstrRelName);
+	GPOS_DELETE(pstrRelName);
 	return pmdname;
 }
 
@@ -287,7 +287,7 @@ CTranslatorRelcacheToDXL::PdrgpmdidRelIndexes
 	)
 {
 	GPOS_ASSERT(NULL != rel);
-	DrgPmdid *pdrgpmdidIndexes = New(pmp) DrgPmdid(pmp);
+	DrgPmdid *pdrgpmdidIndexes = GPOS_NEW(pmp) DrgPmdid(pmp);
 
 	List *plIndexOids = NIL;
 	
@@ -331,7 +331,7 @@ CTranslatorRelcacheToDXL::PdrgpmdidRelIndexes
 		{
 			if (FIndexSupported(relIndex))
 			{
-				CMDIdGPDB *pmdidIndex = New(pmp) CMDIdGPDB(oidIndex);
+				CMDIdGPDB *pmdidIndex = GPOS_NEW(pmp) CMDIdGPDB(oidIndex);
 				pdrgpmdidIndexes->Append(pmdidIndex);
 			}
 
@@ -416,14 +416,14 @@ CTranslatorRelcacheToDXL::PdrgpmdidTriggers
 		}
 	}
 
-	DrgPmdid *pdrgpmdidTriggers = New(pmp) DrgPmdid(pmp);
+	DrgPmdid *pdrgpmdidTriggers = GPOS_NEW(pmp) DrgPmdid(pmp);
 	const ULONG ulTriggers = rel->rd_rel->reltriggers;
 
 	for (ULONG ul = 0; ul < ulTriggers; ul++)
 	{
 		Trigger trigger = rel->trigdesc->triggers[ul];
 		OID oidTrigger = trigger.tgoid;
-		CMDIdGPDB *pmdidTrigger = New(pmp) CMDIdGPDB(oidTrigger);
+		CMDIdGPDB *pmdidTrigger = GPOS_NEW(pmp) CMDIdGPDB(oidTrigger);
 		pdrgpmdidTriggers->Append(pmdidTrigger);
 	}
 
@@ -445,7 +445,7 @@ CTranslatorRelcacheToDXL::PdrgpmdidCheckConstraints
 	OID oid
 	)
 {
-	DrgPmdid *pdrgpmdidCheckConstraints = New(pmp) DrgPmdid(pmp);
+	DrgPmdid *pdrgpmdidCheckConstraints = GPOS_NEW(pmp) DrgPmdid(pmp);
 	List *plOidCheckConstraints = gpdb::PlCheckConstraint(oid);
 
 	ListCell *plcOid = NULL;
@@ -453,7 +453,7 @@ CTranslatorRelcacheToDXL::PdrgpmdidCheckConstraints
 	{
 		OID oidCheckConstraint = lfirst_oid(plcOid);
 		GPOS_ASSERT(0 != oidCheckConstraint);
-		CMDIdGPDB *pmdidCheckConstraint = New(pmp) CMDIdGPDB(oidCheckConstraint);
+		CMDIdGPDB *pmdidCheckConstraint = GPOS_NEW(pmp) CMDIdGPDB(oidCheckConstraint);
 		pdrgpmdidCheckConstraints->Append(pmdidCheckConstraint);
 	}
 
@@ -601,7 +601,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 		fTemporary = rel->rd_istemp;
 		fHasOids = rel->rd_rel->relhasoids;
 	
-		delete [] pulAttnoMapping;
+		GPOS_DELETE_ARRAY(pulAttnoMapping);
 		gpdb::CloseRelation(rel);
 	}
 	GPOS_CATCH_EX(ex)
@@ -624,10 +624,10 @@ CTranslatorRelcacheToDXL::Pmdrel
 		IMDId *pmdidFmtErrTbl = NULL;
 		if (InvalidOid != extentry->fmterrtbl)
 		{
-			pmdidFmtErrTbl = New(pmp) CMDIdGPDB(extentry->fmterrtbl);
+			pmdidFmtErrTbl = GPOS_NEW(pmp) CMDIdGPDB(extentry->fmterrtbl);
 		}
 
-		pmdrel = New(pmp) CMDRelationExternalGPDB
+		pmdrel = GPOS_NEW(pmp) CMDRelationExternalGPDB
 							(
 							pmp,
 							pmdid,
@@ -650,7 +650,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 		// get part constraint
 		CMDPartConstraintGPDB *pmdpartcnstr = PmdpartcnstrRelation(pmp, pmda, oid, pdrgpmdcol);
 
-		pmdrel = New(pmp) CMDRelationGPDB
+		pmdrel = GPOS_NEW(pmp) CMDRelationGPDB
 							(
 							pmp,
 							pmdid,
@@ -691,7 +691,7 @@ CTranslatorRelcacheToDXL::Pdrgpmdcol
 	IMDRelation::Erelstoragetype erelstorage
 	)
 {
-	DrgPmdcol *pdrgpmdcol = New(pmp) DrgPmdcol(pmp);
+	DrgPmdcol *pdrgpmdcol = GPOS_NEW(pmp) DrgPmdcol(pmp);
 
 	for (ULONG ul = 0;  ul < (ULONG) rel->rd_att->natts; ul++)
 	{
@@ -707,13 +707,13 @@ CTranslatorRelcacheToDXL::Pdrgpmdcol
 		}
 
 		ULONG ulColLen = ULONG_MAX;
-		CMDIdGPDB *pmdidCol = New(pmp) CMDIdGPDB(att->atttypid);
+		CMDIdGPDB *pmdidCol = GPOS_NEW(pmp) CMDIdGPDB(att->atttypid);
 		if ((pmdidCol->FEquals(&CMDIdGPDB::m_mdidBPChar) || pmdidCol->FEquals(&CMDIdGPDB::m_mdidVarChar)) && (VARHDRSZ < att->atttypmod))
 		{
 			ulColLen = (ULONG) att->atttypmod - VARHDRSZ;
 		}
 
-		CMDColumn *pmdcol = New(pmp) CMDColumn
+		CMDColumn *pmdcol = GPOS_NEW(pmp) CMDColumn
 										(
 										pmdnameCol,
 										att->attnum,
@@ -867,7 +867,7 @@ CTranslatorRelcacheToDXL::PdrpulDistrCols
 	ULONG ulSize
 	)
 {
-	ULONG *pul = New(pmp) ULONG[ulSize];
+	ULONG *pul = GPOS_NEW_ARRAY(pmp , ULONG, ulSize);
 
 	for (ULONG ul = 0;  ul < pdrgpmdcol->UlLength(); ul++)
 	{
@@ -878,15 +878,15 @@ CTranslatorRelcacheToDXL::PdrpulDistrCols
 		pul[ulIndex] = ul;
 	}
 
-	DrgPul *pdrpulDistrCols = New(pmp) DrgPul(pmp);
+	DrgPul *pdrpulDistrCols = GPOS_NEW(pmp) DrgPul(pmp);
 
 	for (ULONG ul = 0; ul < (ULONG) pgppolicy->nattrs; ul++)
 	{
 		AttrNumber attno = pgppolicy->attrs[ul];
-		pdrpulDistrCols->Append(New(pmp) ULONG(UlPosition(attno, pul)));
+		pdrpulDistrCols->Append(GPOS_NEW(pmp) ULONG(UlPosition(attno, pul)));
 	}
 
-	delete[] pul;
+	GPOS_DELETE_ARRAY(pul);
 	return pdrpulDistrCols;
 }
 
@@ -928,9 +928,9 @@ CTranslatorRelcacheToDXL::AddSystemColumns
 		GPOS_ASSERT(NULL != pstrSysColName);
 
 		// copy string into column name
-		CMDName *pmdnameCol = New(pmp) CMDName(pmp, pstrSysColName);
+		CMDName *pmdnameCol = GPOS_NEW(pmp) CMDName(pmp, pstrSysColName);
 
-		CMDColumn *pmdcol = New(pmp) CMDColumn
+		CMDColumn *pmdcol = GPOS_NEW(pmp) CMDColumn
 										(
 										pmdnameCol, 
 										attno, 
@@ -1014,7 +1014,7 @@ CTranslatorRelcacheToDXL::Pmdindex
 		gpdb::OptTasksFaultInjector(OptRelcacheTranslatorCatalogAccess);
 #endif // FAULT_INJECTOR
 
-		CMDIdGPDB *pmdidRel = New(pmp) CMDIdGPDB(oidRel);
+		CMDIdGPDB *pmdidRel = GPOS_NEW(pmp) CMDIdGPDB(oidRel);
 
 		pmdrel = pmda->Pmdrel(pmdidRel);
 	
@@ -1039,14 +1039,14 @@ CTranslatorRelcacheToDXL::Pmdindex
 		if (BITMAP_AM_OID == relIndex->rd_rel->relam || IMDRelation::ErelstorageAppendOnlyRows == erelstorage || IMDRelation::ErelstorageAppendOnlyCols == erelstorage)
 		{
 			emdindt = IMDIndex::EmdindBitmap;
-			pmdidItemType = New(pmp) CMDIdGPDB(GPDB_ANY);
+			pmdidItemType = GPOS_NEW(pmp) CMDIdGPDB(GPDB_ANY);
 		}
 		
 		// get the index name
 		CHAR *szIndexName = NameStr(relIndex->rd_rel->relname);
 		CWStringDynamic *pstrName = CDXLUtils::PstrFromSz(pmp, szIndexName);
-		pmdname = New(pmp) CMDName(pmp, pstrName);
-		delete pstrName;
+		pmdname = GPOS_NEW(pmp) CMDName(pmp, pstrName);
+		GPOS_DELETE(pstrName);
 		pmdidRel->Release();
 		gpdb::CloseRelation(relIndex);
 	}
@@ -1066,25 +1066,25 @@ CTranslatorRelcacheToDXL::Pmdindex
 	DrgPul *pdrgpulIncludeCols = PdrgpulIndexIncludedColumns(pmp, pmdrel);
 
 	// extract the position of the key columns
-	DrgPul *pdrgpulKeyCols = New(pmp) DrgPul(pmp);
+	DrgPul *pdrgpulKeyCols = GPOS_NEW(pmp) DrgPul(pmp);
 	ULONG ulKeys = pgIndex->indnatts;
 	for (ULONG ul = 0; ul < ulKeys; ul++)
 	{
 		INT iAttno = pgIndex->indkey.values[ul];
 		GPOS_ASSERT(0 != iAttno && "Index expressions not supported");
 
-		pdrgpulKeyCols->Append(New(pmp) ULONG(UlPosition(iAttno, pul)));
+		pdrgpulKeyCols->Append(GPOS_NEW(pmp) ULONG(UlPosition(iAttno, pul)));
 	}
 
 	pmdidIndex->AddRef();	
 	DrgPmdid *pdrgpmdidOpClasses = PdrgpmdidIndexOpClasses(pmp, pmdidIndex);
 	
-	CMDIndexGPDB *pmdindex = New(pmp) CMDIndexGPDB
+	CMDIndexGPDB *pmdindex = GPOS_NEW(pmp) CMDIndexGPDB
 										(
 										pmp,
 										pmdidIndex,
 										pmdname,
-										New(pmp) CMDIdGPDB(pgIndex->indrelid),
+										GPOS_NEW(pmp) CMDIdGPDB(pgIndex->indrelid),
 										pgIndex->indisclustered,
 										emdindt,
 										pmdidItemType,
@@ -1095,7 +1095,7 @@ CTranslatorRelcacheToDXL::Pmdindex
 										NULL // pmdpartcnstr
 										);
 
-	delete [] pul;
+	GPOS_DELETE_ARRAY(pul);
 
 	return pmdindex;
 }
@@ -1216,14 +1216,14 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 	DrgPul *pdrgpulIncludeCols = PdrgpulIndexIncludedColumns(pmp, pmdrel);
 
 	// extract the position of the key columns
-	DrgPul *pdrgpulKeyCols = New(pmp) DrgPul(pmp);
+	DrgPul *pdrgpulKeyCols = GPOS_NEW(pmp) DrgPul(pmp);
 	const ULONG ulKeys = pidxinfo->nColumns;
 	for (ULONG ul = 0; ul < ulKeys; ul++)
 	{
 		INT iAttno = pidxinfo->indexKeys[ul];
 		GPOS_ASSERT(0 != iAttno && "Index expressions not supported");
 
-		pdrgpulKeyCols->Append(New(pmp) ULONG(UlPosition(iAttno, pulAttrMap)));
+		pdrgpulKeyCols->Append(GPOS_NEW(pmp) ULONG(UlPosition(iAttno, pulAttrMap)));
 	}
 	
 	Node *pnodePartCnstr = pidxinfo->partCons;
@@ -1244,12 +1244,12 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 		fUnbounded = fUnbounded && FDefaultPartition(plDefaultLevelsRel, ul);
 	}
 
-	DrgPul *pdrgpulDefaultLevels = New(pmp) DrgPul(pmp);
+	DrgPul *pdrgpulDefaultLevels = GPOS_NEW(pmp) DrgPul(pmp);
 	for (ULONG ul = 0; ul < ulLevels; ul++)
 	{
 		if (fUnbounded || FDefaultPartition(plDefaultLevels, ul))
 		{
-			pdrgpulDefaultLevels->Append(New(pmp) ULONG(ul));
+			pdrgpulDefaultLevels->Append(GPOS_NEW(pmp) ULONG(ul));
 		}
 	}
 
@@ -1281,12 +1281,12 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 	if (INDTYPE_BITMAP == pidxinfo->indType)
 	{
 		emdindt = IMDIndex::EmdindBitmap;
-		pmdidItemType = New(pmp) CMDIdGPDB(GPDB_ANY);
+		pmdidItemType = GPOS_NEW(pmp) CMDIdGPDB(GPDB_ANY);
 	}
 	
 	DrgPmdid *pdrgpmdidOpClasses = PdrgpmdidIndexOpClasses(pmp, pmdidIndex);
 	
-	CMDIndexGPDB *pmdindex = New(pmp) CMDIndexGPDB
+	CMDIndexGPDB *pmdindex = GPOS_NEW(pmp) CMDIndexGPDB
 										(
 										pmp,
 										pmdidIndex,
@@ -1302,7 +1302,7 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 										pmdpartcnstr
 										);
 	
-	delete [] pulAttrMap;
+	GPOS_DELETE_ARRAY(pulAttrMap);
 	
 	return pmdindex;
 }
@@ -1358,13 +1358,13 @@ CTranslatorRelcacheToDXL::PdrgpulIndexIncludedColumns
 	// TODO: 3/19/2012; currently we assume that all the columns
 	// in the table are available from the index.
 
-	DrgPul *pdrgpulIncludeCols = New(pmp) DrgPul(pmp);
+	DrgPul *pdrgpulIncludeCols = GPOS_NEW(pmp) DrgPul(pmp);
 	const ULONG ulIncludedCols = pmdrel->UlColumns();
 	for (ULONG ul = 0;  ul < ulIncludedCols; ul++)
 	{
 		if (!pmdrel->Pmdcol(ul)->FDropped())
 		{
-			pdrgpulIncludeCols->Append(New(pmp) ULONG(ul));
+			pdrgpulIncludeCols->Append(GPOS_NEW(pmp) ULONG(ul));
 		}
 	}
 	
@@ -1414,7 +1414,7 @@ CTranslatorRelcacheToDXL::PulAttnoPositionMap
 	const ULONG ulIncludedCols = pmdrel->UlColumns();
 
 	GPOS_ASSERT(ulIncludedCols <= ulSize);
-	ULONG *pul = New(pmp) ULONG[ulSize];
+	ULONG *pul = GPOS_NEW_ARRAY(pmp , ULONG, ulSize);
 
 	for (ULONG ul = 0; ul < ulSize; ul++)
 	{
@@ -1458,19 +1458,19 @@ CTranslatorRelcacheToDXL::Pmdtype
 	switch (oidType)
 	{
 		case GPDB_INT2_OID:
-			return New(pmp) CMDTypeInt2GPDB(pmp);
+			return GPOS_NEW(pmp) CMDTypeInt2GPDB(pmp);
 
 		case GPDB_INT4_OID:
-			return New(pmp) CMDTypeInt4GPDB(pmp);
+			return GPOS_NEW(pmp) CMDTypeInt4GPDB(pmp);
 
 		case GPDB_INT8_OID:
-			return New(pmp) CMDTypeInt8GPDB(pmp);
+			return GPOS_NEW(pmp) CMDTypeInt8GPDB(pmp);
 
 		case GPDB_BOOL:
-			return New(pmp) CMDTypeBoolGPDB(pmp);
+			return GPOS_NEW(pmp) CMDTypeBoolGPDB(pmp);
 
 		case GPDB_OID_OID:
-			return New(pmp) CMDTypeOidGPDB(pmp);
+			return GPOS_NEW(pmp) CMDTypeOidGPDB(pmp);
 	}
 
 	// continue to construct a generic type
@@ -1494,40 +1494,40 @@ CTranslatorRelcacheToDXL::Pmdtype
 	BOOL fByValue = ptce->typbyval;
 
 	// collect ids of different comparison operators for types
-	CMDIdGPDB *pmdidOpEq = New(pmp) CMDIdGPDB(ptce->eq_opr);
-	CMDIdGPDB *pmdidOpNEq = New(pmp) CMDIdGPDB(gpdb::OidInverseOp(ptce->eq_opr));
-	CMDIdGPDB *pmdidOpLT = New(pmp) CMDIdGPDB(ptce->lt_opr);
-	CMDIdGPDB *pmdidOpLEq = New(pmp) CMDIdGPDB(gpdb::OidInverseOp(ptce->gt_opr));
-	CMDIdGPDB *pmdidOpGT = New(pmp) CMDIdGPDB(ptce->gt_opr);
-	CMDIdGPDB *pmdidOpGEq = New(pmp) CMDIdGPDB(gpdb::OidInverseOp(ptce->lt_opr));
-	CMDIdGPDB *pmdidOpComp = New(pmp) CMDIdGPDB(ptce->cmp_proc);
+	CMDIdGPDB *pmdidOpEq = GPOS_NEW(pmp) CMDIdGPDB(ptce->eq_opr);
+	CMDIdGPDB *pmdidOpNEq = GPOS_NEW(pmp) CMDIdGPDB(gpdb::OidInverseOp(ptce->eq_opr));
+	CMDIdGPDB *pmdidOpLT = GPOS_NEW(pmp) CMDIdGPDB(ptce->lt_opr);
+	CMDIdGPDB *pmdidOpLEq = GPOS_NEW(pmp) CMDIdGPDB(gpdb::OidInverseOp(ptce->gt_opr));
+	CMDIdGPDB *pmdidOpGT = GPOS_NEW(pmp) CMDIdGPDB(ptce->gt_opr);
+	CMDIdGPDB *pmdidOpGEq = GPOS_NEW(pmp) CMDIdGPDB(gpdb::OidInverseOp(ptce->lt_opr));
+	CMDIdGPDB *pmdidOpComp = GPOS_NEW(pmp) CMDIdGPDB(ptce->cmp_proc);
 	BOOL fHashable = gpdb::FOpHashJoinable(ptce->eq_opr);
 	BOOL fComposite = gpdb::FCompositeType(oidType);
 
 	// get standard aggregates
-	CMDIdGPDB *pmdidMin = New(pmp) CMDIdGPDB(gpdb::OidAggregate("min", oidType));
-	CMDIdGPDB *pmdidMax = New(pmp) CMDIdGPDB(gpdb::OidAggregate("max", oidType));
-	CMDIdGPDB *pmdidAvg = New(pmp) CMDIdGPDB(gpdb::OidAggregate("avg", oidType));
-	CMDIdGPDB *pmdidSum = New(pmp) CMDIdGPDB(gpdb::OidAggregate("sum", oidType));
+	CMDIdGPDB *pmdidMin = GPOS_NEW(pmp) CMDIdGPDB(gpdb::OidAggregate("min", oidType));
+	CMDIdGPDB *pmdidMax = GPOS_NEW(pmp) CMDIdGPDB(gpdb::OidAggregate("max", oidType));
+	CMDIdGPDB *pmdidAvg = GPOS_NEW(pmp) CMDIdGPDB(gpdb::OidAggregate("avg", oidType));
+	CMDIdGPDB *pmdidSum = GPOS_NEW(pmp) CMDIdGPDB(gpdb::OidAggregate("sum", oidType));
 	
 	// count aggregate is the same for all types
-	CMDIdGPDB *pmdidCount = New(pmp) CMDIdGPDB(GPDB_COUNT_AGG_OID);
+	CMDIdGPDB *pmdidCount = GPOS_NEW(pmp) CMDIdGPDB(GPDB_COUNT_AGG_OID);
 	
 	// check if type is composite
 	CMDIdGPDB *pmdidTypeRelid = NULL;
 	if (fComposite)
 	{
-		pmdidTypeRelid = New(pmp) CMDIdGPDB(gpdb::OidTypeRelid(oidType));
+		pmdidTypeRelid = GPOS_NEW(pmp) CMDIdGPDB(gpdb::OidTypeRelid(oidType));
 	}
 
 	// get array type mdid
-	CMDIdGPDB *pmdidTypeArray = New(pmp) CMDIdGPDB(gpdb::OidArrayType(oidType));
+	CMDIdGPDB *pmdidTypeArray = GPOS_NEW(pmp) CMDIdGPDB(gpdb::OidArrayType(oidType));
 
 	BOOL fRedistributable = gpdb::FGreenplumDbHashable(oidType);
 
 	pmdid->AddRef();
 
-	return New(pmp) CMDTypeGenericGPDB
+	return GPOS_NEW(pmp) CMDTypeGenericGPDB
 						 (
 						 pmp,
 						 pmdid,
@@ -1597,12 +1597,12 @@ CTranslatorRelcacheToDXL::Pmdscop
 
 	if (InvalidOid != oidLeft)
 	{
-		pmdidTypeLeft = New(pmp) CMDIdGPDB(oidLeft);
+		pmdidTypeLeft = GPOS_NEW(pmp) CMDIdGPDB(oidLeft);
 	}
 
 	if (InvalidOid != oidRight)
 	{
-		pmdidTypeRight = New(pmp) CMDIdGPDB(oidRight);
+		pmdidTypeRight = GPOS_NEW(pmp) CMDIdGPDB(oidRight);
 	}
 
 	// get comparison type
@@ -1613,14 +1613,14 @@ CTranslatorRelcacheToDXL::Pmdscop
 	OID oidFunc = gpdb::OidOpFunc(oidOp);
 	GPOS_ASSERT(InvalidOid != oidFunc);
 
-	CMDIdGPDB *pmdidFunc = New(pmp) CMDIdGPDB(oidFunc);
+	CMDIdGPDB *pmdidFunc = GPOS_NEW(pmp) CMDIdGPDB(oidFunc);
 
 	// get result type
 	OID oidResult = gpdb::OidFuncRetType(oidFunc);
 
 	GPOS_ASSERT(InvalidOid != oidResult);
 
-	CMDIdGPDB *pmdidTypeResult = New(pmp) CMDIdGPDB(oidResult);
+	CMDIdGPDB *pmdidTypeResult = GPOS_NEW(pmp) CMDIdGPDB(oidResult);
 
 	// get commutator and inverse
 	CMDIdGPDB *pmdidOpCommute = NULL;
@@ -1629,7 +1629,7 @@ CTranslatorRelcacheToDXL::Pmdscop
 
 	if(InvalidOid != oidCommute)
 	{
-		pmdidOpCommute = New(pmp) CMDIdGPDB(oidCommute);
+		pmdidOpCommute = GPOS_NEW(pmp) CMDIdGPDB(oidCommute);
 	}
 
 	CMDIdGPDB *pmdidOpInverse = NULL;
@@ -1638,13 +1638,13 @@ CTranslatorRelcacheToDXL::Pmdscop
 
 	if(InvalidOid != oidInverse)
 	{
-		pmdidOpInverse = New(pmp) CMDIdGPDB(oidInverse);
+		pmdidOpInverse = GPOS_NEW(pmp) CMDIdGPDB(oidInverse);
 	}
 
 	BOOL fReturnsNullOnNullInput = gpdb::FOpStrict(oidOp);
 
 	pmdid->AddRef();
-	CMDScalarOpGPDB *pmdscop = New(pmp) CMDScalarOpGPDB
+	CMDScalarOpGPDB *pmdscop = GPOS_NEW(pmp) CMDScalarOpGPDB
 											(
 											pmp,
 											pmdid,
@@ -1741,17 +1741,17 @@ CTranslatorRelcacheToDXL::Pmdfunc
 	}
 
 	CWStringDynamic *pstrFuncName = CDXLUtils::PstrFromSz(pmp, szName);
-	CMDName *pmdname = New(pmp) CMDName(pmp, pstrFuncName);
+	CMDName *pmdname = GPOS_NEW(pmp) CMDName(pmp, pstrFuncName);
 
 	// CMDName ctor created a copy of the string
-	delete pstrFuncName;
+	GPOS_DELETE(pstrFuncName);
 
 	// get result type
 	OID oidResult = gpdb::OidFuncRetType(oidFunc);
 
 	GPOS_ASSERT(InvalidOid != oidResult);
 
-	CMDIdGPDB *pmdidTypeResult = New(pmp) CMDIdGPDB(oidResult);
+	CMDIdGPDB *pmdidTypeResult = GPOS_NEW(pmp) CMDIdGPDB(oidResult);
 
 	// get output argument types if any
 	List *plOutArgTypes = gpdb::PlFuncOutputArgTypes(oidFunc);
@@ -1760,13 +1760,13 @@ CTranslatorRelcacheToDXL::Pmdfunc
 	if (NULL != plOutArgTypes)
 	{
 		ListCell *plc = NULL;
-		pdrgpmdidArgTypes = New(pmp) DrgPmdid(pmp);
+		pdrgpmdidArgTypes = GPOS_NEW(pmp) DrgPmdid(pmp);
 
 		ForEach (plc, plOutArgTypes)
 		{
 			OID oidArgType = lfirst_oid(plc);
 			GPOS_ASSERT(InvalidOid != oidArgType);
-			CMDIdGPDB *pmdidArgType = New(pmp) CMDIdGPDB(oidArgType);
+			CMDIdGPDB *pmdidArgType = GPOS_NEW(pmp) CMDIdGPDB(oidArgType);
 			pdrgpmdidArgTypes->Append(pmdidArgType);
 		}
 
@@ -1780,7 +1780,7 @@ CTranslatorRelcacheToDXL::Pmdfunc
 	LookupFuncProps(oidFunc, &efs, &efda, &fStrict, &fReturnsSet);
 
 	pmdid->AddRef();
-	CMDFunctionGPDB *pmdfunc = New(pmp) CMDFunctionGPDB
+	CMDFunctionGPDB *pmdfunc = GPOS_NEW(pmp) CMDFunctionGPDB
 											(
 											pmp,
 											pmdid,
@@ -1825,17 +1825,17 @@ CTranslatorRelcacheToDXL::Pmdagg
 	}
 
 	CWStringDynamic *pstrAggName = CDXLUtils::PstrFromSz(pmp, szName);
-	CMDName *pmdname = New(pmp) CMDName(pmp, pstrAggName);
+	CMDName *pmdname = GPOS_NEW(pmp) CMDName(pmp, pstrAggName);
 
 	// CMDName ctor created a copy of the string
-	delete pstrAggName;
+	GPOS_DELETE(pstrAggName);
 
 	// get result type
 	OID oidResult = gpdb::OidFuncRetType(oidAgg);
 
 	GPOS_ASSERT(InvalidOid != oidResult);
 
-	CMDIdGPDB *pmdidTypeResult = New(pmp) CMDIdGPDB(oidResult);
+	CMDIdGPDB *pmdidTypeResult = GPOS_NEW(pmp) CMDIdGPDB(oidResult);
 	IMDId *pmdidTypeIntermediate = PmdidAggIntermediateResultType(pmp, pmdid);
 
 	pmdid->AddRef();
@@ -1850,7 +1850,7 @@ CTranslatorRelcacheToDXL::Pmdagg
 	// due to the fact that hashAgg may spill
 	BOOL fHashAggCapable = !fOrdered && gpdb::FAggHasPrelimFunc(oidAgg);
 
-	CMDAggregateGPDB *pmdagg = New(pmp) CMDAggregateGPDB
+	CMDAggregateGPDB *pmdagg = GPOS_NEW(pmp) CMDAggregateGPDB
 											(
 											pmp,
 											pmdid,
@@ -1892,18 +1892,18 @@ CTranslatorRelcacheToDXL::Pmdtrigger
 	}
 
 	CWStringDynamic *pstrTriggerName = CDXLUtils::PstrFromSz(pmp, szName);
-	CMDName *pmdname = New(pmp) CMDName(pmp, pstrTriggerName);
-	delete pstrTriggerName;
+	CMDName *pmdname = GPOS_NEW(pmp) CMDName(pmp, pstrTriggerName);
+	GPOS_DELETE(pstrTriggerName);
 
 	// get relation oid
 	OID oidRel = gpdb::OidTriggerRelid(oidTrigger);
 	GPOS_ASSERT(InvalidOid != oidRel);
-	CMDIdGPDB *pmdidRel = New(pmp) CMDIdGPDB(oidRel);
+	CMDIdGPDB *pmdidRel = GPOS_NEW(pmp) CMDIdGPDB(oidRel);
 
 	// get function oid
 	OID oidFunc = gpdb::OidTriggerFuncid(oidTrigger);
 	GPOS_ASSERT(InvalidOid != oidFunc);
-	CMDIdGPDB *pmdidFunc = New(pmp) CMDIdGPDB(oidFunc);
+	CMDIdGPDB *pmdidFunc = GPOS_NEW(pmp) CMDIdGPDB(oidFunc);
 
 	// get type
 	INT iType = gpdb::ITriggerType(oidTrigger);
@@ -1912,7 +1912,7 @@ CTranslatorRelcacheToDXL::Pmdtrigger
 	BOOL fEnabled = gpdb::FTriggerEnabled(oidTrigger);
 
 	pmdid->AddRef();
-	CMDTriggerGPDB *pmdtrigger = New(pmp) CMDTriggerGPDB
+	CMDTriggerGPDB *pmdtrigger = GPOS_NEW(pmp) CMDTriggerGPDB
 											(
 											pmp,
 											pmdid,
@@ -1951,13 +1951,13 @@ CTranslatorRelcacheToDXL::Pmdcheckconstraint
 		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound, pmdid->Wsz());
 	}
 	CWStringDynamic *pstrCheckConstraintName = CDXLUtils::PstrFromSz(pmp, szName);
-	CMDName *pmdname = New(pmp) CMDName(pmp, pstrCheckConstraintName);
-	delete pstrCheckConstraintName;
+	CMDName *pmdname = GPOS_NEW(pmp) CMDName(pmp, pstrCheckConstraintName);
+	GPOS_DELETE(pstrCheckConstraintName);
 
 	// get relation oid associated with the check constraint
 	OID oidRel = gpdb::OidCheckConstraintRelid(oidCheckConstraint);
 	GPOS_ASSERT(InvalidOid != oidRel);
-	CMDIdGPDB *pmdidRel = New(pmp) CMDIdGPDB(oidRel);
+	CMDIdGPDB *pmdidRel = GPOS_NEW(pmp) CMDIdGPDB(oidRel);
 
 	// translate the check constraint expression
 	Node *pnode = gpdb::PnodeCheckConstraint(oidCheckConstraint);
@@ -1978,19 +1978,19 @@ CTranslatorRelcacheToDXL::Pmdcheckconstraint
 							);
 
 	// generate a mock mapping between var to column information
-	CMappingVarColId *pmapvarcolid = New(pmp) CMappingVarColId(pmp);
-	DrgPdxlcd *pdrgpdxlcd = New(pmp) DrgPdxlcd(pmp);
+	CMappingVarColId *pmapvarcolid = GPOS_NEW(pmp) CMappingVarColId(pmp);
+	DrgPdxlcd *pdrgpdxlcd = GPOS_NEW(pmp) DrgPdxlcd(pmp);
 	const IMDRelation *pmdrel = pmda->Pmdrel(pmdidRel);
 	const ULONG ulLen = pmdrel->UlColumns();
 	for (ULONG ul = 0; ul < ulLen; ul++)
 	{
 		const IMDColumn *pmdcol = pmdrel->Pmdcol(ul);
-		CMDName *pmdnameCol = New(pmp) CMDName(pmp, pmdcol->Mdname().Pstr());
+		CMDName *pmdnameCol = GPOS_NEW(pmp) CMDName(pmp, pmdcol->Mdname().Pstr());
 		CMDIdGPDB *pmdidColType = CMDIdGPDB::PmdidConvert(pmdcol->PmdidType());
 		pmdidColType->AddRef();
 
 		// create a column descriptor for the column
-		CDXLColDescr *pdxlcd = New(pmp) CDXLColDescr
+		CDXLColDescr *pdxlcd = GPOS_NEW(pmp) CDXLColDescr
 										(
 										pmp,
 										pmdnameCol,
@@ -2008,11 +2008,11 @@ CTranslatorRelcacheToDXL::Pmdcheckconstraint
 
 	// cleanup
 	pdrgpdxlcd->Release();
-	delete pmapvarcolid;
+	GPOS_DELETE(pmapvarcolid);
 
 	pmdid->AddRef();
 
-	return New(pmp) CMDCheckConstraintGPDB
+	return GPOS_NEW(pmp) CMDCheckConstraintGPDB
 						(
 						pmp,
 						pmdid,
@@ -2045,10 +2045,10 @@ CTranslatorRelcacheToDXL::PmdnameType
 	GPOS_ASSERT(NULL != szTypeName);
 
 	CWStringDynamic *pstrName = CDXLUtils::PstrFromSz(pmp, szTypeName);
-	CMDName *pmdname = New(pmp) CMDName(pmp, pstrName);
+	CMDName *pmdname = GPOS_NEW(pmp) CMDName(pmp, pstrName);
 
 	// cleanup
-	delete pstrName;
+	GPOS_DELETE(pstrName);
 	return pmdname;
 }
 
@@ -2145,7 +2145,7 @@ CTranslatorRelcacheToDXL::PmdidAggIntermediateResultType
 	GPOS_ASSERT(InvalidOid != oidAgg);
 
 	OID oidTypeIntermediateResult = gpdb::OidAggIntermediateResultType(oidAgg);
-	return New(pmp) CMDIdGPDB(oidTypeIntermediateResult);
+	return GPOS_NEW(pmp) CMDIdGPDB(oidTypeIntermediateResult);
 }
 
 //---------------------------------------------------------------------------
@@ -2176,8 +2176,8 @@ CTranslatorRelcacheToDXL::PmdidFunc
 		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound, wszFuncName);
 	}
 
-	delete [] szFuncName;
-	return New(pmp) CMDIdGPDB(fcl->oid);
+	GPOS_DELETE_ARRAY(szFuncName);
+	return GPOS_NEW(pmp) CMDIdGPDB(fcl->oid);
 }
 
 //---------------------------------------------------------------------------
@@ -2213,9 +2213,9 @@ CTranslatorRelcacheToDXL::PimdobjRelStats
 		// get rel name
 		CHAR *szRelName = NameStr(rel->rd_rel->relname);
 		CWStringDynamic *pstrRelName = CDXLUtils::PstrFromSz(pmp, szRelName);
-		pmdname = New(pmp) CMDName(pmp, pstrRelName);
+		pmdname = GPOS_NEW(pmp) CMDName(pmp, pstrRelName);
 		// CMDName ctor created a copy of the string
-		delete pstrRelName;
+		GPOS_DELETE(pstrRelName);
 
 		BlockNumber pages = 0;
 		GpPolicy *pgppolicy = gpdb::Pdistrpolicy(rel);
@@ -2244,7 +2244,7 @@ CTranslatorRelcacheToDXL::PimdobjRelStats
 		fEmptyStats = true;
 	}
 		
-	CDXLRelStats *pdxlrelstats = New(pmp) CDXLRelStats
+	CDXLRelStats *pdxlrelstats = GPOS_NEW(pmp) CDXLRelStats
 												(
 												pmp,
 												pmdidRelStats,
@@ -2292,11 +2292,11 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 	CDouble dRows(rel->rd_rel->reltuples);
 
 	// extract column name and type
-	CMDName *pmdnameCol = New(pmp) CMDName(pmp, pmdcol->Mdname().Pstr());
+	CMDName *pmdnameCol = GPOS_NEW(pmp) CMDName(pmp, pmdcol->Mdname().Pstr());
 	OID oidAttType = CMDIdGPDB::PmdidConvert(pmdcol->PmdidType())->OidObjectId();
 	gpdb::CloseRelation(rel);
 
-	DrgPdxlbucket *pdrgpdxlbucket = New(pmp) DrgPdxlbucket(pmp);
+	DrgPdxlbucket *pdrgpdxlbucket = GPOS_NEW(pmp) DrgPdxlbucket(pmp);
 
 	if (0 > attrnum)
 	{
@@ -2327,7 +2327,7 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 
 		if (!pmdcol->FDropped())
 		{
-			CMDIdGPDB *pmdidAttType = New(pmp) CMDIdGPDB(oidAttType);
+			CMDIdGPDB *pmdidAttType = GPOS_NEW(pmp) CMDIdGPDB(oidAttType);
 			IMDType *pmdtype = Pmdtype(pmp, pmdidAttType);
 			dWidth = CStatisticsUtils::DDefaultColumnWidth(pmdtype);
 			pmdtype->Release();
@@ -2469,7 +2469,7 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 
 	// create col stats object
 	pmdidColStats->AddRef();
-	CDXLColStats *pdxlcolstats = New(pmp) CDXLColStats
+	CDXLColStats *pdxlcolstats = GPOS_NEW(pmp) CDXLColStats
 											(
 											pmp,
 											pmdidColStats,
@@ -2513,7 +2513,7 @@ CTranslatorRelcacheToDXL::PdxlcolstatsSystemColumn
        GPOS_ASSERT(0 > attrnum);
        GPOS_ASSERT(NULL != pdrgpdxlbucket);
 
-       CMDIdGPDB *pmdidAttType = New(pmp) CMDIdGPDB(oidAttType);
+       CMDIdGPDB *pmdidAttType = GPOS_NEW(pmp) CMDIdGPDB(oidAttType);
        IMDType *pmdtype = Pmdtype(pmp, pmdidAttType);
        GPOS_ASSERT(pmdtype->FFixedLength());
 
@@ -2557,7 +2557,7 @@ CTranslatorRelcacheToDXL::PdxlcolstatsSystemColumn
        pmdidAttType->Release();
        pmdtype->Release();
 
-       return New(pmp) CDXLColStats
+       return GPOS_NEW(pmp) CDXLColStats
                        (
                        pmp,
                        pmdidColStats,
@@ -2664,7 +2664,7 @@ CTranslatorRelcacheToDXL::PimdobjCast
 
 	CMDName *pmdname = CDXLUtils::PmdnameFromSz(pmp, szFuncName);
 	
-	return New(pmp) CMDCastGPDB(pmp, pmdid, pmdname, pmdidSrc, pmdidDest, fBinaryCoercible, New(pmp) CMDIdGPDB(oidCastFunc));
+	return GPOS_NEW(pmp) CMDCastGPDB(pmp, pmdid, pmdname, pmdidSrc, pmdidDest, fBinaryCoercible, GPOS_NEW(pmp) CMDIdGPDB(oidCastFunc));
 }
 
 //---------------------------------------------------------------------------
@@ -2712,7 +2712,7 @@ CTranslatorRelcacheToDXL::PmdobjScCmp
 
 	CMDName *pmdname = CDXLUtils::PmdnameFromSz(pmp, szName);
 
-	return New(pmp) CMDScCmpGPDB(pmp, pmdid, pmdname, pmdidLeft, pmdidRight, ecmpt, New(pmp) CMDIdGPDB(oidScCmp));
+	return GPOS_NEW(pmp) CMDScCmpGPDB(pmp, pmdid, pmdname, pmdidLeft, pmdidRight, ecmpt, GPOS_NEW(pmp) CMDIdGPDB(oidScCmp));
 }
 
 //---------------------------------------------------------------------------
@@ -2737,7 +2737,7 @@ CTranslatorRelcacheToDXL::PdrgpdxlbucketTransformStats
 	ULONG ulNumHistValues
 	)
 {
-	CMDIdGPDB *pmdidAttType = New(pmp) CMDIdGPDB(oidAttType);
+	CMDIdGPDB *pmdidAttType = GPOS_NEW(pmp) CMDIdGPDB(oidAttType);
 	IMDType *pmdtype = Pmdtype(pmp, pmdidAttType);
 
 	// translate MCVs to Orca histogram. Create an empty histogram if there are no MCVs.
@@ -2796,23 +2796,23 @@ CTranslatorRelcacheToDXL::PdrgpdxlbucketTransformStats
 		// both histogram and MCVs exist and have significant info, merge MCV and histogram buckets
 		CHistogram *phistMerged = CStatisticsUtils::PhistMergeMcvHist(pmp, phistGPDBMCV, phistGPDBHist);
 		pdrgpdxlbucket = Pdrgpdxlbucket(pmp, pmdtype, phistMerged);
-		delete phistMerged;
+		GPOS_DELETE(phistMerged);
 	}
 	else
 	{
 		// no MCVs nor histogram
 		GPOS_ASSERT(!fHasHist && !fHasMCV);
-		pdrgpdxlbucket = New(pmp) DrgPdxlbucket(pmp);
+		pdrgpdxlbucket = GPOS_NEW(pmp) DrgPdxlbucket(pmp);
 	}
 
 	// cleanup
 	pmdidAttType->Release();
 	pmdtype->Release();
-	delete phistGPDBMCV;
+	GPOS_DELETE(phistGPDBMCV);
 
 	if (NULL != phistGPDBHist)
 	{
-		delete phistGPDBHist;
+		GPOS_DELETE(phistGPDBHist);
 	}
 
 	return pdrgpdxlbucket;
@@ -2836,15 +2836,15 @@ CTranslatorRelcacheToDXL::PhistTransformGPDBMCV
 	ULONG ulNumMCVValues
 	)
 {
-	DrgPdatum *pdrgpdatum = New(pmp) DrgPdatum(pmp);
-	DrgPdouble *pdrgpdFreq = New(pmp) DrgPdouble(pmp);
+	DrgPdatum *pdrgpdatum = GPOS_NEW(pmp) DrgPdatum(pmp);
+	DrgPdouble *pdrgpdFreq = GPOS_NEW(pmp) DrgPdouble(pmp);
 
 	for (ULONG ul = 0; ul < ulNumMCVValues; ul++)
 	{
 		Datum datumMCV = pdrgdatumMCVValues[ul];
 		IDatum *pdatum = CTranslatorScalarToDXL::Pdatum(pmp, pmdtype, false /* fNull */, datumMCV);
 		pdrgpdatum->Append(pdatum);
-		pdrgpdFreq->Append(New(pmp) CDouble(pdrgfMCVFrequencies[ul]));
+		pdrgpdFreq->Append(GPOS_NEW(pmp) CDouble(pdrgfMCVFrequencies[ul]));
 
 		if (!pdatum->FStatsComparable(pdatum))
 		{
@@ -2852,7 +2852,7 @@ CTranslatorRelcacheToDXL::PhistTransformGPDBMCV
 			// building a histogram. return an empty histogram
 			pdrgpdatum->Release();
 			pdrgpdFreq->Release();
-			return New(pmp) CHistogram(New(pmp) DrgPbucket(pmp));
+			return GPOS_NEW(pmp) CHistogram(GPOS_NEW(pmp) DrgPbucket(pmp));
 		}
 	}
 
@@ -2897,7 +2897,7 @@ CTranslatorRelcacheToDXL::PhistTransformGPDBHist
 
 	const ULONG ulBuckets = ulNumHistValues - 1;
 	// create buckets
-	DrgPbucket *pdrgppbucket = New(pmp) DrgPbucket(pmp);
+	DrgPbucket *pdrgppbucket = GPOS_NEW(pmp) DrgPbucket(pmp);
 	for (ULONG ul = 0; ul < ulBuckets; ul++)
 	{
 		Datum datumMin = pdrgdatumHistValues[ul];
@@ -2914,10 +2914,10 @@ CTranslatorRelcacheToDXL::PhistTransformGPDBHist
 			fUpperClosed = true;
 		}
 
-		CBucket *pbucket = New(pmp) CBucket
+		CBucket *pbucket = GPOS_NEW(pmp) CBucket
 									(
-									New(pmp) CPoint(pdatumMin),
-									New(pmp) CPoint(pdatumMax),
+									GPOS_NEW(pmp) CPoint(pdatumMin),
+									GPOS_NEW(pmp) CPoint(pdatumMax),
 									fLowerClosed,
 									fUpperClosed,
 									dFreqPerBucket,
@@ -2935,11 +2935,11 @@ CTranslatorRelcacheToDXL::PhistTransformGPDBHist
 			// order is different in GPDB, and use const expression eval to compare
 			// datums in Orca (MPP-22780)
 			pdrgppbucket->Release();
-			return New(pmp) CHistogram(New(pmp) DrgPbucket(pmp));
+			return GPOS_NEW(pmp) CHistogram(GPOS_NEW(pmp) DrgPbucket(pmp));
 		}
 	}
 
-	CHistogram *phist = New(pmp) CHistogram(pdrgppbucket);
+	CHistogram *phist = GPOS_NEW(pmp) CHistogram(pdrgppbucket);
 	return phist;
 }
 
@@ -2960,7 +2960,7 @@ CTranslatorRelcacheToDXL::Pdrgpdxlbucket
 	const CHistogram *phist
 	)
 {
-	DrgPdxlbucket *pdrgpdxlbucket = New(pmp) DrgPdxlbucket(pmp);
+	DrgPdxlbucket *pdrgpdxlbucket = GPOS_NEW(pmp) DrgPdxlbucket(pmp);
 	const DrgPbucket *pdrgpbucket = phist->Pdrgpbucket();
 	ULONG ulNumBuckets = pdrgpbucket->UlLength();
 	for (ULONG ul = 0; ul < ulNumBuckets; ul++)
@@ -2970,7 +2970,7 @@ CTranslatorRelcacheToDXL::Pdrgpdxlbucket
 		CDXLDatum *pdxldatumLB = pmdtype->Pdxldatum(pmp, pdatumLB);
 		IDatum *pdatumUB = pbucket->PpUpper()->Pdatum();
 		CDXLDatum *pdxldatumUB = pmdtype->Pdxldatum(pmp, pdatumUB);
-		CDXLBucket *pdxlbucket = New (pmp) CDXLBucket
+		CDXLBucket *pdxlbucket = GPOS_NEW(pmp) CDXLBucket
 											(
 											pdxldatumLB,
 											pdxldatumUB,
@@ -3051,7 +3051,7 @@ CTranslatorRelcacheToDXL::PdrgpulPartKeys
 
 	// TODO: Feb 23, 2012; support intermediate levels
 
-	DrgPul *pdrgpulPartKeys = New(pmp) DrgPul(pmp);
+	DrgPul *pdrgpulPartKeys = GPOS_NEW(pmp) DrgPul(pmp);
 
 	MemoryContext mcxt = CurrentMemoryContext;
 	PartitionNode *pn = gpdb::PpnParts(oid, 0 /*level*/, 0 /*parent*/, false /*inctemplate*/, mcxt, true /*includesubparts*/);
@@ -3076,7 +3076,7 @@ CTranslatorRelcacheToDXL::PdrgpulPartKeys
 
 		INT iAttno = linitial_int(plPartKey);
 		GPOS_ASSERT(0 < iAttno);
-		pdrgpulPartKeys->Append(New(pmp) ULONG(iAttno - 1));
+		pdrgpulPartKeys->Append(GPOS_NEW(pmp) ULONG(iAttno - 1));
 	}
 
 	return pdrgpulPartKeys;
@@ -3105,7 +3105,7 @@ CTranslatorRelcacheToDXL::PulAttnoMapping
 
 	// build a mapping for attnos->positions
 	const ULONG ulCols = pdrgpmdcol->UlLength();
-	ULONG *pul = New(pmp) ULONG[ulMaxCols];
+	ULONG *pul = GPOS_NEW_ARRAY(pmp, ULONG, ulMaxCols);
 
 	// initialize all positions to ULONG_MAX
 	for (ULONG ul = 0;  ul < ulMaxCols; ul++)
@@ -3143,7 +3143,7 @@ CTranslatorRelcacheToDXL::PdrgpdrgpulKeys
 	ULONG *pulMapping
 	)
 {
-	DrgPdrgPul *pdrgpdrgpul = New(pmp) DrgPdrgPul(pmp);
+	DrgPdrgPul *pdrgpdrgpul = GPOS_NEW(pmp) DrgPdrgPul(pmp);
 
 	List *plKeys = gpdb::PlRelationKeys(oid);
 
@@ -3152,14 +3152,14 @@ CTranslatorRelcacheToDXL::PdrgpdrgpulKeys
 	{
 		List *plKey = (List *) lfirst(plcKey);
 
-		DrgPul *pdrgpulKey = New(pmp) DrgPul(pmp);
+		DrgPul *pdrgpulKey = GPOS_NEW(pmp) DrgPul(pmp);
 
 		ListCell *plcKeyElem = NULL;
 		ForEach (plcKeyElem, plKey)
 		{
 			INT iKey = lfirst_int(plcKeyElem);
 			ULONG ulPos = UlPosition(iKey, pulMapping);
-			pdrgpulKey->Append(New(pmp) ULONG(ulPos));
+			pdrgpulKey->Append(GPOS_NEW(pmp) ULONG(ulPos));
 		}
 		GPOS_ASSERT(0 < pdrgpulKey->UlLength());
 
@@ -3170,17 +3170,17 @@ CTranslatorRelcacheToDXL::PdrgpdrgpulKeys
 	
 	if (fAddDefaultKeys)
 	{
-		DrgPul *pdrgpulKey = New(pmp) DrgPul(pmp);
+		DrgPul *pdrgpulKey = GPOS_NEW(pmp) DrgPul(pmp);
 		if (fPartitioned)
 		{
 			// TableOid is part of default key for partitioned tables
 			ULONG ulPosTableOid = UlPosition(TableOidAttributeNumber, pulMapping);
-			pdrgpulKey->Append(New(pmp) ULONG(ulPosTableOid));
+			pdrgpulKey->Append(GPOS_NEW(pmp) ULONG(ulPosTableOid));
 		}
 		ULONG ulPosSegid= UlPosition(GpSegmentIdAttributeNumber, pulMapping);
 		ULONG ulPosCtid = UlPosition(SelfItemPointerAttributeNumber, pulMapping);
-		pdrgpulKey->Append(New(pmp) ULONG(ulPosSegid));
-		pdrgpulKey->Append(New(pmp) ULONG(ulPosCtid));
+		pdrgpulKey->Append(GPOS_NEW(pmp) ULONG(ulPosSegid));
+		pdrgpulKey->Append(GPOS_NEW(pmp) ULONG(ulPosCtid));
 		
 		pdrgpdrgpul->Append(pdrgpulKey);
 	}
@@ -3280,18 +3280,18 @@ CTranslatorRelcacheToDXL::PmdpartcnstrIndex
 	BOOL fUnbounded
 	)
 {
-	DrgPdxlcd *pdrgpdxlcd = New(pmp) DrgPdxlcd(pmp);
+	DrgPdxlcd *pdrgpdxlcd = GPOS_NEW(pmp) DrgPdxlcd(pmp);
 	const ULONG ulColumns = pmdrel->UlColumns();
 	
 	for (ULONG ul = 0; ul < ulColumns; ul++)
 	{
 		const IMDColumn *pmdcol = pmdrel->Pmdcol(ul);
-		CMDName *pmdnameCol = New(pmp) CMDName(pmp, pmdcol->Mdname().Pstr());
+		CMDName *pmdnameCol = GPOS_NEW(pmp) CMDName(pmp, pmdcol->Mdname().Pstr());
 		CMDIdGPDB *pmdidColType = CMDIdGPDB::PmdidConvert(pmdcol->PmdidType());
 		pmdidColType->AddRef();
 
 		// create a column descriptor for the column
-		CDXLColDescr *pdxlcd = New(pmp) CDXLColDescr
+		CDXLColDescr *pdxlcd = GPOS_NEW(pmp) CDXLColDescr
 										(
 										pmp,
 										pmdnameCol,
@@ -3336,12 +3336,12 @@ CTranslatorRelcacheToDXL::PmdpartcnstrRelation
 	gpdb::FreeList(plPartKeys);
 
 	BOOL fUnbounded = true;
-	DrgPul *pdrgpulDefaultLevels = New(pmp) DrgPul(pmp);
+	DrgPul *pdrgpulDefaultLevels = GPOS_NEW(pmp) DrgPul(pmp);
 	for (ULONG ul = 0; ul < ulLevels; ul++)
 	{
 		if (FDefaultPartition(plDefaultLevelsRel, ul))
 		{
-			pdrgpulDefaultLevels->Append(New(pmp) ULONG(ul));
+			pdrgpulDefaultLevels->Append(GPOS_NEW(pmp) ULONG(ul));
 		}
 		else
 		{
@@ -3349,17 +3349,17 @@ CTranslatorRelcacheToDXL::PmdpartcnstrRelation
 		}
 	}
 
-	DrgPdxlcd *pdrgpdxlcd = New(pmp) DrgPdxlcd(pmp);
+	DrgPdxlcd *pdrgpdxlcd = GPOS_NEW(pmp) DrgPdxlcd(pmp);
 	const ULONG ulColumns = pdrgpmdcol->UlLength();
 	for (ULONG ul = 0; ul < ulColumns; ul++)
 	{
 		const IMDColumn *pmdcol = (*pdrgpmdcol)[ul];
-		CMDName *pmdnameCol = New(pmp) CMDName(pmp, pmdcol->Mdname().Pstr());
+		CMDName *pmdnameCol = GPOS_NEW(pmp) CMDName(pmp, pmdcol->Mdname().Pstr());
 		CMDIdGPDB *pmdidColType = CMDIdGPDB::PmdidConvert(pmdcol->PmdidType());
 		pmdidColType->AddRef();
 
 		// create a column descriptor for the column
-		CDXLColDescr *pdxlcd = New(pmp) CDXLColDescr
+		CDXLColDescr *pdxlcd = GPOS_NEW(pmp) CDXLColDescr
 										(
 										pmp,
 										pmdnameCol,
@@ -3418,7 +3418,7 @@ CTranslatorRelcacheToDXL::PmdpartcnstrFromNode
 							);
 
 	// generate a mock mapping between var to column information
-	CMappingVarColId *pmapvarcolid = New(pmp) CMappingVarColId(pmp);
+	CMappingVarColId *pmapvarcolid = GPOS_NEW(pmp) CMappingVarColId(pmp);
 
 	pmapvarcolid->LoadColumns(0 /*ulQueryLevel */, 1 /* rteIndex */, pdrgpdxlcd);
 
@@ -3426,10 +3426,10 @@ CTranslatorRelcacheToDXL::PmdpartcnstrFromNode
 	CDXLNode *pdxlnScalar = sctranslator.PdxlnScOpFromExpr((Expr *) pnodeCnstr, pmapvarcolid);
 
 	// cleanup
-	delete pmapvarcolid;
+	GPOS_DELETE(pmapvarcolid);
 
 	pdrgpulDefaultParts->AddRef();
-	return New(pmp) CMDPartConstraintGPDB(pmp, pdxlnScalar, pdrgpulDefaultParts, fUnbounded);
+	return GPOS_NEW(pmp) CMDPartConstraintGPDB(pmp, pdxlnScalar, pdrgpulDefaultParts, fUnbounded);
 }
 
 //---------------------------------------------------------------------------
@@ -3522,14 +3522,14 @@ CTranslatorRelcacheToDXL::PdrgpmdidIndexOpClasses
 	)
 {
 	List *plOpClasses = gpdb::PlIndexOpClasses(CMDIdGPDB::PmdidConvert(pmdidIndex)->OidObjectId());
-	DrgPmdid *pdrgpmdid = New(pmp) DrgPmdid(pmp);
+	DrgPmdid *pdrgpmdid = GPOS_NEW(pmp) DrgPmdid(pmp);
 	
 	ListCell *plc = NULL;
 	
 	ForEach(plc, plOpClasses)
 	{
 		OID oidOpClass = lfirst_oid(plc);
-		pdrgpmdid->Append(New(pmp) CMDIdGPDB(oidOpClass));
+		pdrgpmdid->Append(GPOS_NEW(pmp) CMDIdGPDB(oidOpClass));
 	}
 	
 	return pdrgpmdid;
@@ -3551,14 +3551,14 @@ CTranslatorRelcacheToDXL::PdrgpmdidScOpOpClasses
 	)
 {
 	List *plOpClasses = gpdb::PlScOpOpClasses(CMDIdGPDB::PmdidConvert(pmdidScOp)->OidObjectId());
-	DrgPmdid *pdrgpmdid = New(pmp) DrgPmdid(pmp);
+	DrgPmdid *pdrgpmdid = GPOS_NEW(pmp) DrgPmdid(pmp);
 	
 	ListCell *plc = NULL;
 	
 	ForEach(plc, plOpClasses)
 	{
 		OID oidOpClass = lfirst_oid(plc);
-		pdrgpmdid->Append(New(pmp) CMDIdGPDB(oidOpClass));
+		pdrgpmdid->Append(GPOS_NEW(pmp) CMDIdGPDB(oidOpClass));
 	}
 	
 	return pdrgpmdid;

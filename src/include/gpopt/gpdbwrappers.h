@@ -159,7 +159,7 @@ namespace gpdb {
 
 	// replace Vars that reference JOIN outputs with references to the original
 	// relation variables instead
-	Query *PqueryFlattenJoinAliasVar(Query *pquery, ULONG ulQueryLevel);
+	Query *PqueryFlattenJoinAliasVar(Query *pquery, gpos::ULONG ulQueryLevel);
 
 	// is aggregate ordered
 	bool FOrderedAgg(Oid aggid);
@@ -490,11 +490,11 @@ namespace gpdb {
     
     // return true if the table is partitioned and hash-distributed, and one of  
     // the child partitions is randomly distributed
-    BOOL FChildPartDistributionMismatch(Relation rel);
+    gpos::BOOL FChildPartDistributionMismatch(Relation rel);
 
     // return true if the table is partitioned and any of the child partitions
     // have a trigger of the given type
-    BOOL FChildTriggers(Oid oid, int triggerType);
+    gpos::BOOL FChildTriggers(Oid oid, int triggerType);
 
 	// does a relation exist with the given oid
 	bool FRelationExists(Oid oid);
@@ -611,7 +611,7 @@ namespace gpdb {
 	FaultInjectorType_e OptTasksFaultInjector(FaultInjectorIdentifier_e identifier);
 
 	// return the number of leaf partition for a given table oid
-	ULONG UlLeafPartitions(Oid oidRelation);
+	gpos::ULONG UlLeafPartitions(Oid oidRelation);
 
 } //namespace gpdb
 

@@ -45,7 +45,7 @@ CMappingVarColId::CMappingVarColId
 	:
 	m_pmp(pmp)
 {
-	m_pmvcmap = New(m_pmp) CMVCMap(m_pmp);
+	m_pmvcmap = GPOS_NEW(m_pmp) CMVCMap(m_pmp);
 }
 
 //---------------------------------------------------------------------------
@@ -80,7 +80,7 @@ CMappingVarColId::Pgpdbattoptcol
 		ulVarNo = OUTER;
 	}
 
-	CGPDBAttInfo *pgpdbattinfo = New(m_pmp) CGPDBAttInfo(ulAbsQueryLevel, ulVarNo, pvar->varattno);
+	CGPDBAttInfo *pgpdbattinfo = GPOS_NEW(m_pmp) CGPDBAttInfo(ulAbsQueryLevel, ulVarNo, pvar->varattno);
 	CGPDBAttOptCol *pgpdbattoptcol = m_pmvcmap->PtLookup(pgpdbattinfo);
 	
 	if (NULL == pgpdbattoptcol)
@@ -156,14 +156,14 @@ CMappingVarColId::Insert
 	GPOS_ASSERT(ulVarNo > 0);
 
 	// create key
-	CGPDBAttInfo *pgpdbattinfo = New(m_pmp) CGPDBAttInfo(ulQueryLevel, ulVarNo, iAttNo);
+	CGPDBAttInfo *pgpdbattinfo = GPOS_NEW(m_pmp) CGPDBAttInfo(ulQueryLevel, ulVarNo, iAttNo);
 
 	// create value
-	COptColInfo *poptcolinfo = New(m_pmp) COptColInfo(ulColId, pstrColName);
+	COptColInfo *poptcolinfo = GPOS_NEW(m_pmp) COptColInfo(ulColId, pstrColName);
 
 	// key is part of value, bump up refcount
 	pgpdbattinfo->AddRef();
-	CGPDBAttOptCol *pgpdbattoptcol = New(m_pmp) CGPDBAttOptCol(pgpdbattinfo, poptcolinfo);
+	CGPDBAttOptCol *pgpdbattoptcol = GPOS_NEW(m_pmp) CGPDBAttOptCol(pgpdbattinfo, poptcolinfo);
 
 #ifdef GPOS_DEBUG
 	BOOL fResult =
@@ -286,7 +286,7 @@ CMappingVarColId::Load
 				);
 
 		ul ++;
-		delete(pstrColName);
+		GPOS_DELETE(pstrColName);
 	}
 }
 
@@ -463,7 +463,7 @@ CMappingVarColId::PmapvarcolidCopy
 	)
 	const
 {
-	CMappingVarColId *pmapvarcolid = New(m_pmp) CMappingVarColId(m_pmp);
+	CMappingVarColId *pmapvarcolid = GPOS_NEW(m_pmp) CMappingVarColId(m_pmp);
 
 	// iterate over full map
 	CMVCMapIter mvcmi(this->m_pmvcmap);
@@ -476,10 +476,10 @@ CMappingVarColId::PmapvarcolidCopy
 		if (pgpdbattinfo->UlQueryLevel() <= ulQueryLevel)
 		{
 			// include all variables defined at same query level or before
-			CGPDBAttInfo *pgpdbattinfoNew = New(m_pmp) CGPDBAttInfo(pgpdbattinfo->UlQueryLevel(), pgpdbattinfo->UlVarNo(), pgpdbattinfo->IAttNo());
-			COptColInfo *poptcolinfoNew = New(m_pmp) COptColInfo(poptcolinfo->UlColId(), New(m_pmp) CWStringConst(m_pmp, poptcolinfo->PstrColName()->Wsz()));
+			CGPDBAttInfo *pgpdbattinfoNew = GPOS_NEW(m_pmp) CGPDBAttInfo(pgpdbattinfo->UlQueryLevel(), pgpdbattinfo->UlVarNo(), pgpdbattinfo->IAttNo());
+			COptColInfo *poptcolinfoNew = GPOS_NEW(m_pmp) COptColInfo(poptcolinfo->UlColId(), GPOS_NEW(m_pmp) CWStringConst(m_pmp, poptcolinfo->PstrColName()->Wsz()));
 			pgpdbattinfoNew->AddRef();
-			CGPDBAttOptCol *pgpdbattoptcolNew = New(m_pmp) CGPDBAttOptCol(pgpdbattinfoNew, poptcolinfoNew);
+			CGPDBAttOptCol *pgpdbattoptcolNew = GPOS_NEW(m_pmp) CGPDBAttOptCol(pgpdbattinfoNew, poptcolinfoNew);
 
 			// insert into hashmap
 #ifdef GPOS_DEBUG
@@ -508,7 +508,7 @@ CMappingVarColId::PmapvarcolidCopy
 	)
 	const
 {
-	CMappingVarColId *pmapvarcolid = New(pmp) CMappingVarColId(pmp);
+	CMappingVarColId *pmapvarcolid = GPOS_NEW(pmp) CMappingVarColId(pmp);
 
 	// iterate over full map
 	CMVCMapIter mvcmi(this->m_pmvcmap);
@@ -518,10 +518,10 @@ CMappingVarColId::PmapvarcolidCopy
 		const CGPDBAttInfo *pgpdbattinfo = pgpdbattoptcol->Pgpdbattinfo();
 		const COptColInfo *poptcolinfo = pgpdbattoptcol->Poptcolinfo();
 
-		CGPDBAttInfo *pgpdbattinfoNew = New(pmp) CGPDBAttInfo(pgpdbattinfo->UlQueryLevel(), pgpdbattinfo->UlVarNo(), pgpdbattinfo->IAttNo());
-		COptColInfo *poptcolinfoNew = New(pmp) COptColInfo(poptcolinfo->UlColId(), New(pmp) CWStringConst(pmp, poptcolinfo->PstrColName()->Wsz()));
+		CGPDBAttInfo *pgpdbattinfoNew = GPOS_NEW(pmp) CGPDBAttInfo(pgpdbattinfo->UlQueryLevel(), pgpdbattinfo->UlVarNo(), pgpdbattinfo->IAttNo());
+		COptColInfo *poptcolinfoNew = GPOS_NEW(pmp) COptColInfo(poptcolinfo->UlColId(), GPOS_NEW(pmp) CWStringConst(pmp, poptcolinfo->PstrColName()->Wsz()));
 		pgpdbattinfoNew->AddRef();
-		CGPDBAttOptCol *pgpdbattoptcolNew = New(pmp) CGPDBAttOptCol(pgpdbattinfoNew, poptcolinfoNew);
+		CGPDBAttOptCol *pgpdbattoptcolNew = GPOS_NEW(pmp) CGPDBAttOptCol(pgpdbattinfoNew, poptcolinfoNew);
 
 		// insert into hashmap
 #ifdef GPOS_DEBUG
@@ -558,7 +558,7 @@ CMappingVarColId::PmapvarcolidRemap
 	// construct a mapping old cols -> new cols
 	HMUlUl *phmulul = CTranslatorUtils::PhmululMap(pmp, pdrgpulOld, pdrgpulNew);
 		
-	CMappingVarColId *pmapvarcolid = New(pmp) CMappingVarColId(pmp);
+	CMappingVarColId *pmapvarcolid = GPOS_NEW(pmp) CMappingVarColId(pmp);
 
 	CMVCMapIter mvcmi(this->m_pmvcmap);
 	while (mvcmi.FAdvance())
@@ -567,7 +567,7 @@ CMappingVarColId::PmapvarcolidRemap
 		const CGPDBAttInfo *pgpdbattinfo = pgpdbattoptcol->Pgpdbattinfo();
 		const COptColInfo *poptcolinfo = pgpdbattoptcol->Poptcolinfo();
 
-		CGPDBAttInfo *pgpdbattinfoNew = New(pmp) CGPDBAttInfo(pgpdbattinfo->UlQueryLevel(), pgpdbattinfo->UlVarNo(), pgpdbattinfo->IAttNo());
+		CGPDBAttInfo *pgpdbattinfoNew = GPOS_NEW(pmp) CGPDBAttInfo(pgpdbattinfo->UlQueryLevel(), pgpdbattinfo->UlVarNo(), pgpdbattinfo->IAttNo());
 		ULONG ulColId = poptcolinfo->UlColId();
 		ULONG *pulColIdNew = phmulul->PtLookup(&ulColId);
 		if (NULL != pulColIdNew)
@@ -575,9 +575,9 @@ CMappingVarColId::PmapvarcolidRemap
 			ulColId = *pulColIdNew;
 		}
 		
-		COptColInfo *poptcolinfoNew = New(pmp) COptColInfo(ulColId, New(pmp) CWStringConst(pmp, poptcolinfo->PstrColName()->Wsz()));
+		COptColInfo *poptcolinfoNew = GPOS_NEW(pmp) COptColInfo(ulColId, GPOS_NEW(pmp) CWStringConst(pmp, poptcolinfo->PstrColName()->Wsz()));
 		pgpdbattinfoNew->AddRef();
-		CGPDBAttOptCol *pgpdbattoptcolNew = New(pmp) CGPDBAttOptCol(pgpdbattinfoNew, poptcolinfoNew);
+		CGPDBAttOptCol *pgpdbattoptcolNew = GPOS_NEW(pmp) CGPDBAttOptCol(pgpdbattinfoNew, poptcolinfoNew);
 
 #ifdef GPOS_DEBUG
 		BOOL fResult =

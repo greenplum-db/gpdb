@@ -373,7 +373,7 @@ CConfigParamMapping::PbsPack
 	ULONG ulXforms // number of available xforms
 	)
 {
-	CBitSet *pbs = New(pmp) CBitSet(pmp, EopttraceSentinel);
+	CBitSet *pbs = GPOS_NEW(pmp) CBitSet(pmp, EopttraceSentinel);
 
 	for (ULONG ul = 0; ul < GPOS_ARRAY_SIZE(m_elem); ul++)
 	{
