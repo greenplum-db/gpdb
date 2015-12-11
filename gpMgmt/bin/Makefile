@@ -33,7 +33,7 @@ core: pygresql subprocess32
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
 all: core lockfile paramiko pycrypto stream pychecker psi unittest2
 else
-all: core
+all: core stream
 endif
 
 #
