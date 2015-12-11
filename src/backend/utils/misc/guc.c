@@ -5251,7 +5251,7 @@ SetPGVariable(const char *name, List *args, bool is_local, bool gp_dispatch)
 
 		if (gp_dispatch)
 		{
-	        CdbDoCommandOnAllGangs( buffer.data, false, /*no txn*/ false );
+			CdbSetGucOnAllGangs( buffer.data, false, /*no txn*/ false );
 		}
 	}
 }
@@ -5308,7 +5308,7 @@ set_config_by_name(PG_FUNCTION_ARGS)
 			if (is_local)
 					appendStringInfo(&buffer, "LOCAL ");
 			appendStringInfo(&buffer, "%s TO '%s'", name, value);
-			CdbDoCommandOnAllGangs(buffer.data,
+			CdbSetGucOnAllGangs(buffer.data,
 								   false /* cancelOnError */,
 								   false /* no two phase commit */);
     }

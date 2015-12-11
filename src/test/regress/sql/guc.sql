@@ -151,3 +151,49 @@ SHOW gp_disable_catalog_access_on_segment;
 DROP TABLE guc_test1;
 DROP TABLE guc_test2;
 -- end_ignore
+
+--
+-- Test GUC if cursor is opened
+--
+-- start_ignore
+drop table if exists test_cursor_set_table;
+drop function if exists test_set_in_loop();
+drop function if exists test_call_set_command();
+-- end_ignore
+
+create table test_cursor_set_table as select * from generate_series(1, 100);
+
+CREATE FUNCTION test_set_in_loop () RETURNS numeric
+    AS $$
+DECLARE
+    rec record;
+    result numeric;
+    tmp numeric;
+BEGIN
+	result = 0;
+FOR rec IN select * from test_cursor_set_table
+LOOP
+        select test_call_set_command() into tmp;
+        result = result + 1;
+END LOOP;
+return result;
+END;
+$$
+    LANGUAGE plpgsql NO SQL;
+
+
+CREATE FUNCTION test_call_set_command() returns numeric
+AS $$
+BEGIN
+       execute 'SET gp_workfile_limit_per_query=524;';
+       return 0;
+END;
+$$
+    LANGUAGE plpgsql NO SQL;
+
+
+select * from test_set_in_loop();
+
+drop table if exists test_cursor_set_table;
+drop function if exists test_set_in_loop();
+drop function if exists test_call_set_command();
