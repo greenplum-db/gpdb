@@ -330,8 +330,10 @@ void Cache_InitReplacementPolicy(Cache *cache);
 void Cache_TouchEntry(Cache *cache, CacheEntry *entry);
 
 /* Statistics related functions */
-void Cache_UpdatePerfCounter(uint32 *counter, int delta);
-void Cache_UpdatePerfCounter64(int64 *counter, int64 delta);
+void Cache_AddPerfCounter(uint32 *counter, int delta);
+void Cache_AddPerfCounter64(int64 *counter, int64 delta);
+void Cache_DecPerfCounter(uint32 *counter, int delta);
+void Cache_DecPerfCounter64(int64 *counter, int64 delta);
 void Cache_TimedOperationStart(void);
 void Cache_TimedOperationRecord(instr_time *totalTime, instr_time *maxTime);
 

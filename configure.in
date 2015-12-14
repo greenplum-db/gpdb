@@ -215,6 +215,12 @@ PGAC_ARG_BOOL(enable, spinlocks, yes,
               [  --disable-spinlocks     do not use spinlocks])
 
 #
+# Atomic operations
+#
+PGAC_ARG_BOOL(enable, atomics, yes,
+              [  --disable-atomics       do not use atomic operations])
+
+#
 # --enable-debug adds -g to compiler flags
 #
 PGAC_ARG_BOOL(enable, debug, no,
@@ -1055,6 +1061,13 @@ else
 *** Not using spinlocks will cause poor performance.])
 fi
 
+if test "$enable_atomics" = yes; then
+  AC_DEFINE(HAVE_ATOMICS, 1, [Define to 1 if you want to use atomics.])
+else
+  AC_MSG_WARN([
+*** Not using atomic operations will cause poor performance.])
+fi
+
 if test "$with_gssapi" = yes ; then
   if test "$PORTNAME" != "win32"; then
     AC_SEARCH_LIBS(gss_init_sec_context, [gssapi_krb5 gss 'gssapi -lkrb5 -lcrypto'], [],
@@ -1131,7 +1144,7 @@ AS_IF([test "$enable_orca" = yes],
 ]) # fi
 
 dnl sys/socket.h is required by AC_FUNC_ACCEPT_ARGTYPES
-AC_CHECK_HEADERS([crypt.h dld.h endian.h fp_class.h getopt.h ieeefp.h ifaddrs.h langinfo.h poll.h pwd.h sys/ioctl.h sys/ipc.h sys/poll.h sys/pstat.h sys/resource.h sys/select.h sys/sem.h sys/shm.h sys/socket.h sys/sockio.h sys/tas.h sys/time.h sys/un.h termios.h ucred.h utime.h wchar.h wctype.h kernel/OS.h kernel/image.h SupportDefs.h])
+AC_CHECK_HEADERS([atomic.h crypt.h dld.h endian.h fp_class.h getopt.h ieeefp.h ifaddrs.h langinfo.h mbarrier.h poll.h pwd.h sys/ioctl.h sys/ipc.h sys/poll.h sys/pstat.h sys/resource.h sys/select.h sys/sem.h sys/shm.h sys/socket.h sys/sockio.h sys/tas.h sys/time.h sys/un.h termios.h ucred.h utime.h wchar.h wctype.h kernel/OS.h kernel/image.h SupportDefs.h])
 
 # Check for bzlib.h
 if test "$PORTNAME" = "win32"; then
@@ -1275,8 +1288,8 @@ fi
 
 m4_defun([AC_PROG_CC_STDC], []) dnl We don't want that.
 AC_C_BIGENDIAN
+PGAC_C_INLINE
 AC_C_CONST
-AC_C_INLINE
 AC_C_STRINGIZE
 PGAC_C_SIGNED
 AC_C_VOLATILE
@@ -1699,12 +1712,19 @@ dnl 64-bit type.  But we still handle the case of snprintf being broken.
 
 PGAC_TYPE_64BIT_INT([long int])
 
-if test x"$HAVE_LONG_INT_64" = x"no" ; then
+if test x"$HAVE_LONG_INT_64" = x"yes" ; then
+  pg_int64_type="long int"
+else
   PGAC_TYPE_64BIT_INT([long long int])
-  if test x"$HAVE_LONG_LONG_INT_64" = x"no" ; then
+  if test x"$HAVE_LONG_LONG_INT_64" = x"yes" ; then
+    pg_int64_type="long long int"
+  else
     AC_MSG_ERROR([Cannot find a working 64-bit integer type.])
   fi
 fi
+
+AC_DEFINE_UNQUOTED(PG_INT64_TYPE, $pg_int64_type,
+  [Define to the name of a signed 64-bit integer type.])
 
 
 dnl If we need to use "long long int", figure out whether nnnLL notation works.
@@ -1800,6 +1820,15 @@ AC_CHECK_TYPES([int8, uint8, int64, uint64], [], [],
 # We also check for sig_atomic_t, which *should* be defined per ANSI
 # C, but is missing on some old platforms.
 AC_CHECK_TYPES(sig_atomic_t, [], [], [#include <signal.h>])
+
+# Check for various atomic operations now that we have checked how to declare
+# 64bit integers.
+PGAC_HAVE_GCC__SYNC_CHAR_TAS
+PGAC_HAVE_GCC__SYNC_INT32_TAS
+PGAC_HAVE_GCC__SYNC_INT32_CAS
+PGAC_HAVE_GCC__SYNC_INT64_CAS
+PGAC_HAVE_GCC__ATOMIC_INT32_CAS
+PGAC_HAVE_GCC__ATOMIC_INT64_CAS
 
 
 # If the user did not disable integer datetimes, check that
