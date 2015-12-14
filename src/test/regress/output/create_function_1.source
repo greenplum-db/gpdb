@@ -47,6 +47,10 @@ CREATE FUNCTION set_ttdummy (int4)
         RETURNS int4
         AS '@abs_builddir@/regress@DLSUFFIX@'
         LANGUAGE C STRICT READS SQL DATA;
+CREATE FUNCTION test_atomic_ops()
+    RETURNS bool
+    AS '@abs_builddir@/regress@DLSUFFIX@'
+    LANGUAGE C IMMUTABLE STRICT NO SQL;
 -- Things that shouldn't work:
 CREATE FUNCTION test1 (int) RETURNS int LANGUAGE SQL CONTAINS SQL
     AS 'SELECT ''not an integer'';';

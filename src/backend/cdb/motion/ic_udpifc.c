@@ -30,7 +30,7 @@
 #include "miscadmin.h"
 #include "libpq/libpq-be.h"
 #include "libpq/ip.h"
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 #include "utils/builtins.h"
 #include "utils/debugbreak.h"
 #include "utils/pg_crc.h"
@@ -1477,8 +1477,9 @@ CleanupMotionUDPIFC(void)
 	pthread_mutex_unlock(&ic_control_info.errorLock);
 	pthread_mutex_unlock(&ic_control_info.lock);
 
+	uint32 expected = 0;
 	/* Shutdown rx thread. */
-	compare_and_swap_32(&ic_control_info.shutdown, 0, 1);
+	pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&ic_control_info.shutdown, &expected, 1);
 
 	if(ic_control_info.threadCreated)
 		pthread_join(ic_control_info.threadHandle, NULL);
@@ -4484,7 +4485,7 @@ handleAcks(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntr
 		{
 			if (!checkCRC(pkt))
 			{
-				gp_atomic_add_32(&ic_statistics.crcErrors, 1);
+				pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&ic_statistics.crcErrors, 1);
 				if (DEBUG2 >= log_min_messages)
 					write_log("received network data error, dropping bad packet, user data unaffected.");
 				continue;
@@ -6229,8 +6230,9 @@ handleDataPacket(MotionConn *conn, icpkthdr *pkt, struct sockaddr_storage *peer,
 static void *
 rxThreadFunc(void *arg)
 {
-	icpkthdr *pkt=NULL;
-	bool	skip_poll=false;
+	icpkthdr *pkt = NULL;
+	bool	skip_poll = false;
+	uint32 	expected = 1;
 
 	gp_set_thread_sigmasks();
 
@@ -6240,8 +6242,8 @@ rxThreadFunc(void *arg)
 		int		n;
 
 		/* check shutdown condition*/
-
-		if (compare_and_swap_32(&ic_control_info.shutdown, 1, 0))
+		expected = 1;
+		if (pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&ic_control_info.shutdown, &expected, 0))
 		{
 			if (DEBUG1 >= log_min_messages)
 			{
@@ -6272,7 +6274,8 @@ rxThreadFunc(void *arg)
 
 			n = poll(&nfd, 1, RX_THREAD_POLL_TIMEOUT);
 
-			if (compare_and_swap_32(&ic_control_info.shutdown, 1, 0))
+			expected = 1;
+			if (pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&ic_control_info.shutdown, &expected, 0))
 			{
 				if (DEBUG1 >= log_min_messages)
 				{
@@ -6316,7 +6319,8 @@ rxThreadFunc(void *arg)
 			read_count = recvfrom(UDP_listenerFd, (char *)pkt, Gp_max_packet_size, 0,
 								  (struct sockaddr *)&peer, &peerlen);
 
-			if (compare_and_swap_32(&ic_control_info.shutdown, 1, 0))
+			expected = 1;
+			if (pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&ic_control_info.shutdown, &expected, 0))
 			{
 				if (DEBUG1 >= log_min_messages)
 				{
@@ -6379,7 +6383,7 @@ rxThreadFunc(void *arg)
 			{
 				if (!checkCRC(pkt))
 				{
-					gp_atomic_add_32(&ic_statistics.crcErrors, 1);
+					pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&ic_statistics.crcErrors, 1);
 					if (DEBUG2 >= log_min_messages)
 						write_log("received network data error, dropping bad packet, user data unaffected.");
 					continue;
@@ -6921,13 +6925,14 @@ dumpConnections(ChunkTransportStateEntry *pEntry, const char *fname)
 void
 WaitInterconnectQuitUDPIFC(void)
 {
+	uint32 expected = 0;
 	/*
 	 * Just in case ic thread is waiting on the locks.
 	*/
 	pthread_mutex_unlock(&ic_control_info.errorLock);
 	pthread_mutex_unlock(&ic_control_info.lock);
 
-	compare_and_swap_32(&ic_control_info.shutdown, 0, 1);
+	pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&ic_control_info.shutdown, &expected, 1);
 
 	if(ic_control_info.threadCreated)
 	{

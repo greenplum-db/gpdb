@@ -62,7 +62,7 @@
 #include "funcapi.h"
 #include "catalog/pg_type.h"
 #include "access/tuptoaster.h"
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 
 extern bool gp_debug_resqueue_priority;
 
@@ -301,8 +301,8 @@ static inline void SwitchGroupLeader(int newLeaderIndex)
 	oldLeaderEntry = &backoffSingleton->backendEntries[myEntry->groupLeaderIndex];
 	newLeaderEntry = &backoffSingleton->backendEntries[newLeaderIndex];
 
-	gp_atomic_add_32( &oldLeaderEntry->numFollowers, -1 );
-	gp_atomic_add_32( &newLeaderEntry->numFollowers, 1 );
+	pg_atomic_sub_fetch_u32((pg_atomic_uint32 *) &oldLeaderEntry->numFollowers, 1 );
+	pg_atomic_add_fetch_u32((pg_atomic_uint32 *) &newLeaderEntry->numFollowers, 1 );
 	myEntry->groupLeaderIndex = newLeaderIndex;
 }
 

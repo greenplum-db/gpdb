@@ -13,7 +13,7 @@
 
 #include "postgres.h"
 
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 #include "utils/memutils.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
@@ -116,7 +116,7 @@ SessionState_Acquire(int sessionId)
 	}
 
 	Assert(NULL != acquired);
-	int pinCount = gp_atomic_add_32((volatile int *) &acquired->pinCount, 1);
+	int pinCount = pg_atomic_add_fetch_u32((pg_atomic_uint32 *) &acquired->pinCount, 1);
 
 	ereport(gp_sessionstate_loglevel, (errmsg("SessionState_Acquire: pinCount: %d, activeProcessCount: %d",
 			pinCount, acquired->activeProcessCount), errprintstack(true)));
@@ -148,7 +148,7 @@ SessionState_Release(SessionState *acquired)
 	Assert(!isProcessActive);
 	Assert(acquired->activeProcessCount < acquired->pinCount);
 
-	int pinCount = gp_atomic_add_32((volatile int *) &acquired->pinCount, -1);
+	int pinCount = pg_atomic_sub_fetch_u32((pg_atomic_uint32 *) &acquired->pinCount, 1);
 
 	ereport(gp_sessionstate_loglevel, (errmsg("SessionState_Release: pinCount: %d, activeProcessCount: %d",
 			pinCount, acquired->activeProcessCount), errprintstack(true)));

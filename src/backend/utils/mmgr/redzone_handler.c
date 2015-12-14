@@ -12,7 +12,7 @@
  */
 
 #include "postgres.h"
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
 #include "utils/vmem_tracker.h"
@@ -143,7 +143,8 @@ RedZoneHandler_FlagTopConsumer()
 
 	Assert(NULL != MySessionState);
 
-	bool success = compare_and_swap_32((uint32*) isRunawayDetector, 0, 1);
+	uint32 expected = 0;
+	bool success = pg_atomic_compare_exchange_u32((pg_atomic_uint32 *) isRunawayDetector, &expected, 1);
 
 	/* If successful then this process must be the runaway detector */
 	AssertImply(success, 1 == *isRunawayDetector);

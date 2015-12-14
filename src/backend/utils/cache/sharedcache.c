@@ -13,7 +13,7 @@
 #include "utils/sharedcache.h"
 #include "cdb/cdbvars.h"
 #include "utils/memutils.h"
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 #include "cdb/cdbutil.h"
 
 /* Suffix used to generate shared memory hashtable name from cache name */
@@ -394,11 +394,11 @@ Cache_AcquireEntry(Cache *cache, void *populate_param)
 
 	CACHE_ASSERT_WIPED(newEntry);
 
-
+	uint32 expected = CACHE_ENTRY_FREE;
 #ifdef USE_ASSERT_CHECKING
 	int32 casResult =
 #endif
-	compare_and_swap_32(&newEntry->state, CACHE_ENTRY_FREE, CACHE_ENTRY_RESERVED);
+	pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&newEntry->state, &expected, CACHE_ENTRY_RESERVED);
 	Assert(1 == casResult);
 
 	/*
@@ -411,10 +411,11 @@ Cache_AcquireEntry(Cache *cache, void *populate_param)
 		cache->populateEntry(CACHE_ENTRY_PAYLOAD(newEntry), populate_param);
 	}
 
+	expected = CACHE_ENTRY_RESERVED;
 #ifdef USE_ASSERT_CHECKING
 	casResult =
 #endif
-	compare_and_swap_32(&newEntry->state, CACHE_ENTRY_RESERVED, CACHE_ENTRY_ACQUIRED);
+	pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&newEntry->state, &expected, CACHE_ENTRY_ACQUIRED);
 	Assert(1 == casResult);
 
 	Cache_RegisterCleanup(cache, newEntry, false /* isCachedEntry */ );
@@ -496,7 +497,7 @@ Cache_ReleaseAcquired(Cache *cache, CacheEntry *entry, bool unregisterCleanup)
 
 	Cache_AddToFreelist(cache, entry);
 
-	Cache_UpdatePerfCounter(&cache->cacheHdr->cacheStats.noAcquiredEntries, -1 /* delta */ );
+	Cache_DecPerfCounter(&cache->cacheHdr->cacheStats.noAcquiredEntries, 1 /* delta */ );
 }
 
 /*
@@ -523,8 +524,8 @@ Cache_GetFreeElement(Cache *cache)
 
 	cacheHdr->freeList = cacheHdr->freeList->nextEntry;
 
-	Cache_UpdatePerfCounter(&cacheHdr->cacheStats.noFreeEntries, -1 /* delta */ );
-	Cache_UpdatePerfCounter(&cacheHdr->cacheStats.noAcquiredEntries, 1 /* delta */);
+	Cache_DecPerfCounter(&cacheHdr->cacheStats.noFreeEntries, 1 /* delta */ );
+	Cache_AddPerfCounter(&cacheHdr->cacheStats.noAcquiredEntries, 1 /* delta */);
 
 	SpinLockRelease(&cacheHdr->spinlock);
 
@@ -551,7 +552,7 @@ Cache_AddToFreelist(Cache *cache, CacheEntry *entry)
 
 	entry->nextEntry = cacheHdr->freeList;
 	cacheHdr->freeList = entry;
-	Cache_UpdatePerfCounter(&cacheHdr->cacheStats.noFreeEntries, 1 /* delta */);
+	Cache_AddPerfCounter(&cacheHdr->cacheStats.noFreeEntries, 1 /* delta */);
 
 	SpinLockRelease(&cacheHdr->spinlock);
 }
@@ -584,10 +585,10 @@ Cache_Insert(Cache *cache, CacheEntry *entry)
 
 	Cache_Stats *cacheStats = &cache->cacheHdr->cacheStats;
 	Cache_TimedOperationStart();
-	Cache_UpdatePerfCounter(&cacheStats->noInserts, 1 /* delta */);
-	Cache_UpdatePerfCounter(&cacheStats->noCachedEntries, 1 /* delta */);
-	Cache_UpdatePerfCounter(&cacheStats->noAcquiredEntries, -1 /* delta */);
-	Cache_UpdatePerfCounter64(&cacheStats->totalEntrySize, entry->size);
+	Cache_AddPerfCounter(&cacheStats->noInserts, 1 /* delta */);
+	Cache_AddPerfCounter(&cacheStats->noCachedEntries, 1 /* delta */);
+	Cache_DecPerfCounter(&cacheStats->noAcquiredEntries, 1 /* delta */);
+	Cache_AddPerfCounter64(&cacheStats->totalEntrySize, entry->size);
 
 	Cache_ComputeEntryHashcode(cache, entry);
 
@@ -618,11 +619,11 @@ Cache_Insert(Cache *cache, CacheEntry *entry)
 
 	Cache_EntryAddRef(cache, entry);
 
+	uint32 expected = CACHE_ENTRY_ACQUIRED;
 #ifdef USE_ASSERT_CHECKING
 	int32 casResult =
 #endif
-
-	compare_and_swap_32(&entry->state, CACHE_ENTRY_ACQUIRED, CACHE_ENTRY_CACHED);
+	pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&entry->state, &expected, CACHE_ENTRY_CACHED);
 	Assert(1 == casResult);
 	Assert(NULL != anchor->firstEntry && NULL != anchor->lastEntry);
 
@@ -650,7 +651,7 @@ Cache_Lookup(Cache *cache, CacheEntry *entry)
 	Assert(NULL != entry);
 
 	Cache_TimedOperationStart();
-	Cache_UpdatePerfCounter(&cache->cacheHdr->cacheStats.noLookups, 1 /* delta */);
+	Cache_AddPerfCounter(&cache->cacheHdr->cacheStats.noLookups, 1 /* delta */);
 
 	/* Advance the clock for the replacement policy */
 	Cache_AdvanceClock(cache);
@@ -697,14 +698,14 @@ Cache_Lookup(Cache *cache, CacheEntry *entry)
 		/* Register it for cleanup in case we get an error while testing for equality */
 		Cache_RegisterCleanup(cache, crtEntry, true /* isCachedEntry */);
 
-		Cache_UpdatePerfCounter(&cache->cacheHdr->cacheStats.noCompares, 1 /* delta */);
+		Cache_AddPerfCounter(&cache->cacheHdr->cacheStats.noCompares, 1 /* delta */);
 
 		if(cache->equivalentEntries(CACHE_ENTRY_PAYLOAD(entry),
 				CACHE_ENTRY_PAYLOAD(crtEntry)))
 		{
 			/* Found the match, we're done */
 			Cache_TouchEntry(cache, crtEntry);
-			Cache_UpdatePerfCounter(&cache->cacheHdr->cacheStats.noCacheHits, 1 /* delta */);
+			Cache_AddPerfCounter(&cache->cacheHdr->cacheStats.noCacheHits, 1 /* delta */);
 			break;
 		}
 
@@ -739,7 +740,7 @@ Cache_UnlinkEntry(Cache *cache, CacheAnchor *anchor, CacheEntry *entry)
 	Assert(NULL != anchor);
 	Assert(NULL != anchor->firstEntry);
 
-	Cache_UpdatePerfCounter64(&cache->cacheHdr->cacheStats.totalEntrySize, -entry->size);
+	Cache_DecPerfCounter64(&cache->cacheHdr->cacheStats.totalEntrySize, entry->size);
 
 	/* Easy case: Remove first element */
 	if (anchor->firstEntry == entry)
@@ -830,7 +831,7 @@ Cache_ReleaseCached(Cache *cache, CacheEntry *entry, bool unregisterCleanup)
 		Cache_UnlinkEntry(cache, (CacheAnchor *) anchor, entry);
 		deleteEntry = true;
 
-		Cache_UpdatePerfCounter(&cache->cacheHdr->cacheStats.noDeletedEntries, -1 /* delta */);
+		Cache_DecPerfCounter(&cache->cacheHdr->cacheStats.noDeletedEntries, 1 /* delta */);
 	}
 
 	SpinLockRelease(&anchor->spinlock);
@@ -907,14 +908,15 @@ Cache_Remove(Cache *cache, CacheEntry *entry)
 {
 	Assert(NULL != entry);
 
+	uint32 expected = CACHE_ENTRY_CACHED;
 #ifdef USE_ASSERT_CHECKING
 	int32 casResult =
 #endif
-	compare_and_swap_32(&entry->state, CACHE_ENTRY_CACHED, CACHE_ENTRY_DELETED);
+	pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&entry->state, &expected, CACHE_ENTRY_DELETED);
 	Assert(casResult == 1);
 
-	Cache_UpdatePerfCounter(&cache->cacheHdr->cacheStats.noCachedEntries, -1 /* delta */);
-	Cache_UpdatePerfCounter(&cache->cacheHdr->cacheStats.noDeletedEntries, 1 /* delta */);
+	Cache_DecPerfCounter(&cache->cacheHdr->cacheStats.noCachedEntries, 1 /* delta */);
+	Cache_AddPerfCounter(&cache->cacheHdr->cacheStats.noDeletedEntries, 1 /* delta */);
 }
 
 /*
@@ -1019,7 +1021,7 @@ Cache_EntryAddRef(Cache *cache, CacheEntry *entry)
 
 	if (1 == entry->pinCount)
 	{
-		Cache_UpdatePerfCounter(&cache->cacheHdr->cacheStats.noPinnedEntries, 1 /* delta */);
+		Cache_AddPerfCounter(&cache->cacheHdr->cacheStats.noPinnedEntries, 1 /* delta */);
 	}
 
 	return entry->pinCount;
@@ -1041,7 +1043,7 @@ Cache_EntryDecRef(Cache *cache, CacheEntry *entry)
 
 	if (0 == entry->pinCount)
 	{
-		Cache_UpdatePerfCounter(&cache->cacheHdr->cacheStats.noPinnedEntries, -1 /* delta */);
+		Cache_DecPerfCounter(&cache->cacheHdr->cacheStats.noPinnedEntries, 1 /* delta */);
 	}
 
 	return entry->pinCount;
@@ -1061,22 +1063,41 @@ Cache_GetEntryByIndex(CacheHdr *cacheHdr, int32 idx)
 }
 
 /*
- * Updates the given performance counter by delta
+ * Atomically increments the performance counter
  *
- * delta can be positive or negative
+ * delta must be positive
  */
 void
-Cache_UpdatePerfCounter(uint32 *counter, int delta)
+Cache_AddPerfCounter(uint32 *counter, int delta)
 {
 	Assert(counter + delta >= 0);
-	gp_atomic_add_32((int32 *) counter, delta);
+	pg_atomic_add_fetch_u32((pg_atomic_uint32 *) counter,delta);
 }
 
 void
-Cache_UpdatePerfCounter64(int64 *counter, int64 delta)
+Cache_AddPerfCounter64(int64 *counter, int64 delta)
 {
 	Assert(counter + delta >= 0);
-	gp_atomic_add_64(counter, delta);
+	pg_atomic_add_fetch_u64((pg_atomic_uint64 *) counter,delta);
+}
+
+/*
+ * Atomically decrements the performance counter
+ *
+ * delta must be positive
+ */
+void
+Cache_DecPerfCounter(uint32 *counter, int delta)
+{
+	Assert(counter - delta >= 0);
+	pg_atomic_sub_fetch_u32((pg_atomic_uint32 *) counter,delta);
+}
+
+void
+Cache_DecPerfCounter64(int64 *counter, int64 delta)
+{
+	Assert(counter - delta >= 0);
+	pg_atomic_sub_fetch_u64((pg_atomic_uint64 *) counter,delta);
 }
 
 /*

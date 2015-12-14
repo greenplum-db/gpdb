@@ -19,7 +19,7 @@
 #include "postgres.h"
 #include "storage/shmem.h"
 #include "utils/syncbitvector.h"
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 
 /*
  * bit vector access descriptor.
@@ -147,7 +147,7 @@ bool SyncBitVector_TestTestSetBit(SyncBitvectorContainer container, int32 vector
 		}
 
 		/* test and set */
-		swapped = compare_and_swap_32(pdatum, datumOld, datumNew);
+		swapped = pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)pdatum, &datumOld, datumNew);
 		if (swapped)
 		{
 			return true;
