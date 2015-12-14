@@ -41,7 +41,7 @@ endif
 #
 
 #
-#  STREAM
+#  STREAM which is used by gpcheckperf for memory bandwidth testing.
 #
 STREAM_DIR=$(SRC)/src/stream
 stream:
