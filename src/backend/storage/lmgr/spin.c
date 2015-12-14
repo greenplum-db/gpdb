@@ -54,10 +54,11 @@ SpinlockSemas(void)
 	 * It would be cleaner to distribute this logic into the affected modules,
 	 * similar to the way shmem space estimation is handled.
 	 *
-	 * For now, though, we just need a few spinlocks (10 should be plenty)
-	 * plus one for each LWLock and one for each buffer header.
+	 * plus one for each LWLock and one for each buffer header,plus
+	 * NUM_ATOMICS_SEMAPHORES for atomic api(without sufficient spinlock
+	 * and/or atomics support)
 	 */
-	return NumLWLocks() + NBuffers + 10;
+	return NumLWLocks() + NBuffers + 10 + NUM_ATOMICS_SEMAPHORES;
 }
 
 /*

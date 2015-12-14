@@ -13,7 +13,7 @@
  */
 
 #include "postgres.h"
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
 #include "utils/faultinjection.h"
@@ -195,7 +195,7 @@ VmemTracker_ReserveVmemChunks(int32 numChunksToReserve)
 	Assert(NULL != MySessionState);
 
 	Assert(0 < numChunksToReserve);
-	int32 total = gp_atomic_add_32(&MySessionState->sessionVmem, numChunksToReserve);
+	int32 total = pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, numChunksToReserve);
 	Assert(total > (int32) 0);
 
 	/* We don't support vmem usage from non-owner thread */
@@ -214,14 +214,14 @@ VmemTracker_ReserveVmemChunks(int32 numChunksToReserve)
 		if (total > maxChunksPerQuery + waivedChunks)
 		{
 			/* Revert the reserved space, but don't revert the prev_alloc as we have already set the firstTime to false */
-			gp_atomic_add_32(&MySessionState->sessionVmem, - numChunksToReserve);
+			pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, numChunksToReserve);
 			return MemoryFailure_QueryMemoryExhausted;
 		}
 		waiverUsed = true;
 	}
 
 	/* Now reserve vmem at segment level */
-	int32 new_vmem = gp_atomic_add_32(segmentVmemChunks, numChunksToReserve);
+	int32 new_vmem = pg_atomic_add_fetch_u32((pg_atomic_uint32 *)segmentVmemChunks, numChunksToReserve);
 
 	/*
 	 * If segment vmem is exhausted, rollback query level reservation. For non-QE
@@ -234,10 +234,10 @@ VmemTracker_ReserveVmemChunks(int32 numChunksToReserve)
 		if (new_vmem > vmemChunksQuota + waivedChunks)
 		{
 			/* Revert query memory reservation */
-			gp_atomic_add_32(&MySessionState->sessionVmem, - numChunksToReserve);
+			pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, numChunksToReserve);
 
 			/* Revert vmem reservation */
-			gp_atomic_add_32(segmentVmemChunks, - numChunksToReserve);
+			pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)segmentVmemChunks, numChunksToReserve);
 
 			return MemoryFailure_VmemExhausted;
 		}
@@ -271,11 +271,11 @@ VmemTracker_ReleaseVmemChunks(int reduction)
 	/* We don't support vmem usage from non-owner thread */
 	Assert(MemoryProtection_IsOwnerThread());
 
-	gp_atomic_add_32((int32*) segmentVmemChunks, - reduction);
+	pg_atomic_sub_fetch_u32((pg_atomic_uint32 *) segmentVmemChunks, reduction);
 
 	Assert(*segmentVmemChunks >= 0);
 	Assert(NULL != MySessionState);
-	gp_atomic_add_32(&MySessionState->sessionVmem, - reduction);
+	pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, reduction);
 	Assert(0 <= MySessionState->sessionVmem);
 	trackedVmemChunks -= reduction;
 }

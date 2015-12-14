@@ -11,7 +11,7 @@
 #include "postgres.h"
 #include "utils/sharedcache.h"
 #include "utils/syncrefhashtable.h"
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 
 /* Replacement policy default parameters */
 
@@ -111,13 +111,13 @@ Cache_Evict(Cache *cache, int64 evictRequestSize)
 		int32 entryIdx = Cache_NextClockHand(cache, &wraparound);
 		Assert(entryIdx < cache->cacheHdr->nEntries);
 
-		Cache_UpdatePerfCounter(&cacheStats->noEntriesScanned,1 /* delta */);
+		Cache_AddPerfCounter(&cacheStats->noEntriesScanned,1 /* delta */);
 
 		if (wraparound)
 		{
 			unsuccessfulLoops++;
 
-			Cache_UpdatePerfCounter(&cacheStats->noWraparound, 1 /* delta */);
+			Cache_AddPerfCounter(&cacheStats->noWraparound, 1 /* delta */);
 
 			if (!foundVictim)
 			{
@@ -199,10 +199,11 @@ Cache_Evict(Cache *cache, int64 evictRequestSize)
 		CACHE_ASSERT_VALID(crtEntry);
 		Assert(crtEntry->utility == 0);
 
+		uint32 expected = CACHE_ENTRY_CACHED;
 #if USE_ASSERT_CHECKING
 		int32 casResult =
 #endif
-		compare_and_swap_32(&crtEntry->state, CACHE_ENTRY_CACHED, CACHE_ENTRY_DELETED);
+		pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&crtEntry->state, &expected, CACHE_ENTRY_DELETED);
 		Assert(1 == casResult);
 
 		SpinLockRelease(&anchor->spinlock);
@@ -210,7 +211,7 @@ Cache_Evict(Cache *cache, int64 evictRequestSize)
 		evictedSize += crtEntry->size;
 
 		/* Don't update noFreeEntries yet. It will be done in Cache_AddToFreelist */
-		Cache_UpdatePerfCounter(&cacheStats->noCachedEntries, -1 /* delta */);
+		Cache_DecPerfCounter(&cacheStats->noCachedEntries, 1 /* delta */);
 
 		/* Unlink entry from the anchor chain */
 		SpinLockAcquire(&anchor->spinlock);
@@ -235,7 +236,7 @@ Cache_Evict(Cache *cache, int64 evictRequestSize)
 
 		Cache_AddToFreelist(cache, crtEntry);
 
-		Cache_UpdatePerfCounter(&cacheStats->noEvicts, 1 /* delta */);
+		Cache_AddPerfCounter(&cacheStats->noEvicts, 1 /* delta */);
 		Cache_TimedOperationRecord(&cacheStats->timeEvictions, &cacheStats->maxTimeEvict);
 
 		if (evictedSize >= evictRequestSize)

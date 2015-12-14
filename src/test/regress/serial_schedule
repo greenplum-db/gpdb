@@ -106,3 +106,4 @@ test: returning
 test: xml
 test: stats
 ignore: tablespace
+test: lock

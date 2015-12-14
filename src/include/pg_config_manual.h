@@ -104,6 +104,14 @@
 #define NUM_USER_DEFINED_LWLOCKS	4
 
 /*
+ * When we have neither spinlocks nor atomic operations support we're
+ * implementing atomic operations on top of spinlock on top of semaphores. To
+ * be safe against atomic operations while holding a spinlock separate
+ * semaphores have to be used.
+ */
+#define NUM_ATOMICS_SEMAPHORES      64
+
+/*
  * Define this to make libpgtcl's "pg_result -assign" command process
  * C-style backslash sequences in returned tuple data and convert
  * PostgreSQL array values into Tcl lists.	CAUTION: This conversion

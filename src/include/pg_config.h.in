@@ -71,6 +71,12 @@
 /* Define to 1 if you have the `atexit' function. */
 #undef HAVE_ATEXIT
 
+/* Define to 1 if you want to use atomics. */
+#undef HAVE_ATOMICS
+
+/* Define to 1 if you have the <atomic.h> header file. */
+#undef HAVE_ATOMIC_H
+
 /* Define to 1 if you have the `cbrt' function. */
 #undef HAVE_CBRT
 
@@ -83,7 +89,8 @@
 /* Define to 1 if you have the <crypt.h> header file. */
 #undef HAVE_CRYPT_H
 
-/* Define to 1 if you have the declaration of CURLOPT_MAIL_FROM. */
+/* Define to 1 if you have the declaration of `CURLOPT_MAIL_FROM', and to 0 if
+   you don't. */
 #undef HAVE_DECL_CURLOPT_MAIL_FROM
 
 /* Define to 1 if you have the declaration of `fdatasync', and to 0 if you
@@ -162,6 +169,25 @@
 
 /* Define to 1 if your compiler understands __FUNCTION__. */
 #undef HAVE_FUNCNAME__FUNCTION
+
+/* Define to 1 if you have __atomic_compare_exchange_n(int *, int *, int). */
+#undef HAVE_GCC__ATOMIC_INT32_CAS
+
+/* Define to 1 if you have __atomic_compare_exchange_n(int64 *, int *, int64).
+   */
+#undef HAVE_GCC__ATOMIC_INT64_CAS
+
+/* Define to 1 if you have __sync_lock_test_and_set(char *) and friends. */
+#undef HAVE_GCC__SYNC_CHAR_TAS
+
+/* Define to 1 if you have __sync_compare_and_swap(int *, int, int). */
+#undef HAVE_GCC__SYNC_INT32_CAS
+
+/* Define to 1 if you have __sync_lock_test_and_set(int *) and friends. */
+#undef HAVE_GCC__SYNC_INT32_TAS
+
+/* Define to 1 if you have __sync_compare_and_swap(int64 *, int64, int64). */
+#undef HAVE_GCC__SYNC_INT64_CAS
 
 /* Define to 1 if you have the `getaddrinfo' function. */
 #undef HAVE_GETADDRINFO
@@ -334,6 +360,9 @@
 
 /* Define to 1 if `long long int' works and is 64 bits. */
 #undef HAVE_LONG_LONG_INT_64
+
+/* Define to 1 if you have the <mbarrier.h> header file. */
+#undef HAVE_MBARRIER_H
 
 /* Define to 1 if you have the `memmove' function. */
 #undef HAVE_MEMMOVE
@@ -694,12 +723,19 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* Define to the name of a signed 64-bit integer type. */
+#undef PG_INT64_TYPE
+
 /* Define to the name of the default PostgreSQL service principal in Kerberos.
    (--with-krb-srvnam=NAME) */
 #undef PG_KRB_SRVNAM
 
 /* PostgreSQL major version as a string */
 #undef PG_MAJORVERSION
+
+/* Define to 1 if "static inline" works without unwanted warnings from
+   compilations where static inline functions are defined but not called. */
+#undef PG_USE_INLINE
 
 /* Postgres version Greenplum Database is based on */
 #undef PG_VERSION

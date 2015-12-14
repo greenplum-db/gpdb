@@ -21,7 +21,7 @@
 #include "postmaster/primary_mirror_mode.h"
 #include "libpq/libpq.h"
 #include "utils/debugbreak.h"
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 #include "optimizer/walkers.h"
 #include "utils/lsyscache.h"
 #include "catalog/pg_proc.h"

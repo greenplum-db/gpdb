@@ -67,7 +67,7 @@
 #include "parser/parsetree.h"
 #include "parser/parse_oper.h"
 #include "parser/parse_relation.h"
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 #include "utils/builtins.h"
 #include "utils/portal.h"
 
@@ -2094,7 +2094,7 @@ thread_DispatchWaitSingle(DispatchCommandParms		*pParms)
 static void
 DecrementRunningCount(void *arg)
 {
-	gp_atomic_add_32(&RunningThreadCount, -1);
+	pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&RunningThreadCount, 1);
 }
 
 /*
@@ -2122,7 +2122,7 @@ thread_DispatchCommand(void *arg)
 	 * (should we actually block signals before spawning a thread, as much
 	 * like we do in fork??)
 	 */
-	gp_atomic_add_32(&RunningThreadCount, 1);
+	pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&RunningThreadCount, 1);
 
 	/*
 	 * We need to make sure the value will be decremented once the thread

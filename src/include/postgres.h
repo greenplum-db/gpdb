@@ -479,6 +479,7 @@ extern PGDLLIMPORT bool assert_enabled;
 #define AssertState(condition)
 #define AssertImply(condition1, condition2)
 #define AssertEquivalent(cond1, cond2)
+#define AssertPointerAlignment(ptr, bndr)	((void)true)
 #else
 #define Assert(condition) \
 		Trap(!(condition), "FailedAssertion")
@@ -497,6 +498,13 @@ extern PGDLLIMPORT bool assert_enabled;
 
 #define AssertEquivalent(cond1, cond2) \
 		Trap(!((bool)(cond1) == (bool)(cond2)), "AssertEquivalent failed")
+
+/*
+ * Check that `ptr' is `bndr' aligned.
+ */
+#define AssertPointerAlignment(ptr, bndr) \
+	Trap(TYPEALIGN(bndr, (uintptr_t)(ptr)) != (uintptr_t)(ptr), \
+		 "UnalignedPointer")
 
 #endif   /* USE_ASSERT_CHECKING */
 
