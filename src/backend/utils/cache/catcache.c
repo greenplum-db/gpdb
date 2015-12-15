@@ -34,7 +34,7 @@
 #include "utils/rel.h"
 #include "utils/resowner.h"
 #include "utils/syscache.h"
-#include "utils/mdver.h"
+
 
  /* #define CACHEDEBUG */	/* turns DEBUG elogs on */
 
@@ -1702,9 +1702,6 @@ PrepareToInvalidateCacheTuple(Relation relation,
 	Assert(CacheHdr != NULL);
 
 	reloid = RelationGetRelid(relation);
-        
-	/* Notifying the MD Versioning component of catalog changes */
-	mdver_inv_translator(relation);
 
 	/* ----------------
 	 *	for each cache
@@ -1727,6 +1724,25 @@ PrepareToInvalidateCacheTuple(Relation relation,
 					 CatalogCacheComputeTupleHashValue(ccp, tuple),
 					 &tuple->t_self,
 					 ccp->cc_relisshared ? (Oid) 0 : MyDatabaseId);
+	}
+
+	/*
+	 * Also register an invalidation for the magic -1 cache, which can
+	 * be used to catch changes to *any* catalog table.
+	 *
+	 * XXX: The gp_persistent_* tables are exempt, because they are modified
+	 * at recovery by the startup process, outside a transaction. Invalidation
+	 * events cannot be registered outside a transaction as we haven't set
+	 * up the invalidation queues yet. Luckily, none of the callers of this
+	 * facility currently need to know about updates to those tables.
+	 */
+	if (IsNormalProcessingMode() &&
+		RelationGetRelid(relation) != GpPersistentRelationNodeRelationId &&
+		RelationGetRelid(relation) != GpPersistentDatabaseNodeRelationId &&
+		RelationGetRelid(relation) != GpPersistentTablespaceNodeRelationId &&
+		RelationGetRelid(relation) != GpPersistentFilespaceNodeRelationId)
+	{
+		(*function) (-1, 0, &tuple->t_self, (Oid) 0);
 	}
 }
 
