@@ -210,6 +210,14 @@ typedef struct
     ArrayType ** output;
 } EachResultColumnAsArraySpec;
 
+typedef struct
+{
+	int values_cnt;
+	int null_cnt;
+	MemoryContext resultColumnMemContext;
+	Datum *result;
+} ResultColumnSpec;
+
 static void spiCallback_getEachResultColumnAsArray(void *clientData);
 static void spiCallback_getProcessedAsFloat4(void *clientData);
 static void spiCallback_getSingleResultRowArrayAsTwoFloat4(void *clientData);
@@ -965,6 +973,12 @@ static void analyzeRelation(Relation relation, List *lAttributeNames, bool rooto
 	/**
 	 * Step 4: ANALYZE attributes, one at a time.
 	 */
+	MemoryContext col_context = AllocSetContextCreate(CurrentMemoryContext,
+													 "Analyze Column",
+													 ALLOCSET_DEFAULT_MINSIZE,
+													 ALLOCSET_DEFAULT_INITSIZE,
+													 ALLOCSET_DEFAULT_MAXSIZE);
+	MemoryContext relationContext = MemoryContextSwitchTo(col_context);
 	foreach (le, lAttributeNames)
 	{
 		AttributeStatistics	stats;
@@ -975,8 +989,12 @@ static void analyzeRelation(Relation relation, List *lAttributeNames, bool rooto
 		else
 			analyzeComputeAttributeStatistics(relationOid, lAttributeName, estimatedRelTuples, relationOid, estimatedRelTuples, false /*mergeStats*/, &stats);
 		updateAttributeStatisticsInCatalog(relationOid, lAttributeName, &stats);
+		MemoryContextResetAndDeleteChildren(col_context);
 	}
-	
+	MemoryContextSwitchTo(relationContext);
+	MemoryContextDelete(col_context);
+
+
 	/**
 	 * Step 5: Cleanup. Drop the sample table.
 	 */
@@ -1246,6 +1264,47 @@ static void spiCallback_getEachResultColumnAsArray(void *clientData)
         Assert(*out);
         out++;
     }
+}
+
+static void spiCallback_getSampleColumn(void *clientData)
+{
+	ResultColumnSpec *spec = (ResultColumnSpec*) clientData;
+	int i = 0;
+	bool isNull = false;
+
+	/* Since we are retrieving one column at a time, the attribute number
+	 * should always be 0.
+	 */
+	int attnum = 1;
+
+    Assert(SPI_tuptable != NULL);
+    Assert(SPI_tuptable->tupdesc);
+
+    MemoryContext callerContext = MemoryContextSwitchTo(spec->resultColumnMemContext);
+    Form_pg_attribute attr = SPI_tuptable->tupdesc->attrs[attnum-1];
+
+    bool isVarlena = (!attr->attbyval) && attr->attlen == -1;
+
+    for (i = 0; i < SPI_processed; i++)
+    {
+    	Datum dValue = heap_getattr(SPI_tuptable->vals[i], attnum, SPI_tuptable->tupdesc, &isNull);
+    	Datum deToasted = dValue;
+
+    	if (isNull)
+    	{
+    		spec->null_cnt++;
+    		continue;
+    	}
+
+		if (isVarlena)
+		{
+			deToasted = PointerGetDatum(PG_DETOAST_DATUM(dValue));
+		}
+
+		spec->result[spec->values_cnt++] = deToasted;
+    }
+
+    MemoryContextSwitchTo(callerContext);
 }
 
 /**
@@ -1908,6 +1967,7 @@ static bool isNotNull(Oid relationOid, const char *attributeName)
 	return (nonNull);
 }
 
+
 /**
  * Computes the absolute number of NULLs in the sample table.
  * Input:
@@ -2542,15 +2602,43 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 	stats->mcv = NULL;
 	stats->freq = NULL;
 	stats->hist = NULL;
-		
+
+	Datum *values = (Datum *) palloc(sizeof(Datum) * (int) sampleTableRelTuples);
+
+	instr_time      starttime, endtime;
+	INSTR_TIME_SET_CURRENT(starttime);
+
+	StringInfo str = makeStringInfo();
+	const char *sampleSchemaName = get_namespace_name(get_rel_namespace(sampleTableOid));
+	const char *sampleTableName = get_rel_name(sampleTableOid);
+
+	appendStringInfo(str, "select tbl.%s from %s.%s as tbl",
+			quote_identifier(attributeName), quote_identifier(sampleSchemaName), quote_identifier(sampleTableName));
+	ResultColumnSpec spec;
+	spec.null_cnt = 0;
+	spec.values_cnt = 0;
+	spec.resultColumnMemContext = CurrentMemoryContext;
+	spec.result = values;
+
+	spiExecuteWithCallback(str->data, false /*readonly*/, 0 /*tcount*/,
+			spiCallback_getSampleColumn, &spec);
+
+	INSTR_TIME_SET_CURRENT(endtime);
+	INSTR_TIME_SUBTRACT(endtime, starttime);
+
+	elog(INFO, "time to read sample for column %s: %.1f ms", quote_identifier(attributeName), INSTR_TIME_GET_MILLISEC(endtime));
+	elog(INFO, "null count is %d", spec.null_cnt);
+	elog(INFO, "value count is %d", spec.values_cnt);
+
+	INSTR_TIME_SET_CURRENT(starttime);
+
 	if (isNotNull(relationOid, attributeName))
 	{
 		stats->nullFraction = 0.0;
 	}
 	else
 	{
-		float4 nullCount = analyzeNullCount(sampleTableOid, relationOid, attributeName, mergeStats);
-		if (ceil(nullCount) >= ceil(sampleTableRelTuples))
+		if (spec.null_cnt >= ceil(sampleTableRelTuples))
 		{
 			/**
 			 * All values are null. no point computing other statistics.
@@ -2560,8 +2648,14 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 			computeMCV = false;
 			computeHist = false;
 		}
-		stats->nullFraction = Min(nullCount / sampleTableRelTuples, 1.0);
+		stats->nullFraction = Min(spec.null_cnt / sampleTableRelTuples, 1.0);
 	}
+
+	INSTR_TIME_SET_CURRENT(endtime);
+	INSTR_TIME_SUBTRACT(endtime, starttime);
+	elog(INFO, "time to collect null frac the old way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
+
+
 	elog(elevel, "nullfrac = %.6f", stats->nullFraction);
 	
 	if (computeWidth && !isFixedWidth(relationOid, attributeName, &stats->avgWidth))
@@ -2598,7 +2692,9 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 		computeMCV = false;
 		computeHist = false;
 	}
-		
+
+	INSTR_TIME_SET_CURRENT(starttime);
+
 	if (computeDistinct)
 	{
 		if (mergeStats)
@@ -2627,7 +2723,11 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 
 	}
 	elog(elevel, "ndistinct = %.6f", stats->ndistinct);
+	INSTR_TIME_SET_CURRENT(endtime);
+	INSTR_TIME_SUBTRACT(endtime, starttime);
+	elog(INFO, "time to collect ndistinct the old way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
 	
+	INSTR_TIME_SET_CURRENT(starttime);
 	if (computeMCV)
 	{
 		unsigned int nMCVEntries = numberOfMCVEntries(relationOid, attributeName);
@@ -2637,8 +2737,12 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 			elog(elevel, "mcv=%s", OidOutputFunctionCall(751,PointerGetDatum(stats->mcv)));
 		if (stats->freq)
 			elog(elevel, "freq=%s", OidOutputFunctionCall(751,PointerGetDatum(stats->freq)));
-	}	
+	}
+	INSTR_TIME_SET_CURRENT(endtime);
+	INSTR_TIME_SUBTRACT(endtime, starttime);
+	elog(INFO, "time to collect mcv the old way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
 	
+	INSTR_TIME_SET_CURRENT(starttime);
 	if (computeHist)	
 	{
 		unsigned int nHistEntries = numberOfHistogramEntries(relationOid, attributeName);
@@ -2647,6 +2751,9 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 		if (stats->hist)
 			elog(elevel, "hist=%s", OidOutputFunctionCall(751,PointerGetDatum(stats->hist)));
 	}
+	INSTR_TIME_SET_CURRENT(endtime);
+	INSTR_TIME_SUBTRACT(endtime, starttime);
+	elog(INFO, "time to collect histogram the old way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
 }
 
 /**
