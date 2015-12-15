@@ -69,7 +69,6 @@
 #include "executor/spi.h"
 #include "utils/workfile_mgr.h"
 #include "utils/session_state.h"
-#include "utils/mdver.h"
 
 shmem_startup_hook_type shmem_startup_hook = NULL;
 
@@ -149,8 +148,6 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 				size = add_size(size, ResPortalIncrementShmemSize());				
 			}
 		}
-                
-		size = add_size(size, mdver_shmem_size());
 		size = add_size(size, ProcGlobalShmemSize());
 		size = add_size(size, LocalDistribXact_ShmemSize());
 		size = add_size(size, XLOGShmemSize());
@@ -415,16 +412,7 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	 */
 	BTreeShmemInit();
 	workfile_mgr_cache_init();
-            
-	/*
-	* On the master and standby master, we allocate
-	* Metadata Versioning's Global generation component in shared memory
-	*/
 
-	if (GpIdentity.segindex == MASTER_CONTENT_ID) {
-		mdver_shmem_init();
-	}
-        
 #ifdef EXEC_BACKEND
 
 	/*
