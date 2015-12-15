@@ -1162,6 +1162,9 @@ CacheInvalidateRelcacheByRelid(Oid relid)
  * provided for syscache callbacks; the routine doesn't really get any
  * useful info as to exactly what changed.	It should treat every call
  * as a "cache flush" request.
+ *
+ * Passing -1 cacheid registers a callback that gets called for changes
+ * on *any* catalog table.
  */
 void
 CacheRegisterSyscacheCallback(int cacheid,

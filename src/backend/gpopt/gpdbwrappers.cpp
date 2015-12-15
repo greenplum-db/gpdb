@@ -2984,4 +2984,56 @@ gpdb::UlLeafPartitions
 	return 0;
 }
 
+/*
+ * To detect changes to catalog tables, which require resetting the
+ * Metadata Cache, we use the normal PostgreSQL catalog cache
+ * invalidation mechanism. Ideally, we would register for
+ * invalidations on specific objects and only reset the parts of the
+ * metadata cache that became invalid. For now though, we just blow
+ * the whole cache every time anything changes.
+ *
+ * We register a callback that gets called on any invalidation
+ * event. The callback simply increments a counter. Whenever we start
+ * planning a query, we check the counter to see if it has changed
+ * since the last planned query, and reset the whole cache if it has.
+ */
+static bool syscache_invalidation_counter_registered = false;
+static int64 syscache_invalidation_counter = 0;
+static int64 last_syscache_invalidation_counter = 0;
+
+static void
+syscache_invalidation_counter_callback(Datum arg, Oid relid)
+{
+	syscache_invalidation_counter++;
+}
+
+// Has there been any catalog changes since last call?
+bool
+gpdb::FMDCacheNeedsReset
+		(
+			void
+		)
+{
+	GP_WRAP_START;
+	{
+		if (!syscache_invalidation_counter_registered)
+		{
+			CacheRegisterSyscacheCallback(-1,
+										  &syscache_invalidation_counter_callback,
+										  (Datum) 0);
+			syscache_invalidation_counter_registered = true;
+		}
+		if (last_syscache_invalidation_counter == syscache_invalidation_counter)
+			return false;
+		else
+		{
+			last_syscache_invalidation_counter = syscache_invalidation_counter;
+			return true;
+		}
+	}
+	GP_WRAP_END;
+
+	return true;
+}
+
 // EOF

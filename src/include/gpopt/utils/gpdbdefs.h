@@ -28,6 +28,7 @@ extern "C" {
 #include "executor/execdesc.h"
 #include "executor/nodeMotion.h"
 #include "parser/parsetree.h"
+#include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/datum.h"
 #include "utils/array.h"

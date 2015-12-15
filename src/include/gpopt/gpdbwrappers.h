@@ -613,6 +613,10 @@ namespace gpdb {
 	// return the number of leaf partition for a given table oid
 	gpos::ULONG UlLeafPartitions(Oid oidRelation);
 
+	// Does the metadata cache need to be reset (because of a catalog
+	// table has been changed?)
+	bool FMDCacheNeedsReset(void);
+
 } //namespace gpdb
 
 #define ForEach(cell, l)	\
