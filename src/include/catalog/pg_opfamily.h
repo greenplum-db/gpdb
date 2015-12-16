@@ -37,8 +37,8 @@
    opfowner      oid
    );
 
-   create unique index on pg_opfamily(opfmethod, opfname, opfnamespace) with (indexid=2754, CamelCase=OpfamilyAmNameNsp, syscacheid=OPFAMILYOID, syscache_nbuckets=64);
-   create unique index on pg_opfamily(oid) with (indexid=2755, CamelCase=OpfamilyOid, syscacheid=CLAOID, syscache_nbuckets=64);
+   create unique index on pg_opfamily(opfmethod, opfname, opfnamespace) with (indexid=2754, CamelCase=OpfamilyAmNameNsp, syscacheid=OPFAMILYAMNAMENSP, syscache_nbuckets=64);
+   create unique index on pg_opfamily(oid) with (indexid=2755, CamelCase=OpfamilyOid, syscacheid=OPFAMILYOID, syscache_nbuckets=64);
 
    alter table pg_opfamily add fk opfmethod on pg_am(oid);
    alter table pg_opfamily add fk opfnamespace on pg_namespace(oid);
