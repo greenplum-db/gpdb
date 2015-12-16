@@ -1,0 +1,262 @@
+-- -----------------------------------------------------------------
+-- Test function variadic paramters 
+-- -----------------------------------------------------------------
+-- test variadic polymorphic functions
+create or replace function myleast(variadic anyarray) returns anyelement as $$
+  select min(g) from unnest($1) g
+$$ language sql immutable strict;
+select myleast(10, 1, 20, 33);
+ myleast 
+---------
+       1
+(1 row)
+
+select myleast(1.1, 0.22, 0.55);
+ myleast 
+---------
+    0.22
+(1 row)
+
+select myleast('z'::text);
+ myleast 
+---------
+ z
+(1 row)
+
+select myleast(); -- fail
+ERROR:  function myleast() does not exist
+LINE 1: select myleast();
+               ^
+HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+-- test with variadic call parameter
+select myleast(variadic array[1,2,3,4,-1]);
+ myleast 
+---------
+      -1
+(1 row)
+
+select myleast(variadic array[1.1, -5.5]);
+ myleast 
+---------
+    -5.5
+(1 row)
+
+--test with empty variadic call parameter
+select myleast(variadic array[]::int[]);
+ERROR:  syntax error at or near "]"
+LINE 1: select myleast(variadic array[]::int[]);
+                                      ^
+-- an example with some ordinary arguments too
+create or replace function concat(text, variadic anyarray) returns text as $$
+  select array_to_string($2, $1);
+$$ language sql immutable strict;
+select concat('%', 1, 2, 3, 4, 5);
+  concat   
+-----------
+ 1%2%3%4%5
+(1 row)
+
+select concat('|', 'a'::text, 'b', 'c');
+ concat 
+--------
+ a|b|c
+(1 row)
+
+select concat('|', variadic array[1,2,33]);
+ concat 
+--------
+ 1|2|33
+(1 row)
+
+select concat('-|-', variadic '{44,NULL,55,NULL,33}'::int[]);
+    concat    
+--------------
+ 44-|-55-|-33
+(1 row)
+
+-- deparse view
+create table people (id int, fname varchar, lname varchar);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into people values (770,'John','Woo');
+insert into people values (771,'Jim','Ng');
+insert into people values (778,'Jerry','Lau');
+insert into people values (790,'Jen','Smith');
+create view print_name as select concat(' ',id, fname, lname) from people; -- fail, type mismatch
+ERROR:  function concat(unknown, integer, character varying, character varying) does not exist
+LINE 1: create view print_name as select concat(' ',id, fname, lname...
+                                         ^
+HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+create view print_name as select concat(' ', fname, lname) from people where id < 790;
+select * from print_name;
+  concat   
+-----------
+ John Woo
+ Jerry Lau
+ Jim Ng
+(3 rows)
+
+select pg_get_viewdef('print_name');
+                                                   pg_get_viewdef                                                    
+---------------------------------------------------------------------------------------------------------------------
+ SELECT concat(' '::text, VARIADIC ARRAY[people.fname, people.lname]) AS concat FROM people WHERE (people.id < 790);
+(1 row)
+
+select pg_get_viewdef('print_name', true);
+                                 pg_get_viewdef                                  
+---------------------------------------------------------------------------------
+  SELECT concat(' '::text, VARIADIC ARRAY[people.fname, people.lname]) AS concat 
+    FROM people                                                                  
+   WHERE people.id < 790;
+(1 row)
+
+drop view print_name;
+drop function concat(text, anyarray);
+-- mix variadic with anyelement
+create or replace function formarray(anyelement, variadic anyarray) returns anyarray as $$
+  select array_prepend($1, $2);
+$$ language sql immutable strict;
+select formarray(1,2,3,4,5);
+  formarray  
+-------------
+ {1,2,3,4,5}
+(1 row)
+
+select formarray(1.1, variadic array[1.2,55.5]);
+   formarray    
+----------------
+ {1.1,1.2,55.5}
+(1 row)
+
+select formarray(1.1, array[1.2,55.5]); -- fail without variadic
+ERROR:  function formarray(numeric, numeric[]) does not exist
+LINE 1: select formarray(1.1, array[1.2,55.5]);
+               ^
+HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+select formarray(1, 'x'::text); -- fail, type mismatch
+ERROR:  function formarray(integer, text) does not exist
+LINE 1: select formarray(1, 'x'::text);
+               ^
+HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+select formarray(1, variadic array['x'::text]); -- fail, type mismatch
+ERROR:  function formarray(integer, text[]) does not exist
+LINE 1: select formarray(1, variadic array['x'::text]);
+               ^
+HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+drop function formarray(anyelement, variadic anyarray);
+-- PLPGSQL
+-- test variadic functions
+create or replace function vari(variadic int[])
+returns void as $$
+begin
+  for i in array_lower($1,1)..array_upper($1,1) loop
+    raise notice '%', $1[i];
+  end loop; end;
+$$ language plpgsql;
+select vari(1,2,3,4,5);
+NOTICE:  1
+NOTICE:  2
+NOTICE:  3
+NOTICE:  4
+NOTICE:  5
+ vari 
+------
+ 
+(1 row)
+
+select vari(3,4,5);
+NOTICE:  3
+NOTICE:  4
+NOTICE:  5
+ vari 
+------
+ 
+(1 row)
+
+select vari(variadic array[5,6,7]);
+NOTICE:  5
+NOTICE:  6
+NOTICE:  7
+ vari 
+------
+ 
+(1 row)
+
+drop function vari(int[]);
+-- coercion test
+create or replace function pleast(variadic numeric[])
+returns numeric as $$
+declare aux numeric = $1[array_lower($1,1)];
+begin
+  for i in array_lower($1,1)+1..array_upper($1,1) loop
+    if $1[i] < aux then aux := $1[i]; end if;
+  end loop;
+  return aux;
+end;
+$$ language plpgsql immutable strict;
+select pleast(10,1,2,3,-16);
+ pleast 
+--------
+    -16
+(1 row)
+
+select pleast(10.2,2.2,-1.1);
+ pleast 
+--------
+   -1.1
+(1 row)
+
+select pleast(10.2,10, -20);
+ pleast 
+--------
+    -20
+(1 row)
+
+select pleast(10,20, -1.0);
+ pleast 
+--------
+   -1.0
+(1 row)
+
+-- in case of conflict, non-variadic version is preferred
+create or replace function pleast(numeric)
+returns numeric as $$
+begin
+  raise notice 'non-variadic function called';
+  return $1;
+end;
+$$ language plpgsql immutable strict;
+select pleast(10);
+NOTICE:  non-variadic function called
+ pleast 
+--------
+     10
+(1 row)
+
+select pleast(1,-2,3.3);
+ pleast 
+--------
+     -2
+(1 row)
+
+drop function pleast(numeric[]);
+drop function pleast(numeric);
+-- table function
+create or replace function tfunc(variadic char[]) returns table (id int, tx char) as 
+$$ select id, unnest($1) || ', ' ||  lname || '.' || fname from people order by 2
+$$ language sql strict;
+select * from tfunc ('hello', 'morning');
+ id  |         tx         
+-----+--------------------
+ 778 | hello, Lau.Jerry
+ 771 | hello, Ng.Jim
+ 790 | hello, Smith.Jen
+ 770 | hello, Woo.John
+ 778 | morning, Lau.Jerry
+ 771 | morning, Ng.Jim
+ 790 | morning, Smith.Jen
+ 770 | morning, Woo.John
+(8 rows)
+
+drop table people;
+drop function tfunc(variadic char[]);

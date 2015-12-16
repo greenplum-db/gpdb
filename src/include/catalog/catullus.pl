@@ -462,6 +462,7 @@ sub make_opt
 			pronamespace => "PGNSP", # pg_catalog
 			proowner	 => "PGUID", # admin
 			prolang		 => $prolang,
+			provariadic	 => 0,
 			proisagg	 => 0,
 			prosecdef	 => $prosecdef,
 			proisstrict	 => $proisstrict,
@@ -1156,6 +1157,7 @@ sub printfndef
 		$nam . "  " . $tup->{pronamespace} . " " .
 		$tup->{proowner} . " " .
 		$tup->{prolang} . " " .
+		($tup->{provariadic} ? $tup->{provariadic} : "0") . " " .
 		(exists($fndef->{with}->{proisagg}) ? $fndef->{with}->{proisagg} :
 		 ($tup->{proisagg} ? "t" : "f") ) . " " .
 		($tup->{prosecdef} ? "t" : "f") . " " .
@@ -1172,7 +1174,7 @@ sub printfndef
 		($tup->{proargnames} ? '"' . $tup->{proargnames} . '"' : "_null_") . " " .
 		(exists($fndef->{with}->{prosrc}) ? $fndef->{with}->{prosrc} :
 		 ($tup->{prosrc} ? $tup->{prosrc} : "_null_" )) . " " .
-		($tup->{probin} ? $tup->{probin} : "-") . " " .
+		($tup->{probin} ? $tup->{probin} : "_null_") . " " .
 		($tup->{proacl} ? $tup->{proacl} : "_null_") . " " . 
 		$tup->{prodataaccess} . " " .
 		"));\n";

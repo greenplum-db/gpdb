@@ -86,6 +86,7 @@ GetHiddenPgProcTuples(Relation pg_proc, int *len)
 		values[Anum_pg_proc_pronamespace - 1] = ObjectIdGetDatum(PG_CATALOG_NAMESPACE);
 		values[Anum_pg_proc_proowner - 1] = ObjectIdGetDatum(BOOTSTRAP_SUPERUSERID);
 		values[Anum_pg_proc_prolang - 1] = ObjectIdGetDatum(INTERNALlanguageId);
+		values[Anum_pg_proc_provariadic - 1] = InvalidOid;
 		values[Anum_pg_proc_proisagg - 1] = BoolGetDatum(false);
 		values[Anum_pg_proc_prosecdef - 1] = BoolGetDatum(false);
 		values[Anum_pg_proc_proisstrict - 1] = BoolGetDatum(true);
@@ -161,6 +162,7 @@ GetHiddenPgProcTuples(Relation pg_proc, int *len)
 		values[Anum_pg_proc_pronamespace - 1] = ObjectIdGetDatum(PG_CATALOG_NAMESPACE);
 		values[Anum_pg_proc_proowner - 1] = ObjectIdGetDatum(BOOTSTRAP_SUPERUSERID);
 		values[Anum_pg_proc_prolang - 1] = ObjectIdGetDatum(INTERNALlanguageId);
+		values[Anum_pg_proc_provariadic - 1] = InvalidOid;
 		values[Anum_pg_proc_proisagg - 1] = BoolGetDatum(false);
 		values[Anum_pg_proc_prosecdef - 1] = BoolGetDatum(false);
 		values[Anum_pg_proc_proisstrict - 1] = BoolGetDatum(true);

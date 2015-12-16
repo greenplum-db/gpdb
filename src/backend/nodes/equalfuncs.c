@@ -1933,6 +1933,7 @@ _equalFuncCall(FuncCall *a, FuncCall *b)
     COMPARE_NODE_FIELD(agg_order);
 	COMPARE_SCALAR_FIELD(agg_star);
 	COMPARE_SCALAR_FIELD(agg_distinct);
+	COMPARE_SCALAR_FIELD(func_variadic);
 	COMPARE_NODE_FIELD(over);
 	COMPARE_SCALAR_FIELD(location);
 	COMPARE_NODE_FIELD(agg_filter);
