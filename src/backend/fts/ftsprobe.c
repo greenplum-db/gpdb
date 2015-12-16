@@ -703,7 +703,7 @@ probeProcessResponse(ProbeConnectionInfo *probeInfo)
 	SegmentState_e state;
 	DataState_e mode;
 	FaultType_e fault;
-	uint32 bufInt;
+	uint32 bufInt = 0;
 
 	memcpy(&bufInt, probeInfo->response, 4);
 	if (ntohl(bufInt) != PROBE_RESPONSE_LEN)

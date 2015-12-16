@@ -27,7 +27,7 @@ enum probe_result_e
 	PROBE_FAULT_CRASH     = 0x08,
 	PROBE_FAULT_MIRROR    = 0x10,
 	PROBE_FAULT_NET       = 0x20,
-	PROBE_DISK_HARDLIMIT  = 0x40, 
+	PROBE_DISK_HARDLIMIT  = 0x40,
 };
 
 #define PROBE_CHECK_FLAG(result, flag) (((result) & (flag)) == (flag))
