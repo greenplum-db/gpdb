@@ -31,7 +31,7 @@
    inhseqno   integer 
    );
 
-   create unique index on pg_inherits(inhrelid, inhseqno) with (indexid=2680, CamelCase=InheritsRelidSeqno, syscacheid=INHRELID, syscache_nbuckets=256);
+   create unique index on pg_inherits(inhrelid, inhseqno) with (indexid=2680, CamelCase=InheritsRelidSeqno, syscache_nbuckets=256);
 
    alter table pg_inherits add fk inhrelid on pg_class(oid);
    alter table pg_inherits add fk inhparent on pg_class(oid);
