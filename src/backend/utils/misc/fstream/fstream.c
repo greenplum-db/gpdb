@@ -313,7 +313,6 @@ static int glob_path(fstream_t *fs, const char *path)
 	if (!path2)
 	{
 		gfile_printf_then_putc_newline("fstream out of memory");
-		gfile_free(path2);
 		return 1;
 	}
 
