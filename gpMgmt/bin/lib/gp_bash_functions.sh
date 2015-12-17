@@ -1973,7 +1973,6 @@ case $OS_TYPE in
 		DEFAULT_LOCALE_SETTING=en_US.UTF-8
 		MAIL=/bin/mailx
 		PING_TIME="1"
-		GTAR=`findCmdInPath gtar`
 		DF=`findCmdInPath df`
 		# Multi-byte tr needed on Solaris to handle [:upper:], [:lower:], etc.
 		MBTR=/usr/xpg4/bin/tr
@@ -1988,7 +1987,6 @@ case $OS_TYPE in
 		DEFAULT_LOCALE_SETTING=en_US.utf8
 		PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
-		GTAR=`findCmdInPath tar`
 		DF="`findCmdInPath df` -P"
 		ID=`whoami`
 		DU_TXT="-c" ;;
@@ -2004,7 +2002,6 @@ case $OS_TYPE in
 		DEFAULT_LOCALE_SETTING=en_US.utf-8
         PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
-		GTAR=`findCmdInPath gnutar`
 		DF="`findCmdInPath df` -P"
 		DU_TXT="-c" ;;	
 	freebsd ) IFCONFIG_TXT=""
@@ -2015,7 +2012,6 @@ case $OS_TYPE in
 		NOLINE_ECHO="$ECHO -e"
 		DEFAULT_LOCALE_SETTING=en_US.utf8
 		PING_TIME="-c 1"
-		GTAR=`findCmdInPath gtar`
 		DF="`findCmdInPath df` -P"
 		DU_TXT="-c" ;;	
 	* ) echo unknown ;;
