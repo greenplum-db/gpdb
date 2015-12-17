@@ -1355,6 +1355,7 @@ make_two_stage_agg_plan(PlannerInfo *root,
 	
 	if (!ctx->is_grpext)
 	{
+		Flow* saved_flow = result_plan->flow;
 		result_plan = (Plan *) make_agg(root,
 										prelim_tlist,
 										NIL, /* no havingQual */
@@ -1370,8 +1371,15 @@ make_two_stage_agg_plan(PlannerInfo *root,
 										ctx->agg_counts->numAggs,
 										ctx->agg_counts->transitionSpace,
 										result_plan);
-		/* May lose useful locus and sort. Unlikely, but could do better. */
-		mark_plan_strewn(result_plan);
+		/* If locustype is Mixed, we need to maintain the locus,
+		 * For other case, mark it as strewn, we may lose useful
+		 * locus and sort. Unlikely, but could do better.
+		 */
+		if (saved_flow->locustype == CdbLocusType_Mixed)
+			mark_plan_mixed(result_plan);
+		else
+			mark_plan_strewn(result_plan);
+		
 		current_pathkeys = NIL;
 	}
 

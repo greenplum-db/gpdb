@@ -572,7 +572,7 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
  * postponing duplicate suppression until additional subqueries are brought
  * into the join, a single duplicate suppression can cover multiple subqueries.
  */
-void
+static void
 cdb_add_subquery_join_paths(PlannerInfo    *root,
 					        RelOptInfo     *joinrel,
 					        RelOptInfo     *rel1,

@@ -25,6 +25,7 @@ typedef enum GangType
 	GANGTYPE_UNALLOCATED,       /* a root slice executed by the qDisp */
 	GANGTYPE_ENTRYDB_READER,    /* a 1-gang with read access to the entry db */
 	GANGTYPE_PRIMARY_READER,    /* a 1-gang or N-gang to read the segment dbs */
+	GANGTYPE_PRIMARY_MIXED,     /* a 1-gang plus N-gang to read both segment dbs and entry db*/
 	GANGTYPE_PRIMARY_WRITER    /* the N-gang that can update the segment dbs */
 } GangType;
 
@@ -55,6 +56,9 @@ typedef struct Gang
 	bool		all_valid_segdbs_connected;
 	bool		allocated;
 
+	/* should be destoryed in cleanupGang() if set*/
+	bool		noReuse;
+
 	/* MPP-24003: pointer to array of segment database info for each reader and writer gang. */
 	struct		CdbComponentDatabaseInfo *segment_database_info;
 } Gang;
@@ -76,6 +80,10 @@ extern void disconnectAndDestroyAllGangs(void);
 extern void CheckForResetSession(void);
 
 extern List * getAllReaderGangs(void);
+
+extern List * getAllIdleReaderGangs(void);
+
+extern List * getAllBusyReaderGangs(void);
 
 extern void detectFailedConnections(void);
 
@@ -103,6 +111,8 @@ extern void cleanupAllIdleGangs(void);
 extern void cleanupPortalGangs(Portal portal);
 
 extern int largestGangsize(void);
+
+extern void setLargestGangsize(int);
 
 extern int gp_pthread_create(pthread_t *thread, void *(*start_routine)(void *), void *arg, const char *caller);
 /*
@@ -224,6 +234,9 @@ typedef struct Slice
 	DirectDispatchInfo directDispatch;
 
 	struct Gang *primaryGang;
+
+	/*Auxiliary Gang for GANGTYPE_PRIMARY_MIXED, it is actually a 1-entry-db gang*/
+	struct Gang *auxiliaryGang;
 
 	/* tell dispatch agents which gang we're talking about.*/
 	int          primary_gang_id;

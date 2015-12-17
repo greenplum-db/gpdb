@@ -1918,7 +1918,10 @@ create_unique_rowid_path(PlannerInfo *root,
         uniquepath->must_repartition = true;
 
         /* Set a fake locus.  Repartitioning key won't be built until later. */
-        CdbPathLocus_MakeStrewn(&uniquepath->path.locus);
+	if (CdbPathLocus_IsMixed(subpath->locus))
+        	CdbPathLocus_MakeMixed(&uniquepath->path.locus);
+	else
+        	CdbPathLocus_MakeStrewn(&uniquepath->path.locus);
 
         /* Estimate repartitioning cost. */
         memset(&motionpath, 0, sizeof(motionpath));
@@ -2269,6 +2272,7 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	pathnode->pathkeys = NIL;	/* for now, assume unordered result */
 
 	/*
+	 * If the function desires to run on both master and all segments, mark it mixed.
 	 * If the function desires to run on segments, mark randomly-distributed.
 	 * If expression contains mutable functions, evaluate it on entry db.
 	 * Otherwise let it be evaluated in the same slice as its parent operator.
@@ -2277,7 +2281,10 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 
 	if (rte->funcexpr && IsA(rte->funcexpr, FuncExpr))
 		data_access = func_data_access(((FuncExpr *) rte->funcexpr)->funcid);
-	if (data_access == PRODATAACCESS_SEGMENT)
+
+	if (data_access == PRODATAACCESS_MIXED)
+		CdbPathLocus_MakeMixed(&pathnode->locus);
+	else if (data_access == PRODATAACCESS_SEGMENT)
 		CdbPathLocus_MakeStrewn(&pathnode->locus);
 	else if (contain_mutable_functions(rte->funcexpr))
 		CdbPathLocus_MakeEntry(&pathnode->locus);

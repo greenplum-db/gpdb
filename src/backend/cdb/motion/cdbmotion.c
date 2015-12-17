@@ -892,8 +892,10 @@ getChunkSorterEntry(MotionLayerState *mlStates,
 	/* We have to create an entry */
 	oldCtxt = MemoryContextSwitchTo(mlStates->motion_layer_mctx);
 
+
+	/*allocate enough entry for 1 + nsegments conns*/
 	if (motNodeEntry->ready_tuple_lists == NULL)
-		motNodeEntry->ready_tuple_lists = (ChunkSorterEntry *)palloc0(GpIdentity.numsegments * sizeof(ChunkSorterEntry));
+		motNodeEntry->ready_tuple_lists = (ChunkSorterEntry *)palloc0((1 + GpIdentity.numsegments) * sizeof(ChunkSorterEntry));
 
 	chunkSorterEntry = &motNodeEntry->ready_tuple_lists[srcRoute];
 

@@ -804,8 +804,8 @@ prescan_walker(Node *node, PlanProfile * context)
             context->dispatchParallel = true;
 
         if (plan->flow &&
-        		(plan->flow->flotype == FLOW_PARTITIONED
-        				|| plan->flow->flotype == FLOW_REPLICATED))
+        		(plan->flow->flotype == FLOW_PARTITIONED ||
+        		 plan->flow->flotype == FLOW_REPLICATED))
         	context->dispatchParallel = true;
 
         context->currentPlanFlow = plan->flow;

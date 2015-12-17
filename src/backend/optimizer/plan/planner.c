@@ -1104,6 +1104,7 @@ inheritance_planner(PlannerInfo *root)
 				case CdbLocusType_Hashed:
 				case CdbLocusType_HashedOJ:
 				case CdbLocusType_Strewn:
+				case CdbLocusType_Mixed:
 					/* MPP-2023: Among subplans, these loci are okay. */
 					break;
 				case CdbLocusType_Null:
@@ -1197,6 +1198,9 @@ inheritance_planner(PlannerInfo *root)
 			/* Depend on caller to avoid incompatible hash keys. */
 			/* For our purpose (UPD/DEL target), strewn is good enough. */
 			mark_plan_strewn(plan);
+			break;
+		case CdbLocusType_Mixed:
+			mark_plan_mixed(plan);
 			break;
 			
 		default:

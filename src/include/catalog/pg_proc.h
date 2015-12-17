@@ -3205,7 +3205,7 @@ DATA(insert OID = 2078 (  set_config		PGNSP PGUID 12 f f f f v 3 25 "25 25 16" _
 DESCR("SET X as a function");
 DATA(insert OID = 2084 (  pg_show_all_settings	PGNSP PGUID 12 f f t t s 0 2249 "" _null_ _null_ _null_ show_all_settings - _null_ ));
 DESCR("SHOW ALL as a function");
-DATA(insert OID = 1371 (  pg_lock_status   PGNSP PGUID 12 f f t t v 0 2249 f "" _null_ _null_ _null_ pg_lock_status - _null_ r ));
+DATA(insert OID = 1371 (  pg_lock_status   PGNSP PGUID 12 f f t t v 0 2249 f "" _null_ _null_ _null_ pg_lock_status - _null_ h ));
 DESCR("view system lock information");
 DATA(insert OID = 1065 (  pg_prepared_xact PGNSP PGUID 12 f f t t v 0 2249 "" _null_ _null_ _null_ pg_prepared_xact - _null_ ));
 DESCR("view two-phase transactions");
@@ -4170,6 +4170,8 @@ DATA(insert OID = 3069 (gp_truncate_error_log PGNSP PGUID 12 f f t t v 1 16 f "2
 #define PRODATAACCESS_MODIFIES	'm'
 /* This is an internal-only data access property. */
 #define PRODATAACCESS_SEGMENT	's'
+/* This is an internal-only data access property. */
+#define PRODATAACCESS_MIXED	'h'
 
 /*
  * prototypes for functions in pg_proc.c

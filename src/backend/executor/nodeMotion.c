@@ -997,15 +997,24 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 
 	    /* How many sending processes in the dispatcher array? Note that targeted dispatch may reduce this number in practice */
 		sendSlice->gangSize = 1;
-	    if (sendFlow->flotype != FLOW_SINGLETON)
-	    	sendSlice->gangSize = getgpsegmentCount();
 
-        /* Does sending slice need 1-gang with read-only access to entry db? */
-        if (sendFlow->flotype == FLOW_SINGLETON &&
-            sendFlow->segindex == -1)
-            sendSlice->gangType = GANGTYPE_ENTRYDB_READER;
+		/*
+		 * For CdbLocusType_Mixed, the gangSize should be N + 1
+		 */
+		if (sendFlow->locustype == CdbLocusType_Mixed )
+			sendSlice->gangSize = 1 + getgpsegmentCount();
+		else if (sendFlow->flotype != FLOW_SINGLETON)
+			sendSlice->gangSize = getgpsegmentCount();
 
-        sendSlice->numGangMembersToBeActive = sliceCalculateNumSendingProcesses(sendSlice, getgpsegmentCount());
+		/* Does sending slice need 1-gang with read-only access to entry db? */
+		if (sendFlow->flotype == FLOW_SINGLETON &&
+				sendFlow->segindex == -1)
+			sendSlice->gangType = GANGTYPE_ENTRYDB_READER;
+
+		if (sendFlow->locustype == CdbLocusType_Mixed)
+			sendSlice->gangType = GANGTYPE_PRIMARY_MIXED;
+
+		sendSlice->numGangMembersToBeActive = sliceCalculateNumSendingProcesses(sendSlice, getgpsegmentCount());
 
 		if (node->motionType == MOTIONTYPE_FIXED && node->numOutputSegs == 1)
 		{

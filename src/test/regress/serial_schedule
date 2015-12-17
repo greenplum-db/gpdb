@@ -88,6 +88,7 @@ test: cluster
 test: dependency
 test: guc
 test: combocid
+test: pg_locks
 test: limit
 ignore: plpgsql
 test: copy2

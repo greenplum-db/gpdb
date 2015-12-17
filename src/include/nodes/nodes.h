@@ -705,7 +705,7 @@ typedef enum DispatchMethod
 {
 	DISPATCH_UNDETERMINED = 0,	/* Used prior to determination. */
 	DISPATCH_SEQUENTIAL,		/* Dispatch on entry postgres process only. */
-	DISPATCH_PARALLEL			/* Dispatch on query executor and entry processes. */
+	DISPATCH_PARALLEL		/* Dispatch on query executor and entry processes. */
 	
 } DispatchMethod;
 

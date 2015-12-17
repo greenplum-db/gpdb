@@ -117,6 +117,12 @@ typedef struct DoConnectParms
 static void addSegDBToConnThreadPool(DoConnectParms * ParmsAr, int *segdbCount,
 						 SegmentDatabaseDescriptor * segdbDesc);
 
+void
+setLargestGangsize(int size)
+{
+	largest_gangsize = size;
+}
+
 int
 largestGangsize(void)
 {
@@ -639,6 +645,7 @@ buildGangDefinition(GangType type, int gang_id, int size, int content, char *por
 	newGangDefinition->gang_id = gang_id;
 	newGangDefinition->allocated = false;
 	newGangDefinition->active = false;
+	newGangDefinition->noReuse = false;
 	newGangDefinition->portal_name = (portal_name ? pstrdup(portal_name) : (char *) NULL);
 
 	if (gp_log_gang >= GPVARS_VERBOSITY_VERBOSE)
@@ -733,7 +740,7 @@ buildGangDefinition(GangType type, int gang_id, int size, int content, char *por
 
 	newGangDefinition->db_descriptors =
 		(SegmentDatabaseDescriptor *) palloc0(cdb_component_dbs->total_segments *
-										  sizeof(SegmentDatabaseDescriptor));
+			  sizeof(SegmentDatabaseDescriptor));
 
 	Assert(cdb_component_dbs->total_segment_dbs > 0);
 
@@ -1296,7 +1303,6 @@ bad:
  * keep track of allocations (it assumes the QD will keep track of what is allocated or not).
  *
  */
-
 static List *allocatedReaderGangsN = NIL;
 static List *availableReaderGangsN = NIL;
 static List *allocatedReaderGangs1 = NIL;
@@ -1305,6 +1311,12 @@ static Gang *primaryWriterGang = NULL;
 
 List *
 getAllReaderGangs()
+{
+	return list_concat(getAllIdleReaderGangs(), getAllBusyReaderGangs());
+}
+
+List *
+getAllIdleReaderGangs()
 {
 	List	   *res = NIL;
 	ListCell   *le;
@@ -1324,6 +1336,23 @@ getAllReaderGangs()
 	{
 		res = lappend(res, lfirst(le));
 	}
+
+	return res;
+}
+
+List *
+getAllBusyReaderGangs()
+{
+	List	   *res = NIL;
+	ListCell   *le;
+
+	/*
+	 * using list_concat() here will destructively modify the lists!
+	 *
+	 * res = list_concat(availableReaderGangsN,
+	 * list_concat(availableReaderGangs1, list_concat(allocatedReaderGangsN,
+	 * allocatedReaderGangs1)));
+	 */
 	foreach(le, allocatedReaderGangsN)
 	{
 		res = lappend(res, lfirst(le));
@@ -2051,6 +2080,14 @@ cleanupGang(Gang *gp)
 
 	if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 		elog(LOG, "cleanupGang done");
+
+	if (gp->noReuse)
+	{
+		disconnectAndDestroyGang(gp);
+		gp = NULL;
+		return false;
+	}
+
 	return true;
 }
 

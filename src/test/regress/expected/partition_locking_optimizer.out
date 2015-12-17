@@ -11,7 +11,7 @@ locktype from
 pg_locks l left outer join pg_class c on (l.relation = c.oid),
 pg_database d where relation is not null and l.database = d.oid and 
 l.gp_segment_id = -1 and
-l.relation != 5039 and     -- XXX XXX: ignore gp_fault_strategy
+l.relation != 5039 and c.relname not like 'pg_class%' and     -- XXX XXX: ignore gp_fault_strategy and pg_class
 d.datname = current_database() order by 1, 3, 2;
 -- end_ignore
 -- Partitioned table with toast table
@@ -39,10 +39,6 @@ select * from locktest;
  g                          | AccessExclusiveLock | relation
  gp_distribution_policy     | RowExclusiveLock    | relation
  locktest                   | AccessShareLock     | relation
- pg_class                   | AccessShareLock     | relation
- pg_class                   | RowExclusiveLock    | relation
- pg_class_oid_index         | AccessShareLock     | relation
- pg_class_relname_nsp_index | AccessShareLock     | relation
  pg_depend                  | RowExclusiveLock    | relation
  pg_locks                   | AccessShareLock     | relation
  pg_partition               | AccessShareLock     | relation
@@ -51,7 +47,7 @@ select * from locktest;
  pg_type                    | RowExclusiveLock    | relation
  toast index                | AccessExclusiveLock | relation
  toast table                | ShareLock           | relation
-(15 rows)
+(11 rows)
 
 commit;
 -- drop
@@ -68,16 +64,12 @@ select * from locktest;
  dropped table              | AccessExclusiveLock | relation
  gp_distribution_policy     | RowExclusiveLock    | relation
  locktest                   | AccessShareLock     | relation
- pg_class                   | AccessShareLock     | relation
- pg_class                   | RowExclusiveLock    | relation
- pg_class_oid_index         | AccessShareLock     | relation
- pg_class_relname_nsp_index | AccessShareLock     | relation
  pg_depend                  | RowExclusiveLock    | relation
  pg_locks                   | AccessShareLock     | relation
  pg_partition               | RowExclusiveLock    | relation
  pg_partition_rule          | RowExclusiveLock    | relation
  pg_type                    | RowExclusiveLock    | relation
-(14 rows)
+(10 rows)
 
 commit;
 -- AO table (ao segments, block directory won't exist after create)
@@ -102,10 +94,6 @@ select * from locktest;
  gp_distribution_policy     | RowExclusiveLock    | relation
  locktest                   | AccessShareLock     | relation
  pg_appendonly              | RowExclusiveLock    | relation
- pg_class                   | AccessShareLock     | relation
- pg_class                   | RowExclusiveLock    | relation
- pg_class_oid_index         | AccessShareLock     | relation
- pg_class_relname_nsp_index | AccessShareLock     | relation
  pg_depend                  | RowExclusiveLock    | relation
  pg_locks                   | AccessShareLock     | relation
  pg_partition               | AccessShareLock     | relation
@@ -114,7 +102,7 @@ select * from locktest;
  pg_type                    | RowExclusiveLock    | relation
  toast index                | AccessExclusiveLock | relation
  toast table                | ShareLock           | relation
-(16 rows)
+(12 rows)
 
 commit;
 begin;
@@ -138,11 +126,8 @@ select * from locktest;
  g_1_prt_3                  | AccessExclusiveLock | append-only segment file
  g_1_prt_3                  | AccessShareLock     | relation
  locktest                   | AccessShareLock     | relation
- pg_class                   | AccessShareLock     | relation
- pg_class_oid_index         | AccessShareLock     | relation
- pg_class_relname_nsp_index | AccessShareLock     | relation
  pg_locks                   | AccessShareLock     | relation
-(12 rows)
+(9 rows)
 
 commit;
 -- drop
@@ -164,16 +149,12 @@ select * from locktest;
  gp_distribution_policy     | RowExclusiveLock    | relation
  locktest                   | AccessShareLock     | relation
  pg_appendonly              | RowExclusiveLock    | relation
- pg_class                   | AccessShareLock     | relation
- pg_class                   | RowExclusiveLock    | relation
- pg_class_oid_index         | AccessShareLock     | relation
- pg_class_relname_nsp_index | AccessShareLock     | relation
  pg_depend                  | RowExclusiveLock    | relation
  pg_locks                   | AccessShareLock     | relation
  pg_partition               | RowExclusiveLock    | relation
  pg_partition_rule          | RowExclusiveLock    | relation
  pg_type                    | RowExclusiveLock    | relation
-(19 rows)
+(15 rows)
 
 commit;
 -- Indexing
@@ -210,15 +191,11 @@ select * from locktest;
  g                          | ShareLock           | relation
  g_idx                      | AccessExclusiveLock | relation
  locktest                   | AccessShareLock     | relation
- pg_class                   | AccessShareLock     | relation
- pg_class                   | RowExclusiveLock    | relation
- pg_class_oid_index         | AccessShareLock     | relation
- pg_class_relname_nsp_index | AccessShareLock     | relation
  pg_locks                   | AccessShareLock     | relation
  pg_partition               | AccessShareLock     | relation
  pg_partition_rule          | AccessShareLock     | relation
  pg_type                    | RowExclusiveLock    | relation
-(11 rows)
+(7 rows)
 
 commit;
 -- test select locking
@@ -236,11 +213,8 @@ select * from locktest;
 ----------------------------+-----------------+----------
  g                          | AccessShareLock | relation
  locktest                   | AccessShareLock | relation
- pg_class                   | AccessShareLock | relation
- pg_class_oid_index         | AccessShareLock | relation
- pg_class_relname_nsp_index | AccessShareLock | relation
  pg_locks                   | AccessShareLock | relation
-(6 rows)
+(3 rows)
 
 commit;
 begin;
@@ -254,11 +228,8 @@ select * from locktest;
 ----------------------------+------------------+----------
  g                          | RowExclusiveLock | relation
  locktest                   | AccessShareLock  | relation
- pg_class                   | AccessShareLock  | relation
- pg_class_oid_index         | AccessShareLock  | relation
- pg_class_relname_nsp_index | AccessShareLock  | relation
  pg_locks                   | AccessShareLock  | relation
-(6 rows)
+(3 rows)
 
 commit;
 -- delete locking
@@ -272,11 +243,8 @@ select * from locktest;
 ----------------------------+-----------------+----------
  g                          | ExclusiveLock   | relation
  locktest                   | AccessShareLock | relation
- pg_class                   | AccessShareLock | relation
- pg_class_oid_index         | AccessShareLock | relation
- pg_class_relname_nsp_index | AccessShareLock | relation
  pg_locks                   | AccessShareLock | relation
-(6 rows)
+(3 rows)
 
 commit;
 -- drop index
@@ -294,15 +262,11 @@ select * from locktest;
  dropped table              | AccessExclusiveLock | relation
  gp_distribution_policy     | RowExclusiveLock    | relation
  locktest                   | AccessShareLock     | relation
- pg_class                   | AccessShareLock     | relation
- pg_class                   | RowExclusiveLock    | relation
- pg_class_oid_index         | AccessShareLock     | relation
- pg_class_relname_nsp_index | AccessShareLock     | relation
  pg_depend                  | RowExclusiveLock    | relation
  pg_locks                   | AccessShareLock     | relation
  pg_partition               | RowExclusiveLock    | relation
  pg_partition_rule          | RowExclusiveLock    | relation
  pg_type                    | RowExclusiveLock    | relation
-(15 rows)
+(11 rows)
 
 commit;

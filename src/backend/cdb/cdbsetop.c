@@ -75,7 +75,13 @@ GpSetOpType choose_setop_type(List *planlist)
 				ok_general = ok_replicated = FALSE;
 				has_partitioned = TRUE;
 				break;
-				
+
+			/*
+			 * To make it simple, disallow redistribution, broadcast when subplans contain mixed locus
+			 */
+			case CdbLocusType_Mixed:
+				ok_general = ok_partitioned = ok_replicated = FALSE;
+				break;
 			case CdbLocusType_Entry:
 				ok_general = ok_partitioned = ok_replicated = ok_single_qe = FALSE;
 				break;
@@ -148,6 +154,7 @@ void adjust_setop_arguments(List *planlist, GpSetOpType setop_type)
 					break;
 				case CdbLocusType_Null:
 				case CdbLocusType_Entry:
+				case CdbLocusType_Mixed:
 				case CdbLocusType_Replicated:
 				default:
 					ereport(ERROR, (
@@ -163,6 +170,7 @@ void adjust_setop_arguments(List *planlist, GpSetOpType setop_type)
 				case CdbLocusType_Hashed:
 				case CdbLocusType_HashedOJ:
 				case CdbLocusType_Strewn:
+				case CdbLocusType_Mixed:
 					Assert( subplanflow->flotype == FLOW_PARTITIONED );
 					adjusted_plan = (Plan*)make_motion_gather_to_QD(subplan, false);				
 					break;
@@ -192,6 +200,7 @@ void adjust_setop_arguments(List *planlist, GpSetOpType setop_type)
 				case CdbLocusType_Hashed:
 				case CdbLocusType_HashedOJ:
 				case CdbLocusType_Strewn:
+				case CdbLocusType_Mixed:
 					Assert( subplanflow->flotype == FLOW_PARTITIONED );
 					/* Gather to QE.  No need to keep ordering. */
 					adjusted_plan = (Plan*)make_motion_gather_to_QE(subplan, false);				
@@ -274,6 +283,7 @@ Flow *copyFlow(Flow *model_flow, bool withExprs, bool withSort)
 		new_flow->segindex = model_flow->segindex;
 	}
 	else if (model_flow->flotype != FLOW_REPLICATED)
+
 	{
 		/* Clean up and give up. This isn't one of our blessed types. */
 		pfree(new_flow);
@@ -519,6 +529,13 @@ void mark_plan_strewn(Plan* plan)
 	Assert( is_plan_node((Node*)plan) && plan->flow == NULL );
 	plan->flow = makeFlow(FLOW_PARTITIONED);
 	plan->flow->locustype = CdbLocusType_Strewn;
+}
+
+void mark_plan_mixed(Plan* plan)
+{
+	Assert( is_plan_node((Node*)plan) && plan->flow == NULL );
+	plan->flow = makeFlow(FLOW_PARTITIONED);
+	plan->flow->locustype = CdbLocusType_Mixed;
 }
 
 void mark_plan_replicated(Plan* plan)

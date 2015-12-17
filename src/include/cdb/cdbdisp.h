@@ -390,7 +390,7 @@ CdbDoCommand(const char *strCommand, bool cancelOnError, bool needTwoPhase);
  * gangs, both reader and writer
  */
 void
-CdbDoCommandOnAllGangs(const char *strCommand, bool cancelOnError, bool needTwoPhase);
+CdbSetGucOnAllGangs(const char *strCommand, bool cancelOnError, bool needTwoPhase);
 
 /*--------------------------------------------------------------------*/
 struct SliceTable;

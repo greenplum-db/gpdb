@@ -66,6 +66,12 @@ cdbpathtoplan_create_flow(PlannerInfo  *root,
     }
     else if (CdbPathLocus_IsStrewn(locus))
         flow = makeFlow(FLOW_PARTITIONED);
+    /*
+     * Mixed mean data are partitioned on both segments and master,
+     * so the flow should be also FLOW_PARTITIONED
+     */
+    else if (CdbPathLocus_IsMixed(locus))
+        flow = makeFlow(FLOW_PARTITIONED);
     else
         Insist(0);
 	
@@ -162,7 +168,6 @@ cdbpathtoplan_create_motion_plan(PlannerInfo   *root,
             motion = make_broadcast_motion(subplan,
                                            false /* useExecutorVarFormat */
                                            );
-
     /* Hashed redistribution to all QEs in gang above... */
     else if (CdbPathLocus_IsHashed(path->path.locus) ||
              CdbPathLocus_IsHashedOJ(path->path.locus))

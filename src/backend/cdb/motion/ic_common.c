@@ -1017,7 +1017,12 @@ void adjustMasterRouting(Slice *recvSlice)
 		if (cdbProc)
 		{
 			if (cdbProc->listenerAddr == NULL)
-				cdbProc->listenerAddr = pstrdup(MyProcPort->remote_host);
+			{
+				if (!strcmp(MyProcPort->remote_host, "[local]"))
+					cdbProc->listenerAddr = pstrdup("127.0.0.1");
+				else
+					cdbProc->listenerAddr = pstrdup(MyProcPort->remote_host);
+			}
 		}
 	}
 }

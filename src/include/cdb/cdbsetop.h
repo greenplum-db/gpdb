@@ -97,6 +97,9 @@ extern
 void mark_plan_strewn(Plan* plan);
 
 extern
+void mark_plan_mixed(Plan* plan);
+
+extern
 void mark_plan_replicated(Plan* plan);
 
 extern

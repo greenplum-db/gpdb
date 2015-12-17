@@ -143,7 +143,7 @@ addSegDBToDispatchThreadPool(DispatchCommandParms  *ParmsAr,
 							 CdbDispatchResult     *dispatchResult);
 
 static void
-cdbdisp_dispatchCommandToAllGangs(const char	*strCommand,
+cdbdisp_dispatchSetCommandToAllGangs(const char	*strCommand,
 						char					*serializedQuerytree,
 						int						serializedQuerytreelen,
 						char					*serializedPlantree,
@@ -1451,7 +1451,7 @@ cdbdisp_check_estate_for_cancel(struct EState *estate)
 }
 
 static void
-cdbdisp_dispatchCommandToAllGangs(const char	*strCommand,
+cdbdisp_dispatchSetCommandToAllGangs(const char	*strCommand,
 								  char			*serializedQuerytree,
 								  int			serializedQuerytreelen,
 								  char			*serializedPlantree,
@@ -1463,13 +1463,14 @@ cdbdisp_dispatchCommandToAllGangs(const char	*strCommand,
 	DispatchCommandQueryParms queryParms;
 	
 	Gang		*primaryGang;
-    List		*readerGangs;
-    ListCell	*le;
+	List		*idleReaderGangs;
+	List		*busyReaderGangs;
+	ListCell	*le;
 
-    int			nsegdb = getgpsegmentCount();
+	int			nsegdb = getgpsegmentCount();
 	int			gangCount;
 	
-    ds->primaryResults = NULL;	
+	ds->primaryResults = NULL;	
 	ds->dispatchThreads = NULL;
 
 	MemSet(&queryParms, 0, sizeof(queryParms));
@@ -1491,14 +1492,15 @@ cdbdisp_dispatchCommandToAllGangs(const char	*strCommand,
 	/* serialized a version of our snapshot */
 	queryParms.serializedDtxContextInfo = 
 		qdSerializeDtxContextInfo(&queryParms.serializedDtxContextInfolen, true /* withSnapshot */, false /* cursor*/,
-								  generateTxnOptions(needTwoPhase), "cdbdisp_dispatchCommandToAllGangs");
+								  generateTxnOptions(needTwoPhase), "cdbdisp_dispatchSetCommandToAllGangs");
 	
-	readerGangs = getAllReaderGangs();
+	idleReaderGangs = getAllIdleReaderGangs();
+	busyReaderGangs = getAllBusyReaderGangs();
 	
 	/*
 	 * Dispatch the command.
 	 */
-	gangCount = 1 + list_length(readerGangs);
+	gangCount = 1 + list_length(idleReaderGangs);
 	ds->primaryResults = cdbdisp_makeDispatchResults(nsegdb * gangCount, 0, cancelOnError);
 
 	ds->primaryResults->writer_gang = primaryGang;
@@ -1507,7 +1509,7 @@ cdbdisp_dispatchCommandToAllGangs(const char	*strCommand,
 						   &queryParms,
 						   primaryGang, -1, gangCount, DEFAULT_DISP_DIRECT);
 
-	foreach(le, readerGangs)
+	foreach(le, idleReaderGangs)
 	{
 		Gang  *rg = lfirst(le);
 		cdbdisp_dispatchToGang(ds,
@@ -1515,7 +1517,17 @@ cdbdisp_dispatchCommandToAllGangs(const char	*strCommand,
 							   &queryParms,
 							   rg, -1, gangCount, DEFAULT_DISP_DIRECT);
 	}
-}	/* cdbdisp_dispatchCommandToAllGangs */
+
+	/* 
+	* Can not send set command to busy gangs, so those gangs
+	* can not be reused because their GUC is not set.
+	*/
+	foreach(le, busyReaderGangs)
+	{
+		Gang  *rg = lfirst(le);
+		rg->noReuse = true;
+	}
+}	/* cdbdisp_dispatchSetCommandToAllGangs */
 
 /*--------------------------------------------------------------------*/
 
@@ -2826,21 +2838,21 @@ CdbDoCommand(const char *strCommand,
 
 
 void
-CdbDoCommandOnAllGangs(const char *strCommand,
+CdbSetGucOnAllGangs(const char *strCommand,
 					   bool cancelOnError,
 					   bool needTwoPhase)
 {
 	volatile CdbDispatcherState ds = {NULL, NULL};
 	const bool withSnapshot = true;
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5), "CdbDoCommandOnAllGangs for command = '%s', needTwoPhase = %s",
+	elog((Debug_print_full_dtm ? LOG : DEBUG5), "CdbSetGucOnAllGangs for command = '%s', needTwoPhase = %s",
 		 strCommand, (needTwoPhase ? "true" : "false"));
 
-	dtmPreCommand("CdbDoCommandOnAllGangs", strCommand, NULL, needTwoPhase, withSnapshot, false /* inCursor */ );
+	dtmPreCommand("CdbSetGucOnAllGangs", strCommand, NULL, needTwoPhase, withSnapshot, false /* inCursor */ );
 
 	PG_TRY();
 	{
-		cdbdisp_dispatchCommandToAllGangs(strCommand, NULL, 0, NULL, 0, cancelOnError, needTwoPhase, (struct CdbDispatcherState *)&ds);
+		cdbdisp_dispatchSetCommandToAllGangs(strCommand, NULL, 0, NULL, 0, cancelOnError, needTwoPhase, (struct CdbDispatcherState *)&ds);
 
 		/*
 		 * Wait for all QEs to finish. If not all of our QEs were successful,
@@ -3492,6 +3504,20 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 								   GP_DISPATCH_COMMAND_TYPE_QUERY,
 								   pQueryParms, primaryGang,
 								   si, sliceLim, &direct);
+		}
+
+		/*
+ 		* If auxiliaryGang is not null, it means current slice is hybrid one
+ 		* which is combination of N-segments gang and 1-entry-db gang.
+ 		* 
+ 		* So here, also dispatch the plan to auxiliaryGang
+ 		*/	
+		if (slice->auxiliaryGang != NULL)
+		{
+			cdbdisp_dispatchToGang(ds,
+					GP_DISPATCH_COMMAND_TYPE_QUERY,
+					pQueryParms, slice->auxiliaryGang,
+					si, sliceLim, &direct);
 		}
 	}
 

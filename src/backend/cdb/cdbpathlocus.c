@@ -396,7 +396,9 @@ cdbpathlocus_from_subquery(struct PlannerInfo  *root,
             if (partkey &&
                 !hashexprcell)
                 CdbPathLocus_MakeHashed(&locus, partkey);
-            else
+            else if (flow->locustype == CdbLocusType_Mixed) 
+                CdbPathLocus_MakeMixed(&locus);
+            else 
                 CdbPathLocus_MakeStrewn(&locus);
             list_free_deep(eq);
             break;

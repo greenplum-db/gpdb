@@ -51,6 +51,7 @@ typedef enum CdbLocusType
     CdbLocusType_Hashed,        /* hash partitioned over all qExecs of N-gang */
     CdbLocusType_HashedOJ,      /* result of hash partitioned outer join */
     CdbLocusType_Strewn,        /* partitioned on no known function */
+    CdbLocusType_Mixed,         /* partitioned on both master and segments, no partitioned key */
     CdbLocusType_End            /* = last valid CdbLocusType + 1 */
 } CdbLocusType;
 
@@ -149,13 +150,15 @@ typedef struct CdbPathLocus
 /*
  * CdbPathLocus_IsPartitioned
  *
- * Returns true if the locus indicates partitioning across an N-gang, such
+ * Returns true if the locus indicates partitioning across an N-gang or N+1 gang, such
  * that each qExec has a disjoint subset of the rows.
  */
 #define CdbPathLocus_IsPartitioned(locus)       \
             (CdbPathLocus_IsHashed(locus) ||    \
              CdbPathLocus_IsHashedOJ(locus) ||  \
+	     CdbPathLocus_IsMixed(locus) ||      \
              CdbPathLocus_IsStrewn(locus))
+
 
 #define CdbPathLocus_IsNull(locus)          \
             ((locus).locustype == CdbLocusType_Null)
@@ -173,6 +176,8 @@ typedef struct CdbPathLocus
             ((locus).locustype == CdbLocusType_HashedOJ)
 #define CdbPathLocus_IsStrewn(locus)        \
             ((locus).locustype == CdbLocusType_Strewn)
+#define CdbPathLocus_IsMixed(locus)        \
+            ((locus).locustype == CdbLocusType_Mixed)
 
 #define CdbPathLocus_Make(plocus, _locustype, _partkey) \
     do {                                                \
@@ -199,6 +204,8 @@ typedef struct CdbPathLocus
             CdbPathLocus_Make((plocus), CdbLocusType_HashedOJ, (partkey))
 #define CdbPathLocus_MakeStrewn(plocus)                 \
             CdbPathLocus_Make((plocus), CdbLocusType_Strewn, NIL)
+#define CdbPathLocus_MakeMixed(plocus)                 \
+            CdbPathLocus_Make((plocus), CdbLocusType_Mixed, NIL)
 
 /************************************************************************/
 
