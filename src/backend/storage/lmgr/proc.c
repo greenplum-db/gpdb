@@ -659,7 +659,7 @@ LockWaitCancel(void)
 	if (MyProc->links.next != INVALID_OFFSET)
 	{
 		/* We could not have been granted the lock yet */
-		RemoveFromWaitQueue(MyProc, lockAwaited->hashcode);
+		RemoveFromWaitQueue(MyProc, lockAwaited->hashcode, true);
 	}
 	else
 	{
@@ -1047,7 +1047,7 @@ ProcSleep(LOCALLOCK *locallock, LockMethod lockMethodTable)
 	 */
 	if (early_deadlock)
 	{
-		RemoveFromWaitQueue(MyProc, hashcode);
+		RemoveFromWaitQueue(MyProc, hashcode, false);
 		return STATUS_ERROR;
 	}
 
@@ -1310,8 +1310,7 @@ CheckDeadLock(void)
 	}
 	else
 	{
-		RemoveFromWaitQueue(MyProc, 
-							LockTagHashCode(&(MyProc->waitLock->tag)));
+		RemoveFromWaitQueue(MyProc, LockTagHashCode(&(MyProc->waitLock->tag)), true);
 	}
 
 	/*
@@ -1684,8 +1683,6 @@ ResProcSleep(LOCKMODE lockmode, LOCALLOCK *locallock, void *incrementSet)
 	uint32		hashcode = locallock->hashcode;
 	LWLockId	partitionLock = LockHashPartitionLock(hashcode);
 
-	bool		selflock = true;		/* initialize result for error. */
-
 	/*
 	 * Don't check my held locks, as we just add at the end of the queue.
 	 */
@@ -1704,16 +1701,6 @@ ResProcSleep(LOCKMODE lockmode, LOCALLOCK *locallock, void *incrementSet)
 
 	MyProc->waitStatus = STATUS_ERROR;	/* initialize result for error */
 
-	/* Now check the status of the self lock footgun. */
-	selflock = ResCheckSelfDeadLock(lock, proclock, incrementSet);
-	if (selflock)
-	{
-		LWLockRelease(partitionLock);
-		ereport(ERROR,
-				(errcode(ERRCODE_T_R_DEADLOCK_DETECTED),
-				 errmsg("deadlock detected, locking against self")));
-	}
-
 	/* Mark that we are waiting for a lock */
 	lockAwaited = locallock;
 
@@ -1724,9 +1711,12 @@ ResProcSleep(LOCKMODE lockmode, LOCALLOCK *locallock, void *incrementSet)
    		elog(FATAL, "could not set timer for (resource lock) process wakeup");
 
 	/*
-	 * Sleep on the semaphore.
+	 * Sleep on the semaphore. see ProcSleep's comments for why we check the wait status here.
 	 */
-	PGSemaphoreLock(&MyProc->sem, true);
+	do
+	{
+		PGSemaphoreLock(&MyProc->sem, true);
+	} while (MyProc->waitStatus == STATUS_WAITING);
 
 	if (!disable_sig_alarm(false))
 		elog(FATAL, "could not disable timer for (resource lock) process wakeup");
@@ -1756,6 +1746,9 @@ ResLockWaitCancel(void)
 
 	if (lockAwaited != NULL)
 	{
+		/* Turn off the deadlock timer, if it's still running */
+		disable_sig_alarm(false);
+
 		/* Unlink myself from the wait queue, if on it  */
 		partitionLock = LockHashPartition(lockAwaited->hashcode);
 		LWLockAcquire(partitionLock, LW_EXCLUSIVE);
@@ -1777,12 +1770,19 @@ ResLockWaitCancel(void)
 	}
 
 	/*
-	 * Reset the proc wait semaphore to zero. This is necessary in the
-	 * scenario where someone else granted us the lock we wanted before we
-	 * were able to remove ourselves from the wait-list.
+	 * We used to do PGSemaphoreReset() here to ensure that our proc's wait
+	 * semaphore is reset to zero.	This prevented a leftover wakeup signal
+	 * from remaining in the semaphore if someone else had granted us the lock
+	 * we wanted before we were able to remove ourselves from the wait-list.
+	 * However, now that ResProcSleep loops until waitStatus changes, a leftover
+	 * wakeup signal isn't harmful, and it seems not worth expending cycles to
+	 * get rid of a signal that most likely isn't there.
 	 */
-	PGSemaphoreReset(&MyProc->sem);
 
+	/*
+	 * Return true even if we were kicked off the lock before we were able to
+	 * remove ourselves.
+	 */
 	return;
 }
 
