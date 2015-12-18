@@ -27,7 +27,6 @@
 #include "utils/faultinjector.h"
 
 static void ExecSortExplainEnd(PlanState *planstate, struct StringInfoData *buf);
-static void ExecSortResetWorkfileState(SortState *node);
 
 /* ----------------------------------------------------------------
  *		ExecSort

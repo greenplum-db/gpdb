@@ -37,8 +37,6 @@ static TupleTableSlot *ExecHashJoinGetSavedTuple(HashJoinBatchSide *side,
 						  TupleTableSlot *tupleSlot);
 static int	ExecHashJoinNewBatch(HashJoinState *hjstate);
 static bool isNotDistinctJoin(List *qualList);
-static bool ExecHashJoinLoadBatchFiles(HashJoinTable hashtable);
-
 
 static void ReleaseHashTable(HashJoinState *node);
 static bool isHashtableEmpty(HashJoinTable hashtable);

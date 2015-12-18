@@ -91,7 +91,6 @@ typedef enum InputRecordType
 
 /* Methods that handle batch files */
 static SpillSet *createSpillSet(unsigned branching_factor, unsigned parent_hash_bit);
-static SpillSet *read_spill_set(AggState *aggstate);
 static int closeSpillFile(AggState *aggstate, SpillSet *spill_set, int file_no);
 static int closeSpillFiles(AggState *aggstate, SpillSet *spill_set);
 static int suspendSpillFiles(SpillSet *spill_set);
@@ -682,7 +681,6 @@ create_agg_hash_table(AggState *aggstate)
 												 ALLOCSET_DEFAULT_INITSIZE,
 												 ALLOCSET_DEFAULT_MAXSIZE);
 
-	workfile_set *work_set = NULL;
 	uint64 operatorMemKB = PlanStateOperatorMemKB( (PlanState *) aggstate);
 
 	if (!calcHashAggTableSizes(1024.0 * (double) operatorMemKB,
