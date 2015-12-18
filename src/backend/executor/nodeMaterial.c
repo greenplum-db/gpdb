@@ -101,53 +101,10 @@ ExecMaterial(MaterialState *node)
 		else
 		{
 			/* Non-shared Materialize node */
-			bool isWriter = true;
-			workfile_set *work_set = NULL;
+			workfile_set *work_set =  workfile_mgr_create_set(BUFFILE, false /* can_reuse */, &node->ss.ps, NULL_SNAPSHOT);
 
-			if (gp_workfile_caching)
-			{
-				work_set = workfile_mgr_find_set( &node->ss.ps);
-
-				if (NULL != work_set)
-				{
-					/* Reusing cached workfiles. Tell subplan we won't be needing any tuples */
-					elog(gp_workfile_caching_loglevel, "Materialize reusing cached workfiles, initiating Squelch walker");
-
-					isWriter = false;
-					ExecSquelchNode(outerPlanState(node));
-					node->eof_underlying = true;
-					node->cached_workfiles_found = true;
-
-					if (node->ss.ps.instrument)
-					{
-						node->ss.ps.instrument->workfileReused = true;
-					}
-				}
-			}
-
-			if (NULL == work_set)
-			{
-				/*
-				 * No work_set found, this is because:
-				 *  a. workfile caching is enabled but we didn't find any reusable set
-				 *  b. workfile caching is disabled
-				 * Creating new empty workset
-				 */
-				Assert(!node->cached_workfiles_found);
-
-				/* Don't try to cache when running under a ShareInputScan node */
-				bool can_reuse = (ma->share_type == SHARE_NOTSHARED);
-
-				work_set = workfile_mgr_create_set(BUFFILE, can_reuse, &node->ss.ps, NULL_SNAPSHOT);
-				isWriter = true;
-			}
-
-			Assert(NULL != work_set);
-			AssertEquivalent(node->cached_workfiles_found, !isWriter);
-
-			ts = ntuplestore_create_workset(work_set, node->cached_workfiles_found,
-					PlanStateOperatorMemKB((PlanState *) node) * 1024);
-			tsa = ntuplestore_create_accessor(ts, isWriter);
+			ts = ntuplestore_create_workset(work_set, PlanStateOperatorMemKB((PlanState *) node) * 1024);
+			tsa = ntuplestore_create_accessor(ts, true /* isWriter */);
 		}
 
 		Assert(ts && tsa);
@@ -190,13 +147,6 @@ ExecMaterial(MaterialState *node)
 			if (TupIsNull(outerslot))
 			{
 				node->eof_underlying = true;
-
-				if (ntuplestore_created_reusable_workfiles(ts))
-				{
-					ntuplestore_flush(ts);
-					ntuplestore_mark_workset_complete(ts);
-				}
-
 				ntuplestore_acc_seek_bof(tsa);
 
 				break;
@@ -284,12 +234,6 @@ ExecMaterial(MaterialState *node)
 		if (TupIsNull(outerslot))
 		{
 			node->eof_underlying = true;
-			if (ntuplestore_created_reusable_workfiles(ts))
-			{
-				ntuplestore_flush(ts);
-				ntuplestore_mark_workset_complete(ts);
-			}
-
 			if (!node->ss.ps.delayEagerFree)
 			{
 				ExecEagerFreeMaterial(node);

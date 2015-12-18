@@ -126,9 +126,6 @@ typedef struct workfile_set
 	/* For non-physical workfile sets, pointer to the serialized plan */
 	workfile_set_plan *set_plan;
 
-	/* Indicates if this set can be reused */
-	bool can_be_reused;
-
 	/* Set to true during operator execution once set is complete */
 	bool complete;
 

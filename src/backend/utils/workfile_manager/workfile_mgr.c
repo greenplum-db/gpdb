@@ -41,7 +41,6 @@ typedef struct workset_info
 	uint64 operator_work_mem;
 	char *dir_path;
 	bool can_be_reused;
-	bool on_disk;
 } workset_info;
 
 /* Forward declarations */
@@ -204,8 +203,6 @@ workfile_mgr_create_set(enum ExecWorkFileType type, bool can_be_reused, PlanStat
 	set_info.dir_path = dir_path;
 	set_info.session_start_time = GetCurrentTimestamp();
 	set_info.operator_work_mem = get_operator_work_mem(ps);
-	set_info.on_disk = true;
-
 	CacheEntry *newEntry = NULL;
 
 	PG_TRY();
@@ -227,19 +224,9 @@ workfile_mgr_create_set(enum ExecWorkFileType type, bool can_be_reused, PlanStat
 	Assert(NULL != newEntry);
 	workfile_set *work_set = CACHE_ENTRY_PAYLOAD(newEntry);
 	Assert(work_set != NULL);
-	if (work_set->can_be_reused)
-	{
-		Assert(plan != NULL);
-		Assert(nodeTag(plan) >= T_Plan && nodeTag(plan) < T_PlanInvalItem);
 
-		workfile_set_plan *s_plan = workfile_mgr_serialize_plan(ps);
-		work_set->key = workfile_mgr_hash_key(s_plan);
-		workfile_mgr_save_plan(work_set, s_plan);
-		workfile_mgr_free_plan(s_plan);
-	}
-
-	elog(gp_workfile_caching_loglevel, "new spill file set. key=0x%x can_be_reused=%d prefix=%s opMemKB=" INT64_FORMAT,
-			work_set->key, work_set->can_be_reused, work_set->path, work_set->metadata.operator_work_mem);
+	elog(gp_workfile_caching_loglevel, "new spill file set. key=0x%x prefix=%s opMemKB=" INT64_FORMAT,
+			work_set->key, work_set->path, work_set->metadata.operator_work_mem);
 
 	return work_set;
 }
@@ -344,36 +331,22 @@ workfile_mgr_populate_set(const void *resource, const void *param)
 	work_set->metadata.operator_work_mem = set_info->operator_work_mem;
 	work_set->set_plan = NULL;
 
-	if (!set_info->on_disk)
-	{
-		/* This is for a "virtual" work_set, used for look-ups. No need to populate further */
-		Assert(NULL == set_info->dir_path);
-		work_set->on_disk = false;
-	}
-	else
-	{
+	work_set->complete = false;
+	work_set->no_files = 0;
+	work_set->size = 0L;
+	work_set->in_progress_size = 0L;
+	work_set->node_type = set_info->nodeType;
+	work_set->metadata.type = set_info->file_type;
+	work_set->metadata.bfz_compress_type = gp_workfile_compress_algorithm;
+	work_set->metadata.snapshot = set_info->snapshot;
+	work_set->metadata.num_leaf_files = 0;
+	work_set->slice_id = currentSliceId;
+	work_set->session_id = gp_session_id;
+	work_set->command_count = gp_command_count;
+	work_set->session_start_time = set_info->session_start_time;
 
-		work_set->complete = false;
-		work_set->no_files = 0;
-		work_set->size = 0L;
-		work_set->in_progress_size = 0L;
-		work_set->node_type = set_info->nodeType;
-		work_set->metadata.type = set_info->file_type;
-		work_set->metadata.bfz_compress_type = gp_workfile_compress_algorithm;
-		work_set->metadata.snapshot = set_info->snapshot;
-		work_set->metadata.num_leaf_files = 0;
-		work_set->slice_id = currentSliceId;
-		work_set->session_id = gp_session_id;
-		work_set->command_count = gp_command_count;
-		work_set->session_start_time = set_info->session_start_time;
-
-		/* If workfile caching is disabled, nothing should be re-used, so override whatever the caller says */
-		work_set->can_be_reused = gp_workfile_caching && set_info->can_be_reused;
-
-		Assert(strlen(set_info->dir_path) < MAXPGPATH);
-		strncpy(work_set->path, set_info->dir_path, MAXPGPATH);
-		work_set->on_disk = true;
-	}
+	Assert(strlen(set_info->dir_path) < MAXPGPATH);
+	strncpy(work_set->path, set_info->dir_path, MAXPGPATH);
 }
 
 /*
@@ -595,7 +568,6 @@ workfile_mgr_lookup_set(PlanState *ps)
 	workset_info set_info;
 	set_info.dir_path = NULL;
 	set_info.operator_work_mem = get_operator_work_mem(ps);
-	set_info.on_disk = false;
 
 	CacheEntry *localEntry = acquire_entry_retry(workfile_mgr_cache, &set_info);
 	Assert(localEntry != NULL);
@@ -816,35 +788,12 @@ workfile_mgr_close_set(workfile_set *work_set)
 {
 	Assert(work_set!=NULL);
 
-	elog(gp_workfile_caching_loglevel, "closing workfile set: can_be_reused=%d complete=%d location: %s, size=" INT64_FORMAT
+	elog(gp_workfile_caching_loglevel, "closing workfile set: complete=%d location: %s, size=" INT64_FORMAT
 			" in_progress_size=" INT64_FORMAT,
-		 work_set->can_be_reused, work_set->complete, work_set->path,
+		 work_set->complete, work_set->path,
 		 work_set->size, work_set->in_progress_size);
 
 	CacheEntry *cache_entry = CACHE_ENTRY_HEADER(work_set);
-
-	if (Cache_IsCached(cache_entry))
-	{
-		/* Workset came from cache. Just release it, nothing to do */
-		Cache_Release(workfile_mgr_cache, cache_entry);
-		return;
-	}
-
-	if (work_set->complete && work_set->can_be_reused)
-	{
-		cache_entry->size = work_set->size;
-
-		/* We want to keep this one around. Insert into cache */
-		Cache_Insert(workfile_mgr_cache, cache_entry);
-		Cache_Release(workfile_mgr_cache, cache_entry);
-		return;
-	}
-
-
-	/*
-	 * Fall-through case: We need to delete this work_set, as it's not reusable.
-	 */
-	Assert(!work_set->complete || !work_set->can_be_reused);
 	Cache_Release(workfile_mgr_cache, cache_entry);
 }
 

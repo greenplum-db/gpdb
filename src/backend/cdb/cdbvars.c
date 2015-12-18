@@ -340,7 +340,6 @@ int		gp_hashagg_compress_spill_files = 0;
 
 int gp_workfile_compress_algorithm = 0;
 bool gp_workfile_checksumming = false;
-bool gp_workfile_caching = false;
 int gp_workfile_caching_loglevel = DEBUG1;
 int gp_sessionstate_loglevel = DEBUG1;
 /* Maximum disk space to use for workfiles on a segment, in kilobytes */

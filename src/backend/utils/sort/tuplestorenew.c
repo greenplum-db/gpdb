@@ -161,8 +161,6 @@ struct NTupleStore
 	int rwflag;  /* if I am ordinary store, or a reader, or a writer of readerwriter (share input) */
 
 
-	bool cached_workfiles_found; /* true if found matching and usable cached workfiles */
-	bool cached_workfiles_loaded; /* set after loading cached workfiles */
 	bool workfiles_created; /* set if the operator created workfiles */
 	workfile_set *work_set; /* workfile set to use when using workfile manager */
 
@@ -668,8 +666,6 @@ ntuplestore_create(int maxBytes)
 	store->lobbytes = 0;
 
 	store->work_set = NULL;
-	store->cached_workfiles_found = false;
-	store->cached_workfiles_loaded = false;
 	store->workfiles_created = false;
 
 	Assert(maxBytes >= 0);
@@ -733,8 +729,6 @@ ntuplestore_create_readerwriter(const char *filename, int maxBytes, bool isWrite
 	{
 		store = (NTupleStore *) check_malloc(sizeof(NTupleStore));
 		store->work_set = NULL;
-		store->cached_workfiles_found = false;
-		store->cached_workfiles_loaded = false;
 		store->workfiles_created = false;
 
 		store->pfile = ExecWorkFile_Open(filenameprefix, BUFFILE,
@@ -803,36 +797,16 @@ ntuplestore_init_reader(NTupleStore *store, int maxBytes)
  * The workSet needs to be initialized by the caller.
  */
 NTupleStore *
-ntuplestore_create_workset(workfile_set *workSet, bool cachedWorkfilesFound, int maxBytes)
+ntuplestore_create_workset(workfile_set *workSet, int maxBytes)
 {
 
 	elog(gp_workfile_caching_loglevel, "Creating tuplestore with workset in directory %s", workSet->path);
 
 	NTupleStore *store = ntuplestore_create(maxBytes);
 	store->work_set = workSet;
-	store->cached_workfiles_found = cachedWorkfilesFound;
+	/* Creating new workset */
+	store->rwflag = NTS_IS_WRITER;
 
-	if (store->cached_workfiles_found)
-	{
-		Assert(store->work_set != NULL);
-
-		/* Reusing existing files. Load data from spill files here */
-		MemoryContext   oldcxt;
-		oldcxt = MemoryContextSwitchTo(TopMemoryContext);
-
-		store->pfile = workfile_mgr_open_fileno(store->work_set, WORKFILE_NUM_TUPLESTORE_DATA);
-		store->plobfile = workfile_mgr_open_fileno(store->work_set, WORKFILE_NUM_TUPLESTORE_LOB);
-
-		MemoryContextSwitchTo(oldcxt);
-
-		ntuplestore_init_reader(store, maxBytes);
-		store->cached_workfiles_loaded = true;
-	}
-	else
-	{
-		/* Creating new workset */
-		store->rwflag = NTS_IS_WRITER;
-	}
 	return store;
 }
 
@@ -1582,7 +1556,6 @@ static void
 ntuplestore_create_spill_files(NTupleStore *nts)
 {
 	Assert(nts->work_set != NULL);
-	Assert(!nts->cached_workfiles_found);
 
 	MemoryContext   oldcxt;
 	oldcxt = MemoryContextSwitchTo(TopMemoryContext);
@@ -1594,17 +1567,7 @@ ntuplestore_create_spill_files(NTupleStore *nts)
 }
 
 /*
- * Returns true if this tuplestore created workfiles that can potentially be
- * reused by other queries.
- */
-bool
-ntuplestore_created_reusable_workfiles(NTupleStore *nts)
-{
-	Assert(nts);
-	return gp_workfile_caching && nts->workfiles_created && nts->work_set && nts->work_set->can_be_reused;
-}
-/*
- * Mark the associated workfile set as complete, allowing it to be cached for reuse.
+ * Mark the associated workfile set as complete
  */
 void
 ntuplestore_mark_workset_complete(NTupleStore *nts)
