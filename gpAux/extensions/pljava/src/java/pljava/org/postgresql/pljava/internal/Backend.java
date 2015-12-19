@@ -174,17 +174,30 @@ public class Backend
 					// Must be able to read timezone info etc. in the java
 					// installation directory.
 					//
+					String classpath = Backend._getConfigOption("pljava_classpath");
+                    			String[] classpathArray = classpath.split(":");
+
 					String jarpath =  Backend.getLibraryPath() + "/java";
 					File javaHome = new File(System.getProperty("java.home"));
-					File GPJavaLib = new File(jarpath);
+
+                    			File GPJavaLib = new File(jarpath);
 					File accessedFile = new File(perm.getName());
-					File fileDir = accessedFile.getParentFile();
-					while(fileDir != null)
+
+                    			File fileDir = accessedFile.getParentFile();
+
+                    			while(fileDir != null)
 					{
 						if(fileDir.equals(javaHome))
 							return;
 						if(fileDir.equals(GPJavaLib))
 							return;
+			                        // now search through the classpath's
+			                        for (int i = 0; i < classpathArray.length; i++)
+                        			{
+							File classPathEntry = new File(classpathArray[i]);
+                            				// need to check to see if we can read the directory as well as read the actual file.
+                            				if ( fileDir.equals(classPathEntry.getPath()) || fileDir.equals(classPathEntry.getParentFile()))return;
+                			        }
 						fileDir = fileDir.getParentFile();
 					}
 				}

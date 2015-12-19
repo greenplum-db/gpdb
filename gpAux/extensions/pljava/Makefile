@@ -104,6 +104,15 @@ test_all: test_%:
 	MODULEROOT=$(PROJDIR)/src/java $*
 
 
+test:
+	cp build/examples.jar /usr/local/gpdb/java/ 
+	@-gpconfig -c pljava_classpath -v \'$(PWD)/build/\'
+	@-echo 'host    all         test                 0.0.0.0/0 trust' >> $(MASTER_DATA_DIRECTORY)/pg_hba.conf
+	@-echo 'local   all         test                trust' >> $(MASTER_DATA_DIRECTORY)/pg_hba.conf
+	@-gpstop -ar
+	cd src && \
+	../../../../src/test/regress/pg_regress  --dbname=test --create-role=test pljava 
+
 # GPDB: we've hacked the c_install rule in the sub-makefile to install
 # examples.jar too. So examples.jar must be built before c_install.
 c_install: examples_all
