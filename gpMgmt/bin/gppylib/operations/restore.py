@@ -530,7 +530,7 @@ class RestoreDatabase(Operation):
                 restore_line = self._build_restore_line(restore_timestamp,
                                                         restore_db, compress,
                                                         self.master_port,
-                                                        self.no_plan, self.force_error_scan, table_filter_file,
+                                                        self.no_plan, table_filter_file,
                                                         self.no_ao_stats, full_restore_with_filter,
                                                         self.change_schema)
                 logger.info('gp_restore commandline: %s: ' % restore_line)
