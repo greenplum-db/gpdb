@@ -105,7 +105,6 @@ test_all: test_%:
 
 
 test:
-	cp build/examples.jar /usr/local/gpdb/java/ 
 	@-gpconfig -c pljava_classpath -v \'$(PWD)/build/\'
 	@-echo 'host    all         test                 0.0.0.0/0 trust' >> $(MASTER_DATA_DIRECTORY)/pg_hba.conf
 	@-echo 'local   all         test                trust' >> $(MASTER_DATA_DIRECTORY)/pg_hba.conf
