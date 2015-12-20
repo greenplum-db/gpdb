@@ -37,7 +37,7 @@
 #include "utils/simex.h"
 #include "utils/vmem_tracker.h"
 #include "utils/session_state.h"
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 
 #define SHMEM_OOM_TIME "last vmem oom time"
 
@@ -98,12 +98,12 @@ void UpdateTimeAtomically(volatile OOMTimeType* time_var)
 		OOMTimeType oldOOMTime = *time_var;
 
 #if defined(__x86_64__)
-		updateCompleted = compare_and_swap_64((uint64*)time_var,
-				(uint64)oldOOMTime,
+		updateCompleted = pg_atomic_compare_exchange_u64((pg_atomic_uint64 *)time_var,
+				(uint64 *)&oldOOMTime,
 				(uint64)newOOMTime);
 #else
-		updateCompleted = compare_and_swap_32((uint32*)time_var,
-				(uint32)oldOOMTime,
+		updateCompleted = pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)time_var,
+				(uint32 *)&oldOOMTime,
 				(uint32)newOOMTime);
 #endif
 	}

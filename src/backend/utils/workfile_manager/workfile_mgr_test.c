@@ -19,7 +19,7 @@
 #include "postmaster/primary_mirror_mode.h"
 #include "storage/bfz.h"
 #include "storage/buffile.h"
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 #include "utils/builtins.h"
 #include "utils/logtape.h"
 #include "utils/memutils.h"
@@ -1780,56 +1780,56 @@ atomic_test(void)
 	elog(LOG, "Running test: atomic_test");
 
 	{
-		elog(LOG, "Running sub-test: compare_and_swap_64");
+		elog(LOG, "Running sub-test: pg_atomic_compare_exchange_u64");
 		uint64 dest = 5;
 		uint64 old = 5;
 		uint64 new = 6;
 
 		elog(LOG, "Before: dest=%d, old=%d, new=%d", (uint32) dest, (uint32) old, (uint32) new);
-		int32 result = compare_and_swap_64(&dest, old, new);
+		int32 result = pg_atomic_compare_exchange_u64((pg_atomic_uint64 *)&dest, &old, new);
 		elog(LOG, "After: dest=%d, old=%d, new=%d, result=%d", (uint32) dest, (uint32) old, (uint32) new, (uint32) result);
 		unit_test_result(dest == new);
 	}
 
 	{
-		elog(LOG, "Running sub-test: gp_atomic_add_64 small addition");
+		elog(LOG, "Running sub-test: pg_atomic_add_fetch_u64 small addition");
 
 		int64 base = 25;
 		int64 inc = 3;
 		int64 result = 0;
 		int64 expected_result = base + inc;
 		elog(DEBUG1, "Before: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
-		result = gp_atomic_add_64(&base, inc);
+		result = pg_atomic_add_fetch_u64((pg_atomic_uint64 *)&base, inc);
 		elog(DEBUG1, "After: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
 		unit_test_result(result == expected_result && base == expected_result);
 
-		elog(LOG, "Running sub-test: gp_atomic_add_64 small subtraction");
+		elog(LOG, "Running sub-test: pg_atomic_sub_fetch_u64 small subtraction");
 
-		inc = -4;
+		inc = 4;
 		result = 0;
 		expected_result = base + inc;
 		elog(DEBUG1, "Before: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
-		result = gp_atomic_add_64(&base, inc);
+		result = pg_atomic_sub_fetch_u64((pg_atomic_uint64 *)&base, inc);
 		elog(DEBUG1, "After: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
 		unit_test_result(result == expected_result && base == expected_result);
 
-		elog(LOG, "Running sub-test: gp_atomic_add_64 huge addition");
+		elog(LOG, "Running sub-test: pg_atomic_add_fetch_u64 huge addition");
 		base = 37421634719307;
 		inc  = 738246483234;
 		result = 0;
 		expected_result = base + inc;
 		elog(DEBUG1, "Before: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
-		result = gp_atomic_add_64(&base, inc);
+		result = pg_atomic_add_fetch_u64((pg_atomic_uint64 *)&base, inc);
 		elog(DEBUG1, "After: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
 		unit_test_result(result == expected_result && base == expected_result);
 
 
-		elog(LOG, "Running sub-test: gp_atomic_add_64 huge subtraction");
-		inc  = -32738246483234;
+		elog(LOG, "Running sub-test: pg_atomic_sub_fetch_u64 huge subtraction");
+		inc  = 32738246483234;
 		result = 0;
 		expected_result = base + inc;
 		elog(DEBUG1, "Before: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
-		result = gp_atomic_add_64(&base, inc);
+		result = pg_atomic_sub_fetch_u64((pg_atomic_uint64 *)&base, inc);
 		elog(DEBUG1, "After: base=%lld, inc=%lld, result=%lld", (long long int) base, (long long int) inc, (long long int) result);
 		unit_test_result(result == expected_result && base == expected_result);
 	}
