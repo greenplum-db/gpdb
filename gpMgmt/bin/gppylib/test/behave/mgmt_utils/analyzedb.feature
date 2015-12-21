@@ -155,18 +155,18 @@ Feature: Incrementally analyze the database
      @analyzedb_UI
      Scenario: Mixed case inputs
      Given no state files exist for database "incr_analyze"
-     And there is schema "MySchema" exists in "incr_analyze"
-     And there is a regular "ao" table "My_ao" with column name list "x,Y,z" and column type list "int,text,real" in schema "myschema"
-     And there is a regular "heap" table "T2_heap_UPPERCASE" with column name list "x,y,z" and column type list "int,text,real" in schema "public"
+     And there is schema ""MySchema"" exists in "incr_analyze"
+     And there is a regular "ao" table ""My_ao"" with column name list ""y","Y",z" and column type list "int,text,real" in schema ""MySchema""
+     And there is a regular "heap" table ""T2_heap_UPPERCASE"" with column name list "x,y,z" and column type list "int,text,real" in schema "public"
      When the user runs "analyzedb -l -d incr_analyze -s MySchema"
-     Then analyzedb should print -myschema.my_ao to stdout
+     Then analyzedb should print -MySchema.My_ao to stdout
      When the user runs "analyzedb -l -d incr_analyze -t MySchema.My_ao"
-     Then analyzedb should print -myschema.my_ao to stdout
+     Then analyzedb should print -MySchema.My_ao to stdout
      When the user runs command "printf 'MySchema.My_ao -x Y,z\npublic.T2_heap_UPPERCASE' > config_file"
-     And the user runs "analyzedb -l -d incr_analyze -f config_file"
-     Then output should contain both "-public.t2_heap_uppercase" and "-myschema.my_ao\(x\)"
+     And the user runs "analyzedb -d incr_analyze -f config_file"
+     Then output should contain both "-public.T2_heap_UPPERCASE" and "-MySchema.My_ao\(y\)"
      When the user runs "analyzedb -l -d incr_analyze -s public"
-     Then analyzedb should print -public.t2_heap_uppercase to stdout
+     Then analyzedb should print -public.T2_heap_UPPERCASE to stdout
      
 
     @analyzedb_core @analyzedb_single_table
@@ -1704,9 +1704,9 @@ Feature: Incrementally analyze the database
      @analyzedb_core @catalog_tables
     Scenario: Catalog tables
      Given no state files exist for database "incr_analyze"
-     When the user runs "analyzedb -l -d incr_analyze -t PG_CATALOG.pg_class"
+     When the user runs "analyzedb -l -d incr_analyze -t pg_catalog.pg_class"
      Then analyzedb should print -pg_catalog.pg_class to stdout
-     When the user runs "analyzedb -l -d incr_analyze -t pg_catalog.PG_ATTRIBUTE"
+     When the user runs "analyzedb -l -d incr_analyze -t pg_catalog.pg_attribute"
      Then analyzedb should print -pg_catalog.pg_attribute to stdout
      When the user runs "analyzedb -l -d incr_analyze -s pg_catalog"
      Then output should contain both "pg_catalog.pg_class" and "pg_catalog.pg_partition_rule"

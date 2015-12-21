@@ -33,8 +33,11 @@ DEFAULT PARTITION default_dates);
 
 @given('there is a regular "{storage_type}" table "{tablename}" with column name list "{col_name_list}" and column type list "{col_type_list}" in schema "{schemaname}"')
 def impl(context, storage_type, tablename, col_name_list, col_type_list, schemaname):
-    if not check_schema_exists(context, schemaname, context.dbname):
-        raise Exception("Schema %s does not exist in database %s" % (schemaname, context.dbname))
+    schemaname_no_quote = schemaname
+    if '"' in schemaname:
+        schemaname_no_quote = schemaname[1:-1]
+    if not check_schema_exists(context, schemaname_no_quote, context.dbname):
+        raise Exception("Schema %s does not exist in database %s" % (schemaname_no_quote, context.dbname))
     drop_table_if_exists(context, '.'.join([schemaname, tablename]), context.dbname)
     create_table_with_column_list(context.conn, storage_type, schemaname, tablename, col_name_list, col_type_list)
     check_table_exists(context, context.dbname, '.'.join([schemaname, tablename]), table_type = storage_type)
@@ -218,7 +221,7 @@ def create_table_with_column_list(conn, storage_type, schemaname, tablename, col
     else:
         raise Exception("Invalid storage type")
 
-    query = "CREATE TABLE " + schemaname + '.' + tablename + col_list + storage_str + "DISTRIBUTED RANDOMLY"
+    query = 'CREATE TABLE %s.%s %s %s DISTRIBUTED RANDOMLY' % (schemaname, tablename, col_list, storage_str)
     dbconn.execSQL(conn, query)
     conn.commit()
 
