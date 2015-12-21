@@ -729,54 +729,38 @@ workfile_mgr_cleanup_set(const void *resource)
 {
 	workfile_set *work_set = (workfile_set *) resource;
 
-	if (work_set->on_disk)
-	{
-		ereport(gp_workfile_caching_loglevel,
-				(errmsg("workfile mgr cleanup deleting set: key=0x%0xd, size=" INT64_FORMAT
-				" in_progress_size=" INT64_FORMAT " path=%s",
-				work_set->key,
-				work_set->size,
-				work_set->in_progress_size,
-				work_set->path),
-				errprintstack(true)));
+	ereport(gp_workfile_caching_loglevel,
+			(errmsg("workfile mgr cleanup deleting set: key=0x%0xd, size=" INT64_FORMAT
+					" in_progress_size=" INT64_FORMAT " path=%s",
+					work_set->key,
+					work_set->size,
+					work_set->in_progress_size,
+					work_set->path),
+					errprintstack(true)));
 
-		Assert(NULL == work_set->set_plan);
+	Assert(NULL == work_set->set_plan);
 
-		workfile_mgr_delete_set_directory(work_set->path);
+	workfile_mgr_delete_set_directory(work_set->path);
 
-		/*
-		 * The most accurate size of a workset is recorded in work_set->in_progress_size.
-		 * work_set->size is only updated when we close a file, so it lags behind
-		 */
+	/*
+	 * The most accurate size of a workset is recorded in work_set->in_progress_size.
+	 * work_set->size is only updated when we close a file, so it lags behind
+	 */
 
-		Assert(work_set->in_progress_size >= work_set->size);
-		int64 size_to_delete = work_set->in_progress_size;
+	Assert(work_set->in_progress_size >= work_set->size);
+	int64 size_to_delete = work_set->in_progress_size;
 
-		elog(gp_workfile_caching_loglevel, "Subtracting " INT64_FORMAT " from workfile diskspace", size_to_delete);
+	elog(gp_workfile_caching_loglevel, "Subtracting " INT64_FORMAT " from workfile diskspace", size_to_delete);
 
-		/*
-		 * When subtracting the size of this workset from our accounting,
-		 * only update the per-query counter if we created the workset.
-		 * In that case, the state is ACQUIRED, otherwise is CACHED or DELETED
-		 */
-		CacheEntry *cacheEntry = CACHE_ENTRY_HEADER(resource);
-		bool update_query_space = (cacheEntry->state == CACHE_ENTRY_ACQUIRED);
+	/*
+	 * When subtracting the size of this workset from our accounting,
+	 * only update the per-query counter if we created the workset.
+	 * In that case, the state is ACQUIRED, otherwise is CACHED or DELETED
+	 */
+	CacheEntry *cacheEntry = CACHE_ENTRY_HEADER(resource);
+	bool update_query_space = (cacheEntry->state == CACHE_ENTRY_ACQUIRED);
 
-		WorkfileDiskspace_Commit(0, size_to_delete, update_query_space);
-	}
-	else
-	{
-		/* Non-physical workfile set, we need to free up the plan memory */
-		if (NULL != work_set->set_plan->serialized_plan)
-		{
-			pfree(work_set->set_plan->serialized_plan);
-		}
-
-		if (NULL != work_set->set_plan)
-		{
-			pfree(work_set->set_plan);
-		}
-	}
+	WorkfileDiskspace_Commit(0, size_to_delete, update_query_space);
 }
 
 /*
@@ -938,7 +922,6 @@ workfile_set_equivalent(const void *virtual_resource, const void *physical_resou
 		return false;
 	}
 
-	Assert(!virtual_workset->on_disk && physical_workset->on_disk && "comparing two physical or two virtual worksets not supported");
 	Assert(NULL != virtual_workset->set_plan);
 
 	return workfile_mgr_compare_plan(physical_workset, virtual_workset->set_plan);
