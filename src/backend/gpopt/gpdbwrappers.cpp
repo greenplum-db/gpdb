@@ -9,7 +9,11 @@
 //		Implementation of GPDB function wrappers. Note that we should never
 // 		return directly from inside the PG_TRY() block, in order to restore
 //		the long jump stack. That is why we save the return value of the GPDB
-//		function to a local variable and return it after the PG_END_TRY()
+//		function to a local variable and return it after the PG_END_TRY().
+//		./README file contains the sources (caches and catalog tables) of metadata
+//		requested by the optimizer and retrieved using GPDB function wrappers. Any
+//		change to optimizer's requested metadata should also be recorded in ./README file.
+//
 //
 //	@test:
 //
