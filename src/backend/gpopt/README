@@ -15,11 +15,11 @@ Metadata Type (neucrates/md/IMDId.h) 	|	Includes		|	Source
 					|	Function		|  Catalog(pg_proc) & CatCache	
 					|	Trigger			|  Catalog(pg_trigger) & CatCache	
 					|	Constratint		|  Catalog(pg_constraint) & CatCache	
--------------------------------------------------------------------------------------------------------------------------------				
+-------------------------------------------------------------------------------------------------------------------------------
 	EmdidRelStats			|	Relation Stats		|  relcache
 -------------------------------------------------------------------------------------------------------------------------------		
 	EmdidColStats			|	Column statistics	|  relcache & Catalog(pg_statistic, pg_type) & CatCache	
 -------------------------------------------------------------------------------------------------------------------------------	
-	EmdidCastFunc			|	Cast Functions		|  Catalog(pg_cast, pg_proc) & CatCache	
+	EmdidCastFunc			|	Cast Function		|  Catalog(pg_cast, pg_proc) & CatCache	
 -------------------------------------------------------------------------------------------------------------------------------	
-	EmdidScCmp			|	Scalar Comparrison	|  Catalog(pg_amop, pg_operator) & CatCache	
+	EmdidScCmp			|  Scalar Comparison Function	|  Catalog(pg_amop, pg_operator) & CatCache	
