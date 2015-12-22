@@ -823,7 +823,7 @@ sub run
         }
         else
         {
-            last if ($lineno == $#glob_in_lines);
+            last if ($#glob_in_lines < 0 || $lineno == $#glob_in_lines);
             $ini = $glob_in_lines[$lineno];
         }
         $lineno++;
