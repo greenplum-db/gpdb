@@ -1935,7 +1935,7 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 		gc = makeNode(GroupClause);
 		tle = get_tle_by_resno(ctx->sub_tlist,  dqaArg->base_index);
 		gc->tleSortGroupRef = tle->ressortgroupref;
-		gc->sortop = dqaArg_eqop;
+		gc->sortop = dqaArg_orderingop;
 
 		extendedGroupClause = list_copy(root->parse->groupClause);
 		extendedGroupClause = lappend(extendedGroupClause, gc);
