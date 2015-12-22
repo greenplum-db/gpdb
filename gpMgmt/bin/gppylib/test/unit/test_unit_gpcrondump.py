@@ -75,6 +75,7 @@ class GpCronDumpTestCase(unittest.TestCase):
             self.netbackup_schedule = None
             self.netbackup_block_size = None
             self.netbackup_keyword = None
+            self.force_error_scan = False
 
     @patch('gpcrondump.GpCronDump._get_master_port')
     @patch('gpcrondump.GpCronDump.validate_dump_schema')

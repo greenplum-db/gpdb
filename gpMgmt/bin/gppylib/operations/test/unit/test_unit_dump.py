@@ -40,6 +40,7 @@ class DumpTestCase(unittest.TestCase):
                                    clear_catalog_dumps=False,
                                    encoding=None,
                                    output_options=[],
+                                   force_error_scan = False,
                                    batch_default=None,
                                    master_datadir='/data/master/p1',
                                    master_port=0,

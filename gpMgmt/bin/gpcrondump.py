@@ -105,6 +105,7 @@ class GpCronDump(Operation):
         self.backup_dir = options.backup_dir
         self.encoding = options.encoding
         self.output_options = options.output_options
+        self.force_error_scan = options.force_error_scan
         self.incremental = options.incremental
         self.timestamp_key = options.timestamp_key
         self.list_backup_files = options.list_backup_files
@@ -838,6 +839,7 @@ class GpCronDump(Operation):
                                             clear_catalog_dumps = self.clear_catalog_dumps,
                                             encoding = self.encoding,
                                             output_options = self.output_options,
+                                            force_error_scan = self.force_error_scan,
                                             batch_default = self.batch_default,
                                             master_datadir = self.master_datadir,
                                             master_port = self.master_port,
@@ -1526,6 +1528,9 @@ def create_parser():
                      help="DEPRECATED OPTION: Directory where report file is placed")
     addTo.add_option('-E', dest='encoding', metavar="<encoding>",
                      help="Dump the data under the given encoding")
+    addTo.add_option('--error-scan', action='store_true', dest='force_error_scan', default=False,
+                     help="Perform a force scan of dump status file for \"ERROR:\" and \"[ERROR]\" in the end, "
+                          "report dump as failure on them, disabled by default")
     addTo.add_option('--clean', const='--clean', action='append_const', dest='output_options',
                      help="Clean (drop) schema prior to dump")
     addTo.add_option('--inserts', const='--inserts', action='append_const', dest='output_options',

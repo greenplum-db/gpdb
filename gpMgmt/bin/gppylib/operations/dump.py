@@ -682,7 +682,7 @@ class DumpDatabase(Operation):
     # to automatically take in all arguments and perhaps do some data type validation.
     def __init__(self, dump_database, dump_schema, include_dump_tables, exclude_dump_tables, include_dump_tables_file,
                  exclude_dump_tables_file, backup_dir, free_space_percent, compress, clear_catalog_dumps, encoding,
-                 output_options, batch_default, master_datadir, master_port, dump_dir, dump_prefix, ddboost,
+                 output_options, force_error_scan, batch_default, master_datadir, master_port, dump_dir, dump_prefix, ddboost,
                  netbackup_service_host, netbackup_policy, netbackup_schedule, netbackup_block_size, netbackup_keyword,
                  incremental=False, include_schema_file=None):
         self.dump_database = dump_database
@@ -697,6 +697,7 @@ class DumpDatabase(Operation):
         self.clear_catalog_dumps = clear_catalog_dumps
         self.encoding = encoding
         self.output_options = output_options
+        self.force_error_scan = force_error_scan
         self.batch_default = batch_default
         self.master_datadir = master_datadir
         self.master_port = master_port
@@ -857,6 +858,8 @@ class DumpDatabase(Operation):
         for opt in self.output_options:
             dump_line += " %s" % opt
 
+        if self.force_error_scan:
+            dump_line += " --error-scan"
         if self.ddboost:
             dump_line += " --ddboost"
         if self.incremental:

@@ -370,7 +370,7 @@ def statistics_file_dumped(master_datadir, backup_dir, dump_dir, dump_prefix, re
     return check_file_dumped_with_nbu(netbackup_service_host, statistics_filename)
 
 def _build_gpdbrestore_cmd_line(ts, table_file, backup_dir, redirected_restore_db, report_status_dir, dump_prefix, ddboost=False, netbackup_service_host=None,
-                                netbackup_block_size=None, change_schema=None):
+                                netbackup_block_size=None, change_schema=None, force_error_scan=False):
     cmd = 'gpdbrestore -t %s --table-file %s -a -v --noplan --noanalyze --noaostats' % (ts, table_file)
     if backup_dir is not None:
         cmd += " -u %s" % backup_dir
@@ -388,6 +388,8 @@ def _build_gpdbrestore_cmd_line(ts, table_file, backup_dir, redirected_restore_d
         cmd += " --netbackup-block-size=%s" % netbackup_block_size
     if change_schema:
         cmd += " --change-schema=%s" % change_schema
+    if force_error_scan:
+        cmd += " --error-scan"
 
     return cmd
 
@@ -429,8 +431,8 @@ def validate_tablenames(table_list):
 
 class RestoreDatabase(Operation):
     def __init__(self, restore_timestamp, no_analyze, drop_db, restore_global, master_datadir, backup_dir,
-                 master_port, dump_dir, dump_prefix, no_plan, restore_tables, batch_default, no_ao_stats,
-                 redirected_restore_db, report_status_dir, restore_stats, metadata_only, ddboost,
+                 master_port, dump_dir, dump_prefix, no_plan, force_error_scan, restore_tables, batch_default, 
+                 no_ao_stats, redirected_restore_db, report_status_dir, restore_stats, metadata_only, ddboost,
                  netbackup_service_host, netbackup_block_size, change_schema):
         self.restore_timestamp = restore_timestamp
         self.no_analyze = no_analyze
@@ -442,6 +444,7 @@ class RestoreDatabase(Operation):
         self.dump_dir = dump_dir
         self.dump_prefix = dump_prefix
         self.no_plan = no_plan
+        self.force_error_scan = force_error_scan
         self.restore_tables = restore_tables
         self.batch_default = batch_default
         self.no_ao_stats = no_ao_stats
@@ -657,7 +660,7 @@ class RestoreDatabase(Operation):
                                                   self.redirected_restore_db,
                                                   self.report_status_dir, self.dump_prefix,
                                                   self.ddboost, self.netbackup_service_host,
-                                                  self.netbackup_block_size, self.change_schema)
+                                                  self.netbackup_block_size, self.change_schema, self.force_error_scan)
                 logger.info('Invoking commandline: %s' % cmd)
                 Command('Invoking gpdbrestore', cmd).run(validateAfter=True)
                 table_files.append(table_file)
@@ -875,6 +878,8 @@ class RestoreDatabase(Operation):
             restore_line += " --netbackup-block-size=%s" % self.netbackup_block_size
         if change_schema:
             restore_line += " --change-schema=%s" % change_schema
+        if self.force_error_scan:
+            restore_line += " --error-scan"
 
         return restore_line
 
@@ -915,6 +920,8 @@ class RestoreDatabase(Operation):
             restore_line += " --netbackup-service-host=%s" % self.netbackup_service_host
         if self.netbackup_block_size:
             restore_line += " --netbackup-block-size=%s" % self.netbackup_block_size
+        if self.force_error_scan:
+            restore_line += " --error-scan"
 
         return restore_line
 
@@ -955,6 +962,8 @@ class RestoreDatabase(Operation):
             restore_line += " --netbackup-block-size=%s" % self.netbackup_block_size
         if self.change_schema:
             restore_line += " --change-schema=%s" % self.change_schema
+        if self.force_error_scan:
+            restore_line += " --error-scan"
 
         return restore_line
 

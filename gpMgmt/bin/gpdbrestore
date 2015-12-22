@@ -75,6 +75,7 @@ class GpdbRestore(Operation):
         self.restore_tables = options.restore_tables
         self.batch_default = options.batch_default
         self.keep_dump_files = options.keep_dump_files
+        self.force_error_scan = options.force_error_scan
         self.no_analyze = options.no_analyze
         self.no_plan = options.no_plan
         self.no_ao_stats = options.no_ao_stats
@@ -280,6 +281,7 @@ class GpdbRestore(Operation):
                         dump_prefix = self.dump_prefix,
                         ddboost = self.ddboost,
                         no_plan = self.no_plan,
+                        force_error_scan = self.force_error_scan,
                         restore_tables = self.restore_tables,
                         batch_default = self.batch_default,
                         no_ao_stats = self.no_ao_stats,
@@ -618,6 +620,9 @@ def create_parser():
                      help="Retain temporary generated table dump files.")
     addTo.add_option('-m', action='store_true', dest='metadata_only', default=False,
                      help="Only restore database metadata")
+    addTo.add_option('--error-scan', action='store_true', dest='force_error_scan', default=False,
+                     help="Perform a force scan of restore status file for \"ERROR:\" and \"[ERROR]\" in the end, "
+                          "report restore as failure on them, disabled by default")
     addTo.add_option('--noanalyze', action='store_true', dest='no_analyze', default=False,
                      help="Suppress the ANALYZE run following a successful restore. The user is responsible for running ANALYZE on any restored tables; failure to run ANALYZE following a restore may result in poor databse performance.")
     addTo.add_option('--noplan', action='store_true', dest='no_plan', default=False)
