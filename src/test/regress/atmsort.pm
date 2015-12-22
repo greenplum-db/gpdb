@@ -58,18 +58,18 @@ my $equiv_expected_rows;
 sub atmsort_init
 {
     my %args = (
-		# defaults
-		IGNORE_HEADERS	=> 0,
-		IGNORE_PLANS	=> 0,
-		INIT_FILES		=> [],
-		DO_EQUIV		=> 'ignore',	# can be 'ignore', 'compare', or 'make'
-		ORDER_WARN		=> 0,
-		VERBOSE			=> 0,
+        # defaults
+        IGNORE_HEADERS  => 0,
+        IGNORE_PLANS    => 0,
+        INIT_FILES      => [],
+        DO_EQUIV        => 'ignore',    # can be 'ignore', 'compare', or 'make'
+        ORDER_WARN      => 0,
+        VERBOSE         => 0,
 
-		# override the defaults from argument list
-		@_
+        # override the defaults from argument list
+        @_
     );
-    
+
     $glob_compare_equiv       = 0;
     $glob_make_equiv_expected = 0;
     $glob_ignore_headers      = 0;
@@ -77,9 +77,9 @@ sub atmsort_init
     $glob_ignore_whitespace   = 0;
     @glob_init                = ();
 
-	$glob_orderwarn           = 0;
-	$glob_verbose             = 0;
-	$glob_fqo                 = {count => 0};
+    $glob_orderwarn           = 0;
+    $glob_verbose             = 0;
+    $glob_fqo                 = {count => 0};
 
     my $compare_equiv = 0;
     my $make_equiv_expected = 0;
@@ -92,21 +92,21 @@ sub atmsort_init
 
     if ($args{DO_EQUIV} =~ m/^(ignore)/i)
     {
-		# ignore all - default
+        # ignore all - default
     }
     elsif ($args{DO_EQUIV} =~ m/^(compare)/i)
     {
-		# compare equiv region
-		$compare_equiv = 1;
+        # compare equiv region
+        $compare_equiv = 1;
     }
-    elsif ($args{DO_EQUIV} =~ m/^(make)/i)            
+    elsif ($args{DO_EQUIV} =~ m/^(make)/i)
     {
-		# make equiv expected output
-		$make_equiv_expected = 1;
+        # make equiv expected output
+        $make_equiv_expected = 1;
     }
     else
     {
-		die "unknown do_equiv option: $do_equiv\nvalid options are:\n\tdo_equiv=compare\n\tdo_equiv=make";
+        die "unknown do_equiv option: $do_equiv\nvalid options are:\n\tdo_equiv=compare\n\tdo_equiv=make";
     }
     $glob_compare_equiv       = $compare_equiv;
     $glob_make_equiv_expected = $make_equiv_expected;
@@ -118,8 +118,8 @@ sub atmsort_init
 
     @glob_init = @{$args{INIT_FILES}};
 
-	$glob_orderwarn           = $args{ORDER_WARN};
-    $glob_verbose      		  = $args{VERBOSE};
+    $glob_orderwarn           = $args{ORDER_WARN};
+    $glob_verbose             = $args{VERBOSE};
 
     init_match_subs();
     init_matchignores();
@@ -211,13 +211,13 @@ sub _build_match_subs
 
             # store the function pointer and the text of the function
             # definition
-            push @{$glob_match_then_sub_fnlist}, 
-			[$fn1, $bigdef, $cmt, $defi->[0], $defi->[1]];
+            push @{$glob_match_then_sub_fnlist},
+            [$fn1, $bigdef, $cmt, $defi->[0], $defi->[1]];
 
-			if ($glob_verbose)
-			{
-				print $atmsort_outfh "GP_IGNORE: Defined $cmt\t$defi->[0]\t$defi->[1]\n"
-			}
+            if ($glob_verbose)
+            {
+                print $atmsort_outfh "GP_IGNORE: Defined $cmt\t$defi->[0]\t$defi->[1]\n"
+            }
         }
         else
         {
@@ -230,7 +230,7 @@ sub _build_match_subs
     }
 
 #    print Data::Dumper->Dump($glob_match_then_sub_fnlist);
-   
+
     return $stat;
 
 } # end _build_match_subs
@@ -239,7 +239,7 @@ sub _build_match_subs
 sub init_match_subs
 {
     my $here_matchsubs;
-	
+
 
 # construct a "HERE" document of match expressions followed by
 # substitution expressions.  Embedded comments and blank lines are ok
@@ -281,7 +281,7 @@ s/connection.*failed.*(http|gpfdist).*/connection failed dummy_protocol\:\/\/DUM
 EOF_matchsubs
 
     $glob_match_then_sub_fnlist = [];
-	
+
     my $stat = _build_match_subs($here_matchsubs, "DEFAULT");
 
     if (scalar(@{$stat}) > 1)
@@ -300,22 +300,22 @@ sub match_then_subs
 
         # get the function and execute it
         my $fn1 = $ff->[0];
-		if (!$glob_verbose)
-		{
-			$ini = &$fn1($ini);
-		}
-		else
-		{
-			my $subs = &$fn1($ini);
+        if (!$glob_verbose)
+        {
+            $ini = &$fn1($ini);
+        }
+        else
+        {
+            my $subs = &$fn1($ini);
 
-			unless ($subs eq $ini)
-			{
-				print $atmsort_outfh "GP_IGNORE: was: $ini";				
-				print $atmsort_outfh "GP_IGNORE: matched $ff->[-3]\t$ff->[-2]\t$ff->[-1]\n"
-			}
+            unless ($subs eq $ini)
+            {
+                print $atmsort_outfh "GP_IGNORE: was: $ini";
+                print $atmsort_outfh "GP_IGNORE: matched $ff->[-3]\t$ff->[-2]\t$ff->[-1]\n"
+            }
 
-			$ini = &$fn1($ini);
-		}
+            $ini = &$fn1($ini);
+        }
 
     }
     return $ini;
@@ -345,7 +345,7 @@ sub _build_match_ignores
     {
         next
             if ($lin =~ m/^\s*$/); # skip blanks
-        
+
         push @{$matchignores_arr}, $lin;
     }
 
@@ -373,12 +373,12 @@ sub _build_match_ignores
 
             # store the function pointer and the text of the function
             # definition
-            push @{$glob_match_then_ignore_fnlist}, 
-			[$fn1, $bigdef, $cmt, $defi, "(ignore)"];
-			if ($glob_verbose)
-			{
-				print $atmsort_outfh "GP_IGNORE: Defined $cmt\t$defi\n"
-			}
+            push @{$glob_match_then_ignore_fnlist},
+            [$fn1, $bigdef, $cmt, $defi, "(ignore)"];
+            if ($glob_verbose)
+            {
+                print $atmsort_outfh "GP_IGNORE: Defined $cmt\t$defi\n"
+            }
 
         }
         else
@@ -392,7 +392,7 @@ sub _build_match_ignores
     }
 
 #    print Data::Dumper->Dump($glob_match_then_ignore_fnlist);
-   
+
     return $stat;
 
 } # end _build_match_ignores
@@ -456,14 +456,14 @@ sub match_then_ignore
         # get the function and execute it
         my $fn1 = $ff->[0];
 
-		if (&$fn1($ini))
-		{
-			if ($glob_verbose)
-			{
-				print $atmsort_outfh "GP_IGNORE: matched $ff->[-3]\t$ff->[-2]\t$ff->[-1]\n"
-			}
-			return 1; # matched
-		}
+        if (&$fn1($ini))
+        {
+            if ($glob_verbose)
+            {
+                print $atmsort_outfh "GP_IGNORE: matched $ff->[-3]\t$ff->[-2]\t$ff->[-1]\n"
+            }
+            return 1; # matched
+        }
     }
     return 0; # no match
 }
@@ -499,16 +499,16 @@ sub tablelizer
 
     return undef
         unless (scalar(@lines));
-    
+
     shift @lines # skip dashed separator (unless it was skipped already)
         unless (defined($got_line1));
-    
+
     my @rows;
 
     for my $lin (@lines)
     {
         my @cols = split(/\|/, $lin, scalar(@colheads));
-        last 
+        last
             unless (scalar(@cols) == scalar(@colheads));
 
         my $rowh = {};
@@ -533,81 +533,81 @@ sub format_explain
 {
     my ($outarr, $directive) = @_;
     my $prefix = "";
-	my $xopt = "perl"; # normal case
+    my $xopt = "perl"; # normal case
 
     $directive = {} unless (defined($directive));
-    
+
     # Ignore plan content if its between start_ignore and end_ignore blocks
     # or if -ignore_plans is specified.
     $prefix = "GP_IGNORE:"
          if (exists($directive->{ignore})) || ($glob_ignore_plans);
 
-	my @tmp_lines;
-	my $sort = 0;
+    my @tmp_lines;
+    my $sort = 0;
 
-	if (scalar(@{$outarr}))
-	{
-		@tmp_lines = (
-			"QUERY PLAN\n",
-			("-" x 71) . "\n",
-			@{$outarr},
-			"(111 rows)\n"
-			);
-	}
-		
-	if (exists($directive->{explain})
-		&& ($directive->{explain} =~ m/operator/i))
-	{
-		$xopt = "operator";
-		$sort = 1;
-	}
+    if (scalar(@{$outarr}))
+    {
+        @tmp_lines = (
+            "QUERY PLAN\n",
+            ("-" x 71) . "\n",
+            @{$outarr},
+            "(111 rows)\n"
+            );
+    }
 
-	my $xplan = '';
+    if (exists($directive->{explain})
+        && ($directive->{explain} =~ m/operator/i))
+    {
+        $xopt = "operator";
+        $sort = 1;
+    }
 
-	open(my $xplan_fh, ">", \$xplan)
-		or die "Can't open in-memory file handle to variable: $!";
+    my $xplan = '';
 
-	explain::explain_init(OPERATION => $xopt,
-				  PRUNE => 'heavily',
-				  INPUT_LINES => \@tmp_lines,
-				  OUTPUT_FH => $xplan_fh);
+    open(my $xplan_fh, ">", \$xplan)
+        or die "Can't open in-memory file handle to variable: $!";
 
-	explain::run();
+    explain::explain_init(OPERATION => $xopt,
+                  PRUNE => 'heavily',
+                  INPUT_LINES => \@tmp_lines,
+                  OUTPUT_FH => $xplan_fh);
 
-	close $xplan_fh;
+    explain::run();
 
-	my @lines = split /\n/, $xplan;
+    close $xplan_fh;
 
-	if ($sort && scalar(@lines) > 0)
-	{
-		@lines = sort @lines;
-	}
+    my @lines = split /\n/, $xplan;
 
-	# Apply prefix to each line, if requested.
-	if (defined($prefix) && length($prefix))
-	{
-		my @prefixedlines;
-	
-		foreach my $line (@lines)
-		{
-			$line = $prefix . $line;
-		}
-	}
+    if ($sort && scalar(@lines) > 0)
+    {
+        @lines = sort @lines;
+    }
 
-	# Put back newlines
-	foreach my $line (@lines)
-	{
-		$line .= "\n";
-	}
+    # Apply prefix to each line, if requested.
+    if (defined($prefix) && length($prefix))
+    {
+        my @prefixedlines;
 
-	# Print it
-	foreach my $line (@lines)
-	{
-		print $atmsort_outfh $line;
-	}
+        foreach my $line (@lines)
+        {
+            $line = $prefix . $line;
+        }
+    }
 
-	return  \@lines;
-}    
+    # Put back newlines
+    foreach my $line (@lines)
+    {
+        $line .= "\n";
+    }
+
+    # Print it
+    foreach my $line (@lines)
+    {
+        print $atmsort_outfh $line;
+    }
+
+    return  \@lines;
+}
 
 # reformat the query output according to the directive hash
 sub format_query_output
@@ -617,39 +617,39 @@ sub format_query_output
 
     $directive = {} unless (defined($directive));
 
-	$fqostate->{count} += 1;
+    $fqostate->{count} += 1;
 
-	if ($glob_verbose)
-	{
-		print $atmsort_outfh "GP_IGNORE: start fqo $fqostate->{count}\n";
-	}
+    if ($glob_verbose)
+    {
+        print $atmsort_outfh "GP_IGNORE: start fqo $fqostate->{count}\n";
+    }
 
     if (exists($directive->{make_equiv_expected}))
     {
-		# special case for EXPLAIN PLAN as first "query"
-		if (exists($directive->{explain}))
-		{
-			my $stat = format_explain($outarr, $directive);
+        # special case for EXPLAIN PLAN as first "query"
+        if (exists($directive->{explain}))
+        {
+            my $stat = format_explain($outarr, $directive);
 
-			# save the first query output from equiv as "expected rows"
+            # save the first query output from equiv as "expected rows"
 
-			if ($stat)
-			{
-				push @{$equiv_expected_rows}, @{$stat};
-			}
-			else
-			{
-				push @{$equiv_expected_rows}, @{$outarr};
-			}
+            if ($stat)
+            {
+                push @{$equiv_expected_rows}, @{$stat};
+            }
+            else
+            {
+                push @{$equiv_expected_rows}, @{$outarr};
+            }
 
-			if ($glob_verbose)
-			{
-				print $atmsort_outfh "GP_IGNORE: end fqo $fqostate->{count}\n";
-			}
+            if ($glob_verbose)
+            {
+                print $atmsort_outfh "GP_IGNORE: end fqo $fqostate->{count}\n";
+            }
 
-			return ;
+            return ;
 
-		}
+        }
 
         # save the first query output from equiv as "expected rows"
         push @{$equiv_expected_rows}, @{$outarr};
@@ -662,17 +662,17 @@ sub format_query_output
         push @{$outarr}, @{$equiv_expected_rows};
     }
 
-	# explain (if not in an equivalence region)
+    # explain (if not in an equivalence region)
     if (exists($directive->{explain}))
     {
        format_explain($outarr, $directive);
-	   if ($glob_verbose)
-	   {
-		   print $atmsort_outfh "GP_IGNORE: end fqo $fqostate->{count}\n";
-	   }
-	   return;
+       if ($glob_verbose)
+       {
+           print $atmsort_outfh "GP_IGNORE: end fqo $fqostate->{count}\n";
+       }
+       return;
     }
-	
+
     $prefix = "GP_IGNORE:"
         if (exists($directive->{ignore}));
 
@@ -692,10 +692,10 @@ sub format_query_output
 #            print "No tablelizer hash for $lines, $firstline\n";
 #            print STDERR "No tablelizer hash for $lines, $firstline\n";
 
-			if ($glob_verbose)
-			{
-				print $atmsort_outfh "GP_IGNORE: end fqo $fqostate->{count}\n";
-			}
+            if ($glob_verbose)
+            {
+                print $atmsort_outfh "GP_IGNORE: end fqo $fqostate->{count}\n";
+            }
 
             return;
         }
@@ -744,7 +744,7 @@ sub format_query_output
                 unless (scalar(@scols))
                 {
                     print $atmsort_outfh "invalid dependency specification: $colset[0]\n";
-                    print STDERR 
+                    print STDERR
                         "invalid dependency specification: $colset[0]\n";
                     next;
                 }
@@ -801,18 +801,18 @@ sub format_query_output
         }
 
         my %unsorth;
-        
+
         for my $col (@allcols)
         {
             $unsorth{$col} = 1;
         }
 
-		# clear sorted column list if just "order 0"
+        # clear sorted column list if just "order 0"
         if ((1 == scalar(@presortcols))
-			&& ($presortcols[0] eq "0"))
+            && ($presortcols[0] eq "0"))
         {
-			@presortcols = ();
-		}
+            @presortcols = ();
+        }
 
 
         for my $col (@presortcols)
@@ -845,7 +845,7 @@ sub format_query_output
 
                 @collist = ();
 
-#            print "hrow:",Data::Dumper->Dump([$h_row]), "\n";            
+#            print "hrow:",Data::Dumper->Dump([$h_row]), "\n";
 
                 for my $col (@presortcols)
                 {
@@ -857,7 +857,7 @@ sub format_query_output
                     else
                     {
                         my $maxcol = scalar(@allcols);
-                        my $errstr = 
+                        my $errstr =
                             "specified ORDER column out of range: $col vs $maxcol\n";
                         print $atmsort_outfh $errstr;
                         print STDERR $errstr;
@@ -887,7 +887,7 @@ sub format_query_output
 
                     @collist = ();
 
-#            print "hrow:",Data::Dumper->Dump([$h_row]), "\n";            
+#            print "hrow:",Data::Dumper->Dump([$h_row]), "\n";
 
                     for my $col (@{$mspec->{allcol}})
                     {
@@ -899,7 +899,7 @@ sub format_query_output
                         else
                         {
                             my $maxcol = scalar(@allcols);
-                            my $errstr = 
+                            my $errstr =
                             "specified MVD column out of range: $col vs $maxcol\n";
                             print $errstr;
                             print STDERR $errstr;
@@ -953,7 +953,7 @@ sub format_query_output
                 if (scalar(@presortcols))
                 {
                     $hd2 .= " ( " . join(", ", @presortcols) . ")";
-                    # have to compare all columns as unsorted 
+                    # have to compare all columns as unsorted
                     push @unsortcols, @presortcols;
                 }
             }
@@ -978,12 +978,12 @@ sub format_query_output
                 if (scalar(@mvd_nodeps))
                 {
                     $hd2 .= " (( " . join(", ", @mvd_nodeps) . "))";
-                    # have to compare all columns as unsorted 
+                    # have to compare all columns as unsorted
                     push @unsortcols, @mvd_nodeps;
                 }
 
             }
-            
+
         }
 
         print $hd2, "\n", "-"x(length($hd2)), "\n";
@@ -1007,7 +1007,7 @@ sub format_query_output
                     else
                     {
                         my $maxcol = scalar(@allcols);
-                        my $errstr = 
+                        my $errstr =
                             "specified UNSORT column out of range: $col vs $maxcol\n";
                         print $errstr;
                         print STDERR $errstr;
@@ -1025,10 +1025,10 @@ sub format_query_output
             }
         }
 
-		if ($glob_verbose)
-		{
-			print "GP_IGNORE: end fqo $fqostate->{count}\n";
-		}
+        if ($glob_verbose)
+        {
+            print "GP_IGNORE: end fqo $fqostate->{count}\n";
+        }
 
         return;
     } # end order
@@ -1055,7 +1055,7 @@ sub format_query_output
                 unless ($line =~ m/\n$/);
 
               push @ggg2, $line;
-           } 
+           }
            @ggg= @ggg2;
         }
 
@@ -1071,7 +1071,7 @@ sub format_query_output
                my $fl2 = $directive->{firstline};
                my $sql_statement = $directive->{sql_statement};
                $sql_statement =~ s/\n/ /gm;
-               my @ocols = 
+               my @ocols =
                    ($sql_statement =~ m/select.*order.*by\s+(.*)\;/is);
 
 #               print Data::Dumper->Dump(\@ocols);
@@ -1093,10 +1093,10 @@ sub format_query_output
                {
                   my $ocolstr = shift @ocols;
                   my @ocols2  = split (/\,/, $ocolstr);
-                  
+
                   if (scalar(@ocols2) < scalar(@allcols2))
                   {
-				     print "GP_IGNORE: ORDER_WARNING: OUTPUT ",
+                     print "GP_IGNORE: ORDER_WARNING: OUTPUT ",
                      scalar(@allcols2), " columns, but ORDER BY on ",
                      scalar(@ocols2), " \n";
                   }
@@ -1130,7 +1130,7 @@ sub format_query_output
                 unless ($line =~ m/\n$/);
 
               push @ggg2, $line;
-           } 
+           }
            @ggg= sort @ggg2;
         }
         for my $line (@ggg)
@@ -1139,10 +1139,10 @@ sub format_query_output
         }
     }
 
-	if ($glob_verbose)
-	{
-		print "GP_IGNORE: end fqo $fqostate->{count}\n";
-	}
+    if ($glob_verbose)
+    {
+        print "GP_IGNORE: end fqo $fqostate->{count}\n";
+    }
 }
 
 
@@ -1246,11 +1246,11 @@ EOF_formatfix
         if ($big_ignore > 0)
         {
             if (($ini =~ m/\-\-\s*end\_equiv\s*$/i) && !($do_equiv))
-            { 
+            {
                 $big_ignore -= 1;
             }
             if ($ini =~ m/\-\-\s*end\_ignore\s*$/i)
-            { 
+            {
                 $big_ignore -= 1;
             }
             print $atmsort_outfh "GP_IGNORE:", $ini;
@@ -1268,19 +1268,19 @@ EOF_formatfix
 
         if ($getrows) # getting rows from SELECT output
         {
-	    # The end of "result set" for a COPY TO STDOUT is a bit tricky
-	    # to find. There is no explicit marker for it. We look for a
-	    # line that looks like a SQL comment or a new query, or an ERROR.
-	    # This is not bullet-proof, but works for the current tests.
+        # The end of "result set" for a COPY TO STDOUT is a bit tricky
+        # to find. There is no explicit marker for it. We look for a
+        # line that looks like a SQL comment or a new query, or an ERROR.
+        # This is not bullet-proof, but works for the current tests.
             if ($copy_to_stdout_result &&
                 ($ini =~ m/\-\-/ ||
                  $ini =~ m/ERROR/ ||
-		 $ini =~ m/(copy)|(create)|(drop)|(select)|(insert)|(update)/i))
+         $ini =~ m/(copy)|(create)|(drop)|(select)|(insert)|(update)/i))
             {
                 my @ggg= sort @outarr;
                 for my $line (@ggg)
                 {
-		    print $atmsort_outfh $bpref, $line;
+            print $atmsort_outfh $bpref, $line;
                 }
 
                 @outarr = ();
@@ -1288,20 +1288,20 @@ EOF_formatfix
                 $has_order = 0;
                 $copy_to_stdout_result = 0;
 
-		# Process the row again, in case it begins another
-		# COPY TO STDOUT statement, or another query.
-		goto reprocess_row;
+        # Process the row again, in case it begins another
+        # COPY TO STDOUT statement, or another query.
+        goto reprocess_row;
             }
 
             # regex example: (5 rows)
             if ($ini =~ m/^\s*\(\d+\s+row(s)*\)\s*$/)
             {
                 format_query_output($glob_fqo,
-									$has_order, \@outarr, $directive);
-          
-      
-                # Always ignore the rowcount for explain plan out as the skeleton plans might be the 
-                # same even if the row counts differ because of session level GUCs. 
+                                    $has_order, \@outarr, $directive);
+
+
+                # Always ignore the rowcount for explain plan out as the skeleton plans might be the
+                # same even if the row counts differ because of session level GUCs.
                 if (exists($directive->{explain}))
                 {
                     $ini = "GP_IGNORE:" . $ini;
@@ -1314,7 +1314,7 @@ EOF_formatfix
             }
         }
         else # finding SQL statement or start of SELECT output
-        { 
+        {
             if (($ini =~ m/\-\-\s*start\_match(subs|ignore)\s*$/i))
             {
                 $define_match_expression = $ini;
@@ -1322,7 +1322,7 @@ EOF_formatfix
             }
             if (($ini =~ m/\-\-\s*start\_ignore\s*$/i) ||
                 (($ini =~ m/\-\-\s*start\_equiv\s*$/i) && !($do_equiv)))
-            { 
+            {
                 $big_ignore += 1;
 
                 for my $line (@outarr)
@@ -1334,7 +1334,7 @@ EOF_formatfix
                 print $atmsort_outfh "GP_IGNORE:", $ini;
                 next;
             }
-            elsif (($ini =~ m/\-\-\s*start\_equiv\s*$/i) && 
+            elsif (($ini =~ m/\-\-\s*start\_equiv\s*$/i) &&
                    $glob_make_equiv_expected)
             {
                 $equiv_expected_rows = [];
@@ -1348,13 +1348,13 @@ EOF_formatfix
 
             # Note: \d is for the psql "describe"
             if ($ini =~ m/(insert|update|delete|select|\\d|copy)/i)
-            {                
+            {
                 $copy_to_stdout_result = 0;
                 $has_order = 0;
                 $sql_statement = "";
 
                 if ($ini =~ m/explain.*(insert|update|delete|select)/i)
-                { 
+                {
                    $directive->{explain} = "normal";
                 }
 
@@ -1362,26 +1362,26 @@ EOF_formatfix
 
             if ($ini =~ m/\-\-\s*force\_explain\s+operator.*$/i)
             {
-                # ENGINF-137: force_explain 
+                # ENGINF-137: force_explain
                 $directive->{explain} = "operator";
             }
             if ($ini =~ m/\-\-\s*force\_explain\s*$/i)
             {
-                # ENGINF-137: force_explain 
+                # ENGINF-137: force_explain
                 $directive->{explain} = "normal";
             }
             if ($ini =~ m/\-\-\s*ignore\s*$/i)
-            { 
+            {
                 $directive->{ignore} = "ignore";
             }
             if ($ini =~ m/\-\-\s*order\s+\d+.*$/i)
-            { 
+            {
                 my $olist = $ini;
                 $olist =~ s/^.*\-\-\s*order//;
                 $directive->{order} = $olist;
             }
             if ($ini =~ m/\-\-\s*mvd\s+\d+.*$/i)
-            { 
+            {
                 my $olist = $ini;
                 $olist =~ s/^.*\-\-\s*mvd//;
                 $directive->{mvd} = $olist;
@@ -1406,8 +1406,8 @@ EOF_formatfix
             {
                 $ini =~ s/\s+(\W)?(\W)?\(seg.*pid.*\)//;
 
-				# also remove line numbers from errors
-				$ini =~ s/\s+(\W)?(\W)?\(\w+\.[ch]:\d+\)/ (SOMEFILE:SOMEFUNC)/;
+                # also remove line numbers from errors
+                $ini =~ s/\s+(\W)?(\W)?\(\w+\.[ch]:\d+\)/ (SOMEFILE:SOMEFUNC)/;
                 my $outsize = scalar(@outarr);
 
                 my $lastguy = -1;
@@ -1450,11 +1450,11 @@ EOF_formatfix
             # and special case these guys:
             #  copy test1 to stdout
             #  \copy test1 to stdout
-	    my $matches_copy_to_stdout = 0;
+        my $matches_copy_to_stdout = 0;
             if ($ini =~ m/^copy\s+((\(select.*\))|\w+)\s+to stdout.*;$/i ||
                 $ini =~ m/^\\copy\s+((\(select.*\))|\w+)\s+to stdout.*$/i)
             {
-	        $matches_copy_to_stdout = 1;
+            $matches_copy_to_stdout = 1;
             }
             # regex example: ---- or ---+---
             # need at least 3 dashes to avoid confusion with "--" comments
@@ -1514,12 +1514,12 @@ EOF_formatfix
                 {
                     $ini = "GP_IGNORE:" . $ini;
                 }
-                
+
                 print $atmsort_outfh $apref, $ini;
 
                 if (defined($sql_statement)
                     && length($sql_statement)
-                    # multiline match 
+                    # multiline match
                     && ($sql_statement =~ m/select.*order.*by/is))
                 {
                     $has_order = 1; # so do *not* sort output
@@ -1553,10 +1553,10 @@ EOF_formatfix
             $ini =~ s/External table .*line (\d)+.*/External table DUMMY_EX, line DUMMY_LINE of DUMMY_LOCATION/;
               $ini =~ s/\s+/ /;
              # MPP-1557,AUTO-3: horrific ERROR DETAIL External Table trifecta
-			if ($glob_verbose)
-			{
-				print $atmsort_outfh "GP_IGNORE: External Table ERROR DETAIL fixup\n";
-			}
+            if ($glob_verbose)
+            {
+                print $atmsort_outfh "GP_IGNORE: External Table ERROR DETAIL fixup\n";
+            }
              if ($ini !~ m/^DETAIL/)
              {
                 # find a "blank" DETAIL tag preceding current line
@@ -1569,7 +1569,7 @@ EOF_formatfix
                    $error_detail_exttab_trifecta_skip = 1;
                 }
              }
-             if (scalar(@outarr) && 
+             if (scalar(@outarr) &&
                  ($outarr[-1] =~ m/^ERROR:\s+missing\s+data\s+for\s+column/))
              {
                 $outarr[-1] = "ERROR:  missing data for column DUMMY_COL\n";
@@ -1600,52 +1600,52 @@ L_push_outarr:
 # The arguments are input and output file names
 sub run
 {
-	my $infname = shift;
-	my $outfname = shift;
+    my $infname = shift;
+    my $outfname = shift;
 
-	open my $infh,  '<', $infname  or die "could not open $infname: $!";
-	open my $outfh, '>', $outfname or die "could not open $outfname: $!";
+    open my $infh,  '<', $infname  or die "could not open $infname: $!";
+    open my $outfh, '>', $outfname or die "could not open $outfname: $!";
 
-	run_fhs($infh, $outfh);
+    run_fhs($infh, $outfh);
 
-	close $infh;
-	close $outfh;
+    close $infh;
+    close $outfh;
 }
 
 # The arguments are input and output file handles
 sub run_fhs
 {
-	my $infh = shift;
-	my $outfh = shift;
+    my $infh = shift;
+    my $outfh = shift;
 
-	# allow multiple init files
-	if (@glob_init)
-	{
-		my $devnullfh;
-		my $init_file_fh;
-	
-		open $devnullfh, "> /dev/null" or die "can't open /dev/null: $!";
+    # allow multiple init files
+    if (@glob_init)
+    {
+        my $devnullfh;
+        my $init_file_fh;
 
-		for my $init_file (@glob_init)
-		{
-			die "no such file: $init_file"
-			unless (-e $init_file);
+        open $devnullfh, "> /dev/null" or die "can't open /dev/null: $!";
 
-			# Perform initialization from this init_file by passing it
-			# to bigloop. Open the file, and pass that as the input file
-			# handle, and redirect output to /dev/null.
-			open $init_file_fh, "< $init_file" or die "could not open $init_file: $!";
+        for my $init_file (@glob_init)
+        {
+            die "no such file: $init_file"
+            unless (-e $init_file);
 
-			atmsort_bigloop($init_file_fh, $devnullfh);
+            # Perform initialization from this init_file by passing it
+            # to bigloop. Open the file, and pass that as the input file
+            # handle, and redirect output to /dev/null.
+            open $init_file_fh, "< $init_file" or die "could not open $init_file: $!";
 
-			close $init_file_fh;
-		}
+            atmsort_bigloop($init_file_fh, $devnullfh);
 
-		close $devnullfh;
-	}
+            close $init_file_fh;
+        }
 
-	# loop over input file.
-	atmsort_bigloop($infh, $outfh);
+        close $devnullfh;
+    }
+
+    # loop over input file.
+    atmsort_bigloop($infh, $outfh);
 }
 
 1;

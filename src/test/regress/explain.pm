@@ -9,25 +9,25 @@ use warnings;
 # IMPLEMENTATION NOTES:
 #
 # EXPLAIN ANALYZE final statistics in analyze_node:
-# 
+#
 # The final statistics look like this:
-# 
+#
 #  Slice statistics:
 #    (slice0)    Executor memory: 472K bytes.
 #    (slice1)    Executor memory: 464K bytes avg x 2 workers, 464K bytes max (seg0).
 #  Settings:
-# 
+#
 #  Total runtime: 52347.493 ms
-# 
+#
 # The "Settings" entry is optional (ie, it only exists if you change the
 # settings in your session).  If the "Settings" entry is missing explain.pl
 # adds a dummy entry to the statistics.  This technique is a bit easier
 # than changing the parser to handle both cases.
 #
 # Parse_node:
-#   InitPlan entries in greenplum are in separate slices, so explain.pl 
+#   InitPlan entries in greenplum are in separate slices, so explain.pl
 #   prefixes them with an arrow (and adds a fake cost) to make them
-#   look like a top-level execution node.  Again, this technique was 
+#   look like a top-level execution node.  Again, this technique was
 #   easier than modifying the parser to special case InitPlan.
 #
 #  Plan parsing in general:
@@ -56,7 +56,7 @@ use warnings;
 #  explain.pl only fixes them up for dot output, but not for yaml, perl, etc.
 #  The rationale is that dot handle digraphs nicely, but yaml and perl are
 #  more suitable for tree output.
-# 
+#
 
 my $outfh; # current output file handle
 my $outfh_need_close = 0;
@@ -245,12 +245,12 @@ sub dodumpcolor
 
         for my $cc (@{$coltab->{$ggg[$ii]}})
         {
-            print $fh '"' . $ii. '" -> "' . $ii. "." . $jj. '"' 
+            print $fh '"' . $ii. '" -> "' . $ii. "." . $jj. '"'
                 . " [len=1];\n";
             $jj++;
         }
     }
-    
+
     print $fh '"root" [label="color schemes"]' . ";\n";
 
     for my $ii (0..(scalar(@ggg)-1))
@@ -259,9 +259,9 @@ sub dodumpcolor
 
         my $jj = 0;
 
-        for my $cc (@{$coltab->{$ggg[$ii]}}) 
+        for my $cc (@{$coltab->{$ggg[$ii]}})
         {
-            print $fh '"' . $ii . "." . $jj . 
+            print $fh '"' . $ii . "." . $jj .
                 '" [label="", style=filled, ' .
                 'fillcolor="' . $cc . '"]' . ";\n";
             $jj++;
@@ -275,25 +275,25 @@ sub dodumpcolor
 sub explain_init
 {
     my %args = (
-		# defaults
-		QUERY_LIST => [],
-		OPERATION => 'YAML',
-		INPUT_FH => undef,
-		INPUT_LINES => undef,
-		OUTPUT => undef,
-		OUTPUT_FH => undef,
-		DIRECTION => 'BT',
-		COLOR_SCHEME => 'set28',
-		TIMELINE => '',
-		PRUNE => undef,
-		STATCOLOR => undef,
-		EDGE_SCHEME => undef,
+        # defaults
+        QUERY_LIST => [],
+        OPERATION => 'YAML',
+        INPUT_FH => undef,
+        INPUT_LINES => undef,
+        OUTPUT => undef,
+        OUTPUT_FH => undef,
+        DIRECTION => 'BT',
+        COLOR_SCHEME => 'set28',
+        TIMELINE => '',
+        PRUNE => undef,
+        STATCOLOR => undef,
+        EDGE_SCHEME => undef,
 
-		# override the defaults from argument list
-		@_
+        # override the defaults from argument list
+        @_
     );
 
-	my @qlst = @{$args{QUERY_LIST}};
+    my @qlst = @{$args{QUERY_LIST}};
 
     $glob_optn = $args{OPERATION};
     $glob_optn = "jpg" if ($glob_optn =~ m/^jpeg/i);
@@ -303,14 +303,14 @@ sub explain_init
 
     if (defined($args{INPUT_FH}))
     {
-	$glob_in_fh = $args{INPUT_FH};
+    $glob_in_fh = $args{INPUT_FH};
     } elsif(defined($args{INPUT_LINES}))
     {
-	@glob_in_lines = @{$args{INPUT_LINES}};
+    @glob_in_lines = @{$args{INPUT_LINES}};
     }
     else
     {
-	die "INPUT_FH or INPUT_LINES argument must be given";
+    die "INPUT_FH or INPUT_LINES argument must be given";
     }
 
     my $DEFAULT_COLOR = "set28";
@@ -358,7 +358,7 @@ sub explain_init
             dodumpcolor(\%glob_coltab, $tmpfh);
 
             close $tmpfh;
-            
+
             my $catcmd = "cat $tmpnam";
 
             # format with neato if jpg was specified
@@ -378,7 +378,7 @@ sub explain_init
             }
 
             system($catcmd);
-            
+
             unlink $tmpnam;
 
             exit(0);
@@ -388,7 +388,7 @@ sub explain_init
             my $colorschemelist = join("\n", sort(keys(%glob_coltab))) . "\n";
 
             # identify the default color
-            $colorschemelist =~ 
+            $colorschemelist =~
                 s/$DEFAULT_COLOR/$DEFAULT_COLOR  \(default\)/gm;
 
             print "\nvalid color schemes are:\n";
@@ -422,21 +422,21 @@ sub analyze_node
             my $t1 = $node->{txt};
 
             # NOTE: the final statistics look something like this:
-            
+
             # Slice statistics:
             #   (slice0)    Executor memory: 472K bytes.
             #   (slice1)    Executor memory: 464K bytes avg x 2 workers, 464K bytes max (seg0).
             # Settings:
             # Total runtime: 52347.493 ms
 
-            # (we've actually added some vertical bars so it might look 
+            # (we've actually added some vertical bars so it might look
             # like this):
             # || Slice statistics:
             # ||   (slice0)    Executor memory: 472K bytes.
 
             # NB: the "Settings" entry is optional, so
             # add Settings if they are missing
-            unless ($t1 =~ 
+            unless ($t1 =~
                     m/Slice\s+statistics.*Settings.*Total\s+runtime/s)
             {
                 $t1 =~
@@ -444,7 +444,7 @@ sub analyze_node
             }
 
             my @foo = ($t1 =~ m/Slice\s+statistics\:\s+(.*)\s+Settings\:\s+(.*)\s+Total\s+runtime:\s+(.*)\s+ms/s);
-            
+
             if (scalar(@foo) == 3)
             {
                 my $mem  = shift @foo;
@@ -520,7 +520,7 @@ sub analyze_node
             {
                 $node->{short} = "";
             }
-        
+
             # last try!!
             unless (defined($node->{short}) && length($node->{short}))
             {
@@ -565,14 +565,14 @@ sub analyze_node
             if ($node->{txt} =~ m/(\d+(\.\d*)?)(\s*ms\s*to\s*end)/i)
             {
 
-                my @ggg = 
+                my @ggg =
                     ($node->{txt} =~ m/(\d+(\.\d*)?)(\s*ms\s*to\s*end)/i);
-            
+
 #                print join('*', @ggg), "\n";
 
                 my $tt = $ggg[0];
 
-                $node->{to_end} = $tt; 
+                $node->{to_end} = $tt;
 
                 $parse_ctx->{alltimes}->{$tt} = 1;
 
@@ -585,15 +585,15 @@ sub analyze_node
                     $parse_ctx->{h_to_end}->{$tt} = ['"'. $node->{id} . '"'];
                 }
 
-                    
+
 
             }
             if ($node->{txt} =~ m/(\d+(\.\d*)?)(\s*ms\s*to\s*first\s*row)/i)
             {
 
-                my @ggg = 
+                my @ggg =
                     ($node->{txt} =~ m/(\d+(\.\d*)?)(\s*ms\s*to\s*first\s*row)/i);
-            
+
 #                print join('*', @ggg), "\n";
 
                 my $tt = $ggg[0];
@@ -616,14 +616,14 @@ sub analyze_node
             if ($node->{txt} =~ m/start offset by (\d+(\.\d*)?)(\s*ms)/i)
             {
 
-                my @ggg = 
+                my @ggg =
                     ($node->{txt} =~ m/start offset by (\d+(\.\d*)?)(\s*ms)/i);
-            
+
 #                print join('*', @ggg), "\n";
 
                 my $tt = $ggg[0];
 
-                $node->{to_startoff} = $tt; 
+                $node->{to_startoff} = $tt;
 
                 $parse_ctx->{allstarttimes}->{$tt} = 1;
 
@@ -639,7 +639,7 @@ sub analyze_node
 
             if (exists($node->{to_end}))
             {
-                $node->{total_time} = 
+                $node->{total_time} =
                     (exists($node->{to_first})) ?
                     ($node->{to_end} - $node->{to_first}) :
                     $node->{to_end};
@@ -653,7 +653,7 @@ sub analyze_node
             if (exists($node->{child}))
             {
                 delete $node->{child}
-                  unless (defined($node->{child}) 
+                  unless (defined($node->{child})
                           && scalar(@{$node->{child}}));
             }
         }
@@ -689,7 +689,7 @@ sub parse_node
             $node->{child} = [];
 
             $node->{txt} = "";
-    
+
             $node->{parent} = $parent
                 if (defined($parent));
 
@@ -699,7 +699,7 @@ sub parse_node
             $node->{id} = $id;
         }
 
-        # XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX 
+        # XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
         # make initplan into a fake node so the graphs look nicer (eg
         # tpch query 15).  Prefix it with an arrow and add a fake cost.
         if ($row =~ m/\|(\s)*InitPlan(.*)slice/)
@@ -755,7 +755,7 @@ sub parse_node
             {
                 # found a child
                 push @{$node->{child}}, parse_node($ref_id, $parse_ctx,
-                                                   $spclen, $plan_rows, 
+                                                   $spclen, $plan_rows,
                                                    $node->{id});
             }
 
@@ -770,7 +770,7 @@ sub parse_node
                 if (defined($node) && exists($node->{txt}))
                 {
                     analyze_node($node, $parse_ctx);
-                    
+
                     return $node;
                 }
             }
@@ -784,7 +784,7 @@ sub parse_node
         $no_more_text = 1;
 
     } # end while
-    
+
     if (defined($node))
     {
         analyze_node($node, $parse_ctx);
@@ -798,36 +798,36 @@ sub parse_node
 sub run
 {
     my @bigarr;
-    
+
     my $state = "INIT";
-    
+
     my $pair = undef;
-    
+
     my ($query, $plan);
-    
+
     my $tpch_format=0;
     my $bigdash = '-' x 40; # make big dash smaller
 
     my $magic;
 
-	my $lineno = 0;
-	
+    my $lineno = 0;
+
     while(1)
     {
-		my $ini;
+        my $ini;
 
-		if ($glob_in_fh)
-		{
-			$ini = <$glob_in_fh>;
-			last if (!defined($ini)); # EOF
-		}
-		else
-		{
-			last if ($lineno == $#glob_in_lines);
-			$ini = $glob_in_lines[$lineno];
-		}
-		$lineno++;
-		
+        if ($glob_in_fh)
+        {
+            $ini = <$glob_in_fh>;
+            last if (!defined($ini)); # EOF
+        }
+        else
+        {
+            last if ($lineno == $#glob_in_lines);
+            $ini = $glob_in_lines[$lineno];
+        }
+        $lineno++;
+
         if ($state =~ m/INIT/)
         {
             if ($ini !~ m/(^EXPLAIN ANALYZE)|(QUERY PLAN)/)
@@ -918,9 +918,9 @@ sub run
 
                 $query .= $ini;
             }
-            
+
         } # end not getplan
-        
+
         if ($state =~ m/GETPLAN/)
         {
 
@@ -940,10 +940,10 @@ sub run
                     next;
                 }
             }
-			# a bit weird here -- just ignore the separator.  But
-			# maybe we should invest some effort to determine that the
-			# separator is the next line after the header (and only
-			# ignore it once) ?
+            # a bit weird here -- just ignore the separator.  But
+            # maybe we should invest some effort to determine that the
+            # separator is the next line after the header (and only
+            # ignore it once) ?
             next
                 if ($ini =~ m/$bigdash/);
 
@@ -958,7 +958,7 @@ sub run
 
             $plan .= $ini;
         }
-        
+
     } # end big for
     if (defined($pair))
     {
@@ -966,17 +966,17 @@ sub run
         $pair->{query} = $query;
         push @bigarr, $pair;
     }
-    
+
 #print scalar(@bigarr), "\n";
-    
-    
+
+
 #print Data::Dumper->Dump(\@bigarr);
-    
+
 #print $bigarr[0]->{plan};
 
     unless(scalar(@{$glob_qlist}))
     {
-        # build a 1-based list of queries 
+        # build a 1-based list of queries
         for (my $ii =1; $ii <= scalar(@bigarr); $ii++)
         {
             push @{$glob_qlist}, $ii;
@@ -992,7 +992,7 @@ sub run
             warn("specified query $qqq is out-of-range -- skipping...\n");
             next;
         }
-        
+
         if ($glob_optn =~ m/query|text|txt/i)
         {
             doquery($bigarr[$qnum]->{query});
@@ -1003,14 +1003,14 @@ sub run
 
         unless (defined($plantxt) && length($plantxt))
         {
-            warn("invalid plan for query $qqq -- skipping...\n");   
+            warn("invalid plan for query $qqq -- skipping...\n");
             next;
         }
-        
+
 #print $plantxt, "\n";
-        
+
         my @plan_r = split(/\n/, $plantxt);
-        
+
         my $pr = \@plan_r;
 
         my $parse_ctx = {};
@@ -1026,10 +1026,10 @@ sub run
         $parse_ctx->{explain_analyze_stats} = {};
 
         my $plantree = parse_node(\$id, $parse_ctx, 0, $pr);
-        
+
 #        my @timelist = sort {$a <=> $b} keys (%{$parse_ctx->{alltimes}});
         my @timelist = sort {$a <=> $b} keys (%{$parse_ctx->{allstarttimes}});
-        
+
 
         if (defined($glob_prune))
         {
@@ -1062,7 +1062,7 @@ sub run
         if ($glob_optn =~ m/magic/i)
         {
             $glob_optn = "jpg";
-            
+
             use IO::File;
             use POSIX qw(tmpnam);
 
@@ -1086,17 +1086,17 @@ sub run
             # reset output file name to create files in the new
             # temporary directory
             $glob_outi = File::Spec->catfile($tmpdir, "query_");
-            
-            $magic = $glob_outi;    
+
+            $magic = $glob_outi;
         }
 
         if ($glob_outi)
         {
-			if ($outfh_need_close)
-			{
-				close $outfh;
-				$outfh_need_close = 0;
-			}
+            if ($outfh_need_close)
+            {
+                close $outfh;
+                $outfh_need_close = 0;
+            }
 
             my $outfilename = $glob_outi;
 
@@ -1143,17 +1143,17 @@ sub run
             }
 
             open ($outfh, ">$outfilename" ) or die "can't open file $outfilename: $!";
-			$outfh_need_close = 1;
+            $outfh_need_close = 1;
 #            print $outfilename, "\n";
         }
-		elsif ($glob_outfh)
-		{
-			$outfh = $glob_outfh;
-		}
-		else
-		{
-			$outfh = *STDOUT;
-		}
+        elsif ($glob_outfh)
+        {
+            $outfh = $glob_outfh;
+        }
+        else
+        {
+            $outfh = *STDOUT;
+        }
 
         if ($glob_optn =~ m/yaml/i)
         {
@@ -1169,7 +1169,7 @@ sub run
         }
         if ($glob_optn =~ m/dot|graph/i)
         {
-            dodotfile($plantree, \@timelist, $qqq, $parse_ctx, 
+            dodotfile($plantree, \@timelist, $qqq, $parse_ctx,
                       $glob_direction);
         }
         if ($glob_optn =~ m/operator/i)
@@ -1208,10 +1208,10 @@ sub run
 
             close STDOUT;
             open (STDOUT, ">$tmpnam" ) or die "can't open STDOUT: $!";
- 
+
             select STDOUT; $| = 1;      # make unbuffered
 
-            dodotfile($plantree, \@timelist, $qqq, $parse_ctx, 
+            dodotfile($plantree, \@timelist, $qqq, $parse_ctx,
                       $glob_direction);
 
             close STDOUT;
@@ -1221,15 +1221,15 @@ sub run
 
             unlink $tmpnam;
 
-            
+
         }
     } #end for querynum
 
-	if ($outfh_need_close)
-	{
-		close $outfh;
-		$outfh_need_close = 0;
-	}
+    if ($outfh_need_close)
+    {
+        close $outfh;
+        $outfh_need_close = 0;
+    }
 
     # magically display all files
     if (defined($magic))
@@ -1258,8 +1258,8 @@ sub run
             }
         }
     }
-    
-} 
+
+}
 #print "\nmax id: $id\n\n";
 
 #
@@ -1286,7 +1286,7 @@ sub doDataDump
 {
     my $plantree = shift;
 
-    
+
     local $Data::Dumper::Indent   = 1;
     local $Data::Dumper::Terse    = 1;
     local $Data::Dumper::Sortkeys = 1;
@@ -1294,23 +1294,23 @@ sub doDataDump
     my $map_expr = 'delete $node->{txt};';
 #    my $map_expr = 'print "foo\n"';
     treeMap($plantree, undef, $map_expr);
-    
+
     print $outfh Data::Dumper->Dump([$plantree]);
 }
 
 sub doOperatorDump
 {
     my $plantree = shift;
-    
-	print $outfh $plantree->{short}, "\n" if (exists($plantree->{short}));
 
-	return
-		unless (exists($plantree->{child}));
+    print $outfh $plantree->{short}, "\n" if (exists($plantree->{short}));
 
-	for my $kid (@{$plantree->{child}})
-	{
-		doOperatorDump($kid);
-	}
+    return
+        unless (exists($plantree->{child}));
+
+    for my $kid (@{$plantree->{child}})
+    {
+        doOperatorDump($kid);
+    }
 }
 
 # add slice info to node
@@ -1320,22 +1320,22 @@ sub addslice
     my ($node, $ctx) = @_;
 
     # AUTO-6: find nodes with "(slice1)" info where the slice numbers aren't
-    # part of the "Slice statistics" 
+    # part of the "Slice statistics"
 
     my $txt1 = $node->{txt};
     $txt1 =~ s/Slice statistics.*//gs;
 
-    if ($txt1 =~ /(slice(\d+))/) 
-    { 
-        my @ggg = ($txt1 =~ m/(slice(\d+))/) ; 
-        $node->{slice} = shift @ggg; 
+    if ($txt1 =~ /(slice(\d+))/)
+    {
+        my @ggg = ($txt1 =~ m/(slice(\d+))/) ;
+        $node->{slice} = shift @ggg;
 
         # check if we have explain analyze stats for the slice
         if (exists($ctx->{explain_analyze_stats})
             && exists($ctx->{explain_analyze_stats}->{memory})
             && exists($ctx->{explain_analyze_stats}->{memory}->{$node->{slice}}))
         {
-            $node->{memory} = 
+            $node->{memory} =
                 $ctx->{explain_analyze_stats}->{memory}->{$node->{slice}};
         }
 
@@ -1366,7 +1366,7 @@ sub doyaml
             my $map_expr = 'delete $node->{txt};';
 
             treeMap($plantree, undef, $map_expr);
-    
+
             # because JSON is REQUIREd, not USEd, the symbols are not
             # imported into the environment.
             print $outfh JSON::objToJson($plantree, {pretty => 1, indent => 2});
@@ -1387,7 +1387,7 @@ sub doyaml
             my $map_expr = 'delete $node->{txt};';
 
             treeMap($plantree, undef, $map_expr);
-    
+
             # because YAML is REQUIREd, not USEd, the symbols are not
             # imported into the environment.
             print $outfh YAML::Dump($plantree);
@@ -1397,7 +1397,7 @@ sub doyaml
             die("Fatal Error: The required package YAML is not installed -- please download it from www.cpan.org\n");
             exit(1);
         }
-        
+
     }
 
 }
@@ -1407,30 +1407,30 @@ sub prune_heavily
 {
     my $node = shift;
 
-    return 
+    return
         unless (exists($node->{short}));
 
-	if ($node->{short} =~ m/Delete\s*\(slice.*segment.*\)\s*\(row.*width.*\)/)
-	{
-		# QA-1309: fix strange DELETE operator formatting
-		$node->{short} = "Delete";
-	}
-	elsif ($node->{short} =~ m/Update\s*\(slice.*segment.*\)\s*\(row.*width.*\)/)
+    if ($node->{short} =~ m/Delete\s*\(slice.*segment.*\)\s*\(row.*width.*\)/)
+    {
+        # QA-1309: fix strange DELETE operator formatting
+        $node->{short} = "Delete";
+    }
+    elsif ($node->{short} =~ m/Update\s*\(slice.*segment.*\)\s*\(row.*width.*\)/)
         {
                 # QA-1309: fix strange UPDATE operator formatting
                 $node->{short} = "Update";
         }
-	elsif ($node->{short} =~ m/\d+\:\d+/)
-	{
+    elsif ($node->{short} =~ m/\d+\:\d+/)
+    {
 
-		# example: Gather Motion 8:1 (slice4);
+        # example: Gather Motion 8:1 (slice4);
 
-		# strip the number of nodes and slice information
-		$node->{short} =~ s/\s+\d+\:\d+.*//;
+        # strip the number of nodes and slice information
+        $node->{short} =~ s/\s+\d+\:\d+.*//;
 
-		# Note: don't worry about removing "(slice1)" info from the
-		# "short" because addslice processes node->{text}
-	}
+        # Note: don't worry about removing "(slice1)" info from the
+        # "short" because addslice processes node->{text}
+    }
 }
 
 # identify the slice for each node
@@ -1461,14 +1461,14 @@ sub pre_slice
             # if the Shared Scan has a child it is the "primary"
             if (exists($node->{child}))
             {
-				my $share_short_fixup = $node->{short};
+                my $share_short_fixup = $node->{short};
 
-				# remove the slice number from the "short"
-				$share_short_fixup =~ s/(\d+)\:/\:/g;
+                # remove the slice number from the "short"
+                $share_short_fixup =~ s/(\d+)\:/\:/g;
 
                 if (!exists($ctx->{share_input_h}->{$share_short_fixup}))
                 {
-                    $ctx->{share_input_h}->{$share_short_fixup} = $node; 
+                    $ctx->{share_input_h}->{$share_short_fixup} = $node;
                 }
             }
             else # not the primary, mark as a duplicate node
@@ -1481,7 +1481,7 @@ sub pre_slice
             # choose first Multi Slice Motion node as primary
             if (!exists($ctx->{multi_slice_h}->{$node->{short}}))
             {
-                $ctx->{multi_slice_h}->{$node->{short}} = $node; 
+                $ctx->{multi_slice_h}->{$node->{short}} = $node;
             }
             else # not the primary, mark as a duplicate node
             {
@@ -1528,14 +1528,14 @@ sub sharedscan_fixup
 
     if (exists($node->{SharedScanDuplicate}))
     {
-		my $share_short_fixup = $node->{short};
+        my $share_short_fixup = $node->{short};
 
-		# remove the slice number from the "short"
-		$share_short_fixup =~ s/(\d+)\:/\:/g;
+        # remove the slice number from the "short"
+        $share_short_fixup =~ s/(\d+)\:/\:/g;
 
         $node->{SharedScanDuplicate} =
             $ctx->{share_input_h}->{$share_short_fixup};
-#        $node->{id} = 
+#        $node->{id} =
 #            $node->{SharedScanDuplicate}->{id};
     }
 
@@ -1544,7 +1544,7 @@ sub sharedscan_fixup
         $node->{MultiSliceMotionDuplicate} =
             $ctx->{multi_slice_h}->{$node->{short}};
         # XXX XXX: for this case the node is really the same
-        $node->{id} = 
+        $node->{id} =
             $node->{MultiSliceMotionDuplicate}->{id};
     }
 
@@ -1596,7 +1596,7 @@ sub nestedloop_fixup
         }
     }
 
-    return 
+    return
         unless (2 == scalar(@kidlist));
 
     if ($kidlist[0]->{id} < $kidlist[1]->{id})
@@ -1617,7 +1617,7 @@ sub get_rows_out
 {
     my ($node, $ctx, $edge) = @_;
 
-    return 
+    return
         unless ($node->{txt} =~ m/(Rows out\:)|(\(cost\=.*\s+rows=.*\s+width\=.*\))/);
 
     my $long = ($edge =~ m/long|med/i);
@@ -1627,10 +1627,10 @@ sub get_rows_out
         if (!$long)
         {
             # short result
-            my @foo = 
-                ($node->{txt} =~ 
+            my @foo =
+                ($node->{txt} =~
                  m/Rows out\:\s+Avg\s+(.*)\s+rows\s+x\s+(.*)\s+workers/);
-        
+
             goto L_get_est unless (2 == scalar(@foo));
 
             # calculate row count as avg x num workers
@@ -1638,10 +1638,10 @@ sub get_rows_out
         }
         else
         {
-            my @foo = 
-                ($node->{txt} =~ 
+            my @foo =
+                ($node->{txt} =~
                  m/Rows out\:\s+(Avg.*workers)/);
-        
+
             goto L_get_est unless (1 == scalar(@foo));
 
             # just print the string
@@ -1658,10 +1658,10 @@ sub get_rows_out
     }
     elsif ($node->{txt} =~ m/Rows out\:\s+.*\s+rows/)
     {
-        my @foo = 
-            ($node->{txt} =~ 
+        my @foo =
+            ($node->{txt} =~
              m/Rows out\:\s+(.*)\s+rows/);
-        
+
         goto L_get_est unless (1 == scalar(@foo));
 
         $node->{rows_out} = $foo[0];
@@ -1679,7 +1679,7 @@ sub get_rows_out
             my @foo = ($node->{rows_out} =~ m/(x.*)$/);
 
             my $tail = $foo[0];
-        
+
             @foo = ($node->{rows_out} =~ m/(.*)\s+x.*/);
 
             my $head = $foo[0];
@@ -1701,7 +1701,7 @@ sub get_rows_out
 L_get_est:
 
     # add row estimates
-    if ($long && 
+    if ($long &&
         ($node->{txt} =~ m/\(cost\=.*\s+rows=.*\s+width\=.*\)/))
     {
         my @foo = ($node->{txt} =~ m/cost\=.*\s+rows=(\d+)\s+width\=.*/);
@@ -1735,12 +1735,12 @@ sub calc_color_rank
 
     if ($ctx->{time_stats_h}->{cnt} > 1)
     {
-        # population variance = 
+        # population variance =
         # (sum of the squares)/n - (square of the sums)/n*n
         my $sum   = $ctx->{time_stats_h}->{sum};
         my $sumsq = $ctx->{time_stats_h}->{sumsq};
         my $enn   = $ctx->{time_stats_h}->{cnt};
-        
+
         my $pop_var = ($sumsq/$enn) - (($sum*$sum)/($enn*$enn));
         my $std_dev = sqrt($pop_var);
         my $mean    = $sum/$enn;
@@ -1814,38 +1814,38 @@ sub dodotfile
 
     {
         my $map_expr = 'addslice($node, $ctx); ';
-        
+
         treeMap($plantree, $map_expr, undef, $parse_ctx);
     }
 
 
 #    $map_expr = 'propslice($node, $ctx);';
-    my $ctx = {level => 0, a1 => [], 
-               share_input_h => {}, multi_slice_h => {}, 
+    my $ctx = {level => 0, a1 => [],
+               share_input_h => {}, multi_slice_h => {},
                time_stats_h => { cnt=>0, sum=>0, sumsq=>0, tt_h => {} }  };
 
 #    my $map_expr = 'print "foo\n"';
-    treeMap($plantree, 
+    treeMap($plantree,
             'pre_slice($node, $ctx); ',
             'post_slice($node, $ctx); ',
             $ctx);
 
     calc_color_rank($ctx);
 
-    treeMap($plantree, 
+    treeMap($plantree,
             'sharedscan_fixup($node, $ctx); ',
             undef,
             $ctx);
 
     # always label the left/right sides of nested loop
-    treeMap($plantree, 
+    treeMap($plantree,
             'nestedloop_fixup($node, $ctx); ',
             undef,
             $ctx);
 
     if (defined($glob_edge) && length($glob_edge))
     {
-        treeMap($plantree, 
+        treeMap($plantree,
                 'get_rows_out($node, $ctx, $glob_edge); ',
                 undef,
                 $ctx);
@@ -1883,7 +1883,7 @@ sub dotkid
         if (($docrunch != 0 ) && (scalar(@{$node->{child}} > 10)))
         {
             my $maxi = scalar(@{$node->{child}});
-            
+
             $maxi -= 2;
 
             for my $ii (2..$maxi)
@@ -1955,7 +1955,7 @@ sub dotlabel_detail
     {
         $frst = "first row: " . $node->{to_first};
     }
-    
+
     my $slice = $node->{slice};
     $slice = " "
         unless (defined($slice));
@@ -1969,7 +1969,7 @@ sub dotlabel_detail
         if (exists($node->{memory}))
         {
             $memstuff = " | { {" . $node->{memory} . "} } ";
-            # make multiline - split on comma and "Work_mem" 
+            # make multiline - split on comma and "Work_mem"
             # (using the vertical bar formatting character)
             $memstuff =~ s/\,/\,\| /gm;
             $memstuff =~ s/Work\_mem/\| Work\_mem/gm;
@@ -2000,9 +2000,9 @@ sub dotlabel
     my $color = scalar(@{$colortable});
     $color = $node->{slice}  if (exists($node->{slice}));
     $color =~ s/slice//;
-    
+
     $color = ($color) % (scalar(@{$colortable}));
-    
+
     # build list of node attributes
     my @attrlist;
     push @attrlist, "shape=record";
@@ -2022,7 +2022,7 @@ sub dotlabel
         my $edgecol = $glob_divcol{rdbu11}->[$node->{color_rank}];
         my $fillcol = $colortable->[$color];
 
-        if (defined($glob_statcolor)) 
+        if (defined($glob_statcolor))
         {
             if ($glob_statcolor =~ m/^t$/i)
             {
@@ -2100,27 +2100,27 @@ sub makedotfile
         print $outfh "   ranksep=.75; size = \"7.5,7.5\";\n\n \n";
         print $outfh "   {\n node [shape=plaintext, fontsize=16];\n";
         print $outfh "/* the time-line graph */\n";
-        
+
         print $outfh join(' -> ', @{$time_list} ), ";\n";
         print $outfh "}\n";
-        
+
         print $outfh "node [shape=box];\n";
-        
+
         while ( my ($kk, $vv) = each(%{$parse_ctx->{h_to_startoff}}))
         {
             print $outfh '{ rank = same; ' . $kk . '; ' . join("; ", @{$vv}) . "; }\n";
         }
-        
+
     }
 
     print $outfh "rankdir=$direction;\n";
 
     dotkid($plantree);
-    
+
     dotlabel($plantree);
-    
+
     print $outfh "\n}\n";
-    
+
 }
 
 1;

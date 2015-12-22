@@ -2,7 +2,7 @@
 #
 # $Header$
 #
-# Copyright (c) 2007, 2008, 2009 GreenPlum.  All rights reserved.  
+# Copyright (c) 2007, 2008, 2009 GreenPlum.  All rights reserved.
 # Author: Jeffrey I Cohen
 #
 #
@@ -25,7 +25,7 @@ use atmsort;
 
 =head1 NAME
 
-B<gpdiff.pl> - GreenPlum diff 
+B<gpdiff.pl> - GreenPlum diff
 
 =head1 SYNOPSIS
 
@@ -33,7 +33,7 @@ B<gpdiff.pl> [options] logfile [logfile...]
 
 Options:
 
-Normally, gpdiff takes the standard "diff" options and passes them 
+Normally, gpdiff takes the standard "diff" options and passes them
 directly to the diff program.  Try `diff --help' for more information
 on the standard options.  The following options are specific to gpdiff:
 
@@ -53,14 +53,14 @@ on the standard options.  The following options are specific to gpdiff:
     Print a brief help message and exits.
 
 =item B<-man>
-    
+
     Prints the manual page and exits.
 
 =item B<-version>
 
     Prints the gpdiff version and underlying diff version
 
-=item B<-gpd_ignore_headers> 
+=item B<-gpd_ignore_headers>
 
 gpdiff/atmsort expect Postgresql "psql-style" output for SELECT
 statements, with a two line header composed of the column names,
@@ -70,10 +70,10 @@ some formatting to adjust the column widths to match the size of the
 row output.  Setting this parameter causes gpdiff to ignore any
 differences in the column naming and format widths globally.
 
-=item B<-gpd_ignore_plans> 
+=item B<-gpd_ignore_plans>
 
 Specify this option to ignore any explain plan diffs between the
-input files. This will completely ignore any plan content in 
+input files. This will completely ignore any plan content in
 the input files thus masking differences in plans between the input files.
 
 =item B<-gpd_init> <file>
@@ -82,26 +82,26 @@ Specify an initialization file containing a series of directives
 (mainly for match_subs) that get applied to the input files.  To
 specify multiple initialization files, use multiple gpd_init arguments, eg:
 
-  -gpd_init file1 -gpd_init file2 
+  -gpd_init file1 -gpd_init file2
 
 =back
 
 =head1 DESCRIPTION
 
-gpdiff compares files using diff after processing them with atmsort.pl. 
-This comparison is designed to ignore certain Greenplum-specific 
+gpdiff compares files using diff after processing them with atmsort.pl.
+This comparison is designed to ignore certain Greenplum-specific
 informational messages, as well as handle the cases where query output
 order may differ for a multi-segment Greenplum database versus a
 single Postgresql instance.  Type "atmsort.pl --man" for more details.
-gpdiff is invoked by pg_regress as part of "make install-check".  
-In this case the diff options are something like: 
+gpdiff is invoked by pg_regress as part of "make install-check".
+In this case the diff options are something like:
 
  "-w -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE:".
 
-Like diff, gpdiff can compare two files, a file and directory, a 
+Like diff, gpdiff can compare two files, a file and directory, a
 directory and file, and two directories.  However, when gpdiff compares
 two directories, it only returns the exit status of the diff
-comparison of the final two files.  
+comparison of the final two files.
 
 =head1 BUGS
 
@@ -119,7 +119,7 @@ potential erroneous comparison.
 
 Jeffrey I Cohen
 
-Copyright (c) 2007, 2008, 2009 GreenPlum.  All rights reserved.  
+Copyright (c) 2007, 2008, 2009 GreenPlum.  All rights reserved.
 
 Address bug reports and comments to: jcohen@greenplum.com
 
@@ -143,9 +143,7 @@ my $glob_init_file = [];
 sub gpdiff_files
 {
     my ($f1, $f2, $d2d) = @_;
-
     my $need_equiv = 0;
-
     my @tmpfils;
 
     # need gnu diff on solaris
@@ -158,18 +156,17 @@ sub gpdiff_files
     {
         my $tmpnam;
 
-        for (;;) 
+        for (;;)
         {
             my $tmpfh;
-        
+
             $tmpnam = tmpnam();
             sysopen($tmpfh, $tmpnam, O_RDWR | O_CREAT | O_EXCL) && last;
         }
 
         push @tmpfils, $tmpnam;
-        
     }
-        
+
     my $newf1 = shift @tmpfils;
     my $newf2 = shift @tmpfils;
 
@@ -178,24 +175,24 @@ sub gpdiff_files
     if (defined($d2d) && exists($d2d->{equiv}))
     {
         # assume f1 and f2 are the same...
-	atmsort::atmsort_init(%glob_atmsort_args, DO_EQUIV => 'compare');
-	atmsort::run($f1, $newf1);
+        atmsort::atmsort_init(%glob_atmsort_args, DO_EQUIV => 'compare');
+        atmsort::run($f1, $newf1);
 
-	atmsort::atmsort_init(%glob_atmsort_args, DO_EQUIV => 'make');
-	atmsort::run($f2, $newf2);
+        atmsort::atmsort_init(%glob_atmsort_args, DO_EQUIV => 'make');
+        atmsort::run($f2, $newf2);
     }
     else
     {
-	atmsort::atmsort_init(%glob_atmsort_args);
-	atmsort::run($f1, $newf1);
-	print "$f1 - $newf1\n";
-	atmsort::run($f2, $newf2);
-	print "$f2 - $newf2\n";
+        atmsort::atmsort_init(%glob_atmsort_args);
+        atmsort::run($f1, $newf1);
+        print "$f1 - $newf1\n";
+        atmsort::run($f2, $newf2);
+        print "$f2 - $newf2\n";
     }
 
     my $args = join(" ", @ARGV, $newf1, $newf2);
 
-#	print "args: $args\n";
+#   print "args: $args\n";
 
     my $outi =`$ATMDIFF $args`;
 
@@ -259,7 +256,6 @@ sub gpdiff_files
     }
 
     return ($stat);
-
 }
 
 sub filefunc
@@ -277,29 +273,24 @@ sub filefunc
         my $dir = $f1;
         my ($dir_h, $stat);
 
-        if ( opendir($dir_h, $dir) ) 
+        if ( opendir($dir_h, $dir) )
         {
             my $fnam;
             while ($fnam = readdir($dir_h))
             {
                 # ignore ., ..
-                next
-                    unless ($fnam !~ m/^(\.)(\.)*$/);
+                next unless ($fnam !~ m/^(\.)(\.)*$/);
 
-                my $absname =
-                    File::Spec->rel2abs(
-                                        File::Spec->catfile(
-                                                            $dir,
-                                                            $fnam
-                                                            ));
+                my $absname = File::Spec->rel2abs(
+                                 File::Spec->catfile($dir, $fnam));
 
                 # specify that is a directory comparison
                 $d2d = {} unless (defined($d2d));
                 $d2d->{dir} = 1;
                 $stat = filefunc($absname, $f2, $d2d);
-            } # end while
+            }
             closedir $dir_h;
-        } # end if open
+        }
         return $stat;
     }
 
@@ -309,16 +300,10 @@ sub filefunc
         my $stat;
         my @foo = File::Spec->splitpath($f1);
 
-        return 0
-            unless (scalar(@foo));
+        return 0 unless (scalar(@foo));
         my $basenam = $foo[-1];
 
-        my $fnam = 
-            File::Spec->rel2abs(
-                                File::Spec->catfile(
-                                                    $f2,
-                                                    $basenam
-                                                    ));
+        my $fnam = File::Spec->rel2abs(File::Spec->catfile( $f2, $basenam));
 
         $stat = filefunc($f1, $fnam, $d2d);
 
@@ -331,16 +316,10 @@ sub filefunc
         my $stat;
         my @foo = File::Spec->splitpath($f2);
 
-        return 0
-            unless (scalar(@foo));
+        return 0 unless (scalar(@foo));
         my $basenam = $foo[-1];
 
-        my $fnam = 
-            File::Spec->rel2abs(
-                                File::Spec->catfile(
-                                                    $f1,
-                                                    $basenam
-                                                    ));
+        my $fnam = File::Spec->rel2abs( File::Spec->catfile( $f1, $basenam));
 
         $stat = filefunc($fnam, $f2, $d2d);
 
@@ -352,117 +331,110 @@ sub filefunc
 
 if (1)
 {
-    my $man			= 0;
-    my $help		= 0;
-    my $verzion		= 0;
-    my $pmsg		= "";
-	my @arg2;              # arg list for diff
-	my %init_dup;
+    my $man         = 0;
+    my $help        = 0;
+    my $verzion     = 0;
+    my $pmsg        = "";
+    my @arg2;              # arg list for diff
+    my %init_dup;
 
 #    getatm();
 
     # check for man or help args
     if (scalar(@ARGV))
     {
-		my $argc = -1;
-		my $maxarg = scalar(@ARGV);
+        my $argc = -1;
+        my $maxarg = scalar(@ARGV);
 
-		while (($argc+1) < $maxarg)
-		{
-			$argc++;
-			my $arg = $ARGV[$argc];
+        while (($argc+1) < $maxarg)
+        {
+            $argc++;
+            my $arg = $ARGV[$argc];
 
-			unless ($arg =~ m/^\-/)
-			{
-				# even if no dash, might be a value for a dash arg...
-				push @arg2, $arg;
-				next;
-			}
-			
-    		# ENGINF-180: ignore header formatting
-                        if ($arg =~ 
-				m/^\-(\-)*(gpd\_ignore\_headers|gp\_ignore\_headers)$/i)
-			{
-				$glob_ignore_headers = 1;
-				next;
-			}
-                        if ($arg =~ 
-				m/^\-(\-)*(gpd\_ignore\_plans|gp\_ignore\_plans)$/i)
-			{
-				$glob_ignore_plans = 1;
-				next;
-			}
-			if ($arg =~ 
-				m/^\-(\-)*(gpd\_init|gp\_init)(\=)*(.*)$/i)
-			{
-				if ($arg =~ m/\=/) # check if "=filename"
-				{
-					my @foo = split (/\=/, $arg, 2);
+            unless ($arg =~ m/^\-/)
+            {
+                # even if no dash, might be a value for a dash arg...
+                push @arg2, $arg;
+                next;
+            }
 
-					die "no init file"
-						unless (2 == scalar(@foo));
+            # ENGINF-180: ignore header formatting
+            if ($arg =~ m/^\-(\-)*(gpd\_ignore\_headers|gp\_ignore\_headers)$/i)
+            {
+                $glob_ignore_headers = 1;
+                next;
+            }
+            if ($arg =~ m/^\-(\-)*(gpd\_ignore\_plans|gp\_ignore\_plans)$/i)
+            {
+                $glob_ignore_plans = 1;
+                next;
+            }
+            if ($arg =~ m/^\-(\-)*(gpd\_init|gp\_init)(\=)*(.*)$/i)
+            {
+                if ($arg =~ m/\=/) # check if "=filename"
+                {
+                    my @foo = split (/\=/, $arg, 2);
 
-					my $init_file = pop @foo;
+                    die "no init file" unless (2 == scalar(@foo));
 
-					# ENGINF-200: allow multiple init files
-					if (exists($init_dup{$init_file}))
-					{
-						warn "duplicate init file \'$init_file\', skipping...";
-					}
-					else
-					{
-						push @{$glob_init_file}, $init_file;
-						
-						$init_dup{$init_file} = 1;
-					}
+                    my $init_file = pop @foo;
 
-				}
-				else # next arg must be init file
-				{
-					$argc++;
+                    # ENGINF-200: allow multiple init files
+                    if (exists($init_dup{$init_file}))
+                    {
+                        warn "duplicate init file \'$init_file\', skipping...";
+                    }
+                    else
+                    {
+                        push @{$glob_init_file}, $init_file;
 
-					die "no init file"
-						unless (defined($ARGV[$argc]));
+                        $init_dup{$init_file} = 1;
+                    }
+                }
+                else # next arg must be init file
+                {
+                    $argc++;
 
-					my $init_file = $ARGV[$argc];
+                    die "no init file" unless (defined($ARGV[$argc]));
 
-					# ENGINF-200: allow multiple init files
-					if (exists($init_dup{$init_file}))
-					{
-						warn "duplicate init file \'$init_file\', skipping...";
-					}
-					else
-					{
-						push @{$glob_init_file}, $init_file;
+                    my $init_file = $ARGV[$argc];
 
-						$init_dup{$init_file} = 1;
-					}
+                    # ENGINF-200: allow multiple init files
+                    if (exists($init_dup{$init_file}))
+                    {
+                        warn "duplicate init file \'$init_file\', skipping...";
+                    }
+                    else
+                    {
+                        push @{$glob_init_file}, $init_file;
 
-				}
-				next;
-			}
-			if ($arg =~ m/^\-(\-)*(v|version)$/)
-			{
-				$verzion = 1;
-				next;
-			}
-			if ($arg =~ m/^\-(\-)*(man|help|\?)$/i)
-			{
-				if ($arg =~ m/man/i)
-				{
-					$man = 1;
-				}
-				else
-				{
-					$help = 1;
-				}
-				next;
-			}
+                        $init_dup{$init_file} = 1;
+                    }
+                }
+                next;
+            }
+            if ($arg =~ m/^\-(\-)*(v|version)$/)
+            {
+                $verzion = 1;
+                next;
+            }
+            if ($arg =~ m/^\-(\-)*(man|help|\?)$/i)
+            {
+                if ($arg =~ m/man/i)
+                {
+                    $man = 1;
+                }
+                else
+                {
+                    $help = 1;
+                }
+                next;
+            }
 
-			# put all "dash" args on separate list for diff
-			push @arg2, $arg;
+            # put all "dash" args on separate list for diff
+            push @arg2, $arg;
 
-		} # end for
+        } # end for
     }
     else
     {
@@ -513,41 +485,39 @@ if (1)
             print STDERR "gpdiff: $fname: No such file or directory\n";
         }
     }
-    exit(2)
-        unless ((-e $f1) && (-e $f2));
+    exit(2) unless ((-e $f1) && (-e $f2));
 
-	# use the "stripped" arg list for diff
-	@ARGV = ();
+    # use the "stripped" arg list for diff
+    @ARGV = ();
 
-	# remove the filenames
-	pop @arg2;
-	pop @arg2;
+    # remove the filenames
+    pop @arg2;
+    pop @arg2;
 
-	push(@ARGV, @arg2);
+    push(@ARGV, @arg2);
 
-	# ENGINF-180: tell atmsort to ignore header formatting (globally)
-	if ($glob_ignore_headers)
-	{
-	    $glob_atmsort_args{IGNORE_HEADERS} = 1;
-	}
+    # ENGINF-180: tell atmsort to ignore header formatting (globally)
+    if ($glob_ignore_headers)
+    {
+        $glob_atmsort_args{IGNORE_HEADERS} = 1;
+    }
 
-	# Tell atmsort to ignore plan content if -gpd_ignore_plans is set
-	if ($glob_ignore_plans)
-	{
-	    $glob_atmsort_args{IGNORE_PLANS} = 1;
-	}
+    # Tell atmsort to ignore plan content if -gpd_ignore_plans is set
+    if ($glob_ignore_plans)
+    {
+        $glob_atmsort_args{IGNORE_PLANS} = 1;
+    }
 
-	# ENGINF-200: allow multiple init files
-	if (defined($glob_init_file) && scalar(@{$glob_init_file}))
-	{
-		# MPP-12262: test here, because we don't get status for atmsort call
-		for my $init_file (@{$glob_init_file})
-		{
-			die "no such file: $init_file"
-				unless (-e $init_file);
-		}
-		@{$glob_atmsort_args{INIT_FILES}} = @{$glob_init_file};
-	}
+    # ENGINF-200: allow multiple init files
+    if (defined($glob_init_file) && scalar(@{$glob_init_file}))
+    {
+        # MPP-12262: test here, because we don't get status for atmsort call
+        for my $init_file (@{$glob_init_file})
+        {
+            die "no such file: $init_file" unless (-e $init_file);
+        }
+        @{$glob_atmsort_args{INIT_FILES}} = @{$glob_init_file};
+    }
 
 
     exit(filefunc($f1, $f2));
