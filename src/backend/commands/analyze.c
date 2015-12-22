@@ -129,11 +129,8 @@ static void analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples,
 static void analyzeEstimateIndexpages(Oid relationOid, Oid indexOid, float4 *indexPages);
 
 /* Attribute-type related functions */
-static bool isOrderedAndHashable(Oid relationOid, const char *attributeName);
-static bool isBoolType(Oid relationOid, const char *attributeName);
-static bool isNotNull(Oid relationOid, const char *attributeName);
-static bool	isFixedWidth(Oid relationOid, const char *attributeName, float4 *width);
-static bool hasMaxDefined(Oid relationOid, const char *attributeName);
+static bool isOrderedAndHashable(Oid typid);
+static bool hasMaxDefined(Oid typid);
 
 /* Sampling related */
 static float4 estimateSampleSize(Oid relationOid, const char *attributeName, float4 relTuples);
@@ -214,6 +211,9 @@ typedef struct
 {
 	int values_cnt;
 	int null_cnt;
+	int nonnull_cnt;
+	double total_width;
+	Form_pg_attribute attr;
 	MemoryContext resultColumnMemContext;
 	Datum *result;
 } ResultColumnSpec;
@@ -1282,26 +1282,41 @@ static void spiCallback_getSampleColumn(void *clientData)
 
     MemoryContext callerContext = MemoryContextSwitchTo(spec->resultColumnMemContext);
     Form_pg_attribute attr = SPI_tuptable->tupdesc->attrs[attnum-1];
+    spec->attr = (Form_pg_attribute) palloc(ATTRIBUTE_TUPLE_SIZE);
+    memcpy(spec->attr, attr, ATTRIBUTE_TUPLE_SIZE);
 
     bool isVarlena = (!attr->attbyval) && attr->attlen == -1;
+    bool is_varwidth = (!attr->attbyval) && attr->attlen < 0;
 
     for (i = 0; i < SPI_processed; i++)
     {
     	Datum dValue = heap_getattr(SPI_tuptable->vals[i], attnum, SPI_tuptable->tupdesc, &isNull);
-    	Datum deToasted = dValue;
 
     	if (isNull)
     	{
     		spec->null_cnt++;
     		continue;
     	}
+    	spec->nonnull_cnt++;
 
 		if (isVarlena)
 		{
-			deToasted = PointerGetDatum(PG_DETOAST_DATUM(dValue));
+			spec->total_width += VARSIZE_ANY(DatumGetPointer(dValue));
+
+			/* If the value is too width, we do not detoast it nor add it to the datum array */
+			if (toast_raw_datum_size(dValue) > COLUMN_WIDTH_THRESHOLD)
+			{
+				continue;
+			}
+			dValue = PointerGetDatum(PG_DETOAST_DATUM(dValue));
+		}
+		else if (is_varwidth)
+		{
+			/* must be cstring */
+			spec->total_width += strlen(DatumGetCString(dValue)) + 1;
 		}
 
-		spec->result[spec->values_cnt++] = deToasted;
+		spec->result[spec->values_cnt++] = dValue;
     }
 
     MemoryContextSwitchTo(callerContext);
@@ -1679,111 +1694,59 @@ static void updateReltuplesRelpagesInCatalog(Oid relationOid, float4 relTuples, 
  * Does this attribute have a total ordering defined i.e. does it have "<", "="
  * and is the attribute hashable?
  * Input:
- * 	relationOid - relation's Oid
- * 	attributeName - attribute in question
+ * 	typid - oid of column type
  * Output:
  * 	true if operators are defined and the attribute type is hashable, false otherwise. 
  */
-static bool isOrderedAndHashable(Oid relationOid, const char *attributeName)
+static bool isOrderedAndHashable(Oid typid)
 {
-	HeapTuple	attributeTuple = NULL;
-	Form_pg_attribute attribute = NULL;
 	Operator	equalityOperator = NULL;
 	Operator	ltOperator = NULL;
 	bool		result = true;
-	cqContext  *pcqCtx;
-	
-	pcqCtx = caql_getattname_scan(NULL, relationOid, attributeName);
-
-	attributeTuple = caql_get_current(pcqCtx);
-
-	Assert(HeapTupleIsValid(attributeTuple));	
-	attribute = (Form_pg_attribute) GETSTRUCT(attributeTuple);	
 
 	/* Does type have "=" operator */
-	equalityOperator = equality_oper(attribute->atttypid, true);
+	equalityOperator = equality_oper(typid, true);
 	if (!equalityOperator)
 		result = false;
 	else
 		ReleaseOperator(equalityOperator);
 
 	/* Does type have "<" operator */
-	ltOperator = ordering_oper(attribute->atttypid, true);
+	ltOperator = ordering_oper(typid, true);
 	if (!ltOperator)
 		result = false;
 	else
 		ReleaseOperator(ltOperator);
 	
 	/* Is the attribute hashable?*/
-	if (!isGreenplumDbHashable(attribute->atttypid))
+	if (!isGreenplumDbHashable(typid))
 		result = false;
-	
-	caql_endscan(pcqCtx);
 	
 	return result;
 }
+
 /**
  * Does attribute have "max" aggregate function defined? We can compute histogram
  * only if this function is defined.
  * Input:
- * 	relationOid - relation's Oid
- * 	attributeName - attribute in question
+ * 	typid - oid of column type
  * Output:
  * 	true if "max" function is defined, false otherwise. 
  */
-static bool hasMaxDefined(Oid relationOid, const char *attributeName)
+static bool hasMaxDefined(Oid typid)
 {
-	HeapTuple	attributeTuple = NULL;
-	Form_pg_attribute attribute = NULL;
 	Oid			maxAggregateFunction = InvalidOid;
 	bool		result = true;
 	List		*funcNames = NIL;
-	cqContext	*pcqCtx;
-
-	pcqCtx = caql_getattname_scan(NULL, relationOid, attributeName);
-
-	attributeTuple = caql_get_current(pcqCtx);
-
-	Assert(HeapTupleIsValid(attributeTuple));	
-	attribute = (Form_pg_attribute) GETSTRUCT(attributeTuple);	
 	
 	/* Does type have "max" operator */
 	funcNames = list_make1(makeString("max"));
 	maxAggregateFunction = LookupFuncName(funcNames, 1 /* nargs to function */, 
-										&attribute->atttypid, true);
+										&typid, true);
 	if (!OidIsValid(maxAggregateFunction))
 		result = false;
-	
-	caql_endscan(pcqCtx);
+
 	return result;
-}
-
-
-/**
- * Is the attribute of type boolean? 
- * Input:
- * 	relationOid - relation's Oid
- * 	attributeName - attribute in question
- * Output:
- * 	true or false
- */
-static bool isBoolType(Oid relationOid, const char *attributeName)
-{
-	HeapTuple	attributeTuple = NULL;
-	Form_pg_attribute attribute = NULL;
-	bool		isBool = false;
-	cqContext  *pcqCtx;
-
-	pcqCtx = caql_getattname_scan(NULL, relationOid, attributeName);
-
-	attributeTuple = caql_get_current(pcqCtx);
-
-	Assert(HeapTupleIsValid(attributeTuple));
-	attribute = (Form_pg_attribute) GETSTRUCT(attributeTuple);
-	isBool = (attribute->atttypid == BOOLOID);
-
-	caql_endscan(pcqCtx);
-	return isBool;
 }
 
 /**
@@ -1939,36 +1902,6 @@ static ArrayType * SPIResultToArray(int resultAttributeNumber, MemoryContext all
 }
 
 /**
- * This method determines if a particular attribute has the "not null" property.
- * Input:
- * 	relationOid - relation's oid
- * 	attributeName
- * Output:
- * 	true if attribute is not-null. false otherwise.
- */
-
-static bool isNotNull(Oid relationOid, const char *attributeName)
-{
-	HeapTuple	attributeTuple = NULL;
-	Form_pg_attribute attribute = NULL;
-	bool		nonNull = false;
-	cqContext  *pcqCtx;
-
-	pcqCtx = caql_getattname_scan(NULL, relationOid, attributeName);
-
-	attributeTuple = caql_get_current(pcqCtx);
-	
-	Assert(HeapTupleIsValid(attributeTuple));
-	attribute = (Form_pg_attribute) GETSTRUCT(attributeTuple);
-	nonNull = attribute->attnotnull;
-
-	caql_endscan(pcqCtx);
-
-	return (nonNull);
-}
-
-
-/**
  * Computes the absolute number of NULLs in the sample table.
  * Input:
  *  sampleTableOid - sample table to query on
@@ -2022,46 +1955,6 @@ static float4 analyzeNullCount(Oid sampleTableOid, Oid relationOid, const char *
 	pfree(str.data);
 
 	return nullcount;
-}
-
-/**
- * Is the attribute fixed-width? If so, this method extracts the width of the attribute.
- * Input:
- * 	relationOid	- relation's oid
- * 	attributeName - name of attribute
- * Output:
- * 	returns true if fixed width
- * 	width - must be non-null. sets width if it returns true.
- */
-
-static bool	isFixedWidth(Oid relationOid, const char *attributeName, float4 *width)
-{
-	HeapTuple	attributeTuple = NULL;
-	Form_pg_attribute attribute = NULL;
-	float4	avgwidth = 0.0;
-	cqContext	*pcqCtx;
-
-	Assert(width);
-	
-	pcqCtx = caql_getattname_scan(NULL, relationOid, attributeName);
-
-	attributeTuple = caql_get_current(pcqCtx);
-
-	Assert(HeapTupleIsValid(attributeTuple));
-	attribute = (Form_pg_attribute) GETSTRUCT(attributeTuple);
-	avgwidth = get_typlen(attribute->atttypid);
-
-	caql_endscan(pcqCtx);
-	
-	if (avgwidth > 0)
-	{
-		*width = avgwidth;
-		return true;
-	}
-	else 
-	{
-		return false;
-	}
 }
 
 /**
@@ -2596,9 +2489,9 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 	Assert(sampleTableRelTuples > 0.0);
 	
 	/* Default values */
-	stats->ndistinct = -1.0;
 	stats->nullFraction = 0.0;
 	stats->avgWidth = 0.0;
+	stats->ndistinct = -1.0;
 	stats->mcv = NULL;
 	stats->freq = NULL;
 	stats->hist = NULL;
@@ -2616,6 +2509,7 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 			quote_identifier(attributeName), quote_identifier(sampleSchemaName), quote_identifier(sampleTableName));
 	ResultColumnSpec spec;
 	spec.null_cnt = 0;
+	spec.nonnull_cnt = 0;
 	spec.values_cnt = 0;
 	spec.resultColumnMemContext = CurrentMemoryContext;
 	spec.result = values;
@@ -2630,9 +2524,9 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 	elog(INFO, "null count is %d", spec.null_cnt);
 	elog(INFO, "value count is %d", spec.values_cnt);
 
-	INSTR_TIME_SET_CURRENT(starttime);
+	Form_pg_attribute attr = spec.attr;
 
-	if (isNotNull(relationOid, attributeName))
+	if (attr->attnotnull)
 	{
 		stats->nullFraction = 0.0;
 	}
@@ -2651,45 +2545,36 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 		stats->nullFraction = Min(spec.null_cnt / sampleTableRelTuples, 1.0);
 	}
 
-	INSTR_TIME_SET_CURRENT(endtime);
-	INSTR_TIME_SUBTRACT(endtime, starttime);
-	elog(INFO, "time to collect null frac the old way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
-
-
 	elog(elevel, "nullfrac = %.6f", stats->nullFraction);
 	
-	if (computeWidth && !isFixedWidth(relationOid, attributeName, &stats->avgWidth))
+	bool is_varwidth = !attr->attbyval && attr->attlen < 0;
+	if (computeWidth)
 	{
-		stats->avgWidth = analyzeComputeAverageWidth(sampleTableOid, relationOid, attributeName, relTuples, mergeStats);
+		Assert(spec.nonnull_cnt > 0); /* we should not be here if all values are null */
+		stats->avgWidth = is_varwidth ? spec.total_width / (double) spec.nonnull_cnt : attr->attlen;
 	}
 	
 	elog(elevel, "avgwidth = %f", stats->avgWidth);		
 	
-	if (!isOrderedAndHashable(relationOid, attributeName))
+	if (stats->avgWidth > COLUMN_WIDTH_THRESHOLD || !isOrderedAndHashable(attr->atttypid))
 	{
+		/* We do not collect advanced stats if the column is too wide or not ordered-and-hashable */
 		computeDistinct = false;
 		computeMCV = false;
 		computeHist = false;
 	}
-	
-	if (!hasMaxDefined(relationOid, attributeName))
+	else if (attr->atttypid == BOOLOID)
 	{
-		computeHist = false;
-	}
-
-	if (isBoolType(relationOid, attributeName))
-	{
+		/* For boolean type we only need to collect MCV */
 		stats->ndistinct = 2;
 		computeDistinct = false;
 		computeHist = false;
 	}
-	
-	if (stats->avgWidth > COLUMN_WIDTH_THRESHOLD)
+	else if (!hasMaxDefined(attr->atttypid))
 	{
-		/* Extremely wide columns are considered to be fully distinct. See comments
-		 * against COLUMN_WIDTH_THRESHOLD */
-		computeDistinct = false;
-		computeMCV = false;
+		/* There may be types that have comparison operator defined but no max agg function defined.
+		 * We skip collecting histogram for such types.
+		 */
 		computeHist = false;
 	}
 
