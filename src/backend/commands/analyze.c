@@ -74,8 +74,6 @@
 #include "utils/debugbreak.h"
 #include "nodes/makefuncs.h"
 
-#include "commands/analyzeutils.h"
-
 /**
  * Statistics related parameters.
  */
@@ -114,7 +112,6 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 		float4 relTuples, 
 		Oid sampleTableOid, 
 		float4 sampleTableRelTuples, 
-		bool mergeStats,
 		AttributeStatistics *stats);
 static List* analyzableRelations(bool rootonly);
 static bool analyzePermitted(Oid relationOid);
@@ -159,18 +156,11 @@ static float4 analyzeComputeNDistinctAbsolute(Oid sampleTableOid,
 		const char *attributeName);
 static float4 analyzeComputeNRepeating(Oid relationOid, 
 		const char *attributeName);
-static float4 analyzeNullCount(Oid sampleTableOid, Oid relationOid, const char *attributeName, bool mergeStats);
-static float4 analyzeComputeAverageWidth(Oid sampleTableOid,
-		Oid relationOid,
-		const char *attributeName,
-		float4 relTuples,
-		bool mergeStats);
 static void analyzeComputeMCV(Oid relationOid, 
 		Oid sampleTableOid,
 		const char *attributeName,
 		float4 relTuples,
 		unsigned int nEntries,
-		bool mergeStats,
 		ArrayType **mcv,
 		ArrayType **freq);
 static void analyzeComputeHistogram(Oid relationOid,  
@@ -178,14 +168,8 @@ static void analyzeComputeHistogram(Oid relationOid,
 		const char *attributeName,
 		float4 relTuples,
 		unsigned int nEntries,
-		bool mergeStats,
 		ArrayType *mcv,
 		ArrayType **hist);
-static float4 analyzeComputeNDistinctByLargestPartition(Oid relationOid,
-		float4 relTuples,
-		const char *attributeName);
-static StringInfo getStringLeafPartitionOids(Oid relationOid);
-static Oid get_largest_leaf_partition(Oid rootOid);
 
 /* Catalog related */
 static void updateAttributeStatisticsInCatalog(Oid relationOid, const char *attributeName, 
@@ -907,25 +891,6 @@ static void analyzeRelation(Relation relation, List *lAttributeNames, bool rooto
 	}
 
 	/**
-	 * For an interior (mid-level) partition, we merge the stats from the leaf children under it.
-	 * The stats at mid-level will be used by the new query optimizer when querying mid-level partitions
-	 * directly. The merge of stats has to be triggered from the root level.
-	 */
-	if (rel_part_status(relationOid) == PART_STATUS_INTERIOR)
-	{
-		foreach (le, lAttributeNames)
-		{
-			AttributeStatistics	stats;
-			const char *lAttributeName = (const char *) lfirst(le);
-			elog(elevel, "ANALYZE merging statistics on attribute %s", lAttributeName);
-			analyzeComputeAttributeStatistics(relationOid, lAttributeName, estimatedRelTuples, relationOid, estimatedRelTuples, true /*mergeStats*/, &stats);
-			updateAttributeStatisticsInCatalog(relationOid, lAttributeName, &stats);
-		}
-
-		return;
-	}
-
-	/**
 	 * Determine how many rows need to be sampled.
 	 */
 	foreach (le, lAttributeNames)
@@ -985,9 +950,9 @@ static void analyzeRelation(Relation relation, List *lAttributeNames, bool rooto
 		const char *lAttributeName = (const char *) lfirst(le);
 		elog(elevel, "ANALYZE computing statistics on attribute %s", lAttributeName);
 		if (sampleTableRequired)			
-			analyzeComputeAttributeStatistics(relationOid, lAttributeName, estimatedRelTuples, sampleTableOid, sampleTableRelTuples, false /*mergeStats*/, &stats);
+			analyzeComputeAttributeStatistics(relationOid, lAttributeName, estimatedRelTuples, sampleTableOid, sampleTableRelTuples, &stats);
 		else
-			analyzeComputeAttributeStatistics(relationOid, lAttributeName, estimatedRelTuples, relationOid, estimatedRelTuples, false /*mergeStats*/, &stats);
+			analyzeComputeAttributeStatistics(relationOid, lAttributeName, estimatedRelTuples, relationOid, estimatedRelTuples, &stats);
 		updateAttributeStatisticsInCatalog(relationOid, lAttributeName, &stats);
 		MemoryContextResetAndDeleteChildren(col_context);
 	}
@@ -1902,126 +1867,6 @@ static ArrayType * SPIResultToArray(int resultAttributeNumber, MemoryContext all
 }
 
 /**
- * Computes the absolute number of NULLs in the sample table.
- * Input:
- *  sampleTableOid - sample table to query on
- * 	relationOid - original table
- * 	attributeName  - attribute in question
- * 	mergeStats - for root or interior partition, whether to merge stats from leaf children partitions
- * Output:
- * 	Number of NULLs
- */
-static float4 analyzeNullCount(Oid sampleTableOid, Oid relationOid, const char *attributeName, bool mergeStats)
-{
-	StringInfoData str;
-	float4	nullcount = 0.0;
-
-	if (mergeStats)
-	{
-		/* To merge stats, we compute the null fraction of this column
-		 * by taking the average of null fractions of the leaf children partitions.
-		 */
-		StringInfo str2 = getStringLeafPartitionOids(relationOid);
-		initStringInfo(&str);
-		appendStringInfo(&str, "select sum(stanullfrac*reltuples)::float4 from pg_statistic, pg_class where "
-				"pg_class.oid = pg_statistic.starelid and starelid %s and staattnum = %d",
-				str2->data, get_attnum(relationOid, attributeName));
-
-		spiExecuteWithCallback(str.data, false /*readonly*/, 0 /*tcount */,
-									spiCallback_getSingleResultRowColumnAsFloat4, &nullcount);
-		pfree(str2->data);
-	}
-
-	else
-	{
-		const char *schemaName = NULL;
-		const char *tableName = NULL;
-
-		schemaName = get_namespace_name(get_rel_namespace(sampleTableOid)); //must be pfreed
-		tableName = get_rel_name(sampleTableOid); // must be pfreed
-
-		initStringInfo(&str);
-		appendStringInfo(&str, "select count(*)::float4 from %s.%s as Ta where Ta.%s is null",
-				quote_identifier(schemaName),
-				quote_identifier(tableName),
-				quote_identifier(attributeName));
-
-		spiExecuteWithCallback(str.data, false /*readonly*/, 0 /*tcount */,
-									spiCallback_getSingleResultRowColumnAsFloat4, &nullcount);
-		pfree((void *) tableName);
-		pfree((void *) schemaName);
-	}
-
-	pfree(str.data);
-
-	return nullcount;
-}
-
-/**
- * Computes average width of an attribute. This uses the built-in pg_column_size.
- * Input:
- * 	sampleTableOid - relation on which to compute average width.
- * 	relationOid - original table
- * 	attributeName - name of attribute
- * 	sampleTableRelTuples - size of relation
- * 	mergeStats - for root or interior partition, whether to merge stats from leaf children partitions
- * Output:
- * 	Average width of attribute.
- */
-static float4 analyzeComputeAverageWidth(Oid sampleTableOid,
-										Oid relationOid,
-										const char *attributeName,
-										float4 relTuples,
-										bool mergeStats)
-{
-	StringInfoData str;
-	float4	avgwidth = 0.0;
-
-	if (mergeStats)
-	{
-		/* To merge stats, we compute the average width of this column
-		 * by taking the average of average width of the leaf children partitions.
-		 */
-		Assert(0.0 < relTuples);
-		StringInfo str2 = getStringLeafPartitionOids(relationOid);
-		initStringInfo(&str);
-		appendStringInfo(&str, "select (sum(stawidth*reltuples)/%f)::float4 from pg_statistic, pg_class where "
-				"pg_class.oid = pg_statistic.starelid and starelid %s and staattnum = %d",
-				relTuples, str2->data, get_attnum(relationOid, attributeName));
-
-		spiExecuteWithCallback(str.data, false /*readonly*/, 0 /*tcount*/,
-									spiCallback_getSingleResultRowColumnAsFloat4, &avgwidth);
-		pfree(str2->data);
-	}
-
-	else
-	{
-		const char *sampleSchemaName = NULL;
-		const char *sampleTableName = NULL;
-
-		sampleSchemaName = get_namespace_name(get_rel_namespace(sampleTableOid)); //must be pfreed
-		sampleTableName = get_rel_name(sampleTableOid); // must be pfreed
-
-		initStringInfo(&str);
-		appendStringInfo(&str, "select avg(pg_column_size(Ta.%s))::float4 from %s.%s as Ta where Ta.%s is not null",
-				quote_identifier(attributeName),
-				quote_identifier(sampleSchemaName),
-				quote_identifier(sampleTableName),
-				quote_identifier(attributeName));
-
-		spiExecuteWithCallback(str.data, false /*readonly*/, 0 /*tcount */,
-									spiCallback_getSingleResultRowColumnAsFloat4, &avgwidth);
-
-		pfree((void *) sampleTableName);
-		pfree((void *) sampleSchemaName);
-	}
-
-	pfree(str.data);
-
-	return avgwidth;
-}
-
-/**
  * Computes the most common values and their frequencies for relation.
  * Input:
  * 	relationOid - relation's oid
@@ -2029,7 +1874,6 @@ static float4 analyzeComputeAverageWidth(Oid sampleTableOid,
  * 	attributeName - attribute in question
  * 	relTuples - number of rows in relation
  * 	nEntries  - number of MCV entries
- * 	mergeStats - for root or interior partition, whether to merge stats from leaf children partitions
  * Output:
  * 	mcv - array of most common values (type is the same as attribute type)
  * 	freq - array of float4's
@@ -2039,61 +1883,46 @@ static void analyzeComputeMCV(Oid relationOid,
 		const char *attributeName,
 		float4 relTuples,
 		unsigned int nEntries,
-		bool mergeStats,
 		ArrayType **mcv,
 		ArrayType **freq)
 {
-	if (mergeStats)
-	{
-		/* for partitioned table, we aggregate the MCVs/Freqs of the leaf partitions
-		 to compute MCVs/Freqs of the interior or root partition */
-		ArrayType *result[2];
-		AttrNumber attnum = get_attnum(relationOid, attributeName);
-		aggregate_leaf_partition_MCVs(relationOid, attnum, nEntries, result);
+	StringInfoData str;
+	const char *sampleSchemaName = NULL;
+	const char *sampleTableName = NULL;
+	ArrayType *spiResult[2];
+	EachResultColumnAsArraySpec spec;
 
-		*mcv = result[0];
-		*freq = result[1];
-	}
-	else
-	{
-		StringInfoData str;
-		const char *sampleSchemaName = NULL;
-		const char *sampleTableName = NULL;
-		ArrayType *spiResult[2];
-		EachResultColumnAsArraySpec spec;
+	Assert(relTuples > 0.0);
+	Assert(nEntries > 0);
 
-		Assert(relTuples > 0.0);
-		Assert(nEntries > 0);
+	sampleSchemaName = get_namespace_name(get_rel_namespace(sampleTableOid)); //must be pfreed
+	sampleTableName = get_rel_name(sampleTableOid); // must be pfreed
 
-		sampleSchemaName = get_namespace_name(get_rel_namespace(sampleTableOid)); //must be pfreed
-		sampleTableName = get_rel_name(sampleTableOid); // must be pfreed
-
-		initStringInfo(&str);
-		appendStringInfo(&str, "select Ta.%s as v, count(Ta.%s)::float4/%f::float4 as f from %s.%s as Ta "
-				"where Ta.%s is not null group by (Ta.%s) order by f desc limit %u",
-				quote_identifier(attributeName),
-				quote_identifier(attributeName),
-				relTuples,
-				quote_identifier(sampleSchemaName),
-				quote_identifier(sampleTableName),
-				quote_identifier(attributeName),
-				quote_identifier(attributeName),
-				nEntries);
+	initStringInfo(&str);
+	appendStringInfo(&str, "select Ta.%s as v, count(Ta.%s)::float4/%f::float4 as f from %s.%s as Ta "
+			"where Ta.%s is not null group by (Ta.%s) order by f desc limit %u",
+			quote_identifier(attributeName),
+			quote_identifier(attributeName),
+			relTuples,
+			quote_identifier(sampleSchemaName),
+			quote_identifier(sampleTableName),
+			quote_identifier(attributeName),
+			quote_identifier(attributeName),
+			nEntries);
 
 
-		spec.numColumns = 2;
-		spec.output = spiResult;
-		spec.memoryContext = CurrentMemoryContext;
-		spiExecuteWithCallback(str.data, false /*readonly*/, 0 /*tcount */,
-									spiCallback_getEachResultColumnAsArray, &spec);
+	spec.numColumns = 2;
+	spec.output = spiResult;
+	spec.memoryContext = CurrentMemoryContext;
+	spiExecuteWithCallback(str.data, false /*readonly*/, 0 /*tcount */,
+								spiCallback_getEachResultColumnAsArray, &spec);
 
-		*mcv = spiResult[0]; /* first attribute of result are mcvs */
-		*freq = spiResult[1]; /* second attribute of result are freqs */
+	*mcv = spiResult[0]; /* first attribute of result are mcvs */
+	*freq = spiResult[1]; /* second attribute of result are freqs */
 
-		pfree(str.data);
-		pfree((void *) sampleTableName);
-		pfree((void *) sampleSchemaName);
-	}
+	pfree(str.data);
+	pfree((void *) sampleTableName);
+	pfree((void *) sampleSchemaName);
 
 	return;
 }
@@ -2106,7 +1935,6 @@ static void analyzeComputeMCV(Oid relationOid,
  * 	attributeName - attribute
  * 	relTuples 	 - estimated number of tuples in relation
  * 	nEntries	 - number of histogram entries requested
- * 	mergeStats - for root or interior partition, whether to merge stats from leaf children partitions
  * 	mcv			 - most common values calculated. these must be excluded before calculating
  * 				   histogram. this may be null.
  * Output:
@@ -2117,79 +1945,65 @@ static void analyzeComputeHistogram(Oid relationOid,
 		const char *attributeName,
 		float4 relTuples,
 		unsigned int nEntries,
-		bool mergeStats,
 		ArrayType *mcv,
 		ArrayType **hist)
 {
-	if (mergeStats)
+	StringInfoData str;
+	unsigned int bucketSize = 0;
+	EachResultColumnAsArraySpec spec;
+	StringInfoData whereClause;
+
+	Assert(relTuples > 0.0);
+	Assert(nEntries > 0);
+
+	bucketSize = relTuples / nEntries;
+
+	if (bucketSize <= 1) /* histogram will be empty if bucketSize <= 1 */
 	{
-		/* for partitioned table, we aggregate the histogram of the leaf partitions
-		 to compute histogram of the interior or root partition */
-		ArrayType *result = NULL;
-		AttrNumber attnum = get_attnum(relationOid, attributeName);
-		aggregate_leaf_partition_histograms(relationOid, attnum, nEntries, &result);
-
-		*hist = result;
+		*hist = NULL;
+		return;
 	}
-	else
-	{
-		StringInfoData str;
-		unsigned int bucketSize = 0;
-		EachResultColumnAsArraySpec spec;
-		StringInfoData whereClause;
 
-		Assert(relTuples > 0.0);
-		Assert(nEntries > 0);
+	const char *sampleSchemaName = NULL;
+	const char *sampleTableName = NULL;
+	sampleSchemaName = get_namespace_name(get_rel_namespace(sampleTableOid)); /* must be pfreed */
+	sampleTableName = get_rel_name(sampleTableOid); /* must be pfreed */
 
-		bucketSize = relTuples / nEntries;
+	initStringInfo(&str);
+	initStringInfo(&whereClause);
+	appendStringInfo(&whereClause, "%s is not null", quote_identifier(attributeName));
 
-		if (bucketSize <= 1) /* histogram will be empty if bucketSize <= 1 */
-		{
-			*hist = NULL;
-			return;
-		}
+	/**
+	 * This query orders the table by rank on the value and chooses values that occur every
+	 * 'bucketSize' interval. It also chooses the maximum value from the relation. It then
+	 * removes duplicate values and orders the values in ascending order. This corresponds to
+	 * the histogram.
+	 */
 
-		const char *sampleSchemaName = NULL;
-		const char *sampleTableName = NULL;
-		sampleSchemaName = get_namespace_name(get_rel_namespace(sampleTableOid)); /* must be pfreed */
-		sampleTableName = get_rel_name(sampleTableOid); /* must be pfreed */
+	appendStringInfo(&str, "select v from ("
+			"select Ta.%s as v, row_number() over (order by Ta.%s) as r from %s.%s as Ta where %s "
+			"union select max(Tb.%s) as v, 1 as r from %s.%s as Tb where %s) as foo "
+			"where r %% %u = 1 group by v order by v",
+			quote_identifier(attributeName),
+			quote_identifier(attributeName),
+			quote_identifier(sampleSchemaName),
+			quote_identifier(sampleTableName),
+			whereClause.data,
+			quote_identifier(attributeName),
+			quote_identifier(sampleSchemaName),
+			quote_identifier(sampleTableName),
+			whereClause.data,
+			bucketSize);
 
-		initStringInfo(&str);
-		initStringInfo(&whereClause);
-		appendStringInfo(&whereClause, "%s is not null", quote_identifier(attributeName));
+	spec.numColumns = 1;
+	spec.output = hist;
+	spec.memoryContext = CurrentMemoryContext;
 
-		/**
-		 * This query orders the table by rank on the value and chooses values that occur every
-		 * 'bucketSize' interval. It also chooses the maximum value from the relation. It then
-		 * removes duplicate values and orders the values in ascending order. This corresponds to
-		 * the histogram.
-		 */
-
-		appendStringInfo(&str, "select v from ("
-				"select Ta.%s as v, row_number() over (order by Ta.%s) as r from %s.%s as Ta where %s "
-				"union select max(Tb.%s) as v, 1 as r from %s.%s as Tb where %s) as foo "
-				"where r %% %u = 1 group by v order by v",
-				quote_identifier(attributeName),
-				quote_identifier(attributeName),
-				quote_identifier(sampleSchemaName),
-				quote_identifier(sampleTableName),
-				whereClause.data,
-				quote_identifier(attributeName),
-				quote_identifier(sampleSchemaName),
-				quote_identifier(sampleTableName),
-				whereClause.data,
-				bucketSize);
-
-		spec.numColumns = 1;
-		spec.output = hist;
-		spec.memoryContext = CurrentMemoryContext;
-
-		spiExecuteWithCallback(str.data, false /*readonly*/, 0 /*tcount */,
-									spiCallback_getEachResultColumnAsArray, &spec);
-		pfree(str.data);
-		pfree((void *) sampleTableName);
-		pfree((void *) sampleSchemaName);
-	}
+	spiExecuteWithCallback(str.data, false /*readonly*/, 0 /*tcount */,
+								spiCallback_getEachResultColumnAsArray, &spec);
+	pfree(str.data);
+	pfree((void *) sampleTableName);
+	pfree((void *) sampleSchemaName);
 
 	return;
 }
@@ -2299,167 +2113,6 @@ static void analyzeComputeNDistinctBySample
 	}
 }
 
-/* Aggregating ndistinct of leaf partitions to figure out the root or interior
- * partition table ndistinct without actual data access.
- * We assume that the leaf stats are already in the catalog.
- * This approach has its limitation - we are trying to infer parent table ndistinct
- * by observing the ndistinct of the largest leaf partition.
- */
-static float4
-analyzeComputeNDistinctByLargestPartition
-	(
-	Oid relationOid,
-	float4 relTuples,
-	const char *attributeName
-	)
-{
-	float4 result = 0;
-	AttrNumber attnum = get_attnum(relationOid, attributeName);
-
-	/* For partition key in single-level single-partition key hierarchy,
-	 * the values for each partition must be disjoint. Therefore we sum
-	 * up the ndistinct from every partition. This is also true for the
-	 * mid-level partitions that are one level above the leaf level.
-	 */
-	PartStatus ps = rel_part_status(relationOid);
-	bool oneLevelAboveLeaf = true;
-	List *lpart_keys = NIL;
-
-	Assert(PART_STATUS_ROOT == ps || PART_STATUS_INTERIOR == ps);
-
-	if (PART_STATUS_ROOT == ps)
-	{
-		lpart_keys = rel_partition_key_attrs(relationOid);
-	}
-	else /* PART_STATUS_INTERIOR == ps */
-	{
-		List *lpart_keys_all_level = rel_partition_keys_ordered(rel_partition_get_master(relationOid));
-		int nlevels = list_length(lpart_keys_all_level); /* total number of partitioning levels, each level has one or more partition keys */
-		List *lpath_relids = rel_get_part_path1(relationOid); /* list of Oids starting from this node (including) and up to the root (excluding) */
-		int nlevels_up = list_length(lpath_relids); /* number of levels above this node */
-		lpart_keys = (List*) list_nth(lpart_keys_all_level, nlevels_up); /* partition key(s) of this level */
-		if (nlevels != nlevels_up + 1)
-		{
-			oneLevelAboveLeaf = false;
-		}
-	}
-
-	if (oneLevelAboveLeaf && 1 == list_length(lpart_keys) && attnum == linitial_int(lpart_keys))
-	{
-		List *lRelOids = rel_get_leaf_children_relids(relationOid);
-		ListCell *lc = NULL;
-		foreach(lc, lRelOids)
-		{
-			Oid partOid = lfirst_oid(lc);
-			float4 partNDV = get_attdistinct(partOid, attnum);
-			if (partNDV < 0.0)
-			{
-				float4 partReltuples = get_rel_reltuples(partOid);
-				result += (-1.0) * partNDV * partReltuples;
-			}
-			else
-			{
-				result += partNDV;
-			}
-		}
-
-		pfree(lpart_keys);
-
-		return result;
-	}
-
-
-	/* For non-partition key column or composition partition keys, we try to reason with the
-	 * ndistinct of the largest leaf partition.
-	 * 1.  if ndistinct<=-1.0 in the child partition, the column is a unique column in the child partition. We
-	 * 	   expect the column to remain distinct in the root as well.
-	 * 2.  if -1.0 < ndistinct < 0.0, the absolute number of ndistinct values in the child partition is a fraction
-	 *     of the number of rows in the partition. We expect that the absolute number of ndistinct in the root
-	 *     to stay the same. Therefore, we convert this to a positive number.
-	 * 3.  if ndistinct is positive, it indicates a small absolute number of distinct values. We expect these
-	 * 	   values to be repeated in all partitions. Therefore, we expect no change in the ndistinct in the root.
-	 */
-
-	Oid largestLeafOid = get_largest_leaf_partition(relationOid);
-	float4 largestLeafNDV = get_attdistinct(largestLeafOid, attnum);
-
-	if (largestLeafNDV <= -1.0)
-	{
-		result = largestLeafNDV;
-	}
-	else if (largestLeafNDV < 0.0)
-	{
-		result = (-1.0) * largestLeafNDV * get_rel_reltuples(largestLeafOid);
-	}
-	else
-	{
-		result = largestLeafNDV;
-	}
-
-	pfree(lpart_keys);
-
-	return result;
-}
-
-/* Get the oid of the largest leaf partition of a partition table (root or interior).
- * Assuming the reltuples for leaf-level partitions have already been populated.
- * Cannot be called on a leaf-level partition.
- */
-static Oid
-get_largest_leaf_partition(Oid relid)
-{
-	float4 largestReltuples = 0;
-
-	List *lChildrenOid = rel_get_leaf_children_relids(relid);
-	Assert(lChildrenOid);
-
-	ListCell *lc = NULL;
-	Oid oidLargestPart = linitial_oid(lChildrenOid);
-
-	foreach(lc, lChildrenOid)
-	{
-		Oid currOid = lfirst_oid(lc);
-		float4 currReltuples = get_rel_reltuples(currOid);
-		if (currReltuples > largestReltuples)
-		{
-			oidLargestPart = currOid;
-			largestReltuples = currReltuples;
-		}
-	}
-
-	pfree(lChildrenOid);
-	return oidLargestPart;
-}
-
-
-/**
- * Helper function to create the IN clause used for calculating merged stats.
- * StringInfo is allocated in the current memory context,
- * so the caller should free it.
- * Input: relationOid - oid of a root or interior partition
- * Output: string "in (oid_1, oid_2, ..., oid_n)" where oid_i's are the oid of leaf children partitions
- * of relationOid
- */
-static StringInfo
-getStringLeafPartitionOids(Oid relationOid)
-{
-	StringInfo str = makeStringInfo();
-	ListCell *le = NULL;
-
-	List *lRelOids = rel_get_leaf_children_relids(relationOid);
-
-	appendStringInfo(str, "in (");
-
-	for (le = list_head(lRelOids); le != list_tail(lRelOids); le = lnext(le))
-	{
-		appendStringInfo(str, "%u, ", lfirst_oid(le));
-	}
-	appendStringInfo(str, "%u)", lfirst_oid(le));
-
-	return str;
-}
-
-
 /**
  * Responsible for computing statistics on relationOid. 
  * Input:
@@ -2468,7 +2121,6 @@ getStringLeafPartitionOids(Oid relationOid)
  * 	relTuples   - expected number of tuples in relation
  * 	sampleTableOid - Oid of the sampled version of the table. It is possible that sampleTableOid == relationOid.
  * 	sampleTableRelTuples - number of tuples in sampled version
- * 	mergeStats - for root or interior partition, whether to merge stats of leaf children partitions
  * Output:
  * 	stats - structure containing nullfrac, avgwidth, ndistinct, mcv, hist
  */
@@ -2477,7 +2129,6 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 		float4 relTuples, 
 		Oid sampleTableOid, 
 		float4 sampleTableRelTuples,
-		bool mergeStats,
 		AttributeStatistics *stats)
 {
 	bool computeWidth = true;
@@ -2520,9 +2171,9 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 	INSTR_TIME_SET_CURRENT(endtime);
 	INSTR_TIME_SUBTRACT(endtime, starttime);
 
-	elog(INFO, "time to read sample for column %s: %.1f ms", quote_identifier(attributeName), INSTR_TIME_GET_MILLISEC(endtime));
-	elog(INFO, "null count is %d", spec.null_cnt);
-	elog(INFO, "value count is %d", spec.values_cnt);
+	elog(elevel, "time to read sample for column %s: %.1f ms", quote_identifier(attributeName), INSTR_TIME_GET_MILLISEC(endtime));
+	elog(elevel, "null count is %d", spec.null_cnt);
+	elog(elevel, "value count is %d", spec.values_cnt);
 
 	Form_pg_attribute attr = spec.attr;
 
@@ -2582,15 +2233,8 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 
 	if (computeDistinct)
 	{
-		if (mergeStats)
-		{
-			stats->ndistinct = analyzeComputeNDistinctByLargestPartition(relationOid, relTuples, attributeName);
-		}
-		else
-		{
-			analyzeComputeNDistinctBySample(relationOid, relTuples, sampleTableOid, sampleTableRelTuples,
-																attributeName, &computeMCV, &computeHist, stats);
-		}
+		analyzeComputeNDistinctBySample(relationOid, relTuples, sampleTableOid, sampleTableRelTuples,
+															attributeName, &computeMCV, &computeHist, stats);
 
 		/* upper bound */
 		if (stats->ndistinct > relTuples)
@@ -2610,14 +2254,14 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 	elog(elevel, "ndistinct = %.6f", stats->ndistinct);
 	INSTR_TIME_SET_CURRENT(endtime);
 	INSTR_TIME_SUBTRACT(endtime, starttime);
-	elog(INFO, "time to collect ndistinct the old way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
+	elog(elevel, "time to collect ndistinct the old way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
 	
 	INSTR_TIME_SET_CURRENT(starttime);
 	if (computeMCV)
 	{
 		unsigned int nMCVEntries = numberOfMCVEntries(relationOid, attributeName);
 		analyzeComputeMCV(relationOid, sampleTableOid, attributeName, sampleTableRelTuples,
-				nMCVEntries, mergeStats, &stats->mcv, &stats->freq);
+				nMCVEntries, &stats->mcv, &stats->freq);
 		if (stats->mcv)
 			elog(elevel, "mcv=%s", OidOutputFunctionCall(751,PointerGetDatum(stats->mcv)));
 		if (stats->freq)
@@ -2625,20 +2269,20 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 	}
 	INSTR_TIME_SET_CURRENT(endtime);
 	INSTR_TIME_SUBTRACT(endtime, starttime);
-	elog(INFO, "time to collect mcv the old way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
+	elog(elevel, "time to collect mcv the old way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
 	
 	INSTR_TIME_SET_CURRENT(starttime);
 	if (computeHist)	
 	{
 		unsigned int nHistEntries = numberOfHistogramEntries(relationOid, attributeName);
 		analyzeComputeHistogram(relationOid, sampleTableOid, attributeName, sampleTableRelTuples,
-				nHistEntries, mergeStats, stats->mcv, &stats->hist);
+				nHistEntries, stats->mcv, &stats->hist);
 		if (stats->hist)
 			elog(elevel, "hist=%s", OidOutputFunctionCall(751,PointerGetDatum(stats->hist)));
 	}
 	INSTR_TIME_SET_CURRENT(endtime);
 	INSTR_TIME_SUBTRACT(endtime, starttime);
-	elog(INFO, "time to collect histogram the old way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
+	elog(elevel, "time to collect histogram the old way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
 }
 
 /**
