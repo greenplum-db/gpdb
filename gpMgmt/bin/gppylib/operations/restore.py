@@ -411,14 +411,16 @@ def truncate_restore_tables(restore_tables, master_port, dbname):
                 truncate_list.append(restore_table)
 
         for t in truncate_list:
+            t_schema, t_table = t.split('.')
             try:
-                qry = 'Truncate %s' % t
+                qry = 'Truncate "%s"."%s"' % (pg.escape_string(t_schema), pg.escape_string(t_table))
                 execSQL(conn, qry)
-            except Exception as e:
-                if 'relation "%s" does not exist' % t in str(e).replace('\n', ''):
+            except pg.DatabaseError as e:
+                if 'relation "%s" does not exist' % t in e.message:
                     logger.warning("Skipping truncate of %s.%s because the relation does not exist." % (dbname, t))
+                    conn.rollback()
                 else:
-                    raise Exception("Could not truncate table %s.%s: %s" % (dbname, t, str(e).replace('\n', '')))
+                    raise e
 
         conn.commit()
     except Exception as e:
