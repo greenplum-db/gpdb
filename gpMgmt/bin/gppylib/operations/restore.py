@@ -408,7 +408,16 @@ def truncate_restore_tables(restore_tables, master_port, dbname):
                 for relation in relations:
                     truncate_list.append(relation[0])
             else:
-                truncate_list.append(restore_table)
+                check_table_exists_qry = """SELECT EXISTS (
+                                                   SELECT 1
+                                                   FROM pg_catalog.pg_class c
+                                                   JOIN pg_catalog.pg_namespace n on n.oid = c.relnamespace
+                                                   WHERE n.nspname = '%s' and c.relname = '%s')""" % (schema, table)
+                exists_result = execSQLForSingleton(conn, check_table_exists_qry)
+                if exists_result:
+                    truncate_list.append(restore_table)
+                else:
+                    logger.warning("Skipping truncate of %s.%s because the relation does not exist." % (dbname, restore_table))
 
         for t in truncate_list:
             t_schema, t_table = t.split('.')
@@ -416,10 +425,6 @@ def truncate_restore_tables(restore_tables, master_port, dbname):
                 qry = 'Truncate "%s"."%s"' % (pg.escape_string(t_schema), pg.escape_string(t_table))
                 execSQL(conn, qry)
             except pg.DatabaseError as e:
-                if 'relation "%s" does not exist' % t in e.message:
-                    logger.warning("Skipping truncate of %s.%s because the relation does not exist." % (dbname, t))
-                    conn.rollback()
-                else:
                     raise e
 
         conn.commit()
