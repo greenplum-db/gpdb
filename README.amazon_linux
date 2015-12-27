@@ -1,0 +1,59 @@
+# edit hostname
+sudo vim /etc/sysconfig/network
+sudo vim /etc/hosts
+
+# add mount points
+sudo vim /etc/fstab
+
+#install packages
+sudo yum install git
+sudo yum install gcc
+sudo yum install readline-devel
+sudo yum install zlib-devel
+sudo yum install libcurl-devel
+sudo yum install bzip2-devel
+sudo yum install bison
+sudo yum install flex
+sudo yum install gcc-c++
+
+#edit sysctl
+vm.overcommit_memory = 2
+
+#edit  /etc/security/limits.conf
+* soft core unlimited
+* soft nofile 65536
+* hard nofile 65536
+* soft nproc 131072
+* hard nproc 131072
+
+#edit /etc/grub.conf
+add transparent_hugepage=never to kernel boot command line
+cat /sys/kernel/mm/transparent_hugepage/enabled
+
+#update blockdev read ahead
+/sbin/blockdev --setra 16384 GPDB_DEVICE_NAMES
+
+# configure and build
+./configure
+make
+sudo make install
+. /usr/local/gpdb/greenplum_path.sh
+
+#python updae
+sudo pip install --upgrade pip
+as root
+    pip install epydoc
+    pip install psi
+    pip install --upgrade lockfile
+
+# init GPDB
+mkdir primary
+mkdir mirror
+mkdir master
+cp $GPHOME/docs/cli_help/gpconfigs/gpinitsystem_test .
+edit gpinitsystem_test
+    create ./hostlist_singlenode
+    modify directories, etc
+
+gpssh-exkeys -h `hostname`
+gpinitsystem -c gpinitsystem.config
