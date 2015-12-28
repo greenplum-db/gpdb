@@ -412,7 +412,7 @@ def truncate_restore_tables(restore_tables, master_port, dbname):
                                                    SELECT 1
                                                    FROM pg_catalog.pg_class c
                                                    JOIN pg_catalog.pg_namespace n on n.oid = c.relnamespace
-                                                   WHERE n.nspname = '%s' and c.relname = '%s')""" % (schema, table)
+                                                   WHERE n.nspname = '%s' and c.relname = '%s')""" % (pg.escape_string(schema), pg.escape_string(table))
                 exists_result = execSQLForSingleton(conn, check_table_exists_qry)
                 if exists_result:
                     truncate_list.append(restore_table)
