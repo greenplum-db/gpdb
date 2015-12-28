@@ -1860,6 +1860,21 @@ Feature: Validate command line arguments
         And gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_part_table" in "fullbkdb" with data
 
+    @truncate
+    Scenario: Full backup and restore with -T and --truncate with dropped table
+        Given the database is running
+        And the database "fullbkdb" does not exist
+        And database "fullbkdb" exists
+        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
+        When the user runs "gpcrondump -a -x fullbkdb"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        And table "public.heap_table" is dropped in "fullbkdb"
+        And the user runs "gpdbrestore -T public.heap_table -a --truncate" with the stored timestamp
+        And gpdbrestore should return a return code of 0
+        And gpdbrestore should print Skipping truncate of fullbkdb.public.heap_table because the relation does not exist to stdout
+        And verify that there is a "heap" table "public.heap_table" in "fullbkdb" with data
+
     @backupfire
     Scenario: Full backup -T test 3
         Given the database is running
@@ -5089,9 +5104,6 @@ Feature: Validate command line arguments
         And the user runs "gpdbrestore -T public.ao_index_table --redirect=testdb --truncate -a" with the stored timestamp
         And gpdbrestore should return a return code of 2
         And gpdbrestore should print Failure from truncating tables, FATAL:  database "testdb" does not exist to stdout
-        And the user runs "gpdbrestore -T public.ao_index_table_1 --truncate -a" with the stored timestamp
-        And gpdbrestore should return a return code of 2
-        And gpdbrestore should print Could not truncate table fullbkdb.public.ao_index_table_1 to stdout
         And there is a "ao" table "ao_index_table" with compression "None" in "testdb" with data
         And the user runs "gpdbrestore -T public.ao_index_table --redirect=testdb --truncate -a" with the stored timestamp
         And gpdbrestore should return a return code of 0
