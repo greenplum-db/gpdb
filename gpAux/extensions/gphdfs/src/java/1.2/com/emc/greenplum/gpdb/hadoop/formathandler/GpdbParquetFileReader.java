@@ -221,7 +221,7 @@ public class GpdbParquetFileReader {
 						|| (oType == OriginalType.TIME_MILLIS && GPDBWritable.isTimeOrTimeArray(gpdbType.getType()))
 						&& DATA_TIME_ANNOTATION_ON) {
 					break;
-				}else if (!GPDBWritable.isIntOrBigInt(gpdbType.getType())) {
+				}else if (!GPDBWritable.isSmallIntOrIntOrBigInt(gpdbType.getType())) {
 					throw new IOException("type mismatch, parquet is int32 but gpdb is not, gpdbColumnIdex : " + i + ", parquetFiled : " + pqType.getName() );
 				}
 				break;
@@ -316,6 +316,9 @@ public class GpdbParquetFileReader {
 				writable.setString(index, FormatHandlerUtil.buildTimeBasedOnDiff("1970-01-01", "yyyy-mm-dd", Calendar.DAY_OF_YEAR, g.getInteger(index, 0), false));
 			}else if (oType == OriginalType.TIME_MILLIS && DATA_TIME_ANNOTATION_ON) {
 				writable.setString(index, FormatHandlerUtil.buildTimeBasedOnDiff("00:00:00.000", "hh:mm:ss.SSS", Calendar.MILLISECOND, g.getInteger(index, 0), false));
+			}else if (oType == OriginalType.INT_16
+					|| (tableSchemas != null && tableSchemas.get(index).getType() == GPDBWritable.SMALLINT)) {
+				writable.setShort(index, (short)g.getInteger(index, 0));
 			}else {
 				writable.setInt(index, g.getInteger(index, 0));
 			}
@@ -563,6 +566,9 @@ public class GpdbParquetFileReader {
 					colTypeArray[i] = GPDBWritable.TEXT;
 				}else if ( (oType == OriginalType.DATE || oType == OriginalType.TIME_MILLIS) && DATA_TIME_ANNOTATION_ON) {
 					colTypeArray[i] = GPDBWritable.TEXT;
+				}else if (oType == OriginalType.INT_16
+						|| (tableSchemas != null && tableSchemas.get(i).getType() == GPDBWritable.SMALLINT)) {
+					colTypeArray[i] = GPDBWritable.SMALLINT;
 				}else {
 					colTypeArray[i] = GPDBWritable.INTEGER;
 				}
