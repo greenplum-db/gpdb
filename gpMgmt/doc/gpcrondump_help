@@ -161,7 +161,7 @@ OPTIONS
  processes depending on how many segment instances it needs to dump. 
 
 
--c (clear old dump files first) 
+-c [<N dumps>|<timestamp>]
 
  Specify this option to delete old backups before performing a back up. 
  In the db_dumps directory, the directory where the name is the oldest 
@@ -169,6 +169,10 @@ OPTIONS
  directory is not deleted. The default is to not delete old backup files. 
 
  The deleted directory might contain files from one or more backups. 
+
+ Specify an integer N to remove N number of oldest dump directories or a
+ YYYYMMDD timestamp to remove a specific dump directory.  Defaults to N=1,
+ the oldest dump directory, if no argument is provided.
 
  WARNING: Before using this option, ensure that incremental backups 
  required to perform the restore are not deleted. The gpdbrestore utility 
@@ -544,11 +548,15 @@ OPTIONS
  Do not output commands to set object privileges (GRANT/REVOKE commands). 
 
 
--o (clear old dump files only) 
+-o [<N dumps>|<timestamp>]
 
  Clear out old dump files only, but do not run a dump. This will remove 
  the oldest dump directory except the current date's dump directory. 
- All dump sets within that directory will be removed. 
+ All dump sets within that directory will be removed.
+
+ Specify an integer N to remove N number of oldest dump directories or a
+ YYYYMMDD timestamp to remove a specific dump directory.  Defaults to N=1,
+ the oldest dump directory, if no argument is provided.
 
  WARNING: Before using this option, ensure that incremental backups 
  required to perform the restore are not deleted. The gpdbrestore utility 
