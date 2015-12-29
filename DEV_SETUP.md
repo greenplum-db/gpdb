@@ -36,7 +36,7 @@ Next go to the `gpdb/vagrant` directory and start a virtual machine using the
 Vagrant file there; i.e. from the terminal window, issue the following command:
 
 ```shell
-cd gpdb/build
+cd gpdb/vagrant
 vagrant up
 ```
 
