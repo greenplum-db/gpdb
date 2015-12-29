@@ -1,0 +1,42 @@
+# Original Authors: Navneet Potti, Nabarun Nag and Jignesh Patel
+
+# Basic Vagrant config (API version 2)
+Vagrant.configure(2) do |config|
+
+  # Base box: Centos-7 box
+  # NOTE: Over time the VMI below may become outdated, so may need to be 
+  #       substituted with a more recent VMI
+  config.vm.box = "boxcutter/centos72"
+
+  # Give a reasonable amount of cpu and memory to the VM
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "gpdb-dev-host" # Name in VirtualBox
+    vb.memory = 8192
+    vb.cpus = 2
+  end
+
+  # Make the gpdb folder will be visible as /gpdb in the virtual machine 
+  config.vm.synced_folder "../../gpdb", "/gpdb"
+
+  # Install packages that are needed to build and run GPDB
+  config.vm.provision "shell", inline: <<-INSTALL
+
+    # install packages needed to build and run GPDB
+    sudo yum -y update
+    sudo yum -y groupinstall "Development tools"
+    sudo yum -y install ed
+    sudo yum -y install readline-devel
+    sudo yum -y install zlib-devel
+    sudo yum -y install curl-devel
+    sudo yum -y install bzip2-devel
+    sudo yum -y install python-devel
+    sudo yum -y install epel-release
+    sudo yum -y install htop
+    wget https://bootstrap.pypa.io/get-pip.py
+    sudo python get-pip.py
+    sudo pip install psi lockfile paramiko setuptools epydoc
+    rm get-pip.py
+
+  INSTALL
+
+end
