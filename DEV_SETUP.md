@@ -282,13 +282,18 @@ you have the psql prompt, and issue the following SQL commands:
 ```sql
 -- Create and populate a Users table
 CREATE TABLE Users (uid INTEGER PRIMARY KEY, name VARCHAR);
-INSERT INTO Users SELECT generate_series, md5(random()) FROM generate_series(1, 100000);
+INSERT INTO Users 
+  SELECT generate_series, md5(random()) FROM generate_series(1, 100000);
 
 -- Create and populate a Messages table
-CREATE TABLE Messages (mid INTEGER PRIMARY KEY, uid INTEGER REFERENCES Users(uid), ptime DATE, message VARCHAR);
+CREATE TABLE Messages (mid INTEGER PRIMARY KEY, 
+                       uid INTEGER REFERENCES Users(uid), 
+                       ptime DATE, message VARCHAR);
 INSERT INTO Messages 
-   SELECT generate_series, round(random()*100000), 
-   date(now() - '1 hour'::INTERVAL * round(random()*24*30)), md5(random())::text 
+   SELECT generate_series, 
+          round(random()*100000), 
+          date(now() - '1 hour'::INTERVAL * round(random()*24*30)), 
+          md5(random())::text 
    FROM generate_series(1, 1000000);
 
 -- Report the number of tuples in each table
@@ -296,7 +301,10 @@ SELECT COUNT(*) FROM Messages;
 SELECT COUNT(*) FROM Users;
 
 -- Report how many messages were posted on each day
-SELECT M.ptime, COUNT(*) FROM Users U NATURAL JOIN Messages M GROUP BY M.ptime ORDER BY M.ptime;
+SELECT M.ptime, COUNT(*) 
+FROM Users U NATURAL JOIN Messages M 
+GROUP BY M.ptime 
+ORDER BY M.ptime;
 ```
 
 As you can see, you created a simple warehouse database simulating users posting
@@ -308,7 +316,7 @@ If you are doing serious development, you will likely need to use a debugger.
 Here is how you do that. 
 * First, list the Postgres processes by typing in (a guest terminal):
 `ps ax | grep postgres`. You should see a list that looks something like:
-![Postgres processes][vagrant/pictures/gpdb_processes.png]. 
+![Postgres processes](/vagrant/pictures/gpdb_processes.png)
 Here the key processes are the ones that were started as 
 `/gpdb/vagrant/install/bin/postgres`. The master is the process (pid 25486 
 in the picture above) that has the word "master" in the `-D` parameter setting,
