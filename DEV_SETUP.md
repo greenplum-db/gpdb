@@ -24,14 +24,6 @@ setup already, then head over to https://www.virtualbox.org/wiki/Downloads
 and http://www.vagrantup.com/downloads to download and then install these
 packages.
 
-You may also need to install the VirtualBox guest additions plugin in Vagrant,
-as your vagrant box below may not boot up the *second* time for reasons listed
-[here](https://github.com/dotless-de/vagrant-vbguest "vbguest"). So, from a
-Terminal, type:
-
-```shell
-vagrant plugin install vagrant-vbguest
-```
 
 ##2: Clone GPDB code from github
 
@@ -48,12 +40,11 @@ Vagrant file there; i.e. from the terminal window, issue the following command:
 
 ```shell
 cd gpdb/build
-
 vagrant up
 ```
 
 The last command will take a while as Vagrant works with VirtualBox to fetch
-a box image for CentOS. The box image is many hundred MBi is size, so it takes
+a box image for CentOS. The box image is many hundred MiBs is size, so it takes
 a while. This image is fetched only once and will be stored by vagrant in a
 directory (likely `~/.vagrant.d/boxes/`), so you won't incur this network IO
 if you repeat the steps above. A side-effect is that vagrant has now used a
@@ -193,7 +184,7 @@ to use sudo mode to save the changes of the file):
 sudo vi /etc/sysctl.conf 
 ```
 
-Then, hit `G`, followed by `O`, and paste the following lines to the end of the
+Then, hit `G`, followed by `O`, and paste the following lines at the end of the
 file:
 ```shell
 kernel.shmmax = 500000000
@@ -244,7 +235,8 @@ the host terminal, type in the following command:
 vagrant plugin install vagrant-vbguest
 ```
 
-Now bring up the virtual box again, by typing (in the terminal in the host OS):
+Now bring up the virtual box again, by typing (in the host OS terminal), the
+following commands:
 ```shell
 vagrant up
 vagrant ssh
@@ -254,6 +246,80 @@ You are back in the guest OS shell! But, now you have GPDB compiled, installed,
 and ready to run. 
 
 
+##6: Initialize and start GPDB
+Next we initialize GPDB using the config file we created above. In the *guest*
+shell type in:
+```shell
+$GPHOME/bin/gpinitsystem -a -c $GPDATA/gpinitsystem_config
+```
+Once initialized, you are now ready to run GPDB. One more configuration to set,
+which you can do by typing into the guest terminal the following command:
 
+```shell
+printf '# Remember the master data directory location\n' >> ~/.bashrc
+printf 'export MASTER_DATA_DIRECTORY=$GPDATA/master/gpseg-1\n' >> ~/.bashrc
+source ~/.bashrc
+```
 
-![Postgres processes][pictures/gpdb_processes.png]
+Now, you are ready to start GPDB. To do that, type in the following commands
+into the (guest) terminal: 
+
+```shell
+DBNAME=$USER
+createdb $DBNAME
+psql $DBNAME
+```
+
+You should see a psql prompt that says `vagrant=#`. At this point, you can open
+up another shell from the host OS. Start another (host) terminal, and 
+`cd gpdb/vagrant`, and then type in `vagrant ssh`. From this second guest
+terminal, you can run GPDB commands like `gpstate`. Go ahead and try it. You
+should see a report that states that you have a master and two segments. 
+
+If you want to try out a few SQL commands, go back to the guest shell in which
+you have the psql prompt, and issue the following SQL commands: 
+
+```sql
+-- Create and populate a Users table
+CREATE TABLE Users (uid INTEGER PRIMARY KEY, name VARCHAR);
+INSERT INTO Users SELECT generate_series, md5(random()) FROM generate_series(1, 100000);
+
+-- Create and populate a Messages table
+CREATE TABLE Messages (mid INTEGER PRIMARY KEY, uid INTEGER REFERENCES Users(uid), ptime DATE, message VARCHAR);
+INSERT INTO Messages 
+   SELECT generate_series, round(random()*100000), 
+   date(now() - '1 hour'::INTERVAL * round(random()*24*30)), md5(random())::text 
+   FROM generate_series(1, 1000000);
+
+-- Report the number of tuples in each table
+SELECT COUNT(*) FROM Messages;
+SELECT COUNT(*) FROM Users;
+
+-- Report how many messages were posted on each day
+SELECT M.ptime, COUNT(*) FROM Users U NATURAL JOIN Messages M GROUP BY M.ptime ORDER BY M.ptime;
+```
+
+As you can see, you created a simple warehouse database simulating users posting
+messages on a social media network, and reported the number of messages that
+were posted on each day. 
+
+##7: Using GDB
+If you are doing serious development, you will likely need to use a debugger.
+Here is how you do that. 
+* First, list the Postgres processes by typing in (a guest terminal):
+`ps ax | grep postgres`. You should see a list that looks something like:
+![Postgres processes][vagrant/pictures/gpdb_processes.png]. 
+Here the key processes are the ones that were started as 
+`/gpdb/vagrant/install/bin/postgres`. The master is the process (pid 25486 
+in the picture above) that has the word "master" in the `-D` parameter setting,
+whereas the segment hosts have the word "gpseg" in the `-D` parameter setting.
+
+* Start ``gdb`` from a guest terminal. Once you get a prompt in gdb, type in the
+following (the pid you specify in attach will be different for you):
+```gdb
+set follow-fork-mode child
+b ExecutorMain
+attach 25486
+```
+Of course, you can change which function you want to break into, and change
+whether you want to debug the master or the segment processes. Happy hacking!
