@@ -14,7 +14,7 @@
  *-------------------------------------------------------------------------
  */
 #ifndef EXECHYBRIDHASHAGG_H
-#define EXECBYBRIDHASHAGG_H
+#define EXECHYBRIDHASHAGG_H
 
 #include "executor/nodeAgg.h" /* Must see AggStatePerGroupData. */
 #include "cdb/cdbpublic.h"    /* CdbExplain_Agg / CdbCellBuf */
