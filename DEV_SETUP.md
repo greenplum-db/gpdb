@@ -204,7 +204,7 @@ vm.overcommit_memory = 2
 Hit the escape key, then type `:wq` to finish saving the file. Verify that you
 see the changes that you made by typing in `cat /etc/sysctl.conf`.
 
-##5: Reboot the Guest OS
+##6: Reboot the Guest OS
 We have to reboot the guest OS to allow the changes to the ``sysctl.conf`
 file to take effect. In the guest shell, type in
 ```shell
@@ -235,7 +235,7 @@ vagrant ssh
 You are back in the guest OS shell! But, now you have GPDB compiled, installed,
 and ready to run. 
 
-##6: Initialize and start GPDB
+##7: Initialize and start GPDB
 Next we initialize GPDB using the config file that we created above. In the 
 *guest* shell type in:
 ```shell
@@ -301,7 +301,7 @@ simulated users posting messages on a social media network, and
 reported the number of messages that were posted on each day.
 Pretty cool! 
 
-##7: Using GDB
+##8: Using GDB
 If you are doing serious development, you will likely need to use a debugger.
 Here is how you do that. 
 
