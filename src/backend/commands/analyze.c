@@ -142,13 +142,6 @@ static void dropSampleTable(Oid sampleTableOid);
 /* Attribute statistics computation */
 static int4 numberOfMCVEntries(Oid relationOid, const char *attributeName);
 static int4 numberOfHistogramEntries(Oid relationOid, const char *attributeName);
-static void analyzeComputeHistogram(Oid relationOid,  
-		Oid sampleTableOid,
-		const char *attributeName,
-		float4 relTuples,
-		unsigned int nEntries,
-		ArrayType *mcv,
-		ArrayType **hist);
 
 /* Catalog related */
 static void updateAttributeStatisticsInCatalog(Oid relationOid, const char *attributeName, 
@@ -157,9 +150,6 @@ static void updateReltuplesRelpagesInCatalog(Oid relationOid, float4 relTuples, 
 
 /* sorting related */
 static int	compare_scalars(const void *a, const void *b, void *arg);
-
-/* Convenience */
-static ArrayType * SPIResultToArray(int resultAttributeNumber, MemoryContext allocationContext);
 
 /* spi execution helpers */
 typedef void (*spiCallback)(void *clientDataOut);
@@ -204,7 +194,6 @@ typedef struct
 	int *tupnoLink;
 } ResultColumnSpec;
 
-static void spiCallback_getEachResultColumnAsArray(void *clientData);
 static void spiCallback_getProcessedAsFloat4(void *clientData);
 static void spiCallback_getSingleResultRowArrayAsTwoFloat4(void *clientData);
 
@@ -958,9 +947,9 @@ static void analyzeRelation(Relation relation, List *lAttributeNames, bool rooto
 		updateAttributeStatisticsInCatalog(relationOid, lAttributeName, &stats);
 		MemoryContextResetAndDeleteChildren(col_context);
 	}
+
 	MemoryContextSwitchTo(relationContext);
 	MemoryContextDelete(col_context);
-
 
 	/**
 	 * Step 5: Cleanup. Drop the sample table.
@@ -1183,28 +1172,6 @@ static void spiCallback_getProcessedAsFloat4(void *clientData)
 {
     float4 *out = (float4*) clientData;
     *out = (float4)SPI_processed;
-}
-
-/**
- * A callback function for use with spiExecuteWithCallback.  Reads each column of output into an array
- *   The number of arrays, the memory context for them, and the output location are determined by
- *   treating *clientData as a EachResultColumnAsArraySpec and using the values there
- */
-static void spiCallback_getEachResultColumnAsArray(void *clientData)
-{
-    EachResultColumnAsArraySpec * spec = (EachResultColumnAsArraySpec*) clientData;
-    int i;
-    ArrayType ** out = spec->output;
-
-    Assert(SPI_tuptable != NULL);
-    Assert(SPI_tuptable->tupdesc);
-
-    for ( i = 1; i <= spec->numColumns; i++ )
-    {
-        *out = SPIResultToArray(i, spec->memoryContext);
-        Assert(*out);
-        out++;
-    }
 }
 
 static void spiCallback_getSampleColumn(void *clientData)
@@ -1703,160 +1670,6 @@ static bool hasMaxDefined(Oid typid)
 }
 
 /**
- * This routine creates an array from one of the result attributes after an SPI call.
- * It allocates this array in the specified context. Note that, in general, the allocation 
- * context must not the SPI context because that is likely to get cleaned out soon. 
- * 
- * Input:
- * 	resultAttributeNumber - attribute to flatten into an array (1 based)
- * Output:
- * 	array of attribute type
- */
-static ArrayType * SPIResultToArray(int resultAttributeNumber, MemoryContext allocationContext)
-{
-	ArrayType *result = NULL;
-	int i = 0;
-	Oid typOutput = InvalidOid;
-	bool isVarLena = false;
-	MemoryContext 	callerContext;
-	Form_pg_attribute attribute = SPI_tuptable->tupdesc->attrs[resultAttributeNumber - 1];
-
-	Assert(attribute);
-
-	callerContext = MemoryContextSwitchTo(allocationContext);	
-	result = construct_empty_array(attribute->atttypid);
-	
-	/**
-	 * We should not need to detoast the type.
-	 */
-	getTypeOutputInfo(attribute->atttypid, &typOutput, &isVarLena);
-	
-	for (i=0;i<SPI_processed;i++)
-	{
-		Datum			dValue = 0;
-		bool			isnull = false;
-		int				index = 0;
-		Datum			deToastedValue = 0;
-		
-		dValue = heap_getattr(SPI_tuptable->vals[i], resultAttributeNumber, SPI_tuptable->tupdesc, &isnull);
-
-		if (!isnull)
-		{
-			if (isVarLena)
-			{
-				deToastedValue = PointerGetDatum(PG_DETOAST_DATUM(dValue));
-			}
-			else
-			{
-				deToastedValue = dValue;
-			}
-
-			/**
-			 * Add this value to the result array.
-			 */
-			index = i+1; /* array indices are 1 based */
-			result = array_set(result, 1 /* nSubscripts */, &index, deToastedValue, isnull,
-					-1 /* arraytyplen */, 
-					attribute->attlen, 
-					attribute->attbyval, 
-					attribute->attalign);
-
-			if (deToastedValue != dValue)
-			{
-				pfree(DatumGetPointer(deToastedValue));
-			}
-		}
-	}
-	MemoryContextSwitchTo(callerContext);
-	return result;
-}
-
-
-
-/**
- * Compute histogram entries for relation.
- * Input:
- * 	relationOid - relation
- * 	sampleTableOid - oid of sample table
- * 	attributeName - attribute
- * 	relTuples 	 - estimated number of tuples in relation
- * 	nEntries	 - number of histogram entries requested
- * 	mcv			 - most common values calculated. these must be excluded before calculating
- * 				   histogram. this may be null.
- * Output:
- * 	hist - array of values representing a histogram. This histogram contains no repeating values.
- */
-static void analyzeComputeHistogram(Oid relationOid,  
-		Oid sampleTableOid,
-		const char *attributeName,
-		float4 relTuples,
-		unsigned int nEntries,
-		ArrayType *mcv,
-		ArrayType **hist)
-{
-	StringInfoData str;
-	unsigned int bucketSize = 0;
-	EachResultColumnAsArraySpec spec;
-	StringInfoData whereClause;
-
-	Assert(relTuples > 0.0);
-	Assert(nEntries > 0);
-
-	bucketSize = relTuples / nEntries;
-
-	if (bucketSize <= 1) /* histogram will be empty if bucketSize <= 1 */
-	{
-		*hist = NULL;
-		return;
-	}
-
-	const char *sampleSchemaName = NULL;
-	const char *sampleTableName = NULL;
-	sampleSchemaName = get_namespace_name(get_rel_namespace(sampleTableOid)); /* must be pfreed */
-	sampleTableName = get_rel_name(sampleTableOid); /* must be pfreed */
-
-	initStringInfo(&str);
-	initStringInfo(&whereClause);
-	appendStringInfo(&whereClause, "%s is not null", quote_identifier(attributeName));
-
-	/**
-	 * This query orders the table by rank on the value and chooses values that occur every
-	 * 'bucketSize' interval. It also chooses the maximum value from the relation. It then
-	 * removes duplicate values and orders the values in ascending order. This corresponds to
-	 * the histogram.
-	 */
-
-	appendStringInfo(&str, "select v from ("
-			"select Ta.%s as v, row_number() over (order by Ta.%s) as r from %s.%s as Ta where %s "
-			"union select max(Tb.%s) as v, 1 as r from %s.%s as Tb where %s) as foo "
-			"where r %% %u = 1 group by v order by v",
-			quote_identifier(attributeName),
-			quote_identifier(attributeName),
-			quote_identifier(sampleSchemaName),
-			quote_identifier(sampleTableName),
-			whereClause.data,
-			quote_identifier(attributeName),
-			quote_identifier(sampleSchemaName),
-			quote_identifier(sampleTableName),
-			whereClause.data,
-			bucketSize);
-
-	spec.numColumns = 1;
-	spec.output = hist;
-	spec.memoryContext = CurrentMemoryContext;
-
-	spiExecuteWithCallback(str.data, false /*readonly*/, 0 /*tcount */,
-								spiCallback_getEachResultColumnAsArray, &spec);
-	pfree(str.data);
-	pfree((void *) sampleTableName);
-	pfree((void *) sampleSchemaName);
-
-	return;
-}
-
-
-
-/**
  * Responsible for computing statistics on relationOid. 
  * Input:
  * 	relationOid - original relation on which statistics must be computed.
@@ -1934,8 +1747,6 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 	{
 		stats->nullFraction = Min(spec.null_cnt / sampleTableRelTuples, 1.0);
 	}
-
-	elog(elevel, "nullfrac = %.6f", stats->nullFraction);
 	
 	bool is_varwidth = !attr->attbyval && attr->attlen < 0;
 	if (spec.null_cnt < ceil(sampleTableRelTuples))
@@ -1943,8 +1754,6 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 		Assert(spec.nonnull_cnt > 0); /* we should not be here if all values are null */
 		stats->avgWidth = is_varwidth ? spec.total_width / (double) spec.nonnull_cnt : attr->attlen;
 	}
-	
-	elog(elevel, "avgwidth = %f", stats->avgWidth);		
 	
 	if (spec.values_cnt == 0 || stats->avgWidth > COLUMN_WIDTH_THRESHOLD || !isOrderedAndHashable(attr->atttypid, &ltopr))
 	{
@@ -2034,6 +1843,11 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 				nmultiple++;
 			}
 
+			/*
+			 * There are some difference between the implementation here and in PostgreSQL.
+			 * We populate and update track and track_cnt even if dups_cnt is 1. This gives
+			 * us more info in the MCV list even if the values are unique.
+			 */
 			if (track_cnt < num_mcv ||
 				dups_cnt > track[track_cnt - 1].count)
 			{
@@ -2131,7 +1945,6 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 		}
 
 	}
-	elog(elevel, "ndistinct = %.6f", stats->ndistinct);
 	INSTR_TIME_SET_CURRENT(endtime);
 	INSTR_TIME_SUBTRACT(endtime, starttime);
 	elog(LOG, "time to collect ndistinct the new way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
@@ -2166,11 +1979,6 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 			stats->mcv = construct_array(mcv_values, num_mcv, attr->atttypid, attr->attlen, attr->attbyval, attr->attalign);
 			stats->freq = construct_array(mcv_freqs, num_mcv, FLOAT4OID, sizeof(float4), true, 'i');
 		}
-
-		if (stats->mcv)
-			elog(elevel, "mcv=%s", OidOutputFunctionCall(751,PointerGetDatum(stats->mcv)));
-		if (stats->freq)
-			elog(elevel, "freq=%s", OidOutputFunctionCall(751,PointerGetDatum(stats->freq)));
 	}
 
 	INSTR_TIME_SET_CURRENT(endtime);
@@ -2180,15 +1988,60 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 	INSTR_TIME_SET_CURRENT(starttime);
 	if (computeHist)	
 	{
-		unsigned int nHistEntries = numberOfHistogramEntries(relationOid, attributeName);
-		analyzeComputeHistogram(relationOid, sampleTableOid, attributeName, sampleTableRelTuples,
-				nHistEntries, stats->mcv, &stats->hist);
-		if (stats->hist)
-			elog(elevel, "hist=%s", OidOutputFunctionCall(751,PointerGetDatum(stats->hist)));
+		Assert(num_hist > 0);
+		unsigned int bucket_size = spec.values_cnt / num_hist;
+		if (bucket_size <= 1)
+		{
+			/* histogram will be empty if bucket_size <= 1 */
+			stats->hist = NULL;
+			return;
+		}
+
+		/**
+		 * In GPDB 4.3, the histogram is constructed by choosing values that occur every
+		 * 'bucketSize' interval. It also chooses the maximum value from the relation. It then
+		 * removes duplicate values and orders the values in ascending order.
+		 */
+		int num_hist_upperbound = num_hist +
+									1 /* one extra for boundary */ +
+									(spec.values_cnt % num_hist) / bucket_size /* remainder */ +
+									1 /* max value */;
+
+		Datum *hist_values = (Datum *) palloc(num_hist_upperbound * sizeof(Datum));
+
+		int hist_cnt = 0; /* the final and unique number of histogram boundaries */
+
+		/*
+		 * The new_value_flag is used to detect duplicates in the histogram boundaries.
+		 * Since we know the values are sorted and spec.tupnoLink[tupno] == tupno is
+		 * only true for the last value of each block of repeated values, we can reset
+		 * the flag whenever we pass through a block of repeated values. This way we do not
+		 * need to do datum comparisons, which are much more expensive.
+		 */
+		bool new_value_flag = true;
+		i = 0;
+		while (i < spec.values_cnt)
+		{
+			int tupno = values[i].tupno;
+			if ((i % bucket_size == 0 || i == spec.values_cnt - 1) &&
+					new_value_flag)
+			{
+				hist_values[hist_cnt] = values[i].value;
+				hist_cnt++;
+				new_value_flag = false;
+			}
+			if (spec.tupnoLink[tupno] == tupno)
+			{
+				new_value_flag = true;
+			}
+			i++;
+		}
+
+		stats->hist = construct_array(hist_values, hist_cnt, attr->atttypid, attr->attlen, attr->attbyval, attr->attalign);
 	}
 	INSTR_TIME_SET_CURRENT(endtime);
 	INSTR_TIME_SUBTRACT(endtime, starttime);
-	elog(LOG, "time to collect histogram the old way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
+	elog(LOG, "time to collect histogram the new way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
 }
 
 /**
