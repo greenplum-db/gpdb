@@ -73,21 +73,25 @@ and ordinal_position =1;
 select table_schema, table_name,column_name,ordinal_position
 from information_schema.columns
 where ordinal_position = 20;
-    table_schema    |  table_name   |    column_name     | ordinal_position 
---------------------+---------------+--------------------+------------------
- information_schema | element_types | interval_precision |               20
- pg_catalog         | pg_partitions | parenttablespace   |               20
- pg_catalog         | pg_statistic  | stavalues3         |               20
- information_schema | attributes    | datetime_precision |               20
- information_schema | columns       | collation_catalog  |               20
- information_schema | domains       | udt_catalog        |               20
- information_schema | parameters    | numeric_scale      |               20
- information_schema | routines      | collation_catalog  |               20
- pg_catalog         | pg_type       | typnotnull         |               20
- pg_catalog         | pg_class      | reltriggers        |               20
- pg_catalog         | pg_am         | amrestrpos         |               20
- pg_catalog         | pg_proc       | proacl             |               20
-(12 rows)
+    table_schema    |      table_name      |    column_name     | ordinal_position 
+--------------------+----------------------+--------------------+------------------
+ information_schema | element_types        | interval_precision |               20
+ gp_toolkit         | __gp_log_segment_ext | logdetail          |               20
+ gp_toolkit         | __gp_log_master_ext  | logdetail          |               20
+ gp_toolkit         | gp_log_system        | logdetail          |               20
+ gp_toolkit         | gp_log_database      | logdetail          |               20
+ pg_catalog         | pg_statistic         | stavalues3         |               20
+ pg_catalog         | pg_partitions        | parenttablespace   |               20
+ information_schema | attributes           | datetime_precision |               20
+ pg_catalog         | pg_type              | typnotnull         |               20
+ pg_catalog         | pg_proc              | proacl             |               20
+ pg_catalog         | pg_class             | reltriggers        |               20
+ pg_catalog         | pg_am                | amrestrpos         |               20
+ information_schema | columns              | collation_catalog  |               20
+ information_schema | domains              | udt_catalog        |               20
+ information_schema | parameters           | numeric_scale      |               20
+ information_schema | routines             | collation_catalog  |               20
+(16 rows)
 
 -- MPP-25724
 create table mpp_25724(mpp_25724_col int) distributed by (mpp_25724_col);
