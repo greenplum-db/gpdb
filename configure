@@ -4480,6 +4480,8 @@ if test "$GCC" = yes -a "$ICC" = no; then
 $as_echo_n "checking if $CC supports -Wendif-labels... " >&6; }
 pgac_save_CFLAGS=$CFLAGS
 CFLAGS="$pgac_save_CFLAGS -Wendif-labels"
+ac_save_c_werror_flag=$ac_c_werror_flag
+ac_c_werror_flag=yes
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4500,6 +4502,7 @@ else
 $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+ac_c_werror_flag=$ac_save_c_werror_flag
 
   #PGAC_PROG_CC_CFLAGS_OPT([-Wmissing-format-attribute])
   # This was included in -Wall/-Wformat in older GCC versions
@@ -4507,6 +4510,8 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 $as_echo_n "checking if $CC supports -Wformat-security... " >&6; }
 pgac_save_CFLAGS=$CFLAGS
 CFLAGS="$pgac_save_CFLAGS -Wformat-security"
+ac_save_c_werror_flag=$ac_c_werror_flag
+ac_c_werror_flag=yes
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4527,12 +4532,15 @@ else
 $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+ac_c_werror_flag=$ac_save_c_werror_flag
 
   # Disable strict-aliasing rules; needed for gcc 3.3+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC supports -fno-strict-aliasing" >&5
 $as_echo_n "checking if $CC supports -fno-strict-aliasing... " >&6; }
 pgac_save_CFLAGS=$CFLAGS
 CFLAGS="$pgac_save_CFLAGS -fno-strict-aliasing"
+ac_save_c_werror_flag=$ac_c_werror_flag
+ac_c_werror_flag=yes
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4553,12 +4561,15 @@ else
 $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+ac_c_werror_flag=$ac_save_c_werror_flag
 
   # Disable optimizations that assume no overflow; needed for gcc 4.3+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC supports -fwrapv" >&5
 $as_echo_n "checking if $CC supports -fwrapv... " >&6; }
 pgac_save_CFLAGS=$CFLAGS
 CFLAGS="$pgac_save_CFLAGS -fwrapv"
+ac_save_c_werror_flag=$ac_c_werror_flag
+ac_c_werror_flag=yes
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4579,12 +4590,15 @@ else
 $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+ac_c_werror_flag=$ac_save_c_werror_flag
 
   # Disable FP optimizations that cause various errors on gcc 4.5+ or maybe 4.6+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC supports -fexcess-precision=standard" >&5
 $as_echo_n "checking if $CC supports -fexcess-precision=standard... " >&6; }
 pgac_save_CFLAGS=$CFLAGS
 CFLAGS="$pgac_save_CFLAGS -fexcess-precision=standard"
+ac_save_c_werror_flag=$ac_c_werror_flag
+ac_c_werror_flag=yes
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4605,6 +4619,7 @@ else
 $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+ac_c_werror_flag=$ac_save_c_werror_flag
 
   # Disable loop optimizations that get confused by variable-length struct
   # declarations in gcc 4.8+
@@ -4612,6 +4627,8 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 $as_echo_n "checking if $CC supports -fno-aggressive-loop-optimizations... " >&6; }
 pgac_save_CFLAGS=$CFLAGS
 CFLAGS="$pgac_save_CFLAGS -fno-aggressive-loop-optimizations"
+ac_save_c_werror_flag=$ac_c_werror_flag
+ac_c_werror_flag=yes
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4632,6 +4649,7 @@ else
 $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+ac_c_werror_flag=$ac_save_c_werror_flag
 
 
   # Silence compiler warnings that you get with modern versions of GCC.
@@ -4642,6 +4660,8 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 $as_echo_n "checking if $CC supports -Wno-unused-but-set-variable... " >&6; }
 pgac_save_CFLAGS=$CFLAGS
 CFLAGS="$pgac_save_CFLAGS -Wno-unused-but-set-variable"
+ac_save_c_werror_flag=$ac_c_werror_flag
+ac_c_werror_flag=yes
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4662,11 +4682,14 @@ else
 $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+ac_c_werror_flag=$ac_save_c_werror_flag
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC supports -Wno-address" >&5
 $as_echo_n "checking if $CC supports -Wno-address... " >&6; }
 pgac_save_CFLAGS=$CFLAGS
 CFLAGS="$pgac_save_CFLAGS -Wno-address"
+ac_save_c_werror_flag=$ac_c_werror_flag
+ac_c_werror_flag=yes
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4687,6 +4710,7 @@ else
 $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+ac_c_werror_flag=$ac_save_c_werror_flag
 
 
   #-Wno-error=enum-compare -Wno-error=address -Wno-error=maybe-uninitialized
@@ -4698,6 +4722,8 @@ elif test "$ICC" = yes; then
 $as_echo_n "checking if $CC supports -mp1... " >&6; }
 pgac_save_CFLAGS=$CFLAGS
 CFLAGS="$pgac_save_CFLAGS -mp1"
+ac_save_c_werror_flag=$ac_c_werror_flag
+ac_c_werror_flag=yes
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4718,12 +4744,15 @@ else
 $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+ac_c_werror_flag=$ac_save_c_werror_flag
 
   # Make sure strict aliasing is off (though this is said to be the default)
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC supports -fno-strict-aliasing" >&5
 $as_echo_n "checking if $CC supports -fno-strict-aliasing... " >&6; }
 pgac_save_CFLAGS=$CFLAGS
 CFLAGS="$pgac_save_CFLAGS -fno-strict-aliasing"
+ac_save_c_werror_flag=$ac_c_werror_flag
+ac_c_werror_flag=yes
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4744,6 +4773,7 @@ else
 $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+ac_c_werror_flag=$ac_save_c_werror_flag
 
 elif test "$PORTNAME" = "aix"; then
   # AIX's xlc has to have strict aliasing turned off too
@@ -4751,6 +4781,8 @@ elif test "$PORTNAME" = "aix"; then
 $as_echo_n "checking if $CC supports -qnoansialias... " >&6; }
 pgac_save_CFLAGS=$CFLAGS
 CFLAGS="$pgac_save_CFLAGS -qnoansialias"
+ac_save_c_werror_flag=$ac_c_werror_flag
+ac_c_werror_flag=yes
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4771,6 +4803,7 @@ else
 $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+ac_c_werror_flag=$ac_save_c_werror_flag
 
 fi
 
