@@ -107,7 +107,7 @@ static int 			elevel = -1;
 
 /* Top level functions */
 static void analyzeRelation(Relation relation, List *lAttributeNames, bool rootonly);
-static void analyzeComputeAttributeStatistics(Oid relationOid, 
+static void analyzeComputeAttributeStatistics(Relation rel,
 		const char *attributeName,
 		float4 relTuples, 
 		Oid sampleTableOid, 
@@ -150,6 +150,7 @@ static void updateReltuplesRelpagesInCatalog(Oid relationOid, float4 relTuples, 
 
 /* sorting related */
 static int	compare_scalars(const void *a, const void *b, void *arg);
+inline static bool datumCompare(Datum d1, Datum d2, FmgrInfo *finfo);
 
 /* spi execution helpers */
 typedef void (*spiCallback)(void *clientDataOut);
@@ -188,12 +189,12 @@ typedef struct
 	int null_cnt;
 	int nonnull_cnt;
 	double total_width;
-	Form_pg_attribute attr;
 	MemoryContext resultColumnMemContext;
 	ScalarItem *result;
 	int *tupnoLink;
 } ResultColumnSpec;
 
+static void spiCallback_getSampleColumn(void *clientData);
 static void spiCallback_getProcessedAsFloat4(void *clientData);
 static void spiCallback_getSingleResultRowArrayAsTwoFloat4(void *clientData);
 
@@ -797,7 +798,7 @@ static void analyzeRelation(Relation relation, List *lAttributeNames, bool rooto
 	ListCell	*lc = NULL;
 
 	relationOid = RelationGetRelid(relation);
-	
+
 	/**
 	 * Step 1: estimate reltuples, relpages for the relation. 
 	 */
@@ -920,7 +921,7 @@ static void analyzeRelation(Relation relation, List *lAttributeNames, bool rooto
 				minSampleTableSize, RelationGetRelationName(relation));
 		sampleTableOid = buildSampleTable(relationOid, lAttributeNames, 
 				estimatedRelTuples, minSampleTableSize, &sampleTableRelTuples);
-		
+
 		/* We must have a non-empty sample table */
 		Assert(sampleTableRelTuples > 0.0);	
 	}
@@ -941,9 +942,9 @@ static void analyzeRelation(Relation relation, List *lAttributeNames, bool rooto
 		const char *lAttributeName = (const char *) lfirst(le);
 		elog(elevel, "ANALYZE computing statistics on attribute %s", lAttributeName);
 		if (sampleTableRequired)			
-			analyzeComputeAttributeStatistics(relationOid, lAttributeName, estimatedRelTuples, sampleTableOid, sampleTableRelTuples, &stats);
+			analyzeComputeAttributeStatistics(relation, lAttributeName, estimatedRelTuples, sampleTableOid, sampleTableRelTuples, &stats);
 		else
-			analyzeComputeAttributeStatistics(relationOid, lAttributeName, estimatedRelTuples, relationOid, estimatedRelTuples, &stats);
+			analyzeComputeAttributeStatistics(relation, lAttributeName, estimatedRelTuples, relationOid, estimatedRelTuples, &stats);
 		updateAttributeStatisticsInCatalog(relationOid, lAttributeName, &stats);
 		MemoryContextResetAndDeleteChildren(col_context);
 	}
@@ -1190,8 +1191,6 @@ static void spiCallback_getSampleColumn(void *clientData)
 
     MemoryContext callerContext = MemoryContextSwitchTo(spec->resultColumnMemContext);
     Form_pg_attribute attr = SPI_tuptable->tupdesc->attrs[attnum-1];
-    spec->attr = (Form_pg_attribute) palloc(ATTRIBUTE_TUPLE_SIZE);
-    memcpy(spec->attr, attr, ATTRIBUTE_TUPLE_SIZE);
 
     bool is_varlena = (!attr->attbyval) && attr->attlen == -1;
     bool is_varwidth = (!attr->attbyval) && attr->attlen < 0;
@@ -1621,10 +1620,13 @@ static bool isOrderedAndHashable(Oid typid, Oid *ltopr)
 	/* Does type have "=" operator */
 	equalityOperator = equality_oper(typid, true);
 	if (!equalityOperator)
+	{
 		result = false;
+	}
 	else
+	{
 		ReleaseOperator(equalityOperator);
-
+	}
 	/* Does type have "<" operator */
 	ltOperator = ordering_oper(typid, true);
 	if (!ltOperator)
@@ -1680,7 +1682,7 @@ static bool hasMaxDefined(Oid typid)
  * Output:
  * 	stats - structure containing nullfrac, avgwidth, ndistinct, mcv, hist
  */
-static void analyzeComputeAttributeStatistics(Oid relationOid, 
+static void analyzeComputeAttributeStatistics(Relation rel,
 		const char *attributeName,
 		float4 relTuples, 
 		Oid sampleTableOid, 
@@ -1690,6 +1692,7 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 	bool computeDistinct = true;
 	bool computeMCV = true;
 	bool computeHist = true;
+	AttrNumber attnum = get_attnum(rel->rd_id, attributeName);
 	
 	Assert(stats != NULL);
 	Assert(sampleTableRelTuples > 0.0);
@@ -1702,6 +1705,8 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 	stats->freq = NULL;
 	stats->hist = NULL;
 
+	Form_pg_attribute attr = rel->rd_att->attrs[attnum - 1];
+
 	ScalarItem *values = (ScalarItem *) palloc(sizeof(ScalarItem) * (int) sampleTableRelTuples);
 	int *tupnoLink = (int*) palloc(sizeof(int) * (int) sampleTableRelTuples);
 
@@ -1712,9 +1717,13 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 	const char *sampleSchemaName = get_namespace_name(get_rel_namespace(sampleTableOid));
 	const char *sampleTableName = get_rel_name(sampleTableOid);
 
-	appendStringInfo(str, "select tbl.%s from %s.%s as tbl",
+	appendStringInfo(str, "select tbl.%s from %s.%s as tbl ",
 			quote_identifier(attributeName), quote_identifier(sampleSchemaName), quote_identifier(sampleTableName));
 
+	if (attr->atttypid == TEXTOID || attr->atttypid == BPCHAROID || attr->atttypid == VARCHAROID)
+	{
+		appendStringInfo(str, "order by tbl.%s", quote_identifier(attributeName));
+	}
 	ResultColumnSpec spec;
 	spec.null_cnt = 0;
 	spec.nonnull_cnt = 0;
@@ -1730,9 +1739,9 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 	INSTR_TIME_SET_CURRENT(endtime);
 	INSTR_TIME_SUBTRACT(endtime, starttime);
 
-	elog(LOG, "\ntime to read sample for column %s: %.1f ms", quote_identifier(attributeName), INSTR_TIME_GET_MILLISEC(endtime));
+	elog(elevel, "\ntime to read sample for column %s: %.1f ms", quote_identifier(attributeName), INSTR_TIME_GET_MILLISEC(endtime));
 
-	Form_pg_attribute attr = spec.attr;
+	int i = 0;
 	Oid ltopr;
 	Oid	cmpFn;
 	int	cmpFlags;
@@ -1783,24 +1792,46 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 
 	INSTR_TIME_SET_CURRENT(starttime);
 
-	Assert(ltopr != InvalidOid); /* at this point, column type must have "<" operator defined */
-	SelectSortFunction(ltopr, false, &cmpFn, &cmpFlags);
-	fmgr_info(cmpFn, &f_cmpfn);
-	CompareScalarsContext cxt;
+	if (attr->atttypid == TEXTOID || attr->atttypid == BPCHAROID || attr->atttypid == VARCHAROID)
+	{
+		/* values are already sorted by SPI call above, only need to do a linear datum comparison
+		 * and update spec.tupnoLink[]
+		 */
+		Assert(eqopr != InvalidOid);
+		/* use equality comparison here since it can be much cheaper than "<".
+		 * see texteq() vs text_lt().
+		 */
+		cmpFn = equality_oper_funcid(attr->atttypid);
+		fmgr_info(cmpFn, &f_cmpfn);
+		int j = 0;
+		int curr_tupno = 0;
+		for (i = spec.values_cnt - 1, j = i+1; i >= 0; i--, j--)
+		{
+			if (i == spec.values_cnt -1 || !datumCompare(values[i].value, values[j].value, &f_cmpfn))
+			{
+				curr_tupno = values[i].tupno;
+			}
+			spec.tupnoLink[values[i].tupno] = curr_tupno;
+		}
+	}
+	else
+	{
+		Assert(ltopr != InvalidOid); /* at this point, column type must have "<" operator defined */
+		SelectSortFunction(ltopr, false, &cmpFn, &cmpFlags);
+		fmgr_info(cmpFn, &f_cmpfn);
+		CompareScalarsContext cxt;
 
-	/* Sort the collected values */
-	cxt.cmpFn = &f_cmpfn;
-	cxt.cmpFlags = cmpFlags;
-	cxt.tupnoLink = spec.tupnoLink;
-	qsort_arg((void *) values, spec.values_cnt, sizeof(ScalarItem),
-			  compare_scalars, (void *) &cxt);
-
+		/* Sort the collected values */
+		cxt.cmpFn = &f_cmpfn;
+		cxt.cmpFlags = cmpFlags;
+		cxt.tupnoLink = spec.tupnoLink;
+		qsort_arg((void *) values, spec.values_cnt, sizeof(ScalarItem),
+				  compare_scalars, (void *) &cxt);
+	}
 	INSTR_TIME_SET_CURRENT(endtime);
 	INSTR_TIME_SUBTRACT(endtime, starttime);
-	elog(LOG, "time to sort the array of datums: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
-	INSTR_TIME_SET_CURRENT(starttime);
+	elog(elevel, "time to sort the array of datums in memory: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
 
-	int i = 0;
 	int ndistinct = 0;
 	int nmultiple = 0;
 	int dups_cnt = 0;
@@ -1875,11 +1906,6 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 		}
 	}
 
-	INSTR_TIME_SET_CURRENT(endtime);
-	INSTR_TIME_SUBTRACT(endtime, starttime);
-	elog(LOG, "time to traverse array of datums: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
-	INSTR_TIME_SET_CURRENT(starttime);
-
 	if (computeDistinct)
 	{
 		if (nmultiple == 0)
@@ -1945,11 +1971,7 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 		}
 
 	}
-	INSTR_TIME_SET_CURRENT(endtime);
-	INSTR_TIME_SUBTRACT(endtime, starttime);
-	elog(LOG, "time to collect ndistinct the new way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
-	
-	INSTR_TIME_SET_CURRENT(starttime);
+
 	if (computeMCV)
 	{
 		/*
@@ -1981,11 +2003,6 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 		}
 	}
 
-	INSTR_TIME_SET_CURRENT(endtime);
-	INSTR_TIME_SUBTRACT(endtime, starttime);
-	elog(LOG, "time to collect mcv the new way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
-	
-	INSTR_TIME_SET_CURRENT(starttime);
 	if (computeHist)	
 	{
 		Assert(num_hist > 0);
@@ -2039,9 +2056,6 @@ static void analyzeComputeAttributeStatistics(Oid relationOid,
 
 		stats->hist = construct_array(hist_values, hist_cnt, attr->atttypid, attr->attlen, attr->attbyval, attr->attalign);
 	}
-	INSTR_TIME_SET_CURRENT(endtime);
-	INSTR_TIME_SUBTRACT(endtime, starttime);
-	elog(LOG, "time to collect histogram the new way: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
 }
 
 /**
@@ -2647,3 +2661,13 @@ compare_scalars(const void *a, const void *b, void *arg)
 	 */
 	return ta - tb;
 }
+
+/*
+ * Comparison function for two datums
+ */
+inline static bool
+datumCompare(Datum d1, Datum d2, FmgrInfo *finfo)
+{
+	return DatumGetBool(FunctionCall2(finfo, d1, d2));
+}
+
