@@ -233,6 +233,15 @@ extern bool gp_create_table_random_default_distribution;
 extern bool gp_allow_non_uniform_partitioning_ddl;
 extern bool gp_enable_exchange_default_partition;
 
+/* database statistics related GUCs */
+extern int default_statistics_target;
+extern double analyze_relative_error;
+extern bool gp_statistics_pullup_from_child_partition;
+extern bool gp_statistics_use_fkeys;
+extern int gp_statistics_blocks_target;
+extern double gp_statistics_ndistinct_scaling_ratio_threshold;
+extern double gp_statistics_sampling_threshold;
+
 /* WAL replication debug gucs */
 extern bool debug_walrepl_snd;
 extern bool debug_walrepl_syncrep;
@@ -431,7 +440,6 @@ extern double optimizer_damping_factor_join;
 extern double optimizer_damping_factor_groupby;
 extern int optimizer_segments;
 extern bool optimizer_analyze_root_partition;
-extern bool optimizer_analyze_midlevel_partition;
 extern bool optimizer_enable_constant_expression_evaluation;
 extern bool optimizer_use_external_constant_expression_evaluation_for_ints;
 extern bool optimizer_enable_bitmapscan;

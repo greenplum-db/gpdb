@@ -7,12 +7,12 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * The new ANALYZE implementation uses routine query processing
- * capabilities of GPDB to compute statistics on relations.  It
- * differs from old ANALYZE functionally in that it computes global
- * statistics which improves cardinalities of join/group-by
- * operations.
- * It uses SPI under the covers to issue queries. The main point of
+ * The new ANALYZE implementation uses in-memory processing of the sampled
+ * columns to compute column-level statistics. This enables a significant
+ * performance speed up over the previous approach via SPI calls.
+ *
+ * It uses SPI under the covers to sample the base table and to read sampled
+ * columns into an array of datums in memory. The main point of
  * entry is the function analyzeStatement. This function does the
  * heavy lifting of setting up transactions and getting locks.
  *
@@ -25,33 +25,17 @@
 
 #include <math.h>
 
-#include "access/heapam.h"
 #include "catalog/catquery.h"
 #include "catalog/heap.h"
-#include "access/transam.h"
 #include "access/tuptoaster.h"
-#include "access/aosegfiles.h"
-#include "access/aocssegfiles.h"
-#include "access/hash.h"
-#include "catalog/index.h"
-#include "catalog/indexing.h"
-#include "catalog/namespace.h"
-#include "catalog/catalog.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbheap.h"
 #include "cdb/cdbhash.h"
 #include "commands/vacuum.h"
-#include "executor/executor.h"
-#include "lib/stringinfo.h"
-#include "libpq/pqformat.h"             /* pq_beginmessage() etc. */
-#include "miscadmin.h"
-#include "parser/parse_expr.h"
 #include "parser/parse_func.h"
 #include "parser/parse_oper.h"
-#include "parser/parse_relation.h"
-#include "pgstat.h"
 #include "utils/acl.h"
 #include "utils/datum.h"
 #include "utils/guc.h"
@@ -59,32 +43,13 @@
 #include "utils/memutils.h"
 #include "utils/syscache.h"
 #include "utils/tuplesort.h"
-#include "utils/pg_locale.h"
-#include "utils/builtins.h"
-#include "utils/inval.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbanalyze.h"
-#include "cdb/cdbrelsize.h"
-#include "utils/fmgroids.h"
 #include "storage/backendid.h"
 #include "executor/spi.h"
 #include "postmaster/autovacuum.h"
 #include "cdb/cdbtm.h"
 #include "catalog/pg_namespace.h"
-#include "utils/debugbreak.h"
 #include "nodes/makefuncs.h"
-
-/**
- * Statistics related parameters.
- */
-
-int				default_statistics_target = 25;
-double			analyze_relative_error = 0.25;
-bool			gp_statistics_pullup_from_child_partition = FALSE;
-bool			gp_statistics_use_fkeys = FALSE;
-int				gp_statistics_blocks_target = 25;
-double			gp_statistics_ndistinct_scaling_ratio_threshold = 0.10;
-double			gp_statistics_sampling_threshold = 10000;
 
 /**
  * This struct contains statistics produced during ANALYZE
@@ -100,6 +65,53 @@ typedef struct AttributeStatistics
 	ArrayType	*hist;		/* equi-depth histogram bounds */
 } AttributeStatistics;
 
+typedef struct
+{
+    int numColumns;
+    MemoryContext memoryContext;
+    ArrayType ** output;
+} EachResultColumnAsArraySpec;
+
+typedef struct
+{
+	Datum		value;			/* a data value */
+	uint32		tupno;			/* position index for tuple it came from */
+} ScalarItem;
+
+typedef struct
+{
+	int			count;			/* # of duplicates */
+	int			first;			/* values[] index of first occurrence */
+} ScalarMCVItem;
+
+typedef struct
+{
+	FmgrInfo   *cmpFn;
+	int			cmpFlags;
+	uint32	   *tupnoLink;
+} CompareScalarsContext;
+
+typedef struct
+{
+	uint32 ndistinct;
+	uint32 nmultiple;
+	int track_cnt;
+	int num_mcv;
+	int num_hist;
+	ScalarMCVItem *track;
+} IterateScalarsContext;
+
+typedef struct
+{
+	uint32 values_cnt;		/* number of tuples that are read into the datum array */
+	uint32 null_cnt;
+	uint32 nonnull_cnt;
+	double total_width;
+	MemoryContext resultColumnMemContext;
+	ScalarItem *values;		/* datum array */
+	uint32 *tupnoLink;
+} ResultColumnSpec;
+
 /**
  * Logging level.
  */
@@ -110,8 +122,7 @@ static void analyzeRelation(Relation relation, List *lAttributeNames, bool rooto
 static void analyzeComputeAttributeStatistics(Relation rel,
 		const char *attributeName,
 		float4 relTuples, 
-		Oid sampleTableOid, 
-		float4 sampleTableRelTuples, 
+		Oid sampleTableOid,
 		AttributeStatistics *stats);
 static List* analyzableRelations(bool rootonly);
 static bool analyzePermitted(Oid relationOid);
@@ -130,79 +141,51 @@ static bool isOrderedAndHashable(Oid typid, Oid *ltopr);
 static bool hasMaxDefined(Oid typid);
 
 /* Sampling related */
-static float4 estimateSampleSize(Oid relationOid, const char *attributeName, float4 relTuples);
+static float4 estimateSampleSize(Relation rel, const char *attributeName, float4 relTuples);
 static char* temporarySampleTableName(Oid relationOid);
 static Oid buildSampleTable(Oid relationOid, 
 		List *lAttributeNames, 
 		float4	relTuples,
-		float4 	requestedSampleSize, 
-		float4 *sampleTableRelTuples);
+		float4 	requestedSampleSize);
 static void dropSampleTable(Oid sampleTableOid);
 
-/* Attribute statistics computation */
-static int4 numberOfMCVEntries(Oid relationOid, const char *attributeName);
-static int4 numberOfHistogramEntries(Oid relationOid, const char *attributeName);
+/* Column statistics */
+static void sort_sample_column(ResultColumnSpec *spec, Oid typid, Oid ltopr);
+static void iterate_scalars(ResultColumnSpec *spec, IterateScalarsContext *itrCxt);
+static void compute_ndistinct(AttributeStatistics *stats,
+							IterateScalarsContext *itrCxt,
+							uint32 toowide_cnt,
+							uint32 sampleTableRelTuples,
+							float4 relTuples,
+							bool *computeMCV);
+static void compute_mcv(AttributeStatistics *stats,
+						ResultColumnSpec *spec,
+						IterateScalarsContext *itrCxt,
+						uint32 sampleTableRelTuples,
+						Form_pg_attribute attr);
+
+static void compute_histogram(AttributeStatistics *stats,
+						ResultColumnSpec *spec,
+						IterateScalarsContext *itrCxt,
+						Form_pg_attribute attr);
 
 /* Catalog related */
 static void updateAttributeStatisticsInCatalog(Oid relationOid, const char *attributeName, 
 		AttributeStatistics *stats);
 static void updateReltuplesRelpagesInCatalog(Oid relationOid, float4 relTuples, float4 relPages);
 
-/* sorting related */
-static int	compare_scalars(const void *a, const void *b, void *arg);
+/* Sorting related */
+static int compare_scalars(const void *a, const void *b, void *arg);
 inline static bool datumCompare(Datum d1, Datum d2, FmgrInfo *finfo);
 
 /* spi execution helpers */
 typedef void (*spiCallback)(void *clientDataOut);
 static void spiExecuteWithCallback(const char *src, bool read_only, long tcount,
            spiCallback callbackFn, void *clientData);
-
-typedef struct
-{
-    int numColumns;
-    MemoryContext memoryContext;
-    ArrayType ** output;
-} EachResultColumnAsArraySpec;
-
-typedef struct
-{
-	Datum		value;			/* a data value */
-	int			tupno;			/* position index for tuple it came from */
-} ScalarItem;
-
-typedef struct
-{
-	int			count;			/* # of duplicates */
-	int			first;			/* values[] index of first occurrence */
-} ScalarMCVItem;
-
-typedef struct
-{
-	FmgrInfo   *cmpFn;
-	int			cmpFlags;
-	int		   *tupnoLink;
-} CompareScalarsContext;
-
-typedef struct
-{
-	int values_cnt;
-	int null_cnt;
-	int nonnull_cnt;
-	double total_width;
-	MemoryContext resultColumnMemContext;
-	ScalarItem *result;
-	int *tupnoLink;
-} ResultColumnSpec;
-
 static void spiCallback_getSampleColumn(void *clientData);
 static void spiCallback_getProcessedAsFloat4(void *clientData);
 static void spiCallback_getSingleResultRowArrayAsTwoFloat4(void *clientData);
 
-/**
- * Extern stuff.
- */
-extern bool	optimizer; /* status of the new optimizer */
-extern bool optimizer_analyze_root_partition; /* GUC for stats collection on root partitions */
 /*
  * To avoid consuming too much memory during analysis and/or too much space
  * in the resulting pg_statistic rows, we ignore varlena datums that are wider
@@ -387,10 +370,6 @@ void analyzeStmt(VacuumStmt *stmt, List *relids)
 				lRelOids = all_leaf_partition_relids(pn); /* all leaves */
 			}
 			lRelOids = lappend_oid(lRelOids, relationOid); /* root partition */
-			if (optimizer_analyze_midlevel_partition)
-			{
-				lRelOids = list_concat(lRelOids, all_interior_partition_relids(pn)); /* interior partitions */
-			}
 		}
 		else if (ps == PART_STATUS_INTERIOR) /* analyze an interior partition directly */
 		{
@@ -793,7 +772,6 @@ static void analyzeRelation(Relation relation, List *lAttributeNames, bool rooto
 	Oid			relationOid = InvalidOid;
 	float4 estimatedRelTuples = 0.0;
 	float4 estimatedRelPages = 0.0;
-	float4 sampleTableRelTuples = 0.0;
 	List	*indexOidList = NIL;
 	ListCell	*lc = NULL;
 
@@ -877,7 +855,6 @@ static void analyzeRelation(Relation relation, List *lAttributeNames, bool rooto
 	/* Cannot compute statistics on pg_statistic due to locking issues */
 	if (relationOid == StatisticRelationId)
 	{
-		elog(elevel, "ANALYZE skipping computing statistics on pg_statistic.");
 		return;
 	}
 
@@ -887,7 +864,7 @@ static void analyzeRelation(Relation relation, List *lAttributeNames, bool rooto
 	foreach (le, lAttributeNames)
 	{
 		const char *attributeName = (const char *) lfirst(le);
-		float4 minRowsForAttribute = estimateSampleSize(relationOid, attributeName, estimatedRelTuples);
+		float4 minRowsForAttribute = estimateSampleSize(relation, attributeName, estimatedRelTuples);
 		minSampleTableSize = Max(minSampleTableSize, minRowsForAttribute);
 	}
 	
@@ -917,13 +894,8 @@ static void analyzeRelation(Relation relation, List *lAttributeNames, bool rooto
 	 */
 	if (sampleTableRequired)
 	{
-		elog(elevel, "ANALYZE building sample table of size %.0f on table %s because it has too many rows.", 
-				minSampleTableSize, RelationGetRelationName(relation));
 		sampleTableOid = buildSampleTable(relationOid, lAttributeNames, 
-				estimatedRelTuples, minSampleTableSize, &sampleTableRelTuples);
-
-		/* We must have a non-empty sample table */
-		Assert(sampleTableRelTuples > 0.0);	
+				estimatedRelTuples, minSampleTableSize);
 	}
 	
 	/**
@@ -941,10 +913,11 @@ static void analyzeRelation(Relation relation, List *lAttributeNames, bool rooto
 		AttributeStatistics	stats;
 		const char *lAttributeName = (const char *) lfirst(le);
 		elog(elevel, "ANALYZE computing statistics on attribute %s", lAttributeName);
-		if (sampleTableRequired)			
-			analyzeComputeAttributeStatistics(relation, lAttributeName, estimatedRelTuples, sampleTableOid, sampleTableRelTuples, &stats);
-		else
-			analyzeComputeAttributeStatistics(relation, lAttributeName, estimatedRelTuples, relationOid, estimatedRelTuples, &stats);
+		if (!sampleTableRequired)
+		{
+			sampleTableOid = relationOid;
+		}
+		analyzeComputeAttributeStatistics(relation, lAttributeName, estimatedRelTuples, sampleTableOid, &stats);
 		updateAttributeStatisticsInCatalog(relationOid, lAttributeName, &stats);
 		MemoryContextResetAndDeleteChildren(col_context);
 	}
@@ -957,7 +930,6 @@ static void analyzeRelation(Relation relation, List *lAttributeNames, bool rooto
 	 */
 	if (sampleTableRequired)
 	{
-		elog(elevel, "ANALYZE dropping sample table");
 		dropSampleTable(sampleTableOid);
 	}
 	
@@ -981,49 +953,6 @@ static char* temporarySampleTableName(Oid relationOid)
 }
 
 /**
- * This method determines the number of mcv entries to be computed for a particular attribute.
- * Input:
- * 	relationOid - Oid of relation
- * 	attributeName - Name of attribute
- * Output:
- * 	number of mcv entries.
- */
-static int4 numberOfMCVEntries(Oid relationOid, const char *attributeName)
-{
-	HeapTuple			attributeTuple = NULL;
-	Form_pg_attribute 	attribute = NULL;
-	int4	 			nMCVEntries = 0;
-	cqContext		   *pcqCtx;
-
-	pcqCtx = caql_getattname_scan(NULL, relationOid, attributeName);
-
-	attributeTuple = caql_get_current(pcqCtx);
-	Assert(HeapTupleIsValid(attributeTuple));
-	attribute = (Form_pg_attribute) GETSTRUCT(attributeTuple);
-	nMCVEntries = attribute->attstattarget;
-
-	caql_endscan(pcqCtx);
-
-	if (nMCVEntries < 0)
-		nMCVEntries = (int4) default_statistics_target;
-	return nMCVEntries;
-}
-
-/**
- * This method determines the number of histogram entries to be computed for a particular attribute.
- * Input:
- * 	relationOid	- relation's Oid
- * 	attributeName - Name of attribute
- * Output:
- * 	number of histogram entries. Currently, this is the same as the number of MCV entries.
- */
-static int4 numberOfHistogramEntries(Oid relationOid, const char *attributeName)
-{
-	/** for now, the number of histogram entries is same as mcv_entries */
-	return numberOfMCVEntries(relationOid, attributeName);
-}
-
-/**
  * Determine the number of tuples from relation that will need to be sampled
  * to compute statistics on the specific attribute. This method looks up the
  * stats target for the said attribute (if one is not found, the default_statistics_target
@@ -1037,13 +966,15 @@ static int4 numberOfHistogramEntries(Oid relationOid, const char *attributeName)
  * 	sample size
  * 
  */
-static float4 estimateSampleSize(Oid relationOid, const char *attributeName, float4 relTuples)
+static float4 estimateSampleSize(Relation rel, const char *attributeName, float4 relTuples)
 {
 	float4		sampleSize = 0.0;
 	int4		statsTarget = 0.0;
 	
-	statsTarget = Max(numberOfHistogramEntries(relationOid, attributeName), 
-						numberOfMCVEntries(relationOid, attributeName));
+	AttrNumber attnum = get_attnum(rel->rd_id, attributeName);
+	Form_pg_attribute attr = rel->rd_att->attrs[attnum - 1];
+
+	statsTarget = attr->attstattarget < 0 ? default_statistics_target : attr->attstattarget;
 	Assert(statsTarget >= 0);
 	/*--------------------
 	 * The following choice of minrows is based on the paper
@@ -1104,8 +1035,6 @@ static void spiExecuteWithCallback(
 					errmsg("Unable to connect to execute internal query.")));
 		}
 		connected = true;
-
-		elog(elevel, "Executing SQL: %s", src);
 		
 		/* Do the query. */
 		ret = SPI_execute(src, read_only, tcount);
@@ -1178,7 +1107,7 @@ static void spiCallback_getProcessedAsFloat4(void *clientData)
 static void spiCallback_getSampleColumn(void *clientData)
 {
 	ResultColumnSpec *spec = (ResultColumnSpec*) clientData;
-	int i = 0;
+	uint32 i = 0;
 	bool isNull = false;
 
 	/* Since we are retrieving one column at a time, the attribute number
@@ -1189,17 +1118,18 @@ static void spiCallback_getSampleColumn(void *clientData)
     Assert(SPI_tuptable != NULL);
     Assert(SPI_tuptable->tupdesc);
 
-    MemoryContext callerContext = MemoryContextSwitchTo(spec->resultColumnMemContext);
     Form_pg_attribute attr = SPI_tuptable->tupdesc->attrs[attnum-1];
-
     bool is_varlena = (!attr->attbyval) && attr->attlen == -1;
     bool is_varwidth = (!attr->attbyval) && attr->attlen < 0;
 
+    MemoryContext callerContext = MemoryContextSwitchTo(spec->resultColumnMemContext);
+
+    ScalarItem *values = (ScalarItem *) palloc(sizeof(ScalarItem) * SPI_processed);
+    uint32 *tupnoLink = (uint32*) palloc(sizeof(uint32) * SPI_processed);
+
     for (i = 0; i < SPI_processed; i++)
     {
-    	Datum dValue_SPI = heap_getattr(SPI_tuptable->vals[i], attnum, SPI_tuptable->tupdesc, &isNull);
-    	/* need to copy datum from SPI context to current context */
-    	Datum dValue = datumCopy(dValue_SPI, attr->attbyval, attr->attlen);
+    	Datum dValue = heap_getattr(SPI_tuptable->vals[i], attnum, SPI_tuptable->tupdesc, &isNull);
 
     	if (isNull)
     	{
@@ -1225,12 +1155,16 @@ static void spiCallback_getSampleColumn(void *clientData)
 			spec->total_width += strlen(DatumGetCString(dValue)) + 1;
 		}
 
-		spec->result[spec->values_cnt].value = dValue;
-		spec->result[spec->values_cnt].tupno = spec->values_cnt;
-		spec->tupnoLink[spec->values_cnt] = spec->values_cnt;
+		/* need to copy datum from SPI context to current context */
+		Datum dValue_copy = datumCopy(dValue, attr->attbyval, attr->attlen);
+		values[spec->values_cnt].value = dValue_copy;
+		values[spec->values_cnt].tupno = spec->values_cnt;
+		tupnoLink[spec->values_cnt] = spec->values_cnt;
 		spec->values_cnt++;
     }
 
+    spec->values = values;
+    spec->tupnoLink = tupnoLink;
     MemoryContextSwitchTo(callerContext);
 }
 
@@ -1255,8 +1189,7 @@ static void spiCallback_getSampleColumn(void *clientData)
 static Oid buildSampleTable(Oid relationOid, 
 		List *lAttributeNames, 
 		float4	relTuples,
-		float4 	requestedSampleSize, 
-		float4 *sampleTableRelTuples)
+		float4 	requestedSampleSize)
 {
 	int nAttributes = -1;
 	StringInfoData str;
@@ -1269,6 +1202,7 @@ static Oid buildSampleTable(Oid relationOid,
 	char 	*sampleTableName = NULL;
 	Oid			sampleTableOid = InvalidOid;
 	float4		randomThreshold = 0.0;
+	float4		sampleTableRelTuples = 0.0;
 	RangeVar 	*rangeVar = NULL;
 	
 	Assert(requestedSampleSize > 0.0);
@@ -1354,7 +1288,7 @@ static Oid buildSampleTable(Oid relationOid,
 	appendStringInfo(&str, " ) distributed randomly");
 
 	spiExecuteWithCallback(str.data, false /*readonly*/, 0 /*tcount */, 
-	                        spiCallback_getProcessedAsFloat4, sampleTableRelTuples);
+	                        spiCallback_getProcessedAsFloat4, &sampleTableRelTuples);
 
 	pfree(str.data);
 	pfree(columnStr.data);
@@ -1362,7 +1296,7 @@ static Oid buildSampleTable(Oid relationOid,
 	elog(elevel, "Created sample table %s.%s with nrows=%.0f", 
 			quote_identifier(sampleSchemaName), 
 			quote_identifier(sampleTableName), 
-			*sampleTableRelTuples);
+			sampleTableRelTuples);
 
 	rangeVar = makeRangeVar(sampleSchemaName, sampleTableName, -1);
 	sampleTableOid = RangeVarGetRelid(rangeVar, true);
@@ -1374,7 +1308,7 @@ static Oid buildSampleTable(Oid relationOid,
 	 * generate bad statistics.
 	 */
 	
-	if (*sampleTableRelTuples < 1.0)
+	if (sampleTableRelTuples < 1.0)
 	{
 		elog(ERROR, "ANALYZE unable to generate accurate statistics on table %s.%s. Try lowering gp_analyze_relative_error", 
 				quote_identifier(schemaName), 
@@ -1385,7 +1319,7 @@ static Oid buildSampleTable(Oid relationOid,
 	 * Update the sample table's reltuples, relpages. Without these, the queries to the sample table would call cdbRelsize which can be an expensive call. 
 	 * We know the number of tuples in the sample table, but don't have the information about the number of pages. We set it to 2 arbitrarily.
 	 */
-	updateReltuplesRelpagesInCatalog(sampleTableOid, *sampleTableRelTuples, 2);
+	updateReltuplesRelpagesInCatalog(sampleTableOid, sampleTableRelTuples, 2);
 
 	pfree((void *) rangeVar);
 	pfree((void *) sampleTableName);
@@ -1449,7 +1383,7 @@ static void analyzeEstimateIndexpages(Oid relationOid, Oid indexOid, float4 *ind
 				"from gp_dist_random('pg_class') c where c.oid=%d", indexOid);
 	}
 
-    spiExecuteWithCallback(sqlstmt.data, false /*readonly*/, 0 /*tcount */,
+    spiExecuteWithCallback(sqlstmt.data, true /*readonly*/, 0 /*tcount */,
         	                        spiCallback_getSingleResultRowArrayAsTwoFloat4, spiResult);
     *indexPages = spiResult[1];
 
@@ -1474,14 +1408,10 @@ static void analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples,
 	
 	List *allRelOids = NIL;
 
-	/* if GUC optimizer_analyze_root_partition is off, we do not analyze root partitions, unless
-	 * using the 'ANALYZE ROOTPARITION tablename' command.
-	 * This is done by estimating the reltuples to be 0 and thus bypass the actual analyze.
-	 * See MPP-21427.
-	 * For mid-level parititions, we aggregate the reltuples and relpages from all leaf children beneath.
+	/* rel_is_partitioned() tests whether a relation is a top-level (root) partition table.
+	 * For mid-level parititions, we do not collect stats since neither planner or Orca uses them.
 	 */
-	if (rel_part_status(relationOid) == PART_STATUS_INTERIOR ||
-			(rel_is_partitioned(relationOid) && (optimizer_analyze_root_partition || rootonly)))
+	if (rel_is_partitioned(relationOid))
 	{
 		allRelOids = rel_get_leaf_children_relids(relationOid);
 	}
@@ -1511,7 +1441,7 @@ static void analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples,
 					"from gp_dist_random('pg_class') c where c.oid=%d", singleOid);
 		}
 
-		spiExecuteWithCallback(sqlstmt.data, false /*readonly*/, 0 /*tcount */,
+		spiExecuteWithCallback(sqlstmt.data, true /*readonly*/, 0 /*tcount */,
 				spiCallback_getSingleResultRowArrayAsTwoFloat4, spiResult);
 		*relTuples += spiResult[0];
 		*relPages += spiResult[1];
@@ -1671,6 +1601,299 @@ static bool hasMaxDefined(Oid typid)
 	return result;
 }
 
+static void sort_sample_column(ResultColumnSpec *spec, Oid typid, Oid ltopr)
+{
+	Oid	cmpFn;
+	int	cmpFlags;
+	FmgrInfo f_cmpfn;
+
+	ScalarItem *values = spec->values;
+
+	if (typid == TEXTOID || typid == BPCHAROID || typid == VARCHAROID)
+	{
+		/* For string columns, the cost of sorting an array of datums is surprisingly high
+		 * comparing to the executor. The executor uses mk_sort which can see 3x speed up
+		 * on string columns versus regular sort. Thus for string columns we piggy-back
+		 * the sort to the previous SPI call that retrieves the sample columns.
+		 * Since the values are already sorted by SPI call above, we only need to do a linear
+		 * datum comparison and update spec->tupnoLink[] to facilitate ndistinct, mcv and histogram
+		 * collection later.
+		 */
+
+		/* use equality comparison here since it can be much cheaper than "<".
+		 * see texteq() vs text_lt().
+		 */
+		cmpFn = equality_oper_funcid(typid);
+		fmgr_info(cmpFn, &f_cmpfn);
+		long k = 0;
+		long j = 0;
+		uint32 curr_tupno = 0;
+		for (k = spec->values_cnt - 1, j = k+1; k >= 0; k--, j--)
+		{
+			if (k == spec->values_cnt - 1 || !datumCompare(values[k].value, values[j].value, &f_cmpfn))
+			{
+				curr_tupno = values[k].tupno;
+			}
+			spec->tupnoLink[values[k].tupno] = curr_tupno;
+		}
+	}
+	else
+	{
+		Assert(ltopr != InvalidOid); /* at this point, column type must have "<" operator defined */
+		SelectSortFunction(ltopr, false /*nulls first*/, &cmpFn, &cmpFlags);
+		fmgr_info(cmpFn, &f_cmpfn);
+		CompareScalarsContext cxt;
+
+		/* Sort the collected values */
+		cxt.cmpFn = &f_cmpfn;
+		cxt.cmpFlags = cmpFlags;
+		cxt.tupnoLink = spec->tupnoLink;
+		qsort_arg((void *) values, spec->values_cnt, sizeof(ScalarItem),
+				  compare_scalars, (void *) &cxt);
+	}
+}
+
+static void iterate_scalars(ResultColumnSpec *spec, IterateScalarsContext *itrCxt)
+{
+	/*
+	 * Now scan the values in order, find the most common ones, and also
+	 * gather info on number of distinct values.
+	 *
+	 * To determine which are most common, we first have to count the
+	 * number of duplicates of each value.	The duplicates are adjacent in
+	 * the sorted list, so a brute-force approach is to compare successive
+	 * datum values until we find two that are not equal. However, that
+	 * requires N-1 invocations of the datum comparison routine, which are
+	 * completely redundant with work that was done during the sort.  (The
+	 * sort algorithm must at some point have compared each pair of items
+	 * that are adjacent in the sorted order; otherwise it could not know
+	 * that it's ordered the pair correctly.) We exploit this by having
+	 * compare_scalars remember the highest tupno index that each
+	 * ScalarItem has been found equal to.	At the end of the sort, a
+	 * ScalarItem's tupnoLink will still point to itself if and only if it
+	 * is the last item of its group of duplicates (since the group will
+	 * be ordered by tupno).
+	 */
+
+	uint32 dups_cnt = 0;
+	uint32 i = 0;
+	ScalarMCVItem *track = itrCxt->track;
+
+	for (i = 0; i < spec->values_cnt; i++)
+	{
+		uint32	tupno = spec->values[i].tupno;
+
+		dups_cnt++;
+		if (spec->tupnoLink[tupno] == tupno)
+		{
+			/* Reached end of duplicates of this value */
+			itrCxt->ndistinct++;
+			if (dups_cnt > 1)
+			{
+				itrCxt->nmultiple++;
+			}
+
+			/*
+			 * There are some difference between the implementation here and in PostgreSQL.
+			 * We populate and update track and track_cnt even if dups_cnt is 1. This gives
+			 * us more info in the MCV list even if the values are unique.
+			 */
+			if (itrCxt->track_cnt < itrCxt->num_mcv ||
+				dups_cnt > track[itrCxt->track_cnt - 1].count)
+			{
+				/*
+				 * Found a new item for the mcv list; find its
+				 * position, bubbling down old items if needed. Loop
+				 * invariant is that j points at an empty/replaceable
+				 * slot.
+				 */
+				int	j = 0;
+
+				if (itrCxt->track_cnt < itrCxt->num_mcv)
+					itrCxt->track_cnt++;
+				for (j = itrCxt->track_cnt - 1; j > 0; j--)
+				{
+					if (dups_cnt <= track[j - 1].count)
+						break;
+					track[j].count = track[j - 1].count;
+					track[j].first = track[j - 1].first;
+				}
+				track[j].count = dups_cnt;
+				track[j].first = i + 1 - dups_cnt;
+			}
+			dups_cnt = 0;
+		}
+	}
+}
+
+static void compute_ndistinct(AttributeStatistics *stats,
+							IterateScalarsContext *itrCxt,
+							uint32 toowide_cnt,
+							uint32 sampleTableRelTuples,
+							float4 relTuples,
+							bool *computeMCV)
+{
+	if (itrCxt->nmultiple == 0)
+	{
+		/* If we found no repeated values, assume it's a unique column */
+		stats->ndistinct = -1.0;
+
+		/*
+		 * If there are many more distinct values than mcv buckets,
+		 * we can ignore computing mcv values.
+		 */
+		if (itrCxt->ndistinct > itrCxt->num_mcv)
+			*computeMCV = false;
+	}
+	else if (toowide_cnt == 0 && itrCxt->nmultiple == itrCxt->ndistinct)
+	{
+		/*
+		 * Every value in the sample appeared more than once.  Assume the
+		 * column has just these values.
+		 */
+		stats->ndistinct = itrCxt->ndistinct;
+	}
+	else
+	{
+		/*----------
+		 * Estimate the number of distinct values using the estimator
+		 * proposed by Haas and Stokes in IBM Research Report RJ 10025:
+		 *		n*d / (n - f1 + f1*n/N)
+		 * where f1 is the number of distinct values that occurred
+		 * exactly once in our sample of n rows (from a total of N),
+		 * and d is the total number of distinct values in the sample.
+		 * This is their Duj1 estimator; the other estimators they
+		 * recommend are considerably more complex, and are numerically
+		 * very unstable when n is much smaller than N.
+		 *
+		 * Overwidth values are assumed to have been distinct.
+		 *----------
+		 */
+		uint32		f1 = itrCxt->ndistinct - itrCxt->nmultiple + toowide_cnt;
+		uint32		d = f1 + itrCxt->nmultiple;
+		double		numer, denom;
+
+		numer = (double) sampleTableRelTuples * (double) d;
+
+		denom = (double) (sampleTableRelTuples - f1) +
+			(double) f1 * (double) sampleTableRelTuples / relTuples;
+
+		stats->ndistinct = numer / denom;
+		/* Clamp to sane range in case of roundoff error */
+		if (stats->ndistinct < (double) d)
+			stats->ndistinct = (double) d;
+		if (stats->ndistinct > relTuples)
+			stats->ndistinct = relTuples;
+		stats->ndistinct = floor(stats->ndistinct + 0.5);
+	}
+
+	/**
+	 * Does ndistinct scale with reltuples?
+	 */
+	if (stats->ndistinct > relTuples * gp_statistics_ndistinct_scaling_ratio_threshold)
+	{
+		stats->ndistinct = -(stats->ndistinct / relTuples);
+	}
+}
+
+static void compute_mcv(AttributeStatistics *stats,
+						ResultColumnSpec *spec,
+						IterateScalarsContext *itrCxt,
+						uint32 sampleTableRelTuples,
+						Form_pg_attribute attr)
+{
+	/*
+	 * Decide how many values are worth storing as most-common values. If
+	 * we are able to generate a complete MCV list (all the values in the
+	 * sample will fit, and we think these are all the ones in the table),
+	 * then do so.
+	 */
+	int num_mcv = itrCxt->num_mcv;
+	ScalarMCVItem *track = itrCxt->track;
+	uint32 i = 0;
+
+	if (itrCxt->track_cnt < num_mcv)
+	{
+		num_mcv = itrCxt->track_cnt;
+	}
+
+	if (num_mcv > 0)
+	{
+		Datum	   *mcv_values;
+		Datum	   *mcv_freqs;
+
+		mcv_values = (Datum *) palloc(num_mcv * sizeof(Datum));
+		mcv_freqs = (Datum *) palloc(num_mcv * sizeof(Datum));
+		for (i = 0; i < num_mcv; i++)
+		{
+			mcv_values[i] = spec->values[track[i].first].value;
+			mcv_freqs[i] = Float4GetDatum((float4) track[i].count / (float4) sampleTableRelTuples);
+		}
+
+		stats->mcv = construct_array(mcv_values, num_mcv, attr->atttypid, attr->attlen, attr->attbyval, attr->attalign);
+		stats->freq = construct_array(mcv_freqs, num_mcv, FLOAT4OID, sizeof(float4), true, 'i');
+	}
+}
+
+static void compute_histogram(AttributeStatistics *stats,
+						ResultColumnSpec *spec,
+						IterateScalarsContext *itrCxt,
+						Form_pg_attribute attr)
+{
+	int num_hist = itrCxt->num_hist;
+
+	Assert(num_hist > 0);
+	uint32 bucket_size = spec->values_cnt / num_hist;
+	if (bucket_size <= 1)
+	{
+		/* histogram will be empty if bucket_size <= 1 */
+		stats->hist = NULL;
+		return;
+	}
+
+	/**
+	 * In legacy GPDB the histogram is constructed by choosing values that occur every
+	 * 'bucketSize' interval. It also chooses the maximum value from the relation. It then
+	 * removes duplicate values and orders the values in ascending order.
+	 */
+	int num_hist_upperbound = num_hist +
+								1 /* one extra for boundary */ +
+								(spec->values_cnt % num_hist) / bucket_size /* remainder */ +
+								1 /* max value */;
+
+	Datum *hist_values = (Datum *) palloc(num_hist_upperbound * sizeof(Datum));
+
+	int hist_cnt = 0; /* the final and unique number of histogram boundaries */
+
+	/*
+	 * The new_value_flag is used to detect duplicates in the histogram boundaries.
+	 * Since we know the values are sorted and spec->tupnoLink[tupno] == tupno is
+	 * only true for the last value of each block of repeated values, we can reset
+	 * the flag whenever we pass through a block of repeated values. This way we do not
+	 * need to do datum comparisons, which are much more expensive.
+	 */
+	bool new_value_flag = true;
+	uint32 i = 0;
+	while (i < spec->values_cnt)
+	{
+		int tupno = spec->values[i].tupno;
+		if ((i % bucket_size == 0 || i == spec->values_cnt - 1) &&
+				new_value_flag)
+		{
+			hist_values[hist_cnt] = spec->values[i].value;
+			hist_cnt++;
+			new_value_flag = false;
+		}
+		if (spec->tupnoLink[tupno] == tupno)
+		{
+			new_value_flag = true;
+		}
+		i++;
+	}
+
+	stats->hist = construct_array(hist_values, hist_cnt, attr->atttypid, attr->attlen, attr->attbyval, attr->attalign);
+}
+
 /**
  * Responsible for computing statistics on relationOid. 
  * Input:
@@ -1686,7 +1909,6 @@ static void analyzeComputeAttributeStatistics(Relation rel,
 		const char *attributeName,
 		float4 relTuples, 
 		Oid sampleTableOid, 
-		float4 sampleTableRelTuples,
 		AttributeStatistics *stats)
 {
 	bool computeDistinct = true;
@@ -1695,7 +1917,6 @@ static void analyzeComputeAttributeStatistics(Relation rel,
 	AttrNumber attnum = get_attnum(rel->rd_id, attributeName);
 	
 	Assert(stats != NULL);
-	Assert(sampleTableRelTuples > 0.0);
 	
 	/* Default values */
 	stats->nullFraction = 0.0;
@@ -1707,12 +1928,6 @@ static void analyzeComputeAttributeStatistics(Relation rel,
 
 	Form_pg_attribute attr = rel->rd_att->attrs[attnum - 1];
 
-	ScalarItem *values = (ScalarItem *) palloc(sizeof(ScalarItem) * (int) sampleTableRelTuples);
-	int *tupnoLink = (int*) palloc(sizeof(int) * (int) sampleTableRelTuples);
-
-	instr_time      starttime, endtime;
-	INSTR_TIME_SET_CURRENT(starttime);
-
 	StringInfo str = makeStringInfo();
 	const char *sampleSchemaName = get_namespace_name(get_rel_namespace(sampleTableOid));
 	const char *sampleTableName = get_rel_name(sampleTableOid);
@@ -1722,6 +1937,9 @@ static void analyzeComputeAttributeStatistics(Relation rel,
 
 	if (attr->atttypid == TEXTOID || attr->atttypid == BPCHAROID || attr->atttypid == VARCHAROID)
 	{
+		/* For string columns, let executor do the sorting since it is much faster (using mk_sort).
+		 * See comments in sort_sample_column().
+		 */
 		appendStringInfo(str, "order by tbl.%s", quote_identifier(attributeName));
 	}
 	ResultColumnSpec spec;
@@ -1730,24 +1948,21 @@ static void analyzeComputeAttributeStatistics(Relation rel,
 	spec.values_cnt = 0;
 	spec.total_width = 0;
 	spec.resultColumnMemContext = CurrentMemoryContext;
-	spec.result = values;
-	spec.tupnoLink = tupnoLink;
 
-	spiExecuteWithCallback(str->data, false /*readonly*/, 0 /*tcount*/,
+	/* read the sample column into an array of datums */
+	spiExecuteWithCallback(str->data, true /*readonly*/, 0 /*tcount*/,
 			spiCallback_getSampleColumn, &spec);
 
-	INSTR_TIME_SET_CURRENT(endtime);
-	INSTR_TIME_SUBTRACT(endtime, starttime);
+	uint32 sampleTableRelTuples = spec.nonnull_cnt + spec.null_cnt;
+	uint32 toowide_cnt = spec.nonnull_cnt - spec.values_cnt;
 
-	elog(elevel, "\ntime to read sample for column %s: %.1f ms", quote_identifier(attributeName), INSTR_TIME_GET_MILLISEC(endtime));
+	if (sampleTableRelTuples == 0)
+	{
+		/* nothing to analyze here */
+		return;
+	}
 
-	int i = 0;
-	Oid ltopr;
-	Oid	cmpFn;
-	int	cmpFlags;
-	FmgrInfo f_cmpfn;
-	int toowide_cnt = spec.nonnull_cnt - spec.values_cnt;
-
+	/* compute null fraction */
 	if (attr->attnotnull)
 	{
 		stats->nullFraction = 0.0;
@@ -1757,6 +1972,7 @@ static void analyzeComputeAttributeStatistics(Relation rel,
 		stats->nullFraction = Min(spec.null_cnt / sampleTableRelTuples, 1.0);
 	}
 	
+	/* compute column width */
 	bool is_varwidth = !attr->attbyval && attr->attlen < 0;
 	if (spec.null_cnt < ceil(sampleTableRelTuples))
 	{
@@ -1764,6 +1980,8 @@ static void analyzeComputeAttributeStatistics(Relation rel,
 		stats->avgWidth = is_varwidth ? spec.total_width / (double) spec.nonnull_cnt : attr->attlen;
 	}
 	
+	/* there are a couple of cases we do not collect advanced stats */
+	Oid ltopr = InvalidOid;
 	if (spec.values_cnt == 0 || stats->avgWidth > COLUMN_WIDTH_THRESHOLD || !isOrderedAndHashable(attr->atttypid, &ltopr))
 	{
 		/* We do not collect advanced stats if the column is all null values or
@@ -1790,271 +2008,37 @@ static void analyzeComputeAttributeStatistics(Relation rel,
 		computeHist = false;
 	}
 
-	INSTR_TIME_SET_CURRENT(starttime);
+	/* sort the array of datums, while keeping track of duplicate chunks */
+	sort_sample_column(&spec, attr->atttypid, ltopr);
 
-	if (attr->atttypid == TEXTOID || attr->atttypid == BPCHAROID || attr->atttypid == VARCHAROID)
-	{
-		/* values are already sorted by SPI call above, only need to do a linear datum comparison
-		 * and update spec.tupnoLink[]
-		 */
-		Assert(eqopr != InvalidOid);
-		/* use equality comparison here since it can be much cheaper than "<".
-		 * see texteq() vs text_lt().
-		 */
-		cmpFn = equality_oper_funcid(attr->atttypid);
-		fmgr_info(cmpFn, &f_cmpfn);
-		int j = 0;
-		int curr_tupno = 0;
-		for (i = spec.values_cnt - 1, j = i+1; i >= 0; i--, j--)
-		{
-			if (i == spec.values_cnt -1 || !datumCompare(values[i].value, values[j].value, &f_cmpfn))
-			{
-				curr_tupno = values[i].tupno;
-			}
-			spec.tupnoLink[values[i].tupno] = curr_tupno;
-		}
-	}
-	else
-	{
-		Assert(ltopr != InvalidOid); /* at this point, column type must have "<" operator defined */
-		SelectSortFunction(ltopr, false, &cmpFn, &cmpFlags);
-		fmgr_info(cmpFn, &f_cmpfn);
-		CompareScalarsContext cxt;
+	/* these variables are states we keep when iterating the array */
+	IterateScalarsContext itrCxt;
+	itrCxt.ndistinct = 0;
+	itrCxt.nmultiple = 0;
+	itrCxt.track_cnt = 0;
+	itrCxt.track = (ScalarMCVItem *) palloc0(itrCxt.num_mcv * sizeof(ScalarMCVItem));
 
-		/* Sort the collected values */
-		cxt.cmpFn = &f_cmpfn;
-		cxt.cmpFlags = cmpFlags;
-		cxt.tupnoLink = spec.tupnoLink;
-		qsort_arg((void *) values, spec.values_cnt, sizeof(ScalarItem),
-				  compare_scalars, (void *) &cxt);
-	}
-	INSTR_TIME_SET_CURRENT(endtime);
-	INSTR_TIME_SUBTRACT(endtime, starttime);
-	elog(elevel, "time to sort the array of datums in memory: %.1f ms", INSTR_TIME_GET_MILLISEC(endtime));
+	itrCxt.num_mcv = attr->attstattarget < 0 ? default_statistics_target : attr->attstattarget;
+	itrCxt.num_hist = itrCxt.num_mcv;
 
-	int ndistinct = 0;
-	int nmultiple = 0;
-	int dups_cnt = 0;
-	int track_cnt = 0;
-	int num_mcv = attr->attstattarget < 0 ? default_statistics_target : attr->attstattarget;
-	int num_hist = num_mcv;
-	ScalarMCVItem *track = (ScalarMCVItem *) palloc0(num_mcv * sizeof(ScalarMCVItem));
-
-	/*
-	 * Now scan the values in order, find the most common ones, and also
-	 * accumulate ordering-correlation statistics.
-	 *
-	 * To determine which are most common, we first have to count the
-	 * number of duplicates of each value.	The duplicates are adjacent in
-	 * the sorted list, so a brute-force approach is to compare successive
-	 * datum values until we find two that are not equal. However, that
-	 * requires N-1 invocations of the datum comparison routine, which are
-	 * completely redundant with work that was done during the sort.  (The
-	 * sort algorithm must at some point have compared each pair of items
-	 * that are adjacent in the sorted order; otherwise it could not know
-	 * that it's ordered the pair correctly.) We exploit this by having
-	 * compare_scalars remember the highest tupno index that each
-	 * ScalarItem has been found equal to.	At the end of the sort, a
-	 * ScalarItem's tupnoLink will still point to itself if and only if it
-	 * is the last item of its group of duplicates (since the group will
-	 * be ordered by tupno).
+	/* iterate the datum array to collect states that will be used for computing ndistinct,
+	 * mcv and histogram below.
 	 */
-
-	for (i = 0; i < spec.values_cnt; i++)
-	{
-		int	tupno = values[i].tupno;
-
-		dups_cnt++;
-		if (spec.tupnoLink[tupno] == tupno)
-		{
-			/* Reached end of duplicates of this value */
-			ndistinct++;
-			if (dups_cnt > 1)
-			{
-				nmultiple++;
-			}
-
-			/*
-			 * There are some difference between the implementation here and in PostgreSQL.
-			 * We populate and update track and track_cnt even if dups_cnt is 1. This gives
-			 * us more info in the MCV list even if the values are unique.
-			 */
-			if (track_cnt < num_mcv ||
-				dups_cnt > track[track_cnt - 1].count)
-			{
-				/*
-				 * Found a new item for the mcv list; find its
-				 * position, bubbling down old items if needed. Loop
-				 * invariant is that j points at an empty/replaceable
-				 * slot.
-				 */
-				int	j = 0;
-
-				if (track_cnt < num_mcv)
-					track_cnt++;
-				for (j = track_cnt - 1; j > 0; j--)
-				{
-					if (dups_cnt <= track[j - 1].count)
-						break;
-					track[j].count = track[j - 1].count;
-					track[j].first = track[j - 1].first;
-				}
-				track[j].count = dups_cnt;
-				track[j].first = i + 1 - dups_cnt;
-			}
-			dups_cnt = 0;
-		}
-	}
+	iterate_scalars(&spec, &itrCxt);
 
 	if (computeDistinct)
 	{
-		if (nmultiple == 0)
-		{
-			/* If we found no repeated values, assume it's a unique column */
-			stats->ndistinct = -1.0;
-
-			/*
-			 * If there are many more distinct values than mcv buckets,
-			 * we can ignore computing mcv values.
-			 */
-			if (ndistinct > num_mcv)
-				computeMCV = false;
-		}
-		else if (toowide_cnt == 0 && nmultiple == ndistinct)
-		{
-			/*
-			 * Every value in the sample appeared more than once.  Assume the
-			 * column has just these values.
-			 */
-			stats->ndistinct = ndistinct;
-		}
-		else
-		{
-			/*----------
-			 * Estimate the number of distinct values using the estimator
-			 * proposed by Haas and Stokes in IBM Research Report RJ 10025:
-			 *		n*d / (n - f1 + f1*n/N)
-			 * where f1 is the number of distinct values that occurred
-			 * exactly once in our sample of n rows (from a total of N),
-			 * and d is the total number of distinct values in the sample.
-			 * This is their Duj1 estimator; the other estimators they
-			 * recommend are considerably more complex, and are numerically
-			 * very unstable when n is much smaller than N.
-			 *
-			 * Overwidth values are assumed to have been distinct.
-			 *----------
-			 */
-			int			f1 = ndistinct - nmultiple + toowide_cnt;
-			int			d = f1 + nmultiple;
-			double		numer, denom;
-
-			numer = (double) sampleTableRelTuples * (double) d;
-
-			denom = (double) (sampleTableRelTuples - f1) +
-				(double) f1 * (double) sampleTableRelTuples / relTuples;
-
-			stats->ndistinct = numer / denom;
-			/* Clamp to sane range in case of roundoff error */
-			if (stats->ndistinct < (double) d)
-				stats->ndistinct = (double) d;
-			if (stats->ndistinct > relTuples)
-				stats->ndistinct = relTuples;
-			stats->ndistinct = floor(stats->ndistinct + 0.5);
-		}
-
-		/**
-		 * Does ndistinct scale with reltuples?
-		 */
-		if (stats->ndistinct > relTuples * gp_statistics_ndistinct_scaling_ratio_threshold)
-		{
-			stats->ndistinct = -(stats->ndistinct / relTuples);
-		}
-
+		compute_ndistinct(stats, &itrCxt, toowide_cnt, sampleTableRelTuples, relTuples, &computeMCV);
 	}
 
 	if (computeMCV)
 	{
-		/*
-		 * Decide how many values are worth storing as most-common values. If
-		 * we are able to generate a complete MCV list (all the values in the
-		 * sample will fit, and we think these are all the ones in the table),
-		 * then do so.
-		 */
-		if (track_cnt < num_mcv)
-		{
-			num_mcv = track_cnt;
-		}
-
-		if (num_mcv > 0)
-		{
-			Datum	   *mcv_values;
-			Datum	   *mcv_freqs;
-
-			mcv_values = (Datum *) palloc(num_mcv * sizeof(Datum));
-			mcv_freqs = (Datum *) palloc(num_mcv * sizeof(Datum));
-			for (i = 0; i < num_mcv; i++)
-			{
-				mcv_values[i] = values[track[i].first].value;
-				mcv_freqs[i] = Float4GetDatum((float4) track[i].count / (float4) sampleTableRelTuples);
-			}
-
-			stats->mcv = construct_array(mcv_values, num_mcv, attr->atttypid, attr->attlen, attr->attbyval, attr->attalign);
-			stats->freq = construct_array(mcv_freqs, num_mcv, FLOAT4OID, sizeof(float4), true, 'i');
-		}
+		compute_mcv(stats, &spec, &itrCxt, sampleTableRelTuples, attr);
 	}
 
 	if (computeHist)	
 	{
-		Assert(num_hist > 0);
-		unsigned int bucket_size = spec.values_cnt / num_hist;
-		if (bucket_size <= 1)
-		{
-			/* histogram will be empty if bucket_size <= 1 */
-			stats->hist = NULL;
-			return;
-		}
-
-		/**
-		 * In GPDB 4.3, the histogram is constructed by choosing values that occur every
-		 * 'bucketSize' interval. It also chooses the maximum value from the relation. It then
-		 * removes duplicate values and orders the values in ascending order.
-		 */
-		int num_hist_upperbound = num_hist +
-									1 /* one extra for boundary */ +
-									(spec.values_cnt % num_hist) / bucket_size /* remainder */ +
-									1 /* max value */;
-
-		Datum *hist_values = (Datum *) palloc(num_hist_upperbound * sizeof(Datum));
-
-		int hist_cnt = 0; /* the final and unique number of histogram boundaries */
-
-		/*
-		 * The new_value_flag is used to detect duplicates in the histogram boundaries.
-		 * Since we know the values are sorted and spec.tupnoLink[tupno] == tupno is
-		 * only true for the last value of each block of repeated values, we can reset
-		 * the flag whenever we pass through a block of repeated values. This way we do not
-		 * need to do datum comparisons, which are much more expensive.
-		 */
-		bool new_value_flag = true;
-		i = 0;
-		while (i < spec.values_cnt)
-		{
-			int tupno = values[i].tupno;
-			if ((i % bucket_size == 0 || i == spec.values_cnt - 1) &&
-					new_value_flag)
-			{
-				hist_values[hist_cnt] = values[i].value;
-				hist_cnt++;
-				new_value_flag = false;
-			}
-			if (spec.tupnoLink[tupno] == tupno)
-			{
-				new_value_flag = true;
-			}
-			i++;
-		}
-
-		stats->hist = construct_array(hist_values, hist_cnt, attr->atttypid, attr->attlen, attr->attbyval, attr->attalign);
+		compute_histogram(stats, &spec, &itrCxt, attr);
 	}
 }
 

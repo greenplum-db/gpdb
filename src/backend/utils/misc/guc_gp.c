@@ -455,6 +455,15 @@ bool		fts_diskio_check = false;
 /* gp_disable_catalog_access_on_segment */
 bool		gp_disable_catalog_access_on_segment = false;
 
+/* database statistics related GUCs */
+int default_statistics_target;
+double analyze_relative_error;
+bool gp_statistics_pullup_from_child_partition;
+bool gp_statistics_use_fkeys;
+int gp_statistics_blocks_target;
+double gp_statistics_ndistinct_scaling_ratio_threshold;
+double gp_statistics_sampling_threshold;
+
 /* Planner gucs */
 bool		enable_seqscan = true;
 bool		enable_indexscan = true;
@@ -3194,21 +3203,11 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"optimizer_analyze_root_partition", PGC_USERSET, STATS_ANALYZE,
-			gettext_noop("Enable statistics collection on root partitions during ANALYZE"),
+			gettext_noop("Deprecated. Statistics on root partitions are always collected during ANALYZE."),
 			NULL
 		},
 		&optimizer_analyze_root_partition,
-		false, NULL, NULL
-	},
-
-	{
-		{"optimizer_analyze_midlevel_partition", PGC_USERSET, STATS_ANALYZE,
-			gettext_noop("Enable statistics collection on intermediate partitions during ANALYZE"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&optimizer_analyze_midlevel_partition,
-		false, NULL, NULL
+		true, NULL, NULL
 	},
 
 	{
