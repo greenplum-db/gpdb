@@ -309,9 +309,11 @@ Here is how you do that.
 First, list the Postgres processes by typing in (a guest terminal) the following 
 command: `ps ax | grep postgres`. You should see a list that looks something 
 like: ![Postgres processes](/vagrant/pictures/gpdb_processes.png)
+
+(You may have to click on the image to see it at a higher resolution.)
 Here the key processes are the ones that were started as 
-`/gpdb/vagrant/install/bin/postgres`. The master is the process (pid 25486 
-in the picture above) that has the word "master" in the `-D` parameter setting,
+`/gpdb/vagrant/install/bin/postgres`. The master is the process (pid 25486
+in the picture above) that has the word "master" in the `-D`parameter setting,
 whereas the segment hosts have the word "gpseg" in the `-D` parameter setting.
 
 Next, start ``gdb`` from a guest terminal. Once you get a prompt in gdb, type
