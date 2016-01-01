@@ -273,7 +273,8 @@ you have the `psql` prompt, and issue the following SQL commands:
 -- Create and populate a Users table
 CREATE TABLE Users (uid INTEGER PRIMARY KEY, name VARCHAR);
 INSERT INTO Users 
-  SELECT generate_series, md5(random()) FROM generate_series(1, 100000);
+  SELECT generate_series, md5(random()) 
+  FROM generate_series(1, 100000);
 
 -- Create and populate a Messages table
 CREATE TABLE Messages (mid INTEGER PRIMARY KEY, 
@@ -297,10 +298,10 @@ GROUP BY M.ptime
 ORDER BY M.ptime;
 ```
 
-You just created a simple warehouse database with a million rows in
-the "fact" table. This database simulates users posting messages on
-a social media network. The final query, reported the number of
-messages that were posted on each day. Pretty cool! 
+You just created a simple warehouse database that simulates users posting
+messages on a social media network. The "fact" table (aka. the `Messages`
+table) has a million rows. The final query reports the number of messages
+that were posted on each day. Pretty cool! 
 
 ##8: Using GDB
 If you are doing serious development, you will likely need to use a debugger.
