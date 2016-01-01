@@ -207,7 +207,7 @@ see the changes that you made by typing in `cat /etc/sysctl.conf`.
 
 ##6: Reboot the Guest OS
 We have to reboot the guest OS to allow the changes to the `sysctl.conf`
-file to take effect. In the guest shell, type in
+file to take effect. In the guest shell, type in:
 ```shell
 exit
 ```
