@@ -2656,7 +2656,7 @@ static void remove_unused_initplans_helper(Plan *plan, Bitmapset **usedParams, B
 		}
 		case T_SubPlan:
 		{
-			SubPlan *subplan = (SubPlan *) subplan;
+			SubPlan *subplan = (SubPlan *) plan;
 			find_params_walker((Node *) subplan->testexpr, &context);
 			find_params_walker((Node *) subplan->args, &context);
 			break;
