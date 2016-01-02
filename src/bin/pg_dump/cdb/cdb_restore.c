@@ -44,7 +44,7 @@ static void *threadProc(void *arg);
 static void myHandler(SIGNAL_ARGS);
 static void installSignalHandlers(void);
 static bool restoreMaster(InputOptions * pInputOpts, PGconn *pConn, SegmentDatabase *sSegDB, SegmentDatabase *tSegDB, ThreadParm * pParm);
-static void spinOffThreads(PGconn *pConn, InputOptions * pInputOpts, const const RestorePairArray * restorePair, ThreadParmArray * pParmAr);
+static void spinOffThreads(PGconn *pConn, InputOptions * pInputOpts, const RestorePairArray * restorePair, ThreadParmArray * pParmAr);
 static int	reportRestoreResults(const char *pszReportDirectory, const ThreadParm * pMasterParm, const ThreadParmArray * pParmAr);
 static int	reportMasterError(InputOptions inputopts, const ThreadParm * pMasterParm, const char *localMsg);
 static void updateAppendOnlyStats(PGconn *pConn);
