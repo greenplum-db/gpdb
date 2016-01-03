@@ -172,7 +172,6 @@ static inline BackoffBackendSharedEntry *getBackoffEntryRW(int index);
 /* Backend uses these */
 static inline BackoffBackendLocalEntry* myBackoffLocalEntry(void);
 static inline BackoffBackendSharedEntry* myBackoffSharedEntry(void);
-static inline bool amGroupLeader(void);
 static inline void SwitchGroupLeader(int newLeaderIndex);
 static inline bool groupingTimeExpired(void);
 static inline void findBetterGroupLeader(void);
@@ -272,14 +271,6 @@ static inline BackoffBackendSharedEntry* myBackoffSharedEntry()
 static inline bool isGroupLeader(int index)
 {
 	return (getBackoffEntryRO(index)->groupLeaderIndex == index);
-}
-
-/**
- * Is the current backend a group leader?
- */
-static inline bool amGroupLeader()
-{
-	return isGroupLeader(MyBackendId);
 }
 
 /**
@@ -390,17 +381,6 @@ static inline BackoffBackendSharedEntry *getBackoffEntryRW(int index)
 	Assert(index >=0 && index < backoffSingleton->numEntries);
 	return &backoffSingleton->backendEntries[index];
 }
-
-/**
- * What is my group leader's target usage?
- */
-static inline double myGroupLeaderTargetUsage()
-{
-	int groupLeaderIndex = myBackoffSharedEntry()->groupLeaderIndex;
-	Assert(groupLeaderIndex <= MyBackendId);
-	return getBackoffEntryRO(groupLeaderIndex)->targetUsage;
-}
-
 
 
 /**

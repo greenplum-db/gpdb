@@ -116,14 +116,6 @@ static inline int nts_page_avail_bytes(NTupleStorePage *page)
 	return b;
 }
 
-static inline void verify_nts_page_format_is_sane()
-{
-	Assert(sizeof(NTupleStorePage) == BLCKSZ); 
-	Assert(NTS_ALLIGN8(sizeof(NTupleStorePageHeader)) == sizeof(NTupleStorePageHeader)); 
-	Assert(offsetof(NTupleStorePage, data) == sizeof(NTupleStorePageHeader)); 
-	Assert(offsetof(NTupleStorePage, slot) == BLCKSZ-sizeof(NTupleStorePageSlotEntry)); 
-}
-
 static inline void update_page_slot_entry(NTupleStorePage *page, int len)
 {
 	short data_start = (short) NTS_ALLIGN8( nts_page_data_bcnt(page) );
