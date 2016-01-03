@@ -353,7 +353,7 @@ static SendBufferPool snd_buffer_pool;
 /*
  * SendControlInfo
  *
- * The related control information for sending data packets and handing acks.
+ * The related control information for sending data packets and handling acks.
  * Main thread use the information in this data structure to do ack handling
  * and congestion control.
  *
@@ -385,7 +385,7 @@ static SendControlInfo snd_control_info;
 /*
  * UDPSignal
  * 		The udp interconnect specific implementation of timeout wait/signal mechanism.
- * 		(Only used for MacOS to avoid the bug in MacOS 10.6.x: MPP-9910).
+ * 		(Only used for MacOS X to avoid the bug in MacOS X 10.6.x: MPP-9910).
  * 		More details are available in the functions to implement UDPSignal.
  */
 typedef struct UDPSignal UDPSignal;
@@ -422,7 +422,7 @@ struct ICGlobalControlInfo
 	/* The background thread handle. */
 	pthread_t threadHandle;
 
-	/* flag showing whether the thread is created. */
+	/* Flag showing whether the thread is created. */
 	bool threadCreated;
 
 	/* The lock protecting eno field. */
@@ -445,7 +445,7 @@ struct ICGlobalControlInfo
 	/*
 	 * Lock and condition variable for coordination between
 	 * main thread and background thread. It protects the shared data
-	 * between the two thread (the connHtab, rx buffer pool and the mainWaitingState etc.).
+	 * between the two threads (the connHtab, rx buffer pool and the mainWaitingState etc.).
 	 */
 	pthread_mutex_t lock;
 	pthread_cond_t cond;
@@ -519,7 +519,7 @@ static ICGlobalControlInfo ic_control_info;
  *
  * Note that even when the buffers are not evenly distributed in the ring and there are some packet
  * losses, the congestion control mechanism, the disorder and duplicate packet handling logic will
- * make assure the number of outstanding buffers (in unack queues) not very large.
+ * assure the number of outstanding buffers (in unack queues) to be not very large.
  *
  * MIN_RTT/MAX_RTT/DEFAULT_RTT/MIN_EXPIRATION_PERIOD/MAX_EXPIRATION_PERIOD gives some heuristic values about
  * the computation of RTT and expiration period. RTT and expiration period (RTO) are not
@@ -599,7 +599,7 @@ static UnackQueueRing unack_queue_ring = {0, 0, 0};
 /*
  * AckSendParam
  *
- * The prarmeters for ack sending.
+ * The parameters for ack sending.
  */
 typedef struct AckSendParam
 {
@@ -616,7 +616,7 @@ typedef struct AckSendParam
  *
  * A structure keeping various statistics about interconnect internal.
  *
- * Note that the statistics for ic is not accurate for multiple cursor case on QD.
+ * Note that the statistics for ic are not accurate for multiple cursor case on QD.
  *
  * totalRecvQueueSize        - receive queue size sum when main thread is trying to get a packet.
  * recvQueueSizeCountingTime - counting times when computing totalRecvQueueSize.
@@ -984,7 +984,7 @@ addCursorIcEntry(CursorICHistoryTable *t, uint32 icId, uint32 cid)
 
 /*
  * updateCursorIcEntry
- * 		Update the status of the cursor ic entry for a give interconnect instance id.
+ * 		Update the status of the cursor ic entry for a given interconnect instance id.
  *
  * There are two states for an instance of interconnect.
  * 		state 1 (value 1): interconnect is setup
@@ -1009,7 +1009,7 @@ updateCursorIcEntry(CursorICHistoryTable *t, uint32 icId, uint8 status)
 
 /*
  * getCursorIcEntry
- * 		Get the cursor entry given interconnect id.
+ * 		Get the cursor entry given an interconnect id.
  */
 static CursorICHistoryEntry *
 getCursorIcEntry(CursorICHistoryTable *t, uint32 icId)
@@ -1535,8 +1535,8 @@ waitOnCondition(int timeout_us, pthread_cond_t *cond, pthread_mutex_t *mutex)
 
 	Assert(timeout_us >= 0);
 	/*
-	 * MPP-9910: pthread_cond_timedwait appears to be broken in OS-X 10.6.x "Snow Leopard"
-	 * Let's use a different timewait function that works better on OSX (and is simpler
+	 * MPP-9910: pthread_cond_timedwait appears to be broken in OS X 10.6.x "Snow Leopard"
+	 * Let's use a different timewait function that works better on OS X (and is simpler
 	 * because it uses relative time)
 	 */
 #ifdef __darwin__
@@ -2553,7 +2553,7 @@ computeExpirationPeriod(MotionConn *conn, uint32 retry)
 	/*
 	 * In fault injection mode, we often use DEFAULT_RTT,
 	 * because the intentional large percent of packet/ack losses will make
-	 * the RTT too large. This will leads to a slow retransmit speed.
+	 * the RTT too large. This will lead to a slow retransmit speed.
 	 * In real hardware environment/workload, we do not expect such a packet loss pattern.
 	 */
 #ifdef USE_ASSERT_CHECKING
@@ -2649,10 +2649,10 @@ getSndBuffer(MotionConn *conn)
 
 /*
  *  The udp interconnect specific implementation of timeout wait/signal mechanism.
- *  (Only for MacOS)
+ *  (Only for MacOS X)
  *
  * The introduction of this is due to the bug in pthread_cond_wait/pthread_cond_timedwait_relative_np
- * on MacOs. (MPP-9910).
+ * on MacOS X. (MPP-9910).
  *
  * The implementation of the signal mechanism is based on UDP protocol. Waiting thread is polling on
  * a UDP socket, and wakes up thread will send a signal id to the socket when the condition is met.
@@ -3822,7 +3822,7 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 	{
 		icpkthdr *buf = NULL;
 
-		/* If this happened, there is some memory leaks.. */
+		/* If this happened, there are some memory leaks.. */
 		if (rx_buffer_pool.freeList == NULL)
 		{
 			pthread_mutex_unlock(&ic_control_info.lock);
@@ -4044,8 +4044,7 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 
 	} /* for (;;) */
 
-	/* We either got data, or get cancelled. We never make it out to
-	 * here. */
+	/* We either got data, or get cancelled. We never make it out to here. */
 	return NULL; /* make GCC behave */
 }
 
@@ -4386,7 +4385,7 @@ handleAckedPacket(MotionConn *ackConn, ICBuffer *buf, uint64 now)
 	        	newDEV = Min(MAX_DEV, Max(newDEV, MIN_DEV));
 	        	buf->conn->dev = newDEV;
 
-	        	/* adjust the conjestion control window. */
+				/* adjust the congestion control window. */
 	        	if (snd_control_info.cwnd < snd_control_info.ssthresh)
 	        		snd_control_info.cwnd += 1;
 	        	else
@@ -4848,12 +4847,12 @@ handleStopMsgs(ChunkTransportState *transportStates, ChunkTransportStateEntry *p
  * Send the buffers in the send queue of the connection if there is capacity left
  * and the congestion control condition is satisfied.
  *
- * Here, we make assure that a connection can have at least one outstanding buffer.
+ * Here, we make sure that a connection can have at least one outstanding buffer.
  * This is very important for two reasons:
  *
  * 1) The handling logic of the ack of the outstanding buffer can always send a buffer
- *    in the send queue. Otherwise, there maybe a deadlock.
- * 2) This makes assure that any connection can have a minimum bandwidth for data
+ *    in the send queue. Otherwise, there may be a deadlock.
+ * 2) This makes sure that any connection can have a minimum bandwidth for data
  *    sending.
  *
  * After sending a buffer, the buffer will be placed into both the unack queue and
@@ -5350,7 +5349,7 @@ pollAcks(ChunkTransportState *transportStates, int fd, int timeout)
 
 /*
  * updateRetransmitStatistics
- * 		Update the restransmit statistics.
+ * 		Update the retransmit statistics.
  */
 static inline void
 updateRetransmitStatistics(MotionConn *conn)
@@ -6188,7 +6187,7 @@ handleDataPacket(MotionConn *conn, icpkthdr *pkt, struct sockaddr_storage *peer,
 		return false;
 	}
 
-		/* Was the main thread waiting for something ? */
+	/* Was the main thread waiting for something ? */
 	if (rx_control_info.mainWaitingState.waiting &&
 			rx_control_info.mainWaitingState.waitingNode == pkt->motNodeId &&
 			rx_control_info.mainWaitingState.waitingQuery == pkt->icId && toWakeup)
