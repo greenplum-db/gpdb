@@ -172,7 +172,7 @@ def validate_modcount(schema, tablename, cnt):
     if len(cnt) > 15:
         raise Exception("Exceeded backup max tuple count of 1 quadrillion rows per table for: '%s.%s' '%s'" % (schema, tablename, cnt))
 
-def get_partition_state(master_port, dbname, catalog_schema, partition_info):
+def get_partition_state_tuples(master_port, dbname, catalog_schema, partition_info):
     """
         Reads the partition state for an AO or AOCS relation, which is the sum of
         the modication counters over all ao segment files.
@@ -190,6 +190,9 @@ def get_partition_state(master_port, dbname, catalog_schema, partition_info):
         modcount by 1. Therefore it is save to assume that to relations with
         modcount 0 with the same last special operation do not have a logical
         change in them.
+
+        The result is a list of tuples, of the format:
+        (schema_schema, partition_name, modcount)
     """
     partition_list = list()
 
@@ -207,9 +210,16 @@ def get_partition_state(master_port, dbname, catalog_schema, partition_info):
             if modcount:
                 modcount = modcount.strip()
             validate_modcount(schemaname, partition_name, modcount)
-            partition_list.append('%s, %s, %s' %(schemaname, partition_name, modcount))
+            partition_list.append((schemaname, partition_name, modcount))
 
     return partition_list
+
+# A legacy version of get_partition_state_tuples() that returns a list of strings
+# instead of tuples. Should not be used in new code, because the string
+# representation doesn't handle schema or table names with commas.
+def get_partition_state(master_port, dbname, catalog_schema, partition_info):
+    tuples = get_partition_state_tuples(master_port, dbname, catalog_schema, partition_info)
+    return map((lambda x: '%s, %s, %s' % x), tuples)
 
 def get_tables_with_dirty_metadata(master_datadir, backup_dir, dump_dir, dump_prefix, full_timestamp, cur_pgstatoperations,
                                    netbackup_service_host=None, netbackup_block_size=None):
@@ -241,26 +251,6 @@ def get_last_state(table_type, master_datadir, backup_dir, dump_dir, dump_prefix
                 restore_file_with_nbu(netbackup_service_host, netbackup_block_size, last_state_filename)
 
     return get_lines_from_file(last_state_filename)
-
-def compare_metadata(old_pgstatoperations, cur_pgstatoperations):
-    diffs = set()
-    for operation in cur_pgstatoperations:
-        toks = operation.split(',')
-        if len(toks) != 6:
-            raise Exception('Wrong number of tokens in last_operation data for current backup: "%s"' % operation)
-        if (toks[2], toks[3]) not in old_pgstatoperations or old_pgstatoperations[(toks[2], toks[3])] != operation:
-            tname = '%s.%s' % (toks[0], toks[1])
-            diffs.add(tname)
-    return diffs
-
-def get_pgstatlastoperations_dict(last_operations):
-    last_operations_dict = {}
-    for operation in last_operations:
-        toks = operation.split(',')
-        if len(toks) != 6:
-            raise Exception('Wrong number of tokens in last_operation data for last backup: "%s"' % operation)
-        last_operations_dict[(toks[2], toks[3])] = operation
-    return last_operations_dict
 
 def get_last_dump_timestamp(master_datadir, backup_dir, dump_dir, dump_prefix, full_timestamp, netbackup_service_host=None, netbackup_block_size=None):
     increments_filename = generate_increments_filename(master_datadir, backup_dir, dump_dir, dump_prefix, full_timestamp)
