@@ -2698,7 +2698,7 @@ udpSignalTimeoutWait(UDPSignal *sig, pthread_cond_t *cond, pthread_mutex_t *mute
 	bool ret = ETIMEDOUT;
 	if (udpSignalPoll(sig, timeout))
 	{
-		if (udpSignalGet(sig));
+		if (udpSignalGet(sig))
 			ret = 0;
 	}
 	sig->sigId = NULL;
