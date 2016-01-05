@@ -26,7 +26,6 @@
 -- s/cat\: cannot open (.*)$/cat\: $1\: NO SUCH FILE/
 --
 -- end_matchsubs
-SET gp_foreign_data_access = true;
 set optimizer_disable_missing_stats_collection = on;
 CREATE TABLE REG_REGION (R_REGIONKEY INT, R_NAME CHAR(25), R_COMMENT VARCHAR(152)) DISTRIBUTED BY (R_REGIONKEY);
 -- --------------------------------------
@@ -610,9 +609,6 @@ ERROR:  protocol "bad_protocol" does not exist
 create external table ext (a int, x text) 
 location ('file://@hostname@@abs_srcdir@/data/no/such/place/badt1.tbl' )
 format 'text';
-alter foreign table ext drop column a; -- should fail (wrong object)
-ERROR:  "ext" is an external table
-HINT:  Use ALTER EXTERNAL TABLE instead
 alter table ext drop column a; -- should pass with warning
 WARNING:  "ext" is an external table. ALTER TABLE for external tables is deprecated.
 HINT:  Use ALTER EXTERNAL TABLE instead
@@ -636,9 +632,6 @@ insert into ext(x) values('a');
 ERROR:  cannot change a readable external table "ext"
 drop table ext; -- should fail (wrong object)
 ERROR:  "ext" is not a base table
-HINT:  Use DROP EXTERNAL TABLE to remove an external table
-drop foreign table ext; -- should fail (wrong object)
-ERROR:  "ext" is not a foreign table
 HINT:  Use DROP EXTERNAL TABLE to remove an external table
 drop external table ext;
 ----------------------------------------------------------------------
@@ -898,67 +891,6 @@ select count(*) from pg_catalog.pg_exttable where reloid in (select r.oid from p
      0
 (1 row)
 
-SET gp_foreign_data_access = false;
--- Tests for MPP17980: generating artificial CTIDs for external table scans
--- This is necessary because the planner currently generates plans that include
--- the CTID attribute for external tables.
-CREATE EXTERNAL TABLE ext_mpp17980 ( id int , id1 int , id2 int)
-LOCATION ('file://@hostname@@abs_srcdir@/data/exttab1/mpp17980.data')
-FORMAT 'CSV' ( DELIMITER ',' NULL ' ');
-CREATE TABLE mpp17980 (id int, date date, amt decimal(10,2))
-DISTRIBUTED randomly PARTITION BY RANGE (date)
-( START (date '2008-01-01') INCLUSIVE  END (date '2009-01-01') EXCLUSIVE
-EVERY (INTERVAL '1 month') );
-NOTICE:  CREATE TABLE will create partition "mpp17980_1_prt_1" for table "mpp17980"
-NOTICE:  CREATE TABLE will create partition "mpp17980_1_prt_2" for table "mpp17980"
-NOTICE:  CREATE TABLE will create partition "mpp17980_1_prt_3" for table "mpp17980"
-NOTICE:  CREATE TABLE will create partition "mpp17980_1_prt_4" for table "mpp17980"
-NOTICE:  CREATE TABLE will create partition "mpp17980_1_prt_5" for table "mpp17980"
-NOTICE:  CREATE TABLE will create partition "mpp17980_1_prt_6" for table "mpp17980"
-NOTICE:  CREATE TABLE will create partition "mpp17980_1_prt_7" for table "mpp17980"
-NOTICE:  CREATE TABLE will create partition "mpp17980_1_prt_8" for table "mpp17980"
-NOTICE:  CREATE TABLE will create partition "mpp17980_1_prt_9" for table "mpp17980"
-NOTICE:  CREATE TABLE will create partition "mpp17980_1_prt_10" for table "mpp17980"
-NOTICE:  CREATE TABLE will create partition "mpp17980_1_prt_11" for table "mpp17980"
-NOTICE:  CREATE TABLE will create partition "mpp17980_1_prt_12" for table "mpp17980"
-INSERT INTO mpp17980 VALUES ( 1,'2008-02-20',122.11);
-SELECT COUNT(*) FROM ext_mpp17980 WHERE id IN ( 1 ) ;  -- This returns 18 tuples
- count
--------
-    18
-(1 row)
-
-SELECT COUNT(*) FROM ext_mpp17980 WHERE id IN ( SELECT id FROM mpp17980 ) ; -- This should return 18 tuples but returns only 1
- count
--------
-    18
-(1 row)
-
-SELECT ctid, * FROM ext_mpp17980;
-  ctid  | id | id1 | id2
---------+----+-----+-----
- (0,1)  |  1 |   1 |   1
- (0,2)  |  1 |   2 |   2
- (0,3)  |  1 |   2 |   3
- (0,4)  |  1 |   3 |   4
- (0,5)  |  1 |   2 |   3
- (0,6)  |  1 |   1 |   1
- (0,7)  |  1 |   2 |   3
- (0,8)  |  1 |   2 |   3
- (0,9)  |  1 |   1 |   1
- (0,10) |  1 |   1 |   1
- (0,11) |  1 |   2 |   2
- (0,12) |  1 |   2 |   3
- (0,13) |  1 |   3 |   4
- (0,14) |  1 |   2 |   3
- (0,15) |  1 |   1 |   1
- (0,16) |  1 |   2 |   3
- (0,17) |  1 |   2 |   3
- (0,18) |  1 |   1 |   1
-(18 rows)
-
-DROP EXTERNAL TABLE ext_mpp17980;
-DROP TABLE mpp17980;
 COPY (VALUES('1,2'),('1,2,3'),('1,'),('1')) TO '@abs_srcdir@/data/tableless.csv';
 CREATE TABLE tableless_heap(a int, b int);
 COPY tableless_heap FROM '@abs_srcdir@/data/tableless.csv' CSV LOG ERRORS SEGMENT REJECT LIMIT 10;
