@@ -69,7 +69,7 @@ POSTGRES_BKI_SRCS := $(addprefix $(top_srcdir)/src/include/catalog/, \
 	gp_segment_config.h gp_san_config.h \
 	gp_verification_history.h \
 	pg_window.h \
-	pg_exttable.h pg_appendonly.h pg_appendonly_alter_column.h aoseg.h \
+	pg_exttable.h pg_appendonly.h aoseg.h \
 	gp_fastsequence.h pg_extprotocol.h \
 	pg_partition.h pg_partition_rule.h pg_filespace.h pg_filespace_entry.h \
 	gp_global_sequence.h gp_persistent.h \

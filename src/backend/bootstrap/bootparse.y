@@ -36,7 +36,6 @@
 #include "catalog/gp_verification_history.h"
 #include "catalog/heap.h"
 #include "catalog/pg_am.h"
-#include "catalog/pg_appendonly_alter_column.h"
 #include "catalog/pg_attribute.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_auth_members.h"

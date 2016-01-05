@@ -138,7 +138,6 @@ print <<"END_MESSAGE";
 #include "catalog/pg_amop.h"
 #include "catalog/pg_amproc.h"
 #include "catalog/pg_appendonly.h"
-#include "catalog/pg_appendonly_alter_column.h"
 #include "catalog/pg_attrdef.h"
 #include "catalog/pg_auth_members.h"
 #include "catalog/pg_authid.h"
