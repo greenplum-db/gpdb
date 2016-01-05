@@ -2403,7 +2403,7 @@ checkRelationAfterInvalidation(PG_FUNCTION_ARGS)
 	RelationCacheInvalidate();
 	if (memcmp(&nodeinfo,
 			   &relation->rd_segfile0_relationnodeinfo,
-			   sizeof(struct RelationNodeInfo) != 0))
+			   sizeof(struct RelationNodeInfo)) != 0)
 		elog(ERROR, "node info does not match");
 
 	relation_close(relation, AccessShareLock);
