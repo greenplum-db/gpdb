@@ -2566,28 +2566,6 @@ class GpTransfer(object):
                 logger.warn(
                     'Failed to remove schema file %s.', schema_filename)
                 logger.warn('This file should be removed manually.')
-
-            # Restoring the full schema uses template0 as the template database
-            # This means that while the gp_toolkit schema is created in each database
-            # it is not populated.  Because of this we need to populate it ourselves.
-            url = DbURL(self._options.dest_host, self._options.dest_port,
-                        'template1', self._options.dest_user)
-            conn = connect(url)
-            databases = [db[0] for db in getUserDatabaseList(conn)]
-            conn.close()
-
-            toolkit_file = os.path.join(self._gphome, 'share', 'postgresql', 'gp_toolkit.sql')
-            logger.info('Populating gp_toolkit schema...')
-            for database in databases:
-                toolkit_cmd = PsqlFile('Create gptoolkit',
-                                self._options.dest_host,
-                                self._options.dest_port,
-                                self._options.dest_user,
-                                database,
-                                toolkit_file)
-                self._pool.addCommand(toolkit_cmd)
-            self._pool.join()
-            self._pool.check_results()
         else:
             # Make sure databases exist on destination system
             url = DbURL(self._options.dest_host, self._options.dest_port,
