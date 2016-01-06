@@ -2066,27 +2066,4 @@ COptTasks::SzOptimizeMinidumpFromFile
 	return optmdpctxt.m_szDXLResult;
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		GetCacheEvictionCounter
-//
-//	@doc:
-//		Get the number of times we evicted entries from CMDCache.
-//		This function is called by udfs for testing purposes.
-//
-//---------------------------------------------------------------------------
-extern "C"
-{
-ULLONG
-GetCacheEvictionCounter()
-{
-	if (!CMDCache::FInitialized())
-	{
-		CMDCache::Init();
-		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
-	}
-	return CMDCache::ULLGetCacheEvictionCounter();
-}
-}
-
 // EOF
