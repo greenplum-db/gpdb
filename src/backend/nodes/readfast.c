@@ -224,6 +224,7 @@ _readQuery(void)
 	READ_INT_FIELD(resultRelation);
 	READ_NODE_FIELD(intoClause);
 	READ_BOOL_FIELD(hasAggs);
+	READ_BOOL_FIELD(hasBypassPreprocess);
 	READ_BOOL_FIELD(hasWindFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
 	READ_NODE_FIELD(rtable);
@@ -833,6 +834,7 @@ _readFuncExpr(void)
 	READ_ENUM_FIELD(funcformat, CoercionForm);
 	READ_NODE_FIELD(args);
 	READ_BOOL_FIELD(is_tablefunc);
+	READ_BOOL_FIELD(bypass_preprocess);
 
 	READ_DONE();
 }
@@ -1455,6 +1457,7 @@ _readPlannedStmt(void)
 	READ_ENUM_FIELD(commandType, CmdType);
 	READ_ENUM_FIELD(planGen, PlanGenerator);
 	READ_BOOL_FIELD(canSetTag);
+	READ_BOOL_FIELD(bypassPreprocess);
 	READ_BOOL_FIELD(transientPlan);
 	READ_NODE_FIELD(planTree);
 	READ_NODE_FIELD(rtable);

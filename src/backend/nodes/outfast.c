@@ -356,6 +356,8 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 
 	WRITE_UINT64_FIELD(query_mem);
 	WRITE_NODE_FIELD(transientTypeRecords);
+
+	WRITE_BOOL_FIELD(bypassPreprocess);
 }
 
 static void
@@ -586,6 +588,7 @@ _outFuncExpr(StringInfo str, FuncExpr *node)
 	WRITE_ENUM_FIELD(funcformat, CoercionForm);
 	WRITE_NODE_FIELD(args);
 	WRITE_BOOL_FIELD(is_tablefunc);
+	WRITE_BOOL_FIELD(bypass_preprocess);
 }
 
 static void
@@ -901,6 +904,7 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_INT_FIELD(resultRelation);
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_BOOL_FIELD(hasAggs);
+	WRITE_BOOL_FIELD(hasBypassPreprocess);
 	WRITE_BOOL_FIELD(hasWindFuncs);
 	WRITE_BOOL_FIELD(hasSubLinks);
 	WRITE_NODE_FIELD(rtable);

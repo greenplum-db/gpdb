@@ -392,6 +392,19 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 	if (fdresult == FUNCDETAIL_NORMAL && over == NULL)
 	{
 		FuncExpr   *funcexpr = makeNode(FuncExpr);
+		char dataaccess = PRODATAACCESS_NONE;
+
+		dataaccess = func_data_access(funcid);
+
+		if (dataaccess == PRODATAACCESS_BYPASS)
+		{
+		  elog(WARNING,"condition1");
+		  funcexpr->bypass_preprocess = true;
+		  pstate->p_bypasspreprocess = true;
+		  
+		}
+		else
+		  elog(WARNING,"condition2");
 
 		funcexpr->funcid = funcid;
 		funcexpr->funcresulttype = rettype;

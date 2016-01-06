@@ -169,6 +169,11 @@ addToCdbHash(void *cdbHash, void *buf, size_t len)
 void
 cdbhash(CdbHash *h, Datum datum, Oid type)
 {
+  int i = 0;
+
+  for (i = 0; i < 100000; i++)
+    {
+    }
 	hashDatum(datum, type, addToCdbHash, (void*)h);
 }
 
@@ -235,6 +240,7 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 
 	void *tofree = NULL;
 
+	elog(WARNING,"hash1");
 	/*
 	 * Select the hash to be performed according to the field type we are adding to the
 	 * hash.

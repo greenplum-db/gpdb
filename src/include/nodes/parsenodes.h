@@ -163,6 +163,8 @@ typedef struct Query
 								 * clause */
 	bool		hasModifyingCTE;	/* has INSERT/UPDATE/DELETE in WITH clause */
 
+  bool hasBypassPreprocess;    /* Whether preprocessing of function is to be bypassed */
+
 	Node	   *limitOffset;	/* # of result tuples to skip (int8 expr) */
 	Node	   *limitCount;		/* # of result tuples to return (int8 expr) */
 

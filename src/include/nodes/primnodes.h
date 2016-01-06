@@ -448,6 +448,7 @@ typedef struct FuncExpr
 	List	   *args;			/* arguments to the function */
 	int			location;		/* token location, or -1 if unknown */
 	bool        is_tablefunc;   /* Is a TableFunction reference */
+  bool        bypass_preprocess;    /* If pre evaluation should be bypassed */
 } FuncExpr;
 
 

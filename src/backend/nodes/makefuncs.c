@@ -331,6 +331,7 @@ makeFuncExpr(Oid funcid, Oid rettype, List *args, CoercionForm fformat)
 	funcexpr->funcformat = fformat;
 	funcexpr->args = args;
 	funcexpr->location = -1;
+	funcexpr->bypass_preprocess = false;
 
 	return funcexpr;
 }
