@@ -39,5 +39,8 @@ extern bool FileRepSubProcess_ProcessSignals(void);
 
 extern bool FileRepSubProcess_IsStateTransitionRequested(void);
 
+extern void FileRepSubProcess_InitializeResyncManagerProcess(void);
+
+
 #endif   /* CDBFILEREPSERVICE_H */
 

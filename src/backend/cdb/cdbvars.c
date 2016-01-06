@@ -150,6 +150,8 @@ int gp_fts_transition_retries = 5;
 /* Timeout to request a segment state transition. */
 int gp_fts_transition_timeout = 3600;
 
+int gp_diskusage_soft_limit = 80;
+int gp_diskusage_hard_limit = 95;
 
 /*
  * When we have certain types of failures during gang creation which indicate

@@ -154,6 +154,8 @@
 
 #include "cdb/cdbfilerep.h"
 #include "cdb/cdbfilerepverify.h"
+#include "cdb/cdbpersistentfilespace.h"
+
 
 #ifdef EXEC_BACKEND
 #include "storage/spin.h"
@@ -3872,7 +3874,8 @@ processPrimaryMirrorTransitionRequest(Port *port, void *pkt)
 }
 
 static void
-sendPrimaryMirrorTransitionQuery(uint32 mode, uint32 segstate, uint32 datastate, uint32 faulttype)
+sendPrimaryMirrorTransitionQuery(uint32 mode, uint32 segstate, uint32 datastate,
+		uint32 faulttype, uint32 hardlimitreached)
 {
 	StringInfoData buf;
 
@@ -3884,6 +3887,7 @@ sendPrimaryMirrorTransitionQuery(uint32 mode, uint32 segstate, uint32 datastate,
 	pq_sendint(&buf, segstate, 4);
 	pq_sendint(&buf, datastate, 4);
 	pq_sendint(&buf, faulttype, 4);
+	pq_sendint(&buf, hardlimitreached, 4);
 
 	pq_endmessage(&buf);
 	pq_flush();
@@ -3905,6 +3909,7 @@ processPrimaryMirrorTransitionQuery(Port *port, void *pkt)
 	SegmentState_e s_state;
 	DataState_e d_state;
 	FaultType_e f_type;
+	bool hardlimitreached = false;
 
 	init_ps_display("filerep status query process", "", "", "");
 
@@ -3984,9 +3989,12 @@ processPrimaryMirrorTransitionQuery(Port *port, void *pkt)
 				FileRep_SetSegmentState(s_state, f_type);
 			}
 		}
+
+		hardlimitreached = PersistentFilespace_CheckDiskUsage();
 	}
 
-	sendPrimaryMirrorTransitionQuery((uint32)pm_mode, (uint32)s_state, (uint32)d_state, (uint32)f_type);
+	sendPrimaryMirrorTransitionQuery((uint32)pm_mode, (uint32)s_state,
+			(uint32)d_state, (uint32)f_type, hardlimitreached);
 
 	return;
 }

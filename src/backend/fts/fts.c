@@ -696,6 +696,56 @@ probePublishUpdate(uint8 *probe_results)
 		CdbComponentDatabaseInfo *primary = segInfo;
 		CdbComponentDatabaseInfo *mirror = FtsGetPeerSegment(segInfo->segindex, segInfo->dbid);
 
+		/*
+		 * If the disk usage hard limit is reached and database is not running in
+		 * the restricted mode, then shut it down.
+		 */
+		if (PROBE_HAS_DISK_HARDLIMIT_REACHED(primary) && (ReservedBackends < MaxBackends))
+		{
+			pid_t pid;
+
+			ereport(WARNING, (errmsg(
+				"FTS: Disk usage Hard Limit reached for segment with Dbid=%d and hostname=%s.",
+				primary->dbid, primary->hostname), errSendAlert(true)));
+
+			ereport(WARNING, (errmsg(
+				"FTS: Shutting down the Greenplum instance because Diskusage Hard Limit reached."),
+												errSendAlert(true)));
+
+			pid = fork();
+
+			if (pid == -1)
+			{
+				elog(ERROR, "FTS: Failed to fork prcoess to shutdown Greenplum instance");
+			}
+			else if (pid == 0)
+			{
+				const char *gpStopCmd = "gpstop -aM fast; killall postgres";
+
+				/* Ignore termination signals so that the stop command is not killed by
+				 * itself */
+
+				pqinitmask();
+				PG_SETMASK(&BlockSig);
+
+				pqsignal(SIGINT, SIG_IGN);
+				pqsignal(SIGQUIT, SIG_IGN);
+				pqsignal(SIGTERM, SIG_IGN);
+
+#ifdef SIGXFSZ
+				pqsignal(SIGXFSZ, SIG_IGN);
+#endif
+				setpgid(0,0);						/* make it its own process group */
+
+				execl("/bin/sh", "sh", "-c", gpStopCmd, NULL);
+
+				elog(ERROR, "FTS: Failed to execute command: %s", gpStopCmd);
+				exit(EXIT_FAILURE);
+			}
+
+			return false;
+		}
+
 		if (failover_strategy == 'n')
 		{
 			Assert(SEGMENT_IS_ACTIVE_PRIMARY(segInfo));

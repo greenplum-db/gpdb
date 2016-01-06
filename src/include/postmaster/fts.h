@@ -27,6 +27,7 @@ enum probe_result_e
 	PROBE_FAULT_CRASH     = 0x08,
 	PROBE_FAULT_MIRROR    = 0x10,
 	PROBE_FAULT_NET       = 0x20,
+	PROBE_DISK_HARDLIMIT  = 0x40,
 };
 
 #define PROBE_CHECK_FLAG(result, flag) (((result) & (flag)) == (flag))
@@ -41,6 +42,8 @@ enum probe_result_e
 	PROBE_CHECK_FLAG(probe_results[(dbInfo)->dbid], PROBE_FAULT_MIRROR)
 #define PROBE_HAS_FAULT_NET(dbInfo) \
 	PROBE_CHECK_FLAG(probe_results[(dbInfo)->dbid], PROBE_FAULT_NET)
+#define PROBE_HAS_DISK_HARDLIMIT_REACHED(dbInfo) \
+	PROBE_CHECK_FLAG(probe_results[(dbInfo)->dbid], PROBE_DISK_HARDLIMIT)
 
 /*
  * primary/mirror state after probing;
