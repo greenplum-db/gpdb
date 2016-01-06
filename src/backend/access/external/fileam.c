@@ -521,7 +521,7 @@ external_insert_init(Relation rel)
 	/*
 	 * Get the pg_exttable information for this table
 	 */
-	extentry = GetExtTableEntry(RelationGetRelid(rel));
+	extentry = GetExtTableEntry(RelationGetRelid(rel), false);
 
 	/*
 	 * allocate and initialize the insert descriptor

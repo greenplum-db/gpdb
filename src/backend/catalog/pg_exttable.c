@@ -136,7 +136,7 @@ InsertExtTableEntry(Oid 	tbloid,
  * Get the catalog entry for an exttable relation (from pg_exttable)
  */
 ExtTableEntry*
-GetExtTableEntry(Oid relid)
+GetExtTableEntry(Oid relid, bool noerror)
 {
 	
 	Relation	pg_exttable_rel;
@@ -166,11 +166,18 @@ GetExtTableEntry(Oid relid)
 				ObjectIdGetDatum(relid)));
 
 	if (!HeapTupleIsValid(tuple))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("missing pg_exttable entry for relation \"%s\"",
-						get_rel_name(relid))));
-
+	{
+		if (noerror)
+		{
+			heap_close(pg_exttable_rel, RowExclusiveLock);
+			return NULL;
+		}
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("missing pg_exttable entry for relation \"%s\"",
+							get_rel_name(relid))));
+	}
 
 	extentry = (ExtTableEntry *) palloc0(sizeof(ExtTableEntry));
 	

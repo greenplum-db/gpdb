@@ -209,12 +209,6 @@ static void transformColumnDefinition(ParseState *pstate,
 static void transformTableConstraint(ParseState *pstate,
 						 CreateStmtContext *cxt,
 						 Constraint *constraint);
-static void transformETDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
-									 List *distributedBy, GpPolicy **policyp,
-									 List *likeDistributedBy,
-									 bool bQuiet,
-									 bool iswritable,
-									 bool onmaster);
 static void transformDistributedBy(ParseState *pstate,
 								   CreateStmtContext *cxt,
 								   List *distributedBy,
@@ -2181,10 +2175,8 @@ transformCreateExternalStmt(ParseState *pstate, CreateExternalStmt *stmt,
 	CreateStmtContext cxt;
 	Query	   *q;
 	ListCell   *elements;
-	ExtTableTypeDesc	*exttypeDesc = NULL;
 	List  	   *likeDistributedBy = NIL;
 	bool	    bQuiet = false;	/* shut up transformDistributedBy messages */
-	bool		onmaster = false;
 	bool		iswritable = stmt->iswritable;
 
 	cxt.stmtType = "CREATE EXTERNAL TABLE";
@@ -2249,34 +2241,25 @@ transformCreateExternalStmt(ParseState *pstate, CreateExternalStmt *stmt,
 	}
 
 	/*
-	 * Check if this is an EXECUTE ON MASTER table. We'll need this information
-	 * in transformExternalDistributedBy. While at it, we also check if an error
-	 * table or LOG ERRORS is attempted to be used on ON MASTER table and error if so.
+	 * Forbid LOG ERRORS and ON MASTER combination.
 	 */
-	if(!iswritable)
+	if (!iswritable && stmt->exttypedesc->exttabletype == EXTTBL_TYPE_EXECUTE)
 	{
-		exttypeDesc = (ExtTableTypeDesc *)stmt->exttypedesc;
+		ListCell   *exec_location_opt;
 
-		if(exttypeDesc->exttabletype == EXTTBL_TYPE_EXECUTE)
+		foreach(exec_location_opt, stmt->exttypedesc->on_clause)
 		{
-			ListCell   *exec_location_opt;
+			DefElem    *defel = (DefElem *) lfirst(exec_location_opt);
 
-			foreach(exec_location_opt, exttypeDesc->on_clause)
+			if (strcmp(defel->defname, "master") == 0)
 			{
-				DefElem    *defel = (DefElem *) lfirst(exec_location_opt);
+				SingleRowErrorDesc *srehDesc = (SingleRowErrorDesc *)stmt->sreh;
 
-				if (strcmp(defel->defname, "master") == 0)
-				{
-					SingleRowErrorDesc *srehDesc = (SingleRowErrorDesc *)stmt->sreh;
-
-					onmaster = true;
-
-					if(srehDesc && (srehDesc->errtable || srehDesc->into_file))
-						ereport(ERROR,
-								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-								 errmsg("External web table with ON MASTER clause "
-										"cannot use LOG ERRORS feature.")));
-				}
+				if(srehDesc && (srehDesc->errtable || srehDesc->into_file))
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+							 errmsg("External web table with ON MASTER clause "
+									"cannot use LOG ERRORS feature.")));
 			}
 		}
 	}
@@ -2289,8 +2272,39 @@ transformCreateExternalStmt(ParseState *pstate, CreateExternalStmt *stmt,
 		transformSingleRowErrorHandling(pstate, &cxt,
 										(SingleRowErrorDesc *) stmt->sreh);
 
-	transformETDistributedBy(pstate, &cxt, stmt->distributedBy, &stmt->policy,
-							 likeDistributedBy, bQuiet, iswritable, onmaster);
+	/*
+	 * Handle DISTRIBUTED BY clause, if any.
+	 *
+	 * Don't create a policy row for EXECUTE type external tables. They have
+	 * an "ON <segment spec>" clause.
+	 *
+	 * WET: by default we distribute RANDOMLY, or by the distribution key
+	 * of the LIKE table if exists. However, if DISTRIBUTED BY was
+	 * specified we use it by calling the regular transformDistributedBy and
+	 * handle it like we would for non external tables.
+	 */
+	if (list_length(stmt->distributedBy) > 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+				 errmsg("Readable external tables can\'t specify a DISTRIBUTED BY clause.")));
+
+	if (stmt->exttypedesc->exttabletype != EXTTBL_TYPE_EXECUTE)
+	{
+		if(stmt->distributedBy == NIL && likeDistributedBy == NIL)
+		{
+			/*
+			 * defaults to DISTRIBUTED RANDOMLY irrespective of the
+			 * gp_create_table_random_default_distribution guc.
+			 */
+			stmt->policy = createRandomDistribution(MaxPolicyAttributeNumber);
+		}
+		else
+		{
+			/* regular DISTRIBUTED BY transformation */
+			transformDistributedBy(pstate, &cxt, stmt->distributedBy, &stmt->policy,
+								   likeDistributedBy, bQuiet);
+		}
+	}
 
 	Assert(cxt.ckconstraints == NIL);
 	Assert(cxt.fkconstraints == NIL);
@@ -2572,78 +2586,6 @@ transformTableConstraint(ParseState *pstate, CreateStmtContext *cxt,
 }
 
 
-
-/*
- * transformETDistributedBy - transform DISTRIBUTED BY clause for
- * external tables.
- *
- * WET: by default we distribute RANDOMLY, or by the distribution key
- * of the LIKE table if exists. However, if DISTRIBUTED BY was
- * specified we use it by calling the regular transformDistributedBy and
- * handle it like we would for non external tables.
- *
- * RET: We always create a random distribution policy entry *unless*
- * this is an EXECUTE table with ON MASTER specified, in which case
- * we create no policy so that the master will be accessed.
- */
-static void
-transformETDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
-						 List *distributedBy, GpPolicy **policyp,
-						 List *likeDistributedBy,
-						 bool bQuiet,
-						 bool iswritable,
-						 bool onmaster)
-{
-	int			maxattrs = MaxPolicyAttributeNumber;
-	GpPolicy*	p = NULL;
-
-	/*
-	 * utility mode creates can't have a policy.  Only the QD can have policies
-	 */
-	if (Gp_role != GP_ROLE_DISPATCH)
-	{
-		*policyp = NULL;
-		return;
-	}
-
-	if(!iswritable && list_length(distributedBy) > 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("Readable external tables can\'t specify a DISTRIBUTED BY clause.")));
-
-	if(iswritable)
-	{
-		/* WET */
-
-		if(distributedBy == NIL && likeDistributedBy == NIL)
-		{
-			/* defaults to DISTRIBUTED RANDOMLY irrespective of the gp_create_table_random_default_distribution guc */
-			*policyp = createRandomDistribution(maxattrs);
-		}
-		else
-		{
-			/* regular DISTRIBUTED BY transformation */
-			transformDistributedBy(pstate, cxt, distributedBy, policyp,
-								   likeDistributedBy, bQuiet);
-		}
-	}
-	else
-	{
-		/* RET */
-
-		if(onmaster)
-		{
-			p = NULL;
-		}
-		else
-		{
-			/* defaults to DISTRIBUTED RANDOMLY */
-			p = createRandomDistribution(maxattrs);
-		}
-
-		*policyp = p;
-	}
-}
 
 /****************stmt->policy*********************/
 static void
@@ -12370,13 +12312,15 @@ transformSingleRowErrorHandling(ParseState *pstate, CreateStmtContext *cxt,
 /*
  * create a policy with random distribution
  */
-GpPolicy *createRandomDistribution(int maxattrs)
+GpPolicy *
+createRandomDistribution(int maxattrs)
 {
-        GpPolicy*       p = NULL;
-        p = (GpPolicy *) palloc(sizeof(GpPolicy) + maxattrs * sizeof(p->attrs[0]));
-        p->ptype = POLICYTYPE_PARTITIONED;
-        p->nattrs = 0;
-        p->attrs[0] = 1;
+	GpPolicy   *p;
 
-        return p;
+	p = (GpPolicy *) palloc(SizeOfGpPolicy(maxattrs));
+	p->ptype = POLICYTYPE_PARTITIONED;
+	p->nattrs = 0;
+	p->attrs[0] = 1;
+
+	return p;
 }

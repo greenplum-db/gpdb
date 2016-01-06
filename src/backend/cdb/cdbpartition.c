@@ -8116,7 +8116,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 								"with external table")));
 		}
 
-		ExtTableEntry *extEntry = GetExtTableEntry(newrel->rd_id);
+		ExtTableEntry *extEntry = GetExtTableEntry(newrel->rd_id, false);
 		if (extEntry && extEntry->iswritable)
 		{
 			congruent = FALSE;

@@ -39,9 +39,6 @@ extern bool IsSystemNamespace(Oid namespaceId);
 extern bool IsToastNamespace(Oid namespaceId);
 extern bool IsAoSegmentNamespace(Oid namespaceId);
 
-
-extern bool isMasterOnly(Oid relationOid);
-
 extern bool IsReservedName(const char *name);
 extern char* GetReservedPrefix(const char *name);
 

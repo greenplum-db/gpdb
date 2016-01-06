@@ -1231,6 +1231,16 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 							locationUris);
 
 		/*
+		 * DefineRelation loaded the new relation into relcache, but the
+		 * relcache contains the distribution policy, which in turn depends on
+		 * the contents of pg_exttable, for EXECUTE-type external tables
+		 * (see GpPolicyFetch()). Now that we have created the pg_exttable
+		 * entry, invalidate the relcache, so that it gets loaded with the
+		 * correct information.
+		 */
+		RelationCacheInvalidateEntry(reloid);
+
+		/*
 		 * record a dependency between the external table and its error table (if one exists)
 		 */
 		if (singlerowerrorDesc && singlerowerrorDesc->errtable)

@@ -356,7 +356,7 @@ get_external_relation_info(Oid relationObjectId, RelOptInfo *rel)
 	/*
 	 * Get the pg_exttable fields for this table
 	 */
-	extentry = GetExtTableEntry(relationObjectId);
+	extentry = GetExtTableEntry(relationObjectId, false);
 	
 	rel->locationlist = extentry->locations;	
 	rel->execcommand = extentry->command;

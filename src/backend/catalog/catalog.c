@@ -27,6 +27,7 @@
 #include "catalog/pg_auth_members.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_database.h"
+#include "catalog/pg_exttable.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_pltemplate.h"
 #include "catalog/pg_resqueue.h"
@@ -625,29 +626,6 @@ IsAoSegmentNamespace(Oid namespaceId)
 	return namespaceId == PG_AOSEGMENT_NAMESPACE;
 }
 
-/**
- * Method determines if a relation is master-only or distributed among segments.
- * Input:
- * 	relationOid
- * Output:
- * 	true if masteronly
- */
-bool
-isMasterOnly(Oid relationOid)
-{
-	Assert(relationOid != InvalidOid);
-	Oid				schemaOid = get_rel_namespace(relationOid);
-	GpPolicy		*distributionPolicy = GpPolicyFetch(CurrentMemoryContext, relationOid);
-	
-	bool masterOnly = (Gp_role == GP_ROLE_UTILITY 
-			|| IsSystemNamespace(schemaOid)
-			|| IsToastNamespace(schemaOid)
-			|| IsAoSegmentNamespace(schemaOid)
-			|| (distributionPolicy == NULL)
-			|| (distributionPolicy->ptype == POLICYTYPE_ENTRY));
-	
-	return masterOnly;
-}
 /*
  * IsReservedName
  *		True iff name starts with the pg_ prefix.

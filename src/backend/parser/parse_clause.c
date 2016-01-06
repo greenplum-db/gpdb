@@ -874,7 +874,7 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 			Oid reloid = RelationGetRelid(pstate->p_target_relation);
 			ExtTableEntry* 	extentry;
 			
-			extentry = GetExtTableEntry(reloid);
+			extentry = GetExtTableEntry(reloid, false);
 			
 			if(!extentry->iswritable)
 				ereport(ERROR,

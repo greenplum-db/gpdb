@@ -3421,7 +3421,7 @@ CopyFromDispatch(CopyState cstate)
 					 * policy should be PARTITIONED (normal tables) or
 					 * ENTRY
 					 */
-					if (!part_policy || part_policy->ptype == POLICYTYPE_UNDEFINED)
+					if (!part_policy)
 					{
 						elog(FATAL, "Bad or undefined policy. (%p)", part_policy);
 					}

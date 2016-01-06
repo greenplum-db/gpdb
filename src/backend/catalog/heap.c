@@ -2155,8 +2155,6 @@ void
 heap_drop_with_catalog(Oid relid)
 {
 	Relation	rel;
-	const struct GpPolicy *policy;
-	bool		removePolicy = false;
 	bool		is_part_child = false;
 	bool		is_appendonly_rel;
 	bool		is_external_rel;
@@ -2171,16 +2169,6 @@ heap_drop_with_catalog(Oid relid)
 
 	is_appendonly_rel = (RelationIsAoRows(rel) || RelationIsAoCols(rel));
 	is_external_rel = RelationIsExternal(rel);
-
-	/*
- 	 * Get the distribution policy and figure out if it is to be removed.
- 	 */
-	policy = rel->rd_cdbpolicy;
-	if (policy &&
-		policy->ptype == POLICYTYPE_PARTITIONED &&
-		Gp_role == GP_ROLE_DISPATCH &&
-		relkind == RELKIND_RELATION)
-		removePolicy = true;
 
 	/*
 	 * Schedule unlinking of the relation's physical file at commit.
@@ -2260,9 +2248,9 @@ heap_drop_with_catalog(Oid relid)
 		RemoveExtTableEntry(relid);
 
 	/*
- 	 * delete distribution policy if present
+ 	 * Remove distribution policy, if any.
  	 */
-	if (removePolicy)
+	if (relkind == RELKIND_RELATION)
 		GpPolicyRemove(relid);
 
 	/*

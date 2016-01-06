@@ -4531,7 +4531,7 @@ CreateExternalStmt:	CREATE OptWritable EXTERNAL OptWeb OptTemp TABLE qualified_n
 							$7->istemp = $5;
 							n->relation = $7;
 							n->tableElts = $9;
-							n->exttypedesc = $11;
+							n->exttypedesc = (ExtTableTypeDesc *) $11;
 							n->format = $13;
 							n->formatOpts = $14;
 							n->encoding = $15;
