@@ -259,3 +259,17 @@ where pg.relfilenode=gsopai.sopaidpartitionoid and pg.relname like 'gptoolkit_us
  gptoolkit_user_table_ao_1_prt_p2         | t             | t              |                          0
 (6 rows)
 
+-- Test __gp_localid and __gp_masterid functions. The output of __gp_localid
+-- depends on the number of segments, so just check that it returns something.
+select count(*) from gp_toolkit.__gp_localid;
+ count 
+-------
+     2
+(1 row)
+
+select * from gp_toolkit.__gp_masterid;
+ masterid 
+----------
+       -1
+(1 row)
+

@@ -96,3 +96,8 @@ select pg.relname,
        sopaidpartitionindexessize
 from pg_class pg,gp_toolkit.gp_size_of_partition_and_indexes_disk gsopai
 where pg.relfilenode=gsopai.sopaidpartitionoid and pg.relname like 'gptoolkit_user_table_ao%';
+
+-- Test __gp_localid and __gp_masterid functions. The output of __gp_localid
+-- depends on the number of segments, so just check that it returns something.
+select count(*) from gp_toolkit.__gp_localid;
+select * from gp_toolkit.__gp_masterid;

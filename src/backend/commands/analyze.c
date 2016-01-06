@@ -1452,7 +1452,7 @@ static void analyzeEstimateIndexpages(Oid relationOid, Oid indexOid, float4 *ind
 		
 	initStringInfo(&sqlstmt);
 	
-	if (isMasterOnly(relationOid))
+	if (GpPolicyFetch(CurrentMemoryContext, relationOid)->ptype == POLICYTYPE_ENTRY)
 	{
 		appendStringInfo(&sqlstmt, "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] "
 				"from pg_class c where c.oid=%d", indexOid);		
@@ -1514,7 +1514,7 @@ static void analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples,
 
 		initStringInfo(&sqlstmt);
 
-		if (isMasterOnly(singleOid))
+		if (GpPolicyFetch(CurrentMemoryContext, singleOid)->ptype == POLICYTYPE_ENTRY)
 		{
 			appendStringInfo(&sqlstmt, "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] "
 					"from pg_class c where c.oid=%d", singleOid);

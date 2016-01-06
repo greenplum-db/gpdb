@@ -1456,7 +1456,7 @@ typedef enum ExtTableType
 	EXTTBL_TYPE_EXECUTE			/* table defined with EXECUTE clause */
 } ExtTableType;
 
-typedef struct ExtTableTypeDesc
+typedef struct
 {
 	NodeTag			type;
 	ExtTableType	exttabletype;
@@ -1470,7 +1470,7 @@ typedef struct CreateExternalStmt
 	NodeTag		type;
 	RangeVar   *relation;		/* external relation to create */
 	List	   *tableElts;		/* column definitions (list of ColumnDef) */
-	Node	   *exttypedesc;    /* LOCATION or EXECUTE information */
+	ExtTableTypeDesc *exttypedesc;    /* LOCATION or EXECUTE information */
 	char	   *format;			/* data format name */
 	List	   *formatOpts;		/* List of DefElem nodes for data format */
 	bool		isweb;
