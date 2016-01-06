@@ -495,6 +495,9 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	
 	Assert(result->utilityStmt == NULL || IsA(result->utilityStmt, DeclareCursorStmt));
 	
+	if (parse->hasBypassPreprocess)
+          result->bypassPreprocess = true;
+
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		/*

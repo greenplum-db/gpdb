@@ -365,6 +365,7 @@ _readQuery(void)
 	}
 
 	READ_BOOL_FIELD(hasAggs);
+	READ_BOOL_FIELD(hasBypassPreprocess);
 	READ_BOOL_FIELD(hasWindFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
 	READ_NODE_FIELD(rtable);
@@ -1588,6 +1589,11 @@ _readFuncExpr(void)
 	if (pg_strtok_peek_fldname("is_tablefunc"))
 	{
 		READ_BOOL_FIELD(is_tablefunc);  /* GPDB */
+	}
+
+	if (pg_strtok_peek_fldname("bypass_preprocess"))
+	{
+	        READ_BOOL_FIELD(bypass_preprocess);
 	}
 
 	READ_DONE();

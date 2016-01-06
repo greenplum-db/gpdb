@@ -106,6 +106,8 @@ CreateQueryDesc(PlannedStmt *plannedstmt,
 	qd->portal_name = NULL;
 
 	qd->gpmon_pkt = NULL;
+
+	qd->late_execfunc = plannedstmt->bypassPreprocess;
 	
     if (Gp_role != GP_ROLE_EXECUTE)
 	{
@@ -275,6 +277,9 @@ ProcessQuery(Portal portal,
 	 * Set up to collect AFTER triggers
 	 */
 	AfterTriggerBeginQuery();
+
+	if (stmt->bypassPreprocess)
+          queryDesc->late_execfunc = true;
 
 	/*
 	 * Call ExecutorStart to prepare the plan for execution
