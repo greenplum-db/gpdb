@@ -536,7 +536,7 @@ ReadBackendBackupFileError(PGconn *pConn, const char *pszBackupDirectory, const 
 	else
 	{
 		char *res = PQgetvalue(pRes, 0, 0);
-		appendPQExpBuffer(pszRtn, res);
+		appendPQExpBufferStr(pszRtn, res);
 		if (strstr(res, "ERROR:") || strstr(res, "[ERROR]"))
 		{
 			status = -1;
