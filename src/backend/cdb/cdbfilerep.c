@@ -150,7 +150,7 @@ static void FileRep_IpcSignalAllInternal(int ii);
 
 static pg_crc32 FileRep_CalculateAdler32(unsigned char *buf, int len);
 
-#define MaxFileRepSubProc 18
+#define MaxFileRepSubProc FileRepProcessType__EnumerationCount
 
 #define EXIT_STATUS_0(st)  ((st) == 0)
 #define EXIT_STATUS_1(st)  (WIFEXITED(st) && WEXITSTATUS(st) == 1)

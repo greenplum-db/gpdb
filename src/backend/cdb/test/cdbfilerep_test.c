@@ -6,7 +6,11 @@
 #include "../cdbfilerep.c"
 
 /*
- * Test for MPP-24515
+ * Test validates if forking a filerep process fails,
+ * it doesn't set the filerep subprocess slot to -1.
+ * As if kill is called against this pid, and if it is -1,
+ * disastrously sends signal to unexpected processes in the system.
+ * Also we expect 0 as the pid of dead process everywhere in the code.
  */
 void
 test__FileRep_StartChildProcess(void **state)
@@ -15,6 +19,8 @@ test__FileRep_StartChildProcess(void **state)
 	FileRepSubProc FileRepSubProcListLocal[FileRepProcessType__EnumerationCount];
 
 	FileRepSubProcList = &FileRepSubProcListLocal;
+
+	assert_int_equal(sizeof(FileRepSubProcListInitial), sizeof(FileRepSubProcListLocal));
 	memcpy(FileRepSubProcList, FileRepSubProcListInitial,
 			sizeof(FileRepSubProcListInitial));
 
