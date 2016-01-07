@@ -132,6 +132,8 @@ GetHiddenPgProcTuples(Relation pg_proc, int *len)
 		proargnames[8] = CStringGetTextDatum("rawbytes");
 		array = construct_array(proargnames, 9, TEXTOID, -1, false, 'i');
 		values[Anum_pg_proc_proargnames - 1] = PointerGetDatum(array);
+		values[Anum_pg_proc_pronargdefaults - 1] = Int16GetDatum(InvalidOid);
+		nulls[Anum_pg_proc_proargdefaults - 1] = true;
 		values[Anum_pg_proc_prosrc - 1] = CStringGetTextDatum("gp_read_error_log");
 		values[Anum_pg_proc_probin - 1] = (Datum) 0;
 		nulls[Anum_pg_proc_probin - 1] = true;
@@ -184,6 +186,8 @@ GetHiddenPgProcTuples(Relation pg_proc, int *len)
 		values[Anum_pg_proc_proacl - 1] = (Datum) 0;
 		nulls[Anum_pg_proc_proacl - 1] = true;
 		values[Anum_pg_proc_prodataaccess - 1] = CharGetDatum('m');
+		values[Anum_pg_proc_pronargdefaults - 1] = Int16GetDatum(InvalidOid);
+		nulls[Anum_pg_proc_proargdefaults - 1] = true;
 
 		tuples[1] = heap_form_tuple(RelationGetDescr(pg_proc), values, nulls);
 

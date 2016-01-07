@@ -38,6 +38,10 @@ extern bool IsBinaryCoercible(Oid srctype, Oid targettype);
 extern bool IsPreferredType(CATEGORY category, Oid type);
 extern CATEGORY TypeCategory(Oid type);
 
+extern Node* coerce_to_specific_type(ParseState *pstate,
+									 Node *node,
+									 Oid targetTypeId,
+									 const char *constructName);
 extern Node *coerce_to_target_type(ParseState *pstate,
 					  Node *expr, Oid exprtype,
 					  Oid targettype, int32 targettypmod,

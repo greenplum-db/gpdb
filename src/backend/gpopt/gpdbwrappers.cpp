@@ -817,7 +817,7 @@ gpdb::FclFuncCandidates
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_proc */
-		return FuncnameGetCandidates(plistNames, iArgs, true);
+		return FuncnameGetCandidates(plistNames, iArgs, false, false);
 	}
 	GP_WRAP_END;
 	return NULL;
