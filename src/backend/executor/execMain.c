@@ -796,6 +796,8 @@ ExecutorRun(QueryDesc *queryDesc,
 
 	Assert(NULL != queryDesc->plannedstmt && NULL != queryDesc->plannedstmt->memoryAccount);
 
+	estate->bypassPreprocessFunctionArgs = queryDesc->late_execfunc_funcargs;
+
 	START_MEMORY_ACCOUNT(queryDesc->plannedstmt->memoryAccount);
 
 	/*
@@ -2767,7 +2769,7 @@ lnext:	;
 						break;
 
 					case CMD_INSERT:
-						ExecInsert(slot, dest, estate, PLANGEN_PLANNER, false /* isUpdate */);
+					  ExecInsert(slot, dest, estate, PLANGEN_PLANNER, false /* isUpdate */, isLateProcess);
 						result = NULL;
 						break;
 

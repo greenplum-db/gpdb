@@ -1149,7 +1149,10 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 			sublist = transformExpressionList(pstate, sublist);
 
 			if (pstate->p_bypasspreprocess)
+			{
 			  qry->hasBypassPreprocess = true;
+			  qry->bypassPreprocessFunctionArgs = pstate->p_bypasspreprocessfuncargs;
+			}
 			  
 			/*
 			 * All the sublists must be the same length, *after*
@@ -1243,7 +1246,10 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 										   (List *) linitial(valuesLists));
 
 		if (pstate->p_bypasspreprocess)
+		{
                   qry->hasBypassPreprocess = true;
+		  qry->bypassPreprocessFunctionArgs = pstate->p_bypasspreprocessfuncargs;
+		}
 
 		/* Prepare row for assignment to target table */
 		exprList = transformInsertRow(pstate, exprList,

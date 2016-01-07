@@ -165,6 +165,7 @@ typedef struct Query
 
   bool hasBypassPreprocess;    /* Whether preprocessing of function is to be bypassed */
 
+  List *bypassPreprocessFunctionArgs;    /* Arguments of bypass function preprocess function */
 	Node	   *limitOffset;	/* # of result tuples to skip (int8 expr) */
 	Node	   *limitCount;		/* # of result tuples to return (int8 expr) */
 

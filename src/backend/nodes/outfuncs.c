@@ -297,8 +297,9 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_ENUM_FIELD(commandType, CmdType);
 	WRITE_ENUM_FIELD(planGen, PlanGenerator);
 	WRITE_BOOL_FIELD(canSetTag);
-	WRITE_BOOL_FIELD(bypassPreprocess);
 	WRITE_BOOL_FIELD(transientPlan);
+	WRITE_BOOL_FIELD(bypassPreprocess);
+	WRITE_NODE_FIELD(bypassPreprocessFuncArgs);
 	WRITE_NODE_FIELD(planTree);
 	WRITE_NODE_FIELD(rtable);
 	WRITE_NODE_FIELD(resultRelations);
@@ -3438,6 +3439,7 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_BOOL_FIELD(hasAggs);
 	WRITE_BOOL_FIELD(hasBypassPreprocess);
+	WRITE_NODE_FIELD(bypassPreprocessFunctionArgs);
 	WRITE_BOOL_FIELD(hasWindFuncs);
 	WRITE_BOOL_FIELD(hasSubLinks);
 	WRITE_NODE_FIELD(rtable);

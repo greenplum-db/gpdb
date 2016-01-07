@@ -60,6 +60,7 @@ typedef struct QueryDesc
 	Oid			es_lastoid;		/* oid of row inserted */
 	bool		extended_query;   /* simple or extended query protocol? */
   bool            late_execfunc;   /* if late execution of function is true */
+  List            *late_execfunc_funcargs;    /* arguments of late function execution function */
 	char		*portal_name;	/* NULL for unnamed portal */
 	
 	/* CDB: EXPLAIN ANALYZE statistics */

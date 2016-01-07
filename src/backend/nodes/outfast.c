@@ -327,6 +327,8 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_ENUM_FIELD(planGen, PlanGenerator);
 	WRITE_BOOL_FIELD(canSetTag);
 	WRITE_BOOL_FIELD(transientPlan);
+	WRITE_BOOL_FIELD(bypassPreprocess);
+	WRITE_NODE_FIELD(bypassPreprocessFuncArgs);
 
 	WRITE_NODE_FIELD(planTree);
 
@@ -356,8 +358,6 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 
 	WRITE_UINT64_FIELD(query_mem);
 	WRITE_NODE_FIELD(transientTypeRecords);
-
-	WRITE_BOOL_FIELD(bypassPreprocess);
 }
 
 static void
@@ -905,6 +905,7 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_BOOL_FIELD(hasAggs);
 	WRITE_BOOL_FIELD(hasBypassPreprocess);
+	WRITE_NODE_FIELD(bypassPreprocessFunctionArgs);
 	WRITE_BOOL_FIELD(hasWindFuncs);
 	WRITE_BOOL_FIELD(hasSubLinks);
 	WRITE_NODE_FIELD(rtable);

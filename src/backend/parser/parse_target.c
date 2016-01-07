@@ -1512,7 +1512,27 @@ ifDelayedFunctionCall(ParseState *pstate, List *exprlist)
       if (IsA(e, FuncCall))
       {
 	  FuncCall  *fref = (FuncCall *) e;
+	  ListCell *lc_internal;
 	  char *fname = NULL;
+
+	  foreach(lc_internal, fref->args)
+	  {
+	    Node *current_node = (Node *) lfirst(lc_internal);
+
+	    if (IsA(current_node, A_Const))
+	    {
+	      A_Const *current_const = (A_Const *) (current_node);
+
+	      if (pstate->p_bypasspreprocessfuncargs == NULL)
+	      {
+		pstate->p_bypasspreprocessfuncargs = list_make1_oid(current_const->val.val.ival);
+	      }
+	      else
+	      {
+		pstate->p_bypasspreprocessfuncargs = lappend_oid(pstate->p_bypasspreprocessfuncargs, (current_const->val.val.ival));
+	      }
+	    }
+	  }
 
 	 fname = strVal(llast(fref->funcname));
 
