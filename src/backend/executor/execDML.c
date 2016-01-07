@@ -20,6 +20,7 @@
 #include "utils/lsyscache.h"
 #include "parser/parsetree.h"
 #include "cdb/cdbvars.h"
+#include "storage/large_object.h" 
 
 /*
  * reconstructTupleValues
@@ -323,7 +324,8 @@ ExecInsert(TupleTableSlot *slot,
 		   DestReceiver *dest,
 		   EState *estate,
 		   PlanGenerator planGen,
-		   bool isUpdate)
+	   bool isUpdate,
+	   bool isExecLatefunc)
 {
 	void		*tuple = NULL;
 	ResultRelInfo *resultRelInfo = NULL;
@@ -337,6 +339,18 @@ ExecInsert(TupleTableSlot *slot,
 	bool 		rel_is_aorows = false;
 	bool		rel_is_aocols = false;
 	bool		rel_is_external = false;
+
+	
+	if (isExecLatefunc)
+	{
+	  List *args_list = estate->bypassPreprocessFunctionArgs;
+
+	  /* Specific hack for lo_create. Please modify for any new functions that use this machinery */
+	  Assert(list_length(args_list) == 1);
+
+	  /* Parser should have set list values as OID parameters for this function */
+	  inv_create(linitial(args_list));
+	}
 
 	/*
 	 * get information on the (current) result relation

@@ -257,9 +257,9 @@ lo_create(PG_FUNCTION_ARGS)
 	 * We don't actually need to store into fscxt, but create it anyway to
 	 * ensure that AtEOXact_LargeObject knows there is state to clean up
 	 */
-	CreateFSContext();
+	//CreateFSContext(); /* is this really needed? */
 
-	lobjId = inv_create(lobjId);
+	//lobjId = inv_create(lobjId);
 
 	PG_RETURN_OID(lobjId);
 }

@@ -989,6 +989,7 @@ SubplanQueryDesc(QueryDesc * qd)
 	substmt->commandType = stmt->commandType;
 	substmt->canSetTag = stmt->canSetTag;
 	substmt->transientPlan = stmt->transientPlan;
+	substmt->bypassPreprocess = qd->late_execfunc;
 	substmt->planTree = stmt->planTree;
 	substmt->rtable = stmt->rtable;
 	substmt->resultRelations = stmt->resultRelations;

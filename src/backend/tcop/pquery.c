@@ -279,7 +279,10 @@ ProcessQuery(Portal portal,
 	AfterTriggerBeginQuery();
 
 	if (stmt->bypassPreprocess)
+	{
           queryDesc->late_execfunc = true;
+	  queryDesc->late_execfunc_funcargs = stmt->bypassPreprocessFuncArgs;
+	}
 
 	/*
 	 * Call ExecutorStart to prepare the plan for execution

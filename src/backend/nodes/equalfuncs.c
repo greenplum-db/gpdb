@@ -805,6 +805,7 @@ _equalQuery(Query *a, Query *b)
 	COMPARE_NODE_FIELD(intoClause);
 	COMPARE_SCALAR_FIELD(hasAggs);
 	COMPARE_SCALAR_FIELD(hasBypassPreprocess);
+	COMPARE_NODE_FIELD(bypassPreprocessFunctionArgs);
 	COMPARE_SCALAR_FIELD(hasWindFuncs);
 	COMPARE_SCALAR_FIELD(hasSubLinks);
 	COMPARE_NODE_FIELD(rtable);

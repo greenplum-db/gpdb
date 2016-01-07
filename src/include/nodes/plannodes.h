@@ -73,6 +73,8 @@ typedef struct PlannedStmt
 
   bool            bypassPreprocess;  /* if bypass function preprocess is set to true */
 
+  List       *bypassPreprocessFuncArgs;    /* arguments of bypass function preprocessing function */ 
+
 	/* Field qdContext communicates memory context on the QD  from portal to
 	 * dispatch.
 	 *
