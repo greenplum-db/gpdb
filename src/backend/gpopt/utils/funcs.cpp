@@ -1351,6 +1351,7 @@ PlannedStmt *orca(Query *pquery)
 //
 //	@doc:
 //		Get the number of times we evicted entries from CMDCache.
+//		This function is called by udfs for testing purposes.
 //
 //---------------------------------------------------------------------------
 extern "C"
