@@ -11,7 +11,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.221 2007/01/10 18:06:03 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.222 2007/01/20 20:45:39 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -159,7 +159,6 @@ static BitmapAnd *make_bitmap_and(List *bitmapplans);
 static BitmapOr *make_bitmap_or(List *bitmapplans);
 static Sort *make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
 		  AttrNumber *sortColIdx, Oid *sortOperators, bool *nullsFirst);
-
 static List *flatten_grouping_list(List *groupcls);
 
 
@@ -2726,25 +2725,21 @@ create_nestloop_plan(PlannerInfo *root,
 		 * that have to be checked as qpquals at the join node.
 		 *
 		 * We can also remove any join clauses that are redundant with those
-		 * being used in the index scan; prior redundancy checks will not have
-		 * caught this case because the join clauses would never have been put
-		 * in the same joininfo list.
+		 * being used in the index scan; this check is needed because
+		 * find_eclass_clauses_for_index_join() may emit different clauses
+		 * than generate_join_implied_equalities() did.
 		 *
 		 * We can skip this if the index path is an ordinary indexpath and not
-		 * a special innerjoin path.
+		 * a special innerjoin path, since it then wouldn't be using any join
+		 * clauses.
 		 */
 		IndexPath  *innerpath = (IndexPath *) best_path->innerjoinpath;
 
 		if (innerpath->isjoininner)
-		{
 			joinrestrictclauses =
 				select_nonredundant_join_clauses(root,
 												 joinrestrictclauses,
-												 innerpath->indexclauses,
-												 best_path->outerjoinpath->parent->relids,
-												 best_path->innerjoinpath->parent->relids,
-												 IS_OUTER_JOIN(best_path->jointype));
-		}
+												 innerpath->indexclauses);
 	}
 	else if (IsA(best_path->innerjoinpath, BitmapHeapPath) ||
 			 IsA(best_path->innerjoinpath, BitmapAppendOnlyPath))
@@ -2790,10 +2785,7 @@ create_nestloop_plan(PlannerInfo *root,
 			joinrestrictclauses =
 				select_nonredundant_join_clauses(root,
 												 joinrestrictclauses,
-												 bitmapclauses,
-												 best_path->outerjoinpath->parent->relids,
-												 best_path->innerjoinpath->parent->relids,
-												 IS_OUTER_JOIN(best_path->jointype));
+												 bitmapclauses);
 		}
 	}
 
@@ -2854,8 +2846,22 @@ create_mergejoin_plan(PlannerInfo *root,
 	List	   *otherclauses;
 	List	   *mergeclauses;
     Sort       *sort;
-	MergeJoin  *join_plan;
 	bool		prefetch=false;
+	List	   *outerpathkeys;
+	List	   *innerpathkeys;
+	int			nClauses;
+	Oid		   *mergefamilies;
+	int		   *mergestrategies;
+	bool	   *mergenullsfirst;
+	MergeJoin  *join_plan;
+	int			i;
+	EquivalenceClass *lastoeclass;
+	EquivalenceClass *lastieclass;
+	PathKey	   *opathkey;
+	PathKey	   *ipathkey;
+	ListCell   *lc;
+	ListCell   *lop;
+	ListCell   *lip;
 
 	/* Get the join qual clauses (in plain expression form) */
 	/* Any pseudoconstant clauses are ignored here */
@@ -2881,7 +2887,8 @@ create_mergejoin_plan(PlannerInfo *root,
 
 	/*
 	 * Rearrange mergeclauses, if needed, so that the outer variable is always
-	 * on the left.
+	 * on the left; mark the mergeclause restrictinfos with correct
+	 * outer_is_left status.
 	 */
 	mergeclauses =
         get_switched_clauses(best_path->jpath.innerjoinpath->parent->relids,
@@ -2903,12 +2910,13 @@ create_mergejoin_plan(PlannerInfo *root,
 		sort =
 			make_sort_from_pathkeys(root,
 									outer_plan,
-									best_path->outersortkeys,
-                                    best_path->jpath.outerjoinpath->parent->relids,
-                                    true);
+									best_path->outersortkeys);
         if (sort)
             outer_plan = (Plan *)sort;
+		outerpathkeys = best_path->outersortkeys;
 	}
+	else
+		outerpathkeys = best_path->jpath.outerjoinpath->pathkeys;
 
 	if (best_path->innersortkeys)
 	{
@@ -2916,9 +2924,7 @@ create_mergejoin_plan(PlannerInfo *root,
 		sort =
 			make_sort_from_pathkeys(root,
 									inner_plan,
-									best_path->innersortkeys,
-                                    best_path->jpath.innerjoinpath->parent->relids,
-                                    true);
+									best_path->innersortkeys);
         if (sort)
             inner_plan = (Plan *)sort;
 	}
@@ -2950,7 +2956,87 @@ create_mergejoin_plan(PlannerInfo *root,
 				inner_plan = (Plan *)mat;
 			}
 		}
+
+		innerpathkeys = best_path->innersortkeys;
 	}
+	else
+		innerpathkeys = best_path->jpath.innerjoinpath->pathkeys;
+
+	/*
+	 * Compute the opfamily/strategy/nullsfirst arrays needed by the executor.
+	 * The information is in the pathkeys for the two inputs, but we need to
+	 * be careful about the possibility of mergeclauses sharing a pathkey
+	 * (compare find_mergeclauses_for_pathkeys()).
+	 */
+	nClauses = list_length(mergeclauses);
+	Assert(nClauses == list_length(best_path->path_mergeclauses));
+	mergefamilies = (Oid *) palloc(nClauses * sizeof(Oid));
+	mergestrategies = (int *) palloc(nClauses * sizeof(int));
+	mergenullsfirst = (bool *) palloc(nClauses * sizeof(bool));
+
+	lastoeclass = NULL;
+	lastieclass = NULL;
+	opathkey = NULL;
+	ipathkey = NULL;
+	lop = list_head(outerpathkeys);
+	lip = list_head(innerpathkeys);
+	i = 0;
+	foreach(lc, best_path->path_mergeclauses)
+	{
+		RestrictInfo   *rinfo = (RestrictInfo *) lfirst(lc);
+		EquivalenceClass *oeclass;
+		EquivalenceClass *ieclass;
+
+		/* fetch outer/inner eclass from mergeclause */
+		Assert(IsA(rinfo, RestrictInfo));
+		if (rinfo->outer_is_left)
+		{
+			oeclass = rinfo->left_ec;
+			ieclass = rinfo->right_ec;
+		}
+		else
+		{
+			oeclass = rinfo->right_ec;
+			ieclass = rinfo->left_ec;
+		}
+		Assert(oeclass != NULL);
+		Assert(ieclass != NULL);
+
+		/* should match current or next pathkeys */
+		/* we check this carefully for debugging reasons */
+		if (oeclass != lastoeclass)
+		{
+			if (!lop)
+				elog(ERROR, "too few pathkeys for mergeclauses");
+			opathkey = (PathKey *) lfirst(lop);
+			lop = lnext(lop);
+			lastoeclass = opathkey->pk_eclass;
+			if (oeclass != lastoeclass)
+				elog(ERROR, "outer pathkeys do not match mergeclause");
+		}
+		if (ieclass != lastieclass)
+		{
+			if (!lip)
+				elog(ERROR, "too few pathkeys for mergeclauses");
+			ipathkey = (PathKey *) lfirst(lip);
+			lip = lnext(lip);
+			lastieclass = ipathkey->pk_eclass;
+			if (ieclass != lastieclass)
+				elog(ERROR, "inner pathkeys do not match mergeclause");
+		}
+		/* pathkeys should match each other too (more debugging) */
+		if (opathkey->pk_opfamily != ipathkey->pk_opfamily ||
+			opathkey->pk_strategy != ipathkey->pk_strategy ||
+			opathkey->pk_nulls_first != ipathkey->pk_nulls_first)
+			elog(ERROR, "left and right pathkeys do not match in mergejoin");
+
+		/* OK, save info for executor */
+		mergefamilies[i] = opathkey->pk_opfamily;
+		mergestrategies[i] = opathkey->pk_strategy;
+		mergenullsfirst[i] = opathkey->pk_nulls_first;
+		i++;
+	}
+
 
 	/*
 	 * Now we can build the mergejoin node.
@@ -2959,9 +3045,9 @@ create_mergejoin_plan(PlannerInfo *root,
 							   joinclauses,
 							   otherclauses,
 							   mergeclauses,
-							   best_path->path_mergeFamilies,
-							   best_path->path_mergeStrategies,
-							   best_path->path_mergeNullsFirst,
+							   mergefamilies,
+							   mergestrategies,
+							   mergenullsfirst,
 							   outer_plan,
 							   inner_plan,
 							   best_path->jpath.jointype);
@@ -3325,8 +3411,9 @@ fix_indexqual_operand(Node *node, IndexOptInfo *index, Oid *opfamily)
  *	  Given a list of merge or hash joinclauses (as RestrictInfo nodes),
  *	  extract the bare clauses, and rearrange the elements within the
  *	  clauses, if needed, so the outer join variable is on the left and
- *	  the inner is on the right.  The original data structure is not touched;
- *	  a modified list is returned.
+ *	  the inner is on the right.  The original clause data structure is not
+ *	  touched; a modified list is returned.  We do, however, set the transient
+ *	  outer_is_left field in each RestrictInfo to show which side was which.
  *
  * CDB:  Caller specifies inner relids instead of outer relids, because with
  * Adaptive NJ there can be HashPlan nodes whose outer relids are not directly
@@ -3376,10 +3463,13 @@ get_switched_clauses(Relids innerrelids, List *clauses)
 			/* Commute it --- note this modifies the temp node in-place. */
 			CommuteOpExpr(temp);
 			t_list = lappend(t_list, temp);
+			restrictinfo->outer_is_left = false;
 		}
 		else
 		{
+			Assert(bms_is_subset(restrictinfo->left_relids, outerrelids));
 			t_list = lappend(t_list, clause);
+			restrictinfo->outer_is_left = true;
 		}
 	}
 	return t_list;
@@ -4107,9 +4197,10 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
 
 	foreach(i, pathkeys)
 	{
-		List	   *keysublist = (List *) lfirst(i);
-		PathKeyItem *pathkey = NULL;
+		PathKey	   *pathkey = (PathKey *) lfirst(i);
 		TargetEntry *tle = NULL;
+		Oid			pk_datatype = InvalidOid;
+		Oid			sortop;
 		ListCell   *j;
         AttrNumber  resno;
 
@@ -4126,16 +4217,19 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
             continue;
 
 		/*
-		 * We can sort by any one of the sort key items listed in this
-		 * sublist.  For now, we take the first one that corresponds to an
-		 * available Var in the tlist.	If there isn't any, use the first one
-		 * that is an expression in the input's vars.
+		 * We can sort by any non-constant expression listed in the pathkey's
+		 * EquivalenceClass.  For now, we take the first one that corresponds
+		 * to an available Var in the tlist. If there isn't any, use the first
+		 * one that is an expression in the input's vars.  (The non-const
+		 * restriction only matters if the EC is below_outer_join; but if it
+		 * isn't, it won't contain consts anyway, else we'd have discarded
+		 * the pathkey as redundant.)
 		 *
 		 * XXX if we have a choice, is there any way of figuring out which
 		 * might be cheapest to execute?  (For example, int4lt is likely much
 		 * cheaper to execute than numericlt, but both might appear in the
-		 * same pathkey sublist...)  Not clear that we ever will have a choice
-		 * in practice, so it may not matter.
+		 * same equivalence class...)  Not clear that we ever will have an
+		 * interesting choice in practice, so it may not matter.
 		 */
         pathkey = cdbpullup_findPathKeyItemInTargetList(keysublist,
                                                         relids,
@@ -4160,6 +4254,49 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
             if (!add_keys_to_targetlist)
                 break;
 
+		foreach(j, pathkey->pk_eclass->ec_members)
+		{
+			EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
+
+			if (em->em_is_const || em->em_is_child)
+				continue;
+			tle = tlist_member((Node *) em->em_expr, tlist);
+			if (tle)
+			{
+				pk_datatype = em->em_datatype;
+				break;			/* found expr already in tlist */
+			}
+		}
+		if (!tle)
+		{
+			/* No matching Var; look for a computable expression */
+			Expr   *sortexpr = NULL;
+
+			foreach(j, pathkey->pk_eclass->ec_members)
+			{
+				EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
+				List	   *exprvars;
+				ListCell   *k;
+
+				if (em->em_is_const || em->em_is_child)
+					continue;
+				sortexpr = em->em_expr;
+				exprvars = pull_var_clause((Node *) sortexpr, false);
+				foreach(k, exprvars)
+				{
+					if (!tlist_member(lfirst(k), tlist))
+						break;
+				}
+				list_free(exprvars);
+				if (!k)
+				{
+					pk_datatype = em->em_datatype;
+					break;		/* found usable expression */
+				}
+			}
+			if (!j)
+				elog(ERROR, "could not find pathkey item to sort");
+
 			/*
 			 * Do we need to insert a Result node?
 			 */
@@ -4173,12 +4310,13 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
 			 * Add resjunk entry to input's tlist
 			 */
             resno = list_length(tlist) + 1;
-			tle = makeTargetEntry((Expr *) pathkey->key,
-								  resno,
+			tle = makeTargetEntry(sortexpr,
+								  list_length(tlist) + 1,
 								  NULL,
 								  true);
 			tlist = lappend(tlist, tle);
 			lefttree->targetlist = tlist;		/* just in case NIL before */
+		}
 		}
 
         /* Add column to sort arrays. */
@@ -4186,6 +4324,31 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
         sortOperators[numsortkeys] = pathkey->sortop;
 		nullsFirst[numsortkeys] = pathkey->nulls_first;
         numsortkeys++;
+
+		/*
+		 * Look up the correct sort operator from the PathKey's slightly
+		 * abstracted representation.
+		 */
+		sortop = get_opfamily_member(pathkey->pk_opfamily,
+									 pk_datatype,
+									 pk_datatype,
+									 pathkey->pk_strategy);
+		if (!OidIsValid(sortop))	/* should not happen */
+			elog(ERROR, "could not find member %d(%u,%u) of opfamily %u",
+				 pathkey->pk_strategy, pk_datatype, pk_datatype,
+				 pathkey->pk_opfamily);
+
+		/*
+		 * The column might already be selected as a sort key, if the pathkeys
+		 * contain duplicate entries.  (This can happen in scenarios where
+		 * multiple mergejoinable clauses mention the same var, for example.)
+		 * So enter it only once in the sort arrays.
+		 */
+		numsortkeys = add_sort_column(tle->resno,
+									  sortop,
+									  pathkey->pk_nulls_first,
+									  numsortkeys,
+									  sortColIdx, sortOperators, nullsFirst);
 	}
 
     if (numsortkeys == 0)

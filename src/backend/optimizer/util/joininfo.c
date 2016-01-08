@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/joininfo.c,v 1.46 2007/01/05 22:19:32 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/joininfo.c,v 1.47 2007/01/20 20:45:39 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -16,6 +16,7 @@
 
 #include "optimizer/joininfo.h"
 #include "optimizer/pathnode.h"
+#include "optimizer/paths.h"
 
 
 /*
@@ -54,6 +55,47 @@ have_relevant_joinclause(PlannerInfo *root,
 		}
 	}
 
+	/*
+	 * We also need to check the EquivalenceClass data structure, which
+	 * might contain relationships not emitted into the joininfo lists.
+	 */
+	if (!result && rel1->has_eclass_joins && rel2->has_eclass_joins)
+		result = have_relevant_eclass_joinclause(root, rel1, rel2);
+
+	/*
+	 * It's possible that the rels correspond to the left and right sides
+	 * of a degenerate outer join, that is, one with no joinclause mentioning
+	 * the non-nullable side.  The above scan will then have failed to locate
+	 * any joinclause indicating we should join, but nonetheless we must
+	 * allow the join to occur.
+	 *
+	 * Note: we need no comparable check for IN-joins because we can handle
+	 * sequential buildup of an IN-join to multiple outer-side rels; therefore
+	 * the "last ditch" case in make_rels_by_joins() always succeeds.  We
+	 * could dispense with this hack if we were willing to try bushy plans
+	 * in the "last ditch" case, but that seems too expensive.
+	 */
+	if (!result)
+	{
+		foreach(l, root->oj_info_list)
+		{
+			OuterJoinInfo *ojinfo = (OuterJoinInfo *) lfirst(l);
+
+			/* ignore full joins --- other mechanisms handle them */
+			if (ojinfo->is_full_join)
+				continue;
+
+			if ((bms_is_subset(ojinfo->min_lefthand, rel1->relids) &&
+				 bms_is_subset(ojinfo->min_righthand, rel2->relids)) ||
+				(bms_is_subset(ojinfo->min_lefthand, rel2->relids) &&
+				 bms_is_subset(ojinfo->min_righthand, rel1->relids)))
+			{
+				result = true;
+				break;
+			}
+		}
+	}
+
 	bms_free(join_relids);
 
 	return result;
@@ -87,40 +129,6 @@ add_join_clause_to_rels(PlannerInfo *root,
 		RelOptInfo *rel = find_base_rel(root, cur_relid);
 
 		rel->joininfo = lappend(rel->joininfo, restrictinfo);
-	}
-	bms_free(tmprelids);
-}
-
-/*
- * remove_join_clause_from_rels
- *	  Delete 'restrictinfo' from all the joininfo lists it is in
- *
- * This reverses the effect of add_join_clause_to_rels.  It's used when we
- * discover that a join clause is redundant.
- *
- * 'restrictinfo' describes the join clause
- * 'join_relids' is the list of relations participating in the join clause
- *				 (there must be more than one)
- */
-void
-remove_join_clause_from_rels(PlannerInfo *root,
-							 RestrictInfo *restrictinfo,
-							 Relids join_relids)
-{
-	Relids		tmprelids;
-	int			cur_relid;
-
-	tmprelids = bms_copy(join_relids);
-	while ((cur_relid = bms_first_member(tmprelids)) >= 0)
-	{
-		RelOptInfo *rel = find_base_rel(root, cur_relid);
-
-		/*
-		 * Remove the restrictinfo from the list.  Pointer comparison is
-		 * sufficient.
-		 */
-		Assert(list_member_ptr(rel->joininfo, restrictinfo));
-		rel->joininfo = list_delete_ptr(rel->joininfo, restrictinfo);
 	}
 	bms_free(tmprelids);
 }

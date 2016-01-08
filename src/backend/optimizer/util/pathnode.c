@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/pathnode.c,v 1.136 2007/01/10 18:06:04 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/pathnode.c,v 1.137 2007/01/20 20:45:39 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -29,8 +29,8 @@
 #include "parser/parse_expr.h"
 #include "parser/parse_oper.h"
 #include "parser/parsetree.h"
-#include "utils/lsyscache.h"
-#include "utils/memutils.h"
+/* 83MERGE_FIXME_DG #include "utils/lsyscache.h" */
+/* 83MERGE_FIXME_SG #include "utils/memutils.h" */
 #include "utils/selfuncs.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
@@ -1682,6 +1682,21 @@ create_unique_path(PlannerInfo *root,
     pathnode->distinct_on_rowid_relids = distinct_on_rowid_relids;
 
 	/*
+	 * We must ensure path struct is allocated in main planning context;
+	 * otherwise GEQO memory management causes trouble.  (Compare
+	 * best_inner_indexscan().)
+	 */
+	oldcontext = MemoryContextSwitchTo(root->planner_cxt);
+
+	pathnode = makeNode(UniquePath);
+
+	/* There is no substructure to allocate, so can switch back right away */
+	MemoryContextSwitchTo(oldcontext);
+
+	pathnode->path.pathtype = T_Unique;
+	pathnode->path.parent = rel;
+
+	/*
 	 * Treat the output as always unsorted, since we don't necessarily have
 	 * pathkeys to represent it.
 	 */
@@ -2566,11 +2581,7 @@ create_nestloop_path(PlannerInfo *root,
  *      Consists of the ones to be used for merging ('mergeclauses') plus
  *      any others in 'restrict_clauses' that are to be applied after the
  *      merge.  We use them for motion planning.  (CDB)
- * 'mergefamilies' are the btree opfamily OIDs identifying the merge
- *		ordering for each merge clause
- * 'mergestrategies' are the btree operator strategies identifying the merge
- *		ordering for each merge clause
- * 'mergenullsfirst' are the nulls first/last flags for each merge clause
+
  * 'outersortkeys' are the sort varkeys for the outer relation
  *      or NIL to use existing ordering
  * 'innersortkeys' are the sort varkeys for the inner relation
@@ -2586,9 +2597,6 @@ create_mergejoin_path(PlannerInfo *root,
 					  List *pathkeys,
 					  List *mergeclauses,
                       List *allmergeclauses,    /*CDB*/
-					  Oid *mergefamilies,
-					  int *mergestrategies,
-					  bool *mergenullsfirst,
 					  List *outersortkeys,
 					  List *innersortkeys)
 {
@@ -2718,9 +2726,6 @@ create_mergejoin_path(PlannerInfo *root,
 	pathnode->jpath.path.rescannable = outer_path->rescannable && inner_path->rescannable;
 
 	pathnode->path_mergeclauses = mergeclauses;
-	pathnode->path_mergeFamilies = mergefamilies;
-	pathnode->path_mergeStrategies = mergestrategies;
-	pathnode->path_mergeNullsFirst = mergenullsfirst;
 	pathnode->outersortkeys = outersortkeys;
 	pathnode->innersortkeys = innersortkeys;
 

@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planner.c,v 1.211 2007/01/10 18:06:03 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planner.c,v 1.212 2007/01/20 20:45:39 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -562,6 +562,7 @@ subquery_planner(PlannerGlobal *glob,
 	root->query_level = parent_root ? parent_root->query_level + 1 : 1;
 	root->parent_root = parent_root;
 	root->planner_cxt = CurrentMemoryContext;
+	root->eq_classes = NIL;
 	root->init_plans = NIL;
 	
 	root->list_cteplaninfo = NIL;
@@ -1350,9 +1351,10 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		 * operation's result.  We have to do this before overwriting the sort
 		 * key information...
 		 */
-		current_pathkeys = make_pathkeys_for_sortclauses(set_sortclauses,
-													result_plan->targetlist);
-		current_pathkeys = canonicalize_pathkeys(root, current_pathkeys);
+		current_pathkeys = make_pathkeys_for_sortclauses(root,
+														 set_sortclauses,
+													result_plan->targetlist,
+														 true);
 
 		/*
 		 * We should not need to call preprocess_targetlist, since we must be
@@ -1377,9 +1379,10 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		/*
 		 * Calculate pathkeys that represent result ordering requirements
 		 */
-		sort_pathkeys = make_pathkeys_for_sortclauses(parse->sortClause,
-													  tlist);
-		sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
+		sort_pathkeys = make_pathkeys_for_sortclauses(root,
+													  parse->sortClause,
+													  tlist,
+													  true);
 	}
 	else if ( parse->windowClause && parse->targetList &&
 			  contain_windowref((Node *)parse->targetList, NULL) )
@@ -1452,6 +1455,22 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("WITHIN GROUP aggregate cannot be used in GROUPING SETS query")));
+
+		/*
+		 * Calculate pathkeys that represent grouping/ordering requirements.
+		 * Stash them in PlannerInfo so that query_planner can canonicalize
+		 * them after EquivalenceClasses have been formed.
+		 */
+		root->group_pathkeys =
+			make_pathkeys_for_sortclauses(root,
+										  parse->groupClause,
+										  tlist,
+										  false);
+		root->sort_pathkeys =
+			make_pathkeys_for_sortclauses(root,
+										  parse->sortClause,
+										  tlist,
+										  false);
 
 		/*
 		 * Will need actual number of aggregates for estimating costs.
@@ -2043,10 +2062,9 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	{
 		if (!pathkeys_contained_in(sort_pathkeys, current_pathkeys))
 		{
-			result_plan = (Plan *)
-				make_sort_from_sortclauses(root,
-										   parse->sortClause,
-										   result_plan);
+			result_plan = (Plan *) make_sort_from_pathkeys(root,
+														   result_plan,
+														   sort_pathkeys);
 			current_pathkeys = sort_pathkeys;
 			mark_sort_locus(result_plan);
 		}
