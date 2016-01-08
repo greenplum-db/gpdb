@@ -33,16 +33,23 @@ except ImportError:
     sys.stderr.write("gpload needs pyyaml.  You can get it from http://pyyaml.org.\n")
     sys.exit(2)
 
+import platform
 try:
     from pygresql import pg
 except Exception, e:
-    errorMsg = "gpload was unable to import The PyGreSQL Python module (pg.py) - %s\n" % str(e)
+    from struct import calcsize
+    sysWordSize = calcsize("P") * 8
+    if (platform.system()) in ['Windows', 'Microsoft'] and (sysWordSize == 64): 
+        errorMsg = "gpload appears to be running in 64-bit Python under Windows.\n"
+        errorMsg = errorMsg + "Currently only 32-bit Python is supported. Please \n"
+        errorMsg = errorMsg + "reinstall a 32-bit Python interpreter.\n"
+    else:
+        errorMsg = "gpload was unable to import The PyGreSQL Python module (pg.py) - %s\n" % str(e)
     sys.stderr.write(str(errorMsg))
     sys.exit(2)
 
 import hashlib
 import datetime,getpass,os,signal,socket,subprocess,threading,time,traceback,re
-import platform
 import uuid
 
 thePlatform = platform.system()
