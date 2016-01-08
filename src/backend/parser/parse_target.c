@@ -15,9 +15,6 @@
 #include "postgres.h"
 
 #include "catalog/pg_type.h"
-#include "catalog/catquery.h"
-#include "catalog/pg_proc.h"
-#include "catalog/pg_proc_callback.h"
 #include "commands/dbcommands.h"
 #include "funcapi.h"
 #include "miscadmin.h"
@@ -1473,22 +1470,16 @@ FigureColnameInternal(Node *node, char **name)
 }
 
 /*
- * transformExpressionList()
- *
- * This is the identical transformation to transformTargetList, except that
- * the input list elements are bare expressions without ResTarget decoration,
- * and the output elements are likewise just expressions without TargetEntry
- * decoration.We use this for ROW() and VALUES() constructs.
+ * getFuncArgs()
+ * Gets function arguments and puts them in parse state. This is used currently * only for late execution functions
  */
-bool
-ifDelayedFunctionCall(ParseState *pstate, List *exprlist)
+void
+getFuncArgs(ParseState *pstate, List *exprlist)
 {
   List   *result = NIL;
   ListCell   *lc;
   ParseStateBreadCrumb    savebreadcrumb;
   bool isDelay;
-  HeapTuple       tup;
-  cqContext  *pcqCtx;
 
   /* CDB: Push error location stack.  Must pop before return! */
   Assert(pstate);
@@ -1504,11 +1495,7 @@ ifDelayedFunctionCall(ParseState *pstate, List *exprlist)
       /* CDB: Drop a breadcrumb in case of error. */
       pstate->p_breadcrumb.node = (Node *)e;
 
-      /*
-       * Check for "something.*".  Depending on the complexity of the
-       * "something", the star could appear as the last name in ColumnRef,
-       * or as the last indirection item in A_Indirection.
-       */
+      /* Currently handle only functions. */
       if (IsA(e, FuncCall))
       {
 	  FuncCall  *fref = (FuncCall *) e;
@@ -1533,34 +1520,10 @@ ifDelayedFunctionCall(ParseState *pstate, List *exprlist)
 	      }
 	    }
 	  }
-
-	 fname = strVal(llast(fref->funcname));
-
-	  pcqCtx = caql_beginscan(
-				  NULL,
-				  cql("SELECT * FROM pg_proc "
-				      " WHERE proname = :1 ",
-				      CStringGetDatum(fname)));
-
-	  tup = caql_getnext(pcqCtx);
-
-	  if (!HeapTupleIsValid(tup)) /* should not happen */
-	    elog(ERROR, "cache lookup failed for function %s", (char *) linitial(fref->funcname));
-
-	  char prodat1 = ((Form_pg_proc) GETSTRUCT(tup))->prodataaccess;
-
-	  if (((Form_pg_proc) GETSTRUCT(tup))->prodataaccess == 'b')
-	    elog(WARNING,"valfound1");
-
-	  caql_endscan(pcqCtx);
-
-	  elog(WARNING,"isde1");
       }
   }
 
   /* CDB: Pop error location stack. */
   Assert(pstate->p_breadcrumb.pop == &savebreadcrumb);
   pstate->p_breadcrumb = savebreadcrumb;
-
-  return isDelay;
 }

@@ -4174,8 +4174,8 @@ DATA(insert OID = 3069 (gp_truncate_error_log PGNSP PGUID 12 0 f f t t v 1 16 f 
 #define PRODATAACCESS_MODIFIES	'm'
 /* This is an internal-only data access property. */
 #define PRODATAACCESS_SEGMENT	's'
-/* 
- * This is a way to specify if current function should bypass 
+/*
+ * This is a way to specify if current function should bypass
  * function preevaluation
  */
 #define PRODATAACCESS_BYPASS  'b'

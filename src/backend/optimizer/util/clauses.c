@@ -1750,8 +1750,6 @@ eval_const_expressions_mutator(Node *node,
 		if (!(expr->bypass_preprocess))
 		simple = simplify_function(expr->funcid, expr->funcresulttype, args,
 								   true, context);
-		else
-		  elog(WARNING,"condition4");
 
 		if (simple)				/* successfully simplified it */
 			return (Node *) simple;

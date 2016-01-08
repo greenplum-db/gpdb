@@ -104,7 +104,7 @@ ExecDML(DMLState *node)
 		 */
 		ExecInsert(node->cleanedUpSlot, NULL /* destReceiver */,
 				node->ps.state, PLANGEN_OPTIMIZER /* Plan origin */, 
-			   isUpdate, false);
+			        isUpdate, false);
 	}
 	else /* DML_DELETE */
 	{

@@ -985,12 +985,9 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 	ListCell   *icols;
 	ListCell   *attnos;
 	ListCell   *lc;
-	bool       isDelay;
 
 	qry->commandType = CMD_INSERT;
 	pstate->p_is_insert = true;
-
-	isDelay = false;
 
 	/*
 	 * We have three cases to deal with: DEFAULT VALUES (selectStmt == NULL),
@@ -1143,7 +1140,7 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 			/* CDB: In case of error, note which sublist is involved. */
 			pstate->p_breadcrumb.node = (Node *)sublist;
 
-			isDelay = ifDelayedFunctionCall(pstate, sublist);
+			getFuncArgs(pstate, sublist);
 
 			/* Do basic expression transformation (same as a ROW() expr) */
 			sublist = transformExpressionList(pstate, sublist);
@@ -1153,7 +1150,7 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 			  qry->hasBypassPreprocess = true;
 			  qry->bypassPreprocessFunctionArgs = pstate->p_bypasspreprocessfuncargs;
 			}
-			  
+
 			/*
 			 * All the sublists must be the same length, *after*
 			 * transformation (which might expand '*' into multiple items).
@@ -1239,7 +1236,7 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 
 		Assert(list_length(valuesLists) == 1);
 
-		isDelay = ifDelayedFunctionCall(pstate, (List *) linitial(valuesLists));
+		getFuncArgs(pstate, (List *) linitial(valuesLists));
 
 		/* Do basic expression transformation (same as a ROW() expr) */
 		exprList = transformExpressionList(pstate,

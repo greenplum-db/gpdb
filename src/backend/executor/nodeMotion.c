@@ -241,8 +241,6 @@ ExecMotion(MotionState * node)
 {
 	Motion	   *motion = (Motion *) node->ps.plan;
 
-	elog(WARNING,"motion1");
-
 	/*
 	 * at the top here we basically decide: -- SENDER vs. RECEIVER and --
 	 * SORTED vs. UNSORTED
@@ -1580,7 +1578,7 @@ doSendTuple(Motion * motion, MotionState * node, TupleTableSlot *outerTupleSlot)
 	HeapTuple       tuple;
 	SendReturnCode  sendRC;
 	ExprContext    *econtext = node->ps.ps_ExprContext;
-	elog(WARNING,"dosend1");
+
 	/* We got a tuple from the child-plan. */
 	node->numTuplesFromChild++;
 
