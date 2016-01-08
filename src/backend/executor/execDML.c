@@ -20,7 +20,7 @@
 #include "utils/lsyscache.h"
 #include "parser/parsetree.h"
 #include "cdb/cdbvars.h"
-#include "storage/large_object.h" 
+#include "storage/large_object.h"
 
 /*
  * reconstructTupleValues
@@ -340,7 +340,6 @@ ExecInsert(TupleTableSlot *slot,
 	bool		rel_is_aocols = false;
 	bool		rel_is_external = false;
 
-	
 	if (isExecLatefunc)
 	{
 	  List *args_list = estate->bypassPreprocessFunctionArgs;
@@ -349,7 +348,7 @@ ExecInsert(TupleTableSlot *slot,
 	  Assert(list_length(args_list) == 1);
 
 	  /* Parser should have set list values as OID parameters for this function */
-	  inv_create(linitial(args_list));
+	  inv_create(linitial_oid(args_list));
 	}
 
 	/*

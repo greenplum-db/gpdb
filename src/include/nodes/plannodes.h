@@ -71,9 +71,9 @@ typedef struct PlannedStmt
 
 	bool		transientPlan;	/* redo plan when TransactionXmin changes? */
 
-  bool            bypassPreprocess;  /* if bypass function preprocess is set to true */
+        bool            bypassPreprocess;  /* if bypass function preprocess is set to true */
 
-  List       *bypassPreprocessFuncArgs;    /* arguments of bypass function preprocessing function */ 
+        List       *bypassPreprocessFuncArgs;    /* arguments of bypass function preprocessing function */
 
 	/* Field qdContext communicates memory context on the QD  from portal to
 	 * dispatch.

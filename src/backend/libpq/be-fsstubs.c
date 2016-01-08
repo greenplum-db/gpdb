@@ -253,13 +253,13 @@ lo_create(PG_FUNCTION_ARGS)
 {
 	Oid			lobjId = PG_GETARG_OID(0);
 
+	/* NOTE: This is a dummy function which is just used for function presence. All processing is done in inv_create which is called independently */
+
 	/*
 	 * We don't actually need to store into fscxt, but create it anyway to
 	 * ensure that AtEOXact_LargeObject knows there is state to clean up
 	 */
 	//CreateFSContext(); /* is this really needed? */
-
-	//lobjId = inv_create(lobjId);
 
 	PG_RETURN_OID(lobjId);
 }

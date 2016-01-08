@@ -422,13 +422,9 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 
 		if (dataaccess == PRODATAACCESS_BYPASS)
 		{
-		  elog(WARNING,"condition1");
 		  funcexpr->bypass_preprocess = true;
 		  pstate->p_bypasspreprocess = true;
-		  
 		}
-		else
-		  elog(WARNING,"condition2");
 
 		funcexpr->funcid = funcid;
 		funcexpr->funcresulttype = rettype;

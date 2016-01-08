@@ -4206,8 +4206,8 @@ DESCR("truncate the error log for the specified external table");
 #define PRODATAACCESS_MODIFIES	'm'
 /* This is an internal-only data access property. */
 #define PRODATAACCESS_SEGMENT	's'
-/* 
- * This is a way to specify if current function should bypass 
+/*
+ * This is a way to specify if current function should bypass
  * function preevaluation
  */
 #define PRODATAACCESS_BYPASS  'b'

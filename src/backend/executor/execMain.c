@@ -127,7 +127,7 @@ static TupleTableSlot *ExecutePlan(EState *estate, PlanState *planstate,
 			CmdType operation,
 			long numberTuples,
 			ScanDirection direction,
-				   DestReceiver *dest,
+			DestReceiver *dest,
 			bool isLateProcess);
 static void ExecSelect(TupleTableSlot *slot,
 		   DestReceiver *dest, EState *estate);
@@ -558,7 +558,6 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 					 * On return, gangs have been allocated and CDBProcess lists have
 					 * been filled in in the slice table.)
 					 */
-				  gp_singleton_segindex = 2;
 					AssignGangs(queryDesc, gp_singleton_segindex);
 				}
 
@@ -901,8 +900,8 @@ ExecutorRun(QueryDesc *queryDesc,
 								 CMD_SELECT,
 								 0,
 								 ForwardScanDirection,
-					     dest,
-					     false);
+					                         dest,
+					                         false);
 		}
 		else if (exec_identity == GP_ROOT_SLICE)
 		{
@@ -918,8 +917,8 @@ ExecutorRun(QueryDesc *queryDesc,
 								 operation,
 								 count,
 								 direction,
-					     dest,
-					     queryDesc->late_execfunc);
+					                         dest,
+					                         queryDesc->late_execfunc);
 		}
 		else
 		{
