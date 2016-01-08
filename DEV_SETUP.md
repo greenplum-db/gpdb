@@ -271,7 +271,8 @@ you have the `psql` prompt, and issue the following SQL commands:
 
 ```sql
 -- Create and populate a Users table
-CREATE TABLE Users (uid INTEGER PRIMARY KEY, name VARCHAR);
+CREATE TABLE Users (uid INTEGER PRIMARY KEY, 
+                    name VARCHAR);
 INSERT INTO Users 
   SELECT generate_series, md5(random()) 
   FROM generate_series(1, 100000);
@@ -279,7 +280,8 @@ INSERT INTO Users
 -- Create and populate a Messages table
 CREATE TABLE Messages (mid INTEGER PRIMARY KEY, 
                        uid INTEGER REFERENCES Users(uid), 
-                       ptime DATE, message VARCHAR);
+                       ptime DATE, 
+                       message VARCHAR);
 INSERT INTO Messages 
    SELECT generate_series, 
           round(random()*100000), 
