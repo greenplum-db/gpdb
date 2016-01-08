@@ -1522,8 +1522,8 @@ _outNode(StringInfo str, void *obj)
 			case T_CdbRelDedupInfo:
 				_outCdbRelDedupInfo(str, obj);
 				break;
-			case T_PathKeyItem:
-				_outPathKeyItem(str, obj);
+			case T_PathKey:
+				_outPathKey(str, obj);
 				break;
 			case T_RestrictInfo:
 				_outRestrictInfo(str, obj);

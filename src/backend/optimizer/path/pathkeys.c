@@ -24,16 +24,15 @@
 #include "optimizer/clauses.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
+#include "optimizer/planmain.h"
 #include "optimizer/tlist.h"
-/* 83MERGE_FIXME_DG #include "optimizer/var.h" */
-/* 83MERGE_FIXME_DG #include "optimizer/restrictinfo.h" */
+#include "optimizer/var.h"
+#include "optimizer/restrictinfo.h"
 #include "parser/parsetree.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_func.h"
 #include "parser/parse_oper.h" /* for compatible_oper_opid() */
 #include "utils/lsyscache.h"
-/* 83MERGE_FIXME_DG #include "utils/memutils.h" */
-/* 83MERGE_FIXME_DG #include "utils/datum.h" */
 
 #include "cdb/cdbdef.h"         /* CdbSwap() */
 #include "cdb/cdbpullup.h"      /* cdbpullup_expr(), cdbpullup_make_var() */
@@ -55,8 +54,6 @@ static PathKey *make_pathkey_from_sortinfo(PlannerInfo *root,
 						   Expr *expr, Oid ordering_op,
 						   bool nulls_first,
 						   bool canonicalize);
-static Var *find_indexkey_var(PlannerInfo *root, RelOptInfo *rel,
-				  AttrNumber varattno);
 
 
 /****************************************************************************
@@ -75,12 +72,6 @@ makePathKey(EquivalenceClass *eclass, Oid opfamily,
 			int strategy, bool nulls_first)
 {
 	PathKey	   *pk = makeNode(PathKey);
-
-	/* 83MERGE_FIXME_DG
-	// CDB: Store the set of relids referenced by the key expr.
-	pk->cdb_key_relids = pull_varnos(key); // Node *key
-	pk->cdb_num_relids = bms_num_members(pk->cdb_key_relids);
-	*/
 
 	pk->pk_eclass = eclass;
 	pk->pk_opfamily = opfamily;
@@ -191,8 +182,8 @@ static List *relevant_known_clauses(PlannerInfo *root, List *lpkitems)
 	Relids pathkey_relids = NULL;
 	foreach (lcpk, lpkitems)
 	{
-		PathKeyItem *item1 = (PathKeyItem *) lfirst(lcpk);
-		pathkey_relids = bms_union(pathkey_relids, pull_varnos(item1->key));
+		PathKey *item1 = (PathKey *) lfirst(lcpk);
+		pathkey_relids = bms_union(pathkey_relids, item1->pk_eclass->ec_relids);
 	}
 
 	relevant_relids = bms_copy(pathkey_relids);
@@ -321,8 +312,8 @@ gen_implied_quals_for_equi_key_list(PlannerInfo *root, List *lpkitems)
     ListCell     *lcpk1 = NULL;
     foreach(lcpk1, lpkitems)
     {
-    	PathKeyItem *item1 = (PathKeyItem *) lfirst(lcpk1);
-    	Relids relidspk1 = pull_varnos(item1->key);
+		PathKey *item1 = (PathKey *) lfirst(lcpk1);
+		Relids relidspk1 = item1->pk_eclass->ec_relids;
 
     	/**
     	 * Only look at pathkeys that correspond to a single relation
@@ -353,17 +344,22 @@ gen_implied_quals_for_equi_key_list(PlannerInfo *root, List *lpkitems)
     				/* now try to apply to others in the equivalence class */
     				foreach(lcpk2, lpkitems)
     				{
-    					PathKeyItem *item2 = (PathKeyItem *) lfirst(lcpk2);;
+    					PathKey *item2 = (PathKey *) lfirst(lcpk2);
+						ListCell *i, *j;
 
-    					if (exprType(item1->key) == exprType(item2->key)
-    							&& exprTypmod(item1->key) == exprTypmod(item2->key))
-    					{
-
-    						relevant_clauses = gen_implied_qual(root,
-    								relevant_clauses,
-    								old_clause,
-    								item1->key,
-    								item2->key);
+						forboth(i, item1->pk_eclass->ec_members, j, item2->pk_eclass->ec_members)
+						{
+							EquivalenceMember *em1 = (EquivalenceMember *) lfirst(i);
+							EquivalenceMember *em2 = (EquivalenceMember *) lfirst(j);
+							if (exprType((Node *)em1->em_expr) == exprType((Node *)em2->em_expr)
+								&& exprTypmod((Node *)em1->em_expr) == exprTypmod((Node *)em2->em_expr))
+							{
+	 							relevant_clauses = gen_implied_qual(root,
+	 								relevant_clauses,
+	 								old_clause,
+	 								(Node *)em1->em_expr,
+									(Node *)em2->em_expr);
+							}
     					}
     				} /* foreach lcpk2 */
     			} /* safe_to_infer */
@@ -383,7 +379,7 @@ gen_implied_quals_for_equi_key_list(PlannerInfo *root, List *lpkitems)
 void
 generate_implied_quals(PlannerInfo *root)
 {
-	ListCell   *cursetlink;
+	ListCell *cursetlink;
     ListCell *curOuterJoinInfo;
 
     if ( ! root->config->gp_enable_predicate_propagation )
@@ -393,8 +389,7 @@ generate_implied_quals(PlannerInfo *root)
 	foreach(cursetlink, root->equi_key_list)
 	{
 		List *curset = (List *) lfirst(cursetlink);
-        gen_implied_quals_for_equi_key_list(
-                root, curset);
+        gen_implied_quals_for_equi_key_list(root, curset);
 	}
 
     /* generate using the local (to nullable side of outer join) equi-key-lists */
@@ -408,14 +403,12 @@ generate_implied_quals(PlannerInfo *root)
         foreach(cursetlink, oj->left_equi_key_list)
         {
             List *curset = (List *) lfirst(cursetlink);
-            gen_implied_quals_for_equi_key_list(
-                root, curset);
+            gen_implied_quals_for_equi_key_list(root, curset);
         }
         foreach(cursetlink, oj->right_equi_key_list)
         {
             List *curset = (List *) lfirst(cursetlink);
-            gen_implied_quals_for_equi_key_list(
-                root, curset);
+            gen_implied_quals_for_equi_key_list(root, curset);
         }
     }
 }
@@ -1103,64 +1096,23 @@ build_join_pathkeys(PlannerInfo *root,
  *    The caller specifies the name of the equality operator thus:
  *          list_make1(makeString("="))
  *
- *    The 'sortop' field of the expr's PathKeyItem node is filled
+ *    The 'sortop' field of the expr's PathKey node is filled
  *    with the Oid of the sort operator that would be used for a
  *    merge join with another expr of the same data type, using the
  *    equality operator whose name is given.  Partitioning doesn't
  *    itself use the sort operator, but its Oid is needed to
- *    associate the PathKeyItem with the same equivalence class
+ *    associate the PathKey with the same equivalence class
  *    (canonical pathkey) as any other expressions to which
  *    our expr is constrained by compatible merge-joinable
  *    equality operators.  (We assume, in what may be a temporary
  *    excess of optimism, that our hashed partitioning function
  *    implements the same notion of equality as these operators.)
  */
-
-PathKeyItem*
-cdb_make_pathkey_for_expr_non_canonical(PlannerInfo    *root,
-					      Node     *expr,
-                          List     *eqopname)
+PathKey *
+cdb_make_pathkey_for_expr_non_canonical(PlannerInfo *root, Node *expr, List *eqopname)
 {
-    Oid             opfamily = InvalidOid;
-    Oid             typeoid = InvalidOid;
-    Oid	            eqopoid = InvalidOid;
-    Oid             leftsortop = InvalidOid;
-    Oid             rightsortop = InvalidOid;
-    PathKeyItem    *item = NULL;
-
-    /* Get the expr's data type. */
-    typeoid = exprType(expr);
-
-    /* Get oid of the equality operator applied to two values of that type. */
-    eqopoid = compatible_oper_opid(eqopname, typeoid, typeoid, true);
-
-    /* Get oid of the sort operator that would be used for a
-     * sort-merge equijoin on a pair of exprs of the same type.
-     */
-    if (eqopoid != InvalidOid && op_mergejoinable(eqopoid))
-    {
-		/* XXX for the moment, continue to force use of particular sortops */
-		if (get_op_mergejoin_info(eqopoid, &leftsortop, &rightsortop, &opfamily))
-		{
-			item = makePathKeyItem((Node *) expr, leftsortop,
-								   false /* XXX nulls_first? */,
-								   true);
-		}
-    }
-    else
-    {
-    	/* Don't balk if caller wants to repartition on an expr whose type has no
-    	 * mergejoinable "=" operator.  Hope the executor knows how to hash it.
-    	 * E.g., cdbpath_dedup_fixup_unique() repartitions on CTID without
-    	 * bothering to insert a coercion to INT8.
-    	 */
-		item = makePathKeyItem((Node *)expr, InvalidOid,
-							   false /* XXX nulls_first? */,
-							   false);
-    }
-    Assert(item);
-    return item;
-}                               /* cdb_make_pathkey_for_expr */
+	return cdb_make_pathkey_for_expr(root, expr, eqopname, false);
+}
 
 /*
  * cdb_make_pathkey_for_expr
@@ -1183,27 +1135,69 @@ cdb_make_pathkey_for_expr_non_canonical(PlannerInfo    *root,
  *    excess of optimism, that our hashed partitioning function
  *    implements the same notion of equality as these operators.)
  */
-List *
+PathKey *
 cdb_make_pathkey_for_expr(PlannerInfo    *root,
 					      Node     *expr,
-                          List     *eqopname)
+                          List     *eqopname,
+						  bool	canonical)
 {
-	List *pathkeyList = NIL;
-    PathKeyItem    *item = cdb_make_pathkey_for_expr_non_canonical(root, expr, eqopname);
-    Assert(item);
-    pathkeyList = make_canonical_pathkey(root, item);
-    Assert(pathkeyList);
-    return pathkeyList;
-}                               /* cdb_make_pathkey_for_expr */
+    Oid             opfamily = InvalidOid;
+    Oid             typeoid = InvalidOid;
+    Oid	            eqopoid = InvalidOid;
+    PathKey        *pk = NULL;
+	List           *mergeopfamilies;
+	EquivalenceClass *eclass;
+	int             strategy;
+	ListCell       *lc;
+
+    /* Get the expr's data type. */
+    typeoid = exprType(expr);
+
+    /* Get Oid of the equality operator applied to two values of that type. */
+    eqopoid = compatible_oper_opid(eqopname, typeoid, typeoid, true);
+
+    /*
+	 * Get Oid of the sort operator that would be used for a
+     * sort-merge equijoin on a pair of exprs of the same type.
+     */
+    if (eqopoid != InvalidOid && op_mergejoinable(eqopoid))
+    {
+		mergeopfamilies = get_mergejoin_opfamilies(eqopoid);
+		foreach(lc, mergeopfamilies)
+		{
+			opfamily = lfirst_oid(lc);
+			strategy = get_op_opfamily_strategy(eqopoid, opfamily);
+			if (strategy)
+				break;
+		}
+		eclass = get_eclass_for_sort_expr(root, (Expr *) expr, typeoid, mergeopfamilies);
+		if (!canonical)
+			pk = makePathKey(eclass, opfamily, strategy, false);
+		else
+			pk = make_canonical_pathkey(root, eclass, opfamily, strategy, false);
+    }
+    else
+    {
+    	/* Don't balk if caller wants to repartition on an expr whose type has no
+    	 * mergejoinable "=" operator.  Hope the executor knows how to hash it.
+    	 * E.g., cdbpath_dedup_fixup_unique() repartitions on CTID without
+    	 * bothering to insert a coercion to INT8.
+    	 */
+		
+		/* 83MERGE_FIXME_DG How to handle? */	
+    }
+    Assert(pk);
+   	return pk;
+}
 
 /*
  * cdb_pull_up_pathkey
  *
- * Given a pathkey, finds a PathKeyItem whose key expr can be projected
+ * Given a pathkey, finds a PathKey whose key expr can be projected
  * thru a given targetlist.  If found, builds the transformed key expr
  * and returns the canonical pathkey representing its equivalence class.
  *
- * Returns NULL if the given pathkey does not have a PathKeyItem whose
+ * Returns NULL if the given pathkey does not have a PathKey whose
  * key expr can be rewritten in terms of the projected output columns.
  *
  * Note that this function does not unite the pre- and post-projection
@@ -1215,7 +1209,7 @@ cdb_make_pathkey_for_expr(PlannerInfo    *root,
  * containing query: there is no provision for adjusting the varlevelsup
  * field in Var nodes for outer references.  This could be added if needed.
  *
- * 'pathkey' is a List of PathKeyItem.
+ * 'pathkey' is a List of PathKey.
  * 'relids' is the set of relids that may occur in the targetlist exprs.
  * 'targetlist' specifies the projection.  It is a List of TargetEntry
  *      or merely a List of Expr.
@@ -1228,57 +1222,68 @@ cdb_make_pathkey_for_expr(PlannerInfo    *root,
  *      Ignored if 'newvarlist' is specified.
  *
  * NB: We ignore the presence or absence of a RelabelType node atop either
- * expr in determining whether a PathKeyItem expr matches a targetlist expr.
+ * expr in determining whether a PathKey expr matches a targetlist expr.
  */
-List *
+PathKey *
 cdb_pull_up_pathkey(PlannerInfo    *root,
-                    List           *pathkey,
+                    PathKey        *pathkey,
                     Relids          relids,
                     List           *targetlist,
                     List           *newvarlist,
                     Index           newrelid)
 {
-    PathKeyItem    *item;
-    Expr           *newexpr;
+    PathKey           *sub_pathkey;
+	EquivalenceClass  *sub_eclass;
+	EquivalenceClass  *outer_ec;
+	EquivalenceMember *sub_member;
+	Expr              *newexpr;
 
     Assert(pathkey);
     Assert(!newvarlist ||
            list_length(newvarlist) == list_length(targetlist));
 
-        /* Find an expr that we can rewrite to use the projected columns. */
-        item = cdbpullup_findPathKeyItemInTargetList(pathkey,
-                                                     relids,
-                                                     targetlist,
-                                                 NULL);
+	/* Find an expr that we can rewrite to use the projected columns. */
+	sub_pathkey = cdbpullup_findPathKeyInTargetList(pathkey,
+													targetlist,
+													NULL);
 
-        /* Replace expr's Var nodes with new ones referencing the targetlist. */
-    if (item)
-            newexpr = cdbpullup_expr((Expr *)item->key,
-                                     targetlist,
-                                     newvarlist,
-                                     newrelid);
+	/* Replace expr's Var nodes with new ones referencing the targetlist. */
+	if (sub_pathkey)
+	{
+		sub_eclass = (EquivalenceClass *) sub_pathkey->pk_eclass;
+		sub_member = (EquivalenceMember *) linitial(sub_eclass->ec_members);
 
-    /* If not found, see if the equiv class contains a constant expr. */
-    else if (CdbPathkeyEqualsConstant(pathkey))
-        {
-        item = (PathKeyItem *)linitial(pathkey);
-        newexpr = (Expr *)copyObject(item->key);
-    }
+		newexpr = cdbpullup_expr((Expr *) sub_member->em_expr,
+								 targetlist,
+								 newvarlist,
+								 newrelid);
+	}
+	/* If not found, see if the equiv class contains a constant expr. */
+	else if (CdbPathkeyEqualsConstant(pathkey))
+	{
+		sub_eclass = (EquivalenceClass *) pathkey->pk_eclass;
+		sub_member = (EquivalenceMember *) linitial(sub_eclass->ec_members);
 
+		newexpr = (Expr *) copyObject(sub_member->em_expr);
+	}
     /* Fail if no usable expr. */
     else
         return NULL;
 
     Insist(newexpr);
 
-    /* Make new PathKeyItem, keeping same sortop. */
-	item = makePathKeyItem((Node *)newexpr, item->sortop,
-						   false /* XXX nulls_first? */,
-						   true);
+	outer_ec = get_eclass_for_sort_expr(root,
+										newexpr,
+										sub_member->em_datatype,
+										sub_eclass->ec_opfamilies);
 
     /* Find or create the equivalence class for the transformed expr. */
-    return make_canonical_pathkey(root, item);
-}                               /* cdb_pull_up_pathkey */
+    return make_canonical_pathkey(root,
+								  outer_ec,
+								  sub_pathkey->pk_opfamily,
+								  sub_pathkey->pk_strategy,
+								  false);
+}
 
 
 
@@ -1348,7 +1353,8 @@ make_pathkeys_for_sortclauses(PlannerInfo *root,
  * canonical form.
  */
 List *
-make_pathkeys_for_groupclause(List *groupclause,
+make_pathkeys_for_groupclause(PlannerInfo *root,
+							  List *groupclause,
 							  List *tlist)
 {
 	List *pathkeys = NIL;
@@ -1358,8 +1364,8 @@ make_pathkeys_for_groupclause(List *groupclause,
 
 	foreach(l, groupclause)
 	{
-		Node	   *sortkey;
-		PathKeyItem *pathkey;
+		Expr	   *sortkey;
+		PathKey    *pathkey;
 
 		Node *node = lfirst(l);
 
@@ -1369,28 +1375,26 @@ make_pathkeys_for_groupclause(List *groupclause,
 		if (IsA(node, GroupClause))
 		{
 			GroupClause *gc = (GroupClause*) node;
-			sortkey = get_sortgroupclause_expr(gc, tlist);
-			pathkey = makePathKeyItem(sortkey, gc->sortop, InvalidOid, true);
+			sortkey = (Expr *) get_sortgroupclause_expr(gc, tlist);
+			pathkey = make_pathkey_from_sortinfo(root, sortkey, gc->sortop, gc->nulls_first, false);
 
 			/*
 			 * Similar to SortClauses, the pathkey becomes a one-elment sublist.
 			 * canonicalize_pathkeys() might replace it with a longer sublist later.
 			 */
-			pathkeys = lappend(pathkeys, list_make1(pathkey));
+			pathkeys = lappend(pathkeys, pathkey);
 		}
-
 		else if (IsA(node, List))
 		{
 			pathkeys = list_concat(pathkeys,
-								   make_pathkeys_for_groupclause((List *)node,
+								   make_pathkeys_for_groupclause(root, (List *)node,
 																 tlist));
 		}
-
 		else if (IsA(node, GroupingClause))
 		{
 			sub_pathkeys =
 				list_concat(sub_pathkeys,
-							make_pathkeys_for_groupclause(((GroupingClause*)node)->groupsets,
+							make_pathkeys_for_groupclause(root, ((GroupingClause*)node)->groupsets,
 															 tlist));
 		}
 	}
@@ -1951,42 +1955,6 @@ truncate_useless_pathkeys(PlannerInfo *root,
 		return list_truncate(list_copy(pathkeys), nuseful);
 }
 
-/*
- * remove_pathkey_item
- *
- * Remove a PathKeyItem for a given key from the given equivalence key list.
- * If such a key is not in the list, nothing is done to the given equivalence
- * key list.
- */
-List *
-remove_pathkey_item(List *equi_key_list,
-					Node *key)
-{
-	ListCell *lc;
-	List *new_list = NIL;
-	
-	foreach (lc, equi_key_list)
-	{
-		List *keys = (List *) lfirst(lc);
-		ListCell *key_lc;
-		List *new_keys = NIL;
-
-		Assert(IsA(keys, List));
-		
-		foreach (key_lc, keys)
-		{
-			PathKeyItem *item = (PathKeyItem *)lfirst(key_lc);
-			Assert(IsA(item, PathKeyItem));
-			
-			if (!equal(item->key, key))
-				new_keys = lappend(new_keys, item);
-		}
-		if (list_length(new_keys) > 0)
-			new_list = lappend(new_list, new_keys);
-	}
-
-	return new_list;
-}
 
 /*
  * construct_equivalencekey_list
@@ -2012,21 +1980,28 @@ construct_equivalencekey_list(List *equi_key_list,
 
 		foreach (key_lc, keys)
 		{
-			PathKeyItem *item = (PathKeyItem *) lfirst(key_lc);
+			PathKey *item = (PathKey *) lfirst(key_lc);
 			TargetEntry *tle;
-			PathKeyItem *new_item;
+			PathKey *new_item;
 			TargetEntry *new_tle;
+			ListCell *i;
 			
-			Assert(IsA(item, PathKeyItem));
+			Assert(IsA(item, PathKey));
 
-			tle = tlist_member(item->key, orig_tlist);
-			if (tle != NULL)
+			foreach(i, item->pk_eclass->ec_members)
 			{
-				Assert(resno_map[tle->resno - 1] > 0);
-				new_tle = list_nth(new_tlist, resno_map[tle->resno - 1] - 1);
-				Assert(new_tle != NULL);
-				new_item = makePathKeyItem((Node *)new_tle->expr, item->sortop, InvalidOid, true);
-				new_keys = lappend(new_keys, new_item);
+				EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
+
+				tle = tlist_member((Node *)em->em_expr, orig_tlist);
+				if (tle != NULL)
+				{
+					Assert(resno_map[tle->resno - 1] > 0);
+					new_tle = list_nth(new_tlist, resno_map[tle->resno - 1] - 1);
+					Assert(new_tle != NULL);
+					/* 83MERGE_FIXME_DG bogus? */
+					new_item = makePathKey(item->pk_eclass, item->pk_opfamily, item->pk_strategy, item->pk_nulls_first);
+					new_keys = lappend(new_keys, new_item);
+				}
 			}
 		}
 		

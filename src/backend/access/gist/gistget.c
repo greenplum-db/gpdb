@@ -190,7 +190,7 @@ gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids,
 		while( ntids < maxtids && so->curPageData < so->nPageData )
 		{
 			tids[ ntids ] = scan->xs_ctup.t_self = so->pageData[ so->curPageData ].heapPtr;
-			ItemPointerSet(&scan->currentItemData,
+			ItemPointerSet(&so->curpos,
 							   BufferGetBlockNumber(so->curbuf), 
 							   so->pageData[ so->curPageData ].pageOffset);
 
@@ -303,7 +303,7 @@ gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids,
 					tids[ ntids ] = scan->xs_ctup.t_self = 
 						so->pageData[ so->curPageData ].heapPtr;
 				
-					ItemPointerSet(&scan->currentItemData,
+					ItemPointerSet(&so->curpos,
 								   BufferGetBlockNumber(so->curbuf), 
 								   so->pageData[ so->curPageData ].pageOffset);
 

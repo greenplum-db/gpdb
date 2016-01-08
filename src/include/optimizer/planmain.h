@@ -133,7 +133,7 @@ extern SubqueryScan *make_subqueryscan(PlannerInfo *root, List *qptlist, List *q
 				  Index scanrelid, Plan *subplan, List *subrtable);
 extern Append *make_append(List *appendplans, bool isTarget, List *tlist);
 extern Sort *make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree,
-						List *pathkeys);
+						List *pathkeys, double limit_tuples, bool add_keys_to_targetlist);
 extern Sort *make_sort_from_sortclauses(PlannerInfo *root, List *sortcls,
 						   Plan *lefttree);
 extern Sort *make_sort_from_groupcols(PlannerInfo *root, List *groupcls,
@@ -193,9 +193,6 @@ extern Repeat *make_repeat(List *tlist,
 						   uint64 grouping,
 						   Plan *subplan);
 extern bool is_projection_capable_plan(Plan *plan);
-extern Sort *make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree,
-                                     List *pathkeys, Relids relids,
-                                     bool add_keys_to_targetlist);
 extern Plan *add_sort_cost(PlannerInfo *root, Plan *input, 
 						   int numCols, 
 						   AttrNumber *sortColIdx, Oid *sortOperators);
@@ -229,6 +226,14 @@ extern void process_implied_equality(PlannerInfo *root,
 									 Relids qualscope,
 									 bool below_outer_join,
 									 bool both_const);
+extern void distribute_qual_to_rels(PlannerInfo *root, Node *clause,
+						bool is_deduced, bool is_deduced_but_not_equijoin,
+						bool below_outer_join,
+						Relids qualscope,
+						Relids ojscope,
+						Relids outerjoin_nonnullable,
+						List **ptrToLocalEquiKeyList,
+						List **postponed_qual_list);
 extern RestrictInfo *build_implied_join_equality(Oid opno,
 							Expr *item1,
 							Expr *item2,

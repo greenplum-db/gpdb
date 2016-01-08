@@ -1952,8 +1952,6 @@ _copyPathKey(PathKey *from)
 {
 	PathKey *newnode = makeNode(PathKey);
 
-	COPY_BITMAPSET_FIELD(cdb_key_relids);   /*CDB*/
-	COPY_SCALAR_FIELD(cdb_num_relids);      /*CDB*/
 	/* EquivalenceClasses are never moved, so just shallow-copy the pointer */
 	COPY_SCALAR_FIELD(pk_eclass);
 	COPY_SCALAR_FIELD(pk_opfamily);

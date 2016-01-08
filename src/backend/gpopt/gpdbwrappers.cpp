@@ -2161,10 +2161,18 @@ gpdb::FOpMergeJoinable
 			/*
 			 * XXX Like in check_mergejoinable, for the moment, continue to
 			 * force use of particular sortops
+			 *
+			 * 83MERGE_FIXME_DG - This used to check get_op_mergejoin_info()
+			 * and essentially return the result of it. Not sure if this is
+			 * equivalent..
 			 */
-			Oid opfamily;
-			if (get_op_mergejoin_info(opno, leftOp, rightOp, &opfamily))
+			List *opfamily = get_mergejoin_opfamilies(opno);
+
+			if (opfamily != NIL && list_length(opfamily) > 0)
+			{
+				list_free(opfamily);
 				return true;
+			}
 		}
 	}
 	GP_WRAP_END;

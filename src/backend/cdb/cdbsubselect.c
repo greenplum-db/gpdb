@@ -367,6 +367,7 @@ static bool IsCorrelatedEqualityOpExpr(	OpExpr *opexp, Expr **innerExpr, Oid *so
 	Oid			opfamily;
 	Oid			lsortOp;
 	Oid			rsortOp;
+	List	   *l;
 
 	Assert(opexp);
 	Assert(list_length(opexp->args) > 1);
@@ -380,8 +381,12 @@ static bool IsCorrelatedEqualityOpExpr(	OpExpr *opexp, Expr **innerExpr, Oid *so
 	if (!op_mergejoinable(opexp->opno))
 		return false;
 
-	if (!get_op_mergejoin_info(opexp->opno, &lsortOp, &rsortOp, &opfamily))
+	/* 83MERGE_FIXME_DG - does this match the previous if (!get_op_mergejoin_info()) call? */
+	l = get_mergejoin_opfamilies(opexp->opno);
+	if (list_length(l) == 0)
 		return false;
+
+	list_free(l);
 
 	Assert(lsortOp == rsortOp);
 	Assert(lsortOp != InvalidOid);

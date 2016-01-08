@@ -106,7 +106,7 @@ static void fix_indexqual_references(List *indexquals, IndexPath *index_path,
 						 List **indexsubtype);
 static Node *fix_indexqual_operand(Node *node, IndexOptInfo *index,
 					  Oid *opfamily);
-static List *get_switched_clauses(Relids innerrelids, List *clauses);
+static List *get_switched_clauses(List *clauses, Relids innerrelids);
 static List *order_qual_clauses(PlannerInfo *root, List *clauses);
 static void copy_path_costsize(PlannerInfo *root, Plan *dest, Path *src);
 static void copy_plan_costsize(Plan *dest, Plan *src);
@@ -2891,8 +2891,7 @@ create_mergejoin_plan(PlannerInfo *root,
 	 * outer_is_left status.
 	 */
 	mergeclauses =
-        get_switched_clauses(best_path->jpath.innerjoinpath->parent->relids,
-                             best_path->path_mergeclauses);
+        get_switched_clauses(best_path->path_mergeclauses, best_path->jpath.outerjoinpath->parent->relids);
 
 	/* Sort clauses into best execution order */
 	/* NB: do NOT reorder the mergeclauses */
@@ -2910,7 +2909,9 @@ create_mergejoin_plan(PlannerInfo *root,
 		sort =
 			make_sort_from_pathkeys(root,
 									outer_plan,
-									best_path->outersortkeys);
+									best_path->outersortkeys,
+									-1.0,
+									true);
         if (sort)
             outer_plan = (Plan *)sort;
 		outerpathkeys = best_path->outersortkeys;
@@ -2924,7 +2925,9 @@ create_mergejoin_plan(PlannerInfo *root,
 		sort =
 			make_sort_from_pathkeys(root,
 									inner_plan,
-									best_path->innersortkeys);
+									best_path->innersortkeys,
+									-1.0,
+									true);
         if (sort)
             inner_plan = (Plan *)sort;
 	}
@@ -3099,8 +3102,7 @@ create_hashjoin_plan(PlannerInfo *root,
 	 * on the left.
 	 */
 	hashclauses =
-        get_switched_clauses(best_path->jpath.innerjoinpath->parent->relids,
-                             best_path->path_hashclauses);
+        get_switched_clauses(best_path->path_hashclauses, best_path->jpath.outerjoinpath->parent->relids);
 
 	/* Sort clauses into best execution order */
 	joinclauses = order_qual_clauses(root, joinclauses);
@@ -3420,7 +3422,7 @@ fix_indexqual_operand(Node *node, IndexOptInfo *index, Oid *opfamily)
  * accessible because outerjoinpath == NULL.
  */
 static List *
-get_switched_clauses(Relids innerrelids, List *clauses)
+get_switched_clauses(List *clauses, Relids innerrelids)
 {
 	List	   *t_list = NIL;
 	ListCell   *l;
@@ -3428,25 +3430,23 @@ get_switched_clauses(Relids innerrelids, List *clauses)
 	foreach(l, clauses)
 	{
 		RestrictInfo *restrictinfo = (RestrictInfo *) lfirst(l);
-
-		Expr *rclause = restrictinfo->clause;
+		OpExpr	   *clause = (OpExpr *) restrictinfo->clause;
 
 		/**
 		 * If this is a IS NOT FALSE boolean test, we can peek underneath.
 		 */
-		if (IsA(rclause, BooleanTest))
+		if (IsA(clause, BooleanTest))
 		{
-			BooleanTest *bt = (BooleanTest *) rclause;
+			BooleanTest *bt = (BooleanTest *) clause;
 
 			if (bt->booltesttype == IS_NOT_FALSE)
 			{
-				rclause = bt->arg;
+				clause = bt->arg;
 			}
 		}
 
-		Assert(is_opclause(rclause));
-		OpExpr *clause = (OpExpr *) rclause;
-		if (bms_is_subset(restrictinfo->left_relids, innerrelids))
+		Assert(is_opclause(clause));
+		if (bms_is_subset(restrictinfo->right_relids, innerrelids))
 		{
 			/*
 			 * Duplicate just enough of the structure to allow commuting the
@@ -3467,7 +3467,7 @@ get_switched_clauses(Relids innerrelids, List *clauses)
 		}
 		else
 		{
-			Assert(bms_is_subset(restrictinfo->left_relids, outerrelids));
+			Assert(bms_is_subset(restrictinfo->left_relids, innerrelids));
 			t_list = lappend(t_list, clause);
 			restrictinfo->outer_is_left = true;
 		}
@@ -4154,7 +4154,6 @@ add_sort_column(AttrNumber colIdx, Oid sortOp, bool nulls_first,
  *
  *	  'lefttree' is the node which yields input tuples
  *	  'pathkeys' is the list of pathkeys by which the result is to be sorted
- *    'relids' is the set of relids that can be used in Var nodes here.
  *    'add_keys_to_targetlist' is true if it is ok to append to the subplan's
  *          targetlist or insert a Result node atop the subplan to evaluate
  *          sort key exprs that are not already present in the subplan's tlist.
@@ -4176,7 +4175,7 @@ add_sort_column(AttrNumber colIdx, Oid sortOp, bool nulls_first,
  */
 Sort *
 make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
-                        Relids relids, bool add_keys_to_targetlist)
+                        double limit_tuples, bool add_keys_to_targetlist)
 {
 	List	   *tlist = lefttree->targetlist;
 	ListCell   *i;
@@ -4198,23 +4197,13 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
 	foreach(i, pathkeys)
 	{
 		PathKey	   *pathkey = (PathKey *) lfirst(i);
+		EquivalenceClass *ec = pathkey->pk_eclass;
+		PathKey    *p;
 		TargetEntry *tle = NULL;
 		Oid			pk_datatype = InvalidOid;
 		Oid			sortop;
 		ListCell   *j;
         AttrNumber  resno;
-
-		/*
-		 * The column might already be selected as a sort key, if the pathkeys
-		 * contain duplicate entries.  (This can happen in scenarios where
-		 * multiple mergejoinable clauses mention the same var, for example.)
-		 * Skip this sort key if it is the same as an earlier one.
-		 */
-        foreach(j, pathkeys)
-            if ((List *)lfirst(j) == keysublist)
-                break;
-        if (j != i)
-            continue;
 
 		/*
 		 * We can sort by any non-constant expression listed in the pathkey's
@@ -4231,44 +4220,14 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
 		 * same equivalence class...)  Not clear that we ever will have an
 		 * interesting choice in practice, so it may not matter.
 		 */
-        pathkey = cdbpullup_findPathKeyItemInTargetList(keysublist,
-                                                        relids,
-                                                        tlist,
-                                                        &resno);
-        if (!pathkey)
-        {
-            /* CDB: Truncate sort keys if caller said don't extend the tlist. */
-            if (!add_keys_to_targetlist)
-                break;
-            elog(ERROR, "could not find pathkey item to sort");
-        }
+        p = cdbpullup_findPathKeyInTargetList(pathkey, tlist, &resno);
 
-        /* Omit this sort key if equivalence class contains a constant expr. */
-        if (pathkey->cdb_num_relids == 0)
-            continue;
-
-        /* If item is not in the tlist, but is computable from tlist vars... */
-        if (resno == 0)
+		/* CDB: Truncate sort keys if caller said don't extend the tlist. */
+        if (!p)
 		{
-            /* CDB: Truncate sort keys if caller said don't extend the tlist. */
-            if (!add_keys_to_targetlist)
+			if (!add_keys_to_targetlist)
                 break;
 
-		foreach(j, pathkey->pk_eclass->ec_members)
-		{
-			EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
-
-			if (em->em_is_const || em->em_is_child)
-				continue;
-			tle = tlist_member((Node *) em->em_expr, tlist);
-			if (tle)
-			{
-				pk_datatype = em->em_datatype;
-				break;			/* found expr already in tlist */
-			}
-		}
-		if (!tle)
-		{
 			/* No matching Var; look for a computable expression */
 			Expr   *sortexpr = NULL;
 
@@ -4317,13 +4276,13 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
 			tlist = lappend(tlist, tle);
 			lefttree->targetlist = tlist;		/* just in case NIL before */
 		}
+		else
+		{
+			EquivalenceMember *em = linitial(p->pk_eclass->ec_members);
+			tle = makeTargetEntry(em->em_expr, resno, NULL, true);
+			pk_datatype = em->em_datatype;
+			pathkey = p;
 		}
-
-        /* Add column to sort arrays. */
-        sortColIdx[numsortkeys] = resno;
-        sortOperators[numsortkeys] = pathkey->sortop;
-		nullsFirst[numsortkeys] = pathkey->nulls_first;
-        numsortkeys++;
 
 		/*
 		 * Look up the correct sort operator from the PathKey's slightly

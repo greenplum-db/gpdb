@@ -29,8 +29,6 @@
 #include "parser/parse_expr.h"
 #include "parser/parse_oper.h"
 #include "parser/parsetree.h"
-/* 83MERGE_FIXME_DG #include "utils/lsyscache.h" */
-/* 83MERGE_FIXME_SG #include "utils/memutils.h" */
 #include "utils/selfuncs.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
@@ -1682,21 +1680,6 @@ create_unique_path(PlannerInfo *root,
     pathnode->distinct_on_rowid_relids = distinct_on_rowid_relids;
 
 	/*
-	 * We must ensure path struct is allocated in main planning context;
-	 * otherwise GEQO memory management causes trouble.  (Compare
-	 * best_inner_indexscan().)
-	 */
-	oldcontext = MemoryContextSwitchTo(root->planner_cxt);
-
-	pathnode = makeNode(UniquePath);
-
-	/* There is no substructure to allocate, so can switch back right away */
-	MemoryContextSwitchTo(oldcontext);
-
-	pathnode->path.pathtype = T_Unique;
-	pathnode->path.parent = rel;
-
-	/*
 	 * Treat the output as always unsorted, since we don't necessarily have
 	 * pathkeys to represent it.
 	 */
@@ -2019,7 +2002,10 @@ make_unique_path(Path *subpath)
     MemoryContext   oldcontext;
 
 	/* Allocate in same context as parent rel in case GEQO is ever used. */
+
+	/*  83MERGE_FIXME_DG - why swap context when pure makeNode() doesnt?
 	oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(subpath->parent));
+	*/
 
     /* Allocate the UniquePath node. */
 	pathnode = makeNode(UniquePath);
@@ -2039,7 +2025,9 @@ make_unique_path(Path *subpath)
     pathnode->must_repartition = false;
 
 	/* Restore caller's allocation context. */
+	/* 83MERGE_FIXME_DG - See above comment..
 	MemoryContextSwitchTo(oldcontext);
+	*/
 
     return pathnode;
 }                               /* make_unique_path */
@@ -2693,7 +2681,7 @@ create_mergejoin_path(PlannerInfo *root,
 
 			foreach(sortkeycell, innersortkeys)
 			{
-				List	   *keysublist = (List *) lfirst(sortkeycell);
+				PathKey	   *keysublist = (PathKey *) lfirst(sortkeycell);
 
 			    if (!CdbPathkeyEqualsConstant(keysublist))
 			    {

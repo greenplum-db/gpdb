@@ -734,7 +734,8 @@ cdb_grouping_planner(PlannerInfo* root,
 
 		if ( consider_agg & AGG_2PHASE_DQA )
 		{
-			List *distinct_pathkeys;
+			PathKey *distinct_pathkeys;
+			List *l;
 				
 			/* Either have DQA or not! */
 			Assert(! (consider_agg & AGG_2PHASE) );
@@ -743,13 +744,14 @@ cdb_grouping_planner(PlannerInfo* root,
 					list_length((List*)agg_counts->dqaArgs) == 1 );
 			distinct_pathkeys = cdb_make_pathkey_for_expr(root,
 														  linitial(agg_counts->dqaArgs),
-														  list_make1(makeString("=")));
-			distinct_pathkeys = list_make1(distinct_pathkeys);
+														  list_make1(makeString("=")),
+														  true);
+			l = list_make1(distinct_pathkeys);
 			
-			if ( ! cdbpathlocus_collocates(plan_2p.input_locus, distinct_pathkeys, false /*exact_match*/))
+			if ( ! cdbpathlocus_collocates(plan_2p.input_locus, l, false /*exact_match*/))
 			{
 				plan_2p.group_prep = MPP_GRP_PREP_HASH_DISTINCT;
-				CdbPathLocus_MakeHashed(&plan_2p.input_locus, distinct_pathkeys);
+				CdbPathLocus_MakeHashed(&plan_2p.input_locus, l);
 			}
 			else
 			{
@@ -757,6 +759,8 @@ cdb_grouping_planner(PlannerInfo* root,
 				plan_2p.output_locus = plan_2p.input_locus;
 				plan_2p.distinctkey_collocate = true;
 			}
+
+			list_free(l);
 		}
 	}
 	
@@ -827,7 +831,8 @@ cdb_grouping_planner(PlannerInfo* root,
 		 */
 		for ( i = 0; i < ctx.numDistinctCols; i++ )
 		{
-			List *distinct_pathkeys;
+			PathKey *distinct_pathkeys;
+			List *l;
 			
 			set_coplan_strategies(root, &ctx, &ctx.dqaArgs[i], plan_3p.input_path);
 
@@ -836,15 +841,16 @@ cdb_grouping_planner(PlannerInfo* root,
 			 */
 			distinct_pathkeys = cdb_make_pathkey_for_expr(root,
 														  ctx.dqaArgs[i].distinctExpr,
-														  list_make1(makeString("=")));
-			distinct_pathkeys = list_make1(distinct_pathkeys);
+														  list_make1(makeString("=")),
+														  true);
+			l = list_make1(distinct_pathkeys);
 			
-			if (cdbpathlocus_collocates(plan_3p.input_locus, distinct_pathkeys, false /*exact_match*/))
+			if (cdbpathlocus_collocates(plan_3p.input_locus, l, false /*exact_match*/))
 			{
 				ctx.dqaArgs[i].distinctkey_collocate = true;
 			}
 
-			list_free(distinct_pathkeys);
+			list_free(l);
 		}
 	}
 	
@@ -2412,8 +2418,11 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 			int		   *mergestrategies;
 			bool	   *mergenullsfirst;
 
-			build_mergejoin_strat_arrays(joinclause, &mergefamilies,
-										 &mergestrategies, &mergenullsfirst);
+			/*
+			 * 83MERGE_FIXME_DG  - need to properly init strategies and families,
+			 * was previously done with build_mergejoin_strat_arrays()
+			 */
+			Assert(false);
 
 			joinclause = get_actual_clauses(joinclause);
 			join_plan = (Plan*)make_mergejoin(join_tlist,
@@ -2804,33 +2813,36 @@ generate_subquery_tlist(Index varno, List *input_tlist,
  * We ignore onther sorts of collocation, e.g., replication or partitioning
  * on a range since these cannot occur at the moment (MPP 2.3).
  */
-bool cdbpathlocus_collocates(CdbPathLocus locus, List *pathkeys, bool exact_match)
+bool
+cdbpathlocus_collocates(CdbPathLocus locus, List *pathkeys, bool exact_match)
 {
-	ListCell *lc;
+	ListCell *i, *j;
 	List *exprs = NIL;
-	
-	if ( CdbPathLocus_IsBottleneck(locus) )
+
+	if (CdbPathLocus_IsBottleneck(locus))
 		return true;
-	
-	if ( !CdbPathLocus_IsHashed(locus) )
+
+	if (!CdbPathLocus_IsHashed(locus))
 		return false;  /* Or would HashedOJ ok, too? */
-	
+
 	if (exact_match && list_length(pathkeys) != list_length(locus.partkey))
-	{
 		return false;
-	}
-	
-	/* Extract a list of expressions from the pathkeys.  Since the locus
+
+	/*
+	 * Extract a list of expressions from the pathkeys.  Since the locus
 	 * presumably knows all about attribute equivalence classes, we use
-	 * only the first item in each input path key. 
+	 * only the first item in each input path key.
+	 * 83MERGE_FIXME_DG - comment inaccurate
 	 */
-	foreach( lc, pathkeys )
+	foreach(i, pathkeys)
 	{
-		PathKeyItem *item;
-		List *lst = (List*)lfirst(lc);
-		Assert( list_length(lst) > 0 );
-		item = (PathKeyItem*)linitial(lst);
-		exprs = lappend(exprs, item->key);
+		PathKey *pathkey = (PathKey *) lfirst(i);
+
+		foreach(j, pathkey->pk_eclass->ec_members)
+		{
+			EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
+			exprs = lappend(exprs, em->em_expr);
+		}
 	}
 	
 	/* Check for containment of locus in exprs. */
@@ -4173,37 +4185,21 @@ reconstruct_pathkeys(PlannerInfo *root, List *pathkeys, int *resno_map,
 					 List *orig_tlist, List *new_tlist)
 {
 	List *new_pathkeys;
+	ListCell *i, *j;
 	
-	ListCell *lc;
-	foreach (lc, pathkeys)
+	foreach(i, pathkeys)
 	{
-		List *keys = (List *)lfirst(lc);
-		ListCell *key_lc;
+		PathKey *pathkey = (PathKey *) lfirst(i);
 		TargetEntry *new_tle;
-			
-		Assert(IsA(keys, List));
-		foreach(key_lc, keys)
+
+		foreach(j, pathkey->pk_eclass->ec_members)
 		{
-			PathKeyItem *item = (PathKeyItem *)lfirst(key_lc);
-			int resno = 0;
-			ListCell *tle_lc;
-			Assert(IsA(item, PathKeyItem));
-				
-			foreach(tle_lc, orig_tlist)
+			EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
+			TargetEntry *tle = tlist_member((Node *) em->em_expr, orig_tlist);
+			if (tle)
 			{
-				TargetEntry *tle = (TargetEntry *)lfirst(tle_lc);
-				Assert(IsA(tle, TargetEntry));
-				if (equal(tle->expr, item->key))
-				{
-					resno = tle->resno;
-					break;
-				}
-			}
-			if (resno > 0)
-			{
-				new_tle = get_tle_by_resno(new_tlist, resno_map[resno-1]);
+				new_tle = get_tle_by_resno(new_tlist, resno_map[tle->resno - 1]);
 				Assert(new_tle != NULL);
-				item->key = (Node *)new_tle->expr;
 			}
 		}
 	}
@@ -5167,7 +5163,7 @@ wrap_plan_index(PlannerInfo *root, Plan *plan, Query *query,
 	 * Update group_pathkeys in order to represent this subquery.
 	 */
 	root->group_pathkeys =
-		make_pathkeys_for_groupclause(root->parse->groupClause, plan->targetlist);
+		make_pathkeys_for_groupclause(root, root->parse->groupClause, plan->targetlist);
 	return plan;
 }
 
@@ -5272,7 +5268,7 @@ make_parallel_or_sequential_agg(PlannerInfo *root, AggClauseCounts *agg_counts,
 				}
 				aggstrategy = AGG_SORTED;
 				current_pathkeys =
-					make_pathkeys_for_groupclause(root->parse->groupClause, result_plan->targetlist);
+					make_pathkeys_for_groupclause(root, root->parse->groupClause, result_plan->targetlist);
 				current_pathkeys = canonicalize_pathkeys(root, current_pathkeys);
 			}
 			else
@@ -5591,7 +5587,7 @@ make_deduplicate_plan(PlannerInfo *root,
 	root->parse->targetList = tlist;
 	root->parse->havingQual = NULL;
 	root->parse->scatterClause = NIL;
-	root->group_pathkeys = make_pathkeys_for_groupclause(groupClause, tlist);
+	root->group_pathkeys = make_pathkeys_for_groupclause(root, groupClause, tlist);
 
 	/*
 	 * Make a multi-phase or simple agg plan.
@@ -5785,8 +5781,7 @@ within_agg_add_outer_sort(PlannerInfo *root,
 		 * Plain aggregate case.  Gather tuples into QD.
 		 */
 		sort_pathkeys =
-			make_pathkeys_for_sortclauses(sortClause, outer_plan->targetlist);
-		sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
+			make_pathkeys_for_sortclauses(root, sortClause, outer_plan->targetlist, true);
 
 		/*
 		 * Check the sort redundancy.
@@ -5848,8 +5843,7 @@ within_agg_add_outer_sort(PlannerInfo *root,
 		groupSortClauses = list_concat(copyObject(root->parse->groupClause),
 									   sortClause);
 		sort_pathkeys =
-			make_pathkeys_for_sortclauses(groupSortClauses, outer_plan->targetlist);
-		sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
+			make_pathkeys_for_sortclauses(root, groupSortClauses, outer_plan->targetlist, true);
 
 		if (!pathkeys_contained_in(sort_pathkeys, wag_context->current_pathkeys))
 		{
@@ -6015,7 +6009,7 @@ within_agg_construct_inner(PlannerInfo *root,
 	root->parse->havingQual = NULL;
 	root->parse->scatterClause = NIL;
 	root->group_pathkeys =
-		make_pathkeys_for_sortclauses(parse->groupClause, tlist);
+		make_pathkeys_for_sortclauses(root, parse->groupClause, tlist, false);
 
 	/*
 	 * Make a multi-phase or simple aggregate plan.
@@ -6207,8 +6201,12 @@ within_agg_join_plans(PlannerInfo *root,
 		int		   *mergestrategies;
 		bool	   *mergenullsfirst;
 
-		build_mergejoin_strat_arrays(join_clause, &mergefamilies,
-									 &mergestrategies, &mergenullsfirst);
+		/*
+		 * 83MERGE_FIXME_DG  - need to properly init strategies and families,
+		 * was previously done with build_mergejoin_strat_arrays()
+		 */
+		Assert(false);
+
 		join_clause = get_actual_clauses(join_clause);
 		result_plan = (Plan *) make_mergejoin(join_tlist,
 											  NIL,
@@ -6916,7 +6914,7 @@ Plan *add_motion_to_dqa_child(Plan *plan, PlannerInfo *root, bool *motion_added)
 	Plan *result = plan;
 	*motion_added = false;
 	
-	List *pathkeys = 	make_pathkeys_for_groupclause(root->parse->groupClause, plan->targetlist);
+	List *pathkeys = 	make_pathkeys_for_groupclause(root, root->parse->groupClause, plan->targetlist);
 	CdbPathLocus locus = cdbpathlocus_from_flow(plan->flow);
 	if (CdbPathLocus_IsPartitioned(locus) && NIL != plan->flow->hashExpr)
 	{

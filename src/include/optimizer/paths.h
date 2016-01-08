@@ -98,10 +98,6 @@ extern void add_paths_to_joinrel(PlannerInfo *root, RelOptInfo *joinrel,
 					 RelOptInfo *innerrel,
 					 JoinType jointype,
 					 List *restrictlist);
-extern void build_mergejoin_strat_arrays(List *mergeclauses,
-							 Oid **mergefamilies,
-							 int **mergestrategies,
-							 bool **mergenullsfirst);
 
 /*
  * joinrels.c
@@ -156,6 +152,16 @@ typedef enum
 	PATHKEYS_DIFFERENT			/* neither pathkey includes the other */
 } PathKeysComparison;
 
+typedef struct
+{
+	Node *replaceThis;
+	Node *withThis;
+	int numReplacementsDone;
+} ReplaceExpressionMutatorReplacement;
+
+extern Node * replace_expression_mutator(Node *node, void *context);
+extern void generate_implied_quals(PlannerInfo *root);
+
 extern List *canonicalize_pathkeys(PlannerInfo *root, List *pathkeys);
 extern PathKeysComparison compare_pathkeys(List *keys1, List *keys2);
 extern bool pathkeys_contained_in(List *keys1, List *keys2);
@@ -177,24 +183,26 @@ extern List *build_join_pathkeys(PlannerInfo *root,
 					JoinType jointype,
 					List *outer_pathkeys);
 
-extern PathKeyItem*
+extern PathKey*
 cdb_make_pathkey_for_expr_non_canonical(PlannerInfo    *root,
 					      Node     *expr,
                           List     *eqopname);
 
-List *
+PathKey *
 cdb_make_pathkey_for_expr(PlannerInfo  *root,
                           Node     *expr,
-                          List     *eqopname);
-List *
+                          List     *eqopname,
+						  bool		canonical);
+PathKey *
 cdb_pull_up_pathkey(PlannerInfo    *root,
-                    List           *pathkey,
+                    PathKey        *pathkey,
                     Relids          relids,
                     List           *targetlist,
                     List           *newvarlist,
                     Index           newrelid);
 
-extern List *make_pathkeys_for_groupclause(List *groupclause,
+extern List *make_pathkeys_for_groupclause(PlannerInfo *root,
+										   List *groupclause,
 										   List *tlist);
 extern List *make_pathkeys_for_sortclauses(PlannerInfo *root,
 							  List *sortclauses,

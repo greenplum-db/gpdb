@@ -794,20 +794,6 @@ make_list_aggs_for_rollup(PlannerInfo *root,
 		input_grouping = grouping;
 	}
 	
-	/* Remove the trailing grouping columns from the equivalence key list. */
-	if (last_group_no > 0)
-	{
-		int tmp_group_no;
-		for (tmp_group_no = 0; tmp_group_no < last_group_no; tmp_group_no++)
-		{
-			TargetEntry *tle = get_tle_by_resno(agg_node->targetlist,
-												groupColIdx[context->numGroupCols - 3 - tmp_group_no]);
-			root->equi_key_list = remove_pathkey_item(root->equi_key_list,
-													  (Node *)tle->expr);
-		}
-	}
-
-
 	/*
 	 * If we need an additional Agg node, we add it here. If the flow
 	 * is not a SINGLETON, we redistribute the data and add the last
@@ -1173,7 +1159,7 @@ generate_dqa_plan(PlannerInfo *root,
 		Assert(new_qual == NULL || IsA(new_qual, List));
 		
 		root->group_pathkeys =
-			make_pathkeys_for_groupclause(root->parse->groupClause,
+			make_pathkeys_for_groupclause(root, root->parse->groupClause,
 										  context->sub_tlist);
 		root->group_pathkeys = canonicalize_pathkeys(root, root->group_pathkeys);
 	}

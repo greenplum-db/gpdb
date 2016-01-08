@@ -216,10 +216,6 @@ typedef struct PlannerInfo
 	/*
 	 * Outer join info
 	 */
-	List	   *left_join_clauses;		/* list of RestrictInfos for outer
-										 * join clauses w/nonnullable var on
-										 * left */
-
 	List	   *eq_classes;				/* list of active EquivalenceClasses */
 
 	List	   *canon_pathkeys;			/* list of "canonical" PathKeys */
@@ -729,28 +725,26 @@ typedef struct PathKey
 	Oid			pk_opfamily;		/* btree opfamily defining the ordering */
 	int			pk_strategy;		/* sort direction (ASC or DESC) */
 	bool		pk_nulls_first;		/* do NULLs come before normal values? */
-    Relids      cdb_key_relids; /* set of relids referenced by key expr */
-    int         cdb_num_relids; /* num of relids referenced by key expr */
 } PathKey;
 
 /*
- * CdbPathKeyItemIsConstant
+ * CdbEquivClassIsConstant
  *      is true if there is no Var of the current level in the expr
  *      referenced by a given PathKeyItem.
  */
-#define CdbPathKeyItemIsConstant(_pathkeyitem)  \
-    ((_pathkeyitem)->cdb_num_relids == 0)
+#define CdbEquivClassIsConstant(_eclass) \
+	(bms_num_members((_eclass)->ec_relids) == 0 || (_eclass)->ec_has_const)
 
 /*
  * CdbPathkeyEqualsConstant
  *      is true if there is a constant expr in a given set of
  *      equijoin-equivalent exprs represented by a pathkey
- *      (i.e. a List of PathKeyItem).  If there is a constant
+ *      (i.e. a List of PathKey).  If there is a constant
  *      expr, it will be at the head of the list.
  */
-#define CdbPathkeyEqualsConstant(_pathkey)  \
-    ( (_pathkey) != NIL &&                  \
-      CdbPathKeyItemIsConstant((PathKeyItem *)linitial(_pathkey)) )
+#define CdbPathkeyEqualsConstant(_pathkey) \
+    ((_pathkey) != NULL && \
+		CdbEquivClassIsConstant((EquivalenceClass *)_pathkey->pk_eclass))
 
 
 /*
@@ -1383,7 +1377,8 @@ typedef struct OuterJoinInfo
 	Relids		min_righthand;	/* base relids in minimum RHS for join */
 	Relids		syn_lefthand;	/* base relids syntactically within LHS */
 	Relids		syn_righthand;	/* base relids syntactically within RHS */
-	JoinType	join_type;		/* LEFT, FULL, or ANTI */
+	JoinType	join_type;		/* LEFT, FULL, or ANTI */						/* 83MERGE_FIXME_DG replace join_type with is_full_join etc? */
+	bool		is_full_join;
 	bool		lhs_strict;		/* joinclause is strict for some LHS rel */
 	bool		delay_upper_joins;	/* can't commute with upper RHS */
 
@@ -1392,7 +1387,7 @@ typedef struct OuterJoinInfo
 	 * only valid for FULL joins.  Will contain equi_key sets but ONLY
 	 * for tables that are below the LEFT nullable side of the outer join.
 	 */
-	List	   *left_equi_key_list;
+	 List	   *left_equi_key_list;
 
 	/**
 	 * list of lists of equijoined PathKeyItems

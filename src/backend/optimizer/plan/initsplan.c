@@ -56,13 +56,14 @@ static OuterJoinInfo *make_outerjoininfo(PlannerInfo *root,
 				   Relids inner_join_rels,
 				   JoinType join_type, Node *clause,
 				   List *leftEquiKeyList, List *rightEquiKeyList);
-static void distribute_qual_to_rels(PlannerInfo *root, Node *clause,
-						bool is_pushed_down,
-						bool is_deduced,
+void distribute_qual_to_rels(PlannerInfo *root, Node *clause,
+						bool is_deduced, bool is_deduced_but_not_equijoin,
 						bool below_outer_join,
 						Relids qualscope,
 						Relids ojscope,
-						Relids outerjoin_nonnullable);
+						Relids outerjoin_nonnullable,
+						List **ptrToLocalEquiKeyList,
+						List **postponed_qual_list);
 static bool check_outerjoin_delay(PlannerInfo *root, Relids *relids_p);
 static void check_mergejoinable(RestrictInfo *restrictinfo);
 static void check_hashjoinable(RestrictInfo *restrictinfo);
@@ -928,7 +929,7 @@ distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 						List **postponed_qual_list)
 {
 	Relids		relids;
-	bool		is_pushed_down;
+	bool		is_pushed_down = false; /* 83MERGE_FIXME_DG */
 	bool		outerjoin_delayed;
 	bool		pseudoconstant = false;
 	bool		maybe_equivalence;
@@ -1057,7 +1058,6 @@ distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 		outerjoin_delayed = false;
 		/* Don't feed it back for more deductions */
 		maybe_equivalence = false;
-		maybe_equijoin = false;
 		maybe_local_equijoin = false;
 		maybe_outer_join = false;
 	}
@@ -1203,9 +1203,6 @@ distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 	 */
 	if (restrictinfo->mergeopfamilies)
 	{
-	    if (maybe_local_equijoin && ptrToLocalEquiKeyList != NULL)
-	        add_equijoined_keys_to_list(ptrToLocalEquiKeyList, restrictinfo);
-
 		if (maybe_equivalence)
 		{
 			if (process_equivalence(root, restrictinfo, below_outer_join))
@@ -1424,7 +1421,7 @@ process_implied_equality(PlannerInfo *root,
 	/* If both constant, try to reduce to a boolean constant. */
 	if (both_const)
 	{
-		clause = (Expr *) eval_const_expressions((Node *) clause);
+		clause = (Expr *) eval_const_expressions(NULL, (Node *) clause);
 
 		/* If we produced const TRUE, just drop the clause */
 		if (clause && IsA(clause, Const))

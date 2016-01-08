@@ -1362,7 +1362,7 @@ add_child_rel_equivalences(PlannerInfo *root,
 				Expr *child_expr;
 				
 				child_expr = (Expr *)
-					adjust_appendrel_attrs((Node *) cur_em->em_expr,
+					adjust_appendrel_attrs(root, (Node *) cur_em->em_expr,
 										   appinfo);
 				add_eq_member(cur_ec, child_expr, child_rel->relids,
 							  true, cur_em->em_datatype);

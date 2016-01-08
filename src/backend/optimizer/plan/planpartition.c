@@ -1292,27 +1292,12 @@ make_mergeclause(Node *outer, Node *inner)
 	OpExpr	   *opxpr;
 	Expr	   *xpr;
 	RestrictInfo *rinfo;
-	Oid			leftOp;
-	Oid			rightOp;
-	Oid			opfamily;
 
 	opxpr = (OpExpr *) make_op(NULL, list_make1(makeString("=")),
 							   outer,
 							   inner, -1);
 	opxpr->xpr.type = T_DistinctExpr;
+	rinfo->mergeopfamilies = get_mergejoin_opfamilies(opxpr->opno);
 
-	xpr = make_notclause((Expr *) opxpr);
-
-	rinfo = make_restrictinfo(xpr, false, false, false, NULL);
-	/* fill in opfamily and other fields, like check_mergejoinable does */
-	if (get_op_mergejoin_info(opxpr->opno, &leftOp, &rightOp, &opfamily))
-	{
-		rinfo->mergejoinoperator = opxpr->opno;
-		rinfo->left_sortop = leftOp;
-		rinfo->right_sortop = rightOp;
-		rinfo->mergeopfamily = opfamily;
-	}
-	else
-		elog(ERROR, "partition key not mergejoinable");
 	return rinfo;
 }

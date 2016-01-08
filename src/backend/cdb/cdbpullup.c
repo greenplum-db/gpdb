@@ -350,13 +350,13 @@ cdbpullup_exprHasSubplanRef(Expr *expr)
 
 
 /*
- * cdbpullup_findPathKeyItemInTargetList
+ * cdbpullup_findPathKeyInTargetList
  *
- * Searches the equivalence class 'pathkey' for a PathKeyItem that
+ * Searches the equivalence class 'pathkey' for a PathKey that
  * uses no rels outside the 'relids' set, and either is a member of
  * 'targetlist', or uses no Vars that are not in 'targetlist'.
  *
- * If found, returns the chosen PathKeyItem and sets the output variables.
+ * If found, returns the chosen PathKey and sets the output variables.
  * - If the item's Vars (if any) are in targetlist, but the item itself is not:
  *      *ptargetindex = 0
  * - Else if the targetlist is a List of TargetEntry nodes:
@@ -368,14 +368,13 @@ cdbpullup_exprHasSubplanRef(Expr *expr)
  *
  * Otherwise returns NULL and sets *ptargetindex = 0.
  *
- * 'pathkey' is a List of PathKeyItem.
- * 'relids' is the set of relids that may occur in the targetlist exprs.
+ * 'pathkey' is a List of PathKey.
  * 'targetlist' is a List of TargetEntry or merely a List of Expr.
  *
  * NB: We ignore the presence or absence of a RelabelType node atop either
- * expr in determining whether a PathKeyItem expr matches a targetlist expr.
+ * expr in determining whether a PathKey expr matches a targetlist expr.
  *
- * (A RelabelType node might have been placed atop a PathKeyItem's expr to
+ * (A RelabelType node might have been placed atop a PathKey's expr to
  * match its type to the sortop's input operand type, when the types are
  * binary compatible but not identical... such as VARCHAR and TEXT.  The
  * RelabelType node merely documents the representational equivalence but
@@ -383,85 +382,73 @@ cdbpullup_exprHasSubplanRef(Expr *expr)
  * atop an argument of a function or operator, but generally not atop a
  * targetlist expr.)
  */
-PathKeyItem *
-cdbpullup_findPathKeyItemInTargetList(List         *pathkey,
-                                      Relids        relids,
-                                      List         *targetlist,
-                                      AttrNumber   *ptargetindex)   // OUT (optional)
+PathKey *
+cdbpullup_findPathKeyInTargetList(PathKey *item, List *targetlist, AttrNumber *ptargetindex)
 {
-    ListCell   *pathkeycell;
+	ListCell *lc;
+	EquivalenceClass *eclass = item->pk_eclass;
 
-    if (ptargetindex)
-       *ptargetindex = 0;
+	if (ptargetindex)
+		*ptargetindex = 0;
 
-    foreach(pathkeycell, pathkey)
-    {
-        PathKeyItem    *item = (PathKeyItem *)lfirst(pathkeycell);
-        TargetEntry    *tle;
+	/* Bail if targetlist is empty. */
+	if (!targetlist)
+		return NULL;
 
-        Assert(IsA(item, PathKeyItem));
+	foreach(lc, eclass->ec_members)
+	{
+		EquivalenceMember *em = (EquivalenceMember *) lfirst(lc);
+		Expr *key = (Expr *) em->em_expr;
+		TargetEntry *tle;
 
-        /* Constant expr?  Return it. */
-        if (item->cdb_num_relids == 0)
-            return item;
+		if (em->em_is_const)
+			continue;
+			
+		/* Ignore possible RelabelType node atop the PathKey expr. */
+		if (IsA(key, RelabelType))
+			key = ((RelabelType *)key)->arg;
 
-        /* Bail if targetlist is empty. */
-        if (!targetlist)
-            break;
+		/* Check if targetlst is a List of TargetEntry */
+		if (IsA(linitial(targetlist), TargetEntry))
+		{
+			tle = tlist_member_ignoring_RelabelType((Node *) key, targetlist);
+			if (tle)
+			{
+				if (ptargetindex)
+					*ptargetindex = tle->resno;
+				return item;
+			}
+		}
+		/* Planner's RelOptInfo targetlists don't have TargetEntry nodes */
+		else
+		{
+			ListCell *tcell;
 
-        /* Consider this item if all of its rels are in 'relids'. */
-        if (bms_is_subset(item->cdb_key_relids, relids))
-        {
-            Expr       *key = (Expr *)item->key;
+			foreach(tcell, targetlist)
+			{
+				Expr *expr = (Expr *) lfirst(tcell);
+				AttrNumber targetindex = 1;
 
-            /* Ignore possible RelabelType node atop the PathKeyItem expr. */
-            if (IsA(key, RelabelType))
-                key = ((RelabelType *)key)->arg;
+				if (IsA(expr, RelabelType))
+					expr = ((RelabelType *)expr)->arg;
 
-            /* Return this item if the whole expr is in targetlist. */
-            if (IsA(linitial(targetlist), TargetEntry))
-            {
-                /* This targetlist is a List of TargetEntry. */
-                tle = tlist_member_ignoring_RelabelType(key, targetlist);
-                if (tle)
-                {
-                    if (ptargetindex)
-                        *ptargetindex = tle->resno;
-                    return item;
-                }
-            }
+				if (equal(expr, key))
+				{
+					if (ptargetindex)
+						*ptargetindex = targetindex;
+					return item;
+				}
+				targetindex++;
+			}
+		}
 
-            /* Planner's RelOptInfo targetlists don't have TargetEntry nodes. */
-            else
-            {
-                ListCell   *cell;
-                AttrNumber  targetindex = 1;
+		/* Return this item if all referenced Vars are in targetlist. */
+		if (!IsA(key, Var) && !cdbpullup_missingVarWalker((Node *) key, targetlist))
+			return item;
+	}
 
-                foreach(cell, targetlist)
-                {
-                    Expr   *expr = (Expr *)lfirst(cell);
-
-                    if (IsA(expr, RelabelType))
-                        expr = ((RelabelType *)expr)->arg;
-
-		            if (equal(expr, key))
-                    {
-                        if (ptargetindex)
-                            *ptargetindex = targetindex;
-                        return item;
-                    }
-                    targetindex++;
-                }
-            }
-
-            /* Return this item if all referenced Vars are in targetlist. */
-            if (!IsA(key, Var) &&
-                !cdbpullup_missingVarWalker((Node *)key, targetlist))
-                return item;
-        }
-    }
-    return NULL;
-}                               /* cdbpullup_findPathKeyItemInTargetList */
+	return NULL;
+}
 
 
 /*
