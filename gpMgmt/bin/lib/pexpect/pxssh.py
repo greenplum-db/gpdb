@@ -86,12 +86,12 @@ class pxssh (spawn):
     '''
 
     def __init__ (self, timeout=30, maxread=2000, searchwindowsize=None,
-                    logfile=None, cwd=None, env=None, options={}):
+                    logfile=None, cwd=None, env=None, options={}, delaybeforesend=0.05):
 
         spawn.__init__(self, None, timeout=timeout, maxread=maxread, searchwindowsize=searchwindowsize, logfile=logfile, cwd=cwd, env=env)
 
         self.name = '<pxssh>'
-
+        self.delaybeforesend = delaybeforesend
         #SUBTLE HACK ALERT! Note that the command that SETS the prompt uses a
         #slightly different string than the regular expression to match it. This
         #is because when you set the prompt the command will echo back, but we

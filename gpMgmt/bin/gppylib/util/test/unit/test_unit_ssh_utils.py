@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import mock
 import sys, os, pwd
 import unittest2 as unittest
 
@@ -9,7 +10,7 @@ try:
         raise Exception("GPHOME not set")
     location = "%s/bin/lib" % gphome
     sys.path.append(location)
-    from gppylib.util.ssh_utils import HostList, Session
+    from gppylib.util.ssh_utils import HostList, Session, pxssh
 except Exception as e:
     print "PYTHON PATH: %s" % ":".join(sys.path)
     print str(e)
@@ -41,6 +42,31 @@ class SshUtilsTestCase(unittest.TestCase):
         s.login(['localhost', 'fakehost'], uname)
         pxssh_hosts = [pxssh_session.x_peer for pxssh_session in s.pxssh_list]
         self.assertEqual(pxssh_hosts, ['localhost'])
- 
+
+    def test02_pxssh_delaybeforesend(self):
+        '''
+        test that delaybeforesend is changed properly
+        '''
+        p1 = pxssh.pxssh()
+        self.assertEquals(p1.delaybeforesend, 0.05)
+
+        p2 = pxssh.pxssh(delaybeforesend=3.0,
+                        options={"StrictHostKeyChecking": "no",
+                                 "BatchMode": "yes"})
+        self.assertEquals(p2.delaybeforesend, 3.0)
+
+    def test03_pxssh_sync_multiplier(self):
+        '''
+        test that sync_multiplier is changed properly
+        '''
+        with mock.patch.object(pxssh.pxssh, 'login', return_value=None) as mock_login:
+            session1 = Session()
+            session1.login(['localhost'], 'gpadmin', 0.05, 1.0)
+            mock_login.assert_called_with('localhost', 'gpadmin', sync_multiplier=1.0)
+
+            session2 = Session()
+            session2.login(['localhost'], 'gpadmin', 1.0, 4.0)
+            mock_login.assert_called_with('localhost', 'gpadmin', sync_multiplier=4.0)
+
 if __name__ == "__main__":
     unittest.main()

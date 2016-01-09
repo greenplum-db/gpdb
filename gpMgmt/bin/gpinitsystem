@@ -1261,6 +1261,8 @@ CREATE_QD_DB () {
 		fi
 		LOG_MSG "[INFO]:-Adding gp_dumpall access to $PG_HBA for master host"
 		BUILD_MASTER_PG_HBA_FILE $GP_DIR
+		LOG_MSG "[INFO]:-Creating gpssh configuration file"
+		BUILD_GPSSH_CONF $GP_DIR
 		LOG_MSG "[INFO]:-Creating perfmon directories and configuration file"
 		BUILD_PERFMON $GP_DIR
 		ERROR_CHK $? "create perfmon directories and configuration file" 1

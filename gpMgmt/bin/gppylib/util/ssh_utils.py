@@ -155,7 +155,7 @@ class Session(cmd.Cmd):
         self.peerStringFormatRaw = "[%%%ds]" % cnt
         return self.peerStringFormatRaw
 
-    def login(self, hostList=None, userName=None):
+    def login(self, hostList=None, userName=None, delaybeforesend=0.05, sync_multiplier=1.0):
         '''This is the normal entry point used to add host names to the object and log in to each of them'''
         if self.verbose: print '\n[Reset ...]'
         if not (self.hostList or hostList):
@@ -181,12 +181,13 @@ class Session(cmd.Cmd):
 
         def connect_host(host):
             self.hostList.append(host)
-            p = pxssh.pxssh(options={"StrictHostKeyChecking": "no",
+            p = pxssh.pxssh(delaybeforesend=delaybeforesend,
+                            options={"StrictHostKeyChecking": "no",
                                      "BatchMode": "yes"})
             try:
                 # The sync_multiplier value is passed onto pexpect.pxssh which is used to determine timeout
                 # values for prompt verification after an ssh connection is established.
-                p.login(host, self.userName, sync_multiplier=1.0)
+                p.login(host, self.userName, sync_multiplier=sync_multiplier)
                 p.x_peer = host
                 p.x_pid = p.pid
                 good_list.append(p)

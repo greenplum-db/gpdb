@@ -1194,6 +1194,27 @@ BUILD_MASTER_PG_HBA_FILE () {
         LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
+BUILD_GPSSH_CONF () {
+        LOG_MSG "[INFO]:-Start Function $FUNCNAME"
+        if [ $# -eq 0 ];then ERROR_EXIT "[FATAL]:-Passed zero parameters, expected at least 1" 2;fi
+        GP_DIR=$1
+        $CAT <<_EOF_ >> $GP_DIR/gpssh.conf
+[gpssh]
+# delaybeforesend specifies the time in seconds to wait at the
+# beginning of an ssh interaction before doing anything.
+# Increasing this value can have a big runtime impact at the
+# beginning of gpssh.
+delaybeforesend = 0.05
+
+# prompt_validation_timeout specifies a timeout multiplier that
+# will be used in validating the ssh prompt. Increasing this
+# value will have a small runtime impact at the beginning of
+# gpssh.
+prompt_validation_timeout = 1.0
+_EOF_
+        LOG_MSG "[INFO]:-End Function $FUNCNAME"
+}
+
 BUILD_PERFMON() {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	GP_DIR=$1
