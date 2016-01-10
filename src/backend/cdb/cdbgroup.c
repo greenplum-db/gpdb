@@ -489,8 +489,15 @@ cdb_grouping_planner(PlannerInfo* root,
 	AggPlanInfo plan_2p;
 	AggPlanInfo plan_3p;
 	AggPlanInfo *plan_info = NULL;
-	
-	Assert( !has_groups || root->group_pathkeys != NULL );
+
+	/*
+	 * We used to assert here that if has_groups is true,
+	 * root->group_pathkeys != NIL. That is not a safe assumption anymore:
+	 * For constants like "SELECT DISTINCT 1 FROM foo", the planner will
+	 * correctly deduce that the constant "1" is the same for every row,
+	 * and group_pathkeys will be NIL. But we still need to group, to remove
+	 * duplicate "dummy" rows coming from all the segments.
+	 */
 
 	memset(&ctx, 0, sizeof(ctx));
 
