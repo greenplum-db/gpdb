@@ -2930,7 +2930,10 @@ create_mergejoin_plan(PlannerInfo *root,
 									true);
         if (sort)
             inner_plan = (Plan *)sort;
+		innerpathkeys = best_path->innersortkeys;
 	}
+	else
+		innerpathkeys = best_path->jpath.innerjoinpath->pathkeys;
 
 	/*
 	 * MPP-3300: very similar to the nested-loop join motion deadlock cases. But we may have already
@@ -2959,11 +2962,7 @@ create_mergejoin_plan(PlannerInfo *root,
 				inner_plan = (Plan *)mat;
 			}
 		}
-
-		innerpathkeys = best_path->innersortkeys;
 	}
-	else
-		innerpathkeys = best_path->jpath.innerjoinpath->pathkeys;
 
 	/*
 	 * Compute the opfamily/strategy/nullsfirst arrays needed by the executor.
