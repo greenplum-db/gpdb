@@ -362,11 +362,12 @@ static bool IsCorrelatedOpExpr(OpExpr *opexp, Expr **innerExpr)
  * 	*innerExpr - points to the inner expr i.e. bar(innervar) in the condition
  * 	*sortOp - postgres special, sort operator to implement the condition as a mergejoin.
  */
-static bool IsCorrelatedEqualityOpExpr(	OpExpr *opexp, Expr **innerExpr, Oid *sortOp )
+static bool
+IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *sortOp)
 {
 	Oid			opfamily;
-	Oid			lsortOp;
-	Oid			rsortOp;
+	Oid			ltype;
+	Oid			rtype;
 	List	   *l;
 
 	Assert(opexp);
@@ -381,17 +382,26 @@ static bool IsCorrelatedEqualityOpExpr(	OpExpr *opexp, Expr **innerExpr, Oid *so
 	if (!op_mergejoinable(opexp->opno))
 		return false;
 
-	/* 83MERGE_FIXME_DG - does this match the previous if (!get_op_mergejoin_info()) call? */
+	/*
+	 * Arbitrarily use the first operator family containing the operator that
+	 * we can find.
+	 */
 	l = get_mergejoin_opfamilies(opexp->opno);
-	if (list_length(l) == 0)
+	if (l == NIL)
 		return false;
 
+	opfamily = linitial_oid(l);
 	list_free(l);
 
-	Assert(lsortOp == rsortOp);
-	Assert(lsortOp != InvalidOid);
-
-	*sortOp = lsortOp;
+	/*
+	 * Look up the correct sort operator from the chosen opfamily.
+	 */
+	ltype = exprType(linitial(opexp->args));
+	rtype = exprType(lsecond(opexp->args));
+	*sortOp = get_opfamily_member(opfamily, ltype, rtype, BTLessStrategyNumber);
+	if (!OidIsValid(*sortOp))	/* should not happen */
+		elog(ERROR, "could not find member %d(%u,%u) of opfamily %u",
+			 BTLessStrategyNumber, ltype, rtype, opfamily);
 
 	if (!IsCorrelatedOpExpr(opexp, innerExpr))
 		return false;
