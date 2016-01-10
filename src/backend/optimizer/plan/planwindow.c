@@ -1858,7 +1858,6 @@ Plan *assure_collocation_and_order(
 		sort_pathkeys = make_pathkeys_for_sortclauses(root, sortclause, input_plan->targetlist, true);
 		if ( root != NULL )
 			sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
-		Assert(sort_pathkeys != NULL);
 	}
 	
 	if ( partkey_len == 0 ) /* Plan for single process locus. */
@@ -1965,7 +1964,6 @@ Plan *assure_order(
 		sort_pathkeys = make_pathkeys_for_sortclauses(root, sortclause, input_plan->targetlist, true);
 		if ( root != NULL )
 			sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
-		Assert(sort_pathkeys != NULL);
 	}
 
 	if(sort_pathkeys != NULL)
