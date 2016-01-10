@@ -1297,6 +1297,10 @@ make_mergeclause(Node *outer, Node *inner)
 							   outer,
 							   inner, -1);
 	opxpr->xpr.type = T_DistinctExpr;
+
+	xpr = make_notclause((Expr *) opxpr);
+
+	rinfo = make_restrictinfo(xpr, false, false, false, NULL);
 	rinfo->mergeopfamilies = get_mergejoin_opfamilies(opxpr->opno);
 
 	return rinfo;

@@ -2650,9 +2650,6 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 	if ( hasagg )
 	{
 		Plan *join_plan = NULL;
-		Oid		   *mergefamilies;
-		int		   *mergestrategies;
-		bool	   *mergenullsfirst;
 		
 		agg_plan = add_join_to_wrapper(root, agg_plan, agg_subquery, join_tlist,
 									   winfo->partkey_len,
@@ -2674,8 +2671,11 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 		 */		
 		 if ( winfo->partkey_len > 0 )
 		 {
-			List *mergeclauses = NIL;
-			
+			List	   *mergeclauses = NIL;
+			Oid		   *mergefamilies = palloc(sizeof(Oid) * winfo->partkey_len);
+			int		   *mergestrategies = palloc(sizeof(int) * winfo->partkey_len);
+			bool	   *mergenullsfirst = palloc(sizeof(bool) * winfo->partkey_len);
+
 			for ( i = 0; i < winfo->partkey_len; i++ )
 			{
 				TargetEntry *tle;
@@ -2690,7 +2690,14 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 									   0);
 
 				mc = make_mergeclause(lft, rgt);
+
+				if (!mc->mergeopfamilies)
+					elog(ERROR, "failed to find mergejoinable operator family for partition key");
+
 				mergeclauses = lappend(mergeclauses, mc);
+				mergefamilies[i] = linitial_oid(mc->mergeopfamilies);
+				mergestrategies[i] = BTLessStrategyNumber;
+				mergenullsfirst[i] = false;
 			}
 
 			mergeclauses = get_actual_clauses(mergeclauses);
