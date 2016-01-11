@@ -793,44 +793,31 @@ cdbpathlocus_is_hashed_on_relids(CdbPathLocus locus, Bitmapset *relids)
 {
     ListCell       *partkeycell;
     ListCell       *pathkeycell;
-    List           *pathkey;
     PathKey        *item;
 
     Assert(cdbpathlocus_is_valid(locus));
-
-    if (!CdbPathLocus_IsHashed(locus) &&
-        !CdbPathLocus_IsHashedOJ(locus))
-        return !CdbPathLocus_IsStrewn(locus);
 
 	if (CdbPathLocus_IsHashed(locus))
 	{
 		foreach(partkeycell, locus.partkey_h)
 		{
-			bool found = false;
+			bool		found = false;
 
             /* Does pathkey contain a Var whose varno is in relids? */
-            pathkey = (List *)lfirst(partkeycell);
-            foreach(pathkeycell, pathkey)
+            PathKey	   *pathkey = (PathKey *) lfirst(partkeycell);
+
+			Assert(IsA(pathkey, PathKey));
+            foreach(pathkeycell, pathkey->pk_eclass->ec_members)
             {
-				ListCell *i;
-
-                item = (PathKey *)lfirst(pathkeycell);
-                Assert(IsA(item, PathKey));
-
-				foreach(i, item->pk_eclass->ec_members)
+				EquivalenceMember *em = (EquivalenceMember *) lfirst(pathkeycell);
+				if (IsA(em->em_expr, Var) && bms_is_subset(em->em_relids, relids))
 				{
-					EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
-					if (IsA(em->em_expr, Var) && bms_is_subset(em->em_relids, relids))
-					{
-						found = true;
-						break;
-					}
-				}
-				if (found)
+					found = true;
 					break;
+				}
             }
-            if (!pathkeycell)
-                return false;
+			if (found)
+				break;
         }
 		/* Every column of the partkey contains a Var whose varno is in relids. */
 		return true;
@@ -844,8 +831,10 @@ cdbpathlocus_is_hashed_on_relids(CdbPathLocus locus, Bitmapset *relids)
             ListCell   *pathkeylistcell;
             foreach(pathkeylistcell, pathkeylist)
             {
+				List           *pathkey;
+
                 /* Does pathkey contain a Var whose varno is in relids? */
-                pathkey = (List *)lfirst(pathkeylistcell);
+                pathkey = (List *) lfirst(pathkeylistcell);
                 foreach(pathkeycell, pathkey)
                 {
 					ListCell *i;
