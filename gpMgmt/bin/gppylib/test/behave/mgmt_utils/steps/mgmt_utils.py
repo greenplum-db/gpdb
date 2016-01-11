@@ -645,31 +645,28 @@ def impl(context):
     context.inc_backup_timestamps.append(context.backup_timestamp)
 
 
-@then('Verify data integrity of database "{dbname}" between source and destination system, work-dir "{dir}"')
+@then('verify data integrity of database "{dbname}" between source and destination system, work-dir "{dir}"')
 def impl(context, dbname, dir):
-    dbconn_src = 'psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d %s'%dbname
-    dbconn_dest = 'psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -d %s'%dbname
+    dbconn_src = 'psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d %s' % dbname
+    dbconn_dest = 'psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -d %s' % dbname
     for file in os.listdir(dir):
         if file.endswith('.sql'):
             filename_prefix = os.path.splitext(file)[0]
-            ans_file_path = os.path.join(dir,filename_prefix+'.ans')
-            out_file_path = os.path.join(dir,filename_prefix+'.out')
-            diff_file_path = os.path.join(dir,filename_prefix+'.diff')
+            ans_file_path = os.path.join(dir,filename_prefix + '.ans')
+            out_file_path = os.path.join(dir,filename_prefix + '.out')
+            diff_file_path = os.path.join(dir,filename_prefix + '.diff')
             # run the command to get the exact data from the source system
-            command = '%s -f %s > %s'%(dbconn_src, os.path.join(dir,file), ans_file_path)
+            command = '%s -f %s > %s' % (dbconn_src, os.path.join(dir, file), ans_file_path)
             run_command(context, command)
 
             # run the command to get the data from the destination system, locally
-            command = '%s -f %s > %s'%(dbconn_dest, os.path.join(dir,file), out_file_path)
+            command = '%s -f %s > %s' % (dbconn_dest, os.path.join(dir, file), out_file_path)
             run_command(context, command)
             
-            gpdiff_cmd = 'gpdiff.pl -w  -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: --gp_init_file=gppylib/test/behave/mgmt_utils/steps/data/global_init_file %s %s > %s'%(ans_file_path, out_file_path, diff_file_path)             
+            gpdiff_cmd = 'gpdiff.pl -w -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: --gp_init_file=gppylib/test/behave/mgmt_utils/steps/data/global_init_file %s %s > %s' % (ans_file_path, out_file_path, diff_file_path)
             run_command(context, gpdiff_cmd)
-    for file in os.listdir(dir):
-        if file.endswith('.diff') and os.path.getsize(os.path.join(dir,file)) > 0: 
-            # if there is some difference generated into the diff file, raise expception
-                raise Exception ("Found difference between source and destination system, see %s"%file)
-
+            if context.ret_code != 0:
+                raise Exception ("Found difference between source and destination system, see %s" % file)
 
 @then('run post verifying workload under "{dir}"')
 def impl(context, dir):

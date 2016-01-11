@@ -190,9 +190,7 @@ sub gpdiff_files
     {
         atmsort::atmsort_init(%glob_atmsort_args);
         atmsort::run($f1, $newf1);
-        print "$f1 - $newf1\n";
         atmsort::run($f2, $newf2);
-        print "$f2 - $newf2\n";
     }
 
     my $args = join(" ", @ARGV, $newf1, $newf2);

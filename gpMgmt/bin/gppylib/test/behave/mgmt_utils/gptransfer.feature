@@ -1427,7 +1427,7 @@ Feature: gptransfer tests
         And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE"
         Then gptransfer should return a return code of 0
         And psql should return a return code of 0
-        Then Verify data integrity of database "gptest" between source and destination system, work-dir "gppylib/test/behave/mgmt_utils/steps/data/gptransfer_verify"
+        Then verify data integrity of database "gptest" between source and destination system, work-dir "gppylib/test/behave/mgmt_utils/steps/data/gptransfer_verify"
         And the user stops the gpfdist on host "GPTRANSFER_SOURCE_HOST" and port "2345" in work directory "HOME" from remote "2"
         And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
         And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
