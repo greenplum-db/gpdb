@@ -2421,15 +2421,21 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 			 * distinct in the join key.  (So does the inner, for that matter,
 			 * but the MJ algorithm is only sensitive to the outer.)
 			 */
-			Oid		   *mergefamilies;
-			int		   *mergestrategies;
-			bool	   *mergenullsfirst;
+			Oid		   *mergefamilies = palloc(sizeof(Oid) * list_length(joinclause));
+			int		   *mergestrategies = palloc(sizeof(int) * list_length(joinclause));
+			bool	   *mergenullsfirst = palloc(sizeof(bool) * list_length(joinclause));
+			ListCell   *l;
+			int			i = 0;
 
-			/*
-			 * 83MERGE_FIXME_DG  - need to properly init strategies and families,
-			 * was previously done with build_mergejoin_strat_arrays()
-			 */
-			Assert(false);
+			foreach (l, joinclause)
+			{
+				RestrictInfo *rinfo = (RestrictInfo *) lfirst(l);
+
+				mergefamilies[i] = linitial_oid(rinfo->mergeopfamilies);
+				mergestrategies[i] = BTLessStrategyNumber;
+				mergenullsfirst[i] = false;
+				i++;
+			}
 
 			joinclause = get_actual_clauses(joinclause);
 			join_plan = (Plan*)make_mergejoin(join_tlist,
@@ -6204,15 +6210,19 @@ within_agg_join_plans(PlannerInfo *root,
 	 */
 	if (list_length(join_clause) > 0)
 	{
-		Oid		   *mergefamilies;
-		int		   *mergestrategies;
-		bool	   *mergenullsfirst;
+		Oid		   *mergefamilies = palloc(sizeof(Oid) * list_length(join_clause));
+		int		   *mergestrategies = palloc(sizeof(int) * list_length(join_clause));
+		bool	   *mergenullsfirst = palloc(sizeof(bool) * list_length(join_clause));
+		ListCell   *l;
+		int			i = 0;
 
-		/*
-		 * 83MERGE_FIXME_DG  - need to properly init strategies and families,
-		 * was previously done with build_mergejoin_strat_arrays()
-		 */
-		Assert(false);
+		foreach(l, join_clause)
+		{
+			mergefamilies[i] = linitial_oid(join_clause);
+			mergestrategies[i] = BTLessStrategyNumber;
+			mergenullsfirst[i] = false;
+			i++;
+		}
 
 		join_clause = get_actual_clauses(join_clause);
 		result_plan = (Plan *) make_mergejoin(join_tlist,
