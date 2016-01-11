@@ -119,11 +119,13 @@ typedef enum CdbLocusType
 typedef struct CdbPathLocus
 {
     CdbLocusType    locustype;
-    List           *partkey;
+    List           *partkey_h;
+    List           *partkey_oj;
 } CdbPathLocus;
 
 #define CdbPathLocus_Degree(locus)          \
-            (list_length((locus).partkey))
+	(CdbPathLocus_IsHashed(locus) ? list_length((locus).partkey_h) :	\
+	 (CdbPathLocus_IsHashedOJ(locus) ? list_length((locus).partkey_oj) : 0))
 
 /*
  * CdbPathLocus_IsEqual
@@ -133,7 +135,8 @@ typedef struct CdbPathLocus
  */
 #define CdbPathLocus_IsEqual(a, b)              \
             ((a).locustype == (b).locustype &&  \
-             (a).partkey == (b).partkey)        \
+             (a).partkey_h == (b).partkey_oj &&		  \
+             (a).partkey_oj == (b).partkey_oj)        \
 
 /*
  * CdbPathLocus_IsBottleneck
@@ -174,31 +177,42 @@ typedef struct CdbPathLocus
 #define CdbPathLocus_IsStrewn(locus)        \
             ((locus).locustype == CdbLocusType_Strewn)
 
-#define CdbPathLocus_Make(plocus, _locustype, _partkey) \
+#define CdbPathLocus_MakeSimple(plocus, _locustype) \
     do {                                                \
         CdbPathLocus *_locus = (plocus);                \
         _locus->locustype = (_locustype);               \
-        _locus->partkey = (_partkey);                   \
-        Assert(_locus->partkey == NULL ||               \
-               cdbpathlocus_is_valid(*_locus));         \
+        _locus->partkey_h = NIL;                        \
+        _locus->partkey_oj = NIL;                       \
     } while (0)
 
 #define CdbPathLocus_MakeNull(plocus)                   \
-            CdbPathLocus_Make((plocus), CdbLocusType_Null, NIL)
+            CdbPathLocus_MakeSimple((plocus), CdbLocusType_Null)
 #define CdbPathLocus_MakeEntry(plocus)                  \
-            CdbPathLocus_Make((plocus), CdbLocusType_Entry, NIL)
+            CdbPathLocus_MakeSimple((plocus), CdbLocusType_Entry)
 #define CdbPathLocus_MakeSingleQE(plocus)               \
-            CdbPathLocus_Make((plocus), CdbLocusType_SingleQE, NIL)
+            CdbPathLocus_MakeSimple((plocus), CdbLocusType_SingleQE)
 #define CdbPathLocus_MakeGeneral(plocus)                \
-            CdbPathLocus_Make((plocus), CdbLocusType_General, NIL)
+            CdbPathLocus_MakeSimple((plocus), CdbLocusType_General)
 #define CdbPathLocus_MakeReplicated(plocus)             \
-            CdbPathLocus_Make((plocus), CdbLocusType_Replicated, NIL)
-#define CdbPathLocus_MakeHashed(plocus, partkey)        \
-            CdbPathLocus_Make((plocus), CdbLocusType_Hashed, (partkey))
-#define CdbPathLocus_MakeHashedOJ(plocus, partkey)      \
-            CdbPathLocus_Make((plocus), CdbLocusType_HashedOJ, (partkey))
+            CdbPathLocus_MakeSimple((plocus), CdbLocusType_Replicated)
+#define CdbPathLocus_MakeHashed(plocus, partkey_)       \
+    do {                                                \
+        CdbPathLocus *_locus = (plocus);                \
+        _locus->locustype = CdbLocusType_Hashed;		\
+        _locus->partkey_h = (partkey_);					\
+        _locus->partkey_oj = NIL;                       \
+        Assert(cdbpathlocus_is_valid(*_locus));         \
+    } while (0)
+#define CdbPathLocus_MakeHashedOJ(plocus, partkey_)     \
+    do {                                                \
+        CdbPathLocus *_locus = (plocus);                \
+        _locus->locustype = CdbLocusType_HashedOJ;		\
+        _locus->partkey_h = NIL;                        \
+        _locus->partkey_oj = (partkey_);				\
+        Assert(cdbpathlocus_is_valid(*_locus));         \
+    } while (0)
 #define CdbPathLocus_MakeStrewn(plocus)                 \
-            CdbPathLocus_Make((plocus), CdbLocusType_Strewn, NIL)
+            CdbPathLocus_MakeSimple((plocus), CdbLocusType_Strewn)
 
 /************************************************************************/
 

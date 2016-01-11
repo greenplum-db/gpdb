@@ -44,8 +44,6 @@
 #define MUST_BE_REDUNDANT(eclass)  \
 	((eclass)->ec_has_const && !(eclass)->ec_below_outer_join)
 
-static PathKey *makePathKey(EquivalenceClass *eclass, Oid opfamily,
-							int strategy, bool nulls_first);
 static PathKey *make_canonical_pathkey(PlannerInfo *root,
 					   EquivalenceClass *eclass, Oid opfamily,
 					   int strategy, bool nulls_first);
@@ -67,7 +65,7 @@ static PathKey *make_pathkey_from_sortinfo(PlannerInfo *root,
  * This does not promise to create a canonical PathKey, it's merely a
  * convenience routine to build the specified node.
  */
-static PathKey *
+PathKey *
 makePathKey(EquivalenceClass *eclass, Oid opfamily,
 			int strategy, bool nulls_first)
 {

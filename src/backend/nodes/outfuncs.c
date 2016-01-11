@@ -1725,7 +1725,8 @@ static void
 _outCdbPathLocus(StringInfo str, CdbPathLocus *node)
 {
     WRITE_ENUM_FIELD(locustype, CdbLocusType);
-    WRITE_NODE_FIELD(partkey);
+    WRITE_NODE_FIELD(partkey_h);
+    WRITE_NODE_FIELD(partkey_oj);
 }                               /* _outCdbPathLocus */
 
 

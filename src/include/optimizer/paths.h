@@ -159,6 +159,9 @@ typedef struct
 	int numReplacementsDone;
 } ReplaceExpressionMutatorReplacement;
 
+extern PathKey *makePathKey(EquivalenceClass *eclass, Oid opfamily,
+							int strategy, bool nulls_first);
+
 extern Node * replace_expression_mutator(Node *node, void *context);
 extern void generate_implied_quals(PlannerInfo *root);
 

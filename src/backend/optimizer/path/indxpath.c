@@ -440,7 +440,7 @@ find_usable_indexes(PlannerInfo *root, RelOptInfo *rel,
                                                        appendrel->relid);
                 if (CdbPathLocus_IsHashed(notalocus))
                     index_pathkeys = truncate_useless_pathkeys(root, appendrel,
-														       notalocus.partkey);
+														       notalocus.partkey_h);
                 else
                     index_pathkeys = NULL;
             }

@@ -394,7 +394,13 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext   *ctx,
             CdbPathLocus_MakeHashed(ctx->colocus, list_make1(copathkey));
         else
         {
-            ctx->colocus->partkey = lcons(copathkey, ctx->colocus->partkey);
+			if (CdbPathLocus_IsHashed(*ctx->colocus))
+				ctx->colocus->partkey_h = lcons(copathkey, ctx->colocus->partkey_h);
+			else
+			{
+				Assert (CdbPathLocus_IsHashedOJ(*ctx->colocus));
+				ctx->colocus->partkey_oj = lcons(copathkey, ctx->colocus->partkey_oj);
+			}
             Assert(cdbpathlocus_is_valid(*ctx->colocus));
         }
     }
@@ -434,7 +440,10 @@ cdbpath_match_preds_to_partkey(PlannerInfo     *root,
     ctx.colocus             = colocus;
     ctx.colocus_eq_locus    = true;
 
-    return cdbpath_match_preds_to_partkey_tail(&ctx, list_head(locus.partkey));
+	if (CdbPathLocus_IsHashed(locus))
+		return cdbpath_match_preds_to_partkey_tail(&ctx, list_head(locus.partkey_h));
+	else
+		return cdbpath_match_preds_to_partkey_tail(&ctx, list_head(locus.partkey_oj));
 }                               /* cdbpath_match_preds_to_partkey */
 
 
@@ -457,10 +466,11 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo   *root,
 {
     ListCell   *outercell;
     ListCell   *innercell;
+	List	   *outer_partkey;
+	List	   *inner_partkey;
 
     if (!mergeclause_list ||
-        !outer_locus.partkey ||
-        !inner_locus.partkey ||
+		CdbPathLocus_Degree(outer_locus) == 0 || CdbPathLocus_Degree(inner_locus) == 0 ||
         CdbPathLocus_Degree(outer_locus) != CdbPathLocus_Degree(inner_locus))
         return false;
 
@@ -469,7 +479,17 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo   *root,
     Assert(CdbPathLocus_IsHashed(inner_locus) ||
            CdbPathLocus_IsHashedOJ(inner_locus));
 
-    forboth(outercell, outer_locus.partkey, innercell, inner_locus.partkey)
+	if (CdbPathLocus_IsHashed(outer_locus))
+		outer_partkey = outer_locus.partkey_h;
+	else
+		outer_partkey = outer_locus.partkey_oj;
+
+	if (CdbPathLocus_IsHashed(outer_locus))
+		inner_partkey = inner_locus.partkey_h;
+	else
+		inner_partkey = inner_locus.partkey_oj;
+
+    forboth(outercell, outer_partkey, innercell, inner_partkey)
     {
         List        *outersublist = (List *)lfirst(outercell);
         List        *innersublist = (List *)lfirst(innercell);
@@ -567,7 +587,7 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo   *root,
 /*
  * cdb_pathkey_isGreenplumDbHashable
  *
- * Iterates through a list of PathKeyItems and determines if all of them
+ * Iterates through a list of equivalence class members and determines if all of them
  * are GreenplumDbHashable.
  *
  */
@@ -667,8 +687,7 @@ cdbpath_partkeys_from_preds(PlannerInfo    *root,
                 b_ec = a_ec;
 
 			/*
-			 * Convoluted logic for ensuring that (a_ec not in a_partkey) AND (b_ec not in b_partkey)
-			 * 83MERGE_FIXME_DG
+			 * Convoluted logic to ensure that (a_ec not in a_partkey) AND (b_ec not in b_partkey)
 			 */
 			found = false;
 			foreach(i, a_partkey)
@@ -695,8 +714,12 @@ cdbpath_partkeys_from_preds(PlannerInfo    *root,
 
 			if (!found)
             {
-                a_partkey = lappend(a_partkey, a_ec);
-                b_partkey = lappend(b_partkey, b_ec);
+				PathKey *a_pk = makePathKey(a_ec, linitial_oid(rinfo->mergeopfamilies),
+											BTLessStrategyNumber, false);
+				PathKey *b_pk = makePathKey(b_ec, linitial_oid(rinfo->mergeopfamilies),
+											BTLessStrategyNumber, false);
+                a_partkey = lappend(a_partkey, a_pk);
+                b_partkey = lappend(b_partkey, b_pk);
             }
         }
 

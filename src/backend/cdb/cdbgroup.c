@@ -555,7 +555,17 @@ cdb_grouping_planner(PlannerInfo* root,
 		}
 		else
 		{
-			if (gp_hash_safe_grouping(root))
+			if (root->group_pathkeys == NIL)
+			{
+				/*
+				 * Grouping, but no grouping key. This arises in cases like
+				 * SELECT DISTINCT <constant>, where we need to eliminate duplicates,
+				 * but there is no key to hash on.
+				 */
+				plan_1p.group_prep = MPP_GRP_PREP_HASH_GROUPS;
+				CdbPathLocus_MakeGeneral(&plan_1p.output_locus);
+			}
+			else if (gp_hash_safe_grouping(root))
 			{
 				plan_1p.group_prep = MPP_GRP_PREP_HASH_GROUPS;
 				CdbPathLocus_MakeHashed(&plan_1p.output_locus, root->group_pathkeys);
@@ -731,7 +741,10 @@ cdb_grouping_planner(PlannerInfo* root,
 		if ( has_groups )
 		{
 			plan_2p.group_type = MPP_GRP_TYPE_GROUPED_2STAGE;
-			CdbPathLocus_MakeHashed(&plan_2p.output_locus, root->group_pathkeys);
+			if (root->group_pathkeys == NIL)
+				CdbPathLocus_MakeGeneral(&plan_2p.output_locus);
+			else
+				CdbPathLocus_MakeHashed(&plan_2p.output_locus, root->group_pathkeys);
 		}
 		else
 		{
@@ -779,7 +792,10 @@ cdb_grouping_planner(PlannerInfo* root,
 		if ( has_groups )
 		{
 			plan_3p.group_type = MPP_GRP_TYPE_GROUPED_DQA_2STAGE;
-			CdbPathLocus_MakeHashed(&plan_3p.output_locus, root->group_pathkeys);
+			if (root->group_pathkeys == NIL)
+				CdbPathLocus_MakeGeneral(&plan_3p.output_locus);
+			else
+				CdbPathLocus_MakeHashed(&plan_3p.output_locus, root->group_pathkeys);
 		}
 		else
 		{
@@ -2838,7 +2854,7 @@ cdbpathlocus_collocates(CdbPathLocus locus, List *pathkeys, bool exact_match)
 	if (!CdbPathLocus_IsHashed(locus))
 		return false;  /* Or would HashedOJ ok, too? */
 
-	if (exact_match && list_length(pathkeys) != list_length(locus.partkey))
+	if (exact_match && list_length(pathkeys) != list_length(locus.partkey_h))
 		return false;
 
 	/*
