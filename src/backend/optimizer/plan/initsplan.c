@@ -1052,9 +1052,7 @@ distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 		 * where the qual belongs.
 		 */
 		Assert(!ojscope);
-		Assert(!pseudoconstant);
 		is_pushed_down = true;
-		/* Needn't feed it back for more deductions */
 		outerjoin_delayed = false;
 		/* Don't feed it back for more deductions */
 		maybe_equivalence = false;
