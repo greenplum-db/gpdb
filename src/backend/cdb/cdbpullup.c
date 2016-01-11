@@ -398,12 +398,12 @@ cdbpullup_findPathKeyInTargetList(PathKey *item, List *targetlist, AttrNumber *p
 	foreach(lc, eclass->ec_members)
 	{
 		EquivalenceMember *em = (EquivalenceMember *) lfirst(lc);
-		Expr *key = (Expr *) em->em_expr;
+		Expr	   *key = (Expr *) em->em_expr;
 		TargetEntry *tle;
 
 		if (em->em_is_const)
 			continue;
-			
+
 		/* Ignore possible RelabelType node atop the PathKey expr. */
 		if (IsA(key, RelabelType))
 			key = ((RelabelType *)key)->arg;
@@ -411,7 +411,7 @@ cdbpullup_findPathKeyInTargetList(PathKey *item, List *targetlist, AttrNumber *p
 		/* Check if targetlst is a List of TargetEntry */
 		if (IsA(linitial(targetlist), TargetEntry))
 		{
-			tle = tlist_member_ignoring_RelabelType((Node *) key, targetlist);
+			tle = tlist_member_ignoring_RelabelType(key, targetlist);
 			if (tle)
 			{
 				if (ptargetindex)
@@ -423,11 +423,11 @@ cdbpullup_findPathKeyInTargetList(PathKey *item, List *targetlist, AttrNumber *p
 		else
 		{
 			ListCell *tcell;
+			AttrNumber targetindex = 1;
 
 			foreach(tcell, targetlist)
 			{
 				Expr *expr = (Expr *) lfirst(tcell);
-				AttrNumber targetindex = 1;
 
 				if (IsA(expr, RelabelType))
 					expr = ((RelabelType *)expr)->arg;
@@ -443,8 +443,11 @@ cdbpullup_findPathKeyInTargetList(PathKey *item, List *targetlist, AttrNumber *p
 		}
 
 		/* Return this item if all referenced Vars are in targetlist. */
-		if (!IsA(key, Var) && !cdbpullup_missingVarWalker((Node *) key, targetlist))
+		if (!IsA(key, Var) &&
+			!cdbpullup_missingVarWalker((Node *) key, targetlist))
+		{
 			return item;
+		}
 	}
 
 	return NULL;

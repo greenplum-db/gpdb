@@ -4067,6 +4067,8 @@ make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
 	node->sortOperators = sortOperators;
 	node->nullsFirst = nullsFirst;
 
+	Assert(sortColIdx[0] != 0);
+
 	node->limitOffset = NULL; /* CDB */
 	node->limitCount  = NULL; /* CDB */
 	node->noduplicates = false; /* CDB */
@@ -4195,13 +4197,11 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
 
 	foreach(i, pathkeys)
 	{
-		PathKey    *pathkey = (PathKey *) lfirst(i);
-		PathKey	   *p;
+		PathKey	   *pathkey = (PathKey *) lfirst(i);
 		TargetEntry *tle = NULL;
 		Oid			pk_datatype = InvalidOid;
 		Oid			sortop;
 		ListCell   *j;
-        AttrNumber  resno;
 
 		/*
 		 * We can sort by any non-constant expression listed in the pathkey's
@@ -4218,16 +4218,26 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
 		 * same equivalence class...)  Not clear that we ever will have an
 		 * interesting choice in practice, so it may not matter.
 		 */
-        p = cdbpullup_findPathKeyInTargetList(pathkey, tlist, &resno);
-
-		/* CDB: Truncate sort keys if caller said don't extend the tlist. */
-        if (!p)
+		foreach(j, pathkey->pk_eclass->ec_members)
 		{
-			if (!add_keys_to_targetlist)
-                break;
+			EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
 
+			if (em->em_is_const || em->em_is_child)
+				continue;
+			tle = tlist_member((Node *) em->em_expr, tlist);
+			if (tle)
+			{
+				pk_datatype = em->em_datatype;
+				break;			/* found expr already in tlist */
+			}
+		}
+		if (!tle)
+		{
 			/* No matching Var; look for a computable expression */
 			Expr   *sortexpr = NULL;
+
+			if (!add_keys_to_targetlist)
+				break;
 
 			foreach(j, pathkey->pk_eclass->ec_members)
 			{
@@ -4266,20 +4276,12 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
 			/*
 			 * Add resjunk entry to input's tlist
 			 */
-            resno = list_length(tlist) + 1;
 			tle = makeTargetEntry(sortexpr,
 								  list_length(tlist) + 1,
 								  NULL,
 								  true);
 			tlist = lappend(tlist, tle);
 			lefttree->targetlist = tlist;		/* just in case NIL before */
-		}
-		else
-		{
-			EquivalenceMember *em = linitial(p->pk_eclass->ec_members);
-			tle = makeTargetEntry(em->em_expr, resno, NULL, true);
-			pk_datatype = em->em_datatype;
-			pathkey = p;
 		}
 
 		/*
@@ -4308,8 +4310,9 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
 									  sortColIdx, sortOperators, nullsFirst);
 	}
 
-    if (numsortkeys == 0)
-        return NULL;
+	Assert(numsortkeys > 0 || !add_keys_to_targetlist);
+	if (numsortkeys == 0)
+		return NULL;
 
 	return make_sort(root, lefttree, numsortkeys,
 					 sortColIdx, sortOperators, nullsFirst);
