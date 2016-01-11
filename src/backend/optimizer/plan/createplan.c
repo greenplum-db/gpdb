@@ -4195,9 +4195,8 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
 
 	foreach(i, pathkeys)
 	{
-		PathKey	   *pathkey = (PathKey *) lfirst(i);
-		EquivalenceClass *ec = pathkey->pk_eclass;
-		PathKey    *p;
+		PathKey    *pathkey = (PathKey *) lfirst(i);
+		PathKey	   *p;
 		TargetEntry *tle = NULL;
 		Oid			pk_datatype = InvalidOid;
 		Oid			sortop;
