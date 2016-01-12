@@ -723,8 +723,8 @@ cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist)
 					break;
 				}
 			}
-			if (found)
-				break;
+			if (!found)
+				return false;
         }
 		/* Every column of the partkey contains an expr in exprlist. */
 		return true;
