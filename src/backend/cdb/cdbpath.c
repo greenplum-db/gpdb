@@ -484,7 +484,7 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo   *root,
 	else
 		outer_partkey = outer_locus.partkey_oj;
 
-	if (CdbPathLocus_IsHashed(outer_locus))
+	if (CdbPathLocus_IsHashed(inner_locus))
 		inner_partkey = inner_locus.partkey_h;
 	else
 		inner_partkey = inner_locus.partkey_oj;
