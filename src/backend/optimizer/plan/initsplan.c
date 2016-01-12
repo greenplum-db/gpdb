@@ -929,7 +929,7 @@ distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 						List **postponed_qual_list)
 {
 	Relids		relids;
-	bool		is_pushed_down = false; /* 83MERGE_FIXME_DG */
+	bool		is_pushed_down;
 	bool		outerjoin_delayed;
 	bool		pseudoconstant = false;
 	bool		maybe_equivalence;
@@ -1098,7 +1098,13 @@ distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 	}
 	else
 	{
-		/* Normal qual clause; check to see if must be delayed by outer join */
+		/*
+		 * Normal qual clause or degenerate outer-join clause.  Either way,
+		 * we can mark it as pushed-down.
+		 */
+		is_pushed_down = true;
+
+		/* Check to see if must be delayed by outer join */
 		outerjoin_delayed = check_outerjoin_delay(root, &relids);
 
 		if (outerjoin_delayed)
