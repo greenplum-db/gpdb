@@ -2012,6 +2012,7 @@ _copyOuterJoinInfo(OuterJoinInfo *from)
 	COPY_SCALAR_FIELD(delay_upper_joins);
     COPY_NODE_FIELD(left_equi_key_list);
     COPY_NODE_FIELD(right_equi_key_list);
+
 	return newnode;
 }
 
