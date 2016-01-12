@@ -882,22 +882,6 @@ Feature: Validate command line arguments
         And verify that there is no table "heap_table" in "fullbkdb"
 
     @backupfire
-    Scenario: Full Backup with option -s and Restore
-        Given the database is running
-        And there is schema "schema_heap, schema_ao" exists in "fullbkdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_part_table" in "fullbkdb" exists for validation
-        When the user runs "gpcrondump -a -x fullbkdb -s schema_heap"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And verify that the "report" file in " " dir contains "Backup Type: Full"
-        And the user runs gpdbrestore with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And verify that there is a "heap" table "schema_heap.heap_table" in "fullbkdb" with data
-        And verify that there is no table "schema_ao.ao_part_table" in "fullbkdb"
-
-    @backupfire
     Scenario: Full Backup with option --exclude-table-file and Restore
         Given the database is running
         And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
@@ -1638,7 +1622,7 @@ Feature: Validate command line arguments
         And verify that the table "gpcrondump_history" in "schematestdb" has dump info for the stored timestamp
 
      @backupfire
-     Scenario: Verify gpdbrestore -s option with full backup
+    Scenario: Verify gpdbrestore -s option with full backup
         Given the database is running
         And the database "testdb1" does not exist
         And the database "testdb2" does not exist
@@ -1663,7 +1647,7 @@ Feature: Validate command line arguments
         And verify that database "testdb2" does not exist
 
      @backupfire
-     Scenario: Verify gpdbrestore -s option with incremental backup
+    Scenario: Verify gpdbrestore -s option with incremental backup
         Given the database is running
         And the database "testdb1" does not exist
         And the database "testdb2" does not exist
@@ -2614,7 +2598,7 @@ Feature: Validate command line arguments
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print --list-backup is not supported for restore with full timestamps to stdout
 
-     Scenario: Full Backup with option -t and non-existant table
+    Scenario: Full Backup with option -t and non-existant table
         Given the database is running
         And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
         And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
@@ -2623,7 +2607,7 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 2
         And gpcrondump should print does not exist in to stdout
 
-     Scenario: Full Backup with option -T and non-existant table
+    Scenario: Full Backup with option -T and non-existant table
         Given the database is running
         And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
         And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
