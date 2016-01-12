@@ -413,6 +413,10 @@ MemoryAccounting_GetAccountName(MemoryAccount *memoryAccount)
 			return "X_BitmapTableScan";
 		case MEMORY_OWNER_TYPE_Exec_PartitionSelector:
 			return "X_PartitionSelector";
+		case MEMORY_OWNER_TYPE_Exec_ResilientJoin:
+			return "X_ResilientJoin";
+		case MEMORY_OWNER_TYPE_Exec_HashDummy:
+			return "X_HashDummy";
 		default:
 			Assert(false);
 			break;

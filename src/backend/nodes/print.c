@@ -539,6 +539,8 @@ plannode_type(Plan *p)
 			return "MERGEJOIN";
 		case T_HashJoin:
 			return "HASHJOIN";
+		case T_ResilientJoin:
+			return "RESILIENTJOIN";
 		case T_ShareInputScan:
 			return "SHAREINPUTSCAN";
 		case T_Material:

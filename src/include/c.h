@@ -358,6 +358,13 @@ typedef int32 int4;
 typedef float float4;
 typedef double float8;
 
+#define HASH_32
+#ifdef HASH_32
+typedef uint32 HashType;
+#else
+typedef uint64 HashType;
+#endif
+
 /*
  * Oid, RegProcedure, TransactionId, SubTransactionId, MultiXactId,
  * CommandId

@@ -1411,6 +1411,7 @@ cdbpath_dedup_fixup_walker(Path *path, void *context)
 			break;
 
 		case T_HashJoin:
+		case T_ResilientJoin:
 		case T_MergeJoin:
 		case T_NestLoop:
 			cdbpath_dedup_fixup_joinrel((JoinPath *)path, ctx);

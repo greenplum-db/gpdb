@@ -210,6 +210,7 @@ IsBlockingOperator(Node *node)
 		case T_BitmapIndexScan: 
 		case T_Hash:
 		case T_Sort:
+		case T_ResilientJoin:
 			return true;
 
 		case T_Material:
@@ -326,6 +327,7 @@ IsMemoryIntensiveOperator(Node *node, PlannedStmt *stmt)
 		case T_Sort:
 		case T_ShareInputScan:
 		case T_Hash:
+		case T_ResilientJoin:
 		case T_BitmapIndexScan:
 		case T_Window:
 		case T_TableFunctionScan:

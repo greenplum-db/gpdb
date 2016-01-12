@@ -188,52 +188,73 @@ cdbhash(CdbHash *h, Datum datum, Oid type)
 void
 hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 {
+	void *bytes = NULL;
+	void *toFree = NULL;
+	size_t length = 0;
 
-	void	   *buf = NULL;		/* pointer to the data */
-	size_t		len = 0;		/* length for the data buffer */
-	
-	int64		intbuf;			/* an 8 byte buffer for all integer sizes */
-		
-	float4		buf_f4;
-	float8		buf_f8;
-	Timestamp	tsbuf;			/* timestamp data dype is either a double or
+	ConvertDatumToHashableBytes(datum, type, &bytes, &length, &toFree);
+
+	/* do the hash using the selected algorithm */
+	hashFn(clientData, bytes, length);
+	if(toFree)
+	{
+		pfree(toFree);
+	}
+}
+
+/*
+ * Converts a datum to an array of bytes. The returned bytes pointer may point to
+ * a static variable inside this function. Therefore, the caller is responsible to
+ * copy the bytes in a more durable address space if required.
+ *
+ * The caller is expected to pfree the buffer pointed by toFree if not null
+ */
+void
+ConvertDatumToHashableBytes(Datum datum, Oid type, void **bytes, size_t *length, void **toFree)
+{
+	static int64 intbuf = 0;			/* an 8 byte buffer for all integer sizes */
+
+	static float4 buf_f4 = 0;
+	static float8 buf_f8 = 0;
+	static Timestamp tsbuf = 0;			/* timestamp data dype is either a double or
 								 * int8 (determined in compile time) */
-	TimestampTz tstzbuf;
-	DateADT		datebuf;
-	TimeADT		timebuf;
-	TimeTzADT  *timetzptr;
-	Interval   *intervalptr;
-	AbsoluteTime abstime_buf;
-	RelativeTime reltime_buf;
-	TimeInterval tinterval;
-	AbsoluteTime tinterval_len;
-	
-	Numeric		num;
-	bool		bool_buf;
-	char        char_buf;
-	Name		namebuf;
-	
-	ArrayType  *arrbuf;
-	inet		 *inetptr; /* inet/cidr */
-	unsigned char inet_hkey[sizeof(inet_struct)];
-	macaddr		*macptr; /* MAC address */
-	
-	VarBit		*vbitptr;
-	
-	int2vector *i2vec_buf;
-	oidvector  *oidvec_buf;
-	
-	Cash		cash_buf;
-	AclItem	   *aclitem_ptr;
-	uint32		aclitem_buf;
-	
-	/*
-	 * special case buffers
-	 */
-	uint32		nanbuf;
-	uint32		invalidbuf;
+	static TimestampTz tstzbuf = 0;
+	static DateADT datebuf = 0;
+	static TimeADT timebuf = 0;
+	static TimeTzADT *timetzptr = NULL;
+	static Interval *intervalptr = NULL;
+	static AbsoluteTime abstime_buf = 0;
+	static RelativeTime reltime_buf = 0;
+	static TimeInterval tinterval = NULL;
+	static AbsoluteTime tinterval_len = 0;
 
-	void *tofree = NULL;
+	static Numeric num = NULL;
+	static bool bool_buf = false;
+	static char char_buf = '\0';
+	static Name namebuf = NULL;
+
+	static ArrayType  *arrbuf = NULL;
+	static inet *inetptr = NULL; /* inet/cidr */
+	static unsigned char inet_hkey[sizeof(inet_struct)] = "\0";
+	static macaddr *macptr = NULL; /* MAC address */
+
+	static VarBit *vbitptr = NULL;
+
+	static int2vector *i2vec_buf = NULL;
+	static oidvector *oidvec_buf = NULL;
+
+	static Cash cash_buf = 0;
+	static AclItem *aclitem_ptr = NULL;
+	static uint32 aclitem_buf = 0;
+
+	/* Constant used for hashing a NAN value  */
+	static uint32 nanbuf = ((uint32)0XE0E0E0E1);
+	/* Constant used for hashing an invalid value  */
+	static uint32 invalidbuf = ((uint32)0XD0D0D0D1);
+
+	*bytes = NULL;
+	*length = 0;
+	*toFree = NULL;
 
 	/*
 	 * Select the hash to be performed according to the field type we are adding to the
@@ -247,23 +268,23 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 		case INT2OID:			/* -32 thousand to 32 thousand, 2-byte storage */
 			intbuf = (int64) DatumGetInt16(datum);		/* cast to 8 byte before
 														 * hashing */
-			buf = &intbuf;
-			len = sizeof(intbuf);
+			*bytes = &intbuf;
+			*length = sizeof(intbuf);
 			break;
 
 		case INT4OID:			/* -2 billion to 2 billion integer, 4-byte
 								 * storage */
 			intbuf = (int64) DatumGetInt32(datum);		/* cast to 8 byte before
 														 * hashing */
-			buf = &intbuf;
-			len = sizeof(intbuf);
+			*bytes = &intbuf;
+			*length = sizeof(intbuf);
 			break;
-			
+
 		case INT8OID:			/* ~18 digit integer, 8-byte storage */
 			intbuf = DatumGetInt64(datum);		/* cast to 8 byte before
 												 * hashing */
-			buf = &intbuf;
-			len = sizeof(intbuf);
+			*bytes = &intbuf;
+			*length = sizeof(intbuf);
 			break;
 
 		case FLOAT4OID: /* single-precision floating point number,
@@ -278,8 +299,8 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			if (buf_f4 == (float4) 0)
 				buf_f4 = 0.0;
 
-			buf = &buf_f4;
-			len = sizeof(buf_f4);
+			*bytes = &buf_f4;
+			*length = sizeof(buf_f4);
 			break;
 
 		case FLOAT8OID: /* double-precision floating point number,
@@ -294,8 +315,8 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			if (buf_f8 == (float8) 0)
 				buf_f8 = 0.0;
 
-			buf = &buf_f8;
-			len = sizeof(buf_f8);
+			*bytes = &buf_f8;
+			*length = sizeof(buf_f8);
 			break;
 
 		case NUMERICOID:
@@ -304,60 +325,61 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 
 			if (NUMERIC_IS_NAN(num))
 			{
-				nanbuf = NAN_VAL;
-				buf = &nanbuf;
-				len = sizeof(nanbuf);
+				*bytes = &nanbuf;
+				*length = sizeof(nanbuf);
 			}
 			else
 				/* not a nan */
 			{
-				buf = num->n_data;
-				len = (VARSIZE(num) - NUMERIC_HDRSZ);
+				*bytes = num->n_data;
+				*length = (VARSIZE(num) - NUMERIC_HDRSZ);
 			}
 
-            /* 
-             * If we did a pg_detoast_datum, we need to remember to pfree, 
+            /*
+             * If we did a pg_detoast_datum, we need to remember to pfree,
              * or we will leak memory.  Because of the 1-byte varlena header stuff.
              */
-            if (num != DatumGetPointer(datum)) 
-                tofree = num;
+            if (num != DatumGetPointer(datum))
+                *toFree = num;
 
 			break;
-		
+
 		/*
 		 * ====== CHARACTER TYPES =======
 		 */
 		case CHAROID:			/* char(1), single character */
 			char_buf = DatumGetChar(datum);
-			buf = &char_buf;
-			len = 1;
+			*bytes = &char_buf;
+			*length = 1;
 			break;
 
 		case BPCHAROID: /* char(n), blank-padded string, fixed storage */
 		case TEXTOID:   /* text */
-		case VARCHAROID: /* varchar */ 
+		case VARCHAROID: /* varchar */
 		case BYTEAOID:   /* bytea */
 			{
 				int tmplen;
-				varattrib_untoast_ptr_len(datum, (char **) &buf, &tmplen, &tofree);
+				varattrib_untoast_ptr_len(datum, (char **) bytes, &tmplen, toFree);
 				/* adjust length to not include trailing blanks */
 				if (type != BYTEAOID && tmplen > 1)
-					tmplen = ignoreblanks((char *) buf, tmplen);
+					tmplen = ignoreblanks((char *) *bytes, tmplen);
 
-				len = tmplen;
+				*length = tmplen;
 				break;
 			}
 
 		case NAMEOID:
 			namebuf = DatumGetName(datum);
-			len = NAMEDATALEN;
-			buf = NameStr(*namebuf);
+			*bytes = NameStr(*namebuf);
+			*length = strlen((char*)*bytes);
+			if (0 == *length)
+			{
+				*length = 1;
+			}
 
-			/* adjust length to not include trailing blanks */
-			if (len > 1)
-				len = ignoreblanks((char *) buf, len);
+			Assert(*length < NAMEDATALEN);		/* else it's not truncated correctly */
 			break;
-		
+
 		/*
 		 * ====== OBJECT IDENTIFIER TYPES ======
 		 */
@@ -369,109 +391,106 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 		case REGCLASSOID:			/* relation name */
 		case REGTYPEOID:			/* data type name */
 			intbuf = (int64) DatumGetUInt32(datum);	/* cast to 8 byte before hashing */
-			buf = &intbuf;
-			len = sizeof(intbuf);
+			*bytes = &intbuf;
+			*length = sizeof(intbuf);
 			break;
 
         case TIDOID:                /* tuple id (6 bytes) */
-            buf = DatumGetPointer(datum);
-            len = SizeOfIptrData;
+        	*bytes = DatumGetPointer(datum);
+        	*length = SizeOfIptrData;
             break;
-			
+
 		/*
 		 * ====== DATE/TIME TYPES ======
 		 */
 		case TIMESTAMPOID:		/* date and time */
 			tsbuf = DatumGetTimestamp(datum);
-			buf = &tsbuf;
-			len = sizeof(tsbuf);
+			*bytes = &tsbuf;
+			*length = sizeof(tsbuf);
 			break;
 
 		case TIMESTAMPTZOID:	/* date and time with time zone */
 			tstzbuf = DatumGetTimestampTz(datum);
-			buf = &tstzbuf;
-			len = sizeof(tstzbuf);
+			*bytes = &tstzbuf;
+			*length = sizeof(tstzbuf);
 			break;
 
 		case DATEOID:			/* ANSI SQL date */
 			datebuf = DatumGetDateADT(datum);
-			buf = &datebuf;
-			len = sizeof(datebuf);
+			*bytes = &datebuf;
+			*length = sizeof(datebuf);
 			break;
 
 		case TIMEOID:			/* hh:mm:ss, ANSI SQL time */
 			timebuf = DatumGetTimeADT(datum);
-			buf = &timebuf;
-			len = sizeof(timebuf);
+			*bytes = &timebuf;
+			*length = sizeof(timebuf);
 			break;
 
 		case TIMETZOID: /* time with time zone */
-			
+
 			/*
 			 * will not compare to TIMEOID on equal values.
 			 * Postgres never attempts to compare the two as well.
 			 */
 			timetzptr = DatumGetTimeTzADTP(datum);
-			buf = (unsigned char *) timetzptr;
-			
+			*bytes = (unsigned char *) timetzptr;
+
 			/*
 			 * Specify hash length as sizeof(double) + sizeof(int4), not as
 			 * sizeof(TimeTzADT), so that any garbage pad bytes in the structure
 			 * won't be included in the hash!
 			 */
-			len = sizeof(timetzptr->time) + sizeof(timetzptr->zone);
+			*length = sizeof(timetzptr->time) + sizeof(timetzptr->zone);
 			break;
 
 		case INTERVALOID:		/* @ <number> <units>, time interval */
 			intervalptr = DatumGetIntervalP(datum);
-			buf = (unsigned char *) intervalptr;
+			*bytes = (unsigned char *) intervalptr;
 			/*
 			 * Specify hash length as sizeof(double) + sizeof(int4), not as
 			 * sizeof(Interval), so that any garbage pad bytes in the structure
 			 * won't be included in the hash!
 			 */
-			len = sizeof(intervalptr->time) + sizeof(intervalptr->month);
+			*length = sizeof(intervalptr->time) + sizeof(intervalptr->month);
 			break;
-			
+
 		case ABSTIMEOID:
 			abstime_buf = DatumGetAbsoluteTime(datum);
-			
+
 			if (abstime_buf == INVALID_ABSTIME)
 			{
 				/* hash to a constant value */
-				invalidbuf = INVALID_VAL;
-				len = sizeof(invalidbuf);
-				buf = &invalidbuf;
+				*length = sizeof(invalidbuf);
+				*bytes = &invalidbuf;
 			}
 			else
 			{
-				len = sizeof(abstime_buf);
-				buf = &abstime_buf;
+				*length = sizeof(abstime_buf);
+				*bytes = &abstime_buf;
 			}
-					
+
 			break;
 
 		case RELTIMEOID:
 			reltime_buf = DatumGetRelativeTime(datum);
-			
+
 			if (reltime_buf == INVALID_RELTIME)
 			{
 				/* hash to a constant value */
-				invalidbuf = INVALID_VAL;
-				len = sizeof(invalidbuf);
-				buf = &invalidbuf;
+				*bytes = &invalidbuf;
 			}
 			else
 			{
-				len = sizeof(reltime_buf);
-				buf = &reltime_buf;
+				*length = sizeof(reltime_buf);
+				*bytes = &reltime_buf;
 			}
-				
+
 			break;
-			
+
 		case TINTERVALOID:
 			tinterval = DatumGetTimeInterval(datum);
-			
+
 			/*
 			 * check if a valid interval. the '0' status code
 			 * stands for T_INTERVAL_INVAL which is defined in
@@ -483,44 +502,43 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			   tinterval->data[1] == INVALID_ABSTIME)
 			{
 				/* hash to a constant value */
-				invalidbuf = INVALID_VAL;
-				len = sizeof(invalidbuf);
-				buf = &invalidbuf;				
+				*length = sizeof(invalidbuf);
+				*bytes = &invalidbuf;
 			}
 			else
 			{
 				/* normalize on length of the time interval */
 				tinterval_len = tinterval->data[1] -  tinterval->data[0];
-				len = sizeof(tinterval_len);
-				buf = &tinterval_len;	
+				*length = sizeof(tinterval_len);
+				*bytes = &tinterval_len;
 			}
 
 			break;
-			
+
 		/*
 		 * ======= NETWORK TYPES ========
 		 */
 		case INETOID:
 		case CIDROID:
-			
+
 			inetptr = DatumGetInetP(datum);
-			len = inet_getkey(inetptr, inet_hkey, sizeof(inet_hkey)); /* fill-in inet_key & get len */
-			buf = inet_hkey;
+			*length = inet_getkey(inetptr, inet_hkey, sizeof(inet_hkey)); /* fill-in inet_key & get len */
+			*bytes = inet_hkey;
 			break;
-		
+
 		case MACADDROID:
-			
+
 			macptr = DatumGetMacaddrP(datum);
-			len = sizeof(macaddr);
-			buf = (unsigned char *) macptr;
+			*length = sizeof(macaddr);
+			*bytes = (unsigned char *) macptr;
 			break;
-			
+
 		/*
 		 * ======== BIT STRINGS ========
 		 */
 		case BITOID:
 		case VARBITOID:
-			
+
 			/*
 			 * Note that these are essentially strings.
 			 * we don't need to worry about '10' and '010'
@@ -528,8 +546,8 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			 * (see SQL standard, and varbit.c)
 			 */
 			vbitptr = DatumGetVarBitP(datum);
-			len = VARBITBYTES(vbitptr);
-			buf = (char *) VARBITS(vbitptr);
+			*length = VARBITBYTES(vbitptr);
+			*bytes = (char *) VARBITS(vbitptr);
 			break;
 
 		/*
@@ -537,10 +555,10 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 		 */
 		case BOOLOID:			/* boolean, 'true'/'false' */
 			bool_buf = DatumGetBool(datum);
-			buf = &bool_buf;
-			len = sizeof(bool_buf);
+			*bytes = &bool_buf;
+			*length = sizeof(bool_buf);
 			break;
-			
+
 		/*
 		 * We prepare the hash key for aclitems just like postgresql does.
 		 * (see code and comment in acl.c: hash_aclitem() ).
@@ -548,52 +566,47 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 		case ACLITEMOID:
 			aclitem_ptr = DatumGetAclItemP(datum);
 			aclitem_buf = (uint32) (aclitem_ptr->ai_privs + aclitem_ptr->ai_grantee + aclitem_ptr->ai_grantor);
-			buf = &aclitem_buf;
-			len = sizeof(aclitem_buf);
+			*bytes = &aclitem_buf;
+			*length = sizeof(aclitem_buf);
 			break;
-			
+
 		/*
 		 * ANYARRAY is a pseudo-type. We use it to include
 		 * any of the array types (OIDs 1007-1033 in pg_type.h).
 		 * caller needs to be sure the type is ANYARRAYOID
 		 * before calling cdbhash on an array (INSERT and COPY do so).
 		 */
-		case ANYARRAYOID:	
-					
+		case ANYARRAYOID:
+
 			arrbuf = DatumGetArrayTypeP(datum);
-			len = VARSIZE(arrbuf) - VARHDRSZ;
-			buf = VARDATA(arrbuf);
+			*length = VARSIZE(arrbuf) - VARHDRSZ;
+			*bytes = VARDATA(arrbuf);
 			break;
-			
+
 		case INT2VECTOROID:
 			i2vec_buf = (int2vector *) DatumGetPointer(datum);
-			len = i2vec_buf->dim1 * sizeof(int2);
-			buf = (void *)i2vec_buf->values;
+			*length = i2vec_buf->dim1 * sizeof(int2);
+			*bytes = (void *)i2vec_buf->values;
 			break;
-			
-		case OIDVECTOROID:	
+
+		case OIDVECTOROID:
 			oidvec_buf = (oidvector *) DatumGetPointer(datum);
-			len = oidvec_buf->dim1 * sizeof(Oid);
-			buf = oidvec_buf->values;
+			*length = oidvec_buf->dim1 * sizeof(Oid);
+			*bytes = oidvec_buf->values;
 			break;
-			
+
 		case CASHOID: /* cash is stored in int32 internally */
 			cash_buf = (* (Cash *)DatumGetPointer(datum));
-			len = sizeof(Cash);
-			buf = &cash_buf;
+			*length = sizeof(Cash);
+			*bytes = &cash_buf;
 			break;
-				
+
 		default:
 			ereport(ERROR,
 					(errcode(ERRCODE_CDB_FEATURE_NOT_YET),
 					 errmsg("Type %u is not hashable.", type)));
 
 	}							/* switch(type) */
-
-	/* do the hash using the selected algorithm */
-	hashFn(clientData, buf, len);
-	if(tofree)
-		pfree(tofree);
 }
 
 /*
@@ -837,7 +850,7 @@ fnv1a_32_buf(void *buf, size_t len, uint32 hval)
 int inet_getkey(inet *addr, unsigned char *inet_key, int key_size)
 {
 	int			addrsize;
-	
+
 	switch (((inet_struct *)VARDATA_ANY(addr))->family)
 	{
 		case PGSQL_AF_INET:
@@ -849,12 +862,12 @@ int inet_getkey(inet *addr, unsigned char *inet_key, int key_size)
 		default:
 			addrsize = 0;
 	}
-	
+
 	Assert(addrsize + 2 <= key_size);
 	inet_key[0] = ((inet_struct *)VARDATA_ANY(addr))->family;
 	inet_key[1] = ((inet_struct *)VARDATA_ANY(addr))->bits;
 	memcpy(inet_key + 2, ((inet_struct *)VARDATA_ANY(addr))->ipaddr, addrsize);
-	
+
 	return (addrsize + 2);
 }
 

@@ -1374,6 +1374,11 @@ motion_sanity_walker(Node *node, sanity_result_t *result)
 			if (((MergeJoin *)node)->join.prefetch_inner)
 				deadlock_safe = true;
 			break;
+		case T_ResilientJoin:
+			branch_label = "RJ";
+			if (((ResilientJoin *)node)->join.prefetch_inner)
+				deadlock_safe = true;
+			break;
 		default:
 			branch_label = NULL;
 			break;
@@ -1421,6 +1426,7 @@ motion_sanity_walker(Node *node, sanity_result_t *result)
 		case T_HashJoin:
 		case T_NestLoop:
 		case T_MergeJoin:
+		case T_ResilientJoin:
 		{
 			Plan *plan = (Plan *)node;
 

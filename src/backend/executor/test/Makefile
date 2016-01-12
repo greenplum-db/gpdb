@@ -2,7 +2,7 @@ subdir=src/backend/executor
 top_builddir=../../../..
 include $(top_builddir)/src/Makefile.global
 
-TARGETS=nodeSubplan nodeShareInputScan execAmi execWorkfile execHHashagg
+TARGETS=nodeSubplan nodeShareInputScan execAmi execWorkfile execHHashagg execAbstractReader
 
 include $(top_builddir)/src/backend/mock.mk
 
@@ -26,3 +26,8 @@ execWorkfile.t: \
 
 execHHashagg.t: \
 	$(MOCK_DIR)/backend/utils/workfile_manager/workfile_file_mock.o
+
+execAbstractReader.t: \
+	$(MOCK_DIR)/backend/executor/execProcnode_mock.o \
+	$(MOCK_DIR)/backend/executor/execAmi_mock.o \
+	$(MOCK_DIR)/backend/utils/mmgr/mcxt_mock.o

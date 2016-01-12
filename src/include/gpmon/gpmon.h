@@ -491,6 +491,15 @@ typedef enum PerfmonNodeType
     PMNT_Unique,
     PMNT_ValuesScan,
     PMNT_Window,
+    PMNT_ResilientJoin,
+    PMNT_ResilientLeftJoin,
+    PMNT_ResilientLeftAntiSemiJoin,
+    PMNT_ResilientFullJoin,
+    PMNT_ResilientRightJoin,
+    PMNT_ResilientExistsJoin,
+    PMNT_ResilientReverseInJoin,
+    PMNT_ResilientUniqueOuterJoin,
+    PMNT_ResilientUniqueInnerJoin,
 	PMNT_MAXIMUM_ENUM
 
 } PerfmonNodeType;

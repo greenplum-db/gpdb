@@ -404,6 +404,17 @@ _outMergeJoin(StringInfo str, MergeJoin *node)
 }
 
 static void
+_outResilientJoin(StringInfo str, ResilientJoin *node)
+{
+	WRITE_NODE_TYPE("RESILIENTJOIN");
+
+	_outJoinPlanInfo(str, (Join *) node);
+
+	WRITE_NODE_FIELD(hashclauses);
+	WRITE_NODE_FIELD(hashqualclauses);
+}
+
+static void
 _outAgg(StringInfo str, Agg *node)
 {
 
@@ -1280,6 +1291,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_HashJoin:
 				_outHashJoin(str, obj);
+				break;
+			case T_ResilientJoin:
+				_outResilientJoin(str, obj);
 				break;
 			case T_Agg:
 				_outAgg(str, obj);

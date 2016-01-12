@@ -98,6 +98,8 @@ typedef enum NodeTag
 	T_RowTrigger,
 	T_AssertOp,
 	T_PartitionSelector,
+	T_ResilientJoin,
+	T_HashDummy,
 	T_Plan_End,
 	/* this one isn't a subclass of Plan: */
 	T_PlanInvalItem,
@@ -156,6 +158,8 @@ typedef enum NodeTag
 	T_RowTriggerState,
 	T_AssertOpState,
 	T_PartitionSelectorState,
+	T_ResilientJoinState,
+	T_HashDummyState,
 	T_PlanState_End,
 	T_TupleDescNode,
 
@@ -491,6 +495,13 @@ typedef enum NodeTag
 	T_ExtProtocolValidatorData, /* in access/extprotocol.h */
 	T_PartitionConstraints,     /* in executor/nodePartitionSelector.h */
 	T_SelectedParts,            /* in executor/nodePartitionSelector.h */
+	T_ResilientJoiner,			/* in executor/nodeResilientJoin.h */
+	T_ResilientHashJoiner,		/* in executor/nodeResilientJoin.h */
+	T_ResilientNestedLoopJoiner,	/* in executor/nodeResilientJoin.h */
+	T_OperatorTupleReader,		/* In executor/execAbstractReader.h */
+	T_HashBucketTupleReader,	/* In executor/execAbstractReader.h */
+	T_SpillableProbeTupleReader,/* In executor/execAbstractReader.h */
+	T_SpilledTupleReader,		/* In executor/execAbstractReader.h */
 	
     /* CDB: tags for random other stuff */
     T_CdbExplain_StatHdr = 950,             /* in cdb/cdbexplain.c */
@@ -680,7 +691,20 @@ typedef enum JoinType
 	 (jointype) == JOIN_FULL || \
 	 (jointype) == JOIN_RIGHT)
 
+/* The algorithm to use for joining */
+typedef enum JoinAlgorithm
+{
+	JoinAlgorithm_HashJoin,
+	JoinAlgorithm_NLJ,
+	JoinAlgorithm_SortMerge
+} JoinAlgorithm;
 
+/* The input sides of a binary operator */
+typedef enum InputSide
+{
+	InputSide_Inner,
+	InputSide_Outer
+} InputSide;
 
 /*
  * FlowType - kinds of tuple flows in parallelized plans.

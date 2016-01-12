@@ -1080,6 +1080,35 @@ explain_outNode(StringInfo str,
 					break;
 			}
 			break;
+		case T_ResilientJoin:
+			switch (((ResilientJoin *) plan)->join.jointype)
+			{
+				case JOIN_INNER:
+					pname = "Hash Join";
+					break;
+				case JOIN_LEFT:
+					pname = "Hash Left Join";
+					break;
+				case JOIN_FULL:
+					pname = "Hash Full Join";
+					break;
+				case JOIN_RIGHT:
+					pname = "Hash Right Join";
+					break;
+				case JOIN_IN:
+					pname = "Hash EXISTS Join";
+					break;
+				case JOIN_LASJ:
+					pname = "Hash Left Anti Semi Join";
+					break;
+				case JOIN_LASJ_NOTIN:
+					pname = "Hash Left Anti Semi Join (Not-In)";
+					break;
+				default:
+					pname = "Hash ??? Join";
+					break;
+			}
+			break;
 		case T_SeqScan:
 			pname = "Seq Scan";
 			break;
@@ -1597,6 +1626,33 @@ explain_outNode(StringInfo str,
 							"inner", innerPlan(plan),
 							str, indent, es);
 			show_upper_qual(hash_join->join.joinqual,
+							"Join Filter",
+							"outer", outerPlan(plan),
+							"inner", innerPlan(plan),
+							str, indent, es);
+			show_upper_qual(plan->qual,
+							"Filter",
+							"outer", outerPlan(plan),
+							"inner", innerPlan(plan),
+							str, indent, es);
+			break;
+		}
+		case T_ResilientJoin: {
+			ResilientJoin *res_join = (ResilientJoin *) plan;
+			/*
+			 * In the case of an "IS NOT DISTINCT" condition, we display
+			 * hashqualclauses instead of hashclauses.
+			 */
+			List *cond_to_show = res_join->hashclauses;
+			if (list_length(res_join->hashqualclauses) > 0) {
+				cond_to_show = res_join->hashqualclauses;
+			}
+			show_upper_qual(cond_to_show,
+							"Hash Cond",
+							"outer", outerPlan(plan),
+							"inner", innerPlan(plan),
+							str, indent, es);
+			show_upper_qual(res_join->join.joinqual,
 							"Join Filter",
 							"outer", outerPlan(plan),
 							"inner", innerPlan(plan),

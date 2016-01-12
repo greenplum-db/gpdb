@@ -764,6 +764,17 @@ _outHashJoin(StringInfo str, HashJoin *node)
 
 #ifndef COMPILING_BINARY_FUNCS
 static void
+_outResilientJoin(StringInfo str, ResilientJoin *node)
+{
+	WRITE_NODE_TYPE("RESILIENTJOIN");
+
+	_outJoinPlanInfo(str, (Join *) node);
+
+	WRITE_NODE_FIELD(hashclauses);
+	WRITE_NODE_FIELD(hashqualclauses);
+}
+
+static void
 _outAgg(StringInfo str, Agg *node)
 {
 	int			i;
@@ -4279,6 +4290,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_HashJoin:
 				_outHashJoin(str, obj);
+				break;
+			case T_ResilientJoin:
+				_outResilientJoin(str, obj);
 				break;
 			case T_Agg:
 				_outAgg(str, obj);

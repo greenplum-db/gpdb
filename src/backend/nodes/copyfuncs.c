@@ -781,6 +781,28 @@ _copyHashJoin(HashJoin *from)
 }
 
 /*
+ * _copyResilientJoin
+ */
+static ResilientJoin *
+_copyResilientJoin(ResilientJoin *from)
+{
+	ResilientJoin   *newnode = makeNode(ResilientJoin);
+
+	/*
+	 * copy node superclass fields
+	 */
+	CopyJoinFields((Join *) from, (Join *) newnode);
+
+	/*
+	 * copy remainder of node
+	 */
+	COPY_NODE_FIELD(hashclauses);
+	COPY_NODE_FIELD(hashqualclauses);
+
+	return newnode;
+}
+
+/*
  * _copyShareInputScan
  */
 static ShareInputScan *
@@ -4367,6 +4389,9 @@ copyObject(void *from)
 			break;
 		case T_HashJoin:
 			retval = _copyHashJoin(from);
+			break;
+		case T_ResilientJoin:
+			retval = _copyResilientJoin(from);
 			break;
 		case T_ShareInputScan:
 			retval = _copyShareInputScan(from);

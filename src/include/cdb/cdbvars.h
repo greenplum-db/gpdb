@@ -755,6 +755,9 @@ extern bool gp_adjust_selectivity_for_outerjoins;
 extern int gp_hashjoin_tuples_per_bucket;
 extern int gp_hashagg_groups_per_bucket;
 
+/* Defines the strategy to use to spill buckets in resilient join */
+extern int resilientjoin_spill_strategy;
+
 /*
  * Capping the amount of memory used for metadata (buckets and batches pointers)
  * for spilling HashJoins. This is in addition to the operator memory quota,
@@ -1042,7 +1045,9 @@ extern bool gpvars_assign_gp_enable_gpperfmon(bool newval, bool doit, GucSource 
 extern bool gpvars_assign_gp_gpperfmon_send_interval(int newval, bool doit, GucSource source);
 extern bool gp_enable_gpperfmon;
 extern int gp_gpperfmon_send_interval;
-extern bool force_bitmap_table_scan;
+extern bool force_new_join;
+extern bool enable_resilient_join;
+extern bool enable_resilient_join_partition_tuning;
 
 extern bool dml_ignore_target_partition_check;
 

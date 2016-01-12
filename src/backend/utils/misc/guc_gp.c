@@ -460,6 +460,9 @@ bool		enable_seqscan = true;
 bool		enable_indexscan = true;
 bool		enable_bitmapscan = true;
 bool		force_bitmap_table_scan = false;
+bool		force_new_join = false;
+bool		enable_resilient_join = false;
+bool		enable_resilient_join_partition_tuning = true;
 bool		enable_tidscan = true;
 bool		enable_sort = true;
 bool		enable_hashagg = true;
@@ -686,6 +689,33 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&force_bitmap_table_scan,
 		false, NULL, NULL
+	},
+	{
+		{"force_new_join", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Forces resilient join instead of the original hash join."),
+			NULL,
+			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&force_new_join,
+		false, NULL, NULL
+	},
+	{
+		{"enable_resilient_join", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Instructs optimizer to use resilient join instead of hash join."),
+			NULL,
+			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&enable_resilient_join,
+		false, NULL, NULL
+	},
+	{
+		{"enable_resilient_join_partition_tuning", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enables partition tuning in resilient join."),
+			NULL,
+			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&enable_resilient_join_partition_tuning,
+		true, NULL, NULL
 	},
 	{
 		{"gp_workfile_faultinject", PGC_SUSET, DEVELOPER_OPTIONS,
@@ -4277,6 +4307,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_hashjoin_metadata_memory_percent,
 		20, 0, INT_MAX, NULL, NULL
+	},
+
+	{
+		{"resilientjoin_spill_strategy", PGC_USERSET, GP_ARRAY_TUNING,
+		gettext_noop("Strategy to use to spill buckets. 0: spill largest buckets, 1: spill group of buckets"),
+		NULL,
+		GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL | GUC_GPDB_ADDOPT
+		},
+		&resilientjoin_spill_strategy,
+		0, 0, 1, NULL, NULL
 	},
 
 	{

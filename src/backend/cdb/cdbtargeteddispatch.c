@@ -504,6 +504,7 @@ AssignContentIdsToPlanData_Walker(Node *node, void *context)
 			case T_NestLoop:
 			case T_MergeJoin:
 			case T_HashJoin:
+			case T_ResilientJoin:
 				/* join: no change to dispatchInfo --> just iterate children */
 				/* note that we could want to look at the join qual but constant checks should have been pushed
 				 * down to the underlying scans so we shouldn't learn anything */

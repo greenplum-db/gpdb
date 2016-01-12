@@ -2569,6 +2569,7 @@ sendInitGpmonPkts(Plan *node, EState *estate)
 		case T_NestLoop:
 		case T_MergeJoin:
 		case T_HashJoin:
+		case T_ResilientJoin:
 		{
 			initGpmonPktFuncs[nodeTag(node) - T_Plan_Start](node, &gpmon_pkt, estate);
 			sendInitGpmonPkts(outerPlan(node), estate);
