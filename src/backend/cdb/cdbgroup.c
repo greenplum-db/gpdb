@@ -6091,12 +6091,15 @@ within_agg_join_plans(PlannerInfo *root,
 {
 	Plan		   *result_plan;
 	ListCell	   *l;
-	int				idx;
 	List		   *join_tlist;
 	List		   *join_clause;
+	Oid			   *mergefamilies;
+	int			   *mergestrategies;
+	bool		   *mergenullsfirst;
 	const Index		Outer = 1, Inner = 2;
 	List		   *extravars;
 	Var			   *pc_var, *tc_var;
+	int				ngroups;
 
 	/*
 	 * Up to now, these should've been prepared.
@@ -6104,44 +6107,13 @@ within_agg_join_plans(PlannerInfo *root,
 	Assert(wag_context->pc_pos > 0);
 	Assert(wag_context->tc_pos > 0);
 
+	ngroups = list_length(root->parse->groupClause);
+	if (list_length(wag_context->current_pathkeys) < ngroups)
+		elog(ERROR, "fewer pathkeys than join clauses");
+
 	/*
 	 * Build target list for grouping columns.
-	 */
-	join_clause = NIL;
-	foreach_with_count (l, root->parse->groupClause, idx)
-	{
-		GroupClause	   *gc = (GroupClause*) lfirst(l);
-		TargetEntry	   *tle;
-		Var			   *outer_var,
-					   *inner_var;
-		RestrictInfo   *rinfo;
-
-		/*
-		 * Construct outer group keys.
-		 */
-		tle = get_sortgroupclause_tle(gc, outer_plan->targetlist);
-		Assert(tle && IsA(tle->expr, Var));
-		outer_var = makeVar(Outer, tle->resno,
-							exprType((Node *) tle->expr),
-							exprTypmod((Node *) tle->expr), 0);
-
-		/*
-		 * Construct inner group keys.
-		 */
-		tle = get_tle_by_resno(inner_plan->targetlist, idx + 1);
-		Assert(tle && IsA(tle->expr, Var));
-		inner_var = makeVar(Inner, tle->resno,
-							exprType((Node *) tle->expr),
-							exprTypmod((Node *) tle->expr), 0);
-
-		/*
-		 * Make join clause for group keys.
-		 */
-		rinfo = make_mergeclause((Node *) outer_var, (Node *) inner_var);
-		join_clause = lappend(join_clause, rinfo);
-	}
-
-	/*
+	 *
 	 * This is similar to make_subplanTargetList(), but things are much simpler.
 	 * Note that this makes sure that expressions like SRF are going to be
 	 * in the upper aggregate target list rather than in this join target list.
@@ -6224,22 +6196,51 @@ within_agg_join_plans(PlannerInfo *root,
 	 * We choose cartesian product if there is no join clauses, meaning
 	 * no grouping happens.
 	 */
-	if (list_length(join_clause) > 0)
+	if (ngroups > 0)
 	{
-		Oid		   *mergefamilies = palloc(sizeof(Oid) * list_length(join_clause));
-		int		   *mergestrategies = palloc(sizeof(int) * list_length(join_clause));
-		bool	   *mergenullsfirst = palloc(sizeof(bool) * list_length(join_clause));
-		ListCell   *l;
-		int			i = 0;
+		int				idx;
+		ListCell	   *lg;
+		ListCell	   *lpk;
 
-		foreach(l, join_clause)
+		/* Build merge join clauses for grouping columns */
+		mergefamilies = (Oid *) palloc(ngroups * sizeof(Oid));
+		mergestrategies = (int *) palloc(ngroups * sizeof(int));
+		mergenullsfirst = (bool *) palloc(ngroups * sizeof(bool));
+		join_clause = NIL;
+		idx = 0;
+		forboth(lg, root->parse->groupClause, lpk, wag_context->current_pathkeys)
 		{
-			mergefamilies[i] = linitial_oid(join_clause);
-			mergestrategies[i] = BTLessStrategyNumber;
-			mergenullsfirst[i] = false;
-			i++;
-		}
+			GroupClause	   *gc = (GroupClause *) lfirst(lg);
+			PathKey		   *pk = (PathKey *) lfirst(lpk);
+			TargetEntry	   *tle;
+			Var			   *outer_var,
+						   *inner_var;
+			RestrictInfo   *rinfo;
 
+			/* Construct outer group key. */
+			tle = get_sortgroupclause_tle(gc, outer_plan->targetlist);
+			Assert(tle && IsA(tle->expr, Var));
+			outer_var = makeVar(Outer, tle->resno,
+								exprType((Node *) tle->expr),
+								exprTypmod((Node *) tle->expr), 0);
+
+			/* Construct inner group keys. */
+			tle = get_tle_by_resno(inner_plan->targetlist, idx + 1);
+			Assert(tle && IsA(tle->expr, Var));
+			inner_var = makeVar(Inner, tle->resno,
+								exprType((Node *) tle->expr),
+								exprTypmod((Node *) tle->expr), 0);
+
+			/* Make join clause for them. */
+			rinfo = make_mergeclause((Node *) outer_var, (Node *) inner_var);
+			join_clause = lappend(join_clause, rinfo);
+
+			/* Also fill in the mergefamilies/mergestrategis/mergenullsfirst arrays for this */
+			mergefamilies[idx] = pk->pk_opfamily;
+			mergestrategies[idx] = pk->pk_strategy;
+			mergenullsfirst[idx] = pk->pk_nulls_first;
+			idx++;
+		}
 		join_clause = get_actual_clauses(join_clause);
 		result_plan = (Plan *) make_mergejoin(join_tlist,
 											  NIL,
