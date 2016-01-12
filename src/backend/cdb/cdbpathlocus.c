@@ -711,8 +711,6 @@ bool
 cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist)
 {
     ListCell       *partkeycell;
-    ListCell       *pathkeycell;
-    PathKey        *item;
 
     Assert(cdbpathlocus_is_valid(locus));
 
@@ -747,32 +745,26 @@ cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist)
 		{
             List       *pathkeylist = (List *)lfirst(partkeycell);
             ListCell   *pathkeylistcell;
+			bool		found = false;
             foreach(pathkeylistcell, pathkeylist)
             {
                 /* Does some expr in pathkey match some item in exprlist? */
-                List *pathkey = (List *)lfirst(pathkeylistcell);
-                foreach(pathkeycell, pathkey)
-                {
-					bool found = false;
-					ListCell *i;
-                    item = (PathKey *)lfirst(pathkeycell);
-                    Assert(IsA(item, PathKey));
-					foreach(i, item->pk_eclass->ec_members)
+				PathKey *item = (PathKey *) lfirst(pathkeylistcell);
+				ListCell *i;
+				Assert(IsA(item, PathKey));
+				foreach(i, item->pk_eclass->ec_members)
+				{
+					EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
+					if (list_member(exprlist, em->em_expr))
 					{
-						EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
-						if (list_member(exprlist, em->em_expr))
-						{
-							found = true;
-							break;
-						}
-					}
-					if (found)
+						found = true;
 						break;
+					}
                 }
-                if (pathkeycell)
-                    break;
+				if (found)
+					break;
             }
-            if (!pathkeylistcell)
+            if (!found)
                 return false;
         }
 		/* Every column of the partkey contains an expr in exprlist. */
@@ -805,7 +797,6 @@ cdbpathlocus_is_hashed_on_relids(CdbPathLocus locus, Bitmapset *relids)
 {
     ListCell       *partkeycell;
     ListCell       *pathkeycell;
-    PathKey        *item;
 
     Assert(cdbpathlocus_is_valid(locus));
 
@@ -839,37 +830,29 @@ cdbpathlocus_is_hashed_on_relids(CdbPathLocus locus, Bitmapset *relids)
 	    foreach(partkeycell, locus.partkey_oj)
 		{
 			bool		found = false;
-            List       *pathkeylist = (List *)lfirst(partkeycell);
+            List       *pathkeylist = (List *) lfirst(partkeycell);
             ListCell   *pathkeylistcell;
             foreach(pathkeylistcell, pathkeylist)
             {
-				List           *pathkey;
-
                 /* Does pathkey contain a Var whose varno is in relids? */
-                pathkey = (List *) lfirst(pathkeylistcell);
-                foreach(pathkeycell, pathkey)
-                {
-					ListCell *i;
+				PathKey        *item = (PathKey *)lfirst(pathkeylistcell);
+				ListCell *i;
 
-                    item = (PathKey *)lfirst(pathkeycell);
-                    Assert(IsA(item, PathKey));
+				Assert(IsA(item, PathKey));
 
-					foreach(i, item->pk_eclass->ec_members)
+				foreach(i, item->pk_eclass->ec_members)
+				{
+					EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
+					if (IsA(em->em_expr, Var) && bms_is_subset(em->em_relids, relids))
 					{
-						EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
-						if (IsA(em->em_expr, Var) && bms_is_subset(em->em_relids, relids))
-						{
-							found = true;
-							break;
-						}
-					}
-					if (found)
+						found = true;
 						break;
-                }
-                if (pathkeycell)
-                    break;
+					}
+				}
+				if (found)
+					break;
             }
-            if (!pathkeylistcell)
+            if (!found)
                 return false;
         }
 		/* Every column of the partkey contains a Var whose varno is in relids. */

@@ -266,30 +266,6 @@ invalid_motion_request:
     return NULL;
 }                               /* cdbpath_create_motion_path */
 
-
-/*
- * cdbpath_partkeyitem_eq_constant
- */
-static inline PathKey *
-cdbpath_partkeyitem_eq_constant(CdbLocusType   locustype,
-                                 List          *partkeyitem)
-{
-    if (locustype == CdbLocusType_Hashed || locustype == CdbLocusType_HashedOJ)
-    {
-        ListCell   *cell;
-        foreach(cell, partkeyitem)
-        {
-            PathKey *pathkey = (PathKey*) lfirst(cell);
-            if (CdbPathkeyEqualsConstant(pathkey))
-                return pathkey;
-        }
-    }
-    else
-        Assert(false);
-    return NULL;
-}                               /* cdbpath_partkeyitem_eq_constant */
-
-
 /*
  * cdbpath_match_preds_to_partkey_tail
  *
@@ -316,11 +292,7 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext   *ctx,
                                     ListCell                   *partkeycell)
 {
     PathKey    *copathkey;
-    List       *sublist;
     ListCell   *rcell;
-
-    /* Get current item of partkey. */
-    sublist = (List *)lfirst(partkeycell);
 
     /* Is there a "<partkey item> = <constant expr>" predicate?
      *
@@ -332,7 +304,31 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext   *ctx,
      *  (Note that "T.D = <constant expr>" won't be in the mergeclause_list
      *  because it isn't a join pred.)
      */
-    copathkey = cdbpath_partkeyitem_eq_constant(ctx->locus.locustype, sublist);
+
+	copathkey = NULL;
+	if (ctx->locus.locustype == CdbLocusType_Hashed)
+	{
+		PathKey *pathkey = (PathKey *) lfirst(partkeycell);
+		if (CdbPathkeyEqualsConstant(pathkey))
+			copathkey = pathkey;
+	}
+	else if (ctx->locus.locustype == CdbLocusType_HashedOJ)
+    {
+		List	   *sublist = (List *) lfirst(partkeycell);
+        ListCell   *cell;
+        foreach(cell, sublist)
+        {
+            PathKey *pathkey = (PathKey*) lfirst(cell);
+
+            if (CdbPathkeyEqualsConstant(pathkey))
+			{
+                copathkey = pathkey;
+				break;
+			}
+        }
+    }
+	else
+		elog(ERROR, "unexpected locus type: %u", ctx->locus.locustype);
 
     /* Look for an equijoin comparison to the partkey item. */
     if (!copathkey)
@@ -345,22 +341,25 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext   *ctx,
 			if (!rinfo->left_ec)
 				cache_mergeclause_eclasses(ctx->root, rinfo);
 
-			foreach(i, sublist)
+			if (CdbPathLocus_IsHashed(ctx->locus))
 			{
-				PathKey *pathkey = (PathKey *) lfirst(i);
-				if (CdbPathLocus_IsHashed(ctx->locus))
+				PathKey *pathkey = (PathKey *) lfirst(partkeycell);
+				if (pathkey->pk_eclass == rinfo->left_ec)
+					copathkey = pathkey;
+				else if (pathkey->pk_eclass == rinfo->right_ec)
+					copathkey = pathkey;
+			}
+			else if (CdbPathLocus_IsHashed(ctx->locus))
+			{
+				List *sublist = (List *) lfirst(partkeycell);
+
+				foreach(i, sublist)
 				{
+					PathKey *pathkey = (PathKey *) lfirst(i);
 					if (pathkey->pk_eclass == rinfo->left_ec)
-						copathkey = rinfo->right_ec;
-					else if (pathkey->pk_eclass == rinfo->right_ec)
-						copathkey = rinfo->left_ec;
-				}
-				else if (CdbPathLocus_IsHashedOJ(ctx->locus))
-				{
-					if (pathkey->pk_eclass == rinfo->left_ec)
-						copathkey = rinfo->right_ec;
+						copathkey = pathkey;
 					else if (rinfo->left_ec != rinfo->right_ec && pathkey->pk_eclass == rinfo->right_ec)
-						copathkey = rinfo->left_ec;
+						copathkey = pathkey;
 				}
 			}
 
@@ -374,7 +373,7 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext   *ctx,
     }
 
     /* Might need to build co-locus if locus is outer join source or result. */
-    if (copathkey != sublist)
+    if (copathkey != lfirst(partkeycell))
         ctx->colocus_eq_locus = false;
 
     /* Match remaining partkey items. */
