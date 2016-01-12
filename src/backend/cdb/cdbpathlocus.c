@@ -443,7 +443,9 @@ cdbpathlocus_get_partkey_exprs(CdbPathLocus     locus,
 			foreach(i, item->pk_eclass->ec_members)
 			{
 				EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
-				result = lappend(result, copyObject(em->em_expr));
+
+				if (bms_is_subset(em->em_relids, relids))
+					result = lappend(result, copyObject(em->em_expr));
 			}
 		}
 		return result;
@@ -454,17 +456,27 @@ cdbpathlocus_get_partkey_exprs(CdbPathLocus     locus,
 		{
 			List       *pathkeylist = (List *)lfirst(partkeycell);
 			ListCell   *pathkeylistcell;
+			PathKey	   *item = NULL;
 
 			foreach(pathkeylistcell, pathkeylist)
 			{
 				PathKey	   *pathkey = (PathKey *) lfirst(pathkeylistcell);
-				PathKey	   *item;
 
 				item = cdbpullup_findPathKeyInTargetList(pathkey,
 														 targetlist,
 														 NULL);
 				if (item)
 					break;
+			}
+			if (item)
+			{
+				foreach(i, item->pk_eclass->ec_members)
+				{
+					EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
+
+					if (bms_is_subset(em->em_relids, relids))
+						result = lappend(result, copyObject(em->em_expr));
+				}
 			}
 		}
 		return result;
