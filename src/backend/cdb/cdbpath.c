@@ -505,23 +505,13 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo   *root,
             /* Skip predicate if neither side matches outer partkey item. */
             if (CdbPathLocus_IsHashed(outer_locus))
             {
-				ListCell *i;
-				foreach(i, outersublist)
-				{
-					PathKey *pathkey = (PathKey *) lfirst(i);
-					if (pathkey->pk_eclass != rinfo->left_ec && pathkey->pk_eclass != rinfo->right_ec)
-					{
-						not_found = true;
-						break;
-					}
-				}
-				if (not_found)
-					continue;
+				PathKey *pathkey = (PathKey *) outer_partkey;
+				if (pathkey->pk_eclass != rinfo->left_ec && pathkey->pk_eclass != rinfo->right_ec)
+					break;
             }
             else
             {
-                Assert(CdbPathLocus_IsHashedOJ(outer_locus));
-
+				Assert(CdbPathLocus_IsHashedOJ(outer_locus));
 				ListCell *i;
 				foreach(i, outersublist)
 				{
@@ -541,18 +531,9 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo   *root,
             {}                  /* do nothing */
             else if (CdbPathLocus_IsHashed(inner_locus))
             {
-				ListCell *i;
-				foreach(i, innersublist)
-				{
-					PathKey *pathkey = (PathKey *) lfirst(i);
-					if (pathkey->pk_eclass != rinfo->left_ec && pathkey->pk_eclass != rinfo->right_ec)
-					{
-						not_found = true;
-						break;
-					}
-				}
-				if (not_found)
-					continue;
+				PathKey *pathkey = (PathKey *) inner_partkey;
+				if (pathkey->pk_eclass != rinfo->left_ec && pathkey->pk_eclass != rinfo->right_ec)
+					break;
             }
             else
             {
