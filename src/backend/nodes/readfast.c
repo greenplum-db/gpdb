@@ -226,6 +226,7 @@ _readQuery(void)
 	READ_BOOL_FIELD(hasAggs);
 	READ_BOOL_FIELD(hasBypassPreprocess);
 	READ_NODE_FIELD(bypassPreprocessFunctionArgs);
+	READ_INT_FIELD(loMode);
 	READ_BOOL_FIELD(hasWindFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
 	READ_NODE_FIELD(rtable);
@@ -1461,6 +1462,7 @@ _readPlannedStmt(void)
 	READ_BOOL_FIELD(transientPlan);
 	READ_BOOL_FIELD(bypassPreprocess);
 	READ_NODE_FIELD(bypassPreprocessFuncArgs);
+	READ_INT_FIELD(loMode);
 	READ_NODE_FIELD(planTree);
 	READ_NODE_FIELD(rtable);
 	READ_NODE_FIELD(resultRelations);

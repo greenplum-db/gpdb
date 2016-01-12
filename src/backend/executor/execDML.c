@@ -347,8 +347,34 @@ ExecInsert(TupleTableSlot *slot,
 	  /* Specific hack for lo_create. Please modify for any new functions that use this machinery */
 	  Assert(list_length(args_list) == 1);
 
-	  /* Parser should have set list values as OID parameters for this function */
-	  inv_create(linitial_oid(args_list));
+	  if (estate->loMode == 1)
+	  {
+	    Oid arg_value = linitial_oid(args_list);
+
+            /* Parser should have set list values as OID parameters for this func\
+	       tion */
+	    inv_create(arg_value);
+	  }
+	  else if (estate->loMode == 2)
+	  {
+	    int attnum;
+	    int arg_value;
+	    bool isnull;
+
+	    attnum = -1;
+	    arg_value = -1;
+	    isnull = false;
+
+	    attnum = linitial_int(args_list);
+
+	    Assert(attnum != -1);
+
+	    arg_value = DatumGetUInt32(slot_getattr(slot, attnum, &isnull));
+
+	    Assert (isnull != true);
+	  /* Parser should have set list values as Var attno for this function */
+	  inv_create(arg_value);
+	  }
 	}
 
 	/*

@@ -1521,7 +1521,43 @@ getFuncArgs(ParseState *pstate, List *exprlist)
 	    }
 	  }
       }
+      else if (IsA(e, TargetEntry))
+      {
+	TargetEntry *te = (TargetEntry *) (e);
+	Expr *expr_internal = (Expr *) (te->expr);
+
+	if (IsA(expr_internal, FuncExpr))
+	{
+	  FuncExpr *fe_expr = (FuncExpr *) (expr_internal);
+	  ListCell *lc_internal;
+
+	  foreach(lc_internal, fe_expr->args)
+	  {
+	    Node *node_internal = (Node *) (lfirst(lc_internal));
+
+	    if (IsA(node_internal, RelabelType))
+	    {
+	      RelabelType *rel_type = (RelabelType *) (node_internal);
+
+	      if (IsA((rel_type->arg), Var))
+	      {
+		  Var *var_internal = (Var *) (rel_type->arg);
+
+		  if (pstate->p_bypasspreprocessfuncargs == NIL)
+		  {
+		    pstate->p_bypasspreprocessfuncargs = list_make1_int((var_internal->varattno));
+		  }
+		  else
+		  {
+		    pstate->p_bypasspreprocessfuncargs = lappend_int(pstate->p_bypasspreprocessfuncargs, (var_internal->varattno));
+		  }
+	      }
+	    }
+	  }
+	}
+      }
   }
+
 
   /* CDB: Pop error location stack. */
   Assert(pstate->p_breadcrumb.pop == &savebreadcrumb);

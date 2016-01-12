@@ -992,6 +992,13 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 		selectQuery = transformStmt(sub_pstate, stmt->selectStmt,
 									extras_before, extras_after);
 
+		if (selectQuery->hasBypassPreprocess)
+		{
+		  qry->hasBypassPreprocess = true;
+		  qry->bypassPreprocessFunctionArgs = selectQuery->bypassPreprocessFunctionArgs;
+		  qry->loMode = 2;
+		}
+
 		release_pstate_resources(sub_pstate);
 		free_parsestate(sub_pstate);
 
@@ -1064,6 +1071,7 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 			{
 			  qry->hasBypassPreprocess = true;
 			  qry->bypassPreprocessFunctionArgs = pstate->p_bypasspreprocessfuncargs;
+			  qry->loMode = 1;
 			}
 
 			/*
@@ -1161,6 +1169,7 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 		{
                   qry->hasBypassPreprocess = true;
 		  qry->bypassPreprocessFunctionArgs = pstate->p_bypasspreprocessfuncargs;
+		  qry->loMode = 1;
 		}
 
 		/* Prepare row for assignment to target table */
@@ -4527,6 +4536,14 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 
 	/* transform targetlist */
 	qry->targetList = transformTargetList(pstate, stmt->targetList);
+
+	if (pstate->p_bypasspreprocess)
+	{
+	  getFuncArgs(pstate, qry->targetList);
+
+	  qry->hasBypassPreprocess = true;
+	  qry->bypassPreprocessFunctionArgs = pstate->p_bypasspreprocessfuncargs;
+	}
 
 	/* mark column origins */
 	markTargetListOrigins(pstate, qry->targetList);

@@ -61,6 +61,7 @@ typedef struct QueryDesc
 	bool		extended_query;   /* simple or extended query protocol? */
         bool            late_execfunc;   /* if late execution of function is true */
         List            *late_execfunc_funcargs;    /* arguments of late function execution function */
+        int             loMode;    /* 1 for constant parameters, 2 for subquery select */
 	char		*portal_name;	/* NULL for unnamed portal */
 	
 	/* CDB: EXPLAIN ANALYZE statistics */
