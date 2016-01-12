@@ -282,6 +282,7 @@ ProcessQuery(Portal portal,
 	{
           queryDesc->late_execfunc = true;
 	  queryDesc->late_execfunc_funcargs = stmt->bypassPreprocessFuncArgs;
+	  queryDesc->loMode = stmt->loMode;
 	}
 
 	/*

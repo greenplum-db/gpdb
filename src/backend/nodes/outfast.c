@@ -329,6 +329,7 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_BOOL_FIELD(transientPlan);
 	WRITE_BOOL_FIELD(bypassPreprocess);
 	WRITE_NODE_FIELD(bypassPreprocessFuncArgs);
+	WRITE_INT_FIELD(loMode);
 
 	WRITE_NODE_FIELD(planTree);
 
@@ -906,6 +907,7 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_BOOL_FIELD(hasAggs);
 	WRITE_BOOL_FIELD(hasBypassPreprocess);
 	WRITE_NODE_FIELD(bypassPreprocessFunctionArgs);
+	WRITE_INT_FIELD(loMode);
 	WRITE_BOOL_FIELD(hasWindFuncs);
 	WRITE_BOOL_FIELD(hasSubLinks);
 	WRITE_NODE_FIELD(rtable);

@@ -367,6 +367,7 @@ _readQuery(void)
 	READ_BOOL_FIELD(hasAggs);
 	READ_BOOL_FIELD(hasBypassPreprocess);
 	READ_NODE_FIELD(bypassPreprocessFunctionArgs);
+	READ_INT_FIELD(loMode);
 	READ_BOOL_FIELD(hasWindFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
 	READ_NODE_FIELD(rtable);
