@@ -647,20 +647,20 @@ Feature: Validate command line arguments
         And the timestamp from gpcrondump is stored
         When the user runs gpdbrestore with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print Restore type               = Full Database to stdout
+        And gpdbrestore should print Restore type              = Full Database to stdout
         When the user runs "gpdbrestore -T public.ao_index_table -a" with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print Restore type               = Table Restore to stdout
+        And gpdbrestore should print Restore type              = Table Restore to stdout
         And table "public.ao_index_table" is assumed to be in dirty state in "fullbkdb"
         When the user runs "gpcrondump -a -x fullbkdb --incremental"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         When the user runs gpdbrestore with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print Restore type               = Incremental Restore to stdout
+        And gpdbrestore should print Restore type              = Incremental Restore to stdout
         When the user runs "gpdbrestore -T public.ao_index_table -a" with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print Restore type               = Incremental Table Restore to stdout
+        And gpdbrestore should print Restore type              = Incremental Table Restore to stdout
 
     Scenario: Output info gpcrondump
         Given the database is running
@@ -1621,7 +1621,7 @@ Feature: Validate command line arguments
         And verify that there is a "heap" table "gpcrondump_history" in "schematestdb"
         And verify that the table "gpcrondump_history" in "schematestdb" has dump info for the stored timestamp
 
-     @backupfire
+    @backupfire
     Scenario: Verify gpdbrestore -s option with full backup
         Given the database is running
         And the database "testdb1" does not exist
@@ -1646,8 +1646,8 @@ Feature: Validate command line arguments
         And verify that the tuple count of all appendonly tables are consistent in "testdb1"
         And verify that database "testdb2" does not exist
 
-     @backupfire
-    Scenario: Verify gpdbrestore -s option with incremental backup
+    @backupfire
+    Scenario: Verify gpdbrestore -s option with incremental backup 
         Given the database is running
         And the database "testdb1" does not exist
         And the database "testdb2" does not exist
@@ -2391,9 +2391,9 @@ Feature: Validate command line arguments
         Then gpcrondump should print --inserts, --column-inserts, --oids cannot be selected with incremental backup to stdout
         And gpcrondump should return a return code of 2
         Examples:
-        | options          |
+        | options         |
         | --inserts        |
-        | --oids           |
+        | --oids          |
         | --column-inserts |
 
     Scenario: Test gpcrondump and gpdbrestore verbose option
@@ -3530,8 +3530,8 @@ Feature: Validate command line arguments
         When the user runs "gpcrondump -x testdb --prefix=foo --incremental  < gppylib/test/behave/mgmt_utils/steps/data/yes.txt"
         Then gpcrondump should return a return code of 0
         And gpcrondump should print Filtering tables using: to stdout
-        And gpcrondump should print Prefix                        = foo to stdout
-        And gpcrondump should print Full dump timestamp           = [0-9]{14} to stdout
+        And gpcrondump should print Prefix                       = foo to stdout
+        And gpcrondump should print Full dump timestamp          = [0-9]{14} to stdout
         And the timestamp from gpcrondump is stored
         And the timestamp from gpcrondump is stored in a list
         And the user runs "gpcrondump -x testdb --incremental --prefix=foo -a --list-filter-tables"
