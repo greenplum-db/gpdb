@@ -60,7 +60,6 @@ Feature: Validate command line arguments
         And gpcrondump should print noanalyze to stdout
 
     @backupfire
-    @slb
     Scenario: Schema level backup With Table filters
         Given the database is running
         And the database "bkdb" does not exist
@@ -139,7 +138,6 @@ Feature: Validate command line arguments
         And the user runs "psql -c 'drop schema schema_heap cascade;' bkdb"
 
     @backupfire
-    @truncate
     Scenario: gpdbrestore with --truncate option
         When the user runs "gpdbrestore -t 20140101010101 --truncate -a"
         Then gpdbrestore should return a return code of 2
@@ -520,7 +518,6 @@ Feature: Validate command line arguments
         And verify that there is a "heap" table "heap_table" in "fullbkdb" with data
         And verify that there is a "ao" table "ao_part_table" in "fullbkdb" with data
 
-    @meta
     Scenario: Metadata-only restore
         Given the database is running
         And database "fullbkdb" is created if not exists on host "None" with port "PGPORT" with user "None"
@@ -536,7 +533,6 @@ Feature: Validate command line arguments
         And the table names in "fullbkdb" is stored
         And tables in "fullbkdb" should not contain any data
 
-    @meta
     Scenario: Metadata-only restore with global objects (-G)
         Given the database is running
         And database "fullbkdb" is created if not exists on host "None" with port "PGPORT" with user "None"
@@ -692,7 +688,6 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And "global" file should be created under " "
 
-    @Gonly
     Scenario: Backup and restore with -G only
         Given the database is running
         And there are no backup files
@@ -1869,7 +1864,6 @@ Feature: Validate command line arguments
         And verify that there is a "ao" table "public.ao_index_table" in "fullbkdb" with data
 
     @backupfire
-    @truncate
     Scenario: Full backup and restore with -T and --truncate
         Given the database is running
         And the database "fullbkdb" does not exist
@@ -1889,7 +1883,6 @@ Feature: Validate command line arguments
         And gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_part_table" in "fullbkdb" with data
 
-    @truncate
     Scenario: Full backup and restore with -T and --truncate with dropped table
         Given the database is running
         And the database "fullbkdb" does not exist
@@ -2937,7 +2930,6 @@ Feature: Validate command line arguments
         And there are no dump files created under " "
 
     @backupsmoke
-    @filter
     Scenario: --list-backup-files option for dump with --prefix and filtering
         Given the database is running
         And there are no backup files
@@ -3506,7 +3498,6 @@ Feature: Validate command line arguments
         And gpdbrestore should return a return code of 0
         And verify that the data of "11" tables in "testdb" is validated after restore
 
-    @filter
     @backupsmoke
     Scenario: Incremental Backup and Restore with -t filter for Full
         Given the database is running
@@ -3547,7 +3538,6 @@ Feature: Validate command line arguments
         And verify that there is no table "public.ao_part_table" in "testdb"
         And verify that there is no table "public.heap_table2" in "testdb"
 
-    @filter
     Scenario: Incremental Backup and Restore with -T filter for Full
         Given the database is running
         And the prefix "foo" is stored
@@ -3584,7 +3574,6 @@ Feature: Validate command line arguments
         And verify that there is no table "public.ao_part_table" in "testdb"
         And verify that there is no table "public.heap_table2" in "testdb"
 
-    @filter
     Scenario: Incremental Backup and Restore with --table-file filter for Full
         Given the database is running
         And the prefix "foo" is stored
@@ -3623,7 +3612,6 @@ Feature: Validate command line arguments
         And verify that there is no table "public.ao_part_table" in "testdb"
         And verify that there is no table "public.heap_table2" in "testdb"
 
-    @filter
     Scenario: Incremental Backup and Restore with --exclude-table-file filter for Full
         Given the database is running
         And the prefix "foo" is stored
@@ -3662,7 +3650,6 @@ Feature: Validate command line arguments
         And verify that there is no table "public.ao_part_table" in "testdb"
         And verify that there is no table "public.heap_table2" in "testdb"
 
-    @filter
     Scenario: Multiple Incremental Backups and Restore with -t filter for Full
         Given the database is running
         And the prefix "foo" is stored
@@ -3707,7 +3694,6 @@ Feature: Validate command line arguments
         And verify that partitioned tables "ao_part_table" in "testdb" have 6 partitions
         And verify that there is no table "public.heap_table2" in "testdb"
 
-    @filter
     Scenario: Incremental Backup and Restore with Multiple Schemas and -t filter for Full
         Given the database is running
         And the prefix "foo" is stored
@@ -3750,7 +3736,6 @@ Feature: Validate command line arguments
         And verify that there is a "ao" table "pepper.ao_table" in "testdb" with data
         And verify that there is a "co" table "pepper.co_table" in "testdb" with data
 
-    @filter
     Scenario: Multiple Full and Incremental Backups with -t filters for different prefixes in parallel
         Given the database is running
         And there are no backup files
@@ -3801,7 +3786,6 @@ Feature: Validate command line arguments
         And verify that there is no table "public.heap_table1" in "testdb"
         And verify that there is no table "public.ao_table" in "testdb"
 
-    @filter
     Scenario: Incremental Backup with table filter on Full Backup should update the tracker files
         Given the database is running
         And the prefix "foo" is stored
@@ -3839,7 +3823,6 @@ Feature: Validate command line arguments
         And verify that there is no table "public.ao_part_table" in "testdb"
         And verify that there is no table "public.heap_table2" in "testdb"
 
-    @filter
     @backupsmoke
     Scenario: Filtered Incremental Backup and Restore with -t and added partition
         Given the database is running
@@ -3875,7 +3858,6 @@ Feature: Validate command line arguments
         And verify that there is partition "3" of "ao" partition table "ao_part_table" in "testdb" in "public"
         And verify that the data of "14" tables in "testdb" is validated after restore
 
-    @filter
     Scenario: Filtered Incremental Backup and Restore with -T and added partition
         Given the database is running
         And the prefix "foo" is stored
@@ -3910,7 +3892,6 @@ Feature: Validate command line arguments
         And verify that there is partition "3" of "ao" partition table "ao_part_table" in "testdb" in "public"
         And verify that the data of "14" tables in "testdb" is validated after restore
 
-    @filter
     Scenario: Filtered Incremental Backup and Restore with -t and dropped partition
         Given the database is running
         And the prefix "foo" is stored
@@ -3944,7 +3925,6 @@ Feature: Validate command line arguments
         And verify that partitioned tables "ao_part_table" in "testdb" have 3 partitions
         And verify that the data of "6" tables in "testdb" is validated after restore
 
-    @filter
     Scenario: Filtered Incremental Backup and Restore with -T and dropped partition
         Given the database is running
         And the prefix "foo" is stored
@@ -3978,7 +3958,6 @@ Feature: Validate command line arguments
         And verify that partitioned tables "ao_part_table" in "testdb" have 3 partitions
         And verify that the data of "6" tables in "testdb" is validated after restore
 
-    @filter
     Scenario: Filtered Incremental Backup and Restore with -t and dropped non-partition and partition table
         Given the database is running
         And the prefix "foo" is stored
@@ -4016,7 +3995,6 @@ Feature: Validate command line arguments
         And verify that partitioned tables "ao_part_table1" in "testdb" have 6 partitions
         And verify that the data of "9" tables in "testdb" is validated after restore
 
-    @filter
     Scenario: Filtered Multiple Incremental Backups and Restore with -t and dropped partition between IBs
         Given the database is running
         And the prefix "foo" is stored
@@ -4770,43 +4748,6 @@ Feature: Validate command line arguments
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "heap_table" in "fullbkdb" with data
-
-    @42backupsmoke
-    @wip
-    Scenario: Full backup and restore with pending drop table transaction
-        Given the database is running
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data and 1000000 rows
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_part_table" in "fullbkdb" exists for validation
-        And all the data from "fullbkdb" is saved for verification
-        And the user drops "heap_table" in "fullbkdb" in a worker pool "w1"
-        Then the user runs the "gpcrondump -a -x fullbkdb" in a worker pool "w2"
-        And the worker pool "w2" is cleaned up
-        And the timestamp from gpcrondump is stored
-        And the worker pool "w1" is cleaned up
-        And the user runs gpdbrestore with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And verify that there is no table "heap_table" in "fullbkdb"
-        And verify that there is a "ao" table "ao_part_table" in "fullbkdb" with data
-
-    @wip
-    Scenario: Full Backup and Restore using gp_dump without no-lock
-        Given the database is running
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data and 1000000 rows
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_part_table" in "fullbkdb" exists for validation
-        When the user runs the "gp_dump --gp-d=db_dumps --gp-s=p --gp-c fullbkdb" in a worker pool "w1"
-        And this test sleeps for "1" seconds
-        And the worker pool "w1" is cleaned up
-        Then gp_dump should return a return code of 0
-        And the timestamp from gp_dump is stored and subdir is " "
-        And the database "fullbkdb" does not exist
-        And database "fullbkdb" exists
-        And the user runs gp_restore with the the stored timestamp and subdir in "fullbkdb"
-        And gp_restore should return a return code of 0
-        And verify that there is a "heap" table "heap_table" in "fullbkdb" with data
-        And verify that there is a "ao" table "ao_part_table" in "fullbkdb" with data
-        And there are no report files in the master data directory
 
     Scenario: Full Backup and Restore using gp_dump with no-lock
         Given the database is running
@@ -5818,7 +5759,6 @@ Feature: Validate command line arguments
         And the mail_contacts file does not exist
 
     @backupfire
-    @slb
     Scenario: Full Backup with multiple -S option and Restore
         Given the database is running
         And the database "fullbkdb" does not exist
@@ -5839,7 +5779,6 @@ Feature: Validate command line arguments
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "fullbkdb" with data
 
     @backupfire
-    @slb
     Scenario: Full Backup with multiple -s option and Restore
         Given the database is running
         And the database "fullbkdb" does not exist
@@ -5860,7 +5799,6 @@ Feature: Validate command line arguments
         And verify that there is no table "schema_ao.ao_part_table" in "fullbkdb"
 
     @backupfire
-    @slb
     Scenario: Full Backup with option -S and Restore
         Given the database is running
         And the database "fullbkdb" does not exist
@@ -5879,7 +5817,6 @@ Feature: Validate command line arguments
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "fullbkdb" with data
 
     @backupfire
-    @slb
     Scenario: Full Backup with option -s and Restore
         Given the database is running
         And the database "fullbkdb" does not exist
@@ -5898,7 +5835,6 @@ Feature: Validate command line arguments
         And verify that there is no table "schema_ao.ao_part_table" in "fullbkdb"
 
     @backupfire
-    @slb
     Scenario: Full Backup with option --exclude-schema-file and Restore
         Given the database is running
         And the database "fullbkdb" does not exist
@@ -5920,7 +5856,6 @@ Feature: Validate command line arguments
         And verify that there is no table "schema_heap1.heap_table" in "fullbkdb"
 
     @backupfire
-    @slb
     Scenario: Full Backup with option --schema-file and Restore
         Given the database is running
         And the database "fullbkdb" does not exist
@@ -5942,7 +5877,6 @@ Feature: Validate command line arguments
         And verify that there is no table "schema_heap1.heap_table" in "fullbkdb"
 
     @backupsmoke
-    @slb
     Scenario: Full Backup and Restore with --prefix option
         Given the database is running
         And the prefix "foo" is stored
@@ -5962,7 +5896,6 @@ Feature: Validate command line arguments
         And verify that there is a "ao" table "ao_part_table" in "testdb" with data
 
     @backupsmoke
-    @slb
     Scenario: Incremental Backup and Restore without --prefix option
         Given the database is running
         And there are no backup files
@@ -5993,8 +5926,6 @@ Feature: Validate command line arguments
         And gpdbrestore should return a return code of 0
         And verify that the data of "12" tables in "testdb" is validated after restore
 
-    @filter
-    @slb
     Scenario: Incremental Backup and Restore with -s filter for Full
         Given the database is running
         And the prefix "foo" is stored
@@ -6031,8 +5962,6 @@ Feature: Validate command line arguments
         And verify that there is no table "schema_heap.heap_table1" in "fullbkdb"
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "fullbkdb" with data
 
-    @filter
-    @slb
     Scenario: Incremental Backup and Restore with --schema-file filter for Full
         Given the database is running
         And the prefix "foo" is stored
@@ -6072,8 +6001,6 @@ Feature: Validate command line arguments
         And verify that there is a "ao" table "schema_ao.ao_index_table" in "fullbkdb" with data
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "fullbkdb" with data
 
-    @filter
-    @slb
     Scenario: Incremental Backup and Restore with --exclude-schema-file filter for Full
         Given the database is running
         And the prefix "foo" is stored
@@ -6111,8 +6038,6 @@ Feature: Validate command line arguments
         And verify that there is no table "schema_ao.ao_index_table" in "fullbkdb"
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "fullbkdb" with data
 
-    @filter
-    @slb
     Scenario: Incremental Backup and Restore with -S filter for Full
         Given the database is running
         And the prefix "foo" is stored
@@ -6154,7 +6079,6 @@ Feature: Validate command line arguments
         When the user runs "pg_dump -s -n public -f /tmp/public_pg_dump_ddl.dmp test_pg_dump"
         Then verify that function is backedup correctly in "/tmp/public_pg_dump_ddl.dmp"
 
-    @filter
     Scenario: Full Backup and Restore with option --change-schema
         Given the database is running
         And the database "fullbkdb" does not exist
@@ -6173,7 +6097,6 @@ Feature: Validate command line arguments
         And verify that there is a table "schema_new1.heap_table" of "heap" type in "fullbkdb" with same data as table "schema_heap.heap_table"
         And verify that there is a table "schema_new1.ao_part_table" of "ao" type in "fullbkdb" with same data as table "schema_ao.ao_part_table"
 
-    @filter
     Scenario: Incremental Backup and Restore with option --change-schema
         Given the database is running
         And the database "fullbkdb" does not exist
