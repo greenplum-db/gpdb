@@ -1235,6 +1235,7 @@ cdb_pull_up_pathkey(PlannerInfo    *root,
 	EquivalenceClass  *outer_ec;
 	EquivalenceMember *sub_member;
 	Expr              *newexpr;
+	ListCell	   *lc;
 
     Assert(pathkey);
     Assert(!newvarlist ||
@@ -1249,12 +1250,18 @@ cdb_pull_up_pathkey(PlannerInfo    *root,
 	if (sub_pathkey)
 	{
 		sub_eclass = (EquivalenceClass *) sub_pathkey->pk_eclass;
-		sub_member = (EquivalenceMember *) linitial(sub_eclass->ec_members);
 
-		newexpr = cdbpullup_expr((Expr *) sub_member->em_expr,
-								 targetlist,
-								 newvarlist,
-								 newrelid);
+		foreach(lc, sub_eclass->ec_members)
+		{
+			sub_member = (EquivalenceMember *) lfirst(lc);
+
+			newexpr = cdbpullup_expr((Expr *) sub_member->em_expr,
+									 targetlist,
+									 newvarlist,
+									 newrelid);
+			if (newexpr)
+				break;
+		}
 	}
 	/* If not found, see if the equiv class contains a constant expr. */
 	else if (CdbPathkeyEqualsConstant(pathkey))
