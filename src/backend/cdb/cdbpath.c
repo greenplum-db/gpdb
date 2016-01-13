@@ -504,9 +504,9 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo   *root,
             /* Skip predicate if neither side matches outer partkey item. */
             if (CdbPathLocus_IsHashed(outer_locus))
             {
-				PathKey *pathkey = (PathKey *) outer_partkey;
+				PathKey *pathkey = (PathKey *) outersublist;
 				if (pathkey->pk_eclass != rinfo->left_ec && pathkey->pk_eclass != rinfo->right_ec)
-					break;
+					continue;
             }
             else
             {
@@ -530,9 +530,9 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo   *root,
             {}                  /* do nothing */
             else if (CdbPathLocus_IsHashed(inner_locus))
             {
-				PathKey *pathkey = (PathKey *) inner_partkey;
+				PathKey *pathkey = (PathKey *) innersublist;
 				if (pathkey->pk_eclass != rinfo->left_ec && pathkey->pk_eclass != rinfo->right_ec)
-					break;
+					continue;
             }
             else
             {
