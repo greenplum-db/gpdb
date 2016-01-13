@@ -802,7 +802,7 @@ def get_hosts(dbname='template1'):
     return getRows(dbname, get_hosts_sql)
 
 def get_backup_dirs_for_hosts(dbname='template1'):
-    get_backup_dir_sql = "select f.fselocation from pg_filespace_entry f inner join gp_segment_configuration g on f.fsedbid=g.dbid and g.role='p'"
+    get_backup_dir_sql = "select hostname,f.fselocation from pg_filespace_entry f inner join gp_segment_configuration g on f.fsedbid=g.dbid and g.role='p'"
     results = getRows(dbname, get_backup_dir_sql)
     dir_map = {}
     for res in results:
