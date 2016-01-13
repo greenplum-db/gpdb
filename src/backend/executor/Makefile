@@ -45,6 +45,6 @@ OBJS = execAmi.o execGrouping.o execJunk.o execMain.o \
        execIndexscan.o \
        execHHashagg.o execGpmon.o execWorkfile.o execHeapScan.o execAOScan.o \
        execAOCSScan.o nodeBitmapAppendOnlyscan.o \
-       execTupleHashComputer.o execSimpleJoin.o execAbstractReader.o execResilientJoin.o \
+       execTupleHashComputer.o execSimpleJoin.o execAbstractReader.o execResilientJoinSpillHandler.o execResilientJoin.o \
        nodeResilientJoin.o nodeHashDummy.o
 include $(top_srcdir)/src/backend/common.mk
