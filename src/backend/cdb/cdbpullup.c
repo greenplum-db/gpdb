@@ -390,7 +390,7 @@ cdbpullup_findPathKeyInTargetList(PathKey *item, List *targetlist)
 		TargetEntry *tle;
 
 		if (em->em_is_const)
-			continue;
+			return item;
 
 		/* Ignore possible RelabelType node atop the PathKey expr. */
 		if (IsA(key, RelabelType))
