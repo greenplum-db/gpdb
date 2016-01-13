@@ -1,18 +1,15 @@
 -- Additional GPDB-added tests for UNION
 
 create temp table t_union1 (a int, b int);
-select distinct a, null as c from t_union1 union select a, b from t_union1;
 select distinct a, null::integer as c from t_union1 union select a, b from t_union1;
 drop table t_union1;
 
 select null union select distinct null;
 
-select 1 union select distinct null;
 select 1 union select distinct null::integer;
 
 select 1 a, NULL b, NULL c UNION SELECT 2, 3, NULL UNION SELECT 3, NULL, 4;
 
-select ARRAY[1, 2, 3] union select distinct null;
 select ARRAY[1, 2, 3] union select distinct null::integer[];
 
 select 1 intersect (select 1, 2 union all select 3, 4);
@@ -99,11 +96,9 @@ return result
 $$
 language plpythonu;
 
-set optimizer = on;
-
 --
 -- N-ary UNION ALL results
--- @optimizer_mode on
+--
 
 with T_constant (d1, d2) as(
 SELECT 100, 100
@@ -159,7 +154,7 @@ order by 1;
 
 --
 -- N-ary UNION ALL explain
--- @optimizer_mode on
+--
 
 select count_operator('
 explain
@@ -227,7 +222,7 @@ order by 1;'
 
 --
 -- N-ary UNION results
--- @optimizer_mode on
+--
 
 with T_constant (d1, d2) as(
 SELECT 100, 100
@@ -283,7 +278,7 @@ order by 1;
 
 --
 -- N-ary UNION explain
--- @optimizer_mode on
+--
 
 select count_operator('
 explain
@@ -351,7 +346,7 @@ order by 1;'
 
 --
 -- Binary UNION ALL results
--- @optimizer_mode on
+--
 
 (select a1 from T_a1) UNION ALL (select b1 from T_b2) order by 1;
 
@@ -393,7 +388,7 @@ UNION ALL SELECT 300, 300)
 
 --
 -- Binary UNION ALL explain
--- @optimizer_mode on
+--
 
 select count_operator('explain (select a1 from T_a1) UNION ALL (select b1 from T_b2) order by 1;', 'APPEND');
 
@@ -438,7 +433,7 @@ UNION ALL SELECT 300, 300)
 
 --
 -- Binary UNION results
--- @optimizer_mode on
+--
 
 (select a1 from T_a1) UNION (select b1 from T_b2) order by 1;
 
@@ -480,7 +475,7 @@ UNION SELECT 300, 300)
 
 --
 -- Binary UNION explain
--- @optimizer_mode on
+--
 
 select count_operator('explain (select a1 from T_a1) UNION (select b1 from T_b2) order by 1;', 'APPEND');
 
@@ -523,205 +518,6 @@ UNION SELECT 200, 200
 UNION SELECT 300, 300)
 (select d1 from T_constant) UNION (select c1 from T_random) order by 1;', 'APPEND');
 
-
-set optimizer = off;
-
---
--- N-ary UNION ALL results
--- @optimizer_mode off
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION ALL SELECT 200, 200
-UNION ALL SELECT 300, 300)
-(select a1 from T_a1)
-UNION ALL
-(select b1 from T_b2)
-UNION ALL
-(select c1 from T_random)
-UNION ALL
-(select d1 from T_constant)
-order by 1;
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION ALL SELECT 200, 200
-UNION ALL SELECT 300, 300)
-(select b1 from T_b2)
-UNION ALL
-(select a1 from T_a1)
-UNION ALL
-(select c1 from T_random)
-UNION ALL
-(select d1 from T_constant)
-order by 1;
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION ALL SELECT 200, 200
-UNION ALL SELECT 300, 300)
-(select c1 from T_random)
-UNION ALL
-(select a1 from T_a1)
-UNION ALL
-(select b1 from T_b2)
-UNION ALL
-(select d1 from T_constant)
-order by 1;
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION ALL SELECT 200, 200
-UNION ALL SELECT 300, 300)
-(select d1 from T_constant)
-UNION ALL
-(select c1 from T_random)
-UNION ALL
-(select a1 from T_a1)
-UNION ALL
-(select b1 from T_b2)
-order by 1;
-
---
--- N-ary UNION results
--- @optimizer_mode off
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION SELECT 200, 200
-UNION SELECT 300, 300)
-(select a1 from T_a1)
-UNION
-(select b1 from T_b2)
-UNION
-(select c1 from T_random)
-UNION
-(select d1 from T_constant)
-order by 1;
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION SELECT 200, 200
-UNION SELECT 300, 300)
-(select b1 from T_b2)
-UNION
-(select a1 from T_a1)
-UNION
-(select c1 from T_random)
-UNION ALL
-(select d1 from T_constant)
-order by 1;
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION SELECT 200, 200
-UNION SELECT 300, 300)
-(select c1 from T_random)
-UNION
-(select a1 from T_a1)
-UNION
-(select b1 from T_b2)
-UNION ALL
-(select d1 from T_constant)
-order by 1;
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION SELECT 200, 200
-UNION SELECT 300, 300)
-(select d1 from T_constant)
-UNION ALL
-(select c1 from T_random)
-UNION
-(select a1 from T_a1)
-UNION
-(select b1 from T_b2)
-order by 1;
-
---
--- Binary UNION ALL results
--- @optimizer_mode off
-
-(select a1 from T_a1) UNION ALL (select b1 from T_b2) order by 1;
-
-(select b1 from T_b2) UNION ALL (select a1 from T_a1) order by 1;
-
-(select a1 from T_a1) UNION ALL (select c1 from T_random) order by 1;
-
-(select c1 from T_random) UNION ALL (select a1 from T_a1) order by 1;
-
-(select * from T_a1) UNION ALL (select * from T_b2) order by 1;
-
-(select * from T_a1) UNION ALL (select * from T_random) order by 1;
-
-(select * from T_b2) UNION ALL (select * from T_random) order by 1;
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION ALL SELECT 200, 200
-UNION ALL SELECT 300, 300)
-(select a1 from T_a1) UNION ALL (select d1 from T_constant) order by 1;
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION ALL SELECT 200, 200
-UNION ALL SELECT 300, 300)
-(select d1 from T_constant) UNION ALL (select a1 from T_a1) order by 1;
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION ALL SELECT 200, 200
-UNION ALL SELECT 300, 300)
-(select c1 from T_random) UNION ALL (select d1 from T_constant) order by 1;
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION ALL SELECT 200, 200
-UNION ALL SELECT 300, 300)
-(select d1 from T_constant) UNION ALL (select c1 from T_random) order by 1;
-
---
--- Binary UNION results
--- @optimizer_mode off
-
-(select a1 from T_a1) UNION (select b1 from T_b2) order by 1;
-
-(select b1 from T_b2) UNION (select a1 from T_a1) order by 1;
-
-(select a1 from T_a1) UNION (select c1 from T_random) order by 1;
-
-(select c1 from T_random) UNION (select a1 from T_a1) order by 1;
-
-(select * from T_a1) UNION (select * from T_b2) order by 1;
-
-(select * from T_a1) UNION (select * from T_random) order by 1;
-
-(select * from T_b2) UNION (select * from T_random) order by 1;
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION SELECT 200, 200
-UNION SELECT 300, 300)
-(select a1 from T_a1) UNION (select d1 from T_constant) order by 1;
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION SELECT 200, 200
-UNION SELECT 300, 300)
-(select d1 from T_constant) UNION (select a1 from T_a1) order by 1;
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION SELECT 200, 200
-UNION SELECT 300, 300)
-(select c1 from T_random) UNION (select d1 from T_constant) order by 1;
-
-with T_constant (d1, d2) as(
-SELECT 100, 100
-UNION SELECT 200, 200
-UNION SELECT 300, 300)
-(select d1 from T_constant) UNION (select c1 from T_random) order by 1;
-
 --
 -- Clean up
 --
@@ -729,5 +525,3 @@ UNION SELECT 300, 300)
 DROP TABLE IF EXISTS T_a1 CASCADE;
 DROP TABLE IF EXISTS T_b2 CASCADE;
 DROP TABLE IF EXISTS T_random CASCADE;
-
-reset optimizer;
