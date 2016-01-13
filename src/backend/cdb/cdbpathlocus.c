@@ -432,9 +432,7 @@ cdbpathlocus_get_partkey_exprs(CdbPathLocus     locus,
 			PathKey    *pathkey = (PathKey *) lfirst(partkeycell);
 			PathKey    *item;
 
-            item = cdbpullup_findPathKeyInTargetList(pathkey,
-													 targetlist,
-													 NULL);
+            item = cdbpullup_findPathKeyInTargetList(pathkey, targetlist);
 
 			/* Fail if can't evaluate partkey in the context of this targetlist. */
 			if (!item)
@@ -462,9 +460,8 @@ cdbpathlocus_get_partkey_exprs(CdbPathLocus     locus,
 			{
 				PathKey	   *pathkey = (PathKey *) lfirst(pathkeylistcell);
 
-				item = cdbpullup_findPathKeyInTargetList(pathkey,
-														 targetlist,
-														 NULL);
+				item = cdbpullup_findPathKeyInTargetList(pathkey, targetlist);
+
 				if (item)
 					break;
 			}

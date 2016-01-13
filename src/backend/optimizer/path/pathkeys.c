@@ -1242,9 +1242,7 @@ cdb_pull_up_pathkey(PlannerInfo    *root,
            list_length(newvarlist) == list_length(targetlist));
 
 	/* Find an expr that we can rewrite to use the projected columns. */
-	sub_pathkey = cdbpullup_findPathKeyInTargetList(pathkey,
-													targetlist,
-													NULL);
+	sub_pathkey = cdbpullup_findPathKeyInTargetList(pathkey, targetlist);
 
 	/* Replace expr's Var nodes with new ones referencing the targetlist. */
 	if (sub_pathkey)

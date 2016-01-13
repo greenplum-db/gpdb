@@ -356,17 +356,8 @@ cdbpullup_exprHasSubplanRef(Expr *expr)
  * uses no rels outside the 'relids' set, and either is a member of
  * 'targetlist', or uses no Vars that are not in 'targetlist'.
  *
- * If found, returns the chosen PathKey and sets the output variables.
- * - If the item's Vars (if any) are in targetlist, but the item itself is not:
- *      *ptargetindex = 0
- * - Else if the targetlist is a List of TargetEntry nodes:
- *      *ptargetindex gets the matching TargetEntry's resno (which is the
- *          1-based position of the TargetEntry in the targetlist); or 0.
- * - Else if the targetlist is a plain List of Expr without TargetEntry nodes:
- *      *ptargetindex gets the 1-based position of the matching entry in the
- *          targetlist, or 0 if the expr is not in the targetlist.
- *
- * Otherwise returns NULL and sets *ptargetindex = 0.
+ * If found, returns the chosen PathKey and sets the output variables,
+ * otherwise returns NULL
  *
  * 'pathkey' is a List of PathKey.
  * 'targetlist' is a List of TargetEntry or merely a List of Expr.
@@ -383,13 +374,10 @@ cdbpullup_exprHasSubplanRef(Expr *expr)
  * targetlist expr.)
  */
 PathKey *
-cdbpullup_findPathKeyInTargetList(PathKey *item, List *targetlist, AttrNumber *ptargetindex)
+cdbpullup_findPathKeyInTargetList(PathKey *item, List *targetlist)
 {
 	ListCell *lc;
 	EquivalenceClass *eclass = item->pk_eclass;
-
-	if (ptargetindex)
-		*ptargetindex = 0;
 
 	/* Bail if targetlist is empty. */
 	if (!targetlist)
@@ -413,17 +401,12 @@ cdbpullup_findPathKeyInTargetList(PathKey *item, List *targetlist, AttrNumber *p
 		{
 			tle = tlist_member_ignoring_RelabelType(key, targetlist);
 			if (tle)
-			{
-				if (ptargetindex)
-					*ptargetindex = tle->resno;
 				return item;
-			}
 		}
 		/* Planner's RelOptInfo targetlists don't have TargetEntry nodes */
 		else
 		{
 			ListCell *tcell;
-			AttrNumber targetindex = 1;
 
 			foreach(tcell, targetlist)
 			{
@@ -433,12 +416,7 @@ cdbpullup_findPathKeyInTargetList(PathKey *item, List *targetlist, AttrNumber *p
 					expr = ((RelabelType *)expr)->arg;
 
 				if (equal(expr, key))
-				{
-					if (ptargetindex)
-						*ptargetindex = targetindex;
 					return item;
-				}
-				targetindex++;
 			}
 		}
 
