@@ -1969,7 +1969,7 @@ static void analyzeComputeAttributeStatistics(Relation rel,
 	}
 	else
 	{
-		stats->nullFraction = Min(spec.null_cnt / sampleTableRelTuples, 1.0);
+		stats->nullFraction = Min(spec.null_cnt / (float4)sampleTableRelTuples, 1.0);
 	}
 	
 	/* compute column width */
