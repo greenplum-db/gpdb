@@ -1518,16 +1518,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 										  sub_tlist);
 
 		/*
-		 * Calculate pathkeys that represent grouping/ordering requirements.
-		 * Stash them in PlannerInfo so that query_planner can canonicalize
-		 * them.
-		 */
-		root->group_pathkeys =
-			make_pathkeys_for_groupclause(root, parse->groupClause, tlist);
-		root->sort_pathkeys =
-			make_pathkeys_for_sortclauses(root, parse->sortClause, tlist, true);
-
-		/*
 		 * Figure out whether we need a sorted result from query_planner.
 		 *
 		 * If we have a GROUP BY clause, then we want a result sorted properly
