@@ -628,8 +628,8 @@ void tuplesort_begin_pos_mk(Tuplesortstate_mk *st, TuplesortPos_mk **pos)
     st_pos = (TuplesortPos_mk *) palloc(sizeof(TuplesortPos_mk));
     memcpy(st_pos, &(st->pos), sizeof(TuplesortPos_mk));
 
-    if(st->tapeset)
-        st_pos->cur_work_tape = LogicalTapeSetDuplicateTape(st->tapeset, st->result_tape);
+    if(st->result_tape)
+        st_pos->cur_work_tape = LogicalTapeSetDuplicateTape(st->result_tape);
 
     *pos = st_pos;
 }
@@ -2464,7 +2464,7 @@ tuplesort_markpos_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos)
         case TSS_SORTEDONTAPE:
             AssertEquivalent(pos == &state->pos, pos->cur_work_tape == NULL);	
             work_tape = pos->cur_work_tape == NULL ? state->result_tape : pos->cur_work_tape;
-            LogicalTapeTell(state->tapeset, work_tape, &pos->markpos.tapepos);
+            LogicalTapeTell(work_tape, &pos->markpos.tapepos);
             pos->markpos_eof = pos->eof_reached;
             break;
         default:
