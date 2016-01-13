@@ -401,8 +401,9 @@ get_eclass_for_sort_expr(PlannerInfo *root,
 	{
 		if (newec->ec_has_volatile ||
 			expression_returns_set((Node *) expr) ||
-			contain_agg_clause((Node *) expr))
-		{
+			contain_agg_clause((Node *) expr) ||
+			contain_window_functions((Node *) expr))
+	{
 			newec->ec_has_const = false;
 			((EquivalenceMember *) linitial(newec->ec_members))->em_is_const = false;
 		}
