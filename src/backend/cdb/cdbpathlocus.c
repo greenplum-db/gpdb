@@ -468,15 +468,15 @@ cdbpathlocus_get_partkey_exprs(CdbPathLocus     locus,
 				if (item)
 					break;
 			}
-			if (item)
-			{
-				foreach(i, item->pk_eclass->ec_members)
-				{
-					EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
+			if (!item)
+				return NIL;
 
-					if (bms_is_subset(em->em_relids, relids))
-						result = lappend(result, copyObject(em->em_expr));
-				}
+			foreach(i, item->pk_eclass->ec_members)
+			{
+				EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
+
+				if (bms_is_subset(em->em_relids, relids))
+					result = lappend(result, copyObject(em->em_expr));
 			}
 		}
 		return result;
