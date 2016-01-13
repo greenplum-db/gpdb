@@ -3765,3 +3765,28 @@ def impl(context, dbname):
     drop_database_if_exists(context, dbname)
     create_database(context, dbname)
 
+
+
+
+
+
+
+@given('the user runs the query "{query}" on "{dbname}" in the background until stopped')
+@when('the user runs the query "{query}" on "{dbname}" in the background until stopped')
+@then('the user runs the query "{query}" on "{dbname}" in the background until stopped')
+def impl(context, query, dbname):
+    thread.start_new_thread(execute_sql_until_stopped, (context, dbname, query))
+
+def execute_sql_until_stopped(context, dbname, query):
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        dbconn.execSQL(conn, query)
+        conn.commit()
+        while True:
+            if hasattr(context, 'background_query_lock'):
+                break
+            time.sleep(1)
+
+@when('the user stops all background queries')
+@then('the user stops all background queries')
+def impl(context):
+    context.background_query_lock = True
