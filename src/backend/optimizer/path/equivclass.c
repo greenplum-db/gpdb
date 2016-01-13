@@ -297,8 +297,8 @@ add_eq_member(EquivalenceClass *ec, Expr *expr, Relids relids,
 		/*
 		 * No Vars, assume it's a pseudoconstant.  This is correct for
 		 * entries generated from process_equivalence(), because a WHERE
-		 * clause can't contain aggregates and non-volatility was checked
-		 * before process_equivalence() ever got called.  But
+		 * clause can't contain aggregates or SRFs, and non-volatility was
+		 * checked before process_equivalence() ever got called.  But
 		 * get_eclass_for_sort_expr() has to work harder.  We put the tests
 		 * there not here to save cycles in the equivalence case.
 		 */
@@ -393,13 +393,15 @@ get_eclass_for_sort_expr(PlannerInfo *root,
 				  false, expr_datatype);
 
 	/*
-	 * add_eq_member doesn't check for volatile functions or aggregates,
-	 * but such could appear in sort expressions, so we have to check
-	 * whether its const-marking was correct.
+	 * add_eq_member doesn't check for volatile functions, set-returning
+	 * functions, or aggregates, but such could appear in sort expressions;
+	 * so we have to check whether its const-marking was correct.
 	 */
 	if (newec->ec_has_const)
 	{
-		if (newec->ec_has_volatile || contain_agg_clause((Node *) expr))
+		if (newec->ec_has_volatile ||
+			expression_returns_set((Node *) expr) ||
+			contain_agg_clause((Node *) expr))
 		{
 			newec->ec_has_const = false;
 			((EquivalenceMember *) linitial(newec->ec_members))->em_is_const = false;

@@ -104,9 +104,21 @@ query_planner(PlannerInfo *root, List *tlist, double tuple_fraction,
 	 */
 	if (parse->jointree->fromlist == NIL)
 	{
+		/* We need a trivial path result */
 		*cheapest_path = (Path *)
 			create_result_path((List *) parse->jointree->quals);
 		*sorted_path = NULL;
+		/*
+		 * We still are required to canonicalize any pathkeys, in case
+		 * it's something like "SELECT 2+2 ORDER BY 1".
+		 */
+		root->canon_pathkeys = NIL;
+		root->query_pathkeys = canonicalize_pathkeys(root,
+													 root->query_pathkeys);
+		root->group_pathkeys = canonicalize_pathkeys(root,
+													 root->group_pathkeys);
+		root->sort_pathkeys = canonicalize_pathkeys(root,
+													root->sort_pathkeys);
 		return;
 	}
 
