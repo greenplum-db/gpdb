@@ -323,8 +323,16 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext   *ctx,
      *  (Note that "T.D = <constant expr>" won't be in the mergeclause_list
      *  because it isn't a join pred.)
      */
-
 	copathkey = NULL;
+
+	/*
+	 * 83MERGE_FIXME_HL: Disabled, was causing the "join" regression test
+	 * to fail. The failing query seems to produce the same plan without
+	 * this block as GPDB before the merge did. Need to investigate if we're
+	 * missing out on optimizations on some other queries, and reinstate this
+	 * in some form if necessary.
+	 */
+#if 0
 	if (ctx->locus.locustype == CdbLocusType_Hashed)
 	{
 		PathKey *pathkey = (PathKey *) lfirst(partkeycell);
@@ -348,7 +356,7 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext   *ctx,
     }
 	else
 		elog(ERROR, "unexpected locus type: %u", ctx->locus.locustype);
-
+#endif
     /* Look for an equijoin comparison to the partkey item. */
     if (!copathkey)
     {
