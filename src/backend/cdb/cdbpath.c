@@ -287,6 +287,25 @@ typedef struct
 } CdbpathMatchPredsContext;
 
 
+/*
+ * A helper function to create a PathKey for an EquivalenceClass. This is used
+ * to construct a PathKey in a hash locus, rather than sort ordering, so we
+ * don't care about the particular opfamily being used, the strategy, nor
+ * nulls_first.
+ */
+static PathKey *
+makePathKeyForEC(EquivalenceClass *eclass)
+{
+	PathKey	   *pk = makeNode(PathKey);
+
+	pk->pk_eclass = eclass;
+	pk->pk_opfamily = linitial_oid(eclass->ec_opfamilies);
+	pk->pk_strategy = BTLessStrategyNumber;
+	pk->pk_nulls_first = false;
+
+	return pk;
+}
+
 static bool
 cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext   *ctx,
                                     ListCell                   *partkeycell)
@@ -344,10 +363,11 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext   *ctx,
 			if (CdbPathLocus_IsHashed(ctx->locus))
 			{
 				PathKey *pathkey = (PathKey *) lfirst(partkeycell);
+
 				if (pathkey->pk_eclass == rinfo->left_ec)
-					copathkey = pathkey;
+					copathkey = makePathKeyForEC(rinfo->right_ec);
 				else if (pathkey->pk_eclass == rinfo->right_ec)
-					copathkey = pathkey;
+					copathkey = makePathKeyForEC(rinfo->left_ec);
 			}
 			else if (CdbPathLocus_IsHashed(ctx->locus))
 			{
@@ -357,9 +377,9 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext   *ctx,
 				{
 					PathKey *pathkey = (PathKey *) lfirst(i);
 					if (pathkey->pk_eclass == rinfo->left_ec)
-						copathkey = pathkey;
-					else if (rinfo->left_ec != rinfo->right_ec && pathkey->pk_eclass == rinfo->right_ec)
-						copathkey = pathkey;
+						copathkey = makePathKeyForEC(rinfo->right_ec);
+					else if (pathkey->pk_eclass == rinfo->right_ec)
+						copathkey = makePathKeyForEC(rinfo->left_ec);
 				}
 			}
 
