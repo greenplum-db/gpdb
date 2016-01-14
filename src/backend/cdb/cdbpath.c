@@ -332,7 +332,6 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext   *ctx,
 	 * missing out on optimizations on some other queries, and reinstate this
 	 * in some form if necessary.
 	 */
-#if 0
 	if (ctx->locus.locustype == CdbLocusType_Hashed)
 	{
 		PathKey *pathkey = (PathKey *) lfirst(partkeycell);
@@ -356,7 +355,6 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext   *ctx,
     }
 	else
 		elog(ERROR, "unexpected locus type: %u", ctx->locus.locustype);
-#endif
     /* Look for an equijoin comparison to the partkey item. */
     if (!copathkey)
     {

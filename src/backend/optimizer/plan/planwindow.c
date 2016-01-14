@@ -1902,7 +1902,7 @@ Plan *assure_collocation_and_order(
 			dist_pathkeys = canonicalize_pathkeys(root, dist_pathkeys);
 		
 		/* Assure the required distribution. */
-		if ( ! cdbpathlocus_collocates(input_locus, dist_pathkeys, false /*exact_match*/) )
+		if ( ! cdbpathlocus_collocates(root, input_locus, dist_pathkeys, false /*exact_match*/) )
 		{
 			foreach (lc, dist_keys)
 			{

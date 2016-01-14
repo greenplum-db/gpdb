@@ -251,6 +251,7 @@ cdb_build_distribution_pathkeys(PlannerInfo      *root,
         /* Append to list of pathkeys. */
         retval = lappend(retval, cpathkey);
     }
+
     list_free_deep(eq);
 	return retval;
 }                               /* cdb_build_distribution_pathkeys */
@@ -692,7 +693,6 @@ cdbpathlocus_join(CdbPathLocus a, CdbPathLocus b)
     return ojlocus;
 }                               /* cdbpathlocus_join */
 
-
 /*
  * cdbpathlocus_is_hashed_on_exprs
  *
@@ -721,6 +721,7 @@ cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist)
             /* Does pathkey have an expr that is equal() to one in exprlist? */
             PathKey	   *pathkey = (PathKey *) lfirst(partkeycell);
 			Assert(IsA(pathkey, PathKey));
+
 			foreach(i, pathkey->pk_eclass->ec_members)
 			{
 				EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
@@ -769,7 +770,6 @@ cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist)
     }
 	else
         return !CdbPathLocus_IsStrewn(locus);
-
 }                               /* cdbpathlocus_is_hashed_on_exprs */
 
 

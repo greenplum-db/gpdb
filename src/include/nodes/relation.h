@@ -731,9 +731,15 @@ typedef struct PathKey
  * CdbEquivClassIsConstant
  *      is true if there is no Var of the current level in the expr
  *      referenced by a given PathKeyItem.
+ *
+ * 83MERGE_FIXME_HL: This is copied from MUST_BE_REDUNDANT in pathkeys.c
  */
+#define CdbEquivClassIsConstant(eclass)						\
+	((eclass)->ec_has_const && !(eclass)->ec_below_outer_join)
+#if 0
 #define CdbEquivClassIsConstant(_eclass) \
 	(bms_num_members((_eclass)->ec_relids) == 0 || (_eclass)->ec_has_const)
+#endif
 
 /*
  * CdbPathkeyEqualsConstant
@@ -744,7 +750,7 @@ typedef struct PathKey
  */
 #define CdbPathkeyEqualsConstant(_pathkey) \
     ((_pathkey) != NULL && \
-		CdbEquivClassIsConstant((EquivalenceClass *)_pathkey->pk_eclass))
+	 CdbEquivClassIsConstant((_pathkey)->pk_eclass))
 
 
 /*

@@ -523,7 +523,7 @@ cdb_grouping_planner(PlannerInfo* root,
 		 */
 		if ( has_groups && 
 			 pathkeys_contained_in(root->group_pathkeys, group_context->best_path->pathkeys) &&
-			 cdbpathlocus_collocates(group_context->best_path->locus, root->group_pathkeys, false /*exact_match*/) )
+			 cdbpathlocus_collocates(root, group_context->best_path->locus, root->group_pathkeys, false /*exact_match*/) )
 		{
 			input_path = group_context->best_path;
 		}
@@ -547,7 +547,7 @@ cdb_grouping_planner(PlannerInfo* root,
 	else if ( has_groups ) /* and not single or replicated */
 	{
 		if (root->group_pathkeys != NULL &&
-				cdbpathlocus_collocates(plan_1p.input_locus, root->group_pathkeys, false /*exact_match*/) )
+			cdbpathlocus_collocates(root, plan_1p.input_locus, root->group_pathkeys, false /*exact_match*/) )
 		{
 			plan_1p.group_prep = MPP_GRP_PREP_NONE;
 			plan_1p.output_locus = plan_1p.input_locus; /* may be less discriminating that group locus */
@@ -768,7 +768,7 @@ cdb_grouping_planner(PlannerInfo* root,
 														  true);
 			l = list_make1(distinct_pathkeys);
 			
-			if ( ! cdbpathlocus_collocates(plan_2p.input_locus, l, false /*exact_match*/))
+			if ( ! cdbpathlocus_collocates(root, plan_2p.input_locus, l, false /*exact_match*/))
 			{
 				plan_2p.group_prep = MPP_GRP_PREP_HASH_DISTINCT;
 				CdbPathLocus_MakeHashed(&plan_2p.input_locus, l);
@@ -868,7 +868,7 @@ cdb_grouping_planner(PlannerInfo* root,
 														  true);
 			l = list_make1(distinct_pathkeys);
 			
-			if (cdbpathlocus_collocates(plan_3p.input_locus, l, false /*exact_match*/))
+			if (cdbpathlocus_collocates(root, plan_3p.input_locus, l, false /*exact_match*/))
 			{
 				ctx.dqaArgs[i].distinctkey_collocate = true;
 			}
@@ -1894,7 +1894,7 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 	int i, n;
 	DqaInfo *dqaArg = &ctx->dqaArgs[dqa_index];
 	bool sort_coplans = ( ctx->join_strategy == DqaJoinMerge );
-	bool groupkeys_collocate = cdbpathlocus_collocates(ctx->input_locus, root->group_pathkeys, false /*exact_match*/);
+	bool groupkeys_collocate = cdbpathlocus_collocates(root, ctx->input_locus, root->group_pathkeys, false /*exact_match*/);
 	bool need_inter_agg = false;
 	bool dqaduphazard = false;
 	bool stream_bottom_agg = root->config->gp_hashagg_streambottom; /* Take hint */
@@ -2832,21 +2832,21 @@ generate_subquery_tlist(Index varno, List *input_tlist,
  * Function: cdbpathlocus_collocates
  *
  * Is a relation with the given locus guaranteed to collocate tuples with
- * non-distinct values of the key.  The key is a list of pathkeys (each of
- * which is a list of PathKeyItem*).
+ * non-distinct values of the key.  The key is a list of PathKeys.
  *
  * Collocation is guaranteed if the locus specifies a single process or
  * if the result is partitioned on a subset of the keys that must be
  * collocated.
  *
- * We ignore onther sorts of collocation, e.g., replication or partitioning
+ * We ignore other sorts of collocation, e.g., replication or partitioning
  * on a range since these cannot occur at the moment (MPP 2.3).
  */
 bool
-cdbpathlocus_collocates(CdbPathLocus locus, List *pathkeys, bool exact_match)
+cdbpathlocus_collocates(PlannerInfo *root, CdbPathLocus locus, List *pathkeys, bool exact_match)
 {
 	ListCell *i, *j;
 	List *exprs = NIL;
+	CdbPathLocus canonLocus;
 
 	if (CdbPathLocus_IsBottleneck(locus))
 		return true;
@@ -2856,6 +2856,19 @@ cdbpathlocus_collocates(CdbPathLocus locus, List *pathkeys, bool exact_match)
 
 	if (exact_match && list_length(pathkeys) != list_length(locus.partkey_h))
 		return false;
+
+	/*
+	 * Eliminate any constants from the locus hash key. A constant has the same
+	 * value everywhere, so it doesn't affect collocation. If that leaves us with no
+	 * path keys at all, any rows that satisfy the query must reside on the same
+	 * node.
+	 * 83MERGE_FIXME_HL: This is a fairly low-level place to do this. Should we
+	 * canonicalize all locuses when they're attached to nodes in the first place?
+	 */
+	canonLocus = locus;
+	canonLocus.partkey_h = canonicalize_pathkeys(root, locus.partkey_h);
+	if (canonLocus.partkey_h == NIL)
+		return true;
 
 	/*
 	 * Extract a list of expressions from the pathkeys.  Since the locus
@@ -2875,7 +2888,7 @@ cdbpathlocus_collocates(CdbPathLocus locus, List *pathkeys, bool exact_match)
 	}
 	
 	/* Check for containment of locus in exprs. */
-	return cdbpathlocus_is_hashed_on_exprs(locus, exprs);
+	return cdbpathlocus_is_hashed_on_exprs(canonLocus, exprs);
 }
 
 
@@ -5850,7 +5863,7 @@ within_agg_add_outer_sort(PlannerInfo *root,
 		 * group_pathkeys should have been fixed to reflect the latest targetlist.
 		 * best_path->locus is wrong here since we put SubqueryScan already.
 		 */
-		if (!cdbpathlocus_collocates(current_locus, root->group_pathkeys, false /*exact_match*/))
+		if (!cdbpathlocus_collocates(root, current_locus, root->group_pathkeys, false /*exact_match*/))
 		{
 			List	   *groupExprs;
 
@@ -6955,7 +6968,7 @@ Plan *add_motion_to_dqa_child(Plan *plan, PlannerInfo *root, bool *motion_added)
 		locus = cdbpathlocus_from_exprs(root, plan->flow->hashExpr);
 	}
 	
-	if (!cdbpathlocus_collocates(locus, pathkeys, true /*exact_match*/))
+	if (!cdbpathlocus_collocates(root, locus, pathkeys, true /*exact_match*/))
 	{
 		/* MPP-22413: join requires exact distribution match for collocation purposes,
 		 * which may not be provided by the underlying group by, as computing the 
