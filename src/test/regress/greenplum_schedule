@@ -16,7 +16,7 @@
 #
 
 ignore: leastsquares
-test: decode_expr bitmapscan case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy
+test: decode_expr bitmapscan case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy segspace
 test: filter gpctas gpdist matrix toast sublink sirv_functions table_functions olap_setup
 
 test: dispatch
