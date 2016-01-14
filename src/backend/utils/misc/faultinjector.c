@@ -95,6 +95,7 @@ FaultInjectorTypeEnumToString[] = {
 	_("status"),
 	_("segv"),
 	_("interrupt"),
+	_("finish_pending"),
 	_("checkpoint_and_panic"),
 	_("not recognized"),
 };
@@ -799,6 +800,21 @@ FaultInjector_InjectFaultIfSet(
 			break;
 		}
 
+		case FaultInjectorTypeFinishPending:
+		{
+			/*
+			 * The place where this type of fault is injected must have
+			 * has HOLD_INTERRUPTS() .. RESUME_INTERRUPTS() around it, otherwise
+			 * the interrupt could be handled inside the fault injector itself
+			 */
+			ereport(LOG,
+					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
+			QueryFinishPending = true;
+			break;
+		}
+
 		case FaultInjectorTypeCheckpointAndPanic:
 		{
 			if (entryLocal->occurrence != FILEREP_UNDEFINED)
@@ -1049,7 +1065,6 @@ FaultInjector_NewHashEntry(
 		case FinishPreparedTransactionAbortPass2AbortingCreateNeeded:
 		case TwoPhaseTransactionCommitPrepared:
 		case TwoPhaseTransactionAbortPrepared:
-		case ExecSortMKSortMergeRuns:
 		
 //		case SubtransactionFlushToFile:
 //		case SubtransactionReadFromFile:
@@ -1142,7 +1157,7 @@ FaultInjector_NewHashEntry(
 		case FaultDuringExecDynamicTableScan:
 		case FaultExecHashJoinNewBatch:
 		case RunawayCleanup:
-			
+		case ExecSortMKSortMergeRuns:
 			if (fileRepRole != FileRepNoRoleConfigured && fileRepRole != FileRepPrimaryRole)
 			{
 				FiLockRelease();
