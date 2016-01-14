@@ -1473,3 +1473,39 @@ subpartition by hash(b) subpartitions 2
 -- different levels -- so this is legal again...
 drop table if exists a;
 
+-- TEST: make sure GPOPT (aka pivotal query optimizer) fall back to legacy query optimizer 
+--       for queries with partition elimination over FULL OUTER JOIN
+--       between partitioned tables.
+
+-- SETUP
+-- start_ignore
+drop table if exists s1;
+drop table if exists s2;
+
+-- setup two partitioned tables s1 and s2
+create table s1 (d1 int, p1 int)
+distributed by (d1)
+partition by list (p1)
+(
+  values (0),
+  values (1));
+
+create table s2 (d2 int, p2 int)
+distributed by (d2)
+partition by list (p2)
+(
+  values (0),
+  values (1));
+-- end_ignore
+
+-- VERIFY
+-- expect GPOPT fall back to legacy query optimizer
+-- since GPOPT don't support partition elimination through full outer joins
+select * from s1 full outer join s2 on s1.d1 = s2.d2 and s1.p1 = s2.p2 where s1.p1 = 1;
+
+-- CLEANUP
+-- start_ignore
+drop table if exists s1;
+drop table if exists s2;
+-- end_ignore
+
