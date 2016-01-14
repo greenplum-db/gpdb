@@ -1157,7 +1157,7 @@ dumpMain(bool oids, const char *dumpencoding, int outputBlobs, int plainText, Re
 	 * Now scan the database and create DumpableObject structs for all the
 	 * objects we intend to dump. LOCK those objects in ACCESS SHARE mode.
 	 */
-	tblinfo = getSchemaData(&numTables);
+	tblinfo = getSchemaData(&numTables, g_role);
 
 	/*
 	 * If we got here it means we successfully got LOCKs on all our dumpable

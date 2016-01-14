@@ -4868,6 +4868,20 @@ Feature: Validate command line arguments
         And the file "/tmp/describe_ao_index_table_before" is removed from the system
         And the file "/tmp/describe_ao_index_table_after" is removed from the system
 
+    Scenario: Dump and Restore metadata
+        Given the database is running
+        And there are no backup files
+        Given database "testdb" is dropped and recreated
+        When the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/create_metadata.sql testdb"
+        When the user runs "gpcrondump -a -x testdb"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        Given database "testdb" is dropped and recreated
+        When the user runs "gpdbrestore -a" with the stored timestamp
+        Then gpdbrestore should return a return code of 0
+        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/check_metadata.sql testdb > /tmp/check_metadata.out"
+        Then verify that the contents of the files "/tmp/check_metadata.out" and "gppylib/test/behave/mgmt_utils/steps/data/check_metadata.ans" are identical
+
     Scenario: Restore -T for full dump should restore GRANT privileges for tablenames with English and multibyte (chinese) characters
         Given the database is running
         And there are no backup files
