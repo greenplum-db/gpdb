@@ -732,21 +732,15 @@ typedef struct PathKey
  *      is true if there is no Var of the current level in the expr
  *      referenced by a given PathKeyItem.
  *
- * 83MERGE_FIXME_HL: This is copied from MUST_BE_REDUNDANT in pathkeys.c
+ * This is copied from MUST_BE_REDUNDANT in pathkeys.c
  */
 #define CdbEquivClassIsConstant(eclass)						\
 	((eclass)->ec_has_const && !(eclass)->ec_below_outer_join)
-#if 0
-#define CdbEquivClassIsConstant(_eclass) \
-	(bms_num_members((_eclass)->ec_relids) == 0 || (_eclass)->ec_has_const)
-#endif
 
 /*
  * CdbPathkeyEqualsConstant
  *      is true if there is a constant expr in a given set of
- *      equijoin-equivalent exprs represented by a pathkey
- *      (i.e. a List of PathKey).  If there is a constant
- *      expr, it will be at the head of the list.
+ *      equijoin-equivalent exprs represented by a PathKey
  */
 #define CdbPathkeyEqualsConstant(_pathkey) \
     ((_pathkey) != NULL && \
