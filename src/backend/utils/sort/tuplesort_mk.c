@@ -1867,11 +1867,6 @@ mergeruns(Tuplesortstate_mk *state)
 
     Assert(state->status == TSS_BUILDRUNS);
 
-	if (QueryFinishPending)
-	{
-		state->status = TSS_SORTEDONTAPE;
-		return;
-	}
 
 #ifdef FAULT_INJECTOR
     /*
@@ -1887,6 +1882,12 @@ mergeruns(Tuplesortstate_mk *state)
 			""); // tableName
 	RESUME_INTERRUPTS();
 #endif
+
+	if (QueryFinishPending)
+	{
+		state->status = TSS_SORTEDONTAPE;
+		return;
+	}
 
     /*
      * If we produced only one initial run (quite likely if the total data
