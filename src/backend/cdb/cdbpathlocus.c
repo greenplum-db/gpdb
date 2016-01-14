@@ -444,7 +444,10 @@ cdbpathlocus_get_partkey_exprs(CdbPathLocus     locus,
 				EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
 
 				if (bms_is_subset(em->em_relids, relids))
+				{
 					result = lappend(result, copyObject(em->em_expr));
+					break;
+				}
 			}
 		}
 		return result;
@@ -474,7 +477,10 @@ cdbpathlocus_get_partkey_exprs(CdbPathLocus     locus,
 				EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
 
 				if (bms_is_subset(em->em_relids, relids))
+				{
 					result = lappend(result, copyObject(em->em_expr));
+					break;
+				}
 			}
 		}
 		return result;
