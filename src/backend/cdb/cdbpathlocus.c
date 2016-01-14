@@ -677,7 +677,7 @@ cdbpathlocus_join(CdbPathLocus a, CdbPathLocus b)
 	{
 		List	   *partkey_oj = NIL;
 
-		forboth(acell, a.partkey_oj, bcell, b.partkey_h)
+		forboth(acell, a.partkey_oj, bcell, b.partkey_oj)
 		{
 			List   *aequivpathkeylist = (List *) lfirst(acell);
             List   *bequivpathkeylist = (List *) lfirst(bcell);
