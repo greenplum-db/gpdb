@@ -897,7 +897,7 @@ cdbpathlocus_is_valid(CdbPathLocus locus)
 			goto bad;
 		if (!IsA(locus.partkey_oj, List))
 			goto bad;
-		foreach(partkeycell, locus.partkey_h)
+		foreach(partkeycell, locus.partkey_oj)
 		{
 			List	   *item = (List *) lfirst(partkeycell);
 			if (!item || !IsA(item, List))
