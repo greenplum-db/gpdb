@@ -76,7 +76,7 @@ cdbpathtoplan_create_flow(PlannerInfo  *root,
      */
     if (pathkeys)
     {
-        Sort   *sort = make_sort_from_pathkeys(root, plan, pathkeys, 1.0, false);
+        Sort   *sort = make_sort_from_pathkeys(root, plan, pathkeys, -1.0, false);
 
         if (sort)
         {
@@ -123,7 +123,7 @@ cdbpathtoplan_create_motion_plan(PlannerInfo   *root,
             Sort   *sort = make_sort_from_pathkeys(root,
                                                    subplan,
                                                    path->path.pathkeys,
-												   1.0,
+												   -1.0,
                                                    true);
 
             /* Merge Receive to preserve ordering */
