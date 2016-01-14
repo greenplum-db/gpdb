@@ -60,7 +60,7 @@ select count(*) > 0 from segspace_view_gp_workfile_mgr_reset_segspace;
 -- end_ignore
 
 
------------- This is from test_select_cancel.sql -------------------
+------------ Interrupting SELECT query that spills -------------------
 
 -- enable the fault injector
 --start_ignore
@@ -81,7 +81,7 @@ reset statement_mem;
 select max(size) from segspace_view_gp_workfile_segspace;
 
 
------------- This is from test_insert_cancel.sql -------------------
+------------ Interrupting INSERT INTO query that spills -------------------
 
 -- enable the fault injector
 --start_ignore
@@ -111,7 +111,8 @@ select max(size) from segspace_view_gp_workfile_segspace;
 drop table if exists segspace_t1_created;
 --end_ignore
 
------------- This is from test_create_table_cancel.sql -------------------
+------------ Interrupting CREATE TABLE AS query that spills -------------------
+
 -- enable the fault injector
 --start_ignore
 \! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
