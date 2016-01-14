@@ -80,8 +80,6 @@ init_tuplestore_state(ShareInputScanState *node)
 		{
 			ExecProcNode(snState);
 
-			CHECK_FOR_INTERRUPTS();
-
 			if (QueryFinishPending)
 			{
 				/* tuplestore is not created correctly */
