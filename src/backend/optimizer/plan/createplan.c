@@ -4155,9 +4155,12 @@ add_sort_column(AttrNumber colIdx, Oid sortOp, bool nulls_first,
  *
  *	  'lefttree' is the node which yields input tuples
  *	  'pathkeys' is the list of pathkeys by which the result is to be sorted
- *    'add_keys_to_targetlist' is true if it is ok to append to the subplan's
- *          targetlist or insert a Result node atop the subplan to evaluate
- *          sort key exprs that are not already present in the subplan's tlist.
+ *	  'limit_tuples' is the bound on the number of output tuples;
+ *               -1 if no bound
+ *	  'add_keys_to_targetlist' is true if it is ok to append to the subplan's
+ *               targetlist or insert a Result node atop the subplan to
+ *               evaluate sort key exprs that are not already present in the
+ *               subplan's tlist.
  *
  * We must convert the pathkey information into arrays of sort key column
  * numbers and sort operator OIDs.
