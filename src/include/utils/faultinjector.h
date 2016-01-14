@@ -249,6 +249,8 @@ typedef enum FaultInjectorType_e {
 	
 	FaultInjectorTypeInterrupt,
 
+	FaultInjectorTypeFinishPending,
+
 	FaultInjectorTypeCheckpointAndPanic,
 
 	/* INSERT has to be done before that line */
