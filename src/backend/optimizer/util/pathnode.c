@@ -29,6 +29,7 @@
 #include "parser/parse_expr.h"
 #include "parser/parse_oper.h"
 #include "parser/parsetree.h"
+#include "utils/memutils.h"
 #include "utils/selfuncs.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
@@ -2002,10 +2003,7 @@ make_unique_path(Path *subpath)
     MemoryContext   oldcontext;
 
 	/* Allocate in same context as parent rel in case GEQO is ever used. */
-
-	/*  83MERGE_FIXME_DG - why swap context when pure makeNode() doesnt?
 	oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(subpath->parent));
-	*/
 
     /* Allocate the UniquePath node. */
 	pathnode = makeNode(UniquePath);
@@ -2025,9 +2023,7 @@ make_unique_path(Path *subpath)
     pathnode->must_repartition = false;
 
 	/* Restore caller's allocation context. */
-	/* 83MERGE_FIXME_DG - See above comment..
 	MemoryContextSwitchTo(oldcontext);
-	*/
 
     return pathnode;
 }                               /* make_unique_path */
