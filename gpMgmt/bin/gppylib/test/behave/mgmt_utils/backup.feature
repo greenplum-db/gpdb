@@ -923,7 +923,9 @@ Feature: Validate command line arguments
     Scenario: plan file creation in directory
         Given the database is running
         And there are no backup files
-        And partition "1" of partition table "ao_part_table, co_part_table_comp" is assumed to be in dirty state in "bkdb" in schema "public"
+        And database "bkdb" is dropped and recreated
+        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
         And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
@@ -936,23 +938,24 @@ Feature: Validate command line arguments
 
     Scenario: Simple Plan File Test
         Given the database is running
-        And there is a "heap" table "heap_table" with compression "None" in "smalldb" with data
-        And there is a "heap" table "heap2_table" with compression "None" in "smalldb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "smalldb" with data
-        And there is a "ao" table "ao2_table" with compression "None" in "smalldb" with data
-        And there is a "co" table "co_table" with compression "None" in "smalldb" with data
-        And there is a "co" table "co2_table" with compression "None" in "smalldb" with data
+        And database "bkdb" is dropped and recreated
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap2_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao2_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "co2_table" with compression "None" in "bkdb" with data
         And there are no backup files
-        When the user runs "gpcrondump -a -x smalldb"
+        When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts0"
-        And the user runs "gpcrondump -a -x smalldb --incremental"
+        And the user runs "gpcrondump -a -x bkdb --incremental"
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the timestamp is labeled "ts1"
         And "dirty_list" file should be created under " "
-        And table "public.co_table" is assumed to be in dirty state in "smalldb"
-        And the user runs "gpcrondump -a -x smalldb --incremental"
+        And table "public.co_table" is assumed to be in dirty state in "bkdb"
+        And the user runs "gpcrondump -a -x bkdb --incremental"
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the timestamp is labeled "ts2"
@@ -965,6 +968,13 @@ Feature: Validate command line arguments
     Scenario: Simple Plan File Test With Partitions
         Given the database is running
         And there are no backup files
+        And database "bkdb" is dropped and recreated
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap2_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao2_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "co2_table" with compression "None" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts0"
@@ -989,50 +999,13 @@ Feature: Validate command line arguments
     Scenario: No plan file generated
         Given the database is running
         And there are no backup files
-        And partition "1" of partition table "ao_part_table, co_part_table_comp" is assumed to be in dirty state in "bkdb" in schema "public"
-        And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
+        And partition "1" of partition table "ao_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
         Then "plan" file should not be created under " "
-
-    @backupfire
-    Scenario: Incremental backup of Non-public schema
-        Given the database is running
-        And there are no "dirty_backup_list" tempfiles
-        And database "schematestdb" is created if not exists on host "None" with port "PGPORT" with user "None"
-        And there is schema "pepper" exists in "schematestdb"
-        And there is a "heap" table "pepper.heap_table" with compression "None" in "schematestdb" with data
-        And there is a "ao" table "pepper.ao_table" with compression "None" in "schematestdb" with data
-        And there is a "co" table "pepper.co_table" with compression "None" in "schematestdb" with data
-        And there is a "ao" partition table "pepper.ao_part_table" with compression "None" in "schematestdb" with data
-        And there is a "co" partition table "pepper.co_part_table" with compression "None" in "schematestdb" with data
-        And there is a "ao" table "pepper.ao_index_table" with index "ao_index" compression "None" in "schematestdb" with data
-        And there is a "co" table "pepper.co_index_table" with index "co_index" compression "None" in "schematestdb" with data
-        And there are no backup files
-        When the user runs "gpcrondump -a -x schematestdb"
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts0"
-        And partition "1" of partition table "ao_part_table" is assumed to be in dirty state in "schematestdb" in schema "pepper"
-        And table "pepper.ao_index_table" is assumed to be in dirty state in "schematestdb"
-        And the user runs "gpcrondump -a -x schematestdb --incremental"
-        And gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the timestamp is labeled "ts1"
-        And "dirty_list" file should be created under " "
-        And partition "1" of partition table "co_part_table" is assumed to be in dirty state in "schematestdb" in schema "pepper"
-        And the user runs "gpcrondump -a -x schematestdb --incremental"
-        And gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the timestamp is labeled "ts2"
-        And "dirty_list" file should be created under " "
-        And the user runs gpdbrestore with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        Then "plan" file should be created under " "
-        And the plan file is validated against "data/plan3"
-        And verify there are no "dirty_backup_list" tempfiles
 
     Scenario: Schema only restore of incremental backup
         Given the database is running
@@ -1051,42 +1024,6 @@ Feature: Validate command line arguments
         And the user runs gpdbrestore with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And tables names should be identical to stored table names in "bkdb"
-
-    @backupfire
-    Scenario: Multiple - Incremental backup and restore
-        Given the database is running
-        And the database "schematestdb" does not exist
-        And database "schematestdb" exists
-        And there is schema "pepper" exists in "schematestdb"
-        And there is a "heap" table "pepper.heap_table" with compression "None" in "schematestdb" with data
-        And there is a "ao" table "pepper.ao_table" with compression "None" in "schematestdb" with data
-        And there is a "co" partition table "pepper.co_part_table" with compression "None" in "schematestdb" with data
-        And there are no backup files
-        And there is a list to store the incremental backup timestamps
-        When the user runs "gpcrondump -a -x schematestdb"
-        And the full backup timestamp from gpcrondump is stored
-        And gpcrondump should return a return code of 0
-        And table "pepper.ao_table" is assumed to be in dirty state in "schematestdb"
-        And the user runs "gpcrondump -a -x schematestdb --incremental"
-        And gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored in a list
-        And partition "1" of partition table "co_part_table" is assumed to be in dirty state in "schematestdb" in schema "pepper"
-        And table "pepper.heap_table" is deleted in "schematestdb"
-        And the user runs "gpcrondump -a -x schematestdb --incremental"
-        And gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored in a list
-        And table "pepper.ao_table" is assumed to be in dirty state in "schematestdb"
-        And the user runs "gpcrondump -a -x schematestdb --incremental"
-        And gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the timestamp from gpcrondump is stored in a list
-        And all the data from "schematestdb" is saved for verification
-        Then the user runs gpdbrestore with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And verify that there is no table "pepper.heap_table" in "schematestdb"
-        And verify that the data of "10" tables in "schematestdb" is validated after restore
-        And verify that the tuple count of all appendonly tables are consistent in "schematestdb"
-        And verify that the plan file is created for the latest timestamp
 
     Scenario: Simple Incremental Backup with AO/CO statistics w/ filter
         Given the database is running
@@ -3034,30 +2971,6 @@ Feature: Validate command line arguments
         And verify that the data of "11" tables in "testdb" is validated after restore
         And close all opened pipes
 
-    Scenario: Incremental Backup with no heap tables, backup at the end
-        Given the database is running
-        And the database "testdb" does not exist
-        And database "testdb" exists
-        And there is a "ao" table "ao_table" with compression "None" in "testdb" with data
-        And there is a "co" partition table "co_part_table" with compression "None" in "testdb" with data
-        And there are no backup files
-        And there is a list to store the incremental backup timestamps
-        When the user runs "gpcrondump -a -x testdb"
-        And the full backup timestamp from gpcrondump is stored
-        And gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored in a list
-        And the timestamp is labeled "ts1"
-        When the user runs "gpcrondump -a -x testdb --incremental"
-        And the timestamp from gpcrondump is stored in a list
-        And the timestamp is labeled "ts2"
-        And gpcrondump should return a return code of 0
-        And all the data from "testdb" is saved for verification
-        Then the user runs gpdbrestore with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And verify that the data of "10" tables in "testdb" is validated after restore
-        And verify that the tuple count of all appendonly tables are consistent in "testdb"
-        And the plan file is validated against "/data/plan11"
-
     Scenario: Incremental Backup with no heap tables, backup in the middle
         Given the database is running
         And the database "testdb" does not exist
@@ -3529,50 +3442,6 @@ Feature: Validate command line arguments
         And verify that there is a "heap" table "public.heap_table1" in "testdb" with data
         And verify that there is a "ao" table "public.ao_index_table" in "testdb" with data
         And verify that there is no table "public.ao_part_table" in "testdb"
-        And verify that there is no table "public.heap_table2" in "testdb"
-
-    Scenario: Multiple Incremental Backups and Restore with -t filter for Full
-        Given the database is running
-        And the prefix "foo" is stored
-        And there are no backup files
-        And the database "testdb" does not exist
-        And database "testdb" exists
-        And there is a list to store the incremental backup timestamps
-        And there is a "heap" table "heap_table1" with compression "None" in "testdb" with data
-        And there is a "heap" table "heap_table2" with compression "None" in "testdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "testdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "testdb" with data
-        When the user runs "gpcrondump -a -x testdb --prefix=foo -t public.ao_index_table -t public.heap_table1 -t public.ao_part_table"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the full backup timestamp from gpcrondump is stored
-        And "_filter" file should be created under " "
-        And verify that the "filter" file in " " dir contains "public.ao_index_table"
-        And verify that the "filter" file in " " dir contains "public.heap_table1"
-        And table "public.ao_index_table" is assumed to be in dirty state in "testdb"
-        When the user runs "gpcrondump -a -x testdb --prefix=foo --incremental"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored in a list
-        And table "public.ao_part_table" is assumed to be in dirty state in "testdb"
-        When the user runs "gpcrondump -a -x testdb --prefix=foo --incremental"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored in a list
-        And table "public.heap_table1" is assumed to be in dirty state in "testdb"
-        When the user runs "gpcrondump -a -x testdb --prefix=foo --incremental"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the timestamp from gpcrondump is stored in a list
-        And the user runs "gpcrondump -x testdb --incremental --prefix=foo -a --list-filter-tables"
-        And gpcrondump should return a return code of 0
-        And gpcrondump should print Filtering testdb for the following tables: to stdout
-        And gpcrondump should print public.ao_index_table to stdout
-        And gpcrondump should print public.heap_table1 to stdout
-        And all the data from "testdb" is saved for verification
-        And the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
-        And gpdbrestore should return a return code of 0
-        And verify that there is a "heap" table "public.heap_table1" in "testdb" with data
-        And verify that there is a "ao" table "public.ao_index_table" in "testdb" with data
-        And verify that partitioned tables "ao_part_table" in "testdb" have 6 partitions
         And verify that there is no table "public.heap_table2" in "testdb"
 
     Scenario: Incremental Backup and Restore with Multiple Schemas and -t filter for Full
