@@ -4136,13 +4136,6 @@ Plan* add_subqueryscan(PlannerInfo* root, List **p_pathkeys,
 
 	mark_passthru_locus(subplan, true, true);
 
-	/* Reconstruct equi_key_list since the rtable has changed.
-	 * XXX we leak the old one.
-	 */
-	root->equi_key_list = construct_equivalencekey_list(root->equi_key_list,
-														resno_map,
-														subquery->targetList,
-														subplan_tlist);
 	if ( p_pathkeys != NULL && *p_pathkeys != NULL )
 	{
 		*p_pathkeys = reconstruct_pathkeys(root, *p_pathkeys, resno_map,

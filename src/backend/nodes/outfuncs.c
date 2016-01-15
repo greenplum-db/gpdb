@@ -2212,8 +2212,6 @@ _outOuterJoinInfo(StringInfo str, OuterJoinInfo *node)
 	WRITE_ENUM_FIELD(join_type, JoinType);
 	WRITE_BOOL_FIELD(lhs_strict);
 	WRITE_BOOL_FIELD(delay_upper_joins);
-    WRITE_NODE_FIELD(left_equi_key_list);
-    WRITE_NODE_FIELD(right_equi_key_list);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 

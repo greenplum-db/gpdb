@@ -230,10 +230,6 @@ extern int	pathkeys_useful_for_ordering(PlannerInfo *root, List *pathkeys);
 extern List *truncate_useless_pathkeys(PlannerInfo *root,
 						  RelOptInfo *rel,
 						  List *pathkeys);
-extern List *construct_equivalencekey_list(List *equi_key_list,
-										   int *resno_map,
-										   List *orig_tlist,
-										   List *new_tlist);
 extern List *remove_pathkey_item(List *equi_key_list,
 								 Node *key);
 

@@ -4098,17 +4098,6 @@ Plan *wrap_plan(PlannerInfo *root, Plan *plan, Query *query,
 	
 	... */
 
-	/* Reconstruct equi_key_list since the rtable has changed.
-	 * XXX we leak the old one.
-	 */
-	/* 83MERGE_FIXME_DG
-	root->equi_key_list =
-		construct_equivalencekey_list(root->equi_key_list,
-									  resno_map,
-									  ((SubqueryScan *)plan)->subplan->targetlist,
-									  subq_tlist);
-	*/
-
 	/* Construct the new pathkeys */
 	if (p_pathkeys != NULL)
 		*p_pathkeys = reconstruct_pathkeys(root, *p_pathkeys, resno_map,

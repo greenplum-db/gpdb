@@ -49,20 +49,17 @@ typedef struct PostponedQual
 static List *deconstruct_recurse(PlannerInfo *root, Node *jtnode,
 					bool below_outer_join,
 					Relids *qualscope, Relids *inner_join_rels,
-					List **ptrToLocalEquiKeyList,
 					List **postponed_qual_list);
 static OuterJoinInfo *make_outerjoininfo(PlannerInfo *root,
 				   Relids left_rels, Relids right_rels,
 				   Relids inner_join_rels,
-				   JoinType join_type, Node *clause,
-				   List *leftEquiKeyList, List *rightEquiKeyList);
+				   JoinType join_type, Node *clause);
 void distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 						bool is_deduced, bool is_deduced_but_not_equijoin,
 						bool below_outer_join,
 						Relids qualscope,
 						Relids ojscope,
 						Relids outerjoin_nonnullable,
-						List **ptrToLocalEquiKeyList,
 						List **postponed_qual_list);
 static bool check_outerjoin_delay(PlannerInfo *root, Relids *relids_p,
 								  bool is_pushed_down);
@@ -286,7 +283,7 @@ deconstruct_jointree(PlannerInfo *root)
 		   IsA(root->parse->jointree, FromExpr));
 
 	result = deconstruct_recurse(root, (Node *) root->parse->jointree, false,
-					&qualscope, &inner_join_rels, NULL, &postponed_qual_list);
+					&qualscope, &inner_join_rels, &postponed_qual_list);
 
 	if (postponed_qual_list != NIL)
 	{
@@ -311,10 +308,6 @@ deconstruct_jointree(PlannerInfo *root)
  *	*inner_join_rels gets the set of base Relids syntactically included in
  *		inner joins appearing at or below this jointree node (do not modify
  *		or free this, either)
- *  if non-NULL, the equikey list at *ptrToLocalEquiKeyList may have its
- *      equi key list expanded with any local equikey lists (equivalent
- *      values under the nullable side of an outer join are local equikeys
- *      but not global equikeys)
  *	Return value is the appropriate joinlist for this jointree node
  *	*postponed_qual_list gets the list of qual clauses which cannot be
  *	distributed to relids of current recurse level, and should be postponed to
@@ -325,7 +318,7 @@ deconstruct_jointree(PlannerInfo *root)
 static List *
 deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 					Relids *qualscope, Relids *inner_join_rels,
-					List **ptrToLocalEquiKeyList, List **postponed_qual_list)
+					List **postponed_qual_list)
 {
 	List	   *joinlist;
 
@@ -372,7 +365,6 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 											   below_outer_join,
 											   &sub_qualscope,
 											   inner_join_rels,
-											   ptrToLocalEquiKeyList,
 											   &child_postponed_quals);
 			*qualscope = bms_add_members(*qualscope, sub_qualscope);
 			sub_members = list_length(sub_joinlist);
@@ -405,7 +397,6 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 				distribute_qual_to_rels(root, pq->qual,
 										false, false, below_outer_join,
 										*qualscope, NULL, NULL,
-										ptrToLocalEquiKeyList,
 										NULL);
 				pfree(pq);
 			}
@@ -426,7 +417,6 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 			distribute_qual_to_rels(root, (Node *) lfirst(l),
 									false, false, below_outer_join,
 									*qualscope, NULL, NULL,
-									ptrToLocalEquiKeyList,
 									postponed_qual_list);
 	}
 	else if (IsA(jtnode, JoinExpr))
@@ -443,10 +433,6 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 		OuterJoinInfo *ojinfo;
         ListCell   *cell;
 		ListCell   *qual;
-
-        List *localLeftEquiKeyList = NIL;
-        List *localRightEquiKeyList = NIL;
-
 		List *child_postponed_quals = NIL;
 		/*
 		 * Order of operations here is subtle and critical.  First we recurse
@@ -466,12 +452,10 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 				leftjoinlist = deconstruct_recurse(root, j->larg,
 												   below_outer_join,
 												   &leftids, &left_inners,
-												   ptrToLocalEquiKeyList,
 												   &child_postponed_quals);
 				rightjoinlist = deconstruct_recurse(root, j->rarg,
 													below_outer_join,
 													&rightids, &right_inners,
-													ptrToLocalEquiKeyList,
 													&child_postponed_quals);
 				*qualscope = bms_union(leftids, rightids);
 				*inner_join_rels = bms_copy(*qualscope);
@@ -484,12 +468,10 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 				leftjoinlist = deconstruct_recurse(root, j->larg,
 												   below_outer_join,
 												   &leftids, &left_inners,
-												   ptrToLocalEquiKeyList,
 												   &child_postponed_quals);
 				rightjoinlist = deconstruct_recurse(root, j->rarg,
 													true,
 													&rightids, &right_inners,
-													&localRightEquiKeyList,
 													&child_postponed_quals);
 				*qualscope = bms_union(leftids, rightids);
 				*inner_join_rels = bms_union(left_inners, right_inners);
@@ -499,12 +481,10 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 				leftjoinlist = deconstruct_recurse(root, j->larg,
 												   true,
 												   &leftids, &left_inners,
-													&localLeftEquiKeyList,
 													&child_postponed_quals);
 				rightjoinlist = deconstruct_recurse(root, j->rarg,
 													true,
 													&rightids, &right_inners,
-													&localRightEquiKeyList,
 													&child_postponed_quals);
 				*qualscope = bms_union(leftids, rightids);
 				*inner_join_rels = bms_union(left_inners, right_inners);
@@ -516,12 +496,10 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 				leftjoinlist = deconstruct_recurse(root, j->larg,
 												   true,
 												   &rightids, &right_inners,
-												   &localRightEquiKeyList,
 												   &child_postponed_quals);
 				rightjoinlist = deconstruct_recurse(root, j->rarg,
 													below_outer_join,
 													&leftids, &left_inners,
-													ptrToLocalEquiKeyList,
 													&child_postponed_quals);
 				*qualscope = bms_union(leftids, rightids);
 				*inner_join_rels = bms_union(left_inners, right_inners);
@@ -551,30 +529,11 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 		    Relids		sub_qualscope = NULL;
             Relids      sub_inners;
 
-            List **localEquiKeyList;
-            switch (j->jointype)
-            {
-                case JOIN_INNER:
-                    localEquiKeyList = ptrToLocalEquiKeyList;
-                    break;
-                case JOIN_LEFT:
-                    localEquiKeyList = &localRightEquiKeyList;
-                    break;
-                case JOIN_RIGHT:
-                    localEquiKeyList = &localRightEquiKeyList;
-                    break;
-                default:
-                    Assert(0);
-                    localEquiKeyList = NULL; /* should not hit */
-                    break;
-            }
-
 		    sub_joinlist = deconstruct_recurse(root, lfirst(cell),
                                                below_outer_join ||
                                                     (j->jointype != JOIN_INNER),
 										       &sub_qualscope,
                                                &sub_inners,
-                                               localEquiKeyList,
 											   &child_postponed_quals
                                                );
 		    rightids = bms_add_members(rightids, sub_qualscope);
@@ -606,9 +565,7 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 										leftids, rightids,
 										*inner_join_rels,
 										j->jointype,
-										j->quals,
-										localLeftEquiKeyList,
-										localRightEquiKeyList);
+										j->quals);
 			ojscope = bms_union(ojinfo->min_lefthand, ojinfo->min_righthand);
 		}
 		else
@@ -628,7 +585,6 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 				distribute_qual_to_rels(root, pq->qual,
 										false, false, below_outer_join,
 										*qualscope, ojscope, nonnullable_rels,
-										ptrToLocalEquiKeyList,
 										NULL);
 				pfree(pq);
 			}
@@ -647,7 +603,6 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 			distribute_qual_to_rels(root, (Node *) lfirst(qual),
 									false, false, below_outer_join,
 									*qualscope, ojscope, nonnullable_rels,
-									ptrToLocalEquiKeyList,
 									postponed_qual_list);
 
 		/* Now we can add the OuterJoinInfo to oj_info_list */
@@ -723,8 +678,7 @@ static OuterJoinInfo *
 make_outerjoininfo(PlannerInfo *root,
 				   Relids left_rels, Relids right_rels,
 				   Relids inner_join_rels,
-				   JoinType join_type, Node *clause,
-				   List *leftEquiKeyList, List *rightEquiKeyList)
+				   JoinType join_type, Node *clause)
 {
 	OuterJoinInfo *ojinfo = makeNode(OuterJoinInfo);
 	Relids		clause_relids;
@@ -758,9 +712,6 @@ make_outerjoininfo(PlannerInfo *root,
 
 	/* this always starts out false */
 	ojinfo->delay_upper_joins = false;
-
-	ojinfo->left_equi_key_list = leftEquiKeyList;
-	ojinfo->right_equi_key_list = rightEquiKeyList;
 
 	/* If it's a full join, no need to be very smart */
 	ojinfo->syn_lefthand = left_rels;
@@ -927,7 +878,6 @@ distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 						Relids qualscope,
 						Relids ojscope,
 						Relids outerjoin_nonnullable,
-						List **ptrToLocalEquiKeyList,
 						List **postponed_qual_list)
 {
 	Relids		relids;
@@ -1470,10 +1420,6 @@ process_implied_equality(PlannerInfo *root,
 	distribute_qual_to_rels(root, (Node *) clause,
 							true, true, below_outer_join,
 							qualscope, NULL, NULL,
-							NULL, 
-							/* NULL is okay for local equi list because
-							 *  we are recording a global equivalence
-							 */
 							NULL);
 }
 

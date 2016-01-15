@@ -207,8 +207,6 @@ typedef struct PlannerInfo
 
 	List       *list_cteplaninfo; /* list of CtePlannerInfo, one for each CTE */
 
-	List	   *equi_key_list;	/* list of lists of equijoined PathKeyItems */
-
     /* Jointree result is a subset of the cross product of these relids... */
     Relids      currlevel_relids;   /* CDB: all relids of current query level,
                                      * omitting any pulled-up subquery relids */
@@ -1381,21 +1379,6 @@ typedef struct OuterJoinInfo
 	bool		is_full_join;
 	bool		lhs_strict;		/* joinclause is strict for some LHS rel */
 	bool		delay_upper_joins;	/* can't commute with upper RHS */
-
-	/**
-	 * list of lists of equijoined PathKeyItems
-	 * only valid for FULL joins.  Will contain equi_key sets but ONLY
-	 * for tables that are below the LEFT nullable side of the outer join.
-	 */
-	 List	   *left_equi_key_list;
-
-	/**
-	 * list of lists of equijoined PathKeyItems
-	 * Will contain equi_key sets but ONLY
-	 * for tables that are below the RIGHT nullable side of the outer join.
-	 */
-	List	   *right_equi_key_list;
-
 } OuterJoinInfo;
 
 /*

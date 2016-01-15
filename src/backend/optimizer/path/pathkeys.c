@@ -156,42 +156,34 @@ static List *remove_outer_join_restrict_infos(List *restrictinfolist)
 }
 
 /**
- * Given a list of pathkey items, extract out all relevant known clauses.
- * This is done by finding all relations represented in the pathkey item.
+ * Given an equivalence class, extract out all the relevant known clauses.
+ * This is done by finding all relations represented in the equivalence class.
  * Then, we extract out all the restrictinfos from these relations and find
  * the additional relations mentioned in these clauses. These restrictinfo
  * clauses are appended into one big list
  * Input:
  * 	root - planner information
- * 	lpkitems - list of equivalent pathkey items
+ * 	eclass - equivalence class
  */
-static List *relevant_known_clauses(PlannerInfo *root, List *lpkitems)
+static List *relevant_known_clauses(PlannerInfo *root, EquivalenceClass *eclass)
 {
 	/**
 	 * Find all the relevant relids from pathkey list and corresponding restrict
 	 * infos.
 	 */
-	Relids relevant_relids = NULL;
+	Relids relevant_relids;
 
 	/**
-	 * First look at pathkey items
-	 */
-	ListCell     *lcpk = NULL;
-	Relids pathkey_relids = NULL;
-	foreach (lcpk, lpkitems)
-	{
-		PathKey *item1 = (PathKey *) lfirst(lcpk);
-		pathkey_relids = bms_union(pathkey_relids, item1->pk_eclass->ec_relids);
-	}
-
-	relevant_relids = bms_copy(pathkey_relids);
-
-	/**
-	 * Next look the restrictinfos for every relation that has a pathkey entry
+	 * Find the restrictinfos for every relation that has an equivalence member
 	 * and then extract out these relids as well
 	 */
 	int relid;
-	while ((relid = bms_first_member(pathkey_relids)) >= 0)
+	Relids iter;
+
+	relevant_relids = bms_copy(eclass->ec_relids);
+
+	iter = bms_copy(eclass->ec_relids);
+	while ((relid = bms_first_member(iter)) >= 0)
 	{
 		RelOptInfo *rel1 = find_base_rel(root, relid);
 
@@ -203,14 +195,13 @@ static List *relevant_known_clauses(PlannerInfo *root, List *lpkitems)
 
 		relevant_relids = bms_union(relevant_relids, pull_varnos((Node *) restrictlistclauses));
 	}
-	bms_free(pathkey_relids);
+	bms_free(iter);
 
 	/**
 	 * Build a list of clauses by iterating over all relevant relations
 	 */
 	List *relevant_clauses = NIL;
-	Relids relevant_relids_c = bms_copy(relevant_relids);
-	while ((relid = bms_first_member(relevant_relids_c)) >= 0)
+	while ((relid = bms_first_member(relevant_relids)) >= 0)
 	{
 		RelOptInfo *rel1 = find_base_rel(root, relid);
 
@@ -221,6 +212,7 @@ static List *relevant_known_clauses(PlannerInfo *root, List *lpkitems)
 		);
 		relevant_clauses = list_concat(relevant_clauses, restrictlistclauses);
 	}
+	bms_free(relevant_relids);
 
 	return relevant_clauses;
 }
@@ -282,7 +274,6 @@ static List *gen_implied_qual(PlannerInfo *root,
 				new_qualscope, /* qualscope */
 				NULL, /* ojscope */
 				NULL, /* outerjoin_nonnullable */
-				NULL, /* local equi join scope */
 				NULL /* postponed_qual_list */
 		);
 		relevant_clauses = lappend(relevant_clauses, new_clause);
@@ -299,30 +290,28 @@ static List *gen_implied_qual(PlannerInfo *root,
  * - lpkitems: list of equivalent pathkey items
  */
 static void
-gen_implied_quals_for_equi_key_list(PlannerInfo *root, List *lpkitems)
+gen_implied_quals_for_eclass(PlannerInfo *root, EquivalenceClass *eclass)
 {
-	List *relevant_clauses = relevant_known_clauses(root, lpkitems);
+	List *relevant_clauses = relevant_known_clauses(root, eclass);
 
     /**
-     * For every triple (pkey1, clause, pkey2), we try to replace pkey1 in clause
-     * with pkey2 and add it as an inferred clause since pkey1 = pkey2
+     * For every triple (em1, clause, em2), we try to replace em1 in clause
+     * with em2 and add it as an inferred clause since em1 = em2
      */
-    ListCell     *lcpk1 = NULL;
-    foreach(lcpk1, lpkitems)
+    ListCell     *lcem1;
+    foreach(lcem1, eclass->ec_members)
     {
-		PathKey *item1 = (PathKey *) lfirst(lcpk1);
-		Relids relidspk1 = item1->pk_eclass->ec_relids;
+		EquivalenceMember *em1 = (EquivalenceMember *) lfirst(lcem1);
 
     	/**
-    	 * Only look at pathkeys that correspond to a single relation
+    	 * Only look at equivalence members that correspond to a single relation
     	 */
-    	if ( bms_membership(relidspk1) == BMS_SINGLETON)
+    	if ( bms_membership(em1->em_relids) == BMS_SINGLETON)
     	{
-
     		/**
     		 * Iterate over all clauses
     		 */
-    		ListCell   *lcclause = NULL;
+    		ListCell   *lcclause;
     		foreach(lcclause, relevant_clauses)
     		{
     			Node *old_clause = (Node *) lfirst(lcclause);
@@ -336,34 +325,27 @@ gen_implied_quals_for_equi_key_list(PlannerInfo *root, List *lpkitems)
 
     			if (safe_to_infer)
     			{
-
-    				ListCell *lcpk2 = NULL;
+    				ListCell *lcem2;
 
     				/* now try to apply to others in the equivalence class */
-    				foreach(lcpk2, lpkitems)
+    				foreach(lcem2, eclass->ec_members)
     				{
-    					PathKey *item2 = (PathKey *) lfirst(lcpk2);
-						ListCell *i, *j;
+    					EquivalenceMember *em2 = (EquivalenceMember *) lfirst(lcem2);
 
-						forboth(i, item1->pk_eclass->ec_members, j, item2->pk_eclass->ec_members)
+						if (exprType((Node *) em1->em_expr) == exprType((Node *) em2->em_expr)
+							&& exprTypmod((Node *)em1->em_expr) == exprTypmod((Node *)em2->em_expr))
 						{
-							EquivalenceMember *em1 = (EquivalenceMember *) lfirst(i);
-							EquivalenceMember *em2 = (EquivalenceMember *) lfirst(j);
-							if (exprType((Node *)em1->em_expr) == exprType((Node *)em2->em_expr)
-								&& exprTypmod((Node *)em1->em_expr) == exprTypmod((Node *)em2->em_expr))
-							{
-	 							relevant_clauses = gen_implied_qual(root,
-	 								relevant_clauses,
-	 								old_clause,
-	 								(Node *)em1->em_expr,
-									(Node *)em2->em_expr);
-							}
-    					}
-    				} /* foreach lcpk2 */
+							relevant_clauses = gen_implied_qual(root,
+																relevant_clauses,
+																old_clause,
+																(Node *)em1->em_expr,
+																(Node *)em2->em_expr);
+						}
+    				} /* foreach lcem2 */
     			} /* safe_to_infer */
     		} /* foreach lcclause */
     	} /* BMS_SINGLETON */
-    } /* foreach lcpk1 */
+    } /* foreach lcem1 */
 }
 
 /* TODO:
@@ -377,38 +359,25 @@ gen_implied_quals_for_equi_key_list(PlannerInfo *root, List *lpkitems)
 void
 generate_implied_quals(PlannerInfo *root)
 {
-	ListCell *cursetlink;
-    ListCell *curOuterJoinInfo;
+	ListCell *lc;
 
-    if ( ! root->config->gp_enable_predicate_propagation )
+    if (!root->config->gp_enable_predicate_propagation)
         return;
 
-    /* generate using the query-global equi-key-list */
-	foreach(cursetlink, root->equi_key_list)
+    /* generate using the query-global equivalence classes */
+	foreach(lc, root->eq_classes)
 	{
-		List *curset = (List *) lfirst(cursetlink);
-        gen_implied_quals_for_equi_key_list(root, curset);
+		EquivalenceClass *ec = (EquivalenceClass *) lfirst(lc);
+
+		Assert(ec->ec_merged == NULL);		/* else shouldn't be in list */
+		Assert(!ec->ec_broken);				/* not yet anyway... */
+
+		/* Single-member ECs won't generate any deductions */
+		if (list_length(ec->ec_members) <= 1)
+			continue;
+
+        gen_implied_quals_for_eclass(root, ec);
 	}
-
-    /* generate using the local (to nullable side of outer join) equi-key-lists */
-    foreach(curOuterJoinInfo, root->oj_info_list)
-    {
-        OuterJoinInfo * oj = (OuterJoinInfo *) lfirst(curOuterJoinInfo);
-
-        /* left equi key lists exist only for full outer join */
-        Assert(oj->left_equi_key_list == NULL || oj->join_type == JOIN_FULL);
-
-        foreach(cursetlink, oj->left_equi_key_list)
-        {
-            List *curset = (List *) lfirst(cursetlink);
-            gen_implied_quals_for_equi_key_list(root, curset);
-        }
-        foreach(cursetlink, oj->right_equi_key_list)
-        {
-            List *curset = (List *) lfirst(cursetlink);
-            gen_implied_quals_for_equi_key_list(root, curset);
-        }
-    }
 }
 
 /*
@@ -1956,61 +1925,4 @@ truncate_useless_pathkeys(PlannerInfo *root,
 		return pathkeys;
 	else
 		return list_truncate(list_copy(pathkeys), nuseful);
-}
-
-
-/*
- * construct_equivalencekey_list
- *    Construct a new equivalence key list from a given list based on
- *    the old and new target list correspondence.
- */
-List *
-construct_equivalencekey_list(List *equi_key_list,
-							  int *resno_map,
-							  List *orig_tlist,
-							  List *new_tlist)
-{
-	List *new_equi_key_list = NIL;
-	ListCell *lc;
-	
-	foreach (lc, equi_key_list)
-	{
-		List *keys = (List *) lfirst(lc);
-		ListCell *key_lc;
-		List *new_keys = NIL;
-		
-		Assert(IsA(keys, List));
-
-		foreach (key_lc, keys)
-		{
-			PathKey *item = (PathKey *) lfirst(key_lc);
-			TargetEntry *tle;
-			PathKey *new_item;
-			TargetEntry *new_tle;
-			ListCell *i;
-			
-			Assert(IsA(item, PathKey));
-
-			foreach(i, item->pk_eclass->ec_members)
-			{
-				EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
-
-				tle = tlist_member((Node *)em->em_expr, orig_tlist);
-				if (tle != NULL)
-				{
-					Assert(resno_map[tle->resno - 1] > 0);
-					new_tle = list_nth(new_tlist, resno_map[tle->resno - 1] - 1);
-					Assert(new_tle != NULL);
-					/* 83MERGE_FIXME_DG bogus? */
-					new_item = makePathKey(item->pk_eclass, item->pk_opfamily, item->pk_strategy, item->pk_nulls_first);
-					new_keys = lappend(new_keys, new_item);
-				}
-			}
-		}
-		
-		if (list_length(new_keys) > 1)
-			new_equi_key_list = lappend(new_equi_key_list, new_keys);
-	}
-
-	return new_equi_key_list;
 }
