@@ -1766,6 +1766,9 @@ make_three_stage_agg_plan(PlannerInfo *root, MppGroupContext *ctx)
 		/* Need to adjust root.  Is this enuf?  I think so. */
 		root->parse->rtable = rtable;
 		root->parse->targetList = copyObject(result_plan->targetlist);
+
+		/* We modified the parse tree, signal that to the caller */
+		ctx->querynode_changed = true;
 	}
 	// Rebuild arrays for RelOptInfo and RangeTblEntry for the PlannerInfo
 	// since the underlying range tables have been transformed
