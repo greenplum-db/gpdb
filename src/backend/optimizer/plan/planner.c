@@ -2045,6 +2045,8 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			result_plan = (Plan *) make_sort_from_pathkeys(root,
 														   result_plan,
 														   sort_pathkeys, limit_tuples, false);
+			if (result_plan == NULL)
+				elog(ERROR, "could not find sort pathkeys in result target list");
 			current_pathkeys = sort_pathkeys;
 			mark_sort_locus(result_plan);
 		}
