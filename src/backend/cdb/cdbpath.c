@@ -325,13 +325,6 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext   *ctx,
      */
 	copathkey = NULL;
 
-	/*
-	 * 83MERGE_FIXME_HL: Disabled, was causing the "join" regression test
-	 * to fail. The failing query seems to produce the same plan without
-	 * this block as GPDB before the merge did. Need to investigate if we're
-	 * missing out on optimizations on some other queries, and reinstate this
-	 * in some form if necessary.
-	 */
 	if (ctx->locus.locustype == CdbLocusType_Hashed)
 	{
 		PathKey *pathkey = (PathKey *) lfirst(partkeycell);
