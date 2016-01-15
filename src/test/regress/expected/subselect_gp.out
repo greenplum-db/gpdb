@@ -1026,26 +1026,42 @@ select * from t1 where a=1 and a=2 and a > (select t2.b from t2);
 (0 rows)
 
 explain select * from t1 where a=1 and a=2 and a > (select t2.b from t2);
-                QUERY PLAN                
-------------------------------------------
- Result  (cost=0.00..0.01 rows=1 width=0)
-   One-Time Filter: false
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice2; segments: 1)  (cost=0.00..0.00 rows=1 width=4)
+   ->  Result  (cost=0.00..0.00 rows=1 width=4)
+         One-Time Filter: false
+         InitPlan  (slice3)
+           ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..0.00 rows=1 width=4)
+                 ->  Seq Scan on t2  (cost=0.00..0.00 rows=1 width=4)
+         ->  Seq Scan on t1  (cost=0.00..0.00 rows=1 width=4)
+               Filter: a > $0 AND a = 1
  Settings:  optimizer_segments=3
- Optimizer status: legacy query optimizer
-(4 rows)
+(9 rows)
 
 explain select * from t1 where a=1 and a=2 and a > (select t2.b from t2)
 union all
 select * from t1 where a=1 and a=2 and a > (select t2.b from t2);
-                   QUERY PLAN                   
-------------------------------------------------
- Append  (cost=0.00..0.04 rows=1 width=0)
-   ->  Result  (cost=0.00..0.01 rows=1 width=0)
-         One-Time Filter: false
-   ->  Result  (cost=0.00..0.01 rows=1 width=0)
-         One-Time Filter: false
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice3; segments: 2)  (cost=0.00..0.02 rows=2 width=4)
+   ->  Append  (cost=0.00..0.02 rows=1 width=4)
+         ->  Result  (cost=0.00..0.00 rows=1 width=4)
+               One-Time Filter: false
+               InitPlan  (slice4)
+                 ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..0.00 rows=1 width=4)
+                       ->  Seq Scan on t2  (cost=0.00..0.00 rows=1 width=4)
+               ->  Seq Scan on t1  (cost=0.00..0.00 rows=1 width=4)
+                     Filter: a > $1 AND a = 1
+         ->  Result  (cost=0.00..0.00 rows=1 width=4)
+               One-Time Filter: false
+               InitPlan  (slice5)
+                 ->  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..0.00 rows=1 width=4)
+                       ->  Seq Scan on t2  (cost=0.00..0.00 rows=1 width=4)
+               ->  Seq Scan on t1  (cost=0.00..0.00 rows=1 width=4)
+                     Filter: a > $0 AND a = 1
  Settings:  optimizer_segments=3
-(6 rows)
+(17 rows)
 
 select * from t1 where a=1 and a=2 and a > (select t2.b from t2)
 union all
@@ -1057,15 +1073,21 @@ select * from t1 where a=1 and a=2 and a > (select t2.b from t2);
 explain select * from t1,
 (select * from t1 where a=1 and a=2 and a > (select t2.b from t2)) foo
 where t1.a = foo.a;
-                   QUERY PLAN                   
-------------------------------------------------
- Nested Loop  (cost=0.00..0.00 rows=2 width=8)
-   ->  Result  (cost=0.00..0.01 rows=1 width=0)
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice2; segments: 1)  (cost=0.00..0.01 rows=4 width=8)
+   ->  Result  (cost=0.00..0.01 rows=2 width=8)
          One-Time Filter: false
-   ->  Result  (cost=0.00..0.01 rows=1 width=0)
-         One-Time Filter: false
+         InitPlan  (slice3)
+           ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..0.00 rows=1 width=4)
+                 ->  Seq Scan on t2  (cost=0.00..0.00 rows=1 width=4)
+         ->  Nested Loop  (cost=0.00..0.01 rows=2 width=8)
+               ->  Seq Scan on t1  (cost=0.00..0.00 rows=1 width=4)
+                     Filter: a > $0 AND a = 1
+               ->  Seq Scan on t1  (cost=0.00..0.00 rows=1 width=4)
+                     Filter: a > $0 AND a = 1
  Settings:  optimizer_segments=3
-(6 rows)
+(12 rows)
 
 select * from t1,
 (select * from t1 where a=1 and a=2 and a > (select t2.b from t2)) foo
