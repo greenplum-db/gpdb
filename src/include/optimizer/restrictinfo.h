@@ -7,11 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
-<<<<<<< HEAD
- * $PostgreSQL: pgsql/src/include/optimizer/restrictinfo.h,v 1.38.2.1 2007/07/31 19:53:50 tgl Exp $
-=======
  * $PostgreSQL: pgsql/src/include/optimizer/restrictinfo.h,v 1.40 2007/01/20 20:45:40 tgl Exp $
->>>>>>> ebef17c7a2f69c932f19381837a8a152fc8b84f2
  *
  *-------------------------------------------------------------------------
  */
