@@ -229,7 +229,7 @@ cdb_build_distribution_pathkeys(PlannerInfo      *root,
         	 * Append child relation.
         	 */
 #ifdef DISTRIBUTION_PATHKEYS_DEBUG
-        	PathKey   *canonicalPathKeyList = cdb_make_pathkey_for_expr(root, (Node *)expr, eq, true);
+			PathKey   *canonicalPathKeyList = cdb_make_pathkey_for_expr(root, (Node *) expr, eq, true);
             /* 
              * This assert ensures that we should not really find any equivalent keys
              * during canonicalization for append child relations.
@@ -244,7 +244,7 @@ cdb_build_distribution_pathkeys(PlannerInfo      *root,
         	/**
         	 * Regular relation. 
         	 */
-            cpathkey = cdb_make_pathkey_for_expr(root, (Node *)expr, eq, true);
+			cpathkey = cdb_make_pathkey_for_expr(root, (Node *) expr, eq, true);
         }
         Assert(cpathkey);
 
@@ -252,7 +252,7 @@ cdb_build_distribution_pathkeys(PlannerInfo      *root,
         retval = lappend(retval, cpathkey);
     }
 
-    list_free_deep(eq);
+	list_free_deep(eq);
 	return retval;
 }                               /* cdb_build_distribution_pathkeys */
 
@@ -433,7 +433,7 @@ cdbpathlocus_get_partkey_exprs(CdbPathLocus     locus,
 			PathKey    *pathkey = (PathKey *) lfirst(partkeycell);
 			PathKey    *item;
 
-            item = cdbpullup_findPathKeyInTargetList(pathkey, targetlist);
+			item = cdbpullup_findPathKeyInTargetList(pathkey, targetlist);
 
 			/* Fail if can't evaluate partkey in the context of this targetlist. */
 			if (!item)
@@ -620,7 +620,7 @@ cdbpathlocus_join(CdbPathLocus a, CdbPathLocus b)
     List           *equivpathkeylist;
     CdbPathLocus    ojlocus;
 
-    Assert(cdbpathlocus_is_valid(a));
+	Assert(cdbpathlocus_is_valid(a));
 	Assert(cdbpathlocus_is_valid(b));
 
     /* Do both input rels have same locus? */
@@ -646,17 +646,17 @@ cdbpathlocus_join(CdbPathLocus a, CdbPathLocus b)
         /* Zip the two pathkey lists together to make a HashedOJ locus. */
 		List	   *partkey_oj = NIL;
 
-        forboth(acell, a.partkey_h, bcell, b.partkey_h)
+		forboth(acell, a.partkey_h, bcell, b.partkey_h)
         {
-            PathKey   *apathkey = (PathKey *) lfirst(acell);
-            PathKey   *bpathkey = (PathKey *)lfirst(bcell);
+			PathKey   *apathkey = (PathKey *) lfirst(acell);
+			PathKey   *bpathkey = (PathKey *)lfirst(bcell);
 
-            equivpathkeylist = list_make2(apathkey, bpathkey);
-            partkey_oj = lappend(partkey_oj, equivpathkeylist);
-        }
-        CdbPathLocus_MakeHashedOJ(&ojlocus, partkey_oj);
-        Assert(cdbpathlocus_is_valid(ojlocus));
-        return ojlocus;
+			equivpathkeylist = list_make2(apathkey, bpathkey);
+			partkey_oj = lappend(partkey_oj, equivpathkeylist);
+		}
+		CdbPathLocus_MakeHashedOJ(&ojlocus, partkey_oj);
+		Assert(cdbpathlocus_is_valid(ojlocus));
+		return ojlocus;
     }
 
     if (!CdbPathLocus_IsHashedOJ(a))
@@ -707,8 +707,6 @@ cdbpathlocus_join(CdbPathLocus a, CdbPathLocus b)
  *
  * For a hashed locus, returns false if the partkey has a column whose
  * equivalence class contains no expr belonging to the given list.
- *
- * 83MERGE_FIXME_DG - this is likely wrong, and if not it's made clunky
  */
 bool
 cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist)
@@ -726,6 +724,7 @@ cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist)
 
             /* Does pathkey have an expr that is equal() to one in exprlist? */
             PathKey	   *pathkey = (PathKey *) lfirst(partkeycell);
+
 			Assert(IsA(pathkey, PathKey));
 
 			foreach(i, pathkey->pk_eclass->ec_members)
@@ -747,7 +746,7 @@ cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist)
 	{
 		foreach(partkeycell, locus.partkey_oj)
 		{
-            List       *pathkeylist = (List *)lfirst(partkeycell);
+            List       *pathkeylist = (List *) lfirst(partkeycell);
             ListCell   *pathkeylistcell;
 			bool		found = false;
             foreach(pathkeylistcell, pathkeylist)
@@ -755,7 +754,9 @@ cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist)
                 /* Does some expr in pathkey match some item in exprlist? */
 				PathKey *item = (PathKey *) lfirst(pathkeylistcell);
 				ListCell *i;
+
 				Assert(IsA(item, PathKey));
+
 				foreach(i, item->pk_eclass->ec_members)
 				{
 					EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
@@ -773,9 +774,9 @@ cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist)
         }
 		/* Every column of the partkey contains an expr in exprlist. */
 		return true;
-    }
+	}
 	else
-        return !CdbPathLocus_IsStrewn(locus);
+		return !CdbPathLocus_IsStrewn(locus);
 }                               /* cdbpathlocus_is_hashed_on_exprs */
 
 

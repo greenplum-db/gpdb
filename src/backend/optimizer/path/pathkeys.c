@@ -294,7 +294,7 @@ gen_implied_quals_for_eclass(PlannerInfo *root, EquivalenceClass *eclass)
 {
 	List *relevant_clauses = relevant_known_clauses(root, eclass);
 
-    /*
+	/*
 	 * For every triple (em1, clause, em2), we try to replace em1 in clause
 	 * with em2 and add it as an inferred clause since em1 = em2
 	 */
@@ -1154,7 +1154,7 @@ cdb_make_pathkey_for_expr(PlannerInfo    *root,
 		/* 83MERGE_FIXME_DG How to handle? */	
     }
     Assert(pk);
-   	return pk;
+	return pk;
 }
 
 /*
@@ -1199,12 +1199,12 @@ cdb_pull_up_pathkey(PlannerInfo    *root,
                     List           *newvarlist,
                     Index           newrelid)
 {
-    PathKey           *sub_pathkey;
-	EquivalenceClass  *sub_eclass;
-	EquivalenceClass  *outer_ec;
+	PathKey	   *sub_pathkey;
+	EquivalenceClass *sub_eclass;
+	EquivalenceClass *outer_ec;
 	EquivalenceMember *sub_member;
-	Expr              *newexpr;
-	ListCell	   *lc;
+	Expr	   *newexpr;
+	ListCell   *lc;
 
     Assert(pathkey);
     Assert(!newvarlist ||

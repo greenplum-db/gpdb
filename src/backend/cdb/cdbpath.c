@@ -592,12 +592,11 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo   *root,
 /*
  * cdb_pathkey_isGreenplumDbHashable
  *
- * Iterates through a list of equivalence class members and determines if all of them
- * are GreenplumDbHashable.
- *
+ * Iterates through a list of equivalence class members and determines if all
+ * of them are GreenplumDbHashable.
  */
 static bool
-cdbpath_pathkey_isGreenplumDbHashable(EquivalenceClass *ec)
+cdbpath_eclass_isGreenplumDbHashable(EquivalenceClass *ec)
 {
 	ListCell *j;
 
@@ -649,8 +648,8 @@ cdbpath_partkeys_from_preds(PlannerInfo    *root,
         /*
          * skip non-hashable keys
          */
-        if (!cdbpath_pathkey_isGreenplumDbHashable(rinfo->left_ec) ||
-            !cdbpath_pathkey_isGreenplumDbHashable(rinfo->right_ec))
+        if (!cdbpath_eclass_isGreenplumDbHashable(rinfo->left_ec) ||
+            !cdbpath_eclass_isGreenplumDbHashable(rinfo->right_ec))
         {
             continue;
         }
@@ -720,10 +719,9 @@ cdbpath_partkeys_from_preds(PlannerInfo    *root,
 
 			if (!found)
             {
-				PathKey *a_pk = makePathKey(a_ec, linitial_oid(rinfo->mergeopfamilies),
-											BTLessStrategyNumber, false);
-				PathKey *b_pk = makePathKey(b_ec, linitial_oid(rinfo->mergeopfamilies),
-											BTLessStrategyNumber, false);
+				PathKey *a_pk = makePathKeyForEC(a_ec);
+				PathKey *b_pk = makePathKeyForEC(b_ec);
+
                 a_partkey = lappend(a_partkey, a_pk);
                 b_partkey = lappend(b_partkey, b_pk);
             }

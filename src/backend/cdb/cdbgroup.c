@@ -491,12 +491,12 @@ cdb_grouping_planner(PlannerInfo* root,
 	AggPlanInfo *plan_info = NULL;
 
 	/*
-	 * We used to assert here that if has_groups is true,
-	 * root->group_pathkeys != NIL. That is not a safe assumption anymore:
-	 * For constants like "SELECT DISTINCT 1 FROM foo", the planner will
-	 * correctly deduce that the constant "1" is the same for every row,
-	 * and group_pathkeys will be NIL. But we still need to group, to remove
-	 * duplicate "dummy" rows coming from all the segments.
+	 * We used to assert here that if has_groups is true, root->group_pathkeys
+	 * != NIL. That is not a safe assumption anymore: For constants like
+	 * "SELECT DISTINCT 1 FROM foo", the planner will correctly deduce that
+	 * the constant "1" is the same for every row, and group_pathkeys will be
+	 * NIL. But we still need to group, to remove duplicate "dummy" rows
+	 * coming from all the segments.
 	 */
 
 	memset(&ctx, 0, sizeof(ctx));
@@ -754,21 +754,21 @@ cdb_grouping_planner(PlannerInfo* root,
 
 		if ( consider_agg & AGG_2PHASE_DQA )
 		{
-			PathKey *distinct_pathkeys;
-			List *l;
-				
+			PathKey    *distinct_pathkey;
+			List	   *l;
+
 			/* Either have DQA or not! */
 			Assert(! (consider_agg & AGG_2PHASE) );
 			
 			Insist( IsA(agg_counts->dqaArgs, List) &&
 					list_length((List*)agg_counts->dqaArgs) == 1 );
-			distinct_pathkeys = cdb_make_pathkey_for_expr(root,
-														  linitial(agg_counts->dqaArgs),
-														  list_make1(makeString("=")),
-														  true);
-			l = list_make1(distinct_pathkeys);
+			distinct_pathkey = cdb_make_pathkey_for_expr(root,
+														 linitial(agg_counts->dqaArgs),
+														 list_make1(makeString("=")),
+														 true);
+			l = list_make1(distinct_pathkey);
 			
-			if ( ! cdbpathlocus_collocates(root, plan_2p.input_locus, l, false /*exact_match*/))
+			if (!cdbpathlocus_collocates(root, plan_2p.input_locus, l, false /*exact_match*/))
 			{
 				plan_2p.group_prep = MPP_GRP_PREP_HASH_DISTINCT;
 				CdbPathLocus_MakeHashed(&plan_2p.input_locus, l);
@@ -854,20 +854,20 @@ cdb_grouping_planner(PlannerInfo* root,
 		 */
 		for ( i = 0; i < ctx.numDistinctCols; i++ )
 		{
-			PathKey *distinct_pathkeys;
-			List *l;
-			
+			PathKey    *distinct_pathkey;
+			List	   *l;
+
 			set_coplan_strategies(root, &ctx, &ctx.dqaArgs[i], plan_3p.input_path);
 
 			/* Determine if the input plan already collocates on the distinct
 			 * key.
 			 */
-			distinct_pathkeys = cdb_make_pathkey_for_expr(root,
-														  ctx.dqaArgs[i].distinctExpr,
-														  list_make1(makeString("=")),
-														  true);
-			l = list_make1(distinct_pathkeys);
-			
+			distinct_pathkey = cdb_make_pathkey_for_expr(root,
+														 ctx.dqaArgs[i].distinctExpr,
+														 list_make1(makeString("=")),
+														 true);
+			l = list_make1(distinct_pathkey);
+
 			if (cdbpathlocus_collocates(root, plan_3p.input_locus, l, false /*exact_match*/))
 			{
 				ctx.dqaArgs[i].distinctkey_collocate = true;
@@ -2842,10 +2842,12 @@ generate_subquery_tlist(Index varno, List *input_tlist,
  * on a range since these cannot occur at the moment (MPP 2.3).
  */
 bool
-cdbpathlocus_collocates(PlannerInfo *root, CdbPathLocus locus, List *pathkeys, bool exact_match)
+cdbpathlocus_collocates(PlannerInfo *root, CdbPathLocus locus, List *pathkeys,
+						bool exact_match)
 {
-	ListCell *i, *j;
-	List *exprs = NIL;
+	ListCell   *i,
+			   *j;
+	List	   *exprs;
 	CdbPathLocus canonLocus;
 
 	if (CdbPathLocus_IsBottleneck(locus))
@@ -2858,12 +2860,14 @@ cdbpathlocus_collocates(PlannerInfo *root, CdbPathLocus locus, List *pathkeys, b
 		return false;
 
 	/*
-	 * Eliminate any constants from the locus hash key. A constant has the same
-	 * value everywhere, so it doesn't affect collocation. If that leaves us with no
-	 * path keys at all, any rows that satisfy the query must reside on the same
-	 * node.
-	 * 83MERGE_FIXME_HL: This is a fairly low-level place to do this. Should we
-	 * canonicalize all locuses when they're attached to nodes in the first place?
+	 * Eliminate any constants from the locus hash key. A constant has the
+	 * same value everywhere, so it doesn't affect collocation. If that leaves
+	 * us with no path keys at all, any rows that satisfy the query must
+	 * reside on the same node.
+	 *
+	 * 83MERGE_FIXME_HL: This is a fairly low-level place to do this. Should
+	 * we canonicalize all locuses when they're attached to nodes in the first
+	 * place?
 	 */
 	canonLocus = locus;
 	canonLocus.partkey_h = canonicalize_pathkeys(root, locus.partkey_h);
@@ -2871,11 +2875,15 @@ cdbpathlocus_collocates(PlannerInfo *root, CdbPathLocus locus, List *pathkeys, b
 		return true;
 
 	/*
-	 * Extract a list of expressions from the pathkeys.  Since the locus
-	 * presumably knows all about attribute equivalence classes, we use
-	 * only the first item in each input path key.
-	 * 83MERGE_FIXME_DG - comment inaccurate
+	 * Extract a list of expressions from the pathkeys.
+	 *
+	 * XXX: It's a bit awkward to extract all the expressions, as
+	 * cdbpathlocus_is_hashed_on_exprs() similarly extracts all expressions
+	 * from the locus partkey, and then cross-compares them. It would be more
+	 * efficient to have a function that compares matching equivalence classes
+	 * directly.
 	 */
+	exprs = NIL;
 	foreach(i, pathkeys)
 	{
 		PathKey *pathkey = (PathKey *) lfirst(i);
@@ -2886,7 +2894,7 @@ cdbpathlocus_collocates(PlannerInfo *root, CdbPathLocus locus, List *pathkeys, b
 			exprs = lappend(exprs, em->em_expr);
 		}
 	}
-	
+
 	/* Check for containment of locus in exprs. */
 	return cdbpathlocus_is_hashed_on_exprs(canonLocus, exprs);
 }
@@ -4219,12 +4227,13 @@ List *
 reconstruct_pathkeys(PlannerInfo *root, List *pathkeys, int *resno_map,
 					 List *orig_tlist, List *new_tlist)
 {
-	List *new_pathkeys;
-	ListCell *i, *j;
-	
+	List	   *new_pathkeys;
+	ListCell   *i,
+			   *j;
+
 	foreach(i, pathkeys)
 	{
-		PathKey *pathkey = (PathKey *) lfirst(i);
+		PathKey    *pathkey = (PathKey *) lfirst(i);
 		TargetEntry *new_tle;
 
 		foreach(j, pathkey->pk_eclass->ec_members)
