@@ -635,9 +635,7 @@ Feature: Validate command line arguments
     Scenario: Output info gpdbrestore
         Given the database is running
         And there are no backup files
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
         And there is a "ao" table "ao_index_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
         When the user runs "gpcrondump -a -x fullbkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -1038,7 +1036,10 @@ Feature: Validate command line arguments
 
     Scenario: Schema only restore of incremental backup
         Given the database is running
+        And database "bkdb" is dropped and recreated
         And there are no backup files
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And partition "1" of partition table "ao_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
@@ -2294,19 +2295,18 @@ Feature: Validate command line arguments
         Then the user runs gpdbrestore with "-R" option in path "/tmp"
         And the timestamps should be printed in sorted order
 
-    Scenario Outline: Dirty File Scale Test
+	@scale
+    Scenario: Dirty File Scale Test
         Given the database is running
         And there are no backup files
         And the database "testdb" does not exist
         And database "testdb" exists
-		And there are "<tablecount>" "heap" tables "public.heap_table" with data in "testdb"
+		And there are "240" "heap" tables "public.heap_table" with data in "testdb"
 		And there are "10" "ao" tables "public.ao_table" with data in "testdb"
         When the user runs "gpcrondump -a -x testdb"
         Then gpcrondump should return a return code of 0
         When table "public.ao_table_1" is assumed to be in dirty state in "testdb"
         And table "public.ao_table_2" is assumed to be in dirty state in "testdb"
-        And table "public.ao_table_3" is assumed to be in dirty state in "testdb"
-        And table "public.ao_table_4" is assumed to be in dirty state in "testdb"
         And all the data from "testdb" is saved for verification
         And the user runs "gpcrondump -a --incremental -x testdb"
         Then gpcrondump should return a return code of 0
@@ -2318,24 +2318,17 @@ Feature: Validate command line arguments
         Then gp_restore should return a return code of 0
         When the user runs gpdbrestore with the stored timestamp and options "--noplan" without -e option
         Then gpdbrestore should return a return code of 0
-        And verify that tables "public.ao_table_5, public.ao_table_6, public.ao_table_7" in "testdb" has no rows
-        And verify that tables "public.ao_table_8, public.ao_table_9, public.ao_table_10" in "testdb" has no rows
+        And verify that tables "public.ao_table_3, public.ao_table_4, public.ao_table_5, public.ao_table_6" in "testdb" has no rows
+        And verify that tables "public.ao_table_7, public.ao_table_8, public.ao_table_9, public.ao_table_10" in "testdb" has no rows
         And verify that the data of the dirty tables under " " in "testdb" is validated after restore
-        Examples:
-        | tablecount |
-        | 95         |
-        | 96         |
-        | 97         |
-        | 195        |
-        | 196        |
-        | 197        |
 
-    Scenario Outline: Dirty File Scale Test for partitions
+	@scale
+    Scenario: Dirty File Scale Test for partitions
         Given the database is running
         And there are no backup files
         And the database "testdb" does not exist
         And database "testdb" exists
-		And there are "<tablecount>" "heap" tables "public.heap_table" with data in "testdb"
+		And there are "240" "heap" tables "public.heap_table" with data in "testdb"
         And there is a "ao" partition table "ao_table" with compression "None" in "testdb" with data
         Then data for partition table "ao_table" with partition level "1" is distributed across all segments on "testdb"
         And verify that partitioned tables "ao_table" in "testdb" have 6 partitions
@@ -2343,8 +2336,6 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         When table "public.ao_table_1_prt_p1_2_prt_1" is assumed to be in dirty state in "testdb"
         And table "public.ao_table_1_prt_p1_2_prt_2" is assumed to be in dirty state in "testdb"
-        And table "public.ao_table_1_prt_p2_2_prt_1" is assumed to be in dirty state in "testdb"
-        And table "public.ao_table_1_prt_p2_2_prt_2" is assumed to be in dirty state in "testdb"
         And all the data from "testdb" is saved for verification
         And the user runs "gpcrondump -a --incremental -x testdb"
         Then gpcrondump should return a return code of 0
@@ -2356,16 +2347,9 @@ Feature: Validate command line arguments
         Then gp_restore should return a return code of 0
         When the user runs gpdbrestore with the stored timestamp and options "--noplan" without -e option
         Then gpdbrestore should return a return code of 0
+        And verify that tables "public.ao_table_1_prt_p1_2_prt_2, public.ao_table_1_prt_p2_2_prt_2" in "testdb" has no rows
         And verify that tables "public.ao_table_1_prt_p1_2_prt_3, public.ao_table_1_prt_p2_2_prt_3" in "testdb" has no rows
         And verify that the data of the dirty tables under " " in "testdb" is validated after restore
-        Examples:
-        | tablecount |
-        | 95         |
-        | 96         |
-        | 97         |
-        | 195        |
-        | 196        |
-        | 197        |
 
     Scenario: Config files have the same timestamp as the backup set
         Given the database is running
@@ -2951,36 +2935,6 @@ Feature: Validate command line arguments
         And the "regular_files" file under " " with options "-t,--prefix=foo" is validated after dump operation
         And there are no dump files created under " "
 
-    Scenario: Full Backup and Restore with named pipes
-        Given the database is running
-        And there are no backup files
-        And the database "fullbkdb" does not exist
-        And database "fullbkdb" exists
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_part_table" in "fullbkdb" exists for validation
-        When the user runs "gpcrondump -a -x fullbkdb --list-backup-files -K 20130101010101"
-        Then gpcrondump should return a return code of 0
-        And gpcrondump should print Added the list of pipe names to the file to stdout
-        And gpcrondump should print Added the list of file names to the file to stdout
-        And gpcrondump should print Successfully listed the names of backup files and pipes to stdout
-        And the timestamp key "20130101010101" for gpcrondump is stored
-        And "pipes" file should be created under " "
-        And "regular_files" file should be created under " "
-        And the "pipes" file under " " with options " " is validated after dump operation
-        And the "regular_files" file under " " with options " " is validated after dump operation
-        And the named pipes are created for the timestamp "20130101010101" under " "
-        And the named pipes are validated against the timestamp "20130101010101" under " "
-        And the named pipe script for the "dump" is run for the files under " "
-        When the user runs "gpcrondump -a -x fullbkdb -K 20130101010101"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the named pipe script for the "restore" is run for the files under " "
-        And the user runs gpdbrestore with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And verify that there is a "heap" table "heap_table" in "fullbkdb" with data
-        And verify that there is a "ao" table "ao_part_table" in "fullbkdb" with data
-
     Scenario: --list-backup-files option for dump -u
         Given the database is running
         And there are no backup files
@@ -3010,7 +2964,7 @@ Feature: Validate command line arguments
         And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
         And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
         And there is a backupfile of tables "heap_table, ao_part_table" in "fullbkdb" exists for validation
-        When the user runs "gpcrondump -a -x fullbkdb --list-backup-files -K 20130101010101 -G"
+        When the user runs "gpcrondump -a -x fullbkdb --list-backup-files -K 20130101010101 -G -g"
         Then gpcrondump should return a return code of 0
         And gpcrondump should print Added the list of pipe names to the file to stdout
         And gpcrondump should print Added the list of file names to the file to stdout
@@ -3023,40 +2977,62 @@ Feature: Validate command line arguments
         And the named pipes are created for the timestamp "20130101010101" under " "
         And the named pipes are validated against the timestamp "20130101010101" under " "
         And the named pipe script for the "dump" is run for the files under " "
-        When the user runs "gpcrondump -a -x fullbkdb -K 20130101010101 -G"
+        When the user runs "gpcrondump -a -x fullbkdb -K 20130101010101 -G -g"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the named pipe script for the "restore" is run for the files under " "
-        And the user runs gpdbrestore with the stored timestamp and options "-G"
+        And the user runs gpdbrestore with the stored timestamp and options "-G -g"
         And gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "heap_table" in "fullbkdb" with data
         And verify that there is a "ao" table "ao_part_table" in "fullbkdb" with data
 
-    Scenario: Full and Incremental Backup with -g option using named pipes
+    Scenario: Incremental Backup and Restore with named pipes with -u
         Given the database is running
+        And the backup files in "/tmp" are deleted
         And there are no backup files
-        And the database "fullbkdb" does not exist
-        And database "fullbkdb" exists
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_part_table" in "fullbkdb" exists for validation
-        When the user runs "gpcrondump -a -x fullbkdb --list-backup-files -K 20130101010101 -g"
+        And the database "testdb" does not exist
+        And database "testdb" exists
+        And there is a list to store the incremental backup timestamps
+        And there is a "heap" table "heap_table" with compression "None" in "testdb" with data
+        And there is a "ao" table "ao_index_table" with compression "None" in "testdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "testdb" with data
+        When the user runs "gpcrondump -a -x testdb -K 20130101010101 --list-backup-files --verbose -u /tmp"
         Then gpcrondump should return a return code of 0
         And gpcrondump should print Added the list of pipe names to the file to stdout
         And gpcrondump should print Added the list of file names to the file to stdout
         And gpcrondump should print Successfully listed the names of backup files and pipes to stdout
         And the timestamp key "20130101010101" for gpcrondump is stored
-        And "pipes" file should be created under " "
-        And "regular_files" file should be created under " "
-        And the "pipes" file under " " with options " " is validated after dump operation
-        And the "regular_files" file under " " with options " " is validated after dump operation
-        And the named pipes are created for the timestamp "20130101010101" under " "
-        And the named pipes are validated against the timestamp "20130101010101" under " "
-        And the named pipe script for the "dump" is run for the files under " "
-        When the user runs "gpcrondump -a -x fullbkdb -K 20130101010101 -g"
+        Then "pipes" file should be created under "/tmp"
+        Then "regular_files" file should be created under "/tmp"
+        And the "pipes" file under "/tmp" with options " " is validated after dump operation
+        And the "regular_files" file under "/tmp" with options " " is validated after dump operation
+        And there are no dump files created under "/tmp"
+        And the named pipes are created for the timestamp "20130101010101" under "/tmp"
+        And the named pipes are validated against the timestamp "20130101010101" under "/tmp"
+        And the named pipe script for the "dump" is run for the files under "/tmp"
+        When the user runs "gpcrondump -a -x testdb -K 20130101010101 -u /tmp"
         Then gpcrondump should return a return code of 0
-        When the user runs "gpcrondump -a -x fullbkdb -K 20130101020101 -g --incremental"
+        And the timestamp from gpcrondump is stored in a list
+        When the user runs "gpcrondump -a -x testdb --list-backup-files -K 20140101010101 --incremental -u /tmp"
         Then gpcrondump should return a return code of 0
+        And the timestamp key "20140101010101" for gpcrondump is stored
+        And "pipes" file should be created under "/tmp"
+        And "regular_files" file should be created under "/tmp"
+        And the "pipes" file under "/tmp" with options " " is validated after dump operation
+        And the "regular_files" file under "/tmp" with options " " is validated after dump operation
+        And the named pipes are created for the timestamp "20140101010101" under "/tmp"
+        And the named pipes are validated against the timestamp "20140101010101" under "/tmp"
+        And the named pipe script for the "dump" is run for the files under "/tmp"
+        And table "public.ao_index_table" is assumed to be in dirty state in "testdb"
+        When the user runs "gpcrondump -a -x testdb -K 20140101010101 --incremental -u /tmp"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored in a list
+        And the named pipe script for the "restore" is run for the files under "/tmp"
+        And all the data from "testdb" is saved for verification
+        And the user runs gpdbrestore with the stored timestamp and options "-u /tmp --verbose"
+        And gpdbrestore should return a return code of 0
+        And verify that the data of "11" tables in "testdb" is validated after restore
+        And close all opened pipes
 
     Scenario: Incremental Backup with no heap tables, backup at the end
         Given the database is running
@@ -3117,101 +3093,6 @@ Feature: Validate command line arguments
         And verify that the data of "12" tables in "testdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "testdb"
         And the plan file is validated against "/data/plan12"
-
-    Scenario: Incremental Backup and Restore with named pipes
-        Given the database is running
-        And there are no backup files
-        And the database "fullbkdb" does not exist
-        And database "fullbkdb" exists
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "fullbkdb" with data
-        And there is a list to store the incremental backup timestamps
-        And there is a backupfile of tables "heap_table, ao_part_table" in "fullbkdb" exists for validation
-        When the user runs "gpcrondump -a -x fullbkdb --list-backup-files -K 20130101010101"
-        Then gpcrondump should return a return code of 0
-        And gpcrondump should print Added the list of pipe names to the file to stdout
-        And gpcrondump should print Added the list of file names to the file to stdout
-        And gpcrondump should print Successfully listed the names of backup files and pipes to stdout
-        And the timestamp key "20130101010101" for gpcrondump is stored
-        And "pipes" file should be created under " "
-        And "regular_files" file should be created under " "
-        And the "pipes" file under " " with options " " is validated after dump operation
-        And the "regular_files" file under " " with options " " is validated after dump operation
-        And the named pipes are created for the timestamp "20130101010101" under " "
-        And the named pipes are validated against the timestamp "20130101010101" under " "
-        And the named pipe script for the "dump" is run for the files under " "
-        When the user runs "gpcrondump -a -x fullbkdb -K 20130101010101"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored in a list
-        When the user runs "gpcrondump -a -x fullbkdb --list-backup-files -K 20140101010101 --incremental"
-        Then gpcrondump should return a return code of 0
-        And the timestamp key "20140101010101" for gpcrondump is stored
-        And "pipes" file should be created under " "
-        And "regular_files" file should be created under " "
-        And the "pipes" file under " " with options " " is validated after dump operation
-        And the "regular_files" file under " " with options " " is validated after dump operation
-        And the named pipes are created for the timestamp "20140101010101" under " "
-        And the named pipes are validated against the timestamp "20140101010101" under " "
-        And the named pipe script for the "dump" is run for the files under " "
-        And table "public.ao_index_table" is assumed to be in dirty state in "fullbkdb"
-        When the user runs "gpcrondump -a -x fullbkdb -K 20140101010101 --incremental"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored in a list
-        And the named pipe script for the "restore" is run for the files under " "
-        And all the data from "fullbkdb" is saved for verification
-        And the user runs gpdbrestore with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And verify that the data of "11" tables in "fullbkdb" is validated after restore
-        And close all opened pipes
-
-    Scenario: Incremental Backup and Restore with named pipes with -u
-        Given the database is running
-        And the backup files in "/tmp" are deleted
-        And there are no backup files
-        And the database "testdb" does not exist
-        And database "testdb" exists
-        And there is a list to store the incremental backup timestamps
-        And there is a "heap" table "heap_table" with compression "None" in "testdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "testdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "testdb" with data
-        When the user runs "gpcrondump -a -x testdb -K 20130101010101 --list-backup-files --verbose -u /tmp"
-        Then gpcrondump should return a return code of 0
-        And gpcrondump should print Added the list of pipe names to the file to stdout
-        And gpcrondump should print Added the list of file names to the file to stdout
-        And gpcrondump should print Successfully listed the names of backup files and pipes to stdout
-        And the timestamp key "20130101010101" for gpcrondump is stored
-        Then "pipes" file should be created under "/tmp"
-        Then "regular_files" file should be created under "/tmp"
-        And the "pipes" file under "/tmp" with options " " is validated after dump operation
-        And the "regular_files" file under "/tmp" with options " " is validated after dump operation
-        And there are no dump files created under "/tmp"
-        And the named pipes are created for the timestamp "20130101010101" under "/tmp"
-        And the named pipes are validated against the timestamp "20130101010101" under "/tmp"
-        And the named pipe script for the "dump" is run for the files under "/tmp"
-        When the user runs "gpcrondump -a -x testdb -K 20130101010101 -u /tmp"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored in a list
-        When the user runs "gpcrondump -a -x testdb --list-backup-files -K 20140101010101 --incremental -u /tmp"
-        Then gpcrondump should return a return code of 0
-        And the timestamp key "20140101010101" for gpcrondump is stored
-        And "pipes" file should be created under "/tmp"
-        And "regular_files" file should be created under "/tmp"
-        And the "pipes" file under "/tmp" with options " " is validated after dump operation
-        And the "regular_files" file under "/tmp" with options " " is validated after dump operation
-        And the named pipes are created for the timestamp "20140101010101" under "/tmp"
-        And the named pipes are validated against the timestamp "20140101010101" under "/tmp"
-        And the named pipe script for the "dump" is run for the files under "/tmp"
-        And table "public.ao_index_table" is assumed to be in dirty state in "testdb"
-        When the user runs "gpcrondump -a -x testdb -K 20140101010101 --incremental -u /tmp"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored in a list
-        And the named pipe script for the "restore" is run for the files under "/tmp"
-        And all the data from "testdb" is saved for verification
-        And the user runs gpdbrestore with the stored timestamp and options "-u /tmp --verbose"
-        And gpdbrestore should return a return code of 0
-        And verify that the data of "11" tables in "testdb" is validated after restore
-        And close all opened pipes
 
     @backupsmoke
     Scenario: Full Backup and Restore with --prefix option
@@ -4492,12 +4373,12 @@ Feature: Validate command line arguments
         When the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/select_multi_byte_char.sql testdb"
         Then psql should print 2000 to stdout
 
+	@scale
     Scenario: Full Backup with option -T and Restore with exactly 1000 partitions
         Given the database is running
         And there are no backup files
         And the database "testdb" does not exist
         And database "testdb" exists
-        And there is a "ao" table "ao_table" with compression "None" in "testdb" with data
         And there is a "ao" table "ao_part_table" in "testdb" having "1000" partitions
         When the user runs "gpcrondump -a -x testdb -T public.ao_part_table"
         Then gpcrondump should return a return code of 0
