@@ -22,24 +22,14 @@
 #include "catalog/pg_type.h"
 #include "commands/explain.h"
 #include "commands/prepare.h"
-#include "executor/executor.h"
 #include "funcapi.h"
 #include "miscadmin.h"
-#include "nodes/nodeFuncs.h"
-#include "parser/analyze.h"
-#include "parser/parse_coerce.h"
-#include "parser/parse_expr.h"
-#include "parser/parse_type.h"
 #include "rewrite/rewriteHandler.h"
 #include "tcop/pquery.h"
 #include "tcop/tcopprot.h"
 #include "tcop/utility.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
-
-#include "commands/tablespace.h"
-#include "catalog/catalog.h"
-#include "catalog/pg_type.h"
 
 extern char *savedSeqServerHost;
 extern int savedSeqServerPort;
@@ -129,7 +119,7 @@ PrepareQuery(PrepareStmt *stmt, const char *queryString)
 	
 	/* Generate plans for queries.	Snapshot is already set. */
 	plan_list = pg_plan_queries(query_list, NULL, false);
-	
+
 	/*
 	 * Save the results.  We don't have the query string for this PREPARE, but
 	 * we do have the string we got from the client, so use that.
@@ -628,8 +618,9 @@ DropPreparedStatement(const char *stmt_name, bool showError)
  * Implements the 'EXPLAIN EXECUTE' utility statement.
  */
 void
-ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainStmt *stmt, const char * queryString, ParamListInfo params,
-					TupOutputState *tstate)
+ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainStmt *stmt,
+					const char *queryString,
+					ParamListInfo params, TupOutputState *tstate)
 {
 	PreparedStatement *entry;
 	ListCell   *q,
@@ -657,24 +648,18 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainStmt *stmt, const char * query
 		paramLI = EvaluateParams(estate, execstmt->params,
 								 entry->argtype_list);
 	}
-	
-	
+
 	query_list = copyObject(entry->query_list); /* planner scribbles on query tree */
 	stmt_list = pg_plan_queries(query_list, paramLI, false);
-	
+
 	Assert(list_length(query_list) == list_length(stmt_list));
 
 	/* Explain each query */
 	forboth(q, query_list, p, stmt_list)
 	{
-		PlannedStmt *plannedstmt;
-		Query *query;
-		Plan *plan;
-		bool is_last_query;
-		
-		query = (Query *) lfirst(q);
-		plannedstmt = (PlannedStmt*) lfirst(p);
-		plan = plannedstmt->planTree;
+		PlannedStmt *pstmt = (PlannedStmt *) lfirst(p);
+		Query	   *query = (Query *) lfirst(q);
+		bool		is_last_query;
 
 		is_last_query = (lnext(p) == NULL);
 
@@ -706,7 +691,7 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainStmt *stmt, const char * query
 			}
 
 
-			ExplainOnePlan(plannedstmt, stmt, "EXECUTE", paramLI, tstate);
+			ExplainOnePlan(pstmt, stmt, "EXECUTE", paramLI, tstate);
 		}
 
 		/* No need for CommandCounterIncrement, as ExplainOnePlan did it */

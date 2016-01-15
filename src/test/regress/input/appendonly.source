@@ -291,9 +291,14 @@ select * from ao where j = 2;
 -- UAO
 ---------------------
 -- DELETE
+select count(*) from tenk_ao1;
 DELETE FROM tenk_ao1 WHERE unique1 = 1;
+select count(*) from tenk_ao1;
 -- UPDATE
-UPDATE tenk_ao1 SET unique2 = 1 WHERE unique2 = 2;
+select count(*) from tenk_ao1 where unique2 < 0;
+UPDATE tenk_ao1 SET unique2 = -unique1 WHERE unique2 <= 5;
+select count(*) from tenk_ao1 where unique2 < 0;
+
 -------------------- 
 -- unsupported sql 
 --------------------

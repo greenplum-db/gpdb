@@ -18,6 +18,7 @@ gptransfer
    [--skip-existing | --truncate | --drop] 
    [--analyze] [--validate=<type> ] [-x] [--dry-run] 
    [--schema-only ]
+   [--partition-transfer ]
    [--no-final-count]
 
    [--source-host=<source_host> [--source-port=<source_port>] 
@@ -70,6 +71,12 @@ following types of operations:
   also specify a destination database with the --dest-database option. 
   When you specify a destination database, the source database tables are 
   copied into the specified destination database. 
+
+  For partitioned tables, you can specify the --partition-transfer and -f
+  options to copy specific leaf child partitions of partitioned tables from
+  a source database to a destination database. The leaf child partitions are
+  the lowest level partitions of a partitioned database. If the child
+  partition is not a leaf child partition, the utility returns an error.
 
 If an invalid set of gptransfer options are specified, or if a specified 
 source table or database does not exist, gptransfer returns an error and 
@@ -241,7 +248,7 @@ OPTIONS
 
  If the source database does not exist, gptransfer returns an error and 
  quits. If a destination database does not exist a database is created. 
- Not valid with the --full, -f, or -t options. 
+ Not valid with the --full, -f, -t, or --partition-transfer options.
 
  Alternatively, specify the -t or -f option to copy a specified set of 
  tables. 
@@ -278,7 +285,7 @@ OPTIONS
 
  If destination database does not exist, it is created. 
 
- Not valid with the --full option. 
+ Not valid with the --full or --partition-transfer option.
 
 
 --dest-host=<dest_host> 
@@ -308,7 +315,7 @@ OPTIONS
  At most, only one of the options can be specified --skip-existing, 
  --truncate, or --drop. If one of them is not specified and the table 
  exists in the destination system, gptransfer returns an error and quits. 
- Not valid with the --full option. 
+ Not valid with the --full or --partition-transfer option.
 
 
 --dry-run 
@@ -369,7 +376,7 @@ OPTIONS
 
  You cannot specify views, or system catalog tables. 
 
- Not valid with the --full option. 
+ Not valid with the --full or --partition-transfer option.
 
  You can specify the --dry-run option to test the command. The -v option, 
  displays and logs the excluded tables. 
@@ -400,7 +407,8 @@ OPTIONS
  --source-map-file option, the --dest-host option, and if necessary, the 
  other destination system options. 
 
- The --full option cannot be specified with the -t, -d, or -f options. 
+ The --full option cannot be specified with the -t, -d, -f, or
+ --partition-transfer options.
 
  A full migration copies all database objects including, tables, indexes, 
  views, users, roles, functions, and resource queues for all user defined 
@@ -442,6 +450,34 @@ OPTIONS
  The default is to compare the row count of tables copied to the destination 
  databases with the tables in the source database.
 
+--partition-transfer
+
+ Specify this option with the -f option to copy leaf child partition tables
+ of partitioned tables from a source database to a destination database.
+ The text file specified by the -f option contains a list of fully qualified
+ leaf child partition table names. Each line lists one source and one
+ destination table name as comma separated pair in below format.
+
+ fully_qualified_source_table_name, fully_qualified_destination_table_name
+
+ If only one table name is specified in the input file, source table name and
+ destination table name will be the same.
+
+ Wildcard characters are not supported.
+
+ If the table is not a leaf child partition, the utility returns an error and
+ no files are transferred. The destination partitioned table must exist and
+ these characteristics must be the same for the partitioned table in the source
+ and destination database.
+
+  Number of columns
+  Column order
+  Column data types
+  Partitioning criteria for the leaf child partition (partition type, partition
+  column, and partition values)
+
+ This option is not valid with the -d, --dest-database, --drop, --full, -F, -t
+ -T, or --schema-only options.
 
 -q | --quiet
 
@@ -474,7 +510,7 @@ OPTIONS
  If you specify tables with the -t or -f option with --schema-only, 
  gptransfer creates only the tables and indexes. No data is transferred. 
 
- Not valid with the --truncate option. 
+ Not valid with the --truncate, or --partition-transfer option.
 
  Because of the overhead required to set up parallel transfers, the 
  --schema-only option not recommended when transferring information for a 
@@ -563,7 +599,7 @@ OPTIONS
  If you specify the -d option to copy all the tables from a database, you 
  do not need to specify individual tables from the database. 
 
- Not valid with the --full, -d, or -f option. 
+ Not valid with the --full, -d, -f, or --partition-transfer option.
 
 
 -T <db.schema.table>
@@ -586,7 +622,7 @@ OPTIONS
 
  If a source table does not exist, gptransfer displays a warning. 
 
- Not valid with the --full option. 
+ Not valid with the --full, or --partition-transfer option.
 
  You can specify the --dry-run option to test the command. The -v option 
  displays and logs the excluded tables. 

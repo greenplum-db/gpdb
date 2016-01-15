@@ -3929,7 +3929,7 @@ CDXLNode *
 CTranslatorQueryToDXL::PdxlnPrEFromGPDBExpr
 	(
 	Expr *pexpr,
-	CHAR *szAliasName,
+	const CHAR *szAliasName,
 	BOOL fInsistNewColIds
 	)
 {

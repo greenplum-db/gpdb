@@ -56,7 +56,7 @@
 #include "cdb/cdblocaldistribxact.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"  /*Gp_is_writer*/
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 #include "utils/session_state.h"
 
 /* GUC variables */
@@ -209,7 +209,7 @@ InitProcGlobal(int mppLocalProcessCounter)
 /*
  * Prepend -- prepend the entry to the free list of ProcGlobal.
  *
- * Use compare_and_swap to avoid using lock and guarantee atomic operation.
+ * Use pg_atomic_compare_exchange_u32/64 to avoid using lock and guarantee atomic operation.
  */
 static void
 Prepend(PGPROC *myProc)
@@ -225,9 +225,19 @@ Prepend(PGPROC *myProc)
 	{
 		myProc->links.next = ProcGlobal->freeProcs;
 		
-		casResult = compare_and_swap_ulong(&ProcGlobal->freeProcs,
-										   myProc->links.next,
-										   MAKE_OFFSET(myProc));
+		if (sizeof(unsigned long) == sizeof(uint64)) 
+		{
+			casResult = pg_atomic_compare_exchange_u64((pg_atomic_uint64 *)&ProcGlobal->freeProcs,
+														(uint64 *)&myProc->links.next,
+														MAKE_OFFSET(myProc));
+		}
+		else
+		{
+			Assert(sizeof(unsigned long) == sizeof(uint32));
+			casResult = pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&ProcGlobal->freeProcs,
+														(uint32 *)&myProc->links.next,
+														MAKE_OFFSET(myProc));
+		}
 		
 		if (gp_debug_pgproc && !casResult)
 		{
@@ -239,14 +249,14 @@ Prepend(PGPROC *myProc)
 	}
 
 	/* Atomically increment numFreeProcs */
-	gp_atomic_add_32(&ProcGlobal->numFreeProcs, 1);
+	pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&ProcGlobal->numFreeProcs, 1);
 }
 
 
 /*
  * RemoveFirst -- remove the first entry in the free list of ProcGlobal.
  *
- * Use compare_and_swap to avoid using lock and guarantee atomic operation.
+ * Use pg_atomic_compare_exchange_u32/64 to avoid using lock and guarantee atomic operation.
  */
 static PGPROC *
 RemoveFirst()
@@ -259,7 +269,7 @@ RemoveFirst()
 	 * Decrement numFreeProcs before removing the first entry from the
 	 * free list.
 	 */
-	gp_atomic_add_32(&procglobal->numFreeProcs, -1);
+	pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&procglobal->numFreeProcs, 1);
 
 	int32 casResult = false;
 	while(!casResult)
@@ -273,10 +283,20 @@ RemoveFirst()
 		}
 		
 		freeProc = (PGPROC *) MAKE_PTR(myOffset);
-			
-		casResult = compare_and_swap_ulong(&((PROC_HDR *)procglobal)->freeProcs,
-										   myOffset,
-										   freeProc->links.next);
+
+		if (sizeof(unsigned long) == sizeof(uint64)) 
+		{
+			casResult = pg_atomic_compare_exchange_u64((pg_atomic_uint64 *)&((PROC_HDR *)procglobal)->freeProcs,
+														(uint64 *)&myOffset,
+														freeProc->links.next);
+		}
+		else
+		{
+			casResult = pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&((PROC_HDR *)procglobal)->freeProcs,
+														(uint32 *)&myOffset,
+														freeProc->links.next);
+
+		}
 
 		if (gp_debug_pgproc && !casResult)
 		{
@@ -292,7 +312,7 @@ RemoveFirst()
 		 * Increment numFreeProcs since we didn't remove any entry from
 		 * the free list.
 		 */
-		gp_atomic_add_32(&procglobal->numFreeProcs, 1);
+		pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&procglobal->numFreeProcs, 1);
 	}
 
 	return freeProc;
@@ -342,7 +362,7 @@ InitProcess(void)
 
 	set_spins_per_delay(procglobal->spins_per_delay);
 
-	int mppLocalProcessSerial = gp_atomic_add_32(&procglobal->mppLocalProcessCounter, 1);
+	int mppLocalProcessSerial = pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&procglobal->mppLocalProcessCounter, 1);
 
 	lockHolderProcPtr = MyProc;
 
@@ -495,6 +515,7 @@ InitAuxiliaryProcess(void)
 	PGPROC	   *auxproc;
 	int			proctype;
 	int			i;
+	uint32 		expected;
 
 	/*
 	 * ProcGlobal should be set up already (if we are a backend, we inherit
@@ -519,8 +540,9 @@ InitAuxiliaryProcess(void)
 	for (proctype = 0; proctype < NUM_AUXILIARY_PROCS; proctype++)
 	{
 		auxproc = &AuxiliaryProcs[proctype];
-		if (compare_and_swap_32((uint32*)(&(auxproc->pid)),
-								0,
+		expected = 0;
+		if (pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)(&(auxproc->pid)),
+								&expected,
 								MyProcPid))
 		{
 			/* Find a free entry, break here. */
@@ -724,8 +746,8 @@ static void update_spins_per_delay()
 	{
 		int old_spins_per_delay = procglobal->spins_per_delay;
 		int new_spins_per_delay = recompute_spins_per_delay(old_spins_per_delay);
-		casResult = compare_and_swap_32((uint32*)&procglobal->spins_per_delay,
-										old_spins_per_delay,
+		casResult = pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&procglobal->spins_per_delay,
+										(uint32 *)&old_spins_per_delay,
 										new_spins_per_delay);
 	}
 }
@@ -1789,7 +1811,7 @@ void ProcNewMppSessionId(int *newSessionId)
 	Assert(newSessionId != NULL);
 
     *newSessionId = MyProc->mppSessionId =
-		gp_atomic_add_32(&ProcGlobal->mppLocalProcessCounter, 1);
+		pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&ProcGlobal->mppLocalProcessCounter, 1);
 
     /*
      * Make sure that our SessionState entry correctly records our

@@ -1333,22 +1333,6 @@ tuplesort_performsort_mk(Tuplesortstate_mk *state)
             state->pos.markpos.tapepos.offset = 0;
             state->pos.markpos_eof = false;
 
-    		/*
-    		 * If we're planning to reuse the spill files from this sort,
-    		 * save metadata here and mark work_set complete.
-    		 */
-    		if (gp_workfile_caching && state->work_set &&
-				!QueryFinishPending)
-    		{
-    			tuplesort_write_spill_metadata_mk(state);
-
-    			/* We don't know how to handle TSS_FINALMERGE yet */
-    			Assert(state->status == TSS_SORTEDONTAPE);
-    			Assert(state->work_set);
-
-    			workfile_mgr_mark_complete(state->work_set);
-    		}
-
             break;
 
         default:
@@ -1738,27 +1722,14 @@ inittapes_mk(Tuplesortstate_mk *state, const char* rwfile_prefix)
      * inaccurate.)
      */
     tapeSpace = maxTapes * TAPE_BUFFER_OVERHEAD;
-
     Assert(state->work_set == NULL);
-    PlanState *ps = NULL;
-    bool can_be_reused = false;
-    if (state->ss != NULL)
-    {
-    	ps = &state->ss->ps;
-    	Sort *node = (Sort *) ps->plan;
-    	if (node->share_type == SHARE_NOTSHARED)
-    	{
-    		/* Only attempt to cache when not shared under a ShareInputScan */
-    		can_be_reused = true;
-    	}
-    }
 
     /*
      * Create the tape set and allocate the per-tape data arrays.
      */
     if(!rwfile_prefix)
     {
-        state->work_set = workfile_mgr_create_set(BUFFILE, can_be_reused, ps, NULL_SNAPSHOT);
+        state->work_set = workfile_mgr_create_set(BUFFILE, false /* can_be_reused */, NULL /* ps */, NULL_SNAPSHOT);
         state->tapeset_state_file = workfile_mgr_create_fileno(state->work_set, WORKFILE_NUM_MKSORT_METADATA);
 
         ExecWorkFile *tape_file = workfile_mgr_create_fileno(state->work_set, WORKFILE_NUM_MKSORT_TAPESET);
@@ -1956,14 +1927,7 @@ mergeruns(Tuplesortstate_mk *state)
          * tape, we can stop at this point and do the final merge on-the-fly.
          */
 
-    	/* If workfile caching is enabled, always do the final merging
-    	 * and store the sorted result on disk, instead of stopping before the
-    	 * last merge iteration.
-    	 * This can cause some slowdown compared to no workfile caching, but
-    	 * it enables us to re-use the mechanism to dump and restore logical
-    	 * tape set information as-is.
-    	 */
-        if (!state->randomAccess && !gp_workfile_caching)
+        if (!state->randomAccess)
         {
             bool		allOneRun = true;
 
@@ -3556,59 +3520,6 @@ tuplesort_set_gpmon_mk(Tuplesortstate_mk *state, gpmon_packet_t *gpmon_pkt, int 
 {
     state->gpmon_pkt = gpmon_pkt;
     state->gpmon_sort_tick = gpmon_tick;
-}
-
-/*
- * Write the metadata of a workfile set to disk
- */
-void
-tuplesort_write_spill_metadata_mk(Tuplesortstate_mk *state)
-{
-
-	if (state->status == TSS_SORTEDINMEM)
-	{
-		/* No spill files, nothing to save */
-		return;
-	}
-
-	/* We don't know how to handle TSS_FINALMERGE yet */
-	Assert(state->status == TSS_SORTEDONTAPE);
-
-	tuplesort_flush_mk(state);
-}
-
-void tuplesort_set_spillfile_set_mk(Tuplesortstate_mk * state, workfile_set * sfs)
-{
-	state->work_set = sfs;
-}
-
-void tuplesort_read_spill_metadata_mk(Tuplesortstate_mk *state)
-{
-
-	Assert(state->work_set != NULL);
-
-	MemoryContext oldctxt = MemoryContextSwitchTo(state->sortcontext);
-
-    state->status = TSS_SORTEDONTAPE;
-    state->readtup = readtup_heap;
-
-	/* Open saved spill file set and metadata.
-	 * Initialize logical tape set to point to the right blocks.  */
-    state->tapeset_state_file = workfile_mgr_open_fileno(state->work_set, WORKFILE_NUM_MKSORT_METADATA);
-	ExecWorkFile *tape_file = workfile_mgr_open_fileno(state->work_set, WORKFILE_NUM_MKSORT_TAPESET);
-
-	state->tapeset = LoadLogicalTapeSetState(state->tapeset_state_file, tape_file);
-    state->currentRun = 0;
-    state->result_tape = LogicalTapeSetGetTape(state->tapeset, 0);
-
-    state->pos.eof_reached = false;
-    state->pos.markpos.tapepos.blkNum = 0;
-    state->pos.markpos.tapepos.offset = 0;
-    state->pos.markpos.mempos = 0;
-    state->pos.markpos_eof = false;
-    state->pos.cur_work_tape = NULL;
-
-    MemoryContextSwitchTo(oldctxt);
 }
 
 /* EOF */

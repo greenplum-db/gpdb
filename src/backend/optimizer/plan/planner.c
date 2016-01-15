@@ -14,13 +14,11 @@
  *-------------------------------------------------------------------------
  */
 
-#include <dlfcn.h>
 #include "postgres.h"
 
 #include <limits.h>
 
 #include "catalog/pg_operator.h"
-#include "catalog/pg_type.h"
 #include "executor/executor.h"
 #include "executor/execHHashagg.h"
 #include "executor/nodeAgg.h"
@@ -43,12 +41,10 @@
 #endif
 #include "parser/parse_expr.h"
 #include "parser/parse_oper.h"
-#include "parser/parse_relation.h"
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
 #include "utils/selfuncs.h"
 #include "utils/syscache.h"
-#include "nodes/bitmapset.h"
 
 #include "cdb/cdbllize.h"
 #include "cdb/cdbmutate.h" 	/* apply_shareinput */
@@ -59,9 +55,6 @@
 #include "cdb/cdbsetop.h" /* motion utilities */
 #include "cdb/cdbsubselect.h"   /* cdbsubselect_flatten_sublinks() */
 
-#include "utils/debugbreak.h"
-#include "catalog/gp_policy.h"
-
 /* GUC parameter */
 double cursor_tuple_fraction = DEFAULT_CURSOR_TUPLE_FRACTION;
 
@@ -71,14 +64,15 @@ planner_hook_type planner_hook = NULL;
 ParamListInfo PlannerBoundParamList = NULL;		/* current boundParams */
 
 /* Expression kind codes for preprocess_expression */
-#define EXPRKIND_QUAL			0
-#define EXPRKIND_TARGET			1
-#define EXPRKIND_RTFUNC			2
-#define EXPRKIND_VALUES			3
-#define EXPRKIND_LIMIT			4
-#define EXPRKIND_ININFO			5
-#define EXPRKIND_APPINFO		6
-#define EXPRKIND_WINDOW_BOUND	7
+#define EXPRKIND_QUAL		0
+#define EXPRKIND_TARGET		1
+#define EXPRKIND_RTFUNC		2
+#define EXPRKIND_VALUES		3
+#define EXPRKIND_LIMIT		4
+#define EXPRKIND_ININFO		5
+#define EXPRKIND_APPINFO	6
+#define EXPRKIND_WINDOW_BOUND 7
+
 
 static Node *preprocess_expression(PlannerInfo *root, Node *expr, int kind);
 static void preprocess_qual_conditions(PlannerInfo *root, Node *jtnode);
@@ -128,7 +122,7 @@ static int gs_compare(const void *a, const void*b);
 static void sort_canonical_gs_list(List *gs, int *p_nsets, Bitmapset ***p_sets);
 
 static Plan *pushdown_preliminary_limit(Plan *plan, Node *limitCount, int64 count_est, Node *limitOffset, int64 offset_est);
-bool is_dummy_plan(Plan *plan);
+static bool is_dummy_plan(Plan *plan);
 
 
 #ifdef USE_ORCA
@@ -244,7 +238,7 @@ optimize_query(Query *parse, ParamListInfo boundParams)
  *
  *****************************************************************************/
 
-PlannedStmt * 
+PlannedStmt *
 planner(Query *parse, int cursorOptions,
 		ParamListInfo boundParams)
 {
@@ -331,7 +325,7 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		isCursor = true;
 		cursorOptions |= ((DeclareCursorStmt *) parse->utilityStmt)->options;
 	}
-	
+
 	/*
 	 * The planner can be called recursively (an example is when
 	 * eval_const_expressions tries to pre-evaluate an SQL function).
@@ -342,7 +336,7 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	 * PlannerInfo.
 	 */
 	glob = makeNode(PlannerGlobal);
-	
+
 	glob->boundParams = boundParams;
 	glob->paramlist = NIL;
 	glob->subplans = NIL;
@@ -390,7 +384,7 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		/* Default assumption is we need all the tuples */
 		tuple_fraction = 0.0;
 	}
-	
+
 	parse = normalize_query(parse);
 
 	PlannerConfig *config = DefaultPlannerConfig();
@@ -564,13 +558,13 @@ subquery_planner(PlannerGlobal *glob,
 	root->planner_cxt = CurrentMemoryContext;
 	root->eq_classes = NIL;
 	root->init_plans = NIL;
-	
+
 	root->list_cteplaninfo = NIL;
 	if (parse->cteList != NIL)
 	{
 		root->list_cteplaninfo = init_list_cteplaninfo(list_length(parse->cteList));
 	}
-	
+
 	root->in_info_list = NIL;
 	root->append_rel_list = NIL;
 
@@ -586,7 +580,6 @@ subquery_planner(PlannerGlobal *glob,
     /* Ensure that jointree has been normalized. See normalize_query_jointree_mutator() */
     AssertImply(parse->jointree->fromlist, list_length(parse->jointree->fromlist) == 1);
 
-    
     /* CDB: Stash current query level's relids before pulling up subqueries. */
     root->currlevel_relids = get_relids_in_jointree((Node *)parse->jointree);
 
@@ -598,7 +591,6 @@ subquery_planner(PlannerGlobal *glob,
 	 */
 	if (parse->hasSubLinks)
         cdbsubselect_flatten_sublinks(root, (Node *)parse);
-
 
 	/*
 	 * Check to see if any subqueries in the rangetable can be merged into
@@ -720,23 +712,13 @@ subquery_planner(PlannerGlobal *glob,
 	{
 		RangeTblEntry *rte = (RangeTblEntry *) lfirst(l);
 
-		switch (rte->rtekind)
-		{
-			case RTE_TABLEFUNCTION:  
-			case RTE_FUNCTION:
-				rte->funcexpr = preprocess_expression(root, rte->funcexpr,
-													  EXPRKIND_RTFUNC);
-				break;
-
-			case RTE_VALUES:
-				rte->values_lists = (List *)
-					preprocess_expression(root, (Node *) rte->values_lists,
-										  EXPRKIND_VALUES);
-				break;
-
-			default:
-				break;
-		}
+		if (rte->rtekind == RTE_FUNCTION || rte->rtekind == RTE_TABLEFUNCTION)
+			rte->funcexpr = preprocess_expression(root, rte->funcexpr,
+												  EXPRKIND_RTFUNC);
+		else if (rte->rtekind == RTE_VALUES)
+			rte->values_lists = (List *)
+				preprocess_expression(root, (Node *) rte->values_lists,
+									  EXPRKIND_VALUES);
 	}
 
 	/*
@@ -856,7 +838,6 @@ subquery_planner(PlannerGlobal *glob,
 	 */
 	if (list_length(glob->subplans) != num_old_subplans || 
 		root->query_level > 1)
-		
 	{
 		Assert(root->parse == parse); /* GPDP isn't always careful about this. */
 		SS_finalize_plan(root, root->parse->rtable, plan, true);
@@ -865,7 +846,7 @@ subquery_planner(PlannerGlobal *glob,
 	/* Return internal info if caller wants it */
 	if (subroot)
 		*subroot = root;
-	
+
 	return plan;
 }
 
@@ -978,8 +959,6 @@ preprocess_expression(PlannerInfo *root, Node *expr, int kind)
 static void
 preprocess_qual_conditions(PlannerInfo *root, Node *jtnode)
 {
-	ListCell   *l;
-
 	if (jtnode == NULL)
 		return;
 	if (IsA(jtnode, RangeTblRef))
@@ -989,6 +968,7 @@ preprocess_qual_conditions(PlannerInfo *root, Node *jtnode)
 	else if (IsA(jtnode, FromExpr))
 	{
 		FromExpr   *f = (FromExpr *) jtnode;
+		ListCell   *l;
 
 		foreach(l, f->fromlist)
 			preprocess_qual_conditions(root, lfirst(l));
@@ -998,6 +978,7 @@ preprocess_qual_conditions(PlannerInfo *root, Node *jtnode)
 	else if (IsA(jtnode, JoinExpr))
 	{
 		JoinExpr   *j = (JoinExpr *) jtnode;
+		ListCell   *l;
 
 		preprocess_qual_conditions(root, j->larg);
 		preprocess_qual_conditions(root, j->rarg);
@@ -1084,7 +1065,7 @@ inheritance_planner(PlannerInfo *root)
 		 */
 		if (is_dummy_plan(subplan))
 			continue;
-		
+
 		/* MPP needs target loci to match. */
 		if ( Gp_role == GP_ROLE_DISPATCH )
 		{
@@ -2052,7 +2033,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		}
 	}
 
-    /*
+	/*
 	 * If we were not able to make the plan come out in the right order, add
 	 * an explicit sort step.  Note that, if we going to add a Unique node,
 	 * the sort_pathkeys will have the distinct keys as a prefix.
@@ -2140,7 +2121,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		rlist = set_returning_clause_references(root->glob,
 												parse->returningList,
 												result_plan,
-												parse->resultRelation); 
+												parse->resultRelation);
 		root->returningLists = list_make1(rlist);
 	}
 	else
@@ -2186,11 +2167,11 @@ is_dummy_plan_walker(Node *node, bool *context)
 	 */
 	if ( node == NULL || !is_plan_node(node) )
 		return false;
-	
+
 	switch (nodeTag(node))
 	{
 		case T_Result:
-			/* 
+			/*
 			 * This tests the base case of a dummy plan which is a Result
 			 * node with a constant FALSE filter quals.  (This is the case
 			 * constructed as an empty Append path by set_plain_rel_pathlist
@@ -2296,7 +2277,7 @@ is_dummy_plan_walker(Node *node, bool *context)
 }
 
 
-bool
+static bool
 is_dummy_plan(Plan *plan)
 {
     bool is_dummy = false;
@@ -2513,12 +2494,11 @@ preprocess_limit(PlannerInfo *root, double tuple_fraction,
 static Oid *
 extract_grouping_ops(List *groupClause, int *numGroupOps)
 {
-	int			maxCols;
+	int			maxCols = list_length(groupClause);
 	int			colno = 0;
 	Oid		   *groupOperators;
 	ListCell   *glitem;
 
-	maxCols = list_length(groupClause);
 	groupOperators = (Oid *) palloc(maxCols * sizeof(Oid));
 
 	foreach(glitem, groupClause)

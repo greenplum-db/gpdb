@@ -89,24 +89,6 @@ typedef struct IndexScanDescData
 typedef IndexScanDescData *IndexScanDesc;
 
 /*
- * HiddenScanDesc is used only in systable API.  This is intended to
- * supply additional tuples in catalog without bumping up the catalog
- * version.
- */
-typedef struct HiddenScanDescData
-{
-	Relation	hdn_rel;		/* base relation */
-	int			hdn_nkeys;		/* number of scan keys */
-	ScanKey		hdn_key;		/* array of scan key descriptors */
-	HeapTuple  *hdn_tuples;		/* in-memory array of tuples */
-	int			hdn_len;		/* number of hidden tuples */
-	HeapTuple	hdn_lasttuple;	/* just-fetched tuple */
-	int			hdn_idx;		/* current reading cursor */
-} HiddenScanDescData;
-
-typedef HiddenScanDescData *HiddenScanDesc;
-
-/*
  * used for scan of external relations with the file protocol
  */
 typedef struct FileScanDescData

@@ -935,15 +935,22 @@ COptTasks::PvOptimizeTask
 	// the invalidation mechanism.
 	bool reset_mdcache = gpdb::FMDCacheNeedsReset();
 
-	// initialize metadata cache, or purge if needed
+	// initialize metadata cache, or purge if needed, or change size if requested
 	if (!CMDCache::FInitialized())
 	{
 		CMDCache::Init();
+		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}
 	else if (reset_mdcache)
 	{
 		CMDCache::Reset();
+		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}
+	else if (CMDCache::ULLGetCacheQuota() != optimizer_mdcache_size * 1024L)
+	{
+		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
+	}
+
 
 	// load search strategy
 	DrgPss *pdrgpss = PdrgPssLoad(pmp, optimizer_search_strategy_path);
@@ -1618,11 +1625,30 @@ COptTasks::PvEvalExprFromDXLTask
 
 	CDXLNode *pdxlnResult = NULL;
 	BOOL fReleaseCache = false;
-	// initialize metadata cache
+
+	// Does the metadatacache need to be reset?
+	//
+	// On the first call, before the cache has been initialized, we
+	// don't care about the return value of FMDCacheNeedsReset(). But
+	// we need to call it anyway, to give it a chance to initialize
+	// the invalidation mechanism.
+	bool reset_mdcache = gpdb::FMDCacheNeedsReset();
+
+	// initialize metadata cache, or purge if needed, or change size if requested
 	if (!CMDCache::FInitialized())
 	{
 		CMDCache::Init();
+		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 		fReleaseCache = true;
+	}
+	else if (reset_mdcache)
+	{
+		CMDCache::Reset();
+		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
+	}
+	else if (CMDCache::ULLGetCacheQuota() != optimizer_mdcache_size * 1024L)
+	{
+		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}
 
 	GPOS_TRY

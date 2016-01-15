@@ -14,6 +14,7 @@
 #include "cdb/partitionselection.h"
 #include "cdb/cdbpartition.h"
 #include "executor/executor.h"
+#include "parser/parse_expr.h"
 #include "utils/memutils.h"
 
 /* ----------------------------------------------------------------

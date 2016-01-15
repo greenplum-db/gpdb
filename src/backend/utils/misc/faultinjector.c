@@ -479,8 +479,8 @@ FaultInjectorType_e
 FaultInjector_InjectFaultIfSet(
 							   FaultInjectorIdentifier_e identifier,
 							   DDLStatement_e			 ddlStatement,
-							   char*					 databaseName,
-							   char*					 tableName)
+							   const char*					 databaseName,
+							   const char*					 tableName)
 {
 	
 	FaultInjectorEntry_s   *entryShared, localEntry,

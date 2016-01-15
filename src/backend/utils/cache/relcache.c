@@ -2402,9 +2402,6 @@ RelationClearRelation(Relation relation, bool rebuild)
 		/* pgstat_info must be preserved */
 		SWAPFIELD(struct PgStat_TableStatus *, pgstat_info);
 
-		/* preserve rd_cdbpolicy, as there are probably pointers to it */
-		SWAPFIELD(struct GpPolicy *, rd_cdbpolicy);
-
 		/* preserve persistent table information for the relation  */
 		SWAPFIELD(struct RelationNodeInfo, rd_segfile0_relationnodeinfo);
 

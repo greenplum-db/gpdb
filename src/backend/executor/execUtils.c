@@ -67,7 +67,6 @@
 #include "cdb/cdbmotion.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/memquota.h"
-#include "catalog/catalog.h" // isMasterOnly()
 #include "executor/spi.h"
 #include "utils/elog.h"
 #include "miscadmin.h"
@@ -1740,7 +1739,7 @@ InitRootSlices(QueryDesc *queryDesc)
 					int idx = list_nth_int(resultRelations, 0);
 					Assert (idx > 0);
 					Oid reloid = getrelid(idx, queryDesc->plannedstmt->rtable);
-					if (!isMasterOnly(reloid))
+					if (GpPolicyFetch(CurrentMemoryContext, reloid)->ptype != POLICYTYPE_ENTRY)
 					{
 						slice->gangType = GANGTYPE_PRIMARY_WRITER;
 						slice->gangSize = getgpsegmentCount();

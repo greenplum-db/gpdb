@@ -341,7 +341,6 @@ class FreeBsdPlatform(GenericPlatform):
     
         
 """ if self.SYSTEM == 'sunos':
-            self.IFCONFIG_TXT='-a inet'
             self.PS_TXT='ef'
             self.LIB_TYPE='LD_LIBRARY_PATH'
             self.ZCAT='gzcat'
@@ -352,7 +351,6 @@ class FreeBsdPlatform(GenericPlatform):
             self.DF=findCmdInPath('df')
             self.DU_TXT='-s'
         elif self.SYSTEM == 'linux':
-            self.IFCONFIG_TXT=''
             self.PS_TXT='ax'
             self.LIB_TYPE='LD_LIBRARY_PATH'
             self.PG_METHOD='ident sameuser'
@@ -361,7 +359,6 @@ class FreeBsdPlatform(GenericPlatform):
             self.DF='%s -P' % findCmdInPath('df')
             self.DU_TXT='c'
         elif self.SYSTEM == 'darwin':
-            self.IFCONFIG_TXT=''
             self.PS_TXT='ax'
             self.LIB_TYPE='DYLD_LIBRARY_PATH'
             self.PG_METHOD='ident sameuser'
@@ -370,7 +367,6 @@ class FreeBsdPlatform(GenericPlatform):
             self.DF='%s -P' % findCmdInPath('df')
             self.DU_TXT='-c'
         elif self.SYSTEM == 'freebsd':
-            self.IFCONFIG_TXT=''
             self.PS_TXT='ax'
             self.LIB_TYPE='LD_LIBRARY_PATH'
             self.PG_METHOD='ident sameuser'

@@ -1076,10 +1076,10 @@ ResHandleUtilityStmt(Portal portal, Node *stmt)
 
 		if (numSlots >= 1) /* statement limit exists */
 		{
-			PortalSetStatus(portal, PORTAL_QUEUE);
+			portal->status = PORTAL_QUEUE;
 
 			portal->releaseResLock = ResLockUtilityPortal(portal, resQueue->ignorecostlimit);
 		}
-		PortalSetStatus(portal, PORTAL_ACTIVE);
+		portal->status = PORTAL_ACTIVE;
 	}
 }

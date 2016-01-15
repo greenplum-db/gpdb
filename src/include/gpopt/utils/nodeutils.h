@@ -20,7 +20,7 @@ extern struct List *extract_nodes(struct Node *ps, int nodeTag);
 // String related functionality.
 
 extern char *textToString(text *pt);
-extern text *stringToText(char *sz);
+extern text *stringToText(const char *sz);
 extern struct Const *stringToConst(char *sz);
 extern char *constToString(Const *pconst);
 

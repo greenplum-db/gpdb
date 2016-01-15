@@ -185,7 +185,7 @@ public class AvroFileReader {
 			break;
 
 		case INT:
-			if (!GPDBWritable.isIntOrBigInt(gpdbField.getType())) {
+			if (!GPDBWritable.isSmallIntOrIntOrBigInt(gpdbField.getType())) {
 				throw new IOException("type mismatch, avro is int but gpdb is not int, gpdbColumnIdex : " + index + ", avroFiled : " + fieldName);
 			}
 			break;
@@ -282,8 +282,20 @@ public class AvroFileReader {
 			break;
 
 		case INT:
-			if(colTypes != null) colTypes.add(GPDBWritable.INTEGER);
-			if(writable != null) writable.setInt(index, (Integer)record.get(fieldName));
+			if(colTypes != null) {
+				if (tableSchemas != null && tableSchemas.get(index).getType() == GPDBWritable.SMALLINT) {
+					colTypes.add(GPDBWritable.SMALLINT);
+				}else {
+					colTypes.add(GPDBWritable.INTEGER);
+				}
+			}
+			if(writable != null) {
+				if (tableSchemas != null && tableSchemas.get(index).getType() == GPDBWritable.SMALLINT) {
+					writable.setShort(index, ((Integer)record.get(fieldName)).shortValue());
+				}else {
+					writable.setInt(index, (Integer)record.get(fieldName));
+				}
+			}
 			break;
 
 		case DOUBLE:
@@ -291,7 +303,7 @@ public class AvroFileReader {
 			if(writable != null) {
 				if (record.get(fieldName) instanceof Integer) {
 					writable.setDouble(index, Double.valueOf((Integer)record.get(fieldName)));
-				}else if (record.get(fieldName) instanceof Integer) {
+				}else if (record.get(fieldName) instanceof Long) {
 					writable.setDouble(index, Double.valueOf((Long)record.get(fieldName)));
 				}else if (record.get(fieldName) instanceof Float) {
 					writable.setDouble(index, Double.valueOf((Float)record.get(fieldName)));
@@ -471,26 +483,16 @@ public class AvroFileReader {
 
 		switch (fieldType) {
 		case INT:
-			return sb.append((Integer)element);
-			
 		case DOUBLE:
-			return sb.append((Double)element);
-
 		case STRING:
-			return sb.append((Utf8)element);
-
 		case FLOAT:
-			return sb.append((Float)element);
-
 		case LONG:
-			return sb.append((Long)element);
+		case BOOLEAN:
+			return sb.append(element);
 
 		case BYTES:
 			FormatHandlerUtil.byteArray2OctString(((ByteBuffer) element).array(), sb);
 			return sb;
-
-		case BOOLEAN:
-			return sb.append((Boolean)element);
 
 		case FIXED:
 			FormatHandlerUtil.byteArray2OctString(( (Fixed) element).bytes(), sb);
@@ -526,8 +528,9 @@ public class AvroFileReader {
 		}
 
 		List<Integer> colTypes = new ArrayList<Integer>();
-		for (Schema.Field field : schema.getFields()) {
-			populateRecord(0, null, field, colTypes, null);
+		List<Schema.Field> fields = schema.getFields();
+		for (int i = 0; i < fields.size(); i++) {
+			populateRecord(i, null, fields.get(i), colTypes, null);
 		}
 
 		colTypeArray = new int[colTypes.size()];

@@ -43,7 +43,7 @@ char *textToString(text *pt)
 //		String to text type. Caller is responsible for freeing memory.
 //---------------------------------------------------------------------------
 
-text *stringToText(char *sz)
+text *stringToText(const char *sz)
 {
 	int len = (int) (strlen(sz) + VARHDRSZ);
 	text *ptResult = (text *) palloc(len + VARHDRSZ);

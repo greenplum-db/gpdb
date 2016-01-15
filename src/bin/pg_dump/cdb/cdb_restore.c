@@ -44,7 +44,7 @@ static void *threadProc(void *arg);
 static void myHandler(SIGNAL_ARGS);
 static void installSignalHandlers(void);
 static bool restoreMaster(InputOptions * pInputOpts, PGconn *pConn, SegmentDatabase *sSegDB, SegmentDatabase *tSegDB, ThreadParm * pParm);
-static void spinOffThreads(PGconn *pConn, InputOptions * pInputOpts, const const RestorePairArray * restorePair, ThreadParmArray * pParmAr);
+static void spinOffThreads(PGconn *pConn, InputOptions * pInputOpts, const RestorePairArray * restorePair, ThreadParmArray * pParmAr);
 static int	reportRestoreResults(const char *pszReportDirectory, const ThreadParm * pMasterParm, const ThreadParmArray * pParmAr);
 static int	reportMasterError(InputOptions inputopts, const ThreadParm * pMasterParm, const char *localMsg);
 static void updateAppendOnlyStats(PGconn *pConn);
@@ -70,7 +70,7 @@ static const char *logFatal = "FATAL";
 const char *progname;
 static char * addPassThroughLongParm(const char *Parm, const char *pszValue, char *pszPassThroughParmString);
 static char *dump_prefix = NULL;
-static char *status_file = NULL;
+static char *status_file_dir = NULL;
 
 /* NetBackup related variable */
 static char *netbackup_service_host = NULL;
@@ -92,6 +92,8 @@ main(int argc, char **argv)
 	SegmentDatabase *sourceSegDB = NULL;
 	SegmentDatabase *targetSegDB = NULL;
 
+	progname = get_progname(argv[0]);
+
 	/* This struct holds the values of the command line parameters */
 	InputOptions inputOpts;
 
@@ -109,8 +111,6 @@ main(int argc, char **argv)
 	memset(&restorePairAr, 0, sizeof(restorePairAr));
 	memset(&parmAr, 0, sizeof(parmAr));
 	memset(&masterParm, 0, sizeof(masterParm));
-
-	progname = get_progname(argv[0]);
 
 #ifdef USE_DDBOOST
 	dd_boost_enabled = 0;
@@ -254,7 +254,7 @@ cleanup:
 	if (pConn != NULL)
 		PQfinish(pConn);
 
-	return (failCount == 0 ? 0 : 1);
+	return failCount;
 }
 
 static void
@@ -738,8 +738,8 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 				pInputOpts->pszPassThroughParms = addPassThroughLongParm("prefix", DUMP_PREFIX, pInputOpts->pszPassThroughParms);
 				break;
 			case 14:
-				status_file = Safe_strdup(optarg);
-				pInputOpts->pszPassThroughParms = addPassThroughLongParm("status", status_file, pInputOpts->pszPassThroughParms);
+				status_file_dir = Safe_strdup(optarg);
+				pInputOpts->pszPassThroughParms = addPassThroughLongParm("status", status_file_dir, pInputOpts->pszPassThroughParms);
 				break;
 			case 15:
 				netbackup_service_host = Safe_strdup(optarg);
@@ -755,7 +755,6 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 				if (change_schema!= NULL)
 					free(change_schema);
 				break;
-
 			default:
 				mpp_err_msg_cache(logError, progname, "Try \"%s --help\" for more information.\n", progname);
 				return false;
@@ -984,6 +983,7 @@ threadProc(void *arg)
 	char	   *pszPassThroughCredentials;
 	char	   *pszPassThroughTargetInfo;
 	PQExpBuffer Qry;
+	PQExpBuffer pqBuffer;
 	PGresult   *pRes;
 	int			sock;
 	bool		bSentCancelMessage;
@@ -1020,7 +1020,7 @@ threadProc(void *arg)
 		sSegDB->pszDBName = Safe_strdup(pInputOpts->pszDBName);
 	}
 
-	/* connect to the source segDB to start gp_dump_agent there */
+	/* connect to the source segDB to start gp_restore_agent there */
 	pConn = MakeDBConnection(sSegDB, false);
 	if (PQstatus(pConn) == CONNECTION_BAD)
 	{
@@ -1178,8 +1178,10 @@ threadProc(void *arg)
 					g_b_SendCancelMessage = true;
 					bIsFinished = true;
 					pParm->bSuccess = false;
+					pqBuffer = createPQExpBuffer();
 					/* Make call to get error message from file on server */
-					pParm->pszErrorMsg = ReadBackendBackupFile(pConn, pInputOpts->pszBackupDirectory, pszKey, BFT_RESTORE_STATUS, progname);
+					ReadBackendBackupFileError(pConn, status_file_dir, pszKey, BFT_RESTORE_STATUS, progname, pqBuffer);
+					pParm->pszErrorMsg = pqBuffer->data;
 
 					mpp_err_msg(logError, progname, "restore failed for source dbid %d, target dbid %d on host %s\n",
 								sSegDB->dbid, tSegDB->dbid, StringNotNull(sSegDB->pszHost, "localhost"));
@@ -1205,6 +1207,20 @@ threadProc(void *arg)
 					bSentCancelMessage = true;
 				}
 			}
+		}
+	}
+
+	/*
+	 * If segment reports success or no errors so far, scan of the restore status file
+	 * for ERRORS and report them if found
+	 */
+	if(pParm->bSuccess || pParm->pszErrorMsg == NULL)
+	{
+		pqBuffer = createPQExpBuffer();
+		int status = ReadBackendBackupFileError(pConn, status_file_dir, pszKey, BFT_RESTORE_STATUS, progname, pqBuffer);
+		if (status != 0)
+		{
+			pParm->pszErrorMsg = pqBuffer->data;
 		}
 	}
 
@@ -1299,7 +1315,7 @@ restoreMaster(InputOptions * pInputOpts,
 	pParm->pTargetSegDBData = tSegDB;
 	pParm->pSourceSegDBData = sSegDB;
 	pParm->pOptionsData = pInputOpts;
-	pParm->bSuccess = false;
+	pParm->bSuccess = true;
 	pParm->pszErrorMsg = NULL;
 	pParm->pszRemoteBackupPath = NULL;
 
@@ -1477,7 +1493,7 @@ spinOffThreads(PGconn *pConn, InputOptions * pInputOpts, const RestorePairArray 
 		pParm->pSourceSegDBData = &restorePairAr->pData[i].segdb_source;
 		pParm->pTargetSegDBData = &restorePairAr->pData[i].segdb_target;
 		pParm->pOptionsData = pInputOpts;
-		pParm->bSuccess = false;
+		pParm->bSuccess = true;
 
 		/* exclude master node */
 		if (pParm->pTargetSegDBData->role == ROLE_MASTER)
@@ -1582,6 +1598,7 @@ reportRestoreResults(const char *pszReportDirectory, const ThreadParm * pMasterP
 	char	   *pszFormat;
 	int			i;
 	int			failCount;
+	int			errorCount;
 	const ThreadParm *pParm;
 	char	   *pszStatus;
 	char	   *pszMsg;
@@ -1656,6 +1673,7 @@ reportRestoreResults(const char *pszReportDirectory, const ThreadParm * pMasterP
 	appendPQExpBuffer(reportBuf, "Individual Results\n");
 
 	failCount = 0;
+	errorCount = 0;
 	for (i = 0; i < pParmAr->count + 1; i++)
 	{
 		if (i == 0)
@@ -1672,10 +1690,19 @@ reportRestoreResults(const char *pszReportDirectory, const ThreadParm * pMasterP
 				continue;
 		}
 
-		if (!pParm->bSuccess)
-			failCount++;
-		pszStatus = pParm->bSuccess ? "Succeeded" : "Failed with error: \n{\n";
 		pszMsg = pParm->pszErrorMsg;
+		if (!pParm->bSuccess)
+		{
+			pszStatus = "Failed with error: \n{\n";
+			failCount++;
+		}
+		else if (pParm->bSuccess && pszMsg != NULL)
+		{
+			pszStatus = "Completed but errors were found: \n{\n";
+			errorCount++;
+		}
+		else
+			pszStatus = "Succeeded";
 		if (pszMsg == NULL)
 			pszMsg = "";
 
@@ -1691,10 +1718,12 @@ reportRestoreResults(const char *pszReportDirectory, const ThreadParm * pMasterP
 			);
 	}
 
-	if (failCount == 0)
+	if (failCount == 0 && errorCount == 0)
 		appendPQExpBuffer(reportBuf, "\n%s  utility finished successfully.\n", progname);
-	else
+	else if (failCount > 0)
 		appendPQExpBuffer(reportBuf, "\n%s  utility finished unsuccessfully with  %d  failures.\n", progname, failCount);
+	else
+		appendPQExpBuffer(reportBuf, "\n%s  utility finished but errors were found.\n", progname);
 
 	/* write report to report file */
 	if (fRptFile != NULL)
@@ -1712,7 +1741,11 @@ reportRestoreResults(const char *pszReportDirectory, const ThreadParm * pMasterP
 
 	destroyPQExpBuffer(reportBuf);
 
-	return failCount;
+	if (failCount > 0)
+		return 1;
+	else if (errorCount > 0)
+		return 2;
+	return 0;
 }
 
 /*

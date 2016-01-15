@@ -5,10 +5,7 @@ import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.ByteBuffer;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -29,7 +26,6 @@ import org.apache.parquet.schema.Type;
 import org.apache.parquet.schema.Types;
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName;
 import org.apache.parquet.schema.Type.Repetition;
-import org.apache.parquet.schema.Types.MessageTypeBuilder;
 
 import com.emc.greenplum.gpdb.hadoop.formathandler.util.FormatHandlerUtil;
 import com.emc.greenplum.gpdb.hadoop.io.GPDBWritable;
@@ -91,7 +87,7 @@ public class GpdbParquetFileWriter {
 		this.dicEnable = dicEnable;
 	}
 
-	protected GpdbParquetFileWriter(){}
+	public GpdbParquetFileWriter(){}
 
 	/**
 	 * read GPDBWritable from gpdb and then write it to hdfs
@@ -177,12 +173,14 @@ public class GpdbParquetFileWriter {
 	 *
 	 * @throws IOException
 	 */
-	private void fillRecord(Group pqGroup, GPDBWritable gw, MessageType schema) throws IOException{
+	public void fillRecord(Group pqGroup, GPDBWritable gw, MessageType schema) throws IOException{
 		int[] colType = gw.getColumnType();
 		List<Type> fields = schema.getFields();
 
 		for (int i = 0; i < colType.length; i++) {
-			fillElement(i, colType[i], pqGroup, gw, fields.get(i));
+			if (!gw.isNull(i)) {
+				fillElement(i, colType[i], pqGroup, gw, fields.get(i));
+			}
 		}
 	}
 
@@ -334,8 +332,6 @@ public class GpdbParquetFileWriter {
 		dis.readFully(tableNameBytes);
 		String tableName = new String(tableNameBytes);
 
-		MessageTypeBuilder typeBuilder = Types.buildMessage();
-
 		int colCount = dis.readInt();
 		List<Type> fields = new ArrayList<Type>();
 		for (int i = 0; i < colCount; i++) {
@@ -389,6 +385,7 @@ public class GpdbParquetFileWriter {
 			break;
 
 		case GPDBWritable.SMALLINT:
+			eType.originalType = OriginalType.INT_16;
 		case GPDBWritable.INTEGER:
 			eType.primitiveType = PrimitiveTypeName.INT32;
 			break;

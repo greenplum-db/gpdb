@@ -70,7 +70,7 @@ Feature: gpfdist configure timeout value
     @wip
     Scenario: gpfdist select from simple external table
         Given the database is running
-        And database "gpfdistdb" is created if not exists
+        And database "gpfdistdb" is created if not exists on host "None" with port "PGPORT" with user "None"
         And the external table "read_ext_data" does not exist in "gpfdistdb"
         And the "gpfdist" process is killed
         Given the directory "extdata" exists in current working directory
@@ -89,7 +89,7 @@ Feature: gpfdist configure timeout value
     @42nonsolsuse
     Scenario: simple writable external table test
         Given the database is running
-        And database "gpfdistdb" is created if not exists
+        And database "gpfdistdb" is created if not exists on host "None" with port "PGPORT" with user "None"
         And the external table "write_ext_data" does not exist in "gpfdistdb"
         And the "gpfdist" process is killed
         Given the directory "extdata" exists in current working directory
@@ -277,7 +277,7 @@ Feature: gpfdist configure timeout value
     @writable_external_table_encoding_conversion
     Scenario: guarantee right encoding conversion when write into external table
         Given the database is running
-        And database "gpfdistdb" is created if not exists
+        And database "gpfdistdb" is created if not exists on host "None" with port "PGPORT" with user "None"
         And the "gpfdist" process is killed
         And the external table "wet_encoding_conversion" does not exist in "gpfdistdb"
         And the directory "extdata" exists in current working directory

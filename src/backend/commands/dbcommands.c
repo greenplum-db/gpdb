@@ -1486,7 +1486,6 @@ dropdb(const char *dbname, bool missing_ok)
 	 */
 	RequestCheckpoint(true, false);
 
-	
 	/*
 	 * Collect information on the database's relations from pg_class and from scanning
 	 * the file-system directories.
@@ -2049,6 +2048,7 @@ AlterDatabaseOwner(const char *dbname, Oid newOwnerId)
 	cqContext  *pcqCtx;
 	Form_pg_database datForm;
 	Oid			dboid = InvalidOid;
+
 	/*
 	 * Get the old tuple.  We don't need a lock on the database per se,
 	 * because we're not going to do anything that would mess up incoming

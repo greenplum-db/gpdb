@@ -1231,6 +1231,16 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 							locationUris);
 
 		/*
+		 * DefineRelation loaded the new relation into relcache, but the
+		 * relcache contains the distribution policy, which in turn depends on
+		 * the contents of pg_exttable, for EXECUTE-type external tables
+		 * (see GpPolicyFetch()). Now that we have created the pg_exttable
+		 * entry, invalidate the relcache, so that it gets loaded with the
+		 * correct information.
+		 */
+		CacheInvalidateRelcacheByRelid(reloid);
+
+		/*
 		 * record a dependency between the external table and its error table (if one exists)
 		 */
 		if (singlerowerrorDesc && singlerowerrorDesc->errtable)
@@ -3157,17 +3167,17 @@ renameatt(Oid myrelid,
 void
 renamerel(Oid myrelid, const char *newrelname, RenameStmt *stmt)
 {
-	Relation		pg_class_desc;
-	HeapTuple		tuple;
-	Oid				typeId;
-	Oid				namespaceId;
-	char			relkind;
-	char			oldrelname[NAMEDATALEN];
-	bool			relhastriggers;
-	Form_pg_class	form;
-	bool			isSystemRelation;
-	cqContext		cqc;
-	cqContext	   *pcqCtx;
+	Relation	relrelation;	/* for RELATION relation */
+	HeapTuple	reltup;
+	Form_pg_class relform;
+	Oid			typeId;
+	Oid			namespaceId;
+	char	   *oldrelname;
+	char		relkind;
+	bool		relhastriggers;
+	bool		isSystemRelation;
+	cqContext	cqc;
+	cqContext  *pcqCtx;
 
 	/* if this is a child table of a partitioning configuration, complain */
 	if (stmt && rel_is_child_partition(myrelid) && !stmt->bAllowPartn)
@@ -3186,28 +3196,30 @@ renamerel(Oid myrelid, const char *newrelname, RenameStmt *stmt)
 						get_rel_name(master), pretty ? pretty : "" )));
 	}
 
-	pg_class_desc = heap_open(RelationRelationId, RowExclusiveLock);
+	/*
+	 * Find relation's pg_class tuple, and make sure newrelname isn't in use.
+	 */
+	relrelation = heap_open(RelationRelationId, RowExclusiveLock);
 
-	pcqCtx = caql_addrel(cqclr(&cqc), pg_class_desc);
+	pcqCtx = caql_addrel(cqclr(&cqc), relrelation);
 
-	tuple = caql_getfirst(
+	reltup = caql_getfirst(
 			pcqCtx,
 			cql("SELECT * FROM pg_class "
 				" WHERE oid = :1 "
 				" FOR UPDATE ",
 				ObjectIdGetDatum(myrelid)));
-
-	if (!HeapTupleIsValid(tuple))
+	if (!HeapTupleIsValid(reltup))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("relation \"%d\" does not exist", myrelid)));
 
-	form = (Form_pg_class) GETSTRUCT(tuple);
-	relkind = form->relkind;
-	namespaceId = form->relnamespace;
-	relhastriggers = form->reltriggers;
-	typeId = form->reltype;
-	strncpy(&oldrelname[0], (form->relname).data, NAMEDATALEN);
+	relform = (Form_pg_class) GETSTRUCT(reltup);
+	relkind = relform->relkind;
+	namespaceId = relform->relnamespace;
+	relhastriggers = relform->reltriggers;
+	typeId = relform->reltype;
+	oldrelname = pstrdup(NameStr(relform->relname));
 
 	isSystemRelation = IsSystemNamespace(namespaceId) ||
 					   IsToastNamespace(namespaceId) ||
@@ -3215,9 +3227,6 @@ renamerel(Oid myrelid, const char *newrelname, RenameStmt *stmt)
 
 	Assert (allowSystemTableModsDDL || !isSystemRelation);
 
-	/*
-	 * Find relation's pg_class tuple, and make sure newrelname isn't in use.
-	 */
 	if (get_relname_relid(newrelname, namespaceId) != InvalidOid)
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_TABLE),
@@ -3225,15 +3234,15 @@ renamerel(Oid myrelid, const char *newrelname, RenameStmt *stmt)
 						newrelname)));
 
 	/*
-	 * Update pg_class tuple with new relname.  (Scribbling on tuple is OK
+	 * Update pg_class tuple with new relname.	(Scribbling on reltup is OK
 	 * because it's a copy...)
 	 */
-	namestrcpy(&(form->relname), newrelname);
+	namestrcpy(&(relform->relname), newrelname);
 
-	caql_update_current(pcqCtx, tuple); /* implicit update of index as well */
+	caql_update_current(pcqCtx, reltup); /* implicit update of index as well */
 
-	heap_freetuple(tuple);
-	heap_close(pg_class_desc, NoLock);
+	heap_freetuple(reltup);
+	heap_close(relrelation, NoLock);
 
 	/*
 	 * Also rename the associated type, if any.
@@ -3258,7 +3267,6 @@ renamerel(Oid myrelid, const char *newrelname, RenameStmt *stmt)
 							   oldrelname,
 							   newrelname,
 							   false, true);
-
 		/* update tgargs where relname is foreign key */
 		update_ri_trigger_args(myrelid,
 							   oldrelname,
@@ -15595,6 +15603,13 @@ ATPExecPartSetTemplate(AlteredTableInfo *tab,
 
 } /* end ATPExecPartSetTemplate */
 
+
+/* part rule update */
+typedef struct part_rule_cxt
+{
+	Oid			old_oid;
+	Oid			new_oid;
+} part_rule_cxt;
 
 static bool
 partrule_walker(Node *node, void *context)

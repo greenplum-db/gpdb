@@ -21,20 +21,13 @@
 #include "access/heapam.h"
 #include "access/xact.h"
 #include "catalog/pg_type.h"
-#include "commands/variable.h"			/* show_session_authorization */
-#include "commands/dbcommands.h" 		/* get_database_name */
 #include "commands/portalcmds.h"
+#include "funcapi.h"
 #include "miscadmin.h"
-#include "nodes/execnodes.h"            /* EState */
 #include "utils/builtins.h"
 #include "utils/memutils.h"
-#include "utils/portal.h"
 #include "utils/resscheduler.h"
-#include "utils/tuplestore.h"           /* tuplestore_begin_heap, etc */
 
-#include "cdb/cdbdisp.h"                /* CdbShutdownPortals, CdbCheckDispatchResult */
-#include "cdb/cdbvars.h"
-#include "cdb/cdbgang.h"
 #include "cdb/ml_ipc.h"
 
 /*
@@ -217,8 +210,7 @@ CreatePortal(const char *name, bool allowDup, bool dupSilent)
 			ereport(ERROR,
 					(errcode(ERRCODE_DUPLICATE_CURSOR),
 					 errmsg("cursor \"%s\" already exists", name)));
-		if (!dupSilent)
-			if (Gp_role != GP_ROLE_EXECUTE)
+		if (!dupSilent && Gp_role != GP_ROLE_EXECUTE)
 			ereport(WARNING,
 					(errcode(ERRCODE_DUPLICATE_CURSOR),
 					 errmsg("closing existing cursor \"%s\"",
@@ -241,7 +233,7 @@ CreatePortal(const char *name, bool allowDup, bool dupSilent)
 										   "Portal");
 
 	/* initialize portal fields that don't start off zero */
-	PortalSetStatus(portal, PORTAL_NEW); 
+	portal->status = PORTAL_NEW;
 	portal->cleanup = PortalCleanup;
 	portal->createSubid = GetCurrentSubTransactionId();
 	portal->strategy = PORTAL_MULTI_QUERY;
@@ -257,7 +249,7 @@ CreatePortal(const char *name, bool allowDup, bool dupSilent)
 		portal->portalId = ResCreatePortalId(name);
 		portal->queueId = GetResQueueId();
 	}
-	portal->is_extended_query = false; /* default value */	
+	portal->is_extended_query = false; /* default value */
 
 	/* put portal in table (sets portal->name) */
 	PortalHashTableInsert(portal, name);
@@ -320,10 +312,10 @@ PortalDefineQuery(Portal portal,
 {
 	AssertArg(PortalIsValid(portal));
 	AssertState(portal->queryContext == NULL);	/* else defined already */
-	
+
 	AssertArg(sourceText != NULL);
 	AssertArg(commandTag != NULL || stmts == NIL);
-	
+
 	portal->prepStmtName = prepStmtName;
 	portal->sourceText = sourceText;
 	portal->sourceTag = sourceTag;
@@ -359,7 +351,7 @@ PortalCreateHoldStore(Portal portal)
 	oldcxt = MemoryContextSwitchTo(portal->holdContext);
 
 	/* XXX: Should maintenance_work_mem be used for the portal size? */
-	portal->holdStore = tuplestore_begin_heap(true, true, work_mem); 
+	portal->holdStore = tuplestore_begin_heap(true, true, work_mem);
 
 	MemoryContextSwitchTo(oldcxt);
 }
@@ -374,7 +366,7 @@ PortalDrop(Portal portal, bool isTopCommit)
 	AssertArg(PortalIsValid(portal));
 
 	/* Not sure if this case can validly happen or not... */
-	if (PortalGetStatus(portal) == PORTAL_ACTIVE) 
+	if (portal->status == PORTAL_ACTIVE)
 		elog(ERROR, "cannot drop active or queued portal");
 
 	TeardownSequenceServer();
@@ -387,11 +379,11 @@ PortalDrop(Portal portal, bool isTopCommit)
 	 */
 	PortalHashTableDelete(portal);
 
-    if (portal->releaseResLock)
-    {
-        portal->releaseResLock = false;
-        ResUnLockPortal(portal);
-    }
+	if (portal->releaseResLock)
+	{
+		portal->releaseResLock = false;
+		ResUnLockPortal(portal);
+	}
 
 	/* let portalcmds.c clean up the state it knows about */
 	if (portal->cleanup)
@@ -421,9 +413,9 @@ PortalDrop(Portal portal, bool isTopCommit)
 	 * eventually ends.
 	 */
 	if (portal->resowner &&
-		(!isTopCommit || PortalGetStatus(portal) == PORTAL_FAILED))
+		(!isTopCommit || portal->status == PORTAL_FAILED))
 	{
-		bool		isCommit = (PortalGetStatus(portal) != PORTAL_FAILED);
+		bool		isCommit = (portal->status != PORTAL_FAILED);
 
 		ResourceOwnerRelease(portal->resowner,
 							 RESOURCE_RELEASE_BEFORE_LOCKS,
@@ -448,11 +440,11 @@ PortalDrop(Portal portal, bool isTopCommit)
 		MemoryContext oldcontext;
 
 		oldcontext = MemoryContextSwitchTo(portal->holdContext);
-		tuplestore_end(portal->holdStore); 
+		tuplestore_end(portal->holdStore);
 		MemoryContextSwitchTo(oldcontext);
 		portal->holdStore = NULL;
 	}
-	
+
 	/* delete tuplestore storage, if any */
 	if (portal->holdContext)
 		MemoryContextDelete(portal->holdContext);
@@ -513,7 +505,7 @@ CommitHoldablePortals(void)
 		/* Is it a holdable portal created in the current xact? */
 		if ((portal->cursorOptions & CURSOR_OPT_HOLD) &&
 			portal->createSubid != InvalidSubTransactionId &&
-			PortalGetStatus(portal) == PORTAL_READY)
+			portal->status == PORTAL_READY)
 		{
 			/*
 			 * We are exiting the transaction that created a holdable cursor.
@@ -573,7 +565,7 @@ PrepareHoldablePortals(void)
 		/* Is it a holdable portal created in the current xact? */
 		if ((portal->cursorOptions & CURSOR_OPT_HOLD) &&
 			portal->createSubid != InvalidSubTransactionId &&
-			PortalGetStatus(portal) == PORTAL_READY)
+			portal->status == PORTAL_READY)
 		{
 			/*
 			 * We are exiting the transaction that created a holdable cursor.
@@ -613,7 +605,7 @@ AtCommit_Portals(void)
 		 * Note however that any resource owner attached to such a portal is
 		 * still going to go away, so don't leave a dangling pointer.
 		 */
-		if (PortalGetStatus(portal) == PORTAL_ACTIVE)
+		if (portal->status == PORTAL_ACTIVE)
 		{
 			portal->resowner = NULL;
 			continue;
@@ -657,8 +649,8 @@ AtAbort_Portals(void)
 	{
 		Portal		portal = hentry->portal;
 
-		if (PortalGetStatus(portal) == PORTAL_ACTIVE)
-			PortalSetStatus(portal, PORTAL_FAILED);
+		if (portal->status == PORTAL_ACTIVE)
+			portal->status = PORTAL_FAILED;
 
 		/*
 		 * Do nothing else to cursors held over from a previous transaction.
@@ -709,7 +701,7 @@ AtCleanup_Portals(void)
 		/* Do nothing to cursors held over from a previous transaction */
 		if (portal->createSubid == InvalidSubTransactionId)
 		{
-			Assert(PortalGetStatus(portal) != PORTAL_ACTIVE);
+			Assert(portal->status != PORTAL_ACTIVE);
 			Assert(portal->resowner == NULL);
 			continue;
 		}
@@ -765,9 +757,6 @@ AtSubAbort_Portals(SubTransactionId mySubid,
 	HASH_SEQ_STATUS status;
 	PortalHashEnt *hentry;
 
-    UnusedArg(parentSubid);
-    UnusedArg(parentXactOwner);
-
 	hash_seq_init(&status, PortalHashTable);
 
 	while ((hentry = (PortalHashEnt *) hash_seq_search(&status)) != NULL)
@@ -785,8 +774,8 @@ AtSubAbort_Portals(SubTransactionId mySubid,
 		 *
 		 * This is only needed to dodge the sanity check in PortalDrop.
 		 */
-		if (PortalGetStatus(portal) == PORTAL_ACTIVE)
-			PortalSetStatus(portal, PORTAL_FAILED);
+		if (portal->status == PORTAL_ACTIVE)
+			portal->status = PORTAL_FAILED;
 
 		/*
 		 * If the portal is READY then allow it to survive into the parent
@@ -807,7 +796,7 @@ AtSubAbort_Portals(SubTransactionId mySubid,
 		}
 		else
 #endif
-
+		{
 			/* let portalcmds.c clean up the state it knows about */
 			if (portal->cleanup)
 			{
@@ -815,20 +804,21 @@ AtSubAbort_Portals(SubTransactionId mySubid,
 				portal->cleanup = NULL;
 			}
 
-		/*
-		 * Any resources belonging to the portal will be released in the
-		 * upcoming transaction-wide cleanup; they will be gone before we
-		 * run PortalDrop.
-		 */
-		portal->resowner = NULL;
+			/*
+			 * Any resources belonging to the portal will be released in the
+			 * upcoming transaction-wide cleanup; they will be gone before we
+			 * run PortalDrop.
+			 */
+			portal->resowner = NULL;
 
-		/*
-		 * Although we can't delete the portal data structure proper, we
-		 * can release any memory in subsidiary contexts, such as executor
-		 * state.  The cleanup hook was the last thing that might have
-		 * needed data there.
-		 */
-		MemoryContextDeleteChildren(PortalGetHeapMemory(portal));
+			/*
+			 * Although we can't delete the portal data structure proper, we
+			 * can release any memory in subsidiary contexts, such as executor
+			 * state.  The cleanup hook was the last thing that might have
+			 * needed data there.
+			 */
+			MemoryContextDeleteChildren(PortalGetHeapMemory(portal));
+		}
 	}
 }
 
@@ -1033,38 +1023,4 @@ pg_cursor(PG_FUNCTION_ARGS)
 	rsinfo->setDesc = tupdesc;
 
 	return (Datum) 0;
-}
-
-void PortalSetStatus(Portal p, PortalStatus s)
-{
-	p->portal_status = s;
-}
-
-PortalStatus
-PortalGetStatus(Portal p)
-{
-	return p->portal_status;
-}
-
-const char *
-PortalGetStatusString(Portal p)
-{
-	switch (p->portal_status)
-	{
-		case PORTAL_NEW:
-			return "PORTAL_NEW";
-		case PORTAL_READY:
-			return "PORTAL_READY";
-		case PORTAL_QUEUE:
-			return "PORTAL_QUEUE";
-		case PORTAL_ACTIVE:
-			return "PORTAL_ACTIVE";
-		case PORTAL_DONE:
-			return "PORTAL_DONE";
-		case PORTAL_FAILED:
-			return "PORTAL_FAILED";
-		case PORTAL_STATUSMAX:
-		default:
-			return "Unknown portal status";
-	}
 }

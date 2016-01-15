@@ -29,13 +29,6 @@ typedef enum
 	PART_STATUS_LEAF	/* a leaf part of a partitioned table */
 } PartStatus;
 
-typedef enum
-{
-	PART_TABLE,
-	PART_PART,
-	PART_CAND
-} PartExchangeRole;
-
 /* cache of function lookups for range partition selection */
 typedef struct PartitionRangeState
 {
@@ -61,23 +54,11 @@ typedef struct PartitionHashState
 	bool *hashinit;
 } PartitionHashState;
 
-/* part rule update */
-typedef struct part_rule_cxt
-{
-	Oid old_oid;
-	Oid new_oid;
-} part_rule_cxt;
-
-
 typedef struct LogicalIndexes
 {
 	int			numLogicalIndexes;
 	LogicalIndexInfo	**logicalIndexInfo;
 } LogicalIndexes;
-
-#define parkindIsHash(c)   ((c) == 'h')
-#define parkindIsRange(c)  ((c) == 'r')
-#define parkindIsList(c)   ((c) == 'l')
 
 extern bool rel_is_default_partition(Oid relid);
 
@@ -102,9 +83,6 @@ extern PartStatus rel_part_status(Oid relid);
 extern List *
 cdb_exchange_part_constraints(Relation table, Relation part, Relation cand, 
 							  bool validate, bool is_split, AlterPartitionCmd *pc);
-
-extern void
-add_reg_part_dependency(Oid tableconid, Oid partconid);
 
 extern PartitionByType
 char_to_parttype(char c);
@@ -260,8 +238,6 @@ extern Datum *get_partition_encoding_attoptions(Relation rel, Oid paroid);
 
 extern LogicalIndexes * BuildLogicalIndexInfo(Oid relid);
 extern Oid getPhysicalIndexRelid(LogicalIndexInfo *iInfo, Oid partOid);
-extern Oid	exprType(Node *expr);
-extern Node *makeBoolConst(bool value, bool isnull);
 
 extern LogicalIndexInfo *logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid);
 

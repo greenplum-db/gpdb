@@ -79,6 +79,7 @@ test: delete
 test: namespace
 ignore: prepared_xacts
 test: privileges
+test: lock
 test: misc
 test: select_views
 test: portals_p2

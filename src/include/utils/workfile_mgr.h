@@ -120,14 +120,8 @@ typedef struct workfile_set
 	/* Operator-specific metadata */
 	workfile_set_op_metadata metadata;
 
-	/* Set to true for workfile sets that are associated with physical files */
-	bool on_disk;
-
 	/* For non-physical workfile sets, pointer to the serialized plan */
 	workfile_set_plan *set_plan;
-
-	/* Indicates if this set can be reused */
-	bool can_be_reused;
 
 	/* Set to true during operator execution once set is complete */
 	bool complete;

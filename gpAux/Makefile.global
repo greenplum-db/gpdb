@@ -145,6 +145,7 @@ export NO_M64=1
 
 # 32-bit/64-bit compiler/linker flag settings
 hpux_ia64_BLD_CFLAGS=-mlp64 -D_XOPEN_SOURCE_EXTENDED
+osx106_x86_BLD_CFLAGS=-m32 -march=i686
 rhel6_x86_64_BLD_CFLAGS=-m64
 rhel5_x86_64_BLD_CFLAGS=-m64
 rhel5_x86_32_BLD_CFLAGS=-m32

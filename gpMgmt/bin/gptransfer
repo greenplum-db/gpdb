@@ -27,6 +27,7 @@ import signal
 import inspect
 import hashlib
 import datetime
+from collections import defaultdict
 from threading import Thread, Event, Lock
 import thread
 from optparse import OptionGroup, SUPPRESS_HELP
@@ -231,6 +232,16 @@ def create_parser():
         default=False,
         help=SUPPRESS_HELP
     )
+
+    general_option_group.add_option(
+        '--partition-transfer',
+        dest='partition_transfer',
+        default=False,
+        action='store_true',
+        help='Transfer partition tables if enabled, disabled by default, this is '
+             'used in combination with -f option'
+    )
+
     general_option_group.add_option(
         '--max-line-length',
         type='int',
@@ -408,7 +419,11 @@ def create_parser():
         default=None,
         action='store',
         metavar='<file>',
-        help='File containing list of database.schema.table entries to transfer'
+        help='File containing list of database.schema.table entries to transfer, '
+             'if --partition-transfer option is specified, each line is a comma '
+             'separated pair of full qualified source partition and destination '
+             'partition table name, if dest partition table name is not specified, '
+             'same source partition table name will be used in dest database'
     )
     # file
     source_option_group.add_option(
@@ -420,6 +435,7 @@ def create_parser():
         metavar='<file>',
         help='File containing list of database.schema.table entries to exclude from transfer'
     )
+
     # exclusive lock
     source_option_group.add_option(
         '-x',
@@ -705,7 +721,7 @@ def get_databases_by_regexp(host, port, user, databases, warning=False):
 
     return dbs
 
-def get_user_tables(host, port, user, databases=None, full=False):
+def get_user_tables(host, port, user, databases=None, full=False, partition_transfer=False):
     """
     Retrieves all tables from a list of databases on a GPDB system.
 
@@ -717,15 +733,16 @@ def get_user_tables(host, port, user, databases=None, full=False):
 
     # We need to use this SQL query because we only want the top level
     # partition.  If we use gpcatalog.get_usertable_list we will dupe data.
-    all_tables_sql = """
+    table_sql_part1 = """
 SELECT
     n.nspname, c.relname, c.relstorage
 FROM
     pg_class c JOIN pg_namespace n ON (c.relnamespace=n.oid)
     JOIN pg_catalog.gp_distribution_policy p on (c.oid = p.localoid)
-WHERE
-    c.oid NOT IN ( SELECT parchildrelid as oid FROM pg_partition_rule )
-AND n.nspname NOT IN ('gpexpand', 'pg_bitmapindex', 'information_schema', 'gp_toolkit');"""
+WHERE """
+    table_sql_parttion_transfer = """c.oid NOT IN ( SELECT parchildrelid as oid FROM pg_partition_rule ) AND """
+    table_sql_part2 = """ n.nspname NOT IN ('gpexpand', 'pg_bitmapindex', 'information_schema', 'gp_toolkit');"""
+    all_tables_sql = table_sql_part1 + (table_sql_parttion_transfer if not partition_transfer else '') + table_sql_part2
 
     all_tables = set()
 
@@ -2323,6 +2340,8 @@ class GpTransfer(object):
         _args: args from the options parser.  Not used.
         """
         self._options = options
+        self.src_dest_partition_table_mapping = None
+        self._pre_validate_options()
         self._work_dir = os.path.join(self._options.work_base_dir,
                                       GPTRANSFER_TMP_DIR)
 
@@ -2358,8 +2377,9 @@ class GpTransfer(object):
             get_user_tables(self._options.dest_host,
                             self._options.dest_port,
                             self._options.dest_user,
-                            [db for db in self._dest_databases if db in self._all_dest_databases])
-
+                            [db for db in self._dest_databases if db in self._all_dest_databases],
+                            False,
+                            self._options.partition_transfer)
         # segment address list
         self._host_map = self._get_host_map()
 
@@ -2391,11 +2411,13 @@ class GpTransfer(object):
                 self._options.max_gpfdist_instances)
 
         # validate options
-        self._validate_options()
+        self._post_validate_options()
 
         self._validate_host_map()
 
         self._validate_table_transfer_set()
+        if self._options.partition_transfer:
+            self._validate_partition_table_transfer_set()
 
         self._validate_filespace(self._options.source_host, self._options.source_port, self._options.source_user,
                                  self._options.dest_host, self._options.dest_port, self._options.dest_user,
@@ -2566,28 +2588,6 @@ class GpTransfer(object):
                 logger.warn(
                     'Failed to remove schema file %s.', schema_filename)
                 logger.warn('This file should be removed manually.')
-
-            # Restoring the full schema uses template0 as the template database
-            # This means that while the gp_toolkit schema is created in each database
-            # it is not populated.  Because of this we need to populate it ourselves.
-            url = DbURL(self._options.dest_host, self._options.dest_port,
-                        'template1', self._options.dest_user)
-            conn = connect(url)
-            databases = [db[0] for db in getUserDatabaseList(conn)]
-            conn.close()
-
-            toolkit_file = os.path.join(self._gphome, 'share', 'postgresql', 'gp_toolkit.sql')
-            logger.info('Populating gp_toolkit schema...')
-            for database in databases:
-                toolkit_cmd = PsqlFile('Create gptoolkit',
-                                self._options.dest_host,
-                                self._options.dest_port,
-                                self._options.dest_user,
-                                database,
-                                toolkit_file)
-                self._pool.addCommand(toolkit_cmd)
-            self._pool.join()
-            self._pool.check_results()
         else:
             # Make sure databases exist on destination system
             url = DbURL(self._options.dest_host, self._options.dest_port,
@@ -2800,14 +2800,15 @@ class GpTransfer(object):
                             str(pair.dest),
                             action_msg)
 
-    def _validate_options(self):
+
+    def _pre_validate_options(self):
         """
         Validates the options passed in to the application.
         """
 
         logger.info('Validating options...')
         if self._options.batch_size > MAX_BATCH_SIZE \
-            or self._options.batch_size < 1:
+	    or self._options.batch_size < 1:
             raise ProgramArgumentValidationException('Invalid value for --batch-size.  '
                                    '--batch-size must be greater than 0 and '
                                    'less than %s' % MAX_BATCH_SIZE)
@@ -2826,9 +2827,39 @@ class GpTransfer(object):
             raise ProgramArgumentValidationException('Cannot specify -F and --full options '
                                    'together')
 
-        if (self._options.exclude_tables or self._options.exclude_input_file) and not self._excluding_table:
-            logger.warning('Found no tables to exclude from transfer table list')
-            sys.exit(0)
+
+
+        if (self._options.partition_transfer and not self._options.input_file):
+            raise ProgramArgumentValidationException('--partition-transfer option must be '
+                                                     'used with -f option')
+
+        if (self._options.partition_transfer and self._options.databases):
+            raise ProgramArgumentValidationException('--partition-transfer option cannot be '
+                                                     'used with -d option')
+
+        if (self._options.partition_transfer and self._options.drop):
+            raise ProgramArgumentValidationException('--partition-transfer option cannot be used '
+                                                     'with --drop option')
+
+        if (self._options.partition_transfer and self._options.tables):
+            raise ProgramArgumentValidationException('--partition-transfer option cannot be used '
+                                                     'with -t option')
+
+        if (self._options.partition_transfer and self._options.schema_only):
+            raise ProgramArgumentValidationException('--partition-transfer option cannot be used '
+                                                     'with --schema-only option, please create partition '
+                                                     'table in other ways')
+
+        if (self._options.partition_transfer and (self._options.exclude_tables or self._options.exclude_input_file)):
+            raise ProgramArgumentValidationException('--partition-transfer option cannot be used '
+                                                     'with any exclude table option')
+
+        if self._options.input_file and not os.path.isfile(self._options.input_file):
+            raise ProgramArgumentValidationException('Input file %s is not a valid file' % self._options.input_file)
+
+        if (self._options.partition_transfer and self._options.full):
+            raise ProgramArgumentValidationException('--partition-transfer option cannot be ' 
+                                                     'used with --full option')
 
         if self._options.full and (self._options.truncate or self._options.drop or
                                    self._options.skip_existing):
@@ -2875,10 +2906,6 @@ class GpTransfer(object):
                                            self._options.input_file)) != 1:
             raise ProgramArgumentValidationException('Only one of --full, -f, -t, or -d can be specified')
 
-        if self._options.full and self._dest_databases != None and len(self._dest_databases) != 0:
-            raise ProgramArgumentValidationException('--full option specified but databases exist '
-                                   'in destination system')
-
         if self._options.base_port <= 1024 or self._options.base_port > 65535:
             raise ProgramArgumentValidationException('Invalid --base-port option')
 
@@ -2915,9 +2942,6 @@ class GpTransfer(object):
             raise ProgramArgumentValidationException('GPHOME directory does not exist on %s'
                                    % self._options.source_host)
 
-        if self._gpfdist_instance_count == 0:
-            raise Exception('Destination system is too small')
-
         if self._options.validator and self._options.validator not in \
                 validator_factory.get_available_validators():
             raise ProgramArgumentValidationException(
@@ -2925,7 +2949,8 @@ class GpTransfer(object):
 
         if self._options.source_host == self._options.dest_host and \
                 self._options.source_port == self._options.dest_port and \
-                not self._options.dest_database:
+                not self._options.dest_database and \
+                not self._options.partition_transfer:
             raise ProgramArgumentValidationException('Source and destination systems cannot be '
                                    'the same unless --dest-database option is '
                                    'set')
@@ -2946,6 +2971,22 @@ class GpTransfer(object):
         if self._options.delimiter == ',' and self._options.format.lower() == 'text':
             raise ProgramArgumentValidationException(
                 'Invalid --delimiter. Default delimiter "," is not allowed in TEXT format. Specify --delimiter option for TEXT')
+
+    def _post_validate_options(self):
+        """
+        Validates the options passed in to the application.
+        """
+
+        if self._options.full and self._dest_databases != None and len(self._dest_databases) != 0:
+            raise ProgramArgumentValidationException('--full option specified but databases exist '
+                                   'in destination system')
+
+        if self._gpfdist_instance_count == 0:
+            raise Exception('Destination system is too small')
+
+        if (self._options.exclude_tables or self._options.exclude_input_file) and not self._excluding_table:
+            logger.warning('Found no tables to exclude from transfer table list')
+            sys.exit(0)
 
     def _final_count_validation(self):
         logger.info('Running final table row count validation on destination tables...')
@@ -3103,11 +3144,29 @@ class GpTransfer(object):
 
     def _get_source_tables(self):
         source_tables = list()
+        # --partition-transfer will have the exact database name for each destination table,
+        # not support the regexp
+        if self._options.partition_transfer:
+            self._get_tables_from_partition_input_file()
+            user_tables = get_user_tables(self._options.source_host,
+                                          self._options.source_port,
+                                          self._options.source_user,
+                                          self._src_databases,
+                                          False,
+                                          self._options.partition_transfer)
+            # filter out non-exist source tables from source databases.
+            for tbl in self.src_dest_partition_table_mapping:
+                for user_tbl in user_tables:
+                    if tbl == str(user_tbl):
+                        source_tables.append(user_tbl)
+            return source_tables
+
         if self._options.full:
             for src_table in get_user_tables(self._options.source_host,
                                              self._options.source_port,
                                              self._options.source_user,
-                                             full = True):
+                                             full = True,
+                                             partition_transfer = False):
                 if src_table.database != 'gpperfmon':
                     source_tables.append(src_table)
 
@@ -3124,6 +3183,7 @@ class GpTransfer(object):
 
             # for databases to transfer with option -d
             databases = list()
+
             for database in self._options.databases:
                 databases.append(_process_regexp(database))
             databases_full_transfer = get_databases_by_regexp(
@@ -3136,43 +3196,21 @@ class GpTransfer(object):
             for table in get_user_tables(self._options.source_host,
                                          self._options.source_port,
                                          self._options.source_user,
-                                         databases_full_transfer):
+                                         databases_full_transfer,
+                                         False,
+                                         self._options.partition_transfer):
                 source_tables.append(table)
 
             del databases[:]
-            # add specified tables and parse wildcard of table names
             tables = list()
-            for fqn in self._options.tables:
-                (database, schema, table) = split_fqn(fqn)
-                database = _process_regexp(database)
-                schema = _process_regexp(schema)
-                table = _process_regexp(table)
+            # add specified tables and parse wildcard of table names
+            if self._options.tables:
+                self._get_tables_from_option(databases, tables)
 
-                if database not in databases:
-                    databases.append(database)
-
-                if (database, schema, table) not in tables:
-                    tables.append((database, schema, table))
-
-            # add all tables in input file and parse wildcard of table names
             # gptransfer with -f option
+            # add all tables from input file and parse wildcard of table names
             if self._options.input_file:
-                with open(self._options.input_file) as input_file:
-                    for line in input_file:
-                        line = line.strip()
-                        if line.startswith('#'):
-                            continue
-
-                        (database, schema, table) = split_fqn(line)
-                        database = _process_regexp(database)
-                        schema = _process_regexp(schema)
-                        table = _process_regexp(table)
-
-                        if database not in databases:
-                            databases.append(database)
-
-                        if (database, schema, table) not in tables:
-                            tables.append((database, schema, table))
+                self._get_tables_from_input_file(databases, tables)
 
             databases_table_transfer = get_databases_by_regexp(
                                            self._options.source_host,
@@ -3182,6 +3220,7 @@ class GpTransfer(object):
 
             # get all source databases to transfer tables from
             self._src_databases = databases_full_transfer + databases_table_transfer
+
 
             # get all destination databases
             if self._options.dest_database:
@@ -3194,7 +3233,9 @@ class GpTransfer(object):
             user_tables = get_user_tables(self._options.source_host,
                                           self._options.source_port,
                                           self._options.source_user,
-                                          databases_table_transfer)
+                                          databases_table_transfer,
+                                          False,
+                                          self._options.partition_transfer)
 
             # Filter down to only the tables needed to added
             seen = set()
@@ -3215,10 +3256,85 @@ class GpTransfer(object):
                                         ' or %s with schema name %s, or %s with table name %s\n%s' %
                                         (db_, database, schema_, schema, table_, table, e))
 
-        return self.filter_tables(source_tables, self.get_exclude_tables())
+        return self.filter_tables(source_tables, self._get_exclude_tables())
 
+    def _process_tables_details(self, table_info, databases, tables):
+        (database, schema, table) = self._process_full_qualified_regexp_name(table_info)
+        if database not in databases:
+            databases.append(database)
+        if (database, schema, table) not in tables:
+            tables.append((database, schema, table))
 
-    def get_exclude_tables(self):
+    def _get_tables_from_input_file(self, databases, tables):
+        """
+        if users provide an input file, add all tables specified.
+        """
+        with open (self._options.input_file) as input_file:
+            for line in input_file:
+                line = line.strip()
+                if line.startswith('#'):
+                    continue
+                self._process_tables_details(line, databases, tables)
+
+    def _get_tables_from_partition_input_file(self):
+        """
+        read comma ',' separated partition table pair: <source, destination>,
+        populate all source-destination pairs with their exact name(does not expect regexp).
+        """
+        self.src_dest_partition_table_mapping = dict()
+        self._dest_databases = []
+        self._src_databases = []
+        with open (self._options.input_file) as input_file:
+            for line in input_file:
+                line = line.strip()
+                if line.startswith('#'):
+                    continue
+                if ',' in line:
+                    src_table, dest_table = line.split(',')
+                else:
+                    src_table = dest_table = line
+
+                # populate the mapping between source and destination table pair
+                src_table, dest_table = src_table.strip(), dest_table.strip()
+                if src_table == '' or dest_table == '':
+                    raise Exception('Can not specify empty table names')
+                if src_table == dest_table and self._options.source_host == self._options.dest_host:
+                    raise Exception('Can not transfer between same partition table %s' % src_table)
+                if (src_table in self.src_dest_partition_table_mapping and
+                    self.src_dest_partition_table_mapping[src_table] == dest_table):
+                    logger.warning('Duplicate entries found, source partition table %s, destination partition table %s ' %
+                                   (src_table, dest_table))
+                    continue
+                self.src_dest_partition_table_mapping[src_table] = dest_table
+
+                src_db = split_fqn(src_table)[0]
+                if src_db not in self._src_databases:
+                    self._src_databases.append(src_db)
+                dest_db = split_fqn(dest_table)[0]
+                if dest_db not in self._dest_databases:
+                    self._dest_databases.append(dest_db)
+
+    def _get_tables_from_option(self, databases, tables):
+        """
+        If use provided tables to transfer from command line, add all of them
+        """
+        for fqn in self._options.tables:
+            self._process_tables_details(fqn, databases, tables)
+
+    def _process_full_qualified_regexp_name(self, full_qualified_name):
+        """
+        split the full qualified table name(possibly in regexp format), and
+        return (database, schema, table) tuple
+        """
+        (database, schema, table) = split_fqn(full_qualified_name)
+
+        database = _process_regexp(database)
+        schema = _process_regexp(schema)
+        table = _process_regexp(table)
+
+        return (database, schema, table)
+
+    def _get_exclude_tables(self):
         """
         get all tables to exclude from transfer table list
         """
@@ -3299,15 +3415,25 @@ class GpTransfer(object):
         seen = set()
 
         for src_table in self._src_tables:
-            dest_database = src_table.database
-            if self._options.dest_database and not self._options.full:
-                dest_database = self._options.dest_database
-
-            table_pair = GpTransferTablePair(src_table,
-                                             GpTransferTable(dest_database,
-                                                             src_table.schema,
-                                                             src_table.table,
+            if self._options.partition_transfer:
+                src_tbl_key = str(src_table)
+                dest_db, dest_schema, dest_tbl = split_fqn(self.src_dest_partition_table_mapping[src_tbl_key])
+                table_pair = GpTransferTablePair(src_table,
+                                             GpTransferTable(dest_db,
+                                                             dest_schema,
+                                                             dest_tbl,
                                                              src_table.external))
+
+            else:
+                dest_database = src_table.database
+                if self._options.dest_database and not self._options.full:
+                    dest_database = self._options.dest_database
+
+                table_pair = GpTransferTablePair(src_table,
+                                                 GpTransferTable(dest_database,
+                                                                 src_table.schema,
+                                                                 src_table.table,
+                                                                 src_table.external))
             if table_pair not in seen:
                 seen.add(table_pair)
                 table_pairs.append(table_pair)
@@ -3375,15 +3501,20 @@ class GpTransfer(object):
                         non_supported_table_name_list.remove(table_pair)
                 elif table_pair.dest.external:
                     continue
-                elif not self._options.truncate and not self._options.drop:
+                elif not self._options.truncate and not self._options.drop and not self._options.partition_transfer:
                     raise Exception('Table %s exists in database %s.'
                                     % (table_pair.dest,
                                     table_pair.dest.database))
                 else:
                     if self._options.truncate:
                         truncate_list.append(table_pair.dest)
-                    else:
+                    elif not self._options.partition_transfer:
                         drop_list.append(table_pair.dest)
+
+            if self._options.partition_transfer:
+                if table_pair.dest not in self._dest_tables:
+                    raise Exception('Table %s does not exist in destination database ' 
+                                     'to transfer partition tables' % str(table_pair.dest))
 
         if len(non_supported_table_name_list) > 0:
             with open(GPTRANSFER_FAILED_TABLES_FILE, 'w') as failed_file:
@@ -3424,6 +3555,322 @@ class GpTransfer(object):
                 cont = ask_yesno(None, 'Do you want to continue?', 'N')
                 if not cont:
                     raise Exception('Canceled')
+
+    def _validate_partition_table_transfer_set(self):
+        """
+        validate that the table pair to transfer are actually leaf partition tables.
+        validate that the pair have same layout and partition criteria.
+        """
+
+        logger.info('Validating partition table transfer set...')
+
+        for table_pair in self._table_transfer_set:
+            self._check_leaf_partition_set(table_pair)
+
+            if not self._has_same_column_types(table_pair):
+                raise Exception('Source paritition table %s has different column layout or types from '
+                                'destination partition table %s' % (str(table_pair.source), str(table_pair.dest)))        
+            if not self._has_same_partition_criteria(table_pair):
+                raise Exception('Source paritition table %s has different partition criteria from '
+                                'destination table %s' % (str(table_pair.source), str(table_pair.dest)))
+
+    def _has_same_column_types(self, table_pair):
+        '''
+        Colums at the same ordinal_position of two partition tables need to be of same type
+        '''
+        src_tbl_columns = self._get_table_columns(table_pair.source, self._options.source_host, self._options.source_port, self._options.source_user)
+        dest_tbl_columns = self._get_table_columns(table_pair.dest, self._options.dest_host, self._options.dest_port, self._options.dest_user)
+
+        if len(src_tbl_columns) != len(dest_tbl_columns):
+            return False
+        for ordinal_pos in src_tbl_columns:
+            if src_tbl_columns[ordinal_pos] != dest_tbl_columns[ordinal_pos]:
+                return False
+        return True
+
+    def _get_table_columns(self, tbl, host, port, user):
+        column_types = dict()
+        get_columns_sql = ''' select ordinal_position, is_nullable, data_type, character_maximum_length,
+                             character_octet_length, numeric_precision, numeric_precision_radix, numeric_scale,
+                             datetime_precision, interval_type, udt_name from information_schema.columns
+                             where table_schema = '%s' and table_name = '%s';''' % (pg.escape_string(tbl.schema), pg.escape_string(tbl.table))
+        with dbconn.connect(dbconn.DbURL(host, port, tbl.database, user)) as conn:
+            cursor = execSQL(conn, get_columns_sql)
+            for row in cursor:
+                column_attrs = list()
+                ordinal_pos = row[0]
+                column_attrs.extend(row[1:])
+                column_types[ordinal_pos] = column_attrs
+        return column_types
+
+
+    def _has_same_partition_levels(self, table_pair):
+        logger.debug('Verifying that partition table transfer pair has same level of partition.')
+        src_prt_levels = self._get_partition_levels(table_pair.source, self._options.source_host,
+                                                           self._options.source_port, self._options.source_user)
+        dest_prt_levels = self._get_partition_levels(table_pair.dest, self._options.dest_host,
+                                                            self._options.dest_port, self._options.dest_user)
+        if src_prt_levels != dest_prt_levels:
+            return False
+        return True
+
+
+    def _get_partition_levels(self, tbl, host, port, user):
+        get_max_partition_sql = ''' select max(p1.partitionlevel) from pg_partitions p1, pg_partitions p2 
+                                    where p1.schemaname = p2.schemaname and p1.tablename = p2.tablename and
+                                    p2.partitionschemaname = '%s' and p2.partitiontablename = '%s';''' % (pg.escape_string(tbl.schema),
+                                                                                                          pg.escape_string(tbl.table))
+        with dbconn.connect(dbconn.DbURL(host, port, tbl.database, user)) as conn:
+            res = execSQLForSingletonRow(conn, get_max_partition_sql)
+            return res[0]
+
+
+    def _has_same_partition_criteria(self, table_pair):
+        #verify the current subpartition pair:
+        logger.debug('Verifying that partition table transfer pair has same partition criteria')
+        source_dest_info = 'source partition table %s and destination partition table %s' % (str(table_pair.source), str(table_pair.dest))
+        if not self._has_same_partition_levels(table_pair):
+            logger.error('Max levels of partition is not same between %s' % source_dest_info)
+            return False
+        if not self._has_same_partition_type_and_key_columns(table_pair):
+            logger.error('Partition type or key is different between %s' % source_dest_info)
+            return False
+        if not self._has_same_parent_partition_value(
+                                                      self._get_partition_levels(
+                                                          table_pair.source,
+                                                          self._options.source_host,
+                                                          self._options.source_port,
+                                                          self._options.source_user),
+                                                      table_pair.source.database,
+                                                      table_pair.source.schema,
+                                                      table_pair.source.table,
+                                                      table_pair.dest.database,
+                                                      table_pair.dest.schema,
+                                                      table_pair.dest.table):
+            logger.error('Partition value is different in the partition hierarchy between %s' % source_dest_info)
+            return False
+        return True
+
+    def _has_same_parent_partition_value(self, level, src_db, src_schema, src_table, dest_db, dest_schema, dest_table):
+        if not self._has_same_partition_value(src_db, src_schema, src_table, dest_db, dest_schema, dest_table):
+            return False
+        if level == 0:
+            return True
+        src_schema, src_table = self._get_parentpartable(src_db, src_schema, src_table, self._options.source_host, self._options.source_port, self._options.source_user)
+        dest_schema, dest_table = self._get_parentpartable(dest_db, dest_schema, dest_table, self._options.dest_host, self._options.dest_port, self._options.dest_user)
+        return self._has_same_parent_partition_value(level - 1, src_db, src_schema, src_table, dest_db, dest_schema, dest_table)
+
+    def _get_parentpartable(self, db, schema, table, host, port, user):
+        """
+        get the parent partition table, return its schema and table name
+        """
+        table_info = 'table %s.%s.%s, host %s' % (db, schema, table, host)
+        logger.debug('Getting parent table information for %s' % (table_info))
+        oid = self._get_oid(db, schema, table, host, port, user)
+        get_parentpartable_sql = ''' select n.nspname, c.relname
+                                 from pg_class c,
+                                      pg_namespace n,
+                                      pg_inherits i
+                                 where i.inhparent = c.oid
+                                       and c.relnamespace = n.oid
+                                       and i.inhrelid = %s; ''' % oid
+        with dbconn.connect(dbconn.DbURL(host, port, db, user)) as conn:
+            row = execSQLForSingletonRow(conn, get_parentpartable_sql)
+            if not row:
+                raise Exception('Found no parent table for %s' % table_info)
+            return row[0], row[1]
+
+    def _get_top_level_parent_table(self, db, schema, table, host, port, user):
+        """
+        get the top level parent partition table's name and its namespace
+        """
+        table_info = 'table %s.%s.%s, host %s' % (db, schema, table, host)
+        logger.debug('Getting top level parent table information for %s' % (table_info))
+        get_top_level_table_sql = ''' select schemaname, tablename from pg_catalog.pg_partitions 
+                                      where partitionschemaname = '%s'
+                                            and partitiontablename = '%s' ''' % (
+                                            pg.escape_string(schema),
+                                            pg.escape_string(table))
+        with dbconn.connect(dbconn.DbURL(host, port, db, user)) as conn:
+            row = execSQLForSingletonRow(conn, get_top_level_table_sql)
+            if not row:
+                raise Exception('Failed to find the top level table for %s' % table_info)
+            return row[0], row[1]
+
+    def _get_top_level_parent_table_oid(self, db, schema, table, host, port, user):
+        root_schema, root_table = self._get_top_level_parent_table(db, schema, table, host, port, user)
+        root_oid = self._get_oid(db, root_schema, root_table, host, port, user)
+        return root_oid
+
+    def _has_same_partition_type_and_key_columns(self, table_pair):
+        source_dest_info = 'source table %s and destination table %s' % (str(table_pair.source), str(table_pair.dest))
+        source_partition_column_info = self._get_partition_column_info(table_pair.source.database,
+                                                                 table_pair.source.schema,
+                                                                 table_pair.source.table,
+                                                                 self._options.source_host,
+                                                                 self._options.source_port,
+                                                                 self._options.source_user)
+
+        dest_partition_column_info = self._get_partition_column_info(table_pair.dest.database,
+                                                                 table_pair.dest.schema,
+                                                                 table_pair.dest.table,
+                                                                 self._options.dest_host,
+                                                                 self._options.dest_port,
+                                                                 self._options.dest_user)
+        for level_key in source_partition_column_info:
+            if source_partition_column_info[level_key]['parkind'] != dest_partition_column_info[level_key]['parkind']:
+                logger.error('Partition type is different at level %s between %s' % (level_key, source_dest_info))
+            if source_partition_column_info[level_key]['parnatts'] != dest_partition_column_info[level_key]['parnatts']:
+                logger.error('Number of partition columns is different at level %s between %s' % (level_key, source_dest_info))
+
+            # this handles multi column partition, sort them before compare, in case same partition columns but in random order
+            source_paratts = [att.strip() for att in source_partition_column_info[level_key]['paratts'].split(' ')]
+            dest_paratts = [att.strip() for att in dest_partition_column_info[level_key]['paratts'].split(' ')]
+            if sorted(source_paratts) != sorted(dest_paratts):
+                logger.error('Partition column attributes is different at level %s between %s' % 
+                            (level_key, source_dest_info))
+                return False
+        return True
+
+    def _get_partition_column_info(self, db, schema, table, host, port, user):
+        level_partition_info = defaultdict(dict)
+        top_level_table_oid = self._get_top_level_parent_table_oid(db, schema, table, host, port, user)
+        get_partition_colum = ''' select parkind, parlevel, parnatts, paratts from pg_partition
+                                  where paristemplate = 'f' 
+                                  and parrelid = %s ''' % top_level_table_oid
+        with dbconn.connect(dbconn.DbURL(host, port, db, user)) as conn:
+            cursor = execSQL(conn, get_partition_colum)
+            for row in cursor:
+                level = row[1]
+                level_partition_info[level]['parkind'] = row[0]
+                level_partition_info[level]['parnatts'] = row[2]
+                level_partition_info[level]['paratts'] = row[3]
+        return level_partition_info
+
+    def _has_same_partition_value(self, src_db, src_schema, src_table, dest_db, dest_schema, dest_table):
+        """
+        Verify that the partition value is the same based on the partition type: [range, list]
+        """
+        source_partition_info = self._get_partition_info(src_db, src_schema, src_table, self._options.source_host,
+                                                         self._options.source_port, self._options.source_user)
+        dest_partition_info = self._get_partition_info(dest_db, dest_schema, dest_table, self._options.dest_host,
+                                                       self._options.dest_port, self._options.dest_user)
+
+        part_transfer_pair_msg = '''source partition table %s.%s.%s and 
+                                    destination partition table %s.%s.%s.''' % (src_db, src_schema, 
+                                                                                src_table, dest_db, 
+                                                                                dest_schema, dest_table)
+        part_type = source_partition_info['partitiontype']
+        if source_partition_info['parisdefault'] != dest_partition_info['parisdefault']:
+            logger.error('One of the subpartition table is a default partition, %s' % part_transfer_pair_msg)
+            return False
+
+        if part_type == 'list':
+            return self._has_same_list_partition_value(source_partition_info, dest_partition_info, part_transfer_pair_msg)
+        elif part_type == 'range':
+            return self._has_same_range_partition_value(source_partition_info, dest_partition_info, part_transfer_pair_msg)
+        else:
+            raise Exception('Unknown partitioning type %s found, %s' % (part_type, part_transfer_pair_msg))
+
+    def _has_same_range_partition_value(self, source_partition_info, dest_partition_info, part_transfer_pair_msg):
+        if (source_partition_info['parrangestartincl'] != dest_partition_info['parrangestartincl'] or
+            source_partition_info['parrangestart'] != dest_partition_info['parrangestart'] or
+            source_partition_info['parrangeend'] != dest_partition_info['parrangeend'] or
+            source_partition_info['parrangeevery'] != dest_partition_info['parrangeevery']):
+
+             logger.error('Range partition value is different between %s' % part_transfer_pair_msg)
+             return False
+        return True
+
+    def _has_same_list_partition_value(self, source_partition_info, dest_partition_info, part_transfer_pair_msg):
+        source_partition_values = self._process_list_partition_value(source_partition_info['parlistvalues'])
+        dest_partition_values = self._process_list_partition_value(dest_partition_info['parlistvalues'])
+
+        # Sort the partition values/constraints
+        if sorted(source_partition_values) != sorted(dest_partition_values):
+            logger.error('List partition value is different between %s' % part_transfer_pair_msg)
+            return False
+        return True
+
+    def _process_list_partition_value(self, partition_info):
+        """
+        In the scenario of multiple partition colums, the partition values will
+        be in the format: (({constraint1} {constraint2})) in pg_catalog.pg_partition_rule
+        """
+        partition_values = partition_info[2 : len(partition_info) - 2].split('} {')
+        partition_values = [val.strip('{') if '{' in val else val.strip('}') for val in partition_values]
+        return partition_values
+
+    def _get_oid(self, db, schema, table, host, port, user):
+        get_oid_sql = ''' select c.oid
+                     from pg_catalog.pg_class c, pg_catalog.pg_namespace n
+                     where c.relname = '%s' 
+                           and n.oid = c.relnamespace
+                           and n.nspname = '%s'
+                           ''' % (pg.escape_string(table), pg.escape_string(schema))
+        with dbconn.connect(dbconn.DbURL(host, port, db, user)) as conn:
+            res = execSQLForSingletonRow(conn, get_oid_sql)
+            if not res:
+                raise Exception('Failed to retrieve the oid of table %s.%s.%s on host %s' % (db, schema, table, host))
+            return res[0]
+
+
+    def _get_partition_info(self, db, schema, table, host, port, user):
+        part_type = None
+        partition_info = dict()
+        oid = self._get_oid(db, schema, table, host, port, user)
+
+        get_partition_type = ''' select partitiontype
+                                 from pg_catalog.pg_partitions
+                                 where partitionschemaname = '%s'
+                                       and partitiontablename = '%s';''' % (pg.escape_string(schema), pg.escape_string(table))
+        with dbconn.connect(dbconn.DbURL(host, port, db, user)) as conn:
+            part_type = execSQLForSingletonRow(conn, get_partition_type)
+            partition_info['partitiontype'] = part_type[0]
+
+        get_partition_info_sql = '''select parisdefault, parruleord, parrangestartincl, parrangeendincl, parrangestart,
+                                           parrangeend, parrangeevery, parlistvalues
+                                    from pg_catalog.pg_partition_rule 
+                                    where parchildrelid = %s;''' % oid
+
+        with dbconn.connect(dbconn.DbURL(host, port, db, user)) as conn:
+            row = execSQLForSingletonRow(conn, get_partition_info_sql)
+            partition_info['parisdefault'] = row[0] 
+            partition_info['parruleord'] = row[1] 
+            partition_info['parrangestartincl'] = row[2] 
+            partition_info['parrangeendincl'] = row[3] 
+            partition_info['parrangestart'] = row[4] 
+            partition_info['parrangeend'] = row[5] 
+            partition_info['parrangeevery'] = row[6] 
+            partition_info['parlistvalues'] = row[7] 
+        return partition_info
+
+
+    def _check_leaf_partition_set(self, table_pair):
+        # check if the source and destination table are all leaf partition tables
+
+        logger.debug('Verifying partition table is leaf partition table.')
+        if not self._is_leaf_partition(table_pair.source, self._options.source_host,
+                                      self._options.source_port, self._options.source_user):
+            raise Exception('Source table %s is not a leaf partition table.' % str(table_pair.source))
+
+        if not self._is_leaf_partition(table_pair.dest, self._options.dest_host,
+                                      self._options.dest_port, self._options.dest_user):
+            raise Exception('Destination table %s is not a leaf partition table.' % str(table_pair.dest))
+       
+    def _is_leaf_partition(self, tbl, host, port, user):
+        check_leaf_partition_sql = '''select relname from pg_class r 
+                             where not relhassubclass and exists 
+                             (select oid from pg_partition_rule p where r.oid = p.parchildrelid) and not exists 
+                             (select oid from pg_partition p where r.oid = p.parrelid) and  
+                             relnamespace = (select oid from pg_namespace where nspname = '%s') and 
+                             relname = '%s' ;''' % (pg.escape_string(tbl.schema), pg.escape_string(tbl.table))
+        with dbconn.connect(dbconn.DbURL(host, port, tbl.database, user)) as conn:
+            cursor = execSQL(conn, check_leaf_partition_sql)
+            if cursor.rowcount != 1:
+                return False
+        return True
+
 
     def _get_host_map(self):
         """

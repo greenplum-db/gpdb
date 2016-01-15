@@ -1,7 +1,7 @@
 Pkgname: pljava 
 Architecture: #arch
 OS: #os
-Version: ossv1.4.0_pv1.2_gpdb4.3orca
+Version: ossv1.4.0_pv1.3_gpdb4.3orca
 GPDBVersion: 4.3
 Description: Provides a procedural language implementation of Java for the Greenplum Database. 
 PostInstall:

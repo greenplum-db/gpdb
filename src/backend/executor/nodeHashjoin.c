@@ -37,12 +37,8 @@ static TupleTableSlot *ExecHashJoinGetSavedTuple(HashJoinBatchSide *side,
 						  TupleTableSlot *tupleSlot);
 static int	ExecHashJoinNewBatch(HashJoinState *hjstate);
 static bool isNotDistinctJoin(List *qualList);
-static bool ExecHashJoinLoadBatchFiles(HashJoinTable hashtable);
-
 
 static void ReleaseHashTable(HashJoinState *node);
-static void ExecHashJoinResetWorkfileState(HashJoinState *node);
-static void ExecHashJoinSaveState(HashJoinTable hashtable);
 static bool isHashtableEmpty(HashJoinTable hashtable);
 
 /* ----------------------------------------------------------------
@@ -170,31 +166,13 @@ ExecHashJoin(HashJoinState *node)
 			node->hj_FirstOuterTupleSlot = NULL;
 		}
 
-
-		workfile_set *work_set = NULL;
-
-		if (gp_workfile_caching)
-		{
-			Assert(!node->cached_workfiles_batches_buckets_loaded);
-			Assert(!node->cached_workfiles_loaded);
-
-			/* Look for cached workfiles. Mark here if found */
-			work_set = workfile_mgr_find_set(&node->js.ps);
-			if (work_set != NULL)
-			{
-				elog(gp_workfile_caching_loglevel, "HashJoin found matching existing spill file set");
-				node->cached_workfiles_found = true;
-			}
-		}
-
 		/*
 		 * create the hash table
 		 */
 		hashtable = ExecHashTableCreate(hashNode,
 										node,
 										node->hj_HashOperators,
-										PlanStateOperatorMemKB((PlanState *) hashNode),
-										work_set);
+										PlanStateOperatorMemKB((PlanState *) hashNode));
 		node->hj_HashTable = hashtable;
 
         /*
@@ -219,47 +197,12 @@ ExecHashJoin(HashJoinState *node)
 		 * the HashJoin plan when creating the spill file set */
 		hashtable->hjstate = node;
 
-		/* Workfile caching: If possible, load the hashtable state
-		 * from cached workfiles first.
-		 */
-		if (gp_workfile_caching && node->cached_workfiles_found)
-		{
-			Assert(node->cached_workfiles_batches_buckets_loaded);
-			Assert(!node->cached_workfiles_loaded);
-			Assert(hashtable->work_set != NULL);
-			elog(gp_workfile_caching_loglevel, "In ExecHashJoin, loading hashtable from cached workfiles");
-
-			ExecHashJoinLoadBatchFiles(hashtable);
-			node->cached_workfiles_loaded = true;
-
-			elog(gp_workfile_caching_loglevel, "HashJoin reusing cached workfiles, initiating Squelch walker on inner and outer subplans");
-			ExecSquelchNode(outerNode);
-			ExecSquelchNode((PlanState *)hashNode);
-
-			if (node->js.ps.instrument)
-			{
-				node->js.ps.instrument->workfileReused = true;
-			}
-
-			/* Open the first batch and build hashtable from it. */
-			hashtable->curbatch = -1;
-			ExecHashJoinNewBatch(node);
-#ifdef HJDEBUG
-		elog(gp_workfile_caching_loglevel, "HashJoin built table with %.1f tuples by loading from disk for batch 0",
-				hashtable->totalTuples);
-#endif
-
-		}
-		else
-		{
-			/* No cached workfiles found. Execute the Hash node and build the hashtable */
-
-			(void) MultiExecProcNode((PlanState *) hashNode);
+		/* Execute the Hash node and build the hashtable */
+		(void) MultiExecProcNode((PlanState *) hashNode);
 
 #ifdef HJDEBUG
 		elog(gp_workfile_caching_loglevel, "HashJoin built table with %.1f tuples by executing subplan for batch 0", hashtable->totalTuples);
 #endif
-		}
 
 		/**
 		 * If LASJ_NOTIN and a null was found on the inner side, then clean out.
@@ -362,24 +305,10 @@ ExecHashJoin(HashJoinState *node)
 			node->hj_CurTuple = NULL;
 
 			/*
-			 * Save outer tuples for the batch 0 to disk if workfile caching is
-			 * enabled. We do this only when there is spilling.
-			 */
-			if (gp_workfile_caching && batchno == 0 && hashtable->nbatch > 1 && !node->cached_workfiles_loaded)
-			{
-				Assert(batchno >= node->nbatch_loaded_state);
-				ExecHashJoinSaveTuple(&node->js.ps, ExecFetchSlotMemTuple(outerTupleSlot, false),
-									  hashvalue,
-									  hashtable,
-                                      &hashtable->batches[batchno]->outerside,
-									  hashtable->bfCxt);
-			}
-
-			/*
 			 * Now we've got an outer tuple and the corresponding hash bucket,
 			 * but this tuple may not belong to the current batch.
 			 */
-			if (batchno != hashtable->curbatch && !node->cached_workfiles_found)
+			if (batchno != hashtable->curbatch)
 			{
 				/*
 				 * Need to postpone this outer tuple to a later batch. Save it
@@ -387,7 +316,6 @@ ExecHashJoin(HashJoinState *node)
 				 */
 				Assert(batchno != 0);
 				Assert(batchno > hashtable->curbatch);
-				Assert(batchno >= node->nbatch_loaded_state);
 				ExecHashJoinSaveTuple(&node->js.ps, ExecFetchSlotMemTuple(outerTupleSlot, false),
 									  hashvalue,
 									  hashtable,
@@ -687,8 +615,6 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	hjstate->hj_MatchedOuter = false;
 	hjstate->hj_OuterNotEmpty = false;
 
-	ExecHashJoinResetWorkfileState(hjstate);
-
 	initGpmonPktForHashJoin((Plan *)node, &hjstate->js.ps.gpmon_pkt, estate);
 	
 	return hjstate;
@@ -769,9 +695,8 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 
 	HashState *hashState = (HashState *) innerPlanState(hjstate);
 
-	/* Read tuples from outer relation only if it's the first batch
-	 * and we're not loading from cached workfiles.  */
-	if (curbatch == 0 && !hjstate->cached_workfiles_loaded)
+	/* Read tuples from outer relation only if it's the first batch */
+	if (curbatch == 0)
 	{
 		for (;;)
 		{
@@ -818,16 +743,6 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 			 * and continue with the next one.
 			 */
 		} /* for (;;) */
-
-		/*
-		 * We have just reached the end of the first pass. Write out the first
-		 * inner batch so that we can reuse it when the workfile caching is
-		 * enabled.
-		 */
-		if (gp_workfile_caching) 
-		  {
-		    ExecHashJoinSaveFirstInnerBatch(hashtable);
-		  }
 
 		/*
 		 * We have just reached the end of the first pass. Try to switch to a
@@ -879,14 +794,6 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 		CheckSendPlanStateGpmonPkt(&hjstate->js.ps);
 	}
 
-	/* Write spill file state to disk. */
-	ExecHashJoinSaveState(hashtable);
-
-	if (gp_workfile_caching && hjstate->workfiles_created)
-	{
-		workfile_mgr_mark_complete(hashtable->work_set);
-	}
-
 	/* Out of batches... */
 	return NULL;
 }
@@ -934,21 +841,13 @@ start_over:
 		/*
 		 * We no longer need the previous outer batch file; close it right
 		 * away to free disk space.
-		 *
-		 * However, if workfile caching is enabled, and this is the first
-		 * time to create cached workfiles, we can not close the batch file
-		 * here, since we need to save the workfile names at the end.
 		 */
-		if (!(gp_workfile_caching &&
-			  !hjstate->cached_workfiles_found))
+		batch = hashtable->batches[curbatch];
+		if (batch->outerside.workfile != NULL)
 		{
-			batch = hashtable->batches[curbatch];
-			if (batch->outerside.workfile != NULL)
-			{
-				workfile_mgr_close_file(hashtable->work_set, batch->outerside.workfile);
-			}
-			batch->outerside.workfile = NULL;
+			workfile_mgr_close_file(hashtable->work_set, batch->outerside.workfile);
 		}
+		batch->outerside.workfile = NULL;
 	}
 
 	/*
@@ -1019,16 +918,12 @@ start_over:
 
 	if (batch->innerside.workfile != NULL)
 	{
-		/* Rewind batch file only if it was created by this operator.
-		 * If we're loading from cached workfiles, no need to rewind. */
-		if (!hjstate->cached_workfiles_loaded)
+		/* Rewind batch file */
+		bool result = ExecWorkFile_Rewind(batch->innerside.workfile);
+		if (!result)
 		{
-			bool result = ExecWorkFile_Rewind(batch->innerside.workfile);
-			if (!result)
-			{
-			    ereport(ERROR, (errcode_for_file_access(),
-			    	errmsg("could not access temporary file")));
-			}
+			ereport(ERROR, (errcode_for_file_access(),
+					errmsg("could not access temporary file")));
 		}
 
 	    for (;;)
@@ -1056,23 +951,16 @@ start_over:
 	     * after we build the hash table, the inner batch file is no longer
 	     * needed.
 		 *
-		 * However, if workfile caching is enabled, and this is the first
-		 * time to create cached workfiles, we can not close the batch file
-		 * here, since we need to save the workfile names at the end.
 	     */
-		if (!(gp_workfile_caching &&
-			  !hjstate->cached_workfiles_found))
-		{
-			if (hjstate->js.ps.instrument)
-			{
-				Assert(hashtable->stats);
-				hashtable->stats->batchstats[curbatch].innerfilesize =
-						ExecWorkFile_Tell64(hashtable->batches[curbatch]->innerside.workfile);
-			}
-			workfile_mgr_close_file(hashtable->work_set, batch->innerside.workfile);
-			batch->innerside.workfile = NULL;
+	    if (hjstate->js.ps.instrument)
+	    {
+	    	Assert(hashtable->stats);
+	    	hashtable->stats->batchstats[curbatch].innerfilesize =
+	    			ExecWorkFile_Tell64(hashtable->batches[curbatch]->innerside.workfile);
 		}
-    }
+	    workfile_mgr_close_file(hashtable->work_set, batch->innerside.workfile);
+	    batch->innerside.workfile = NULL;
+	}
 
     /*
      * If there's no outer batch file, advance to next batch.
@@ -1082,16 +970,12 @@ start_over:
 
     /*
      * Rewind outer batch file, so that we can start reading it.
-     * We only need to do that if we created those files, and not using cached workfiles.
      */
-	if (!hjstate->cached_workfiles_loaded)
+	bool result = ExecWorkFile_Rewind(batch->outerside.workfile);
+	if (!result)
 	{
-		bool result = ExecWorkFile_Rewind(batch->outerside.workfile);
-		if (!result)
-		{
-			ereport(ERROR, (errcode_for_file_access(),
-						errmsg("could not access temporary file")));
-		}
+		ereport(ERROR, (errcode_for_file_access(),
+				errmsg("could not access temporary file")));
 	}
 	
     return curbatch;
@@ -1322,19 +1206,6 @@ static void ReleaseHashTable(HashJoinState *node)
 	node->hj_MatchedOuter = false;
 	node->hj_FirstOuterTupleSlot = NULL;	
 
-	ExecHashJoinResetWorkfileState(node);
-}
-
-/*
- * Reset workfile caching state
- */
-static void ExecHashJoinResetWorkfileState(HashJoinState *node)
-{
-	node->cached_workfiles_batches_buckets_loaded = false;
-	node->cached_workfiles_loaded = false;
-	node->cached_workfiles_found = false;
-	node->workfiles_created = false;
-	node->nbatch_loaded_state = -1;
 }
 
 /* Is this an IS-NOT-DISTINCT-join qual list (as opposed the an equijoin)?
@@ -1463,287 +1334,6 @@ ExecHashJoinSaveFirstInnerBatch(HashJoinTable hashtable)
 			tuple = tuple->next;
 		}
 	}
-}
-
-/* Writing a string to a Workfile.
- * Format: [length|string]
- * This must be the same format used in ExecHashJoinReadStringStateFile.
- * Terminating null character is not written to disk
- */
-static bool
-WriteStringWorkFile(ExecWorkFile *workfile, const char *str)
-{
-	bool res = false;
-	size_t slen = strlen(str);
-
-	res = ExecWorkFile_Write(workfile, & slen, sizeof(slen));
-	if (res == false)
-	{
-		return false;
-	}
-
-	return(ExecWorkFile_Write(workfile, (void *) str, slen));
-}
-
-/*
- * Reads a string from a workfile.
- *  Format: [length|string]
- *  This must be the same format used in ExecHashJoinWriteStringStateFile.
- *  Returns the palloc-ed string in the current context, NULL if error occurs.
- */
-static char *
-ReadStringWorkFile(ExecWorkFile *workfile)
-{
-
-	size_t slen = 0;
-	bool res = ExecWorkFile_Read(workfile, & slen, sizeof(slen));
-	if (res == false)
-	{
-		return NULL;
-	}
-
-	char * read_string = palloc(slen+1);
-	res = ExecWorkFile_Read(workfile, read_string, slen);
-
-	if (res == false)
-	{
-		pfree(read_string);
-		return NULL;
-	}
-
-	read_string[slen]='\0';
-	return read_string;
-}
-
-/*
- * SaveBatchFileName
- *   Save the batch file name to the state file, and close the batch file.
- */
-static void
-SaveBatchFileNameAndClose(HashJoinTable hashtable, ExecWorkFile *workfile)
-{
-
-	char *batch_file_name = EMPTY_WORKFILE_NAME;
-	bool free_name = false;
-	if (workfile != NULL)
-	{
-		batch_file_name = pstrdup(ExecWorkFile_GetFileName(workfile));
-		free_name = true;
-		workfile_mgr_close_file(hashtable->work_set, workfile);
-	}
-
-	bool res = WriteStringWorkFile(hashtable->state_file, batch_file_name);
-	if (!res)
-	{
-		workfile_mgr_report_error();
-	}
-
-	if (free_name)
-	{
-		pfree(batch_file_name);
-	}
-}
-
-
-/*
- * Workfile caching: dump hashtable spill files state to disk after reading
- * all inner and outer relation tuples. This can be used to re-load the spill file set
- * at a later time.
- */
-static void
-ExecHashJoinSaveState(HashJoinTable hashtable)
-{
-	/* What do we need to save:
-	 *  - nbuckets
-	 *  - nbatches
-	 *  - names of each file corresponding to each inner batch, in order
-	 *  - names of each file corresponding to each inner batch, in order
-	 */
-	if (!gp_workfile_caching)
-	{
-		return;
-	}
-
-	if (!hashtable->hjstate->workfiles_created)
-	{
-		return;
-	}
-
-	/*
-	 * If this is called when a spill set is used, we only need to save
-	 * the spill file state when the number of batches is changed during execution.
-	 */
-	if (hashtable->hjstate->cached_workfiles_found &&
-		hashtable->nbatch == hashtable->nbatch_original)
-	{
-		Assert(!hashtable->hjstate->workfiles_created);
-		return;
-	}
-
-	elog(gp_workfile_caching_loglevel, "Saving HashJoin inner and outer relation spill file state to disk");
-
-	bool res = false;
-
-	res = ExecWorkFile_Write(hashtable->state_file,
-			& hashtable->nbuckets, sizeof(hashtable->nbuckets));
-	if(!res)
-	{
-		workfile_mgr_report_error();
-	}
-
-	res = ExecWorkFile_Write(hashtable->state_file,
-			& hashtable->nbatch, sizeof(hashtable->nbatch));
-
-	if(!res)
-	{
-		workfile_mgr_report_error();
-	}
-
-	int i;
-	for (i=0; i < hashtable->nbatch; i++)
-	{
-		SaveBatchFileNameAndClose(hashtable,
-								  hashtable->batches[i]->innerside.workfile);
-		hashtable->batches[i]->innerside.workfile = NULL;
-
-		elog(gp_workfile_caching_loglevel, "HashJoin inner batch %d: innerspace=%d, spaceAllowed=%d, innertuples=%d",
-			 i, (int)hashtable->batches[i]->innerspace, (int)hashtable->spaceAllowed, hashtable->batches[i]->innertuples);
-
-		SaveBatchFileNameAndClose(hashtable,
-								  hashtable->batches[i]->outerside.workfile);
-		hashtable->batches[i]->outerside.workfile = NULL;
-	}
-
-	workfile_mgr_close_file(hashtable->work_set, hashtable->state_file);
-	hashtable->state_file = NULL;
-}
-
-/*
- * Opens the state workfile from a cached workfile set and reads nbuckets and
- * nbatch from it.
- */
-bool
-ExecHashJoinLoadBucketsBatches(HashJoinTable hashtable)
-{
-	/* What do we need to load:
-	 *  - nbuckets
-	 *  - nbatches
-	 */
-
-	Assert(hashtable != NULL);
-	Assert(hashtable->work_set != NULL);
-	Assert(!hashtable->hjstate->cached_workfiles_batches_buckets_loaded);
-
-	/*
-	 * We allocate the workfile data structures in the longer-lived context hashtable->bfCxt.
-	 * This way we can find them and close them at transaction abort, even after hashtable
-	 * went away.
-	 */
-	MemoryContext   oldcxt;
-	oldcxt = MemoryContextSwitchTo(hashtable->bfCxt);
-
-	hashtable->state_file = workfile_mgr_open_fileno(hashtable->work_set,
-			WORKFILE_NUM_HASHJOIN_METADATA);
-
-	elog(gp_workfile_caching_loglevel, "Loading HashJoin spill state from disk file %s",
-			ExecWorkFile_GetFileName(hashtable->state_file));
-
-	Assert(NULL != hashtable->state_file);
-
-	int loaded_nbuckets = 0;
-	int loaded_nbatch = 0;
-
-	uint64 bytes_read = 0;
-	bytes_read = ExecWorkFile_Read(hashtable->state_file,
-			& loaded_nbuckets, sizeof(loaded_nbuckets));
-	insist_log(bytes_read == sizeof(loaded_nbuckets),
-			"Could not read from temporary work file: %m");
-
-	hashtable->nbuckets = loaded_nbuckets;
-
-
-	bytes_read = ExecWorkFile_Read(hashtable->state_file,
-			& loaded_nbatch, sizeof(loaded_nbatch));
-	insist_log(bytes_read == sizeof(loaded_nbatch),
-			"Could not read from temporary work file: %m");
-
-	hashtable->nbatch = loaded_nbatch;
-
-	hashtable->hjstate->cached_workfiles_batches_buckets_loaded = true;
-
-	MemoryContextSwitchTo(oldcxt);
-	return true;
-}
-
-/*
- * OpenBatchFile
- *   Open a batch file that is stored in state_file.
- */
-static ExecWorkFile*
-OpenBatchFile(HashJoinTable hashtable, int batch_no)
-{
-	ExecWorkFile *workfile = NULL;
-	
-	/*
-	 * We allocate the workfile data structures in the longer-lived context hashtable->bfCxt.
-	 * This way we can find them and close them at transaction abort, even after hashtable
-	 * went away.
-	 */
-	MemoryContext   oldcxt;
-	oldcxt = MemoryContextSwitchTo(hashtable->bfCxt);
-
-	char * batch_file_name = ReadStringWorkFile(hashtable->state_file);
-	insist_log(batch_file_name != NULL, "Could not read from temporary work file: %m");
-
-	if (strncmp(batch_file_name, EMPTY_WORKFILE_NAME, sizeof(EMPTY_WORKFILE_NAME)) != 0)
-	{
-		workfile = ExecWorkFile_Open(batch_file_name,
-									 hashtable->work_set->metadata.type,
-									 false /* delOnClose */,
-									 hashtable->work_set->metadata.bfz_compress_type);
-		Assert(NULL != workfile);
-
-		elog(gp_workfile_caching_loglevel, "opened for re-use batch file %s for batch #%d",
-			 batch_file_name, batch_no);
-	}
-
-	pfree(batch_file_name);
-
-	MemoryContextSwitchTo(oldcxt);
-	return workfile;
-}
-
-
-static bool
-ExecHashJoinLoadBatchFiles(HashJoinTable hashtable)
-{
-	/* We already read:
-	 *  - nbuckets
-	 *  - nbatches
-	 *
-	 * What do we need to load:
-	 *  - names of each file corresponding to each inner batch, in order
-	 *  - names of each file corresponding to each outer batch, in order
-	 */
-
-	Assert(hashtable != NULL);
-	Assert(hashtable->work_set != NULL);
-	Assert(hashtable->state_file != NULL);
-	Assert(hashtable->hjstate->cached_workfiles_batches_buckets_loaded);
-
-	MemoryContext oldcxt = MemoryContextSwitchTo(hashtable->bfCxt);
-
-	for (int i=0; i < hashtable->nbatch; i++)
-	{
-		Assert(hashtable->batches[i]->innerside.workfile == NULL);
-		hashtable->batches[i]->innerside.workfile = OpenBatchFile(hashtable, i);
-
-		Assert(hashtable->batches[i]->outerside.workfile == NULL);
-		hashtable->batches[i]->outerside.workfile = OpenBatchFile(hashtable, i);
-	}
-
-	MemoryContextSwitchTo(oldcxt);
-	return true;
 }
 
 /*

@@ -44,6 +44,7 @@ Debug
 Release
 pgsql.sln
 cscope.*
+build.sh
 
 # Added
 *.swp

@@ -198,7 +198,7 @@ PROCESS_QE () {
     fi
 
     # Add all local IPV4 addresses
-    SEGMENT_IPV4_LOCAL_ADDRESS_ALL=(`$TRUSTED_SHELL $GP_HOSTADDRESS "$IFCONFIG $IFCONFIG_TXT |$GREP \"inet \"|$GREP -v \"127.0.0\"|$AWK '{print \\$2}'|$CUT -d: -f2"`)
+    SEGMENT_IPV4_LOCAL_ADDRESS_ALL=(`$TRUSTED_SHELL $GP_HOSTADDRESS "$IPV4_ADDR_LIST_CMD | $GREP inet | $GREP -v \"127.0.0\" | $AWK '{print \\$2}' | $CUT -d'/' -f1"`)
     for ADDR in "${SEGMENT_IPV4_LOCAL_ADDRESS_ALL[@]}"
     do
 	# MPP-15889
@@ -207,7 +207,7 @@ PROCESS_QE () {
     done
 
     # Add all local IPV6 addresses
-    SEGMENT_IPV6_LOCAL_ADDRESS_ALL=(`$TRUSTED_SHELL $GP_HOSTADDRESS "$IPV6_ADDR_LIST_CMD | $GREP inet6 | $AWK '{print \\$2}' |$CUT -d'/' -f1"`)
+    SEGMENT_IPV6_LOCAL_ADDRESS_ALL=(`$TRUSTED_SHELL $GP_HOSTADDRESS "$IPV6_ADDR_LIST_CMD | $GREP inet6 | $AWK '{print \\$2}' | $CUT -d'/' -f1"`)
     for ADDR in "${SEGMENT_IPV6_LOCAL_ADDRESS_ALL[@]}"
     do
 	# MPP-15889

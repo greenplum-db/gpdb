@@ -101,10 +101,6 @@ ERROR:  role "market" does not exist
 DROP USER jona11;
 ERROR:  role "jona11" does not exist
 DROP USER jona12;
-ALTER LANGUAGE plpgsql  RENAME TO plsamples;
-ALTER LANGUAGE plsamples  RENAME TO plpgsql;
--- commentting the drop in the test case. Since jetpack is made implicit we cannot drop language plpgsql
--- DROP LANGUAGE plsamples;
 select unnest('{}'::text[]);
  unnest 
 --------

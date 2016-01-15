@@ -334,6 +334,7 @@ static int glob_path(fstream_t *fs, const char *path)
 			glob_and_copy(path, GLOB_MARK | GLOB_NOCHECK, 0, &fs->glob))
 		{
 			gfile_printf_then_putc_newline("fstream glob failed");
+			gfile_free(path2);
 			return 1;
 		}
 		path = p;

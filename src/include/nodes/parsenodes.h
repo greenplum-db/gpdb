@@ -331,6 +331,7 @@ typedef struct FuncCall
     List       *agg_order;      /* ORDER BY (list of SortBy) */
 	bool		agg_star;		/* argument was really '*' */
 	bool		agg_distinct;	/* arguments were labeled DISTINCT */
+	bool		func_variadic;	/* last argument was labeled VARIADIC */
 	int			location;		/* token location, or -1 if unknown */
 	Node	   *over;			/* over clause */
     Node       *agg_filter;     /* aggregation filter clause */
@@ -1455,7 +1456,7 @@ typedef enum ExtTableType
 	EXTTBL_TYPE_EXECUTE			/* table defined with EXECUTE clause */
 } ExtTableType;
 
-typedef struct ExtTableTypeDesc
+typedef struct
 {
 	NodeTag			type;
 	ExtTableType	exttabletype;
@@ -1469,7 +1470,7 @@ typedef struct CreateExternalStmt
 	NodeTag		type;
 	RangeVar   *relation;		/* external relation to create */
 	List	   *tableElts;		/* column definitions (list of ColumnDef) */
-	Node	   *exttypedesc;    /* LOCATION or EXECUTE information */
+	ExtTableTypeDesc *exttypedesc;    /* LOCATION or EXECUTE information */
 	char	   *format;			/* data format name */
 	List	   *formatOpts;		/* List of DefElem nodes for data format */
 	bool		isweb;
@@ -2146,7 +2147,7 @@ typedef struct FunctionParameter
 	NodeTag		type;
 	char	   *name;			/* parameter name, or NULL if not given */
 	TypeName   *argType;		/* TypeName for parameter type */
-	FunctionParameterMode mode; /* IN/OUT/INOUT */
+	FunctionParameterMode mode; /* IN/OUT/INOUT/VARIADIC/TABLE */
 } FunctionParameter;
 
 typedef struct AlterFunctionStmt

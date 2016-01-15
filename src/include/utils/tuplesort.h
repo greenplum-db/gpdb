@@ -139,10 +139,6 @@ extern void tuplesort_finalize_stats_mk(Tuplesortstate_mk *state);
 
 extern int	tuplesort_merge_order(long allowedMem);
 
-extern void tuplesort_write_spill_metadata_mk(Tuplesortstate_mk *state);
-extern void tuplesort_read_spill_metadata_mk(Tuplesortstate_mk *state);
-
-extern void tuplesort_set_spillfile_set_mk(Tuplesortstate_mk * state, workfile_set * sfs);
 /*
  * These routines may only be called if randomAccess was specified 'true'.
  * Likewise, backwards scan in gettuple/getdatum is only allowed if

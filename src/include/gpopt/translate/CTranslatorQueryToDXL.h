@@ -332,7 +332,7 @@ namespace gpdxl
 				);
 
 			// translate a target list entry or a join alias entry into a project element
-			CDXLNode *PdxlnPrEFromGPDBExpr(Expr *pexpr, CHAR *szAliasName, BOOL fInsistNewColIds = false);
+			CDXLNode *PdxlnPrEFromGPDBExpr(Expr *pexpr, const CHAR *szAliasName, BOOL fInsistNewColIds = false);
 
 			// translate a CTE into a DXL logical CTE operator
 			CDXLNode *PdxlnFromCTE

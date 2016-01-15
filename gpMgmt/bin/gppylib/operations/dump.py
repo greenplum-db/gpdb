@@ -172,7 +172,7 @@ def validate_modcount(schema, tablename, cnt):
     if len(cnt) > 15:
         raise Exception("Exceeded backup max tuple count of 1 quadrillion rows per table for: '%s.%s' '%s'" % (schema, tablename, cnt))
 
-def get_partition_state(master_port, dbname, catalog_schema, partition_info):
+def get_partition_state_tuples(master_port, dbname, catalog_schema, partition_info):
     """
         Reads the partition state for an AO or AOCS relation, which is the sum of
         the modication counters over all ao segment files.
@@ -190,6 +190,9 @@ def get_partition_state(master_port, dbname, catalog_schema, partition_info):
         modcount by 1. Therefore it is save to assume that to relations with
         modcount 0 with the same last special operation do not have a logical
         change in them.
+
+        The result is a list of tuples, of the format:
+        (schema_schema, partition_name, modcount)
     """
     partition_list = list()
 
@@ -207,9 +210,18 @@ def get_partition_state(master_port, dbname, catalog_schema, partition_info):
             if modcount:
                 modcount = modcount.strip()
             validate_modcount(schemaname, partition_name, modcount)
-            partition_list.append('%s, %s, %s' %(schemaname, partition_name, modcount))
+            partition_list.append((schemaname, partition_name, modcount))
 
     return partition_list
+
+def get_partition_state(master_port, dbname, catalog_schema, partition_info):
+    """
+    A legacy version of get_partition_state_tuples() that returns a list of strings
+    instead of tuples. Should not be used in new code, because the string
+    representation doesn't handle schema or table names with commas.
+    """
+    tuples = get_partition_state_tuples(master_port, dbname, catalog_schema, partition_info)
+    return map((lambda x: '%s, %s, %s' % x), tuples)
 
 def get_tables_with_dirty_metadata(master_datadir, backup_dir, dump_dir, dump_prefix, full_timestamp, cur_pgstatoperations,
                                    netbackup_service_host=None, netbackup_block_size=None):
@@ -614,7 +626,7 @@ def backup_statistics_file_with_nbu(master_datadir, backup_dir, dump_dir, dump_p
         timestamp_key = TIMESTAMP_KEY
 
     backup_file_with_nbu(netbackup_service_host, netbackup_policy, netbackup_schedule, netbackup_block_size, netbackup_keyword,
-                         generate_statistics_filename(master_datadir, backup_dir, dump_dir, dump_prefix, DUMP_DATE, timestamp_key))
+                         generate_stats_filename(master_datadir, backup_dir, dump_dir, dump_prefix, DUMP_DATE, timestamp_key))
 
 def backup_config_files_with_nbu(master_datadir, backup_dir, dump_dir, dump_prefix, master_port, netbackup_service_host, netbackup_policy,
                                  netbackup_schedule, netbackup_block_size, netbackup_keyword, timestamp_key=None):
@@ -1041,16 +1053,24 @@ class PostDumpSegment(Operation):
             logger.error('Could not locate status file: %s' % self.status_file)
             raise NoStatusFile()
         # Ensure that status file indicates successful dump
+        completed = False
+        error_found = False
         with open(self.status_file, 'r') as f:
             for line in f:
                 if line.find("Finished successfully") != -1:
-                    break
+                    completed = True
+                elif line.find("ERROR:") != -1 or line.find("[ERROR]") != -1:
+                    error_found = True
+        if error_found:
+            if completed:
+                logger.warn("Status report file indicates dump completed with errors: %s" % self.status_file)
             else:
-                logger.error("Status report file indicates errors: %s" % self.status_file)
+                logger.error("Status report file indicates dump incomplete with errors: %s" % self.status_file)
+            with open(self.status_file, 'r') as f:
                 for line in f:
                     logger.info(line)
-                logger.error("Status file contents dumped to log file")
-                raise StatusFileError()
+            logger.error("Status file contents dumped to log file")
+            raise StatusFileError()
         # Ensure that dump file exists
         if not os.path.exists(self.dump_file):
             logger.error("Could not locate dump file: %s" % self.dump_file)

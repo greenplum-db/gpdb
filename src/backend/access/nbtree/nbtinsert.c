@@ -20,7 +20,6 @@
 #include "access/transam.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbaocsam.h"
-#include "cdb/cdbvars.h"  /*Gp_is_primary*/
 #include "miscadmin.h"
 #include "utils/inval.h"
 

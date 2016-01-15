@@ -48,8 +48,31 @@ def before_feature(context, feature):
         And there is a hard coded ao partition table "sales" with 4 child partitions in schema "public"
         """)
 
+    if 'minirepro' in feature.tags:
+        start_database_if_not_started(context)
+        minirepro_db = 'minireprodb'
+        drop_database_if_exists(context, minirepro_db)
+        create_database(context, minirepro_db)
+        context.conn = dbconn.connect(dbconn.DbURL(dbname=minirepro_db))
+        context.dbname = minirepro_db
+        dbconn.execSQL(context.conn, "CREATE OR REPLACE FUNCTION gp_toolkit.gp_dump_query_oids(text) " \
+        "RETURNS text AS '$libdir/gpoptutils', 'gp_dump_query_oids' LANGUAGE C IMMUTABLE;")
+        dbconn.execSQL(context.conn, 'GRANT EXECUTE ON FUNCTION gp_toolkit.gp_dump_query_oids(text) TO public')
+        dbconn.execSQL(context.conn, 'create table t1(a integer, b integer)')
+        dbconn.execSQL(context.conn, 'create table t2(c integer, d integer)')
+        dbconn.execSQL(context.conn, 'create table t3(e integer, f integer)')
+        dbconn.execSQL(context.conn, 'create view v1 as select a, b from t1, t3 where t1.a=t3.e')
+        dbconn.execSQL(context.conn, 'create view v2 as select c, d from t2, t3 where t2.c=t3.f')
+        dbconn.execSQL(context.conn, 'create view v3 as select a, d from v1, v2 where v1.a=v2.c')
+        dbconn.execSQL(context.conn, 'insert into t1 values(1, 2)')
+        dbconn.execSQL(context.conn, 'insert into t2 values(1, 3)')
+        dbconn.execSQL(context.conn, 'insert into t3 values(1, 4)')
+        context.conn.commit()
+
 def after_feature(context, feature):
     if 'analyzedb' in feature.tags:
+        context.conn.close()
+    if 'minirepro' in feature.tags:
         context.conn.close()
 
 def before_scenario(context, scenario):
@@ -77,4 +100,3 @@ def after_scenario(context, scenario):
 
         if os.path.isdir('%s/gpAdminLogs.bk' % home_dir):
             shutil.move('%s/gpAdminLogs.bk' % home_dir, '%s/gpAdminLogs' % home_dir)
-

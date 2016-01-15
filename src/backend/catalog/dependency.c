@@ -1058,7 +1058,7 @@ doDeletion(const ObjectAddress *object)
 		case OCLASS_COMPRESSION:
 			elog(NOTICE, "dependency: not yet implemented!");
 			break;
-			
+
 		default:
 			elog(ERROR, "unrecognized object class: %u",
 				 object->classId);

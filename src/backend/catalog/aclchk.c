@@ -665,28 +665,28 @@ ExecGrant_Relation(InternalGrant *istmt)
 
 	foreach(cell, istmt->objects)
 	{
-		Oid				 relOid		 = lfirst_oid(cell);
-		Datum			 aclDatum;
-		Form_pg_class	 pg_class_tuple;
-		bool			 isNull;
-		AclMode			 avail_goptions;
-		AclMode			 this_privileges;
-		Acl				*old_acl;
-		Acl				*new_acl;
-		Oid				 grantorId;
-		Oid				 ownerId	 = InvalidOid;
-		HeapTuple		 tuple;
-		HeapTuple		 newtuple;
-		Datum			 values[Natts_pg_class];
-		bool			 nulls[Natts_pg_class];
-		bool			 replaces[Natts_pg_class];
-		int				 nnewmembers;
-		Oid				*newmembers;
-		int				 noldmembers = 0;
-		Oid				*oldmembers;
-		bool			 bTemp;
-		cqContext		 cqc;
-		cqContext		*pcqCtx;
+		Oid			relOid = lfirst_oid(cell);
+		Datum		aclDatum;
+		Form_pg_class pg_class_tuple;
+		bool		isNull;
+		AclMode		avail_goptions;
+		AclMode		this_privileges;
+		Acl			*old_acl;
+		Acl			*new_acl;
+		Oid			grantorId;
+		Oid			ownerId	 = InvalidOid;
+		HeapTuple	tuple;
+		HeapTuple	newtuple;
+		Datum		values[Natts_pg_class];
+		bool		nulls[Natts_pg_class];
+		bool		replaces[Natts_pg_class];
+		int			nnewmembers;
+		Oid		   *newmembers;
+		int			noldmembers = 0;
+		Oid		   *oldmembers;
+		bool		bTemp;
+		cqContext	cqc;
+		cqContext  *pcqCtx;
 
 		bTemp = false;
 
@@ -696,12 +696,9 @@ ExecGrant_Relation(InternalGrant *istmt)
 					" WHERE oid = :1 "
 					" FOR UPDATE ",
 					ObjectIdGetDatum(relOid)));
-
 		tuple = caql_getnext(pcqCtx);
-
 		if (!HeapTupleIsValid(tuple))
 			elog(ERROR, "cache lookup failed for relation %u", relOid);
-
 		pg_class_tuple = (Form_pg_class) GETSTRUCT(tuple);
 
 		/* Not sensible to grant on an index */
@@ -807,7 +804,7 @@ ExecGrant_Relation(InternalGrant *istmt)
 				else
 				{
 					if (this_privileges & ~((AclMode) ACL_ALL_RIGHTS_RELATION))
-	
+					{
 						/*
 						 * USAGE is the only permission supported by
 						 * sequences but not by non-sequences.  Don't
@@ -817,6 +814,7 @@ ExecGrant_Relation(InternalGrant *istmt)
 						ereport(ERROR,
 								(errcode(ERRCODE_INVALID_GRANT_OPERATION),
 							  errmsg("invalid privilege type USAGE for table")));
+					}
 				}
 			}
 	
@@ -868,19 +866,19 @@ ExecGrant_Relation(InternalGrant *istmt)
 
 		nnewmembers = aclmembers(new_acl, &newmembers);
 
-			/* finished building new ACL value, now insert it */
-			MemSet(values, 0, sizeof(values));
-			MemSet(nulls, false, sizeof(nulls));
-			MemSet(replaces, false, sizeof(replaces));
+		/* finished building new ACL value, now insert it */
+		MemSet(values, 0, sizeof(values));
+		MemSet(nulls, false, sizeof(nulls));
+		MemSet(replaces, false, sizeof(replaces));
 
-			replaces[Anum_pg_class_relacl - 1] = true;
-			values[Anum_pg_class_relacl - 1] = PointerGetDatum(new_acl);
+		replaces[Anum_pg_class_relacl - 1] = true;
+		values[Anum_pg_class_relacl - 1] = PointerGetDatum(new_acl);
 
-			newtuple = caql_modify_current(pcqCtx, values, nulls, replaces);
+		newtuple = caql_modify_current(pcqCtx, values, nulls, replaces);
 
 		caql_update_current(pcqCtx, newtuple);
 		/* and Update indexes (implicit) */
-		
+
 		/* MPP-7572: Don't track metadata if table in any
 		 * temporary namespace
 		 */

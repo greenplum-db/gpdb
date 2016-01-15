@@ -24,7 +24,6 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "access/reloptions.h"
 #include "access/transam.h"
 #include "access/xact.h"
 #include "catalog/indexing.h"
@@ -45,7 +44,6 @@
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "storage/procsignal.h"
-//#include "storage/sinvaladt.h"
 #include "storage/sinval.h"
 #include "tcop/tcopprot.h"
 #include "utils/flatfiles.h"

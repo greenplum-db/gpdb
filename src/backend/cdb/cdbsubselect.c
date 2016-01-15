@@ -1167,9 +1167,6 @@ convert_IN_to_join(PlannerInfo *root, List** rtrlist_inout, SubLink *sublink)
 							  rtindex,
 							  &ininfo->sub_targetlist);
 
-	/* Add the completed node to the query's list */
-	root->in_info_list = lappend(root->in_info_list, ininfo);
-
 	return result;
 }                               /* convert_IN_to_join */
 

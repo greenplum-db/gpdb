@@ -50,8 +50,6 @@
 #include "utils/tqual.h"
 #include "cdb/cdbdtxcontextinfo.h"
 
-#include "miscadmin.h"
-#include "storage/proc.h"
 #include "access/twophase.h"  /* max_prepared_xacts */
 
 #include "storage/buffile.h"

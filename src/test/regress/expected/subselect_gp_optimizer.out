@@ -1213,3 +1213,17 @@ select id from tbl_25484 where 3 = (select 3 where 3 = (select num));
 drop table tbl_25484;
 reset optimizer_segments;
 reset optimizer_nestloop_factor;
+--
+-- Test case that once triggered a bug in the IN-clause pull-up code.
+--
+SELECT p.id
+    FROM (SELECT * FROM generate_series(1,10) id
+          WHERE id IN (
+              SELECT 1
+              UNION ALL
+              SELECT 0)) p;
+ id 
+----
+  1
+(1 row)
+

@@ -8664,41 +8664,6 @@ SELECT f3, myagg3(f1) from (select * from array_table order by f1 limit 10) as f
  c  | {3,6}
 (3 rows)
 
--- Functions that are wrongly annotated in the catalog as NOSQL
-CREATE TABLE orca.test_part (i int) PARTITION BY RANGE(i) (start(1) exclusive end(2) inclusive);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "test_part_1_prt_1" for table "test_part"
-CREATE TABLE orca.test_distributed(i int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-INSERT INTO orca.test_distributed SELECT i from generate_series(1,2) i;
--- Function pg_get_partition_rule_def(oid, bool)
-SELECT pg_get_partition_rule_def(pr1.oid, true) AS partitionboundary ,n.nspname AS schemaname, cl.relname AS tablename 
-FROM orca.test_distributed, pg_namespace n, pg_namespace n2, pg_class cl
-LEFT JOIN pg_tablespace sp ON cl.reltablespace = sp.oid, pg_class cl2
-LEFT JOIN pg_tablespace sp3 ON cl2.reltablespace = sp3.oid, pg_partition pp, pg_partition_rule pr1
-WHERE pp.paristemplate = false AND pp.parrelid = cl.oid AND pr1.paroid = pp.oid AND cl2.oid = pr1.parchildrelid
-AND cl.relnamespace = n.oid AND cl2.relnamespace = n2.oid and cl.relname ='test_part';
- partitionboundary | schemaname | tablename 
--------------------+------------+-----------
-                   | orca       | test_part
-                   | orca       | test_part
-(2 rows)
-
--- Function pg_get_partition_rule_def(oid)
-SELECT pg_get_partition_rule_def(pr1.oid) AS partitionboundary ,n.nspname AS schemaname, cl.relname AS tablename 
-FROM orca.test_distributed, pg_namespace n, pg_namespace n2, pg_class cl
-LEFT JOIN pg_tablespace sp ON cl.reltablespace = sp.oid, pg_class cl2
-LEFT JOIN pg_tablespace sp3 ON cl2.reltablespace = sp3.oid, pg_partition pp, pg_partition_rule pr1
-WHERE pp.paristemplate = false AND pp.parrelid = cl.oid AND pr1.paroid = pp.oid AND cl2.oid = pr1.parchildrelid
-AND cl.relnamespace = n.oid AND cl2.relnamespace = n2.oid and cl.relname ='test_part';
- partitionboundary | schemaname | tablename 
--------------------+------------+-----------
-                   | orca       | test_part
-                   | orca       | test_part
-(2 rows)
-
 -- MPP-22453: wrong result in indexscan when the indexqual compares different data types
 create table mpp22453(a int, d date);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -9834,10 +9799,6 @@ NOTICE:  drop cascades to constraint p1_1_prt_pp2_check on table orca.p1_1_prt_p
 NOTICE:  drop cascades to table orca.p1_1_prt_pp1
 NOTICE:  drop cascades to constraint p1_1_prt_pp1_check on table orca.p1_1_prt_pp1
 NOTICE:  drop cascades to table orca.p1
-NOTICE:  drop cascades to table orca.test_distributed
-NOTICE:  drop cascades to table orca.test_part_1_prt_1
-NOTICE:  drop cascades to constraint test_part_1_prt_1_check on table orca.test_part_1_prt_1
-NOTICE:  drop cascades to table orca.test_part
 NOTICE:  drop cascades to table orca.tab2
 NOTICE:  drop cascades to table orca.tab1
 NOTICE:  drop cascades to table orca.twf2

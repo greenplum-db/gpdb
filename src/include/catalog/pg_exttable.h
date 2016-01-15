@@ -128,8 +128,7 @@ typedef struct ExtTableEntry
 
 /* No initial contents. */
 
-extern void
-InsertExtTableEntry(Oid 	tbloid, 
+extern void InsertExtTableEntry(Oid 	tbloid,
 					bool 	iswritable,
 					bool 	isweb,
 					bool	issreh,
@@ -143,11 +142,10 @@ InsertExtTableEntry(Oid 	tbloid,
 					Datum	locationExec,
 					Datum	locationUris);
 
-extern ExtTableEntry*
-GetExtTableEntry(Oid relid);
+extern ExtTableEntry *GetExtTableEntry(Oid relid);
+extern ExtTableEntry *GetExtTableEntryIfExists(Oid relid);
 
-extern void
-RemoveExtTableEntry(Oid relid);
+extern void RemoveExtTableEntry(Oid relid);
 
 #define fmttype_is_custom(c) (c == 'b' || c == 'a' || c == 'p')
 #define fmttype_is_avro(c) (c == 'a')

@@ -438,13 +438,12 @@ MarkAsPreparing(TransactionId xid,
 {
 	GlobalTransaction gxact;
 	int			i;
-	int			idlen = strlen(gid);
 
-	if (idlen >= GIDSIZE)
+	if (strlen(gid) >= GIDSIZE)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("transaction identifier \"%s\" is too long (%d > %d max)",
-						gid, idlen, GIDSIZE)));
+						gid, (int) strlen(gid), GIDSIZE)));
 
 	LWLockAcquire(TwoPhaseStateLock, LW_EXCLUSIVE);
 
@@ -735,7 +734,7 @@ FindPrepareGXact(const char *gid)
 		 errmsg("prepared transaction with identifier \"%s\" does not exist",
 				gid)));
 
-	 /* NOTREACHED */
+	/* NOTREACHED */
 	return NULL;
 }
 
@@ -808,10 +807,10 @@ GetPreparedTransactionList(GlobalTransaction *gxacts)
 
 	if (TwoPhaseState->numPrepXacts == 0)
 	{
-			LWLockRelease(TwoPhaseStateLock);
+		LWLockRelease(TwoPhaseStateLock);
 
-			*gxacts = NULL;
-			return 0;
+		*gxacts = NULL;
+		return 0;
 	}
 
 	num = TwoPhaseState->numPrepXacts;
@@ -850,7 +849,7 @@ pg_prepared_xact(PG_FUNCTION_ARGS)
 
 	if (SRF_IS_FIRSTCALL())
 	{
-		TupleDesc       tupdesc;
+		TupleDesc	tupdesc;
 		MemoryContext oldcontext;
 
 		/* create a function context for cross-call persistence */
@@ -959,7 +958,7 @@ TwoPhaseGetDummyProc(TransactionId xid)
 
 	LWLockRelease(TwoPhaseStateLock);
 
-	if (result == NULL)                     /* should not happen */
+	if (result == NULL)			/* should not happen */
 		elog(ERROR, "failed to find dummy PGPROC for xid %u (%d entries)", xid, TwoPhaseState->numPrepXacts);
 
 	cached_xid = xid;
@@ -1169,11 +1168,10 @@ StartPrepare(GlobalTransaction gxact)
 void
 EndPrepare(GlobalTransaction gxact)
 {
+	TransactionId xid = gxact->proc.xid;
+
 	MIRRORED_LOCK_DECLARE;
-
 	CHECKPOINT_START_LOCK_DECLARE;
-
-	TransactionId       xid = gxact->proc.xid;
 
 	if (Debug_persistent_print)
 		elog(Persistent_DebugPrintLevel(), "EndPrepare: xid = %d", xid);
@@ -1591,7 +1589,7 @@ RemoveTwoPhaseFile(TransactionId xid, bool giveWarning)
 	remove_recover_post_checkpoint_prepared_transactions_map_entry(xid,
         "RemoveTwoPhaseFile: Removing from list");
 
-} /* end RemoveTwoPhaseFile */
+}
 
 /*
  * This is used in WAL replay.
@@ -1635,7 +1633,6 @@ CheckPointTwoPhase(XLogRecPtr redo_horizon)
 	return;
 }
 
-
 /*
  * PrescanPreparedTransactions
  *
@@ -1648,7 +1645,7 @@ CheckPointTwoPhase(XLogRecPtr redo_horizon)
  * crashRecoverPostCheckpointPreparedTransactions_map_ht has already been
  * populated with all pre and post checkpoint inflight transactions.
  *
- * Wwe will advance nextXid beyond any subxact XIDs belonging to valid
+ * We will advance nextXid beyond any subxact XIDs belonging to valid
  * prepared xacts.  We need to do this since subxact commit doesn't
  * write a WAL entry, and so there might be no evidence in WAL of those
  * subxact XIDs.
@@ -1698,6 +1695,8 @@ PrescanPreparedTransactions(void)
 
 		if (TransactionIdDidCommit(xid) == false && TransactionIdDidAbort(xid) == false)
 		{
+			int			i;
+
 			/*
 			 * Incorporate xid into the running-minimum result.
 			 */
@@ -1708,19 +1707,21 @@ PrescanPreparedTransactions(void)
 			 * Examine subtransaction XIDs ... they should all follow main
 			 * XID, and they may force us to advance nextXid.
 			 */
-			subxids = (TransactionId *)((char *)hdr + MAXALIGN(sizeof(TwoPhaseFileHeader)));
-			for (int i = 0; i < hdr->nsubxacts; i++)
+			subxids = (TransactionId *)
+				((char *)hdr + MAXALIGN(sizeof(TwoPhaseFileHeader)));
+			for (i = 0; i < hdr->nsubxacts; i++)
 			{
 				TransactionId subxid = subxids[i];
 
 				Assert(TransactionIdFollows(subxid, xid));
-				if (TransactionIdFollowsOrEquals(subxid, ShmemVariableCache->nextXid))
+				if (TransactionIdFollowsOrEquals(subxid,
+												 ShmemVariableCache->nextXid))
 				{
 					ShmemVariableCache->nextXid = subxid;
 					TransactionIdAdvance(ShmemVariableCache->nextXid);
 				}
-			}  /* end for (int i = 0; i < hdr->nsubxacts; i++) */
-		}  /* end if (TransactionIdDidCommit(xid) == false && TransactionIdDidAbort(xid) == false) */
+			}
+		}
 
 		/* Get the next entry */
 		entry = (prpt_map *)hash_seq_search(&hsStatus);
@@ -1734,11 +1735,10 @@ PrescanPreparedTransactions(void)
 			tfXLogRecPtr = (XLogRecPtr *) &entry->xlogrecptr;
 		else
 			tfXLogRecPtr = NULL;
-
-	}  /* end while (tfXLogRecPtr != NULL) */
+	}
 
 	return result;
-}  /* end PrescanPreparedTransactions */
+}
 
 
 /*

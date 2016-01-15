@@ -8,23 +8,17 @@
  */
 package org.postgresql.pljava.sqlj;
 
+import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLData;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.postgresql.pljava.internal.Backend;
@@ -88,32 +82,55 @@ public class Loader extends ClassLoader
 			m_classpath = classpath.split(":");
 
 		/* Find the directory that contains our jar files */
-		String jarpath = Backend.getLibraryPath() + "/java";
+		String jarpath = Backend.getLibraryPath() + "/java/";
 
 		/* Create a new JarLoader for every element in the classpath */
 		for (int i = 0; i < m_classpath.length; i++)
 		{
 			try 
 			{
-				String path="file:///";
+				String searchPath;
 
-				// Previous behaviour required that paths be relative to $GPHOME/lib/postgresql/java/
-				// if the user specifies a relative path we will respect that behaviour
-				if (!m_classpath[i].startsWith("/"))
-				{
-					path += jarpath + '/';
-				}
+                		if (!m_classpath[i].startsWith("/"))
+                		{
+                		    searchPath = jarpath + m_classpath[i];
+                		}
+                		else
+                		{
+                    			searchPath = m_classpath[i];
+                		}
 
-				// add the classpath, note from above that if the path starts with /
-				// then the classpath will be absolute.
-				path += m_classpath[i];
+                		URL url = null;
+	
+        		        File tmp = new File(searchPath);
 
-				URL url = new URL(path);
-				JarLoader loader = new JarLoader(this, url);
-				m_jarloaders.add(loader);
+                		// if directory then lets get all the jar files
+                		if (tmp.isDirectory()) {
+                	    		File jarFiles[] = tmp.listFiles(new FileFilter() {
+                        			public boolean accept(File pathname) {
+                        			    // not interested in directories
+                        			    if (pathname.isDirectory()) return false;
+                        			    // only interested in jar files
+                        			    return pathname.getPath().endsWith("jar");
+                       				 }
+                    			});
+                   		 	for (int j=0; j<jarFiles.length;j++)
+                    			{
+                        			url = new URL("file:///"+jarFiles[j].getPath());
+                        			JarLoader loader = new JarLoader(this, url);
+                        			m_jarloaders.add(loader);
+                   			 }
+                		}
+                		else
+                		{
+                		    url = new URL("file:///" + searchPath);
+                		    JarLoader loader = new JarLoader(this, url);
+                		    m_jarloaders.add(loader);
+               			 }
+
 			}
 			catch (MalformedURLException e)
-		    {
+		    	{	
 				// XXX - Ignore malformed URLs?
 				throw new SQLException("Malformed URL Exception: " +
 									   e.getMessage());

@@ -74,12 +74,15 @@ def impl(context, dbconn, version):
 @given('database "{dbname}" exists')
 @then('database "{dbname}" exists')
 def impl(context, dbname):
-    create_database(context, dbname)
-
-@given('database "{dbname}" is created if not exists')
-@then('database "{dbname}" is created if not exists')
-def impl(context, dbname):
     create_database_if_not_exists(context, dbname)
+
+@given('database "{dbname}" is created if not exists on host "{HOST}" with port "{PORT}" with user "{USER}"')
+@then('database "{dbname}" is created if not exists on host "{HOST}" with port "{PORT}" with user "{USER}"')
+def impl(context, dbname, HOST, PORT, USER):
+    host = os.environ.get(HOST)
+    port = int(os.environ.get(PORT))
+    user = os.environ.get(USER)
+    create_database_if_not_exists(context, dbname, host, port, user)
 
 @when('the database "{dbname}" does not exist')
 @given('the database "{dbname}" does not exist')
@@ -87,11 +90,27 @@ def impl(context, dbname):
 def impl(context, dbname):
     drop_database_if_exists(context, dbname)
 
+@when('the database "{dbname}" does not exist on host "{HOST}" with port "{PORT}" with user "{USER}"')
+@given('the database "{dbname}" does not exist on host "{HOST}" with port "{PORT}" with user "{USER}"')
+@then('the database "{dbname}" does not exist on host "{HOST}" with port "{PORT}" with user "{USER}"')
+def impl(context, dbname, HOST, PORT, USER):
+    host = os.environ.get(HOST)
+    port = int(os.environ.get(PORT))
+    user = os.environ.get(USER)
+    drop_database_if_exists(context, dbname, host, port, user)
+
 @given('the database "{dbname}" does not exist with connection "{dbconn}"')
 @when('the database "{dbname}" does not exist with connection "{dbconn}"')
 @then('the database "{dbname}" does not exist with connection "{dbconn}"')
 def impl(context, dbname, dbconn): 
     command = '%s -c \'drop database if exists %s;\''%(dbconn, dbname)
+    run_command(context, command)
+
+@given('the database "{dbname}" exists with connection "{dbconn}"')
+@when('the database "{dbname}" exists with connection "{dbconn}"')
+@then('the database "{dbname}" exists with connection "{dbconn}"')
+def impl(context, dbname, dbconn): 
+    command = '%s -c \'create database %s;\''%(dbconn, dbname)
     run_command(context, command)
 
 def get_segment_hostlist():
@@ -152,19 +171,31 @@ def impl(context, table_list, dbname):
     for t in tables:
         truncate_table(dbname, t.strip()) 
 
-def populate_regular_table_data(context, tabletype, table_name, compression_type, dbname, rowcount=1094):
-    create_database_if_not_exists(context, dbname)
-    drop_table_if_exists(context, table_name=table_name, dbname=dbname)
+def populate_regular_table_data(context, tabletype, table_name, compression_type, dbname, rowcount=1094, with_data=False, host=None, port=0, user=None):
+    create_database_if_not_exists(context, dbname, host=host, port=port, user=user)
+    drop_table_if_exists(context, table_name=table_name, dbname=dbname, host=host, port=port, user=user)
     if compression_type == "None":
-        create_partition(context, table_name, tabletype, dbname, compression_type=None, partition=False, rowcount=rowcount)
+        create_partition(context, table_name, tabletype, dbname, compression_type=None, partition=False,
+                         rowcount=rowcount, with_data=with_data, host=host, port=port, user=user)
     else:
-        create_partition(context, table_name, tabletype, dbname, compression_type, partition=False, rowcount=rowcount)
+        create_partition(context, table_name, tabletype, dbname, compression_type, partition=False,
+                         rowcount=rowcount, with_data=with_data, host=host, port=port, user=user)
 
 @given('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data')
 @when('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data')
 @then('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data')
 def impl(context, tabletype, table_name, compression_type, dbname):
-    populate_regular_table_data(context, tabletype, table_name, compression_type, dbname)
+    populate_regular_table_data(context, tabletype, table_name, compression_type, dbname, with_data=True)
+
+@given('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data "{with_data}" on host "{HOST}" with port "{PORT}" with user "{USER}"')
+@when('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data "{with_data}" on host "{HOST}" with port "{PORT}" with user "{USER}"')
+@then('there is a "{tabletype}" table "{table_name}" with compression "{compression_type}" in "{dbname}" with data "{with_data}" on host "{HOST}" with port "{PORT}" with user "{USER}"')
+def impl(context, tabletype, table_name, compression_type, dbname, with_data, HOST, PORT, USER):
+    host = os.environ.get(HOST)
+    port = int(os.environ.get(PORT))
+    user = os.environ.get(USER)
+    with_data = bool(with_data)
+    populate_regular_table_data(context, tabletype, table_name, compression_type, dbname, 10, with_data, host, port, user)
 
 @when('the partition table "{table_name}" in "{dbname}" is populated with similar data')
 def impl(context, table_name, dbname):
@@ -190,9 +221,9 @@ def impl(context, tabletype, table_name, compression_type, dbname):
     create_database_if_not_exists(context, dbname)
     drop_table_if_exists(context, table_name=table_name, dbname=dbname)
     if compression_type == "None":
-        create_partition(context, table_name, tabletype, dbname)
+        create_partition(context, tablename=table_name, storage_type=tabletype, dbname=dbname, with_data=True)
     else:
-        create_partition(context, table_name, tabletype, dbname, compression_type)
+        create_partition(context, tablename=table_name, storage_type=tabletype, dbname=dbname, with_data=True, compression_type=compression_type)
 
 @given('there is a mixed storage partition table "{tablename}" in "{dbname}" with data')
 def impl(context, tablename, dbname):
@@ -245,6 +276,7 @@ def impl(context, env_var):
     del context.orig_env[env_var]
 
 @when('the table names in "{dbname}" is stored')
+@then('the table names in "{dbname}" is stored')
 def impl(context, dbname):
     context.table_names = get_table_names(dbname)
    
@@ -613,31 +645,28 @@ def impl(context):
     context.inc_backup_timestamps.append(context.backup_timestamp)
 
 
-@then('Verify data integrity of database "{dbname}" between source and destination system, work-dir "{dir}"')
+@then('verify data integrity of database "{dbname}" between source and destination system, work-dir "{dir}"')
 def impl(context, dbname, dir):
-    dbconn_src = 'psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d %s'%dbname
-    dbconn_dest = 'psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -d %s'%dbname
+    dbconn_src = 'psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d %s' % dbname
+    dbconn_dest = 'psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -d %s' % dbname
     for file in os.listdir(dir):
         if file.endswith('.sql'):
             filename_prefix = os.path.splitext(file)[0]
-            ans_file_path = os.path.join(dir,filename_prefix+'.ans')
-            out_file_path = os.path.join(dir,filename_prefix+'.out')
-            diff_file_path = os.path.join(dir,filename_prefix+'.diff')
+            ans_file_path = os.path.join(dir,filename_prefix + '.ans')
+            out_file_path = os.path.join(dir,filename_prefix + '.out')
+            diff_file_path = os.path.join(dir,filename_prefix + '.diff')
             # run the command to get the exact data from the source system
-            command = '%s -f %s > %s'%(dbconn_src, os.path.join(dir,file), ans_file_path)
+            command = '%s -f %s > %s' % (dbconn_src, os.path.join(dir, file), ans_file_path)
             run_command(context, command)
 
             # run the command to get the data from the destination system, locally
-            command = '%s -f %s > %s'%(dbconn_dest, os.path.join(dir,file), out_file_path)
+            command = '%s -f %s > %s' % (dbconn_dest, os.path.join(dir, file), out_file_path)
             run_command(context, command)
             
-            gpdiff_cmd = 'gpdiff.pl -w  -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: --gp_init_file=gppylib/test/behave/mgmt_utils/steps/data/global_init_file %s %s > %s'%(ans_file_path, out_file_path, diff_file_path)             
+            gpdiff_cmd = 'gpdiff.pl -w -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: --gp_init_file=gppylib/test/behave/mgmt_utils/steps/data/global_init_file %s %s > %s' % (ans_file_path, out_file_path, diff_file_path)
             run_command(context, gpdiff_cmd)
-    for file in os.listdir(dir):
-        if file.endswith('.diff') and os.path.getsize(os.path.join(dir,file)) > 0: 
-            # if there is some difference generated into the diff file, raise expception
-                raise Exception ("Found difference between source and destination system, see %s"%file)
-
+            if context.ret_code != 0:
+                raise Exception ("Found difference between source and destination system, see %s" % file)
 
 @then('run post verifying workload under "{dir}"')
 def impl(context, dir):
@@ -925,15 +954,13 @@ def impl(context, table_list, dbname):
 def impl(context, tname, dbname, nrows):
     check_row_count(tname, dbname, int(nrows))
 
-@then('verify that table "{tname}" in "{dbname}" has same data on source and destination system')
-def impl(context, tname, dbname):
-    print 'veryfing data integraty'
-    match_table_select(context, tname, dbname)
+@then('verify that table "{src_tname}" in database "{src_dbname}" of source system has same data with table "{dest_tname}" in database "{dest_dbname}" of destination system with options "{options}"')
+def impl(context, src_tname, src_dbname, dest_tname, dest_dbname, options):
+    match_table_select(context, src_tname, src_dbname, dest_tname, dest_dbname, options)
 
-@then('verify that table "{tname}" in "{dbname}" has same data on source and destination system with order by {orderby}')
-def impl(context, tname, dbname, orderby):
-    print 'veryfing data integraty'
-    match_table_select(context, tname, dbname, orderby)
+@then('verify that table "{src_tname}" in database "{src_dbname}" of source system has same data with table "{dest_tname}" in database "{dest_dbname}" of destination system with order by "{orderby}"')
+def impl(context, src_tname, src_dbname, dest_tname, dest_dbname, orderby):
+    match_table_select(context, src_tname, src_dbname, dest_tname, dest_dbname, orderby)
 
 @then('verify that partitioned tables "{table_list}" in "{dbname}" have {num_parts} partitions')
 @then('verify that partitioned tables "{table_list}" in "{dbname}" have {num_parts} partitions in partition level "{partitionlevel}"')
@@ -1040,7 +1067,7 @@ def impl(context, filename):
         os.remove(table_file)
 
 def create_table_file_locally(context, filename, table_list, location=os.getcwd()):
-    tables = table_list.split(',')
+    tables = table_list.split('|')
     file_path = os.path.join(location, filename)
     with open(file_path, 'w') as fp:
         for t in tables:

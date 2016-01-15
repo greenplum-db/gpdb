@@ -498,6 +498,7 @@ bool		optimizer_print_query;
 bool		optimizer_print_plan;
 bool		optimizer_print_xform;
 bool		optimizer_release_mdcache;
+int		optimizer_mdcache_size;
 bool		optimizer_disable_xform_result_printing;
 bool		optimizer_print_memo_after_exploration;
 bool		optimizer_print_memo_after_implementation;
@@ -583,6 +584,8 @@ bool		gp_plpgsql_clear_cache_always = false;
  * pairs.  E.g. "appendonly=true,orientation=column"
  */
 char	   *gp_default_storage_options = NULL;
+
+int			writable_external_table_bufsize = 64;
 
 struct config_bool ConfigureNamesBool_gp[] =
 {
@@ -674,16 +677,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_workfile_checksumming,
 		true, NULL, NULL
-	},
-	{
-		{"gp_workfile_caching", PGC_SUSET, QUERY_TUNING_OTHER,
-			gettext_noop("Enable work file caching"),
-			gettext_noop("When enabled, work files are persistent "
-						 "and their contents can be reused."),
-			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_workfile_caching,
-		false, NULL, NULL
 	},
 	{
 		{"force_bitmap_table_scan", PGC_USERSET, DEVELOPER_OPTIONS,
@@ -3439,6 +3432,16 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"writable_external_table_bufsize", PGC_USERSET, EXTERNAL_TABLES,
+			gettext_noop("Buffer size in kilo bytes for writable external table before writing data to gpfdist."),
+			gettext_noop("Valid value is between 32K and 128M: [32, 131072]."),
+			GUC_UNIT_KB | GUC_NOT_IN_SAMPLE
+		},
+		&writable_external_table_bufsize,
+		64, 32, 131072, NULL, NULL
+	},
+
+	{
 		{"gp_cancel_query_delay_time", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("The time in milliseconds to delay a query cancellation."),
 			NULL,
@@ -4713,6 +4716,17 @@ struct config_int ConfigureNamesInt_gp[] =
 		&optimizer_segments,
 		0, 0, INT_MAX, NULL, NULL
 	},
+
+	{
+		{"optimizer_mdcache_size", PGC_USERSET, RESOURCES_MEM,
+			gettext_noop("Sets the size of MDCache."),
+			NULL,
+			GUC_UNIT_KB | GUC_GPDB_ADDOPT
+		},
+		&optimizer_mdcache_size,
+		0, 0, INT_MAX, NULL, NULL
+	},
+
 	{
 		{"memory_profiler_dataset_size", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Set the size in GB"),
@@ -5394,7 +5408,7 @@ struct config_string ConfigureNamesString_gp[] =
 		{"pljava_classpath", PGC_SUSET, CUSTOM_OPTIONS,
 			gettext_noop("classpath used by the the JVM"),
 			NULL,
-			GUC_GPDB_ADDOPT | GUC_NOT_IN_SAMPLE | GUC_SUPERUSER_ONLY
+			GUC_GPDB_ADDOPT | GUC_NOT_IN_SAMPLE 
 		},
 		&pljava_classpath,
 		"", NULL, NULL

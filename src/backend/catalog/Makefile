@@ -23,7 +23,7 @@ OBJS = catalog.o dependency.o heap.o index.o indexing.o namespace.o aclchk.o \
        aoseg.o aoblkdir.o gp_fastsequence.o \
        pg_attribute_encoding.o pg_compression.o aovisimap.o \
        gp_global_sequence.o gp_persistent.o pg_appendonly.o \
-       aocatalog.o hiddencat.o $(QUICKLZ_COMPRESSION)
+       aocatalog.o $(QUICKLZ_COMPRESSION)
 
 
 SUBDIRS = caql core
@@ -32,39 +32,7 @@ BKIFILES = postgres.bki postgres.description postgres.shdescription
 
 include $(top_srcdir)/src/backend/common.mk
 
-all: gp_toolkit.sql gp_toolkit_test.sql $(BKIFILES)
-
-JETPACK_NAME = toolkit
-JETPACK_SCHEMA = gp_$(JETPACK_NAME)
-JETPACK_OBJECT_PREFIX = gp_
-JETPACK_PREFIX = $(JETPACK_SCHEMA).$(JETPACK_OBJECT_PREFIX)
-JETPACK_PREFIX_AUX = $(JETPACK_SCHEMA).__$(JETPACK_OBJECT_PREFIX)
-AO_CO_DIAGNOSTICS_PATHNAME = $$libdir\/gp_ao_co_diagnostics
-WORKFILE_PATHNAME = $$libdir\/gp_workfile_mgr
-SESSION_STATE_PATHNAME = $$libdir\/gp_session_state
-
-gp_toolkit.sql: gp_toolkit.sql.in
-	sed \
-	-e 's/%%JETPACK_NAME%%/$(JETPACK_NAME)/g' \
-	-e 's/%%JETPACK_SCHEMA%%/$(JETPACK_SCHEMA)/g' \
-	-e 's/%%JETPACK_PREFIX%%/$(JETPACK_PREFIX)/g' \
-	-e 's/%%JETPACK_OBJECT_PREFIX%%/$(JETPACK_OBJECT_PREFIX)/g' \
-	-e 's/%%JETPACK_PREFIX_AUX%%/$(JETPACK_PREFIX_AUX)/g' \
-	-e 's/%%AO_CO_DIAGNOSTICS_MODULE%%/$(AO_CO_DIAGNOSTICS_PATHNAME)/g' \
-	-e 's/%%WORKFILE_MODULE%%/$(WORKFILE_PATHNAME)/g' \
-	-e 's/%%SESSION_STATE_MODULE%%/$(SESSION_STATE_PATHNAME)/g' \
-	-e 's/	/    /g' \
-	$< > $@
-
-gp_toolkit_test.sql: gp_toolkit_test.sql.in
-	sed \
-	-e 's/%%JETPACK_NAME%%/$(JETPACK_NAME)/g' \
-	-e 's/%%JETPACK_SCHEMA%%/$(JETPACK_SCHEMA)/g' \
-	-e 's/%%JETPACK_PREFIX%%/$(JETPACK_PREFIX)/g' \
-	-e 's/%%JETPACK_PREFIX_AUX%%/$(JETPACK_PREFIX_AUX)/g' \
-	-e 's/%%AO_CO_DIAGNOSTICS_MODULE%%/$(AO_CO_DIAGNOSTICS_PATHNAME)/g' \
-	-e 's/	/    /g' \
-	$< > $@
+all: $(BKIFILES)
 
 # TIDYCAT_BEGIN_CODEGEN
 # WARNING: DO NOT MODIFY THE FOLLOWING SECTION:
@@ -99,9 +67,8 @@ POSTGRES_BKI_SRCS := $(addprefix $(top_srcdir)/src/include/catalog/, \
 	pg_authid.h pg_auth_members.h pg_shdepend.h pg_shdescription.h pg_resqueue.h \
 	gp_configuration.h gp_id.h gp_policy.h gp_version.h \
 	gp_segment_config.h gp_san_config.h \
-	gp_verification_history.h \
 	pg_window.h \
-	pg_exttable.h pg_appendonly.h pg_appendonly_alter_column.h aoseg.h \
+	pg_exttable.h pg_appendonly.h aoseg.h \
 	gp_fastsequence.h pg_extprotocol.h \
 	pg_partition.h pg_partition_rule.h pg_filespace.h pg_filespace_entry.h \
 	gp_global_sequence.h gp_persistent.h \
@@ -144,8 +111,7 @@ install-data: $(BKIFILES) installdirs
 	$(INSTALL_DATA) $(call vpathsearch,cdb_util.sql) '$(DESTDIR)$(datadir)/cdb_util.sql'
 	$(INSTALL_DATA) $(call vpathsearch,cdb_schema.sql) '$(DESTDIR)$(datadir)/cdb_init.d/cdb_schema.sql'
 	$(INSTALL_DATA) $(srcdir)/sql_features.txt '$(DESTDIR)$(datadir)/sql_features.txt'
-	$(INSTALL_DATA) $(call vpathsearch,gp_toolkit.sql) '$(DESTDIR)$(datadir)/gp_toolkit.sql'
-	$(INSTALL_DATA) $(call vpathsearch,compaction_info.sql) '$(DESTDIR)$(datadir)/compaction_info.sql'
+	$(INSTALL_DATA) $(call vpathsearch,gp_toolkit.sql) '$(DESTDIR)$(datadir)/cdb_init.d/gp_toolkit.sql'
 
 installdirs:
 	$(MKDIR_P) '$(DESTDIR)$(datadir)'
@@ -156,7 +122,7 @@ uninstall-data:
 
 # postgres_bki_srcs is in the distribution tarball, so it is not cleaned here.
 clean:
-	rm -f SUBSYS.o $(OBJS) $(BKIFILES) gp_toolkit_test.sql gp_toolkit.sql
+	rm -f SUBSYS.o $(OBJS) $(BKIFILES)
 
 maintainer-clean: clean
 	rm -f postgres_bki_srcs

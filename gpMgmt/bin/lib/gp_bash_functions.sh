@@ -1630,25 +1630,30 @@ PING_HOST () {
 	if [ x"" == x"$PING_EXIT" ];then PING_EXIT=0;fi
 	case $OS_TYPE in
 		darwin )
-			$PING $PING_TIME $TARGET_HOST > /dev/null 2>&1 || $PING6 $PING_TIME $TARGET_HOST > /dev/null 2>&1 ;;
+			$PING $PING_TIME $TARGET_HOST > /dev/null 2>&1 || $PING6 $PING_TIME $TARGET_HOST > /dev/null 2>&1 
+                        ;;
 		linux )
-			$PING $TARGET_HOST $PING_TIME > /dev/null 2>&1 || $PING6 $TARGET_HOST $PING_TIME > /dev/null 2>&1 ;;
+			$PING $TARGET_HOST $PING_TIME > /dev/null 2>&1 || $PING6 $TARGET_HOST $PING_TIME > /dev/null 2>&1 
+                        ;;
 		* )
 			$PING $TARGET_HOST $PING_TIME > /dev/null 2>&1
 	esac
 	RETVAL=$?
 	case $RETVAL in
-		0) LOG_MSG "[INFO]:-$TARGET_HOST contact established" ;;
+		0) LOG_MSG "[INFO]:-$TARGET_HOST contact established" 
+                   ;;
 		1) if [ $PING_EXIT -eq 0 ];then
 			ERROR_EXIT "[FATAL]:-Unable to contact $TARGET_HOST" 2
 		   else
 		        LOG_MSG "[WARN]:-Unable to contact $TARGET_HOST" 1
-		   fi ;;
+		   fi 
+                   ;;
 		2) if [ $PING_EXIT -eq 0 ];then
 		 	ERROR_EXIT "[FATAL]:-Unknown host $TARGET_HOST" 2
 		   else
 			LOG_MSG "[WARN]:-Unknown host $TARGET_HOST" 1
-		   fi ;;
+		   fi 
+                   ;;
 	esac
 	LOG_MSG "[INFO]:-End Function $FUNCNAME"
 	return $RETVAL
@@ -1961,7 +1966,7 @@ fi
 #Set up OS type for scripts to change command lines
 OS_TYPE=`uname -s|tr '[A-Z]' '[a-z]'`
 case $OS_TYPE in
-	sunos ) IFCONFIG_TXT="-a inet"
+	sunos ) IPV4_ADDR_LIST_CMD="$IFCONFIG -a4"
 		IPV6_ADDR_LIST_CMD="$IFCONFIG -a6"
 		PS_TXT="-ef"
 		LIB_TYPE="LD_LIBRARY_PATH"
@@ -1973,12 +1978,11 @@ case $OS_TYPE in
 		DEFAULT_LOCALE_SETTING=en_US.UTF-8
 		MAIL=/bin/mailx
 		PING_TIME="1"
-		GTAR=`findCmdInPath gtar`
 		DF=`findCmdInPath df`
 		# Multi-byte tr needed on Solaris to handle [:upper:], [:lower:], etc.
 		MBTR=/usr/xpg4/bin/tr
 		DU_TXT="-s" ;;
-	linux ) IFCONFIG_TXT=""
+	linux ) IPV4_ADDR_LIST_CMD="`findCmdInPath ip` -4 address show"
 		IPV6_ADDR_LIST_CMD="`findCmdInPath ip` -6 address show"
 		PS_TXT="ax"
 		LIB_TYPE="LD_LIBRARY_PATH"
@@ -1988,11 +1992,10 @@ case $OS_TYPE in
 		DEFAULT_LOCALE_SETTING=en_US.utf8
 		PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
-		GTAR=`findCmdInPath tar`
 		DF="`findCmdInPath df` -P"
 		ID=`whoami`
 		DU_TXT="-c" ;;
-	darwin ) IFCONFIG_TXT=""
+	darwin ) IPV4_ADDR_LIST_CMD="$IFCONFIG -a inet"
 		IPV6_ADDR_LIST_CMD="$IFCONFIG -a inet6"
 		PS_TXT="ax"
 		LIB_TYPE="DYLD_LIBRARY_PATH"
@@ -2002,20 +2005,18 @@ case $OS_TYPE in
 		HOST_ARCH_TYPE="uname -m"
 		NOLINE_ECHO=$ECHO
 		DEFAULT_LOCALE_SETTING=en_US.utf-8
-        PING6=`findCmdInPath ping6`
+        	PING6=`findCmdInPath ping6`
 		PING_TIME="-c 1"
-		GTAR=`findCmdInPath gnutar`
 		DF="`findCmdInPath df` -P"
 		DU_TXT="-c" ;;	
-	freebsd ) IFCONFIG_TXT=""
-		PS_TXT="ax"
+	freebsd ) IPV4_ADDR_LIST_CMD="$IFCONFIG -a inet"
+		IPV6_ADDR_LIST_CMD="$IFCONFIG -a inet6"
 		LIB_TYPE="LD_LIBRARY_PATH"
 		PG_METHOD="ident"
 		HOST_ARCH_TYPE="uname -m"
 		NOLINE_ECHO="$ECHO -e"
 		DEFAULT_LOCALE_SETTING=en_US.utf8
 		PING_TIME="-c 1"
-		GTAR=`findCmdInPath gtar`
 		DF="`findCmdInPath df` -P"
 		DU_TXT="-c" ;;	
 	* ) echo unknown ;;

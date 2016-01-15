@@ -55,6 +55,9 @@ typedef struct Gang
 	bool		all_valid_segdbs_connected;
 	bool		allocated;
 
+	/* should be destroyed in cleanupGang() if set*/
+	bool		noReuse;
+
 	/* MPP-24003: pointer to array of segment database info for each reader and writer gang. */
 	struct		CdbComponentDatabaseInfo *segment_database_info;
 } Gang;
@@ -76,6 +79,10 @@ extern void disconnectAndDestroyAllGangs(void);
 extern void CheckForResetSession(void);
 
 extern List * getAllReaderGangs(void);
+
+extern List * getAllIdleReaderGangs(void);
+
+extern List * getAllBusyReaderGangs(void);
 
 extern void detectFailedConnections(void);
 

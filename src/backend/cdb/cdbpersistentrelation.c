@@ -86,11 +86,6 @@ static void PersistentRelation_VerifyInitScan(void)
 // Helpers 
 // -----------------------------------------------------------------------------
 
-inline static void XLogRecPtr_Zero(XLogRecPtr *xlogLoc)
-{
-	MemSet(xlogLoc, 0, sizeof(XLogRecPtr));
-}
-
 void PersistentRelation_FlushXLog(void)
 {
 	PersistentFileSysObj_FlushXLog();

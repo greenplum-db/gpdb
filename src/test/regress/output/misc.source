@@ -502,8 +502,20 @@ ERROR:  function cannot execute on segment because it accesses relation "public.
 DETAIL:  SQL function "hobbies" during startup
 SELECT user_relns() AS user_relns
    ORDER BY user_relns;
-     user_relns      
----------------------
+               user_relns               
+----------------------------------------
+ __gp_aovisimap_hidden_t
+ __gp_fullname
+ __gp_is_append_only
+ __gp_localid
+ __gp_log_master_ext
+ __gp_log_segment_ext
+ __gp_masterid
+ __gp_number_of_segments
+ __gp_user_data_tables
+ __gp_user_data_tables_readable
+ __gp_user_namespaces
+ __gp_user_tables
  a_star
  abstime_tbl
  aggtest
@@ -544,6 +556,43 @@ SELECT user_relns() AS user_relns
  float8_tbl
  floats
  func_index_heap
+ gp_bloat_diag
+ gp_bloat_expected_pages
+ gp_disk_free
+ gp_locks_on_relation
+ gp_locks_on_resqueue
+ gp_log_command_timings
+ gp_log_database
+ gp_log_master_concise
+ gp_log_system
+ gp_param_setting_t
+ gp_param_settings_seg_value_diffs
+ gp_pgdatabase_invalid
+ gp_resq_activity
+ gp_resq_activity_by_queue
+ gp_resq_priority_backend
+ gp_resq_priority_statement
+ gp_resq_role
+ gp_resqueue_status
+ gp_roles_assigned
+ gp_size_of_all_table_indexes
+ gp_size_of_database
+ gp_size_of_index
+ gp_size_of_partition_and_indexes_disk
+ gp_size_of_schema_disk
+ gp_size_of_table_and_indexes_disk
+ gp_size_of_table_and_indexes_licensing
+ gp_size_of_table_disk
+ gp_size_of_table_uncompressed
+ gp_skew_analysis_t
+ gp_skew_coefficients
+ gp_skew_details_t
+ gp_skew_idle_fractions
+ gp_stats_missing
+ gp_table_indexes
+ gp_workfile_entries
+ gp_workfile_usage_per_query
+ gp_workfile_usage_per_segment
  hash_f8_heap
  hash_i4_heap
  hash_name_heap
@@ -602,7 +651,7 @@ SELECT user_relns() AS user_relns
  tinterval_tbl
  toyemp
  varchar_tbl
-(98 rows)
+(147 rows)
 
 SELECT name(equipment(hobby_construct(text 'skywalking', text 'mer')));
  name 

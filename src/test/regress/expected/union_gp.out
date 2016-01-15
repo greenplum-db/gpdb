@@ -1,7 +1,7 @@
 -- Additional GPDB-added tests for UNION
 create temp table t_union1 (a int, b int);
-select distinct a, null as c from t_union1 union select a, b from t_union1;
-ERROR:  UNION/INTERSECT/EXCEPT could not convert type text to integer
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 select distinct a, null::integer as c from t_union1 union select a, b from t_union1;
  a | c 
 ---+---
@@ -14,13 +14,11 @@ select null union select distinct null;
  
 (1 row)
 
-select 1 union select distinct null;
-ERROR:  UNION/INTERSECT/EXCEPT could not convert type text to integer
 select 1 union select distinct null::integer;
  ?column? 
 ----------
-         
         1
+         
 (2 rows)
 
 select 1 a, NULL b, NULL c UNION SELECT 2, 3, NULL UNION SELECT 3, NULL, 4;
@@ -31,13 +29,11 @@ select 1 a, NULL b, NULL c UNION SELECT 2, 3, NULL UNION SELECT 3, NULL, 4;
  3 |   | 4
 (3 rows)
 
-select ARRAY[1, 2, 3] union select distinct null;
-ERROR:  UNION/INTERSECT/EXCEPT could not convert type text to integer[]
 select ARRAY[1, 2, 3] union select distinct null::integer[];
   array  
 ---------
- 
  {1,2,3}
+ 
 (2 rows)
 
 select 1 intersect (select 1, 2 union all select 3, 4);
@@ -63,7 +59,7 @@ select 'b'::information_schema.sql_identifier)a;
      (select '1' as a union select null)
      union
      (select 1 union select distinct null::integer)
-   )s) 
+   )s)
   union
   (select * from (
      (select '1' union select null)
@@ -72,8 +68,8 @@ select 'b'::information_schema.sql_identifier)a;
   )s2);
  a 
 ---
-  
  1
+  
 (2 rows)
 
 -- Yet, we keep behaviors on text-like columns
@@ -98,6 +94,8 @@ select pg_typeof(a) from(select 1 x, 'foo' a union
 (1 row)
 
 CREATE TABLE union_ctas (a, b) AS SELECT 1, 2 UNION SELECT 1, 1 UNION SELECT 1, 1;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 SELECT * FROM union_ctas;
  a | b 
 ---+---
@@ -108,7 +106,11 @@ SELECT * FROM union_ctas;
 DROP TABLE union_ctas;
 -- MPP-21075: push quals below union
 CREATE TABLE union_quals1 (a, b) AS SELECT i, i%2 from generate_series(1,10) i;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 CREATE TABLE union_quals2 (a, b) AS SELECT i%2, i from generate_series(1,10) i;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 SELECT * FROM (SELECT a, b from union_quals1 UNION SELECT b, a from union_quals2) as foo(a,b) where a > b order by a;
  a  | b 
 ----+---
@@ -206,3 +208,1673 @@ select distinct a from (select  distinct 'A' from (select 'C' from (select disti
  B
 (2 rows)
 
+--
+-- Setup
+--
+--start_ignore
+DROP TABLE IF EXISTS T_a1 CASCADE;
+NOTICE:  table "t_a1" does not exist, skipping
+DROP TABLE IF EXISTS T_b2 CASCADE;
+NOTICE:  table "t_b2" does not exist, skipping
+DROP TABLE IF EXISTS T_random CASCADE;
+NOTICE:  table "t_random" does not exist, skipping
+--end_ignore
+CREATE TABLE T_a1 (a1 int, a2 int) DISTRIBUTED BY(a1);
+INSERT INTO T_a1 SELECT i, i%5 from generate_series(1,10) i;
+CREATE TABLE T_b2 (b1 int, b2 int) DISTRIBUTED BY(b2);
+INSERT INTO T_b2 SELECT i, i%5 from generate_series(1,20) i;
+CREATE TABLE T_random (c1 int, c2 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO T_random SELECT i, i%5 from generate_series(1,30) i;
+create language plpythonu;
+create or replace function count_operator(explain_query text, operator text) returns int as
+$$
+rv = plpy.execute(explain_query)
+search_text = operator
+result = 0
+for i in range(len(rv)):
+    cur_line = rv[i]['QUERY PLAN']
+    if search_text.lower() in cur_line.lower():
+        result = result+1
+return result
+$$
+language plpythonu;
+--
+-- N-ary UNION ALL results
+--
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select a1 from T_a1)
+UNION ALL
+(select b1 from T_b2)
+UNION ALL
+(select c1 from T_random)
+UNION ALL
+(select d1 from T_constant)
+order by 1;
+ a1  
+-----
+   1
+   1
+   1
+   2
+   2
+   2
+   3
+   3
+   3
+   4
+   4
+   4
+   5
+   5
+   5
+   6
+   6
+   6
+   7
+   7
+   7
+   8
+   8
+   8
+   9
+   9
+   9
+  10
+  10
+  10
+  11
+  11
+  12
+  12
+  13
+  13
+  14
+  14
+  15
+  15
+  16
+  16
+  17
+  17
+  18
+  18
+  19
+  19
+  20
+  20
+  21
+  22
+  23
+  24
+  25
+  26
+  27
+  28
+  29
+  30
+ 100
+ 200
+ 300
+(63 rows)
+
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select b1 from T_b2)
+UNION ALL
+(select a1 from T_a1)
+UNION ALL
+(select c1 from T_random)
+UNION ALL
+(select d1 from T_constant)
+order by 1;
+ b1  
+-----
+   1
+   1
+   1
+   2
+   2
+   2
+   3
+   3
+   3
+   4
+   4
+   4
+   5
+   5
+   5
+   6
+   6
+   6
+   7
+   7
+   7
+   8
+   8
+   8
+   9
+   9
+   9
+  10
+  10
+  10
+  11
+  11
+  12
+  12
+  13
+  13
+  14
+  14
+  15
+  15
+  16
+  16
+  17
+  17
+  18
+  18
+  19
+  19
+  20
+  20
+  21
+  22
+  23
+  24
+  25
+  26
+  27
+  28
+  29
+  30
+ 100
+ 200
+ 300
+(63 rows)
+
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select c1 from T_random)
+UNION ALL
+(select a1 from T_a1)
+UNION ALL
+(select b1 from T_b2)
+UNION ALL
+(select d1 from T_constant)
+order by 1;
+ c1  
+-----
+   1
+   1
+   1
+   2
+   2
+   2
+   3
+   3
+   3
+   4
+   4
+   4
+   5
+   5
+   5
+   6
+   6
+   6
+   7
+   7
+   7
+   8
+   8
+   8
+   9
+   9
+   9
+  10
+  10
+  10
+  11
+  11
+  12
+  12
+  13
+  13
+  14
+  14
+  15
+  15
+  16
+  16
+  17
+  17
+  18
+  18
+  19
+  19
+  20
+  20
+  21
+  22
+  23
+  24
+  25
+  26
+  27
+  28
+  29
+  30
+ 100
+ 200
+ 300
+(63 rows)
+
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select d1 from T_constant)
+UNION ALL
+(select c1 from T_random)
+UNION ALL
+(select a1 from T_a1)
+UNION ALL
+(select b1 from T_b2)
+order by 1;
+ d1  
+-----
+   1
+   1
+   1
+   2
+   2
+   2
+   3
+   3
+   3
+   4
+   4
+   4
+   5
+   5
+   5
+   6
+   6
+   6
+   7
+   7
+   7
+   8
+   8
+   8
+   9
+   9
+   9
+  10
+  10
+  10
+  11
+  11
+  12
+  12
+  13
+  13
+  14
+  14
+  15
+  15
+  16
+  16
+  17
+  17
+  18
+  18
+  19
+  19
+  20
+  20
+  21
+  22
+  23
+  24
+  25
+  26
+  27
+  28
+  29
+  30
+ 100
+ 200
+ 300
+(63 rows)
+
+--
+-- N-ary UNION ALL explain
+--
+select count_operator('
+explain
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select a1 from T_a1)
+UNION ALL
+(select b1 from T_b2)
+UNION ALL
+(select c1 from T_random)
+UNION ALL
+(select d1 from T_constant)
+order by 1;'
+, 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+select count_operator('
+explain
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select b1 from T_b2)
+UNION ALL
+(select a1 from T_a1)
+UNION ALL
+(select c1 from T_random)
+UNION ALL
+(select d1 from T_constant)
+order by 1;'
+, 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+select count_operator('
+explain
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select c1 from T_random)
+UNION ALL
+(select a1 from T_a1)
+UNION ALL
+(select b1 from T_b2)
+UNION ALL
+(select d1 from T_constant)
+order by 1;'
+, 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+select count_operator('
+explain
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select d1 from T_constant)
+UNION ALL
+(select c1 from T_random)
+UNION ALL
+(select a1 from T_a1)
+UNION ALL
+(select b1 from T_b2)
+order by 1;'
+, 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+--
+-- N-ary UNION results
+--
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select a1 from T_a1)
+UNION
+(select b1 from T_b2)
+UNION
+(select c1 from T_random)
+UNION
+(select d1 from T_constant)
+order by 1;
+ a1  
+-----
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+  10
+  11
+  12
+  13
+  14
+  15
+  16
+  17
+  18
+  19
+  20
+  21
+  22
+  23
+  24
+  25
+  26
+  27
+  28
+  29
+  30
+ 100
+ 200
+ 300
+(33 rows)
+
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select b1 from T_b2)
+UNION
+(select a1 from T_a1)
+UNION
+(select c1 from T_random)
+UNION ALL
+(select d1 from T_constant)
+order by 1;
+ b1  
+-----
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+  10
+  11
+  12
+  13
+  14
+  15
+  16
+  17
+  18
+  19
+  20
+  21
+  22
+  23
+  24
+  25
+  26
+  27
+  28
+  29
+  30
+ 100
+ 200
+ 300
+(33 rows)
+
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select c1 from T_random)
+UNION
+(select a1 from T_a1)
+UNION
+(select b1 from T_b2)
+UNION ALL
+(select d1 from T_constant)
+order by 1;
+ c1  
+-----
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+  10
+  11
+  12
+  13
+  14
+  15
+  16
+  17
+  18
+  19
+  20
+  21
+  22
+  23
+  24
+  25
+  26
+  27
+  28
+  29
+  30
+ 100
+ 200
+ 300
+(33 rows)
+
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select d1 from T_constant)
+UNION ALL
+(select c1 from T_random)
+UNION
+(select a1 from T_a1)
+UNION
+(select b1 from T_b2)
+order by 1;
+ d1  
+-----
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+  10
+  11
+  12
+  13
+  14
+  15
+  16
+  17
+  18
+  19
+  20
+  21
+  22
+  23
+  24
+  25
+  26
+  27
+  28
+  29
+  30
+ 100
+ 200
+ 300
+(33 rows)
+
+--
+-- N-ary UNION explain
+--
+select count_operator('
+explain
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select a1 from T_a1)
+UNION
+(select b1 from T_b2)
+UNION
+(select c1 from T_random)
+UNION
+(select d1 from T_constant)
+order by 1;'
+, 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+select count_operator('
+explain
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select b1 from T_b2)
+UNION
+(select a1 from T_a1)
+UNION
+(select c1 from T_random)
+UNION
+(select d1 from T_constant)
+order by 1;'
+, 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+select count_operator('
+explain
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select c1 from T_random)
+UNION
+(select a1 from T_a1)
+UNION
+(select b1 from T_b2)
+UNION
+(select d1 from T_constant)
+order by 1;'
+, 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+select count_operator('
+explain
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select d1 from T_constant)
+UNION
+(select c1 from T_random)
+UNION
+(select a1 from T_a1)
+UNION
+(select b1 from T_b2)
+order by 1;'
+, 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+--
+-- Binary UNION ALL results
+--
+(select a1 from T_a1) UNION ALL (select b1 from T_b2) order by 1;
+ a1 
+----
+  1
+  1
+  2
+  2
+  3
+  3
+  4
+  4
+  5
+  5
+  6
+  6
+  7
+  7
+  8
+  8
+  9
+  9
+ 10
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+(30 rows)
+
+(select b1 from T_b2) UNION ALL (select a1 from T_a1) order by 1;
+ b1 
+----
+  1
+  1
+  2
+  2
+  3
+  3
+  4
+  4
+  5
+  5
+  6
+  6
+  7
+  7
+  8
+  8
+  9
+  9
+ 10
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+(30 rows)
+
+(select a1 from T_a1) UNION ALL (select c1 from T_random) order by 1;
+ a1 
+----
+  1
+  1
+  2
+  2
+  3
+  3
+  4
+  4
+  5
+  5
+  6
+  6
+  7
+  7
+  8
+  8
+  9
+  9
+ 10
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+ 21
+ 22
+ 23
+ 24
+ 25
+ 26
+ 27
+ 28
+ 29
+ 30
+(40 rows)
+
+(select c1 from T_random) UNION ALL (select a1 from T_a1) order by 1;
+ c1 
+----
+  1
+  1
+  2
+  2
+  3
+  3
+  4
+  4
+  5
+  5
+  6
+  6
+  7
+  7
+  8
+  8
+  9
+  9
+ 10
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+ 21
+ 22
+ 23
+ 24
+ 25
+ 26
+ 27
+ 28
+ 29
+ 30
+(40 rows)
+
+(select * from T_a1) UNION ALL (select * from T_b2) order by 1;
+ a1 | a2 
+----+----
+  1 |  1
+  1 |  1
+  2 |  2
+  2 |  2
+  3 |  3
+  3 |  3
+  4 |  4
+  4 |  4
+  5 |  0
+  5 |  0
+  6 |  1
+  6 |  1
+  7 |  2
+  7 |  2
+  8 |  3
+  8 |  3
+  9 |  4
+  9 |  4
+ 10 |  0
+ 10 |  0
+ 11 |  1
+ 12 |  2
+ 13 |  3
+ 14 |  4
+ 15 |  0
+ 16 |  1
+ 17 |  2
+ 18 |  3
+ 19 |  4
+ 20 |  0
+(30 rows)
+
+(select * from T_a1) UNION ALL (select * from T_random) order by 1;
+ a1 | a2 
+----+----
+  1 |  1
+  1 |  1
+  2 |  2
+  2 |  2
+  3 |  3
+  3 |  3
+  4 |  4
+  4 |  4
+  5 |  0
+  5 |  0
+  6 |  1
+  6 |  1
+  7 |  2
+  7 |  2
+  8 |  3
+  8 |  3
+  9 |  4
+  9 |  4
+ 10 |  0
+ 10 |  0
+ 11 |  1
+ 12 |  2
+ 13 |  3
+ 14 |  4
+ 15 |  0
+ 16 |  1
+ 17 |  2
+ 18 |  3
+ 19 |  4
+ 20 |  0
+ 21 |  1
+ 22 |  2
+ 23 |  3
+ 24 |  4
+ 25 |  0
+ 26 |  1
+ 27 |  2
+ 28 |  3
+ 29 |  4
+ 30 |  0
+(40 rows)
+
+(select * from T_b2) UNION ALL (select * from T_random) order by 1;
+ b1 | b2 
+----+----
+  1 |  1
+  1 |  1
+  2 |  2
+  2 |  2
+  3 |  3
+  3 |  3
+  4 |  4
+  4 |  4
+  5 |  0
+  5 |  0
+  6 |  1
+  6 |  1
+  7 |  2
+  7 |  2
+  8 |  3
+  8 |  3
+  9 |  4
+  9 |  4
+ 10 |  0
+ 10 |  0
+ 11 |  1
+ 11 |  1
+ 12 |  2
+ 12 |  2
+ 13 |  3
+ 13 |  3
+ 14 |  4
+ 14 |  4
+ 15 |  0
+ 15 |  0
+ 16 |  1
+ 16 |  1
+ 17 |  2
+ 17 |  2
+ 18 |  3
+ 18 |  3
+ 19 |  4
+ 19 |  4
+ 20 |  0
+ 20 |  0
+ 21 |  1
+ 22 |  2
+ 23 |  3
+ 24 |  4
+ 25 |  0
+ 26 |  1
+ 27 |  2
+ 28 |  3
+ 29 |  4
+ 30 |  0
+(50 rows)
+
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select a1 from T_a1) UNION ALL (select d1 from T_constant) order by 1;
+ a1  
+-----
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+  10
+ 100
+ 200
+ 300
+(13 rows)
+
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select d1 from T_constant) UNION ALL (select a1 from T_a1) order by 1;
+ d1  
+-----
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+  10
+ 100
+ 200
+ 300
+(13 rows)
+
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select c1 from T_random) UNION ALL (select d1 from T_constant) order by 1;
+ c1  
+-----
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+  10
+  11
+  12
+  13
+  14
+  15
+  16
+  17
+  18
+  19
+  20
+  21
+  22
+  23
+  24
+  25
+  26
+  27
+  28
+  29
+  30
+ 100
+ 200
+ 300
+(33 rows)
+
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select d1 from T_constant) UNION ALL (select c1 from T_random) order by 1;
+ d1  
+-----
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+  10
+  11
+  12
+  13
+  14
+  15
+  16
+  17
+  18
+  19
+  20
+  21
+  22
+  23
+  24
+  25
+  26
+  27
+  28
+  29
+  30
+ 100
+ 200
+ 300
+(33 rows)
+
+--
+-- Binary UNION ALL explain
+--
+select count_operator('explain (select a1 from T_a1) UNION ALL (select b1 from T_b2) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              1
+(1 row)
+
+select count_operator('explain (select b1 from T_b2) UNION ALL (select a1 from T_a1) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              1
+(1 row)
+
+select count_operator('explain (select a1 from T_a1) UNION ALL (select c1 from T_random) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              1
+(1 row)
+
+select count_operator('explain (select c1 from T_random) UNION ALL (select a1 from T_a1) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              1
+(1 row)
+
+select count_operator('explain (select * from T_a1) UNION ALL (select * from T_b2) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              1
+(1 row)
+
+select count_operator('explain (select * from T_a1) UNION ALL (select * from T_random) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              1
+(1 row)
+
+select count_operator('explain (select * from T_b2) UNION ALL (select * from T_random) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              1
+(1 row)
+
+select count_operator('explain
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select a1 from T_a1) UNION ALL (select d1 from T_constant) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+select count_operator('explain
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select d1 from T_constant) UNION ALL (select a1 from T_a1) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+select count_operator('explain
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select c1 from T_random) UNION ALL (select d1 from T_constant) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+select count_operator('explain with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION ALL SELECT 200, 200
+UNION ALL SELECT 300, 300)
+(select d1 from T_constant) UNION ALL (select c1 from T_random) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+--
+-- Binary UNION results
+--
+(select a1 from T_a1) UNION (select b1 from T_b2) order by 1;
+ a1 
+----
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+(20 rows)
+
+(select b1 from T_b2) UNION (select a1 from T_a1) order by 1;
+ b1 
+----
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+(20 rows)
+
+(select a1 from T_a1) UNION (select c1 from T_random) order by 1;
+ a1 
+----
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+ 21
+ 22
+ 23
+ 24
+ 25
+ 26
+ 27
+ 28
+ 29
+ 30
+(30 rows)
+
+(select c1 from T_random) UNION (select a1 from T_a1) order by 1;
+ c1 
+----
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+ 21
+ 22
+ 23
+ 24
+ 25
+ 26
+ 27
+ 28
+ 29
+ 30
+(30 rows)
+
+(select * from T_a1) UNION (select * from T_b2) order by 1;
+ a1 | a2 
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  0
+  6 |  1
+  7 |  2
+  8 |  3
+  9 |  4
+ 10 |  0
+ 11 |  1
+ 12 |  2
+ 13 |  3
+ 14 |  4
+ 15 |  0
+ 16 |  1
+ 17 |  2
+ 18 |  3
+ 19 |  4
+ 20 |  0
+(20 rows)
+
+(select * from T_a1) UNION (select * from T_random) order by 1;
+ a1 | a2 
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  0
+  6 |  1
+  7 |  2
+  8 |  3
+  9 |  4
+ 10 |  0
+ 11 |  1
+ 12 |  2
+ 13 |  3
+ 14 |  4
+ 15 |  0
+ 16 |  1
+ 17 |  2
+ 18 |  3
+ 19 |  4
+ 20 |  0
+ 21 |  1
+ 22 |  2
+ 23 |  3
+ 24 |  4
+ 25 |  0
+ 26 |  1
+ 27 |  2
+ 28 |  3
+ 29 |  4
+ 30 |  0
+(30 rows)
+
+(select * from T_b2) UNION (select * from T_random) order by 1;
+ b1 | b2 
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  0
+  6 |  1
+  7 |  2
+  8 |  3
+  9 |  4
+ 10 |  0
+ 11 |  1
+ 12 |  2
+ 13 |  3
+ 14 |  4
+ 15 |  0
+ 16 |  1
+ 17 |  2
+ 18 |  3
+ 19 |  4
+ 20 |  0
+ 21 |  1
+ 22 |  2
+ 23 |  3
+ 24 |  4
+ 25 |  0
+ 26 |  1
+ 27 |  2
+ 28 |  3
+ 29 |  4
+ 30 |  0
+(30 rows)
+
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select a1 from T_a1) UNION (select d1 from T_constant) order by 1;
+ a1  
+-----
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+  10
+ 100
+ 200
+ 300
+(13 rows)
+
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select d1 from T_constant) UNION (select a1 from T_a1) order by 1;
+ d1  
+-----
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+  10
+ 100
+ 200
+ 300
+(13 rows)
+
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select c1 from T_random) UNION (select d1 from T_constant) order by 1;
+ c1  
+-----
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+  10
+  11
+  12
+  13
+  14
+  15
+  16
+  17
+  18
+  19
+  20
+  21
+  22
+  23
+  24
+  25
+  26
+  27
+  28
+  29
+  30
+ 100
+ 200
+ 300
+(33 rows)
+
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select d1 from T_constant) UNION (select c1 from T_random) order by 1;
+ d1  
+-----
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+  10
+  11
+  12
+  13
+  14
+  15
+  16
+  17
+  18
+  19
+  20
+  21
+  22
+  23
+  24
+  25
+  26
+  27
+  28
+  29
+  30
+ 100
+ 200
+ 300
+(33 rows)
+
+--
+-- Binary UNION explain
+--
+select count_operator('explain (select a1 from T_a1) UNION (select b1 from T_b2) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              1
+(1 row)
+
+select count_operator('explain (select b1 from T_b2) UNION (select a1 from T_a1) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              1
+(1 row)
+
+select count_operator('explain (select a1 from T_a1) UNION (select c1 from T_random) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              1
+(1 row)
+
+select count_operator('explain (select c1 from T_random) UNION (select a1 from T_a1) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              1
+(1 row)
+
+select count_operator('explain (select * from T_a1) UNION (select * from T_b2) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              1
+(1 row)
+
+select count_operator('explain (select * from T_a1) UNION (select * from T_random) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              1
+(1 row)
+
+select count_operator('explain (select * from T_b2) UNION (select * from T_random) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              1
+(1 row)
+
+select count_operator('explain
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select a1 from T_a1) UNION (select d1 from T_constant) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+select count_operator('explain
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select d1 from T_constant) UNION (select a1 from T_a1) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+select count_operator('explain
+with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select c1 from T_random) UNION (select d1 from T_constant) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+select count_operator('explain with T_constant (d1, d2) as(
+SELECT 100, 100
+UNION SELECT 200, 200
+UNION SELECT 300, 300)
+(select d1 from T_constant) UNION (select c1 from T_random) order by 1;', 'APPEND');
+ count_operator 
+----------------
+              2
+(1 row)
+
+--
+-- Clean up
+--
+DROP TABLE IF EXISTS T_a1 CASCADE;
+DROP TABLE IF EXISTS T_b2 CASCADE;
+DROP TABLE IF EXISTS T_random CASCADE;

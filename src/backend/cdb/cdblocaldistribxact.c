@@ -2,7 +2,7 @@
  *
  * cdblocaldistribxact.c
  *
- * Mainatins state of current distributed transactions on each (local)
+ * Maintains state of current distributed transactions on each (local)
  * database instance.  Driven by added GP code in the xact.c module.
  *
  * Also support a cache of recently seen committed transactions found by the

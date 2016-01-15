@@ -253,7 +253,7 @@ ProcessQuery(Portal portal,
 		stmt->canSetTag
 		&& !superuser())
 	{
-		PortalSetStatus(portal, PORTAL_QUEUE);
+		portal->status = PORTAL_QUEUE;
 		
 		if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
 			queryDesc->plannedstmt->query_mem = ResourceQueueGetQueryMemoryLimit(queryDesc->plannedstmt, portal->queueId);
@@ -261,7 +261,7 @@ ProcessQuery(Portal portal,
 		portal->releaseResLock = ResLockPortal(portal, queryDesc);
 	}
 
-	PortalSetStatus(portal, PORTAL_ACTIVE);
+	portal->status = PORTAL_ACTIVE;
 	
 	if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE
 			&& Gp_role == GP_ROLE_DISPATCH
@@ -687,7 +687,7 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 
 	AssertArg(PortalIsValid(portal));
 	AssertState(portal->queryContext != NULL);	/* query defined? */
-	AssertState(PortalGetStatus(portal)  == PORTAL_NEW);	/* else extra PortalStart */
+	AssertState(portal->status  == PORTAL_NEW);	/* else extra PortalStart */
 
 	/* Set up the sequence server */
 	SetupSequenceServer(seqServerHost, seqServerPort);
@@ -796,13 +796,13 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 						saveActivePortal && 
 						saveActivePortal->releaseResLock)
 					{
-						PortalSetStatus(portal, PORTAL_QUEUE);
+						portal->status = PORTAL_QUEUE;
 						if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
 							queryDesc->plannedstmt->query_mem = ResourceQueueGetQueryMemoryLimit(queryDesc->plannedstmt, portal->queueId);
 					}
 					else
 					{
-						PortalSetStatus(portal, PORTAL_QUEUE);
+						portal->status = PORTAL_QUEUE;
 						
 						if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
 							queryDesc->plannedstmt->query_mem = ResourceQueueGetQueryMemoryLimit(queryDesc->plannedstmt, portal->queueId);
@@ -810,7 +810,7 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 					}
 				}
 
-				PortalSetStatus(portal, PORTAL_ACTIVE);
+				portal->status = PORTAL_ACTIVE;
 
 				if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE
 						&& Gp_role == GP_ROLE_DISPATCH
@@ -913,7 +913,7 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 	PG_CATCH();
 	{
 		/* Uncaught error while executing portal: mark it dead */
-		PortalSetStatus(portal, PORTAL_FAILED);
+		portal->status = PORTAL_FAILED;
 
 		/* Restore global vars and propagate error */
 		ActivePortal = saveActivePortal;
@@ -932,7 +932,7 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 	CurrentResourceOwner = saveResourceOwner;
 	PortalContext = savePortalContext;
 
-	PortalSetStatus(portal, PORTAL_READY);
+	portal->status = PORTAL_READY;
 }
 
 /*
@@ -1036,12 +1036,12 @@ PortalRun(Portal portal, int64 count, bool isTopLevel,
 	/*
 	 * Check for improper portal use, and mark portal active.
 	 */
-	if (PortalGetStatus(portal) != PORTAL_READY && PortalGetStatus(portal) != PORTAL_QUEUE)
+	if (portal->status != PORTAL_READY && portal->status != PORTAL_QUEUE)
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 				 errmsg("portal \"%s\" cannot be run", portal->name)));
 
-	PortalSetStatus(portal, PORTAL_ACTIVE);
+	portal->status = PORTAL_ACTIVE;
 
 	/*
 	 * Set up global portal context pointers.
@@ -1086,7 +1086,7 @@ PortalRun(Portal portal, int64 count, bool isTopLevel,
 					strcpy(completionTag, portal->commandTag);
 
 				/* Mark portal not active */
-				PortalSetStatus(portal, PORTAL_READY);
+				portal->status = PORTAL_READY;
 
 				/*
 				 * Since it's a forward fetch, say DONE iff atEnd is now true.
@@ -1113,7 +1113,7 @@ PortalRun(Portal portal, int64 count, bool isTopLevel,
 				    strcpy(completionTag, portal->commandTag);
 
 				/* Mark portal not active */
-				PortalSetStatus(portal, PORTAL_READY);
+				portal->status = PORTAL_READY;
 
 				/*
 				 * Since it's a forward fetch, say DONE iff atEnd is now true.
@@ -1126,7 +1126,7 @@ PortalRun(Portal portal, int64 count, bool isTopLevel,
 							   dest, altdest, completionTag);
 
 				/* Prevent portal's commands from being re-executed */
-				PortalSetStatus(portal, PORTAL_DONE);
+				portal->status = PORTAL_DONE;
 
 				/* Always complete at end of RunMulti */
 				result = true;
@@ -1141,7 +1141,7 @@ PortalRun(Portal portal, int64 count, bool isTopLevel,
 	PG_CATCH();
 	{
 		/* Uncaught error while executing portal: mark it dead */
-		PortalSetStatus(portal, PORTAL_FAILED);
+		portal->status = PORTAL_FAILED;
 
 		/* Restore global vars and propagate error */
 		if (saveMemoryContext == saveTopTransactionContext)
@@ -1695,12 +1695,12 @@ PortalRunFetch(Portal portal,
 	/*
 	 * Check for improper portal use, and mark portal active.
 	 */
-	if (PortalGetStatus(portal) != PORTAL_READY)
+	if (portal->status != PORTAL_READY)
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 				 errmsg("portal \"%s\" cannot be run", portal->name)));
 
-	PortalSetStatus(portal, PORTAL_ACTIVE);
+	portal->status = PORTAL_ACTIVE;
 
 	/*
 	 * Set up global portal context pointers.
@@ -1753,7 +1753,7 @@ PortalRunFetch(Portal portal,
 	PG_CATCH();
 	{
 		/* Uncaught error while executing portal: mark it dead */
-		PortalSetStatus(portal, PORTAL_FAILED);
+		portal->status = PORTAL_FAILED;
 
 		/* Restore global vars and propagate error */
 		ActivePortal = saveActivePortal;
@@ -1769,7 +1769,7 @@ PortalRunFetch(Portal portal,
 	MemoryContextSwitchTo(oldContext);
 
 	/* Mark portal not active */
-	PortalSetStatus(portal, PORTAL_READY);
+	portal->status = PORTAL_READY;
 
 	ActivePortal = saveActivePortal;
 	ActiveSnapshot = saveActiveSnapshot;

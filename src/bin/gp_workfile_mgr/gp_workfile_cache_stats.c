@@ -203,18 +203,14 @@ gp_workfile_mgr_cache_entries(PG_FUNCTION_ARGS)
 		 */
 		Cache_LockEntry(cache, crtEntry);
 
-		if (!should_list_entry(crtEntry) || !work_set->on_disk)
+		if (!should_list_entry(crtEntry))
 		{
 			Cache_UnlockEntry(cache, crtEntry);
 			continue;
 		}
 
 		values[0] = Int32GetDatum(Gp_segment);
-		if (work_set->on_disk)
-		{
-			/* Only physical sets have a meaningful path */
-			strncpy(work_set_path, work_set->path, MAXPGPATH);
-		}
+		strncpy(work_set_path, work_set->path, MAXPGPATH);
 
 		values[2] = UInt32GetDatum(crtEntry->hashvalue);
 

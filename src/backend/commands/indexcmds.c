@@ -1407,6 +1407,7 @@ relationHasPrimaryKey(Relation rel)
 	List	   *indexoidlist;
 	ListCell   *indexoidscan;
 	cqContext  *pcqCtx;
+
 	/*
 	 * Get the list of index OIDs for the table from the relcache, and look up
 	 * each one in the pg_index syscache until we find one marked primary key
@@ -1928,5 +1929,6 @@ ReindexDatabase(ReindexStmt *stmt)
 
 	setupRegularDtxContext();
 	StartTransactionCommand();
+
 	MemoryContextDelete(private_context);
 }

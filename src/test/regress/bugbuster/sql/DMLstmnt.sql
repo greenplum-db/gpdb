@@ -90,11 +90,6 @@ DROP GROUP market;
 DROP USER jona11;
 DROP USER jona12;
 
-ALTER LANGUAGE plpgsql  RENAME TO plsamples;
-ALTER LANGUAGE plsamples  RENAME TO plpgsql;
--- commentting the drop in the test case. Since jetpack is made implicit we cannot drop language plpgsql
--- DROP LANGUAGE plsamples;
-
 select unnest('{}'::text[]);
 
 drop table mpp_r6756 cascade; --ignore

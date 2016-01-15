@@ -23,7 +23,6 @@
 #include "access/heapam.h"
 #include "access/relscan.h"
 #include "access/transam.h"
-#include "catalog/catalog.h"
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "storage/bufmgr.h"
@@ -191,11 +190,6 @@ systable_beginscan(Relation heapRelation,
 	sysscan->heap_rel = heapRelation;
 	sysscan->irel = irel;
 
-	/*
-	 * Set up "hidden" tuples for particular relations.
-	 */
-	sysscan->hscan = hidden_beginscan(heapRelation, nkeys, key);
-
 	if (irel)
 	{
 		int			i;
@@ -244,9 +238,6 @@ systable_getnext(SysScanDesc sysscan)
 	else
 		htup = heap_getnext(sysscan->scan, ForwardScanDirection);
 
-	if (!HeapTupleIsValid(htup) && sysscan->hscan != NULL)
-		htup = hidden_getnext(sysscan->hscan, ForwardScanDirection);
-
 	return htup;
 }
 
@@ -259,9 +250,6 @@ systable_getprev(SysScanDesc sysscan)
 		htup = index_getnext(sysscan->iscan, BackwardScanDirection);
 	else
 		htup = heap_getnext(sysscan->scan, BackwardScanDirection);
-
-	if (!HeapTupleIsValid(htup) && sysscan->hscan != NULL)
-		htup = hidden_getnext(sysscan->hscan, BackwardScanDirection);
 
 	return htup;
 }
@@ -281,9 +269,6 @@ systable_endscan(SysScanDesc sysscan)
 	}
 	else
 		heap_endscan(sysscan->scan);
-
-	if (sysscan->hscan)
-		hidden_endscan(sysscan->hscan);
 
 	pfree(sysscan);
 }

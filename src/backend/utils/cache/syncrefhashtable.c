@@ -11,7 +11,7 @@
 
 #include "postgres.h"
 #include "utils/syncrefhashtable.h"
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 #include "storage/shmem.h"
 
 /*
@@ -261,8 +261,7 @@ static int32
 SyncHTAddRef(SyncHT *syncHT, void *entry)
 {
 	int32 *pinCountPtr = (int32 *) ((char *) entry + syncHT->pinCountOffset);
-	int32 inc = 1;
-	gp_atomic_add_32(pinCountPtr, inc);
+	pg_atomic_add_fetch_u32((pg_atomic_uint32 *)pinCountPtr,1);
 	return *pinCountPtr;
 }
 
@@ -274,7 +273,6 @@ static int32
 SyncHTDecRef(SyncHT *syncHT, void *entry)
 {
 	int32 *pinCountPtr = (int32 *) ((char *) entry + syncHT->pinCountOffset);
-	int32 inc = -1;
-	gp_atomic_add_32(pinCountPtr, inc);
+	pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)pinCountPtr,1);
 	return *pinCountPtr;
 }

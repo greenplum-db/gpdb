@@ -1,0 +1,25 @@
+===================================================================================================
+This document describes the type and source of all metadata used and requested from optimizer. GPDB
+collects all these data using GPDB function wrappers. 
+Copyright (c) 2015, Pivotal Software, Inc.
+---------------------------------------------------------------------------------------------------
+
+
+Metadata Type (naucrates/md/IMDId.h) 	|	Includes		|	Source
+------------------------------------------------------------------------------------------------------------------------------	
+	EmdidGPDB			|	Index			|  relcache	
+					|	Type			|  typcache & CatCache & Catalog(pg_type)	
+					|	Relation		|  relcache	
+					|	Scalar operator		|  Catalog(pg_operator) & CatCache	
+					|	Aggregate		|  Catalog(pg_proc, pg_aggregate) & CatCache	
+					|	Function		|  Catalog(pg_proc) & CatCache	
+					|	Trigger			|  Catalog(pg_trigger) & CatCache	
+					|	Constratint		|  Catalog(pg_constraint) & CatCache	
+-------------------------------------------------------------------------------------------------------------------------------
+	EmdidRelStats			|	Relation Stats		|  relcache
+-------------------------------------------------------------------------------------------------------------------------------		
+	EmdidColStats			|	Column statistics	|  relcache & Catalog(pg_statistic, pg_type) & CatCache	
+-------------------------------------------------------------------------------------------------------------------------------	
+	EmdidCastFunc			|	Cast Function		|  Catalog(pg_cast, pg_proc) & CatCache	
+-------------------------------------------------------------------------------------------------------------------------------	
+	EmdidScCmp			|  Scalar Comparison Function	|  Catalog(pg_amop, pg_operator) & CatCache	

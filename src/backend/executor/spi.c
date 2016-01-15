@@ -1875,13 +1875,13 @@ _SPI_pquery(QueryDesc * queryDesc, bool fire_triggers, long tcount)
 					if (!ActivePortal->releaseResLock)
 					{
 						/** TODO: siva - can we ever reach this point? */
-						PortalSetStatus(ActivePortal, PORTAL_QUEUE);
+						ActivePortal->status = PORTAL_QUEUE;
 					
 						_SPI_assign_query_mem(queryDesc);
 
 						ActivePortal->releaseResLock =
 							ResLockPortal(ActivePortal, queryDesc);
-						PortalSetStatus(ActivePortal, PORTAL_ACTIVE);
+						ActivePortal->status = PORTAL_ACTIVE;
 					} 
 					else
 					{

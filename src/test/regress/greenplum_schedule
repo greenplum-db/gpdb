@@ -52,7 +52,7 @@ test: vacuum_gp
 #test: gpic_bigtup
 
 ignore: gp_portal_error
-test: partition_indexing column_compression eagerfree mapred gpparams tidycat aocs gp_optimizer co_nestloop_idxscan  gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic
+test: partition_indexing column_compression eagerfree mapred gpparams tidycat aocs co_nestloop_idxscan  gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic
 ignore: icudp_full
 ignore: gp_delete_as_trunc
 
@@ -60,8 +60,7 @@ test: resource_queue
 
 test: filespace trig auth_constraint role rle portals_updatable plpgsql_cache timeseries resource_queue_function pg_stat_last_operation gp_numeric_agg gp_toolkit plan_size partindex_test direct_dispatch partition_pruning_with_fn dsp
 
-#Aggregate function
-test: aggregate_with_groupingsets
+test: aggregate_with_groupingsets gp_optimizer 
 
 ignore: tpch500GB_orca
 

@@ -4965,7 +4965,7 @@ CTranslatorDXLToPlStmt::PrteFromTblDescr
 			// add those to the RTE as they are required by GPDB
 			for (INT iDroppedColAttno = iLastAttno + 1; iDroppedColAttno < iAttno; iDroppedColAttno++)
 			{
-				Value *pvalDroppedColName = gpdb::PvalMakeString("");
+				Value *pvalDroppedColName = gpdb::PvalMakeString(PStrDup(""));
 				palias->colnames = gpdb::PlAppendElement(palias->colnames, pvalDroppedColName);
 			}
 			
@@ -4990,7 +4990,7 @@ CTranslatorDXLToPlStmt::PrteFromTblDescr
 	// if there are any dropped columns at the end, add those too to the RangeTblEntry
 	for (ULONG ul = iLastAttno + 1; ul <= ulRelColumns; ul++)
 	{
-		Value *pvalDroppedColName = gpdb::PvalMakeString("");
+		Value *pvalDroppedColName = gpdb::PvalMakeString(PStrDup(""));
 		palias->colnames = gpdb::PlAppendElement(palias->colnames, pvalDroppedColName);
 	}
 	

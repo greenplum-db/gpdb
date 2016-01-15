@@ -32,10 +32,8 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "access/sysattr.h"
 #include "access/transam.h"
 #include "access/reloptions.h"
-#include "access/sysattr.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/catquery.h"
@@ -58,7 +56,6 @@
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_type.h"
-#include "catalog/gp_fastsequence.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbsreh.h"
 #include "commands/tablecmds.h"
@@ -538,22 +535,23 @@ CheckAttributeType(const char *attname, Oid atttypid)
 	 *
 	 * Refuse any attempt to create a pseudo-type column.
 	 */
-	if (Gp_role != GP_ROLE_EXECUTE)
+	/* GPDB: The QD should've checked these already. In QE, just accept it. */
+	if (Gp_role == GP_ROLE_EXECUTE)
+		return;
+
+	if (atttypid == UNKNOWNOID)
+		ereport(WARNING,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+				 errmsg("column \"%s\" has type \"unknown\"", attname),
+				 errdetail("Proceeding with relation creation anyway.")));
+	else if (att_typtype == 'p')
 	{
-		if (atttypid == UNKNOWNOID)
-			ereport(WARNING,
+		/* Special hack for pg_statistic: allow ANYARRAY during initdb */
+		if (atttypid != ANYARRAYOID || IsUnderPostmaster)
+			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("column \"%s\" has type \"unknown\"", attname),
-					 errdetail("Proceeding with relation creation anyway.")));
-		else if (att_typtype == 'p')
-		{
-			/* Special hack for pg_statistic: allow ANYARRAY during initdb */
-			if (atttypid != ANYARRAYOID || IsUnderPostmaster)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("column \"%s\" has pseudo-type %s",
-								attname, format_type_be(atttypid))));
-		}
+					 errmsg("column \"%s\" has pseudo-type %s",
+							attname, format_type_be(atttypid))));
 	}
 }
 
@@ -1329,7 +1327,7 @@ heap_create_with_catalog(const char *relname,
 						 int oidinhcount,
 						 OnCommitAction oncommit,
                          const struct GpPolicy *policy,
-                         Datum reloptions,
+						 Datum reloptions,
 						 bool allow_system_table_mods,
 						 bool valid_opts,
 						 Oid *comptypeOid,
@@ -1673,7 +1671,6 @@ heap_create_with_catalog(const char *relname,
 	 * the OID of the newly created relation.
 	 */
 	heap_close(new_rel_desc, NoLock);	/* do not unlock till end of xact */
-
 	heap_close(pg_class_desc, RowExclusiveLock);
 
 	return relid;
@@ -1960,7 +1957,7 @@ RemoveAttrDefault(Oid relid, AttrNumber attnum,
 		object.objectSubId = 0;
 
 		performDeletion(&object, behavior);
-		
+
 		found = true;
 		adoid = object.objectId;
 	}
@@ -2156,8 +2153,6 @@ void
 heap_drop_with_catalog(Oid relid)
 {
 	Relation	rel;
-	const struct GpPolicy *policy;
-	bool		removePolicy = false;
 	bool		is_part_child = false;
 	bool		is_appendonly_rel;
 	bool		is_external_rel;
@@ -2172,16 +2167,6 @@ heap_drop_with_catalog(Oid relid)
 
 	is_appendonly_rel = (RelationIsAoRows(rel) || RelationIsAoCols(rel));
 	is_external_rel = RelationIsExternal(rel);
-
-	/*
- 	 * Get the distribution policy and figure out if it is to be removed.
- 	 */
-	policy = rel->rd_cdbpolicy;
-	if (policy &&
-		policy->ptype == POLICYTYPE_PARTITIONED &&
-		Gp_role == GP_ROLE_DISPATCH &&
-		relkind == RELKIND_RELATION)
-		removePolicy = true;
 
 	/*
 	 * Schedule unlinking of the relation's physical file at commit.
@@ -2261,9 +2246,9 @@ heap_drop_with_catalog(Oid relid)
 		RemoveExtTableEntry(relid);
 
 	/*
- 	 * delete distribution policy if present
+	 * Remove distribution policy, if any.
  	 */
-	if (removePolicy)
+	if (relkind == RELKIND_RELATION)
 		GpPolicyRemove(relid);
 
 	/*
@@ -2483,25 +2468,25 @@ StoreRelCheck(Relation rel, char *ccname, char *ccbin, Oid conOid)
 	 * Create the Check Constraint
 	 */
 	conOid = CreateConstraintEntry(ccname,		/* Constraint Name */
-								   conOid,		/* Constraint Oid */
-								   RelationGetNamespace(rel),	/* namespace */
-								   CONSTRAINT_CHECK,		/* Constraint Type */
-								   false,	/* Is Deferrable */
-								   false,	/* Is Deferred */
-								   RelationGetRelid(rel),		/* relation */
-								   attNos,		/* attrs in the constraint */
-								   keycount,		/* # attrs in the constraint */
-								   InvalidOid,	/* not a domain constraint */
-								   InvalidOid,	/* Foreign key fields */
-								   NULL,
-								   0,
-								   ' ',
-								   ' ',
-								   ' ',
-								   InvalidOid,	/* no associated index */
-								   expr, /* Tree form check constraint */
-								   ccbin,	/* Binary form check constraint */
-								   ccsrc);		/* Source form check constraint */
+						  conOid,		/* Constraint Oid */
+						  RelationGetNamespace(rel),	/* namespace */
+						  CONSTRAINT_CHECK,		/* Constraint Type */
+						  false,	/* Is Deferrable */
+						  false,	/* Is Deferred */
+						  RelationGetRelid(rel),		/* relation */
+						  attNos,		/* attrs in the constraint */
+						  keycount,		/* # attrs in the constraint */
+						  InvalidOid,	/* not a domain constraint */
+						  InvalidOid,	/* Foreign key fields */
+						  NULL,
+						  0,
+						  ' ',
+						  ' ',
+						  ' ',
+						  InvalidOid,	/* no associated index */
+						  expr, /* Tree form check constraint */
+						  ccbin,	/* Binary form check constraint */
+						  ccsrc);		/* Source form check constraint */
 
 	pfree(ccsrc);
 	return conOid;
@@ -2650,9 +2635,8 @@ AddRelationConstraints(Relation rel,
 									 ccname))
 				ereport(ERROR,
 						(errcode(ERRCODE_DUPLICATE_OBJECT),
-						 errmsg("constraint \"%s\" for relation \"%s\" already exists",
-								ccname, RelationGetRelationName(rel))));
-
+				errmsg("constraint \"%s\" for relation \"%s\" already exists",
+					   ccname, RelationGetRelationName(rel))));
 			/* Check against other new constraints */
 			/* Needed because we don't do CommandCounterIncrement in loop */
 			foreach(cell2, checknames)
@@ -2885,6 +2869,7 @@ cookDefault(ParseState *pstate,
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 			 errmsg("cannot use window function in default expression")));
+
 	/*
 	 * Coerce the expression to the correct type and typmod, if given. This
 	 * should match the parser's processing of non-defaulted expressions ---
@@ -3056,7 +3041,7 @@ heap_truncate(List *relids)
 	foreach(cell, relids)
 	{
 		Oid			rid = lfirst_oid(cell);
-		Relation	rel, trel;
+		Relation	rel;
 		Oid			toastrelid;
 		Oid			aosegrelid;
 		Oid         aoblkdirrelid;
@@ -3070,6 +3055,8 @@ heap_truncate(List *relids)
 		toastrelid = rel->rd_rel->reltoastrelid;
 		if (OidIsValid(toastrelid))
 		{
+			Relation trel;
+
 			trel = heap_open(toastrelid, AccessExclusiveLock);
 			relations = lappend(relations, trel);
 		}

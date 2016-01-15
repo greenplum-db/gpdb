@@ -890,6 +890,10 @@ public class GPDBWritable implements Writable {
 		return type == FLOAT8 || type == FLOAT8_ARR;
 	}
 
+	private static boolean isSmallIntOrSmallIntArray(int type) {
+		return type == SMALLINT || type == INT2_ARR;
+	}
+
 	public static boolean isIntOrIntArray(int type) {
 		return type == INTEGER || type == INT4_ARR;
 	}
@@ -914,6 +918,10 @@ public class GPDBWritable implements Writable {
 		return isIntOrIntArray(type) || isBigintOrBigintArray(type);
 	}
 
+	public static boolean isSmallIntOrIntOrBigInt(int type) {
+		return isIntOrIntArray(type) || isBigintOrBigintArray(type) || isSmallIntOrSmallIntArray(type);
+	}
+
 	public static boolean isArrayType(int colType2, int ndims) {
 		return ndims > 0;
 	}
@@ -936,6 +944,13 @@ public class GPDBWritable implements Writable {
 
 	public static boolean isXmlOrXmlArray(int type) {
 		return type == XML || type == XML_ARR;
+	}
+
+	/**
+	 * check whether the value of a column is null
+	 */
+	public boolean isNull(int index) {
+		return colValue[index] == null;
 	}
 
 }

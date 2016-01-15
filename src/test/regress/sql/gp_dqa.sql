@@ -10,6 +10,7 @@ insert into dqa_t2 select i%34, i%45, (i%10) || '', '2009-06-10'::date + ( (i%56
 from generate_series(0, 99) i;
 
 set gp_eager_agg_distinct_pruning=on;
+set enable_hashagg=on;
 set enable_groupagg=off;
 
 -- Distinct keys are distribution keys
@@ -187,6 +188,15 @@ insert into gp_dqa_t2 select i , i %4 from generate_series(1,10) i;
 select distinct A.a, sum(distinct A.b), count(distinct B.c) from gp_dqa_t1 A left join gp_dqa_t2 B on (A.a = B.a) group by A.a order by A.a;
 
 select distinct A.a, sum(distinct A.b), count(distinct B.c) from gp_dqa_t1 A right join gp_dqa_t2 B on (A.a = B.a) group by A.a order by A.a;
+
+-- Most of the above test queries got planned as hash aggregates. Repeat
+-- a few of them as group aggregates
+set enable_hashagg=off;
+set enable_groupagg=on;
+
+select count(distinct d), count(distinct c), count(distinct dt) from dqa_t1;
+select count(distinct c), count(distinct dt), i from dqa_t1 group by i;
+
 
 -- cleanup
 drop table gp_dqa_t1;

@@ -20,7 +20,6 @@
 #include "catalog/dependency.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_depend.h"
-#include "catalog/pg_type.h"
 #include "commands/defrem.h"
 #include "commands/tablecmds.h"
 #include "commands/view.h"
@@ -37,9 +36,7 @@
 
 
 #include "cdb/cdbdisp.h"
-#include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbcat.h"
 
 
 static void checkViewTupleDesc(TupleDesc newdesc, TupleDesc olddesc);

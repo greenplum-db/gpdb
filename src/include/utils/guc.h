@@ -376,6 +376,7 @@ extern bool optimizer_print_query;
 extern bool optimizer_print_plan;
 extern bool optimizer_print_xform;
 extern bool optimizer_release_mdcache;
+extern int optimizer_mdcache_size;
 extern bool optimizer_disable_xform_result_printing;
 extern bool	optimizer_print_memo_after_exploration;
 extern bool	optimizer_print_memo_after_implementation;
@@ -499,6 +500,8 @@ extern char  *gp_default_storage_options;
  * the mirror for a particular directory.
  */
 extern int log_count_recovered_files_batch;
+
+extern int writable_external_table_bufsize;
 
 /* Storage option names */
 #define SOPT_FILLFACTOR    "fillfactor"

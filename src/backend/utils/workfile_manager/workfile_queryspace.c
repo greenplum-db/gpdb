@@ -10,7 +10,7 @@
 
 #include <postgres.h>
 #include "storage/shmem.h"
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 #include "utils/workfile_mgr.h"
 #include "utils/memutils.h"
 #include "miscadmin.h"
@@ -133,7 +133,7 @@ WorkfileQueryspace_Reserve(int64 bytes_to_reserve)
 		return true;
 	}
 
-	int64 total = gp_atomic_add_64(&queryEntry->queryDiskspace, bytes_to_reserve);
+	int64 total = pg_atomic_add_fetch_u64((pg_atomic_uint64 *)&queryEntry->queryDiskspace, bytes_to_reserve);
 	Assert(total >= (int64) 0);
 
 	if (gp_workfile_limit_per_query == 0)
@@ -151,7 +151,7 @@ WorkfileQueryspace_Reserve(int64 bytes_to_reserve)
 			workfileError = WORKFILE_ERROR_LIMIT_PER_QUERY;
 
 			/* Revert the reserved space */
-			gp_atomic_add_64(&queryEntry->queryDiskspace, - bytes_to_reserve);
+			pg_atomic_sub_fetch_u64((pg_atomic_uint64 *)&queryEntry->queryDiskspace, bytes_to_reserve);
 			/* Set diskfull to true to stop any further attempts to write more data */
 			WorkfileDiskspace_SetFull(true /* isFull */);
 		}
@@ -187,7 +187,7 @@ WorkfileQueryspace_Commit(int64 commit_bytes, int64 reserved_bytes)
 #if USE_ASSERT_CHECKING
 		int64 total =
 #endif
-		gp_atomic_add_64(&queryEntry->queryDiskspace, (commit_bytes - reserved_bytes));
+		pg_atomic_sub_fetch_u64((pg_atomic_uint64 *)&queryEntry->queryDiskspace, (reserved_bytes - commit_bytes));
 		Assert(total >= (int64) 0);
 	}
 }
@@ -210,7 +210,7 @@ WorkfileQueryspace_AddWorkfile(void)
 		return true;
 	}
 
-	int32 workfilesCreated = gp_atomic_add_32(&queryEntry->workfilesCreated, 1);
+	int32 workfilesCreated = pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&queryEntry->workfilesCreated, 1);
 
 	elog(gp_workfile_caching_loglevel, "Creating new workfile, query file count = %d", workfilesCreated);
 
@@ -241,7 +241,7 @@ WorkfileQueryspace_SubtractWorkfile(int32 nFiles)
 	}
 
 	/* Subtract the number of files atomically */
-	int32 workfilesLeft = gp_atomic_add_32(&queryEntry->workfilesCreated, - nFiles);
+	int32 workfilesLeft = pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&queryEntry->workfilesCreated, nFiles);
 	elog(gp_workfile_caching_loglevel, "Closing %d workfiles, query file count = %d",
 			nFiles, workfilesLeft);
 	Assert(workfilesLeft >= 0);

@@ -56,7 +56,7 @@ public class AvroFileWriter {
 		}
 	}
 
-	protected AvroFileWriter(){}
+	public AvroFileWriter(){}
 
 	/**
 	 * read GPDBWritable from gpdb and then write it to hdfs
@@ -246,7 +246,7 @@ public class AvroFileWriter {
 	 *
 	 * @throws Exception when something goes wrong
 	 */
-	private void fillRecord(GenericRecord record, GPDBWritable gw, Schema schema) throws IOException {
+	public void fillRecord(GenericRecord record, GPDBWritable gw, Schema schema) throws IOException {
 		int[] colType = gw.getColumnType();
 		Object[] colValue = gw.getColumnValue();
 
@@ -264,7 +264,7 @@ public class AvroFileWriter {
 				record.put(i, FormatHandlerUtil.decodeString(schema.getFields().get(i).schema(), (String)colValue[i], true, columDelimiter[i]));
 				break;
 			case GPDBWritable.BYTEA:
-				record.put(i, ByteBuffer.wrap((byte[])colValue[i]));
+				record.put(i, colValue[i] == null ? null : ByteBuffer.wrap((byte[])colValue[i]));
 				break;
 			case GPDBWritable.REAL:
 				record.put(i, (Float)colValue[i]);
@@ -282,7 +282,7 @@ public class AvroFileWriter {
 				record.put(i, (Integer)colValue[i]);
 				break;
 			case GPDBWritable.SMALLINT:
-				record.put(i, (Integer)colValue[i]);
+				record.put(i, colValue[i] == null ? null : ((Short)colValue[i]).intValue());
 				break;
 			default:
 				break;

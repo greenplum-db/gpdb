@@ -184,7 +184,9 @@ class Session(cmd.Cmd):
             p = pxssh.pxssh(options={"StrictHostKeyChecking": "no",
                                      "BatchMode": "yes"})
             try:
-                p.login(host, self.userName, sync_multiplier=0.5)
+                # The sync_multiplier value is passed onto pexpect.pxssh which is used to determine timeout
+                # values for prompt verification after an ssh connection is established.
+                p.login(host, self.userName, sync_multiplier=1.0)
                 p.x_peer = host
                 p.x_pid = p.pid
                 good_list.append(p)

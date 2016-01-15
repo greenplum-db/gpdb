@@ -19,7 +19,7 @@ from gppylib.operations.backup_utils import check_backup_type, check_dir_writabl
                                             execute_sql, expand_partition_tables, generate_ao_state_filename, generate_cdatabase_filename, \
                                             generate_co_state_filename, generate_createdb_filename, generate_createdb_prefix, generate_dbdump_prefix, \
                                             generate_dirtytable_filename, generate_global_filename, generate_global_prefix, generate_increments_filename, \
-                                            generate_master_config_filename, generate_master_dbdump_prefix, generate_stats_prefix, generate_metadata_filename, \
+                                            generate_master_config_filename, generate_master_dbdump_prefix, generate_stats_filename, generate_stats_prefix, generate_metadata_filename, \
                                             generate_partition_list_filename, generate_pgstatlastoperation_filename, generate_plan_filename, generate_report_filename, \
                                             generate_segment_config_filename, get_all_segment_addresses, get_backup_directory, get_full_timestamp_for_incremental, \
                                             get_full_timestamp_for_incremental_with_nbu, get_lines_from_file, restore_file_with_nbu, run_pool_command, scp_file_to_hosts, \
@@ -314,7 +314,7 @@ def restore_statistics_file_with_nbu(master_datadir, backup_dir, dump_dir, dump_
         raise Exception('Restore timestamp is None.')
     if netbackup_service_host is None:
         raise Exception('Netbackup service hostname is None.')
-    restore_file_with_nbu(netbackup_service_host, netbackup_block_size, generate_statistics_filename(master_datadir, backup_dir, dump_dir, dump_prefix, restore_timestamp[0:8], restore_timestamp))
+    restore_file_with_nbu(netbackup_service_host, netbackup_block_size, generate_stats_filename(master_datadir, backup_dir, dump_dir, dump_prefix, restore_timestamp[0:8], restore_timestamp))
 
 def restore_partition_list_file_with_nbu(master_datadir, backup_dir, dump_dir, dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size):
     if (master_datadir is None) and (backup_dir is None):
@@ -366,7 +366,7 @@ def statistics_file_dumped(master_datadir, backup_dir, dump_dir, dump_prefix, re
         raise Exception('Restore timestamp is None.')
     if netbackup_service_host is None:
         raise Exception('Netbackup service hostname is None.')
-    statistics_filename = generate_statistics_filename(master_datadir, backup_dir, dump_dir, dump_prefix, restore_timestamp[0:8], restore_timestamp)
+    statistics_filename = generate_stats_filename(master_datadir, backup_dir, dump_dir, dump_prefix, restore_timestamp[0:8], restore_timestamp)
     return check_file_dumped_with_nbu(netbackup_service_host, statistics_filename)
 
 def _build_gpdbrestore_cmd_line(ts, table_file, backup_dir, redirected_restore_db, report_status_dir, dump_prefix, ddboost=False, netbackup_service_host=None,
@@ -409,14 +409,24 @@ def truncate_restore_tables(restore_tables, master_port, dbname):
                 for relation in relations:
                     truncate_list.append(relation[0])
             else:
-                truncate_list.append(restore_table)
+                check_table_exists_qry = """SELECT EXISTS (
+                                                   SELECT 1
+                                                   FROM pg_catalog.pg_class c
+                                                   JOIN pg_catalog.pg_namespace n on n.oid = c.relnamespace
+                                                   WHERE n.nspname = '%s' and c.relname = '%s')""" % (pg.escape_string(schema), pg.escape_string(table))
+                exists_result = execSQLForSingleton(conn, check_table_exists_qry)
+                if exists_result:
+                    truncate_list.append(restore_table)
+                else:
+                    logger.warning("Skipping truncate of %s.%s because the relation does not exist." % (dbname, restore_table))
 
         for t in truncate_list:
+            t_schema, t_table = t.split('.')
             try:
-                qry = 'Truncate %s' % t
+                qry = 'Truncate "%s"."%s"' % (pg.escape_string(t_schema), pg.escape_string(t_table))
                 execSQL(conn, qry)
-            except Exception as e:
-                raise Exception("Could not truncate table %s.%s: %s" % (dbname, t, str(e).replace('\n', '')))
+            except pg.DatabaseError as e:
+                raise e
 
         conn.commit()
     except Exception as e:
@@ -429,8 +439,9 @@ def validate_tablenames(table_list):
 
 class RestoreDatabase(Operation):
     def __init__(self, restore_timestamp, no_analyze, drop_db, restore_global, master_datadir, backup_dir,
-                 master_port, dump_dir, dump_prefix, no_plan, restore_tables, batch_default, no_ao_stats,
-                 redirected_restore_db, report_status_dir, restore_stats, ddboost, netbackup_service_host, netbackup_block_size, change_schema):
+                 master_port, dump_dir, dump_prefix, no_plan, restore_tables, batch_default,
+                 no_ao_stats, redirected_restore_db, report_status_dir, restore_stats, metadata_only, ddboost,
+                 netbackup_service_host, netbackup_block_size, change_schema):
         self.restore_timestamp = restore_timestamp
         self.no_analyze = no_analyze
         self.drop_db = drop_db
@@ -447,6 +458,7 @@ class RestoreDatabase(Operation):
         self.redirected_restore_db = redirected_restore_db
         self.report_status_dir = report_status_dir
         self.restore_stats = restore_stats
+        self.metadata_only = metadata_only
         self.ddboost = ddboost
         self.netbackup_service_host = netbackup_service_host
         self.netbackup_block_size = netbackup_block_size
@@ -496,7 +508,7 @@ class RestoreDatabase(Operation):
         full_restore = is_full_restore(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.restore_timestamp, self.ddboost)
         begin_incremental = is_begin_incremental_run(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.restore_timestamp, self.no_plan, self.ddboost)
 
-        if (full_restore and self.restore_tables is not None and not self.no_plan) or begin_incremental:
+        if (full_restore and self.restore_tables is not None and not self.no_plan) or begin_incremental or self.metadata_only:
             if full_restore and not self.no_plan:
                 full_restore_with_filter = True
 
@@ -511,7 +523,9 @@ class RestoreDatabase(Operation):
                                                                 self.change_schema)
             logger.info("Running metadata restore")
             logger.info("Invoking commandline: %s" % restore_line)
-            Command('Invoking gp_restore', restore_line).run(validateAfter=True)
+            cmd = Command('Invoking gp_restore', restore_line)
+            cmd.run(validateAfter=False)
+            self._process_result(cmd)
             logger.info("Expanding parent partitions if any in table filter")
             self.restore_tables = expand_partition_tables(restore_db, self.restore_tables)
 
@@ -521,14 +535,17 @@ class RestoreDatabase(Operation):
         else:
             table_filter_file = self.create_filter_file() # returns None if nothing to filter
 
-            restore_line = self._build_restore_line(restore_timestamp,
-                                                    restore_db, compress,
-                                                    self.master_port,
-                                                    self.no_plan, table_filter_file,
-                                                    self.no_ao_stats, full_restore_with_filter,
-                                                    self.change_schema)
-            logger.info('gp_restore commandline: %s: ' % restore_line)
-            Command('Invoking gp_restore', restore_line).run(validateAfter=True)
+            if not self.metadata_only:
+                restore_line = self._build_restore_line(restore_timestamp,
+                                                        restore_db, compress,
+                                                        self.master_port,
+                                                        self.no_plan, table_filter_file,
+                                                        self.no_ao_stats, full_restore_with_filter,
+                                                        self.change_schema)
+                logger.info('gp_restore commandline: %s: ' % restore_line)
+                cmd = Command('Invoking gp_restore', restore_line)
+                cmd.run(validateAfter=False)
+                self._process_result(cmd)
 
             if full_restore_with_filter:
                 restore_line = self._build_post_data_schema_only_restore_line(restore_timestamp,
@@ -538,17 +555,29 @@ class RestoreDatabase(Operation):
                                                                               full_restore_with_filter)
                 logger.info("Running post data restore")
                 logger.info('gp_restore commandline: %s: ' % restore_line)
-                Command('Invoking gp_restore', restore_line).run(validateAfter=True)
+                cmd = Command('Invoking gp_restore', restore_line)
+                cmd.run(validateAfter=False)
+                self._process_result(cmd)
 
             if table_filter_file:
                 self.remove_filter_file(table_filter_file)
 
-        if (not self.no_analyze) and (self.restore_tables is None):
-            self._analyze(restore_db, self.master_port)
-        elif (not self.no_analyze) and self.restore_tables:
-            self._analyze_restore_tables(restore_db, self.restore_tables, self.change_schema)
+        if not self.metadata_only:
+            if (not self.no_analyze) and (self.restore_tables is None):
+                self._analyze(restore_db, self.master_port)
+            elif (not self.no_analyze) and self.restore_tables:
+                self._analyze_restore_tables(restore_db, self.restore_tables, self.change_schema)
         if self.restore_stats:
             self._restore_stats(restore_timestamp, self.master_datadir, self.backup_dir, self.master_port, restore_db, self.restore_tables)
+
+    def _process_result(self, cmd):
+        res = cmd.get_results()
+        if res.rc == 0:
+            logger.info("gpdbrestore finished successfully")
+        elif res.rc == 2:
+            logger.warn("gpdbrestore finished but ERRORS were found, please check the restore report file for details")
+        else:
+            raise Exception('gpdbrestore finished unsuccessfully')
 
     def _analyze(self, restore_db, master_port):
         conn = None

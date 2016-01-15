@@ -19,6 +19,8 @@
 #include "gpopt/utils/nodeutils.h"
 #include "gpopt/utils/CCatalogUtils.h"
 #include "gpopt/utils/COptTasks.h"
+#include "gpopt/mdcache/CMDCache.h"
+#include "utils/guc.h"
 
 #include "gpos/_api.h"
 #include "gpos/io/CFileReader.h"
@@ -1339,5 +1341,29 @@ PlannedStmt *orca(Query *pquery)
 	BOOL fUnexpectedFailure = false;
 
 	return COptTasks::PplstmtOptimize(pquery, &fUnexpectedFailure);
+}
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		GetCacheEvictionCounter
+//
+//	@doc:
+//		Get the number of times we evicted entries from CMDCache.
+//		This function is called by udfs for testing purposes.
+//
+//---------------------------------------------------------------------------
+extern "C"
+{
+ULLONG
+GetCacheEvictionCounter()
+{
+	if (!CMDCache::FInitialized())
+	{
+		CMDCache::Init();
+		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
+	}
+	return CMDCache::ULLGetCacheEvictionCounter();
 }
 }

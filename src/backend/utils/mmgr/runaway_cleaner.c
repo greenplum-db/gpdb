@@ -14,7 +14,7 @@
  */
 
 #include "postgres.h"
-#include "utils/atomic.h"
+#include "utils/gp_atomic.h"
 #include "cdb/cdbvars.h"
 #include "utils/vmem_tracker.h"
 #include "utils/session_state.h"
@@ -243,11 +243,12 @@ RunawayCleaner_RunawayCleanupDoneForProcess(bool ignoredCleanup)
 #if USE_ASSERT_CHECKING
 	int cleanProgress =
 #endif
-			gp_atomic_add_32(&MySessionState->cleanupCountdown, -1);
+			pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&MySessionState->cleanupCountdown, -1);
 	Assert(0 <= cleanProgress);
 
-	bool finalCleaner = compare_and_swap_32((uint32*) &MySessionState->cleanupCountdown,
-			0, CLEANUP_COUNTDOWN_BEFORE_RUNAWAY);
+	uint32 expected = 0;
+	bool finalCleaner = pg_atomic_compare_exchange_u32((pg_atomic_uint32 *) &MySessionState->cleanupCountdown,
+			&expected, CLEANUP_COUNTDOWN_BEFORE_RUNAWAY);
 
 	if (finalCleaner)
 	{

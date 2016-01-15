@@ -68,6 +68,13 @@ typedef struct
 	Node *entry;
 } ConNodeEntry;
 
+
+typedef enum
+{
+	PART_TABLE,
+	PART_PART,
+	PART_CAND
+} PartExchangeRole;
 static void
 record_constraints(Relation pgcon, MemoryContext context,
 				   HTAB *hash_tbl, Relation rel,
@@ -1265,35 +1272,6 @@ constraint_diffs(List *cons_a, List *cons_b, bool match_names, List **missing, L
 	pfree(match_a);
 	pfree(match_b);
 }
-
-
-
-/*
- * Install a dependency of a regular constraint on a part of a
- * partitioned to on the corresponding regular constaint on the
- * partitioned table as a whole.
- *
- * NOTE This doesn't apply to partition constraints that guard
- * the partitioning policy of the table.  These aren't represented
- * on the partitioned table as a whole.
- */
-
-void
-add_reg_part_dependency(Oid tableconid, Oid partconid)
-{
-	ObjectAddress tablecon;
-	ObjectAddress partcon;
-
-	tablecon.classId = ConstraintRelationId;
-	tablecon.objectId = tableconid;
-	tablecon.objectSubId = 0;
-	partcon.classId = ConstraintRelationId;
-	partcon.objectId = partconid;
-	partcon.objectSubId = 0;
-	recordDependencyOn(&partcon, &tablecon, DEPENDENCY_INTERNAL);
-}
-
-
 
 /*
  * Translate internal representation to catalog partition type indication

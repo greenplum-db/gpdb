@@ -2295,7 +2295,7 @@ static size_t curl_fwrite(char *buf, int nbytes, URL_FILE* file, CopyState pstat
 	 */
 	if(!curl->out.ptr)
 	{
-		const int bufsize = 64 * 1024 * sizeof(char);
+		const int bufsize = writable_external_table_bufsize * 1024 * sizeof(char);
 		MemoryContext oldcontext = CurrentMemoryContext;
 		
 		MemoryContextSwitchTo(CurTransactionContext); /* TODO: is there a better cxt to use? */

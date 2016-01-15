@@ -181,11 +181,11 @@ def getRow(dbname, exec_sql):
     return result
 
 
-def check_db_exists(dbname):
+def check_db_exists(dbname, host=None, port=0, user=None):
     LIST_DATABASE_SQL = 'select datname from pg_database'  
   
-    results = []  
-    with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
+    results = [] 
+    with dbconn.connect(dbconn.DbURL(hostname=host, username=user, port=port, dbname='template1')) as conn:
         curs = dbconn.execSQL(conn, LIST_DATABASE_SQL)
         results = curs.fetchall()
 
@@ -195,23 +195,28 @@ def check_db_exists(dbname):
  
     return False
 
-def create_database_if_not_exists(context, dbname):
-    if not check_db_exists(dbname):
-        create_database(context, dbname)
+def create_database_if_not_exists(context, dbname, host=None, port=0, user=None):
+    if not check_db_exists(dbname, host, port, user):
+        create_database(context, dbname, host, port, user)
 
-def create_database(context, dbname):
+def create_database(context, dbname=None, host=None, port=0, user=None):
 
     LOOPS = 10
+    if host == None or port == 0 or user == None:
+        createdb_cmd = 'createdb %s' % dbname
+    else:
+        createdb_cmd = 'psql -h %s -p %d -U %s -d template1 -c "create database %s"' % (host,
+                        port, user, dbname)
     for i in range(LOOPS):
         context.exception = None
 
-        run_gpcommand(context, 'createdb %s' % dbname)
+        run_command(context, createdb_cmd)
 
         if context.exception:
             time.sleep(1)
             continue
 
-        if check_db_exists(dbname):
+        if check_db_exists(dbname, host, port, user):
             return
 
         time.sleep(1)
@@ -219,7 +224,7 @@ def create_database(context, dbname):
     if context.exception:
         raise context.exception
 
-    raise Exception("createdb for '%s' failed after %d attempts" % (dbname, LOOPS))
+    raise Exception("create database for '%s' failed after %d attempts" % (dbname, LOOPS))
 
 def clear_all_saved_data_verify_files(context):
     current_dir = os.getcwd()
@@ -298,7 +303,8 @@ def check_partition_table_exists(context, dbname, schemaname, table_name, table_
         return False
     return check_table_exists(context, dbname, partitions[0][0].strip(), table_type) 
 
-def check_table_exists(context, dbname, table_name, table_type=None):
+def check_table_exists(context, dbname, table_name, table_type=None, host=None, port=0, user=None):
+
     SQL = """
             select oid::regclass, relkind, relstorage, reloptions \
             from pg_class \
@@ -306,7 +312,7 @@ def check_table_exists(context, dbname, table_name, table_type=None):
           """ % table_name
 
     table_row = None 
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname)) as conn:
         try:
             table_row = dbconn.execSQLForSingletonRow(conn, SQL) 
         except Exception as e:
@@ -352,26 +358,26 @@ def drop_external_table_if_exists(context, table_name, dbname):
     if check_table_exists(context, table_name=table_name, dbname=dbname, table_type='external'):
         drop_external_table(context, table_name=table_name, dbname=dbname)
 
-def drop_table_if_exists(context, table_name, dbname):
-    if check_table_exists(context, table_name=table_name, dbname=dbname):
-        drop_table(context, table_name=table_name, dbname=dbname)
+def drop_table_if_exists(context, table_name, dbname, host=None, port=0, user=None):
+    if check_table_exists(context, table_name=table_name, dbname=dbname, host=host, port=port, user=user):
+        drop_table(context, table_name=table_name, dbname=dbname, host=host, port=port, user=user)
 
-def drop_external_table(context, table_name, dbname):
+def drop_external_table(context, table_name, dbname, host=None, port=0, user=None):
     SQL = 'drop external table %s' % table_name
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname)) as conn:
         dbconn.execSQL(conn, SQL)
         conn.commit()
 
-    if check_table_exists(context, table_name=table_name, dbname=dbname, table_type='external'):
+    if check_table_exists(context, table_name=table_name, dbname=dbname, table_type='external', host=host, port=port, user=user):
         raise Exception('Unable to successfully drop the table %s' % table_name) 
 
-def drop_table(context, table_name, dbname):
+def drop_table(context, table_name, dbname, host=None, port=0, user=None):
     SQL = 'drop table %s' % table_name
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(hostname=host, username=user, port=port, dbname=dbname)) as conn:
         dbconn.execSQL(conn, SQL)
         conn.commit()
 
-    if check_table_exists(context, table_name=table_name, dbname=dbname):
+    if check_table_exists(context, table_name=table_name, dbname=dbname, host=host, port=port, user=user):
         raise Exception('Unable to successfully drop the table %s' % table_name) 
  
 def check_schema_exists(context, schema_name, dbname):
@@ -546,7 +552,7 @@ def drop_partition(context, partitionnum, tablename, dbname):
         dbconn.execSQL(conn, alter_table_str)
         conn.commit()
 
-def create_partition(context, tablename, storage_type, dbname, compression_type=None, partition=True, rowcount=1094):
+def create_partition(context, tablename, storage_type, dbname, compression_type=None, partition=True, rowcount=1094, with_data=True, host=None, port=0, user=None):
 
     interval = '1 year'
 
@@ -574,11 +580,12 @@ def create_partition(context, tablename, storage_type, dbname, compression_type=
 
     create_table_str = create_table_str + ";" 
 
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname)) as conn:
         dbconn.execSQL(conn, create_table_str)
         conn.commit()
 
-    populate_partition(tablename, PARTITION_START_DATE, dbname, 0, rowcount)
+    if with_data:
+        populate_partition(tablename, PARTITION_START_DATE, dbname, 0, rowcount, host, port, user)
 
 # same data size as populate partition, but different values
 def populate_partition_diff_data_same_eof(tablename, dbname):
@@ -587,12 +594,12 @@ def populate_partition_diff_data_same_eof(tablename, dbname):
 def populate_partition_same_data(tablename, dbname):
     populate_partition(tablename, PARTITION_START_DATE, dbname, 0)
 
-def populate_partition(tablename, start_date, dbname, data_offset, rowcount=1094):
+def populate_partition(tablename, start_date, dbname, data_offset, rowcount=1094, host=None, port=0, user=None):
 
     insert_sql_str = "insert into %s select i+%d, 'backup', i + date '%s' from generate_series(0,%d) as i" %(tablename, data_offset, start_date, rowcount)
     insert_sql_str += "; insert into %s select i+%d, 'restore', i + date '%s' from generate_series(0,%d) as i" %(tablename, data_offset, start_date, rowcount)
 
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+    with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname)) as conn:
         dbconn.execSQL(conn, insert_sql_str)
         conn.commit()
 
@@ -643,13 +650,18 @@ def create_int_table(context, table_name, table_type='heap', dbname='testdb'):
         if result != NROW:
             raise Exception('Integer table creation was not successful. Expected %d does not match %d' %(NROW, result))
        
-def drop_database(context, dbname):
+def drop_database(context, dbname, host=None, port=0, user=None):
 
     LOOPS = 10
+    if host == None or port == 0 or user == None:
+        dropdb_cmd = 'dropdb %s' % dbname
+    else:
+        dropdb_cmd = 'psql -h %s -p %d -U %s -d template1 -c "drop database %s"' % (host,
+                        port, user, dbname)
     for i in range(LOOPS):
         context.exception = None
 
-        run_gpcommand(context, 'dropdb %s' % dbname)
+        run_gpcommand(context, dropdb_cmd)
 
         if context.exception:
             time.sleep(1)
@@ -665,9 +677,9 @@ def drop_database(context, dbname):
 
     raise Exception('db exists after dropping: %s' % dbname)
 
-def drop_database_if_exists(context, dbname):
-    if check_db_exists(dbname):
-        drop_database(context, dbname)
+def drop_database_if_exists(context, dbname=None, host=None, port=0, user=None):
+    if check_db_exists(dbname, host=host, port=port, user=user):
+        drop_database(context, dbname, host=host, port=port, user=user)
 
 def run_on_all_segs(context, dbname, query):
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
@@ -753,17 +765,29 @@ def check_row_count(tablename, dbname, nrows):
 def check_empty_table(tablename, dbname):
     check_row_count(tablename, dbname, 0)
      
-def match_table_select(context, tablename, dbname, orderby=None):
+def match_table_select(context, src_tablename, src_dbname, dest_tablename, dest_dbname, orderby=None, options=''):
     if orderby != None :
-        check_query = 'psql -d %s -c \'select * from %s order by %s\'' % (dbname, tablename, orderby)
-        command = 'psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d %s -c \'select * from %s order by %s\''%(dbname, tablename, orderby)
+        dest_tbl_qry = 'psql -d %s -c \'select * from %s order by %s\' %s' % (dest_dbname, dest_tablename, orderby, options)
+        src_tbl_qry = '''psql -p %s -h %s -U %s -d %s -c \'select * from %s order by %s\' %s''' % (
+                                                                  os.environ.get('GPTRANSFER_SOURCE_PORT'),
+                                                                  os.environ.get('GPTRANSFER_SOURCE_HOST'),
+                                                                  os.environ.get('GPTRANSFER_SOURCE_USER'),
+                                                                  src_dbname, src_tablename, orderby, options)
     else:
-        check_query = 'psql -d %s -c \'select * from %s\'' % (dbname, tablename)
-        command = 'psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d %s -c \'select * from %s\''%(dbname, tablename)
-    (rc, out1, err) = run_cmd(check_query)
-    (rc, out2, err) = run_cmd(command)
-    if out2 != out1:
-        raise Exception('table %s in database %s between source and destination system does not match'%(tablename,dbname))
+        dest_tbl_qry = 'psql -d %s -c \'select * from %s\' %s' % (dest_dbname, dest_tablename, options)
+        src_tbl_qry = '''psql -p %s -h %s -U %s -d %s -c \'select * from %s\' %s''' % (
+                                                      os.environ.get('GPTRANSFER_SOURCE_PORT'),
+                                                      os.environ.get('GPTRANSFER_SOURCE_HOST'),
+                                                      os.environ.get('GPTRANSFER_SOURCE_USER'),
+                                                      src_dbname, src_tablename, options)
+
+    (_, dest_content, _) = run_cmd(dest_tbl_qry)
+    (_, src_content, _) = run_cmd(src_tbl_qry)
+    if src_content != dest_content:
+        raise Exception('''table %s in database %s of source system does not match rows with table %s in database %s of destination system.\n
+                         destination table content:\n%s\n
+                         source table content:\n%s\n''' % (
+                         src_tablename,src_dbname, dest_tablename, dest_dbname, dest_content, src_content))
 
 def get_master_hostname(dbname='template1'):
     master_hostname_sql = "select distinct hostname from gp_segment_configuration where content=-1 and role='p'"
