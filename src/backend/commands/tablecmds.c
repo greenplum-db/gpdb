@@ -13645,6 +13645,15 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		if (!ldistro)
 			ldistro = make_dist_clause(rel);
 
+		/* force the use of legacy query optimizer, since PQO will not redistribute the tuples if the current and required
+		   distributions are both RANDOM even when reorganize is set to "true"*/
+		bool saveOptimizerGucValue = optimizer;
+		optimizer = false;
+
+		if (saveOptimizerGucValue)
+		{
+			elog(LOG, "ALTER SET DISTRIBUTED BY: falling back to legacy query optimizer to ensure re-distribution of tuples.");
+		}
 
 		/* Step (b) - build CTAS */
 		queryDesc = build_ctas_with_dist(rel, ldistro,
@@ -13671,10 +13680,13 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 
 			/* Restore the old snapshot */
 			ActiveSnapshot = saveSnapshot;
+			optimizer = saveOptimizerGucValue;
 		}
 		PG_CATCH();
 		{
 			ActiveSnapshot = saveSnapshot;
+			optimizer = saveOptimizerGucValue;
+
 			PG_RE_THROW();
 		}
 		PG_END_TRY();
