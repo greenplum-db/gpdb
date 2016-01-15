@@ -61,7 +61,7 @@ TupleTableSlot *ExecShareInputScan(ShareInputScanState *node)
  *    Initialize the tuplestore state for the Shared node if the state
  *    is not initialized.
  */
-static bool
+static void
 init_tuplestore_state(ShareInputScanState *node)
 {
 	Assert(node->ts_state == NULL);
@@ -79,12 +79,6 @@ init_tuplestore_state(ShareInputScanState *node)
 		if(snState)
 		{
 			ExecProcNode(snState);
-
-			if (QueryFinishPending)
-			{
-				/* tuplestore is not created correctly */
-				return false;
-			}
 		}
 		
 		else
@@ -167,9 +161,6 @@ init_tuplestore_state(ShareInputScanState *node)
 
 	Assert(NULL != node->ts_state);
 	Assert(NULL != node->ts_state->matstore || NULL != node->ts_state->sortstore || NULL != node->ts_state->sortstore_mk);
-
-	/* tuplestore is created correctly */
-	return true;
 }
 
 
@@ -185,7 +176,6 @@ ShareInputNext(ShareInputScanState *node)
 	ScanDirection dir;
 	bool forward;
 	TupleTableSlot *slot;
-	bool ts_is_valid;
 
 	ShareInputScan * sisc = (ShareInputScan *) node->ss.ps.plan;
 
@@ -204,12 +194,7 @@ ShareInputNext(ShareInputScanState *node)
 	{
 		elog(DEBUG1, "SISC (shareid=%d, slice=%d): No tuplestore yet, initializing tuplestore",
 				sisc->share_id, currentSliceId);
-		ts_is_valid = init_tuplestore_state(node);
-
-		if(!ts_is_valid)
-		{
-			return NULL;
-		}
+		init_tuplestore_state(node);
 	}
 
 	slot = node->ss.ps.ps_ResultTupleSlot;
