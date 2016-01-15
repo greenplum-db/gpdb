@@ -37,7 +37,7 @@ WorkfileSegspace_Init(void)
 	 * Make sure it is 64-bit aligned, since we will are using 64 bit
 	 * atomic operations on it
 	 */
-	used_segspace = (pg_atomic_uint64 *)(TYPEALIGN(8, shmem_base));
+	used_segspace = (pg_atomic_uint64 *)(TYPEALIGN(sizeof(pg_atomic_uint64), shmem_base));
 	Assert(0 == used_segspace->value);
 }
 
