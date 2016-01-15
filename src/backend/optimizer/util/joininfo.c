@@ -82,7 +82,7 @@ have_relevant_joinclause(PlannerInfo *root,
 			OuterJoinInfo *ojinfo = (OuterJoinInfo *) lfirst(l);
 
 			/* ignore full joins --- other mechanisms handle them */
-			if (ojinfo->is_full_join)
+			if (ojinfo->join_type == JOIN_FULL)
 				continue;
 
 			if ((bms_is_subset(ojinfo->min_lefthand, rel1->relids) &&

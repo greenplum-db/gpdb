@@ -1375,8 +1375,7 @@ typedef struct OuterJoinInfo
 	Relids		min_righthand;	/* base relids in minimum RHS for join */
 	Relids		syn_lefthand;	/* base relids syntactically within LHS */
 	Relids		syn_righthand;	/* base relids syntactically within RHS */
-	JoinType	join_type;		/* LEFT, FULL, or ANTI */						/* 83MERGE_FIXME_DG replace join_type with is_full_join etc? */
-	bool		is_full_join;
+	JoinType	join_type;		/* LEFT, FULL, or ANTI */
 	bool		lhs_strict;		/* joinclause is strict for some LHS rel */
 	bool		delay_upper_joins;	/* can't commute with upper RHS */
 } OuterJoinInfo;
