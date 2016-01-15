@@ -5107,6 +5107,7 @@ Feature: Validate command line arguments
         And verify that there is a "heap" table "heap_table" in "TESTING" with data
         And verify that there is a "ao" table "ao_part_table" in "TESTING" with data
 
+	@gp_toolkit
     Scenario: Full backup and Restore should create the gp_toolkit schema with -e option
         Given the database is running
         And the database "testdb" does not exist
@@ -5124,6 +5125,7 @@ Feature: Validate command line arguments
         And verify that the data of "10" tables in "testdb" is validated after restore
         And the gp_toolkit schema for "testdb" is verified after restore
 
+	@gp_toolkit
     Scenario: Incremental backup and Restore should create the gp_toolkit schema with -e option
         Given the database is running
         And the database "testdb" does not exist
@@ -5143,6 +5145,7 @@ Feature: Validate command line arguments
         And verify that the data of "10" tables in "testdb" is validated after restore
         And the gp_toolkit schema for "testdb" is verified after restore
 
+	@gp_toolkit
     Scenario: Redirected Restore should create the gp_toolkit schema with -e option
         Given the database is running
         And the database "testdb" does not exist
@@ -5160,6 +5163,7 @@ Feature: Validate command line arguments
         And verify that the data of "10" tables in "fullbkdb" is validated after restore
         And the gp_toolkit schema for "fullbkdb" is verified after restore
 
+	@gp_toolkit
     Scenario: Redirected Restore should create the gp_toolkit schema without -e option
         Given the database is running
         And the database "testdb" does not exist
@@ -5626,37 +5630,6 @@ Feature: Validate command line arguments
         And there should be dump files under " " with prefix "foo"
         And verify that there is a "heap" table "heap_table" in "testdb" with data
         And verify that there is a "ao" table "ao_part_table" in "testdb" with data
-
-    @backupsmoke
-    Scenario: Incremental Backup and Restore without --prefix option
-        Given the database is running
-        And there are no backup files
-        And the database "testdb" does not exist
-        And database "testdb" exists
-        And there is a list to store the incremental backup timestamps
-        And there is schema "schema_heap, schema_ao, schema_heap1" exists in "testdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "testdb" with data
-        And there is a "heap" table "schema_heap1.heap_table1" with compression "None" in "testdb" with data
-        And there is a "ao" table "schema_ao.ao_index_table" with compression "None" in "testdb" with data
-        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "None" in "testdb" with data
-        When the user runs "gpcrondump -a -x testdb -s schema_heap -s schema_ao"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the full backup timestamp from gpcrondump is stored
-        And table "schema_ao.ao_index_table" is assumed to be in dirty state in "testdb"
-        When the user runs "gpcrondump -a -x testdb --incremental"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the timestamp from gpcrondump is stored in a list
-        And table "schema_ao.ao_index_table" is assumed to be in dirty state in "testdb"
-        When the user runs "gpcrondump -a -x testdb --incremental"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the timestamp from gpcrondump is stored in a list
-        And all the data from "testdb" is saved for verification
-        And the user runs gpdbrestore with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And verify that the data of "12" tables in "testdb" is validated after restore
 
     Scenario: Incremental Backup and Restore with -s filter for Full
         Given the database is running
