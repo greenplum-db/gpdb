@@ -1947,7 +1947,7 @@ logicaltape_test(void)
 				if ( j == test_entry)
 				{
 					/* Keep record position of target record in LogicalTape */
-					LogicalTapeUnfrozenTell(work_tape, &entryPos);
+					LogicalTapeUnfrozenTell(tape_set, work_tape, &entryPos);
 
 					LogicalTapeWrite(tape_set, work_tape, test_string->data, (size_t)test_string->len);
 				}

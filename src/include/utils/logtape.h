@@ -48,13 +48,13 @@ extern void LogicalTapeRewind(LogicalTapeSet *lts, LogicalTape *lt, bool forWrit
 extern void LogicalTapeFreeze(LogicalTapeSet *lts, LogicalTape *lt);
 extern bool LogicalTapeBackspace(LogicalTapeSet *lts, LogicalTape *lt, size_t size);
 extern bool LogicalTapeSeek(LogicalTapeSet *lts, LogicalTape *lt, LogicalTapePos *pos); 
-extern void LogicalTapeTell(LogicalTape *lt, LogicalTapePos *pos);
-extern void LogicalTapeUnfrozenTell(LogicalTape *lt, LogicalTapePos *pos);
+extern void LogicalTapeTell(LogicalTapeSet *lts, LogicalTape *lt, LogicalTapePos *pos);
+extern void LogicalTapeUnfrozenTell(LogicalTapeSet *lts, LogicalTape *lt, LogicalTapePos *pos);
 
 extern long LogicalTapeSetBlocks(LogicalTapeSet *lts);
 extern void LogicalTapeSetForgetFreeSpace(LogicalTapeSet *lts);
 
 extern LogicalTape *LogicalTapeSetGetTape(LogicalTapeSet *lts, int tapenum);
-extern LogicalTape *LogicalTapeSetDuplicateTape(LogicalTape *lt);
+extern LogicalTape *LogicalTapeSetDuplicateTape(LogicalTapeSet *lts, LogicalTape *lt);
 
 #endif   /* LOGTAPE_H */

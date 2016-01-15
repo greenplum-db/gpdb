@@ -703,7 +703,7 @@ LogicalTapeSeek(LogicalTapeSet *lts, LogicalTape *lt, LogicalTapePos *pos)
  * Obtain current position in a form suitable for a later LogicalTapeSeek.
  */
 void
-LogicalTapeTell(LogicalTape *lt, LogicalTapePos *pos)
+LogicalTapeTell(LogicalTapeSet *lts, LogicalTape *lt, LogicalTapePos *pos)
 {
 	Assert(lt->frozen);
 	pos->blkNum = lt->currPos.blkNum;
@@ -714,7 +714,7 @@ LogicalTapeTell(LogicalTape *lt, LogicalTapePos *pos)
  * Obtain current position from an unfrozen tape.
  */
 void
-LogicalTapeUnfrozenTell(LogicalTape *lt, LogicalTapePos *pos)
+LogicalTapeUnfrozenTell(LogicalTapeSet *lts, LogicalTape *lt, LogicalTapePos *pos)
 {
 	pos->blkNum = lt->currPos.blkNum;
 	pos->offset = lt->currPos.offset;
@@ -729,7 +729,7 @@ LogicalTapeSetBlocks(LogicalTapeSet *lts)
 	return lts->nFileBlocks;
 }
 
-LogicalTape *LogicalTapeSetDuplicateTape(LogicalTape *lt)
+LogicalTape *LogicalTapeSetDuplicateTape(LogicalTapeSet *lts, LogicalTape *lt)
 {
 	LogicalTape *dup = (LogicalTape *) palloc(sizeof(LogicalTape));
 
