@@ -294,43 +294,43 @@ gen_implied_quals_for_eclass(PlannerInfo *root, EquivalenceClass *eclass)
 {
 	List *relevant_clauses = relevant_known_clauses(root, eclass);
 
-    /**
-     * For every triple (em1, clause, em2), we try to replace em1 in clause
-     * with em2 and add it as an inferred clause since em1 = em2
-     */
+    /*
+	 * For every triple (em1, clause, em2), we try to replace em1 in clause
+	 * with em2 and add it as an inferred clause since em1 = em2
+	 */
     ListCell     *lcem1;
     foreach(lcem1, eclass->ec_members)
     {
 		EquivalenceMember *em1 = (EquivalenceMember *) lfirst(lcem1);
 
-    	/**
-    	 * Only look at equivalence members that correspond to a single relation
-    	 */
-    	if ( bms_membership(em1->em_relids) == BMS_SINGLETON)
+		/*
+		 * Only look at equivalence members that correspond to a single relation
+		 */
+		if (bms_membership(em1->em_relids) == BMS_SINGLETON)
     	{
-    		/**
-    		 * Iterate over all clauses
-    		 */
-    		ListCell   *lcclause;
-    		foreach(lcclause, relevant_clauses)
+			/*
+			 * Iterate over all clauses
+			 */
+			ListCell   *lcclause;
+			foreach(lcclause, relevant_clauses)
     		{
     			Node *old_clause = (Node *) lfirst(lcclause);
 
-    			/**
-    			 * Is it safe to infer from old_clause?
-    			 */
-    			bool safe_to_infer =
-    					!contain_volatile_functions(old_clause)
-    					&& !contain_subplans(old_clause);
+				/*
+				 * Is it safe to infer from old_clause?
+				 */
+				bool safe_to_infer =
+					!contain_volatile_functions(old_clause)
+					&& !contain_subplans(old_clause);
 
-    			if (safe_to_infer)
-    			{
-    				ListCell *lcem2;
+				if (safe_to_infer)
+				{
+					ListCell *lcem2;
 
-    				/* now try to apply to others in the equivalence class */
-    				foreach(lcem2, eclass->ec_members)
+					/* now try to apply to others in the equivalence class */
+					foreach(lcem2, eclass->ec_members)
     				{
-    					EquivalenceMember *em2 = (EquivalenceMember *) lfirst(lcem2);
+						EquivalenceMember *em2 = (EquivalenceMember *) lfirst(lcem2);
 
 						if (exprType((Node *) em1->em_expr) == exprType((Node *) em2->em_expr)
 							&& exprTypmod((Node *)em1->em_expr) == exprTypmod((Node *)em2->em_expr))
@@ -341,11 +341,11 @@ gen_implied_quals_for_eclass(PlannerInfo *root, EquivalenceClass *eclass)
 																(Node *)em1->em_expr,
 																(Node *)em2->em_expr);
 						}
-    				} /* foreach lcem2 */
-    			} /* safe_to_infer */
-    		} /* foreach lcclause */
-    	} /* BMS_SINGLETON */
-    } /* foreach lcem1 */
+					} /* foreach lcem2 */
+				} /* safe_to_infer */
+			} /* foreach lcclause */
+		} /* BMS_SINGLETON */
+	} /* foreach lcem1 */
 }
 
 /* TODO:
