@@ -1283,7 +1283,7 @@ check_outerjoin_delay(PlannerInfo *root, Relids *relids_p,
 					found_some = true;
 				}
 				/* set delay_upper_joins if needed */
-				if (is_pushed_down && !ojinfo->join_type == JOIN_FULL &&
+				if (is_pushed_down && ojinfo->join_type != JOIN_FULL &&
 					bms_overlap(relids, ojinfo->min_lefthand))
 					ojinfo->delay_upper_joins = true;
 			}
