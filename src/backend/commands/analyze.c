@@ -1110,15 +1110,13 @@ static void spiCallback_getSampleColumn(void *clientData)
 	uint32 i = 0;
 	bool isNull = false;
 
-	/* Since we are retrieving one column at a time, the attribute number
-	 * should always be 0.
-	 */
-	int attnum = 1;
-
     Assert(SPI_tuptable != NULL);
     Assert(SPI_tuptable->tupdesc);
 
-    Form_pg_attribute attr = SPI_tuptable->tupdesc->attrs[attnum-1];
+	/* Since we are retrieving one column at a time, the attribute index
+	 * should always be 0.
+	 */
+    Form_pg_attribute attr = SPI_tuptable->tupdesc->attrs[0];
     bool is_varlena = (!attr->attbyval) && attr->attlen == -1;
     bool is_varwidth = (!attr->attbyval) && attr->attlen < 0;
 
@@ -1129,7 +1127,7 @@ static void spiCallback_getSampleColumn(void *clientData)
 
     for (i = 0; i < SPI_processed; i++)
     {
-    	Datum dValue = heap_getattr(SPI_tuptable->vals[i], attnum, SPI_tuptable->tupdesc, &isNull);
+    	Datum dValue = heap_getattr(SPI_tuptable->vals[i], 1, SPI_tuptable->tupdesc, &isNull);
 
     	if (isNull)
     	{
