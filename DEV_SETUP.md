@@ -335,10 +335,10 @@ whether you want to debug the master or the segment processes. Happy hacking!
 ##9: Want a larger cluster to play around with?
 If you want to play around with a larger cluster, then you can spin up the
 `gpdemo` cluster that is described in the
-(README.md)["https://github.com/greenplum-db/gpdb/blob/master/README.md"] file. But, there a few things
+[README.md]("https://github.com/greenplum-db/gpdb/blob/master/README.md") file. But, there a few things
 that you will have to do differently. Here are the steps.
 
-1. First, we will need to spin down the GPDB server that we just stared above,
+First, we will need to spin down the GPDB server that we just stared above,
 as the setup for the demo has a different configuration. Issue the following
 command from your Vagrant shell:
 
@@ -346,7 +346,9 @@ command from your Vagrant shell:
 gpstop
 ```
 
-2. The demo cluster setup uses different environmental variable settings than
+When prompted for a response, type in "Y".
+
+The demo cluster setup uses different environmental variable settings than
 what we added to our environment above. So, we need to clear them out. The
 easiest way is to log out of the VM and log right back in (the variables that
 we need to remain set will be preserved as we added them to the
@@ -358,16 +360,16 @@ Exit vagrant by typing:
 exit
 ```
 
-Now we are back in the host, and we can spin up vagrant again.
+Now we are back in the host OS, and we can spin up Vagrant again.
 
-``shell
+```shell
 vagrant ssh
 ```
 
-3. The code for the GPDB demo cluster is in `/gpdb/gpAux/gpdemo`. The scripts
+The code for the GPDB demo cluster is in `/gpdb/gpAux/gpdemo`. The scripts
 there will attempt to build a data directory in the `gpdemo` directory. As you
-may recall `/gpdb` is a shared directory between the host and the guest. This
-shared directory does not behave like a regular file system in the *guest* OS
+may recall `/gpdb` is a shared directory between the host OS and the guest OS.
+This shared directory does not behave like a regular file system in the guest OS
 in many cases. So, we need to run the demo scripts from a location that is not
 in the shared filesystem. (For those who are curious about more details, the
 `initdb` initialization will, in many cases, fail if the data directory is
