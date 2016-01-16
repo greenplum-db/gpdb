@@ -299,6 +299,20 @@ bool
 cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist);
 
 /*
+ * cdbpathlocus_is_hashed_on_eclasses
+ *
+ * This function tests whether grouping on a given set of exprs can be done
+ * in place without motion.
+ *
+ * For a hashed locus, returns false if the partkey has any column whose
+ * equivalence class is not in 'eclasses' list.
+ *
+ * If 'ignore_constants' is true, any constants in the locus are ignored.
+ */
+bool
+cdbpathlocus_is_hashed_on_eclasses(CdbPathLocus locus, List *eclasses, bool ignore_constants);
+
+/*
  * cdbpathlocus_is_hashed_on_relids
  *
  * Used when a subquery predicate (such as "x IN (SELECT ...)") has been

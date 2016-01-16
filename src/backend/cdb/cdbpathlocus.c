@@ -779,6 +779,112 @@ cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist)
 		return !CdbPathLocus_IsStrewn(locus);
 }                               /* cdbpathlocus_is_hashed_on_exprs */
 
+/*
+ * cdbpathlocus_is_hashed_on_eclasses
+ *
+ * This function tests whether grouping on a given set of exprs can be done
+ * in place without motion.
+ *
+ * For a hashed locus, returns false if the partkey has any column whose
+ * equivalence class is not in 'eclasses' list.
+ *
+ * If 'ignore_constants' is true, any constants in the locus are ignored.
+ */
+bool
+cdbpathlocus_is_hashed_on_eclasses(CdbPathLocus locus, List *eclasses,
+								   bool ignore_constants)
+{
+	ListCell   *partkeycell;
+	ListCell   *eccell;
+
+	Assert(cdbpathlocus_is_valid(locus));
+
+	if (CdbPathLocus_IsHashed(locus))
+	{
+		foreach(partkeycell, locus.partkey_h)
+		{
+			PathKey	   *pathkey = (PathKey *) lfirst(partkeycell);
+			bool		found = false;
+			EquivalenceClass *pk_ec;
+
+			/* Does pathkey have an eclass that's not in 'eclasses'? */
+			Assert(IsA(pathkey, PathKey));
+
+			pk_ec = pathkey->pk_eclass;
+			while (pk_ec->ec_merged != NULL)
+				pk_ec = pk_ec->ec_merged;
+
+			if (ignore_constants && CdbEquivClassIsConstant(pk_ec))
+				continue;
+
+			foreach(eccell, eclasses)
+			{
+				EquivalenceClass *ec = (EquivalenceClass *) lfirst(eccell);
+
+				while (ec->ec_merged != NULL)
+					ec = ec->ec_merged;
+
+				if (ec == pk_ec)
+				{
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+				return false;
+		}
+		/* Every column of the partkey contains an expr in exprlist. */
+		return true;
+	}
+	else if (CdbPathLocus_IsHashedOJ(locus))
+	{
+		foreach(partkeycell, locus.partkey_oj)
+		{
+			List	   *pathkeylist = (List *) lfirst(partkeycell);
+			ListCell   *pathkeylistcell;
+			bool		found = false;
+
+			foreach(pathkeylistcell, pathkeylist)
+			{
+				PathKey	   *pathkey = (PathKey *) lfirst(pathkeylistcell);
+				EquivalenceClass *pk_ec;
+
+				/* Does pathkey have an eclass that's not in 'eclasses'? */
+				Assert(IsA(pathkey, PathKey));
+
+				pk_ec = pathkey->pk_eclass;
+				while (pk_ec->ec_merged != NULL)
+					pk_ec = pk_ec->ec_merged;
+
+				if (ignore_constants && CdbEquivClassIsConstant(pk_ec))
+					continue;
+
+				foreach(eccell, eclasses)
+				{
+					EquivalenceClass *ec = (EquivalenceClass *) lfirst(eccell);
+
+					while (ec->ec_merged != NULL)
+						ec = ec->ec_merged;
+
+					if (ec == pk_ec)
+					{
+						found = true;
+						break;
+					}
+				}
+				if (found)
+					break;
+			}
+			if (!found)
+				return false;
+		}
+		/* Every column of the partkey contains an expr in exprlist. */
+		return true;
+	}
+	else
+		return !CdbPathLocus_IsStrewn(locus);
+}                               /* cdbpathlocus_is_hashed_on_exprs */
+
 
 /*
  * cdbpathlocus_is_hashed_on_relids

@@ -2848,10 +2848,8 @@ bool
 cdbpathlocus_collocates(PlannerInfo *root, CdbPathLocus locus, List *pathkeys,
 						bool exact_match)
 {
-	ListCell   *i,
-			   *j;
-	List	   *exprs;
-	CdbPathLocus canonLocus;
+	ListCell   *i;
+	List	   *pk_eclasses;
 
 	if (CdbPathLocus_IsBottleneck(locus))
 		return true;
@@ -2863,43 +2861,28 @@ cdbpathlocus_collocates(PlannerInfo *root, CdbPathLocus locus, List *pathkeys,
 		return false;
 
 	/*
-	 * Eliminate any constants from the locus hash key. A constant has the
-	 * same value everywhere, so it doesn't affect collocation. If that leaves
-	 * us with no path keys at all, any rows that satisfy the query must
-	 * reside on the same node.
-	 *
-	 * 83MERGE_FIXME_HL: This is a fairly low-level place to do this. Should
-	 * we canonicalize all locuses when they're attached to nodes in the first
-	 * place?
+	 * Extract a list of eclasses from the pathkeys.
 	 */
-	canonLocus = locus;
-	canonLocus.partkey_h = canonicalize_pathkeys(root, locus.partkey_h);
-	if (canonLocus.partkey_h == NIL)
-		return true;
-
-	/*
-	 * Extract a list of expressions from the pathkeys.
-	 *
-	 * XXX: It's a bit awkward to extract all the expressions, as
-	 * cdbpathlocus_is_hashed_on_exprs() similarly extracts all expressions
-	 * from the locus partkey, and then cross-compares them. It would be more
-	 * efficient to have a function that compares matching equivalence classes
-	 * directly.
-	 */
-	exprs = NIL;
+	pk_eclasses = NIL;
 	foreach(i, pathkeys)
 	{
-		PathKey *pathkey = (PathKey *) lfirst(i);
+		PathKey	   *pathkey = (PathKey *) lfirst(i);
+		EquivalenceClass *ec;
 
-		foreach(j, pathkey->pk_eclass->ec_members)
-		{
-			EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
-			exprs = lappend(exprs, em->em_expr);
-		}
+		ec = pathkey->pk_eclass;
+		while (ec->ec_merged != NULL)
+			ec = ec->ec_merged;
+
+		pk_eclasses = lappend(pk_eclasses, ec);
 	}
 
-	/* Check for containment of locus in exprs. */
-	return cdbpathlocus_is_hashed_on_exprs(canonLocus, exprs);
+	/*
+	 * Check for containment of locus in pk_eclasses.
+	 *
+	 * We ignore constants in the locus hash key. A constant has the same
+	 * value everywhere, so it doesn't affect collocation.
+	 */
+	return cdbpathlocus_is_hashed_on_eclasses(locus, pk_eclasses, true);
 }
 
 
