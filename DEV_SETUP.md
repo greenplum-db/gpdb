@@ -5,7 +5,7 @@ This guide was developed in collaboration with Navneet Potti (@navsan) and
 Nabarun Nag (@nabarunnag).
 
 ## Who should read this document?
-Any one who wants to develop code for GPDB. This guide targets the 
+Any one who wants to develop code for GPDB. This guide targets the
 free-lance developer who typically has a laptop and wants to develop
 GPDB code on it. In other words, such a typical developer does not necessarily
 have 24x7 access to a cluster, and needs a miminal stand-alone development
@@ -49,10 +49,10 @@ few hundred MiBs of space on your machine. You can see the list of boxes that
 vagrant has downloaded using ``vagrant box list``. If you need to drop some
 box images, follow the instructions posted [here](https://docs.vagrantup.com/v2/cli/box.html "vagrant manage boxes").
 
-If you are curious about what Vagrant is doing, then open the file 
-`Vagrantfile`. The `config.vm.box` parameter there specifies the 
+If you are curious about what Vagrant is doing, then open the file
+`Vagrantfile`. The `config.vm.box` parameter there specifies the
 vagrant box image that is being feteched. Essentially you are creating an
-image of CentOS on your machine that will be used below to setup and run GPDB. 
+image of CentOS on your machine that will be used below to setup and run GPDB.
 
 While you are viewing the Vagrantfile, a few more things to notice here are:
 * The parameter `vb.memory` sets the memory to 8GB for the virtual machine.
@@ -62,8 +62,8 @@ While you are viewing the Vagrantfile, a few more things to notice here are:
   use to 2. Again, feel free to change this number based on the machine that
   you have.
 * Notice the parameter `config.vm.synced_folder`. This configuration requests
-  that the code you checked out into the directory `gpdb` be mounted as 
-  `/gpdb` in the virtual machine. More on this later below. 
+  that the code you checked out into the directory `gpdb` be mounted as
+  `/gpdb` in the virtual machine. More on this later below.
 
 Once the command above (`vagrant up`) returns, we are ready to start the
 virtual machine. Type in the following command into the terminal window
@@ -75,21 +75,21 @@ vagrant ssh
 
 Now you are in the virtual machine shell in a **guest** OS that is running in
 your actual machine (the **host**). Everything that you do in the guest machine
-will be isolated from the host, except for any changes that you make to 
+will be isolated from the host, except for any changes that you make to
 ``/gpdb`` - recall that we requested that the code we checked out show up at
 this mount point in the virtual machine. Thus, if you type ``ls /gpdb`` in the
 virtual machine shell, then you will see the GPDB code that you checked out.
 
 ##4: Setup and compile GPDB
-Next, issue the following commands from the guest shell. 
+Next, issue the following commands from the guest shell.
 
 ```shell
-mkdir -p /home/vagrant/gpdb_install 
+mkdir -p /home/vagrant/gpdb_install
 mkdir -p /home/vagrant/gpdb_data
 ```
 
 The above commands create an install directory and a data directory. The install
-directory is created in the shared folder (so changes here will be visible 
+directory is created in the shared folder (so changes here will be visible
 from the host). The data directory is created in the local disk in the guest OS.
 Changing the data directory to the shared folder (i.e. under `/gpdb`) will run
 into trouble with file permissions when creating data with GPDB. So, make sure
@@ -124,7 +124,7 @@ make install
 We are nearly ready to run GPDB. However, we still have to setup a few
 environment variables, and make changes to the guest OS. Here are the steps. In
 the guest shell, type in the following commands to create the required
-(bash) environment variables: 
+(bash) environment variables:
 
 ```shell
 printf '\n# GPDB environment variables\nexport GPDB=/gpdb\n' >> ~/.bashrc
@@ -135,7 +135,7 @@ printf 'source $GPHOME/greenplum_path.sh\nfi\n' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-Then, type in the following commands to create the required data directories: 
+Then, type in the following commands to create the required data directories:
 ```shell
 mkdir -p $GPDATA/master
 mkdir -p $GPDATA/segments
@@ -168,14 +168,14 @@ printf "ENCODING=UNICODE\n"                                            >> $GPCFG
 ```
 
 We also need to change the guest OS settings as per the instructions
-[here](http://gpdb.docs.pivotal.io/4360/prep_os-system-params.html#topic3). 
+[here](http://gpdb.docs.pivotal.io/4360/prep_os-system-params.html#topic3).
 The security limits and other settings specified in that link are not necessary,
 so we can skip that. To change the guest OS settings, issue the following
 commands in the guest shell (you could use any editor that you like, but you will
 need to use "sudo mode" to save the changes to the `/etc/sysctl.conf` file):
 
 ```shell
-sudo vi /etc/sysctl.conf 
+sudo vi /etc/sysctl.conf
 ```
 
 Then, hit capital-`G`, followed by capital-`O`, and paste the following
@@ -221,7 +221,7 @@ vagrant halt
 Now, before bringing up vagrant again, we need to make sure that we have the
 VirtualBox guest additions setup. This sadly requires an extra step (which
 hopefully will go away in future version of Vagrant and VirtualBox). From
-the host terminal, type in the following command: 
+the host terminal, type in the following command:
 ```shell
 vagrant plugin install vagrant-vbguest
 ```
@@ -234,10 +234,10 @@ vagrant ssh
 ```
 
 You are back in the guest OS shell! But, now you have GPDB compiled, installed,
-and ready to run. 
+and ready to run.
 
 ##7: Initialize and start GPDB
-Next we initialize GPDB using the config file that we created above. In the 
+Next we initialize GPDB using the config file that we created above. In the
 *guest* shell type in:
 ```shell
 $GPHOME/bin/gpinitsystem -a -c $GPDATA/gpinitsystem_config
@@ -252,7 +252,7 @@ source ~/.bashrc
 ```
 
 Now, you are ready to start GPDB. To do that, type in the following commands
-into the (guest) terminal: 
+into the (guest) terminal:
 ```shell
 DBNAME=$USER
 createdb $DBNAME
@@ -262,31 +262,31 @@ psql $DBNAME
 You should see a psql prompt that says `vagrant=#`. At this point, you can open
 up another shell from the host OS. Start another *host* terminal, and go to
 the vagrant directory by typing `cd gpdb/vagrant`. Then, type in `vagrant ssh`.
-From this second guest terminal, you can run GPDB commands like `gpstate`. 
+From this second guest terminal, you can run GPDB commands like `gpstate`.
 Go ahead and try it. You should see a report that states that you have a master
 and two segments.
 
 If you want to try out a few SQL commands, go back to the guest shell in which
-you have the `psql` prompt, and issue the following SQL commands: 
+you have the `psql` prompt, and issue the following SQL commands:
 
 ```sql
 -- Create and populate a Users table
-CREATE TABLE Users (uid INTEGER PRIMARY KEY, 
+CREATE TABLE Users (uid INTEGER PRIMARY KEY,
                     name VARCHAR);
-INSERT INTO Users 
-  SELECT generate_series, md5(random()) 
+INSERT INTO Users
+  SELECT generate_series, md5(random())
   FROM generate_series(1, 100000);
 
 -- Create and populate a Messages table
-CREATE TABLE Messages (mid INTEGER PRIMARY KEY, 
-                       uid INTEGER REFERENCES Users(uid), 
-                       ptime DATE, 
+CREATE TABLE Messages (mid INTEGER PRIMARY KEY,
+                       uid INTEGER REFERENCES Users(uid),
+                       ptime DATE,
                        message VARCHAR);
-INSERT INTO Messages 
-   SELECT generate_series, 
-          round(random()*100000), 
-          date(now() - '1 hour'::INTERVAL * round(random()*24*30)), 
-          md5(random())::text 
+INSERT INTO Messages
+   SELECT generate_series,
+          round(random()*100000),
+          date(now() - '1 hour'::INTERVAL * round(random()*24*30)),
+          md5(random())::text
    FROM generate_series(1, 1000000);
 
 -- Report the number of tuples in each table
@@ -294,29 +294,29 @@ SELECT COUNT(*) FROM Messages;
 SELECT COUNT(*) FROM Users;
 
 -- Report how many messages were posted on each day
-SELECT M.ptime, COUNT(*) 
-FROM Users U NATURAL JOIN Messages M 
-GROUP BY M.ptime 
+SELECT M.ptime, COUNT(*)
+FROM Users U NATURAL JOIN Messages M
+GROUP BY M.ptime
 ORDER BY M.ptime;
 ```
 
 You just created a simple warehouse database that simulates users posting
 messages on a social media network. The "fact" table (aka. the `Messages`
 table) has a million rows. The final query reports the number of messages
-that were posted on each day. Pretty cool! 
+that were posted on each day. Pretty cool!
 
 (Note if you want to exit the `psql` shell above, type in `\q`.)
 
 ##8: Using GDB
 If you are doing serious development, you will likely need to use a debugger.
-Here is how you do that. 
+Here is how you do that.
 
-First, list the Postgres processes by typing in (a guest terminal) the following 
-command: `ps ax | grep postgres`. You should see a list that looks something 
+First, list the Postgres processes by typing in (a guest terminal) the following
+command: `ps ax | grep postgres`. You should see a list that looks something
 like: ![Postgres processes](/vagrant/pictures/gpdb_processes.png)
 
 (You may have to click on the image to see it at a higher resolution.)
-Here the key processes are the ones that were started as 
+Here the key processes are the ones that were started as
 `/gpdb/vagrant/install/bin/postgres`. The master is the process (pid 25486
 in the picture above) that has the word "master" in the `-D`parameter setting,
 whereas the segment hosts have the word "gpseg" in the `-D` parameter setting.
@@ -331,3 +331,73 @@ attach 25486
 ```
 Of course, you can change which function you want to break into, and change
 whether you want to debug the master or the segment processes. Happy hacking!
+
+##9: Want a larger cluster to play around with?
+If you want to play around with a larger cluster, then you can spin up the
+`gpdemo` cluster that is described in the
+(README.md)["https://github.com/greenplum-db/gpdb/blob/master/README.md"] file. But, there a few things
+that you will have to do differently. Here are the steps.
+
+1. First, we will need to spin down the GPDB server that we just stared above,
+as the setup for the demo has a different configuration. Issue the following
+command from your Vagrant shell:
+
+```shell
+gpstop
+```
+
+2. The demo cluster setup uses different environmental variable settings than
+what we added to our environment above. So, we need to clear them out. The
+easiest way is to log out of the VM and log right back in (the variables that
+we need to remain set will be preserved as we added them to the
+`~/.bash_profile` file).
+
+Exit vagrant by typing:
+
+```shell
+exit
+```
+
+Now we are back in the host, and we can spin up vagrant again.
+
+``shell
+vagrant ssh
+```
+
+3. The code for the GPDB demo cluster is in `/gpdb/gpAux/gpdemo`. The scripts
+there will attempt to build a data directory in the `gpdemo` directory. As you
+may recall `/gpdb` is a shared directory between the host and the guest. This
+shared directory does not behave like a regular file system in the *guest* OS
+in many cases. So, we need to run the demo scripts from a location that is not
+in the shared filesystem. (For those who are curious about more details, the
+`initdb` initialization will, in many cases, fail if the data directory is
+under `/gpdb`).
+
+We already have a GPDB data directory, so let us go there and copy the demo
+files there.
+
+```shell
+cd /home/vagrant/gpdb_data/
+cp -R /gpdb/gpAux/gpdemo .
+cd gpdemo
+```
+
+Then, run the `gpdemo` scripts to build a cluster.
+
+```shell
+make cluster
+source gpdemo-env.sh
+```
+
+Finally, we are ready to run queries, so we fall back to the flow above as:
+
+```
+DBNAME=$USER
+createdb $DBNAME
+psql $DBNAME
+```
+
+You are back in the GPDB shell and you can fire away SQL queries as before. Now,
+you actually have a GPDB cluster running in Vagrant. You can use `top` to
+examine the processes that are running, or use `htop` (we installed that as part
+of the original Vagrant install).
