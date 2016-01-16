@@ -1083,9 +1083,8 @@ cdb_make_pathkey_for_expr_non_canonical(PlannerInfo *root, Node *expr, List *eqo
 
 /*
  * cdb_make_pathkey_for_expr
- *	  Returns a canonicalized pathkey (a List of PathKeyItem)
- *    which represents an equivalence class of expressions
- *    that must be equal to the given expression.
+ *	  Returns a canonicalized PathKey which represents an equivalence
+ *    class of expressions that must be equal to the given expression.
  *
  *    The caller specifies the name of the equality operator thus:
  *          list_make1(makeString("="))
@@ -1095,7 +1094,7 @@ cdb_make_pathkey_for_expr_non_canonical(PlannerInfo *root, Node *expr, List *eqo
  *    merge join with another expr of the same data type, using the
  *    equality operator whose name is given.  Partitioning doesn't
  *    itself use the sort operator, but its Oid is needed to
- *    associate the PathKeyItem with the same equivalence class
+ *    associate the PathKey with the same equivalence class
  *    (canonical pathkey) as any other expressions to which
  *    our expr is constrained by compatible merge-joinable
  *    equality operators.  (We assume, in what may be a temporary
@@ -1127,33 +1126,23 @@ cdb_make_pathkey_for_expr(PlannerInfo    *root,
 	 * Get Oid of the sort operator that would be used for a
      * sort-merge equijoin on a pair of exprs of the same type.
      */
-    if (eqopoid != InvalidOid && op_mergejoinable(eqopoid))
-    {
-		mergeopfamilies = get_mergejoin_opfamilies(eqopoid);
-		foreach(lc, mergeopfamilies)
-		{
-			opfamily = lfirst_oid(lc);
-			strategy = get_op_opfamily_strategy(eqopoid, opfamily);
-			if (strategy)
-				break;
-		}
-		eclass = get_eclass_for_sort_expr(root, (Expr *) expr, typeoid, mergeopfamilies);
-		if (!canonical)
-			pk = makePathKey(eclass, opfamily, strategy, false);
-		else
-			pk = make_canonical_pathkey(root, eclass, opfamily, strategy, false);
-    }
-    else
-    {
-    	/* Don't balk if caller wants to repartition on an expr whose type has no
-    	 * mergejoinable "=" operator.  Hope the executor knows how to hash it.
-    	 * E.g., cdbpath_dedup_fixup_unique() repartitions on CTID without
-    	 * bothering to insert a coercion to INT8.
-    	 */
-		
-		/* 83MERGE_FIXME_DG How to handle? */	
-    }
-    Assert(pk);
+	if (eqopoid == InvalidOid || !op_mergejoinable(eqopoid))
+		elog(ERROR, "could not find = operator for type %u", typeoid);
+
+	mergeopfamilies = get_mergejoin_opfamilies(eqopoid);
+	foreach(lc, mergeopfamilies)
+	{
+		opfamily = lfirst_oid(lc);
+		strategy = get_op_opfamily_strategy(eqopoid, opfamily);
+		if (strategy)
+			break;
+	}
+	eclass = get_eclass_for_sort_expr(root, (Expr *) expr, typeoid, mergeopfamilies);
+	if (!canonical)
+		pk = makePathKey(eclass, opfamily, strategy, false);
+	else
+		pk = make_canonical_pathkey(root, eclass, opfamily, strategy, false);
+
 	return pk;
 }
 
