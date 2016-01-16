@@ -628,9 +628,17 @@ void tuplesort_begin_pos_mk(Tuplesortstate_mk *st, TuplesortPos_mk **pos)
     st_pos = (TuplesortPos_mk *) palloc(sizeof(TuplesortPos_mk));
     memcpy(st_pos, &(st->pos), sizeof(TuplesortPos_mk));
 
-    if(st->tapeset)
+    if(st->result_tape)
+    {
         st_pos->cur_work_tape = LogicalTapeSetDuplicateTape(st->tapeset, st->result_tape);
-
+    }
+    else
+    {
+    	/* sort did not finish completely due to QueryFinishPending
+    	 * so pretend that there are no tuples
+    	 */
+    	st_pos->eof_reached = true;
+    }
     *pos = st_pos;
 }
 
