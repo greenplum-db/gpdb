@@ -84,8 +84,8 @@ virtual machine shell, then you will see the GPDB code that you checked out.
 Next, issue the following commands from the guest shell. 
 
 ```shell
-mkdir -p /gpdb/vagrant/install 
-mkdir -p ~/gpdb_data
+mkdir -p /home/vagrant/gpdb_install 
+mkdir -p /home/vagrant/gpdb_data
 ```
 
 The above commands create an install directory and a data directory. The install
@@ -100,7 +100,7 @@ Now, in the guest shell go to the directory that contains the GPDB code and
 configure it to build by issuing the following commands:
 ```shell
 cd /gpdb
-./configure --prefix=/gpdb/vagrant/install --enable-depend --enable-debug
+./configure --prefix=/home/vagrant/gpdb_install --enable-depend --enable-debug
 ```
 
 Now, let's build GPDB. In the guest shell, type in:
@@ -113,7 +113,7 @@ VM is setup to run on two cores of the host machine). Sometimes, this parallel
 may produces errors. If that happens, just re-issue the ``make`` command
 again, but this time without the ``-j`` flag.
 
-Next, we are ready to install GPDB in the directory ``/gpdb/vagrant/install``.
+Next, we are ready to install GPDB in the directory ``/home/vagrant/gpdb_install``.
 To do this, in the guest shell, type the following command:
 
 ```shell
@@ -128,8 +128,8 @@ the guest shell, type in the following commands to create the required
 
 ```shell
 printf '\n# GPDB environment variables\nexport GPDB=/gpdb\n' >> ~/.bashrc
-printf 'export GPHOME=/gpdb/vagrant/install\n' >> ~/.bashrc
-printf 'export GPDATA=~/gpdb_data\n' >> ~/.bashrc
+printf 'export GPHOME=/home/vagrant/gpdb_install\n' >> ~/.bashrc
+printf 'export GPDATA=/home/vagrant/gpdb_data\n' >> ~/.bashrc
 printf 'if [ -e $GPHOME/greenplum_path.sh ]; then\n\t' >> ~/.bashrc
 printf 'source $GPHOME/greenplum_path.sh\nfi\n' >> ~/.bashrc
 source ~/.bashrc
@@ -304,6 +304,8 @@ You just created a simple warehouse database that simulates users posting
 messages on a social media network. The "fact" table (aka. the `Messages`
 table) has a million rows. The final query reports the number of messages
 that were posted on each day. Pretty cool! 
+
+(Note if you want to exit the `psql` shell above, type in `\q`.)
 
 ##8: Using GDB
 If you are doing serious development, you will likely need to use a debugger.
