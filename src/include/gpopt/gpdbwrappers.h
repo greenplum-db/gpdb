@@ -433,9 +433,6 @@ namespace gpdb {
 	// is the given operator hash-joinable
 	bool FOpHashJoinable(Oid opno);
 
-	// is the given operator merge-joinable
-	bool FOpMergeJoinable(Oid opno, Oid *leftOp, Oid *rightOp);
-
 	// is the given operator strict
 	bool FOpStrict(Oid opno);
 

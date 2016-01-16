@@ -2150,40 +2150,6 @@ gpdb::FOpHashJoinable
 }
 
 bool
-gpdb::FOpMergeJoinable
-	(
-	Oid opno,
-	Oid *leftOp,
-	Oid *rightOp
-	)
-{
-	GP_WRAP_START;
-	{
-		/* catalog tables: pg_operator, pg_amop, pg_opfamily */
-		if (op_mergejoinable(opno))
-		{
-			/*
-			 * XXX Like in check_mergejoinable, for the moment, continue to
-			 * force use of particular sortops
-			 *
-			 * 83MERGE_FIXME_DG - This used to check get_op_mergejoin_info()
-			 * and essentially return the result of it. Not sure if this is
-			 * equivalent..
-			 */
-			List *opfamily = get_mergejoin_opfamilies(opno);
-
-			if (opfamily != NIL && list_length(opfamily) > 0)
-			{
-				list_free(opfamily);
-				return true;
-			}
-		}
-	}
-	GP_WRAP_END;
-	return false;
-}
-
-bool
 gpdb::FOpStrict
 	(
 	Oid opno
