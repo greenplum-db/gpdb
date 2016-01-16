@@ -21,6 +21,10 @@ test: filter gpctas gpdist matrix toast sublink sirv_functions table_functions o
 
 test: dispatch
 
+# 'segspace' relies on the segment spill space to be 0, and uses fault injectors
+# so it needs to be in a group by itself
+test: segspace
+
 test: gpdiffcheck gptokencheck information_schema gp_hashagg sequence_gp tidscan
 
 test: rangefuncs_cdb gp_dqa external_table subselect_gp indexjoin distributed_transactions olap_group olap_window_seq with_clause as_alias regex_gp partition1

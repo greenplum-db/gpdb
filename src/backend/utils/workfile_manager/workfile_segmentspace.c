@@ -19,7 +19,7 @@
 #define WORKFILE_SEGSPACE_SHMEM_NAME "WorkfileSegspace"
 
 /* Pointer to the shared memory counter with the total used diskspace across segment */
-static int64 *used_segspace = NULL;
+static pg_atomic_uint64 *used_segspace = NULL;
 
 /*
  * Initialize shared memory area for the WorkfileSegspace module
@@ -33,8 +33,12 @@ WorkfileSegspace_Init(void)
 			WorkfileSegspace_ShMemSize(),
 			&attach);
 
-	used_segspace = (int64 *)shmem_base;
-	Assert(0 == *used_segspace);
+	/*
+	 * Make sure it is 64-bit aligned, since we will are using 64 bit
+	 * atomic operations on it
+	 */
+	used_segspace = (pg_atomic_uint64 *)(TYPEALIGN(sizeof(pg_atomic_uint64), shmem_base));
+	Assert(0 == used_segspace->value);
 }
 
 /*
@@ -43,7 +47,12 @@ WorkfileSegspace_Init(void)
 Size
 WorkfileSegspace_ShMemSize(void)
 {
-	return sizeof(*used_segspace);
+	/*
+	 * Reserve 16 bytes instead of just 8. In case the pointer returned
+	 * is not 64-bit aligned, we'll align it after allocation, and we might
+	 * need the extra space.
+	 */
+	return 2 * sizeof(*used_segspace);
 }
 
 /*
@@ -58,7 +67,7 @@ WorkfileSegspace_Reserve(int64 bytes_to_reserve)
 {
 	Assert(NULL != used_segspace);
 
-	int64 total = pg_atomic_add_fetch_u64((pg_atomic_uint64 *)used_segspace, bytes_to_reserve);
+	int64 total = pg_atomic_add_fetch_u64(used_segspace, bytes_to_reserve);
 	Assert(total >= (int64) 0);
 
 	if (gp_workfile_limit_per_segment == 0)
@@ -81,7 +90,7 @@ WorkfileSegspace_Reserve(int64 bytes_to_reserve)
 		{
 
 			/* Revert the reserved space */
-			(void) pg_atomic_sub_fetch_u64((pg_atomic_uint64 *)used_segspace, bytes_to_reserve);
+			(void) pg_atomic_sub_fetch_u64(used_segspace, bytes_to_reserve);
 
 			CHECK_FOR_INTERRUPTS();
 
@@ -97,7 +106,7 @@ WorkfileSegspace_Reserve(int64 bytes_to_reserve)
 				 */
 				elog(gp_workfile_caching_loglevel,
 						"Failed to reserved size " INT64_FORMAT ". Reverted back to total " INT64_FORMAT,
-						bytes_to_reserve, *used_segspace);
+						bytes_to_reserve, used_segspace->value);
 
 				/* Set diskfull to true to stop any further attempts to write more data */
 				WorkfileDiskspace_SetFull(true /* isFull */);
@@ -106,7 +115,7 @@ WorkfileSegspace_Reserve(int64 bytes_to_reserve)
 			}
 
 			/* Try to reserve again */
-			total = pg_atomic_add_fetch_u64((pg_atomic_uint64 *)used_segspace, bytes_to_reserve);
+			total = pg_atomic_add_fetch_u64(used_segspace, bytes_to_reserve);
 			Assert(total >= (int64) 0);
 
 			if (total <= max_allowed_diskspace)
@@ -150,7 +159,7 @@ WorkfileSegspace_Commit(int64 commit_bytes, int64 reserved_bytes)
 #if USE_ASSERT_CHECKING
 	int64 total = 
 #endif
-	pg_atomic_sub_fetch_u64((pg_atomic_uint64 *)used_segspace, (reserved_bytes - commit_bytes));
+	pg_atomic_sub_fetch_u64(used_segspace, (reserved_bytes - commit_bytes));
 	Assert(total >= (int64) 0);
 }
 
@@ -161,7 +170,7 @@ int64
 WorkfileSegspace_GetSize()
 {
 	Assert(NULL != used_segspace);
-	return *used_segspace;
+	return used_segspace->value;
 }
 
 /* EOF */
