@@ -1089,12 +1089,11 @@ cdb_make_pathkey_for_expr_non_canonical(PlannerInfo *root, Node *expr, List *eqo
  *    The caller specifies the name of the equality operator thus:
  *          list_make1(makeString("="))
  *
- *    The 'sortop' field of the expr's PathKeyItem node is filled
- *    with the Oid of the sort operator that would be used for a
- *    merge join with another expr of the same data type, using the
- *    equality operator whose name is given.  Partitioning doesn't
- *    itself use the sort operator, but its Oid is needed to
- *    associate the PathKey with the same equivalence class
+ *    The 'opfamily' field of resulting PathKey is filled with the operator
+ *    family that would be used for a merge join with another expr of the
+ *    same data type, using the equality operator whose name is given.
+ *    Partitioning doesn't itself use the sort operator, but its Oid is
+ *    needed to associate the PathKey with the same equivalence class
  *    (canonical pathkey) as any other expressions to which
  *    our expr is constrained by compatible merge-joinable
  *    equality operators.  (We assume, in what may be a temporary

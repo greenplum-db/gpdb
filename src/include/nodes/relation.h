@@ -727,8 +727,7 @@ typedef struct PathKey
 
 /*
  * CdbEquivClassIsConstant
- *      is true if there is no Var of the current level in the expr
- *      referenced by a given PathKeyItem.
+ *      is true if the equivalence class represents a pseudo-constant
  *
  * This is copied from MUST_BE_REDUNDANT in pathkeys.c
  */
