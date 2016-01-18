@@ -106,7 +106,7 @@ static void fix_indexqual_references(List *indexquals, IndexPath *index_path,
 						 List **indexsubtype);
 static Node *fix_indexqual_operand(Node *node, IndexOptInfo *index,
 					  Oid *opfamily);
-static List *get_switched_clauses(List *clauses, Relids innerrelids);
+static List *get_switched_clauses(List *clauses, Relids outerrelids);
 static List *order_qual_clauses(PlannerInfo *root, List *clauses);
 static void copy_path_costsize(PlannerInfo *root, Plan *dest, Path *src);
 static void copy_plan_costsize(Plan *dest, Plan *src);
@@ -2890,8 +2890,8 @@ create_mergejoin_plan(PlannerInfo *root,
 	 * on the left; mark the mergeclause restrictinfos with correct
 	 * outer_is_left status.
 	 */
-	mergeclauses =
-        get_switched_clauses(best_path->path_mergeclauses, best_path->jpath.outerjoinpath->parent->relids);
+	mergeclauses = get_switched_clauses(best_path->path_mergeclauses,
+							 best_path->jpath.outerjoinpath->parent->relids);
 
 	/* Sort clauses into best execution order */
 	/* NB: do NOT reorder the mergeclauses */
@@ -3100,8 +3100,8 @@ create_hashjoin_plan(PlannerInfo *root,
 	 * Rearrange hashclauses, if needed, so that the outer variable is always
 	 * on the left.
 	 */
-	hashclauses =
-        get_switched_clauses(best_path->path_hashclauses, best_path->jpath.outerjoinpath->parent->relids);
+	hashclauses = get_switched_clauses(best_path->path_hashclauses,
+							 best_path->jpath.outerjoinpath->parent->relids);
 
 	/* Sort clauses into best execution order */
 	joinclauses = order_qual_clauses(root, joinclauses);
@@ -3415,13 +3415,9 @@ fix_indexqual_operand(Node *node, IndexOptInfo *index, Oid *opfamily)
  *	  the inner is on the right.  The original clause data structure is not
  *	  touched; a modified list is returned.  We do, however, set the transient
  *	  outer_is_left field in each RestrictInfo to show which side was which.
- *
- * CDB:  Caller specifies inner relids instead of outer relids, because with
- * Adaptive NJ there can be HashPlan nodes whose outer relids are not directly
- * accessible because outerjoinpath == NULL.
  */
 static List *
-get_switched_clauses(List *clauses, Relids innerrelids)
+get_switched_clauses(List *clauses, Relids outerrelids)
 {
 	List	   *t_list = NIL;
 	ListCell   *l;
@@ -3429,23 +3425,25 @@ get_switched_clauses(List *clauses, Relids innerrelids)
 	foreach(l, clauses)
 	{
 		RestrictInfo *restrictinfo = (RestrictInfo *) lfirst(l);
-		OpExpr	   *clause = (OpExpr *) restrictinfo->clause;
+
+		Expr *rclause = restrictinfo->clause;
 
 		/**
 		 * If this is a IS NOT FALSE boolean test, we can peek underneath.
 		 */
-		if (IsA(clause, BooleanTest))
+		if (IsA(rclause, BooleanTest))
 		{
-			BooleanTest *bt = (BooleanTest *) clause;
+			BooleanTest *bt = (BooleanTest *) rclause;
 
 			if (bt->booltesttype == IS_NOT_FALSE)
 			{
-				clause = bt->arg;
+				rclause = bt->arg;
 			}
 		}
 
-		Assert(is_opclause(clause));
-		if (bms_is_subset(restrictinfo->right_relids, innerrelids))
+		Assert(is_opclause(rclause));
+		OpExpr *clause = (OpExpr *) rclause;
+		if (bms_is_subset(restrictinfo->right_relids, outerrelids))
 		{
 			/*
 			 * Duplicate just enough of the structure to allow commuting the
@@ -3466,7 +3464,7 @@ get_switched_clauses(List *clauses, Relids innerrelids)
 		}
 		else
 		{
-			Assert(bms_is_subset(restrictinfo->left_relids, innerrelids));
+			Assert(bms_is_subset(restrictinfo->left_relids, outerrelids));
 			t_list = lappend(t_list, clause);
 			restrictinfo->outer_is_left = true;
 		}
