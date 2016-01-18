@@ -230,7 +230,5 @@ extern int	pathkeys_useful_for_ordering(PlannerInfo *root, List *pathkeys);
 extern List *truncate_useless_pathkeys(PlannerInfo *root,
 						  RelOptInfo *rel,
 						  List *pathkeys);
-extern List *remove_pathkey_item(List *equi_key_list,
-								 Node *key);
 
 #endif   /* PATHS_H */
