@@ -161,7 +161,7 @@ OPTIONS
  processes depending on how many segment instances it needs to dump. 
 
 
--c [<N dumps>|<timestamp>]
+-c (clear old dump files first)
 
  Specify this option to delete old backups before performing a back up. 
  In the db_dumps directory, the directory where the name is the oldest 
@@ -170,13 +170,15 @@ OPTIONS
 
  The deleted directory might contain files from one or more backups. 
 
- Specify an integer N to remove N number of oldest dump directories or a
- YYYYMMDD timestamp to remove a specific dump directory.  Defaults to N=1,
- the oldest dump directory, if no argument is provided.
-
  WARNING: Before using this option, ensure that incremental backups 
  required to perform the restore are not deleted. The gpdbrestore utility 
  option --list-backup lists the backup sets required to perform a backup. 
+
+ If --cleanup-date=<YYYYMMDD date> is specified, the specified date will
+ be deleted.
+
+ If --cleanup-total=<N int> is specified, the oldest N dump dates will
+ be deleted.
 
  If --ddboost is specified, only the old files on Data Domain Boost are 
  deleted. 
@@ -195,6 +197,18 @@ OPTIONS
  If --incremental is specified and the files are on NFS storage, the -C 
  option is not supported. The database objects are not dropped if the -C 
  option is specified. 
+
+
+--cleanup-date <YYYYMMDD date>
+
+ Addon for -c (clear dumps) and -o (clear dumps only) options. Delete a
+ specified date.
+
+
+--cleanup-total <N int>
+
+ Addon for -c (clear dumps) and -o (clear dumps only) options. Delete
+ the oldest N dump dates.
 
 
 --column-inserts 
@@ -548,20 +562,22 @@ OPTIONS
  Do not output commands to set object privileges (GRANT/REVOKE commands). 
 
 
--o [<N dumps>|<timestamp>]
+-o (clear old dump files only)
 
  Clear out old dump files only, but do not run a dump. This will remove 
  the oldest dump directory except the current date's dump directory. 
  All dump sets within that directory will be removed.
 
- Specify an integer N to remove N number of oldest dump directories or a
- YYYYMMDD timestamp to remove a specific dump directory.  Defaults to N=1,
- the oldest dump directory, if no argument is provided.
-
  WARNING: Before using this option, ensure that incremental backups 
  required to perform the restore are not deleted. The gpdbrestore utility 
  option --list-backup lists the backup sets required to perform a 
  restore. 
+
+ If --cleanup-date=<YYYYMMDD date> is specified, the specified date will
+ be deleted.
+
+ If --cleanup-total=<N int> is specified, the oldest N dump dates will
+ be deleted.
 
  If --ddboost is specified, only the old files on Data Domain Boost are 
  deleted. 

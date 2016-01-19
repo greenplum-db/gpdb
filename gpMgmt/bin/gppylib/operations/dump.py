@@ -1659,12 +1659,12 @@ class DeleteCurrentSegDump(Operation):
             RemoveFile(os.path.join(path, filename)).run()
 
 class DeleteOldestDumps(Operation):
-    # TODO: This Operation isn't consuming backup_dir. Should it?
-    def __init__(self, master_datadir, master_port, dump_dir, del_val, ddboost):
+    def __init__(self, master_datadir, master_port, dump_dir, cleanup_date=None, cleanup_total=None, ddboost):
         self.master_datadir = master_datadir
         self.master_port = master_port
         self.dump_dir = dump_dir
-        self.del_val = del_val  # N dumps <int> or specific dump <YYYYMMDD timestamp>
+        self.cleanup_date = cleanup_date  # delete specific dump <YYYYMMDD timestamp>
+        self.cleanup_total = cleanup_total  # delete oldest N dumps <int>
         self.ddboost = ddboost
 
     def execute(self):
@@ -1690,23 +1690,24 @@ class DeleteOldestDumps(Operation):
             logger.info("No old backup sets to remove")
             return
 
-        # Check if del_val is a timestamp to remove only that specific dump
-        if len(self.del_val) == 8:
-            if self.del_val not in old_dates:
-                logger.warning("Timestamp dump %s does not exist." % self.del_val)
-                return
-            del_old_dates = [self.del_val]
-        else:
-            if len(old_dates) < int(self.del_val):
-                logger.warning("Unable to delete %s backups.  Only have %d backups." % (self.del_val, len(old_dates)))
+        delete_old_dates = []
+        if self.cleanup_total:
+            if len(old_dates) < int(self.cleanup_total):
+                logger.warning("Unable to delete %s backups.  Only have %d backups." % (self.cleanup_total, len(old_dates)))
                 return
 
             old_dates.sort()
-            del_old_dates = old_dates[0:int(self.del_val)]
+            delete_old_dates = delete_old_dates + old_dates[0:int(self.cleanup_total)]
+
+        if self.cleanup_date and self.cleanup_date not in delete_old_dates:
+            if self.cleanup_date not in old_dates:
+                logger.warning("Timestamp dump %s does not exist." % self.cleanup_date)
+                return
+            delete_old_dates.append(self.cleanup_date)
 
         gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.master_port), utility=True)
         primaries = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
-        for old_date in del_old_dates:
+        for old_date in delete_old_dates:
             # Remove the directories on DDBoost only. This will avoid the problem
             # where we might accidently end up deleting local backup files, but
             # the intention was to delete only the files on DDboost.
@@ -1736,7 +1737,7 @@ class DeleteOldestDumps(Operation):
                     except ExecutionError, e:
                         logger.warn("Error encountered during deletion of %s on %s" % (path, seg.getSegmentHostName()))
 
-        return del_old_dates
+        return delete_old_dates
 
 class VacuumDatabase(Operation):
     # TODO: move this to gppylib.operations.common?

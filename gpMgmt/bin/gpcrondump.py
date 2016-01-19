@@ -80,6 +80,16 @@ class GpCronDump(Operation):
         self.cur_host = socket.gethostname()
 
         self.clear_dumps_only = options.clear_dumps_only
+        self.clear_dumps = options.clear_dumps
+        self.cleanup_date = options.cleanup_date
+        self.cleanup_total = options.cleanup_total
+        if not (self.clear_dumps_only or self.clear_dumps) and self.cleanup_date:
+            raise ExceptionNoStackTraceNeeded("Must supply -c or -o with --cleanup-date option")
+        elif not (self.clear_dumps_only or self.clear_dumps) and self.cleanup_total:
+            raise ExceptionNoStackTraceNeeded("Must supply -c or -o with --cleanup-total option")
+        elif (self.clear_dumps_only or self.clear_dumps) and not (self.cleanup_date or self.cleanup_total):
+            self.cleanup_total = '1'
+
         self.post_script = options.post_script
         self.dump_config = options.dump_config
         self.history = options.history
@@ -89,7 +99,6 @@ class GpCronDump(Operation):
 
         self.compress = options.compress
         self.free_space_percent = options.free_space_percent
-        self.clear_dumps = options.clear_dumps
         self.dump_schema = options.dump_schema
         self.include_schema_file = options.include_schema_file
         self.exclude_schema_file = options.exclude_schema_file
@@ -740,11 +749,12 @@ class GpCronDump(Operation):
         if self.clear_dumps_only:
             logger.info('Clearing dumps only...')
             generate_dump_timestamp(self._get_timestamp_object(self.timestamp_key))
-            DeleteOldestDumps(master_datadir=self.master_datadir,
-                              master_port=self.master_port,
-                              dump_dir=self.dump_dir,
-                              del_val=self.clear_dumps_only,
-                              ddboost=self.ddboost).run()
+            DeleteOldestDumps(master_datadir = self.master_datadir,
+                              master_port = self.master_port,
+                              dump_dir = self.dump_dir,
+                              cleanup_date = self.cleanup_date,
+                              cleanup_total = self.cleanup_total,
+                              ddboost = self.ddboost).run()
             return
 
         if self.post_script is not None:
@@ -1008,7 +1018,8 @@ class GpCronDump(Operation):
                     deleted_dump_set = DeleteOldestDumps(master_datadir = self.master_datadir,
                                                          master_port = self.master_port,
                                                          dump_dir = self.dump_dir,
-                                                         del_val = self.clear_dumps,
+                                                         cleanup_date = self.cleanup_date,
+                                                         cleanup_total = self.cleanup_total,
                                                          ddboost = self.ddboost).run()
 
             if self.post_vacuum:
@@ -1281,7 +1292,7 @@ class GpCronDump(Operation):
         on_or_off = {False: "Off", True: "On"}
         logger.info("Rollback dumps                       = %s" % on_or_off[self.rollback])
         logger.info("Dump file compression                = %s" % on_or_off[self.compress])
-        logger.info("Clear old dump files                 = %s" % on_or_off[bool(self.clear_dumps)])
+        logger.info("Clear old dump files                 = %s" % on_or_off[self.clear_dumps])
         logger.info("Update history table                 = %s" % on_or_off[self.history])
         logger.info("Secure config files                  = %s" % on_or_off[self.dump_config])
         logger.info("Dump global objects                  = %s" % on_or_off[self.dump_global])
@@ -1431,30 +1442,6 @@ class GpCronDump(Operation):
         if default_email is True:
             MailDumpEvent(default_subject, default_msg).run()
 
-def clear_dumps_callback(option, opt_str, value, parser):
-    """
-    This is the callback function for the clear_dumps options -c and -o.  It checks if there is
-    an integer given or defaults to 1 for backwards scripting compatibility.  It then sets the
-    value for the relative OptParser dest to be used later in option parsing.
-    """
-    assert value is None
-    if len(parser.rargs) > 0:
-        value = parser.rargs[0]
-        if value[0] == "-":
-            value = "1"
-        else:
-            del parser.rargs[0]
-
-    if value == None:
-        value = "1"
-
-    try:
-        int(value)
-    except ValueError as e:
-        raise Exception('-o argument is not an integer: %s' % value)
-
-    setattr(parser.values, option.dest, value)
-
 def create_parser():
     parser = OptParser(option_class=OptChecker,
                        version='%prog version $Revision: #5 $',
@@ -1479,10 +1466,10 @@ def create_parser():
                      help="Do not use compression [default: use compression]")
     addTo.add_option('-f', dest='free_space_percent', metavar="<0-99>",
                      help="Percentage of disk space to ensure is reserved after dump.")
-    addTo.add_option('-c', action="callback", dest='clear_dumps', callback=clear_dumps_callback,
-                     help="Clear old dump directories. Will remove desired N oldest dump directories <int> or a given dump directory <YYYYMMDD timestamp>. This excludes the current dump directory.")
-    addTo.add_option('-o', action="callback", dest='clear_dumps_only', callback=clear_dumps_callback,
-                     help="Clear old dump directories only without running a dump. Will remove desired N oldest dump directories <int> or a given dump directory <YYYYMMDD timestamp>. This excludes the current dump directory.")
+    addTo.add_option('-c', action='store_true', dest='clear_dumps', default=False,
+                     help="Clear old dump directories [default: do not clear]. Will remove the oldest dump directory other than the current dump directory.")
+    addTo.add_option('-o', action='store_true', dest='clear_dumps_only', default=False,
+                     help="Clear dump files only. Do not run a dump. Like -c, this will clear the oldest dump directory, other than the current dump directory.")
     addTo.add_option('-s', action='append', dest='dump_schema', metavar="<schema name>",
                      help="Dump the schema contained within the database name supplied via -x. Option can be used more than once")
     addTo.add_option('--schema-file', dest='include_schema_file', metavar="<filename>",
@@ -1510,6 +1497,10 @@ def create_parser():
     addTo.add_option('-K', dest='timestamp_key', metavar="<YYYYMMDDHHMMSS>",
                      help="Timestamp key for the dump.")
 
+    addTo.add_option('--cleanup-date', dest='cleanup_date', default=None, metavar='<YYYYMMDD date>',
+                     help="Specific dump date to clear.")
+    addTo.add_option('--cleanup-total', dest='cleanup_total', default=None, metavar='<N int>',
+                     help="Specific number of old dumps to clear.")
     addTo.add_option('--list-backup-files', dest='list_backup_files', default=False, action='store_true',
                      help="Files created during the dump operation for a particular input timestamp")
     addTo.add_option('--prefix', dest='local_dump_prefix', default='', metavar='<filename prefix>',

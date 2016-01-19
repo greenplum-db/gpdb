@@ -1478,8 +1478,6 @@ Feature: Validate command line arguments
         When the method get_partition_state is executed on table "public.tuple_count_table" in "tempdb" for ao table "pepper.t1"
         Then the get_partition_state result should contain "pepper, t1, 999999999999999"
 
-    @backupfire
-    @dumpdelete
     Scenario: Test gpcrondump dump deletion only (-o option)
         Given the database is running
         And the database "deletedumpdb" does not exist
@@ -1494,20 +1492,18 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And the dump directories "20130101" should not exist
         And older backup directories "20130101" exists
-        When the user runs "gpcrondump -o 20130101"
+        When the user runs "gpcrondump -o --cleanup-date=20130101"
         Then gpcrondump should return a return code of 0
         And the dump directories "20130101" should not exist
         And older backup directories "20130101" exists
         And older backup directories "20130102" exists
-        When the user runs "gpcrondump -o 2"
+        When the user runs "gpcrondump -o --cleanup-total=2"
         Then gpcrondump should return a return code of 0
         And the dump directories "20130101" should not exist
         And the dump directories "20130102" should not exist
         And the dump directory for the stored timestamp should exist
         And the database "deletedumpdb" does not exist
 
-    @backupfire
-    @dumpdelete
     Scenario: Negative test gpcrondump dump deletion only (-o option)
         Given the database is running
         And the database "deletedumpdb" does not exist
@@ -1521,18 +1517,20 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And gpcrondump should print No old backup sets to remove to stdout
         And older backup directories "20130101" exists
-        When the user runs "gpcrondump -o 20130100"
+        When the user runs "gpcrondump -o --cleanup-date=20130100"
         Then gpcrondump should return a return code of 0
         And gpcrondump should print Timestamp dump 20130100 does not exist. to stdout
-        When the user runs "gpcrondump -o 2"
+        When the user runs "gpcrondump -o --cleanup-total=2"
         Then gpcrondump should return a return code of 0
         And gpcrondump should print Unable to delete 2 backups.  Only have 1 backups. to stdout
-        When the user runs "gpcrondump -o abc"
+        When the user runs "gpcrondump --cleanup-date=20130100"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print -o argument is not an integer: abc to stdout
+        And gpcrondump should print Must supply -c or -o with --cleanup-date option to stdout
+        When the user runs "gpcrondump --cleanup-total=2"
+        Then gpcrondump should return a return code of 2
+        And gpcrondump should print Must supply -c or -o with --cleanup-total option to stdout
 
     @backupfire
-    @dumpdelete
     Scenario: Test gpcrondump dump deletion (-c option)
         Given the database is running
         And the database "dumpdeletedb" does not exist
@@ -1549,13 +1547,13 @@ Feature: Validate command line arguments
         And the dump directory for the stored timestamp should exist
         And older backup directories "20130101" exists
         And older backup directories "20130102" exists
-        When the user runs "gpcrondump -a -x deletedumpdb -c 2"
+        When the user runs "gpcrondump -a -x deletedumpdb -c --cleanup-total=2"
         Then gpcrondump should return a return code of 0
         And the dump directories "20130101" should not exist
         And the dump directories "20130102" should not exist
         And the dump directory for the stored timestamp should exist
         And older backup directories "20130101" exists
-        When the user runs "gpcrondump -a -x deletedumpdb -c 20130101"
+        When the user runs "gpcrondump -a -x deletedumpdb -c --cleanup-date=20130101"
         Then gpcrondump should return a return code of 0
         And the dump directories "20130101" should not exist
         And the dump directory for the stored timestamp should exist
