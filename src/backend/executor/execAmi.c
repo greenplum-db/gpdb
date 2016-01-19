@@ -49,6 +49,8 @@
 #include "executor/nodeBitmapAppendOnlyscan.h"
 #include "executor/nodeWindow.h"
 #include "executor/nodeShareInputScan.h"
+#include "executor/nodeResilientJoin.h"
+#include "executor/nodeHashDummy.h"
 
 
 /*
@@ -250,6 +252,12 @@ ExecReScan(PlanState *node, ExprContext *exprCtxt)
 			break;
 		case T_PartitionSelectorState:
 			ExecReScanPartitionSelector((PartitionSelectorState *) node, exprCtxt);
+			break;
+		case T_ResilientJoinState:
+			ExecResilientJoinReScan((ResilientJoinState *) node, exprCtxt);
+			break;
+		case T_HashDummyState:
+			ExecReScanHashDummy((HashDummyState *) node, exprCtxt);
 			break;
 			
 		default:
@@ -618,6 +626,7 @@ ExecEagerFree(PlanState *node)
 		case T_DynamicIndexScanState:
 		case T_SequenceState:
 		case T_PartitionSelectorState:
+		case T_HashDummyState:
 			break;
 
 		case T_TableScanState:
@@ -680,6 +689,10 @@ ExecEagerFree(PlanState *node)
 
 		case T_ShareInputScanState:
 			ExecEagerFreeShareInputScan((ShareInputScanState *)node);
+			break;
+
+		case T_ResilientJoinState:
+			ExecEagerFreeResilientJoin((ResilientJoinState *)node);
 			break;
 
 		default:
@@ -811,6 +824,7 @@ ExecEagerFreeChildNodes(PlanState *node, bool subplanDone)
 		case T_BitmapAndState:
 		case T_BitmapOrState:
 		case T_HashJoinState:
+		case T_ResilientJoinState:
 		{
 			planstate_walk_node(innerPlanState(node), EagerFreeWalker, &ctx);
 			planstate_walk_node(outerPlanState(node), EagerFreeWalker, &ctx);

@@ -985,6 +985,15 @@ plan_tree_walker(Node *node,
 				return true;
 			break;
 
+		case T_ResilientJoin:
+			if (walk_join_node_fields((Join *) node, walker, context))
+				return true;
+			if (walker((Node *) ((ResilientJoin *) node)->hashclauses, context))
+				return true;
+			if (walker((Node *) ((ResilientJoin *) node)->hashqualclauses, context))
+				return true;
+			break;
+
 		case T_Material:
 			if (walk_plan_node_fields((Plan *) node, walker, context))
 				return true;

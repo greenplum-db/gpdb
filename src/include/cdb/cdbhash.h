@@ -96,4 +96,6 @@ extern bool isGreenplumDbHashable(Oid typid);
  */
 extern bool typeIsArrayType(Oid typeoid);
 
+extern void ConvertDatumToHashableBytes(Datum datum, Oid type, void **bytes, size_t *length, void **toFree);
+
 #endif   /* CDBHASH_H */

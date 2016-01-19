@@ -1672,9 +1672,17 @@ CTranslatorDXLToPlStmt::PhjFromDXLHJ
 	GPOS_ASSERT(pdxlnHJ->UlArity() == EdxlhjIndexSentinel);
 
 	// create hash join node
-	HashJoin *phj = MakeNode(HashJoin);
+	Plan *phj = NULL;
+	if (enable_resilient_join)
+	{
+		phj = (Plan *) MakeNode(ResilientJoin);
+	}
+	else
+	{
+		phj = (Plan *) MakeNode(HashJoin);
+	}
+	Join *pj = (Join *)phj;
 
-	Join *pj = &(phj->join);
 	Plan *pplan = &(pj->plan);
 	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
 	pplan->plan_parent_node_id = IPlanId(pplanParent);
@@ -1712,7 +1720,15 @@ CTranslatorDXLToPlStmt::PhjFromDXLHJ
 	DrgPdxltrctx *pdrgpdxltrctxWithSiblings = GPOS_NEW(m_pmp) DrgPdxltrctx(m_pmp);
 	pdrgpdxltrctxWithSiblings->Append(&dxltrctxLeft);
 	pdrgpdxltrctxWithSiblings->AppendArray(pdrgpdxltrctxPrevSiblings);
-	Plan *pplanRight = (Plan*) PhhashFromDXL(pdxlnRight, &dxltrctxRight, pplan, pdrgpdxltrctxWithSiblings);
+	Plan *pplanRight = NULL;
+	if (enable_resilient_join)
+	{
+		pplanRight = PplFromDXL(pdxlnRight, &dxltrctxRight, pplan, pdrgpdxltrctxPrevSiblings);
+	}
+	else
+	{
+		pplanRight = (Plan*) PhhashFromDXL(pdxlnRight, &dxltrctxRight, pplan, pdrgpdxltrctxWithSiblings);
+	}
 
 	DrgPdxltrctx *pdrgpdxltrctx = GPOS_NEW(m_pmp) DrgPdxltrctx(m_pmp);
 	pdrgpdxltrctx->Append(const_cast<CDXLTranslateContext*>(&dxltrctxLeft));
@@ -1775,7 +1791,14 @@ CTranslatorDXLToPlStmt::PhjFromDXLHJ
 	if (!fHasINDFCond)
 	{
 		// no INDF conditions in the hash condition list
-		phj->hashclauses = plHashConditions;
+		if (enable_resilient_join)
+		{
+			((ResilientJoin *)phj)->hashclauses = plHashConditions;
+		}
+		else
+		{
+			((HashJoin *)phj)->hashclauses = plHashConditions;
+		}
 	}
 	else
 	{
@@ -1820,11 +1843,19 @@ CTranslatorDXLToPlStmt::PhjFromDXLHJ
 			plHashClauses = gpdb::PlAppendElement(plHashClauses, pexpr2);
 		}
 
-		phj->hashclauses = plHashClauses;
-		phj->hashqualclauses = plHashConditions;
-	}
+		GPOS_ASSERT(NIL != plHashClauses);
 
-	GPOS_ASSERT(NIL != phj->hashclauses);
+		if (enable_resilient_join)
+		{
+			((ResilientJoin *)phj)->hashclauses = plHashClauses;
+			((ResilientJoin *)phj)->hashqualclauses = plHashConditions;
+		}
+		else
+		{
+			((HashJoin *)phj)->hashclauses = plHashClauses;
+			((HashJoin *)phj)->hashqualclauses = plHashConditions;
+		}
+	}
 
 	pplan->lefttree = pplanLeft;
 	pplan->righttree = pplanRight;
@@ -1835,7 +1866,7 @@ CTranslatorDXLToPlStmt::PhjFromDXLHJ
 	pdrgpdxltrctxWithSiblings->Release();
 	pdrgpdxltrctx->Release();
 
-	return  (Plan *) phj;
+	return phj;
 }
 
 //---------------------------------------------------------------------------

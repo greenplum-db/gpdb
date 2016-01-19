@@ -517,6 +517,19 @@ plan_tree_mutator(Node *node,
 			}
 			break;
 
+		case T_ResilientJoin:
+			{
+				ResilientJoin   *rjoin = (ResilientJoin *) node;
+				ResilientJoin   *newrjoin;
+
+				FLATCOPY(newrjoin, rjoin, ResilientJoin);
+				JOINMUTATE(newrjoin, rjoin);
+				MUTATE(newrjoin->hashclauses, rjoin->hashclauses, List *);
+				MUTATE(newrjoin->hashqualclauses, rjoin->hashqualclauses, List *);
+				return (Node *) newrjoin;
+			}
+			break;
+
 		case T_ShareInputScan:
 			{
 				ShareInputScan *sis = (ShareInputScan *) node;

@@ -790,6 +790,13 @@ typedef struct MergeJoin
  *		a match.  This is normally identical to hashclauses (which holds the
  *		equality test), but differs in case of non-equijoin comparisons.
  *		Field hashclauses is retained for use in hash table operations.
+ *
+ *		hashclauses are no longer evaluated as an expression. Instead, we extract
+ *		lclauses and rclauses for left and right hashable column expressions, and
+ *		evaluate these expressions to obtain the hashable values for left and right
+ *		columns. During joining, we only check the hash values of left and right
+ *		columns and then evaluate the hashqualclauses on the tuples with the same
+ *		hash value.
  * ----------------
  */
 typedef struct HashJoin
@@ -1219,5 +1226,19 @@ typedef struct PartitionSelector
 	List		*staticScanIds;     	/* scan ids used to propagate statically selected part oids */
 
 } PartitionSelector;
+
+/* ----------------
+ *		Resilient Join
+ *
+ * ----------------
+ */
+typedef HashJoin ResilientJoin;
+
+/* ----------------
+ *		Dummy Hash node
+ *
+ * ----------------
+ */
+typedef Hash HashDummy;
 
 #endif   /* PLANNODES_H */

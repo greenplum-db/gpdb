@@ -121,6 +121,8 @@
 #include "executor/nodeValuesscan.h"
 #include "executor/nodeWindow.h"
 #include "executor/nodePartitionSelector.h"
+#include "executor/nodeResilientJoin.h"
+#include "executor/nodeHashDummy.h"
 #include "miscadmin.h"
 #include "tcop/tcopprot.h"
 #include "cdb/cdbvars.h"
@@ -137,6 +139,8 @@ static void ExecCdbTraceNode(PlanState *node, bool entry, TupleTableSlot *result
 
  /* flags bits for planstate walker */
  #define PSW_IGNORE_INITPLAN	0x01
+
+ extern bool		optimizer; /* Enable the optimizer */
 
  /**
   * Forward declarations of static functions
@@ -232,25 +236,6 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	 */
 	bool isAlienPlanNode = !((currentSliceId == origSliceIdInPlan) ||
 			(nodeTag(node) == T_Motion && ((Motion*)node)->motionID == currentSliceId));
-
-	/*
-	 * As of 03/28/2014, there is no support for BitmapTableScan
-	 * in the planner/optimizer. Therefore, for testing purpose
-	 * we treat Bitmap Heap/AO/AOCO as BitmapTableScan, if the guc
-	 * force_bitmap_table_scan is true.
-	 *
-	 * TODO rahmaf2 04/01/2014: remove all "fake" BitmapTableScan
-	 * once the planner/optimizer is capable of generating BitmapTableScan
-	 * nodes. [JIRA: MPP-23177]
-	 */
-	if (force_bitmap_table_scan)
-	{
-		if (IsA(node, BitmapHeapScan) ||
-				IsA(node, BitmapAppendOnlyScan))
-		{
-			node->type = T_BitmapTableScan;
-		}
-	}
 
 	switch (nodeTag(node))
 	{
@@ -501,8 +486,16 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 
 			START_MEMORY_ACCOUNT(curMemoryAccount);
 			{
-			result = (PlanState *) ExecInitHashJoin((HashJoin *) node,
+				if (force_new_join)
+				{
+					result = (PlanState *) ExecInitResilientJoin((ResilientJoin *) node,
 													estate, eflags);
+				}
+				else
+				{
+					result = (PlanState *) ExecInitHashJoin((HashJoin *) node,
+													estate, eflags);
+				}
 			}
 			END_MEMORY_ACCOUNT();
 			break;
@@ -583,8 +576,16 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 
 			START_MEMORY_ACCOUNT(curMemoryAccount);
 			{
-			result = (PlanState *) ExecInitHash((Hash *) node,
-												estate, eflags);
+				if (force_new_join)
+				{
+					result = (PlanState *) ExecInitHashDummy((HashDummy *) node,
+														estate, eflags);
+				}
+				else
+				{
+					result = (PlanState *) ExecInitHash((Hash *) node,
+														estate, eflags);
+				}
 			}
 			END_MEMORY_ACCOUNT();
 			break;
@@ -682,6 +683,27 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			}
 			END_MEMORY_ACCOUNT();
 			break;
+		case T_ResilientJoin:
+			curMemoryAccount = CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, node, ResilientJoin);
+
+			START_MEMORY_ACCOUNT(curMemoryAccount);
+			{
+			result = (PlanState *) ExecInitResilientJoin((ResilientJoin *) node,
+															estate, eflags);
+			}
+			END_MEMORY_ACCOUNT();
+			break;
+		case T_HashDummy:
+			curMemoryAccount = CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, node, HashDummy);
+
+			START_MEMORY_ACCOUNT(curMemoryAccount);
+			{
+				result = (PlanState *) ExecInitHashDummy((HashDummy *) node,
+													estate, eflags);
+			}
+			END_MEMORY_ACCOUNT();
+			break;
+
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
 			result = NULL;		/* keep compiler quiet */
@@ -847,7 +869,9 @@ ExecProcNode(PlanState *node)
 		&&Exec_Jmp_SplitUpdate,
 		&&Exec_Jmp_RowTrigger,
 		&&Exec_Jmp_AssertOp,
-		&&Exec_Jmp_PartitionSelector
+		&&Exec_Jmp_PartitionSelector,
+		&&Exec_Jmp_ResilientJoin,
+		&&Exec_Jmp_HashDummy
 	};
 
 	COMPILE_ASSERT((T_Plan_End - T_Plan_Start) == (T_PlanState_End - T_PlanState_Start));
@@ -1030,6 +1054,14 @@ Exec_Jmp_PartitionSelector:
 	result = ExecPartitionSelector((PartitionSelectorState *) node);
 	goto Exec_Jmp_Done;
 
+Exec_Jmp_ResilientJoin:
+	result = ExecResilientJoin((ResilientJoinState *) node);
+	goto Exec_Jmp_Done;
+
+Exec_Jmp_HashDummy:
+		result = ExecHashDummy((HashDummyState *) node);
+		goto Exec_Jmp_Done;
+
 Exec_Jmp_Done:
 	if (node->instrument)
 		InstrStopNode(node->instrument, TupIsNull(result) ? 0.0 : 1.0);
@@ -1130,6 +1162,10 @@ Exec_Jmp_Done:
 
 		case T_HashJoinState:
 			result = ExecHashJoin((HashJoinState *) node);
+			break;
+
+		case T_ResilientJoinState:
+			result = ExecResilientJoin((ResilientJoinState *) node);
 			break;
 
 			/*
@@ -1379,8 +1415,11 @@ ExecCountSlotsNode(Plan *node)
 			return ExecCountSlotsMergeJoin((MergeJoin *) node);
 
 		case T_HashJoin:
+			if (force_new_join)
+			{
+				return ExecCountSlotsResilientJoin((ResilientJoin *) node);
+			}
 			return ExecCountSlotsHashJoin((HashJoin *) node);
-
 		/*
 		 * share input nodes
 		 */
@@ -1406,6 +1445,10 @@ ExecCountSlotsNode(Plan *node)
 			return ExecCountSlotsUnique((Unique *) node);
 
 		case T_Hash:
+			if (force_new_join)
+			{
+				return ExecCountSlotsHashDummy((HashDummy *) node);
+			}
 			return ExecCountSlotsHash((Hash *) node);
 
 		case T_SetOp:
@@ -1434,6 +1477,12 @@ ExecCountSlotsNode(Plan *node)
 
 		case T_PartitionSelector:
 			return ExecCountSlotsPartitionSelector((PartitionSelector *) node);
+
+		case T_ResilientJoin:
+			return ExecCountSlotsResilientJoin((ResilientJoin *) node);
+
+		case T_HashDummy:
+			return ExecCountSlotsHashDummy((HashDummy *) node);
 
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
@@ -1733,6 +1782,12 @@ ExecEndNode(PlanState *node)
 		case T_PartitionSelectorState:
 			ExecEndPartitionSelector((PartitionSelectorState *) node);
 			break;
+		case T_ResilientJoinState:
+			ExecEndResilientJoin((ResilientJoinState *) node);
+			break;
+		case T_HashDummyState:
+			ExecEndHashDummy((HashDummyState *) node);
+			break;
 
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
@@ -1854,6 +1909,10 @@ ExecCdbTraceNode(PlanState *node, bool entry, TupleTableSlot *result)
 
 		case T_HashJoinState:
 			nameTag = "HashJoin";
+			break;
+
+		case T_ResilientJoinState:
+			nameTag = "ResilientJoin";
 			break;
 
 			/*

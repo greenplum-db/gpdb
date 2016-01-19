@@ -151,6 +151,9 @@ get_name_from_nodeType(const NodeTag node_type)
 		case T_SortState:
 			appendStringInfoString(operator_name,"Sort");
 			break;
+		case T_ResilientJoinState:
+			appendStringInfoString(operator_name,"ResilientJoin");
+			break;
 		case T_Invalid:
 			/* When spilling from a builtin function, we don't have a valid node type */
 			appendStringInfoString(operator_name,"BuiltinFunction");

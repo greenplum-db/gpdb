@@ -1909,6 +1909,22 @@ _readHashJoin(void)
 }
 
 /*
+ * _readResilientJoin
+ */
+static ResilientJoin *
+_readResilientJoin(void)
+{
+	READ_LOCALS(ResilientJoin);
+
+	readJoinInfo((Join *)local_node);
+
+	READ_NODE_FIELD(hashclauses);
+	READ_NODE_FIELD(hashqualclauses);
+
+	READ_DONE();
+}
+
+/*
  * _readAgg
  */
 static Agg *
@@ -2723,6 +2739,9 @@ readNodeBinary(void)
 				break;
 			case T_HashJoin:
 				return_value = _readHashJoin();
+				break;
+			case T_ResilientJoin:
+				return_value = _readResilientJoin();
 				break;
 			case T_Agg:
 				return_value = _readAgg();

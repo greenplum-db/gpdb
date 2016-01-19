@@ -2118,31 +2118,98 @@ typedef struct HashJoinTableData *HashJoinTable;
 
 typedef struct HashJoinState
 {
-	JoinState	js;				/* its first field is NodeTag */
-	List	   *hashclauses;	/* list of ExprState nodes (hash) */
-	List	   *hashqualclauses;	/* CDB: list of ExprState nodes (match) */
-	HashJoinTable hj_HashTable;
-	uint32		hj_CurHashValue;
-	int			hj_CurBucketNo;
-	HashJoinTuple hj_CurTuple;
-	List	   *hj_OuterHashKeys;		/* list of ExprState nodes */
-	List	   *hj_InnerHashKeys;		/* list of ExprState nodes */
-	List	   *hj_HashOperators;		/* list of operator OIDs */
-	TupleTableSlot *hj_OuterTupleSlot;
-	TupleTableSlot *hj_HashTupleSlot;
-	TupleTableSlot *hj_NullInnerTupleSlot;
-	TupleTableSlot *hj_FirstOuterTupleSlot;
-	bool		hj_NeedNewOuter;
-	bool		hj_MatchedOuter;
-	bool		hj_OuterNotEmpty;
-	bool		hj_InnerEmpty;  /* set to true if inner side is empty */
-	bool		prefetch_inner;
-	bool		hj_nonequijoin;
+		/* its first field is NodeTag */
+        JoinState        js;
 
-	/* set if the operator created workfiles */
-	bool workfiles_created;
+        /*
+         * A list of ExprState pointers that can be broken into hj_OuterHashKeys
+         * and hj_InnerHashKeys
+         */
+        List           *hashclauses;
+
+        /*
+         * This is evaluated to verify if two tuples with same hash value actually
+         * matches on their hashed column. Note, hash values can be identical for different
+         * values and therefore are not conclusive for comparing two tuples
+         */
+        List           *hashqualclauses;
+        HashJoinTable hj_HashTable;
+
+        /*
+         * The hash value of the outer tuple. This is matched against the hash values of each
+         * tuple in a bucket. Not sure why we have different hash values within a single bucket.
+         * Refer to ExecScanHashBucket
+         */
+        uint32                hj_CurHashValue;
+        /*
+         * One outer tuple can join with many inner tuples. We cache the outer tuple's
+         * current bucket number across joins with multiple inner tuples
+         */
+        int                        hj_CurBucketNo;
+        /*
+         * The current inner tuple (i.e., build tuple) in the current bucket. The next
+         * join call can just start from this tuple instead of iterating within the bucket
+         * all-over again
+         */
+        HashJoinTuple hj_CurTuple;
+
+        /* The outer (probe) hash keys (list of ExprStaten nodes) as extracted from hashclauses (see above) */
+        List           *hj_OuterHashKeys;
+
+        /* The inner (build) hash keys (list of ExprState nodes) as extracted from hashclauses (see above) */
+        List           *hj_InnerHashKeys;
+
+        /*
+         * All the operator functions' oids as extracted from hashclauses (see above).
+         * These oids are later converted to hashfunctions inside ExecHashTableCreate
+         * and used to hash the keys
+         */
+        List           *hj_HashOperators;
+
+        /* This slot is used to read saved outer tuples (i.e., from the outer side workfile) */
+        struct TupleTableSlot *hj_OuterTupleSlot;
+
+        /*
+         * This is the output tuple from the hash join. This tuple slot also points to
+         * the hashstate->ps.ps_ResultTupleSlot
+         */
+        struct TupleTableSlot *hj_HashTupleSlot;
+        /* A NULL tuple slot to produce null values for inner tuple's columns during outer joins */
+        struct TupleTableSlot *hj_NullInnerTupleSlot;
+
+        /*
+         * We read one tuple from outer side to check if we have an empty outer side
+         * (i.e., skip building the hash table). We save that pre-fetched tuple in
+         * this slot
+         */
+        struct TupleTableSlot *hj_FirstOuterTupleSlot;
+        /*
+         * Whether we need to fetch a new outer, or can continue using the already fetched
+         * outer tuple. Note, one outer tuple can join with many inner tuple.
+         */
+        bool                hj_NeedNewOuter;
+        /*
+         * If the outer already matched with 1 inner, this is set to true. For JOIN_IN
+         * we can skip the rest of the inner tuples and request a new outer tuple
+         */
+        bool                hj_MatchedOuter;
+
+        /* Is the outer node already found to be completely empty? */
+        bool                hj_OuterNotEmpty;
+        /* After build is done, did we find the hash table empty? */
+        bool                hj_InnerEmpty;
+        /*
+         * Should we first check for emptiness of the outer side? If prefetch_inner
+         * is set to true, we never try to prefetch the outer to check for emptiness
+         */
+        bool                prefetch_inner;
+
+        /* If set to true, this is a IS NOT DISTICT join (??). In such case we keep nulls */
+        bool                hj_nonequijoin;
+
+        /* set if the operator created workfiles */
+        bool workfiles_created;
 } HashJoinState;
-
 
 /* ----------------------------------------------------------------
  *				 Materialization State Information
@@ -2398,6 +2465,15 @@ typedef struct HashState
 	bool		hs_hashkeys_null;	/* found an instance wherein hashkeys are all null */
 	/* hashkeys is same as parent's hj_InnerHashKeys */
 } HashState;
+
+/* ----------------
+ *         HashDummyState information
+ * ----------------
+ */
+typedef struct HashDummyState
+{
+        PlanState        ps;                /* its first field is NodeTag */
+} HashDummyState;
 
 /* ----------------
  *	 SetOpState information
