@@ -270,6 +270,7 @@ AggregateCreateWithOid(const char		*aggName,
 							  PointerGetDatum(NULL),	/* parameterModes */
 							  PointerGetDatum(NULL),	/* parameterNames */
 							  PRODATAACCESS_NONE,		/* prodataaccess */
+							  NIL,						/* parameterDefaults */
 							  procOid);
 	/*
 	 * Okay to create the pg_aggregate entry.
@@ -397,9 +398,9 @@ lookup_agg_function(List *fnName,
 	 * function's return value.  it also returns the true argument types to
 	 * the function.
 	 */
-	fdresult = func_get_detail(fnName, NIL, nargs, input_types, false,
+	fdresult = func_get_detail(fnName, NIL, nargs, input_types, false, false,
 							   &fnOid, rettype, &retset, &retstrict,
-							   &retordered, &nvargs, &true_oid_array);
+							   &retordered, &nvargs, &true_oid_array, NULL);
 
 	/* only valid case is a normal function not returning a set */
 	if (fdresult != FUNCDETAIL_NORMAL || !OidIsValid(fnOid))

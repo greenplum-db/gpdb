@@ -2728,6 +2728,7 @@ _outFunctionParameter(StringInfo str, FunctionParameter *node)
 	WRITE_STRING_FIELD(name);
 	WRITE_NODE_FIELD(argType);
 	WRITE_ENUM_FIELD(mode, FunctionParameterMode);
+	WRITE_NODE_FIELD(defexpr);
 }
 
 static void

@@ -3344,6 +3344,7 @@ _copyFunctionParameter(FunctionParameter *from)
 	COPY_STRING_FIELD(name);
 	COPY_NODE_FIELD(argType);
 	COPY_SCALAR_FIELD(mode);
+	COPY_NODE_FIELD(defexpr);
 
 	return newnode;
 }

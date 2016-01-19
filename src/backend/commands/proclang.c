@@ -164,6 +164,7 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
 										 PointerGetDatum(NULL),
 										 PointerGetDatum(NULL),
 										 PRODATAACCESS_NONE,
+										 NIL,
 										 stmt->plhandlerOid);
 		}
 
@@ -198,6 +199,7 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
 										 PointerGetDatum(NULL),
 										 PointerGetDatum(NULL),
 										 PRODATAACCESS_NONE,
+										 NIL,
 										 stmt->plvalidatorOid);
 			}
 		}

@@ -31,6 +31,8 @@
 #include "funcapi.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
+#include "nodes/nodeFuncs.h"
+#include "parser/parse_expr.h"
 #include "parser/parse_type.h"
 #include "tcop/pquery.h"
 #include "tcop/tcopprot.h"
@@ -82,6 +84,7 @@ ProcedureCreate(const char *procedureName,
 				Datum parameterModes,
 				Datum parameterNames,
 				char prodataaccess,
+				List *parameterDefaults,
 				Oid funcOid)
 {
 	Oid			retval;
@@ -107,6 +110,9 @@ ProcedureCreate(const char *procedureName,
 	int			i;
 	cqContext	cqc;
 	cqContext  *pcqCtx;
+	bool		isnull;
+	Datum		ndefDatum;
+	int			ndefCount;
 
 	/*
 	 * sanity checks
@@ -326,6 +332,11 @@ ProcedureCreate(const char *procedureName,
 	nulls[Anum_pg_proc_proacl - 1] = true;
 	values[Anum_pg_proc_prodataaccess - 1] = CharGetDatum(prodataaccess);
 	values[Anum_pg_proc_provariadic - 1] = ObjectIdGetDatum(variadicType);
+	values[Anum_pg_proc_pronargdefaults - 1] = UInt16GetDatum(list_length(parameterDefaults));
+	if (parameterDefaults != NIL)
+		values[Anum_pg_proc_proargdefaults - 1] = CStringGetTextDatum(nodeToString(parameterDefaults));
+	else
+		nulls[Anum_pg_proc_proargdefaults - 1] = true;
 
 	rel = heap_open(ProcedureRelationId, RowExclusiveLock);
 
@@ -392,6 +403,57 @@ ProcedureCreate(const char *procedureName,
 					errmsg("cannot change return type of existing function"),
 				errdetail("Row type defined by OUT parameters is different."),
 						 errhint("Use DROP FUNCTION first.")));
+		}
+
+		/*
+		 * If there are existing defaults, check compatibility: redefinition
+		 * must not remove any defaults nor change their types.  (Removing
+		 * a default might cause a function to fail to satisfy an existing
+		 * call.  Changing type would only be possible if the associated
+		 * parameter is polymorphic, and in such cases a change of default
+		 * type might alter the resolved output type of existing calls.)
+		 */
+		ndefDatum = SysCacheGetAttr(PROCNAMEARGSNSP, oldtup,
+									Anum_pg_proc_pronargdefaults, &isnull);
+		ndefCount = DatumGetObjectId(ndefDatum);
+		if (ndefCount != 0)
+		{
+			Datum       proargdefaults;
+			List       *oldDefaults;
+			ListCell   *oldlc;
+			ListCell   *newlc;
+
+			if (list_length(parameterDefaults) < ndefCount)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+						 errmsg("cannot remove parameter defaults from existing function"),
+						 errhint("Use DROP FUNCTION first.")));
+
+			proargdefaults = SysCacheGetAttr(PROCNAMEARGSNSP, oldtup,
+											 Anum_pg_proc_proargdefaults,
+											 &isnull);
+			Assert(!isnull);
+			oldDefaults = (List *) stringToNode(TextDatumGetCString(proargdefaults));
+			Assert(IsA(oldDefaults, List));
+			Assert(list_length(oldDefaults) == ndefCount);
+
+			/* new list can have more defaults than old, advance over 'em */
+			newlc = list_head(parameterDefaults);
+			for (i = list_length(parameterDefaults) - ndefCount; i > 0; i--)
+				newlc = lnext(newlc);
+
+			foreach(oldlc, oldDefaults)
+			{
+				Node   *oldDef = (Node *) lfirst(oldlc);
+				Node   *newDef = (Node *) lfirst(newlc);
+
+				if (exprType(oldDef) != exprType(newDef))
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+							 errmsg("cannot change data type of existing parameter default value"),
+							 errhint("Use DROP FUNCTION first.")));
+				newlc = lnext(newlc);
+			}
 		}
 
 		/*
@@ -539,6 +601,11 @@ ProcedureCreate(const char *procedureName,
 		referenced.objectSubId = 0;
 		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 	}
+
+	/* dependency on parameter default expressions */
+	if (parameterDefaults)
+		recordDependencyOnExpr(&myself, (Node *) parameterDefaults,
+							   NIL, DEPENDENCY_NORMAL);
 
 	/* dependency on owner */
 	recordDependencyOnOwner(ProcedureRelationId, retval, GetUserId());
