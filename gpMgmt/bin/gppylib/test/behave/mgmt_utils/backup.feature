@@ -4874,6 +4874,8 @@ Feature: Validate command line arguments
         When the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/create_metadata.sql testdb"
         And the user runs "gpcrondump -a -x testdb -K 30160101010101 -u /tmp"
         Then gpcrondump should return a return code of 0
+        And the full backup timestamp from gpcrondump is stored
+        And all the data from the remote segments in "testdb" are stored in path "/tmp" for "full"
         And verify that the file "/tmp/db_dumps/30160101/gp_dump_status_0_2_30160101010101" does not contain "reading indexes"
         And verify that the file "/tmp/db_dumps/30160101/gp_dump_status_1_1_30160101010101" contains "reading indexes"
         Given database "testdb" is dropped and recreated
