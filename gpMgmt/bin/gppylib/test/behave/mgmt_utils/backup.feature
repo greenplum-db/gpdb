@@ -4870,17 +4870,19 @@ Feature: Validate command line arguments
 
     Scenario: Dump and Restore metadata
         Given the database is running
-        And there are no backup files
-        Given database "testdb" is dropped and recreated
+        And database "testdb" is dropped and recreated
         When the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/create_metadata.sql testdb"
-        When the user runs "gpcrondump -a -x testdb"
+        And the user runs "gpcrondump -a -x testdb -K 30160101010101 -u /tmp"
         Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
+        And verify that the file "/tmp/db_dumps/30160101/gp_dump_status_0_2_30160101010101" does not contain "reading indexes"
+        And verify that the file "/tmp/db_dumps/30160101/gp_dump_status_1_1_30160101010101" contains "reading indexes"
         Given database "testdb" is dropped and recreated
-        When the user runs "gpdbrestore -a" with the stored timestamp
+        When the user runs "gpdbrestore -a -t 30160101010101 -u /tmp"
         Then gpdbrestore should return a return code of 0
         And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/check_metadata.sql testdb > /tmp/check_metadata.out"
-        Then verify that the contents of the files "/tmp/check_metadata.out" and "gppylib/test/behave/mgmt_utils/steps/data/check_metadata.ans" are identical
+        And verify that the contents of the files "/tmp/check_metadata.out" and "gppylib/test/behave/mgmt_utils/steps/data/check_metadata.ans" are identical
+        And the directory "/tmp/db_dumps" is removed or does not exist
+        And the directory "/tmp/check_metadata.out" is removed or does not exist
 
     Scenario: Restore -T for full dump should restore GRANT privileges for tablenames with English and multibyte (chinese) characters
         Given the database is running
