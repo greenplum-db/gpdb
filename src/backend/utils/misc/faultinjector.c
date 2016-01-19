@@ -802,11 +802,6 @@ FaultInjector_InjectFaultIfSet(
 
 		case FaultInjectorTypeFinishPending:
 		{
-			/*
-			 * The place where this type of fault is injected must have
-			 * has HOLD_INTERRUPTS() .. RESUME_INTERRUPTS() around it, otherwise
-			 * the interrupt could be handled inside the fault injector itself
-			 */
 			ereport(LOG,
 					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
