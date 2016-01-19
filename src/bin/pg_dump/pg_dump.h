@@ -424,7 +424,7 @@ extern const char *EXT_PARTITION_NAME_POSTFIX;
  *	common utility functions
  */
 
-extern TableInfo *getSchemaData(int *numTablesPtr);
+extern TableInfo *getSchemaData(int *numTablesPtr, int g_role);
 
 typedef enum _OidOptions
 {
