@@ -2418,6 +2418,16 @@ tuplesort_rescan_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos)
             pos->cur_work_tape = NULL;
             break;
         case TSS_SORTEDONTAPE:
+            if (NULL == state->result_tape)
+            {
+                Assert(pos->eof_reached);
+                pos->markpos.tapepos.blkNum = 0L;
+                pos->markpos.tapepos.offset = 0;
+                pos->markpos_eof = true;
+
+                break;
+            }
+
             if(pos == &state->pos)
             {
                 Assert(pos->cur_work_tape == NULL);
