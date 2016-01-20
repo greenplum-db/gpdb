@@ -180,3 +180,5 @@ make installcheck-good
 
 For Greenplum Database documentation, please check online docs:
 http://gpdb.docs.pivotal.io
+
+There is also a Vagrant-based quickstart guide for developers in `vagrant/README.md`.
