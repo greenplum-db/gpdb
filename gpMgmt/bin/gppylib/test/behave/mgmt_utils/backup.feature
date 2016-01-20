@@ -4257,70 +4257,6 @@ Feature: Validate command line arguments
         And gpdbrestore should return a return code of 0
         And verify that the data of "1" tables in "testdb" is validated after restore
 
-    Scenario: Testing pg_dump log messages
-        Given the database is running
-        And there is a "heap" table "heap_table" with compression "None" in "testdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "testdb" with data
-        When the user runs "pg_dump testdb 2> /tmp/pg_dump_log -f /tmp/pg_dump"
-        Then pg_dump should return a return code of 0
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading schemas"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading user-defined functions"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading user-defined types"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading type storage options"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading procedural languages"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading user-defined aggregate functions"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading user-defined operators"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading user-defined external protocols"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading user-defined operator classes"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading user-defined conversions"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading user-defined tables"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading table inheritance information"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading rewrite rules"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading type casts"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "finding inheritance relationships"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading column info for interesting tables"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "flagging inherited columns in subtables"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading indexes"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading constraints"
-        And verify that the "pg_dump_log" file in "/tmp" dir does not contain "reading triggers"
-        And the database "testdb" does not exist
-        And database "testdb" exists
-        And the user runs "psql -f /tmp/pg_dump testdb"
-        And psql should return a return code of 0
-        And there are no report files in the master data directory
-
-    Scenario: Testing pg_dump log messages with verbose option set
-        Given the database is running
-        And there is a "heap" table "heap_table" with compression "None" in "testdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "testdb" with data
-        When the user runs "pg_dump testdb 2> /tmp/pg_dump_log -f /tmp/pg_dump --verbose"
-        Then pg_dump should return a return code of 0
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading schemas"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading user-defined functions"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading user-defined types"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading type storage options"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading procedural languages"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading user-defined aggregate functions"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading user-defined operators"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading user-defined external protocols"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading user-defined operator classes"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading user-defined conversions"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading user-defined tables"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading table inheritance information"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading rewrite rules"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading type casts"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "finding inheritance relationships"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading column info for interesting tables"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "flagging inherited columns in subtables"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading indexes"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading constraints"
-        And verify that the "pg_dump_log" file in "/tmp" dir contains "reading triggers"
-        And the database "testdb" does not exist
-        And database "testdb" exists
-        And the user runs "psql -f /tmp/pg_dump testdb"
-        And psql should return a return code of 0
-        And there are no report files in the master data directory
-
     Scenario: Single table restore with shared sequence across multiple tables
         Given the database is running
         And there are no backup files
@@ -5777,12 +5713,6 @@ Feature: Validate command line arguments
         And verify that there is a "heap" table "schema_heap.heap_table2" in "fullbkdb" with data
         And verify that there is no table "schema_ao.ao_index_table" in "fullbkdb"
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "fullbkdb" with data
-
-    Scenario: pg_dump correctly backup aggregate functions
-        Given the user runs "deletedb test_pg_dump; createdb test_pg_dump"
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/pg_dump_function_test.sql test_pg_dump"
-        When the user runs "pg_dump -s -n public -f /tmp/public_pg_dump_ddl.dmp test_pg_dump"
-        Then verify that function is backedup correctly in "/tmp/public_pg_dump_ddl.dmp"
 
     Scenario: Full Backup and Restore with option --change-schema
         Given the database is running
