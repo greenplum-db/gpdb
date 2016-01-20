@@ -628,17 +628,9 @@ void tuplesort_begin_pos_mk(Tuplesortstate_mk *st, TuplesortPos_mk **pos)
     st_pos = (TuplesortPos_mk *) palloc(sizeof(TuplesortPos_mk));
     memcpy(st_pos, &(st->pos), sizeof(TuplesortPos_mk));
 
-    if(st->result_tape)
-    {
+    if(st->tapeset)
         st_pos->cur_work_tape = LogicalTapeSetDuplicateTape(st->tapeset, st->result_tape);
-    }
-    else
-    {
-    	/* sort did not finish completely due to QueryFinishPending
-    	 * so pretend that there are no tuples
-    	 */
-    	st_pos->eof_reached = true;
-    }
+
     *pos = st_pos;
 }
 
@@ -1875,6 +1867,11 @@ mergeruns(Tuplesortstate_mk *state)
 
     Assert(state->status == TSS_BUILDRUNS);
 
+	if (QueryFinishPending)
+	{
+		state->status = TSS_SORTEDONTAPE;
+		return;
+	}
 
 #ifdef FAULT_INJECTOR
     /*
@@ -1890,12 +1887,6 @@ mergeruns(Tuplesortstate_mk *state)
 			""); // tableName
 	RESUME_INTERRUPTS();
 #endif
-
-	if (QueryFinishPending)
-	{
-		state->status = TSS_SORTEDONTAPE;
-		return;
-	}
 
     /*
      * If we produced only one initial run (quite likely if the total data

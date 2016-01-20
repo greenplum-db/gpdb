@@ -307,7 +307,6 @@ class GpInjectFaultProgram:
 			      "reset (remove fault injection), status (report fault injection status), " \
 			      "segv (inject a SEGV), " \
 			      "interrupt (inject an Interrupt), " \
-			      "finish_pending (set QueryFinishPending to true), " \
 			      "checkpoint_and_panic (inject a panic following checkpoint) ")
         addTo.add_option("-z", "--sleep_time_s", dest="sleepTimeSeconds", type="int", default="10" ,
                             metavar="<sleepTime>",
