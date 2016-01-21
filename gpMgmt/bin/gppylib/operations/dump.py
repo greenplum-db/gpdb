@@ -1659,7 +1659,7 @@ class DeleteCurrentSegDump(Operation):
             RemoveFile(os.path.join(path, filename)).run()
 
 class DeleteOldestDumps(Operation):
-    def __init__(self, master_datadir, master_port, dump_dir, cleanup_date=None, cleanup_total=None, ddboost):
+    def __init__(self, master_datadir, master_port, dump_dir, cleanup_date=None, cleanup_total=None, ddboost=False):
         self.master_datadir = master_datadir
         self.master_port = master_port
         self.dump_dir = dump_dir
