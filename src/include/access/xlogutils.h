@@ -30,5 +30,7 @@ extern Relation CreateFakeRelcacheEntry(RelFileNode rnode);
 extern void FreeFakeRelcacheEntry(Relation fakerel);
 
 extern void XLogAOSegmentFile(RelFileNode rnode, uint32 segmentFileNum);
+extern int read_local_xlog_page(XLogReaderState *state, XLogRecPtr targetPagePtr,
+	int reqLen, XLogRecPtr targetRecPtr, char *cur_page, TimeLineID *pageTLI);
 
 #endif
