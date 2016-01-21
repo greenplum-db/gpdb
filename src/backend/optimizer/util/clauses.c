@@ -38,6 +38,7 @@
 #include "parser/analyze.h"
 #include "parser/parse_clause.h"
 #include "parser/parse_coerce.h"
+#include "parser/parse_func.h"
 #include "parser/parse_expr.h"
 #include "tcop/tcopprot.h"
 #include "utils/acl.h"
@@ -90,10 +91,12 @@ static List *simplify_and_arguments(List *args,
 					   eval_const_expressions_context *context,
 					   bool *haveNull, bool *forceFalse);
 static Expr *simplify_boolean_equality(List *args);
-static Expr *simplify_function(Oid funcid, Oid result_type, List *args,
+static Expr *simplify_function(Oid funcid, Oid result_type, List **args,
 				  bool allow_inline,
 				  eval_const_expressions_context *context);
 static bool large_const(Expr *expr, Size max_size);
+static List *add_function_defaults(List *args, Oid result_type,
+								   HeapTuple func_tuple);
 static Expr *evaluate_function(Oid funcid, Oid result_type, List *args,
 				  HeapTuple func_tuple,
 				  eval_const_expressions_context *context);
@@ -1820,7 +1823,7 @@ eval_const_expressions_mutator(Node *node,
 		 * Code for op/func reduction is pretty bulky, so split it out as a
 		 * separate function.
 		 */
-		simple = simplify_function(expr->funcid, expr->funcresulttype, args,
+		simple = simplify_function(expr->funcid, expr->funcresulttype, &args,
 								   true, context);
 		if (simple)				/* successfully simplified it */
 			return (Node *) simple;
@@ -1875,7 +1878,7 @@ eval_const_expressions_mutator(Node *node,
 		 * Code for op/func reduction is pretty bulky, so split it out as a
 		 * separate function.
 		 */
-		simple = simplify_function(expr->opfuncid, expr->opresulttype, args,
+		simple = simplify_function(expr->opfuncid, expr->opresulttype, &args,
 								   true, context);
 		if (simple)				/* successfully simplified it */
 			return (Node *) simple;
@@ -1964,7 +1967,7 @@ eval_const_expressions_mutator(Node *node,
 			 * a separate function.
 			 */
 			simple = simplify_function(expr->opfuncid, expr->opresulttype,
-									   args, false, context);
+									   &args, false, context);
 			if (simple)			/* successfully simplified it */
 			{
 				/*
@@ -2850,9 +2853,15 @@ simplify_boolean_equality(List *args)
  *
  * Returns a simplified expression if successful, or NULL if cannot
  * simplify the function call.
+ *
+ * This function is also responsible for adding any default argument
+ * expressions onto the function argument list; which is a bit grotty,
+ * but it avoids an extra fetch of the function's pg_proc tuple.  For this
+ * reason, the args list is pass-by-reference, and it may get modified
+ * even if simplification fails.
  */
 static Expr *
-simplify_function(Oid funcid, Oid result_type, List *args,
+simplify_function(Oid funcid, Oid result_type, List **args,
 				  bool allow_inline,
 				  eval_const_expressions_context *context)
 {
@@ -2879,7 +2888,11 @@ simplify_function(Oid funcid, Oid result_type, List *args,
 	if (!HeapTupleIsValid(func_tuple))
 		elog(ERROR, "cache lookup failed for function %u", funcid);
 
-	newexpr = evaluate_function(funcid, result_type, args,
+	/* While we have the tuple, check if we need to add defaults */
+	if (((Form_pg_proc) GETSTRUCT(func_tuple))->pronargs > list_length(*args))
+		*args = add_function_defaults(*args, result_type, func_tuple);
+
+	newexpr = evaluate_function(funcid, result_type, *args,
 								func_tuple, context);
 
 	if (large_const(newexpr, context->max_size))
@@ -2889,13 +2902,85 @@ simplify_function(Oid funcid, Oid result_type, List *args,
 	}
 
 	if (!newexpr && allow_inline)
-		newexpr = inline_function(funcid, result_type, args,
+		newexpr = inline_function(funcid, result_type, *args,
 								  pcqCtx,
 								  func_tuple, context);
 
 	caql_endscan(pcqCtx);
 
 	return newexpr;
+}
+
+/*
+ * add_function_defaults: add missing function arguments from its defaults
+ *
+ * It is possible for some of the defaulted arguments to be polymorphic;
+ * therefore we can't assume that the default expressions have the correct
+ * data types already.  We have to re-resolve polymorphics and do coercion
+ * just like the parser did.
+ */
+static List *
+add_function_defaults(List *args, Oid result_type, HeapTuple func_tuple)
+{
+	Form_pg_proc funcform = (Form_pg_proc) GETSTRUCT(func_tuple);
+	Datum       proargdefaults;
+	bool        isnull;
+	char       *str;
+	List       *defaults;
+	int         ndelete;
+	int         nargs;
+	Oid         actual_arg_types[FUNC_MAX_ARGS];
+	Oid         declared_arg_types[FUNC_MAX_ARGS];
+	Oid         rettype;
+	ListCell   *lc;
+
+	/* The error cases here shouldn't happen, but check anyway */
+	proargdefaults = SysCacheGetAttr(PROCOID, func_tuple,
+									 Anum_pg_proc_proargdefaults,
+									 &isnull);
+	if (isnull)
+		elog(ERROR, "not enough default arguments");
+	str = TextDatumGetCString(proargdefaults);
+	defaults = (List *) stringToNode(str);
+	Assert(IsA(defaults, List));
+	pfree(str);
+
+	/* Delete any unused defaults from the list */
+	ndelete = list_length(args) + list_length(defaults) - funcform->pronargs;
+	if (ndelete < 0)
+		elog(ERROR, "not enough default arguments");
+	while (ndelete-- > 0)
+		defaults = list_delete_first(defaults);
+	/* And form the combined argument list */
+	args = list_concat(args, defaults);
+	Assert(list_length(args) == funcform->pronargs);
+
+	/*
+	 * The rest of this should be a no-op if there are no polymorphic
+	 * arguments, but we do it anyway to be sure.
+	 */
+	if (list_length(args) > FUNC_MAX_ARGS)
+		elog(ERROR, "too many function arguments");
+	nargs = 0;
+	foreach(lc, args)
+	{
+		actual_arg_types[nargs++] = exprType((Node *) lfirst(lc));
+	}
+	memcpy(declared_arg_types, funcform->proargtypes.values,
+		   funcform->pronargs * sizeof(Oid));
+	rettype = enforce_generic_type_consistency(actual_arg_types,
+											   declared_arg_types,
+											   nargs,
+											   funcform->prorettype);
+
+	/* let's just check we got the same answer as the parser did ... */
+	if (rettype != result_type)
+		elog(ERROR, "function's resolved result type changed during planning");
+
+	/* perform any necessary typecasting of arguments */
+	make_fn_arguments(NULL, args, actual_arg_types, declared_arg_types);
+
+	return args;
 }
 
 /*

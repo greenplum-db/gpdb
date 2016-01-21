@@ -2174,6 +2174,7 @@ typedef struct FunctionParameter
 	char	   *name;			/* parameter name, or NULL if not given */
 	TypeName   *argType;		/* TypeName for parameter type */
 	FunctionParameterMode mode; /* IN/OUT/INOUT/VARIADIC/TABLE */
+	Node	   *defexpr;		/* raw default expr, or NULL if not given */
 } FunctionParameter;
 
 typedef struct AlterFunctionStmt
