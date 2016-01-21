@@ -235,7 +235,6 @@ Feature: Validate command line arguments
         And gpcrondump should print Invalid state file format to stdout
 
     @backupsmoke
-    @foo
     Scenario: Simple Incremental Backup
         Given the database is running
         And database "bkdb" is dropped and recreated
@@ -329,8 +328,11 @@ Feature: Validate command line arguments
 
     Scenario: Increments File Check With Complicated Scenario
         Given the database is running
-        And partition "1" of partition table "ao_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
+        And database "bkdb" is dropped and recreated
+        And database "fullbkdb" is dropped and recreated
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
         And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
+        And partition "1" of partition table "ao_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
         And there are no backup files
         And there is a list to store the incremental backup timestamps
         When the user runs "gpcrondump -a -x bkdb"
@@ -342,20 +344,15 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored in a list
         And "dirty_list" file should be created under " "
-        And the user runs "gpcrondump -a --incremental -x bkdb"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored in a list
-        And "dirty_list" file should be created under " "
-        And the user runs "gpcrondump -a --incremental -x bkdb"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored in a list
-        And "dirty_list" file should be created under " "
         And verify that the incremental file has all the stored timestamps
 
     Scenario: Incremental File Check With Different Directory
         Given the database is running
-        And partition "1" of partition table "ao_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
+        And database "bkdb" is dropped and recreated
+        And database "fullbkdb" is dropped and recreated
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
         And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
+        And partition "1" of partition table "ao_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
         And there are no backup files
         And there is a list to store the incremental backup timestamps
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
@@ -374,14 +371,15 @@ Feature: Validate command line arguments
         And verify that the incremental file in "/tmp" has all the stored timestamps
 
     @backupsmoke
-    Scenario: Simple Incremental Backup with -u option
+    Scenario: Incremental Backup with -u option
         Given the database is running
+        And database "bkdb" is dropped and recreated
         And there are no backup files
         And the backup files in "/tmp" are deleted
+        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
-        And partition "1" of partition table "ao_part_table, co_part_table_comp" is assumed to be in dirty state in "bkdb" in schema "public"
-        And partition "1" in partition level "0" of partition table "part_external" is assumed to be in dirty state in "bkdb" in schema "public"
-        And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
+        And table "public.ao_table" is assumed to be in dirty state in "bkdb"
         And the user runs "gpcrondump -a --incremental -x bkdb -u /tmp"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -389,31 +387,19 @@ Feature: Validate command line arguments
         And "dirty_list" file should be created under "/tmp"
         And the subdir from gpcrondump is stored
         And all the data from "bkdb" is saved for verification
-        And the database "bkdb" does not exist
-        And database "bkdb" exists
+        And database "bkdb" is dropped and recreated
         And the user runs gp_restore with the stored timestamp and subdir in "bkdb" and backup_dir "/tmp"
-        And gp_restore should return a return code of 2
-        And verify that partitioned tables "ao_part_table, co_part_table, heap_part_table" in "bkdb" have 6 partitions
-        And verify that partitioned tables "ao_part_table_comp, co_part_table_comp" in "bkdb" have 6 partitions
-        And verify that partitioned tables "part_external" in "bkdb" have 5 partitions in partition level "0"
-        And verify that partitioned tables "ao_part_table, co_part_table_comp" in "bkdb" has 5 empty partitions
-        And verify that partitioned tables "co_part_table, ao_part_table_comp" in "bkdb" has 6 empty partitions
-        And verify that partitioned tables "heap_part_table" in "bkdb" has 0 empty partitions
+        And gp_restore should return a return code of 0
         And verify that there is a "heap" table "heap_table" in "bkdb"
-        And verify that there is a "heap" table "heap_index_table" in "bkdb"
-        And verify that there is partition "1" of "ao" partition table "ao_part_table" in "bkdb" in "public"
-        And verify that there is partition "2" in partition level "0" of mixed partition table "part_external" with storage_type "x"  in "bkdb" in "public"
-        And verify that there is partition "1" of "co" partition table "co_part_table_comp" in "bkdb" in "public"
-        And verify that there is partition "1" of "heap" partition table "heap_part_table" in "bkdb" in "public"
-        And verify that there is partition "2" of "heap" partition table "heap_part_table" in "bkdb" in "public"
-        And verify that there is partition "3" of "heap" partition table "heap_part_table" in "bkdb" in "public"
-        And verify that tables "public.ao_table, public.co_table, public.ao_table_comp, public.co_table_comp" in "bkdb" has no rows
-        And verify that tables "public.co_index_table, public.ao_index_table_comp, public.co_index_table_comp" in "bkdb" has no rows
+        And verify that there is a "ao" table "ao_table" in "bkdb"
         And verify that the data of the dirty tables under "/tmp" in "bkdb" is validated after restore
         And verify that the distribution policy of all the tables in "bkdb" are validated after restore
 
     Scenario: gpdbrestore with -R for full dump
         Given the database is running
+        And database "bkdb" is dropped and recreated
+        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
         And there are no backup files
         And the backup files in "/tmp" are deleted
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
@@ -421,23 +407,25 @@ Feature: Validate command line arguments
         And the full backup timestamp from gpcrondump is stored
         And all the data from "bkdb" is saved for verification
         And the subdir from gpcrondump is stored
-        And the database "bkdb" does not exist
-        And database "bkdb" exists
+        And database "bkdb" is dropped and recreated
         And all the data from the remote segments in "bkdb" are stored in path "/tmp" for "full"
         And the user runs gpdbrestore with "-R" option in path "/tmp"
         And gpdbrestore should return a return code of 0
-        And verify that the data of "74" tables in "bkdb" is validated after restore
+        And verify that the data of "2" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     Scenario: gpdbrestore with -R for incremental dump
         Given the database is running
+        And database "bkdb" is dropped and recreated
+        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
         And there are no backup files
         And the backup files in "/tmp" are deleted
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
         Then gpcrondump should return a return code of 0
         And the subdir from gpcrondump is stored
         And the full backup timestamp from gpcrondump is stored
-        When table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
+        When table "public.ao_table" is assumed to be in dirty state in "bkdb"
         And the user runs "gpcrondump -a --incremental -x bkdb -u /tmp"
         And the timestamp from gpcrondump is stored
         Then gpcrondump should return a return code of 0
@@ -449,10 +437,11 @@ Feature: Validate command line arguments
     @backupsmoke
     Scenario: Full Backup and Restore
         Given the database is running
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_part_table" in "fullbkdb" exists for validation
-        When the user runs "gpcrondump -a -x fullbkdb"
+        And database "bkdb" is dropped and recreated
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
+        When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And verify that the "report" file in " " dir contains "Backup Type: Full"
@@ -478,42 +467,42 @@ Feature: Validate command line arguments
         And verify that the "status" file in " " dir contains "reading triggers"
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
-        And verify that there is a "heap" table "heap_table" in "fullbkdb" with data
-        And verify that there is a "ao" table "ao_part_table" in "fullbkdb" with data
+        And verify that there is a "heap" table "heap_table" in "bkdb" with data
+        And verify that there is a "ao" table "ao_part_table" in "bkdb" with data
 
     Scenario: Metadata-only restore
         Given the database is running
-        And database "fullbkdb" is created if not exists on host "None" with port "PGPORT" with user "None"
-        And there is schema "schema_heap" exists in "fullbkdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "fullbkdb" with data
-        When the user runs "gpcrondump -a -x fullbkdb"
+        And database "bkdb" is dropped and recreated
+        And there is schema "schema_heap" exists in "bkdb"
+        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "bkdb" with data
+        When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
-        And the schemas "schema_heap" do not exist in "fullbkdb"
+        And the schemas "schema_heap" do not exist in "bkdb"
         And the user runs gpdbrestore with the stored timestamp and options "-m"
         And gpdbrestore should return a return code of 0
-        And verify that there is a "heap" table "schema_heap.heap_table" in "fullbkdb"
-        And the table names in "fullbkdb" is stored
-        And tables in "fullbkdb" should not contain any data
+        And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb"
+        And the table names in "bkdb" is stored
+        And tables in "bkdb" should not contain any data
 
     Scenario: Metadata-only restore with global objects (-G)
         Given the database is running
-        And database "fullbkdb" is created if not exists on host "None" with port "PGPORT" with user "None"
-        And there is schema "schema_heap" exists in "fullbkdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "fullbkdb" with data
-        And the user runs "psql -c 'CREATE ROLE foo_user' fullbkdb"
-        When the user runs "gpcrondump -a -x fullbkdb -G"
+        And database "bkdb" is dropped and recreated
+        And there is schema "schema_heap" exists in "bkdb"
+        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "bkdb" with data
+        And the user runs "psql -c 'CREATE ROLE foo_user' bkdb"
+        When the user runs "gpcrondump -a -x bkdb -G"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
-        And the user runs "psql -c 'DROP ROLE foo_user' fullbkdb"
-        And the schemas "schema_heap" do not exist in "fullbkdb"
+        And the user runs "psql -c 'DROP ROLE foo_user' bkdb"
+        And the schemas "schema_heap" do not exist in "bkdb"
         And the user runs gpdbrestore with the stored timestamp and options "-m -G"
         And gpdbrestore should return a return code of 0
-        And verify that there is a "heap" table "schema_heap.heap_table" in "fullbkdb"
-        And the table names in "fullbkdb" is stored
-        And tables in "fullbkdb" should not contain any data
-        And verify that a role "foo_user" exists in database "fullbkdb"
-        And the user runs "psql -c 'DROP ROLE foo_user' fullbkdb"
+        And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb"
+        And the table names in "bkdb" is stored
+        And tables in "bkdb" should not contain any data
+        And verify that a role "foo_user" exists in database "bkdb"
+        And the user runs "psql -c 'DROP ROLE foo_user' bkdb"
 
     @backupfire
     Scenario: Full Backup and Restore with -y
