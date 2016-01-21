@@ -52,7 +52,7 @@ extern char *ChooseRelationNameWithCache(const char *name1, const char *name2,
 extern Oid	GetDefaultOpClass(Oid type_id, Oid am_id);
 
 /* commands/functioncmds.c */
-extern void CreateFunction(CreateFunctionStmt *stmt);
+extern void CreateFunction(CreateFunctionStmt *stmt, const char *queryString);
 extern void RemoveFunction(RemoveFuncStmt *stmt);
 extern void RemoveFunctionById(Oid funcOid);
 extern void SetFunctionReturnType(Oid funcOid, Oid newRetType);
