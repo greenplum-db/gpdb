@@ -8,7 +8,7 @@ Feature: Validate command line arguments
         And gpcrondump should return a return code of 2
 
     @backupfire
-    Scenario: Incremental Backup With Table filters
+    Scenario: Valid option combinations for incremental backup
         Given the database is running
         When the user runs "gpcrondump -a --incremental -t public.bkdb -x bkdb"
         Then gpcrondump should print include table list can not be selected with incremental backup to stdout
@@ -60,7 +60,7 @@ Feature: Validate command line arguments
         And gpcrondump should print noanalyze to stdout
 
     @backupfire
-    Scenario: Schema level backup With Table filters
+    Scenario: Valid option combinations for schema level backup
         Given the database is running
         And the database "bkdb" does not exist
         And database "bkdb" exists
@@ -138,7 +138,7 @@ Feature: Validate command line arguments
         And the user runs "psql -c 'drop schema schema_heap cascade;' bkdb"
 
     @backupfire
-    Scenario: gpdbrestore with --truncate option
+    Scenario: Valid option combinations for gpdbrestore --truncate
         When the user runs "gpdbrestore -t 20140101010101 --truncate -a"
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print --truncate can be specified only with -T or --table-file option to stdout
@@ -146,72 +146,9 @@ Feature: Validate command line arguments
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print Cannot specify --truncate and -e together to stdout
 
-
-    ###
-    ### Any tests that require this data set should come after
-    ###
-    @backupsmoke
-    @dataset
-    Scenario Outline: partition table test with data on all segments, with/without compression
-        Given there is a "<tabletype>" partition table "<tablename>" with compression "<compressiontype>" in "<dbname>" with data
-        Then data for partition table "<tablename>" with partition level "<partlevel>" is distributed across all segments on "<dbname>"
-        And verify that partitioned tables "<tablename>" in "bkdb" have 6 partitions
-        Examples:
-        | tabletype | tablename           | compressiontype | dbname | partlevel |
-        | ao        | ao_part_table       | None            | bkdb   | 1         |
-        | co        | co_part_table       | None            | bkdb   | 1         |
-        | heap      | heap_part_table     | None            | bkdb   | 1         |
-        | ao        | ao_part_table_comp  | None            | bkdb   | 1         |
-        | co        | co_part_table_comp  | zlib            | bkdb   | 1         |
-
-    @backupsmoke
-    @dataset
-    Scenario Outline: regular table test with data on all segments, with/without compression
-        Given there is a "<tabletype>" table "<tablename>" with compression "<compressiontype>" in "<dbname>" with data
-        Then data for table "<tablename>" is distributed across all segments on "<dbname>"
-        Examples:
-        | tabletype | tablename      | compressiontype | dbname |
-        | ao        | ao_table       | None            | bkdb |
-        | co        | co_table       | None            | bkdb |
-        | heap      | heap_table     | None            | bkdb |
-        | ao        | ao_table_comp  | None            | bkdb |
-        | co        | co_table_comp  | zlib            | bkdb |
-
-    @backupsmoke
-    @dataset
-    Scenario Outline: regular table test with data on all segments, with/without compression and with indexes
-        Given there is a "<tabletype>" table "<tablename>" with index "<indexname>" compression "<compressiontype>" in "<dbname>" with data
-        Then data for table "<tablename>" is distributed across all segments on "<dbname>"
-        Examples:
-        | tabletype | tablename            | compressiontype | dbname | indexname      |
-        | ao        | ao_index_table       | None            | bkdb   | ao_in          |
-        | co        | co_index_table       | None            | bkdb   | co_in          |
-        | heap      | heap_index_table     | None            | bkdb   | heap_in        |
-        | ao        | ao_index_table_comp  | None            | bkdb   | ao_comp_in     |
-        | co        | co_index_table_comp  | zlib            | bkdb   | co_comp_in     |
-
-    @backupsmoke
-    @dataset
-    Scenario: Partition tables with mixed storage types
-        Given there is a mixed storage partition table "part_mixed_1" in "bkdb" with data
-        Then data for partition table "part_mixed_1" with partition level "1" is distributed across all segments on "bkdb"
-        And verify that storage_types of the partition table "part_mixed_1" are as expected in "bkdb"
-
-	@backupsmoke
-    @dataset
-    Scenario: Partition tables with external partition
-        Given the user runs "echo > /tmp/backup_gpfdist_dummy"
-        And the user runs "gpfdist -p 8098 -d /tmp &"
-        And there is a partition table "part_external" has external partitions of gpfdist with file "backup_gpfdist_dummy" on port "8098" in "bkdb" with data
-        Then data for partition table "part_external" with partition level "0" is distributed across all segments on "bkdb"
-        And verify that storage_types of the partition table "part_external" are as expected in "bkdb"
-
     @backupsmoke
     Scenario: Negative test for Incremental Backup
         Given the database is running
-        And partition "1" of partition table "ao_part_table, co_part_table_comp" is assumed to be in dirty state in "bkdb" in schema "public"
-        And partition "1" in partition level "0" of partition table "part_external" is assumed to be in dirty state in "bkdb" in schema "public"
-        And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
         And there are no backup files
         When the user runs "gpcrondump -a --incremental -x bkdb"
         Then gpcrondump should return a return code of 2
@@ -219,8 +156,8 @@ Feature: Validate command line arguments
 
     Scenario: Negative test for Incremental Backup - Incremental with -u after a full backup to default directory
         Given the database is running
-        And partition "1" of partition table "ao_part_table, co_part_table_comp" is assumed to be in dirty state in "bkdb" in schema "public"
-        And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
+        And database "bkdb" is dropped and recreated
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
         And there are no backup files
         And the backup files in "/tmp" are deleted
         When the user runs "gpcrondump -a -x bkdb"
@@ -231,8 +168,8 @@ Feature: Validate command line arguments
 
     Scenario: Negative test for Incremental Backup - Incremental to default directory after a full backup with -u option
         Given the database is running
-        And partition "1" of partition table "ao_part_table, co_part_table_comp" is assumed to be in dirty state in "bkdb" in schema "public"
-        And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
+        And database "bkdb" is dropped and recreated
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
         And there are no backup files
         And the backup files in "/tmp" are deleted
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
@@ -243,9 +180,9 @@ Feature: Validate command line arguments
 
     Scenario: Negative test for Incremental Backup - Incremental after a full backup of different database
         Given the database is running
-        And there is a "heap" table "heap_table2" with compression "None" in "fullbkdb" with data
-        And partition "1" of partition table "ao_part_table, co_part_table_comp" is assumed to be in dirty state in "bkdb" in schema "public"
-        And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
+        And database "fullbkdb" is dropped and recreated
+        And database "bkdb" is dropped and recreated
+        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
         And there are no backup files
         When the user runs "gpcrondump -a -x fullbkdb"
         Then gpcrondump should return a return code of 0
@@ -255,12 +192,13 @@ Feature: Validate command line arguments
 
     Scenario: Dirty table list check on recreating a table with same data and contents
         Given the database is running
-        And there is a "ao" table "ao_table" with compression "None" in "testdb" with data
+        And database "bkdb" is dropped and recreated
+        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
         And there are no backup files
-        When the user runs "gpcrondump -a -x testdb"
+        When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
-        When the "public.ao_table" is recreated with same data in "testdb"
-        And the user runs "gpcrondump -a --incremental -x testdb"
+        When the "public.ao_table" is recreated with same data in "bkdb"
+        And the user runs "gpcrondump -a --incremental -x bkdb"
         And the timestamp from gpcrondump is stored
         Then gpcrondump should return a return code of 0
         And "public.ao_table" is marked as dirty in dirty_list file
@@ -270,6 +208,7 @@ Feature: Validate command line arguments
 
     Scenario: Negative test for missing state file
         Given the database is running
+        And database "bkdb" is dropped and recreated
         And there are no backup files
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
@@ -283,6 +222,7 @@ Feature: Validate command line arguments
 
     Scenario: Negative test for invalid state file format
         Given the database is running
+        And database "bkdb" is dropped and recreated
         And there are no backup files
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
@@ -295,9 +235,33 @@ Feature: Validate command line arguments
         And gpcrondump should print Invalid state file format to stdout
 
     @backupsmoke
+    @foo
     Scenario: Simple Incremental Backup
         Given the database is running
+        And database "bkdb" is dropped and recreated
         And there are no backup files
+        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table_comp" with compression "zlib" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_index_table_comp" with compression "zlib" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table_comp" with compression "zlib" in "bkdb" with data
+        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "co_table_comp" with compression "zlib" in "bkdb" with data
+        And there is a "co" table "co_index_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "co_index_table_comp" with compression "zlib" in "bkdb" with data
+        And there is a "co" partition table "co_part_table" with compression "None" in "bkdb" with data
+        And there is a "co" partition table "co_part_table_comp" with compression "zlib" in "bkdb" with data
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_index_table" with compression "None" in "bkdb" with data
+        And there is a "heap" partition table "heap_part_table" with compression "None" in "bkdb" with data
+        And there is a mixed storage partition table "part_mixed_1" in "bkdb" with data
+        Given the user runs "echo > /tmp/backup_gpfdist_dummy"
+        And the user runs "gpfdist -p 8098 -d /tmp &"
+        And there is a partition table "part_external" has external partitions of gpfdist with file "backup_gpfdist_dummy" on port "8098" in "bkdb" with data
+        Then data for partition table "part_mixed_1" with partition level "1" is distributed across all segments on "bkdb"
+        And data for partition table "part_external" with partition level "0" is distributed across all segments on "bkdb"
+        Given there are no backup files
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And gpcrondump should print Validating disk space to stdout
@@ -305,7 +269,7 @@ Feature: Validate command line arguments
         And the state files are generated under " " for stored "full" timestamp
         And the "last_operation" files are generated under " " for stored "full" timestamp
         When partition "1" of partition table "ao_part_table, co_part_table_comp, part_mixed_1" is assumed to be in dirty state in "bkdb" in schema "public"
-        When partition "1" in partition level "0" of partition table "part_external" is assumed to be in dirty state in "bkdb" in schema "public"
+        And partition "1" in partition level "0" of partition table "part_external" is assumed to be in dirty state in "bkdb" in schema "public"
         And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
         And the temp files "dirty_backup_list" are removed from the system
         And the user runs "gpcrondump -a --incremental -x bkdb"
@@ -338,10 +302,9 @@ Feature: Validate command line arguments
         And gpdbrestore should print Table public.heap_part_table to stdout
         And gpdbrestore should print Table public.heap_table to stdout
         And gpdbrestore should print Table public.part_mixed_1 to stdout
-        And the database "bkdb" does not exist
-        And database "bkdb" exists
+        And database "bkdb" is dropped and recreated
         And the user runs gp_restore with the the stored timestamp and subdir in "bkdb"
-        And gp_restore should return a return code of 2
+        And gp_restore should return a return code of 0
         And verify that partitioned tables "ao_part_table, co_part_table, heap_part_table" in "bkdb" have 6 partitions
         And verify that partitioned tables "ao_part_table_comp, co_part_table_comp" in "bkdb" have 6 partitions
         And verify that partitioned tables "part_external" in "bkdb" have 5 partitions in partition level "0"
