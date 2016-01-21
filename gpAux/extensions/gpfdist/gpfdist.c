@@ -3435,12 +3435,22 @@ int gpfdist_init(int argc, const char* const argv[])
 	/* redirect stderr and stdout to log */
 	if (opt.l)
 	{
-		FILE *f // ignored. required by -Werror=unused-result
+		FILE *f;
 		f = freopen(opt.l, "a", stderr);
+		if (f == null)
+		{
+			fprintf(stderr, "Failed to redirect stderr to log.")
+			return -1;
+		}
 #ifndef WIN32
 		setlinebuf(stderr);
 #endif
 		f = freopen(opt.l, "a", stdout);
+		if (f == null)
+		{
+			fprintf(stderr, "Failed to redirect stdout to log.")
+			return -1;
+		}
 #ifndef WIN32
 		setlinebuf(stdout);
 #endif
