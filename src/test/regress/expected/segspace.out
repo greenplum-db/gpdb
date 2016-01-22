@@ -65,19 +65,19 @@ select count(*) > 0 from segspace_view_gp_workfile_mgr_reset_segspace;
 -- enable the fault injector
 --start_ignore
 \! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20160122:13:45:59:048726 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20160122:13:45:59:048726 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
-20160122:13:45:59:048726 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
-20160122:13:45:59:048726 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
-20160122:13:45:59:048726 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
-20160122:13:45:59:048726 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
+20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
+20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
+20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
+20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
+20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
 \! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20160122:13:45:59:048738 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20160122:13:45:59:048738 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
-20160122:13:45:59:048738 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
-20160122:13:45:59:048738 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
-20160122:13:45:59:048738 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
-20160122:13:45:59:048738 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
+20160114:11:07:01:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
+20160114:11:07:02:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160114:11:07:02:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
+20160114:11:07:02:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
+20160114:11:07:02:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
+20160114:11:07:02:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
 --end_ignore
 set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
@@ -99,19 +99,19 @@ select max(size) from segspace_view_gp_workfile_segspace;
 -- enable the fault injector
 --start_ignore
 \! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20160122:13:46:00:048753 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20160122:13:46:00:048753 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
-20160122:13:46:00:048753 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
-20160122:13:46:00:048753 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
-20160122:13:46:00:048753 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
-20160122:13:46:00:048753 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
+20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
+20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
+20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
+20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
+20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
 \! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20160122:13:46:01:048765 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20160122:13:46:01:048765 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
-20160122:13:46:01:048765 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
-20160122:13:46:01:048765 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
-20160122:13:46:01:048765 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
-20160122:13:46:01:048765 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
+20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
+20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
+20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
+20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
+20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
 --end_ignore
 drop table if exists segspace_t1_created;
 NOTICE:  table "segspace_t1_created" does not exist, skipping
@@ -140,19 +140,19 @@ drop table if exists segspace_t1_created;
 -- enable the fault injector
 --start_ignore
 \! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20160122:13:46:02:048782 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20160122:13:46:02:048782 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
-20160122:13:46:02:048782 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
-20160122:13:46:02:048782 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
-20160122:13:46:02:048782 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
-20160122:13:46:02:048782 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
+20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
+20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
+20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
+20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
+20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
 \! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20160122:13:46:02:048795 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20160122:13:46:02:048795 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
-20160122:13:46:02:048795 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
-20160122:13:46:02:048795 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
-20160122:13:46:02:048795 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
-20160122:13:46:02:048795 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
+20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
+20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
+20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
+20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
+20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
 --end_ignore
 drop table if exists segspace_t1_created;
 NOTICE:  table "segspace_t1_created" does not exist, skipping
