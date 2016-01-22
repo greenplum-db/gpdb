@@ -46,14 +46,18 @@ SELECT * FROM gp_toolkit.__gp_masterid, segspace_view_gp_workfile_mgr_reset_segs
 --- create and populate the table
 
 DROP TABLE IF EXISTS segspace_test_hj_skew;
-CREATE TABLE segspace_test_hj_skew (i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int, i8 int);
+CREATE TABLE segspace_test_hj_skew (i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int, i8 int) DISTRIBUTED BY (i1);
 
 set gp_autostats_mode = none;
 
 -- many values with i1 = 1
-INSERT INTO segspace_test_hj_skew SELECT 1,i,i,i,i,i,i,i FROM generate_series (0,99999) i;
+INSERT INTO segspace_test_hj_skew SELECT 1,i,i,i,i,i,i,i FROM 
+	(select generate_series(1, nsegments * 50000) as i from 
+	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
 -- some nicely distributed values
-INSERT INTO segspace_test_hj_skew SELECT i,i,i,i,i,i,i,i FROM generate_series (0,199999) i;
+INSERT INTO segspace_test_hj_skew SELECT i,i,i,i,i,i,i,i FROM 
+	(select generate_series(1, nsegments * 100000) as i from 
+	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
 
 ANALYZE segspace_test_hj_skew;
 
@@ -78,6 +82,7 @@ select count(*) > 0 from segspace_view_gp_workfile_mgr_reset_segspace;
 set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
 set gp_autostats_mode = none;
+set gp_hashjoin_metadata_memory_percent=0;
 
 begin;
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
@@ -97,11 +102,12 @@ select max(size) from segspace_view_gp_workfile_segspace;
 --end_ignore
 
 drop table if exists segspace_t1_created;
-create table segspace_t1_created (i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int, i8 int);
+create table segspace_t1_created (i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int, i8 int) DISTRIBUTED BY (i1);
 
 set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
 set gp_autostats_mode = none;
+set gp_hashjoin_metadata_memory_percent=0;
 
 begin;
 
@@ -130,6 +136,7 @@ drop table if exists segspace_t1_created;
 set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
 set gp_autostats_mode = none;
+set gp_hashjoin_metadata_memory_percent=0;
 
 begin;
 
