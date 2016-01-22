@@ -37,7 +37,7 @@ from (SELECT attnum::information_schema.cardinal_number
       from pg_attribute 
       where attnum > 0 and attrelid = 'r'::regclass) q
 where attnum=2;
-                                                  QUERY PLAN                                                  
+                                                  QUERY PLAN
 --------------------------------------------------------------------------------------------------------------
  Seq Scan on pg_attribute  (cost=0.00..473.38 rows=1 width=2)
    Filter: attnum > 0 AND attrelid = 1699317::oid AND attnum::information_schema.cardinal_number::integer = 2

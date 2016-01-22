@@ -32,7 +32,7 @@ select dfunc(4,5);
 \df dfunc
 drop function dfunc(int, int);
 
--- check implicit coercion 
+-- check implicit coercion
 create function dfunc(a int DEFAULT 1.0, int DEFAULT '-1') returns int as $$ select $1 + $2; $$ language sql;
 select dfunc();
 
