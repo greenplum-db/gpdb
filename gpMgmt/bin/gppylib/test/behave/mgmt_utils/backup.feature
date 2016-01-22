@@ -504,46 +504,31 @@ Feature: Validate command line arguments
         And verify that a role "foo_user" exists in database "bkdb"
         And the user runs "psql -c 'DROP ROLE foo_user' bkdb"
 
-    @backupfire
-    Scenario: Full Backup and Restore with -y
-        Given the database is running
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_part_table" in "fullbkdb" exists for validation
-        When the user runs "gpcrondump -a -y /tmp -x fullbkdb"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And gpcrondump should print -y is a deprecacted option.  Report files are always generated with the backup set. to stdout
-        And verify that the "report" file in " " dir contains "Backup Type: Full"
-        And the user runs gpdbrestore with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And verify that there is a "heap" table "heap_table" in "fullbkdb" with data
-        And verify that there is a "ao" table "ao_part_table" in "fullbkdb" with data
-
     Scenario: Full Backup and Restore using gp_dump
         Given the database is running
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_part_table" in "fullbkdb" exists for validation
-        When the user runs "gpcrondump -a -x fullbkdb"
+        And database "bkdb" is dropped and recreated
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
+        When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
-        When the user runs "gp_dump --gp-d=db_dumps --gp-s=p --gp-c fullbkdb"
+        When the user runs "gp_dump --gp-d=db_dumps --gp-s=p --gp-c bkdb"
         Then gp_dump should return a return code of 0
         And the timestamp from gp_dump is stored and subdir is " "
-        And the database "fullbkdb" does not exist
-        And database "fullbkdb" exists
-        And the user runs gp_restore with the the stored timestamp and subdir in "fullbkdb"
+        And database "bkdb" is dropped and recreated
+        And the user runs gp_restore with the the stored timestamp and subdir in "bkdb"
         And gp_restore should return a return code of 0
-        And verify that there is a "heap" table "heap_table" in "fullbkdb" with data
-        And verify that there is a "ao" table "ao_part_table" in "fullbkdb" with data
+        And verify that there is a "heap" table "heap_table" in "bkdb" with data
+        And verify that there is a "ao" table "ao_part_table" in "bkdb" with data
         And there are no report files in the master data directory
 
     Scenario: gpdbrestore -L with Full Backup
         Given the database is running
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_part_table" in "fullbkdb" exists for validation
-        When the user runs "gpcrondump -a -x fullbkdb"
+        And database "bkdb" is dropped and recreated
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
+        When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And verify that the "report" file in " " dir contains "Backup Type: Full"
@@ -555,16 +540,15 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: gpcrondump -b with Full and Incremental backup
         Given the database is running
+        And database "bkdb" is dropped and recreated
         And there are no backup files
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        When the user runs "gpcrondump -a -x fullbkdb -b"
+        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        When the user runs "gpcrondump -a -x bkdb -b"
         Then gpcrondump should return a return code of 0
         And gpcrondump should print Bypassing disk space check to stdout
         And gpcrondump should not print Validating disk space to stdout
-        And table "public.ao_index_table" is assumed to be in dirty state in "fullbkdb"
-        When the user runs "gpcrondump -a -x fullbkdb -b --incremental"
+        And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
+        When the user runs "gpcrondump -a -x bkdb -b --incremental"
         Then gpcrondump should return a return code of 0
         And gpcrondump should print Bypassing disk space checks for incremental backup to stdout
         And gpcrondump should not print Validating disk space to stdout
@@ -572,11 +556,10 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: gpdbrestore -b with Full timestamp
         Given the database is running
+        And database "bkdb" is dropped and recreated
         And there are no backup files
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        When the user runs "gpcrondump -a -x fullbkdb"
+        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the subdir from gpcrondump is stored
         And the full backup timestamp from gpcrondump is stored
@@ -586,179 +569,191 @@ Feature: Validate command line arguments
 
     Scenario: Output info gpdbrestore
         Given the database is running
+        And database "bkdb" is dropped and recreated
         And there are no backup files
-        And there is a "ao" table "ao_index_table" with compression "None" in "fullbkdb" with data
-        When the user runs "gpcrondump -a -x fullbkdb"
+        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         When the user runs gpdbrestore with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print Restore type              = Full Database to stdout
+        And gpdbrestore should print Restore type                = Full Database to stdout
         When the user runs "gpdbrestore -T public.ao_index_table -a" with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print Restore type              = Table Restore to stdout
-        And table "public.ao_index_table" is assumed to be in dirty state in "fullbkdb"
-        When the user runs "gpcrondump -a -x fullbkdb --incremental"
+        And gpdbrestore should print Restore type                = Table Restore to stdout
+        And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
+        When the user runs "gpcrondump -a -x bkdb --incremental"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         When the user runs gpdbrestore with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print Restore type              = Incremental Restore to stdout
+        And gpdbrestore should print Restore type                = Incremental Restore to stdout
         When the user runs "gpdbrestore -T public.ao_index_table -a" with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And gpdbrestore should print Restore type              = Incremental Table Restore to stdout
+        And gpdbrestore should print Restore type                = Incremental Table Restore to stdout
 
     Scenario: Output info gpcrondump
         Given the database is running
+        And database "bkdb" is dropped and recreated
         And there are no backup files
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        When the user runs "gpcrondump -a -x fullbkdb"
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And gpcrondump should print Dump type                                = Full to stdout
-        And table "public.ao_index_table" is assumed to be in dirty state in "fullbkdb"
-        When the user runs "gpcrondump -a -x fullbkdb --incremental"
+        And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
+        When the user runs "gpcrondump -a -x bkdb --incremental"
         Then gpcrondump should return a return code of 0
         And gpcrondump should print Dump type                                = Incremental to stdout
 
     Scenario: gpcrondump -G with Full timestamp
         Given the database is running
+        And database "bkdb" is dropped and recreated
         And there are no backup files
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        When the user runs "gpcrondump -a -x fullbkdb -G"
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        When the user runs "gpcrondump -a -x bkdb -G"
         And the timestamp from gpcrondump is stored
         Then gpcrondump should return a return code of 0
         And "global" file should be created under " "
-        And table "public.ao_index_table" is assumed to be in dirty state in "fullbkdb"
-        When the user runs "gpcrondump -a -x fullbkdb -G --incremental"
+        And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
+        When the user runs "gpcrondump -a -x bkdb -G --incremental"
         And the timestamp from gpcrondump is stored
         Then gpcrondump should return a return code of 0
         And "global" file should be created under " "
 
     Scenario: Backup and restore with -G only
         Given the database is running
+        And database "bkdb" is dropped and recreated
         And there are no backup files
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And the user runs "psql -c 'CREATE ROLE foo_user' fullbkdb"
-        And verify that a role "foo_user" exists in database "fullbkdb"
-        When the user runs "gpcrondump -a -x fullbkdb -G"
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And the user runs "psql -c 'CREATE ROLE foo_user' bkdb"
+        And verify that a role "foo_user" exists in database "bkdb"
+        When the user runs "gpcrondump -a -x bkdb -G"
         And the timestamp from gpcrondump is stored
         Then gpcrondump should return a return code of 0
         And "global" file should be created under " "
-        And the user runs "psql -c 'DROP ROLE foo_user' fullbkdb"
+        And the user runs "psql -c 'DROP ROLE foo_user' bkdb"
         And the user runs gpdbrestore with the stored timestamp and options "-G only"
         And gpdbrestore should return a return code of 0
-        And verify that a role "foo_user" exists in database "fullbkdb"
-        And verify that there is no table "heap_table" in "fullbkdb"
-        And the user runs "psql -c 'DROP ROLE foo_user' fullbkdb"
+        And verify that a role "foo_user" exists in database "bkdb"
+        And verify that there is no table "heap_table" in "bkdb"
+        And the user runs "psql -c 'DROP ROLE foo_user' bkdb"
 
     @valgrind
     Scenario: Valgrind test of gp_dump incremental
         Given the database is running
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_part_table" in "fullbkdb" exists for validation
-        When the user runs "gpcrondump -x fullbkdb -a"
+        And database "bkdb" is dropped and recreated
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
+        When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
-        And the user runs valgrind with "gp_dump --gp-d=db_dumps --gp-s=p --gp-c --incremental fullbkdb" and options " "
+        And the user runs valgrind with "gp_dump --gp-d=db_dumps --gp-s=p --gp-c --incremental bkdb" and options " "
 
     @valgrind
     Scenario: Valgrind test of gp_dump incremental with table file
         Given the database is running
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_table, ao_part_table" in "fullbkdb" exists for validation
+        And database "bkdb" is dropped and recreated
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a backupfile of tables "heap_table, ao_table, ao_part_table" in "bkdb" exists for validation
         And the tables "public.ao_table" are in dirty hack file "/tmp/dirty_hack.txt"
-        And partition "1" of partition tables "ao_part_table" in "fullbkdb" in schema "public" are in dirty hack file "/tmp/dirty_hack.txt"
-        When the user runs "gpcrondump -x fullbkdb -a"
+        And partition "1" of partition tables "ao_part_table" in "bkdb" in schema "public" are in dirty hack file "/tmp/dirty_hack.txt"
+        When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
-        And the user runs valgrind with "gp_dump --gp-d=db_dumps --gp-s=p --gp-c --incremental fullbkdb --table-file=/tmp/dirty_hack.txt" and options " "
+        And the user runs valgrind with "gp_dump --gp-d=db_dumps --gp-s=p --gp-c --incremental bkdb --table-file=/tmp/dirty_hack.txt" and options " "
 
     @valgrind
     Scenario: Valgrind test of gp_dump full with table file
         Given the database is running
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_table, ao_part_table" in "fullbkdb" exists for validation
+        And database "bkdb" is dropped and recreated
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a backupfile of tables "heap_table, ao_table, ao_part_table" in "bkdb" exists for validation
         And the tables "public.ao_table" are in dirty hack file "/tmp/dirty_hack.txt"
-        And partition "1" of partition tables "ao_part_table" in "fullbkdb" in schema "public" are in dirty hack file "/tmp/dirty_hack.txt"
-        When the user runs "gpcrondump -x fullbkdb -a"
+        And partition "1" of partition tables "ao_part_table" in "bkdb" in schema "public" are in dirty hack file "/tmp/dirty_hack.txt"
+        When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
-        And the user runs valgrind with "gp_dump --gp-d=db_dumps --gp-s=p --gp-c fullbkdb --table-file=/tmp/dirty_hack.txt" and options " "
+        And the user runs valgrind with "gp_dump --gp-d=db_dumps --gp-s=p --gp-c bkdb --table-file=/tmp/dirty_hack.txt" and options " "
 
     @valgrind
     Scenario: Valgrind test of gp_dump_agent incremental with table file
         Given the database is running
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_table, ao_part_table" in "fullbkdb" exists for validation
+        And database "bkdb" is dropped and recreated
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a backupfile of tables "heap_table, ao_table, ao_part_table" in "bkdb" exists for validation
         And the tables "public.ao_table" are in dirty hack file "/tmp/dirty_hack.txt"
-        And partition "1" of partition tables "ao_part_table" in "fullbkdb" in schema "public" are in dirty hack file "/tmp/dirty_hack.txt"
-        When the user runs "gpcrondump -x fullbkdb -a"
+        And partition "1" of partition tables "ao_part_table" in "bkdb" in schema "public" are in dirty hack file "/tmp/dirty_hack.txt"
+        When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
-        And the user runs valgrind with "gp_dump_agent --gp-k 11111111111111_1_1_ --gp-d /tmp --pre-data-schema-only fullbkdb --incremental --table-file=/tmp/dirty_hack.txt" and options " "
+        And the user runs valgrind with "gp_dump_agent --gp-k 11111111111111_1_1_ --gp-d /tmp --pre-data-schema-only bkdb --incremental --table-file=/tmp/dirty_hack.txt" and options " "
 
     @valgrind
     Scenario: Valgrind test of gp_dump_agent full with table file
         Given the database is running
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_table, ao_part_table" in "fullbkdb" exists for validation
+        And database "bkdb" is dropped and recreated
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a backupfile of tables "heap_table, ao_table, ao_part_table" in "bkdb" exists for validation
         And the tables "public.ao_table" are in dirty hack file "/tmp/dirty_hack.txt"
-        And partition "1" of partition tables "ao_part_table" in "fullbkdb" in schema "public" are in dirty hack file "/tmp/dirty_hack.txt"
-        When the user runs "gpcrondump -x fullbkdb -a"
+        And partition "1" of partition tables "ao_part_table" in "bkdb" in schema "public" are in dirty hack file "/tmp/dirty_hack.txt"
+        When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
-        And the user runs valgrind with "gp_dump_agent --gp-k 11111111111111_1_1_ --gp-d /tmp --pre-data-schema-only fullbkdb --table-file=/tmp/dirty_hack.txt" and options " "
+        And the user runs valgrind with "gp_dump_agent --gp-k 11111111111111_1_1_ --gp-d /tmp --pre-data-schema-only bkdb --table-file=/tmp/dirty_hack.txt" and options " "
 
     @valgrind
     Scenario: Valgrind test of gp_dump_agent incremental
         Given the database is running
+        And database "bkdb" is dropped and recreated
         And the backup files in "/tmp" are deleted
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_part_table" in "fullbkdb" exists for validation
-        When the user runs "gpcrondump -x fullbkdb -a"
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
+        When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
-        And the user runs valgrind with "gp_dump_agent --gp-k 11111111111111_1_1_ --gp-d /tmp --pre-data-schema-only fullbkdb --incremental" and options " "
+        And the user runs valgrind with "gp_dump_agent --gp-k 11111111111111_1_1_ --gp-d /tmp --pre-data-schema-only bkdb --incremental" and options " "
 
     @valgrind
     Scenario: Valgrind test of gp_restore for incremental backup
         Given the database is running
+        And database "bkdb" is dropped and recreated
         And there are no backup files
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_table" in "fullbkdb" exists for validation
-        When the user runs "gpcrondump -a -x fullbkdb"
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a backupfile of tables "heap_table, ao_table" in "bkdb" exists for validation
+        When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
-        And table "public.ao_table" is assumed to be in dirty state in "fullbkdb"
-        And the user runs "gpcrondump -a -x fullbkdb --incremental"
+        And table "public.ao_table" is assumed to be in dirty state in "bkdb"
+        And the user runs "gpcrondump -a -x bkdb --incremental"
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
-        And the user runs valgrind with "gp_restore" and options "-i --gp-i --gp-l=p -d fullbkdb --gp-c"
+        And the user runs valgrind with "gp_restore" and options "-i --gp-i --gp-l=p -d bkdb --gp-c"
 
     @valgrind
     Scenario: Valgrind test of gp_restore_agent for incremental backup
         Given the database is running
+        And database "bkdb" is dropped and recreated
         And there are no backup files
-        And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "fullbkdb" with data
-        And there is a backupfile of tables "heap_table, ao_table" in "fullbkdb" exists for validation
-        When the user runs "gpcrondump -a -x fullbkdb"
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a backupfile of tables "heap_table, ao_table" in "bkdb" exists for validation
+        When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
-        And table "public.ao_table" is assumed to be in dirty state in "fullbkdb"
-        And the user runs "gpcrondump -a -x fullbkdb --incremental"
+        And table "public.ao_table" is assumed to be in dirty state in "bkdb"
+        And the user runs "gpcrondump -a -x bkdb --incremental"
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
-        And the user runs valgrind with "gp_restore_agent" and options "--gp-c /bin/gunzip -s --post-data-schema-only --target-dbid 1 -d fullbkdb"
+        And the user runs valgrind with "gp_restore_agent" and options "--gp-c /bin/gunzip -s --post-data-schema-only --target-dbid 1 -d bkdb"
 
     @backupfire
+    @foo
     Scenario: gp_dump timestamp test
         Given the database is running
         And there is a "heap" table "heap_table" with compression "None" in "fullbkdb" with data
@@ -921,12 +916,13 @@ Feature: Validate command line arguments
         Given the database is running
         And there are no backup files
         And database "bkdb" is dropped and recreated
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "heap2_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao2_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co2_table" with compression "None" in "bkdb" with data
+        And there is a "heap" partition table "heap_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" partition table "heap_part_table_comp" with compression "zlib" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table_comp" with compression "zlib" in "bkdb" with data
+        And there is a "co" partition table "co_part_table" with compression "None" in "bkdb" with data
+        And there is a "co" partition table "co_part_table_comp" with compression "zlib" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts0"
