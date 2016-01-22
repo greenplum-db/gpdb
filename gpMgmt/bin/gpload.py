@@ -1620,7 +1620,7 @@ class gpload:
             # do default host, the current one
             if not local_hostname:
                 try:
-                    pipe = subprocess.Popen("hostname",
+                    pipe = subprocess.Popen(["hostname","-f"],
                                             stdout=subprocess.PIPE,
                                             stderr=subprocess.PIPE)
                     result  = pipe.communicate();
