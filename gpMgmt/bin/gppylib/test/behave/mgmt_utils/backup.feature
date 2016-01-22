@@ -703,8 +703,7 @@ Feature: Validate command line arguments
         When the user runs "gp_dump --gp-d=db_dumps --gp-k=20121228111527 --gp-s=p --gp-c bkdb"
         Then gp_dump should return a return code of 0
         And the timestamp from gp_dump is stored and subdir is " "
-        And the database "bkdb" does not exist
-        And database "bkdb" exists
+        And database "bkdb" is dropped and recreated
         And the user runs "gp_restore -i --gp-k 20121228111527 --gp-d db_dumps --gp-i --gp-r db_dumps --gp-l=p -d bkdb --gp-c"
         And gp_restore should return a return code of 0
         And verify that there is a "heap" table "heap_table" in "bkdb" with data
@@ -824,7 +823,6 @@ Feature: Validate command line arguments
         And there is a "ao" table "ao2_table" with compression "None" in "bkdb" with data
         And there is a "co" table "co_table" with compression "None" in "bkdb" with data
         And there is a "co" table "co2_table" with compression "None" in "bkdb" with data
-        And there are no backup files
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts0"
@@ -934,7 +932,6 @@ Feature: Validate command line arguments
         And there is a "co" partition table "pepper.co_part_table" with compression "None" in "bkdb" with data
         And there is a "co" partition table "co_part_table" with compression "None" in "bkdb" with data
         And there is a list to store the incremental backup timestamps
-        And there are no backup files
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts0"
@@ -1981,8 +1978,7 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the subdir from gpcrondump is stored
-        And the database "bkdb" does not exist
-        And database "bkdb" exists
+        And database "bkdb" is dropped and recreated
         When the user runs gp_restore with the the stored timestamp and subdir for metadata only in "bkdb"
         Then gp_restore should return a return code of 0
         When the user runs gpdbrestore with the stored timestamp and options "--noplan" without -e option
@@ -2007,8 +2003,7 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the subdir from gpcrondump is stored
-        And the database "bkdb" does not exist
-        And database "bkdb" exists
+        And database "bkdb" is dropped and recreated
         When the user runs gp_restore with the the stored timestamp and subdir for metadata only in "bkdb"
         Then gp_restore should return a return code of 0
         When the user runs gpdbrestore with the stored timestamp and options "--noplan" without -e option
@@ -2284,8 +2279,7 @@ Feature: Validate command line arguments
         When the user runs "gp_dump --gp-d=db_dumps --gp-s=p --gp-c bkdb"
         Then gp_dump should return a return code of 0
         And the timestamp from gp_dump is stored and subdir is " "
-        And the database "bkdb" does not exist
-        And database "bkdb" exists
+        And database "bkdb" is dropped and recreated
         And the user runs gp_restore with the the stored timestamp and subdir in "bkdb" and bypasses ao stats
         And gp_restore should return a return code of 0
         And verify that there is a "heap" table "heap_table" in "bkdb" with data
@@ -3454,8 +3448,7 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And all the data from "bkdb" is saved for verification
-        And the database "bkdb" does not exist
-        And database "bkdb" exists
+        And database "bkdb" is dropped and recreated
         And there is a file "restore_file" with tables "public.ao_table|public.ext_tab"
         And the user runs "gpdbrestore --table-file restore_file -a" with the stored timestamp
         And gpdbrestore should return a return code of 0
@@ -4147,7 +4140,6 @@ Feature: Validate command line arguments
         And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
         And there is a "ao" table "ao_table2" with compression "None" in "bkdb" with data
         And there is a "co" table "co_table" with compression "None" in "bkdb" with data
-        And there are no backup files
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And table "ao_table2" is assumed to be in dirty state in "bkdb"
@@ -4179,10 +4171,8 @@ Feature: Validate command line arguments
     Scenario: (RR) Full Backup and Restore with --prefix option for multiple databases
         Given the test is initialized
         And the prefix "foo" is stored
-        And the database "testdb1" does not exist
-        And database "testdb1" exists
-        And the database "testdb2" does not exist
-        And database "testdb2" exists
+        And database "testdb1" is dropped and recreated
+        And database "testdb2" is dropped and recreated
         And there is a "heap" table "heap_table1" with compression "None" in "testdb1" with data
         And there is a "ao" partition table "ao_part_table" with compression "None" in "testdb1" with data
         And there is a backupfile of tables "heap_table1, ao_part_table" in "testdb1" exists for validation
@@ -4354,7 +4344,6 @@ Feature: Validate command line arguments
         And there is a "ao" table "ao_table" with compression "None" in "TESTING" with data
         And there is a "ao" table "ao_table2" with compression "None" in "TESTING" with data
         And there is a "co" table "co_table" with compression "None" in "TESTING" with data
-        And there are no backup files
         When the user runs "gpcrondump -a -x TESTING"
         And gpcrondump should return a return code of 0
         And table "ao_table2" is assumed to be in dirty state in "TESTING"
@@ -4436,7 +4425,6 @@ Feature: Validate command line arguments
     Scenario: Redirected Restore should create the gp_toolkit schema without -e option
         Given the test is initialized
         And the database "fullbkdb" does not exist
-        And there are no backup files
         And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
         And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
         And all the data from "bkdb" is saved for verification
@@ -4457,8 +4445,7 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And all the data from "bkdb" is saved for verification
-        And the database "bkdb" does not exist
-        And database "bkdb" exists
+        And database "bkdb" is dropped and recreated
         And the user runs "gpdbrestore --noanalyze -a" with the stored timestamp
         And gpdbrestore should return a return code of 0
         And gpdbestore should print Analyze bypassed on request to stdout
@@ -4473,8 +4460,7 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And all the data from "bkdb" is saved for verification
-        And the database "bkdb" does not exist
-        And database "bkdb" exists
+        And database "bkdb" is dropped and recreated
         And the user runs "gpdbrestore -a" with the stored timestamp
         And gpdbrestore should return a return code of 0
         And gpdbestore should print Commencing analyze of bkdb database to stdout
@@ -4604,7 +4590,6 @@ Feature: Validate command line arguments
         And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
         And there is a "ao" table "ao_table2" with compression "None" in "bkdb" with data
         And there is a "co" table "co_table" with compression "None" in "bkdb" with data
-        And there are no backup files
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And table "ao_table2" is assumed to be in dirty state in "bkdb"
