@@ -5958,7 +5958,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 						  "pg_catalog.pg_get_function_identity_arguments(oid) as funciargs, "
 						  "pg_catalog.pg_get_function_result(oid) as funcresult, "
 						  "provolatile, proisstrict, prosecdef, "
-						  "procost, prorows, prodataaccess"
+						  "procost, prorows, prodataaccess, "
 						  "(SELECT lanname FROM pg_catalog.pg_language WHERE oid = prolang) as lanname "
 						  "FROM pg_catalog.pg_proc "
 						  "WHERE oid = '%u'::pg_catalog.oid",
