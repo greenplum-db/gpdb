@@ -275,6 +275,31 @@ isGPDB4300OrLater(void)
 	return retValue;
 }
 
+/*
+ * Check if we are talking to GPDB
+ */
+static bool
+isGPDB(void)
+{
+	PQExpBuffer query;
+	PGresult   *res;
+	char	   *ver;
+	bool		retValue = false;
+
+	query = createPQExpBuffer();
+	appendPQExpBuffer(query, "select version()");
+	res = PQexec(g_conn, query->data);
+	check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
+
+	ver = (PQgetvalue(res, 0, 0));
+	if (strstr(ver, "Greenplum") != NULL)
+		retValue = true;
+
+	PQclear(res);
+	destroyPQExpBuffer(query);
+	return retValue;
+}
+
 
 /*
  * If GPDB version is 5.0, pg_proc has provariadic column.
@@ -305,32 +330,6 @@ isGPDB5000OrLater(void)
 
 	return retValue;
 }
-
-/*
- * Check if we are talking to GPDB
- */
-static bool
-isGPDB(void)
-{
-	PQExpBuffer query;
-	PGresult   *res;
-	char	   *ver;
-	bool		retValue = false;
-
-	query = createPQExpBuffer();
-	appendPQExpBuffer(query, "select version()");
-	res = PQexec(g_conn, query->data);
-	check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
-
-	ver = (PQgetvalue(res, 0, 0));
-	if (strstr(ver, "Greenplum") != NULL)
-		retValue = true;
-
-	PQclear(res);
-	destroyPQExpBuffer(query);
-	return retValue;
-}
-
 
 int
 main(int argc, char **argv)
