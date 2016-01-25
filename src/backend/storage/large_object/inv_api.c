@@ -91,6 +91,23 @@ open_lo_relation(void)
 }
 
 /*
+ * Get new OID for making new Large Object
+ */
+Oid
+get_new_oid()
+{
+	Oid lobjId;
+	
+	lobjId = InvalidOid;
+	
+	open_lo_relation();
+
+	lobjId = GetNewOidWithIndex(lo_heap_r, lo_index_r);
+	
+	return lobjId;
+}
+
+/*
  * Clean up at main transaction end
  */
 void

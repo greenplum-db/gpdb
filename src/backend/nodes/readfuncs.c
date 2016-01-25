@@ -367,7 +367,11 @@ _readQuery(void)
 	READ_BOOL_FIELD(hasAggs);
 	READ_BOOL_FIELD(hasBypassPreprocess);
 	READ_NODE_FIELD(bypassPreprocessFunctionArgs);
-	READ_INT_FIELD(loMode);
+	READ_NODE_FIELD(bypassPreprocessStringArgs);
+	READ_NODE_FIELD(loMode);
+	if (pg_strtok_peek_fldname("bypassLocation"))
+		READ_NODE_FIELD(bypassLocation);
+		
 	READ_BOOL_FIELD(hasWindFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
 	READ_NODE_FIELD(rtable);

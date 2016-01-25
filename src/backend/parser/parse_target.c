@@ -1474,7 +1474,7 @@ FigureColnameInternal(Node *node, char **name)
  * Gets function arguments and puts them in parse state. This is used currently * only for late execution functions
  */
 void
-getFuncArgs(ParseState *pstate, List *exprlist)
+getFuncArgs(int current_lomode, ParseState *pstate, List *exprlist)
 {
   List   *result = NIL;
   ListCell   *lc;
@@ -1496,7 +1496,7 @@ getFuncArgs(ParseState *pstate, List *exprlist)
       pstate->p_breadcrumb.node = (Node *)e;
 
       /* Currently handle only functions. */
-      if (IsA(e, FuncCall))
+      /*if (IsA(e, FuncCall))
       {
 	  FuncCall  *fref = (FuncCall *) e;
 	  ListCell *lc_internal;
@@ -1520,8 +1520,8 @@ getFuncArgs(ParseState *pstate, List *exprlist)
 	      }
 	    }
 	  }
-      }
-      else if (IsA(e, TargetEntry))
+	}*/
+      if (IsA(e, TargetEntry))
       {
 	TargetEntry *te = (TargetEntry *) (e);
 	Expr *expr_internal = (Expr *) (te->expr);

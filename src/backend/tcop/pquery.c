@@ -280,8 +280,10 @@ ProcessQuery(Portal portal,
 
 	if (stmt->bypassPreprocess)
 	{
-          queryDesc->late_execfunc = true;
+    queryDesc->late_execfunc = true;
 	  queryDesc->late_execfunc_funcargs = stmt->bypassPreprocessFuncArgs;
+		queryDesc->late_execfunc_stringargs = stmt->bypassPreprocessStringArgs;
+		queryDesc->bypass_location = stmt->bypassLocation;
 	  queryDesc->loMode = stmt->loMode;
 	}
 
