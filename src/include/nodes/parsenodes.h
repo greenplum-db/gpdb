@@ -163,10 +163,14 @@ typedef struct Query
 								 * clause */
 	bool		hasModifyingCTE;	/* has INSERT/UPDATE/DELETE in WITH clause */
 
-        bool hasBypassPreprocess;    /* Whether preprocessing of function is to be bypassed */
+	bool hasBypassPreprocess;    /* Whether preprocessing of function is to be bypassed */
 
-        List *bypassPreprocessFunctionArgs;    /* Arguments of bypass function preprocess function */
-        int        loMode;    /* 1 for constant parameters, 2 for subquery select */
+	List *bypassPreprocessFunctionArgs;    /* Arguments of bypass function preprocess function */
+	List *bypassPreprocessStringArgs;    /* String Arguments of bypass function preprocess function */
+	List       *loMode;    /* 1 for constant parameters, 2 for subquery select, 3 for lo_import */
+	
+	List *bypassLocation;    /* locations of bypass preprocess functions */
+	
 	Node	   *limitOffset;	/* # of result tuples to skip (int8 expr) */
 	Node	   *limitCount;		/* # of result tuples to return (int8 expr) */
 

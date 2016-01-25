@@ -161,7 +161,9 @@ _copyPlannedStmt(PlannedStmt *from)
 	COPY_SCALAR_FIELD(transientPlan);
 	COPY_SCALAR_FIELD(bypassPreprocess);
 	COPY_NODE_FIELD(bypassPreprocessFuncArgs);
-	COPY_SCALAR_FIELD(loMode);
+	COPY_NODE_FIELD(bypassPreprocessStringArgs);
+	COPY_NODE_FIELD(bypassLocation);
+	COPY_NODE_FIELD(loMode);
 
 	COPY_NODE_FIELD(planTree);
 	COPY_NODE_FIELD(rtable);
@@ -2654,7 +2656,9 @@ _copyQuery(Query *from)
 	COPY_SCALAR_FIELD(hasAggs);
 	COPY_SCALAR_FIELD(hasBypassPreprocess);
 	COPY_NODE_FIELD(bypassPreprocessFunctionArgs);
-	COPY_SCALAR_FIELD(loMode);
+	COPY_NODE_FIELD(bypassPreprocessStringArgs);
+	COPY_NODE_FIELD(loMode);
+	COPY_NODE_FIELD(bypassLocation);
 	COPY_SCALAR_FIELD(hasWindFuncs);
 	COPY_SCALAR_FIELD(hasSubLinks);
 	COPY_NODE_FIELD(rtable);

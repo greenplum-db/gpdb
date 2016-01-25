@@ -59,9 +59,11 @@ typedef struct QueryDesc
 	uint64		es_processed;	/* # of tuples processed */
 	Oid			es_lastoid;		/* oid of row inserted */
 	bool		extended_query;   /* simple or extended query protocol? */
-        bool            late_execfunc;   /* if late execution of function is true */
-        List            *late_execfunc_funcargs;    /* arguments of late function execution function */
-        int             loMode;    /* 1 for constant parameters, 2 for subquery select */
+	bool            late_execfunc;   /* if late execution of function is true */
+	List            *late_execfunc_funcargs;    /* arguments of late function execution function */
+	List            *late_execfunc_stringargs;    /* string arguments of late function execution function */
+	List             *loMode;    /* 1 for constant parameters, 2 for subquery select */
+	List    *bypass_location;    /* location of bypass preprocessing functions */
 	char		*portal_name;	/* NULL for unnamed portal */
 	
 	/* CDB: EXPLAIN ANALYZE statistics */

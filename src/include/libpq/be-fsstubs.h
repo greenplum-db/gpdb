@@ -36,6 +36,7 @@ extern Datum lo_lseek(PG_FUNCTION_ARGS);
 extern Datum lo_tell(PG_FUNCTION_ARGS);
 extern Datum lo_unlink(PG_FUNCTION_ARGS);
 extern Datum lo_truncate(PG_FUNCTION_ARGS);
+extern Oid	lo_import_internal(char *filename, Oid lobjOid);
 
 /*
  * compatibility option for access control

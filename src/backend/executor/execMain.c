@@ -796,6 +796,8 @@ ExecutorRun(QueryDesc *queryDesc,
 	Assert(NULL != queryDesc->plannedstmt && NULL != queryDesc->plannedstmt->memoryAccount);
 
 	estate->bypassPreprocessFunctionArgs = queryDesc->late_execfunc_funcargs;
+	estate->bypassPreprocessStringArgs = queryDesc->late_execfunc_stringargs;
+	estate->bypassLocation = queryDesc->bypass_location;
 	estate->loMode = queryDesc->loMode;
 
 	START_MEMORY_ACCOUNT(queryDesc->plannedstmt->memoryAccount);

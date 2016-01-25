@@ -17,6 +17,7 @@
 #include "commands/trigger.h"
 #include "executor/execdebug.h"
 #include "executor/execDML.h"
+#include "libpq/be-fsstubs.h"
 #include "utils/lsyscache.h"
 #include "parser/parsetree.h"
 #include "cdb/cdbvars.h"
@@ -343,38 +344,78 @@ ExecInsert(TupleTableSlot *slot,
 	if (isExecLatefunc)
 	{
 	  List *args_list = estate->bypassPreprocessFunctionArgs;
+		List *args_string_list = estate->bypassPreprocessStringArgs;
+		List *bypass_location = estate->bypassLocation;
+		List *lomode = estate->loMode;
+		ListCell *lc_lomode;
+		ListCell *lc_args;
+		ListCell *lc_location;
+		ListCell *lc_stringargs;
+		
+		lc_args = list_head(args_list);
+		lc_stringargs = list_head(args_string_list);
+		lc_location = list_head(bypass_location);
+		
+		Assert(list_length(lomode) == list_length(bypass_location));
+		
+		foreach(lc_lomode, lomode)
+		{
+			int current_lomode = lfirst_int(lc_lomode);
 
 	  /* Specific hack for lo_create. Please modify for any new functions that use this machinery */
-	  Assert(list_length(args_list) == 1);
+	  //Assert(list_length(args_list) == 1);
 
-	  if (estate->loMode == 1)
-	  {
-	    Oid arg_value = linitial_oid(args_list);
+	  	if (current_lomode == 4)
+	  	{
+	    	Oid arg_value = linitial_oid(lfirst(lc_args));
+				
+				lc_args = lnext(lc_args);
+				lc_location = lnext(lc_location);
 
-            /* Parser should have set list values as OID parameters for this func\
+        /* Parser should have set list values as OID parameters for this func\
 	       tion */
-	    inv_create(arg_value);
+	    	inv_create(arg_value);
+	  	}
+	  	else if (current_lomode== 1)
+	  	{
+	    	int attnum;
+	    	int arg_value;
+	    	bool isnull;
+
+	    	attnum = -1;
+	    	arg_value = -1;
+	    	isnull = false;
+
+	    	attnum = lfirst_int(lc_location);
+				
+				//lc_args = lnext(lc_args);
+				lc_location = lnext(lc_location);
+
+	    	Assert(attnum != -1);
+
+	    	arg_value = DatumGetUInt32(slot_getattr(slot, attnum, &isnull));
+
+	    	Assert (isnull != true);
+	  		/* Parser should have set list values as Var attno for this function */
+	  		inv_create(arg_value);
 	  }
-	  else if (estate->loMode == 2)
-	  {
-	    int attnum;
-	    int arg_value;
-	    bool isnull;
-
-	    attnum = -1;
-	    arg_value = -1;
-	    isnull = false;
-
-	    attnum = linitial_int(args_list);
-
-	    Assert(attnum != -1);
-
-	    arg_value = DatumGetUInt32(slot_getattr(slot, attnum, &isnull));
-
-	    Assert (isnull != true);
-	  /* Parser should have set list values as Var attno for this function */
-	  inv_create(arg_value);
-	  }
+		else if (current_lomode == 3)
+		{
+			char *args = (char *) linitial(lfirst(lc_stringargs));
+			int cur_location = lfirst_int(lc_location);
+			int arg_value = InvalidOid;
+			bool isnull = false;
+			
+			lc_stringargs = lnext(lc_stringargs);
+			lc_location = lnext(lc_location);
+			
+			arg_value = DatumGetUInt32(slot_getattr(slot, cur_location, &isnull));
+			
+			Assert(isnull != true);
+			
+			lo_import_internal(args, arg_value);
+		}
+		}
 	}
 
 	/*
@@ -1139,4 +1180,3 @@ lreplace:;
 	ExecARUpdateTriggers(estate, resultRelInfo, tupleid, tuple);
 
 }
-

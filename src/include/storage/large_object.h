@@ -79,5 +79,6 @@ extern int	inv_tell(LargeObjectDesc *obj_desc);
 extern int	inv_read(LargeObjectDesc *obj_desc, char *buf, int nbytes);
 extern int	inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes);
 extern void inv_truncate(LargeObjectDesc *obj_desc, int len);
+extern Oid get_new_oid();
 
 #endif   /* LARGE_OBJECT_H */
