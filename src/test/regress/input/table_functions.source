@@ -164,6 +164,10 @@ CREATE FUNCTION error(INOUT setof example)
 CREATE FUNCTION error() RETURNS TABLE(a setof example) 
     AS $$ SELECT * FROM example $$ LANGUAGE SQL READS SQL DATA;
 
+/* ERROR: anytable cannot have default value */
+CREATE FUNCTION error(a anytable DEFAULT TABLE(select 1,'test')) RETURNS TABLE(a int, b text)
+    AS '@abs_builddir@/regress@DLSUFFIX@', 'multiset_example' LANGUAGE C;
+
 /* Negative test cases around the "anytable" type */
 CREATE TABLE fail(x anytable);
 CREATE TYPE  fail AS (x anytable);

@@ -774,16 +774,14 @@ TypeIsVisible(Oid typid)
  * such an entry it should react as though the call were ambiguous.
  *
  * GPDB: this function has been backported from PostgreSQL 8.4, to get
- * support for variadic arguments. We have not backported support for
- * default arguments, however, which means that all the mentions of default
- * arguments in the comments are moot.
+ * support for variadic arguments and default arguments.
  *
  */
 FuncCandidateList
 FuncnameGetCandidates(List *names, int nargs,
-					  bool expand_variadic)
+					  bool expand_variadic,
+					  bool expand_defaults)
 {
-	bool		expand_defaults = false; /* defaults not backported yet */
 	FuncCandidateList resultList = NULL;
 	bool		any_special = false;
 	char	   *schemaname;
@@ -846,7 +844,6 @@ FuncnameGetCandidates(List *names, int nargs,
 		/*
 		 * Check if function can match by using parameter defaults.
 		 */
-#ifdef DEFAULT_ARGS_NOT_IMPLEMENTED_YET
 		if (pronargs > nargs && expand_defaults)
 		{
 			/* Ignore if not enough default expressions */
@@ -856,7 +853,6 @@ FuncnameGetCandidates(List *names, int nargs,
 			any_special = true;
 		}
 		else
-#endif
 			use_defaults = false;
 
 		/* Ignore if it doesn't match requested argument count */
@@ -914,9 +910,7 @@ FuncnameGetCandidates(List *names, int nargs,
 		}
 		else
 			newResult->nvargs = 0;
-#ifdef DEFAULT_ARGS_NOT_IMPLEMENTED_YET
 		newResult->ndargs = use_defaults ? pronargs - nargs : 0;
-#endif
 
 		/*
 		 * Does it have the same arguments as something we already accepted?
@@ -955,13 +949,13 @@ FuncnameGetCandidates(List *names, int nargs,
 			}
 			else
 			{
-				int			cmp_nargs = newResult->nargs;
+				int			cmp_nargs = newResult->nargs - newResult->ndargs;
 
 				for (prevResult = resultList;
 					 prevResult;
 					 prevResult = prevResult->next)
 				{
-					if (cmp_nargs == prevResult->nargs &&
+					if (cmp_nargs == prevResult->nargs - prevResult->ndargs &&
 						memcmp(newResult->args,
 							   prevResult->args,
 							   cmp_nargs * sizeof(Oid)) == 0)
@@ -1118,7 +1112,8 @@ FunctionIsVisible(Oid funcid)
 
 		visible = false;
 
-		clist = FuncnameGetCandidates(list_make1(makeString(proname)), nargs, false);
+		clist = FuncnameGetCandidates(list_make1(makeString(proname)),
+									  nargs, false, false);
 
 		for (; clist; clist = clist->next)
 		{
@@ -1402,6 +1397,7 @@ OpernameGetCandidates(List *names, char oprkind)
 		newResult->oid = HeapTupleGetOid(opertup);
 		newResult->nargs = 2;
 		newResult->nvargs = 0;
+		newResult->ndargs = 0;
 		newResult->args[0] = operform->oprleft;
 		newResult->args[1] = operform->oprright;
 		newResult->next = resultList;
