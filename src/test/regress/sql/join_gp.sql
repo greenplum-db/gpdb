@@ -74,6 +74,16 @@ select count(*) from hjn_test, (select 3 as bar) foo where least (foo.bar,(array
 select count(*) from hjn_test, (select 3 as bar) foo where hjn_test.i = least (foo.bar, least(4,10)) and hjn_test.j = least(4,10);
 select * from int4_tbl a join int4_tbl b on (a.f1 = (select f1 from int4_tbl c where c.f1=b.f1));
 
+-- Same as the last query, but with a partitioned table (which requires a
+-- Result node to do projection of the hash expression, as Append is not
+-- projection-capable)
+create table part4_tbl (f1 int4) partition by range (f1) (start(-1000000) end (1000000) every (1000000));
+insert into part4_tbl values
+       (-123457), (-123456), (-123455),
+       (-1), (0), (1),
+       (123455), (123456), (123457);
+select * from part4_tbl a join part4_tbl b on (a.f1 = (select f1 from int4_tbl c where c.f1=b.f1));
+
 --
 -- Test case where a Motion hash key is only needed for the redistribution,
 -- and not returned in the final result set. There was a bug at one point where
@@ -117,4 +127,5 @@ select enable_xform('CXformLeftAntiSemiJoinNotIn2HashJoinNotIn');
 select enable_xform('CXformLeftOuterJoin2HashJoin');
 select enable_xform('CXformLeftSemiJoin2HashJoin');
 
+set client_min_messages='warning'; -- silence drop-cascade NOTICEs
 drop schema pred cascade;

@@ -180,6 +180,26 @@ select * from int4_tbl a join int4_tbl b on (a.f1 = (select f1 from int4_tbl c w
  -2147483647 | -2147483647
 (5 rows)
 
+-- Same as the last query, but with a partitioned table (which requires a
+-- Result node to do projection of the hash expression, as Append is not
+-- projection-capable)
+create table part4_tbl (f1 int4) partition by range (f1) (start(-1000000) end (1000000) every (1000000));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "part4_tbl_1_prt_1" for table "part4_tbl"
+NOTICE:  CREATE TABLE will create partition "part4_tbl_1_prt_2" for table "part4_tbl"
+insert into part4_tbl values
+       (-123457), (-123456), (-123455),
+       (-1), (0), (1),
+       (123455), (123456), (123457);
+select * from part4_tbl a join part4_tbl b on (a.f1 = (select f1 from int4_tbl c where c.f1=b.f1));
+   f1    |   f1    
+---------+---------
+  123456 |  123456
+ -123456 | -123456
+       0 |       0
+(3 rows)
+
 --
 -- Test case where a Motion hash key is only needed for the redistribution,
 -- and not returned in the final result set. There was a bug at one point where
@@ -310,11 +330,5 @@ select enable_xform('CXformLeftSemiJoin2HashJoin');
  Server has been compiled without ORCA
 (1 row)
 
+set client_min_messages='warning'; -- silence drop-cascade NOTICEs
 drop schema pred cascade;
-NOTICE:  drop cascades to table tjoin3
-NOTICE:  drop cascades to table tjoin2
-NOTICE:  drop cascades to table tjoin1
-NOTICE:  drop cascades to table int4_tbl
-NOTICE:  drop cascades to table hjn_test
-NOTICE:  drop cascades to table t2
-NOTICE:  drop cascades to table t1
