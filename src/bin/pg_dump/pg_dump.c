@@ -203,7 +203,8 @@ static void getDependencies(void);
 static void setExtPartDependency(TableInfo *tblinfo, int numTables);
 static void getDomainConstraints(TypeInfo *tinfo);
 static void getTableData(TableInfo *tblinfo, int numTables, bool oids);
-static char *format_function_arguments(FuncInfo *finfo, int nallargs,
+static char *format_function_arguments(FuncInfo *finfo, char *funcargs);
+static char *format_function_arguments_old(FuncInfo *finfo, int nallargs,
 						  char **allargtypes,
 						  char **argmodes,
 						  char **argnames);
@@ -237,6 +238,8 @@ static void check_sql_result(PGresult *res, PGconn *conn, const char *query,
 static char *nextToken(register char **stringp, register const char *delim);
 static void addDistributedBy(PQExpBuffer q, TableInfo *tbinfo, int actual_atts);
 static bool isGPDB4300OrLater(void);
+static bool isGPDB(void);
+static bool isGPDB5000OrLater(void);
 
 /* END MPP ADDITION */
 
@@ -258,6 +261,7 @@ isGPDB4300OrLater(void)
 				"select attnum from pg_catalog.pg_attribute "
 				"where attrelid = 'pg_catalog.pg_proc'::regclass and "
 				"attname = 'prodataaccess'");
+
 		res = PQexec(g_conn, query->data);
 		check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
 
@@ -271,6 +275,61 @@ isGPDB4300OrLater(void)
 	return retValue;
 }
 
+/*
+ * Check if we are talking to GPDB
+ */
+static bool
+isGPDB(void)
+{
+	PQExpBuffer query;
+	PGresult   *res;
+	char	   *ver;
+	bool		retValue = false;
+
+	query = createPQExpBuffer();
+	appendPQExpBuffer(query, "select version()");
+	res = PQexec(g_conn, query->data);
+	check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
+
+	ver = (PQgetvalue(res, 0, 0));
+	if (strstr(ver, "Greenplum") != NULL)
+		retValue = true;
+
+	PQclear(res);
+	destroyPQExpBuffer(query);
+	return retValue;
+}
+
+
+/*
+ * If GPDB version is 5.0, pg_proc has provariadic column.
+ * When we have version() returns GPDB version instead of "main build dev" or
+ * something similar, we'll fix this function (MPP-17313)
+ */
+static bool
+isGPDB5000OrLater(void)
+{
+	bool	retValue = false;
+
+	if (isGPDB() == true)
+	{
+		PQExpBuffer query;
+		PGresult   *res;
+
+		query = createPQExpBuffer();
+		appendPQExpBuffer(query,"select attnum from pg_catalog.pg_attribute where attrelid = 1255 and attname = 'provariadic'");
+		res = PQexec(g_conn, query->data);
+		check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
+
+		if (PQntuples(res) == 1)
+			retValue = true;
+
+		PQclear(res);
+		destroyPQExpBuffer(query);
+	}
+
+	return retValue;
+}
 
 int
 main(int argc, char **argv)
@@ -5636,17 +5695,35 @@ dumpPlTemplateFunc(Oid funcOid, const char *templateField, PQExpBuffer buffer)
 	destroyPQExpBuffer(fquery);
 }
 
-
 /*
  * format_function_arguments: generate function name and argument list
+ *
+ * This is used when we can rely on pg_get_function_arguments to format
+ * the argument list.
+ */
+static char *
+format_function_arguments(FuncInfo *finfo, char *funcargs)
+{
+	PQExpBufferData fn;
+
+	initPQExpBuffer(&fn);
+	appendPQExpBuffer(&fn, "%s(%s)", fmtId(finfo->dobj.name), funcargs);
+	return fn.data;
+}
+
+/*
+ * format_function_arguments_old: generate function name and argument list
  *
  * The argument type names are qualified if needed.  The function name
  * is never qualified.
  *
+ * This is used only with pre-GPDB 5.0 servers, so we aren't expecting to see
+ * DEFAULT arguments.
+ *
  * Any or all of allargtypes, argmodes, argnames may be NULL.
  */
 static char *
-format_function_arguments(FuncInfo *finfo, int nallargs,
+format_function_arguments_old(FuncInfo *finfo, int nallargs,
 						  char **allargtypes,
 						  char **argmodes,
 						  char **argnames)
@@ -5826,12 +5903,16 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	PQExpBuffer delqry;
 	PQExpBuffer asPart;
 	PGresult   *res;
-	char	   *funcsig;
+	char       *funcsig;                /* identity signature */
+	char       *funcfullsig;            /* full signature */
 	char	   *funcsig_tag;
 	int			ntups;
 	char	   *proretset;
 	char	   *prosrc;
 	char	   *probin;
+	char       *funcargs;
+	char	   *funciargs;
+	char       *funcresult;
 	char	   *proallargtypes;
 	char	   *proargmodes;
 	char	   *proargnames;
@@ -5848,6 +5929,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	char	  **argmodes = NULL;
 	char	  **argnames = NULL;
 	bool		isGE43 = isGPDB4300OrLater();
+	bool		isGE50 = isGPDB5000OrLater();
 
 	/* Skip if not to be dumped */
 	if (!finfo->dobj.dump || dataOnly)
@@ -5862,7 +5944,27 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	selectSourceSchema(finfo->dobj.namespace->dobj.name);
 
 	/* Fetch function-specific details */
-	if (g_fout->remoteVersion >= 80300)
+
+	if (isGE50)
+	{
+		/*
+		 * In GPDB 5.0 and up we rely on pg_get_function_arguments and
+		 * pg_get_function_result instead of examining proallargtypes etc.
+		 */
+		appendPQExpBuffer(query,
+						  "SELECT proretset, prosrc, probin, "
+						  "pg_catalog.pg_get_function_arguments(oid) as funcargs, "
+						  "pg_catalog.pg_get_function_identity_arguments(oid) as funciargs, "
+						  "pg_catalog.pg_get_function_result(oid) as funcresult, "
+						  "provolatile, proisstrict, prosecdef, "
+						  "procost, prorows, prodataaccess, "
+						  "(SELECT lanname FROM pg_catalog.pg_language WHERE oid = prolang) as lanname "
+						  "FROM pg_catalog.pg_proc "
+						  "WHERE oid = '%u'::pg_catalog.oid",
+						  finfo->dobj.catId.oid);
+
+	}
+	else if (g_fout->remoteVersion >= 80300)
 	{
 		appendPQExpBuffer(query,
 						  "SELECT proretset, prosrc, probin, "
@@ -5964,9 +6066,20 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	proretset = PQgetvalue(res, 0, PQfnumber(res, "proretset"));
 	prosrc = PQgetvalue(res, 0, PQfnumber(res, "prosrc"));
 	probin = PQgetvalue(res, 0, PQfnumber(res, "probin"));
-	proallargtypes = PQgetvalue(res, 0, PQfnumber(res, "proallargtypes"));
-	proargmodes = PQgetvalue(res, 0, PQfnumber(res, "proargmodes"));
-	proargnames = PQgetvalue(res, 0, PQfnumber(res, "proargnames"));
+	if (isGE50)
+	{
+		funcargs = PQgetvalue(res, 0, PQfnumber(res, "funcargs"));
+		funciargs = PQgetvalue(res, 0, PQfnumber(res, "funciargs"));
+		funcresult = PQgetvalue(res, 0, PQfnumber(res, "funcresult"));
+		proallargtypes = proargmodes = proargnames = NULL;
+	}
+	else
+	{
+		proallargtypes = PQgetvalue(res, 0, PQfnumber(res, "proallargtypes"));
+		proargmodes = PQgetvalue(res, 0, PQfnumber(res, "proargmodes"));
+		proargnames = PQgetvalue(res, 0, PQfnumber(res, "proargnames"));
+		funcargs = funciargs = funcresult = NULL;
+	}
 	provolatile = PQgetvalue(res, 0, PQfnumber(res, "provolatile"));
 	proisstrict = PQgetvalue(res, 0, PQfnumber(res, "proisstrict"));
 	prosecdef = PQgetvalue(res, 0, PQfnumber(res, "prosecdef"));
@@ -6059,8 +6172,19 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 		}
 	}
 
-	funcsig = format_function_arguments(finfo, nallargs, allargtypes,
-										argmodes, argnames);
+	if (funcargs)
+	{
+		/* GPDB 5.0 or later; we rely on server-side code for most of the work */
+		funcfullsig = format_function_arguments(finfo, funcargs);
+		funcsig = format_function_arguments(finfo, funciargs);
+	}
+	else
+	{
+		/* pre-GPDB 5.0, do it ourselves */
+		funcsig = format_function_arguments_old(finfo, nallargs, allargtypes,
+												argmodes, argnames);
+		funcfullsig = funcsig;
+	}
 	funcsig_tag = format_function_signature(finfo, false);
 
 	/*
@@ -6070,31 +6194,33 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 					  fmtId(finfo->dobj.namespace->dobj.name),
 					  funcsig);
 
-	appendPQExpBuffer(q, "CREATE FUNCTION %s ", funcsig);
+	appendPQExpBuffer(q, "CREATE FUNCTION %s ", funcfullsig);
 
-	/* switch between RETURNS SETOF RECORD and RETURNS TABLE functions */
-	if (!is_returns_table_function(nallargs, argmodes))
-	{
-		rettypename = getFormattedTypeName(finfo->prorettype, zeroAsOpaque);
-		appendPQExpBuffer(q, "RETURNS %s%s\n    %s\n    LANGUAGE %s",
-						  (proretset[0] == 't') ? "SETOF " : "",
-						  rettypename,
-						  asPart->data,
-						  fmtId(lanname));
-		free(rettypename);
-	}
+	if (funcresult)
+		appendPQExpBuffer(q, "RETURNS %s", funcresult);
 	else
 	{
-		char	   *func_cols;
-
-		func_cols = format_table_function_columns(finfo, nallargs, allargtypes,
-												  argmodes, argnames);
-		appendPQExpBuffer(q, "RETURNS TABLE %s\n    %s\n    LANGUAGE %s",
-						  func_cols,
-						  asPart->data,
-						  fmtId(lanname));
-		free(func_cols);
+		/* switch between RETURNS SETOF RECORD and RETURNS TABLE functions */
+		if (!is_returns_table_function(nallargs, argmodes))
+		{
+			rettypename = getFormattedTypeName(finfo->prorettype, zeroAsOpaque);
+			appendPQExpBuffer(q, "RETURNS %s%s",
+							  (proretset[0] == 't') ? "SETOF " : "",
+							  rettypename);
+			free(rettypename);
+		}
+		else
+		{
+			char	   *func_cols;
+			func_cols = format_table_function_columns(finfo, nallargs, allargtypes,
+													  argmodes, argnames);
+			appendPQExpBuffer(q, "RETURNS TABLE %s", func_cols);
+			free(func_cols);
+		}
 	}
+
+	appendPQExpBuffer(q, "\n    %s", asPart->data);
+	appendPQExpBuffer(q, "\n    LANGUAGE %s", fmtId(lanname));
 
 	if (provolatile[0] != PROVOLATILE_VOLATILE)
 	{

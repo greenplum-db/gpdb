@@ -97,9 +97,13 @@ ERROR:  functions cannot accept set arguments
 CREATE FUNCTION error(INOUT setof example) 
     AS $$ SELECT * FROM example $$ LANGUAGE SQL READS SQL DATA;
 ERROR:  functions cannot accept set arguments
-CREATE FUNCTION error() RETURNS TABLE(a setof example) 
+CREATE FUNCTION error() RETURNS TABLE(a setof example)
     AS $$ SELECT * FROM example $$ LANGUAGE SQL READS SQL DATA;
 ERROR:  functions cannot accept set arguments
+/* ERROR: anytable cannot have default value */
+CREATE FUNCTION error(a anytable DEFAULT TABLE(select 1,'test')) RETURNS TABLE(a int, b text)
+    AS '@abs_srcdir@/regress.so', 'multiset_example' LANGUAGE C;
+ERROR:  anytable parameter cannot have default value
 /* Negative test cases around the "anytable" type */
 CREATE TABLE fail(x anytable);
 NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
@@ -148,33 +152,33 @@ ORDER BY p.proname;
 
 /* Observe how psql reports them */
 \df (scalar_*|multiset_*)
-                                               List of functions
-     Schema     |           Name            | Result data type |          Argument data types          |  Type  
-----------------+---------------------------+------------------+---------------------------------------+--------
- table_function | multiset_1                | SETOF record     | a anytable                            | normal
- table_function | multiset_2                | SETOF record     | a anytable                            | normal
- table_function | multiset_3                | SETOF record     | a anytable, OUT a integer, OUT b text | normal
- table_function | multiset_4                | SETOF record     | a anytable                            | normal
- table_function | multiset_5                | SETOF example    | a anytable                            | normal
- table_function | multiset_6                | SETOF record     | a anytable                            | normal
- table_function | multiset_materialize_bad  | SETOF record     | anytable                              | normal
- table_function | multiset_materialize_good | SETOF record     | anytable                              | normal
- table_function | multiset_scalar_null      | integer          | anytable                              | normal
- table_function | multiset_scalar_tuple     | example          | anytable                              | normal
- table_function | multiset_scalar_value     | integer          | anytable                              | normal
- table_function | multiset_setof_null       | SETOF integer    | anytable                              | normal
- table_function | multiset_setof_value      | SETOF integer    | anytable                              | normal
- table_function | scalar_1                  | integer          | integer                               | normal
- table_function | scalar_2                  | integer          | integer                               | normal
- table_function | scalar_3                  | integer          | a integer, OUT b integer              | normal
- table_function | scalar_4                  | integer          | INOUT x integer                       | normal
- table_function | scalar_5                  | anyelement       | anyelement                            | normal
- table_function | scalar_tf_1               | SETOF record     | integer                               | normal
- table_function | scalar_tf_2               | SETOF record     | integer                               | normal
- table_function | scalar_tf_3               | SETOF record     | a integer                             | normal
- table_function | scalar_tf_4               | SETOF record     | a integer, OUT a integer, OUT b text  | normal
- table_function | scalar_tf_5               | SETOF record     | a integer                             | normal
- table_function | scalar_tf_6               | SETOF example    | a anyelement                          | normal
+                                                   List of functions
+     Schema     |           Name            |     Result data type     |          Argument data types          |  Type
+----------------+---------------------------+--------------------------+---------------------------------------+--------
+ table_function | multiset_1                | TABLE(a integer, b text) | a anytable                            | normal
+ table_function | multiset_2                | TABLE(a integer, b text) | a anytable                            | normal
+ table_function | multiset_3                | SETOF record             | a anytable, OUT a integer, OUT b text | normal
+ table_function | multiset_4                | SETOF record             | a anytable                            | normal
+ table_function | multiset_5                | SETOF example            | a anytable                            | normal
+ table_function | multiset_6                | SETOF record             | a anytable                            | normal
+ table_function | multiset_materialize_bad  | TABLE(a integer, b text) | anytable                              | normal
+ table_function | multiset_materialize_good | TABLE(a integer, b text) | anytable                              | normal
+ table_function | multiset_scalar_null      | integer                  | anytable                              | normal
+ table_function | multiset_scalar_tuple     | example                  | anytable                              | normal
+ table_function | multiset_scalar_value     | integer                  | anytable                              | normal
+ table_function | multiset_setof_null       | SETOF integer            | anytable                              | normal
+ table_function | multiset_setof_value      | SETOF integer            | anytable                              | normal
+ table_function | scalar_1                  | integer                  | integer                               | normal
+ table_function | scalar_2                  | integer                  | integer                               | normal
+ table_function | scalar_3                  | integer                  | a integer, OUT b integer              | normal
+ table_function | scalar_4                  | integer                  | INOUT x integer                       | normal
+ table_function | scalar_5                  | anyelement               | anyelement                            | normal
+ table_function | scalar_tf_1               | TABLE(a integer, b text) | integer                               | normal
+ table_function | scalar_tf_2               | TABLE(a integer, b text) | integer                               | normal
+ table_function | scalar_tf_3               | TABLE(a integer, b text) | a integer                             | normal
+ table_function | scalar_tf_4               | SETOF record             | a integer, OUT a integer, OUT b text  | normal
+ table_function | scalar_tf_5               | SETOF record             | a integer                             | normal
+ table_function | scalar_tf_6               | SETOF example            | a anyelement                          | normal
 (24 rows)
 
 -- Normal function use:

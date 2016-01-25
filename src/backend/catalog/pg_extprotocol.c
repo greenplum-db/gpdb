@@ -235,9 +235,9 @@ ValidateProtocolFunction(List *fnName, ExtPtcFuncType fntype)
 	 * function's return value.  it also returns the true argument types to
 	 * the function.
 	 */
-	fdresult = func_get_detail(fnName, NIL, nargs, inputTypes, false,
+	fdresult = func_get_detail(fnName, NIL, nargs, inputTypes, false, false,
 							   &fnOid, &actual_rettype, &retset, &retstrict,
-							   &retordered, &nvargs, &true_oid_array);
+							   &retordered, &nvargs, &true_oid_array, NULL);
 
 	/* only valid case is a normal function not returning a set */
 	if (fdresult != FUNCDETAIL_NORMAL || !OidIsValid(fnOid))
