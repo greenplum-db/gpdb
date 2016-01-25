@@ -404,7 +404,7 @@ lo_import_internal(char *filename, Oid lobjOid)
 	/*
 	 * open the file to be read in
 	 */
-	//text_to_cstring_buffer(filename, fnamebuf, sizeof(fnamebuf));
+	 
 	fd = PathNameOpenFile(filename, O_RDONLY | PG_BINARY, 0666);
 	if (fd < 0)
 		ereport(ERROR,

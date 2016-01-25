@@ -361,22 +361,8 @@ ExecInsert(TupleTableSlot *slot,
 		foreach(lc_lomode, lomode)
 		{
 			int current_lomode = lfirst_int(lc_lomode);
-
-	  /* Specific hack for lo_create. Please modify for any new functions that use this machinery */
-	  //Assert(list_length(args_list) == 1);
-
-	  	if (current_lomode == 4)
-	  	{
-	    	Oid arg_value = linitial_oid(lfirst(lc_args));
-				
-				lc_args = lnext(lc_args);
-				lc_location = lnext(lc_location);
-
-        /* Parser should have set list values as OID parameters for this func\
-	       tion */
-	    	inv_create(arg_value);
-	  	}
-	  	else if (current_lomode== 1)
+			
+	  	if (current_lomode== 1)
 	  	{
 	    	int attnum;
 	    	int arg_value;
@@ -388,7 +374,6 @@ ExecInsert(TupleTableSlot *slot,
 
 	    	attnum = lfirst_int(lc_location);
 				
-				//lc_args = lnext(lc_args);
 				lc_location = lnext(lc_location);
 
 	    	Assert(attnum != -1);
@@ -399,23 +384,25 @@ ExecInsert(TupleTableSlot *slot,
 	  		/* Parser should have set list values as Var attno for this function */
 	  		inv_create(arg_value);
 	  }
-		else if (current_lomode == 3)
-		{
-			char *args = (char *) linitial(lfirst(lc_stringargs));
-			int cur_location = lfirst_int(lc_location);
-			int arg_value = InvalidOid;
-			bool isnull = false;
+			else if (current_lomode == 3)
+			{
+				A_Const *current_node = (A_Const *) linitial(lfirst(lc_args));
 			
-			lc_stringargs = lnext(lc_stringargs);
-			lc_location = lnext(lc_location);
+				char *args = (char *) current_node->val.val.ival;
+				int cur_location = lfirst_int(lc_location);
+				int arg_value = InvalidOid;
+				bool isnull = false;
 			
-			arg_value = DatumGetUInt32(slot_getattr(slot, cur_location, &isnull));
+				lc_args = lnext(lc_args);
+				lc_location = lnext(lc_location);
 			
-			Assert(isnull != true);
+				arg_value = DatumGetUInt32(slot_getattr(slot, cur_location, &isnull));
 			
-			lo_import_internal(args, arg_value);
+				Assert(isnull != true);
+			
+				lo_import_internal(args, arg_value);
 		}
-		}
+	}
 	}
 
 	/*
