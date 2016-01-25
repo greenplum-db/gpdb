@@ -2693,6 +2693,12 @@ static void remove_unused_initplans_helper(Plan *plan, Bitmapset **usedParams, B
 			find_params_walker((Node *) motion->hashExpr, &context);
 			break;
 		}
+		case T_Window:
+		{
+			Window *w = (Window *) plan;
+			find_params_walker((Node *) w->windowKeys, &context);
+			break;
+		}
 		default:
 			break;
 	}
