@@ -2167,9 +2167,15 @@ shareinput_mutator_xslice_3(Node *node, ApplyShareInputContext *ctxt, bool fPop)
 
 		shareinput_find_sharenode(ctxt, sisc->share_id, &plan_slicemark);
 
+		Assert(plan_slicemark.plan);
+
 		if(plan_slicemark.plan)
 		{
 			stype = get_plan_share_type(plan_slicemark.plan);
+		}
+		else
+		{
+			elog(ERROR, "Sub-plan for share_id %d cannot be NULL.", sisc->share_id);
 		}
 
 		switch(stype)
