@@ -269,10 +269,10 @@ AggregateCreateWithOid(const char		*aggName,
 							  PointerGetDatum(NULL),	/* allParamTypes */
 							  PointerGetDatum(NULL),	/* parameterModes */
 							  PointerGetDatum(NULL),	/* parameterNames */
+							  NIL,						/* parameterDefaults */
 							  1,				/* procost */
 							  0,				/* prorows */
 							  PRODATAACCESS_NONE,		/* prodataaccess */
-							  NIL,						/* parameterDefaults */
 							  procOid);
 
 	/*

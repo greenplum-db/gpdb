@@ -1135,10 +1135,10 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 					PointerGetDatum(allParameterTypes),
 					PointerGetDatum(parameterModes),
 					PointerGetDatum(parameterNames),
+					parameterDefaults,
 					procost,
 					prorows,
 					dataAccess,
-					parameterDefaults,
 					stmt->funcOid);
 
 	if (Gp_role == GP_ROLE_DISPATCH)

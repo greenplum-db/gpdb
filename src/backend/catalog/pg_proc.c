@@ -83,10 +83,10 @@ ProcedureCreate(const char *procedureName,
 				Datum allParameterTypes,
 				Datum parameterModes,
 				Datum parameterNames,
+				List *parameterDefaults,
 				float4 procost,
 				float4 prorows,
 				char prodataaccess,
-				List *parameterDefaults,
 				Oid funcOid)
 {
 	Oid			retval;
