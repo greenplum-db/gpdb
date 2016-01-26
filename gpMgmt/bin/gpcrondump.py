@@ -1497,10 +1497,10 @@ def create_parser():
     addTo.add_option('-K', dest='timestamp_key', metavar="<YYYYMMDDHHMMSS>",
                      help="Timestamp key for the dump.")
 
-    addTo.add_option('--cleanup-date', dest='cleanup_date', default=None, metavar='<YYYYMMDD date>',
-                     help="Specific dump date to clear.")
-    addTo.add_option('--cleanup-total', dest='cleanup_total', default=None, metavar='<N int>',
-                     help="Specific number of old dumps to clear.")
+    addTo.add_option('--cleanup-date', dest='cleanup_date', default=None, metavar='<yyyymmdd date>',
+                     help="Remove backup sets for a yyyymmdd date.")
+    addTo.add_option('--cleanup-total', dest='cleanup_total', default=None, metavar='<n int>',
+                     help="Remove the n oldest backup sets based on the backup timestamp.")
     addTo.add_option('--list-backup-files', dest='list_backup_files', default=False, action='store_true',
                      help="Files created during the dump operation for a particular input timestamp")
     addTo.add_option('--prefix', dest='local_dump_prefix', default='', metavar='<filename prefix>',
