@@ -1105,7 +1105,7 @@ COptTasks::PvOptimizeTask
 	CRefCount::SafeRelease(pbsEnabled);
 	CRefCount::SafeRelease(pbsDisabled);
 	CRefCount::SafeRelease(pbsTraceFlags);
-	if (optimizer_release_mdcache)
+	if (!optimizer_metadata_caching)
 	{
 		CMDCache::Shutdown();
 	}
