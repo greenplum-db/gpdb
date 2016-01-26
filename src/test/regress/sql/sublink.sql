@@ -16,3 +16,27 @@ CREATE VIEW v_xpect_triangle_de AS
 
 
 SELECT * FROM v_xpect_triangle_de , ( SELECT lpad(s.a ::text, 2, '0'::text) AS all_months FROM generate_series(1, 12) s(a)) b WHERE (v_xpect_triangle_de.rep_year::text || b.all_months)::text>=  ( SELECT d_xpect_setup.key_value AS valid_from FROM d_xpect_setup WHERE d_xpect_setup.key::text = 'data_valid_from'::text AND d_xpect_setup.country::text = 'NL'::text);
+
+
+--
+-- This bizarre looking query is reduced from a customer's query that used
+-- to cause an assertion failure or crash. The interesting property is that
+-- there are two references to cte_a in the query, inside cte_b, but after
+-- the planner has expanded both references to cte_b, there are now four
+-- references to cte_a, in the half-built plan tree.
+--
+WITH cte_a (col1, col2)
+AS
+(
+  VALUES (10, 123), (20, 234)
+)
+,
+cte_b AS
+(
+  SELECT (SELECT col1 FROM cte_a WHERE cte_a.col1 = lp.col1) as match1,
+	 (SELECT col1 FROM cte_a WHERE cte_a.col1 = lp.col2) as match2
+  FROM (SELECT 10 as col1, 20 as col2) as lp
+
+)
+SELECT *
+FROM cte_b as first, cte_b as second;

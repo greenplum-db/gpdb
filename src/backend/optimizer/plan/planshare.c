@@ -160,21 +160,18 @@ static ShareInputScan *make_shareinputscan(PlannerInfo *root, Plan *inputplan)
 	return sisc;
 }
 
-List *share_plan(PlannerInfo *root, Plan *common, int numpartners)
+/*
+ * Prepare a subplan for sharing. This creates a Materialize node,
+ * or marks the existing Materialize or Sort node as shared. After
+ * this, you can call share_prepared_plan() as many times as you
+ * want to share this plan.
+ */
+Plan *
+prepare_plan_for_sharing(PlannerInfo *root, Plan *common)
 {
-	List *shared_nodes = NULL;
 	ShareType stype;
 	Plan *shared = common;
 	bool xslice = false;
-	int i;
-
-	Assert(numpartners > 0);
-	
-	if(numpartners == 1)
-	{
-		shared_nodes = lappend(shared_nodes, common);
-		return shared_nodes;
-	}
 
 	if (IsA(common, ShareInputScan))
 	{
@@ -220,14 +217,49 @@ List *share_plan(PlannerInfo *root, Plan *common, int numpartners)
 		m->share_type = stype;
 	}
 
-	for(i=0; i<numpartners; ++i)
+	return shared;
+}
+
+/*
+ * Create a ShareInputScan to scan the given subplan. The subplan
+ * must've been prepared for sharing by calling
+ * prepare_plan_for_sharing().
+ */
+Plan *
+share_prepared_plan(PlannerInfo *root, Plan *common)
+{
+	return (Plan *) make_shareinputscan(root, common);
+}
+
+/*
+ * A shorthand for prepare_plan_for_sharing() followed by
+ * 'numpartners' calls to share_prepared_plan().
+ */
+List *
+share_plan(PlannerInfo *root, Plan *common, int numpartners)
+{
+	List	   *shared_nodes = NIL;
+	Plan	   *shared;
+	int			i;
+
+	Assert(numpartners > 0);
+
+	if (numpartners == 1)
+		return list_make1(common);
+
+	shared = prepare_plan_for_sharing(root, common);
+
+	for (i = 0; i < numpartners; i++)
 	{
-		Plan *p = (Plan *) make_shareinputscan(root, shared);
+		Plan	   *p;
+
+		p = (Plan *) make_shareinputscan(root, shared);
 		shared_nodes = lappend(shared_nodes, p);
 	}
 
 	return shared_nodes;
 }
+
 
 /*
  * Return the total cost of sharing common numpartner times.

@@ -120,7 +120,7 @@ typedef struct CtePlanInfo
 	 * If a CTE is referenced multiple times, this list contains multiple plans,
 	 * each of which has ShareNode on top.
 	 */
-	List *subplans;
+	Plan *shared_plan;
 
 	/*
 	 * The rtable corresponding to the subplan.
@@ -131,16 +131,6 @@ typedef struct CtePlanInfo
 	 * The pathkeys corresponding to the subplan.
 	 */
 	List *pathkeys;
-
-	/*
-	 * The next plan id in subplans that should be used (starting with 0).
-	 */
-	int nextPlanId;
-
-	/*
-	 * Number of non-shared plans generated for this cte.
-	 */
-	int numNonSharedPlans;
 } CtePlanInfo;
 
 /*----------
