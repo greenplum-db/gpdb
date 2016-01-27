@@ -10,15 +10,17 @@
 
 UNAME = $(shell uname)
 UNAME_P = $(shell uname -p)
+UNAME_M = $(shell uname -m)
+
 ARCH_OS = GPOS_$(UNAME)
 ARCH_CPU = GPOS_$(UNAME_P)
 
-ARCH_BIT = GPOS_64BIT
-
-ifeq ($(ARCH_BIT), GPOS_32BIT)
-       ARCH_FLAGS = -m32
+ifeq (x86_64, $(UNAME_M))
+	ARCH_BIT = GPOS_64BIT
+	ARCH_FLAGS = -m64
 else
-       ARCH_FLAGS = -m64
+	ARCH_BIT = GPOS_32BIT
+	ARCH_FLAGS = -m32
 endif
 
 ifeq "$(BLD_TYPE)" "opt"
