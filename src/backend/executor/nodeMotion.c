@@ -1578,7 +1578,7 @@ doSendTuple(Motion * motion, MotionState * node, TupleTableSlot *outerTupleSlot)
 	HeapTuple       tuple;
 	SendReturnCode  sendRC;
 	ExprContext    *econtext = node->ps.ps_ExprContext;
-	
+
 	/* We got a tuple from the child-plan. */
 	node->numTuplesFromChild++;
 

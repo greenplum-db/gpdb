@@ -992,6 +992,22 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 		selectQuery = transformStmt(sub_pstate, stmt->selectStmt,
 									extras_before, extras_after);
 
+		if (selectQuery->hasBypassPreprocess)
+		{
+		  qry->hasBypassPreprocess = true;
+		  //qry->bypassPreprocessFunctionArgs = selectQuery->bypassPreprocessFunctionArgs;
+			qry->bypassLocation = selectQuery->bypassPreprocessFunctionArgs;
+			
+			if (qry->loMode == NIL)
+			{
+		  	qry->loMode = list_make1_int(linitial(selectQuery->loMode));
+			}
+			else
+			{
+					qry->loMode = lappend_int(qry->loMode, linitial_int(selectQuery->loMode));
+			}
+		}
+
 		release_pstate_resources(sub_pstate);
 		free_parsestate(sub_pstate);
 
@@ -1055,9 +1071,48 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 			/* CDB: In case of error, note which sublist is involved. */
 			pstate->p_breadcrumb.node = (Node *)sublist;
 
+			if (pstate->p_bypasspreprocess)
+			{
+			  qry->hasBypassPreprocess = true;
+				
+					if (qry->loMode == NIL)
+					{
+						if (pstate->p_lomode == NIL)
+						{
+			  			qry->loMode = list_make1_int(1);
+							
+							getFuncArgs(1, pstate, sublist);
+						}
+						else
+						{
+							qry->loMode = pstate->p_lomode;
+							
+							getFuncArgs(linitial_int(pstate->p_lomode), pstate, sublist);
+						}
+					}
+					else
+					{
+						if (pstate->p_lomode == NIL)
+						{
+							qry->loMode = lappend_int(qry->loMode, 1);
+							
+							getFuncArgs(1, pstate, sublist);
+						}
+						else
+						{
+							qry->loMode = lappend_int(qry->loMode, linitial_int(pstate->p_lomode));
+							
+							getFuncArgs(linitial_int(pstate->p_lomode), pstate, sublist);
+						}
+					}
+					
+					qry->bypassPreprocessFunctionArgs = pstate->p_bypasspreprocessfuncargs;
+					qry->bypassPreprocessStringArgs = pstate->p_bypasspreprocessstringargs;
+				}
+
 			/* Do basic expression transformation (same as a ROW() expr) */
 			sublist = transformExpressionList(pstate, sublist);
-
+			
 			/*
 			 * All the sublists must be the same length, *after*
 			 * transformation (which might expand '*' into multiple items).
@@ -1083,6 +1138,8 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 										 icolumns, attrnos);
 
 			exprsLists = lappend(exprsLists, sublist);
+			
+			qry->bypassLocation = pstate->p_bypasslocation;
 		}
 
 		/* CDB: Clear error location. */
@@ -1147,10 +1204,51 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 		exprList = transformExpressionList(pstate,
 										   (List *) linitial(valuesLists));
 
+		if (pstate->p_bypasspreprocess)
+		{
+    	qry->hasBypassPreprocess = true;
+			
+				if (qry->loMode == NIL)
+				{
+					if (pstate->p_lomode == NIL)
+					{
+		  			qry->loMode = list_make1_int(1);
+
+						getFuncArgs(1, pstate, (List *) linitial(valuesLists));
+					}
+					else
+					{
+						qry->loMode = lappend_int(qry->loMode, linitial_int(pstate->p_lomode));
+						
+						getFuncArgs(linitial_int(pstate->p_lomode), pstate, (List *) linitial(valuesLists));
+					}
+				}
+				else
+				{
+					if (pstate->p_lomode == NIL)
+					{
+						qry->loMode = lappend_int(qry->loMode, 1);
+
+						getFuncArgs(1, pstate, (List *) linitial(valuesLists));
+					}
+					else
+					{
+						qry->loMode = lappend_int(qry->loMode, linitial_int(pstate->p_lomode));
+						
+						getFuncArgs(linitial_int(pstate->p_lomode), pstate, (List *) linitial(valuesLists));
+					}
+				}
+				
+				qry->bypassPreprocessFunctionArgs = pstate->p_bypasspreprocessfuncargs;
+				qry->bypassPreprocessStringArgs = pstate->p_bypasspreprocessstringargs;
+		}
+
 		/* Prepare row for assignment to target table */
 		exprList = transformInsertRow(pstate, exprList,
 									  stmt->cols,
 									  icolumns, attrnos);
+										
+	  qry->bypassLocation = pstate->p_bypasslocation;
 	}
 
 	/*
@@ -1274,6 +1372,23 @@ transformInsertRow(ParseState *pstate, List *exprlist,
 	{
 		Expr	   *expr = (Expr *) lfirst(lc);
 		ResTarget  *col;
+		
+		if (IsA(expr, FuncExpr))
+		{
+			FuncExpr *fexpr = (FuncExpr *) expr;
+			
+			if (fexpr->bypass_preprocess == true)
+			{
+				if (pstate->p_bypasslocation == NIL)
+				{
+					pstate->p_bypasslocation = list_make1_int(lfirst_int(attnos));
+				}
+				else
+				{
+					pstate->p_bypasslocation = lappend_int(pstate->p_bypasslocation, lfirst_int(attnos));
+				}
+			}
+		}
 
 		col = (ResTarget *) lfirst(icols);
 		Assert(IsA(col, ResTarget));
@@ -4511,6 +4626,25 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 
 	/* transform targetlist */
 	qry->targetList = transformTargetList(pstate, stmt->targetList);
+
+	if (pstate->p_bypasspreprocess)
+	{
+	  getFuncArgs(1, pstate, qry->targetList);
+
+	  qry->hasBypassPreprocess = true;
+	  qry->bypassPreprocessFunctionArgs = pstate->p_bypasspreprocessfuncargs;
+		
+		if (qry->loMode == NIL)
+		{
+			qry->loMode = pstate->p_lomode;
+		}
+		else
+		{
+			qry->loMode = lappend_int(qry->loMode, linitial_int(pstate->p_lomode));
+		}
+		
+		qry->bypassLocation = pstate->p_bypasspreprocessfuncargs;
+	}
 
 	/* mark column origins */
 	markTargetListOrigins(pstate, qry->targetList);

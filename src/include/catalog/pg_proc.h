@@ -1124,7 +1124,7 @@ DESCR("storage manager");
 DATA(insert OID = 763 (  smgrne			   PGNSP PGUID 12 1 0 f f t f i 2 16 "210 210" _null_ _null_ _null_ smgrne - _null_ ));
 DESCR("storage manager");
 
-DATA(insert OID = 764 (  lo_import		   PGNSP PGUID 12 1 0 f f t f v 1 26 "25" _null_ _null_ _null_	lo_import - _null_ ));
+DATA(insert OID = 764 (  lo_import	  PGNSP PGUID 12 1 0 0 f f t f v 1 0 26 f "25" _null_ _null_ _null_ _null_ lo_import - _null_ b ));
 DESCR("large object import");
 DATA(insert OID = 765 (  lo_export		   PGNSP PGUID 12 1 0 f f t f v 2 23 "26 25" _null_ _null_ _null_ lo_export - _null_ ));
 DESCR("large object export");
@@ -1320,7 +1320,11 @@ DATA(insert OID = 956 (  lo_lseek		   PGNSP PGUID 12 1 0 f f t f v 3 23 "23 23 2
 DESCR("large object seek");
 DATA(insert OID = 957 (  lo_creat		   PGNSP PGUID 12 1 0 f f t f v 1 26 "23" _null_ _null_ _null_	lo_creat - _null_ ));
 DESCR("large object create");
-DATA(insert OID = 715 (  lo_create		   PGNSP PGUID 12 1 0 f f t f v 1 26 "26" _null_ _null_ _null_	lo_create - _null_ ));
+<<<<<<< HEAD
+DATA(insert OID = 715 (  lo_create	  PGNSP PGUID 12 1 0 0 f f t f v 1 0 26 f "26" _null_ _null_ _null_ _null_ lo_create - _null_ b ));
+=======
+DATA(insert OID = 715 (  lo_create		   PGNSP PGUID 12 0 f f t f v 1 26 f "26" _null_ _null_ _null_ lo_create - _null_ b ));
+>>>>>>> 3ce65b0896c6ef2699d2432bb59ea43e548486fd
 DESCR("large object create");
 DATA(insert OID = 958 (  lo_tell		   PGNSP PGUID 12 1 0 f f t f v 1 23 "23" _null_ _null_ _null_	lo_tell - _null_ ));
 DESCR("large object position");
@@ -4206,6 +4210,11 @@ DESCR("truncate the error log for the specified external table");
 #define PRODATAACCESS_MODIFIES	'm'
 /* This is an internal-only data access property. */
 #define PRODATAACCESS_SEGMENT	's'
+/*
+ * This is a way to specify if current function should bypass
+ * function preevaluation
+ */
+#define PRODATAACCESS_BYPASS  'b'
 
 /*
  * prototypes for functions in pg_proc.c

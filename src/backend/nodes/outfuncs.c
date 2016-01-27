@@ -1,4 +1,4 @@
-/*-------------------------------------------------------------------------
+/*
  *
  * outfuncs.c
  *	  Output functions for Postgres tree nodes.
@@ -298,6 +298,11 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_ENUM_FIELD(planGen, PlanGenerator);
 	WRITE_BOOL_FIELD(canSetTag);
 	WRITE_BOOL_FIELD(transientPlan);
+	WRITE_BOOL_FIELD(bypassPreprocess);
+	WRITE_NODE_FIELD(bypassPreprocessFuncArgs);
+	WRITE_NODE_FIELD(bypassPreprocessStringArgs);
+	WRITE_NODE_FIELD(bypassLocation);
+	WRITE_NODE_FIELD(loMode);
 	WRITE_NODE_FIELD(planTree);
 	WRITE_NODE_FIELD(rtable);
 	WRITE_NODE_FIELD(resultRelations);
@@ -1301,6 +1306,11 @@ _outFuncExpr(StringInfo str, FuncExpr *node)
 	if (node->is_tablefunc)
 	{
 		WRITE_BOOL_FIELD(is_tablefunc);  /* GPDB */
+	}
+
+	if (node->bypass_preprocess)
+	{
+	       WRITE_BOOL_FIELD(bypass_preprocess);
 	}
 }
 #endif /* COMPILING_BINARY_FUNCS */
@@ -3456,6 +3466,10 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_INT_FIELD(resultRelation);
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_BOOL_FIELD(hasAggs);
+	WRITE_BOOL_FIELD(hasBypassPreprocess);
+	WRITE_NODE_FIELD(bypassPreprocessFunctionArgs);
+	WRITE_NODE_FIELD(bypassPreprocessStringArgs);
+	WRITE_NODE_FIELD(loMode);
 	WRITE_BOOL_FIELD(hasWindFuncs);
 	WRITE_BOOL_FIELD(hasSubLinks);
 	WRITE_NODE_FIELD(rtable);

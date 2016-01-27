@@ -105,6 +105,11 @@ typedef struct ParseState
 	List	   *p_setopTypes;		/* predicated types on Setop */
 	List	   *p_setopTypmods;		/* predicated typmods on Setop */
 	bool        p_propagateSetopTypes;      /* if possible to propagate types on Setop */
+  bool        p_bypasspreprocess;    /* if bypass function preprocessing is true */
+  List       *p_bypasspreprocessfuncargs;    /* arguments of bypass function preprocessing function */
+	List       *p_bypasspreprocessstringargs;    /* string arguments of bypass function preprocessing function */
+	List       *p_bypasslocation;    /* locations of bypass preprocess functions */
+	List        *p_lomode;    /* 1 for Constant parameters lo_create, 2 for subquery select case, 3 for lo_import */
 } ParseState;
 
 extern ParseState *make_parsestate(ParseState *parentParseState);

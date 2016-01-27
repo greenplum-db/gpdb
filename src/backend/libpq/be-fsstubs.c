@@ -85,7 +85,6 @@ static MemoryContext fscxt = NULL;
 
 static int	newLOfd(LargeObjectDesc *lobjCookie);
 static void deleteLOfd(int fd);
-static Oid	lo_import_internal(text *filename, Oid lobjOid);
 
 
 /*****************************************************************************
@@ -253,13 +252,13 @@ lo_create(PG_FUNCTION_ARGS)
 {
 	Oid			lobjId = PG_GETARG_OID(0);
 
+	/* NOTE: This is a dummy function which is just used for function presence. All processing is done in inv_create which is called independently */
+
 	/*
 	 * We don't actually need to store into fscxt, but create it anyway to
 	 * ensure that AtEOXact_LargeObject knows there is state to clean up
 	 */
-	CreateFSContext();
-
-	lobjId = inv_create(lobjId);
+	//CreateFSContext(); /* is this really needed? */
 
 	PG_RETURN_OID(lobjId);
 }
@@ -361,9 +360,11 @@ lowrite(PG_FUNCTION_ARGS)
 Datum
 lo_import(PG_FUNCTION_ARGS)
 {
+	Oid lobjId = get_new_oid();
+	
 	text	   *filename = PG_GETARG_TEXT_PP(0);
 
-	PG_RETURN_OID(lo_import_internal(filename, InvalidOid));
+	PG_RETURN_OID(ObjectIdGetDatum(lobjId));
 }
 
 /*
@@ -379,8 +380,8 @@ lo_import_with_oid(PG_FUNCTION_ARGS)
 	PG_RETURN_OID(lo_import_internal(filename, oid));
 }
 
-static Oid
-lo_import_internal(text *filename, Oid lobjOid)
+Oid
+lo_import_internal(char *filename, Oid lobjOid)
 {
 	File		fd;
 	int			nbytes,
@@ -403,13 +404,13 @@ lo_import_internal(text *filename, Oid lobjOid)
 	/*
 	 * open the file to be read in
 	 */
-	text_to_cstring_buffer(filename, fnamebuf, sizeof(fnamebuf));
-	fd = PathNameOpenFile(fnamebuf, O_RDONLY | PG_BINARY, 0666);
+	 
+	fd = PathNameOpenFile(filename, O_RDONLY | PG_BINARY, 0666);
 	if (fd < 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not open server file \"%s\": %m",
-						fnamebuf)));
+						filename)));
 
 	/*
 	 * create an inversion object

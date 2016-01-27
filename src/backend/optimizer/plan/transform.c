@@ -295,6 +295,7 @@ static bool is_sirv_funcexpr(FuncExpr *fe)
 			&& !contain_subplans((Node *) fe->args) /* Must not contain sublinks */
 			&& func_volatile(fe->funcid) == PROVOLATILE_VOLATILE /* Must be a volatile function */
 			&& fe->funcresulttype != RECORDOID /* Record types cannot be handled currently */
+		        && !fe->bypass_preprocess /* If preprocessing is not disabled explicitly */
 			);
 
 	/**

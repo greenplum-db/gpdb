@@ -416,6 +416,25 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 	if (fdresult == FUNCDETAIL_NORMAL && over == NULL)
 	{
 		FuncExpr   *funcexpr = makeNode(FuncExpr);
+		char dataaccess = PRODATAACCESS_NONE;
+
+		dataaccess = func_data_access(funcid);
+
+		if (dataaccess == PRODATAACCESS_BYPASS)
+		{
+		  funcexpr->bypass_preprocess = true;
+		  pstate->p_bypasspreprocess = true;
+			
+			/* Dirty hack to avoid more catalog flags */
+			if (funcid == 764)  /* lo_import funcid */
+			{
+				pstate->p_lomode = list_make1_int(3);
+			}
+			else if (funcid == 715)
+			{
+				pstate->p_lomode = list_make1_int(1);
+			}
+		}
 
 		funcexpr->funcid = funcid;
 		funcexpr->funcresulttype = rettype;

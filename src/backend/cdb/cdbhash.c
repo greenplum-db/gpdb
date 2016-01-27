@@ -169,7 +169,7 @@ addToCdbHash(void *cdbHash, void *buf, size_t len)
 void
 cdbhash(CdbHash *h, Datum datum, Oid type)
 {
-	hashDatum(datum, type, addToCdbHash, (void*)h);
+  hashDatum(datum, type, addToCdbHash, (void*)h);
 }
 
 /*

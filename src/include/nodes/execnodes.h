@@ -652,6 +652,11 @@ typedef struct EState
 	 * Information relevant to dynamic table scans.
 	 */
 	DynamicTableScanInfo *dynamicTableScanInfo;
+        /* Arguments for bypass function processing function */
+  List *bypassPreprocessFunctionArgs;
+	List *bypassPreprocessStringArgs;
+	List *bypassLocation;    /* location for bypass preprocess functions */
+  List *loMode;    /* 1 for Constant parameters, 2 for subquery select */
 } EState;
 
 struct PlanState;

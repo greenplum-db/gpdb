@@ -127,7 +127,8 @@ static TupleTableSlot *ExecutePlan(EState *estate, PlanState *planstate,
 			CmdType operation,
 			long numberTuples,
 			ScanDirection direction,
-			DestReceiver *dest);
+			DestReceiver *dest,
+			bool isLateProcess);
 static void ExecSelect(TupleTableSlot *slot,
 		   DestReceiver *dest, EState *estate);
 
@@ -794,6 +795,11 @@ ExecutorRun(QueryDesc *queryDesc,
 
 	Assert(NULL != queryDesc->plannedstmt && NULL != queryDesc->plannedstmt->memoryAccount);
 
+	estate->bypassPreprocessFunctionArgs = queryDesc->late_execfunc_funcargs;
+	estate->bypassPreprocessStringArgs = queryDesc->late_execfunc_stringargs;
+	estate->bypassLocation = queryDesc->bypass_location;
+	estate->loMode = queryDesc->loMode;
+
 	START_MEMORY_ACCOUNT(queryDesc->plannedstmt->memoryAccount);
 
 	/*
@@ -897,7 +903,8 @@ ExecutorRun(QueryDesc *queryDesc,
 								 CMD_SELECT,
 								 0,
 								 ForwardScanDirection,
-								 dest);
+					                         dest,
+					                         false);
 		}
 		else if (exec_identity == GP_ROOT_SLICE)
 		{
@@ -913,7 +920,8 @@ ExecutorRun(QueryDesc *queryDesc,
 								 operation,
 								 count,
 								 direction,
-								 dest);
+					                         dest,
+					                         queryDesc->late_execfunc);
 		}
 		else
 		{
@@ -2530,7 +2538,8 @@ ExecutePlan(EState *estate,
 			CmdType operation,
 			long numberTuples,
 			ScanDirection direction,
-			DestReceiver *dest)
+	    DestReceiver *dest,
+	    bool isLateProcess)
 {
 	JunkFilter *junkfilter;
 	TupleTableSlot *planSlot;
@@ -2762,7 +2771,7 @@ lnext:	;
 						break;
 
 					case CMD_INSERT:
-						ExecInsert(slot, dest, estate, PLANGEN_PLANNER, false /* isUpdate */);
+					  ExecInsert(slot, dest, estate, PLANGEN_PLANNER, false /* isUpdate */, isLateProcess);
 						result = NULL;
 						break;
 

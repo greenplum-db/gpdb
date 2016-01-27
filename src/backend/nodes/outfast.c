@@ -327,6 +327,11 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_ENUM_FIELD(planGen, PlanGenerator);
 	WRITE_BOOL_FIELD(canSetTag);
 	WRITE_BOOL_FIELD(transientPlan);
+	WRITE_BOOL_FIELD(bypassPreprocess);
+	WRITE_NODE_FIELD(bypassPreprocessFuncArgs);
+	WRITE_NODE_FIELD(bypassPreprocessStringArgs);
+	WRITE_NODE_FIELD(bypassLocation);
+	WRITE_NODE_FIELD(loMode);
 
 	WRITE_NODE_FIELD(planTree);
 
@@ -586,6 +591,7 @@ _outFuncExpr(StringInfo str, FuncExpr *node)
 	WRITE_ENUM_FIELD(funcformat, CoercionForm);
 	WRITE_NODE_FIELD(args);
 	WRITE_BOOL_FIELD(is_tablefunc);
+	WRITE_BOOL_FIELD(bypass_preprocess);
 }
 
 static void
@@ -901,6 +907,11 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_INT_FIELD(resultRelation);
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_BOOL_FIELD(hasAggs);
+	WRITE_BOOL_FIELD(hasBypassPreprocess);
+	WRITE_NODE_FIELD(bypassPreprocessFunctionArgs);
+	WRITE_NODE_FIELD(bypassPreprocessStringArgs);
+	WRITE_NODE_FIELD(loMode);
+	WRITE_NODE_FIELD(bypassLocation);
 	WRITE_BOOL_FIELD(hasWindFuncs);
 	WRITE_BOOL_FIELD(hasSubLinks);
 	WRITE_NODE_FIELD(rtable);
@@ -2017,4 +2028,3 @@ nodeToBinaryStringFast(void *obj, int * length)
 	*length = str.len;
 	return str.data;
 }
-

@@ -159,6 +159,11 @@ _copyPlannedStmt(PlannedStmt *from)
 	COPY_SCALAR_FIELD(planGen);
 	COPY_SCALAR_FIELD(canSetTag);
 	COPY_SCALAR_FIELD(transientPlan);
+	COPY_SCALAR_FIELD(bypassPreprocess);
+	COPY_NODE_FIELD(bypassPreprocessFuncArgs);
+	COPY_NODE_FIELD(bypassPreprocessStringArgs);
+	COPY_NODE_FIELD(bypassLocation);
+	COPY_NODE_FIELD(loMode);
 
 	COPY_NODE_FIELD(planTree);
 	COPY_NODE_FIELD(rtable);
@@ -1403,6 +1408,7 @@ _copyFuncExpr(FuncExpr *from)
 	COPY_SCALAR_FIELD(funcformat);
 	COPY_NODE_FIELD(args);
 	COPY_SCALAR_FIELD(is_tablefunc);
+	COPY_SCALAR_FIELD(bypass_preprocess);
 
 	return newnode;
 }
@@ -2645,6 +2651,11 @@ _copyQuery(Query *from)
 	COPY_SCALAR_FIELD(resultRelation);
 	COPY_NODE_FIELD(intoClause);
 	COPY_SCALAR_FIELD(hasAggs);
+	COPY_SCALAR_FIELD(hasBypassPreprocess);
+	COPY_NODE_FIELD(bypassPreprocessFunctionArgs);
+	COPY_NODE_FIELD(bypassPreprocessStringArgs);
+	COPY_NODE_FIELD(loMode);
+	COPY_NODE_FIELD(bypassLocation);
 	COPY_SCALAR_FIELD(hasWindFuncs);
 	COPY_SCALAR_FIELD(hasSubLinks);
 	COPY_NODE_FIELD(rtable);
