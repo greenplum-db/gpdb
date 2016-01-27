@@ -80,6 +80,16 @@ class GpCronDump(Operation):
         self.cur_host = socket.gethostname()
 
         self.clear_dumps_only = options.clear_dumps_only
+        self.clear_dumps = options.clear_dumps
+        self.cleanup_date = options.cleanup_date
+        self.cleanup_total = options.cleanup_total
+        if not (self.clear_dumps_only or self.clear_dumps) and self.cleanup_date:
+            raise ExceptionNoStackTraceNeeded("Must supply -c or -o with --cleanup-date option")
+        elif not (self.clear_dumps_only or self.clear_dumps) and self.cleanup_total:
+            raise ExceptionNoStackTraceNeeded("Must supply -c or -o with --cleanup-total option")
+        elif (self.clear_dumps_only or self.clear_dumps) and not (self.cleanup_date or self.cleanup_total):
+            self.cleanup_total = '1'
+
         self.post_script = options.post_script
         self.dump_config = options.dump_config
         self.history = options.history
@@ -89,7 +99,6 @@ class GpCronDump(Operation):
 
         self.compress = options.compress
         self.free_space_percent = options.free_space_percent
-        self.clear_dumps = options.clear_dumps
         self.dump_schema = options.dump_schema
         self.include_schema_file = options.include_schema_file
         self.exclude_schema_file = options.exclude_schema_file
@@ -739,11 +748,14 @@ class GpCronDump(Operation):
                 raise ExceptionNoStackTraceNeeded('The option --ddboost-config-remove is standalone. It is NOT used in conjunction with any other gocrondump options.')
 
         if self.clear_dumps_only:
+            logger.info('Clearing dumps only...')
             generate_dump_timestamp(self._get_timestamp_object(self.timestamp_key))
-            DeleteOldestDumps(master_datadir=self.master_datadir,
-                              master_port=self.master_port,
-                              dump_dir=self.dump_dir,
-                              ddboost=self.ddboost).run()
+            DeleteOldestDumps(master_datadir = self.master_datadir,
+                              master_port = self.master_port,
+                              dump_dir = self.dump_dir,
+                              cleanup_date = self.cleanup_date,
+                              cleanup_total = self.cleanup_total,
+                              ddboost = self.ddboost).run()
             return
 
         if self.post_script is not None:
@@ -1028,6 +1040,8 @@ class GpCronDump(Operation):
                     deleted_dump_set = DeleteOldestDumps(master_datadir = self.master_datadir,
                                                          master_port = self.master_port,
                                                          dump_dir = self.dump_dir,
+                                                         cleanup_date = self.cleanup_date,
+                                                         cleanup_total = self.cleanup_total,
                                                          ddboost = self.ddboost).run()
 
             if self.post_vacuum:
@@ -1505,6 +1519,10 @@ def create_parser():
     addTo.add_option('-K', dest='timestamp_key', metavar="<YYYYMMDDHHMMSS>",
                      help="Timestamp key for the dump.")
 
+    addTo.add_option('--cleanup-date', dest='cleanup_date', default=None, metavar='<yyyymmdd date>',
+                     help="Remove backup sets for a yyyymmdd date.")
+    addTo.add_option('--cleanup-total', dest='cleanup_total', default=None, metavar='<n int>',
+                     help="Remove the n oldest backup sets based on the backup timestamp.")
     addTo.add_option('--list-backup-files', dest='list_backup_files', default=False, action='store_true',
                      help="Files created during the dump operation for a particular input timestamp")
     addTo.add_option('--prefix', dest='local_dump_prefix', default='', metavar='<filename prefix>',

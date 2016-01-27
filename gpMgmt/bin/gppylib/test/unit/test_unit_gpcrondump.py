@@ -30,6 +30,8 @@ class GpCronDumpTestCase(unittest.TestCase):
             self.compress = True
             self.free_space_percent = None
             self.clear_dumps = False
+            self.cleanup_date = None
+            self.cleanup_total = None
             self.dump_schema = False
             self.dump_databases = 'testdb'
             self.bypass_disk_check = True

@@ -15,7 +15,8 @@ gpcrondump -x database_name
      [-u backup_directory] [-R post_dump_script] [--incremental] 
      [ -K <timestamp> [--list-backup-files] ] 
      [--prefix <prefix_string> [--list-filter-tables] ]
-     [-c] [-z] [-r] [-f <free_space_percent>] [-b] [-h] [-j | -k] 
+     [ -c  [ --cleanup-date yyyymmdd  |  --cleanup-total n ] ]
+     [-z] [-r] [-f <free_space_percent>] [-b] [-h] [-j | -k]
      [-g] [-G] [-C] [-d <master_data_directory>] [-B <parallel_processes>] 
      [-a] [-q] [-y <reportfile>] [-l <logfile_directory>]
      [--email-file <path_to_file> ] [-v]
@@ -38,7 +39,7 @@ gpcrondump --ddboost-host <ddboost_hostname>
 
 gpcrondump --ddboost-config-remove
 
-gpcrondump -o
+gpcrondump -o  [ --cleanup-date yyyymmdd  |  --cleanup-total n ]
 
 gpcrondump -? 
 
@@ -161,7 +162,7 @@ OPTIONS
  processes depending on how many segment instances it needs to dump. 
 
 
--c (clear old dump files first) 
+-c (clear old dump files first)
 
  Specify this option to delete old backups before performing a back up. 
  In the db_dumps directory, the directory where the name is the oldest 
@@ -173,6 +174,9 @@ OPTIONS
  WARNING: Before using this option, ensure that incremental backups 
  required to perform the restore are not deleted. The gpdbrestore utility 
  option --list-backup lists the backup sets required to perform a backup. 
+
+ You can specify the option --cleanup-date or --cleanup-total to specify
+ backup sets to delete.
 
  If --ddboost is specified, only the old files on Data Domain Boost are 
  deleted. 
@@ -191,6 +195,35 @@ OPTIONS
  If --incremental is specified and the files are on NFS storage, the -C 
  option is not supported. The database objects are not dropped if the -C 
  option is specified. 
+
+
+--cleanup-date=yyyymmdd
+
+ Remove backup sets for the date yyyy-mm-dd. The date format is yyyymmdd.
+ If multiple backup sets were created on the date, all the backup sets
+ for that date are deleted. If no backup sets are found, gpcrondump
+ returns a warning message and no backup sets are deleted. If the -c
+ option is specified, the backup process continues.
+
+ Valid only with the -c or -o option.
+
+ WARNING: Before using this option, ensure that incremental backups
+ required to perform the restore are not deleted. The gpdbrestore utility
+ option --list-backup lists the backup sets required to perform a backup.
+
+
+--cleanup-total=n
+
+ Remove the n oldest backup sets based on the backup timestamp. If there
+ are fewer than n backup sets, gpcrondump returns a warning message and
+ no backup sets are deleted. If the -c option is specified, the backup
+ process continues.
+
+ Valid only with the -c or -o option.
+
+ WARNING: Before using this option, ensure that incremental backups
+ required to perform the restore are not deleted. The gpdbrestore utility
+ option --list-backup lists the backup sets required to perform a backup.
 
 
 --column-inserts 
@@ -554,16 +587,19 @@ OPTIONS
  Do not output commands to set object privileges (GRANT/REVOKE commands). 
 
 
--o (clear old dump files only) 
+-o (clear old dump files only)
 
  Clear out old dump files only, but do not run a dump. This will remove 
  the oldest dump directory except the current date's dump directory. 
- All dump sets within that directory will be removed. 
+ All dump sets within that directory will be removed.
 
  WARNING: Before using this option, ensure that incremental backups 
  required to perform the restore are not deleted. The gpdbrestore utility 
  option --list-backup lists the backup sets required to perform a 
  restore. 
+
+ You can specify the option --cleanup-date or --cleanup-total to specify
+ backup sets to delete.
 
  If --ddboost is specified, only the old files on Data Domain Boost are 
  deleted. 
