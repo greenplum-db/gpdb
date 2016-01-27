@@ -66,6 +66,8 @@ extern void StatementCancelHandler(SIGNAL_ARGS);
 extern void FloatExceptionHandler(SIGNAL_ARGS);
 extern void prepare_for_client_read(void);
 extern void client_read_ended(void);
+extern void prepare_for_client_write(void);
+extern void client_write_ended(void);
 extern void process_postgres_switches(int argc, char *argv[],
 						  GucContext ctx, const char **dbname);
 extern int	PostgresMain(int argc, char *argv[],

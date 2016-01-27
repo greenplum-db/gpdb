@@ -33,6 +33,8 @@ volatile bool QueryFinishPending = false;
 volatile bool ProcDiePending = false;
 volatile bool ClientConnectionLost = false;
 volatile bool ImmediateInterruptOK = false;
+volatile bool ImmediateDieOK = false;
+volatile bool TermSignalReceived = false;
 
 // Make these signed integers (instead of uint32) to detect garbage negative values.
 volatile int32 InterruptHoldoffCount = 0;

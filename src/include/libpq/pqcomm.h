@@ -223,4 +223,8 @@ typedef struct PrimaryMirrorTransitionPacket
 	uint32 dataLength;
 } PrimaryMirrorTransitionPacket;
 
+/* the number of times trying to acquire the send mutex for the front
+ * end connection after detecting process is exitting */
+#define PQ_BUSY_TEST_COUNT_IN_EXITING 5
+
 #endif   /* PQCOMM_H */
