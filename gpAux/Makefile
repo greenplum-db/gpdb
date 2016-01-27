@@ -1257,13 +1257,6 @@ endif
 copyoptimizerlibs :
 ifneq "$(BLD_GPDB_BUILDSET)" "partial"
 ifeq "$(ORCA_CONFIG)" "--enable-orca"
-	# Copy GP Optimizer libraries 
-	echo "Copying Orca libraries";
-	for b in libnaucrates libgpdbcost libgpopt; do \
-		rm -f $(INSTLOC)/lib/$$b.$(LDSFX); \
-		echo "Copying $$b"; \
-		cp  $(OPTIMIZER)/$$b/$(OBJDIR_DEFAULT)/$$b.$(LDSFX) $(INSTLOC)/lib ; \
-	done
 	rm -f $(INSTLOC)/lib/libgpos.$(LDSFX);
 	cp $(LIBGPOS_LIBDIR)/libgpos.$(LDSFX) $(INSTLOC)/lib;
 	rm -f $(INSTLOC)/lib/libxerces-c-3.1.$(LDSFX);
