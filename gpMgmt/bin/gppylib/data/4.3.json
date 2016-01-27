@@ -7308,6 +7308,7 @@
          "oid" : "Oid",
          "proacl" : "aclitem[1]",
          "proallargtypes" : "Oid[1]",
+         "proargdefaults" : "text",
          "proargmodes" : "char[1]",
          "proargnames" : "text[1]",
          "proargtypes" : "oidvector",
@@ -7320,6 +7321,7 @@
          "prolang" : "Oid",
          "proname" : "NameData",
          "pronamespace" : "Oid",
+         "pronargdefaults" : "int2",
          "pronargs" : "int2",
          "proowner" : "Oid",
          "proretset" : "bool",
@@ -7398,6 +7400,11 @@
             "sqltype" : "smallint"
          },
          {
+            "colname" : "pronargdefaults",
+            "ctype" : "int2",
+            "sqltype" : "smallint"
+         },
+         {
             "colname" : "prorettype",
             "ctype" : "Oid",
             "sqltype" : "oid"
@@ -7426,6 +7433,11 @@
             "colname" : "proargnames",
             "ctype" : "text[1]",
             "sqltype" : "text[]"
+         },
+         {
+            "colname" : "proargdefaults",
+            "ctype" : "text",
+            "sqltype" : "text"
          },
          {
             "colname" : "prosrc",
@@ -7594,7 +7606,7 @@
          }
       ],
       "relid_comment_tag" : "/* relation id: 1255 - pg_proc */\n",
-      "tabdef_text" : "\n   CREATE TABLE pg_proc\n   with (camelcase=Procedure, bootstrap=true, relid=1255, toast_oid=2836, toast_index=2837)\n   (\n   proname         name, \n   pronamespace    oid, \n   proowner        oid, \n   prolang         oid, \n   procost         float4, \n   prorows         float4, \n   provariadic     oid,\n   proisagg        boolean, \n   prosecdef       boolean, \n   proisstrict     boolean, \n   proretset       boolean, \n   provolatile     \"char\", \n   pronargs        smallint, \n   prorettype      oid, \n   proiswin        boolean, \n   proargtypes     oidvector, \n   proallargtypes  oid[], \n   proargmodes     \"char\"[], \n   proargnames     text[], \n   prosrc          text, \n   probin          bytea, \n   proacl          aclitem[],\n   prodataaccess   \"char\"\n   )",
+      "tabdef_text" : "\n   CREATE TABLE pg_proc\n   with (camelcase=Procedure, bootstrap=true, relid=1255, toast_oid=2836, toast_index=2837)\n   (\n   proname         name, \n   pronamespace    oid, \n   proowner        oid, \n   prolang         oid, \n   procost         float4, \n   prorows         float4, \n   provariadic     oid,\n   proisagg        boolean, \n   prosecdef       boolean, \n   proisstrict     boolean, \n   proretset       boolean, \n   provolatile     \"char\", \n   pronargs        smallint, \n   pronargdefaults smallint,\n   prorettype      oid, \n   proiswin        boolean, \n   proargtypes     oidvector, \n   proallargtypes  oid[], \n   proargmodes     \"char\"[], \n   proargnames     text[], \n   proargdefaults  text,\n   prosrc          text, \n   probin          bytea, \n   proacl          aclitem[],\n   prodataaccess   \"char\"\n   )",
       "with" : {
          "bootstrap" : "1",
          "camelcase" : "Procedure",
