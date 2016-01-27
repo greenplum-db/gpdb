@@ -21,7 +21,7 @@ UNAME_ALL = $(UNAME).$(UNAME_P)
 
 # shared lib support
 ifeq (Darwin, $(UNAME))
-	ARCH_FLAGS = -m32
+	ARCH_FLAGS = -m64
 	LDSFX = dylib
 else
 	ARCH_FLAGS = -m64
