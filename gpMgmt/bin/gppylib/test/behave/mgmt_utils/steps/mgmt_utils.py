@@ -156,11 +156,6 @@ def impl(context, table, dbname):
         dbconn.execSQL(conn, insert_sql)
         conn.rollback()
  
-    
-@when('table "{table_name}" is deleted in "{dbname}"')
-def impl(context, table_name, dbname):
-    drop_table_if_exists(context, table_name=table_name, dbname=dbname)
-
 @given('the user truncates "{table_list}" tables in "{dbname}"')
 @when('the user truncates "{table_list}" tables in "{dbname}"')
 @then('the user truncates "{table_list}" tables in "{dbname}"')
@@ -3006,8 +3001,7 @@ def impl(context, partitionnum, tablename, dbname):
 @when('table "{tablename}" is dropped in "{dbname}"')
 @then('table "{tablename}" is dropped in "{dbname}"')
 def impl(context, tablename, dbname):
-    drop_sql = """DROP TABLE %s""" % tablename
-    execute_sql(dbname, drop_sql)
+    drop_table_if_exists(context, table_name=tablename, dbname=dbname)
 
 def create_trigger_function(dbname, trigger_func_name, tablename):
     trigger_func_sql = """ 
