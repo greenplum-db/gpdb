@@ -187,6 +187,7 @@ transformExpressionList(ParseState *pstate, List *exprlist)
 	List	   *result = NIL;
 	ListCell   *lc;
 	ParseStateBreadCrumb    savebreadcrumb;
+	int i = 0;
 
 	/* CDB: Push error location stack.  Must pop before return! */
 	Assert(pstate);
@@ -199,6 +200,9 @@ transformExpressionList(ParseState *pstate, List *exprlist)
 
 		/* CDB: Drop a breadcrumb in case of error. */
 		pstate->p_breadcrumb.node = (Node *)e;
+		
+		++i;
+		pstate->current_location = i;
 
 		/*
 		 * Check for "something.*".  Depending on the complexity of the

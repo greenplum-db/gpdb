@@ -497,10 +497,10 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	
 	if (parse->hasBypassPreprocess)
 	{
-  	result->bypassPreprocess = true;
-	  result->bypassPreprocessFuncArgs = parse->bypassPreprocessFunctionArgs;
+		result->bypassPreprocess = true;
+		result->bypassPreprocessFuncArgs = parse->bypassPreprocessFunctionArgs;
 		result->bypassPreprocessStringArgs = parse->bypassPreprocessStringArgs;
-	  result->loMode = parse->loMode;
+		result->loMode = parse->loMode;
 		result->bypassLocation = parse->bypassLocation;
 	}
 

@@ -430,7 +430,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 			{
 				pstate->p_lomode = list_make1_int(3);
 			}
-			else if (funcid == 715)
+			else if (funcid == 715 | funcid == 957)
 			{
 				pstate->p_lomode = list_make1_int(1);
 			}

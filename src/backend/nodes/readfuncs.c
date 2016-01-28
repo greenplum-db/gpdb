@@ -371,7 +371,7 @@ _readQuery(void)
 	READ_NODE_FIELD(loMode);
 	if (pg_strtok_peek_fldname("bypassLocation"))
 		READ_NODE_FIELD(bypassLocation);
-		
+
 	READ_BOOL_FIELD(hasWindFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
 	READ_NODE_FIELD(rtable);

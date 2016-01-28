@@ -325,8 +325,8 @@ ExecInsert(TupleTableSlot *slot,
 		   DestReceiver *dest,
 		   EState *estate,
 		   PlanGenerator planGen,
-	   bool isUpdate,
-	   bool isExecLatefunc)
+		   bool isUpdate,
+		   bool isExecLatefunc)
 {
 	void		*tuple = NULL;
 	ResultRelInfo *resultRelInfo = NULL;
@@ -343,7 +343,7 @@ ExecInsert(TupleTableSlot *slot,
 
 	if (isExecLatefunc)
 	{
-	  List *args_list = estate->bypassPreprocessFunctionArgs;
+		List *args_list = estate->bypassPreprocessFunctionArgs;
 		List *args_string_list = estate->bypassPreprocessStringArgs;
 		List *bypass_location = estate->bypassLocation;
 		List *lomode = estate->loMode;
@@ -351,55 +351,55 @@ ExecInsert(TupleTableSlot *slot,
 		ListCell *lc_args;
 		ListCell *lc_location;
 		ListCell *lc_stringargs;
-		
+
 		lc_args = list_head(args_list);
 		lc_stringargs = list_head(args_string_list);
 		lc_location = list_head(bypass_location);
-		
+
 		Assert(list_length(lomode) == list_length(bypass_location));
-		
+
 		foreach(lc_lomode, lomode)
 		{
 			int current_lomode = lfirst_int(lc_lomode);
-			
-	  	if (current_lomode== 1)
-	  	{
-	    	int attnum;
-	    	int arg_value;
-	    	bool isnull;
 
-	    	attnum = -1;
-	    	arg_value = -1;
-	    	isnull = false;
+			if (current_lomode== 1)
+			{
+				int attnum;
+				int arg_value;
+				bool isnull;
 
-	    	attnum = lfirst_int(lc_location);
-				
+				attnum = -1;
+				arg_value = -1;
+				isnull = false;
+
+				attnum = lfirst_int(lc_location);
+
 				lc_location = lnext(lc_location);
 
-	    	Assert(attnum != -1);
+				Assert(attnum != -1);
 
-	    	arg_value = DatumGetUInt32(slot_getattr(slot, attnum, &isnull));
+				arg_value = DatumGetUInt32(slot_getattr(slot, attnum, &isnull));
 
-	    	Assert (isnull != true);
-	  		/* Parser should have set list values as Var attno for this function */
-	  		inv_create(arg_value);
-	  }
+				Assert (isnull != true);
+				/* Parser should have set list values as Var attno for this function */
+				inv_create(arg_value);
+			}
 			else if (current_lomode == 3)
 			{
 				A_Const *current_node = (A_Const *) linitial(lfirst(lc_args));
-			
+
 				char *args = (char *) current_node->val.val.ival;
 				int cur_location = lfirst_int(lc_location);
 				int arg_value = InvalidOid;
 				bool isnull = false;
-			
+
 				lc_args = lnext(lc_args);
 				lc_location = lnext(lc_location);
-			
+
 				arg_value = DatumGetUInt32(slot_getattr(slot, cur_location, &isnull));
-			
+
 				Assert(isnull != true);
-			
+
 				lo_import_internal(args, arg_value);
 		}
 	}

@@ -219,12 +219,15 @@ inv_create(Oid lobjId)
 	 * use.  We can use the index on pg_largeobject for checking OID
 	 * uniqueness, even though it has additional columns besides OID.
 	 */
+	 
+	elog(WARNING,"Value before1 %d", lobjId);
+	
 	if (!OidIsValid(lobjId))
 	{
-		open_lo_relation();
-
-		lobjId = GetNewOidWithIndex(lo_heap_r, lo_index_r);
+		elog(ERROR, "Internal error. Invalid Oid in LO make object");
 	}
+	
+	elog(WARNING,"Value2 %d", lobjId);
 
 	/*
 	 * Create the LO by writing an empty first page for it in pg_largeobject
