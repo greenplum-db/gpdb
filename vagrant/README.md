@@ -28,12 +28,21 @@ Go to the directory in your machine where you want to check out the GPDB code,
 and clone the GPDB code by typing the following into a terminal window.
 
 ```shell
-git clone git clone https://github.com/greenplum-db/gpdb.git
+git clone https://github.com/greenplum-db/gpdb.git
 ```
 
 ##3: Setup and start the virtual machine
-Next go to the `gpdb/vagrant` directory and start a virtual machine using the
-Vagrant file there; i.e. from the terminal window, issue the following command:
+Next go to the `gpdb/vagrant` directory. This directory has virtual machine
+configurations for different operating systems. Pick the distro of your choice,
+and `cd` to that directory. For this example, we will assume that you pick
+`centos`. So, issue the following command: 
+
+```shell
+cd centos
+```
+
+Next we will start a virtual machine using the Vagrant file in that directory.
+From the terminal window, issue the following command:
 
 ```shell
 cd gpdb/vagrant
@@ -62,8 +71,8 @@ While you are viewing the Vagrantfile, a few more things to notice here are:
   use to 2. Again, feel free to change this number based on the machine that
   you have.
 * Notice the parameter `config.vm.synced_folder`. This configuration requests
-  that the code you checked out into the directory `gpdb` be mounted as
-  `/gpdb` in the virtual machine. More on this later below.
+  that the code you checked out get mounted as `/gpdb` in the virtual machine.
+  More on this later below.
 
 Once the command above (`vagrant up`) returns, we are ready to start the
 virtual machine. Type in the following command into the terminal window
@@ -172,10 +181,10 @@ We also need to change the guest OS settings as per the instructions
 The security limits and other settings specified in that link are not necessary,
 so we can skip that. To change the guest OS settings, issue the following
 commands in the guest shell (you could use any editor that you like, but you will
-need to use "sudo mode" to save the changes to the `/etc/sysctl.conf` file):
+need to use "sudo mode" to save the changes to the `/etc/sysctl.d` directory):
 
 ```shell
-sudo vi /etc/sysctl.conf
+sudo vi /etc/sysctl.d/gpdb.conf
 ```
 
 Then, hit capital-`G`, followed by capital-`O`, and paste the following
@@ -203,40 +212,15 @@ net.core.wmem_max = 2097152
 vm.overcommit_memory = 2
 ```
 Hit the escape key, then type `:wq` to finish saving the file. Verify that you
-see the changes that you made by typing in `cat /etc/sysctl.conf`.
+see the changes that you made by typing in `cat /etc/sysctl.d/gpdb.conf`.
 
-##6: Reboot the Guest OS
-We have to reboot the guest OS to allow the changes to the `sysctl.conf`
-file to take effect. In the guest shell, type in:
+Next, apply the changes that you just made by running the following command:
+
 ```shell
-exit
+sudo sysctl -p /etc/sysctl.d/gpdb.conf
 ```
 
-Then, halt the virtual machine by typing the following command (in the host
-OS shell as you are there now!):
-```shell
-vagrant halt
-```
-
-Now, before bringing up vagrant again, we need to make sure that we have the
-VirtualBox guest additions setup. This sadly requires an extra step (which
-hopefully will go away in future version of Vagrant and VirtualBox). From
-the host terminal, type in the following command:
-```shell
-vagrant plugin install vagrant-vbguest
-```
-
-Now bring up virtual box again, by typing (in the host OS terminal), the
-following commands:
-```shell
-vagrant up
-vagrant ssh
-```
-
-You are back in the guest OS shell! But, now you have GPDB compiled, installed,
-and ready to run.
-
-##7: Initialize and start GPDB
+##6: Initialize and start GPDB
 Next we initialize GPDB using the config file that we created above. In the
 *guest* shell type in:
 ```shell
@@ -307,7 +291,7 @@ that were posted on each day. Pretty cool!
 
 (Note if you want to exit the `psql` shell above, type in `\q`.)
 
-##8: Using GDB
+##7: Using GDBP
 If you are doing serious development, you will likely need to use a debugger.
 Here is how you do that.
 
@@ -332,13 +316,13 @@ attach 25486
 Of course, you can change which function you want to break into, and change
 whether you want to debug the master or the segment processes. Happy hacking!
 
-##9: Want a larger cluster to play around with?
+##8: Want a larger cluster to play around with?
 If you want to play around with a larger cluster, then you can spin up the
 `gpdemo` cluster that is described in the
 [README.md]("https://github.com/greenplum-db/gpdb/blob/master/README.md") file. But, there a few things
 that you will have to do differently. Here are the steps.
 
-First, we will need to spin down the GPDB server that we just stared above,
+First, we will need to spin down the GPDB server that we just started above,
 as the setup for the demo has a different configuration. Issue the following
 command from your Vagrant shell:
 
