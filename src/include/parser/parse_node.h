@@ -109,6 +109,7 @@ typedef struct ParseState
   List       *p_bypasspreprocessfuncargs;    /* arguments of bypass function preprocessing function */
 	List       *p_bypasspreprocessstringargs;    /* string arguments of bypass function preprocessing function */
 	List       *p_bypasslocation;    /* locations of bypass preprocess functions */
+	int					current_location;    /* current targetlist location */
 	List        *p_lomode;    /* 1 for Constant parameters lo_create, 2 for subquery select case, 3 for lo_import */
 } ParseState;
 

@@ -995,8 +995,8 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 		if (selectQuery->hasBypassPreprocess)
 		{
 		  qry->hasBypassPreprocess = true;
-		  //qry->bypassPreprocessFunctionArgs = selectQuery->bypassPreprocessFunctionArgs;
-			qry->bypassLocation = selectQuery->bypassPreprocessFunctionArgs;
+		  qry->bypassPreprocessFunctionArgs = selectQuery->bypassPreprocessFunctionArgs;
+			qry->bypassLocation = sub_pstate->p_bypasslocation;
 			
 			if (qry->loMode == NIL)
 			{
@@ -1372,23 +1372,6 @@ transformInsertRow(ParseState *pstate, List *exprlist,
 	{
 		Expr	   *expr = (Expr *) lfirst(lc);
 		ResTarget  *col;
-		
-		if (IsA(expr, FuncExpr))
-		{
-			FuncExpr *fexpr = (FuncExpr *) expr;
-			
-			if (fexpr->bypass_preprocess == true)
-			{
-				if (pstate->p_bypasslocation == NIL)
-				{
-					pstate->p_bypasslocation = list_make1_int(lfirst_int(attnos));
-				}
-				else
-				{
-					pstate->p_bypasslocation = lappend_int(pstate->p_bypasslocation, lfirst_int(attnos));
-				}
-			}
-		}
 
 		col = (ResTarget *) lfirst(icols);
 		Assert(IsA(col, ResTarget));

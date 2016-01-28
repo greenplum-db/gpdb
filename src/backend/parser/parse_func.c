@@ -434,6 +434,15 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 			{
 				pstate->p_lomode = list_make1_int(1);
 			}
+			
+			if (pstate->p_bypasslocation == NIL)
+			{
+				pstate->p_bypasslocation = list_make1_int(pstate->current_location);
+			}
+			else
+			{
+				pstate->p_bypasslocation = lappend_int(pstate->p_bypasslocation, pstate->current_location);
+			}
 		}
 
 		funcexpr->funcid = funcid;

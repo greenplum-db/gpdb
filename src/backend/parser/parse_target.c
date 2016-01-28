@@ -103,6 +103,7 @@ transformTargetList(ParseState *pstate, List *targetlist)
 	List	   *p_target = NIL;
 	ListCell   *o_target;
 	ParseStateBreadCrumb    savebreadcrumb;
+	int i = 0;
 
 	/* CDB: Push error location stack.  Must pop before return! */
 	Assert(pstate);
@@ -115,7 +116,10 @@ transformTargetList(ParseState *pstate, List *targetlist)
 
 		/* CDB: Drop a breadcrumb in case of error. */
 		pstate->p_breadcrumb.node = (Node *)res;
-
+		
+		++i;
+		
+		pstate->current_location = i;
 		/*
 		 * Check for "something.*".  Depending on the complexity of the
 		 * "something", the star could appear as the last name in ColumnRef,
@@ -1476,55 +1480,54 @@ FigureColnameInternal(Node *node, char **name)
 void
 getFuncArgs(int current_lomode, ParseState *pstate, List *exprlist)
 {
-  List   *result = NIL;
-  ListCell   *lc;
-  ParseStateBreadCrumb    savebreadcrumb;
-  bool isDelay;
+	List   *result = NIL;
+	ListCell   *lc;
+	ParseStateBreadCrumb    savebreadcrumb;
+	bool isDelay;
 
-  /* CDB: Push error location stack.  Must pop before return! */
-  Assert(pstate);
-  savebreadcrumb = pstate->p_breadcrumb;
-  pstate->p_breadcrumb.pop = &savebreadcrumb;
+	/* CDB: Push error location stack.  Must pop before return! */
+	Assert(pstate);
+	savebreadcrumb = pstate->p_breadcrumb;
+	pstate->p_breadcrumb.pop = &savebreadcrumb;
 
-  isDelay = false;
+	isDelay = false;
 
-  foreach(lc, exprlist)
-  {
-      Node   *e = (Node *) lfirst(lc);
+	foreach(lc, exprlist)
+	{
+		Node   *e = (Node *) lfirst(lc);
 
-      /* CDB: Drop a breadcrumb in case of error. */
-      pstate->p_breadcrumb.node = (Node *)e;
+		/* CDB: Drop a breadcrumb in case of error. */
+		pstate->p_breadcrumb.node = (Node *)e;
 
-      /* Currently handle only functions. */
-    if (IsA(e, FuncCall))
-    {
-	  	FuncCall  *fref = (FuncCall *) e;
-	  	ListCell *lc_internal;
-	  	char *fname = NULL;
+		/* Currently handle only functions. */
+		if (IsA(e, FuncCall))
+		{
+			FuncCall  *fref = (FuncCall *) e;
+			ListCell *lc_internal;
+			char *fname = NULL;
 
-	  	foreach(lc_internal, fref->args)
-	  	{
-	    	Node *current_node = (Node *) lfirst(lc_internal);
+			foreach(lc_internal, fref->args)
+			{
+				Node *current_node = (Node *) lfirst(lc_internal);
 
-	    	if (IsA(current_node, A_Const))
-	    	{
-	      	A_Const *current_const = (A_Const *) (current_node);
+				if (IsA(current_node, A_Const))
+				{
+					A_Const *current_const = (A_Const *) (current_node);
 
-	      	if (pstate->p_bypasspreprocessfuncargs == NULL)
-	      	{
+					if (pstate->p_bypasspreprocessfuncargs == NULL)
+					{
 						pstate->p_bypasspreprocessfuncargs = list_make1(list_make1(current_const));
-	      	}
-	      	else
-	      	{
+					}
+					else
+					{
 						pstate->p_bypasspreprocessfuncargs = lappend(pstate->p_bypasspreprocessfuncargs, (list_make1(current_const)));
-	      	}
-	    	}
-	  }
+					}
+				}
+			}
+		}
 	}
-}
 
-
-  /* CDB: Pop error location stack. */
-  Assert(pstate->p_breadcrumb.pop == &savebreadcrumb);
-  pstate->p_breadcrumb = savebreadcrumb;
+	/* CDB: Pop error location stack. */
+	Assert(pstate->p_breadcrumb.pop == &savebreadcrumb);
+	pstate->p_breadcrumb = savebreadcrumb;
 }
