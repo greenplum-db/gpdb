@@ -916,7 +916,7 @@ Feature: Validate command line arguments
     Scenario: Simple Incremental Backup with AO/CO statistics w/ filter
         Given the test is initialized
         And there is a "ao" table "public.ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "public.ao_table2" with compression "None" in "bkdb" with data
+        And there is a "ao" table "public.ao_index_table" with compression "None" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And table "public.ao_table" is assumed to be in dirty state in "bkdb"
@@ -925,11 +925,11 @@ Feature: Validate command line arguments
         And the timestamp from gpcrondump is stored
         When the user runs gpdbrestore with the stored timestamp and options "--noaostats"
         Then gpdbrestore should return a return code of 0
-        And verify that there are "0" tuples in "bkdb" for table "public.ao_table2"
+        And verify that there are "0" tuples in "bkdb" for table "public.ao_index_table"
         And verify that there are "0" tuples in "bkdb" for table "public.ao_table"
         When the user runs gpdbrestore with the stored timestamp and options "-T public.ao_table" without -e option
         Then gpdbrestore should return a return code of 0
-        And verify that there are "0" tuples in "bkdb" for table "public.ao_table2"
+        And verify that there are "0" tuples in "bkdb" for table "public.ao_index_table"
         And verify that there are "8760" tuples in "bkdb" for table "public.ao_table"
 
     @backupsmoke
@@ -958,7 +958,7 @@ Feature: Validate command line arguments
         And partition "2" of partition table "co_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
         And partition "3" of partition table "co_part_table" is assumed to be in dirty state in "bkdb" in schema "pepper"
         And partition "3" of partition table "co_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
-        And table "public.heap_table2" is deleted in "bkdb"
+        And table "public.heap_table2" is dropped in "bkdb"
         And the user runs "gpcrondump -a --incremental -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts1"
@@ -1148,7 +1148,7 @@ Feature: Validate command line arguments
         And the full backup timestamp from gpcrondump is stored
         And gpcrondump should return a return code of 0
         And partition "1" of partition table "co_part_table" is assumed to be in dirty state in "bkdb" in schema "testschema"
-        And table "testschema.heap_table" is deleted in "bkdb"
+        And table "testschema.heap_table" is dropped in "bkdb"
         And the user runs "gpcrondump -a -x bkdb --incremental -z"
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored in a list
@@ -1618,190 +1618,51 @@ Feature: Validate command line arguments
         And gpdbrestore should return a return code of 2
         Then gpdbrestore should print No schema name supplied to stdout
 
-    @foo
     Scenario: Full backup with gpdbrestore -T for DB with FUNCTION having DROP SQL
         Given the test is initialized
         And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
         And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
         And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/create_function_with_drop_table.sql bkdb"
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And all the data from "bkdb" is saved for verification
-        When table "public.ao_index_table" is deleted in "bkdb"
+        When table "public.ao_index_table" is dropped in "bkdb"
         And the user runs "gpdbrestore -T public.ao_index_table -a" with the stored timestamp
         And gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_index_table" in "bkdb" with data
-        And verify that there is a "ao" table "public.ao_part_table" in "bkdb" with data
         And verify that there is a "heap" table "public.heap_table" in "bkdb" with data
 
-    @backupfire
-    @foo
     Scenario: Incremental restore with table filter
         Given the test is initialized
         And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
         And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table2" with compression "None" in "bkdb" with data
         And there is a "co" table "co_table" with compression "None" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
-        And table "ao_table2" is assumed to be in dirty state in "bkdb"
-        And table "co_table" is assumed to be in dirty state in "bkdb"
+        And table "ao_table" is assumed to be in dirty state in "bkdb"
         And the user runs "gpcrondump -a --incremental -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And all the data from "bkdb" is saved for verification
-        And the user runs gpdbrestore with the stored timestamp and options "-T public.ao_table2,public.co_table"
+        And the user runs gpdbrestore with the stored timestamp and options "-T public.ao_table,public.co_table"
         Then gpdbrestore should return a return code of 0
         And verify that exactly "2" tables in "bkdb" have been restored
 
-    @foo
     Scenario: Incremental restore with invalid table filter
         Given the test is initialized
         And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table2" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
-        And table "ao_table2" is assumed to be in dirty state in "bkdb"
-        And table "co_table" is assumed to be in dirty state in "bkdb"
         And the user runs "gpcrondump -a --incremental -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And all the data from "bkdb" is saved for verification
-        And the user runs gpdbrestore with the stored timestamp and options "-T public.ao_table2,public.invalid"
+        And the user runs gpdbrestore with the stored timestamp and options "-T public.heap_table,public.invalid"
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print Invalid tables for -T option: The following tables were not found in plan file to stdout
 
     @foo
-    @backupfire
-    Scenario: Incremental backup -T test 1
-        Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
-        When the user runs "gpcrondump -a -x bkdb"
-        Then gpcrondump should return a return code of 0
-        And table "ao_index_table" is assumed to be in dirty state in "bkdb"
-        When the user runs "gpcrondump -a -x bkdb --incremental"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And all the data from "bkdb" is saved for verification
-        When the user runs "gpdbrestore -e -T public.ao_index_table -a" with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        Then verify that there is no table "ao_part_table" in "bkdb"
-        And verify that there is no table "heap_table" in "bkdb"
-        And verify that there is a "ao" table "public.ao_index_table" in "bkdb" with data
-
-    @foo
-    Scenario: Incremental backup -T test 2
-        Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
-        When the user runs "gpcrondump -a -x bkdb"
-        Then gpcrondump should return a return code of 0
-        And table "ao_index_table" is assumed to be in dirty state in "bkdb"
-        When the user runs "gpcrondump -a -x bkdb --incremental"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And all the data from "bkdb" is saved for verification
-        And database "bkdb" is dropped and recreated
-        When the user runs "gpdbrestore -T public.ao_index_table -a" with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        Then verify that there is no table "ao_part_table" in "bkdb"
-        And verify that there is no table "heap_table" in "bkdb"
-        And verify that there is a "ao" table "public.ao_index_table" in "bkdb" with data
-
-    @foo
-    Scenario: Incremental backup -T test 3
-        Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
-        When the user runs "gpcrondump -a -x bkdb"
-        Then gpcrondump should return a return code of 0
-        And table "ao_index_table" is assumed to be in dirty state in "bkdb"
-        When the user runs "gpcrondump -a -x bkdb --incremental"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And all the data from "bkdb" is saved for verification
-        When the user truncates "public.ao_index_table" tables in "bkdb"
-        And the user runs "gpdbrestore -T public.ao_index_table -a" with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And verify that there is a "ao" table "public.ao_index_table" in "bkdb" with data
-
-    @foo
-    Scenario: Incremental backup -T test 4
-        Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
-        When the user runs "gpcrondump -a -x bkdb"
-        Then gpcrondump should return a return code of 0
-        And table "ao_index_table" is assumed to be in dirty state in "bkdb"
-        When the user runs "gpcrondump -a -x bkdb --incremental"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And all the data from "bkdb" is saved for verification
-        When table "public.ao_index_table" is deleted in "bkdb"
-        And the user runs "gpdbrestore -T public.ao_index_table -a" with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And verify that there is a "ao" table "public.ao_index_table" in "bkdb" with data
-
-    Scenario: Incremental backup -T test 5
-        Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
-        When the user runs "gpcrondump -a -x bkdb"
-        Then gpcrondump should return a return code of 0
-        And table "public.ao_part_table_1_prt_p2_2_prt_3" is assumed to be in dirty state in "bkdb"
-        When the user runs "gpcrondump -a -x bkdb --incremental"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And all the data from "bkdb" is saved for verification
-        When the user truncates "public.ao_part_table_1_prt_p2_2_prt_3" tables in "bkdb"
-        And the user runs "gpdbrestore -T public.ao_part_table_1_prt_p2_2_prt_3 -a" with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And verify that there is a "ao" table "public.ao_part_table_1_prt_p2_2_prt_3" in "bkdb" with data
-
-    Scenario: Incremental backup -T test 6
-        Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
-        When the user runs "gpcrondump -a -x bkdb"
-        Then gpcrondump should return a return code of 0
-        And table "public.ao_part_table_1_prt_p2_2_prt_3" is assumed to be in dirty state in "bkdb"
-        When the user runs "gpcrondump -a -x bkdb --incremental"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        When the user truncates "public.ao_part_table_1_prt_p2_2_prt_3" tables in "bkdb"
-        And the user runs "gpdbrestore -T ao_part_table_1_prt_p2_2_prt_3 -a" with the stored timestamp
-        And gpdbrestore should return a return code of 2
-        Then gpdbrestore should print No schema name supplied to stdout
-
-    Scenario: Incremental backup -T test 7
-        Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
-        When the user runs "gpcrondump -a -x bkdb"
-        Then gpcrondump should return a return code of 0
-        And table "public.ao_part_table_1_prt_p2_2_prt_3" is assumed to be in dirty state in "bkdb"
-        When the user runs "gpcrondump -a -x bkdb --incremental"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And all the data from "bkdb" is saved for verification
-        And the user runs "gpdbrestore -T public.ao_part_table -a -e" with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        Then verify that there is no table "heap_table" in "bkdb"
-        And verify that there is no table "ao_index_table" in "bkdb"
-        And verify that there is a "ao" table "public.ao_part_table" in "bkdb" with data
-
     @backupfire
     Scenario: gpdbrestore -L with -u option
         Given the test is initialized
