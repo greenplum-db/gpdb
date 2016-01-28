@@ -3790,3 +3790,12 @@ def execute_sql_until_stopped(context, dbname, query):
 @then('the user stops all background queries')
 def impl(context):
     context.background_query_lock = True
+
+@given('the test is initialized')
+def impl(context):
+    context.execute_steps(u'''
+        Given the database is running
+        And database "bkdb" is dropped and recreated
+        And there are no backup files
+        And the backup files in "/tmp" are deleted
+    ''')
