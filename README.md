@@ -131,7 +131,7 @@ make installcheck-bugbuster
 
 ## Basic GPDB source configuration, compilation, gpdemo cluster creation and test execution example
 
-* Configure build environment with [gporca](https://github.com/greenplum-db/gporca), the modular cost-based query optimizer. If you haven't installed GPORCA and GPOS yet, see the ORCA [README](https://raw.githubusercontent.com/cloudfoundry/uaa/master/NOTICE).
+* Configure build environment with [gporca](https://github.com/greenplum-db/gporca), the modular cost-based query optimizer. If you haven't installed GPORCA and GPOS yet, see the ORCA [README](https://github.com/greenplum-db/gporca/blob/master/README.md).
 
 ```
 configure --prefix=<install location> --enable-orca
