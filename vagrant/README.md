@@ -35,15 +35,15 @@ git clone https://github.com/greenplum-db/gpdb.git
 
 ##3: Setup and start the virtual machine
 Next go to the `gpdb/vagrant` directory. This directory has virtual machine
-configurations for different operating systems. Pick the distro of your choice,
-and `cd` to that directory. For this example, we will assume that you pick
-`centos`. So, issue the following command: 
+configurations for different operating systems (for now there is only one).
+Pick the distro of your choice, and `cd` to that directory. For this document,
+we will assume that you pick `centos`. So, issue the following command: 
 
 ```shell
 cd gpdb/vagrant/centos
 ```
 
-Next we will start a virtual machine using the Vagrant file in that directory.
+Next let us start a virtual machine using the Vagrant file in that directory.
 From the terminal window, issue the following command:
 
 ```shell
@@ -72,12 +72,12 @@ While you are viewing the Vagrantfile, a few more things to notice here are:
   use to 2. Again, feel free to change this number based on the machine that
   you have.
 * Notice the parameter `config.vm.synced_folder`. This configuration requests
-  that the code you checked out get mounted as `/gpdb` in the virtual machine.
+  that the code you checked out is mounted as `/gpdb` in the virtual machine.
   More on this later below.
 
 Once the command above (`vagrant up`) returns, we are ready to start the
 virtual machine. Type in the following command into the terminal window
-(make sure that you are in the directory `gpdb/vagrant`):
+(make sure that you are in the directory `gpdb/vagrant/centos`):
 
 ```shell
 vagrant ssh
@@ -213,10 +213,8 @@ net.core.wmem_max = 2097152
 vm.overcommit_memory = 2
 ```
 Hit the escape key, then type `:wq` to finish saving the file. Verify that you
-see the changes that you made by typing in `cat /etc/sysctl.d/gpdb.conf`.
-
+see the changes that you made by typing in `cat /etc/sysctl.d/gpdb.conf`. 
 Next, apply the changes that you just made by running the following command:
-
 ```shell
 sudo sysctl -p /etc/sysctl.d/gpdb.conf
 ```
