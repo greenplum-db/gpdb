@@ -2,7 +2,9 @@
 
 ### Credits
 This guide was developed in collaboration with Navneet Potti (@navsan) and
-Nabarun Nag (@nabarunnag).
+Nabarun Nag (@nabarunnag). Many thanks to Dave Cramer (@davecramer) and
+Daniel Gustafsson (@danielgustafsson) for various suggestions to improve
+the original version of this document.
 
 ## Who should read this document?
 Any one who wants to develop code for GPDB. This guide targets the
@@ -38,14 +40,13 @@ and `cd` to that directory. For this example, we will assume that you pick
 `centos`. So, issue the following command: 
 
 ```shell
-cd centos
+cd gpdb/vagrant/centos
 ```
 
 Next we will start a virtual machine using the Vagrant file in that directory.
 From the terminal window, issue the following command:
 
 ```shell
-cd gpdb/vagrant
 vagrant up
 ```
 
