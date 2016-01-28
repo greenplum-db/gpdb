@@ -1339,7 +1339,7 @@ def impl(context, filetype, dir):
         raise Exception("Unknown filetype '%s' specified" % filetype)
 
 
-    dump_dir = dir if len(dir.strip()) != 0 else master_data_dir
+    dump_dir = dir.strip() if len(dir.strip()) != 0 else master_data_dir
     file_path = os.path.join(dump_dir, 'db_dumps', context.backup_timestamp[0:8], '%s%s' % (context.dump_prefix, filename))
 
     if not os.path.exists(file_path):
@@ -2355,7 +2355,7 @@ def validate_files(file_list, pattern_list, expected_file_count):
      
 @then('the "{file_type}" file under "{directory}" with options "{options}" is validated after dump operation')
 def impl(context, file_type, directory, options):
-    backup_dir = directory if directory.strip() != '' else master_data_dir  
+    backup_dir = directory.strip() if directory.strip() != '' else master_data_dir  
     if len(options.split(',')) > 3:
         raise Exception('Invalid options specified "%s"' % options) 
     option_list = options.split(',')
@@ -2407,7 +2407,7 @@ def get_segment_dump_files(context, dir):
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
     primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
     for seg in primary_segs:
-        segment_dump_dir =  dir if len(dir.strip()) != 0 else seg.getSegmentDataDirectory()
+        segment_dump_dir =  dir.strip() if len(dir.strip()) != 0 else seg.getSegmentDataDirectory()
         cmd = Command('check dump files', 'ls %s/db_dumps/%s' % (segment_dump_dir, context.backup_timestamp[0:8]), ctxt=REMOTE, remoteHost=seg.getSegmentHostName())
         cmd.run(validateAfter=False) #because we expect ls to fail
         results.append((seg, [r for r in cmd.get_results().stdout.strip().split()]))
@@ -2415,14 +2415,16 @@ def get_segment_dump_files(context, dir):
     
 @then('there are no dump files created under "{dir}"')
 def impl(context, dir):
+    dir = dir.strip()
     if not hasattr(context, "dump_prefix"):
         context.dump_prefix = ''
-    master_dump_dir = dir if len(dir.strip()) != 0 else master_data_dir
+    master_dump_dir = dir if len(dir) != 0 else master_data_dir
     segment_dump_files = get_segment_dump_files(context, dir)
 
     for seg, dump_files in segment_dump_files:
-        segment_dump_dir =  dir if len(dir.strip()) != 0 else seg.getSegmentDataDirectory()
+        segment_dump_dir =  dir if len(dir) != 0 else seg.getSegmentDataDirectory()
         if len(dump_files) != 0:
+            print seg, dump_files
             raise Exception('Found extra dump files on the segment %s under %s/db_dumps/%s' % (seg.getSegmentDataDirectory(), segment_dump_dir, context.backup_timestamp[0:8]))
     
     cmd = Command('check dump files', 'ls %s/db_dumps/%s' % (master_dump_dir, context.backup_timestamp[0:8]))
