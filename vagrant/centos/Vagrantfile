@@ -15,8 +15,8 @@ Vagrant.configure(2) do |config|
     vb.cpus = 2
   end
 
-  # Make the gpdb folder will be visible as /gpdb in the virtual machine 
-  config.vm.synced_folder "../../gpdb", "/gpdb"
+  # Make the GPDB code folder will be visible as /gpdb in the virtual machine 
+  config.vm.synced_folder "../../.", "/gpdb"
 
   # Install packages that are needed to build and run GPDB
   config.vm.provision "shell", inline: <<-INSTALL
