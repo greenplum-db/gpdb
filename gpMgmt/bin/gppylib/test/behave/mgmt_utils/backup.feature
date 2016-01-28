@@ -146,7 +146,9 @@ Feature: Validate command line arguments
         And the user runs "gpdbrestore -t 20140101010101" and options "-T public.ao_table --table-file foo"
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print Cannot specify -T and --table-file together to stdout
-
+        When the user runs "gpdbrestore -u /tmp --ddboost -s bkdb"
+        Then gpdbrestore should return a return code of 2
+        And gpdbrestore should print -u cannot be used with DDBoost parameters to stdout
 
     @backupsmoke
     Scenario: Negative test for Incremental Backup
@@ -1662,8 +1664,8 @@ Feature: Validate command line arguments
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print Invalid tables for -T option: The following tables were not found in plan file to stdout
 
-    @foo
     @backupfire
+    @foo
     Scenario: gpdbrestore -L with -u option
         Given the test is initialized
         And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
@@ -1679,6 +1681,7 @@ Feature: Validate command line arguments
         And gpdbrestore should print Table public.heap_table to stdout
 
     @backupfire
+    @foo
     Scenario: gpdbrestore -b with -u option for Full timestamp
         Given the test is initialized
         And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
@@ -1695,13 +1698,7 @@ Feature: Validate command line arguments
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     @backupfire
-    Scenario: gpdbrestore should not support -u and ddboost parameters together
-        Given the test is initialized
-        When the user runs "gpdbrestore -u /tmp --ddboost -s testdb1"
-        Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print -u cannot be used with DDBoost parameters to stdout
-
-    @backupfire
+    @foo
     Scenario: gpdbrestore with -s and -u options for full backup
         Given the test is initialized
         And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
@@ -1716,6 +1713,7 @@ Feature: Validate command line arguments
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     @backupfire
+    @foo
     Scenario: gpdbrestore with -s and -u options for incremental backup
         Given the test is initialized
         And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
@@ -1732,20 +1730,14 @@ Feature: Validate command line arguments
         And verify that the data of "11" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
+    @foo
     Scenario: gpdbrestore -b option should display the timestamps in sorted order
         Given the test is initialized
         And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
-        And table "ao_index_table" is assumed to be in dirty state in "bkdb"
         And the user runs "gpcrondump -x bkdb --incremental -a"
         And gpcrondump should return a return code of 0
-        And table "ao_index_table" is assumed to be in dirty state in "bkdb"
-        And the user runs "gpcrondump -x bkdb --incremental -a"
-        And gpcrondump should return a return code of 0
-        And table "ao_index_table" is assumed to be in dirty state in "bkdb"
         And the user runs "gpcrondump -x bkdb --incremental -a"
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
