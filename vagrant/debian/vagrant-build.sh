@@ -9,7 +9,7 @@ cd /gpdb/gpAux
 cp -rp gpdemo /home/vagrant/
 sudo chown -R vagrant:vagrant /home/vagrant/gpdemo
 cat /home/vagrant/.ssh/id_rsa.pub >> /home/vagrant/.ssh/authorized_keys
-cd gpdemo
+cd /home/vagrant/gpdemo
 source /usr/local/gpdb/greenplum_path.sh
 make cluster
 
