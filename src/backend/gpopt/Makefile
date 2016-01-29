@@ -38,3 +38,6 @@ endif
 
 all:
 	 $(CXX)  $(ARCH_FLAGS) $(LDLIBFLAGS) -lgpos -L$(XERCES_LIBDIR) -lxerces-c-3.1 -lnaucrates -lgpdbcost -lgpopt -lpthread  -o libdxltranslators.$(LDSFX) $(shell find . -name '*.o' ! -name 'SUBSYS.o')
+
+install:
+	cp $(BLD_TOP)/../src/backend/gpopt/libdxltranslators.$(LDSFX) $(INSTLOC);
