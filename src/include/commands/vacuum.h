@@ -110,45 +110,6 @@ typedef struct VacAttrStats
 	int			rowstride;
 } VacAttrStats;
 
-/*
- * The "vtlinks" array keeps information about each recently-updated tuple
- * ("recent" meaning its XMAX is too new to let us recycle the tuple).
- * We store the tuple's own TID as well as its t_ctid (its link to the next
- * newer tuple version).  Searching in this array allows us to follow update
- * chains backwards from newer to older tuples.  When we move a member of an
- * update chain, we must move *all* the live members of the chain, so that we
- * can maintain their t_ctid link relationships (we must not just overwrite
- * t_ctid in an existing tuple).
- *
- * Note: because t_ctid links can be stale (this would only occur if a prior
- * VACUUM crashed partway through), it is possible that new_tid points to an
- * empty slot or unrelated tuple.  We have to check the linkage as we follow
- * it, just as is done in EvalPlanQual.
- */
-typedef struct VTupleLinkData
-{
-	ItemPointerData new_tid;	/* t_ctid of an updated tuple */
-	ItemPointerData this_tid;	/* t_self of the tuple */
-} VTupleLinkData;
-
-typedef VTupleLinkData *VTupleLink;
-
-/*
- * VRelStats contains the data acquired by scan_heap for use later
- */
-typedef struct VRelStats
-{
-	/* miscellaneous statistics */
-	BlockNumber rel_pages;
-	double		rel_tuples;
-	Size		min_tlen;
-	Size		max_tlen;
-	bool		hasindex;
-	/* vtlinks array for tuple chain following - sorted by new_tid */
-	int			num_vtlinks;
-	VTupleLink	vtlinks;
-} VRelStats;
-
 typedef struct VacuumStatsContext
 {
 	MemoryContext ctx;
@@ -235,7 +196,8 @@ extern bool vacuumStatement_IsInAppendOnlyPseudoCompactionPhase(VacuumStmt* vacs
 extern void lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats);
 extern void vacuum_appendonly_rel(Relation aorel, VacuumStmt *vacstmt);
 extern void vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot,
-		void* vacrelstats, bool isVacFull);
+										 BlockNumber *rel_pages, double *rel_tuples,
+										 bool *relhasindex);
 extern int vacuum_appendonly_indexes(Relation aoRelation, VacuumStmt *vacstmt, List* updated_stats);
 extern void vacuum_aocs_rel(Relation aorel, void *vacrelstats, bool isVacFull);
 extern void gen_oids_for_bitmaps(VacuumStmt *vacstmt, Relation onerel);
