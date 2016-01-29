@@ -85,10 +85,10 @@ throughout the codebase, but a few larger additions worth noting:
 
 * __src/backend/gpopt/__
 
-  Contains the so-called __translator__ library, for using the ORCA
+  Contains the so-called __translator__ library, for using the GPORCA
   optimizer with Greenplum. The translator library is written in C++
   code, and contains glue code for translating plans and queries
-  between the DXL format used by ORCA, and the PostgreSQL internal
+  between the DXL format used by GPORCA, and the PostgreSQL internal
   representation. This goes unused, unless building with
   _--enable-orca_.
 
@@ -106,7 +106,13 @@ throughout the codebase, but a few larger additions worth noting:
 
 ## Basic GPDB source configuration, compilation, gpdemo cluster creation and test execution example
 
-* Configure build environment
+* Configure build environment with [gporca](https://github.com/greenplum-db/gporca), the modular cost-based query optimizer. If you haven't installed GPORCA and GPOS yet, see the ORCA [README](https://github.com/greenplum-db/gporca/blob/master/README.md).
+
+```
+configure --prefix=<install location> --enable-orca
+```
+
+* Configure build environment without GPORCA.
 
 ```
 configure --prefix=<install location>
