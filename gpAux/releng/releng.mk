@@ -15,9 +15,9 @@
 #-------------------------------------------------------------------------------------
 
 UNAME = $(shell uname)
-UNAME_P = $(shell uname -p)
+UNAME_M = $(shell uname -m)
 
-UNAME_ALL = $(UNAME).$(UNAME_P)
+UNAME_ALL = $(UNAME).$(UNAME_M)
 
 # shared lib support
 ifeq (Darwin, $(UNAME))

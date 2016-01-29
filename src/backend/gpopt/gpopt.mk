@@ -9,11 +9,10 @@
 ##-------------------------------------------------------------------------------------
 
 UNAME = $(shell uname)
-UNAME_P = $(shell uname -p)
 UNAME_M = $(shell uname -m)
 
 ARCH_OS = GPOS_$(UNAME)
-ARCH_CPU = GPOS_$(UNAME_P)
+ARCH_CPU = GPOS_$(UNAME_M)
 
 ifeq "$(BLD_TYPE)" "opt"
 	GPOPT_flags = -O3 -fno-omit-frame-pointer -g3
