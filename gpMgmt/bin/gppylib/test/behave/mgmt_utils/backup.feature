@@ -144,9 +144,11 @@ Feature: Validate command line arguments
         When the user runs "gpdbrestore -t 20140101010101 --truncate -e -T public.foo -a"
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print Cannot specify --truncate and -e together to stdout
-        And the user runs "gpdbrestore -t 20140101010101" and options "-T public.ao_table --table-file foo"
+        And there is a table-file "/tmp/table_file_foo" with tables "public.ao_table, public.co_table"
+        And the user runs "gpdbrestore -t 20140101010101" and options "-T public.ao_table --table-file /tmp/table_file_foo"
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print Cannot specify -T and --table-file together to stdout
+        Then the file "/tmp/table_file_foo" is removed from the system
         When the user runs "gpdbrestore -u /tmp --ddboost -s bkdb"
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print -u cannot be used with DDBoost parameters to stdout
@@ -182,7 +184,7 @@ Feature: Validate command line arguments
         And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
-        And the user runs "gpcrondump -a --incremental -x bkdb"
+        And the user runs "gpcrondump -a --incremental -x bkdb2"
         Then gpcrondump should return a return code of 2
         And gpcrondump should print No full backup found for incremental to stdout
 

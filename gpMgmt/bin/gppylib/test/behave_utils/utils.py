@@ -137,7 +137,7 @@ def check_return_code(context, ret_code):
         emsg = ""
         if context.error_message:
             emsg += context.error_message
-        raise Exception("expected return code '%s' does not equal acutal return code '%s' %s" % (ret_code, context.ret_code, emsg))
+        raise Exception("expected return code '%s' does not equal actual return code '%s' %s" % (ret_code, context.ret_code, emsg))
 
 def check_database_is_running(context):
     if not 'PGPORT' in os.environ:
