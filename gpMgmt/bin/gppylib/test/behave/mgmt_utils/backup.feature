@@ -136,6 +136,7 @@ Feature: Validate command line arguments
         And the user runs "psql -c 'drop schema schema_heap cascade;' bkdb"
 
     @backupfire
+	@foo
     Scenario: Valid option combinations for gpdbrestore
         When the user runs "gpdbrestore -t 20140101010101 --truncate -a"
         Then gpdbrestore should return a return code of 2
@@ -175,6 +176,7 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 2
         And gpcrondump should print No full backup found for incremental to stdout
 
+    @foo
     Scenario: Negative test for Incremental Backup - Incremental after a full backup of different database
         Given the test is initialized
         And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
@@ -210,6 +212,7 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 2
         And gpcrondump should print state file does not exist to stdout
 
+    @foo
     Scenario: Negative test for invalid state file format
         Given the test is initialized
         When the user runs "gpcrondump -a -x bkdb"
@@ -532,6 +535,7 @@ Feature: Validate command line arguments
         And the user runs gpdbrestore with the stored timestamp and options "-b"
         Then gpdbrestore should return a return code of 0
 
+    @foo
     Scenario: Output info gpdbrestore
         Given the test is initialized
         And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
@@ -859,6 +863,7 @@ Feature: Validate command line arguments
         And the plan file is validated against "data/plan1"
 
     @plan
+    @foo
     Scenario: Simple Plan File Test With Partitions
         Given the test is initialized
         And there is a "heap" partition table "heap_part_table" with compression "None" in "bkdb" with data
@@ -889,6 +894,7 @@ Feature: Validate command line arguments
         Then "plan" file should be created under " "
         And the plan file is validated against "data/plan2"
 
+    @foo
     Scenario: No plan file generated
         Given the test is initialized
         And partition "1" of partition table "ao_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
@@ -1782,6 +1788,7 @@ Feature: Validate command line arguments
         And verify that the data of the dirty tables under " " in "bkdb" is validated after restore
 
 	@scale
+    @foo
     Scenario: Dirty File Scale Test for partitions
         Given the test is initialized
 		And there are "240" "heap" tables "public.heap_table" with data in "bkdb"
@@ -2042,6 +2049,7 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 2
         And gpcrondump should print is not a valid increment to stdout
 
+    @foo
     Scenario: gpdbrestore with missing report file for middle increment
         Given the test is initialized
         And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
@@ -2146,6 +2154,7 @@ Feature: Validate command line arguments
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     @backupsmoke
+    @foo
     Scenario Outline: --list-backup-files option for dump
         Given the test is initialized
         And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
@@ -2207,6 +2216,7 @@ Feature: Validate command line arguments
         And the "regular_files" file under " " with options "-t,--prefix=foo" is validated after dump operation
         And there are no dump files created under " "
 
+    @foo
     Scenario: Full Backup and Restore with named pipes with -G option
         Given the test is initialized
         And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
@@ -2234,6 +2244,7 @@ Feature: Validate command line arguments
         And verify that there is a "heap" table "heap_table" in "bkdb" with data
         And verify that there is a "ao" table "ao_part_table" in "bkdb" with data
 
+    @foo
     Scenario: Incremental Backup and Restore with named pipes with -u
         Given the test is initialized
         And there is a list to store the incremental backup timestamps
@@ -2328,6 +2339,7 @@ Feature: Validate command line arguments
         And verify that there is a "heap" table "heap_table" in "bkdb" with data
         And verify that there is a "ao" table "ao_part_table" in "bkdb" with data
 
+    @foo
     Scenario: Full Backup and Restore with --prefix option for multiple databases
         Given the test is initialized
         And the prefix "foo" is stored
@@ -2395,6 +2407,7 @@ Feature: Validate command line arguments
         And there should be dump files under "/tmp" with prefix "foo"
         And verify that there is a "heap" table "heap_table" in "bkdb" with data
 
+    @foo
     Scenario: Incremental Backup and Restore with --prefix and -u options
         Given the test is initialized
         And the prefix "foo" is stored
@@ -2493,6 +2506,7 @@ Feature: Validate command line arguments
         Then gpdbrestore should return a return code of 0
         And verify that the data of "2" tables in "bkdb" is validated after restore
 
+    @foo
     Scenario: Incremental Backup and Restore with Multiple Schemas and -t filter for Full
         Given the test is initialized
         And the prefix "foo" is stored
@@ -2802,6 +2816,7 @@ Feature: Validate command line arguments
         Then gpcrondump should print -C option can not be selected with incremental backup to stdout
         And gpcrondump should return a return code of 2
 
+    @foo
     Scenario: Full Backup and Restore of external and ao table
         Given the test is initialized
         And there is a "heap" table "public.heap_table" with compression "None" in "bkdb" with data
@@ -2962,6 +2977,7 @@ Feature: Validate command line arguments
         And psql should not print bitmap_co_index to stdout
         And verify that the data of "6" tables in "bkdb" is validated after restore
 
+    @foo
     Scenario: Incremental Backup and Restore of specified post data objects
         Given the test is initialized
         And there is schema "testschema" exists in "bkdb"
@@ -3034,6 +3050,7 @@ Feature: Validate command line arguments
         Then psql should print 2000 to stdout
 
 	@scale
+    @foo
     Scenario: Full Backup with option -T and Restore with exactly 1000 partitions
         Given the test is initialized
         And there is a "ao" table "ao_part_table" in "bkdb" having "1000" partitions
@@ -3847,12 +3864,13 @@ Feature: Validate command line arguments
         And verify that the restored table "public.ao_index_table" in database "bkdb" is analyzed
         And verify that the table "public.heap_table" in database "bkdb" is not analyzed
 
+    @plan
     Scenario: Gpcrondump with --email-file option
         Given the test is initialized
         And database "testdb1" is dropped and recreated
         And database "testdb2" is dropped and recreated
-        And there is a "heap" table "heap_table1" with compression "None" in "testdb1" with data
-        And there is a "heap" table "heap_table2" with compression "None" in "testdb2" with data
+        And there is a "heap" table "heap_table" with compression "None" in "testdb1" with data
+        And there is a "heap" table "heap_table" with compression "None" in "testdb2" with data
         And the mail_contacts file does not exist
         And the mail_contacts file exists
         And the yaml file "gppylib/test/behave/mgmt_utils/steps/data/test_email_details.yaml" stores email details is in proper format
@@ -3863,7 +3881,7 @@ Feature: Validate command line arguments
 
     Scenario: Gpcrondump without mail_contacts
         Given the test is initialized
-        And there is a "heap" table "heap_table1" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
         And the mail_contacts file does not exist
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
@@ -3871,7 +3889,7 @@ Feature: Validate command line arguments
 
     Scenario: Negative case for gpcrondump with --email-file option
         Given the test is initialized
-        And there is a "heap" table "heap_table1" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
         And the mail_contacts file does not exist
         And the mail_contacts file exists
         And the yaml file "gppylib/test/behave/mgmt_utils/steps/data/test_email_details_wrong_format.yaml" stores email details is not in proper format
@@ -3897,24 +3915,6 @@ Feature: Validate command line arguments
         And verify that there is no table "schema_heap.heap_table" in "bkdb"
         And verify that there is no table "schema_heap1.heap_table1" in "bkdb"
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb" with data
-
-    @backupfire
-    Scenario: Full Backup with multiple -s option and Restore
-        Given the test is initialized
-        And there is schema "schema_heap, schema_ao, schema_heap1" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "schema_heap1.heap_table1" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "None" in "bkdb" with data
-        And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_part_table, schema_heap1.heap_table1" in "bkdb" exists for validation
-        When the user runs "gpcrondump -a -x bkdb -s schema_heap -s schema_heap1"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And verify that the "report" file in " " dir contains "Backup Type: Full"
-        And the user runs gpdbrestore with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
-        And verify that there is a "heap" table "schema_heap1.heap_table1" in "bkdb" with data
-        And verify that there is no table "schema_ao.ao_part_table" in "bkdb"
 
     @backupfire
     Scenario: Full Backup with option -S and Restore
@@ -3985,22 +3985,6 @@ Feature: Validate command line arguments
         And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb" with data
         And verify that there is no table "schema_heap1.heap_table" in "bkdb"
-
-    @backupsmoke
-    Scenario: Full Backup and Restore with --prefix option
-        Given the test is initialized
-        And the prefix "foo" is stored
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
-        When the user runs "gpcrondump -a -x bkdb --prefix=foo"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
-        And gpdbrestore should return a return code of 0
-        And there should be dump files under " " with prefix "foo"
-        And verify that there is a "heap" table "heap_table" in "bkdb" with data
-        And verify that there is a "ao" table "ao_part_table" in "bkdb" with data
 
     Scenario: Incremental Backup and Restore with -s filter for Full
         Given the test is initialized
@@ -4137,6 +4121,7 @@ Feature: Validate command line arguments
         And verify that there is no table "schema_ao.ao_index_table" in "bkdb"
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb" with data
 
+    @foo
     Scenario: Full Backup and Restore with option --change-schema
         Given the test is initialized
         And there is schema "schema_heap, schema_ao, schema_new1" exists in "bkdb"
@@ -4148,11 +4133,12 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And verify that the "report" file in " " dir contains "Backup Type: Full"
-        And the user runs "gpdbrestore --change-schema=schema_new1 -a --table-file include_file" with the stored timestamp
+        And the user runs "gpdbrestore --change-schema=schema_new -a --table-file include_file" with the stored timestamp
         And gpdbrestore should return a return code of 0
-        And verify that there is a table "schema_new1.heap_table" of "heap" type in "bkdb" with same data as table "schema_heap.heap_table"
-        And verify that there is a table "schema_new1.ao_part_table" of "ao" type in "bkdb" with same data as table "schema_ao.ao_part_table"
+        And verify that there is a table "schema_new.heap_table" of "heap" type in "bkdb" with same data as table "schema_heap.heap_table"
+        And verify that there is a table "schema_new.ao_part_table" of "ao" type in "bkdb" with same data as table "schema_ao.ao_part_table"
 
+    @foo
     Scenario: Incremental Backup and Restore with option --change-schema
         Given the test is initialized
         And there is schema "schema_heap, schema_ao, schema_new1" exists in "bkdb"
@@ -4168,10 +4154,10 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And verify that the "report" file in " " dir contains "Backup Type: Incremental"
-        And the user runs "gpdbrestore --change-schema=schema_new1 -a --table-file include_file" with the stored timestamp
+        And the user runs "gpdbrestore --change-schema=schema_new -a --table-file include_file" with the stored timestamp
         And gpdbrestore should return a return code of 0
-        And verify that there is a table "schema_new1.heap_table" of "heap" type in "bkdb" with same data as table "schema_heap.heap_table"
-        And verify that there is a table "schema_new1.ao_part_table" of "ao" type in "bkdb" with same data as table "schema_ao.ao_part_table"
+        And verify that there is a table "schema_new.heap_table" of "heap" type in "bkdb" with same data as table "schema_heap.heap_table"
+        And verify that there is a table "schema_new.ao_part_table" of "ao" type in "bkdb" with same data as table "schema_ao.ao_part_table"
 
     Scenario: Full backup and restore with statistics
         Given the test is initialized
