@@ -833,41 +833,18 @@ Feature: Validate command line arguments
         And gpdbrestore should return a return code of 0
         Then "plan" file should be created under " "
 
-    @plan
     Scenario: Simple Plan File Test
         Given the test is initialized
         And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "heap2_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao2_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co2_table" with compression "None" in "bkdb" with data
-        When the user runs "gpcrondump -a -x bkdb"
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts0"
-        And the user runs "gpcrondump -a -x bkdb --incremental"
-        And gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the timestamp is labeled "ts1"
-        And "dirty_list" file should be created under " "
-        And table "public.co_table" is assumed to be in dirty state in "bkdb"
-        And the user runs "gpcrondump -a -x bkdb --incremental"
-        And gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the timestamp is labeled "ts2"
-        And "dirty_list" file should be created under " "
-        And the user runs gpdbrestore with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        Then "plan" file should be created under " "
-        And the plan file is validated against "data/plan1"
-
-    @plan
-    Scenario: Simple Plan File Test With Partitions
-        Given the test is initialized
+        And there is a "heap" table "heap_index_table" with compression "None" in "bkdb" with data
         And there is a "heap" partition table "heap_part_table" with compression "None" in "bkdb" with data
         And there is a "heap" partition table "heap_part_table_comp" with compression "zlib" in "bkdb" with data
+        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
         And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
         And there is a "ao" partition table "ao_part_table_comp" with compression "zlib" in "bkdb" with data
+        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "co_index_table" with compression "None" in "bkdb" with data
         And there is a "co" partition table "co_part_table" with compression "None" in "bkdb" with data
         And there is a "co" partition table "co_part_table_comp" with compression "zlib" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
@@ -879,6 +856,7 @@ Feature: Validate command line arguments
         And the timestamp from gpcrondump is stored
         And the timestamp is labeled "ts1"
         And "dirty_list" file should be created under " "
+        And table "public.co_table" is assumed to be in dirty state in "bkdb"
         And partition "1" of partition table "co_part_table_comp" is assumed to be in dirty state in "bkdb" in schema "public"
         And the user runs "gpcrondump -a -x bkdb --incremental"
         And gpcrondump should return a return code of 0
@@ -888,7 +866,7 @@ Feature: Validate command line arguments
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
         Then "plan" file should be created under " "
-        And the plan file is validated against "data/plan2"
+        And the plan file is validated against "data/bar_plan1"
 
     Scenario: No plan file generated
         Given the test is initialized
@@ -936,46 +914,6 @@ Feature: Validate command line arguments
         And verify that there are "0" tuples in "bkdb" for table "public.ao_index_table"
         And verify that there are "8760" tuples in "bkdb" for table "public.ao_table"
 
-    @backupsmoke
-    @plan
-    Scenario: Simple Incremental Backup for Multiple Schemas with common tablenames
-        Given the test is initialized
-        And there is schema "pepper" exists in "bkdb"
-        And there is a "heap" table "pepper.heap_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "heap_table2" with compression "None" in "bkdb" with data
-        And there is a "heap" partition table "pepper.heap_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "pepper.ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "pepper.ao_table2" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table2" with compression "None" in "bkdb" with data
-        And there is a "co" partition table "pepper.co_part_table" with compression "None" in "bkdb" with data
-        And there is a "co" partition table "co_part_table" with compression "None" in "bkdb" with data
-        And there is a list to store the incremental backup timestamps
-        When the user runs "gpcrondump -a -x bkdb"
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts0"
-        And the full backup timestamp from gpcrondump is stored
-        And table "public.ao_table" is assumed to be in dirty state in "bkdb"
-        And table "pepper.ao_table2" is assumed to be in dirty state in "bkdb"
-        And partition "1" of partition table "co_part_table" is assumed to be in dirty state in "bkdb" in schema "pepper"
-        And partition "2" of partition table "co_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
-        And partition "3" of partition table "co_part_table" is assumed to be in dirty state in "bkdb" in schema "pepper"
-        And partition "3" of partition table "co_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
-        And table "public.heap_table2" is dropped in "bkdb"
-        And the user runs "gpcrondump -a --incremental -x bkdb"
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts1"
-        Then the timestamp from gpcrondump is stored
-        And verify that the "report" file in " " dir contains "Backup Type: Incremental"
-        And "dirty_list" file should be created under " "
-        And all the data from "bkdb" is saved for verification
-        And the user runs gpdbrestore with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And the plan file is validated against "data/plan4"
-        And verify that the data of "33" tables in "bkdb" is validated after restore
-        And verify that the tuple count of all appendonly tables are consistent in "bkdb"
-
     @backupfire
     Scenario: pg_stat_last_operation registers truncate for regular tables
         Given the test is initialized
@@ -1005,103 +943,63 @@ Feature: Validate command line arguments
         Then pg_stat_last_operation does not register the truncate for tables "co_part_table_1_prt_p2_2_prt_2" in "bkdb" in schema "testschema"
         Then pg_stat_last_operation does not register the truncate for tables "co_part_table_1_prt_p2_2_prt_3" in "bkdb" in schema "testschema"
 
-    @plan
-    Scenario: Simple Incremental Backup to test TRUNCATE
+    Scenario: Simple Incremental Backup with TRUNCATE
         Given the test is initialized
-        And there is schema "pepper" exists in "bkdb"
-        And there is a "ao" table "pepper.ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "pepper.co_table" with compression "None" in "bkdb" with data
+        And there is schema "testschema" exists in "bkdb"
+        And there is a "ao" table "testschema.ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "testschema.ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "testschema.co_table" with compression "None" in "bkdb" with data
+        And there is a "co" partition table "testschema.co_part_table" with compression "None" in "bkdb" with data
         And there is a list to store the incremental backup timestamps
-        When the user truncates "pepper.ao_table" tables in "bkdb"
-        And the user truncates "pepper.co_table" tables in "bkdb"
-        And the numbers "1" to "10000" are inserted into "pepper.ao_table" tables in "bkdb"
-        And the numbers "1" to "10000" are inserted into "pepper.co_table" tables in "bkdb"
+        When the user truncates "testschema.ao_table" tables in "bkdb"
+        And the user truncates "testschema.co_table" tables in "bkdb"
+        And the numbers "1" to "10000" are inserted into "testschema.ao_table" tables in "bkdb"
+        And the numbers "1" to "10000" are inserted into "testschema.co_table" tables in "bkdb"
         And the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts0"
         And the full backup timestamp from gpcrondump is stored
-        And the user truncates "pepper.co_table" tables in "bkdb"
-        And the numbers "1" to "10000" are inserted into "pepper.co_table" tables in "bkdb"
-        And table "pepper.co_table" is assumed to be in dirty state in "bkdb"
+        And the user truncates "testschema.ao_part_table" tables in "bkdb"
+        And the partition table "testschema.ao_part_table" in "bkdb" is populated with similar data
+        And the user truncates "testschema.co_table" tables in "bkdb"
+        And the numbers "1" to "10000" are inserted into "testschema.co_table" tables in "bkdb"
+        And table "testschema.co_table" is assumed to be in dirty state in "bkdb"
         And the user runs "gpcrondump -a --incremental -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts1"
-        Then the timestamp from gpcrondump is stored
-        And verify that the "report" file in " " dir contains "Backup Type: Incremental"
+        And the timestamp from gpcrondump is stored
+        And the user truncates "testschema.ao_part_table" tables in "bkdb"
+        And the partition table "testschema.ao_part_table" in "bkdb" is populated with similar data
+        And the user runs "gpcrondump -a --incremental -x bkdb"
+        And gpcrondump should return a return code of 0
+        And the timestamp is labeled "ts2"
+        And the timestamp from gpcrondump is stored
+        Then verify that the "report" file in " " dir contains "Backup Type: Incremental"
         And "dirty_list" file should be created under " "
         And all the data from "bkdb" is saved for verification
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
-        And the plan file is validated against "data/plan5"
-        And verify that the data of "2" tables in "bkdb" is validated after restore
+        And verify that the data of "20" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
-    @plan
-    Scenario: IB TRUNCATE partitioned table
-        Given the test is initialized
-        And there is schema "pepper" exists in "bkdb"
-        And there is a "ao" partition table "pepper.ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "co" partition table "pepper.co_part_table" with compression "None" in "bkdb" with data
-        And there is a list to store the incremental backup timestamps
-        When the user runs "gpcrondump -a -x bkdb"
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts0"
-        And the full backup timestamp from gpcrondump is stored
-        And the user truncates "pepper.ao_part_table" tables in "bkdb"
-        And the partition table "pepper.ao_part_table" in "bkdb" is populated with similar data
-        And the user runs "gpcrondump -a --incremental -x bkdb"
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts1"
-        Then the timestamp from gpcrondump is stored
-        And all the data from "bkdb" is saved for verification
-        And the user runs gpdbrestore with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And the plan file is validated against "data/plan6"
-        And verify that the data of "18" tables in "bkdb" is validated after restore
-        And verify that the tuple count of all appendonly tables are consistent in "bkdb"
-
-    @backupsmoke
-    @plan
-    Scenario: IB TRUNCATE partitioned table 2 times
-        Given the test is initialized
-        And there is schema "pepper" exists in "bkdb"
-        And there is a "ao" partition table "pepper.ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "co" partition table "pepper.co_part_table" with compression "None" in "bkdb" with data
-        And the user truncates "pepper.ao_part_table" tables in "bkdb"
-        And the partition table "pepper.ao_part_table" in "bkdb" is populated with same data
-        And there is a list to store the incremental backup timestamps
-        When the user runs "gpcrondump -a -x bkdb"
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts0"
-        And the full backup timestamp from gpcrondump is stored
-        And the user truncates "pepper.ao_part_table" tables in "bkdb"
-        And the partition table "pepper.ao_part_table" in "bkdb" is populated with similar data
-        And the user runs "gpcrondump -a --incremental -x bkdb"
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts1"
-        Then the timestamp from gpcrondump is stored
-        And all the data from "bkdb" is saved for verification
-        And the user runs gpdbrestore with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And the plan file is validated against "data/plan6"
-        And verify that the data of "18" tables in "bkdb" is validated after restore
-        And verify that the tuple count of all appendonly tables are consistent in "bkdb"
-
-    @plan
     Scenario: Simple Incremental Backup to test ADD COLUMN
         Given the test is initialized
-        And there is schema "pepper" exists in "bkdb"
-        And there is a "ao" table "pepper.ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "pepper.co_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "pepper.ao_table2" with compression "None" in "bkdb" with data
-        And there is a "co" table "pepper.co_table2" with compression "None" in "bkdb" with data
+        And there is schema "testschema" exists in "bkdb"
+        And there is a "ao" table "testschema.ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "testschema.ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "testschema.ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "testschema.co_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "testschema.co_index_table" with compression "None" in "bkdb" with data
+        And there is a "co" partition table "testschema.co_part_table" with compression "None" in "bkdb" with data
         And there is a list to store the incremental backup timestamps
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts0"
         And the full backup timestamp from gpcrondump is stored
-        And the user adds column "foo" with type "int" and default "0" to "pepper.ao_table" table in "bkdb"
-        And the user adds column "foo" with type "int" and default "0" to "pepper.co_table" table in "bkdb"
+        And the user adds column "foo" with type "int" and default "0" to "testschema.ao_table" table in "bkdb"
+        And the user adds column "foo" with type "int" and default "0" to "testschema.co_table" table in "bkdb"
+        And the user adds column "foo" with type "int" and default "0" to "testschema.ao_part_table" table in "bkdb"
+        And the user adds column "foo" with type "int" and default "0" to "testschema.co_part_table" table in "bkdb"
         And the user runs "gpcrondump -a --incremental -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts1"
@@ -1110,34 +1008,7 @@ Feature: Validate command line arguments
         And all the data from "bkdb" is saved for verification
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
-        And the plan file is validated against "data/plan7"
-        And verify that the data of "4" tables in "bkdb" is validated after restore
-        And verify that the tuple count of all appendonly tables are consistent in "bkdb"
-
-    @backupsmoke
-    @plan
-    Scenario: Incremental Backup to test ADD COLUMN with partitions
-        Given the test is initialized
-        And there is schema "pepper" exists in "bkdb"
-        And there is a "ao" table "pepper.ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "pepper.ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "co" partition table "pepper.co_part_table" with compression "None" in "bkdb" with data
-        And there is a list to store the incremental backup timestamps
-        When the user runs "gpcrondump -a -x bkdb -v"
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts0"
-        And the full backup timestamp from gpcrondump is stored
-        And the user adds column "foo" with type "int" and default "0" to "pepper.ao_part_table" table in "bkdb"
-        And the user adds column "foo" with type "int" and default "0" to "pepper.co_part_table" table in "bkdb"
-        And the user runs "gpcrondump -a --incremental -x bkdb"
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts1"
-        Then the timestamp from gpcrondump is stored
-        And all the data from "bkdb" is saved for verification
-        And the user runs gpdbrestore with the stored timestamp
-        And gpdbrestore should return a return code of 0
-        And the plan file is validated against "data/plan8"
-        And verify that the data of "19" tables in "bkdb" is validated after restore
+        And verify that the data of "22" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     @backupfire
@@ -1169,19 +1040,18 @@ Feature: Validate command line arguments
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
         And verify that the plan file is created for the latest timestamp
 
-    @plan
     Scenario: Rollback Insert
         Given the test is initialized
-        And there is schema "pepper" exists in "bkdb"
-        And there is a "ao" table "pepper.ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "pepper.co_table" with compression "None" in "bkdb" with data
+        And there is schema "testschema" exists in "bkdb"
+        And there is a "ao" table "testschema.ao_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "testschema.co_table" with compression "None" in "bkdb" with data
         And there is a list to store the incremental backup timestamps
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts0"
         And the full backup timestamp from gpcrondump is stored
-        And an insert on "pepper.ao_table" in "bkdb" is rolled back
-        And table "pepper.co_table" is assumed to be in dirty state in "bkdb"
+        And an insert on "testschema.ao_table" in "bkdb" is rolled back
+        And table "testschema.co_table" is assumed to be in dirty state in "bkdb"
         And the user runs "gpcrondump -a --incremental -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts1"
@@ -1191,23 +1061,22 @@ Feature: Validate command line arguments
         And all the data from "bkdb" is saved for verification
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
-        And the plan file is validated against "data/plan9"
+        And the plan file is validated against "data/bar_plan2"
         And verify that the data of "2" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
-    @plan
     Scenario: Rollback Truncate Table
         Given the test is initialized
-        And there is schema "pepper" exists in "bkdb"
-        And there is a "ao" table "pepper.ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "pepper.co_table" with compression "None" in "bkdb" with data
+        And there is schema "testschema" exists in "bkdb"
+        And there is a "ao" table "testschema.ao_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "testschema.co_table" with compression "None" in "bkdb" with data
         And there is a list to store the incremental backup timestamps
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts0"
         And the full backup timestamp from gpcrondump is stored
-        And a truncate on "pepper.ao_table" in "bkdb" is rolled back
-        And table "pepper.co_table" is assumed to be in dirty state in "bkdb"
+        And a truncate on "testschema.ao_table" in "bkdb" is rolled back
+        And table "testschema.co_table" is assumed to be in dirty state in "bkdb"
         And the user runs "gpcrondump -a --incremental -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts1"
@@ -1217,23 +1086,22 @@ Feature: Validate command line arguments
         And all the data from "bkdb" is saved for verification
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
-        And the plan file is validated against "data/plan9"
+        And the plan file is validated against "data/bar_plan2"
         And verify that the data of "2" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
-    @plan
     Scenario: Rollback Alter table
         Given the test is initialized
-        And there is schema "pepper" exists in "bkdb"
-        And there is a "ao" table "pepper.ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "pepper.co_table" with compression "None" in "bkdb" with data
+        And there is schema "testschema" exists in "bkdb"
+        And there is a "ao" table "testschema.ao_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "testschema.co_table" with compression "None" in "bkdb" with data
         And there is a list to store the incremental backup timestamps
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts0"
         And the full backup timestamp from gpcrondump is stored
-        And an alter on "pepper.ao_table" in "bkdb" is rolled back
-        And table "pepper.co_table" is assumed to be in dirty state in "bkdb"
+        And an alter on "testschema.ao_table" in "bkdb" is rolled back
+        And table "testschema.co_table" is assumed to be in dirty state in "bkdb"
         And the user runs "gpcrondump -a --incremental -x bkdb"
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts1"
@@ -1243,7 +1111,7 @@ Feature: Validate command line arguments
         And all the data from "bkdb" is saved for verification
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
-        And the plan file is validated against "data/plan9"
+        And the plan file is validated against "data/bar_plan2"
         And verify that the data of "2" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
@@ -2280,8 +2148,7 @@ Feature: Validate command line arguments
         And verify that the data of "11" tables in "bkdb" is validated after restore
         And close all opened pipes
 
-    @plan
-    Scenario: Incremental Backup with no heap tables, backup in the middle
+    Scenario: Incremental Backup with one increment having no dirty tables
         Given the test is initialized
         And there is a "ao" table "ao_table_1" with compression "None" in "bkdb" with data
         And there is a "ao" table "ao_table_2" with compression "None" in "bkdb" with data
@@ -2312,7 +2179,7 @@ Feature: Validate command line arguments
         And gpdbrestore should return a return code of 0
         And verify that the data of "12" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
-        And the plan file is validated against "/data/plan12"
+        And the plan file is validated against "/data/bar_plan3"
 
     @backupsmoke
     Scenario: Full Backup and Restore with --prefix option
@@ -3849,7 +3716,6 @@ Feature: Validate command line arguments
         And verify that the restored table "public.ao_index_table" in database "bkdb" is analyzed
         And verify that the table "public.heap_table" in database "bkdb" is not analyzed
 
-    @plan
     Scenario: Gpcrondump with --email-file option
         Given the test is initialized
         And database "testdb1" is dropped and recreated
