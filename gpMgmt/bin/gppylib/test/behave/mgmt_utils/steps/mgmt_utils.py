@@ -1473,7 +1473,7 @@ def impl(context):
     if context.exception:
         raise context.exception
 
-@then('the saved state file is corrupted')
+@then('the saved state file is .strip()corrupted')
 def impl(context):
 
     write_lines = list()
