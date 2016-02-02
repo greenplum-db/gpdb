@@ -78,7 +78,6 @@ typedef enum LWLockId
 	AutovacuumScheduleLock,
 	SharedSnapshotLock,
 	DistributedLogControlLock,
-	TemporarySerializePreparesLock,
 	SeqServerControlLock,
 	AOSegFileLock,
 	PersistentObjLock,
