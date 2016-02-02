@@ -570,7 +570,6 @@ Feature: NetBackup Integration with GPDB
         And verify that there is a "heap" table "heap_table" in "bkdb" with data
         And verify that there is a "ao" table "ao_table" in "bkdb" with data
 
-    @review
     @nbupartI
     Scenario: Restore database without prefix for a dump with prefix using NetBackup
         Given the test is initialized
@@ -709,7 +708,6 @@ Feature: NetBackup Integration with GPDB
         And psql should print \"heap_const_1\" FOREIGN KEY \(column1, column2, column3\) REFERENCES heap_index_table\(column1, column2, column3\) to stdout
         And verify that the data of "4" tables in "bkdb" is validated after restore
 
-    @review
     @nbupartI
     Scenario: Full backup and restore for table names with multibyte (chinese) characters using NetBackup
         Given the test is initialized
@@ -723,7 +721,6 @@ Feature: NetBackup Integration with GPDB
         When the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/select_multi_byte_char.sql bkdb"
         Then psql should print 1000 to stdout
 
-    @review
     @nbupartI
     Scenario: Full Backup with option -T and Restore with exactly 1000 partitions using NetBackup
         Given the test is initialized
@@ -782,7 +779,6 @@ Feature: NetBackup Integration with GPDB
         And verify that there is a "heap" table "heap_table" in "bkdb" with data
         And verify that there is a "ao" table "ao_part_table" in "bkdb" with data
 
-    @review
     @nbupartI
     Scenario: Restore -T for full dump should restore metadata/postdata objects for tablenames with English and multibyte (chinese) characters using NetBackup
         Given the test is initialized
@@ -817,168 +813,6 @@ Feature: NetBackup Integration with GPDB
         And the file "/tmp/describe_multi_byte_char_after" is removed from the system
         And the file "/tmp/describe_ao_index_table_before" is removed from the system
         And the file "/tmp/describe_ao_index_table_after" is removed from the system
-
-    @review
-    @nbupartI
-    Scenario: Restore -T for full dump should restore GRANT privileges for tablenames with English and multibyte (chinese) characters using NetBackup
-        Given the test is initialized
-        And the netbackup params have been parsed
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/create_multi_byte_char_tables.sql bkdb"
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/primary_key_multi_byte_char_table_name.sql bkdb"
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/index_multi_byte_char_table_name.sql bkdb"
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/grant_multi_byte_char_table_name.sql bkdb"
-        And the user runs """psql -c "CREATE ROLE test_gpadmin LOGIN ENCRYPTED PASSWORD 'changeme' SUPERUSER INHERIT CREATEDB CREATEROLE RESOURCE QUEUE pg_default;" bkdb"""
-        And the user runs """psql -c "CREATE ROLE customer LOGIN ENCRYPTED PASSWORD 'changeme' NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE pg_default;" bkdb"""
-        And the user runs """psql -c "CREATE ROLE select_group NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE pg_default;" bkdb"""
-        And the user runs """psql -c "CREATE ROLE test_group NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE pg_default;" bkdb"""
-        And the user runs """psql -c "CREATE SCHEMA customer AUTHORIZATION test_gpadmin" bkdb"""
-        And the user runs """psql -c "GRANT ALL ON SCHEMA customer TO test_gpadmin;" bkdb"""
-        And the user runs """psql -c "GRANT ALL ON SCHEMA customer TO customer;" bkdb"""
-        And the user runs """psql -c "GRANT USAGE ON SCHEMA customer TO select_group;" bkdb"""
-        And the user runs """psql -c "GRANT ALL ON SCHEMA customer TO test_group;" bkdb"""
-        And there is a "heap" table "customer.heap_index_table_1" with index "heap_index_1" compression "None" in "bkdb" with data
-        And the user runs """psql -c "ALTER TABLE customer.heap_index_table_1 owner to customer" bkdb"""
-        And the user runs """psql -c "GRANT ALL ON TABLE customer.heap_index_table_1 TO customer;" bkdb"""
-        And the user runs """psql -c "GRANT ALL ON TABLE customer.heap_index_table_1 TO test_group;" bkdb"""
-        And the user runs """psql -c "GRANT SELECT ON TABLE customer.heap_index_table_1 TO select_group;" bkdb"""
-        And there is a "heap" table "customer.heap_index_table_2" with index "heap_index_2" compression "None" in "bkdb" with data
-        And the user runs """psql -c "ALTER TABLE customer.heap_index_table_2 owner to customer" bkdb"""
-        And the user runs """psql -c "GRANT ALL ON TABLE customer.heap_index_table_2 TO customer;" bkdb"""
-        And the user runs """psql -c "GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE customer.heap_index_table_2 TO test_group;" bkdb"""
-        And the user runs """psql -c "GRANT SELECT ON TABLE customer.heap_index_table_2 TO select_group;" bkdb"""
-        And there is a "heap" table "customer.heap_index_table_3" with index "heap_index_3" compression "None" in "bkdb" with data
-        And the user runs """psql -c "ALTER TABLE customer.heap_index_table_3 owner to customer" bkdb"""
-        And the user runs """psql -c "GRANT ALL ON TABLE customer.heap_index_table_3 TO customer;" bkdb"""
-        And the user runs """psql -c "GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE customer.heap_index_table_3 TO test_group;" bkdb"""
-        And the user runs """psql -c "GRANT SELECT ON TABLE customer.heap_index_table_3 TO select_group;" bkdb"""
-        And the user runs """psql -c "ALTER ROLE customer SET search_path = customer, public;" bkdb"""
-        When the user runs "psql -c '\d customer.heap_index_table_1' bkdb > /tmp/describe_heap_index_table_1_before"
-        And the user runs "psql -c '\dp customer.heap_index_table_1' bkdb > /tmp/privileges_heap_index_table_1_before"
-        And the user runs "psql -c '\d customer.heap_index_table_2' bkdb > /tmp/describe_heap_index_table_2_before"
-        And the user runs "psql -c '\dp customer.heap_index_table_2' bkdb > /tmp/privileges_heap_index_table_2_before"
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/describe_multi_byte_char.sql bkdb > /tmp/describe_multi_byte_char_before"
-        When the user runs "gpcrondump -x bkdb -g -G -a -b -v -u /tmp --rsyncable --netbackup-block-size 4096" using netbackup
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        When there is a backupfile of tables "customer.heap_index_table_1, customer.heap_index_table_2, customer.heap_index_table_3" in "bkdb" exists for validation
-        And table "customer.heap_index_table_1" is dropped in "bkdb"
-        And table "customer.heap_index_table_2" is dropped in "bkdb"
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/drop_table_with_multi_byte_char.sql bkdb"
-        And the user runs gpdbrestore with the stored timestamp and options "--table-file gppylib/test/behave/mgmt_utils/steps/data/include_tables_with_grant_permissions -u /tmp --netbackup-block-size 4096" without -e option using netbackup
-        Then gpdbrestore should return a return code of 0
-        When the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/select_multi_byte_char_tables.sql bkdb"
-        Then psql should print 1000 to stdout 4 times
-        And verify that there is a "heap" table "customer.heap_index_table_1" in "bkdb" with data
-        And verify that there is a "heap" table "customer.heap_index_table_2" in "bkdb" with data
-        And verify that there is a "heap" table "customer.heap_index_table_3" in "bkdb" with data
-        When the user runs "psql -c '\d customer.heap_index_table_1' bkdb > /tmp/describe_heap_index_table_1_after"
-        And the user runs "psql -c '\dp customer.heap_index_table_1' bkdb > /tmp/privileges_heap_index_table_1_after"
-        And the user runs "psql -c '\d customer.heap_index_table_2' bkdb > /tmp/describe_heap_index_table_2_after"
-        And the user runs "psql -c '\dp customer.heap_index_table_2' bkdb > /tmp/privileges_heap_index_table_2_after"
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/describe_multi_byte_char.sql bkdb > /tmp/describe_multi_byte_char_after"
-        Then verify that the contents of the files "/tmp/describe_heap_index_table_1_before" and "/tmp/describe_heap_index_table_1_after" are identical
-        And verify that the contents of the files "/tmp/describe_heap_index_table_2_before" and "/tmp/describe_heap_index_table_2_after" are identical
-        And verify that the contents of the files "/tmp/privileges_heap_index_table_1_before" and "/tmp/privileges_heap_index_table_1_after" are identical
-        And verify that the contents of the files "/tmp/privileges_heap_index_table_2_before" and "/tmp/privileges_heap_index_table_2_after" are identical
-        And verify that the contents of the files "/tmp/describe_multi_byte_char_before" and "/tmp/describe_multi_byte_char_after" are identical
-        And the file "/tmp/describe_heap_index_table_1_before" is removed from the system
-        And the file "/tmp/describe_heap_index_table_1_after" is removed from the system
-        And the file "/tmp/privileges_heap_index_table_1_before" is removed from the system
-        And the file "/tmp/privileges_heap_index_table_1_after" is removed from the system
-        And the file "/tmp/describe_heap_index_table_2_before" is removed from the system
-        And the file "/tmp/describe_heap_index_table_2_after" is removed from the system
-        And the file "/tmp/privileges_heap_index_table_2_before" is removed from the system
-        And the file "/tmp/privileges_heap_index_table_2_after" is removed from the system
-        And the file "/tmp/describe_multi_byte_char_before" is removed from the system
-        And the file "/tmp/describe_multi_byte_char_after" is removed from the system
-
-    @review
-    @nbupartI
-    Scenario: Full Backup and Redirected Restore without -e option using NetBackup
-        Given the test is initialized
-        And the netbackup params have been parsed
-        And there is a "heap" table "heap_table" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
-        And all the data from "bkdb" is saved for verification
-        When the user runs "gpcrondump -x bkdb -a" using netbackup
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        When the user runs gpdbrestore with the stored timestamp and options "--redirect=bkdb" without -e option using netbackup
-        Then gpdbrestore should return a return code of 0
-        And verify that there is a "heap" table "public.heap_table" in "bkdb" with data
-        And verify that there is a "ao" table "public.ao_part_table" in "bkdb" with data
-
-    @review
-    @nbupartI
-    Scenario: Full Backup and Redirected Restore with -e option using NetBackup
-        Given the test is initialized
-        And the netbackup params have been parsed
-        And there is a "heap" table "heap_table" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
-        And all the data from "bkdb" is saved for verification
-        When the user runs "gpcrondump -x bkdb -a --netbackup-block-size 1024" using netbackup
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        When the user runs gpdbrestore with the stored timestamp and options "--redirect=bkdb --netbackup-block-size 1024" using netbackup
-        Then gpdbrestore should return a return code of 0
-        And verify that there is a "heap" table "public.heap_table" in "bkdb" with data
-        And verify that there is a "ao" table "public.ao_part_table" in "bkdb" with data
-
-    @review
-    @nbupartI
-    Scenario: Full backup and Redirected Restore with -T using NetBackup
-        Given the test is initialized
-        And the netbackup params have been parsed
-        And there is a "heap" table "heap_table" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" in "bkdb" with data
-        When the user runs "gpcrondump -a -x bkdb --netbackup-block-size 2048" using netbackup
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And all the data from "bkdb" is saved for verification
-        When the user truncates "public.ao_index_table" tables in "bkdb"
-        And the user runs gpdbrestore with the stored timestamp and options "-T public.ao_index_table --redirect=bkdb --netbackup-block-size 2048" without -e option using netbackup
-        Then gpdbrestore should return a return code of 0
-        And verify that there is a "ao" table "public.ao_index_table" in "bkdb" with data
-
-    @review
-    @nbupartI
-    Scenario: (RR) Full Backup and Restore with --prefix option using NetBackup
-        Given the test is initialized
-        And the netbackup params have been parsed
-        And the prefix "foo" is stored
-        And there is a "heap" table "heap_table" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
-        And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
-        When the user runs "gpcrondump -a -x bkdb --prefix=foo --netbackup-block-size 4096" using netbackup
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo --redirect=bkdb --netbackup-block-size 4096" without -e option using netbackup
-        Then gpdbrestore should return a return code of 0
-        And there should be dump files under " " with prefix "foo"
-        And verify that there is a "heap" table "heap_table" in "bkdb" with data
-        And verify that there is a "ao" table "ao_part_table" in "bkdb" with data
-
-    @review
-    @nbupartI
-    Scenario: (RR) Full Backup and Restore with --prefix option for multiple databases using NetBackup
-        Given the test is initialized
-        And the netbackup params have been parsed
-        And the prefix "foo" is stored
-        And database "bkdb2" is dropped and recreated 
-        And there is a "heap" table "heap_table1" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
-        And there is a backupfile of tables "heap_table1, ao_part_table" in "bkdb" exists for validation
-        And there is a "heap" table "heap_table2" in "bkdb2" with data
-        And there is a backupfile of tables "heap_table2" in "bkdb2" exists for validation
-        When the user runs "gpcrondump -a -x bkdb,bkdb2 --prefix=foo --netbackup-block-size 4096" using netbackup
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo --redirect=bkdb --netbackup-block-size 4096" without -e option using netbackup
-        Then gpdbrestore should return a return code of 0
-        And there should be dump files under " " with prefix "foo"
-        And verify that there is a "heap" table "heap_table1" in "bkdb" with data
-        And verify that there is a "ao" table "ao_part_table" in "bkdb" with data
 
     @nbupartI
     Scenario: Full Backup and Restore with the master dump file missing using NetBackup
@@ -1125,11 +959,11 @@ Feature: NetBackup Integration with GPDB
         Given the test is initialized
         And the netbackup params have been parsed
         And there is a "heap" table "heap_table" in "bkdb" with data
-        And there is a "heap" table "heap_index_table" in "bkdb" with data
+        And there is a "heap" partition table "heap_part_table" in "bkdb" with data
         And there is a "ao" table "ao_table" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a "co" table "co_table" in "bkdb" with data
-        And there is a "co" table "co_index_table" in "bkdb" with data
+        And there is a "co" partition table "co_part_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb --netbackup-block-size 4096" using netbackup
         And gpcrondump should return a return code of 0
         And the timestamp is labeled "ts0"
@@ -1139,6 +973,7 @@ Feature: NetBackup Integration with GPDB
         And the timestamp is labeled "ts1"
         And "dirty_list" file should be created under " "
         And table "public.co_table" is assumed to be in dirty state in "bkdb"
+        And partition "1" of partition table "co_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
         And the user runs "gpcrondump -a -x bkdb --incremental --netbackup-block-size 4096" using netbackup
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -1148,33 +983,6 @@ Feature: NetBackup Integration with GPDB
         And gpdbrestore should return a return code of 0
         Then "plan" file should be created under " "
         And the plan file is validated against "data/plan1"
-
-    @review
-    @nbusmoke
-    @nbupartI
-    Scenario: Simple Plan File Test With Partitions
-        Given the test is initialized
-        And the netbackup params have been parsed
-        When the user runs "gpcrondump -a -x bkdb --netbackup-block-size 4096" using netbackup
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts0"
-        And partition "1" of partition table "ao_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
-        And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
-        And the user runs "gpcrondump -a -x bkdb --incremental --netbackup-block-size 4096" using netbackup
-        And gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the timestamp is labeled "ts1"
-        And "dirty_list" file should be created under " "
-        And partition "1" of partition table "co_part_table_comp" is assumed to be in dirty state in "bkdb" in schema "public"
-        And the user runs "gpcrondump -a -x bkdb --incremental --netbackup-block-size 4096" using netbackup
-        And gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the timestamp is labeled "ts2"
-        And "dirty_list" file should be created under " "
-        And the user runs gpdbrestore with the stored timestamp using netbackup
-        And gpdbrestore should return a return code of 0
-        Then "plan" file should be created under " "
-        And the plan file is validated against "data/net_plan2"
 
     @nbupartI
     Scenario: Multiple Incremental backup and restore
@@ -1219,33 +1027,6 @@ Feature: NetBackup Integration with GPDB
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
         And verify that the plan file is created for the latest timestamp
 
-    @review
-    @nbupartI
-    Scenario: Incremental Backup to test ADD COLUMN with partitions
-        Given the test is initialized
-        And the netbackup params have been parsed
-        And there is schema "testschema" exists in "bkdb"
-        And there is a "ao" table "testschema.ao_table" in "bkdb" with data
-        And there is a "ao" partition table "testschema.ao_part_table" in "bkdb" with data
-        And there is a "co" partition table "testschema.co_part_table" in "bkdb" with data
-        And there is a list to store the incremental backup timestamps
-        When the user runs "gpcrondump -a -x bkdb -v --netbackup-block-size 4096" using netbackup
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts0"
-        And the full backup timestamp from gpcrondump is stored
-        And the user adds column "foo" with type "int" and default "0" to "testschema.ao_part_table" table in "bkdb"
-        And the user adds column "foo" with type "int" and default "0" to "testschema.co_part_table" table in "bkdb"
-        And the user runs "gpcrondump -a --incremental -x bkdb --netbackup-block-size 4096" using netbackup
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts1"
-        Then the timestamp from gpcrondump is stored
-        And all the data from "bkdb" is saved for verification
-        When the user runs gpdbrestore with the stored timestamp using netbackup
-        Then gpdbrestore should return a return code of 0
-        And the plan file is validated against "data/plan8"
-        And verify that the data of "19" tables in "bkdb" is validated after restore
-        And verify that the tuple count of all appendonly tables are consistent in "bkdb"
-
     @nbusmoke
     @nbupartI
     Scenario: Non compressed incremental backup
@@ -1280,90 +1061,6 @@ Feature: NetBackup Integration with GPDB
         And verify that the data of "10" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
         And verify that the plan file is created for the latest timestamp
-
-    @review
-    @nbupartI
-    Scenario: Rollback Insert
-        Given the test is initialized
-        And the netbackup params have been parsed
-        And there is schema "testschema" exists in "bkdb"
-        And there is a "ao" table "testschema.ao_table" in "bkdb" with data
-        And there is a "co" table "testschema.co_table" in "bkdb" with data
-        And there is a list to store the incremental backup timestamps
-        When the user runs "gpcrondump -a -x bkdb --netbackup-block-size 4096" using netbackup
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts0"
-        And the full backup timestamp from gpcrondump is stored
-        And an insert on "testschema.ao_table" in "bkdb" is rolled back
-        And table "testschema.co_table" is assumed to be in dirty state in "bkdb"
-        And the user runs "gpcrondump -a --incremental -x bkdb --netbackup-block-size 4096" using netbackup
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts1"
-        Then the timestamp from gpcrondump is stored
-        And verify that the "report" file in " " dir contains "Backup Type: Incremental"
-        And "dirty_list" file should be created under " "
-        And all the data from "bkdb" is saved for verification
-        When the user runs gpdbrestore with the stored timestamp using netbackup
-        Then gpdbrestore should return a return code of 0
-        And the plan file is validated against "data/plan9"
-        And verify that the data of "2" tables in "bkdb" is validated after restore
-        And verify that the tuple count of all appendonly tables are consistent in "bkdb"
-
-    @review
-    @nbupartI
-    Scenario: Rollback Truncate Table
-        Given the test is initialized
-        And the netbackup params have been parsed
-        And there is schema "testschema" exists in "bkdb"
-        And there is a "ao" table "testschema.ao_table" in "bkdb" with data
-        And there is a "co" table "testschema.co_table" in "bkdb" with data
-        And there is a list to store the incremental backup timestamps
-        When the user runs "gpcrondump -a -x bkdb --netbackup-block-size 4096" using netbackup
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts0"
-        And the full backup timestamp from gpcrondump is stored
-        And a truncate on "testschema.ao_table" in "bkdb" is rolled back
-        And table "testschema.co_table" is assumed to be in dirty state in "bkdb"
-        And the user runs "gpcrondump -a --incremental -x bkdb --netbackup-block-size 4096" using netbackup
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts1"
-        Then the timestamp from gpcrondump is stored
-        And verify that the "report" file in " " dir contains "Backup Type: Incremental"
-        And "dirty_list" file should be created under " "
-        And all the data from "bkdb" is saved for verification
-        When the user runs gpdbrestore with the stored timestamp using netbackup
-        Then gpdbrestore should return a return code of 0
-        And the plan file is validated against "data/plan9"
-        And verify that the data of "2" tables in "bkdb" is validated after restore
-        And verify that the tuple count of all appendonly tables are consistent in "bkdb"
-
-    @review
-    @nbupartI
-    Scenario: Rollback Alter table
-        Given the test is initialized
-        And the netbackup params have been parsed
-        And there is schema "testschema" exists in "bkdb"
-        And there is a "ao" table "testschema.ao_table" in "bkdb" with data
-        And there is a "co" table "testschema.co_table" in "bkdb" with data
-        And there is a list to store the incremental backup timestamps
-        When the user runs "gpcrondump -a -x bkdb --netbackup-block-size 4096" using netbackup
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts0"
-        And the full backup timestamp from gpcrondump is stored
-        And an alter on "testschema.ao_table" in "bkdb" is rolled back
-        And table "testschema.co_table" is assumed to be in dirty state in "bkdb"
-        And the user runs "gpcrondump -a --incremental -x bkdb --netbackup-block-size 4096" using netbackup
-        And gpcrondump should return a return code of 0
-        And the timestamp is labeled "ts1"
-        Then the timestamp from gpcrondump is stored
-        And verify that the "report" file in " " dir contains "Backup Type: Incremental"
-        And "dirty_list" file should be created under " "
-        And all the data from "bkdb" is saved for verification
-        When the user runs gpdbrestore with the stored timestamp using netbackup
-        Then gpdbrestore should return a return code of 0
-        And the plan file is validated against "data/plan9"
-        And verify that the data of "2" tables in "bkdb" is validated after restore
-        And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     @nbupartI
     Scenario: Verify the gpcrondump -h option works with full and incremental backups
@@ -1421,19 +1118,16 @@ Feature: NetBackup Integration with GPDB
         And verify that there is no table "heap_table" in "bkdb"
         And verify that there is a "ao" table "public.ao_index_table" in "bkdb" with data
 
-    @review
     @nbupartII
-    Scenario Outline: Dirty File Scale Test
+    Scenario: Dirty File Scale Test
         Given the test is initialized
         And the netbackup params have been parsed
-		And there are "<tablecount>" "heap" tables "public.heap_table" with data in "bkdb"
+		And there are "240" "heap" tables "public.heap_table" with data in "bkdb"
 		And there are "10" "ao" tables "public.ao_table" with data in "bkdb"
         When the user runs "gpcrondump -a -x bkdb --netbackup-block-size 4096" using netbackup
         Then gpcrondump should return a return code of 0
         When table "public.ao_table_1" is assumed to be in dirty state in "bkdb"
         And table "public.ao_table_2" is assumed to be in dirty state in "bkdb"
-        And table "public.ao_table_3" is assumed to be in dirty state in "bkdb"
-        And table "public.ao_table_4" is assumed to be in dirty state in "bkdb"
         And all the data from "bkdb" is saved for verification
         And the user runs "gpcrondump -a --incremental -x bkdb --netbackup-block-size 4096" using netbackup
         Then gpcrondump should return a return code of 0
@@ -1444,24 +1138,15 @@ Feature: NetBackup Integration with GPDB
         Then gp_restore should return a return code of 0
         When the user runs gpdbrestore with the stored timestamp and options "--noplan" without -e option using netbackup
         Then gpdbrestore should return a return code of 0
-        And verify that tables "public.ao_table_5, public.ao_table_6, public.ao_table_7" in "bkdb" has no rows
-        And verify that tables "public.ao_table_8, public.ao_table_9, public.ao_table_10" in "bkdb" has no rows
+        And verify that tables "public.ao_table_3, public.ao_table_4, public.ao_table_5, public.ao_table_6" in "bkdb" has no rows
+        And verify that tables "public.ao_table_7, public.ao_table_8, public.ao_table_9, public.ao_table_10" in "bkdb" has no rows
         And verify that the data of the dirty tables under " " in "bkdb" is validated after restore
-        Examples:
-        | tablecount |
-        | 95         |
-        | 96         |
-        | 97         |
-        | 195        |
-        | 196        |
-        | 197        |
 
-    @review
     @nbupartII
-    Scenario Outline: Dirty File Scale Test for partitions
+    Scenario: Dirty File Scale Test for partitions
         Given the test is initialized
         And the netbackup params have been parsed
-		And there are "<tablecount>" "heap" tables "public.heap_table" with data in "bkdb"
+		And there are "240"heap" tables "public.heap_table" with data in "bkdb"
         And there is a "ao" partition table "ao_table" in "bkdb" with data
         Then data for partition table "ao_table" with partition level "1" is distributed across all segments on "bkdb"
         And verify that partitioned tables "ao_table" in "bkdb" have 6 partitions
@@ -1469,29 +1154,19 @@ Feature: NetBackup Integration with GPDB
         Then gpcrondump should return a return code of 0
         When table "public.ao_table_1_prt_p1_2_prt_1" is assumed to be in dirty state in "bkdb"
         And table "public.ao_table_1_prt_p1_2_prt_2" is assumed to be in dirty state in "bkdb"
-        And table "public.ao_table_1_prt_p2_2_prt_1" is assumed to be in dirty state in "bkdb"
-        And table "public.ao_table_1_prt_p2_2_prt_2" is assumed to be in dirty state in "bkdb"
         And all the data from "bkdb" is saved for verification
         And the user runs "gpcrondump -a --incremental -x bkdb --netbackup-block-size 4096" using netbackup
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the subdir from gpcrondump is stored
-        And the database "bkdb" does not exist
-        And database "bkdb" exists
+        And database "bkdb" is dropped and recreated
         When the user runs gp_restore with the the stored timestamp and subdir for metadata only in "bkdb" using netbackup
         Then gp_restore should return a return code of 0
         When the user runs gpdbrestore with the stored timestamp and options "--noplan" without -e option using netbackup
         Then gpdbrestore should return a return code of 0
-        And verify that tables "public.ao_table_1_prt_p1_2_prt_3, public.ao_table_1_prt_p2_2_prt_3" in "bkdb" has no rows
+        And verify that tables "public.ao_table_1_prt_p1_2_prt_3, public.ao_table_1_prt_p2_2_prt_1" in "bkdb" has no rows
+        And verify that tables "public.ao_table_1_prt_p2_2_prt_2, public.ao_table_1_prt_p2_2_prt_3" in "bkdb" has no rows
         And verify that the data of the dirty tables under " " in "bkdb" is validated after restore
-        Examples:
-        | tablecount |
-        | 95         |
-        | 96         |
-        | 97         |
-        | 195        |
-        | 196        |
-        | 197        |
 
     @nbupartII
     Scenario: Incremental table filter gpdbrestore
@@ -1635,8 +1310,6 @@ Feature: NetBackup Integration with GPDB
         Then gpdbrestore should return a return code of 0
         And verify that the data of "11" tables in "bkdb" is validated after restore
 
-    @review
-    @filter
     @nbupartII
     Scenario: Incremental Backup with table filter on Full Backup should update the tracker files
         Given the test is initialized
@@ -1732,7 +1405,6 @@ Feature: NetBackup Integration with GPDB
         And psql should not print bitmap_co_index to stdout
         And verify that the data of "51" tables in "bkdb" is validated after restore
 
-    @review
     @nbupartII
     Scenario: Restore -T for incremental dump should restore metadata/postdata objects for tablenames with English and multibyte (chinese) characters
         Given the test is initialized
@@ -1774,100 +1446,3 @@ Feature: NetBackup Integration with GPDB
         And the file "/tmp/describe_ao_index_table_before" is removed from the system
         And the file "/tmp/describe_ao_index_table_after" is removed from the system
 
-    @review
-    @nbupartII
-    Scenario: Restore -T for incremental dump should restore GRANT privileges for tablenames with English and multibyte (chinese) characters
-        Given the test is initialized
-        And the netbackup params have been parsed
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/create_multi_byte_char_tables.sql bkdb"
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/primary_key_multi_byte_char_table_name.sql bkdb"
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/index_multi_byte_char_table_name.sql bkdb"
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/grant_multi_byte_char_table_name.sql bkdb"
-        And the user runs """psql -c "CREATE ROLE test_gpadmin LOGIN ENCRYPTED PASSWORD 'changeme' SUPERUSER INHERIT CREATEDB CREATEROLE RESOURCE QUEUE pg_default;" bkdb"""
-        And the user runs """psql -c "CREATE ROLE customer LOGIN ENCRYPTED PASSWORD 'changeme' NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE pg_default;" bkdb"""
-        And the user runs """psql -c "CREATE ROLE select_group NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE pg_default;" bkdb"""
-        And the user runs """psql -c "CREATE ROLE test_group NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE pg_default;" bkdb"""
-        And the user runs """psql -c "CREATE SCHEMA customer AUTHORIZATION test_gpadmin" bkdb"""
-        And the user runs """psql -c "GRANT ALL ON SCHEMA customer TO test_gpadmin;" bkdb"""
-        And the user runs """psql -c "GRANT ALL ON SCHEMA customer TO customer;" bkdb"""
-        And the user runs """psql -c "GRANT USAGE ON SCHEMA customer TO select_group;" bkdb"""
-        And the user runs """psql -c "GRANT ALL ON SCHEMA customer TO test_group;" bkdb"""
-        And there is a "heap" table "customer.heap_index_table_1" with index "heap_index_1" compression "None" in "bkdb" with data
-        And the user runs """psql -c "ALTER TABLE customer.heap_index_table_1 owner to customer" bkdb"""
-        And the user runs """psql -c "GRANT ALL ON TABLE customer.heap_index_table_1 TO customer;" bkdb"""
-        And the user runs """psql -c "GRANT ALL ON TABLE customer.heap_index_table_1 TO test_group;" bkdb"""
-        And the user runs """psql -c "GRANT SELECT ON TABLE customer.heap_index_table_1 TO select_group;" bkdb"""
-        And there is a "heap" table "customer.heap_index_table_2" with index "heap_index_2" compression "None" in "bkdb" with data
-        And the user runs """psql -c "ALTER TABLE customer.heap_index_table_2 owner to customer" bkdb"""
-        And the user runs """psql -c "GRANT ALL ON TABLE customer.heap_index_table_2 TO customer;" bkdb"""
-        And the user runs """psql -c "GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE customer.heap_index_table_2 TO test_group;" bkdb"""
-        And the user runs """psql -c "GRANT SELECT ON TABLE customer.heap_index_table_2 TO select_group;" bkdb"""
-        And there is a "heap" table "customer.heap_index_table_3" with index "heap_index_3" compression "None" in "bkdb" with data
-        And the user runs """psql -c "ALTER TABLE customer.heap_index_table_3 owner to customer" bkdb"""
-        And the user runs """psql -c "GRANT ALL ON TABLE customer.heap_index_table_3 TO customer;" bkdb"""
-        And the user runs """psql -c "GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE customer.heap_index_table_3 TO test_group;" bkdb"""
-        And the user runs """psql -c "GRANT SELECT ON TABLE customer.heap_index_table_3 TO select_group;" bkdb"""
-        And the user runs """psql -c "ALTER ROLE customer SET search_path = customer, public;" bkdb"""
-        When the user runs "psql -c '\d customer.heap_index_table_1' bkdb > /tmp/describe_heap_index_table_1_before"
-        And the user runs "psql -c '\dp customer.heap_index_table_1' bkdb > /tmp/privileges_heap_index_table_1_before"
-        And the user runs "psql -c '\d customer.heap_index_table_2' bkdb > /tmp/describe_heap_index_table_2_before"
-        And the user runs "psql -c '\dp customer.heap_index_table_2' bkdb > /tmp/privileges_heap_index_table_2_before"
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/describe_multi_byte_char.sql bkdb > /tmp/describe_multi_byte_char_before"
-        When the user runs "gpcrondump -x bkdb -g -G -a -b -v -u /tmp --rsyncable --netbackup-block-size 4096" using netbackup
-        Then gpcrondump should return a return code of 0
-        And table "customer.heap_index_table_1" is assumed to be in dirty state in "bkdb"
-        And table "customer.heap_index_table_2" is assumed to be in dirty state in "bkdb"
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/dirty_table_multi_byte_char.sql bkdb"
-        When the user runs "gpcrondump --incremental -x bkdb -g -G -a -b -v -u /tmp --rsyncable --netbackup-block-size 4096" using netbackup
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        When there is a backupfile of tables "customer.heap_index_table_1, customer.heap_index_table_2, customer.heap_index_table_3" in "bkdb" exists for validation
-        And table "customer.heap_index_table_1" is dropped in "bkdb"
-        And table "customer.heap_index_table_2" is dropped in "bkdb"
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/drop_table_with_multi_byte_char.sql bkdb"
-        When the user runs gpdbrestore with the stored timestamp and options "--table-file gppylib/test/behave/mgmt_utils/steps/data/include_tables_with_grant_permissions -u /tmp --netbackup-block-size 4096" without -e option using netbackup
-        Then gpdbrestore should return a return code of 0
-        When the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/select_multi_byte_char_tables.sql bkdb"
-        Then psql should print 2000 to stdout 4 times
-        And verify that there is a "heap" table "customer.heap_index_table_1" in "bkdb" with data
-        And verify that there is a "heap" table "customer.heap_index_table_2" in "bkdb" with data
-        And verify that there is a "heap" table "customer.heap_index_table_3" in "bkdb" with data
-        When the user runs "psql -c '\d customer.heap_index_table_1' bkdb > /tmp/describe_heap_index_table_1_after"
-        And the user runs "psql -c '\dp customer.heap_index_table_1' bkdb > /tmp/privileges_heap_index_table_1_after"
-        And the user runs "psql -c '\d customer.heap_index_table_2' bkdb > /tmp/describe_heap_index_table_2_after"
-        And the user runs "psql -c '\dp customer.heap_index_table_2' bkdb > /tmp/privileges_heap_index_table_2_after"
-        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/describe_multi_byte_char.sql bkdb > /tmp/describe_multi_byte_char_after"
-        Then verify that the contents of the files "/tmp/describe_heap_index_table_1_before" and "/tmp/describe_heap_index_table_1_after" are identical
-        And verify that the contents of the files "/tmp/describe_heap_index_table_2_before" and "/tmp/describe_heap_index_table_2_after" are identical
-        And verify that the contents of the files "/tmp/privileges_heap_index_table_1_before" and "/tmp/privileges_heap_index_table_1_after" are identical
-        And verify that the contents of the files "/tmp/privileges_heap_index_table_2_before" and "/tmp/privileges_heap_index_table_2_after" are identical
-        And verify that the contents of the files "/tmp/describe_multi_byte_char_before" and "/tmp/describe_multi_byte_char_after" are identical
-        And the file "/tmp/describe_heap_index_table_1_before" is removed from the system
-        And the file "/tmp/describe_heap_index_table_1_after" is removed from the system
-        And the file "/tmp/privileges_heap_index_table_1_before" is removed from the system
-        And the file "/tmp/privileges_heap_index_table_1_after" is removed from the system
-        And the file "/tmp/describe_heap_index_table_2_before" is removed from the system
-        And the file "/tmp/describe_heap_index_table_2_after" is removed from the system
-        And the file "/tmp/privileges_heap_index_table_2_before" is removed from the system
-        And the file "/tmp/privileges_heap_index_table_2_after" is removed from the system
-        And the file "/tmp/describe_multi_byte_char_before" is removed from the system
-        And the file "/tmp/describe_multi_byte_char_after" is removed from the system
-
-    @review
-    @nbusmoke
-    @nbupartII
-    Scenario: Incremental Backup and Redirected Restore
-        Given the test is initialized
-        And the netbackup params have been parsed
-        And there is a "heap" table "heap_table" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table1" in "bkdb" with data
-        When the user runs "gpcrondump -x bkdb -a --netbackup-block-size 1024" using netbackup
-        Then gpcrondump should return a return code of 0
-        And table "public.ao_part_table1" is assumed to be in dirty state in "bkdb"
-        When the user runs "gpcrondump -x bkdb -a --incremental --netbackup-block-size 1024" using netbackup
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And all the data from "bkdb" is saved for verification
-        When the user runs gpdbrestore with the stored timestamp and options "--redirect=bkdb --netbackup-block-size 1024" using netbackup
-        Then gpdbrestore should return a return code of 0
-        And verify that the data of "10" tables in "bkdb" is validated after restore
