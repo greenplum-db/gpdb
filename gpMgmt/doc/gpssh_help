@@ -148,11 +148,10 @@ that gpssh uses when validating the initial ssh connection. These
 parameters affect the network connection before the gpssh session
 executes commands with ssh. The location of the file is specified by the
 environment variable MASTER_DATA_DIRECTORY. If the environment variable
-is not defined gpssh uses the default values or the values set with the
--d and -t options. If the environment variable is defined and the
-gpssh.conf file does not exist in the directory, gpssh returns an error.
-For information about the environment variable, see the Greenplum
-Database Reference Guide.
+is not defined or the gpssh.conf file does not exist in the directory
+gpssh uses the default values or the values set with the -d and -t
+options. For information about the environment variable, see the
+Greenplum Database Reference Guide.
 
 The gpssh.conf file is a text file that consists of a [gpssh] section
 and parameters. On a line, the # (pound sign) indicates the start of a

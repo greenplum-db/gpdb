@@ -98,28 +98,23 @@ def parseConfigFile():
     if GV.DELAY_BEFORE_SEND is not None and GV.PROMPT_VALIDATION_TIMEOUT is not None:
         if GV.opt['-v']:
             print 'Skip parsing gpssh.conf as both -d and -t are being used'
-    else:
-        gpssh_config_file_path = None
-        if 'MASTER_DATA_DIRECTORY' in os.environ:
-            gpssh_config_file_path = os.environ.get('MASTER_DATA_DIRECTORY') + '/gpssh.conf'
-            if os.path.exists(gpssh_config_file_path) and os.path.isfile(gpssh_config_file_path):
-                config = ConfigParser.RawConfigParser()
-                config.read(gpssh_config_file_path)
-                if GV.DELAY_BEFORE_SEND is None:
-                    GV.DELAY_BEFORE_SEND = config.getfloat('gpssh', 'delaybeforesend')
-                if GV.PROMPT_VALIDATION_TIMEOUT is None:
-                    GV.PROMPT_VALIDATION_TIMEOUT = config.getfloat('gpssh', 'prompt_validation_timeout')
-            else:
-                print '[ERROR] Config file gpssh.conf does not exist in $MASTER_DATA_DIRECTORY'
-                sys.exit(1)
-        else:
-            print '[WARN] $MASTER_DATA_DIRECTORY environment variable is not set'
-            if GV.DELAY_BEFORE_SEND is None:
-                print 'Using default delaybeforesend: 0.05'
-                GV.DELAY_BEFORE_SEND = 0.05
-            if GV.PROMPT_VALIDATION_TIMEOUT is None:
-                print 'Using default prompt_validation_timeout: 1.0'
-                GV.PROMPT_VALIDATION_TIMEOUT = 1.0
+        return
+
+    try:
+        config = ConfigParser.RawConfigParser()
+        config.read(os.environ.get('MASTER_DATA_DIRECTORY') + '/gpssh.conf')
+        if GV.DELAY_BEFORE_SEND is None:
+            GV.DELAY_BEFORE_SEND = config.getfloat('gpssh', 'delaybeforesend')
+        if GV.PROMPT_VALIDATION_TIMEOUT is None:
+            GV.PROMPT_VALIDATION_TIMEOUT = config.getfloat('gpssh', 'prompt_validation_timeout')
+    except Exception:
+        if GV.opt['-v']:
+            print '[WARN] Reference default values as $MASTER_DATA_DIRECTORY/gpssh.conf could not be found'
+
+        if GV.DELAY_BEFORE_SEND is None:
+            GV.DELAY_BEFORE_SEND = 0.05
+        if GV.PROMPT_VALIDATION_TIMEOUT is None:
+            GV.PROMPT_VALIDATION_TIMEOUT = 1.0
 
     if GV.DELAY_BEFORE_SEND < 0.0:
         print '[ERROR] delaybeforesend cannot be negative'
