@@ -232,12 +232,6 @@ def impl(context, tablename, dbname, filename, port):
     drop_table_if_exists(context, table_name=tablename, dbname=dbname)
     create_external_partition(context, tablename, dbname, port, filename)
  
-@given('there is {table_type} table {table_name} in "{dbname}" with data')
-def impl(context, table_type, table_name, dbname):
-    create_database_if_not_exists(context, dbname)
-    drop_table_if_exists(context, table_name=table_name, dbname=dbname)
-    create_int_table(context, table_type=table_type, table_name=table_name, dbname=dbname)
-
 @given('"{dbname}" does not exist')
 def impl(context, dbname):
     drop_database(context, dbname)
@@ -3795,3 +3789,12 @@ def impl(context):
         And there are no backup files
         And the backup files in "/tmp" are deleted
     ''')
+
+@given('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data')
+def impl(context, tabletype, tablename, dbname):
+    populate_regular_table_data(context, tabletype, tablename, 'None', dbname, with_data=True)
+
+@given('there is a "{tabletype}" partition table "{table_name}" in "{dbname}" with data')
+def impl(context, tabletype, table_name, dbname):
+    create_partition(context, tablename=table_name, storage_type=tabletype, dbname=dbname, with_data=True)
+
