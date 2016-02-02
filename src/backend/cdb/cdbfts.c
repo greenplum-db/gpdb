@@ -286,7 +286,7 @@ FtsHandleGangConnectionFailure(SegmentDatabaseDescriptor * segdbDesc, int size)
 		{
 			if (!FtsTestConnection(segInfo, forceRescan))
 			{
-				ereport(LOG, (errmsg_internal("FTS: found bad segment with dbid %d", segInfo->dbid),
+				ereport(WARNING, (errmsg_internal("FTS: found bad segment with dbid %d", segInfo->dbid),
 						errSendAlert(true)));
 				/* probe process has already marked segment down. */
 			}
