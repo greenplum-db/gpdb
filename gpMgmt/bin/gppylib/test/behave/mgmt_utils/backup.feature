@@ -63,7 +63,7 @@ Feature: Validate command line arguments
     Scenario: Valid option combinations for schema level backup
         Given the test is initialized
         And there is schema "schema_heap" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -s schema_heap -t schema_heap.heap_table -x bkdb"
         Then gpcrondump should return a return code of 2
         And gpcrondump should print -t and -T can not be selected with -s option to stdout
@@ -161,7 +161,7 @@ Feature: Validate command line arguments
 
     Scenario: Negative test for Incremental Backup - Incremental with -u after a full backup to default directory
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the user runs "gpcrondump -a --incremental -x bkdb -u /tmp"
@@ -170,7 +170,7 @@ Feature: Validate command line arguments
 
     Scenario: Negative test for Incremental Backup - Incremental to default directory after a full backup with -u option
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
         Then gpcrondump should return a return code of 0
         And the user runs "gpcrondump -a --incremental -x bkdb"
@@ -179,7 +179,7 @@ Feature: Validate command line arguments
 
     Scenario: Negative test for Incremental Backup - Incremental after a full backup of different database
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the user runs "gpcrondump -a --incremental -x bkdb2"
@@ -188,7 +188,7 @@ Feature: Validate command line arguments
 
     Scenario: Dirty table list check on recreating a table with same data and contents
         Given the test is initialized
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         When the "public.ao_table" is recreated with same data in "bkdb"
@@ -214,7 +214,7 @@ Feature: Validate command line arguments
 
     Scenario: Negative test for invalid state file format
         Given the test is initialized
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the full backup timestamp from gpcrondump is stored
@@ -226,23 +226,24 @@ Feature: Validate command line arguments
         And gpcrondump should print Invalid state file format to stdout
 
     @backupsmoke
+    @foo
     Scenario: Simple Incremental Backup
         Given the test is initialized
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
         And there is a "ao" table "ao_table_comp" with compression "zlib" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
         And there is a "ao" table "ao_index_table_comp" with compression "zlib" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a "ao" partition table "ao_part_table_comp" with compression "zlib" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "co_table" in "bkdb" with data
         And there is a "co" table "co_table_comp" with compression "zlib" in "bkdb" with data
-        And there is a "co" table "co_index_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "co_index_table" in "bkdb" with data
         And there is a "co" table "co_index_table_comp" with compression "zlib" in "bkdb" with data
-        And there is a "co" partition table "co_part_table" with compression "None" in "bkdb" with data
+        And there is a "co" partition table "co_part_table" in "bkdb" with data
         And there is a "co" partition table "co_part_table_comp" with compression "zlib" in "bkdb" with data
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "heap_index_table" with compression "None" in "bkdb" with data
-        And there is a "heap" partition table "heap_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "heap" table "heap_index_table" in "bkdb" with data
+        And there is a "heap" partition table "heap_part_table" in "bkdb" with data
         And there is a mixed storage partition table "part_mixed_1" in "bkdb" with data
         Given the user runs "echo > /tmp/backup_gpfdist_dummy"
         And the user runs "gpfdist -p 8098 -d /tmp &"
@@ -318,8 +319,8 @@ Feature: Validate command line arguments
     Scenario: Increments File Check With Complicated Scenario
         Given the test is initialized
         And the database "bkdb2" is dropped and recreated
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb2" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb2" with data
         And partition "1" of partition table "ao_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
         And there is a list to store the incremental backup timestamps
         When the user runs "gpcrondump -a -x bkdb"
@@ -336,8 +337,8 @@ Feature: Validate command line arguments
     Scenario: Incremental File Check With Different Directory
         Given the test is initialized
         And the database "bkdb2" is dropped and recreated
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb2" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb2" with data
         And partition "1" of partition table "ao_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
         And there is a list to store the incremental backup timestamps
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
@@ -358,8 +359,8 @@ Feature: Validate command line arguments
     @backupsmoke
     Scenario: Incremental Backup with -u option
         Given the test is initialized
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
         And table "public.ao_table" is assumed to be in dirty state in "bkdb"
         And the user runs "gpcrondump -a --incremental -x bkdb -u /tmp"
@@ -379,8 +380,8 @@ Feature: Validate command line arguments
 
     Scenario: gpdbrestore with -R for full dump
         Given the test is initialized
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
         Then gpcrondump should return a return code of 0
         And the full backup timestamp from gpcrondump is stored
@@ -395,8 +396,8 @@ Feature: Validate command line arguments
 
     Scenario: gpdbrestore with -R for incremental dump
         Given the test is initialized
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
         Then gpcrondump should return a return code of 0
         And the subdir from gpcrondump is stored
@@ -413,8 +414,8 @@ Feature: Validate command line arguments
     @backupsmoke
     Scenario: Full Backup and Restore
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
@@ -448,7 +449,7 @@ Feature: Validate command line arguments
     Scenario: Metadata-only restore
         Given the test is initialized
         And there is schema "schema_heap" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -462,7 +463,7 @@ Feature: Validate command line arguments
     Scenario: Metadata-only restore with global objects (-G)
         Given the test is initialized
         And there is schema "schema_heap" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         And the user runs "psql -c 'CREATE ROLE foo_user' bkdb"
         When the user runs "gpcrondump -a -x bkdb -G"
         Then gpcrondump should return a return code of 0
@@ -479,8 +480,8 @@ Feature: Validate command line arguments
 
     Scenario: gpdbrestore -L with Full Backup
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
@@ -494,7 +495,7 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: gpcrondump -b with Full and Incremental backup
         Given the test is initialized
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -b"
         Then gpcrondump should return a return code of 0
         And gpcrondump should print Bypassing disk space check to stdout
@@ -508,7 +509,7 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: gpdbrestore -b with Full timestamp
         Given the test is initialized
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the subdir from gpcrondump is stored
@@ -519,7 +520,7 @@ Feature: Validate command line arguments
 
     Scenario: Output info gpdbrestore
         Given the test is initialized
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -542,9 +543,9 @@ Feature: Validate command line arguments
 
     Scenario: Output info gpcrondump
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And gpcrondump should print Dump type                                = Full to stdout
@@ -555,8 +556,8 @@ Feature: Validate command line arguments
 
     Scenario: gpcrondump -G with Full timestamp
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -G"
         And the timestamp from gpcrondump is stored
         Then gpcrondump should return a return code of 0
@@ -569,7 +570,7 @@ Feature: Validate command line arguments
 
     Scenario: Backup and restore with -G only
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         And the user runs "psql -c 'CREATE ROLE foo_user' bkdb"
         And verify that a role "foo_user" exists in database "bkdb"
         When the user runs "gpcrondump -a -x bkdb -G"
@@ -585,8 +586,8 @@ Feature: Validate command line arguments
 
     Scenario: Valgrind test of gp_dump incremental
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
@@ -594,9 +595,9 @@ Feature: Validate command line arguments
 
     Scenario: Valgrind test of gp_dump incremental with table file
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_table, ao_part_table" in "bkdb" exists for validation
         And the tables "public.ao_table" are in dirty hack file "/tmp/dirty_hack.txt"
         And partition "1" of partition tables "ao_part_table" in "bkdb" in schema "public" are in dirty hack file "/tmp/dirty_hack.txt"
@@ -606,9 +607,9 @@ Feature: Validate command line arguments
 
     Scenario: Valgrind test of gp_dump full with table file
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_table, ao_part_table" in "bkdb" exists for validation
         And the tables "public.ao_table" are in dirty hack file "/tmp/dirty_hack.txt"
         And partition "1" of partition tables "ao_part_table" in "bkdb" in schema "public" are in dirty hack file "/tmp/dirty_hack.txt"
@@ -618,9 +619,9 @@ Feature: Validate command line arguments
 
     Scenario: Valgrind test of gp_dump_agent incremental with table file
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_table, ao_part_table" in "bkdb" exists for validation
         And the tables "public.ao_table" are in dirty hack file "/tmp/dirty_hack.txt"
         And partition "1" of partition tables "ao_part_table" in "bkdb" in schema "public" are in dirty hack file "/tmp/dirty_hack.txt"
@@ -630,9 +631,9 @@ Feature: Validate command line arguments
 
     Scenario: Valgrind test of gp_dump_agent full with table file
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_table, ao_part_table" in "bkdb" exists for validation
         And the tables "public.ao_table" are in dirty hack file "/tmp/dirty_hack.txt"
         And partition "1" of partition tables "ao_part_table" in "bkdb" in schema "public" are in dirty hack file "/tmp/dirty_hack.txt"
@@ -642,8 +643,8 @@ Feature: Validate command line arguments
 
     Scenario: Valgrind test of gp_dump_agent incremental
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
@@ -651,8 +652,8 @@ Feature: Validate command line arguments
 
     Scenario: Valgrind test of gp_restore for incremental backup
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
@@ -664,8 +665,8 @@ Feature: Validate command line arguments
 
     Scenario: Valgrind test of gp_restore_agent for incremental backup
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
@@ -678,8 +679,8 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: Full Backup with option -t and Restore
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
         And the temp files "include_dump_tables" are removed from the system
         When the user runs "gpcrondump -a -x bkdb -t public.heap_table"
@@ -695,8 +696,8 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: Full Backup with option -T and Restore
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
         And the temp files "exclude_dump_tables" are removed from the system
         When the user runs "gpcrondump -a -x bkdb -T public.heap_table"
@@ -712,9 +713,9 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: Full Backup with option --exclude-table-file and Restore
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "co" partition table "co_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
+        And there is a "co" partition table "co_part_table" in "bkdb" with data
         And there is a backupfile of tables "co_part_table" in "bkdb" exists for validation
         And there is a file "exclude_file" with tables "public.heap_table|public.ao_part_table"
         When the user runs "gpcrondump -a -x bkdb --exclude-table-file exclude_file"
@@ -730,9 +731,9 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: Full Backup with option --table-file and Restore
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "co" partition table "co_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
+        And there is a "co" partition table "co_part_table" in "bkdb" with data
         And there is a backupfile of tables "ao_part_table,heap_table" in "bkdb" exists for validation
         And there is a file "include_file" with tables "public.heap_table|public.ao_part_table"
         When the user runs "gpcrondump -a -x bkdb --table-file include_file"
@@ -747,8 +748,8 @@ Feature: Validate command line arguments
 
     Scenario: plan file creation in directory
         Given the test is initialized
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
         And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
@@ -761,17 +762,17 @@ Feature: Validate command line arguments
 
     Scenario: Simple Plan File Test
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "heap_index_table" with compression "None" in "bkdb" with data
-        And there is a "heap" partition table "heap_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "heap" table "heap_index_table" in "bkdb" with data
+        And there is a "heap" partition table "heap_part_table" in "bkdb" with data
         And there is a "heap" partition table "heap_part_table_comp" with compression "zlib" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a "ao" partition table "ao_part_table_comp" with compression "zlib" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_index_table" with compression "None" in "bkdb" with data
-        And there is a "co" partition table "co_part_table" with compression "None" in "bkdb" with data
+        And there is a "co" table "co_table" in "bkdb" with data
+        And there is a "co" table "co_index_table" in "bkdb" with data
+        And there is a "co" partition table "co_part_table" in "bkdb" with data
         And there is a "co" partition table "co_part_table_comp" with compression "zlib" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
@@ -796,7 +797,7 @@ Feature: Validate command line arguments
 
     Scenario: No plan file generated
         Given the test is initialized
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And partition "1" of partition table "ao_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
@@ -807,8 +808,8 @@ Feature: Validate command line arguments
 
     Scenario: Schema only restore of incremental backup
         Given the test is initialized
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And partition "1" of partition table "ao_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
@@ -823,8 +824,8 @@ Feature: Validate command line arguments
 
     Scenario: Simple Incremental Backup with AO/CO statistics w/ filter
         Given the test is initialized
-        And there is a "ao" table "public.ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "public.ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "public.ao_table" in "bkdb" with data
+        And there is a "ao" table "public.ao_index_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And table "public.ao_table" is assumed to be in dirty state in "bkdb"
@@ -843,8 +844,8 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: pg_stat_last_operation registers truncate for regular tables
         Given the test is initialized
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "co" table "co_table" in "bkdb" with data
         When the user truncates "ao_table, co_table" tables in "bkdb"
         Then pg_stat_last_operation registers the truncate for tables "ao_table, co_table" in "bkdb" in schema "public"
 
@@ -852,8 +853,8 @@ Feature: Validate command line arguments
     Scenario: pg_stat_last_operation registers truncate for partition tables
         Given the test is initialized
         And there is schema "testschema" exists in "bkdb"
-        And there is a "ao" partition table "testschema.ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "co" partition table "testschema.co_part_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "testschema.ao_part_table" in "bkdb" with data
+        And there is a "co" partition table "testschema.co_part_table" in "bkdb" with data
         When the user truncates "testschema.ao_part_table" tables in "bkdb"
         When the user truncates "testschema.co_part_table_1_prt_p1_2_prt_2" tables in "bkdb"
         Then pg_stat_last_operation registers the truncate for tables "ao_part_table_1_prt_p1_2_prt_1" in "bkdb" in schema "testschema"
@@ -872,10 +873,10 @@ Feature: Validate command line arguments
     Scenario: Simple Incremental Backup with TRUNCATE
         Given the test is initialized
         And there is schema "testschema" exists in "bkdb"
-        And there is a "ao" table "testschema.ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "testschema.ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "testschema.co_table" with compression "None" in "bkdb" with data
-        And there is a "co" partition table "testschema.co_part_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "testschema.ao_table" in "bkdb" with data
+        And there is a "ao" partition table "testschema.ao_part_table" in "bkdb" with data
+        And there is a "co" table "testschema.co_table" in "bkdb" with data
+        And there is a "co" partition table "testschema.co_part_table" in "bkdb" with data
         And there is a list to store the incremental backup timestamps
         When the user truncates "testschema.ao_table" tables in "bkdb"
         And the user truncates "testschema.co_table" tables in "bkdb"
@@ -911,12 +912,12 @@ Feature: Validate command line arguments
     Scenario: Simple Incremental Backup to test ADD COLUMN
         Given the test is initialized
         And there is schema "testschema" exists in "bkdb"
-        And there is a "ao" table "testschema.ao_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "testschema.ao_index_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "testschema.ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "testschema.co_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "testschema.co_index_table" with compression "None" in "bkdb" with data
-        And there is a "co" partition table "testschema.co_part_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "testschema.ao_table" in "bkdb" with data
+        And there is a "ao" table "testschema.ao_index_table" in "bkdb" with data
+        And there is a "ao" partition table "testschema.ao_part_table" in "bkdb" with data
+        And there is a "co" table "testschema.co_table" in "bkdb" with data
+        And there is a "co" table "testschema.co_index_table" in "bkdb" with data
+        And there is a "co" partition table "testschema.co_part_table" in "bkdb" with data
         And there is a list to store the incremental backup timestamps
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
@@ -941,9 +942,9 @@ Feature: Validate command line arguments
     Scenario: Non compressed incremental backup
         Given the test is initialized
         And there is schema "testschema" exists in "bkdb"
-        And there is a "heap" table "testschema.heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "testschema.ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" partition table "testschema.co_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "testschema.heap_table" in "bkdb" with data
+        And there is a "ao" table "testschema.ao_table" in "bkdb" with data
+        And there is a "co" partition table "testschema.co_part_table" in "bkdb" with data
         And there is a list to store the incremental backup timestamps
         When the user runs "gpcrondump -a -x bkdb -z"
         And the full backup timestamp from gpcrondump is stored
@@ -969,8 +970,8 @@ Feature: Validate command line arguments
     Scenario: Rollback Insert
         Given the test is initialized
         And there is schema "testschema" exists in "bkdb"
-        And there is a "ao" table "testschema.ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "testschema.co_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "testschema.ao_table" in "bkdb" with data
+        And there is a "co" table "testschema.co_table" in "bkdb" with data
         And there is a list to store the incremental backup timestamps
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
@@ -994,8 +995,8 @@ Feature: Validate command line arguments
     Scenario: Rollback Truncate Table
         Given the test is initialized
         And there is schema "testschema" exists in "bkdb"
-        And there is a "ao" table "testschema.ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "testschema.co_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "testschema.ao_table" in "bkdb" with data
+        And there is a "co" table "testschema.co_table" in "bkdb" with data
         And there is a list to store the incremental backup timestamps
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
@@ -1019,8 +1020,8 @@ Feature: Validate command line arguments
     Scenario: Rollback Alter table
         Given the test is initialized
         And there is schema "testschema" exists in "bkdb"
-        And there is a "ao" table "testschema.ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "testschema.co_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "testschema.ao_table" in "bkdb" with data
+        And there is a "co" table "testschema.co_table" in "bkdb" with data
         And there is a list to store the incremental backup timestamps
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
@@ -1044,8 +1045,8 @@ Feature: Validate command line arguments
     @backupsmoke
     Scenario: Out of Sync timestamp
         Given the test is initialized
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "co" table "co_table" in "bkdb" with data
         And there is a list to store the incremental backup timestamps
         And there is a fake timestamp for "30160101010101"
         When the user runs "gpcrondump -a -x bkdb"
@@ -1176,8 +1177,8 @@ Feature: Validate command line arguments
     Scenario: Verify the gpcrondump -h option works with full and incremental backups
         Given the test is initialized
         And there is schema "testschema" exists in "bkdb"
-        And there is a "ao" table "testschema.ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "testschema.co_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "testschema.ao_table" in "bkdb" with data
+        And there is a "co" table "testschema.co_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -h"
         And the timestamp from gpcrondump is stored
         Then gpcrondump should return a return code of 0
@@ -1193,10 +1194,10 @@ Feature: Validate command line arguments
     Scenario: Verify gpdbrestore -s option works with full backup
         Given the test is initialized
         And database "bkdb2" is dropped and recreated
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb2" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb2" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "co" table "co_table" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb2" with data
+        And there is a "co" table "co_table" in "bkdb2" with data
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And all the data from "bkdb" is saved for verification
@@ -1213,10 +1214,10 @@ Feature: Validate command line arguments
     Scenario: Verify gpdbrestore -s option works with incremental backup 
         Given the test is initialized
         And database "bkdb2" is dropped and recreated
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb2" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb2" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "co" table "co_table" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb2" with data
+        And there is a "co" table "co_table" in "bkdb2" with data
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And the user runs "gpcrondump -a -x bkdb2"
@@ -1237,8 +1238,8 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: gpdbrestore -u option with full backup
         Given the test is initialized
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "co" table "co_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -1252,8 +1253,8 @@ Feature: Validate command line arguments
     @backupsmoke
     Scenario: gpdbrestore -u option with incremental backup
         Given the test is initialized
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "co" table "co_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
         And gpcrondump should return a return code of 0
         And table "public.ao_table" is assumed to be in dirty state in "bkdb"
@@ -1270,10 +1271,10 @@ Feature: Validate command line arguments
     Scenario: gpcrondump -x with multiple databases
         Given the test is initialized
         And database "bkdb2" is dropped and recreated
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb2" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb2" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "co" table "co_table" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb2" with data
+        And there is a "co" table "co_table" in "bkdb2" with data
         When the user runs "gpcrondump -a -x bkdb,bkdb2"
         And the timestamp for database dumps "bkdb, bkdb2" are stored
         And gpcrondump should return a return code of 0
@@ -1291,8 +1292,8 @@ Feature: Validate command line arguments
 
     Scenario: gpdbrestore with --table-file option
         Given the test is initialized
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "co" table "co_table" in "bkdb" with data
         And there is a table-file "/tmp/table_file_foo" with tables "public.ao_table, public.co_table"
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
@@ -1309,8 +1310,8 @@ Feature: Validate command line arguments
     @backupsmoke
     Scenario: Incremental restore with extra full backup
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And table "ao_table" is assumed to be in dirty state in "bkdb"
@@ -1329,8 +1330,8 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: gpcrondump should not track external tables
         Given the test is initialized
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "co" table "co_table" in "bkdb" with data
         And there is an external table "ext_tab" in "bkdb" with data for file "/tmp/ext_tab"
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
@@ -1349,9 +1350,9 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: gpdbrestore with -T option
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -1365,9 +1366,9 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: Full backup and restore with -T and --truncate
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -1382,7 +1383,7 @@ Feature: Validate command line arguments
 
     Scenario: Full backup and restore with -T and --truncate with dropped table
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -1394,7 +1395,7 @@ Feature: Validate command line arguments
 
     Scenario: Full backup -T with truncated table
         Given the test is initialized
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -1407,7 +1408,7 @@ Feature: Validate command line arguments
 
     Scenario: Full backup -T with no schema name supplied
         Given the test is initialized
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -1418,8 +1419,8 @@ Feature: Validate command line arguments
 
     Scenario: Full backup with gpdbrestore -T for DB with FUNCTION having DROP SQL
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
         And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/create_function_with_drop_table.sql bkdb"
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
@@ -1433,9 +1434,9 @@ Feature: Validate command line arguments
 
     Scenario: Incremental restore with table filter
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "co" table "co_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And table "ao_table" is assumed to be in dirty state in "bkdb"
@@ -1449,7 +1450,7 @@ Feature: Validate command line arguments
 
     Scenario: Incremental restore with invalid table filter
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And the user runs "gpcrondump -a --incremental -x bkdb"
@@ -1463,8 +1464,8 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: gpdbrestore -L with -u option
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
         Then gpcrondump should return a return code of 0
@@ -1478,9 +1479,9 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: gpdbrestore -b with -u option for Full timestamp
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
         Then gpcrondump should return a return code of 0
         And the subdir from gpcrondump is stored
@@ -1494,9 +1495,9 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: gpdbrestore with -s and -u options for full backup
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
         Then gpcrondump should return a return code of 0
         And all the data from "bkdb" is saved for verification
@@ -1508,9 +1509,9 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: gpdbrestore with -s and -u options for incremental backup
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
         Then gpcrondump should return a return code of 0
         And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
@@ -1524,7 +1525,7 @@ Feature: Validate command line arguments
 
     Scenario: gpdbrestore -b option should display the timestamps in sorted order
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And the user runs "gpcrondump -x bkdb --incremental -a"
@@ -1538,9 +1539,9 @@ Feature: Validate command line arguments
 
     Scenario: gpdbrestore -R option should display the timestamps in sorted order
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb -u /tmp"
         And gpcrondump should return a return code of 0
         And table "ao_index_table" is assumed to be in dirty state in "bkdb"
@@ -1581,7 +1582,7 @@ Feature: Validate command line arguments
     Scenario: Dirty File Scale Test for partitions
         Given the test is initialized
         And there are "240" "heap" tables "public.heap_table" with data in "bkdb"
-        And there is a "ao" partition table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_table" in "bkdb" with data
         Then data for partition table "ao_table" with partition level "1" is distributed across all segments on "bkdb"
         And verify that partitioned tables "ao_table" in "bkdb" have 6 partitions
         When the user runs "gpcrondump -a -x bkdb"
@@ -1604,7 +1605,7 @@ Feature: Validate command line arguments
 
     Scenario: Config files have the same timestamp as the backup set
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb -g"
         And the timestamp from gpcrondump is stored
@@ -1624,7 +1625,7 @@ Feature: Validate command line arguments
 
     Scenario: Test gpcrondump and gpdbrestore verbose option
         Given the test is initialized
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb --verbose"
         And gpcrondump should return a return code of 0
         And table "public.ao_table" is assumed to be in dirty state in "bkdb"
@@ -1641,10 +1642,10 @@ Feature: Validate command line arguments
     Scenario: Incremental table filter gpdbrestore with different schema for same tablenames
         Given the test is initialized
         And there is schema "testschema" exists in "bkdb"
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table1" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "testschema.ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "testschema.ao_part_table1" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table1" in "bkdb" with data
+        And there is a "ao" partition table "testschema.ao_part_table" in "bkdb" with data
+        And there is a "ao" partition table "testschema.ao_part_table1" in "bkdb" with data
         Then data for partition table "ao_part_table" with partition level "1" is distributed across all segments on "bkdb"
         Then data for partition table "ao_part_table1" with partition level "1" is distributed across all segments on "bkdb"
         Then data for partition table "testschema.ao_part_table" with partition level "1" is distributed across all segments on "bkdb"
@@ -1677,8 +1678,8 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: Incremental table filter gpdbrestore with noplan option
         Given the test is initialized
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table1" with compression "None" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table1" in "bkdb" with data
         Then data for partition table "ao_part_table" with partition level "1" is distributed across all segments on "bkdb"
         Then data for partition table "ao_part_table1" with partition level "1" is distributed across all segments on "bkdb"
         And verify that partitioned tables "ao_part_table" in "bkdb" have 6 partitions
@@ -1705,9 +1706,9 @@ Feature: Validate command line arguments
     @backupsmoke
     Scenario: gpdbrestore list_backup option
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "co" table "co_table" in "bkdb" with data
         And there is a list to store the incremental backup timestamps
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
@@ -1737,7 +1738,7 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: gpdbrestore list_backup option with -T table filter
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         When the user runs "gpcrondump -a --incremental -x bkdb"
@@ -1750,7 +1751,7 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: gpdbrestore list_backup option with full timestamp
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -1760,8 +1761,8 @@ Feature: Validate command line arguments
 
     Scenario: Full Backup with option -t and non-existant table
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb -t cool.dude -t public.heap_table"
         Then gpcrondump should return a return code of 2
@@ -1769,8 +1770,8 @@ Feature: Validate command line arguments
 
     Scenario: Full Backup with option -T and non-existant table
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb -T public.heap_table -T cool.dude"
         Then gpcrondump should return a return code of 0
@@ -1784,9 +1785,9 @@ Feature: Validate command line arguments
 
     Scenario: Negative test gpdbrestore -G with incremental timestamp
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb "
         Then gpcrondump should return a return code of 0
         When the user runs "gpcrondump -a -x bkdb --incremental -G"
@@ -1803,8 +1804,8 @@ Feature: Validate command line arguments
 
     Scenario: Full Backup and Restore using gp_dump with no-lock
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data and 1000000 rows
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data and 1000000 rows
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
         When the user runs the "gp_dump --gp-s=p --gp-c --no-lock bkdb" in a worker pool "w1"
         And this test sleeps for "2" seconds
@@ -1831,7 +1832,7 @@ Feature: Validate command line arguments
     Scenario: Restore -T for incremental dump should restore metadata/postdata objects for tablenames with English and multibyte (chinese) characters
         Given the test is initialized
         And there is schema "schema_heap" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         And there is a "ao" table "public.ao_index_table" with index "ao_index" compression "None" in "bkdb" with data
         And there is a "co" table "public.co_index_table" with index "co_index" compression "None" in "bkdb" with data
         And there is a "heap" table "public.heap_index_table" with index "heap_index" compression "None" in "bkdb" with data
@@ -2051,8 +2052,8 @@ Feature: Validate command line arguments
     Scenario: Redirected Restore Full Backup and Restore without -e option
         Given the test is initialized
         And the database "bkdb2" does not exist
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And all the data from "bkdb" is saved for verification
         When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
@@ -2065,8 +2066,8 @@ Feature: Validate command line arguments
     Scenario: Full Backup and Restore with -e option
         Given the test is initialized
         And the database "bkdb2" does not exist
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And all the data from "bkdb" is saved for verification
         When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
@@ -2079,8 +2080,8 @@ Feature: Validate command line arguments
     Scenario: Incremental Backup and Redirected Restore
         Given the test is initialized
         And the database "bkdb2" does not exist
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table1" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table1" in "bkdb" with data
         When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
         And table "public.ao_part_table1" is assumed to be in dirty state in "bkdb"
@@ -2095,9 +2096,9 @@ Feature: Validate command line arguments
     Scenario: Full backup and redirected restore with -T
         Given the test is initialized
         And the database "bkdb2" does not exist
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -2110,7 +2111,7 @@ Feature: Validate command line arguments
     Scenario: Full backup and redirected restore with -T and --truncate
         Given the test is initialized
         And the database "bkdb2" does not exist
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -2118,7 +2119,7 @@ Feature: Validate command line arguments
         And the user runs "gpdbrestore -T public.ao_index_table --redirect=bkdb2 --truncate -a" with the stored timestamp
         And gpdbrestore should return a return code of 2
         And gpdbrestore should print Failure from truncating tables, FATAL:  database "bkdb2" does not exist to stdout
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb2" with data
+        And there is a "ao" table "ao_index_table" in "bkdb2" with data
         And the user runs "gpdbrestore -T public.ao_index_table --redirect=bkdb2 --truncate -a" with the stored timestamp
         And gpdbrestore should return a return code of 0
         And verify that there is a "ao" table "public.ao_index_table" in "bkdb2" with data
@@ -2127,9 +2128,9 @@ Feature: Validate command line arguments
     Scenario: Incremental redirected restore with table filter
         Given the test is initialized
         And the database "bkdb2" does not exist
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_table" with compression "None" in "bkdb" with data
-        And there is a "co" table "co_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" table "ao_table" in "bkdb" with data
+        And there is a "co" table "co_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         And gpcrondump should return a return code of 0
         And table "ao_table" is assumed to be in dirty state in "bkdb"
@@ -2146,8 +2147,8 @@ Feature: Validate command line arguments
         Given the test is initialized
         And the prefix "foo" is stored
         And the database "bkdb2" does not exist
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb --prefix=foo"
         Then gpcrondump should return a return code of 0
@@ -2162,10 +2163,10 @@ Feature: Validate command line arguments
         Given the test is initialized
         And the prefix "foo" is stored
         And database "bkdb2" is dropped and recreated
-        And there is a "heap" table "heap_table1" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table1" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table1, ao_part_table" in "bkdb" exists for validation
-        And there is a "heap" table "heap_table2" with compression "None" in "bkdb2" with data
+        And there is a "heap" table "heap_table2" in "bkdb2" with data
         And there is a backupfile of tables "heap_table2" in "bkdb2" exists for validation
         When the user runs "gpcrondump -a -x bkdb,bkdb2 --prefix=foo"
         Then gpcrondump should return a return code of 0
@@ -2178,7 +2179,7 @@ Feature: Validate command line arguments
 
     Scenario: Full Backup and Restore with the master dump file missing
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -2190,7 +2191,7 @@ Feature: Validate command line arguments
 
     Scenario: Incremental Backup and Restore with the master dump file missing
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
         When the user runs "gpcrondump -x bkdb -a --incremental"
@@ -2205,8 +2206,8 @@ Feature: Validate command line arguments
     Scenario: Uppercase Database Name Full Backup and Restore
         Given the test is initialized
         And database "TESTING" is dropped and recreated
-        And there is a "heap" table "heap_table" with compression "None" in "TESTING" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "TESTING" with data
+        And there is a "heap" table "heap_table" in "TESTING" with data
+        And there is a "ao" partition table "ao_part_table" in "TESTING" with data
         And all the data from "TESTING" is saved for verification
         When the user runs "gpcrondump -x TESTING -a"
         Then gpcrondump should return a return code of 0
@@ -2220,8 +2221,8 @@ Feature: Validate command line arguments
     Scenario: Uppercase Database Name Full Backup and Restore using -s option with and without quotes
         Given the test is initialized
         And database "TESTING" is dropped and recreated
-        And there is a "heap" table "heap_table" with compression "None" in "TESTING" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "TESTING" with data
+        And there is a "heap" table "heap_table" in "TESTING" with data
+        And there is a "ao" partition table "ao_part_table" in "TESTING" with data
         And all the data from "TESTING" is saved for verification
         When the user runs "gpcrondump -x TESTING -a"
         Then gpcrondump should return a return code of 0
@@ -2240,8 +2241,8 @@ Feature: Validate command line arguments
     Scenario: Uppercase Database Name Incremental Backup and Restore
         Given the test is initialized
         And database "TESTING" is dropped and recreated
-        And there is a "heap" table "heap_table" with compression "None" in "TESTING" with data
-        And there is a "ao" partition table "ao_part_table1" with compression "None" in "TESTING" with data
+        And there is a "heap" table "heap_table" in "TESTING" with data
+        And there is a "ao" partition table "ao_part_table1" in "TESTING" with data
         When the user runs "gpcrondump -x TESTING -a"
         Then gpcrondump should return a return code of 0
         And table "public.ao_part_table1" is assumed to be in dirty state in "TESTING"
@@ -2256,8 +2257,8 @@ Feature: Validate command line arguments
 
     Scenario: Full backup and Restore should create the gp_toolkit schema with -e option
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And all the data from "bkdb" is saved for verification
         And the gp_toolkit schema for "bkdb" is saved for verification
         When the user runs "gpcrondump -x bkdb -a"
@@ -2270,8 +2271,8 @@ Feature: Validate command line arguments
 
     Scenario: Incremental backup and Restore should create the gp_toolkit schema with -e option
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And all the data from "bkdb" is saved for verification
         And the gp_toolkit schema for "bkdb" is saved for verification
         When the user runs "gpcrondump -x bkdb -a"
@@ -2287,8 +2288,8 @@ Feature: Validate command line arguments
     Scenario: Redirected Restore should create the gp_toolkit schema with or without -e option
         Given the test is initialized
         And the database "bkdb2" does not exist
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And all the data from "bkdb" is saved for verification
         And the gp_toolkit schema for "bkdb" is saved for verification
         When the user runs "gpcrondump -x bkdb -a"
@@ -2305,8 +2306,8 @@ Feature: Validate command line arguments
 
     Scenario: gpdbrestore with noanalyze
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -2320,8 +2321,8 @@ Feature: Validate command line arguments
 
     Scenario: gpdbrestore without noanalyze
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -2337,8 +2338,8 @@ Feature: Validate command line arguments
         Given the test is initialized
         And there are no report files in "master_data_directory"
         And there are no status files in "segment_data_directory"
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And all the data from "bkdb" is saved for verification
         When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
@@ -2356,8 +2357,8 @@ Feature: Validate command line arguments
 
     Scenario: Writable Report/Status Directory Full Backup and Restore with --report-status-dir option
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And all the data from "bkdb" is saved for verification
         When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
@@ -2375,8 +2376,8 @@ Feature: Validate command line arguments
 
     Scenario: Writable Report/Status Directory Full Backup and Restore with -u option
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And all the data from "bkdb" is saved for verification
         When the user runs "gpcrondump -x bkdb -a -u /tmp -K 20160101010101"
         Then gpcrondump should return a return code of 0
@@ -2393,8 +2394,8 @@ Feature: Validate command line arguments
 
     Scenario: Writable Report/Status Directory Full Backup and Restore with no write access -u option
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And all the data from "bkdb" is saved for verification
         When the user runs "gpcrondump -x bkdb -a -u /tmp -K 20160101010101"
         Then gpcrondump should return a return code of 0
@@ -2416,8 +2417,8 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: Filtered Full Backup with Partition Table
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -2431,8 +2432,8 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: Filtered Incremental Backup with Partition Table
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         When the user runs "gpcrondump -a -x bkdb --incremental"
@@ -2447,9 +2448,9 @@ Feature: Validate command line arguments
 
     Scenario: gpdbrestore runs ANALYZE on restored table only
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
-        And there is a "ao" table "ao_index_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
+        And there is a "ao" table "ao_index_table" in "bkdb" with data
         And the database "bkdb" is analyzed
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
@@ -2467,8 +2468,8 @@ Feature: Validate command line arguments
         Given the test is initialized
         And database "testdb1" is dropped and recreated
         And database "testdb2" is dropped and recreated
-        And there is a "heap" table "heap_table" with compression "None" in "testdb1" with data
-        And there is a "heap" table "heap_table" with compression "None" in "testdb2" with data
+        And there is a "heap" table "heap_table" in "testdb1" with data
+        And there is a "heap" table "heap_table" in "testdb2" with data
         And the mail_contacts file does not exist
         And the mail_contacts file exists
         And the yaml file "gppylib/test/behave/mgmt_utils/steps/data/test_email_details.yaml" stores email details is in proper format
@@ -2479,7 +2480,7 @@ Feature: Validate command line arguments
 
     Scenario: Gpcrondump without mail_contacts
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         And the mail_contacts file does not exist
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
@@ -2487,7 +2488,7 @@ Feature: Validate command line arguments
 
     Scenario: Negative case for gpcrondump with --email-file option
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         And the mail_contacts file does not exist
         And the mail_contacts file exists
         And the yaml file "gppylib/test/behave/mgmt_utils/steps/data/test_email_details_wrong_format.yaml" stores email details is not in proper format
@@ -2500,9 +2501,9 @@ Feature: Validate command line arguments
     Scenario: Full Backup with multiple -S option and Restore
         Given the test is initialized
         And there is schema "schema_heap, schema_ao, schema_heap1" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "schema_heap1.heap_table1" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And there is a "heap" table "schema_heap1.heap_table1" in "bkdb" with data
+        And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "schema_heap1.heap_table1, schema_heap.heap_table, schema_ao.ao_part_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb -S schema_heap -S schema_heap1"
         Then gpcrondump should return a return code of 0
@@ -2518,8 +2519,8 @@ Feature: Validate command line arguments
     Scenario: Full Backup with option -S and Restore
         Given the test is initialized
         And there is schema "schema_heap, schema_ao" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_part_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb -S schema_heap"
         Then gpcrondump should return a return code of 0
@@ -2534,8 +2535,8 @@ Feature: Validate command line arguments
     Scenario: Full Backup with option -s and Restore
         Given the test is initialized
         And there is schema "schema_heap, schema_ao" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_part_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb -s schema_heap"
         Then gpcrondump should return a return code of 0
@@ -2550,9 +2551,9 @@ Feature: Validate command line arguments
     Scenario: Full Backup with option --exclude-schema-file and Restore
         Given the test is initialized
         And there is schema "schema_heap, schema_ao, schema_heap1" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "schema_heap1.heap_table1" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And there is a "heap" table "schema_heap1.heap_table1" in "bkdb" with data
+        And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_part_table, schema_heap1.heap_table1" in "bkdb" exists for validation
         And there is a file "exclude_file" with tables "schema_heap1|schema_ao"
         When the user runs "gpcrondump -a -x bkdb --exclude-schema-file exclude_file"
@@ -2569,9 +2570,9 @@ Feature: Validate command line arguments
     Scenario: Full Backup with option --schema-file and Restore
         Given the test is initialized
         And there is schema "schema_heap, schema_ao, schema_heap1" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "schema_heap1.heap_table1" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And there is a "heap" table "schema_heap1.heap_table1" in "bkdb" with data
+        And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_part_table, schema_heap1.heap_table1" in "bkdb" exists for validation
         And there is a file "include_file" with tables "schema_heap|schema_ao"
         When the user runs "gpcrondump -a -x bkdb --schema-file include_file"
@@ -2589,10 +2590,10 @@ Feature: Validate command line arguments
         And the prefix "foo" is stored
         And there is a list to store the incremental backup timestamps
         And there is schema "schema_heap, schema_ao, schema_heap1" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table1" with compression "None" in "bkdb" with data
-        And there is a "heap" table "schema_heap1.heap_table2" with compression "None" in "bkdb" with data
-        And there is a "ao" table "schema_ao.ao_index_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table1" in "bkdb" with data
+        And there is a "heap" table "schema_heap1.heap_table2" in "bkdb" with data
+        And there is a "ao" table "schema_ao.ao_index_table" in "bkdb" with data
+        And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb --prefix=foo -s schema_ao -s schema_heap"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -2600,7 +2601,7 @@ Feature: Validate command line arguments
         And "_filter" file should be created under " "
         And verify that the "filter" file in " " dir contains "schema_ao.ao_index_table"
         And verify that the "filter" file in " " dir contains "schema_heap.heap_table1"
-        And there is a "heap" table "schema_heap.heap_table2" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table2" in "bkdb" with data
         And table "schema_heap.heap_table1" is dropped in "bkdb"
         When the user runs "gpcrondump -a -x bkdb --prefix=foo --incremental"
         Then gpcrondump should return a return code of 0
@@ -2622,10 +2623,10 @@ Feature: Validate command line arguments
         And the prefix "foo" is stored
         And there is a list to store the incremental backup timestamps
         And there is schema "schema_heap, schema_ao, schema_heap1" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table1" with compression "None" in "bkdb" with data
-        And there is a "heap" table "schema_heap1.heap_table2" with compression "None" in "bkdb" with data
-        And there is a "ao" table "schema_ao.ao_index_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table1" in "bkdb" with data
+        And there is a "heap" table "schema_heap1.heap_table2" in "bkdb" with data
+        And there is a "ao" table "schema_ao.ao_index_table" in "bkdb" with data
+        And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
         And there is a table-file "/tmp/schema_file" with tables "schema_ao,schema_heap"
         When the user runs "gpcrondump -a -x bkdb --prefix=foo --schema-file /tmp/schema_file"
         Then gpcrondump should return a return code of 0
@@ -2634,7 +2635,7 @@ Feature: Validate command line arguments
         And "_filter" file should be created under " "
         And verify that the "filter" file in " " dir contains "schema_ao.ao_index_table"
         And verify that the "filter" file in " " dir contains "schema_heap.heap_table1"
-        And there is a "heap" table "schema_heap.heap_table2" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table2" in "bkdb" with data
         And partition "3" is added to partition table "schema_ao.ao_part_table" in "bkdb"
         And partition "2" is dropped from partition table "schema_ao.ao_part_table" in "bkdb"
         And table "schema_heap.heap_table1" is dropped in "bkdb"
@@ -2658,10 +2659,10 @@ Feature: Validate command line arguments
         And the prefix "foo" is stored
         And there is a list to store the incremental backup timestamps
         And there is schema "schema_heap, schema_ao, schema_heap1" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table1" with compression "None" in "bkdb" with data
-        And there is a "heap" table "schema_heap1.heap_table2" with compression "None" in "bkdb" with data
-        And there is a "ao" table "schema_ao.ao_index_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table1" in "bkdb" with data
+        And there is a "heap" table "schema_heap1.heap_table2" in "bkdb" with data
+        And there is a "ao" table "schema_ao.ao_index_table" in "bkdb" with data
+        And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
         And there is a table-file "/tmp/schema_file" with tables "schema_heap1,schema_heap"
         When the user runs "gpcrondump -a -x bkdb --prefix=foo --exclude-schema-file /tmp/schema_file"
         Then gpcrondump should return a return code of 0
@@ -2669,7 +2670,7 @@ Feature: Validate command line arguments
         And the full backup timestamp from gpcrondump is stored
         And "_filter" file should be created under " "
         And verify that the "filter" file in " " dir contains "schema_ao.ao_index_table"
-        And there is a "heap" table "schema_heap.heap_table2" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table2" in "bkdb" with data
         And table "schema_ao.ao_index_table" is dropped in "bkdb"
         And partition "3" is added to partition table "schema_ao.ao_part_table" in "bkdb"
         And partition "2" is dropped from partition table "schema_ao.ao_part_table" in "bkdb"
@@ -2692,10 +2693,10 @@ Feature: Validate command line arguments
         And the prefix "foo" is stored
         And there is a list to store the incremental backup timestamps
         And there is schema "schema_heap, schema_ao, schema_heap1" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table1" with compression "None" in "bkdb" with data
-        And there is a "heap" table "schema_heap1.heap_table2" with compression "None" in "bkdb" with data
-        And there is a "ao" table "schema_ao.ao_index_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table1" in "bkdb" with data
+        And there is a "heap" table "schema_heap1.heap_table2" in "bkdb" with data
+        And there is a "ao" table "schema_ao.ao_index_table" in "bkdb" with data
+        And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
         And there is a table-file "/tmp/schema_file" with tables "schema_heap1,schema_heap"
         When the user runs "gpcrondump -a -x bkdb --prefix=foo -S schema_heap1 -S schema_heap"
         Then gpcrondump should return a return code of 0
@@ -2703,7 +2704,7 @@ Feature: Validate command line arguments
         And the full backup timestamp from gpcrondump is stored
         And "_filter" file should be created under " "
         And verify that the "filter" file in " " dir contains "schema_ao.ao_index_table"
-        And there is a "heap" table "schema_heap.heap_table2" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table2" in "bkdb" with data
         And table "schema_ao.ao_part_table" is assumed to be in dirty state in "bkdb"
         And table "schema_ao.ao_index_table" is dropped in "bkdb"
         When the user runs "gpcrondump -a -x bkdb --prefix=foo --incremental"
@@ -2722,8 +2723,8 @@ Feature: Validate command line arguments
     Scenario: Full Backup and Restore with option --change-schema
         Given the test is initialized
         And there is schema "schema_heap, schema_ao, schema_new" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_part_table" in "bkdb" exists for validation
         And there is a file "include_file" with tables "schema_heap.heap_table|schema_ao.ao_part_table"
         When the user runs "gpcrondump -a -x bkdb --table-file include_file"
@@ -2738,8 +2739,8 @@ Feature: Validate command line arguments
     Scenario: Incremental Backup and Restore with option --change-schema
         Given the test is initialized
         And there is schema "schema_heap, schema_ao, schema_new" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "schema_ao.ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_part_table" in "bkdb" exists for validation
         And there is a file "include_file" with tables "schema_heap.heap_table|schema_ao.ao_part_table"
         When the user runs "gpcrondump -a -x bkdb --table-file include_file"
@@ -2757,8 +2758,8 @@ Feature: Validate command line arguments
 
     Scenario: Full backup and restore with statistics
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And the database "bkdb" is analyzed
         When the user runs "gpcrondump -a -x bkdb --dump-stats"
         And the timestamp from gpcrondump is stored
@@ -2769,8 +2770,8 @@ Feature: Validate command line arguments
         And verify that the restored table "public.heap_table" in database "bkdb" is analyzed
         And verify that the restored table "public.ao_part_table" in database "bkdb" is analyzed
         And database "bkdb" is dropped and recreated
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         When the user runs gpdbrestore with the stored timestamp and options "--restore-stats only"
         Then gpdbrestore should return a return code of 2
         When the user runs gpdbrestore with the stored timestamp and options "--restore-stats only" without -e option
@@ -2780,9 +2781,9 @@ Feature: Validate command line arguments
 
     Scenario: Backup and restore with statistics and table filters
         Given the test is initialized
-        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data
-        And there is a "heap" table "heap_table2" with compression "None" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table" with compression "None" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
+        And there is a "heap" table "heap_table2" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And the database "bkdb" is analyzed
         When the user runs "gpcrondump -a -x bkdb --dump-stats -t public.heap_table -t public.heap_table2"
         And the timestamp from gpcrondump is stored
