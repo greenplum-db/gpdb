@@ -2070,10 +2070,10 @@ Feature: Validate command line arguments
         Given the test is initialized
         And the database "bkdb2" does not exist
         And there is a "heap" table "heap_table" in "bkdb" with data
-        And there is a "ao" partition table "ao_part_table1" in "bkdb" with data
+        And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         When the user runs "gpcrondump -x bkdb -a"
         Then gpcrondump should return a return code of 0
-        And table "public.ao_part_table1" is assumed to be in dirty state in "bkdb"
+        And table "public.ao_part_table" is assumed to be in dirty state in "bkdb"
         When the user runs "gpcrondump -x bkdb -a --incremental"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -2152,18 +2152,18 @@ Feature: Validate command line arguments
         Given the test is initialized
         And the prefix "foo" is stored
         And database "bkdb2" is dropped and recreated
-        And there is a "heap" table "heap_table1" in "bkdb" with data
+        And there is a "heap" table "heap_table" in "bkdb" with data
         And there is a "ao" partition table "ao_part_table" in "bkdb" with data
-        And there is a backupfile of tables "heap_table1, ao_part_table" in "bkdb" exists for validation
-        And there is a "heap" table "heap_table2" in "bkdb2" with data
-        And there is a backupfile of tables "heap_table2" in "bkdb2" exists for validation
+        And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
+        And there is a "heap" table "heap_table" in "bkdb2" with data
+        And there is a backupfile of tables "heap_table" in "bkdb2" exists for validation
         When the user runs "gpcrondump -a -x bkdb,bkdb2 --prefix=foo"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the user runs gpdbrestore with the stored timestamp and options "--prefix=foo --redirect=bkdb3"
         And gpdbrestore should return a return code of 0
         And there should be dump files under " " with prefix "foo"
-        And verify that there is a "heap" table "heap_table1" in "bkdb3" with data
+        And verify that there is a "heap" table "heap_table" in "bkdb3" with data
         And verify that there is a "ao" table "ao_part_table" in "bkdb3" with data
 
     Scenario: Full Backup and Restore with the master dump file missing
@@ -2231,10 +2231,10 @@ Feature: Validate command line arguments
         Given the test is initialized
         And database "TESTING" is dropped and recreated
         And there is a "heap" table "heap_table" in "TESTING" with data
-        And there is a "ao" partition table "ao_part_table1" in "TESTING" with data
+        And there is a "ao" partition table "ao_part_table" in "TESTING" with data
         When the user runs "gpcrondump -x TESTING -a"
         Then gpcrondump should return a return code of 0
-        And table "public.ao_part_table1" is assumed to be in dirty state in "TESTING"
+        And table "public.ao_part_table" is assumed to be in dirty state in "TESTING"
         When the user runs "gpcrondump -x TESTING -a --incremental"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -2489,19 +2489,19 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: Full Backup with multiple -S option and Restore
         Given the test is initialized
-        And there is schema "schema_heap, schema_ao, schema_heap1" exists in "bkdb"
+        And there is schema "schema_heap, schema_ao, testschema" exists in "bkdb"
         And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
-        And there is a "heap" table "schema_heap1.heap_table1" in "bkdb" with data
+        And there is a "heap" table "testschema.heap_table" in "bkdb" with data
         And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
-        And there is a backupfile of tables "schema_heap1.heap_table1, schema_heap.heap_table, schema_ao.ao_part_table" in "bkdb" exists for validation
-        When the user runs "gpcrondump -a -x bkdb -S schema_heap -S schema_heap1"
+        And there is a backupfile of tables "testschema.heap_table, schema_heap.heap_table, schema_ao.ao_part_table" in "bkdb" exists for validation
+        When the user runs "gpcrondump -a -x bkdb -S schema_heap -S testschema"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And verify that the "report" file in " " dir contains "Backup Type: Full"
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
         And verify that there is no table "schema_heap.heap_table" in "bkdb"
-        And verify that there is no table "schema_heap1.heap_table1" in "bkdb"
+        And verify that there is no table "testschema.heap_table" in "bkdb"
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb" with data
 
     @backupfire
@@ -2539,12 +2539,12 @@ Feature: Validate command line arguments
     @backupfire
     Scenario: Full Backup with option --exclude-schema-file and Restore
         Given the test is initialized
-        And there is schema "schema_heap, schema_ao, schema_heap1" exists in "bkdb"
+        And there is schema "schema_heap, schema_ao, testschema" exists in "bkdb"
         And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
-        And there is a "heap" table "schema_heap1.heap_table1" in "bkdb" with data
+        And there is a "heap" table "testschema.heap_table" in "bkdb" with data
         And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
-        And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_part_table, schema_heap1.heap_table1" in "bkdb" exists for validation
-        And there is a file "exclude_file" with tables "schema_heap1|schema_ao"
+        And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_part_table, testschema.heap_table" in "bkdb" exists for validation
+        And there is a file "exclude_file" with tables "testschema|schema_ao"
         When the user runs "gpcrondump -a -x bkdb --exclude-schema-file exclude_file"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -2553,16 +2553,16 @@ Feature: Validate command line arguments
         And gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         And verify that there is no table "schema_ao.ao_part_table" in "bkdb"
-        And verify that there is no table "schema_heap1.heap_table" in "bkdb"
+        And verify that there is no table "testschema.heap_table" in "bkdb"
 
     @backupfire
     Scenario: Full Backup with option --schema-file and Restore
         Given the test is initialized
-        And there is schema "schema_heap, schema_ao, schema_heap1" exists in "bkdb"
+        And there is schema "schema_heap, schema_ao, testschema" exists in "bkdb"
         And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
-        And there is a "heap" table "schema_heap1.heap_table1" in "bkdb" with data
+        And there is a "heap" table "testschema.heap_table" in "bkdb" with data
         And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
-        And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_part_table, schema_heap1.heap_table1" in "bkdb" exists for validation
+        And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_part_table, testschema.heap_table" in "bkdb" exists for validation
         And there is a file "include_file" with tables "schema_heap|schema_ao"
         When the user runs "gpcrondump -a -x bkdb --schema-file include_file"
         Then gpcrondump should return a return code of 0
@@ -2572,15 +2572,15 @@ Feature: Validate command line arguments
         And gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb" with data
-        And verify that there is no table "schema_heap1.heap_table" in "bkdb"
+        And verify that there is no table "testschema.heap_table" in "bkdb"
 
     Scenario: Incremental Backup and Restore with -s filter for Full
         Given the test is initialized
         And the prefix "foo" is stored
         And there is a list to store the incremental backup timestamps
-        And there is schema "schema_heap, schema_ao, schema_heap1" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table1" in "bkdb" with data
-        And there is a "heap" table "schema_heap1.heap_table2" in "bkdb" with data
+        And there is schema "schema_heap, schema_ao, testschema" exists in "bkdb"
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And there is a "heap" table "testschema.heap_table" in "bkdb" with data
         And there is a "ao" table "schema_ao.ao_index_table" in "bkdb" with data
         And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb --prefix=foo -s schema_ao -s schema_heap"
@@ -2589,31 +2589,31 @@ Feature: Validate command line arguments
         And the full backup timestamp from gpcrondump is stored
         And "_filter" file should be created under " "
         And verify that the "filter" file in " " dir contains "schema_ao.ao_index_table"
-        And verify that the "filter" file in " " dir contains "schema_heap.heap_table1"
-        And there is a "heap" table "schema_heap.heap_table2" in "bkdb" with data
-        And table "schema_heap.heap_table1" is dropped in "bkdb"
+        And verify that the "filter" file in " " dir contains "schema_heap.heap_table"
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And table "schema_heap.heap_table" is dropped in "bkdb"
         When the user runs "gpcrondump -a -x bkdb --prefix=foo --incremental"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the timestamp from gpcrondump is stored in a list
         And all the data from "bkdb" is saved for verification
-        And the user runs "psql -c 'drop table schema_heap.heap_table2' bkdb"
+        And the user runs "psql -c 'drop table schema_heap.heap_table' bkdb"
         And the user runs "psql -c 'drop table schema_ao.ao_index_table' bkdb"
         And the user runs "psql -c 'drop table schema_ao.ao_part_table' bkdb"
         When the user runs "gpdbrestore --prefix=foo -a" with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And verify that there is a "heap" table "schema_heap.heap_table2" in "bkdb" with data
+        And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         And verify that there is a "ao" table "schema_ao.ao_index_table" in "bkdb" with data
-        And verify that there is no table "schema_heap.heap_table1" in "bkdb"
+        And verify that there is no table "schema_heap.heap_table" in "bkdb"
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb" with data
 
     Scenario: Incremental Backup and Restore with --schema-file filter for Full
         Given the test is initialized
         And the prefix "foo" is stored
         And there is a list to store the incremental backup timestamps
-        And there is schema "schema_heap, schema_ao, schema_heap1" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table1" in "bkdb" with data
-        And there is a "heap" table "schema_heap1.heap_table2" in "bkdb" with data
+        And there is schema "schema_heap, schema_ao, testschema" exists in "bkdb"
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And there is a "heap" table "testschema.heap_table" in "bkdb" with data
         And there is a "ao" table "schema_ao.ao_index_table" in "bkdb" with data
         And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
         And there is a table-file "/tmp/schema_file" with tables "schema_ao,schema_heap"
@@ -2623,23 +2623,23 @@ Feature: Validate command line arguments
         And the full backup timestamp from gpcrondump is stored
         And "_filter" file should be created under " "
         And verify that the "filter" file in " " dir contains "schema_ao.ao_index_table"
-        And verify that the "filter" file in " " dir contains "schema_heap.heap_table1"
-        And there is a "heap" table "schema_heap.heap_table2" in "bkdb" with data
+        And verify that the "filter" file in " " dir contains "schema_heap.heap_table"
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         And partition "3" is added to partition table "schema_ao.ao_part_table" in "bkdb"
         And partition "2" is dropped from partition table "schema_ao.ao_part_table" in "bkdb"
-        And table "schema_heap.heap_table1" is dropped in "bkdb"
+        And table "schema_heap.heap_table" is dropped in "bkdb"
         When the user runs "gpcrondump -a -x bkdb --prefix=foo --incremental"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the timestamp from gpcrondump is stored in a list
         And all the data from "bkdb" is saved for verification
-        And the user runs "psql -c 'drop table schema_heap.heap_table2' bkdb"
+        And the user runs "psql -c 'drop table schema_heap.heap_table' bkdb"
         And the user runs "psql -c 'drop table schema_ao.ao_index_table' bkdb"
         And the user runs "psql -c 'drop table schema_ao.ao_part_table' bkdb"
         When the user runs "gpdbrestore --prefix=foo -a" with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And verify that there is no table "schema_heap.heap_table1" in "bkdb"
-        And verify that there is a "heap" table "schema_heap.heap_table2" in "bkdb" with data
+        And verify that there is no table "schema_heap.heap_table" in "bkdb"
+        And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         And verify that there is a "ao" table "schema_ao.ao_index_table" in "bkdb" with data
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb" with data
 
@@ -2647,19 +2647,19 @@ Feature: Validate command line arguments
         Given the test is initialized
         And the prefix "foo" is stored
         And there is a list to store the incremental backup timestamps
-        And there is schema "schema_heap, schema_ao, schema_heap1" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table1" in "bkdb" with data
-        And there is a "heap" table "schema_heap1.heap_table2" in "bkdb" with data
+        And there is schema "schema_heap, schema_ao, testschema" exists in "bkdb"
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And there is a "heap" table "testschema.heap_table" in "bkdb" with data
         And there is a "ao" table "schema_ao.ao_index_table" in "bkdb" with data
         And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
-        And there is a table-file "/tmp/schema_file" with tables "schema_heap1,schema_heap"
+        And there is a table-file "/tmp/schema_file" with tables "testschema,schema_heap"
         When the user runs "gpcrondump -a -x bkdb --prefix=foo --exclude-schema-file /tmp/schema_file"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the full backup timestamp from gpcrondump is stored
         And "_filter" file should be created under " "
         And verify that the "filter" file in " " dir contains "schema_ao.ao_index_table"
-        And there is a "heap" table "schema_heap.heap_table2" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         And table "schema_ao.ao_index_table" is dropped in "bkdb"
         And partition "3" is added to partition table "schema_ao.ao_part_table" in "bkdb"
         And partition "2" is dropped from partition table "schema_ao.ao_part_table" in "bkdb"
@@ -2672,8 +2672,8 @@ Feature: Validate command line arguments
         And the user runs "psql -c 'drop table schema_ao.ao_part_table' bkdb"
         When the user runs "gpdbrestore --prefix=foo -a" with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And verify that there is a "heap" table "schema_heap.heap_table1" in "bkdb" with data
-        And verify that there is a "heap" table "schema_heap.heap_table2" in "bkdb" with data
+        And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         And verify that there is no table "schema_ao.ao_index_table" in "bkdb"
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb" with data
 
@@ -2681,19 +2681,19 @@ Feature: Validate command line arguments
         Given the test is initialized
         And the prefix "foo" is stored
         And there is a list to store the incremental backup timestamps
-        And there is schema "schema_heap, schema_ao, schema_heap1" exists in "bkdb"
-        And there is a "heap" table "schema_heap.heap_table1" in "bkdb" with data
-        And there is a "heap" table "schema_heap1.heap_table2" in "bkdb" with data
+        And there is schema "schema_heap, schema_ao, testschema" exists in "bkdb"
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And there is a "heap" table "testschema.heap_table" in "bkdb" with data
         And there is a "ao" table "schema_ao.ao_index_table" in "bkdb" with data
         And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
-        And there is a table-file "/tmp/schema_file" with tables "schema_heap1,schema_heap"
-        When the user runs "gpcrondump -a -x bkdb --prefix=foo -S schema_heap1 -S schema_heap"
+        And there is a table-file "/tmp/schema_file" with tables "testschema,schema_heap"
+        When the user runs "gpcrondump -a -x bkdb --prefix=foo -S testschema -S schema_heap"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the full backup timestamp from gpcrondump is stored
         And "_filter" file should be created under " "
         And verify that the "filter" file in " " dir contains "schema_ao.ao_index_table"
-        And there is a "heap" table "schema_heap.heap_table2" in "bkdb" with data
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         And table "schema_ao.ao_part_table" is assumed to be in dirty state in "bkdb"
         And table "schema_ao.ao_index_table" is dropped in "bkdb"
         When the user runs "gpcrondump -a -x bkdb --prefix=foo --incremental"
@@ -2704,8 +2704,8 @@ Feature: Validate command line arguments
         And the user runs "psql -c 'drop table schema_ao.ao_part_table' bkdb"
         When the user runs "gpdbrestore --prefix=foo -a" with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And verify that there is a "heap" table "schema_heap.heap_table1" in "bkdb" with data
-        And verify that there is a "heap" table "schema_heap.heap_table2" in "bkdb" with data
+        And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         And verify that there is no table "schema_ao.ao_index_table" in "bkdb"
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb" with data
 
@@ -2771,20 +2771,20 @@ Feature: Validate command line arguments
     Scenario: Backup and restore with statistics and table filters
         Given the test is initialized
         And there is a "heap" table "heap_table" in "bkdb" with data
-        And there is a "heap" table "heap_table2" in "bkdb" with data
+        And there is a "heap" table "heap_index_table" in "bkdb" with data
         And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And the database "bkdb" is analyzed
-        When the user runs "gpcrondump -a -x bkdb --dump-stats -t public.heap_table -t public.heap_table2"
+        When the user runs "gpcrondump -a -x bkdb --dump-stats -t public.heap_table -t public.heap_index_table"
         And the timestamp from gpcrondump is stored
         Then gpcrondump should return a return code of 0
         And "statistics" file should be created under " "
         And verify that the "statistics" file in " " dir does not contain "Schema: public, Table: ao_part_table"
         And database "bkdb" is dropped and recreated
-        When the user runs gpdbrestore with the stored timestamp and options "-T public.heap_table2 --noanalyze"
+        When the user runs gpdbrestore with the stored timestamp and options "-T public.heap_index_table --noanalyze"
         Then gpdbrestore should return a return code of 0
         When the user runs gpdbrestore with the stored timestamp and options "--restore-stats -T public.heap_table" without -e option
         Then gpdbrestore should return a return code of 0
-        And verify that the table "public.heap_table2" in database "bkdb" is not analyzed
+        And verify that the table "public.heap_index_table" in database "bkdb" is not analyzed
         And verify that the restored table "public.heap_table" in database "bkdb" is analyzed
 
     # THIS SHOULD BE THE LAST TEST
