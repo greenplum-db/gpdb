@@ -81,6 +81,7 @@ Feature: NetBackup Integration with GPDB
         When the user runs "gpcrondump -a -x bkdb" using netbackup
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
+        And the subdir from gpcrondump is stored
         When the user runs "gpdbrestore -e -s bkdb -a" using netbackup
         Then gpdbrestore should print -s is not supported with NetBackup to stdout
         And gpdbrestore should return a return code of 2
@@ -269,7 +270,7 @@ Feature: NetBackup Integration with GPDB
         And there is a "ao" table "public.ao_table" in "bkdb" with data
         And there is a "co" table "public.co_table" in "bkdb" with data
         And there is a backupfile of tables "co_table" in "bkdb" exists for validation
-        And there is a file "exclude_file" with tables "public.heap_table"
+        And there is a file "exclude_file" with tables "public.ao_table"
         When the user runs "gpcrondump -a -x bkdb --exclude-table-file exclude_file --netbackup-block-size 2048" using netbackup
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -287,7 +288,7 @@ Feature: NetBackup Integration with GPDB
         And there is a "ao" table "public.ao_table" in "bkdb" with data
         And there is a "co" table "public.co_table" in "bkdb" with data
         And there is a backupfile of tables "ao_table,heap_table" in "bkdb" exists for validation
-        And there is a file "include_file" with tables "public.ao_table"
+        And there is a file "include_file" with tables "public.ao_table,public.heap_table"
         When the user runs "gpcrondump -a -x bkdb --table-file include_file --netbackup-block-size 2048" using netbackup
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -953,7 +954,6 @@ Feature: NetBackup Integration with GPDB
         And "dirty_list" file should be created under "/tmp"
         And verify that the incremental file in "/tmp" has all the stored timestamps
 
-    @review
     @nbupartI
     Scenario: Simple Plan File Test
         Given the test is initialized
