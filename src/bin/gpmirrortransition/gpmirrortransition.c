@@ -24,12 +24,6 @@
  */
 
 
-static inline bool
-isEmpty(char *str)
-{
-	return str == NULL || str[0] == '\0';
-}
-
 static bool
 gpCheckForNeedToExitFn(void)
 {

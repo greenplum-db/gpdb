@@ -92,21 +92,6 @@ static inline int PARENT(int n)
     Assert(n > 0);
     return (n-1) >> 1;
 }
-static inline int SIBLING(int n)
-{
-    Assert(n > 0);
-    return ((n-1) ^ 1) + 1;
-}
-static inline bool ISLEFT(int n)
-{
-    Assert(n > 0);
-    return (n & 1) != 0;
-}
-static inline bool ISRIGHT(int n)
-{
-    Assert(n > 0);
-    return (n & 1) == 0;
-}
 
 /*
  * Heap compare.
