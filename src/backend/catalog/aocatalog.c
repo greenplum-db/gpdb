@@ -42,7 +42,8 @@ CreateAOAuxiliaryTable(
 	char aoauxiliary_relname[NAMEDATALEN];
 	char aoauxiliary_idxname[NAMEDATALEN];
 	bool shared_relation;
-	Oid relOid, aoauxiliary_relid, aoauxiliary_idxid;
+	Oid relOid, aoauxiliary_relid = InvalidOid;
+	Oid aoauxiliary_idxid;
 	ObjectAddress baseobject;
 	ObjectAddress aoauxiliaryobject;
 
