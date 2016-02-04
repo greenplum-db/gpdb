@@ -199,12 +199,12 @@ Feature: NetBackup Integration with GPDB
         And the netbackup params have been parsed
         And there is a "ao" table "ao_table" in "bkdb" with data
         And there is a "co" table "co_table" in "bkdb" with data
-        When the user runs "gpcrondump -a -x bkdb -t public.heap_table -t public.ao_part_table" using netbackup
+        When the user runs "gpcrondump -a -x bkdb -t public.co_table -t public.ao_table" using netbackup
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And all the data from "bkdb" is saved for verification
-        When the user truncates "public.heap_table" tables in "bkdb"
-        And the user truncates "public.ao_part_table" tables in "bkdb"
+        When the user truncates "public.co_table" tables in "bkdb"
+        And the user truncates "public.ao_table" tables in "bkdb"
         And the user runs gpdbrestore with the stored timestamp and options " " without -e option using netbackup
         Then gpdbrestore should return a return code of 0
         And verify that the data of "2" tables in "bkdb" is validated after restore
@@ -246,21 +246,16 @@ Feature: NetBackup Integration with GPDB
     Scenario: Full Backup with option -t and Restore after TRUNCATE on filtered tables using NetBackup
         Given the test is initialized
         And the netbackup params have been parsed
-        And there is schema "testschema" exists in "bkdb"
         And there is a "heap" table "heap_table" in "bkdb" with data
-        And there is a "heap" table "testschema.heap_table" in "bkdb" with data
         And there is a "ao" table "ao_table" in "bkdb" with data
-        And there is a "ao" table "testschema.ao_table" in "bkdb" with data
-        And there is a backupfile of tables "public.heap_table, testschema.ao_table" in "bkdb" exists for validation
-        When the user runs "gpcrondump -a -x bkdb -t public.heap_table -t testschema.ao_table --netbackup-block-size 2048" using netbackup
+        And there is a backupfile of tables "public.heap_table" in "bkdb" exists for validation
+        When the user runs "gpcrondump -a -x bkdb -t public.heap_table --netbackup-block-size 2048" using netbackup
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         When the user truncates "public.heap_table" tables in "bkdb"
         And the user runs gpdbrestore with the stored timestamp and options "--netbackup-block-size 2048" without -e option using netbackup
         Then gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "public.heap_table" in "bkdb" with data
-        And verify that there is a "ao" table "testschema.ao_table" in "bkdb" with data
-        And verify that there is no "heap" table "testschema.heap_table" in "bkdb" with data
         And verify that there is no "ao" table "public.ao_table" in "bkdb" with data
 
     @nbupartI
@@ -288,7 +283,7 @@ Feature: NetBackup Integration with GPDB
         And there is a "ao" table "public.ao_table" in "bkdb" with data
         And there is a "co" table "public.co_table" in "bkdb" with data
         And there is a backupfile of tables "ao_table,heap_table" in "bkdb" exists for validation
-        And there is a file "include_file" with tables "public.ao_table,public.heap_table"
+        And there is a file "include_file" with tables "public.ao_table|public.heap_table"
         When the user runs "gpcrondump -a -x bkdb --table-file include_file --netbackup-block-size 2048" using netbackup
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
