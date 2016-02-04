@@ -154,7 +154,10 @@ typedef struct PortalData
 
 	/* Status data */
 	PortalStatus status;		/* see above */
-	bool	releaseResLock;	/* true => resscheduler lock must be released */
+	bool	holdingResLock;	/* true => resscheduler lock must be released, however,
+				 * in an extreme case when a portal receives a SIGTERM just
+				 * after being granted the resource lock, the holding ResLock
+				 * is not set but it is indeed holding the ResLock */
 
 	/* If not NULL, Executor is active; call ExecutorEnd eventually: */
 	QueryDesc  *queryDesc;		/* info needed for executor invocation */
