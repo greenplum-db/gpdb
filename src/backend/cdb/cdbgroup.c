@@ -4221,7 +4221,7 @@ reconstruct_pathkeys(PlannerInfo *root, List *pathkeys, int *resno_map,
 	foreach(i, pathkeys)
 	{
 		PathKey    *pathkey = (PathKey *) lfirst(i);
-		bool		found;
+		bool		found = false;
 
 		foreach(j, pathkey->pk_eclass->ec_members)
 		{
