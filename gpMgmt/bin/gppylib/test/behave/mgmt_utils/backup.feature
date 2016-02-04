@@ -144,7 +144,7 @@ Feature: Validate command line arguments
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print Cannot specify --truncate and -e together to stdout
         And there is a table-file "/tmp/table_file_foo" with tables "public.ao_table, public.co_table"
-        And the user runs "gpdbrestore -t 20140101010101" and options "-T public.ao_table --table-file /tmp/table_file_foo"
+        And the user runs "gpdbrestore -t 20140101010101 -T public.ao_table --table-file /tmp/table_file_foo"
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print Cannot specify -T and --table-file together to stdout
         Then the file "/tmp/table_file_foo" is removed from the system
@@ -317,7 +317,7 @@ Feature: Validate command line arguments
 
     Scenario: Increments File Check With Complicated Scenario
         Given the test is initialized
-        And the database "bkdb2" is dropped and recreated
+        And database "bkdb2" is dropped and recreated
         And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a "heap" table "heap_table" in "bkdb2" with data
         And partition "1" of partition table "ao_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
@@ -335,7 +335,7 @@ Feature: Validate command line arguments
 
     Scenario: Incremental File Check With Different Directory
         Given the test is initialized
-        And the database "bkdb2" is dropped and recreated
+        And database "bkdb2" is dropped and recreated
         And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a "heap" table "heap_table" in "bkdb2" with data
         And partition "1" of partition table "ao_part_table" is assumed to be in dirty state in "bkdb" in schema "public"
@@ -1792,7 +1792,7 @@ Feature: Validate command line arguments
 
     Scenario: Full Backup and Restore using gp_dump with no-lock
         Given the test is initialized
-        And there is a "heap" table "heap_table" in "bkdb" with data and 1000000 rows
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data and 1000000 rows
         And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
         When the user runs the "gp_dump --gp-s=p --gp-c --no-lock bkdb" in a worker pool "w1"
@@ -2694,7 +2694,7 @@ Feature: Validate command line arguments
         When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
         Then gpdbrestore should return a return code of 0
         And verify that there is no table "testschema.heap_table" in "bkdb"
-        And verify that there is a table "schema_ao.ao_index_table" in "bkdb" with data
+        And verify that there is a "ao" table "schema_ao.ao_index_table" in "bkdb" with data
         And verify that there is no table "schema_heap.heap_table" in "bkdb"
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb" with data
 
