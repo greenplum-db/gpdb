@@ -1467,7 +1467,7 @@ def impl(context):
     if context.exception:
         raise context.exception
 
-@then('the saved state file is .strip()corrupted')
+@then('the saved state file is corrupted')
 def impl(context):
 
     write_lines = list()
@@ -1713,6 +1713,7 @@ def impl(context, table_name, db_name):
         raise Exception('Expected the length of the string to be greater than %s, but got %s instead' % (MAX_COMMAND_LINE_LEN, len(partition_list_string)))
 
 @given('there is a table-file "{filename}" with tables "{table_list}"')
+@then('there is a table-file "{filename}" with tables "{table_list}"')
 def impl(context, filename, table_list):
     tables = table_list.split(',')
     with open(filename, 'w') as fd:
