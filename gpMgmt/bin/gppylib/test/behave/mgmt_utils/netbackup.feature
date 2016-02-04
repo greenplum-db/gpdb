@@ -924,7 +924,7 @@ Feature: NetBackup Integration with GPDB
         And verify that the incremental file has all the stored timestamps
 
     @nbusmoke
-    @nbupartI
+    @nbupartII
     Scenario: Incremental File Check With Different Directory
         Given the test is initialized
         And the netbackup params have been parsed
@@ -949,7 +949,7 @@ Feature: NetBackup Integration with GPDB
         And "dirty_list" file should be created under "/tmp"
         And verify that the incremental file in "/tmp" has all the stored timestamps
 
-    @nbupartI
+    @nbupartII
     Scenario: Simple Plan File Test
         Given the test is initialized
         And the netbackup params have been parsed
@@ -979,7 +979,7 @@ Feature: NetBackup Integration with GPDB
         Then "plan" file should be created under " "
         And the plan file is validated against "data/plan1"
 
-    @nbupartI
+    @nbupartII
     Scenario: Multiple Incremental backup and restore
         Given the test is initialized
         And the netbackup params have been parsed
@@ -1023,7 +1023,7 @@ Feature: NetBackup Integration with GPDB
         And verify that the plan file is created for the latest timestamp
 
     @nbusmoke
-    @nbupartI
+    @nbupartII
     Scenario: Non compressed incremental backup
         Given the test is initialized
         And the netbackup params have been parsed
@@ -1057,7 +1057,7 @@ Feature: NetBackup Integration with GPDB
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
         And verify that the plan file is created for the latest timestamp
 
-    @nbupartI
+    @nbupartII
     Scenario: Verify the gpcrondump -h option works with full and incremental backups
         Given the test is initialized
         And the netbackup params have been parsed
@@ -1075,7 +1075,7 @@ Feature: NetBackup Integration with GPDB
         And verify that there is a "heap" table "gpcrondump_history" in "bkdb"
         And verify that the table "gpcrondump_history" in "bkdb" has dump info for the stored timestamp
 
-    @nbupartI
+    @nbupartII
     Scenario: gpdbrestore -u option with incremental backup timestamp
         Given the test is initialized
         And the netbackup params have been parsed
@@ -1093,7 +1093,7 @@ Feature: NetBackup Integration with GPDB
         Then verify that the data of "2" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
-    @nbupartI
+    @nbupartII
     Scenario: Incremental backup with -T option
         Given the test is initialized
         And the netbackup params have been parsed
