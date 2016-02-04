@@ -448,7 +448,6 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 		bool		nulls[13];
 		HeapTuple	tuple;
 		PgBackendStatus *beentry;
-		SockAddr	zero_clientaddr;
 
 		MemSet(values, 0, sizeof(values));
 		MemSet(nulls, 0, sizeof(nulls));
@@ -489,6 +488,7 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 		/* Values only available to same user or superuser */
 		if (superuser() || beentry->st_userid == GetUserId())
 		{
+			SockAddr	zero_clientaddr;
 			bool		waiting;
 
 			if (*(beentry->st_activity) == '\0')
@@ -521,7 +521,7 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 			/* A zeroed client addr means we don't know */
 			memset(&zero_clientaddr, 0, sizeof(zero_clientaddr));
 			if (memcmp(&(beentry->st_clientaddr), &zero_clientaddr,
-					   sizeof(zero_clientaddr) == 0))
+					   sizeof(zero_clientaddr)) == 0)
 			{
 				nulls[9] = true;
 				nulls[10] = true;
@@ -814,7 +814,7 @@ pg_stat_get_backend_client_addr(PG_FUNCTION_ARGS)
 	/* A zeroed client addr means we don't know */
 	memset(&zero_clientaddr, 0, sizeof(zero_clientaddr));
 	if (memcmp(&(beentry->st_clientaddr), &zero_clientaddr,
-			   sizeof(zero_clientaddr) == 0))
+			   sizeof(zero_clientaddr)) == 0)
 		PG_RETURN_NULL();
 
 	switch (beentry->st_clientaddr.addr.ss_family)
@@ -860,7 +860,7 @@ pg_stat_get_backend_client_port(PG_FUNCTION_ARGS)
 	/* A zeroed client addr means we don't know */
 	memset(&zero_clientaddr, 0, sizeof(zero_clientaddr));
 	if (memcmp(&(beentry->st_clientaddr), &zero_clientaddr,
-			   sizeof(zero_clientaddr) == 0))
+			   sizeof(zero_clientaddr)) == 0)
 		PG_RETURN_NULL();
 
 	switch (beentry->st_clientaddr.addr.ss_family)
