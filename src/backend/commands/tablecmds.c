@@ -11008,17 +11008,15 @@ ATExecSetTableSpace_AppendOnly(
 
 	if (Debug_persistent_print)
 		elog(Persistent_DebugPrintLevel(), 
-			 "ALTER TABLE SET TABLESPACE: pg_appendonly entry for Append-Only %u/%u/%u, segment file #%d "
+			 "ALTER TABLE SET TABLESPACE: pg_appendonly entry for Append-Only %u/%u/%u, "
 			 "segrelid %u, segidxid %u, "
-			 "persistent TID %s and serial number " INT64_FORMAT,
+			 "persistent TID %s",
 			 rel->rd_node.spcNode,
 			 rel->rd_node.dbNode,
 			 rel->rd_node.relNode,
-			 segmentFileNum,
 			 aoEntry->segrelid,
 			 aoEntry->segidxid,
-			 ItemPointerToString(&oldPersistentTid),
-			 oldPersistentSerialNum);	
+			 ItemPointerToString(&oldPersistentTid));
 
 	/*
 	 * Loop through segment files
