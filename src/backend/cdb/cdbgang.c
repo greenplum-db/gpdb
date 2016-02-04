@@ -1004,7 +1004,6 @@ addOptions(PQExpBufferData *buffer, bool iswriter, int segindex, bool i_am_super
 	}
 
 	appendPQExpBuffer(buffer, " -c gp_qd_callback_info=port=%d", PostPortNumber);
-	appendPQExpBuffer(buffer, " -c gp_qd_proc_offset=%ld", (long) MAKE_OFFSET(MyProc));
 
 	/*
 	 * Transactions are tricky.

@@ -4250,16 +4250,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_qd_proc_offset", PGC_BACKEND, GP_WORKER_IDENTITY,
-			gettext_noop("The shmmem offset of the original QD backend that is handling this query"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
-		},
-		(int *) &gp_qd_proc_offset,
-		-1, -1, INT_MAX, NULL, NULL
-	},
-
-	{
 		{"gp_hashjoin_tuples_per_bucket", PGC_USERSET, GP_ARRAY_TUNING,
 			gettext_noop("Target density of hashtable used by Hashjoin during execution"),
 			gettext_noop("A smaller value will tend to produce larger hashtables, which increases join performance"),

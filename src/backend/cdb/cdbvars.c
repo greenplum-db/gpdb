@@ -58,8 +58,6 @@ bool 		gp_is_callback;		/* are we executing a callback query? */
 
 bool		gp_use_dispatch_agent;	/* Use experimental code for Query Dispatch Agent */
 
-unsigned long gp_qd_proc_offset;	/* the proc entry for the original backend on the QD */
-
 int         gp_command_count;          /* num of commands from client */
 
 bool        gp_debug_pgproc;           /* print debug info for PGPROC */

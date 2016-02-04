@@ -166,7 +166,6 @@ extern int qdPostmasterPort;
 
 extern char * gp_qd_callback_info;
 extern bool gp_use_snapshop_during_callback;
-extern unsigned long gp_qd_proc_offset;
 
 /*
  * Allow callback query?
