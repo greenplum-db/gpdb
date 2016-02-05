@@ -1,0 +1,50 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+core.*
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+
+# backup files
+*~
+\#.*\#
+
+*.orig
+
+.DS_Store
+
+tags
+TAGS
+GPATH
+GTAGS
+GRTAGS
+core
+
+*.gcov
+*.gcda
+*.gcno
+s3test

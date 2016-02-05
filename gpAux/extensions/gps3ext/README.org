@@ -1,0 +1,11 @@
+* Build
+
+  =make= to build the extension for GPDB.
+
+* Test
+** Run Unit Test
+  In order to running test, it need [[https://github.com/GPDBUnite/unite][uniteserver]] to serve the test content and recevie log.
+  =make -f Makefile.test test=
+
+** Test Coverage
+   =make -f Makefile.test coverage=

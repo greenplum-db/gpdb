@@ -387,6 +387,7 @@ define BUILD_STEPS
 	rm -rf $(INSTLOC)
 	cd $(BUILDDIR)/src/include/ && $(MAKE) install
 	@$(MAKE) mkgpfdist INSTLOC=$(INSTLOC)
+	@$(MAKE) mkgps3ext INSTLOC=$(INSTLOC)
 	@$(MAKE) mkdbgen INSTLOC=$(INSTLOC)
 	@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) copylibs INSTLOC=$(INSTLOC)
@@ -1014,6 +1015,9 @@ mkgpfdist:
 
 mkgphdfs:
 	@cd extensions && $(MAKE) mkgphdfs OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)
+
+mkgps3ext:
+    @cd extensions && $(MAKE) mks3ext OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)
 
 mkpljava:
 	@cd extensions && $(MAKE) mkpljava OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)
