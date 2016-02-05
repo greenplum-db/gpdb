@@ -1089,6 +1089,8 @@ def verify_file_contents(context, file_type, file_dir, text_find, should_contain
         fn = '%sgp_dump_%s_filter' % (context.dump_prefix, context.backup_timestamp)
     elif file_type == "statistics":
         fn = '%sgp_statistics_1_1_%s' % (context.dump_prefix, context.backup_timestamp)
+    elif file_type == 'schema':
+        fn = '%sgp_dump_%s_schema' % (context.dump_prefix, context.backup_timestamp)
 
     subdirectory = context.backup_timestamp[0:8]
     
@@ -1329,6 +1331,8 @@ def impl(context, filetype, dir):
         filename = 'gp_dump_%s_regular_files' % context.backup_timestamp
     elif filetype == '_filter':
         filename = 'gp_dump_%s_filter' % context.backup_timestamp
+    elif filetype == '_schema':
+        filename = 'gp_dump_%s_schema' % context.backup_timestamp
     else:
         raise Exception("Unknown filetype '%s' specified" % filetype)
 
