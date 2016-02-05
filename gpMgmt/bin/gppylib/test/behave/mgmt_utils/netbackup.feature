@@ -247,7 +247,6 @@ Feature: NetBackup Integration with GPDB
         Given the test is initialized
         And the netbackup params have been parsed
         And there is a "heap" table "heap_table" in "bkdb" with data
-        And there is a "ao" table "ao_table" in "bkdb" with data
         And there is a backupfile of tables "public.heap_table" in "bkdb" exists for validation
         When the user runs "gpcrondump -a -x bkdb -t public.heap_table --netbackup-block-size 2048" using netbackup
         Then gpcrondump should return a return code of 0
@@ -256,7 +255,6 @@ Feature: NetBackup Integration with GPDB
         And the user runs gpdbrestore with the stored timestamp and options "--netbackup-block-size 2048" without -e option using netbackup
         Then gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "public.heap_table" in "bkdb" with data
-        And verify that there is no "ao" table "public.ao_table" in "bkdb" with data
 
     @nbupartI
     Scenario: Full Backup with option --exclude-table-file and Restore using NetBackup
@@ -760,7 +758,7 @@ Feature: NetBackup Integration with GPDB
     Scenario: Full backup and restore using gpcrondump with pg_class lock using NetBackup
         Given the test is initialized
         And the netbackup params have been parsed
-        And there is a "heap" table "heap_table" in "bkdb" with data and 1000000 rows
+        And there is a "heap" table "heap_table" with compression "None" in "bkdb" with data and 1000000 rows
         And there is a "ao" partition table "ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "heap_table, ao_part_table" in "bkdb" exists for validation
         When the user runs the "gpcrondump -a -x bkdb" in a worker pool "w1" using netbackup
@@ -1018,7 +1016,7 @@ Feature: NetBackup Integration with GPDB
         And the user runs gpdbrestore with the stored timestamp using netbackup
         Then gpdbrestore should return a return code of 0
         And verify that there is no table "testschema.heap_table" in "bkdb"
-        And verify that the data of "60" tables in "bkdb" is validated after restore
+        And verify that the data of "59" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
         And verify that the plan file is created for the latest timestamp
 
@@ -1141,7 +1139,7 @@ Feature: NetBackup Integration with GPDB
     Scenario: Dirty File Scale Test for partitions
         Given the test is initialized
         And the netbackup params have been parsed
-		And there are "240"heap" tables "public.heap_table" with data in "bkdb"
+		And there are "240" "heap" tables "public.heap_table" with data in "bkdb"
         And there is a "ao" partition table "ao_table" in "bkdb" with data
         Then data for partition table "ao_table" with partition level "1" is distributed across all segments on "bkdb"
         And verify that partitioned tables "ao_table" in "bkdb" have 6 partitions
