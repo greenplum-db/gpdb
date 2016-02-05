@@ -1005,7 +1005,7 @@ Feature: NetBackup Integration with GPDB
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored in a list
         And partition "1" of partition table "co_part_table" is assumed to be in dirty state in "bkdb" in schema "testschema"
-        And table "testschema.heap_table" is deleted in "bkdb"
+        And table "testschema.heap_table" is dropped in "bkdb"
         And the user runs "gpcrondump -a -x bkdb --incremental --netbackup-block-size 4096" using netbackup
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored in a list
@@ -1040,7 +1040,7 @@ Feature: NetBackup Integration with GPDB
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored in a list
         And partition "1" of partition table "co_part_table" is assumed to be in dirty state in "bkdb" in schema "testschema"
-        And table "testschema.heap_table" is deleted in "bkdb"
+        And table "testschema.heap_table" is dropped in "bkdb"
         And the user runs "gpcrondump -a -x bkdb --incremental -z --netbackup-block-size 4096" using netbackup
         And gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored in a list
