@@ -2587,9 +2587,8 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the full backup timestamp from gpcrondump is stored
-        And "_filter" file should be created under " "
-        And verify that the "filter" file in " " dir contains "schema_ao.ao_index_table"
-        And verify that the "filter" file in " " dir contains "schema_heap.heap_table"
+        And "_schema" file should be created under " "
+        And verify that the "schema" file in " " dir contains "schema_ao"
         When the user runs "gpcrondump -a -x bkdb --prefix=foo --incremental"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -2617,9 +2616,8 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the full backup timestamp from gpcrondump is stored
-        And "_filter" file should be created under " "
-        And verify that the "filter" file in " " dir contains "schema_ao.ao_index_table"
-        And verify that the "filter" file in " " dir contains "schema_heap.heap_table"
+        And "_schema" file should be created under " "
+        And verify that the "schema" file in " " dir contains "schema_ao"
         And partition "3" is added to partition table "schema_ao.ao_part_table" in "bkdb"
         And partition "2" is dropped from partition table "schema_ao.ao_part_table" in "bkdb"
         When the user runs "gpcrondump -a -x bkdb --prefix=foo --incremental"
@@ -2649,8 +2647,8 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the full backup timestamp from gpcrondump is stored
-        And "_filter" file should be created under " "
-        And verify that the "filter" file in " " dir contains "schema_ao.ao_index_table"
+        And "_schema" file should be created under " "
+        And verify that the "schema" file in " " dir contains "schema_ao"
         And table "schema_ao.ao_index_table" is dropped in "bkdb"
         And partition "3" is added to partition table "schema_ao.ao_part_table" in "bkdb"
         And partition "2" is dropped from partition table "schema_ao.ao_part_table" in "bkdb"
@@ -2681,8 +2679,8 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
         And the full backup timestamp from gpcrondump is stored
-        And "_filter" file should be created under " "
-        And verify that the "filter" file in " " dir contains "schema_ao.ao_index_table"
+        And "_schema" file should be created under " "
+        And verify that the "schema" file in " " dir contains "schema_ao"
         And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
         And table "schema_ao.ao_part_table" is assumed to be in dirty state in "bkdb"
         And table "schema_ao.ao_index_table" is dropped in "bkdb"
