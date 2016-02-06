@@ -4178,18 +4178,11 @@ int dtxCurrentPhase1Count(void)
 static void
 performDtxProtocolPrepare(const char *gid)
 {
-	/*
-	 * Temporarily serialize prepare work in-order to compensate for
-	 * the Postgres parallelism bug described in MPP-1484.
-	 */
-	LWLockAcquire(TemporarySerializePreparesLock, LW_EXCLUSIVE);
-
 	StartTransactionCommand();
 
 	elog(DTM_DEBUG5, "performDtxProtocolCommand going to call PrepareTransactionBlock for distributed transaction (id = '%s')", gid);
 	if (!PrepareTransactionBlock((char *)gid))
 	{
-		LWLockRelease(TemporarySerializePreparesLock);
 		elog(ERROR, "Prepare of distributed transaction %s failed", gid);
 		return;
 	}
@@ -4203,8 +4196,6 @@ performDtxProtocolPrepare(const char *gid)
 	elog(DTM_DEBUG5, "Prepare of distributed transaction succeeded (id = '%s')", gid);
 
 	setDistributedTransactionContext( DTX_CONTEXT_QE_PREPARED );
-
-	LWLockRelease(TemporarySerializePreparesLock);
 }
 
 /**
