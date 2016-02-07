@@ -4221,7 +4221,6 @@ reconstruct_pathkeys(PlannerInfo *root, List *pathkeys, int *resno_map,
 	foreach(i, pathkeys)
 	{
 		PathKey    *pathkey = (PathKey *) lfirst(i);
-		bool		found;
 
 		foreach(j, pathkey->pk_eclass->ec_members)
 		{
@@ -4245,12 +4244,9 @@ reconstruct_pathkeys(PlannerInfo *root, List *pathkeys, int *resno_map,
 										  pathkey->pk_nulls_first);
 
 				new_pathkeys = lappend(new_pathkeys, new_pathkey);
-				found = true;
 				break;
 			}
 		}
-		if (!found)
-			elog(ERROR, "could not find path key item in subplan's target list");
 	}
 
 	new_pathkeys = canonicalize_pathkeys(root, new_pathkeys);
