@@ -1,0 +1,13 @@
+
+Build Test Instruction
+======================
+
+ 1. Create `/tmp/pgsql/source' directory and extract the postgresql
+    source tarball(s) in it.
+
+ 2. Check `VERSIONS' variable in `tests/build_test.sh'.
+
+ 3. Run `./test/build_test.sh' (in the xlogdump source root directory).
+
+ 4. `xlogdump-${VER}' executable(s) must be created.
+

@@ -1,0 +1,35 @@
+
+./01db/output/000000010000000000000002:
+
+[page:0, xlp_info:6, xlp_tli:1, xlp_pageaddr:0/2000000] XLP_LONG_HEADER XLP_BKP_REMOVABLE 
+Unexpected page info flags 0006 at offset 0
+[cur:0/2000020, xid:0, rmid:0(XLOG), len/tot_len:4/36, info:48, prev:0/17F4670] nextOid: 24576
+[cur:0/2000048, xid:1682, rmid:10(Heap), len/tot_len:21/1237, info:8, prev:0/2000020] insert: s/d/r:1664/0/12784 blk/off:0/4 header: none
+[cur:0/2000048, xid:1682, rmid:10(Heap), len/tot_len:21/1237, info:8, prev:0/2000020] bkpblock[1]: s/d/r:1664/0/12784 blk:0 hole_off/len:40/7032
+[cur:0/2000520, xid:1682, rmid:11(Btree), len/tot_len:18/218, info:8, prev:0/2000048] insert_leaf: s/d/r:1664/0/12786 tid 1/4
+[cur:0/2000520, xid:1682, rmid:11(Btree), len/tot_len:18/218, info:8, prev:0/2000048] bkpblock[1]: s/d/r:1664/0/12786 blk:1 hole_off/len:40/8048
+[cur:0/2000600, xid:1682, rmid:11(Btree), len/tot_len:18/194, info:8, prev:0/2000520] insert_leaf: s/d/r:1664/0/12787 tid 1/4
+[cur:0/2000600, xid:1682, rmid:11(Btree), len/tot_len:18/194, info:8, prev:0/2000520] bkpblock[1]: s/d/r:1664/0/12787 blk:1 hole_off/len:40/8072
+[cur:0/20006C8, xid:0, rmid:0(XLOG), len/tot_len:64/96, info:16, prev:0/2000600] checkpoint: redo 0/020006C8; tli 1; nextxid 1683;  nextoid 24576; nextmulti 1; nextoffset 0; online at 0000-00-00 00:00:00 GMT
+[cur:0/2000728, xid:1682, rmid:4(Database), len/tot_len:16/48, info:0, prev:0/20006C8] dbase_create: db_id:16384, tablespace_id:1663, src_db_id:1, src_tablespace_id:1663
+[cur:0/2000758, xid:0, rmid:0(XLOG), len/tot_len:64/96, info:16, prev:0/2000728] checkpoint: redo 0/02000758; tli 1; nextxid 1683;  nextoid 24576; nextmulti 1; nextoffset 0; online at 0000-00-00 00:00:00 GMT
+[cur:0/20007B8, xid:1682, rmid:1(Transaction), len/tot_len:32/64, info:0, prev:0/2000758] d/s:12788/1663 commit at 0000-00-00 00:00:00 GMT
+[cur:0/20007F8, xid:1683, rmid:10(Heap), len/tot_len:21/1237, info:24, prev:0/20007B8] delete: s/d/r:1664/0/12784 block 0 off 4
+[cur:0/20007F8, xid:1683, rmid:10(Heap), len/tot_len:21/1237, info:24, prev:0/20007B8] bkpblock[1]: s/d/r:1664/0/12784 blk:0 hole_off/len:40/7032
+[cur:0/2000CD0, xid:0, rmid:0(XLOG), len/tot_len:64/96, info:16, prev:0/20007F8] checkpoint: redo 0/02000CD0; tli 1; nextxid 1684;  nextoid 24576; nextmulti 1; nextoffset 0; online at 0000-00-00 00:00:00 GMT
+[cur:0/2000D30, xid:1683, rmid:4(Database), len/tot_len:8/40, info:16, prev:0/2000CD0] dbase_drop: db_id:16384, tablespace_id:1663
+[cur:0/2000D58, xid:1683, rmid:1(Transaction), len/tot_len:32/64, info:0, prev:0/2000D30] d/s:12788/1663 commit at 0000-00-00 00:00:00 GMT
+[cur:0/2000D98, xid:0, rmid:0(XLOG), len/tot_len:64/96, info:0, prev:0/2000D58] checkpoint: redo 0/02000D98; tli 1; nextxid 1684;  nextoid 16385; nextmulti 1; nextoffset 0; shutdown at 0000-00-00 00:00:00 GMT
+ReadRecord: record with zero len at 0/02000DF8
+Bogus page magic number 0000 at offset 2000
+[page:1, xlp_info:0, xlp_tli:0, xlp_pageaddr:0/0] 
+ReadRecord: record with zero len at 0/02002010
+Bogus page magic number 0000 at offset 4000
+[page:2, xlp_info:0, xlp_tli:0, xlp_pageaddr:0/0] 
+ReadRecord: record with zero len at 0/02004010
+Bogus page magic number 0000 at offset 6000
+[page:3, xlp_info:0, xlp_tli:0, xlp_pageaddr:0/0] 
+ReadRecord: record with zero len at 0/02006010
+Bogus page magic number 0000 at offset 8000
+[page:4, xlp_info:0, xlp_tli:0, xlp_pageaddr:0/0] 
+ReadRecord: record with zero len at 0/02008010

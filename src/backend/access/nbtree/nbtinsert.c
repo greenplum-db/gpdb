@@ -1194,6 +1194,10 @@ _bt_split(Relation rel, Buffer buf, OffsetNumber firstright,
 		xlrec.level = ropaque->btpo.level;
 		xlrec.firstright = firstright;
 
+		/* Set persistentTid and persistentSerialNum like xl_btreetid_set() does */
+		xlrec.persistentTid = rel->rd_segfile0_relationnodeinfo.persistentTid;
+		xlrec.persistentSerialNum = rel->rd_segfile0_relationnodeinfo.persistentSerialNum;
+
 		rdata[0].data = (char *) &xlrec;
 		rdata[0].len = SizeOfBtreeSplit;
 		rdata[0].buffer = InvalidBuffer;

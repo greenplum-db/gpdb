@@ -1,35 +1,109 @@
-/*
- * xlogdump
- *
- * A tool for extracting data from the PostgreSQL's write ahead logs.
- *
- * Diogo Biazus <diogob@gmail.com>
- * Based on the original xlogdump code by Tom Lane
- *
- * Permission to use, copy, modify, and distribute this software and its
- * documentation for any purpose, without fee, and without a written agreement
- * is hereby granted, provided that the above copyright notice and this
- * paragraph and the following two paragraphs appear in all copies.
- *
- * IN NO EVENT SHALL THE AUTHOR OR DISTRIBUTORS BE LIABLE TO ANY PARTY FOR
- * DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING
- * LOST PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS
- * DOCUMENTATION, EVEN IF THE AUTHOR OR DISTRIBUTORS HAVE BEEN ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- * THE AUTHOR AND DISTRIBUTORS SPECIFICALLY DISCLAIMS ANY WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
- * AND FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS
- * ON AN "AS IS" BASIS, AND THE AUTHOR AND DISTRIBUTORS HAS NO OBLIGATIONS TO
- * PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
- *
- */
 
-How to install:
-  Place these files in a directory called 'xlogdump' under 'contrib' in the PostgreSQL source tree. Then run:
-  
+xlogdump README
+
+
+What's `xlogdump'?
+==================
+
+  A tool for extracting data from the PostgreSQL's write ahead logs.
+
+
+How to install
+==============
+
+  To build xlogdump, you don't need to have PostgreSQL source tree.
+  You can build xlogdump with using pgxs, PostgreSQL header files
+  and shared libraries.
+
+  If you're using PostgreSQL from some RPM packages, those additional
+  requirements are generally included in the supplemental devel package.
+  You need to install it before building xlogdump.
+
+  Also, make sure that you're going to build xlogdump against the same
+  architecture (i686 or x86_64) and the same major version of PostgreSQL.
+
+  Currently, xlogdump cannot deal with WAL files generated on the different
+  architecture. So, you need to build xlogdump on the 32-bit architecture
+  when you want to analyze WAL files generated on the 32-bit box.
+  64-bit as well.
+
+  You need to set two environmental variables, PATH and USE_PGXS.
+  And then, run `make' and `make install' at the directory where
+  you extracted xlogdump source code.
+
+    export PATH=$PATH:/usr/local/pgsql/bin
+    export USE_PGXS=1
     make
     make install
+
    
-Documentation:
-  Read the doc/index.hml for a complete help and examples.
+Supported Version
+=================
+
+  xlogdump is able to be compiled and work with following versions:
+
+  - PostgreSQL 9.2.x
+  - PostgreSQL 9.1.x
+  - PostgreSQL 9.0.x
+  - PostgreSQL 8.4.x
+  - PostgreSQL 8.3.x
+
+
+Usage
+=====
+
+Usage:
+  xlogdump [OPTION]... [segment file(s)]
+
+Options:
+  -r, --rmid=RMID           Outputs only the transaction log records
+                            containing the specified operation.
+                            RMID:Resource Manager
+                               0:XLOG
+                               1:Transaction
+                               2:Storage
+                               3:CLOG
+                               4:Database
+                               5:Tablespace
+                               6:MultiXact
+                               7:RelMap
+                               8:Standby
+                               9:Heap2
+                              10:Heap
+                              11:Btree
+                              12:Hash
+                              13:Gin
+                              14:Gist
+                              15:Sequence
+                              16:SPGist
+  -x, --xid=XID             Outputs only the transaction log records
+                            containing the specified transaction id.
+  -t, --transactions        Outputs only transaction info: the xid,
+                            total length and status of each transaction.
+  -s, --statements          Tries to build fake statements that produce the
+                            physical changes found within the xlog segments.
+  -S, --stats               Collects and shows statistics of the transaction
+                            log records from the xlog segments.
+  -n, --oid2name            Show object names instead of OIDs with looking up
+                            the system catalogs or a cache file.
+  -g, --gen_oid2name        Generate an oid2name cache file (oid2name.out)
+                            by reading the system catalogs.
+  -T, --hide-timestamps     Do not print timestamps.
+  -?, --help                Show this help.
+
+oid2name supplimental options:
+  -h, --host=HOST           database server host or socket directory
+  -p, --port=PORT           database server port number
+  -U, --user=NAME           database user name to connect
+  -d, --dbname=NAME         database name to connect
+  -f, --file=FILE           file name to read oid2name cache
+
+
+Bug report
+==========
+
+  Any bug reports and/or comments are welcome. Please send them to the
+  author:
+
+    Satoshi Nagayasu <satoshi.nagayasu@gmail.com>
+

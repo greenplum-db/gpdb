@@ -310,6 +310,9 @@ typedef struct xl_btree_split
 	uint32		level;			/* tree level of page being split */
 	OffsetNumber firstright;	/* first item moved to right page */
 
+	ItemPointerData persistentTid;
+	int64		persistentSerialNum;
+
 	/*
 	 * If level > 0, BlockIdData downlink follows.  (We use BlockIdData
 	 * rather than BlockNumber for alignment reasons: SizeOfBtreeSplit
@@ -329,7 +332,7 @@ typedef struct xl_btree_split
 	 */
 } xl_btree_split;
 
-#define SizeOfBtreeSplit	(offsetof(xl_btree_split, firstright) + sizeof(OffsetNumber))
+#define SizeOfBtreeSplit	(offsetof(xl_btree_split, persistentSerialNum) + sizeof(int64))
 
 /*
  * This is what we need to know about delete of individual leaf index tuples.

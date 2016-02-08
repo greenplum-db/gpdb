@@ -1,0 +1,237 @@
+
+./07relmap/output/000000010000000000000002:
+
+[page:0, xlp_info:6, xlp_tli:1, xlp_pageaddr:0/2000000] XLP_LONG_HEADER XLP_BKP_REMOVABLE 
+Unexpected page info flags 0006 at offset 0
+[page:1, xlp_info:5, xlp_tli:1, xlp_pageaddr:0/2002000] XLP_FIRST_IS_CONTRECORD XLP_BKP_REMOVABLE 
+[cur:0/2000020, xid:1682, rmid:10(Heap), len/tot_len:28/11988, info:44, prev:0/17F4670] update: s/d/r:1663/12788/12578 block 1 off 42 to block 2 off 21
+[cur:0/2000020, xid:1682, rmid:10(Heap), len/tot_len:28/11988, info:44, prev:0/17F4670] bkpblock[1]: s/d/r:1663/12788/12578 blk:1 hole_off/len:204/148
+[cur:0/2000020, xid:1682, rmid:10(Heap), len/tot_len:28/11988, info:44, prev:0/17F4670] bkpblock[2]: s/d/r:1663/12788/12578 blk:2 hole_off/len:156/4356
+[cur:0/2002F08, xid:1682, rmid:11(Btree), len/tot_len:18/2334, info:8, prev:0/2000020] insert_leaf: s/d/r:1663/12788/12580 tid 1/8
+[cur:0/2002F08, xid:1682, rmid:11(Btree), len/tot_len:18/2334, info:8, prev:0/2000020] bkpblock[1]: s/d/r:1663/12788/12580 blk:1 hole_off/len:468/5932
+[page:2, xlp_info:5, xlp_tli:1, xlp_pageaddr:0/2004000] XLP_FIRST_IS_CONTRECORD XLP_BKP_REMOVABLE 
+[cur:0/2003828, xid:1682, rmid:11(Btree), len/tot_len:18/2334, info:8, prev:0/2002F08] insert_leaf: s/d/r:1663/12788/12581 tid 1/67
+[cur:0/2003828, xid:1682, rmid:11(Btree), len/tot_len:18/2334, info:8, prev:0/2002F08] bkpblock[1]: s/d/r:1663/12788/12581 blk:1 hole_off/len:468/5932
+[cur:0/2004160, xid:1682, rmid:0(XLOG), len/tot_len:4/36, info:48, prev:0/2003828] nextOid: 24576
+[cur:0/2004188, xid:1682, rmid:2(Storage), len/tot_len:16/48, info:16, prev:0/2004160] create rel: s/d/r:1663/12788/16384
+[cur:0/20041B8, xid:1682, rmid:10(Heap), len/tot_len:21/3981, info:8, prev:0/2004188] insert: s/d/r:1663/12788/12531 blk/off:7/20 header: none
+[cur:0/20041B8, xid:1682, rmid:10(Heap), len/tot_len:21/3981, info:8, prev:0/2004188] bkpblock[1]: s/d/r:1663/12788/12531 blk:7 hole_off/len:384/4288
+[page:3, xlp_info:5, xlp_tli:1, xlp_pageaddr:0/2006000] XLP_FIRST_IS_CONTRECORD XLP_BKP_REMOVABLE 
+[cur:0/2005148, xid:1682, rmid:11(Btree), len/tot_len:18/6754, info:8, prev:0/20041B8] insert_leaf: s/d/r:1663/12788/12533 tid 1/332
+[cur:0/2005148, xid:1682, rmid:11(Btree), len/tot_len:18/6754, info:8, prev:0/20041B8] bkpblock[1]: s/d/r:1663/12788/12533 blk:1 hole_off/len:1352/1512
+[cur:0/2006BC0, xid:1682, rmid:11(Btree), len/tot_len:18/3570, info:8, prev:0/2005148] insert_leaf: s/d/r:1663/12788/12534 tid 2/7
+[cur:0/2006BC0, xid:1682, rmid:11(Btree), len/tot_len:18/3570, info:8, prev:0/2005148] bkpblock[1]: s/d/r:1663/12788/12534 blk:2 hole_off/len:448/4696
+[page:4, xlp_info:5, xlp_tli:1, xlp_pageaddr:0/2008000] XLP_FIRST_IS_CONTRECORD XLP_BKP_REMOVABLE 
+[cur:0/20079B8, xid:1682, rmid:10(Heap), len/tot_len:21/5713, info:8, prev:0/2006BC0] insert: s/d/r:1663/12788/12656 blk/off:45/86 header: none
+[cur:0/20079B8, xid:1682, rmid:10(Heap), len/tot_len:21/5713, info:8, prev:0/2006BC0] bkpblock[1]: s/d/r:1663/12788/12656 blk:45 hole_off/len:820/2556
+[cur:0/2009020, xid:1682, rmid:11(Btree), len/tot_len:18/3642, info:8, prev:0/20079B8] insert_leaf: s/d/r:1663/12788/12658 tid 26/118
+[cur:0/2009020, xid:1682, rmid:11(Btree), len/tot_len:18/3642, info:8, prev:0/20079B8] bkpblock[1]: s/d/r:1663/12788/12658 blk:26 hole_off/len:528/4624
+[page:5, xlp_info:5, xlp_tli:1, xlp_pageaddr:0/200A000] XLP_FIRST_IS_CONTRECORD XLP_BKP_REMOVABLE 
+[cur:0/2009E60, xid:1682, rmid:11(Btree), len/tot_len:18/3166, info:8, prev:0/2009020] insert_leaf: s/d/r:1663/12788/12659 tid 18/100
+[cur:0/2009E60, xid:1682, rmid:11(Btree), len/tot_len:18/3166, info:8, prev:0/2009020] bkpblock[1]: s/d/r:1663/12788/12659 blk:18 hole_off/len:460/5100
+[cur:0/200AAD8, xid:1682, rmid:10(Heap), len/tot_len:175/207, info:0, prev:0/2009E60] insert: s/d/r:1663/12788/12531 blk/off:7/21 header: t_infomask2 30 t_infomask 2057 t_hoff 32
+[cur:0/200ABA8, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/200AAD8] insert_leaf: s/d/r:1663/12788/12533 tid 1/332
+[page:6, xlp_info:5, xlp_tli:1, xlp_pageaddr:0/200C000] XLP_FIRST_IS_CONTRECORD XLP_BKP_REMOVABLE 
+[cur:0/200ABF0, xid:1682, rmid:11(Btree), len/tot_len:18/7482, info:8, prev:0/200ABA8] insert_leaf: s/d/r:1663/12788/12534 tid 1/42
+[cur:0/200ABF0, xid:1682, rmid:11(Btree), len/tot_len:18/7482, info:8, prev:0/200ABA8] bkpblock[1]: s/d/r:1663/12788/12534 blk:1 hole_off/len:936/784
+[cur:0/200C940, xid:1682, rmid:10(Heap), len/tot_len:52/84, info:0, prev:0/200ABF0] insert: s/d/r:1663/12788/12656 blk/off:45/87 header: t_infomask2 7 t_infomask 2048 t_hoff 24
+[cur:0/200C998, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/200C940] insert_leaf: s/d/r:1663/12788/12658 tid 26/118
+[page:7, xlp_info:5, xlp_tli:1, xlp_pageaddr:0/200E000] XLP_FIRST_IS_CONTRECORD XLP_BKP_REMOVABLE 
+[cur:0/200C9E8, xid:1682, rmid:11(Btree), len/tot_len:18/7478, info:8, prev:0/200C998] insert_leaf: s/d/r:1663/12788/12659 tid 5/181
+[cur:0/200C9E8, xid:1682, rmid:11(Btree), len/tot_len:18/7478, info:8, prev:0/200C998] bkpblock[1]: s/d/r:1663/12788/12659 blk:5 hole_off/len:1076/788
+[page:8, xlp_info:5, xlp_tli:1, xlp_pageaddr:0/2010000] XLP_FIRST_IS_CONTRECORD XLP_BKP_REMOVABLE 
+[cur:0/200E738, xid:1682, rmid:10(Heap), len/tot_len:21/7533, info:8, prev:0/200C9E8] insert: s/d/r:1663/12788/12554 blk/off:0/28 header: none
+[cur:0/200E738, xid:1682, rmid:10(Heap), len/tot_len:21/7533, info:8, prev:0/200C9E8] bkpblock[1]: s/d/r:1663/12788/12554 blk:0 hole_off/len:336/736
+[cur:0/20104C0, xid:1682, rmid:11(Btree), len/tot_len:18/5914, info:8, prev:0/200E738] insert_leaf: s/d/r:1663/12788/12556 tid 1/290
+[cur:0/20104C0, xid:1682, rmid:11(Btree), len/tot_len:18/5914, info:8, prev:0/200E738] bkpblock[1]: s/d/r:1663/12788/12556 blk:1 hole_off/len:1184/2352
+[page:9, xlp_info:5, xlp_tli:1, xlp_pageaddr:0/2012000] XLP_FIRST_IS_CONTRECORD XLP_BKP_REMOVABLE 
+[cur:0/2011BE0, xid:1682, rmid:11(Btree), len/tot_len:18/4282, info:8, prev:0/20104C0] insert_leaf: s/d/r:1663/12788/12557 tid 2/15
+[cur:0/2011BE0, xid:1682, rmid:11(Btree), len/tot_len:18/4282, info:8, prev:0/20104C0] bkpblock[1]: s/d/r:1663/12788/12557 blk:2 hole_off/len:464/3984
+[cur:0/2012CB0, xid:1682, rmid:10(Heap), len/tot_len:21/1877, info:8, prev:0/2011BE0] insert: s/d/r:1663/12788/12543 blk/off:41/12 header: none
+[cur:0/2012CB0, xid:1682, rmid:10(Heap), len/tot_len:21/1877, info:8, prev:0/2011BE0] bkpblock[1]: s/d/r:1663/12788/12543 blk:41 hole_off/len:72/6392
+[cur:0/2013408, xid:1682, rmid:11(Btree), len/tot_len:18/714, info:8, prev:0/2012CB0] insert_leaf: s/d/r:1663/12788/12545 tid 15/20
+[cur:0/2013408, xid:1682, rmid:11(Btree), len/tot_len:18/714, info:8, prev:0/2012CB0] bkpblock[1]: s/d/r:1663/12788/12545 blk:15 hole_off/len:104/7552
+[cur:0/20136D8, xid:1682, rmid:11(Btree), len/tot_len:18/514, info:8, prev:0/2013408] insert_leaf: s/d/r:1663/12788/12546 tid 10/20
+[cur:0/20136D8, xid:1682, rmid:11(Btree), len/tot_len:18/514, info:8, prev:0/2013408] bkpblock[1]: s/d/r:1663/12788/12546 blk:10 hole_off/len:104/7752
+[cur:0/20138E0, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/20136D8] insert: s/d/r:1663/12788/12543 blk/off:41/13 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2013990, xid:1682, rmid:11(Btree), len/tot_len:50/82, info:0, prev:0/20138E0] insert_leaf: s/d/r:1663/12788/12545 tid 15/21
+[cur:0/20139E8, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2013990] insert_leaf: s/d/r:1663/12788/12546 tid 10/21
+[cur:0/2013A30, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/20139E8] insert: s/d/r:1663/12788/12543 blk/off:41/14 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2013AE0, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2013A30] insert_leaf: s/d/r:1663/12788/12545 tid 15/22
+[cur:0/2013B30, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2013AE0] insert_leaf: s/d/r:1663/12788/12546 tid 10/22
+[cur:0/2013B78, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2013B30] insert: s/d/r:1663/12788/12543 blk/off:41/15 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2013C28, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2013B78] insert_leaf: s/d/r:1663/12788/12545 tid 15/20
+[cur:0/2013C78, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2013C28] insert_leaf: s/d/r:1663/12788/12546 tid 10/23
+[cur:0/2013CC0, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2013C78] insert: s/d/r:1663/12788/12543 blk/off:41/16 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2013D70, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2013CC0] insert_leaf: s/d/r:1663/12788/12545 tid 15/20
+[cur:0/2013DC0, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2013D70] insert_leaf: s/d/r:1663/12788/12546 tid 10/24
+[cur:0/2013E08, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2013DC0] insert: s/d/r:1663/12788/12543 blk/off:41/17 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2013EB8, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2013E08] insert_leaf: s/d/r:1663/12788/12545 tid 15/25
+[cur:0/2013F08, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2013EB8] insert_leaf: s/d/r:1663/12788/12546 tid 10/25
+[cur:0/2013F50, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2013F08] insert: s/d/r:1663/12788/12543 blk/off:41/18 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[page:10, xlp_info:4, xlp_tli:1, xlp_pageaddr:0/2014000] XLP_BKP_REMOVABLE 
+Unexpected page info flags 0004 at offset 14000
+[cur:0/2014010, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2013F50] insert_leaf: s/d/r:1663/12788/12545 tid 15/21
+[cur:0/2014060, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2014010] insert_leaf: s/d/r:1663/12788/12546 tid 10/26
+[cur:0/20140A8, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2014060] insert: s/d/r:1663/12788/12543 blk/off:41/19 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2014158, xid:1682, rmid:11(Btree), len/tot_len:50/82, info:0, prev:0/20140A8] insert_leaf: s/d/r:1663/12788/12545 tid 15/22
+[cur:0/20141B0, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2014158] insert_leaf: s/d/r:1663/12788/12546 tid 10/27
+[cur:0/20141F8, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/20141B0] insert: s/d/r:1663/12788/12543 blk/off:41/20 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/20142A8, xid:1682, rmid:11(Btree), len/tot_len:50/82, info:0, prev:0/20141F8] insert_leaf: s/d/r:1663/12788/12545 tid 15/22
+[cur:0/2014300, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/20142A8] insert_leaf: s/d/r:1663/12788/12546 tid 10/28
+[cur:0/2014348, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2014300] insert: s/d/r:1663/12788/12543 blk/off:41/21 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/20143F8, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2014348] insert_leaf: s/d/r:1663/12788/12545 tid 15/22
+[cur:0/2014448, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/20143F8] insert_leaf: s/d/r:1663/12788/12546 tid 10/29
+[cur:0/2014490, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2014448] insert: s/d/r:1663/12788/12543 blk/off:41/22 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2014540, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2014490] insert_leaf: s/d/r:1663/12788/12545 tid 15/29
+[cur:0/2014590, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2014540] insert_leaf: s/d/r:1663/12788/12546 tid 10/30
+[cur:0/20145D8, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2014590] insert: s/d/r:1663/12788/12543 blk/off:41/23 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2014688, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/20145D8] insert_leaf: s/d/r:1663/12788/12545 tid 15/23
+[cur:0/20146D8, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2014688] insert_leaf: s/d/r:1663/12788/12546 tid 10/31
+[cur:0/2014720, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/20146D8] insert: s/d/r:1663/12788/12543 blk/off:41/24 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/20147D0, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2014720] insert_leaf: s/d/r:1663/12788/12545 tid 15/20
+[cur:0/2014820, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/20147D0] insert_leaf: s/d/r:1663/12788/12546 tid 10/32
+[cur:0/2014868, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2014820] insert: s/d/r:1663/12788/12543 blk/off:41/25 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2014918, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2014868] insert_leaf: s/d/r:1663/12788/12545 tid 15/25
+[cur:0/2014968, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2014918] insert_leaf: s/d/r:1663/12788/12546 tid 10/33
+[cur:0/20149B0, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2014968] insert: s/d/r:1663/12788/12543 blk/off:41/26 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2014A60, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/20149B0] insert_leaf: s/d/r:1663/12788/12545 tid 15/31
+[cur:0/2014AB0, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2014A60] insert_leaf: s/d/r:1663/12788/12546 tid 10/34
+[cur:0/2014AF8, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2014AB0] insert: s/d/r:1663/12788/12543 blk/off:41/27 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2014BA8, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2014AF8] insert_leaf: s/d/r:1663/12788/12545 tid 15/33
+[cur:0/2014BF8, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2014BA8] insert_leaf: s/d/r:1663/12788/12546 tid 10/35
+[cur:0/2014C40, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2014BF8] insert: s/d/r:1663/12788/12543 blk/off:41/28 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2014CF0, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2014C40] insert_leaf: s/d/r:1663/12788/12545 tid 15/35
+[cur:0/2014D40, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2014CF0] insert_leaf: s/d/r:1663/12788/12546 tid 10/36
+[cur:0/2014D88, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2014D40] insert: s/d/r:1663/12788/12543 blk/off:41/29 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2014E38, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2014D88] insert_leaf: s/d/r:1663/12788/12545 tid 15/29
+[cur:0/2014E88, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2014E38] insert_leaf: s/d/r:1663/12788/12546 tid 10/37
+[cur:0/2014ED0, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2014E88] insert: s/d/r:1663/12788/12543 blk/off:41/30 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2014F80, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2014ED0] insert_leaf: s/d/r:1663/12788/12545 tid 15/30
+[cur:0/2014FD0, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2014F80] insert_leaf: s/d/r:1663/12788/12546 tid 10/38
+[cur:0/2015018, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2014FD0] insert: s/d/r:1663/12788/12543 blk/off:41/31 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/20150C8, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2015018] insert_leaf: s/d/r:1663/12788/12545 tid 15/20
+[cur:0/2015118, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/20150C8] insert_leaf: s/d/r:1663/12788/12546 tid 10/39
+[cur:0/2015160, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2015118] insert: s/d/r:1663/12788/12543 blk/off:41/32 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2015210, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2015160] insert_leaf: s/d/r:1663/12788/12545 tid 15/20
+[cur:0/2015260, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2015210] insert_leaf: s/d/r:1663/12788/12546 tid 10/40
+[cur:0/20152A8, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2015260] insert: s/d/r:1663/12788/12543 blk/off:41/33 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2015358, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/20152A8] insert_leaf: s/d/r:1663/12788/12545 tid 15/40
+[cur:0/20153A8, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2015358] insert_leaf: s/d/r:1663/12788/12546 tid 10/41
+[cur:0/20153F0, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/20153A8] insert: s/d/r:1663/12788/12543 blk/off:41/34 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/20154A0, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/20153F0] insert_leaf: s/d/r:1663/12788/12545 tid 15/35
+[cur:0/20154F0, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/20154A0] insert_leaf: s/d/r:1663/12788/12546 tid 10/42
+[cur:0/2015538, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/20154F0] insert: s/d/r:1663/12788/12543 blk/off:41/35 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/20155E8, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2015538] insert_leaf: s/d/r:1663/12788/12545 tid 15/23
+[cur:0/2015638, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/20155E8] insert_leaf: s/d/r:1663/12788/12546 tid 10/43
+[cur:0/2015680, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2015638] insert: s/d/r:1663/12788/12543 blk/off:41/36 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2015730, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2015680] insert_leaf: s/d/r:1663/12788/12545 tid 15/44
+[cur:0/2015780, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2015730] insert_leaf: s/d/r:1663/12788/12546 tid 10/44
+[cur:0/20157C8, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2015780] insert: s/d/r:1663/12788/12543 blk/off:41/37 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2015878, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/20157C8] insert_leaf: s/d/r:1663/12788/12545 tid 15/36
+[cur:0/20158C8, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2015878] insert_leaf: s/d/r:1663/12788/12546 tid 10/45
+[cur:0/2015910, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/20158C8] insert: s/d/r:1663/12788/12543 blk/off:41/38 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/20159C0, xid:1682, rmid:11(Btree), len/tot_len:50/82, info:0, prev:0/2015910] insert_leaf: s/d/r:1663/12788/12545 tid 15/26
+[cur:0/2015A18, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/20159C0] insert_leaf: s/d/r:1663/12788/12546 tid 10/46
+[cur:0/2015A60, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2015A18] insert: s/d/r:1663/12788/12543 blk/off:41/39 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2015B10, xid:1682, rmid:11(Btree), len/tot_len:50/82, info:0, prev:0/2015A60] insert_leaf: s/d/r:1663/12788/12545 tid 15/27
+[cur:0/2015B68, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2015B10] insert_leaf: s/d/r:1663/12788/12546 tid 10/47
+[cur:0/2015BB0, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2015B68] insert: s/d/r:1663/12788/12543 blk/off:41/40 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2015C60, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2015BB0] insert_leaf: s/d/r:1663/12788/12545 tid 15/27
+[cur:0/2015CB0, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2015C60] insert_leaf: s/d/r:1663/12788/12546 tid 10/48
+[cur:0/2015CF8, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2015CB0] insert: s/d/r:1663/12788/12543 blk/off:41/41 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2015DA8, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2015CF8] insert_leaf: s/d/r:1663/12788/12545 tid 15/20
+[cur:0/2015DF8, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2015DA8] insert_leaf: s/d/r:1663/12788/12546 tid 10/49
+[cur:0/2015E40, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2015DF8] insert: s/d/r:1663/12788/12543 blk/off:41/42 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2015EF0, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2015E40] insert_leaf: s/d/r:1663/12788/12545 tid 15/20
+[cur:0/2015F40, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2015EF0] insert_leaf: s/d/r:1663/12788/12546 tid 10/20
+[page:11, xlp_info:5, xlp_tli:1, xlp_pageaddr:0/2016000] XLP_FIRST_IS_CONTRECORD XLP_BKP_REMOVABLE 
+[cur:0/2015F88, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2015F40] insert: s/d/r:1663/12788/12543 blk/off:41/43 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2016050, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2015F88] insert_leaf: s/d/r:1663/12788/12545 tid 15/21
+[cur:0/2016098, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2016050] insert_leaf: s/d/r:1663/12788/12546 tid 10/20
+[cur:0/20160E0, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2016098] insert: s/d/r:1663/12788/12543 blk/off:41/44 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2016190, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/20160E0] insert_leaf: s/d/r:1663/12788/12545 tid 15/52
+[cur:0/20161E0, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2016190] insert_leaf: s/d/r:1663/12788/12546 tid 10/20
+[cur:0/2016228, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/20161E0] insert: s/d/r:1663/12788/12543 blk/off:41/45 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/20162D8, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2016228] insert_leaf: s/d/r:1663/12788/12545 tid 15/20
+[cur:0/2016328, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/20162D8] insert_leaf: s/d/r:1663/12788/12546 tid 10/20
+[cur:0/2016370, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2016328] insert: s/d/r:1663/12788/12543 blk/off:41/46 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2016420, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2016370] insert_leaf: s/d/r:1663/12788/12545 tid 15/53
+[cur:0/2016470, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2016420] insert_leaf: s/d/r:1663/12788/12546 tid 10/20
+[cur:0/20164B8, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/2016470] insert: s/d/r:1663/12788/12543 blk/off:41/47 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/2016568, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/20164B8] insert_leaf: s/d/r:1663/12788/12545 tid 15/20
+[cur:0/20165B8, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/2016568] insert_leaf: s/d/r:1663/12788/12546 tid 10/20
+[cur:0/2016600, xid:1682, rmid:10(Heap), len/tot_len:143/175, info:0, prev:0/20165B8] insert: s/d/r:1663/12788/12543 blk/off:41/48 header: t_infomask2 21 t_infomask 2049 t_hoff 32
+[cur:0/20166B0, xid:1682, rmid:11(Btree), len/tot_len:42/74, info:0, prev:0/2016600] insert_leaf: s/d/r:1663/12788/12545 tid 15/24
+[cur:0/2016700, xid:1682, rmid:11(Btree), len/tot_len:34/66, info:0, prev:0/20166B0] insert_leaf: s/d/r:1663/12788/12546 tid 10/20
+[cur:0/2016748, xid:1682, rmid:10(Heap), len/tot_len:207/239, info:64, prev:0/2016700] hot_update: s/d/r:1663/12788/12554 block 0 off 2 to block 0 off 33
+[cur:0/2016838, xid:1682, rmid:10(Heap), len/tot_len:174/206, info:64, prev:0/2016748] hot_update: s/d/r:1663/12788/12554 block 0 off 28 to block 0 off 34
+[cur:0/2016908, xid:1682, rmid:2(Storage), len/tot_len:16/48, info:16, prev:0/2016838] create rel: s/d/r:1663/12788/16387
+[page:12, xlp_info:5, xlp_tli:1, xlp_pageaddr:0/2018000] XLP_FIRST_IS_CONTRECORD XLP_BKP_REMOVABLE 
+[cur:0/2016938, xid:1682, rmid:10(Heap), len/tot_len:28/7968, info:72, prev:0/2016908] hot_update: s/d/r:1663/12788/12554 block 2 off 16 to block 2 off 2
+[cur:0/2016938, xid:1682, rmid:10(Heap), len/tot_len:28/7968, info:72, prev:0/2016908] bkpblock[1]: s/d/r:1663/12788/12554 blk:2 hole_off/len:244/308
+[cur:0/2018870, xid:1682, rmid:10(Heap), len/tot_len:183/215, info:112, prev:0/2016938] inplace: s/d/r:1663/12788/12554 block 0 off 33
+[cur:0/2018948, xid:1682, rmid:10(Heap), len/tot_len:150/182, info:112, prev:0/2018870] inplace: s/d/r:1663/12788/12554 block 2 off 2
+[cur:0/2018A00, xid:1682, rmid:2(Storage), len/tot_len:16/48, info:16, prev:0/2018948] create rel: s/d/r:1663/12788/16388
+[cur:0/2018A30, xid:1682, rmid:10(Heap), len/tot_len:174/206, info:64, prev:0/2018A00] hot_update: s/d/r:1663/12788/12554 block 2 off 19 to block 2 off 6
+[cur:0/2018B00, xid:1682, rmid:10(Heap), len/tot_len:150/182, info:112, prev:0/2018A30] inplace: s/d/r:1663/12788/12554 block 2 off 6
+[cur:0/2018BB8, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2018B00] delete: s/d/r:1663/12788/12656 block 45 off 87
+[cur:0/2018BF0, xid:1682, rmid:10(Heap), len/tot_len:21/3701, info:24, prev:0/2018BB8] delete: s/d/r:1663/12788/16384 block 7 off 19
+[cur:0/2018BF0, xid:1682, rmid:10(Heap), len/tot_len:21/3701, info:24, prev:0/2018BB8] bkpblock[1]: s/d/r:1663/12788/16384 blk:7 hole_off/len:104/4568
+[cur:0/2019A68, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2018BF0] delete: s/d/r:1663/12788/12656 block 45 off 86
+[cur:0/2019AA0, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019A68] delete: s/d/r:1663/12788/16384 block 7 off 20
+[cur:0/2019AD8, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019AA0] delete: s/d/r:1663/12788/12543 block 41 off 48
+[cur:0/2019B10, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019AD8] delete: s/d/r:1663/12788/12543 block 41 off 47
+[cur:0/2019B48, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019B10] delete: s/d/r:1663/12788/12543 block 41 off 46
+[cur:0/2019B80, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019B48] delete: s/d/r:1663/12788/12543 block 41 off 45
+[cur:0/2019BB8, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019B80] delete: s/d/r:1663/12788/12543 block 41 off 44
+[cur:0/2019BF0, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019BB8] delete: s/d/r:1663/12788/12543 block 41 off 43
+[cur:0/2019C28, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019BF0] delete: s/d/r:1663/12788/12543 block 41 off 42
+[cur:0/2019C60, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019C28] delete: s/d/r:1663/12788/12543 block 41 off 12
+[cur:0/2019C98, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019C60] delete: s/d/r:1663/12788/12543 block 41 off 13
+[cur:0/2019CD0, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019C98] delete: s/d/r:1663/12788/12543 block 41 off 14
+[cur:0/2019D08, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019CD0] delete: s/d/r:1663/12788/12543 block 41 off 15
+[cur:0/2019D40, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019D08] delete: s/d/r:1663/12788/12543 block 41 off 16
+[cur:0/2019D78, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019D40] delete: s/d/r:1663/12788/12543 block 41 off 17
+[cur:0/2019DB0, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019D78] delete: s/d/r:1663/12788/12543 block 41 off 18
+[cur:0/2019DE8, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019DB0] delete: s/d/r:1663/12788/12543 block 41 off 19
+[cur:0/2019E20, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019DE8] delete: s/d/r:1663/12788/12543 block 41 off 20
+[cur:0/2019E58, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019E20] delete: s/d/r:1663/12788/12543 block 41 off 21
+[cur:0/2019E90, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019E58] delete: s/d/r:1663/12788/12543 block 41 off 22
+[cur:0/2019EC8, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019E90] delete: s/d/r:1663/12788/12543 block 41 off 23
+[cur:0/2019F00, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019EC8] delete: s/d/r:1663/12788/12543 block 41 off 24
+[cur:0/2019F38, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019F00] delete: s/d/r:1663/12788/12543 block 41 off 25
+[cur:0/2019F70, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019F38] delete: s/d/r:1663/12788/12543 block 41 off 26
+[cur:0/2019FA8, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019F70] delete: s/d/r:1663/12788/12543 block 41 off 27
+[page:13, xlp_info:5, xlp_tli:1, xlp_pageaddr:0/201A000] XLP_FIRST_IS_CONTRECORD XLP_BKP_REMOVABLE 
+[cur:0/2019FE0, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019FA8] delete: s/d/r:1663/12788/12543 block 41 off 28
+[cur:0/201A030, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/2019FE0] delete: s/d/r:1663/12788/12543 block 41 off 29
+[cur:0/201A068, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/201A030] delete: s/d/r:1663/12788/12543 block 41 off 30
+[cur:0/201A0A0, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/201A068] delete: s/d/r:1663/12788/12543 block 41 off 31
+[cur:0/201A0D8, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/201A0A0] delete: s/d/r:1663/12788/12543 block 41 off 32
+[cur:0/201A110, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/201A0D8] delete: s/d/r:1663/12788/12543 block 41 off 33
+[cur:0/201A148, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/201A110] delete: s/d/r:1663/12788/12543 block 41 off 34
+[cur:0/201A180, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/201A148] delete: s/d/r:1663/12788/12543 block 41 off 35
+[cur:0/201A1B8, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/201A180] delete: s/d/r:1663/12788/12543 block 41 off 36
+[cur:0/201A1F0, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/201A1B8] delete: s/d/r:1663/12788/12543 block 41 off 37
+[cur:0/201A228, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/201A1F0] delete: s/d/r:1663/12788/12543 block 41 off 38
+[cur:0/201A260, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/201A228] delete: s/d/r:1663/12788/12543 block 41 off 39
+[cur:0/201A298, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/201A260] delete: s/d/r:1663/12788/12543 block 41 off 40
+[cur:0/201A2D0, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/201A298] delete: s/d/r:1663/12788/12543 block 41 off 41
+[cur:0/201A308, xid:1682, rmid:10(Heap), len/tot_len:21/53, info:16, prev:0/201A2D0] delete: s/d/r:1663/12788/12554 block 0 off 34
+[cur:0/201A340, xid:1682, rmid:7(RelMap), len/tot_len:524/556, info:0, prev:0/201A308] update: dbid:12788, tsid:1663, nbytes:512
+[cur:0/201A570, xid:1682, rmid:1(Transaction), len/tot_len:68/100, info:0, prev:0/201A340] d/s:12788/1663 commit at 0000-00-00 00:00:00 GMT
+[cur:0/201A5D8, xid:0, rmid:0(XLOG), len/tot_len:64/96, info:0, prev:0/201A570] checkpoint: redo 0/0201A5D8; tli 1; nextxid 1683;  nextoid 16389; nextmulti 1; nextoffset 0; shutdown at 0000-00-00 00:00:00 GMT
+ReadRecord: record with zero len at 0/0201A638
+Bogus page magic number 0000 at offset 1C000
+[page:14, xlp_info:0, xlp_tli:0, xlp_pageaddr:0/0] 
+ReadRecord: record with zero len at 0/0201C010
+Bogus page magic number 0000 at offset 1E000
+[page:15, xlp_info:0, xlp_tli:0, xlp_pageaddr:0/0] 
+ReadRecord: record with zero len at 0/0201E010
+Bogus page magic number 0000 at offset 20000
+[page:16, xlp_info:0, xlp_tli:0, xlp_pageaddr:0/0] 
+ReadRecord: record with zero len at 0/02020010
+Bogus page magic number 0000 at offset 22000
+[page:17, xlp_info:0, xlp_tli:0, xlp_pageaddr:0/0] 
+ReadRecord: record with zero len at 0/02022010

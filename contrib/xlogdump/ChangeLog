@@ -1,0 +1,45 @@
+2011-11-15  Satoshi Nagayasu <satoshi.nagayasu@gmail.com>
+	* Version 0.5.1
+	* Allows to lookup the object names for the build-in database objects
+	  by reading `oid2name.txt' file, instead of reading the system
+	  catalogs through a database connection,
+	* Added '-f, --file' option to read an oid2name cache file,
+	* Added '-g, --gen_oid2name' option to generate an oid2name file
+	  to cache oids and object names in the system catalogs.
+
+2011-09-26  Satoshi Nagayasu <satoshi.nagayasu@gmail.com>
+	* Version 0.5.0
+	* Fixed to allow to be compiled againt 9.1.
+	* Fixed Makefile to fit with the PostgreSQL `contrib' directory.
+	* Fixed compilation errors which depend on a variety of platforms.
+	* Improved and added several xlog record outputs on RMGR operations.
+	* Added `-n, --oid2name' options to show the object names, instead
+	  of the object ids, with looking up the system catalogs.
+	* Renamed `--username' option with `--user'.
+	* Added default values for `--host', `--port', and `--user' options.
+	* Rewrote local oid-name caching functions for looking up object
+	  names from object ids.
+	* Replaced `--rmname' option with `--rmid' to specify a RMGR id,
+	  not RMGR name, for the output filter by the specific RMGR.
+	* Added `-x, --xid' options to filter printing xlog records by
+	  the specific transaction id.
+	* Fixed timestamp outputs on printing commit/abort xlog records.
+	* Fixed SEGV on specifying `--statements' option.
+	  (But this option is still not working)
+	* Added `-S, --stats' options to collect and show statistics of
+	  xlog records from the WAL segment(s).
+	
+2011-09-04  Satoshi Nagayasu <satoshi.nagayasu@gmail.com>
+	* Version 0.4.0
+	* Moved the xlogdump codebase from the original xlogviewer project
+	  into the new github repository.
+	  Original xlogdump: http://xlogviewer.projects.postgresql.org/
+	* Fixed compilation errors to be able to work with several PostgreSQL
+	  major versions through 8.2 to 9.0, and added a build test script.
+	* Fixed object name lookup functions which enables to show object
+	  name instead of object ids.
+	* Refactored xlog dump format and printing functions.
+	* Added several RMGR operations, in the xlog records, to be shown.
+	* Refactored various code, and cleaned up output messages,
+	  including help messages.
+	* Added a README file.
