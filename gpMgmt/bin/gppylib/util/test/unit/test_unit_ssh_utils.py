@@ -3,6 +3,8 @@
 import mock
 import sys, os, pwd
 import unittest2 as unittest
+from StringIO import StringIO
+from mock import patch
 
 try:
     gphome = os.environ.get('GPHOME')
@@ -67,6 +69,23 @@ class SshUtilsTestCase(unittest.TestCase):
             session2 = Session()
             session2.login(['localhost'], 'gpadmin', 1.0, 4.0)
             mock_login.assert_called_with('localhost', 'gpadmin', sync_multiplier=4.0)
+
+    @patch('sys.stdout', new_callable=StringIO)
+    def test04_exceptions(self, mock_stdout):
+        '''
+        Test pxssh.login() exceptions
+        '''
+        with mock.patch.object(pxssh.pxssh, 'login', side_effect=pxssh.ExceptionPxssh('foo')) as mock_login:
+            session1 = Session()
+            session1.login(['localhost'], 'gpadmin', 0.05, 1.0)
+            self.assertEqual(mock_stdout.getvalue(), '[ERROR] unable to login to localhost\nfoo\n')
+            mock_stdout.truncate(0)
+
+        with mock.patch.object(pxssh.pxssh, 'login', side_effect=pxssh.EOF('foo')) as mock_login:
+            session2 = Session()
+            session2.login(['localhost'], 'gpadmin', 0.05, 1.0)
+            self.assertEqual(mock_stdout.getvalue(), '[ERROR] unable to login to localhost\nCould not acquire connection.\n')
+            mock_stdout.truncate(0)
 
 if __name__ == "__main__":
     unittest.main()

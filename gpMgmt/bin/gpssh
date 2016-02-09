@@ -195,11 +195,11 @@ def interactive():
             print '\n[Unexpected EOF from some hosts...]'
             pass
         except ssh_utils.Session.SessionCmdExit:
-                print ''
-                break
+            print ''
+            break
         except ssh_utils.Session.SessionError, e:
-                print 'Error: %s' % e
-                pass
+            print 'Error: %s' % e
+            pass
         except KeyboardInterrupt:
             print '\n[Interrupt...]'
             GV.session.reset()
