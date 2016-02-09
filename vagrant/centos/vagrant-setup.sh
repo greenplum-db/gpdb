@@ -3,8 +3,7 @@
 set -x
 
 # install packages needed to build and run GPDB
-sudo systemctl stop firewalld
-#sudo yum -y update
+sudo yum -y update
 sudo yum -y groupinstall "Development tools"
 sudo yum -y install ed
 sudo yum -y install readline-devel
@@ -30,5 +29,4 @@ sudo usermod -aG docker gpadmin
 sudo usermod -aG docker vagrant
 
 # Misc
-sudo yum -y install vim mc
-
+sudo yum -y install vim mc psmisc
