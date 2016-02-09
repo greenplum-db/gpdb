@@ -946,13 +946,13 @@ ERROR:  "myview" is not a table
 drop view myview;
 -- test some commands to make sure they fail on the dropped column
 analyze atacc1(a);
-ERROR:  Relation atacc1 does not have an attribute named a.
+ERROR:  column "a" of relation "atacc1" does not exist
 analyze atacc1("........pg.dropped.1........");
-ERROR:  Relation atacc1 does not have an attribute named ........pg.dropped.1.........
+ERROR:  column "........pg.dropped.1........" of relation "atacc1" does not exist
 vacuum analyze atacc1(a);
-ERROR:  Relation atacc1 does not have an attribute named a.
+ERROR:  column "a" of relation "atacc1" does not exist
 vacuum analyze atacc1("........pg.dropped.1........");
-ERROR:  Relation atacc1 does not have an attribute named ........pg.dropped.1.........
+ERROR:  column "........pg.dropped.1........" of relation "atacc1" does not exist
 comment on column atacc1.a is 'testing';
 ERROR:  column "a" of relation "atacc1" does not exist
 comment on column atacc1."........pg.dropped.1........" is 'testing';
