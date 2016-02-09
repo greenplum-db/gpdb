@@ -6,7 +6,6 @@ Vagrant.configure(2) do |config|
   # Base box: Centos-7 box
   # NOTE: Over time the VMI below may become outdated, so may need to be 
   #       substituted with a more recent VMI
-  #config.vm.box = "bento/centos-6.7"
   config.vm.box = "boxcutter/centos72"
 
   # Make this VM reachable on the host network as well, so that other
