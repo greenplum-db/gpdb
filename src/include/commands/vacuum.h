@@ -56,21 +56,6 @@ typedef struct VacAttrStats *VacAttrStatsP;
 typedef Datum (*AnalyzeAttrFetchFunc) (VacAttrStatsP stats, int rownum,
 												   bool *isNull);
 
-typedef struct PgStatistic
-{
-	bool		stats_valid;
-	float4		stanullfrac;	/* fraction of entries that are NULL */
-	int4		stawidth;		/* average width of column values */
-	float4		stadistinct;	/* # distinct values */
-	int2		stakind[STATISTIC_NUM_SLOTS];
-	Oid			staop[STATISTIC_NUM_SLOTS];
-	int			numnumbers[STATISTIC_NUM_SLOTS];
-	float4	   *stanumbers[STATISTIC_NUM_SLOTS];
-	int			numvalues[STATISTIC_NUM_SLOTS];
-	Datum	   *stavalues[STATISTIC_NUM_SLOTS];
-	
-} PgStatistic;
-
 typedef struct VacAttrStats
 {
 	/*
@@ -96,8 +81,17 @@ typedef struct VacAttrStats
 	 * These fields are to be filled in by the compute_stats routine. (They
 	 * are initialized to zero when the struct is created.)
 	 */
-	PgStatistic pgstat;
-	
+	bool		stats_valid;
+	float4		stanullfrac;	/* fraction of entries that are NULL */
+	int4		stawidth;		/* average width of column values */
+	float4		stadistinct;	/* # distinct values */
+	int2		stakind[STATISTIC_NUM_SLOTS];
+	Oid			staop[STATISTIC_NUM_SLOTS];
+	int			numnumbers[STATISTIC_NUM_SLOTS];
+	float4	   *stanumbers[STATISTIC_NUM_SLOTS];
+	int			numvalues[STATISTIC_NUM_SLOTS];
+	Datum	   *stavalues[STATISTIC_NUM_SLOTS];
+
 	/*
 	 * These fields are private to the main ANALYZE code and should not be
 	 * looked at by type-specific functions.
@@ -118,49 +112,18 @@ typedef struct VacuumStatsContext
 	VacAttrStats **vac_stats;
 } VacuumStatsContext;
 
-typedef enum VacuumStatsType
-{
-	PG_CLASS_STATS,
-	PG_STATISTIC_STATS
-} VacuumStatsType;
-
 /*
- * VUpdatedStats represents the base structure for the stats info for
- * both pg_class and pg_statistic. This is used to store the stats collected from
- * QE.
- *
- * Depending on the value for 'type', the object represents either VPgClassStats
- * or VPgStatisticStats.
+ * VPgClassStats is used to hold the stats information that are stored in
+ * pg_class. It is sent from QE to QD in a special libpq message , when a
+ * QE runs VACUUM on a table.
  */
-typedef struct VUpdatedStats
-{
-	VacuumStatsType type;
-	Oid relid;
-} VUpdatedStats;
-
 typedef struct VPgClassStats
 {
-	VUpdatedStats metadata;
+	Oid			relid;
 	BlockNumber rel_pages;
-	double rel_tuples;
+	double		rel_tuples;
 	BlockNumber empty_end_pages;
 } VPgClassStats;
-
-typedef struct VPgStatisticStats
-{
-	VUpdatedStats metadata;
-	
-	/* Represent tuples in pg_statistic table from QEs */
-	List *tuples;
-
-	/* The number of tuples corresponding each tuple in 'tuples'.  */
-	List *reltuples;
-
-	/* The corresponing attribute index */
-	int16 attno;
-	PgStatistic pgstat;
-} VPgStatisticStats;
-
 
 /* GUC parameters */
 extern PGDLLIMPORT int default_statistics_target; /* PGDLLIMPORT for PostGIS */

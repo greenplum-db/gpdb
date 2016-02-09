@@ -1481,14 +1481,11 @@ vac_update_relstats(Relation rel, BlockNumber num_pages, double num_tuples,
 		num_tuples = 0.0;
 		foreach (lc, updated_stats)
 		{
-			VUpdatedStats *stats = (VUpdatedStats*) lfirst(lc);
-			if (stats->relid == relid && stats->type == PG_CLASS_STATS)
+			VPgClassStats *stats = (VPgClassStats *) lfirst(lc);
+			if (stats->relid == relid)
 			{
-				VPgClassStats *pgclass_stats = (VPgClassStats *)stats;
-
-				num_pages += pgclass_stats->rel_pages;
-				num_tuples += pgclass_stats->rel_tuples;
-
+				num_pages += stats->rel_pages;
+				num_tuples += stats->rel_tuples;
 				break;
 			}
 		}
@@ -1506,13 +1503,12 @@ vac_update_relstats(Relation rel, BlockNumber num_pages, double num_tuples,
 
 		pq_beginmessage(&buf, 'y');
 		pq_sendstring(&buf, "VACUUM");
-		stats.metadata.type = PG_CLASS_STATS;
-		stats.metadata.relid = relid;
+		stats.relid = relid;
 		stats.rel_pages = num_pages;
 		stats.rel_tuples = num_tuples;
 		stats.empty_end_pages = 0;
 		pq_sendint(&buf, sizeof(VPgClassStats), sizeof(int));
-		pq_sendbytes(&buf, (char*)(&stats), sizeof(VPgClassStats));
+		pq_sendbytes(&buf, (char *) &stats, sizeof(VPgClassStats));
 		pq_endmessage(&buf);
 	}
 
@@ -2008,15 +2004,14 @@ vacuum_rel(Relation onerel, VacuumStmt *vacstmt, LOCKMODE lmode, List *updated_s
 static void
 save_vacstats(Oid relid, BlockNumber rel_pages, double rel_tuples, BlockNumber empty_end_pages)
 {
-	VPgClassStats	   *stats;
+	VPgClassStats *stats;
 
 	if (VacFullInitialStatsSize >= MaxVacFullInitialStatsSize)
 		elog(ERROR, "out of stats slot");
 
 	stats = &VacFullInitialStats[VacFullInitialStatsSize++];
 
-	stats->metadata.type = PG_CLASS_STATS;
-	stats->metadata.relid = relid;
+	stats->relid = relid;
 	stats->rel_pages = rel_pages;
 	stats->rel_tuples = rel_tuples;
 	stats->empty_end_pages = empty_end_pages;
@@ -2438,7 +2433,7 @@ scan_heap_for_truncate(VRelStats *vacrelstats, Relation onerel,
 	double		num_tuples;
 	bool		do_shrinking = true;
 	int			i;
-	VPgClassStats	   *prev_stats = NULL;
+	VPgClassStats *prev_stats = NULL;
 
 	relname = RelationGetRelationName(onerel);
 
@@ -2455,8 +2450,8 @@ scan_heap_for_truncate(VRelStats *vacrelstats, Relation onerel,
 	/* Retrieve the relation stats info from the previous transaction. */
 	for (i = 0; i < VacFullInitialStatsSize; i++)
 	{
-		VPgClassStats	   *stats = &VacFullInitialStats[i];
-		if (stats->metadata.relid == RelationGetRelid(onerel))
+		VPgClassStats *stats = &VacFullInitialStats[i];
+		if (stats->relid == RelationGetRelid(onerel))
 		{
 			prev_stats = stats;
 			break;
@@ -5212,35 +5207,25 @@ vacuum_combine_stats(CdbDispatchResults *primaryResults,
 			ListCell *lc = NULL;
 
 			struct pg_result *pgresult = cdbdisp_getPGresult(result, pgresult_no);
-			int type;
 
 			if (pgresult->extras == NULL)
 				continue;
 
 			Assert(pgresult->extraslen > sizeof(int));
 
-			/* Check for the type of stats that are received */
-			memcpy(&type, pgresult->extras, sizeof(int));
-			Assert(type == PG_CLASS_STATS);
-
 			/*
 			 * Process the stats for pg_class. We simple compute the maximum
 			 * number of rel_tuples and rel_pages.
 			 */
-			pgclass_stats = (VPgClassStats *)pgresult->extras;
+			pgclass_stats = (VPgClassStats *) pgresult->extras;
 			foreach (lc, stats_context->updated_stats)
 			{
-				VUpdatedStats *tmp_stats = (VUpdatedStats *)lfirst(lc);
-				if (tmp_stats->relid == pgclass_stats->metadata.relid &&
-						tmp_stats->type == PG_CLASS_STATS)
+				VPgClassStats *tmp_stats = (VPgClassStats *) lfirst(lc);
+
+				if (tmp_stats->relid == pgclass_stats->relid)
 				{
-					VPgClassStats *tmp_pgclass_stats = (VPgClassStats *)tmp_stats;
-
-					tmp_pgclass_stats->rel_pages +=
-							pgclass_stats->rel_pages;
-					tmp_pgclass_stats->rel_tuples +=
-							pgclass_stats->rel_tuples;
-
+					tmp_stats->rel_pages += pgclass_stats->rel_pages;
+					tmp_stats->rel_tuples += pgclass_stats->rel_tuples;
 					break;
 				}
 			}
