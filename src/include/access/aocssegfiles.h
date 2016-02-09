@@ -7,6 +7,10 @@
 #ifndef AOCS_SEGFILES_H
 #define AOCS_SEGFILES_H
 
+#include "access/appendonly_visimap.h"
+#include "access/aosegfiles.h"
+#include "utils/tqual.h"
+
 #define Natts_pg_aocsseg 6
 #define Anum_pg_aocs_segno 1
 #define Anum_pg_aocs_tupcount 2

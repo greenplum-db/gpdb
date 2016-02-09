@@ -64,6 +64,7 @@ typedef struct VacAttrStats
 	 */
 	Form_pg_attribute attr;		/* copy of pg_attribute row for column */
 	Form_pg_type attrtype;		/* copy of pg_type row for column */
+	char		relstorage;		/* pg_class.relstorage for table */
 	MemoryContext anl_context;	/* where to save long-lived data */
 
 	/*
@@ -140,8 +141,11 @@ extern void vac_update_relstats(Relation rel,
 								BlockNumber num_pages,
 								double num_tuples,
 								bool hasindex,
-								TransactionId frozenxid,
-								List *updated_stats);
+								TransactionId frozenxid);
+extern void vac_update_relstats_from_list(Relation rel,
+							  BlockNumber num_pages, double num_tuples,
+							  bool hasindex, TransactionId frozenxid,
+										  List *updated_stats);
 extern void vacuum_set_xid_limits(VacuumStmt *vacstmt, bool sharedRel,
 					  TransactionId *oldestXmin,
 					  TransactionId *freezeLimit);
@@ -167,6 +171,7 @@ extern void gen_oids_for_bitmaps(VacuumStmt *vacstmt, Relation onerel);
 extern List *get_oids_for_bitmap(List *all_extra_oids, Relation Irel, Relation onerel, int occurrence);
 
 /* in commands/analyze.c */
+extern void analyze_rel(Oid relid, VacuumStmt *vacstmt);
 extern void analyzeStatement(VacuumStmt *vacstmt, List *relids);
-extern void analyzeStmt(VacuumStmt *vacstmt, List *relids);
+//extern void analyzeStmt(VacuumStmt *vacstmt, List *relids);
 #endif   /* VACUUM_H */

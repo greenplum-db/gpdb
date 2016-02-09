@@ -1425,6 +1425,38 @@ vacuum_set_xid_limits(VacuumStmt *vacstmt, bool sharedRel,
 	*freezeLimit = limit;
 }
 
+void
+vac_update_relstats_from_list(Relation rel,
+							  BlockNumber num_pages, double num_tuples,
+							  bool hasindex, TransactionId frozenxid,
+							  List *updated_stats)
+{
+	/*
+	 * If this is QD, use the stats collected in updated_stats instead of
+	 * the one provided through 'num_pages' and 'num_tuples'.  It doesn't
+	 * seem worth doing so for system tables, though (it'd better say
+	 * "non-distributed" tables than system relations here, but for now
+	 * it's effectively the same.)
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH && !IsSystemRelation(rel))
+	{
+		ListCell *lc;
+		num_pages = 0;
+		num_tuples = 0.0;
+		foreach (lc, updated_stats)
+		{
+			VPgClassStats *stats = (VPgClassStats *) lfirst(lc);
+			if (stats->relid == RelationGetRelid(rel))
+			{
+				num_pages += stats->rel_pages;
+				num_tuples += stats->rel_tuples;
+				break;
+			}
+		}
+	}
+
+	vac_update_relstats(rel, num_pages, num_tuples, hasindex, frozenxid);
+}
 
 /*
  *	vac_update_relstats() -- update statistics for one relation
@@ -1453,9 +1485,10 @@ vacuum_set_xid_limits(VacuumStmt *vacstmt, bool sharedRel,
  *
  *		This routine is shared by full VACUUM and lazy VACUUM.
  */
+
 void
 vac_update_relstats(Relation rel, BlockNumber num_pages, double num_tuples,
-					bool hasindex, TransactionId frozenxid, List *updated_stats)
+					bool hasindex, TransactionId frozenxid)
 {
 	Relation	rd;
 	HeapTuple	ctup;
@@ -1466,30 +1499,6 @@ vac_update_relstats(Relation rel, BlockNumber num_pages, double num_tuples,
 	cqContext  *pcqCtx;
 
 	Assert(relid != InvalidOid);
-
-	/*
-	 * If this is QD, use the stats collected in updated_stats instead of
-	 * the one provided through 'num_pages' and 'num_tuples'.  It doesn't
-	 * seem worth doing so for system tables, though (it'd better say
-	 * "non-distributed" tables than system relations here, but for now
-	 * it's effectively the same.)
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH && !IsSystemRelation(rel))
-	{
-		ListCell *lc;
-		num_pages = 0;
-		num_tuples = 0.0;
-		foreach (lc, updated_stats)
-		{
-			VPgClassStats *stats = (VPgClassStats *) lfirst(lc);
-			if (stats->relid == relid)
-			{
-				num_pages += stats->rel_pages;
-				num_tuples += stats->rel_tuples;
-				break;
-			}
-		}
-	}
 
 	/*
 	 * CDB: send the number of tuples and the number of pages in pg_class located
@@ -2392,7 +2401,7 @@ full_vacuum_rel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats)
 	if (update_relstats)
 	{
 		/* update statistics in pg_class */
-		vac_update_relstats(onerel, vacrelstats->rel_pages,
+		vac_update_relstats_from_list(onerel, vacrelstats->rel_pages,
 						vacrelstats->rel_tuples, vacrelstats->hasindex,
 						FreezeLimit, updated_stats);
 
@@ -4221,7 +4230,7 @@ scan_index(Relation indrel, double num_tuples, List *updated_stats, bool isfull,
 		return;
 
 	/* now update statistics in pg_class */
-	vac_update_relstats(indrel,
+	vac_update_relstats_from_list(indrel,
 						stats->num_pages, stats->num_index_tuples,
 						false, InvalidTransactionId, updated_stats);
 
@@ -4294,7 +4303,7 @@ vacuum_appendonly_index(Relation indexRelation,
 		return;
 
 	/* now update statistics in pg_class */
-	vac_update_relstats(indexRelation,
+	vac_update_relstats_from_list(indexRelation,
 						stats->num_pages, stats->num_index_tuples,
 						false, InvalidTransactionId, updated_stats);
 
@@ -4353,7 +4362,7 @@ vacuum_index(VacPageList vacpagelist, Relation indrel,
 		return;
 
 	/* now update statistics in pg_class */
-	vac_update_relstats(indrel,
+	vac_update_relstats_from_list(indrel,
 						stats->num_pages, stats->num_index_tuples,
 						false, InvalidTransactionId, updated_stats);
 
