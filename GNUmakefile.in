@@ -13,7 +13,7 @@ all:
 #	$(MAKE) -C doc all
 	$(MAKE) -C src all
 	$(MAKE) -C config all
-	#$(MAKE) -C contrib/xlogdump all
+	$(MAKE) -C contrib/xlogdump all
 	$(MAKE) -C contrib/changetrackingdump all
 	$(MAKE) -C contrib/formatter all
 	$(MAKE) -C contrib/formatter_fixedwidth all
@@ -31,7 +31,7 @@ install:
 #	$(MAKE) -C doc $@
 	$(MAKE) -C src $@
 	$(MAKE) -C config $@
-	#$(MAKE) -C contrib/xlogdump $@
+	$(MAKE) -C contrib/xlogdump $@
 	$(MAKE) -C contrib/changetrackingdump $@
 	$(MAKE) -C contrib/formatter $@
 	$(MAKE) -C contrib/formatter_fixedwidth $@
@@ -51,7 +51,7 @@ installdirs uninstall:
 #	$(MAKE) -C doc $@
 	$(MAKE) -C src $@
 	$(MAKE) -C config $@
-	#$(MAKE) -C contrib/xlogdump $@
+	$(MAKE) -C contrib/xlogdump $@
 	$(MAKE) -C contrib/changetrackingdump $@
 	$(MAKE) -C contrib/formatter $@
 	$(MAKE) -C contrib/formatter_fixedwidth $@
@@ -76,7 +76,7 @@ clean:
 	$(MAKE) -C contrib $@
 	$(MAKE) -C src $@
 	$(MAKE) -C config $@
-	#$(MAKE) -C contrib/xlogdump $@
+	$(MAKE) -C contrib/xlogdump $@
 	$(MAKE) -C contrib/changetrackingdump $@
 	$(MAKE) -C contrib/formatter $@
 	$(MAKE) -C contrib/formatter_fixedwidth $@

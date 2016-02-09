@@ -5,6 +5,7 @@ top_builddir = ..
 include $(top_builddir)/src/Makefile.global
 
 WANTED_DIRS = \
+		xlogdump \
 		pgbench \
 		changetrackingdump \
 		formatter \
@@ -15,8 +16,6 @@ WANTED_DIRS = \
 		gp_cancel_query \
 		indexscan
 
-
-# 83MERGE_FIXME_DG xlogdump \
 
 ifeq ($(with_openssl),yes)
 WANTED_DIRS += sslinfo
