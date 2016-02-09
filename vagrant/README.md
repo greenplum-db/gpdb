@@ -4,7 +4,8 @@
 This guide was developed in collaboration with Navneet Potti (@navsan) and
 Nabarun Nag (@nabarunnag). Many thanks to Dave Cramer (@davecramer) and
 Daniel Gustafsson (@danielgustafsson) for various suggestions to improve
-the original version of this document.
+the original version of this document. Alexey Grishchenko (@0x0FFF) has
+also participated in improvement of the document and scripts.
 
 ## Who should read this document?
 Any one who wants to develop code for GPDB. This guide targets the
@@ -75,7 +76,7 @@ While you are viewing the Vagrantfile, a few more things to notice here are:
   that the code you checked out is mounted as `/gpdb` in the virtual machine.
   More on this later below.
 
-Once the command above (`vagrant up`) returns, we are ready to start the
+Once the command above (`vagrant up`) returns, we are ready to login to the
 virtual machine. Type in the following command into the terminal window
 (make sure that you are in the directory `gpdb/vagrant/centos`):
 
@@ -90,159 +91,33 @@ will be isolated from the host, except for any changes that you make to
 this mount point in the virtual machine. Thus, if you type ``ls /gpdb`` in the
 virtual machine shell, then you will see the GPDB code that you checked out.
 
-##4: Setup and compile GPDB
-Next, issue the following commands from the guest shell.
+That's it - GPDB is built, up and running. You can login under `gpadmin` user
+with the password `changeme` and start the psql connection to the database.
 
-```shell
-mkdir -p /home/vagrant/gpdb_install
-mkdir -p /home/vagrant/gpdb_data
-```
+If you are curious how this happened, take a look at the following scripts:
+* `vagrant/centos/vagrant-setup.sh` - this script installs all the packages
+  required for GPDB as dependencies, and also creates `gpadmin` user
+* `vagrant/centos/vagrant-build.sh` - this script builds GPDB. In case you
+  need to change build options you can change this file and re-create VM by
+  running `vagrant destroy` followed by `vagrant up`
+* `vagrant/centos/vagrant-install.sh` - this script configures OS-level settings
+  required for running GPDB
+* `vagrant/centos/vagrant-install-gpdb.sh` - this script is responsible for GPDB
+  installation
 
-The above commands create an install directory and a data directory. The install
-directory is created in the shared folder (so changes here will be visible
-from the host). The data directory is created in the local disk in the guest OS.
-Changing the data directory to the shared folder (i.e. under `/gpdb`) will run
-into trouble with file permissions when creating data with GPDB. So, make sure
-that you keep the data directory pointed to a disk location that is only
-visible in the guest OS.
-
-Now, in the guest shell go to the directory that contains the GPDB code and
-configure it to build by issuing the following commands:
-```shell
-cd /gpdb
-./configure --prefix=/home/vagrant/gpdb_install --enable-depend --enable-debug
-```
-
-Now, let's build GPDB. In the guest shell, type in:
-```shell
-make
-```
-Building the binaries will take a while. If you are adventurous you can issue
-the command ``make -j 2`` to build in parallel using two threads (note your
-VM is setup to run on two cores of the host machine). Sometimes, this parallel
-may produces errors. If that happens, just re-issue the ``make`` command
-again, but this time without the ``-j`` flag.
-
-Next, we are ready to install GPDB in the directory ``/home/vagrant/gpdb_install``.
-To do this, in the guest shell, type the following command:
-
-```shell
-make install
-```
-
-##5: Setup and compile GPDB
-We are nearly ready to run GPDB. However, we still have to setup a few
-environment variables, and make changes to the guest OS. Here are the steps. In
-the guest shell, type in the following commands to create the required
-(bash) environment variables:
-
-```shell
-printf '\n# GPDB environment variables\nexport GPDB=/gpdb\n' >> ~/.bashrc
-printf 'export GPHOME=/home/vagrant/gpdb_install\n' >> ~/.bashrc
-printf 'export GPDATA=/home/vagrant/gpdb_data\n' >> ~/.bashrc
-printf 'if [ -e $GPHOME/greenplum_path.sh ]; then\n\t' >> ~/.bashrc
-printf 'source $GPHOME/greenplum_path.sh\nfi\n' >> ~/.bashrc
-source ~/.bashrc
-```
-
-Then, type in the following commands to create the required data directories:
-```shell
-mkdir -p $GPDATA/master
-mkdir -p $GPDATA/segments
-```
-
-We also need to setup up `ssh` keys, which can be be accomplished by typing
-(in the guest shell) the following commands:
-```shell
-gpssh-exkeys -h `hostname`
-hostname >> $GPDATA/hosts
-```
-
-We also need to create a configuration file for GPDB. Let us setup a cluster
-with one master and two segments. Type in the following commands into the guest
-shell to create a configuration file called ``gpinitsystem_config``.
-```shell
-GPCFG=$GPDATA/gpinitsystem_config
-rm -f $GPCFG
-printf "declare -a DATA_DIRECTORY=($GPDATA/segments $GPDATA/segments)" >> $GPCFG
-printf "\nMASTER_HOSTNAME=`hostname`\n"                                >> $GPCFG
-printf "MACHINE_LIST_FILE=$GPDATA/hosts\n"                             >> $GPCFG
-printf "MASTER_DIRECTORY=$GPDATA/master\n"                             >> $GPCFG
-printf "ARRAY_NAME=\"GPDB\" \n"                                        >> $GPCFG
-printf "SEG_PREFIX=gpseg\n"                                            >> $GPCFG
-printf "PORT_BASE=40000\n"                                             >> $GPCFG
-printf "MASTER_PORT=5432\n"                                            >> $GPCFG
-printf "TRUSTED_SHELL=ssh\n"                                           >> $GPCFG
-printf "CHECK_POINT_SEGMENTS=8\n"                                      >> $GPCFG
-printf "ENCODING=UNICODE\n"                                            >> $GPCFG
-```
-
-We also need to change the guest OS settings as per the instructions
-[here](http://gpdb.docs.pivotal.io/4360/prep_os-system-params.html#topic3).
-The security limits and other settings specified in that link are not necessary,
-so we can skip that. To change the guest OS settings, issue the following
-commands in the guest shell (you could use any editor that you like, but you will
-need to use "sudo mode" to save the changes to the `/etc/sysctl.d` directory):
-
-```shell
-sudo vi /etc/sysctl.d/gpdb.conf
-```
-
-Then, hit capital-`G`, followed by capital-`O`, and paste the following
-lines at the end of the file:
-```shell
-kernel.shmmax = 500000000
-kernel.shmmni = 4096
-kernel.shmall = 4000000000
-kernel.sem = 250 512000 100 2048
-kernel.sysrq = 1
-kernel.core_uses_pid = 1
-kernel.msgmnb = 65536
-kernel.msgmax = 65536
-kernel.msgmni = 2048
-net.ipv4.tcp_syncookies = 1
-net.ipv4.ip_forward = 0
-net.ipv4.conf.default.accept_source_route = 0
-net.ipv4.tcp_tw_recycle = 1
-net.ipv4.tcp_max_syn_backlog = 4096
-net.ipv4.conf.all.arp_filter = 1
-net.ipv4.ip_local_port_range = 1025 65535
-net.core.netdev_max_backlog = 10000
-net.core.rmem_max = 2097152
-net.core.wmem_max = 2097152
-vm.overcommit_memory = 2
-```
-Hit the escape key, then type `:wq` to finish saving the file. Verify that you
-see the changes that you made by typing in `cat /etc/sysctl.d/gpdb.conf`. 
-Next, apply the changes that you just made by running the following command:
-```shell
-sudo sysctl -p /etc/sysctl.d/gpdb.conf
-```
-
-##6: Initialize and start GPDB
-Next we initialize GPDB using the config file that we created above. In the
-*guest* shell type in:
-```shell
-$GPHOME/bin/gpinitsystem -a -c $GPDATA/gpinitsystem_config
-```
-
-Once initialized, you are now ready to run GPDB. One more configuration to set,
-which you can accomplish by issuing the following command from the guest terminal:
-```shell
-printf '# Remember the master data directory location\n' >> ~/.bashrc
-printf 'export MASTER_DATA_DIRECTORY=$GPDATA/master/gpseg-1\n' >> ~/.bashrc
-source ~/.bashrc
-```
+You can easily go to `vagrant/centos/Vagrantfile` and comment out the calls for
+any of these scripts at any time to prevent GPDB installation or OS-level
+congigurations
 
 Now, you are ready to start GPDB. To do that, type in the following commands
-into the (guest) terminal:
+into the (guest) terminal under `gpadmin` user:
 ```shell
 DBNAME=$USER
 createdb $DBNAME
 psql $DBNAME
 ```
 
-You should see a psql prompt that says `vagrant=#`. At this point, you can open
+You should see a psql prompt that says `gpadmin=#`. At this point, you can open
 up another shell from the host OS. Start another *host* terminal, and go to
 the vagrant directory by typing `cd gpdb/vagrant`. Then, type in `vagrant ssh`.
 From this second guest terminal, you can run GPDB commands like `gpstate`.
@@ -290,7 +165,7 @@ that were posted on each day. Pretty cool!
 
 (Note if you want to exit the `psql` shell above, type in `\q`.)
 
-##7: Using GDBP
+##4: Using GDBP
 If you are doing serious development, you will likely need to use a debugger.
 Here is how you do that.
 
@@ -315,7 +190,7 @@ attach 25486
 Of course, you can change which function you want to break into, and change
 whether you want to debug the master or the segment processes. Happy hacking!
 
-##8: Want a larger cluster to play around with?
+##5: Want a larger cluster to play around with?
 If you want to play around with a larger cluster, then you can spin up the
 `gpdemo` cluster that is described in the
 [README.md]("https://github.com/greenplum-db/gpdb/blob/master/README.md") file. But, there a few things
@@ -362,7 +237,8 @@ We already have a GPDB data directory, so let us go there and copy the demo
 files there.
 
 ```shell
-cd /home/vagrant/gpdb_data/
+su - gpadmin
+cd /home/gpadmin/gpdb_data/
 cp -R /gpdb/gpAux/gpdemo .
 cd gpdemo
 ```

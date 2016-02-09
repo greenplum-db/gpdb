@@ -25,8 +25,6 @@ rm get-pip.py
 # Create gpadmin user
 sudo useradd gpadmin -d /home/gpadmin -s /bin/bash
 echo changeme | sudo passwd gpadmin --stdin
-sudo usermod -aG docker gpadmin
-sudo usermod -aG docker vagrant
 
 # Misc
 sudo yum -y install vim mc psmisc
