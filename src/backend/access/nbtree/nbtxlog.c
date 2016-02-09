@@ -452,9 +452,6 @@ btree_xlog_split(bool onleft, bool isroot,
 		}
 	}
 
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-
 	/* We no longer need the right buffer. */
 	UnlockReleaseBuffer(rbuf);
 
@@ -480,6 +477,9 @@ btree_xlog_split(bool onleft, bool isroot,
 			UnlockReleaseBuffer(buffer);
 		}
 	}
+
+	MIRROREDLOCK_BUFMGR_UNLOCK;
+	// -------- MirroredLock ----------
 
 	/* The job ain't done till the parent link is inserted... */
 	log_incomplete_split(xlrec->node,
