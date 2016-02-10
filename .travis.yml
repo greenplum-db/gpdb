@@ -43,7 +43,7 @@ python:
 
 install:
   - pip install --user --upgrade pip
-  - pip install --user psi
+  - pip install --user --pre psi
   - pip install --user lockfile
   - pip install --user paramiko
   - pip install --user setuptools
