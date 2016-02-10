@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 # Stop firewall
 sudo systemctl stop firewalld
 
@@ -42,10 +44,10 @@ sudo sysctl -p /etc/sysctl.d/gpdb.conf
 # GPDB Kernel Limits
 sudo rm -f /etc/security/limits.d/gpdb.conf
 sudo bash -c 'printf "# GPDB-Specific Settings\n\n"     >> /etc/security/limits.d/gpdb.conf'
-sudo bash -c 'printf "* soft nofile 65536"              >> /etc/security/limits.d/gpdb.conf'
-sudo bash -c 'printf "* hard nofile 65536"              >> /etc/security/limits.d/gpdb.conf'
-sudo bash -c 'printf "* soft nproc 131072"              >> /etc/security/limits.d/gpdb.conf'
-sudo bash -c 'printf "* hard nproc 131072"              >> /etc/security/limits.d/gpdb.conf'
+sudo bash -c 'printf "* soft nofile 65536\n"            >> /etc/security/limits.d/gpdb.conf'
+sudo bash -c 'printf "* hard nofile 65536\n"            >> /etc/security/limits.d/gpdb.conf'
+sudo bash -c 'printf "* soft nproc 131072\n"            >> /etc/security/limits.d/gpdb.conf'
+sudo bash -c 'printf "* hard nproc 131072\n"            >> /etc/security/limits.d/gpdb.conf'
 
 # Do not destroy user context on logout
 sudo sed -i '/RemoveIPC=no/d' /etc/systemd/logind.conf

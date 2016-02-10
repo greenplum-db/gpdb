@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 cd /home/gpadmin
 rm ~/.bashrc
 printf '#!/bin/bash\n' >> ~/.bashrc
@@ -10,9 +12,9 @@ printf 'if [ -e $GPHOME/greenplum_path.sh ]; then\n\t' >> ~/.bashrc
 printf 'source $GPHOME/greenplum_path.sh\nfi\n' >> ~/.bashrc
 source ~/.bashrc
 
-sudo killall postgres
+killall postgres
 sleep 5
-sudo killall postgres -s SIGKILL
+killall postgres -s SIGKILL
 rm -rf $GPDATA/master
 rm -rf $GPDATA/segments
 
