@@ -108,7 +108,7 @@ script:
 ## Before install 
 ## install libevent 
 ## ----------------------------------------------------------------------
-before install:
+before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
        brew install libevent          ; 
     fi
