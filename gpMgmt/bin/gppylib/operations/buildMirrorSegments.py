@@ -21,7 +21,7 @@ from gppylib.operations.utils import ParallelOperation, RemoteOperation
 from gppylib.operations.unix import CleanSharedMem 
 from gppylib.operations.filespace import PG_SYSTEM_FILESPACE, GP_TRANSACTION_FILES_FILESPACE, GP_TEMPORARY_FILES_FILESPACE, GetMoveOperationList, GetFilespaceEntriesDict, GetFilespaceEntries, GetCurrentFilespaceEntries, RollBackFilespaceChanges, UpdateFlatFiles, FileType, MoveFilespaceError
 from gppylib.commands.gp import is_pid_postmaster, get_pid_from_remotehost
-from gppylib.commands.unix import check_pid_on_remotehost
+from gppylib.commands.unix import check_pid_on_remotehost, Scp
     
 logger = get_default_logger()
 
@@ -533,9 +533,9 @@ class GpMirrorListToBuild:
         #
         # Copy remote files from the sample segment to the master
         #
-        for toCopyFromRemote in ["postgresql.conf", "pg_hba.conf"]:
+        for toCopyFromRemote in ["postgresql.conf", "pg_hba.conf", "db_dumps"]:
             cmd = gp.RemoteCopy('copying %s from a segment' % toCopyFromRemote,
-                               sampleSegment.getSegmentDataDirectory() + '/' + toCopyFromRemote,
+                               os.path.join(sampleSegment.getSegmentDataDirectory(), toCopyFromRemote),
                                masterSegment.getSegmentHostName(), schemaDir, ctxt=base.REMOTE,
                                remoteHost=sampleSegment.getSegmentAddress())
             cmd.run(validateAfter=True)
@@ -631,6 +631,21 @@ class GpMirrorListToBuild:
         for hostName in destSegmentByHost.keys():
             cmds.append(createConfigureNewSegmentCommand(hostName, 'configure blank segments', False))
         self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "unpacking basic segment directory")
+
+        #
+        # copy dump files from old segment to new segment
+        #
+        for srcSeg in srcSegments:
+            for destSeg in destSegments:
+                if srcSeg.content == destSeg.content:
+                    cmd = Scp('copy db_dumps from old segment to new segment',
+                               os.path.join(srcSeg.getSegmentDataDirectory(), 'db_dumps*', '*'),
+                               os.path.join(destSeg.getSegmentDataDirectory(), 'db_dumps'),
+                               srcSeg.getSegmentAddress(),
+                               destSeg.getSegmentAddress(),
+                               recursive=True)
+                    cmd.run(validateAfter=True)
+                    break
 
         #
         # Clean up copied tar from each remote host

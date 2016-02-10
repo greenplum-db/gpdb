@@ -13,6 +13,7 @@ import yaml
 
 from gppylib.commands.gp import SegmentStart, GpStandbyStart
 from gppylib.commands.unix import findCmdInPath
+from gppylib.operations.backup_utils import Context
 from gppylib.operations.dump import get_partition_state
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.unix import ListRemoteFilesByPattern, CheckRemoteFile
@@ -1498,10 +1499,12 @@ def impl(context, table, dbname, ao_table):
     ao_sch, ao_tbl = ao_table.split('.') 
     part_info = [(1, ao_sch, ao_tbl, tbl)]
     try:
+        backup_utils = Context()
+        backup_utils.master_port = os.environ.get('PGPORT')
+        backup_utils.dump_database = dbname
         context.exception = None
         context.partition_list_res = None
-        context.partition_list_res = get_partition_state(master_port=os.environ.get('PGPORT'),
-                        dbname=dbname, catalog_schema=sch, partition_info=part_info)
+        context.partition_list_res = get_partition_state(backup_utils, sch, part_info)
     except Exception as e:
         context.exception = e
 

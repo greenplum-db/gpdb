@@ -346,7 +346,7 @@ def check_table_exists(context, dbname, table_name, table_type=None, host=None, 
         SQL = """
               select c.oid, c.relkind, c.relstorage, c.reloptions
               from pg_class c, pg_namespace n
-              where c.relname = E'%s' and n.nspname = E'%s' and c.relnamespace = n.oid;
+              where c.relname = '%s' and n.nspname = '%s' and c.relnamespace = n.oid;
               """ % (pg.escape_string(tablename), pg.escape_string(schemaname))
     else:
         SQL = """

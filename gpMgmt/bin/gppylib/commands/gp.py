@@ -1340,7 +1340,7 @@ def get_gphome():
 def get_masterdatadir():
     logger.debug("Checking if MASTER_DATA_DIRECTORY env variable is set.")
     master_datadir = os.environ.get('MASTER_DATA_DIRECTORY')
-    if master_datadir is None:
+    if not master_datadir:
         raise GpError("Environment Variable MASTER_DATA_DIRECTORY not set!")
     return master_datadir
 

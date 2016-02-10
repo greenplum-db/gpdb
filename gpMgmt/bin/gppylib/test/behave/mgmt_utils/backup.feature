@@ -179,6 +179,7 @@ Feature: Validate command line arguments
 
     Scenario: Negative test for Incremental Backup - Incremental after a full backup of different database
         Given the test is initialized
+        And database "bkdb2" is dropped and recreated
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
@@ -249,7 +250,6 @@ Feature: Validate command line arguments
         And there is a partition table "part_external" has external partitions of gpfdist with file "backup_gpfdist_dummy" on port "8098" in "bkdb" with data
         Then data for partition table "part_mixed_1" with partition level "1" is distributed across all segments on "bkdb"
         And data for partition table "part_external" with partition level "0" is distributed across all segments on "bkdb"
-        Given there are no backup files
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And gpcrondump should print Validating disk space to stdout
@@ -457,23 +457,24 @@ Feature: Validate command line arguments
         And the table names in "bkdb" is stored
         And tables in "bkdb" should not contain any data
 
+    @foo
     Scenario: Metadata-only restore with global objects (-G)
         Given the test is initialized
         And there is schema "schema_heap" exists in "bkdb"
         And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
-        And the user runs "psql -c 'CREATE ROLE foo_user' bkdb"
+        And the user runs "psql -c 'CREATE ROLE "foo%userWITHCAPS"' bkdb"
         When the user runs "gpcrondump -a -x bkdb -G"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
-        And the user runs "psql -c 'DROP ROLE foo_user' bkdb"
+        And the user runs "psql -c 'DROP ROLE "foo%userWITHCAPS"' bkdb"
         And the schemas "schema_heap" do not exist in "bkdb"
         And the user runs gpdbrestore with the stored timestamp and options "-m -G"
         And gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb"
         And the table names in "bkdb" is stored
         And tables in "bkdb" should not contain any data
-        And verify that a role "foo_user" exists in database "bkdb"
-        And the user runs "psql -c 'DROP ROLE foo_user' bkdb"
+        And verify that a role "foo%userWITHCAPS" exists in database "bkdb"
+        And the user runs "psql -c 'DROP ROLE "foo%userWITHCAPS"' bkdb"
 
     Scenario: gpdbrestore -L with Full Backup
         Given the test is initialized
@@ -1071,7 +1072,7 @@ Feature: Validate command line arguments
         And the row "1, 0, 999999999999998, 999999999999998, 0, 0" is inserted into "public.tuple_count_table" in "bkdb"
         And the row "2, 0, 1, 1, 0, 0" is inserted into "public.tuple_count_table" in "bkdb"
         When the method get_partition_state is executed on table "public.tuple_count_table" in "bkdb" for ao table "testschema.t1"
-        Then the get_partition_state result should contain "testschema,t1,999999999999999"
+        Then the get_partition_state result should contain "testschema, t1, 999999999999999"
 
     Scenario: Test gpcrondump dump deletion only (-o option)
         Given the test is initialized
@@ -3214,8 +3215,7 @@ Feature: Validate command line arguments
         And the timestamp from gpcrondump is stored
         When the user runs "gpdbrestore -T " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 "." ao_T\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><1 " --change-schema=" S\`~@#\$%^&*()_-+[{]}|\\;: \\'\"/?><1 " -S " S\`~@#\$%^&*()-+[{]}|\\;: \\'\"/?><2 " " with the stored timestamp
         Then gpdbrestore should return a return code of 2
-        And gpcrondump should print -S schema level restore does not work with --change-schema option to stdout
-
+        And gpcrondump should print -S option cannot be used with --change-schema option to stdout
 
     Scenario: Gpdbrestore with --table-file, -T, --truncate and --change-schema options when table name, schema name and database name contains special character
         Given the test is initialized
@@ -3279,7 +3279,6 @@ Feature: Validate command line arguments
         And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/special_chars/drop_special_database.sql template1"
         And the directory "/tmp/special_table_data.out" is removed or does not exist
         And the directory "/tmp/special_table_data.ans" is removed or does not exist
-
 
     Scenario: gpdbrestore, --redirect option with special db name, and all table name, schema name and database name contain special character
         Given the test is initialized
@@ -3351,7 +3350,7 @@ Feature: Validate command line arguments
         And the directory "/tmp/special_ao_table_data.ans" is removed or does not exist
         And the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
 
-	Scenario: Restoring a nonexistent table should fail with clear error message
+    Scenario: Restoring a nonexistent table should fail with clear error message
         Given the test is initialized
         And there is a "heap" table "heap_table" in "bkdb" with data
         When the user runs "gpcrondump -a -x bkdb"
@@ -3389,7 +3388,6 @@ Feature: Validate command line arguments
         And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb" with data
         And verify that there is no table "testschema.heap_table" in "bkdb"
 
-    @aoco_stat_update
     Scenario: Simple Full Backup with AO/CO statistics w/ filter
         Given the test is initialized
         And there is a "ao" table "public.ao_table" in "bkdb" with data
@@ -3406,7 +3404,6 @@ Feature: Validate command line arguments
         And verify that there are "0" tuples in "bkdb" for table "public.ao_index_table"
         And verify that there are "4380" tuples in "bkdb" for table "public.ao_table"
 
-    @aoco_stat_update
     Scenario: Simple Full Backup with AO/CO statistics w/ filter schema
         Given the test is initialized
         And there is schema "schema_ao, testschema" exists in "bkdb"
@@ -3438,8 +3435,6 @@ Feature: Validate command line arguments
         And verify that there are "4380" tuples in "bkdb" for table "schema_ao.ao_index_table"
         And verify that there are "0" tuples in "bkdb" for table "schema_ao.ao_part_table"
 
-
-    @redirect
     Scenario: Restore with --redirect option should not rely on existance of dumped database
         Given the test is initialized
         When the user runs "gpcrondump -a -x bkdb"
