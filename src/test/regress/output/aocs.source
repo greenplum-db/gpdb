@@ -570,9 +570,31 @@ select j,i from co where k = 'aaa' or k = 'bbb';
 -- UAO
 ---------------------
 -- DELETE
+select count(*) from gp_toolkit.__gp_aocsseg_name('tenk_aocs1') where modcount > 0;
+ count 
+-------
+     0
+(1 row)
+
 DELETE FROM tenk_aocs1 WHERE unique1 = 1;
+-- modcount after DELETE must increment to flag table should be included in
+-- incremental backup
+select count(*) from gp_toolkit.__gp_aocsseg_name('tenk_aocs1') where modcount > 0;
+ count 
+-------
+    16
+(1 row)
+
 -- UPDATE
 UPDATE tenk_aocs1 SET unique2 = 1 WHERE unique2 = 2;
+-- modcount after UPDATE must increment to flag table should be included in
+-- incremental backup
+select count(*) from gp_toolkit.__gp_aocsseg_name('tenk_aocs1') where modcount > 1;
+ count 
+-------
+    16
+(1 row)
+
 -------------------- 
 -- unsupported sql 
 --------------------

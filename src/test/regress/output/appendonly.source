@@ -577,7 +577,21 @@ select count(*) from tenk_ao1;
  10000
 (1 row)
 
+select count(*) from gp_toolkit.__gp_aoseg_name('tenk_ao1') where modcount > 0;
+ count 
+-------
+     0
+(1 row)
+
 DELETE FROM tenk_ao1 WHERE unique1 = 1;
+-- modcount after DELETE must increment to flag table should be included in
+-- incremental backup
+select count(*) from gp_toolkit.__gp_aoseg_name('tenk_ao1') where modcount > 0;
+ count 
+-------
+     1
+(1 row)
+
 select count(*) from tenk_ao1;
  count 
 -------
@@ -592,6 +606,14 @@ select count(*) from tenk_ao1 where unique2 < 0;
 (1 row)
 
 UPDATE tenk_ao1 SET unique2 = -unique1 WHERE unique2 <= 5;
+-- modcount after UPDATE must increment to flag table should be included in
+-- incremental backup
+select count(*) from gp_toolkit.__gp_aoseg_name('tenk_ao1') where modcount > 1;
+ count 
+-------
+     1
+(1 row)
+
 select count(*) from tenk_ao1 where unique2 < 0;
  count 
 -------
