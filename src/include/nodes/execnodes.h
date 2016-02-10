@@ -2367,17 +2367,6 @@ typedef struct WindowState
 
 	/* Indicate if any function need a peer count. */
 	bool		need_peercount;
-
-	/* A char buffer to temporarily hold serialized data
-	 * before writing them to the frame buffer.
-	 *
-	 * Use this pre-allocated buffer to avoid doing
-	 * palloc/pfree many times.
-	 *
-	 * The size of this array is specified by 'max_size'.
-	 */
-	char		*serial_array;
-	Size		max_size;
 } WindowState;
 
 /* ----------------

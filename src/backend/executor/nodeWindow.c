@@ -227,6 +227,17 @@ typedef struct WindowStatePerLevelData
 	FrameBufferEntry *curr_entry_buf;
 	FrameBufferEntry *trail_entry_buf;
 	FrameBufferEntry *lead_entry_buf;
+	
+	/* A char buffer to temporarily hold serialized data
+	* before writing them to the frame buffer.
+	*
+	* Use this pre-allocated buffer to avoid doing
+	* palloc/pfree many times.
+	*
+	* The size of this array is specified by 'max_size'.
+	*/
+	char *serial_array;
+	Size max_size;
 }	WindowStatePerLevelData;
 
 /*
@@ -1444,11 +1455,11 @@ appendToFrameBuffer(WindowStatePerLevel level_state,
 	ExprContext *econtext = wstate->ps.ps_ExprContext;
 
 	Assert(buffer->is_rows == level_state->is_rows);
-	MemSet(wstate->serial_array, 0, wstate->max_size);
+	MemSet(level_state->serial_array, 0, level_state->max_size);
 	serializeEntry(level_state, econtext,
-				   &(wstate->serial_array), &(wstate->max_size), &len);
+				   &(level_state->serial_array), &(level_state->max_size), &len);
 
-	ntuplestore_acc_put_data(buffer->writer, (void *)(wstate->serial_array), len);
+	ntuplestore_acc_put_data(buffer->writer, (void *)(level_state->serial_array), len);
 
 	adjustEdgesAfterAppend(level_state, wstate, last_peer);
 
@@ -3018,13 +3029,6 @@ makeWindowState(Window * window, EState *estate)
 											   ALLOCSET_DEFAULT_INITSIZE,
 											   ALLOCSET_DEFAULT_MAXSIZE);
 
-	/*
-	 * We allocate the buffer to be 1K initially, which should be sufficient
-	 * for most cases.
-	 */
-	wstate->serial_array = palloc0(FRAMEBUFFER_ENTRY_SIZE);
-	wstate->max_size = FRAMEBUFFER_ENTRY_SIZE;
-
 	return wstate;
 }
 
@@ -3056,6 +3060,9 @@ initializePartition(WindowState * wstate)
 		level_state->dense_rank = 1;
 		level_state->prior_rank = 1;
 		level_state->prior_dense_rank = 1;
+
+		level_state->serial_array = palloc0(FRAMEBUFFER_ENTRY_SIZE);
+		level_state->max_size = FRAMEBUFFER_ENTRY_SIZE;
 	}
 
 	/* Per-partition input buffer management reinitialzation. */
@@ -6042,10 +6049,10 @@ windowBufferNextLastAgg(WindowBufferCursor cursor)
 		 * memory.
 		 */
 		econtext->ecxt_scantuple = wstate->spare;
-		MemSet(wstate->serial_array, 0, wstate->max_size);
+		MemSet(level_state->serial_array, 0, level_state->max_size);
 		serializeEntry(level_state, econtext,
-					   &(wstate->serial_array), &(wstate->max_size), &len);
-		entry = deserializeEntry(level_state, entry, wstate->serial_array, len);
+					   &(level_state->serial_array), &(level_state->max_size), &len);
+		entry = deserializeEntry(level_state, entry, level_state->serial_array, len);
 		/* Get back the slot. */
 		econtext->ecxt_scantuple = slot;
 		/* We never use this again as it's the logical last row. */
@@ -6223,6 +6230,12 @@ ExecEndWindow(WindowState * node)
 
 		freeFrameBufferEntry(level_state->lead_entry_buf);
 		level_state->lead_entry_buf = NULL;
+
+		if (level_state->serial_array != NULL)
+		{
+			pfree(level_state->serial_array);
+			level_state->serial_array = NULL;
+		}
 	}
 
 	ExecEagerFreeWindow(node);
@@ -6241,8 +6254,6 @@ ExecEndWindow(WindowState * node)
 
 	if (node->cmpcontext != NULL)
 		MemoryContextDelete(node->cmpcontext);
-
-	pfree(node->serial_array);
 
 	if (node->numlevels > 0)
 		pfree(node->level_state);
