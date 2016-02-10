@@ -1892,6 +1892,7 @@ gpdb::PvalMakeInteger
 		return makeInteger(i);
 	}
 	GP_WRAP_END;
+	return NULL;
 }
 
 Node *

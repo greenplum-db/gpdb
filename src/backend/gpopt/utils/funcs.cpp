@@ -1088,7 +1088,7 @@ RestoreQueryFromFile(PG_FUNCTION_ARGS)
 	CFileReader fr;
 	fr.Open(szFilename);
 	ULLONG ullSize = fr.UllSize();
-	elog(NOTICE, "(RestoreFromFile) Filesize is %d", ullSize);
+	elog(NOTICE, "(RestoreFromFile) Filesize is %llu", ullSize);
 
 	char *pcBuf = (char*) gpdb::GPDBAlloc(ullSize);
 	fr.UlpRead((BYTE*)pcBuf, ullSize);

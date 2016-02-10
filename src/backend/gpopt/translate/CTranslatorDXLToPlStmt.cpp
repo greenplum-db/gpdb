@@ -5676,7 +5676,6 @@ CTranslatorDXLToPlStmt::SetVarTypMod
 
 		if (IsA(pte->expr, Var))
 		{
-			pte->expr;
 			Var *var = (Var*) pte->expr;
 			var->vartypmod = *(*pdrgpi)[ul];
 		}
