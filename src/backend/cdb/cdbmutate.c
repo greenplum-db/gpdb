@@ -2693,6 +2693,12 @@ static void remove_unused_initplans_helper(Plan *plan, Bitmapset **usedParams, B
 			find_params_walker((Node *) motion->hashExpr, &context);
 			break;
 		}
+		case T_Window:
+		{
+			Window *w = (Window *) plan;
+			find_params_walker((Node *) w->windowKeys, &context);
+			break;
+		}
 		default:
 			break;
 	}
@@ -2716,64 +2722,42 @@ static void remove_unused_initplans_helper(Plan *plan, Bitmapset **usedParams, B
 
 	if (NIL != plan->initPlan)
 	{
-		/* gather initplans from current node, and keep track of their param ids */
-		List *paramids = NIL;
-		List *planids = NIL;
+		List	   *newInitPlans = NIL;
+		ListCell *lc;
 
-		ListCell *lc = NULL;
 		foreach (lc, plan->initPlan)
 		{
 			SubPlan *initplan = (SubPlan *) lfirst(lc);
+			ListCell *lc_paramid;
+			bool		anyused;
+
 			Assert(initplan->is_initplan);
-			Assert(1 == list_length(initplan->setParam));
 
-			planids = lappend_int(planids, initplan->plan_id);
-			paramids = lappend_int(paramids, linitial_int(initplan->setParam));
-		}
-
-		/* remove from these lists the params that are used */
-		int paramid = bms_first_from(context.paramids, 0);
-		while (0 <= paramid)
-		{
-			int index = list_find_int(paramids, paramid);
-			if (0 <= index)
+			/* Are any of this Init Plan's output parameters actually used? */
+			anyused = false;
+			foreach (lc_paramid, initplan->setParam)
 			{
-				int planid = list_nth_int(planids, index);
-				paramids = list_delete_int(paramids, paramid);
-				planids = list_delete_int(planids, planid);
+				int			paramid = lfirst_int(lc_paramid);
+
+				if (bms_is_member(paramid, context.paramids))
+				{
+					anyused = true;
+					break;
+				}
 			}
 
-			paramid = bms_first_from(context.paramids, paramid + 1);
-		}
-
-		/* delete unused initplans */
-		List *oldInitPlans = plan->initPlan;
-		plan->initPlan = NIL;
-
-		foreach (lc, oldInitPlans)
-		{
-			SubPlan *initplan = (SubPlan *) lfirst(lc);
-			if (0 > list_find_int(planids, initplan->plan_id))
-			{
-				plan->initPlan = lappend(plan->initPlan, initplan);
-			}
+			/* If none of its params are used, leave out from the new list */
+			if (anyused)
+				newInitPlans = lappend(newInitPlans, initplan);
 			else
-			{
-				pfree(initplan);
-			}
+				elog(DEBUG2, "removing unused InitPlan %s", initplan->plan_name);
 		}
 
 		/* remove unused params */
-		foreach (lc, paramids)
-		{
-			int paramid = lfirst_int(lc);
-			plan->allParam = bms_del_member(plan->allParam, paramid);
-		}
+		plan->allParam = bms_intersect(plan->allParam, context.paramids);
 
-		/* cleanup */
-		list_free(oldInitPlans);
-		list_free(planids);
-		list_free(paramids);
+		list_free(plan->initPlan);
+		plan->initPlan = newInitPlans;
 	}
 
 	Bitmapset *oldbms = *usedParams;

@@ -462,6 +462,15 @@ drop table if exists t1;
 drop table if exists t2;
 
 --
+-- Test Initplans that return multiple params.
+--
+create table initplan_test(i int, j int, m int);
+insert into initplan_test values (1,1,1);
+select * from initplan_test where row(j, m) = (select j, m from initplan_test where i = 1);
+
+drop table initplan_test;
+
+--
 -- apply parallelization for subplan MPP-24563
 --
 create table t1_mpp_24563 (id int, value int) distributed by (id);

@@ -489,6 +489,14 @@ expression_tree_walker(Node *node,
 					return true;
 			}
 			break;
+		case T_WindowKey:
+			{
+				WindowKey *wk = (WindowKey *) node;
+
+				if (walker((Node *) wk->frame, context))
+					return true;
+			}
+			break;
 		case T_WindowFrameEdge:
 			{
 				WindowFrameEdge *edge = (WindowFrameEdge *)node;
@@ -1005,7 +1013,8 @@ plan_tree_walker(Node *node,
 		case T_Window:
 			if (walk_plan_node_fields((Plan *) node, walker, context))
 				return true;
-			/* Other fields are simple items and lists of simple items. */
+			if (walker(((Window *) node)->windowKeys, context))
+				return true;
 			break;
 
 		case T_Unique:
@@ -1176,6 +1185,9 @@ plan_tree_walker(Node *node,
 		case T_PartBoundExpr:
 		case T_PartBoundInclusionExpr:
 		case T_PartBoundOpenExpr:
+		case T_WindowFrame:
+		case T_WindowFrameEdge:
+		case T_WindowKey:
 
 		default:
 			return expression_tree_walker(node, walker, context);
