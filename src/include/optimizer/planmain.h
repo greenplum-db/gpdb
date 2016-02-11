@@ -241,17 +241,16 @@ extern RestrictInfo *build_implied_join_equality(Oid opno,
 /*
  * prototypes for plan/setrefs.c
  */
-Plan *
-set_plan_references(PlannerGlobal *glob, Plan *plan, List *rtable);
+extern Plan *set_plan_references(PlannerGlobal *glob,
+								 Plan *plan,
+								 List *rtable);
 
-List *
-set_returning_clause_references(PlannerGlobal *glob,
+extern List *set_returning_clause_references(PlannerGlobal *glob,
 								List *rlist,
 								Plan *topplan,
 								Index resultRelation);
 
-extern void
-extract_query_dependencies(List *queries,
+extern void extract_query_dependencies(List *queries,
 						   List **relationOids,
 						   List **invalItems);
 extern void fix_opfuncids(Node *node);

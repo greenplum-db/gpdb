@@ -16,14 +16,11 @@
 #define PRINT_H
 
 #include "nodes/parsenodes.h"
-
-struct Plan;                            /* #include "nodes/plannodes.h" */
-struct Query;                           /* #include "nodes/plannodes.h" */
-struct TupleTableSlot;                  /* #include "executor/tuptable.h" */
+#include "nodes/execnodes.h"
 
 #define nodeDisplay(x)		pprint(x)
 
-extern char * plannode_type(struct Plan *p);
+extern char *plannode_type(Plan *p);
 extern void print(void *obj);
 extern void pprint(void *obj);
 extern void elog_node_display(int lev, const char *title,
@@ -34,9 +31,9 @@ extern void print_rt(List *rtable);
 extern void print_expr(Node *expr, List *rtable);
 extern void print_pathkeys(List *pathkeys, List *rtable);
 extern void print_tl(List *tlist, List *rtable);
-extern void print_slot(struct TupleTableSlot *slot);
-extern void print_plan_recursive(struct Plan *p, struct Query *parsetree,
+extern void print_slot(TupleTableSlot *slot);
+extern void print_plan_recursive(Plan *p, Query *parsetree,
 					 int indentLevel, char *label);
-extern void print_plan(struct Plan *p, struct Query *parsetree);
+extern void print_plan(Plan *p, Query *parsetree);
 
 #endif   /* PRINT_H */

@@ -100,10 +100,10 @@ Cost		disable_cost = 1.0e9;
 /* CDB: The enable_xxx globals have been moved to allpaths.c */
 
 typedef struct
-	{
-		PlannerInfo *root;
-		QualCost	total;
-	} cost_qual_eval_context;
+{
+	PlannerInfo *root;
+	QualCost	total;
+} cost_qual_eval_context;
 
 static MergeScanSelCache *cached_scansel(PlannerInfo *root,
 										 RestrictInfo *rinfo,
@@ -2264,7 +2264,7 @@ cost_qual_eval_node(QualCost *cost, Node *qual, PlannerInfo *root)
 }
 
 static bool
-cost_qual_eval_walker(Node *node,  cost_qual_eval_context *context)
+cost_qual_eval_walker(Node *node, cost_qual_eval_context *context)
 {
 	if (node == NULL)
 		return false;
@@ -2286,7 +2286,6 @@ cost_qual_eval_walker(Node *node,  cost_qual_eval_context *context)
 			locContext.root = context->root;
 			locContext.total.startup = 0;
 			locContext.total.per_tuple = 0;
-
 			/*
 			 * For an OR clause, recurse into the marked-up tree so that
 			 * we set the eval_cost for contained RestrictInfos too.
@@ -2330,8 +2329,8 @@ cost_qual_eval_walker(Node *node,  cost_qual_eval_context *context)
 	 */
 	if (IsA(node, FuncExpr))
 	{
-		context->total.per_tuple += get_func_cost(((FuncExpr *) node)->funcid) *
-			cpu_operator_cost;
+		context->total.per_tuple +=
+			get_func_cost(((FuncExpr *) node)->funcid) * cpu_operator_cost;
 	}
 	else if (IsA(node, OpExpr) ||
 			 IsA(node, DistinctExpr) ||
@@ -2339,8 +2338,8 @@ cost_qual_eval_walker(Node *node,  cost_qual_eval_context *context)
 	{
 		/* rely on struct equivalence to treat these all alike */
 		set_opfuncid((OpExpr *) node);
-		context->total.per_tuple += get_func_cost(((OpExpr *) node)->opfuncid) *
-			cpu_operator_cost;
+		context->total.per_tuple +=
+			get_func_cost(((OpExpr *) node)->opfuncid) * cpu_operator_cost;
 	}
 	else if (IsA(node, ScalarArrayOpExpr))
 	{
@@ -2441,7 +2440,8 @@ cost_qual_eval_walker(Node *node,  cost_qual_eval_context *context)
 				/* assume we need 50% of the tuples */
 				context->total.per_tuple += 0.50 * plan_run_cost;
 				/* also charge a cpu_operator_cost per row examined */
-				context->total.per_tuple += 0.50 * plan->plan_rows * cpu_operator_cost;
+				context->total.per_tuple +=
+					0.50 * plan->plan_rows * cpu_operator_cost;
 			}
 			else
 			{
