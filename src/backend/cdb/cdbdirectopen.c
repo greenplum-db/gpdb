@@ -7,6 +7,8 @@
  *-------------------------------------------------------------------------
  */
 
+#include "postgres.h"
+
 #include "cdb/cdbdirectopen.h"
 #include "utils/guc.h"
 #include "storage/smgr.h"

@@ -9,7 +9,6 @@
 #ifndef CDBDIRECTOPEN_H
 #define CDBDIRECTOPEN_H
 
-#include "postgres.h"
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "utils/palloc.h"

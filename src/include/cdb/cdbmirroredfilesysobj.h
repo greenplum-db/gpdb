@@ -10,7 +10,6 @@
 #ifndef CDBMIRROREDFSOBJ_H
 #define CDBMIRROREDFSOBJ_H
 
-#include "postgres.h"
 #include "storage/relfilenode.h"
 #include "storage/dbdirnode.h"
 #include "storage/smgr.h"

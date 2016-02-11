@@ -7,7 +7,9 @@
  * Copyright (c) 2010, Greenplum inc
  * 
  *-------------------------------------------------------------------------*/
- 
+
+#include "postgres.h"
+
 #include "cdb/memquota.h"
 #include "cdb/cdbllize.h"
 #include "storage/lwlock.h"

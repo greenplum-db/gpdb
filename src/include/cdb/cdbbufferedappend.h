@@ -13,7 +13,6 @@
 #ifndef CDBBUFFEREDAPPEND_H
 #define CDBBUFFEREDAPPEND_H
 
-#include "postgres.h"
 #include "storage/fd.h"
 #include "cdb/cdbmirroredappendonly.h"
 

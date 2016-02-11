@@ -9,7 +9,6 @@
 #ifndef _CDBGANG_H_
 #define _CDBGANG_H_
 
-#include "postgres.h"
 #include "cdb/cdbutil.h"
 #include "executor/execdesc.h"
 #include <pthread.h>
