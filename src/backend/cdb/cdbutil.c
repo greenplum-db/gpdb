@@ -29,7 +29,6 @@
 #include "utils/memutils.h"
 #include "catalog/gp_configuration.h"
 #include "catalog/gp_segment_config.h"
-#include "cdb/cdbcat.h"
 #include "cdb/cdbutil.h"
 #include "nodes/execnodes.h"	/* Slice, SliceTable */
 #include "cdb/cdbmotion.h"

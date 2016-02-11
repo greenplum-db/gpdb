@@ -36,7 +36,6 @@
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbcat.h"
 
 static void AlterSchemaOwner_internal(cqContext  *pcqCtx, 
 									  HeapTuple tup, Relation rel, Oid newOwnerId);

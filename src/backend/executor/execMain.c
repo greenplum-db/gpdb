@@ -82,7 +82,6 @@
 
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbaocsam.h"
-#include "cdb/cdbcat.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbexplain.h"             /* cdbexplain_sendExecStats() */

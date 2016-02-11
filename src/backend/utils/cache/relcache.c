@@ -73,7 +73,7 @@
 #include "utils/syscache.h"
 #include "utils/typcache.h"
 
-#include "cdb/cdbcat.h"         /* GpPolicy */
+#include "catalog/gp_policy.h"         /* GpPolicy */
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"        /* Gp_role */
 #include "cdb/cdbmirroredflatfile.h"

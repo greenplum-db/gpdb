@@ -39,7 +39,6 @@
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbcat.h"
 #include "cdb/cdbmotion.h"
 #include "cdb/ml_ipc.h"
 

@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-#include "cdb/cdbcat.h"         /* GpPolicy */
+#include "catalog/gp_policy.h"         /* GpPolicy */
 #include "cdb/cdbdef.h"         /* CdbSwap() */
 #include "cdb/cdbpullup.h"      /* cdbpullup_missing_var_walker() */
 #include "nodes/makefuncs.h"    /* makeVar() */

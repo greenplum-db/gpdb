@@ -66,7 +66,6 @@
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbcat.h"
 #include "cdb/cdbpersistentdatabase.h"
 #include "cdb/cdbpersistentrelation.h"
 #include "cdb/cdbmirroredfilesysobj.h"

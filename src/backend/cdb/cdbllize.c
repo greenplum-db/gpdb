@@ -35,7 +35,6 @@
 #include "cdb/cdbplan.h"
 #include "cdb/cdbpullup.h"
 #include "cdb/cdbllize.h"
-#include "cdb/cdbcat.h"
 #include "cdb/cdbmutate.h"
 #include "optimizer/tlist.h"
 
