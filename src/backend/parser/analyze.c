@@ -5902,7 +5902,6 @@ transformAlterTable_all_PartitionStmt(
 				prule = get_part_rule1(rel,
 									   pid2,
 									   false, true,
-									   CurrentMemoryContext,
 									   NULL,
 									   pNode,
 									   sid1.data, NULL);

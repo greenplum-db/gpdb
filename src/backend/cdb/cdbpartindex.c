@@ -924,7 +924,7 @@ get_relation_part_constraints(Oid rootOid, List **defaultLevels)
 	{
 		List *partKey = (List *) list_nth(partkeys, level);
 
-		PartitionNode *pn = get_parts(rootOid, level, 0 /*parent*/, false /* inctemplate */, CurrentMemoryContext, false /*includesubparts*/);
+		PartitionNode *pn = get_parts(rootOid, level, 0 /*parent*/, false /* inctemplate */, false /*includesubparts*/);
 
 		Assert(NULL != pn);
 		List *partOids = all_partition_relids(pn);

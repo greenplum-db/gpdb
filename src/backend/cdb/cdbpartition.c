@@ -404,7 +404,7 @@ rel_has_external_partition(Oid relid)
 {
 	ListCell *lc = NULL;
 	PartitionNode *n = get_parts(relid, 0 /*level*/ ,
-							0 /*parent*/, false /* inctemplate */, CurrentMemoryContext, false /*includesubparts*/);
+							0 /*parent*/, false /* inctemplate */, false /*includesubparts*/);
 
 	if (n == NULL || n->rules == NULL)
 		return false;
@@ -1858,8 +1858,7 @@ add_part_to_catalog(Oid relid, PartitionBy *pby,
  * and continue in an ascending sequence.
  */
 void
-parruleord_reset_rank(Oid partid, int2 level, Oid parent, int2 ruleord,
-					  MemoryContext mcxt)
+parruleord_reset_rank(Oid partid, int2 level, Oid parent, int2 ruleord)
 {
 	ScanKeyData key[3];
 	HeapTuple tuple;
@@ -1924,8 +1923,7 @@ parruleord_reset_rank(Oid partid, int2 level, Oid parent, int2 ruleord,
  */
 void
 parruleord_open_gap(Oid partid, int2 level, Oid parent, int2 ruleord,
-					int stopkey,
-					MemoryContext mcxt, bool closegap)
+					int stopkey, bool closegap)
 {
 	HeapTuple tuple;
 	cqContext	*pcqCtx;
@@ -1972,7 +1970,7 @@ parruleord_open_gap(Oid partid, int2 level, Oid parent, int2 ruleord,
  * Exported for ruleutils.c
  */
 PartitionRule *
-ruleMakePartitionRule(HeapTuple tuple, TupleDesc tupdesc, MemoryContext mcxt)
+ruleMakePartitionRule(HeapTuple tuple, TupleDesc tupdesc)
 {
 	Form_pg_partition_rule rule_desc =
 	(Form_pg_partition_rule)GETSTRUCT(tuple);
@@ -1980,12 +1978,9 @@ ruleMakePartitionRule(HeapTuple tuple, TupleDesc tupdesc, MemoryContext mcxt)
 	char *rule_str;
 	Datum rule_datum;
 	bool isnull;
-	MemoryContext oldcxt;
 	PartitionRule *rule;
 
-	oldcxt = MemoryContextSwitchTo(mcxt);
 	rule = makeNode(PartitionRule);
-	MemoryContextSwitchTo(oldcxt);
 
 	rule->parruleid = HeapTupleGetOid(tuple);
 	rule->paroid = rule_desc->paroid;
@@ -1993,7 +1988,7 @@ ruleMakePartitionRule(HeapTuple tuple, TupleDesc tupdesc, MemoryContext mcxt)
 	rule->parparentoid = rule_desc->parparentrule;
 	rule->parisdefault = rule_desc->parisdefault;
 
-	rule->parname = MemoryContextStrdup(mcxt, NameStr(rule_desc->parname));
+	rule->parname = pstrdup(NameStr(rule_desc->parname));
 
 	rule->parruleord = rule_desc->parruleord;
 	rule->parrangestartincl = rule_desc->parrangestartincl;
@@ -2009,9 +2004,7 @@ ruleMakePartitionRule(HeapTuple tuple, TupleDesc tupdesc, MemoryContext mcxt)
 	rule_str = DatumGetCString(DirectFunctionCall1(textout,
 												   PointerGetDatum(rule_text)));
 
-	oldcxt = MemoryContextSwitchTo(mcxt);
 	rule->parrangestart = stringToNode(rule_str);
-	MemoryContextSwitchTo(oldcxt);
 
 	pfree(rule_str);
 
@@ -2025,9 +2018,7 @@ ruleMakePartitionRule(HeapTuple tuple, TupleDesc tupdesc, MemoryContext mcxt)
 	rule_str = DatumGetCString(DirectFunctionCall1(textout,
 												   PointerGetDatum(rule_text)));
 
-	oldcxt = MemoryContextSwitchTo(mcxt);
 	rule->parrangeend = stringToNode(rule_str);
-	MemoryContextSwitchTo(oldcxt);
 
 	pfree(rule_str);
 
@@ -2041,9 +2032,7 @@ ruleMakePartitionRule(HeapTuple tuple, TupleDesc tupdesc, MemoryContext mcxt)
 	rule_str = DatumGetCString(DirectFunctionCall1(textout,
 												   PointerGetDatum(rule_text)));
 
-	oldcxt = MemoryContextSwitchTo(mcxt);
 	rule->parrangeevery = stringToNode(rule_str);
-	MemoryContextSwitchTo(oldcxt);
 
 	/* list values */
 	rule_datum = heap_getattr(tuple,
@@ -2055,9 +2044,7 @@ ruleMakePartitionRule(HeapTuple tuple, TupleDesc tupdesc, MemoryContext mcxt)
 	rule_str = DatumGetCString(DirectFunctionCall1(textout,
 												   PointerGetDatum(rule_text)));
 
-	oldcxt = MemoryContextSwitchTo(mcxt);
 	rule->parlistvalues = stringToNode(rule_str);
-	MemoryContextSwitchTo(oldcxt);
 
 	pfree(rule_str);
 
@@ -2126,18 +2113,15 @@ ruleMakePartitionRule(HeapTuple tuple, TupleDesc tupdesc, MemoryContext mcxt)
  * Result is in the given memory context.
  */
 Partition *
-partMakePartition(HeapTuple tuple, TupleDesc tupdesc, MemoryContext mcxt)
+partMakePartition(HeapTuple tuple, TupleDesc tupdesc)
 {
 	oidvector *oids;
 	int2vector *atts;
 	bool isnull;
 	Form_pg_partition partrow = (Form_pg_partition)GETSTRUCT(tuple);
-	MemoryContext oldcxt;
 	Partition *p;
 
-	oldcxt = MemoryContextSwitchTo(mcxt);
 	p = makeNode(Partition);
-	MemoryContextSwitchTo(oldcxt);
 
 	p->partid = HeapTupleGetOid(tuple);
 	p->parrelid = partrow->parrelid;
@@ -2153,10 +2137,8 @@ partMakePartition(HeapTuple tuple, TupleDesc tupdesc, MemoryContext mcxt)
 										tupdesc, &isnull));
 	Assert(!isnull);
 
-	oldcxt = MemoryContextSwitchTo(mcxt);
 	p->paratts = palloc(sizeof(int2) * p->parnatts);
 	p->parclass = palloc(sizeof(Oid) * p->parnatts);
-	MemoryContextSwitchTo(oldcxt);
 
 	memcpy(p->paratts, atts->values, sizeof(int2) * p->parnatts);
 	memcpy(p->parclass, oids->values, sizeof(Oid) * p->parnatts);
@@ -2179,10 +2161,9 @@ partMakePartition(HeapTuple tuple, TupleDesc tupdesc, MemoryContext mcxt)
  */
 PartitionNode *
 get_parts(Oid relid, int2 level, Oid parent, bool inctemplate,
-		  MemoryContext mcxt, bool includesubparts)
+		  bool includesubparts)
 {
 	PartitionNode *pnode = NULL;
-	MemoryContext oldcxt;
 	HeapTuple tuple;
 	Relation rel;
 	List *rules = NIL;
@@ -2218,7 +2199,7 @@ get_parts(Oid relid, int2 level, Oid parent, bool inctemplate,
 	if (HeapTupleIsValid(tuple))
 	{
 		pnode = makeNode(PartitionNode);
-		pnode->part = partMakePartition(tuple, RelationGetDescr(rel), mcxt);
+		pnode->part = partMakePartition(tuple, RelationGetDescr(rel));
 	}
 
 	heap_close(rel, AccessShareLock);
@@ -2257,20 +2238,18 @@ get_parts(Oid relid, int2 level, Oid parent, bool inctemplate,
 	{
 		PartitionRule *rule;
 
-		rule = ruleMakePartitionRule(tuple, RelationGetDescr(rel), mcxt);
+		rule = ruleMakePartitionRule(tuple, RelationGetDescr(rel));
 		if (includesubparts)
 		{
 			rule->children = get_parts(relid, level + 1, rule->parruleid,
-									   inctemplate, mcxt, true /*includesubparts*/);
+									   inctemplate, true /*includesubparts*/);
 		}
 
 		if (rule->parisdefault)
 			pnode->default_part = rule;
 		else
 		{
-			oldcxt = MemoryContextSwitchTo(mcxt);
 			rules = lappend(rules, rule);
-			MemoryContextSwitchTo(oldcxt);
 		}
 	}
 	/* NOTE: this assert is valid, except for the case of splitting
@@ -2296,9 +2275,8 @@ PartitionNode *
 RelationBuildPartitionDescByOid(Oid relid, bool inctemplate)
 {
 	PartitionNode *n;
-	MemoryContext mcxt = CurrentMemoryContext;
 
-	n = get_parts(relid, 0, 0, inctemplate, mcxt, true /*includesubparts*/);
+	n = get_parts(relid, 0, 0, inctemplate, true /*includesubparts*/);
 
 	return n;
 }
@@ -2975,8 +2953,10 @@ rel_get_leaf_children_relids(Oid relid)
 
 	if (PART_STATUS_ROOT == ps)
 	{
-		PartitionNode *pn = get_parts(relid, 0 /*level*/, 0 /*parent*/, false /*inctemplate*/,
-				CurrentMemoryContext, true /*includesubparts*/);
+		PartitionNode *pn;
+
+		pn = get_parts(relid, 0 /*level*/, 0 /*parent*/, false /*inctemplate*/,
+					   true /*includesubparts*/);
 		leaf_relids = all_leaf_partition_relids(pn);
 		pfree(pn);
 	}
@@ -3048,7 +3028,7 @@ countLeafPartTables(Oid rootOid)
 	Assert (rel_is_partitioned(rootOid));
 
 	PartitionNode *pn = get_parts(rootOid, 0 /* level */, 0 /* parent */, false /* inctemplate */,
-								  CurrentMemoryContext, true /* include subparts */);
+								  true /* include subparts */);
 
 	List *lRelOids = all_leaf_partition_relids(pn);
 	Assert (list_length(lRelOids) > 0);
@@ -3227,7 +3207,6 @@ static List *rel_get_part_path(Oid relid)
 {
 	PartitionNode		*pNode	   = NULL;
 	Partition			*part	   = NULL;
-	MemoryContext		 mcxt	   = CurrentMemoryContext;
 	List				*lrelid	   = NIL;
 	List				*lnamerank = NIL;
 	List				*lnrv	   = NIL;
@@ -3240,7 +3219,7 @@ static List *rel_get_part_path(Oid relid)
 		return NIL;
 
 	/* call the guts of RelationBuildPartitionDesc */
-	pNode = get_parts(masteroid, 0, 0, false, mcxt, true /*includesubparts*/);
+	pNode = get_parts(masteroid, 0, 0, false, true /*includesubparts*/);
 
 	if (!pNode)
 	{
@@ -4514,7 +4493,6 @@ get_part_rule1(Relation rel,
 			   AlterPartitionId *pid,
 			   bool bExistError,
 			   bool bMustExist,
-			   MemoryContext mcxt,
 			   int *pSearch,
 			   PartitionNode *pNode,
 			   char *relname,
@@ -4883,7 +4861,6 @@ get_part_rule(Relation rel,
 			  AlterPartitionId *pid,
 			  bool bExistError,
 			  bool bMustExist,
-			  MemoryContext mcxt,
 			  int *pSearch,
 			  bool inctemplate)
 {
@@ -4904,7 +4881,7 @@ get_part_rule(Relation rel,
 		return get_part_rule1(rel,
 							  pid,
 							  bExistError, bMustExist,
-							  mcxt, pSearch, pNode, relname, NULL);
+							  pSearch, pNode, relname, NULL);
 
 	if (!pid)
 		return NULL;
@@ -4935,7 +4912,7 @@ get_part_rule(Relation rel,
 		prule2 = get_part_rule1(rel,
 								pid2,
 								bExistError, bMustExist,
-								mcxt, pSearch, pNode, sid1.data, &pNode2);
+								pSearch, pNode, sid1.data, &pNode2);
 
 		pNode = pNode2;
 
@@ -4968,7 +4945,7 @@ get_part_rule(Relation rel,
 			prule2 = get_part_rule1(rel,
 									pid2,
 									bExistError, bMustExist,
-									mcxt, pSearch, pNode, sid1.data, &pNode2);
+									pSearch, pNode, sid1.data, &pNode2);
 
 			pNode = pNode2;
 
@@ -5105,7 +5082,6 @@ atpxPart_validate_spec(
 							   pNode->part->parlevel + 1,
 							   InvalidOid, /* no parent for template */
 							   true,
-							   CurrentMemoryContext,
 							   true /*includesubparts*/
 							   );
 	}
@@ -5362,7 +5338,6 @@ atpxPart_validate_spec(
 											   pNode2->part->parlevel + 1,
 											   InvalidOid, /* no parent for template */
 											   true,
-											   CurrentMemoryContext,
 											   true /*includesubparts*/
 											   );
 					}
@@ -5496,7 +5471,7 @@ atpxPartAddList(Relation rel,
 				pid.partiddef = (Node *)makeInteger(-1);
 
 				prule = get_part_rule1(rel, &pid, false, false,
-									   CurrentMemoryContext, NULL,
+									   NULL,
 									   pNode,
 									   lrelname,
 									   &pNode2);
@@ -5585,7 +5560,7 @@ atpxPartAddList(Relation rel,
 				pid.partiddef = (Node *)makeInteger(1);
 
 				prule = get_part_rule1(rel, &pid, false, false,
-									   CurrentMemoryContext, NULL,
+									   NULL,
 									   pNode,
 									   lrelname,
 									   &pNode2);
@@ -5668,7 +5643,7 @@ atpxPartAddList(Relation rel,
 				pid.partiddef = (Node *)makeInteger(1);
 
 				prule = get_part_rule1(rel, &pid, false, false,
-									   CurrentMemoryContext, NULL,
+									   NULL,
 									   pNode,
 									   lrelname,
 									   &pNode2);
@@ -5754,7 +5729,7 @@ atpxPartAddList(Relation rel,
 				pid.partiddef = (Node *)makeInteger(-1);
 
 				prule = get_part_rule1(rel, &pid, false, false,
-									   CurrentMemoryContext, NULL,
+									   NULL,
 									   pNode,
 									   lrelname,
 									   &pNode2);
@@ -5840,7 +5815,7 @@ atpxPartAddList(Relation rel,
 												(List *)pid.partiddef);
 
 				prule = get_part_rule1(rel, &pid, false, false,
-									   CurrentMemoryContext, &startSearchpoint,
+									   &startSearchpoint,
 									   pNode,
 									   lrelname,
 									   &pNode2);
@@ -6074,7 +6049,7 @@ atpxPartAddList(Relation rel,
 												(List *)pid.partiddef);
 
 				prule = get_part_rule1(rel, &pid, false, false,
-									   CurrentMemoryContext, &endSearchpoint,
+									   &endSearchpoint,
 									   pNode,
 									   lrelname,
 									   &pNode2);
@@ -6508,7 +6483,7 @@ atpxPartAddList(Relation rel,
 					pid.location  = -1;
 
 					prule = get_part_rule1(rel, &pid, false, false,
-										   CurrentMemoryContext, NULL,
+										   NULL,
 										   pNode,
 										   lrelname,
 										   &pNode2);
@@ -6584,7 +6559,7 @@ atpxPartAddList(Relation rel,
 			parruleord_open_gap(
 					pNode->part->partid, pNode->part->parlevel,
 					rule->parparentoid, --hole, 1,
-					CurrentMemoryContext, false /* closegap */);
+					false /* closegap */);
 		}
 	}
 	else if (newPos == LAST && pNode && list_length(pNode->rules) > 0)
@@ -6613,7 +6588,7 @@ atpxPartAddList(Relation rel,
 			parruleord_open_gap(
 					pNode->part->partid, pNode->part->parlevel,
 					last_rule->parparentoid, last_rule->parruleord, stopkey,
-					CurrentMemoryContext, true /* closegap */);
+					true /* closegap */);
 			/* Let the new rule reuse last rule's parruleord. */
 			--maxpartno;
 		}
@@ -6649,7 +6624,6 @@ atpxPartAddList(Relation rel,
 					rule->parparentoid,
 					--maxpartno,
 					++hole,
-					CurrentMemoryContext,
 					true /* closegap */);
 		}
 		else if (maxpartno < hole)
@@ -6665,7 +6639,6 @@ atpxPartAddList(Relation rel,
 					rule->parparentoid,
 					hole,
 					maxpartno,
-					CurrentMemoryContext,
 					false /* closegap */);
 		}
 		/* if (hole == maxpartno) we don't need to open a gap. */
@@ -7241,7 +7214,7 @@ atpxModifyListOverlap (Relation rel,
 			pid2.location  = -1;
 
 			prule2 = get_part_rule(rel, &pid2, false, false,
-								   CurrentMemoryContext, NULL, false);
+								   NULL, false);
 
 			if (bAdd)
 			{
@@ -7401,7 +7374,7 @@ atpxModifyRangeOverlap (Relation				 rel,
 		pid2.location  = -1;
 
 		prule2 = get_part_rule(rel, &pid2, false, false,
-							   CurrentMemoryContext, NULL, false);
+							   NULL, false);
 
 		if (!prule2)
 		{
@@ -7441,7 +7414,7 @@ atpxModifyRangeOverlap (Relation				 rel,
 				pid2.location  = -1;
 
 				prule2 = get_part_rule(rel, &pid2, false, false,
-									   CurrentMemoryContext, NULL, false);
+									   NULL, false);
 
 				Assert(prule2);
 
@@ -7505,7 +7478,7 @@ atpxModifyRangeOverlap (Relation				 rel,
 				pid2.location  = -1;
 
 				prule2 = get_part_rule(rel, &pid2, false, false,
-									   CurrentMemoryContext, NULL, false);
+									   NULL, false);
 
 				Assert(prule2);
 
@@ -7947,7 +7920,6 @@ get_pprule_from_ATC(Relation rel, AlterTableCmd *cmd)
 	pprule = get_part_rule(rel,
 						   work_partid,
 						   true, true, /* parts must exist */
-						   CurrentMemoryContext,
 						   NULL, /* no implicit results */
 						   false /* no template rules */
 						   );

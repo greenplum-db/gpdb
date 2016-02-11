@@ -1431,14 +1431,13 @@ gpdb::PpnParts
 	int2 level,
 	Oid parent,
 	bool inctemplate,
-	MemoryContext mcxt,
 	bool includesubparts
 	)
 {
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_partition, pg_partition_rule */
-		return get_parts(relid, level, parent, inctemplate, mcxt, includesubparts);
+		return get_parts(relid, level, parent, inctemplate, includesubparts);
 	}
 	GP_WRAP_END;
 	return NULL;

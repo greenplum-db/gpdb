@@ -3026,8 +3026,7 @@ CTranslatorRelcacheToDXL::PdrgpulPartKeys
 
 	DrgPul *pdrgpulPartKeys = GPOS_NEW(pmp) DrgPul(pmp);
 
-	MemoryContext mcxt = CurrentMemoryContext;
-	PartitionNode *pn = gpdb::PpnParts(oid, 0 /*level*/, 0 /*parent*/, false /*inctemplate*/, mcxt, true /*includesubparts*/);
+	PartitionNode *pn = gpdb::PpnParts(oid, 0 /*level*/, 0 /*parent*/, false /*inctemplate*/, true /*includesubparts*/);
 	GPOS_ASSERT(NULL != pn);
 	
 	if (gpdb::FHashPartitioned(pn->part->parkind))

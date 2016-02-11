@@ -4069,7 +4069,6 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 								  0, /**/
 								  InvalidOid, /**/
 								  false, /**/
-								  CurrentMemoryContext,
 								  true /*includesubparts*/);
 				
 				all_oids = lcons_oid(RelationGetRelid(rel), all_partition_relids(pnode));
@@ -4265,11 +4264,11 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				AlterPartitionId *pid = (AlterPartitionId *) pc->partid;
 
 				prule1 = get_part_rule(rel, pid, true, true,
-									   CurrentMemoryContext, NULL, false);
+									   NULL, false);
 
 				prule2 = get_part_rule(rel, (AlterPartitionId *)pc->arg1,
 									   true, true,
-									   CurrentMemoryContext, NULL, false);
+									   NULL, false);
 
 				if (pc->arg2)
 				{
@@ -4277,8 +4276,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 
 					prule3 = get_part_rule(rel,
 										   (AlterPartitionId *)pc2->partid,
-										   true, true,
-										   CurrentMemoryContext, NULL, false);
+										   true, true, NULL, false);
 				}
 
 				if (prule1)
@@ -4381,8 +4379,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 				 */
 
 				/* We'll error out if it doesn't exist */
-				prule1 = get_part_rule(rel, pid, true, true,
-									   CurrentMemoryContext, NULL, false);
+				prule1 = get_part_rule(rel, pid, true, true, NULL, false);
 
 				if (prule1->topRule->children)
 					ereport(ERROR,
@@ -4759,12 +4756,10 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 
 					prule2 = get_part_rule(rel,
 										   (AlterPartitionId *)cmd2->partid,
-										   false, false, CurrentMemoryContext,
-										   NULL, false);
+										   false, false, NULL, false);
 
 					prule3 = get_part_rule(rel, (AlterPartitionId *)cmd2->arg1,
-										   false, false, CurrentMemoryContext,
-										   NULL, false);
+										   false, false, NULL, false);
 					/* both can't exist */
 					if (prule2 && prule3)
 					{
@@ -13868,10 +13863,10 @@ ATPExecPartAdd(AlteredTableInfo *tab,
 
 	/* don't check if splitting or setting a subpartition template */
 	if (!is_split && !bSetTemplate)
+	{
 		/* We complain if partition already exists, so prule should be NULL */
-		prule = get_part_rule(rel, pid, true, false,
-							  CurrentMemoryContext, NULL,
-							  false);
+		prule = get_part_rule(rel, pid, true, false, NULL, false);
+	}
 
 	if (!prule)
 	{
@@ -14061,9 +14056,7 @@ ATPExecPartAlter(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		pid2->partiddef = (Node *)pidlst;
 		pid2->location  = -1;
 
-		prule = get_part_rule(rel, pid2, true, true,
-							  CurrentMemoryContext, NULL,
-							  false);
+		prule = get_part_rule(rel, pid2, true, true, NULL, false);
 
 		if (!prule)
 			ereport(ERROR,
@@ -14174,8 +14167,7 @@ ATPExecPartCoalesce(Relation rel,
 	if (Gp_role != GP_ROLE_DISPATCH)
 		return;
 
-	prule = get_part_rule(rel, pid, true, true, CurrentMemoryContext, NULL,
-						  false);
+	prule = get_part_rule(rel, pid, true, true, NULL, false);
 
 	if (0)
 	{
@@ -14186,7 +14178,6 @@ ATPExecPartCoalesce(Relation rel,
 				prule->topRule->parparentoid,
 				prule->topRule->parruleord,
 				0,
-				CurrentMemoryContext,
 				false /* closegap */);
 
 	}
@@ -14263,8 +14254,7 @@ ATPExecPartDrop(Relation rel,
 		locPid->partiddef = (Node *)makeInteger(1);
 	}
 
-	prule = get_part_rule(rel, pid, bCheckMaybe, true,
-						  CurrentMemoryContext, NULL, false);
+	prule = get_part_rule(rel, pid, bCheckMaybe, true, NULL, false);
 
 	/* MPP-3722: complain if for(value) matches the default partition */
 	if ((locPid->idtype == AT_AP_IDValue)
@@ -14517,8 +14507,7 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 		pn = RelationBuildPartitionDesc(rel, false);
 		pcols = get_partition_attrs(pn);
 
-		prule = get_part_rule(rel, pid, true, true,
-							  CurrentMemoryContext, NULL, false);
+		prule = get_part_rule(rel, pid, true, true, NULL, false);
 
 		if (!prule)
 			return;
@@ -14780,8 +14769,7 @@ ATPExecPartMerge(Relation rel,
 		RangeVar		   *relrv1, *relrv2;
 		Relation			r1, r2;
 
-		prule1 = get_part_rule(rel, pid, true, true,
-							   CurrentMemoryContext, NULL, false);
+		prule1 = get_part_rule(rel, pid, true, true, NULL, false);
 
 		/*
 		 * XXX: get_namespace_name(prule1->topRule->parchildrelid) is wrong
@@ -14794,8 +14782,7 @@ ATPExecPartMerge(Relation rel,
 		r1 = heap_openrv(relrv1, AccessExclusiveLock);
 
 		prule2 = get_part_rule(rel, (AlterPartitionId *)pc->arg1,
-							   true, true,
-							   CurrentMemoryContext, NULL, false);
+							   true, true, NULL, false);
 
 		relrv2 = makeRangeVar(
 					get_namespace_name(prule2->topRule->parchildrelid),
@@ -14808,8 +14795,7 @@ ATPExecPartMerge(Relation rel,
 			AlterPartitionCmd *pc2 = (AlterPartitionCmd *)pc->arg2;
 
 			prule3 = get_part_rule(rel, (AlterPartitionId *)pc2->partid,
-								   true, true, CurrentMemoryContext,
-								   NULL, false);
+								   true, true, NULL, false);
 
 			Assert(PointerIsValid(prule3));
 
@@ -14891,8 +14877,7 @@ ATPExecPartModify(Relation rel,
 	if (Gp_role != GP_ROLE_DISPATCH)
 		return;
 
-	prule = get_part_rule(rel, pid, true, true, CurrentMemoryContext, NULL,
-						  false);
+	prule = get_part_rule(rel, pid, true, true, NULL, false);
 
 	if (prule)
 	{
@@ -14983,8 +14968,7 @@ ATPExecPartModify(Relation rel,
 				prule->pNode->part->partid,
 				prule->pNode->part->parlevel,
 				prule->topRule->parparentoid,
-				prule->topRule->parruleord,
-				CurrentMemoryContext);
+				prule->topRule->parruleord);
 
 		/* MPP-6929: metadata tracking */
 		MetaTrackUpdObject(RelationRelationId,
@@ -15027,8 +15011,7 @@ ATPExecPartRename(Relation rel,
 							 &lrelname,
 							 lRelNameBuf);
 
-	prule = get_part_rule(rel, pid, true, true, CurrentMemoryContext, NULL,
-						  false);
+	prule = get_part_rule(rel, pid, true, true, NULL, false);
 
 	if (prule)
 	{
@@ -15059,7 +15042,7 @@ ATPExecPartRename(Relation rel,
 
 		/* ERROR if exists */
 		prule2 = get_part_rule1(rel, &newpid, true, false,
-								CurrentMemoryContext, NULL,
+								NULL,
 								pNode,
 								lrelname,
 								NULL);
@@ -15843,8 +15826,7 @@ ATPExecPartSplit(Relation *rel,
 		List *orient = NIL;
 
 		/* Get target meta data */
-		prule = get_part_rule(*rel, pid, true, true,
-							  CurrentMemoryContext, NULL, false);
+		prule = get_part_rule(*rel, pid, true, true, NULL, false);
 
 		/* Error out on external partition */
 		existrel = heap_open(prule->topRule->parchildrelid, NoLock);
@@ -15939,8 +15921,7 @@ ATPExecPartSplit(Relation *rel,
 			{
 				PgPartRule *tmprule;
 				tmprule = get_part_rule(*rel, (AlterPartitionId *)pc2->partid,
-										false, false, CurrentMemoryContext,
-										NULL, false);
+										false, false, NULL, false);
 				if (tmprule)
 				{
 					isdef = tmprule->topRule->parisdefault;
@@ -16026,8 +16007,7 @@ ATPExecPartSplit(Relation *rel,
 			{
 				PgPartRule *tmprule;
 				tmprule = get_part_rule(*rel, (AlterPartitionId *)pc2->arg1,
-										false, false, CurrentMemoryContext,
-										NULL, false);
+										false, false, NULL, false);
 				if (tmprule)
 				{
 					isdef = tmprule->topRule->parisdefault;
@@ -16160,8 +16140,7 @@ ATPExecPartSplit(Relation *rel,
 		else
 		{
 			/* refresh prule, out of date due to EXCHANGE */
-			prule = get_part_rule(*rel, pid, true, true,
-								  CurrentMemoryContext, NULL, false);
+			prule = get_part_rule(*rel, pid, true, true, NULL, false);
 			idpid = makeNode(AlterPartitionId);
 			idpid->idtype = AT_AP_IDRule;
 			idpid->partiddef = (Node *)list_make2((Node *)prule, pid);
@@ -16626,8 +16605,7 @@ ATPExecPartSplit(Relation *rel,
 			else
 			{
 				PgPartRule *tmprule;
-				tmprule = get_part_rule(*rel, mypid, true, true,
-									    CurrentMemoryContext, NULL, false);
+				tmprule = get_part_rule(*rel, mypid, true, true, NULL, false);
 				newchildrelid = tmprule->topRule->parchildrelid;
 			}
 
@@ -16818,8 +16796,7 @@ ATPExecPartTruncate(Relation rel,
 	if (Gp_role != GP_ROLE_DISPATCH)
 		return;
 
-	prule = get_part_rule(rel, pid, true, true, CurrentMemoryContext, NULL,
-						  false);
+	prule = get_part_rule(rel, pid, true, true, NULL, false);
 
 	if (prule)
 	{
@@ -18074,8 +18051,7 @@ ATPrepExchange(Relation rel, AlterPartitionCmd *pc)
 		if (is_split)
 			return;
 		
-		prule = get_part_rule(rel, pid, true, true,
-							  CurrentMemoryContext, NULL, false);
+		prule = get_part_rule(rel, pid, true, true, NULL, false);
 		if (prule)
 		{
 			/* cannot exchange a hash partition */

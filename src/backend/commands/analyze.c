@@ -323,7 +323,7 @@ analyzeStmt(VacuumStmt *stmt, List *relids)
 		else if (ps == PART_STATUS_ROOT)
 		{
 			PartitionNode *pn = get_parts(relationOid, 0 /*level*/ ,
-		 	 	            0 /*parent*/, false /* inctemplate */, CurrentMemoryContext, true /*includesubparts*/);
+		 	 	            0 /*parent*/, false /* inctemplate */, true /*includesubparts*/);
 			Assert(pn);
 			if (!stmt->rootonly)
 			{
@@ -1555,7 +1555,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	if (rel_has_external_partition(RelationGetRelid(onerel)))
 	{
 		PartitionNode *pn = get_parts(RelationGetRelid(onerel), 0 /*level*/ ,
-								0 /*parent*/, false /* inctemplate */, CurrentMemoryContext, false /*includesubparts*/);
+								0 /*parent*/, false /* inctemplate */, false /*includesubparts*/);
 
 		ListCell *lc = NULL;
 		bool isFirst = true;

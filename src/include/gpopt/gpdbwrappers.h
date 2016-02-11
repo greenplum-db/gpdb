@@ -293,7 +293,7 @@ namespace gpdb {
 	List *PlPartitionAttrs(Oid oid);
 
 	// parts of a partitioned table
-	PartitionNode *PpnParts(Oid relid, int2 level, Oid parent, bool inctemplate, MemoryContext mcxt, bool includesubparts);
+	PartitionNode *PpnParts(Oid relid, int2 level, Oid parent, bool inctemplate, bool includesubparts);
 
 	// keys of the relation with the given oid
 	List *PlRelationKeys(Oid relid);

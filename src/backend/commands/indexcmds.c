@@ -1731,7 +1731,7 @@ ReindexTable(ReindexStmt *stmt)
 		PartitionNode *pn;
 
 		pn = get_parts(relid, 0 /* level */, 0 /* parent */, false /* inctemplate */,
-			CurrentMemoryContext, true /* includesubparts */);
+					   true /* includesubparts */);
 		prels = all_partition_relids(pn);
 	}
 	else if (rel_is_child_partition(relid))

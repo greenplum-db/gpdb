@@ -7488,7 +7488,7 @@ pg_get_partition_template_def_worker(Oid relid, int prettyFlags,
 		truncateStringInfo(&sid2, 0);
 
 		pnt = get_parts(relid, 
-						templatelevel, 0, true, CurrentMemoryContext, true /*includesubparts*/);
+						templatelevel, 0, true, true /*includesubparts*/);
 		get_partition_recursive(pnt, &headc, &bodyc, &leveldone, 
 								bLeafTablename);
 
@@ -7656,8 +7656,7 @@ get_rule_def_common(Oid partid, int prettyFlags, int bLeafTablename)
 	}
 
 
-	rule = ruleMakePartitionRule(tuple, RelationGetDescr(rel), 
-								 CurrentMemoryContext);
+	rule = ruleMakePartitionRule(tuple, RelationGetDescr(rel));
 	heap_close(rel, AccessShareLock);
 
 	/* lookup pg_partition by oid */
@@ -7675,8 +7674,7 @@ get_rule_def_common(Oid partid, int prettyFlags, int bLeafTablename)
 		return NULL;
 	}
 
-	part = partMakePartition(tuple, RelationGetDescr(rel),
-							 CurrentMemoryContext);
+	part = partMakePartition(tuple, RelationGetDescr(rel));
 
 	heap_close(rel, AccessShareLock);
 
