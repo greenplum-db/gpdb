@@ -1,12 +1,12 @@
 #!/bin/bash
 
-sudo rm -rf /home/gpadmin/gpdb_install
-sudo mkdir /home/gpadmin/gpdb_install
-sudo chown -R gpadmin:gpadmin /home/gpadmin/gpdb*
+sudo rm -rf /usr/local/greenplum-db
+sudo mkdir /usr/local/greenplum-db
+sudo chown -R vagrant:vagrant /usr/local/greenplum-db
 cd /gpdb
-./configure --prefix=/home/gpadmin/gpdb_install --enable-depend --enable-debug --with-python || exit 1
+./configure --prefix=/usr/local/greenplum-db --enable-depend --enable-debug --with-python || exit 1
 sudo make clean || exit 1
 sudo make || exit 1
 sudo make install
-sudo chown -R gpadmin:gpadmin /home/gpadmin/gpdb_install
+sudo chown -R vagrant:vagrant /usr/local/greenplum-db
 

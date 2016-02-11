@@ -38,7 +38,7 @@ git clone https://github.com/greenplum-db/gpdb.git
 Next go to the `gpdb/vagrant` directory. This directory has virtual machine
 configurations for different operating systems (for now there is only one).
 Pick the distro of your choice, and `cd` to that directory. For this document,
-we will assume that you pick `centos`. So, issue the following command: 
+we will assume that you pick `centos`. So, issue the following command:
 
 ```shell
 cd gpdb/vagrant/centos
@@ -91,33 +91,34 @@ will be isolated from the host, except for any changes that you make to
 this mount point in the virtual machine. Thus, if you type ``ls /gpdb`` in the
 virtual machine shell, then you will see the GPDB code that you checked out.
 
-That's it - GPDB is built, up and running. You can login under `gpadmin` user
-with the password `changeme` and start the psql connection to the database.
+That's it - GPDB is built, up and running. You can open database connection right
+away with ``psql -d template1`` and start creating your stuff, or run the
+command ``make installcheck-good`` in ``/gpdb`` directory to run Greenplum tests
 
 If you are curious how this happened, take a look at the following scripts:
 * `vagrant/centos/vagrant-setup.sh` - this script installs all the packages
-  required for GPDB as dependencies, and also creates `gpadmin` user
+  required for GPDB as dependencies
 * `vagrant/centos/vagrant-build.sh` - this script builds GPDB. In case you
   need to change build options you can change this file and re-create VM by
   running `vagrant destroy` followed by `vagrant up`
-* `vagrant/centos/vagrant-install.sh` - this script configures OS-level settings
-  required for running GPDB
-* `vagrant/centos/vagrant-install-gpdb.sh` - this script is responsible for GPDB
-  installation
+* `vagrant/centos/vagrant-configure-os.sh` - this script configures OS
+  parameters required for running GPDB
+* `vagrant/centos/vagrant-install-inner.sh` - this script is responsible for
+  GPDB installation
 
 You can easily go to `vagrant/centos/Vagrantfile` and comment out the calls for
 any of these scripts at any time to prevent GPDB installation or OS-level
-congigurations
+configurations
 
 Now, you are ready to start GPDB. To do that, type in the following commands
-into the (guest) terminal under `gpadmin` user:
+into the (guest) terminal:
 ```shell
 DBNAME=$USER
 createdb $DBNAME
 psql $DBNAME
 ```
 
-You should see a psql prompt that says `gpadmin=#`. At this point, you can open
+You should see a psql prompt that says `vagrant=#`. At this point, you can open
 up another shell from the host OS. Start another *host* terminal, and go to
 the vagrant directory by typing `cd gpdb/vagrant`. Then, type in `vagrant ssh`.
 From this second guest terminal, you can run GPDB commands like `gpstate`.

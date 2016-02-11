@@ -25,6 +25,7 @@ Vagrant.configure(2) do |config|
   # Install packages that are needed to build and run GPDB
   config.vm.provision "shell", path: "vagrant-setup.sh"
   config.vm.provision "shell", path: "vagrant-build.sh"
+  config.vm.provision "shell", path: "vagrant-configure-os.sh"
   config.vm.provision "shell", path: "vagrant-install.sh"
 
 end
