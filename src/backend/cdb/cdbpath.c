@@ -8,10 +8,6 @@
  */
 #include "postgres.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "catalog/pg_operator.h"
 #include "catalog/pg_proc.h"    /* CDB_PROC_TIDTOI8 */
 #include "catalog/pg_type.h"    /* INT8OID */
@@ -31,10 +27,6 @@ extern "C" {
 #include "cdb/cdbhash.h"        /* isGreenplumDbHashable() */
 
 #include "cdb/cdbpath.h"        /* me */
-
-#ifdef __cplusplus
-}   /* extern "C" */
-#endif
 
 #ifdef small                    /* <socket.h> might #define small */
 #undef small                    /*  but I want it for a variable name */

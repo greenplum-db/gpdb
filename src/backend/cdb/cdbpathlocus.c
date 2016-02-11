@@ -8,10 +8,6 @@
  */
 #include "postgres.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "catalog/gp_policy.h"         /* GpPolicy */
 #include "cdb/cdbdef.h"         /* CdbSwap() */
 #include "cdb/cdbpullup.h"      /* cdbpullup_missing_var_walker() */
@@ -25,10 +21,6 @@ extern "C" {
 
 #include "cdb/cdbvars.h"
 #include "cdb/cdbpathlocus.h"   /* me */
-
-#ifdef __cplusplus
-}   /* extern "C" */
-#endif
 
 static List *
 cdb_build_distribution_pathkeys(PlannerInfo      *root,
