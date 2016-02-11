@@ -13,7 +13,6 @@
 
 #include "lib/stringinfo.h"         /* StringInfo */
 
-#include "cdb/cdbselect.h"
 #include "cdb/cdbtm.h"
 #include <pthread.h>
 

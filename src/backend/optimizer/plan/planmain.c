@@ -29,6 +29,7 @@
 #include "utils/selfuncs.h"
 
 #include "cdb/cdbpath.h"        /* cdbpath_rows() */
+#include "cdb/cdbvars.h"
 
 static Bitmapset *distcols_in_groupclause(List *gc, Bitmapset *bms);
 

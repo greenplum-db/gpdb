@@ -27,6 +27,7 @@
 #include "cdb/cdbhash.h"        /* isGreenplumDbHashable() */
 
 #include "cdb/cdbpath.h"        /* me */
+#include "cdb/cdbvars.h"
 
 #ifdef small                    /* <socket.h> might #define small */
 #undef small                    /*  but I want it for a variable name */

@@ -12,8 +12,6 @@
 #ifndef CDBDATABASEINFO_H
 #define CDBDATABASEINFO_H
 
-#include "utils/palloc.h"
-#include "storage/fd.h"
 #include "storage/itemptr.h"
 #include "storage/dbdirnode.h"
 #include "catalog/pg_appendonly.h"

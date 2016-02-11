@@ -9,7 +9,7 @@
 #ifndef CDBMIRROREDFLATFILE_H
 #define CDBMIRROREDFLATFILE_H
 
-#include "utils/palloc.h"
+#include "access/xlogdefs.h"
 #include "storage/fd.h"
 #include "storage/dbdirnode.h"
 

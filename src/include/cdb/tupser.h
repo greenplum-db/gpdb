@@ -79,6 +79,12 @@ typedef struct SerTupInfo
 	bool	   *nulls;
 }	SerTupInfo;
 
+/*
+ * forward declaration to avoid #including cdbmotion.h here, which would create a circular
+ * dependency
+ */
+struct directTransportBuffer;
+
 /* Populate a SerTupInfo struct with information looked up from the specified
  * tuple-descriptor.
  */

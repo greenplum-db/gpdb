@@ -76,6 +76,7 @@
 #include "utils/tuplesort.h"
 
 #include "cdb/cdbpath.h"        /* cdbpath_rows() */
+#include "cdb/cdbvars.h"
 
 #define LOG2(x)  (log(x) / 0.693147180559945)
 

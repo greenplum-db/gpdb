@@ -78,9 +78,9 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbutil.h"
 #include "access/persistentfilesysobjname.h"
+#include "cdb/cdbpersistentdatabase.h"
 #include "cdb/cdbpersistentrelation.h"
 #include "cdb/cdbmirroredfilesysobj.h"
-
 
 
 /* GUC variable */

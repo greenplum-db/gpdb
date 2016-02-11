@@ -16,6 +16,7 @@
 #include <signal.h>
 
 #include "access/xlogmm.h"
+#include "catalog/pg_tablespace.h"
 #include "cdb/cdbfilerepprimary.h"
 #include "cdb/cdbmirroredbufferpool.h"
 #include "cdb/cdbfilerepresyncmanager.h"

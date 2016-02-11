@@ -10,7 +10,7 @@
 #ifndef CDBPATH_H
 #define CDBPATH_H
 
-#include "cdb/cdbvars.h"        /* getgpsegmentCount, gp_opt_segments, etc */
+#include "nodes/relation.h"
 
 void
 cdbpath_cost_motion(PlannerInfo *root, CdbMotionPath *motionpath);

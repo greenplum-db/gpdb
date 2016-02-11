@@ -9,11 +9,8 @@
 #ifndef CDBFILEREPPRIMARYRECOVERY_H
 #define CDBFILEREPPRIMARYRECOVERY_H
 
-#include "cdb/cdbfilerep.h"
-
 
 extern void FileRepPrimary_StartRecovery(void);
-
 
 #endif
 

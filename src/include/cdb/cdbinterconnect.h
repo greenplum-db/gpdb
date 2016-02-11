@@ -16,6 +16,7 @@
 
 struct directTransportBuffer;
 
+#include "cdb/cdbselect.h"
 #include "cdb/tupser.h"
 #include "cdb/tupchunk.h"
 #include "cdb/tupchunklist.h"
@@ -23,6 +24,7 @@ struct directTransportBuffer;
 struct CdbProcess;                          /* #include "nodes/execnodes.h" */
 struct Slice;                               /* #include "nodes/execnodes.h" */
 struct SliceTable;                          /* #include "nodes/execnodes.h" */
+struct EState;                              /* #include "nodes/execnodes.h" */
 
 typedef struct icpkthdr
 {
@@ -513,7 +515,7 @@ typedef struct ChunkTransportState
 	int			sliceId;
 
 	/* Estate pointer for this statement (UDP-IC specific) */
-	EState		*estate;
+	struct EState *estate;
 
 	/* Function pointers to our send/receive functions */
 	bool (*SendChunk)(MotionLayerState *mlStates, struct ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, MotionConn *conn, TupleChunkListItem tcItem, int16 motionId);

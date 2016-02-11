@@ -9,10 +9,7 @@
 #ifndef CDBSHAREDOIDSEARCH_H
 #define CDBSHAREDOIDSEARCH_H
 
-#include "utils/palloc.h"
-#include "storage/fd.h"
 #include "cdb/cdbshareddoublylinked.h"
-#include "cdb/cdbsharedoidsearch.h"
 
 
 typedef struct SharedOidSearchFreeObjPool

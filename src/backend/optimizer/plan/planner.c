@@ -51,9 +51,11 @@
 #include "cdb/cdbpath.h"        /* cdbpath_segments */
 #include "cdb/cdbpathtoplan.h"  /* cdbpathtoplan_create_flow() */
 #include "cdb/cdbpartition.h" /* query_has_external_partition() */
+#include "cdb/cdbplan.h"
 #include "cdb/cdbgroup.h" /* grouping_planner extensions */
 #include "cdb/cdbsetop.h" /* motion utilities */
 #include "cdb/cdbsubselect.h"   /* cdbsubselect_flatten_sublinks() */
+#include "cdb/cdbvars.h"
 
 /* GUC parameter */
 double cursor_tuple_fraction = DEFAULT_CURSOR_TUPLE_FRACTION;

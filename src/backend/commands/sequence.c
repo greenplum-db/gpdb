@@ -37,6 +37,7 @@
 #include "utils/syscache.h"
 
 #include "cdb/cdbdisp.h"
+#include "cdb/cdbdoublylinked.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbmotion.h"

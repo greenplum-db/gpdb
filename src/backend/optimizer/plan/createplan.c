@@ -46,6 +46,7 @@
 #include "cdb/cdbpathtoplan.h"  /* cdbpathtoplan_create_flow() etc. */
 #include "cdb/cdbpullup.h"      /* cdbpullup_targetlist() */
 #include "cdb/cdbsreh.h"
+#include "cdb/cdbvars.h"
 
 
 static Plan *create_subplan(PlannerInfo *root, Path *best_path);   /*CDB*/

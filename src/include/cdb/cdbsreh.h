@@ -11,7 +11,6 @@
 #ifndef CDBSREH_H
 #define CDBSREH_H
 
-#include "c.h"
 #include "fmgr.h"
 #include "cdb/cdbcopy.h"
 #include "utils/memutils.h"

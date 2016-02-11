@@ -37,6 +37,7 @@
 #include "parser/parse_expr.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteManip.h"
+#include "utils/guc.h"
 #include "utils/lsyscache.h"
 
 #include "cdb/cdbllize.h"                   /* repartitionPlan */

@@ -15,6 +15,7 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 
+#include "catalog/pg_authid.h"
 #include "cdb/cdbtm.h"
 #include "libpq/libpq-be.h"
 #include "miscadmin.h"

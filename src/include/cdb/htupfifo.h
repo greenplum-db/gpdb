@@ -16,6 +16,8 @@
 #ifndef HTUPFIFO_H
 #define HTUPFIFO_H
 
+#include "access/htup.h"
+
 /* An entry in the HeapTuple FIFO.	Entries are formed into queues. */
 typedef struct htf_entry_data
 {

@@ -11,8 +11,8 @@
 
 #include "miscadmin.h"
 #include "utils/guc.h"
-#include "utils/palloc.h"
-#include "storage/fd.h"
+
+#include "cdb/cdbpersistentstore.h"
 
 /*
  * This struct provides accounting information to help Post DTM recovery

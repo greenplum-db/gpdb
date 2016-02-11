@@ -9,12 +9,8 @@
 #ifndef CDBPERSISTENTRELATION_H
 #define CDBPERSISTENTRELATION_H
 
-#include "utils/palloc.h"
-#include "storage/fd.h"
 #include "access/persistentfilesysobjname.h"
 #include "cdb/cdbpersistentfilesysobj.h"
-#include "cdb/cdbpersistentdatabase.h"
-#include "cdb/cdbdoublylinked.h"
 
 /*
  * This module is for generic relation file create and drop.

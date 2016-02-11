@@ -18,7 +18,6 @@
 #include "nodes/parsenodes.h"
 #include "nodes/plannodes.h"
 #include "nodes/params.h"
-#include "cdb/cdbplan.h"
 
 extern Plan *cdbparallelize(struct PlannerInfo *root, Plan *plan, Query *query,
 							int cursorOptions, 

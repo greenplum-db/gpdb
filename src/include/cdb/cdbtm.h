@@ -8,7 +8,6 @@
 #define CDBTM_H
 
 #include "storage/lwlock.h"
-#include "utils/hsearch.h"
 #include "lib/stringinfo.h"
 #include "access/xlogdefs.h"
 #include "cdb/cdbdistributedsnapshot.h"

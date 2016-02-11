@@ -16,6 +16,7 @@
 #include "postgres.h"
 
 #include "access/reloptions.h"
+#include "access/transam.h"
 #include "access/url.h"
 #include "access/xlog_internal.h"
 #include "cdb/cdbappendonlyam.h"
