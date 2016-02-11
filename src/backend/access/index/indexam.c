@@ -483,7 +483,7 @@ index_getnext(IndexScanDesc scan, ScanDirection direction)
 		LockBuffer(scan->xs_cbuf, BUFFER_LOCK_SHARE);
 
 		if (HeapTupleSatisfiesVacuum(heapTuple->t_data, RecentGlobalXmin,
-									 scan->xs_cbuf, true) == HEAPTUPLE_DEAD)
+									 scan->xs_cbuf) == HEAPTUPLE_DEAD)
 			scan->kill_prior_tuple = true;
 
 		LockBuffer(scan->xs_cbuf, BUFFER_LOCK_UNLOCK);

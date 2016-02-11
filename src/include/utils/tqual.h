@@ -372,8 +372,7 @@ extern bool HeapTupleSatisfiesSnapshot(Relation relation, HeapTupleHeader tuple,
 extern HTSU_Result HeapTupleSatisfiesUpdate(Relation relation, HeapTupleHeader tuple,
 						 CommandId curcid, Buffer buffer);
 extern HTSV_Result HeapTupleSatisfiesVacuum(HeapTupleHeader tuple,
-						 TransactionId OldestXmin, Buffer buffer,
-						 bool vacuumFull);
+						 TransactionId OldestXmin, Buffer buffer);
 
 extern Snapshot GetTransactionSnapshot(void);
 extern Snapshot GetLatestSnapshot(void);

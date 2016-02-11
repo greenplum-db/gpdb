@@ -405,7 +405,7 @@ _bt_check_unique(Relation rel, IndexTuple itup, Relation heapRel,
 						 */
 						LockBuffer(hbuffer, BUFFER_LOCK_SHARE);
 						if (HeapTupleSatisfiesVacuum(htup.t_data, RecentGlobalXmin,
-													 hbuffer, true) == HEAPTUPLE_DEAD)
+													 hbuffer) == HEAPTUPLE_DEAD)
 						{
 							curitemid->lp_flags |= LP_DELETE;
 							opaque->btpo_flags |= BTP_HAS_GARBAGE;

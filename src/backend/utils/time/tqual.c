@@ -2226,7 +2226,7 @@ HeapTupleSatisfiesSnapshot(Relation relation, HeapTupleHeader tuple, Snapshot sn
  */
 HTSV_Result
 HeapTupleSatisfiesVacuum(HeapTupleHeader tuple, TransactionId OldestXmin,
-						 Buffer buffer, bool vacuumFull)
+						 Buffer buffer)
 {
 	WATCH_VISIBILITY_CLEAR();
 

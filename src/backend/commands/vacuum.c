@@ -2525,7 +2525,7 @@ scan_heap_for_truncate(VRelStats *vacrelstats, Relation onerel,
 			tuple.t_len = ItemIdGetLength(itemid);
 			ItemPointerSet(&(tuple.t_self), blkno, offnum);
 
-			switch (HeapTupleSatisfiesVacuum(tuple.t_data, OldestXmin, buf, true))
+			switch (HeapTupleSatisfiesVacuum(tuple.t_data, OldestXmin, buf))
 			{
 				case HEAPTUPLE_DEAD:
 					tupgone = true;
@@ -2764,7 +2764,7 @@ scan_heap(VRelStats *vacrelstats, Relation onerel,
 			tuple.t_len = ItemIdGetLength(itemid);
 			ItemPointerSet(&(tuple.t_self), blkno, offnum);
 
-			switch (HeapTupleSatisfiesVacuum(tuple.t_data, OldestXmin, buf, true))
+			switch (HeapTupleSatisfiesVacuum(tuple.t_data, OldestXmin, buf))
 			{
 				case HEAPTUPLE_DEAD:
 					tupgone = true;		/* we can delete the tuple */
@@ -3404,7 +3404,7 @@ repair_frag(VRelStats *vacrelstats, Relation onerel,
 					/* must check for DEAD or MOVED_IN tuple, too */
 					nextTstatus = HeapTupleSatisfiesVacuum(nextTdata,
 														   OldestXmin,
-														   nextBuf, true);
+														   nextBuf);
 					if (nextTstatus == HEAPTUPLE_DEAD ||
 						nextTstatus == HEAPTUPLE_INSERT_IN_PROGRESS)
 					{
