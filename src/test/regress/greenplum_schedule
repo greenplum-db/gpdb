@@ -89,25 +89,14 @@ ignore: tpch500GB_orca
 #test: orca_udfs
 
 # Tests for "compaction", i.e. VACUUM, of updatable append-only tables
+test: uao_compaction/full uao_compaction/alter_table_analyze2 uao_compaction/outdated_partialindex uao_compaction/drop_column_update uao_compaction/eof_truncate uao_compaction/basic uao_compaction/outdatedindex uao_compaction/update_toast uao_compaction/outdatedindex_abort uao_compaction/delete_toast uao_compaction/alter_table_analyze uao_compaction/full_eof_truncate uao_compaction/full_threshold
 test: uao_compaction/full_stats
-test: uao_compaction/full
-test: uao_compaction/alter_table_analyze2
-test: uao_compaction/index2
-test: uao_compaction/outdated_partialindex
-test: uao_compaction/index_stats
-test: uao_compaction/drop_column_update
-test: uao_compaction/eof_truncate
-test: uao_compaction/basic
-test: uao_compaction/index
-test: uao_compaction/threshold
-test: uao_compaction/outdatedindex
-test: uao_compaction/update_toast
-test: uao_compaction/outdatedindex_abort
-test: uao_compaction/delete_toast
+
 test: uao_compaction/stats
+test: uao_compaction/threshold
+test: uao_compaction/index_stats
+test: uao_compaction/index
 test: uao_compaction/drop_column
-test: uao_compaction/alter_table_analyze
-test: uao_compaction/full_eof_truncate
-test: uao_compaction/full_threshold
+test: uao_compaction/index2
 
 # end of tests
