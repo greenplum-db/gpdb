@@ -2235,7 +2235,8 @@ appendonly_fetch_init(
 						aoFetchDesc->totalSegfiles,
 						aoFetchDesc->relation,
 						1,
-						false);
+						false,
+						NULL);
 
 	AppendOnlyVisimap_Init(&aoFetchDesc->visibilityMap,
 						aoentry->visimaprelid,

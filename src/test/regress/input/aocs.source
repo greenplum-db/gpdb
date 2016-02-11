@@ -283,7 +283,11 @@ select * from co where j = 2;
 insert into co values (9,2,'b'), (10,2,'bb'), (11,2,'bbb'), (12,2,'bbbb'),
 	(13,5,'aaaaa'), (14,6,'aaaaaa'), (15,7,'aaaaaaa'), (16,8,'aaaaaaaa');
 select * from co where j = 2;
-
+-- Select specific columns.  This covers the case when block directory
+-- entries for only specific columns need to be loaded during index
+-- scan.
+select i from co where j = 2;
+select j,i from co where k = 'aaa' or k = 'bbb';
 
 ---------------------
 -- UAO

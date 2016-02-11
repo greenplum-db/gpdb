@@ -544,6 +544,28 @@ select * from co where j = 2;
  11 | 2 | bbb
 (6 rows)
 
+-- Select specific columns.  This covers the case when block directory
+-- entries for only specific columns need to be loaded during index
+-- scan.
+select i from co where j = 2;
+ i  
+----
+  9
+ 11
+  2
+ 10
+ 10
+ 12
+(6 rows)
+
+select j,i from co where k = 'aaa' or k = 'bbb';
+ j | i  
+---+----
+ 3 |  3
+ 3 | 11
+ 2 | 11
+(3 rows)
+
 ---------------------
 -- UAO
 ---------------------

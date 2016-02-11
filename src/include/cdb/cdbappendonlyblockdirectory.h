@@ -90,7 +90,8 @@ typedef struct AppendOnlyBlockDirectory
 	Relation blkdirIdx;
 	int numColumnGroups;
 	bool isAOCol;
-	
+	bool *proj; /* projected columns, used only if isAOCol = TRUE */
+
 	MemoryContext memoryContext;
 	
 	int				totalSegfiles;
@@ -182,7 +183,8 @@ extern void AppendOnlyBlockDirectory_Init_forSearch(
 	int totalSegfiles,
 	Relation aoRel,
 	int numColumnGroups,
-	bool isAOCol);
+	bool isAOCol,
+	bool *proj);
 extern void AppendOnlyBlockDirectory_Init_addCol(
 	AppendOnlyBlockDirectory *blockDirectory,
 	AppendOnlyEntry *aoEntry,
