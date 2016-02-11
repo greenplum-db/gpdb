@@ -1,0 +1,296 @@
+--
+-- Test queries mixes window functions with aggregate functions or grouping.
+--
+DROP TABLE IF EXISTS test_group_window;
+NOTICE:  table "test_group_window" does not exist, skipping
+CREATE TABLE test_group_window(c1 int, c2 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+WITH tt AS (SELECT * FROM test_group_window)
+SELECT tt.c1, COUNT() over () as fraction
+FROM tt
+GROUP BY tt.c1
+ORDER BY tt.c1;
+ c1 | fraction 
+----+----------
+(0 rows)
+
+DROP TABLE test_group_window;
+--
+-- Set up
+--
+CREATE TABLE bfv_cte_foo AS SELECT i as a, i+1 as b from generate_series(1,10)i;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+CREATE TABLE bfv_cte_bar AS SELECT i as c, i+1 as d from generate_series(1,10)i;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+--
+-- Test with CTE inlining disabled
+--
+set optimizer_cte_inlining = off;
+--
+-- With clause select test 1
+--
+WITH t AS
+(
+ SELECT e.*,f.*
+ FROM
+    (
+      SELECT * FROM bfv_cte_foo WHERE a < 10
+    ) e
+ LEFT OUTER JOIN
+    (
+       SELECT * FROM bfv_cte_bar WHERE c < 10
+    ) f
+  ON e.a = f.d )
+SELECT t.a,t.d, count(*) over () AS window
+FROM t
+GROUP BY t.a,t.d ORDER BY t.a,t.d LIMIT 2;
+ a | d | window 
+---+---+--------
+ 1 |   |      9
+ 2 | 2 |      9
+(2 rows)
+
+--
+-- With clause select test 2
+--
+WITH t(a,b,d) AS
+(
+  SELECT bfv_cte_foo.a,bfv_cte_foo.b,bfv_cte_bar.d FROM bfv_cte_foo,bfv_cte_bar WHERE bfv_cte_foo.a = bfv_cte_bar.d
+)
+SELECT t.b,avg(t.a), rank() OVER (PARTITION BY t.a ORDER BY t.a) FROM bfv_cte_foo,t GROUP BY bfv_cte_foo.a,bfv_cte_foo.b,t.b,t.a ORDER BY 1,2,3 LIMIT 5;
+ b | avg | rank 
+---+-----+------
+ 3 |   2 |    1
+ 3 |   2 |    1
+ 3 |   2 |    1
+ 3 |   2 |    1
+ 3 |   2 |    1
+(5 rows)
+
+--
+-- With clause select test 3
+--
+WITH t(a,b,d) AS
+(
+  SELECT bfv_cte_foo.a,bfv_cte_foo.b,bfv_cte_bar.d FROM bfv_cte_foo,bfv_cte_bar WHERE bfv_cte_foo.a = bfv_cte_bar.d
+)
+SELECT cup.*, SUM(t.d) OVER(PARTITION BY t.b) FROM
+  (
+    SELECT bfv_cte_bar.*, AVG(t.b) OVER(PARTITION BY t.a ORDER BY t.b desc) AS e FROM t,bfv_cte_bar
+  ) AS cup,
+t WHERE cup.e < 10
+GROUP BY cup.c,cup.d, cup.e ,t.d, t.b
+ORDER BY 1,2,3,4
+LIMIT 10;
+ c | d | e | sum 
+---+---+---+-----
+ 1 | 2 | 3 | 140
+ 1 | 2 | 3 | 210
+ 1 | 2 | 3 | 280
+ 1 | 2 | 3 | 350
+ 1 | 2 | 3 | 420
+ 1 | 2 | 3 | 490
+ 1 | 2 | 3 | 560
+ 1 | 2 | 3 | 630
+ 1 | 2 | 3 | 700
+ 1 | 2 | 4 | 140
+(10 rows)
+
+--
+-- With clause select test 4
+--
+WITH t(a,b,d) AS
+(
+  SELECT bfv_cte_foo.a,bfv_cte_foo.b,bfv_cte_bar.d FROM bfv_cte_foo,bfv_cte_bar WHERE bfv_cte_foo.a = bfv_cte_bar.d
+)
+SELECT cup.*, SUM(t.d) FROM
+  (
+    SELECT bfv_cte_bar.*, count(*) OVER() AS e FROM t,bfv_cte_bar WHERE t.a = bfv_cte_bar.c
+  ) AS cup,
+t GROUP BY cup.c,cup.d, cup.e,t.a
+HAVING AVG(t.d) < 10 ORDER BY 1,2,3,4 LIMIT 10;
+ c | d | e | sum 
+---+---+---+-----
+ 2 | 3 | 9 |   2
+ 2 | 3 | 9 |   3
+ 2 | 3 | 9 |   4
+ 2 | 3 | 9 |   5
+ 2 | 3 | 9 |   6
+ 2 | 3 | 9 |   7
+ 2 | 3 | 9 |   8
+ 2 | 3 | 9 |   9
+ 3 | 4 | 9 |   2
+ 3 | 4 | 9 |   3
+(10 rows)
+
+--
+-- With clause select test 5
+--
+WITH t(a,b,d) AS
+(
+  SELECT bfv_cte_foo.a,bfv_cte_foo.b,bfv_cte_bar.d FROM bfv_cte_foo,bfv_cte_bar WHERE bfv_cte_foo.a = bfv_cte_bar.d
+)
+SELECT cup.*, SUM(t.d) OVER(PARTITION BY t.b) FROM
+  (
+    SELECT bfv_cte_bar.c as e,r.d FROM
+		(
+			SELECT t.d, avg(t.a) over() FROM t
+		) r,bfv_cte_bar
+  ) AS cup,
+t WHERE cup.e < 10
+GROUP BY cup.d, cup.e, t.d, t.b
+ORDER BY 1,2,3
+LIMIT 10;
+ e | d | sum 
+---+---+-----
+ 1 | 2 | 162
+ 1 | 2 | 243
+ 1 | 2 | 324
+ 1 | 2 | 405
+ 1 | 2 | 486
+ 1 | 2 | 567
+ 1 | 2 | 648
+ 1 | 2 | 729
+ 1 | 2 | 810
+ 1 | 3 | 162
+(10 rows)
+
+--
+-- Test with CTE inlining enabled
+--
+set optimizer_cte_inlining = on;
+set optimizer_cte_inlining_bound = 1000;
+--
+-- With clause select test 1
+--
+WITH t AS
+(
+ SELECT e.*,f.*
+ FROM
+    (
+      SELECT * FROM bfv_cte_foo WHERE a < 10
+    ) e
+ LEFT OUTER JOIN
+    (
+       SELECT * FROM bfv_cte_bar WHERE c < 10
+    ) f
+  ON e.a = f.d )
+SELECT t.a,t.d, count(*) over () AS window
+FROM t
+GROUP BY t.a,t.d ORDER BY t.a,t.d LIMIT 2;
+ a | d | window 
+---+---+--------
+ 1 |   |      9
+ 2 | 2 |      9
+(2 rows)
+
+--
+-- With clause select test 2
+--
+WITH t(a,b,d) AS
+(
+  SELECT bfv_cte_foo.a,bfv_cte_foo.b,bfv_cte_bar.d FROM bfv_cte_foo,bfv_cte_bar WHERE bfv_cte_foo.a = bfv_cte_bar.d
+)
+SELECT t.b,avg(t.a), rank() OVER (PARTITION BY t.a ORDER BY t.a) FROM bfv_cte_foo,t GROUP BY bfv_cte_foo.a,bfv_cte_foo.b,t.b,t.a ORDER BY 1,2,3 LIMIT 5;
+ b | avg | rank 
+---+-----+------
+ 3 |   2 |    1
+ 3 |   2 |    1
+ 3 |   2 |    1
+ 3 |   2 |    1
+ 3 |   2 |    1
+(5 rows)
+
+--
+-- With clause select test 3
+--
+WITH t(a,b,d) AS
+(
+  SELECT bfv_cte_foo.a,bfv_cte_foo.b,bfv_cte_bar.d FROM bfv_cte_foo,bfv_cte_bar WHERE bfv_cte_foo.a = bfv_cte_bar.d
+)
+SELECT cup.*, SUM(t.d) OVER(PARTITION BY t.b) FROM
+  (
+    SELECT bfv_cte_bar.*, AVG(t.b) OVER(PARTITION BY t.a ORDER BY t.b desc) AS e FROM t,bfv_cte_bar
+  ) AS cup,
+t WHERE cup.e < 10
+GROUP BY cup.c,cup.d, cup.e ,t.d, t.b
+ORDER BY 1,2,3,4
+LIMIT 10;
+ c | d | e | sum 
+---+---+---+-----
+ 1 | 2 | 3 | 140
+ 1 | 2 | 3 | 210
+ 1 | 2 | 3 | 280
+ 1 | 2 | 3 | 350
+ 1 | 2 | 3 | 420
+ 1 | 2 | 3 | 490
+ 1 | 2 | 3 | 560
+ 1 | 2 | 3 | 630
+ 1 | 2 | 3 | 700
+ 1 | 2 | 4 | 140
+(10 rows)
+
+--
+-- With clause select test 4
+--
+WITH t(a,b,d) AS
+(
+  SELECT bfv_cte_foo.a,bfv_cte_foo.b,bfv_cte_bar.d FROM bfv_cte_foo,bfv_cte_bar WHERE bfv_cte_foo.a = bfv_cte_bar.d
+)
+SELECT cup.*, SUM(t.d) FROM
+  (
+    SELECT bfv_cte_bar.*, count(*) OVER() AS e FROM t,bfv_cte_bar WHERE t.a = bfv_cte_bar.c
+  ) AS cup,
+t GROUP BY cup.c,cup.d, cup.e,t.a
+HAVING AVG(t.d) < 10 ORDER BY 1,2,3,4 LIMIT 10;
+ c | d | e | sum 
+---+---+---+-----
+ 2 | 3 | 9 |   2
+ 2 | 3 | 9 |   3
+ 2 | 3 | 9 |   4
+ 2 | 3 | 9 |   5
+ 2 | 3 | 9 |   6
+ 2 | 3 | 9 |   7
+ 2 | 3 | 9 |   8
+ 2 | 3 | 9 |   9
+ 3 | 4 | 9 |   2
+ 3 | 4 | 9 |   3
+(10 rows)
+
+--
+-- With clause select test 5
+--
+WITH t(a,b,d) AS
+(
+  SELECT bfv_cte_foo.a,bfv_cte_foo.b,bfv_cte_bar.d FROM bfv_cte_foo,bfv_cte_bar WHERE bfv_cte_foo.a = bfv_cte_bar.d
+)
+SELECT cup.*, SUM(t.d) OVER(PARTITION BY t.b) FROM
+  (
+    SELECT bfv_cte_bar.c as e,r.d FROM
+		(
+			SELECT t.d, avg(t.a) over() FROM t
+		) r,bfv_cte_bar
+  ) AS cup,
+t WHERE cup.e < 10
+GROUP BY cup.d, cup.e, t.d, t.b
+ORDER BY 1,2,3
+LIMIT 10;
+ e | d | sum 
+---+---+-----
+ 1 | 2 | 162
+ 1 | 2 | 243
+ 1 | 2 | 324
+ 1 | 2 | 405
+ 1 | 2 | 486
+ 1 | 2 | 567
+ 1 | 2 | 648
+ 1 | 2 | 729
+ 1 | 2 | 810
+ 1 | 3 | 162
+(10 rows)
+
+DROP TABLE IF EXISTS bfv_cte_foo;
+DROP TABLE IF EXISTS bfv_cte_bar;
+reset optimizer_cte_inlining;
+reset optimizer_cte_inlining_bound;
