@@ -8148,19 +8148,23 @@ select stddev(n) over(order by d range between current row and interval '1 day' 
                      |  89 | 89.0000000000000000 | 89
 (3 rows)
 
--- This test examines the case that a statement invokes multiple lead functions, which are not sorted regarding the rows that they use.
--- For example, first lead retrieves data from one tuple ahead, second lead function retrieves data from two tuples ahead, while third one
--- gets data from one tuple ahead again.
+-- This test examines the case that a statement invokes multiple lead functions,
+-- which are not sorted regarding the rows that they use and projected attributes are varlen.
 DROP TABLE IF EXISTS empsalary;
+NOTICE:  table "empsalary" does not exist, skipping
 CREATE TABLE empsalary(
   depname varchar,
   empno bigint,
   salary char(8),
   enroll_date date
 );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'depname' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO empsalary VALUES('develop', 8, '6000', '2006/10/01');
 INSERT INTO empsalary VALUES('develop', 11, '5200', '2007/08/15');
 INSERT INTO empsalary VALUES('develop', 9, '4500', '2008/01/01');
+-- First lead retrieves data from one tuple ahead, second lead function retrieves data from two tuples ahead, while third one
+-- gets data from one tuple ahead again.
 select * ,
 lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
 lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
@@ -8171,6 +8175,69 @@ from empsalary;
  develop |     8 | 6000     | 10-01-2006  | 5200     | 4500     |        11
  develop |    11 | 5200     | 08-15-2007  | 4500     |          |         9
  develop |     9 | 4500     | 01-01-2008  |          |          |
+(3 rows)
+
+-- Lead functions are in order.
+select * ,
+lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
+lead(empno,1) over (partition by depname order by salary desc) qianzhi11,
+lead(salary,2) over (partition by depname order by salary desc) qianzhi2
+from empsalary;
+ depname | empno |  salary  | enroll_date | qianzhi1 | qianzhi11 | qianzhi2
+---------+-------+----------+-------------+----------+-----------+----------
+ develop |     8 | 6000     | 10-01-2006  | 5200     |        11 | 4500
+ develop |    11 | 5200     | 08-15-2007  | 4500     |         9 |
+ develop |     9 | 4500     | 01-01-2008  |          |           |
+(3 rows)
+
+DROP TABLE IF EXISTS empsalary;
+CREATE TABLE empsalary(
+  depname varchar,
+  empno bigint,
+  salary numeric(22, 6),
+  enroll_date date
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'depname' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO empsalary VALUES('develop', 8, 6000, '2006/10/01');
+INSERT INTO empsalary VALUES('develop', 11, 5200, '2007/08/15');
+INSERT INTO empsalary VALUES('develop', 9, 4500, '2008/01/01');
+-- Similar to the first statement using numeric.
+select * ,
+lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
+lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
+lead(empno,1) over (partition by depname order by salary desc) qianzhi11
+from empsalary;
+ depname | empno |   salary    | enroll_date |  qianzhi1   |  qianzhi2   | qianzhi11
+---------+-------+-------------+-------------+-------------+-------------+-----------
+ develop |     8 | 6000.000000 | 10-01-2006  | 5200.000000 | 4500.000000 |        11
+ develop |    11 | 5200.000000 | 08-15-2007  | 4500.000000 |             |         9
+ develop |     9 | 4500.000000 | 01-01-2008  |             |             |
+(3 rows)
+
+DROP TABLE IF EXISTS empsalary;
+CREATE TABLE empsalary(
+  depname varchar,
+  empno bigint,
+  salary int,
+  enroll_date date
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'depname' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO empsalary VALUES('develop', 8, 6000, '2006/10/01');
+INSERT INTO empsalary VALUES('develop', 11, 5200, '2007/08/15');
+INSERT INTO empsalary VALUES('develop', 9, 4500, '2008/01/01');
+-- Similar to the first statement using int.
+select * ,
+lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
+lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
+lead(empno,1) over (partition by depname order by salary desc) qianzhi11
+from empsalary;
+ depname | empno | salary | enroll_date | qianzhi1 | qianzhi2 | qianzhi11
+---------+-------+--------+-------------+----------+----------+-----------
+ develop |     8 |   6000 | 10-01-2006  |     5200 |     4500 |        11
+ develop |    11 |   5200 | 08-15-2007  |     4500 |          |         9
+ develop |     9 |   4500 | 01-01-2008  |          |          |
 (3 rows)
 
 -- End of Test

@@ -1547,9 +1547,8 @@ select stddev(n) over(order by d range between current row and interval '1 day' 
        sum(n) over(order by d range between current row and interval '1 day' following),
        avg(n) over(order by d range between current row and interval '1 day' following), n from olap_window_seq_test;
 
--- This test examines the case that a statement invokes multiple lead functions, which are not sorted regarding the rows that they use.
--- For example, first lead retrieves data from one tuple ahead, second lead function retrieves data from two tuples ahead, while third one 
--- gets data from one tuple ahead again.  
+-- This test examines the case that a statement invokes multiple lead functions, 
+-- which are not sorted regarding the rows that they use and projected attributes are varlen. 
 DROP TABLE IF EXISTS empsalary;
 CREATE TABLE empsalary(
   depname varchar,
@@ -1562,6 +1561,53 @@ INSERT INTO empsalary VALUES('develop', 8, '6000', '2006/10/01');
 INSERT INTO empsalary VALUES('develop', 11, '5200', '2007/08/15');
 INSERT INTO empsalary VALUES('develop', 9, '4500', '2008/01/01');
 
+-- First lead retrieves data from one tuple ahead, second lead function retrieves data from two tuples ahead, while third one 
+-- gets data from one tuple ahead again.  
+select * ,
+lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
+lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
+lead(empno,1) over (partition by depname order by salary desc) qianzhi11
+from empsalary;
+
+-- Lead functions are in order. 
+select * ,
+lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
+lead(empno,1) over (partition by depname order by salary desc) qianzhi11,
+lead(salary,2) over (partition by depname order by salary desc) qianzhi2
+from empsalary;
+
+DROP TABLE IF EXISTS empsalary;
+CREATE TABLE empsalary(
+  depname varchar,
+  empno bigint,
+  salary numeric(22, 6),
+  enroll_date date
+);
+
+INSERT INTO empsalary VALUES('develop', 8, 6000, '2006/10/01');
+INSERT INTO empsalary VALUES('develop', 11, 5200, '2007/08/15');
+INSERT INTO empsalary VALUES('develop', 9, 4500, '2008/01/01');
+
+-- Similar to the first statement using numeric.
+select * ,
+lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
+lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
+lead(empno,1) over (partition by depname order by salary desc) qianzhi11
+from empsalary;
+
+DROP TABLE IF EXISTS empsalary;
+CREATE TABLE empsalary(
+  depname varchar,
+  empno bigint,
+  salary int,
+  enroll_date date
+);
+
+INSERT INTO empsalary VALUES('develop', 8, 6000, '2006/10/01');
+INSERT INTO empsalary VALUES('develop', 11, 5200, '2007/08/15');
+INSERT INTO empsalary VALUES('develop', 9, 4500, '2008/01/01');
+
+-- Similar to the first statement using int. 
 select * ,
 lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
 lead(salary,2) over (partition by depname order by salary desc) qianzhi2,

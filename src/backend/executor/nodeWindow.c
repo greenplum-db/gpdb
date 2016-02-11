@@ -228,8 +228,9 @@ typedef struct WindowStatePerLevelData
 	FrameBufferEntry *trail_entry_buf;
 	FrameBufferEntry *lead_entry_buf;
 	
-	/* A char buffer to temporarily hold serialized data
-	* before writing them to the frame buffer.
+	/* A char buffer to temporarily hold serialized data before
+	*  writing them to the frame buffer, and keep deserialized
+	*  data when reading from the frame buffer.
 	*
 	* Use this pre-allocated buffer to avoid doing
 	* palloc/pfree many times.
