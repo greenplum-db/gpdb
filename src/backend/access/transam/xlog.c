@@ -9073,8 +9073,8 @@ RecoveryRestartPoint(const CheckPoint *checkPoint)
 {
 //	int			elapsed_secs;
 	int			rmid;
-	uint _logId = 0;
-	uint _logSeg = 0;
+	uint32 _logId = 0;
+	uint32 _logSeg = 0;
 
 	/* use volatile pointer to prevent code rearrangement */
 	volatile XLogCtlData *xlogctl = XLogCtl;

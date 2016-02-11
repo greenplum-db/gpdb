@@ -1688,7 +1688,7 @@ initDDSystem(ddp_inst_desc_t *ddp_inst, ddp_conn_desc_t *ddp_conn, ddp_client_in
             bool createStorageUnit, char **default_backup_directory, bool remote)
 {
 	int err = DD_ERR_NONE;
-	uint POOL_SIZE = DDBOOST_POOL_SIZE;
+	unsigned int POOL_SIZE = DDBOOST_POOL_SIZE;
 	char *storage_unit_name = NULL;
 	char *dd_boost_username = NULL;
 	char *dd_boost_passwd = NULL;

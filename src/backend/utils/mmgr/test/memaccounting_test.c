@@ -1198,7 +1198,7 @@ test__MemoryAccounting_Serialize_Deserialize__Validate(void **state)
 	StringInfoData buffer;
     initStringInfo(&buffer);
 
-    uint totalSerialized = MemoryAccounting_Serialize(&buffer);
+    uint32 totalSerialized = MemoryAccounting_Serialize(&buffer);
 
     /*
      * We haven't created any new account, so we should have

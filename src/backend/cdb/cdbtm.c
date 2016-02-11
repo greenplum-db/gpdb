@@ -4460,7 +4460,7 @@ performDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 						gid, contextInfo->nestingLevel, GetCurrentTransactionNestLevel())));
 			}
 			
-			uint i = GetCurrentTransactionNestLevel() - contextInfo->nestingLevel;
+			unsigned int i = GetCurrentTransactionNestLevel() - contextInfo->nestingLevel;
 			while (i > 0)
 			{
 				RollbackAndReleaseCurrentSubTransaction();

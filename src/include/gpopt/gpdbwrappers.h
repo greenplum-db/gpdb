@@ -248,10 +248,10 @@ namespace gpdb {
 	bool FCastFunc(Oid oidSrc, Oid oidDest, bool *is_binary_coercible, Oid *oidCastFunc);
 	
 	// get type of operator
-	uint UlCmpt(Oid oidOp, Oid oidLeft, Oid oidRight);
+	unsigned int UlCmpt(Oid oidOp, Oid oidLeft, Oid oidRight);
 	
 	// get scalar comparison between given types
-	Oid OidScCmp(Oid oidLeft, Oid oidRight, uint ulCmpt);
+	Oid OidScCmp(Oid oidLeft, Oid oidRight, unsigned int ulCmpt);
 
 	// get equality operator for given type
 	Oid OidEqualityOp(Oid oidType);

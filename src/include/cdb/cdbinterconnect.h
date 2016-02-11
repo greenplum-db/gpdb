@@ -414,14 +414,14 @@ typedef struct MotionNodeEntry
 	 * Variable that records the total number of senders to this motion node.
 	 * This is expected to always be (number of qExecs).
 	 */
-	uint            num_senders;
+	uint32          num_senders;
 
 	/*
 	 * Variable that tracks number of senders that have reported end-of-stream
 	 * for this motion node.  When the local node sends end-of-stream, that is
 	 * also recorded.
 	 */
-	uint            num_stream_ends_recvd;
+	uint32          num_stream_ends_recvd;
 
 	bool            cleanedUp;
 	bool            valid;

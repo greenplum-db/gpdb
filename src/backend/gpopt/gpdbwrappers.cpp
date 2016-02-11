@@ -1239,7 +1239,7 @@ gpdb::FCastFunc
 	return false;
 }
 
-uint
+unsigned int
 gpdb::UlCmpt
 	(
 	Oid oidOp,
@@ -1261,7 +1261,7 @@ gpdb::OidScCmp
 	(
 	Oid oidLeft, 
 	Oid oidRight,
-	uint ulCmpt
+	unsigned int ulCmpt
 	)
 {
 	GP_WRAP_START;
