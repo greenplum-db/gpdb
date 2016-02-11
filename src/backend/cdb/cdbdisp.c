@@ -60,8 +60,6 @@
 #include "cdb/cdbrelsize.h"
 #include "gp-libpq-fe.h"
 #include "libpq/libpq-be.h"
-#include "commands/vacuum.h" /* VUpdatedStats */
-#include "cdb/cdbanalyze.h"  /* cdbanalyze_get_columnstats */
 #include "cdb/cdbutil.h"
 
 #include "parser/parsetree.h"

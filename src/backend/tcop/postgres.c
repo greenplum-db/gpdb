@@ -79,7 +79,6 @@
 #include "utils/debugbreak.h"
 #include "mb/pg_wchar.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdblogsync.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbdtxcontextinfo.h"

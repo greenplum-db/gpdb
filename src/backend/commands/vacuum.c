@@ -44,7 +44,6 @@
 #include "commands/dbcommands.h"
 #include "commands/tablecmds.h"
 #include "commands/vacuum.h"
-#include "cdb/cdbanalyze.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbvars.h"

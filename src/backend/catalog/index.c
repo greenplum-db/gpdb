@@ -65,7 +65,6 @@
 #include "utils/faultinjector.h"
 
 #include "cdb/cdbvars.h"
-#include "cdb/cdbanalyze.h"
 #include "cdb/cdboidsync.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbaocsam.h"
