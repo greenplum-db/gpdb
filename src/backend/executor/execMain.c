@@ -3189,7 +3189,7 @@ ExecDelete(ItemPointer tupleid,
 	Relation	resultRelationDesc;
 	HTSU_Result result;
 	ItemPointerData update_ctid;
-	TransactionId update_xmax;
+	TransactionId update_xmax = InvalidTransactionId;
 
 	/*
 	 * get information on the (current) result relation
@@ -3359,6 +3359,8 @@ ldelete:;
 			else if (!ItemPointerEquals(tupleid, &update_ctid))
 			{
 				TupleTableSlot *epqslot;
+
+				Assert(update_xmax != InvalidTransactionId);
 
 				epqslot = EvalPlanQual(estate,
 									   resultRelInfo->ri_RangeTableIndex,
