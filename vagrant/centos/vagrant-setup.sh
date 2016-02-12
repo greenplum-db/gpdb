@@ -3,7 +3,6 @@
 set -x
 
 # install packages needed to build and run GPDB
-sudo yum -y update
 sudo yum -y groupinstall "Development tools"
 sudo yum -y install ed
 sudo yum -y install readline-devel
