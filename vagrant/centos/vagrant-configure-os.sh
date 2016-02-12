@@ -2,19 +2,27 @@
 
 set -x
 
+IP_ADDRESS=$1
+if [[ -z "$IP_ADDRESS" ]]; then
+    echo "ERROR: IP address should be provided as a parameter to the script"
+    exit 1
+fi
+
 # Stop firewall
 sudo systemctl stop firewalld
 
 # Disable SELinux
 sudo setenforce 0
-sudo sed -i 's/^SELINUX=.*$/SELINUX=disabled/' /etc/selinux/config 
+sudo sed -i 's/^SELINUX=.*$/SELINUX=disabled/' /etc/selinux/config
 
 # Setting up hostname for host-private network
+sudo hostnamectl set-hostname gpdbvagrant.pivotal.io
 sudo hostname gpdbvagrant.pivotal.io
 sudo sed -i '/vagrant/d' /etc/hosts
-sudo bash -c 'echo "192.168.10.200 gpdbvagrant.pivotal.io gpdbvagrant" >> /etc/hosts'
+sudo bash -c "echo '$IP_ADDRESS gpdbvagrant.pivotal.io gpdbvagrant' >> /etc/hosts"
 sudo sed -i '/HOSTNAME/d' /etc/sysconfig/network
 sudo bash -c 'echo "HOSTNAME=gpdbvagrant.pivotal.io" >> /etc/sysconfig/network'
+sudo bash -c 'echo "DHCP_HOSTNAME=gpdbvagrant.pivotal.io" >> /etc/sysconfig/network'
 
 # GPDB Kernel Settings
 sudo rm -f /etc/sysctl.d/gpdb.conf
@@ -43,6 +51,11 @@ sudo bash -c 'printf "kernel.core_uses_pid = 1\n"                      >> /etc/s
 sudo bash -c 'printf "kernel.core_pattern = /tmp/gpdb_cores/core-%%e-%%s-%%u-%%g-%%p-%%t\n" >> /etc/sysctl.d/gpdb.conf'
 sudo sysctl -p /etc/sysctl.d/gpdb.conf
 
+# Creating directory for core files
+sudo rm -rf /tmp/gpdb_cores
+sudo mkdir -p /tmp/gpdb_cores
+sudo chown vagrant:vagrant /tmp/gpdb_cores
+
 # GPDB Kernel Limits
 sudo rm -f /etc/security/limits.d/gpdb.conf
 sudo bash -c 'printf "# GPDB-Specific Settings\n\n"     >> /etc/security/limits.d/gpdb.conf'
@@ -57,4 +70,3 @@ sudo bash -c 'printf "* hard core unlimited\n"         >> /etc/security/limits.d
 sudo sed -i '/RemoveIPC=no/d' /etc/systemd/logind.conf
 sudo bash -c 'echo "RemoveIPC=no" >> /etc/systemd/logind.conf'
 sudo service systemd-logind restart
-
