@@ -3607,7 +3607,7 @@ ExecUpdate(TupleTableSlot *slot,
 	Relation	resultRelationDesc;
 	HTSU_Result result;
 	ItemPointerData update_ctid;
-	TransactionId update_xmax;
+	TransactionId update_xmax = InvalidTransactionId;
 	AOTupleId	aoTupleId = AOTUPLEID_INIT;
 	TupleTableSlot *partslot = NULL;
 
@@ -3803,6 +3803,8 @@ lreplace:;
 				else if (!ItemPointerEquals(tupleid, &update_ctid))
 				{
 					TupleTableSlot *epqslot;
+
+					Assert(update_xmax != InvalidTransactionId);
 
 					epqslot = EvalPlanQual(estate,
 										   resultRelInfo->ri_RangeTableIndex,
