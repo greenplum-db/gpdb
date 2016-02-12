@@ -79,6 +79,8 @@ test: aggregate_with_groupingsets gp_optimizer
 test: nested_case_null
 test: bfv_cte bfv_joins
 
+test: bfv_statistic
+
 ignore: tpch500GB_orca
 
 # XXX: This test depends on libgpoptudfs library, which includes ORCA helper
