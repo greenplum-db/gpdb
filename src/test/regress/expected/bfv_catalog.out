@@ -1,3 +1,4 @@
+-- count number of certain operators in a given plan
 create language plpythonu;
 create or replace function count_operator(explain_query text, operator text) returns int as
 $$
@@ -125,6 +126,7 @@ NOTICE:  table "x" does not exist, skipping
 CREATE TABLE t1 (a int, b int) DISTRIBUTED BY (a);
 CREATE TABLE t2 (a int, b int) DISTRIBUTED BY (a);
 CREATE TABLE x (a int) DISTRIBUTED BY (a);
+-- intent is to: expect to have 'table scan' operator in query plan
 select count_operator('explain select * from x where a=  (select sum(t1.a)  from t1 inner join (select x.a as outer_ref, * from t2) as foo on (foo.a=t1.a+ outer_ref)  group by foo.a);', 'Table Scan') > 0;
  ?column? 
 ----------
@@ -135,9 +137,6 @@ DROP TABLE t1;
 DROP TABLE t2;
 DROP TABLE x;
 reset optimizer;
---
---
---
 SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = off;
@@ -185,43 +184,43 @@ where
     konst.dim_bezei     = 'NatCat-Zone'   and gesamt.dim_bezei    = 'NatCat-Zone'   and gesamt.dim_elem_lvl = 0;
       natcat_zone_elem_bezei      |       natcat_zone_elem_id        | land_nr 
 ----------------------------------+----------------------------------+---------
- 326069604c6a5df905ad7524ff6fd845 | 326069604c6a5df905ad7524ff6fd845 |        
- ec8989f78fab481d87f43ecacca55aa1 | ec8989f78fab481d87f43ecacca55aa1 |        
- 49b10fbde180f30ecd23a4155ecc5a6f | 49b10fbde180f30ecd23a4155ecc5a6f |        
- fc8baa6879e639926be3916810962e13 | fc8baa6879e639926be3916810962e13 |        
- 3fbe674f00bdce9f04865f793d7b555a | 3fbe674f00bdce9f04865f793d7b555a |        
- 2c61ebff5a7f675451467527df66788d | 2c61ebff5a7f675451467527df66788d |        
- 35b3855dc94445aa82615b66f73f5be9 | 35b3855dc94445aa82615b66f73f5be9 |        
- ba8eaeec35b54c67fea9bb1645a489a8 | ba8eaeec35b54c67fea9bb1645a489a8 |        
- ecab6653cedb98ded1c7416c0d114df7 | ecab6653cedb98ded1c7416c0d114df7 |        
- ada53304c5b9e4a839615b6e8f908eb6 | ada53304c5b9e4a839615b6e8f908eb6 |        
- b0c597f91004d4355059ffeee1f30393 | b0c597f91004d4355059ffeee1f30393 |        
  832e21f9da1ad55895637d00686fdb42 | 832e21f9da1ad55895637d00686fdb42 |        
  0776809bccf9f0ce17bea87f017c1b9f | 0776809bccf9f0ce17bea87f017c1b9f |        
+ 131d5a3daa39b73050f40a62372ee44e | 131d5a3daa39b73050f40a62372ee44e |        
+ 49b10fbde180f30ecd23a4155ecc5a6f | 49b10fbde180f30ecd23a4155ecc5a6f |        
  8381363cab61eb967e4bb45a8d44b7e0 | 8381363cab61eb967e4bb45a8d44b7e0 |        
- 484c5aa99688af4038b3980324f1232c | 484c5aa99688af4038b3980324f1232c |        
- 57c7d11cd49333e3f722204c63016da9 | 57c7d11cd49333e3f722204c63016da9 |        
- e7333d76e27e6772a960a972a8d6598e | e7333d76e27e6772a960a972a8d6598e |        
- e060bb629c10e1b143614cc1e9ccdc67 | e060bb629c10e1b143614cc1e9ccdc67 |        
+ dec371fcaec103c77f726ecf6f045d19 | dec371fcaec103c77f726ecf6f045d19 |        
+ 3fbe674f00bdce9f04865f793d7b555a | 3fbe674f00bdce9f04865f793d7b555a |        
+ 5034bc3fd2a153aad8f903a3df44d08a | 5034bc3fd2a153aad8f903a3df44d08a |        
+ 2c61ebff5a7f675451467527df66788d | 2c61ebff5a7f675451467527df66788d |        
+ f4864963ac0643d1b73ec6580f283042 | f4864963ac0643d1b73ec6580f283042 |        
+ b6eb281e772f7b8fc9404fba1fbbb06a | b6eb281e772f7b8fc9404fba1fbbb06a |        
  78fe5b68956805618673ba3f04999ae8 | 78fe5b68956805618673ba3f04999ae8 |        
+ 06202b87153d246b5acbf8ed52301f6e | 06202b87153d246b5acbf8ed52301f6e |        
+ a441cb7c28e1f94b7d8e7e1be1f07310 | a441cb7c28e1f94b7d8e7e1be1f07310 |        
+ e4541ed56cf3de37439937a54e5d6f38 | e4541ed56cf3de37439937a54e5d6f38 |        
+ fc8baa6879e639926be3916810962e13 | fc8baa6879e639926be3916810962e13 |        
+ 578ed5a4eecf5a15803abdc49f6152d6 | 578ed5a4eecf5a15803abdc49f6152d6 |        
+ 57c7d11cd49333e3f722204c63016da9 | 57c7d11cd49333e3f722204c63016da9 |        
+ e6d96502596d7e7887b76646c5f615d9 | e6d96502596d7e7887b76646c5f615d9 |        
+ 365f939403a7e61514b0f74b6809290f | 365f939403a7e61514b0f74b6809290f |        
+ ecab6653cedb98ded1c7416c0d114df7 | ecab6653cedb98ded1c7416c0d114df7 |        
+ b0c597f91004d4355059ffeee1f30393 | b0c597f91004d4355059ffeee1f30393 |        
  5e4ac03d7827ca48ed305a0d80cd5aa1 | 5e4ac03d7827ca48ed305a0d80cd5aa1 |        
  f2f72863a84704b5c9ba7a8aa051f73d | f2f72863a84704b5c9ba7a8aa051f73d |        
- a441cb7c28e1f94b7d8e7e1be1f07310 | a441cb7c28e1f94b7d8e7e1be1f07310 |        
  78b0fb7d034c46f13890008e6f36806b | 78b0fb7d034c46f13890008e6f36806b |        
+ 326069604c6a5df905ad7524ff6fd845 | 326069604c6a5df905ad7524ff6fd845 |        
+ ec8989f78fab481d87f43ecacca55aa1 | ec8989f78fab481d87f43ecacca55aa1 |        
  f81e986ee4c9f80d6002bf5302b3ea87 | f81e986ee4c9f80d6002bf5302b3ea87 |        
- e4541ed56cf3de37439937a54e5d6f38 | e4541ed56cf3de37439937a54e5d6f38 |        
- 131d5a3daa39b73050f40a62372ee44e | 131d5a3daa39b73050f40a62372ee44e |        
  ffe7470430a737c4ce6dc74bea0155d5 | ffe7470430a737c4ce6dc74bea0155d5 |        
- dec371fcaec103c77f726ecf6f045d19 | dec371fcaec103c77f726ecf6f045d19 |        
  d877c55797fd430ce8150363cd86058f | d877c55797fd430ce8150363cd86058f |        
- 5034bc3fd2a153aad8f903a3df44d08a | 5034bc3fd2a153aad8f903a3df44d08a |        
- 578ed5a4eecf5a15803abdc49f6152d6 | 578ed5a4eecf5a15803abdc49f6152d6 |        
- e6d96502596d7e7887b76646c5f615d9 | e6d96502596d7e7887b76646c5f615d9 |        
- f4864963ac0643d1b73ec6580f283042 | f4864963ac0643d1b73ec6580f283042 |        
+ 35b3855dc94445aa82615b66f73f5be9 | 35b3855dc94445aa82615b66f73f5be9 |        
+ 484c5aa99688af4038b3980324f1232c | 484c5aa99688af4038b3980324f1232c |        
+ e7333d76e27e6772a960a972a8d6598e | e7333d76e27e6772a960a972a8d6598e |        
+ ba8eaeec35b54c67fea9bb1645a489a8 | ba8eaeec35b54c67fea9bb1645a489a8 |        
  375dcc1c4dec844c30d1a9a33d6e04af | 375dcc1c4dec844c30d1a9a33d6e04af |        
- 365f939403a7e61514b0f74b6809290f | 365f939403a7e61514b0f74b6809290f |        
- b6eb281e772f7b8fc9404fba1fbbb06a | b6eb281e772f7b8fc9404fba1fbbb06a |        
- 06202b87153d246b5acbf8ed52301f6e | 06202b87153d246b5acbf8ed52301f6e |        
+ e060bb629c10e1b143614cc1e9ccdc67 | e060bb629c10e1b143614cc1e9ccdc67 |        
+ ada53304c5b9e4a839615b6e8f908eb6 | ada53304c5b9e4a839615b6e8f908eb6 |        
  2708c3704f3c6a7b3a9e685289b412aa | 2708c3704f3c6a7b3a9e685289b412aa |        
 (38 rows)
 

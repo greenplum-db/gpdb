@@ -1,3 +1,4 @@
+-- count number of certain operators in a given plan
 create language plpythonu;
 
 create or replace function count_operator(explain_query text, operator text) returns int as
@@ -53,6 +54,7 @@ CREATE TABLE t1 (a int, b int) DISTRIBUTED BY (a);
 CREATE TABLE t2 (a int, b int) DISTRIBUTED BY (a);
 CREATE TABLE x (a int) DISTRIBUTED BY (a);
 
+-- intent is to: expect to have 'table scan' operator in query plan
 select count_operator('explain select * from x where a=  (select sum(t1.a)  from t1 inner join (select x.a as outer_ref, * from t2) as foo on (foo.a=t1.a+ outer_ref)  group by foo.a);', 'Table Scan') > 0;
 
 DROP TABLE t1;
@@ -60,10 +62,6 @@ DROP TABLE t2;
 DROP TABLE x;
 
 reset optimizer;
-
---
---
---
 
 SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
