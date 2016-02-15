@@ -95,6 +95,7 @@ initFetchDesc(BitmapAppendOnlyScanState *scanstate)
 
 			GetNeededColumnsForScan((Node *) node->scan.plan.targetlist, proj, currentRelation->rd_att->natts);
 			GetNeededColumnsForScan((Node *) node->scan.plan.qual, proj, currentRelation->rd_att->natts);
+			GetNeededColumnsForScan((Node *) node->bitmapqualorig, proj, currentRelation->rd_att->natts);
                 
 			for(colno = 0; colno < currentRelation->rd_att->natts; colno++)
 			{
