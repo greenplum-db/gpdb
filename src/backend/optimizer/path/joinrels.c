@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/joinrels.c,v 1.85 2007/02/13 02:31:03 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/joinrels.c,v 1.86 2007/02/16 00:14:01 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

@@ -14,7 +14,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/vacuum.c,v 1.345 2007/02/05 04:22:18 tgl Exp $
+ *       $PostgreSQL: pgsql/src/backend/commands/vacuum.c,v 1.350 2007/04/16 18:29:50 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1016,7 +1016,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid, List *relations)
 		{
 			char *vsubtype = ""; /* NOFULL */
 
-			if (IsAutoVacuumProcess())
+			if (IsAutoVacuumWorkerProcess())
 				vsubtype = "AUTO";
 			else
 			{
@@ -1146,7 +1146,7 @@ vacuumStatement(VacuumStmt *vacstmt, List *relids)
 	 * Send info about dead objects to the statistics collector, unless we are
 	 * in autovacuum --- autovacuum.c does this for itself.
 	 */
-	if (!IsAutoVacuumProcess())
+	if (!IsAutoVacuumWorkerProcess())
 		pgstat_vacuum_stat();
 
 	/*
@@ -1244,7 +1244,7 @@ vacuumStatement(VacuumStmt *vacstmt, List *relids)
 	 */
 	ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
 
-	if (!IsAutoVacuumProcess())
+	if (!IsAutoVacuumWorkerProcess())
 	{
 		/*
 		 * Update pg_database.datfrozenxid, and truncate pg_clog if possible.
@@ -4838,6 +4838,9 @@ vacuum_delay_point(void)
 		pg_usleep(msec * 1000L);
 
 		VacuumCostBalance = 0;
+
+		/* update balance values for workers */
+		AutoVacuumUpdateDelay();
 
 		/* Might have gotten an interrupt while sleeping */
 		CHECK_FOR_INTERRUPTS();

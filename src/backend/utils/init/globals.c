@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/init/globals.c,v 1.100 2007/01/05 22:19:44 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/init/globals.c,v 1.101 2007/04/16 18:29:54 alvherre Exp $
  *
  * NOTES
  *	  Globals used all over the place should be declared here and not
@@ -114,9 +114,14 @@ int			max_statement_mem = 2048000;
 int			gp_vmem_limit_per_query = 0;
 int			maintenance_work_mem = 65536;
 
-/* Primary determinants of sizes of shared-memory structures: */
+/* 
+ * Primary determinants of sizes of shared-memory structures.  MaxBackends is
+ * MaxConnections + autovacuum_max_workers (it is computed by the GUC assign
+ * hook):
+ */
 int			NBuffers = 4096;
 int			MaxBackends = 200;
+int			MaxConnections = 90;
 
 int			gp_workfile_max_entries = 8192; /* Number of unique entries we can hold in the workfile directory */
 

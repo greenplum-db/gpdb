@@ -38,7 +38,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/postmaster.c,v 1.521 2007/02/13 19:18:54 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/postmaster.c,v 1.524 2007/02/16 02:59:41 momjian Exp $
  *
  * NOTES
  *
@@ -241,6 +241,7 @@ static int	SendStop = false;
 
 /* still more option variables */
 bool		EnableSSL = false;
+char	   *SSLCipherSuites;
 bool		SilentMode = false; /* silent_mode */
 
 int			PreAuthDelay = 0;
@@ -479,6 +480,8 @@ bool		ClientAuthInProgress = false;		/* T during new-client
 bool		redirection_done = false;	/* stderr redirected for syslogger? */
 
 static volatile bool force_autovac = false; /* received START_AUTOVAC signal */
+/* received START_AUTOVAC_LAUNCHER signal */
+static bool start_autovac_launcher = false;
 
 /*
  * State for assigning random salts and cancel keys.
@@ -560,7 +563,7 @@ static enum CAC_state canAcceptConnections(void);
 static long PostmasterRandom(void);
 static void RandomSalt(char *md5Salt);
 static void signal_child(pid_t pid, int signal);
-static bool SignalSomeChildren(int signal, int target);
+static void SignalSomeChildren(int signal, bool only_autovac);
 
 #define SignalChildren(sig)			SignalSomeChildren(sig, BACKEND_TYPE_ALL)
 #define SignalAutovacWorkers(sig)	SignalSomeChildren(sig, BACKEND_TYPE_AUTOVAC)
@@ -577,6 +580,7 @@ static bool SignalSomeChildren(int signal, int target);
 static int	CountChildren(int target);
 static bool CreateOptsFile(int argc, char *argv[], char *fullprogname);
 static pid_t StartChildProcess(AuxProcType type);
+static void StartAutovacuumWorker(void);
 
 static void setProcAffinity(int id);
 
@@ -2513,14 +2517,13 @@ ServerLoop(void)
 
 			/*
 			 * Start a new autovacuum process, if there isn't one running already.
-			 * (It'll die relatively quickly.)  We check that it's not started too
-			 * frequently in autovac_start.
+			 * (It'll die relatively quickly.)  
 			 */
 			if ((AutoVacuumingActive() || force_autovac) && AutoVacPID == 0 &&
 				StartupPidsAllZero() && pmState > PM_STARTUP_PASS4 &&
 				!FatalError && Shutdown == NoShutdown)
 			{
-				AutoVacPID = autovac_start();
+				AutoVacPID = start_autovac_launcher;
 				if (Debug_print_server_processes)
 					elog(LOG,"restarted 'autovacuum process' as pid %ld",
 						 (long)AutoVacPID);
@@ -4935,10 +4938,9 @@ static void do_reaper()
 		if (pid == AutoVacPID)
 		{
 			AutoVacPID = 0;
-			autovac_stopped();
 			if (!EXIT_STATUS_0(exitstatus) && !EXIT_STATUS_1(exitstatus) && resetRequired)
 				HandleChildCrash(pid, exitstatus,
-								 _("autovacuum process"));
+								 _("autovacuum launcher process"));
 			continue;
 		}
 
@@ -6263,14 +6265,14 @@ signal_child(pid_t pid, int signal)
 }
 
 /*
- * Send a signal to the targeted children (but NOT special children;
- * dead_end children are never signaled, either).
+ * Send a signal to all backend children, including autovacuum workers (but NOT
+ * special children).  If only_autovac is TRUE, only the autovacuum worker
+ * processes are signalled.
  */
-static bool
-SignalSomeChildren(int signal, int target)
+static void
+SignalSomeChildren(int signal, bool only_autovac)
 {
 	Dlelem	   *curr;
-	bool		signaled = false;
 
 	for (curr = DLGetHead(BackendList); curr; curr = DLGetSucc(curr))
 	{
@@ -6278,32 +6280,14 @@ SignalSomeChildren(int signal, int target)
 
 		if (bp->dead_end)
 			continue;
-
-		/*
-		 * Since target == BACKEND_TYPE_ALL is the most common case, we test
-		 * it first and avoid touching shared memory for every child.
-		 */
-		if (target != BACKEND_TYPE_ALL)
-		{
-			int			child;
-
-			if (bp->is_autovacuum)
-				child = BACKEND_TYPE_AUTOVAC;
-			else if (IsPostmasterChildWalSender(bp->child_slot))
-				child = BACKEND_TYPE_WALSND;
-			else
-				child = BACKEND_TYPE_NORMAL;
-			if (!(target & child))
-				continue;
-		}
+		if (only_autovac && !bp->is_autovacuum)
+			continue;
 
 		ereport(DEBUG4,
 				(errmsg_internal("sending signal %d to process %d",
 								 signal, (int) bp->pid)));
 		signal_child(bp->pid, signal);
-		signaled = true;
 	}
-	return signaled;
 }
 
 /*
@@ -7113,8 +7097,10 @@ SubPostmasterMain(int argc, char *argv[])
 		PGSharedMemoryReAttach();
 
 	/* autovacuum needs this set before calling InitProcess */
-	if (strcmp(argv[1], "--forkautovac") == 0)
-		AutovacuumIAm();
+	if (strcmp(argv[1], "--forkavlauncher") == 0)
+		AutovacuumLauncherIAm();
+	if (strcmp(argv[1], "--forkavworker") == 0)
+		AutovacuumWorkerIAm();
 
 	/*
 	 * Start our win32 signal implementation. This has to be done after we
@@ -7220,7 +7206,24 @@ SubPostmasterMain(int argc, char *argv[])
 		AuxiliaryProcessMain(argc - 2, argv + 2);
 		proc_exit(0);
 	}
-	if (strcmp(argv[1], "--forkautovac") == 0)
+	if (strcmp(argv[1], "--forkavlauncher") == 0)
+	{
+		/* Close the postmaster's sockets */
+		ClosePostmasterPorts(false);
+
+		/* Restore basic shared memory pointers */
+		InitShmemAccess(UsedShmemSegAddr);
+
+		/* Need a PGPROC to run CreateSharedMemoryAndSemaphores */
+		InitDummyProcess();
+
+		/* Attach process to shared data structures */
+		CreateSharedMemoryAndSemaphores(false, 0);
+
+		AutoVacLauncherMain(argc - 2, argv + 2);
+		proc_exit(0);
+	}
+	if (strcmp(argv[1], "--forkavworker") == 0)
 	{
 		/* Close the postmaster's sockets */
 		ClosePostmasterPorts(false);
@@ -7234,7 +7237,7 @@ SubPostmasterMain(int argc, char *argv[])
 		/* Attach process to shared data structures */
 		CreateSharedMemoryAndSemaphores(false, 0);
 
-		AutoVacMain(argc - 2, argv + 2);
+		AutoVacWorkerMain(argc - 2, argv + 2);
 		proc_exit(0);
 	}
 	if (strcmp(argv[1], "--forkarch") == 0)
@@ -7430,7 +7433,7 @@ sigusr1_handler(SIGNAL_ARGS)
 		WalReceiverPID = StartWalReceiver();
 	}
 
-	if (CheckPostmasterSignal(PMSIGNAL_START_AUTOVAC))
+	if (CheckPostmasterSignal(PMSIGNAL_START_AUTOVAC_LAUNCHER))
 	{
 		/*
 		 * Start one iteration of the autovacuum daemon, even if autovacuuming
@@ -7441,8 +7444,12 @@ sigusr1_handler(SIGNAL_ARGS)
 		 * that by launching another iteration as soon as the current one
 		 * completes.
 		 */
-		force_autovac = true;
+		start_autovac_launcher = true;
 	}
+
+	/* The autovacuum launcher wants us to start a worker process. */
+	if (CheckPostmasterSignal(PMSIGNAL_START_AUTOVAC_WORKER))
+		StartAutovacuumWorker();
 
 	if (CheckPostmasterSignal(PMSIGNAL_FILEREP_STATE_CHANGE))
 	{
@@ -7793,6 +7800,57 @@ StartChildProcess(AuxProcType type)
 	 * in parent, successful fork
 	 */
 	return pid;
+}
+
+/*
+ * StartAutovacuumWorker
+ *		Start an autovac worker process.
+ *
+ * This function is here because it enters the resulting PID into the
+ * postmaster's private backends list.
+ *
+ * NB -- this code very roughly matches BackendStartup.
+ */
+static void
+StartAutovacuumWorker(void)
+{
+	Backend	   *bn;
+
+	/*
+	 * do nothing if not in condition to run a process.  This should not
+	 * actually happen, since the signal is only supposed to be sent by
+	 * autovacuum launcher when it's OK to do it, but test for it just in case.
+	 */
+	if (StartupPID != 0 || FatalError || Shutdown != NoShutdown)
+		return;
+
+	bn = (Backend *) malloc(sizeof(Backend));
+	if (!bn)
+	{
+		ereport(LOG,
+				(errcode(ERRCODE_OUT_OF_MEMORY),
+				 errmsg("out of memory")));
+		return;
+	}
+
+	bn->pid = StartAutoVacWorker();
+	bn->is_autovacuum = true;
+	/* we don't need a cancel key */
+
+	if (bn->pid > 0)
+	{
+		DLAddHead(BackendList, DLNewElem(bn));
+#ifdef EXEC_BACKEND
+		ShmemBackendArrayAdd(bn);
+#endif
+	}
+	else
+	{
+		/* not much we can do */
+		ereport(LOG,
+				(errmsg("could not fork new process for autovacuum: %m")));
+		free(bn);
+	}
 }
 
 /*

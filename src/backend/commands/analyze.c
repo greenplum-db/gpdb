@@ -361,7 +361,7 @@ analyzeStmt(VacuumStmt *stmt, List *relids)
 	 */
 
 	if ((!IsInTransactionChain((void *) stmt) && list_length(lRelOids) > 1)
-			|| IsAutoVacuumProcess())
+			|| IsAutoVacuumWorkerProcess())
 		bUseOwnXacts = true;
 
 	/**
@@ -417,7 +417,7 @@ analyzeStmt(VacuumStmt *stmt, List *relids)
 		{
 			char *asubtype = "";
 
-			if (IsAutoVacuumProcess())
+			if (IsAutoVacuumWorkerProcess())
 				asubtype = "AUTO";
 
 			MetaTrackUpdObject(RelationRelationId,

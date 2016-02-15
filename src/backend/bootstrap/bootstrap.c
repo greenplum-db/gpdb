@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/bootstrap/bootstrap.c,v 1.230 2007/02/10 14:58:54 petere Exp $
+ *	  $PostgreSQL: pgsql/src/backend/bootstrap/bootstrap.c,v 1.232 2007/02/16 02:10:07 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -551,7 +551,7 @@ BootstrapModeMain(void)
 	 * Do backend-like initialization for bootstrap mode
 	 */
 	InitProcess();
-	InitPostgres(NULL, InvalidOid, NULL, NULL);
+	(void) InitPostgres(NULL, InvalidOid, NULL, NULL);
 
 	/* Initialize stuff for bootstrap-file processing */
 	for (i = 0; i < MAXATTR; i++)

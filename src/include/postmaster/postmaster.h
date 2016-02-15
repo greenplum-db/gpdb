@@ -15,6 +15,7 @@
 
 /* GUC options */
 extern bool EnableSSL;
+extern char *SSLCipherSuites;
 extern bool SilentMode;
 extern int	ReservedBackends;
 extern int	PostPortNumber;
