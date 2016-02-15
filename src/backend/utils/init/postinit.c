@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/init/postinit.c,v 1.173 2007/01/05 22:19:44 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/init/postinit.c,v 1.174 2007/02/15 23:23:23 alvherre Exp $
  *
  *
  *-------------------------------------------------------------------------
@@ -315,6 +315,48 @@ ProcessRoleGUC(void)
 }
 
 /*
+ * FindMyDatabaseByOid
+ *
+ * As above, but the actual database Id is known.  Return its name and the 
+ * tablespace OID.  Return TRUE if found, FALSE if not.  The same restrictions
+ * as FindMyDatabase apply.
+ */
+static bool
+FindMyDatabaseByOid(Oid dbid, char *dbname, Oid *db_tablespace)
+{
+	bool		result = false;
+	char	   *filename;
+	FILE	   *db_file;
+	Oid			db_id;
+	char		thisname[NAMEDATALEN];
+	TransactionId db_frozenxid;
+
+	filename = database_getflatfilename();
+	db_file = AllocateFile(filename, "r");
+	if (db_file == NULL)
+		ereport(FATAL,
+				(errcode_for_file_access(),
+				 errmsg("could not open file \"%s\": %m", filename)));
+
+	while (read_pg_database_line(db_file, thisname, &db_id,
+								 db_tablespace, &db_frozenxid))
+	{
+		if (dbid == db_id)
+		{
+			result = true;
+			strlcpy(dbname, thisname, NAMEDATALEN);
+			break;
+		}
+	}
+
+	FreeFile(db_file);
+	pfree(filename);
+
+	return result;
+}
+
+
+/*
  * CheckMyDatabase -- fetch information from the pg_database entry for our DB
  */
 static void
@@ -347,9 +389,9 @@ CheckMyDatabase(const char *name, bool am_superuser)
 	 * a way to recover from disabling all access to all databases, for
 	 * example "UPDATE pg_database SET datallowconn = false;".
 	 *
-	 * We do not enforce them for autovacuum worker processes either.
+	 * We do not enforce them for the autovacuum worker processes either.
 	 */
-	if (IsUnderPostmaster && !IsAutoVacuumProcess())
+	if (IsUnderPostmaster && !IsAutoVacuumWorkerProcess())
 	{
 		/*
 		 * Check that the database is currently allowing connections.
@@ -566,7 +608,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 			 char *out_dbname)
 {
 	bool		bootstrap = IsBootstrapProcessingMode();
-	bool		autovacuum = IsAutoVacuumProcess();
+	bool		autovacuum = IsAutoVacuumWorkerProcess();
 	bool		am_superuser;
 	char	   *fullpath;
 	char		dbname[NAMEDATALEN];

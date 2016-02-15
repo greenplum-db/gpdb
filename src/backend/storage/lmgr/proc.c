@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/proc.c,v 1.183 2007/01/16 13:28:56 alvherre Exp $
+ *	    $PostgreSQL: pgsql/src/backend/storage/lmgr/proc.c,v 1.188 2007/04/16 18:29:53 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -171,6 +171,7 @@ InitProcGlobal(int mppLocalProcessCounter)
 	 * Initialize the data structures.
 	 */
 	ProcGlobal->freeProcs = INVALID_OFFSET;
+	ProcGlobal->autovacFreeProcs = INVALID_OFFSET;
 
 	ProcGlobal->spins_per_delay = DEFAULT_SPINS_PER_DELAY;
 
@@ -179,13 +180,13 @@ InitProcGlobal(int mppLocalProcessCounter)
 	/*
 	 * Pre-create the PGPROC structures and create a semaphore for each.
 	 */
-	procs = (PGPROC *) ShmemAlloc(MaxBackends * sizeof(PGPROC));
+	procs = (PGPROC *) ShmemAlloc((MaxConnections) * sizeof(PGPROC));
 	if (!procs)
 		ereport(FATAL,
 				(errcode(ERRCODE_OUT_OF_MEMORY),
 				 errmsg("out of shared memory")));
-	MemSet(procs, 0, MaxBackends * sizeof(PGPROC));
-	for (i = 0; i < MaxBackends; i++)
+	MemSet(procs, 0, MaxConnections * sizeof(PGPROC));
+	for (i = 0; i < MaxConnections; i++)
 	{
 		PGSemaphoreCreate(&(procs[i].sem));
 		InitSharedLatch(&(procs[i].procLatch));
@@ -194,7 +195,20 @@ InitProcGlobal(int mppLocalProcessCounter)
 		ProcGlobal->freeProcs = MAKE_OFFSET(&procs[i]);
 	}
 	ProcGlobal->procs = procs;
-	ProcGlobal->numFreeProcs = MaxBackends;
+	ProcGlobal->numFreeProcs = MaxConnections;
+
+	procs = (PGPROC *) ShmemAlloc((autovacuum_max_workers) * sizeof(PGPROC));
+	if (!procs)
+		ereport(FATAL,
+				(errcode(ERRCODE_OUT_OF_MEMORY),
+				 errmsg("out of shared memory")));
+	MemSet(procs, 0, autovacuum_max_workers * sizeof(PGPROC));
+	for (i = 0; i < autovacuum_max_workers; i++)
+	{
+		PGSemaphoreCreate(&(procs[i].sem));
+		procs[i].links.next = ProcGlobal->autovacFreeProcs;
+		ProcGlobal->autovacFreeProcs = MAKE_OFFSET(&procs[i]);
+	}
 
 	MemSet(AuxiliaryProcs, 0, NUM_AUXILIARY_PROCS * sizeof(PGPROC));
 	for (i = 0; i < NUM_AUXILIARY_PROCS; i++)
@@ -375,11 +389,11 @@ InitProcess(void)
 	 * cleaning up.  (XXX autovac launcher currently doesn't participate in
 	 * this; it probably should.)
 	 *
-	 * Ideally, we should create functions similar to IsAutoVacuumProcess()
+	 * Ideally, we should create functions similar to IsAutoVacuumWorkerProcess()
 	 * for ftsProber, SeqServer etc who call InitProcess().
 	 * But MyPMChildSlot helps to get away with it.
 	 */
-	if (IsUnderPostmaster && !IsAutoVacuumProcess()
+	if (IsUnderPostmaster && !IsAutoVacuumWorkerProcess()
 		&& MyPMChildSlot > 0)
 		MarkPostmasterChildActive();
 
@@ -399,7 +413,7 @@ InitProcess(void)
 	MyProc->databaseId = InvalidOid;
 	MyProc->roleId = InvalidOid;
 	MyProc->inVacuum = false;
-	MyProc->isAutovacuum = IsAutoVacuumProcess();
+	MyProc->isAutovacuum = IsAutoVacuumWorkerProcess();
 	MyProc->postmasterResetRequired = true;
 	MyProc->lwWaiting = false;
 	MyProc->lwExclusive = false;
@@ -826,7 +840,7 @@ ProcKill(int code, Datum arg)
 	 * This process is no longer present in shared memory in any meaningful
 	 * way, so tell the postmaster we've cleaned up acceptably well.
 	 */
-	if (IsUnderPostmaster && !IsAutoVacuumProcess()
+	if (IsUnderPostmaster && !IsAutoVacuumWorkerProcess()
 		&& MyPMChildSlot > 0)
 		MarkPostmasterChildInactive();
 }

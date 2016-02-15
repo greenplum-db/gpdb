@@ -11,7 +11,7 @@
  * Written by Peter Eisentraut <peter_e@gmx.net>.
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/misc/guc.c,v 1.374 2007/02/14 03:08:44 neilc Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/misc/guc.c,v 1.385 2007/04/16 18:29:55 alvherre Exp $
  *
  *--------------------------------------------------------------------
  */
@@ -162,6 +162,8 @@ static const char *show_IntervalStyle(void);
 static const char *show_tcp_keepalives_idle(void);
 static const char *show_tcp_keepalives_interval(void);
 static const char *show_tcp_keepalives_count(void);
+static bool assign_autovacuum_max_workers(int newval, bool doit, GucSource source);
+static bool assign_maxconnections(int newval, bool doit, GucSource source);
 
 static const char *assign_application_name(const char *newval, bool doit, GucSource source);
 static bool assign_autovacuum_warning(bool newval, bool doit, GucSource source);
@@ -1175,16 +1177,19 @@ static struct config_int ConfigureNamesInt[] =
 	 * number.
 	 *
 	 * MaxBackends is limited to INT_MAX/4 because some places compute
-	 * 4*MaxBackends without any overflow check.  Likewise we have to limit
-	 * NBuffers to INT_MAX/2.
+	 * 4*MaxBackends without any overflow check.  This check is made on
+	 * assign_maxconnections, since MaxBackends is computed as MaxConnections +
+	 * autovacuum_max_workers.
+	 *
+	 * Likewise we have to limit NBuffers to INT_MAX/2.
 	 */
 	{
 		{"max_connections", PGC_POSTMASTER, CONN_AUTH_SETTINGS,
 			gettext_noop("Sets the maximum number of concurrent connections."),
 			NULL
 		},
-		&MaxBackends,
-		200, 10, MAX_MAX_BACKENDS, NULL, NULL
+		&MaxConnections,
+		200, 10, MAX_MAX_BACKENDS, assign_maxconnections, NULL
 	},
 
 	{
@@ -1622,6 +1627,15 @@ static struct config_int ConfigureNamesInt[] =
 		},
 		&block_size,
 		BLCKSZ, BLCKSZ, BLCKSZ, NULL, NULL
+	},
+	{
+		/* see max_connections */
+		{"autovacuum_max_workers", PGC_POSTMASTER, AUTOVACUUM,
+			gettext_noop("Sets the maximum number of simultaneously running autovacuum worker processes."),
+			NULL
+		},
+		&autovacuum_max_workers,
+		3, 1, INT_MAX / 4, assign_autovacuum_max_workers, NULL
 	},
 
 	{
@@ -2467,7 +2481,7 @@ static struct config_string ConfigureNamesString[] =
 		&external_pid_file,
 		NULL, assign_canonical_path, NULL
 	},
-
+			
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, NULL, NULL, NULL
@@ -6730,6 +6744,33 @@ GUCArrayReset(ArrayType *array)
 	return newarray;
 }
 
+static bool
+assign_maxconnections(int newval, bool doit, GucSource source)
+{
+	if (doit)
+	{
+		if (newval + autovacuum_max_workers > INT_MAX / 4)
+			return false;
+
+		MaxBackends = newval + autovacuum_max_workers;
+	}
+
+	return true;
+}
+
+static bool
+assign_autovacuum_max_workers(int newval, bool doit, GucSource source)
+{
+	if (doit)
+	{
+		if (newval + MaxConnections > INT_MAX / 4)
+			return false;
+
+		MaxBackends = newval + MaxConnections;
+	}
+
+	return true;
+}
 
 /*
  * assign_hook subroutines

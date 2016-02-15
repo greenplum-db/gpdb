@@ -1,7 +1,7 @@
 /* -----------------------------------------------------------------------
  * formatting.c
  *
- * $PostgreSQL: pgsql/src/backend/utils/adt/formatting.c,v 1.124 2007/02/14 05:10:55 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/adt/formatting.c,v 1.125 2007/02/16 03:39:45 momjian Exp $
  *
  *
  *	 Portions Copyright (c) 1999-2008, PostgreSQL Global Development Group
@@ -426,6 +426,7 @@ typedef struct
 				ddd,
 				mm,
 				ms,
+				iyear,
 				year,
 				bc,
 				ww,
