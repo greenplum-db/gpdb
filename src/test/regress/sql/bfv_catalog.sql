@@ -1,5 +1,7 @@
 -- count number of certain operators in a given plan
+-- start_ignore
 create language plpythonu;
+-- end_ignore
 
 create or replace function count_operator(explain_query text, operator text) returns int as
 $$
