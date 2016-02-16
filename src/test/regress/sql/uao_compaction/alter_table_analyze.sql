@@ -1,4 +1,4 @@
--- @Description Checks analyze and drop column interfaction
+-- @Description Checks analyze and drop column interaction
 
 CREATE TABLE ck_ct_ao_analyze1(
 text_col text,
@@ -46,3 +46,14 @@ INSERT INTO ck_ct_ao_analyze1 values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}',  2,
 INSERT INTO ck_ct_ao_analyze1 values ('3_zero', 3, '3_zero', 0, 0, 0, '{0}',  0, 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000');
 update ck_ct_ao_analyze1 set bigint_col = bigint_col + 1 where text_col = '1_zero';
 ANALYZE ck_ct_ao_analyze1;
+--
+--
+ALTER TABLE ck_ct_ao_analyze1 ADD COLUMN added_col_one_more character varying(30) default 'test_value';
+ALTER TABLE ck_ct_ao_analyze1 DROP COLUMN added_col ;
+ALTER TABLE ck_ct_ao_analyze1 RENAME COLUMN after_rename_col TO after_rename_col_one_more_time;
+ALTER TABLE ck_ct_ao_analyze1 ALTER COLUMN change_datatype_col TYPE int8;
+ALTER TABLE ck_ct_ao_analyze1 set with ( reorganize='true') distributed by (int_col);
+update ck_ct_ao_analyze1 set bigint_col = bigint_col + 1 where text_col = '1_zero';
+ANALYZE ck_ct_ao_analyze1;
+select * from ck_ct_ao_analyze1;
+
