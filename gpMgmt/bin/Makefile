@@ -224,9 +224,9 @@ PYTHON_FILES=`grep -l --exclude=Makefile --exclude=gplogfilter "/bin/env python"
 behave: $(BEHAVE_BIN)
 	@echo "Running behave on management scripts..."
 	@if [ -n ""$(tags)"" ]; then \
-		PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(PYTHONSRC_INSTALL_PYTHON_PATH) python $(BEHAVE_BIN) $(SERVER_SRC)/gppylib/test/behave/* --no-color -k --tags=$(tags) 2>&1 ; \
+		PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(PYTHONSRC_INSTALL_PYTHON_PATH) python $(BEHAVE_BIN) $(SERVER_SRC)/gppylib/test/behave/* --no-color -s -k --tags=$(tags) 2>&1 ; \
 	else \
-		PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(PYTHONSRC_INSTALL_PYTHON_PATH) python $(BEHAVE_BIN) $(SERVER_SRC)/gppylib/test/behave/* --no-color 2>&1; \
+		PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(PYTHONSRC_INSTALL_PYTHON_PATH) python $(BEHAVE_BIN) $(SERVER_SRC)/gppylib/test/behave/* --no-color -s 2>&1; \
 	fi
 
 checkcode: pylint

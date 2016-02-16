@@ -187,9 +187,9 @@ def impl(context, options):
         command = 'gpdbrestore -e -t %s %s -a --netbackup-service-host %s' % (ts, options, netbackup_service_host)
     run_gpcommand(context, command)
 
-@given('verify that {filetype} file has been backed up using NetBackup')
-@when('verify that {filetype} file has been backed up using NetBackup')
-@then('verify that {filetype} file has been backed up using NetBackup')
+@given('verify that {filetype} file has been backed up using nebBackup')
+@when('verify that {filetype} file has been backed up using netbackup')
+@then('verify that {filetype} file has been backed up using netbackup')
 def impl(context, filetype):
     if hasattr(context, 'netbackup_service_host'):
         netbackup_service_host = context.netbackup_service_host
@@ -320,9 +320,9 @@ def impl(context, dbname):
     command = 'gpdbrestore -e -a -t ' + ts + " --netbackup-service-host " + netbackup_service_host
     run_gpcommand(context, command)
 
-@given('verify that {filetype} file with prefix "{prefix}" under subdir "{subdir}" has been backed up using NetBackup')
-@when('verify that {filetype} file with prefix "{prefix}" under subdir "{subdir}" has been backed up using NetBackup')
-@then('verify that {filetype} file with prefix "{prefix}" under subdir "{subdir}" has been backed up using NetBackup')
+@given('verify that {filetype} file with prefix "{prefix}" under subdir "{subdir}" has been backed up using netbackup')
+@when('verify that {filetype} file with prefix "{prefix}" under subdir "{subdir}" has been backed up using netbackup')
+@then('verify that {filetype} file with prefix "{prefix}" under subdir "{subdir}" has been backed up using netbackup')
 def impl(context, filetype, prefix, subdir):
     if hasattr(context, 'netbackup_service_host'):
         netbackup_service_host = context.netbackup_service_host
