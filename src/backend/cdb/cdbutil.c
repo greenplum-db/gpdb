@@ -34,6 +34,7 @@
 #include "cdb/cdbmotion.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbgangmgr.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/ml_ipc.h"			/* listener_setup */
 #include "cdb/cdbtm.h"
@@ -490,7 +491,7 @@ cdb_cleanup(int code __attribute__((unused)) , Datum arg __attribute__((unused))
 {
 	elog(DEBUG1, "Cleaning up Greenplum components...");
 
-	disconnectAndDestroyAllGangs();
+	GetGangMgr().disconnectAndDestroyAllGangs();
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{

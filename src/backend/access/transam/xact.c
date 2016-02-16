@@ -58,6 +58,7 @@
 #include "utils/vmem_tracker.h"
 
 #include "cdb/cdbgang.h"
+#include "cdb/cdbgangmgr.h"
 #include "cdb/cdbvars.h" /* Gp_role, Gp_is_writer, interconnect_setup_timeout */
 
 #include "cdb/cdbpersistentstore.h"
@@ -3751,7 +3752,7 @@ CommitTransaction(void)
 
 	Assert(LocalDistribXactRef_IsNil(&localDistribXactRef));
 
-	freeGangsForPortal(NULL);
+	GetGangMgr().freeGangsForPortal(NULL);
 }
 
 
@@ -4296,20 +4297,20 @@ AbortTransaction(void)
 
 	Assert(LocalDistribXactRef_IsNil(&localDistribXactRef));
 
-	freeGangsForPortal(NULL);
+	GetGangMgr().freeGangsForPortal(NULL);
 
 	/* If a query was cancelled, then cleanup reader gangs. */
 	if (QueryCancelCleanup)
 	{
 		QueryCancelCleanup = false;
-		cleanupIdleReaderGangs();
+		GetGangMgr().cleanupIdleReaderGangs();
 	}
 
 	/* If memprot decides to kill process, make sure we destroy all processes
 	 * so that all mem/resource will be freed
 	 */
 	if(elog_geterrcode() == ERRCODE_GP_MEMPROT_KILL)
-		disconnectAndDestroyAllGangs();
+		GetGangMgr().disconnectAndDestroyAllGangs();
 }
 
 /*

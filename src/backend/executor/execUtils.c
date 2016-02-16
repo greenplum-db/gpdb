@@ -60,6 +60,8 @@
 
 #include "cdb/cdbutil.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbgangmgr.h"
+#include "cdb/cdbslicetable.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdispatchresult.h"
@@ -1866,13 +1868,13 @@ AssignGangs(QueryDesc *queryDesc, int utility_segment_index)
 		{
 			if (i == 0 && !queryDesc->extended_query)
 			{
-				inv.vecNgangs[i] = allocateWriterGang();
+				inv.vecNgangs[i] = GetGangMgr().allocateWriterGang();
 
 				Assert(inv.vecNgangs[i] != NULL);
 			}
 			else
 			{
-				inv.vecNgangs[i] = allocateGang(GANGTYPE_PRIMARY_READER, getgpsegmentCount(), 0, queryDesc->portal_name);
+				inv.vecNgangs[i] = GetGangMgr().allocateGang(GANGTYPE_PRIMARY_READER, getgpsegmentCount(), 0, queryDesc->portal_name);
 			}
 		}
 	}
@@ -1881,7 +1883,7 @@ AssignGangs(QueryDesc *queryDesc, int utility_segment_index)
 		inv.vec1gangs_primary_reader = (Gang **) palloc(sizeof(Gang *) * inv.num1gangs_primary_reader);
 		for (i = 0; i < inv.num1gangs_primary_reader; i++)
 		{
-			inv.vec1gangs_primary_reader[i] = allocateGang(GANGTYPE_PRIMARY_READER, 1, utility_segment_index, queryDesc->portal_name);
+			inv.vec1gangs_primary_reader[i] = GetGangMgr().allocateGang(GANGTYPE_PRIMARY_READER, 1, utility_segment_index, queryDesc->portal_name);
 		}
 	}
 	if (inv.num1gangs_entrydb_reader > 0)
@@ -1889,7 +1891,7 @@ AssignGangs(QueryDesc *queryDesc, int utility_segment_index)
 		inv.vec1gangs_entrydb_reader = (Gang **) palloc(sizeof(Gang *) * inv.num1gangs_entrydb_reader);
 		for (i = 0; i < inv.num1gangs_entrydb_reader; i++)
 		{
-			inv.vec1gangs_entrydb_reader[i] = allocateGang(GANGTYPE_ENTRYDB_READER, 1, -1, queryDesc->portal_name);
+			inv.vec1gangs_entrydb_reader[i] = GetGangMgr().allocateGang(GANGTYPE_ENTRYDB_READER, 1, -1, queryDesc->portal_name);
 		}
 	}
 
@@ -1924,7 +1926,7 @@ ReleaseGangs(QueryDesc *queryDesc)
 {
 	Assert(queryDesc != NULL);
 
-	freeGangsForPortal(queryDesc->portal_name);
+	GetGangMgr().freeGangsForPortal(queryDesc->portal_name);
 }
 
 

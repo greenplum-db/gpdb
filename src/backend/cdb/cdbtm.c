@@ -22,6 +22,7 @@
 #include "storage/shmem.h"
 #include "storage/ipc.h"
 #include "cdb/cdbdisp.h"
+#include "cdb/cdbgangmgr.h"
 #include "cdb/cdbdtxcontextinfo.h"
 
 #include "cdb/cdbvars.h"
@@ -156,7 +157,6 @@ static void performDtxProtocolCommitPrepared(const char *gid, bool raiseErrorIfN
 static void performDtxProtocolAbortPrepared(const char *gid, bool raiseErrorIfNotFound);
 static DistributedTransactionId determineSegmentMaxDistributedXid(void);
 
-extern void resetSessionForPrimaryGangLoss(void);
 extern void CheckForResetSession(void);
 
 /**
@@ -792,7 +792,7 @@ doNotifyingCommitPrepared(void)
 		 * at the top in PostgresMain.
 		 */
 		elog(NOTICE, "Releasing segworker group to retry broadcast.");
-		disconnectAndDestroyAllGangs();
+		GetGangMgr().disconnectAndDestroyAllGangs();
 
 		/*
 		 * This call will at a minimum change the session id so we will
@@ -854,7 +854,7 @@ doNotifyingAbort(void)
 
 	if (currentGxact->state == DTX_STATE_NOTIFYING_ABORT_NO_PREPARED)
 	{
-		if (gangsExist())
+		if (GetGangMgr().gangsExist())
 		{
 			succeeded = doDispatchDtxProtocolCommand(DTX_PROTOCOL_COMMAND_ABORT_NO_PREPARED, /* flags */ 0,
 													 currentGxact->gid, currentGxact->gxid,
@@ -869,7 +869,7 @@ doNotifyingAbort(void)
 				 * Reset the dispatch logic and disconnect from any segment that didn't respond to our abort.
 				 */
 				elog(NOTICE, "Releasing segworker groups to finish aborting the transaction.");
-				disconnectAndDestroyAllGangs();
+				GetGangMgr().disconnectAndDestroyAllGangs();
 
 				/*
 				 * This call will at a minimum change the session id so we will
@@ -928,7 +928,7 @@ doNotifyingAbort(void)
 			 * Reset the dispatch logic (i.e. deallocate gang) so we can attempt a retry.
 			 */
 			elog(NOTICE, "Releasing segworker groups to retry broadcast.");
-			disconnectAndDestroyAllGangs();
+			GetGangMgr().disconnectAndDestroyAllGangs();
 
 			/*
 			 * This call will at a minimum change the session id so we will
@@ -1239,7 +1239,7 @@ rollbackDtxTransaction(void)
 			 * segments.  What's left are possibily prepared transactions.
 			 */
 			elog(WARNING, "Releasing segworker groups since one or more segment connections failed.  This will abort the transactions in the segments that did not get prepared.");
-			disconnectAndDestroyAllGangs();
+			GetGangMgr().disconnectAndDestroyAllGangs();
 
 			/*
 			 * This call will at a minimum change the session id so we will
@@ -1264,7 +1264,7 @@ rollbackDtxTransaction(void)
 		 * segments.
 		 */
 		elog(NOTICE, "Releasing segworker groups to finish aborting the transaction.");
-		disconnectAndDestroyAllGangs();
+		GetGangMgr().disconnectAndDestroyAllGangs();
 
 		/*
 		 * This call will at a minimum change the session id so we will
@@ -1332,7 +1332,7 @@ rollbackDtxTransaction(void)
 		 * segment instances.  And, we will abort the transactions in the
 		 * segments.
 		 */
-		disconnectAndDestroyAllGangs();
+		GetGangMgr().disconnectAndDestroyAllGangs();
 
 		/*
 		 * This call will at a minimum change the session id so we will
@@ -1563,7 +1563,7 @@ initTM(void)
 				 * we should catch it if it happens.
 				 */
 				if (!first)
-					detectFailedConnections();
+					GetGangMgr().detectFailedConnections();
 
 				initTM_recover_as_needed();
 				succeeded = true;
@@ -1614,7 +1614,7 @@ initTM(void)
 
 		RestoreToUser(olduser);
 
-		freeGangsForPortal(NULL);
+		GetGangMgr().freeGangsForPortal(NULL);
 	}
 	else
 	{
@@ -1648,7 +1648,7 @@ initTM(void)
 					Persistent_PostDTMRecv_RemoveHashEntry(MyDatabaseId);
 
 					RestoreToUser(olduser);
-					freeGangsForPortal(NULL);
+					GetGangMgr().freeGangsForPortal(NULL);
 				}
 				releaseTmLock();
 			}
@@ -3159,8 +3159,8 @@ cdbtm_performDeferredRecovery(void)
 
 			*shmDtmRecoveryDeferred = false;
 			elog(NOTICE, "Releasing segworker groups for deferred recovery.");
-			disconnectAndDestroyAllGangs();
-			resetSessionForPrimaryGangLoss();
+			GetGangMgr().disconnectAndDestroyAllGangs();
+			GetGangMgr().resetSessionForPrimaryGangLoss();
 		}
 		releaseTmLock();
 		CheckForResetSession();

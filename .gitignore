@@ -51,3 +51,5 @@ build.sh
 *.out
 
 VERSION
+.cproject
+.project

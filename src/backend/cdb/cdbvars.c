@@ -19,6 +19,7 @@
 #include "catalog/gp_segment_config.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbfts.h"
+#include "cdb/cdbgangmgr.h"
 #include "cdb/cdbutil.h"
 #include "lib/stringinfo.h"
 #include "libpq/libpq-be.h"
@@ -668,7 +669,6 @@ assign_gp_connections_per_thread(int newval, bool doit, GucSource source __attri
  *
  * See src/backend/util/misc/guc.c for option definition.
  */
-void disconnectAndDestroyAllGangs(void);
 
 bool
 assign_gp_use_dispatch_agent(bool newval, bool doit, GucSource source __attribute__((unused)) )
@@ -688,7 +688,7 @@ assign_gp_use_dispatch_agent(bool newval, bool doit, GucSource source __attribut
 		 * will wipe them out.
 		 */
 		if (newval != gp_use_dispatch_agent && Gp_role != GP_ROLE_UTILITY)
-			disconnectAndDestroyAllGangs();
+			GetGangMgr().disconnectAndDestroyAllGangs();
 		gp_use_dispatch_agent = newval;
 	}
 

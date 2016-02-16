@@ -33,6 +33,7 @@
 #include "nodes/readfuncs.h"
 #include "utils/lsyscache.h"  /* For get_typlenbyval */
 #include "cdb/cdbgang.h"
+#include "cdb/cdbslicetable.h"
 
 /*
  * readfuncs.c is compiled normally into readfuncs.o, but it's also

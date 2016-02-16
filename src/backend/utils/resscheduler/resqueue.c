@@ -22,6 +22,7 @@
 #include "access/xact.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbgangmgr.h"
 #include "funcapi.h"
 #include "miscadmin.h"
 #include "pgstat.h"
@@ -422,7 +423,7 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 		 */
 		if (ResourceCleanupIdleGangs)
 		{
-			cleanupIdleReaderGangs();
+			GetGangMgr().cleanupIdleReaderGangs();
 		}
 
 		/*

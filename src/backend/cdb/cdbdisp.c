@@ -50,6 +50,8 @@
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbgangmgr.h"
+#include "cdb/cdbslicetable.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbsubplan.h"
 #include "cdb/cdbvars.h"
@@ -365,12 +367,12 @@ cdbdisp_dispatchToGang(struct CdbDispatcherState *ds,
 
 	segdbs_in_thread_pool = 0;
 	
-	Assert(db_descriptors_size <= largestGangsize());
+	Assert(db_descriptors_size <= GetGangMgr().largestGangsize());
 
 	if (gp_connections_per_thread == 0)
 		max_threads = 1;	/* one, not zero, because we need to allocate one param block */
 	else
-		max_threads = 1 + (largestGangsize() - 1) / gp_connections_per_thread;
+		max_threads = 1 + (GetGangMgr().largestGangsize() - 1) / gp_connections_per_thread;
 	
 	if (DispatchContext == NULL)
 	{
@@ -725,7 +727,7 @@ addSegDBToDispatchThreadPool(DispatchCommandParms  *ParmsAr,
 		pParms->localSlice = sliceId;
 		Assert(DispatchContext != NULL);
 		pParms->dispatchResultPtrArray =
-			(CdbDispatchResult **) palloc0((gp_connections_per_thread == 0 ? largestGangsize() : gp_connections_per_thread)*
+			(CdbDispatchResult **) palloc0((gp_connections_per_thread == 0 ? GetGangMgr().largestGangsize() : gp_connections_per_thread)*
 										   sizeof(CdbDispatchResult *));
 		MemSet(&pParms->thread, 0, sizeof(pthread_t));
 		pParms->db_count = 0;
@@ -958,7 +960,7 @@ cdbdisp_returnResults(CdbDispatchResults *primaryResults,
 	 * last entry. The caller must PQclear() each PGresult and free() the
 	 * array.
 	 */
-	nslots = 2 * largestGangsize() + 1;
+	nslots = 2 * GetGangMgr().largestGangsize() + 1;
 	resultSets = (struct pg_result **)calloc(nslots, sizeof(*resultSets));
 
 	if (!resultSets)
@@ -1111,7 +1113,7 @@ cdbdisp_dispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 	/*
 	 * Allocate a primary QE for every available segDB in the system.
 	 */
-	primaryGang = allocateWriterGang();
+	primaryGang = GetGangMgr().allocateWriterGang();
 
 	Assert(primaryGang);
 
@@ -1139,7 +1141,7 @@ cdbdisp_dispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 	/* Wait for all QEs to finish.	Don't cancel. */
 	CdbCheckDispatchResult(&ds, DISPATCH_WAIT_NONE);
 
-	if (!gangOK(primaryGang))
+	if (! GetGangMgr().gangOK(primaryGang))
 	{
 		*badGangs = true;
 
@@ -1219,7 +1221,7 @@ cdbdisp_dispatchCommand(const char                 *strCommand,
 	/*
 	 * Allocate a primary QE for every available segDB in the system.
 	 */
-	primaryGang = allocateWriterGang();
+	primaryGang = GetGangMgr().allocateWriterGang();
 
 	Assert(primaryGang);
 
@@ -1487,7 +1489,7 @@ cdbdisp_dispatchSetCommandToAllGangs(const char	*strCommand,
 	/*
 	 * Allocate a primary QE for every available segDB in the system.
 	 */
-	primaryGang = allocateWriterGang();
+	primaryGang = GetGangMgr().allocateWriterGang();
 
 	Assert(primaryGang);
 	
@@ -1498,8 +1500,8 @@ cdbdisp_dispatchSetCommandToAllGangs(const char	*strCommand,
 		qdSerializeDtxContextInfo(&queryParms.serializedDtxContextInfolen, true /* withSnapshot */, false /* cursor*/,
 								  generateTxnOptions(needTwoPhase), "cdbdisp_dispatchSetCommandToAllGangs");
 	
-	idleReaderGangs = getAllIdleReaderGangs();
-	busyReaderGangs = getAllBusyReaderGangs();
+	idleReaderGangs = GetGangMgr().getAllIdleReaderGangs();
+	busyReaderGangs = GetGangMgr().getAllBusyReaderGangs();
 	
 	/*
 	 * Dispatch the command.
@@ -3355,7 +3357,7 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 	}
 
 	/* Allocate result array with enough slots for QEs of primary gangs. */
-	ds->primaryResults = cdbdisp_makeDispatchResults(nSlices * largestGangsize(),
+	ds->primaryResults = cdbdisp_makeDispatchResults(nSlices * GetGangMgr().largestGangsize(),
 												   sliceLim,
 												   cancelOnError);
 
@@ -3429,7 +3431,7 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 			if (primaryGang == NULL)
 			{
 				elog(DEBUG2,"Dispatch %d, Gangs are %d, type=%d",iSlice, slice->primary_gang_id, slice->gangType);
-				primaryGang = findGangById(slice->primary_gang_id);
+				primaryGang = GetGangMgr().findGangById(slice->primary_gang_id);
 
 				Assert(primaryGang != NULL);
 				if (primaryGang != NULL)
@@ -3477,7 +3479,7 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 			 */
 			elog(DEBUG2,"primary %d",pQueryParms->primary_gang_id);
 			if (pQueryParms->primary_gang_id > 0)
-				primaryGang = findGangById(pQueryParms->primary_gang_id);
+				primaryGang = GetGangMgr().findGangById(pQueryParms->primary_gang_id);
 		}
 
 		Assert(primaryGang != NULL);	/* Must have a gang to dispatch to */

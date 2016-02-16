@@ -31,6 +31,7 @@
 #include "nodes/relation.h"
 #include "utils/datum.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbslicetable.h"
 #include "nodes/nodeFuncs.h"
 
 /*

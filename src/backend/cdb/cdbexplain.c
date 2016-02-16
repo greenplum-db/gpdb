@@ -24,6 +24,7 @@
 #include "utils/memutils.h"             /* MemoryContextGetPeakSpace() */
 #include "cdb/memquota.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbslicetable.h"
 #include "inttypes.h"
 #include "utils/vmem_tracker.h"
 #include "parser/parsetree.h"

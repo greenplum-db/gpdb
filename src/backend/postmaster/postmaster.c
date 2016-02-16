@@ -147,7 +147,7 @@
 #include "utils/ps_status.h"
 #include "utils/resscheduler.h"
 
-#include "cdb/cdbgang.h"                /* cdbgang_parse_gpqeid_params */
+#include "cdb/cdbgangmgr.h"                /* cdbgang_parse_gpqeid_params */
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 
@@ -2913,9 +2913,9 @@ retry1:
      * CDB: Process "gpqeid" parameter string for qExec startup.
      */
     if (gpqeid)
-        cdbgang_parse_gpqeid_params(port, gpqeid);
+        GetGangMgr().cdbgang_parse_gpqeid_params(port, gpqeid);
     else if (gpqdid)
-    	cdbgang_parse_gpqdid_params(port, gpqdid);
+    	GetGangMgr().cdbgang_parse_gpqdid_params(port, gpqdid);
     else if (gpdaid)
 	{
 		ereport(FATAL,

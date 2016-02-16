@@ -20,6 +20,7 @@
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbgangmgr.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
@@ -70,7 +71,7 @@ makeCdbCopy(bool is_copy_in)
 	}
 
 	/* init gangs */
-	c->primary_writer = allocateWriterGang();
+	c->primary_writer = GetGangMgr().allocateWriterGang();
 	
 	/* init seg list for copy out */
 	if (!c->copy_in)
@@ -237,7 +238,7 @@ cdbCopySendData(CdbCopy *c, int target_seg, const char *buffer,
 
 	gp = c->primary_writer;
 
-	q = getSegmentDescriptorFromGang(gp, target_seg);
+	q = GetGangMgr().getSegmentDescriptorFromGang(gp, target_seg);
 		
 	/* transmit the COPY data */
 	result = PQputCopyData(q->conn, buffer, nbytes);
@@ -279,7 +280,7 @@ cdbCopySendDataSingle(CdbCopy *c, int target_seg, const char *buffer,
 	
 	Assert(gp);
 
-	q = getSegmentDescriptorFromGang(gp, target_seg);
+	q = GetGangMgr().getSegmentDescriptorFromGang(gp, target_seg);
 
 	/* transmit the COPY data */
 	elog(DEBUG4,"PQputCopyData to segment %d\n", target_seg);
@@ -341,7 +342,7 @@ bool cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 		{
 			int			source_seg = lfirst_int(cur);
 
-			q = getSegmentDescriptorFromGang(gp, source_seg);
+			q = GetGangMgr().getSegmentDescriptorFromGang(gp, source_seg);
 
 			/* send a query cancel request to that segdb */
 			PQrequestCancel(q->conn);
@@ -362,7 +363,7 @@ bool cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 			int			source_seg = lfirst_int(cur);
 			char		*buffer;
 
-			q = getSegmentDescriptorFromGang(gp, source_seg);
+			q = GetGangMgr().getSegmentDescriptorFromGang(gp, source_seg);
 
 			/* get 1 row of COPY data */
 			nbytes = PQgetCopyData(q->conn, &buffer, false);

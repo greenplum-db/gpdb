@@ -34,6 +34,7 @@
 #include "utils/builtins.h"
 #include "utils/datum.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbslicetable.h"
 #include "utils/workfile_mgr.h"
 #include "parser/parsetree.h"
 

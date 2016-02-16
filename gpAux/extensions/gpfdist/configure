@@ -3304,7 +3304,7 @@ if test -n "$APR_CONFIG"; then
   LIBS="$LIBS $apr_link_ld_libs"
 fi
 
-CFLAGS="-Werror $CFLAGS"
+CFLAGS="-Werror -Wno-deprecated -Wno-parentheses-equality $CFLAGS"
 
 # If the 'apr-1-config --link-ld' produced correct output, -lapr-1 is already
 # in LIBS, hence AC_SEARCH_LIBS rather than AC_CHECK_LIB. (and the autoconf

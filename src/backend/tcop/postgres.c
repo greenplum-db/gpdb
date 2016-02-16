@@ -85,6 +85,7 @@
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbgangmgr.h"
 #include "cdb/ml_ipc.h"
 #include "utils/guc.h"
 #include "access/twophase.h"
@@ -4575,7 +4576,7 @@ PostgresMain(int argc, char *argv[],
 			 * This means giving the end user enough time to type in the next SQL statement
 			 *
 			 */
-			if (IdleSessionGangTimeout > 0 && gangsExist())
+			if (IdleSessionGangTimeout > 0 && GetGangMgr().gangsExist())
 				if (!enable_sig_alarm( IdleSessionGangTimeout /* ms */, false))
 					elog(FATAL, "could not set timer for client wait timeout");
 		}

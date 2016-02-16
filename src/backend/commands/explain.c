@@ -44,6 +44,7 @@
 #include "cdb/memquota.h"
 #include "miscadmin.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbslicetable.h"
 
 #ifdef USE_ORCA
 extern char *SzDXLPlan(Query *parse);
@@ -67,8 +68,6 @@ typedef struct ExplainState
 	StringInfoData  outbuf;         /* the output buffer */
     StringInfoData  workbuf;        /* a scratch buffer */
 } ExplainState;
-
-extern bool Test_print_direct_dispatch_info;
 
 static void ExplainOneQuery(Query *query, ExplainStmt *stmt,
 							const char *queryString,

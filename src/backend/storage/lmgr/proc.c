@@ -55,6 +55,7 @@
 
 #include "cdb/cdblocaldistribxact.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbgangmgr.h"
 #include "cdb/cdbvars.h"  /*Gp_is_writer*/
 #include "utils/gp_atomic.h"
 #include "utils/session_state.h"
@@ -1553,9 +1554,9 @@ HandleClientWaitTimeout(void)
 	/*
 	 * Free gangs to free up resources on the segDBs.
 	 */
-	if (gangsExist())
+	if (GetGangMgr().gangsExist())
 	{
-		cleanupAllIdleGangs();
+		GetGangMgr().cleanupAllIdleGangs();
 	}
 
 }

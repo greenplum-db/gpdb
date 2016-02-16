@@ -19,6 +19,7 @@
 #include "cdb/cdbconn.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbdisp.h"
+#include "cdb/cdbgangmgr.h"
 #include "access/xact.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbtm.h"
@@ -206,12 +207,12 @@ void
 FtsReConfigureMPP(bool create_new_gangs)
 {
 	/* need to scan to pick up the latest view */
-	detectFailedConnections();
+	GetGangMgr().detectFailedConnections();
 	local_fts_statusVersion = ftsProbeInfo->fts_statusVersion;
 
 	ereport(LOG, (errmsg_internal("FTS: reconfiguration is in progress"),
 			errSendAlert(true)));
-	disconnectAndDestroyAllGangs();
+	GetGangMgr().disconnectAndDestroyAllGangs();
 
 	/* Caller should throw an error. */
 	return;
@@ -294,10 +295,10 @@ FtsHandleGangConnectionFailure(SegmentDatabaseDescriptor * segdbDesc, int size)
 		}
 	}
 
-	if (gangsExist())
+	if (GetGangMgr().gangsExist())
 	{
 		reportError = true;
-		disconnectAndDestroyAllGangs();
+		GetGangMgr().disconnectAndDestroyAllGangs();
 	}
 
 	/*

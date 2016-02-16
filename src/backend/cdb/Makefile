@@ -34,7 +34,7 @@ OBJS = cdbappendonlystorage.o cdbappendonlystorageformat.o \
 	   cdbfilerepresetpeerprocess.o \
 	   cdbfts.o \
 	   cdbglobalsequence.o \
-	   cdbgang.o cdbgroup.o \
+	   cdbgang.o cdbgangmgr.o cdbgroup.o cdbslicetable.o \
 	   cdbhash.o cdbheap.o \
 	   cdbllize.o cdblocaldistribxact.o \
 	   cdbmaxdistributedxid.o \

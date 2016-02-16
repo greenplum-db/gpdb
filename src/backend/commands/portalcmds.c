@@ -34,6 +34,7 @@
 #include "utils/resscheduler.h"
 
 #include "cdb/cdbgang.h"
+#include "cdb/cdbgangmgr.h"
 #include "cdb/cdbvars.h"
 #include "postmaster/backoff.h"
 
@@ -312,8 +313,8 @@ PortalCleanup(Portal portal)
 		if (cleanupstate < 1 && Gp_role == GP_ROLE_DISPATCH)
 		{
 			cleanupstate = 1;
-			freeGangsForPortal((char *)portal->name);
-			cleanupPortalGangs(portal);
+			GetGangMgr().freeGangsForPortal((char *)portal->name);
+			GetGangMgr().cleanupPortalGangs(portal);
 		}
 
 		/* Sorry, can't dismiss this error. */
@@ -366,7 +367,7 @@ PortalCleanupHelper(Portal portal, volatile int *cleanupstate)
 	if (*cleanupstate < 1 && Gp_role == GP_ROLE_DISPATCH)
 	{
 		*cleanupstate = 1;
-		cleanupPortalGangs(portal);
+		GetGangMgr().cleanupPortalGangs(portal);
 	}
 
 	/* 
