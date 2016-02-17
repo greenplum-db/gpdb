@@ -18,6 +18,8 @@
 #include "nodes/relation.h"
 #include "utils/relcache.h"
 
+#define DEFAULT_EXTERNAL_TABLE_PAGES 1000
+#define DEFAULT_INTERNAL_TABLE_PAGES 100
 
 extern void get_relation_info(PlannerInfo *root, Oid relationObjectId,
 				  bool inhparent, RelOptInfo *rel);
