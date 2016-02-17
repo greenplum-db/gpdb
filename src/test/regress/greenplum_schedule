@@ -77,9 +77,7 @@ test: catalog bfv_catalog
 test: aggregate_with_groupingsets gp_optimizer 
 
 test: nested_case_null
-test: bfv_cte bfv_joins
-
-test: bfv_statistic
+test: bfv_cte bfv_joins bfv_statistic bfv_subquery
 
 ignore: tpch500GB_orca
 
