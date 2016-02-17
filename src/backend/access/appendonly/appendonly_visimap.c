@@ -71,6 +71,10 @@ static void AppendOnlyVisimap_Find(
 		AppendOnlyVisimap *visiMap,
 		AOTupleId *tupleId);
 
+
+static AppendOnlyVisimapCacheEntry *AppendOnlyVisimapCache_search(AppendOnlyVisimapCacheEntry *root, int segmentFileNum, uint64 rowNum);
+static void AppendOnlyVisimapCache_insert(AppendOnlyVisimapCacheEntry **root, AppendOnlyVisimapCacheEntry *newNode);
+
 /*
  * Finishes the visimap operations.
  * No other function should be called with the given
@@ -133,6 +137,8 @@ AppendOnlyVisimap_Init(
 			appendOnlyMetaDataSnapshot,
 			visiMap->memoryContext);
 
+	visiMap->cache = NULL;
+
 	MemoryContextSwitchTo(oldContext);
 }
 
@@ -151,6 +157,10 @@ AppendOnlyVisimap_Find(
 		AppendOnlyVisimap *visiMap,
 		AOTupleId *aoTupleId)
 {
+	AppendOnlyVisimapCacheEntry *cacheEntry;
+	int			segmentFileNum;
+	int64		firstRowNum;
+
 	Assert(visiMap);
 	Assert(aoTupleId);
 	
@@ -159,17 +169,43 @@ AppendOnlyVisimap_Find(
 			"(tupleId) = %s", 
 			AOTupleIdToString(aoTupleId)); 
 
+	segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
+	firstRowNum = AppendOnlyVisimapEntry_GetFirstRowNum(&visiMap->visimapEntry, aoTupleId);
+
+/* Check the cache first */
+	cacheEntry = AppendOnlyVisimapCache_search(visiMap->cache,
+											   segmentFileNum, firstRowNum);
+	if (cacheEntry)
+	{
+		visiMap->visimapEntry.segmentFileNum = segmentFileNum;
+		visiMap->visimapEntry.bitmap = cacheEntry->bitmap;
+		visiMap->visimapEntry.firstRowNum = cacheEntry->firstRowNum;
+		visiMap->visimapEntry.cached = true;
+		return;
+	}
+
 	if (!AppendOnlyVisimapStore_Find(&visiMap->visimapStore,
-				AOTupleIdGet_segmentFileNum(aoTupleId),
-				AppendOnlyVisimapEntry_GetFirstRowNum(
-					&visiMap->visimapEntry, aoTupleId),
-				&visiMap->visimapEntry))
+									 segmentFileNum,
+									 firstRowNum,
+									 &visiMap->visimapEntry))
 	{
 		/*
 		 * There is no entry that covers the given tuple id.
 		 */ 
 		AppendOnlyVisimapEntry_New(&visiMap->visimapEntry, aoTupleId);
 	}
+
+	/* Insert entry to cache */
+	cacheEntry = MemoryContextAlloc(visiMap->memoryContext,
+									sizeof(AppendOnlyVisimapCacheEntry));
+	cacheEntry->segmentFileNum = segmentFileNum;
+	cacheEntry->firstRowNum = visiMap->visimapEntry.firstRowNum;
+	cacheEntry->bitmap = bms_copy(visiMap->visimapEntry.bitmap);
+
+	visiMap->visimapEntry.bitmap = cacheEntry->bitmap;
+	visiMap->visimapEntry.cached = true;
+
+	AppendOnlyVisimapCache_insert(&visiMap->cache, cacheEntry);
 }
 
 /*
@@ -910,4 +946,89 @@ AppendOnlyVisimapDelete_Finish(
 
 	hash_destroy(visiMapDelete->dirtyEntryCache);
 	ExecWorkFile_Close(visiMapDelete->workfile);
+}
+
+
+
+
+
+
+/*
+ * Search cache ops
+ */
+
+/*
+ * in a search, 'a' is the key we're searching for.
+ */
+static int
+AppendOnlyVisimapCache_compare(AppendOnlyVisimapCacheEntry *a, AppendOnlyVisimapCacheEntry *b)
+{
+	if (a->segmentFileNum > b->segmentFileNum)
+		return -1;
+	else if (a->segmentFileNum < b->segmentFileNum)
+		return 1;
+
+	if (a->firstRowNum == b->firstRowNum)
+		return 0;
+	else if (a->firstRowNum > b->firstRowNum)
+		return -1;
+	else
+		return 1;
+}
+
+static AppendOnlyVisimapCacheEntry *
+AppendOnlyVisimapCache_search(AppendOnlyVisimapCacheEntry *root, int segmentFileNum, uint64 rowNum)
+{
+	AppendOnlyVisimapCacheEntry *current = root;
+	AppendOnlyVisimapCacheEntry key;
+
+	key.segmentFileNum = segmentFileNum;
+	key.firstRowNum = rowNum;
+
+	while (current)
+	{
+		int			cmp;
+
+		cmp = AppendOnlyVisimapCache_compare(&key, current);
+		if (cmp == 0)
+			break;
+		else if (cmp < 0)
+			current = current->leftChild;
+		else
+			current = current->rightChild;
+	}
+
+	//elog(NOTICE, "search: %d %ld (found %d %ld-%ld)", segmentFileNum, rowNum,
+	//	 current ? current->segmentFileNum : -1,
+	//	 current ? current->firstRowNum : -1,
+	//	 current ? current->lastRowNum : -1);
+
+	return current;
+}
+
+static void
+AppendOnlyVisimapCache_insert(AppendOnlyVisimapCacheEntry **root, AppendOnlyVisimapCacheEntry *newNode)
+{
+	AppendOnlyVisimapCacheEntry **current = root;
+
+	//elog(NOTICE, "insert: %d %ld - %ld", newNode->segmentFileNum,
+	//	 newNode->firstRowNum,
+	//	 newNode->lastRowNum);
+
+	newNode->leftChild = NULL;
+	newNode->rightChild = NULL;
+
+	while (*current)
+	{
+		int			cmp;
+
+		cmp = AppendOnlyVisimapCache_compare(newNode, *current);
+		/* we don't expect duplicates */
+		Assert(cmp != 0);
+		if (cmp < 0)
+			current = &(*current)->leftChild;
+		else
+			current = &(*current)->rightChild;
+	}
+	*current = newNode;
 }

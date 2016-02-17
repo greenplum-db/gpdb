@@ -79,6 +79,27 @@ typedef struct MinipagePerColumnGroup
 #define NUM_MINIPAGE_ENTRIES (((MaxHeapTupleSize)/8 - sizeof(HeapTupleHeaderData) - 64 * 3)\
 							  / sizeof(MinipageEntry))
 
+struct BlockDirCacheEntry;
+typedef struct BlockDirCacheEntry BlockDirCacheEntry;
+
+/*
+ * The key for these is (segmentFileNum, firstRowNum)
+ *
+ */
+struct BlockDirCacheEntry
+{
+	BlockDirCacheEntry *leftChild;
+	BlockDirCacheEntry *rightChild;
+
+	int			segmentFileNum;
+
+	int64		firstRowNum;	/* inclusive */
+	int64		lastRowNum;		/* exclusive */
+
+	Minipage   *minipage;
+};
+
+
 /*
  * Define a structure for the append-only relation block directory.
  */
@@ -106,6 +127,8 @@ typedef struct AppendOnlyBlockDirectory
 	 * Last minipage that contains an array of MinipageEntries.
 	 */
 	MinipagePerColumnGroup *minipages;
+
+	BlockDirCacheEntry **cacheRoots;
 
 	/*
 	 * Some temporary space to help form tuples to be inserted into

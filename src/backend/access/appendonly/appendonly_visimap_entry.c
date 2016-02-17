@@ -32,7 +32,8 @@ AppendOnlyVisimapEntry_Finish(
 		pfree(visiMapEntry->data);
 		visiMapEntry->data = NULL;
 	}
-	bms_free(visiMapEntry->bitmap);
+	if (!visiMapEntry->cached)
+		bms_free(visiMapEntry->bitmap);
 	visiMapEntry->bitmap = NULL;
 }
 
@@ -53,6 +54,7 @@ AppendOnlyVisimapEntry_Init(
 	Assert(visiMapEntry);
 
 	visiMapEntry->dirty = false;
+	visiMapEntry->cached = false;
 	visiMapEntry->data = palloc0(APPENDONLY_VISIMAP_DATA_BUFFER_SIZE);
 	SET_VARSIZE(visiMapEntry->data, 0);
 	visiMapEntry->segmentFileNum = -1;
@@ -73,12 +75,14 @@ AppendOnlyVisimapEntry_Reset(
 {
 	Assert(visiMapEntry);
 
+	if (!visiMapEntry->cached)
+		bms_free(visiMapEntry->bitmap);
+	visiMapEntry->bitmap = NULL;
+
 	visiMapEntry->dirty = false;
+	visiMapEntry->cached = false;
 	visiMapEntry->segmentFileNum = -1;
 	visiMapEntry->firstRowNum = -1;
-
-	bms_free(visiMapEntry->bitmap);
-	visiMapEntry->bitmap = NULL;
 }
 
 /*
@@ -96,7 +100,8 @@ AppendOnlyVisimapEntry_New(
 	Assert(tupleId);
 	Assert(!visiMapEntry->dirty);
 
-	bms_free(visiMapEntry->bitmap);
+	if (!visiMapEntry->cached)
+		bms_free(visiMapEntry->bitmap);
 	visiMapEntry->bitmap = NULL;
 
 	visiMapEntry->segmentFileNum = AOTupleIdGet_segmentFileNum(tupleId);
@@ -145,7 +150,8 @@ AppendOnlyVisiMapEnty_ReadData(
 		elog(ERROR, "error occured during visimap bitmap decompression");
 	}
 
-	bms_free(visiMapEntry->bitmap);
+	if (!visiMapEntry->cached)
+		bms_free(visiMapEntry->bitmap);
 
 	newWordCount = 
 		BitmapDecompress_GetBlockCount(&decompressState);
@@ -192,7 +198,6 @@ AppendOnlyVisimapEntry_Copyout(
 	bool isNull;
 
 	Assert(visiMapEntry);
-	Assert(!visiMapEntry->dirty);
 	Assert(tuple);
 	Assert(tupleDesc);
 	Assert(!visiMapEntry->dirty); /* entry should not contain dirty data */
@@ -215,7 +220,8 @@ AppendOnlyVisimapEntry_Copyout(
 		/*
 		 * when the visimap data is NULL, all entries are visible.
 		 */
-		bms_free(visiMapEntry->bitmap);
+		if (!visiMapEntry->cached)
+			bms_free(visiMapEntry->bitmap);
 		visiMapEntry->bitmap = NULL;
 	}
 	else
@@ -513,6 +519,7 @@ AppendOnlyVisimapEntry_HideTuple(
 	MemoryContext oldContext;
 	HTSU_Result result;
 
+	Assert(!visiMapEntry->cached);
 	Assert(visiMapEntry);
 	Assert(tupleId);
 	Assert(AppendOnlyVisimapEntry_IsValid(visiMapEntry));
@@ -630,4 +637,3 @@ AppendOnlyVisimapEntry_GetNextInvisible(
 		return false;
 	}
 }
-

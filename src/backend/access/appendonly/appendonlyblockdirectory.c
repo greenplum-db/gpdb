@@ -92,6 +92,9 @@ AppendOnlyBlockDirectoryEntry_RangeHasRow(
 		    checkRowNum <= directoryEntry->range.lastRowNum);
 }
 
+static void AppendOnlyBlockDirCache_insert(BlockDirCacheEntry **root, BlockDirCacheEntry *newNode);
+static BlockDirCacheEntry *AppendOnlyBlockDirCache_search(BlockDirCacheEntry *root, int segmentFileNum, uint64 rowNum);
+
 /*
  * init_internal
  *
@@ -147,6 +150,8 @@ init_internal(AppendOnlyBlockDirectory *blockDirectory)
 			palloc0(minipage_size(NUM_MINIPAGE_ENTRIES));
 		minipageInfo->numMinipageEntries = 0;
 	}
+
+	blockDirectory->cacheRoots = palloc0(sizeof(BlockDirCacheEntry *) * blockDirectory->numColumnGroups);
 
 	MemoryContextSwitchTo(oldcxt);
 }
@@ -343,18 +348,17 @@ AppendOnlyBlockDirectory_Init_addCol(
 static bool
 set_directoryentry_range(
 	AppendOnlyBlockDirectory *blockDirectory,
+	Minipage *minipage,
 	int columnGroupNo,
 	int entry_no,
 	AppendOnlyBlockDirectoryEntry *directoryEntry)
 {
-	MinipagePerColumnGroup *minipageInfo =
-		&blockDirectory->minipages[columnGroupNo];
 	FileSegInfo *fsInfo;
 	AOCSFileSegInfo *aocsFsInfo = NULL;
 	MinipageEntry *entry;
 	MinipageEntry *next_entry = NULL;
 	
-	Assert(entry_no >= 0 && ((uint32)entry_no) < minipageInfo->numMinipageEntries);
+	Assert(entry_no >= 0 && ((uint32)entry_no) < minipage->nEntry);
 	
 	fsInfo = blockDirectory->currentSegmentFileInfo;
 	Assert(fsInfo != NULL);
@@ -364,10 +368,10 @@ set_directoryentry_range(
 		aocsFsInfo = (AOCSFileSegInfo *)fsInfo;
 	}
 
-	entry = &(minipageInfo->minipage->entry[entry_no]);
-	if (((uint32)entry_no) < minipageInfo->numMinipageEntries - 1)
+	entry = &(minipage->entry[entry_no]);
+	if (((uint32)entry_no) < minipage->nEntry - 1)
 	{
-		next_entry = &(minipageInfo->minipage->entry[entry_no + 1]);
+		next_entry = &(minipage->entry[entry_no + 1]);
 	}
 	
 	directoryEntry->range.fileOffset = entry->fileOffset;
@@ -464,11 +468,13 @@ AppendOnlyBlockDirectory_GetEntry(
 	FileSegInfo *fsInfo = NULL;
 	IndexScanDesc idxScanDesc;
 	HeapTuple tuple = NULL;
+	int entry_no = -1;
+	BlockDirCacheEntry *cacheEntry;
 	MinipagePerColumnGroup *minipageInfo =
 		&blockDirectory->minipages[columnGroupNo];
-	int entry_no = -1;
-	int tmpGroupNo;
-	
+	BlockDirCacheEntry **cacheRoot =
+		&blockDirectory->cacheRoots[columnGroupNo];
+
 	if (blkdirRel == NULL || blkdirIdx == NULL)
 	{
 		Assert(RelationIsValid(blockDirectory->aoRel));
@@ -486,153 +492,138 @@ AppendOnlyBlockDirectory_GetEntry(
 						"(%d, %d, " INT64_FORMAT ")",
 						columnGroupNo, segmentFileNum, rowNum)));
 
-	/*
-	 * If the segment file number is the same as
-	 * blockDirectory->currentSegmentFileNum, the in-memory minipage
-	 * may contain such an entry. We search the in-memory minipage
-	 * first. If such an entry can not be found, we search for the
-	 * appropriate minipage by using the block directory btree index.
-	 */
-	if (segmentFileNum == blockDirectory->currentSegmentFileNum &&
-		minipageInfo->numMinipageEntries > 0)
-	{
-		Assert(blockDirectory->currentSegmentFileInfo != NULL);
 
-		MinipageEntry *firstentry =
-			&minipageInfo->minipage->entry[0];
-		if (rowNum >= firstentry->firstRowNum)
+	if (segmentFileNum != blockDirectory->currentSegmentFileNum)
+	{
+		/* Reset mini page cache */
+		/*
+		 * MPP-17061: we need to update currentSegmentFileNum
+		 * & currentSegmentFileInfo at the same time when we 
+		 * load the minipage for the block directory entry we
+		 * found, otherwise we would risk having inconsistency
+		 * between currentSegmentFileNum/currentSegmentFileInfo
+		 * and minipage contents, which would cause wrong block
+		 * header offset being returned in following block 
+		 * directory entry look up.
+		 */
+		minipageInfo->numMinipageEntries = 0;
+
+		for (i = 0; i < blockDirectory->totalSegfiles; i++)
 		{
-			/*
-			 * Check if the existing minipage contains the requested
-			 * rowNum. If so, just get it.
-			 */
-			entry_no = find_minipage_entry(minipageInfo->minipage,
-									   minipageInfo->numMinipageEntries,
-									   rowNum);
-			if (entry_no != -1)
-			{
-				return set_directoryentry_range(blockDirectory,
-									 columnGroupNo,
-									 entry_no,
-									 directoryEntry);
+			fsInfo = blockDirectory->segmentFileInfo[i];
 
-			}
-
-			/*
-			 * The given rowNum may point to a tuple that does not exist
-			 * in the AO table any more, either because of cancellation of
-			 * an insert, or due to crashes during an insert. If this is
-			 * the case, rowNum is smaller than the highest entry in
-			 * the in-memory minipage entry.
-			 */
-			else
-			{
-				MinipageEntry *entry =
-					&minipageInfo->minipage->entry[minipageInfo->numMinipageEntries - 1];
-				
-				if (rowNum < entry->firstRowNum + entry->rowCount - 1)
-					return false;
-			}
+			if (!blockDirectory->isAOCol && segmentFileNum == fsInfo->segno)
+				break;
+			else if (blockDirectory->isAOCol && segmentFileNum ==
+					 ((AOCSFileSegInfo*)fsInfo)->segno)
+				break;
 		}
-	}
 
-	for (i = 0; i < blockDirectory->totalSegfiles; i++)
-	{
-		fsInfo = blockDirectory->segmentFileInfo[i];
-		
-		if (!blockDirectory->isAOCol && segmentFileNum == fsInfo->segno)
-			break;
-		else if (blockDirectory->isAOCol && segmentFileNum ==
-				 ((AOCSFileSegInfo*)fsInfo)->segno)
-			break;
+		blockDirectory->currentSegmentFileNum = segmentFileNum;
+		blockDirectory->currentSegmentFileInfo = fsInfo;
 	}
+	else
+		fsInfo = blockDirectory->currentSegmentFileInfo;
 
 	Assert(fsInfo != NULL);
 
-	/*
-	 * Search the btree index to find the minipage that contains
-	 * the rowNum. We find the minipages for all column groups, since
-	 * currently we will need to access all columns at the same time.
-	 */
-	heapTupleDesc = RelationGetDescr(blkdirRel);
-
-	Assert(numScanKeys == 3);
-
-	for (tmpGroupNo = 0; tmpGroupNo < blockDirectory->numColumnGroups; tmpGroupNo++)
+	/* First check the cache to find the minipage that covers this rowNum */
+	cacheEntry = AppendOnlyBlockDirCache_search(*cacheRoot,
+												segmentFileNum,
+												rowNum);
+	if (!cacheEntry)
 	{
+		/*
+		 * Search the btree index to find the minipage that contains
+		 * the rowNum.
+		 */
+		MinipageEntry *firstEntry;
+		MinipageEntry *lastEntry;
+		uint32		mp_size;
+
+		heapTupleDesc = RelationGetDescr(blkdirRel);
+
+		Assert(numScanKeys == 3);
+
 		/* Setup the scan keys for the scan. */
 		Assert(scanKeys != NULL);
 		scanKeys[0].sk_argument = Int32GetDatum(segmentFileNum);
-		scanKeys[1].sk_argument = Int32GetDatum(tmpGroupNo);
+		scanKeys[1].sk_argument = Int32GetDatum(columnGroupNo);
 		scanKeys[2].sk_argument = Int64GetDatum(rowNum);
 		
 		idxScanDesc = index_beginscan(blkdirRel, blkdirIdx,
 									  blockDirectory->appendOnlyMetaDataSnapshot,
 									  numScanKeys, scanKeys);
-	
+
 		tuple = index_getnext(idxScanDesc, BackwardScanDirection);
 
 		if (tuple != NULL)
 		{
-			/*
-			 * MPP-17061: we need to update currentSegmentFileNum
-			 * & currentSegmentFileInfo at the same time when we 
-			 * load the minipage for the block directory entry we
-			 * found, otherwise we would risk having inconsistency
-			 * between currentSegmentFileNum/currentSegmentFileInfo
-			 * and minipage contents, which would cause wrong block
-			 * header offset being returned in following block 
-			 * directory entry look up.
-			 */
-			blockDirectory->currentSegmentFileNum = segmentFileNum;
-			blockDirectory->currentSegmentFileInfo = fsInfo;
-			
 			extract_minipage(blockDirectory,
 							 tuple,
 							 heapTupleDesc,
-							 tmpGroupNo);
+							 columnGroupNo);
 		}
 		else
 		{
 			/* MPP-17061: index look up failed, row is invisible */
 			index_endscan(idxScanDesc);
 			return false;
-		}	
+		}
 
 		index_endscan(idxScanDesc);
-	}
-
-	{
-		MinipagePerColumnGroup *minipageInfo;
-		minipageInfo = &blockDirectory->minipages[columnGroupNo];
 
 		/*
-		 * Perform a binary search over the minipage to find
-		 * the entry about the AO block.
+		 * If this entry doesn't cover the requested tuple, it's not put into cache. We could
+		 * create a negative cache entry instead
 		 */
-		entry_no = find_minipage_entry(minipageInfo->minipage,
-									   minipageInfo->numMinipageEntries,
-									   rowNum);
-
-		/* If there are no entries, return false. */
-		if (entry_no == -1 && minipageInfo->numMinipageEntries == 0)
+		firstEntry = &minipageInfo->minipage->entry[0];
+		lastEntry = &minipageInfo->minipage->entry[minipageInfo->numMinipageEntries - 1];
+		if (rowNum >= lastEntry->firstRowNum + lastEntry->rowCount)
 			return false;
 
-		if (entry_no == -1)
-		{
-			/*
-			 * Since the last few blocks may not be logged in the block
-			 * directory, we always use the last entry.
-			 */
-			entry_no = minipageInfo->numMinipageEntries - 1;
-		}
-		return set_directoryentry_range(blockDirectory,
-										columnGroupNo,
-										entry_no,
-										directoryEntry);
+		/* Load the minipage into cache */
+
+		cacheEntry = MemoryContextAlloc(blockDirectory->memoryContext,
+										sizeof(BlockDirCacheEntry));
+		cacheEntry->segmentFileNum = segmentFileNum;
+		cacheEntry->firstRowNum = firstEntry->firstRowNum;
+		cacheEntry->lastRowNum = lastEntry->firstRowNum + lastEntry->rowCount;
+
+		mp_size = minipage_size(minipageInfo->numMinipageEntries);
+		cacheEntry->minipage = MemoryContextAlloc(blockDirectory->memoryContext, mp_size);
+		memcpy(cacheEntry->minipage, minipageInfo->minipage, mp_size);
+		SET_VARSIZE(cacheEntry->minipage, mp_size);
+		cacheEntry->minipage->nEntry = minipageInfo->numMinipageEntries;
+
+		AppendOnlyBlockDirCache_insert(cacheRoot, cacheEntry);
 	}
-	
-	return false;
+
+	/*
+	 * Perform a binary search over the minipage to find
+	 * the entry about the AO block.
+	 */
+	entry_no = find_minipage_entry(cacheEntry->minipage,
+								   cacheEntry->minipage->nEntry,
+								   rowNum);
+
+	/* If there are no entries, return false. */
+	if (entry_no == -1 && cacheEntry->minipage->nEntry == 0)
+		return false;
+
+	if (entry_no == -1)
+	{
+		/*
+		 * Since the last few blocks may not be logged in the block
+		 * directory, we always use the last entry.
+		 */
+		entry_no = cacheEntry->minipage->nEntry - 1;
+	}
+	return set_directoryentry_range(blockDirectory,
+									cacheEntry->minipage,
+									columnGroupNo,
+									entry_no,
+									directoryEntry);
 }
 
 /*
@@ -1334,3 +1325,86 @@ AppendOnlyBlockDirectory_End_addCol(
 	MemoryContextDelete(blockDirectory->memoryContext);
 }
 
+
+/*
+ * Search cache ops
+ */
+
+/*
+ * in a search, 'a' is the key we're searching for.
+ */
+static int
+AppendOnlyBlockDirCache_compare(BlockDirCacheEntry *a, BlockDirCacheEntry *b)
+{
+	if (a->segmentFileNum > b->segmentFileNum)
+		return -1;
+	else if (a->segmentFileNum < b->segmentFileNum)
+		return 1;
+
+	if (a->firstRowNum >= b->firstRowNum)
+	{
+		if (a->firstRowNum < b->lastRowNum)
+			return 0; /* this range covers the search key */
+
+		return -1;
+	}
+	else
+		return 1;
+}
+
+static BlockDirCacheEntry *
+AppendOnlyBlockDirCache_search(BlockDirCacheEntry *root, int segmentFileNum, uint64 rowNum)
+{
+	BlockDirCacheEntry *current = root;
+	BlockDirCacheEntry key;
+
+	key.segmentFileNum = segmentFileNum;
+	key.firstRowNum = rowNum;
+
+	while (current)
+	{
+		int			cmp;
+
+		cmp = AppendOnlyBlockDirCache_compare(&key, current);
+		if (cmp == 0)
+			break;
+		else if (cmp < 0)
+			current = current->leftChild;
+		else
+			current = current->rightChild;
+	}
+
+	//elog(NOTICE, "search: %d %ld (found %d %ld-%ld)", segmentFileNum, rowNum,
+	//	 current ? current->segmentFileNum : -1,
+	//	 current ? current->firstRowNum : -1,
+	//	 current ? current->lastRowNum : -1);
+
+	return current;
+}
+
+static void
+AppendOnlyBlockDirCache_insert(BlockDirCacheEntry **root, BlockDirCacheEntry *newNode)
+{
+	BlockDirCacheEntry **current = root;
+
+	//elog(NOTICE, "insert: %d %ld - %ld", newNode->segmentFileNum,
+	//	 newNode->firstRowNum,
+	//	 newNode->lastRowNum);
+
+	newNode->leftChild = NULL;
+	newNode->rightChild = NULL;
+	
+	while (*current)
+	{
+		int			cmp;
+
+		cmp = AppendOnlyBlockDirCache_compare(newNode, *current);
+		/* we don't expect duplicates */
+		Assert(cmp != 0);
+		if (cmp < 0)
+			current = &(*current)->leftChild;
+		else
+			current = &(*current)->rightChild;
+	}
+	*current = newNode;
+}

@@ -79,6 +79,11 @@ typedef struct AppendOnlyVisimapEntry
 	 */
 	bool dirty;
 
+	/*
+	 * true if the 'bitmap' points at a cache, and should not be freed or modified.
+	 */
+	bool		cached;
+
 	/**
 	 * tuple id of the last loaded visibility map entry.
 	 * Is Invalid iff there is no current table or if the

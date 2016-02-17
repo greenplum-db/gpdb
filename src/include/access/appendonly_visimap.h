@@ -32,6 +32,21 @@
 #define APPENDONLY_VISIMAP_MAX_RANGE 32768
 #define APPENDONLY_VISIMAP_MAX_BITMAP_SIZE 4096
 
+
+struct AppendOnlyVisimapCacheEntry;
+typedef struct AppendOnlyVisimapCacheEntry AppendOnlyVisimapCacheEntry;
+
+struct AppendOnlyVisimapCacheEntry
+{
+	AppendOnlyVisimapCacheEntry *leftChild;
+	AppendOnlyVisimapCacheEntry *rightChild;
+
+	int32		segmentFileNum;
+	int64		firstRowNum;
+
+	Bitmapset  *bitmap;
+};
+
 /*
  * Data structure for the ao visibility map processing.
  *
@@ -56,6 +71,11 @@ typedef struct AppendOnlyVisimap
 	 * visibility map entries.
 	 */ 
 	AppendOnlyVisimapStore visimapStore;	
+
+	/*
+	 * Cache to speed up lookups
+	 */
+	AppendOnlyVisimapCacheEntry *cache;
 
 } AppendOnlyVisimap;
 
