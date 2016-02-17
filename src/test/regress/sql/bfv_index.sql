@@ -140,7 +140,52 @@ select * from Tab23383 where b='1' and a='1';
 select count_index_scans('explain select * from Tab23383 where b::int=''1'';');
 
 drop table Tab23383;
-drop function count_index_scans(text);
+
+-- pick index scan when query has a relabel on the index key: partitioned tables
+-- start_ignore
+drop table if exists Tbl23383_partitioned;
+-- end_ignore
+
+create table Tbl23383_partitioned(a int, b varchar(20), c varchar(20), d varchar(20))
+partition by range(a)
+(partition p1 start(1) end(500),
+partition p2 start(500) end(1000) inclusive);
+insert into Tbl23383_partitioned select g,g,g,g from generate_series(1,1000) g;
+create index idx23383_b on Tbl23383_partitioned(b);
+
+-- heterogenous indexes
+create index idx23383_c on Tbl23383_partitioned_1_prt_p1(c);
+create index idx23383_cd on Tbl23383_partitioned_1_prt_p2(c,d);
+-- start_ignore
+select disable_xform('CXformDynamicGet2DynamicTableScan');
+-- end_ignore
+
+select count_index_scans('explain select * from Tbl23383_partitioned where b=''1''');
+select * from Tbl23383_partitioned where b='1';
+
+select count_index_scans('explain select * from Tbl23383_partitioned where ''1''=b');
+select * from Tbl23383_partitioned where '1'=b;
+
+select count_index_scans('explain select * from Tbl23383_partitioned where ''2''> b order by a limit 10;');
+select * from Tbl23383_partitioned where '2'> b order by a limit 10;
+
+select count_index_scans('explain select * from Tbl23383_partitioned where b between ''1'' and ''2'' order by a limit 10;');
+select * from Tbl23383_partitioned where b between '1' and '2' order by a limit 10;
+
+-- predicates on both index and non-index key
+select count_index_scans('explain select * from Tbl23383_partitioned where b=''1'' and a=''1'';');
+select * from Tbl23383_partitioned where b='1' and a='1';
+
+--negative tests: no index scan plan possible, fall back to planner
+select count_index_scans('explain select * from Tbl23383_partitioned where b::int=''1'';');
+
+-- heterogenous indexes
+select count_index_scans('explain select * from Tbl23383_partitioned where c=''1'';');
+select * from Tbl23383_partitioned where c='1';
+
+-- start_ignore
+drop table Tbl23383_partitioned;
+-- end_ignore
 
 reset enable_seqscan;
 
@@ -160,3 +205,4 @@ select disable_xform('CXformGet2TableScan');
 explain select * from tbl_ab where b::oid=1;
 
 drop table tbl_ab;
+drop function count_index_scans(text);
