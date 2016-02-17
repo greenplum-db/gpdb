@@ -187,17 +187,21 @@ for i in range(len(rv)):
 return result
 $$
 language plpythonu;
+DROP TABLE bfv_tab1;
+DROP TABLE bfv_tab2_facttable1;
+DROP TABLE bfv_tab2_dimdate;
+DROP TABLE bfv_tab2_dimtabl1;
 -- pick index scan when query has a relabel on the index key: non partitioned tables
 set enable_seqscan = off;
 -- start_ignore
-drop table if exists mpp23383;
-NOTICE:  table "mpp23383" does not exist, skipping
+drop table if exists Tab23383;
+NOTICE:  table "tab23383" does not exist, skipping
 -- end_ignore
-create table mpp23383(a int, b varchar(20));
+create table Tab23383(a int, b varchar(20));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into mpp23383 select g,g from generate_series(1,1000) g;
-create index mpp23383_b on mpp23383(b);
+insert into Tab23383 select g,g from generate_series(1,1000) g;
+create index Tab23383_b on Tab23383(b);
 -- start_ignore
 select disable_xform('CXformGet2TableScan');
           disable_xform          
@@ -206,37 +210,37 @@ select disable_xform('CXformGet2TableScan');
 (1 row)
 
 -- end_ignore
-select count_index_scans('explain select * from mpp23383 where b=''1'';');
+select count_index_scans('explain select * from Tab23383 where b=''1'';');
  count_index_scans 
 -------------------
                  1
 (1 row)
 
-select * from mpp23383 where b='1';
+select * from Tab23383 where b='1';
  a | b 
 ---+---
  1 | 1
 (1 row)
 
-select count_index_scans('explain select * from mpp23383 where ''1''=b;');
+select count_index_scans('explain select * from Tab23383 where ''1''=b;');
  count_index_scans 
 -------------------
                  1
 (1 row)
 
-select * from mpp23383 where '1'=b;
+select * from Tab23383 where '1'=b;
  a | b 
 ---+---
  1 | 1
 (1 row)
 
-select count_index_scans('explain select * from mpp23383 where ''2''> b order by a limit 10;');
+select count_index_scans('explain select * from Tab23383 where ''2''> b order by a limit 10;');
  count_index_scans 
 -------------------
                  1
 (1 row)
 
-select * from mpp23383 where '2'> b order by a limit 10;
+select * from Tab23383 where '2'> b order by a limit 10;
  a  | b  
 ----+----
   1 | 1
@@ -251,13 +255,13 @@ select * from mpp23383 where '2'> b order by a limit 10;
  18 | 18
 (10 rows)
 
-select count_index_scans('explain select * from mpp23383 where b between ''1'' and ''2'' order by a limit 10;');
+select count_index_scans('explain select * from Tab23383 where b between ''1'' and ''2'' order by a limit 10;');
  count_index_scans 
 -------------------
                  1
 (1 row)
 
-select * from mpp23383 where b between '1' and '2' order by a limit 10;
+select * from Tab23383 where b between '1' and '2' order by a limit 10;
  a  | b  
 ----+----
   1 | 1
@@ -273,24 +277,25 @@ select * from mpp23383 where b between '1' and '2' order by a limit 10;
 (10 rows)
 
 -- predicates on both index and non-index key
-select count_index_scans('explain select * from mpp23383 where b=''1'' and a=''1'';');
+select count_index_scans('explain select * from Tab23383 where b=''1'' and a=''1'';');
  count_index_scans 
 -------------------
                  1
 (1 row)
 
-select * from mpp23383 where b='1' and a='1';
+select * from Tab23383 where b='1' and a='1';
  a | b 
 ---+---
  1 | 1
 (1 row)
 
 --negative tests: no index scan plan possible, fall back to planner
-select count_index_scans('explain select * from mpp23383 where b::int=''1'';');
+select count_index_scans('explain select * from Tab23383 where b::int=''1'';');
  count_index_scans 
 -------------------
                  0
 (1 row)
 
-drop table mpp23383;
+drop table Tab23383;
+drop function count_index_scans(text);
 reset enable_seqscan;
