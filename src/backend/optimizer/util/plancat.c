@@ -422,41 +422,18 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
 	{
 
 		/*
-		 * Let's ask the QEs for the size of the relation.
-		 * In the future, it would be better to send the command to only one QE.
-		 *
-		 * NOTE: External tables should always have >0 values in pg_class
-		 * (created this way). Therefore we should never get here. However, as
-		 * a security measure (if values in pg_class were somehow changed) we
-		 * plug in our 1K pages 1M tuples estimate here as well, and skip
-		 * cdbRelSize as we can't calculate ext table size.
+		 * We do a default estimate if we do not have statistics available for a relation.
+		 * If we do not have statistics for a relation, we might as well as take default 
+		 * estimate of the size in order to save cost of asking QEs.
 		 */
-		if(!RelationIsExternal(rel))
-		{
-		    size = cdbRelSize(rel);
-		}
-		else
-		{
-			/*
-			 * Estimate a default of 1000 pages - see comment above.
-			 * NOTE: if you change this look at AddNewRelationTuple in heap.c).
-			 */
-			size = 1000 * BLCKSZ;
-		}
 
-
-		if (size < 0)
-		{
-			curpages = 100;
-			*default_stats_used = true;
-		}
-		else
-		{
-			curpages = size / BLCKSZ;  /* average blocks per primary segment DB */
-		}
-
-		if (curpages == 0 && size > 0)
-			curpages = 1;
+		/*
+		* Estimate a default of 1000 pages - see comment above.
+		* NOTE: if you change this look at AddNewRelationTuple in heap.c).
+		*/
+		size = 1000 * BLCKSZ;
+		
+		curpages = 1000;  /* average blocks per primary segment DB */
 	}
 
 	/* report estimated # pages */
