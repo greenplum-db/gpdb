@@ -527,6 +527,52 @@ from
 where
     konst.dim_bezei     = 'NatCat-Zone'   and gesamt.dim_bezei    = 'NatCat-Zone'   and gesamt.dim_elem_lvl = 0;
 
+-- test queries that should run on the master
+drop table if exists mpp_bfv_1;
+create table mpp_bfv_1(col1 int, col2 text, col3 numeric) distributed by (col1);
+
+-- this cannot go to the _setup file, because it is not propagated here
+-- start_ignore
+select disable_xform('CXformIndexGet2IndexScan');
+set optimizer_enable_master_only_queries = on;
+-- end_ignore
+
+-- query that mentions no tables should have no motions
+select count_operator('explain select substr(''abc'', 2)', 'Motion');
+
+-- queries that mention only master only tables (such as catalog tables)
+-- should have no motions
+select count_operator('explain select relname from pg_class where relname = ''pg_class''', 'Motion');
+
+select count_operator('explain select attname from pg_attribute where attname = ''attstorage''', 'Motion');
+
+-- queries with master-only TVFs and no distributed trabes have no motions
+select count_operator('explain select * from generate_series(1,10)', 'Motion');
+
+-- queries over distributed tables should have motions
+select count_operator('explain select col2 from mpp_bfv_1;', 'Motion');
+
+drop table mpp_bfv_1;
+
+-- this cannot go to the _teardown file, because it is not propagated here
+-- start_ignore
+select enable_xform('CXformIndexGet2IndexScan');
+-- end_ignore
+
+drop table if exists mpp_bfv_2;
+create table mpp_bfv_2(a int, b text, primary key (a)) distributed by (a);
+
+-- stop falling back to planner when catalog functions are encountered
+
+explain select pg_column_size('mpp_bfv_2');
+
+explain select pg_lock_status();
+
+select pg_get_constraintdef(pg_constraint.oid) from pg_constraint, pg_class where conrelid=pg_class.oid and pg_class.relname='mpp_bfv_2';
+
+select count(*) > 0 as non_empty from (select pg_get_expr(d.adbin, d.adrelid) from pg_attrdef d) t;
+
+drop table mpp_bfv_2;
 drop table test_r_rvv_stada_dim_konst;
 drop table test_sf_dd_land_vm;
 drop function count_operator(text,text);
