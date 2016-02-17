@@ -1,0 +1,93 @@
+-- @Description Tests the basic behavior of (lazy) vacuum w.r.t. to the threshold guc.
+-- The output depends on the number of segments as the skip decision and the 
+-- notify is done on the segments.
+CREATE TABLE uao_threshold (a INT, b INT, c CHAR(128)) WITH (appendonly=true);
+CREATE INDEX uao_threshold_index ON uao_threshold(b);
+INSERT INTO uao_threshold SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(1, 100) AS i;
+\set QUIET off
+VACUUM uao_threshold;
+VACUUM
+DELETE FROM uao_threshold WHERE a < 4;
+DELETE 3
+SELECT COUNT(*) FROM uao_threshold;
+ count 
+-------
+    97
+(1 row)
+
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     1 |      100 |     1
+(1 row)
+
+-- 97 visible tuples, no vacuum
+VACUUM uao_threshold;
+VACUUM
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     1 |      100 |     1
+(1 row)
+
+DELETE FROM uao_threshold WHERE a < 12;
+DELETE 8
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     1 |      100 |     1
+(1 row)
+
+-- 89 visible tuples, do vacuum
+VACUUM uao_threshold;
+VACUUM
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     1 |       50 |     1
+     2 |       44 |     1
+(2 rows)
+
+-- no invisible tuples, no vacuum
+VACUUM uao_threshold;
+VACUUM
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     1 |       50 |     1
+     2 |       44 |     1
+(2 rows)
+
+DELETE FROM uao_threshold WHERE a < 15;
+DELETE 3
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     1 |       50 |     1
+     2 |       44 |     1
+(2 rows)
+
+-- 3 invisible tuples, no vacuum
+VACUUM uao_threshold;
+VACUUM
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     1 |        0 |     1
+     2 |       44 |     1
+     3 |       43 |     1
+(3 rows)
+
+SET gp_appendonly_compaction_threshold=2;
+SET
+-- 3 invisible tuples, no vacuum
+VACUUM uao_threshold;
+VACUUM
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     1 |        0 |     1
+     2 |       44 |     1
+     3 |       43 |     1
+(3 rows)
+

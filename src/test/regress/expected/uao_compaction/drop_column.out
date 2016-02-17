@@ -1,0 +1,63 @@
+-- @Description Tests dropping a column after a compaction
+CREATE TABLE uao_drop_col (a INT, b INT, c CHAR(128)) WITH (appendonly=true) DISTRIBUTED BY (a);
+CREATE INDEX uao_drop_col_index ON uao_drop_col(b);
+INSERT INTO uao_drop_col SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(1, 10) AS i;
+DELETE FROM uao_drop_col WHERE a < 4;
+SELECT COUNT(*) FROM uao_drop_col;
+ count 
+-------
+     7
+(1 row)
+
+SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_drop_col';
+   relname    | reltuples 
+--------------+-----------
+ uao_drop_col | 10
+(1 row)
+
+SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_drop_col_index';
+      relname       | reltuples 
+--------------------+-----------
+ uao_drop_col_index | 10
+(1 row)
+
+VACUUM uao_drop_col;
+SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_drop_col';
+   relname    | reltuples 
+--------------+-----------
+ uao_drop_col | 7
+(1 row)
+
+SELECT relname, reltuples FROM pg_class WHERE relname = 'uao_drop_col_index';
+      relname       | reltuples 
+--------------------+-----------
+ uao_drop_col_index | 7
+(1 row)
+
+ALTER TABLE uao_drop_col DROP COLUMN c;
+SELECT * FROM uao_drop_col;
+ a  | b 
+----+---
+  4 | 1
+  5 | 1
+  6 | 1
+  7 | 1
+  8 | 1
+  9 | 1
+ 10 | 1
+(7 rows)
+
+INSERT INTO uao_drop_col VALUES (42, 42);
+SELECT * FROM uao_drop_col;
+ a  | b 
+----+----
+  42 | 42
+   4 | 1
+   5 | 1
+   6 | 1
+   7 | 1
+   8 | 1
+   9 | 1
+  10 | 1
+(8 rows)
+
