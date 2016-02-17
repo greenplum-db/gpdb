@@ -99,41 +99,64 @@ return result
 $$
 language plpythonu;
 
+DROP TABLE bfv_tab1;
+DROP TABLE bfv_tab2_facttable1;
+DROP TABLE bfv_tab2_dimdate;
+DROP TABLE bfv_tab2_dimtabl1;
+
 -- pick index scan when query has a relabel on the index key: non partitioned tables
 
 set enable_seqscan = off;
 
 -- start_ignore
-drop table if exists mpp23383;
+drop table if exists Tab23383;
 -- end_ignore
 
-create table mpp23383(a int, b varchar(20));
-insert into mpp23383 select g,g from generate_series(1,1000) g;
-create index mpp23383_b on mpp23383(b);
+create table Tab23383(a int, b varchar(20));
+insert into Tab23383 select g,g from generate_series(1,1000) g;
+create index Tab23383_b on Tab23383(b);
 
 -- start_ignore
 select disable_xform('CXformGet2TableScan');
 -- end_ignore
 
-select count_index_scans('explain select * from mpp23383 where b=''1'';');
-select * from mpp23383 where b='1';
+select count_index_scans('explain select * from Tab23383 where b=''1'';');
+select * from Tab23383 where b='1';
 
-select count_index_scans('explain select * from mpp23383 where ''1''=b;');
-select * from mpp23383 where '1'=b;
+select count_index_scans('explain select * from Tab23383 where ''1''=b;');
+select * from Tab23383 where '1'=b;
 
-select count_index_scans('explain select * from mpp23383 where ''2''> b order by a limit 10;');
-select * from mpp23383 where '2'> b order by a limit 10;
+select count_index_scans('explain select * from Tab23383 where ''2''> b order by a limit 10;');
+select * from Tab23383 where '2'> b order by a limit 10;
 
-select count_index_scans('explain select * from mpp23383 where b between ''1'' and ''2'' order by a limit 10;');
-select * from mpp23383 where b between '1' and '2' order by a limit 10;
+select count_index_scans('explain select * from Tab23383 where b between ''1'' and ''2'' order by a limit 10;');
+select * from Tab23383 where b between '1' and '2' order by a limit 10;
 
 -- predicates on both index and non-index key
-select count_index_scans('explain select * from mpp23383 where b=''1'' and a=''1'';');
-select * from mpp23383 where b='1' and a='1';
+select count_index_scans('explain select * from Tab23383 where b=''1'' and a=''1'';');
+select * from Tab23383 where b='1' and a='1';
 
 --negative tests: no index scan plan possible, fall back to planner
-select count_index_scans('explain select * from mpp23383 where b::int=''1'';');
+select count_index_scans('explain select * from Tab23383 where b::int=''1'';');
 
-drop table mpp23383;
+drop table Tab23383;
+drop function count_index_scans(text);
 
 reset enable_seqscan;
+
+-- when optimizer is on PG exception raised during DXL->PlStmt translation for IndexScan query
+
+-- start_ignore
+drop table if exists tbl_ab;
+-- end_ignore
+
+create table tbl_ab(a int, b int);
+create index idx_ab_b on tbl_ab(b);
+
+-- start_ignore
+select disable_xform('CXformGet2TableScan');
+-- end_ignore
+
+explain select * from tbl_ab where b::oid=1;
+
+drop table tbl_ab;
