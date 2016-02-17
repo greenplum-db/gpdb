@@ -104,13 +104,13 @@ insert into  bfv_subquery_t2 values (1, 10);
 select count_operator('explain select bfv_subquery_t1.i, (select bfv_subquery_t1.i from bfv_subquery_t2) from bfv_subquery_t1;', 'Table Scan') > 0;
  ?column? 
 ----------
- f
+ t
 (1 row)
 
 select count_operator('explain select bfv_subquery_t1.i, (select bfv_subquery_t1.i from bfv_subquery_t2) from bfv_subquery_t1;', 'Seq Scan') > 0;
  ?column? 
 ----------
- t
+ f
 (1 row)
 
 select bfv_subquery_t1.i, (select bfv_subquery_t1.i from bfv_subquery_t2) from bfv_subquery_t1 order by 1, 2;

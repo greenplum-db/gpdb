@@ -77,17 +77,8 @@ create table  bfv_subquery_t2(i int, j int);
 insert into  bfv_subquery_t1 select i, i%5 from generate_series(1,10)i;
 insert into  bfv_subquery_t2 values (1, 10);
 
---start_ignore
-set optimizer = on;
---end_ignore
 select count_operator('explain select bfv_subquery_t1.i, (select bfv_subquery_t1.i from bfv_subquery_t2) from bfv_subquery_t1;', 'Table Scan') > 0;
-
---start_ignore
-set optimizer = off;
---end_ignore
 select count_operator('explain select bfv_subquery_t1.i, (select bfv_subquery_t1.i from bfv_subquery_t2) from bfv_subquery_t1;', 'Seq Scan') > 0;
-
-reset optimizer;
 
 select bfv_subquery_t1.i, (select bfv_subquery_t1.i from bfv_subquery_t2) from bfv_subquery_t1 order by 1, 2;
 
