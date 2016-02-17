@@ -72,8 +72,11 @@ test: gp_toolkit
 
 test: filespace trig auth_constraint role rle portals_updatable plpgsql_cache timeseries resource_queue_function pg_stat_last_operation gp_numeric_agg plan_size partindex_test direct_dispatch partition_pruning_with_fn dsp
 
-test: catalog bfv_catalog
+# direct dispatch tests
+test: bfv_dd bfv_dd_multicolumn
 
+test: catalog bfv_catalog bfv_legacy
+ 
 test: aggregate_with_groupingsets gp_optimizer 
 
 test: nested_case_null
