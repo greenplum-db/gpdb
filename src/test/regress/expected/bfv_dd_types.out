@@ -23,7 +23,7 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 create table direct_test_type_smallint (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (smallint1);
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
-create table direct_test_type_boolean (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (boolean1);
+create table direct_test_type_boolean2 (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (boolean1);
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 create table direct_test_type_double (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (double1);
@@ -82,7 +82,7 @@ insert into direct_test_type_smallint values (8,8,true,8,8,'2008-08-08',8.8);
 INFO:  Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
-insert into direct_test_type_boolean values (8,8,true,8,8,'2008-08-08',8.8);
+insert into direct_test_type_boolean2 values (8,8,true,8,8,'2008-08-08',8.8);
 INFO:  Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
@@ -464,7 +464,7 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 drop table direct_test_type_varbit;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
-drop table direct_test_type_boolean;
+drop table direct_test_type_boolean2;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 reset test_print_direct_dispatch_info;

@@ -18,7 +18,7 @@ CREATE TABLE direct_test_type_int8 (id int8) DISTRIBUTED BY (id);
 
 create table direct_test_type_real (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (real1);
 create table direct_test_type_smallint (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (smallint1);
-create table direct_test_type_boolean (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (boolean1);
+create table direct_test_type_boolean2 (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (boolean1);
 create table direct_test_type_double (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (double1);
 create table direct_test_type_date (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (date1);
 create table direct_test_type_numeric (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (numeric1);
@@ -38,7 +38,7 @@ INSERT INTO direct_test_type_int8 VALUES (1);
 
 insert into direct_test_type_real values (8,8,true,8,8,'2008-08-08',8.8);
 insert into direct_test_type_smallint values (8,8,true,8,8,'2008-08-08',8.8);
-insert into direct_test_type_boolean values (8,8,true,8,8,'2008-08-08',8.8);
+insert into direct_test_type_boolean2 values (8,8,true,8,8,'2008-08-08',8.8);
 insert into direct_test_type_double values (8,8,true,8,8,'2008-08-08',8.8);
 insert into direct_test_type_date values (8,8,true,8,8,'2008-08-08',8.8);
 insert into direct_test_type_numeric values (8,8,true,8,8,'2008-08-08',8.8);
@@ -137,5 +137,5 @@ drop table direct_test_type_inet;
 drop table direct_test_type_macaddr;
 drop table direct_test_type_tinterval;
 drop table direct_test_type_varbit;
-drop table direct_test_type_boolean;
+drop table direct_test_type_boolean2;
 reset test_print_direct_dispatch_info;
