@@ -3612,7 +3612,7 @@ class GpTransfer(object):
         if len(src_tbl_columns) != len(dest_tbl_columns):
             return False
         for ordinal_pos in src_tbl_columns:
-            if src_tbl_columns[ordinal_pos] != dest_tbl_columns[ordinal_pos]:
+            if (ordinal_pos not in dest_tbl_columns) or (src_tbl_columns[ordinal_pos] != dest_tbl_columns[ordinal_pos]):
                 return False
         return True
 
