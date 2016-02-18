@@ -442,7 +442,8 @@ class GpdbRestore(Operation):
 
         table_counts = []
         if len(self.restore_tables) > 0 or len(self.schema_level_restore_list) > 0:
-            self.restore_tables, self.schema_level_restore_list = validate_tablenames(self.restore_tables, self.schema_level_restore_list)
+            self.restore_tables, self.schema_level_restore_list = validate_tablenames(self.restore_tables, self.master_datadir, self.backup_dir, self.dump_dir,
+                                                                                      self.dump_prefix, restore_timestamp, self.schema_level_restore_list)
 
         if not self.db_host_path and not self.ddboost:
             report_filename = generate_report_filename(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, restore_timestamp)

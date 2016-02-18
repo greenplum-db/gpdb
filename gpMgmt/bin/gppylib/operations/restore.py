@@ -1167,7 +1167,7 @@ class ValidateSegments(Operation):
                 if not exists:
                     raise ExceptionNoStackTraceNeeded("No dump file on %s at %s" % (seg.getSegmentHostName(), path))
 
-def validate_tablenames(table_list, schema_level_restore_list=None):
+def validate_tablenames(table_list, master_data_dir, backup_dir, dump_dir, dump_prefix, timestamp, schema_level_restore_list=None):
     """
     verify table list, and schema list, resolve duplicates and overlaps
     """
@@ -1175,9 +1175,11 @@ def validate_tablenames(table_list, schema_level_restore_list=None):
     restore_table_list = []
     table_set = set()
 
+    # validate special characters
     check_funny_chars_in_names(schema_level_restore_list, is_full_qualified_name = False)
     check_funny_chars_in_names(table_list)
 
+    # validate schemas
     if schema_level_restore_list:
         schema_level_restore_list = list(set(schema_level_restore_list))
 
@@ -1186,11 +1188,28 @@ def validate_tablenames(table_list, schema_level_restore_list=None):
             raise Exception("No schema name supplied for %s, removing from list of tables to restore" % restore_table)
         schema, table = split_fqn(restore_table)
         # schema level restore will be handled before specific table restore, treat as duplicate
-        if (schema_level_restore_list and schema in schema_level_restore_list) or (schema, table) in table_set:
-            continue
-        else:
+        if not ((schema_level_restore_list and schema in schema_level_restore_list) or (schema, table) in table_set):
             table_set.add((schema, table))
             restore_table_list.append(restore_table)
+
+    # validate tables
+    filename = generate_metadata_filename(master_data_dir, backup_dir, dump_dir, dump_prefix, timestamp)
+    lines = get_lines_from_file(filename)
+
+    with open(filename) as fd:
+        for line in fd:
+            pattern = "-- Name: (.+); Type: (.+); Schema: (.+);"
+            match = search(pattern, line)
+            if match is None:
+                continue
+            name, type, schema = match.group(1), match.group(2), match.group(3)
+            if type == "TABLE":
+                schema = pg.escape_string(schema)
+                name = pg.escape_string(name)
+                dumped_table = '%s.%s' % (schema, name)
+                # no escaping needed, both restore_table_list and metadata file have un-escaped schema and table names
+                if dumped_table not in restore_table_list:
+                    raise Exception("Table %s not found in backup" % dumped_table)
 
     return restore_table_list, schema_level_restore_list 
 
