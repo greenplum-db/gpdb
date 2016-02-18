@@ -137,3 +137,5 @@ drop table direct_test_type_inet;
 drop table direct_test_type_macaddr;
 drop table direct_test_type_tinterval;
 drop table direct_test_type_varbit;
+drop table direct_test_type_boolean;
+reset test_print_direct_dispatch_info;

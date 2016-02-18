@@ -464,3 +464,7 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 drop table direct_test_type_varbit;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+drop table direct_test_type_boolean;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+reset test_print_direct_dispatch_info;
