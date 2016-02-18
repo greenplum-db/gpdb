@@ -83,6 +83,32 @@ select * from dd_part_singlecol where a=1 or a=3 or a=5;
 
 select * from dd_part_singlecol where a is null or a=1;
 
+-- simple predicates
+select * from dd_part_singlecol where a=1;
+
+select * from dd_part_singlecol where a=1 and b=2;
+
+select * from dd_part_singlecol where a = 1 and b<10;
+
+select * from dd_part_singlecol where a is null;
+
+select * from dd_part_singlecol where a is null and b is null;
+
+-- complex queries
+-- projections
+select b from dd_part_singlecol where a=1;
+ 
+select a+b from dd_part_singlecol where a=1;
+
+select 'one' from dd_part_singlecol where a=1;
+
+select a, 'one' from dd_part_singlecol where a=1;
+
+-- group by and sort
+select a, count(*) from dd_part_singlecol where a=1 group by a;
+
+select a, count(*) from dd_part_singlecol where a=1 group by a order by a;
+
 -- indexes
 create table dd_singlecol_idx(a int, b int, c int) distributed by (a);
 create index sc_idx_b on dd_singlecol_idx(b);
