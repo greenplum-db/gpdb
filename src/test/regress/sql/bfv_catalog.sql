@@ -570,8 +570,6 @@ explain select pg_lock_status();
 
 select pg_get_constraintdef(pg_constraint.oid) from pg_constraint, pg_class where conrelid=pg_class.oid and pg_class.relname='mpp_bfv_2';
 
-select count(*) > 0 as non_empty from (select pg_get_expr(d.adbin, d.adrelid) from pg_attrdef d) t;
-
 drop table mpp_bfv_2;
 drop table test_r_rvv_stada_dim_konst;
 drop table test_sf_dd_land_vm;
