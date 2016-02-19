@@ -35,11 +35,6 @@
 #include "utils/faultinjector.h"
 #include "utils/memutils.h"
 
-static volatile sig_atomic_t stateChangeRequested = false;
-/* state change informed by SIGUSR1 signal from postmaster */
-
-/* NOTE configure signaling for stateChangeRequested */
-
 static bool FileRepPrimary_IsMirroringRequired(
 											   FileRepRelationType_e fileRepRelationType,
 											   FileRepOperation_e	 fileRepOperation);

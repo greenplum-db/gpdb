@@ -5030,12 +5030,6 @@ int GetDecimalFromHex(char hex)
  * attribute buffer that indicates where the current attribute begins.
  */
 
-static inline uint64 uint64_has_nullbyte(uint64 w) {
-return ((w - 0x0101010101010101ull) & ~w & 0x8080808080808080ull); }
-static inline uint64 uint64_has_byte(uint64 w, unsigned char b) {
-	w ^= b * 0x0101010101010101ull;
-	return ((w - 0x0101010101010101ull) & ~w & 0x8080808080808080ull);}
-
 void
 CopyReadAttributesText(CopyState cstate, bool * __restrict nulls,
 					   int * __restrict attr_offsets, int num_phys_attrs, Form_pg_attribute * __restrict attr)
