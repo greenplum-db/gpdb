@@ -2756,8 +2756,8 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_metadata_caching", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Cache metadata in MDCache."),
+		{"optimizer_metadata_caching", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("This guc enables the optimizer to cache and reuse metadata."),
 			NULL
 		},
 		&optimizer_metadata_caching,
