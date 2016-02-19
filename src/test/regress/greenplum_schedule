@@ -83,6 +83,8 @@ test: nested_case_null
 
 test: bfv_cte bfv_joins bfv_statistic bfv_subquery bfv_planner bfv_legacy
 
+test: cf_executor cf_olap_windowerr cf_olap_window
+
 ignore: tpch500GB_orca
 
 # XXX: This test depends on libgpoptudfs library, which includes ORCA helper
