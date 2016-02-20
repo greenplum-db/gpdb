@@ -1819,7 +1819,7 @@ Feature: Validate command line arguments
         And the named pipes are created for the timestamp "20140101010101" under " "
         And the named pipes are validated against the timestamp "20140101010101" under " "
         And the named pipe script for the "dump" is run for the files under " "
-        And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
+        And table "public.ao_part_table" is assumed to be in dirty state in "bkdb"
         When the user runs "gpcrondump -a -x bkdb -K 20140101010101 --incremental"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored in a list
@@ -1856,7 +1856,7 @@ Feature: Validate command line arguments
         And gpcrondump should return a return code of 0
         And gpcrondump should print Filtering bkdb for the following tables: to stdout
         And gpcrondump should print public.ao_index_table to stdout
-        And gpcrondump should print public.heap_table1 to stdout
+        And gpcrondump should print public.heap_table to stdout
         And all the data from "bkdb" is saved for verification
         And the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
         And gpdbrestore should return a return code of 0
@@ -1886,7 +1886,6 @@ Feature: Validate command line arguments
         And gpcrondump should return a return code of 0
         And gpcrondump should print Filtering bkdb for the following tables: to stdout
         And gpcrondump should print public.ao_index_table to stdout
-        And gpcrondump should print public.heap_table to stdout
         And all the data from "bkdb" is saved for verification
         And the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
         And gpdbrestore should return a return code of 0
@@ -1941,7 +1940,6 @@ Feature: Validate command line arguments
         And the full backup timestamp from gpcrondump is stored
         And "_filter" file should be created under " "
         And verify that the "filter" file in " " dir contains "public.ao_index_table"
-        And verify that the "filter" file in " " dir contains "public.heap_table"
         And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
         When the temp files "exclude_table_file_1" are removed from the system
         And the user runs "gpcrondump -a -x bkdb --prefix=foo --incremental"
@@ -1952,13 +1950,12 @@ Feature: Validate command line arguments
         And gpcrondump should return a return code of 0
         And gpcrondump should print Filtering bkdb for the following tables: to stdout
         And gpcrondump should print public.ao_index_table to stdout
-        And gpcrondump should print public.heap_table to stdout
         And all the data from "bkdb" is saved for verification
         And the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
         And gpdbrestore should return a return code of 0
-        And verify that there is a "heap" table "public.heap_table" in "bkdb" with data
         And verify that there is a "ao" table "public.ao_index_table" in "bkdb" with data
         And verify that there is no table "public.ao_part_table" in "bkdb"
+        And verify that there is no table "public.heap_table" in "bkdb"
 
     Scenario: Full Backup with option -t and non-existant table
         Given the test is initialized
