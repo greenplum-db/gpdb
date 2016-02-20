@@ -1,4 +1,5 @@
 # Original Authors: Navneet Potti, Nabarun Nag and Jignesh Patel
+require 'yaml'
 
 # IP Address for the private VM network
 ip_address = "192.168.10.200"
@@ -24,6 +25,13 @@ Vagrant.configure(2) do |config|
 
   # Make the GPDB code folder will be visible as /gpdb in the virtual machine
   config.vm.synced_folder "../../.", "/gpdb"
+
+  if File.file?('vagrant-local.yml')
+    local_config = YAML::load_file('vagrant-local.yml')
+    local_config['synced_folder'].each do |folder|
+      config.vm.synced_folder folder['local'], folder['shared'] unless folder['local'].nil? or folder['shared'].nil?
+    end
+  end
 
   # Install packages that are needed to build and run GPDB
   config.vm.provision "shell", path: "vagrant-setup.sh"

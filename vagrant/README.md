@@ -75,6 +75,16 @@ While you are viewing the Vagrantfile, a few more things to notice here are:
 * Notice the parameter `config.vm.synced_folder`. This configuration requests
   that the code you checked out is mounted as `/gpdb` in the virtual machine.
   More on this later below.
+* Additional synced folders can be configured by adding a `vagrant-local.yml`
+  configuration file on the following format:
+
+```yaml
+synced_folder:
+    - local: /local/folder
+      shared: /folder/in/vagrant
+    - local: /another/local/folder
+      shared: /another/folder/in/vagrant
+```
 
 Once the command above (`vagrant up`) returns, we are ready to login to the
 virtual machine. Type in the following command into the terminal window
