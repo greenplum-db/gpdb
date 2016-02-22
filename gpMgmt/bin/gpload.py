@@ -51,6 +51,7 @@ except Exception, e:
 import hashlib
 import datetime,getpass,os,signal,socket,subprocess,threading,time,traceback,re
 import uuid
+import socket
 
 thePlatform = platform.system()
 if thePlatform in ['Windows', 'Microsoft']:
@@ -1628,15 +1629,13 @@ class gpload:
 
             # do default host, the current one
             if not local_hostname:
-                try:
-                    pipe = subprocess.Popen("hostname",
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE)
-                    result  = pipe.communicate();
-                except OSError, e:
-                    self.log(self.ERROR, "command failed: " + str(e))
-                
-                local_hostname = [result[0].strip()]
+                # if fully_qualified_domain_name is defined and set to true we want to
+                # resolve the fqdn rather than just grabbing the hostname.
+                fqdn = self.getconfig(name+':fully_qualified_domain_name', bool, False)
+                if fqdn:
+                    local_hostname = socket.getfqdn()
+                else:
+                    local_hostname = socket.gethostname()
 
             # build gpfdist parameters
             popenList = ['gpfdist']
