@@ -182,7 +182,7 @@ class Worker(Thread):
     name=None
     logger=None
     
-    def __init__(self,name,pool,timeout=5):
+    def __init__(self,name,pool,timeout=0.1):
         self.name=name
         self.pool=pool
         self.timeout=timeout
@@ -194,7 +194,7 @@ class Worker(Thread):
         try_count = 0
         while True:
             try:
-                if try_count == 5:
+                if try_count == 100:
                     self.logger.debug("[%s] try and get work from queue..." % self.name)
                     try_count = 0
                 
