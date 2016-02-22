@@ -3362,6 +3362,26 @@ Feature: Validate command line arguments
         Then gpdbrestore should print Table public.heap_table2 not found in backup to stdout
         Then gpdbrestore should not print Issue with 'ANALYZE' of restored table 'public.heap_table2' in 'bkdb' database to stdout
 
+    @backupfire
+    Scenario: Full Backup with option --schema-file with prefix option and Restore
+        Given the test is initialized
+        And the prefix "foo" is stored
+        And there is schema "schema_heap, schema_ao, testschema" exists in "bkdb"
+        And there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And there is a "heap" table "testschema.heap_table" in "bkdb" with data
+        And there is a "ao" partition table "schema_ao.ao_part_table" in "bkdb" with data
+        And there is a backupfile of tables "schema_heap.heap_table, schema_ao.ao_part_table, testschema.heap_table" in "bkdb" exists for validation
+        And there is a file "include_file" with tables "schema_heap|schema_ao"
+        When the user runs "gpcrondump -a -x bkdb --schema-file include_file --prefix=foo"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        And verify that the "report" file in " " dir contains "Backup Type: Full"
+        When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo"
+        Then gpdbrestore should return a return code of 0
+        And verify that there is a "heap" table "schema_heap.heap_table" in "bkdb" with data
+        And verify that there is a "ao" table "schema_ao.ao_part_table" in "bkdb" with data
+        And verify that there is no table "testschema.heap_table" in "bkdb"
+
     # THIS SHOULD BE THE LAST TEST
     @backupfire
     Scenario: cleanup for backup feature

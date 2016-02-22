@@ -985,9 +985,9 @@ class DumpTestCase(unittest.TestCase):
         self.assertEqual(ts_key[0:8], DUMP_DATE)
 
     def test_create_dump_line_00(self):
-        self.dumper.include_schema_file = '/tmp/foo'
+        self.dumper.include_schema_file = '/tmp/schema_file'
         output = self.dumper.create_dump_string('dcddev', '20121212', '01234567891234')
-        expected_output = """gp_dump -p 0 -U dcddev --gp-d=/data/master/p1/db_dumps/20121212 --gp-r=/data/master/p1/db_dumps/20121212 --gp-s=p --gp-k=01234567891234 --no-lock --gp-c --no-expand-children -n "\\"testschema\\"" "testdb" --table-file=/tmp/table_list.txt --schema-file=/tmp/foo"""
+        expected_output = """gp_dump -p 0 -U dcddev --gp-d=/data/master/p1/db_dumps/20121212 --gp-r=/data/master/p1/db_dumps/20121212 --gp-s=p --gp-k=01234567891234 --no-lock --gp-c --no-expand-children -n "\\"testschema\\"" "testdb" --schema-file=/tmp/schema_file"""
         self.assertEquals(output, expected_output)
 
     def test00_create_dump_line_with_prefix(self):
@@ -1017,6 +1017,13 @@ class DumpTestCase(unittest.TestCase):
         self.dumper.netbackup_schedule = "test_schedule"
         output = self.dumper.create_dump_string('dcddev', '20121212', '01234567891234')
         expected_output = """gp_dump -p 0 -U dcddev --gp-d=/data/master/p1/db_dumps/20121212 --gp-r=/data/master/p1/db_dumps/20121212 --gp-s=p --gp-k=01234567891234 --no-lock --gp-c --no-expand-children -n "\\"testschema\\"" "testdb" --netbackup-service-host=mdw --netbackup-policy=test_policy --netbackup-schedule=test_schedule"""
+        self.assertEquals(output, expected_output)
+
+    def test_create_dump_line_with_prefix_schema_level_dump(self):
+        self.dumper.dump_prefix = 'foo_'
+        self.dumper.include_schema_file = '/tmp/schema_file '
+        output = self.dumper.create_dump_string('dcddev', '20121212', '01234567891234')
+        expected_output = """gp_dump -p 0 -U dcddev --gp-d=/data/master/p1/db_dumps/20121212 --gp-r=/data/master/p1/db_dumps/20121212 --gp-s=p --gp-k=01234567891234 --no-lock --gp-c --prefix=foo_ --no-expand-children -n "\\"testschema\\"" "testdb" --schema-file=/tmp/schema_file """
         self.assertEquals(output, expected_output)
 
     def test_get_backup_dir_with_master_data_dir(self):
