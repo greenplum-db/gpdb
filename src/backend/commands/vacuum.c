@@ -694,6 +694,8 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid, List *relations)
 	MemoryContext		oldctx;
 	bool				bTemp;
 	VacuumStatsContext stats_context;
+	Oid                 parrelid=InvalidOid;
+	Relation            paronerel;
 
 	/*
 	 * We compact segment file by segment file.
@@ -722,6 +724,15 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid, List *relations)
 		 * Reset truncate flag always as we may iterate more than one relation.
 		 */
 		vacstmt->heap_truncate = false;
+
+		StartTransactionCommand();
+
+		parrelid=rel_partition_get_master(relid);
+		if (parrelid==relid) {
+			parrelid=InvalidOid;
+		}
+
+		CommitTransactionCommand();
 	}
 
 	while (!getnextrelation)
@@ -763,6 +774,20 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid, List *relations)
 		if (Gp_role == GP_ROLE_EXECUTE)
 			dropPhase = vacuumStatement_IsInAppendOnlyDropPhase(vacstmt);
 
+		/*
+		 * During AO drop phase, lock parent table it it exists 
+		 */ 
+		if (Gp_role == GP_ROLE_DISPATCH && parrelid!=InvalidOid && dropPhase) {
+			paronerel = open_relation_and_check_permission(vacstmt, parrelid, RELKIND_RELATION, dropPhase);
+ 
+			if (paronerel==NULL) {
+				CommitTransactionCommand();
+				continue;
+			}
+			/* Close parent relation now, but keep lock. */
+			relation_close(paronerel, NoLock);
+		}
+ 
 		/*
 		 * Open the relation with an appropriate lock, and check the permission.
 		 */
