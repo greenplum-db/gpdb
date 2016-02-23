@@ -1,0 +1,15 @@
+---
+jobs:
+- name: placeholder-job
+  plan:
+  - task: placeholder-task
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: ubuntu
+          tag: '14.04'
+      run:
+        path: echo
+        args: ["This is the gpdb-5.0 stub pipeline"]
