@@ -100,8 +100,8 @@ script:
   - gpssh --version
   - gpmapreduce --version
   - gpfdist --version
-  - cd ${TRAVIS_BUILD_DIR}/gpAux/gpdemo
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
+  - cd ${TRAVIS_BUILD_DIR}/gpAux/gpdemo
   - make
   - cat ${HOME}/gpAdminLogs/*.log
   - createdb
