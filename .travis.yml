@@ -115,6 +115,9 @@ script:
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
        brew install libevent          ; 
+       sysctl -w kern.sysv.shmmax=2147483648;
+    else
+       sysctl -w kernel.shmmax=500000000;
     fi
 
 ## ----------------------------------------------------------------------
