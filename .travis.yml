@@ -103,7 +103,7 @@ script:
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
   - cd ${TRAVIS_BUILD_DIR}/gpAux/gpdemo
   - make
-  - cat ${HOME}/gpAdminLogs/*.log
+  - cat ~/gpAdminLogs/*.log
   - createdb
   - cd ${TRAVIS_BUILD_DIR}
   - make installcheck-good 
