@@ -4375,11 +4375,13 @@ handleAckedPacket(MotionConn *ackConn, ICBuffer *buf, uint64 now)
 
 	        if (buf->nRetry == 0)
 	        {
+	            /* newRTT = buf->conn->rtt * (1 - RTT_COEFFICIENT) + ackTime * RTT_COEFFICIENT; */
 	        	newRTT = buf->conn->rtt - (buf->conn->rtt >> RTT_SHIFT_COEFFICIENT) + (ackTime >> RTT_SHIFT_COEFFICIENT);
 	        	newRTT = Min(MAX_RTT, Max(newRTT, MIN_RTT));
 	        	buf->conn->rtt = newRTT;
 
-				newDEV = buf->conn->dev - (buf->conn->dev >> DEV_SHIFT_COEFFICIENT) + ((ackTime - newRTT) >> DEV_SHIFT_COEFFICIENT);
+	        	/* newDEV = buf->conn->dev * (1 - DEV_COEFFICIENT) + DEV_COEFFICIENT * abs(ackTime - newRTT); */
+	        	newDEV = buf->conn->dev - (buf->conn->dev >> DEV_SHIFT_COEFFICIENT) + (abs(ackTime - newRTT) >> DEV_SHIFT_COEFFICIENT);
 	        	newDEV = Min(MAX_DEV, Max(newDEV, MIN_DEV));
 	        	buf->conn->dev = newDEV;
 
