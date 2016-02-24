@@ -83,7 +83,7 @@ test: nested_case_null
 
 test: bfv_cte bfv_joins bfv_statistic bfv_subquery bfv_planner bfv_legacy
 
-test: qp_executor qp_olap_windowerr qp_olap_window
+test: qp_executor qp_olap_windowerr qp_olap_window qp_derived_table
 
 ignore: tpch500GB_orca
 
