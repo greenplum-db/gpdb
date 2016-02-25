@@ -109,7 +109,7 @@ script:
   - make installcheck-good 
 
 after_failure:
-  - cat ${TRAVIS_BUILD_DIR}/src/backend/regress/regression.diffs
+  - cat ${TRAVIS_BUILD_DIR}/src/test/regress/regression.diffs
 
 ## ----------------------------------------------------------------------
 ## Before install 
@@ -128,6 +128,8 @@ before_install:
        sudo sysctl -w net.inet.tcp.msl=60;
        sudo sysctl -a;
     else
+       sudo apt-get -qq update;
+       sudo apt-get install -y libperl-dev;
        sudo sysctl -w kernel.shmmax=500000000;
        sudo sysctl -w kernel.shmmni=4096;
        sudo sysctl -w kernel.shmall=4000000000;
