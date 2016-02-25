@@ -150,8 +150,9 @@ before_install:
   - # Avoid typing password during 'make' under gpAux/gpdemo
   - cd ~
   - sudo ssh-keygen -A
-  - sudo ssh-add
-  - cat ~/.ssh/id_rsa.pub | ssh $USERNAME@HOSTNAME 'cat >> ~/.ssh/authorized_keys'
+  - cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+  - echo "host *" > ~/.ssh/config
+  - echo "  StrictHostKeyChecking no" > ~/.ssh/config
 
 ## ----------------------------------------------------------------------
 ## Notification
