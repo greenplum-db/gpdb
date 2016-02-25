@@ -296,8 +296,12 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 
 		ResCleanUpLock(lock, proclock, hashcode, false);
 
-		LWLockRelease(ResQueueLock);
-		LWLockRelease(partitionLock);
+		/* Since ereport(ERROR) has been called, we use LWLockReleaseAll to
+		 * avoid repeating HOLD_INTERRUPTS call if using retail LWLockRelease
+		 * calls, otherwise, PANIC would be raised for the unparity of
+		 * InterruptHoldoffCount
+		 */
+		LWLockReleaseAll();
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
@@ -547,8 +551,12 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
         !locallock->lock ||
         !locallock->proclock)
 	{
-        elog(LOG, "Resource queue %d: no lock to release", locktag->locktag_field1);
-        if (locallock)
+		/* Change the log level from LOG to DEBUG1, since after overhauling the
+		 * locking code of resource queue, this path would be hit much more
+		 * frequently, and also the info should be catagorized as DEBUG
+		 */
+		elog(DEBUG1, "Resource queue %d: no lock to release", locktag->locktag_field1);
+		if (locallock)
 		{
             RemoveLocalLock(locallock);
 		}
