@@ -108,6 +108,9 @@ script:
   - cd ${TRAVIS_BUILD_DIR}
   - make installcheck-good 
 
+after_failure:
+  - cat ${TRAVIS_BUILD_DIR}/src/backend/regress/regression.diffs
+
 ## ----------------------------------------------------------------------
 ## Before install 
 ## install libevent 
