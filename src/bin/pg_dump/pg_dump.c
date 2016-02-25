@@ -15256,6 +15256,7 @@ dumpAttrDef(Archive *fout, AttrDefInfo *adinfo)
 	PQExpBuffer q;
 	PQExpBuffer delq;
 	char	   *qualrelname;
+	char	   *tag;
 
 	/* Skip if table definition not to be dumped */
 	if (!tbinfo->dobj.dump || dopt->dataOnly)
@@ -15286,8 +15287,10 @@ dumpAttrDef(Archive *fout, AttrDefInfo *adinfo)
 	appendPQExpBuffer(delq, "ALTER COLUMN %s DROP DEFAULT;\n",
 					  fmtId(tbinfo->attnames[adnum - 1]));
 
+	tag = psprintf("%s %s", tbinfo->dobj.name, tbinfo->attnames[adnum - 1]);
+
 	ArchiveEntry(fout, adinfo->dobj.catId, adinfo->dobj.dumpId,
-				 tbinfo->attnames[adnum - 1],
+				 tag,
 				 tbinfo->dobj.namespace->dobj.name,
 				 NULL,
 				 tbinfo->rolname,
@@ -15296,6 +15299,7 @@ dumpAttrDef(Archive *fout, AttrDefInfo *adinfo)
 				 NULL, 0,
 				 NULL, NULL);
 
+	free(tag);
 	destroyPQExpBuffer(q);
 	destroyPQExpBuffer(delq);
 	free(qualrelname);
@@ -15436,6 +15440,7 @@ dumpConstraint(Archive *fout, ConstraintInfo *coninfo)
 	TableInfo  *tbinfo = coninfo->contable;
 	PQExpBuffer q;
 	PQExpBuffer delq;
+	char	   *tag = NULL;
 
 	/* Skip if not to be dumped */
 	if (!coninfo->dobj.dump || dopt->dataOnly)
@@ -15539,8 +15544,10 @@ dumpConstraint(Archive *fout, ConstraintInfo *coninfo)
 		appendPQExpBuffer(delq, "DROP CONSTRAINT %s;\n",
 						  fmtId(coninfo->dobj.name));
 
+		tag = psprintf("%s %s", tbinfo->dobj.name, coninfo->dobj.name);
+
 		ArchiveEntry(fout, coninfo->dobj.catId, coninfo->dobj.dumpId,
-					 coninfo->dobj.name,
+					 tag,
 					 tbinfo->dobj.namespace->dobj.name,
 					 indxinfo->tablespace,
 					 tbinfo->rolname, false,
@@ -15566,8 +15573,10 @@ dumpConstraint(Archive *fout, ConstraintInfo *coninfo)
 		appendPQExpBuffer(delq, "DROP CONSTRAINT %s;\n",
 						  fmtId(coninfo->dobj.name));
 
+		tag = psprintf("%s %s", tbinfo->dobj.name, coninfo->dobj.name);
+
 		ArchiveEntry(fout, coninfo->dobj.catId, coninfo->dobj.dumpId,
-					 coninfo->dobj.name,
+					 tag,
 					 tbinfo->dobj.namespace->dobj.name,
 					 NULL,
 					 tbinfo->rolname, false,
@@ -15595,8 +15604,10 @@ dumpConstraint(Archive *fout, ConstraintInfo *coninfo)
 			appendPQExpBuffer(delq, "DROP CONSTRAINT %s;\n",
 							  fmtId(coninfo->dobj.name));
 
+			tag = psprintf("%s %s", tbinfo->dobj.name, coninfo->dobj.name);
+
 			ArchiveEntry(fout, coninfo->dobj.catId, coninfo->dobj.dumpId,
-						 coninfo->dobj.name,
+						 tag,
 						 tbinfo->dobj.namespace->dobj.name,
 						 NULL,
 						 tbinfo->rolname, false,
@@ -15625,8 +15636,10 @@ dumpConstraint(Archive *fout, ConstraintInfo *coninfo)
 			appendPQExpBuffer(delq, "DROP CONSTRAINT %s;\n",
 							  fmtId(coninfo->dobj.name));
 
+			tag = psprintf("%s %s", tyinfo->dobj.name, coninfo->dobj.name);
+
 			ArchiveEntry(fout, coninfo->dobj.catId, coninfo->dobj.dumpId,
-						 coninfo->dobj.name,
+						 tag,
 						 tyinfo->dobj.namespace->dobj.name,
 						 NULL,
 						 tyinfo->rolname, false,
@@ -15646,6 +15659,7 @@ dumpConstraint(Archive *fout, ConstraintInfo *coninfo)
 	if (tbinfo && coninfo->separate)
 		dumpTableConstraintComment(fout, coninfo);
 
+	free(tag);
 	destroyPQExpBuffer(q);
 	destroyPQExpBuffer(delq);
 }
@@ -15947,6 +15961,7 @@ dumpTrigger(Archive *fout, TriggerInfo *tginfo)
 	size_t		lentgargs;
 	const char *p;
 	int			findx;
+	char	   *tag;
 
 	/*
 	 * we needn't check dobj.dump because TriggerInfo wouldn't have been
@@ -16119,8 +16134,10 @@ dumpTrigger(Archive *fout, TriggerInfo *tginfo)
 	appendPQExpBuffer(trigprefix, "TRIGGER %s ON",
 					  fmtId(tginfo->dobj.name));
 
+	tag = psprintf("%s %s", tbinfo->dobj.name, tginfo->dobj.name);
+
 	ArchiveEntry(fout, tginfo->dobj.catId, tginfo->dobj.dumpId,
-				 tginfo->dobj.name,
+				 tag,
 				 tbinfo->dobj.namespace->dobj.name,
 				 NULL,
 				 tbinfo->rolname, false,
@@ -16133,6 +16150,7 @@ dumpTrigger(Archive *fout, TriggerInfo *tginfo)
 				tbinfo->dobj.namespace->dobj.name, tbinfo->rolname,
 				tginfo->dobj.catId, 0, tginfo->dobj.dumpId);
 
+	free(tag);
 	destroyPQExpBuffer(query);
 	destroyPQExpBuffer(delqry);
 	destroyPQExpBuffer(trigprefix);
@@ -16368,6 +16386,8 @@ dumpRule(Archive *fout, RuleInfo *rinfo)
 
 	tag = psprintf("%s %s", tbinfo->dobj.name, rinfo->dobj.name);
 
+	tag = psprintf("%s %s", tbinfo->dobj.name, rinfo->dobj.name);
+
 	ArchiveEntry(fout, rinfo->dobj.catId, rinfo->dobj.dumpId,
 				 tag,
 				 tbinfo->dobj.namespace->dobj.name,
@@ -16383,6 +16403,8 @@ dumpRule(Archive *fout, RuleInfo *rinfo)
 				tbinfo->dobj.namespace->dobj.name,
 				tbinfo->rolname,
 				rinfo->dobj.catId, 0, rinfo->dobj.dumpId);
+
+	PQclear(res);
 
 	free(tag);
 	destroyPQExpBuffer(query);
