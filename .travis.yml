@@ -149,7 +149,7 @@ before_install:
     fi
   - # Avoid typing password during 'make' under gpAux/gpdemo
   - cd ~
-  - sudo ssh-keygen -A
+  - ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ''
   - cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
   - echo "host *" > ~/.ssh/config
   - echo "  StrictHostKeyChecking no" > ~/.ssh/config
