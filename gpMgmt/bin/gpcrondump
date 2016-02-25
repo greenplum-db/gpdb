@@ -237,6 +237,11 @@ class GpCronDump(Operation):
             logger.info("Bypassing disk space check as '-b' option is specified")
             self.free_space_percent = None
 
+        #Check if backup_dir contains the absolute path
+        if self.backup_dir is not None:
+            if not os.path.isabs(self.backup_dir):
+                raise Exception("\"%s\" is not an absolute path. Please specify the absolute path where the backup files will be placed on each host." % self.backup_dir)
+
         if self.ddboost:
             if (not self.replicate and self.max_streams is not None) or (self.replicate and self.max_streams is None):
                 raise ExceptionNoStackTraceNeeded("--max-streams must be specified along with --replicate")
