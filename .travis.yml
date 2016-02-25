@@ -123,6 +123,7 @@ before_install:
        sysctl -w kern.maxfiles=65535;
        sysctl -w kern.maxfilesperproc=65535;
        sysctl -w net.inet.tcp.msl=60;
+       sysctl -a;
     else
        sysctl -w kernel.shmmax=500000000;
        sysctl -w kernel.shmmni=4096;
@@ -146,6 +147,7 @@ before_install:
        sysctl -w net.core.rmem_max=2097152;
        sysctl -w net.core.wmem_max=2097152;
        sysctl -w vm.overcommit_memory=2;
+       sysctl -a;
     fi
 
 ## ----------------------------------------------------------------------
