@@ -104,6 +104,7 @@ script:
   - cd ${TRAVIS_BUILD_DIR}/gpAux/gpdemo
   - make
   - cat ~/gpAdminLogs/*.log
+  - source gpdemo-env.sh
   - createdb
   - cd ${TRAVIS_BUILD_DIR}
   - make installcheck-good 
