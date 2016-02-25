@@ -116,14 +116,14 @@ script:
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
        brew install libevent          ; 
-       sudo sysctl -e kern.sysv.shmmax=2147483648;
-       sudo sysctl -e kern.sysv.shmmin=1;
-       sudo sysctl -e kern.sysv.shmmni=64;
-       sudo sysctl -e kern.sysv.shmseg=16;
-       sudo sysctl -e kern.sysv.shmall=524288;
-       sudo sysctl -e kern.maxfiles=65535;
-       sudo sysctl -e kern.maxfilesperproc=65535;
-       sudo sysctl -e net.inet.tcp.msl=60;
+       sudo sysctl -w kern.sysv.shmmax=2147483648;
+       sudo sysctl -w kern.sysv.shmmin=1;
+       sudo sysctl -w kern.sysv.shmmni=64;
+       sudo sysctl -w kern.sysv.shmseg=16;
+       sudo sysctl -w kern.sysv.shmall=524288;
+       sudo sysctl -w kern.maxfiles=65535;
+       sudo sysctl -w kern.maxfilesperproc=65535;
+       sudo sysctl -w net.inet.tcp.msl=60;
        sudo sysctl -a;
     else
        sudo sysctl -w kernel.shmmax=500000000;
