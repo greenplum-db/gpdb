@@ -31,6 +31,7 @@
 #include "gpopt/translate/CContextDXLToPlStmt.h"
 #include "gpopt/translate/CTranslatorRelcacheToDXL.h"
 #include "gpopt/eval/CConstExprEvaluatorDXL.h"
+#include "gpopt/engine/CHint.h"
 
 #include "cdb/cdbvars.h"
 #include "utils/guc.h"
