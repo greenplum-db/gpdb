@@ -147,6 +147,11 @@ before_install:
        sudo sysctl -w vm.overcommit_memory=2;
        sudo sysctl -a;
     fi
+  - # Avoid typing password during 'make' under gpAux/gpdemo
+  - cd ~
+  - ssh-keygen -A
+  - ssh-add
+  - cat ~/.ssh/id_rsa.pub | ssh $USERNAME@HOSTNAME 'cat >> ~/.ssh/authorized_keys'
 
 ## ----------------------------------------------------------------------
 ## Notification
