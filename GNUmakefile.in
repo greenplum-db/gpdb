@@ -24,7 +24,7 @@ all:
 	$(MAKE) -C contrib/gp_internal_tools all
 	$(MAKE) -C contrib/gp_cancel_query all
 	$(MAKE) -C contrib/indexscan all
-	$(MAKE) -C gpAux/extensions mkgpfdist
+	$(MAKE) -C gpAux/extensions mkgpfdist mapreduce
 	@echo "All of Greenplum Database successfully made. Ready to install."
 
 install:
@@ -87,6 +87,7 @@ clean:
 	$(MAKE) -C contrib/gp_internal_tools $@
 	$(MAKE) -C contrib/gp_cancel_query $@
 	$(MAKE) -C contrib/indexscan $@
+	$(MAKE) -C gpAux/extensions $@
 # Garbage from autoconf:
 	@rm -rf autom4te.cache/
 
@@ -94,6 +95,7 @@ clean:
 # will be gone too soon.
 distclean maintainer-clean:
 #	-$(MAKE) -C doc $@
+	-$(MAKE) -C gpAux/extensions $@
 	-$(MAKE) -C contrib $@
 	-$(MAKE) -C config $@
 	-$(MAKE) -C src $@

@@ -187,6 +187,7 @@ enable_email		= @enable_email@
 enable_connectemc	= @enable_connectemc@
 enable_ddboost	    = @enable_ddboost@
 enable_netbackup	= @enable_netbackup@
+enable_mapreduce    = @enable_mapreduce@
 
 python_includespec	= @python_includespec@
 python_libdir		= @python_libdir@
