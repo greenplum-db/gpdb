@@ -22,7 +22,6 @@ os:
   - osx
 
 language: c
-sudo: false
 
 git:
   submodules: false
