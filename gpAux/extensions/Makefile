@@ -21,7 +21,7 @@ ifneq ($(with_apr_config),yes)
 endif
 endif
 
-all: mkgpfdist mkdbgen mkgphdfs
+all: mkgpfdist mkdbgen mkgphdfs mks3ext
 
 .PHONY:
 mkgpfdist:
@@ -57,6 +57,9 @@ mkgphdfs:
 		ANT=/opt/releng/apache-ant/bin/ant \
 		JAVA_HOME=${JAVA_HOME}
 
+.PHONY:
+mks3ext:
+	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gps3ext USE_PGXS=1 install
 
 # Only include include these files when running enterprise build
 ENTERPRISE_TARGETS="mkdbgen mkgphdfs mkorafce mkplr mkpljava"

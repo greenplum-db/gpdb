@@ -1,0 +1,5 @@
+#!/bin/bash
+
+gtags
+htags --suggest -t 'Welcome to GPDB S3 source code!' doc
+
