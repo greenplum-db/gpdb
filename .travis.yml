@@ -149,8 +149,8 @@ before_install:
     fi
   - # Avoid typing password during 'make' under gpAux/gpdemo
   - cd ~
-  - ssh-keygen -A
-  - ssh-add
+  - sudo ssh-keygen -A
+  - sudo ssh-add
   - cat ~/.ssh/id_rsa.pub | ssh $USERNAME@HOSTNAME 'cat >> ~/.ssh/authorized_keys'
 
 ## ----------------------------------------------------------------------
