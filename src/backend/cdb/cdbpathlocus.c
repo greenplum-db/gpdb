@@ -40,6 +40,56 @@ cdb_build_distribution_pathkeys(PlannerInfo      *root,
  */
 bool cdbpathlocus_querysegmentcatalogs = false;
 
+/*
+ * Are two pathkeys equal?
+ *
+ * This is the roughly the same as compare_pathkeys, but compare_pathkeys
+ * requires the input pathkeys to be canonicalized. The PathKeys we use to
+ * represent hashed distribution are not canonicalized, so we can't use it.
+ */
+static bool
+pathkeys_equal(List *apathkey, List *bpathkey)
+{
+	ListCell   *acell;
+	ListCell   *bcell;
+
+	forboth(acell, apathkey, bcell, bpathkey)
+	{
+		PathKey   *apathkey = (PathKey *) lfirst(acell);
+		PathKey   *bpathkey = (PathKey *) lfirst(bcell);
+
+		Assert(IsA(apathkey, PathKey));
+		Assert(IsA(bpathkey, PathKey));
+
+		if (apathkey->pk_eclass != bpathkey->pk_eclass)
+			return false;
+	}
+	return true;
+}
+
+/*
+ * Does given list of path keys contain the given pathkey? "contains" is
+ * defined in terms of pathkeys_equal.
+ */
+static bool
+list_contains_pathkey(List *list, List *pathkey)
+{
+	ListCell   *lc;
+	bool		found;
+
+	found = false;
+	foreach(lc, list)
+	{
+		List	   *lpathkey = (List *) lfirst(lc);
+
+		if (pathkeys_equal(pathkey, lpathkey))
+		{
+			found = true;
+			break;
+		}
+	}
+	return found;
+}
 
 /*
  * cdbpathlocus_compare
@@ -85,30 +135,20 @@ cdbpathlocus_compare(CdbPathLocus_Comparison    op,
     if (a.locustype == b.locustype)
     {
         if (CdbPathLocus_IsHashed(a))
-        {
-            forboth(acell, a.partkey_h, bcell, b.partkey_h)
-            {
-                List   *apathkey = (List *)lfirst(acell);
-                List   *bpathkey = (List *)lfirst(bcell);
-
-                if (apathkey != bpathkey)
-                    return false;
-            }
-            return true;
-        }
+			return pathkeys_equal(a.partkey_h, b.partkey_h);
 
         if (CdbPathLocus_IsHashedOJ(a))
         {
             forboth(acell, a.partkey_oj, bcell, b.partkey_oj)
             {
-                List   *aequivpathkeylist = (List *)lfirst(acell);
-                List   *bequivpathkeylist = (List *)lfirst(bcell);
+                List	   *aequivpathkeylist = (List *) lfirst(acell);
+                List	   *bequivpathkeylist = (List *) lfirst(bcell);
 
                 foreach(bequivpathkeycell, bequivpathkeylist)
                 {
                     List   *bpathkey = (List *)lfirst(bequivpathkeycell);
 
-                    if (!list_member_ptr(aequivpathkeylist, bpathkey))
+                    if (!list_contains_pathkey(aequivpathkeylist, bpathkey))
                         return false;
                 }
                 if (op == CdbPathLocus_Comparison_Equal)
@@ -117,7 +157,7 @@ cdbpathlocus_compare(CdbPathLocus_Comparison    op,
                     {
                         List   *apathkey = (List *)lfirst(aequivpathkeycell);
 
-                        if (!list_member_ptr(bequivpathkeylist, apathkey))
+                        if (!list_contains_pathkey(bequivpathkeylist, apathkey))
                             return false;
                     }
                 }

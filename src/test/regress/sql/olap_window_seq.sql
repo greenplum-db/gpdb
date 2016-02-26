@@ -1614,5 +1614,41 @@ lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
 lead(empno,1) over (partition by depname order by salary desc) qianzhi11
 from empsalary;
 
--- End of Test
+-- There was a bug at one point where the planner would not recognize that the
+-- distribution key of a subplan matched the distribution key needed for the
+-- PARTITION BY clause, and generated an unnecessary Motion node. The
+-- sub-optimal plan looked like this:
+--
+--                                                       QUERY PLAN                                
+--                       
+-- ----------------------------------------------------------------------------------------------------------------------
+--  Gather Motion 2:1  (slice3; segments: 2)  (cost=3.56..3.60 rows=5 width=12)
+--    ->  Window  (cost=3.56..3.60 rows=3 width=12)
+--          Partition By: bar.a
+--          Order By: bar.b
+--          ->  Sort  (cost=3.56..3.57 rows=3 width=12)
+--                Sort Key: bar.a, bar.b
+--                ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=1.21..3.50 rows=3 width=12)
+--                      Hash Key: bar.a
+--                      ->  Hash Join  (cost=1.21..3.40 rows=3 width=12)
+--                            Hash Cond: foo.a = bar.a
+--                            ->  Seq Scan on foo  (cost=0.00..2.10 rows=5 width=4)
+--                            ->  Hash  (cost=1.15..1.15 rows=3 width=8)
+--                                  ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.15 rows=3 width=8)
+--                                        Hash Key: bar.a
+--                                        ->  Seq Scan on bar  (cost=0.00..1.05 rows=3 width=8)
+-- (15 rows)
+--
+-- The Redistribute Motion node in the middle is not needed, because the
+-- subplan is already distributed by bar.a, but the planner failed to
+-- recognize that. The point of this test case is to test that that unneeded
+-- Motion node isn't there.
+create table foo (a int4) distributed by (a);
+create table bar (a int4, b int4) distributed by (a, b);
+insert into foo select g from generate_series(1, 10) g;
+insert into bar select g%2, g from generate_series(1, 5) g;
 
+select foo.a, sum(b) over (partition by bar.a order by bar.b) from foo, bar where foo.a = bar.a;
+explain select foo.a, sum(b) over (partition by bar.a order by bar.b) from foo, bar where foo.a = bar.a;
+
+drop table foo, bar;
