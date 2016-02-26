@@ -166,7 +166,6 @@ sqlmansect_dummy = l
 with_perl	= @with_perl@
 with_python	= @with_python@
 with_tcl	= @with_tcl@
-with_java   = @with_java@
 with_openssl	= @with_openssl@
 with_libxml     = @with_libxml
 with_system_tzdata = @with_system_tzdata@
@@ -174,7 +173,9 @@ with_zlib	= @with_zlib@
 with_apr_config	= @with_apr_config@
 enable_shared	= @enable_shared@
 enable_rpath	= @enable_rpath@
-enable_nls	= @enable_nls@
+# NLS is not supported in Greenplum, see comment documenting
+# this in configure.in
+# enable_nls	= @enable_nls@
 enable_debug	= @enable_debug@
 enable_dtrace	= @enable_dtrace@
 enable_coverage	= @enable_coverage@
@@ -183,7 +184,6 @@ enable_largefile	= @enable_largefile@
 enable_orca		= @enable_orca@
 enable_gpfdist		= @enable_gpfdist@
 enable_snmp			= @enable_snmp@
-enable_email		= @enable_email@
 enable_connectemc	= @enable_connectemc@
 enable_ddboost	    = @enable_ddboost@
 enable_netbackup	= @enable_netbackup@
