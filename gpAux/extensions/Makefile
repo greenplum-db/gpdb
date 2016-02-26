@@ -37,19 +37,31 @@ mkgpfdist:
 		echo "gpfdist disabled"; \
 	fi
 
-install: mkgpfdist
+mapreduce:
+	if [ "$(enable_mapreduce)" = "yes" ]; then \
+		echo "gpmapreduce enabled"; \
+		$(MAKE) -C gpmapreduce; \
+	fi
+
+install: mkgpfdist mapreduce
 	if [ "$(enable_gpfdist)" = "yes" ]; then \
 		if [ ! -d $(prefix)/bin ]; then \
 			mkdir -p $(prefix)/bin ; \
 		fi; \
 		cp -p gpfdist/gpfdist$(EXE_EXT) $(prefix)/bin/ ; \
+	fi; \
+	if [ "$(enable_mapreduce)" = "yes" ]; then \
+		$(MAKE) -C gpmapreduce install; \
 	fi
 
 clean:
-	@if [ -f gpfdist/GNUmakefile ]; then $(MAKE) -C gpfdist clean; fi
+	@if [ -f gpfdist/GNUmakefile ]; then $(MAKE) -C gpfdist clean; fi; \
+	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce clean; fi
+
 
 distclean:
-	@if [ -f gpfdist/GNUmakefile ]; then $(MAKE) -C gpfdist clean; fi
+	@if [ -f gpfdist/GNUmakefile ]; then $(MAKE) -C gpfdist clean; fi; \
+	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce distclean; fi
 
 .PHONY:
 mkgphdfs:

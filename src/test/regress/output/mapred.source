@@ -42,7 +42,7 @@ select lanname, lanispl, lanpltrusted from pg_language;
  plpythonu | t       | f
 (6 rows)
 
--- Check enviornment variables that should have been set by greenplum_path.sh
+-- Check environment variables that should have been set by greenplum_path.sh
 --
 -- 1) We need to check these on all segments and on the master.
 -- 2) We do this via external table rather than perl/python in case it is part
@@ -79,6 +79,7 @@ SELECT * FROM env WHERE var in (
 (10 rows)
 
 -- end_ignore
+-- start_ignore
 --
 -- Some checks to verify what versions of perl/python we have.
 -- If everything has been configured correctly this should be constant
@@ -107,7 +108,6 @@ SELECT python_version() FROM env GROUP BY python_version;
 CREATE OR REPLACE FUNCTION perl_version() returns text as $$
 return "Perl $]"
 $$ language plperlu NO SQL;
--- ignore
 SELECT perl_version() FROM env GROUP BY perl_version;
  perl_version  
 ---------------
@@ -118,7 +118,6 @@ SELECT perl_version() FROM env GROUP BY perl_version;
 -- The following two checks need to be put into big ignore blocks
 -- because paths can be of differing lengths
 --
--- start_ignore
 CREATE OR REPLACE FUNCTION python_path() returns text as $$
 import sys
 return sys.path[0]

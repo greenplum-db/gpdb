@@ -715,6 +715,7 @@ with_perl
 with_tcl
 enable_thread_safety
 INCLUDES
+enable_mapreduce
 enable_netbackup
 enable_ddboost
 enable_connectemc
@@ -828,6 +829,7 @@ enable_snmp
 enable_connectemc
 enable_ddboost
 enable_netbackup
+enable_mapreduce
 enable_thread_safety
 enable_thread_safety_force
 with_tcl
@@ -1498,6 +1500,7 @@ build with coverage testing instrumentation
   --enable-connectemc     enable connect emc support
   --enable-ddboost     enable connect emc support
   --enable-netbackup     enable NetBackup support
+  --enable-mapreduce     enable Greenplum Mapreduce support
   --disable-thread-safety  Do not make client libraries thread-safe
   --enable-thread-safety-force  force thread-safety despite thread test failure
   --disable-largefile     omit support for large files
@@ -5435,6 +5438,39 @@ fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $enable_netbackup" >&5
 $as_echo "$enable_netbackup" >&6; }
+
+
+#
+# --enable-mapreduce enables GPMapreduce support
+#
+
+pgac_args="$pgac_args enable_mapreduce"
+
+# Check whether --enable-mapreduce was given.
+if test "${enable_mapreduce+set}" = set; then :
+  enableval=$enable_mapreduce;
+  case $enableval in
+    yes)
+
+$as_echo "#define USE_MAPREDUCE 1" >>confdefs.h
+
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --enable-mapreduce option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  enable_mapreduce=no
+
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with Greenplum Mapreduce... $enable_mapreduce" >&5
+$as_echo "checking whether to build with Greenplum Mapreduce... $enable_mapreduce" >&6; }
 
 
 #
@@ -9972,6 +10008,22 @@ done
 
 fi
 
+if test "$enable_mapreduce" = yes; then
+  for ac_header in yaml.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "yaml.h" "ac_cv_header_yaml_h" "$ac_includes_default"
+if test "x$ac_cv_header_yaml_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_YAML_H 1
+_ACEOF
+
+else
+  as_fn_error $? "YAML includes required for Greenplum Mapreduce" "$LINENO" 5
+fi
+
+done
+
+fi
 
 
 ##
