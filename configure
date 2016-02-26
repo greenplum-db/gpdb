@@ -1478,7 +1478,7 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-disable 64-bit integer date/time support
+  --disable-integer-datetimes disable 64-bit integer date/time support
   --disable-shared        do not build shared libraries
   --disable-rpath         do not embed shared library search path in executables
   --disable-spinlocks     do not use spinlocks
@@ -1486,18 +1486,18 @@ disable 64-bit integer date/time support
   --disable-gpfdist       do not use gpfdist
   --enable-debug          build with debugging symbols (-g)
   --enable-profiling      build with profiling enabled
-build with coverage testing instrumentation
+  --enable-coverage       build with coverage testing instrumentation
   --enable-dtrace         build with DTrace support
   --enable-depend         turn on automatic dependency tracking
   --enable-cassert        enable assertion checks (for debugging)
-  --enable-debugbreak        enable debug_break and debug_break_n (for debugging)
-  --enable-ntuplestore      enable debug_ntuplestore (for debugging)
-  --enable-testutils        enable testing utilities
-  --enable-orca        enable ORCA optimizer
-  --enable-snmp        enable snmp for MIB and alerts via TRAP/INFORM
+  --enable-debugbreak     enable debug_break and debug_break_n (for debugging)
+  --enable-ntuplestore    enable debug_ntuplestore (for debugging)
+  --enable-testutils      enable testing utilities
+  --enable-orca           enable ORCA optimizer
+  --enable-snmp           enable snmp for MIB and alerts via TRAP/INFORM
   --enable-connectemc     enable connect emc support
-  --enable-ddboost     enable connect emc support
-  --enable-netbackup     enable NetBackup support
+  --enable-ddboost        enable DD Boost support
+  --enable-netbackup      enable NetBackup support
   --disable-thread-safety  Do not make client libraries thread-safe
   --enable-thread-safety-force  force thread-safety despite thread test failure
   --disable-largefile     omit support for large files
@@ -5301,8 +5301,8 @@ else
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: enable_orca" >&5
-$as_echo "enable_orca" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with ORCA... $enable_orca" >&5
+$as_echo "checking whether to build with ORCA... $enable_orca" >&6; }
 
 
 #
@@ -5400,8 +5400,8 @@ else
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $enable_ddboost" >&5
-$as_echo "$enable_ddboost" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with DD Boost support... $enable_ddboost" >&5
+$as_echo "checking whether to build with DD Boost support... $enable_ddboost" >&6; }
 
 
 #
@@ -5433,8 +5433,8 @@ else
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $enable_netbackup" >&5
-$as_echo "$enable_netbackup" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with NetBackup support... $enable_netbackup" >&5
+$as_echo "checking whether to build with NetBackup support... $enable_netbackup" >&6; }
 
 
 #
