@@ -626,6 +626,7 @@ ac_includes_default="\
 #endif"
 
 ac_subst_vars='LTLIBOBJS
+ICG_DEPENDENCIES
 vpath_build
 SGMLSPL
 COLLATEINDEX
@@ -6261,6 +6262,7 @@ done
       esac
     done
   fi
+  ICG_DEPENDENCIES="--dependency libxml "$ICG_DEPENDENCIES
 fi
 
 
@@ -7739,6 +7741,7 @@ else
 $as_echo "$perl_embed_ldflags" >&6; }
 fi
 
+  ICG_DEPENDENCIES="--dependency perl "$ICG_DEPENDENCIES
 fi
 
 if test "$with_python" = yes; then
@@ -7858,6 +7861,7 @@ $as_echo "no" >&6; }
 fi
 
 
+  ICG_DEPENDENCIES="--dependency python "$ICG_DEPENDENCIES
 fi
 
 ZIC=
@@ -15656,6 +15660,7 @@ else
 $as_echo "done" >&6; }
   fi
 fi
+
 
 
 

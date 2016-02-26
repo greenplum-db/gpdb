@@ -15,9 +15,13 @@
 #   hitting max_connections limit on segments.
 #
 
+# The xml test suite has been moved from the parallel schedule to here in
+# order to support autoconf generated dependency checking for testruns
+test: xml(libxml)
+
 ignore: leastsquares
-test: opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy
-test: filter gpctas gpdist matrix toast sublink sirv_functions table_functions olap_setup
+test: opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile naivebayes join_gp union_gp(python) gpcopy
+test: filter gpctas gpdist matrix toast sublink sirv_functions(python) table_functions(python, perl) olap_setup
 
 test: dispatch
 
@@ -31,7 +35,7 @@ test: sort_finish_pending
 
 test: gpdiffcheck gptokencheck information_schema gp_hashagg sequence_gp tidscan
 
-test: rangefuncs_cdb gp_dqa external_table subselect_gp indexjoin distributed_transactions olap_group olap_window_seq with_clause as_alias regex_gp partition1
+test: rangefuncs_cdb(perl) gp_dqa external_table subselect_gp indexjoin distributed_transactions olap_group olap_window_seq with_clause as_alias regex_gp partition1
 
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests. Unfortunately, 'partition' also assumes that there
@@ -58,7 +62,7 @@ test: vacuum_gp
 # ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
 
 ignore: gp_portal_error
-test: partition_indexing column_compression eagerfree mapred gpparams tidycat aocs co_nestloop_idxscan  gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic aoco_privileges
+test: partition_indexing column_compression eagerfree mapred(mapred, python, perl) gpparams tidycat aocs co_nestloop_idxscan  gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic aoco_privileges
 ignore: icudp_full
 ignore: gp_delete_as_trunc
 
@@ -73,7 +77,7 @@ test: filespace trig auth_constraint role rle portals_updatable plpgsql_cache ti
 # direct dispatch tests
 test: bfv_dd bfv_dd_multicolumn bfv_dd_types
 
-test: catalog bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition DML_over_joins
+test: catalog bfv_catalog(python) bfv_index(python) bfv_olap bfv_aggregate(python) bfv_partition(python) DML_over_joins
  
 test: aggregate_with_groupingsets gp_optimizer 
 
@@ -87,14 +91,14 @@ test: qp_misc
 
 test: qp_misc_jiras
 
-test: bfv_cte bfv_joins bfv_statistic bfv_subquery bfv_planner bfv_legacy
+test: bfv_cte bfv_joins bfv_statistic(python) bfv_subquery(python) bfv_planner bfv_legacy(python)
 
-test: qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan
-test: qp_functions qp_misc_rio_join_small qp_misc_rio
+test: qp_executor qp_olap_windowerr qp_olap_window(python) qp_derived_table qp_bitmapscan
+test: qp_functions qp_misc_rio_join_small qp_misc_rio(python)
 
 test: qp_correlated_query qp_targeted_dispatch
 
-test: qp_dpe qp_subquery qp_functions_idf qp_regexp qp_resource_queue
+test: qp_dpe(python) qp_subquery qp_functions_idf(python) qp_regexp qp_resource_queue
 
 test: qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4
 

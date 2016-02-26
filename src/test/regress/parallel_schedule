@@ -112,7 +112,7 @@ test: select_views portals_p2 cluster dependency guc
 # The sixth group of parallel test
 # ----------
 # "plpgsql" cannot run concurrently with "rules"
-test: limit copy2 temp domain rangefuncs prepare without_oid conversion truncate alter_table sequence polymorphism rowtypes xml
+test: limit copy2 temp domain rangefuncs prepare without_oid conversion truncate alter_table sequence polymorphism rowtypes
 
 # 83MERGE_FIXME: the largeobject test is temporarily disabled due to test errors
 # test: largeobject

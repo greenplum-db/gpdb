@@ -51,3 +51,4 @@ build.sh
 *.swp
 
 VERSION
+src/test/regress/greenplum_schedule

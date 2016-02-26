@@ -59,7 +59,7 @@ LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl
 
 # Build regression test driver
 
-all: submake-libpgport pg_regress$(X)
+all: submake-libpgport pg_regress$(X) greenplum_schedule
 
 pg_regress$(X): pg_regress.o pg_regress_main.o
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@
@@ -169,6 +169,9 @@ check: all upg2-setup ugpart-setup
 installcheck: all upg2-setup ugpart-setup
 	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/serial_schedule --srcdir=$(abs_srcdir)
 
+%_schedule: %_schedule.in
+	./gensched.pl $(ICG_DEPENDENCIES) < $< > $@
+
 installcheck-good: all
 	if [ -z "$(INSTALLCHECK_GOOD_KERBEROS)" ]; then \
 	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --srcdir=$(abs_srcdir); \
@@ -267,6 +270,7 @@ clean distclean maintainer-clean: clean-lib
 	rm -f gmon.out
 	rm -f $(upg2_temp_files)
 	rm -f $(srcdir)/sql/cppudf.sql
+	rm -f greenplum_schedule
 ifeq ($(PORTNAME), cygwin)
 	rm -f regress.def
 endif

@@ -904,6 +904,7 @@ if test "$with_libxml" = yes ; then
       esac
     done
   fi
+  ICG_DEPENDENCIES="--dependency libxml "$ICG_DEPENDENCIES
 fi
 
 AC_SUBST(with_libxml)
@@ -1031,11 +1032,13 @@ if test "$with_perl" = yes; then
   fi
   PGAC_CHECK_PERL_CONFIGS([archlibexp,privlibexp,useshrplib])
   PGAC_CHECK_PERL_EMBED_LDFLAGS
+  ICG_DEPENDENCIES="--dependency perl "$ICG_DEPENDENCIES
 fi
 
 if test "$with_python" = yes; then
   PGAC_PATH_PYTHON
   PGAC_CHECK_PYTHON_EMBED_SETUP
+  ICG_DEPENDENCIES="--dependency python "$ICG_DEPENDENCIES
 fi
 
 ZIC=
@@ -2158,6 +2161,7 @@ else
 fi
 AC_SUBST(vpath_build)
 
+AC_SUBST(ICG_DEPENDENCIES)
 
 AC_CONFIG_FILES([GNUmakefile src/Makefile.global])
 
