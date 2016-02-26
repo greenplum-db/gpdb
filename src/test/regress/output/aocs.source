@@ -40,19 +40,29 @@ CREATE TABLE tenk_aocs1 (like tenk_heap_for_aocs) with (appendonly=true, orienta
 CREATE TABLE tenk_aocs2 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=0, blocksize=262144) distributed by(unique1);
 CREATE TABLE tenk_aocs3 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=6, blocksize=1048576, checksum=true) distributed by(unique1);
 CREATE TABLE tenk_aocs4 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=1, compresstype=zlib) distributed by(unique1);
-CREATE TABLE tenk_aocs5 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=6, compresstype=zlib, blocksize=1048576, checksum=true) distributed by(unique1);
+CREATE TABLE tenk_aocs5 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=6, compresstype=zlib) distributed by(unique1);
+CREATE TABLE tenk_aocs6 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=6, compresstype=zlib, blocksize=1048576, checksum=true) distributed by(unique1);
 -- invalid
-CREATE TABLE tenk_aocs6 (like tenk_heap_for_aocs) with (appendonly=false, orientation=column, compresslevel=6, checksum=true) distributed by(unique1);
+CREATE TABLE tenk_aocs7 (like tenk_heap_for_aocs) with (appendonly=true, orientation=col) distributed by(unique1);
+ERROR:  invalid parameter value for "orientation": "col"
+CREATE TABLE tenk_aocs8 (like tenk_heap_for_aocs) with appendonly=true, orientation=column distributed by(unique1);
+ERROR:  syntax error at or near "appendonly"
+LINE 1: ...E TABLE tenk_aocs8 (like tenk_heap_for_aocs) with appendonly...
+                                                             ^
+CREATE TABLE tenk_aocs9 (like tenk_heap_for_aocs) with (appendonly=true orientation=column) distributed by(unique1);
+ERROR:  syntax error at or near "orientation"
+LINE 1: ...9 (like tenk_heap_for_aocs) with (appendonly=true orientatio...
+                                                             ^
+CREATE TABLE tenk_aocs10 (like tenk_heap_for_aocs) with (appendonly=false, orientation=column, compresslevel=6, checksum=true) distributed by(unique1);
 ERROR:  invalid option 'compresslevel' for base relation. Only valid for Append Only relations
-CREATE TABLE tenk_aocs7 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=6, compresstype=zlib) distributed by(unique1);
-CREATE TABLE tenk_aocs8 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, blocksize=100) distributed by(unique1);
+CREATE TABLE tenk_aocs11 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, blocksize=100) distributed by(unique1);
 ERROR:  block size must be between 8KB and 2MB and be an 8KB multiple. Got 100
-CREATE TABLE tenk_aocs9 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=0, compresstype=zlib) distributed by(unique1);
+CREATE TABLE tenk_aocs12 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=0, compresstype=zlib) distributed by(unique1);
 ERROR:  compresstype can't be used with compresslevel 0
 -- cs without ao is invalid.
-CREATE TABLE tenk_aocs10 (like tenk_heap_for_aocs) with (orientation=column) distributed by(unique1);
+CREATE TABLE tenk_aocs13 (like tenk_heap_for_aocs) with (orientation=column) distributed by(unique1);
 ERROR:  invalid option "orientation" for base relation. Only valid for Append Only relations
--------------------- 
+--------------------
 -- catalog checks
 --------------------
 -- check pg_appendonly
@@ -63,8 +73,8 @@ SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM 
  tenk_aocs2 |    262144 |              |             0 | t
  tenk_aocs3 |   1048576 | zlib         |             6 | t
  tenk_aocs4 |     32768 | zlib         |             1 | t
- tenk_aocs5 |   1048576 | zlib         |             6 | t
- tenk_aocs7 |     32768 | zlib         |             6 | t
+ tenk_aocs5 |     32768 | zlib         |             6 | t
+ tenk_aocs6 |   1048576 | zlib         |             6 | t
 (6 rows)
 
 -------------------- 
@@ -374,8 +384,8 @@ SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM 
  tenk_aocs2 |    262144 |              |             0 | t
  tenk_aocs3 |   1048576 | zlib         |             6 | t
  tenk_aocs4 |     32768 | zlib         |             1 | t
- tenk_aocs5 |   1048576 | zlib         |             6 | t
- tenk_aocs7 |     32768 | zlib         |             6 | t
+ tenk_aocs5 |     32768 | zlib         |             6 | t
+ tenk_aocs6 |   1048576 | zlib         |             6 | t
 (6 rows)
 
 SELECT count(*) FROM tenk_aocs1;
@@ -402,6 +412,10 @@ SELECT count(*) FROM tenk_aocs4;
  10000
 (1 row)
 
+-- INHERITS
+-- This is not supported in aocs and should error out
+CREATE TABLE tenk_inherits_tenk_aocs1() INHERITS (tenk_aocs1);
+ERROR:  cannot inherit relation "tenk_aocs1" as it is column oriented
 -- NYI
 -- test get_ao_compression_ratio. use uncompressed table, so result is always 1.
 -- SELECT get_ao_compression_ratio('tenk_aocs2');
@@ -438,6 +452,40 @@ SELECT count(*) FROM tenk_aocs4;
  10000
 (1 row)
 
+-- LIKE
+-- Should not copy storage options if not specified
+CREATE TABLE tenk_like_nocopy_storage (LIKE tenk_aocs1);
+SELECT count(*) FROM pg_class WHERE relstorage = 'c' AND relname = 'tenk_like_nocopy_storage';
+ count
+-------
+     0
+(1 row)
+
+-- Check tables are truly decoupled
+CREATE TABLE tenk_truly_decoupled (LIKE tenk_aocs4);
+ALTER TABLE tenk_aocs4 DROP COLUMN two;
+SELECT count(two) FROM tenk_truly_decoupled;
+ count
+-------
+     0
+(1 row)
+
+-- DOMAIN
+CREATE DOMAIN aocs_domain_constraint AS VARCHAR
+    DEFAULT 'Default value for varchar.'
+    CONSTRAINT constr1
+    NOT NULL
+    CHECK (length(VALUE) > 16 AND length(VALUE) < 50);
+CREATE TABLE aocs_with_domain_constraint (id integer, vc1 aocs_domain_constraint)
+    WITH (appendonly=true, orientation=column) DISTRIBUTED BY (id);
+-- The following should succeed
+INSERT INTO aocs_with_domain_constraint (id, vc1) VALUES (1, 'Long enough, but not too long.;');
+INSERT INTO aocs_with_domain_constraint (id, vc1) VALUES (2, 'This is purrfect.');
+-- The following should fail
+INSERT INTO aocs_with_domain_constraint (id, vc1) VALUES (3, 'Not long enough.');
+ERROR:  value for domain aocs_domain_constraint violates check constraint "aocs_domain_constraint_check"
+INSERT INTO aocs_with_domain_constraint (id, vc1) VALUES (4, NULL);
+ERROR:  domain aocs_domain_constraint does not allow null values
 -- JOIN
 SELECT count(*) FROM tenk_aocs1 t1, tenk_aocs2 t2 where t1.unique1 = t2.unique2;
  count 
@@ -464,6 +512,12 @@ SELECT unique1 FROM tenk_heap_for_aocs EXCEPT SELECT unique1 FROM tenk_aocs3;
 
 -- TRUNCATE
 TRUNCATE tenk_aocs2;
+SELECT count(*) FROM tenk_aocs2;
+ count
+-------
+     0
+(1 row)
+
 -- OID with aocs NYI
 -- OIDS
 -- 
@@ -566,6 +620,9 @@ select j,i from co where k = 'aaa' or k = 'bbb';
  2 | 11
 (3 rows)
 
+-- Test clustering errors out
+cluster co_j_cluster on co_j;
+ERROR:  "co_j" is an index
 ---------------------
 -- UAO
 ---------------------
@@ -595,22 +652,6 @@ select count(*) from gp_toolkit.__gp_aocsseg_name('tenk_aocs1') where modcount >
     16
 (1 row)
 
--------------------- 
--- unsupported sql 
---------------------
--- ALTER
-ALTER TABLE tenk_aocs1 RENAME TO tenk_renamed;
-ALTER TABLE tenk_renamed ADD COLUMN newcol int default 10;
-ALTER TABLE tenk_renamed ALTER COLUMN twothousand SET NOT NULL;
-ALTER TABLE tenk_renamed ADD COLUMN newcol2 int NOT NULL; -- should fail
-ERROR:  ADD COLUMN with no default value in append-only tables is not yet supported.
-SELECT count(*) FROM tenk_renamed;
- count 
--------
- 9999
-(1 row)
-
-ALTER TABLE tenk_renamed RENAME TO tenk_aocs1;
 --------------------
 -- system columns
 --------------------

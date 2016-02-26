@@ -111,4 +111,7 @@ s/\(cdbdisp\.c:\d+\)//
 m/^NOTICE:.*drop cascades to.*/
 s/^NOTICE:.*drop cascades to.*/^NOTICE: drop cascades to /
 
+# Mask out some numbers (parts of partition names) that vary from run to run.
+m/overlaps existing partition "r\d+"/
+s/overlaps existing partition "r\d+"/partition "r##########"/
 -- end_matchsubs

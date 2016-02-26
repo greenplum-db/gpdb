@@ -68,6 +68,11 @@ alter table atsdb_ao set distributed by (j);
 -- Still AO?
 explain select count(*) from atsdb_ao;
 select count(*) from atsdb_ao;
+-- check alter, vacuum analyze, and then alter
+delete from atsdb_ao where i = any(array(select generate_series(1,90)));
+vacuum analyze atsdb_ao;
+alter table atsdb_ao set distributed randomly;
+select count(*) from atsdb_ao;
 drop table atsdb_ao;
 
 -- Check divergent distribution policies for partitioning.

@@ -1,6 +1,6 @@
 set optimizer_disable_missing_stats_collection = on;
 --
--- This test case covers basic ADD COLUMN functionality for AOCS relations.
+-- This test case covers ALTER functionality for AOCS relations.
 --
 
 --
@@ -257,6 +257,60 @@ alter table addcol8
    drop column c;
 select * from addcol8 order by a;
 \d addcol8
+
+-- try renaming table and see if stuff still works
+alter table addcol1 rename to addcol1_renamed;
+alter table addcol1_renamed add column new_column int default 10;
+alter table addcol1_renamed alter column new_column set not null;
+alter table addcol1_renamed add column new_column2 int not null; -- should fail
+select count(*) from addcol1_renamed;
+alter table addcol1_renamed drop column new_column;
+alter table addcol1_renamed rename to addcol1;
+
+-- try renaming columns and see if stuff still works
+alter table addcol1 rename column f to f_renamed;
+alter table addcol1 alter column f_renamed set default 10;
+insert into addcol1 values (999);
+select a, f_renamed from addcol1 where a = 999;
+
+-- try dropping and adding back the column
+alter table addcol1 drop column f_renamed;
+alter table addcol1 add column f_renamed int default 20;
+select a, f_renamed from addcol1 where a = 999;
+
+-- try altering statistics of a column
+alter table addcol1 alter column f_renamed set statistics 1000;
+select attstattarget from pg_attribute where attrelid = 'aocs_addcol.addcol1'::regclass and attname = 'f_renamed';
+set client_min_messages to error;
+alter table addcol1 alter column f_renamed set statistics 1001; -- should limit to 1000 and give warning
+set client_min_messages to notice;
+select attstattarget from pg_attribute where attrelid = 'aocs_addcol.addcol1'::regclass and attname = 'f_renamed';
+
+-- test alter distribution policy
+alter table addcol1 set distributed randomly;
+alter table addcol1 set distributed by (a);
+
+-- test some constraints (unique indexes do not work for unique and pkey)
+alter table addcol1 add constraint tunique unique(a);
+alter table addcol1 add constraint tpkey primary key(a);
+alter table addcol1 add constraint tcheck check (a is not null);
+
+-- test some aocs partition table altering
+create table alter_aocs_part_table (a int, b int) with (appendonly=true, orientation=column) distributed by (a)
+    partition by range(b) (start (1) end (5) exclusive every (1), default partition foo);
+insert into alter_aocs_part_table values (generate_series(1,10), generate_series(1,10));
+alter table alter_aocs_part_table drop partition for (rank(1));
+alter table alter_aocs_part_table split default partition start(6) inclusive end(7) exclusive;
+alter table alter_aocs_part_table split default partition start(6) inclusive end(8) exclusive;
+alter table alter_aocs_part_table split default partition start(7) inclusive end(8) exclusive;
+select partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive, partitionisdefault
+    from pg_partitions where tablename = 'alter_aocs_part_table';
+create table alter_aocs_ao_table (a int, b int) with (appendonly=true) distributed by (a);
+insert into alter_aocs_ao_table values (2,2);
+alter table alter_aocs_part_table exchange partition for (rank(1)) with table alter_aocs_ao_table;
+create table alter_aocs_heap_table (a int, b int) distributed by (a);
+insert into alter_aocs_heap_table values (3,3);
+alter table alter_aocs_part_table exchange partition for (rank(2)) with table alter_aocs_heap_table;
 
 -- cleanup so as not to affect other installcheck tests
 -- (e.g. column_compression).
