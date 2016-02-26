@@ -1147,6 +1147,16 @@ if test "$enable_snmp" = yes ; then
 	AC_CHECK_LIB(netsnmp,  netsnmp_ds_set_string,  [], [AC_MSG_ERROR([library 'netsnmp' is required for snmp support])])
 fi
 
+# Check for EMC Connect
+if test "$enable_connectemc" = yes ; then
+  AC_CHECK_LIB(emcconnect, main, [], [AC_MSG_ERROR([library 'emcconnect' is required for Connect EMC support])])
+fi
+
+# Check for DD Boost
+if test "$enable_ddboost" = yes ; then
+  AC_CHECK_LIB(DDBoost, main, [], [AC_MSG_ERROR([library 'DDBoost' is required for DD Boost support])])
+fi
+
 ##
 ## Header files
 ##
