@@ -6545,16 +6545,6 @@ StartupXLOG(void)
 	else if (ControlFile->state != DB_SHUTDOWNED)
 		InRecovery = true;
 
-	/*
-	 * We need to create the pg_distributedlog directory if we are
-	 * upgrading from before 3.1.1.4 patch.
-	 *
-	 * Force a recovery to replay into the distributed log the
-	 * recent distributed transaction commits.
-	 */
-	if (DistributedLog_UpgradeCheck(InRecovery))
-		InRecovery = true;
-
 	if (InRecovery && !IsUnderPostmaster)
 	{
 		ereport(FATAL,

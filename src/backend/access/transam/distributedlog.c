@@ -56,12 +56,6 @@ static SlruCtlData DistributedLogCtlData;
  */
 #define DISTRIBUTEDLOG_DIR "pg_distributedlog"
 
-/*
- * Used while in the Startup process to see if we created the
- * pg_distributedlog directory and need to ignore missing pages...
- */
-static bool DistributedLogUpgrade = false;
-
 typedef struct DistributedLogShmem
 {
 	TransactionId	oldestXid;
@@ -102,7 +96,7 @@ DistributedLog_SetCommitted(
 	
 	LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
 
-	if (isRedo || DistributedLogUpgrade)
+	if (isRedo)
 	{
 		elog((Debug_print_full_dtm ? LOG : DEBUG5),
 			 "DistributedLog_SetCommitted check if page %d is present", 
@@ -459,51 +453,6 @@ DistributedLog_ZeroPage(int page, bool writeXlog)
 
 /*
  * This must be called ONCE during postmaster or standalone-backend startup,
- * before recovery is performed.  We look to see if this is the first
- * time we have started after being an earlier version.  We detect this
- * by looking for the pg_distributedlog directory.
- */
-bool
-DistributedLog_UpgradeCheck(bool inRecovery)
-{
-	char		path[MAXPGPATH];
-	DIR		   *dir;
-	char		*distributedLogDir = makeRelativeToTxnFilespace(DISTRIBUTEDLOG_DIR);
-	
-	if (snprintf(path, MAXPGPATH, "%s", distributedLogDir) > MAXPGPATH)
-	{
-		ereport(ERROR, (errmsg("cannot form path: %s", distributedLogDir)));		
-	}
-	pfree(distributedLogDir);
-	
-	dir = opendir(path);
-	if (dir == NULL)
-	{
-		if (errno != ENOENT)
-			elog(ERROR, "Could not open directory \"%s\": %m", path);
-
-		if (inRecovery)
-			elog(ERROR, 
-			     "The directory \"%s\" is missing indicating we are upgrading to 3.1.1.5, but the system was not cleanly shutdown",
-			     path);
-
-		if (mkdir(path, S_IRWXU | S_IRWXG | S_IRWXO) < 0)
-			elog(ERROR,"Could not create directory \"%s\": %m\n",
-				 path);
-
-		DistributedLogUpgrade = true;
-
-		elog(LOG,"Created the directory \"%s\" for upgrade", path);
-		
-		return true;
-	}
-
-	return false;
-}
-
-
-/*
- * This must be called ONCE during postmaster or standalone-backend startup,
  * after StartupXLOG has initialized ShmemVariableCache->nextXid.
  */
 void
@@ -527,24 +476,6 @@ DistributedLog_Startup(
 	MIRRORED_LOCK;
 
 	LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
-
-	if (DistributedLogUpgrade)
-	{
-		int	existsPage;
-
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-			 "DistributedLog_Startup oldest active xid = %u and next xid = %u (page range is %d through %d)",
-			 oldestActiveXid, nextXid, startPage, endPage);
-		
-		for (existsPage = startPage; existsPage <= endPage; existsPage++)
-		{
-			if (!SimpleLruPageExists(DistributedLogCtl, existsPage))
-			{
-				DistributedLog_ZeroPage(existsPage, /* writeXLog */ false);
-				elog(LOG,"DistributedLog_Startup zeroed page %d", existsPage);
-			}
-		}
-	}
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),
 		 "DistributedLog_Startup startPage %d, endPage %d", 
