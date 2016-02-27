@@ -294,24 +294,6 @@ perl_privlibexp		= @perl_privlibexp@
 perl_useshrplib		= @perl_useshrplib@
 perl_embed_ldflags	= @perl_embed_ldflags@
 
-# Java
-ifneq (@JAVA@,)
-    # quoted to protect pathname with spaces
-	JAVA        = "@JAVA@"
-	JAVAC       = "@JAVAC@"
-	JAVAH       = "@JAVAH@"
-	JAR         = "@JAR@"
-	JAVADOC     = "@JAVADOC@"
-	JAVA_HOME   = @JAVA_HOME@
-	JAVAC_FLAGS = @JAVAC_FLAGS@
-else
-	JAVA        = $(missing) java
-	JAVAC       = $(missing) javac
-	JAVAH       = $(missing) javah
-	JAR         = $(missing) jar
-	JAVADOC     = $(missing) javadoc
-endif
-
 # Miscellaneous
 
 AWK	= @AWK@
@@ -371,7 +353,9 @@ endif
 # Feature settings
 
 DEF_PGPORT = @default_port@
-WANTED_LANGUAGES = @WANTED_LANGUAGES@
+# NLS is not supported in Greenplum, see comment documenting
+# this in configure.in
+# WANTED_LANGUAGES = @WANTED_LANGUAGES@
 
 
 
