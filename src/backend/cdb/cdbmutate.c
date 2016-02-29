@@ -461,6 +461,13 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 
                     Insist(focusPlan(plan, true, false));
                 }
+                else if (plan->flow->numOrderbyCols > 0 && plan->flow->numSortCols > 0)
+                {
+                    if (plan->flow->numSortCols > plan->flow->numOrderbyCols)
+                        plan->flow->numSortCols = plan->flow->numOrderbyCols;
+
+                    Insist(focusPlan(plan, true, false));
+                }
 
                 /* Use UNION RECEIVE.  Does not preserve ordering. */
                 else
@@ -963,7 +970,7 @@ apply_motion_mutator(Node *node, ApplyMotionState * context)
                                                            flow->numSortCols,
                                                            flow->sortColIdx,
                                                            flow->sortOperators,
-														   flow->nullsFirst,
+                                                           flow->nullsFirst,
                                                            true /* useExecutorVarFormat */);
             }
             else

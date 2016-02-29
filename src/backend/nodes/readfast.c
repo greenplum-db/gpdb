@@ -2153,6 +2153,8 @@ _readFlow(void)
 	READ_OID_ARRAY(sortOperators, local_node->numSortCols);
 	READ_BOOL_ARRAY(nullsFirst, local_node->numSortCols);
 
+	READ_INT_FIELD(numOrderbyCols);
+
 	READ_NODE_FIELD(hashExpr);
 	READ_NODE_FIELD(flow_before_req_move);
 

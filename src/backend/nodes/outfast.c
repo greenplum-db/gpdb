@@ -655,6 +655,8 @@ _outFlow(StringInfo str, Flow *node)
 	WRITE_OID_ARRAY(sortOperators, node->numSortCols);
 	WRITE_BOOL_ARRAY(nullsFirst, node->numSortCols);
 
+	WRITE_INT_FIELD(numOrderbyCols);
+
 	WRITE_NODE_FIELD(hashExpr);
 
 	WRITE_NODE_FIELD(flow_before_req_move);

@@ -1711,6 +1711,7 @@ _outFlow(StringInfo str, Flow *node)
 				appendStringInfo(str, " %u", node->sortOperators[i]);
 		}
 	}
+	WRITE_INT_FIELD(numOrderbyCols);
 
 	WRITE_NODE_FIELD(hashExpr);
 
