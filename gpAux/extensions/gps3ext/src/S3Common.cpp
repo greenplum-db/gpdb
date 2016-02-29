@@ -235,6 +235,7 @@ uint64_t ParserCallback(void *contents, uint64_t size, uint64_t nmemb,
     return realsize;
 }
 
+// invoked by s3_import(), need to be exception safe
 char *get_opt_s3(const char *url, const char *key) {
     const char *key_f = NULL;
     const char *key_tailing = NULL;
@@ -303,6 +304,7 @@ FAIL:
 }
 
 // returned memory needs to be freed
+// invoked by s3_import(), need to be exception safe
 char *truncate_options(const char *url_with_options) {
     const char *delimiter = " ";
     char *options = strstr((char *)url_with_options, delimiter);

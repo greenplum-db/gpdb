@@ -1,6 +1,10 @@
 #ifndef _GPS3EXT_H_
 #define _GPS3EXT_H_
 #include <string>
+#include <signal.h>
+
+// GPDB's global val
+extern volatile bool QueryCancelPending;
 
 // TODO include GpId from proper place
 typedef int32_t int32;

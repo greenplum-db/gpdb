@@ -14,6 +14,9 @@ class S3ExtBase {
     virtual bool Init(int segid, int segnum, int chunksize) = 0;
     virtual bool TransferData(char* data, uint64_t& len) = 0;
     virtual bool Destroy() = 0;
+    virtual bool ValidateURL();
+
+    string get_region() { return this->region; }
 
    protected:
     S3Credential cred;
@@ -29,8 +32,6 @@ class S3ExtBase {
 
     int concurrent_num;
     int chunksize;
-
-    virtual bool ValidateURL();
 };
 
 class S3Reader : public S3ExtBase {

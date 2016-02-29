@@ -89,8 +89,13 @@ void LogMessage(LOGLEVEL loglevel, const char* fmt, ...) {
 }
 
 static bool loginited = false;
+
+// invoked by s3_import(), need to be exception safe
 void InitLog() {
-    if (!loginited) {
+    try {
+        if (loginited) {
+            return;
+        }
         s3ext_logsock_local = socket(PF_UNIX, SOCK_DGRAM, 0);
         if (s3ext_logsock_local < 0) {
             perror("Failed to create socket while InitLog()");
@@ -113,6 +118,8 @@ void InitLog() {
         inet_aton(s3ext_logserverhost.c_str(), &s3ext_logserveraddr.sin_addr);
 
         loginited = true;
+    } catch (...) {
+        return;
     }
 }
 
