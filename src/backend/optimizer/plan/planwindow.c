@@ -93,7 +93,7 @@ typedef struct WindowInfo
 	bool	needauxcount;
 	
 	AttrNumber *partkey_attrs;
-	Oid		   *partkey_operators;
+	Oid		   *partkey_operators;		/* array of equality operators */
 	List	   *key_list;
 	
 	/* coplan assembly */
@@ -3283,17 +3283,11 @@ static RangeTblEntry *rte_for_coplan(
 			/* TODO Fix this cheesy estimate. */
 			double d = new_plan->plan_rows / 100.0;
 			long num_groups = (d < 0)? 0: ( d > LONG_MAX )? LONG_MAX: (long)d;
-			int			i;
-			Oid		   *eqOperators;
-
-			eqOperators = (Oid *) palloc(winfo->partkey_len * sizeof(Oid));
-			for (i = 0; i < winfo->partkey_len; i++)
-				eqOperators[i] = get_equality_op_for_ordering_op(winfo->partkey_operators[i]);
 
 			new_plan = (Plan*)
 				make_agg(root, coplan->targetlist, NULL,
 						 AGG_SORTED, false,
-						 winfo->partkey_len, winfo->partkey_attrs, eqOperators,
+						 winfo->partkey_len, winfo->partkey_attrs, winfo->partkey_operators,
 						 num_groups,
 						 0, /* num_nullcols */
 						 0, /* input_grouping */
