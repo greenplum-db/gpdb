@@ -550,3 +550,21 @@ SELECT p.id
               SELECT 1
               UNION ALL
               SELECT 0)) p;
+
+--
+-- Verify another bug in the IN-clause pull-up code. This returned some
+-- rows from xsupplier twice, because of a bug in detecting whether a
+-- Redistribute node was needed.
+--
+CREATE TABLE xlineitem (l_orderkey int4, l_suppkey int4) distributed by (l_orderkey);
+insert into xlineitem select g+3, g from generate_series(10,100) g;
+insert into xlineitem select g+1, g from generate_series(10,100) g;
+insert into xlineitem select g, g from generate_series(10,100) g;
+
+CREATE TABLE xsupplier (s_suppkey int4, s_name text) distributed by (s_suppkey);
+insert into xsupplier select g, 'foo' || g from generate_series(1,10) g;
+
+select s_name from xsupplier
+where s_suppkey in (
+  select g.l_suppkey from xlineitem g
+) ;

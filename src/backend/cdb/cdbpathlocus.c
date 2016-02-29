@@ -903,8 +903,8 @@ cdbpathlocus_is_hashed_on_relids(CdbPathLocus locus, Bitmapset *relids)
 					break;
 				}
             }
-			if (found)
-				break;
+			if (!found)
+				return false;
         }
 		/* Every column of the partkey contains a Var whose varno is in relids. */
 		return true;
