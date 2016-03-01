@@ -9,9 +9,14 @@
 using std::stringstream;
 using std::string;
 
+// invoked by s3_import(), need to be exception safe
 S3ExtBase *CreateExtWrapper(const char *url) {
-    S3ExtBase *ret = new S3Reader(url);
-    return ret;
+    try {
+        S3ExtBase *ret = new S3Reader(url);
+        return ret;
+    } catch (...) {
+        return NULL;
+    }
 }
 
 S3ExtBase::S3ExtBase(string url) {
@@ -41,55 +46,62 @@ S3Reader::S3Reader(string url) : S3ExtBase(url) {
     this->keylist = NULL;
 }
 
+// invoked by s3_import(), need to be exception safe
 bool S3Reader::Init(int segid, int segnum, int chunksize) {
-    // set segment id and num
-    this->segid = s3ext_segid;
-    this->segnum = s3ext_segnum;
-    this->contentindex = this->segid;
+    try {
+        // set segment id and num
+        this->segid = s3ext_segid;
+        this->segnum = s3ext_segnum;
+        this->contentindex = this->segid;
 
-    this->chunksize = chunksize;
+        this->chunksize = chunksize;
 
-    // Validate url first
-    if (!this->ValidateURL()) {
-        S3ERROR("The given URL(%s) is invalid", this->url.c_str());
+        // Validate url first
+        if (!this->ValidateURL()) {
+            S3ERROR("The given URL(%s) is invalid", this->url.c_str());
+            return false;
+        }
+
+        // TODO: As separated function for generating url
+        stringstream sstr;
+        sstr << "s3-" << this->region << ".amazonaws.com";
+        S3DEBUG("Host url is %s", sstr.str().c_str());
+        int initretry = 3;
+        while (initretry--) {
+            this->keylist = ListBucket(this->schema.c_str(), sstr.str().c_str(),
+                                       this->bucket.c_str(),
+                                       this->prefix.c_str(), this->cred);
+
+            if (!this->keylist) {
+                S3INFO("Can't get keylist from bucket %s",
+                       this->bucket.c_str());
+                if (initretry) {
+                    S3INFO("Retrying");
+                    continue;
+                } else {
+                    S3ERROR(
+                        "Quit initialization because ListBucket keeps failing");
+                    return false;
+                }
+            }
+
+            if (this->keylist->contents.size() == 0) {
+                S3INFO("Keylist of bucket is empty");
+                if (initretry) {
+                    S3INFO("Retry listing bucket");
+                    continue;
+                } else {
+                    S3ERROR("Quit initialization because keylist is empty");
+                    return false;
+                }
+            }
+            break;
+        }
+        S3INFO("Got %d files to download", this->keylist->contents.size());
+        this->getNextDownloader();
+    } catch (...) {
         return false;
     }
-
-    // TODO: As separated function for generating url
-    stringstream sstr;
-    sstr << "s3-" << this->region << ".amazonaws.com";
-    S3DEBUG("Host url is %s", sstr.str().c_str());
-    int initretry = 3;
-    while (initretry--) {
-        this->keylist =
-            ListBucket(this->schema.c_str(), sstr.str().c_str(),
-                       this->bucket.c_str(), this->prefix.c_str(), this->cred);
-
-        if (!this->keylist) {
-            S3INFO("Can't get keylist from bucket %s", this->bucket.c_str());
-            if (initretry) {
-                S3INFO("Retrying");
-                continue;
-            } else {
-                S3ERROR("Quit initialization because ListBucket keeps failing");
-                return false;
-            }
-        }
-
-        if (this->keylist->contents.size() == 0) {
-            S3INFO("Keylist of bucket is empty");
-            if (initretry) {
-                S3INFO("Retry listing bucket");
-                continue;
-            } else {
-                S3ERROR("Quit initialization because keylist is empty");
-                return false;
-            }
-        }
-        break;
-    }
-    S3INFO("Got %d files to download", this->keylist->contents.size());
-    this->getNextDownloader();
 
     // return this->filedownloader ? true : false;
     return true;
@@ -116,9 +128,8 @@ void S3Reader::getNextDownloader() {
     string keyurl = this->getKeyURL(c->Key());
     S3DEBUG("key: %s, size: %llu", keyurl.c_str(), c->Size());
 
-    // XXX don't use strdup()
-    if (!filedownloader->init(keyurl.c_str(), c->Size(),
-                              this->chunksize, &this->cred)) {
+    if (!filedownloader->init(keyurl, c->Size(), this->chunksize,
+                              &this->cred)) {
         delete this->filedownloader;
         this->filedownloader = NULL;
     } else {  // move to next file
@@ -137,50 +148,66 @@ string S3Reader::getKeyURL(const string key) {
     return sstr.str();
 }
 
+// invoked by s3_import(), need to be exception safe
 bool S3Reader::TransferData(char *data, uint64_t &len) {
-    if (!this->filedownloader) {
-        S3INFO("No files to download, exit");
-        // not initialized?
-        len = 0;
-        return true;
-    }
-    uint64_t buflen;
-RETRY:
-    buflen = len;
-    // S3DEBUG("getlen is %d", len);
-    bool result = filedownloader->get(data, buflen);
-    if (!result) {  // read fail
-        S3ERROR("Failed to get data from filedownloader");
+    try {
+        if (!this->filedownloader) {
+            S3INFO("No files to download, exit");
+            // not initialized?
+            len = 0;
+            return true;
+        }
+        uint64_t buflen;
+    RETRY:
+        buflen = len;
+        // S3DEBUG("getlen is %d", len);
+        bool result = filedownloader->get(data, buflen);
+        if (!result) {  // read fail
+            S3ERROR("Failed to get data from filedownloader");
+            return false;
+        }
+        // S3DEBUG("getlen is %lld", buflen);
+        if (buflen == 0) {
+            // change to next downloader
+            this->getNextDownloader();
+            if (this->filedownloader) {  // download next file
+                S3INFO("Time to download new file");
+                goto RETRY;
+            }
+        }
+        len = buflen;
+    } catch (...) {
         return false;
     }
-    // S3DEBUG("getlen is %lld", buflen);
-    if (buflen == 0) {
-        // change to next downloader
-        this->getNextDownloader();
-        if (this->filedownloader) {  // download next file
-            S3INFO("Time to download new file");
-            goto RETRY;
-        }
-    }
-    len = buflen;
+
     return true;
 }
 
+// invoked by s3_import(), need to be exception safe
 bool S3Reader::Destroy() {
-    // reset filedownloader
-    if (this->filedownloader) {
-        this->filedownloader->destroy();
-        delete this->filedownloader;
+    try {
+        // reset filedownloader
+        if (this->filedownloader) {
+            this->filedownloader->destroy();
+            delete this->filedownloader;
+        }
+
+        // Free keylist
+        if (this->keylist) {
+            delete this->keylist;
+        }
+    } catch (...) {
+        return false;
     }
 
-    // Free keylist
-    if (this->keylist) {
-        delete this->keylist;
-    }
     return true;
 }
 
 bool S3ExtBase::ValidateURL() {
+    // TODO http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
+    // s3.eu-central-1.amazonaws.com -> s3-eu-central-1.amazonaws.com
+    // s3.ap-northeast-2.amazonaws.com -> s3-ap-northeast-2.amazonaws.com
+
     const char *awsdomain = ".amazonaws.com";
     int ibegin = 0;
     int iend = url.find("://");
@@ -199,10 +226,18 @@ bool S3ExtBase::ValidateURL() {
 
     ibegin = url.find("-");
     iend = url.find(awsdomain);
-    if ((iend == string::npos) || (ibegin == string::npos)) {
+
+    if (iend == string::npos) {
         return false;
+    } else if (ibegin == string::npos) {
+        this->region = "external-1";
+    } else {
+        this->region = url.substr(ibegin + 1, iend - ibegin - 1);
     }
-    this->region = url.substr(ibegin + 1, iend - ibegin - 1);
+
+    if (this->region.compare("us-east-1") == 0) {
+        this->region = "external-1";
+    }
 
     ibegin = find_Nth(url, 3, "/");
     iend = find_Nth(url, 4, "/");

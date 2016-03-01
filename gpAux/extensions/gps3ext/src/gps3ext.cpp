@@ -20,6 +20,7 @@
 #include "gps3ext.h"
 #include "gps3conf.h"
 
+#include <signal.h>
 #include <pthread.h>
 #include <openssl/err.h>
 
@@ -36,55 +37,44 @@ Datum s3_import(PG_FUNCTION_ARGS);
 Datum s3_validate_urls(PG_FUNCTION_ARGS);
 }
 
-#define MUTEX_TYPE       pthread_mutex_t
-#define MUTEX_SETUP(x)   pthread_mutex_init(&(x), NULL)
+#define MUTEX_TYPE pthread_mutex_t
+#define MUTEX_SETUP(x) pthread_mutex_init(&(x), NULL)
 #define MUTEX_CLEANUP(x) pthread_mutex_destroy(&(x))
-#define MUTEX_LOCK(x)    pthread_mutex_lock(&(x))
-#define MUTEX_UNLOCK(x)  pthread_mutex_unlock(&(x))
-#define THREAD_ID        pthread_self(  )
- 
- 
-/* This array will store all of the mutexes available to OpenSSL. */ 
-static MUTEX_TYPE *mutex_buf= NULL;
- 
- 
-static void locking_function(int mode, int n, const char * file, int line)
-{
+#define MUTEX_LOCK(x) pthread_mutex_lock(&(x))
+#define MUTEX_UNLOCK(x) pthread_mutex_unlock(&(x))
+#define THREAD_ID pthread_self()
+
+/* This array will store all of the mutexes available to OpenSSL. */
+static MUTEX_TYPE *mutex_buf = NULL;
+
+static void locking_function(int mode, int n, const char *file, int line) {
     if (mode & CRYPTO_LOCK)
         MUTEX_LOCK(mutex_buf[n]);
     else
         MUTEX_UNLOCK(mutex_buf[n]);
 }
- 
-static unsigned long id_function(void)
-{
-    return ((unsigned long)THREAD_ID);
-}
 
-int thread_setup(void)
-{
+static unsigned long id_function(void) { return ((unsigned long)THREAD_ID); }
+
+int thread_setup(void) {
     int i;
- 
-    mutex_buf = (pthread_mutex_t*)palloc(CRYPTO_num_locks() * sizeof(MUTEX_TYPE));
-    if (!mutex_buf)
-        return 0;
-    for (i = 0;  i < CRYPTO_num_locks(  );  i++)
-        MUTEX_SETUP(mutex_buf[i]);
+
+    mutex_buf =
+        (pthread_mutex_t *)palloc(CRYPTO_num_locks() * sizeof(MUTEX_TYPE));
+    if (!mutex_buf) return 0;
+    for (i = 0; i < CRYPTO_num_locks(); i++) MUTEX_SETUP(mutex_buf[i]);
     CRYPTO_set_id_callback(id_function);
     CRYPTO_set_locking_callback(locking_function);
     return 1;
 }
- 
-int thread_cleanup(void)
-{
+
+int thread_cleanup(void) {
     int i;
- 
-    if (!mutex_buf)
-        return 0;
+
+    if (!mutex_buf) return 0;
     CRYPTO_set_id_callback(NULL);
     CRYPTO_set_locking_callback(NULL);
-    for (i = 0;  i < CRYPTO_num_locks(  );  i++)
-        MUTEX_CLEANUP(mutex_buf[i]);
+    for (i = 0; i < CRYPTO_num_locks(); i++) MUTEX_CLEANUP(mutex_buf[i]);
     pfree(mutex_buf);
     mutex_buf = NULL;
     return 1;
@@ -92,6 +82,7 @@ int thread_cleanup(void)
 
 /*
  * Import data into GPDB.
+ * invoked by GPDB, be careful with C++ exceptions.
  */
 Datum s3_import(PG_FUNCTION_ARGS) {
     S3ExtBase *myData;
@@ -111,7 +102,7 @@ Datum s3_import(PG_FUNCTION_ARGS) {
         if (myData) {
             thread_cleanup();
             if (!myData->Destroy()) {
-                ereport(ERROR, (0, errmsg("Cleanup S3 extention failed")));
+                ereport(ERROR, (0, errmsg("Failed to cleanup S3 extention")));
             }
             delete myData;
         }
@@ -122,6 +113,7 @@ Datum s3_import(PG_FUNCTION_ARGS) {
         /* first call. do any desired init */
         curl_global_init(CURL_GLOBAL_ALL);
         thread_setup();
+
         const char *p_name = "s3";
         char *url_with_options = EXTPROTOCOL_GET_URL(fcinfo);
         char *url = truncate_options(url_with_options);
@@ -135,9 +127,8 @@ Datum s3_import(PG_FUNCTION_ARGS) {
 
         bool result = InitConfig(config_path, "");
         if (!result) {
-            ereport(ERROR,
-                    (0, errmsg("Can't find config file %s", config_path)));
             free(config_path);
+            ereport(ERROR, (0, errmsg("Can't find config file, please check")));
         } else {
             ClearConfig();
             free(config_path);
@@ -202,6 +193,7 @@ Datum s3_import(PG_FUNCTION_ARGS) {
 
 /*
  * Export data out of GPDB.
+ * invoked by GPDB, be careful with C++ exceptions.
  */
 Datum s3_export(PG_FUNCTION_ARGS) { PG_RETURN_INT32(0); }
 

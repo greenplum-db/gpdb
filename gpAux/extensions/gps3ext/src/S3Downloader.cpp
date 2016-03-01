@@ -7,6 +7,7 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
+#include "gps3ext.h"
 #include "utils.h"
 #include "S3Log.h"
 #include <curl/curl.h>
@@ -184,6 +185,11 @@ void *DownloadThreadfunc(void *data) {
     uint64_t filled_size = 0;
     S3INFO("Downloading thread starts");
     do {
+        if (QueryCancelPending) {
+            S3INFO("Downloading thread is interrupted by GPDB");
+            return NULL;
+        }
+
         filled_size = buffer->Fill();
         // XXX fix the returning type
         if (filled_size == -1) {
@@ -303,6 +309,10 @@ static uint64_t WriterCallback(void *contents, uint64_t size, uint64_t nmemb,
     uint64_t realsize = size * nmemb;
     Bufinfo *p = reinterpret_cast<Bufinfo *>(userp);
 
+    if (QueryCancelPending) {
+        return -1;
+    }
+
     memcpy(p->buf + p->len, contents, realsize);
     p->len += realsize;
     return realsize;
@@ -390,6 +400,12 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
 
         CURLcode res = curl_easy_perform(curl_handle);
+
+        if (res == CURLE_WRITE_ERROR) {
+            S3INFO("Curl downloading is interrupted by GPDB");
+            bi.len = -1;
+            break;
+        }
 
         if (res == CURLE_OPERATION_TIMEDOUT) {
             S3WARN("Net speed is too slow, retry");

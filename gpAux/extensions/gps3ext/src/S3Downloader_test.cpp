@@ -1,6 +1,8 @@
 #include "gtest/gtest.h"
 #include "S3Downloader.cpp"
 
+volatile bool QueryCancelPending = false;
+
 TEST(OffsetMgr, simple) {
     OffsetMgr *o = new OffsetMgr(4096, 1000);
     Range r = o->NextOffset();
