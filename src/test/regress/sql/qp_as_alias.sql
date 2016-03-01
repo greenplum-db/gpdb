@@ -1,5 +1,6 @@
 -- start_ignore
 create schema qp_as_alias;
+set search_path = qp_as_alias;
 -- end_ignore
 
 create table xyz ("B B" int, "C" int, "D+1" int) DISTRIBUTED RANDOMLY;
