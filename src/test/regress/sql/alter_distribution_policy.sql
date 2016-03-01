@@ -58,7 +58,7 @@ select * from atsdb where i = 1;
 drop table atsdb;
 
 -- Now try AO
-create table atsdb_ao (i int, j text) distributed by (i);
+create table atsdb_ao (i int, j text) with (appendonly=true) distributed by (i);
 insert into atsdb_ao select i, (i+1)::text from generate_series(1, 100) i;
 insert into atsdb_ao select i, (i+1)::text from generate_series(1, 100) i;
 -- check that we're an AO table
