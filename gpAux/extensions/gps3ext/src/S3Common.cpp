@@ -18,7 +18,7 @@ using std::stringstream;
 
 bool SignGETv2(HeaderContent *h, string path_with_query,
                const S3Credential &cred) {
-    char timestr[64];
+    char timestr[65];
     char tmpbuf[20];  // SHA_DIGEST_LENGTH is 20
 
     // CONTENT_LENGTH is not a part of StringToSign
@@ -44,10 +44,9 @@ bool SignGETv2(HeaderContent *h, string path_with_query,
     return true;
 }
 
-#if 0
 bool SignPUTv2(HeaderContent *h, string path_with_query,
                const S3Credential &cred) {
-    char timestr[64];
+    char timestr[65];
     char tmpbuf[20];  // SHA_DIGEST_LENGTH is 20
     string typestr;
 
@@ -71,9 +70,9 @@ bool SignPUTv2(HeaderContent *h, string path_with_query,
     return true;
 }
 
-bool SignPOSTv2(HeaderContent *h, const char *path_with_query,
+bool SignPOSTv2(HeaderContent *h, string path_with_query,
                 const S3Credential &cred) {
-    char timestr[64];
+    char timestr[65];
     char tmpbuf[20];  // SHA_DIGEST_LENGTH is 20
     // string md5str;
 
@@ -104,7 +103,6 @@ bool SignPOSTv2(HeaderContent *h, const char *path_with_query,
 
     return true;
 }
-#endif
 
 const char *GetFieldString(HeaderField f) {
     switch (f) {
@@ -139,7 +137,7 @@ bool HeaderContent::Add(HeaderField f, const std::string &v) {
         return false;
     }
 }
-/*
+
 const char *HeaderContent::Get(HeaderField f) {
     const char *ret = NULL;
     if (!this->fields[f].empty()) {
@@ -147,7 +145,7 @@ const char *HeaderContent::Get(HeaderField f) {
     }
     return ret;
 }
-*/
+
 struct curl_slist *HeaderContent::GetList() {
     struct curl_slist *chunk = NULL;
     std::map<HeaderField, std::string>::iterator it;
@@ -219,20 +217,22 @@ char *UrlParser::extract_field(const struct http_parser_url *u,
     return ret;
 }
 
+// return the number of items
 uint64_t ParserCallback(void *contents, uint64_t size, uint64_t nmemb,
                         void *userp) {
     uint64_t realsize = size * nmemb;
-    int res;
-    // printf("%.*s",realsize, (char*)contents);
     struct XMLInfo *pxml = (struct XMLInfo *)userp;
+
+    // printf("%.*s",realsize, (char*)contents);
+
     if (!pxml->ctxt) {
         pxml->ctxt = xmlCreatePushParserCtxt(NULL, NULL, (const char *)contents,
                                              realsize, "resp.xml");
-        return realsize;
     } else {
-        res = xmlParseChunk(pxml->ctxt, (const char *)contents, realsize, 0);
+        xmlParseChunk(pxml->ctxt, (const char *)contents, realsize, 0);
     }
-    return realsize;
+
+    return nmemb;
 }
 
 // invoked by s3_import(), need to be exception safe
@@ -315,8 +315,10 @@ char *truncate_options(const char *url_with_options) {
     }
 
     char *url = (char *)malloc(url_len + 1);
-    memcpy(url, url_with_options, url_len);
-    url[url_len] = 0;
+    if (url) {
+        memcpy(url, url_with_options, url_len);
+        url[url_len] = 0;
+    }
 
     return url;
 }

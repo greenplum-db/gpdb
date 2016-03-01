@@ -304,6 +304,7 @@ Downloader::~Downloader() {
     if (this->buffers) free(this->buffers);
 }
 
+// return the number of items
 static uint64_t WriterCallback(void *contents, uint64_t size, uint64_t nmemb,
                                void *userp) {
     uint64_t realsize = size * nmemb;
@@ -315,7 +316,8 @@ static uint64_t WriterCallback(void *contents, uint64_t size, uint64_t nmemb,
 
     memcpy(p->buf + p->len, contents, realsize);
     p->len += realsize;
-    return realsize;
+
+    return nmemb;
 }
 
 HTTPFetcher::HTTPFetcher(string url, OffsetMgr *o)

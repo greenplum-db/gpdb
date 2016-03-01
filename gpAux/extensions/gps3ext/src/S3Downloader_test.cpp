@@ -40,6 +40,7 @@ TEST(OffsetMgr, reset) {
     delete o;
 }
 
+#ifdef FAKETEST
 #define HOSTSTR "localhost"
 #define BUCKETSTR "metro.pivotal.io"
 TEST(ListBucket, fake) {
@@ -58,6 +59,7 @@ TEST(ListBucket, fake) {
     }
     delete r;
 }
+#endif  // FAKETEST
 
 #define S3HOST "s3-us-west-2.amazonaws.com"
 #define S3BUCKET "s3test.pivotal.io"
@@ -126,20 +128,12 @@ void DownloadTest(const char *url, uint64_t file_size, const char *md5_str,
     free(buf);
 }
 
+#ifdef FAKETEST
 void HTTPDownloaderTest(const char *url, uint64_t file_size,
                         const char *md5_str, uint8_t thread_num,
                         uint64_t chunk_size, uint64_t buffer_size) {
     return DownloadTest(url, file_size, md5_str, thread_num, chunk_size,
                         buffer_size, false);
-}
-
-void S3DwonloadTest(const char *url, uint64_t file_size, const char *md5_str,
-                    uint8_t thread_num, uint64_t chunk_size,
-                    uint64_t buffer_size) {
-    InitConfig("test/s3.conf", "default");
-
-    return DownloadTest(url, file_size, md5_str, thread_num, chunk_size,
-                        buffer_size, true);
 }
 
 TEST(HTTPDownloader, divisible) {
@@ -206,8 +200,18 @@ TEST(HTTPDownloader, random_parameters_256M) {
                        "9cb7c287fdd5a44378798d3e75d2d2a6", 3, 1 * 10523,
                        77 * 879);
 }
+#endif  // FAKETEST
 
 #ifdef AWSTEST
+void S3DwonloadTest(const char *url, uint64_t file_size, const char *md5_str,
+                    uint8_t thread_num, uint64_t chunk_size,
+                    uint64_t buffer_size) {
+    InitConfig("test/s3.conf", "default");
+
+    return DownloadTest(url, file_size, md5_str, thread_num, chunk_size,
+                        buffer_size, true);
+}
+
 TEST(S3Downloader, simple) {
     printf("Try downloading data0014\n");
     S3DwonloadTest(

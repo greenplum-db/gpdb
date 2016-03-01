@@ -151,7 +151,6 @@ TEST(ExtWrapper, ValidateURL_useast1) {
 }
 
 #ifdef AWSTEST
-
 TEST(ExtWrapper, normal_region_default) {
     ExtWrapperTest(
         "https://s3.amazonaws.com/useast1.s3test.pivotal.io/small17/",
@@ -234,9 +233,9 @@ TEST(ExtWrapper, normal2_3segs) {
         "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset2/normal/",
         64 * 1024, "00675684b6d6697571f22baaf407c6df", 2, 3, 64 * 1024 * 1024);
 }
-
 #endif  // AWSTEST
 
+#ifdef FAKETEST
 TEST(FakeExtWrapper, simple) {
     ExtWrapperTest("http://localhost/metro.pivotal.io/", 64 * 1024,
                    "138fc555074671912125ba692c678246", 0, 1, 64 * 1024 * 1024);
@@ -273,3 +272,4 @@ TEST(FakeExtWrapper, bigfile) {
     ExtWrapperTest("http://localhost/bigfile/", 64 * 1024,
                    "83c7ab787e3f1d1e7880dcae954ab4a4", 0, 1, 64 * 1024 * 1024);
 }
+#endif  // FAKETEST

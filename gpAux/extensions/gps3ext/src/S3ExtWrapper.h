@@ -2,7 +2,7 @@
 #define __S3_EXT_WRAPPER__
 
 #include "S3Downloader.h"
-// #include "S3Uploader.h"
+#include "S3Uploader.h"
 #include <string>
 
 using std::string;

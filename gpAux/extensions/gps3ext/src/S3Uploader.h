@@ -8,14 +8,13 @@
 #include <pthread.h>
 
 #include <iostream>
-#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
 
 #include <cstddef>
 #include <cstdlib>
-#include <cstdint>
+// #include <cstdint>
 #include <cstring>
 
 using std::vector;

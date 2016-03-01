@@ -1,5 +1,5 @@
 CPP = g++
-CFLAGS = -g3 -std=c++98 -fPIC -fprofile-arcs -ftest-coverage -DDEBUGS3 -DAWSTEST
+CFLAGS = -g3 -std=c++98 -fPIC -fprofile-arcs -ftest-coverage -DDEBUGS3 -DAWSTEST -DFAKETEST
 INCLUDES = -Isrc -Ilib -I/usr/include/libxml2
 LDFLAGS = -lpthread -lcrypto -lcurl -lxml2 -lgcov
 
