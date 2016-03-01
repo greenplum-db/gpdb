@@ -9959,6 +9959,17 @@ fi
 
 fi
 
+if test "$enable_ddboost" = yes ; then
+  ac_fn_c_check_header_mongrel "$LINENO" "ddp_api.h" "ac_cv_header_ddp_api_h" "$ac_includes_default"
+if test "x$ac_cv_header_ddp_api_h" = xyes; then :
+
+else
+  as_fn_error $? "header file <ddp_api.h> is required for DD Boost" "$LINENO" 5
+fi
+
+
+fi
+
 # For processor affinity support in Linux on NUMA platforms such as
 # AMD x86_64, the 'numactl' or 'libnuma' package is required.  See
 #  http://lwn.net/Articles/67005/

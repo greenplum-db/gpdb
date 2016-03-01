@@ -1281,6 +1281,10 @@ if test "$with_bonjour" = yes ; then
   AC_CHECK_HEADER(DNSServiceDiscovery/DNSServiceDiscovery.h, [], [AC_MSG_ERROR([header file <DNSServiceDiscovery/DNSServiceDiscovery.h> is required for Bonjour])])
 fi
 
+if test "$enable_ddboost" = yes ; then
+  AC_CHECK_HEADER(ddp_api.h, [], [AC_MSG_ERROR([header file <ddp_api.h> is required for DD Boost])])
+fi
+
 # For processor affinity support in Linux on NUMA platforms such as
 # AMD x86_64, the 'numactl' or 'libnuma' package is required.  See
 #  http://lwn.net/Articles/67005/
