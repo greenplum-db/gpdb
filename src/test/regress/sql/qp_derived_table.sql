@@ -1,3 +1,8 @@
+-- start_ignore
+create schema qp_derived_table;
+set search_path to qp_derived_table;
+-- end_ignore
+
 create table T0(
 	C0 int,
 	C1 int,
@@ -105529,104 +105534,5 @@ LIMIT 821;
 
 
 -- start_ignore
-drop table if exists t0;
-drop table if exists t1;
-drop table if exists t2;
-drop table if exists t3;
-drop table if exists t4;
-drop table if exists t5;
-drop table if exists t6;
-drop table if exists t7;
-drop table if exists t8;
-drop table if exists t9;
-drop table if exists t10;
-drop table if exists t11;
-drop table if exists t12;
-drop table if exists t13;
-drop table if exists t14;
-drop table if exists t15;
-drop table if exists t16;
-drop table if exists t17;
-drop table if exists t18;
-drop table if exists t19;
-drop table if exists t20;
-drop table if exists t21;
-drop table if exists t22;
-drop table if exists t23;
-drop table if exists t24;
-drop table if exists t25;
-drop table if exists t26;
-drop table if exists t27;
-drop table if exists t28;
-drop table if exists t29;
-drop table if exists t30;
-drop table if exists t31;
-drop table if exists t32;
-drop table if exists t33;
-drop table if exists t34;
-drop table if exists t35;
-drop table if exists t36;
-drop table if exists t37;
-drop table if exists t38;
-drop table if exists t39;
-drop table if exists t40;
-drop table if exists t41;
-drop table if exists t42;
-drop table if exists t43;
-drop table if exists t44;
-drop table if exists t45;
-drop table if exists t46;
-drop table if exists t47;
-drop table if exists t48;
-drop table if exists t49;
-drop table if exists t50;
-drop table if exists t51;
-drop table if exists t52;
-drop table if exists t53;
-drop table if exists t54;
-drop table if exists t55;
-drop table if exists t56;
-drop table if exists t57;
-drop table if exists t58;
-drop table if exists t59;
-drop table if exists t60;
-drop table if exists t61;
-drop table if exists t62;
-drop table if exists t63;
-drop table if exists t64;
-drop table if exists t65;
-drop table if exists t66;
-drop table if exists t67;
-drop table if exists t68;
-drop table if exists t69;
-drop table if exists t70;
-drop table if exists t71;
-drop table if exists t72;
-drop table if exists t73;
-drop table if exists t74;
-drop table if exists t75;
-drop table if exists t76;
-drop table if exists t77;
-drop table if exists t78;
-drop table if exists t79;
-drop table if exists t80;
-drop table if exists t81;
-drop table if exists t82;
-drop table if exists t83;
-drop table if exists t84;
-drop table if exists t85;
-drop table if exists t86;
-drop table if exists t87;
-drop table if exists t88;
-drop table if exists t89;
-drop table if exists t90;
-drop table if exists t91;
-drop table if exists t92;
-drop table if exists t93;
-drop table if exists t94;
-drop table if exists t95;
-drop table if exists t96;
-drop table if exists t97;
-drop table if exists t98;
-drop table if exists t99;
+drop schema qp_derived_table cascade;
 -- end_ignore
