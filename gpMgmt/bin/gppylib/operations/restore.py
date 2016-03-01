@@ -1194,11 +1194,12 @@ def validate_tablenames(table_list, master_data_dir, backup_dir, dump_dir, dump_
 
     # validate tables
     filename = generate_metadata_filename(master_data_dir, backup_dir, dump_dir, dump_prefix, timestamp)
-    lines = get_lines_from_file(filename)
 
-    with open(filename) as fd:
+    dumped_tables = []
+    fd = gzip.open(filename, 'r')
+    try:
         for line in fd:
-            pattern = "-- Name: (.+); Type: (.+); Schema: (.+);"
+            pattern = "-- Name: (.+?); Type: (.+?); Schema: (.+?);"
             match = search(pattern, line)
             if match is None:
                 continue
@@ -1206,10 +1207,12 @@ def validate_tablenames(table_list, master_data_dir, backup_dir, dump_dir, dump_
             if type == "TABLE":
                 schema = pg.escape_string(schema)
                 name = pg.escape_string(name)
-                dumped_table = '%s.%s' % (schema, name)
-                # no escaping needed, both restore_table_list and metadata file have un-escaped schema and table names
-                if dumped_table not in restore_table_list:
-                    raise Exception("Table %s not found in backup" % dumped_table)
+                dumped_tables.append('%s.%s' % (schema, name))
+    finally:
+        fd.close()
+    for table in restore_table_list:
+        if table not in dumped_tables:
+            raise Exception("Table %s not found in backup" % table)
 
     return restore_table_list, schema_level_restore_list 
 
