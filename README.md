@@ -134,7 +134,9 @@ source gpdemo-env.sh
 
 The directory and the TCP ports for the demo cluster can be changed on the fly:
 
+```
 DATADIRS=/tmp/gpdb-cluster MASTER_PORT=15432 PORT_BASE=25432 make cluster
+```
 
 
 ## Build GPDB with GPORCA
