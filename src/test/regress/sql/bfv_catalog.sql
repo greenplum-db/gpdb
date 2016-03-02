@@ -46,7 +46,6 @@ drop table q68t792_temp;
 --
 -- Fix bug in Expression to DXL translation for correlated queries when optimizer is turned on.
 --
-set optimizer = on;
 
 DROP TABLE IF EXISTS t1 CASCADE;
 DROP TABLE IF EXISTS t2 CASCADE;
@@ -62,8 +61,6 @@ select count_operator('explain select * from x where a=  (select sum(t1.a)  from
 DROP TABLE t1;
 DROP TABLE t2;
 DROP TABLE x;
-
-reset optimizer;
 
 SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
