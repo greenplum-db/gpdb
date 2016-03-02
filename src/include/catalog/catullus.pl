@@ -20,7 +20,7 @@ use warnings;
 
 =head1 NAME
 
-B<catullus.pl> - generate pg_proc and pg_type entries
+B<catullus.pl> - generate pg_proc entries
 
 =head1 VERSION
 
@@ -37,8 +37,6 @@ Options:
     -man        full documentation
     -procdef    sql definitions for pg_proc functions
     -prochdr    header file to modify (procedures)
-    -typedef    sql definitions for pg_type functions
-    -typehdr    header file to modify (types)
 
 =head1 OPTIONS
 
@@ -60,28 +58,13 @@ Options:
 
     header file to modify (normally pg_proc_gp.h).  The original file is copied to a .backup copy.
 
-=item B<-typedef> <filename> (Required)
-
-    sql definitions for pg_type functions (normally pg_type.sql)
-
-=item B<-typehdr> <filename> (Required)
-
-    header file to modify (normally pg_type.h).  The original file is copied to a .backup copy.
-
 
 =back
 
 =head1 DESCRIPTION
 
-catullus.pl converts annotated sql CREATE FUNCTION and CREATE TYPE
-statements into pg_proc and pg_type entries and updates pg_proc_gp.h and
-pg_type.h.
-
-The pg_type definitions are stored in pg_type.sql.  catullus reads
-these definitions and outputs DATA statements for loading the pg_type
-table.  In pg_type.h, it looks for a block of code delimited by the
-tokens TIDYCAT_BEGIN_PG_TYPE_GEN and TIDYCAT_END_PG_TYPE_GEN and
-substitutes the new generated code for the previous contents.
+catullus.pl converts annotated sql CREATE FUNCTION statements into
+pg_proc entries and updates pg_proc_gp.h.
 
 The pg_proc definitions are stored in pg_proc.sql.  catullus reads
 these definitions and, using type information from pg_type.sql,
@@ -140,16 +123,12 @@ BEGIN {
 	    my $s_man       = 0;     # full documentation
 	    my $s_procdef;           # sql definitions for pg_proc functions
 	    my $s_prochdr;           # header file to modify (procedures)
-	    my $s_typedef;           # sql definitions for pg_type functions
-	    my $s_typehdr;           # header file to modify (types)
 
     GetOptions(
 		'help|?'                                                 =>     \$s_help,
 		'man'                                                    =>     \$s_man,
 		'procdef|prosource|procsource|prosrc|procsrc=s'          =>     \$s_procdef,
 		'prochdr|proheader|procheader|prohdr=s'                  =>     \$s_prochdr,
-		'typedef|typdef|typesource|typsource|typesrc|typsrc=s'   =>     \$s_typedef,
-		'typehdr|typheader|typeheader|typhdr=s'                  =>     \$s_typehdr,
                )
         or pod2usage(2);
 
@@ -173,41 +152,15 @@ BEGIN {
 	    unless (defined($s_prochdr));
 	    die ("invalid argument for 'prochdr': file $s_prochdr does not exist")
 	    unless (defined($s_prochdr) && (-e $s_prochdr));
-	    die ("missing required argument for 'typedef'")
-	    unless (defined($s_typedef));
-	    die ("invalid argument for 'typedef': file $s_typedef does not exist")
-	    unless (defined($s_typedef) && (-e $s_typedef));
-	    die ("missing required argument for 'typehdr'")
-	    unless (defined($s_typehdr));
-	    die ("invalid argument for 'typehdr': file $s_typehdr does not exist")
-	    unless (defined($s_typehdr) && (-e $s_typehdr));
 	
 	$glob_glob->{procdef}    =  $s_procdef  if (defined($s_procdef));
 	$glob_glob->{prochdr}    =  $s_prochdr  if (defined($s_prochdr));
-	$glob_glob->{typedef}    =  $s_typedef  if (defined($s_typedef));
-	$glob_glob->{typehdr}    =  $s_typehdr  if (defined($s_typehdr));
 	
 	glob_validate();
 
 
 }
 # SLZY_CMDLINE_END
-
-# DO NOT extend this list!  All new types must have a default array type.
-my %array_type_exception_h = 
-	(
-	 pg_type => 1,
-	 pg_attribute => 1,
-	 pg_proc => 1,
-	 pg_class => 1,
-	 pg_authid => 1,
-	 pg_auth_members => 1,
-	 pg_database => 1,
-	 gp_global_sequence => 1,
-	 smgr => 1,
-	 unknown => 1,
-	 nb_classification => 1
-	);
 
 sub doformat
 {
@@ -1509,673 +1462,33 @@ sub doprocs()
 
 }
 
-# populate a type definition
-sub make_type
+# MAIN routine for pg_type parsing
+sub readtypes
 {
-	my %h1 = @_;
+	my $fh;
 
-	die ("no oid")
-		unless (exists($h1{with}) &&
-				exists($h1{with}->{oid}));
+	open $fh, "< pg_type.h"
+	    or die "cannot open pg_type.h: $!";
 
-	die ("no tuple")
-		unless (exists($h1{tuple}));
-
-	my @deflist;
-
-	# treat bootstrap tables (and nb_classification) special
-	if (($h1{tuple}->{typname} =~ 
-		m/^pg\_(type|attribute|proc|class|authid|auth_members|database)$/) ||
-		($h1{tuple}->{typname} eq "gp_global_sequence") ||
-		($h1{tuple}->{typname} eq "nb_classification"))
+	while (my $row = <$fh>)
 	{
-		my %boottabdef = (
-			typnamespace => "PGNSP", # pg_catalog
-			typowner	 => "PGUID", # admin
-			typlen         => -1,
-			typbyval       => "f",
-			typtype        => 'c', # composite
-			typisdefined   => "t",
-			typdelim       => ',', # except for box which uses ";"
-#			typrelid       => 0,
-			typelem        => 0,
-			typinput       => "record_in",
-			typoutput      => "record_out",
-			typreceive     => "record_recv",
-			typsend        => "record_send",
-			typmodin       => '-',
-			typmodout      => '-',
-			typanalyze     => undef,
-			typalign       => "d",
-			typstorage     => "x",
-			typnotnull     => 'f', # not a domain
-			typbasetype    => 0,   # not a domain
-			typtypmod      => -1,  # not a domain
-			typndims       => 0,
-			typdefaultbin  => undef,
-			typdefault     => undef
-			);
+	    # The DATA lines in pg_type.h look like this:
+	    #   DATA(insert OID = 16 (	bool	   ...));
+	    #
+	    # Extract the oid and the type name.
+	    $row =~ /^DATA\(insert\s+OID\s+=\s+(\d+)\s+\(\s+(\w+).*\)/ or next;
+	    my $oid = $1;
+	    my $typname = $2;
 
-		while (my ($kk, $vv) = each(%boottabdef))
-		{
-			$h1{tuple}->{$kk} = $vv;
-		}
-		die "no relid"
-			unless (exists($h1{with}->{relid}));
-		$h1{tuple}->{typrelid} = $h1{with}->{relid};
-
-		goto L_enddef;
+	    # save the oid for each typename for CREATE TYPE...ELEMENT lookup
+	    $glob_typeoidh{lc($typname)} = $oid;
 	}
-
-	# parse the rest of the definition
-	if (exists($h1{at}))
-	{
-		my @foo = split(/\n/, $h1{at});
-
-		for my $f1 (@foo)
-		{
-			# XXX XXX: complain about missing/extra commas here?
-
-			# remove spaces and trailing comma
-			$f1 =~ s/^\s+//;
-			$f1 =~ s/\s+$//;
-			$f1 =~ s/\,$//;
-
-			next unless (length($f1));
-			push @deflist, $f1;
-		}
-	}
-
-	# byvalue is false, unless passedbyvalue is set
-	$h1{tuple}->{typbyval} = "f";
-
-	$h1{tuple}->{typmodin} = '-';
-	$h1{tuple}->{typmodout} = '-';
-
-	for my $def (@deflist)
-	{
-		if ($def =~ m/passedbyvalue/i)
-		{
-			$h1{tuple}->{typbyval} = "t";
-			next;
-		}
-
-		# key = value pairs
-		my @baz = split(/\s*=\s*/, $def, 2);
-		die "bad def: $def"
-			unless (2 == scalar(@baz));
-
-		my $kk = shift @baz;
-		my $vv = shift @baz;
-
-		$kk =~ s/^\s+//;
-		$kk =~ s/\s+$//;
-		$vv =~ s/^\s+//;
-		$vv =~ s/\s+$//;
-
-		# get names of regproc functions
-		if ($kk =~ m/^(input|output|receive|send|analyze)$/i)
-		{
-			my $rproc = "typ" . lc($kk); # regproc name
-
-			# XXX XXX: fixup dummy_cast_functions
-			$vv =~ s/dummy\_cast\_functions\.//;
-
-			$h1{tuple}->{$rproc} = $vv;
-		}
-
-		if ($kk =~ m/^(typmodin|typmodout)$/i)
-		{
-			my $rproc = lc($kk); # regproc name
-			$h1{tuple}->{$rproc} = $vv;
-		}
-
-		if ($kk =~ m/^storage$/i)
-		{
-			die ("bad storage: $vv - must be PLAIN, EXTERNAL, EXTENDED, or MAIN")
-				unless ($vv =~ m/^(plain|external|extended|main)$/i);
-
-			# just use first character for storage type...
-			my $st1 = lc(substr($vv, 0, 1));
-
-			# ...except for eXtended
-			$st1 = "x" if ($vv =~ m/extended/i);
-			$h1{tuple}->{typstorage} = $st1;
-		}
-
-		if ($kk =~ m/^internallength$/i)
-		{
-			my $ilen;
-
-			$ilen = $vv;
-
-			$ilen = -1 if ($vv =~ m/^variable$/i);
-
-			# must be a number
-			die ("bad length: $vv")
-				unless ($ilen =~ m/^(\-)?\d+$/);
-
-			$h1{tuple}->{typlen} = $ilen;
-		}
-
-		if ($kk =~ m/^element$/i)
-		{
-			die ("bad element: $vv")
-				unless (exists($h1{typeoidh}) &&
-						exists($h1{typeoidh}->{lc($vv)}));
-
-			$h1{tuple}->{typelem} = $h1{typeoidh}->{lc($vv)};
-		}
-
-		if ($kk =~ m/^alignment$/i)
-		{
-			die ("bad aligment: $vv")
-				unless ($vv =~ m/^(char|short|int|int2|int4|double)$/);
-
-			# just use first character for alignment...
-			$h1{tuple}->{typalign} = lc(substr($vv, 0, 1));
-
-			# ...except for int2 (short)
-			$h1{tuple}->{typalign} = "s" if ($vv =~ m/^int2/i);
-		}
-
-		if ($kk =~ m/^delimiter$/i)
-		{
-			my $delim = $vv;
-
-			# remove trailing comma, quotes
-			$delim =~ s/\s*\,\s*$//;
-
-			$delim =~ s/\"\s*$//;
-			$delim =~ s/^\s*\"//;
-			$delim =~ s/\'\s*$//;
-			$delim =~ s/^\s*\'//; 
-
-			die ("bad delimiter: $vv")
-				unless (1 == length($delim));
-
-			$h1{tuple}->{typdelim} = $delim;
-		}
-
-	}
-
-L_enddef:
-
-	return (\%h1);
-}# end make_type
-
-# build DATA statements for array types
-sub print_arr_type
-{
-	my $tdef = shift;
-
-	return ""
-		unless (exists($tdef->{with}) &&
-				exists($tdef->{with}->{arrayoid}));
-
-	my $bigstr = 
-		"DATA(insert OID = {arrayoid} (\t_{typname}\t   " .
-		"{typnamespace} {typowner} " .
-		"-1 f b t " .
-		"{typdelim} 0\t" . 
-		"{oid} array_in array_out array_recv array_send " .
-		"{typmodin} {typmodout} - {typalign} x f 0 -1 0 _null_ _null_ ));";
-
-	my $t2def = {oid => $tdef->{with}->{oid}};
-	$t2def->{arrayoid} = $tdef->{with}->{arrayoid};
-
-	while (my ($kk, $vv) = each(%{$tdef->{tuple}}))
-	{
-		$t2def->{$kk} = $vv;
-
-		if ($kk =~ m/typdelim/)
-		{
-			$t2def->{$kk} = sprintf("\\0%o", ord($vv)); 
-		}
-		if ($kk =~ m/typalign/)
-		{
-			# typecmds.c:DefineType() "alignment must be 'i' or 'd' for arrays"
-			# XXX XXX: alignment is always "int" unless base type is "double"
-			$t2def->{$kk} = "i"
-				unless ($vv eq "d");
-		}
-	}
-
-	my $fmt = doformat($bigstr, $t2def);
-
-	return $fmt;
-
-} # end print_arr_type
-
-sub print_type
-{
-	my $tdef = shift;
-
-	my $bigstr =
-		"DATA(insert OID = {oid} (\t{typname}\t   {typnamespace} {typowner} " .
-		"{typlen} {typbyval} {typtype} {typisdefined} " .
-		"{typdelim} {typrelid}\t" .
-		"{typelem} {typinput} {typoutput} {typreceive} {typsend} " .
-		"{typmodin} {typmodout} " .
-		"{typanalyze} {typalign} {typstorage} {typnotnull} {typbasetype} " .
-		"{typtypmod} {typndims} {typdefaultbin} {typdefault} ));";
-
-	my $t2def = {oid => $tdef->{with}->{oid}};
-
-#	print Data::Dumper->Dump([$tdef]);
-
-	while (my ($kk, $vv) = each(%{$tdef->{tuple}}))
-	{
-		$t2def->{$kk} = $vv;
-
-		unless (defined($vv))
-		{
-			$t2def->{$kk} = '_null_';
-
-			# a null regproc is a dash...
-			if ($kk =~ m/^typ(input|output|receive|send|analyze)$/)
-			{
-				$t2def->{$kk} = "-";
-			}
-		}
-
-		if ($kk =~ m/typdelim/)
-		{
-			$t2def->{$kk} = sprintf("\\0%o", ord($vv)); 
-		}
-	}
-	
-	# XXX XXX: fixup for name
-	if ($t2def->{typname} eq "name")
-	{
-		# 64
-		$t2def->{typlen} = "NAMEDATALEN";
-	}
-
-	my $fmt = doformat($bigstr, $t2def);
-
-	if (exists($tdef->{with}->{description}))
-	{
-		$fmt .= "\nDESCR(" . $tdef->{with}->{description} . ");";
-	}
-
-	return $fmt;
-	
-} # end print_type
-
-# MAIN routine for pg_type generation
-sub dotypes
-{
-	
-	my $whole_file;
-	
-	{
-        # $$$ $$$ undefine input record separator (\n)
-        # and slurp entire file into variable
-		
-        local $/;
-        undef $/;
-		
-		my $fh;
-
-		open $fh, "< $glob_glob->{typedef}" 
-			or die "cannot open $glob_glob->{typedef}: $!";
-
-		$whole_file = <$fh>;
-		
-		close $fh;
-	}
-	
-	my $wf2 = $whole_file;
-
-	# substitute for all "(.*)" pairs an empty "()" :
-	#   for the case where "(" ends a line and ")" begins a line, 
-	#   and ".*" does not contain parens
-	#
-
-	# This expression converts a CREATE TYPE statement to a single
-	# line
-	$wf2 =~ s/\((?:\s*)$([^\(\)]*)^\s*\)/()/gsm;
-
-	# strip off the remainder of the CREATE TYPE statement after the type name
-	$wf2 =~ s/(^\s*CREATE TYPE\s+(?:\")?\w+(?:\")?)\(\).*/$1/gm;
-
-	# remove DROP TYPE
-	$wf2 =~ s/^\s*DROP TYPE.*//gmi;
-
-	# uncomment #defines
-	$wf2 =~ s/(^\s*\-\-\s*\#define)/\#define/gmi;
-
-	# uncomment ARRAY TYPE -- will substitute later
-	$wf2 =~ s/(^\s*\-\-\s*ARRAY TYPE)/ARRAY TYPE/gmi;
-
-#	$wf2 =~ s|^\s*(\-\-)(\s*$)|$2|gm;
-
-#	$wf2 =~ s|^\s*(\-\-)(.*)(\s*$)|/* $2 */$3|gm;
-	$wf2 =~ s|(\-\-)(.*)(\s*$)|/* $2 */$3|gm;
-
-#	$wf2 =~ s|/\*\s+\*/||gm;
-
-#	print $wf2;
-
-	my @lines = split(/\n/, $wf2);
-
-	my %raytypes;
-
-	# convert comments on adjacent lines to block comments
-	my $prevline = "";
-	my $wf3 = "";
-	for my $lin (@lines)
-	{
-		if ($lin =~ m|^\s*/\*.*\*/|)
-		{
-			if ($prevline =~ m|\*/\s*$|)
-			{
-				$prevline =~ s|\*/\s*$||;
-				$lin =~ s|(^\s*)/\*|$1\*\*|;
-			}
-		}
-		else
-		{
-			if ($prevline =~ m|^\s*\*\*.*\*/|)
-			{
-				$prevline =~ s|\*/\s*$|\n\*/|;
-			}
-		}
-
-		if ($lin =~ m/^\s*ARRAY TYPE/)
-		{
-			my @foo = ($lin =~ m/^\s*ARRAY TYPE\s+(.*)/);
-
-			die "bad array type name: $lin"
-				unless (scalar(@foo));
-
-			my $atyp = shift @foo;
-
-			# remove quotes
-			$atyp =~ s/\"//g; 
-			
-			die "duplicate array type reference: $atyp"
-				if (exists($raytypes{$atyp}));
-
-			$raytypes{$atyp} = -1;
-		}
-
-		$wf3 .= $prevline . "\n";
-		$prevline = $lin;
-	}
-	$wf3 .= $prevline . "\n";
-
-#	print $wf3;
-
-	my @alltypes = split(/\;\s*$/m, $whole_file);
-
-	my @alltypedef;
-
-	for my $atyp (@alltypes)
-	{
-		# filter comments
-		$atyp =~ s/^\s*\-\-.*//gm;
-
-		# filter empties
-		$atyp =~ s/^\s+$//gm;
-
-		# filter DROP TYPE
-		$atyp =~ s/^\s*DROP TYPE.*//i;
-
-		next unless (length($atyp));
-
-		my $raw = $atyp;
-
-		my @baz = ($atyp =~ m/^\s*CREATE TYPE (?:\")?(\w+)(?:\")?/im);
-
-		die "bad type $atyp"
-			unless (scalar(@baz));
-
-		my $typname = shift @baz;
-
-		$atyp =~ s/^\s*CREATE TYPE\s+[^\(]*\($//im;
-		my $w1 = get_fnwithhash($atyp);
-
-		# match up array oids - 
-		# if no match, assume array definition "trails" (immediately
-		# follows) the scalar
-		my $trailing_array = !(exists($raytypes{$typname}));
-
-		if ($trailing_array)
-		{
-			# if there isn't a "substitute location" for the array
-			# type of this type, then complain if we don't have an
-			# ARRAYOID, unless this is a pseudo type, or one of the
-			# bootstrap tables.
-
-			unless (exists($w1->{arrayoid}) ||
-					(exists($w1->{typtype}) &&
-					 ($w1->{typtype} eq "PSEUDO")))
-			{
-				die "missing ARRAYOID for array type for $typname"
-					unless (exists($array_type_exception_h{$typname}))
-			}
-		}
-		else
-		{
-			die "missing ARRAYOID for array type for $typname"
-				unless (exists($w1->{arrayoid}));
-
-			$raytypes{$typname} = $w1->{arrayoid};
-		}
-
-		# save the oid for each typename for CREATE TYPE...ELEMENT lookup
-		$glob_typeoidh{lc($typname)} = $w1->{oid}
-			if (exists($w1->{oid}));
-		$glob_typeoidh{"_" . lc($typname)} = $w1->{arrayoid}
-			if (exists($w1->{arrayoid}));
-
-		# remove WITH
-		$atyp =~ s/^\s*\) WITH .*//i;
-		
-		my $tdef = {
-			typname        => $typname,
-			typnamespace => "PGNSP", # pg_catalog
-			typowner	 => "PGUID", # admin
-#			typlen         => 0,
-#			typbyval       => 0,
-			typtype        => 'b', # "base" by default
-			typisdefined   => 't', # 
-			typdelim       => ',', # except for box which uses ";"
-			typrelid       => 0,
-			typelem        => 0,   # 
-			typinput       => undef,
-			typoutput      => undef,
-			typreceive     => undef,
-			typsend        => undef,
-			typmodin       => undef,
-			typmodout      => undef,
-			typanalyze     => undef,
-#			typalign       => 0,
-#			typstorage     => 0,
-			typnotnull     => 'f', # not a domain
-			typbasetype    => 0,   # not a domain
-			typtypmod      => -1,  # not a domain
-			typndims       => 0,
-			typdefaultbin  => undef,
-			typdefault     => undef
-
-		};
-		
-		# reset typtype from "base" to "pseudo" (or whatever)
-		if (exists($w1->{typtype}) && length($w1->{typtype}))
-		{
-			my $ttt = substr(lc($w1->{typtype}), 0, 1);
-
-			die "invalid type: $w1->{typtype} - valid types are BASE, COMPOSITE, DOMAIN, and PSEUDO"
-				unless ($ttt =~ m/^(b|c|d|p)$/);
-
-			$tdef->{typtype} = $ttt;
-		}
-		if ($tdef->{typtype} eq 'b')
-		{
-			unless (exists($w1->{arrayoid}))
-			{
-				die "missing ARRAYOID for array type for $typname"
-					unless (exists($array_type_exception_h{$typname}));
-			}
-		}
-			
-		my $t1def = {
-			tuple => $tdef, raw => $raw, with => $w1, 
-			trailing_array => $trailing_array, at=>$atyp};
-
-		push @alltypedef, $t1def;
-	} # end for my $atyp
-
-	my @wf4 = split(/\n/, $wf3);
-
-	# finish processing type definitions in second pass 
-	#
-	# sort the definitions by typename length so global replacement works, 
-	# eg replace "timestamptz" before "timestamp"
-	for my $t1def 
-		(sort {length($b->{tuple}->{typname}) <=> 
-				   length($a->{tuple}->{typname})}(@alltypedef))
-	{
-		my $t2def		 = make_type(%{$t1def}, typeoidh=>\%glob_typeoidh);
-		my $ttname		 = $t1def->{tuple}->{typname};
-		my $datstatement = print_type($t2def);
-		my $arrstatement = print_arr_type($t2def);
-
-		# rather than global replace the ARRAY and CREATE TYPE
-		# definitions with a regex, walk the file line by line to
-		# place trailing array defs after #defines...
-		for my $linnum (0..(scalar(@wf4)-1))
-		{
-			my $lin = $wf4[$linnum];
-
-			chomp($lin);
-			$wf4[$linnum] = $lin;
-			next
-				unless ($lin =~ m/^\s*(ARRAY|CREATE) TYPE (\")?$ttname(\")?/);
-
-			if ($lin =~ m/^\s*CREATE TYPE/)
-			{
-				$lin =~ s/^\s*CREATE TYPE $ttname\s*$/$datstatement/;
-				$lin =~ s/^\s*CREATE TYPE \"$ttname\"\s*$/$datstatement/;
-
-				if ($t1def->{trailing_array})
-				{
-					my $nextlin = $linnum + 1;
-					
-					# the "trailing array" definition immediately
-					# follows the scalar definition, unless the scalar
-					# is followed by a #define
-					if (($nextlin <= (scalar(@wf4)-1)) &&
-						($wf4[$nextlin] =~ m/^\s*\#define/))
-					{
-						$wf4[$nextlin] .= "\n" . $arrstatement;
-					}
-					else
-					{
-						$lin .= "\n" . $arrstatement;
-					}
-				}
-			}
-			else
-			{
-				$lin =~ s/^\s*ARRAY TYPE $ttname\s*$/$arrstatement/;
-				$lin =~ s/^\s*ARRAY TYPE \"$ttname\"\s*$/$arrstatement/;
-			}
-			$wf4[$linnum] = $lin;
-		} # end for my linnum
-	} # end for my t1def
-
-#	print Data::Dumper->Dump([\%raytypes]);
-#	print join("\n", @wf4);
-
-    my $verzion = "unknown";
-	$verzion = $glob_glob->{_sleazy_properties}->{version}
-	if (exists($glob_glob->{_sleazy_properties}) &&
-		exists($glob_glob->{_sleazy_properties}->{version}));
-
-	$verzion = $0 . " version " . $verzion;
-	my $nnow = localtime;
-	my $gen_hdr_str = "";
-#	$gen_hdr_str = "/* TIDYCAT_BEGIN_PG_TYPE_GEN \n\n";
-	$gen_hdr_str = "\n";
-	$gen_hdr_str .= "   WARNING: DO NOT MODIFY THE FOLLOWING SECTION: \n" .
-		"   Generated by " . $verzion . "\n" . 
-		"   on " . $nnow . "\n\n" . 
-		"   Please make your changes in " . $glob_glob->{typedef} . "\n*/\n\n";
-
-	my $bigstr = "";
-
-	$bigstr .= $gen_hdr_str;
-
-	# append generated DATA definitions
-	$bigstr .= join("\n", @wf4);
-
-	$bigstr .= "\n\n";
-
-	if (0)
-	{
-		print $bigstr;
-	}
-	else
-	{
-        # $$$ $$$ undefine input record separator (\n)
-        # and slurp entire file into variable
-		
-        local $/;
-        undef $/;
-		
-		my $tfh;
-
-		open $tfh, "< $glob_glob->{typehdr}" 
-			or die "cannot open $glob_glob->{typehdr}: $!";
-
-		my $target_file = <$tfh>;
-		
-		close $tfh;
-
-		my $prefx = quotemeta('TIDYCAT_BEGIN_PG_TYPE_GEN');
-		my $suffx = quotemeta('TIDYCAT_END_PG_TYPE_GEN');
-
-		my @zzz = ($target_file =~ 
-				   m/^\s*\/\*\s*$prefx\s*\s*$(.*)^\s*\/\*\s*$suffx\s*\*\/\s*$/ms);
-
-		die "bad target: $glob_glob->{typehdr}"
-			unless (scalar(@zzz));
-
-		my $rex = $zzz[0];
-
-		# replace carriage returns first, then quotemeta, then fix CR again...
-		$rex =~ s/\n/SLASHNNN/gm;
-		$rex = quotemeta($rex);
-		$rex =~ s/SLASHNNN/\\n/gm;
-
-		# substitute the new generated type definitions for the prior
-		# generated defitions in the target file
-		$target_file =~ s/$rex/$bigstr/ms;
-
-		# save a backup file
-		system "cp $glob_glob->{typehdr} $glob_glob->{typehdr}.backup";
-
-		my $outi;
-
-		open $outi, "> $glob_glob->{typehdr}" 
-			or die "cannot open $glob_glob->{typehdr} for write: $!";
-		
-		# rewrite the target file
-		print $outi $target_file;
-
-		close $outi;
-		
-	}
-
-} # end sub dotypes
+	close $fh;
+}
 
 if (1)
 {
-	dotypes();
+	readtypes();
 	doprocs();
 }
 
@@ -2217,28 +1530,12 @@ if (0)
          "short" : "header file to modify (procedures)",
          "type" : "file"
       },
-      {
-         "alias" : "typdef|typesource|typsource|typesrc|typsrc",
-         "long" : "sql definitions for pg_type functions (normally pg_type.sql)",
-         "name" : "typedef",
-         "required" : "1",
-         "short" : "sql definitions for pg_type functions",
-         "type" : "file"
-      },
-      {
-         "alias" : "typheader|typeheader|typhdr",
-         "long" : "header file to modify (normally pg_type.h).  The original file is copied to a .backup copy.",
-         "name" : "typehdr",
-         "required" : "1",
-         "short" : "header file to modify (types)",
-         "type" : "file"
-      }
    ],
    "long" : "$toplong",
    "properties" : {
       "slzy_date" : 1317671892
    },
-   "short" : "generate pg_proc and pg_type entries",
+   "short" : "generate pg_proc entries",
    "version" : "8"
 }
 
@@ -2252,17 +1549,10 @@ if (0)
 {
 	my $toplong = <<'EOF_toplong';
 catullus.pl converts annotated sql CREATE FUNCTION and CREATE TYPE
-statements into pg_proc and pg_type entries and updates pg_proc_gp.h and
-pg_type.h.
-
-The pg_type definitions are stored in pg_type.sql.  catullus reads
-these definitions and outputs DATA statements for loading the pg_type
-table.  In pg_type.h, it looks for a block of code delimited by the
-tokens TIDYCAT_BEGIN_PG_TYPE_GEN and TIDYCAT_END_PG_TYPE_GEN and
-substitutes the new generated code for the previous contents.
+statements into pg_proc and updates pg_proc_gp.h.
 
 The pg_proc definitions are stored in pg_proc.sql.  catullus reads
-these definitions and, using type information from pg_type.sql,
+these definitions and, using type information from pg_type.h,
 generates DATA statements for loading the pg_proc table.  In
 pg_proc_gp.h, it looks for a block of code delimited by the tokens
 TIDYCAT_BEGIN_PG_PROC_GEN and TIDYCAT_END_PG_PROC_GEN and substitutes
