@@ -204,7 +204,7 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 	 */
     snprintf(service,32,"%d",0);
     memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = AF_UNSPEC;    	/* Allow IPv4 or IPv6 */
+	hints.ai_family = AF_INET | AF_INET6;	/* Allow IPv4 or IPv6 */
 	hints.ai_socktype = SOCK_STREAM; 	/* TCP socket */
 	hints.ai_flags = AI_PASSIVE;    	/* For wildcard IP address */
 	hints.ai_protocol = 0;          	/* Any protocol */
@@ -652,7 +652,7 @@ setupOutgoingConnection(ChunkTransportState *transportStates, ChunkTransportStat
 	/* Initialize hint structure */
 	MemSet(&hint, 0, sizeof(hint));
 	hint.ai_socktype = SOCK_STREAM;
-	hint.ai_family = AF_UNSPEC;	/* Allow for IPv4 or IPv6  */
+	hint.ai_family = AF_INET | AF_INET6;	/* Allow for IPv4 or IPv6  */
 #ifdef AI_NUMERICSERV
 	hint.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;  /* Never do name resolution */
 #else

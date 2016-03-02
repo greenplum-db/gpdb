@@ -690,7 +690,7 @@ setupSeqServerConnection(char *seqServerHost, uint16 seqServerPort)
 	/* Initialize hint structure */
 	MemSet(&hint, 0, sizeof(hint));
 	hint.ai_socktype = SOCK_STREAM;
-	hint.ai_family = AF_UNSPEC;		/* Allow for IPv4 or IPv6  */
+	hint.ai_family = AF_INET | AF_INET6;		/* Allow for IPv4 or IPv6  */
 #ifdef AI_NUMERICSERV
 	hint.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;  /* Never do name resolution */
 #else
@@ -1041,7 +1041,7 @@ SendDummyPacket(void)
 
 	MemSet(&hint, 0, sizeof(hint));
 	hint.ai_socktype = SOCK_DGRAM;
-	hint.ai_family = AF_UNSPEC; /* Allow for IPv4 or IPv6  */
+	hint.ai_family = AF_INET | AF_INET6; /* Allow for IPv4 or IPv6  */
 
 #ifdef AI_NUMERICSERV
 	hint.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;  /* Never do name resolution */

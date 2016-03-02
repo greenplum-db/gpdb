@@ -404,7 +404,7 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort)
 	char service[32];
 	snprintf(service,32,"%d",0);
 	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = AF_UNSPEC;	/* Allow IPv4 or IPv6 */
+	hints.ai_family = AF_INET | AF_INET6;	/* Allow IPv4 or IPv6 */
 	hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
 	hints.ai_flags = AI_PASSIVE;	/* For wildcard IP address */
 	hints.ai_protocol = 0;			/* Any protocol */
@@ -1262,7 +1262,7 @@ startOutgoingUDPConnections(ChunkTransportState *transportStates,
 	snprintf(service,32,"%d",0);
 
 	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = AF_UNSPEC;	/* Allow IPv4 or IPv6 */
+	hints.ai_family = AF_INET | AF_INET6;	/* Allow IPv4 or IPv6 */
 	hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
 	hints.ai_flags = AI_PASSIVE; /* For wildcard IP address */
 	hints.ai_protocol = 0; /* Any protocol */
@@ -1370,7 +1370,7 @@ getSockAddr(struct sockaddr_storage * peer, socklen_t * peer_len, const char * l
 	/* Initialize hint structure */
 	MemSet(&hint, 0, sizeof(hint));
 	hint.ai_socktype = SOCK_DGRAM; /* UDP */
-	hint.ai_family = AF_UNSPEC; /* Allow for any family (v4, v6, even unix in the future)  */
+	hint.ai_family = AF_INET | AF_INET6; /* Allow for any family (v4, v6, even unix in the future)  */
 #ifdef AI_NUMERICSERV
 	hint.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;  /* Never do name resolution */
 #else
