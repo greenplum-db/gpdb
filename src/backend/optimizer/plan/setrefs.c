@@ -16,17 +16,15 @@
  */
 #include "postgres.h"
 
-#include "access/transam.h"
 #include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
-#include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/planmain.h"
 #include "optimizer/tlist.h"
-#include "parser/parsetree.h"
+#include "parser/parse_expr.h"
 #include "parser/parse_relation.h"
-#include "parser/parse_expr.h" /* exprType, exprTypmod */
+#include "parser/parsetree.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 #include "cdb/cdbhash.h"
