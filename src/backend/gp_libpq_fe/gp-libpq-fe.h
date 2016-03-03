@@ -196,6 +196,7 @@ typedef struct _PQconninfoOption
 								 * hide value "D"  Debug option - don't show
 								 * by default */
 	int			dispsize;		/* Field size in characters for dialog	*/
+	off_t	  connofs;
 } PQconninfoOption;
 
 /* ----------------
