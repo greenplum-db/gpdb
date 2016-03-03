@@ -339,7 +339,7 @@ WorkfileQueryspace_ReleaseEntry(void)
 				session_id, command_count);
 	}
 
-	Assert(querySpaceNestingLevel >= 0);
+	Assert(querySpaceNestingLevel == 0);
 }
 
 /*
