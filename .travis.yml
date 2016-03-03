@@ -119,6 +119,7 @@ after_failure:
 ## install libevent 
 ## ----------------------------------------------------------------------
 before_install:
+  - git submodule update --init --recursive
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
        brew install libevent          ; 
        sudo sysctl -w kern.sysv.shmmax=2147483648;
