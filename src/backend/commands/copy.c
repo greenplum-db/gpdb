@@ -3610,6 +3610,12 @@ CopyFromDispatch(CopyState cstate)
 			}
 		}
 
+		if (resultRelInfo->ri_partSlot != NULL)
+		{
+			Assert(resultRelInfo->ri_partInsertMap != NULL);
+			ExecDropSingleTupleTableSlot(resultRelInfo->ri_partSlot);
+		}
+
 		/* Close indices and then the relation itself */
 		ExecCloseIndices(resultRelInfo);
 		heap_close(resultRelInfo->ri_RelationDesc, NoLock);
@@ -4328,6 +4334,12 @@ CopyFrom(CopyState cstate)
 
 			if (resultRelInfo->ri_extInsertDesc)
 					external_insert_finish(resultRelInfo->ri_extInsertDesc);
+
+			if (resultRelInfo->ri_partSlot != NULL)
+			{
+				Assert(resultRelInfo->ri_partInsertMap);
+				ExecDropSingleTupleTableSlot(resultRelInfo->ri_partSlot);
+			}
 			
 			/* Close indices and then the relation itself */
 			ExecCloseIndices(resultRelInfo);
