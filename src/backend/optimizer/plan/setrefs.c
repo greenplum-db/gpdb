@@ -41,7 +41,7 @@ typedef struct
 {
 	List	   *tlist;			/* underlying target list */
 	int			num_vars;		/* number of plain Var tlist entries */
-	bool		has_non_vars;	/* are there other entries? */
+	bool		has_non_vars;	/* are there non-plain-Var entries? */
 	/* array of num_vars entries: */
 	tlist_vinfo vars[1];		/* VARIABLE LENGTH ARRAY */
 } indexed_tlist;				/* VARIABLE LENGTH STRUCT */
@@ -98,7 +98,7 @@ static void set_inner_join_references(PlannerGlobal *glob, Plan *inner_plan,
 									  indexed_tlist *outer_itlist);
 static void set_upper_references(PlannerGlobal *glob, Plan *plan, int rtoffset,
 					 bool use_scan_slot);
-static void set_dummy_tlist_references(Plan *plan, int rtoffset, bool use_child_targets);
+static void set_dummy_tlist_references(Plan *plan, int rtoffset);
 static indexed_tlist *build_tlist_index(List *tlist);
 static Var *search_indexed_tlist_for_var(Var *var,
 							 indexed_tlist *itlist,
@@ -697,7 +697,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 			{
 				Sort	   *splan = (Sort *) plan;
 
-				set_dummy_tlist_references(plan, rtoffset, false);
+				set_dummy_tlist_references(plan, rtoffset);
 				Assert(splan->plan.qual == NIL);
 
 				splan->limitOffset =
@@ -718,7 +718,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 			 * executor, we fix it up for possible use by EXPLAIN (not to
 			 * mention ease of debugging --- wrong varnos are very confusing).
 			 */
-			set_dummy_tlist_references(plan, rtoffset, false);
+			set_dummy_tlist_references(plan, rtoffset);
 
 			/*
 			 * Since these plan types don't check quals either, we should not
@@ -755,7 +755,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 						   && shared->share_id == sisc->share_id);
 				}
 #endif
-				set_dummy_tlist_references(plan, rtoffset, false);
+				set_dummy_tlist_references(plan, rtoffset);
 			}
 			break;
 		case T_Limit:
@@ -768,7 +768,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 				 * however; and those cannot contain subplan variable refs, so
 				 * fix_scan_expr works for them.
 				 */
-				set_dummy_tlist_references(plan, rtoffset, false);
+				set_dummy_tlist_references(plan, rtoffset);
 				Assert(splan->plan.qual == NIL);
 
 				splan->limitOffset =
@@ -782,8 +782,6 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 			break;
 		case T_Window:
 			set_upper_references(glob, plan, rtoffset, true);
-			if ( plan->targetlist == NIL )
-				set_dummy_tlist_references(plan, rtoffset, true);
 			{
 				indexed_tlist  *subplan_itlist =
 					build_tlist_index(plan->lefttree->targetlist);
@@ -851,7 +849,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 				 * Append, like Sort et al, doesn't actually evaluate its
 				 * targetlist or check quals.
 				 */
-				set_dummy_tlist_references(plan, rtoffset, false);
+				set_dummy_tlist_references(plan, rtoffset);
 				Assert(splan->plan.qual == NIL);
 				foreach(l, splan->appendplans)
 				{
@@ -923,7 +921,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 
 				/* no need to fix targetlist and qual */
 				Assert(plan->qual == NIL);
-				set_dummy_tlist_references(plan, rtoffset, true);
+				set_dummy_tlist_references(plan, rtoffset);
 				pfree(childplan_itlist);
 			}
 			break;
@@ -1625,34 +1623,15 @@ set_upper_references(PlannerGlobal *glob, Plan *plan, int rtoffset,
  * Note: we could almost use set_upper_references() here, but it fails for
  * Append for lack of a lefttree subplan.  Single-purpose code is faster
  * anyway.
- *
- * Note that old function cdb_build_identity_tlist looked into the child
- * plan target list for type information, etc.  The PG approach, instead,
- * uses the plan's own target list, which is cleaner.  The flag argument,
- * use_child_targets, gives the old GPDB behavior.
  */
 static void
-set_dummy_tlist_references(Plan *plan, int rtoffset, bool use_child_targets)
+set_dummy_tlist_references(Plan *plan, int rtoffset)
 {
 	List	   *output_targetlist;
-	List	   *input_targetlist;
 	ListCell   *l;
 
 	output_targetlist = NIL;
-
-	if (use_child_targets)
-	{
-		/* Note targetlist be NIL as in case of a function of no arguments */
-		Assert(plan->lefttree);
-		input_targetlist = plan->lefttree->targetlist;
-	}
-	else
-	{
-		//Assert(plan && plan->targetlist);t
-		input_targetlist = plan->targetlist;
-	}
-
-	foreach(l, input_targetlist)
+	foreach(l, plan->targetlist)
 	{
 		TargetEntry *tle = (TargetEntry *) lfirst(l);
 		Var		   *oldvar = (Var *) tle->expr;
