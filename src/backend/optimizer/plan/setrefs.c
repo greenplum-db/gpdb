@@ -57,7 +57,7 @@ typedef struct
 	PlannerGlobal *glob;
 	indexed_tlist *outer_itlist;
 	indexed_tlist *inner_itlist;
-	Index		skip_rel;
+	Index		acceptable_rel;
 	int			rtoffset;
 	bool        use_outer_tlist_for_matching_nonvars;
 	bool        use_inner_tlist_for_matching_nonvars;
@@ -111,19 +111,19 @@ static List *fix_join_expr(PlannerGlobal *glob,
 			  List *clauses,
 			  indexed_tlist *outer_itlist,
 			  indexed_tlist *inner_itlist,
-			  Index skip_rel, int rtoffset);
+			  Index acceptable_rel, int rtoffset);
 static Node *fix_join_expr_mutator(Node *node,
 					  fix_join_expr_context *context);
 static List *fix_hashclauses(PlannerGlobal *glob,
 				List *clauses,
 				indexed_tlist *outer_itlist,
 				indexed_tlist *inner_itlist,
-				Index skip_rel, int rtoffset);
+				Index acceptable_rel, int rtoffset);
 static List *fix_child_hashclauses(PlannerGlobal *glob,
 					  List *clauses,
 					  indexed_tlist *outer_itlist,
 					  indexed_tlist *inner_itlist,
-					  Index skip_rel, int rtoffset,
+					  Index acceptable_rel, int rtoffset,
 					  Index child);
 
 static Node *fix_upper_expr(PlannerGlobal *glob,
@@ -1883,18 +1883,18 @@ search_indexed_tlist_for_non_var(Node *node,
  * (those will later be adjusted in fix_scan_list).
  * (We also implement RETURNING clause fixup using this second scenario.)
  *
- * For a normal join, skip_rel should be zero so that any failure to
+ * For a normal join, acceptable_rel should be zero so that any failure to
  * match a Var will be reported as an error.  For the indexscan case,
- * pass inner_itlist = NULL and skip_rel = the (not-offseted-yet) ID
+ * pass inner_itlist = NULL and acceptable_rel = the (not-offseted-yet) ID
  * of the inner relation.
  *
  * 'clauses' is the targetlist or list of join clauses
  * 'outer_itlist' is the indexed target list of the outer join relation
  * 'inner_itlist' is the indexed target list of the inner join relation,
  *		or NULL
- * 'skip_rel' is either zero or the rangetable index of a relation
+ * 'acceptable_rel' is either zero or the rangetable index of a relation
  *		whose Vars may appear in the clause without provoking an error.
- * 'rtoffset' is what to add to varno for Vars of relations other than skip_rel.
+ * 'rtoffset' is what to add to varno for Vars of relations other than acceptable_rel.
  *
  * Returns the new expression tree.  The original clause structure is
  * not modified.
@@ -1904,7 +1904,7 @@ fix_join_expr(PlannerGlobal *glob,
 			  List *clauses,
 			  indexed_tlist *outer_itlist,
 			  indexed_tlist *inner_itlist,
-			  Index skip_rel,
+			  Index acceptable_rel,
 			  int rtoffset)
 {
 	fix_join_expr_context context;
@@ -1912,7 +1912,7 @@ fix_join_expr(PlannerGlobal *glob,
 	context.glob = glob;
 	context.outer_itlist = outer_itlist;
 	context.inner_itlist = inner_itlist;
-	context.skip_rel = skip_rel;
+	context.acceptable_rel = acceptable_rel;
 	context.rtoffset = rtoffset;
 	context.use_outer_tlist_for_matching_nonvars = true;
 	context.use_inner_tlist_for_matching_nonvars = true;
@@ -1931,7 +1931,7 @@ static List *fix_hashclauses(PlannerGlobal *glob,
                            List *clauses,
                            indexed_tlist *outer_itlist,
                            indexed_tlist *inner_itlist,
-                           Index skip_rel, int rtoffset)
+                           Index acceptable_rel, int rtoffset)
 {
     Assert(clauses);
     ListCell *lc = NULL;
@@ -2000,7 +2000,7 @@ fix_child_hashclauses(PlannerGlobal *glob,
               List *clauses,
               indexed_tlist *outer_itlist,
               indexed_tlist *inner_itlist,
-              Index skip_rel,
+              Index acceptable_rel,
               int rtoffset,
               Index child)
 {
@@ -2008,7 +2008,7 @@ fix_child_hashclauses(PlannerGlobal *glob,
     context.glob = glob;
     context.outer_itlist = outer_itlist;
     context.inner_itlist = inner_itlist;
-    context.skip_rel = skip_rel;
+    context.acceptable_rel = acceptable_rel;
     context.rtoffset = rtoffset;
     if (INNER == child)
     {
@@ -2054,8 +2054,8 @@ fix_join_expr_mutator(Node *node, fix_join_expr_context *context)
 				return (Node *) newvar;
 		}
 
-		/* If it's for an skip_rel (the inner relation in an index nested loop join), return it */
-		if (var->varno == context->skip_rel)
+		/* If it's for an acceptable_rel (the inner relation in an index nested loop join), return it */
+		if (var->varno == context->acceptable_rel)
 		{
 			return (Node *) var;
 		}
