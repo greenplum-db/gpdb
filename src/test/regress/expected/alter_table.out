@@ -1706,6 +1706,56 @@ select * from ao1;
  cc   |    3 | 5    | 
 (4 rows)
 
+alter table ao1 alter column col2 set default 2;
+select adsrc from pg_attrdef pdef, pg_attribute pattr
+    where pdef.adrelid='ao1'::regclass and pdef.adrelid=pattr.attrelid and pdef.adnum=pattr.attnum and pattr.attname='col2';
+ adsrc
+-------
+ 2
+(1 row)
+
+alter table ao1 rename col2 to col2_renamed;
+-- check dropping column
+alter table ao1 drop column col4;
+select attname from pg_attribute where attrelid='ao1'::regclass and attname='col4';
+ attname
+---------
+(0 rows)
+
+-- change the storage type of a column
+alter table ao1 alter column col3 set storage plain;
+select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
+ attname | attstorage
+---------+------------
+ col3    | p
+(1 row)
+
+alter table ao1 alter column col3 set storage main;
+select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
+ attname | attstorage
+---------+------------
+ col3    | m
+(1 row)
+
+alter table ao1 alter column col3 set storage external;
+select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
+ attname | attstorage
+---------+------------
+ col3    | e
+(1 row)
+
+alter table ao1 alter column col3 set storage extended;
+select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
+ attname | attstorage
+---------+------------
+ col3    | x
+(1 row)
+
+-- cannot set reloption appendonly
+alter table ao1 set (appendonly=true, compresslevel=5, fillfactor=50);
+ERROR:  cannot SET reloption "appendonly"
+alter table ao1 reset (appendonly, compresslevel, fillfactor);
+ERROR:  cannot SET reloption "appendonly"
 ---
 --- check catalog contents after alter table on AO tables 
 ---
@@ -2040,6 +2090,139 @@ select * from testbug_char5 order by 1,2;
  201208 |    3333 | 1     | 2    
 (9 rows)
 
+-- Test exchanging partition and then rolling back
+begin work;
+create table testbug_char5_exchange (timest character varying(6), user_id numeric(16,0) NOT NULL, tag1 char(5), tag2 char(5))
+  with (appendonly=true, compresstype=zlib, compresslevel=3) distributed by (user_id);
+insert into testbug_char5_exchange values ('201205', 3333, '2', '2');
+alter table testbug_char5 truncate partition part201205;
+select count(*) from testbug_char5;
+ count
+-------
+     7
+(1 row)
+
+alter table testbug_char5 exchange partition part201205 with table testbug_char5_exchange;
+select count(*) from testbug_char5;
+ count
+-------
+     8
+(1 row)
+
+rollback work;
+select count(*) from testbug_char5;
+ count
+-------
+     9
+(1 row)
+
+-- Test AO hybrid partitioning scheme (range and list) w/ subpartitions
+create table ao_multi_level_part_table (date date, region text, region1 text, amount decimal(10,2))
+  with (appendonly=true, compresstype=zlib, compresslevel=1)
+  partition by range(date) subpartition by list(region) (
+    partition part1 start(date '2008-01-01') end(date '2009-01-01')
+      (subpartition usa values ('usa'), subpartition asia values ('asia'), default subpartition def),
+    partition part2 start(date '2009-01-01') end(date '2010-01-01')
+      (subpartition usa values ('usa'), subpartition asia values ('asia')));
+-- insert some data
+insert into ao_multi_level_part_table values ('2008-02-02', 'usa', 'Texas', 10.05), ('2008-03-03', 'asia', 'China', 1.01);
+insert into ao_multi_level_part_table values ('2009-02-02', 'usa', 'Utah', 10.05), ('2009-03-03', 'asia', 'Japan', 1.01);
+-- add a partition that is not a default partition
+alter table ao_multi_level_part_table add partition part3 start(date '2010-01-01') end(date '2012-01-01') with (appendonly=true)
+  (subpartition usa values ('usa'), subpartition asia values ('asia'), default subpartition def);
+-- Add default partition (defaults to heap storage unless set with AO)
+alter table ao_multi_level_part_table add default partition yearYYYY (default subpartition def);
+select count(*) from pg_appendonly where relid='ao_multi_level_part_table_1_prt_yearyyyy'::regclass;
+ count
+-------
+     0
+(1 row)
+
+alter table ao_multi_level_part_table drop partition yearYYYY;
+NOTICE:  dropped partition "yearyyyy" for relation "ao_multi_level_part_table" and its children
+alter table ao_multi_level_part_table add default partition yearYYYY with (appendonly=true) (default subpartition def);
+select count(*) from pg_appendonly where relid='ao_multi_level_part_table_1_prt_yearyyyy'::regclass;
+ count
+-------
+     1
+(1 row)
+
+-- index on atts 1, 4
+create index ao_mlp_idx on ao_multi_level_part_table(date, amount);
+select indexname from pg_indexes where tablename='ao_multi_level_part_table';
+ indexname
+------------
+ ao_mlp_idx
+(1 row)
+
+alter index ao_mlp_idx rename to ao_mlp_idx_renamed;
+select indexname from pg_indexes where tablename='ao_multi_level_part_table';
+     indexname
+--------------------
+ ao_mlp_idx_renamed
+(1 row)
+
+-- truncate partitions until table is empty
+select * from ao_multi_level_part_table;
+    date    | region | region1 | amount
+------------+--------+---------+--------
+ 02-02-2008 | usa    | Texas   |  10.05
+ 02-02-2009 | usa    | Utah    |  10.05
+ 03-03-2008 | asia   | China   |   1.01
+ 03-03-2009 | asia   | Japan   |   1.01
+(4 rows)
+
+truncate ao_multi_level_part_table_1_prt_part1_2_prt_asia;
+select * from ao_multi_level_part_table;
+    date    | region | region1 | amount
+------------+--------+---------+--------
+ 02-02-2008 | usa    | Texas   |  10.05
+ 02-02-2009 | usa    | Utah    |  10.05
+ 03-03-2009 | asia   | Japan   |   1.01
+(3 rows)
+
+alter table ao_multi_level_part_table truncate partition for (rank(1));
+NOTICE:  truncated partition "part1" for relation "ao_multi_level_part_table" and its children
+select * from ao_multi_level_part_table;
+    date    | region | region1 | amount
+------------+--------+---------+--------
+ 02-02-2009 | usa    | Utah    |  10.05
+ 03-03-2009 | asia   | Japan   |   1.01
+(2 rows)
+
+alter table ao_multi_level_part_table alter partition part2 truncate partition usa;
+NOTICE:  truncated partition "usa" for partition "part2" of relation "ao_multi_level_part_table"
+select * from ao_multi_level_part_table;
+    date    | region | region1 | amount
+------------+--------+---------+--------
+ 03-03-2009 | asia   | Japan   |   1.01
+(1 row)
+
+alter table ao_multi_level_part_table truncate partition part2;
+NOTICE:  truncated partition "part2" for relation "ao_multi_level_part_table" and its children
+select * from ao_multi_level_part_table;
+ date | region | region1 | amount
+------+--------+---------+--------
+(0 rows)
+
+-- drop column in the partition table
+select count(*) from pg_attribute where attrelid='ao_multi_level_part_table'::regclass and attname = 'region1';
+ count
+-------
+     1
+(1 row)
+
+alter table ao_multi_level_part_table drop column region1;
+select count(*) from pg_attribute where attrelid='ao_multi_level_part_table'::regclass and attname = 'region1';
+ count
+-------
+     0
+(1 row)
+
+-- splitting top partition of a multi-level partition should not work
+alter table ao_multi_level_part_table split partition part3 at (date '2011-01-01') into (partition part3, partition part4);
+ERROR:  cannot split partition with child partitions
+HINT:  Try splitting the child partitions.
 --
 -- Check index scan
 --
@@ -2147,6 +2330,37 @@ set search_path=public;
 drop schema if exists mpp17582 cascade;
 NOTICE:  drop cascades to table mpp17582.load
 NOTICE:  drop cascades to table mpp17582.dim
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_yearyyyy_2_prt_def
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_yearyyyy
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_def
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_def
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_asia
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_asia
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_2_prt_asia_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_asia
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_usa
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_usa
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_2_prt_usa_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_usa
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part3
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_asia
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part2_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_asia
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part2_2_prt_asia_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_asia
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_usa
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part2_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_usa
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part2_2_prt_usa_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_usa
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part2
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part2_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part2
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_def
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_def
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_asia
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_asia
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_2_prt_asia_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_asia
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_usa
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_usa
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_2_prt_usa_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_usa
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part1
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table
 NOTICE:  drop cascades to table mpp17582.testbug_char5_1_prt_part201208
 NOTICE:  drop cascades to constraint testbug_char5_1_prt_part201208_check on table mpp17582.testbug_char5_1_prt_part201208
 NOTICE:  drop cascades to append only table mpp17582.testbug_char5_1_prt_part201207

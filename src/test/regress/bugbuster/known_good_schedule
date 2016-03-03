@@ -10,7 +10,7 @@ test: spi
 test: security
 test: load_tpch sirv_functions view xpath
 # these tests depend on load_tpch
-test: tpch_query hashagg gpsort
+test: tpch_query tpch_aopart hashagg gpsort
 test: bkup_gp
 test: mpp-11333
 test: codecoverage

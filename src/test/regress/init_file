@@ -114,4 +114,8 @@ s/^NOTICE:.*drop cascades to.*/^NOTICE: drop cascades to /
 # Mask out some numbers (parts of partition names) that vary from run to run.
 m/overlaps existing partition "r\d+"/
 s/overlaps existing partition "r\d+"/partition "r##########"/
+
+# Mask out some numbers (part of temp table schema) that vary from run to run.
+m/Table "pg_temp_\d+.temp/
+s/Table "pg_temp_\d+.temp/Table "pg_temp_#####/
 -- end_matchsubs

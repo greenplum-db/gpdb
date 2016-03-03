@@ -94,6 +94,7 @@ INSERT INTO tenk_aocs1 SELECT * FROM tenk_heap_for_aocs;
 INSERT INTO tenk_aocs2 SELECT * FROM tenk_heap_for_aocs;
 INSERT INTO tenk_aocs3 SELECT * FROM tenk_heap_for_aocs;
 INSERT INTO tenk_aocs4 SELECT * FROM tenk_heap_for_aocs;
+INSERT INTO tenk_aocs5 SELECT * FROM tenk_heap_for_aocs;
 
 -- mix and match some
 INSERT INTO tenk_aocs1 SELECT * FROM tenk_aocs1;
@@ -273,6 +274,18 @@ INSERT INTO aocs_with_domain_constraint (id, vc1) VALUES (4, NULL);
 -- JOIN
 SELECT count(*) FROM tenk_aocs1 t1, tenk_aocs2 t2 where t1.unique1 = t2.unique2;
 SELECT count(*) FROM tenk_aocs1 t1, tenk_heap_for_aocs t2 where t1.unique1 = t2.unique2;
+SELECT count(*) FROM tenk_aocs1 t1 INNER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2);
+SELECT count(*) FROM tenk_aocs1 t1 LEFT OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2);
+SELECT count(*) FROM tenk_aocs1 t1 RIGHT OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2);
+SELECT count(*) FROM tenk_aocs1 t1 FULL OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2);
+SELECT count(*) FROM tenk_aocs1 t1 INNER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
+SELECT count(*) FROM tenk_aocs1 t1 LEFT OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
+SELECT count(*) FROM tenk_aocs1 t1 RIGHT OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
+SELECT count(*) FROM tenk_aocs1 t1 FULL OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
+
+CREATE TABLE empty_aocs_table_for_join (like tenk_heap_for_aocs) with (appendonly=true, orientation=column) distributed by(unique1);
+SELECT count(*) FROM tenk_aocs1 t1 INNER JOIN empty_aocs_table_for_join t2 ON (t1.unique1 = t2.unique2);
+SELECT count(*) FROM tenk_aocs1 t1 LEFT OUTER JOIN empty_aocs_table_for_join t2 ON (t1.unique1 = t2.unique2);
 
 -- EXCEPT
 SELECT unique1 FROM tenk_aocs1 EXCEPT SELECT unique1 FROM tenk_aocs1;
@@ -307,6 +320,23 @@ insert into co values (9,2,'b'), (10,2,'bb'), (11,2,'bbb'), (12,2,'bbbb'),
 	(13,5,'aaaaa'), (14,6,'aaaaaa'), (15,7,'aaaaaaa'), (16,8,'aaaaaaaa');
 select * from co where j = 2;
 
+create index co_ij on co (i, j) with (fillfactor=10);
+alter index co_ij set (fillfactor=20);
+reindex index co_ij;
+select indexname from pg_indexes where tablename = 'co' order by indexname;
+alter table co alter j type bigint;
+alter table co rename j to j_renamed;
+alter table co drop column j_renamed;
+select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'co' order by attname, tablename;
+create index co_i on co (i) where i = 9;
+analyze co;
+select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'co' order by attname, tablename;
+select indexname from pg_indexes where tablename = 'co' order by indexname;
+select * from co where i = 9;
+alter index co_i rename to co_i_renamed;
+select indexname from pg_indexes where tablename = 'co' order by indexname;
+drop index if exists co_i_renamed;
+
 drop table if exists co;
 create table co (i int, j int, k varchar) with(appendonly=true, orientation=column);
 insert into co values (1,1,'a'), (2,2,'aa'), (3,3,'aaa'), (4,4,'aaaa'),
@@ -331,6 +361,51 @@ select j,i from co where k = 'aaa' or k = 'bbb';
 -- Test clustering errors out
 cluster co_j_cluster on co_j;
 
+-- TEMP TABLES w/ INDEXES
+create temp table temp_tenk_aocs5 with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
+    as select * from tenk_aocs5 distributed by (unique1);
+create index temp_even_index on temp_tenk_aocs5 (even);
+select count(*) from temp_tenk_aocs5;
+select tablename, indexname, indexdef from pg_indexes where tablename = 'temp_tenk_aocs5';
+insert into temp_tenk_aocs5(unique1, unique2) values (99998888, 99998888);
+update temp_tenk_aocs5 set unique2 = 99998889 where unique2 = 99998888;
+delete from temp_tenk_aocs5 where unique2 = 99998889;
+select count(*) from temp_tenk_aocs5;
+truncate table temp_tenk_aocs5;
+vacuum analyze temp_tenk_aocs5;
+\d temp_tenk_aocs5
+insert into temp_tenk_aocs5(unique1, unique2) values (99998888, 99998888);
+select unique1 from temp_tenk_aocs5;
+
+-- TEMP TABLES w/ COMMIT DROP AND USING PREPARE
+begin;
+prepare tenk_aocs5_prep(int4) as select * from tenk_aocs5 where unique1 > 8000;
+create temp table tenk_aocs5_temp_drop with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
+    on commit drop as execute tenk_aocs5_prep(8095);
+select count(*) from tenk_aocs5_temp_drop;
+commit;
+select count(*) from tenk_aocs5_temp_drop;
+
+-- TEMP TABLES w/ COMMIT DELETE ROWS
+begin;
+create temp table tenk_aocs5_temp_delete_rows with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
+    on commit delete rows as select * from tenk_aocs5 where unique1 > 8000 distributed by (unique1);
+select count(*) from tenk_aocs5_temp_delete_rows;
+commit;
+select count(*) from tenk_aocs5_temp_delete_rows;
+
+-- TEMP TABLES w/ COMMIT PRESERVE ROWS
+begin;
+create temp table tenk_aocs5_temp_pres_rows with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
+    on commit preserve rows as select * from tenk_aocs5 where unique1 > 8000 distributed by (unique1);
+select count(*) from tenk_aocs5_temp_pres_rows;
+commit;
+select count(*) from tenk_aocs5_temp_pres_rows;
+
+-- RULES
+create rule aocs_rule_update as on insert to tenk_aocs5 do instead update foo_aocs set two=2;
+create rule aocs_rule_delete as on insert to tenk_aocs5 do instead delete from foo_aocs where unique1=1;
+
 ---------------------
 -- UAO
 ---------------------
@@ -342,6 +417,7 @@ DELETE FROM tenk_aocs1 WHERE unique1 = 1;
 select count(*) from gp_toolkit.__gp_aocsseg_name('tenk_aocs1') where modcount > 0;
 -- UPDATE
 UPDATE tenk_aocs1 SET unique2 = 1 WHERE unique2 = 2;
+UPDATE tenk_aocs1 SET two = 2;
 -- modcount after UPDATE must increment to flag table should be included in
 -- incremental backup
 select count(*) from gp_toolkit.__gp_aocsseg_name('tenk_aocs1') where modcount > 1;
@@ -400,3 +476,22 @@ insert into aocs_unknown
 select i, 'unknown' from generate_series(1, 10)i;
 
 select * from aocs_unknown;
+
+-- Check compression and distribution
+create table aocs_compress_table (id int, v varchar)
+    with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1) distributed by (id);
+create table aocs_compress_results(table_size int, aocs_compress_id_index_size int, aocs_compress_v_index_size int) distributed randomly;
+create index aocs_compress_id_index on aocs_compress_table (id);
+create index aocs_compress_v_index on aocs_compress_table (v);
+insert into aocs_compress_results values (pg_relation_size('aocs_compress_table'), pg_relation_size('aocs_compress_id_index'), pg_relation_size('aocs_compress_v_index'));
+
+insert into aocs_compress_table (id, v) values (1, 'ifyouwantto99knowwhatist8329histhenkeepreadingit;;untilyou]findoutyoureyeshurtandyoustil0ldontknow103kwhatitisdoyouunderstandmeyetandifyoustillwanttoknowthenyoupleasekeepreading');
+insert into aocs_compress_results values (pg_relation_size('aocs_compress_table'), pg_relation_size('aocs_compress_id_index'), pg_relation_size('aocs_compress_v_index'));
+
+select get_ao_compression_ratio('aocs_compress_table');
+select get_ao_distribution('aocs_compress_table');
+
+truncate table aocs_compress_table; -- after truncate, reclaim space from the table and index
+insert into aocs_compress_results values (pg_relation_size('aocs_compress_table'), pg_relation_size('aocs_compress_id_index'), pg_relation_size('aocs_compress_v_index'));
+
+select count(*) from (select distinct * from aocs_compress_results) temp; -- should give 2 after reclaiming space

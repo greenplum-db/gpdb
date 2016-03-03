@@ -539,8 +539,9 @@ order by partcons;
 --
 -- ************************************************************
 -- * Scenario 3
--- * 	- multi-level partitions 
--- * 	- dropped columns 
+-- * 	- multi-level partitions
+-- *  - truncate partition
+-- * 	- dropped columns
 -- ************************************************************
 --
 create table part_table3
@@ -574,6 +575,9 @@ NOTICE:  CREATE TABLE will create partition "part_table3_1_prt_part1_2_prt_asia"
 NOTICE:  CREATE TABLE will create partition "part_table3_1_prt_part1_2_prt_def" for table "part_table3_1_prt_part1"
 NOTICE:  CREATE TABLE will create partition "part_table3_1_prt_part2_2_prt_usa" for table "part_table3_1_prt_part2"
 NOTICE:  CREATE TABLE will create partition "part_table3_1_prt_part2_2_prt_asia" for table "part_table3_1_prt_part2"
+-- insert some data
+insert into part_table3 values ('2008-02-02', 'usa', 'Texas', 10.05), ('2008-03-03', 'asia', 'China', 1.01);
+insert into part_table3 values ('2009-02-02', 'usa', 'Texas', 10.05), ('2009-03-03', 'asia', 'China', 1.01);
 -- index on atts 1, 4
 create index i1 on part_table3(date, amount); 
 NOTICE:  building index for child partition "part_table3_1_prt_part1"
@@ -590,6 +594,50 @@ as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, in
  1 4    |               | 
 (1 row)
 
+-- truncate partitions until table is empty
+select * from part_table3;
+    date    | region | region1 | amount
+------------+--------+---------+--------
+ 02-02-2008 | usa    | Texas   |  10.05
+ 02-02-2009 | usa    | Texas   |  10.05
+ 03-03-2008 | asia   | China   |   1.01
+ 03-03-2009 | asia   | China   |   1.01
+(4 rows)
+
+truncate part_table3_1_prt_part1_2_prt_asia;
+select * from part_table3;
+    date    | region | region1 | amount
+------------+--------+---------+--------
+ 02-02-2008 | usa    | Texas   |  10.05
+ 02-02-2009 | usa    | Texas   |  10.05
+ 03-03-2009 | asia   | China   |   1.01
+(3 rows)
+
+alter table part_table3 truncate partition for (rank(1));
+NOTICE:  truncated partition "part1" for relation "part_table3" and its children
+select * from part_table3;
+    date    | region | region1 | amount
+------------+--------+---------+--------
+ 02-02-2009 | usa    | Texas   |  10.05
+ 03-03-2009 | asia   | China   |   1.01
+(2 rows)
+
+alter table part_table3 alter partition part2 truncate partition usa;
+NOTICE:  truncated partition "usa" for partition "part2" of relation "part_table3"
+select * from part_table3;
+    date    | region | region1 | amount
+------------+--------+---------+--------
+ 03-03-2009 | asia   | China   |   1.01
+(1 row)
+
+alter table part_table3 truncate partition part2;
+NOTICE:  truncated partition "part2" for relation "part_table3" and its children
+select * from part_table3;
+ date | region | region1 | amount
+------+--------+---------+--------
+(0 rows)
+
+-- drop column region1
 alter table part_table3 drop column region1;  
 select indKey, defaultLevels, partCons from gp_build_logical_index('part_table3'::regclass)
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);

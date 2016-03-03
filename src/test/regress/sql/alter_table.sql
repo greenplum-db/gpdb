@@ -1188,6 +1188,30 @@ select * from ao1;
 insert into ao1 values('dd', 4);
 select * from ao1;
 
+alter table ao1 alter column col2 set default 2;
+select adsrc from pg_attrdef pdef, pg_attribute pattr
+    where pdef.adrelid='ao1'::regclass and pdef.adrelid=pattr.attrelid and pdef.adnum=pattr.attnum and pattr.attname='col2';
+
+alter table ao1 rename col2 to col2_renamed;
+
+-- check dropping column
+alter table ao1 drop column col4;
+select attname from pg_attribute where attrelid='ao1'::regclass and attname='col4';
+
+-- change the storage type of a column
+alter table ao1 alter column col3 set storage plain;
+select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
+alter table ao1 alter column col3 set storage main;
+select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
+alter table ao1 alter column col3 set storage external;
+select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
+alter table ao1 alter column col3 set storage extended;
+select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
+
+-- cannot set reloption appendonly
+alter table ao1 set (appendonly=true, compresslevel=5, fillfactor=50);
+alter table ao1 reset (appendonly, compresslevel, fillfactor);
+
 ---
 --- check catalog contents after alter table on AO tables 
 ---
@@ -1419,8 +1443,68 @@ insert into testbug_char5 select '201206',3333,'1','2';
 insert into testbug_char5 select '201207',3333,'1','2';
 insert into testbug_char5 select '201208',3333,'1','2';
 
-
 select * from testbug_char5 order by 1,2;
+
+-- Test exchanging partition and then rolling back
+begin work;
+create table testbug_char5_exchange (timest character varying(6), user_id numeric(16,0) NOT NULL, tag1 char(5), tag2 char(5))
+  with (appendonly=true, compresstype=zlib, compresslevel=3) distributed by (user_id);
+insert into testbug_char5_exchange values ('201205', 3333, '2', '2');
+alter table testbug_char5 truncate partition part201205;
+select count(*) from testbug_char5;
+alter table testbug_char5 exchange partition part201205 with table testbug_char5_exchange;
+select count(*) from testbug_char5;
+rollback work;
+select count(*) from testbug_char5;
+
+-- Test AO hybrid partitioning scheme (range and list) w/ subpartitions
+create table ao_multi_level_part_table (date date, region text, region1 text, amount decimal(10,2))
+  with (appendonly=true, compresstype=zlib, compresslevel=1)
+  partition by range(date) subpartition by list(region) (
+    partition part1 start(date '2008-01-01') end(date '2009-01-01')
+      (subpartition usa values ('usa'), subpartition asia values ('asia'), default subpartition def),
+    partition part2 start(date '2009-01-01') end(date '2010-01-01')
+      (subpartition usa values ('usa'), subpartition asia values ('asia')));
+
+-- insert some data
+insert into ao_multi_level_part_table values ('2008-02-02', 'usa', 'Texas', 10.05), ('2008-03-03', 'asia', 'China', 1.01);
+insert into ao_multi_level_part_table values ('2009-02-02', 'usa', 'Utah', 10.05), ('2009-03-03', 'asia', 'Japan', 1.01);
+
+-- add a partition that is not a default partition
+alter table ao_multi_level_part_table add partition part3 start(date '2010-01-01') end(date '2012-01-01') with (appendonly=true)
+  (subpartition usa values ('usa'), subpartition asia values ('asia'), default subpartition def);
+
+-- Add default partition (defaults to heap storage unless set with AO)
+alter table ao_multi_level_part_table add default partition yearYYYY (default subpartition def);
+select count(*) from pg_appendonly where relid='ao_multi_level_part_table_1_prt_yearyyyy'::regclass;
+alter table ao_multi_level_part_table drop partition yearYYYY;
+alter table ao_multi_level_part_table add default partition yearYYYY with (appendonly=true) (default subpartition def);
+select count(*) from pg_appendonly where relid='ao_multi_level_part_table_1_prt_yearyyyy'::regclass;
+
+-- index on atts 1, 4
+create index ao_mlp_idx on ao_multi_level_part_table(date, amount);
+select indexname from pg_indexes where tablename='ao_multi_level_part_table';
+alter index ao_mlp_idx rename to ao_mlp_idx_renamed;
+select indexname from pg_indexes where tablename='ao_multi_level_part_table';
+
+-- truncate partitions until table is empty
+select * from ao_multi_level_part_table;
+truncate ao_multi_level_part_table_1_prt_part1_2_prt_asia;
+select * from ao_multi_level_part_table;
+alter table ao_multi_level_part_table truncate partition for (rank(1));
+select * from ao_multi_level_part_table;
+alter table ao_multi_level_part_table alter partition part2 truncate partition usa;
+select * from ao_multi_level_part_table;
+alter table ao_multi_level_part_table truncate partition part2;
+select * from ao_multi_level_part_table;
+
+-- drop column in the partition table
+select count(*) from pg_attribute where attrelid='ao_multi_level_part_table'::regclass and attname = 'region1';
+alter table ao_multi_level_part_table drop column region1;
+select count(*) from pg_attribute where attrelid='ao_multi_level_part_table'::regclass and attname = 'region1';
+
+-- splitting top partition of a multi-level partition should not work
+alter table ao_multi_level_part_table split partition part3 at (date '2011-01-01') into (partition part3, partition part4);
 
 --
 -- Check index scan
