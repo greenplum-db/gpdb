@@ -104,13 +104,14 @@ script:
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
   - cd ${TRAVIS_BUILD_DIR}/gpAux/gpdemo
   - make
-  - cat ~/gpAdminLogs/*.log
   - source gpdemo-env.sh
   - createdb
   - cd ${TRAVIS_BUILD_DIR}
   - make installcheck-good 
 
 after_failure:
+  - cat ~/gpAdminLogs/*.log
+  - cat ${TRAVIS_BUILD_DIR}/gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_log/*
   - cat ${TRAVIS_BUILD_DIR}/src/test/regress/regression.diffs
 
 ## ----------------------------------------------------------------------
