@@ -24,6 +24,7 @@ os:
 language: c
 cache: ccache
 sudo: required
+dist: trusty
 
 git:
   submodules: false
