@@ -560,6 +560,30 @@ SELECT TblText1.a, TblText2.b FROM TblText1 JOIN TblText2 ON TblText1.a = TblTex
 
 SELECT TblText1.a, TblText2.b FROM TblText1 JOIN TblText2 ON TblText1.a = TblText2.a WHERE (( (TblText1.a, TblText2.b) IN (SELECT TblText3.a, TblText3.b FROM TblText3)));
 
+--
+-- Delete
+--
+-- start_ignore
+create table TabDel1(a int, b int);
+insert into TabDel1 values(1,2),(3,4),(5,6);
+
+create table TabDel2 as select * from TabDel1;
+
+create table TabDel3(a int, b int);
+insert into TabDel3 values(1,2);
+
+create table TabDel4(a int not null, b int not null);
+insert into TabDel4 values(1,2);
+-- end_ignore
+
+explain delete from TabDel1 where TabDel1.a not in (select a from TabDel3); -- do not support this because we produce NLASJ
+
+explain delete from TabDel2 where TabDel2.a not in (select a from TabDel4); -- support this
+-- start_ignore
+delete from TabDel2 where TabDel2.a not in (select a from TabDel4); 
+-- end_ignore
+select * from TabDel2;
+
 -- start_ignore
 drop schema qp_subquery cascade;
 -- end_ignore

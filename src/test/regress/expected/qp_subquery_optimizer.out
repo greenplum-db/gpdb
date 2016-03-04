@@ -1189,6 +1189,66 @@ SELECT TblText1.a, TblText2.b FROM TblText1 JOIN TblText2 ON TblText1.a = TblTex
  oak     | barrett
 (2 rows)
 
+--
+-- Delete
+--
+-- start_ignore
+create table TabDel1(a int, b int);
+CREATE TABLE
+insert into TabDel1 values(1,2),(3,4),(5,6);
+INSERT 0 3
+create table TabDel2 as select * from TabDel1;
+SELECT 3
+create table TabDel3(a int, b int);
+CREATE TABLE
+insert into TabDel3 values(1,2);
+INSERT 0 1
+create table TabDel4(a int not null, b int not null);
+CREATE TABLE
+insert into TabDel4 values(1,2);
+INSERT 0 1
+-- end_ignore
+explain delete from TabDel1 where TabDel1.a not in (select a from TabDel3); -- do not support this because we produce NLASJ
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Delete  (cost=0.00..862.04 rows=1 width=1)
+   ->  Result  (cost=0.00..862.00 rows=1 width=26)
+         ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=1 width=18)
+               Hash Cond: qp_subquery.tabdel1.a = tabdel3.a
+               ->  Table Scan on tabdel1  (cost=0.00..431.00 rows=1 width=18)
+               ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Table Scan on tabdel3  (cost=0.00..431.00 rows=1 width=4)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 1.624
+(10 rows)
+
+explain delete from TabDel2 where TabDel2.a not in (select a from TabDel4); -- support this
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Delete  (cost=0.00..862.04 rows=1 width=1)
+   ->  Result  (cost=0.00..862.00 rows=1 width=26)
+         ->  Explicit Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=18)
+               ->  Hash Left Anti Semi Join (Not-In)  (cost=0.00..862.00 rows=1 width=18)
+                     Hash Cond: qp_subquery.tabdel2.a = tabdel4.a
+                     ->  Table Scan on tabdel2  (cost=0.00..431.00 rows=1 width=18)
+                     ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Table Scan on tabdel4  (cost=0.00..431.00 rows=1 width=4)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 1.624
+(11 rows)
+
+-- start_ignore
+delete from TabDel2 where TabDel2.a not in (select a from TabDel4); 
+DELETE 2
+-- end_ignore
+select * from TabDel2;
+ a | b 
+---+---
+ 1 | 2
+(1 row)
+
 -- start_ignore
 drop schema qp_subquery cascade;
 -- end_ignore

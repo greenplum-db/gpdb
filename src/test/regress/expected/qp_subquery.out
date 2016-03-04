@@ -1188,6 +1188,65 @@ SELECT TblText1.a, TblText2.b FROM TblText1 JOIN TblText2 ON TblText1.a = TblTex
  oak     | barrett
 (2 rows)
 
+--
+-- Delete
+--
+-- start_ignore
+create table TabDel1(a int, b int);
+CREATE TABLE
+insert into TabDel1 values(1,2),(3,4),(5,6);
+INSERT 0 3
+create table TabDel2 as select * from TabDel1;
+SELECT 3
+create table TabDel3(a int, b int);
+CREATE TABLE
+insert into TabDel3 values(1,2);
+INSERT 0 1
+create table TabDel4(a int not null, b int not null);
+CREATE TABLE
+insert into TabDel4 values(1,2);
+INSERT 0 1
+-- end_ignore
+explain delete from TabDel1 where TabDel1.a not in (select a from TabDel3); -- do not support this because we produce NLASJ
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Delete (slice0; segments: 3)  (rows=2 width=10)
+   ->  Explicit Redistribute Motion 3:3  (slice2; segments: 3)  (cost=1.10..3.18 rows=2 width=10)
+         ->  Hash Left Anti Semi Join (Not-In)  (cost=1.10..3.18 rows=2 width=10)
+               Hash Cond: tabdel1.a = "NotIn_SUBQUERY".a
+               ->  Seq Scan on tabdel1  (cost=0.00..2.03 rows=1 width=14)
+                     Filter: a IS NOT NULL
+               ->  Hash  (cost=1.06..1.06 rows=1 width=4)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.06 rows=1 width=4)
+                           ->  Subquery Scan "NotIn_SUBQUERY"  (cost=0.00..1.02 rows=1 width=4)
+                                 ->  Seq Scan on tabdel3  (cost=0.00..1.01 rows=1 width=4)
+ Optimizer status: legacy query optimizer
+(11 rows)
+
+explain delete from TabDel2 where TabDel2.a not in (select a from TabDel4); -- support this
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Delete (slice0; segments: 3)  (rows=2 width=10)
+   ->  Hash Left Anti Semi Join (Not-In)  (cost=1.03..3.11 rows=2 width=10)
+         Hash Cond: tabdel2.a = "NotIn_SUBQUERY".a
+         ->  Seq Scan on tabdel2  (cost=0.00..2.03 rows=1 width=14)
+               Filter: a IS NOT NULL
+         ->  Hash  (cost=1.02..1.02 rows=1 width=4)
+               ->  Subquery Scan "NotIn_SUBQUERY"  (cost=0.00..1.02 rows=1 width=4)
+                     ->  Seq Scan on tabdel4  (cost=0.00..1.01 rows=1 width=4)
+ Optimizer status: legacy query optimizer
+(9 rows)
+
+-- start_ignore
+delete from TabDel2 where TabDel2.a not in (select a from TabDel4); 
+DELETE 2
+-- end_ignore
+select * from TabDel2;
+ a | b 
+---+---
+ 1 | 2
+(1 row)
+
 -- start_ignore
 drop schema qp_subquery cascade;
 -- end_ignore
