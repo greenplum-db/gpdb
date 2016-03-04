@@ -8,10 +8,10 @@
 
 #include <time.h>
 #include <string.h>
-#include <openssl/sha.h>
 #include <stdio.h>
-#include <openssl/des.h>
 #include <stdbool.h>
+#include <openssl/sha.h>
+#include <openssl/des.h>
 #include <openssl/hmac.h>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
@@ -112,55 +112,97 @@ char *Base64Encode(const char *buffer,
     return ret;  // s
 }
 
-bool sha256(const char *string, char outputBuffer[65]) {
+// not returning the normal hex result, might have '\0'
+bool sha1hmac(const char *str, unsigned char out_hash[20], const char *secret,
+              int secret_len) {
+    if (!str) return false;
+
+    unsigned int len = 32;
+
+    HMAC_CTX hmac;
+    HMAC_CTX_init(&hmac);
+    HMAC_Init_ex(&hmac, secret, secret_len, EVP_sha1(), NULL);
+    HMAC_Update(&hmac, (unsigned char *)str, strlen(str));
+    HMAC_Final(&hmac, out_hash, &len);
+
+    HMAC_CTX_cleanup(&hmac);
+
+    return true;
+}
+
+bool sha1hmac_hex(const char *str, char out_hash_hex[41], const char *secret,
+                  int secret_len) {
+    if (!str) return false;
+
+    unsigned char hash[20];
+
+    sha1hmac(str, hash, secret, secret_len);
+
+    for (int i = 0; i < 20; i++) {
+        sprintf(out_hash_hex + (i * 2), "%02x", hash[i]);
+    }
+    out_hash_hex[40] = 0;
+
+    return true;
+}
+
+// SHA256_DIGEST_LENGTH == 32
+bool sha256(const char *string, unsigned char out_hash[32]) {
     if (!string) return false;
 
-    unsigned char hash[SHA256_DIGEST_LENGTH];  // 32
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
     SHA256_Update(&sha256, string, strlen(string));
-    SHA256_Final(hash, &sha256);
+    SHA256_Final(out_hash, &sha256);
+
+    return true;
+}
+
+// SHA256_DIGEST_LENGTH * 2 + 1 == 65
+bool sha256_hex(const char *string, char out_hash_hex[65]) {
+    if (!string) return false;
+
+    unsigned char hash[SHA256_DIGEST_LENGTH];  // 32
+
+    sha256(string, hash);
 
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        sprintf(outputBuffer + (i * 2), "%02x", hash[i]);
+        sprintf(out_hash_hex + (i * 2), "%02x", hash[i]);
     }
-    outputBuffer[64] = 0;
+    out_hash_hex[64] = 0;
 
     return true;
 }
 
-// not returning the normal hex result, might have '\0'
-bool sha1hmac(const char *str, char hash[20], const char *secret) {
+bool sha256hmac(const char *str, unsigned char out_hash[32], const char *secret,
+                int secret_len) {
     if (!str) return false;
 
-    unsigned int len = SHA_DIGEST_LENGTH;  // 20
-    HMAC_CTX hmac;
-    HMAC_CTX_init(&hmac);
-    HMAC_Init_ex(&hmac, secret, strlen(secret), EVP_sha1(), NULL);
-    HMAC_Update(&hmac, (unsigned char *)str, strlen(str));
-    HMAC_Final(&hmac, (unsigned char *)hash, &len);
-
-    HMAC_CTX_cleanup(&hmac);
-
-    return true;
-}
-
-bool sha256hmac(const char *str, char out[65], const char *secret) {
-    if (!str) return false;
-
-    unsigned char hash[32];  // must be unsigned here
     unsigned int len = 32;
+
     HMAC_CTX hmac;
     HMAC_CTX_init(&hmac);
-    HMAC_Init_ex(&hmac, secret, strlen(secret), EVP_sha256(), NULL);
+    HMAC_Init_ex(&hmac, secret, secret_len, EVP_sha256(), NULL);
     HMAC_Update(&hmac, (unsigned char *)str, strlen(str));
+    HMAC_Final(&hmac, out_hash, &len);
 
-    HMAC_Final(&hmac, hash, &len);
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        sprintf(out + (i * 2), "%02x", hash[i]);
-    }
     HMAC_CTX_cleanup(&hmac);
-    out[64] = 0;
+
+    return true;
+}
+
+bool sha256hmac_hex(const char *str, char out_hash_hex[65], const char *secret,
+                    int secret_len) {
+    if (!str) return false;
+
+    unsigned char hash[SHA256_DIGEST_LENGTH];  // 32
+
+    sha256hmac(str, hash, secret, secret_len);
+
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        sprintf(out_hash_hex + (i * 2), "%02x", hash[i]);
+    }
+    out_hash_hex[64] = 0;
 
     return true;
 }
@@ -415,4 +457,15 @@ std::string uri_decode(const std::string &src) {
     std::string ret_str(sub_start, sub_end);
     delete[] sub_start;
     return ret_str;
+}
+
+void find_replace(string &str, const string &find, const string &replace) {
+    if (find.empty()) return;
+
+    size_t pos = 0;
+
+    while ((pos = str.find(find, pos)) != string::npos) {
+        str.replace(pos, find.length(), replace);
+        pos += replace.length();
+    }
 }

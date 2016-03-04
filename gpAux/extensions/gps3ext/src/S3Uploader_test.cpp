@@ -2,6 +2,7 @@
 #include "S3Uploader.cpp"
 
 #ifdef AWSTEST
+
 #define S3HOST "s3-us-west-2.amazonaws.com"
 #define S3BUCKET "s3test.pivotal.io/upload_test"
 
@@ -120,4 +121,5 @@ TEST(Uploader, get_upload_id_spaces_directories) {
     EXPECT_NE(upload_id, (void *)NULL);
 }
 */
+
 #endif  // AWSTEST

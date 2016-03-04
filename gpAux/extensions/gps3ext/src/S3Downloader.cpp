@@ -15,6 +15,7 @@
 #include <inttypes.h>
 
 #include <unistd.h>
+using std::stringstream;
 
 OffsetMgr::OffsetMgr(uint64_t m, uint64_t c)
     : maxsize(m), chunksize(c), curpos(0) {
@@ -166,13 +167,14 @@ uint64_t BlockingBuffer::Fill() {
     return (readlen == -1) ? -1 : this->realsize;
 }
 
-BlockingBuffer *BlockingBuffer::CreateBuffer(string url, OffsetMgr *o,
+BlockingBuffer *BlockingBuffer::CreateBuffer(string url, string region,
+                                             OffsetMgr *o,
                                              S3Credential *pcred) {
     BlockingBuffer *ret = NULL;
     if (url == "") return NULL;
 
     if (pcred) {
-        ret = new S3Fetcher(url, o, *pcred);
+        ret = new S3Fetcher(url, region, o, *pcred);
     } else {
         ret = new HTTPFetcher(url, o);
     }
@@ -228,8 +230,8 @@ Downloader::Downloader(uint8_t part_num)
     }
 }
 
-bool Downloader::init(string url, uint64_t size, uint64_t chunksize,
-                      S3Credential *pcred) {
+bool Downloader::init(string url, string region, uint64_t size,
+                      uint64_t chunksize, S3Credential *pcred) {
     if (!this->threads || !this->buffers) {
         return false;
     }
@@ -242,7 +244,7 @@ bool Downloader::init(string url, uint64_t size, uint64_t chunksize,
 
     for (int i = 0; i < this->num; i++) {
         this->buffers[i] = BlockingBuffer::CreateBuffer(
-            url, o, pcred);  // decide buffer according to url
+            url, region, o, pcred);  // decide buffer according to url
         if (!this->buffers[i]->Init()) {
             S3ERROR("Failed to init blocking buffer");
             return false;
@@ -393,6 +395,7 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
         snprintf(rangebuf, 128, "bytes=%" PRIu64 "-%" PRIu64, offset,
                  offset + len - 1);
         this->AddHeaderField(RANGE, rangebuf);
+        this->AddHeaderField(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
         if (!this->processheader()) {
             S3ERROR("Failed to sign while fetching data, retry");
             continue;
@@ -442,13 +445,16 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
     return bi.len;
 }
 
-S3Fetcher::S3Fetcher(string url, OffsetMgr *o, const S3Credential &cred)
+S3Fetcher::S3Fetcher(string url, string region, OffsetMgr *o,
+                     const S3Credential &cred)
     : HTTPFetcher(url, o) {
     this->cred = cred;
+    this->region = region;
 }
 
 bool S3Fetcher::processheader() {
-    return SignGETv2(&this->headers, this->urlparser.Path(), this->cred);
+    return SignRequestV4("GET", &this->headers, this->region,
+                         this->urlparser.Path(), "", this->cred);
 }
 
 // CreateBucketContentItem
@@ -470,8 +476,11 @@ BucketContent *CreateBucketContentItem(string key, uint64_t size) {
 }
 
 // require curl 7.17 higher
-xmlParserCtxtPtr DoGetXML(string host, string bucket, string url,
-                          const S3Credential &cred) {
+xmlParserCtxtPtr DoGetXML(string region, string bucket, string url,
+                          string prefix, const S3Credential &cred) {
+    stringstream host;
+    host << "s3-" << region << ".amazonaws.com";
+
     CURL *curl = curl_easy_init();
 
     if (curl) {
@@ -495,10 +504,15 @@ xmlParserCtxtPtr DoGetXML(string host, string bucket, string url,
         return NULL;
     }
 
-    header->Add(HOST, host);
+    header->Add(HOST, host.str());
     UrlParser p(url.c_str());
-    if (!SignGETv2(header, p.Path(), cred)) {
-        S3ERROR("failed to sign in DoGetXML()");
+    header->Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+
+    std::stringstream query;
+    query << "prefix=" << prefix;
+
+    if (!SignRequestV4("GET", header, region, p.Path(), query.str(), cred)) {
+        S3ERROR("Failed to sign in DoGetXML()");
         delete header;
         return NULL;
     }
@@ -515,7 +529,6 @@ xmlParserCtxtPtr DoGetXML(string host, string bucket, string url,
             xmlFreeParserCtxt(xml.ctxt);
             xml.ctxt = NULL;
         }
-
     } else {
         if (xml.ctxt) {
             xmlParseChunk(xml.ctxt, "", 0, 1);
@@ -580,21 +593,26 @@ static bool extractContent(ListBucketResult *result, xmlNode *root_element) {
     return true;
 }
 
-ListBucketResult *ListBucket(string schema, string host, string bucket,
+ListBucketResult *ListBucket(string schema, string region, string bucket,
                              string prefix, const S3Credential &cred) {
-    std::stringstream sstr;
+    stringstream host;
+    host << "s3-" << region << ".amazonaws.com";
+
+    S3DEBUG("Host url is %s", host.str().c_str());
+
+    std::stringstream url;
     if (prefix != "") {
-        sstr << schema << "://" << host << "/" << bucket
-             << "?prefix=" << prefix;
-        // sstr<<"http://"<<bucket<<"."<<host<<"?prefix="<<prefix;
+        url << schema << "://" << host.str() << "/" << bucket
+            << "?prefix=" << prefix;
     } else {
-        sstr << schema << "://" << bucket << "." << host;
+        url << schema << "://" << bucket << "." << host.str();
     }
 
-    xmlParserCtxtPtr xmlcontext = DoGetXML(host, bucket, sstr.str(), cred);
+    xmlParserCtxtPtr xmlcontext =
+        DoGetXML(region, bucket, url.str(), prefix, cred);
 
     if (!xmlcontext) {
-        S3ERROR("Failed to list bucket for %s", sstr.str().c_str());
+        S3ERROR("Failed to list bucket for %s", url.str().c_str());
         return NULL;
     }
 
@@ -604,6 +622,23 @@ ListBucketResult *ListBucket(string schema, string host, string bucket,
         xmlFreeParserCtxt(xmlcontext);
         return NULL;
     }
+
+    /*
+     *     char *response_code = NULL;
+     *     xmlNodePtr cur = root_element->xmlChildrenNode;
+     *     while (cur != NULL) {
+     *         if (!xmlStrcmp(cur->name, (const xmlChar *)"Code")) {
+     *             response_code = strdup((const char *)xmlNodeGetContent(cur));
+     *             break;
+     *         }
+     *
+     *         cur = cur->next;
+     *     }
+     *
+     *     if (response_code) {
+     *         std::cout << response_code << std::endl;
+     *     }
+     */
 
     ListBucketResult *result = new ListBucketResult();
 

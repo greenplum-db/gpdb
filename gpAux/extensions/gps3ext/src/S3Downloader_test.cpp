@@ -61,7 +61,7 @@ TEST(ListBucket, fake) {
 }
 #endif  // FAKETEST
 
-#define S3HOST "s3-us-west-2.amazonaws.com"
+#define S3REGION "us-west-2"
 #define S3BUCKET "s3test.pivotal.io"
 #define S3PREFIX "dataset1/small17"
 
@@ -73,7 +73,7 @@ TEST(ListBucket, s3) {
     S3Credential g_cred = {s3ext_accessid, s3ext_secret};
 
     ListBucketResult *r =
-        ListBucket("https", S3HOST, S3BUCKET, S3PREFIX, g_cred);
+        ListBucket("https", S3REGION, S3BUCKET, S3PREFIX, g_cred);
 
     ASSERT_NE(r, (void *)NULL);
     EXPECT_EQ(r->contents.size(), 16);
@@ -82,7 +82,8 @@ TEST(ListBucket, s3) {
     vector<BucketContent *>::iterator i;
     for (i = r->contents.begin(); i != r->contents.end(); i++) {
         BucketContent *p = *i;
-        sprintf(urlbuf, "http://%s/%s/%s", S3HOST, S3BUCKET, p->Key().c_str());
+        sprintf(urlbuf, "http://s3-%s.amazonaws.com/%s/%s", S3REGION, S3BUCKET,
+                p->Key().c_str());
         printf("%s, %d\n", urlbuf, p->Size());
     }
 
@@ -91,9 +92,9 @@ TEST(ListBucket, s3) {
 
 #endif  // AWSTEST
 
-void DownloadTest(const char *url, uint64_t file_size, const char *md5_str,
-                  uint8_t thread_num, uint64_t chunk_size, uint64_t buffer_size,
-                  bool use_credential) {
+void DownloadTest(const char *url, const char *region, uint64_t file_size,
+                  const char *md5_str, uint8_t thread_num, uint64_t chunk_size,
+                  uint64_t buffer_size, bool use_credential) {
     InitConfig("test/s3.conf", "default");
 
     S3Credential g_cred = {s3ext_accessid, s3ext_secret};
@@ -107,9 +108,9 @@ void DownloadTest(const char *url, uint64_t file_size, const char *md5_str,
     ASSERT_NE((void *)NULL, buf);
 
     if (use_credential) {
-        result = d->init(url, file_size, chunk_size, &g_cred);
+        result = d->init(url, region, file_size, chunk_size, &g_cred);
     } else {
-        result = d->init(url, file_size, chunk_size, NULL);
+        result = d->init(url, "", file_size, chunk_size, NULL);
     }
 
     ASSERT_TRUE(result);
@@ -132,7 +133,7 @@ void DownloadTest(const char *url, uint64_t file_size, const char *md5_str,
 void HTTPDownloaderTest(const char *url, uint64_t file_size,
                         const char *md5_str, uint8_t thread_num,
                         uint64_t chunk_size, uint64_t buffer_size) {
-    return DownloadTest(url, file_size, md5_str, thread_num, chunk_size,
+    return DownloadTest(url, NULL, file_size, md5_str, thread_num, chunk_size,
                         buffer_size, false);
 }
 
@@ -203,12 +204,12 @@ TEST(HTTPDownloader, random_parameters_256M) {
 #endif  // FAKETEST
 
 #ifdef AWSTEST
-void S3DwonloadTest(const char *url, uint64_t file_size, const char *md5_str,
-                    uint8_t thread_num, uint64_t chunk_size,
-                    uint64_t buffer_size) {
+void S3DwonloadTest(const char *url, const char *region, uint64_t file_size,
+                    const char *md5_str, uint8_t thread_num,
+                    uint64_t chunk_size, uint64_t buffer_size) {
     InitConfig("test/s3.conf", "default");
 
-    return DownloadTest(url, file_size, md5_str, thread_num, chunk_size,
+    return DownloadTest(url, region, file_size, md5_str, thread_num, chunk_size,
                         buffer_size, true);
 }
 
@@ -217,13 +218,15 @@ TEST(S3Downloader, simple) {
     S3DwonloadTest(
         "http://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/small17/"
         "data0014",
-        4420346, "68c4a63b721e7af0ae945ce109ca87ad", 4, 1024 * 1024, 65536);
+        "us-west-2", 4420346, "68c4a63b721e7af0ae945ce109ca87ad", 4,
+        1024 * 1024, 65536);
 
     printf("Try downloading data0016\n");
     S3DwonloadTest(
         "http://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/small17/"
         "data0016",
-        2536018, "0fd502a303eb8f138f5916ec357721b1", 4, 1024 * 1024, 65536);
+        "us-west-2", 2536018, "0fd502a303eb8f138f5916ec357721b1", 4,
+        1024 * 1024, 65536);
 }
 
 TEST(S3Downloader, httpssimple) {
@@ -231,13 +234,15 @@ TEST(S3Downloader, httpssimple) {
     S3DwonloadTest(
         "http://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/small17/"
         "data0014",
-        4420346, "68c4a63b721e7af0ae945ce109ca87ad", 4, 1024 * 1024, 65536);
+        "us-west-2", 4420346, "68c4a63b721e7af0ae945ce109ca87ad", 4,
+        1024 * 1024, 65536);
 
     printf("Try downloading data0016\n");
     S3DwonloadTest(
         "http://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/small17/"
         "data0016",
-        2536018, "0fd502a303eb8f138f5916ec357721b1", 4, 1024 * 1024, 65536);
+        "us-west-2", 2536018, "0fd502a303eb8f138f5916ec357721b1", 4,
+        1024 * 1024, 65536);
 }
 
 TEST(S3Downloader, bigfile) {
@@ -247,7 +252,7 @@ TEST(S3Downloader, bigfile) {
     printf("Try downloading big file 1\n");
     S3DwonloadTest(
         "http://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset2/hugefile/"
-        "airlinedata1.csv",
+        "airlinedata1.csv", "us-west-2",
         4664425994, "f5811ad92c994f1d6913d5338575fe38", 4, 64 * 1024 * 1024,
         65536);
 }

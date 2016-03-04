@@ -47,7 +47,7 @@ class OffsetMgr {
 
 class BlockingBuffer {
    public:
-    static BlockingBuffer* CreateBuffer(string url, OffsetMgr* o,
+    static BlockingBuffer* CreateBuffer(string url, string region, OffsetMgr* o,
                                         S3Credential* pcred);
     BlockingBuffer(string url, OffsetMgr* o);
     virtual ~BlockingBuffer();
@@ -83,7 +83,7 @@ class BlockingBuffer {
 struct Downloader {
     Downloader(uint8_t part_num);
     ~Downloader();
-    bool init(string url, uint64_t size, uint64_t chunksize,
+    bool init(string url, string region, uint64_t size, uint64_t chunksize,
               S3Credential* pcred);
     bool get(char* buf, uint64_t& len);
     void destroy();
@@ -123,13 +123,15 @@ class HTTPFetcher : public BlockingBuffer {
 
 class S3Fetcher : public HTTPFetcher {
    public:
-    S3Fetcher(string url, OffsetMgr* o, const S3Credential& cred);
+    S3Fetcher(string url, string region, OffsetMgr* o,
+              const S3Credential& cred);
     ~S3Fetcher(){};
 
    protected:
     virtual bool processheader();
 
    private:
+    string region;
     S3Credential cred;
 };
 
@@ -161,8 +163,8 @@ struct BucketContent {
 };
 
 // need free
-ListBucketResult* ListBucket(string schema, string host, string bucket,
-                             string path, const S3Credential& cred);
+ListBucketResult* ListBucket(string schema, string region, string bucket,
+                             string prefix, const S3Credential& cred);
 
 ListBucketResult* ListBucket_FakeHTTP(string host, string bucket);
 

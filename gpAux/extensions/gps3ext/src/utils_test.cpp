@@ -23,8 +23,6 @@ TEST(utils, time) {
     gethttpnow(data);
 }
 
-TEST(signature, v2) {}
-
 #include <curl/curl.h>
 TEST(utils, simplecurl) {
     CURL *c = CreateCurlHandler(NULL);
@@ -62,29 +60,23 @@ TEST(utils, base64) {
 
 TEST(utils, sha256) {
     char hash_str[65] = {0};
-    EXPECT_TRUE(sha256(TEST_STRING, hash_str));
+    EXPECT_TRUE(sha256_hex(TEST_STRING, hash_str));
     EXPECT_STREQ(
         "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592",
         hash_str);
 }
 
 TEST(utils, sha1hmac) {
-    unsigned char hash[20] = {0};  // must be unsigned here
-    char hash_str[41] = {0};
+    char hash_hex[41] = {0};
 
-    EXPECT_TRUE(sha1hmac(TEST_STRING, (char *)hash, "key"));
+    EXPECT_TRUE(sha1hmac_hex(TEST_STRING, (char *)hash_hex, "key", 3));
 
-    for (int i = 0; i < 20; i++) {
-        sprintf(hash_str + (i * 2), "%02x", hash[i]);
-    }
-    hash_str[40] = 0;
-
-    EXPECT_STREQ("de7c9b85b8b78aa6bc8a7a36f70a90701c9db4d9", hash_str);
+    EXPECT_STREQ("de7c9b85b8b78aa6bc8a7a36f70a90701c9db4d9", hash_hex);
 }
 
 TEST(utils, sha256hmac) {
     char hash_str[65] = {0};
-    EXPECT_TRUE(sha256hmac(TEST_STRING, hash_str, "key"));
+    EXPECT_TRUE(sha256hmac_hex(TEST_STRING, hash_str, "key", 3));
     EXPECT_STREQ(
         "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8",
         hash_str);

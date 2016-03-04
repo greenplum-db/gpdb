@@ -191,8 +191,6 @@ const char *GetUploadId(const char *host, const char *bucket,
 
     HeaderContent *header = new HeaderContent();
     header->Add(HOST, host);
-    // XXX
-    // header->Disable(CONTENTTYPE);
     header->Add(CONTENTTYPE, "application/x-www-form-urlencoded");
     UrlParser p(url.str().c_str());
     path_with_query << p.Path() << "?uploads";
@@ -393,7 +391,7 @@ const char *PartPutS3Object(const char *host, const char *bucket,
     xmlNodePtr cur = root_element->xmlChildrenNode;
     while (cur != NULL) {
         if (!xmlStrcmp(cur->name, (const xmlChar *)"Code")) {
-            response_code = strdup((const char *)xmlNodeGetContent(cur));
+            response_code = (char *)xmlNodeGetContent(cur);
             break;
         }
 
@@ -401,14 +399,13 @@ const char *PartPutS3Object(const char *host, const char *bucket,
     }
 
     if (response_code) {
-        std::cout << response_code << std::endl;
+        std::cout << "Error: " << response_code << std::endl;
     }
 
     xmlFreeParserCtxt(xml.ctxt);
 
     curl_slist_free_all(chunk);
     curl_easy_cleanup(curl);
-    free(response_code);
 
     return NULL;
 }
@@ -476,13 +473,6 @@ bool CompleteMultiPutS3(const char *host, const char *bucket,
 
     HeaderContent *header = new HeaderContent();
     header->Add(HOST, host);
-    // XXX If you add a header with no content as in 'Accept:' (no data on the
-    // right side of the colon), the internally used header will get disabled.
-    // With this option you can add new headers, replace internal headers and
-    // remove internal headers. To add a header with no content (nothing to the
-    // right side of the colon), use the form 'MyHeader;' (note the ending
-    // semicolon). still a space character there
-    // header->Disable(CONTENTTYPE);
     header->Add(CONTENTTYPE, "application/xml");
     header->Add(CONTENTLENGTH, std::to_string(body_size));
     UrlParser p(url.str().c_str());

@@ -27,6 +27,8 @@ enum HeaderField {
     EXPECT,
     AUTHORIZATION,
     ETAG,
+    X_AMZ_DATE,
+    X_AMZ_CONTENT_SHA256,
 };
 
 enum Method { GET, PUT, POST, DELETE, HEAD };
@@ -51,6 +53,9 @@ bool SignPUTv2(HeaderContent* h, string path_with_query,
 
 bool SignPOSTv2(HeaderContent* h, string path_with_query,
                 const S3Credential& cred);
+
+bool SignRequestV4(string method, HeaderContent* h, string region, string path,
+                   string query, const S3Credential& cred);
 
 class UrlParser {
    public:

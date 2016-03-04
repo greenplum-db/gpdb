@@ -19,7 +19,7 @@ using std::stringstream;
 bool SignGETv2(HeaderContent *h, string path_with_query,
                const S3Credential &cred) {
     char timestr[65];
-    char tmpbuf[20];  // SHA_DIGEST_LENGTH is 20
+    unsigned char tmpbuf[20];  // SHA_DIGEST_LENGTH is 20
 
     // CONTENT_LENGTH is not a part of StringToSign
     h->Add(CONTENTLENGTH, "0");
@@ -28,11 +28,13 @@ bool SignGETv2(HeaderContent *h, string path_with_query,
     h->Add(DATE, timestr);
     stringstream sstr;
     sstr << "GET\n\n\n" << timestr << "\n" << path_with_query;
-    if (!sha1hmac(sstr.str().c_str(), tmpbuf, cred.secret.c_str())) {
+    if (!sha1hmac(sstr.str().c_str(), tmpbuf, cred.secret.c_str(),
+                  strlen(cred.secret.c_str()))) {
         return false;
     }
     // S3DEBUG("%s", sstr.str().c_str());
-    char *signature = Base64Encode(tmpbuf, 20);  // SHA_DIGEST_LENGTH is 20
+    char *signature =
+        Base64Encode((char *)tmpbuf, 20);  // SHA_DIGEST_LENGTH is 20
     // S3DEBUG("%s", signature);
     sstr.clear();
     sstr.str("");
@@ -47,7 +49,7 @@ bool SignGETv2(HeaderContent *h, string path_with_query,
 bool SignPUTv2(HeaderContent *h, string path_with_query,
                const S3Credential &cred) {
     char timestr[65];
-    char tmpbuf[20];  // SHA_DIGEST_LENGTH is 20
+    unsigned char tmpbuf[20];  // SHA_DIGEST_LENGTH is 20
     string typestr;
 
     gethttpnow(timestr);
@@ -57,15 +59,17 @@ bool SignPUTv2(HeaderContent *h, string path_with_query,
     typestr = h->Get(CONTENTTYPE);
 
     sstr << "PUT\n\n" << typestr << "\n" << timestr << "\n" << path_with_query;
-    if (!sha1hmac(sstr.str().c_str(), tmpbuf, cred.secret.c_str())) {
+    if (!sha1hmac(sstr.str().c_str(), tmpbuf, cred.secret.c_str(),
+                  strlen(cred.secret.c_str()))) {
         return false;
     }
-    char *signature = Base64Encode(tmpbuf, 20);  // SHA_DIGEST_LENGTH is 20
+    char *signature =
+        Base64Encode((char *)tmpbuf, 20);  // SHA_DIGEST_LENGTH is 20
     sstr.clear();
     sstr.str("");
     sstr << "AWS " << cred.keyid << ":" << signature;
     free(signature);
-    h->Add(AUTHORIZATION, sstr.str().c_str());
+    h->Add(AUTHORIZATION, sstr.str());
 
     return true;
 }
@@ -73,7 +77,7 @@ bool SignPUTv2(HeaderContent *h, string path_with_query,
 bool SignPOSTv2(HeaderContent *h, string path_with_query,
                 const S3Credential &cred) {
     char timestr[65];
-    char tmpbuf[20];  // SHA_DIGEST_LENGTH is 20
+    unsigned char tmpbuf[20];  // SHA_DIGEST_LENGTH is 20
     // string md5str;
 
     gethttpnow(timestr);
@@ -91,15 +95,92 @@ bool SignPOSTv2(HeaderContent *h, string path_with_query,
              << "\n" << timestr << "\n" << path_with_query;
     }
     // printf("%s\n", sstr.str().c_str());
-    if (!sha1hmac(sstr.str().c_str(), tmpbuf, cred.secret.c_str())) {
+    if (!sha1hmac(sstr.str().c_str(), tmpbuf, cred.secret.c_str(),
+                  strlen(cred.secret.c_str()))) {
         return false;
     }
-    char *signature = Base64Encode(tmpbuf, 20);  // SHA_DIGEST_LENGTH is 20
+    char *signature =
+        Base64Encode((char *)tmpbuf, 20);  // SHA_DIGEST_LENGTH is 20
     sstr.clear();
     sstr.str("");
     sstr << "AWS " << cred.keyid << ":" << signature;
     free(signature);
-    h->Add(AUTHORIZATION, sstr.str().c_str());
+    h->Add(AUTHORIZATION, sstr.str());
+
+    return true;
+}
+
+bool SignRequestV4(string method, HeaderContent *h, string region, string path,
+                   string query, const S3Credential &cred) {
+    time_t t;
+    struct tm tm_info;
+    char date_str[17];
+    char timestamp_str[17];
+
+    char canonical_hex[65];
+    char signature_hex[65];
+
+    string signed_headers;
+
+    unsigned char kDate[SHA256_DIGEST_LENGTH];
+    unsigned char kRegion[SHA256_DIGEST_LENGTH];
+    unsigned char kService[SHA256_DIGEST_LENGTH];
+    unsigned char signingkey[SHA256_DIGEST_LENGTH];
+
+    /* YYYYMMDD'T'HHMMSS'Z' */
+    t = time(NULL);
+    gmtime_r(&t, &tm_info);
+    strftime(timestamp_str, 17, "%Y%m%dT%H%M%SZ", &tm_info);
+
+    h->Add(X_AMZ_DATE, timestamp_str);
+    memcpy(date_str, timestamp_str, 8);
+    date_str[8] = '\0';
+
+    // XXX need to do more than this, incase of non-ASCII characters
+    // 1, sort queries 2, encodes qureies and their values except "=" and "&"
+    find_replace(query, "/", "%2F");
+
+    stringstream canonical_str;
+
+    canonical_str << method << "\n" << path << "\n" << query
+                  << "\nhost:" << h->Get(HOST)
+                  << "\nx-amz-content-sha256:" << h->Get(X_AMZ_CONTENT_SHA256)
+                  << "\nx-amz-date:" << h->Get(X_AMZ_DATE) << "\n\n"
+                  << "host;x-amz-content-sha256;x-amz-date\n"
+                  << h->Get(X_AMZ_CONTENT_SHA256);
+    signed_headers = "host;x-amz-content-sha256;x-amz-date";
+
+    // printf("\n%s\n\n", canonical_str.str().c_str());
+    sha256_hex(canonical_str.str().c_str(), canonical_hex);
+
+    // http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
+    find_replace(region, "external-1", "us-east-1");
+
+    stringstream string2sign_str;
+    string2sign_str << "AWS4-HMAC-SHA256\n" << timestamp_str << "\n" << date_str
+                    << "/" << region << "/s3/aws4_request\n" << canonical_hex;
+
+    // printf("\n%s\n\n", string2sign_str.str().c_str());
+    stringstream kSecret;
+    kSecret << "AWS4" << cred.secret;
+
+    sha256hmac(date_str, kDate, kSecret.str().c_str(),
+               strlen(kSecret.str().c_str()));
+    sha256hmac(region.c_str(), kRegion, (char *)kDate, SHA256_DIGEST_LENGTH);
+    sha256hmac("s3", kService, (char *)kRegion, SHA256_DIGEST_LENGTH);
+    sha256hmac("aws4_request", signingkey, (char *)kService,
+               SHA256_DIGEST_LENGTH);
+    sha256hmac_hex(string2sign_str.str().c_str(), signature_hex,
+                   (char *)signingkey, SHA256_DIGEST_LENGTH);
+
+    stringstream signature_header;
+    signature_header << "AWS4-HMAC-SHA256 Credential=" << cred.keyid << "/"
+                     << date_str << "/" << region << "/"
+                     << "s3"
+                     << "/aws4_request,SignedHeaders=" << signed_headers
+                     << ",Signature=" << signature_hex;
+
+    h->Add(AUTHORIZATION, signature_header.str());
 
     return true;
 }
@@ -124,6 +205,10 @@ const char *GetFieldString(HeaderField f) {
             return "Authorization";
         case ETAG:
             return "ETag";
+        case X_AMZ_DATE:
+            return "x-amz-date";
+        case X_AMZ_CONTENT_SHA256:
+            return "x-amz-content-sha256";
         default:
             return "unknown";
     }

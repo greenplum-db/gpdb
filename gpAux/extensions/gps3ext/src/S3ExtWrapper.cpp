@@ -63,15 +63,10 @@ bool S3Reader::Init(int segid, int segnum, int chunksize) {
             return false;
         }
 
-        // TODO: As separated function for generating url
-        stringstream sstr;
-        sstr << "s3-" << this->region << ".amazonaws.com";
-        S3DEBUG("Host url is %s", sstr.str().c_str());
         int initretry = 3;
         while (initretry--) {
-            this->keylist = ListBucket(this->schema.c_str(), sstr.str().c_str(),
-                                       this->bucket.c_str(),
-                                       this->prefix.c_str(), this->cred);
+            this->keylist = ListBucket(this->schema, this->region, this->bucket,
+                                       this->prefix, this->cred);
 
             if (!this->keylist) {
                 S3INFO("Can't get keylist from bucket %s",
@@ -136,7 +131,7 @@ void S3Reader::getNextDownloader() {
     string keyurl = this->getKeyURL(c->Key());
     S3DEBUG("key: %s, size: %llu", keyurl.c_str(), c->Size());
 
-    if (!filedownloader->init(keyurl, c->Size(), this->chunksize,
+    if (!filedownloader->init(keyurl, this->region, c->Size(), this->chunksize,
                               &this->cred)) {
         delete this->filedownloader;
         this->filedownloader = NULL;
@@ -214,15 +209,7 @@ bool S3Reader::Destroy() {
 }
 
 bool S3ExtBase::ValidateURL() {
-    // TODO http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
-    // As the documentation above says, some regions use domains in forms other
-    // than the "standard" ones, need to cover them here.
-    //
-    // Still have two to take care of, do it later since they only support
-    // signature v4, s3ext doesn't support v4 yet.
-    //
-    // s3.eu-central-1.amazonaws.com -> s3-eu-central-1.amazonaws.com
-    // s3.ap-northeast-2.amazonaws.com -> s3-ap-northeast-2.amazonaws.com
+    // http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
 
     const char *awsdomain = ".amazonaws.com";
     int ibegin = 0;
@@ -240,15 +227,15 @@ bool S3ExtBase::ValidateURL() {
             this->schema = "http";
     }
 
-    ibegin = url.find("-");
+    ibegin = url.find("://s3") + 4;  // "3"
     iend = url.find(awsdomain);
 
     if (iend == string::npos) {
         return false;
-    } else if (ibegin == string::npos) {
+    } else if (ibegin + 1 == iend) {  // "s3.amazonaws.com"
         this->region = "external-1";
     } else {
-        this->region = url.substr(ibegin + 1, iend - ibegin - 1);
+        this->region = url.substr(ibegin + 2, iend - ibegin - 2);
     }
 
     if (this->region.compare("us-east-1") == 0) {
