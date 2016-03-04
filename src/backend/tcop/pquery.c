@@ -1621,18 +1621,13 @@ PortalRunMulti(Portal portal, bool isTopLevel,
 			 * process utility functions (create, destroy, etc..)
 			 *
 			 * These are assumed canSetTag if they're the only stmt in the
-			 * portal, with the following exception:
-			 *
-			 *  A COPY FROM that specifies a non-existent error table, will
-			 *  be transformed (parse_analyze) into a (CreateStmt, CopyStmt).
-			 *  XXX Maybe this should be treated like DECLARE CURSOR?
+			 * portal.
 			 */
-			if (list_length(portal->stmts) == 1 || portal->sourceTag == T_CopyStmt)
+			if (list_length(portal->stmts) == 1)
 				PortalRunUtility(portal, stmt, isTopLevel, dest, completionTag);
 			else
 				PortalRunUtility(portal, stmt, isTopLevel, altdest, NULL);
 		}
-		
 
 		/*
 		 * Increment command counter between queries, but not after the last
