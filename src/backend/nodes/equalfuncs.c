@@ -1334,6 +1334,14 @@ _equalRemoveOpClassStmt(RemoveOpClassStmt *a, RemoveOpClassStmt *b)
 }
 
 static bool
+_equalDoStmt(DoStmt *a, DoStmt *b)
+{
+	COMPARE_NODE_FIELD(args);
+
+	return true;
+}
+
+static bool
 _equalRemoveOpFamilyStmt(RemoveOpFamilyStmt *a, RemoveOpFamilyStmt *b)
 {
 	COMPARE_NODE_FIELD(opfamilyname);
@@ -1697,10 +1705,12 @@ _equalCreatePLangStmt(CreatePLangStmt *a, CreatePLangStmt *b)
 {
 	COMPARE_STRING_FIELD(plname);
 	COMPARE_NODE_FIELD(plhandler);
+	COMPARE_NODE_FIELD(plinline);
 	COMPARE_NODE_FIELD(plvalidator);
 	COMPARE_SCALAR_FIELD(pltrusted);
 	COMPARE_SCALAR_FIELD(plangOid);
 	COMPARE_SCALAR_FIELD(plhandlerOid);
+	COMPARE_SCALAR_FIELD(plinlineOid);
 	COMPARE_SCALAR_FIELD(plvalidatorOid);
 
 	return true;
@@ -2733,6 +2743,9 @@ equal(void *a, void *b)
 			break;
 		case T_RemoveFuncStmt:
 			retval = _equalRemoveFuncStmt(a, b);
+			break;
+		case T_DoStmt:
+			retval = _equalDoStmt(a, b);
 			break;
 		case T_RemoveOpClassStmt:
 			retval = _equalRemoveOpClassStmt(a, b);

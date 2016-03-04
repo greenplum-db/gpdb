@@ -36,7 +36,8 @@
    tmplhandler    text, 
    tmplvalidator  text, 
    tmpllibrary    text, 
-   tmplacl        aclitem[]
+   tmplacl        aclitem[],
+   tmplinline     text
    );
    
    create unique index on pg_pltemplate(tmplname) with (indexid=1137, CamelCase=PLTemplateName);
@@ -59,6 +60,7 @@ CATALOG(pg_pltemplate,1136) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 	text		tmplvalidator;	/* name of validator function, or NULL */
 	text		tmpllibrary;	/* path of shared library */
 	aclitem		tmplacl[1];		/* access privileges for template */
+	text		tmplinline;		/* name of anonymous-block handler, or NULL */
 } FormData_pg_pltemplate;
 
 /* ----------------
@@ -72,27 +74,27 @@ typedef FormData_pg_pltemplate *Form_pg_pltemplate;
  *		compiler constants for pg_pltemplate
  * ----------------
  */
-#define Natts_pg_pltemplate					6
+#define Natts_pg_pltemplate					7
 #define Anum_pg_pltemplate_tmplname			1
 #define Anum_pg_pltemplate_tmpltrusted		2
 #define Anum_pg_pltemplate_tmplhandler		3
 #define Anum_pg_pltemplate_tmplvalidator	4
 #define Anum_pg_pltemplate_tmpllibrary		5
 #define Anum_pg_pltemplate_tmplacl			6
+#define Anum_pg_pltemplate_tmplinline		7
 
 
 /* ----------------
  *		initial contents of pg_pltemplate
  * ----------------
  */
-
-DATA(insert ( "plpgsql"		t "plpgsql_call_handler" "plpgsql_validator" "$libdir/plpgsql" _null_ ));
-DATA(insert ( "pltcl"		t "pltcl_call_handler" _null_ "$libdir/pltcl" _null_ ));
-DATA(insert ( "pltclu"		f "pltclu_call_handler" _null_ "$libdir/pltcl" _null_ ));
-DATA(insert ( "plperl"		t "plperl_call_handler" "plperl_validator" "$libdir/plperl" _null_ ));
-DATA(insert ( "plperlu"		f "plperl_call_handler" "plperl_validator" "$libdir/plperl" _null_ ));
-DATA(insert ( "plpythonu"	f "plpython_call_handler" _null_ "$libdir/plpython" _null_ ));
-DATA(insert ( "plr"         f "plr_call_handler" _null_ "$libdir/plr" _null_ ));
-DATA(insert ( "pljava"      t "pljava_call_handler" _null_ "$libdir/pljava" _null_ ));
-DATA(insert ( "pljavau"     f "pljavau_call_handler" _null_ "$libdir/pljava" _null_ ));
+DATA(insert ( "plpgsql"		t "plpgsql_call_handler" "plpgsql_validator" "$libdir/plpgsql" _null_ "plpgsql_inline_handler" ));
+DATA(insert ( "pltcl"		t "pltcl_call_handler" _null_ "$libdir/pltcl" _null_ _null_ ));
+DATA(insert ( "pltclu"		f "pltclu_call_handler" _null_ "$libdir/pltcl" _null_ _null_ ));
+DATA(insert ( "plperl"		t "plperl_call_handler" "plperl_validator" "$libdir/plperl" _null_ "plperl_inline_handler" ));
+DATA(insert ( "plperlu"		f "plperlu_call_handler" "plperlu_validator" "$libdir/plperl" _null_ "plperlu_inline_handler" ));
+DATA(insert ( "plpythonu"	f "plpython_call_handler" _null_ "$libdir/plpython" _null_ "plpython_inline_handler" ));
+DATA(insert ( "plr"         f "plr_call_handler" _null_ "$libdir/plr" _null_ _null_ ));
+DATA(insert ( "pljava"      t "pljava_call_handler" _null_ "$libdir/pljava" _null_ _null_ ));
+DATA(insert ( "pljavau"     f "pljavau_call_handler" _null_ "$libdir/pljava" _null_ _null_ ));
 #endif   /* PG_PLTEMPLATE_H */

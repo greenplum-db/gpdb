@@ -1767,10 +1767,12 @@ typedef struct CreatePLangStmt
 	NodeTag		type;
 	char	   *plname;			/* PL name */
 	List	   *plhandler;		/* PL call handler function (qual. name) */
+	List	   *plinline;		/* optional inline function (qual. name) */
 	List	   *plvalidator;	/* optional validator function (qual. name) */
 	bool		pltrusted;		/* PL is trusted */
 	Oid	   		plangOid;		/* oid for PL */
 	Oid			plhandlerOid;	/* oid for PL call handler function */
+	Oid			plinlineOid;	/* oid for inline function */
 	Oid			plvalidatorOid;	/* oid for validator function */
 } CreatePLangStmt;
 
@@ -2179,6 +2181,26 @@ typedef struct AlterFunctionStmt
 	FuncWithArgs *func;			/* name and args of function */
 	List	   *actions;		/* list of DefElem */
 } AlterFunctionStmt;
+
+/* ----------------------
+ *		DO Statement
+ *
+ * DoStmt is the raw parser output, InlineCodeBlock is the execution-time API
+ * ----------------------
+ */
+typedef struct DoStmt
+{
+	NodeTag		type;
+	List	   *args;			/* List of DefElem nodes */
+} DoStmt;
+
+typedef struct InlineCodeBlock
+{
+	NodeTag		type;
+	char	   *source_text;	/* source text of anonymous code block */
+	Oid			langOid;		/* OID of selected language */
+	bool		langIsTrusted;  /* trusted property of the language */
+} InlineCodeBlock;
 
 /* ----------------------
  *		Drop {Function|Aggregate|Operator} Statement

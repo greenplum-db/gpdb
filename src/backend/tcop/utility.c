@@ -1294,6 +1294,10 @@ ProcessUtility(Node *parsetree,
 			}
 			break;
 
+		case T_DoStmt:
+			ExecuteDoStmt((DoStmt *) parsetree);
+			break;
+
 		case T_CreatedbStmt:
 			createdb((CreatedbStmt *) parsetree);
 			break;
@@ -2226,6 +2230,10 @@ CreateCommandTag(Node *parsetree)
 			}
 			break;
 
+		case T_DoStmt:
+			tag = "DO";
+			break;
+
 		case T_CreatedbStmt:
 			tag = "CREATE DATABASE";
 			break;
@@ -2622,6 +2630,10 @@ GetCommandLogLevel(Node *parsetree)
 
 		case T_RemoveFuncStmt:
 			lev = LOGSTMT_DDL;
+			break;
+
+		case T_DoStmt:
+			lev = LOGSTMT_ALL;
 			break;
 
 		case T_CreatedbStmt:

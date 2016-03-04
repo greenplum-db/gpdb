@@ -360,6 +360,7 @@ typedef enum NodeTag
 	T_CreateFunctionStmt,
 	T_AlterFunctionStmt,
 	T_RemoveFuncStmt,
+	T_DoStmt,
 	T_RenameStmt,
 	T_RuleStmt,
 	T_NotifyStmt,
@@ -489,6 +490,7 @@ typedef enum NodeTag
 	 */
 	T_TriggerData = 900,		/* in commands/trigger.h */
 	T_ReturnSetInfo,			/* in nodes/execnodes.h */
+	T_InlineCodeBlock,			/* in nodes/parsenodes.h */
     T_HashBitmap,               /* in nodes/tidbitmap.h */
     T_StreamBitmap,             /* in nodes/tidbitmap.h */
 	T_FormatterData,            /* in access/formatter.h */

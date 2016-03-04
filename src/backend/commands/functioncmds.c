@@ -2092,6 +2092,118 @@ DropCastById(Oid castOid)
 }
 
 /*
+ * ExecuteDoStmt
+ *		Execute inline procedural-language code
+ */
+void
+ExecuteDoStmt(DoStmt *stmt)
+{
+	InlineCodeBlock *codeblock = makeNode(InlineCodeBlock);
+	ListCell   *arg;
+	DefElem    *as_item = NULL;
+	DefElem    *language_item = NULL;
+	char	   *language;
+	Oid			laninline;
+	HeapTuple	languageTuple;
+	Form_pg_language languageStruct;
+	cqContext  *pcqCtx;
+	bool        isnull;
+
+	/* Process options we got from gram.y */
+	foreach(arg, stmt->args)
+	{
+		DefElem    *defel = (DefElem *) lfirst(arg);
+
+		if (strcmp(defel->defname, "as") == 0)
+		{
+			if (as_item)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			as_item = defel;
+		}
+		else if (strcmp(defel->defname, "language") == 0)
+		{
+			if (language_item)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			language_item = defel;
+		}
+		else
+			elog(ERROR, "option \"%s\" not recognized",
+				 defel->defname);
+	}
+
+	if (as_item)
+		codeblock->source_text = strVal(as_item->arg);
+	else
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("no inline code specified")));
+
+	/* if LANGUAGE option wasn't specified, use the default */
+	if (language_item)
+		language = strVal(language_item->arg);
+	else
+		language = "plpgsql";
+
+	/* Look up the language and validate permissions */
+	pcqCtx = caql_beginscan(
+				NULL,
+				cql("SELECT * FROM pg_language "
+					" WHERE lanname = :1 ",
+					CStringGetDatum(language)));
+
+	languageTuple = caql_getnext(pcqCtx);	
+	if (!HeapTupleIsValid(languageTuple))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("language \"%s\" does not exist", language),
+				 (PLTemplateExists(language) ?
+				  errhint("Use CREATE LANGUAGE to load the language into the database.") : 0)));
+
+	codeblock->langOid = HeapTupleGetOid(languageTuple);
+	languageStruct = (Form_pg_language) GETSTRUCT(languageTuple);
+	codeblock->langIsTrusted = languageStruct->lanpltrusted;
+
+	if (languageStruct->lanpltrusted)
+	{
+		/* if trusted language, need USAGE privilege */
+		AclResult	aclresult;
+
+		aclresult = pg_language_aclcheck(codeblock->langOid, GetUserId(),
+										 ACL_USAGE);
+		if (aclresult != ACLCHECK_OK)
+			aclcheck_error(aclresult, ACL_KIND_LANGUAGE,
+						   NameStr(languageStruct->lanname));
+	}
+	else
+	{
+		/* if untrusted language, must be superuser */
+		if (!superuser())
+			aclcheck_error(ACLCHECK_NO_PRIV, ACL_KIND_LANGUAGE,
+						   NameStr(languageStruct->lanname));
+	}
+
+	/* get the handler function's OID */
+	laninline = caql_getattr(pcqCtx, 
+						 Anum_pg_language_laninline, 
+						 &isnull);
+	if (isnull || !OidIsValid(laninline))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg("language \"%s\" does not support inline code execution",
+					NameStr(languageStruct->lanname))));
+
+	caql_endscan(pcqCtx);
+
+	/* execute the inline handler */
+	OidFunctionCall1(laninline, PointerGetDatum(codeblock));
+}
+
+
+/*
  * Execute ALTER FUNCTION/AGGREGATE SET SCHEMA
  *
  * These commands are identical except for the lookup procedure, so share code.

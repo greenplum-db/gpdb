@@ -3992,10 +3992,12 @@ _outCreatePLangStmt(StringInfo str, CreatePLangStmt *node)
 
 	WRITE_STRING_FIELD(plname);
 	WRITE_NODE_FIELD(plhandler);
+	WRITE_NODE_FIELD(plinline);
 	WRITE_NODE_FIELD(plvalidator);
 	WRITE_BOOL_FIELD(pltrusted);
 	WRITE_OID_FIELD(plangOid);
 	WRITE_OID_FIELD(plhandlerOid);
+	WRITE_OID_FIELD(plinlineOid);
 	WRITE_OID_FIELD(plvalidatorOid);
 }
 
