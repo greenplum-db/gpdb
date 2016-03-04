@@ -1,25 +1,25 @@
-CREATE FUNCTION pljava_call_handler()  RETURNS language_handler AS 'pljava' LANGUAGE C;
-CREATE FUNCTION pljavau_call_handler() RETURNS language_handler AS 'pljava' LANGUAGE C;
-CREATE TRUSTED LANGUAGE java HANDLER pljava_call_handler;
-CREATE LANGUAGE javaU HANDLER pljavau_call_handler;
-\c test test
-DROP SCHEMA javatest CASCADE;
-alter database test owner to test;
 CREATE SCHEMA javatest;
 set search_path=javatest,public;
-#set pljava.classpath='examples.jar';
-set log_min_messages=info;  -- XXX
 
 CREATE TABLE javatest.test AS SELECT 1 as i distributed by (i);
 
-CREATE FUNCTION javatest.print("char")
-  RETURNS "char"
+CREATE FUNCTION javatest.print(char)
+  RETURNS char
   AS 'org.postgresql.example.Parameters.print'
   LANGUAGE java;
 
   SELECT javatest.print('a'::char);
   SELECT javatest.print('a'::char) FROM javatest.test;
   SELECT * FROM javatest.print('a'::char);
+
+CREATE FUNCTION javatest.print(varchar)
+  RETURNS varchar
+  AS 'org.postgresql.example.Parameters.print'
+  LANGUAGE java;
+
+  SELECT javatest.print('abc'::varchar);
+  SELECT javatest.print('abc'::varchar) FROM javatest.test;
+  SELECT * FROM javatest.print('abc'::varchar);
 
 CREATE FUNCTION javatest.print(bytea)
   RETURNS bytea
@@ -164,7 +164,7 @@ CREATE FUNCTION javatest.create_temp_file_trusted()
   SELECT javatest.create_temp_file_trusted();
   SELECT javatest.create_temp_file_trusted() FROM javatest.test;
   SELECT * FROM javatest.create_temp_file_trusted();
- 
+
 
 
 CREATE FUNCTION javatest.transferPeople(int)
@@ -174,7 +174,7 @@ CREATE FUNCTION javatest.transferPeople(int)
 
   CREATE TABLE javatest.employees1(
     id        int PRIMARY KEY,
-    name      varchar(200),	
+    name      varchar(200),
     salary    int
     );
 

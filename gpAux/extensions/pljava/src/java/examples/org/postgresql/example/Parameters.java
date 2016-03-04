@@ -15,7 +15,7 @@ import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
-import java.util.logging.Logger;
+import java.util.logging.*;
 
 /**
  * Some methods used for testing parameter and return value coersion and resolution
@@ -25,7 +25,7 @@ import java.util.logging.Logger;
  */
 public class Parameters
 {
-	static void log(String msg)
+    static void log(String msg)
 	{
 		// GCJ has a somewhat serious bug (reported)
 		//
@@ -36,8 +36,7 @@ public class Parameters
 		}
 		else
 		{
-			System.out.println("DUMMY: " + msg);
-			Logger.getAnonymousLogger().info(msg);
+            Logger.getAnonymousLogger().config(msg);
 		}
 	}
 
@@ -280,6 +279,12 @@ public class Parameters
 		}
 		log(buf.toString());
 		return intArray;
+	}
+
+    public static String print(String value)
+	{
+        log("string " + value);
+        return value;
 	}
 
 	public static void print(Date time)
