@@ -121,16 +121,11 @@ create table atsdb_ao (i int, j text) with (appendonly=true) distributed by (i);
 insert into atsdb_ao select i, (i+1)::text from generate_series(1, 100) i;
 insert into atsdb_ao select i, (i+1)::text from generate_series(1, 100) i;
 -- check that we're an AO table
-explain select count(*) from atsdb_ao;
-                                    QUERY PLAN
------------------------------------------------------------------------------------
- Aggregate  (cost=4.32..4.33 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=4.25..4.30 rows=1 width=8)
-         ->  Aggregate  (cost=4.25..4.26 rows=1 width=8)
-               ->  Append-only Scan on atsdb_ao  (cost=0.00..4.00 rows=34 width=0)
- Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
-(6 rows)
+select count(*) from pg_appendonly where relid='atsdb_ao'::regclass;
+ count
+-------
+     1
+(1 row)
 
 select count(*) from atsdb_ao;
  count 
@@ -140,16 +135,11 @@ select count(*) from atsdb_ao;
 
 alter table atsdb_ao set distributed by (j);
 -- Still AO?
-explain select count(*) from atsdb_ao;
-                                    QUERY PLAN
------------------------------------------------------------------------------------
- Aggregate  (cost=4.32..4.33 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=4.25..4.30 rows=1 width=8)
-         ->  Aggregate  (cost=4.25..4.26 rows=1 width=8)
-               ->  Append-only Scan on atsdb_ao  (cost=0.00..4.00 rows=34 width=0)
- Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
-(6 rows)
+select count(*) from pg_appendonly where relid='atsdb_ao'::regclass;
+ count
+-------
+     1
+(1 row)
 
 select count(*) from atsdb_ao;
  count 

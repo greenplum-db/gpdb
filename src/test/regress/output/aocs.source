@@ -35,31 +35,37 @@ CREATE TABLE tenk_heap_for_aocs (
 -- create few AO tables. test various reloptions combinations. use a sample
 -- of them (the first 4) for later testing.
 --
--- valid
+-- valid combinations
 CREATE TABLE tenk_aocs1 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, checksum=true) distributed by(unique1);
 CREATE TABLE tenk_aocs2 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=0, blocksize=262144) distributed by(unique1);
 CREATE TABLE tenk_aocs3 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=6, blocksize=1048576, checksum=true) distributed by(unique1);
 CREATE TABLE tenk_aocs4 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=1, compresstype=zlib) distributed by(unique1);
 CREATE TABLE tenk_aocs5 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=6, compresstype=zlib) distributed by(unique1);
 CREATE TABLE tenk_aocs6 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=6, compresstype=zlib, blocksize=1048576, checksum=true) distributed by(unique1);
--- invalid
+-- invalid combinations
+-- col instead of column
 CREATE TABLE tenk_aocs7 (like tenk_heap_for_aocs) with (appendonly=true, orientation=col) distributed by(unique1);
 ERROR:  invalid parameter value for "orientation": "col"
+-- no parentheses surrounding storage options
 CREATE TABLE tenk_aocs8 (like tenk_heap_for_aocs) with appendonly=true, orientation=column distributed by(unique1);
 ERROR:  syntax error at or near "appendonly"
 LINE 1: ...E TABLE tenk_aocs8 (like tenk_heap_for_aocs) with appendonly...
                                                              ^
+-- no comma separating storage options
 CREATE TABLE tenk_aocs9 (like tenk_heap_for_aocs) with (appendonly=true orientation=column) distributed by(unique1);
 ERROR:  syntax error at or near "orientation"
 LINE 1: ...9 (like tenk_heap_for_aocs) with (appendonly=true orientatio...
                                                              ^
+-- appendonly=false with orientation=column should not work
 CREATE TABLE tenk_aocs10 (like tenk_heap_for_aocs) with (appendonly=false, orientation=column, compresslevel=6, checksum=true) distributed by(unique1);
 ERROR:  invalid option 'compresslevel' for base relation. Only valid for Append Only relations
+-- block size must be between 8KB and 2MB w/ 8KB multiple
 CREATE TABLE tenk_aocs11 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, blocksize=100) distributed by(unique1);
 ERROR:  block size must be between 8KB and 2MB and be an 8KB multiple. Got 100
+-- cannot have compresslevel 0
 CREATE TABLE tenk_aocs12 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=0, compresstype=zlib) distributed by(unique1);
 ERROR:  compresstype can't be used with compresslevel 0
--- cs without ao is invalid.
+-- orientation=column must be combined with appendonly=true
 CREATE TABLE tenk_aocs13 (like tenk_heap_for_aocs) with (orientation=column) distributed by(unique1);
 ERROR:  invalid option "orientation" for base relation. Only valid for Append Only relations
 --------------------
