@@ -539,6 +539,27 @@ select * from Tbl04 where (x,y) not in (select 1,y from Tbl10);
 alter table Tbl10 alter column x set not null;
 -- end_ignore
 select * from Tbl04 where (x,y) not in (select x,y from Tbl10);
+
+-- start_ignore
+create table TblText1(a text, b text);
+create table TblText2(a text, b text);
+create table TblText3(a text, b text);
+
+insert into TblText1 values('rob', 'klopp');
+insert into TblText1 values('florian','waas');
+insert into TblText1 values('oak','barrett');
+insert into TblText1 values('tushar','pednekar');
+
+insert into TblText2 select * from TblText1;
+
+insert into TblText3 values('florian','waas');
+insert into TblText3 values('oak','barrett');
+-- end_ignore
+
+SELECT TblText1.a, TblText2.b FROM TblText1 JOIN TblText2 ON TblText1.a = TblText2.a WHERE ((NOT (TblText1.a, TblText2.b) IN (SELECT TblText3.a, TblText3.b FROM TblText3)));
+
+SELECT TblText1.a, TblText2.b FROM TblText1 JOIN TblText2 ON TblText1.a = TblText2.a WHERE (( (TblText1.a, TblText2.b) IN (SELECT TblText3.a, TblText3.b FROM TblText3)));
+
 -- start_ignore
 drop schema qp_subquery cascade;
 -- end_ignore
