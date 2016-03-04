@@ -19,6 +19,10 @@ contribdir = $(top_builddir)/contrib
 # port number for temp-installation test postmaster
 TEMP_PORT = 5$(DEF_PGPORT)
 
+# Greenplum regression tests use $PGPORT
+PGPORT?=15432
+
+
 # where to find psql for testing an existing installation
 PSQLDIR = $(bindir)
 

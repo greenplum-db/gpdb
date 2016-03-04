@@ -138,6 +138,12 @@ The directory and the TCP ports for the demo cluster can be changed on the fly:
 DATADIRS=/tmp/gpdb-cluster MASTER_PORT=15432 PORT_BASE=25432 make cluster
 ```
 
+The TCP port for the regression test can be changed on the fly:
+
+```
+PGPORT=15432 make installcheck-good
+```
+
 
 ## Build GPDB with GPORCA
 
