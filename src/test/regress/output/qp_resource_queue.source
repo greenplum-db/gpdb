@@ -1,0 +1,268 @@
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+create schema qp_resource_queue;
+set search_path to qp_resource_queue;
+drop table if exists tenk1;
+NOTICE:  table "tenk1" does not exist, skipping
+create table tenk1 (unique1 int4,unique2 int4, two int4,four int4,ten int4,twenty int4,
+                                hundred int4,thousand int4,twothousand int4,fivethous int4,tenthous int4,
+                                odd int4,even int4,stringu1 name,stringu2 name,string4 name);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+copy tenk1 from '/Users/oarap/gitdev/gpdb/src/test/regress/data/tenk.data';
+-- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: query1.sql
+-- ----------------------------------------------------------------------
+-- SQL coverage of RESOURCE QUEUE
+CREATE RESOURCE QUEUE regressq ACTIVE THRESHOLD 1;
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+----------+---------------+--------------+---------------+--------------------
+ regressq |             1 |           -1 | f             |                  0
+(1 row)
+
+ALTER RESOURCE QUEUE regressq ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+----------+---------------+--------------+---------------+--------------------
+ regressq |             2 |         2000 | f             |                  0
+(1 row)
+
+ALTER RESOURCE QUEUE regressq COST THRESHOLD 3000.00 OVERCOMMIT;
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+----------+---------------+--------------+---------------+--------------------
+ regressq |             2 |         3000 | t             |                  0
+(1 row)
+
+ALTER RESOURCE QUEUE regressq COST THRESHOLD 4e+3 NOOVERCOMMIT;
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+----------+---------------+--------------+---------------+--------------------
+ regressq |             2 |         4000 | f             |                  0
+(1 row)
+
+DROP RESOURCE QUEUE regressq;
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+---------+---------------+--------------+---------------+--------------------
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: query2.sql
+-- ----------------------------------------------------------------------
+-- negative
+CREATE RESOURCE QUEUE regressq2;
+ERROR:  at least one threshold ("ACTIVE_STATEMENTS", "MAX_COST") must be specified
+CREATE RESOURCE QUEUE regressq2 ACTIVE THRESHOLD 2;
+ALTER RESOURCE QUEUE regressq2 ACTIVE THRESHOLD -10;
+ERROR:  active threshold cannot be less than -1 or equal to 0
+ALTER RESOURCE QUEUE regressq2 COST THRESHOLD -1000.00;
+ERROR:  cost threshold must be equal to -1 or greater than 0
+DROP RESOURCE QUEUE regressq2;
+-- ----------------------------------------------------------------------
+-- Test: query3.sql
+-- ----------------------------------------------------------------------
+-- SQL coverage of ROLE -> RESIOURCE QUEUE
+CREATE RESOURCE QUEUE reg_activeq ACTIVE THRESHOLD 2;
+CREATE RESOURCE QUEUE reg_costq COST THRESHOLD 30000.00;
+CREATE USER reg_u1 RESOURCE QUEUE reg_costq;
+GRANT ALL ON SCHEMA qp_resource_queue to reg_u1;
+GRANT ALL ON TABLE tenk1 to reg_u1;
+SELECT u.rolname, u.rolsuper, r.rsqname FROM pg_roles as u, pg_resqueue as r WHERE u.rolresqueue=r.oid and rolname='reg_u1';
+ rolname | rolsuper |  rsqname  
+---------+----------+-----------
+ reg_u1  | f        | reg_costq
+(1 row)
+
+ALTER USER reg_u1 RESOURCE QUEUE reg_activeq;
+SELECT u.rolname, u.rolsuper, r.rsqname FROM pg_roles as u, pg_resqueue as r WHERE u.rolresqueue=r.oid and rolname='reg_u1';
+ rolname | rolsuper |   rsqname   
+---------+----------+-------------
+ reg_u1  | f        | reg_activeq
+(1 row)
+
+CREATE USER reg_u2 RESOURCE QUEUE reg_activeq;
+SELECT u.rolname, u.rolsuper, r.rsqname FROM pg_roles as u, pg_resqueue as r WHERE u.rolresqueue=r.oid and r.rsqname='reg_activeq';
+ rolname | rolsuper |   rsqname   
+---------+----------+-------------
+ reg_u1  | f        | reg_activeq
+ reg_u2  | f        | reg_activeq
+(2 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: query4.sql
+-- ----------------------------------------------------------------------
+-- negative
+CREATE USER reg_u3 RESOURCE QUEUE bogusq;
+ERROR:  resource queue "bogusq" does not exist
+-- ----------------------------------------------------------------------
+-- Test: query5.sql
+-- ----------------------------------------------------------------------
+-- feature must be on for tests to be valid
+show resource_scheduler;
+ resource_scheduler 
+--------------------
+ on
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: query7.sql
+-- ----------------------------------------------------------------------
+SHOW search_path;
+    search_path    
+-------------------
+ qp_resource_queue
+(1 row)
+
+-- self deadlock (active queue threshold 2)
+SET SESSION AUTHORIZATION reg_u1;
+SHOW search_path;
+    search_path    
+-------------------
+ qp_resource_queue
+(1 row)
+
+BEGIN;
+DECLARE c1 CURSOR FOR SELECT 1 FROM tenk1;
+DECLARE c2 CURSOR FOR SELECT 2 FROM tenk1;
+DECLARE c3 CURSOR FOR SELECT 3 FROM tenk1;
+ERROR:  deadlock detected, locking against self
+END;
+-- ----------------------------------------------------------------------
+-- Test: query8.sql
+-- ----------------------------------------------------------------------
+-- track cursor open/close count (should not deadlock)
+BEGIN;
+DECLARE c1 CURSOR FOR SELECT 1 FROM tenk1;
+CLOSE c1;
+DECLARE c2 CURSOR FOR SELECT 2 FROM tenk1;
+DECLARE c3 CURSOR FOR SELECT 3 FROM tenk1;
+CLOSE c3;
+DECLARE c4 CURSOR FOR SELECT 4 FROM tenk1;
+END;
+-- ----------------------------------------------------------------------
+-- Test: query9.sql
+-- ----------------------------------------------------------------------
+-- return to the super user
+RESET SESSION AUTHORIZATION;
+-- ----------------------------------------------------------------------
+-- Test: query10.sql
+-- ----------------------------------------------------------------------
+-- reset session to super user. make sure no longer queued
+BEGIN;
+DECLARE c1 CURSOR FOR SELECT 1 FROM tenk1;
+DECLARE c2 CURSOR FOR SELECT 2 FROM tenk1;
+DECLARE c3 CURSOR FOR SELECT 3 FROM tenk1;
+END;
+-- ----------------------------------------------------------------------
+-- Test: query17.sql
+-- ----------------------------------------------------------------------
+CREATE RESOURCE QUEUE myqueue COST THRESHOLD 1000.0 IGNORE THRESHOLD -1.0;
+ALTER RESOURCE QUEUE myqueue IGNORE THRESHOLD -1;
+ALTER resource queue pg_default ignore threshold -1;
+ALTER resource queue pg_default cost threshold 1000.0 ignore threshold -1.0;
+create resource queue zoo1_queue cost threshold 4.0 ignore threshold -1;
+Create resource queue abcd_q ignore threshold -1 active threshold 1;
+ALTER resource queue pg_default cost threshold -1;
+ALTER resource queue pg_default cost threshold -1.0;
+ALTER resource queue pg_default with (costlimit=-1);
+ERROR:  option "costlimit" is not a valid resource type
+ALTER resource queue pg_default with (costlimit=-1.0);
+ERROR:  option "costlimit" is not a valid resource type
+create resource queue foo1_queue with (activelimit=1);
+ERROR:  at least one threshold ("ACTIVE_STATEMENTS", "MAX_COST") must be specified
+Drop resource queue myqueue;
+Drop resource queue abcd_q;
+Drop resource queue foo1_queue;
+ERROR:  resource queue "foo1_queue" does not exist
+Drop resource queue zoo1_queue;
+-- ----------------------------------------------------------------------
+-- Test: query99.sql
+-- ----------------------------------------------------------------------
+-- cleanup
+REVOKE ALL ON tenk1 FROM reg_u1;
+REVOKE ALL ON SCHEMA qp_resource_queue FROM reg_u1;
+DROP USER reg_u1;
+DROP USER reg_u2;
+DROP RESOURCE QUEUE reg_activeq;
+DROP RESOURCE QUEUE reg_costq;
+--DROP TABLE mpp3159t;
+--DROP TABLE wm_test0;
+--REVOKE ALL ON DATABASE gptest FROM mpp3159user;
+--DROP USER mpp3159user;
+-- ----------------------------------------------------------------------
+-- Test: query100.sql
+-- ----------------------------------------------------------------------
+\echo --start_ignore
+--start_ignore
+DROP TABLE if exists test_table;
+NOTICE:  table "test_table" does not exist, skipping
+DROP ROLE if exists test_role;
+DROP RESOURCE QUEUE test_q;
+\echo --end_ignore
+--end_ignore
+CREATE TABLE test_table(c1 int, c2 int); 
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO test_table values(1, 2);
+CREATE RESOURCE QUEUE test_q WITH (ACTIVE_STATEMENTS = 1, MEMORY_LIMIT='8GB');
+CREATE ROLE test_role WITH RESOURCE QUEUE test_q;
+GRANT ALL ON SCHEMA qp_resource_queue TO test_role;
+GRANT SELECT ON test_table TO test_role;
+SET ROLE test_role;
+ALTER RESOURCE QUEUE test_q WITH (ACTIVE_STATEMENTS = 1, MEMORY_LIMIT='10GB');
+ERROR:  must be superuser to alter resource queues
+RESET ROLE;
+ALTER RESOURCE QUEUE test_q WITH (ACTIVE_STATEMENTS = 1, MEMORY_LIMIT='10GB');
+SET ROLE test_role;
+SELECT count(*) FROM test_table;
+ count 
+-------
+     1
+(1 row)
+
+RESET ROLE;
+ALTER RESOURCE QUEUE test_q WITH (ACTIVE_STATEMENTS = 1, MEMORY_LIMIT='7GB');
+SET ROLE test_role;
+SELECT count(*) FROM test_table;
+ count 
+-------
+     1
+(1 row)
+
+RESET ROLE;
+REVOKE ALL ON SCHEMA qp_resource_queue FROM test_role;
+-- ----------------------------------------------------------------------
+-- Test: query101.sql
+-- ----------------------------------------------------------------------
+\echo --start_ignore
+--start_ignore
+drop table if exists test;
+NOTICE:  table "test" does not exist, skipping
+drop role testrole;
+drop resource queue testq;
+\echo --end_ignore
+--end_ignore
+create table test(c1 int, c2 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into test values(1,2);
+select count(*) from test;
+ count 
+-------
+     1
+(1 row)
+
+create resource queue testq with (ACTIVE_STATEMENTS = 1, MEMORY_LIMIT='10MB');
+create role testrole with resource queue testq;
+grant select on test to testrole;
+grant ALL on SCHEMA qp_resource_queue to testrole;
+set statement_mem='125MB';
+set role testrole;
+select count(*) from test;
+ERROR:  deadlock detected, locking against self
+reset role;
