@@ -15,7 +15,7 @@ import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
-import java.util.logging.*;
+import java.util.logging.Logger;
 
 /**
  * Some methods used for testing parameter and return value coersion and resolution
@@ -36,7 +36,7 @@ public class Parameters
 		}
 		else
 		{
-            Logger.getAnonymousLogger().config(msg);
+			Logger.getAnonymousLogger().config(msg);
 		}
 	}
 
