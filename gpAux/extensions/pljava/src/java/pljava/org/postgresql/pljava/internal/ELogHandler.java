@@ -89,6 +89,8 @@ public class ELogHandler extends Handler
 			pgLevel = LOG_WARNING;
 		else if(level.equals(Level.INFO))
 			pgLevel = LOG_INFO;
+		else if(level.equals(Level.CONFIG))
+			pgLevel = LOG_LOG;
 		else if(level.equals(Level.FINE))
 			pgLevel = LOG_DEBUG1;
 		else if(level.equals(Level.FINER))
@@ -123,7 +125,7 @@ public class ELogHandler extends Handler
 	{
 		Properties props = new Properties();
 		props.setProperty("handlers", ELogHandler.class.getName());
-		props.setProperty(".level", getPgLevel().getName());
+		props.setProperty(".level", Level.FINEST.getName());
 		ByteArrayOutputStream po = new ByteArrayOutputStream();
 		try
 		{
@@ -134,44 +136,6 @@ public class ELogHandler extends Handler
 		catch(IOException e)
 		{
 		}
-	}
-
-	/**
-	 * Obtains the &quot;log_min_messages&quot; configuration variable and
-	 * translates it into a {@link Level} object.
-	 * @return The Level that corresponds to the configuration variable.
-	 */
-	public static Level getPgLevel()
-	{
-		// We use this little trick to provide the correct config option
-		// without having to call back into the JNI code the first time
-		// around since that call will be a bit premature (it will come
-		// during JVM initialization and before the native method is
-		// registered).
-		//
-		String pgLevel = Backend.getConfigOption("log_min_messages");
-		Level level = Level.ALL;
-		if(pgLevel != null)
-		{	
-			pgLevel = pgLevel.toLowerCase().trim();
-			if(pgLevel.equals("panic") || pgLevel.equals("fatal"))
-				level = Level.OFF;
-			else if(pgLevel.equals("error"))
-				level = Level.SEVERE;
-			else if(pgLevel.equals("warning"))
-				level = Level.WARNING;
-			else if(pgLevel.equals("notice"))
-				level = Level.CONFIG;
-			else if(pgLevel.equals("info"))
-				level = Level.INFO;
-			else if(pgLevel.equals("debug1"))
-				level = Level.FINE;
-			else if(pgLevel.equals("debug2"))
-				level = Level.FINER;
-			else if(pgLevel.equals("debug3") || pgLevel.equals("debug4") || pgLevel.equals("debug5"))
-				level = Level.FINEST;
-		}
-		return level;
 	}
 
 	// Private method to configure an ELogHandler

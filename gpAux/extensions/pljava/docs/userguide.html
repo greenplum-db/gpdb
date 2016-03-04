@@ -641,10 +641,13 @@ set.</li>
 <h3><i><a name="Logging_">Logging</a></i></h3>
 <p>PL/Java uses the standard Java 1.4 Logger. Hence, you can write things like:</p>
 <pre>Logger.getAnonymousLogger().info( &quot;Time is &quot; + new Date(System.currentTimeMillis()));</pre>
-<p>At present, the logger is hardwired to a handler that maps the current state 
-of the PostgreSQL configuration setting log_min_messages to a valid Logger level 
-and that outputs all messages using the backend function elog(). The following 
-mapping apply between the Logger levels and the PostgreSQL backend levels.</p>
+<p>By default the logger is initialized with logging level of Level.FINEST, so
+all the log messages would be routed to the <code>elog()</code> function in the backend. This
+function in turn would output message to client log based on the
+<code>client_min_messages</code> setting and to server log based on <code>log_min_messages</code> setting.
+Be aware that INFO messages are always routed to the client regardless of the
+setting of <code>client_min_messages</code>. The following mapping apply between the Logger
+levels and the PostgreSQL backend levels:</p>
 <table border="0" width="43%" id="table8">
   <tr>
     <td><b>java.util.logging.Level</b></td>
@@ -663,6 +666,10 @@ mapping apply between the Logger levels and the PostgreSQL backend levels.</p>
     <td>INFO</td>
   </tr>
   <tr>
+    <td>CONFIG</td>
+    <td>LOG</td>
+  </tr>
+  <tr>
     <td>FINE</td>
     <td>DEBUG1</td>
   </tr>
@@ -675,6 +682,15 @@ mapping apply between the Logger levels and the PostgreSQL backend levels.</p>
     <td>DEBUG3</td>
   </tr>
 </table>
+<p>In case you want to limit the amount of messages routed from Java to backend,
+after creating Java logger call <code>setLevel()</code> on top of it, like this:</p>
+<pre>// Getting default logger that sends everything to GPDB backend
+Logger log = Logger.getAnonymousLogger();
+// Set level of logging for it - this would limit the messages sent to backend
+log.setLevel(Level.SEVERE);
+// This message won't reach the backend, as WARNING < SEVERE
+log.log(Level.WARNING, msg);
+</pre>
 <h2><a name="Security">Security</a></h2>
 <h3><i><a name="Installation">Installation</a></i></h3>
 <p>Only a PostgreSQL super user can install PL/Java. The PL/Java utility functions 
