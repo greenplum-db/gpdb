@@ -446,7 +446,9 @@ UNION ALL
 SELECT e1.i, e2.j from exttab_cursor_2 e1 INNER JOIN exttab_cursor_2 e2 ON e1.i = e2.i
 UNION ALL
 SELECT e1.i, e2.j from exttab_cursor_2 e1 INNER JOIN exttab_cursor_2 e2 ON e1.i = e2.i;
+\set ECHO info
 COMMIT;
+\set ECHO all
 -- This should have the errors populated already
 SELECT count(*) > 0 FROM gp_read_error_log('exttab_cursor_2');
 

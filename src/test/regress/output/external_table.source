@@ -885,7 +885,7 @@ UNION ALL
 SELECT e1.i, e2.j from exttab_cursor_2 e1 INNER JOIN exttab_cursor_2 e2 ON e1.i = e2.i
 UNION ALL
 SELECT e1.i, e2.j from exttab_cursor_2 e1 INNER JOIN exttab_cursor_2 e2 ON e1.i = e2.i;
-COMMIT;
+\set ECHO info
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice3 @hostname@:40000 pid=95621)
 DETAIL:  External table exttab_cursor_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data: "error_1"
 -- This should have the errors populated already
