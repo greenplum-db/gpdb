@@ -539,7 +539,6 @@ DeleteGpRelationNodeTuple(
 	ItemPointerData     persistentTid;
 	int64               persistentSerialNum;
 
-	/* Grab an appropriate lock on the gp_relation_node relation */
 	gp_relation_node = heap_open(GpRelationNodeRelationId, RowExclusiveLock);
 
 	tuple = FetchGpRelationNodeTuple(gp_relation_node,
