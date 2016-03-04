@@ -584,6 +584,28 @@ delete from TabDel2 where TabDel2.a not in (select a from TabDel4);
 -- end_ignore
 select * from TabDel2;
 
+--
+-- Update
+--
+-- start_ignore
+create table TblUp1(a int, b int);
+insert into TblUp1 values(1,2),(3,4),(5,6);
+
+create table TblUp2 as select * from TblUp1;
+
+create table TblUp3(a int, b int);
+insert into TblUp3 values(1,2);
+
+create table TblUp4(a int not null, b int not null);
+insert into TblUp4 values(1,2);
+
+-- end_ignore
+
+-- planner does not support updates on distribution keys
+update TblUp1 set a=100 where a not in (select a from TblUp3);
+select * from TblUp1;
+update TblUp2 set a=100 where a not in (select a from TblUp4);
+select * from TblUp2;
 -- start_ignore
 drop schema qp_subquery cascade;
 -- end_ignore
