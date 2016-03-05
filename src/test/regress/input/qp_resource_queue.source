@@ -213,3 +213,10 @@ set statement_mem='125MB';
 set role testrole;
 select count(*) from test;
 reset role;
+
+-- start_ignore
+drop table if exists test;
+drop table if exists test_table;
+drop table if exists tenk1;
+drop schema if exists qp_resource_queue;
+-- end_ignore
