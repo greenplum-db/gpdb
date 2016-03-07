@@ -515,7 +515,6 @@ devel : gccVersionCheck HOMEDEP Debug/GNUmakefile
 else
 devel : gccVersionCheck HOMEDEP $(ISCONFIG)
 endif
-	false
 	$(BUILD_STEPS)
 
 #---------------------------------------------------------------------
@@ -536,7 +535,6 @@ dist : gccVersionCheck GPROOTDEP RECONFIG Release/GNUmakefile
 else
 dist : gccVersionCheck GPROOTDEP RECONFIG $(ISCONFIG)
 endif
-	false
 	$(BUILD_STEPS)
 ifneq "$(BLD_GPDB_BUILDSET)" "partial"
 	@$(MAKE) qautils-tarball INSTLOC=$(INSTLOC)
