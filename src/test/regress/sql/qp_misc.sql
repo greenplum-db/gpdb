@@ -17699,16 +17699,6 @@ select nullif(1,2) from tversion
 group by
 f1
 ) Q ) P;
---- NullifCoreReturnsOne_p2
-select 'NullifCoreReturnsOne_p2' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
-select count(distinct c) c from (
-select f1, count(*) c  from (
-select 1 f1 from tversion union
-select nullif(1, cnnull) from tversion
-) Q
-group by
-f1
-) Q ) P;
 --- NumericComparisonGreaterThanOrEqual_p1
 select 'NumericComparisonGreaterThanOrEqual_p1' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
 select count(distinct c) c from (
@@ -17980,23 +17970,6 @@ select 5 f1, 'DDD' f2, 'DD' f3, 40 f4, 1 f5 from tversion union
 select 6 f1, null f2, null f3, 50 f4, 2 f5 from tversion union
 select 7 f1, null f2, null f3, null f4, 1 f5 from tversion union
 select rnum, c1, c2, c3, dense_rank() over(partition by c1 order by c3 desc ) from tolap
-) Q
-group by
-f1,f2,f3,f4,f5
-) Q ) P;
---- OlapCoreFirstValueNoWindowFrame_p1
-select 'OlapCoreFirstValueNoWindowFrame_p1' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
-select count(distinct c) c from (
-select f1,f2,f3,f4,f5, count(*) c  from (
-select 0 f1, 'AAA' f2, 'AA' f3, 10 f4, 10 f5 from tversion union
-select 1 f1, 'AAA' f2, 'AA' f3, 15 f4, 10 f5 from tversion union
-select 2 f1, 'AAA' f2, 'AB' f3, 25 f4, 10 f5 from tversion union
-select 3 f1, 'BBB' f2, 'BB' f3, 20 f4, 20 f5 from tversion union
-select 4 f1, 'CCC' f2, 'CC' f3, 30 f4, 30 f5 from tversion union
-select 5 f1, 'DDD' f2, 'DD' f3, 40 f4, 40 f5 from tversion union
-select 6 f1, null f2, null f3, 50 f4, 50 f5 from tversion union
-select 7 f1, null f2, null f3, null f4, 50 f5 from tversion union
-select rnum, c1, c2, c3, first_value( c3 ) over(partition by c1 order by c3 asc ) from tolap
 ) Q
 group by
 f1,f2,f3,f4,f5
