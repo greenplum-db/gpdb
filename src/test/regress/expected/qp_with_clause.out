@@ -385,18 +385,18 @@ with diversecountries as
  from diversecountries,city where city.id = diversecountries.capital;
         name        |       name       | cnt 
 --------------------+------------------+-----
- Italy              | Roma             |   8
  Austria            | Wien             |   8
  Russian Federation | Moscow           |  12
- South Africa       | Pretoria         |  11
- Canada             | Ottawa           |  12
- China              | Peking           |  12
+ Italy              | Roma             |   8
  Myanmar            | Rangoon (Yangon) |   8
+ China              | Peking           |  12
  Denmark            | Kobenhavn        |   7
+ Canada             | Ottawa           |  12
  United States      | Washington       |  12
+ South Africa       | Pretoria         |  11
+ Iran               | Teheran          |  10
  Australia          | Canberra         |   8
  India              | New Delhi        |  12
- Iran               | Teheran          |  10
 (12 rows)
 
 --query5 -Using a CTE in the select list
@@ -431,18 +431,18 @@ select
 from country,city where country.capital = city.id) FOO where FOO.CNT is not null;
  cnt |      country       |     capital      
 -----+--------------------+------------------
-   8 | Australia          | Canberra
-  12 | India              | New Delhi
-  10 | Iran               | Teheran
-   8 | Italy              | Roma
    8 | Austria            | Wien
   12 | Russian Federation | Moscow
-  11 | South Africa       | Pretoria
-  12 | Canada             | Ottawa
   12 | China              | Peking
    8 | Myanmar            | Rangoon (Yangon)
-   7 | Denmark            | Kobenhavn
+  10 | Iran               | Teheran
+  11 | South Africa       | Pretoria
   12 | United States      | Washington
+   8 | Italy              | Roma
+  12 | Canada             | Ottawa
+   7 | Denmark            | Kobenhavn
+   8 | Australia          | Canberra
+  12 | India              | New Delhi
 (12 rows)
 
 --queries Using a CTE in the HAVING clause
@@ -2798,169 +2798,169 @@ select
  ?column? | code |          name          |     language     
 ----------+------+------------------------+------------------
        16 | AFG  | Afghanistan            | Dari
-       16 | ARM  | Armenia                | Armenian
-       16 | AUT  | Austria                | German
-       16 | BMU  | Bermuda                | English
-       16 | BRB  | Barbados               | English
-       16 | CHE  | Switzerland            | Romansh
-       16 | CHE  | Switzerland            | German
-       16 | COL  | Colombia               | Spanish
-       16 | CRI  | Costa Rica             | Spanish
-       16 | CZE  | Czech Republic         | Czech
-       16 | ECU  | Ecuador                | Spanish
-       16 | EGY  | Egypt                  | Arabic
-       16 | FIN  | Finland                | Finnish
-       16 | GTM  | Guatemala              | Spanish
-       16 | GUM  | Guam                   | Chamorro
-       16 | HND  | Honduras               | Spanish
-       16 | HRV  | Croatia                | Serbo-Croatian
-       16 | IDN  | Indonesia              | Malay
-       16 | IND  | India                  | Hindi
-       16 | IRQ  | Iraq                   | Arabic
-       16 | ISR  | Israel                 | Arabic
-       16 | KAZ  | Kazakstan              | Kazakh
-       16 | KOR  | South Korea            | Korean
-       16 | LIE  | Liechtenstein          | German
-       16 | LKA  | Sri Lanka              | Tamil
-       16 | LTU  | Lithuania              | Lithuanian
-       16 | MDG  | Madagascar             | French
-       16 | MKD  | Macedonia              | Macedonian
-       16 | MLT  | Malta                  | English
-       16 | MTQ  | Martinique             | French
-       16 | NCL  | New Caledonia          | French
-       16 | NIC  | Nicaragua              | Spanish
-       16 | PAN  | Panama                 | Spanish
-       16 | PHL  | Philippines            | Pilipino
-       16 | PRY  | Paraguay               | Guarani
-       16 | ROM  | Romania                | Romanian
-       16 | ROM  | Romania                | Romani
-       16 | RWA  | Rwanda                 | French
-       16 | SDN  | Sudan                  | Arabic
-       16 | SEN  | Senegal                | Wolof
-       16 | SGP  | Singapore              | Tamil
-       16 | SVK  | Slovakia               | Slovak
-       16 | SYR  | Syria                  | Arabic
-       16 | TUR  | Turkey                 | Turkish
-       16 | TWN  | Taiwan                 | Mandarin Chinese
-       16 | TZA  | Tanzania               | Swahili
-       16 | URY  | Uruguay                | Spanish
-       16 | VNM  | Vietnam                | Vietnamese
-       16 | ZAF  | South Africa           | Afrikaans
        16 | AFG  | Afghanistan            | Pashto
-       16 | ALB  | Albania                | Albaniana
-       16 | AND  | Andorra                | Catalan
-       16 | ANT  | Netherlands Antilles   | Dutch
-       16 | ARG  | Argentina              | Spanish
-       16 | AUS  | Australia              | English
-       16 | BEL  | Belgium                | German
-       16 | BEL  | Belgium                | Dutch
-       16 | BGD  | Bangladesh             | Bengali
-       16 | BGR  | Bulgaria               | Bulgariana
-       16 | BHR  | Bahrain                | Arabic
-       16 | BOL  | Bolivia                | Ketdua
-       16 | CHE  | Switzerland            | Italian
-       16 | CHN  | China                  | Chinese
-       16 | CUB  | Cuba                   | Spanish
-       16 | CYM  | Cayman Islands         | English
-       16 | CYP  | Cyprus                 | Turkish
-       16 | DNK  | Denmark                | Danish
-       16 | EST  | Estonia                | Estonian
-       16 | FIN  | Finland                | Swedish
-       16 | FJI  | Fiji Islands           | Fijian
-       16 | FRA  | France                 | French
-       16 | GBR  | United Kingdom         | English
-       16 | GEO  | Georgia                | Georgiana
-       16 | GLP  | Guadeloupe             | French
-       16 | GRC  | Greece                 | Greek
-       16 | GUM  | Guam                   | English
-       16 | ISR  | Israel                 | Hebrew
-       16 | KGZ  | Kyrgyzstan             | Kirgiz
-       16 | KHM  | Cambodia               | Khmer
-       16 | KWT  | Kuwait                 | Arabic
-       16 | LAO  | Laos                   | Lao
-       16 | LBN  | Lebanon                | Arabic
-       16 | LKA  | Sri Lanka              | Singali
-       16 | LVA  | Latvia                 | Latvian
-       16 | MAC  | Macao                  | Portuguese
-       16 | MDA  | Moldova                | Romanian
-       16 | MEX  | Mexico                 | Spanish
-       16 | MLT  | Malta                  | Maltese
-       16 | MMR  | Myanmar                | Burmese
-       16 | NOR  | Norway                 | Norwegian
-       16 | NPL  | Nepal                  | Nepali
-       16 | PAK  | Pakistan               | Urdu
-       16 | PER  | Peru                   | Spanish
-       16 | POL  | Poland                 | Polish
-       16 | PRK  | North Korea            | Korean
-       16 | SVN  | Slovenia               | Slovene
-       16 | THA  | Thailand               | Thai
-       16 | TJK  | Tajikistan             | Tadzhik
-       16 | TKM  | Turkmenistan           | Turkmenian
-       16 | UKR  | Ukraine                | Ukrainian
-       16 | VEN  | Venezuela              | Spanish
-       16 | YEM  | Yemen                  | Arabic
-       16 | YUG  | Yugoslavia             | Serbo-Croatian
-       16 | ZAF  | South Africa           | Xhosa
-       16 | ZWE  | Zimbabwe               | English
-       16 | ANT  | Netherlands Antilles   | Papiamento
-       16 | ARE  | United Arab Emirates   | Arabic
-       16 | AZE  | Azerbaijan             | Azerbaijani
-       16 | BEL  | Belgium                | French
+       16 | ARM  | Armenia                | Armenian
        16 | BIH  | Bosnia and Herzegovina | Serbo-Croatian
-       16 | BLR  | Belarus                | Belorussian
-       16 | BLR  | Belarus                | Russian
-       16 | BOL  | Bolivia                | Spanish
-       16 | BOL  | Bolivia                | Aimara
        16 | BRA  | Brazil                 | Portuguese
-       16 | CAN  | Canada                 | French
-       16 | CAN  | Canada                 | English
-       16 | CHE  | Switzerland            | French
-       16 | CHL  | Chile                  | Spanish
-       16 | COM  | Comoros                | Comorian
-       16 | CYP  | Cyprus                 | Greek
-       16 | DEU  | Germany                | German
-       16 | DOM  | Dominican Republic     | Spanish
-       16 | DZA  | Algeria                | Arabic
-       16 | ESP  | Spain                  | Spanish
+       16 | SLV  | El Salvador            | Spanish
+       16 | PHL  | Philippines            | Pilipino
+       16 | GLP  | Guadeloupe             | French
        16 | HKG  | Hong Kong              | English
-       16 | HTI  | Haiti                  | French
-       16 | HUN  | Hungary                | Hungarian
-       16 | IRL  | Ireland                | English
-       16 | IRL  | Ireland                | Irish
        16 | IRN  | Iran                   | Persian
        16 | ISL  | Iceland                | Icelandic
-       16 | ITA  | Italy                  | Italian
+       16 | AUT  | Austria                | German
        16 | JOR  | Jordan                 | Arabic
-       16 | JPN  | Japan                  | Japanese
-       16 | KGZ  | Kyrgyzstan             | Russian
+       16 | CHN  | China                  | Chinese
+       16 | COM  | Comoros                | Comorian
+       16 | CYP  | Cyprus                 | Turkish
+       16 | CYP  | Cyprus                 | Greek
+       16 | LVA  | Latvia                 | Latvian
        16 | LBY  | Libyan Arab Jamahiriya | Arabic
-       16 | LUX  | Luxembourg             | Luxembourgish
-       16 | LUX  | Luxembourg             | German
-       16 | LUX  | Luxembourg             | French
-       16 | MAR  | Morocco                | Arabic
+       16 | LIE  | Liechtenstein          | German
+       16 | MDG  | Madagascar             | French
        16 | MDG  | Madagascar             | Malagasy
+       16 | MKD  | Macedonia              | Macedonian
        16 | MWI  | Malawi                 | Chichewa
        16 | MYS  | Malaysia               | Malay
-       16 | NLD  | Netherlands            | Dutch
-       16 | NZL  | New Zealand            | English
-       16 | PER  | Peru                   | Ketdua
-       16 | PER  | Peru                   | Aimara
-       16 | PRT  | Portugal               | Portuguese
-       16 | PRY  | Paraguay               | Spanish
-       16 | RUS  | Russian Federation     | Russian
-       16 | RWA  | Rwanda                 | Rwanda
+       16 | MLT  | Malta                  | English
+       16 | MLT  | Malta                  | Maltese
+       16 | MTQ  | Martinique             | French
+       16 | MEX  | Mexico                 | Spanish
+       16 | MDA  | Moldova                | Romanian
+       16 | MMR  | Myanmar                | Burmese
+       16 | FRA  | France                 | French
+       16 | SEN  | Senegal                | Wolof
+       16 | SGP  | Singapore              | Tamil
        16 | SGP  | Singapore              | Malay
        16 | SGP  | Singapore              | Chinese
-       16 | SLV  | El Salvador            | Spanish
-       16 | SWE  | Sweden                 | Swedish
-       16 | TCD  | Chad                   | Arabic
+       16 | SVN  | Slovenia               | Slovene
+       16 | CHE  | Switzerland            | Romansh
+       16 | CHE  | Switzerland            | German
+       16 | CHE  | Switzerland            | Italian
+       16 | CHE  | Switzerland            | French
        16 | TGO  | Togo                   | Kabye
        16 | TGO  | Togo                   | Ewe
-       16 | TUN  | Tunisia                | Arabic
-       16 | USA  | United States          | English
+       16 | TCD  | Chad                   | Arabic
+       16 | TUR  | Turkey                 | Turkish
+       16 | TKM  | Turkmenistan           | Turkmenian
+       16 | HUN  | Hungary                | Hungarian
+       16 | NCL  | New Caledonia          | French
        16 | UZB  | Uzbekistan             | Uzbek
+       16 | VEN  | Venezuela              | Spanish
+       16 | RUS  | Russian Federation     | Russian
+       16 | NLD  | Netherlands            | Dutch
+       16 | ANT  | Netherlands Antilles   | Dutch
+       16 | ANT  | Netherlands Antilles   | Papiamento
+       16 | ALB  | Albania                | Albaniana
+       16 | ARG  | Argentina              | Spanish
+       16 | AZE  | Azerbaijan             | Azerbaijani
+       16 | BMU  | Bermuda                | English
+       16 | BOL  | Bolivia                | Ketdua
+       16 | BOL  | Bolivia                | Aimara
+       16 | BOL  | Bolivia                | Spanish
+       16 | BGR  | Bulgaria               | Bulgariana
+       16 | CYM  | Cayman Islands         | English
+       16 | CHL  | Chile                  | Spanish
+       16 | DOM  | Dominican Republic     | Spanish
+       16 | ECU  | Ecuador                | Spanish
+       16 | EGY  | Egypt                  | Arabic
+       16 | ZAF  | South Africa           | Afrikaans
+       16 | ZAF  | South Africa           | Xhosa
        16 | ZAF  | South Africa           | English
        16 | ZAF  | South Africa           | Zulu
+       16 | GUM  | Guam                   | Chamorro
+       16 | GUM  | Guam                   | English
+       16 | GTM  | Guatemala              | Spanish
+       16 | HTI  | Haiti                  | French
+       16 | IDN  | Indonesia              | Malay
+       16 | IRQ  | Iraq                   | Arabic
+       16 | IRL  | Ireland                | Irish
+       16 | IRL  | Ireland                | English
+       16 | KHM  | Cambodia               | Khmer
+       16 | KGZ  | Kyrgyzstan             | Kirgiz
+       16 | KGZ  | Kyrgyzstan             | Russian
+       16 | COL  | Colombia               | Spanish
+       16 | KOR  | South Korea            | Korean
+       16 | CUB  | Cuba                   | Spanish
+       16 | KWT  | Kuwait                 | Arabic
+       16 | LAO  | Laos                   | Lao
+       16 | LUX  | Luxembourg             | German
+       16 | LUX  | Luxembourg             | French
+       16 | LUX  | Luxembourg             | Luxembourgish
+       16 | NIC  | Nicaragua              | Spanish
+       16 | NOR  | Norway                 | Norwegian
+       16 | PAK  | Pakistan               | Urdu
+       16 | PER  | Peru                   | Spanish
+       16 | PER  | Peru                   | Aimara
+       16 | PER  | Peru                   | Ketdua
+       16 | PRT  | Portugal               | Portuguese
+       16 | LKA  | Sri Lanka              | Tamil
+       16 | LKA  | Sri Lanka              | Singali
+       16 | SYR  | Syria                  | Arabic
+       16 | TZA  | Tanzania               | Swahili
+       16 | CZE  | Czech Republic         | Czech
+       16 | URY  | Uruguay                | Spanish
+       16 | VNM  | Vietnam                | Vietnamese
+       16 | EST  | Estonia                | Estonian
+       16 | USA  | United States          | English
+       16 | DZA  | Algeria                | Arabic
+       16 | AND  | Andorra                | Catalan
+       16 | ARE  | United Arab Emirates   | Arabic
+       16 | AUS  | Australia              | English
+       16 | BHR  | Bahrain                | Arabic
+       16 | BGD  | Bangladesh             | Bengali
+       16 | BRB  | Barbados               | English
+       16 | BEL  | Belgium                | German
+       16 | BEL  | Belgium                | Dutch
+       16 | BEL  | Belgium                | French
+       16 | GBR  | United Kingdom         | English
+       16 | CRI  | Costa Rica             | Spanish
+       16 | ESP  | Spain                  | Spanish
+       16 | FJI  | Fiji Islands           | Fijian
+       16 | GEO  | Georgia                | Georgiana
+       16 | HND  | Honduras               | Spanish
+       16 | IND  | India                  | Hindi
+       16 | ISR  | Israel                 | Arabic
+       16 | ISR  | Israel                 | Hebrew
+       16 | ITA  | Italy                  | Italian
+       16 | JPN  | Japan                  | Japanese
+       16 | YEM  | Yemen                  | Arabic
+       16 | YUG  | Yugoslavia             | Serbo-Croatian
+       16 | CAN  | Canada                 | French
+       16 | CAN  | Canada                 | English
+       16 | KAZ  | Kazakstan              | Kazakh
+       16 | PRK  | North Korea            | Korean
+       16 | GRC  | Greece                 | Greek
+       16 | HRV  | Croatia                | Serbo-Croatian
+       16 | LBN  | Lebanon                | Arabic
+       16 | LTU  | Lithuania              | Lithuanian
+       16 | MAC  | Macao                  | Portuguese
+       16 | MAR  | Morocco                | Arabic
+       16 | NPL  | Nepal                  | Nepali
+       16 | PAN  | Panama                 | Spanish
+       16 | PRY  | Paraguay               | Guarani
+       16 | PRY  | Paraguay               | Spanish
+       16 | POL  | Poland                 | Polish
+       16 | ROM  | Romania                | Romani
+       16 | ROM  | Romania                | Romanian
+       16 | RWA  | Rwanda                 | French
+       16 | RWA  | Rwanda                 | Rwanda
+       16 | SWE  | Sweden                 | Swedish
+       16 | DEU  | Germany                | German
+       16 | SVK  | Slovakia               | Slovak
+       16 | SDN  | Sudan                  | Arabic
+       16 | FIN  | Finland                | Finnish
+       16 | FIN  | Finland                | Swedish
+       16 | TJK  | Tajikistan             | Tadzhik
+       16 | TWN  | Taiwan                 | Mandarin Chinese
+       16 | DNK  | Denmark                | Danish
+       16 | THA  | Thailand               | Thai
+       16 | TUN  | Tunisia                | Arabic
+       16 | UKR  | Ukraine                | Ukrainian
+       16 | NZL  | New Zealand            | English
+       16 | BLR  | Belarus                | Russian
+       16 | BLR  | Belarus                | Belorussian
+       16 | ZWE  | Zimbabwe               | English
 (164 rows)
 
 --query 6 Use CTE in the main query and subqueries within the main query
@@ -4707,76 +4707,6 @@ on r.code = r1.code) AS FOO;
 -------
     43
 (1 row)
-
--- query7
-with alleuropeanlanguages as 
-(select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
- FROM country,city,countrylanguage
- WHERE country.code = countrylanguage.countrycode
- and country.capital = city.id
- and country.continent = 'Europe')
-select * from
-(select * from alleuropeanlanguages where isofficial='True') e1,
-(select * from alleuropeanlanguages where percentage > 50) e2
-where e1.code = e2.code order by e2.COUNTRY,e1.language;
- code |        country         |              capital              |    language    | isofficial | percentage | code |        country         |              capital              |    language    | isofficial | percentage 
-------+------------------------+-----------------------------------+----------------+------------+------------+------+------------------------+-----------------------------------+----------------+------------+------------
- ALB  | Albania                | Tirana                            | Albaniana      | t          |       97.9 | ALB  | Albania                | Tirana                            | Albaniana      | t          |       97.9
- AUT  | Austria                | Wien                              | German         | t          |         92 | AUT  | Austria                | Wien                              | German         | t          |         92
- BLR  | Belarus                | Minsk                             | Belorussian    | t          |       65.6 | BLR  | Belarus                | Minsk                             | Belorussian    | t          |       65.6
- BLR  | Belarus                | Minsk                             | Russian        | t          |         32 | BLR  | Belarus                | Minsk                             | Belorussian    | t          |       65.6
- BEL  | Belgium                | Bruxelles [Brussel]               | Dutch          | t          |       59.2 | BEL  | Belgium                | Bruxelles [Brussel]               | Dutch          | t          |       59.2
- BEL  | Belgium                | Bruxelles [Brussel]               | French         | t          |       32.6 | BEL  | Belgium                | Bruxelles [Brussel]               | Dutch          | t          |       59.2
- BEL  | Belgium                | Bruxelles [Brussel]               | German         | t          |          1 | BEL  | Belgium                | Bruxelles [Brussel]               | Dutch          | t          |       59.2
- BIH  | Bosnia and Herzegovina | Sarajevo                          | Serbo-Croatian | t          |       99.2 | BIH  | Bosnia and Herzegovina | Sarajevo                          | Serbo-Croatian | t          |       99.2
- BGR  | Bulgaria               | Sofija                            | Bulgariana     | t          |       83.2 | BGR  | Bulgaria               | Sofija                            | Bulgariana     | t          |       83.2
- HRV  | Croatia                | Zagreb                            | Serbo-Croatian | t          |       95.9 | HRV  | Croatia                | Zagreb                            | Serbo-Croatian | t          |       95.9
- CZE  | Czech Republic         | Praha                             | Czech          | t          |       81.2 | CZE  | Czech Republic         | Praha                             | Czech          | t          |       81.2
- DNK  | Denmark                | Kobenhavn                         | Danish         | t          |       93.5 | DNK  | Denmark                | Kobenhavn                         | Danish         | t          |       93.5
- EST  | Estonia                | Tallinn                           | Estonian       | t          |       65.3 | EST  | Estonia                | Tallinn                           | Estonian       | t          |       65.3
- FRO  | Faroe Islands          | Torshavn                          | Danish         | t          |          0 | FRO  | Faroe Islands          | Torshavn                          | Faroese        | t          |        100
- FRO  | Faroe Islands          | Torshavn                          | Faroese        | t          |        100 | FRO  | Faroe Islands          | Torshavn                          | Faroese        | t          |        100
- FIN  | Finland                | Helsinki [Helsingfors]            | Finnish        | t          |       92.7 | FIN  | Finland                | Helsinki [Helsingfors]            | Finnish        | t          |       92.7
- FIN  | Finland                | Helsinki [Helsingfors]            | Swedish        | t          |        5.7 | FIN  | Finland                | Helsinki [Helsingfors]            | Finnish        | t          |       92.7
- FRA  | France                 | Paris                             | French         | t          |       93.6 | FRA  | France                 | Paris                             | French         | t          |       93.6
- DEU  | Germany                | Berlin                            | German         | t          |       91.3 | DEU  | Germany                | Berlin                            | German         | t          |       91.3
- GIB  | Gibraltar              | Gibraltar                         | English        | t          |       88.9 | GIB  | Gibraltar              | Gibraltar                         | English        | t          |       88.9
- GRC  | Greece                 | Athenai                           | Greek          | t          |       98.5 | GRC  | Greece                 | Athenai                           | Greek          | t          |       98.5
- HUN  | Hungary                | Budapest                          | Hungarian      | t          |       98.5 | HUN  | Hungary                | Budapest                          | Hungarian      | t          |       98.5
- ISL  | Iceland                | Reykjavik                         | Icelandic      | t          |       95.7 | ISL  | Iceland                | Reykjavik                         | Icelandic      | t          |       95.7
- IRL  | Ireland                | Dublin                            | English        | t          |       98.4 | IRL  | Ireland                | Dublin                            | English        | t          |       98.4
- IRL  | Ireland                | Dublin                            | Irish          | t          |        1.6 | IRL  | Ireland                | Dublin                            | English        | t          |       98.4
- ITA  | Italy                  | Roma                              | Italian        | t          |       94.1 | ITA  | Italy                  | Roma                              | Italian        | t          |       94.1
- LVA  | Latvia                 | Riga                              | Latvian        | t          |       55.1 | LVA  | Latvia                 | Riga                              | Latvian        | t          |       55.1
- LIE  | Liechtenstein          | Vaduz                             | German         | t          |         89 | LIE  | Liechtenstein          | Vaduz                             | German         | t          |         89
- LTU  | Lithuania              | Vilnius                           | Lithuanian     | t          |       81.6 | LTU  | Lithuania              | Vilnius                           | Lithuanian     | t          |       81.6
- LUX  | Luxembourg             | Luxembourg [Luxemburg/Letzebuerg] | French         | t          |        4.2 | LUX  | Luxembourg             | Luxembourg [Luxemburg/Letzebuerg] | Luxembourgish  | t          |       64.4
- LUX  | Luxembourg             | Luxembourg [Luxemburg/Letzebuerg] | German         | t          |        2.3 | LUX  | Luxembourg             | Luxembourg [Luxemburg/Letzebuerg] | Luxembourgish  | t          |       64.4
- LUX  | Luxembourg             | Luxembourg [Luxemburg/Letzebuerg] | Luxembourgish  | t          |       64.4 | LUX  | Luxembourg             | Luxembourg [Luxemburg/Letzebuerg] | Luxembourgish  | t          |       64.4
- MKD  | Macedonia              | Skopje                            | Macedonian     | t          |       66.5 | MKD  | Macedonia              | Skopje                            | Macedonian     | t          |       66.5
- MLT  | Malta                  | Valletta                          | English        | t          |        2.1 | MLT  | Malta                  | Valletta                          | Maltese        | t          |       95.8
- MLT  | Malta                  | Valletta                          | Maltese        | t          |       95.8 | MLT  | Malta                  | Valletta                          | Maltese        | t          |       95.8
- MDA  | Moldova                | Chisinau                          | Romanian       | t          |       61.9 | MDA  | Moldova                | Chisinau                          | Romanian       | t          |       61.9
- NLD  | Netherlands            | Amsterdam                         | Dutch          | t          |       95.6 | NLD  | Netherlands            | Amsterdam                         | Dutch          | t          |       95.6
- NOR  | Norway                 | Oslo                              | Norwegian      | t          |       96.6 | NOR  | Norway                 | Oslo                              | Norwegian      | t          |       96.6
- POL  | Poland                 | Warszawa                          | Polish         | t          |       97.6 | POL  | Poland                 | Warszawa                          | Polish         | t          |       97.6
- PRT  | Portugal               | Lisboa                            | Portuguese     | t          |         99 | PRT  | Portugal               | Lisboa                            | Portuguese     | t          |         99
- ROM  | Romania                | Bucuresti                         | Romani         | t          |        0.7 | ROM  | Romania                | Bucuresti                         | Romanian       | t          |       90.7
- ROM  | Romania                | Bucuresti                         | Romanian       | t          |       90.7 | ROM  | Romania                | Bucuresti                         | Romanian       | t          |       90.7
- RUS  | Russian Federation     | Moscow                            | Russian        | t          |       86.6 | RUS  | Russian Federation     | Moscow                            | Russian        | t          |       86.6
- SMR  | San Marino             | San Marino                        | Italian        | t          |        100 | SMR  | San Marino             | San Marino                        | Italian        | t          |        100
- SVK  | Slovakia               | Bratislava                        | Slovak         | t          |       85.6 | SVK  | Slovakia               | Bratislava                        | Slovak         | t          |       85.6
- SVN  | Slovenia               | Ljubljana                         | Slovene        | t          |       87.9 | SVN  | Slovenia               | Ljubljana                         | Slovene        | t          |       87.9
- ESP  | Spain                  | Madrid                            | Spanish        | t          |       74.4 | ESP  | Spain                  | Madrid                            | Spanish        | t          |       74.4
- SWE  | Sweden                 | Stockholm                         | Swedish        | t          |       89.5 | SWE  | Sweden                 | Stockholm                         | Swedish        | t          |       89.5
- CHE  | Switzerland            | Bern                              | French         | t          |       19.2 | CHE  | Switzerland            | Bern                              | German         | t          |       63.6
- CHE  | Switzerland            | Bern                              | German         | t          |       63.6 | CHE  | Switzerland            | Bern                              | German         | t          |       63.6
- CHE  | Switzerland            | Bern                              | Italian        | t          |        7.7 | CHE  | Switzerland            | Bern                              | German         | t          |       63.6
- CHE  | Switzerland            | Bern                              | Romansh        | t          |        0.6 | CHE  | Switzerland            | Bern                              | German         | t          |       63.6
- UKR  | Ukraine                | Kyiv                              | Ukrainian      | t          |       64.7 | UKR  | Ukraine                | Kyiv                              | Ukrainian      | t          |       64.7
- GBR  | United Kingdom         | London                            | English        | t          |       97.3 | GBR  | United Kingdom         | London                            | English        | t          |       97.3
- YUG  | Yugoslavia             | Beograd                           | Serbo-Croatian | t          |       75.2 | YUG  | Yugoslavia             | Beograd                           | Serbo-Croatian | t          |       75.2
-(55 rows)
 
 -- query8
 with allcountrystats as 
@@ -6853,255 +6783,6 @@ ANALYZE COUNTRY_CO;
 ANALYZE COUNTRYLANGUAGE_CO;
 set enable_seqscan=off;
 set enable_indexscan=on;
---query1
-with capitals as 
-(select country_co.code,id,city_co.name from city_co,country_co 
- where city_co.countrycode = country_co.code AND city_co.id = country_co.capital) 
-select * from 
-capitals,countrylanguage_co
-where capitals.code = countrylanguage_co.countrycode and isofficial='true'
-order by capitals.code,countrylanguage_co.language;
- code |  id  |               name                | countrycode |     language     | isofficial | percentage 
-------+------+-----------------------------------+-------------+------------------+------------+------------
- ABW  |  129 | Oranjestad                        | ABW         | Dutch            | t          |        5.3
- AFG  |    1 | Kabul                             | AFG         | Dari             | t          |       32.1
- AFG  |    1 | Kabul                             | AFG         | Pashto           | t          |       52.4
- AIA  |   62 | The Valley                        | AIA         | English          | t          |          0
- ALB  |   34 | Tirana                            | ALB         | Albaniana        | t          |       97.9
- AND  |   55 | Andorra la Vella                  | AND         | Catalan          | t          |       32.3
- ANT  |   33 | Willemstad                        | ANT         | Dutch            | t          |          0
- ANT  |   33 | Willemstad                        | ANT         | Papiamento       | t          |       86.2
- ARE  |   65 | Abu Dhabi                         | ARE         | Arabic           | t          |         42
- ARG  |   69 | Buenos Aires                      | ARG         | Spanish          | t          |       96.8
- ARM  |  126 | Yerevan                           | ARM         | Armenian         | t          |       93.4
- ASM  |   54 | Fagatogo                          | ASM         | English          | t          |        3.1
- ASM  |   54 | Fagatogo                          | ASM         | Samoan           | t          |       90.6
- ATG  |   63 | Saint Johns                       | ATG         | English          | t          |          0
- AUS  |  135 | Canberra                          | AUS         | English          | t          |       81.2
- AUT  | 1523 | Wien                              | AUT         | German           | t          |         92
- AZE  |  144 | Baku                              | AZE         | Azerbaijani      | t          |         89
- BDI  |  552 | Bujumbura                         | BDI         | French           | t          |          0
- BDI  |  552 | Bujumbura                         | BDI         | Kirundi          | t          |       98.1
- BEL  |  179 | Bruxelles [Brussel]               | BEL         | Dutch            | t          |       59.2
- BEL  |  179 | Bruxelles [Brussel]               | BEL         | French           | t          |       32.6
- BEL  |  179 | Bruxelles [Brussel]               | BEL         | German           | t          |          1
- BGD  |  150 | Dhaka                             | BGD         | Bengali          | t          |       97.7
- BGR  |  539 | Sofija                            | BGR         | Bulgariana       | t          |       83.2
- BHR  |  149 | al-Manama                         | BHR         | Arabic           | t          |       67.7
- BIH  |  201 | Sarajevo                          | BIH         | Serbo-Croatian   | t          |       99.2
- BLR  | 3520 | Minsk                             | BLR         | Belorussian      | t          |       65.6
- BLR  | 3520 | Minsk                             | BLR         | Russian          | t          |         32
- BLZ  |  185 | Belmopan                          | BLZ         | English          | t          |       50.8
- BMU  |  191 | Hamilton                          | BMU         | English          | t          |        100
- BOL  |  194 | La Paz                            | BOL         | Aimara           | t          |        3.2
- BOL  |  194 | La Paz                            | BOL         | Ketdua           | t          |        8.1
- BOL  |  194 | La Paz                            | BOL         | Spanish          | t          |       87.7
- BRA  |  211 | Brasilia                          | BRA         | Portuguese       | t          |       97.5
- BRB  |  174 | Bridgetown                        | BRB         | English          | t          |          0
- BRN  |  538 | Bandar Seri Begawan               | BRN         | Malay            | t          |       45.5
- BTN  |  192 | Thimphu                           | BTN         | Dzongkha         | t          |         50
- CAN  | 1822 | Ottawa                            | CAN         | English          | t          |       60.4
- CAN  | 1822 | Ottawa                            | CAN         | French           | t          |       23.4
- CCK  | 2317 | West Island                       | CCK         | English          | t          |          0
- CHE  | 3248 | Bern                              | CHE         | French           | t          |       19.2
- CHE  | 3248 | Bern                              | CHE         | German           | t          |       63.6
- CHE  | 3248 | Bern                              | CHE         | Italian          | t          |        7.7
- CHE  | 3248 | Bern                              | CHE         | Romansh          | t          |        0.6
- CHL  |  554 | Santiago de Chile                 | CHL         | Spanish          | t          |       89.7
- CHN  | 1891 | Peking                            | CHN         | Chinese          | t          |         92
- COK  |  583 | Avarua                            | COK         | Maori            | t          |          0
- COL  | 2257 | Santafe de Bogota                 | COL         | Spanish          | t          |         99
- COM  | 2295 | Moroni                            | COM         | Comorian         | t          |         75
- CPV  | 1859 | Praia                             | CPV         | Portuguese       | t          |          0
- CRI  |  584 | San Jose                          | CRI         | Spanish          | t          |       97.5
- CUB  | 2413 | La Habana                         | CUB         | Spanish          | t          |        100
- CXR  | 1791 | Flying Fish Cove                  | CXR         | English          | t          |          0
- CYM  |  553 | George Town                       | CYM         | English          | t          |          0
- CYP  | 2430 | Nicosia                           | CYP         | Greek            | t          |       74.1
- CYP  | 2430 | Nicosia                           | CYP         | Turkish          | t          |       22.4
- CZE  | 3339 | Praha                             | CZE         | Czech            | t          |       81.2
- DEU  | 3068 | Berlin                            | DEU         | German           | t          |       91.3
- DJI  |  585 | Djibouti                          | DJI         | Arabic           | t          |       10.6
- DNK  | 3315 | Kobenhavn                         | DNK         | Danish           | t          |       93.5
- DOM  |  587 | Santo Domingo de Guzman           | DOM         | Spanish          | t          |         98
- DZA  |   35 | Alger                             | DZA         | Arabic           | t          |         86
- ECU  |  594 | Quito                             | ECU         | Spanish          | t          |         93
- EGY  |  608 | Cairo                             | EGY         | Arabic           | t          |       98.8
- ERI  |  652 | Asmara                            | ERI         | Tigrinja         | t          |       49.1
- ESH  | 2453 | El-Aaiun                          | ESH         | Arabic           | t          |        100
- ESP  |  653 | Madrid                            | ESP         | Spanish          | t          |       74.4
- EST  | 3791 | Tallinn                           | EST         | Estonian         | t          |       65.3
- FIN  | 3236 | Helsinki [Helsingfors]            | FIN         | Finnish          | t          |       92.7
- FIN  | 3236 | Helsinki [Helsingfors]            | FIN         | Swedish          | t          |        5.7
- FJI  |  764 | Suva                              | FJI         | Fijian           | t          |       50.8
- FLK  |  763 | Stanley                           | FLK         | English          | t          |          0
- FRA  | 2974 | Paris                             | FRA         | French           | t          |       93.6
- FRO  |  901 | Torshavn                          | FRO         | Danish           | t          |          0
- FRO  |  901 | Torshavn                          | FRO         | Faroese          | t          |        100
- GBR  |  456 | London                            | GBR         | English          | t          |       97.3
- GEO  |  905 | Tbilisi                           | GEO         | Georgiana        | t          |       71.7
- GIB  |  915 | Gibraltar                         | GIB         | English          | t          |       88.9
- GLP  |  919 | Basse-Terre                       | GLP         | French           | t          |          0
- GNB  |  927 | Bissau                            | GNB         | Portuguese       | t          |        8.1
- GRC  | 2401 | Athenai                           | GRC         | Greek            | t          |       98.5
- GRL  |  917 | Nuuk                              | GRL         | Danish           | t          |       12.5
- GRL  |  917 | Nuuk                              | GRL         | Greenlandic      | t          |       87.5
- GTM  |  922 | Ciudad de Guatemala               | GTM         | Spanish          | t          |       64.7
- GUM  |  921 | Agaaa                             | GUM         | Chamorro         | t          |       29.6
- GUM  |  921 | Agaaa                             | GUM         | English          | t          |       37.5
- HKG  |  937 | Victoria                          | HKG         | English          | t          |        2.2
- HND  |  933 | Tegucigalpa                       | HND         | Spanish          | t          |       97.2
- HRV  | 2409 | Zagreb                            | HRV         | Serbo-Croatian   | t          |       95.9
- HTI  |  929 | Port-au-Prince                    | HTI         | French           | t          |          0
- HUN  | 3483 | Budapest                          | HUN         | Hungarian        | t          |       98.5
- IDN  |  939 | Jakarta                           | IDN         | Malay            | t          |       12.1
- IND  | 1109 | New Delhi                         | IND         | Hindi            | t          |       39.9
- IRL  | 1447 | Dublin                            | IRL         | English          | t          |       98.4
- IRL  | 1447 | Dublin                            | IRL         | Irish            | t          |        1.6
- IRN  | 1380 | Teheran                           | IRN         | Persian          | t          |       45.7
- IRQ  | 1365 | Baghdad                           | IRQ         | Arabic           | t          |       77.2
- ISL  | 1449 | Reykjavik                         | ISL         | Icelandic        | t          |       95.7
- ISR  | 1450 | Jerusalem                         | ISR         | Arabic           | t          |         18
- ISR  | 1450 | Jerusalem                         | ISR         | Hebrew           | t          |       63.1
- ITA  | 1464 | Roma                              | ITA         | Italian          | t          |       94.1
- JOR  | 1786 | Amman                             | JOR         | Arabic           | t          |       97.9
- JPN  | 1532 | Tokyo                             | JPN         | Japanese         | t          |       99.1
- KAZ  | 1864 | Astana                            | KAZ         | Kazakh           | t          |         46
- KGZ  | 2253 | Bishkek                           | KGZ         | Kirgiz           | t          |       59.7
- KGZ  | 2253 | Bishkek                           | KGZ         | Russian          | t          |       16.2
- KHM  | 1800 | Phnom Penh                        | KHM         | Khmer            | t          |       88.6
- KIR  | 2256 | Bairiki                           | KIR         | Kiribati         | t          |       98.9
- KNA  | 3064 | Basseterre                        | KNA         | English          | t          |          0
- KOR  | 2331 | Seoul                             | KOR         | Korean           | t          |       99.9
- KWT  | 2429 | Kuwait                            | KWT         | Arabic           | t          |       78.1
- LAO  | 2432 | Vientiane                         | LAO         | Lao              | t          |       67.2
- LBN  | 2438 | Beirut                            | LBN         | Arabic           | t          |         93
- LBY  | 2441 | Tripoli                           | LBY         | Arabic           | t          |         96
- LCA  | 3065 | Castries                          | LCA         | English          | t          |         20
- LIE  | 2446 | Vaduz                             | LIE         | German           | t          |         89
- LKA  | 3217 | Colombo                           | LKA         | Singali          | t          |       60.3
- LKA  | 3217 | Colombo                           | LKA         | Tamil            | t          |       19.6
- LSO  | 2437 | Maseru                            | LSO         | English          | t          |          0
- LSO  | 2437 | Maseru                            | LSO         | Sotho            | t          |         85
- LTU  | 2447 | Vilnius                           | LTU         | Lithuanian       | t          |       81.6
- LUX  | 2452 | Luxembourg [Luxemburg/Letzebuerg] | LUX         | French           | t          |        4.2
- LUX  | 2452 | Luxembourg [Luxemburg/Letzebuerg] | LUX         | German           | t          |        2.3
- LUX  | 2452 | Luxembourg [Luxemburg/Letzebuerg] | LUX         | Luxembourgish    | t          |       64.4
- LVA  | 2434 | Riga                              | LVA         | Latvian          | t          |       55.1
- MAC  | 2454 | Macao                             | MAC         | Portuguese       | t          |        2.3
- MAR  | 2486 | Rabat                             | MAR         | Arabic           | t          |         65
- MCO  | 2695 | Monaco-Ville                      | MCO         | French           | t          |       41.9
- MDA  | 2690 | Chisinau                          | MDA         | Romanian         | t          |       61.9
- MDG  | 2455 | Antananarivo                      | MDG         | French           | t          |          0
- MDG  | 2455 | Antananarivo                      | MDG         | Malagasy         | t          |       98.9
- MDV  | 2463 | Male                              | MDV         | Dhivehi          | t          |        100
- MEX  | 2515 | Ciudad de Mexico                  | MEX         | Spanish          | t          |       92.1
- MHL  | 2507 | Dalap-Uliga-Darrit                | MHL         | English          | t          |          0
- MHL  | 2507 | Dalap-Uliga-Darrit                | MHL         | Marshallese      | t          |       96.8
- MKD  | 2460 | Skopje                            | MKD         | Macedonian       | t          |       66.5
- MLT  | 2484 | Valletta                          | MLT         | English          | t          |        2.1
- MLT  | 2484 | Valletta                          | MLT         | Maltese          | t          |       95.8
- MMR  | 2710 | Rangoon (Yangon)                  | MMR         | Burmese          | t          |         69
- MNG  | 2696 | Ulan Bator                        | MNG         | Mongolian        | t          |       78.8
- MNP  | 2913 | Garapan                           | MNP         | English          | t          |        4.8
- MSR  | 2697 | Plymouth                          | MSR         | English          | t          |          0
- MTQ  | 2508 | Fort-de-France                    | MTQ         | French           | t          |          0
- MWI  | 2462 | Lilongwe                          | MWI         | Chichewa         | t          |       58.3
- MYS  | 2464 | Kuala Lumpur                      | MYS         | Malay            | t          |       58.4
- MYT  | 2514 | Mamoutzou                         | MYT         | French           | t          |       20.3
- NCL  | 3493 | Noumea                            | NCL         | French           | t          |       34.3
- NFK  | 2806 | Kingston                          | NFK         | English          | t          |          0
- NIC  | 2734 | Managua                           | NIC         | Spanish          | t          |       97.6
- NIU  | 2805 | Alofi                             | NIU         | English          | t          |          0
- NLD  |    5 | Amsterdam                         | NLD         | Dutch            | t          |       95.6
- NOR  | 2807 | Oslo                              | NOR         | Norwegian        | t          |       96.6
- NPL  | 2729 | Kathmandu                         | NPL         | Nepali           | t          |       50.4
- NRU  | 2728 | Yaren                             | NRU         | English          | t          |        7.5
- NRU  | 2728 | Yaren                             | NRU         | Nauru            | t          |       57.5
- NZL  | 3499 | Wellington                        | NZL         | English          | t          |         87
- OMN  | 2821 | Masqat                            | OMN         | Arabic           | t          |       76.7
- PAK  | 2831 | Islamabad                         | PAK         | Urdu             | t          |        7.6
- PAN  | 2882 | Ciudad de Panama                  | PAN         | Spanish          | t          |       76.8
- PER  | 2890 | Lima                              | PER         | Aimara           | t          |        2.3
- PER  | 2890 | Lima                              | PER         | Ketdua           | t          |       16.4
- PER  | 2890 | Lima                              | PER         | Spanish          | t          |       79.8
- PHL  |  766 | Manila                            | PHL         | Pilipino         | t          |       29.3
- PLW  | 2881 | Koror                             | PLW         | English          | t          |        3.2
- PLW  | 2881 | Koror                             | PLW         | Palau            | t          |       82.2
- POL  | 2928 | Warszawa                          | POL         | Polish           | t          |       97.6
- PRI  | 2919 | San Juan                          | PRI         | Spanish          | t          |       51.3
- PRK  | 2318 | Pyongyang                         | PRK         | Korean           | t          |       99.9
- PRT  | 2914 | Lisboa                            | PRT         | Portuguese       | t          |         99
- PRY  | 2885 | Asuncion                          | PRY         | Guarani          | t          |       40.1
- PRY  | 2885 | Asuncion                          | PRY         | Spanish          | t          |       55.1
- PYF  | 3016 | Papeete                           | PYF         | French           | t          |       40.8
- QAT  | 2973 | Doha                              | QAT         | Arabic           | t          |       40.7
- ROM  | 3018 | Bucuresti                         | ROM         | Romani           | t          |        0.7
- ROM  | 3018 | Bucuresti                         | ROM         | Romanian         | t          |       90.7
- RUS  | 3580 | Moscow                            | RUS         | Russian          | t          |       86.6
- RWA  | 3047 | Kigali                            | RWA         | French           | t          |          0
- RWA  | 3047 | Kigali                            | RWA         | Rwanda           | t          |        100
- SAU  | 3173 | Riyadh                            | SAU         | Arabic           | t          |         95
- SDN  | 3225 | Khartum                           | SDN         | Arabic           | t          |       49.4
- SEN  | 3198 | Dakar                             | SEN         | Wolof            | t          |       48.1
- SGP  | 3208 | Singapore                         | SGP         | Chinese          | t          |       77.1
- SGP  | 3208 | Singapore                         | SGP         | Malay            | t          |       14.1
- SGP  | 3208 | Singapore                         | SGP         | Tamil            | t          |        7.4
- SHN  | 3063 | Jamestown                         | SHN         | English          | t          |          0
- SJM  |  938 | Longyearbyen                      | SJM         | Norwegian        | t          |          0
- SLV  |  645 | San Salvador                      | SLV         | Spanish          | t          |        100
- SMR  | 3171 | San Marino                        | SMR         | Italian          | t          |        100
- SOM  | 3214 | Mogadishu                         | SOM         | Arabic           | t          |          0
- SOM  | 3214 | Mogadishu                         | SOM         | Somali           | t          |       98.3
- SPM  | 3067 | Saint-Pierre                      | SPM         | French           | t          |          0
- SVK  | 3209 | Bratislava                        | SVK         | Slovak           | t          |       85.6
- SVN  | 3212 | Ljubljana                         | SVN         | Slovene          | t          |       87.9
- SWE  | 3048 | Stockholm                         | SWE         | Swedish          | t          |       89.5
- SWZ  | 3244 | Mbabane                           | SWZ         | Swazi            | t          |       89.9
- SYC  | 3206 | Victoria                          | SYC         | English          | t          |        3.8
- SYC  | 3206 | Victoria                          | SYC         | French           | t          |        1.3
- SYR  | 3250 | Damascus                          | SYR         | Arabic           | t          |         90
- TCA  | 3423 | Cockburn Town                     | TCA         | English          | t          |          0
- TCD  | 3337 | NDjamena                          | TCD         | Arabic           | t          |       12.3
- TGO  | 3332 | Lome                              | TGO         | Ewe              | t          |       23.2
- TGO  | 3332 | Lome                              | TGO         | Kabye            | t          |       13.8
- THA  | 3320 | Bangkok                           | THA         | Thai             | t          |       52.6
- TJK  | 3261 | Dushanbe                          | TJK         | Tadzhik          | t          |       62.2
- TKL  | 3333 | Fakaofo                           | TKL         | English          | t          |          0
- TKM  | 3419 | Ashgabat                          | TKM         | Turkmenian       | t          |       76.7
- TMP  | 1522 | Dili                              | TMP         | Portuguese       | t          |          0
- TON  | 3334 | Nukualofa                         | TON         | English          | t          |          0
- TON  | 3334 | Nukualofa                         | TON         | Tongan           | t          |       98.3
- TUN  | 3349 | Tunis                             | TUN         | Arabic           | t          |       69.9
- TUR  | 3358 | Ankara                            | TUR         | Turkish          | t          |       87.6
- TUV  | 3424 | Funafuti                          | TUV         | English          | t          |          0
- TUV  | 3424 | Funafuti                          | TUV         | Tuvalu           | t          |       92.5
- TWN  | 3263 | Taipei                            | TWN         | Mandarin Chinese | t          |       20.1
- TZA  | 3306 | Dodoma                            | TZA         | Swahili          | t          |        8.8
- UKR  | 3426 | Kyiv                              | UKR         | Ukrainian        | t          |       64.7
- URY  | 3492 | Montevideo                        | URY         | Spanish          | t          |       95.7
- USA  | 3813 | Washington                        | USA         | English          | t          |       86.2
- UZB  | 3503 | Toskent                           | UZB         | Uzbek            | t          |       72.6
- VAT  | 3538 | Citta del Vaticano                | VAT         | Italian          | t          |          0
- VCT  | 3066 | Kingstown                         | VCT         | English          | t          |          0
- VEN  | 3539 | Caracas                           | VEN         | Spanish          | t          |       96.9
- VGB  |  537 | Road Town                         | VGB         | English          | t          |          0
- VIR  | 4067 | Charlotte Amalie                  | VIR         | English          | t          |       81.7
- VNM  | 3770 | Hanoi                             | VNM         | Vietnamese       | t          |       86.8
- VUT  | 3537 | Port-Vila                         | VUT         | Bislama          | t          |       56.6
- VUT  | 3537 | Port-Vila                         | VUT         | English          | t          |       28.3
- VUT  | 3537 | Port-Vila                         | VUT         | French           | t          |       14.2
- WSM  | 3169 | Apia                              | WSM         | English          | t          |        0.6
- WSM  | 3169 | Apia                              | WSM         | Samoan           | t          |       47.5
- YEM  | 1780 | Sanaa                             | YEM         | Arabic           | t          |       99.6
- YUG  | 1792 | Beograd                           | YUG         | Serbo-Croatian   | t          |       75.2
- ZAF  |  716 | Pretoria                          | ZAF         | Afrikaans        | t          |       14.3
- ZAF  |  716 | Pretoria                          | ZAF         | English          | t          |        8.5
- ZAF  |  716 | Pretoria                          | ZAF         | Xhosa            | t          |       17.7
- ZAF  |  716 | Pretoria                          | ZAF         | Zulu             | t          |       22.7
- ZWE  | 4068 | Harare                            | ZWE         | English          | t          |        2.2
-(237 rows)
-
 --query2
 with lang_total as
 ( select count(*) as lang_count,country_co.code,countrylanguage_co.countrycode
@@ -7291,64 +6972,6 @@ order by COUNTRY_CO;
  VEN  | Venezuela                        | Caracas                 | Hugo Chavez Frias                 |                             3
  VIR  | Virgin Islands, U.S.             | Charlotte Amalie        | George W. Bush                    |                             3
 (40 rows)
-
--- query 6 
- 
-select count(*) from
-( select r.* from
-  ( with fact as 
-     (
-      select country_co.name as COUNTRY_CO,country_co.code,city_co.name as CAPITAL,S_POPULATION,S_GNP,AVG_LIFE,AGG1.region
-      from      
-         (select
-         sum(case when (city_co.population >= 0.5 * country_co.population) then country_co.population else city_co.population end) as S_POPULATION,
-         sum(case when (gnp >= gnpold) then gnp else gnpold end) as S_GNP,
-         avg(case when (lifeexpectancy > 60) then 50 else lifeexpectancy end) as AVG_LIFE,country_co.region
-         from country_co,city_co  
-         where governmentform != 'Constitutional Monarchy'
-         and country_co.capital = city_co.id
-         and indepyear > 0
-         group by country_co.region) AGG1
-         ,country_co,city_co
-         where country_co.capital = city_co.id
-         and country_co.region = AGG1.region
-      )
-     
-     select code,COUNTRY_CO,CAPITAL,S_POPULATION,S_GNP,AVG_LIFE,language as OFFICIALLANGUAGE,region
-     from fact,countrylanguage_co
-     where fact.code = countrylanguage_co.countrycode and isofficial = 'True'
-     and fact.region = 'South America'
-     
-     UNION ALL
-     
-     select code,COUNTRY_CO,CAPITAL,S_POPULATION,S_GNP,AVG_LIFE,language as OFFICIALLANGUAGE,region
-     from fact,countrylanguage_co
-     where fact.code = countrylanguage_co.countrycode and isofficial = 'True'
-     and fact.region = 'North America'
-     
-     UNION ALL
-     
-     select code,COUNTRY_CO,CAPITAL,S_POPULATION,S_GNP,AVG_LIFE,language as OFFICIALLANGUAGE,region
-     from fact,countrylanguage_co
-     where fact.code = countrylanguage_co.countrycode and isofficial = 'True'
-     and fact.region = 'Caribbean'
- ) as r
- left join
-  (
-   select 'ARG' as CODE UNION ALL
-   select 'BOL' as CODE UNION ALL
-   select 'BRA' as CODE UNION ALL
-   select 'PER' as CODE UNION ALL
-   select 'URY' as CODE UNION ALL
-   select 'IND' as CODE  UNION ALL
-   select 'LCA' as CODE UNION ALL
-   select 'VCT' as CODE
-   ) as r1
-on r.code = r1.code) AS FOO;
- count 
--------
-    43
-(1 row)
 
 -- query7
 with alleuropeanlanguages as 
@@ -7622,79 +7245,6 @@ LIMIT 50;
           37 |        2 | Egypt                                 |         3.69935e+07 | 65.3857127598354 |  173266000 |         14 |  243870.00 | Northern Africa
            7 |        2 | El Salvador                           |         1.40524e+07 | 71.0249996185303 |  135221000 |         23 |  473151.00 | Central America
 (50 rows)
-
---query 11
-with allcity_costats as 
-( select city_co.name CITY_CO,city_co.id,country_co.name COUNTRY_CO,city_co.district,city_co.population as CITY_CO_POP
-  from
-  city_co,country_co
-  where city_co.countrycode = country_co.code
-),
-alldistrictstats as 
-( select allcity_costats.district,allcity_costats.COUNTRY_CO,sum(CITY_CO_POP) DISTRICT_POP,
-  count(CITY_CO) as D_CITY_CO_CNT
-  from allcity_costats
-  group by allcity_costats.district,allcity_costats.COUNTRY_CO
-  order by district,COUNTRY_CO
-),
-allcountry_costats as 
-( select alldistrictstats.COUNTRY_CO,country_co.code,sum(D_CITY_CO_CNT) C_CITY_CO_CNT,
-  count(distinct countrylanguage_co.language) C_LANG_CNT
-  from alldistrictstats,country_co,countrylanguage_co
-  where alldistrictstats.COUNTRY_CO = country_co.name
-  and country_co.code = countrylanguage_co.countrycode
-  group by COUNTRY_CO,code
-),
-asian_region_stats as 
-(
-select sum(FOO.C_CITY_CO_CNT) REGION_CITY_CO_CNT,sum(FOO.C_LANG_CNT) REGION_LANG_CNT,FOO.region
-FROM
-(
-select allcountry_costats.code,allcountry_costats.COUNTRY_CO,C_CITY_CO_CNT,C_LANG_CNT,country_co.region,city_co.name CAPITAL
-from allcountry_costats,country_co,city_co
-where allcountry_costats.code = country_co.code
-and country_co.capital = city_co.id
-and C_CITY_CO_CNT/C_LANG_CNT > 1
-and country_co.continent = 'Asia') FOO
-,allcountry_costats,country_co
-WHERE allcountry_costats.code = country_co.code
-and FOO.region = country_co.region
-group by FOO.region order by FOO.region
-)
-select * from
-(
-select REGION_CITY_CO_CNT as CITY_CO_CNT,REGION_LANG_CNT as LANG_CNT, region as IDENTIFIER from asian_region_stats
-UNION ALL
-(
-select sum(FOO.C_CITY_CO_CNT) CITY_CO_CNT,sum(FOO.C_LANG_CNT) LANG_CNT,FOO.region as IDENTIFIER
-FROM
-(
-select allcountry_costats.code,allcountry_costats.COUNTRY_CO,C_CITY_CO_CNT,C_LANG_CNT,country_co.region,allcity_costats.CITY_CO CAPITAL
-from allcountry_costats,country_co,allcity_costats
-where allcountry_costats.code = country_co.code
-and country_co.capital = allcity_costats.id
-and C_CITY_CO_CNT/C_LANG_CNT > 1
-and country_co.continent = 'Europe') FOO
-,allcountry_costats,country_co
-WHERE allcountry_costats.code = country_co.code
-and FOO.region = country_co.region
-group by FOO.region order by FOO.region
-)
-) FOO1
-order by FOO1.lang_cnt,FOO1.identifier;
- city_co_cnt | lang_cnt |        identifier         
--------------+----------+---------------------------
-         494 |       10 | British Islands
-         159 |       48 | Baltic Countries
-        1295 |      161 | Nordic Countries
-       50176 |      264 | Eastern Asia
-        9414 |      369 | Western Europe
-       11880 |      450 | Southern Europe
-       32900 |      610 | Eastern Europe
-       29161 |      616 | Southeast Asia
-        8568 |      792 | Middle East
-       80388 |     1092 | Southern and Central Asia
-(10 rows)
 
 -- Queries using multiple CTEs
 -- query1 - all CTEs being used once in the main query
@@ -8161,52 +7711,52 @@ select (select min(GNP_IDX) from gnp_index_compare) MIN_COUNTRY_GNP_IDX, (select
  from city,country where city.id = country.capital and country.continent='Europe';
   min_country_gnp_idx   |  max_reg_gnp_idx   |              capital              |            country            
 ------------------------+--------------------+-----------------------------------+-------------------------------
- 0.39526143942847043283 | 1.2055929013175585 | Tirana                            | Albania
- 0.39526143942847043283 | 1.2055929013175585 | London                            | United Kingdom
- 0.39526143942847043283 | 1.2055929013175585 | Roma                              | Italy
- 0.39526143942847043283 | 1.2055929013175585 | Wien                              | Austria
- 0.39526143942847043283 | 1.2055929013175585 | Beograd                           | Yugoslavia
- 0.39526143942847043283 | 1.2055929013175585 | Athenai                           | Greece
- 0.39526143942847043283 | 1.2055929013175585 | Zagreb                            | Croatia
- 0.39526143942847043283 | 1.2055929013175585 | Luxembourg [Luxemburg/Letzebuerg] | Luxembourg
- 0.39526143942847043283 | 1.2055929013175585 | Skopje                            | Macedonia
- 0.39526143942847043283 | 1.2055929013175585 | Warszawa                          | Poland
- 0.39526143942847043283 | 1.2055929013175585 | Paris                             | France
- 0.39526143942847043283 | 1.2055929013175585 | Bucuresti                         | Romania
- 0.39526143942847043283 | 1.2055929013175585 | San Marino                        | San Marino
- 0.39526143942847043283 | 1.2055929013175585 | Bratislava                        | Slovakia
- 0.39526143942847043283 | 1.2055929013175585 | Bern                              | Switzerland
- 0.39526143942847043283 | 1.2055929013175585 | Praha                             | Czech Republic
- 0.39526143942847043283 | 1.2055929013175585 | Citta del Vaticano                | Holy See (Vatican City State)
- 0.39526143942847043283 | 1.2055929013175585 | Moscow                            | Russian Federation
- 0.39526143942847043283 | 1.2055929013175585 | Amsterdam                         | Netherlands
- 0.39526143942847043283 | 1.2055929013175585 | Andorra la Vella                  | Andorra
- 0.39526143942847043283 | 1.2055929013175585 | Bruxelles [Brussel]               | Belgium
- 0.39526143942847043283 | 1.2055929013175585 | Sarajevo                          | Bosnia and Herzegovina
- 0.39526143942847043283 | 1.2055929013175585 | Sofija                            | Bulgaria
- 0.39526143942847043283 | 1.2055929013175585 | Madrid                            | Spain
- 0.39526143942847043283 | 1.2055929013175585 | Torshavn                          | Faroe Islands
- 0.39526143942847043283 | 1.2055929013175585 | Dublin                            | Ireland
- 0.39526143942847043283 | 1.2055929013175585 | Reykjavik                         | Iceland
- 0.39526143942847043283 | 1.2055929013175585 | Vilnius                           | Lithuania
- 0.39526143942847043283 | 1.2055929013175585 | Chisinau                          | Moldova
- 0.39526143942847043283 | 1.2055929013175585 | Oslo                              | Norway
- 0.39526143942847043283 | 1.2055929013175585 | Lisboa                            | Portugal
- 0.39526143942847043283 | 1.2055929013175585 | Stockholm                         | Sweden
- 0.39526143942847043283 | 1.2055929013175585 | Berlin                            | Germany
- 0.39526143942847043283 | 1.2055929013175585 | Helsinki [Helsingfors]            | Finland
- 0.39526143942847043283 | 1.2055929013175585 | Kobenhavn                         | Denmark
- 0.39526143942847043283 | 1.2055929013175585 | Budapest                          | Hungary
- 0.39526143942847043283 | 1.2055929013175585 | Minsk                             | Belarus
  0.39526143942847043283 | 1.2055929013175585 | Gibraltar                         | Gibraltar
  0.39526143942847043283 | 1.2055929013175585 | Longyearbyen                      | Svalbard and Jan Mayen
+ 0.39526143942847043283 | 1.2055929013175585 | Tallinn                           | Estonia
+ 0.39526143942847043283 | 1.2055929013175585 | Kyiv                              | Ukraine
  0.39526143942847043283 | 1.2055929013175585 | Riga                              | Latvia
  0.39526143942847043283 | 1.2055929013175585 | Vaduz                             | Liechtenstein
  0.39526143942847043283 | 1.2055929013175585 | Valletta                          | Malta
  0.39526143942847043283 | 1.2055929013175585 | Monaco-Ville                      | Monaco
  0.39526143942847043283 | 1.2055929013175585 | Ljubljana                         | Slovenia
- 0.39526143942847043283 | 1.2055929013175585 | Kyiv                              | Ukraine
- 0.39526143942847043283 | 1.2055929013175585 | Tallinn                           | Estonia
+ 0.39526143942847043283 | 1.2055929013175585 | Tirana                            | Albania
+ 0.39526143942847043283 | 1.2055929013175585 | Luxembourg [Luxemburg/Letzebuerg] | Luxembourg
+ 0.39526143942847043283 | 1.2055929013175585 | Praha                             | Czech Republic
+ 0.39526143942847043283 | 1.2055929013175585 | Citta del Vaticano                | Holy See (Vatican City State)
+ 0.39526143942847043283 | 1.2055929013175585 | London                            | United Kingdom
+ 0.39526143942847043283 | 1.2055929013175585 | Roma                              | Italy
+ 0.39526143942847043283 | 1.2055929013175585 | Beograd                           | Yugoslavia
+ 0.39526143942847043283 | 1.2055929013175585 | Athenai                           | Greece
+ 0.39526143942847043283 | 1.2055929013175585 | Zagreb                            | Croatia
+ 0.39526143942847043283 | 1.2055929013175585 | Warszawa                          | Poland
+ 0.39526143942847043283 | 1.2055929013175585 | Bucuresti                         | Romania
+ 0.39526143942847043283 | 1.2055929013175585 | Bratislava                        | Slovakia
+ 0.39526143942847043283 | 1.2055929013175585 | Wien                              | Austria
+ 0.39526143942847043283 | 1.2055929013175585 | Skopje                            | Macedonia
+ 0.39526143942847043283 | 1.2055929013175585 | Paris                             | France
+ 0.39526143942847043283 | 1.2055929013175585 | San Marino                        | San Marino
+ 0.39526143942847043283 | 1.2055929013175585 | Bern                              | Switzerland
+ 0.39526143942847043283 | 1.2055929013175585 | Moscow                            | Russian Federation
+ 0.39526143942847043283 | 1.2055929013175585 | Amsterdam                         | Netherlands
+ 0.39526143942847043283 | 1.2055929013175585 | Sofija                            | Bulgaria
+ 0.39526143942847043283 | 1.2055929013175585 | Dublin                            | Ireland
+ 0.39526143942847043283 | 1.2055929013175585 | Oslo                              | Norway
+ 0.39526143942847043283 | 1.2055929013175585 | Lisboa                            | Portugal
+ 0.39526143942847043283 | 1.2055929013175585 | Andorra la Vella                  | Andorra
+ 0.39526143942847043283 | 1.2055929013175585 | Bruxelles [Brussel]               | Belgium
+ 0.39526143942847043283 | 1.2055929013175585 | Madrid                            | Spain
+ 0.39526143942847043283 | 1.2055929013175585 | Vilnius                           | Lithuania
+ 0.39526143942847043283 | 1.2055929013175585 | Stockholm                         | Sweden
+ 0.39526143942847043283 | 1.2055929013175585 | Berlin                            | Germany
+ 0.39526143942847043283 | 1.2055929013175585 | Helsinki [Helsingfors]            | Finland
+ 0.39526143942847043283 | 1.2055929013175585 | Kobenhavn                         | Denmark
+ 0.39526143942847043283 | 1.2055929013175585 | Minsk                             | Belarus
+ 0.39526143942847043283 | 1.2055929013175585 | Sarajevo                          | Bosnia and Herzegovina
+ 0.39526143942847043283 | 1.2055929013175585 | Torshavn                          | Faroe Islands
+ 0.39526143942847043283 | 1.2055929013175585 | Reykjavik                         | Iceland
+ 0.39526143942847043283 | 1.2055929013175585 | Chisinau                          | Moldova
+ 0.39526143942847043283 | 1.2055929013175585 | Budapest                          | Hungary
 (46 rows)
 
 --query2 using the CTE in the where clause(initplan) of the main query. One CTE using another CTE in it's where clause as it's initplan
@@ -8242,6 +7792,18 @@ where FOO.LANG_CNT between (select min(CNT) from notdiversecountries) AND (selec
         1 | Anguilla
         4 | Belize
         3 | Trinidad and Tobago
+        1 | Cayman Islands
+        2 | Bahamas
+        2 | Dominican Republic
+        2 | Greenland
+        2 | Martinique
+        2 | Saint Vincent and the Grenadines
+        2 | Saint Kitts and Nevis
+        4 | Nicaragua
+        2 | Saint Lucia
+       12 | United States
+       12 | Canada
+        3 | Netherlands Antilles
         6 | Mexico
         4 | Costa Rica
         1 | Turks and Caicos Islands
@@ -8257,18 +7819,6 @@ where FOO.LANG_CNT between (select min(CNT) from notdiversecountries) AND (selec
         2 | Guadeloupe
         4 | Honduras
         2 | Antigua and Barbuda
-        1 | Cayman Islands
-        2 | Bahamas
-        2 | Dominican Republic
-        2 | Greenland
-        2 | Martinique
-        2 | Saint Vincent and the Grenadines
-        2 | Saint Kitts and Nevis
-        4 | Nicaragua
-        2 | Saint Lucia
-       12 | United States
-       12 | Canada
-        3 | Netherlands Antilles
 (37 rows)
 
 --query3 using CTE more than once in the same initplan and also more than once in the main query
@@ -8588,8 +8138,7 @@ group by region ) OUTERMOST_FOO,bad_headofstates,country
 where country.code = bad_headofstates.code and country.region = OUTERMOST_FOO.region
 order by OUTERMOST_FOO.region,bad_headofstates.headofstate LIMIT 40
 );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'avg' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
 select * from bad_headofstates order by region,headofstate;
        avg        |          region           |           headofstate            
 ------------------+---------------------------+----------------------------------
@@ -9327,7 +8876,6 @@ View definition:
 select * from view_with_deep_nested_CTE order by city LIMIT 20;
    avg   |         city         
 ---------+----------------------
-  243402 | A Coruaa (La Coruaa)
   243825 | Aachen
   161161 | Aalborg
   298900 | Aba
@@ -9342,6 +8890,7 @@ select * from view_with_deep_nested_CTE order by city LIMIT 20;
   158954 | Acarigua
  1070000 | Accra
   197595 | Acheng
+  243402 | A Coruaa (La Coruaa)
  1131198 | Adana
  2495000 | Addis Abeba
   978100 | Adelaide

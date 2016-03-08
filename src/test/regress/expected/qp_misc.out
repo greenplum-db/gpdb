@@ -3502,7 +3502,7 @@ COPY bruce5 (a) FROM stdin;
 --
 
 COPY tbint (rnum, cbint) FROM stdin;
-ERROR:  invalid input syntax for integer: "N"  (seg0 hyuan-mac:25432 pid=26647)
+ERROR:  invalid input syntax for integer: "N"  (seg0 pbld1:12011 pid=28820)
 CONTEXT:  COPY tbint, line 2, column 0
 
 
@@ -3557,7 +3557,7 @@ COPY tcons4 (rnum, col1, col2) FROM stdin;
 --
 
 COPY tdbl (rnum, cdbl) FROM stdin;
-ERROR:  invalid input syntax for type double precision: "N"  (seg0 hyuan-mac:25432 pid=26647)
+ERROR:  invalid input syntax for type double precision: "N"  (seg0 pbld1:12011 pid=28820)
 CONTEXT:  COPY tdbl, line 2, column 0
 
 
@@ -3566,7 +3566,7 @@ CONTEXT:  COPY tdbl, line 2, column 0
 --
 
 COPY tdec (rnum, cdec) FROM stdin;
-ERROR:  invalid input syntax for type numeric: "N"  (seg0 hyuan-mac:25432 pid=26647)
+ERROR:  invalid input syntax for type numeric: "N"  (seg0 pbld1:12011 pid=28820)
 CONTEXT:  COPY tdec, line 2, column 0
 
 
@@ -3575,7 +3575,7 @@ CONTEXT:  COPY tdec, line 2, column 0
 --
 
 COPY tdt (rnum, cdt) FROM stdin;
-ERROR:  invalid input syntax for type date: "N"  (seg0 hyuan-mac:25432 pid=26647)
+ERROR:  invalid input syntax for type date: "N"  (seg0 pbld1:12011 pid=28820)
 CONTEXT:  COPY tdt, line 2, column 0
 
 
@@ -3598,7 +3598,7 @@ COPY tests_stage (test_name_part) FROM stdin;
 --
 
 COPY tflt (rnum, cflt) FROM stdin;
-ERROR:  invalid input syntax for type double precision: "N"  (seg0 hyuan-mac:25432 pid=26647)
+ERROR:  invalid input syntax for type double precision: "N"  (seg0 pbld1:12011 pid=28820)
 CONTEXT:  COPY tflt, line 2, column 0
 
 
@@ -3607,7 +3607,7 @@ CONTEXT:  COPY tflt, line 2, column 0
 --
 
 COPY tint (rnum, cint) FROM stdin;
-ERROR:  invalid input syntax for integer: "N"  (seg0 hyuan-mac:25432 pid=26647)
+ERROR:  invalid input syntax for integer: "N"  (seg0 pbld1:12011 pid=28820)
 CONTEXT:  COPY tint, line 2, column 0
 
 
@@ -3791,7 +3791,7 @@ COPY tmaxcols (rnum, c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13,
 --
 
 COPY tnum (rnum, cnum) FROM stdin;
-ERROR:  invalid input syntax for type numeric: "N"  (seg0 hyuan-mac:25432 pid=26647)
+ERROR:  invalid input syntax for type numeric: "N"  (seg0 pbld1:12011 pid=28820)
 CONTEXT:  COPY tnum, line 2, column 0
 
 
@@ -3800,7 +3800,7 @@ CONTEXT:  COPY tnum, line 2, column 0
 --
 
 COPY tolap (rnum, c1, c2, c3, c4) FROM stdin;
-ERROR:  invalid input syntax for integer: "N"  (seg1 hyuan-mac:25433 pid=26648)
+ERROR:  invalid input syntax for integer: "N"  (seg1 pbld1:12012 pid=28826)
 CONTEXT:  COPY tolap, line 5, column 7
 
 
@@ -3809,7 +3809,7 @@ CONTEXT:  COPY tolap, line 5, column 7
 --
 
 COPY trl (rnum, crl) FROM stdin;
-ERROR:  invalid input syntax for type real: "N"  (seg0 hyuan-mac:25432 pid=26647)
+ERROR:  invalid input syntax for type real: "N"  (seg0 pbld1:12011 pid=28820)
 CONTEXT:  COPY trl, line 2, column 0
 
 
@@ -3853,7 +3853,7 @@ COPY tset3 (rnum, c1, c2) FROM stdin;
 --
 
 COPY tsint (rnum, csint) FROM stdin;
-ERROR:  invalid input syntax for integer: "N"  (seg0 hyuan-mac:25432 pid=26647)
+ERROR:  invalid input syntax for integer: "N"  (seg0 pbld1:12011 pid=28820)
 CONTEXT:  COPY tsint, line 2, column 0
 
 
@@ -3862,7 +3862,7 @@ CONTEXT:  COPY tsint, line 2, column 0
 --
 
 COPY ttm (rnum, ctm) FROM stdin;
-ERROR:  invalid input syntax for type time: "N"  (seg0 hyuan-mac:25432 pid=26647)
+ERROR:  invalid input syntax for type time: "N"  (seg0 pbld1:12011 pid=28820)
 CONTEXT:  COPY ttm, line 2, column 0
 
 
@@ -3871,7 +3871,7 @@ CONTEXT:  COPY ttm, line 2, column 0
 --
 
 COPY tts (rnum, cts) FROM stdin;
-ERROR:  invalid input syntax for type timestamp: "N"  (seg0 hyuan-mac:25432 pid=26647)
+ERROR:  invalid input syntax for type timestamp: "N"  (seg0 pbld1:12011 pid=28820)
 CONTEXT:  COPY tts, line 2, column 0
 
 
@@ -17623,21 +17623,6 @@ f1
  NullifCoreReturnsOne_p1 |        1
 (1 row)
 
---- NullifCoreReturnsOne_p2
-select 'NullifCoreReturnsOne_p2' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
-select count(distinct c) c from (
-select f1, count(*) c  from (
-select 1 f1 from tversion union
-select nullif(1, cnnull) from tversion
-) Q
-group by
-f1
-) Q ) P;
-     test_name_part      | pass_ind 
--------------------------+----------
- NullifCoreReturnsOne_p2 |        1
-(1 row)
-
 --- NumericComparisonGreaterThanOrEqual_p1
 select 'NumericComparisonGreaterThanOrEqual_p1' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
 select count(distinct c) c from (
@@ -17998,28 +17983,6 @@ f1,f2,f3,f4,f5
     test_name_part    | pass_ind 
 ----------------------+----------
  OlapCoreDenseRank_p1 |        1
-(1 row)
-
---- OlapCoreFirstValueNoWindowFrame_p1
-select 'OlapCoreFirstValueNoWindowFrame_p1' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
-select count(distinct c) c from (
-select f1,f2,f3,f4,f5, count(*) c  from (
-select 0 f1, 'AAA' f2, 'AA' f3, 10 f4, 10 f5 from tversion union
-select 1 f1, 'AAA' f2, 'AA' f3, 15 f4, 10 f5 from tversion union
-select 2 f1, 'AAA' f2, 'AB' f3, 25 f4, 10 f5 from tversion union
-select 3 f1, 'BBB' f2, 'BB' f3, 20 f4, 20 f5 from tversion union
-select 4 f1, 'CCC' f2, 'CC' f3, 30 f4, 30 f5 from tversion union
-select 5 f1, 'DDD' f2, 'DD' f3, 40 f4, 40 f5 from tversion union
-select 6 f1, null f2, null f3, 50 f4, 50 f5 from tversion union
-select 7 f1, null f2, null f3, null f4, 50 f5 from tversion union
-select rnum, c1, c2, c3, first_value( c3 ) over(partition by c1 order by c3 asc ) from tolap
-) Q
-group by
-f1,f2,f3,f4,f5
-) Q ) P;
-           test_name_part           | pass_ind 
-------------------------------------+----------
- OlapCoreFirstValueNoWindowFrame_p1 |        1
 (1 row)
 
 --- OlapCoreFirstValueNullOrdering_p1
