@@ -356,11 +356,8 @@ GpRelationNodeBeginScan(
 HeapTuple
 GpRelationNodeGetNext(
 	GpRelationNodeScan 	*gpRelationNodeScan,
-
 	int32				*segmentFileNum,
-
 	ItemPointer			persistentTid,
-
 	int64				*persistentSerialNum)
 {
 	HeapTuple tuple;
@@ -394,7 +391,8 @@ GpRelationNodeGetNext(
 						persistentTid,
 						persistentSerialNum);
 	if (actualRelationNode != gpRelationNodeScan->relfilenode)
-		elog(FATAL, "Mismatch in node tuple for gp_relation_node for relation %u, relfilenode %u, relation node %u",
+		elog(FATAL, "Index on gp_relation_node broken."
+			   "Mismatch in node tuple for gp_relation_node for relation %u, relfilenode %u, relation node %u",
 			 gpRelationNodeScan->relationId, 
 			 gpRelationNodeScan->relfilenode,
 			 actualRelationNode);
@@ -411,8 +409,7 @@ GpRelationNodeEndScan(
 	systable_endscan((SysScanDesc)gpRelationNodeScan->scan);
 }
 
-
-HeapTuple
+static HeapTuple
 ScanGpRelationNodeTuple(
 	Relation 	gp_relation_node,
 	Oid 		relfilenode,
@@ -516,8 +513,15 @@ FetchGpRelationNodeTuple(
 						&createMirrorDataLossTrackingSessionNum,
 						persistentTid,
 						persistentSerialNum);
-	Assert (actualRelationNode == relfilenode);
 	
+	if (actualRelationNode != relfilenode)
+	{
+		elog(ERROR, "Index on gp_relation_node broken."
+			   "Mismatch in node tuple for gp_relation_node intended relfilenode %u, fetched relfilenode %u",
+			 relfilenode,
+			 actualRelationNode);
+	}
+
 	return tuple;
 }
 
@@ -532,21 +536,25 @@ DeleteGpRelationNodeTuple(
 {
 	Relation	gp_relation_node;
 	HeapTuple	tuple;
+	ItemPointerData     persistentTid;
+	int64               persistentSerialNum;
 
-	/* Grab an appropriate lock on the pg_class relation */
+	/* Grab an appropriate lock on the gp_relation_node relation */
 	gp_relation_node = heap_open(GpRelationNodeRelationId, RowExclusiveLock);
 
-	tuple = ScanGpRelationNodeTuple(
-						gp_relation_node,
-						relation->rd_rel->relfilenode,
-						segmentFileNum);
+	tuple = FetchGpRelationNodeTuple(gp_relation_node,
+				relation->rd_rel->relfilenode,
+				segmentFileNum,
+				&persistentTid,
+				&persistentSerialNum);
+
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "could not find node tuple for relation %u, relation file node %u, segment file #%d",
 			 RelationGetRelid(relation),
 			 relation->rd_rel->relfilenode,
 			 segmentFileNum);
 
-	/* delete the relation tuple from pg_class, and finish up */
+	/* delete the relation tuple from gp_relation_node, and finish up */
 	simple_heap_delete(gp_relation_node, &tuple->t_self);
 	heap_freetuple(tuple);
 
