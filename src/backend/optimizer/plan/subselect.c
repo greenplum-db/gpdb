@@ -33,8 +33,10 @@
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
-#include "cdb/cdbvars.h"
+
 #include "cdb/cdbmutate.h"
+#include "cdb/cdbsubselect.h"
+#include "cdb/cdbvars.h"
 
 
 typedef struct convert_testexpr_context
@@ -833,9 +835,155 @@ hash_ok_operator(OpExpr *expr)
 
 /*
  * convert_IN_to_join: can we convert an IN SubLink to join style?
- *
- * CDB: This function has been moved into cdbsubselect.c.
  */
+Node *
+convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
+{
+	Query	   *subselect = (Query *) sublink->subselect;
+	List	   *in_operators;
+	int			rtindex;
+	InClauseInfo *ininfo;
+    bool        correlated;
+	Node	   *result;
+
+    Assert(IsA(subselect, Query));
+
+    cdbsubselect_drop_orderby(subselect);
+    cdbsubselect_drop_distinct(subselect);
+
+	/*
+	 * The combining operators and left-hand expressions mustn't be volatile.
+	 */
+	if (contain_volatile_functions(sublink->testexpr))
+		return (Node *)sublink;
+
+	/**
+	 * If subquery returns a set-returning function (SRF) in the targetlist, we
+	 * do not attempt to convert the IN to a join.
+	 */
+	
+	if (expression_returns_set((Node *) subselect->targetList))
+		return (Node *) sublink;
+
+	/**
+	 * If deeply correlated, then don't pull it up
+	 */
+	if (IsSubqueryMultiLevelCorrelated(subselect))
+		return (Node *) sublink;
+
+	/**
+	 * If there are CTEs, then the transformation does not work. Don't attempt to pullup.
+	 */
+	if (root->parse->cteList)
+		return (Node *) sublink;
+
+    /*
+     * If uncorrelated, and no Var nodes on lhs, the subquery will be executed
+     * only once.  It should become an InitPlan, but make_subplan() doesn't
+     * handle that case, so just flatten it for now.
+     * CDB TODO: Let it become an InitPlan, so its QEs can be recycled.
+     */
+    correlated = contain_vars_of_level_or_above(sublink->subselect, 1);
+
+    if (correlated)
+    {
+    	/**
+    	 * Under certain conditions, we do cannot pull up the subquery as a join.
+    	 */
+
+    	if (subselect->hasAggs
+    			|| (subselect->jointree->fromlist == NULL)
+    			|| subselect->havingQual
+    			|| subselect->groupClause
+    			|| subselect->hasWindFuncs
+    			|| subselect->distinctClause
+    			|| subselect->setOperations)
+    		return (Node *) sublink;
+    	
+    	/* do not pull subqueries with correlation in a func expr in the 
+    	   from clause of the subselect */
+    	if (has_correlation_in_funcexpr_rte(subselect->rtable))
+    	{
+    		return (Node *) sublink;
+    	}
+
+    	if (contain_subplans(subselect->jointree->quals))
+    	{
+    		return (Node *) sublink;
+    	}
+    }
+
+    /*
+	 * Okay, pull up the sub-select into top range table and jointree.
+	 *
+	 * We rely here on the assumption that the outer query has no references
+	 * to the inner (necessarily true, other than the Vars that we build
+	 * below). Therefore this is a lot easier than what pull_up_subqueries has
+	 * to go through.
+	 */
+    ininfo = cdbsubselect_add_rte_and_ininfo(root, rtrlist_inout, subselect, "IN_subquery");
+
+    /* Get the index of the subquery RTE that was just created. */
+	rtindex = list_length(root->parse->rtable);
+    Assert(rt_fetch(rtindex, root->parse->rtable)->subquery == subselect);
+
+    /*
+     * Uncorrelated "=ANY" subqueries can use JOIN_UNIQUE dedup technique.  We
+	 * expect that the test expression will be either a single OpExpr, or an
+	 * AND-clause containing OpExprs.  (If it's anything else then the parser
+	 * must have determined that the operators have non-equality-like
+	 * semantics.  In the OpExpr case we can't be sure what the operator's
+	 * semantics are like, and must check for ourselves.)
+     */
+    ininfo->try_join_unique = false;
+	in_operators = NIL;
+	if (!correlated &&
+        sublink->testexpr)
+    {
+		ininfo->try_join_unique = true;
+        if (IsA(sublink->testexpr, OpExpr))
+	    {
+			Oid			opno = ((OpExpr *) sublink->testexpr)->opno;
+		    List	   *opfamilies;
+		    List	   *opstrats;
+
+		    get_op_btree_interpretation(opno, &opfamilies, &opstrats);
+		    if (!list_member_int(opstrats, ROWCOMPARE_EQ))
+			    ininfo->try_join_unique = false;
+			in_operators = list_make1_oid(opno);
+	    }
+		else if (and_clause(sublink->testexpr))
+		{
+			ListCell   *lc;
+
+			/* OK, but we need to extract the per-column operator OIDs */
+			in_operators = NIL;
+			foreach(lc, ((BoolExpr *) sublink->testexpr)->args)
+			{
+				OpExpr *op = (OpExpr *) lfirst(lc);
+
+				if (!IsA(op, OpExpr))           /* probably shouldn't happen */
+					ininfo->try_join_unique = false;
+				in_operators = lappend_oid(in_operators, op->opno);
+			}
+        }
+		else
+			ininfo->try_join_unique = false;
+    }
+
+	ininfo->in_operators = in_operators;
+
+	/*
+	 * Build the result qual expression.  As a side effect,
+	 * ininfo->sub_targetlist is filled with a list of Vars representing the
+	 * subselect outputs.
+	 */
+	result = convert_testexpr(root, sublink->testexpr,
+							  rtindex,
+							  &ininfo->sub_targetlist);
+
+	return result;
+}                               /* convert_IN_to_join */
 
 /*
  * Replace correlation vars (uplevel vars) with Params.
