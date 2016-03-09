@@ -106,8 +106,8 @@ script:
   - make
   - source gpdemo-env.sh
   - createdb
-  - cd ${TRAVIS_BUILD_DIR}
-  - make installcheck-good 
+  - cd ${TRAVIS_BUILD_DIR}/src/test/regress
+  - ./pg_regress --init-file=./init_file --schedule=parallel_schedule --schedule=greenplum_schedule
 
 after_failure:
   - cat ~/gpAdminLogs/*.log
@@ -119,7 +119,6 @@ after_failure:
 ## install libevent 
 ## ----------------------------------------------------------------------
 before_install:
-  - git submodule update --init --recursive
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
        brew install libevent          ; 
        sudo sysctl -w kern.sysv.shmmax=2147483648;
