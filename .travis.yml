@@ -62,7 +62,7 @@ env:
     APR_UTIL_TAR=${APR_UTIL}.tar.gz
 
 before_script:
-  - export PATH=${TRAVIS_BUILD_DIR}/tools/bin:$PATH
+  - export PATH=$PATH:${TRAVIS_BUILD_DIR}/tools/bin
   - cd ${TRAVIS_BUILD_DIR}
   - wget http://ftp.jaist.ac.jp/pub/apache/apr/${APR_TAR}
   - wget http://ftp.jaist.ac.jp/pub/apache/apr/${APR_UTIL_TAR}
