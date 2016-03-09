@@ -131,6 +131,7 @@ before_install:
        sudo sysctl -w net.inet.tcp.msl=60;
        sudo sysctl -a;
     else
+       export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
        sudo apt-get -qq update;
        sudo apt-get install -y libperl-dev;
        sudo sysctl -w kernel.shmmax=500000000;
