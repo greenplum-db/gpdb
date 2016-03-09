@@ -20,10 +20,6 @@ extern Node *convert_EXPR_to_join(PlannerInfo *root, List** rtrlist_inout, OpExp
 
 extern void cdbsubselect_drop_orderby(Query *subselect);
 extern void cdbsubselect_drop_distinct(Query *subselect);
-extern InClauseInfo *cdbsubselect_add_rte_and_ininfo(PlannerInfo *root,
-                                List **rtrlist_inout,
-                                Query *subselect,
-                                const char *aliasname);
 extern bool has_correlation_in_funcexpr_rte(List *rtable);
 
 #endif   /* CDBSUBSELECT_H */

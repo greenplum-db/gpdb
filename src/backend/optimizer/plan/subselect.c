@@ -860,6 +860,8 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
 	InClauseInfo *ininfo;
     bool        correlated;
 	Node	   *result;
+	RangeTblEntry *rte;
+	RangeTblRef *rtr;
 
     Assert(IsA(subselect, Query));
 
@@ -936,11 +938,24 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
 	 * below). Therefore this is a lot easier than what pull_up_subqueries has
 	 * to go through.
 	 */
-    ininfo = cdbsubselect_add_rte_and_ininfo(root, rtrlist_inout, subselect, "IN_subquery");
-
-    /* Get the index of the subquery RTE that was just created. */
+	rte = addRangeTableEntryForSubquery(NULL,
+										subselect,
+										makeAlias("IN_subquery", NIL),
+										false);
+	parse->rtable = lappend(parse->rtable, rte);
 	rtindex = list_length(parse->rtable);
-    Assert(rt_fetch(rtindex, parse->rtable)->subquery == subselect);
+	rtr = makeNode(RangeTblRef);
+	rtr->rtindex = rtindex;
+
+    /* Tell caller to augment the jointree with a reference to the new RTE. */
+	*rtrlist_inout = lappend(*rtrlist_inout, rtr);
+
+	/*
+	 * Now build the InClauseInfo node.
+	 */
+	ininfo = makeNode(InClauseInfo);
+    ininfo->sub_targetlist = NULL;
+	ininfo->righthand = bms_make_singleton(rtindex);
 
     /*
      * Uncorrelated "=ANY" subqueries can use JOIN_UNIQUE dedup technique.  We
@@ -997,6 +1012,9 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
 							  sublink->testexpr,
 							  rtindex,
 							  &ininfo->sub_targetlist);
+
+	/* Add the completed node to the query's list */
+	root->in_info_list = lappend(root->in_info_list, ininfo);
 
 	return result;
 }

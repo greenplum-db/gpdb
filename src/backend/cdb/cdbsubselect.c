@@ -185,47 +185,6 @@ cdbsubselect_drop_orderby(Query *subselect)
     }
 }                               /* cdbsubselect_drop_orderby */
 
-
-/*
- * cdbsubselect_add_rte_and_ininfo
- */
-InClauseInfo *
-cdbsubselect_add_rte_and_ininfo(PlannerInfo    *root, 
-                                List          **rtrlist_inout, 
-                                Query          *subselect,
-                                const char     *aliasname)
-{
-	InClauseInfo   *ininfo;
-	RangeTblEntry  *rte;
-    RangeTblRef    *rtr;
-	int			    rtindex;
-
-    /* Build an InClauseInfo struct. */
-	ininfo = makeNode(InClauseInfo);
-    ininfo->sub_targetlist = NULL;
-
-    /* Determine the index of the subquery RTE that we'll create below. */
-	rtindex = list_length(root->parse->rtable) + 1;
-	ininfo->righthand = bms_make_singleton(rtindex);
-
-    /* Tell join planner to quell duplication of outer query result rows. */
-	root->in_info_list = lappend(root->in_info_list, ininfo);
-
-    /* Make a subquery RTE in the current query level. */
-    rte = addRangeTableEntryForSubquery(NULL,
-										subselect,
-										makeAlias(aliasname, NIL),
-										false);
-	root->parse->rtable = lappend(root->parse->rtable, rte);
-
-    /* Tell caller to augment the jointree with a reference to the new RTE. */
-    rtr = makeNode(RangeTblRef);
-	rtr->rtindex = rtindex;
-    *rtrlist_inout = lappend(*rtrlist_inout, rtr);
-
-    return ininfo;
-}                               /* cdbsubselect_add_rte_and_ininfo */
-
 /**
  * safe_to_convert_NOT_EXISTS
  */
@@ -890,6 +849,10 @@ convert_EXISTS_to_join(PlannerInfo *root, List** rtrlist_inout, SubLink *sublink
     Node           *lnode;
     Node           *rnode;
     Node           *node;
+	InClauseInfo   *ininfo;
+	RangeTblEntry  *rte;
+    RangeTblRef    *rtr;
+	int			    rtindex;
 
     Assert(IsA(subselect, Query));
 
@@ -1007,7 +970,29 @@ convert_EXISTS_to_join(PlannerInfo *root, List** rtrlist_inout, SubLink *sublink
     /*
      * Build subquery RTE, InClauseInfo, etc.
      */
-    cdbsubselect_add_rte_and_ininfo(root, rtrlist_inout, subselect, "EXISTS_subquery");
+
+    /* Build an InClauseInfo struct. */
+	ininfo = makeNode(InClauseInfo);
+    ininfo->sub_targetlist = NULL;
+
+    /* Determine the index of the subquery RTE that we'll create below. */
+	rtindex = list_length(root->parse->rtable) + 1;
+	ininfo->righthand = bms_make_singleton(rtindex);
+
+    /* Tell join planner to quell duplication of outer query result rows. */
+	root->in_info_list = lappend(root->in_info_list, ininfo);
+
+    /* Make a subquery RTE in the current query level. */
+    rte = addRangeTableEntryForSubquery(NULL,
+										subselect,
+										makeAlias("EXISTS_subquery", NIL),
+										false);
+	root->parse->rtable = lappend(root->parse->rtable, rte);
+
+    /* Tell caller to augment the jointree with a reference to the new RTE. */
+    rtr = makeNode(RangeTblRef);
+	rtr->rtindex = rtindex;
+    *rtrlist_inout = lappend(*rtrlist_inout, rtr);
 
     return limitqual;
 }                               /* convert_EXISTS_to_join */
