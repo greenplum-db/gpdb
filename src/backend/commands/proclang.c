@@ -216,6 +216,10 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
 		/*
 		 * Likewise for the anonymous block handler, if required; but we don't
 		 * care about its return type.
+		 *
+		 * FIXME: in upstream, below section is put prior to uppper section.
+		 *        but we find a minor issue in test (reported by Gang Xiong),
+		 *        so leave it be like this.
 		 */
 		if (pltemplate->tmplinline)
 		{

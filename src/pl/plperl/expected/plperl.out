@@ -609,5 +609,7 @@ NOTICE:  This is a test
 CONTEXT:  PL/Perl anonymous code block
 -- check that restricted operations are rejected in a plperl DO block
 DO $$ use Config; $$ LANGUAGE plperl;
-ERROR:  'require' trapped by operation mask at line 1.
+ERROR:  creation of Perl function failed
+DETAIL:  Unable to load Config.pm into plperl at line 1.
+BEGIN failed--compilation aborted at line 1.
 CONTEXT:  PL/Perl anonymous code block

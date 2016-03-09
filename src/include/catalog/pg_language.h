@@ -30,9 +30,9 @@
    lanispl        boolean, -- Is a procedural language
    lanpltrusted   boolean, -- PL is trusted
    lanplcallfoid  oid,     -- Call handler for PL
+   laninline      oid,     -- Optional anonymous-block handler function
    lanvalidator   oid,     -- optional validation function
-   lanacl         aclitem[], -- Access privileges
-   laninline      oid
+   lanacl         aclitem[] -- Access privileges
    );
 
    create unique index on pg_language(lanname) with (indexid=2681, CamelCase=LanguageName, syscacheid=LANGNAME, syscache_nbuckets=4);
@@ -71,9 +71,9 @@ CATALOG(pg_language,2612)
 	bool		lanispl;		/* Is a procedural language */
 	bool		lanpltrusted;	/* PL is trusted */
 	Oid			lanplcallfoid;	/* Call handler for PL */
+	Oid			laninline;		/* Optional anonymous-block handler function */
 	Oid			lanvalidator;	/* optional validation function */
 	aclitem		lanacl[1];		/* Access privileges */
-	Oid			laninline;
 } FormData_pg_language;
 
 
@@ -94,9 +94,9 @@ typedef FormData_pg_language *Form_pg_language;
 #define Anum_pg_language_lanispl		2
 #define Anum_pg_language_lanpltrusted	3
 #define Anum_pg_language_lanplcallfoid	4
-#define Anum_pg_language_lanvalidator	5
-#define Anum_pg_language_lanacl			6
-#define Anum_pg_language_laninline		7
+#define Anum_pg_language_laninline		5
+#define Anum_pg_language_lanvalidator	6
+#define Anum_pg_language_lanacl			7
 
 
 /* TIDYCAT_END_CODEGEN */
@@ -107,13 +107,13 @@ typedef FormData_pg_language *Form_pg_language;
  * ----------------
  */
 
-DATA(insert OID = 12 ( "internal" f f 0 2246 _null_ 0 ));
+DATA(insert OID = 12 ( "internal" f f 0 0 2246 _null_ ));
 DESCR("Built-in functions");
 #define INTERNALlanguageId 12
-DATA(insert OID = 13 ( "c" f f 0 2247 _null_ 0 ));
+DATA(insert OID = 13 ( "c" f f 0 0 2247 _null_ ));
 DESCR("Dynamically-loaded C functions");
 #define ClanguageId 13
-DATA(insert OID = 14 ( "sql" f t 0 2248 _null_ 0 ));
+DATA(insert OID = 14 ( "sql" f t 0 0 2248 _null_ ));
 DESCR("SQL-language functions");
 #define SQLlanguageId 14
 
