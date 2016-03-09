@@ -25,6 +25,7 @@
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/prep.h"
+#include "optimizer/subselect.h"
 #include "optimizer/tlist.h"
 #include "optimizer/var.h"
 #include "parser/parse_expr.h"
@@ -222,7 +223,7 @@ Node *
 pull_up_subqueries(PlannerInfo *root, Node *jtnode,
 				   bool below_outer_join, bool append_rel_member)
 {
-    if (jtnode == NULL)
+	if (jtnode == NULL)
 		return NULL;
 	if (IsA(jtnode, RangeTblRef))
 	{
@@ -246,7 +247,8 @@ pull_up_subqueries(PlannerInfo *root, Node *jtnode,
 		 * If we are looking at an append-relation member, we can't pull it up
 		 * unless is_safe_append_member says so.
 		 */
-		if (rte->rtekind == RTE_SUBQUERY && !rte->forceDistRandom &&
+		if (rte->rtekind == RTE_SUBQUERY &&
+			!rte->forceDistRandom &&
 			is_simple_subquery(root, rte->subquery) &&
 			(!below_outer_join || has_nullable_targetlist(rte->subquery)) &&
 			(!append_rel_member || is_safe_append_member(rte->subquery)))

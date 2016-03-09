@@ -835,10 +835,25 @@ hash_ok_operator(OpExpr *expr)
 
 /*
  * convert_IN_to_join: can we convert an IN SubLink to join style?
+ *
+ * The caller has found a SubLink at the top level of WHERE, but has not
+ * checked the properties of the SubLink at all.  Decide whether it is
+ * appropriate to process this SubLink in join style.  If not, return the
+ * original sublink unmodified.
+ * If so, build the qual clause(s) to replace the SubLink, and return them.
+ *
+ * Side effects of a successful conversion include adding the SubLink's
+ * subselect to the query's rangetable and adding an InClauseInfo node to
+ * its in_info_list.
+ *
+ * Upon creating an RTE for a flattened subquery, a corresponding RangeTblRef
+ * node is appended to the caller's List referenced by *rtrlist_inout, so the
+ * caller can add it to the jointree.
  */
 Node *
 convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
 {
+	Query	   *parse = root->parse;
 	Query	   *subselect = (Query *) sublink->subselect;
 	List	   *in_operators;
 	int			rtindex;
@@ -874,7 +889,7 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
 	/**
 	 * If there are CTEs, then the transformation does not work. Don't attempt to pullup.
 	 */
-	if (root->parse->cteList)
+	if (parse->cteList)
 		return (Node *) sublink;
 
     /*
@@ -913,7 +928,7 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
     	}
     }
 
-    /*
+	/*
 	 * Okay, pull up the sub-select into top range table and jointree.
 	 *
 	 * We rely here on the assumption that the outer query has no references
@@ -924,8 +939,8 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
     ininfo = cdbsubselect_add_rte_and_ininfo(root, rtrlist_inout, subselect, "IN_subquery");
 
     /* Get the index of the subquery RTE that was just created. */
-	rtindex = list_length(root->parse->rtable);
-    Assert(rt_fetch(rtindex, root->parse->rtable)->subquery == subselect);
+	rtindex = list_length(parse->rtable);
+    Assert(rt_fetch(rtindex, parse->rtable)->subquery == subselect);
 
     /*
      * Uncorrelated "=ANY" subqueries can use JOIN_UNIQUE dedup technique.  We
@@ -978,12 +993,13 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
 	 * ininfo->sub_targetlist is filled with a list of Vars representing the
 	 * subselect outputs.
 	 */
-	result = convert_testexpr(root, sublink->testexpr,
+	result = convert_testexpr(root,
+							  sublink->testexpr,
 							  rtindex,
 							  &ininfo->sub_targetlist);
 
 	return result;
-}                               /* convert_IN_to_join */
+}
 
 /*
  * Replace correlation vars (uplevel vars) with Params.
