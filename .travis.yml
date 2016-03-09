@@ -102,6 +102,7 @@ script:
   - gpmapreduce --version
   - gpfdist --version
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
+  - env
   - cd ${TRAVIS_BUILD_DIR}/gpAux/gpdemo
   - make
   - source gpdemo-env.sh
@@ -131,7 +132,6 @@ before_install:
        sudo sysctl -w net.inet.tcp.msl=60;
        sudo sysctl -a;
     else
-       export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
        sudo apt-get -qq update;
        sudo apt-get install -y libperl-dev;
        sudo sysctl -w kernel.shmmax=500000000;
