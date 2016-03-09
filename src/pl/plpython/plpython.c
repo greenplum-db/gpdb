@@ -1454,13 +1454,21 @@ static void
 PLy_function_delete_args(PLyProcedure *proc)
 {
 	int			i;
+	PyObject	*arg;
 
 	if (!proc->argnames)
 		return;
 
 	for (i = 0; i < proc->nargs; i++)
-		if (proc->argnames[i])
-			PyDict_DelItemString(proc->globals, proc->argnames[i]);
+		if (proc->argnames[i]) {
+			arg = PyString_FromString(proc->argnames[i]);
+
+			/* Deleting the item only if it exists in the dictionaty */
+			if (PyDict_Contains(proc->globals, arg)) {
+				PyDict_DelItem(proc->globals, arg);
+			}
+			Py_DECREF(arg);
+		}
 }
 
 /*
@@ -1982,12 +1990,12 @@ PLy_procedure_munge_source(const char *name, const char *src)
 				}
 			}
 
-			pyelog(INFO, "After searching the start of the string, index is: %d sf is: %d endquote is: %c", i, sf, cendquote); 
+			pyelog(INFO, "After searching the start of the string, index is: %d sf is: %d endquote is: %c", (int)i, sf, cendquote);
 
 			/* now copy all characters to the destination buffer if we see the beginning of a string */ 
 			while (sf != STRING_BEGIN_NOT_YET && sf != STRING_SEEN_END && i < olen)
 			{
-				pyelog(INFO, "copying src[%d]=%c", i, src[i]); 
+				pyelog(INFO, "copying src[%d]=%c", (int)i, src[i]);
 
 				BOUNDED_PTR_ASSIGN_INC(mp, mrc + mlen, src[i]); 
 
@@ -2016,7 +2024,7 @@ PLy_procedure_munge_source(const char *name, const char *src)
 				i++; 
 			}
 
-			pyelog(INFO, "After searching the END of the string, index is: %d sf is: %d", i, sf); 
+			pyelog(INFO, "After searching the END of the string, index is: %d sf is: %d", (int)i, sf);
 
 			if (i == olen) 
 				break; 
