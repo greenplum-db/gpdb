@@ -103,6 +103,9 @@ s/\(COptTasks\.cpp:\d+\)//
 m/\(cdbdisp\.c:\d+\)/
 s/\(cdbdisp\.c:\d+\)//
 
+m/\(plpython\.c:\d+\)/
+s/\(plpython\.c:\d+\)//
+
 #In alter_table_distribution_policy tests, some test cases emit NOTICE message
 #like the following
 #drop cascades to function pg_atsdb_211851_2_4_out.
