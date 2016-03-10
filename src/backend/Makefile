@@ -80,7 +80,7 @@ endif
 
 # adding codegen libraries
 ifeq ($(enable_codegen),yes)
-LIBS := $(LIBS) -L$(top_builddir)/src/backend/codegen/utils/build -lgpcodegen
+LIBS := $(LIBS) -L$(top_builddir)/src/backend/codegen -lgpcodegen
 endif
 
 # Greenplum uses threads in the backend

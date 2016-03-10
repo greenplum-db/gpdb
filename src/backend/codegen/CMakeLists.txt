@@ -1,20 +1,14 @@
 #   Copyright 2015-2016 Pivotal Software, Inc.
 #
-#   Licensed under the Apache License, Version 2.0 (the "License");
-#   you may not use this file except in compliance with the License.
-#   You may obtain a copy of the License at
+#   CMakeLists.txt
+#       Cmake configuration for building GPDB codegen module.
 #
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-#   Unless required by applicable law or agreed to in writing, software
-#   distributed under the License is distributed on an "AS IS" BASIS,
-#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#   See the License for the specific language governing permissions and
-#   limitations under the License.
 
 cmake_minimum_required(VERSION 2.8.12)
 
 project(gpcodegen CXX)
+set(CMAKE_BUILD_FILES_DIRECTORY build)
+set(CMAKE_BUILD_DIRECTORY build)
 
 # Options. Turn on with 'cmake -Dvar_name=ON'
 option(build_examples "Build examples also" OFF)
@@ -67,7 +61,7 @@ CHECK_CXX_SYMBOL_EXISTS(mkstemp "stdlib.h" HAVE_POSIX_MKSTEMP)
 CHECK_CXX_SYMBOL_EXISTS(write "unistd.h" HAVE_POSIX_WRITE)
 CHECK_CXX_SYMBOL_EXISTS(fsync "unistd.h" HAVE_POSIX_FSYNC)
 if (HAVE_POSIX_MKSTEMP AND HAVE_POSIX_WRITE AND HAVE_POSIX_FSYNC)
-  set(codegen_tmpfile_sources temporary_file.cc)
+  set(codegen_tmpfile_sources utils/temporary_file.cc)
   set_property(DIRECTORY
       APPEND PROPERTY COMPILE_DEFINITIONS CODEGEN_HAVE_TEMPORARY_FILE)
 else()
@@ -76,8 +70,9 @@ else()
                   "be available.")
 endif()
 
-# Include our include path.
-include_directories(../../../include)
+# Include our include paths.
+include_directories(../../include)
+include_directories(include)
 
 # Pull in LLVM libraries.
 find_package(LLVM REQUIRED CONFIG)
@@ -117,8 +112,8 @@ include_directories(${CLANG_INCLUDE_DIRS})
 
 # Core codegen library.
 add_library(gpcodegen SHARED
-            clang_compiler.cc
-            code_generator.cc
+            utils/clang_compiler.cc
+            utils/code_generator.cc
             ${codegen_tmpfile_sources})
 if(APPLE)
   set(WL_START_GROUP "")
@@ -151,28 +146,42 @@ set_target_properties(
     INSTALL_NAME_DIR ${full_install_name_dir}
     MACOSX_RPATH ON)
 
+# Integrate with GPDB build system. 
+# Here we compile all the GPDB code generators, and link them incrementally
+# with the gpcodegen shared library to create a binary SUBSYS.o as expected by
+# GPDB make system. We invoke the linker with -nostdlib since we don't really
+# want to create a full executable.
+add_executable(SUBSYS.o init_codegen.cc)
+set_target_properties(SUBSYS.o
+    PROPERTIES
+    LINK_FLAGS "-Wl,-r -nostdlib")
+target_link_libraries(
+    gpcodegen
+)
+
+# Integrate with GPDB build system
+# GPDB unit tests use unittest-check instead of test, so we add an alias target
+# that calls the ctests we registered above.
+add_custom_target(unittest-check ${CMAKE_CTEST_COMMAND})
+
+SET(TEST_SOURCES
+    tests/clang_compiler_unittest.cc
+    tests/code_generator_unittest.cc
+    tests/instance_method_wrappers_unittest.cc)
+
 # Googletest framework for tests.
 SET(GTEST_DIR ../../../gpAux/extensions/gtest)
 add_subdirectory(${GTEST_DIR} ${CMAKE_BINARY_DIR}/gtest EXCLUDE_FROM_ALL)
 include_directories(${GTEST_DIR}/include)
 enable_testing()
 
-# Unit test for ClangCompiler.
-add_executable(clang_compiler_unittest tests/clang_compiler_unittest.cc)
-target_link_libraries(clang_compiler_unittest gpcodegen gtest)
-add_test(clang_compiler_unittest clang_compiler_unittest)
-
-# Unit test for CodeGenerator.
-add_executable(code_generator_unittest tests/code_generator_unittest.cc)
-target_link_libraries(code_generator_unittest gpcodegen gtest)
-add_test(code_generator_unittest code_generator_unittest)
-
-# Unit test for instance method wrappers.
-add_executable(instance_method_wrappers_unittest
-               tests/instance_method_wrappers_unittest.cc)
-target_link_libraries(instance_method_wrappers_unittest gtest gtest_main)
-add_test(instance_method_wrappers_unittest instance_method_wrappers_unittest)
-
+foreach(TEST_SRC ${TEST_SOURCES})
+    get_filename_component(TEST_NAME ${TEST_SRC} NAME_WE)
+    add_executable(${TEST_NAME} EXCLUDE_FROM_ALL ${TEST_SRC})
+    target_link_libraries(${TEST_NAME} gpcodegen gtest)
+    add_test(${TEST_NAME} ${TEST_NAME})
+    add_dependencies(unittest-check ${TEST_NAME})
+endforeach()
 
 # Examples
 if (build_examples)
@@ -182,3 +191,7 @@ endif()
 # Installation
 install(TARGETS gpcodegen DESTINATION lib)
 #install(DIRECTORY include/codegen DESTINATION include)
+
+# Clean up
+set(CMAKE_FILES Testing CMakeCache.txt CTestTestfile.cmake cmake_install.cmake install_manifest.txt Makefile)
+set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${CMAKE_FILES}")

@@ -637,10 +637,15 @@ AC_SUBST(enable_codegen)
 
 AS_IF([test "$enable_codegen" = yes],
 [ # then
-   AS_MKDIR_P(src/backend/codegen/utils/build)
-   cd src/backend/codegen/utils/build
+   AC_CHECK_PROG(CMAKE, cmake, yes)
+   AS_IF([test "${CMAKE}" != yes], [AC_MSG_ERROR(['cmake is required for build GPDB with codegen enabled'])])
+
+   cd src/backend/codegen
    AS_IF([test "${prefix}" = NONE], [prefix=${ac_default_prefix}])
-   AS_IF([cmake -DCMAKE_INSTALL_PREFIX=${prefix} ..], [], [AC_MSG_ERROR(['error while configuring codegen.'])])
+   AS_IF([test "${enable_debug}" = yes], [build_type="Debug"], [build_type="Release"])
+   CMAKE_CMD="cmake -DCMAKE_INSTALL_PREFIX=${prefix} -DCMAKE_BUILD_TYPE=${build_type} ."
+   echo "Executing cmake command : ${CMAKE_CMD}"
+   AS_IF([${CMAKE_CMD}], [], [AC_MSG_ERROR(['error while configuring codegen.'])])
    cd -
 ]) # fi
 

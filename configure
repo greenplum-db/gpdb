@@ -722,6 +722,7 @@ enable_netbackup
 enable_ddboost
 enable_connectemc
 enable_snmp
+CMAKE
 enable_codegen
 enable_orca
 autodepend
@@ -5349,12 +5350,59 @@ $as_echo "checking whether to build with codegen... $enable_codegen" >&6; }
 
 if test "$enable_codegen" = yes; then :
    # then
-   as_dir=src/backend/codegen/utils/build; as_fn_mkdir_p
-   cd src/backend/codegen/utils/build
+   # Extract the first word of "cmake", so it can be a program name with args.
+set dummy cmake; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_CMAKE+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$CMAKE"; then
+  ac_cv_prog_CMAKE="$CMAKE" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_CMAKE="yes"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+CMAKE=$ac_cv_prog_CMAKE
+if test -n "$CMAKE"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $CMAKE" >&5
+$as_echo "$CMAKE" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+   if test "${CMAKE}" != yes; then :
+  as_fn_error $? "'cmake is required for build GPDB with codegen enabled'" "$LINENO" 5
+fi
+
+   cd src/backend/codegen
    if test "${prefix}" = NONE; then :
   prefix=${ac_default_prefix}
 fi
-   if cmake -DCMAKE_INSTALL_PREFIX=${prefix} ..; then :
+   if test "${enable_debug}" = yes; then :
+  build_type="Debug"
+else
+  build_type="Release"
+fi
+   CMAKE_CMD="cmake -DCMAKE_INSTALL_PREFIX=${prefix} -DCMAKE_BUILD_TYPE=${build_type} ."
+   echo "Executing cmake command : ${CMAKE_CMD}"
+   if ${CMAKE_CMD}; then :
 
 else
   as_fn_error $? "'error while configuring codegen.'" "$LINENO" 5

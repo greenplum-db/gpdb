@@ -1,5 +1,5 @@
-# Greenplum codegen utils
-Support library for integrating LLVM code-generation in a larger C++ codebase.
+# GPDB codegen utils (src/backend/codegen/utils)
+Support library for integrating LLVM code-generation in GPDB.
 This augments the core functionality provided by the LLVM C++ libraries for
 program construction, optimization, and execution with additional features to
 help runtime-generated code integrate smoothly with statically compiled code.
@@ -30,11 +30,11 @@ Key features include:
 3. [Debugging Generated Code](#debugging-generated-code)
 4. [Learning Resources](#learning-resources)
 
-## Building
+## Building codegen utils
 
 ### Prerequisites
-To build codegen utils, you will need CMake 2.8 or higher and a recent version of
-LLVM and Clang (including headers and developer libraries) (Codegen utils is
+To build codegen utils, you will need cmake 2.8 or higher and a recent version of
+llvm and clang (including headers and developer libraries) (codegen utils is
 currently developed against the LLVM 3.7.X release series). Here's how to
 acquire these dependencies for various OSes.
 
@@ -97,7 +97,7 @@ When building codegen, you will need to point cmake at the more recent LLVM
 like so:
 
 ```
-cmake -D CMAKE_PREFIX_PATH=/usr/local/llvm37 /path/to/codegen
+./configure --enable-codegen CMAKE_PREFIX_PATH=/usr/local/llvm37
 ```
 
 #### Mac OS X
@@ -118,7 +118,7 @@ brew tap homebrew/versions
 brew install --with-clang llvm37
 ```
 
-Unfortunately, the cmake configuration module for LLVM that is isntalled by
+Unfortunately, the cmake configuration module for LLVM that is installed by
 brew is broken. Fortunately, we can fix it. Edit
 `/usr/local/opt/llvm37/lib/llvm-3.7/share/llvm/cmake/LLVMConfig.cmake` and fix
 the path detection logic at the front of the file (before
@@ -139,58 +139,14 @@ Because the version of LLVM installed by brew is not installed in one of the
 default locations, you will need to point cmake at it when building codegen
 like so:
 ```
-cmake -D CMAKE_PREFIX_PATH=/usr/local/opt/llvm37/lib/llvm-3.7 /path/to/codegen
-```
-
-### Configure and Build
-Create a build directory outside of the source tree to build codegen in. Then
-cd into the directory and run CMake to configure Codegen. For a DEBUG build,
-do:
-```
-cmake -D CMAKE_BUILD_TYPE=Debug /path/to/codegen
-```
-
-For a RELEASE build, do:
-```
-cmake -D CMAKE_BUILD_TYPE=Release /path/to/codegen
-```
-
-If your OS/package manager put the LLVM 3.7 libraries in a nonstandard place
-(e.g. on FreeBSD or using brew on Mac) you may need to add a `CMAKE_PREFIX_PATH`
-option to your command line as noted above.
-
-You can also configure CMake to use a C++ compiler other than the system default
-by setting the `CMAKE_CXX_COMPILER` option (although codegen should build with
-most compilers with reasonable C++11 support - the last few major versions of
-g++ and clang are both known to work).
-
-The codegen source code also comes with a number of example code snippets in the
-`example` directory. You can configure Cmake to also build those examples by
-setting `build_examples` option.
-
-```
-    cmake -D build_examples=ON /path/to/codegen
-```
-
-To actually build codegen, simply run `make` after `cmake` successfully
-completes:
-```
-make
+./configure --enable-codegen CMAKE_PREFIX_PATH=/usr/local/opt/llvm37/lib/llvm-3.7
 ```
 
 ### Testing
-After a successful build, run tests as follows:
+You can run unit tests as follows
 ```
-make test
+make -C src/backend/codegen unittest-check
 ```
-
-### Running examples
-After configuring Cmake with `-D build_examples=ON`, and successfully building
-codegen, you can run the corresponding examples from the build directory as follows:
-```
-./example/materialize_tuple_ex
-```
-
 
 ## Coding Guidelines
 
@@ -206,27 +162,6 @@ We have a few additional style rules that aren't covered by the guide:
   name of a variable or function (e.g. write `int* my_pointer;` not
   `int *my_pointer;`.
 
-The `cpplint.py` automatic linter is a useful tool that mechanically checks C++
-source code for compliance with many aspects of the style guide. There is a copy
-of it under [third_party/cpplint](third_party/cpplint), along with a helper
-script called `lint_everything.py`. Running
-`third_party/cpplint/lint_everything.py` from the root of the this source
-tree will run the linter on all source files and report any issues.
-
-### cpplint on Mac
-
-Both `cpplint.py` and `lint_everything.py` have shebangs that specify to use
-`python2` as the interpreter (they are not compatible with Python 3). On
-Mac OS X, you may not have a symlink for `python2` installed. To set one up
-yourself, just run:
-
-```
-sudo ln -s /usr/bin/python2.7 /usr/local/bin/python2
-```
-
-Note that if you have an older version of Mac OS X, you may need to replace
-`python2.7` in the above command with `python2.6`, or whatever the most recent
-version of python 2.X installed on your machine is.
 
 ## Debugging Generated Code
 

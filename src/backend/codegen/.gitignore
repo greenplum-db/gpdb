@@ -35,3 +35,10 @@
 cscope.*
 cctree.*
 
+# CMake files
+CMakeFiles/
+CMakeCache.txt
+CTestTestfile.cmake
+cmake_install.cmake
+install_manifest.txt
+Makefile
