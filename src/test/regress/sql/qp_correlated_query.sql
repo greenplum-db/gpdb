@@ -1012,6 +1012,79 @@ SELECT * FROM t1 WHERE exists (SELECT * FROM f(t1.a));
 SELECT * FROM t1 where a not in (SELECT f FROM f(t1.a));
 RESET ALL;
 
+-- start_ignore
+CREATE TABLE tversion (
+    rnum integer NOT NULL,
+    c1 integer,
+    cver character(6),
+    cnnull integer,
+    ccnull character(1)
+) DISTRIBUTED BY (rnum);
+
+COPY tversion (rnum, c1, cver, cnnull, ccnull) FROM stdin;
+0	1	1.0   	\N	\N
+\.
+
+CREATE TABLE tjoin1 (
+    rnum integer NOT NULL,
+    c1 integer,
+    c2 integer
+) DISTRIBUTED BY (rnum);
+
+CREATE TABLE tjoin2 (
+    rnum integer NOT NULL,
+    c1 integer,
+    c2 character(2)
+) DISTRIBUTED BY (rnum);
+
+CREATE TABLE tjoin3 (
+    rnum integer NOT NULL,
+    c1 integer,
+    c2 character(2)
+) DISTRIBUTED BY (rnum);
+
+CREATE TABLE tjoin4 (
+    rnum integer NOT NULL,
+    c1 integer,
+    c2 character(2)
+) DISTRIBUTED BY (rnum);
+
+
+COPY tjoin1 (rnum, c1, c2) FROM stdin;
+1	20	25
+0	10	15
+2	\N	50
+\.
+
+COPY tjoin2 (rnum, c1, c2) FROM stdin;
+1	15	DD
+0	10	BB
+3	10	FF
+2	\N	EE
+\.
+
+COPY tjoin3 (rnum, c1, c2) FROM stdin;
+1	15	YY
+0	10	XX
+\.
+
+
+COPY tjoin4 (rnum, c1, c2) FROM stdin;
+0	20	ZZ
+\.
+
+-- end_ignore
+
+select tjoin1.rnum, tjoin1.c1, case when 10 in ( select 1 from tversion ) then 'yes' else 'no' end from tjoin1 order by rnum;
+
+select rnum, c1, c2 from tjoin2 where 50 not in ( select c2 from tjoin1 where c2=25) order by rnum;
+
+select rnum, c1, c2 from tjoin2 where 20 > all ( select c1 from tjoin1 where c1 = 100) order by rnum;
+
+select rnum, c1, c2 from tjoin2 where 75 > all ( select c2 from tjoin1) order by rnum;
+
+select rnum, c1, c2 from tjoin2 where 20 > all ( select c1 from tjoin1) order by rnum;
+
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------

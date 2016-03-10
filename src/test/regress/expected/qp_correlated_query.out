@@ -3027,6 +3027,80 @@ SELECT * FROM t1 where a not in (SELECT f FROM f(t1.a));
 (0 rows)
 
 RESET ALL;
+-- start_ignore
+CREATE TABLE tversion (
+    rnum integer NOT NULL,
+    c1 integer,
+    cver character(6),
+    cnnull integer,
+    ccnull character(1)
+) DISTRIBUTED BY (rnum);
+COPY tversion (rnum, c1, cver, cnnull, ccnull) FROM stdin;
+CREATE TABLE tjoin1 (
+    rnum integer NOT NULL,
+    c1 integer,
+    c2 integer
+) DISTRIBUTED BY (rnum);
+CREATE TABLE tjoin2 (
+    rnum integer NOT NULL,
+    c1 integer,
+    c2 character(2)
+) DISTRIBUTED BY (rnum);
+CREATE TABLE tjoin3 (
+    rnum integer NOT NULL,
+    c1 integer,
+    c2 character(2)
+) DISTRIBUTED BY (rnum);
+CREATE TABLE tjoin4 (
+    rnum integer NOT NULL,
+    c1 integer,
+    c2 character(2)
+) DISTRIBUTED BY (rnum);
+COPY tjoin1 (rnum, c1, c2) FROM stdin;
+COPY tjoin2 (rnum, c1, c2) FROM stdin;
+COPY tjoin3 (rnum, c1, c2) FROM stdin;
+COPY tjoin4 (rnum, c1, c2) FROM stdin;
+-- end_ignore
+select tjoin1.rnum, tjoin1.c1, case when 10 in ( select 1 from tversion ) then 'yes' else 'no' end from tjoin1 order by rnum;
+ rnum | c1 | case 
+------+----+------
+    0 | 10 | no
+    1 | 20 | no
+    2 |    | no
+(3 rows)
+
+select rnum, c1, c2 from tjoin2 where 50 not in ( select c2 from tjoin1 where c2=25) order by rnum;
+ rnum | c1 | c2 
+------+----+----
+    0 | 10 | BB
+    1 | 15 | DD
+    2 |    | EE
+    3 | 10 | FF
+(4 rows)
+
+select rnum, c1, c2 from tjoin2 where 20 > all ( select c1 from tjoin1 where c1 = 100) order by rnum;
+ rnum | c1 | c2 
+------+----+----
+    0 | 10 | BB
+    1 | 15 | DD
+    2 |    | EE
+    3 | 10 | FF
+(4 rows)
+
+select rnum, c1, c2 from tjoin2 where 75 > all ( select c2 from tjoin1) order by rnum;
+ rnum | c1 | c2 
+------+----+----
+    0 | 10 | BB
+    1 | 15 | DD
+    2 |    | EE
+    3 | 10 | FF
+(4 rows)
+
+select rnum, c1, c2 from tjoin2 where 20 > all ( select c1 from tjoin1) order by rnum;
+ rnum | c1 | c2 
+------+----+----
+(0 rows)
+
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
