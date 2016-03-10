@@ -742,53 +742,6 @@ MemTuple ExecCopySlotMemTupleTo(TupleTableSlot *slot, MemoryContext pctxt, char 
 	return mtup;
 }
 		
-/* --------------------------------
- *		ExecCopySlotHeadTupleTo
- * 			Copy heapTuple to a preallocated buffer.   Code adapted from ExecCopySlotTuple
- *
- * 			return the copied heaptule if there is enough space, or, if the memorycontext is
- *              not null, which the function will alloc enough space from the context.  One can
- *				test if the tuple is alloced (ret == dest)
- *
- *			return NULL and set *len to space need if there is not enough space and the mem context is null.
- *			return NULL if heap tuple is not valid, and set *len = 0.  See slot->tts_tuple case below.
- * -------------------------------
- */
-HeapTuple ExecCopySlotHeapTupleTo(TupleTableSlot *slot, MemoryContext pctxt, char* dest, unsigned int *len)
-{
-	uint32 dumlen;
-	HeapTuple tup = NULL;
-
-	Assert(!TupIsNull(slot));
-	Assert(slot->tts_tupleDescriptor);
-
-	if(!len)
-		len = &dumlen;
-	
-	if (slot->PRIVATE_tts_heaptuple)
-	{
-		tup = heaptuple_copy_to(slot->PRIVATE_tts_heaptuple, (HeapTuple) dest, len);
-
-		if(tup || !pctxt)
-			return tup;
-
-		tup = (HeapTuple) ctxt_alloc(pctxt, *len);
-		tup = heaptuple_copy_to(slot->PRIVATE_tts_heaptuple, tup, len);
-		Assert(tup);
-
-		return tup;
-	}
-
-	slot_getallattrs(slot);
-	tup = heaptuple_form_to(slot->tts_tupleDescriptor, slot_get_values(slot), slot_get_isnull(slot), (HeapTuple) dest, len);
-
-	if(tup || !pctxt)
-		return tup;
-	tup = (HeapTuple) ctxt_alloc(pctxt, *len);
-	tup = heaptuple_form_to(slot->tts_tupleDescriptor, slot_get_values(slot), slot_get_isnull(slot), tup, len);
-	Assert(tup);
-	return tup;
-}
 	
 /* --------------------------------
  *		ExecFetchSlotTuple
