@@ -34,6 +34,10 @@ ifeq ($(enable_orca),yes)
 SUBDIRS += gpopt
 endif
 
+ifeq ($(enable_codegen),yes)
+SUBDIRS += codegen
+endif
+
 include $(srcdir)/common.mk
 
 # As of 9/2009:
@@ -72,6 +76,11 @@ LIBS := $(LIBS) -L$(OPTIMIZER)/libnaucrates/$(OBJDIR_DEFAULT) -lnaucrates
 LIBS := $(LIBS) -L$(OPTIMIZER)/libgpdbcost/$(OBJDIR_DEFAULT) -lgpdbcost
 LIBS := $(LIBS) -L$(OPTIMIZER)/libgpopt/$(OBJDIR_DEFAULT) -lgpopt
 LIBS := $(LIBS) -L$(top_builddir)/src/backend/gpopt -ldxltranslators
+endif
+
+# adding codegen libraries
+ifeq ($(enable_codegen),yes)
+LIBS := $(LIBS) -L$(top_builddir)/src/backend/codegen/utils/build -lgpcodegen
 endif
 
 # Greenplum uses threads in the backend
@@ -220,6 +229,9 @@ endif
 	$(INSTALL_DATA) $(srcdir)/access/transam/recovery.conf.sample '$(DESTDIR)$(datadir)/recovery.conf.sample'
 ifeq ($(enable_orca), yes)
 	$(MAKE) -C gpopt $@ INSTLOC=$(DESTDIR)$(libdir)
+endif
+ifeq ($(enable_codegen), yes)
+	$(MAKE) -C codegen $@ DESTDIR=$(DESTDIR)
 endif
 
 install-bin: postgres $(POSTGRES_IMP) installdirs

@@ -12,16 +12,16 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#ifndef BALERION_ANNOTATED_TYPE_DETAIL_H_
-#define BALERION_ANNOTATED_TYPE_DETAIL_H_
+#ifndef GPCODEGEN_ANNOTATED_TYPE_DETAIL_H_
+#define GPCODEGEN_ANNOTATED_TYPE_DETAIL_H_
 
 #include <type_traits>
 
-namespace balerion {
+namespace gpcodegen {
 
 // Additional type_traits-style templates used to implement AnnotatedType are
 // contained in this nested detail namespace. They are not considered part of
-// the public Balerion API.
+// the public API.
 namespace annotated_type_detail {
 
 // Adapter for std::is_unsigned with some additional specializations. Detects
@@ -107,7 +107,7 @@ using IsLongLong = std::is_same<long long,  // NOLINT(runtime/int)
                                 typename BaseScalar<T>::type>;
 
 }  // namespace annotated_type_detail
-}  // namespace balerion
+}  // namespace gpcodegen
 
-#endif  // BALERION_ANNOTATED_TYPE_DETAIL_H_
+#endif  // GPCODEGEN_ANNOTATED_TYPE_DETAIL_H_
 // EOF

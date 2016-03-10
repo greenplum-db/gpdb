@@ -12,7 +12,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#include "balerion/clang_compiler.h"
+#include "codegen/utils/clang_compiler.h"
 
 #include <cassert>
 #include <cstddef>
@@ -23,11 +23,11 @@
 #include <utility>
 #include <vector>
 
-#include "balerion/annotated_type.h"
-#include "balerion/code_generator.h"
+#include "codegen/utils/annotated_type.h"
+#include "codegen/utils/code_generator.h"
 
-#ifdef BALERION_HAVE_TEMPORARY_FILE
-#include "balerion/temporary_file.h"
+#ifdef CODEGEN_HAVE_TEMPORARY_FILE
+#include "codegen/utils/temporary_file.h"
 #endif
 
 #include "clang/CodeGen/CodeGenAction.h"
@@ -36,7 +36,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 
-namespace balerion {
+namespace gpcodegen {
 
 namespace {
 
@@ -98,7 +98,7 @@ std::string ScalarCppTypeFromLLVMType(const llvm::Type& llvm_type) {
           std::fprintf(
               stderr,
               "Unexpected bit width (=%u) for llvm::IntegerType in "
-                  "balerion::ClangCompiler::CppTypeFromAnnotatedType\n",
+                  "gpcodegen::ClangCompiler::CppTypeFromAnnotatedType\n",
               bit_width);
           std::exit(1);
       }
@@ -107,7 +107,7 @@ std::string ScalarCppTypeFromLLVMType(const llvm::Type& llvm_type) {
       std::fprintf(
           stderr,
           "FATAL ERROR: Unhandled llvm::Type::TypeID in "
-              "balerion::ClangCompiler::CppTypeFromAnnotatedType\n");
+              "gpcodegen::ClangCompiler::CppTypeFromAnnotatedType\n");
       std::exit(1);
     }
   }
@@ -200,10 +200,10 @@ bool ClangCompiler::CompileCppSource(const llvm::Twine& source_code,
 
   bool run_ok = false;
   if (debug) {
-#ifdef BALERION_HAVE_TEMPORARY_FILE
+#ifdef CODEGEN_HAVE_TEMPORARY_FILE
     // Dump source code to temporary file so that the debugger can find it.
     std::string source_prefix(TemporaryFile::TemporaryDirectoryPath());
-    source_prefix.append("/balerion_cpp_src_");
+    source_prefix.append("/codegen_cpp_src_");
 
     TemporaryFile source_dump(source_prefix.c_str());
     if (!(source_dump.Open()
@@ -221,7 +221,7 @@ bool ClangCompiler::CompileCppSource(const llvm::Twine& source_code,
                                 &compiled_module),
         source_code,
         {"-std=c++11", "-Wno-c99-extensions", "-g", "-x", "c++"},
-#ifdef BALERION_HAVE_TEMPORARY_FILE
+#ifdef CODEGEN_HAVE_TEMPORARY_FILE
         source_dump.Filename());
 #else
         "debugsrc.cc");
@@ -309,6 +309,6 @@ std::string HexDouble(const double value) {
 
 }  // namespace clang_compiler_detail
 
-}  // namespace balerion
+}  // namespace gpcodegen
 
 // EOF

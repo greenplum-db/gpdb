@@ -14,8 +14,8 @@
 
 #include <cstdio>
 
-#include "balerion/code_generator.h"
-#include "balerion/utility.h"
+#include "codegen/utils/code_generator.h"
+#include "codegen/utils/utility.h"
 #include "llvm/IR/Verifier.h"
 
 namespace {
@@ -74,10 +74,9 @@ void materializeTuple(char *tuple) {
 // This implementation does illustrate the basic blocks and branches necessary
 // when implementing a for loop, a switch construct, type conversion and
 // external
-// function calls using balerion.
 //
 MaterializeTupleFunction
-GenerateCodeForMaterializeTuple(balerion::CodeGenerator *code_generator) {
+GenerateCodeForMaterializeTuple(gpcodegen::CodeGenerator *code_generator) {
 
   auto irb = code_generator->ir_builder();
   llvm::Function *mt_function =
@@ -139,7 +138,7 @@ GenerateCodeForMaterializeTuple(balerion::CodeGenerator *code_generator) {
 
   // "Input Arguments"
   llvm::Value *tuple_arg =
-      (llvm::Value *)balerion::ArgumentByPosition(mt_function, 0);
+      (llvm::Value *)gpcodegen::ArgumentByPosition(mt_function, 0);
 
   // entry block
   irb->SetInsertPoint(entry);
@@ -212,7 +211,7 @@ GenerateCodeForMaterializeTuple(balerion::CodeGenerator *code_generator) {
   assert(!llvm::verifyModule(*code_generator->module()));
 
   bool prepare_ok = code_generator->PrepareForExecution(
-             balerion::CodeGenerator::OptimizationLevel::kDefault, true);
+             gpcodegen::CodeGenerator::OptimizationLevel::kDefault, true);
   assert(prepare_ok);
 
   return code_generator->GetFunctionPointer<void, char *>("materializeTuple");
@@ -220,11 +219,11 @@ GenerateCodeForMaterializeTuple(balerion::CodeGenerator *code_generator) {
 }
 
 int main() {
-  bool init_ok = balerion::CodeGenerator::InitializeGlobal();
+  bool init_ok = gpcodegen::CodeGenerator::InitializeGlobal();
   assert(init_ok);
 
   std::printf("Testing static compiled version:\n");
-  balerion::CodeGenerator code_generator("materializeTuple");
+  gpcodegen::CodeGenerator code_generator("materializeTuple");
   testMaterializeTuple(materializeTuple);
 
   std::printf("Testing JIT compiled version:\n");

@@ -12,14 +12,14 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#ifndef BALERION_INSTANCE_METHOD_WRAPPERS_H_
-#define BALERION_INSTANCE_METHOD_WRAPPERS_H_
+#ifndef GPCODEGEN_INSTANCE_METHOD_WRAPPERS_H_
+#define GPCODEGEN_INSTANCE_METHOD_WRAPPERS_H_
 
 #include <utility>
 
-namespace balerion {
+namespace gpcodegen {
 
-/** \addtogroup Balerion
+/** \addtogroup codegen
  *  @{
  */
 
@@ -28,9 +28,9 @@ namespace balerion {
  *        wraps an invocation of an instance method of a class.
  *
  * @note Writing out the explicit MethodType parameter can be cumbersome and
- *       error-prone. See the macros BALERION_WRAP_METHOD(),
- *       BALERION_WRAP_OVERLOADED_METHOD(), and
- *       BALERION_WRAP_OVERLOADED_METHOD_ZERO_ARGS() which provide some
+ *       error-prone. See the macros GPCODEGEN_WRAP_METHOD(),
+ *       GPCODEGEN_WRAP_OVERLOADED_METHOD(), and
+ *       GPCODEGEN_WRAP_OVERLOADED_METHOD_ZERO_ARGS() which provide some
  *       additional syntactic sugar to make this easier.
  *
  * @tparam MethodType A pointer-to-method type.
@@ -107,12 +107,12 @@ class InstanceMethodWrapper<
  *        automatic type deduction for the type of a pointer-to-method.
  *
  * @note This macro doesn't work with overloaded methods. See
- *       BALERION_WRAP_OVERLOADED_METHOD() instead.
+ *       GPCODEGEN_WRAP_OVERLOADED_METHOD() instead.
  *
  * @param method_ptr A pointer-to-method.
  **/
-#define BALERION_WRAP_METHOD(method_ptr)  \
-    ::balerion::InstanceMethodWrapper<decltype(method_ptr), (method_ptr)>::Call
+#define GPCODEGEN_WRAP_METHOD(method_ptr)  \
+    ::gpcodegen::InstanceMethodWrapper<decltype(method_ptr), (method_ptr)>::Call
 
 /**
  * @brief Macro which provides syntactic sugar for InstanceMethodWrapper::Call()
@@ -121,7 +121,7 @@ class InstanceMethodWrapper<
  *        `ReturnType ClassName::MethodName(...) Qualifiers`
  *
  * @note This macro is for overloads that take at least one argument. See
- *       BALERION_WRAP_OVERLOADED_METHOD_ZERO_ARGS() for overloads that take no
+ *       GPCODEGEN_WRAP_OVERLOADED_METHOD_ZERO_ARGS() for overloads that take no
  *       argument (other than the implicit 'this' pointer). (Many compilers will
  *       actually allow zero variadic arguments in a variadic macro invocation,
  *       but this is an extension and not an official requirement of the C
@@ -144,18 +144,18 @@ class InstanceMethodWrapper<
  * @param ... Variadic arguments for the types of parameters passed to the
  *        overloaded method.
  **/
-#define BALERION_WRAP_OVERLOADED_METHOD(ReturnType,         \
+#define GPCODEGEN_WRAP_OVERLOADED_METHOD(ReturnType,         \
                                         ClassName,          \
                                         MethodName,         \
                                         Qualifiers,         \
                                         ...)                \
-    ::balerion::InstanceMethodWrapper<                      \
+    ::gpcodegen::InstanceMethodWrapper<                      \
         ReturnType (ClassName::*)(__VA_ARGS__) Qualifiers,  \
         &ClassName::MethodName>                             \
             ::Call
 
 /**
- * @brief Special version of BALERION_WRAP_OVERLOADED_METHOD() for overloads
+ * @brief Special version of GPCODEGEN_WRAP_OVERLOADED_METHOD() for overloads
  *        that take no argument other than the implicit 'this' pointer.
  *
  * @param ReturnType The type that the desired overloaded version of MethodName
@@ -168,11 +168,11 @@ class InstanceMethodWrapper<
  *        writing a comma and then the closing right-paren immediately
  *        following) if the desired version of the method has no cv-qualifiers.
  **/
-#define BALERION_WRAP_OVERLOADED_METHOD_ZERO_ARGS(ReturnType,  \
+#define GPCODEGEN_WRAP_OVERLOADED_METHOD_ZERO_ARGS(ReturnType,  \
                                                   ClassName,   \
                                                   MethodName,  \
                                                   Qualifiers)  \
-    ::balerion::InstanceMethodWrapper<                         \
+    ::gpcodegen::InstanceMethodWrapper<                         \
         ReturnType (ClassName::*)() Qualifiers,                \
         &ClassName::MethodName>                                \
             ::Call
@@ -282,6 +282,6 @@ void WrapDestructor(ClassType* object) {
 
 /** @} */
 
-}  // namespace balerion
+}  // namespace codegen
 
-#endif  // BALERION_INSTANCE_METHOD_WRAPPERS_H_
+#endif  // GPCODEGEN_INSTANCE_METHOD_WRAPPERS_H_

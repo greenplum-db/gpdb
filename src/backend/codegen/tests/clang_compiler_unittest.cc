@@ -17,14 +17,14 @@
 #include <string>
 #include <type_traits>
 
-#include "balerion/clang_compiler.h"
-#include "balerion/code_generator.h"
-#include "balerion/instance_method_wrappers.h"
+#include "codegen/utils/clang_compiler.h"
+#include "codegen/utils/code_generator.h"
+#include "codegen/utils/instance_method_wrappers.h"
 #include "gtest/gtest.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Module.h"
 
-namespace balerion {
+namespace gpcodegen {
 
 namespace {
 
@@ -131,7 +131,7 @@ TEST_F(ClangCompilerTest, BasicCompilationTest) {
 
 // Similar to above, but compile the two functions in separate modules.
 static const char kMultiModuleFactorialSource[] =
-"namespace balerion_test {\n"
+"namespace codegen_test {\n"
 "unsigned factorial(unsigned arg) {\n"
 "  unsigned prod = 1;\n"
 "  for (; arg > 0; --arg) {\n"
@@ -142,11 +142,11 @@ static const char kMultiModuleFactorialSource[] =
 "}\n";
 
 static const char kMultiModuleBinomialCoeffecientSource[] =
-"namespace balerion_test {\n"
+"namespace codegen_test {\n"
 "unsigned factorial(unsigned);\n"
 "}\n"
 "\n"
-"using balerion_test::factorial;\n"
+"using codegen_test::factorial;\n"
 "\n"
 "extern \"C\" unsigned binomial_coefficient(const unsigned n,\n"
 "                                           const unsigned k) {\n"
@@ -441,10 +441,10 @@ TEST_F(ClangCompilerTest, ExternalMethodTest) {
       &WrapDelete<Accumulator<double>>,
       "delete_Accumulator");
   code_generator_->RegisterExternalFunction(
-      &BALERION_WRAP_METHOD(&Accumulator<double>::Accumulate),
+      &GPCODEGEN_WRAP_METHOD(&Accumulator<double>::Accumulate),
       "Accumulator_Accumulate");
   code_generator_->RegisterExternalFunction(
-      &BALERION_WRAP_METHOD(&Accumulator<double>::Get),
+      &GPCODEGEN_WRAP_METHOD(&Accumulator<double>::Get),
       "Accumulator_Get");
 
   EXPECT_TRUE(clang_compiler_->CompileCppSource(
@@ -467,11 +467,11 @@ TEST_F(ClangCompilerTest, ExternalMethodTest) {
             (*AddWithAccumulator)(-4.5e20, 6.2e-3, 123.45e67));
 }
 
-}  // namespace balerion
+}  // namespace gpcodegen
 
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
-  AddGlobalTestEnvironment(new balerion::ClangCompilerTestEnvironment);
+  AddGlobalTestEnvironment(new gpcodegen::ClangCompilerTestEnvironment);
   return RUN_ALL_TESTS();
 }
 

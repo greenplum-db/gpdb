@@ -26,10 +26,10 @@
 #include <utility>
 #include <vector>
 
-#include "balerion/annotated_type.h"
-#include "balerion/code_generator.h"
-#include "balerion/instance_method_wrappers.h"
-#include "balerion/utility.h"
+#include "codegen/utils/annotated_type.h"
+#include "codegen/utils/code_generator.h"
+#include "codegen/utils/instance_method_wrappers.h"
+#include "codegen/utils/utility.h"
 #include "gtest/gtest.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -47,7 +47,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Casting.h"
 
-namespace balerion {
+namespace gpcodegen {
 
 namespace {
 
@@ -2041,7 +2041,7 @@ TEST_F(CodeGeneratorTest, IterationTest) {
 // Macro that provides some syntactic sugar for a call to
 // CheckGetPointerToMemberConstant(). Automates deduction of the expected
 // member type and calculation of the expected offset within the struct.
-#define BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(struct_ptr, element_name)  \
+#define GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(struct_ptr, element_name)  \
   CheckGetPointerToMemberConstant<                                             \
       std::remove_reference<decltype((struct_ptr)->element_name)>::type>(      \
           &pointer_check_addresses,                                            \
@@ -2052,7 +2052,7 @@ TEST_F(CodeGeneratorTest, IterationTest) {
 
 // Similar to above, but tests accesing a field nested inside a struct member of
 // the top-level struct.
-#define BALERION_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT(                    \
+#define GPCODEGEN_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT(                    \
     struct_ptr,                                                                \
     top_element_name,                                                          \
     nested_element_name)                                                       \
@@ -2079,9 +2079,9 @@ TEST_F(CodeGeneratorTest, GetPointerToMemberConstantTest) {
 
   // Test a struct on the stack.
   DummyStruct stack_struct;
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(&stack_struct, int_field);
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(&stack_struct, bool_field);
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(&stack_struct, double_field);
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(&stack_struct, int_field);
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(&stack_struct, bool_field);
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(&stack_struct, double_field);
 
   // Also works without specifying any members at all. This trivially gives a
   // pointer to the original struct.
@@ -2091,22 +2091,22 @@ TEST_F(CodeGeneratorTest, GetPointerToMemberConstantTest) {
 
   // And on the heap.
   std::unique_ptr<DummyStruct> heap_struct(new DummyStruct);
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(heap_struct.get(), int_field);
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(heap_struct.get(), bool_field);
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(heap_struct.get(), double_field);
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(heap_struct.get(), int_field);
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(heap_struct.get(), bool_field);
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(heap_struct.get(), double_field);
   CheckGetPointerToMemberConstant<DummyStruct>(&pointer_check_addresses,
                                                heap_struct.get(),
                                                0);
 
   // A NULL pointer also works, since CodeGenerator::GetPointerToMember() only
   // does address computation and doesn't dereference anything.
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
       static_cast<DummyStruct*>(nullptr),
       int_field);
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
       static_cast<DummyStruct*>(nullptr),
       bool_field);
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
       static_cast<DummyStruct*>(nullptr),
       double_field);
   CheckGetPointerToMemberConstant<DummyStruct>(
@@ -2118,54 +2118,54 @@ TEST_F(CodeGeneratorTest, GetPointerToMemberConstantTest) {
   // confusion when the pointer-to-member type is the same as the pointer type
   // used for the underlying address computation.
   DummyStructWithCharFields stack_struct_with_char_fields;
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(&stack_struct_with_char_fields,
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(&stack_struct_with_char_fields,
                                               front_char);
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(&stack_struct_with_char_fields,
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(&stack_struct_with_char_fields,
                                               char_ptr);
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(&stack_struct_with_char_fields,
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(&stack_struct_with_char_fields,
                                               back_char);
 
   // Also test a struct that nests other structs.
   Matryoshka stack_matryoshka;
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
       &stack_matryoshka,
       nested_dummy_struct_with_char_fields);
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
       &stack_matryoshka,
       non_nested_char);
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
       &stack_matryoshka,
       non_nested_int);
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
       &stack_matryoshka,
       ptr_to_peer);
-  BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
+  GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT(
       &stack_matryoshka,
       nested_dummy_struct);
 
   // Test accessing fields inside nested structs with a single call to
   // GetPointerToMember().
-  BALERION_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT(
+  GPCODEGEN_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT(
       &stack_matryoshka,
       nested_dummy_struct_with_char_fields,
       front_char);
-  BALERION_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT(
+  GPCODEGEN_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT(
       &stack_matryoshka,
       nested_dummy_struct_with_char_fields,
       char_ptr);
-  BALERION_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT(
+  GPCODEGEN_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT(
       &stack_matryoshka,
       nested_dummy_struct_with_char_fields,
       back_char);
-  BALERION_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT(
+  GPCODEGEN_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT(
       &stack_matryoshka,
       nested_dummy_struct,
       int_field);
-  BALERION_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT(
+  GPCODEGEN_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT(
       &stack_matryoshka,
       nested_dummy_struct,
       bool_field);
-  BALERION_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT(
+  GPCODEGEN_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT(
       &stack_matryoshka,
       nested_dummy_struct,
       double_field);
@@ -2180,8 +2180,8 @@ TEST_F(CodeGeneratorTest, GetPointerToMemberConstantTest) {
   FinishCheckingGlobalConstantPointers(pointer_check_addresses);
 }
 
-#undef BALERION_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT
-#undef BALERION_TEST_GET_POINTER_TO_STRUCT_ELEMENT
+#undef GPCODEGEN_TEST_GET_POINTER_TO_NESTED_STRUCT_ELEMENT
+#undef GPCODEGEN_TEST_GET_POINTER_TO_STRUCT_ELEMENT
 
 TEST_F(CodeGeneratorTest, GetPointerToMemberTest) {
   // Create some accessor functions that load the value of fields in a struct
@@ -2303,10 +2303,10 @@ TEST_F(CodeGeneratorTest, CppClassObjectTest) {
           &WrapDelete<Accumulator<double>>);
   llvm::Function* accumulator_double_accumulate
       = code_generator_->RegisterExternalFunction(
-          &BALERION_WRAP_METHOD(&Accumulator<double>::Accumulate));
+          &GPCODEGEN_WRAP_METHOD(&Accumulator<double>::Accumulate));
   llvm::Function* accumulator_double_get
       = code_generator_->RegisterExternalFunction(
-          &BALERION_WRAP_METHOD(&Accumulator<double>::Get));
+          &GPCODEGEN_WRAP_METHOD(&Accumulator<double>::Get));
 
   llvm::Function* accumulate_test_fn
       = code_generator_->CreateFunction<double, double>("accumulate_test_fn");
@@ -2365,7 +2365,7 @@ TEST_F(CodeGeneratorTest, CppClassObjectTest) {
 }
 
 
-#ifdef BALERION_DEBUG
+#ifdef GPCODEGEN_DEBUG
 
 TEST_F(CodeGeneratorDeathTest, WrongFunctionTypeTest) {
   // Create a function identical to the one in TrivialCompilationTest, but try
@@ -2424,13 +2424,13 @@ TEST_F(CodeGeneratorDeathTest, GetPointerToMemberFromWrongTypeBasePointerTest) {
                "");
 }
 
-#endif  // BALERION_DEBUG
+#endif  // GPCODEGEN_DEBUG
 
-}  // namespace balerion
+}  // namespace gpcodegen
 
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
-  AddGlobalTestEnvironment(new balerion::CodeGeneratorTestEnvironment);
+  AddGlobalTestEnvironment(new gpcodegen::CodeGeneratorTestEnvironment);
   return RUN_ALL_TESTS();
 }
 

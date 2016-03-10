@@ -12,7 +12,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#include "balerion/temporary_file.h"
+#include "codegen/utils/temporary_file.h"
 
 #include <unistd.h>
 #include <cerrno>
@@ -21,7 +21,7 @@
 #include <cstdlib>
 #include <cstring>
 
-namespace balerion {
+namespace gpcodegen {
 
 TemporaryFile::TemporaryFile(const char* prefix)
     : filename_buffer_(nullptr),
@@ -107,4 +107,4 @@ bool TemporaryFile::Flush() {
   return fsync(fd_) == 0;
 }
 
-}  // namespace balerion
+}  // namespace gpcodegen

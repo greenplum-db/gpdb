@@ -12,12 +12,12 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#ifndef BALERION_MACROS_H_
-#define BALERION_MACROS_H_
+#ifndef GPCODEGEN_MACROS_H_
+#define GPCODEGEN_MACROS_H_
 
 #define DISALLOW_COPY_AND_ASSIGN(classname)   \
   classname(const classname& orig) = delete;  \
   classname& operator=(const classname &orig) = delete
 
-#endif  // BALERION_MACROS_H_
+#endif  // GPCODEGEN_MACROS_H_
 // EOF

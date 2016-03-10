@@ -12,7 +12,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#include "balerion/code_generator.h"
+#include "codegen/utils/code_generator.h"
 
 #include <cassert>
 #include <cstddef>
@@ -50,15 +50,15 @@
 
 namespace llvm { class FunctionType; }
 
-namespace balerion {
+namespace gpcodegen {
 
 namespace {
 
-// Almost-trivial conversion from Balerion enum for optimization level to the
+// Almost-trivial conversion from Codegen enum for optimization level to the
 // LLVM equivalent.
-inline llvm::CodeGenOpt::Level OptLevelBalerionToLLVM(
-    const CodeGenerator::OptimizationLevel balerion_opt_level) {
-  switch (balerion_opt_level) {
+inline llvm::CodeGenOpt::Level OptLevelCodegenToLLVM(
+    const CodeGenerator::OptimizationLevel codegen_opt_level) {
+  switch (codegen_opt_level) {
     case CodeGenerator::OptimizationLevel::kNone:
       return llvm::CodeGenOpt::None;
     case CodeGenerator::OptimizationLevel::kLess:
@@ -129,7 +129,7 @@ bool CodeGenerator::Optimize(const OptimizationLevel generic_opt_level,
           llvm::TargetOptions(),
           llvm::Reloc::Default,
           llvm::CodeModel::Default,
-          OptLevelBalerionToLLVM(generic_opt_level)));
+          OptLevelCodegenToLLVM(generic_opt_level)));
   if (!native_target_machine) {
     // Couldn't create TargetMachine.
     return false;
@@ -213,7 +213,7 @@ bool CodeGenerator::PrepareForExecution(const OptimizationLevel cpu_opt_level,
 
   llvm::EngineBuilder builder(std::move(module_));
   builder.setEngineKind(llvm::EngineKind::JIT);
-  builder.setOptLevel(OptLevelBalerionToLLVM(cpu_opt_level));
+  builder.setOptLevel(OptLevelCodegenToLLVM(cpu_opt_level));
   if (optimize_for_host_cpu) {
     builder.setMCPU(llvm::sys::getHostCPUName());
   }
@@ -357,6 +357,6 @@ llvm::Value* CodeGenerator::GetPointerToMemberImpl(
   }
 }
 
-}  // namespace balerion
+}  // namespace gpcodegen
 
 // EOF

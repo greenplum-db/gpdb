@@ -12,20 +12,20 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#ifndef BALERION_ANNOTATED_TYPE_H_
-#define BALERION_ANNOTATED_TYPE_H_
+#ifndef GPCODEGEN_ANNOTATED_TYPE_H_
+#define GPCODEGEN_ANNOTATED_TYPE_H_
 
 #include <algorithm>
 #include <type_traits>
 #include <vector>
 
-#include "balerion/annotated_type_detail.h"
+#include "codegen/utils/annotated_type_detail.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 
-namespace balerion {
+namespace gpcodegen {
 
-/** \addtogroup Balerion
+/** \addtogroup codegen
  *  @{
  */
 
@@ -157,7 +157,7 @@ struct AnnotatedType {
 
 /** @} */
 
-}  // namespace balerion
+}  // namespace gpcodegen
 
-#endif  // BALERION_ANNOTATED_TYPE_H_
+#endif  // GPCODEGEN_ANNOTATED_TYPE_H_
 // EOF

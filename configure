@@ -722,6 +722,7 @@ enable_netbackup
 enable_ddboost
 enable_connectemc
 enable_snmp
+enable_codegen
 enable_orca
 autodepend
 TAS
@@ -827,6 +828,7 @@ enable_debugbreak
 enable_debugntuplestore
 enable_testutils
 enable_orca
+enable_codegen
 enable_snmp
 enable_connectemc
 enable_ddboost
@@ -1498,6 +1500,7 @@ Optional Features:
   --enable-ntuplestore    enable debug_ntuplestore (for debugging)
   --enable-testutils      enable testing utilities
   --enable-orca           enable ORCA optimizer
+  --enable-codegen       enable code generation
   --enable-snmp           enable snmp for MIB and alerts via TRAP/INFORM
   --enable-connectemc     enable connect emc support
   --enable-ddboost        enable DD Boost support
@@ -5309,6 +5312,56 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with ORCA... $enable_orca" >&5
 $as_echo "checking whether to build with ORCA... $enable_orca" >&6; }
 
+
+#
+# Enable code generation
+#
+
+pgac_args="$pgac_args enable_codegen"
+
+# Check whether --enable-codegen was given.
+if test "${enable_codegen+set}" = set; then :
+  enableval=$enable_codegen;
+  case $enableval in
+    yes)
+
+$as_echo "#define USE_CODEGEN 1" >>confdefs.h
+
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --enable-codegen option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  enable_codegen=no
+
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with codegen... $enable_codegen" >&5
+$as_echo "checking whether to build with codegen... $enable_codegen" >&6; }
+
+
+
+if test "$enable_codegen" = yes; then :
+   # then
+   as_dir=src/backend/codegen/utils/build; as_fn_mkdir_p
+   cd src/backend/codegen/utils/build
+   if test "${prefix}" = NONE; then :
+  prefix=${ac_default_prefix}
+fi
+   if cmake -DCMAKE_INSTALL_PREFIX=${prefix} ..; then :
+
+else
+  as_fn_error $? "'error while configuring codegen.'" "$LINENO" 5
+fi
+   cd -
+
+fi # fi
 
 #
 # --enable-snmp enables snmp mib and trap/inform

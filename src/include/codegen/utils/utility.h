@@ -12,14 +12,14 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#ifndef BALERION_UTILITY_H_
-#define BALERION_UTILITY_H_
+#ifndef GPCODEGEN_UTILITY_H_
+#define GPCODEGEN_UTILITY_H_
 
 #include "llvm/IR/Function.h"
 
-namespace balerion {
+namespace gpcodegen {
 
-/** \addtogroup Balerion
+/** \addtogroup codegen
  *  @{
  */
 
@@ -49,7 +49,7 @@ llvm::Argument* ArgumentByPosition(llvm::Function* function,
 
 /** @} */
 
-}  // namespace balerion
+}  // namespace gpcodegen
 
-#endif  // BALERION_UTILITY_H_
+#endif  // GPCODEGEN_UTILITY_H_
 // EOF

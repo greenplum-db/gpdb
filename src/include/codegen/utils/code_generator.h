@@ -12,8 +12,8 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#ifndef BALERION_CODE_GENERATOR_H_
-#define BALERION_CODE_GENERATOR_H_
+#ifndef GPCODEGEN_CODE_GENERATOR_H_
+#define GPCODEGEN_CODE_GENERATOR_H_
 
 #include <cassert>
 #include <cstddef>
@@ -24,8 +24,8 @@
 #include <utility>
 #include <vector>
 
-#include "balerion/annotated_type.h"
-#include "balerion/macros.h"
+#include "codegen/utils/annotated_type.h"
+#include "codegen/utils/macros.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
@@ -41,14 +41,14 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 
-namespace balerion {
+namespace gpcodegen {
 
 // Forward declaration of helper class for friending purposes.
 namespace code_generator_detail {
 template <typename, typename> class ConstantMaker;
 }  // namespace code_generator_detail
 
-/** \addtogroup Balerion
+/** \addtogroup codegen
  *  @{
  */
 
@@ -262,11 +262,11 @@ class CodeGenerator {
    **/
   llvm::BasicBlock* CreateBasicBlock(const llvm::Twine& name,
                                      llvm::Function* parent) {
-#ifdef BALERION_DEBUG
+#ifdef GPCODEGEN_DEBUG
     // DEBUG-only assertion to make sure that caller does not try to generate IR
     // for an external function.
     assert(!parent->getName().startswith(kExternalFunctionNamePrefix));
-#endif  // BALERION_DEBUG
+#endif  // GPCODEGEN_DEBUG
     return llvm::BasicBlock::Create(context_, name, parent, nullptr);
   }
 
@@ -386,7 +386,7 @@ class CodeGenerator {
   auto GetFunctionPointer(const std::string& function_name)
       -> ReturnType (*)(ArgumentTypes...) {
     if (engine_) {
-#ifdef BALERION_DEBUG
+#ifdef GPCODEGEN_DEBUG
       CheckFunctionType(function_name,
                         GetFunctionType<ReturnType, ArgumentTypes...>());
 #endif
@@ -417,8 +417,8 @@ class CodeGenerator {
     std::vector<AnnotatedType> argument_types;
   };
 
-  static constexpr char kExternalVariableNamePrefix[] = "_balerionv";
-  static constexpr char kExternalFunctionNamePrefix[] = "_balerionx";
+  static constexpr char kExternalVariableNamePrefix[] = "_gpcodegenv";
+  static constexpr char kExternalFunctionNamePrefix[] = "_gpcodegenx";
 
   // Used internally when GetConstant() is called with a pointer type. Creates a
   // new GlobalVariable with external linkage in '*module_' and remembers its
@@ -512,7 +512,7 @@ class CodeGenerator {
 // Because function template partial specialization is not allowed, we use
 // helper classes to implement GetType() and GetAnnotatedType(). They are
 // encapsulated in this nested namespace, which is not considered part of the
-// public API for balerion.
+// public API.
 namespace code_generator_detail {
 
 // type_traits-style template that detects whether 'T' is bool, or a const
@@ -758,7 +758,7 @@ class TypeVectorBuilder<HeadType, TailTypes...> {
  public:
   static_assert(!std::is_same<HeadType, void>::value,
                 "void is not allowed as an argument type for "
-                "balerion::CodeGenerator::GetFunctionType()");
+                "gpcodegen::CodeGenerator::GetFunctionType()");
 
   static void AppendTypes(CodeGenerator* generator,
                           std::vector<llvm::Type*>* types) {
@@ -953,7 +953,7 @@ void CodeGenerator::RecordNamedExternalFunction(const std::string& name) {
   named_external_functions_.emplace_back(std::move(named_external_fn));
 }
 
-}  // namespace balerion
+}  // namespace gpcodegen
 
-#endif  // BALERION_CODE_GENERATOR_H_
+#endif  // GPCODEGEN_CODE_GENERATOR_H_
 // EOF

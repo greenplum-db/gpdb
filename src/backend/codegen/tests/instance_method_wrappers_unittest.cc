@@ -15,10 +15,10 @@
 #include <cstddef>
 #include <cstdlib>
 
-#include "balerion/instance_method_wrappers.h"
+#include "codegen/utils/instance_method_wrappers.h"
 #include "gtest/gtest.h"
 
-namespace balerion {
+namespace gpcodegen {
 
 namespace {
 
@@ -283,20 +283,20 @@ TEST_F(InstanceMethodWrappersTest, SimpleMethodTest) {
 
   // Invoke a simple non-overloaded method via a wrapper.
   EXPECT_EQ(45,
-            (BALERION_WRAP_METHOD(&AbstractBase::AddPayload)(&instance_a1, 3)));
+            (GPCODEGEN_WRAP_METHOD(&AbstractBase::AddPayload)(&instance_a1, 3)));
   EXPECT_EQ(126,
-            (BALERION_WRAP_METHOD(&AbstractBase::AddPayload)(&instance_a2, 3)));
+            (GPCODEGEN_WRAP_METHOD(&AbstractBase::AddPayload)(&instance_a2, 3)));
   EXPECT_EQ(-9,
-            (BALERION_WRAP_METHOD(&AbstractBase::AddPayload)(&instance_b, 3)));
+            (GPCODEGEN_WRAP_METHOD(&AbstractBase::AddPayload)(&instance_b, 3)));
 
   // Should also work fine if we refer to the derived classes rather than the
   // base.
   EXPECT_EQ(45,
-            (BALERION_WRAP_METHOD(&DerivedA::AddPayload)(&instance_a1, 3)));
+            (GPCODEGEN_WRAP_METHOD(&DerivedA::AddPayload)(&instance_a1, 3)));
   EXPECT_EQ(126,
-            (BALERION_WRAP_METHOD(&DerivedA::AddPayload)(&instance_a2, 3)));
+            (GPCODEGEN_WRAP_METHOD(&DerivedA::AddPayload)(&instance_a2, 3)));
   EXPECT_EQ(-9,
-            (BALERION_WRAP_METHOD(&DerivedB::AddPayload)(&instance_b, 3)));
+            (GPCODEGEN_WRAP_METHOD(&DerivedB::AddPayload)(&instance_b, 3)));
 }
 
 TEST_F(InstanceMethodWrappersTest, OverloadedMethodTest) {
@@ -305,12 +305,12 @@ TEST_F(InstanceMethodWrappersTest, OverloadedMethodTest) {
   DerivedB instance_b(-12);
 
   // Overloaded methods distinguished only by their const-qualifier.
-  EXPECT_FALSE((BALERION_WRAP_OVERLOADED_METHOD_ZERO_ARGS(
+  EXPECT_FALSE((GPCODEGEN_WRAP_OVERLOADED_METHOD_ZERO_ARGS(
                     bool,
                     AbstractBase,
                     ThisConst,)(  // NOLINT(whitespace/comma)
                         &instance_a1)));
-  EXPECT_TRUE((BALERION_WRAP_OVERLOADED_METHOD_ZERO_ARGS(
+  EXPECT_TRUE((GPCODEGEN_WRAP_OVERLOADED_METHOD_ZERO_ARGS(
                    bool,
                    AbstractBase,
                    ThisConst,
@@ -319,7 +319,7 @@ TEST_F(InstanceMethodWrappersTest, OverloadedMethodTest) {
 
   // Overloads which take arguments.
   EXPECT_EQ(58,
-            (BALERION_WRAP_OVERLOADED_METHOD(
+            (GPCODEGEN_WRAP_OVERLOADED_METHOD(
                 int,
                 AbstractBase,
                 SubPayload,
@@ -329,7 +329,7 @@ TEST_F(InstanceMethodWrappersTest, OverloadedMethodTest) {
                     100)));
 
   EXPECT_EQ(2.125,
-            (BALERION_WRAP_OVERLOADED_METHOD(
+            (GPCODEGEN_WRAP_OVERLOADED_METHOD(
                 double,
                 AbstractBase,
                 SubPayload,
@@ -339,7 +339,7 @@ TEST_F(InstanceMethodWrappersTest, OverloadedMethodTest) {
                     125.125)));
 
   EXPECT_EQ(124.75,
-            (BALERION_WRAP_OVERLOADED_METHOD(
+            (GPCODEGEN_WRAP_OVERLOADED_METHOD(
                 double,
                 AbstractBase,
                 SubPayload,
@@ -358,19 +358,19 @@ TEST_F(InstanceMethodWrappersTest, VirtualMethodTest) {
 
   // Invoke virtual method of base class on instances of derived classes.
   EXPECT_EQ(84,
-            (BALERION_WRAP_METHOD(&AbstractBase::MulPayload)(&instance_a1, 2)));
+            (GPCODEGEN_WRAP_METHOD(&AbstractBase::MulPayload)(&instance_a1, 2)));
   EXPECT_EQ(369,
-            (BALERION_WRAP_METHOD(&AbstractBase::MulPayload)(&instance_a2, 3)));
+            (GPCODEGEN_WRAP_METHOD(&AbstractBase::MulPayload)(&instance_a2, 3)));
   EXPECT_EQ(48,
-            (BALERION_WRAP_METHOD(&AbstractBase::MulPayload)(&instance_b, 4)));
+            (GPCODEGEN_WRAP_METHOD(&AbstractBase::MulPayload)(&instance_b, 4)));
 
   // Should also work if we refer to the derived classes than the base.
   EXPECT_EQ(84,
-            (BALERION_WRAP_METHOD(&DerivedA::MulPayload)(&instance_a1, 2)));
+            (GPCODEGEN_WRAP_METHOD(&DerivedA::MulPayload)(&instance_a1, 2)));
   EXPECT_EQ(369,
-            (BALERION_WRAP_METHOD(&DerivedA::MulPayload)(&instance_a2, 3)));
+            (GPCODEGEN_WRAP_METHOD(&DerivedA::MulPayload)(&instance_a2, 3)));
   EXPECT_EQ(48,
-            (BALERION_WRAP_METHOD(&DerivedB::MulPayload)(&instance_b, 4)));
+            (GPCODEGEN_WRAP_METHOD(&DerivedB::MulPayload)(&instance_b, 4)));
 }
 
 TEST_F(InstanceMethodWrappersTest, OverloadedVirtualMethodTest) {
@@ -380,7 +380,7 @@ TEST_F(InstanceMethodWrappersTest, OverloadedVirtualMethodTest) {
 
   // Invoke virtual method with overloads.
   EXPECT_EQ(1,
-            (BALERION_WRAP_OVERLOADED_METHOD(
+            (GPCODEGEN_WRAP_OVERLOADED_METHOD(
                 int,
                 AbstractBase,
                 DivPayload,
@@ -390,7 +390,7 @@ TEST_F(InstanceMethodWrappersTest, OverloadedVirtualMethodTest) {
                     63)));
 
   EXPECT_EQ(1.5,
-            (BALERION_WRAP_OVERLOADED_METHOD(
+            (GPCODEGEN_WRAP_OVERLOADED_METHOD(
                 double,
                 AbstractBase,
                 DivPayload,
@@ -400,7 +400,7 @@ TEST_F(InstanceMethodWrappersTest, OverloadedVirtualMethodTest) {
                     63.0)));
 
   EXPECT_EQ(-1.75,
-            (BALERION_WRAP_OVERLOADED_METHOD(
+            (GPCODEGEN_WRAP_OVERLOADED_METHOD(
                 double,
                 AbstractBase,
                 DivPayload,
@@ -415,13 +415,13 @@ TEST_F(InstanceMethodWrappersTest, OperatorOverloadTest) {
 
   // Simple overloaded operator.
   AbstractBase& incremented
-      = BALERION_WRAP_METHOD(&AbstractBase::operator++)(&instance);
+      = GPCODEGEN_WRAP_METHOD(&AbstractBase::operator++)(&instance);
   EXPECT_EQ(&instance, &incremented);
   EXPECT_EQ(43, instance.GetPayload());
 
   // Operator with multiple differently-typed overloads.
   EXPECT_EQ(45,
-            (BALERION_WRAP_OVERLOADED_METHOD(
+            (GPCODEGEN_WRAP_OVERLOADED_METHOD(
                 int,
                 AbstractBase,
                 operator+,
@@ -430,7 +430,7 @@ TEST_F(InstanceMethodWrappersTest, OperatorOverloadTest) {
                     &instance,
                     2)));
   EXPECT_EQ(0.5,
-            (BALERION_WRAP_OVERLOADED_METHOD(
+            (GPCODEGEN_WRAP_OVERLOADED_METHOD(
                 double,
                 AbstractBase,
                 operator+,
@@ -440,6 +440,6 @@ TEST_F(InstanceMethodWrappersTest, OperatorOverloadTest) {
                     -42.5)));
 }
 
-}  // namespace balerion
+}  // namespace gpcodegen
 
 // EOF

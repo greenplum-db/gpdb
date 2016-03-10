@@ -14,18 +14,10 @@
 
 cmake_minimum_required(VERSION 2.8.12)
 
-project(balerion CXX)
+project(gpcodegen CXX)
 
 # Options. Turn on with 'cmake -Dvar_name=ON'
 option(build_examples "Build examples also" OFF)
-
-# Balerion versioning based on Semantic Versioning (semver.org). Active
-# development in master branch may break API or ABI stability, but releases
-# may periodically be tagged at which point the version will be incremented
-# appropriately.
-set(BALERION_VERSION_MAJOR 0)
-set(BALERION_VERSION_MINOR 1)
-set(BALERION_VERSION_PATCH 0)
 
 # Look for flags to enable C++11 support.
 include(CheckCXXCompilerFlag)
@@ -55,17 +47,17 @@ if (COMPILER_HAS_WNO_C99_EXTENSIONS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c99-extensions")
 endif()
 
-# Turn on the BALERION_DEBUG flag if this is a debug build.
+# Turn on the CODEGEN_DEBUG flag if this is a debug build.
 if (CMAKE_MAJOR_VERSION GREATER 2)
   cmake_policy(SET CMP0043 NEW)
   set_property(
     DIRECTORY
-    APPEND PROPERTY COMPILE_DEFINITIONS $<$<CONFIG:Debug>:BALERION_DEBUG>
+    APPEND PROPERTY COMPILE_DEFINITIONS $<$<CONFIG:Debug>:CODEGEN_DEBUG>
   )
 else()
   set_property(
     DIRECTORY
-    APPEND PROPERTY COMPILE_DEFINITIONS_DEBUG BALERION_DEBUG
+    APPEND PROPERTY COMPILE_DEFINITIONS_DEBUG CODEGEN_DEBUG
   )
 endif()
 
@@ -75,9 +67,9 @@ CHECK_CXX_SYMBOL_EXISTS(mkstemp "stdlib.h" HAVE_POSIX_MKSTEMP)
 CHECK_CXX_SYMBOL_EXISTS(write "unistd.h" HAVE_POSIX_WRITE)
 CHECK_CXX_SYMBOL_EXISTS(fsync "unistd.h" HAVE_POSIX_FSYNC)
 if (HAVE_POSIX_MKSTEMP AND HAVE_POSIX_WRITE AND HAVE_POSIX_FSYNC)
-  set(balerion_tmpfile_sources src/temporary_file.cc)
+  set(codegen_tmpfile_sources temporary_file.cc)
   set_property(DIRECTORY
-               APPEND PROPERTY COMPILE_DEFINITIONS BALERION_HAVE_TEMPORARY_FILE)
+      APPEND PROPERTY COMPILE_DEFINITIONS CODEGEN_HAVE_TEMPORARY_FILE)
 else()
   message(WARNING "Missing required POSIX I/O syscalls for temporary files. "
                   "Line-by-line DEBUG information for generated code will not "
@@ -85,7 +77,7 @@ else()
 endif()
 
 # Include our include path.
-include_directories(include)
+include_directories(../../../include)
 
 # Pull in LLVM libraries.
 find_package(LLVM REQUIRED CONFIG)
@@ -102,7 +94,7 @@ if (NOT LLVM_ENABLE_RTTI)
   else()
     message(WARNING "LLVM was built without RTTI (run-time type information) "
                     "support, but compiler does not support -fno-rtti flag to "
-                    "also build Balerion without RTTI support. You may see "
+                    "also build gpcodegen without RTTI support. You may see "
                     "linking errors about undefined references to typeinfo for "
                     "various LLVM classes.")
   endif()
@@ -123,13 +115,22 @@ endif()
 find_package(Clang REQUIRED)
 include_directories(${CLANG_INCLUDE_DIRS})
 
-# Core balerion library.
-add_library(balerion SHARED
-            src/clang_compiler.cc
-            src/code_generator.cc
-            ${balerion_tmpfile_sources})
+# Core codegen library.
+add_library(gpcodegen SHARED
+            clang_compiler.cc
+            code_generator.cc
+            ${codegen_tmpfile_sources})
+if(APPLE)
+  set(WL_START_GROUP "")
+  set(WL_END_GROUP "")
+else()
+  set(WL_START_GROUP "-Wl,--start-group")
+  set(WL_END_GROUP "-Wl,--end-group")
+endif()
+
+target_link_libraries(gpcodegen ${WL_START_GROUP} ${CLANG_LIBRARIES} ${WL_END_GROUP})
 if (MONOLITHIC_LLVM_LIBRARY)
-  target_link_libraries(balerion ${LLVM_MONOLITHIC_LIBRARIES})
+  target_link_libraries(gpcodegen ${LLVM_MONOLITHIC_LIBRARIES})
 else()
   # Here we link against the LLVM libraries that we use directly, as well as
   # those that are needed by the Clang libraries that we use (e.g. objcarcopts,
@@ -137,19 +138,16 @@ else()
   # objective-C). The llvm_map_components_to_libnames() function also takes care
   # of pulling in any transitive linking dependencies for the libraries we
   # specify.
-  llvm_map_components_to_libnames(balerion_llvm_libs
+  llvm_map_components_to_libnames(codegen_llvm_libs
                                   analysis bitwriter core executionengine ipo
                                   irreader linker mc mcjit native objcarcopts
                                   option passes support target)
-  target_link_libraries(balerion ${balerion_llvm_libs})
+  target_link_libraries(gpcodegen ${WL_START_GROUP} ${codegen_llvm_libs} ${WL_END_GROUP})
 endif()
-target_link_libraries(balerion ${CLANG_LIBRARIES})
 
 get_filename_component(full_install_name_dir "${CMAKE_INSTALL_PREFIX}/lib" ABSOLUTE)
 set_target_properties(
-    balerion PROPERTIES
-    SOVERSION ${BALERION_VERSION_MAJOR}.${BALERION_VERSION_MINOR}
-    VERSION ${BALERION_VERSION_MAJOR}.${BALERION_VERSION_MINOR}.${BALERION_VERSION_PATCH}
+    gpcodegen PROPERTIES
     INSTALL_NAME_DIR ${full_install_name_dir}
     MACOSX_RPATH ON)
 
@@ -160,12 +158,12 @@ enable_testing()
 
 # Unit test for ClangCompiler.
 add_executable(clang_compiler_unittest tests/clang_compiler_unittest.cc)
-target_link_libraries(clang_compiler_unittest balerion gtest)
+target_link_libraries(clang_compiler_unittest gpcodegen gtest)
 add_test(clang_compiler_unittest clang_compiler_unittest)
 
 # Unit test for CodeGenerator.
 add_executable(code_generator_unittest tests/code_generator_unittest.cc)
-target_link_libraries(code_generator_unittest balerion gtest)
+target_link_libraries(code_generator_unittest gpcodegen gtest)
 add_test(code_generator_unittest code_generator_unittest)
 
 # Unit test for instance method wrappers.
@@ -181,5 +179,5 @@ if (build_examples)
 endif()
 
 # Installation
-install(TARGETS balerion DESTINATION lib)
-install(DIRECTORY include/balerion DESTINATION include)
+install(TARGETS gpcodegen DESTINATION lib)
+#install(DIRECTORY include/codegen DESTINATION include)

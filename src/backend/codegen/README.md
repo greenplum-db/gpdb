@@ -1,9 +1,9 @@
-# Balerion
+# Greenplum codegen utils
 Support library for integrating LLVM code-generation in a larger C++ codebase.
-Balerion augments the core functionality provided by the LLVM C++ libraries for
+This augments the core functionality provided by the LLVM C++ libraries for
 program construction, optimization, and execution with additional features to
 help runtime-generated code integrate smoothly with statically compiled code.
-Key features of Balerion include:
+Key features include:
 
 * A `CodeGenerator` class that encapsulates LLVM modules, optimization passes,
   and execution engines, managing the whole lifetime of generated code.
@@ -25,21 +25,16 @@ Key features of Balerion include:
 
 # Contents
 
-1. [License](#license)
-2. [Building Balerion](#building-balerion)
-3. [Coding Guidelines](#coding-guidelines)
-4. [Debugging Generated Code](#debugging-generated-code)
-5. [Learning Resources](#learning-resources)
+1. [Building codegen utils](#building)
+2. [Coding Guidelines](#coding-guidelines)
+3. [Debugging Generated Code](#debugging-generated-code)
+4. [Learning Resources](#learning-resources)
 
-## License
-Balerion is Copyright 2015-2016 Pivotal Software, Inc. and is released under the
-Apache License, Version 2.0. See [LICENSE](LICENSE) for the full license text.
-
-## Building Balerion
+## Building
 
 ### Prerequisites
-To build Balerion, you will need CMake 2.8 or higher and a recent version of
-LLVM and Clang (including headers and developer libraries) (Balerion is
+To build codegen utils, you will need CMake 2.8 or higher and a recent version of
+LLVM and Clang (including headers and developer libraries) (Codegen utils is
 currently developed against the LLVM 3.7.X release series). Here's how to
 acquire these dependencies for various OSes.
 
@@ -98,11 +93,11 @@ sudo pkg update
 sudo pkg install -y cmake llvm37 clang37
 ```
 
-When building Balerion, you will need to point cmake at the more recent LLVM
+When building codegen, you will need to point cmake at the more recent LLVM
 like so:
 
 ```
-cmake -D CMAKE_PREFIX_PATH=/usr/local/llvm37 /path/to/balerion
+cmake -D CMAKE_PREFIX_PATH=/usr/local/llvm37 /path/to/codegen
 ```
 
 #### Mac OS X
@@ -141,23 +136,23 @@ set(_LLVM_LIBRARY_DIR "${LLVM_INSTALL_PREFIX}/lib")
 ```
 
 Because the version of LLVM installed by brew is not installed in one of the
-default locations, you will need to point cmake at it when building balerion
+default locations, you will need to point cmake at it when building codegen
 like so:
 ```
-cmake -D CMAKE_PREFIX_PATH=/usr/local/opt/llvm37/lib/llvm-3.7 /path/to/balerion
+cmake -D CMAKE_PREFIX_PATH=/usr/local/opt/llvm37/lib/llvm-3.7 /path/to/codegen
 ```
 
 ### Configure and Build
-Create a build directory outside of the source tree to build balerion in. Then
-cd into the directory and run CMake to configure Balerion. For a DEBUG build,
+Create a build directory outside of the source tree to build codegen in. Then
+cd into the directory and run CMake to configure Codegen. For a DEBUG build,
 do:
 ```
-cmake -D CMAKE_BUILD_TYPE=Debug /path/to/balerion
+cmake -D CMAKE_BUILD_TYPE=Debug /path/to/codegen
 ```
 
 For a RELEASE build, do:
 ```
-cmake -D CMAKE_BUILD_TYPE=Release /path/to/balerion
+cmake -D CMAKE_BUILD_TYPE=Release /path/to/codegen
 ```
 
 If your OS/package manager put the LLVM 3.7 libraries in a nonstandard place
@@ -165,19 +160,19 @@ If your OS/package manager put the LLVM 3.7 libraries in a nonstandard place
 option to your command line as noted above.
 
 You can also configure CMake to use a C++ compiler other than the system default
-by setting the `CMAKE_CXX_COMPILER` option (although Balerion should build with
+by setting the `CMAKE_CXX_COMPILER` option (although codegen should build with
 most compilers with reasonable C++11 support - the last few major versions of
 g++ and clang are both known to work).
 
-The balerion source code also comes with a number of example code snippets in the
+The codegen source code also comes with a number of example code snippets in the
 `example` directory. You can configure Cmake to also build those examples by
 setting `build_examples` option.
 
 ```
-    cmake -D build_examples=ON /path/to/balerion
+    cmake -D build_examples=ON /path/to/codegen
 ```
 
-To actually build Balerion, simply run `make` after `cmake` successfully
+To actually build codegen, simply run `make` after `cmake` successfully
 completes:
 ```
 make
@@ -191,24 +186,15 @@ make test
 
 ### Running examples
 After configuring Cmake with `-D build_examples=ON`, and successfully building
-balerion, you can run the corresponding examples from the build directory as follows:
+codegen, you can run the corresponding examples from the build directory as follows:
 ```
 ./example/materialize_tuple_ex
 ```
 
-### Installing
-You can install the Balerion shared library and headers by running:
-```
-sudo make install
-```
-
-By default, CMake will install Balerion under `/usr/local`. You can change the
-installation prefix with the `CMAKE_INSTALL_PREFIX` option when running CMake
-above.
 
 ## Coding Guidelines
 
-Balerion is written using the
+This module is written using the
 [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html).
 We have a few additional style rules that aren't covered by the guide:
 * Publicly visible classes (and their public methods) should have doxygen
@@ -224,7 +210,7 @@ The `cpplint.py` automatic linter is a useful tool that mechanically checks C++
 source code for compliance with many aspects of the style guide. There is a copy
 of it under [third_party/cpplint](third_party/cpplint), along with a helper
 script called `lint_everything.py`. Running
-`third_party/cpplint/lint_everything.py` from the root of the Balerion source
+`third_party/cpplint/lint_everything.py` from the root of the this source
 tree will run the linter on all source files and report any issues.
 
 ### cpplint on Mac
@@ -288,7 +274,7 @@ source. Work is in progress to expose debugging information for generated IR.
 ## Learning Resources
 We have collected some documentation and resources to learn more about using
 LLVM generally and about some specific programming techniques that are used in
-Balerion. When we refer to "LLVM IR" below, that means LLVM intermediate
+codegen. When we refer to "LLVM IR" below, that means LLVM intermediate
 representation, which is the internal language used to build up programs in
 LLVM. IR is assembly-like, but it is strongly-typed, uses static single
 assignment, and has the illusion of unlimited registers.

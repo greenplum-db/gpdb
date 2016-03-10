@@ -626,6 +626,25 @@ AC_MSG_RESULT([checking whether to build with ORCA... $enable_orca])
 AC_SUBST(enable_orca)
 
 #
+# Enable code generation
+#
+PGAC_ARG_BOOL(enable, codegen, no, [  --enable-codegen       enable code generation],
+              [AC_DEFINE([USE_CODEGEN], 1,
+                         [Define to 1 to enable code generation. (--enable-codegen)])])
+AC_MSG_RESULT([checking whether to build with codegen... $enable_codegen])
+AC_SUBST(enable_codegen)
+
+
+AS_IF([test "$enable_codegen" = yes],
+[ # then
+   AS_MKDIR_P(src/backend/codegen/utils/build)
+   cd src/backend/codegen/utils/build
+   AS_IF([test "${prefix}" = NONE], [prefix=${ac_default_prefix}])
+   AS_IF([cmake -DCMAKE_INSTALL_PREFIX=${prefix} ..], [], [AC_MSG_ERROR(['error while configuring codegen.'])])
+   cd -
+]) # fi
+
+#
 # --enable-snmp enables snmp mib and trap/inform
 #
 PGAC_ARG_BOOL(enable, snmp, no, [  --enable-snmp           enable snmp for MIB and alerts via TRAP/INFORM],

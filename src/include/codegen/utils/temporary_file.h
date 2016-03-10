@@ -12,19 +12,19 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#ifndef BALERION_TEMPORARY_FILE_H_
-#define BALERION_TEMPORARY_FILE_H_
+#ifndef GPCODEGEN_TEMPORARY_FILE_H_
+#define GPCODEGEN_TEMPORARY_FILE_H_
 
 #include <cstddef>
 #include <string>
 
-#include "balerion/macros.h"
+#include "codegen/utils/macros.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 
-namespace balerion {
+namespace gpcodegen {
 
-/** \addtogroup Balerion
+/** \addtogroup codegen
  *  @{
  */
 
@@ -150,6 +150,6 @@ class TemporaryFile {
 
 /** @} */
 
-}  // namespace balerion
+}  // namespace gpcodegen
 
-#endif  // BALERION_TEMPORARY_FILE_H_
+#endif  // GPCODEGEN_TEMPORARY_FILE_H_

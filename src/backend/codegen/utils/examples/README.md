@@ -8,7 +8,7 @@ README
     cmake -D build_examples=ON ../
 ```
 
-2. Build balerion.
+2. Build codegen.
 ```
     make
 ```

@@ -12,24 +12,24 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#ifndef BALERION_CLANG_COMPILER_H_
-#define BALERION_CLANG_COMPILER_H_
+#ifndef GPCODEGEN_CLANG_COMPILER_H_
+#define GPCODEGEN_CLANG_COMPILER_H_
 
 #include <cstddef>
 #include <cstdint>
 #include <string>
 #include <type_traits>
 
-#include "balerion/code_generator.h"
-#include "balerion/macros.h"
+#include "codegen/utils/code_generator.h"
+#include "codegen/utils/macros.h"
 
 namespace llvm { class Twine; }
 
-namespace balerion {
+namespace gpcodegen {
 
 struct AnnotatedType;
 
-/** \addtogroup Balerion
+/** \addtogroup codegen
  *  @{
  */
 
@@ -309,7 +309,7 @@ std::string ClangCompiler::GetLiteralConstant(const CppType constant_value) {
       code_generator_);
 }
 
-}  // namespace balerion
+}  // namespace gpcodegen
 
-#endif  // BALERION_CLANG_COMPILER_H_
+#endif  // GPCODEGEN_CLANG_COMPILER_H_
 // EOF
