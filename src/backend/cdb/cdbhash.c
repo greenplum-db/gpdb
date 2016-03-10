@@ -32,6 +32,7 @@
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
+#include "utils/complex_type.h"
 #include "cdb/cdbhash.h"
 #include "cdb/cdbutil.h"
 
@@ -222,6 +223,11 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 	VarBit		*vbitptr;
 	
 	oidvector  *oidvec_buf;
+	Complex		*complex_ptr;
+	Complex		complex_buf;
+	double		complex_real;
+	double		complex_imag;
+	AclItem		*aclitem_ptr;
 	
 	Cash		cash_buf;
 	pg_uuid_t  *uuid_buf;
@@ -572,6 +578,29 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			buf = (char *)uuid_buf;
 			break;
 				
+		case COMPLEXOID:		
+			complex_ptr  = DatumGetComplexP(datum);
+			complex_real = re(complex_ptr);
+			complex_imag = im(complex_ptr);
+			/*
+			* On IEEE-float machines, minus zero and zero have different bit
+			* patterns but should compare as equal.  We must ensure that they
+			* have the same hash value, which is most easily done this way:
+			*/
+			if (0 == complex_real)
+			{
+				complex_real = (double) 0;
+			}
+			if (0 == complex_imag)
+			{
+				complex_imag = (double) 0;
+			}
+				
+			INIT_COMPLEX(&complex_buf, complex_real, complex_imag);
+			len = sizeof(Complex);
+			buf = (unsigned char *) &complex_buf;
+			break;
+
 		default:
 			ereport(ERROR,
 					(errcode(ERRCODE_CDB_FEATURE_NOT_YET),
@@ -740,6 +769,7 @@ bool isGreenplumDbHashable(Oid typid)
 		case OIDVECTOROID:	
 		case CASHOID: 
 		case UUIDOID:
+		case COMPLEXOID:
 			return true;
 		default:
 			return false;
