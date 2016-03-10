@@ -410,7 +410,13 @@ DESCR("XML content");
 #define XMLOID 142
 DATA(insert OID = 143 ( _xml	   PGNSP PGUID -1 f b t \054 0 142 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
 
-/* OIDS 200 - 299 */
+
+DATA(insert OID = 193 (	complex	   PGNSP PGUID 16 f b t \054 0	0 complex_in complex_out complex_recv complex_send - - - d p f 0 -1 0 _null_ _null_ ));
+DESCR("double-precision floating point complex number, 16-byte storage");
+#define COMPLEXOID 193
+DATA(insert OID = 194 (	_complex	   PGNSP PGUID -1 f b t \054 0	193 array_in array_out array_recv array_send - - - d x f 0 -1 0 _null_ _null_ ));
+
+/*  OIDS 200 - 299  */
 
 DATA(insert OID = 210 (  smgr	   PGNSP PGUID 2 t b t \054 0 0 0 smgrin smgrout - - - - - s p f 0 -1 0 _null_ _null_ ));
 DESCR("storage manager");
