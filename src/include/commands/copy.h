@@ -86,8 +86,8 @@ typedef enum ErrLocType
 typedef enum CopyErrMode
 {
 	ALL_OR_NOTHING,	/* Either all rows or no rows get loaded (the default) */
-	SREH_IGNORE,	/* Sreh - ignore errors (REJECT but no error table) */
-	SREH_LOG		/* Sreh - log errors in an error table */
+	SREH_IGNORE,	/* Sreh - ignore errors (REJECT, but don't log errors) */
+	SREH_LOG		/* Sreh - log errors */
 } CopyErrMode;
 
 
