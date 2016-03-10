@@ -190,7 +190,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 		CreateTableSpaceStmt
 		CreateAssertStmt CreateTrigStmt 
 		CreateUserStmt CreateRoleStmt
-		CreatedbStmt DeclareCursorStmt DefineStmt DeleteStmt
+		CreatedbStmt DeclareCursorStmt DefineStmt DeleteStmt DoStmt
 		DropGroupStmt DropOpClassStmt DropOpFamilyStmt DropPLangStmt DropQueueStmt DropStmt
 		DropAssertStmt DropTrigStmt DropRuleStmt DropCastStmt DropRoleStmt
 		DropUserStmt DropdbStmt
@@ -252,7 +252,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <list>	OptSchemaEltList
 
 %type <boolean> TriggerActionTime TriggerForSpec opt_trusted
-%type <str>		opt_lancompiler
 
 %type <str>		TriggerEvents
 %type <value>	TriggerFuncArg
@@ -262,7 +261,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 				index_name name file_name
 
 %type <list>	func_name handler_name qual_Op qual_all_Op subquery_Op
-				opt_class opt_validator validator_clause
+				opt_class opt_inline_handler opt_validator validator_clause
 
 %type <range>	qualified_name OptConstrFromTable
 
@@ -302,14 +301,14 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 				TableFuncElementList opt_type_modifiers
 				prep_type_clause
 				execute_param_clause using_clause returning_clause
-				table_func_column_list scatter_clause
+				table_func_column_list scatter_clause dostmt_opt_list
 
 %type <node>    table_value_select_clause
 
 %type <range>	OptTempTableName
 %type <into>	into_clause create_as_target
 
-%type <defelt>	createfunc_opt_item common_func_opt_item
+%type <defelt>	createfunc_opt_item common_func_opt_item dostmt_opt_item
 %type <fun_param> func_arg func_arg_with_default table_func_column
 %type <fun_param_mode> arg_class
 %type <typnam>	func_return func_type
@@ -512,7 +511,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	IDENTITY_P IF_P  IGNORE_P ILIKE IMMEDIATE IMMUTABLE IMPLICIT_P IN_P INCLUDING
 	INCLUSIVE
 	INCREMENT
-	INDEX INDEXES INHERIT INHERITS INITIALLY INNER_P INOUT INPUT_P
+	INDEX INDEXES INHERIT INHERITS INITIALLY INLINE_P INNER_P INOUT INPUT_P
 	INSENSITIVE INSERT INSTEAD INT_P INTEGER INTERSECT
 	INTERVAL INTO INVOKER IS ISNULL ISOLATION
 
@@ -520,7 +519,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 	KEY
 
-	LANCOMPILER LANGUAGE LARGE_P LAST_P LEADING LEAST LEFT LEVEL
+	LANGUAGE LARGE_P LAST_P LEADING LEAST LEFT LEVEL
 	LIKE LIMIT LIST LISTEN LOAD LOCAL LOCALTIME LOCALTIMESTAMP LOCATION
 	LOCK_P LOG_P LOGIN_P
 
@@ -728,7 +727,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc INVOKER
 			%nonassoc ISOLATION
 			%nonassoc KEY
-			%nonassoc LANCOMPILER
 			%nonassoc LANGUAGE
 			%nonassoc LARGE_P
 			%nonassoc LAST_P
@@ -1032,6 +1030,7 @@ stmt :
 			| DeclareCursorStmt
 			| DefineStmt
 			| DeleteStmt
+			| DoStmt
 			| DropAssertStmt
 			| DropCastStmt
 			| DropGroupStmt
@@ -4928,19 +4927,20 @@ CreatePLangStmt:
 				n->plname = $5;
 				/* parameters are all to be supplied by system */
 				n->plhandler = NIL;
+				n->plinline = NIL;
 				n->plvalidator = NIL;
 				n->pltrusted = false;
 				$$ = (Node *)n;
 			}
 			| CREATE opt_trusted opt_procedural LANGUAGE ColId_or_Sconst
-			  HANDLER handler_name opt_validator opt_lancompiler
+			  HANDLER handler_name opt_inline_handler opt_validator
 			{
 				CreatePLangStmt *n = makeNode(CreatePLangStmt);
 				n->plname = $5;
 				n->plhandler = $7;
-				n->plvalidator = $8;
+				n->plinline = $8;
+				n->plvalidator = $9;
 				n->pltrusted = $2;
-				/* LANCOMPILER is now ignored entirely */
 				$$ = (Node *)n;
 			}
 		;
@@ -4959,6 +4959,11 @@ handler_name:
 			| name attrs				{ $$ = lcons(makeString($1), $2); }
 		;
 
+opt_inline_handler:
+			INLINE_P handler_name					{ $$ = $2; }
+			| /*EMPTY*/								{ $$ = NIL; }
+		;
+
 validator_clause:
 			VALIDATOR handler_name					{ $$ = $2; }
 			| NO VALIDATOR							{ $$ = NIL; }
@@ -4967,11 +4972,6 @@ validator_clause:
 opt_validator:
 			validator_clause						{ $$ = $1; }
 			| /*EMPTY*/								{ $$ = NIL; }
-		;
-
-opt_lancompiler:
-			LANCOMPILER Sconst						{ $$ = $2; }
-			| /*EMPTY*/								{ $$ = NULL; }
 		;
 
 DropPLangStmt:
@@ -6935,6 +6935,40 @@ any_operator:
 					{ $$ = list_make1(makeString($1)); }
 			| ColId '.' any_operator
 					{ $$ = lcons(makeString($1), $3); }
+		;
+
+
+/*****************************************************************************
+ *
+ *		DO <anonymous code block> [ LANGUAGE language ]
+ *
+ * We use a DefElem list for future extensibility, and to allow flexibility
+ * in the clause order.
+ *
+ *****************************************************************************/
+
+DoStmt: DO dostmt_opt_list
+				{
+					DoStmt *n = makeNode(DoStmt);
+					n->args = $2;
+					$$ = (Node *)n;
+				}
+		;
+
+dostmt_opt_list:
+			dostmt_opt_item						{ $$ = list_make1($1); }
+			| dostmt_opt_list dostmt_opt_item	{ $$ = lappend($1, $2); }
+		;
+
+dostmt_opt_item:
+			Sconst
+				{
+					$$ = makeDefElem("as", (Node *)makeString($1));
+				}
+			| LANGUAGE ColId_or_Sconst 
+				{
+					$$ = makeDefElem("language", (Node *)makeString($2));
+				}
 		;
 
 
@@ -12356,6 +12390,7 @@ unreserved_keyword:
 			| INDEXES
 			| INHERIT
 			| INHERITS
+			| INLINE_P
 			| INPUT_P
 			| INSENSITIVE
 			| INSERT
@@ -12363,7 +12398,6 @@ unreserved_keyword:
 			| INVOKER
 			| ISOLATION
 			| KEY
-			| LANCOMPILER
 			| LANGUAGE
 			| LARGE_P
 			| LAST_P
@@ -12655,7 +12689,6 @@ PartitionIdentKeyword: ABORT_P
 			| INVOKER
 			| ISOLATION
 			| KEY
-			| LANCOMPILER
 			| LANGUAGE
 			| LARGE_P
 			| LAST_P

@@ -1183,10 +1183,10 @@ DROP FUNCTION mpp_pytest();
 ---
 ---
 SELECT * FROM pg_pltemplate WHERE tmplname LIKE '%pljava%' ORDER BY tmplname;
- tmplname | tmpltrusted |     tmplhandler      | tmplvalidator |  tmpllibrary   | tmplacl 
-----------+-------------+----------------------+---------------+----------------+---------
- pljava   | t           | pljava_call_handler  |               | $libdir/pljava | 
- pljavau  | f           | pljavau_call_handler |               | $libdir/pljava | 
+ tmplname | tmpltrusted |     tmplhandler      | tmplinline | tmplvalidator |  tmpllibrary   | tmplacl
+----------+-------------+----------------------+------------+---------------+----------------+---------
+ pljava   | t           | pljava_call_handler  |            |               | $libdir/pljava |
+ pljavau  | f           | pljavau_call_handler |            |               | $libdir/pljava |
 (2 rows)
 
 ---

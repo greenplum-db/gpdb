@@ -607,6 +607,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
    lanispl        boolean, -- Is a procedural language
    lanpltrusted   boolean, -- PL is trusted
    lanplcallfoid  oid,     -- Call handler for PL
+   laninline      oid,	   -- Optional anonymous-block handler function
    lanvalidator   oid,     -- optional validation function
    lanacl         aclitem[] -- Access privileges
    );
@@ -721,6 +722,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
    tmplname       name, 
    tmpltrusted    boolean, 
    tmplhandler    text, 
+   tmplinline     text,
    tmplvalidator  text, 
    tmpllibrary    text, 
    tmplacl        aclitem[]
@@ -1460,6 +1462,7 @@ order by relname, pa1.attnum;
  pg_language                   | lanispl                                           | bool
  pg_language                   | lanpltrusted                                      | bool
  pg_language                   | lanplcallfoid                                     | oid
+ pg_language                   | laninline                                         | oid
  pg_language                   | lanvalidator                                      | oid
  pg_language                   | lanacl                                            | _aclitem
  pg_largeobject                | loid                                              | oid
@@ -1524,6 +1527,7 @@ order by relname, pa1.attnum;
  pg_pltemplate                 | tmplname                                          | name
  pg_pltemplate                 | tmpltrusted                                       | bool
  pg_pltemplate                 | tmplhandler                                       | text
+ pg_pltemplate                 | tmplinline                                        | text
  pg_pltemplate                 | tmplvalidator                                     | text
  pg_pltemplate                 | tmpllibrary                                       | text
  pg_pltemplate                 | tmplacl                                           | _aclitem
@@ -2054,6 +2058,7 @@ order by relname, pa1.attnum;
  pg_language                   | lanispl                                           | bool
  pg_language                   | lanpltrusted                                      | bool
  pg_language                   | lanplcallfoid                                     | oid
+ pg_language                   | laninline                                         | oid
  pg_language                   | lanvalidator                                      | oid
  pg_language                   | lanacl                                            | _aclitem
  pg_largeobject                | loid                                              | oid
@@ -2118,6 +2123,7 @@ order by relname, pa1.attnum;
  pg_pltemplate                 | tmplname                                          | name
  pg_pltemplate                 | tmpltrusted                                       | bool
  pg_pltemplate                 | tmplhandler                                       | text
+ pg_pltemplate                 | tmplinline                                        | text
  pg_pltemplate                 | tmplvalidator                                     | text
  pg_pltemplate                 | tmpllibrary                                       | text
  pg_pltemplate                 | tmplacl                                           | _aclitem

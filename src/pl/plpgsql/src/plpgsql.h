@@ -71,7 +71,7 @@ enum
  * Execution tree node types
  * ----------
  */
-enum
+enum PLpgSQL_stmt_types
 {
 	PLPGSQL_STMT_BLOCK,
 	PLPGSQL_STMT_ASSIGN,
@@ -714,6 +714,8 @@ extern PLpgSQL_plugin **plugin_ptr;
  */
 extern PLpgSQL_function *plpgsql_compile(FunctionCallInfo fcinfo,
 				bool forValidator);
+extern PLpgSQL_function *plpgsql_compile_inline(FunctionCallInfo fcinfo, 
+				char *proc_source);
 extern int	plpgsql_parse_word(char *word);
 extern int	plpgsql_parse_dblword(char *word);
 extern int	plpgsql_parse_tripword(char *word);
@@ -739,6 +741,7 @@ extern void plpgsql_compile_error_callback(void *arg);
  */
 extern void _PG_init(void);
 extern Datum plpgsql_call_handler(PG_FUNCTION_ARGS);
+extern Datum plpgsql_inline_handler(PG_FUNCTION_ARGS);
 extern Datum plpgsql_validator(PG_FUNCTION_ARGS);
 
 /* ----------
@@ -781,6 +784,7 @@ extern void plpgsql_ns_rename(char *oldname, char *newname);
  */
 extern void plpgsql_convert_ident(const char *s, char **output, int numidents);
 extern const char *plpgsql_stmt_typename(PLpgSQL_stmt *stmt);
+extern void plpgsql_free_function_memory(PLpgSQL_function *func);
 extern void plpgsql_dumptree(PLpgSQL_function *func);
 
 /* ----------

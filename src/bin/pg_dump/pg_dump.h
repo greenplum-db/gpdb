@@ -394,6 +394,7 @@ typedef struct _procLangInfo
 	DumpableObject dobj;
 	bool		lanpltrusted;
 	Oid			lanplcallfoid;
+	Oid			laninline;
 	Oid			lanvalidator;
 	char	   *lanacl;
 	char	   *lanowner;		/* name of owner, or empty string */

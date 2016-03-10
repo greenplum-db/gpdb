@@ -3220,6 +3220,7 @@ dumpProcLang(Archive *fout, ProcLangInfo *plang)
 	char	   *qlanname;
 	char	   *lanschema;
 	FuncInfo   *funcInfo;
+	FuncInfo   *inlineInfo = NULL;
 	FuncInfo   *validatorInfo = NULL;
 
 	if (dataOnly)
@@ -3244,12 +3245,19 @@ dumpProcLang(Archive *fout, ProcLangInfo *plang)
 			validatorInfo = NULL;
 	}
 
+	if (OidIsValid(plang->laninline))
+	{
+		inlineInfo = findFuncByOid(plang->laninline);
+		if (inlineInfo != NULL && !inlineInfo->dobj.dump)
+			inlineInfo = NULL;
+	}
 	/*
 	 * If the functions are dumpable then emit a traditional CREATE LANGUAGE
 	 * with parameters.  Otherwise, dump only if shouldDumpProcLangs() says to
 	 * dump it.
 	 */
 	useParams = (funcInfo != NULL &&
+				 (inlineInfo != NULL || !OidIsValid(plang->laninline)) &&
 				 (validatorInfo != NULL || !OidIsValid(plang->lanvalidator)));
 
 	if (!useParams && !shouldDumpProcLangs())
@@ -3280,6 +3288,17 @@ dumpProcLang(Archive *fout, ProcLangInfo *plang)
 	{
 		appendPQExpBuffer(defqry, " HANDLER %s",
 						  fmtId(funcInfo->dobj.name));
+	
+		if (OidIsValid(plang->laninline))
+		{
+			appendPQExpBuffer(defqry, " INLINE ");
+			/* Cope with possibility that inline is in different schema */
+			if (inlineInfo->dobj.namespace != funcInfo->dobj.namespace)
+				appendPQExpBuffer(defqry, "%s.",
+							fmtId(inlineInfo->dobj.namespace->dobj.name));
+			appendPQExpBuffer(defqry, "%s",
+							  fmtId(inlineInfo->dobj.name));
+		}
 		if (OidIsValid(plang->lanvalidator))
 		{
 			appendPQExpBuffer(defqry, " VALIDATOR ");

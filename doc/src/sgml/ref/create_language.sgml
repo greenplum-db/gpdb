@@ -22,7 +22,7 @@ PostgreSQL documentation
 <synopsis>
 CREATE [ PROCEDURAL ] LANGUAGE <replaceable class="parameter">name</replaceable>
 CREATE [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <replaceable class="parameter">name</replaceable>
-    HANDLER <replaceable class="parameter">call_handler</replaceable> [ VALIDATOR <replaceable>valfunction</replaceable> ]
+	HANDLER <replaceable class="parameter">call_handler</replaceable> [ INLINE <replaceable class="parameter">inline_handler</replaceable> ] [ VALIDATOR <replaceable>valfunction</replaceable> ]
 </synopsis>
  </refsynopsisdiv>
 
@@ -120,13 +120,33 @@ CREATE [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <replaceable class="parameter">name</
       <para>
        <replaceable class="parameter">call_handler</replaceable> is
        the name of a previously registered function that will be
-       called to execute the procedural language functions.  The call
+       called to execute the procedural language's functions.  The call
        handler for a procedural language must be written in a compiled
        language such as C with version 1 call convention and
        registered with <productname>PostgreSQL</productname> as a
        function taking no arguments and returning the
        <type>language_handler</type> type, a placeholder type that is
        simply used to identify the function as a call handler.
+      </para>
+     </listitem>
+    </varlistentry>
+
+    <varlistentry>
+     <term><literal>INLINE</literal> <replaceable class="parameter">inline_handler</replaceable></term>
+
+     <listitem>
+      <para>
+       <replaceable class="parameter">inline_handler</replaceable> is the
+       name of a previously registered function that will be called
+       to execute an anonymous code block
+       (<xref linkend="sql-do" endterm="sql-do-title"> command)
+       in this language.
+       If no <replaceable class="parameter">inline_handler</replaceable>
+       function is specified, the language does not support anonymous code blocks.
+       The handler function must take one argument of
+       type <type>internal</type>, which will be the <command>DO</> command's
+       internal representation, and it will typically return
+       <type>void</>.  The return value of the handler is ignored.
       </para>
      </listitem>
     </varlistentry>
@@ -203,10 +223,10 @@ CREATE [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <replaceable class="parameter">name</
   </para>
 
   <para>
-   The call handler function and the validator function (if any)
-   must already exist if the server does not have an entry for the language
-   in <structname>pg_pltemplate</>.  But when there is an entry,
-   the functions need not already exist;
+   The call handler function, the inline handler function (if any),
+   and the validator function (if any) must already exist if the server
+   does not have an entry for the language in <structname>pg_pltemplate</>. 
+   But when there is an entry, the functions need not already exist;
    they will be automatically defined if not present in the database.
    (This might result in <command>CREATE LANGUAGE</> failing, if the
    shared library that implements the language is not available in
@@ -217,7 +237,7 @@ CREATE [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <replaceable class="parameter">name</
    In <productname>PostgreSQL</productname> versions before 7.3, it was
    necessary to declare handler functions as returning the placeholder
    type <type>opaque</>, rather than <type>language_handler</>.
-   To support loading 
+   To support loading
    of old dump files, <command>CREATE LANGUAGE</> will accept a function
    declared as returning <type>opaque</>, but it will issue a notice and
    change the function's declared return type to <type>language_handler</>.
