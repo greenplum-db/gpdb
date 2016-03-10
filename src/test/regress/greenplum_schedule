@@ -81,7 +81,7 @@ test: aggregate_with_groupingsets gp_optimizer
 
 test: nested_case_null
 
-test: qp_as_alias qp_olap_mdqa qp_with_clause qp_misc
+test: qp_olap_mdqa qp_with_clause qp_misc
 
 test: bfv_cte bfv_joins bfv_statistic bfv_subquery bfv_planner bfv_legacy
 
