@@ -127,4 +127,5 @@ test: uaocs_compaction/index_stats
 test: uaocs_compaction/index
 test: uaocs_compaction/drop_column
 
+test: complex
 # end of tests
