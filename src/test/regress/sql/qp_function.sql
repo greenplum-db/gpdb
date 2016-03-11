@@ -112,3 +112,144 @@ select b, percentile_cont(0.9876) within group( order by c::numeric - 2.8765::nu
 select median( c::numeric + (0.2*0.99):: numeric) from perctnum;
 
 select percentile_cont(1.00) within group( order by b::float8 + (110 / 13)::float8) from perctnum; 
+
+--SQL with <> operator with IDF in HAVING clause
+
+select count(*),median(a) from perct group by b having median(b) <> 33 order by median(a);
+
+--SQL with multiple IDF conditions in HAVING clause
+
+select a, avg(b),percentile_cont(0.4) within group (order by a)  from perct group by a having percentile_cont(0.4) within group (order by a)  > 1 and percentile_cont(0.4) within group( order by a ) < 10  order by a;
+
+--SQL with multiple IDF conditions in HAVING clause (including median)
+
+select a, avg(b)  from perct group by a having percentile_cont(0.4) within group (order by a)  > median(b)  order by a desc limit 10;
+
+--SQL with IDF and not in condition in HAVING clause
+
+select  median(b)  from perct group by a having median(a) not in (select avg(b) from perct4) order by median(b) desc limit 10;
+
+--SQL with multiple IDF and not in condition in HAVING clause
+
+select count(*), median(b)  from perct group by a having median(a) not in ( select b from perct4 group by b having median(b) < 5 and percentile_disc(0.9) within group(order by a) > 3) order by median(b) limit 10;
+
+-- SQL with IDF and aggregate func and Over clause
+
+select variance(a) over(partition by median(b))from perct group by a,b order by b limit 10;
+
+-- SQL with IDF in aggregate function - MPP-16862
+
+select median( median(a)) from perct;
+select median(percentile_cont(0.5) within group (order by a)) from perct;
+select a, percentile_disc(0.1234567890)  within group ( order by avg(a)) from perct group by a;
+select a,median( ( count (*) )) from perct group by 1 limit 2;
+
+-- SQL with IDF with SRF
+
+select gendates( '1992-01-01', '1998-08-02', 10 ), median('1day'::interval);
+
+-- SQL with IDF and OVER
+
+
+-- SQL with IDF and Windows function
+
+
+
+-- SQL with IDF on JOIN condition
+
+
+-- SQL with nested IDF
+
+select sum(median(a))  from perct ;
+select median( median(0.9) ) ;
+select median( percentile_cont(0.2) within group( ORDER by 1)) ;
+
+-- SQL with IDF and Grouping Sets
+
+select a,median(b) from perct4 group by median(c);
+
+
+-- SQL with Outer aggregate reference and IDF
+
+select ( (select sum(a) from perct group by b having median(t.a) < 5 limit 1 ) ) from perct t;
+
+select ( select percentile_cont(0.6) within group (order by t.a) from perct where a <10 limit 1 )  from perct t;
+
+-- SQL with Group by () and IDF
+select a,median(b) from perct group by ();
+select a,percentile_cont(0.7) within group(order by b) from perct group by ();
+
+-- SQL with Cube and IDF
+
+-- SQL with GroupingSets and IDF
+select percentile_cont(0.7) within group (order by a) from perct4 group by grouping sets((b),(c), ());
+select median(a) from perct group by grouping sets((), (b));
+
+-- SQL with grouping and IDF
+select a, median(b) , grouping(c) , grouping(a) from perct4 group by grouping sets((a,c),a,c,());
+
+-- SQL with group_id and IDF
+select median(group_id()) from perct group by a,b;
+
+-- SQL with IDF and windows func : ERROR
+
+select percentile_cont(0.2) within group (order by median(a) over()) from perct;
+
+-- SQL with IDF , aggregate func and over clause within IDF : ERROR
+
+select percentile_cont(0.2) within group (order by stddev(b) over() ) from perct;
+select median(avg(a) over()) from perct;
+
+-- SQL with math expression as input to median
+
+select b+1 as col1 ,median(a+b) from perct group by b order by b desc;
+
+select b^2, median((select median(a) from perct) - (select sum(a)/10+ median(a) from perct ) + b + 500) from perct group by b order by b desc ;
+
+-- PERCENTILE FUNCTION: SQL with math expression as input to IDF
+
+select b, percentile_disc(8*9/100 % 10 + 0.1::int) within group (order by a) from perct group by b order by b;
+
+-- SQL with IDF AND ORDER BY constant value
+
+select percentile_disc(0.05::int)  within group (order by a) from perct;
+
+select percentile_disc(0.05::text) within group (order by a) from perct;
+
+-- start_ignore
+CREATE SEQUENCE serial START 101;
+-- end_ignore
+
+select percentile_cont(0.5) within group (order by NEXTVAL('SERIAL')) from perct;
+
+-- SQL with IDF and Date/Time Functions and Operators : Functions and Other operations
+
+select median(double precision '4.95' * interval '1 hour');
+select median('19990101'::date);
+select median('19990101'::timestamp);
+select median('19990101'::timestamptz);
+select median (( EXTRACT(microseconds FROM TIMESTAMP '2012-04-04 14:54:37.843901-07')));
+
+-- SQL contains IDF and group by ()
+select a,percentile_cont(0.9) within group (order by b) from perct4 group by a,() order by a limit 10;
+select a,median(b) from perct group by a,() order by a limit 10;
+select a, median(b) from perct4 GROUP BY GROUPING SETS((a)) order by a limit 10;
+select percentile_cont(0.7) within group (order by a) from perct group by grouping sets((b)) order by 1;
+select DISTINCT percentile_cont(0.7) within group (order by a) from perct group by grouping sets((b), (b)) order by 1;
+
+-- VIEW with IDF and its definition -- Median and subquery
+-- start_ignore
+create view idf_v1 as select median (( select median((select median(a) from perct)) from perct ));
+-- end_ignore
+select pg_get_viewdef('idf_v1');  
+ 
+-- VIEW with IDF and its definition -- Percentile function with wrong input
+-- start_ignore
+create view idf_v4 as select percentile_disc(1.5) within group (order by a) as percentile_disc_a, percentile_disc( 0.9) within group (order by b) as percentile_disc_b  from perct;
+-- end_ignore
+-- Expected Error : input is out of range
+select * from idf_v4;
+
+-- start_ignore
+drop schema qp_idf cascade;
+-- end_ignore
