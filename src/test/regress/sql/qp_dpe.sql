@@ -1,3 +1,4 @@
+-- Testing Dynamic Partition Elimination
 
 -- ----------------------------------------------------------------------
 -- Test: setup.sql
