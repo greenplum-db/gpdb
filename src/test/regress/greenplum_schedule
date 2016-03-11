@@ -89,6 +89,8 @@ test: qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapsca
 
 test: qp_dpe qp_subquery qp_correlated_query qp_function
 
+test: qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4
+
 ignore: tpch500GB_orca
 
 # XXX: This test depends on libgpoptudfs library, which includes ORCA helper
