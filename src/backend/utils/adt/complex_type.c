@@ -12,7 +12,6 @@
  *	src/backend/utils/adt/complex_type.c
  *
  *
- *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
