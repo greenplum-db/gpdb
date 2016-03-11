@@ -60,6 +60,8 @@ env:
     APR_UTIL=apr-util-1.5.4
     APR_TAR=${APR}.tar.gz
     APR_UTIL_TAR=${APR_UTIL}.tar.gz
+  - CC="ccache gcc"
+  - CXX="ccache g++"
 
 before_script:
   - export PATH=$PATH:${TRAVIS_BUILD_DIR}/tools/bin
