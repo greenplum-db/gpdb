@@ -30,7 +30,6 @@ alter table qp_misc_jiras.mpp1318 alter column aa type integer using  bit_length
 drop index qp_misc_jiras.mpp1318_daa;
 alter table qp_misc_jiras.mpp1318 alter column aa type integer using  bit_length(aa);
 drop table qp_misc_jiras.mpp1318;
-\! gpssh-exkeys
 CREATE TABLE qp_misc_jiras.mpp3403_tab(a INT);
 begin;
 INSERT INTO qp_misc_jiras.mpp3403_tab VALUES(1);
