@@ -250,6 +250,14 @@ create view idf_v4 as select percentile_disc(1.5) within group (order by a) as p
 -- Expected Error : input is out of range
 select * from idf_v4;
 
+-- SQL with IDF and distinct
+
+select distinct(median(b)) from perct group by a;
+
+-- SQL with IDF and distinct on
+
+select distinct on (median(a)) median(a) ,b from perct group by b order by median(a),b;
+
 -- start_ignore
 drop schema qp_idf cascade;
 -- end_ignore

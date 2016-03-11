@@ -876,6 +876,40 @@ create view idf_v4 as select percentile_disc(1.5) within group (order by a) as p
 select * from idf_v4;
 ERROR:  input is out of range
 HINT:  Argument to percentile function must be between 0.0 and 1.0.
+-- SQL with IDF and distinct
+select distinct(median(b)) from perct group by a;
+ median 
+--------
+      0
+      1
+      2
+      3
+      4
+      5
+      6
+      7
+      8
+      9
+     10
+(11 rows)
+
+-- SQL with IDF and distinct on
+select distinct on (median(a)) median(a) ,b from perct group by b order by median(a),b;
+ median | b  
+--------+----
+      5 |  0
+   14.5 |  1
+   24.5 |  2
+   34.5 |  3
+   44.5 |  4
+   54.5 |  5
+   64.5 |  6
+   74.5 |  7
+   84.5 |  8
+   94.5 |  9
+    100 | 10
+(11 rows)
+
 -- start_ignore
 drop schema qp_idf cascade;
 NOTICE:  drop cascades to view idf_v4
