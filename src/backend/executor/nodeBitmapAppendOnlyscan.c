@@ -65,6 +65,7 @@ initFetchDesc(BitmapAppendOnlyScanState *scanstate)
 									  estate->es_snapshot,
 									  appendOnlyMetaDataSnapshot);
 			scanstate->baos_currentAOCSFetchDesc = NULL;
+			scanstate->baos_currentAOCSLossyFetchDesc = NULL;
 		}
 	}
 	
@@ -73,6 +74,7 @@ initFetchDesc(BitmapAppendOnlyScanState *scanstate)
 		if (scanstate->baos_currentAOCSFetchDesc == NULL)
 		{
 			bool *proj;
+			bool *projLossy;
 			int colno;
 			Snapshot appendOnlyMetaDataSnapshot = estate->es_snapshot;
 			if (appendOnlyMetaDataSnapshot == SnapshotAny)
@@ -92,9 +94,14 @@ initFetchDesc(BitmapAppendOnlyScanState *scanstate)
 			Assert(currentRelation->rd_att != NULL);
 		
 			proj = (bool *)palloc0(sizeof(bool) * currentRelation->rd_att->natts);
+			projLossy = (bool *)palloc0(sizeof(bool) * currentRelation->rd_att->natts);
 
 			GetNeededColumnsForScan((Node *) node->scan.plan.targetlist, proj, currentRelation->rd_att->natts);
 			GetNeededColumnsForScan((Node *) node->scan.plan.qual, proj, currentRelation->rd_att->natts);
+
+            memcpy(projLossy,proj,sizeof(bool) * currentRelation->rd_att->natts);
+
+			GetNeededColumnsForScan((Node *) node->bitmapqualorig, projLossy, currentRelation->rd_att->natts);
                 
 			for(colno = 0; colno < currentRelation->rd_att->natts; colno++)
 			{
@@ -112,6 +119,24 @@ initFetchDesc(BitmapAppendOnlyScanState *scanstate)
 			
 			scanstate->baos_currentAOCSFetchDesc =
 				aocs_fetch_init(currentRelation, estate->es_snapshot, appendOnlyMetaDataSnapshot, proj);
+
+			for(colno = 0; colno < currentRelation->rd_att->natts; colno++)
+			{
+				if(projLossy[colno])
+					break;
+			}
+			
+			/*
+			 * At least project one column. Since the tids stored in the index may not have
+			 * a correponding tuple any more (because of previous crashes, for example), we
+			 * need to read the tuple to make sure.
+			 */
+			if(colno == currentRelation->rd_att->natts)
+				projLossy[0] = true;
+			
+			scanstate->baos_currentAOCSLossyFetchDesc =
+				aocs_fetch_init(currentRelation, estate->es_snapshot, appendOnlyMetaDataSnapshot, projLossy);
+			
 		}
 	}
 }
@@ -137,6 +162,15 @@ freeFetchDesc(BitmapAppendOnlyScanState *scanstate)
 		aocs_fetch_finish(scanstate->baos_currentAOCSFetchDesc);
 		pfree(scanstate->baos_currentAOCSFetchDesc);
 		scanstate->baos_currentAOCSFetchDesc = NULL;
+	}
+
+	if (scanstate->baos_currentAOCSLossyFetchDesc != NULL)
+	{
+		Assert(!((BitmapAppendOnlyScan *)(scanstate->ss.ps.plan))->isAORow);
+		pfree(scanstate->baos_currentAOCSLossyFetchDesc->proj);
+		aocs_fetch_finish(scanstate->baos_currentAOCSLossyFetchDesc);
+		pfree(scanstate->baos_currentAOCSLossyFetchDesc);
+		scanstate->baos_currentAOCSLossyFetchDesc = NULL;
 	}
 }
 
@@ -192,6 +226,7 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 	ExprContext *econtext;
 	AppendOnlyFetchDesc aoFetchDesc;
 	AOCSFetchDesc aocsFetchDesc;
+	AOCSFetchDesc aocsLossyFetchDesc;
 	Index		scanrelid;
 	Node  		*tbm;
 	TBMIterateResult *tbmres;
@@ -212,6 +247,7 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 
 	aoFetchDesc = node->baos_currentAOFetchDesc;
 	aocsFetchDesc = node->baos_currentAOCSFetchDesc;
+	aocsLossyFetchDesc = node->baos_currentAOCSLossyFetchDesc;
 	scanrelid = ((BitmapAppendOnlyScan *) node->ss.ps.plan)->scan.scanrelid;
 	tbm = node->baos_tbm;
 	tbmres = (TBMIterateResult *) node->baos_tbmres;
@@ -393,8 +429,16 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 		
 		else
 		{
-			Assert(aocsFetchDesc != NULL);
-			aocs_fetch(aocsFetchDesc, &aoTid, slot);
+			if (node->baos_lossy) 
+			{
+				Assert(aocsLossyFetchDesc != NULL);
+				aocs_fetch(aocsLossyFetchDesc, &aoTid, slot);
+			}
+			else
+			{
+				Assert(aocsFetchDesc != NULL);
+				aocs_fetch(aocsFetchDesc, &aoTid, slot);
+			}
 		}
 		
       	if (TupIsNull(slot))
@@ -636,6 +680,7 @@ ExecInitBitmapAppendOnlyScan(BitmapAppendOnlyScan *node, EState *estate, int efl
 
 	scanstate->baos_currentAOFetchDesc = NULL;
 	scanstate->baos_currentAOCSFetchDesc = NULL;
+	scanstate->baos_currentAOCSLossyFetchDesc = NULL;
 	
 	/*
 	 * initialize child nodes
