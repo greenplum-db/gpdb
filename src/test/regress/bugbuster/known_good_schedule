@@ -25,5 +25,4 @@ test: bkup_pg gpmgmt1 cursor metadata_track
 test: memory_quota
 test: TestPSQL
 test: opperf
-test: complex
 # end of tests
