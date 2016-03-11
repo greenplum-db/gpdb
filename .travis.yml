@@ -105,14 +105,12 @@ script:
   - env
   - cd ${TRAVIS_BUILD_DIR}/gpAux/gpdemo
   - make
+  - cat ~/gpAdminLogs/*.log
+  - cat ${TRAVIS_BUILD_DIR}/gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_log/*
   - source gpdemo-env.sh
   - createdb
   - cd ${TRAVIS_BUILD_DIR}/src/test/regress
   - ./pg_regress --init-file=./init_file --schedule=parallel_schedule --schedule=greenplum_schedule
-
-after_failure:
-  - cat ~/gpAdminLogs/*.log
-  - cat ${TRAVIS_BUILD_DIR}/gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_log/*
   - cat ${TRAVIS_BUILD_DIR}/src/test/regress/regression.diffs
 
 ## ----------------------------------------------------------------------
