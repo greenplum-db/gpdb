@@ -3040,7 +3040,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 explain select gp_segment_id, a, func1(a) from qp_misc_jiras.fim1; -- we allow this
                                                                                   QUERY PLAN                                                                                  
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------- 
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..251.38 rows=963 width=8)
    ->  Seq Scan on fim1  (cost=0.00..251.38 rows=321 width=8)
  Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; gp_enable_agg_distinct=off; gp_enable_agg_distinct_pruning=off; optimizer_segments=3
@@ -3069,7 +3069,7 @@ $$
 language plpgsql;
 explain select gp_segment_id, a, func2(a) from qp_misc_jiras.fim1; -- we should disallow this
                                                                                   QUERY PLAN                                                                                  
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..251.38 rows=963 width=8)
    ->  Seq Scan on fim1  (cost=0.00..251.38 rows=321 width=8)
  Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; gp_enable_agg_distinct=off; gp_enable_agg_distinct_pruning=off; optimizer=off; optimizer_segments=3
@@ -3092,7 +3092,7 @@ $$
 language plpgsql;
 explain select gp_segment_id, a, func3(a) from qp_misc_jiras.fim1; -- we allow this
                                                                                   QUERY PLAN                                                                                  
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..251.38 rows=963 width=8)
    ->  Seq Scan on fim1  (cost=0.00..251.38 rows=321 width=8)
  Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; gp_enable_agg_distinct=off; gp_enable_agg_distinct_pruning=off; optimizer=off; optimizer_segments=3
