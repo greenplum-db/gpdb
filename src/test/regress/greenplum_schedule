@@ -87,9 +87,9 @@ test: bfv_cte bfv_joins bfv_statistic bfv_subquery bfv_planner bfv_legacy
 
 test: qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan
 
-test: qp_correlated_query
+test: qp_correlated_query 
 
-test: qp_dpe qp_subquery qp_function
+test: qp_dpe qp_subquery qp_function qp_regexp
 
 ignore: tpch500GB_orca
 
