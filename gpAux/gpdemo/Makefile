@@ -18,7 +18,7 @@ all:
 	$(MAKE) probe
 
 cluster:	
-	@- MASTER_DEMO_PORT=$(MASTER_PORT) DEMO_PORT_BASE=$(PORT_BASE) ./demo_cluster.sh 
+	@ MASTER_DEMO_PORT=$(MASTER_PORT) DEMO_PORT_BASE=$(PORT_BASE) ./demo_cluster.sh 
 	@ echo ""
 
 probe:
