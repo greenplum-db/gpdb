@@ -134,6 +134,19 @@ before_install:
     else
        sudo apt-get -qq update;
        sudo apt-get install -y libperl-dev;
+       sudo apt-get install -y ed;
+       sudo apt-get install -y readline-devel;
+       sudo apt-get install -y zlib-devel;
+       sudo apt-get install -y curl-devel;
+       sudo apt-get install -y bzip2-devel;
+       sudo apt-get install -y python-devel;
+       sudo apt-get install -y apr-devel;
+       sudo apt-get install -y libevent-devel;
+       sudo apt-get install -y openssl-libs openssl-devel;
+       sudo apt-get install -y libyaml libyaml-devel;
+       sudo apt-get install -y epel-release;
+       sudo apt-get install -y htop;
+       sudo apt-get install -y perl-Env;
        sudo sysctl -w kernel.shmmax=500000000;
        sudo sysctl -w kernel.shmmni=4096;
        sudo sysctl -w kernel.shmall=4000000000;
