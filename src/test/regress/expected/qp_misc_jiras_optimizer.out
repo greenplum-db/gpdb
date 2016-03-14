@@ -1,7 +1,7 @@
 set DateStyle="ISO, MDY";
 set gp_create_table_random_default_distribution=off;
-set optimizer_disable_missing_stats_collection=on;
 -- start_ignore
+set optimizer_disable_missing_stats_collection=on;
 create schema qp_misc_jiras;
 create table qp_misc_jiras.mpp3301_foo (c1 int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
@@ -848,11 +848,9 @@ select case when 1=2 then rank() over(partition by j order by i) end from qp_mis
 (100 rows)
 
 drop table qp_misc_jiras.mpp5219_test;
-\echo -- start_ignore
 -- start_ignore
 create language plpgsql;
 NOTICE:  language "plpgsql" already exists, skipping
-\echo -- end_ignore
 -- end_ignore
 DROP TYPE IF EXISTS qp_misc_jiras.mpp4958_percent_cont_type CASCADE;
 NOTICE:  type "qp_misc_jiras.mpp4958_percent_cont_type" does not exist, skipping
@@ -915,7 +913,6 @@ create table qp_misc_jiras.mpp4958_test (i int, j int, k int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into qp_misc_jiras.mpp4958_test select i, i%36, i%109 from generate_series(0, 999999) i;
-\echo -- start_ignore
 -- start_ignore
 select qp_misc_jiras.mpp4958_percent_cont(0.90, i::numeric, j, k) from qp_misc_jiras.mpp4958_test;
  mpp4958_percent_cont 
@@ -923,7 +920,6 @@ select qp_misc_jiras.mpp4958_percent_cont(0.90, i::numeric, j, k) from qp_misc_j
                999975
 (1 row)
 
-\echo -- end_ignore
 -- end_ignore
 drop table qp_misc_jiras.mpp4958_test;
 drop aggregate qp_misc_jiras.mpp4958_percent_cont(real, numeric, bigint, bigint);
@@ -981,7 +977,6 @@ create table qp_misc_jiras.mpp4958_test (i int, j int, k int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into qp_misc_jiras.mpp4958_test select i, i%36, i%109 from generate_series(0, 999999) i;
-\echo -- start_ignore
 -- start_ignore
 select qp_misc_jiras.mpp4958_percent_cont(0.90, i::numeric, j, k) from qp_misc_jiras.mpp4958_test;
  mpp4958_percent_cont 
@@ -989,7 +984,6 @@ select qp_misc_jiras.mpp4958_percent_cont(0.90, i::numeric, j, k) from qp_misc_j
      999954.099989414
 (1 row)
 
-\echo -- end_ignore
 -- end_ignore
 drop table qp_misc_jiras.mpp4958_test;
 drop aggregate qp_misc_jiras.mpp4958_percent_cont(real,numeric,bigint,bigint);
@@ -1029,14 +1023,12 @@ select * from qp_misc_jiras.mpp4622_ext2;
 drop external web table qp_misc_jiras.mpp4622_ext1;
 drop external web table qp_misc_jiras.mpp4622_ext2;
 create external web table qp_misc_jiras.mpp3286_ext_hostname (hostname text) execute 'hostname' format 'text'; 
-\echo --start_ignore
 --start_ignore
 select * from qp_misc_jiras.mpp3286_ext_hostname,gp_configuration;
  hostname | content | definedprimary | dbid | isprimary | valid | hostname | port | datadir 
 ----------+---------+----------------+------+-----------+-------+----------+------+---------
 (0 rows)
 
-\echo --end_ignore
 --end_ignore
 drop external web table qp_misc_jiras.mpp3286_ext_hostname;
 create table qp_misc_jiras.mpp5305_test(a int, b int);
@@ -1657,13 +1649,9 @@ select * from qp_misc_jiras.mpp6419_test where '2009-12-12'::date = (select 'tes
 (0 rows)
 
 drop table qp_misc_jiras.mpp6419_test;
-\echo -- start_matchsubs
 -- start_matchsubs
-\echo -- m/pg_temp/
 -- m/pg_temp/
-\echo '-- s/pg_temp_(\\d)+/pg_temp_xx/'
--- s/pg_temp_(\d)+/pg_temp_xx/
-\echo -- end_matchsubs
+-- s/pg_temp_(\\d)+/pg_temp_xx/
 -- end_matchsubs
 create temp table qp_misc_jiras_foo (a int, b text);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -3129,20 +3117,6 @@ SELECT * FROM qp_misc_jiras.tableCC;
    3 | foobar   |    5 |  6 |        7 |    8 |    9 |   10
 (1 row)
 
--- --------------------------------------------------------------------------------------
--- COPYRIGHT: Copyright (c) 2010, Greenplum.  All rights reserved.
--- PURPOSE: Verify bug: MPP-6870
---      CREATE INDEX + SELECT hitting Out-Of-Memory problem while using 'inet' data type
---		in the distributed key column
--- AUTHOR: Ngoc Lam-Miller
---
--- WARNINGS (if applicable):
--- ALGORITHM (optional):
--- LAST MODIFIED:
---      - 2010/01/25: initial version
---	- 2010/01/26: modified the generation of the first IP octet (from %200 to %201): 
---		==> IPs should be hashed to all segments now
--- --------------------------------------------------------------------------------------
 -- start_ignore
 DROP TABLE IF EXISTS qp_misc_jiras.inet_ip_pairs CASCADE;
 NOTICE:  table "inet_ip_pairs" does not exist, skipping
@@ -3182,18 +3156,6 @@ SELECT gp_segment_id,count(*) FROM qp_misc_jiras.inet_ip_pairs GROUP BY 1;
 -- start_ignore
 DROP TABLE IF EXISTS qp_misc_jiras.inet_ip_pairs CASCADE;
 -- end_ignore
--- --------------------------------------------------------------------------------------
--- COPYRIGHT: Copyright (c) 2010, Greenplum.  All rights reserved.
--- PURPOSE: Verify bug: MPP-7498
---	Drop table if exists cascade causing catalog corruption 
---		(orphan relations on the segments)
--- AUTHOR: Ngoc Lam-Miller
---
--- WARNINGS (if applicable):
--- ALGORITHM (optional):
--- LAST MODIFIED:
---      - 2010/01/28: initial version
--- --------------------------------------------------------------------------------------
 set gp_autostats_mode=none;
 -- start_ignore
 drop table if exists qp_misc_jiras.mpp_7498_t1, qp_misc_jiras.mpp_7498_t2, qp_misc_jiras.mpp_7498_t3 cascade;
@@ -3210,11 +3172,6 @@ NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entr
 drop table qp_misc_jiras.mpp_7498_t2;
 drop table if exists qp_misc_jiras.mpp_7498_t1, qp_misc_jiras.mpp_7498_t2, qp_misc_jiras.mpp_7498_t3 cascade;
 NOTICE:  table "mpp_7498_t2" does not exist, skipping
--- --------------------------------------------------------
--- MPP-7498: the original problem: 
--- create table t1(x int, y text) distributed by (x);
---     ERROR:  relation "t1" already exists  (seg0 sysadmins-macbook-pro.local:51401 pid=40168)
--- --------------------------------------------------------
 create table qp_misc_jiras.mpp_7498_t1(x int, y text) distributed by (x);
 insert into qp_misc_jiras.mpp_7498_t1 select x, 'foo' from generate_series(1,70000) x;
 create table qp_misc_jiras.mpp_7498_t2 as select * from qp_misc_jiras.mpp_7498_t1;
@@ -3225,17 +3182,6 @@ NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entr
 -- start_ignore
 drop table if exists qp_misc_jiras.mpp_7498_t1, qp_misc_jiras.mpp_7498_t2, qp_misc_jiras.mpp_7498_t3 cascade;
 -- end_ignore
--- --------------------------------------------------------------------------------------
--- COPYRIGHT: Copyright (c) 2010, Greenplum.  All rights reserved.
--- PURPOSE: Verify bug: MPP-7886
---	PostgreSQL functions currtid and currtid2 fail.
--- AUTHOR: Lyublena Antova
---
--- WARNINGS (if applicable):
--- ALGORITHM (optional):
--- LAST MODIFIED:
---      - 2010/02/02: initial version
--- --------------------------------------------------------------------------------------
 -- start_ignore
 DROP TABLE IF EXISTS qp_misc_jiras.mpp7886_foo;
 NOTICE:  table "mpp7886_foo" does not exist, skipping
@@ -3313,17 +3259,6 @@ select sum(z) as c from qp_misc_jiras.mpp7957_foo group by cube(z) order by c;
 (2 rows)
 
 drop table qp_misc_jiras.mpp7957_foo;
--- --------------------------------------------------------------------------------------
--- COPYRIGHT: Copyright (c) 2010, Greenplum.  All rights reserved.
--- PURPOSE: Verify fix for bug: MPP-6421
---	Immutable functions as non-superusers causes SIGSEGV
--- AUTHOR: Lyublena Antova
---
--- WARNINGS (if applicable):
--- ALGORITHM (optional):
--- LAST MODIFIED:
---      - 2010/02/17: initial version
--- --------------------------------------------------------------------------------------
 -- start_ignore
 DROP SCHEMA IF EXISTS mustan CASCADE;
 NOTICE:  schema "mustan" does not exist, skipping
@@ -3444,17 +3379,6 @@ select * from mustan.f7( '20080102' );--
  2008-01-02
 (1 row)
 
---------------------------------------------------------------------------------------
--- COPYRIGHT: Copyright (c) 2010, Greenplum.  All rights reserved.
--- PURPOSE: Verify fix for bug: MPP-5994
---	getting group agg instead of hash agg (even though enable_groupagg='off')
--- AUTHOR: Lyublena Antova
---
--- WARNINGS (if applicable):
--- ALGORITHM (optional):
--- LAST MODIFIED:
---      - 2010/02/18: initial version
--- --------------------------------------------------------------------------------------
 -- start_ignore
 drop table if exists qp_misc_jiras.mpp5994_test;
 NOTICE:  table "mpp5994_test" does not exist, skipping
@@ -3674,20 +3598,6 @@ select pg_get_partition_def('qp_misc_jiras.mpp8258'::regclass, true);
 
 drop table qp_misc_jiras.mpp8258;
 -- start_ignore
--- --------------------------------------------------------------------------------------
--- COPYRIGHT: Copyright (c) 2010, Greenplum.  All rights reserved.
--- PURPOSE: Verify bug: MPP-5032
---	Temp table inside a stored procedure: OID is cached in function execution plan
---		Executing function the second time runs into OID doesn't exist problem
--- AUTHOR: Ngoc Lam-Miller
---
--- WARNINGS (if applicable):
--- ALGORITHM (optional):
--- LAST MODIFIED:
---      - 2010/03/26: initial version
--- --------------------------------------------------------------------------------------
--- end_ignore
--- start_ignore
 DROP FUNCTION qp_misc_jiras.mpp5032_func();
 ERROR:  function qp_misc_jiras.mpp5032_func() does not exist
 -- end_ignore
@@ -3721,19 +3631,6 @@ PL/pgSQL function "mpp5032_func" line 2 at SQL statement
 DROP FUNCTION qp_misc_jiras.mpp5032_func();
 -- end_ignore
 -- start_ignore
--- --------------------------------------------------------------------------------------
--- COPYRIGHT: Copyright (c) 2010, Greenplum.  All rights reserved.
--- PURPOSE: Verify bug: MPP-5032
---	Work-around MPP-5032
--- AUTHOR: Ngoc Lam-Miller
---
--- WARNINGS (if applicable):
--- ALGORITHM (optional):
--- LAST MODIFIED:
---      - 2010/03/26: initial version
--- --------------------------------------------------------------------------------------
--- end_ignore
--- start_ignore
 DROP FUNCTION qp_misc_jiras.mpp5032_func();
 ERROR:  function qp_misc_jiras.mpp5032_func() does not exist
 -- end_ignore
@@ -3765,20 +3662,6 @@ PL/pgSQL function "mpp5032_func" line 2 at SQL statement
 
 -- start_ignore
 DROP FUNCTION qp_misc_jiras.mpp5032_func();
--- end_ignore
--- start_ignore
--- --------------------------------------------------------------------------------------
--- COPYRIGHT: Copyright (c) 2010, Greenplum.  All rights reserved.
--- PURPOSE: Verify bug: MPP-6135
---     QE process received SIGSEGV on second agg-query. 
---     
--- AUTHOR: this repro is added by Ngoc
---
--- WARNINGS (if applicable):
--- ALGORITHM (optional):
--- LAST MODIFIED:
---      - 2010/03/27: initial version - imported from qp_misc_jiras.mpp-6135-repro-b.sql
--- --------------------------------------------------------------------------------------
 -- end_ignore
 -- start_ignore
 drop table utable cascade;
@@ -3860,20 +3743,6 @@ NOTICE:  drop cascades to rule _RETURN on view uview
 NOTICE:  drop cascades to view uview
 -- end_ignore
 -- start_ignore
--- --------------------------------------------------------------------------------------
--- COPYRIGHT: Copyright (c) 2010, Greenplum.  All rights reserved.
--- PURPOSE: Verify bug: MPP-6325
---     Grouping planner represents grouping keys as bogus vars
---
--- AUTHOR: this repro is added by Ngoc
---
--- WARNINGS (if applicable):
--- ALGORITHM (optional):
--- LAST MODIFIED:
---      - 2010/03/27: initial version - imported from MPP-6325 minimal2.sql
--- --------------------------------------------------------------------------------------
--- end_ignore
--- start_ignore
 drop table qp_misc_jiras.foo_6325;
 ERROR:  table "foo_6325" does not exist
 drop table qp_misc_jiras.bar_6325;
@@ -3934,20 +3803,6 @@ insert into qp_misc_jiras.abc_mpp8621 select i % 100, (i+1) % 100 from generate_
 DROP TABLE qp_misc_jiras.abc_mpp8621;
 -- end_ignore
 -- start_ignore
--- --------------------------------------------------------------------------------------
--- COPYRIGHT: Copyright (c) 2010, Greenplum.  All rights reserved.
--- PURPOSE: Verify bug: MPP-8860
---	"ERROR: table row type and query-specified row type do not match" for text/varchar types	
---
--- AUTHOR: this repro is added by Ngoc
---
--- WARNINGS (if applicable):
--- ALGORITHM (optional):
--- LAST MODIFIED:
---      - 2010/04/16: initial version - imported from qp_misc_jiras.mpp-8860
--- --------------------------------------------------------------------------------------
--- end_ignore
--- start_ignore
 drop table if exists qp_misc_jiras.mpp8860_1;
 NOTICE:  table "mpp8860_1" does not exist, skipping
 drop table if exists qp_misc_jiras.mpp8860_2;
@@ -3970,7 +3825,6 @@ drop table if exists qp_misc_jiras.mpp8860_1;
 drop table if exists qp_misc_jiras.mpp8860_2;
 -- end_ignore
 -- MPP-9739: Unicode not supported - chr() ascii() functions do not return unicode codepoints for multibyte characters
--- Johnny Soedomo
 Create Table qp_misc_jiras.mpp9739_unicode_test
 (
 id int Not Null,
@@ -3994,20 +3848,6 @@ By id;
 (2 rows)
 
 drop table qp_misc_jiras.mpp9739_unicode_test;
--- start_ignore
--- --------------------------------------------------------------------------------------
--- COPYRIGHT: Copyright (c) 2010, Greenplum.  All rights reserved.
--- PURPOSE: Verify bug: MPP-9613
---     Function cannot execute on segment because it accesses relation in public schema
---
--- AUTHOR: this repro is added by Ngoc
---
--- WARNINGS (if applicable):
--- ALGORITHM (optional):
--- LAST MODIFIED:
---      - 2010/05/28: initial version - imported from MPP-9613 repro.sql
--- --------------------------------------------------------------------------------------
--- end_ignore
 --
 -- Create table qp_misc_jiras.mpp9613
 --
@@ -4139,13 +3979,11 @@ show autovacuum;
 
 set autovacuum=on;
 ERROR:  parameter "autovacuum" cannot be changed now
-\echo '-- start_ignore'
 -- start_ignore
 drop table if exists qp_misc_jiras.mpp9706ao;
 NOTICE:  table "mpp9706ao" does not exist, skipping
 drop table if exists qp_misc_jiras.mpp9706aoc;
 NOTICE:  table "mpp9706aoc" does not exist, skipping
-\echo '-- end_ignore'
 -- end_ignore
 create table qp_misc_jiras.mpp9706ao ( a int ) with (appendonly=true, compresslevel=5) distributed by (a);
 create table qp_misc_jiras.mpp9706aoc ( a int ) with (appendonly=true, compresslevel=5, orientation=column) distributed by (a);
@@ -4225,14 +4063,6 @@ drop index qp_misc_jiras.badbitmapindex1;
 drop index qp_misc_jiras.bmap2_index;
 drop table qp_misc_jiras.badbitmapindex;
 drop table qp_misc_jiras.bmap2;
--- start_ignore
--- --------------------------------------------------------------------------
--- QA-1203:
--- from Nitasha: the statement "set statement_timeout=0;"
---               might intermittently return "ERROR:  canceling statement due to statement timeout"
---               => if this statement fails everyday, reopen QA-1203
--- --------------------------------------------------------------------------
--- end_ignore
 CREATE TABLE qp_misc_jiras.execution_table (
  id integer,
  status integer,
@@ -4326,13 +4156,11 @@ else 'Unidentify' end
 (16 rows)
 
 DROP TABLE qp_misc_jiras.ir_voice_sms_and_data;
-\echo '-- start_ignore'
 -- start_ignore
 drop table if exists qp_misc_jiras.x cascade;
 NOTICE:  table "x" does not exist, skipping
 drop table if exists qp_misc_jiras.r cascade;
 NOTICE:  table "r" does not exist, skipping
-\echo '-- end_ignore'
 -- end_ignore
 create table qp_misc_jiras.x (a int, b int) distributed by (a);
 set gp_debug_linger=0;
@@ -5357,7 +5185,6 @@ select * from qp_misc_jiras.mpp13491_aocol;
 (1 row)
 
 drop table qp_misc_jiras.mpp13491_aocol;
-\echo -- start_ignore
 -- start_ignore
 drop function if exists test();
 NOTICE:  function test() does not exist, skipping
@@ -5366,7 +5193,6 @@ NOTICE:  table "_mpp10050_test" does not exist, skipping
 create language plpgsql;
 NOTICE:  language "plpgsql" already exists, skipping
 create table qp_misc_jiras._mpp10050_test (id int) distributed randomly;
-\echo -- end_ignore
 -- end_ignore
 create function test()
 returns void
