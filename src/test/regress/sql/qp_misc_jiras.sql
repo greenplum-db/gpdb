@@ -2564,7 +2564,6 @@ set statement_timeout=0;
 DROP TABLE qp_misc_jiras.execution_table;
 DROP TABLE qp_misc_jiras.execution_t2;
 
-set gp_debug_linger=3;
 
 CREATE TABLE qp_misc_jiras.ir_voice_sms_and_data (
     imsi_number character varying(35),
@@ -2597,7 +2596,6 @@ drop table if exists qp_misc_jiras.r cascade;
 -- end_ignore
 create table qp_misc_jiras.x (a int, b int) distributed by (a);
 
-set gp_debug_linger=0;
 
 --create index xi on x(a);
 
