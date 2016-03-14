@@ -115,6 +115,7 @@ static Node *makeIntConst(int val, int location);
 static Node *makeFloatConst(char *str, int location);
 static Node *makeNullAConst(int location);
 static Node *makeAConst(Value *v, int location);
+static Node *makeAArrayExpr(List *elements);
 static A_Const *makeBoolAConst(bool state, int location);
 static FuncCall *makeOverlaps(List *largs, List *rargs, int location);
 static void check_qualified_name(List *names);
@@ -11607,6 +11608,28 @@ expr_list:	a_expr
 				}
 		;
 
+type_list:	Typename								{ $$ = list_make1($1); }
+			| type_list ',' Typename				{ $$ = lappend($1, $3); }
+		;
+
+array_expr: '[' expr_list ']'
+				{
+					$$ = makeAArrayExpr($2);
+				}
+			| '[' array_expr_list ']'
+				{
+					$$ = makeAArrayExpr($2);
+				}
+            | '[' ']'
+                {
+                    $$ = makeAArrayExpr(NIL);
+                }
+        ;
+
+array_expr_list: array_expr							{ $$ = list_make1($1); }
+			| array_expr_list ',' array_expr		{ $$ = lappend($1, $3); }
+		;
+
 extract_list:
 			extract_arg FROM a_expr
 				{
@@ -11616,30 +11639,6 @@ extract_list:
 					$$ = list_make2((Node *) n, $3);
 				}
 			| /*EMPTY*/								{ $$ = NIL; }
-		;
-
-type_list:	Typename								{ $$ = list_make1($1); }
-			| type_list ',' Typename				{ $$ = lappend($1, $3); }
-		;
-
-array_expr_list: array_expr
-				{	$$ = list_make1($1);		}
-			| array_expr_list ',' array_expr
-				{	$$ = lappend($1, $3);	}
-		;
-
-array_expr: '[' expr_list ']'
-				{
-					ArrayExpr *n = makeNode(ArrayExpr);
-					n->elements = $2;
-					$$ = (Node *)n;
-				}
-			| '[' array_expr_list ']'
-				{
-					ArrayExpr *n = makeNode(ArrayExpr);
-					n->elements = $2;
-					$$ = (Node *)n;
-				}
 		;
 
 /* Allow delimited string SCONST in extract_arg as an SQL extension.
@@ -13200,13 +13199,6 @@ makeColumnRef(char *colname, List *indirection, int location)
 static Node *
 makeTypeCast(Node *arg, TypeName *typename, int location)
 {
-	/*
-	 * Simply generate a TypeCast node.
-	 *
-	 * Earlier we would determine whether an A_Const would
-	 * be acceptable, however Domains require coerce_type()
-	 * to process them -- applying constraints as required.
-	 */
 	TypeCast *n = makeNode(TypeCast);
 	n->arg = arg;
 	n->typname = typename;
@@ -13295,7 +13287,7 @@ makeBoolAConst(bool state, int location)
 {
 	A_Const *n = makeNode(A_Const);
 	n->val.type = T_String;
-	n->val.val.str = (state? "t": "f");
+	n->val.val.str = (state ? "t" : "f");
 	n->typname = SystemTypeName("bool");
 	n->location = location;
 	return n;
@@ -13500,15 +13492,6 @@ SystemTypeName(char *name)
 											   makeString(name)));
 }
 
-/* parser_init()
- * Initialize to parse one query string
- */
-void
-parser_init(void)
-{
-	QueryIsRule = FALSE;
-}
-
 /* exprIsNullConstant()
  * Test whether an a_expr is a plain NULL constant or not.
  */
@@ -13584,6 +13567,15 @@ doNegateFloat(Value *v)
 	}
 }
 
+static Node*
+makeAArrayExpr(List *elements)
+{
+	A_ArrayExpr *n = makeNode(A_ArrayExpr);
+
+	n->elements = elements;
+	return (Node *) n;
+}
+
 static Node *
 makeXmlExpr(XmlExprOp op, char *name, List *named_args, List *args,
 			int location)
@@ -13604,6 +13596,15 @@ makeXmlExpr(XmlExprOp op, char *name, List *named_args, List *args,
 	x->type = InvalidOid;			/* marks the node as not analyzed */
 	x->location = location;
 	return (Node *) x;
+}
+
+/* parser_init()
+ * Initialize to parse one query string
+ */
+void
+parser_init(void)
+{
+    QueryIsRule = FALSE;
 }
 
 /*

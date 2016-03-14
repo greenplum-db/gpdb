@@ -2410,6 +2410,15 @@ _copyA_Indirection(A_Indirection *from)
 	return newnode;
 }
 
+static A_ArrayExpr *
+_copyA_ArrayExpr(A_ArrayExpr *from)
+{
+	A_ArrayExpr *newnode = makeNode(A_ArrayExpr);
+	COPY_NODE_FIELD(elements);
+
+	return newnode;
+}
+
 static ResTarget *
 _copyResTarget(ResTarget *from)
 {
@@ -4985,6 +4994,9 @@ copyObject(void *from)
 			break;
 		case T_A_Indirection:
 			retval = _copyA_Indirection(from);
+			break;
+		case T_A_ArrayExpr:
+			retval = _copyA_ArrayExpr(from);
 			break;
 		case T_ResTarget:
 			retval = _copyResTarget(from);

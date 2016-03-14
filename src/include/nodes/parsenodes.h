@@ -301,9 +301,9 @@ typedef struct A_Const
  * TypeCast - a CAST expression
  *
  * NOTE: for mostly historical reasons, A_Const parsenodes contain
- * room for a TypeName; we only generate a separate TypeCast node if the
- * argument to be casted is not a constant.  In theory either representation
- * would work, but the combined representation saves a bit of code in many
+ * room for a TypeName, allowing a constant to be marked as being of a given
+ * type without a separate TypeCast node.  Either representation will work,
+ * but the combined representation saves a bit of code in many
  * productions in gram.y.
  */
 typedef struct TypeCast
@@ -376,7 +376,7 @@ typedef struct A_ArrayExpr
 {
 	NodeTag		type;
 	List	   *elements;		/* array element expressions */
-	int			location;		/* token location, or -1 if unknown */
+//	int			location;		/* token location, or -1 if unknown */
 } A_ArrayExpr;
 
 /*

@@ -1856,6 +1856,21 @@ _readArrayExpr(void)
 }
 
 /*
+ * _readA_ArrayExpr
+ */
+static A_ArrayExpr *
+_readA_ArrayExpr(void)
+{
+	READ_LOCALS(A_ArrayExpr);
+
+	READ_NODE_FIELD(elements);
+
+	READ_DONE();
+}
+
+
+
+/*
  * _readRowExpr
  */
 static RowExpr *
@@ -3182,6 +3197,7 @@ static ParseNodeInfo infoAr[] =
 	{"WINDOWSPECPARSE", (ReadFn)_readWindowSpecParse},
 	{"WITHCLAUSE", (ReadFn)_readWithClause},
 	{"XMLEXPR", (ReadFn)_readXmlExpr},
+	{"A_ARRAY", (ReadFn)_readA_ArrayExpr},
 };
 
 /*

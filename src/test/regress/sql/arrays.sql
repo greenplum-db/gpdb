@@ -287,7 +287,7 @@ select E'{{1,2},\\{2,3}}'::text[];
 select '{{"1 2" x},{3}}'::text[];
 select '{}}'::text[];
 select '{ }}'::text[];
--- select array[];  -- MPP-11851
+select array[];
 -- none of the above should be accepted
 
 -- all of the following should be accepted
@@ -300,7 +300,7 @@ select '{
            0 second,
            @ 1 hour @ 42 minutes @ 20 seconds
          }'::interval[];
--- select array[]::text[];  -- MPP-11851
+select array[]::text[];
 select '[0:1]={1.1,2.2}'::float8[];
 -- all of the above should be accepted
 

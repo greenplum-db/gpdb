@@ -4338,6 +4338,15 @@ get_rule_expr(Node *node, deparse_context *context,
 				appendStringInfo(buf, "ARRAY[");
 				get_rule_expr((Node *) arrayexpr->elements, context, true);
 				appendStringInfoChar(buf, ']');
+
+				/*
+				 * If the array isn't empty, we assume its elements are
+				 * coerced to the desired type.  If it's empty, though, we
+				 * need an explicit coercion to the array type.
+				 */
+				if (arrayexpr->elements == NIL)
+					appendStringInfo(buf, "::%s",
+						format_type_with_typemod(arrayexpr->array_typeid, -1));
 			}
 			break;
 

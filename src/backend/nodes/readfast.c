@@ -2873,6 +2873,9 @@ readNodeBinary(void)
 			case T_ArrayExpr:
 				return_value = _readArrayExpr();
 				break;
+			case T_A_ArrayExpr:
+				return_value = _readA_ArrayExpr();
+				break;
 			case T_RowExpr:
 				return_value = _readRowExpr();
 				break;

@@ -47,9 +47,11 @@ select myleast(variadic array[1.1, -5.5]);
 
 --test with empty variadic call parameter
 select myleast(variadic array[]::int[]);
-ERROR:  syntax error at or near "]"
-LINE 1: select myleast(variadic array[]::int[]);
-                                      ^
+ myleast
+---------
+
+(1 row)
+
 -- an example with some ordinary arguments too
 create or replace function concat(text, variadic anyarray) returns text as $$
   select array_to_string($2, $1);

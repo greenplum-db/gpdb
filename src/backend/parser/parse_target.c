@@ -1385,7 +1385,7 @@ FigureColnameInternal(Node *node, char **name)
 				return 1;
 			}
 			break;
-		case T_ArrayExpr:
+		case T_A_ArrayExpr:
 			/* make ARRAY[] act like a function */
 			*name = "array";
 			return 2;
