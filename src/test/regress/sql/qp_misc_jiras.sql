@@ -3,66 +3,66 @@ set gp_create_table_random_default_distribution=off;
 -- start_ignore
 set optimizer_disable_missing_stats_collection=on;
 create schema qp_misc_jiras;
-create table qp_misc_jiras.mpp3301_foo (c1 int);
-create external web table qp_misc_jiras.mpp3301_bar(like qp_misc_jiras.mpp3301_foo) execute 'echo 1' on master format 'csv';
+create table qp_misc_jiras.tbl3301_foo (c1 int);
+create external web table qp_misc_jiras.tbl3301_bar(like qp_misc_jiras.tbl3301_foo) execute 'echo 1' on master format 'csv';
 -- end_ignore
-insert into qp_misc_jiras.mpp3301_foo select * from qp_misc_jiras.mpp3301_bar;
+insert into qp_misc_jiras.tbl3301_foo select * from qp_misc_jiras.tbl3301_bar;
 
-select * from qp_misc_jiras.mpp3301_foo;
-create table qp_misc_jiras.mpp1318(dummy integer, aa text not null);
-create index mpp1318_daa on qp_misc_jiras.mpp1318(dummy,aa);
-alter table qp_misc_jiras.mpp1318 alter column aa type integer using  bit_length(aa);
-drop index qp_misc_jiras.mpp1318_daa;
-alter table qp_misc_jiras.mpp1318 alter column aa type integer using  bit_length(aa);
-drop table qp_misc_jiras.mpp1318;
+select * from qp_misc_jiras.tbl3301_foo;
+create table qp_misc_jiras.tbl1318(dummy integer, aa text not null);
+create index tbl1318_daa on qp_misc_jiras.tbl1318(dummy,aa);
+alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
+drop index qp_misc_jiras.tbl1318_daa;
+alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
+drop table qp_misc_jiras.tbl1318;
 
-create table qp_misc_jiras.mpp1318(dummy integer, aa text not null);
-create index concurrently a_daa on qp_misc_jiras.mpp1318(dummy,aa);
-alter table qp_misc_jiras.mpp1318 alter column aa type integer using  bit_length(aa);
-drop index qp_misc_jiras.mpp1318_daa;
-alter table qp_misc_jiras.mpp1318 alter column aa type integer using  bit_length(aa);
-drop table qp_misc_jiras.mpp1318;
+create table qp_misc_jiras.tbl1318(dummy integer, aa text not null);
+create index concurrently a_daa on qp_misc_jiras.tbl1318(dummy,aa);
+alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
+drop index qp_misc_jiras.tbl1318_daa;
+alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
+drop table qp_misc_jiras.tbl1318;
 
-create table qp_misc_jiras.mpp1318(dummy integer, aa text not null);
-create index mpp1318_daa on qp_misc_jiras.mpp1318 using bitmap(dummy,aa);
-alter table qp_misc_jiras.mpp1318 alter column aa type integer using  bit_length(aa);
-drop index qp_misc_jiras.mpp1318_daa;
-alter table qp_misc_jiras.mpp1318 alter column aa type integer using  bit_length(aa);
-drop table qp_misc_jiras.mpp1318;
-CREATE TABLE qp_misc_jiras.mpp3403_tab(a INT);
+create table qp_misc_jiras.tbl1318(dummy integer, aa text not null);
+create index tbl1318_daa on qp_misc_jiras.tbl1318 using bitmap(dummy,aa);
+alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
+drop index qp_misc_jiras.tbl1318_daa;
+alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
+drop table qp_misc_jiras.tbl1318;
+CREATE TABLE qp_misc_jiras.tbl3403_tab(a INT);
 begin;
-INSERT INTO qp_misc_jiras.mpp3403_tab VALUES(1);
-INSERT INTO qp_misc_jiras.mpp3403_tab VALUES(2);
-INSERT INTO qp_misc_jiras.mpp3403_tab VALUES(3);
-SAVEPOINT s; DELETE FROM qp_misc_jiras.mpp3403_tab; ROLLBACK TO SAVEPOINT s;
-SELECT a FROM qp_misc_jiras.mpp3403_tab ORDER BY a;
-SAVEPOINT s; DELETE FROM qp_misc_jiras.mpp3403_tab; ROLLBACK TO SAVEPOINT s;
-SAVEPOINT s; DELETE FROM qp_misc_jiras.mpp3403_tab; ROLLBACK TO SAVEPOINT s;
-SAVEPOINT s; DELETE FROM qp_misc_jiras.mpp3403_tab; ROLLBACK TO SAVEPOINT s;
-SELECT a FROM qp_misc_jiras.mpp3403_tab ORDER BY a;
+INSERT INTO qp_misc_jiras.tbl3403_tab VALUES(1);
+INSERT INTO qp_misc_jiras.tbl3403_tab VALUES(2);
+INSERT INTO qp_misc_jiras.tbl3403_tab VALUES(3);
+SAVEPOINT s; DELETE FROM qp_misc_jiras.tbl3403_tab; ROLLBACK TO SAVEPOINT s;
+SELECT a FROM qp_misc_jiras.tbl3403_tab ORDER BY a;
+SAVEPOINT s; DELETE FROM qp_misc_jiras.tbl3403_tab; ROLLBACK TO SAVEPOINT s;
+SAVEPOINT s; DELETE FROM qp_misc_jiras.tbl3403_tab; ROLLBACK TO SAVEPOINT s;
+SAVEPOINT s; DELETE FROM qp_misc_jiras.tbl3403_tab; ROLLBACK TO SAVEPOINT s;
+SELECT a FROM qp_misc_jiras.tbl3403_tab ORDER BY a;
 COMMIT;
-SELECT a FROM qp_misc_jiras.mpp3403_tab ORDER BY a;
-drop table qp_misc_jiras.mpp3403_tab;
-create table qp_misc_jiras.mpp2788 as select * from generate_series(1, 1000);
-\d qp_misc_jiras.mpp2788;
-drop table qp_misc_jiras.mpp2788;
-create table qp_misc_jiras.mpp2859 (domain integer, class integer, attr text, value integer) distributed by (domain);
-insert into qp_misc_jiras.mpp2859 values(1, 1, 'A', 1);
-insert into qp_misc_jiras.mpp2859 values(2, 1, 'A', 0);
-insert into qp_misc_jiras.mpp2859 values(3, 0, 'B', 1);
+SELECT a FROM qp_misc_jiras.tbl3403_tab ORDER BY a;
+drop table qp_misc_jiras.tbl3403_tab;
+create table qp_misc_jiras.tbl2788 as select * from generate_series(1, 1000);
+\d qp_misc_jiras.tbl2788;
+drop table qp_misc_jiras.tbl2788;
+create table qp_misc_jiras.tbl2859 (domain integer, class integer, attr text, value integer) distributed by (domain);
+insert into qp_misc_jiras.tbl2859 values(1, 1, 'A', 1);
+insert into qp_misc_jiras.tbl2859 values(2, 1, 'A', 0);
+insert into qp_misc_jiras.tbl2859 values(3, 0, 'B', 1);
 
-SELECT attr, class, (select count(distinct class) from qp_misc_jiras.mpp2859) as dclass FROM qp_misc_jiras.mpp2859 GROUP BY attr, class ORDER BY attr;
+SELECT attr, class, (select count(distinct class) from qp_misc_jiras.tbl2859) as dclass FROM qp_misc_jiras.tbl2859 GROUP BY attr, class ORDER BY attr;
 
-create table qp_misc_jiras.mpp2859a as 
-SELECT attr, class, (select count(distinct class) from qp_misc_jiras.mpp2859) as dclass FROM qp_misc_jiras.mpp2859 GROUP BY attr, class
+create table qp_misc_jiras.tbl2859a as 
+SELECT attr, class, (select count(distinct class) from qp_misc_jiras.tbl2859) as dclass FROM qp_misc_jiras.tbl2859 GROUP BY attr, class
 distributed by (attr);
 
-drop table qp_misc_jiras.mpp2859;
-drop table qp_misc_jiras.mpp2859a;
-create role mpp3068_testrole;
-alter role mpp3068_testrole set search_path to blahblah1;
-drop role mpp3068_testrole;
-create view  qp_misc_jiras.mpp_2517_view  as select foo from (select 'bar' as foo) a;
+drop table qp_misc_jiras.tbl2859;
+drop table qp_misc_jiras.tbl2859a;
+create role tbl3068_testrole;
+alter role tbl3068_testrole set search_path to blahblah1;
+drop role tbl3068_testrole;
+create view  qp_misc_jiras.tbl_2517_view  as select foo from (select 'bar' as foo) a;
 
 --  The following select is based on the query generated by psql's \dt command.
 
@@ -75,19 +75,19 @@ FROM pg_catalog.pg_class c
      LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 WHERE c.relkind IN ('v','')
       AND n.nspname NOT IN ('pg_catalog', 'pg_toast')
-  AND C.relname =  'mpp_2517_view'
+  AND C.relname =  'tbl_2517_view'
   AND c.relkind = 'v'
 ORDER BY 1,2;
 
-drop view qp_misc_jiras.mpp_2517_view;
-create table qp_misc_jiras.mpp3511 (i int);
-insert into qp_misc_jiras.mpp3511 values (1),(2),(3),(4),(5);
-select * FROM qp_misc_jiras.mpp3511 where i = (select distinct max(i) from qp_misc_jiras.mpp3511);
-drop table qp_misc_jiras.mpp3511;
+drop view qp_misc_jiras.tbl_2517_view;
+create table qp_misc_jiras.tbl3511 (i int);
+insert into qp_misc_jiras.tbl3511 values (1),(2),(3),(4),(5);
+select * FROM qp_misc_jiras.tbl3511 where i = (select distinct max(i) from qp_misc_jiras.tbl3511);
+drop table qp_misc_jiras.tbl3511;
 -- 
--- Create parent qp_misc_jiras.mpp1544 table
+-- Create parent qp_misc_jiras.tbl1544 table
 -- 
-CREATE TABLE qp_misc_jiras.mpp1544
+CREATE TABLE qp_misc_jiras.tbl1544
 ( pid INTEGER UNIQUE,
   pdate DATE NOT NULL,
   pval TEXT
@@ -97,46 +97,46 @@ CREATE TABLE qp_misc_jiras.mpp1544
 -- 
 -- Child tables
 -- 
-CREATE TABLE qp_misc_jiras.mpp1544_child_depth_1_y_2000_year (
-CONSTRAINT mpp1544_child_depth_1_y_2000_year_pdate_check
+CREATE TABLE qp_misc_jiras.tbl1544_child_depth_1_y_2000_year (
+CONSTRAINT tbl1544_child_depth_1_y_2000_year_pdate_check
 CHECK (pdate >= '2000-01-01'::date AND pdate < '2001-01-01'::date))
-INHERITS (qp_misc_jiras.mpp1544)
+INHERITS (qp_misc_jiras.tbl1544)
 ;
-CREATE TABLE qp_misc_jiras.mpp1544_child_depth_1_y_2001_year (
-CONSTRAINT mpp1544_child_depth_1_y_2001_year_pdate_check
+CREATE TABLE qp_misc_jiras.tbl1544_child_depth_1_y_2001_year (
+CONSTRAINT tbl1544_child_depth_1_y_2001_year_pdate_check
 CHECK (pdate >= '2001-01-01'::date AND pdate < '2002-01-01'::date))
-INHERITS (qp_misc_jiras.mpp1544)
+INHERITS (qp_misc_jiras.tbl1544)
 ;
 
 -- 
 -- Inserting redirection triggers
 -- 
-CREATE RULE rule_mpp1544_child_depth_1_y_2000_year AS
-ON INSERT TO qp_misc_jiras.mpp1544
+CREATE RULE rule_tbl1544_child_depth_1_y_2000_year AS
+ON INSERT TO qp_misc_jiras.tbl1544
 WHERE new.pdate >= '2000-01-01'::date AND new.pdate < '2001-01-01'::date
 DO INSTEAD
-INSERT INTO qp_misc_jiras.mpp1544_child_depth_1_y_2000_year (pid, pdate, pval)
+INSERT INTO qp_misc_jiras.tbl1544_child_depth_1_y_2000_year (pid, pdate, pval)
 VALUES (new.pid, new.pdate, new.pval)
 ;
-CREATE RULE rule_mpp1544_child_depth_1_y_2001_year AS
-ON INSERT TO qp_misc_jiras.mpp1544
+CREATE RULE rule_tbl1544_child_depth_1_y_2001_year AS
+ON INSERT TO qp_misc_jiras.tbl1544
 WHERE new.pdate >= '2001-01-01'::date AND new.pdate < '2002-01-01'::date
 DO INSTEAD
-INSERT INTO qp_misc_jiras.mpp1544_child_depth_1_y_2001_year (pid, pdate, pval)
+INSERT INTO qp_misc_jiras.tbl1544_child_depth_1_y_2001_year (pid, pdate, pval)
 VALUES (new.pid, new.pdate, new.pval)
 ;
 
 -- 
 -- Add Data
 -- 
-INSERT INTO qp_misc_jiras.mpp1544 VALUES(1,'2000-01-01','xxx');
-INSERT INTO qp_misc_jiras.mpp1544 VALUES(2,'2001-01-01','xxx');
+INSERT INTO qp_misc_jiras.tbl1544 VALUES(1,'2000-01-01','xxx');
+INSERT INTO qp_misc_jiras.tbl1544 VALUES(2,'2001-01-01','xxx');
 
-delete from qp_misc_jiras.mpp1544 where pdate='2000-01-01';
-update qp_misc_jiras.mpp1544 set pval='yyy' where pdate='2000-01-01';
+delete from qp_misc_jiras.tbl1544 where pdate='2000-01-01';
+update qp_misc_jiras.tbl1544 set pval='yyy' where pdate='2000-01-01';
 
-drop table qp_misc_jiras.mpp1544 cascade;
-CREATE TYPE qp_misc_jiras.mpp4009_mediageoitem AS ( loctn_type character varying,
+drop table qp_misc_jiras.tbl1544 cascade;
+CREATE TYPE qp_misc_jiras.tbl4009_mediageoitem AS ( loctn_type character varying,
 loctn_nm character varying,
 loctn_desc character varying,
 tot_trk_impsn bigint,
@@ -146,19 +146,19 @@ all_click bigint,
 tot_trk_conv bigint,
 all_conv bigint,
 rank integer);
-create role mpp4009_gpadmin;
-alter type qp_misc_jiras.mpp4009_mediageoitem owner to mpp4009_gpadmin;
-select typname, rolname as owner from pg_type,pg_authid where typname='mpp4009_mediageoitem' and pg_type.typowner=pg_authid.oid;
-select relname, rolname as owner from pg_class,pg_authid where relname='mpp4009_mediageoitem' and pg_class.relowner=pg_authid.oid;
-drop type qp_misc_jiras.mpp4009_mediageoitem;
-drop role mpp4009_gpadmin;
+create role tbl4009_gpadmin;
+alter type qp_misc_jiras.tbl4009_mediageoitem owner to tbl4009_gpadmin;
+select typname, rolname as owner from pg_type,pg_authid where typname='tbl4009_mediageoitem' and pg_type.typowner=pg_authid.oid;
+select relname, rolname as owner from pg_class,pg_authid where relname='tbl4009_mediageoitem' and pg_class.relowner=pg_authid.oid;
+drop type qp_misc_jiras.tbl4009_mediageoitem;
+drop role tbl4009_gpadmin;
 -- create schemas
 
-create schema mpp4105_sdc_stage;
-create schema mpp4105_sandbox_gp;
+create schema tbl4105_sdc_stage;
+create schema tbl4105_sandbox_gp;
 
 -- create the tables
-CREATE TABLE mpp4105_sdc_stage.curr_cust_cmunty_membr (
+CREATE TABLE tbl4105_sdc_stage.curr_cust_cmunty_membr (
     cust_cmunty_user_id integer,
     user_friend_id integer,
     user_hash_key smallint,
@@ -167,7 +167,7 @@ CREATE TABLE mpp4105_sdc_stage.curr_cust_cmunty_membr (
     is_friend boolean
 ) distributed by (user_hash_key);
 
-CREATE TABLE mpp4105_sandbox_gp.curr_user_profl (
+CREATE TABLE tbl4105_sandbox_gp.curr_user_profl (
     myspace_id integer,
     user_hash_key smallint,
     gender smallint,
@@ -188,7 +188,7 @@ CREATE TABLE mpp4105_sandbox_gp.curr_user_profl (
     culturepref smallint
 ) distributed by (user_hash_key);
 
-CREATE TABLE mpp4105_sandbox_gp.curr_user_geo (
+CREATE TABLE tbl4105_sandbox_gp.curr_user_geo (
     user_id integer,
     user_hash_key smallint,
     ip_geo_sk integer,
@@ -205,7 +205,7 @@ CREATE TABLE mpp4105_sandbox_gp.curr_user_geo (
     visits_last_90_days bigint
 ) distributed by (user_hash_key);
 
-CREATE TABLE mpp4105_sandbox_gp.ip_geo (
+CREATE TABLE tbl4105_sandbox_gp.ip_geo (
     ip_geo_sk integer DEFAULT 1,
     srce_ip_geo_cntry character varying(65) NOT NULL,
     srce_ip_geo_rgn character varying(135) NOT NULL,
@@ -281,8 +281,8 @@ CREATE TABLE mpp4105_sandbox_gp.ip_geo (
               ,coalesce(up.CULTUREPREF,-99) as culturepref
               ,f.page_views
               ,CASE WHEN COALESCE( page_views,0 ) > 0 THEN 1 ELSE 0 END as visit 
-        FROM mpp4105_sdc_stage.curr_cust_cmunty_membr f 
-             LEFT OUTER JOIN mpp4105_sandbox_gp.curr_user_profl up
+        FROM tbl4105_sdc_stage.curr_cust_cmunty_membr f 
+             LEFT OUTER JOIN tbl4105_sandbox_gp.curr_user_profl up
               ON ( f.user_hash_key = up.user_hash_key 
              AND   f.user_friend_id = up.myspace_id )
              LEFT OUTER JOIN ( SELECT user_hash_key
@@ -291,8 +291,8 @@ CREATE TABLE mpp4105_sandbox_gp.ip_geo (
                                   , geo.ip_geo_cntry_abbr
                                   , geo.ip_geo_state
                                   , geo.ip_geo_city
-                              FROM mpp4105_sandbox_gp.curr_user_geo 
-                                   LEFT OUTER JOIN mpp4105_sandbox_gp.ip_geo geo
+                              FROM tbl4105_sandbox_gp.curr_user_geo 
+                                   LEFT OUTER JOIN tbl4105_sandbox_gp.ip_geo geo
                                    USING ( ip_geo_sk ) 
                               ) g
               ON ( f.user_hash_key = g.user_hash_key 
@@ -319,14 +319,14 @@ CREATE TABLE mpp4105_sandbox_gp.ip_geo (
    --     DISTRIBUTED RANDOMLY;
 
 -- drop the tables
-drop table mpp4105_sdc_stage.curr_cust_cmunty_membr;
-drop table mpp4105_sandbox_gp.curr_user_profl;
-drop table mpp4105_sandbox_gp.curr_user_geo;
-drop table mpp4105_sandbox_gp.ip_geo;
+drop table tbl4105_sdc_stage.curr_cust_cmunty_membr;
+drop table tbl4105_sandbox_gp.curr_user_profl;
+drop table tbl4105_sandbox_gp.curr_user_geo;
+drop table tbl4105_sandbox_gp.ip_geo;
 
 -- drop the schemas
-drop schema mpp4105_sdc_stage;
-drop schema mpp4105_sandbox_gp;
+drop schema tbl4105_sdc_stage;
+drop schema tbl4105_sandbox_gp;
 
 set enable_nestloop=on;
 
@@ -417,15 +417,15 @@ drop table qp_misc_jiras.satelliteupdatelog cascade;
 drop table qp_misc_jiras.satelliteupdatelogkey cascade;
 drop table qp_misc_jiras.satellite cascade;
 drop table qp_misc_jiras.satelliteupdatelogserver cascade;
-create table qp_misc_jiras.mpp3183_t1 (i int);
-insert into qp_misc_jiras.mpp3183_t1 values (1), (1);
-select * into qp_misc_jiras.mpp3183_t2 from qp_misc_jiras.mpp3183_t1;
-select * into qp_misc_jiras.mpp3183_t3 from qp_misc_jiras.mpp3183_t1;
-select i from (select i from qp_misc_jiras.mpp3183_t2 union all select i from qp_misc_jiras.mpp3183_t3) tmpt where i in (select i from qp_misc_jiras.mpp3183_t2 union all select i from qp_misc_jiras.mpp3183_t3);
-drop table qp_misc_jiras.mpp3183_t1;
-drop table qp_misc_jiras.mpp3183_t2;
-drop table qp_misc_jiras.mpp3183_t3;
-create table qp_misc_jiras.mpp5028_part_test (a int, b date,c text) 
+create table qp_misc_jiras.tbl3183_t1 (i int);
+insert into qp_misc_jiras.tbl3183_t1 values (1), (1);
+select * into qp_misc_jiras.tbl3183_t2 from qp_misc_jiras.tbl3183_t1;
+select * into qp_misc_jiras.tbl3183_t3 from qp_misc_jiras.tbl3183_t1;
+select i from (select i from qp_misc_jiras.tbl3183_t2 union all select i from qp_misc_jiras.tbl3183_t3) tmpt where i in (select i from qp_misc_jiras.tbl3183_t2 union all select i from qp_misc_jiras.tbl3183_t3);
+drop table qp_misc_jiras.tbl3183_t1;
+drop table qp_misc_jiras.tbl3183_t2;
+drop table qp_misc_jiras.tbl3183_t3;
+create table qp_misc_jiras.tbl5028_part_test (a int, b date,c text) 
 partition by range(b)
 (
 	partition p1 start('2007-01-01'),
@@ -433,61 +433,61 @@ partition by range(b)
         partition p3 start('2009-01-01'),
 	default partition def_part
 );
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (1, '2006-1-01', 'Year 1');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (1, '2007-1-01', 'Year 2');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (1, '2008-1-01', 'Year 3');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (1, '2009-1-01', 'Year 4');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (2, '2006-2-01', 'Year 1');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (2, '2007-2-01', 'Year 2');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (2, '2008-2-01', 'Year 3');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (2, '2009-2-01', 'Year 4');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (3, '2006-3-01', 'Year 1');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (3, '2007-3-01', 'Year 2');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (3, '2008-3-01', 'Year 3');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (3, '2009-3-01', 'Year 4');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (4, '2006-4-01', 'Year 1');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (4, '2007-4-01', 'Year 2');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (4, '2008-4-01', 'Year 3');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (4, '2009-4-01', 'Year 4');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (5, '2006-5-01', 'Year 1');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (5, '2007-5-01', 'Year 2');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (5, '2008-5-01', 'Year 3');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (5, '2009-5-01', 'Year 4');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (6, '2006-6-01', 'Year 1');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (6, '2007-6-01', 'Year 2');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (6, '2008-6-01', 'Year 3');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (6, '2009-6-01', 'Year 4');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (7, '2006-7-01', 'Year 1');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (7, '2007-7-01', 'Year 2');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (7, '2008-7-01', 'Year 3');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (7, '2009-7-01', 'Year 4');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (8, '2006-8-01', 'Year 1');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (8, '2007-8-01', 'Year 2');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (8, '2008-8-01', 'Year 3');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (8, '2009-8-01', 'Year 4');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (9, '2006-9-01', 'Year 1');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (9, '2007-9-01', 'Year 2');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (9, '2008-9-01', 'Year 3');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (9, '2009-9-01', 'Year 4');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (10, '2006-10-01', 'Year 1');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (10, '2007-10-01', 'Year 2');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (10, '2008-10-01', 'Year 3');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (10, '2009-10-01', 'Year 4');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (11, '2006-11-01', 'Year 1');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (11, '2007-11-01', 'Year 2');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (11, '2008-11-01', 'Year 3');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (11, '2009-11-01', 'Year 4');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (12, '2006-12-01', 'Year 1');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (12, '2007-12-01', 'Year 2');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (12, '2008-12-01', 'Year 3');
-INSERT INTO qp_misc_jiras.mpp5028_part_test VALUES (12, '2009-12-01', 'Year 4');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (1, '2006-1-01', 'Year 1');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (1, '2007-1-01', 'Year 2');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (1, '2008-1-01', 'Year 3');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (1, '2009-1-01', 'Year 4');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (2, '2006-2-01', 'Year 1');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (2, '2007-2-01', 'Year 2');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (2, '2008-2-01', 'Year 3');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (2, '2009-2-01', 'Year 4');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (3, '2006-3-01', 'Year 1');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (3, '2007-3-01', 'Year 2');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (3, '2008-3-01', 'Year 3');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (3, '2009-3-01', 'Year 4');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (4, '2006-4-01', 'Year 1');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (4, '2007-4-01', 'Year 2');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (4, '2008-4-01', 'Year 3');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (4, '2009-4-01', 'Year 4');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (5, '2006-5-01', 'Year 1');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (5, '2007-5-01', 'Year 2');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (5, '2008-5-01', 'Year 3');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (5, '2009-5-01', 'Year 4');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (6, '2006-6-01', 'Year 1');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (6, '2007-6-01', 'Year 2');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (6, '2008-6-01', 'Year 3');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (6, '2009-6-01', 'Year 4');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (7, '2006-7-01', 'Year 1');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (7, '2007-7-01', 'Year 2');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (7, '2008-7-01', 'Year 3');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (7, '2009-7-01', 'Year 4');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (8, '2006-8-01', 'Year 1');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (8, '2007-8-01', 'Year 2');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (8, '2008-8-01', 'Year 3');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (8, '2009-8-01', 'Year 4');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (9, '2006-9-01', 'Year 1');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (9, '2007-9-01', 'Year 2');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (9, '2008-9-01', 'Year 3');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (9, '2009-9-01', 'Year 4');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (10, '2006-10-01', 'Year 1');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (10, '2007-10-01', 'Year 2');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (10, '2008-10-01', 'Year 3');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (10, '2009-10-01', 'Year 4');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (11, '2006-11-01', 'Year 1');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (11, '2007-11-01', 'Year 2');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (11, '2008-11-01', 'Year 3');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (11, '2009-11-01', 'Year 4');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (12, '2006-12-01', 'Year 1');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (12, '2007-12-01', 'Year 2');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (12, '2008-12-01', 'Year 3');
+INSERT INTO qp_misc_jiras.tbl5028_part_test VALUES (12, '2009-12-01', 'Year 4');
 
-select count(*) from qp_misc_jiras.mpp5028_part_test_1_prt_def_part ;
-select count(*) from qp_misc_jiras.mpp5028_part_test_1_prt_p1;
-select count(*) from qp_misc_jiras.mpp5028_part_test_1_prt_p2;
-select count(*) from qp_misc_jiras.mpp5028_part_test_1_prt_p3;
+select count(*) from qp_misc_jiras.tbl5028_part_test_1_prt_def_part ;
+select count(*) from qp_misc_jiras.tbl5028_part_test_1_prt_p1;
+select count(*) from qp_misc_jiras.tbl5028_part_test_1_prt_p2;
+select count(*) from qp_misc_jiras.tbl5028_part_test_1_prt_p3;
 
-create table qp_misc_jiras.mpp5028_delete_as_truncate (a int, b date,c text)
+create table qp_misc_jiras.tbl5028_delete_as_truncate (a int, b date,c text)
 partition by range(b)
 (
         partition p1 start('2007-01-01'),
@@ -495,28 +495,28 @@ partition by range(b)
         partition p3 start('2009-01-01'),
         default partition def_part
 );
-insert into qp_misc_jiras.mpp5028_delete_as_truncate select * from qp_misc_jiras.mpp5028_part_test;
+insert into qp_misc_jiras.tbl5028_delete_as_truncate select * from qp_misc_jiras.tbl5028_part_test;
 
-DELETE FROM qp_misc_jiras.mpp5028_part_test where b >= '2007-01-01' and b <= '2007-03-01';
+DELETE FROM qp_misc_jiras.tbl5028_part_test where b >= '2007-01-01' and b <= '2007-03-01';
 
-select count(*) from qp_misc_jiras.mpp5028_part_test; -- should be 45
+select count(*) from qp_misc_jiras.tbl5028_part_test; -- should be 45
 
-select count(*) from qp_misc_jiras.mpp5028_part_test_1_prt_def_part ; -- should be 12
-select count(*) from qp_misc_jiras.mpp5028_part_test_1_prt_p1; -- should be 9
-select count(*) from qp_misc_jiras.mpp5028_part_test_1_prt_p2; -- should be 12
-select count(*) from qp_misc_jiras.mpp5028_part_test_1_prt_p3; -- should be 12
+select count(*) from qp_misc_jiras.tbl5028_part_test_1_prt_def_part ; -- should be 12
+select count(*) from qp_misc_jiras.tbl5028_part_test_1_prt_p1; -- should be 9
+select count(*) from qp_misc_jiras.tbl5028_part_test_1_prt_p2; -- should be 12
+select count(*) from qp_misc_jiras.tbl5028_part_test_1_prt_p3; -- should be 12
 set gp_enable_delete_as_truncate=on;
 
-DELETE FROM qp_misc_jiras.mpp5028_delete_as_truncate where b >= '2007-01-01' and b <= '2007-03-01';
+DELETE FROM qp_misc_jiras.tbl5028_delete_as_truncate where b >= '2007-01-01' and b <= '2007-03-01';
 
-select count(*) from qp_misc_jiras.mpp5028_delete_as_truncate; --should be 45
-select count(*) from qp_misc_jiras.mpp5028_delete_as_truncate_1_prt_def_part ; -- should be 12
-select count(*) from qp_misc_jiras.mpp5028_delete_as_truncate_1_prt_p1; -- should be 9
-select count(*) from qp_misc_jiras.mpp5028_delete_as_truncate_1_prt_p2; -- should be 12
-select count(*) from qp_misc_jiras.mpp5028_delete_as_truncate_1_prt_p3; -- should be 12
+select count(*) from qp_misc_jiras.tbl5028_delete_as_truncate; --should be 45
+select count(*) from qp_misc_jiras.tbl5028_delete_as_truncate_1_prt_def_part ; -- should be 12
+select count(*) from qp_misc_jiras.tbl5028_delete_as_truncate_1_prt_p1; -- should be 9
+select count(*) from qp_misc_jiras.tbl5028_delete_as_truncate_1_prt_p2; -- should be 12
+select count(*) from qp_misc_jiras.tbl5028_delete_as_truncate_1_prt_p3; -- should be 12
 
-drop table qp_misc_jiras.mpp5028_delete_as_truncate;
-drop table qp_misc_jiras.mpp5028_part_test;
+drop table qp_misc_jiras.tbl5028_delete_as_truncate;
+drop table qp_misc_jiras.tbl5028_part_test;
 -- start_ignore
 --   MPP-11125: partition p1 start('0') end('25') every 8 (12)
 --   	- it did not work as expected but behaved same as "every (12)"
@@ -525,7 +525,7 @@ drop table qp_misc_jiras.mpp5028_part_test;
 --             added an extra "every 8 (12)" to test invalid syntax
 -- end_ignore
 
-create table qp_misc_jiras.mpp5151_customer(C_CUSTKEY INTEGER,
+create table qp_misc_jiras.tbl5151_customer(C_CUSTKEY INTEGER,
                 C_NAME VARCHAR(25),
                 C_ADDRESS VARCHAR(40),
                C_NATIONKEY INTEGER,
@@ -540,27 +540,27 @@ subpartition by range (c_acctbal) subpartition template (start('-999.99') end('1
 (
 partition p1 start('0') end('25') every (12)
 );
-create table qp_misc_jiras.mpp5151_customer(C_CUSTKEY INTEGER, primary key(c_custkey));
-drop table qp_misc_jiras.mpp5151_customer;
+create table qp_misc_jiras.tbl5151_customer(C_CUSTKEY INTEGER, primary key(c_custkey));
+drop table qp_misc_jiras.tbl5151_customer;
 
 -- start_ignore
 --    invalid syntax
 -- end_ignore
-create table qp_misc_jiras.mpp5151_customer(C_CUSTKEY INTEGER) partition by range (c_nationkey) (start('0') end('25') every 8 (12));
-create table qp_misc_jiras.mpp2945_test (a numeric(19), b int) distributed by (a);
-insert into qp_misc_jiras.mpp2945_test values(1,2), (3,4);
+create table qp_misc_jiras.tbl5151_customer(C_CUSTKEY INTEGER) partition by range (c_nationkey) (start('0') end('25') every 8 (12));
+create table qp_misc_jiras.tbl2945_test (a numeric(19), b int) distributed by (a);
+insert into qp_misc_jiras.tbl2945_test values(1,2), (3,4);
 -- the following should error out
-alter table qp_misc_jiras.mpp2945_test alter a type bigint;
-drop table qp_misc_jiras.mpp2945_test;
-create table qp_misc_jiras.mpp5219_test (i int, j int);
-insert into qp_misc_jiras.mpp5219_test select i, i%10 from generate_series(0, 99) i;
-select case when 1=2 then rank() over(partition by j order by i) end from qp_misc_jiras.mpp5219_test;
-drop table qp_misc_jiras.mpp5219_test;
+alter table qp_misc_jiras.tbl2945_test alter a type bigint;
+drop table qp_misc_jiras.tbl2945_test;
+create table qp_misc_jiras.tbl5219_test (i int, j int);
+insert into qp_misc_jiras.tbl5219_test select i, i%10 from generate_series(0, 99) i;
+select case when 1=2 then rank() over(partition by j order by i) end from qp_misc_jiras.tbl5219_test;
+drop table qp_misc_jiras.tbl5219_test;
 -- start_ignore
 create language plpgsql;
 -- end_ignore
-DROP TYPE IF EXISTS qp_misc_jiras.mpp4958_percent_cont_type CASCADE;
-CREATE TYPE qp_misc_jiras.mpp4958_percent_cont_type AS (
+DROP TYPE IF EXISTS qp_misc_jiras.tbl4958_percent_cont_type CASCADE;
+CREATE TYPE qp_misc_jiras.tbl4958_percent_cont_type AS (
         rn real,
         frn integer,
         crn integer,
@@ -568,8 +568,8 @@ CREATE TYPE qp_misc_jiras.mpp4958_percent_cont_type AS (
         crn_val numeric
 );
 
-CREATE OR REPLACE FUNCTION qp_misc_jiras.mpp4958_percent_cont_sfunc_p( state qp_misc_jiras.mpp4958_percent_cont_type, percentile real, val numeric, rank bigint, count bigint  )
-        RETURNS qp_misc_jiras.mpp4958_percent_cont_type
+CREATE OR REPLACE FUNCTION qp_misc_jiras.tbl4958_percent_cont_sfunc_p( state qp_misc_jiras.tbl4958_percent_cont_type, percentile real, val numeric, rank bigint, count bigint  )
+        RETURNS qp_misc_jiras.tbl4958_percent_cont_type
 AS $$
 BEGIN
         IF state.rn = 0 THEN
@@ -590,7 +590,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION qp_misc_jiras.mpp4958_percent_cont_ffunc_p( state qp_misc_jiras.mpp4958_percent_cont_type )
+CREATE OR REPLACE FUNCTION qp_misc_jiras.tbl4958_percent_cont_ffunc_p( state qp_misc_jiras.tbl4958_percent_cont_type )
         RETURNS numeric
 AS $$
 DECLARE
@@ -608,27 +608,27 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP AGGREGATE IF EXISTS qp_misc_jiras.mpp4958_percent_cont( real, numeric, bigint, bigint );
-CREATE AGGREGATE qp_misc_jiras.mpp4958_percent_cont( real, numeric, bigint, bigint ) (
-        sfunc = qp_misc_jiras.mpp4958_percent_cont_sfunc_p,
-        stype = qp_misc_jiras.mpp4958_percent_cont_type,
-        finalfunc = qp_misc_jiras.mpp4958_percent_cont_ffunc_p,
+DROP AGGREGATE IF EXISTS qp_misc_jiras.tbl4958_percent_cont( real, numeric, bigint, bigint );
+CREATE AGGREGATE qp_misc_jiras.tbl4958_percent_cont( real, numeric, bigint, bigint ) (
+        sfunc = qp_misc_jiras.tbl4958_percent_cont_sfunc_p,
+        stype = qp_misc_jiras.tbl4958_percent_cont_type,
+        finalfunc = qp_misc_jiras.tbl4958_percent_cont_ffunc_p,
         initcond = '( 0, 0, 0, 0, 0 )'
 );
 
-drop table if exists qp_misc_jiras.mpp4958_test;
-create table qp_misc_jiras.mpp4958_test (i int, j int, k int);
-insert into qp_misc_jiras.mpp4958_test select i, i%36, i%109 from generate_series(0, 999999) i;
+drop table if exists qp_misc_jiras.tbl4958_test;
+create table qp_misc_jiras.tbl4958_test (i int, j int, k int);
+insert into qp_misc_jiras.tbl4958_test select i, i%36, i%109 from generate_series(0, 999999) i;
 -- start_ignore
-select qp_misc_jiras.mpp4958_percent_cont(0.90, i::numeric, j, k) from qp_misc_jiras.mpp4958_test;
+select qp_misc_jiras.tbl4958_percent_cont(0.90, i::numeric, j, k) from qp_misc_jiras.tbl4958_test;
 -- end_ignore
 
-drop table qp_misc_jiras.mpp4958_test;
-drop aggregate qp_misc_jiras.mpp4958_percent_cont(real, numeric, bigint, bigint);
-drop type qp_misc_jiras.mpp4958_percent_cont_type cascade;
+drop table qp_misc_jiras.tbl4958_test;
+drop aggregate qp_misc_jiras.tbl4958_percent_cont(real, numeric, bigint, bigint);
+drop type qp_misc_jiras.tbl4958_percent_cont_type cascade;
 
-DROP TYPE IF EXISTS qp_misc_jiras.mpp4958_percent_cont_type CASCADE;
-CREATE TYPE qp_misc_jiras.mpp4958_percent_cont_type AS (
+DROP TYPE IF EXISTS qp_misc_jiras.tbl4958_percent_cont_type CASCADE;
+CREATE TYPE qp_misc_jiras.tbl4958_percent_cont_type AS (
         rn real,
         frn integer,
         crn integer,
@@ -640,29 +640,29 @@ CREATE TYPE qp_misc_jiras.mpp4958_percent_cont_type AS (
 
 
 
-CREATE OR REPLACE FUNCTION qp_misc_jiras.mpp4958_percent_cont_sfunc_p( state qp_misc_jiras.mpp4958_percent_cont_type, percentile real, val numeric, rank bigint, count bigint  )
-        RETURNS qp_misc_jiras.mpp4958_percent_cont_type
+CREATE OR REPLACE FUNCTION qp_misc_jiras.tbl4958_percent_cont_sfunc_p( state qp_misc_jiras.tbl4958_percent_cont_type, percentile real, val numeric, rank bigint, count bigint  )
+        RETURNS qp_misc_jiras.tbl4958_percent_cont_type
 AS $$
         select case when ($1.rn = 0 and $4 != floor ($1.rn) and $4 != ceil ($1.rn))
-                        then (1 + ( $2 * ( $5 - 1 ) ), $1.frn, $1.crn, $1.frn_val, $1.crn_val)::qp_misc_jiras.mpp4958_percent_cont_type
+                        then (1 + ( $2 * ( $5 - 1 ) ), $1.frn, $1.crn, $1.frn_val, $1.crn_val)::qp_misc_jiras.tbl4958_percent_cont_type
                     when $1.rn = 0 and $4 != floor($1.rn) and $4 = ceil($1.rn)
-                        then (1 + ( $2 * ( $5 - 1 ) ), $1.frn, $4, $1.frn_val, $3)::qp_misc_jiras.mpp4958_percent_cont_type
+                        then (1 + ( $2 * ( $5 - 1 ) ), $1.frn, $4, $1.frn_val, $3)::qp_misc_jiras.tbl4958_percent_cont_type
                     when $1.rn = 0 and $4 = floor($1.rn) and $4 != ceil($1.rn)
-                        then (1 + ( $2 * ( $5 - 1 ) ), $4, $1.crn, $3, $1.crn_val)::qp_misc_jiras.mpp4958_percent_cont_type
+                        then (1 + ( $2 * ( $5 - 1 ) ), $4, $1.crn, $3, $1.crn_val)::qp_misc_jiras.tbl4958_percent_cont_type
                     when $1.rn = 0 and $4 = floor($1.rn) and $4 = ceil($1.rn)
-                        then (1 + ( $2 * ( $5 - 1 ) ), $4, $4, $3, $3)::qp_misc_jiras.mpp4958_percent_cont_type
+                        then (1 + ( $2 * ( $5 - 1 ) ), $4, $4, $3, $3)::qp_misc_jiras.tbl4958_percent_cont_type
                     when $1.rn != 0 and $4 != floor($1.rn) and $4 = ceil($1.rn)
-                        then ($1.rn, $1.frn, $4, $1.frn_val, $3)::qp_misc_jiras.mpp4958_percent_cont_type
+                        then ($1.rn, $1.frn, $4, $1.frn_val, $3)::qp_misc_jiras.tbl4958_percent_cont_type
                     when $1.rn != 0 and $4 = floor($1.rn) and $4 != ceil($1.rn)
-                        then ($1.rn, $4, $1.crn, $3, $1.crn_val)::qp_misc_jiras.mpp4958_percent_cont_type
+                        then ($1.rn, $4, $1.crn, $3, $1.crn_val)::qp_misc_jiras.tbl4958_percent_cont_type
                     when $1.rn != 0 and $4 = floor($1.rn) and $4 = ceil($1.rn)
-                        then ($1.rn, $4, $4, $3, $3)::qp_misc_jiras.mpp4958_percent_cont_type
+                        then ($1.rn, $4, $4, $3, $3)::qp_misc_jiras.tbl4958_percent_cont_type
                     else
                         $1
                end;
 $$ LANGUAGE SQL;
 
-CREATE OR REPLACE FUNCTION qp_misc_jiras.mpp4958_percent_cont_ffunc_p( state qp_misc_jiras.mpp4958_percent_cont_type )
+CREATE OR REPLACE FUNCTION qp_misc_jiras.tbl4958_percent_cont_ffunc_p( state qp_misc_jiras.tbl4958_percent_cont_type )
         RETURNS numeric
 AS $$
         select case when $1.crn = $1.frn and $1.crn = $1.rn then $1.frn_val
@@ -670,24 +670,24 @@ AS $$
                     end;
 $$ LANGUAGE SQL;
 
-DROP AGGREGATE IF EXISTS qp_misc_jiras.mpp4958_percent_cont( real, numeric, bigint, bigint );
-CREATE AGGREGATE qp_misc_jiras.mpp4958_percent_cont( real, numeric, bigint, bigint ) (
-        sfunc = qp_misc_jiras.mpp4958_percent_cont_sfunc_p,
-        stype = qp_misc_jiras.mpp4958_percent_cont_type,
-        finalfunc = qp_misc_jiras.mpp4958_percent_cont_ffunc_p,
+DROP AGGREGATE IF EXISTS qp_misc_jiras.tbl4958_percent_cont( real, numeric, bigint, bigint );
+CREATE AGGREGATE qp_misc_jiras.tbl4958_percent_cont( real, numeric, bigint, bigint ) (
+        sfunc = qp_misc_jiras.tbl4958_percent_cont_sfunc_p,
+        stype = qp_misc_jiras.tbl4958_percent_cont_type,
+        finalfunc = qp_misc_jiras.tbl4958_percent_cont_ffunc_p,
         initcond = '( 0, 0, 0, 0, 0 )'
 );
 
-drop table if exists qp_misc_jiras.mpp4958_test;
-create table qp_misc_jiras.mpp4958_test (i int, j int, k int);
-insert into qp_misc_jiras.mpp4958_test select i, i%36, i%109 from generate_series(0, 999999) i;
+drop table if exists qp_misc_jiras.tbl4958_test;
+create table qp_misc_jiras.tbl4958_test (i int, j int, k int);
+insert into qp_misc_jiras.tbl4958_test select i, i%36, i%109 from generate_series(0, 999999) i;
 -- start_ignore
-select qp_misc_jiras.mpp4958_percent_cont(0.90, i::numeric, j, k) from qp_misc_jiras.mpp4958_test;
+select qp_misc_jiras.tbl4958_percent_cont(0.90, i::numeric, j, k) from qp_misc_jiras.tbl4958_test;
 -- end_ignore
 
-drop table qp_misc_jiras.mpp4958_test;
-drop aggregate qp_misc_jiras.mpp4958_percent_cont(real,numeric,bigint,bigint);
-drop type qp_misc_jiras.mpp4958_percent_cont_type cascade;
+drop table qp_misc_jiras.tbl4958_test;
+drop aggregate qp_misc_jiras.tbl4958_percent_cont(real,numeric,bigint,bigint);
+drop type qp_misc_jiras.tbl4958_percent_cont_type cascade;
 select n
 from ( select row_number() over (partition by x) from (values (0)) as t(x) ) as r(n)
 group by n;
@@ -695,47 +695,47 @@ group by n;
 select n
 from ( select row_number() over () from (values (0)) as t(x) ) as r(n)
 group by n;
-create external web table qp_misc_jiras.mpp4622_ext1 (i int, j int) execute 'echo " | 20" ' on master format 'text' (delimiter as E'|' null as ' ');
-select * from qp_misc_jiras.mpp4622_ext1;
-create external web table qp_misc_jiras.mpp4622_ext2 (i int, j int) execute 'echo "  | 20" ' on master format 'text' (delimiter as E'|' null as '  ');
-select * from qp_misc_jiras.mpp4622_ext2;
-drop external web table qp_misc_jiras.mpp4622_ext1;
-drop external web table qp_misc_jiras.mpp4622_ext2;
-create external web table qp_misc_jiras.mpp3286_ext_hostname (hostname text) execute 'hostname' format 'text'; 
+create external web table qp_misc_jiras.tbl4622_ext1 (i int, j int) execute 'echo " | 20" ' on master format 'text' (delimiter as E'|' null as ' ');
+select * from qp_misc_jiras.tbl4622_ext1;
+create external web table qp_misc_jiras.tbl4622_ext2 (i int, j int) execute 'echo "  | 20" ' on master format 'text' (delimiter as E'|' null as '  ');
+select * from qp_misc_jiras.tbl4622_ext2;
+drop external web table qp_misc_jiras.tbl4622_ext1;
+drop external web table qp_misc_jiras.tbl4622_ext2;
+create external web table qp_misc_jiras.tbl3286_ext_hostname (hostname text) execute 'hostname' format 'text'; 
 --start_ignore
-select * from qp_misc_jiras.mpp3286_ext_hostname,gp_configuration;
+select * from qp_misc_jiras.tbl3286_ext_hostname,gp_configuration;
 --end_ignore
-drop external web table qp_misc_jiras.mpp3286_ext_hostname;
-create table qp_misc_jiras.mpp5305_test(a int, b int);
-insert into qp_misc_jiras.mpp5305_test select i,i+1 from generate_series(1,1000)i;
+drop external web table qp_misc_jiras.tbl3286_ext_hostname;
+create table qp_misc_jiras.tbl5305_test(a int, b int);
+insert into qp_misc_jiras.tbl5305_test select i,i+1 from generate_series(1,1000)i;
 begin;
-declare c scroll cursor for select * from qp_misc_jiras.mpp5305_test order by a;
+declare c scroll cursor for select * from qp_misc_jiras.tbl5305_test order by a;
 fetch forward 100 from c; -- should give the first 100 rows
 fetch 100 from c; -- should give the next 100 rows
 fetch 1 from c; -- should give one row
 fetch backward 100 from c; -- should error out. we currently don't support this
 rollback;
-drop table qp_misc_jiras.mpp5305_test;
-create external web table qp_misc_jiras.mpp_3739_foo (a text) execute E'' ON SEGMENT 0 FORMAT 'CSV';
+drop table qp_misc_jiras.tbl5305_test;
+create external web table qp_misc_jiras.tbl_3739_foo (a text) execute E'' ON SEGMENT 0 FORMAT 'CSV';
 show gp_interconnect_setup_timeout;
 set gp_interconnect_setup_timeout=3600;
 show gp_interconnect_setup_timeout;
 set gp_interconnect_setup_timeout=10000;
 set gp_interconnect_setup_timeout=4000;
-create schema mpp5352_test;
-select tablename from pg_tables where schemaname='mpp5352_test' and tablename not in( select partitiontablename from pg_partitions where partitionschemaname = 'mpp5352_test' );
-drop schema mpp5352_test;
+create schema tbl5352_test;
+select tablename from pg_tables where schemaname='tbl5352_test' and tablename not in( select partitiontablename from pg_partitions where partitionschemaname = 'tbl5352_test' );
+drop schema tbl5352_test;
 -- start_ignore
-DROP TABLE if exists qp_misc_jiras.mpp5223_sales_fact cascade;
+DROP TABLE if exists qp_misc_jiras.tbl5223_sales_fact cascade;
 -- end_ignore
 
-CREATE TABLE qp_misc_jiras.mpp5223_sales_fact(
+CREATE TABLE qp_misc_jiras.tbl5223_sales_fact(
 	   time     timestamp,
 	   product  int, 
 	   sales    numeric(12,2)
 ) distributed by (product);
 
-copy qp_misc_jiras.mpp5223_sales_fact from stdin;
+copy qp_misc_jiras.tbl5223_sales_fact from stdin;
 1-2-07	1	1.03
 1-6-07	2	13.25
 1-11-07	3	8.32
@@ -812,25 +812,25 @@ FROM
       extract(year from time) as year, 
 	  extract(month from time) as month,
       sum(sales) as sales
-   FROM qp_misc_jiras.mpp5223_sales_fact 
+   FROM qp_misc_jiras.tbl5223_sales_fact 
    GROUP BY product, year, month
   ) product_yearly_sales
 window w as (partition by product order by year*12+month
              range between 12 preceding and 1 preceding)
 order by year, product, sales; -- mvd 1,2->4
 
-drop table qp_misc_jiras.mpp5223_sales_fact;
-CREATE VIEW qp_misc_jiras.mpp4255_simple_v as SELECT 1 as value;
-CREATE VIEW qp_misc_jiras.mpp4255_union_v as SELECT 1 as value UNION ALL SELECT 2;
+drop table qp_misc_jiras.tbl5223_sales_fact;
+CREATE VIEW qp_misc_jiras.tbl4255_simple_v as SELECT 1 as value;
+CREATE VIEW qp_misc_jiras.tbl4255_union_v as SELECT 1 as value UNION ALL SELECT 2;
 
-SELECT * FROM qp_misc_jiras.mpp4255_simple_v;
-SELECT generate_series(1,3), * from qp_misc_jiras.mpp4255_simple_v;
-SELECT * from qp_misc_jiras.mpp4255_union_v;
-SELECT generate_series(1,3), * from qp_misc_jiras.mpp4255_union_v;
+SELECT * FROM qp_misc_jiras.tbl4255_simple_v;
+SELECT generate_series(1,3), * from qp_misc_jiras.tbl4255_simple_v;
+SELECT * from qp_misc_jiras.tbl4255_union_v;
+SELECT generate_series(1,3), * from qp_misc_jiras.tbl4255_union_v;
 
-drop view qp_misc_jiras.mpp4255_simple_v;
-drop view qp_misc_jiras.mpp4255_union_v;
-create table qp_misc_jiras.mpp5246_sale
+drop view qp_misc_jiras.tbl4255_simple_v;
+drop view qp_misc_jiras.tbl4255_union_v;
+create table qp_misc_jiras.tbl5246_sale
 (       
         cn int not null,
         vn int not null,
@@ -843,7 +843,7 @@ create table qp_misc_jiras.mpp5246_sale
         
 ) distributed by (cn,vn,pn);
 
-insert into qp_misc_jiras.mpp5246_sale values
+insert into qp_misc_jiras.tbl5246_sale values
   ( 2, 40, 100, '1401-1-1', 1100, 2400),
   ( 1, 10, 200, '1401-3-1', 1, 0),
   ( 3, 40, 200, '1401-4-1', 1, 0),
@@ -861,11 +861,11 @@ insert into qp_misc_jiras.mpp5246_sale values
 
 --The following query shouldn't crash and error out
 
-explain select cn, count(*) over (order by dt range between '2 day'::interval preceding and 2 preceding) from qp_misc_jiras.mpp5246_sale;
+explain select cn, count(*) over (order by dt range between '2 day'::interval preceding and 2 preceding) from qp_misc_jiras.tbl5246_sale;
 
-drop table qp_misc_jiras.mpp5246_sale;
+drop table qp_misc_jiras.tbl5246_sale;
 
-create table qp_misc_jiras.mpp4896_customer
+create table qp_misc_jiras.tbl4896_customer
 (
         cn int not null,
         cname text not null,
@@ -875,7 +875,7 @@ create table qp_misc_jiras.mpp4896_customer
 
 ) distributed by (cn);
 
-create table qp_misc_jiras.mpp4896_sale
+create table qp_misc_jiras.tbl4896_sale
 (
         cn int not null,
         vn int not null,
@@ -888,13 +888,13 @@ create table qp_misc_jiras.mpp4896_sale
         
 ) distributed by (cn,vn,pn);
 
-insert into qp_misc_jiras.mpp4896_customer values
+insert into qp_misc_jiras.tbl4896_customer values
   ( 1, 'Macbeth', 'Inverness'),
   ( 2, 'Duncan', 'Forres'),
   ( 3, 'Lady Macbeth', 'Inverness'),
   ( 4, 'Witches, Inc', 'Lonely Heath');
 
-insert into qp_misc_jiras.mpp4896_sale values
+insert into qp_misc_jiras.tbl4896_sale values
   ( 2, 40, 100, '1401-1-1', 1100, 2400),
   ( 1, 10, 200, '1401-3-1', 1, 0),
   ( 3, 40, 200, '1401-4-1', 1, 0),
@@ -920,40 +920,40 @@ TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.cn)),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.cn)),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.qty)),0),'99999999.9999999'),
 TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.cn)),0),'99999999.9999999')
-FROM qp_misc_jiras.mpp4896_sale as sale ,qp_misc_jiras.mpp4896_customer as customer
+FROM qp_misc_jiras.tbl4896_sale as sale ,qp_misc_jiras.tbl4896_customer as customer
 WHERE sale.cn=customer.cn
 GROUP BY CUBE((sale.dt),(newalias1,newalias2,newalias1),(sale.cn,sale.cn,sale.cn,newalias1),
 (sale.qty),(sale.pn,newalias3,sale.vn),(sale.vn,sale.vn,sale.prc),(sale.cn,newalias2)),sale.cn,sale.vn;
 
 
-drop table qp_misc_jiras.mpp4896_sale;
-drop table qp_misc_jiras.mpp4896_customer;
-create table qp_misc_jiras.mpp4703_test (i int, j int);
-insert into qp_misc_jiras.mpp4703_test select i, i%10 from generate_series(0, 9999) i;
-create index test_j on qp_misc_jiras.mpp4703_test(j);
+drop table qp_misc_jiras.tbl4896_sale;
+drop table qp_misc_jiras.tbl4896_customer;
+create table qp_misc_jiras.tbl4703_test (i int, j int);
+insert into qp_misc_jiras.tbl4703_test select i, i%10 from generate_series(0, 9999) i;
+create index test_j on qp_misc_jiras.tbl4703_test(j);
 set gp_select_invisible=true;
 set enable_seqscan=off;
 set enable_indexscan=off;
-select count(*) from qp_misc_jiras.mpp4703_test where j = 5 or j = 10; --shouldn't crash
-drop table qp_misc_jiras.mpp4703_test;
-create table qp_misc_jiras.mpp_694_1(c1 int, b1 box);
-select * from qp_misc_jiras.mpp_694_1;
-create table qp_misc_jiras.mpp_694_2 (like qp_misc_jiras.mpp_694_1);
+select count(*) from qp_misc_jiras.tbl4703_test where j = 5 or j = 10; --shouldn't crash
+drop table qp_misc_jiras.tbl4703_test;
+create table qp_misc_jiras.tbl_694_1(c1 int, b1 box);
+select * from qp_misc_jiras.tbl_694_1;
+create table qp_misc_jiras.tbl_694_2 (like qp_misc_jiras.tbl_694_1);
 
 
 
 
-select * from qp_misc_jiras.mpp_694_2;
-insert into qp_misc_jiras.mpp_694_2 values(2,'(2,2),(2,2)');
-insert into qp_misc_jiras.mpp_694_2 values(2,'(2,2),(3,2)');
-insert into qp_misc_jiras.mpp_694_2 values(2,'(2,2),(3,3)');
-insert into qp_misc_jiras.mpp_694_1 select * from qp_misc_jiras.mpp_694_2;
-select * from qp_misc_jiras.mpp_694_2;
-select * from qp_misc_jiras.mpp_694_2 join qp_misc_jiras.mpp_694_1 on qp_misc_jiras.mpp_694_2.b1=qp_misc_jiras.mpp_694_1.b1;
-select * from qp_misc_jiras.mpp_694_1 join qp_misc_jiras.mpp_694_2 on qp_misc_jiras.mpp_694_1.b1=qp_misc_jiras.mpp_694_2.b1;
+select * from qp_misc_jiras.tbl_694_2;
+insert into qp_misc_jiras.tbl_694_2 values(2,'(2,2),(2,2)');
+insert into qp_misc_jiras.tbl_694_2 values(2,'(2,2),(3,2)');
+insert into qp_misc_jiras.tbl_694_2 values(2,'(2,2),(3,3)');
+insert into qp_misc_jiras.tbl_694_1 select * from qp_misc_jiras.tbl_694_2;
+select * from qp_misc_jiras.tbl_694_2;
+select * from qp_misc_jiras.tbl_694_2 join qp_misc_jiras.tbl_694_1 on qp_misc_jiras.tbl_694_2.b1=qp_misc_jiras.tbl_694_1.b1;
+select * from qp_misc_jiras.tbl_694_1 join qp_misc_jiras.tbl_694_2 on qp_misc_jiras.tbl_694_1.b1=qp_misc_jiras.tbl_694_2.b1;
 
-drop table qp_misc_jiras.mpp_694_1;
-drop table qp_misc_jiras.mpp_694_2;
+drop table qp_misc_jiras.tbl_694_1;
+drop table qp_misc_jiras.tbl_694_2;
 -- Postgres timestamp
 select '20081225 130000'::timestamp;
 -- Teradata timestamp
@@ -961,11 +961,11 @@ select '20081225130000'::timestamp;
 select * from ( select 'a' as a) x join (select 'a' as b) y on a=b;
 select * from ( ( select 'a' as a ) xx join (select 'a' as b) yy on a = b ) x join (select 'a' as c) y on a=c;
 select x.b from ( ( select 'a' as a ) xx join (select 'a' as b) yy on a = b ) x join (select 'a' as c) y on a=c;
-drop table if exists qp_misc_jiras.mpp6027_test;
-create table qp_misc_jiras.mpp6027_test (i int, j bigint, k int, l int, m int);
-insert into qp_misc_jiras.mpp6027_test select i, i%100, i%123, i%234, i%345 from generate_series(1, 500) i;
-select j, sum(k), row_number() over (partition by j order by sum(k)) from qp_misc_jiras.mpp6027_test group by j order by j limit 10; -- order 1
-CREATE TABLE qp_misc_jiras.mpp6419_test(
+drop table if exists qp_misc_jiras.tbl6027_test;
+create table qp_misc_jiras.tbl6027_test (i int, j bigint, k int, l int, m int);
+insert into qp_misc_jiras.tbl6027_test select i, i%100, i%123, i%234, i%345 from generate_series(1, 500) i;
+select j, sum(k), row_number() over (partition by j order by sum(k)) from qp_misc_jiras.tbl6027_test group by j order by j limit 10; -- order 1
+CREATE TABLE qp_misc_jiras.tbl6419_test(
 lstg_id numeric(38,0),
 icedt date,
 icehr smallint,
@@ -978,10 +978,10 @@ START ('2009-05-26 00:00:00'::timestamp without time zone)
 END ('2009-06-30 00:00:00'::timestamp without time zone) EVERY ('1 day'::interval) WITH (appendonly=true, compresslevel=5)
 );
 
-insert into qp_misc_jiras.mpp6419_test values( 123, '2009-06-01', 12, '2009-06-01 01:01:01', 'aaaaaa');
-select * from qp_misc_jiras.mpp6419_test where icedt = (select partitionrangestart FROM pg_partitions where tablename='test1' and schemaname='public' and partitionrank=1);
-select * from qp_misc_jiras.mpp6419_test where '2009-12-12'::date = (select 'test'::text);
-drop table qp_misc_jiras.mpp6419_test;
+insert into qp_misc_jiras.tbl6419_test values( 123, '2009-06-01', 12, '2009-06-01 01:01:01', 'aaaaaa');
+select * from qp_misc_jiras.tbl6419_test where icedt = (select partitionrangestart FROM pg_partitions where tablename='test1' and schemaname='public' and partitionrank=1);
+select * from qp_misc_jiras.tbl6419_test where '2009-12-12'::date = (select 'test'::text);
+drop table qp_misc_jiras.tbl6419_test;
 
 -- start_matchsubs
 -- m/pg_temp/
@@ -1207,22 +1207,22 @@ drop table qp_misc_jiras.ins_cr_nds_dt, qp_misc_jiras.ins_cr_nds_mstr, qp_misc_j
 
 reset gp_select_invisible;
 
-create table qp_misc_jiras.mpp6448 (x "char");
-insert into qp_misc_jiras.mpp6448 values ('a');
-select x from qp_misc_jiras.mpp6448;
-drop table qp_misc_jiras.mpp6448;
-create table qp_misc_jiras.mpp6833_anl(a int, b int, c int) distributed by (a) partition by range (b) (partition bb start (0) end (2) every (1));
-analyze qp_misc_jiras.mpp6833_anl;
-explain select * from qp_misc_jiras.mpp6833_anl; -- should not hit cdbRelSize();
-select relname, reltuples, relpages from pg_class where relname like 'mpp6833_anl%'; -- should show relpages = 1.0
+create table qp_misc_jiras.tbl6448 (x "char");
+insert into qp_misc_jiras.tbl6448 values ('a');
+select x from qp_misc_jiras.tbl6448;
+drop table qp_misc_jiras.tbl6448;
+create table qp_misc_jiras.tbl6833_anl(a int, b int, c int) distributed by (a) partition by range (b) (partition bb start (0) end (2) every (1));
+analyze qp_misc_jiras.tbl6833_anl;
+explain select * from qp_misc_jiras.tbl6833_anl; -- should not hit cdbRelSize();
+select relname, reltuples, relpages from pg_class where relname like 'tbl6833_anl%'; -- should show relpages = 1.0
 
-create table qp_misc_jiras.mpp6833_vac(a int, b int, c int) distributed by (a) partition by range (b) (partition bb start (0) end (2) every (1));
-vacuum qp_misc_jiras.mpp6833_vac;
-explain select * from qp_misc_jiras.mpp6833_vac; -- should not hit cdbRelSize();
-select relname, reltuples, relpages from pg_class where relname like 'mpp6833_vac%'; -- should show relpages = 1.0
+create table qp_misc_jiras.tbl6833_vac(a int, b int, c int) distributed by (a) partition by range (b) (partition bb start (0) end (2) every (1));
+vacuum qp_misc_jiras.tbl6833_vac;
+explain select * from qp_misc_jiras.tbl6833_vac; -- should not hit cdbRelSize();
+select relname, reltuples, relpages from pg_class where relname like 'tbl6833_vac%'; -- should show relpages = 1.0
 
-drop table qp_misc_jiras.mpp6833_anl;
-drop table qp_misc_jiras.mpp6833_vac;
+drop table qp_misc_jiras.tbl6833_anl;
+drop table qp_misc_jiras.tbl6833_vac;
 -- actual query
 
 drop table if exists qp_misc_jiras_foo;
@@ -1247,55 +1247,55 @@ insert into qp_misc_jiras_bar values(4,5,6);
 
 select a.t from qp_misc_jiras_bar a where d in(select d from qp_misc_jiras_bar b where a.g=b.g) order by a.t;
 -- Various AO/CO util functions
-drop table if exists qp_misc_jiras.mpp7126_ao;
-drop table if exists qp_misc_jiras.mpp7126_ao_zlib3;
-drop table if exists qp_misc_jiras.mpp7126_ao_quicklz1;
-drop table if exists qp_misc_jiras.mpp7126_co;
-drop table if exists qp_misc_jiras.mpp7126_co_zlib3;
-drop table if exists qp_misc_jiras.mpp7126_co_quicklz1;
+drop table if exists qp_misc_jiras.tbl7126_ao;
+drop table if exists qp_misc_jiras.tbl7126_ao_zlib3;
+drop table if exists qp_misc_jiras.tbl7126_ao_quicklz1;
+drop table if exists qp_misc_jiras.tbl7126_co;
+drop table if exists qp_misc_jiras.tbl7126_co_zlib3;
+drop table if exists qp_misc_jiras.tbl7126_co_quicklz1;
 
 -- ctas from one storage type to another
-create table qp_misc_jiras.mpp7126_ao (a int, b text, c date) with (appendonly=true);
-insert into qp_misc_jiras.mpp7126_ao select i, 'abcd'||i, '1981-10-02' from generate_series(1,100000)i;
-create table qp_misc_jiras.mpp7126_ao_zlib3 with (appendonly=true, compresstype = zlib, compresslevel=3 ) as select * from qp_misc_jiras.mpp7126_ao;
-create table qp_misc_jiras.mpp7126_co with (appendonly=true,orientation=column) as select * from qp_misc_jiras.mpp7126_ao_zlib3;
-create table qp_misc_jiras.mpp7126_co_zlib3  with (appendonly=true,orientation=column, compresstype=zlib, compresslevel=3) as select * from qp_misc_jiras.mpp7126_co;
+create table qp_misc_jiras.tbl7126_ao (a int, b text, c date) with (appendonly=true);
+insert into qp_misc_jiras.tbl7126_ao select i, 'abcd'||i, '1981-10-02' from generate_series(1,100000)i;
+create table qp_misc_jiras.tbl7126_ao_zlib3 with (appendonly=true, compresstype = zlib, compresslevel=3 ) as select * from qp_misc_jiras.tbl7126_ao;
+create table qp_misc_jiras.tbl7126_co with (appendonly=true,orientation=column) as select * from qp_misc_jiras.tbl7126_ao_zlib3;
+create table qp_misc_jiras.tbl7126_co_zlib3  with (appendonly=true,orientation=column, compresstype=zlib, compresslevel=3) as select * from qp_misc_jiras.tbl7126_co;
 
 -- selects
-select count(*) from qp_misc_jiras.mpp7126_ao;
-select count(*) from qp_misc_jiras.mpp7126_ao_zlib3;
-select count(*) from qp_misc_jiras.mpp7126_co;
-select count(*) from qp_misc_jiras.mpp7126_co_zlib3;
+select count(*) from qp_misc_jiras.tbl7126_ao;
+select count(*) from qp_misc_jiras.tbl7126_ao_zlib3;
+select count(*) from qp_misc_jiras.tbl7126_co;
+select count(*) from qp_misc_jiras.tbl7126_co_zlib3;
 
 -- util functions
 
 -- start_ignore
 
-select get_ao_compression_ratio('qp_misc_jiras.mpp7126_ao');
-select get_ao_compression_ratio('qp_misc_jiras.mpp7126_ao_zlib3');
-select get_ao_compression_ratio('qp_misc_jiras.mpp7126_co');
-select get_ao_compression_ratio('qp_misc_jiras.mpp7126_co_zlib3');
+select get_ao_compression_ratio('qp_misc_jiras.tbl7126_ao');
+select get_ao_compression_ratio('qp_misc_jiras.tbl7126_ao_zlib3');
+select get_ao_compression_ratio('qp_misc_jiras.tbl7126_co');
+select get_ao_compression_ratio('qp_misc_jiras.tbl7126_co_zlib3');
 
 
-select get_ao_distribution('qp_misc_jiras.mpp7126_ao');
-select get_ao_distribution('qp_misc_jiras.mpp7126_ao_zlib3');
-select get_ao_distribution('qp_misc_jiras.mpp7126_co');
-select get_ao_distribution('qp_misc_jiras.mpp7126_co_zlib3');
+select get_ao_distribution('qp_misc_jiras.tbl7126_ao');
+select get_ao_distribution('qp_misc_jiras.tbl7126_ao_zlib3');
+select get_ao_distribution('qp_misc_jiras.tbl7126_co');
+select get_ao_distribution('qp_misc_jiras.tbl7126_co_zlib3');
 
 -- end_ignore
 
-select gp_update_ao_master_stats('qp_misc_jiras.mpp7126_ao');
-select gp_update_ao_master_stats('qp_misc_jiras.mpp7126_ao_zlib3');
-select gp_update_ao_master_stats('qp_misc_jiras.mpp7126_co');
-select gp_update_ao_master_stats('qp_misc_jiras.mpp7126_co_zlib3');
+select gp_update_ao_master_stats('qp_misc_jiras.tbl7126_ao');
+select gp_update_ao_master_stats('qp_misc_jiras.tbl7126_ao_zlib3');
+select gp_update_ao_master_stats('qp_misc_jiras.tbl7126_co');
+select gp_update_ao_master_stats('qp_misc_jiras.tbl7126_co_zlib3');
 
 
 
 -- drop the objects created
-drop table qp_misc_jiras.mpp7126_ao;
-drop table qp_misc_jiras.mpp7126_ao_zlib3;
-drop table qp_misc_jiras.mpp7126_co;
-drop table qp_misc_jiras.mpp7126_co_zlib3;
+drop table qp_misc_jiras.tbl7126_ao;
+drop table qp_misc_jiras.tbl7126_ao_zlib3;
+drop table qp_misc_jiras.tbl7126_co;
+drop table qp_misc_jiras.tbl7126_co_zlib3;
 drop table if exists pre_visitor_ca_event_ao;
 drop table if exists pre_visitor_ca_event_cao;
 
@@ -1403,73 +1403,73 @@ select count(*) from pre_visitor_ca_event_cao;
 
 drop table pre_visitor_ca_event_ao;
 drop table pre_visitor_ca_event_cao;
-drop table if exists qp_misc_jiras.mpp6701_test;
-create table qp_misc_jiras.mpp6701_test(i int[]);
-insert into qp_misc_jiras.mpp6701_test values('{1,2,3}');
-select i from qp_misc_jiras.mpp6701_test;
-select i from qp_misc_jiras.mpp6701_test group by i;
-drop table qp_misc_jiras.mpp6701_test;
+drop table if exists qp_misc_jiras.tbl6701_test;
+create table qp_misc_jiras.tbl6701_test(i int[]);
+insert into qp_misc_jiras.tbl6701_test values('{1,2,3}');
+select i from qp_misc_jiras.tbl6701_test;
+select i from qp_misc_jiras.tbl6701_test group by i;
+drop table qp_misc_jiras.tbl6701_test;
 select name,category from pg_settings where name like 'gp_enable_predicate_propagation';
-drop table if exists qp_misc_jiras.mpp7161_co;
-create table qp_misc_jiras.mpp7161_co(a int, b varchar);
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 0) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 15) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 11) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 16) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 3) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 7) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 5) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 9) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 1) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 17) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 9) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 13) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 12) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 6) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 11) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 17) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 3) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 6) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 16) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 18) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 10) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-insert into qp_misc_jiras.mpp7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 4) i;
-select count(*) from qp_misc_jiras.mpp7161_co;
-drop table qp_misc_jiras.mpp7161_co;
-select i, j into qp_misc_jiras.mpp6535_table from generate_series(1, 200) i, generate_series(1, 201) j;
-insert into qp_misc_jiras.mpp6535_table select * from qp_misc_jiras.mpp6535_table ;
-insert into qp_misc_jiras.mpp6535_table select * from qp_misc_jiras.mpp6535_table ;
-insert into qp_misc_jiras.mpp6535_table select * from qp_misc_jiras.mpp6535_table ;
-insert into qp_misc_jiras.mpp6535_table select * from qp_misc_jiras.mpp6535_table ;
-insert into qp_misc_jiras.mpp6535_table select * from qp_misc_jiras.mpp6535_table ;
-insert into qp_misc_jiras.mpp6535_table select * from qp_misc_jiras.mpp6535_table ;
-insert into qp_misc_jiras.mpp6535_table select * from qp_misc_jiras.mpp6535_table ;
+drop table if exists qp_misc_jiras.tbl7161_co;
+create table qp_misc_jiras.tbl7161_co(a int, b varchar);
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 0) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 15) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 11) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 16) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 3) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 7) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 5) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 9) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 1) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 17) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 9) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 13) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 12) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 6) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 11) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 17) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 3) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 6) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 16) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 18) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 10) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 4) i;
+select count(*) from qp_misc_jiras.tbl7161_co;
+drop table qp_misc_jiras.tbl7161_co;
+select i, j into qp_misc_jiras.tbl6535_table from generate_series(1, 200) i, generate_series(1, 201) j;
+insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
+insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
+insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
+insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
+insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
+insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
+insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
 set gp_enable_agg_distinct_pruning  = off;
-select count(distinct i), count(distinct j) from qp_misc_jiras.mpp6535_table;
+select count(distinct i), count(distinct j) from qp_misc_jiras.tbl6535_table;
 set gp_enable_agg_distinct = off;
-select count(distinct i), count(distinct j) from qp_misc_jiras.mpp6535_table;
-drop table qp_misc_jiras.mpp6535_table;
+select count(distinct i), count(distinct j) from qp_misc_jiras.tbl6535_table;
+drop table qp_misc_jiras.tbl6535_table;
 drop table if exists statement_timeout_test;
 create table statement_timeout_test(a int, b int);
 insert into statement_timeout_test select i,i+1 from generate_series(1,10000)i;
@@ -1478,49 +1478,49 @@ set statement_timeout = 1000; -- 1 sec
 execute prestmt; -- should get cancelled automatically
 drop table statement_timeout_test;
 set gp_autostats_mode=none;
-drop table qp_misc_jiras.mpp_6934;
-create table qp_misc_jiras.mpp_6934(x inet);
-insert into qp_misc_jiras.mpp_6934 select (i%200 || '.' || i%11 || '.' || i%11 || '.' || i%100)::inet from generate_series(1,4000000) i;
-analyze qp_misc_jiras.mpp_6934; 
-drop table qp_misc_jiras.mpp_6934;
-drop table if exists qp_misc_jiras.mpp7286_test;
-create table qp_misc_jiras.mpp7286_test (i int, d date);
-insert into qp_misc_jiras.mpp7286_test select i%10, '2009/01/01'::date + (i || ' days')::interval from generate_series(0, 99999) i;
+drop table qp_misc_jiras.tbl_6934;
+create table qp_misc_jiras.tbl_6934(x inet);
+insert into qp_misc_jiras.tbl_6934 select (i%200 || '.' || i%11 || '.' || i%11 || '.' || i%100)::inet from generate_series(1,4000000) i;
+analyze qp_misc_jiras.tbl_6934; 
+drop table qp_misc_jiras.tbl_6934;
+drop table if exists qp_misc_jiras.tbl7286_test;
+create table qp_misc_jiras.tbl7286_test (i int, d date);
+insert into qp_misc_jiras.tbl7286_test select i%10, '2009/01/01'::date + (i || ' days')::interval from generate_series(0, 99999) i;
 
 set gp_enable_agg_distinct=off;
 set gp_enable_agg_distinct_pruning=off;
 set statement_mem='1000kB';
 set optimizer_prefer_scalar_dqa_multistage_agg=off;
 
-select count(distinct d) from qp_misc_jiras.mpp7286_test;
-drop table qp_misc_jiras.mpp7286_test;
-drop table if exists qp_misc_jiras.mpp7381_test;
-create table qp_misc_jiras.mpp7381_test (i int, t text, d date, ti time with time zone);
-alter table qp_misc_jiras.mpp7381_test alter column t set storage external;
+select count(distinct d) from qp_misc_jiras.tbl7286_test;
+drop table qp_misc_jiras.tbl7286_test;
+drop table if exists qp_misc_jiras.tbl7381_test;
+create table qp_misc_jiras.tbl7381_test (i int, t text, d date, ti time with time zone);
+alter table qp_misc_jiras.tbl7381_test alter column t set storage external;
 
-insert into qp_misc_jiras.mpp7381_test select i, '0123456789' || i, current_date, current_time from generate_series(0, 999) i;
-insert into qp_misc_jiras.mpp7381_test select i, t||t||t||t||t||t||t||t||t||t, d, ti from qp_misc_jiras.mpp7381_test;
-insert into qp_misc_jiras.mpp7381_test select i, t||t||t||t||t||t||t||t||t||t, d, ti from qp_misc_jiras.mpp7381_test;
-insert into qp_misc_jiras.mpp7381_test select i, t||t||t||t||t||t||t||t||t||t, d, ti from qp_misc_jiras.mpp7381_test;
+insert into qp_misc_jiras.tbl7381_test select i, '0123456789' || i, current_date, current_time from generate_series(0, 999) i;
+insert into qp_misc_jiras.tbl7381_test select i, t||t||t||t||t||t||t||t||t||t, d, ti from qp_misc_jiras.tbl7381_test;
+insert into qp_misc_jiras.tbl7381_test select i, t||t||t||t||t||t||t||t||t||t, d, ti from qp_misc_jiras.tbl7381_test;
+insert into qp_misc_jiras.tbl7381_test select i, t||t||t||t||t||t||t||t||t||t, d, ti from qp_misc_jiras.tbl7381_test;
 
-select max(length(t)) from qp_misc_jiras.mpp7381_test;
+select max(length(t)) from qp_misc_jiras.tbl7381_test;
 
-drop table if exists qp_misc_jiras.mpp7381_test1;
-create table qp_misc_jiras.mpp7381_test1 (i int, t text, d date, ti time with time zone);
-alter table qp_misc_jiras.mpp7381_test1 alter column t set storage extended;
+drop table if exists qp_misc_jiras.tbl7381_test1;
+create table qp_misc_jiras.tbl7381_test1 (i int, t text, d date, ti time with time zone);
+alter table qp_misc_jiras.tbl7381_test1 alter column t set storage extended;
 
-insert into qp_misc_jiras.mpp7381_test1 select i,t,current_date, current_time from qp_misc_jiras.mpp7381_test;
-select count(*) from qp_misc_jiras.mpp7381_test1;
-drop table qp_misc_jiras.mpp7381_test;
-drop table qp_misc_jiras.mpp7381_test1;
+insert into qp_misc_jiras.tbl7381_test1 select i,t,current_date, current_time from qp_misc_jiras.tbl7381_test;
+select count(*) from qp_misc_jiras.tbl7381_test1;
+drop table qp_misc_jiras.tbl7381_test;
+drop table qp_misc_jiras.tbl7381_test1;
 set gp_autostats_mode=none;
-drop table if exists qp_misc_jiras.mpp7404_t1;
-drop table if exists qp_misc_jiras.mpp7404_t2;
-create table qp_misc_jiras.mpp7404_t1(x text);
-create table qp_misc_jiras.mpp7404_t2(x text);
+drop table if exists qp_misc_jiras.tbl7404_t1;
+drop table if exists qp_misc_jiras.tbl7404_t2;
+create table qp_misc_jiras.tbl7404_t1(x text);
+create table qp_misc_jiras.tbl7404_t2(x text);
 
-insert into qp_misc_jiras.mpp7404_t1 select ('foo'|| i::text) from generate_series(1,2) i;
-insert into qp_misc_jiras.mpp7404_t2 select x from qp_misc_jiras.mpp7404_t1;
+insert into qp_misc_jiras.tbl7404_t1 select ('foo'|| i::text) from generate_series(1,2) i;
+insert into qp_misc_jiras.tbl7404_t2 select x from qp_misc_jiras.tbl7404_t1;
 
 --Setting to modify system catalog
 set allow_system_table_mods=dml;
@@ -1529,60 +1529,60 @@ set allow_system_table_mods=dml;
 -- Case 1: make t1 and t2 appear really big
 --
 
-update pg_class set reltuples=100000, relpages=1000 where relname='qp_misc_jiras.mpp7404_t1';
-update pg_class set reltuples=100000, relpages=1000 where relname='qp_misc_jiras.mpp7404_t2';
+update pg_class set reltuples=100000, relpages=1000 where relname='qp_misc_jiras.tbl7404_t1';
+update pg_class set reltuples=100000, relpages=1000 where relname='qp_misc_jiras.tbl7404_t2';
 
---explain select count(*) from qp_misc_jiras.mpp7404_t1 where substr(x,0,2) in (select substr(x,0,2) from qp_misc_jiras.mpp7404_t2);
+--explain select count(*) from qp_misc_jiras.tbl7404_t1 where substr(x,0,2) in (select substr(x,0,2) from qp_misc_jiras.tbl7404_t2);
 
-select count(*) from qp_misc_jiras.mpp7404_t1 where substr(x,0,2) in (select substr(x,0,2) from qp_misc_jiras.mpp7404_t2);
+select count(*) from qp_misc_jiras.tbl7404_t1 where substr(x,0,2) in (select substr(x,0,2) from qp_misc_jiras.tbl7404_t2);
 
 --
 -- Case 2: make t1, t2 appear small
 --
 
-update pg_class set reltuples=1, relpages=1 where relname='qp_misc_jiras.mpp7404_t1';
-update pg_class set reltuples=1, relpages=1 where relname='qp_misc_jiras.mpp7404_t2';
+update pg_class set reltuples=1, relpages=1 where relname='qp_misc_jiras.tbl7404_t1';
+update pg_class set reltuples=1, relpages=1 where relname='qp_misc_jiras.tbl7404_t2';
 
---explain select * from qp_misc_jiras.mpp7404_t1 where substr(x,0,2) in (select substr(x,0,2) from qp_misc_jiras.mpp7404_t2);
+--explain select * from qp_misc_jiras.tbl7404_t1 where substr(x,0,2) in (select substr(x,0,2) from qp_misc_jiras.tbl7404_t2);
 
-select count(*) from qp_misc_jiras.mpp7404_t1 where substr(x,0,2) in (select substr(x,0,2) from qp_misc_jiras.mpp7404_t2);
+select count(*) from qp_misc_jiras.tbl7404_t1 where substr(x,0,2) in (select substr(x,0,2) from qp_misc_jiras.tbl7404_t2);
 select to_char(10, '999E99');
-drop table if exists qp_misc_jiras.mpp7616_test;
-create table qp_misc_jiras.mpp7616_test (a int, b text) with (appendonly=true, orientation=column) distributed by (a);
-insert into qp_misc_jiras.mpp7616_test select generate_series(1,1000), generate_series(1,1000);
-select count(a.*) from qp_misc_jiras.mpp7616_test a inner join qp_misc_jiras.mpp7616_test b using (a);
-select count(a.b) from qp_misc_jiras.mpp7616_test a inner join qp_misc_jiras.mpp7616_test b using (a);
+drop table if exists qp_misc_jiras.tbl7616_test;
+create table qp_misc_jiras.tbl7616_test (a int, b text) with (appendonly=true, orientation=column) distributed by (a);
+insert into qp_misc_jiras.tbl7616_test select generate_series(1,1000), generate_series(1,1000);
+select count(a.*) from qp_misc_jiras.tbl7616_test a inner join qp_misc_jiras.tbl7616_test b using (a);
+select count(a.b) from qp_misc_jiras.tbl7616_test a inner join qp_misc_jiras.tbl7616_test b using (a);
 -- start_ignore
-drop table qp_misc_jiras.mpp7616_test;
-drop table if exists qp_misc_jiras.mpp6874 ;
-create table qp_misc_jiras.mpp6874 ( a int, b text);
-\d+ qp_misc_jiras.mpp6874
-insert into qp_misc_jiras.mpp6874 values ( generate_series(1,1000),'test_1');
-create index qp_misc_jiras.mpp6874_a on qp_misc_jiras.mpp6874 using bitmap(a);
-\d+ qp_misc_jiras.mpp6874
-drop index qp_misc_jiras.mpp6874_a;
-\d+ qp_misc_jiras.mpp6874
-drop table qp_misc_jiras.mpp6874 ;
-drop table if exists qp_misc_jiras.mpp7740_rank;
-CREATE TABLE qp_misc_jiras.mpp7740_rank (id int, gender char(1), count char(1) )
+drop table qp_misc_jiras.tbl7616_test;
+drop table if exists qp_misc_jiras.tbl6874 ;
+create table qp_misc_jiras.tbl6874 ( a int, b text);
+\d+ qp_misc_jiras.tbl6874
+insert into qp_misc_jiras.tbl6874 values ( generate_series(1,1000),'test_1');
+create index qp_misc_jiras.tbl6874_a on qp_misc_jiras.tbl6874 using bitmap(a);
+\d+ qp_misc_jiras.tbl6874
+drop index qp_misc_jiras.tbl6874_a;
+\d+ qp_misc_jiras.tbl6874
+drop table qp_misc_jiras.tbl6874 ;
+drop table if exists qp_misc_jiras.tbl7740_rank;
+CREATE TABLE qp_misc_jiras.tbl7740_rank (id int, gender char(1), count char(1) )
             DISTRIBUTED BY (id)
             PARTITION BY LIST (gender,count)
             ( PARTITION girls VALUES (('F','1')),
               PARTITION boys VALUES (('M','1')),
               DEFAULT PARTITION other );
 -- end_ignore
-insert into qp_misc_jiras.mpp7740_rank values(1,'F','1');
-insert into qp_misc_jiras.mpp7740_rank values(1,'F','0');
-insert into qp_misc_jiras.mpp7740_rank values(1,'M','1');
-insert into qp_misc_jiras.mpp7740_rank values(1,'M','0');
+insert into qp_misc_jiras.tbl7740_rank values(1,'F','1');
+insert into qp_misc_jiras.tbl7740_rank values(1,'F','0');
+insert into qp_misc_jiras.tbl7740_rank values(1,'M','1');
+insert into qp_misc_jiras.tbl7740_rank values(1,'M','0');
 -- start_ignore 
-alter table qp_misc_jiras.mpp7740_rank split default partition at (values(('F', '0'))) into (partition mother, partition other);
+alter table qp_misc_jiras.tbl7740_rank split default partition at (values(('F', '0'))) into (partition mother, partition other);
 -- end_ignore
-select * from qp_misc_jiras.mpp7740_rank_1_prt_girls;
-select * from qp_misc_jiras.mpp7740_rank_1_prt_boys;
-select * from qp_misc_jiras.mpp7740_rank_1_prt_mother;
-select * from qp_misc_jiras.mpp7740_rank_1_prt_other;
-drop table qp_misc_jiras.mpp7740_rank;
+select * from qp_misc_jiras.tbl7740_rank_1_prt_girls;
+select * from qp_misc_jiras.tbl7740_rank_1_prt_boys;
+select * from qp_misc_jiras.tbl7740_rank_1_prt_mother;
+select * from qp_misc_jiras.tbl7740_rank_1_prt_other;
+drop table qp_misc_jiras.tbl7740_rank;
 -- This is the reproduction material for bug 7027.
 -- Most of this is taken from an existing test, so this might be 
 -- redundant, but it's easy to add it here and then we don't have to 
@@ -1625,82 +1625,82 @@ SELECT * FROM qp_misc_jiras.one_of_every_data_type ORDER BY id,serial_col;
 -- Clean up.
 DROP TABLE IF EXISTS qp_misc_jiras.one_of_every_data_type; 
 
-drop table if exists qp_misc_jiras.mpp7553_test;
-create table qp_misc_jiras.mpp7553_test (i int, j int);
-insert into qp_misc_jiras.mpp7553_test values(1,2);
+drop table if exists qp_misc_jiras.tbl7553_test;
+create table qp_misc_jiras.tbl7553_test (i int, j int);
+insert into qp_misc_jiras.tbl7553_test values(1,2);
 
-explain select i as a, i as b from qp_misc_jiras.mpp7553_test group by grouping sets( (a, b), (a));
+explain select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a));
 
-select i as a, i as b from qp_misc_jiras.mpp7553_test group by grouping sets( (a, b), (a)); 
+select i as a, i as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
 
-explain select j as a, j as b from qp_misc_jiras.mpp7553_test group by grouping sets( (a, b), (a)); 
+explain select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
 
-select j as a, j as b from qp_misc_jiras.mpp7553_test group by grouping sets( (a, b), (a)); 
+select j as a, j as b from qp_misc_jiras.tbl7553_test group by grouping sets( (a, b), (a)); 
 
-drop table qp_misc_jiras.mpp7553_test;
+drop table qp_misc_jiras.tbl7553_test;
 
-drop table if exists qp_misc_jiras.mpp7268_foo;
-drop table if exists qp_misc_jiras.mpp7268_bar;
+drop table if exists qp_misc_jiras.tbl7268_foo;
+drop table if exists qp_misc_jiras.tbl7268_bar;
 
-create table qp_misc_jiras.mpp7268_foo (a varchar(15), b varchar(15)) distributed by (b);
+create table qp_misc_jiras.tbl7268_foo (a varchar(15), b varchar(15)) distributed by (b);
 
-\d qp_misc_jiras.mpp7268_foo;
+\d qp_misc_jiras.tbl7268_foo;
 
-create table qp_misc_jiras.mpp7268_bar as select * from qp_misc_jiras.mpp7268_foo;
+create table qp_misc_jiras.tbl7268_bar as select * from qp_misc_jiras.tbl7268_foo;
 
-\d qp_misc_jiras.mpp7268_bar; 
+\d qp_misc_jiras.tbl7268_bar; 
 
-drop table if exists qp_misc_jiras.mpp7268_foo;
-drop table if exists qp_misc_jiras.mpp7268_bar;
+drop table if exists qp_misc_jiras.tbl7268_foo;
+drop table if exists qp_misc_jiras.tbl7268_bar;
 
-create table qp_misc_jiras.mpp7268_foo (a int, b int) distributed by (b);
+create table qp_misc_jiras.tbl7268_foo (a int, b int) distributed by (b);
 
-\d qp_misc_jiras.mpp7268_foo;
+\d qp_misc_jiras.tbl7268_foo;
 
-create table qp_misc_jiras.mpp7268_bar as select * from qp_misc_jiras.mpp7268_foo;
+create table qp_misc_jiras.tbl7268_bar as select * from qp_misc_jiras.tbl7268_foo;
 
-\d qp_misc_jiras.mpp7268_bar; 
+\d qp_misc_jiras.tbl7268_bar; 
 
-drop table if exists qp_misc_jiras.mpp7268_foo;
-drop table if exists qp_misc_jiras.mpp7268_bar;
+drop table if exists qp_misc_jiras.tbl7268_foo;
+drop table if exists qp_misc_jiras.tbl7268_bar;
 
-create table qp_misc_jiras.mpp7268_foo (a varchar(15), b int) distributed by (b);
+create table qp_misc_jiras.tbl7268_foo (a varchar(15), b int) distributed by (b);
 
-\d qp_misc_jiras.mpp7268_foo;
+\d qp_misc_jiras.tbl7268_foo;
 
-create table qp_misc_jiras.mpp7268_bar as select * from qp_misc_jiras.mpp7268_foo;
+create table qp_misc_jiras.tbl7268_bar as select * from qp_misc_jiras.tbl7268_foo;
 
-\d qp_misc_jiras.mpp7268_bar; 
+\d qp_misc_jiras.tbl7268_bar; 
 
-drop table if exists qp_misc_jiras.mpp7268_foo;
-drop table if exists qp_misc_jiras.mpp7268_bar;
+drop table if exists qp_misc_jiras.tbl7268_foo;
+drop table if exists qp_misc_jiras.tbl7268_bar;
 
-create table qp_misc_jiras.mpp7268_foo (a int, b varchar(15)) distributed by (b);
+create table qp_misc_jiras.tbl7268_foo (a int, b varchar(15)) distributed by (b);
 
-\d qp_misc_jiras.mpp7268_foo;
+\d qp_misc_jiras.tbl7268_foo;
 
-create table qp_misc_jiras.mpp7268_bar as select * from qp_misc_jiras.mpp7268_foo;
+create table qp_misc_jiras.tbl7268_bar as select * from qp_misc_jiras.tbl7268_foo;
 
-\d qp_misc_jiras.mpp7268_bar; 
+\d qp_misc_jiras.tbl7268_bar; 
 
-drop table if exists qp_misc_jiras.mpp7268_foo;
-drop table if exists qp_misc_jiras.mpp7268_bar;
-drop table if exists qp_misc_jiras.mpp6775_foo;
-drop table if exists qp_misc_jiras.mpp6775_bar;
+drop table if exists qp_misc_jiras.tbl7268_foo;
+drop table if exists qp_misc_jiras.tbl7268_bar;
+drop table if exists qp_misc_jiras.tbl6775_foo;
+drop table if exists qp_misc_jiras.tbl6775_bar;
  
-create table qp_misc_jiras.mpp6775_bar(x int) distributed randomly;        
-create table qp_misc_jiras.mpp6775_foo(like qp_misc_jiras.mpp6775_bar) distributed randomly;
+create table qp_misc_jiras.tbl6775_bar(x int) distributed randomly;        
+create table qp_misc_jiras.tbl6775_foo(like qp_misc_jiras.tbl6775_bar) distributed randomly;
 
-alter table qp_misc_jiras.mpp6775_foo add column y int;
-alter table qp_misc_jiras.mpp6775_foo drop column y;
+alter table qp_misc_jiras.tbl6775_foo add column y int;
+alter table qp_misc_jiras.tbl6775_foo drop column y;
 
-insert into qp_misc_jiras.mpp6775_foo(x) select  t1.x from qp_misc_jiras.mpp6775_bar t1 join qp_misc_jiras.mpp6775_bar t2 on t1.x=t2.x;
+insert into qp_misc_jiras.tbl6775_foo(x) select  t1.x from qp_misc_jiras.tbl6775_bar t1 join qp_misc_jiras.tbl6775_bar t2 on t1.x=t2.x;
 
-insert into qp_misc_jiras.mpp6775_foo(x) select  t1.x from qp_misc_jiras.mpp6775_bar t1;
-insert into qp_misc_jiras.mpp6775_foo(x) select  t1.x from qp_misc_jiras.mpp6775_bar t1 group by t1.x;
+insert into qp_misc_jiras.tbl6775_foo(x) select  t1.x from qp_misc_jiras.tbl6775_bar t1;
+insert into qp_misc_jiras.tbl6775_foo(x) select  t1.x from qp_misc_jiras.tbl6775_bar t1 group by t1.x;
 
-drop table if exists qp_misc_jiras.mpp6775_foo;
-drop table if exists qp_misc_jiras.mpp6775_bar;
+drop table if exists qp_misc_jiras.tbl6775_foo;
+drop table if exists qp_misc_jiras.tbl6775_bar;
 --
 -- Test Set 1
 --
@@ -1920,77 +1920,77 @@ DROP TABLE IF EXISTS qp_misc_jiras.inet_ip_pairs CASCADE;
 set gp_autostats_mode=none;
 
 -- start_ignore
-drop table if exists qp_misc_jiras.mpp_7498_t1, qp_misc_jiras.mpp_7498_t2, qp_misc_jiras.mpp_7498_t3 cascade;
+drop table if exists qp_misc_jiras.tbl_7498_t1, qp_misc_jiras.tbl_7498_t2, qp_misc_jiras.tbl_7498_t3 cascade;
 -- end_ignore
 
-create table qp_misc_jiras.mpp_7498_t1(x int, y text) distributed by (x);
-insert into qp_misc_jiras.mpp_7498_t1 select x, 'foo' from generate_series(1,70000) x;
-create table qp_misc_jiras.mpp_7498_t2 as select * from qp_misc_jiras.mpp_7498_t1;
-create table qp_misc_jiras.mpp_7498_t3 as select * from qp_misc_jiras.mpp_7498_t1;
-drop table qp_misc_jiras.mpp_7498_t2;
+create table qp_misc_jiras.tbl_7498_t1(x int, y text) distributed by (x);
+insert into qp_misc_jiras.tbl_7498_t1 select x, 'foo' from generate_series(1,70000) x;
+create table qp_misc_jiras.tbl_7498_t2 as select * from qp_misc_jiras.tbl_7498_t1;
+create table qp_misc_jiras.tbl_7498_t3 as select * from qp_misc_jiras.tbl_7498_t1;
+drop table qp_misc_jiras.tbl_7498_t2;
 
-drop table if exists qp_misc_jiras.mpp_7498_t1, qp_misc_jiras.mpp_7498_t2, qp_misc_jiras.mpp_7498_t3 cascade;
+drop table if exists qp_misc_jiras.tbl_7498_t1, qp_misc_jiras.tbl_7498_t2, qp_misc_jiras.tbl_7498_t3 cascade;
 
 
-create table qp_misc_jiras.mpp_7498_t1(x int, y text) distributed by (x);
-insert into qp_misc_jiras.mpp_7498_t1 select x, 'foo' from generate_series(1,70000) x;
-create table qp_misc_jiras.mpp_7498_t2 as select * from qp_misc_jiras.mpp_7498_t1;
-create table qp_misc_jiras.mpp_7498_t3 as select * from qp_misc_jiras.mpp_7498_t1;
+create table qp_misc_jiras.tbl_7498_t1(x int, y text) distributed by (x);
+insert into qp_misc_jiras.tbl_7498_t1 select x, 'foo' from generate_series(1,70000) x;
+create table qp_misc_jiras.tbl_7498_t2 as select * from qp_misc_jiras.tbl_7498_t1;
+create table qp_misc_jiras.tbl_7498_t3 as select * from qp_misc_jiras.tbl_7498_t1;
 
 
 -- clean up all the test tables
 -- start_ignore
-drop table if exists qp_misc_jiras.mpp_7498_t1, qp_misc_jiras.mpp_7498_t2, qp_misc_jiras.mpp_7498_t3 cascade;
+drop table if exists qp_misc_jiras.tbl_7498_t1, qp_misc_jiras.tbl_7498_t2, qp_misc_jiras.tbl_7498_t3 cascade;
 -- end_ignore
 
 
 
 -- start_ignore
-DROP TABLE IF EXISTS qp_misc_jiras.mpp7886_foo;
+DROP TABLE IF EXISTS qp_misc_jiras.tbl7886_foo;
 -- end_ignore
 
-CREATE TABLE qp_misc_jiras.mpp7886_foo (ssn INT, lastName VARCHAR, junk INT) DISTRIBUTED BY (ssn);
-INSERT INTO qp_misc_jiras.mpp7886_foo VALUES (1, 'foo', 1);
+CREATE TABLE qp_misc_jiras.tbl7886_foo (ssn INT, lastName VARCHAR, junk INT) DISTRIBUTED BY (ssn);
+INSERT INTO qp_misc_jiras.tbl7886_foo VALUES (1, 'foo', 1);
 
 select currtid2('t'::text, '(0,1)'::tid);
 
 -- start_ignore
-DROP TABLE qp_misc_jiras.mpp7886_foo;
+DROP TABLE qp_misc_jiras.tbl7886_foo;
 -- end_ignore
 
 -- Resource Queue should not be created inside Transaction block the error is the expected behavior
 begin;
 CREATE RESOURCE QUEUE db_resque_new1 ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
 end;
-create table qp_misc_jiras.mpp8017(x int, y int) distributed by (x);
-create index mpp8017_x on qp_misc_jiras.mpp8017(x);
-insert into qp_misc_jiras.mpp8017 select generate_series(1,100), generate_series(1,100);
-analyze qp_misc_jiras.mpp8017;
-select relname, reltuples, relpages from pg_class where relname in ('mpp8017', 'mpp8017_x');
-drop table qp_misc_jiras.mpp8017;
+create table qp_misc_jiras.tbl8017(x int, y int) distributed by (x);
+create index tbl8017_x on qp_misc_jiras.tbl8017(x);
+insert into qp_misc_jiras.tbl8017 select generate_series(1,100), generate_series(1,100);
+analyze qp_misc_jiras.tbl8017;
+select relname, reltuples, relpages from pg_class where relname in ('tbl8017', 'tbl8017_x');
+drop table qp_misc_jiras.tbl8017;
 
 
-drop table qp_misc_jiras.mpp7957_foo;
+drop table qp_misc_jiras.tbl7957_foo;
 
-create table qp_misc_jiras.mpp7957_foo(x int, y int, z int) distributed by (x);
+create table qp_misc_jiras.tbl7957_foo(x int, y int, z int) distributed by (x);
 
-insert into qp_misc_jiras.mpp7957_foo values(1,2,3);
-insert into qp_misc_jiras.mpp7957_foo values(1,2,3);
-insert into qp_misc_jiras.mpp7957_foo values(1,2,3);
+insert into qp_misc_jiras.tbl7957_foo values(1,2,3);
+insert into qp_misc_jiras.tbl7957_foo values(1,2,3);
+insert into qp_misc_jiras.tbl7957_foo values(1,2,3);
 
-select count(*) as c from qp_misc_jiras.mpp7957_foo group by cube(x) order by c;
+select count(*) as c from qp_misc_jiras.tbl7957_foo group by cube(x) order by c;
 
-select count(*) as c from qp_misc_jiras.mpp7957_foo group by cube(y) order by c;
+select count(*) as c from qp_misc_jiras.tbl7957_foo group by cube(y) order by c;
 
-select count(*) as c from qp_misc_jiras.mpp7957_foo group by cube(z) order by c;
+select count(*) as c from qp_misc_jiras.tbl7957_foo group by cube(z) order by c;
 
-select sum(z) as c from qp_misc_jiras.mpp7957_foo group by cube(x) order by c;
+select sum(z) as c from qp_misc_jiras.tbl7957_foo group by cube(x) order by c;
 
-select sum(z) as c from qp_misc_jiras.mpp7957_foo group by cube(y) order by c;
+select sum(z) as c from qp_misc_jiras.tbl7957_foo group by cube(y) order by c;
 
-select sum(z) as c from qp_misc_jiras.mpp7957_foo group by cube(z) order by c;
+select sum(z) as c from qp_misc_jiras.tbl7957_foo group by cube(z) order by c;
 
-drop table qp_misc_jiras.mpp7957_foo;
+drop table qp_misc_jiras.tbl7957_foo;
 
 -- start_ignore
 DROP SCHEMA IF EXISTS mustan CASCADE;
@@ -2084,11 +2084,11 @@ select * from mustan.f7( '20080102' );--
 
 
 -- start_ignore
-drop table if exists qp_misc_jiras.mpp5994_test;
-create table qp_misc_jiras.mpp5994_test (i int, j int);
+drop table if exists qp_misc_jiras.tbl5994_test;
+create table qp_misc_jiras.tbl5994_test (i int, j int);
 -- end_ignore
 
-insert into qp_misc_jiras.mpp5994_test select i, i%1000 from generate_series(1, 100000) i;
+insert into qp_misc_jiras.tbl5994_test select i, i%1000 from generate_series(1, 100000) i;
 
 
 reset enable_indexscan; 
@@ -2100,16 +2100,16 @@ reset gp_enable_agg_distinct_pruning;
 
 set enable_groupagg=off;
 -- both queries should use hashagg
-explain select count(distinct j) from (select t1.* from qp_misc_jiras.mpp5994_test t1, qp_misc_jiras.mpp5994_test t2 where t1.j = t2.j) tmp group by j;
-explain select count(distinct j) from (select t1.* from qp_misc_jiras.mpp5994_test t1, qp_misc_jiras.mpp5994_test t2 where t1.i = t2.i) tmp group by j;
+explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.j = t2.j) tmp group by j;
+explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.i = t2.i) tmp group by j;
 
 set enable_groupagg=on;
 -- first query should use groupagg, and second one - hashagg
-explain select count(distinct j) from (select t1.* from qp_misc_jiras.mpp5994_test t1, qp_misc_jiras.mpp5994_test t2 where t1.j = t2.j) tmp group by j;
-explain select count(distinct j) from (select t1.* from qp_misc_jiras.mpp5994_test t1, qp_misc_jiras.mpp5994_test t2 where t1.i = t2.i) tmp group by j;
+explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.j = t2.j) tmp group by j;
+explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.i = t2.i) tmp group by j;
 
-drop table qp_misc_jiras.mpp5994_test;
-CREATE TABLE qp_misc_jiras.mpp_8205 (
+drop table qp_misc_jiras.tbl5994_test;
+CREATE TABLE qp_misc_jiras.tbl_8205 (
 text_col text,
 bigint_col bigint,
 char_vary_col character varying(30),
@@ -2122,81 +2122,81 @@ set enable_indexscan = on;
 
 show enable_indexscan;
 
-explain analyze select reltablespace  from pg_class where oid = (select reltoastrelid from pg_class where relname='mpp_8205'); -- force_explain
+explain analyze select reltablespace  from pg_class where oid = (select reltoastrelid from pg_class where relname='tbl_8205'); -- force_explain
 
-select reltablespace from pg_class where oid = (select reltoastrelid from pg_class where relname='mpp_8205');
+select reltablespace from pg_class where oid = (select reltoastrelid from pg_class where relname='tbl_8205');
 
-drop table qp_misc_jiras.mpp_8205;
+drop table qp_misc_jiras.tbl_8205;
 
 -- create sample table
-create table qp_misc_jiras.mpp2976(x int);
-insert into qp_misc_jiras.mpp2976 select generate_series(1,1000);
+create table qp_misc_jiras.tbl2976(x int);
+insert into qp_misc_jiras.tbl2976 select generate_series(1,1000);
 
 -- test cases
 -- start_ignore
-select pg_relation_size(tablename) from pg_tables where schemaname ='qp_misc_jiras' and tablename = 'mpp2976'; -- This should work
+select pg_relation_size(tablename) from pg_tables where schemaname ='qp_misc_jiras' and tablename = 'tbl2976'; -- This should work
 
-select pg_relation_size(oid) from pg_class where relname = 'mpp2976'; -- This should work
+select pg_relation_size(oid) from pg_class where relname = 'tbl2976'; -- This should work
 -- end_ignore
-create table qp_misc_jiras.mpp2976_3(x int) distributed by (x);
+create table qp_misc_jiras.tbl2976_3(x int) distributed by (x);
 
-drop table qp_misc_jiras.mpp2976;
-drop table qp_misc_jiras.mpp2976_3;
-create table qp_misc_jiras.mpp8258 (a int, b double precision)
+drop table qp_misc_jiras.tbl2976;
+drop table qp_misc_jiras.tbl2976_3;
+create table qp_misc_jiras.tbl8258 (a int, b double precision)
 PARTITION BY RANGE(b)
 (START (1::double precision) END (100::double precision)
 EVERY ((10)::double precision),
 PARTITION p1 START (100::double precision) END (150::double precision));
 
-select pg_get_partition_def('qp_misc_jiras.mpp8258'::regclass, true);
+select pg_get_partition_def('qp_misc_jiras.tbl8258'::regclass, true);
 
-drop table qp_misc_jiras.mpp8258;
+drop table qp_misc_jiras.tbl8258;
 
 
 -- start_ignore
-DROP FUNCTION qp_misc_jiras.mpp5032_func();
+DROP FUNCTION qp_misc_jiras.tbl5032_func();
 -- end_ignore
 
 
-CREATE OR REPLACE FUNCTION qp_misc_jiras.mpp5032_func() RETURNS VOID AS
+CREATE OR REPLACE FUNCTION qp_misc_jiras.tbl5032_func() RETURNS VOID AS
 $$
     BEGIN
-	CREATE TEMP TABLE mpp5032_tt AS SELECT 'hello world!'::text;
-	PERFORM * FROM mpp5032_tt;
-	DROP TABLE mpp5032_tt;
+	CREATE TEMP TABLE tbl5032_tt AS SELECT 'hello world!'::text;
+	PERFORM * FROM tbl5032_tt;
+	DROP TABLE tbl5032_tt;
     END;
 $$ LANGUAGE plpgsql;
 
-SELECT qp_misc_jiras.mpp5032_func();
-SELECT qp_misc_jiras.mpp5032_func();
+SELECT qp_misc_jiras.tbl5032_func();
+SELECT qp_misc_jiras.tbl5032_func();
 
 
 -- start_ignore
-DROP FUNCTION qp_misc_jiras.mpp5032_func();
+DROP FUNCTION qp_misc_jiras.tbl5032_func();
 -- end_ignore
 
 
 
 -- start_ignore
-DROP FUNCTION qp_misc_jiras.mpp5032_func();
+DROP FUNCTION qp_misc_jiras.tbl5032_func();
 -- end_ignore
 
 
-CREATE FUNCTION qp_misc_jiras.mpp5032_func() RETURNS VOID AS
+CREATE FUNCTION qp_misc_jiras.tbl5032_func() RETURNS VOID AS
 $$
     BEGIN
-	CREATE TEMP TABLE mpp5032_tt AS SELECT 'hello world!'::text;
-	execute 'SELECT COUNT(*) FROM mpp5032_tt';
-	DROP TABLE mpp5032_tt;
+	CREATE TEMP TABLE tbl5032_tt AS SELECT 'hello world!'::text;
+	execute 'SELECT COUNT(*) FROM tbl5032_tt';
+	DROP TABLE tbl5032_tt;
     END;
 $$ LANGUAGE plpgsql;
 
-SELECT qp_misc_jiras.mpp5032_func();
-SELECT qp_misc_jiras.mpp5032_func();
+SELECT qp_misc_jiras.tbl5032_func();
+SELECT qp_misc_jiras.tbl5032_func();
 
 
 -- start_ignore
-DROP FUNCTION qp_misc_jiras.mpp5032_func();
+DROP FUNCTION qp_misc_jiras.tbl5032_func();
 -- end_ignore
 
 
@@ -2313,91 +2313,91 @@ group by 1, 2;
 -- start_ignore
 drop table qp_misc_jiras.foo_6325;
 drop table qp_misc_jiras.bar_6325;
-DROP TABLE qp_misc_jiras.abc_mpp8621;
+DROP TABLE qp_misc_jiras.abc_tbl8621;
 -- end_ignore
 
-CREATE TABLE qp_misc_jiras.abc_mpp8621 (a int, b int) WITH (appendonly=true, orientation=column);
-INSERT INTO qp_misc_jiras.abc_mpp8621 select generate_series(1,1000);
-INSERT INTO qp_misc_jiras.abc_mpp8621 select generate_series(1,1000);
-alter table qp_misc_jiras.abc_mpp8621 set distributed randomly;
-alter table qp_misc_jiras.abc_mpp8621 set distributed by (a);
-create index abc_idx on qp_misc_jiras.abc_mpp8621 using bitmap (a);
-insert into qp_misc_jiras.abc_mpp8621 select i, i+1 from generate_series(1, 2000000)i;
-insert into qp_misc_jiras.abc_mpp8621 select i % 100, (i+1) % 100 from generate_series(1,20*1000*1000) i;
+CREATE TABLE qp_misc_jiras.abc_tbl8621 (a int, b int) WITH (appendonly=true, orientation=column);
+INSERT INTO qp_misc_jiras.abc_tbl8621 select generate_series(1,1000);
+INSERT INTO qp_misc_jiras.abc_tbl8621 select generate_series(1,1000);
+alter table qp_misc_jiras.abc_tbl8621 set distributed randomly;
+alter table qp_misc_jiras.abc_tbl8621 set distributed by (a);
+create index abc_idx on qp_misc_jiras.abc_tbl8621 using bitmap (a);
+insert into qp_misc_jiras.abc_tbl8621 select i, i+1 from generate_series(1, 2000000)i;
+insert into qp_misc_jiras.abc_tbl8621 select i % 100, (i+1) % 100 from generate_series(1,20*1000*1000) i;
 
 -- start_ignore
-DROP TABLE qp_misc_jiras.abc_mpp8621;
+DROP TABLE qp_misc_jiras.abc_tbl8621;
 -- end_ignore
 
 
 
 -- start_ignore
-drop table if exists qp_misc_jiras.mpp8860_1;
-drop table if exists qp_misc_jiras.mpp8860_2;
+drop table if exists qp_misc_jiras.tbl8860_1;
+drop table if exists qp_misc_jiras.tbl8860_2;
 -- end_ignore
 
-CREATE TABLE qp_misc_jiras.mpp8860_1 (
+CREATE TABLE qp_misc_jiras.tbl8860_1 (
      id INTEGER NOT NULL,
      key TEXT NOT NULL
 ) distributed by (id);
 
 -- -----------------------------------------
-CREATE TABLE qp_misc_jiras.mpp8860_2 (
+CREATE TABLE qp_misc_jiras.tbl8860_2 (
      id INTEGER NOT NULL,
      key CHARACTER VARYING(50) NOT NULL
 ) distributed by (id);
 
 -- -----------------------------------------
-INSERT INTO qp_misc_jiras.mpp8860_1 SELECT 1, key FROM qp_misc_jiras.mpp8860_2;
+INSERT INTO qp_misc_jiras.tbl8860_1 SELECT 1, key FROM qp_misc_jiras.tbl8860_2;
 
 -- -----------------------------------------
 
 -- start_ignore
-drop table if exists qp_misc_jiras.mpp8860_1;
-drop table if exists qp_misc_jiras.mpp8860_2;
+drop table if exists qp_misc_jiras.tbl8860_1;
+drop table if exists qp_misc_jiras.tbl8860_2;
 -- end_ignore
 
 -- MPP-9739: Unicode not supported - chr() ascii() functions do not return unicode codepoints for multibyte characters
-Create Table qp_misc_jiras.mpp9739_unicode_test
+Create Table qp_misc_jiras.tbl9739_unicode_test
 (
 id int Not Null,
 str Varchar(10) Not Null
 )
 Distributed By (id);
 
-Insert Into qp_misc_jiras.mpp9739_unicode_test (id, str) Values (1, Chr(1000) || Chr(2001) || Chr(3010));
-Insert Into qp_misc_jiras.mpp9739_unicode_test (id, str) Values (2, Chr(105) || Chr(110) || Chr(35));
+Insert Into qp_misc_jiras.tbl9739_unicode_test (id, str) Values (1, Chr(1000) || Chr(2001) || Chr(3010));
+Insert Into qp_misc_jiras.tbl9739_unicode_test (id, str) Values (2, Chr(105) || Chr(110) || Chr(35));
 
 Select id,
 Ascii (Substr(str, 1, 1)) As first_char_code,
 Ascii (Substr(str, 2, 1)) As second_char_code,
 Ascii (Substr(str, 3, 1)) As third_char_code,
 Ascii (Substr(str, 4, 1)) As fourth_char_code
-From qp_misc_jiras.mpp9739_unicode_test
+From qp_misc_jiras.tbl9739_unicode_test
 Order
 By id;
 
-drop table qp_misc_jiras.mpp9739_unicode_test;
+drop table qp_misc_jiras.tbl9739_unicode_test;
 
 
 --
--- Create table qp_misc_jiras.mpp9613
+-- Create table qp_misc_jiras.tbl9613
 --
 
 -- start_ignore
-drop table qp_misc_jiras.mpp9613;
+drop table qp_misc_jiras.tbl9613;
 -- end_ignore
 
-create table qp_misc_jiras.mpp9613(x int, y numeric) distributed by (x);
+create table qp_misc_jiras.tbl9613(x int, y numeric) distributed by (x);
 
-insert into qp_misc_jiras.mpp9613 values(1, 1);
-insert into qp_misc_jiras.mpp9613 values(1, 2);
-insert into qp_misc_jiras.mpp9613 values(1, 3);
-insert into qp_misc_jiras.mpp9613 values(1, 4);
-insert into qp_misc_jiras.mpp9613 values(1, 5);
-insert into qp_misc_jiras.mpp9613 values(1, 6);
-insert into qp_misc_jiras.mpp9613 values(1, 7);
-insert into qp_misc_jiras.mpp9613 values(1, 8);
+insert into qp_misc_jiras.tbl9613 values(1, 1);
+insert into qp_misc_jiras.tbl9613 values(1, 2);
+insert into qp_misc_jiras.tbl9613 values(1, 3);
+insert into qp_misc_jiras.tbl9613 values(1, 4);
+insert into qp_misc_jiras.tbl9613 values(1, 5);
+insert into qp_misc_jiras.tbl9613 values(1, 6);
+insert into qp_misc_jiras.tbl9613 values(1, 7);
+insert into qp_misc_jiras.tbl9613 values(1, 8);
 
 
 --
@@ -2438,7 +2438,7 @@ CREATE OR REPLACE FUNCTION _final_median2(numeric[])
 $$
    SELECT AVG(val.x)
    FROM (
-   	select count(*) as x from qp_misc_jiras.mpp9613
+   	select count(*) as x from qp_misc_jiras.tbl9613
    	) val;
 $$
 LANGUAGE 'sql' IMMUTABLE;
@@ -2458,41 +2458,41 @@ CREATE AGGREGATE median2(numeric) (
 -- Queries.
 --
 
-explain select x, "median"(y) from qp_misc_jiras.mpp9613 group by x; -- this should be allowed
+explain select x, "median"(y) from qp_misc_jiras.tbl9613 group by x; -- this should be allowed
 
-select x, "median"(y) from qp_misc_jiras.mpp9613 group by x; -- this should be allowed
+select x, "median"(y) from qp_misc_jiras.tbl9613 group by x; -- this should be allowed
 
-explain select x, median2(y) from qp_misc_jiras.mpp9613 group by x; -- this should be disallowed
+explain select x, median2(y) from qp_misc_jiras.tbl9613 group by x; -- this should be disallowed
 
-select x, median2(y) from qp_misc_jiras.mpp9613 group by x; -- this should be disallowed
+select x, median2(y) from qp_misc_jiras.tbl9613 group by x; -- this should be disallowed
 
 
 -- start_ignore
-drop table qp_misc_jiras.mpp9613;
+drop table qp_misc_jiras.tbl9613;
 DROP AGGREGATE "median"(numeric);
 DROP AGGREGATE median2(numeric);
 -- end_ignore
 
-create table qp_misc_jiras.mpp7285_axg (id int, time timestamp) partition by range (time) (start ('2009-01-01 00:00:00'::timestamp without time zone) end ('2009-01-03 00:00:00'::timestamp without time zone) every ('1 day'::interval));
-alter table qp_misc_jiras.mpp7285_axg add partition p20090103 start ('2009-01-03 00:00:00'::timestamp without time zone) end ('2009-01-04 00:00:00'::timestamp without time zone);
-select count(*) from qp_misc_jiras.mpp7285_axg;
-drop table qp_misc_jiras.mpp7285_axg;
+create table qp_misc_jiras.tbl7285_axg (id int, time timestamp) partition by range (time) (start ('2009-01-01 00:00:00'::timestamp without time zone) end ('2009-01-03 00:00:00'::timestamp without time zone) every ('1 day'::interval));
+alter table qp_misc_jiras.tbl7285_axg add partition p20090103 start ('2009-01-03 00:00:00'::timestamp without time zone) end ('2009-01-04 00:00:00'::timestamp without time zone);
+select count(*) from qp_misc_jiras.tbl7285_axg;
+drop table qp_misc_jiras.tbl7285_axg;
 show autovacuum;
 set autovacuum=on;
 
 -- start_ignore
-drop table if exists qp_misc_jiras.mpp9706ao;
-drop table if exists qp_misc_jiras.mpp9706aoc;
+drop table if exists qp_misc_jiras.tbl9706ao;
+drop table if exists qp_misc_jiras.tbl9706aoc;
 -- end_ignore
 
-create table qp_misc_jiras.mpp9706ao ( a int ) with (appendonly=true, compresslevel=5) distributed by (a);
-create table qp_misc_jiras.mpp9706aoc ( a int ) with (appendonly=true, compresslevel=5, orientation=column) distributed by (a);
+create table qp_misc_jiras.tbl9706ao ( a int ) with (appendonly=true, compresslevel=5) distributed by (a);
+create table qp_misc_jiras.tbl9706aoc ( a int ) with (appendonly=true, compresslevel=5, orientation=column) distributed by (a);
 
-insert into qp_misc_jiras.mpp9706ao select i from generate_series(1, 100) i;
-insert into qp_misc_jiras.mpp9706aoc select i from generate_series(1, 100) i;
+insert into qp_misc_jiras.tbl9706ao select i from generate_series(1, 100) i;
+insert into qp_misc_jiras.tbl9706aoc select i from generate_series(1, 100) i;
 
-select * from pg_catalog.get_ao_distribution('qp_misc_jiras.mpp9706ao'::regclass) order by 1 limit 2;
-select * from pg_catalog.get_ao_distribution('qp_misc_jiras.mpp9706aoc'::regclass) order by 1 limit 2;
+select * from pg_catalog.get_ao_distribution('qp_misc_jiras.tbl9706ao'::regclass) order by 1 limit 2;
+select * from pg_catalog.get_ao_distribution('qp_misc_jiras.tbl9706aoc'::regclass) order by 1 limit 2;
 create table qp_misc_jiras.test_1 (a int, b int, c int) with (appendonly=true, orientation=column,compresslevel=0,blocksize=32768,checksum=false);
 insert into qp_misc_jiras.test_1 values (1,1,2);
 insert into qp_misc_jiras.test_1 values (1,1,3);
@@ -2561,9 +2561,9 @@ set statement_timeout=60;
 
 Create index id_idx on qp_misc_jiras.execution_table using bitmap (id, execution_id);
 set statement_timeout=0;
-Create table qp_misc_jiras.abc_mpp9083 (a int, b int);
+Create table qp_misc_jiras.abc_tbl9083 (a int, b int);
 set statement_timeout=20;
-DROP TABLE qp_misc_jiras.abc_mpp9083;
+DROP TABLE qp_misc_jiras.abc_tbl9083;
 set statement_timeout=0;
 
 DROP TABLE qp_misc_jiras.execution_table;
@@ -2677,11 +2677,11 @@ DROP FUNCTION fn_trig();
 
 set gp_select_invisible=false;
 
-create table qp_misc_jiras.tbl1_mpp_11257 (
+create table qp_misc_jiras.tbl1_tbl_11257 (
  id            bigint,
 partition_key timestamp,
 distribution_key bigint not null,
-constraint pk_tbl1_mpp_11257 primary key (distribution_key, partition_key, id)
+constraint pk_tbl1_tbl_11257 primary key (distribution_key, partition_key, id)
 )
 distributed by (distribution_key)
 partition by range (partition_key)
@@ -2689,22 +2689,22 @@ partition by range (partition_key)
 default partition default_partition,
 partition d_2010_09_28 start (date '2010-09-28') end (date '2010-09-29')
 );
-select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl1_mpp_11257%' ;
+select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl1_tbl_11257%' ;
 -- start_ignore
-alter table qp_misc_jiras.tbl1_mpp_11257 split default partition
+alter table qp_misc_jiras.tbl1_tbl_11257 split default partition
 start (date '2010-09-27' )
 end (date '2010-09-28')
 into (partition d_2010_09_27, partition default_partition);
 -- end_ignore
-select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl1_mpp_11257%' ;
+select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl1_tbl_11257%' ;
 
 
 
-create table qp_misc_jiras.tbl2_mpp_11257 (
+create table qp_misc_jiras.tbl2_tbl_11257 (
 a int,
 b int,
 c int,
-constraint pk_tbl2_mpp_11257 primary key (a,b,c)
+constraint pk_tbl2_tbl_11257 primary key (a,b,c)
 )
 distributed by (a)
 partition by range (b)
@@ -2712,26 +2712,26 @@ partition by range (b)
  default partition default_partition,
 partition p1 start (1) end (2)
  );
-insert into qp_misc_jiras.tbl2_mpp_11257 values(1,2,3);
-select * from qp_misc_jiras.tbl2_mpp_11257;
-delete from qp_misc_jiras.tbl2_mpp_11257 where a=1 and b=2 and c=3;
-select * from qp_misc_jiras.tbl2_mpp_11257;
-insert into qp_misc_jiras.tbl2_mpp_11257 values(1,2,3); 
-select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl2_mpp_11257%' ;
+insert into qp_misc_jiras.tbl2_tbl_11257 values(1,2,3);
+select * from qp_misc_jiras.tbl2_tbl_11257;
+delete from qp_misc_jiras.tbl2_tbl_11257 where a=1 and b=2 and c=3;
+select * from qp_misc_jiras.tbl2_tbl_11257;
+insert into qp_misc_jiras.tbl2_tbl_11257 values(1,2,3); 
+select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl2_tbl_11257%' ;
 
 -- start_ignore
-alter table qp_misc_jiras.tbl2_mpp_11257 split default partition
+alter table qp_misc_jiras.tbl2_tbl_11257 split default partition
 start (3)
 end (4)
 into (partition p2, partition default_partition);
 -- end_ignore
-select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl2_mpp_11257%' ;
+select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl2_tbl_11257%' ;
 
-delete from qp_misc_jiras.tbl2_mpp_11257 where a=1 and b=2 and c=3;
-select * from qp_misc_jiras.tbl2_mpp_11257;
+delete from qp_misc_jiras.tbl2_tbl_11257 where a=1 and b=2 and c=3;
+select * from qp_misc_jiras.tbl2_tbl_11257;
 
-drop table qp_misc_jiras.tbl1_mpp_11257;
-drop table qp_misc_jiras.tbl2_mpp_11257;
+drop table qp_misc_jiras.tbl1_tbl_11257;
+drop table qp_misc_jiras.tbl2_tbl_11257;
 set enable_seqscan=off;
 --
 -- Heap table. TidScan should be used.
@@ -2764,14 +2764,14 @@ select  * from qp_misc_jiras.test_co where ctid='(33554432,32769)' and gp_segmen
 -- end_ignore
 
 -- start_ignore
-drop table if exists qp_misc_jiras.test_mpp10856;
+drop table if exists qp_misc_jiras.test_tbl10856;
 -- end_ignore
 
 set gp_enable_explain_allstat=on;
-create table qp_misc_jiras.test_mpp10856 (i int, j int);
-insert into qp_misc_jiras.test_mpp10856 select i, i from generate_series(0, 999999) i;
-explain analyze select count(*) from qp_misc_jiras.test_mpp10856;
-drop table if exists qp_misc_jiras.test_mpp10856;
+create table qp_misc_jiras.test_tbl10856 (i int, j int);
+insert into qp_misc_jiras.test_tbl10856 select i, i from generate_series(0, 999999) i;
+explain analyze select count(*) from qp_misc_jiras.test_tbl10856;
+drop table if exists qp_misc_jiras.test_tbl10856;
 
 -- start_ignore
 -- This is to verify MPP-8946
@@ -2910,57 +2910,57 @@ select to_timestamp('15:12:02.020.001230', 'HH:MI:SS.MS.US');
 select to_timestamp('15:12:02.020.001230', 'HH24:MI:SS.MS.US');
 
 reset TIMEZONE;
-drop table if exists qp_misc_jiras.mpp13409_test;
+drop table if exists qp_misc_jiras.tbl13409_test;
 
-create table qp_misc_jiras.mpp13409_test (i int, j int);
+create table qp_misc_jiras.tbl13409_test (i int, j int);
 
 --Hangs when given an invalid value for reorganize
-alter table qp_misc_jiras.mpp13409_test set with (reorganize=foo) distributed by (j);
+alter table qp_misc_jiras.tbl13409_test set with (reorganize=foo) distributed by (j);
 
 --Invalid integer value. def->arg
-alter table qp_misc_jiras.mpp13409_test set with (reorganize=123) distributed by (j);
+alter table qp_misc_jiras.tbl13409_test set with (reorganize=123) distributed by (j);
 
-alter table qp_misc_jiras.mpp13409_test set with (reorganize="true");
+alter table qp_misc_jiras.tbl13409_test set with (reorganize="true");
 
-alter table qp_misc_jiras.mpp13409_test set with (reorganize="TRUE");
+alter table qp_misc_jiras.tbl13409_test set with (reorganize="TRUE");
 
-alter table qp_misc_jiras.mpp13409_test set with (reorganize="FALSE");
+alter table qp_misc_jiras.tbl13409_test set with (reorganize="FALSE");
 
-alter table qp_misc_jiras.mpp13409_test set with (reorganize="false");
+alter table qp_misc_jiras.tbl13409_test set with (reorganize="false");
 
 
 --Valid strings
 
-alter table qp_misc_jiras.mpp13409_test set with (reorganize=true);
+alter table qp_misc_jiras.tbl13409_test set with (reorganize=true);
 
-alter table qp_misc_jiras.mpp13409_test set with (reorganize=TRUE);
+alter table qp_misc_jiras.tbl13409_test set with (reorganize=TRUE);
 
-alter table qp_misc_jiras.mpp13409_test set with (reorganize=FALSE);
+alter table qp_misc_jiras.tbl13409_test set with (reorganize=FALSE);
 
-alter table qp_misc_jiras.mpp13409_test set with (reorganize=false);
+alter table qp_misc_jiras.tbl13409_test set with (reorganize=false);
 
-alter table qp_misc_jiras.mpp13409_test set with (reorganize='false');
+alter table qp_misc_jiras.tbl13409_test set with (reorganize='false');
 
-alter table qp_misc_jiras.mpp13409_test set with (reorganize='FALSE');
+alter table qp_misc_jiras.tbl13409_test set with (reorganize='FALSE');
 
-alter table qp_misc_jiras.mpp13409_test set with (reorganize='TRUE');
+alter table qp_misc_jiras.tbl13409_test set with (reorganize='TRUE');
 
-alter table qp_misc_jiras.mpp13409_test set with (reorganize='true');
+alter table qp_misc_jiras.tbl13409_test set with (reorganize='true');
 -- start_ignore
-drop table if exists qp_misc_jiras.mpp13879_1;
-drop table if exists qp_misc_jiras.mpp13879_2;
+drop table if exists qp_misc_jiras.tbl13879_1;
+drop table if exists qp_misc_jiras.tbl13879_2;
 -- end_ignore
-create table qp_misc_jiras.mpp13879_1 (a int) distributed by (a);
-insert into qp_misc_jiras.mpp13879_1 select generate_series(1,10);
-select * from qp_misc_jiras.mpp13879_1;
-select a, max(a) over (order by a range between current row and 2 following) as max from qp_misc_jiras.mpp13879_1;
-create table qp_misc_jiras.mpp13879_2 (a numeric) distributed by (a);
-create table qp_misc_jiras.mpp13879_2 (a numeric) distributed by (a);
-insert into qp_misc_jiras.mpp13879_2 select generate_series(1,10);
-select * from qp_misc_jiras.mpp13879_2;
-select a, max(a) over (order by a range between current row and 2 following) as max from qp_misc_jiras.mpp13879_2;
-drop table qp_misc_jiras.mpp13879_1;
-drop table qp_misc_jiras.mpp13879_2;
+create table qp_misc_jiras.tbl13879_1 (a int) distributed by (a);
+insert into qp_misc_jiras.tbl13879_1 select generate_series(1,10);
+select * from qp_misc_jiras.tbl13879_1;
+select a, max(a) over (order by a range between current row and 2 following) as max from qp_misc_jiras.tbl13879_1;
+create table qp_misc_jiras.tbl13879_2 (a numeric) distributed by (a);
+create table qp_misc_jiras.tbl13879_2 (a numeric) distributed by (a);
+insert into qp_misc_jiras.tbl13879_2 select generate_series(1,10);
+select * from qp_misc_jiras.tbl13879_2;
+select a, max(a) over (order by a range between current row and 2 following) as max from qp_misc_jiras.tbl13879_2;
+drop table qp_misc_jiras.tbl13879_1;
+drop table qp_misc_jiras.tbl13879_2;
 drop table if exists qp_misc_jiras.esc176_1;
 create table qp_misc_jiras.esc176_1 (id integer, seq integer, val double precision, clickdate timestamp without time zone) distributed by (id);
 insert into qp_misc_jiras.esc176_1 values (1,1,0.2,CURRENT_TIMESTAMP);
@@ -2986,33 +2986,33 @@ select id, seq, sum(val) over (partition by id order by seq::numeric range betwe
 select id, seq, sum(val) over (partition by id order by seq::numeric range between 10 preceding and 0 preceding), val from qp_misc_jiras.esc176_1;
 drop table qp_misc_jiras.esc176_1;
 -- start_ignore
-drop table if exists qp_misc_jiras.mpp13491_h;
-drop table if exists qp_misc_jiras.mpp13491_aocol;
+drop table if exists qp_misc_jiras.tbl13491_h;
+drop table if exists qp_misc_jiras.tbl13491_aocol;
 -- end_ignore
-create table qp_misc_jiras.mpp13491_h(a int,str varchar)distributed by (a);
-alter table qp_misc_jiras.mpp13491_h alter column str set storage external;
-insert into qp_misc_jiras.mpp13491_h values (1, lpad('a', 100000, 'b'));
-create table qp_misc_jiras.mpp13491_aocol with (appendonly=true, orientation=column) as select * from qp_misc_jiras.mpp13491_h distributed by (a);
-truncate table qp_misc_jiras.mpp13491_h;
+create table qp_misc_jiras.tbl13491_h(a int,str varchar)distributed by (a);
+alter table qp_misc_jiras.tbl13491_h alter column str set storage external;
+insert into qp_misc_jiras.tbl13491_h values (1, lpad('a', 100000, 'b'));
+create table qp_misc_jiras.tbl13491_aocol with (appendonly=true, orientation=column) as select * from qp_misc_jiras.tbl13491_h distributed by (a);
+truncate table qp_misc_jiras.tbl13491_h;
 \t off
-select * from qp_misc_jiras.mpp13491_aocol;
-drop table qp_misc_jiras.mpp13491_h;
-select * from qp_misc_jiras.mpp13491_aocol;
-drop table qp_misc_jiras.mpp13491_aocol;
+select * from qp_misc_jiras.tbl13491_aocol;
+drop table qp_misc_jiras.tbl13491_h;
+select * from qp_misc_jiras.tbl13491_aocol;
+drop table qp_misc_jiras.tbl13491_aocol;
 -- start_ignore
 drop function if exists test();
-drop table if exists qp_misc_jiras._mpp10050_test;
+drop table if exists qp_misc_jiras._tbl10050_test;
 create language plpgsql;
-create table qp_misc_jiras._mpp10050_test (id int) distributed randomly;
+create table qp_misc_jiras._tbl10050_test (id int) distributed randomly;
 -- end_ignore
 create function test()
 returns void
 as
 $$
 begin
-drop table if exists qp_misc_jiras._mpp10050_test;
-create table qp_misc_jiras._mpp10050_test (id int) distributed randomly;
-insert into qp_misc_jiras._mpp10050_test values (1);
+drop table if exists qp_misc_jiras._tbl10050_test;
+create table qp_misc_jiras._tbl10050_test (id int) distributed randomly;
+insert into qp_misc_jiras._tbl10050_test values (1);
 end;
 $$
 language plpgsql
