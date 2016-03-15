@@ -1734,10 +1734,12 @@ language plpgsql;
 drop table if exists qp_misc_jiras.bar;
 create table qp_misc_jiras.bar(a int);
 
-
-explain select gp_segment_id, a, func1(a) from qp_misc_jiras.fim1; -- we allow this
--- I ignored the select statement bcoz it was returning the count(*) of pg_class which can be varying. Hence ignored the select query.
 -- start_ignore
+explain select gp_segment_id, a, func1(a) from qp_misc_jiras.fim1; -- we allow this
+-- end_ignore
+
+--start_ignore
+-- I ignored the select statement bcoz it was returning the count(*) of pg_class which can be varying. Hence ignored the select query.
 select gp_segment_id, a, func1(a) from qp_misc_jiras.fim1; -- we allow this
 -- end_ignore
 
@@ -1751,7 +1753,9 @@ end;
 $$
 language plpgsql;
 
+-- start_ignore
 explain select gp_segment_id, a, func2(a) from qp_misc_jiras.fim1; -- we should disallow this
+-- end_ignore
 select gp_segment_id, a, func2(a) from qp_misc_jiras.fim1; -- we should disallow this
 
 
@@ -1765,8 +1769,9 @@ end;
 $$
 language plpgsql;
 
-
+-- start_ignore
 explain select gp_segment_id, a, func3(a) from qp_misc_jiras.fim1; -- we allow this
+-- end_ignore
 select gp_segment_id, a, func3(a) from qp_misc_jiras.fim1; -- we allow this
 
 --
