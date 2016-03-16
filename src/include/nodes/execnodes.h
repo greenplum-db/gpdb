@@ -1097,6 +1097,33 @@ typedef struct FieldStoreState
 } FieldStoreState;
 
 /* ----------------
+ *      CoerceViaIOState node
+ * ----------------
+ */
+typedef struct CoerceViaIOState
+{
+	ExprState	xprstate;
+	ExprState  *arg;			/* input expression */
+	FmgrInfo	outfunc;		/* lookup info for source output function */
+	FmgrInfo	infunc;			/* lookup info for result input function */
+	Oid			intypioparam;	/* argument needed for input function */
+}CoerceViaIOState;
+
+/* ---------------------
+ *	ArrayCoerceExprState node
+ *  ---------------------
+ */
+typedef struct ArrayCoerceExprState
+{
+	ExprState	xprstate;
+	ExprState  *arg;			/* input array value */
+	Oid			resultelemtype; /* element type of result array */
+	FmgrInfo	elemfunc;		/* lookup info for element coercion function */
+	/* use struct pointer to avoid including array.h here */
+	struct ArrayMapState *amstate;		/* workspace for array_map */
+} ArrayCoerceExprState;
+
+/* ----------------
  *		ConvertRowtypeExprState node
  * ----------------
  */

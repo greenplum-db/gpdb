@@ -1394,6 +1394,12 @@ _outNode(StringInfo str, void *obj)
 			case T_RelabelType:
 				_outRelabelType(str, obj);
 				break;
+			case T_CoerceViaIO:
+				_outCoerceViaIO(str, obj);
+				break;
+			case T_ArrayCoerceExpr:
+				_outArrayCoerceExpr(str, obj);	
+				break;
 			case T_ConvertRowtypeExpr:
 				_outConvertRowtypeExpr(str, obj);
 				break;

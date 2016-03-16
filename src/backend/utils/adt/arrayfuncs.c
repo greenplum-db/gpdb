@@ -4271,7 +4271,7 @@ array_type_length_coerce_internal(ArrayType *src,
 					 errmsg("array coercion to domain type elements not "
 							"currently supported")));
 
-		if (!find_coercion_pathway(tgt_elem_type, src_elem_type,
+		if (COERCION_PATH_NONE == find_coercion_pathway(tgt_elem_type, src_elem_type,
 								   COERCION_EXPLICIT, &funcId))
 		{
 			/* should never happen, but check anyway */
@@ -4361,7 +4361,7 @@ array_length_coerce(PG_FUNCTION_ARGS)
 	{
 		Oid			funcId;
 
-		funcId = find_typmod_coercion_function(ARR_ELEMTYPE(v));
+		find_typmod_coercion_function(ARR_ELEMTYPE(v), &funcId);
 
 		if (OidIsValid(funcId))
 			fmgr_info_cxt(funcId, &my_extra->coerce_finfo, fmgr_info->fn_mcxt);

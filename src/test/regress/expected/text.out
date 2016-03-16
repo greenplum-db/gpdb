@@ -23,3 +23,31 @@ SELECT '' AS two, * FROM TEXT_TBL order by f1;
      | hi de ho neighbor
 (2 rows)
 
+--
+-- TEXT CASTING TO/FROM ANY TYPE
+--
+SELECT '1'::bool::text;
+ text
+------
+ t
+(1 row)
+
+SELECT array[1,2]::text;
+ array
+-------
+ {1,2}
+(1 row)
+
+SELECT '{1,2}'::text::integer[];
+ int4
+-------
+ {1,2}
+(1 row)
+
+CREATE TYPE usr_define_type as (id int, name text);
+SELECT '(1,abc)'::text::usr_define_type;
+ usr_define_type
+-----------------
+ (1,abc)
+(1 row)
+

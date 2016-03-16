@@ -431,6 +431,8 @@ transformExpr(ParseState *pstate, Node *expr)
 		case T_FieldSelect:
 		case T_FieldStore:
 		case T_RelabelType:
+		case T_ArrayCoerceExpr:
+		case T_CoerceViaIO:
 		case T_ConvertRowtypeExpr:
 		case T_CaseTestExpr:
 		case T_ArrayExpr:
@@ -2736,6 +2738,12 @@ exprType(Node *expr)
 		case T_RelabelType:
 			type = ((RelabelType *) expr)->resulttype;
 			break;
+		case T_CoerceViaIO:
+			type = ((CoerceViaIO *) expr)->resulttype;
+			break;
+		case T_ArrayCoerceExpr:
+			type = ((ArrayCoerceExpr *) expr)->resulttype;	
+			break;
 		case T_ConvertRowtypeExpr:
 			type = ((ConvertRowtypeExpr *) expr)->resulttype;
 			break;
@@ -2863,6 +2871,8 @@ exprTypmod(Node *expr)
 			return ((FieldSelect *) expr)->resulttypmod;
 		case T_RelabelType:
 			return ((RelabelType *) expr)->resulttypmod;
+		case T_ArrayCoerceExpr:
+			return ((ArrayCoerceExpr *) expr)->resulttypmod;
 		case T_CaseExpr:
 			{
 				/*
@@ -2985,47 +2995,51 @@ exprTypmod(Node *expr)
 bool
 exprIsLengthCoercion(Node *expr, int32 *coercedTypmod)
 {
-	FuncExpr   *func;
-	int			nargs;
-	Const	   *second_arg;
-
 	if (coercedTypmod != NULL)
 		*coercedTypmod = -1;	/* default result on failure */
 
-	/* Is it a function-call at all? */
-	if (expr == NULL || !IsA(expr, FuncExpr))
-		return false;
-	func = (FuncExpr *) expr;
-
 	/*
-	 * If it didn't come from a coercion context, reject.
+	 * Scalar-type length coercions are FuncExprs, array-type length
+	 * coercions are ArrayCoerceExprs
 	 */
-	if (func->funcformat != COERCE_EXPLICIT_CAST &&
-		func->funcformat != COERCE_IMPLICIT_CAST)
-		return false;
+	if (expr && IsA(expr, FuncExpr))
+	{
+		FuncExpr   *func = (FuncExpr *) expr;
+		int		 nargs;
+		Const	  *second_arg;
 
-	/*
-	 * If it's not a two-argument or three-argument function with the second
-	 * argument being an int4 constant, it can't have been created from a
-	 * length coercion (it must be a type coercion, instead).
-	 */
-	nargs = list_length(func->args);
-	if (nargs < 2 || nargs > 3)
-		return false;
+		/*
+		 * If it didn't come from a coercion context, reject.
+		 */
+		if (func->funcformat != COERCE_EXPLICIT_CAST &&
+			func->funcformat != COERCE_IMPLICIT_CAST)
+			return false;
 
-	second_arg = (Const *) lsecond(func->args);
-	if (!IsA(second_arg, Const) ||
-		second_arg->consttype != INT4OID ||
-		second_arg->constisnull)
-		return false;
+		/*
+		 * If it's not a two-argument or three-argument function with the
+		 * second argument being an int4 constant, it can't have been created
+		 * from a length coercion (it must be a type coercion, instead).
+		 */
+		nargs = list_length(func->args);
+		if (nargs < 2 || nargs > 3)
+			return false;
 
-	/*
-	 * OK, it is indeed a length-coercion function.
-	 */
-	if (coercedTypmod != NULL)
-		*coercedTypmod = DatumGetInt32(second_arg->constvalue);
+		second_arg = (Const *) lsecond(func->args);
+		if (!IsA(second_arg, Const) ||
+			second_arg->consttype != INT4OID ||
+			second_arg->constisnull)
+			return false;
 
-	return true;
+		/*
+		 * OK, it is indeed a length-coercion function.
+		 */
+		if (coercedTypmod != NULL)
+			*coercedTypmod = DatumGetInt32(second_arg->constvalue);
+
+		return true;
+	}
+
+	return false;
 }
 
 /*

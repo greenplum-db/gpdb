@@ -33,6 +33,15 @@ typedef enum CATEGORY
 	USER_TYPE
 } CATEGORY;
 
+/* Result codes for find_coercion_pathway */
+typedef enum CoercionPathType
+{
+	COERCION_PATH_NONE,			/* failed to find any coercion pathway */
+	COERCION_PATH_FUNC,			/* apply the specified coercion function */
+	COERCION_PATH_RELABELTYPE,	/* binary-compatible cast, no function */
+	COERCION_PATH_ARRAYCOERCE,	/* need an ArrayCoerceExpr node */
+	COERCION_PATH_COERCEVIAIO	/* need a CoerceViaIO node */
+} CoercionPathType;
 
 extern bool IsBinaryCoercible(Oid srctype, Oid targettype);
 extern bool IsPreferredType(CATEGORY category, Oid type);
@@ -86,9 +95,11 @@ extern Oid resolve_generic_type(Oid declared_type,
 					 Oid context_actual_type,
 					 Oid context_declared_type);
 
-extern bool find_coercion_pathway(Oid targetTypeId, Oid sourceTypeId,
+extern CoercionPathType find_coercion_pathway(Oid targetTypeId,
+					  Oid sourceTypeId,
 					  CoercionContext ccontext,
 					  Oid *funcid);
-extern Oid	find_typmod_coercion_function(Oid typeId);
+extern CoercionPathType find_typmod_coercion_function(Oid typeId,
+							  Oid *funcid);
 
 #endif   /* PARSE_COERCE_H */

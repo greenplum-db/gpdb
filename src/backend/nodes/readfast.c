@@ -2858,6 +2858,12 @@ readNodeBinary(void)
 			case T_RelabelType:
 				return_value = _readRelabelType();
 				break;
+			case T_CoerceViaIO:
+				return_value = _readCoerceViaIO();
+				break;
+			case T_ArrayCoerceExpr:
+				return_value = _readArrayCoerceExpr();
+				break;
 			case T_ConvertRowtypeExpr:
 				return_value = _readConvertRowtypeExpr();
 				break;

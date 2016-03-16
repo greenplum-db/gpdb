@@ -13,3 +13,12 @@ INSERT INTO TEXT_TBL VALUES ('hi de ho neighbor');
 
 SELECT '' AS two, * FROM TEXT_TBL order by f1;
 
+--
+-- TEXT CASTING TO/FROM ANY TYPE
+--
+SELECT '1'::bool::text;
+SELECT array[1,2]::text;
+SELECT '{1,2}'::text::integer[];
+
+CREATE TYPE usr_define_type as (id int, name text);
+SELECT '(1,abc)'::text::usr_define_type;

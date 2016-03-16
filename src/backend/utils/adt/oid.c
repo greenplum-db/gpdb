@@ -31,7 +31,7 @@
  *****************************************************************************/
 
 static Oid
-oidin_subr(const char *funcname, const char *s, char **endloc)
+oidin_subr(const char *s, char **endloc)
 {
 	unsigned long cvt;
 	char	   *endptr;
@@ -112,7 +112,7 @@ oidin(PG_FUNCTION_ARGS)
 	char	   *s = PG_GETARG_CSTRING(0);
 	Oid			result;
 
-	result = oidin_subr("oidin", s, NULL);
+	result = oidin_subr(s, NULL);
 	PG_RETURN_OID(result);
 }
 
@@ -198,7 +198,7 @@ oidvectorin(PG_FUNCTION_ARGS)
 			oidString++;
 		if (*oidString == '\0')
 			break;
-		result->values[n] = oidin_subr("oidvectorin", oidString, &oidString);
+		result->values[n] = oidin_subr(oidString, &oidString);
 	}
 	while (*oidString && isspace((unsigned char) *oidString))
 		oidString++;
@@ -451,7 +451,7 @@ text_oid(PG_FUNCTION_ARGS)
 	memcpy(str, VARDATA(string), len);
 	*(str + len) = '\0';
 
-	result = oidin_subr("text_oid", str, NULL);
+	result = oidin_subr(str, NULL);
 
 	pfree(str);
 
