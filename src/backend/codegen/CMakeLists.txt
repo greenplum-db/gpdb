@@ -152,8 +152,9 @@ set_target_properties(
     MACOSX_RPATH ON)
 
 # Googletest framework for tests.
-add_subdirectory(third_party/gtest)
-include_directories(third_party/gtest/include)
+SET(GTEST_DIR ../../../gpAux/extensions/gtest)
+add_subdirectory(${GTEST_DIR} ${CMAKE_BINARY_DIR}/gtest EXCLUDE_FROM_ALL)
+include_directories(${GTEST_DIR}/include)
 enable_testing()
 
 # Unit test for ClangCompiler.
