@@ -702,9 +702,9 @@ select * from qp_misc_jiras.tbl4622_ext2;
 drop external web table qp_misc_jiras.tbl4622_ext1;
 drop external web table qp_misc_jiras.tbl4622_ext2;
 create external web table qp_misc_jiras.tbl3286_ext_hostname (hostname text) execute 'hostname' format 'text'; 
---start_ignore
+-- start_ignore
 select * from qp_misc_jiras.tbl3286_ext_hostname,gp_configuration;
---end_ignore
+-- end_ignore
 drop external web table qp_misc_jiras.tbl3286_ext_hostname;
 create table qp_misc_jiras.tbl5305_test(a int, b int);
 insert into qp_misc_jiras.tbl5305_test select i,i+1 from generate_series(1,1000)i;
@@ -1735,10 +1735,6 @@ drop table if exists qp_misc_jiras.bar;
 create table qp_misc_jiras.bar(a int);
 
 -- start_ignore
-explain select gp_segment_id, a, func1(a) from qp_misc_jiras.fim1; -- we allow this
--- end_ignore
-
---start_ignore
 -- I ignored the select statement bcoz it was returning the count(*) of pg_class which can be varying. Hence ignored the select query.
 select gp_segment_id, a, func1(a) from qp_misc_jiras.fim1; -- we allow this
 -- end_ignore
@@ -1753,9 +1749,6 @@ end;
 $$
 language plpgsql;
 
--- start_ignore
-explain select gp_segment_id, a, func2(a) from qp_misc_jiras.fim1; -- we should disallow this
--- end_ignore
 select gp_segment_id, a, func2(a) from qp_misc_jiras.fim1; -- we should disallow this
 
 
@@ -1769,9 +1762,6 @@ end;
 $$
 language plpgsql;
 
--- start_ignore
-explain select gp_segment_id, a, func3(a) from qp_misc_jiras.fim1; -- we allow this
--- end_ignore
 select gp_segment_id, a, func3(a) from qp_misc_jiras.fim1; -- we allow this
 
 --
