@@ -516,7 +516,7 @@ typedef struct IndexElem
 typedef struct ColumnReferenceStorageDirective
 {
 	NodeTag		type;
-	Value	   *column;
+	char	   *column;	  /* column name, or NULL for DEFAULTs (deflt==true) */
 	bool		deflt;
 	List	   *encoding;
 } ColumnReferenceStorageDirective;
@@ -1633,7 +1633,7 @@ typedef struct PartitionBy			/* the Partition By clause */
 typedef struct PartitionElem
 {
 	NodeTag				type;
-	Node			   *partName;	/* partition name (optional) */
+	char			   *partName;	/* partition name (optional) */
 	Node			   *boundSpec;	/* boundary specification */
 	Node			   *subSpec;	/* subpartition spec */
 	bool                isDefault;	/* TRUE if default partition declaration */

@@ -7023,7 +7023,7 @@ ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 		ColumnReferenceStorageDirective *c =
 			makeNode(ColumnReferenceStorageDirective);
 
-		c->column = makeString(colDef->colname);
+		c->column = colDef->colname;
 
 		if (colDef->encoding)
 			c->encoding = colDef->encoding;
@@ -12189,7 +12189,6 @@ new_rel_opts(Relation rel, List *lwith)
 {
 	Datum newOptions = PointerGetDatum(NULL);
 	bool make_heap = false;
-	bool need_free_value = false;
 	if (lwith && list_length(lwith))
 	{
 		ListCell *lc;
@@ -12202,7 +12201,7 @@ new_rel_opts(Relation rel, List *lwith)
 		{
 			DefElem *e = lfirst(lc);
 			if (pg_strcasecmp(e->defname, "appendonly") == 0 &&
-				pg_strcasecmp(defGetString(e, &need_free_value), "false") == 0)
+				pg_strcasecmp(defGetString(e), "false") == 0)
 			{
 				make_heap = true;
 				break;
@@ -13859,7 +13858,7 @@ ATPExecPartAdd(AlteredTableInfo *tab,
 			atpxPartAddList(rel, pc, pNode,
 							pc2->arg2, /* utl statement */
 							(locPid->idtype == AT_AP_IDName) ?
-							locPid->partiddef : NULL, /* partition name */
+							strVal(locPid->partiddef) : NULL, /* partition name */
 							isDefault, (PartitionElem *) pc2->arg1,
 							PARTTYP_RANGE,
 							par_prule,
@@ -13874,7 +13873,7 @@ ATPExecPartAdd(AlteredTableInfo *tab,
 			atpxPartAddList(rel, pc, pNode,
 							pc2->arg2, /* utl statement */
 							(locPid->idtype == AT_AP_IDName) ?
-							locPid->partiddef : NULL, /* partition name */
+							strVal(locPid->partiddef) : NULL, /* partition name */
 							isDefault, (PartitionElem *) pc2->arg1,
 							PARTTYP_LIST,
 							par_prule,
@@ -15671,8 +15670,7 @@ rel_get_column_encodings(Relation rel)
 			{
 				ColumnReferenceStorageDirective *d =
 					makeNode(ColumnReferenceStorageDirective);
-				char *colname = pstrdup(NameStr(rel->rd_att->attrs[attno]->attname));
-				d->column = makeString(colname);
+				d->column = pstrdup(NameStr(rel->rd_att->attrs[attno]->attname));
 				d->encoding = colencs[attno];
 		
 				out = lappend(out, d);
@@ -16443,8 +16441,8 @@ ATPExecPartSplit(Relation *rel,
 
 			}
 
-			pelem->partName = (Node *)makeString(parname);
-			mypid->partiddef = pelem->partName;
+			pelem->partName = parname;
+			mypid->partiddef = (Node *)makeString(parname);
 			mypid->idtype = AT_AP_IDName;
 
 			pelem->location  = -1;
@@ -16510,7 +16508,7 @@ ATPExecPartSplit(Relation *rel,
 											 AccessShareLock);
 
 				Datum d = DirectFunctionCall1(namein,
-							CStringGetDatum(strVal(pelem->partName)));
+							CStringGetDatum(pelem->partName));
 
 				/* XXX XXX: SnapshotSelf - but we just did a
 				 * CommandCounterIncrement()
@@ -17905,8 +17903,7 @@ static Datum transformFormatOpts(char formattype, List *formatOpts, int numcols,
 		{
 			DefElem    *defel = (DefElem *) lfirst(option);
 			char	   *key = defel->defname;
-			bool need_free_value = false;
-			char	   *val = defGetString(defel, &need_free_value);
+			char	   *val = defGetString(defel);
 			
 			if (strcmp(key, "formatter") == 0)
 			{
@@ -17917,22 +17914,14 @@ static Datum transformFormatOpts(char formattype, List *formatOpts, int numcols,
 					
 				formatter = strVal(defel->arg);
 			}
-			
+
 			/* MPP-14467 - replace any space chars with meta char */
 			resetStringInfo(&key_modified);
 			appendStringInfoString(&key_modified, key);
 			replaceStringInfoString(&key_modified, " ", "<gpx20>");
-			
+
 			sprintf((char *) format_str + len, "%s '%s' ", key_modified.data, val);
 			len += strlen(key_modified.data) + strlen(val) + 4;
-			
-			if (need_free_value)
-			{
-				pfree(val);
-				val = NULL;
-			}
-
-			AssertImply(need_free_value, NULL == val);
 
 			if (len > maxlen)
 				ereport(ERROR,

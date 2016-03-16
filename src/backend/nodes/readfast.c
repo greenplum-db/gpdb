@@ -1146,7 +1146,7 @@ _readColumnReferenceStorageDirective(void)
 {
 	READ_LOCALS(ColumnReferenceStorageDirective);
 
-	READ_NODE_FIELD(column);
+	READ_STRING_FIELD(column);
 	READ_BOOL_FIELD(deflt);
 	READ_NODE_FIELD(encoding);
 
@@ -1191,7 +1191,7 @@ _readPartitionElem(void)
 {
 	READ_LOCALS(PartitionElem);
 
-	READ_NODE_FIELD(partName);
+	READ_STRING_FIELD(partName);
 	READ_NODE_FIELD(boundSpec);
 	READ_NODE_FIELD(subSpec);
 	READ_BOOL_FIELD(isDefault);

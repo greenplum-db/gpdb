@@ -2529,7 +2529,7 @@ _copyColumnReferenceStorageDirective(ColumnReferenceStorageDirective *from)
 	ColumnReferenceStorageDirective *newnode =
 		makeNode(ColumnReferenceStorageDirective);
 
-	COPY_NODE_FIELD(column);
+	COPY_STRING_FIELD(column);
 	COPY_SCALAR_FIELD(deflt);
 	COPY_NODE_FIELD(encoding);
 
@@ -3076,7 +3076,7 @@ _copyPartitionElem(PartitionElem *from)
 {
 	PartitionElem *newnode = makeNode(PartitionElem);
 
-	COPY_NODE_FIELD(partName);
+	COPY_STRING_FIELD(partName);
 	COPY_NODE_FIELD(boundSpec);
 	COPY_NODE_FIELD(subSpec);
 	COPY_SCALAR_FIELD(isDefault);

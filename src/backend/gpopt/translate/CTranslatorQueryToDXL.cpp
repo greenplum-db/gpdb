@@ -1005,14 +1005,10 @@ CTranslatorQueryToDXL::PstrExtractOptionValue
 	GPOS_ASSERT(NULL != pdefelem);
 
 	BOOL fNeedsFree = false;
-	CHAR *szValue = gpdb::SzDefGetString(pdefelem, &fNeedsFree);
+	CHAR *szValue = gpdb::SzDefGetString(pdefelem);
 
 	CWStringDynamic *pstrResult = CDXLUtils::PstrFromSz(m_pmp, szValue);
 	
-	if (fNeedsFree)
-	{
-		gpdb::GPDBFree(szValue);
-	}
 	
 	return pstrResult;
 }

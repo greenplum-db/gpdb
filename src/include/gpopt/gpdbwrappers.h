@@ -596,7 +596,7 @@ namespace gpdb {
 	bool FInterpretOidsOption(List *plOptions);
 	
 	// extract string value from defelem's value
-	char *SzDefGetString(DefElem *pdefelem, bool *fNeedFree);
+	char *SzDefGetString(DefElem *pdefelem);
 
 	// fold array expression constant values
 	Node *PnodeFoldArrayexprConstants(ArrayExpr *parrayexpr);

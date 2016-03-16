@@ -2969,13 +2969,12 @@ gpdb::FInterpretOidsOption
 char *
 gpdb::SzDefGetString
 	(
-	DefElem *pdefelem,
-	bool *fNeedFree
+	DefElem *pdefelem
 	)
 {
 	GP_WRAP_START;
 	{
-		return defGetString(pdefelem, fNeedFree);
+		return defGetString(pdefelem);
 	}
 	GP_WRAP_END;
 	return NULL;

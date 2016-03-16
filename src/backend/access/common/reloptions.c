@@ -298,28 +298,15 @@ transformRelOptions(Datum oldOptions, List *defList,
 			 * have just "name", assume "name=true" is meant.
 			 */
 
-			bool need_free_value = false;
 			if (def->arg != NULL)
-			{
-				value = defGetString(def, &need_free_value);
-			}
+				value = defGetString(def);
 			else
-			{
 				value = "true";
-			}
 			len = VARHDRSZ + strlen(def->defname) + 1 + strlen(value);
 			/* +1 leaves room for sprintf's trailing null */
 			t = (text *) palloc(len + 1);
 			SET_VARSIZE(t, len);
 			sprintf(VARDATA(t), "%s=%s", def->defname, value);
-
-			if (need_free_value)
-			{
-				pfree(value);
-				value = NULL;
-			}
-
-			AssertImply(need_free_value, NULL == value);
 
 			astate = accumArrayResult(astate, PointerGetDatum(t),
 									  false, TEXTOID,

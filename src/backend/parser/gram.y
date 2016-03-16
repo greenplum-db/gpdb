@@ -446,9 +446,9 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <node> 	TabPartitionBoundarySpecStart TabPartitionBoundarySpecEnd
 				OptTabPartitionBoundarySpecEnd        /* PartitionRangeItem */
 %type <node> 	OptTabPartitionBoundarySpecEvery      /* PartitionRangeItem */
-%type <node> 	TabPartitionNameDecl TabSubPartitionNameDecl      /* string */
+%type <str> 	TabPartitionNameDecl TabSubPartitionNameDecl
 				TabPartitionDefaultNameDecl TabSubPartitionDefaultNameDecl 
-				opt_table_partition_merge_into 
+%type <node>	opt_table_partition_merge_into
 				table_partition_modify
 				opt_table_partition_split_into
 %type <boolean>	opt_comma
@@ -3374,12 +3374,12 @@ TableElement:
 		;
 
 column_reference_storage_directive:
-			COLUMN columnElem ENCODING definition
+			COLUMN ColId ENCODING definition
 				{
 					ColumnReferenceStorageDirective *n =
 						makeNode(ColumnReferenceStorageDirective);
 
-					n->column = (Value *)$2;
+					n->column = $2;
 					n->encoding = $4;
 					$$ = (Node *)n;
 				}
@@ -4235,24 +4235,24 @@ TabSubPartitionElem:
 
 TabPartitionNameDecl: PARTITION PartitionColId
 				{
-					$$ = (Node *) makeString($2);
+					$$ = $2;
 				}
 		;
 TabPartitionDefaultNameDecl: DEFAULT PARTITION PartitionColId
 				{
-					$$ = (Node *) makeString($3);
+					$$ = $3;
 				}
 		;
 
 TabSubPartitionNameDecl: SUBPARTITION PartitionColId
 				{
-					$$ = (Node *) makeString($2);
+					$$ = $2;
 				}
 		;
 
 TabSubPartitionDefaultNameDecl: DEFAULT SUBPARTITION PartitionColId
 				{
-					$$ = (Node *) makeString($3);
+					$$ = $3;
 				}
 		;
 

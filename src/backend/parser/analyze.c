@@ -210,7 +210,7 @@ static List*generate_alternate_vars(Var *var, grouped_window_ctx *ctx);
 static List *fillin_encoding(List *list);
 
 static List *transformAttributeEncoding(List *stenc, CreateStmt *stmt,
-										CreateStmtContext cxt);
+										CreateStmtContext *cxt);
 /*
  * parse_analyze
  *		Analyze a raw parse tree and transform it to Query form.
@@ -1298,8 +1298,7 @@ co_explicitly_disabled(List *opts)
 			continue;
 		}
 
-		bool need_free_arg = false;
-		arg = defGetString(el, &need_free_arg);
+		arg = defGetString(el);
 		bool result = false;
 		if (pg_strcasecmp("appendonly", el->defname) == 0 &&
 			pg_strcasecmp("false", arg) == 0)
@@ -1311,13 +1310,6 @@ co_explicitly_disabled(List *opts)
 		{
 			result = true;
 		}
-		if (need_free_arg)
-		{
-			pfree(arg);
-			arg = NULL;
-		}
-
-		AssertImply(need_free_arg, NULL == arg);
 
 		if (result)
 		{
@@ -1352,8 +1344,7 @@ is_aocs(List *opts)
 			continue;
 		}
 
-		bool need_free_arg = false;
-		arg = defGetString(el, &need_free_arg);
+		arg = defGetString(el);
 
 		if (pg_strcasecmp("appendonly", el->defname) == 0)
 		{
@@ -1366,13 +1357,6 @@ is_aocs(List *opts)
 			found_cs = true;
 			csvalue = pg_strcasecmp("column", arg) == 0;
 		}
-		if (need_free_arg)
-		{
-			pfree(arg);
-			arg = NULL;
-		}
-
-		AssertImply(need_free_arg, NULL == arg);
 	}
 	if (!found_ao)
 		aovalue = isDefaultAO();
@@ -1411,30 +1395,11 @@ encodings_overlap(List *a, List *b, bool test_conflicts)
 					}
 					else
 					{
-						bool need_free_ela = false;
-						bool need_free_elb = false;
-						char *ela_str = defGetString(ela, &need_free_ela);
-						char *elb_str = defGetString(elb, &need_free_elb);
-						int result = pg_strcasecmp(ela_str,elb_str);
-						// free ela_str, elb_str if it is initialized via TypeNameToString
-						if (need_free_ela)
-						{
-							pfree(ela_str);
-							ela_str = NULL;
-						}
-						if (need_free_elb)
-						{
-							pfree(elb_str);
-							elb_str = NULL;
-						}
+						char *ela_str = defGetString(ela);
+						char *elb_str = defGetString(elb);
 
-						AssertImply(need_free_ela, NULL == ela_str);
-						AssertImply(need_free_elb, NULL == elb_str);
-
-						if (result != 0)
-						{
+						if (pg_strcasecmp(ela_str, elb_str) != 0)
 							return true;
-						}
 					}
 				}
 				else
@@ -1583,10 +1548,10 @@ validateColumnStorageEncodingClauses(List *stenc, CreateStmt *stmt)
 		{
 			bool found = false;
 			char colname[NAMEDATALEN];
-			size_t collen = strlen(strVal(c->column));
+			size_t collen = strlen(c->column);
 			size_t n = NAMEDATALEN - 1 < collen ? NAMEDATALEN - 1 : collen;
 			MemSet(colname, 0, NAMEDATALEN);
-			memcpy(colname, strVal(c->column), n);
+			memcpy(colname, c->column, n);
 			colname[n] = '\0';
 
 			ce = hash_search(ht, colname, HASH_FIND, &found);
@@ -1613,7 +1578,7 @@ validateColumnStorageEncodingClauses(List *stenc, CreateStmt *stmt)
  * quite small in practice.
  */
 static ColumnReferenceStorageDirective *
-find_crsd(Value *column, List *stenc)
+find_crsd(char *column, List *stenc)
 {
 	ListCell *lc;
 
@@ -1621,7 +1586,7 @@ find_crsd(Value *column, List *stenc)
 	{
 		ColumnReferenceStorageDirective *c = lfirst(lc);
 
-		if (c->deflt == false && equal(column, c->column))
+		if (c->deflt == false && strcmp(column, c->column) == 0)
 			return c;
 	}
 	return NULL;
@@ -1699,7 +1664,7 @@ form_default_storage_directive(List *enc)
 }
 
 static List *
-transformAttributeEncoding(List *stenc, CreateStmt *stmt, CreateStmtContext cxt)
+transformAttributeEncoding(List *stenc, CreateStmt *stmt, CreateStmtContext *cxt)
 {
 	ListCell *lc;
 	bool found_enc = stenc != NIL;
@@ -1707,6 +1672,7 @@ transformAttributeEncoding(List *stenc, CreateStmt *stmt, CreateStmtContext cxt)
 	ColumnReferenceStorageDirective *deflt = NULL;
 	List *newenc = NIL;
 	List *tmpenc;
+	MemoryContext oldCtx;
 
 #define UNSUPPORTED_ORIENTATION_ERROR() \
 	ereport(ERROR, \
@@ -1717,6 +1683,8 @@ transformAttributeEncoding(List *stenc, CreateStmt *stmt, CreateStmtContext cxt)
 	if (stenc && !can_enc)
 		UNSUPPORTED_ORIENTATION_ERROR();
 
+	/* Use the temporary context to avoid leaving behind so much garbage. */
+	oldCtx = MemoryContextSwitchTo(cxt->tempCtx);
 
 	/* get the default clause, if there is one. */
 	foreach(lc, stenc)
@@ -1732,22 +1700,19 @@ transformAttributeEncoding(List *stenc, CreateStmt *stmt, CreateStmtContext cxt)
 			 */
 			if (deflt)
 				elog(ERROR, "only one default column encoding may be specified");
-			else
-			{
-				deflt = c;
-				deflt->encoding = transformStorageEncodingClause(deflt->encoding);
 
-				/*
-				 * The default encoding and the with clause better not
-				 * try and set the same options!
-				 */
+			deflt = copyObject(c);
+			deflt->encoding = transformStorageEncodingClause(deflt->encoding);
 
-				if (encodings_overlap(stmt->options, c->encoding, false))
-					ereport(ERROR,
-						    (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 	 errmsg("DEFAULT COLUMN ENCODING clause cannot "
-						 			"override values set in WITH clause")));
-			}
+			/*
+			 * The default encoding and the with clause better not
+			 * try and set the same options!
+			 */
+			if (encodings_overlap(stmt->options, deflt->encoding, false))
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						 errmsg("DEFAULT COLUMN ENCODING clause cannot "
+								"override values set in WITH clause")));
 		}
 	}
 
@@ -1769,67 +1734,48 @@ transformAttributeEncoding(List *stenc, CreateStmt *stmt, CreateStmtContext cxt)
 	 * -- i.e., COLUMN name ENCODING () -- apply that. Otherwise, apply the
 	 * default.
 	 */
-	foreach(lc, cxt.columns)
+	foreach(lc, cxt->columns)
 	{
-		Node *n = lfirst(lc);
-		ColumnDef *d = (ColumnDef *)n;
-		ColumnReferenceStorageDirective *c =
-			makeNode(ColumnReferenceStorageDirective);
+		ColumnDef *d = (ColumnDef *) lfirst(lc);
+		ColumnReferenceStorageDirective *c;
 
 		Insist(IsA(d, ColumnDef));
 
-		c->column = makeString(pstrdup(d->colname));
+		c = makeNode(ColumnReferenceStorageDirective);
+		c->column = pstrdup(d->colname);
 
+		/*
+		 * Find a storage encoding for this column, in this order:
+		 *
+		 * 1. An explicit encoding clause in the ColumnDef
+		 * 2. A column reference storage directive for this column
+		 * 3. A default column encoding in the statement
+		 * 4. A default for the type.
+		 */
 		if (d->encoding)
 		{
 			found_enc = true;
-			c->encoding = d->encoding;
-			c->encoding = transformStorageEncodingClause(c->encoding);
+			c->encoding = transformStorageEncodingClause(d->encoding);
 		}
 		else
 		{
-			/*
-			 * No explicit encoding clause but we may still have a
-			 * clause if
-			 * i. There's a column reference storage directive for this
-			 * column
-			 * ii. There's a default column encoding
-			 * iii. There's a default for the type.
-			 *
-			 * If none of these is the case, we set an 'empty' encoding
-			 * clause.
-			 */
-
-			/*
-			 * We use stenc here -- the storage encoding directives
-			 * gleaned from the table elements list because we know
-			 * there's nothing to look at in new_enc, since we're
-			 * generating that
-			 */
 			ColumnReferenceStorageDirective *s = find_crsd(c->column, stenc);
 
 			if (s)
-			{
-				s->encoding = transformStorageEncodingClause(s->encoding);
-				newenc = lappend(newenc, s);
-				continue;
-			}
-
-			/* ... and so we beat on, boats against the current... */
-			if (deflt)
-			{
-				c->encoding = copyObject(deflt->encoding);
-			}
+				c->encoding = transformStorageEncodingClause(s->encoding);
 			else
 			{
-				List *te = TypeNameGetStorageDirective(d->typname);
-
-				if (te)
-				{
-					c->encoding = copyObject(te);
-				}
+				if (deflt)
+					c->encoding = copyObject(deflt->encoding);
 				else
-					c->encoding = default_column_encoding_clause();
+				{
+					List *te = TypeNameGetStorageDirective(d->typname);
+
+					if (te)
+						c->encoding = copyObject(te);
+					else
+						c->encoding = default_column_encoding_clause();
+				}
 			}
 		}
 		newenc = lappend(newenc, c);
@@ -1841,10 +1787,14 @@ transformAttributeEncoding(List *stenc, CreateStmt *stmt, CreateStmtContext cxt)
 		if (found_enc)
 			UNSUPPORTED_ORIENTATION_ERROR();
 		else
-			return NULL;
+			newenc = NULL;
 	}
 
 	validateColumnStorageEncodingClauses(newenc, stmt);
+
+	/* copy the result out of the temporary memory context */
+	MemoryContextSwitchTo(oldCtx);
+	newenc = copyObject(newenc);
 
 	return newenc;
 }
@@ -1869,6 +1819,22 @@ transformCreateStmt(ParseState *pstate, CreateStmt *stmt,
 	bool	    bQuiet = false;	/* shut up transformDistributedBy messages */
 	List	   *stenc = NIL; /* column reference storage encoding clauses */
 
+	/*
+	 * We don't normally care much about the memory consumption of parsing,
+	 * because any memory leaked is leaked into MessageContext which is
+	 * reset between each command. But if a table is heavily partitioned,
+	 * the CREATE TABLE statement can be expanded into hundreds or even
+	 * thousands of CreateStmts, so the leaks start to add up. To reduce
+	 * the memory consumption, we use a temporary memory context that's
+	 * destroyed after processing the CreateStmt for some parts of the
+	 * processing.
+	 */
+	cxt.tempCtx =
+		AllocSetContextCreate(CurrentMemoryContext,
+							  "CreateStmt analyze context",
+							  ALLOCSET_DEFAULT_MINSIZE,
+							  ALLOCSET_DEFAULT_INITSIZE,
+							  ALLOCSET_DEFAULT_MAXSIZE);
 
 	cxt.stmtType = "CREATE TABLE";
 	cxt.relation = stmt->relation;
@@ -2025,7 +1991,7 @@ transformCreateStmt(ParseState *pstate, CreateStmt *stmt,
 		}
 	}
 	else
-		stmt->attr_encodings = transformAttributeEncoding(stenc, stmt, cxt);
+		stmt->attr_encodings = transformAttributeEncoding(stenc, stmt, &cxt);
 
 	/*
 	 * Postprocess Greenplum Database distribution columns
@@ -2064,6 +2030,8 @@ transformCreateStmt(ParseState *pstate, CreateStmt *stmt,
 	stmt->constraints = cxt.ckconstraints;
 	*extras_before = list_concat(*extras_before, cxt.blist);
 	*extras_after = list_concat(cxt.alist, *extras_after);
+
+	MemoryContextDelete(cxt.tempCtx);
 
 	return q;
 }
@@ -3157,10 +3125,9 @@ fillin_encoding(List *list)
 	bool foundCompressType = false;
 	bool foundCompressTypeNone = false;
 	char *cmplevel = NULL;
-	bool need_free_cmplevel = false;
 	bool foundBlockSize = false;
 	char *arg;
-	List *retList = list;
+	List *retList = list_copy(list);
 	ListCell *lc;
 	DefElem *el;
 	const StdRdOptions *ao_opts = currentAOStorageOptions();
@@ -3172,21 +3139,13 @@ fillin_encoding(List *list)
 		if (pg_strcasecmp("compresstype", el->defname) == 0)
 		{
 			foundCompressType = true;
-			bool need_free_arg = false;
-			arg = defGetString(el, &need_free_arg);
+			arg = defGetString(el);
 			if (pg_strcasecmp("none", arg) == 0)
 				foundCompressTypeNone = true;
-			if (need_free_arg)
-			{
-				pfree(arg);
-				arg = NULL;
-			}
-
-			AssertImply(need_free_arg, NULL == arg);
 		}
 		else if (pg_strcasecmp("compresslevel", el->defname) == 0)
 		{
-			cmplevel = defGetString(el, &need_free_cmplevel);
+			cmplevel = defGetString(el);
 		}
 		else if (pg_strcasecmp("blocksize", el->defname) == 0)
 			foundBlockSize = true;

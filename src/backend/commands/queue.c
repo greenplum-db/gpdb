@@ -347,10 +347,7 @@ AlterResqueueCapabilityEntry(
 
 		/* WITHOUT clause value determined in pg_resourcetype */
 		if (!bWithout)
-		{
-			bool need_free_value = false;
-			pStrVal = makeString(defGetString(defel, &need_free_value));
-		}
+			pStrVal = makeString(defGetString(defel));
 		else
 		{
 			pStrVal = NULL; /* if NULL, delete entry from

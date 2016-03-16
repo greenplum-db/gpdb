@@ -53,6 +53,8 @@ typedef struct
 								 * transfer to the list CreateStmt->deferredStmts
 								 * for later parse_analyze and dispatch */
 	IndexStmt  *pkey;			/* PRIMARY KEY index, if any */
+
+	MemoryContext tempCtx;
 } CreateStmtContext;
 
 Query *transformCreateStmt(ParseState *pstate, CreateStmt *stmt,

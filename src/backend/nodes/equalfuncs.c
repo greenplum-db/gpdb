@@ -1137,7 +1137,7 @@ static bool
 _equalColumnReferenceStorageDirective(ColumnReferenceStorageDirective *a,
 									   ColumnReferenceStorageDirective *b)
 {
-	COMPARE_NODE_FIELD(column);
+	COMPARE_STRING_FIELD(column);
 	COMPARE_SCALAR_FIELD(deflt);
 	COMPARE_NODE_FIELD(encoding);
 

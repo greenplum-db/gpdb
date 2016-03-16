@@ -169,7 +169,7 @@ atpxPart_validate_spec(
 					   CreateStmt				*ct,
 					   PartitionElem			*pelem,
 					   PartitionNode			*pNode,
-					   Node						*partName,
+					   char						*partName,
 					   bool						 isDefault,
 					   PartitionByType			 part_type,
 					   char						*partDesc);
@@ -1671,7 +1671,7 @@ add_part_to_catalog(Oid relid, PartitionBy *pby,
 		parruleord = el->partno;
 
 		if (el->partName)
-			parname = strVal(el->partName);
+			parname = el->partName;
 
 		switch (pby->partType)
 		{
@@ -5018,7 +5018,7 @@ atpxPart_validate_spec(
 					   CreateStmt				*ct,
 					   PartitionElem			*pelem,
 					   PartitionNode			*pNode,
-					   Node						*partName,
+					   char						*partName,
 					   bool						 isDefault,
 					   PartitionByType			 part_type,
 					   char						*partDesc)
@@ -5047,7 +5047,7 @@ atpxPart_validate_spec(
 
 	spec->partElem = list_make1(pelem);
 
-	pelem->partName = partName ? copyObject(partName) : NULL;
+	pelem->partName = partName;
 	pelem->isDefault = isDefault;
 	pelem->AddPartDesc = pstrdup(partDesc);
 
@@ -5193,10 +5193,8 @@ atpxPart_validate_spec(
 
 							el = makeNode(PartitionElem);
 
-							if (rule_tmpl->parname &&
-								strlen(rule_tmpl->parname))
-								el->partName =
-								(Node*)makeString(rule_tmpl->parname);
+							if (rule_tmpl->parname && strlen(rule_tmpl->parname) > 0)
+								el->partName = rule_tmpl->parname;
 
 							el->isDefault = rule_tmpl->parisdefault;
 
@@ -5303,10 +5301,8 @@ atpxPart_validate_spec(
 
 							el = makeNode(PartitionElem);
 
-							if (rule_tmpl->parname &&
-								strlen(rule_tmpl->parname))
-								el->partName =
-								(Node*)makeString(rule_tmpl->parname);
+							if (rule_tmpl->parname && strlen(rule_tmpl->parname) > 0)
+								el->partName = rule_tmpl->parname;
 
 							el->isDefault = rule_tmpl->parisdefault;
 
@@ -5364,7 +5360,7 @@ atpxPartAddList(Relation rel,
 				AlterPartitionCmd *pc,
 				PartitionNode  *pNode,
 				Node *pUtl,     /* pc2->arg2 */
-				Node *partName, /* pid->partiddef (or NULL) */
+				char *partName, /* pid->partiddef (or NULL) */
 				bool isDefault,
 				PartitionElem *pelem,
 				PartitionByType part_type,
@@ -7197,7 +7193,7 @@ atpxModifyListOverlap (Relation rel,
 									  pelem,
 									  pNode,
 									  (pid->idtype == AT_AP_IDName) ?
-									  pid->partiddef : NULL,
+									  strVal(pid->partiddef) : NULL,
 									  false,		 /* isDefault */
 									  PARTTYP_LIST, /* part_type */
 									  prule->partIdStr);
@@ -7699,7 +7695,7 @@ atpxModifyRangeOverlap (Relation				 rel,
 									  pelem,
 									  pNode,
 									  (pid->idtype == AT_AP_IDName) ?
-									  pid->partiddef : NULL,
+									  strVal(pid->partiddef) : NULL,
 									  false,		 /* isDefault */
 									  PARTTYP_RANGE, /* part_type */
 									  prule->partIdStr);
@@ -9203,7 +9199,7 @@ add_template_encoding_clauses(Oid relid, Oid paroid, List *stenc)
 		if (c->deflt)
 			continue;
 
-		attnum = get_attnum(relid, strVal(c->column));
+		attnum = get_attnum(relid, c->column);
 
 		Insist(attnum > 0);
 
@@ -9269,13 +9265,11 @@ get_deparsed_partition_encodings(Oid relid, Oid paroid)
 	{
 		if (opts[i] && !rel->rd_att->attrs[i]->attisdropped)
 		{
-			char *column;
 			ColumnReferenceStorageDirective *c =
 				makeNode(ColumnReferenceStorageDirective);
 
 			c->encoding = untransformRelOptions(opts[i]);
-			column = get_attname(relid, i + 1);
-			c->column = makeString(column);
+			c->column = get_attname(relid, i + 1);
 			out = lappend(out, c);
 		}
 	}

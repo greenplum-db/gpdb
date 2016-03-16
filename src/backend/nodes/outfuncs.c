@@ -2322,7 +2322,7 @@ _outColumnReferenceStorageDirective(StringInfo str, ColumnReferenceStorageDirect
 {
 	WRITE_NODE_TYPE("COLUMNREFERENCESTORAGEDIRECTIVE");
 	
-	WRITE_NODE_FIELD(column);
+	WRITE_STRING_FIELD(column);
 	WRITE_BOOL_FIELD(deflt);
 	WRITE_NODE_FIELD(encoding);
 }
@@ -2824,7 +2824,7 @@ static void
 _outPartitionElem(StringInfo str, PartitionElem *node)
 {
 	WRITE_NODE_TYPE("PARTITIONELEM");
-	WRITE_NODE_FIELD(partName);
+	WRITE_STRING_FIELD(partName);
 	WRITE_NODE_FIELD(boundSpec);
 	WRITE_NODE_FIELD(subSpec);
 	WRITE_BOOL_FIELD(isDefault);
