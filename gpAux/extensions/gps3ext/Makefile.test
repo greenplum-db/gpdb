@@ -8,7 +8,7 @@ testcources = src/gps3conf_test.cpp src/utils_test.cpp src/S3Downloader_test.cpp
 testapp = s3test
 testobjs = $(testcources:.cpp=.o)
 
-GTEST_DIR = gtest
+GTEST_DIR = ../gtest
 
 # Usually you shouldn't tweak such internal variables, indicated by a
 # trailing _.
