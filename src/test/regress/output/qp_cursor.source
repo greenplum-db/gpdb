@@ -1,0 +1,446 @@
+-- ----------------------------------------------------------------------
+-- Test: setup_schema.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+create schema qp_cursor;
+set search_path to qp_cursor;
+-- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+DROP TABLE if exists lu_customer;
+NOTICE:  table "lu_customer" does not exist, skipping
+CREATE TABLE lu_customer (
+    customer_id numeric(28,0),
+    cust_first_name character varying(50),
+    cust_last_name character varying(50),
+    cust_birthdate date,
+    address character varying(50),
+    income_id numeric(28,0),
+    email character varying(50),
+    cust_city_id numeric(28,0)
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'customer_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- ----------------------------------------------------------------------
+-- Test: copy.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+\copy lu_customer from '@abs_srcdir@/data/lu_customer.data' delimiter as '|'
+-- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: query03.sql
+-- ----------------------------------------------------------------------
+begin;
+declare c0 cursor for select count(*) from lu_customer;
+savepoint x;
+update lu_customer set cust_city_id =32 where cust_city_id=24;
+fetch c0;
+ count 
+-------
+   679
+(1 row)
+
+declare c1 cursor for select * from lu_customer a13 where (extract(year from a13.cust_birthdate) in (select extract(year from c21.cust_birthdate) from lu_customer c21)) order by customer_id;
+fetch absolute 679 from c1;
+ customer_id | cust_first_name | cust_last_name | cust_birthdate |         address         | income_id |      email       | cust_city_id 
+-------------+-----------------+----------------+----------------+-------------------------+-----------+------------------+--------------
+         679 | Jill            | Widen          | 12-03-1974     | 187 Roger Williams Ave. |         6 | jill@hotmail.com |           78
+(1 row)
+
+fetch absolute 680 from c1;
+ customer_id | cust_first_name | cust_last_name | cust_birthdate | address | income_id | email | cust_city_id 
+-------------+-----------------+----------------+----------------+---------+-----------+-------+--------------
+(0 rows)
+
+rollback to x;
+fetch c0; 
+ count 
+-------
+(0 rows)
+
+commit;
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+DROP TABLE if exists lu_customer;
+CREATE TABLE lu_customer (
+    customer_id numeric(28,0),
+    cust_first_name character varying(50),
+    cust_last_name character varying(50),
+    cust_birthdate date,
+    address character varying(50),
+    income_id numeric(28,0),
+    email character varying(50),
+    cust_city_id numeric(28,0)
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'customer_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- ----------------------------------------------------------------------
+-- Test: copy.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+\copy lu_customer from '@abs_srcdir@/data/lu_customer.data' delimiter as '|'
+-- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: query04.sql
+-- ----------------------------------------------------------------------
+Begin;
+savepoint x;
+update lu_customer set cust_city_id =24 where cust_city_id=32;
+declare c0 cursor for select cust_city_id from lu_customer where cust_city_id=24;
+fetch c0;
+ cust_city_id 
+--------------
+           24
+(1 row)
+
+fetch c0;
+ cust_city_id 
+--------------
+           24
+(1 row)
+
+rollback to x;
+declare c1 cursor for select cust_city_id from lu_customer where cust_city_id=32;
+fetch c1;
+ cust_city_id 
+--------------
+           32
+(1 row)
+
+fetch c1;
+ cust_city_id 
+--------------
+           32
+(1 row)
+
+savepoint y;
+declare c2 cursor for select cust_city_id from lu_customer where cust_city_id =32;
+rollback to x;
+fetch c2;
+ERROR:  cursor "c2" does not exist
+fetch c1;
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+commit;
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+DROP TABLE if exists lu_customer;
+CREATE TABLE lu_customer (
+    customer_id numeric(28,0),
+    cust_first_name character varying(50),
+    cust_last_name character varying(50),
+    cust_birthdate date,
+    address character varying(50),
+    income_id numeric(28,0),
+    email character varying(50),
+    cust_city_id numeric(28,0)
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'customer_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- ----------------------------------------------------------------------
+-- Test: copy.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+\copy lu_customer from '@abs_srcdir@/data/lu_customer.data' delimiter as '|'
+-- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: query05.sql
+-- ----------------------------------------------------------------------
+Begin;
+savepoint x;
+update lu_customer set cust_city_id =24 where cust_city_id=32;
+declare c0 cursor for select cust_city_id from lu_customer where cust_city_id=24;
+fetch c0;
+ cust_city_id 
+--------------
+           24
+(1 row)
+
+fetch c0;
+ cust_city_id 
+--------------
+           24
+(1 row)
+
+declare c1 cursor for select cust_city_id from lu_customer where cust_city_id=32;
+savepoint y;
+fetch c1;
+ cust_city_id 
+--------------
+(0 rows)
+
+rollback to y; 
+fetch c0;
+ cust_city_id 
+--------------
+           24
+(1 row)
+
+fetch c0;
+ cust_city_id 
+--------------
+           24
+(1 row)
+
+fetch c0;
+ cust_city_id 
+--------------
+           24
+(1 row)
+
+fetch c0;
+ cust_city_id 
+--------------
+(0 rows)
+
+commit;
+-- ----------------------------------------------------------------------
+-- Test: query09.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+DROP TABLE o_users cascade;
+ERROR:  table "o_users" does not exist
+DROP TABLE o_join1;
+ERROR:  table "o_join1" does not exist
+DROP TABLE o_join2;
+ERROR:  table "o_join2" does not exist
+DROP TABLE o_direct cascade;
+ERROR:  table "o_direct" does not exist
+DROP VIEW o_indirect;
+ERROR:  view "o_indirect" does not exist
+--end_ignore
+CREATE TABLE o_users (username text) distributed randomly;
+INSERT INTO o_users VALUES (current_user);
+INSERT INTO o_users VALUES ('test_user');
+CREATE TABLE o_join1 (a int, b int) distributed randomly;
+INSERT INTO o_join1 VALUES (5, 6);
+INSERT INTO o_join1 VALUES (3, 7);
+CREATE TABLE o_join2 (a int, b int) distributed randomly;
+INSERT INTO o_join2 VALUES (10, 50);
+INSERT INTO o_join2 VALUES (5, 2);
+CREATE TABLE o_direct (a int, b int, c text) distributed randomly;
+INSERT INTO o_direct VALUES (1, 2, 'hello');
+INSERT INTO o_direct VALUES (5, 2, 'goodbye');
+CREATE OR REPLACE FUNCTION o_tester() RETURNS boolean
+    AS $$select coalesce((select max(1) from o_users where username=current_user) ,0)::boolean;$$
+LANGUAGE sql IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION o_rev(text) RETURNS text
+    AS $_$
+DECLARE original alias for $1;
+reverse_str text;
+i int4;
+BEGIN reverse_str := '';
+   FOR i IN REVERSE LENGTH(original)..1 LOOP
+     reverse_str := reverse_str || substr(original,i,1);
+   END LOOP;
+   RETURN reverse_str;
+END;$_$ LANGUAGE plpgsql IMMUTABLE; 
+CREATE VIEW o_indirect as
+SELECT a, b, CASE WHEN o_tester() THEN o_rev(c) ELSE c END AS tested FROM o_direct;
+--order 1
+SELECT o_indirect.a, o_indirect.tested FROM o_indirect LEFT OUTER JOIN (select o_join1.b FROM o_join1 FULL JOIN o_join2 ON (o_join2.b = o_join1.b)) BLAH ON o_indirect.b = BLAH.b order by 1;
+ a | tested  
+---+---------
+ 1 | olleh
+ 5 | eybdoog
+(2 rows)
+
+BEGIN;
+CREATE TABLE o_second (a int, b int) distributed randomly;
+INSERT INTO o_second VALUES (1, 1);
+INSERT INTO o_second VALUES (10, 9);
+--order 1
+DECLARE c0 CURSOR FOR SELECT o_indirect.a, o_indirect.tested FROM o_indirect LEFT OUTER JOIN (select o_join1.b FROM o_join1 FULL JOIN o_join2 ON (o_join2.b = o_join1.b)) BLAH ON o_indirect.b = BLAH.b order by 1;
+FETCH c0;
+ a | tested 
+---+--------
+ 1 | olleh
+(1 row)
+
+ABORT;
+--start_ignore
+DROP TABLE o_users cascade;
+DROP TABLE o_join1;
+DROP TABLE o_join2;
+DROP TABLE o_direct Cascade;
+NOTICE:  drop cascades to rule _RETURN on view o_indirect
+NOTICE:  drop cascades to view o_indirect
+DROP VIEW o_indirect;
+ERROR:  view "o_indirect" does not exist
+--end_ignore
+-- ----------------------------------------------------------------------
+-- Test: query12.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+DROP TABLE test cascade;
+ERROR:  table "test" does not exist
+DROP FUNCTION reffunc2();
+ERROR:  function reffunc2() does not exist
+--end_ignore
+CREATE TABLE test (col text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO test VALUES ('123');
+CREATE FUNCTION reffunc2() RETURNS refcursor AS '
+DECLARE
+    ref refcursor;
+BEGIN
+    OPEN ref FOR SELECT col FROM test;
+    RETURN ref;
+END;
+' LANGUAGE plpgsql;
+BEGIN;
+SELECT reffunc2();
+      reffunc2      
+--------------------
+ <unnamed portal 1>
+(1 row)
+
+FETCH ALL IN "<unnamed portal 1>";
+ col 
+-----
+ 123
+(1 row)
+
+COMMIT;
+--start_ignore
+DROP TABLE test cascade;
+DROP FUNCTION reffunc2();
+--end_ignore
+-- ----------------------------------------------------------------------
+-- Test: query17.sql
+-- ----------------------------------------------------------------------
+--start_ignore 
+DROP INDEX if exists fog_4752_sidx;
+NOTICE:  index "fog_4752_sidx" does not exist, skipping
+DROP TABLE if exists fog_4752;
+NOTICE:  table "fog_4752" does not exist, skipping
+--end_ignore
+CREATE TABLE fog_4752 ( description text, gid integer NOT NULL, item_class text, item_id integer, origin_x double precision, origin_y double precision, origin_z double precision) distributed randomly;
+CREATE INDEX fog_4752_sidx ON fog_4752 USING bitmap(gid);
+ALTER TABLE fog_4752 ADD CONSTRAINT fog_4752_pkey PRIMARY KEY (description,gid);
+ERROR:  PRIMARY KEY and DISTRIBUTED RANDOMLY are incompatible
+INSERT INTO fog_4752 (description, gid, item_class, item_id, origin_x, origin_y, origin_z) VALUES ('Polygon1', 3, 'Polygon', 3, 567242.49402979179, 197718.29200272885, 0);
+INSERT INTO fog_4752 (description, gid, item_class, item_id, origin_x, origin_y, origin_z) VALUES ('Polygon2', 2, 'Polygon', 3, 567242.49402979179, 197718.29200272885, 0);
+INSERT INTO fog_4752 (description, gid, item_class, item_id, origin_x, origin_y, origin_z) VALUES ('Polygon3', 4, 'Polygon', 3, 567242.49402979179, 197718.29200272885, 0);
+INSERT INTO fog_4752 (description, gid, item_class, item_id, origin_x, origin_y, origin_z) VALUES ('Polygon4', 5, 'Polygon', 3, 567242.49402979179, 197718.29200272885, 0);
+INSERT INTO fog_4752 (description, gid, item_class, item_id, origin_x, origin_y, origin_z) VALUES ('Polygon6', 6, 'Polygon', 3, 567242.49402979179, 197718.29200272885, 0);
+INSERT INTO fog_4752 (description, gid, item_class, item_id, origin_x, origin_y, origin_z) VALUES ('Polygon5', 1, 'Polygon', 3, 567242.49402979179, 197718.29200272885, 0);
+SET ENABLE_SEQSCAN = On;
+BEGIN;
+--order 1
+DECLARE C63 SCROLL CURSOR FOR select * from fog_4752 order by 1;
+FETCH ABSOLUTE 1 IN C63;
+ description | gid | item_class | item_id |     origin_x     |     origin_y     | origin_z 
+-------------+-----+------------+---------+------------------+------------------+----------
+ Polygon1    |   3 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+(1 row)
+
+FETCH FORWARD 3 IN C63;
+ description | gid | item_class | item_id |     origin_x     |     origin_y     | origin_z 
+-------------+-----+------------+---------+------------------+------------------+----------
+ Polygon2    |   2 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+ Polygon3    |   4 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+ Polygon4    |   5 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+(3 rows)
+
+FETCH C63;
+ description | gid | item_class | item_id |     origin_x     |     origin_y     | origin_z 
+-------------+-----+------------+---------+------------------+------------------+----------
+ Polygon5    |   1 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+(1 row)
+
+COMMIT;
+SET ENABLE_SEQSCAN = OFF; 
+BEGIN;
+--order 1
+DECLARE C63 SCROLL CURSOR FOR select * from fog_4752 order by 1;
+FETCH ABSOLUTE 1 IN C63;
+ description | gid | item_class | item_id |     origin_x     |     origin_y     | origin_z 
+-------------+-----+------------+---------+------------------+------------------+----------
+ Polygon1    |   3 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+(1 row)
+
+FETCH FORWARD 3 IN C63;
+ description | gid | item_class | item_id |     origin_x     |     origin_y     | origin_z 
+-------------+-----+------------+---------+------------------+------------------+----------
+ Polygon2    |   2 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+ Polygon3    |   4 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+ Polygon4    |   5 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+(3 rows)
+
+FETCH C63;
+ description | gid | item_class | item_id |     origin_x     |     origin_y     | origin_z 
+-------------+-----+------------+---------+------------------+------------------+----------
+ Polygon5    |   1 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+(1 row)
+
+COMMIT;
+ ---- Drop and recreate index using btree and check if using btree fetch returns correct results. 
+DROP INDEX if exists fog_4752_sidx;
+CREATE INDEX fog_4752_sidx ON fog_4752 USING btree(gid);
+SET ENABLE_SEQSCAN = On;
+BEGIN;
+--order 1
+DECLARE C63 SCROLL CURSOR FOR select * from fog_4752 order by 1;
+FETCH ABSOLUTE 1 IN C63;
+ description | gid | item_class | item_id |     origin_x     |     origin_y     | origin_z 
+-------------+-----+------------+---------+------------------+------------------+----------
+ Polygon1    |   3 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+(1 row)
+
+FETCH FORWARD 3 IN C63;
+ description | gid | item_class | item_id |     origin_x     |     origin_y     | origin_z 
+-------------+-----+------------+---------+------------------+------------------+----------
+ Polygon2    |   2 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+ Polygon3    |   4 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+ Polygon4    |   5 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+(3 rows)
+
+FETCH C63;
+ description | gid | item_class | item_id |     origin_x     |     origin_y     | origin_z 
+-------------+-----+------------+---------+------------------+------------------+----------
+ Polygon5    |   1 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+(1 row)
+
+COMMIT;
+SET ENABLE_SEQSCAN = OFF; 
+BEGIN;
+--order 1
+DECLARE C63 SCROLL CURSOR FOR select * from fog_4752 order by 1;
+FETCH ABSOLUTE 1 IN C63;
+ description | gid | item_class | item_id |     origin_x     |     origin_y     | origin_z 
+-------------+-----+------------+---------+------------------+------------------+----------
+ Polygon1    |   3 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+(1 row)
+
+FETCH FORWARD 3 IN C63;
+ description | gid | item_class | item_id |     origin_x     |     origin_y     | origin_z 
+-------------+-----+------------+---------+------------------+------------------+----------
+ Polygon2    |   2 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+ Polygon3    |   4 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+ Polygon4    |   5 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+(3 rows)
+
+FETCH C63;
+ description | gid | item_class | item_id |     origin_x     |     origin_y     | origin_z 
+-------------+-----+------------+---------+------------------+------------------+----------
+ Polygon5    |   1 | Polygon    |       3 | 567242.494029792 | 197718.292002729 |        0
+(1 row)
+
+COMMIT;
+--start_ignore 
+DROP INDEX if exists fog_4752_sidx;
+DROP TABLE if exists fog_4752;
+--end_ignore
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop schema qp_cursor cascade;
+NOTICE:  drop cascades to function o_rev(text)
+NOTICE:  drop cascades to function o_tester()
+NOTICE:  drop cascades to table lu_customer
+-- end_ignore
