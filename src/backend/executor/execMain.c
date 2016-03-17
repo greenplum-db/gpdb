@@ -142,7 +142,6 @@ static void intorel_startup(DestReceiver *self, int operation, TupleDesc typeinf
 static void intorel_receive(TupleTableSlot *slot, DestReceiver *self);
 static void intorel_shutdown(DestReceiver *self);
 static void intorel_destroy(DestReceiver *self);
-static void ClearPartitionState(EState *estate);
 
 /*
  * For a partitioned insert target only:  
@@ -1045,8 +1044,7 @@ ExecutorEnd(QueryDesc *queryDesc)
 		RemoveMotionLayer(estate->motionlayer_context, true);
 
 		/*
-		 * Release EState and per-query memory context.  This should release
-		 * everything the executor has allocated.
+		 * Release EState and per-query memory context.
 		 */
 		FreeExecutorState(estate);
 
@@ -1089,8 +1087,7 @@ ExecutorEnd(QueryDesc *queryDesc)
 	queryDesc->es_lastoid = estate->es_lastoid;
 
 	/*
-	 * Release EState and per-query memory context.  This should release
-	 * everything the executor has allocated.
+	 * Release EState and per-query memory context
 	 */
 	FreeExecutorState(estate);
 	
@@ -2485,12 +2482,6 @@ ExecEndPlan(PlanState *planstate, EState *estate)
 
 		heap_close(erm->relation, NoLock);
 	}
-	
-	/*
-	 * Release partition-related resources (esp. TupleDesc ref counts).
-	 */
-	if ( estate->es_partition_state )
-		ClearPartitionState(estate);
 }
 
 /*
@@ -4454,7 +4445,9 @@ EvalPlanQualStop(evalPlanQual *epq)
 
 	MemoryContextSwitchTo(oldcontext);
 
-	FreeExecutorState(epqstate);
+	/* Because this EState has sharing fields with main query's EState,
+	 * we only release the memory of EState here */
+	FreeExecutorStateMemory(epqstate);
 
 	epq->estate = NULL;
 	epq->planstate = NULL;
@@ -5722,7 +5715,6 @@ map_part_attrs_from_targetdesc(TupleDesc target, TupleDesc part, AttrMap **map_p
 	pfree(mapper);
 }
 
-
 /*
  * Clear any partition state held in the argument EState node.  This is
  * called during ExecEndPlan and is not, itself, recursive.
@@ -5730,18 +5722,18 @@ map_part_attrs_from_targetdesc(TupleDesc target, TupleDesc part, AttrMap **map_p
  * At present, the only required cleanup is to decrement reference counts
  * in any tuple descriptors held in slots in the partition state.
  */
-static void
+void
 ClearPartitionState(EState *estate)
 {
 	PartitionState *pstate = estate->es_partition_state;
 	HASH_SEQ_STATUS hash_seq_status;
 	ResultPartHashEntry *entry;
-	
+
 	if ( pstate == NULL || pstate->result_partition_hash == NULL )
 		return;
-	
+
 	/* Examine each hash table entry. */
-	hash_freeze(pstate->result_partition_hash); 
+	hash_freeze(pstate->result_partition_hash);
 	hash_seq_init(&hash_seq_status, pstate->result_partition_hash);
 	while ( (entry = hash_seq_search(&hash_seq_status)) )
 	{
@@ -5750,10 +5742,10 @@ ClearPartitionState(EState *estate)
 		if ( info->ri_partSlot )
 		{
 			Assert( info->ri_partInsertMap ); /* paired with slot */
-			if ( info->ri_partSlot->tts_tupleDescriptor )
-				ReleaseTupleDesc(info->ri_partSlot->tts_tupleDescriptor);
-			ExecClearTuple(info->ri_partSlot);
+			ExecDropSingleTupleTableSlot(info->ri_partSlot);
 		}
 	}
 	/* No need for hash_seq_term() since we iterated to end. */
+	hash_destroy(pstate->result_partition_hash);
+	pstate->result_partition_hash = NULL;
 }

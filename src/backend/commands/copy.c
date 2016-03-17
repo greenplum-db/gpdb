@@ -3643,10 +3643,6 @@ CopyFromDispatch(CopyState cstate)
 	if (policy)
 		pfree(policy);
 
-	/* free the hash table allocated by values_get_partition(), if any */
-	if(estate->es_result_partitions && estate->es_partition_state->result_partition_hash != NULL)
-		hash_destroy(estate->es_partition_state->result_partition_hash);
-
 	/*
 	 * Don't worry about the partition table hash map, that will be
 	 * freed when our current memory context is freed. And that will be
@@ -4299,10 +4295,6 @@ CopyFrom(CopyState cstate)
 	if (estate->es_result_partitions && Gp_role == GP_ROLE_EXECUTE)
 		SendAOTupCounts(estate);
 
-	/* free the hash table allocated by values_get_partition(), if any */
-	if(estate->es_result_partitions && estate->es_partition_state->result_partition_hash != NULL)
-		hash_destroy(estate->es_partition_state->result_partition_hash);
-		
 	pfree(attr_offsets);
 
 	pfree(in_functions);
