@@ -135,7 +135,7 @@ SELECT SUM(upb), isinterestonly
   
 -- End of mpp16598  
   
--- Test Rail: C87782 (Redistribute on top of Append with flow node)
+-- Redistribute on top of Append with flow node
 -- start_ignore
 drop table if exists foo_p;
 drop table if exists bar;
@@ -177,7 +177,7 @@ select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where
 select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = 6 or foo_p.b = 7 order by 1, 2 desc limit 10;
 
 
--- Test Rail: C87783 (Broadcast on top of Append with flow node)
+-- Broadcast on top of Append with flow node
 -- Forge stats to force a broadcast instead of append
 -- Make bar appear too big so that the planner chooses to do a flow on foo_p
 -- Make foo_p appear too small so that the planner chooses to do a broadcast
@@ -193,7 +193,7 @@ update pg_class set reltuples = 1, relpages = 1 where relname like 'foo_p_1_prt_
 select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.a  where foo_p.p =3 and foo_p.a = 6 order by 1, 2 desc limit 10;
 
 
--- Test Rail: C87784 (Varchar in the select list with redistribute on top of an append with flow node)
+-- Varchar in the select list with redistribute on top of an append with flow node
 -- start_ignore
 drop table if exists abbp;
 drop table if exists b;
@@ -218,7 +218,7 @@ select qx_count_operator('explain select abbp.b, abbp.t from abbp left outer joi
 -- end_ignore
 select abbp.b, abbp.t from abbp left outer join b on abbp.a = b.k  where abbp.t is not null and abbp.a = '6SOME NUMBER' order by 1, 2 desc limit 10;
 
--- Test Rail: C87785 (Varchar in the select list with a broadcast on top of an append with flow node)
+-- Varchar in the select list with a broadcast on top of an append with flow node
 -- Forge stats to force a broadcast instead of append
 -- Make b appear too big so that the planner chooses to do a flow on abbp
 -- Make abbp appear too small so that the planner chooses to do a broadcast 
@@ -235,7 +235,7 @@ select abbp.b, abbp.t from abbp join (select abbp.* from b, abbp where abbp.a = 
 select abbp.b, abbp.t from abbp left outer join b on abbp.a = b.k  where abbp.t is not null and abbp.a = '6SOME NUMBER' order by 1, 2 desc limit 10;
 
 
--- Test Rail: C87786 (Queries without motion node on the partitioned table)
+-- Queries without motion node on the partitioned table
 -- start_ignore
 drop table if exists abbp;
 drop table if exists b;
@@ -261,7 +261,7 @@ select qx_count_operator('explain select abbp.b, abbp.t from abbp left outer joi
 -- end_ignore
 select abbp.b, abbp.t from abbp left outer join b on abbp.a = b.k where abbp.t is not null and abbp.a = 6 order by 1, 2 asc limit 10;
 
--- Test Rail: C87787 (Partitioned tables with decimal type distribution keys)
+-- Partitioned tables with decimal type distribution keys
 -- start_ignore
 drop table if exists foo_p;
 drop table if exists bar;
@@ -287,7 +287,7 @@ select qx_count_operator('explain select foo_p.b, foo_p.t from foo_p left outer 
 -- end_ignore
 select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = 6.00 order by 1, 2 desc limit 10;
 
--- Test Rail: C87788 (Partitioned tables with character type distribution keys used in predicates)
+-- Partitioned tables with character type distribution keys used in predicates
 -- start_ignore
 drop table if exists abbp;
 drop table if exists b;
@@ -313,7 +313,7 @@ select qx_count_operator('explain select abbp.b, abbp.t from abbp left outer joi
 -- end_ignore
 select abbp.b, abbp.t from abbp left outer join b on abbp.a = b.k  where abbp.t is not null and abbp.a = '6SOME NUMBER' order by 1, 2 asc limit 10;
 
--- Test Rail: C87789 (Partitioned tables on both sides of a join)
+-- Partitioned tables on both sides of a join
 -- start_ignore
 drop table if exists foo_p;
 drop table if exists bar_p;
@@ -359,13 +359,7 @@ select qx_count_operator('explain select foo_p.b, foo_p.t from foo_p left outer 
 -- end_ignore
 select foo_p.b, foo_p.t from foo_p left outer join bar_p on foo_p.a = bar_p.a  where foo_p.t is not null and foo_p.a = 6 order by 1, 2 asc limit 10;
 
--- Test Rail: C87790 (Motion nodes on top of other non-projection capable nodes)
--- 
-
--- Test Rail: C87849 (Queries with inner join)
--- TBD
-
--- Test Rail: C87850 (Queries where equality predicate is not an immediate constant)
+-- Queries where equality predicate is not an immediate constant
 -- start_ignore
 drop table if exists foo_p;
 drop table if exists bar;
@@ -396,7 +390,7 @@ select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.k  where
 drop function if exists mytest(integer);
 -- Repeat test cases with inner join instead of inner join: C87849 (Queries with inner join)
 
--- Test Rail: C87782 (Redistribute on top of Append with flow node)
+-- Redistribute on top of Append with flow node
 -- start_ignore
 drop table if exists foo_p;
 drop table if exists bar;
@@ -422,11 +416,7 @@ select foo_p.b, foo_p.t from foo_p inner join bar on foo_p.a = bar.k  where foo_
 select qx_count_operator('explain select foo_p.k, foo_p.t from foo_p inner join bar on foo_p.k = bar.k  where foo_p.t is not null and foo_p.p = 6;', 'Hash Join');
 select foo_p.k, foo_p.t from foo_p inner join bar on foo_p.k = bar.k  where foo_p.t is not null and foo_p.p = 6 order by 1, 2 desc limit 10;
 
--- Test Rail: C87783 (Broadcast on top of Append with flow node)
-
--- TBD
-
--- Test Rail: C87784 (Varchar in the select list with redistribute on top of an append with flow node)
+-- Varchar in the select list with redistribute on top of an append with flow node
 -- start_ignore
 drop table if exists a_p;
 drop table if exists bar;
@@ -449,11 +439,7 @@ select a_p.k, a_p.t from a_p inner join b on a_p.k = b.k  where a_p.t is not nul
 select qx_count_operator('explain select a_p.b, a_p.t from a_p inner join b on a_p.a = b.k  where a_p.t is not null and a_p.a = E''6SOME NUMBER''', 'Nested Loop');
 select a_p.b, a_p.t from a_p inner join b on a_p.a = b.k  where a_p.t is not null and a_p.a = '6SOME NUMBER' order by 1, 2 desc limit 10;
 
--- Test Rail: C87785 (Varchar in the select list with a broadcast on top of an append with flow node)
-
--- TBD
-
--- Test Rail: C87786 (Queries without motion node on the partitioned table)
+-- Queries without motion node on the partitioned table
 -- start_ignore
 drop table if exists a_p;
 drop table if exists b;
@@ -477,7 +463,7 @@ select a_p.k, a_p.t from a_p inner join b on a_p.k = b.k where a_p.t is not null
 select qx_count_operator('explain select a_p.b, a_p.t from a_p inner join b on a_p.a = b.k where a_p.t is not null and a_p.a = 6;', 'Nested Loop');
 select a_p.b, a_p.t from a_p inner join b on a_p.a = b.k where a_p.t is not null and a_p.a = 6 order by 1, 2 desc limit 10;
 
--- Test Rail: C87787 (Partitioned tables with decimal type distribution keys)
+-- Partitioned tables with decimal type distribution keys
 -- start_ignore
 drop table if exists foo_p;
 drop table if exists bar;
@@ -501,7 +487,7 @@ select foo_p.k, foo_p.t from foo_p inner join bar on foo_p.k = bar.k  where foo_
 select qx_count_operator('explain select foo_p.b, foo_p.t from foo_p inner join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = 6.00;', 'Nested Loop');
 select foo_p.b, foo_p.t from foo_p inner join bar on foo_p.a = bar.k  where foo_p.t is not null and foo_p.a = 6.00 order by 1, 2 desc limit 10;
 
--- Test Rail: C87788 (Partitioned tables with character type distribution keys used in predicates)
+-- Partitioned tables with character type distribution keys used in predicates
 -- start_ignore
 drop table if exists a_p;
 drop table if exists b;
@@ -525,7 +511,7 @@ select a_p.k, a_p.t from a_p inner join b on a_p.k = b.k  where a_p.t is not nul
 select qx_count_operator('explain select a_p.b, a_p.t from a_p inner join b on a_p.a = b.k  where a_p.t is not null and a_p.a = E''6SOME NUMBER''', 'Nested Loop');
 select a_p.b, a_p.t from a_p inner join b on a_p.a = b.k  where a_p.t is not null and a_p.a = '6SOME NUMBER' order by 1, 2 asc limit 10;
 
--- Test Rail: C87789 (Partitioned tables on both sides of a join)
+-- Partitioned tables on both sides of a join
 -- start_ignore
 drop table if exists foo_p;
 drop table if exists bar_p;
@@ -570,13 +556,7 @@ select foo_p.b, foo_p.t from foo_p inner join bar_p on foo_p.a = bar_p.a  where 
 select qx_count_operator('explain select foo_p.b, foo_p.t from foo_p inner join bar_p on foo_p.a = bar_p.a  where foo_p.t is not null and foo_p.a = 6;', 'Nested Loop'); 
 select foo_p.b, foo_p.t from foo_p inner join bar_p on foo_p.a = bar_p.a  where foo_p.t is not null and foo_p.a = 6 order by 1, 2 desc limit 10;
 
--- Test Rail: C87790 (Motion nodes on top of other non-projection capable nodes)
--- TBD
-
--- Test Rail: C87849 (Queries with inner join)
--- TBD
-
--- Test Rail: C87850 (Queries where equality predicate is not an immediate constant)
+-- Queries where equality predicate is not an immediate constant
 -- start_ignore
 drop table if exists foo_p;
 drop table if exists bar;
