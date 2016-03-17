@@ -97,7 +97,7 @@ When building codegen, you will need to point cmake at the more recent LLVM
 like so:
 
 ```
-./configure --enable-codegen CMAKE_PREFIX_PATH=/usr/local/llvm37
+./configure --enable-codegen --with-codegen-prefix=/usr/local/llvm37
 ```
 
 #### Mac OS X
@@ -139,7 +139,7 @@ Because the version of LLVM installed by brew is not installed in one of the
 default locations, you will need to point cmake at it when building codegen
 like so:
 ```
-./configure --enable-codegen CMAKE_PREFIX_PATH=/usr/local/opt/llvm37/lib/llvm-3.7
+./configure --enable-codegen --with-codegen-prefix=/usr/local/opt/llvm37/lib/llvm-3.7
 ```
 
 ### Testing

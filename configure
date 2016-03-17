@@ -830,6 +830,7 @@ enable_debugntuplestore
 enable_testutils
 enable_orca
 enable_codegen
+with_codegen_prefix
 enable_snmp
 enable_connectemc
 enable_ddboost
@@ -1521,6 +1522,7 @@ Optional Packages:
   --with-libraries=DIRS   look for additional libraries in DIRS
   --with-libs=DIRS        alternative spelling of --with-libraries
   --with-pgport=PORTNUM   change default port number [5432]
+  --with-codegen-prefix   semicolon saperated prefix search path for LLVM and Clang
   --with-tcl              build Tcl modules (PL/Tcl)
   --with-tclconfig=DIR    tclConfig.sh is in DIR
   --with-perl             build Perl modules (PL/Perl)
@@ -5391,6 +5393,37 @@ fi
   as_fn_error $? "'cmake is required for build GPDB with codegen enabled'" "$LINENO" 5
 fi
 
+
+pgac_args="$pgac_args with_codegen_prefix"
+
+
+# Check whether --with-codegen-prefix was given.
+if test "${with_codegen_prefix+set}" = set; then :
+  withval=$with_codegen_prefix;
+  case $withval in
+    yes)
+      codegen_prefix=
+      ;;
+    no)
+      :
+      ;;
+    *)
+      with_codegen_prefix=yes
+codegen_prefix=$withval
+      ;;
+  esac
+
+else
+  with_codegen_prefix=no
+fi
+
+
+
+if test "$with_codegen_prefix" = yes; then
+  :
+fi
+
+
    cd src/backend/codegen
    if test "${prefix}" = NONE; then :
   prefix=${ac_default_prefix}
@@ -5400,7 +5433,8 @@ fi
 else
   build_type="Release"
 fi
-   CMAKE_CMD="cmake -DCMAKE_INSTALL_PREFIX=${prefix} -DCMAKE_BUILD_TYPE=${build_type} ."
+
+   CMAKE_CMD="cmake -DCMAKE_PREFIX_PATH="${codegen_prefix}" -DCMAKE_INSTALL_PREFIX=${prefix} -DCMAKE_BUILD_TYPE=${build_type} ."
    echo "Executing cmake command : ${CMAKE_CMD}"
    if ${CMAKE_CMD}; then :
 
