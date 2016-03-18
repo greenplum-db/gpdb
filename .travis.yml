@@ -102,7 +102,6 @@ script:
   - gpssh --version
   - gpmapreduce --version
   - gpfdist --version
-  - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
   - env
   - cd ${TRAVIS_BUILD_DIR}/gpAux/gpdemo
   - make
