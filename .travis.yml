@@ -119,7 +119,7 @@ script:
 ## ----------------------------------------------------------------------
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
-       brew install libevent          ; 
+       brew install libevent; 
        sudo sysctl -w kern.sysv.shmmax=2147483648;
        sudo sysctl -w kern.sysv.shmmin=1;
        sudo sysctl -w kern.sysv.shmmni=64;
@@ -162,8 +162,6 @@ before_install:
        sudo sysctl -w net.core.wmem_max=2097152;
        sudo sysctl -w vm.overcommit_memory=2;
        cat /etc/security/limits.conf;
-       ulimit -n 65536 -S;
-       ulimit -u 131072 -S;
        ulimit -a;
     fi
   - # Avoid typing password during 'make' under gpAux/gpdemo
