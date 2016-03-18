@@ -376,7 +376,7 @@ typedef struct A_ArrayExpr
 {
 	NodeTag		type;
 	List	   *elements;		/* array element expressions */
-//	int			location;		/* token location, or -1 if unknown */
+	int			location;		/* token location, or -1 if unknown */
 } A_ArrayExpr;
 
 /*

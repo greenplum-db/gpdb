@@ -115,7 +115,7 @@ static Node *makeIntConst(int val, int location);
 static Node *makeFloatConst(char *str, int location);
 static Node *makeNullAConst(int location);
 static Node *makeAConst(Value *v, int location);
-static Node *makeAArrayExpr(List *elements);
+static Node *makeAArrayExpr(List *elements, int location);
 static A_Const *makeBoolAConst(bool state, int location);
 static FuncCall *makeOverlaps(List *largs, List *rargs, int location);
 static void check_qualified_name(List *names);
@@ -11614,15 +11614,15 @@ type_list:	Typename								{ $$ = list_make1($1); }
 
 array_expr: '[' expr_list ']'
 				{
-					$$ = makeAArrayExpr($2);
+					$$ = makeAArrayExpr($2, @1);
 				}
 			| '[' array_expr_list ']'
 				{
-					$$ = makeAArrayExpr($2);
+					$$ = makeAArrayExpr($2, @1);
 				}
             | '[' ']'
                 {
-                    $$ = makeAArrayExpr(NIL);
+                    $$ = makeAArrayExpr(NIL, @1);
                 }
         ;
 
@@ -11636,6 +11636,8 @@ extract_list:
 					A_Const *n = makeNode(A_Const);
 					n->val.type = T_String;
 					n->val.val.str = $1;
+					n->location = @1;
+
 					$$ = list_make2((Node *) n, $3);
 				}
 			| /*EMPTY*/								{ $$ = NIL; }
@@ -13568,11 +13570,12 @@ doNegateFloat(Value *v)
 }
 
 static Node*
-makeAArrayExpr(List *elements)
+makeAArrayExpr(List *elements, int location)
 {
 	A_ArrayExpr *n = makeNode(A_ArrayExpr);
 
 	n->elements = elements;
+	n->location = location;
 	return (Node *) n;
 }
 

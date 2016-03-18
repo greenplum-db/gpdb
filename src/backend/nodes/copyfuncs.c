@@ -1648,6 +1648,7 @@ _copyArrayExpr(ArrayExpr *from)
 	COPY_SCALAR_FIELD(element_typeid);
 	COPY_NODE_FIELD(elements);
 	COPY_SCALAR_FIELD(multidims);
+	COPY_LOCATION_FIELD(location);
 
 	return newnode;
 }
@@ -2415,6 +2416,7 @@ _copyA_ArrayExpr(A_ArrayExpr *from)
 {
 	A_ArrayExpr *newnode = makeNode(A_ArrayExpr);
 	COPY_NODE_FIELD(elements);
+	COPY_LOCATION_FIELD(location);
 
 	return newnode;
 }

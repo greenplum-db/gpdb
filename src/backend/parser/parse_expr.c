@@ -1278,6 +1278,7 @@ transformAExprIn(ParseState *pstate, A_Expr *a)
 			newa->element_typeid = scalar_type;
 			newa->elements = aexprs;
 			newa->multidims = false;
+			newa->location = -1;
 
 			return (Node *) make_scalar_array_op(pstate,
 												 a->name,

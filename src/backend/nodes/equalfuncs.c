@@ -484,6 +484,7 @@ _equalArrayExpr(ArrayExpr *a, ArrayExpr *b)
 	COMPARE_SCALAR_FIELD(element_typeid);
 	COMPARE_NODE_FIELD(elements);
 	COMPARE_SCALAR_FIELD(multidims);
+	COMPARE_LOCATION_FIELD(location);
 
 	return true;
 }
@@ -2017,6 +2018,7 @@ static bool
 _equalA_ArrayExpr(A_ArrayExpr *a, A_ArrayExpr *b)
 {
 	COMPARE_NODE_FIELD(elements);
+	COMPARE_LOCATION_FIELD(location);
 
 	return true;
 }
