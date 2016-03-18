@@ -103,6 +103,7 @@ script:
   - gpmapreduce --version
   - gpfdist --version
   - env
+  - ldd -v ${TRAVIS_BUILD_DIR}/gpsql/bin/postgres
   - cd ${TRAVIS_BUILD_DIR}/gpAux/gpdemo
   - make
   - cat ~/gpAdminLogs/*.log
