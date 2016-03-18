@@ -164,16 +164,16 @@ before_install:
        sudo sysctl -w net.core.wmem_max=2097152;
        sudo sysctl -w vm.overcommit_memory=2;
        sudo sysctl -a;
-       sudo ulimit -n 65536
-       sudo ulimit -u 131072
-       sudo ulimit -a;
+       ulimit -n 65536;
+       ulimit -u 131072;
+       ulimit -a;
     fi
   - # Avoid typing password during 'make' under gpAux/gpdemo
   - cd ~
   - ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ''
   - cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-  - echo "host *" > ~/.ssh/config
-  - echo "  StrictHostKeyChecking no" > ~/.ssh/config
+  - chmod 600  ~/.ssh/authorized_keys
+
 
 ## ----------------------------------------------------------------------
 ## Notification
