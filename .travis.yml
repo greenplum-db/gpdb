@@ -161,6 +161,7 @@ before_install:
        sudo sysctl -w net.core.rmem_max=2097152;
        sudo sysctl -w net.core.wmem_max=2097152;
        sudo sysctl -w vm.overcommit_memory=2;
+       cat /etc/security/limits.conf;
        ulimit -n 65536 -S;
        ulimit -u 131072 -S;
        ulimit -a;
