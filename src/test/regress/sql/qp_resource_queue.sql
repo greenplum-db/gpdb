@@ -4,8 +4,8 @@
 -- ----------------------------------------------------------------------
 
 -- start_ignore
-create schema qr_resource_queue;
-set search_path to qr_resource_queue;
+create schema qp_resource_queue;
+set search_path to qp_resource_queue;
 -- end_ignore
 
 -- ----------------------------------------------------------------------
@@ -320,5 +320,5 @@ select tbl16369_func1(),tbl16369_func2(),tbl16369_func4(),tbl16369_func5(),tbl16
 -- ----------------------------------------------------------------------
 
 -- start_ignore
-drop schema qr_resource_queue cascade;
+drop schema qp_resource_queue cascade;
 -- end_ignore

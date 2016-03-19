@@ -89,7 +89,7 @@ test: qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapsca
 
 test: qp_correlated_query 
 
-test: qp_dpe qp_subquery qp_function qp_regexp
+test: qp_dpe qp_subquery qp_function qp_regexp qp_resource_queue
 
 ignore: tpch500GB_orca
 

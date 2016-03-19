@@ -2,8 +2,8 @@
 -- Test: setup_schema.sql
 -- ----------------------------------------------------------------------
 -- start_ignore
-create schema qr_resource_queue;
-set search_path to qr_resource_queue;
+create schema qp_resource_queue;
+set search_path to qp_resource_queue;
 -- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: setup.sql
@@ -571,7 +571,7 @@ PL/pgSQL function "tbl16369_func11" line 7 at assignment
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
 -- start_ignore
-drop schema qr_resource_queue cascade;
+drop schema qp_resource_queue cascade;
 NOTICE:  drop cascades to function complexquery()
 NOTICE:  drop cascades to table x
 NOTICE:  drop cascades to table test1
