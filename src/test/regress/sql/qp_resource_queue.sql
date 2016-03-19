@@ -13,6 +13,7 @@ set search_path to qr_resource_queue;
 -- ----------------------------------------------------------------------
 
 -- start_ignore
+drop role if exists gpadmin;
 drop role if exists tbl16369_user1;
 drop role if exists tbl16369_user3;
 drop resource queue tbl16369_resq1;
@@ -38,6 +39,9 @@ create resource queue tbl16369_resq1 WITH (ACTIVE_STATEMENTS=1);
 CREATE ROLE tbl16369_user1 LOGIN PASSWORD 'tbl16369pwd' NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE tbl16369_resq1;
 create resource queue tbl16369_resq3 WITH (ACTIVE_STATEMENTS=1, MEMORY_LIMIT='200MB');
 CREATE ROLE tbl16369_user3 LOGIN PASSWORD 'tbl16369pwd' NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE tbl16369_resq3;
+create role gpadmin login superuser;
+grant gpadmin to mpp16369_user1;
+grant gpadmin to mpp16369_user3;
 Drop table if exists tbl16369_test;
 create table tbl16369_test(col text);
 CREATE TABLE tbl16369_zipcode_gis ( zipcode INTEGER, zip_col1 INTEGER, zip_col2 INTEGER ) DISTRIBUTED BY ( zipcode );
