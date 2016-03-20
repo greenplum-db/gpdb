@@ -38,8 +38,10 @@ create resource queue tbl16369_resq1 WITH (ACTIVE_STATEMENTS=1);
 CREATE ROLE tbl16369_user1 LOGIN PASSWORD 'tbl16369pwd' NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE tbl16369_resq1;
 create resource queue tbl16369_resq3 WITH (ACTIVE_STATEMENTS=1, MEMORY_LIMIT='200MB');
 CREATE ROLE tbl16369_user3 LOGIN PASSWORD 'tbl16369pwd' NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE tbl16369_resq3;
+-- start_ignore
 drop role if exists gpadmin;
 create role gpadmin login superuser;
+-- end_ignore
 grant gpadmin to tbl16369_user1;
 grant gpadmin to tbl16369_user3;
 Drop table if exists tbl16369_test;
