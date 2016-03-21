@@ -4,7 +4,7 @@
 # Data Directories
 # ======================================================================
 
-DATADIRS?=`pwd`/datadirs
+DATADIRS=${DATADIRS:-`pwd`/datadirs}
 QDDIR=$DATADIRS/qddir
 
 SEG_PREFIX=demoDataDir
