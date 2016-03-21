@@ -18,7 +18,6 @@
  *		CreateExecutorState		Create/delete executor working state
  *		CreateSubExecutorState
  *		FreeExecutorState
- *		FreeExecutorStateMemory
  *		CreateExprContext
  *		CreateStandaloneExprContext
  *		FreeExprContext
@@ -340,58 +339,26 @@ freeDynamicTableScanInfo(DynamicTableScanInfo *scanInfo)
 }
 
 /* ----------------
- *		FreeExecutorState
+ *      FreeExecutorState
  *
- *		Release an EState memory along with all plan-execution-irrelevant
- *		working resources.
+ *      Release an EState along with all remaining working storage.
  *
- * Note: this is not responsible for releasing resources such as open
- * relations or buffer pins, but it will shut down any still-active
- * ExprContexts within the EState, clear the PartitionState, and free the
- * memory of this EState. That is sufficient cleanup for situations where
- * the EState has only been used for expression evaluation, and not to run
- * a complete Plan.
+ * Note: this is not responsible for releasing non-memory resources,
+ * such as open relations or buffer pins.  But it will shut down any
+ * still-active ExprContexts within the EState.  That is sufficient
+ * cleanup for situations where the EState has only been used for expression
+ * evaluation, and not to run a complete Plan.
  *
  * This can be called in any memory context ... so long as it's not one
  * of the ones to be freed.
+ *
+ * In Greenplum, this also clears the PartitionState, even though that's a
+ * non-memory resource, as that can be allocated for expression evaluation even
+ * when there is no Plan.
  * ----------------
  */
 void
 FreeExecutorState(EState *estate)
-{
-	/*
-	 * Release partition-related resources (esp. TupleDesc ref counts).
-	 */
-	if (estate->es_partition_state)
-	{
-		ClearPartitionState(estate);
-	}
-
-	/*
-	 * XXX: Not sure what other non-memory resources should be released here,
-	 * but the principle is that, this routine should free all resources
-	 * referenced by this EState if it is just used for expression evaluation
-	 * instead of a complete plan execution. Note that, it means this routine
-	 * may release resources shared with other EStates. Other non-momory
-	 * resources to be released found can be added here.
-	 */
-
-	FreeExecutorStateMemory(estate);
-}
-
-/* ----------------
- *		FreeExecutorStateMemory
- *
- * Note: There are cases where one EState has some sharing
- * fields with other EStates, such as es_result_relations, and
- * those fields point to memory allocated in other EStates(e.g,
- * EState created in EvalPlanQualStart()). This routine would not
- * do cleanup for those fields(use FreeExecutorState to do that),
- * and only focuses on the memory of itself.
- * ----------------
- */
-void
-FreeExecutorStateMemory(EState *estate)
 {
 	/*
 	 * Shut down and free any remaining ExprContexts.  We do this explicitly
@@ -431,6 +398,14 @@ FreeExecutorStateMemory(EState *estate)
 		Assert(proc_exit_inprogress || dynamicTableScanInfo != estate->dynamicTableScanInfo);
 		freeDynamicTableScanInfo(estate->dynamicTableScanInfo);
 		estate->dynamicTableScanInfo = NULL;
+	}
+
+	/*
+	 * Greenplum: release partition-related resources (esp. TupleDesc ref counts).
+	 */
+	if (estate->es_partition_state)
+	{
+		ClearPartitionState(estate);
 	}
 
 	/*

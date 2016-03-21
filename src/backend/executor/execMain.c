@@ -4445,9 +4445,23 @@ EvalPlanQualStop(evalPlanQual *epq)
 
 	MemoryContextSwitchTo(oldcontext);
 
-	/* Because this EState has sharing fields with main query's EState,
-	 * we only release the memory of EState here */
-	FreeExecutorStateMemory(epqstate);
+	/*
+	 * Reset the sharing fields of this EState with main query's EState
+	 * to NULL before calling FreeExecutorState, to avoid duplicate cleanup.
+	 * This should be symmetric to the setup in EvalPlanQualStart().
+	 */
+	epqstate->es_snapshot = NULL;
+	epqstate->es_crosscheck_snapshot = NULL;
+	epqstate->es_range_table = NIL;
+	epqstate->es_result_relations = NULL;
+	epqstate->es_result_relation_info = NULL;
+	epqstate->es_junkFilter = NULL;
+	epqstate->es_into_relation_descriptor = NULL;
+	epqstate->es_param_list_info = NULL;
+	epqstate->es_rowMarks = NIL;
+	epqstate->es_plannedstmt = NULL;
+
+	FreeExecutorState(epqstate);
 
 	epq->estate = NULL;
 	epq->planstate = NULL;
