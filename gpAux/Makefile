@@ -62,8 +62,6 @@ endif
 #$(warning BLD_CFLAGS=$(BLD_CFLAGS))
 #$(warning )
 
-# help gpcheckdb, our only C++ binary, find the right copy of libstdc++
-sol10_sparc_32_CXX_LIB_DIR=/usr/sfw/lib
 BLD_CXX_LIB_DIR=$($(BLD_ARCH)_CXX_LIB_DIR)
 
 # help Windows builds find the cross-compiler and a pre-built curl
