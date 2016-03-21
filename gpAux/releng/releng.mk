@@ -56,7 +56,7 @@ OPTIMIZER_VER = $(shell grep "\"optimizer\"" $(GREP_SED_VAR))
 LIBSTDC++_VER = $(shell grep "\"libstdc\""   $(GREP_SED_VAR))
 
 XERCES = $(BLD_TOP)/ext/$(BLD_ARCH)
-XERCES_LIBDIR = $(XERCES)/lib
+XERCES_LIBDIR ?= $(XERCES)/lib
 
 LIBGPOS = $(BLD_TOP)/ext/$(BLD_ARCH)/libgpos
 LIBGPOS_LIBDIR = $(LIBGPOS)/$(OBJDIR_DEFAULT)

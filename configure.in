@@ -654,6 +654,12 @@ AS_IF([test "$enable_codegen" = yes],
 ]) # fi
 
 #
+# --with-xerces=DIR enables building with a patched Xerces-C (or GP-Xerces) for ORCA installed
+# in a separate path from the system wide headers/libraries
+#
+PGAC_ARG_REQ(with, xerces, [  --with-xerces=DIR       Xerces-C is installed in DIR])
+
+#
 # --enable-snmp enables snmp mib and trap/inform
 #
 PGAC_ARG_BOOL(enable, snmp, no, [  --enable-snmp           enable snmp for MIB and alerts via TRAP/INFORM],
@@ -1066,6 +1072,25 @@ AC_DEFINE_UNQUOTED(GP_VERSION_NUM, $GP_VERSION_NUM, [Greenplum version as a numb
 ## probes for standard functions such as pow().
 ##
 
+if test "$enable_orca" = yes ; then
+  save_libs=$LIBS
+  AC_CHECK_LIB(gpopt, main, [], [AC_MSG_ERROR([library 'gpopt' is required for Greenplum Query Optimizer (orca)])])
+  AC_CHECK_LIB(gpos, gpos_init, [], [AC_MSG_ERROR([library 'gpos' is required for Greenplum Query Optimizer (orca)])])
+  AC_CHECK_LIB(naucrates, InitDXL, [], [AC_MSG_ERROR([library 'naucrates' is required for Greenplum Query Optimizer (orca)])])
+  AC_CHECK_LIB(gpdbcost, main, [], [AC_MSG_ERROR([library 'gpdbcost' is required for Greenplum Query Optimizer (orca)])])
+  if test x"$with_xerces" = x; then
+    AC_CHECK_LIB(xerces-c, main, [], [AC_MSG_ERROR([library Xerces-C is required for Greenplum Query Optimizer (orca)])])
+  else
+    save_ldflags=$LDFLAGS
+    LDFLAGS="-L$with_xerces/lib"
+    export LDFLAGS
+    AC_CHECK_LIB(xerces-c, main, [XERCES_LDFLAGS=$LDFLAGS], [AC_MSG_ERROR([library Xerces-C is required for Greenplum Query Optimizer (orca), not found in "$with_xerces/lib"])])
+    LDFLAGS=$save_ldflags
+    AC_SUBST(XERCES_LDFLAGS)
+  fi
+  LIBS=$save_libs
+fi
+
 AC_CHECK_LIB(m, main)
 AC_SEARCH_LIBS(setproctitle, util)
 AC_SEARCH_LIBS(dlopen, dl)
@@ -1219,10 +1244,33 @@ fi
 
 # Check for Greenplum Query Optimizer (orca) and supporting Greenplum OS header files.
 AS_IF([test "$enable_orca" = yes],
-[ # then
+[
+  if test x"$with_xerces" = x; then
+    AC_CHECK_HEADERS(xercesc/util/XercesVersion.hpp, [], [AC_MSG_ERROR([Xerces-C includes required for Greenplum Query Optimizer (orca)])])
+  else
+    save_cppflags=$CPPFLAGS
+    CPPFLAGS="-I$with_xerces/include"
+    export CPPFLAGS
+    AC_CHECK_HEADERS(xercesc/util/XercesVersion.hpp, [XERCES_INCLUDEFLAGS=$CPPFLAGS], [AC_MSG_ERROR([Xerces-C includes required for Greenplum Query Optimizer (orca), not found in "$with_xerces/include"])])
+    CPPFLAGS=$save_cppflags
+    XERCES_INCLUDEDIR="$with_xerces/include"
+    AC_SUBST(XERCES_INCLUDEFLAGS)
+    AC_SUBST(XERCES_INCLUDEDIR)
+  fi
+  if test "$PORTNAME" = "darwin"; then
+    AC_DEFINE([GPOS_Darwin], [1], [])
+  fi
   AC_CHECK_HEADERS(gpopt/init.h,  [], [AC_MSG_ERROR([gpopt/init.h GPOPT header file is required for Greenplum Query Optimizer (orca)])])
-  AC_CHECK_HEADERS(gpos/assert.h, [], [AC_MSG_ERROR([gpos/assert.h GPOS header file is required for Greenplum Query Optimizer (orca)])])
-]) # fi
+  AC_CHECK_HEADERS(gpos/assert.h gpos/_api.h gpos/base.h gpos/common/CAutoP.h gpos/common/CAutoTimer.h gpos/common/CBitSet.h gpos/common/CBitSetIter.h gpos/error/CAutoExceptionStack.h gpos/error/CAutoTrace.h gpos/error/CErrorHandlerStandard.h gpos/error/CException.h gpos/error/CLoggerStream.h gpos/io/CFileReader.h gpos/io/CFileWriter.h gpos/io/COstreamFile.h gpos/io/COstreamString.h gpos/memory/CAutoMemoryPool.h gpos/memory/IMemoryPool.h gpos/string/CWStringDynamic.h gpos/task/CAutoTaskProxy.h gpos/task/CAutoTraceFlag.h gpos/task/CTaskContext.h gpos/task/CWorkerPoolManager.h, [], [AC_MSG_ERROR([GPOS header files are required for Greenplum Query Optimizer (orca)])])
+  AC_LANG_PUSH([C++])
+  AC_CHECK_HEADERS([gpdbcost/CCostModelGPDB.h gpdbcost/CCostModelGPDBLegacy.h], [], [AC_MSG_ERROR([GPDBCost header files are required for Greenplum Query Optimizer (orca)])])
+  AC_CHECK_HEADERS(naucrates/md/CMDName.h naucrates/base/CQueryToDXLResult.h naucrates/dxl/CDXLUtils.h naucrates/dxl/CIdGenerator.h naucrates/dxl/gpdb_types.h naucrates/dxl/operators/CDXLColDescr.h naucrates/dxl/operators/CDXLDatumBool.h naucrates/dxl/operators/CDXLDatumGeneric.h naucrates/dxl/operators/CDXLDatumInt2.h naucrates/dxl/operators/CDXLDatumInt4.h naucrates/dxl/operators/CDXLDatumInt8.h naucrates/dxl/operators/CDXLDatumOid.h naucrates/dxl/operators/CDXLDirectDispatchInfo.h naucrates/dxl/operators/CDXLNode.h naucrates/dxl/operators/CDXLScalarBooleanTest.h naucrates/dxl/operators/CDXLScalarIdent.h naucrates/dxl/operators/CDXLSpoolInfo.h naucrates/dxl/operators/dxlops.h naucrates/dxl/parser/CParseHandlerDXL.h naucrates/dxl/xml/dxltokens.h naucrates/exception.h naucrates/init.h naucrates/md/CDXLColStats.h naucrates/md/CDXLRelStats.h naucrates/md/CMDCastGPDB.h naucrates/md/CMDIdCast.h naucrates/md/CMDIdColStats.h naucrates/md/CMDIdGPDB.h naucrates/md/CMDIdGPDBCtas.h naucrates/md/CMDIdRelStats.h naucrates/md/CMDIdScCmp.h naucrates/md/CMDIndexGPDB.h naucrates/md/CMDPartConstraintGPDB.h naucrates/md/CMDRelationGPDB.h naucrates/md/CMDScCmpGPDB.h naucrates/md/CMDTypeBoolGPDB.h naucrates/md/CMDTypeGenericGPDB.h naucrates/md/CMDTypeInt2GPDB.h naucrates/md/CMDTypeInt4GPDB.h naucrates/md/CMDTypeInt8GPDB.h naucrates/md/CMDTypeOidGPDB.h naucrates/md/CSystemId.h naucrates/md/IMDAggregate.h naucrates/md/IMDColStats.h naucrates/md/IMDColumn.h naucrates/md/IMDFunction.h naucrates/md/IMDId.h naucrates/md/IMDIndex.h naucrates/md/IMDRelStats.h naucrates/md/IMDRelation.h naucrates/md/IMDRelationExternal.h naucrates/md/IMDScalarOp.h naucrates/md/IMDTrigger.h naucrates/md/IMDType.h naucrates/md/IMDTypeBool.h naucrates/md/IMDTypeInt2.h naucrates/md/IMDTypeInt4.h naucrates/md/IMDTypeInt8.h naucrates/md/IMDTypeOid.h naucrates/traceflags/traceflags.h, [], [AC_MSG_ERROR([Naucrates header files are required for Greenplum Query Optimizer (orca)])],
+  [#ifdef HAVE_NAUCRATES_MD_CMDNAME_H
+   #include <naucrates/md/CMDName.h>
+   #endif
+  ])
+  AC_LANG_POP([C++])
+])
 
 dnl sys/socket.h is required by AC_FUNC_ACCEPT_ARGTYPES
 AC_CHECK_HEADERS([atomic.h crypt.h dld.h endian.h fp_class.h getopt.h ieeefp.h ifaddrs.h langinfo.h mbarrier.h poll.h pwd.h sys/ioctl.h sys/ipc.h sys/poll.h sys/pstat.h sys/resource.h sys/select.h sys/sem.h sys/shm.h sys/socket.h sys/sockio.h sys/tas.h sys/time.h sys/un.h termios.h ucred.h utime.h wchar.h wctype.h kernel/OS.h kernel/image.h SupportDefs.h])
