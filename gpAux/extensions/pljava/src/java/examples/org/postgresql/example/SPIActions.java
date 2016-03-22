@@ -38,7 +38,7 @@ public class SPIActions
 			System.out.println(msg);
 		}
 		else
-			Logger.getAnonymousLogger().info(msg);
+			Logger.getAnonymousLogger().config(msg);
 	}
 
 	private static final String SP_CHECKSTATE = "sp.checkState";
@@ -96,7 +96,7 @@ public class SPIActions
 		{
 			log("It failed allright. Everything OK then");
 			log("Rolling back to anonymous savepoint");
-			
+
 			nextState(currentSession, 2, 3);
 			conn.rollback(sp);
 			nextState(currentSession, 4, 5);
@@ -149,7 +149,7 @@ public class SPIActions
                 log("Expected: OK; Retrieved: " + rs.getString(1));
             }
             rs.close();
-            stmt.close();                
+            stmt.close();
 			nextState(currentSession, 2, 3);
 			conn.releaseSavepoint(sp);
 			nextState(currentSession, 4, 5);
@@ -200,7 +200,7 @@ public class SPIActions
 				int id = rs.getInt(1);
 				String name = rs.getString(2);
 				int empSal = rs.getInt(3);
-				
+
 				insert.setInt(1, id);
 				insert.setString(2, name);
 				insert.setInt(3, empSal);

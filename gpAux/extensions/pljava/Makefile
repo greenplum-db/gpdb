@@ -47,6 +47,16 @@ export TAR				:= /bin/tar
 OS := $(shell uname -s)
 MACHINE := $(shell uname -m)
 
+ifndef JAVA_HOME
+	$(error JAVA_HOME is not set)
+else
+	export JAVA=${JAVA_HOME}/bin/java
+	export JAVAC=${JAVA_HOME}/bin/javac
+	export JAVAH=${JAVA_HOME}/bin/javah
+	export JAR=${JAVA_HOME}/bin/jar
+	export JAVADOC=${JAVA_HOME}/bin/javadoc
+endif
+
 .PHONY: all clean docs javadoc install uninstall depend release \
 	c_all c_install c_uninstall c_depend \
 	pljava_all pljava_javadoc \
@@ -105,12 +115,7 @@ test_all: test_%:
 
 
 test:
-	@-gpconfig -c pljava_classpath -v \'$(PWD)/build/\'
-	@-echo 'host    all         test                 0.0.0.0/0 trust' >> $(MASTER_DATA_DIRECTORY)/pg_hba.conf
-	@-echo 'local   all         test                trust' >> $(MASTER_DATA_DIRECTORY)/pg_hba.conf
-	@-gpstop -ar
-	cd src && \
-	../../../../src/test/regress/pg_regress  --dbname=test --create-role=test pljava 
+	@$(MAKE) -C tests
 
 # GPDB: we've hacked the c_install rule in the sub-makefile to install
 # examples.jar too. So examples.jar must be built before c_install.
@@ -124,4 +129,3 @@ c_all c_install c_uninstall c_depend: c_%: pljava_all
 release: all docs javadoc
 	@-mkdir -p $(TARGETDIR)/distrib
 	@$(MAKE) -r -C $(TARGETDIR) -f $(PROJDIR)/packaging/Makefile $@
-
