@@ -15562,6 +15562,23 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 	ExecDropSingleTupleTableSlot(rria->ri_partSlot);
 	ExecDropSingleTupleTableSlot(rrib->ri_partSlot);
 
+	/*
+	 * We may have created "cached" version of our target result tuple table slot
+	 * inside reconstructMatchingTupleSlot. Drop any such slots.
+	 */
+	if (NULL != rria->ri_resultSlot)
+	{
+		Assert(NULL != rria->ri_resultSlot->tts_tupleDescriptor);
+		ExecDropSingleTupleTableSlot(rria->ri_resultSlot);
+		rria->ri_resultSlot = NULL;
+	}
+	if (NULL != rrib->ri_resultSlot)
+	{
+		Assert(NULL != rrib->ri_resultSlot->tts_tupleDescriptor);
+		ExecDropSingleTupleTableSlot(rrib->ri_resultSlot);
+		rrib->ri_resultSlot = NULL;
+	}
+
 	if (rria->ri_partInsertMap)
 		pfree(rria->ri_partInsertMap);
 	if (rrib->ri_partInsertMap)

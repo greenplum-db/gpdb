@@ -1561,3 +1561,25 @@ select * from testbug_char5;
 
 set search_path=public;
 drop schema if exists mpp17582 cascade;
+
+-- Test for tuple descriptor leak during row splitting
+DROP TABLE IF EXISTS split_tupdesc_leak;
+CREATE TABLE split_tupdesc_leak
+(
+   ym character varying(6) NOT NULL,
+   suid character varying(50) NOT NULL,
+   genre_ids character varying(20)[]
+) 
+WITH (APPENDONLY=true, ORIENTATION=row, COMPRESSTYPE=zlib, OIDS=FALSE)
+DISTRIBUTED BY (suid)
+PARTITION BY LIST(ym)
+(
+	DEFAULT PARTITION p_split_tupdesc_leak_ym  WITH (appendonly=true, orientation=row, compresstype=zlib)
+);
+
+INSERT INTO split_tupdesc_leak VALUES ('201412','0001EC1TPEvT5SaJKIR5yYXlFQ7tS','{0}');
+
+ALTER TABLE split_tupdesc_leak SPLIT DEFAULT PARTITION AT ('201412')
+	INTO (PARTITION p_split_tupdesc_leak_ym, PARTITION p_split_tupdesc_leak_ym_201412);
+
+DROP TABLE split_tupdesc_leak;
