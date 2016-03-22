@@ -270,6 +270,10 @@ exprLocation(Node *expr)
 								  exprLocation((Node *) fc->args));
 			}
 			break;
+		case T_A_ArrayExpr:
+			/* the location points at ARRAY or [, which must be leftmost */
+			loc = ((A_ArrayExpr *) expr)->location;
+			break;
 		case T_ResTarget:
 			/* we need not examine the contained expression (if any) */
 			loc = ((ResTarget *) expr)->location;

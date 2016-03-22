@@ -135,6 +135,9 @@ inline static char extended_char(char* token, size_t length)
 /* Read a character-string field */
 #define READ_STRING_FIELD(fldname)  READ_SCALAR_FIELD(fldname, nullable_string(token, length))
 
+/* Read a parse location field (and throw away the value, per notes above) */
+#define READ_LOCATION_FIELD(fldname) READ_SCALAR_FIELD(fldname, -1)
+
 /* Read a Node field */
 #define READ_NODE_FIELD(fldname) \
     do { \
@@ -1851,9 +1854,26 @@ _readArrayExpr(void)
 	READ_OID_FIELD(element_typeid);
 	READ_NODE_FIELD(elements);
 	READ_BOOL_FIELD(multidims);
+/*	READ_LOCATION_FIELD(location); */
 
 	READ_DONE();
 }
+
+/*
+ * _readA_ArrayExpr
+ */
+static A_ArrayExpr *
+_readA_ArrayExpr(void)
+{
+	READ_LOCALS(A_ArrayExpr);
+
+	READ_NODE_FIELD(elements);
+/*	READ_LOCATION_FIELD(location); */
+
+	READ_DONE();
+}
+
+
 
 /*
  * _readRowExpr
@@ -3182,6 +3202,7 @@ static ParseNodeInfo infoAr[] =
 	{"WINDOWSPECPARSE", (ReadFn)_readWindowSpecParse},
 	{"WITHCLAUSE", (ReadFn)_readWithClause},
 	{"XMLEXPR", (ReadFn)_readXmlExpr},
+	{"A_ARRAYEXPR", (ReadFn)_readA_ArrayExpr},
 };
 
 /*

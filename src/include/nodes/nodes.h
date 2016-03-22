@@ -443,6 +443,7 @@ typedef enum NodeTag
 	T_FuncCall,
 	T_A_Indices,
 	T_A_Indirection,
+	T_A_ArrayExpr,
 	T_ResTarget,
 	T_TypeCast,
 	T_SortBy,

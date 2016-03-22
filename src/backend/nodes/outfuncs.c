@@ -110,6 +110,10 @@
 	(appendStringInfo(str, " :" CppAsString(fldname) " "), \
 	 _outToken(str, node->fldname))
 
+/* Write a parse location field (actually same as INT case) */
+#define WRITE_LOCATION_FIELD(fldname) \
+	appendStringInfo(str, " :" CppAsString(fldname) " %d", node->fldname)
+
 /* Write a Node field */
 #define WRITE_NODE_FIELD(fldname) \
 	(appendStringInfo(str, " :" CppAsString(fldname) " "), \
@@ -1498,6 +1502,7 @@ _outArrayExpr(StringInfo str, ArrayExpr *node)
 	WRITE_OID_FIELD(element_typeid);
 	WRITE_NODE_FIELD(elements);
 	WRITE_BOOL_FIELD(multidims);
+/*	WRITE_LOCATION_FIELD(location); */
 }
 
 static void
@@ -3896,6 +3901,15 @@ _outA_Indirection(StringInfo str, A_Indirection *node)
 }
 
 static void
+_outA_ArrayExpr(StringInfo str, A_ArrayExpr *node)
+{
+	WRITE_NODE_TYPE("A_ARRAYEXPR");
+
+	WRITE_NODE_FIELD(elements);
+/*	WRITE_LOCATION_FIELD(location); */
+}
+
+static void
 _outResTarget(StringInfo str, ResTarget *node)
 {
 	WRITE_NODE_TYPE("RESTARGET");
@@ -4912,6 +4926,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_A_Indirection:
 				_outA_Indirection(str, obj);
+				break;
+			case T_A_ArrayExpr:
+				_outA_ArrayExpr(str, obj);
 				break;
 			case T_ResTarget:
 				_outResTarget(str, obj);

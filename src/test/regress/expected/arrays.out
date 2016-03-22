@@ -812,7 +812,9 @@ select '{ }}'::text[];
 ERROR:  malformed array literal: "{ }}"
 LINE 1: select '{ }}'::text[];
                ^
--- select array[];  -- MPP-11851
+select array[];
+ERROR:  cannot determine type of empty array
+HINT:  Explicitly cast to the desired type, for example ARRAY[]::integer[].
 -- none of the above should be accepted
 -- all of the following should be accepted
 select '{}'::text[];
@@ -854,7 +856,12 @@ select '{
  {"@ 0","@ 1 hour 42 mins 20 secs"}
 (1 row)
 
--- select array[]::text[];  -- MPP-11851
+select array[]::text[];
+ array
+-------
+ {}
+(1 row)
+
 select '[0:1]={1.1,2.2}'::float8[];
      float8      
 -----------------

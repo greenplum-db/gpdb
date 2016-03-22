@@ -484,6 +484,7 @@ _equalArrayExpr(ArrayExpr *a, ArrayExpr *b)
 	COMPARE_SCALAR_FIELD(element_typeid);
 	COMPARE_NODE_FIELD(elements);
 	COMPARE_SCALAR_FIELD(multidims);
+	COMPARE_LOCATION_FIELD(location);
 
 	return true;
 }
@@ -2014,6 +2015,15 @@ _equalA_Indirection(A_Indirection *a, A_Indirection *b)
 }
 
 static bool
+_equalA_ArrayExpr(A_ArrayExpr *a, A_ArrayExpr *b)
+{
+	COMPARE_NODE_FIELD(elements);
+	COMPARE_LOCATION_FIELD(location);
+
+	return true;
+}
+
+static bool
 _equalResTarget(ResTarget *a, ResTarget *b)
 {
 	COMPARE_STRING_FIELD(name);
@@ -2937,6 +2947,9 @@ equal(void *a, void *b)
 			break;
 		case T_A_Indirection:
 			retval = _equalA_Indirection(a, b);
+			break;
+		case T_A_ArrayExpr:
+			retval = _equalA_ArrayExpr(a, b);
 			break;
 		case T_ResTarget:
 			retval = _equalResTarget(a, b);

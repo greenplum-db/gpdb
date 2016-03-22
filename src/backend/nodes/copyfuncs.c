@@ -1648,6 +1648,7 @@ _copyArrayExpr(ArrayExpr *from)
 	COPY_SCALAR_FIELD(element_typeid);
 	COPY_NODE_FIELD(elements);
 	COPY_SCALAR_FIELD(multidims);
+	COPY_LOCATION_FIELD(location);
 
 	return newnode;
 }
@@ -2406,6 +2407,16 @@ _copyA_Indirection(A_Indirection *from)
 
 	COPY_NODE_FIELD(arg);
 	COPY_NODE_FIELD(indirection);
+
+	return newnode;
+}
+
+static A_ArrayExpr *
+_copyA_ArrayExpr(A_ArrayExpr *from)
+{
+	A_ArrayExpr *newnode = makeNode(A_ArrayExpr);
+	COPY_NODE_FIELD(elements);
+	COPY_LOCATION_FIELD(location);
 
 	return newnode;
 }
@@ -4985,6 +4996,9 @@ copyObject(void *from)
 			break;
 		case T_A_Indirection:
 			retval = _copyA_Indirection(from);
+			break;
+		case T_A_ArrayExpr:
+			retval = _copyA_ArrayExpr(from);
 			break;
 		case T_ResTarget:
 			retval = _copyResTarget(from);

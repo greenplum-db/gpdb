@@ -1847,6 +1847,9 @@ _outNode(StringInfo str, void *obj)
 			case T_A_Indirection:
 				_outA_Indirection(str, obj);
 				break;
+			case T_A_ArrayExpr:
+				_outA_ArrayExpr(str,obj);
+				break;
 			case T_ResTarget:
 				_outResTarget(str, obj);
 				break;
