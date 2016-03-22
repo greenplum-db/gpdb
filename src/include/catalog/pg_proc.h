@@ -1087,6 +1087,9 @@ DATA(insert OID = 393 (  array_le		   PGNSP PGUID 12 1 0 f f t f i 2 16 "2277 22
 DESCR("array less than or equal");
 DATA(insert OID = 396 (  array_ge		   PGNSP PGUID 12 1 0 f f t f i 2 16 "2277 2277" _null_ _null_ _null_ array_ge - _null_ ));
 DESCR("array greater than or equal");
+/* TODO: array_ndims OID is 748 */
+DATA(insert OID = 3400 (  array_ndims		   PGNSP PGUID 12 1 0 f f t f i 1 23 "2277" _null_ _null_ _null_ array_ndims - _null_ ));
+DESCR("array dimensions");
 DATA(insert OID = 747 (  array_dims		   PGNSP PGUID 12 1 0 f f t f i 1 25 "2277" _null_ _null_ _null_ array_dims - _null_ ));
 DESCR("array dimensions");
 DATA(insert OID = 750 (  array_in		   PGNSP PGUID 12 1 0 f f t f s 3 2277 "2275 26 23" _null_ _null_ _null_	array_in - _null_ ));
@@ -1098,6 +1101,9 @@ DATA(insert OID = 2091 (  array_lower	   PGNSP PGUID 12 1 0 f f t f i 2 23 "2277
 DESCR("array lower dimension");
 DATA(insert OID = 2092 (  array_upper	   PGNSP PGUID 12 1 0 f f t f i 2 23 "2277 23" _null_ _null_ _null_ array_upper - _null_ ));
 DESCR("array upper dimension");
+/* TODO: array_length OID is 2176 */
+DATA(insert OID = 3401 (  array_length	   PGNSP PGUID 12 1 0 f f t f i 2 23 "2277 23" _null_ _null_ _null_ array_length - _null_ ));
+DESCR("array length");
 DATA(insert OID = 378 (  array_append	   PGNSP PGUID 12 1 0 f f f f i 2 2277 "2277 2283" _null_ _null_ _null_ array_push - _null_ ));
 DESCR("append element onto end of array");
 DATA(insert OID = 379 (  array_prepend	   PGNSP PGUID 12 1 0 f f f f i 2 2277 "2283 2277" _null_ _null_ _null_ array_push - _null_ ));
@@ -1114,6 +1120,18 @@ DATA(insert OID = 515 (  array_larger	   PGNSP PGUID 12 1 0 f f t f i 2 2277 "22
 DESCR("larger of two");
 DATA(insert OID = 516 (  array_smaller	   PGNSP PGUID 12 1 0 f f t f i 2 2277 "2277 2277" _null_ _null_ _null_ array_smaller - _null_ ));
 DESCR("smaller of two");
+/* TODO: generate_subscripts OID is 1191 */
+DATA(insert OID = 3402 (  generate_subscripts PGNSP PGUID 12 1 1000 f f t t i 3 23 "2277 23 16" _null_ _null_ _null_ generate_subscripts - _null_ ));
+DESCR("array subscripts generator");
+/* TODO: generate_subscripts OID is 1192 */
+DATA(insert OID = 3403 (  generate_subscripts PGNSP PGUID 12 1 1000 f f t t i 2 23 "2277 23" _null_ _null_ _null_ generate_subscripts_nodir - _null_ ));
+DESCR("array subscripts generator");
+/* TODO: array_fill OID is 1193 */
+DATA(insert OID = 3404 (  array_fill 	   PGNSP PGUID 12 1 0 f f f f i 2 2277 "2283 1007" _null_ _null_ _null_ array_fill - _null_ ));
+DESCR("array constructor with value");
+/* TODO: array_fill OID is 1286 */
+DATA(insert OID = 3405 (  array_fill 	   PGNSP PGUID 12 1 0 f f f f i 3 2277 "2283 1007 1007" _null_ _null_ _null_ array_fill_with_lower_bounds - _null_ ));
+DESCR("array constructor with value");
 
 DATA(insert OID = 760 (  smgrin			   PGNSP PGUID 12 1 0 f f t f s 1 210 "2275" _null_ _null_ _null_  smgrin - _null_ ));
 DESCR("I/O");

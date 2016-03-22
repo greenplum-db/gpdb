@@ -6,7 +6,7 @@ CREATE TABLE arrtest (
 	a 			int2[],
 	b 			int4[][][],
 	c 			name[],
-	d			text[][], 
+	d			text[][],
 	e 			float8[],
 	f			char(5)[],
 	g			varchar(5)[]
@@ -27,7 +27,7 @@ INSERT INTO arrtest (f)
    VALUES ('{"too long"}');
 
 INSERT INTO arrtest (a, b[1:2][1:2], c, d, e, f, g)
-   VALUES ('{11,12,23}', '{{3,4},{4,5}}', '{"foobar"}', 
+   VALUES ('{11,12,23}', '{{3,4},{4,5}}', '{"foobar"}',
            '{{"elt1", "elt2"}}', '{"3.4", "6.7"}',
            '{"abc","abcde"}', '{"abc","abcde"}');
 
@@ -40,7 +40,7 @@ SELECT * FROM arrtest ORDER BY 1,2,3,4;
 SELECT arrtest.a[1],
           arrtest.b[1][1][1],
           arrtest.c[1],
-          arrtest.d[1][1], 
+          arrtest.d[1][1],
           arrtest.e[0]
    FROM arrtest ORDER BY 1,2,3,4;
 
@@ -49,21 +49,20 @@ SELECT a[1], b[1][1][1], c[1], d[1][1], e[0]
 
 SELECT a[1:3],
           b[1:1][1:2][1:2],
-          c[1:2], 
+          c[1:2],
           d[1:1][1:2]
    FROM arrtest ORDER BY 1,2,3,4;
 
--- array_ndims exists in postgres, but not in gp
--- SELECT array_ndims(a) AS a,array_ndims(b) AS b,array_ndims(c) AS c
---    FROM arrtest;
+SELECT array_ndims(a) AS a,array_ndims(b) AS b,array_ndims(c) AS c
+    FROM arrtest ORDER BY 1,2,3;
 
 SELECT array_dims(a) AS a,array_dims(b) AS b,array_dims(c) AS c
    FROM arrtest ORDER BY 1,2;
 
--- returns nothing 
+-- returns nothing
 SELECT *
    FROM arrtest
-   WHERE a[1] < 5 and 
+   WHERE a[1] < 5 and
          c = '{"foobar"}'::_name ORDER BY 1,2,3,4;
 
 UPDATE arrtest
@@ -83,7 +82,7 @@ SELECT a,b,c FROM arrtest ORDER BY 1,2,3;
 
 SELECT a[1:3],
           b[1:1][1:2][1:2],
-          c[1:2], 
+          c[1:2],
           d[1:1][2:2]
    FROM arrtest ORDER BY 1,2,3,4;
 
@@ -240,7 +239,7 @@ select 33 * any (44);
 -- nulls
 select 33 = any (null::int[]);
 select null::int = any ('{1,2,3}');
--- select 33 = any ('{1,null,3}');  -- MPP: 11852
+select 33 = any ('{1,null,3}');
 select 33 = any ('{1,null,33}');
 select 33 = all (null::int[]);
 select null::int = all ('{1,2,3}');
@@ -328,3 +327,62 @@ SELECT max(f1), min(f1), max(f2), min(f2), max(f3), min(f3) FROM arraggtest;
 INSERT INTO arraggtest (f1, f2, f3) VALUES
 ('{}','{{pink,white,blue,red,grey,orange}}','{2.1,1.87,1.4,2.2}');
 SELECT max(f1), min(f1), max(f2), min(f2), max(f3), min(f3) FROM arraggtest;
+
+create or replace function unnest1(anyarray)
+returns setof anyelement as $$
+select $1[s] from generate_subscripts($1,1) g(s);
+$$ language sql immutable;
+
+create or replace function unnest2(anyarray)
+returns setof anyelement as $$
+select $1[s1][s2] from generate_subscripts($1,1) g1(s1),
+                   generate_subscripts($1,2) g2(s2);
+$$ language sql immutable;
+
+select * from unnest1(array[1,2,3]);
+select * from unnest2(array[[1,2,3],[4,5,6]]);
+
+drop function unnest1(anyarray);
+drop function unnest2(anyarray);
+
+select array_fill(null::integer, array[3,3],array[2,2]);
+select array_fill(null::integer, array[3,3]);
+select array_fill(null::text, array[3,3],array[2,2]);
+select array_fill(null::text, array[3,3]);
+select array_fill(7, array[3,3],array[2,2]);
+select array_fill(7, array[3,3]);
+select array_fill('juhu'::text, array[3,3],array[2,2]);
+select array_fill('juhu'::text, array[3,3]);
+-- raise exception
+select array_fill(1, null, array[2,2]);
+select array_fill(1, array[2,2], null);
+select array_fill(1, array[3,3], array[1,1,1]);
+select array_fill(1, array[1,2,null]);
+
+select string_to_array('1|2|3', '|');
+select string_to_array('1|2|3|', '|');
+select string_to_array('1||2|3||', '||');
+select string_to_array('1|2|3', '');
+select string_to_array('', '|');
+select string_to_array('1|2|3', NULL);
+select string_to_array(NULL, '|');
+
+select array_to_string(string_to_array('1|2|3', '|'), '|');
+
+select array_length(array[1,2,3], 1);
+select array_length(array[[1,2,3], [4,5,6]], 0);
+select array_length(array[[1,2,3], [4,5,6]], 1);
+select array_length(array[[1,2,3], [4,5,6]], 2);
+select array_length(array[[1,2,3], [4,5,6]], 3);
+
+select array_agg(unique1 order by unique1) from (select unique1 from tenk1 where unique1 < 15 order by unique1) ss;
+select array_agg(ten order by ten) from (select ten from tenk1 where unique1 < 15 order by unique1) ss;
+select array_agg(nullif(ten, 4) order by ten) from (select ten from tenk1 where unique1 < 15 order by unique1) ss;
+select array_agg(unique1 order by unique1) from tenk1 where unique1 < -15;
+
+select unnest(array[1,2,3]);
+select * from unnest(array[1,2,3]);
+select unnest(array[1,2,3,4.5]::float8[]);
+select unnest(array[1,2,3,4.5]::numeric[]);
+select unnest(array[1,2,3,null,4,null,null,5,6]);
+select unnest(array[1,2,3,null,4,null,null,5,6]::text[]);
