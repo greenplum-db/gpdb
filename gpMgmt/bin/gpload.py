@@ -699,7 +699,7 @@ def notice_processor(self):
        return
 
     theNotices = self.db.notices()
-    r = re.compile("^NOTICE:  Found (\d) data formatting errors.*")
+    r = re.compile("^NOTICE:  Found (\d+) data formatting errors.*")
     messageNumber = 0
     m = None
     while messageNumber < len(theNotices) and m == None:
@@ -1127,6 +1127,7 @@ class gpload:
         self.ERROR = 1
         self.options.qv = self.INFO
         self.options.l = None
+        self.lastcmdtime = ''
         
         seenv = False
         seenq = False
@@ -2332,25 +2333,35 @@ class gpload:
 
     def count_errors(self):
         notice_processor(self)
-        if self.log_errors and not self.options.D and not self.reuse_tables:
+        if self.log_errors and not self.options.D:
             # make sure we only get errors for our own instance
-            queryStr = "select count(*) from gp_read_error_log('%s')" % pg.escape_string(self.extTableName)
-            results = self.db.query(queryStr.encode('utf-8')).getresult()
-            return (results[0])[0]
+            if not self.reuse_tables:
+                queryStr = "select count(*) from gp_read_error_log('%s')" % pg.escape_string(self.extTableName)
+                results = self.db.query(queryStr.encode('utf-8')).getresult()
+                return (results[0])[0]
+            else: # reuse_tables
+                queryStr = "select cmdtime, count(*) from gp_read_error_log('%s') group by cmdtime order by cmdtime desc limit 1" % pg.escape_string(self.extTableName)
+                results = self.db.query(queryStr.encode('utf-8')).getresult()
+                self.lastcmdtime = (results[0])[0]
+                global NUM_WARN_ROWS
+                NUM_WARN_ROWS = (results[0])[1]
+                return (results[0])[1];
         return 0
     
     def report_errors(self):
         errors = self.count_errors()
         if errors==1:
             self.log(self.WARN, '1 bad row')
-            if self.log_errors:
-                self.log(self.WARN, "please use GPDB built-in function gp_read_error_log('%s') to access the detailed error row" % self.extTableName)
-            self.exitValue = 1
         elif errors:
             self.log(self.WARN, '%d bad rows'%errors)
-            if self.log_errors:
-                self.log(self.WARN, "please use GPDB built-in function gp_read_error_log('%s') to access the detailed error row" % self.extTableName)
-            self.exitValue = 1
+
+        # error message is also deleted if externatal table is dropped.
+        # if reuse_table is set, error message is not deleted. 
+        if errors and self.log_errors and self.reuse_tables:
+            self.log(self.WARN, "Please use following query to access the detailed error")
+            self.log(self.WARN, "select * from gp_read_error_log('{0}') where cmdtime = '{1}'".format(pg.escape_string(self.extTableName), self.lastcmdtime))
+        self.exitValue = 1 if errors else 0
+
 
     def do_insert(self, dest):
         """
