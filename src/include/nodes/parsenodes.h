@@ -1114,8 +1114,20 @@ typedef struct CreateSchemaStmt
 	char	   *schemaname;		/* the name of the schema to create */
 	char	   *authid;			/* the owner of the created schema */
 	List	   *schemaElts;		/* schema components (list of parsenodes) */
+
+	/*
+	 * In GPDB, when a CreateSchemaStmt is dispatched to executor nodes, the
+	 * following fields are set. schemaOid is the OID of the new schema.
+	 *
+	 * There's a special case for when the temporary namespace is created,
+	 * on the first use in the session. There are actually two temporary
+	 * namespaces, the regular one, and a temporary toast namespace. They are
+	 * both created in the same command, with istemp='true', schemaOid the
+	 * temp namespace's OID, and toastSchemaOid the temp toast namespace's OID.
+	 */
 	bool        istemp;         /* true for temp schemas (internal only) */
 	Oid			schemaOid;
+	Oid			toastSchemaOid;
 } CreateSchemaStmt;
 
 typedef enum DropBehavior

@@ -52,6 +52,7 @@
 #include "cdb/cdbvars.h"
 #include "tcop/utility.h"
 
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbtm.h"
 
 /*
@@ -2352,19 +2353,22 @@ recomputeNamespacePath(void)
 	list_free(oidlist);
 }
 
+static void
+InitTempTableNamespace(void)
+{
+	InitTempTableNamespaceWithOids(InvalidOid);
+}
+
 /*
  * InitTempTableNamespace
  *		Initialize temp table namespace on first use in a particular backend
  */
-static void
-InitTempTableNamespace(void)
+void
+InitTempTableNamespaceWithOids(Oid tempSchema)
 {
 	char		namespaceName[NAMEDATALEN];
-	int			fetchCount;
-	char	   *rolname;
-	CreateSchemaStmt *stmt;
-
-	Assert(!OidIsValid(myTempNamespace));
+	Oid			namespaceId;
+	int			session_suffix;
 
 	/*
 	 * First, do permission check to see if we are authorized to make temp
@@ -2383,20 +2387,19 @@ InitTempTableNamespace(void)
 				 errmsg("permission denied to create temporary tables in database \"%s\"",
 						get_database_name(MyDatabaseId))));
 
-	/* 
+	/*
 	 * TempNamespace name creation rules are different depending on the
 	 * nature of the current connection role.
 	 */
 	switch (Gp_role)
 	{
 		case GP_ROLE_DISPATCH:
-			snprintf(namespaceName, sizeof(namespaceName), "pg_temp_%d", 
-					 gp_session_id);
+		case GP_ROLE_EXECUTE:
+			session_suffix = gp_session_id;
 			break;
 
 		case GP_ROLE_UTILITY:
-			snprintf(namespaceName, sizeof(namespaceName), "pg_temp_%d", 
-					 MyBackendId);
+			session_suffix = MyBackendId;
 			break;
 
 		default:
@@ -2405,42 +2408,70 @@ InitTempTableNamespace(void)
 			break;
 	}
 
+	snprintf(namespaceName, sizeof(namespaceName), "pg_temp_%d", session_suffix);
+
+	namespaceId = GetSysCacheOid(NAMESPACENAME,
+								 CStringGetDatum(namespaceName),
+								 0, 0, 0);
+	if (!OidIsValid(namespaceId))
+	{
+		/*
+		 * First use of this temp namespace in this database; create it. The
+		 * temp namespaces are always owned by the superuser.  We leave their
+		 * permissions at default --- i.e., no access except to superuser ---
+		 * to ensure that unprivileged users can't peek at other backends'
+		 * temp tables.  This works because the places that access the temp
+		 * namespace for my own backend skip permissions checks on it.
+		 */
+		namespaceId = NamespaceCreate(namespaceName, BOOTSTRAP_SUPERUSERID, tempSchema);
+		/* Advance command counter to make namespace visible */
+		CommandCounterIncrement();
+	}
+	else
+	{
+		/*
+		 * If the namespace already exists, clean it out (in case the former
+		 * owner crashed without doing so).
+		 */
+		RemoveTempRelations(namespaceId);
+	}
+
 	/*
-	 * First use of this temp namespace in this database; create it. The
-	 * temp namespaces are always owned by the superuser.  We leave their
-	 * permissions at default --- i.e., no access except to superuser ---
-	 * to ensure that unprivileged users can't peek at other backends'
-	 * temp tables.  This works because the places that access the temp
-	 * namespace for my own backend skip permissions checks on it.
+	 * Okay, we've prepared the temp namespace ... but it's not committed yet,
+	 * so all our work could be undone by transaction rollback.  Set flag for
+	 * AtEOXact_Namespace to know what to do.
 	 */
+	myTempNamespace = namespaceId;
+
+	/* It should not be done already. */
+	AssertState(myTempNamespaceSubID == InvalidSubTransactionId);
+	myTempNamespaceSubID = GetCurrentSubTransactionId();
+
+	namespaceSearchPathValid = false;	/* need to rebuild list */
 
 	/* 
-	 * CDB: Dispatch CREATE SCHEMA command.
+	 * GPDB: Dispatch a special CREATE SCHEMA command, to also create the
+	 * temp schema in all the segments.
 	 *
-	 * We need to keep the OID of temp schemas synchronized across the
+	 * We need to keep the OID of the temp schema synchronized across the
 	 * cluster which means that we must go through regular dispatch
-	 * logic rather than letting every backend manage the 
+	 * logic rather than letting every backend manage it.
 	 */
-		
-	/* Lookup the name of the superuser */
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		CreateSchemaStmt *stmt;
 
-	rolname = caql_getcstring_plus(
-					NULL,
-					&fetchCount,
-					NULL,
-					cql("SELECT rolname FROM pg_authid "
-						" WHERE oid = :1 ",
-						ObjectIdGetDatum(BOOTSTRAP_SUPERUSERID)));
+		stmt = makeNode(CreateSchemaStmt);
+		stmt->istemp	 = true;
+		stmt->schemaOid = namespaceId;
 
-	Assert(fetchCount);  /* bootstrap user MUST exist */
-
-	/* Execute the internal DDL */
-	stmt = makeNode(CreateSchemaStmt);
-	stmt->schemaname = namespaceName;
-	stmt->istemp	 = true;
-	stmt->authid	 = rolname;
-	ProcessUtility((Node*) stmt, "(internal create temp schema command)",
-				   NULL, false, None_Receiver, NULL);
+		/*
+		 * Dispatch the command to all primary and mirror segment dbs.
+		 * Starts a global transaction and reconfigures cluster if needed.
+		 * Waits for QEs to finish.  Exits via ereport(ERROR,...) if error.
+		 */
+		CdbDispatchUtilityStatement((Node *)stmt, "(internal create temp schema command)");
+	}
 }
 
 /*
