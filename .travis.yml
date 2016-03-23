@@ -89,6 +89,7 @@ script:
   - ./configure --with-openssl --with-ldap --with-libcurl --with-python --with-perl --with-libxml --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config
   - make -j4 -s
   - make install
+## verify install
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
   - cd ${TRAVIS_BUILD_DIR}/gpAux/extensions/orafce
   - make install USE_PGXS=1
@@ -102,14 +103,18 @@ script:
   - gpssh --version
   - gpmapreduce --version
   - gpfdist --version
+## check postgres dependency and env
   - env
   - ldd -v ${TRAVIS_BUILD_DIR}/gpsql/bin/postgres
+## make GPDB cluster
+  - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
   - cd ${TRAVIS_BUILD_DIR}/gpAux/gpdemo
   - make
   - cat ~/gpAdminLogs/*.log
   - cat ${TRAVIS_BUILD_DIR}/gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_log/*
   - source gpdemo-env.sh
   - createdb
+## run ICG test
   - cd ${TRAVIS_BUILD_DIR}/src/test/regress
   - ./pg_regress --init-file=./init_file --schedule=parallel_schedule --schedule=greenplum_schedule
   - cat ${TRAVIS_BUILD_DIR}/src/test/regress/regression.diffs
@@ -163,6 +168,8 @@ before_install:
        sudo sysctl -w net.core.wmem_max=2097152;
        sudo sysctl -w vm.overcommit_memory=2;
        cat /etc/security/limits.conf;
+       ulimit -a;
+       sudo sh -c "ulimit -n 65535 && ulimit -u 131072 && exec su $LOGNAME";
        ulimit -a;
     fi
   - # Avoid typing password during 'make' under gpAux/gpdemo
