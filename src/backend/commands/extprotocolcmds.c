@@ -374,7 +374,8 @@ RenameExtProtocol(const char *oldname, const char *newname)
 		MemSet(replaces, false, sizeof(replaces));
 
 		replaces[Anum_pg_extprotocol_ptcname - 1] = true;
-		values[Anum_pg_extprotocol_ptcname - 1] = CStringGetDatum(newname);
+		values[Anum_pg_extprotocol_ptcname - 1] =
+			DirectFunctionCall1(namein, CStringGetDatum((char *) newname));
 		
 		newtuple = caql_modify_current(pcqCtx, values,
 									   nulls, replaces);
