@@ -2752,6 +2752,7 @@ def impl(context, filename, path):
         raise Exception('file "%s" is not exist' % fullpath)
 
 @given('waiting "{second}" seconds')
+@then('waiting "{second}" seconds')
 def impl(context, second):
     time.sleep(float(second))
 
@@ -3492,7 +3493,9 @@ def impl(context, schema_list, dbname):
 
 @then('verify that the schema "{schema_name}" exists in "{dbname}"')
 def impl(context, schema_name, dbname):
-    check_schema_exists(context, schema_name, dbname)
+    schema_exists = check_schema_exists(context, schema_name, dbname)
+    if not schema_exists:
+        raise Exception("Schema '%s' does not exist in the database '%s'" % (schema_name,dbname))    
 
 def get_gptransfer_log_name(logdir):
     today = datetime.now()
@@ -3604,10 +3607,16 @@ def impl(context, query, dbname, filename):
     thread.start_new_thread(run_gpcommand, (context, cmd))
     time.sleep(10)
 
+@given('the user runs the command "{cmd}" in the background')
 @when('the user runs the command "{cmd}" in the background')
 def impl(context, cmd):
     thread.start_new_thread(run_command, (context,cmd))
     time.sleep(10)
+
+@given('the user runs the command "{cmd}" in the background without sleep')
+@when('the user runs the command "{cmd}" in the background without sleep')
+def impl(context, cmd):
+    thread.start_new_thread(run_command, (context,cmd))
 
 @then('verify that the file "{filename}" contains the string "{output}"')
 def impl(context, filename, output):
@@ -3780,3 +3789,15 @@ def impl(context, tabletype, tablename, dbname):
 def impl(context, tabletype, table_name, dbname):
     create_partition(context, tablename=table_name, storage_type=tabletype, dbname=dbname, with_data=True)
 
+@then('read pid from file "{filename}" and kill the process')
+@when('read pid from file "{filename}" and kill the process')
+@given('read pid from file "{filename}" and kill the process')
+def impl(context, filename):
+    with open(filename) as fr:
+        pid = fr.readline().strip()
+
+    if not pid:
+        raise Exception("process id '%s' not found in the file '%s'" % (pid,filename))
+
+    cmd = Command(name="killing pid", cmdStr='kill -9 %s' % pid)
+    cmd.run(validateAfter=True)

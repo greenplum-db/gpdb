@@ -147,9 +147,6 @@ class Global():
         # ownership fixups
         self.Owners = []
     
-        # drop leaked temporary schemas
-        self.Schemas = []
-    
         # fix distribution policies
         self.Policies = []
         
@@ -1857,13 +1854,17 @@ def checkPGClass():
         if len(err) > 100:
             logger.error("...")
 
-
-#############
-def checkPGNamespace():
+def getLeakedSchemas():
     logger.info('-----------------------------------')
     logger.info('Checking for leaked temporary schemas')
     db = connect2(GV.cfg[1], utilityMode=False)
-    
+
+    leaked_schemas = []
+    # This query does a union of all the leaked temp schemas on the master as well as all the segments.
+    # The first part of the query uses gp_dist_random which gets the leaked schemas from only the segments
+    # The second part of the query gets the leaked temp schemas from just the master
+
+
     # The simpler form of this query that pushed the union into the
     # inner select does not run correctly on 3.2.x
     qry = '''
@@ -1894,12 +1895,16 @@ def checkPGNamespace():
             logger.error('found %d unbound temporary schemas' % curs.ntuples())
             for row in curs.getresult():
                 logger.error("  ... %s" % row[0])
-                GV.Schemas.append(row[0])
+                leaked_schemas.append(row[0])
     except Exception, e:
         setError(ERROR_NOREPAIR)
         myprint('[ERROR] executing test: checkPGNamespace')
         myprint('  Execution error: ' + str(e))
 
+    return leaked_schemas
+
+#############
+def checkPGNamespace():
     # Check for objects in various catalogs that are in a schema that has
     # been dropped.
     logger.info('Checking missing schema definitions ...')
@@ -3444,11 +3449,6 @@ name_repair = {
          "description": "Check if needs repair file to fix messed up ownership",
          "fn": lambda: checkOwnersRepair()
     },
-    "schemas":
-    {
-         "description": "Check if needs repair file to fix schema related issues",
-         "fn": lambda: checkSchemaRepair()
-    },
     "policies":
     {
          "description": "Check if needs repair file to fix distribution policy",
@@ -3653,7 +3653,6 @@ def runAllTests():
              len(GV.Reindex) > 0 or 
              len(GV.Constraints) > 0 or
              len(GV.Owners) > 0 or 
-             len(GV.Schemas) > 0 or
              len(GV.Policies) > 0)
     if GV.opt['-g'] != None and fixes:
         try:
@@ -3785,25 +3784,28 @@ def checkOwnersRepair():
     else:
         return None, None
 
-def checkSchemaRepair():
-    # Remove leaked temporary schemas
-    if len(GV.Schemas) > 0:
-        # dbname.type.timestamp.sql
-        filename = '%s.%s.%s.sql' % (GV.dbname, "fixnamespace", TIMESTAMP)
-        fullpath = '%s/%s' % (GV.opt['-g'], filename)
-        try:
-            file = open(fullpath, 'w')
-        except Exception, e:
-            logger.fatal('Unable to create file "%s": %s' % (fullpath, str(e)))
-            sys.exit(1)
+def dropLeakedSchemas(dbname):
+    leaked_schemas = getLeakedSchemas()
 
-        description = '\necho "Dropping temporary schemas"\n'
-        for s in GV.Schemas:
-            file.write('DROP SCHEMA IF EXISTS "%s" CASCADE;\n' % s)
-        file.close()
-        return description, filename
-    else:
-        return None, None
+    if len(leaked_schemas) <= 0:
+        return
+
+    myprint("Dropping leaked schemas '%s' in the database '%s' " % (leaked_schemas, dbname))
+    db = connect(database=dbname)
+    try:
+        for schema in leaked_schemas:
+            # the query will return unquoted schema names
+            # but we only search for schemas with name like pg_temp_[0-9](see the method getLeakedSchemas),
+            # so we don't really need to quote the sql statement
+            logger.debug('DROP SCHEMA IF EXISTS "%s" CASCADE;\n' % schema)
+            qry = 'DROP SCHEMA IF EXISTS "%s" CASCADE;\n' % schema
+            curs = db.query(qry)
+    except Exception, e:
+        setError(ERROR_NOREPAIR)
+        myprint('  Execution error: ' + str(e))
+    finally:
+        if db is not None:
+            db.close()
 
 def checkPoliciesRepair():
     # changes to distribution policies
@@ -4772,12 +4774,12 @@ if __name__ == '__main__':
         GPObjects = {}
         GPObjectGraph = {} 
         GV.dbname  = dbname
-
         myprint('')
         myprint("Connected as user \'%s\' to database '%s', port '%d', gpdb version '%s'" \
                    % (GV.opt['-U'], GV.dbname, GV.report_cfg[-1]['port'], GV.version))
         myprint('-------------------------------------------------------------------')
            
+        dropLeakedSchemas(dbname)
         if GV.opt['-R']:
             name = GV.opt['-R']
             try:
