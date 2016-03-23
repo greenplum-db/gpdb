@@ -171,8 +171,6 @@ before_install:
        ulimit -a;
        sudo ulimit -n 65535;
        sudo ulimit -Su 131072;
-       #exec su $LOGNAME;
-       #sudo sh -c "ulimit -n 65535 && ulimit -Su 131072 && exec su $LOGNAME";
        ulimit -a;
     fi
   - # Avoid typing password during 'make' under gpAux/gpdemo
