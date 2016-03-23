@@ -2355,7 +2355,7 @@ class gpload:
         elif errors:
             self.log(self.WARN, '%d bad rows'%errors)
 
-        # error message is also deleted if externatal table is dropped.
+        # error message is also deleted if external table is dropped.
         # if reuse_table is set, error message is not deleted. 
         if errors and self.log_errors and self.reuse_tables:
             self.log(self.WARN, "Please use following query to access the detailed error")
