@@ -81,7 +81,13 @@ test: aggregate_with_groupingsets gp_optimizer
 
 test: nested_case_null
 
-test: qp_olap_mdqa qp_with_clause qp_misc qp_misc_jiras
+test: qp_olap_mdqa 
+
+test: qp_with_clause 
+
+test: qp_misc 
+
+test: qp_misc_jiras
 
 test: bfv_cte bfv_joins bfv_statistic bfv_subquery bfv_planner bfv_legacy
 
