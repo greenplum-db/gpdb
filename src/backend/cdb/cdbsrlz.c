@@ -11,32 +11,19 @@
  */
 
 #include "postgres.h"
-#include "regex/regex.h"
-#include "miscadmin.h"
-#include "utils/guc.h"
-#include "optimizer/clauses.h"
 #include "cdb/cdbplan.h"
 #include "cdb/cdbsrlz.h"
-#include "utils/memaccounting.h"
-#include "nodes/print.h"
 #include <math.h>
-#ifdef HAVE_LIBZ
-#include <zlib.h>
-#endif
-
+#include "miscadmin.h"
+#include "nodes/print.h"
+#include "optimizer/clauses.h"
+#include "regex/regex.h"
+#include "utils/guc.h"
+#include "utils/memaccounting.h"
+#include "utils/zlib_wrapper.h"
 
 static char *compress_string(const char *src, int uncompressed_size, int *size);
 static char *uncompress_string(const char *src, int size, int * uncompressed_len);
-
-/*
- * compressBound doesn't exist in older zlibs, so let's use our own
- */
-static
-unsigned long 
-gp_compressBound(unsigned long sourceLen)
-{
-  return sourceLen + (sourceLen >> 12) + (sourceLen >> 14) + 11;
-}
 
 /*
  * serializeNode -
@@ -151,7 +138,7 @@ compress_string(const char *src, int uncompressed_size, int *size)
 	result = palloc(compressed_size + sizeof(int));
 	memcpy(result, &uncompressed_size, sizeof(int)); 		/* save the original length */
 	
-	status = compress2(result+sizeof(int), &compressed_size, (Bytef *)src, uncompressed_size, level);
+	status = gp_compress2(result+sizeof(int), &compressed_size, (Bytef *)src, uncompressed_size, level);
 	if (status != Z_OK)
 		elog(ERROR,"Compression failed: %s (errno=%d) uncompressed len %d, compressed %d",
 			 zError(status), status, uncompressed_size, (int)compressed_size);
@@ -183,7 +170,7 @@ uncompress_string(const char *src, int size, int *uncompressed_len)
 	resultlen = *uncompressed_len;
 	result = palloc(resultlen);
 		
-	status = uncompress(result, &resultlen, (Bytef *)(src+sizeof(int)), size-sizeof(int));
+	status = gp_uncompress(result, &resultlen, (Bytef *)(src+sizeof(int)), size-sizeof(int));
 	if (status != Z_OK)
 		elog(ERROR,"Uncompress failed: %s (errno=%d compressed len %d, uncompressed %d)",
 			 zError(status), status, size, *uncompressed_len);
