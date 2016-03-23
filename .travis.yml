@@ -167,10 +167,14 @@ before_install:
        sudo sysctl -w net.core.rmem_max=2097152;
        sudo sysctl -w net.core.wmem_max=2097152;
        sudo sysctl -w vm.overcommit_memory=2;
+       sudo sh -c "echo 'root hard noproc 131072' >> /etc/security/limits.conf"
+       sudo sh -c "echo 'root soft noproc 131072' >> /etc/security/limits.conf"
+       sudo sh -c "echo 'travis hard noproc 131072' >> /etc/security/limits.conf"
+       sudo sh -c "echo 'travis soft noproc 131072' >> /etc/security/limits.conf"
        cat /etc/security/limits.conf;
        ulimit -Ha;
        ulimit -Sa;
-       sudo sh -c "ulimit -n 65535 && ulimit -Su 131072 && exec su $LOGNAME";
+       sudo sh -c "ulimit -n 65535 && ulimit -p 131072 && exec su $LOGNAME";
        ulimit -Ha;
        ulimit -Sa;
     fi
