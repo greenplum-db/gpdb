@@ -1337,10 +1337,11 @@ SELECT COUNT(*) FROM gp_read_error_log('exttab_heap_join_1');
 
 \! rm @abs_srcdir@/data/tableless.csv
 
+-- start_ignore
 -- drop temp external protocols
 DROP PROTOCOL if exists demoprot;
 DROP PROTOCOL if exists demoprot2;
-DROP PROTOCOL if exists demoprot_untrusted;
+-- end_ignore
 
 -- create external protocol
 CREATE OR REPLACE FUNCTION write_to_file() RETURNS integer as '$libdir/gpextprotocol.so', 'demoprot_export' LANGUAGE C STABLE NO SQL;
