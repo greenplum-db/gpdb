@@ -168,9 +168,11 @@ before_install:
        sudo sysctl -w net.core.wmem_max=2097152;
        sudo sysctl -w vm.overcommit_memory=2;
        cat /etc/security/limits.conf;
-       ulimit -a;
+       ulimit -Ha;
+       ulimit -Sa;
        sudo sh -c "ulimit -n 65535 && ulimit -Su 131072 && exec su $LOGNAME";
-       ulimit -a;
+       ulimit -Ha;
+       ulimit -Sa;
     fi
   - # Avoid typing password during 'make' under gpAux/gpdemo
   - cd ~
