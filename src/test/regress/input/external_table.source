@@ -1355,7 +1355,7 @@ ALTER PROTOCOL demoprot RENAME TO demoprot2;
 -- displaying more than oneline here
 select distinct ptcname from (
         select ptcname AS ptcname from gp_dist_random('pg_extprotocol')
-) all_segments;
+) all_segments where ptcname = 'demoprot2';
 
 -- drop temp external protocols
 DROP PROTOCOL if exists demoprot;
