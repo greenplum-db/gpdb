@@ -44,6 +44,7 @@ python:
 ## ----------------------------------------------------------------------
 
 install:
+  - PYTHON_CONFIGURE_OPTS="--enable-unicode=ucs4 --with-wide-unicode --enable-shared --enable-ipv6 --enable-loadable-sqlite-extensions --with-computed-gotos"
   - pip install --user --upgrade pip
   - pip install --user --pre psi
   - pip install --user lockfile
@@ -186,6 +187,7 @@ before_install:
   - ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ''
   - cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
   - chmod 600  ~/.ssh/authorized_keys
+  - env
 
 
 ## ----------------------------------------------------------------------
