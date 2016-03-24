@@ -107,9 +107,7 @@ script:
 ## check postgres dependency and env
   - env
   - ldd -v ${TRAVIS_BUILD_DIR}/gpsql/bin/postgres
-  - find ${TRAVIS_BUILD_DIR} -name _posixsubprocess.so -ls -exec readelf -s {} \;
-  - find /opt/python/2.7.10 -name 'libpython*so' -ls -exec readelf -s {} \;
-  - find /opt/python/2.7.10 -name '_ARC4.so' -ls -exec readelf -s {} \;
+  - find ${TRAVIS_BUILD_DIR} /opt/python/2.7.10 /home/travis/.local/lib/python2.7 -name "*so" | while read sofile ; do echo $sofile; readelf -s $sofile | grep PyUnicodeUCS ; done;
 ## make GPDB cluster
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
   - cd ${TRAVIS_BUILD_DIR}/gpAux/gpdemo
@@ -151,6 +149,7 @@ before_install:
        sudo apt-get install -y libbz2-dev;
        sudo apt-get install -y python-dev;
        sudo apt-get install -y python-crypto;
+       sudo apt-get install -y python-paramiko;
        sudo sysctl -w kernel.shmmax=500000000;
        sudo sysctl -w kernel.shmmni=4096;
        sudo sysctl -w kernel.shmall=4000000000;
