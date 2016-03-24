@@ -26,11 +26,11 @@ else
   APR_LIB=$(shell $(with_apr_config) --link-ld --libs)
 endif
 
-ifneq ($(PORTNAME),win32)
-  CPPFLAGS += -DGPFXDIST
-else
+ifeq ($(PORTNAME),win32)
   override CPPFLAGS := -I$(top_builddir)/src/port $(CPPFLAGS)
   OBJS += $(top_builddir)/src/port/glob.o
+else
+  override CPPFLAGS := -DGPFXDIST $(CPPFLAGS)
 endif
 
 LDLIBS += $(LIBS) $(GPFDIST_LIBS) $(APR_LIB)
