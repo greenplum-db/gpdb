@@ -1181,9 +1181,8 @@ selectDumpableType(TypeInfo *tinfo)
 	else if (!tinfo->isDefined)
 		tinfo->dobj.dump = false;
 
-	/* skip all array types that start w/ underscore */
-	else if ((tinfo->dobj.name[0] == '_') &&
-			 OidIsValid(tinfo->typelem))
+	/* skip auto-generated array types */
+	else if (tinfo->isArray)
 		tinfo->dobj.dump = false;
 
 	else
@@ -2065,6 +2064,7 @@ getTypes(int *numTypes)
 	int			i_typrelkind;
 	int			i_typtype;
 	int			i_typisdefined;
+	int			i_isarray;
 
 	/*
 	 * we include even the built-in types because those may be used as array
@@ -2072,7 +2072,14 @@ getTypes(int *numTypes)
 	 *
 	 * we filter out the built-in types when we dump out the types
 	 *
-	 * same approach for undefined (shell) types
+	 * same approach for undefined (shell) types and array types
+	 *
+	 * Note: as of 8.3 we can reliably detect whether a type is an
+	 * auto-generated array type by checking the element type's typarray.
+	 * (Before that the test is capable of generating false positives.) We
+	 * still check for name beginning with '_', though, so as to avoid the
+	 * cost of the subselect probe for all standard types.  This would have to
+	 * be revisited if the backend ever allows renaming of array types.
 	 */
 
 	/* Make sure we are in proper schema */
@@ -2085,7 +2092,9 @@ getTypes(int *numTypes)
 					  "typoutput::oid as typoutput, typelem, typrelid, "
 					  "CASE WHEN typrelid = 0 THEN ' '::\"char\" "
 					  "ELSE (SELECT relkind FROM pg_class WHERE oid = typrelid) END as typrelkind, "
-					  "typtype, typisdefined "
+					  "typtype, typisdefined, "
+					  "typname[0] = '_' AND typelem != 0 AND "
+					  "(SELECT typarray FROM pg_type te WHERE oid = pg_type.typelem) = oid AS isarray "
 					  "FROM pg_type",
 					  username_subquery);
 
@@ -2108,6 +2117,7 @@ getTypes(int *numTypes)
 	i_typrelkind = PQfnumber(res, "typrelkind");
 	i_typtype = PQfnumber(res, "typtype");
 	i_typisdefined = PQfnumber(res, "typisdefined");
+	i_isarray = PQfnumber(res, "isarray");
 
 	for (i = 0; i < ntups; i++)
 	{
@@ -2135,19 +2145,15 @@ getTypes(int *numTypes)
 			tinfo[i].typrelkind != RELKIND_COMPOSITE_TYPE)
 			tinfo[i].dobj.objType = DO_TABLE_TYPE;
 
-		/*
-		 * check for user-defined array types, omit system generated ones
-		 */
-		if (OidIsValid(tinfo[i].typelem) &&
-			tinfo[i].dobj.name[0] != '_')
-			tinfo[i].isArray = true;
-		else
-			tinfo[i].isArray = false;
-
 		if (strcmp(PQgetvalue(res, i, i_typisdefined), "t") == 0)
 			tinfo[i].isDefined = true;
 		else
 			tinfo[i].isDefined = false;
+
+		if (strcmp(PQgetvalue(res, i, i_isarray), "t") == 0)
+			tinfo[i].isArray = true;
+		else
+			tinfo[i].isArray = false;
 
 		/* Decide whether we want to dump it */
 		selectDumpableType(&tinfo[i]);
@@ -5074,7 +5080,7 @@ dumpBaseType(Archive *fout, TypeInfo *tinfo)
 			appendPQExpBufferStr(q, typdefault);
 	}
 
-	if (tinfo->isArray)
+	if (OidIsValid(tinfo->typelem))
 	{
 		char	   *elemType;
 

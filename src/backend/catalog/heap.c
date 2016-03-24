@@ -105,8 +105,8 @@ static Oid AddNewRelationType(const char *typeName,
 				   Oid typeNamespace,
 				   Oid new_rel_oid,
 				   char new_rel_kind,
-				   char new_array_type,
-				   Oid ownerid);
+				   Oid ownerid,
+				   Oid new_array_type);
 static void RelationRemoveInheritance(Oid relid);
 static Oid StoreRelCheck(Relation rel, char *ccname, char *ccbin, Oid conoid);
 static Node* cookConstraint (ParseState *pstate,
@@ -533,18 +533,17 @@ CheckAttributeType(const char *attname, Oid atttypid)
 
 	if (Gp_role != GP_ROLE_EXECUTE)
 	{
-		/*
-		 * Warn user, but don't fail, if column to be created has UNKNOWN type
-		 * (usually as a result of a 'retrieve into' - jolly)
-		 *
-		 * Refuse any attempt to create a pseudo-type column.
-		 */
-		
 		if (atttypid == UNKNOWNOID)
+		{
+			/*
+			 * Warn user, but don't fail, if column to be created has UNKNOWN type
+			 * (usually as a result of a 'retrieve into' - jolly)
+			 */
 			ereport(WARNING,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 					 errmsg("column \"%s\" has type \"unknown\"", attname),
 					 errdetail("Proceeding with relation creation anyway.")));
+		}
 		else if (att_typtype == TYPTYPE_PSEUDO)
 		{
 			/*
@@ -580,6 +579,7 @@ CheckAttributeType(const char *attname, Oid atttypid)
 					continue;
 				CheckAttributeType(NameStr(attr->attname), attr->atttypid);
 			}
+
 			relation_close(relation, AccessShareLock);
 		}
 	}
@@ -1151,8 +1151,8 @@ AddNewRelationType(const char *typeName,
 				   Oid typeNamespace,
 				   Oid new_rel_oid,
 				   char new_rel_kind,
-				   char new_array_type,
-				   Oid ownerid)
+				   Oid ownerid,
+				   Oid new_array_type)
 {
 	return
 		TypeCreate(typeName,		/* type name */
@@ -1372,7 +1372,7 @@ heap_create_with_catalog(const char *relname,
 	Relation	gp_relation_node_desc;
 	Relation	new_rel_desc;
 	Oid			new_type_oid;
-	Oid         new_array_oid = InvalidOid;
+	Oid			new_array_oid = InvalidOid;
 	bool		appendOnlyRel;
 	StdRdOptions *stdRdOptions;
 	int			safefswritesize = gp_safefswritesize;
@@ -1381,7 +1381,7 @@ heap_create_with_catalog(const char *relname,
 	{
 	    new_array_oid = *comptypeArrayOid;
 	}
-		
+
 	pg_class_desc = heap_open(RelationRelationId, RowExclusiveLock);
 
 	if (!IsBootstrapProcessingMode())
@@ -1506,7 +1506,7 @@ heap_create_with_catalog(const char *relname,
 	}
 
 	/*
-	 * since defining a relation also defines a complex type, we add a new
+	 * Since defining a relation also defines a complex type, we add a new
 	 * system type corresponding to the new relation.
 	 *
 	 * NOTE: we could get a unique-index failure here, in case the same name
@@ -1527,8 +1527,8 @@ heap_create_with_catalog(const char *relname,
 											  relnamespace,
 											  relid,
 											  relkind,
-											  new_array_oid,
-											  ownerid);
+											  ownerid,
+											  new_array_oid);
 		else
 		{
 			new_type_oid = TypeCreateWithOid(
@@ -1573,37 +1573,39 @@ heap_create_with_catalog(const char *relname,
 	if (OidIsValid(new_array_oid))
 	{
 		char	*relarrayname;
+
 		relarrayname = makeArrayTypeName(relname, relnamespace);
+
 		TypeCreateWithOid(
 						relarrayname,		/* type name */
 						relnamespace,		/* type namespace */
-					   	InvalidOid,			/* relation oid */
-					   	0,					/* relation kind */
-					   	ownerid,
-					   	-1,					/* internal size (varlena) */
-					   	TYPTYPE_BASE,		/* type-type (complex) */
-					   	DEFAULT_TYPDELIM,	/* default array delimiter */
-					   	F_ARRAY_IN,			/* input procedure */
-					   	F_ARRAY_OUT,		/* output procedure */
-					   	F_ARRAY_RECV,		/* receive procedure */
-					   	F_ARRAY_SEND,		/* send procedure */
-					   	InvalidOid,			/* typmodin procedure */
-					   	InvalidOid,			/* typmodout procedure */
-					   	InvalidOid,			/* analyze procedure - default */
-					   	new_type_oid,		/* array element type - irrelevant */
-				   		true,				/* this is not an array type */
-				   		InvalidOid,			/* array type if any */		
-					   	InvalidOid,			/* domain base type - irrelevant */
-					   	NULL,				/* default value - none */
-					   	NULL,				/* default binary representation */
-					   	false,				/* passed by reference */
-					   	'd',				/* alignment - must be the largest! */
-					   	'x',				/* fully TOASTable */
-					   	-1,					/* typmod */
-					   	0,					/* array dimensions for typBaseType */
-					   	false,				/* Type NOT NULL */
-					   	new_array_oid,
-					   	0);	
+						InvalidOid,			/* relation oid */
+						0,					/* relation kind */
+						ownerid,
+						-1,					/* internal size (varlena) */
+						TYPTYPE_BASE,		/* type-type (complex) */
+						DEFAULT_TYPDELIM,	/* default array delimiter */
+						F_ARRAY_IN,			/* input procedure */
+						F_ARRAY_OUT,		/* output procedure */
+						F_ARRAY_RECV,		/* receive procedure */
+						F_ARRAY_SEND,		/* send procedure */
+						InvalidOid,			/* typmodin procedure */
+						InvalidOid,			/* typmodout procedure */
+						InvalidOid,			/* analyze procedure - default */
+						new_type_oid,		/* array element type - irrelevant */
+						true,				/* this is not an array type */
+						InvalidOid,			/* array type if any */		
+						InvalidOid,			/* domain base type - irrelevant */
+						NULL,				/* default value - none */
+						NULL,				/* default binary representation */
+						false,				/* passed by reference */
+						'd',				/* alignment - must be the largest! */
+						'x',				/* fully TOASTable */
+						-1,					/* typmod */
+						0,					/* array dimensions for typBaseType */
+						false,				/* Type NOT NULL */
+						new_array_oid,
+						0);
 
 		if (PointerIsValid(comptypeArrayOid))
 		{

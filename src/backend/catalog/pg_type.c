@@ -297,9 +297,9 @@ TypeCreateWithOid(const char *typeName,
 	values[i++] = CharGetDatum(typeType);		/* typtype */
 	values[i++] = BoolGetDatum(true);	/* typisdefined */
 	values[i++] = CharGetDatum(typDelim);		/* typdelim */
-	values[i++] = ObjectIdGetDatum(relationOid);	/* typrelid */
+	values[i++] = ObjectIdGetDatum(relationOid);		/* typrelid */
 	values[i++] = ObjectIdGetDatum(elementType);		/* typelem */
-	values[i++] = ObjectIdGetDatum(arrayType);		/*  typarray */
+	values[i++] = ObjectIdGetDatum(arrayType);			/* typarray */
 	values[i++] = ObjectIdGetDatum(inputProcedure);		/* typinput */
 	values[i++] = ObjectIdGetDatum(outputProcedure);	/* typoutput */
 	values[i++] = ObjectIdGetDatum(receiveProcedure);	/* typreceive */
@@ -477,28 +477,28 @@ Oid TypeCreate(const char *typeName,
 							ownerId,
 							internalSize,
 							typeType,
-		   					typDelim,
-		   					inputProcedure,
-		   					outputProcedure,
-		   					receiveProcedure,
-		   					sendProcedure,
-		   					typmodinProcedure,
-		   					typmodoutProcedure,
-		   					analyzeProcedure,
-		   					elementType,
+							typDelim,
+							inputProcedure,
+							outputProcedure,
+							receiveProcedure,
+							sendProcedure,
+							typmodinProcedure,
+							typmodoutProcedure,
+							analyzeProcedure,
+							elementType,
 							isImplicitArray,
 							arrayType,
-		   					baseType,
-		   					defaultTypeValue,
-		   					defaultTypeBin,
-		   					passedByValue,
-		   					alignment,
-		   					storage,
-		   					typeMod,
-		   					typNDims,
-		   					typeNotNull,
-		   					InvalidOid,
-		   					0);
+							baseType,
+							defaultTypeValue,
+							defaultTypeBin,
+							passedByValue,
+							alignment,
+							storage,
+							typeMod,
+							typNDims,
+							typeNotNull,
+							InvalidOid,
+							0);
 }
 
 /*
@@ -540,8 +540,14 @@ GenerateTypeDependencies(Oid typeNamespace,
 	myself.objectId = typeObjectId;
 	myself.objectSubId = 0;
 
-	/* dependency on namespace */
-	/* skip for relation rowtype, since we have indirect dependency */
+	/*
+	 * Make dependency on namespace and shared dependency on owner.
+	 *
+	 * For a relation rowtype (that's not a composite type), we should skip
+	 * these because we'll depend on them indirectly through the pg_class
+	 * entry.  Likewise, skip for implicit arrays since we'll depend on them
+	 * through the element type.
+	 */
 	if ((!OidIsValid(relationOid) || relationKind == RELKIND_COMPOSITE_TYPE) &&
 		!isImplicitArray)
 	{
@@ -632,17 +638,17 @@ GenerateTypeDependencies(Oid typeNamespace,
 	}
 
 	/*
-	 * If the type is an array type, mark it auto-dependent on the base type.
-	 * (This is a compromise between the typical case where the array type is
-	 * automatically generated and the case where it is manually created: we'd
-	 * prefer INTERNAL for the former case and NORMAL for the latter.)
+	 * If the type is an implicitly-created array type, mark it as internally
+	 * dependent on the element type.  Otherwise, if it has an element type,
+	 * the dependency is a normal one.
 	 */
 	if (OidIsValid(elementType))
 	{
 		referenced.classId = TypeRelationId;
 		referenced.objectId = elementType;
 		referenced.objectSubId = 0;
-		recordDependencyOn(&myself, &referenced, DEPENDENCY_AUTO);
+		recordDependencyOn(&myself, &referenced,
+								isImplicitArray ? DEPENDENCY_INTERNAL : DEPENDENCY_NORMAL);
 	}
 
 	/* Normal dependency from a domain to its base type. */
@@ -657,7 +663,6 @@ GenerateTypeDependencies(Oid typeNamespace,
 	/* Normal dependency on the default expression. */
 	if (defaultExpr)
 		recordDependencyOnExpr(&myself, defaultExpr, NIL, DEPENDENCY_NORMAL);
-
 }
 
 /*
@@ -732,10 +737,14 @@ makeArrayTypeName(const char *typeName, Oid typeNamespace)
 	int			i;
 	Relation	pg_type_desc;
 
-	if (!typeName)
-		return NULL;
+	/*
+	 * The idea is to prepend underscores as needed until we make a name that
+	 * doesn't collide with anything...
+	 */
 	arr = (char*)palloc(NAMEDATALEN);
+
 	pg_type_desc = heap_open(TypeRelationId, AccessShareLock);
+
 	for (i = 1; i < NAMEDATALEN - 1; i++)
 	{
 		arr[i - 1] = '_';
@@ -747,7 +756,9 @@ makeArrayTypeName(const char *typeName, Oid typeNamespace)
 								  0, 0))
 			break;
 	}
+
 	heap_close(pg_type_desc, AccessShareLock);
+
 	if (i >= NAMEDATALEN-1)
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),

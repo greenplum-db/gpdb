@@ -145,16 +145,6 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 					   get_namespace_name(typeNamespace));
 
 	/*
-	 * Type names must be one character shorter than other names, allowing
-	 * room to create the corresponding array type name with prepended "_".
-	 */
-	if (strlen(typeName) > (NAMEDATALEN - 2))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_NAME),
-				 errmsg("type names must be %d characters or less",
-						NAMEDATALEN - 2)));
-
-	/*
 	 * Look to see if type already exists (presumably as a shell; if not,
 	 * TypeCreate will complain).  If it doesn't, create it as a shell, so
 	 * that the OID is known for use in the I/O function definitions.
@@ -442,6 +432,7 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 	if (analyzeOid && !pg_proc_ownercheck(analyzeOid, GetUserId()))
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_PROC,
 					   NameListToString(analyzeName));
+
 	/*  Preassign array type OID so we can insert it in pg_type.typarray */
 	pg_type = heap_open(TypeRelationId, AccessShareLock);
 	array_oid = shadowOid;
@@ -504,7 +495,7 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 			   InvalidOid,		/* relation oid (n/a here) */
 			   0,				/* relation kind (ditto) */
 			   GetUserId(),		/* owner's ID */
-			   -1,				/* internal size */
+			   -1,				/* internal size (always varlena) */
 			   TYPTYPE_BASE,	/* type-type (base type) */
 			   delimiter,		/* array element delimiter */
 			   F_ARRAY_IN,		/* input procedure */
@@ -700,19 +691,6 @@ DefineDomain(CreateDomainStmt *stmt)
 	if (aclresult != ACLCHECK_OK)
 		aclcheck_error(aclresult, ACL_KIND_NAMESPACE,
 					   get_namespace_name(domainNamespace));
-
-	/*
-	 * Domainnames, unlike typenames don't need to account for the '_' prefix.
-	 * So they can be one character longer.  (This test is presently useless
-	 * since the parser will have truncated the name to fit.  But leave it
-	 * here since we may someday support arrays of domains, in which case
-	 * we'll be back to needing to enforce NAMEDATALEN-2.)
-	 */
-	if (strlen(domainName) > (NAMEDATALEN - 1))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_NAME),
-				 errmsg("domain names must be %d characters or less",
-						NAMEDATALEN - 1)));
 
 	/*
 	 * Look up the base type.
@@ -1501,7 +1479,7 @@ AlterDomainDefault(List *names, Node *defaultRaw)
 	/* Rebuild dependencies */
 	GenerateTypeDependencies(typTup->typnamespace,
 							 domainoid,
-							 typTup->typrelid,
+							 InvalidOid,		/* typrelid is n/a */
 							 0, /* relation kind is n/a */
 							 typTup->typowner,
 							 typTup->typinput,
@@ -1512,7 +1490,7 @@ AlterDomainDefault(List *names, Node *defaultRaw)
 							 typTup->typmodout,
 							 typTup->typanalyze,
 							 typTup->typelem,
-							 false,
+							 false,		/* a domain isn't an implicit array */
 							 typTup->typbasetype,
 							 defaultExpr,
 							 true);		/* Rebuild is true */
@@ -2372,7 +2350,7 @@ AlterTypeOwner(List *names, Oid newOwnerId)
 
 	/*
 	 * If it's a composite type, we need to check that it really is a
-	 * free-standing composite type, and not a table's underlying type. We
+	 * free-standing composite type, and not a table's rowtype. We
 	 * want people to use ALTER TABLE not ALTER TYPE for that case.
 	 */
 	if (typTup->typtype == TYPTYPE_COMPOSITE &&
@@ -2381,6 +2359,16 @@ AlterTypeOwner(List *names, Oid newOwnerId)
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("\"%s\" is a table's row type",
 						TypeNameToString(typename))));
+
+	/* don't allow direct alteration of array types, either */
+	if (OidIsValid(typTup->typelem) &&
+		get_array_type(typTup->typelem) == typeOid)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("cannot alter array type %s",
+						format_type_be(typeOid)),
+				 errhint("You can alter type %s, which will alter the array type as well.",
+						 format_type_be(typTup->typelem))));
 
 	/*
 	 * If the new owner is the same as the existing owner, consider the
@@ -2428,6 +2416,10 @@ AlterTypeOwner(List *names, Oid newOwnerId)
 
 			/* Update owner dependency reference */
 			changeDependencyOnOwner(TypeRelationId, typeOid, newOwnerId);
+
+			/* If it has an array type, update that too */
+			if (OidIsValid(typTup->typarray))
+				AlterTypeOwnerInternal(typTup->typarray, newOwnerId, false);
 		}
 	}
 
@@ -2482,6 +2474,10 @@ AlterTypeOwnerInternal(Oid typeOid, Oid newOwnerId,
 	if (hasDependEntry)
 		changeDependencyOnOwner(TypeRelationId, typeOid, newOwnerId);
 
+	/* If it has an array type, update that too */
+		if (OidIsValid(typTup->typarray))
+			AlterTypeOwnerInternal(typTup->typarray, newOwnerId, false);
+
 	/* Clean up */
 	heap_close(rel, RowExclusiveLock);
 }
@@ -2495,6 +2491,7 @@ AlterTypeNamespace(List *names, const char *newschema)
 	TypeName   *typename;
 	Oid			typeOid;
 	Oid			nspOid;
+	Oid			elemOid;
 
 	/* Make a TypeName so we can use standard type lookup machinery */
 	typename = makeTypeNameFromNameList(names);
@@ -2508,6 +2505,16 @@ AlterTypeNamespace(List *names, const char *newschema)
 	/* get schema OID and check its permissions */
 	nspOid = LookupCreationNamespace(newschema);
 
+	/* don't allow direct alteration of array types */
+	elemOid = get_element_type(typeOid);
+	if (OidIsValid(elemOid) && get_array_type(elemOid) == typeOid)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("cannot alter array type %s",
+						format_type_be(typeOid)),
+				 errhint("You can alter type %s, which will alter the array type as well.",
+						 format_type_be(elemOid))));
+
 	/* and do the work */
 	AlterTypeNamespaceInternal(typeOid, nspOid, false, true);
 }
@@ -2516,6 +2523,10 @@ AlterTypeNamespace(List *names, const char *newschema)
  * Move specified type to new namespace.
  *
  * Caller must have already checked privileges.
+ *
+ * The function automatically recurses to process the type's array type,
+ * if any.  isImplicitArray should be TRUE only when doing this internal
+ * recursion (outside callers must never try to move an array type directly).
  *
  * If errorOnTableType is TRUE, the function errors out if the type is
  * a table type.  ALTER TABLE has to be used to move a table to a new
@@ -2661,6 +2672,7 @@ AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid,
 	heap_freetuple(tup);
 
 	heap_close(rel, RowExclusiveLock);
+
 	/*  Recursively alter the associated array type, if any */
 	if (OidIsValid(arrayOid))
 		AlterTypeNamespaceInternal(arrayOid, nspOid, true, true);

@@ -2927,7 +2927,7 @@ get_element_type(Oid typid)
 /*
  * get_array_type
  *
- *		Given the type OID, get the corresponding "true"  array type.
+ *		Given the type OID, get the corresponding "true" array type.
  *		Returns InvalidOid if no array type can be found.
  *
  */

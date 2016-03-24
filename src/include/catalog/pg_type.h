@@ -156,7 +156,7 @@ CATALOG(pg_type,1247) BKI_BOOTSTRAP
 	/*
 	 * If there is a "true" array type having this type as element type,
 	 *  typarray links to it.  Zero if no associated "true" array type.
-	 */ 	 	 
+	 */
 	Oid			typarray;
 
 	/*
@@ -788,7 +788,7 @@ extern Oid TypeCreateWithOid(const char *typeName,
 		   Oid typmodoutProcedure,
 		   Oid analyzeProcedure,
 		   Oid elementType,
- 		   bool isImplicitArray,
+		   bool isImplicitArray,
 		   Oid arrayType,
 		   Oid baseType,
 		   const char *defaultTypeValue,
@@ -811,8 +811,8 @@ extern void GenerateTypeDependencies(Oid typeNamespace,
 						 Oid outputProcedure,
 						 Oid receiveProcedure,
 						 Oid sendProcedure,
-		   				 Oid typmodinProcedure,
-		   				 Oid typmodoutProcedure,
+						 Oid typmodinProcedure,
+						 Oid typmodoutProcedure,
 						 Oid analyzeProcedure,
 						 Oid elementType,
 						 bool isImplicitArray,

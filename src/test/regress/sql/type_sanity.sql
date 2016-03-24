@@ -94,6 +94,13 @@ WHERE p1.typinput = p2.oid AND p1.typtype in ('b', 'p') AND
     (p2.oid = 'array_in'::regproc)
 ORDER BY 1;
 
+-- Make sure typarray points to a varlena array type of our own base
+SELECT p1.oid, p1.typname as basetype, p2.typname as arraytype,
+       p2.typelem, p2.typlen
+FROM   pg_type p1 LEFT JOIN pg_type p2 ON (p1.typarray = p2.oid)
+WHERE  p1.typarray <> 0 AND
+       (p2.oid IS NULL OR p2.typelem <> p1.oid OR p2.typlen <> -1);
+
 -- Check for bogus typoutput routines
 
 -- As of 8.0, this check finds refcursor, which is borrowing
