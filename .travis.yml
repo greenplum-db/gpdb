@@ -174,7 +174,9 @@ before_install:
        cat /etc/security/limits.conf;
        ulimit -Ha;
        ulimit -Sa;
-       sudo sh -c "ulimit -n 65535 && ulimit -p 131072 && exec su $LOGNAME";
+       ulimit -n 65535;
+       ulimit -p 131072 || echo "p failed";
+       ulimit -u 131072 || echo "u failed";
        ulimit -Ha;
        ulimit -Sa;
     fi
