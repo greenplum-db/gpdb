@@ -126,6 +126,7 @@ script:
 ## install libevent 
 ## ----------------------------------------------------------------------
 before_install:
+  - find ~/.local/lib/python2.7 -type d
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
        brew install libevent; 
        sudo sysctl -w kern.sysv.shmmax=2147483648;
