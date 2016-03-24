@@ -121,38 +121,25 @@ static void analyzeStmt(VacuumStmt *stmt, List *relids);
  */
 void analyzeStatement(VacuumStmt *stmt, List *relids)
 {
-	/* MPP-14608: Analyze may create temp tables.
-	 * Disable autostats so that analyze is not called during their creation. */
-
-	GpAutoStatsModeValue autostatvalBackup = gp_autostats_mode;
-	GpAutoStatsModeValue autostatInFunctionsvalBackup = gp_autostats_mode_in_functions;
 	bool optimizerBackup = optimizer;
 
-	gp_autostats_mode = GP_AUTOSTATS_NONE;
-	gp_autostats_mode_in_functions = GP_AUTOSTATS_NONE;
 	optimizer = false;
 
 	PG_TRY();
 	{
 		analyzeStmt(stmt, relids);
-		gp_autostats_mode = autostatvalBackup;
-		gp_autostats_mode_in_functions = autostatInFunctionsvalBackup;
 		optimizer = optimizerBackup;
 	}
 
 	/* Clean up in case of error. */
 	PG_CATCH();
 	{
-		gp_autostats_mode = autostatvalBackup;
-		gp_autostats_mode_in_functions = autostatInFunctionsvalBackup;
 		optimizer = optimizerBackup;
 
 		/* Carry on with error handling. */
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
-	Assert(gp_autostats_mode == autostatvalBackup);
-	Assert(gp_autostats_mode_in_functions == autostatInFunctionsvalBackup);
 	Assert(optimizer == optimizerBackup);
 }
 
