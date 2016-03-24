@@ -107,6 +107,9 @@ script:
 ## check postgres dependency and env
   - env
   - ldd -v ${TRAVIS_BUILD_DIR}/gpsql/bin/postgres
+  - find ${TRAVIS_BUILD_DIR} -name _posixsubprocess.so -ls -exec readelf -s {} \;
+  - find /opt/python/2.7.10 -name 'libpython*so' -ls -exec readelf -s {} \;
+  - find /opt/python/2.7.10 -name '_ARC4.so' -ls -exec readelf -s {} \;
 ## make GPDB cluster
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
   - cd ${TRAVIS_BUILD_DIR}/gpAux/gpdemo
