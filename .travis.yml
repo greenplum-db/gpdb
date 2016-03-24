@@ -85,7 +85,7 @@ before_script:
 ## ----------------------------------------------------------------------
 
 script:
-  - export PYTHON_CONFIGURE_OPTS=--enable-shared --enable-ipv6 --enable-loadable-sqlite-extensions --with-computed-gotos
+  - export PYTHON_CONFIGURE_OPTS="--enable-shared --enable-ipv6 --enable-loadable-sqlite-extensions --with-computed-gotos"
   - cd ${TRAVIS_BUILD_DIR}
   - ./configure --with-openssl --with-ldap --with-libcurl --with-python --with-perl --with-libxml --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config
   - make -j4 -s
