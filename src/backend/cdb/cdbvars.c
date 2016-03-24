@@ -82,9 +82,6 @@ int			gp_external_max_segs;      /* max segdbs per gpfdist/gpfdists URI */
 
 int			gp_safefswritesize;  /* set for safe AO writes in non-mature fs */
 
-int			gp_connections_per_thread; /* How many libpq connections are
-										 * handled in each thread */
-
 int			gp_cached_gang_threshold; /*How many gangs to keep around from stmt to stmt.*/
 
 int			Gp_segment = UNDEF_SEGMENT;		/* What content this QE is
@@ -634,34 +631,6 @@ assign_gp_role(const char *newval, bool doit, GucSource source)
 	return newval;
 }
 
-
-/*
- * Assign hook routine for "gp_connections_per_thread" option.  This variablle has context
- * PGC_SUSET so that is can only be set by a superuser via the SET command.
- * (It can also be set in config file, but not inside of PGOPTIONS.)
- *
- * See src/backend/util/misc/guc.c for option definition.
- */
-bool
-assign_gp_connections_per_thread(int newval, bool doit, GucSource source __attribute__((unused)) )
-{
-
-#if FALSE
-	elog(DEBUG1, "assign_gp_connections_per_thread: gp_connections_per_thread=%s, newval=%d, doit=%s",
-	   show_gp_connections_per_thread(), newval, (doit ? "true" : "false"));
-#endif
-
-	if (doit)
-	{
-		if (newval < 0)
-			return false;
-
-		gp_connections_per_thread = newval;
-	}
-
-	return true;
-}
-
 /*
  * Assign hook routine for "assign_gp_use_dispatch_agent" option.  This variable has context
  * PGC_USERSET
@@ -719,29 +688,6 @@ show_gp_role(void)
 {
 	return role_to_string(Gp_role);
 }
-
-/*
- * Show hook routine for "gp_connections_per_thread" option.
- *
- * See src/backend/util/misc/guc.c for option definition.
- */
-const char *
-show_gp_connections_per_thread(void)
-{
-	/*
-	 * We rely on the fact that the memory context will clean up the memory
-	 * for the buffer.data.
-	 */
-	StringInfoData buffer;
-
-	initStringInfo(&buffer);
-
-	appendStringInfo(&buffer, "%d", gp_connections_per_thread);
-
-	return buffer.data;
-}
-
-
 
 /* --------------------------------------------------------------------------------------------------
  * Logging

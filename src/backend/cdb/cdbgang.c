@@ -10,8 +10,8 @@
 #include "postgres.h"
 
 #include <unistd.h>				/* getpid() */
-#include <pthread.h>
 #include <limits.h>
+#include <poll.h>
 
 #include "gp-libpq-fe.h"
 #include "miscadmin.h"			/* MyDatabaseId */
@@ -48,11 +48,8 @@ extern char *default_tablespace;
 
 
 #define MAX_CACHED_1_GANGS 1
-/*
- *	thread_DoConnect is the thread proc used to perform the connection to one of the qExecs.
- */
-static void *thread_DoConnect(void *arg);
-static void build_gpqeid_param(char *buf, int bufsz, bool is_writer);
+
+static char *build_gpqeid_param(bool is_writer);
 
 static Gang *createGang(GangType type, int gang_id, int size, int content, char *portal_name);
 
@@ -63,11 +60,13 @@ static Gang *buildGangDefinition(GangType type, int gang_id, int size, int conte
 
 static bool isTargetPortal(const char *p1, const char *p2);
 
-static int	addOptions(PQExpBufferData *buffer, bool iswriter, int segindex, bool i_am_superuser);
+static char *build_options(bool iswriter, int segindex, bool i_am_superuser);
 
 static bool cleanupGang(Gang * gp);
 
 extern void resetSessionForPrimaryGangLoss(void);
+
+static bool cdbgang_shouldRetryConnection(SegmentDatabaseDescriptor *segdbDesc, int retries);
 
 /*
  * Points to the result of getCdbComponentDatabases()
@@ -79,44 +78,6 @@ static int	largest_gangsize = 0;
 
 static MemoryContext GangContext = NULL;
 
-/*
- * Parameter structure for the DoConnect threads
- */
-typedef struct DoConnectParms
-{
-	/*
-	 * db_count: The number of segdbs that this thread is responsible for
-	 * connecting to.
-	 * Equals the count of segdbDescPtrArray below.
-	 */
-	int			db_count;
-
-	/*
-	 * segdbDescPtrArray: Array of SegmentDatabaseDescriptor* 's that this thread is
-	 * responsible for connecting to. Has size equal to db_count.
-	 */
-	SegmentDatabaseDescriptor **segdbDescPtrArray;
-
-	/* type of gang. */
-	GangType	type;
-
-	bool		i_am_superuser;
-
-	/*
-	 * The pthread_t thread handle.
-	 */
-	pthread_t	thread;
-}	DoConnectParms;
-
-/*
- * AddSegDBToConnThreadPool
- * Helper function used to add a segdb's segdbDesc to the thread pool to be connected to.
- * It figures out which thread will handle it, based on the setting of
- * gp_connections_per_thread.
- */
-static void addSegDBToConnThreadPool(DoConnectParms * ParmsAr, int *segdbCount,
-						 SegmentDatabaseDescriptor * segdbDesc);
-
 int
 largestGangsize(void)
 {
@@ -126,13 +87,15 @@ largestGangsize(void)
 static bool
 segment_failure_due_to_recovery(SegmentDatabaseDescriptor *segdbDesc)
 {
-	char *fatal=NULL, *message=NULL, *ptr=NULL;
-	int fatal_len=0;
+	char	   *fatal;
+	char	   *message;
+	char	   *ptr;
+	int			fatal_len;
 
 	if (segdbDesc == NULL)
 		return false;
 
-	message = segdbDesc->error_message.data;
+	message = PQerrorMessage(segdbDesc->conn);
 
 	if (message == NULL)
 		return false;
@@ -193,10 +156,6 @@ createGang(GangType type, int gang_id, int size, int content, char *portal_name)
 
 	SegmentDatabaseDescriptor *segdbDesc;
 	CdbComponentDatabaseInfo *q;
-	DoConnectParms *doConnectParmsAr;
-	int			threadCount;
-	int			max_threads;
-	int			segdbs_in_thread_pool;
 	int			segdb_count;
 	int			i;
 	Portal		portal;
@@ -209,9 +168,7 @@ createGang(GangType type, int gang_id, int size, int content, char *portal_name)
 create_gang_retry:
 	portal = NULL;
 	newGangDefinition = NULL;
-	doConnectParmsAr = NULL;
 	successful_connections = 0;
-	threadCount = 0;
 	connectAsSuperUser = false;
 	in_recovery_mode_count = 0;
 
@@ -267,26 +224,13 @@ create_gang_retry:
 
 	segdb_count = newGangDefinition->size;
 
-	Assert(gp_connections_per_thread >= 0);
 	Assert(segdb_count > 0);
 
 	/*
-	 * The most threads we could have is segdb_count / gp_connections_per_thread, rounded up.
-	 * This is equivalent to 1 + (segdb_count-1) / gp_connections_per_thread.
 	 * We allocate enough memory for this many DoConnectParms structures,
-	 * even though we may not use them all.
 	 */
-
 	if (size > largest_gangsize)
 		largest_gangsize = size;
-
-	if (gp_connections_per_thread == 0)
-		max_threads = 1;
-	else
-		max_threads = 1 + (segdb_count - 1) / gp_connections_per_thread;
-	Assert(max_threads > 0);
-	doConnectParmsAr = (DoConnectParms *) palloc0(max_threads * sizeof(DoConnectParms));
-	segdbs_in_thread_pool = 0;
 
 	newGangDefinition->active = true;
 
@@ -295,264 +239,295 @@ create_gang_retry:
 	 * ourself, we prepare a thread Parm struct for connecting to it.
 	 * If a segment has no valid segdbs, we recognize that here and give
 	 * an error message.
+	 *
+	 * If any error happens, we'll close any already-opened connections in
+	 * the CATCH-block.
 	 */
-	for (i = 0; i < segdb_count; i++)
+	in_recovery_mode_count = 0;
+	PG_TRY();
 	{
-		/*
-		 * Create the connection requests.	If we find a segment without a valid segdb
-		 * we error out.  Also, if this segdb is invalid, we msut fail the connection.
-		 */
-		segdbDesc = &newGangDefinition->db_descriptors[i];
+		struct pollfd *fds;
+		int		   *indexes;
+		struct timeval start_ts;
+		struct timeval now;
+		bool		failed;
 
-		if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
+		for (i = 0; i < segdb_count; i++)
 		{
-			elog(LOG, "createGang: segment %d/%d descriptor %p (gangdef size %d)", i, segdb_count, segdbDesc, newGangDefinition->size);
-		}
-
-		/*
-		 * This function handles putting the segdbDesc into the proper thread's Parms
-		 * structure, based on gp_connections_per_thread.
-		 * It does this based on the value of segdbs_in_thread_pool,
-		 * which it increments each time it is called.
-		 */
-		addSegDBToConnThreadPool(doConnectParmsAr, &segdbs_in_thread_pool, segdbDesc);
-	}
-
-	/*
-	 * Spin off the threads we've prepared.
-	 */
-	if (segdbs_in_thread_pool == 0)
-		threadCount = 0;
-	else if (gp_connections_per_thread == 0)
-		threadCount = 1;
-	else
-		threadCount = 1 + (segdbs_in_thread_pool - 1) / gp_connections_per_thread;
-
-	for (i = 0; i < threadCount; i++)
-	{
-		int			pthread_err;
-		DoConnectParms *pParms = &doConnectParmsAr[i];
-
-		/* set the gangType. */
-		pParms->type = type;
-
-		pParms->i_am_superuser = connectAsSuperUser;
-
-		if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-			elog(LOG, "createGang creating thread %d of %d for libpq connections",
-				 i + 1, threadCount);
-
-		pthread_err = gp_pthread_create(&pParms->thread, thread_DoConnect, pParms, "createGang");
-
-		if (pthread_err != 0)
-		{
-			int			j;
+			char	   *gpqeid;
+			char	   *options;
 
 			/*
-			 * Error during thread create (this should be caused by resource
-			 * constraints). If we leave the threads running, they'll
-			 * immediately have some problems -- so we need to join them, and
-			 * *then* we can issue our FATAL error
+			 * Create the connection requests.	If we find a segment without a
+			 * valid segdb we error out.  Also, if this segdb is invalid, we must
+			 * fail the connection.
 			 */
+			segdbDesc = &newGangDefinition->db_descriptors[i];
 
-			for (j = 0; j < i; j++)
+			if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 			{
-				DoConnectParms *pParms;
-
-				pParms = &doConnectParmsAr[j];
-				pthread_join(pParms->thread, NULL);
+				elog(LOG, "createGang: starting connection, segment %d/%d descriptor %p (gangdef size %d)",
+					 i+1, segdb_count, segdbDesc, newGangDefinition->size);
 			}
 
-			ereport(FATAL, (errcode(ERRCODE_INTERNAL_ERROR),
-							errmsg("failed to create thread %d of %d", i + 1, threadCount),
-							errdetail("pthread_create() failed with err %d", pthread_err)));
+			q = segdbDesc->segment_database_info;
+
+			/*
+			 * Build the connection string.  Writer-ness needs to be processed
+			 * early enough now some locks are taken before command line
+			 * options are recognized.
+			 */
+			gpqeid = build_gpqeid_param(type == GANGTYPE_PRIMARY_WRITER);
+			options = build_options((type == GANGTYPE_PRIMARY_WRITER),
+									q->segindex, connectAsSuperUser);
+
+			cdbconn_doConnectStart(segdbDesc, gpqeid, options);
+			segdbDesc->poll_status = PGRES_POLLING_WRITING;
+
+			if (PQstatus(segdbDesc->conn) == CONNECTION_BAD)
+			{
+				if (cdbgang_shouldRetryConnection(segdbDesc, create_gang_retry_counter))
+				{
+					in_recovery_mode_count++;
+					break;
+				}
+				else
+				{
+					/*
+					 * Log the details to the server log, but give a more
+					 * generic error to the client. XXX: The user would
+					 * probably prefer to see a bit more details too.
+					 */
+					ereport(LOG,
+							(errcode(ERRCODE_GP_INTERNAL_ERROR),
+							 errmsg("Master unable to connect to %s with options %s: %s",
+									segdbDesc->whoami,
+									options,
+									PQerrorMessage(segdbDesc->conn))));
+
+					ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+									errmsg("failed to acquire resources on one or more segments")));
+				}
+			}
 		}
-	}
 
-	/*
-	 * wait for all of the DoConnect threads to complete.
-	 */
-	for (i = 0; i < threadCount; i++)
-	{
-		DoConnectParms *pParms = &doConnectParmsAr[i];
+		if (in_recovery_mode_count > 0)
+			break;
 
-		if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-			elog(LOG, "joining to thread %d of %d for libpq connections",
-				 i + 1, threadCount);
+		/*
+		 * Ok, we've now launched all the connection attempts. Start the
+		 * timeout clock (= get the start timestamp), and poll until they're
+		 * all completed or we reach timeout.
+		 */
+		gettimeofday(&start_ts, NULL);
+		fds = (struct pollfd *) palloc0(sizeof(struct pollfd) * segdb_count);
+		indexes = (int *) palloc(sizeof(int) * segdb_count);
 
-		if (0 != pthread_join(pParms->thread, NULL))
+		failed = false;
+		while (!failed)
 		{
-			elog(FATAL, "could not create segworker group");
+			int			nfds = 0;
+			int			nready;
+			int			timeout;
+
+			for (i = 0; i < segdb_count; i++)
+			{
+				segdbDesc = &newGangDefinition->db_descriptors[i];
+
+				if (segdbDesc->conn &&
+					(segdbDesc->poll_status == PGRES_POLLING_READING ||
+					 segdbDesc->poll_status == PGRES_POLLING_WRITING))
+				{
+					indexes[nfds] = i;
+					fds[nfds].fd = PQsocket(segdbDesc->conn);
+					fds[nfds].events = 0;
+					if (segdbDesc->poll_status == PGRES_POLLING_READING)
+						fds[nfds].events |= POLLIN;
+					if (segdbDesc->poll_status == PGRES_POLLING_WRITING)
+						fds[nfds].events |= POLLOUT;
+					nfds++;
+				}
+			}
+
+			if (nfds == 0)
+			{
+				/* all done! */
+				elog(LOG, "All connections established for gang");
+				break;
+			}
+
+			if (gp_segment_connect_timeout > 0)
+			{
+				int64 diff_us;
+
+				gettimeofday(&now, NULL);
+
+				diff_us = (now.tv_sec - start_ts.tv_sec) * 1000000;
+				diff_us += (int) now.tv_usec - (int) start_ts.tv_usec;
+
+				if (diff_us > (int64) gp_segment_connect_timeout * 1000000)
+					timeout = 0;
+				else
+				{
+					timeout = gp_segment_connect_timeout * 1000 -
+						diff_us / 1000;
+				}
+			}
+			else
+				timeout = -1;
+
+			/* Wait until something happens */
+			nready = poll(fds, nfds, timeout);
+
+			if (nready < 0)
+				ereport(ERROR,
+						(errcode_for_socket_access(),
+						 errmsg("poll() failed while connecting to segments")));
+
+			if (nready == 0 && timeout == 0)
+			{
+				/* Timeout reached */
+				elog(LOG, "timeout reached!");
+				break;
+			}
+
+			for (i = 0; i < nfds; i++)
+			{
+				if (fds[i].revents == 0)
+					continue;
+
+				segdbDesc = &newGangDefinition->db_descriptors[indexes[i]];
+
+				segdbDesc->poll_status = PQconnectPoll(segdbDesc->conn);
+
+				if (segdbDesc->poll_status == PGRES_POLLING_OK)
+				{
+					cdbconn_doConnectComplete(segdbDesc);
+
+					if (segdbDesc->motionListener == -1)
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_GP_INTERNAL_ERROR),
+								 errmsg("Internal error: No motion listener port for %s\n",
+										segdbDesc->whoami)));
+					}
+					if (gp_log_gang >= GPVARS_VERBOSITY_VERBOSE)
+						elog(LOG, "Connected to %s motionListenerPorts=%d/%d with options %s",
+							 segdbDesc->whoami,
+							 (segdbDesc->motionListener & 0x0ffff),
+							 ((segdbDesc->motionListener >> 16) & 0x0ffff),
+							 PQoptions(segdbDesc->conn));
+				}
+				else if (segdbDesc->poll_status == PGRES_POLLING_FAILED)
+				{
+					/*
+					 * Connection failed, but before we error out, see if this
+					 * is the kind of failure that we'd like to retry.
+					 */
+					if (cdbgang_shouldRetryConnection(segdbDesc, create_gang_retry_counter))
+					{
+						in_recovery_mode_count++;
+						break;
+					}
+					else
+					{
+						/*
+						 * Log the details to the server log, but give a more
+						 * generic error to the client. XXX: The user would
+						 * probably prefer to see a bit more details too.
+						 */
+						ereport(LOG,
+								(errcode(ERRCODE_GP_INTERNAL_ERROR),
+								 errmsg("Master unable to connect to %s with options %s: %s",
+										segdbDesc->whoami,
+										PQoptions(segdbDesc->conn),
+										PQerrorMessage(segdbDesc->conn))));
+
+						ereport(ERROR,
+								(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+								 errmsg("failed to acquire resources on one or more segments")));
+					}
+				}
+			}
 		}
 	}
-
-	/*
-	 * Free the memory allocated for the threadParms array
-	 */
-	if (doConnectParmsAr != NULL)
+	PG_CATCH();
 	{
-		for (i = 0; i < threadCount; i++)
-		{
-			DoConnectParms *pParms = &doConnectParmsAr[i];
+		/*
+		 * Non-retryable error while connecting. Disconnect all the
+		 * connections already started, before propagating the error.
+		 */
+		int			j;
 
-			pfree(pParms->segdbDescPtrArray);
-			pParms->segdbDescPtrArray = NULL;
+		for (j = 0; j < segdb_count; j++)
+		{
+			segdbDesc = &newGangDefinition->db_descriptors[i];
+			if (segdbDesc->conn)
+			{
+				PQfinish(segdbDesc->conn);
+				segdbDesc->conn = NULL;
+			}
 		}
-		pfree(doConnectParmsAr);
-		doConnectParmsAr = NULL;
+		/* clean the gang before error out */
+		disconnectAndDestroyGang(newGangDefinition);
+
+		CheckForResetSession();
+
+		PG_RE_THROW();
 	}
+	PG_END_TRY();
 
 	newGangDefinition->active = false;
 
 	/*
-	 * For now, set all_valid_segdbs_connected to true.
-	 * Reset to false if we get fail to connect to a valid segdb
+	 * If a connection failed in a way that we want to retry rather
+	 * than error out, close all the connections, sleep, and retry.
 	 */
-	newGangDefinition->all_valid_segdbs_connected = true;
-
-	/*
-	 * In this loop, we check whether the connections were successful.
-	 * If not, we recreate the error message with palloc and show it as
-	 * a warning.
-	 */
-	for (i = 0; i < segdb_count; i++)
+	if (in_recovery_mode_count > 0)
 	{
-		segdbDesc = &newGangDefinition->db_descriptors[i];
-		q = segdbDesc->segment_database_info;
+		int			j;
+
+		for (j = 0; j < i; j++)
+		{
+			segdbDesc = &newGangDefinition->db_descriptors[i];
+			if (segdbDesc->conn)
+				PQfinish(segdbDesc->conn);
+		}
 
 		/*
-		 * check connection established or not, if not, we may have to
-		 * re-build this gang.
+		 * On the first retry, we want to verify that we are
+		 * using the most current version of the
+		 * configuration.
 		 */
-		if (!segdbDesc->conn)
-		{
-			if (segdbDesc->whoami)
-				elog(LOG, "Failed connection to %s", segdbDesc->whoami);
+		if (create_gang_retry_counter == 0)
+			FtsNotifyProber();
 
-			/*
-			 * Log failed connections.	Complete failures
-			 * are taken care of later.
-			 */
-			ereport(LOG, (errcode(segdbDesc->errcode),
-						  errmsg("%s", segdbDesc->error_message.data)));
-
-			insist_log(segdbDesc->errcode != 0 || segdbDesc->error_message.len != 0,
-					"connection is null, but no error code or error message, for segDB %d", i);
-
-			Assert(segdbDesc->errcode != 0);
-			Assert(segdbDesc->error_message.len > 0);
-
-			/* this connect failed -- but why ? */
-			if (segment_failure_due_to_recovery(segdbDesc))
-			{
-				in_recovery_mode_count++;
-			}
-
-			segdbDesc->errcode = 0;
-			resetPQExpBuffer(&segdbDesc->error_message);
-
-			newGangDefinition->all_valid_segdbs_connected = false;
-		}
-		else
-		{
-			Assert(PQstatus(segdbDesc->conn) != CONNECTION_BAD &&
-				   segdbDesc->errcode == 0 &&
-				   segdbDesc->error_message.len == 0);
-
-			if (gp_log_gang >= GPVARS_VERBOSITY_VERBOSE)
-				elog(LOG, "Connected to %s motionListenerPorts=%d/%d with options %s",
-					 segdbDesc->whoami,
-					 (segdbDesc->motionListener & 0x0ffff),
-					 ((segdbDesc->motionListener >> 16) & 0x0ffff),
-					 PQoptions(segdbDesc->conn));
-
-			/*
-			 * We should have retrieved the IP from our cache
-			 */
-			Assert(q->hostip != NULL);
-
-			/*
-			 * We have a live connection!
-			 */
-			successful_connections++;
-		}
-	}
-
-	if (size != successful_connections || size != newGangDefinition->size)
-	{
 		/*
-		 * Before we do anything rash, let's take a closer look at the
-		 * connection which failed.
-		 *
-		 * We're going to see if *all* of the connect-failures we've got look
-		 * like a simple-retry will help.
+		 * MPP-10751: In case we're destroying a writer-gang, we don't want
+		 * to cause a session-reset (and odd side-effect inside
+		 * disconnectAndDestroyGang()) so let's pretend that this is a
+		 * reader-gang.
 		 */
-		if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
+		if (newGangDefinition->type == GANGTYPE_PRIMARY_WRITER)
 		{
-			elog(LOG, "createGang: %d processes requested; %d segments online; %d successful connections %d in recovery",
-					size, newGangDefinition->size, successful_connections, in_recovery_mode_count);
+			disconnectAndDestroyAllReaderGangs(true);
+			newGangDefinition->type = GANGTYPE_PRIMARY_READER;
 		}
 
-		if (successful_connections + in_recovery_mode_count == size)
-		{
-			if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-			{
-				elog(LOG, "createGang: gang creation failed, but retryable.");
-			}
+		disconnectAndDestroyGang(newGangDefinition); /* free up connections */
+		newGangDefinition = NULL;
 
-			if (gp_gang_creation_retry_count)
-			{
-				/*
-				 * On the first retry, we want to verify that we are
-				 * using the most current version of the
-				 * configuration.
-				 */
-				if (create_gang_retry_counter == 0)
-				{
-					Assert(newGangDefinition->db_descriptors);
-					Assert(newGangDefinition->db_descriptors[0].segment_database_info);
+		MemoryContextSwitchTo(oldContext);
 
-					FtsTestConnection(newGangDefinition->db_descriptors[0].segment_database_info, true);
-				}
+		CHECK_FOR_INTERRUPTS();
 
-				if (create_gang_retry_counter++ < gp_gang_creation_retry_count)
-				{
-					/*
-					 * MPP-10751: In case we're destroying a
-					 * writer-gang, we don't want to cause a
-					 * session-reset (and odd side-effect inside
-					 * disconnectAndDestroyGang()) so let's pretend
-					 * that this is a reader-gang.
-					 */
-					if (newGangDefinition->type == GANGTYPE_PRIMARY_WRITER)
-					{
-						disconnectAndDestroyAllReaderGangs(true);
-						newGangDefinition->type = GANGTYPE_PRIMARY_READER;
-					}
+		pg_usleep(gp_gang_creation_retry_timer * 1000);
 
-					disconnectAndDestroyGang(newGangDefinition); /* free up connections */
-					newGangDefinition = NULL;
+		CHECK_FOR_INTERRUPTS();
 
-					MemoryContextSwitchTo(oldContext);
-
-					CHECK_FOR_INTERRUPTS();
-
-					pg_usleep(gp_gang_creation_retry_timer * 1000);
-
-					CHECK_FOR_INTERRUPTS();
-
-					goto create_gang_retry;
-				}
-			}
-		}
+		create_gang_retry_counter++;
+		goto create_gang_retry;
 	}
-
-	/*
-	 * If no segdb for a segment got a successful
-	 * connection, we error out.  We had to do this as a separate
-	 * loop from the preceding one to make sure all error messages were
-	 * palloced before potentially calling ereport.
-	 */
 
 	/*
 	 * we only want to "just error out" if we don't have
@@ -577,33 +552,62 @@ create_gang_retry:
 
 	MemoryContextSwitchTo(oldContext);
 
-	if (successful_connections != newGangDefinition->size && isFTSEnabled())
+	return newGangDefinition;
+}
+
+static bool
+cdbgang_shouldRetryConnection(SegmentDatabaseDescriptor *segdbDesc, int retries)
+{
+	/* If we have exceeded the number of retries, we're finished */
+	if (retries >= gp_gang_creation_retry_count)
+		return false;
+
+	/* Retry if the segment was still starting up */
+	if (segment_failure_due_to_recovery(segdbDesc))
+		return true;
+
+	/* Other kinds of errors are only retried if FTS is enabled. */
+	if (!isFTSEnabled())
+		return false;
+
+	/*
+	 * If FTS thinks that the segment is OK, but we got an error,
+	 * we must've seen some kind of transient failure.
+	 */
+	if (FtsTestConnection(segdbDesc->segment_database_info, false))
 	{
-		bool		errorOut;
-
-		errorOut = FtsHandleGangConnectionFailure(newGangDefinition->db_descriptors, newGangDefinition->size);
-
-		/*
-		 * don't error out if our DTM isn't started yet. See MPP-5764:
-		 * ideally this would be fixed in FtsHandleGangConnectionFailure.
-		 */
-		if (shmDtmStarted != NULL && !*shmDtmStarted)
-			errorOut = false;
-
-		disconnectAndDestroyGang(newGangDefinition);
-		CheckForResetSession();
-
-		if (errorOut)
-		{
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					errmsg("failed to acquire resources on one or more segments")));
-
-		}
-
-		newGangDefinition = NULL;
+		elog(DEBUG2, "no found fault for segment dbid %d",
+			 segdbDesc->segment_database_info->dbid);
+		return false;
 	}
 
-	return newGangDefinition;
+	/*
+	 * KLUDGE: Do not error out if we are attempting a DTM protocol retry
+	 */
+	if (DistributedTransactionContext == DTX_CONTEXT_QD_RETRY_PHASE_2)
+		return false;
+
+	/*
+	 * Is there a transaction active ?
+	 *
+	 * When the error is raised, it will abort the current DTM transaction
+	 */
+	if (isCurrentDtxActive())
+	{
+		elog((Debug_print_full_dtm ? LOG : DEBUG5),
+			 "cdbgang_shouldRetryConnection found an active DTM transaction, retrying.");
+		return true;
+	}
+
+	/*
+	 * error out if this sets read only flag, at this stage the read only
+	 * transaction checking has passed, so error out, but do not error out if
+	 * tm is in recovery
+	 */
+	if ((isFtsReadOnlySet() && !isTMInRecovery()))
+		return true;
+
+	return false;
 }
 
 /*
@@ -679,8 +683,6 @@ buildGangDefinition(GangType type, int gang_id, int size, int content, char *por
 				Insist(0);
 		}
 	}
-
-	newGangDefinition->all_valid_segdbs_connected = false;
 
 	/*
 	 * MPP-2613
@@ -799,63 +801,6 @@ buildGangDefinition(GangType type, int gang_id, int size, int content, char *por
 	return newGangDefinition;
 }
 
-
-/*
- * AddSegDBToConnThreadPool
- * Helper function used to add a segdb's segdbDesc to the thread pool to be connected to.
- * It figures out which thread will handle it, based on the setting of
- * gp_connections_per_thread.
- */
-static void
-addSegDBToConnThreadPool(DoConnectParms * ParmsAr, int *segdbCount,
-						 SegmentDatabaseDescriptor * segdbDesc)
-{
-	DoConnectParms *pParms;
-	int			ParmsIndex;
-	bool		firsttime = false;
-
-	Assert(segdbCount != NULL);
-
-	/*
-	 * The proper index into the DoConnectParms array is computed, based on
-	 * having gp_connections_per_thread segdbDesc's in each thread.
-	 * If it's the first access to an array location, determined
-	 * by (*segdbCount) % gp_connections_per_thread == 0,
-	 * then we initialize the struct members for that array location first.
-	 */
-	if (gp_connections_per_thread == 0)
-		ParmsIndex = 0;
-	else
-		ParmsIndex = (*segdbCount) / gp_connections_per_thread;
-	pParms = &ParmsAr[ParmsIndex];
-
-	if (gp_connections_per_thread == 0)
-		firsttime = (*segdbCount) == 0;
-	else
-		firsttime = (*segdbCount) % gp_connections_per_thread == 0;
-
-	if (firsttime)
-	{
-		Assert(gp_connections_per_thread >= 0);
-		pParms->segdbDescPtrArray =
-			(SegmentDatabaseDescriptor **) palloc0((gp_connections_per_thread == 0 ? getgpsegmentCount() : gp_connections_per_thread) *
-										sizeof(SegmentDatabaseDescriptor *));
-		MemSet(&pParms->thread, 0, sizeof(pthread_t));
-		pParms->db_count = 0;
-	}
-
-	/*
-	 * Just add to the end of the used portion of the segdbDescPtrArray
-	 * and bump the count of members
-	 */
-	pParms->segdbDescPtrArray[pParms->db_count++] = segdbDesc;
-
-	/*
-	 * Bump the count of segdbs processed
-	 */
-	(*segdbCount)++;
-}
-
 int
 gp_pthread_create(pthread_t * thread,
 				  void *(*start_routine) (void *),
@@ -910,8 +855,8 @@ gp_pthread_create(pthread_t * thread,
 	return pthread_err;
 }
 
-static bool
-addOneOption(PQExpBufferData *buffer, struct config_generic * guc)
+static void
+addOneOption(StringInfo buffer, struct config_generic *guc)
 {
 	Assert(guc && (guc->flags & GUC_GPDB_ADDOPT));
 	switch (guc->vartype)
@@ -920,24 +865,23 @@ addOneOption(PQExpBufferData *buffer, struct config_generic * guc)
 			{
 				struct config_bool *bguc = (struct config_bool *) guc;
 
-				appendPQExpBuffer(buffer, " -c %s=%s", guc->name,
-								  *(bguc->variable) ? "true" : "false"
-					);
-				return true;
+				appendStringInfo(buffer, " -c %s=%s", guc->name,
+								 *(bguc->variable) ? "true" : "false");
+				return;
 			}
 		case PGC_INT:
 			{
 				struct config_int *iguc = (struct config_int *) guc;
 
-				appendPQExpBuffer(buffer, " -c %s=%d", guc->name, *iguc->variable);
-				return true;
+				appendStringInfo(buffer, " -c %s=%d", guc->name, *iguc->variable);
+				return;
 			}
 		case PGC_REAL:
 			{
 				struct config_real *rguc = (struct config_real *) guc;
 
-				appendPQExpBuffer(buffer, " -c %s=%f", guc->name, *rguc->variable);
-				return true;
+				appendStringInfo(buffer, " -c %s=%f", guc->name, *rguc->variable);
+				return;
 			}
 		case PGC_STRING:
 			{
@@ -945,7 +889,7 @@ addOneOption(PQExpBufferData *buffer, struct config_generic * guc)
 				const char *str = *sguc->variable;
 				int			i;
 
-				appendPQExpBuffer(buffer, " -c %s=", guc->name);
+				appendStringInfo(buffer, " -c %s=", guc->name);
 				/*
 				 * All whitespace characters must be escaped. See
 				 * pg_split_opts() in the backend.
@@ -953,37 +897,37 @@ addOneOption(PQExpBufferData *buffer, struct config_generic * guc)
 				for (i = 0; str[i] != '\0'; i++)
 				{
 					if (isspace((unsigned char) str[i]))
-						appendPQExpBufferChar(buffer, '\\');
+						appendStringInfoChar(buffer, '\\');
 
-					appendPQExpBufferChar(buffer, str[i]);
+					appendStringInfoChar(buffer, str[i]);
 				}
-				return true;
+				return;
 			}
 	}
 
-	Assert(!"Invalid guc var type");
-	return false;
+	elog(ERROR, "unrecognized GUC var type");
 }
 
 /*
- * Add GUCs to option string.
+ * Put all GUCs to option string.
  *
- * Return 1 (>0) if success.
- * Return -index (<=0) into get_guc_variables on failure, so that caller
- * will be able to print a nice error message.
+ * Returns a palloc'd string.
  */
-static int
-addOptions(PQExpBufferData *buffer, bool iswriter, int segindex, bool i_am_superuser)
+static char *
+build_options(bool iswriter, int segindex, bool i_am_superuser)
 {
 	struct config_generic **gucs = get_guc_variables();
 	int			ngucs = get_num_guc_variables();
+	StringInfoData buf;
 	int			i;
+
+	initStringInfo(&buf);
 
 	if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 		write_log("addOptions: iswriter %d segindex %d", iswriter, segindex);
 
 	/* The following gucs are set will function parameter */
-	appendPQExpBuffer(buffer, "-c gp_segment=%d", segindex);
+	appendStringInfo(&buf, "-c gp_segment=%d", segindex);
 
 	/* GUCs need special handling */
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -992,18 +936,18 @@ addOptions(PQExpBufferData *buffer, bool iswriter, int segindex, bool i_am_super
 
 		qdinfo = &cdb_component_dbs->entry_db_info[0];
 		if (qdinfo->hostip != NULL)
-			appendPQExpBuffer(buffer, " -c gp_qd_hostname=%s", qdinfo->hostip);
+			appendStringInfo(&buf, " -c gp_qd_hostname=%s", qdinfo->hostip);
 		else
-			appendPQExpBuffer(buffer, " -c gp_qd_hostname=%s", qdinfo->hostname);
-		appendPQExpBuffer(buffer, " -c gp_qd_port=%d", qdinfo->port);
+			appendStringInfo(&buf, " -c gp_qd_hostname=%s", qdinfo->hostname);
+		appendStringInfo(&buf, " -c gp_qd_port=%d", qdinfo->port);
 	}
 	else
 	{
-		appendPQExpBuffer(buffer, " -c gp_qd_hostname=%s", qdHostname);
-		appendPQExpBuffer(buffer, " -c gp_qd_port=%d", qdPostmasterPort);
+		appendStringInfo(&buf, " -c gp_qd_hostname=%s", qdHostname);
+		appendStringInfo(&buf, " -c gp_qd_port=%d", qdPostmasterPort);
 	}
 
-	appendPQExpBuffer(buffer, " -c gp_qd_callback_info=port=%d", PostPortNumber);
+	appendStringInfo(&buf, " -c gp_qd_callback_info=port=%d", PostPortNumber);
 
 	/*
 	 * Transactions are tricky.
@@ -1020,13 +964,13 @@ addOptions(PQExpBufferData *buffer, bool iswriter, int segindex, bool i_am_super
 	if (DefaultXactIsoLevel != XACT_READ_COMMITTED)
 	{
 		if (DefaultXactIsoLevel == XACT_SERIALIZABLE)
-			appendPQExpBuffer(buffer, " -c default_transaction_isolation=serializable");
+			appendStringInfo(&buf, " -c default_transaction_isolation=serializable");
 	}
 
 	if (XactIsoLevel != XACT_READ_COMMITTED)
 	{
 		if (XactIsoLevel == XACT_SERIALIZABLE)
-			appendPQExpBuffer(buffer, " -c transaction_isolation=serializable");
+			appendStringInfo(&buf, " -c transaction_isolation=serializable");
 	}
 
 	for (i = 0; i < ngucs; ++i)
@@ -1036,120 +980,26 @@ addOptions(PQExpBufferData *buffer, bool iswriter, int segindex, bool i_am_super
 		if ((guc->flags & GUC_GPDB_ADDOPT) &&
 			(guc->context == PGC_USERSET || i_am_superuser))
 		{
-			bool		fOK = addOneOption(buffer, guc);
-
-			if (!fOK)
-				return -i;
+			addOneOption(&buf, guc);
 		}
 	}
-	return 1;
+
+	return buf.data;
 }
 
 /*
- *	thread_DoConnect is the thread proc used to perform the connection to one of the qExecs.
- */
-static void *
-thread_DoConnect(void *arg)
-{
-	DoConnectParms *pParms;
-	SegmentDatabaseDescriptor **segdbDescPtrArray;
-
-	int			db_count;
-	int			i;
-	int			err;
-
-	SegmentDatabaseDescriptor *segdbDesc;
-	CdbComponentDatabaseInfo *q;
-
-	gp_set_thread_sigmasks();
-
-	pParms = (DoConnectParms *) arg;
-	segdbDescPtrArray = pParms->segdbDescPtrArray;
-	db_count = pParms->db_count;
-
-	/*
-	 * The pParms contains an array of SegmentDatabaseDescriptors
-	 * to connect to.
-	 */
-	for (i = 0; i < db_count; i++)
-	{
-		PQExpBufferData buffer;
-		char		gpqeid[100];
-
-		segdbDesc = segdbDescPtrArray[i];
-
-		if (segdbDesc == NULL || segdbDesc->segment_database_info == NULL)
-		{
-			write_log("thread_DoConnect: bad segment definition during gang creation %d/%d\n", i, db_count);
-			continue;
-		}
-
-		q = segdbDesc->segment_database_info;
-
-		/*
-		 * We use PQExpBufferData instead of StringInfoData
-		 * because the former uses malloc, the latter palloc.
-		 * We are in a thread, and we CANNOT use palloc since it's not
-		 * thread safe.  We cannot call elog or ereport either for the
-		 * same reason.
-		 */
-		initPQExpBuffer(&buffer);
-
-		/*
-		 * Build the connection string.  Writer-ness needs to be processed
-		 * early enough now some locks are taken before command line options
-		 * are recognized.
-		 */
-		build_gpqeid_param(gpqeid, sizeof(gpqeid),
-						   pParms->type == GANGTYPE_PRIMARY_WRITER);
-		err = addOptions(&buffer,
-						 (pParms->type == GANGTYPE_PRIMARY_WRITER),
-						 q->segindex, pParms->i_am_superuser);
-
-		if (err <= 0)
-		{
-			struct config_generic **gucs = get_guc_variables();
-			struct config_generic *errguc = gucs[-err];
-
-			segdbDesc->errcode = ERRCODE_GP_INTERNAL_ERROR;
-			appendPQExpBuffer(&segdbDesc->error_message,
-					  "Internal error: AddOption %s failed\n", errguc->name);
-			PQfinish(segdbDesc->conn);
-			segdbDesc->conn = NULL;
-		}
-		else
-		{
-			if (cdbconn_doConnect(segdbDesc, gpqeid, buffer.data))
-			{
-				if (segdbDesc->motionListener == -1)
-				{
-					segdbDesc->errcode = ERRCODE_GP_INTERNAL_ERROR;
-					appendPQExpBuffer(&segdbDesc->error_message,
-						  "Internal error: No motion listener port for %s\n",
-									  segdbDesc->whoami);
-					PQfinish(segdbDesc->conn);
-					segdbDesc->conn = NULL;
-				}
-			}
-		}
-
-		free(buffer.data);
-	}
-
-	return (NULL);
-}	/* thread_DoConnect */
-
-
-/*
- * build_gpqeid_params
+ * build_gpqeid_param
  *
  * Called from the qDisp process to create the "gpqeid" parameter string
- * to be passed to a qExec that is being started.  NB: Can be called in a
- * thread, so mustn't use palloc/elog/ereport/etc.
+ * to be passed to a qExec that is being started.
  */
-static void
-build_gpqeid_param(char *buf, int bufsz, bool is_writer)
+static char *
+build_gpqeid_param(bool is_writer)
 {
+	StringInfoData buf;
+
+	initStringInfo(&buf);
+
 #ifdef HAVE_INT64_TIMESTAMP
 #define TIMESTAMP_FORMAT INT64_FORMAT
 #else
@@ -1160,13 +1010,14 @@ build_gpqeid_param(char *buf, int bufsz, bool is_writer)
 #endif
 #endif
 
-	snprintf(buf, bufsz,
-			"%d;" TIMESTAMP_FORMAT ";%s",
-			gp_session_id,
-			PgStartTime,
-			(is_writer ? "true" : "false"));
+	appendStringInfo(&buf,
+					 "%d;" TIMESTAMP_FORMAT ";%s",
+					 gp_session_id,
+					 PgStartTime,
+					 (is_writer ? "true" : "false"));
+	return buf.data;
 
-}	/* build_gpqeid_params */
+}	/* build_gpqeid_param */
 
 /*
  * cdbgang_parse_gpqeid_params
@@ -1447,22 +1298,7 @@ allocateGang(GangType type, int size, int content, char *portal_name)
 					if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 						elog(LOG, "Creating a new reader N-gang for %s", (portal_name ? portal_name : "unnamed portal"));
 
-					for (int attempts = 0; (attempts < gp_gang_creation_retry_count && gp == NULL); attempts++)
-					{
-						gp = createGang(type, gang_id_counter++, size, content, portal_name);
-						if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG
-								&& gp == NULL)
-						{
-							elog(LOG, "Could not create reader gang. Retry count = %d", (attempts + 1));
-						}
-					}
-				}
-
-				if (!gp)
-				{
-					ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-							errmsg("segworker group creation failed"),
-							errhint("server log may have more detailed error message")));
+					gp = createGang(type, gang_id_counter++, size, content, portal_name);
 				}
 
 				allocatedReaderGangsN = lappend(allocatedReaderGangsN, gp);
@@ -1522,26 +1358,7 @@ allocateGang(GangType type, int size, int content, char *portal_name)
 				{
 					if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 						elog(LOG, "creating a new reader 1-gang for seg%d, portal: %s", content, (portal_name ? portal_name : "unnamed"));
-					for (int attempts = 0; (attempts < gp_gang_creation_retry_count && (gp == NULL || gp->size !=size)); attempts++)
-					{
-						gp = createGang(type, gang_id_counter++, size, content, portal_name);
-						if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG
-								&& (gp == NULL || gp->size !=size))
-						{
-							elog(LOG, "Could not create 1-reader gang. Retry count = %d", (attempts + 1));
-						}
-
-					}
-				}
-				if (gp == NULL || gp->size != size)
-				{
-					if (content == -1)
-						elog(LOG, "could not allocate a reader 1-segworker group for master segment; portal: %s",
-								(portal_name ? portal_name : "unnamed"));
-					else
-						elog(LOG, "could not allocate a reader 1-segworker group for segment %d; portal: %s",
-								content, (portal_name ? portal_name : "unnamed"));
-					Insist(false);
+					gp = createGang(type, gang_id_counter++, size, content, portal_name);
 				}
 				allocatedReaderGangs1 = lappend(allocatedReaderGangs1, gp);
 			}
@@ -1614,19 +1431,8 @@ allocateWriterGang()
 
 		nsegdb = getgpsegmentCount();
 
-		for (int attempts = 0; (attempts < gp_gang_creation_retry_count && writer_gang == NULL); attempts++)
-		{
-			writer_gang =
-				createGang(GANGTYPE_PRIMARY_WRITER, PRIMARY_WRITER_GANG_ID, nsegdb, -1, NULL);
-
-			if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG
-					&& writer_gang == NULL)
-			{
-				elog(LOG, "Could not create writer gang. Retry count = %d", (attempts + 1));
-			}
-
-		}
-
+		writer_gang =
+			createGang(GANGTYPE_PRIMARY_WRITER, PRIMARY_WRITER_GANG_ID, nsegdb, -1, NULL);
 		MemoryContextSwitchTo(oldContext);
 	}
 	else
@@ -1634,8 +1440,6 @@ allocateWriterGang()
 		if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 			elog(LOG, "Reusing an existing primary writer gang");
 	}
-
-	insist_log(writer_gang != NULL, "no primary segworker group allocated");
 
 	writer_gang->allocated = true;
 
@@ -2055,11 +1859,7 @@ cleanupGang(Gang *gp)
 		}
 
 		/* QE is no longer associated with a slice. */
-		if (!cdbconn_setSliceIndex(segdbDesc, -1))
-		{
-			insist_log(false, "could not reset slice index during cleanup");
-		}
-
+		cdbconn_setSliceIndex(segdbDesc, -1);
 	}
 
 	gp->allocated = false;
@@ -2394,9 +2194,6 @@ disconnectAndDestroyGang(Gang *gp)
 
 			segdbDesc->conn = NULL;
 		}
-
-		/* Free memory owned by the segdbDesc. */
-		cdbconn_termSegmentDescriptor(segdbDesc);
 	}
 
 	/*

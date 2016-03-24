@@ -228,6 +228,7 @@ char	   *memory_profiler_query_id = "none";
 int			memory_profiler_dataset_size = 0;
 bool		gp_dump_memory_usage = FALSE;
 
+int			phony_gp_connections_per_thread = 0;
 
 #define VERIFY_CHECKPOINT_INTERVAL_DEFAULT 180
 int			verify_checkpoint_interval =
@@ -4019,13 +4020,13 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_connections_per_thread", PGC_SUSET, GP_ARRAY_TUNING,
-			gettext_noop("Sets the number of client connections handled in each thread."),
+		{"gp_connections_per_thread", PGC_SUSET, COMPAT_OPTIONS_PREVIOUS,
+			gettext_noop("Unused. Accepted only for backwards-compatibility."),
 			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
+			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
 		},
-		&gp_connections_per_thread,
-		512, 0, INT_MAX, assign_gp_connections_per_thread, show_gp_connections_per_thread
+		&phony_gp_connections_per_thread,
+		0, 0, INT_MAX, NULL, NULL
 	},
 
 	{

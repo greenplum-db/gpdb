@@ -1,0 +1,9 @@
+
+
+Potential issues:
+
+* gethostbyname() will block
+* Dispatching a large query might block if it doesn't fit in TCP send buffer
+
+
+

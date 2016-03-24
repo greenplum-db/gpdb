@@ -518,7 +518,6 @@ gp_interconnect_type=udpifc
 
 # - Worker Process Creation -
 
-gp_connections_per_thread = 64
 gp_segment_connect_timeout = 600s
 #gp_enable_delete_as_truncate = off
 

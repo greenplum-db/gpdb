@@ -99,27 +99,6 @@ cdbdisp_seterrcode(int                  errcode,        /* ERRCODE_xxx or 0 */
                    int                  resultIndex,    /* -1 if no PGresult */
                    CdbDispatchResult   *dispatchResult);
 
-/* Transfer connection error messages to dispatchResult from segdbDesc. */
-bool                            /* returns true if segdbDesc had err info */
-cdbdisp_mergeConnectionErrors(CdbDispatchResult                *dispatchResult,
-                              struct SegmentDatabaseDescriptor *segdbDesc);
-
-/* Format a message, printf-style, and append to the error_message buffer.
- * Also write it to stderr if logging is enabled for messages of the
- * given severity level 'elevel' (for example, DEBUG1; or 0 to suppress).
- * 'errcode' is the ERRCODE_xxx value for setting the client's SQLSTATE.
- * NB: This can be called from a dispatcher thread, so it must not use
- * palloc/pfree or elog/ereport because they are not thread safe.
- */
-void
-cdbdisp_appendMessage(CdbDispatchResult    *dispatchResult,
-                      int                   elevel,
-                      int                   errcode,
-                      const char           *fmt,
-                      ...)
-/* This extension allows gcc to check the format string */
-__attribute__((format(printf, 4, 5)));
-
 /* Store a PGresult object ptr in the result buffer.
  * NB: Caller must not PQclear() the PGresult object.
  */

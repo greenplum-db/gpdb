@@ -34,21 +34,14 @@ typedef struct SegmentDatabaseDescriptor
 	 * segindex assigned to the segment in gp_segment_config
 	 */
 	int4         			segindex; /* this is actually the *content-id* */
-	
+
     /* conn
 	 *
 	 * A non-NULL value points to the PGconn block of a successfully
 	 * established connection to the segment database.
 	 */
-	PGconn				   *conn;		
-	
-	/*
-	 * Error info saved when connection cannot be established.
-	 */
-    int                     errcode;        /* ERRCODE_xxx (sqlstate encoded as
-                                             * an int) of first error, or 0.
-                                             */
-	PQExpBufferData         error_message;  /* message text; '\n' at end */
+	PGconn				   *conn;
+	PostgresPollingStatusType poll_status;
 
     /*
      * Connection info saved at most recent PQconnectdb.
@@ -57,7 +50,7 @@ typedef struct SegmentDatabaseDescriptor
      */
     int4		            motionListener; /* interconnect listener port */
     int4					backendPid;
-    char                   *whoami;         /* QE identifier for msgs */
+    char                    whoami[100];         /* QE identifier for msgs */
     struct SegmentDatabaseDescriptor * myAgent;
 
 } SegmentDatabaseDescriptor;
@@ -68,20 +61,17 @@ void
 cdbconn_initSegmentDescriptor(SegmentDatabaseDescriptor        *segdbDesc,
                               struct CdbComponentDatabaseInfo  *cdbinfo);
 
-
-/* Free all memory owned by a segment descriptor. */
-void
-cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc);
-
-
 /* Connect to a QE as a client via libpq. */
-bool                            /* returns true if connected */
-cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
-		  const char *gpqeid,
-		  const char *options);
+void                            /* returns true if connected */
+cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
+		       const char *gpqeid,
+		       const char *options);
+
+void                            /* returns true if connected */
+cdbconn_doConnectComplete(SegmentDatabaseDescriptor *segdbDesc);
 
 /* Set the slice index for error messages related to this QE. */
-bool
+void
 cdbconn_setSliceIndex(SegmentDatabaseDescriptor    *segdbDesc,
                       int                           sliceIndex);
 

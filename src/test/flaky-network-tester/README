@@ -1,0 +1,10 @@
+This directory contains a small utility for emulating network failures.
+It is intended for testing failures between master and segments.
+
+To use, load the library into the master's postmaster with LD_PRELOAD,
+and set FLAKY_PORT to the port number of one of the segments. For example:
+
+FLAKY_PORT=40004 LD_PRELOAD=flaky-wrap.so bin/postmaster -D data-master/ -E
+
+Grep the logs for the string "FLAKY" to see what it's doing.
+

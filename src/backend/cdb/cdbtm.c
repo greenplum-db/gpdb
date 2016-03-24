@@ -1027,7 +1027,7 @@ doDtxPhase2Retry(void)
 				}
 
 				/*
-				 * KLUDGE: FtsHandleGangConnectionFailure will need a special
+				 * KLUDGE: cdbgang_shouldRetryConnection() needs a special
 				 * transaction context to tell it not to raise an ERROR...
 				 */
 				setDistributedTransactionContext(DTX_CONTEXT_QD_RETRY_PHASE_2);

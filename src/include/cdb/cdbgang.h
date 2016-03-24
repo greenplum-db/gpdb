@@ -51,7 +51,6 @@ typedef struct Gang
 
 	/* For debugging purposes only. These do not add any actual functionality. */
 	bool		active;
-	bool		all_valid_segdbs_connected;
 	bool		allocated;
 
 	/* should be destroyed in cleanupGang() if set*/

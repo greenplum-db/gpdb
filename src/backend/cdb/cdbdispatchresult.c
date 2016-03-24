@@ -44,16 +44,6 @@ noTrailingNewline(StringInfo buf)
         buf->data[--buf->len] = '\0';
 }                               /* noTrailingNewline */
 
-static void
-noTrailingNewlinePQ(PQExpBuffer buf)
-{
-    while (buf->len > 0 &&
-           buf->data[buf->len-1] <= ' ' &&
-           buf->data[buf->len-1] > '\0')
-        buf->data[--buf->len] = '\0';
-}                               /* noTrailingNewlinePQ */
-
-
 /* If buffer is nonempty, make sure it has exactly one trailing newline. */
 static void
 oneTrailingNewline(StringInfo buf)
@@ -62,14 +52,6 @@ oneTrailingNewline(StringInfo buf)
     if (buf->len > 0)
         appendStringInfoChar(buf, '\n');
 }                               /* oneTrailingNewline */
-
-static void
-oneTrailingNewlinePQ(PQExpBuffer buf)
-{
-    noTrailingNewlinePQ(buf);
-    if (buf->len > 0)
-        appendPQExpBufferChar(buf, '\n');
-}                               /* oneTrailingNewlinePQ */
 
 
 /*--------------------------------------------------------------------*/
@@ -257,97 +239,6 @@ cdbdisp_seterrcode(int                  errcode,        /* ERRCODE_xxx or 0 */
     }
 }                               /* cdbdisp_seterrcode */
 
-
-/* Transfer connection error messages to dispatchResult from segdbDesc. */
-bool                            /* returns true if segdbDesc had err info */
-cdbdisp_mergeConnectionErrors(CdbDispatchResult                *dispatchResult,
-                              struct SegmentDatabaseDescriptor *segdbDesc)
-{
-    if (!segdbDesc)
-        return false;
-    if (segdbDesc->errcode == 0 &&
-        segdbDesc->error_message.len == 0)
-        return false;
-
-    /* Error code should always be accompanied by text and vice-versa. */
-    Assert(segdbDesc->errcode != 0 && segdbDesc->error_message.len > 0);
-
-    /* Append error message text and save error code. */
-    cdbdisp_appendMessage(dispatchResult, 0, segdbDesc->errcode, "%s",
-                          segdbDesc->error_message.data);
-
-    /* Reset connection object's error info. */
-    segdbDesc->errcode = 0;
-    segdbDesc->error_message.len = 0;
-    segdbDesc->error_message.data[0] = '\0';
-
-    return true;
-}                               /* cdbdisp_mergeConnectionErrors */
-
-
-/* Format a message, printf-style, and append to the error_message buffer.
- * Also write it to stderr if logging is enabled for messages of the
- * given severity level 'elevel' (for example, DEBUG1; or 0 to suppress).
- * 'errcode' is the ERRCODE_xxx value for setting the client's SQLSTATE.
- * NB: This can be called from a dispatcher thread, so it must not use
- * palloc/pfree or elog/ereport because they are not thread safe.
- */
-void
-cdbdisp_appendMessage(CdbDispatchResult    *dispatchResult,
-                      int                   elevel,
-                      int                   errcode,
-                      const char           *fmt,
-                      ...)
-{
-    va_list args;
-    int     msgoff;
-
-    /* Remember first error. */
-    cdbdisp_seterrcode(errcode, -1, dispatchResult);
-
-    /* Allocate buffer if first message.
-     * Insert newline between previous message and new one.
-     */
-    if (!dispatchResult->error_message)
-	{
-        dispatchResult->error_message = createPQExpBuffer();
-
-		if (PQExpBufferBroken(dispatchResult->error_message))
-		{
-			destroyPQExpBuffer(dispatchResult->error_message);
-			dispatchResult->error_message = NULL;
-
-			write_log("cdbdisp_appendMessage: allocation failed, can't save error-message.");
-			return;
-		}
-	}
-    else
-        oneTrailingNewlinePQ(dispatchResult->error_message);
-
-    msgoff = dispatchResult->error_message->len;
-
-    /* Format the message and append it to the buffer. */
-    va_start(args, fmt);
-    appendPQExpBufferVA(dispatchResult->error_message, fmt, args);
-    va_end(args);
-
-    /* Display the message on stderr for debugging, if requested.
-     * This helps to clarify the actual timing of threaded events.
-     */
-    if (elevel >= log_min_messages)
-    {
-        oneTrailingNewlinePQ(dispatchResult->error_message);
-        write_log("%s", dispatchResult->error_message->data + msgoff);
-    }
-
-    /* In case the caller wants to hand the buffer to ereport(),
-     * follow the ereport() convention of not ending with a newline.
-     */
-    noTrailingNewlinePQ(dispatchResult->error_message);
-
-}                               /* cdbdisp_appendMessage */
-
-
 /* Store a PGresult object ptr in the result buffer.
  * NB: Caller must not PQclear() the PGresult object.
  */
@@ -519,16 +410,6 @@ cdbdisp_debugDispatchResult(CdbDispatchResult  *dispatchResult,
              dispatchResult->error_message->data);
     }
 
-    /* Connection error? */
-    if (dispatchResult->segdbDesc &&
-        dispatchResult->segdbDesc->error_message.len > 0)
-	{
-        cdbdisp_errcode_to_sqlstate(dispatchResult->segdbDesc->errcode, esqlstate);
-        elog(elevel_error, "DispatchResult: (%s) %s",
-             esqlstate,
-             dispatchResult->segdbDesc->error_message.data);
-	}
-
     /* Should have either an error code or an ok result. */
     if (!dispatchResult->errcode &&
         dispatchResult->okindex < 0)
@@ -549,7 +430,6 @@ cdbdisp_dumpDispatchResult(CdbDispatchResult       *dispatchResult,
                            bool                     verbose,
                            struct StringInfoData   *buf)
 {
-    SegmentDatabaseDescriptor  *segdbDesc = dispatchResult->segdbDesc;
     int     ires;
     int     nres;
 
@@ -623,13 +503,6 @@ cdbdisp_dumpDispatchResult(CdbDispatchResult       *dispatchResult,
                 goto done;
         }
     }                           /* for each PGresult */
-
-    /* segdbDesc error message shouldn't be possible here, but check anyway.
-     *   Ordinarily dispatchResult->segdbDesc is NULL here because we are
-     *   called after it has been cleared by CdbCheckDispatchResult().
-     */
-    if (dispatchResult->segdbDesc)
-        cdbdisp_mergeConnectionErrors(dispatchResult, segdbDesc);
 
     /* Error found on our side of the libpq interface? */
     if (dispatchResult->error_message &&
