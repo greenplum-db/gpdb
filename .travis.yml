@@ -150,6 +150,7 @@ before_install:
        sudo apt-get install -y libcurl4-dev;
        sudo apt-get install -y libbz2-dev;
        sudo apt-get install -y python-dev;
+       sudo apt-get install -y python-crypto;
        sudo sysctl -w kernel.shmmax=500000000;
        sudo sysctl -w kernel.shmmni=4096;
        sudo sysctl -w kernel.shmall=4000000000;
