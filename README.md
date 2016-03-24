@@ -163,6 +163,22 @@ Once build and started, run `psql` and check the GPOPT (e.g. GPORCA) version:
 select gp_opt_version();
 ```
 
+## Build GPDB with code generation enabled
+
+To build GPDB with code generation (codegen) enabled, you will need cmake 2.8 or higher
+and a recent version of llvm and clang (include headers and developer libraries). Codegen utils
+is currently developed against the LLVM 3.7.X release series. You can find more details about the codegen feature,
+including details about obtaining the prerequisites, building and testing GPDB with codegen in the [Codegen README](src/backend/codegen).
+
+In short, you can change the `configure` with additional option
+`--enable-codegen`, optionally giving the path to llvm and clang libraries on
+your system.
+```
+# Configure build environment to install at /usr/local/gpdb
+# Enable CODEGEN
+./configure --enable-codegen --prefix=/usr/local/gpdb --with-codegen-prefix="/path/to/llvm;/path/to/clang
+```
+
 ## Regression tests
 
 * The default regression tests

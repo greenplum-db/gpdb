@@ -626,6 +626,34 @@ AC_MSG_RESULT([checking whether to build with ORCA... $enable_orca])
 AC_SUBST(enable_orca)
 
 #
+# Enable code generation
+#
+PGAC_ARG_BOOL(enable, codegen, no, [  --enable-codegen       enable code generation],
+              [AC_DEFINE([USE_CODEGEN], 1,
+                         [Define to 1 to enable code generation. (--enable-codegen)])])
+AC_MSG_RESULT([checking whether to build with codegen... $enable_codegen])
+AC_SUBST(enable_codegen)
+
+
+AS_IF([test "$enable_codegen" = yes],
+[ # then
+   AC_CHECK_PROG(CMAKE, cmake, yes)
+   AS_IF([test "${CMAKE}" != yes], [AC_MSG_ERROR(['cmake is required for build GPDB with codegen enabled'])])
+
+   PGAC_ARG_OPTARG(with, codegen-prefix, [  --with-codegen-prefix   semicolon saperated prefix search path for LLVM and Clang], 
+                   [codegen_prefix=], [codegen_prefix=$withval])
+
+   cd src/backend/codegen
+   AS_IF([test "${prefix}" = NONE], [prefix=${ac_default_prefix}])
+   AS_IF([test "${enable_debug}" = yes], [build_type="Debug"], [build_type="Release"])
+
+   CMAKE_CMD="cmake -DCMAKE_PREFIX_PATH="${codegen_prefix}" -DCMAKE_INSTALL_PREFIX=${prefix} -DCMAKE_BUILD_TYPE=${build_type} ."
+   echo "Executing cmake command : ${CMAKE_CMD}"
+   AS_IF([${CMAKE_CMD}], [], [AC_MSG_ERROR(['error while configuring codegen.'])])
+   cd -
+]) # fi
+
+#
 # --enable-snmp enables snmp mib and trap/inform
 #
 PGAC_ARG_BOOL(enable, snmp, no, [  --enable-snmp           enable snmp for MIB and alerts via TRAP/INFORM],
