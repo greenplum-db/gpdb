@@ -158,7 +158,7 @@ SET default_tablespace = 'regression_ts_b3';
 CREATE TABLE fsts_test_part5 (id int, name text, rank int, year date, gender char(1)) TABLESPACE regression_ts_a3 DISTRIBUTED BY (id)
   PARTITION BY LIST (gender) SUBPARTITION BY RANGE (year) SUBPARTITION TEMPLATE (start (date '2001-01-01')) (values ('M'), values ('F'));
 
--- Create an index for the creation of block dir
+-- Create an index
 CREATE INDEX fsts_test_part5_index ON fsts_test_part5(id);
 
 -- Add default partition
@@ -220,7 +220,7 @@ TRUNCATE fsts_test_part5;
 -- Select from the table
 SELECT * FROM fsts_test_part5;
 
--- Alter Tbale add column
+-- Alter table add column
 ALTER TABLE fsts_test_part5 ADD COLUMN new_int_column int;
 
 -- Vacuum analyze the table

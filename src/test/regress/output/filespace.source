@@ -1171,7 +1171,7 @@ NOTICE:  CREATE TABLE will create partition "fsts_test_part5_1_prt_1" for table 
 NOTICE:  CREATE TABLE will create partition "fsts_test_part5_1_prt_2" for table "fsts_test_part5"
 NOTICE:  CREATE TABLE will create partition "fsts_test_part5_1_prt_1_2_prt_1" for table "fsts_test_part5_1_prt_1"
 NOTICE:  CREATE TABLE will create partition "fsts_test_part5_1_prt_2_2_prt_1" for table "fsts_test_part5_1_prt_2"
--- Create an index for the creation of block dir
+-- Create an index
 CREATE INDEX fsts_test_part5_index ON fsts_test_part5(id);
 NOTICE:  building index for child partition "fsts_test_part5_1_prt_1"
 NOTICE:  building index for child partition "fsts_test_part5_1_prt_2"
@@ -1251,7 +1251,7 @@ SELECT * FROM fsts_test_part5;
 ----+------+------+------+--------
 (0 rows)
 
--- Alter Tbale add column
+-- Alter table add column
 ALTER TABLE fsts_test_part5 ADD COLUMN new_int_column int;
 -- Vacuum analyze the table
 VACUUM ANALYZE fsts_test_part5;
