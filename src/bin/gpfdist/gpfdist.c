@@ -3472,8 +3472,9 @@ int gpfdist_init(int argc, const char* const argv[])
 	if (opt.ssl)
 		printf("Serving HTTPS on port %d, directory %s\n", opt.p, opt.d);
 	else
-#else
 		printf("Serving HTTP on port %d, directory %s\n", opt.p, opt.d);
+#else
+	printf("Serving HTTP on port %d, directory %s\n", opt.p, opt.d);
 #endif
 
 	fflush(stdout);
