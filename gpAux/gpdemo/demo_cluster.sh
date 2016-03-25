@@ -347,17 +347,17 @@ fi
 if [ -f "${CLUSTER_CONFIG_POSTGRES_ADDONS}" ]; then
     echo "=========================================================================================="
     echo "executing:"
-    echo "  $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} \"$@\""
+    echo "  $GPPATH/gpinitsystem -D -a -c $CLUSTER_CONFIG -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} \"$@\""
     echo "=========================================================================================="
     echo ""
-    $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} "$@"
+    $GPPATH/gpinitsystem -D -a -c $CLUSTER_CONFIG -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} "$@"
 else
     echo "=========================================================================================="
     echo "executing:"
-    echo "  $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG \"$@\""
+    echo "  $GPPATH/gpinitsystem -D -a -c $CLUSTER_CONFIG \"$@\""
     echo "=========================================================================================="
     echo ""
-    $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG "$@"
+    $GPPATH/gpinitsystem -D -a -c $CLUSTER_CONFIG "$@"
 fi
 RETURN=$?
 

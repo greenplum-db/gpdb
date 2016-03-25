@@ -22,7 +22,9 @@ os:
   - osx
 
 language: c
-sudo: false
+cache: ccache
+sudo: required
+dist: trusty
 
 git:
   submodules: false
@@ -42,12 +44,14 @@ python:
 ## ----------------------------------------------------------------------
 
 install:
+  - PYTHON_CONFIGURE_OPTS="--enable-unicode=ucs2 --enable-shared --enable-ipv6 --enable-loadable-sqlite-extensions --with-computed-gotos"
   - pip install --user --upgrade pip
   - pip install --user --pre psi
   - pip install --user lockfile
   - pip install --user paramiko
   - pip install --user setuptools
   - pip install --user epydoc
+  - python ${TRAVIS_BUILD_DIR}/run.py
 
 ## ----------------------------------------------------------------------
 ## Build APR & APR-UTIL used to build gpfdist
@@ -59,8 +63,10 @@ env:
     APR_TAR=${APR}.tar.gz
     APR_UTIL_TAR=${APR_UTIL}.tar.gz
 
+
 before_script:
-  - export PATH=${TRAVIS_BUILD_DIR}/tools/bin:$PATH
+  - python ${TRAVIS_BUILD_DIR}/run.py
+  - export PATH=$PATH:${TRAVIS_BUILD_DIR}/tools/bin
   - cd ${TRAVIS_BUILD_DIR}
   - wget http://ftp.jaist.ac.jp/pub/apache/apr/${APR_TAR}
   - wget http://ftp.jaist.ac.jp/pub/apache/apr/${APR_UTIL_TAR}
@@ -82,11 +88,12 @@ before_script:
 ## ----------------------------------------------------------------------
 
 script:
+  - python ${TRAVIS_BUILD_DIR}/run.py
   - cd ${TRAVIS_BUILD_DIR}
-  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config
-
-  - make
+  - ./configure --with-openssl --with-ldap --with-libcurl --with-python --with-perl --with-libxml --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config
+  - make -j4 -s
   - make install
+## verify install
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
   - cd ${TRAVIS_BUILD_DIR}/gpAux/extensions/orafce
   - make install USE_PGXS=1
@@ -100,15 +107,94 @@ script:
   - gpssh --version
   - gpmapreduce --version
   - gpfdist --version
+## check postgres dependency and env
+  - python ${TRAVIS_BUILD_DIR}/run.py
+  - env
+  - ldd -v ${TRAVIS_BUILD_DIR}/gpsql/bin/postgres
+  - find ${TRAVIS_BUILD_DIR} /opt/python/2.7.10 /home/travis/.local/lib/python2.7 -name "*so" | while read sofile ; do echo $sofile; readelf -s $sofile | grep PyUnicodeUCS ; done;
+## make GPDB cluster
+  - python ${TRAVIS_BUILD_DIR}/run.py
+  - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
+  - python ${TRAVIS_BUILD_DIR}/run.py
+  - cd ${TRAVIS_BUILD_DIR}/gpAux/gpdemo
+  - make
+  - cat ~/gpAdminLogs/*.log
+  - cat ${TRAVIS_BUILD_DIR}/gpAux/gpdemo/datadirs/qddir/demoDataDir-1/pg_log/*
+  - source gpdemo-env.sh
+  - createdb
+## run ICG test
+  - cd ${TRAVIS_BUILD_DIR}/src/test/regress
+  - ./pg_regress --init-file=./init_file --schedule=parallel_schedule --schedule=greenplum_schedule
+  - cat ${TRAVIS_BUILD_DIR}/src/test/regress/regression.diffs
 
 ## ----------------------------------------------------------------------
 ## Before install 
 ## install libevent 
 ## ----------------------------------------------------------------------
 before_install:
+  - dpkg -l
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
-       brew install libevent          ; 
+       brew install libevent; 
+       sudo sysctl -w kern.sysv.shmmax=2147483648;
+       sudo sysctl -w kern.sysv.shmmin=1;
+       sudo sysctl -w kern.sysv.shmmni=64;
+       sudo sysctl -w kern.sysv.shmseg=16;
+       sudo sysctl -w kern.sysv.shmall=524288;
+       sudo sysctl -w kern.maxfiles=65535;
+       sudo sysctl -w kern.maxfilesperproc=65535;
+       sudo sysctl -w net.inet.tcp.msl=60;
+    else
+       sudo apt-get -qq update;
+       sudo apt-get install -y libperl-dev;
+       sudo apt-get install -y ed;
+       sudo apt-get install -y libreadline-dev;
+       sudo apt-get install -y bison flex;
+       sudo apt-get install -y zlib1g-dev;
+       sudo apt-get install -y openssl libssl-dev;
+       sudo apt-get install -y libpam-dev;
+       sudo apt-get install -y libcurl4-dev;
+       sudo apt-get install -y libbz2-dev;
+       sudo apt-get install -y python-dev;
+       sudo sysctl -w kernel.shmmax=500000000;
+       sudo sysctl -w kernel.shmmni=4096;
+       sudo sysctl -w kernel.shmall=4000000000;
+       sudo sysctl -w kernel.sysrq=1;
+       sudo sysctl -w kernel.core_uses_pid=1;
+       sudo sysctl -w kernel.sysrq=1;
+       sudo sysctl -w kernel.core_uses_pid=1;
+       sudo sysctl -w kernel.msgmnb=65536;
+       sudo sysctl -w kernel.msgmax=65536;
+       sudo sysctl -w kernel.msgmni=2048;
+       sudo sysctl -w net.ipv4.tcp_syncookies=1;
+       sudo sysctl -w net.ipv4.ip_forward=0;
+       sudo sysctl -w net.ipv4.conf.default.accept_source_route=0;
+       sudo sysctl -w net.ipv4.tcp_tw_recycle=1;
+       sudo sysctl -w net.ipv4.tcp_max_syn_backlog=4096;
+       sudo sysctl -w net.ipv4.conf.all.arp_filter=1;
+       sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1;
+       sudo sysctl -w net.core.netdev_max_backlog=10000;
+       sudo sysctl -w net.core.rmem_max=2097152;
+       sudo sysctl -w net.core.wmem_max=2097152;
+       sudo sysctl -w vm.overcommit_memory=2;
+       cat /etc/security/limits.conf;
+       sudo sh -c "echo 'root hard noproc 131072' >> /etc/security/limits.conf";
+       sudo sh -c "echo 'root soft noproc 131072' >> /etc/security/limits.conf";
+       sudo sh -c "echo 'travis hard noproc 131072' >> /etc/security/limits.conf";
+       sudo sh -c "echo 'travis soft noproc 131072' >> /etc/security/limits.conf";
+       cat /etc/security/limits.conf;
+       echo "=== hard limits ===";
+       sudo sh -c "ulimit -Ha";
+       echo "=== soft limits ===";
+       sudo sh -c "ulimit -Sa";
     fi
+  - dpkg -l
+  - # Avoid typing password during 'make' under gpAux/gpdemo
+  - cd ~
+  - ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ''
+  - cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+  - chmod 600  ~/.ssh/authorized_keys
+  - env
+
 
 ## ----------------------------------------------------------------------
 ## Notification

@@ -73,7 +73,7 @@ test: filespace trig auth_constraint role rle portals_updatable plpgsql_cache ti
 # direct dispatch tests
 test: bfv_dd bfv_dd_multicolumn bfv_dd_types
 
-test: catalog bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition
+test: catalog bfv_olap bfv_aggregate 
  
 test: aggregate_with_groupingsets gp_optimizer 
 
