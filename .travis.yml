@@ -51,6 +51,7 @@ install:
   - pip install --user paramiko
   - pip install --user setuptools
   - pip install --user epydoc
+  - python run.py
 
 ## ----------------------------------------------------------------------
 ## Build APR & APR-UTIL used to build gpfdist
@@ -64,6 +65,7 @@ env:
 
 
 before_script:
+  - python run.py
   - export PATH=$PATH:${TRAVIS_BUILD_DIR}/tools/bin
   - cd ${TRAVIS_BUILD_DIR}
   - wget http://ftp.jaist.ac.jp/pub/apache/apr/${APR_TAR}
@@ -86,6 +88,7 @@ before_script:
 ## ----------------------------------------------------------------------
 
 script:
+  - python run.py
   - cd ${TRAVIS_BUILD_DIR}
   - ./configure --with-openssl --with-ldap --with-libcurl --with-python --with-perl --with-libxml --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config
   - make -j4 -s
@@ -149,8 +152,6 @@ before_install:
        sudo apt-get install -y libcurl4-dev;
        sudo apt-get install -y libbz2-dev;
        sudo apt-get install -y python-dev;
-       sudo apt-get install -y python-crypto;
-       sudo apt-get install -y python-paramiko;
        sudo sysctl -w kernel.shmmax=500000000;
        sudo sysctl -w kernel.shmmni=4096;
        sudo sysctl -w kernel.shmall=4000000000;
