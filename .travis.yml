@@ -48,7 +48,7 @@ install:
   - pip install --user --upgrade pip
   - pip install --user --pre psi
   - pip install --user lockfile
-  #- pip install --user paramiko
+  - pip install --user paramiko
   - pip install --user setuptools
   - pip install --user epydoc
 

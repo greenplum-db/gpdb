@@ -31,7 +31,7 @@ PYLIB_DIR=$(SRC)/ext
 core: pygresql subprocess32
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
-all: core lockfile paramiko pycrypto stream pychecker psi unittest2
+all: core lockfile pycrypto stream pychecker psi unittest2
 else
 all: core stream
 endif
@@ -74,11 +74,11 @@ pygresql:
 #
 PARAMIKO_VERSION=1.7.6-9
 PARAMIKO_DIR=paramiko-$(PARAMIKO_VERSION)
-paramiko:
-	@echo "--- paramiko"
-	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PARAMIKO_DIR).tar.gz
-	cd $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/ && python setup.py build
-	cp -r $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/build/lib/paramiko  $(PYLIB_DIR)/
+# paramiko:
+# 	@echo "--- paramiko"
+# 	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PARAMIKO_DIR).tar.gz
+# 	cd $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/ && python setup.py build
+# 	cp -r $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/build/lib/paramiko  $(PYLIB_DIR)/
 
 #
 # LOCKFILE
