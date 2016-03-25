@@ -108,6 +108,7 @@ script:
   - gpmapreduce --version
   - gpfdist --version
 ## check postgres dependency and env
+  - python ${TRAVIS_BUILD_DIR}/run.py
   - env
   - ldd -v ${TRAVIS_BUILD_DIR}/gpsql/bin/postgres
   - find ${TRAVIS_BUILD_DIR} /opt/python/2.7.10 /home/travis/.local/lib/python2.7 -name "*so" | while read sofile ; do echo $sofile; readelf -s $sofile | grep PyUnicodeUCS ; done;

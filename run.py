@@ -9,6 +9,11 @@ try:
 	import paramiko
 except:
 	print "failed to import paramiko"
+try:
+	import _posixsubprocess
+	print _posixsubprocess.__file__
+except:
+	print "failed to import posixsubprocess"
 
 try:
 	import Crypto
@@ -28,5 +33,11 @@ try:
 	print Crypto.__file__
 except:
 	print "failed to import Crypto"
+
+try:
+	import _posixsubprocess
+	print _posixsubprocess.__file__
+except:
+	print "failed to import posixsubprocess"
 
 print "=============== DONE ========================="
