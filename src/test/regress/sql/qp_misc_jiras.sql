@@ -2510,6 +2510,9 @@ drop index qp_misc_jiras.bmap2_index;
 drop table qp_misc_jiras.badbitmapindex;
 drop table qp_misc_jiras.bmap2;
 
+-- temporally ignore and will be sovled by
+--   https://www.pivotaltracker.com/story/show/116312671
+-- start_ignore
 CREATE TABLE qp_misc_jiras.ir_voice_sms_and_data (
     imsi_number character varying(35),
     ir_call_country_name character varying(35),
@@ -2535,6 +2538,7 @@ case when ir_call_type_group_code in ('H', 'VH', 'PCB') then 'Thailland'
 else 'Unidentify' end
 ;
 DROP TABLE qp_misc_jiras.ir_voice_sms_and_data;
+-- end_ignore 
 -- start_ignore
 drop table if exists qp_misc_jiras.x cascade;
 drop table if exists qp_misc_jiras.r cascade;

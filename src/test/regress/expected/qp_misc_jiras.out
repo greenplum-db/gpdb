@@ -4003,6 +4003,9 @@ drop index qp_misc_jiras.badbitmapindex1;
 drop index qp_misc_jiras.bmap2_index;
 drop table qp_misc_jiras.badbitmapindex;
 drop table qp_misc_jiras.bmap2;
+-- temporally ignore and will be sovled by
+--   https://www.pivotaltracker.com/story/show/116312671
+-- start_ignore
 CREATE TABLE qp_misc_jiras.ir_voice_sms_and_data (
     imsi_number character varying(35),
     ir_call_country_name character varying(35),
@@ -4040,6 +4043,7 @@ else 'Unidentify' end
 (10 rows)
 
 DROP TABLE qp_misc_jiras.ir_voice_sms_and_data;
+-- end_ignore
 -- start_ignore
 drop table if exists qp_misc_jiras.x cascade;
 NOTICE:  table "x" does not exist, skipping
