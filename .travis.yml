@@ -44,7 +44,7 @@ python:
 ## ----------------------------------------------------------------------
 
 install:
-  - PYTHON_CONFIGURE_OPTS="--enable-unicode=ucs4 --with-wide-unicode --enable-shared --enable-ipv6 --enable-loadable-sqlite-extensions --with-computed-gotos"
+  - PYTHON_CONFIGURE_OPTS="--enable-unicode=ucs2 --enable-shared --enable-ipv6 --enable-loadable-sqlite-extensions --with-computed-gotos"
   - pip install --user --upgrade pip
   - pip install --user --pre psi
   - pip install --user lockfile
@@ -126,6 +126,7 @@ script:
 ## install libevent 
 ## ----------------------------------------------------------------------
 before_install:
+  - dpkg -l
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
        brew install libevent; 
        sudo sysctl -w kern.sysv.shmmax=2147483648;
@@ -182,7 +183,7 @@ before_install:
        echo "=== soft limits ===";
        sudo sh -c "ulimit -Sa";
     fi
-  - find ~/.local -type d
+  - dpkg -l
   - # Avoid typing password during 'make' under gpAux/gpdemo
   - cd ~
   - ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ''
