@@ -316,7 +316,7 @@ extern char *PQhost(const PGconn *conn);
 extern char *PQport(const PGconn *conn);
 extern char *PQtty(const PGconn *conn);
 extern char *PQoptions(const PGconn *conn);
-extern int	PQgetQEdetail(PGconn *conn, bool alwaysFetch); /* GPDB -- retrieve QE-backend details. */
+extern int	PQgetQEdetail(PGconn *conn); /* GPDB -- retrieve QE-backend details. */
 extern ConnStatusType PQstatus(const PGconn *conn);
 extern PGTransactionStatusType PQtransactionStatus(const PGconn *conn);
 extern const char *PQparameterStatus(const PGconn *conn,

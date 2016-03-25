@@ -4368,41 +4368,12 @@ PQoptions(const PGconn *conn)
 }
 
 /* GPDB function to retrieve QE-backend details (motion listener) */
-int	PQgetQEdetail(PGconn *conn, bool alwaysFetch)
+int
+PQgetQEdetail(PGconn *conn)
 {
 	if (!conn || (PQstatus(conn) == CONNECTION_BAD))
 		return -1;
-	
-	/* return it immediately if we've already fetched it. */
-	if (!alwaysFetch && conn->motion_listener != 0)
-		return conn->motion_listener;
 
-	/* reset to 0 */
-	conn->motion_listener = 0;
-	
-	/* send a request to fetch the motion listener port. */
-	pqPacketSend(conn, 'W', NULL, 0 );
-
-	conn->asyncStatus = PGASYNC_BUSY;	
-	
-	/* wait for a response. */
-	if (PG_PROTOCOL_MAJOR(conn->pversion) >= 3)
-		pqParseInput3(conn);
-	else
-		return -1;
-	
-	while (conn->motion_listener == 0)
-	{
-		pqWait(TRUE, FALSE, conn);
-		if (pqReadData(conn) < 0)
-			return -1;
-		
-		if (PG_PROTOCOL_MAJOR(conn->pversion) >= 3)
-			pqParseInput3(conn);
-		else
-			return -1;
-	}
-	
 	return conn->motion_listener;
 }
 
