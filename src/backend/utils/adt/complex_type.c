@@ -488,6 +488,90 @@ complex_hash(PG_FUNCTION_ARGS)
 	return hash_any((unsigned char *) &key, sizeof(key));
 }
 
+static int
+complex_abs_cmp_internal(Complex *a, Complex *b)
+{
+	double a_x = re(a);
+	double a_y = im(a);
+	double b_x = re(b);
+	double b_y = im(b);
+	
+	
+	/* We can only define a partial order when comparing complex numbers so
+	 * we compare real parts first and if they are equal, we compare imaginary
+	 * parts
+	 */
+	if (a_x > b_x)
+	{
+		return 1;
+	}
+	else if (a_x == b_x)
+	{
+		if (a_y > b_y)
+		{
+			return 1;
+		}
+		else if (a_y < b_y)
+		{
+			return -1;
+		}
+	}
+	else if (a_x < b_x)
+	{
+		return -1;
+	}
+	
+	return 0;
+}
+	
+/*
+ *		complex_lt				- checks whether arg1 is less than arg2
+ */
+Datum
+complex_lt(PG_FUNCTION_ARGS)
+{
+	Complex    *a = PG_GETARG_COMPLEX_P(0);
+	Complex    *b = PG_GETARG_COMPLEX_P(1);
+
+	PG_RETURN_BOOL(complex_abs_cmp_internal(a, b) < 0);
+}
+
+/*
+ *		complex_gt				- checks whether arg1 is greater than arg2
+ */
+Datum
+complex_gt(PG_FUNCTION_ARGS)
+{
+	Complex    *a = PG_GETARG_COMPLEX_P(0);
+	Complex    *b = PG_GETARG_COMPLEX_P(1);
+
+	PG_RETURN_BOOL(complex_abs_cmp_internal(a, b) > 0);
+}
+
+/*
+ *		complex_lte				- checks whether arg1 is less than or equal to arg2
+ */
+Datum
+complex_lte(PG_FUNCTION_ARGS)
+{
+	Complex    *a = PG_GETARG_COMPLEX_P(0);
+	Complex    *b = PG_GETARG_COMPLEX_P(1);
+
+	PG_RETURN_BOOL(complex_abs_cmp_internal(a, b) <= 0);
+}
+
+/*
+ *		complex_gte				- checks whether arg1 is greater than or equal to arg2
+ */
+Datum
+complex_gte(PG_FUNCTION_ARGS)
+{
+	Complex    *a = PG_GETARG_COMPLEX_P(0);
+	Complex    *b = PG_GETARG_COMPLEX_P(1);
+
+	PG_RETURN_BOOL(complex_abs_cmp_internal(a, b) >= 0);
+}
+
 /*
  *		complex_eq				- checks whether arg1 equals arg2
  */
@@ -496,10 +580,8 @@ complex_eq(PG_FUNCTION_ARGS)
 {
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *b = PG_GETARG_COMPLEX_P(1);
-	bool		re_eq = (isnan(re(a)) && isnan(re(a))) || (re(a) == re(b));
-	bool		im_eq = (isnan(im(a)) && isnan(im(b))) || (im(b) == im(a));
 
-	PG_RETURN_BOOL(re_eq && im_eq);
+	PG_RETURN_BOOL(complex_abs_cmp_internal(a, b) == 0);
 }
 
 /*
@@ -511,10 +593,7 @@ complex_ne(PG_FUNCTION_ARGS)
 	Complex    *a = PG_GETARG_COMPLEX_P(0);
 	Complex    *b = PG_GETARG_COMPLEX_P(1);
 
-	bool		re_eq = (isnan(re(a)) && isnan(re(a))) || (re(a) == re(b));
-	bool		im_eq = (isnan(im(a)) && isnan(im(b))) || (im(b) == im(a));
-
-	PG_RETURN_BOOL(!re_eq || !im_eq);
+	PG_RETURN_BOOL(complex_abs_cmp_internal(a, b) != 0);
 }
 
 /*
