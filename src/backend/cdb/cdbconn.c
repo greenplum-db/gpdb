@@ -381,6 +381,7 @@ cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
 
 	Assert (nkeywords < MAX_KEYWORDS);
 
+		Assert (!(PQExpBufferDataBroken(buffer)));
     /*
      * Call libpq to connect
      */
@@ -442,7 +443,7 @@ cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
 						 buffer.data);
     }
 
-    free(buffer.data);
+    termPQExpBuffer(&buffer);
     return segdbDesc->conn != NULL;
 }                               /* cdbconn_doConnect */
 
@@ -496,5 +497,3 @@ cdbconn_setSliceIndex(SegmentDatabaseDescriptor    *segdbDesc,
     truncatePQExpBuffer(scratchbuf, scratchoff);
     return true;
 }                               /* cdbconn_setSliceIndex */
-
-
