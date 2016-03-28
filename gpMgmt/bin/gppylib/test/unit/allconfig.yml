@@ -17,6 +17,7 @@ GPLOAD:
         - msg: text
     - FORMAT: csv
     - QUOTE: '"'
+    - FULLY_QUALIFIED_DOMAIN_NAME: true
   OUTPUT:
     - TABLE: test
     - MODE: merge
@@ -30,4 +31,3 @@ GPLOAD:
 
   PRELOAD:
     - REUSE_TABLES: true 
-    - FULLY_QUALIFIED_DOMAIN_NAME: true

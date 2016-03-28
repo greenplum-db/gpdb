@@ -98,7 +98,7 @@ class GpLoadTestCase(unittest.TestCase):
         self.assertEqual(1981, gploader.getconfig('gpload:input:source:port', int))
         self.assertEqual(True, gploader.getconfig('gpload:preload:reuse_tables', bool))
         self.assertEqual(False, gploader.getconfig('gpload:input:log_errors', bool, False))
-        self.assertEqual(True, gploader.getconfig('gpload:preload:fully_qualified_domain_name', bool))
+        self.assertEqual(True, gploader.getconfig('gpload:input:fully_qualified_domain_name', bool))
 
 
 #------------------------------- Mainline --------------------------------
