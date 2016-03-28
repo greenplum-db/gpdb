@@ -121,6 +121,7 @@ valid_tokens = {
     "preload": {'parse_children': True, 'parent': 'gpload'},
     "truncate": {'parse_children': False, 'parent': 'preload'},
     "reuse_tables": {'parse_children': False, 'parent': 'preload'},
+    "fully_qualified_domain_name": {'parse_children': False, 'parent': 'preload'},
     "sql": {'parse_children': True, 'parent': 'gpload'},
     "before": {'parse_children': False, 'parent': 'sql'},
     "after": {'parse_children': False, 'parent': 'sql'},

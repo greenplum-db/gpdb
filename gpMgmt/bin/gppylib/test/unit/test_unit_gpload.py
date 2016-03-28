@@ -43,12 +43,12 @@ class GpLoadTestCase(unittest.TestCase):
         self.assertEqual(self.commit, expected_commit_value)
 
     def test_reuse_exttbl_with_errtbl_and_limit(self):
-	gploader = gpload(['-f', os.path.join(os.path.dirname(__file__), 'gpload_merge.yml')])
+        gploader = gpload(['-f', os.path.join(os.path.dirname(__file__), 'gpload_merge.yml')])
         gploader.read_config()
-	gploader.locations = [ 'gpfdist://localhost:8080/test' ]
+        gploader.locations = [ 'gpfdist://localhost:8080/test' ]
         rejectLimit = '9999'
 
-	sql = gploader.get_reuse_exttable_query('csv', 'header', None, {}, None, False)
+        sql = gploader.get_reuse_exttable_query('csv', 'header', None, {}, None, False)
         self.assertTrue('pgext.fmterrtbl IS NULL' in sql)
         self.assertTrue('pgext.rejectlimit IS NULL' in sql)
 
@@ -91,6 +91,14 @@ class GpLoadTestCase(unittest.TestCase):
          self.help_test_with_config(['--no_auto_trans', '-f', os.path.join(os.path.dirname(__file__), 'gpload_update.yml')],
                               False,
                               False)
+
+    def test_case_configvalue(self):
+        gploader = gpload(['-f', os.path.join(os.path.dirname(__file__), 'allconfig.yml')])
+        self.assertEqual(u'test', gploader.getconfig('gpload:output:table'))
+        self.assertEqual(1981, gploader.getconfig('gpload:input:source:port', int))
+        self.assertEqual(True, gploader.getconfig('gpload:preload:reuse_tables', bool))
+        self.assertEqual(False, gploader.getconfig('gpload:input:log_errors', bool, False))
+        self.assertEqual(True, gploader.getconfig('gpload:preload:fully_qualified_domain_name', bool))
 
 
 #------------------------------- Mainline --------------------------------
