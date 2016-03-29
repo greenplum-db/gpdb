@@ -8,7 +8,7 @@
 #define BFZ_MODE_FREED		2
 #define BFZ_MODE_SCAN		3
 
-#define BFZ_BUFFER_SIZE		(1<<12)
+#define BFZ_BUFFER_SIZE		(1<<14)
 
 struct bfz;
 

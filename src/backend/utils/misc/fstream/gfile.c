@@ -39,7 +39,7 @@
 #define S_IXUSR		 S_IEXEC
 #endif 
 
-#define COMPRESSION_BUFFER_SIZE		4096
+#define COMPRESSION_BUFFER_SIZE		(1<<14)
 
 
 static int
