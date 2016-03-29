@@ -161,9 +161,9 @@ class Global():
 
         # the following variables used for reporting purposes
         self.elapsedTime = 0
-        self.totalTestRun = 0
-        self.testStatus = True
-        self.failedTest = []
+        self.totalCheckRun = 0
+        self.checkStatus = True
+        self.failedChecks = []
 
 GV = Global()
 
@@ -239,11 +239,11 @@ def parseCommandLine():
     logger.debug('Set default hostname to %s' % GV.opt['-h'])
     
     if GV.opt['-R']:
-        logger.debug('Run this test: %s' % GV.opt['-R'])
+        logger.debug('Run this check: %s' % GV.opt['-R'])
 
     if GV.opt['-C']:
         GV.opt['-C'] = GV.opt['-C'].lower()
-        logger.debug('Run cross consistency test for table: %s' % GV.opt['-C'])
+        logger.debug('Run cross consistency check for table: %s' % GV.opt['-C'])
 
     if (len(args) != 0 and len(args) != 1):
         usage('Too many arguments')
@@ -453,7 +453,7 @@ def checkDistribPolicy():
         if not err:
             logger.info('[OK] randomly distributed tables')
         else:
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_REMOVE)
             logger.info('[FAIL] randomly distributed tables')
             logger.error('pg_constraint has %d issue(s)' % len(err))
@@ -496,7 +496,7 @@ def checkDistribPolicy():
         if not err:
             logger.info('[OK] unique constraints')
         else:
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_REMOVE)
             logger.info('[FAIL] unique constraints')
             logger.error('pg_constraint has %d issue(s)' % len(err))
@@ -546,7 +546,7 @@ def checkPartitionIntegrity():
         if not err:
             logger.info('[OK] pg_partition branch integrity')
         else:
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_NOREPAIR)
             logger.info('[FAIL] pg_partition branch integrity')
             logger.error('pg_partition has %d issue(s)' % len(err))
@@ -578,7 +578,7 @@ def checkPartitionIntegrity():
         if not err:
             logger.info('[OK] partition with oids check')
         else:
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_NOREPAIR)
             logger.info('[FAIL] partition with oids check')
             logger.error('partition with oids check found %d issue(s)' % len(err))
@@ -672,7 +672,7 @@ def checkPartitionIntegrity():
         if not err:
             logger.info('[OK] partition distribution policy check')
         else:
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_REMOVE)
             logger.info('[FAIL] partition distribution policy check')
             logger.error('partition distribution policy check found %d issue(s)' % len(err))
@@ -1674,12 +1674,12 @@ def checkPartitionRegularity():
     
     if not okayToRun:
         logger.warn('unable to run pg_partition/pg_constraint regularity checks')
-        logger.warn('prerequisite tests failed or not run')
+        logger.warn('prerequisite checks failed or not run')
         return
     
     db = connect()
 
-    testname = 'user-defined constraint regularity on partitioned tables'
+    checkname = 'user-defined constraint regularity on partitioned tables'
     
     qry = partitionRegularityChecks['irreg_user_constraint']    
     err = []
@@ -1691,23 +1691,23 @@ def checkPartitionRegularity():
             err.append( (row['tableconname'], row['tableid'], row['numactual'], row['numexpected']) )
 
         if not err:
-            logger.info('[OK]  %s' % testname)
+            logger.info('[OK]  %s' % checkname)
         else:
             irregular = True
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_NOREPAIR)
-            logger.info('[FAIL]  %s' % testname)
-            logger.error(' %s test has %d issue(s)' % (testname, len(err)) )
+            logger.info('[FAIL]  %s' % checkname)
+            logger.error(' %s check has %d issue(s)' % (checkname, len(err)) )
             efmt = '  Constraint "%s" of partitioned table "%s" occurs %d times, %d expected.'
             for e in err: 
                 logger.error(efmt % e)
 
     except Exception, e:
         setError(ERROR_NOREPAIR)
-        myprint('[ERROR] executing test: %s' % testname)
+        myprint('[ERROR] executing test: %s' % checkname)
         myprint('  Execution error: ' + str(e))
 
-    testname = 'system-defined partition constraint regularity on partitioned tables'
+    checkname = 'system-defined partition constraint regularity on partitioned tables'
     
     # Determine maximum number of partitioning levels in this database
     try:
@@ -1724,31 +1724,29 @@ def checkPartitionRegularity():
                 err.append( (row['partid'], row['tableid'], row['actual'], row['expected']) )
 
         if not err:
-            logger.info('[OK]  %s' % testname)
+            logger.info('[OK]  %s' % checkname)
         else:
             irregular = True
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_NOREPAIR)
-            logger.info('[FAIL]  %s' % testname)
-            logger.error(' %s test has %d issue(s)' % ( testname, len(err)) )
+            logger.info('[FAIL]  %s' % checkname)
+            logger.error(' %s check has %d issue(s)' % ( checkname, len(err)) )
             efmt = '  Part table "%s" of partitioned table "%s" has %d system-defined constraints, %d expected.'
             for e in err:
                 logger.error(efmt % e)
 
     except Exception, e:
         setError(ERROR_NOREPAIR)
-        myprint('[ERROR] executing test: %s' % testname)
+        myprint('[ERROR] executing test: %s' % checkname)
         myprint('  Execution error: ' + str(e))
 
-    testname = 'unenforced unique constraints on partitioned tables'
+    checkname = 'unenforced unique constraints on partitioned tables'
     
     if irregular:
-        logger.warn('skipping test %s due to constraint irregularities' % testname)
+        logger.warn('skipping check %s due to constraint irregularities' % checkname)
     elif GV.Remove:
-        logger.warn('skipping test %s due to required removals' % testname)
+        logger.warn('skipping check %s due to required removals' % checkname)
     else:
-        # logger.info('Checking %s ...' % testname)
-
         qry = partitionRegularityChecks['unenforced_constraint_info']
         err = []
         try:
@@ -1760,12 +1758,12 @@ def checkPartitionRegularity():
                 err.append(row)
    
             if not err:
-                logger.info('[OK]  %s' % testname)
+                logger.info('[OK]  %s' % checkname)
             else:
-                GV.testStatus = False
+                GV.checkStatus = False
                 setError(ERROR_REMOVE)
-                logger.info('[FAIL]  %s' % testname)
-                logger.error(' %s test has %d issue(s)' % ( testname, len(err) ) )
+                logger.info('[FAIL]  %s' % checkname)
+                logger.error(' %s check has %d issue(s)' % ( checkname, len(err) ) )
                 efmt = '  partitioned table "{tableid}" has unenforced {con_type_phrase} constraint: "{partid}"'
                 repair_fmt = partitionRegularityChecks['unenforced_constraint_repairs']
                 n = 0
@@ -1781,21 +1779,19 @@ def checkPartitionRegularity():
 
         except Exception, e:
             setError(ERROR_NOREPAIR)
-            myprint('[ERROR] executing test: %s' % testname)
+            myprint('[ERROR] executing test: %s' % checkname)
             myprint('  Execution error: ' + str(e))
           
 
-    testname = 'inconsistently named constraint in partitioned table'
+    checkname = 'inconsistently named constraint in partitioned table'
     
     if irregular:
-        logger.warn('skipping test %s due to constraint irregularities' % testname)
+        logger.warn('skipping check %s due to constraint irregularities' % checkname)
     elif GV.Remove:
-        logger.warn('skipping test %s due to required removals' % testname)
+        logger.warn('skipping check %s due to required removals' % checkname)
     elif GV.DemoteConstraint:
-        logger.warn('skipping test %s due to unenforced constraint removals' % testname)
+        logger.warn('skipping check %s due to unenforced constraint removals' % checkname)
     else:
-        # logger.info('Checking %s ...' % testname)
-        
         qry = partitionRegularityChecks['fix_ill_named_constraint']    
         err = []
         try:
@@ -1804,12 +1800,12 @@ def checkPartitionRegularity():
                 err.append( row ) 
     
             if not err:
-                logger.info('[OK]  %s' % testname)
+                logger.info('[OK]  %s' % checkname)
             else:
-                GV.testStatus = False
+                GV.checkStatus = False
                 setError(ERROR_REMOVE)
-                logger.info('[FAIL]  %s' % testname)
-                logger.error(' %s test has %d issue(s)' % ( testname, len(err) ) )
+                logger.info('[FAIL]  %s' % checkname)
+                logger.error(' %s check has %d issue(s)' % ( checkname, len(err) ) )
                 efmt = '  part table "%s" has constraint named "%s"; should be "%s"'
                 n = 0
                 for e in err:
@@ -1827,7 +1823,7 @@ def checkPartitionRegularity():
 
         except Exception, e:
             setError(ERROR_NOREPAIR)
-            myprint('[ERROR] executing test: %s' % testname)
+            myprint('[ERROR] executing test: %s' % checkname)
             myprint('  Execution error: ' + str(e))
 
     db.close()
@@ -1847,7 +1843,7 @@ def checkPGClass():
     if not err:
         logger.info('[OK] pg_class')
     else:
-        GV.testStatus = False
+        GV.checkStatus = False
         setError(ERROR_NOREPAIR)
         logger.info('[FAIL] pg_class')
         logger.error('pg_class has %d issue(s)' % len(err))
@@ -1888,7 +1884,7 @@ def checkPGNamespace():
         if curs.ntuples() == 0:
             logger.info('[OK] temporary schemas')
         else: 
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_REMOVE)
             logger.info('[FAIL] temporary schemas')
             logger.error('found %d unbound temporary schemas' % curs.ntuples())
@@ -1920,7 +1916,7 @@ def checkPGNamespace():
     if not err:
         logger.info('[OK] missing schema definitions')
     else:
-        GV.testStatus = False
+        GV.checkStatus = False
         setError(ERROR_NOREPAIR)
         logger.info('[FAIL] missing schema definitons')
         logger.error('found %d references to non-existent schemas' % len(err))
@@ -2078,7 +2074,7 @@ def checkDepend():
         if not err:
             logger.info('[OK] basic object dependencies')
         else:   
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_NOREPAIR)
             logger.info('[FAIL] basic object dependencies')
             logger.error('  found %d dependencies on dropped objects' % len(err))
@@ -2154,7 +2150,7 @@ def checkOwners():
         if len(rows) == 0:
             logger.info('[OK] table ownership')
         else: 
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_REMOVE)
             logger.info('[FAIL] table ownership')
             logger.error('found %d table ownership issue(s)' % len(rows))
@@ -2202,7 +2198,7 @@ def checkOwners():
         if len(rows) == 0:
             logger.info('[OK] type ownership')
         else:
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_NOREPAIR)
             logger.info('[FAIL] type ownership')
             logger.error('found %d type ownership issue(s)' % len(rows))
@@ -2222,7 +2218,7 @@ def checkOwners():
 
         # FIXME: add repair script
         # NOTE: types with typrelid probably will be repaired by the
-        # script generated by the table ownership test above.
+        # script generated by the table ownership check above.
 
     # TODO:
     # Check owners in pg_proc
@@ -2498,7 +2494,6 @@ def checkPersistentTables():
     if in_sync:
         queries.append([qname, qry])
 
-
     qname = "gp_persistent_relation_node   <=> pg_tablespace"
     qry = """
     SELECT  distinct p.tablespace_oid
@@ -2649,7 +2644,7 @@ def checkPersistentTables():
         if not err:
             logger.info('[OK] ' + qname)
         else:
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_NOREPAIR)
             logger.info('[FAIL] ' + qname)
             logger.error('%s found %d issue(s)' % (qname, len(err)))
@@ -2709,7 +2704,7 @@ def getCatObj(namestr):
 #-------------------------------------------------------------------------------
 def checkACL():
     logger.info('-----------------------------------')
-    logger.info('Performing cross database ACL tests')
+    logger.info('Performing cross database ACL checks')
 
     # looks up information in the catalog:
     tables = GV.catalog.getCatalogTables()
@@ -2774,7 +2769,7 @@ def checkTableACL(cat):
         if nrows == 0:
             logger.info('[OK] Cross consistency acl check for ' + catname)
         else:
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_NOREPAIR)
             GV.aclStatus = False
             logger.info('[FAIL] Cross consistency acl check for ' + catname)
@@ -2799,7 +2794,7 @@ def checkTableACL(cat):
 def checkForeignKey():
 
     logger.info('-----------------------------------')
-    logger.info('Performing foreign key tests')
+    logger.info('Performing foreign key checks')
 
     if GV.foreignKeyStatus == None:
         GV.foreignKeyStatus = True
@@ -2869,7 +2864,7 @@ def checkTableForeignKey(cat):
                 logger.info('[OK] Foreign key check for %s(%s) referencing %s(%s)'%
                             (catname, fkeystr, pkcatname, pkeystr))
             else:
-                GV.testStatus = False
+                GV.checkStatus = False
                 setError(ERROR_NOREPAIR)
                 GV.foreignKeyStatus = False
                 logger.info('[FAIL] Foreign key check for %s(%s) referencing %s(%s)'%
@@ -2937,7 +2932,7 @@ def fkQuery(catname, pkcatname, fkeystr, pkeystr, pkeys, cat1pkeys):
 #-------------------------------------------------------------------------------
 def checkMissingEntry():
     logger.info('-----------------------------------')
-    logger.info('Performing cross consistency tests: check for missing or extraneous entries')
+    logger.info('Performing cross consistency checks: check for missing or extraneous entries')
     
     if GV.missingEntryStatus == None:
         GV.missingEntryStatus = True
@@ -2996,7 +2991,7 @@ def checkTableMissingEntry(cat):
                 logger_with_level = logger.warning
                 log_level = logging.WARNING
             else:
-                GV.testStatus = False
+                GV.checkStatus = False
                 setError(ERROR_NOREPAIR)
                 GV.missingEntryStatus = False
                 logger_with_level = logger.error
@@ -3091,7 +3086,7 @@ def transformTextArrayCols(catname, columns, colnames, coltypes):
 #-------------------------------------------------------------------------------
 def checkInconsistentEntry():
     logger.info('-----------------------------------')
-    logger.info('Performing cross consistency test: check for inconsistent entries')
+    logger.info('Performing cross consistency check: check for inconsistent entries')
     
     if GV.inconsistentEntryStatus == None:
         GV.inconsistentEntryStatus = True
@@ -3151,7 +3146,7 @@ def checkTableInconsistentEntry(cat):
         if nrows == 0:
             logger.info('[OK] Checking for inconsistent entries for ' + catname)
         else:
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_NOREPAIR)
             GV.inconsistentEntryStatus = False
             logger.info('[FAIL] Checking for inconsistent entries for ' + catname)
@@ -3238,7 +3233,7 @@ def inconsistentEntryQuery(max_content, catname, pkey, columns, castcols):
 #-------------------------------------------------------------------------------
 def checkDuplicateEntry():
     logger.info('-----------------------------------')
-    logger.info('Performing test: checking for duplicate entries')
+    logger.info('Performing check: checking for duplicate entries')
 
     # looks up information in the catalog:
     tables = GV.catalog.getCatalogTables()
@@ -3289,7 +3284,7 @@ def checkTableDuplicateEntry(cat):
         if nrows == 0:
             logger.info('[OK] Checking for duplicate entries for ' + catname)
         else:
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_NOREPAIR)
             logger.error('[FAIL] Checking for duplicate entries for ' + catname)
             logger.error('  %s has %d issue(s)' % (catname, nrows))
@@ -3366,7 +3361,7 @@ def checkDuplicatePersistentEntry():
         if nrows == 0:
             logger.info('[OK] Checking for duplicate persistent entries for ' + catname)
         else:
-            GV.testStatus = False
+            GV.checkStatus = False
             setError(ERROR_NOREPAIR)
             logger.error('[FAIL] Checking for duplicate persistent entries for ' + catname)
             logger.error('  %s has %d issue(s)' % (catname, nrows))
@@ -3420,7 +3415,7 @@ def duplicatePersistentEntryQuery(catname, pkey, excol, state):
     return qry
 
 ############################################################################
-# Help populating repair part for all tested types
+# Help populating repair part for all checked types
 # All functions dependent on results stored in global variable GV
 ############################################################################
 name_repair = {
@@ -3457,13 +3452,13 @@ name_repair = {
 }
 
 ############################################################################
-# version = X.X : run this test as part of running all tests on gpdb <= X.X  
-#                 individually, any test should be ok run on any version
+# version = X.X : run this check as part of running all checks on gpdb <= X.X
+#                 individually, any check should be ok run on any version
 #  online = True: okie to run gpcheckcat online
-#   order = X   : the order test should be run when running all tests
+#   order = X   : the order check should be run when running all checks
 ############################################################################
 
-name_test = {
+all_checks = {
     "duplicate":
     {
          "description": "Check for duplicate entries",
@@ -3580,69 +3575,69 @@ name_test = {
 
 
 #-------------------------------------------------------------------------------
-def listAllTests():
+def listAllChecks():
 
     myprint('\nList of gpcheckcat tests:\n')
-    for name in sorted(name_test, key=lambda x: name_test[x]["order"]):
+    for name in sorted(all_checks, key=lambda x: all_checks[x]["order"]):
         myprint(" %24s: %s" % \
-              (name, name_test[name]["description"]))
+                (name, all_checks[name]["description"]))
     myprint('')
 
 
 #-------------------------------------------------------------------------------
-def runTestCatname(cat):
+def runCheckCatname(cat):
 
-    tests = {'missing_extraneous': lambda: checkTableMissingEntry(cat),
+    checks = {'missing_extraneous': lambda: checkTableMissingEntry(cat),
              'inconsistent': lambda: checkTableInconsistentEntry(cat),
              'foreign_key': lambda: checkTableForeignKey(cat),
              'duplicate': lambda: checkTableDuplicateEntry(cat),
              'acl': lambda: checkTableACL(cat)}
 
-    for test in sorted(tests):
-        myprint("Performing test '%s' for %s" % (test,cat.getTableName()))
+    for check in sorted(checks):
+        myprint("Performing test '%s' for %s" % (check,cat.getTableName()))
         stime = time.time()
-        tests[test]()
+        checks[check]()
         etime = time.time()
         elapsed = etime - stime
         GV.elapsedTime += elapsed
         elapsed = str(datetime.timedelta(seconds=elapsed))[:-4]
-        GV.totalTestRun += 1
-        myprint("Total runtime for test '%s': %s" % (test, elapsed))
+        GV.totalCheckRun += 1
+        myprint("Total runtime for test '%s': %s" % (check, elapsed))
 
 
 #-------------------------------------------------------------------------------
-def runOneTest(name):
+def runOneCheck(name):
 
-    if not name_test.has_key(name):
-        logger.info("'%s' is not a valid test" % (name))
+    if not all_checks.has_key(name):
+        logger.info("'%s' is not a valid check" % (name))
         raise LookupError
-    if GV.opt['-O'] and not name_test[name]["online"]:
-        logger.info("%s: Skip this test in online mode" % (name))
+    if GV.opt['-O'] and not all_checks[name]["online"]:
+        logger.info("%s: Skip this check in online mode" % (name))
         return
     else:
         myprint("Performing test '%s'" % name)
-        GV.totalTestRun += 1
-        GV.testStatus = True
+        GV.totalCheckRun += 1
+        GV.checkStatus = True
         stime = time.time()
-        name_test[name]["fn"]()
+        all_checks[name]["fn"]()
         etime = time.time()
         elapsed = etime - stime
         GV.elapsedTime += elapsed
         elapsed = str(datetime.timedelta(seconds=elapsed))[:-4]
         myprint("Total runtime for test '%s': %s" % (name, elapsed)) 
-        if GV.testStatus == False:
-            GV.failedTest.append(name)
+        if GV.checkStatus == False:
+            GV.failedChecks.append(name)
 
 
 
 #-------------------------------------------------------------------------------
-def runAllTests():
+def runAllChecks():
     '''
     perform catalog check for specified database
     '''
-    for name in sorted(name_test, key=lambda x: name_test[x]["order"]):
-        if name_test[name]["version"] >= GV.version:
-            runOneTest(name)
+    for name in sorted(all_checks, key=lambda x: all_checks[x]["order"]):
+        if all_checks[name]["version"] >= GV.version:
+            runOneCheck(name)
 
     closeDbs()
     logger.info("------------------------------------")
@@ -4030,7 +4025,7 @@ def getResourceTypeOid(oid):
 
   
 #-------------------------------------------------------------------------------
-# Process results of tests (CC and FK) for a particular catalog:
+# Process results of checks (CC and FK) for a particular catalog:
 #   - Categorize entry into GPObject
 #   - Instantiate GPObject if needed
 #-------------------------------------------------------------------------------
@@ -4690,16 +4685,16 @@ def checkcatReport():
             reportAllIssuesRecursive(child, graph)
 
     buildGraph()
-    reportedTest = ['duplicate','missing_extraneous','inconsistent','foreign_key','acl', 'duplicate_persistent'] 
+    reportedCheck = ['duplicate','missing_extraneous','inconsistent','foreign_key','acl', 'duplicate_persistent']
     myprint('')
     myprint('SUMMARY REPORT')
     myprint('===================================================================')
     elapsed = datetime.timedelta(seconds=int(GV.elapsedTime))
     endTime = datetime.datetime.now().strftime('%Y-%m-%d %H:%I:%S')
     myprint('Completed %d test(s) on database \'%s\' at %s with elapsed time %s' \
-            % (GV.totalTestRun, GV.dbname, endTime, elapsed))
+            % (GV.totalCheckRun, GV.dbname, endTime, elapsed))
 
-    if len(GPObjectGraph) == 0 and len(GV.failedTest) == 0:
+    if len(GPObjectGraph) == 0 and len(GV.failedChecks) == 0:
         myprint('Found no catalog issue\n')
         return
   
@@ -4719,7 +4714,7 @@ def checkcatReport():
                 reportAllIssuesRecursive(par, GPObjectGraph)
         myprint('')
 
-    notReported = set(GV.failedTest).difference(reportedTest)
+    notReported = set(GV.failedChecks).difference(reportedCheck)
     if len(notReported) > 0:
         myprint('Failed test(s) that are not reported here: %s' % (', '.join(notReported)))
         myprint('See %s for detail\n' % get_logfile())
@@ -4729,7 +4724,7 @@ def _myprint(str, level=logging.CRITICAL):
 
 myprint = _myprint
 
-def generateVerifyFile(catname, fields, results, testname):
+def generateVerifyFile(catname, fields, results, checkname):
     in_clause = reduce(lambda x, y: x + ('' if not x else ',') + str(y[fields.index('oid')]), results, '')
     verify_sql = '''
           SELECT *
@@ -4740,7 +4735,7 @@ def generateVerifyFile(catname, fields, results, testname):
           ) alltyprelids
           GROUP BY relname, oid ORDER BY count(*) desc
     '''.format(in_clause=in_clause)
-    filename = 'gpcheckcat.verify.%s.%s.%s.%s.sql' % (GV.dbname, catname, testname, TIMESTAMP)
+    filename = 'gpcheckcat.verify.%s.%s.%s.%s.sql' % (GV.dbname, catname, checkname, TIMESTAMP)
     try:
         with open(filename, 'w') as fp:
             fp.write(verify_sql + '\n')
@@ -4752,7 +4747,7 @@ if __name__ == '__main__':
 
     parseCommandLine()
     if GV.opt['-l']:
-        listAllTests()
+        listAllChecks()
         sys.exit(GV.retcode)
 
     GV.version = getversion()
@@ -4781,7 +4776,7 @@ if __name__ == '__main__':
         if GV.opt['-R']:
             name = GV.opt['-R']
             try:
-                runOneTest(name)
+                runOneCheck(name)
             except LookupError, e:
                 myprint("'%s' is not a valid test\n\n" % (name))
                 setError(ERROR_NOREPAIR)
@@ -4790,12 +4785,12 @@ if __name__ == '__main__':
             namestr = GV.opt['-C']
             try:
                 cat = getCatObj(namestr)
-                runTestCatname(cat)
+                runCheckCatname(cat)
             except Exception, e:
                 setError(ERROR_NOREPAIR)
                 sys.exit(GV.retcode)
         else:
-            runAllTests()
+            runAllChecks()
 
         checkcatReport()
 
