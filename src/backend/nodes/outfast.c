@@ -1398,7 +1398,7 @@ _outNode(StringInfo str, void *obj)
 				_outCoerceViaIO(str, obj);
 				break;
 			case T_ArrayCoerceExpr:
-				_outArrayCoerceExpr(str, obj);	
+				_outArrayCoerceExpr(str, obj);
 				break;
 			case T_ConvertRowtypeExpr:
 				_outConvertRowtypeExpr(str, obj);

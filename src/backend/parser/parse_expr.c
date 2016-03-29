@@ -2742,7 +2742,7 @@ exprType(Node *expr)
 			type = ((CoerceViaIO *) expr)->resulttype;
 			break;
 		case T_ArrayCoerceExpr:
-			type = ((ArrayCoerceExpr *) expr)->resulttype;	
+			type = ((ArrayCoerceExpr *) expr)->resulttype;
 			break;
 		case T_ConvertRowtypeExpr:
 			type = ((ConvertRowtypeExpr *) expr)->resulttype;

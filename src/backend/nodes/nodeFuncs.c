@@ -151,24 +151,24 @@ exprLocation(Node *expr)
 								  exprLocation((Node *) rexpr->arg));
 			}
 			break;
-        case T_CoerceViaIO:
-            {
-                CoerceViaIO *cexpr = (CoerceViaIO *) expr;
+		case T_CoerceViaIO:
+			{
+				CoerceViaIO *cexpr = (CoerceViaIO *) expr;
 
-                /* Much as above */
-                loc = leftmostLoc(cexpr->location,
-                                  exprLocation((Node *) cexpr->arg));
-            }
-            break;
-        case T_ArrayCoerceExpr:
-            {
-                ArrayCoerceExpr *cexpr = (ArrayCoerceExpr *) expr;
+				/* Much as above */
+				loc = leftmostLoc(cexpr->location,
+								  exprLocation((Node *) cexpr->arg));
+			}
+			break;
+		case T_ArrayCoerceExpr:
+			{
+				ArrayCoerceExpr *cexpr = (ArrayCoerceExpr *) expr;
 
-                /* Much as above */
-                loc = leftmostLoc(cexpr->location,
-                                  exprLocation((Node *) cexpr->arg));
-            }
-            break;
+				/* Much as above */
+				loc = leftmostLoc(cexpr->location,
+								  exprLocation((Node *) cexpr->arg));
+			}
+			break;
 		case T_ConvertRowtypeExpr:
 			{
 				ConvertRowtypeExpr *cexpr = (ConvertRowtypeExpr *) expr;

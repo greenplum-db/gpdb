@@ -236,7 +236,7 @@ typedef enum NodeTag
 	T_SubPlanState,
 	T_FieldSelectState,
 	T_FieldStoreState,
-    T_CoerceViaIOState,
+	T_CoerceViaIOState,
 	T_ArrayCoerceExprState,
 	T_ConvertRowtypeExprState,
 	T_CaseExprState,

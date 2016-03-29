@@ -1044,7 +1044,7 @@ build_coercion_expression(Node *node, CoercionPathType pathtype, Oid funcId,
 		caql_endscan(pcqCtx);
 	}
 
-	if (pathtype == COERCION_PATH_FUNC)	
+	if (pathtype == COERCION_PATH_FUNC)
 	{
 		/* We build an ordinary FuncExpr with special arguments */
 		List	   *args;
@@ -1109,7 +1109,7 @@ build_coercion_expression(Node *node, CoercionPathType pathtype, Oid funcId,
 		iocoerce->arg = (Expr *) node;
 		iocoerce->resulttype = targetTypeId;
 		iocoerce->coerceformat = cformat;
-		return (Node *) iocoerce;	
+		return (Node *) iocoerce;
 	}
 	else
 	{
@@ -2190,7 +2190,7 @@ find_coercion_pathway(Oid targetTypeId, Oid sourceTypeId,
 		CoercionPathType elempathtype = COERCION_PATH_NONE;
 
 		if (targetTypeId == OIDVECTOROID || targetTypeId == INT2VECTOROID)
-		{	
+		{
 			caql_endscan(pcqCtx);
 			return COERCION_PATH_NONE;
 		}
@@ -2259,7 +2259,7 @@ find_coercion_pathway(Oid targetTypeId, Oid sourceTypeId,
  * result codes are:
  *  COERCION_PATH_NONE: no length coercion needed
  *  COERCION_PATH_FUNC: apply the function returned in *funcid
- *  COERCION_PATH_ARRAYCOERCE: apply the function using ArrayCoerceExpr 
+ *  COERCION_PATH_ARRAYCOERCE: apply the function using ArrayCoerceExpr
 */
 CoercionPathType
 find_typmod_coercion_function(Oid typeId, Oid *funcid)

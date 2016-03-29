@@ -5040,7 +5040,7 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				astate->amstate = (ArrayMapState *) palloc0(sizeof(ArrayMapState));
 				state = (ExprState *) astate;
 			}
-			break;		
+			break;
 		case T_ConvertRowtypeExpr:
 			{
 				ConvertRowtypeExpr *convert = (ConvertRowtypeExpr *) node;
