@@ -7819,7 +7819,7 @@ copy pt_td_leak from '/tmp/pt_td_leak.out' with delimiter ',';
 select * from pt_td_leak where col1 = 5;
  col1 | col2 | col3
 ------+------+------
-    5 |    5 |     
+    5 |    5 |    5
 (1 row)
 
 drop table pt_td_leak;
