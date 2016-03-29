@@ -24,7 +24,7 @@ bfz_nothing_close_ex(bfz_t * thiz)
 {
 	gp_retry_close(thiz->fd);
 	thiz->fd = -1;
-	free(thiz->freeable_stuff);
+	pfree(thiz->freeable_stuff);
 	thiz->freeable_stuff = NULL;
 }
 
@@ -68,7 +68,13 @@ bfz_nothing_write_ex(bfz_t * bfz, const char *buffer, int size)
 void
 bfz_nothing_init(bfz_t * thiz)
 {
-	struct bfz_freeable_stuff *fs = malloc(sizeof *fs);
+	/*
+	 * Check that we are allocating in the TopMemoryContext since this
+	 * memory context must still be available when calling the transaction
+	 * callback at the time when the transaction aborts.
+	 */
+	Assert(TopMemoryContext == CurrentMemoryContext);
+	struct bfz_freeable_stuff *fs = palloc(sizeof *fs);
 
 	if (!fs)
 		ereport(ERROR,
