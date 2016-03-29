@@ -11,7 +11,6 @@
 
 #include "postgres.h"
 #include "utils/palloc.h"
-#include "zlib.h"
 #include "utils/zlib_wrapper.h"
 
 /*
