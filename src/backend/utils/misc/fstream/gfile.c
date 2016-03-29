@@ -243,7 +243,7 @@ struct zlib_stuff
 	Byte out[COMPRESSION_BUFFER_SIZE];
 };
 
-ssize_t
+static ssize_t
 gz_file_read(gfile_t* fd, void* ptr, size_t len)
 {
 	struct zlib_stuff* z = fd->u.z;
@@ -375,7 +375,7 @@ gz_file_write_one_chunk(gfile_t *fd, int do_flush)
 	return ret;
 }
 
-ssize_t
+static ssize_t
 gz_file_write(gfile_t *fd, void *ptr, size_t size)
 {
 	int ret;
@@ -409,7 +409,7 @@ gz_file_write(gfile_t *fd, void *ptr, size_t size)
 	return size;
 }
 
-int
+static int
 gz_file_close(gfile_t *fd)
 {
 	int e = 0;

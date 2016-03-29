@@ -36,50 +36,18 @@ bfz_zlib_close_ex(bfz_t * thiz)
 }
 
 static void
-gzwrite_fully(struct gfile_t *f, const char *buffer, int size)
-{
-	while (size)
-	{
-		int			i = f->write(f, buffer, size);
-
-		if (i < 0)
-			ereport(ERROR,
-					(errcode(ERRCODE_IO_ERROR),
-					errmsg("could not write to temporary file: %m")));
-		if (i == 0)
-			break;
-		buffer += i;
-		size -= i;
-	}
-}
-
-static int
-gzread_fully(struct gfile_t *f, char *buffer, int size)
-{
-	int			orig_size = size;
-
-	while (size)
-	{
-		int			i = f->read(f, buffer, size);
-
-		if (i < 0)
-			ereport(ERROR,
-					(errcode(ERRCODE_IO_ERROR),
-					errmsg("could not read from temporary file: %m")));
-		if (i == 0)
-			break;
-		buffer += i;
-		size -= i;
-	}
-	return orig_size - size;
-}
-
-static void
 bfz_zlib_write_ex(bfz_t * thiz, const char *buffer, int size)
 {
 	struct bfz_zlib_freeable_stuff *fs = (void *) thiz->freeable_stuff;
 
-	gzwrite_fully(fs->gfile, buffer, size);
+	ssize_t written = gfile_write(fs->gfile, buffer, size);
+	if (written < 0)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("could not write to temporary file: %m")));
+	}
+
 }
 
 static int
@@ -87,7 +55,15 @@ bfz_zlib_read_ex(bfz_t * thiz, char *buffer, int size)
 {
 	struct bfz_zlib_freeable_stuff *fs = (void *) thiz->freeable_stuff;
 
-	return gzread_fully(fs->gfile, buffer, size);
+	ssize_t read = gfile_read(fs->gfile, buffer, size);
+	if (read < 0)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("could not read from temporary file: %m")));
+	}
+
+	return read;
 }
 
 void
