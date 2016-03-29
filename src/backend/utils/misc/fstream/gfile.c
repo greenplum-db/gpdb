@@ -243,7 +243,7 @@ struct zlib_stuff
 	Byte out[COMPRESSION_BUFFER_SIZE];
 };
 
-static ssize_t
+ssize_t
 gz_file_read(gfile_t* fd, void* ptr, size_t len)
 {
 	struct zlib_stuff* z = fd->u.z;
@@ -337,7 +337,7 @@ gz_file_read(gfile_t* fd, void* ptr, size_t len)
 	}
 }
 
-static int 
+static int
 gz_file_write_one_chunk(gfile_t *fd, int do_flush)
 {
 	/*
@@ -375,12 +375,12 @@ gz_file_write_one_chunk(gfile_t *fd, int do_flush)
 	return ret;
 }
 
-static ssize_t
+ssize_t
 gz_file_write(gfile_t *fd, void *ptr, size_t size)
 {
 	int ret;
-	
-	
+
+
 	size_t left_to_compress = size;
 	size_t one_iter_compress;
 	struct zlib_stuff* z = fd->u.z;
@@ -409,7 +409,7 @@ gz_file_write(gfile_t *fd, void *ptr, size_t size)
 	return size;
 }
 
-static int
+int
 gz_file_close(gfile_t *fd)
 {
 	int e = 0;
@@ -444,7 +444,7 @@ static void z_free(voidpf a, voidpf b)
 	gfile_free(b);
 }
 
-static int gz_file_open(gfile_t *fd)
+int gz_file_open(gfile_t *fd)
 {
 	if (!(fd->u.z = gfile_malloc(sizeof *fd->u.z)))
 	{
