@@ -109,6 +109,10 @@ extern int SPI_execute_snapshot(SPIPlanPtr plan,
 					 Snapshot snapshot,
 					 Snapshot crosscheck_snapshot,
 					 bool read_only, bool fire_triggers, long tcount);
+extern int SPI_execute_with_args(const char *src,
+					  int nargs, Oid *argtypes,
+					  Datum *Values, const char *Nulls,
+					  bool read_only, long tcount);
 extern SPIPlanPtr SPI_prepare(const char *src, int nargs, Oid *argtypes);
 extern SPIPlanPtr SPI_saveplan(SPIPlanPtr plan);
 extern int	SPI_freeplan(SPIPlanPtr plan);
@@ -138,6 +142,11 @@ extern void SPI_freetuptable(SPITupleTable *tuptable);
 
 extern Portal SPI_cursor_open(const char *name, SPIPlanPtr plan,
 				Datum *Values, const char *Nulls, bool read_only);
+extern Portal SPI_cursor_open_with_args(const char *name,
+						  const char *src,
+						  int nargs, Oid *argtypes,
+						  Datum *Values, const char *Nulls,
+						  bool read_only, int cursorOptions);
 extern Portal SPI_cursor_find(const char *name);
 extern void SPI_cursor_fetch(Portal portal, bool forward, long count);
 extern void SPI_cursor_move(Portal portal, bool forward, long count);

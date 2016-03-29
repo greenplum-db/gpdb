@@ -72,16 +72,20 @@ static int	_SPI_stack_depth = 0;		/* allocated size of _SPI_stack */
 static int	_SPI_connected = -1;
 static int	_SPI_curid = -1;
 
-static void _SPI_prepare_plan(const char *src, SPIPlanPtr plan);
+static Portal SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
+						 Datum *Values, const char *Nulls,
+						 bool read_only, int pflags);
 
-static int _SPI_execute_plan(SPIPlanPtr plan,
-				  Datum *Values, const char *Nulls,
+static void _SPI_prepare_plan(const char *src, SPIPlanPtr plan,
+				  ParamListInfo boundParams);
+
+static int _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 				  Snapshot snapshot, Snapshot crosscheck_snapshot,
 				  bool read_only, bool fire_triggers, long tcount);
 
-/*static ParamListInfo _SPI_convert_params(int nargs, Oid *argtypes,
+static ParamListInfo _SPI_convert_params(int nargs, Oid *argtypes,
 					Datum *Values, const char *Nulls,
-					int pflags); */
+					int pflags);
 
 static void _SPI_assign_query_mem(QueryDesc * queryDesc);
 
@@ -395,9 +399,9 @@ SPI_execute(const char *src, bool read_only, long tcount)
 	plan.argtypes = NULL;
 	plan.use_count = 0;
 
-	_SPI_prepare_plan(src, &plan);
+	_SPI_prepare_plan(src, &plan, NULL);
 
-	res = _SPI_execute_plan(&plan, NULL, NULL,
+	res = _SPI_execute_plan(&plan, NULL,
 							InvalidSnapshot, InvalidSnapshot,
 							read_only, true, tcount);
 
@@ -430,7 +434,9 @@ SPI_execute_plan(SPIPlanPtr plan, Datum *Values, const char *Nulls,
 		return res;
 
 	res = _SPI_execute_plan(plan,
-							Values, Nulls,
+							_SPI_convert_params(plan->nargs, plan->argtypes,
+												Values, Nulls,
+												0),
 							InvalidSnapshot, InvalidSnapshot,
 							read_only, true, tcount);
 
@@ -477,9 +483,73 @@ SPI_execute_snapshot(SPIPlanPtr plan,
 		return res;
 
 	res = _SPI_execute_plan(plan,
-							Values, Nulls,
+							_SPI_convert_params(plan->nargs, plan->argtypes,
+												Values, Nulls,
+												0),
 							snapshot, crosscheck_snapshot,
 							read_only, fire_triggers, tcount);
+
+	_SPI_end_call(true);
+	return res;
+}
+
+/*
+ * SPI_execute_with_args -- plan and execute a query with supplied arguments
+ *
+ * This is functionally comparable to SPI_prepare followed by
+ * SPI_execute_plan, except that since we know the plan will be used only
+ * once, we can tell the planner to rely on the parameter values as constants.
+ * This eliminates potential performance disadvantages compared to
+ * inserting the parameter values directly into the query text.
+ */
+int
+SPI_execute_with_args(const char *src,
+					  int nargs, Oid *argtypes,
+					  Datum *Values, const char *Nulls,
+					  bool read_only, long tcount)
+{
+	int			res;
+	_SPI_plan	plan;
+	ParamListInfo paramLI;
+
+	if (src == NULL || nargs < 0 || tcount < 0)
+		return SPI_ERROR_ARGUMENT;
+
+	if (nargs > 0 && (argtypes == NULL || Values == NULL))
+		return SPI_ERROR_PARAM;
+
+	res = _SPI_begin_call(true);
+	if (res < 0)
+		return res;
+
+	memset(&plan, 0, sizeof(_SPI_plan));
+	plan.magic = _SPI_PLAN_MAGIC;
+	plan.cursor_options = 0;
+	plan.nargs = nargs;
+	plan.argtypes = argtypes;
+
+	/*
+	 * Add this to be compatible with current version of GPDB
+	 *
+	 * TODO: Remove it after the related codes are backported
+	 *		 from upstream, e.g. plan.query is to be assigned
+	 *		 in _SPI_prepare_plan
+	 */
+	plan.query = src;
+	plan.use_count = 0;
+	plan.plancxt = NULL;
+
+	paramLI = _SPI_convert_params(nargs, argtypes,
+								  Values, Nulls,
+								  PARAM_FLAG_CONST);
+
+	_SPI_prepare_plan(src, &plan, paramLI);
+
+	/* We don't need to copy the plan since it will be thrown away anyway */
+
+	res = _SPI_execute_plan(&plan, paramLI,
+							InvalidSnapshot, InvalidSnapshot,
+							read_only, true, tcount);
 
 	_SPI_end_call(true);
 	return res;
@@ -510,7 +580,7 @@ SPI_prepare(const char *src, int nargs, Oid *argtypes)
 	plan.argtypes = argtypes;
 	plan.use_count = 0;
 
-	_SPI_prepare_plan(src, &plan);
+	_SPI_prepare_plan(src, &plan, NULL);
 
 	/* copy plan to procedure context */
 	result = _SPI_copy_plan(&plan, _SPI_CPLAN_PROCXT);
@@ -910,7 +980,6 @@ SPI_freetuptable(SPITupleTable *tuptable)
 }
 
 
-
 /*
  * SPI_cursor_open()
  *
@@ -921,6 +990,86 @@ SPI_cursor_open(const char *name, SPIPlanPtr plan,
 				Datum *Values, const char *Nulls,
 				bool read_only)
 {
+	return SPI_cursor_open_internal(name, plan, Values, Nulls,
+									read_only, 0);
+}
+
+
+/*
+ * SPI_cursor_open_with_args()
+ *
+ * Parse and plan a query and open it as a portal.  Like SPI_execute_with_args,
+ * we can tell the planner to rely on the parameter values as constants,
+ * because the plan will only be used once.
+ */
+Portal
+SPI_cursor_open_with_args(const char *name,
+						  const char *src,
+						  int nargs, Oid *argtypes,
+						  Datum *Values, const char *Nulls,
+						  bool read_only, int cursorOptions)
+{
+	Portal		result;
+	_SPI_plan	plan;
+	ParamListInfo paramLI;
+
+	if (src == NULL || nargs < 0)
+		elog(ERROR, "SPI_cursor_open_with_args called with invalid arguments");
+
+	if (nargs > 0 && (argtypes == NULL || Values == NULL))
+		elog(ERROR, "SPI_cursor_open_with_args called with missing parameters");
+
+	SPI_result = _SPI_begin_call(true);
+	if (SPI_result < 0)
+		elog(ERROR, "SPI_cursor_open_with_args called while not connected");
+
+	memset(&plan, 0, sizeof(_SPI_plan));
+	plan.magic = _SPI_PLAN_MAGIC;
+	plan.cursor_options = cursorOptions;
+	plan.nargs = nargs;
+	plan.argtypes = argtypes;
+
+	/*
+	 * Add this to be compatible with current version of GPDB
+	 *
+	 * TODO: Remove it after the related codes are backported
+	 *		 from upstream, e.g. plan.query is to be assigned
+	 *		 in _SPI_prepare_plan
+	 */
+	plan.query = src; 
+	plan.use_count = 0;
+	plan.plancxt = NULL;
+
+	paramLI = _SPI_convert_params(nargs, argtypes,
+								  Values, Nulls,
+								  PARAM_FLAG_CONST);
+
+	_SPI_prepare_plan(src, &plan, paramLI);
+
+	/* We needn't copy the plan; SPI_cursor_open_internal will do so */
+
+	/* Adjust stack so that SPI_cursor_open_internal doesn't complain */
+	_SPI_curid--;
+
+	/* SPI_cursor_open_internal expects to be called in procedure memory context */
+	_SPI_procmem();
+
+	result = SPI_cursor_open_internal(name, &plan, Values, Nulls,
+									  read_only, PARAM_FLAG_CONST);
+
+	/* And clean up */
+	_SPI_curid++;
+	_SPI_end_call(true);
+
+	return result;
+}
+
+static Portal
+SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
+						 Datum *Values, const char *Nulls,
+						 bool read_only, int pflags)
+{
+
 	_SPI_plan  *spiplan = (_SPI_plan *) plan;
 	List	   *qtlist;
 	List	   *ptlist;
@@ -1021,7 +1170,7 @@ SPI_cursor_open(const char *name, SPIPlanPtr plan,
 			ParamExternData *prm = &paramLI->params[k];
 
 			prm->ptype = spiplan->argtypes[k];
-			prm->pflags = 0;
+			prm->pflags = pflags;
 			prm->isnull = (Nulls && Nulls[k] == 'n');
 			if (prm->isnull)
 			{
@@ -1116,7 +1265,6 @@ SPI_cursor_open(const char *name, SPIPlanPtr plan,
 	/* Return the created portal */
 	return portal;
 }
-
 
 /*
  * SPI_cursor_find()
@@ -1414,7 +1562,7 @@ spi_printtup(TupleTableSlot *slot, DestReceiver *self)
  * and need to be copied somewhere to survive.
  */
 static void
-_SPI_prepare_plan(const char *src, SPIPlanPtr plan)
+_SPI_prepare_plan(const char *src, SPIPlanPtr plan, ParamListInfo boundParams)
 {
 	List	   *raw_parsetree_list;
 	List	   *query_list_list;
@@ -1507,7 +1655,7 @@ _SPI_prepare_plan(const char *src, SPIPlanPtr plan)
  * tcount: execution tuple-count limit, or 0 for none
  */
 static int
-_SPI_execute_plan(_SPI_plan * plan, Datum *Values, const char *Nulls,
+_SPI_execute_plan(_SPI_plan * plan, ParamListInfo paramLI,
 				  Snapshot snapshot, Snapshot crosscheck_snapshot,
 				  bool read_only, bool fire_triggers, long tcount)
 {
@@ -1543,31 +1691,6 @@ _SPI_execute_plan(_SPI_plan * plan, Datum *Values, const char *Nulls,
 		ListCell   *plan_list_item = list_head(plan->ptlist);
 		ListCell   *query_list_list_item;
 		ErrorContextCallback spierrcontext;
-		int			nargs = plan->nargs;
-		ParamListInfo paramLI;
-
-		/* Convert parameters to form wanted by executor */
-		if (nargs > 0)
-		{
-			int			k;
-
-			/* sizeof(ParamListInfoData) includes the first array element */
-			paramLI = (ParamListInfo) palloc(sizeof(ParamListInfoData) +
-									   (nargs - 1) *sizeof(ParamExternData));
-			paramLI->numParams = nargs;
-
-			for (k = 0; k < nargs; k++)
-			{
-				ParamExternData *prm = &paramLI->params[k];
-
-				prm->value = Values[k];
-				prm->isnull = (Nulls && Nulls[k] == 'n');
-				prm->pflags = 0;
-				prm->ptype = plan->argtypes[k];
-			}
-		}
-		else
-			paramLI = NULL;
 
 		/*
 		 * Setup error traceback support for ereport()
@@ -1792,6 +1915,41 @@ fail:
 
 	return my_res;
 }
+
+/*
+ * Convert query parameters to form wanted by planner and executor
+ */
+static ParamListInfo
+_SPI_convert_params(int nargs, Oid *argtypes,
+					Datum *Values, const char *Nulls,
+					int pflags)
+{
+	ParamListInfo paramLI;
+
+	if (nargs > 0)
+	{
+		int			i;
+
+		/* sizeof(ParamListInfoData) includes the first array element */
+		paramLI = (ParamListInfo) palloc(sizeof(ParamListInfoData) +
+									   (nargs - 1) *sizeof(ParamExternData));
+		paramLI->numParams = nargs;
+
+		for (i = 0; i < nargs; i++)
+		{
+			ParamExternData *prm = &paramLI->params[i];
+
+			prm->value = Values[i];
+			prm->isnull = (Nulls && Nulls[i] == 'n');
+			prm->pflags = pflags;
+			prm->ptype = argtypes[i];
+		}
+	}
+	else
+		paramLI = NULL;
+	return paramLI;
+}
+
 
 /*
  * Assign memory for a query before executing through SPI.
