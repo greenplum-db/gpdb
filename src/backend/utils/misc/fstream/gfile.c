@@ -337,7 +337,7 @@ gz_file_read(gfile_t* fd, void* ptr, size_t len)
 	}
 }
 
-static int
+static int 
 gz_file_write_one_chunk(gfile_t *fd, int do_flush)
 {
 	/*
@@ -379,8 +379,8 @@ static ssize_t
 gz_file_write(gfile_t *fd, void *ptr, size_t size)
 {
 	int ret;
-
-
+	
+	
 	size_t left_to_compress = size;
 	size_t one_iter_compress;
 	struct zlib_stuff* z = fd->u.z;

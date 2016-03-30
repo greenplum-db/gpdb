@@ -7,7 +7,9 @@
 struct bfz_zlib_freeable_stuff
 {
 	struct bfz_freeable_stuff super;
-	struct gfile_t *gfile;
+
+	/* handle for the compressed file */
+	gfile_t *gfile;
 };
 
 /* This file implements bfz compression algorithm "zlib". */
@@ -24,19 +26,36 @@ bfz_zlib_close_ex(bfz_t * thiz)
 {
 	struct bfz_zlib_freeable_stuff *fs = (void *) thiz->freeable_stuff;
 
-	fs->gfile->close(fs->gfile);
-	pfree(fs->gfile);
-	fs->gfile = NULL;
+	if (NULL != fs)
+	{
+		Assert(NULL != fs->gfile);
 
-	Assert(thiz->fd != -1);
-	close(thiz->fd);
-	thiz->fd = -1;
-	pfree(fs);
-	thiz->freeable_stuff = NULL;
+		fs->gfile->close(fs->gfile);
+		pfree(fs->gfile);
+		fs->gfile = NULL;
+
+		pfree(fs);
+		thiz->freeable_stuff = NULL;
+	}
+
+	/*
+	 * gfile->close() does not close the underlying file descriptor.
+	 * Let's close it here.
+	 */
+	if (thiz->fd != -1)
+	{
+		close(thiz->fd);
+		thiz->fd = -1;
+	}
 }
 
+/*
+ * bfz_zlib_write_ex
+ *   Write data to an opened compressed file.
+ *   An exception is thrown if the data cannot be written for any reason.
+ */
 static void
-bfz_zlib_write_ex(bfz_t * thiz, const char *buffer, int size)
+bfz_zlib_write_ex(bfz_t *thiz, const char *buffer, int size)
 {
 	struct bfz_zlib_freeable_stuff *fs = (void *) thiz->freeable_stuff;
 
@@ -47,11 +66,17 @@ bfz_zlib_write_ex(bfz_t * thiz, const char *buffer, int size)
 				(errcode(ERRCODE_IO_ERROR),
 				errmsg("could not write to temporary file: %m")));
 	}
-
 }
 
+/*
+ * bfz_zlib_read_ex
+ *  Read data from an already opened compressed file.
+ *
+ *  The buffer pointer must be valid and have at least size bytes.
+ *  An exception is thrown if the data cannot be read for any reason.
+ */
 static int
-bfz_zlib_read_ex(bfz_t * thiz, char *buffer, int size)
+bfz_zlib_read_ex(bfz_t *thiz, char *buffer, int size)
 {
 	struct bfz_zlib_freeable_stuff *fs = (void *) thiz->freeable_stuff;
 
@@ -66,6 +91,13 @@ bfz_zlib_read_ex(bfz_t * thiz, char *buffer, int size)
 	return read;
 }
 
+/*
+ * bfz_zlib_init
+ *  Initialize the zlib subsystem for a file.
+ *
+ *  The underlying file descriptor fd should already be opened
+ *  and valid. Memory is allocated in the current memory context.
+ */
 void
 bfz_zlib_init(bfz_t * thiz)
 {
@@ -73,13 +105,7 @@ bfz_zlib_init(bfz_t * thiz)
 	struct bfz_zlib_freeable_stuff *fs = palloc(sizeof *fs);
 	fs->gfile = palloc0(sizeof *fs->gfile);
 
-	if (!fs || !fs->gfile)
-		ereport(ERROR,
-			(errcode(ERRCODE_OUT_OF_MEMORY),
-			 errmsg("out of memory")));
-
 	fs->gfile->fd.filefd = thiz->fd;
-	fs->gfile->transform = NULL;
 	fs->gfile->compression = GZ_COMPRESSION;
 
 	if (thiz->mode == BFZ_MODE_APPEND)
@@ -90,9 +116,11 @@ bfz_zlib_init(bfz_t * thiz)
 	int res = gz_file_open(fs->gfile);
 
 	if (res == 1)
-			ereport(ERROR,
-					(errcode(ERRCODE_IO_ERROR),
-					errmsg("gz_file_open failed: %m")));
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("gz_file_open failed: %m")));
+	}
 
 	thiz->freeable_stuff = &fs->super;
 	fs->super.read_ex = bfz_zlib_read_ex;
