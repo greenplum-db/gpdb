@@ -4246,15 +4246,6 @@ DESCR("read the error log for the specified external table");
 DATA(insert OID = 3069 ( gp_truncate_error_log  PGNSP PGUID 12 1 0 0 f f t f v 1 0 16 f "25" _null_ _null_ _null_ _null_ gp_truncate_error_log _null_ _null_ m ));
 DESCR("truncate the error log for the specified external table");
 
-/* functions for the complex data type */
-/* complex_in(cstring) => complex */ 
-DATA(insert OID = 3423 ( complex_in  PGNSP PGUID 12 1 0 0 f f t f i 1 0 193 f "2275" _null_ _null_ _null_ _null_ complex_in _null_ _null_ c ));
-DESCR("I/O");
-
-/* complex_out(complex) => cstring */ 
-DATA(insert OID = 3424 ( complex_out  PGNSP PGUID 12 1 0 0 f f t f i 1 0 2275 f "193" _null_ _null_ _null_ _null_ complex_out _null_ _null_ c ));
-DESCR("I/O");
-
 /* complex_recv(internal) => complex */ 
 DATA(insert OID = 3425 ( complex_recv  PGNSP PGUID 12 1 0 0 f f t f i 1 0 193 f "2281" _null_ _null_ _null_ _null_ complex_recv _null_ _null_ c ));
 DESCR("I/O");
