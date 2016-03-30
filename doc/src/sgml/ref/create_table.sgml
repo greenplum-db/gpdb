@@ -28,7 +28,7 @@ CREATE [[GLOBAL | LOCAL] {TEMPORARY | TEMP}] TABLE table_name (
    | LIKE other_table [{INCLUDING | EXCLUDING} 
                       {DEFAULTS | CONSTRAINTS}] ...}
    [, ... ] ]
-   [column_reference_storage_directive [, …] ]
+   [column_reference_storage_directive [, ... ]
    )
    [ INHERITS ( parent_table [, ... ] ) ]
    [ WITH ( storage_parameter=value [, ... ] )

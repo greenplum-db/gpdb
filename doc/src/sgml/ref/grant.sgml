@@ -53,8 +53,8 @@ GRANT { CREATE | ALL [ PRIVILEGES ] }
 GRANT <replaceable class="PARAMETER">role</replaceable> [, ...] TO <replaceable class="PARAMETER">username</replaceable> [, ...] [ WITH ADMIN OPTION ]
 
 GRANT { SELECT | INSERT | ALL [PRIVILEGES] } 
-    ON PROTOCOL <replaceable>protocolname</replaceable> 
-    TO <replaceable class="PARAMETER">username</replaceable>
+    ON PROTOCOL <replaceable>protocolname</replaceable>
+    TO <replaceable class="PARAMETER">username</replaceable>
 
 </synopsis>
  </refsynopsisdiv>
