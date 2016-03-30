@@ -92,6 +92,10 @@ def parseargs():
         logger.error("cannot use both value option and primaryvalue/mirrorvalue option")
         parser.exit()
 
+    if (options.masteronly or options.mastervalue) and options.entry == "gp_default_storage_options":
+        logger.error("gp_default_storage_options value cannot be different on master and segments.")
+        parser.exit()
+
     if options.value and (not options.mastervalue):
         options.mastervalue = options.value
 
@@ -282,10 +286,6 @@ options = parseargs()
 
 if options.debug:
     enable_verbose_logging()
-
-if options.masteronly and options.entry == "gp_default_storage_options":
-    logger.fatal("gp_default_storage_options is not a masteronly parameter.")
-    sys.exit(1)
 
 try:
     dburl = dbconn.DbURL()

@@ -333,6 +333,19 @@ create external table ext_t2 (a int, b int)
 drop external table ext_t1;
 drop external table ext_t2;
 
+-- Make sure gp_default_storage_options GUC value is set in newly created cdbgangs
+-- after previous idle cdbgang is stopped
+SET gp_vmem_idle_resource_timeout=30;
+SET gp_default_storage_options='appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=row';
+\! sleep 1
+CREATE TABLE check_guc_value_after_new_cdbgang (a int) DISTRIBUTED RANDOMLY;
+SELECT DISTINCT relid::regclass FROM pg_appendonly WHERE relid='check_guc_value_after_new_cdbgang'::regclass;
+SELECT DISTINCT relid::regclass FROM gp_dist_random('pg_appendonly') WHERE relid='check_guc_value_after_new_cdbgang'::regclass;
+SELECT DISTINCT relname, reloptions FROM pg_class WHERE relname='check_guc_value_after_new_cdbgang';
+SELECT DISTINCT relname, reloptions FROM gp_dist_random('pg_class') WHERE relname='check_guc_value_after_new_cdbgang';
+DROP TABLE check_guc_value_after_new_cdbgang;
+RESET gp_vmem_idle_resource_timeout;
+
 -- cleanup
 \c postgres
 drop database dsp1;
