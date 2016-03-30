@@ -383,10 +383,8 @@ cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
 
 		if (PQExpBufferDataBroken(buffer))
 		{
-			write_log("Out Of Memory encountered %s\n",
-			 buffer.data);
-			 
-			raise(SIGABRT);
+			write_log("Out Of Memory encountered");
+			return false;
 		}
     /*
      * Call libpq to connect
