@@ -6,7 +6,8 @@ TARGETS=cdbbufferedread \
 	cdbbackup \
 	cdbdisp \
 	cdbfilerep \
-	cdbgang
+	cdbgang \
+	cdbsrlz
 
 include $(top_builddir)/src/backend/mock.mk
 
