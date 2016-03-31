@@ -270,22 +270,12 @@ cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
 				  const char *options)
 {
     CdbComponentDatabaseInfo   *q = segdbDesc->segment_database_info;
-    PQExpBufferData             buffer;
 #define MAX_KEYWORDS 10
 	const char *keywords[MAX_KEYWORDS];
 	const char *values[MAX_KEYWORDS];
 	int			nkeywords = 0;
 	char		portstr[20];
 	char		timeoutstr[20];
-
-    /*
-     * We use PQExpBufferData instead of StringInfoData
-     * because the former uses malloc, the latter palloc.
-     * We are in a thread, and we CANNOT use palloc since it's not
-     * thread safe.  We cannot call elog or ereport either for the
-     * same reason.
-     */
-    initPQExpBuffer(&buffer);
 
 	keywords[nkeywords] = "gpqeid";
 	values[nkeywords] = gpqeid;
@@ -408,9 +398,8 @@ cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
         if (!segdbDesc->errcode)
             segdbDesc->errcode = ERRCODE_GP_INTERCONNECTION_ERROR;
         appendPQExpBuffer(&segdbDesc->error_message,
-                          "Master unable to connect to %s with options %s: %s\n",
+                          "Master unable to connect to %s with options %s\n",
                           segdbDesc->whoami,
-                          buffer.data,
                           PQerrorMessage(segdbDesc->conn));
 
         /* Don't use elog, it's not thread-safe */
@@ -436,13 +425,11 @@ cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
 
         /* Don't use elog, it's not thread-safe */
         if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-            write_log("Connected to %s motionListener=%d with options %s\n",
+            write_log("Connected to %s motionListener=%d\n",
 						 segdbDesc->whoami,
-						 segdbDesc->motionListener,
-						 buffer.data);
+						 segdbDesc->motionListener);
     }
 
-    free(buffer.data);
     return segdbDesc->conn != NULL;
 }                               /* cdbconn_doConnect */
 
@@ -496,5 +483,3 @@ cdbconn_setSliceIndex(SegmentDatabaseDescriptor    *segdbDesc,
     truncatePQExpBuffer(scratchbuf, scratchoff);
     return true;
 }                               /* cdbconn_setSliceIndex */
-
-
