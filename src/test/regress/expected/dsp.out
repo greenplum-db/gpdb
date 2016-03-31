@@ -861,7 +861,6 @@ SELECT DISTINCT relname, reloptions FROM gp_dist_random('pg_class') WHERE relnam
  check_guc_value_after_new_cdbgang | {appendonly=true}
 (1 row)
 
-DROP TABLE check_guc_value_after_new_cdbgang;
 RESET gp_vmem_idle_resource_timeout;
 -- cleanup
 \c postgres

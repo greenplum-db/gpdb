@@ -343,7 +343,6 @@ SELECT DISTINCT relid::regclass FROM pg_appendonly WHERE relid='check_guc_value_
 SELECT DISTINCT relid::regclass FROM gp_dist_random('pg_appendonly') WHERE relid='check_guc_value_after_new_cdbgang'::regclass;
 SELECT DISTINCT relname, reloptions FROM pg_class WHERE relname='check_guc_value_after_new_cdbgang';
 SELECT DISTINCT relname, reloptions FROM gp_dist_random('pg_class') WHERE relname='check_guc_value_after_new_cdbgang';
-DROP TABLE check_guc_value_after_new_cdbgang;
 RESET gp_vmem_idle_resource_timeout;
 
 -- cleanup

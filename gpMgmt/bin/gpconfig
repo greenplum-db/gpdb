@@ -22,6 +22,7 @@ except ImportError, e:
 EXECNAME = os.path.split(__file__)[-1]
 
 prohibitedGucs = set(["port", "listen_addresses"])
+sameValueGucs = set(["gp_default_storage_options"])
 longShow = set(["port"])
 
 def parseargs():
@@ -92,8 +93,8 @@ def parseargs():
         logger.error("cannot use both value option and primaryvalue/mirrorvalue option")
         parser.exit()
 
-    if (options.masteronly or options.mastervalue) and options.entry == "gp_default_storage_options":
-        logger.error("gp_default_storage_options value cannot be different on master and segments.")
+    if (options.masteronly or options.mastervalue) and options.entry in sameValueGucs:
+        logger.error("%s value cannot be different on master and segments", options.entry)
         parser.exit()
 
     if options.value and (not options.mastervalue):
