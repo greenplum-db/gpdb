@@ -3012,12 +3012,22 @@ makeWindowState(Window * window, EState *estate)
 	wstate->level_state = NULL;
 
 	numlevels = list_length(window->windowKeys);
+	wstate->numlevels = numlevels;
+
 	if (numlevels > 0)
+	{
 		wstate->level_state = (WindowStatePerLevel)
 			palloc0(numlevels * sizeof(WindowStatePerLevelData));
+
+		for (int level = 0; level < wstate->numlevels; level++)
+		{
+			WindowStatePerLevel level_state = &wstate->level_state[level];
+			level_state->serial_array = palloc0(FRAMEBUFFER_ENTRY_SIZE);
+			level_state->max_size = FRAMEBUFFER_ENTRY_SIZE;
+		}
+	}
 	else
 		wstate->level_state = NULL;
-	wstate->numlevels = numlevels;
 
 	wstate->transcontext = AllocSetContextCreate(CurrentMemoryContext,
 												 "TransContext",
@@ -3061,9 +3071,6 @@ initializePartition(WindowState * wstate)
 		level_state->dense_rank = 1;
 		level_state->prior_rank = 1;
 		level_state->prior_dense_rank = 1;
-
-		level_state->serial_array = palloc0(FRAMEBUFFER_ENTRY_SIZE);
-		level_state->max_size = FRAMEBUFFER_ENTRY_SIZE;
 	}
 
 	/* Per-partition input buffer management reinitialzation. */
