@@ -23,3 +23,9 @@ table_functions.out
 tidycat2.out
 tpch500GB.out
 partindex_test.out
+external_table.out
+table_functions_optimizer.out
+largeobject.out
+qp_gist_indexes2.out
+qp_gist_indexes2_optimizer.out
+qp_regexp.out

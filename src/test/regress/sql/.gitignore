@@ -17,7 +17,6 @@ aocs.sql
 appendonly.sql
 bkup_bkupdb.sql
 mapred.sql
-ereport.sql
 tidycat.sql
 filespace.sql
 upgrade.sql
@@ -29,3 +28,6 @@ tidycat2.sql
 tpch500GB.sql
 partindex_test.sql
 external_table.sql
+largeobject.sql
+qp_gist_indexes2.sql
+qp_regexp.sql

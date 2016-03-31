@@ -49,6 +49,5 @@ build.sh
 
 # Added
 *.swp
-*.out
 
 VERSION
