@@ -386,3 +386,50 @@ select unnest(array[1,2,3,4.5]::float8[]);
 select unnest(array[1,2,3,4.5]::numeric[]);
 select unnest(array[1,2,3,null,4,null,null,5,6]);
 select unnest(array[1,2,3,null,4,null,null,5,6]::text[]);
+
+-- Internal function for the aggregate
+-- Is called for each item in an aggregation
+CREATE FUNCTION int_agg_state (internal, int4)
+RETURNS internal
+AS 'array_agg_transfn'
+LANGUAGE INTERNAL;
+
+-- Internal function for the aggregate
+-- Is called at the end of the aggregation, and returns an array.
+CREATE FUNCTION int_agg_final_array (internal)
+RETURNS int4[]
+AS 'array_agg_finalfn'
+LANGUAGE INTERNAL;
+
+-- The aggregate function itself
+-- uses the above functions to create an array of integers from an aggregation.
+CREATE ORDERED AGGREGATE int_array_aggregate (
+	BASETYPE = int4,
+	SFUNC = int_agg_state,
+	STYPE = internal,
+	FINALFUNC = int_agg_final_array
+);
+
+-- Tests
+select int_array_aggregate(i) from generate_series(1,10,2) i;
+
+CREATE TEMP TABLE int_test_tbl1 AS (
+	SELECT id FROM generate_series(11, 1000, 11) as id
+) DISTRIBUTED BY ( id );
+
+CREATE TEMP TABLE int_test_tbl2 AS (
+	SELECT id FROM generate_series(7, 1000, 7) as id
+) DISTRIBUTED BY ( id );
+
+
+SELECT l.id as "number % 11 in left",
+	int_array_aggregate(r.id ORDER BY r.id) "array of those % 7 too in right"
+FROM int_test_tbl1 l, int_test_tbl2 r
+WHERE l.id % r.id = 0
+GROUP BY l.id
+ORDER BY l.id;
+
+-- Drop above three functions
+DROP AGGREGATE int_array_aggregate (int4);
+DROP FUNCTION int_agg_final_array (internal);
+DROP FUNCTION int_agg_state (internal, int4);

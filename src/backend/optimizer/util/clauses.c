@@ -542,7 +542,19 @@ count_agg_clauses_walker(Node *node, AggClauseCounts *counts)
 
 			counts->transitionSpace += avgwidth + 2 * sizeof(void *);
 		}
-		
+		else if (aggtranstype == INTERNALOID)
+		{
+			/*
+			 * INTERNAL transition type is a special case: although INTERNAL
+			 * is pass-by-value, it's almost certainly being used as a pointer
+			 * to some large data structure.  We assume usage of
+			 * ALLOCSET_DEFAULT_INITSIZE, which is a good guess if the data is
+			 * being kept in a private memory context, as is done by
+			 * array_agg() for instance.
+			 */
+			counts->transitionSpace += ALLOCSET_DEFAULT_INITSIZE;
+		}
+
 		if ( inputTypes != NULL )
 			pfree(inputTypes);
 

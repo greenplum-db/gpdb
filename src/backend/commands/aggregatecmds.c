@@ -190,17 +190,25 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 	 * transtype can't be a pseudo-type, (except during upgrade mode)
 	 * since we need to be able to store values of the transtype.
 	 * However, we can allow polymorphic transtype in some cases
-	 * (AggregateCreate will check).
+	 * (AggregateCreate will check). Also, we allow "internal"
+	 * for functions that want to pass pointers to private data structures;
+	 * but allow that only to superusers, since you could crash the system
+	 * (or worse) by connecting up incompatible internal-using functions
+	 * in an aggregate.
 	 */
 	transTypeId = typenameTypeId(NULL, transType);
 	if ((get_typtype(transTypeId) == 'p' &&
 		 transTypeId != ANYARRAYOID &&
 		 transTypeId != ANYELEMENTOID))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-				 errmsg("aggregate transition data type cannot be %s",
-						format_type_be(transTypeId))));
-
+	{
+		if (transTypeId == INTERNALOID && superuser())
+			/* okay */ ;
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+					 errmsg("aggregate transition data type cannot be %s",
+							format_type_be(transTypeId))));
+	}
 	/*
 	 * Most of the argument-checking is done inside of AggregateCreate
 	 */
