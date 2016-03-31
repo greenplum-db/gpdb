@@ -441,64 +441,6 @@ length_in_encoding(PG_FUNCTION_ARGS)
 }
 
 /*
- * Convert string using encoding_name.
- *
- * TEXT convert2(TEXT string, NAME src_encoding_name, NAME dest_encoding_name)
- */
-Datum
-pg_convert2(PG_FUNCTION_ARGS)
-{
-	text	   *string = PG_GETARG_TEXT_P(0);
-	char	   *src_encoding_name = NameStr(*PG_GETARG_NAME(1));
-	int			src_encoding = pg_char_to_encoding(src_encoding_name);
-	char	   *dest_encoding_name = NameStr(*PG_GETARG_NAME(2));
-	int			dest_encoding = pg_char_to_encoding(dest_encoding_name);
-	unsigned char *result;
-	text	   *retval;
-	unsigned char *str;
-	int			len;
-
-	if (src_encoding < 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("invalid source encoding name \"%s\"",
-						src_encoding_name)));
-	if (dest_encoding < 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("invalid destination encoding name \"%s\"",
-						dest_encoding_name)));
-
-	/* make sure that source string is null terminated */
-	len = VARSIZE(string) - VARHDRSZ;
-	str = palloc(len + 1);
-	memcpy(str, VARDATA(string), len);
-	*(str + len) = '\0';
-
-	result = pg_do_encoding_conversion(str, len, src_encoding, dest_encoding);
-	if (result == NULL)
-		elog(ERROR, "encoding conversion failed");
-
-	/*
-	 * build text data type structure. we cannot use textin() here, since
-	 * textin assumes that input string encoding is same as database encoding.
-	 */
-	len = strlen((char *) result) + VARHDRSZ;
-	retval = palloc(len);
-	SET_VARSIZE(retval, len);
-	memcpy(VARDATA(retval), result, len - VARHDRSZ);
-
-	if (result != str)
-		pfree(result);
-	pfree(str);
-
-	/* free memory if allocated by the toaster */
-	PG_FREE_IF_COPY(string, 0);
-
-	PG_RETURN_TEXT_P(retval);
-}
-
-/*
  * convert client encoding to server encoding.
  */
 char *

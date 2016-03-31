@@ -1014,7 +1014,6 @@ extern Datum PG_char_to_encoding(PG_FUNCTION_ARGS);
 extern Datum PG_character_set_name(PG_FUNCTION_ARGS);
 extern Datum PG_character_set_id(PG_FUNCTION_ARGS);
 extern Datum pg_convert(PG_FUNCTION_ARGS);
-extern Datum pg_convert2(PG_FUNCTION_ARGS);
 extern Datum pg_convert_to(PG_FUNCTION_ARGS);
 extern Datum pg_convert_from(PG_FUNCTION_ARGS);
 extern Datum length_in_encoding(PG_FUNCTION_ARGS);
