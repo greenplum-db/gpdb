@@ -822,7 +822,7 @@ ExecProcNode(PlanState *node)
 
 	START_CODE_GENERATOR_MANAGER(node->CodegenManager);
 	{
-	START_MEMORY_ACCOUNT(node->plan->memoryAccount);
+	START_MEMORY_ACCOUNT(node->memoryAccount);
 	{
 
 #ifndef WIN32
@@ -1269,7 +1269,7 @@ MultiExecProcNode(PlanState *node)
 
 	Assert(NULL != node->plan);
 
-	START_MEMORY_ACCOUNT(node->plan->memoryAccount);
+	START_MEMORY_ACCOUNT(node->memoryAccount);
 	{
 		PG_TRACE5(execprocnode__enter, Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id, node->plan->plan_parent_node_id);
 

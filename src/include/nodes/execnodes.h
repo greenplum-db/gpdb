@@ -1388,6 +1388,9 @@ typedef struct PlanState
 	void      (*cdbexplainfun)(struct PlanState *planstate, struct StringInfoData *buf);
 	/* callback before ExecutorEnd */
 
+	/* MemoryAccount to use for recording the memory usage of different plan nodes. */
+	MemoryAccount* memoryAccount;
+
 	/*
 	 * GpMon packet
 	 */
