@@ -1892,3 +1892,7 @@ CREATE FUNCTION gp_nondbspecific_ptcat_verification() RETURNS bool LANGUAGE inte
  CREATE FUNCTION complex_lte(complex, complex) RETURNS bool  LANGUAGE internal IMMUTABLE STRICT AS 'complex_lte' WITH (OID=3595, DESCRIPTION="less than or equal");
  
  CREATE FUNCTION complex_gte(complex, complex) RETURNS bool  LANGUAGE internal IMMUTABLE STRICT AS 'complex_gte' WITH (OID=3596, DESCRIPTION="greater than or equal");
+ 
+ CREATE FUNCTION complex2float8(complex) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'complex2float8' WITH (OID=3597, DESCRIPTION="(internal) type cast from complex to float8");
+ 
+ CREATE FUNCTION complex2numeric(complex) RETURNS numeric LANGUAGE internal IMMUTABLE STRICT AS 'complex2numeric' WITH (OID=3598, DESCRIPTION="(internal) type cast from complex to numeric");
