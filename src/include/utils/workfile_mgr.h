@@ -22,12 +22,6 @@
  * Workfile management default parameters
  */
 
-/* Minimum size requested for an eviction (in bytes) */
-#define MIN_EVICT_SIZE 1 << 20
-
-/* Number of attempts to evict before we give up */
-#define MAX_EVICT_ATTEMPTS 100
-
 /* Other constants */
 
 #define	WORKFILE_SET_PREFIX "workfile_set"
@@ -167,7 +161,6 @@ void workfile_mgr_cache_init(void);
 void workfile_mgr_mark_complete(workfile_set *work_set);
 Cache *workfile_mgr_get_cache(void);
 int32 workfile_mgr_clear_cache(int seg_id);
-int64 workfile_mgr_evict(int64 size_requested);
 void workfile_update_in_progress_size(ExecWorkFile *workfile, int64 size);
 
 /* Workfile File operations */
