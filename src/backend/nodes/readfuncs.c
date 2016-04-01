@@ -1784,6 +1784,40 @@ _readRelabelType(void)
 }
 
 /*
+* _readCoerceViaIO
+*/
+static CoerceViaIO *
+_readCoerceViaIO(void)
+{
+	READ_LOCALS(CoerceViaIO);
+
+	READ_NODE_FIELD(arg);
+	READ_OID_FIELD(resulttype);
+	READ_ENUM_FIELD(coerceformat, CoercionForm);
+
+	READ_DONE();
+
+}
+
+/*
+ * _readArrayCoerceExpr
+ */
+static ArrayCoerceExpr *
+_readArrayCoerceExpr(void)
+{
+	READ_LOCALS(ArrayCoerceExpr);
+
+	READ_NODE_FIELD(arg);
+	READ_OID_FIELD(elemfuncid);
+	READ_OID_FIELD(resulttype);
+	READ_INT_FIELD(resulttypmod);
+	READ_BOOL_FIELD(isExplicit);
+	READ_ENUM_FIELD(coerceformat, CoercionForm);
+
+	READ_DONE();
+}
+
+/*
  * _readConvertRowtypeExpr
  */
 static ConvertRowtypeExpr *
@@ -3079,6 +3113,7 @@ static ParseNodeInfo infoAr[] =
 	{"ALTERTABLESTMT", (ReadFn)_readAlterTableStmt},
 	{"ALTERTYPESTMT", (ReadFn)_readAlterTypeStmt},
 	{"ARRAY", (ReadFn)_readArrayExpr},
+	{"ARRAYCOERCEEXPR", (ReadFn)_readArrayCoerceExpr},
 	{"ARRAYREF", (ReadFn)_readArrayRef},
 	{"A_CONST", (ReadFn)_readAConst},
 	{"BOOLEANTEST", (ReadFn)_readBooleanTest},
@@ -3090,6 +3125,7 @@ static ParseNodeInfo infoAr[] =
 	{"COALESCE", (ReadFn)_readCoalesceExpr},
 	{"COERCETODOMAIN", (ReadFn)_readCoerceToDomain},
 	{"COERCETODOMAINVALUE", (ReadFn)_readCoerceToDomainValue},
+	{"COERCEVIAIO", (ReadFn)_readCoerceViaIO},
 	{"COLUMNDEF", (ReadFn)_readColumnDef},
 	{"COLUMNREF", (ReadFn)_readColumnRef},
 	{"COMMONTABLEEXPR", (ReadFn)_readCommonTableExpr},

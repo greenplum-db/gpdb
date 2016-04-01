@@ -793,6 +793,36 @@ contain_mutable_functions_walker(Node *node, void *context)
 			return true;
 		/* else fall through to check args */
 	}
+	if (IsA(node, CoerceViaIO))
+	{
+		CoerceViaIO *expr = (CoerceViaIO *) node;
+		Oid             iofunc;
+		Oid             typioparam;
+		bool    typisvarlena;
+
+		/* check the result type's input function */
+		getTypeInputInfo(expr->resulttype,
+					&iofunc, &typioparam);
+		if (func_volatile(iofunc) != PROVOLATILE_IMMUTABLE)
+			return true;
+		/* check the input type's output function */
+		getTypeOutputInfo(exprType((Node *) expr->arg),
+					&iofunc, &typisvarlena);
+		if (func_volatile(iofunc) != PROVOLATILE_IMMUTABLE)
+			return true;
+		/* else fall through to check args */
+	}
+	if (IsA(node, ArrayCoerceExpr))
+	{
+		ArrayCoerceExpr *expr = (ArrayCoerceExpr *) node;
+
+		if (OidIsValid(expr->elemfuncid) &&
+			func_volatile(expr->elemfuncid) != PROVOLATILE_IMMUTABLE)
+		{
+			return true;
+		}
+		/* else fall through to check args */
+	}
 	if (IsA(node, RowCompareExpr))
 	{
 		RowCompareExpr *rcexpr = (RowCompareExpr *) node;
@@ -865,6 +895,34 @@ contain_volatile_functions_walker(Node *node, void *context)
 		ScalarArrayOpExpr *expr = (ScalarArrayOpExpr *) node;
 
 		if (op_volatile(expr->opno) == PROVOLATILE_VOLATILE)
+			return true;
+		/* else fall through to check args */
+	}
+	else if (IsA(node, CoerceViaIO))
+	{
+		CoerceViaIO *expr = (CoerceViaIO *) node;
+		Oid	 iofunc;
+		Oid	 typioparam;
+		bool	typisvarlena;
+
+		/* check the result type's input function */
+		getTypeInputInfo(expr->resulttype,
+						 &iofunc, &typioparam);
+		if (func_volatile(iofunc) == PROVOLATILE_VOLATILE)
+			return true;
+		/* check the input type's output function */
+		getTypeOutputInfo(exprType((Node *) expr->arg),
+						  &iofunc, &typisvarlena);
+		if (func_volatile(iofunc) == PROVOLATILE_VOLATILE)
+			return true;
+		/* else fall through to check args */
+	}
+	if (IsA(node, ArrayCoerceExpr))
+	{
+		ArrayCoerceExpr *expr = (ArrayCoerceExpr *) node;
+
+		if (OidIsValid(expr->elemfuncid) &&
+			func_volatile(expr->elemfuncid) == PROVOLATILE_VOLATILE)
 			return true;
 		/* else fall through to check args */
 	}
@@ -1197,6 +1255,20 @@ find_nonnullable_rels_walker(Node *node, bool top_level)
 	else if (IsA(node, RelabelType))
 	{
 		RelabelType *expr = (RelabelType *) node;
+
+		result = find_nonnullable_rels_walker((Node *) expr->arg, top_level);
+	}
+	else if (IsA(node, CoerceViaIO))
+	{
+		/* not clear this is useful, but it can't hurt */
+		CoerceViaIO *expr = (CoerceViaIO *) node;
+
+		result = find_nonnullable_rels_walker((Node *) expr->arg, top_level);
+	}
+	else if (IsA(node, ArrayCoerceExpr))
+	{
+		/* ArrayCoerceExpr is strict at the array level */
+		ArrayCoerceExpr *expr = (ArrayCoerceExpr *) node;
 
 		result = find_nonnullable_rels_walker((Node *) expr->arg, top_level);
 	}
@@ -1555,6 +1627,20 @@ strip_implicit_coercions(Node *node)
 		if (r->relabelformat == COERCE_IMPLICIT_CAST)
 			return strip_implicit_coercions((Node *) r->arg);
 	}
+	else if (IsA(node, CoerceViaIO))
+	{
+		CoerceViaIO *c = (CoerceViaIO *) node;
+
+		if (c->coerceformat == COERCE_IMPLICIT_CAST)
+			return strip_implicit_coercions((Node *) c->arg);
+	}
+	else if (IsA(node, ArrayCoerceExpr))
+	{
+		ArrayCoerceExpr *c = (ArrayCoerceExpr *) node;
+
+		if (c->coerceformat == COERCE_IMPLICIT_CAST)
+			return strip_implicit_coercions((Node *) c->arg);
+	}
 	else if (IsA(node, ConvertRowtypeExpr))
 	{
 		ConvertRowtypeExpr *c = (ConvertRowtypeExpr *) node;
@@ -1599,6 +1685,10 @@ set_coercionform_dontcare_walker(Node *node, void *context)
 		((FuncExpr *) node)->funcformat = COERCE_DONTCARE;
 	else if (IsA(node, RelabelType))
 		((RelabelType *) node)->relabelformat = COERCE_DONTCARE;
+	else if (IsA(node, CoerceViaIO))
+		((CoerceViaIO *) node)->coerceformat = COERCE_DONTCARE;
+	else if (IsA(node, ArrayCoerceExpr))
+		((ArrayCoerceExpr *) node)->coerceformat = COERCE_DONTCARE;
 	else if (IsA(node, ConvertRowtypeExpr))
 		((ConvertRowtypeExpr *) node)->convertformat = COERCE_DONTCARE;
 	else if (IsA(node, RowExpr))
@@ -3989,6 +4079,26 @@ expression_tree_mutator(Node *node,
 
 				FLATCOPY(newnode, relabel, RelabelType);
 				MUTATE(newnode->arg, relabel->arg, Expr *);
+				return (Node *) newnode;
+			}
+			break;
+		case T_CoerceViaIO:
+			{
+				CoerceViaIO *iocoerce = (CoerceViaIO *) node;
+				CoerceViaIO *newnode;
+
+				FLATCOPY(newnode, iocoerce, CoerceViaIO);
+				MUTATE(newnode->arg, iocoerce->arg, Expr *);
+				return (Node *) newnode;
+			}
+			break;
+		case T_ArrayCoerceExpr:
+			{
+				ArrayCoerceExpr *acoerce = (ArrayCoerceExpr *) node;
+				ArrayCoerceExpr *newnode;
+
+				FLATCOPY(newnode, acoerce, ArrayCoerceExpr);
+				MUTATE(newnode->arg, acoerce->arg, Expr *);
 				return (Node *) newnode;
 			}
 			break;

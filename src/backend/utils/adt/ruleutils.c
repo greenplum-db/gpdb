@@ -202,6 +202,9 @@ static void get_sortlist_expr(List *l, List *targetList, bool force_colno,
                               deparse_context *context, char *keyword_clause);
 static void get_windowspec_expr(WindowSpec *spec, deparse_context *context);
 static void get_windowref_expr(WindowRef *wref, deparse_context *context);
+static void get_coercion_expr(Node *arg, deparse_context *context,
+							Oid resulttype, int32 resulttypmod,
+							Node *parentNode);
 static void get_const_expr(Const *constval, deparse_context *context,
 						   int showtype);
 static void get_sublink_expr(SubLink *sublink, deparse_context *context);
@@ -3687,6 +3690,12 @@ isSimpleNode(Node *node, Node *parentNode, int prettyFlags)
 		case T_RelabelType:
 			return isSimpleNode((Node *) ((RelabelType *) node)->arg,
 								node, prettyFlags);
+		case T_CoerceViaIO:
+			return isSimpleNode((Node *) ((CoerceViaIO *) node)->arg,
+								node, prettyFlags);
+		case T_ArrayCoerceExpr:
+			return isSimpleNode((Node *) ((ArrayCoerceExpr *) node)->arg,
+								node, prettyFlags);
 		case T_ConvertRowtypeExpr:
 			return isSimpleNode((Node *) ((ConvertRowtypeExpr *) node)->arg,
 								node, prettyFlags);
@@ -4215,6 +4224,48 @@ get_rule_expr(Node *node, deparse_context *context,
 					appendStringInfo(buf, "::%s",
 								format_type_with_typemod(relabel->resulttype,
 													 relabel->resulttypmod));
+				}
+			}
+			break;
+
+		case T_CoerceViaIO:
+			{
+				CoerceViaIO *iocoerce = (CoerceViaIO *) node;
+				Node	   *arg = (Node *) iocoerce->arg;
+
+				if (iocoerce->coerceformat == COERCE_IMPLICIT_CAST &&
+					!showimplicit)
+				{
+					/* don't show the implicit cast */
+					get_rule_expr_paren(arg, context, false, node);
+				}
+				else
+				{
+					get_coercion_expr(arg, context,
+									  iocoerce->resulttype,
+									  -1,
+									  node);
+				}
+			}
+			break;
+
+		case T_ArrayCoerceExpr:
+			{
+				ArrayCoerceExpr *acoerce = (ArrayCoerceExpr *) node;
+				Node	   *arg = (Node *) acoerce->arg;
+
+				if (acoerce->coerceformat == COERCE_IMPLICIT_CAST &&
+					!showimplicit)
+				{
+					/* don't show the implicit cast */
+					get_rule_expr_paren(arg, context, false, node);
+				}
+				else
+				{
+					get_coercion_expr(arg, context,
+									  acoerce->resulttype,
+									  acoerce->resulttypmod,
+									  node);
 				}
 			}
 			break;
@@ -5336,6 +5387,46 @@ get_windowref_expr(WindowRef *wref, deparse_context *context)
 	{
 		get_windowspec_expr(spec, context);
 	}
+}
+
+/*
+ * get_coercion_expr
+ *
+ *  Make a string representation of a value coerced to a specific type
+ * ----------
+ */
+static void
+get_coercion_expr(Node *arg, deparse_context *context,
+		  Oid resulttype, int32 resulttypmod,
+		  Node *parentNode)
+{
+    StringInfo  buf = context->buf;
+
+    /*
+     * Since parse_coerce.c doesn't immediately collapse application of
+     * length-coercion functions to constants, what we'll typically see
+     * in such cases is a Const with typmod -1 and a length-coercion
+     * function right above it.  Avoid generating redundant output.
+     * However, beware of suppressing casts when the user actually wrote
+     * something like 'foo'::text::char(3).
+     */
+    if (arg && IsA(arg, Const) &&
+	((Const *) arg)->consttype == resulttype &&
+	((Const *) arg)->consttypmod == -1)
+    {
+	/* Show the constant without normal ::typename decoration */
+	get_const_expr((Const *) arg, context, false);
+    }
+    else
+    {
+	if (!PRETTY_PAREN(context))
+	    appendStringInfoChar(buf, '(');
+	get_rule_expr_paren(arg, context, false, parentNode);
+	if (!PRETTY_PAREN(context))
+	    appendStringInfoChar(buf, ')');
+    }
+    appendStringInfo(buf, "::%s",
+		     format_type_with_typemod(resulttype, resulttypmod));
 }
 
 /* ----------

@@ -286,6 +286,10 @@ expression_tree_walker(Node *node,
 			break;
 		case T_RelabelType:
 			return walker(((RelabelType *) node)->arg, context);
+		case T_CoerceViaIO:
+			return walker(((CoerceViaIO *) node)->arg, context);
+		case T_ArrayCoerceExpr:
+			return walker(((ArrayCoerceExpr *) node)->arg, context);
 		case T_ConvertRowtypeExpr:
 			return walker(((ConvertRowtypeExpr *) node)->arg, context);
 		case T_CaseExpr:
