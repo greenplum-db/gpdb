@@ -573,7 +573,7 @@ postquel_end(execution_state *es)
 			{
 				Oid			relationOid = InvalidOid; 					/* relation that is modified */
 				AutoStatsCmdType cmdType = AUTOSTATS_CMDTYPE_SENTINEL; 	/* command type */
-				autostats_get_cmdtype(es->qd->plannedstmt, &cmdType, &relationOid);
+				autostats_get_cmdtype(es->qd, &cmdType, &relationOid);
 				auto_stats(cmdType, relationOid, es->qd->es_processed, true /* inFunction */);
 			}
 		}

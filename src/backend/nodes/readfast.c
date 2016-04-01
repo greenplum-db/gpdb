@@ -368,34 +368,6 @@ _readRangeVar(void)
 	READ_DONE();
 }
 
-static IntoClause *
-_readIntoClause(void)
-{
-	READ_LOCALS(IntoClause);
-
-	READ_NODE_FIELD(rel);
-	READ_NODE_FIELD(colNames);
-	READ_NODE_FIELD(options);
-	READ_ENUM_FIELD(onCommit, OnCommitAction);
-	READ_STRING_FIELD(tableSpaceName);
-	READ_OID_FIELD(oidInfo.relOid);
-	READ_OID_FIELD(oidInfo.comptypeOid);
-	READ_OID_FIELD(oidInfo.comptypeArrayOid);
-	READ_OID_FIELD(oidInfo.toastOid);
-	READ_OID_FIELD(oidInfo.toastIndexOid);
-	READ_OID_FIELD(oidInfo.toastComptypeOid);
-	READ_OID_FIELD(oidInfo.aosegOid);
-	READ_OID_FIELD(oidInfo.aosegIndexOid);
-	READ_OID_FIELD(oidInfo.aosegComptypeOid);
-	READ_OID_FIELD(oidInfo.aovisimapOid);
-	READ_OID_FIELD(oidInfo.aovisimapIndexOid);
-	READ_OID_FIELD(oidInfo.aovisimapComptypeOid);
-	READ_OID_FIELD(oidInfo.aoblkdirOid);
-	READ_OID_FIELD(oidInfo.aoblkdirIndexOid);
-	READ_OID_FIELD(oidInfo.aoblkdirComptypeOid);
-	READ_DONE();
-}
-
 /*
  * _readConst
  */
@@ -1466,13 +1438,22 @@ _readPlannedStmt(void)
 	READ_INT_FIELD(nMotionNodes);
 	READ_INT_FIELD(nInitPlans);
 	/* intoPolicy not serialized in outfast.c */
-	READ_NODE_FIELD(sliceTable);
 
 	READ_UINT64_FIELD(query_mem);
-	READ_NODE_FIELD(transientTypeRecords);
 	READ_DONE();
 }
 
+static QueryDispatchDesc *
+_readQueryDispatchDesc(void)
+{
+	READ_LOCALS(QueryDispatchDesc);
+
+	READ_NODE_FIELD(transientTypeRecords);
+	READ_NODE_FIELD(intoOidInfo);
+	READ_STRING_FIELD(intoTableSpaceName);
+	READ_NODE_FIELD(sliceTable);
+	READ_DONE();
+}
 
 /*
  * _readPlan
@@ -2639,6 +2620,9 @@ readNodeBinary(void)
 			case T_PlannedStmt:
 				return_value = _readPlannedStmt();
 				break;
+			case T_QueryDispatchDesc:
+				return_value = _readQueryDispatchDesc();
+				break;
 			case T_Plan:
 					return_value = _readPlan();
 					break;
@@ -2785,6 +2769,9 @@ readNodeBinary(void)
 				break;
 			case T_IntoClause:
 				return_value = _readIntoClause();
+				break;
+			case T_TableOidInfo:
+				return_value = _readTableOidInfo();
 				break;
 			case T_Var:
 				return_value = _readVar();

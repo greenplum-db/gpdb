@@ -132,11 +132,6 @@ _equalRangeVar(RangeVar *a, RangeVar *b)
 
 /* 
  * Records information about the target of a CTAS (SELECT ... INTO). 
- * This node type first appears in 3.4 as part of the preparation for 
- * PlannedStmt support.
- *
- * NB Prior to introducting the IntoClause, only relOid, comptypeOid were
- *    tested for equality
  */
 static bool
 _equalIntoClause(IntoClause *a, IntoClause *b)
@@ -146,8 +141,28 @@ _equalIntoClause(IntoClause *a, IntoClause *b)
 	COMPARE_NODE_FIELD(options);
 	COMPARE_SCALAR_FIELD(onCommit);
 	COMPARE_STRING_FIELD(tableSpaceName);
-	COMPARE_SCALAR_FIELD(oidInfo.relOid);
-	COMPARE_SCALAR_FIELD(oidInfo.comptypeOid);
+
+	return true;
+}
+
+static bool
+_equalTableOidInfo(TableOidInfo *a, TableOidInfo *b)
+{
+	COMPARE_SCALAR_FIELD(relOid);
+	COMPARE_SCALAR_FIELD(comptypeOid);
+	COMPARE_SCALAR_FIELD(comptypeArrayOid);
+	COMPARE_SCALAR_FIELD(toastOid);
+	COMPARE_SCALAR_FIELD(toastIndexOid);
+	COMPARE_SCALAR_FIELD(toastComptypeOid);
+	COMPARE_SCALAR_FIELD(aosegOid);
+	COMPARE_SCALAR_FIELD(aosegIndexOid);
+	COMPARE_SCALAR_FIELD(aosegComptypeOid);
+	COMPARE_SCALAR_FIELD(aovisimapOid);
+	COMPARE_SCALAR_FIELD(aovisimapIndexOid);
+	COMPARE_SCALAR_FIELD(aovisimapComptypeOid);
+	COMPARE_SCALAR_FIELD(aoblkdirOid);
+	COMPARE_SCALAR_FIELD(aoblkdirIndexOid);
+	COMPARE_SCALAR_FIELD(aoblkdirComptypeOid);
 	
 	return true;
 }
@@ -2535,6 +2550,9 @@ equal(void *a, void *b)
 			break;
 		case T_IntoClause:
 			retval = _equalIntoClause(a, b);
+			break;
+		case T_TableOidInfo:
+			retval = _equalTableOidInfo(a, b);
 			break;
 		case T_Var:
 			retval = _equalVar(a, b);

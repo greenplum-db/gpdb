@@ -653,7 +653,6 @@ _readRangeVar(void)
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
-#ifndef COMPILING_BINARY_FUNCS
 static IntoClause *
 _readIntoClause(void)
 {
@@ -664,52 +663,33 @@ _readIntoClause(void)
 	READ_NODE_FIELD(options);
 	READ_ENUM_FIELD(onCommit, OnCommitAction);
 	READ_STRING_FIELD(tableSpaceName);
-	READ_OID_FIELD(oidInfo.relOid);
-    READ_OID_FIELD(oidInfo.comptypeOid);
-	READ_OID_FIELD(oidInfo.comptypeArrayOid);
-    READ_OID_FIELD(oidInfo.toastOid);
-    READ_OID_FIELD(oidInfo.toastIndexOid);
-    READ_OID_FIELD(oidInfo.toastComptypeOid);
-    READ_OID_FIELD(oidInfo.aosegOid);
-    READ_OID_FIELD(oidInfo.aosegIndexOid);
-    READ_OID_FIELD(oidInfo.aosegComptypeOid);
-	READ_OID_FIELD(oidInfo.aovisimapOid);
-	READ_OID_FIELD(oidInfo.aovisimapIndexOid);
-	READ_OID_FIELD(oidInfo.aovisimapComptypeOid);
-	READ_OID_FIELD(oidInfo.aoblkdirOid);
-	READ_OID_FIELD(oidInfo.aoblkdirIndexOid);
-	READ_OID_FIELD(oidInfo.aoblkdirComptypeOid);
-	/* policy not serialized */
-
-	/* Is this code, carried over from 3.3, actually needed?
-	 *
-	 * If the Query was a CTAS, and the CTAS was stored in the catalog
-	 * as part of a rule, we don't want to remember the OIDs assigned
-	 * in the past.  Not sure we can ever have that happen.
-	 */
-	Assert(local_node->oidInfo.relOid == InvalidOid);
-
-	local_node->oidInfo.relOid = InvalidOid;
-	local_node->oidInfo.comptypeOid = InvalidOid;
-	local_node->oidInfo.comptypeArrayOid = InvalidOid;
-	local_node->oidInfo.toastOid = InvalidOid;
-	local_node->oidInfo.toastIndexOid = InvalidOid;
-	local_node->oidInfo.toastComptypeOid = InvalidOid;
-	local_node->oidInfo.aosegOid = InvalidOid;
-	local_node->oidInfo.aosegIndexOid = InvalidOid;
-	local_node->oidInfo.aosegComptypeOid = InvalidOid;
-	local_node->oidInfo.aoblkdirOid = InvalidOid;
-	local_node->oidInfo.aoblkdirIndexOid = InvalidOid;
-	local_node->oidInfo.aoblkdirComptypeOid = InvalidOid;
-	local_node->oidInfo.aovisimapOid = InvalidOid;
-	local_node->oidInfo.aovisimapIndexOid = InvalidOid;
-	local_node->oidInfo.aovisimapComptypeOid = InvalidOid;
-
-	/* policy not serialized */
 
 	READ_DONE();
 }
-#endif /* COMPILING_BINARY_FUNCS */
+
+static TableOidInfo *
+_readTableOidInfo(void)
+{
+	READ_LOCALS(TableOidInfo);
+
+	READ_OID_FIELD(relOid);
+	READ_OID_FIELD(comptypeOid);
+	READ_OID_FIELD(comptypeArrayOid);
+	READ_OID_FIELD(toastOid);
+	READ_OID_FIELD(toastIndexOid);
+	READ_OID_FIELD(toastComptypeOid);
+	READ_OID_FIELD(aosegOid);
+	READ_OID_FIELD(aosegIndexOid);
+	READ_OID_FIELD(aosegComptypeOid);
+	READ_OID_FIELD(aovisimapOid);
+	READ_OID_FIELD(aovisimapIndexOid);
+	READ_OID_FIELD(aovisimapComptypeOid);
+	READ_OID_FIELD(aoblkdirOid);
+	READ_OID_FIELD(aoblkdirIndexOid);
+	READ_OID_FIELD(aoblkdirComptypeOid);
+
+	READ_DONE();
+}
 
 /*
  * _readVar
@@ -3122,6 +3102,7 @@ static ParseNodeInfo infoAr[] =
 	{"SLICETABLE", (ReadFn)_readSliceTable},
 	{"SORTCLAUSE", (ReadFn)_readSortClause},
 	{"SUBLINK", (ReadFn)_readSubLink},
+	{"TABLEOIDINFO", (ReadFn)_readTableOidInfo},
 	{"TABLEVALUEEXPR", (ReadFn)_readTableValueExpr},
 	{"TARGETENTRY", (ReadFn)_readTargetEntry},
 	{"TRUNCATESTMT", (ReadFn)_readTruncateStmt},

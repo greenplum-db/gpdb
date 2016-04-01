@@ -18,15 +18,6 @@ struct QueryDesc;
 struct DirectDispatchInfo;
 struct EState;
 
-typedef enum GangType
-{
-	GANGTYPE_UNALLOCATED, /* a root slice executed by the qDisp */
-	GANGTYPE_ENTRYDB_READER, /* a 1-gang with read access to the entry db */
-	GANGTYPE_SINGLETON_READER, /* a 1-gang to read the segment dbs */
-	GANGTYPE_PRIMARY_READER, /* a N-gang to read the segment dbs */
-	GANGTYPE_PRIMARY_WRITER /* the N-gang that can update the segment dbs */
-} GangType;
-
 /*
  * A gang represents a single group of workers on each connected segDB
  */
@@ -158,108 +149,6 @@ typedef struct CdbProcess
 
 	int contentid;
 } CdbProcess;
-
-/*
- * MPP Plan Slice information
- *
- * These structures summarize how a plan tree is sliced up into separate
- * units of execution or slices. A slice will execute on a each worker within
- * a gang of processes. Some gangs have a worker process on each of several
- * databases, others have a single worker.
- *
- */
-typedef struct Slice
-{
-	NodeTag type;
-
-	/*
-	 * The index in the global slice table of this slice. The root slice of
-	 * the main plan is always 0. Slices that have senders at their local
-	 * root have a sliceIndex equal to the motionID of their sender Motion.
-	 *
-	 * Undefined slices should have this set to -1.
-	 */
-	int sliceIndex;
-
-	/*
-	 * The root slice of the slice tree of which this slice is a part.
-	 */
-	int rootIndex;
-
-	/*
-	 * the index of parent in global slice table (origin 0) or -1 if
-	 * this is root slice.
-	 */
-	int parentIndex;
-
-	/*
-	 * An integer list of indices in the global slice table (origin 0)
-	 * of the child slices of this slice, or -1 if this is a leaf slice.
-	 * A child slice corresponds to a receiving motion in this slice.
-	 */
-	List *children;
-
-	/* What kind of gang does this slice need */
-	GangType gangType;
-
-	/*
-	 * How many gang members needed
-	 *
-	 * It is set before the process lists below and used to decide how
-	 * to initialize them.
-	 */
-	int gangSize;
-
-	/*
-	 * How many of the gang members will actually be used. This takes into
-	 * account directDispatch information
-	 */
-	int numGangMembersToBeActive;
-
-	/*
-	 * directDispatch->isDirectDispatch should ONLY be set for a slice when it requires an n-gang.
-	 */
-	DirectDispatchInfo directDispatch;
-
-	struct Gang *primaryGang;
-
-	/* tell dispatch agents which gang we're talking about.*/
-	int primary_gang_id;
-
-
-	/*
-	 * A list of CDBProcess nodes corresponding to the worker processes allocated
-	 * to implement this plan slice.
-	 *
-	 * The number of processes must agree with the the plan slice to be implemented.
-	 */
-	List *primaryProcesses;
-} Slice;
-
-/*
- * The SliceTable is a list of Slice structures organized into root slices
- * and motion slices as follows:
- *
- * Slice 0 is the root slice of plan as a whole.
- * Slices 1 through nMotion are motion slices with a sending motion at
- * the root of the slice.
- * Slices nMotion+1 and on are root slices of initPlans.
- *
- * There may be unused slices in case the plan contains subplans that
- * are not initPlans. (This won't happen unless MPP decides to support
- * subplans similarly to PostgreSQL, which isn't the current plan.)
- */
-typedef struct SliceTable
-{
-	NodeTag type;
-
-	int nMotions; /* The number Motion nodes in the entire plan */
-	int nInitPlans; /* The number of initplan slices allocated */
-	int localSlice; /* Index of the slice to execute */
-	List *slices; /* List of slices */
-	bool doInstrument; /* true => collect stats for EXPLAIN ANALYZE */
-	uint32 ic_instance_id;
-} SliceTable;
 
 extern void InitSliceTable(struct EState *estate, int nMotions, int nSubplans);
 extern Slice *getCurrentSlice(struct EState *estate, int sliceIndex);

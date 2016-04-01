@@ -188,9 +188,20 @@ _copyPlannedStmt(PlannedStmt *from)
 	}
 	else
 		newnode->intoPolicy = NULL;
-	COPY_NODE_FIELD(sliceTable);
 
 	COPY_SCALAR_FIELD(query_mem);
+
+	return newnode;
+}
+
+static QueryDispatchDesc *
+_copyQueryDispatchDesc(QueryDispatchDesc *from)
+{
+	QueryDispatchDesc *newnode = makeNode(QueryDispatchDesc);
+
+	COPY_NODE_FIELD(intoOidInfo);
+	COPY_NODE_FIELD(intoTableSpaceName);
+	COPY_NODE_FIELD(sliceTable);
 
 	return newnode;
 }
@@ -1271,15 +1282,31 @@ _copyIntoClause(IntoClause *from)
 	COPY_NODE_FIELD(options);
 	COPY_SCALAR_FIELD(onCommit);
 	COPY_STRING_FIELD(tableSpaceName);
-	COPY_SCALAR_FIELD(oidInfo.relOid);
-	COPY_SCALAR_FIELD(oidInfo.comptypeOid);
-	COPY_SCALAR_FIELD(oidInfo.toastOid);
-	COPY_SCALAR_FIELD(oidInfo.toastIndexOid);
-	COPY_SCALAR_FIELD(oidInfo.toastComptypeOid);
-	COPY_SCALAR_FIELD(oidInfo.aosegOid);
-	COPY_SCALAR_FIELD(oidInfo.aosegIndexOid);
-	COPY_SCALAR_FIELD(oidInfo.aosegComptypeOid);
-	
+
+	return newnode;
+}
+
+static TableOidInfo *
+_copyTableOidInfo(TableOidInfo *from)
+{
+	TableOidInfo *newnode = makeNode(TableOidInfo);
+
+	COPY_SCALAR_FIELD(relOid);
+	COPY_SCALAR_FIELD(comptypeOid);
+	COPY_SCALAR_FIELD(comptypeArrayOid);
+	COPY_SCALAR_FIELD(toastOid);
+	COPY_SCALAR_FIELD(toastIndexOid);
+	COPY_SCALAR_FIELD(toastComptypeOid);
+	COPY_SCALAR_FIELD(aosegOid);
+	COPY_SCALAR_FIELD(aosegIndexOid);
+	COPY_SCALAR_FIELD(aosegComptypeOid);
+	COPY_SCALAR_FIELD(aovisimapOid);
+	COPY_SCALAR_FIELD(aovisimapIndexOid);
+	COPY_SCALAR_FIELD(aovisimapComptypeOid);
+	COPY_SCALAR_FIELD(aoblkdirOid);
+	COPY_SCALAR_FIELD(aoblkdirIndexOid);
+	COPY_SCALAR_FIELD(aoblkdirComptypeOid);
+
 	return newnode;
 }
 
@@ -4400,6 +4427,9 @@ copyObject(void *from)
 		case T_PlannedStmt:
 			retval = _copyPlannedStmt(from);
 			break;
+		case T_QueryDispatchDesc:
+			retval = _copyQueryDispatchDesc(from);
+			break;
 		case T_Plan:
 			retval = _copyPlan(from);
 			break;
@@ -4547,6 +4577,9 @@ copyObject(void *from)
 			break;
 		case T_IntoClause:
 			retval = _copyIntoClause(from);
+			break;
+		case T_TableOidInfo:
+			retval = _copyTableOidInfo(from);
 			break;
 		case T_Var:
 			retval = _copyVar(from);

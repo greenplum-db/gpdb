@@ -164,7 +164,7 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	 * Start execution, inserting parameters if any.
 	 */
 	PortalStart(portal, params, ActiveSnapshot,
-				savedSeqServerHost, savedSeqServerPort);
+				savedSeqServerHost, savedSeqServerPort, NULL);
 
 	Assert(portal->strategy == PORTAL_ONE_SELECT);
 

@@ -963,8 +963,8 @@ pg_plan_queries(List *querytrees, ParamListInfo boundParams,
  * query_string -- optional query text (C string).
  * serializedQuerytree[len]  -- Query node or (NULL,0) if plan provided.
  * serializedPlantree[len] -- PlannedStmt node, or (NULL,0) if query provided.
- * serializedParms[len] -- optional parameters
- * serializedSliceInfo[len] -- optional SliceTable
+ * serializedParams[len] -- optional parameters
+ * serializedQueryDispatchDesc[len] -- QueryDispatchDesc node, or (NULL,0) if query provided.
  * localSlice -- slice table index
  *
  * Caller may supply either a Query (representing utility command) or
@@ -975,7 +975,7 @@ exec_mpp_query(const char *query_string,
 			   const char * serializedQuerytree, int serializedQuerytreelen,
 			   const char * serializedPlantree, int serializedPlantreelen,
 			   const char * serializedParams, int serializedParamslen,
-			   const char * serializedSliceInfo, int serializedSliceInfolen,
+			   const char * serializedQueryDispatchDesc, int serializedQueryDispatchDesclen,
 			   const char * seqServerHost, int seqServerPort,
 			   int localSlice)
 {
@@ -986,6 +986,7 @@ exec_mpp_query(const char *query_string,
 	char		msec_str[32];
 	Node		   *utilityStmt = NULL;
 	PlannedStmt	   *plan = NULL;
+	QueryDispatchDesc *ddesc = NULL;
 	CmdType		commandType = CMD_UNKNOWN;
 	SliceTable *sliceTable = NULL;
     Slice      *slice = NULL;
@@ -1056,53 +1057,45 @@ exec_mpp_query(const char *query_string,
 		
 		utilityStmt = query->utilityStmt;
 	}
-	
-	/*
-	 * Deserialize the slice table, if there is one, and set up the local slice.
-	 */
-    if (serializedSliceInfo != NULL && serializedSliceInfolen > 0)
-	{
-        sliceTable = (SliceTable *) deserializeNode(serializedSliceInfo, serializedSliceInfolen);
-		
-		sliceTable->localSlice = localSlice;
-		
-        if (!sliceTable ||
-            !IsA(sliceTable, SliceTable) ||
-            sliceTable->localSlice < 0 ||
-            sliceTable->localSlice >= list_length(sliceTable->slices))
-            elog(ERROR, "MPPEXEC: received invalid slice table:, %d", localSlice);
-		
-        slice = (Slice *)list_nth(sliceTable->slices, sliceTable->localSlice);
-        Insist(IsA(slice, Slice));
-		
-        /* Set global sliceid variable for elog. */
-        currentSliceId = sliceTable->localSlice;
-    }
-	
+
  	/*
      * Deserialize the query execution plan (a PlannedStmt node), if there is one.
      */
-    if (serializedPlantree != NULL && serializedPlantreelen > 0)
-    {
-    	plan = (PlannedStmt *) deserializeNode(serializedPlantree,serializedPlantreelen);
-		if ( !plan ||
-			!IsA(plan, PlannedStmt) ||
-			plan->sliceTable != NULL ||
-			plan->memoryAccount != NULL)
-		{
+	if (serializedPlantree != NULL && serializedPlantreelen > 0)
+	{
+		plan = (PlannedStmt *) deserializeNode(serializedPlantree,serializedPlantreelen);
+		if (!plan || !IsA(plan, PlannedStmt))
 			elog(ERROR, "MPPEXEC: receive invalid planned statement");
-		}
-		
-    	/*
-		 * Since we're running as a QE, we need to put the slice table 
-		 * and associated values determined by the QD that called MPPEXEC 
-		 * into the EState before we run the executor.  We can't do it now 
-		 * because our EState isn't ready. Instead, put it in PlannedStmt 
-		 * and let the code that sets up the QueryDesc sort it out.
-		 */
-		plan->sliceTable = (Node *) sliceTable; /* Cache for CreateQueryDesc */
     }
-	
+
+	/*
+     * Deserialize the extra execution information (a QueryDispatchDesc node), if there is one.
+     */
+    if (serializedQueryDispatchDesc != NULL && serializedQueryDispatchDesclen > 0)
+    {
+		ddesc = (QueryDispatchDesc *) deserializeNode(serializedQueryDispatchDesc,serializedQueryDispatchDesclen);
+		if (!ddesc || !IsA(ddesc, QueryDispatchDesc))
+			elog(ERROR, "MPPEXEC: received invalid QueryDispatchDesc with planned statement");
+
+        sliceTable = ddesc->sliceTable;
+
+		if (sliceTable)
+		{
+			if (!IsA(sliceTable, SliceTable) ||
+				sliceTable->localSlice < 0 ||
+				sliceTable->localSlice >= list_length(sliceTable->slices))
+				elog(ERROR, "MPPEXEC: received invalid slice table: %d", localSlice);
+
+			sliceTable->localSlice = localSlice;
+
+			slice = (Slice *)list_nth(sliceTable->slices, sliceTable->localSlice);
+			Insist(IsA(slice, Slice));
+
+			/* Set global sliceid variable for elog. */
+			currentSliceId = sliceTable->localSlice;
+		}
+    }
+
 	/*
 	 * Choose the command type from either the Query or the PlannedStmt.
 	 */
@@ -1330,11 +1323,11 @@ exec_mpp_query(const char *query_string,
 						  MessageContext);
 
 		/* 
-		 * Start the portal.  No parameters here.
+		 * Start the portal.
 		 */
 		PortalStart(portal, paramLI, InvalidSnapshot,
-					seqServerHost, seqServerPort);
-		
+					seqServerHost, seqServerPort, ddesc);
+
 		/*
 		 * Select text output format, the default.
 		 */
@@ -1755,7 +1748,7 @@ exec_simple_query(const char *query_string, const char *seqServerHost, int seqSe
 		 * Start the portal.  No parameters here.
 		 */
 		PortalStart(portal, NULL, InvalidSnapshot,
-					seqServerHost, seqServerPort);
+					seqServerHost, seqServerPort, NULL);
 
 		/*
 		 * Select the appropriate output format: text unless we are doing a
@@ -2512,7 +2505,7 @@ exec_bind_message(StringInfo input_message)
 					  qContext);
 
 	PortalStart(portal, params, InvalidSnapshot,
-				savedSeqServerHost, savedSeqServerPort);
+				savedSeqServerHost, savedSeqServerPort, NULL);
 
 	/*
 	 * Apply the result format requests to the portal.
@@ -4754,7 +4747,7 @@ PostgresMain(int argc, char *argv[],
 					const char *serializedQuerytree = NULL;
 					const char *serializedPlantree = NULL;
 					const char *serializedParams = NULL;
-					const char *serializedSliceInfo = NULL;
+					const char *serializedQueryDispatchDesc = NULL;
 					const char *seqServerHost = NULL;
 					
 					int query_string_len = 0;
@@ -4762,7 +4755,7 @@ PostgresMain(int argc, char *argv[],
 					int serializedQuerytreelen = 0;
 					int serializedPlantreelen = 0;
 					int serializedParamslen = 0;
-					int serializedSliceInfolen = 0;
+					int serializedQueryDispatchDesclen = 0;
 					int seqServerHostlen = 0;
 					int seqServerPort = -1;
 					
@@ -4819,7 +4812,7 @@ PostgresMain(int argc, char *argv[],
 					serializedQuerytreelen = pq_getmsgint(&input_message, 4);
 					serializedPlantreelen = pq_getmsgint(&input_message, 4);
 					serializedParamslen = pq_getmsgint(&input_message, 4);
-					serializedSliceInfolen = pq_getmsgint(&input_message, 4);
+					serializedQueryDispatchDesclen = pq_getmsgint(&input_message, 4);
 					serializedSnapshotlen = pq_getmsgint(&input_message, 4);
 						
 					/* read in the snapshot info */
@@ -4850,9 +4843,9 @@ PostgresMain(int argc, char *argv[],
 						
 					if (serializedParamslen > 0)
 						serializedParams = pq_getmsgbytes(&input_message,serializedParamslen);
-						
-					if (serializedSliceInfolen > 0)
-						serializedSliceInfo = pq_getmsgbytes(&input_message,serializedSliceInfolen);
+
+					if (serializedQueryDispatchDesclen > 0)
+						serializedQueryDispatchDesc = pq_getmsgbytes(&input_message,serializedQueryDispatchDesclen);
 
 					if (seqServerHostlen > 0)
 						seqServerHost = pq_getmsgbytes(&input_message, seqServerHostlen);
@@ -4908,9 +4901,9 @@ PostgresMain(int argc, char *argv[],
 									   serializedQuerytree, serializedQuerytreelen,
 									   serializedPlantree, serializedPlantreelen,
 									   serializedParams, serializedParamslen,
-									   serializedSliceInfo, serializedSliceInfolen,
+									   serializedQueryDispatchDesc, serializedQueryDispatchDesclen,
 									   seqServerHost, seqServerPort, localSlice);
-					
+
 					SetUserIdAndContext(GetOuterUserId(), false);
 
 					send_ready_for_query = true;

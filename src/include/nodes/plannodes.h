@@ -149,25 +149,8 @@ typedef struct PlannedStmt
 	 */
 	struct GpPolicy  *intoPolicy;
 
-	/*
-	 * GPDB: This allows the slice table to accompany the plan as it
-	 * moves around the executor.
-	 *
-	 * Currently, the slice table should not be installed on the QD.
-	 * Rather is it shipped to QEs as a separate parameter to MPPEXEC.
-	 * The implementation of MPPEXEC, which runs on the QEs, installs
-	 * the slice table in the plan as required there.
-	 */
-	Node	   *sliceTable;
-
 	/* What is the memory reserved for this query's execution? */
 	uint64		query_mem;
-
-	/*
-	 * List of TupleDescNodes, one for each transient record type, when a
-	 * PlannedStmt is transferred from QD to QEs
-	 */
-	List	   *transientTypeRecords;
 } PlannedStmt;
 
 

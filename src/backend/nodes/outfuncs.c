@@ -317,10 +317,8 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_INT_FIELD(nInitPlans);
 
 	/* Don't serialize policy */
-	WRITE_NODE_FIELD(sliceTable);
 
 	WRITE_UINT64_FIELD(query_mem);
-	WRITE_NODE_FIELD(transientTypeRecords);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -1118,21 +1116,28 @@ _outIntoClause(StringInfo str, IntoClause *node)
 	WRITE_NODE_FIELD(options);
 	WRITE_ENUM_FIELD(onCommit, OnCommitAction);
 	WRITE_STRING_FIELD(tableSpaceName);
-	WRITE_OID_FIELD(oidInfo.relOid);
-	WRITE_OID_FIELD(oidInfo.comptypeOid);
-	WRITE_OID_FIELD(oidInfo.comptypeArrayOid);
-	WRITE_OID_FIELD(oidInfo.toastOid);
-	WRITE_OID_FIELD(oidInfo.toastIndexOid);
-	WRITE_OID_FIELD(oidInfo.toastComptypeOid);
-	WRITE_OID_FIELD(oidInfo.aosegOid);
-	WRITE_OID_FIELD(oidInfo.aosegIndexOid);
-	WRITE_OID_FIELD(oidInfo.aosegComptypeOid);
-	WRITE_OID_FIELD(oidInfo.aovisimapOid);
-	WRITE_OID_FIELD(oidInfo.aovisimapIndexOid);
-	WRITE_OID_FIELD(oidInfo.aovisimapComptypeOid);
-	WRITE_OID_FIELD(oidInfo.aoblkdirOid);
-	WRITE_OID_FIELD(oidInfo.aoblkdirIndexOid);
-	WRITE_OID_FIELD(oidInfo.aoblkdirComptypeOid);
+}
+
+static void
+_outTableOidInfo(StringInfo str, TableOidInfo *node)
+{
+	WRITE_NODE_TYPE("TABLEOIDINFO");
+
+	WRITE_OID_FIELD(relOid);
+	WRITE_OID_FIELD(comptypeOid);
+	WRITE_OID_FIELD(comptypeArrayOid);
+	WRITE_OID_FIELD(toastOid);
+	WRITE_OID_FIELD(toastIndexOid);
+	WRITE_OID_FIELD(toastComptypeOid);
+	WRITE_OID_FIELD(aosegOid);
+	WRITE_OID_FIELD(aosegIndexOid);
+	WRITE_OID_FIELD(aosegComptypeOid);
+	WRITE_OID_FIELD(aovisimapOid);
+	WRITE_OID_FIELD(aovisimapIndexOid);
+	WRITE_OID_FIELD(aovisimapComptypeOid);
+	WRITE_OID_FIELD(aoblkdirOid);
+	WRITE_OID_FIELD(aoblkdirIndexOid);
+	WRITE_OID_FIELD(aoblkdirComptypeOid);
 }
 
 static void
@@ -4377,6 +4382,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_IntoClause:
 				_outIntoClause(str, obj);
+				break;
+			case T_TableOidInfo:
+				_outTableOidInfo(str, obj);
 				break;
 			case T_Var:
 				_outVar(str, obj);

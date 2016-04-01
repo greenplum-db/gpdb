@@ -58,10 +58,10 @@ typedef struct DispatchCommandQueryParms
 	int serializedQuerytreelen;
 	char *serializedPlantree;
 	int serializedPlantreelen;
+	char *serializedQueryDispatchDesc;
+	int serializedQueryDispatchDesclen;
 	char *serializedParams;
 	int serializedParamslen;
-	char *serializedSliceInfo;
-	int serializedSliceInfolen;
 
 	/*
 	 * serialized DTX context string
@@ -168,12 +168,12 @@ cdbdisp_dispatchPlan(struct QueryDesc *queryDesc,
 					 bool cancelOnError, struct CdbDispatcherState *ds)
 {
 	char *splan,
-		 *ssliceinfo,
+		 *sddesc,
 		 *sparams;
 
 	int	splan_len,
 		splan_len_uncompressed,
-		ssliceinfo_len,
+		sddesc_len,
 		sparams_len;
 
 	SliceTable *sliceTbl;
@@ -396,8 +396,8 @@ cdbdisp_dispatchPlan(struct QueryDesc *queryDesc,
 		sparams_len = 0;
 	}
 
-	ssliceinfo =
-		serializeNode((Node *) sliceTbl, &ssliceinfo_len,
+	sddesc =
+		serializeNode((Node *) queryDesc->ddesc, &sddesc_len,
 					  NULL /*uncompressed_size */ );
 
 	MemSet(&queryParms, 0, sizeof(queryParms));
@@ -408,8 +408,8 @@ cdbdisp_dispatchPlan(struct QueryDesc *queryDesc,
 	queryParms.serializedPlantreelen = splan_len;
 	queryParms.serializedParams = sparams;
 	queryParms.serializedParamslen = sparams_len;
-	queryParms.serializedSliceInfo = ssliceinfo;
-	queryParms.serializedSliceInfolen = ssliceinfo_len;
+	queryParms.serializedQueryDispatchDesc = sddesc;
+	queryParms.serializedQueryDispatchDesclen = sddesc_len;
 	queryParms.rootIdx = rootIdx;
 
 	/*
@@ -833,10 +833,10 @@ cdbdisp_queryParmsInit(struct CdbDispatcherState *ds,
 		pQueryParms->serializedParams = NULL;
 	}
 
-	if (pQueryParms->serializedSliceInfo != NULL)
+	if (pQueryParms->serializedQueryDispatchDesc != NULL)
 	{
-		pfree(pQueryParms->serializedSliceInfo);
-		pQueryParms->serializedSliceInfo = NULL;
+		pfree(pQueryParms->serializedQueryDispatchDesc);
+		pQueryParms->serializedQueryDispatchDesc = NULL;
 	}
 
 	if (pQueryParms->serializedDtxContextInfo != NULL)
@@ -1027,8 +1027,8 @@ PQbuildGpQueryString(MemoryContext cxt, DispatchCommandParms * pParms,
 	int	plantree_len = pQueryParms->serializedPlantreelen;
 	const char *params = pQueryParms->serializedParams;
 	int	params_len = pQueryParms->serializedParamslen;
-	const char *sliceinfo = pQueryParms->serializedSliceInfo;
-	int	sliceinfo_len = pQueryParms->serializedSliceInfolen;
+	const char *sddesc = pQueryParms->serializedQueryDispatchDesc;
+	int	sddesc_len = pQueryParms->serializedQueryDispatchDesclen;
 	const char *snapshotInfo = pQueryParms->serializedDtxContextInfo;
 	int	snapshotInfo_len = pQueryParms->serializedDtxContextInfolen;
 	int	flags = 0; /* unused flags */
@@ -1068,7 +1068,7 @@ PQbuildGpQueryString(MemoryContext cxt, DispatchCommandParms * pParms,
 		sizeof(querytree_len) +
 		sizeof(plantree_len) +
 		sizeof(params_len) +
-		sizeof(sliceinfo_len) +
+		sizeof(sddesc_len) +
 		sizeof(snapshotInfo_len) +
 		snapshotInfo_len +
 		sizeof(flags) +
@@ -1076,7 +1076,7 @@ PQbuildGpQueryString(MemoryContext cxt, DispatchCommandParms * pParms,
 		sizeof(seqServerPort) +
 		command_len +
 		querytree_len +
-		plantree_len + params_len + sliceinfo_len + seqServerHostlen;
+		plantree_len + params_len + sddesc_len + seqServerHostlen;
 
 	shared_query = MemoryContextAlloc(cxt, total_query_len);
 
@@ -1157,7 +1157,7 @@ PQbuildGpQueryString(MemoryContext cxt, DispatchCommandParms * pParms,
 	memcpy(pos, &tmp, sizeof(params_len));
 	pos += sizeof(params_len);
 
-	tmp = htonl(sliceinfo_len);
+	tmp = htonl(sddesc_len);
 	memcpy(pos, &tmp, sizeof(tmp));
 	pos += sizeof(tmp);
 
@@ -1207,10 +1207,10 @@ PQbuildGpQueryString(MemoryContext cxt, DispatchCommandParms * pParms,
 		pos += params_len;
 	}
 
-	if (sliceinfo_len > 0)
+	if (sddesc_len > 0)
 	{
-		memcpy(pos, sliceinfo, sliceinfo_len);
-		pos += sliceinfo_len;
+		memcpy(pos, sddesc, sddesc_len);
+		pos += sddesc_len;
 	}
 
 	if (seqServerHostlen > 0)

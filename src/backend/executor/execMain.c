@@ -245,6 +245,7 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	GpExecIdentity exec_identity;
 	bool		shouldDispatch;
 	bool		needDtxTwoPhase;
+	QueryDispatchDesc *ddesc;
 
 	/* sanity checks: queryDesc must not be started already */
 	Assert(queryDesc != NULL);
@@ -360,11 +361,12 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	/* Initialize per-query resource (diskspace) tracking */
 	WorkfileQueryspace_InitEntry(gp_session_id, gp_command_count);
 
-	if (Gp_role != GP_ROLE_DISPATCH && queryDesc->plannedstmt->transientTypeRecords != NULL)
+	if (Gp_role != GP_ROLE_DISPATCH && queryDesc->ddesc &&
+		queryDesc->ddesc->transientTypeRecords != NULL)
 	{
 		ListCell   *cell;
 
-		foreach(cell, queryDesc->plannedstmt->transientTypeRecords)
+		foreach(cell, queryDesc->ddesc->transientTypeRecords)
 		{
 			TupleDescNode *tmp = lfirst(cell);
 			assign_record_type_typmod(tmp->tuple);
@@ -375,6 +377,9 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH && queryDesc->plannedstmt->planTree->dispatch == DISPATCH_PARALLEL)
 	{
+		ddesc = makeNode(QueryDispatchDesc);
+		queryDesc->ddesc = ddesc;
+
 		/*
 		 * If this is an extended query (normally cursor or bind/exec) - before
 		 * starting the portal, we need to make sure that the shared snapshot is
@@ -418,6 +423,7 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 			Relation	pg_class_desc;
 			Relation	pg_type_desc;
 			Oid         reltablespace;
+			TableOidInfo *intoOidInfo;
 
 			cdb_sync_oid_to_segments();
 
@@ -430,6 +436,7 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 							(errcode(ERRCODE_UNDEFINED_OBJECT),
 							 errmsg("tablespace \"%s\" does not exist",
 									intoClause->tableSpaceName)));
+				ddesc->intoTableSpaceName = intoClause->tableSpaceName;
 			}
 			else
 			{
@@ -439,42 +446,52 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 				if (!OidIsValid(reltablespace))
 					reltablespace = MyDatabaseTableSpace;
 
-				intoClause->tableSpaceName = get_tablespace_name(reltablespace);
+				ddesc->intoTableSpaceName = get_tablespace_name(reltablespace);
 			}
 
 			pg_class_desc = heap_open(RelationRelationId, RowExclusiveLock);
 			pg_type_desc = heap_open(TypeRelationId, RowExclusiveLock);
 
-			intoClause->oidInfo.relOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
-			elog(DEBUG3, "ExecutorStart assigned new intoOidInfo.relOid = %d",
-				 intoClause->oidInfo.relOid);
+			/*
+			 * GPDB_83_MERGE_FIXME: We probably shoudln't be using
+			 * GetNewrelFileNode(), but plain GetNewOid(), for those OIDs
+			 * that are not actually relfilenodes.
+			 */
+			intoOidInfo = makeNode(TableOidInfo);
+			ddesc->intoOidInfo = intoOidInfo;
 
-			intoClause->oidInfo.comptypeOid = GetNewRelFileNode(reltablespace, false, pg_type_desc);
-			intoClause->oidInfo.toastOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
-			intoClause->oidInfo.toastIndexOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
-			intoClause->oidInfo.toastComptypeOid = GetNewRelFileNode(reltablespace, false, pg_type_desc);
-			intoClause->oidInfo.aosegOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
-			intoClause->oidInfo.aosegIndexOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
-			intoClause->oidInfo.aosegComptypeOid = GetNewRelFileNode(reltablespace, false, pg_type_desc);
-			intoClause->oidInfo.aoblkdirOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
-			intoClause->oidInfo.aoblkdirIndexOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
-			intoClause->oidInfo.aoblkdirComptypeOid = GetNewRelFileNode(reltablespace, false, pg_type_desc);
-			intoClause->oidInfo.aovisimapOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
-			intoClause->oidInfo.aovisimapIndexOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
-			intoClause->oidInfo.aovisimapComptypeOid = GetNewRelFileNode(reltablespace, false, pg_type_desc);
+			intoOidInfo->relOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
+			elog(DEBUG3, "ExecutorStart assigned new intoOidInfo.relOid = %d",
+				 intoOidInfo->relOid);
+
+			intoOidInfo->comptypeOid = GetNewRelFileNode(reltablespace, false, pg_type_desc);
+			intoOidInfo->toastOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
+			intoOidInfo->toastIndexOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
+			intoOidInfo->toastComptypeOid = GetNewRelFileNode(reltablespace, false, pg_type_desc);
+			intoOidInfo->aosegOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
+			intoOidInfo->aosegIndexOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
+			intoOidInfo->aosegComptypeOid = GetNewRelFileNode(reltablespace, false, pg_type_desc);
+			intoOidInfo->aoblkdirOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
+			intoOidInfo->aoblkdirIndexOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
+			intoOidInfo->aoblkdirComptypeOid = GetNewRelFileNode(reltablespace, false, pg_type_desc);
+			intoOidInfo->aovisimapOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
+			intoOidInfo->aovisimapIndexOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
+			intoOidInfo->aovisimapComptypeOid = GetNewRelFileNode(reltablespace, false, pg_type_desc);
 			heap_close(pg_class_desc, RowExclusiveLock);
 			heap_close(pg_type_desc, RowExclusiveLock);
 		}
 	}
 	else if (Gp_role == GP_ROLE_EXECUTE)
 	{
+		ddesc = queryDesc->ddesc;
+
 		/* qDisp should have sent us a slice table via MPPEXEC */
-		if (queryDesc->plannedstmt->sliceTable != NULL)
+		if (ddesc && ddesc->sliceTable != NULL)
 		{
 			SliceTable *sliceTable;
 			Slice	   *slice;
 
-			sliceTable = (SliceTable *)queryDesc->plannedstmt->sliceTable;
+			sliceTable = queryDesc->ddesc->sliceTable;
 			Assert(IsA(sliceTable, SliceTable));
 			slice = (Slice *)list_nth(sliceTable->slices, sliceTable->localSlice);
 			Assert(IsA(slice, Slice));
@@ -633,6 +650,10 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 			dtmPreCommand("ExecutorStart", "(none)", queryDesc->plannedstmt,
 						  needDtxTwoPhase, true /* wantSnapshot */, queryDesc->extended_query );
 
+			queryDesc->ddesc->sliceTable = estate->es_sliceTable;
+
+			build_tuple_node_list(&queryDesc->ddesc->transientTypeRecords);
+
 			/*
 			 * First, see whether we need to pre-execute any initPlan subplans.
 			 */
@@ -648,8 +669,6 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 																   queryDesc->params,
 																   queryDesc->estate->es_param_exec_vals);
 			}
-
-			build_tuple_node_list(&queryDesc->plannedstmt->transientTypeRecords);
 
 			/*
 			 * This call returns after launching the threads that send the
@@ -4651,9 +4670,11 @@ OpenIntoRel(QueryDesc *queryDesc)
     Oid         intoOid;
     Oid         intoComptypeOid;
 	Oid         intoComptypeArrayOid;
+	char	   *intoTableSpaceName;
     GpPolicy   *targetPolicy;
 	int			safefswritesize = gp_safefswritesize;
 	bool		bufferPoolBulkLoad;
+	TableOidInfo *intoOidInfo;
 
 	RelFileNode relFileNode;
 	
@@ -4677,9 +4698,10 @@ OpenIntoRel(QueryDesc *queryDesc)
 				 errmsg("ON COMMIT can only be used on temporary tables")));
 	
 	/* MPP specific stuff */
-    intoOid = intoClause->oidInfo.relOid;
-    intoComptypeOid = intoClause->oidInfo.comptypeOid;
-	intoComptypeArrayOid = intoClause->oidInfo.comptypeArrayOid;
+	intoOidInfo = queryDesc->ddesc->intoOidInfo;
+	intoOid = intoOidInfo->relOid;
+	intoComptypeOid = intoOidInfo->comptypeOid;
+	intoComptypeArrayOid = intoOidInfo->comptypeArrayOid;
 
 	/*
 	 * Security check: disallow creating temp tables from security-restricted
@@ -4707,14 +4729,15 @@ OpenIntoRel(QueryDesc *queryDesc)
 	 * Select tablespace to use.  If not specified, use default_tablespace
 	 * (which may in turn default to database's default).
 	 */
-	if (intoClause->tableSpaceName)
+	intoTableSpaceName = queryDesc->ddesc->intoTableSpaceName;
+	if (intoTableSpaceName)
 	{
-		tablespaceId = get_tablespace_oid(intoClause->tableSpaceName);
+		tablespaceId = get_tablespace_oid(intoTableSpaceName);
 		if (!OidIsValid(tablespaceId))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("tablespace \"%s\" does not exist",
-							intoClause->tableSpaceName)));
+							intoTableSpaceName)));
 	}
 	else
 	{
@@ -4809,20 +4832,20 @@ OpenIntoRel(QueryDesc *queryDesc)
 	 * CommandCounterIncrement(), so that the new tables will be visible for
 	 * insertion.
 	 */
-	AlterTableCreateToastTableWithOid(intoRelationId, 
-									  intoClause->oidInfo.toastOid, 
-									  intoClause->oidInfo.toastIndexOid, 
-									  &intoClause->oidInfo.toastComptypeOid, 
+	AlterTableCreateToastTableWithOid(intoRelationId,
+									  intoOidInfo->toastOid,
+									  intoOidInfo->toastIndexOid,
+									  &intoOidInfo->toastComptypeOid,
 									  false);
-	AlterTableCreateAoSegTableWithOid(intoRelationId, 
-									  intoClause->oidInfo.aosegOid, 
-									  intoClause->oidInfo.aosegIndexOid,
-									  &intoClause->oidInfo.aosegComptypeOid, 
+	AlterTableCreateAoSegTableWithOid(intoRelationId,
+									  intoOidInfo->aosegOid,
+									  intoOidInfo->aosegIndexOid,
+									  &intoOidInfo->aosegComptypeOid,
 									  false);
 	AlterTableCreateAoVisimapTableWithOid(intoRelationId,
-									  intoClause->oidInfo.aovisimapOid,
-									  intoClause->oidInfo.aovisimapIndexOid,
-									  &intoClause->oidInfo.aovisimapComptypeOid,
+									  intoOidInfo->aovisimapOid,
+									  intoOidInfo->aovisimapIndexOid,
+									  &intoOidInfo->aovisimapComptypeOid,
 									  false);
 
     /* don't create AO block directory here, it'll be created when needed */

@@ -43,7 +43,8 @@ typedef enum NodeTag
 	T_SliceTable,
 	T_ShareNodeEntry,
 	T_PartitionState,
-	
+	T_QueryDispatchDesc,
+
 	/*
 	 * TAGS FOR PLAN NODES (plannodes.h)
 	 */
@@ -219,6 +220,7 @@ typedef enum NodeTag
 	T_PartBoundExpr,
 	T_PartBoundInclusionExpr,
 	T_PartBoundOpenExpr,
+	T_TableOidInfo,
 
 	/*
 	 * TAGS FOR EXPRESSION STATE NODES (execnodes.h)
