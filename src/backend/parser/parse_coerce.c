@@ -1859,6 +1859,7 @@ TypeCategory(Oid inType)
 		case (FLOAT8OID):
 		case (NUMERICOID):
 		case (CASHOID):
+		case (COMPLEXOID):
 			result = NUMERIC_TYPE;
 			break;
 
