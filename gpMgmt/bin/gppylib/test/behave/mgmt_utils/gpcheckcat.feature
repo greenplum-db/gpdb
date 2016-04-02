@@ -1,7 +1,7 @@
 @gpcheckcat
 Feature: gpcheckcat tests
 
-  Scenario: gpcheckcat should drop leaked schemas
+    Scenario: gpcheckcat should drop leaked schemas
         Given database "leak" is dropped and recreated
         And the user runs the command "psql leak -f 'gppylib/test/behave/mgmt_utils/steps/data/gpcheckcat/create_temp_schema_leak.sql'" in the background without sleep
         And waiting "1" seconds
@@ -31,3 +31,16 @@ Feature: gpcheckcat tests
         And gpcheckcat should print Table pg_compression has a violated unique index: pg_compression_compname_index to stdout
         And the user runs "dropdb test_index"
         And verify that a log was created by gpcheckcat in the user's "gpAdminLogs" directory
+
+    @foo
+    Scenario: gpcheckcat should discover attributes missing from pg_class
+        Given database "miss_attr" is dropped and recreated
+        And there is a "heap" table "public.foo" in "miss_attr" with data
+        When the user runs "gpcheckcat miss_attr"
+        And gpcheckcat should return a return code of 0
+        Then gpcheckcat should not print Missing to stdout
+
+        And the user runs "psql miss_attr -f gppylib/test/behave/mgmt_utils/steps/data/create_table_with_missing_attributes.sql"
+        Then psql should return a return code of 0
+        When the user runs "gpcheckcat miss_attr"
+        Then gpcheckcat should print Missing to stdout
