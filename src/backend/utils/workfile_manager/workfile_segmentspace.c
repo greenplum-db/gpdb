@@ -83,53 +83,14 @@ WorkfileSegspace_Reserve(int64 bytes_to_reserve)
 	}
 	else
 	{
-		/* We exceeded the logical limit. Revert and try to evict */
+		/* We exceeded the logical limit. Revert the reserved space */
+		(void) pg_atomic_sub_fetch_u64(used_segspace, bytes_to_reserve);
 
-		int crt_attempt = 0;
-		while (crt_attempt < MAX_EVICT_ATTEMPTS)
-		{
+		workfileError = WORKFILE_ERROR_LIMIT_PER_SEGMENT;
 
-			/* Revert the reserved space */
-			(void) pg_atomic_sub_fetch_u64(used_segspace, bytes_to_reserve);
-
-			CHECK_FOR_INTERRUPTS();
-
-			int64 requested_evict = Max(MIN_EVICT_SIZE, bytes_to_reserve);
-			int64 size_evicted = workfile_mgr_evict(requested_evict);
-
-			if (size_evicted < bytes_to_reserve)
-			{
-				workfileError = WORKFILE_ERROR_LIMIT_PER_SEGMENT;
-				/*
-				 * We couldn't evict as much as we need to write. Reservation
-				 * failed, notify caller.
-				 */
-				elog(gp_workfile_caching_loglevel,
-						"Failed to reserved size " INT64_FORMAT ". Reverted back to total " INT64_FORMAT,
-						bytes_to_reserve, used_segspace->value);
-
-				/* Set diskfull to true to stop any further attempts to write more data */
-				WorkfileDiskspace_SetFull(true /* isFull */);
-
-				return false;
-			}
-
-			/* Try to reserve again */
-			total = pg_atomic_add_fetch_u64(used_segspace, bytes_to_reserve);
-			Assert(total >= (int64) 0);
-
-			if (total <= max_allowed_diskspace)
-			{
-				/* Reservation successful, we're done */
-				return true;
-			}
-
-			/*
-			 * Someone else snatched the space after we evicted it.
-			 * Loop around and try to evict again
-			 */
-			crt_attempt++;
-		}
+		/* Set diskfull to true to stop any further attempts to write more data */
+		WorkfileDiskspace_SetFull(true /* isFull */);
+		return false;
 	}
 
 
