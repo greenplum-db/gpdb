@@ -628,7 +628,7 @@ SELECT * FROM errcopy;
 TRUNCATE errcopy;
 SELECT gp_truncate_error_log('errcopy');
 
-COPY errcopy from stdin delimiter '\t' log errors segment reject limit 3 rows;
+COPY errcopy from stdin delimiter E'\t' log errors segment reject limit 3 rows;
 1       2       0
 1       3       4
 1       4

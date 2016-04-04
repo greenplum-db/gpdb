@@ -632,11 +632,7 @@ SELECT gp_truncate_error_log('errcopy');
  t
 (1 row)
 
-COPY errcopy from stdin delimiter '\t' log errors segment reject limit 3 rows;
-WARNING:  nonstandard use of escape in a string literal
-LINE 1: COPY errcopy from stdin delimiter '\t' log errors segment re...
-                                          ^
-HINT:  Use the escape string syntax for escapes, e.g., E'\r\n'.
+COPY errcopy from stdin delimiter E'\t' log errors segment reject limit 3 rows;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "b"
 CONTEXT:  COPY errcopy, line 3: "1       4"
 SELECT * FROM errcopy;
