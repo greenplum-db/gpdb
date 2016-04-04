@@ -945,9 +945,9 @@ AC_ARG_WITH(apr-config,
 [], [with_apr_config=yes])
 
 if test "$with_apr_config" = yes; then
-  AC_PATH_PROGS(APR_CONFIG, apr-1-config)
+  AC_PATH_PROGS(APR_1_CONFIG, apr-1-config)
 else
-  APR_CONFIG=$with_apr_config
+  APR_1_CONFIG=$with_apr_config
 fi
 AC_SUBST(with_apr_config)
 
@@ -1151,11 +1151,11 @@ fi
 # Find APR headers and libraries
 #
 
-if test -n "$APR_CONFIG"; then
-  apr_includes=`"$APR_CONFIG" --includes`
-  apr_link_ld_libs=`"$APR_CONFIG" --link-ld --libs`
-  apr_cflags=`"$APR_CONFIG" --cflags`
-  apr_cppflags=`"$APR_CONFIG" --cppflags`
+if test -n "$APR_1_CONFIG"; then
+  apr_includes=`"$APR_1_CONFIG" --includes`
+  apr_link_ld_libs=`"$APR_1_CONFIG" --link-ld --libs`
+  apr_cflags=`"$APR_1_CONFIG" --cflags`
+  apr_cppflags=`"$APR_1_CONFIG" --cppflags`
   CPPFLAGS="$CPPFLAGS $apr_includes $apr_cppflags"
   CFLAGS="$CFLAGS $apr_cflags"
 fi

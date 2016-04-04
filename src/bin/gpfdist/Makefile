@@ -20,12 +20,6 @@ ifeq ($(have_yaml),yes)
   OBJS += transform.o
 endif
 
-ifeq ($(with_apr_config),yes)
-  APR_LIB=$(shell apr-1-config --link-ld --libs)
-else
-  APR_LIB=$(shell $(with_apr_config) --link-ld --libs)
-endif
-
 ifeq ($(PORTNAME),win32)
   override CPPFLAGS := -I$(top_builddir)/src/port $(CPPFLAGS)
   OBJS += $(top_builddir)/src/port/glob.o
@@ -33,7 +27,7 @@ else
   override CPPFLAGS := -DGPFXDIST $(CPPFLAGS)
 endif
 
-LDLIBS += $(LIBS) $(GPFDIST_LIBS) $(APR_LIB)
+LDLIBS += $(LIBS) $(GPFDIST_LIBS) $(shell $(APR_1_CONFIG) --link-ld --libs)
 
 all: gpfdist$(EXE_EXT)
 

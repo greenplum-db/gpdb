@@ -698,7 +698,7 @@ ELF_SYS
 EGREP
 GREP
 with_apr_config
-APR_CONFIG
+APR_1_CONFIG
 with_libcurl
 with_rt
 with_zlib
@@ -6402,12 +6402,12 @@ do
 set dummy $ac_prog; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_APR_CONFIG+:} false; then :
+if ${ac_cv_path_APR_1_CONFIG+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  case $APR_CONFIG in
+  case $APR_1_CONFIG in
   [\\/]* | ?:[\\/]*)
-  ac_cv_path_APR_CONFIG="$APR_CONFIG" # Let the user override the test with a path.
+  ac_cv_path_APR_1_CONFIG="$APR_1_CONFIG" # Let the user override the test with a path.
   ;;
   *)
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
@@ -6417,7 +6417,7 @@ do
   test -z "$as_dir" && as_dir=.
     for ac_exec_ext in '' $ac_executable_extensions; do
   if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_APR_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    ac_cv_path_APR_1_CONFIG="$as_dir/$ac_word$ac_exec_ext"
     $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
@@ -6428,21 +6428,21 @@ IFS=$as_save_IFS
   ;;
 esac
 fi
-APR_CONFIG=$ac_cv_path_APR_CONFIG
-if test -n "$APR_CONFIG"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $APR_CONFIG" >&5
-$as_echo "$APR_CONFIG" >&6; }
+APR_1_CONFIG=$ac_cv_path_APR_1_CONFIG
+if test -n "$APR_1_CONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $APR_1_CONFIG" >&5
+$as_echo "$APR_1_CONFIG" >&6; }
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 fi
 
 
-  test -n "$APR_CONFIG" && break
+  test -n "$APR_1_CONFIG" && break
 done
 
 else
-  APR_CONFIG=$with_apr_config
+  APR_1_CONFIG=$with_apr_config
 fi
 
 
@@ -8954,11 +8954,11 @@ fi
 # Find APR headers and libraries
 #
 
-if test -n "$APR_CONFIG"; then
-  apr_includes=`"$APR_CONFIG" --includes`
-  apr_link_ld_libs=`"$APR_CONFIG" --link-ld --libs`
-  apr_cflags=`"$APR_CONFIG" --cflags`
-  apr_cppflags=`"$APR_CONFIG" --cppflags`
+if test -n "$APR_1_CONFIG"; then
+  apr_includes=`"$APR_1_CONFIG" --includes`
+  apr_link_ld_libs=`"$APR_1_CONFIG" --link-ld --libs`
+  apr_cflags=`"$APR_1_CONFIG" --cflags`
+  apr_cppflags=`"$APR_1_CONFIG" --cppflags`
   CPPFLAGS="$CPPFLAGS $apr_includes $apr_cppflags"
   CFLAGS="$CFLAGS $apr_cflags"
 fi
