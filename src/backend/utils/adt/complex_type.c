@@ -1281,54 +1281,7 @@ numeric2complex(PG_FUNCTION_ARGS)
 
 	PG_RETURN_COMPLEX_P(construct_complex_in(float_num, 0));
 }
-float8
-complex2float8_internal(Complex *a)
-{
-	double		 re_a = re(a);
-	double		 im_a = im(a);
-	double		float_num;
-	double		square_rea;
-	double		square_ima;
 
-	square_rea = re_a * re_a;
-	square_ima = im_a * im_a;
-
-	/* We check only if real part is NaN since a complex
-	* number with real part NaN cannot be valid */
-	if (isnan(re_a))
-	{
-		float_num = get_float8_nan();
-	}
-	else
-	{
-		float_num = sqrt((square_rea + square_ima));
-	}
-	
-	return float_num;
-}
-Datum
-complex2float8(PG_FUNCTION_ARGS)
-{
-	Complex    *a = PG_GETARG_COMPLEX_P(0);
-	double		float_num;
-	
-	float_num = complex2float8_internal(a);
-	
-	PG_RETURN_FLOAT8(float_num);
-}
-
-Datum
-complex2numeric(PG_FUNCTION_ARGS)
-{
-	Complex    *a = PG_GETARG_COMPLEX_P(0);
-	Datum		res_val;
-	double		float_num;
-	
-	float_num = complex2float8_internal(a);
-	res_val = DirectFunctionCall1(float8_numeric, Float8GetDatum(float_num));
-
-	return res_val;
-}
 /*
  *		complex_dot_product		- returns dot product of two 1-dim array with the same size
  */

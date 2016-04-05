@@ -195,7 +195,4 @@ extern Datum int42complex(PG_FUNCTION_ARGS);
 extern Datum int22complex(PG_FUNCTION_ARGS);
 extern Datum numeric2complex(PG_FUNCTION_ARGS);
 
-/* Return mod of number */
-extern Datum complex2float8(PG_FUNCTION_ARGS);
-extern Datum complex2numeric(PG_FUNCTION_ARGS);
 #endif   /* COMPLEX_H */

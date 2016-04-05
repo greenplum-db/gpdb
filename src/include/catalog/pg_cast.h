@@ -441,8 +441,6 @@ DATA(insert OID=9090 (21   193 3588 i));
 DATA(insert OID=9091 (600  193 0 i));
 DATA(insert OID=9092 (193  600 0 i));
 DATA(insert OID=9093 (1700 193 3592 i));
-DATA(insert OID=9094 (193 701 3597 i));
-DATA(insert OID=9095 (193 1700 3598 i));
 /*
  * CDB: Allow explicit cast from tid to int8
  */
