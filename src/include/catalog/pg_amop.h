@@ -915,6 +915,12 @@ DATA(insert (	3032	1700 1700 3 f 1752 3013 ));
 DATA(insert (	3032	1700 1700 4 f 1757 3013 ));
 DATA(insert (	3032	1700 1700 5 f 1756 3013 ));
 
+/* complex */
+DATA(insert (	3043   193 193 1 f  3469 403 ));
+DATA(insert (	3043   701 701 2 f  3481 403 ));
+DATA(insert (	3043   701 701 3 f  3482 403 ));
+DATA(insert (	3043   701 701 4 f  3483 403 ));
+DATA(insert (	3043   701 701 5 f  3484 403 ));
 /*
  * oid
  */
