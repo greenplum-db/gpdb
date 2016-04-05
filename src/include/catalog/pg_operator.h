@@ -981,6 +981,21 @@ DATA(insert OID = 3328 (  ">"     PGNSP PGUID b f f 3310 3310	16 3327 3329 gpxlo
 DATA(insert OID = 3329 (  "<="    PGNSP PGUID b f f 3310 3310	16 3330 3328 gpxloglocle scalarltsel scalarltjoinsel ));
 DATA(insert OID = 3330 (  ">="    PGNSP PGUID b f f 3310 3310	16 3329 3327 gpxloglocge scalargtsel scalargtjoinsel ));
 
+/* operators for complex data type */
+DATA(insert OID = 3469 (  "="	   PGNSP PGUID b f f 193 193 16 3469 3470 complex_eq eqsel eqjoinsel)); 
+#define ComplexEqualOperator 3469
+DATA(insert OID = 3470 (  "<>"	   PGNSP PGUID b f f 193 193 16 3470 3469 complex_ne  neqsel neqjoinsel)); 
+DATA(insert OID = 3471 (  "@"	   PGNSP PGUID l f f 0   193 701 0	0	 complexabs  - -)); 
+DATA(insert OID = 3472 (  "+"	   PGNSP PGUID b f f 193 193 193 0	0	complex_pl  - -));
+DATA(insert OID = 3473 (  "+"	   PGNSP PGUID l f f 0   193 193 0	0	 complex_up  - -));
+DATA(insert OID = 3474 (  "-"	   PGNSP PGUID b f f 193 193 193 0	0	 complex_mi  - -));
+DATA(insert OID = 3475 (  "-"	   PGNSP PGUID l f f 0   193 193 0	0	 complex_um  - -));
+DATA(insert OID = 3476 (  "*"	   PGNSP PGUID b f f 193 193 193 0	0	 complex_mul - -));
+DATA(insert OID = 3477 (  "/"	   PGNSP PGUID b f f 193 193 193 0	0	 complex_div - -)); 
+DATA(insert OID = 3478 (  "^"	   PGNSP PGUID b f f 193 193 193 0	0	 complex_power 	- -));
+DATA(insert OID = 3479 (  "|/"	   PGNSP PGUID l f f 0   193 193 0	0	 complex_sqrt 	- -));
+DATA(insert OID = 3480 (  "||/"	   PGNSP PGUID l f f 0   193 193 0	0	 complex_cbrt	- -));
+
 DATA(insert OID = 7095 (  "/"    PGNSP PGUID b f f 1186  1186 701          0  0 interval_interval_div - - ));
 DATA(insert OID = 7096 (  "%"    PGNSP PGUID b f f 1186  1186 1186         0  0 interval_interval_mod - - ));
 

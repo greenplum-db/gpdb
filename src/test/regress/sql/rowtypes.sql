@@ -4,17 +4,17 @@
 
 -- Make both a standalone composite type and a table rowtype
 
-create type complex as (r float8, i float8);
+create type complex_t as (r float8, i float8);
 
 create temp table fullname (first text, last text);
 
 -- Nested composite
 
-create type quad as (c1 complex, c2 complex);
+create type quad as (c1 complex_t, c2 complex_t);
 
 -- Some simple tests of I/O conversions and row construction
 
-select (1.1,2.2)::complex, row((3.3,4.4),(5.5,null))::quad;
+select (1.1,2.2)::complex_t, row((3.3,4.4),(5.5,null))::quad;
 
 select row('Joe', 'Blow')::fullname, '(Joe,Blow)'::fullname;
 
