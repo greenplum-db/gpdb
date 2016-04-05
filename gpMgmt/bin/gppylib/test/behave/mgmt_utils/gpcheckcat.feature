@@ -33,14 +33,19 @@ Feature: gpcheckcat tests
         And verify that a log was created by gpcheckcat in the user's "gpAdminLogs" directory
 
     @foo
-    Scenario: gpcheckcat should discover attributes missing from pg_class
+    Scenario Outline: gpcheckcat should discover attributes missing from pg_class
         Given database "miss_attr" is dropped and recreated
         And there is a "heap" table "public.foo" in "miss_attr" with data
+        And the user runs "psql miss_attr -c "ALTER TABLE foo ALTER COLUMN column1 SET DEFAULT 1;""
         When the user runs "gpcheckcat miss_attr"
         And gpcheckcat should return a return code of 0
         Then gpcheckcat should not print Missing to stdout
-
-        And the user runs "psql miss_attr -f gppylib/test/behave/mgmt_utils/steps/data/create_table_with_missing_attributes.sql"
+        And the user runs "psql miss_attr -c "SET allow_system_table_mods='dml'; DELETE FROM <tablename> where <attrname>='foo'::regclass::oid;""
         Then psql should return a return code of 0
         When the user runs "gpcheckcat miss_attr"
         Then gpcheckcat should print Missing to stdout
+        Examples:
+          | attrname | tablename    |
+          | attrelid | pg_attribute |
+          | adrelid  | pg_attrdef   |
+          | typrelid | pg_type      |

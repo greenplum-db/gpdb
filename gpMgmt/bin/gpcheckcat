@@ -2,7 +2,7 @@
 '''
 Usage: gpcheckcat [<option>] [dbname]
 
-    -? 
+    -?
     -B parallel: number of worker threads
     -g dir     : generate SQL to rectify catalog corruption, put it in dir
     -p port    : DB port number
@@ -11,7 +11,7 @@ Usage: gpcheckcat [<option>] [dbname]
     -v         : verbose
     -A         : all databases
     -S option  : shared table options (none, only)
-    -O         : Online 
+    -O         : Online
     -l         : list all tests
     -R test    : run this particular test
     -C catname : run cross consistency, FK and ACL tests for this catalog table
@@ -77,7 +77,7 @@ def setError(level):
     '''
     Increases the error level to the specified level, if specified level is
     lower than the existing level no change is made.
-    
+
     error level 0 => success
     error level 1 => error, with repair script removes objects
     error level 2 => error, with repair script that resynchronizes objects
@@ -184,8 +184,8 @@ def getversion():
     versions = ["3.2", "3.3", "4.0", "4.1", "main"]
     db = connect()
     curs = db.query('''
-    select regexp_replace(version(), 
-       E'.*PostgreSQL [^ ]+ .Greenplum Database ([1-9]+.[0-9]+|main).*', 
+    select regexp_replace(version(),
+       E'.*PostgreSQL [^ ]+ .Greenplum Database ([1-9]+.[0-9]+|main).*',
        E'\\\\1') as ver;''')
 
     row = curs.getresult()[0]
@@ -430,7 +430,7 @@ def getGPConfiguration():
     # so we filter out non-primary segment databases in the query
     qry = '''
           SELECT content, preferred_role = 'p' as definedprimary,
-                 dbid, role = 'p' as isprimary, hostname, address, port, 
+                 dbid, role = 'p' as isprimary, hostname, address, port,
                  fselocation as datadir
             FROM gp_segment_configuration JOIN pg_filespace_entry on (dbid = fsedbid)
            WHERE fsefsoid = (select oid from pg_filespace where fsname='pg_system')
@@ -487,7 +487,7 @@ def checkDistribPolicy():
 
     # final part of the WHERE clause here is a little tricky: we want to make
     # sure that the set of distribution columns is a left subset of the
-    # constraint. 
+    # constraint.
     qry = '''
     select  n.nspname, rel.relname, pk.conname as constraint
     from    pg_constraint pk
@@ -495,7 +495,7 @@ def checkDistribPolicy():
       join  pg_namespace n on (rel.relnamespace = n.oid)
       join  gp_distribution_policy d on (rel.oid = d.localoid)
     where pk.contype in ('p', 'u') and
-          (d.attrnums is null or not 
+          (d.attrnums is null or not
            d.attrnums operator(pg_catalog.<@) pk.conkey)
     '''
     try:
@@ -533,8 +533,8 @@ def checkPartitionIntegrity():
     logger.info('Checking pg_partition ...')
     err = []
     db = connect()
-    qry = ''' 
-    select distinct 
+    qry = '''
+    select distinct
            quote_ident(n.nspname) || '.' || quote_ident(c.relname) as parname
     from   pg_partition_rule r1
       join pg_partition_rule r2 on (r1.oid = r2.parparentrule)
@@ -615,9 +615,9 @@ def checkPartitionIntegrity():
     # distribution
     qry = '''
     select
-      parrelid, 
-      parchildrelid, 
-      d1.attrnums as parpolicy, 
+      parrelid,
+      parchildrelid,
+      d1.attrnums as parpolicy,
       d2.attrnums as parchildpolicy
     from
       (
@@ -627,7 +627,7 @@ def checkPartitionIntegrity():
         from
           (
             select parrelid, parchildrelid, g1.attname, g1.index
-            from   pg_partition_rule pr 
+            from   pg_partition_rule pr
                    join pg_partition p on (pr.paroid = p.oid)
                    join (
                      select localoid, attname, index
@@ -646,7 +646,7 @@ def checkPartitionIntegrity():
           full outer join
           (
             select parrelid, parchildrelid, g2.attname, g2.index
-            from   pg_partition_rule pr 
+            from   pg_partition_rule pr
                    join pg_partition p on (pr.paroid = p.oid)
                    join (
                      select localoid, attname, index
@@ -726,19 +726,19 @@ def checkPartitionIntegrity():
 
 partitionRegularityChecks = {
     # Query: irreg_user_constraint
-    # 
+    #
     #     A row represents an irregular user-defined constraint.
-    # 
+    #
     #     This view just filters ptable_user_con_info so that it returns no rows
     #     if no irregular user-defined constraints exist.
-    #     
+    #
     #     An irregular user-constraint is a constraint whose definition (DDL expression
     #     format) appears on the root table of a partitioned table, and doesn't appear
     #     on every part table of the partitioned table.  It is possible to construct
     #     these using sequences of DDL operations on release prior to Rio.  In Rio,
     #     it is possible to construct them with FOREIGN KEY constraints, but not with
     #     other constraint types.
-    # 
+    #
     # tableid:  pg_class.oid of the partitioned table
     # conname:  name of the constraint on the partitioned table
     # contype:  type of constraint (same on part and table)
@@ -920,20 +920,20 @@ partitionRegularityChecks = {
             numexpected != numactual""",
 
     # Query: irreg_sys_constraint
-    # 
+    #
     #     A row represents an irregular system-defined constraint.
-    # 
+    #
     #     An irregular system constraint is a constraint whose definition (DDL
     #     expression format) appears on some part tables and that is not a system-
     #     defined partition constraint.
-    #     
+    #
     #     This view doesn't actually test this.  Instead, it checks for an
     #     expected pattern of system-defined constraints.
     #     1. The constraints checked are those that don't appear on the root.
     #     2. Each part has as many constraints as its depth in the partition
     #        less any default parts on its path.
     #     Violators are listed as results.
-    # 
+    #
     # tableid:  pg_class.oid of the partitioned table
     # partid:  pg_class.oid of the (constrained) part table
     # expected:  number of constraint occurrences expected
@@ -959,9 +959,9 @@ partitionRegularityChecks = {
             x.expected != coalesce(a.actual,0);""",
 
     # Query based on view: unenforced_constraint_info
-    # 
+    #
     #     a row represents an unenforced unique constraint to be fixed.
-    # 
+    #
     # tableid
     # partid
     # indexid
@@ -1197,14 +1197,14 @@ partitionRegularityChecks = {
         """--Demote type-{contype} constraint {conname} on part {partid}
 --of partitioned table {tableid} to simple unique index.
 
---Disconnect index {indexid} from constraint {conname} 
+--Disconnect index {indexid} from constraint {conname}
 delete
-from 
+from
     pg_depend
 where
     (classid, objid, objsubid, refclassid, refobjid, refobjsubid, deptype) =
     (
-        select  
+        select
             d.classid,
             d.objid,
             d.objsubid,
@@ -1212,15 +1212,15 @@ where
             d.refobjid,
             d.refobjsubid,
             d.deptype
-        from 
+        from
             pg_index i,
             pg_depend d
-        where 
+        where
             i.indexrelid = {indexoid} and
-            d.classid = 'pg_class'::regclass and 
-            d.objid = i.indexrelid and 
-            d.objsubid = 0 and 
-            d.refclassid = 'pg_constraint'::regclass and 
+            d.classid = 'pg_class'::regclass and
+            d.objid = i.indexrelid and
+            d.objsubid = 0 and
+            d.refclassid = 'pg_constraint'::regclass and
             d.refobjid = (
                 select oid
                 from pg_constraint
@@ -1230,12 +1230,12 @@ where
                    contypid = 0 and
                    contype = {quoted_contype}
             ) and
-            d.refobjsubid = 0 and 
+            d.refobjsubid = 0 and
             d.deptype = 'i'
     );
 --Replace dependency of constraint {conname} on table columns of {partid}
 --with dependency of index {indexoid} on same.
-update 
+update
     pg_depend
 set
     classid = 'pg_class'::regclass,
@@ -1257,19 +1257,19 @@ where
     refobjsubid <> 0 and
     deptype = 'a';
 --Delete constraint {conname} leaving its index {indexid}
-delete 
+delete
 from
     pg_constraint
-where 
+where
     conrelid = {partoid} and
     conname = {quoted_conname} and
     contypid = 0 and
     contype = {quoted_contype};""",
 
     # Query: fix_ill_named_constraint
-    # 
+    #
     #     a row represents the data for a fixup of an ill-named constraint
-    # 
+    #
     # tableid:  pg_class.oid of the partitioned table as regclass
     # tableconname:  pg_constraint.conname on the partitioned table
     # partid:  pg_class.oid of the part table as regclass
@@ -1845,10 +1845,16 @@ def checkPGClass():
     logger.info('Checking pg_class ...')
     qry = '''
     SELECT relname, relkind, tc.oid as oid,
-           reltoastrelid, reltoastidxid 
-    FROM   pg_class tc left outer join 
+           reltoastrelid, reltoastidxid
+    FROM   pg_class tc left outer join
            pg_attribute ta on (tc.oid = ta.attrelid)
     WHERE  ta.attrelid is NULL
+    UNION
+    SELECT relname, relkind, tc.oid as oid,
+           reltoastrelid, reltoastidxid
+    FROM   pg_class tc left outer join
+           pg_attrdef ta on (tc.oid = ta.adrelid)
+    WHERE  ta.adrelid is NULL
     '''
     err = connect2run(qry, ('relname', 'relkind', 'oid'))
     if not err:
@@ -1922,10 +1928,10 @@ def checkPGNamespace():
     logger.info('Checking missing schema definitions ...')
     qry = '''
     SELECT o.catalog, o.nsp
-    FROM pg_namespace n right outer join 
-         (select 'pg_class' as catalog, relnamespace as nsp from pg_class 
+    FROM pg_namespace n right outer join
+         (select 'pg_class' as catalog, relnamespace as nsp from pg_class
           union
-          select 'pg_type' as catalog, typnamespace as nsp from pg_type 
+          select 'pg_type' as catalog, typnamespace as nsp from pg_type
           union
           select 'pg_operator' as catalog, oprnamespace as nsp from pg_operator
           union
@@ -1957,26 +1963,26 @@ Produce repair scripts to remove dangling entries of gp_fastsequence:
 def removeFastSequence(db):
     '''
     MPP-14758: gp_fastsequence does not get cleanup after a failed transaction (AO/CO)
-    Note: this is slightly different from the normal foreign key check 
-          because it streches the cross reference across segments. 
-          This makes it safe in the event of cross consistency issues with pg_class, 
+    Note: this is slightly different from the normal foreign key check
+          because it streches the cross reference across segments.
+          This makes it safe in the event of cross consistency issues with pg_class,
           but may not repair some issues when there are cross consistency problems
     '''
     try:
-        qry = """ 
-              SELECT dbid, objid 
+        qry = """
+              SELECT dbid, objid
                 FROM gp_segment_configuration AS cfg JOIN
 			         (SELECT gp_segment_id, objid
                         FROM (select gp_segment_id, objid from gp_fastsequence
                               union
                               select gp_segment_id, objid from gp_dist_random('gp_fastsequence')) AS fs
-                        LEFT OUTER JOIN 
-                             (select oid from pg_class 
+                        LEFT OUTER JOIN
+                             (select oid from pg_class
                               union
                               select oid from gp_dist_random('pg_class')) AS c
                         ON (fs.objid = c.oid)
                      WHERE c.oid IS NULL) AS r
-                  ON r.gp_segment_id = cfg.content 
+                  ON r.gp_segment_id = cfg.content
                WHERE cfg.role = 'p';
               """
         curs = db.query(qry)
@@ -2066,18 +2072,18 @@ def checkDepend():
     #
     # It would be desireable to switch these queries to a gp_dist_random
     # type query rather than issueing it in utility mode on every segment,
-    # however because there are numerous issues remaining with oid 
+    # however because there are numerous issues remaining with oid
     # inconsistencies (see crossDBCheck()) that doesn't work out well.
     deps = []
     for cat in catalogs:
         qry = """
           SELECT '{catalog}' as catalog, objid FROM (
-            SELECT objid FROM pg_depend 
+            SELECT objid FROM pg_depend
               WHERE classid = '{catalog}'::regclass
             UNION ALL
-            SELECT refobjid FROM pg_depend 
+            SELECT refobjid FROM pg_depend
               WHERE refclassid = '{catalog}'::regclass
-          ) d 
+          ) d
           LEFT OUTER JOIN {catalog} c on (d.objid = c.oid)
           WHERE c.oid is NULL
           UNION ALL
@@ -2087,7 +2093,7 @@ def checkDepend():
             UNION ALL
             SELECT dbid, refobjid FROM pg_shdepend
               WHERE refclassid = '{catalog}'::regclass
-          ) d JOIN pg_database db 
+          ) d JOIN pg_database db
             ON (d.dbid = db.oid and datname= current_database())
           LEFT OUTER JOIN {catalog} c on (d.objid = c.oid)
           WHERE c.oid is NULL
@@ -2095,7 +2101,7 @@ def checkDepend():
         deps.append(qry)
 
     qry = """
-    SELECT distinct catalog, objid 
+    SELECT distinct catalog, objid
     FROM (%s
     ) q
     """ % "UNION ALL".join(deps)
@@ -2144,7 +2150,7 @@ def checkOwners():
     #    table based on having multiple "wrong" owners.  Realistically most
     #    of the problems we have seen with this problem the wrong owner is
     #    almost always the gpadmin user, so this is not expected.  If it does
-    #    occur it won't be a problem, but we will issue more ALTER TABLE 
+    #    occur it won't be a problem, but we will issue more ALTER TABLE
     #    commands than is strictly necessary.
     #
     #  - Between 3.3 and 4.0 the ao segment columns migrated from pg_class
@@ -2155,12 +2161,12 @@ def checkOwners():
                     a.rolname, m.rolname as master_rolname
     from gp_dist_random('pg_class') r
       join pg_class c on (c.oid = r.oid)
-      left join pg_appendonly ao on (c.oid = ao.segrelid or 
+      left join pg_appendonly ao on (c.oid = ao.segrelid or
                                      c.oid = ao.segidxid or
-                                     c.oid = ao.blkdirrelid or 
+                                     c.oid = ao.blkdirrelid or
                                      c.oid = ao.blkdiridxid)
       left join pg_class t on (t.reltoastidxid = c.oid)
-      left join pg_class o on (o.oid = ao.relid or 
+      left join pg_class o on (o.oid = ao.relid or
                                o.reltoastrelid = t.oid or
                                o.reltoastrelid = c.oid)
       join pg_authid a on (a.oid = r.relowner)
@@ -2264,7 +2270,7 @@ def checkPersistentTables():
     logger.info('Checking persistent tables')
 
     # Some of the persistency checks modified depending on if we are in
-    # change tracking or not.  For instance when we are in-sync we 
+    # change tracking or not.  For instance when we are in-sync we
     # shouldn't have persistent entries stuck in "drop pending", but this
     # is a perfectly valid state to maintain while in change-tracking.
     db = connect2(GV.cfg[1], utilityMode=False)
@@ -2302,7 +2308,7 @@ def checkPersistentTables():
              else 'unknown state: ' || p.mirror_existence_state
         end as mirror_existence_state
     FROM gp_persistent_filespace_node p
-    WHERE p.persistent_state not in (0, 2) 
+    WHERE p.persistent_state not in (0, 2)
        or p.mirror_existence_state not in (0,1,3)
     """
     if in_sync:
@@ -2310,12 +2316,12 @@ def checkPersistentTables():
 
     qname = "gp_persistent_filespace_node  <=> pg_filespace"
     qry = """
-    SELECT  coalesce(f.oid, p.filespace_oid) as filespace_oid, 
+    SELECT  coalesce(f.oid, p.filespace_oid) as filespace_oid,
         f.fsname as "filespace"
-    FROM (SELECT * FROM gp_persistent_filespace_node 
-          WHERE persistent_state = 2) p 
-      FULL OUTER JOIN (SELECT oid, fsname FROM pg_filespace 
-                       WHERE oid != 3052) f 
+    FROM (SELECT * FROM gp_persistent_filespace_node
+          WHERE persistent_state = 2) p
+      FULL OUTER JOIN (SELECT oid, fsname FROM pg_filespace
+                       WHERE oid != 3052) f
         ON (p.filespace_oid = f.oid)
     WHERE  (p.filespace_oid is NULL OR f.oid is NULL)
     """
@@ -2323,7 +2329,7 @@ def checkPersistentTables():
 
     qname = "gp_persistent_filespace_node  <=> gp_global_sequence"
     qry = """
-    SELECT  p.filespace_oid, f.fsname as "filespace", 
+    SELECT  p.filespace_oid, f.fsname as "filespace",
         case when p.persistent_state = 0 then 'free'
              when p.persistent_state = 1 then 'create pending'
              when p.persistent_state = 2 then 'created'
@@ -2364,7 +2370,7 @@ def checkPersistentTables():
              else 'unknown state: ' || p.mirror_existence_state
         end as mirror_existence_state
     FROM gp_persistent_database_node p
-    WHERE p.persistent_state not in (0, 2) 
+    WHERE p.persistent_state not in (0, 2)
        or p.mirror_existence_state not in (0,1,3)
     """
     if in_sync:
@@ -2374,9 +2380,9 @@ def checkPersistentTables():
     qry = """
     SELECT coalesce(d.oid, p.database_oid) as database_oid,
        d.datname as database
-    FROM (SELECT * FROM gp_persistent_database_node 
+    FROM (SELECT * FROM gp_persistent_database_node
           WHERE persistent_state = 2) p
-      FULL OUTER JOIN pg_database d 
+      FULL OUTER JOIN pg_database d
         ON (d.oid = p.database_oid)
     WHERE (d.datname is null or p.database_oid is null)
     """
@@ -2384,11 +2390,11 @@ def checkPersistentTables():
 
     qname = "gp_persistent_database_node   <=> pg_tablespace"
     qry = """
-    SELECT  coalesce(t.oid, p.database_oid) as database_oid, 
+    SELECT  coalesce(t.oid, p.database_oid) as database_oid,
         t.spcname as tablespace
-    FROM (SELECT * FROM gp_persistent_database_node 
+    FROM (SELECT * FROM gp_persistent_database_node
           WHERE persistent_state = 2) p
-      LEFT OUTER JOIN (SELECT oid, spcname FROM pg_tablespace 
+      LEFT OUTER JOIN (SELECT oid, spcname FROM pg_tablespace
                        WHERE oid != 1664) t
         ON (t.oid = p.tablespace_oid)
     WHERE  t.spcname is null
@@ -2438,7 +2444,7 @@ def checkPersistentTables():
              else 'unknown state: ' || p.mirror_existence_state
         end as mirror_existence_state
     FROM gp_persistent_tablespace_node p
-    WHERE p.persistent_state not in (0, 2) 
+    WHERE p.persistent_state not in (0, 2)
        or p.mirror_existence_state not in (0,1,3)
     """
     if in_sync:
@@ -2446,10 +2452,10 @@ def checkPersistentTables():
 
     qname = "gp_persistent_tablespace_node <=> pg_tablespace"
     qry = """
-    SELECT  coalesce(t.oid, p.tablespace_oid) as tablespace_oid, 
+    SELECT  coalesce(t.oid, p.tablespace_oid) as tablespace_oid,
         t.spcname as tablespace
-    FROM (SELECT * FROM gp_persistent_tablespace_node 
-          WHERE persistent_state = 2) p 
+    FROM (SELECT * FROM gp_persistent_tablespace_node
+          WHERE persistent_state = 2) p
       FULL OUTER JOIN (
         SELECT oid, spcname FROM pg_tablespace WHERE oid not in (1663, 1664)
       ) t ON (t.oid = p.tablespace_oid)
@@ -2460,9 +2466,9 @@ def checkPersistentTables():
     qname = "gp_persistent_tablespace_node <=> pg_filespace"
     qry = """
     SELECT  p.filespace_oid, f.fsname as "filespace"
-    FROM (SELECT * FROM gp_persistent_tablespace_node 
+    FROM (SELECT * FROM gp_persistent_tablespace_node
           WHERE persistent_state = 2) p
-      LEFT OUTER JOIN pg_filespace f 
+      LEFT OUTER JOIN pg_filespace f
         ON (f.oid = p.filespace_oid)
     WHERE  f.fsname is null
     """
@@ -2511,7 +2517,7 @@ def checkPersistentTables():
              else 'unknown state: ' || p.mirror_existence_state
         end as mirror_existence_state
     FROM gp_persistent_relation_node p
-    WHERE (p.persistent_state not in (0, 2) 
+    WHERE (p.persistent_state not in (0, 2)
            or p.mirror_existence_state not in (0,1,3))
       and p.database_oid in (
         SELECT oid FROM pg_database WHERE datname = current_database()
@@ -2523,14 +2529,14 @@ def checkPersistentTables():
     qname = "gp_persistent_relation_node   <=> pg_tablespace"
     qry = """
     SELECT  distinct p.tablespace_oid
-    FROM (SELECT * FROM gp_persistent_relation_node 
-          WHERE persistent_state = 2 
+    FROM (SELECT * FROM gp_persistent_relation_node
+          WHERE persistent_state = 2
             AND database_oid in (
-              SELECT oid FROM pg_database 
+              SELECT oid FROM pg_database
               WHERE datname = current_database()
               UNION ALL
               SELECT 0)) p
-      LEFT OUTER JOIN pg_tablespace t 
+      LEFT OUTER JOIN pg_tablespace t
         ON (t.oid = p.tablespace_oid)
     WHERE  t.oid is null
     """
@@ -2541,7 +2547,7 @@ def checkPersistentTables():
     SELECT  datname, oid, count(*)
     FROM (
       SELECT  d.datname as datname, p.database_oid as oid
-      FROM (SELECT * FROM gp_persistent_relation_node 
+      FROM (SELECT * FROM gp_persistent_relation_node
             WHERE database_oid != 0 and persistent_state = 2
            ) p
         full outer join pg_database d ON (d.oid = p.database_oid)
@@ -2566,8 +2572,8 @@ def checkPersistentTables():
       FULL OUTER JOIN gp_relation_node r
         ON (p.relfilenode_oid = r.relfilenode_oid and
             p.segment_file_num = r.segment_file_num)
-    WHERE  (p.relfilenode_oid is NULL OR 
-            r.relfilenode_oid is NULL OR 
+    WHERE  (p.relfilenode_oid is NULL OR
+            r.relfilenode_oid is NULL OR
             p.ctid != r.persistent_tid)
     """
     queries.append([qname, qry])
@@ -2586,7 +2592,7 @@ def checkPersistentTables():
       ) p
       FULL OUTER JOIN (
         SELECT  n.nspname, c.relname, c.relfilenode, c.relstorage, c.relkind
-        FROM  pg_class c 
+        FROM  pg_class c
           LEFT OUTER JOIN pg_namespace n ON (c.relnamespace = n.oid)
         WHERE  c.relstorage not in ('v', 'x', 'f')
       ) c ON (p.relfilenode_oid = c.relfilenode)
@@ -2597,7 +2603,7 @@ def checkPersistentTables():
     qname = "gp_persistent_relation_node   <=> gp_global_sequence"
     qry = """
     SELECT  p.tablespace_oid, p.database_oid, p.relfilenode_oid,
-        p.segment_file_num, 
+        p.segment_file_num,
         case when p.persistent_state = 0 then 'free'
              when p.persistent_state = 1 then 'create pending'
              when p.persistent_state = 2 then 'created'
@@ -2632,14 +2638,14 @@ def checkPersistentTables():
     FULL OUTER JOIN (
       SELECT p.*, c.relkind, c.relstorage
       FROM   gp_persistent_relation_node_check() p
-        LEFT OUTER JOIN pg_class c 
+        LEFT OUTER JOIN pg_class c
           ON (p.relfilenode_oid = c.relfilenode)
       WHERE (p.segment_file_num = 0 or c.relstorage != 'h')
     ) b ON (a.tablespace_oid   = b.tablespace_oid    and
             a.database_oid     = b.database_oid      and
             a.relfilenode_oid  = b.relfilenode_oid   and
             a.segment_file_num = b.segment_file_num)
-    WHERE (a.relfilenode_oid is null OR 
+    WHERE (a.relfilenode_oid is null OR
 	   (a.persistent_state = 2 and b.relfilenode_oid is null))  and
       coalesce(a.database_oid, b.database_oid) in (
         SELECT oid FROM pg_database WHERE datname = current_database()
@@ -2654,9 +2660,9 @@ def checkPersistentTables():
     qname = "pg_database                   <=> filesystem"
     qry = """
     SELECT tablespace_oid, database_oid, count(*)
-    FROM   gp_persistent_relation_node_check() p 
-      LEFT OUTER JOIN pg_database d 
-      ON (p.database_oid = d.oid) 
+    FROM   gp_persistent_relation_node_check() p
+      LEFT OUTER JOIN pg_database d
+      ON (p.database_oid = d.oid)
     WHERE  d.oid is null and database_oid != 0
     GROUP BY tablespace_oid, database_oid;
     """
@@ -2918,7 +2924,7 @@ def fkQuery(catname, pkcatname, fkeystr, pkeystr, pkeys, cat1pkeys):
           SELECT {primary_key_alias}, {cat2_dot_pk},
                  array_agg(gp_segment_id order by gp_segment_id) as segids
           FROM (
-                SELECT cat1.gp_segment_id, {cat1_dot_pk}, cat1.{FK1} as {cat2_dot_pk} 
+                SELECT cat1.gp_segment_id, {cat1_dot_pk}, cat1.{FK1} as {cat2_dot_pk}
                 FROM
                     gp_dist_random('{CATALOG1}') cat1 LEFT OUTER JOIN
                     gp_dist_random('{CATALOG2}') cat2
@@ -2927,7 +2933,7 @@ def fkQuery(catname, pkcatname, fkeystr, pkeystr, pkeys, cat1pkeys):
                 WHERE cat2.{PK2} is NULL
                   AND cat1.{FK1} != 0
                 UNION ALL
-                SELECT -1 as gp_segment_id, {cat1_dot_pk}, cat1.{FK1} as {cat2_dot_pk} 
+                SELECT -1 as gp_segment_id, {cat1_dot_pk}, cat1.{FK1} as {cat2_dot_pk}
                 FROM
                     {CATALOG1} cat1 LEFT OUTER JOIN
                     {CATALOG2} cat2
@@ -3040,19 +3046,19 @@ def missingEntryQuery(max_content, catname, pkey, castedPkey):
     # =================
     #  Missing / Extra
     # =================
-    #   Cross product 
+    #   Cross product
     #       (all unique {primary_key} present on any segment)
     #       (all unique segment_ids in the system)
     #   Left join
     #       (actual ({primary_key}, segment_id) present in the catalog)
-    #   
+    #
     #   Count number not null vs number null in the join:
     #     If the nulls are <= 1/2 the result report those segments as "missing"
     #     If the non-nulls are <= 1/2 the result report those segments as "extra"
 
     qry = """
           SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
-          
+
           -- distribute catalog table from master, so that we can avoid to gather
           CREATE TEMPORARY TABLE _tmp_master ON COMMIT DROP AS
               SELECT gp_segment_id segid, {primary_key} FROM {catalog};
@@ -3065,7 +3071,7 @@ def missingEntryQuery(max_content, catname, pkey, castedPkey):
             FROM (
                  SELECT segid, {primary_key}
                  FROM(  SELECT distinct {primary_key} FROM _tmp_master
-                        UNION 
+                        UNION
                         SELECT distinct {primary_key} FROM gp_dist_random('{catalog}') ) all_pks,
                       ( SELECT distinct content as segid from gp_segment_configuration) all_segs
                ) ideal
@@ -3211,8 +3217,8 @@ def inconsistentEntryQuery(max_content, catname, pkey, columns, castcols):
 
     qry = """
               SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
-              
-              SET gp_enable_mk_sort=off; 
+
+              SET gp_enable_mk_sort=off;
 
               -- distribute catalog table from master, so that we can avoid to gather
               CREATE TEMPORARY TABLE _tmp_master ON COMMIT DROP AS
@@ -3399,13 +3405,13 @@ def checkDuplicatePersistentEntry():
 def duplicatePersistentEntryQuery(catname, pkey, excol, state):
     """
     Check for duplicate persistent table entries:
-    	the query is similar to the duplicate catalog entries query, except an extra condition 
+    	the query is similar to the duplicate catalog entries query, except an extra condition
     	and the check is limited to the connected database for reporting purposes
     """
 
     qry = """
           SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
-          
+
           -- distribute catalog table from master, so that we can avoid to gather
           CREATE TEMPORARY TABLE _tmp_master ON COMMIT DROP AS
               SELECT gp_segment_id segid, {pkey}, {excol} FROM {catalog};
@@ -3416,14 +3422,14 @@ def duplicatePersistentEntryQuery(catname, pkey, excol, state):
                    select segid, {pkey} from _tmp_master
                    where {excol} != {state}
                    union all
-                   select gp_segment_id as segid, {pkey} from gp_dist_random('{catalog}') 
+                   select gp_segment_id as segid, {pkey} from gp_dist_random('{catalog}')
                    where {excol} != {state}
-              ) all_segments 
+              ) all_segments
                 LEFT OUTER JOIN pg_database d ON (all_segments.database_oid = d.oid)
               WHERE d.datname = '{dbname}'
               GROUP BY segid, {pkey}
               HAVING count(*) > 1
-          ) rowresult 
+          ) rowresult
           GROUP BY {pkey}, total
           """.format(catalog=catname, pkey=','.join(pkey), excol=excol, state=state, dbname=GV.dbname)
     return qry
@@ -4026,9 +4032,9 @@ def getOidFromPK(catname, pkeys):
     pkeystr = ' and '.join(pkeystrList)
 
     qry = """
-          SELECT oid 
+          SELECT oid
           FROM (
-                SELECT oid FROM {catname} 
+                SELECT oid FROM {catname}
                 WHERE {pkeystr}
                 UNION ALL
                 SELECT oid FROM gp_dist_random('{catname}')
@@ -4068,9 +4074,9 @@ def getClassOidForRelfilenode(relfilenode):
 
 # -------------------------------------------------------------------------------
 def getResourceTypeOid(oid):
-    qry = """ 
+    qry = """
           SELECT oid
-          FROM ( 
+          FROM (
                SELECT oid FROM pg_resourcetype WHERE restypid = %d
                UNION ALL
                SELECT oid FROM gp_dist_random('pg_resourcetype')
@@ -4649,7 +4655,7 @@ def getRelInfo(objects):
             SELECT reltoastrelid as childoid, oid as paroid
             FROM (
               SELECT reltoastrelid, oid, rank() over (partition by reltoastrelid order by count(*) desc)
-                FROM 
+                FROM
                   ( SELECT reltoastrelid, oid FROM pg_class
                     WHERE reltoastrelid in ({oids})
                     UNION ALL
@@ -4665,7 +4671,7 @@ def getRelInfo(objects):
             SELECT segrelid as childoid, relid as paroid
             FROM (
                SELECT segrelid, relid, rank() over (partition by segrelid order by count(*) desc)
-                FROM 
+                FROM
                  ( SELECT segrelid, relid FROM pg_appendonly
                    WHERE segrelid in ({oids})
                    UNION ALL
@@ -4676,12 +4682,12 @@ def getRelInfo(objects):
             ) par_aoco
             WHERE rank=1
 
-            UNION ALL 
+            UNION ALL
 
             SELECT indexrelid as childoid, indrelid as paroid
             FROM (
                SELECT indexrelid, indrelid, rank() over (partition by indexrelid order by count(*) desc)
-               FROM 
+               FROM
                 ( SELECT indexrelid, indrelid FROM pg_index
                    WHERE  indexrelid in ({oids})
                    UNION ALL
