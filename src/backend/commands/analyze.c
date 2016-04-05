@@ -106,351 +106,6 @@ static bool std_typanalyze(VacAttrStats *stats);
 static void analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples, float4 *relPages, bool rootonly);
 static void analyzeEstimateIndexpages(Relation onerel, Relation indrel, BlockNumber *indexPages);
 
-
-static void analyzeStmt(VacuumStmt *stmt, List *relids);
-
-/**
- * This is the main entry point for analyze execution. Three possible ways of calling this method.
- * 1. Full database ANALYZE. No relations are explicitly specified.
- * 2. List of relations is specified (Usually by autovacuum).
- * 3. One relation is specified (optionally, a list of columns).
- * This method can only be called in DISPATCH or UTILITY roles.
- * Input:
- * 	vacstmt - Vacuum statement.
- * 	relids  - Usually NULL except when called by autovacuum.
- */
-void analyzeStatement(VacuumStmt *stmt, List *relids)
-{
-	/* MPP-14608: Analyze may create temp tables.
-	 * Disable autostats so that analyze is not called during their creation. */
-
-	GpAutoStatsModeValue autostatvalBackup = gp_autostats_mode;
-	GpAutoStatsModeValue autostatInFunctionsvalBackup = gp_autostats_mode_in_functions;
-	bool optimizerBackup = optimizer;
-
-	gp_autostats_mode = GP_AUTOSTATS_NONE;
-	gp_autostats_mode_in_functions = GP_AUTOSTATS_NONE;
-	optimizer = false;
-
-	PG_TRY();
-	{
-		analyzeStmt(stmt, relids);
-		gp_autostats_mode = autostatvalBackup;
-		gp_autostats_mode_in_functions = autostatInFunctionsvalBackup;
-		optimizer = optimizerBackup;
-	}
-
-	/* Clean up in case of error. */
-	PG_CATCH();
-	{
-		gp_autostats_mode = autostatvalBackup;
-		gp_autostats_mode_in_functions = autostatInFunctionsvalBackup;
-		optimizer = optimizerBackup;
-
-		/* Carry on with error handling. */
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
-	Assert(gp_autostats_mode == autostatvalBackup);
-	Assert(gp_autostats_mode_in_functions == autostatInFunctionsvalBackup);
-	Assert(optimizer == optimizerBackup);
-}
-
-/**
- * If ANALYZE is requested with no relations specified, this method is called to build
- * the implicit list of relations from pg_class. Only those with relkind == RELKIND_RELATION
- * are considered.
- * If rootonly is true, we only analyze root partition table.
- *
- * Input:
- * 	None
- * Output:
- * 	List of relids
- */
-static List *
-analyzableRelations(bool rootonly)
-{
-	List	   *lRelOids = NIL;
-	cqContext  *pcqCtx;
-	HeapTuple	tuple;
-
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_class "
-				" WHERE relkind = :1 ",
-				CharGetDatum(RELKIND_RELATION)));
-
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
-	{
-		Oid			candidateOid = HeapTupleGetOid(tuple);
-
-		if (rootonly && !rel_is_partitioned(candidateOid))
-		{
-			continue;
-		}
-
-		if (candidateOid == StatisticRelationId)
-			continue;
-
-		if (pg_class_ownercheck(candidateOid, GetUserId()) 
-			|| pg_database_ownercheck(MyDatabaseId, GetUserId()))
-		{
-			lRelOids = lappend_oid(lRelOids, candidateOid);
-		}
-	}
-
-	caql_endscan(pcqCtx);
-
-	return lRelOids;
-}
-
-/**
- * This method can only be called in DISPATCH or UTILITY roles.
- * Input:
- * 	vacstmt - Vacuum statement.
- * 	relids  - Usually NULL except when called by autovacuum.
- */
-static void
-analyzeStmt(VacuumStmt *stmt, List *relids)
-{
-	List	   			  	*lRelOids = NIL;
-	MemoryContext			callerContext = NULL;
-	MemoryContext 			analyzeStatementContext = NULL;
-	MemoryContext 			analyzeRelationContext = NULL;
-	bool					bUseOwnXacts = false;
-	ListCell				*le1 = NULL;
-
-	/**
-	 * Ensure that an ANALYZE is requested.
-	 */
-	Assert(stmt->analyze);	
-	
-	/**
-	 * Ensure that vacuum was not requested.
-	 */
-	Assert(!stmt->vacuum);
-	
-	/**
-	 * Both relids and stmt->relation cannot be non-null.
-	 */
-	Assert(!(relids != NIL && stmt->relation != NULL));
-	
-	/**
-	 * Works only in DISPATCH and UTILITY mode.
-	 */
-	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY);
-	
-	/**
-	 * Only works in normal processing mode - should not be called in bootstrapping or
-	 * init mode.
-	 */
-	Assert(IsNormalProcessingMode());
-	
-	if (stmt->verbose)
-		elevel = INFO;
-	else
-		elevel = DEBUG2;
-
-	callerContext = CurrentMemoryContext;
-
-	/*
-	 * This is the statement-level context. This will be cleaned up when we exit this
-	 * function.
-	 */
-	analyzeStatementContext = AllocSetContextCreate(PortalContext,
-			"Analyze",
-			ALLOCSET_DEFAULT_MINSIZE,
-			ALLOCSET_DEFAULT_INITSIZE,
-			ALLOCSET_DEFAULT_MAXSIZE);
-
-	MemoryContextSwitchTo(analyzeStatementContext);
-
-
-	/*
-	 * This is a per relation context.
-	 */
-	analyzeRelationContext = AllocSetContextCreate(analyzeStatementContext,
-			"AnalyzeRel",
-			ALLOCSET_DEFAULT_MINSIZE,
-			ALLOCSET_DEFAULT_INITSIZE,
-			ALLOCSET_DEFAULT_MAXSIZE);
-
-	/**
-	 * What relations need to be ANALYZED.
-	 */
-	if (relids == NIL && stmt->relation == NULL)
-	{
-		/**
-		 * ANALYZE entire DB.
-		 */
-		lRelOids = analyzableRelations(stmt->rootonly);
-		if (stmt->rootonly && NIL == lRelOids)
-		{
-			ereport(WARNING,
-					(errmsg("there are no partitioned tables in database to ANALYZE ROOTPARTITION")));
-		}
-	}
-	else if (relids != NIL)
-	{
-		/**
-		 * ANALYZE called by autovacuum.
-		 */
-		lRelOids = relids;
-	}
-	else
-	{
-		/**
-		 * ANALYZE one relation (optionally, a list of columns).
-		 */
-		Oid relationOid = InvalidOid;
-		Assert(relids == NIL);
-		Assert(stmt->relation != NULL);
-		relationOid = RangeVarGetRelid(stmt->relation, false);
-		PartStatus ps = rel_part_status(relationOid);
-
-		if (ps != PART_STATUS_ROOT && stmt->rootonly)
-		{
-			ereport(WARNING,
-					(errmsg("skipping \"%s\" --- cannot analyze a non-root partition using ANALYZE ROOTPARTITION",
-							get_rel_name(relationOid))));
-		}
-		else if (ps == PART_STATUS_ROOT)
-		{
-			PartitionNode *pn = get_parts(relationOid, 0 /*level*/ ,
-		 	 	            0 /*parent*/, false /* inctemplate */, true /*includesubparts*/);
-			Assert(pn);
-			if (!stmt->rootonly)
-			{
-				lRelOids = all_leaf_partition_relids(pn); /* all leaves */
-			}
-			lRelOids = lappend_oid(lRelOids, relationOid); /* root partition */
-			if (optimizer_analyze_midlevel_partition)
-			{
-				lRelOids = list_concat(lRelOids, all_interior_partition_relids(pn)); /* interior partitions */
-			}
-		}
-		else if (ps == PART_STATUS_INTERIOR) /* analyze an interior partition directly */
-		{
-			/* disable analyzing mid-level partitions directly since the users are encouraged
-			 * to work with the root partition only. To gather stats on mid-level partitions
-			 * (for Orca's use), the user should run ANALYZE or ANALYZE ROOTPARTITION on the
-			 * root level.
-			 */
-			ereport(WARNING,
-					(errmsg("skipping \"%s\" --- cannot analyze a mid-level partition. "
-							"Please run ANALYZE on the root partition table.",
-							get_rel_name(relationOid))));
-		}
-		else
-		{
-			lRelOids = list_make1_oid(relationOid);
-		}
-	}
-
-	/*
-	 * Decide whether we need to start/commit our own transactions.
-	 * The scenarios in which we can start/commit our own transactions are:
-	 * 1. We are not in a transaction block and there are multiple relations specified (some of them may be implicit)
-	 * 2. We are in autovacuum mode
-	 */
-
-	if ((!IsInTransactionChain((void *) stmt) && list_length(lRelOids) > 1)
-			|| IsAutoVacuumWorkerProcess())
-		bUseOwnXacts = true;
-
-	/**
-	 * Iterate through all relids in the list and issue analyze on all columns on each relation.
-	 */
-
-	if (bUseOwnXacts)
-	{
-		/*
-		 * We commit the transaction started in PostgresMain() here, and start
-		 * another one before exiting to match the commit waiting for us back in
-		 * PostgresMain().
-		 */
-		CommitTransactionCommand();
-		MemoryContextSwitchTo(analyzeStatementContext);
-	}
-
-	foreach (le1, lRelOids)
-	{
-		Oid				candidateOid	  = InvalidOid;
-		bool			bTemp;
-
-		bTemp = false;
-
-		Assert(analyzeStatementContext == CurrentMemoryContext);
-
-		if (bUseOwnXacts)
-		{
-			/**
-			 * We use a different transaction per relation so that we
-			 * may release locks on relations as soon as possible.
-			 */
-			setupRegularDtxContext();
-			StartTransactionCommand();
-			ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
-			MemoryContextSwitchTo(analyzeStatementContext);
-		}
-
-		candidateOid = lfirst_oid(le1);
-
-		/* Switch to per relation context */
-		MemoryContextSwitchTo(analyzeRelationContext);
-
-		analyze_rel(candidateOid, stmt);
-
-		/* Switch back to statement context and reset relation context */
-		MemoryContextSwitchTo(analyzeStatementContext);
-		MemoryContextResetAndDeleteChildren(analyzeRelationContext);
-
-
-		/* MPP-6929: metadata tracking */
-		if (!bTemp && (Gp_role == GP_ROLE_DISPATCH))
-		{
-			char *asubtype = "";
-
-			if (IsAutoVacuumWorkerProcess())
-				asubtype = "AUTO";
-
-			MetaTrackUpdObject(RelationRelationId,
-							   candidateOid,
-							   GetUserId(),
-							   "ANALYZE",
-							   asubtype
-				);
-		}
-
-		if (bUseOwnXacts)
-		{
-			/**
-			 * We commit the transaction so that locks on the relation may be released.
-			 */
-			CommitTransactionCommand();
-			MemoryContextSwitchTo(analyzeStatementContext);
-		}
-	}
-
-	if (bUseOwnXacts)
-	{
-		/**
-		 * We start a new transaction command to match the one in PostgresMain().
-		 */
-		setupRegularDtxContext();
-		StartTransactionCommand();
-		ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
-		MemoryContextSwitchTo(analyzeStatementContext);
-	}
-
-	Assert(analyzeStatementContext == CurrentMemoryContext);
-	MemoryContextSwitchTo(callerContext);
-	MemoryContextDelete(analyzeStatementContext);
-}
-
-
-
-
 /*
  *	analyze_rel() -- analyze one relation
  */
@@ -768,7 +423,7 @@ analyze_rel(Oid relid, VacuumStmt *vacstmt)
 	 */
 	if (!vacstmt->vacuum)
 	{
-		vac_update_relstats(onerel,
+		vac_update_relstats(RelationGetRelid(onerel),
 							totalpages,
 							totalrows, hasindex,
 							InvalidTransactionId);
@@ -803,7 +458,7 @@ analyze_rel(Oid relid, VacuumStmt *vacstmt)
 			}
 
 			totalindexrows = ceil(thisdata->tupleFract * totalrows);
-			vac_update_relstats(Irel[ind],
+			vac_update_relstats(RelationGetRelid(Irel[ind]),
 								estimatedIndexPages,
 								totalindexrows, false,
 								InvalidTransactionId);
@@ -811,6 +466,22 @@ analyze_rel(Oid relid, VacuumStmt *vacstmt)
 
 		/* report results to the stats collector, too */
 		pgstat_report_analyze(onerel, totalrows, totaldeadrows);
+	}
+
+	/* MPP-6929: metadata tracking */
+	if (!vacuumStatement_IsTemporary(onerel) && (Gp_role == GP_ROLE_DISPATCH))
+	{
+		char *asubtype = "";
+
+		if (IsAutoVacuumWorkerProcess())
+			asubtype = "AUTO";
+
+		MetaTrackUpdObject(RelationRelationId,
+						   relid,
+						   GetUserId(),
+						   "ANALYZE",
+						   asubtype
+			);
 	}
 
 	/* We skip to here if there were no analyzable columns */
@@ -1600,13 +1271,36 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 
 	elog(elevel, "Executing SQL: %s", str.data);
 
-	/*
-	 * Do the query. We pass readonly==false, to force SPI to take a new
-	 * snapshot. That ensures that we see all changes by our own transaction.
-	 */
-	ret = SPI_execute(str.data, false, 0);
-	Assert(ret > 0);
-	sampleTuples = SPI_processed;
+	/* Temporarily disable ORCA while we run the query */
+	{
+		bool		optimizerBackup = optimizer;
+
+		optimizer = false;
+
+		PG_TRY();
+		{
+			/*
+			 * Do the query. We pass readonly==false, to force SPI to take a new
+			 * snapshot. That ensures that we see all changes by our own transaction.
+			 */
+			ret = SPI_execute(str.data, false, 0);
+			Assert(ret > 0);
+			sampleTuples = SPI_processed;
+
+			optimizer = optimizerBackup;
+		}
+
+		/* Clean up in case of error. */
+		PG_CATCH();
+		{
+			optimizer = optimizerBackup;
+
+			/* Carry on with error handling. */
+			PG_RE_THROW();
+		}
+		PG_END_TRY();
+		Assert(optimizer == optimizerBackup);
+	}
 
 	/* Ok, read in the tuples to *rows */
 	MemoryContextSwitchTo(oldcxt);

@@ -315,7 +315,7 @@ static Relation open_relation_and_check_permission(VacuumStmt *vacstmt,
 												   Oid relid,
 												   char expected_relkind,
 												   bool forceAccessExclusiveLock);
-static void vacuumStatement(VacuumStmt *vacstmt, List *relids);
+static void vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid, List *relations);
 
 static void
 vacuum_combine_stats(CdbDispatchResults *primaryResults,
@@ -332,53 +332,285 @@ static void vacuum_appendonly_index(Relation indexRelation,
  ****************************************************************************
  */
 
-/**
- * Primary entry points for VACUUM, VACUUM FULL and ANALYZE commands.
- * It calls subroutines vacuumStatement and analyzeStatement depending
- * on the intent of vacstmt. Not both of vacstmt and relids can be non-null.
- * Input:
- * 	vacstmt - vacuum statement.
- * 	relids  - list of relations (used by autovacuum)
+/*
+ * Primary entry point for VACUUM and ANALYZE commands.
+ *
+ * relids is normally NIL; if it is not, then it provides the list of
+ * relation OIDs to be processed, and vacstmt->relation is ignored.
+ * (The non-NIL case is currently only used by autovacuum.)
+ *
+ * It is the caller's responsibility that both vacstmt and relids
+ * (if given) be allocated in a memory context that won't disappear
+ * at transaction commit.  In fact this context must be QueryContext
+ * to avoid complaints from PreventTransactionChain.
  */
 void
 vacuum(VacuumStmt *vacstmt, List *relids)
 {
-	VacuumStmt *analyzeStmt = copyObject(vacstmt);
-	bool doAnalyze = vacstmt->analyze;
-	bool doVacuum = vacstmt->vacuum;
+	const char *stmttype = vacstmt->vacuum ? "VACUUM" : "ANALYZE";
+	volatile MemoryContext anl_context = NULL;
+	volatile bool all_rels,
+				in_outer_xact,
+				use_own_xacts;
+	List	   *relations;
 
-	Assert(!(vacstmt != NULL && relids != NULL));
+	if (vacstmt->vacuum && vacstmt->rootonly)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("ROOTPARTITION option cannot be used together with VACUUM, try ANALYZE ROOTPARTITION")));
 
-	if (doVacuum)
+	if (vacstmt->verbose)
+		elevel = INFO;
+	else
+		elevel = DEBUG2;
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+		elevel = DEBUG2; /* vacuum messages aren't interesting from the QD */
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+		clear_relsize_cache();
+
+	/*
+	 * We cannot run VACUUM inside a user transaction block; if we were inside
+	 * a transaction, then our commit- and start-transaction-command calls
+	 * would not have the intended effect! Furthermore, the forced commit that
+	 * occurs before truncating the relation's file would have the effect of
+	 * committing the rest of the user's transaction too, which would
+	 * certainly not be the desired behavior.  (This only applies to VACUUM
+	 * FULL, though.  We could in theory run lazy VACUUM inside a transaction
+	 * block, but we choose to disallow that case because we'd rather commit
+	 * as soon as possible after finishing the vacuum.	This is mainly so that
+	 * we can let go the AccessExclusiveLock that we may be holding.)
+	 *
+	 * ANALYZE (without VACUUM) can run either way.
+	 */
+	if (vacstmt->vacuum)
 	{
-		if (vacstmt->rootonly)
-		{
-			ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR),
-							errmsg("ROOTPARTITION option cannot be used together with VACUUM, try ANALYZE ROOTPARTITION")));
-		}
+		if (Gp_role == GP_ROLE_DISPATCH)
+			PreventTransactionChain((void *) vacstmt, stmttype);
+		in_outer_xact = false;
+	}
+	else
+		in_outer_xact = IsInTransactionChain((void *) vacstmt);
+
+	/*
+	 * Send info about dead objects to the statistics collector, unless we are
+	 * in autovacuum --- autovacuum.c does this for itself.
+	 */
+	if (vacstmt->vacuum && !IsAutoVacuumWorkerProcess())
+		pgstat_vacuum_stat();
+
+	/*
+	 * Create special memory context for cross-transaction storage.
+	 *
+	 * Since it is a child of PortalContext, it will go away eventually even
+	 * if we suffer an error; there's no need for special abort cleanup logic.
+	 */
+	vac_context = AllocSetContextCreate(PortalContext,
+										"Vacuum",
+										ALLOCSET_DEFAULT_MINSIZE,
+										ALLOCSET_DEFAULT_INITSIZE,
+										ALLOCSET_DEFAULT_MAXSIZE);
+
+	/* Remember whether we are processing everything in the DB */
+	all_rels = (relids == NIL && vacstmt->relation == NULL);
+
+	/*
+	 * Build list of relations to process, unless caller gave us one. (If we
+	 * build one, we put it in vac_context for safekeeping.)
+	 */
+	relations = get_rel_oids(relids, vacstmt->relation, stmttype, vacstmt->rootonly);
+
+	/*
+	 * Decide whether we need to start/commit our own transactions.
+	 *
+	 * For VACUUM (with or without ANALYZE): always do so, so that we can
+	 * release locks as soon as possible.  (We could possibly use the outer
+	 * transaction for a one-table VACUUM, but handling TOAST tables would be
+	 * problematic.)
+	 *
+	 * For ANALYZE (no VACUUM): if inside a transaction block, we cannot
+	 * start/commit our own transactions.  Also, there's no need to do so if
+	 * only processing one relation.  For multiple relations when not within a
+	 * transaction block, use own transactions so we can release locks sooner.
+	 */
+	if (vacstmt->vacuum)
+		use_own_xacts = true;
+	else
+	{
+		Assert(vacstmt->analyze);
+		if (in_outer_xact)
+			use_own_xacts = false;
+		else if (list_length(relations) > 1)
+			use_own_xacts = true;
 		else
+			use_own_xacts = false;
+	}
+
+	/*
+	 * If we are running ANALYZE without per-table transactions, we'll need a
+	 * memory context with table lifetime.
+	 */
+	if (!use_own_xacts)
+		anl_context = AllocSetContextCreate(PortalContext,
+											"Analyze",
+											ALLOCSET_DEFAULT_MINSIZE,
+											ALLOCSET_DEFAULT_INITSIZE,
+											ALLOCSET_DEFAULT_MAXSIZE);
+
+	/*
+	 * vacuum_rel expects to be entered with no transaction active; it will
+	 * start and commit its own transaction.  But we are called by an SQL
+	 * command, and so we are executing inside a transaction already. We
+	 * commit the transaction started in PostgresMain() here, and start
+	 * another one before exiting to match the commit waiting for us back in
+	 * PostgresMain().
+	 */
+	if (use_own_xacts)
+	{
+		/* matches the StartTransaction in PostgresMain() */
+		if (Gp_role != GP_ROLE_EXECUTE)
+			CommitTransactionCommand();
+	}
+
+	PG_TRY();
+	{
+		ListCell   *cur;
+
+		/* Turn vacuum cost accounting on or off */
+		VacuumCostActive = (VacuumCostDelay > 0);
+		VacuumCostBalance = 0;
+
+		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			/**
-			 * Perform vacuum.
-			 */
-			vacstmt->analyze = false;
-			vacstmt->vacuum = true;
-			vacuumStatement(vacstmt, NIL);
+			vacstmt->appendonly_compaction_segno = NIL;
+			vacstmt->appendonly_compaction_insert_segno = NIL;
+			vacstmt->appendonly_compaction_vacuum_cleanup = false;
+			vacstmt->appendonly_relation_empty = false;
+		}
+
+		/*
+		 * Loop to process each selected relation.
+		 */
+		foreach(cur, relations)
+		{
+			Oid			relid = lfirst_oid(cur);
+
+			if (vacstmt->vacuum)
+				vacuumStatement_Relation(vacstmt, relid, relations);
+
+			if (vacstmt->analyze)
+			{
+				MemoryContext old_context = NULL;
+
+				/*
+				 * If using separate xacts, start one for analyze. Otherwise,
+				 * we can use the outer transaction, but we still need to call
+				 * analyze_rel in a memory context that will be cleaned up on
+				 * return (else we leak memory while processing multiple
+				 * tables).
+				 */
+				if (use_own_xacts)
+				{
+					StartTransactionCommand();
+					/* functions in indexes may want a snapshot set */
+					ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
+				}
+				else
+					old_context = MemoryContextSwitchTo(anl_context);
+
+				/*
+				 * Tell the buffer replacement strategy that vacuum is causing
+				 * the IO
+				 */
+				StrategyHintVacuum(true);
+
+				analyze_rel(relid, vacstmt);
+
+				StrategyHintVacuum(false);
+
+				if (use_own_xacts)
+					CommitTransactionCommand();
+				else
+				{
+					MemoryContextSwitchTo(old_context);
+					MemoryContextResetAndDeleteChildren(anl_context);
+				}
+			}
 		}
 	}
-
-	if (doAnalyze)
+	PG_CATCH();
 	{
-		/**
-		 * Perform ANALYZE.
+		/* Make sure cost accounting is turned off after error */
+		VacuumCostActive = false;
+		/* And reset buffer replacement strategy, too */
+		StrategyHintVacuum(false);
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
+	/* Turn off vacuum cost accounting */
+	VacuumCostActive = false;
+
+	/*
+	 * Finish up processing.
+	 */
+	if (use_own_xacts)
+	{
+		/* here, we are not in a transaction */
+
+		/*
+		 * This matches the CommitTransaction waiting for us in
+		 * PostgresMain().
+		 *
+		 * MPP-7632 and MPP-7984: if we're in a vacuum analyze we need to
+		 * make sure that this transaction we're in has the right
+		 * properties
 		 */
-		analyzeStmt->analyze = true;
-		analyzeStmt->vacuum = false;
-		analyzeStatement(analyzeStmt, NIL);
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			/* Set up the distributed transaction context. */
+			setupRegularDtxContext();
+		}
+		StartTransactionCommand();
+
+		/*
+		 * Re-establish the transaction snapshot.  This is wasted effort when
+		 * we are called as a normal utility command, because the new
+		 * transaction will be dropped immediately by PostgresMain(); but it's
+		 * necessary if we are called from autovacuum because autovacuum might
+		 * continue on to do an ANALYZE-only call.
+		 */
+		ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
 	}
 
-	vacstmt->analyze = doAnalyze;
-	vacstmt->vacuum = doVacuum;
+	if (vacstmt->vacuum && !IsAutoVacuumWorkerProcess())
+	{
+		/*
+		 * Update pg_database.datfrozenxid, and truncate pg_clog if possible.
+		 * (autovacuum.c does this for itself.)
+		 */
+		vac_update_datfrozenxid();
+
+		/*
+		 * If it was a database-wide VACUUM, print FSM usage statistics (we
+		 * don't make you be superuser to see these).  We suppress this in
+		 * autovacuum, too.
+		 */
+		if (all_rels)
+			PrintFreeSpaceMapStatistics(elevel);
+	}
+
+	/*
+	 * Clean up working storage --- note we must do this after
+	 * StartTransactionCommand, else we might be trying to delete the active
+	 * context!
+	 */
+	MemoryContextDelete(vac_context);
+	vac_context = NULL;
+
+	if (anl_context)
+		MemoryContextDelete(anl_context);
 }
 
 /*
@@ -456,12 +688,12 @@ static bool vacuum_assign_compaction_segno(
 	}
 }
 
-static bool
-vacuumStatement_IsTemporary(Oid relid)
+bool
+vacuumStatement_IsTemporary(Relation onerel)
 {
 	bool bTemp = false;
 	/* MPP-7576: don't track internal namespace tables */
-	switch (get_rel_namespace(relid))
+	switch (RelationGetNamespace(onerel))
 	{
 		case PG_CATALOG_NAMESPACE:
 			/* MPP-7773: don't track objects in system namespace
@@ -484,7 +716,7 @@ vacuumStatement_IsTemporary(Oid relid)
 	 * temporary namespace
 	 */
 	if (!bTemp)
-		bTemp = isAnyTempNamespace(get_rel_namespace(relid));
+		bTemp = isAnyTempNamespace(RelationGetNamespace(onerel));
 	return bTemp;
 }
 
@@ -695,6 +927,10 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid, List *relations)
 	bool				bTemp;
 	VacuumStatsContext stats_context;
 
+	vacstmt = copyObject(vacstmt);
+	vacstmt->analyze = false;
+	vacstmt->vacuum = true;
+
 	/*
 	 * We compact segment file by segment file.
 	 * Therefore in some cases, we have multiple vacuum dispatches
@@ -780,7 +1016,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid, List *relations)
 		}
 
 		/* XXX not about temporary table, this is about meta data tracking. */
-		bTemp = vacuumStatement_IsTemporary(relid);
+		bTemp = vacuumStatement_IsTemporary(onerel);
 
 		vacuumStatement_AssignRelation(vacstmt, relid, relations);
 
@@ -1086,192 +1322,6 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid, List *relations)
 }
 
 /*
- * Primary entry point for VACUUM (incl FULL) commands.
- *
- * relids is normally NIL; if it is not, then it provides the list of
- * relation OIDs to be processed, and vacstmt->relation is ignored.
- * (The non-NIL case is currently only used by autovacuum.)
- *
- * It is the caller's responsibility that both vacstmt and relids
- * (if given) be allocated in a memory context that won't disappear
- * at transaction commit.  In fact this context must be QueryContext
- * to avoid complaints from PreventTransactionChain.
- *
- * vacuum() has been changed so that it is an entry point only for vacuum
- * commands. ANALYZE is now handled by analyzeStatement() in analyze.c.
- */
-static void
-vacuumStatement(VacuumStmt *vacstmt, List *relids)
-{
-	const char *stmttype = "VACUUM";
-	volatile bool all_rels = false;
-	List	   *relations = NIL;
-
-	/**
-	 * Handles only vacuum (incl FULL). Does not handle ANALYZE.
-	 */
-	Assert(vacstmt->vacuum);
-	Assert(!vacstmt->analyze);
-
-	if (vacstmt->verbose)
-		elevel = INFO;
-	else
-		elevel = DEBUG2;
-
-	if (Gp_role == GP_ROLE_DISPATCH)
-		clear_relsize_cache();
-
-	if (Gp_role == GP_ROLE_DISPATCH)
-		elevel = DEBUG2; /* vacuum messages aren't interesting from the QD */
-
-
-	/*
-	 * We cannot run VACUUM inside a user transaction block; if we were inside
-	 * a transaction, then our commit- and start-transaction-command calls
-	 * would not have the intended effect! Furthermore, the forced commit that
-	 * occurs before truncating the relation's file would have the effect of
-	 * committing the rest of the user's transaction too, which would
-	 * certainly not be the desired behavior.  (This only applies to VACUUM
-	 * FULL, though.  We could in theory run lazy VACUUM inside a transaction
-	 * block, but we choose to disallow that case because we'd rather commit
-	 * as soon as possible after finishing the vacuum.	This is mainly so that
-	 * we can let go the AccessExclusiveLock that we may be holding.)
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		PreventTransactionChain((void *) vacstmt, stmttype);
-	}
-
-	/*
-	 * Send info about dead objects to the statistics collector, unless we are
-	 * in autovacuum --- autovacuum.c does this for itself.
-	 */
-	if (!IsAutoVacuumWorkerProcess())
-		pgstat_vacuum_stat();
-
-	/*
-	 * Create special memory context for cross-transaction storage.
-	 *
-	 * Since it is a child of PortalContext, it will go away eventually even
-	 * if we suffer an error; there's no need for special abort cleanup logic.
-	 */
-	vac_context = AllocSetContextCreate(PortalContext,
-										"Vacuum",
-										ALLOCSET_DEFAULT_MINSIZE,
-										ALLOCSET_DEFAULT_INITSIZE,
-										ALLOCSET_DEFAULT_MAXSIZE);
-
-	/* Remember whether we are processing everything in the DB */
-	all_rels = (relids == NIL && vacstmt->relation == NULL);
-
-	/*
-	 * Build list of relations to process, unless caller gave us one. (If we
-	 * build one, we put it in vac_context for safekeeping.)
-	 */
-	relations = get_rel_oids(relids, vacstmt->relation, stmttype, vacstmt->rootonly);
-
-	/*
-	 * vacuum_rel expects to be entered with no transaction active; it will
-	 * start and commit its own transaction.  But we are called by an SQL
-	 * command, and so we are executing inside a transaction already. We
-	 * commit the transaction started in PostgresMain() here, and start
-	 * another one before exiting to match the commit waiting for us back in
-	 * PostgresMain().
-	 */
-	if (Gp_role != GP_ROLE_EXECUTE)
-		CommitTransactionCommand();
-
-	PG_TRY();
-	{
-		ListCell   *cur;
-
-		/* Turn vacuum cost accounting on or off */
-		VacuumCostActive = (VacuumCostDelay > 0);
-		VacuumCostBalance = 0;
-
-		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			vacstmt->appendonly_compaction_segno = NIL;
-			vacstmt->appendonly_compaction_insert_segno = NIL;
-			vacstmt->appendonly_compaction_vacuum_cleanup = false;
-			vacstmt->appendonly_relation_empty = false;
-		}
-
-		/*
-		 * Loop to process each selected relation.
-		 */
-		foreach(cur, relations)
-		{
-			Oid	relid = lfirst_oid(cur);
-			vacuumStatement_Relation(vacstmt, relid, relations);
-		}
-	}
-	PG_CATCH();
-	{
-		/* Make sure cost accounting is turned off after error */
-		VacuumCostActive = false;
-		/* And reset buffer replacement strategy, too */
-		StrategyHintVacuum(false);
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
-
-	/* Turn off vacuum cost accounting */
-	VacuumCostActive = false;
-
-	/*
-	 * Finish up processing.
-	 * This matches the CommitTransaction waiting for us in
-	 * PostgresMain().
-	 *
-	 * MPP-7632 and MPP-7984: if we're in a vacuum analyze we need to
-	 * make sure that this transaction we're in has the right
-	 * properties
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		/* Set up the distributed transaction context. */
-		setupRegularDtxContext();
-	}
-	StartTransactionCommand();
-
-	/*
-	 * Re-establish the transaction snapshot.  This is wasted effort when
-	 * we are called as a normal utility command, because the new
-	 * transaction will be dropped immediately by PostgresMain(); but it's
-	 * necessary if we are called from autovacuum because autovacuum might
-	 * continue on to do an ANALYZE-only call.
-	 */
-	ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
-
-	if (!IsAutoVacuumWorkerProcess())
-	{
-		/*
-		 * Update pg_database.datfrozenxid, and truncate pg_clog if possible.
-		 * (autovacuum.c does this for itself.)
-		 */
-		vac_update_datfrozenxid();
-
-		/*
-		 * If it was a database-wide VACUUM, print FSM usage statistics (we
-		 * don't make you be superuser to see these).  We suppress this in
-		 * autovacuum, too.
-		 */
-		if (all_rels)
-			PrintFreeSpaceMapStatistics(elevel);
-	}
-
-	/*
-	 * Clean up working storage --- note we must do this after
-	 * StartTransactionCommand, else we might be trying to delete the active
-	 * context!
-	 */
-	Assert(CurrentMemoryContext != vac_context);
-	MemoryContextDelete(vac_context);
-	vac_context = NULL;
-}
-
-/*
  * Build a list of Oids for each relation to be processed
  *
  * The list is built in vac_context so that it will survive across our
@@ -1454,7 +1504,8 @@ vac_update_relstats_from_list(Relation rel,
 		}
 	}
 
-	vac_update_relstats(rel, num_pages, num_tuples, hasindex, frozenxid);
+	vac_update_relstats(RelationGetRelid(rel), num_pages, num_tuples,
+						hasindex, frozenxid);
 }
 
 /*
@@ -1479,20 +1530,16 @@ vac_update_relstats_from_list(Relation rel,
  *		vacuuming pg_class might think they could delete a tuple marked with
  *		xmin = our xid.
  *
- *		MPP: 8.2 introduced XLOG entries for "inplace" stats updates so we
- *		no longer need the out-of-place hack.
- *
- *		This routine is shared by full VACUUM and lazy VACUUM.
+ *		This routine is shared by full VACUUM, lazy VACUUM, and stand-alone
+ *		ANALYZE.
  */
-
 void
-vac_update_relstats(Relation rel, BlockNumber num_pages, double num_tuples,
+vac_update_relstats(Oid relid, BlockNumber num_pages, double num_tuples,
 					bool hasindex, TransactionId frozenxid)
 {
 	Relation	rd;
 	HeapTuple	ctup;
 	Form_pg_class pgcform;
-	Oid			relid = RelationGetRelid(rel);
 	bool		dirty;
 	cqContext	cqc;
 	cqContext  *pcqCtx;

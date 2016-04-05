@@ -3734,8 +3734,15 @@ _copyVacuumStmt(VacuumStmt *from)
 	COPY_SCALAR_FIELD(freeze_min_age);
 	COPY_NODE_FIELD(relation);
 	COPY_NODE_FIELD(va_cols);
+
 	COPY_NODE_FIELD(expanded_relids);
 	COPY_NODE_FIELD(extra_oids);
+	COPY_NODE_FIELD(appendonly_compaction_segno);
+	COPY_NODE_FIELD(appendonly_compaction_insert_segno);
+	COPY_SCALAR_FIELD(appendonly_compaction_vacuum_cleanup);
+	COPY_SCALAR_FIELD(appendonly_compaction_vacuum_prepare);
+	COPY_SCALAR_FIELD(appendonly_relation_empty);
+	COPY_SCALAR_FIELD(heap_truncate);
 
 	return newnode;
 }

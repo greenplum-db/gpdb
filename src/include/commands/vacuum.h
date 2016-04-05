@@ -137,11 +137,11 @@ extern void vacuum(VacuumStmt *vacstmt, List *relids);
 extern void vac_open_indexes(Relation relation, LOCKMODE lockmode,
 				 int *nindexes, Relation **Irel);
 extern void vac_close_indexes(int nindexes, Relation *Irel, LOCKMODE lockmode);
-extern void vac_update_relstats(Relation rel,
-								BlockNumber num_pages,
-								double num_tuples,
-								bool hasindex,
-								TransactionId frozenxid);
+extern void vac_update_relstats(Oid relid,
+					BlockNumber num_pages,
+					double num_tuples,
+					bool hasindex,
+					TransactionId frozenxid);
 extern void vac_update_relstats_from_list(Relation rel,
 							  BlockNumber num_pages, double num_tuples,
 							  bool hasindex, TransactionId frozenxid,
@@ -152,6 +152,8 @@ extern void vacuum_set_xid_limits(VacuumStmt *vacstmt, bool sharedRel,
 extern void vac_update_datfrozenxid(void);
 extern bool vac_is_partial_index(Relation indrel);
 extern void vacuum_delay_point(void);
+
+extern bool vacuumStatement_IsTemporary(Relation onerel);
 
 extern bool vacuumStatement_IsInAppendOnlyDropPhase(VacuumStmt *vacstmt);
 extern bool vacummStatement_IsInAppendOnlyCleanupPhase(VacuumStmt *vacstmt);
