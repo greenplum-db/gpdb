@@ -83,7 +83,7 @@ install: generate_greenplum_path_file
 	mkdir -p $(prefix)/sbin
 
 	#symlink gpcheckcat from bin to bin/lib to mainitain backward compatibility
-	if [ -f ../gpcheckcat  ]; then \
+	if [ -f bin/gpcheckcat  ]; then \
 		ln -sf ../gpcheckcat bin/lib/gpcheckcat; \
 	fi
 
