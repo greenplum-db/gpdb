@@ -47,11 +47,11 @@ def parseargs():
     USER=os.getenv('USER')
     if USER is None or USER is ' ':
         logger.error('USER environment variable must be set.')
-        parser.exit()
+        parser.exit(status=1)
 
     if options.list:
         doList(options.skipvalidation)
-        parser.exit()
+        parser.exit(status=1)
 
     if options.show:
 
@@ -62,11 +62,11 @@ def parseargs():
         else:
             doShow(options.show, longform=False)
 
-        parser.exit()
+        parser.exit(status=1)
 
     if options.change and options.remove:
         logger.error("Multiple actions specified.  See the --help info.")
-        parser.exit()
+        parser.exit(status=1)
 
     if options.change:
         options.entry = options.change
@@ -75,27 +75,27 @@ def parseargs():
         options.remove = True
     else:
         logger.error("No action specified.  See the --help info.")
-        parser.exit()
+        parser.exit(status=1)
 
     if options.remove and (options.value or options.primaryvalue or options.mirrorvalue or options.mastervalue):
         logger.error("remove action does not take a value, primary value, mirror value or master value parameter")
-        parser.exit()
+        parser.exit(status=1)
 
     if options.change and (not options.value and (not options.mirrorvalue and not options.primaryvalue)):
         logger.error("change requested but value not specified")
-        parser.exit()
+        parser.exit(status=1)
 
     if options.change and options.mastervalue and options.masteronly:
         logger.error("when changing a parameter on the master only specify the --value not --mastervalue")
-        parser.exit()
+        parser.exit(status=1)
 
     if options.change and (options.value and (options.primaryvalue or options.mirrorvalue)):
         logger.error("cannot use both value option and primaryvalue/mirrorvalue option")
-        parser.exit()
+        parser.exit(status=1)
 
     if (options.masteronly or options.mastervalue) and options.entry in sameValueGucs:
         logger.error("%s value cannot be different on master and segments", options.entry)
-        parser.exit()
+        parser.exit(status=1)
 
     if options.value and (not options.mastervalue):
         options.mastervalue = options.value
