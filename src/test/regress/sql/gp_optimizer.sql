@@ -249,8 +249,8 @@ select a,1 from orca.r group by rollup(a);
 select array[array[a,b]], array[b] from orca.r;
 
 -- setops
-select a, b from m union select b,a from orca.m;
-SELECT a from m UNION ALL select b from orca.m UNION ALL select a+b from orca.m group by 1;
+select a, b from orca.m union select b,a from orca.m;
+SELECT a from orca.m UNION ALL select b from orca.m UNION ALL select a+b from orca.m group by 1;
 
 ----------------------------------------------------------------------
 set optimizer=off;
