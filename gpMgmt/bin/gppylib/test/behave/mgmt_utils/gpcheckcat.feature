@@ -19,4 +19,4 @@ Feature: gpcheckcat tests
         Then psql should return a return code of 0
         And psql should print (0 rows) to stdout
         And verify that the schema "good_schema" exists in "leak"
-
+        And the user runs "dropdb leak"
