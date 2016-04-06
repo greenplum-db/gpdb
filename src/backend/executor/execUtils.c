@@ -52,6 +52,7 @@
 #include "parser/parsetree.h"
 #include "utils/memutils.h"
 #include "utils/relcache.h"
+#include "utils/typcache.h"
 #include "utils/workfile_mgr.h"
 
 #include "cdb/cdbvars.h"
@@ -644,6 +645,17 @@ void
 ExecAssignResultType(PlanState *planstate, TupleDesc tupDesc)
 {
 	TupleTableSlot *slot = planstate->ps_ResultTupleSlot;
+
+	/*
+	 * In PostgreSQL, we rely on ExecEvalWholeRowVar() to do this, at
+	 * execution time. In Greenplum, however, the typmods assigned to
+	 * rowtypes must be the same between the master and all segments,
+	 * so we must assign typmods at executor startup, before the plan
+	 * gets dispatched to segments.
+	 */
+	if (tupDesc->tdtypeid == RECORDOID &&
+		tupDesc->tdtypmod < 0)
+		assign_record_type_typmod(tupDesc);
 
 	ExecSetSlotDescriptor(slot, tupDesc);
 }
