@@ -82,15 +82,16 @@ install: generate_greenplum_path_file
 	mkdir -p $(prefix)/lib/python	
 	mkdir -p $(prefix)/sbin
 
+	#symlink gpcheckcat from bin to bin/lib to mainitain backward compatibility
+	if [ -f ../gpcheckcat  ]; then \
+		ln -sf ../gpcheckcat bin/lib/gpcheckcat; \
+	fi
+
 	#Setup /lib/python contents
 	cp -rp bin/gppylib $(prefix)/lib/python
 	cp -rp bin/ext/* $(prefix)/lib/python
 	cp -rp bin $(prefix)
 	
-	#symlink gpcheckcat from bin to bin/lib to mainitain backward compatibility
-	if [ -f $(prefix)/bin/gpcheckcat  ]; then \
-		ln -sf ../gpcheckcat bin/lib/gpcheckcat; \
-	fi
 
 #ifeq "$(findstring $(BLD_ARCH),$(GPPKG_PLATFORMS))" ""
 #	@echo "Removing gppkg from distribution"
