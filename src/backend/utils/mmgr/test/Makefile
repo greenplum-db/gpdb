@@ -39,6 +39,8 @@ memaccounting.t: \
 
 runaway_cleaner.t: \
 	$(MOCK_DIR)/backend/utils/error/elog_mock.o \
+	$(MOCK_DIR)/backend/utils/mmgr/mcxt_mock.o \
+	$(MOCK_DIR)/backend/utils/mmgr/memaccounting_mock.o \
 	$(MOCK_DIR)/backend/utils/misc/faultinjector_mock.o \
 	$(MOCK_DIR)/backend/utils/misc/superuser_mock.o \
 	$(MOCK_DIR)/backend/utils/mmgr/idle_tracker_mock.o
