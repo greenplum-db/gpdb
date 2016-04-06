@@ -159,6 +159,9 @@ DATA(insert OID = 2745 (	2742	array_ops		PGNSP PGUID ));
 DATA(insert OID = 2968 (	403		uuid_ops		PGNSP PGUID ));
 DATA(insert OID = 2969 (	405		uuid_ops		PGNSP PGUID ));
 
+/* Complex Number type */
+DATA(insert OID = 2978 (	403		complex_ops		PGNSP PGUID ));
+DATA(insert OID = 2979 (	405		complex_ops		PGNSP PGUID ));
 
 DATA(insert OID = 7080 (	403		xlogloc_ops		PGNSP PGUID ));
 
@@ -197,5 +200,6 @@ DATA(insert OID = 3045 (	3013	name_pattern_ops	PGNSP PGUID ));
 DATA(insert OID = 3046 (	3013	money_ops		PGNSP PGUID ));
 DATA(insert OID = 3047 (	3013	reltime_ops		PGNSP PGUID ));
 DATA(insert OID = 3048 (	3013	tinterval_ops	PGNSP PGUID ));
+DATA(insert OID = 3057 (	3013	complex_ops		PGNSP PGUID ));
 
 #endif   /* PG_OPFAMILY_H */
