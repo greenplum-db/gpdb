@@ -428,7 +428,7 @@ alter table addcol1 rename to addcol1_renamed;
 alter table addcol1_renamed add column new_column int default 10;
 alter table addcol1_renamed alter column new_column set not null;
 alter table addcol1_renamed add column new_column2 int not null; -- should fail
-ERROR:  ADD COLUMN with no default value in append-only tables is not yet supported.
+ERROR:  column "new_column2" contains null values
 select count(*) from addcol1_renamed;
  count
 -------

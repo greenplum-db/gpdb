@@ -1821,14 +1821,13 @@ insert into ao1 values('1');
 insert into ao1 values('1');
 insert into ao1 values('1');
 alter table ao1 add column col2 char(1);
-ERROR:  ADD COLUMN with no default value in append-only tables is not yet supported.
 select * from ao1;
- col1 
-------
- 1
- 1
- 1
- 1
+ col1 | col2 
+------+------
+ 1    | 
+ 1    | 
+ 1    | 
+ 1    | 
 (4 rows)
 
 --
@@ -1976,14 +1975,13 @@ insert into aoco1 values('1');
 insert into aoco1 values('1');
 insert into aoco1 values('1');
 alter table aoco1 add column col2 char(1);
-ERROR:  ADD COLUMN with no default value in append-only tables is not yet supported.
 select * from aoco1;
- col1 
-------
- 1
- 1
- 1
- 1
+ col1 | col2 
+------+------
+ 1    | 
+ 1    | 
+ 1    | 
+ 1    | 
 (4 rows)
 
 drop table aoco1;
@@ -1999,9 +1997,9 @@ create domain zipcode as text
 constraint c1 not null;
 -- following should fail
 alter table ao1 add column col2 zipcode;
-ERROR:  ADD COLUMN with no default value in append-only tables is not yet supported.
+ERROR:  domain zipcode does not allow null values  (seg1 localhost:40001 pid=17627)
 alter table ao1 add column col2 zipcode default NULL;
-ERROR:  domain zipcode does not allow null values  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  domain zipcode does not allow null values  (seg1 localhost:40001 pid=17627)
 select * from ao1;
  col1  
 -------

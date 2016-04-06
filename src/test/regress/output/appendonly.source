@@ -896,8 +896,7 @@ ALTER TABLE tenk_renamed ALTER COLUMN twothousand SET NOT NULL;
 ALTER TABLE tenk_renamed ADD COLUMN sercol serial; -- MPP-10015
 NOTICE:  ALTER TABLE will create implicit sequence "tenk_renamed_sercol_seq" for serial column "tenk_renamed.sercol"
 ALTER TABLE tenk_renamed ADD COLUMN newcol2 int NOT NULL; -- should fail
-ERROR:  ADD COLUMN with no default value in append-only tables is not yet supported.
-HINT:  Use a DEFAULT value, or use INSERT...SELECT to movedata to a newly created table with the new column.
+ERROR:  column "newcol2" contains null values
 SELECT count(*) FROM tenk_renamed;
  count 
 -------

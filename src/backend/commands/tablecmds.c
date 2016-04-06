@@ -6742,30 +6742,6 @@ ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 	cqContext  *pclaCtx;
 	cqContext  *patCtx;
 
-	/*
-	 * Append Only tables don't support ADD COLUMN when no default value is
-	 * specified. This is because this scenario makes a schema change that
-	 * memtuples can't deal with yet. If a default value is specified than it
-	 * it ok because the whole table will get re-written in phase 3. Let's
-	 * catch this now before doing any real work. 
-	 *
-	 * coldDef->raw_default is null in 2 cases - when there is no DEFAULT 
-	 * specified and when DEFAULT NULL is specified. We only want to block
-	 * the case when there is no DEFAULT specified. Hence we also check
-	 * colDef->default_is_null as it records the fact that DEFAULT NULL was 
-	 * specified. 
- 	*/
-	 
-	if ((RelationIsAoRows(rel) || RelationIsAoCols(rel)) && 
-		(!colDef->default_is_null && !colDef->raw_default))
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_GP_FEATURE_NOT_YET),
-				 errmsg("ADD COLUMN with no default value in append-only tables"
-						" is not yet supported.")
-                ));
-	}
-
 	attrdesc = heap_open(AttributeRelationId, RowExclusiveLock);
 
 	patCtx = caql_beginscan( 
@@ -7000,11 +6976,8 @@ ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 	 * to track adding columns without default values to AO tables efficiently.
 	 * When that JIRA is fixed, the following piece of code may be removed
 	 */
-	if (!defval && (RelationIsAoRows(rel) || RelationIsAoCols(rel))
-			&& colDef->default_is_null)
-	{
+	if (!defval && (RelationIsAoRows(rel) || RelationIsAoCols(rel)))
 		defval = (Expr *) makeNullConst(typeOid, -1);
-	}
 
 	if (defval)
 	{

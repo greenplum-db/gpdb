@@ -470,7 +470,6 @@ typedef struct ColumnDef
 	char	   *cooked_default; /* nodeToString representation */
 	List	   *constraints;	/* other constraints on column */
 	List	   *encoding;		/* ENCODING clause */
-	bool	   default_is_null;	/* DEFAULT NULL case */
 } ColumnDef;
 
 /*
