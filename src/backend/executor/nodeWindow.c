@@ -3017,7 +3017,7 @@ makeWindowState(Window * window, EState *estate)
 	if (numlevels > 0)
 	{
 		wstate->level_state = (WindowStatePerLevel)
-			palloc0(numlevels * sizeof(WindowStatePerLevelData));
+			palloc0(wstate->numlevels * sizeof(WindowStatePerLevelData));
 
 		for (int level = 0; level < wstate->numlevels; level++)
 		{
