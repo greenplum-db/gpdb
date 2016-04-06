@@ -1,15 +1,15 @@
 #include "S3Common.h"
 #include "utils.h"
 
-#include <sstream>
-#include <cstring>
-#include <cstdlib>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <sstream>
 
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <string>
-#include <map>
 
 #include "gps3conf.h"
 
@@ -88,11 +88,16 @@ bool SignPOSTv2(HeaderContent *h, string path_with_query,
 
     if (typestr != NULL) {
         sstr << "POST\n"
-             << "\n" << typestr << "\n" << timestr << "\n" << path_with_query;
+             << "\n"
+             << typestr << "\n"
+             << timestr << "\n"
+             << path_with_query;
     } else {
         sstr << "POST\n"
              << "\n"
-             << "\n" << timestr << "\n" << path_with_query;
+             << "\n"
+             << timestr << "\n"
+             << path_with_query;
     }
     // printf("%s\n", sstr.str().c_str());
     if (!sha1hmac(sstr.str().c_str(), tmpbuf, cred.secret.c_str(),
@@ -137,13 +142,16 @@ bool SignRequestV4(string method, HeaderContent *h, string region, string path,
     date_str[8] = '\0';
 
     // XXX need to do more than this, incase of non-ASCII characters
-    // 1, sort queries 2, encodes qureies and their values except "=" and "&"
-    find_replace(query, "/", "%2F");
+    // sort queries
+    string query_encoded = uri_encode(query);
+    find_replace(query_encoded, "%26", "&");
+    find_replace(query_encoded, "%3D", "=");
 
     stringstream canonical_str;
 
-    canonical_str << method << "\n" << path << "\n" << query
-                  << "\nhost:" << h->Get(HOST)
+    canonical_str << method << "\n"
+                  << path << "\n"
+                  << query_encoded << "\nhost:" << h->Get(HOST)
                   << "\nx-amz-content-sha256:" << h->Get(X_AMZ_CONTENT_SHA256)
                   << "\nx-amz-date:" << h->Get(X_AMZ_DATE) << "\n\n"
                   << "host;x-amz-content-sha256;x-amz-date\n"
@@ -157,8 +165,10 @@ bool SignRequestV4(string method, HeaderContent *h, string region, string path,
     find_replace(region, "external-1", "us-east-1");
 
     stringstream string2sign_str;
-    string2sign_str << "AWS4-HMAC-SHA256\n" << timestamp_str << "\n" << date_str
-                    << "/" << region << "/s3/aws4_request\n" << canonical_hex;
+    string2sign_str << "AWS4-HMAC-SHA256\n"
+                    << timestamp_str << "\n"
+                    << date_str << "/" << region << "/s3/aws4_request\n"
+                    << canonical_hex;
 
     // printf("\n%s\n\n", string2sign_str.str().c_str());
     stringstream kSecret;

@@ -1,5 +1,5 @@
-#include "gtest/gtest.h"
 #include "S3Downloader.cpp"
+#include "gtest/gtest.h"
 
 volatile bool QueryCancelPending = false;
 
@@ -47,16 +47,19 @@ TEST(ListBucket, fake) {
     ListBucketResult *r = ListBucket_FakeHTTP(HOSTSTR, BUCKETSTR);
 
     ASSERT_NE(r, (void *)NULL);
-    EXPECT_EQ(r->contents.size(), 16);
+    EXPECT_EQ(16, r->contents.size());
 
-    char urlbuf[256];
-    vector<BucketContent *>::iterator i;
-    for (i = r->contents.begin(); i != r->contents.end(); i++) {
-        BucketContent *p = *i;
-        sprintf(urlbuf, "http://%s/%s/%s", HOSTSTR, BUCKETSTR,
-                p->Key().c_str());
-        printf("%s, %llu\n", urlbuf, p->Size());
-    }
+    /*
+     * char urlbuf[256];
+     * vector<BucketContent *>::iterator i;
+     * for (i = r->contents.begin(); i != r->contents.end(); i++) {
+     *     BucketContent *p = *i;
+     *     sprintf(urlbuf, "http://%s/%s/%s", HOSTSTR, BUCKETSTR,
+     *             p->Key().c_str());
+     *     printf("%s, %llu\n", urlbuf, p->Size());
+     * }
+     */
+
     delete r;
 }
 #endif  // FAKETEST
@@ -76,16 +79,45 @@ TEST(ListBucket, s3) {
         ListBucket("https", S3REGION, S3BUCKET, S3PREFIX, g_cred);
 
     ASSERT_NE(r, (void *)NULL);
-    EXPECT_EQ(r->contents.size(), 16);
+    EXPECT_EQ(16, r->contents.size());
 
-    char urlbuf[256];
-    vector<BucketContent *>::iterator i;
-    for (i = r->contents.begin(); i != r->contents.end(); i++) {
-        BucketContent *p = *i;
-        sprintf(urlbuf, "http://s3-%s.amazonaws.com/%s/%s", S3REGION, S3BUCKET,
-                p->Key().c_str());
-        printf("%s, %d\n", urlbuf, p->Size());
-    }
+    /*
+     * char urlbuf[256];
+     * vector<BucketContent *>::iterator i;
+     * for (i = r->contents.begin(); i != r->contents.end(); i++) {
+     *     BucketContent *p = *i;
+     *     sprintf(urlbuf, "https://s3-%s.amazonaws.com/%s/%s", S3REGION,
+     * S3BUCKET,
+     *             p->Key().c_str());
+     *     printf("%s, %d\n", urlbuf, p->Size());
+     * }
+     */
+
+    delete r;
+}
+
+TEST(ListBucket, s3_1024) {
+    InitConfig("test/s3.conf", "default");
+
+    S3Credential g_cred = {s3ext_accessid, s3ext_secret};
+
+    ListBucketResult *r =
+        ListBucket("https", S3REGION, S3BUCKET, "1024files", g_cred);
+
+    ASSERT_NE(r, (void *)NULL);
+    EXPECT_EQ(1024, r->contents.size());
+
+    /*
+     * char urlbuf[256];
+     * vector<BucketContent *>::iterator i;
+     * for (i = r->contents.begin(); i != r->contents.end(); i++) {
+     *     BucketContent *p = *i;
+     *     sprintf(urlbuf, "https://s3-%s.amazonaws.com/%s/%s", S3REGION,
+     * S3BUCKET,
+     *             p->Key().c_str());
+     *     printf("%s, %d\n", urlbuf, p->Size());
+     * }
+     */
 
     delete r;
 }
@@ -252,8 +284,8 @@ TEST(S3Downloader, bigfile) {
     printf("Try downloading big file 1\n");
     S3DwonloadTest(
         "http://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset2/hugefile/"
-        "airlinedata1.csv", "us-west-2",
-        4664425994, "f5811ad92c994f1d6913d5338575fe38", 4, 64 * 1024 * 1024,
-        65536);
+        "airlinedata1.csv",
+        "us-west-2", 4664425994, "f5811ad92c994f1d6913d5338575fe38", 4,
+        64 * 1024 * 1024, 65536);
 }
 #endif  // AWSTEST

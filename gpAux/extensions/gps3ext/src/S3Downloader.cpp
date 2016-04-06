@@ -1,16 +1,16 @@
 #include "S3Downloader.h"
 
 #include <algorithm>  // std::min
-#include <sstream>
 #include <iostream>
+#include <sstream>
 
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
+#include <curl/curl.h>
+#include "S3Log.h"
 #include "gps3ext.h"
 #include "utils.h"
-#include "S3Log.h"
-#include <curl/curl.h>
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
@@ -477,7 +477,8 @@ BucketContent *CreateBucketContentItem(string key, uint64_t size) {
 
 // require curl 7.17 higher
 xmlParserCtxtPtr DoGetXML(string region, string bucket, string url,
-                          string prefix, const S3Credential &cred) {
+                          string prefix, const S3Credential &cred,
+                          string marker) {
     stringstream host;
     host << "s3-" << region << ".amazonaws.com";
 
@@ -509,6 +510,9 @@ xmlParserCtxtPtr DoGetXML(string region, string bucket, string url,
     header->Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
 
     std::stringstream query;
+    if (marker != "") {
+        query << "marker=" << marker << "&";
+    }
     query << "prefix=" << prefix;
 
     if (!SignRequestV4("GET", header, region, p.Path(), query.str(), cred)) {
@@ -546,14 +550,24 @@ bool BucketContentComp(BucketContent *a, BucketContent *b) {
     return strcmp(a->Key().c_str(), b->Key().c_str()) < 0;
 }
 
-static bool extractContent(ListBucketResult *result, xmlNode *root_element) {
+static bool extractContent(ListBucketResult *result, xmlNode *root_element,
+                           string &marker) {
     if (!result || !root_element) {
         return false;
     }
 
     xmlNodePtr cur;
+    const char *key = NULL;
+    bool is_truncated = false;
+
     cur = root_element->xmlChildrenNode;
     while (cur != NULL) {
+        if (!xmlStrcmp(cur->name, (const xmlChar *)"IsTruncated")) {
+            if (!strncmp((const char *)xmlNodeGetContent(cur), "true", 4)) {
+                is_truncated = true;
+            }
+        }
+
         if (!xmlStrcmp(cur->name, (const xmlChar *)"Name")) {
             result->Name = (const char *)xmlNodeGetContent(cur);
         }
@@ -564,7 +578,6 @@ static bool extractContent(ListBucketResult *result, xmlNode *root_element) {
 
         if (!xmlStrcmp(cur->name, (const xmlChar *)"Contents")) {
             xmlNodePtr contNode = cur->xmlChildrenNode;
-            const char *key = NULL;
             uint64_t size = 0;
             while (contNode != NULL) {
                 if (!xmlStrcmp(contNode->name, (const xmlChar *)"Key")) {
@@ -589,71 +602,91 @@ static bool extractContent(ListBucketResult *result, xmlNode *root_element) {
         }
         cur = cur->next;
     }
-    sort(result->contents.begin(), result->contents.end(), BucketContentComp);
+
+    // sort(result->contents.begin(), result->contents.end(),
+    // BucketContentComp);
+
+    marker = is_truncated ? key : "";
+
     return true;
 }
 
 ListBucketResult *ListBucket(string schema, string region, string bucket,
                              string prefix, const S3Credential &cred) {
+    string marker = "";
+
     stringstream host;
     host << "s3-" << region << ".amazonaws.com";
 
     S3DEBUG("Host url is %s", host.str().c_str());
 
-    std::stringstream url;
-    if (prefix != "") {
-        url << schema << "://" << host.str() << "/" << bucket
-            << "?prefix=" << prefix;
-    } else {
-        url << schema << "://" << bucket << "." << host.str();
-    }
-
-    xmlParserCtxtPtr xmlcontext =
-        DoGetXML(region, bucket, url.str(), prefix, cred);
-
-    if (!xmlcontext) {
-        S3ERROR("Failed to list bucket for %s", url.str().c_str());
-        return NULL;
-    }
-
-    xmlNode *root_element = xmlDocGetRootElement(xmlcontext->myDoc);
-    if (!root_element) {
-        S3ERROR("Failed to parse returned xml of bucket list");
-        xmlFreeParserCtxt(xmlcontext);
-        return NULL;
-    }
-
-    /*
-     *     char *response_code = NULL;
-     *     xmlNodePtr cur = root_element->xmlChildrenNode;
-     *     while (cur != NULL) {
-     *         if (!xmlStrcmp(cur->name, (const xmlChar *)"Code")) {
-     *             response_code = strdup((const char *)xmlNodeGetContent(cur));
-     *             break;
-     *         }
-     *
-     *         cur = cur->next;
-     *     }
-     *
-     *     if (response_code) {
-     *         std::cout << response_code << std::endl;
-     *     }
-     */
-
+    xmlParserCtxtPtr xmlcontext = NULL;
     ListBucketResult *result = new ListBucketResult();
 
-    if (!result) {
-        // allocate fail
-        S3ERROR("Failed to allocate bucket list result");
-        xmlFreeParserCtxt(xmlcontext);
-        return NULL;
-    }
-    if (!extractContent(result, root_element)) {
-        S3ERROR("Failed to extract key from bucket list");
-        delete result;
-        xmlFreeParserCtxt(xmlcontext);
-        return NULL;
-    }
+    do {
+        std::stringstream url;
+
+        if (prefix != "") {
+            url << schema << "://" << host.str() << "/" << bucket << "?";
+
+            if (marker != "") {
+                url << "marker=" << marker << "&";
+            }
+
+            url << "prefix=" << prefix;
+        } else {
+            url << schema << "://" << bucket << "." << host.str() << "?";
+
+            if (marker != "") {
+                url << "marker=" << marker;
+            }
+        }
+
+        xmlcontext = DoGetXML(region, bucket, url.str(), prefix, cred, marker);
+
+        if (!xmlcontext) {
+            S3ERROR("Failed to list bucket for %s", url.str().c_str());
+            return NULL;
+        }
+
+        xmlNode *root_element = xmlDocGetRootElement(xmlcontext->myDoc);
+        if (!root_element) {
+            S3ERROR("Failed to parse returned xml of bucket list");
+            xmlFreeParserCtxt(xmlcontext);
+            return NULL;
+        }
+
+        /*
+         *     char *response_code = NULL;
+         *     xmlNodePtr cur = root_element->xmlChildrenNode;
+         *     while (cur != NULL) {
+         *         if (!xmlStrcmp(cur->name, (const xmlChar *)"Code")) {
+         *             response_code = strdup((const char
+         * *)xmlNodeGetContent(cur));
+         *             break;
+         *         }
+         *
+         *         cur = cur->next;
+         *     }
+         *
+         *     if (response_code) {
+         *         std::cout << response_code << std::endl;
+         *     }
+         */
+
+        if (!result) {
+            // allocate fail
+            S3ERROR("Failed to allocate bucket list result");
+            xmlFreeParserCtxt(xmlcontext);
+            return NULL;
+        }
+        if (!extractContent(result, root_element, marker)) {
+            S3ERROR("Failed to extract key from bucket list");
+            delete result;
+            xmlFreeParserCtxt(xmlcontext);
+            return NULL;
+        }
+    } while (marker != "");
 
     /* always cleanup */
     xmlFreeParserCtxt(xmlcontext);
@@ -705,7 +738,9 @@ ListBucketResult *ListBucket_FakeHTTP(string host, string bucket) {
         xmlFreeParserCtxt(xml.ctxt);
         return NULL;
     }
-    if (!extractContent(result, root_element)) {
+
+    string marker = "";
+    if (!extractContent(result, root_element, marker)) {
         delete result;
         xmlFreeParserCtxt(xml.ctxt);
         return NULL;

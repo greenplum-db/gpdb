@@ -1,6 +1,6 @@
+#include "S3Common.cpp"
 #include "gtest/gtest.h"
 #include "http_parser.cpp"
-#include "S3Common.cpp"
 
 TEST(S3Common, UrlParser) {
     UrlParser *p = new UrlParser(

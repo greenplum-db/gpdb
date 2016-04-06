@@ -2,9 +2,9 @@
 #define __S3_COMMON_H__
 
 #include <curl/curl.h>
-#include "http_parser.h"
 #include <map>
 #include <string>
+#include "http_parser.h"
 using std::string;
 
 #include <libxml/parser.h>

@@ -1,11 +1,11 @@
 #ifndef __S3DOWNLOADER_H__
 #define __S3DOWNLOADER_H__
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include <iostream>
 #include <map>
