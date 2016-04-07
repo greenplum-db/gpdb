@@ -51,18 +51,19 @@ def parseargs():
 
     if options.list:
         doList(options.skipvalidation)
-        parser.exit(status=1)
+        parser.exit()
 
     if options.show:
 
         if options.skipvalidation:
             logger.error('--skipvalidation can not be combined with --show')
+            parser.exit(status=1)
         elif options.show in longShow:
             doShow(options.show, longform=True)
         else:
             doShow(options.show, longform=False)
 
-        parser.exit(status=1)
+        parser.exit()
 
     if options.change and options.remove:
         logger.error("Multiple actions specified.  See the --help info.")
