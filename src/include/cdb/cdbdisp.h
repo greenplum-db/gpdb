@@ -397,6 +397,7 @@ struct SliceTable;
 void
 cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 				  bool cancelOnError,
+				  bool inCursor,
 				  struct SliceTable *sliceTbl,
 				  struct CdbDispatcherState *ds); /* OUT: fields filled in */
 

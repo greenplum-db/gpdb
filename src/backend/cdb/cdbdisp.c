@@ -3315,6 +3315,7 @@ bindCurrentOfParams(char *cursor_name, Oid target_relid, ItemPointer ctid, int *
 void
 cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 				  bool cancelOnError,
+				  bool inCursor,
 				  struct SliceTable *sliceTbl,
 				  struct CdbDispatcherState *ds)
 {
@@ -3489,7 +3490,8 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 		/* Bail out if already got an error or cancellation request. */
 		if (cancelOnError)
 		{
-			if (ds->primaryResults->errcode)
+			/* Don't error out here if it's DECLARE CURSOR statement. */
+			if (!inCursor && ds->primaryResults->errcode)
 				break;
 			if (InterruptPending)
 				break;
@@ -3918,7 +3920,7 @@ cdbdisp_dispatchPlan(struct QueryDesc *queryDesc,
 	Assert(sliceTbl);
 	Assert(sliceTbl->slices != NIL);
 
-	cdbdisp_dispatchX(&queryParms, cancelOnError, sliceTbl, ds);
+	cdbdisp_dispatchX(&queryParms, cancelOnError, queryDesc->extended_query, sliceTbl, ds);
 
 	sliceTbl->localSlice = oldLocalSlice;
 }	/* cdbdisp_dispatchPlan */
