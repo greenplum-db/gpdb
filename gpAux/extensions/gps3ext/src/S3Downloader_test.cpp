@@ -122,6 +122,32 @@ TEST(ListBucket, s3_1024) {
     delete r;
 }
 
+TEST(ListBucket, s3_5120) {
+    InitConfig("test/s3.conf", "default");
+
+    S3Credential g_cred = {s3ext_accessid, s3ext_secret};
+
+    ListBucketResult *r =
+        ListBucket("https", S3REGION, S3BUCKET, "5120files", g_cred);
+
+    ASSERT_NE(r, (void *)NULL);
+    EXPECT_EQ(5120, r->contents.size());
+
+    /*
+     * char urlbuf[256];
+     * vector<BucketContent *>::iterator i;
+     * for (i = r->contents.begin(); i != r->contents.end(); i++) {
+     *     BucketContent *p = *i;
+     *     sprintf(urlbuf, "https://s3-%s.amazonaws.com/%s/%s", S3REGION,
+     * S3BUCKET,
+     *             p->Key().c_str());
+     *     printf("%s, %d\n", urlbuf, p->Size());
+     * }
+     */
+
+    delete r;
+}
+
 #endif  // AWSTEST
 
 void DownloadTest(const char *url, const char *region, uint64_t file_size,
