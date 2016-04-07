@@ -42,7 +42,9 @@ CMDPATH=(/usr/kerberos/bin /usr/sfw/bin /opt/sfw/bin /usr/local/bin /bin /usr/bi
 declare -a GPPATH
 GPPATH=( $GPHOME $MPPHOME $BIZHOME )
 if [ ${#GPPATH[@]} -eq 0 ];then
-	echo "[FATAL]:-GPHOME is not set, need to set this within environment"
+	echo "[FATAL]:-GPHOME environment variable is required to run GPDB but could not be found."
+	echo "Please set it by sourcing the  greenplum_path.sh  in your GPDB installation directory."
+	echo "Example: ''. /usr/local/gpdb/greenplum_path.sh''"
 	exit 2
 fi
 
@@ -60,7 +62,7 @@ findCmdInPath() {
 				return
 			else
 				echo $cmdtofind
-				return "Problem in gp_bash_functions, command '/usr/xpg4/bin/awk' not found. You will need to edit the script named gp_bash_functions.sh to properly locate the needed commands for your platform."			
+				return "Problem in gp_bash_functions, command '/usr/xpg4/bin/awk' not found. You will need to edit the script named gp_bash_functions.sh to properly locate the needed commands for your platform."
 			fi
 		fi
 		for pathel in ${CMDPATH[@]}
@@ -163,7 +165,8 @@ CALL_HOST=`$HOSTNAME|$CUT -d. -f1`
 PSQLBIN=`findMppPath`
 
 if [ x"$PSQLBIN" = x"" ];then
-		echo "Problem in gp_bash_functions, command '$GP_UNIQUE_COMMAND' not found in Greenplum path. Try setting GPHOME to the location of your Greenplum distribution"
+		echo "Problem in gp_bash_functions, command '$GP_UNIQUE_COMMAND' not found in Greenplum path."
+		echo "Try setting GPHOME to the location of your Greenplum distribution."
 		exit 99
 fi
 
