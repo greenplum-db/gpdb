@@ -215,6 +215,7 @@ have_docbook	= @have_docbook@
 DOCBOOKSTYLE	= @DOCBOOKSTYLE@
 COLLATEINDEX	= @COLLATEINDEX@
 
+ICG_DEPENDENCIES	= @ICG_DEPENDENCIES@
 
 ##########################################################################
 #
