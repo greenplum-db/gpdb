@@ -596,6 +596,21 @@ complex_ne(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(complex_abs_cmp_internal(a, b) != 0);
 }
 
+Datum
+complex_cmp(PG_FUNCTION_ARGS)
+{
+	Complex	*num1 = PG_GETARG_COMPLEX_P(0);
+	Complex	*num2 = PG_GETARG_COMPLEX_P(1);
+	int			result;
+
+	result = complex_abs_cmp_internal(num1, num2);
+
+	PG_FREE_IF_COPY(num1, 0);
+	PG_FREE_IF_COPY(num2, 1);
+
+	PG_RETURN_INT32(result);
+}
+
 /*
  *		complex_pl				- returns arg1 + arg2
  */
