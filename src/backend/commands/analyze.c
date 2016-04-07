@@ -178,12 +178,12 @@ analyze_rel(Oid relid, VacuumStmt *vacstmt)
 	 * Check that it's a plain table; we used to do this in get_rel_oids() but
 	 * seems safer to check after we've locked the relation.
 	 */
-	if (onerel->rd_rel->relkind != RELKIND_RELATION)
+	if (onerel->rd_rel->relkind != RELKIND_RELATION || RelationIsExternal(onerel))
 	{
 		/* No need for a WARNING if we already complained during VACUUM */
 		if (!vacstmt->vacuum)
 			ereport(WARNING,
-					(errmsg("skipping \"%s\" --- cannot analyze indexes, views, or special system tables",
+					(errmsg("skipping \"%s\" --- cannot analyze indexes, views, external tables, or special system tables",
 							RelationGetRelationName(onerel))));
 		relation_close(onerel, ShareUpdateExclusiveLock);
 		return;
