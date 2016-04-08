@@ -48,6 +48,7 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/nbtree.h"
 #include "access/transam.h"
 #include "access/aosegfiles.h"
 #include "access/aocssegfiles.h"
@@ -57,6 +58,8 @@
 #include "commands/vacuum.h"
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
+#include "catalog/pg_namespace.h"
+#include "catalog/pg_proc.h"
 #include "cdb/cdbappendonlyam.h"
 #include "miscadmin.h"
 #include "pgstat.h"
@@ -725,6 +728,17 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 						get_namespace_name(RelationGetNamespace(onerel)),
 						relname),
 				 errhint("Consider using VACUUM FULL on this relation or increasing the configuration parameter \"max_fsm_pages\".")));
+
+	if (gp_indexcheck_vacuum == INDEX_CHECK_ALL ||
+		(gp_indexcheck_vacuum == INDEX_CHECK_SYSTEM &&
+		 PG_CATALOG_NAMESPACE == RelationGetNamespace(onerel)))
+	{
+		for (i = 0; i < nindexes; i++)
+		{
+			if (Irel[i]->rd_am->aminsert == BTINSERT_OID)
+				_bt_validate_vacuum(Irel[i], onerel, OldestXmin);
+		}
+	}
 }
 
 

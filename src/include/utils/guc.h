@@ -509,6 +509,16 @@ extern int log_count_recovered_files_batch;
 
 extern int writable_external_table_bufsize;
 
+typedef enum
+{
+	INDEX_CHECK_NONE,
+	INDEX_CHECK_SYSTEM,
+	INDEX_CHECK_ALL
+} IndexCheckType;
+
+extern IndexCheckType gp_indexcheck_insert;
+extern IndexCheckType gp_indexcheck_vacuum;
+
 /* Storage option names */
 #define SOPT_FILLFACTOR    "fillfactor"
 #define SOPT_APPENDONLY    "appendonly"
