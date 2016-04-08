@@ -93,7 +93,8 @@ select * from region where r_regionkey = '7';
 -- tables since we cannot enfoce them. But since this insert maps to a 
 -- single definitive partition, we can detect it.
 insert into region values(7, 'abc', 'def');
-ERROR:  duplicate key violates unique constraint "region_pkey_1_prt_p1_2_prt_sp1_3_prt_1"  (seg0 slarimac:40000 pid=97859)
+ERROR: duplicate key value violates unique constraint "region_pkey_1_prt_p1_2_prt_sp1_3_prt_1"  (seg0 slarimac:40000 pid=97859)
+DETAIL: Key (r_regionkey)=(7) already exists.
 drop table region;
 -- exchange
 -- 1) test all sanity checking

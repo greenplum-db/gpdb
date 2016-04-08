@@ -17,7 +17,7 @@
  *
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/backend/utils/adt/ri_triggers.c,v 1.91 2007/02/14 01:58:57 tgl Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/adt/ri_triggers.c,v 1.114 2009/08/01 19:59:41 tgl Exp $
  *
  * ----------
  */
@@ -3377,11 +3377,8 @@ ri_ReportViolation(RI_QueryKey *qkey, const char *constrname,
 				   HeapTuple violator, TupleDesc tupdesc,
 				   bool spi_err)
 {
-#define BUFLENGTH	512
-	char		key_names[BUFLENGTH];
-	char		key_values[BUFLENGTH];
-	char	   *name_ptr = key_names;
-	char	   *val_ptr = key_values;
+	StringInfoData key_names;
+	StringInfoData key_values;
 	bool		onfk;
 	int			idx,
 				key_idx;
@@ -3429,6 +3426,8 @@ ri_ReportViolation(RI_QueryKey *qkey, const char *constrname,
 	}
 
 	/* Get printable versions of the keys involved */
+	initStringInfo(&key_names);
+	initStringInfo(&key_values);
 	for (idx = 0; idx < qkey->nkeypairs; idx++)
 	{
 		int			fnum = qkey->keypair[idx][key_idx];
@@ -3440,20 +3439,13 @@ ri_ReportViolation(RI_QueryKey *qkey, const char *constrname,
 		if (!val)
 			val = "null";
 
-		/*
-		 * Go to "..." if name or value doesn't fit in buffer.  We reserve 5
-		 * bytes to ensure we can add comma, "...", null.
-		 */
-		if (strlen(name) >= (key_names + BUFLENGTH - 5) - name_ptr ||
-			strlen(val) >= (key_values + BUFLENGTH - 5) - val_ptr)
+		if (idx > 0)
 		{
-			sprintf(name_ptr, "...");
-			sprintf(val_ptr, "...");
-			break;
+			appendStringInfoString(&key_names, ", ");
+			appendStringInfoString(&key_values, ", ");
 		}
-
-		name_ptr += sprintf(name_ptr, "%s%s", idx > 0 ? "," : "", name);
-		val_ptr += sprintf(val_ptr, "%s%s", idx > 0 ? "," : "", val);
+		appendStringInfoString(&key_names, name);
+		appendStringInfoString(&key_values, val);
 	}
 
 	if (onfk)
@@ -3462,7 +3454,7 @@ ri_ReportViolation(RI_QueryKey *qkey, const char *constrname,
 				 errmsg("insert or update on table \"%s\" violates foreign key constraint \"%s\"",
 						RelationGetRelationName(fk_rel), constrname),
 				 errdetail("Key (%s)=(%s) is not present in table \"%s\".",
-						   key_names, key_values,
+						   key_names.data, key_values.data,
 						   RelationGetRelationName(pk_rel))));
 	else
 		ereport(ERROR,
@@ -3471,7 +3463,7 @@ ri_ReportViolation(RI_QueryKey *qkey, const char *constrname,
 						RelationGetRelationName(pk_rel),
 						constrname, RelationGetRelationName(fk_rel)),
 			errdetail("Key (%s)=(%s) is still referenced from table \"%s\".",
-					  key_names, key_values,
+					  key_names.data, key_values.data,
 					  RelationGetRelationName(fk_rel))));
 }
 

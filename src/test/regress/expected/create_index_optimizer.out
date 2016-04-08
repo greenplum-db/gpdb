@@ -393,7 +393,8 @@ INSERT INTO concur_heap VALUES  ('b','b');
 CREATE UNIQUE INDEX CONCURRENTLY concur_index2 ON concur_heap(f1);
 -- check if constraint is set up properly to be enforced
 INSERT INTO concur_heap VALUES ('b','x');
-ERROR:  duplicate key violates unique constraint "concur_index2"  (seg1 jeffsmac:11002 pid=62533)
+ERROR:  duplicate key value violates unique constraint "concur_index2"
+DETAIL:  Key (f1)=(b) already exists.
 -- check if constraint is enforced properly at build time
 --CREATE UNIQUE INDEX CONCURRENTLY concur_index3 ON concur_heap(f2);
 -- test that expression indexes and partial indexes work concurrently
@@ -899,11 +900,11 @@ insert into ijk values (1, NULL, NULL);
 insert into ijk values (1, NULL, NULL);
 -- should fail.
 create unique index ijk_i on ijk(i);
-ERROR:  could not create unique index  (seg0 jeffsmac:11001 pid=62532)
-DETAIL:  Table contains duplicate values.
+ERROR:  could not create unique index "ijk_i"
+DETAIL:  Key (i)=(1) is duplicated.
 create unique index ijk_ij on ijk(i,j);
-ERROR:  could not create unique index  (seg0 jeffsmac:11001 pid=62532)
-DETAIL:  Table contains duplicate values.
+ERROR:  could not create unique index "ijk_ij"
+DETAIL:  Key (i, j)=(1, 3) is duplicated.
 -- should OK.
 create unique index ijk_ijk on ijk(i,j,k);
 set gp_enable_mk_sort=on;
@@ -917,11 +918,11 @@ insert into ijk values (1, NULL, NULL);
 insert into ijk values (1, NULL, NULL);
 -- should fail.
 create unique index ijk_i on ijk(i);
-ERROR:  could not create unique index  (seg0 jeffsmac:11001 pid=62532)
-DETAIL:  Table contains duplicate values.
+ERROR:  could not create unique index "ijk_i"
+DETAIL:  Key (i)=(1) is duplicated.
 create unique index ijk_ij on ijk(i,j);
-ERROR:  could not create unique index  (seg0 jeffsmac:11001 pid=62532)
-DETAIL:  Table contains duplicate values.
+ERROR:  could not create unique index "ijk_ij"
+DETAIL:  Key (i, j)=(1, 3) is duplicated.
 -- should OK.
 create unique index ijk_ijk on ijk(i,j,k);
 set gp_enable_mk_sort=off;

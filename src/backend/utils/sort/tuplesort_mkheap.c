@@ -5,6 +5,7 @@
  * Copyright (c) Greenplum Inc, 2008-2009.
  */
 #include "postgres.h"
+#include "access/genam.h"
 #include "utils/tuplesort.h"
 #include "utils/tuplesort_mk.h"
 #include "utils/datum.h"
@@ -538,7 +539,17 @@ static int mkheap_putAndGet_impl(MKHeap *mkheap, MKEntry *e)
          * See NOTE ON UNIQUENESS CHECKING in the comment at the top of the file
          * for information about why we check for duplicates here
          */
-        ERROR_UNIQUENESS_VIOLATED();
+        Datum   values[INDEX_MAX_KEYS];
+        bool    isnull[INDEX_MAX_KEYS];
+
+        index_deform_tuple((IndexTuple)mkheap->p->ptr, mkheap->mkctxt->tupdesc, values, isnull);
+        ereport(ERROR,
+                (errcode(ERRCODE_UNIQUE_VIOLATION),
+                 errmsg("could not create unique index \"%s\"",
+                        RelationGetRelationName(mkheap->mkctxt->indexRel)),
+                 errdetail("Key %s is duplicated.",
+                           BuildIndexValueDescription(mkheap->mkctxt->indexRel,
+                                                      values, isnull))));
     }
 
     if(mke_is_empty(e))
@@ -643,7 +654,17 @@ static int mkheap_putAndGet_impl(MKHeap *mkheap, MKEntry *e)
                 /* enforce uniqueness first */
                 if(c == 0 && mkheap->mkctxt->enforceUnique)
                 {
-                    ERROR_UNIQUENESS_VIOLATED();
+                    Datum   values[INDEX_MAX_KEYS];
+                    bool    isnull[INDEX_MAX_KEYS];
+            
+                    index_deform_tuple((IndexTuple)mkheap->p->ptr, mkheap->mkctxt->tupdesc, values, isnull);
+                    ereport(ERROR,
+                            (errcode(ERRCODE_UNIQUE_VIOLATION),
+                             errmsg("could not create unique index \"%s\"",
+                                    RelationGetRelationName(mkheap->mkctxt->indexRel)),
+                             errdetail("Key %s is duplicated.",
+                                       BuildIndexValueDescription(mkheap->mkctxt->indexRel,
+                                                                  values, isnull))));
                 }
 
             	return c;
