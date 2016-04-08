@@ -410,9 +410,9 @@ DATA(insert (	1988   1700 1700 4 f 1757	403 ));
 DATA(insert (	1988   1700 1700 5 f 1756	403 ));
 
 /* btree complex */
-DATA(insert (	2003   193 193 1 f 3481	403 ));
+DATA(insert (	2003   193 193 3 f 3481	403 ));
 DATA(insert (	2003   193 193 2 f 3483	403 ));
-DATA(insert (	2003   193 193 3 f 3469	403 ));
+DATA(insert (	2003   193 193 1 f 3469	403 ));
 DATA(insert (	2003   193 193 4 f 3484 403 ));
 DATA(insert (	2003   193 193 5 f 3482	403 ));
 
@@ -597,8 +597,6 @@ DATA(insert (	2232   19 19 1 f 2334	405 ));
 DATA(insert (	2235   1033 1033 1 f  974	405 ));
 /* numeric_ops */
 DATA(insert (	1998   1700 1700 1 f 1752 405 ));
-/* complex_ops */
-DATA(insert (	3043   193 193 1 f 3469 405 ));
 /* uuid_ops */ 
 DATA(insert (	2969   2950 2950 1 f 2972 405 ));
 
