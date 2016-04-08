@@ -387,6 +387,44 @@ select unnest(array[1,2,3,4.5]::numeric[]);
 select unnest(array[1,2,3,null,4,null,null,5,6]);
 select unnest(array[1,2,3,null,4,null,null,5,6]::text[]);
 
+-- Suppress NOTICE messages when users/groups don't exist
+SET client_min_messages TO 'error';
+
+-- create a non-superuser
+DROP ROLE IF EXISTS user_internal_stype;
+CREATE USER user_internal_stype;
+SET SESSION AUTHORIZATION user_internal_stype;
+
+RESET client_min_messages;
+
+-- Internal function for the aggregate
+-- Is called for each item in an aggregation
+CREATE FUNCTION int_agg_state (internal, int4)
+RETURNS internal
+AS 'array_agg_transfn'
+LANGUAGE INTERNAL;
+
+-- Internal function for the aggregate
+-- Is called at the end of the aggregation, and returns an array.
+CREATE FUNCTION int_agg_final_array (internal)
+RETURNS int4[]
+AS 'array_agg_finalfn'
+LANGUAGE INTERNAL;
+
+-- The aggregate function itself
+-- uses the above functions to create an array of integers from an aggregation.
+CREATE ORDERED AGGREGATE int_array_aggregate (
+	BASETYPE = int4,
+	SFUNC = int_agg_state,
+	STYPE = internal,
+	FINALFUNC = int_agg_final_array
+);
+
+-- change to superuser
+-- start_ignore
+\c -
+-- end_ignore
+
 -- Internal function for the aggregate
 -- Is called for each item in an aggregation
 CREATE FUNCTION int_agg_state (internal, int4)
@@ -429,7 +467,14 @@ WHERE l.id % r.id = 0
 GROUP BY l.id
 ORDER BY l.id;
 
+-- clean up
+-- start_ignore
 -- Drop above three functions
 DROP AGGREGATE int_array_aggregate (int4);
 DROP FUNCTION int_agg_final_array (internal);
 DROP FUNCTION int_agg_state (internal, int4);
+-- Drop user and group
+--DROP ROLE IF EXISTS user_group;
+RESET SESSION AUTHORIZATION;
+DROP USER IF EXISTS user_internal_stype;
+-- end_ignore
