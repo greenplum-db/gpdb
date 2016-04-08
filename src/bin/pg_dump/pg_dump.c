@@ -14497,13 +14497,18 @@ dumpTable(Archive *fout, TableInfo *tbinfo)
 	DumpOptions *dopt = fout->dopt;
 	char	   *namecopy;
 
-	if (tbinfo->dobj.dump && !dopt->dataOnly)
-	{
-		if (tbinfo->relkind == RELKIND_SEQUENCE)
-			dumpSequence(fout, tbinfo);
-		else
-			dumpTableSchema(fout, tbinfo);
-	}
+	/*
+	 * noop if we are not dumping anything about this table, or if we are
+	 * doing a data-only dump
+	 */
+	if (!tbinfo->dobj.dump || dopt->dataOnly)
+		return;
+
+	if (tbinfo->relkind == RELKIND_SEQUENCE)
+		dumpSequence(fout, tbinfo);
+	else
+		dumpTableSchema(fout, tbinfo);
+
 	/* Handle the ACL here */
 	namecopy = pg_strdup(fmtId(tbinfo->dobj.name));
 	if (tbinfo->dobj.dump & DUMP_COMPONENT_ACL)
