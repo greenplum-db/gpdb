@@ -1850,12 +1850,6 @@ def checkPGClass():
     FROM   pg_class tc left outer join
            pg_attribute ta on (tc.oid = ta.attrelid)
     WHERE  ta.attrelid is NULL
-    UNION
-    SELECT relname, relkind, tc.oid as oid,
-           reltoastrelid, reltoastidxid
-    FROM   pg_class tc left outer join
-           pg_attrdef ta on (tc.oid = ta.adrelid)
-    WHERE  ta.adrelid is NULL
     '''
     err = connect2run(qry, ('relname', 'relkind', 'oid'))
     if not err:
