@@ -476,6 +476,7 @@ BucketContent *CreateBucketContentItem(string key, uint64_t size) {
 }
 
 // require curl 7.17 higher
+// http://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketGET.html
 xmlParserCtxtPtr DoGetXML(string region, string bucket, string url,
                           string prefix, const S3Credential &cred,
                           string marker) {
@@ -546,10 +547,6 @@ xmlParserCtxtPtr DoGetXML(string region, string bucket, string url,
     return xml.ctxt;
 }
 
-bool BucketContentComp(BucketContent *a, BucketContent *b) {
-    return strcmp(a->Key().c_str(), b->Key().c_str()) < 0;
-}
-
 static bool extractContent(ListBucketResult *result, xmlNode *root_element,
                            string &marker) {
     if (!result || !root_element) {
@@ -603,9 +600,6 @@ static bool extractContent(ListBucketResult *result, xmlNode *root_element,
         cur = cur->next;
     }
 
-    // sort(result->contents.begin(), result->contents.end(),
-    // BucketContentComp);
-
     marker = is_truncated ? key : "";
 
     return true;
@@ -656,26 +650,17 @@ ListBucketResult *ListBucket(string schema, string region, string bucket,
             return NULL;
         }
 
-        /*
-         *     char *response_code = NULL;
-         *     xmlNodePtr cur = root_element->xmlChildrenNode;
-         *     while (cur != NULL) {
-         *         if (!xmlStrcmp(cur->name, (const xmlChar *)"Code")) {
-         *             response_code = strdup((const char
-         * *)xmlNodeGetContent(cur));
-         *             break;
-         *         }
-         *
-         *         cur = cur->next;
-         *     }
-         *
-         *     if (response_code) {
-         *         std::cout << response_code << std::endl;
-         *     }
-         */
+        xmlNodePtr cur = root_element->xmlChildrenNode;
+        while (cur != NULL) {
+            if (!xmlStrcmp(cur->name, (const xmlChar *)"Code")) {
+                S3ERROR("Server returns error \"%s\"", xmlNodeGetContent(cur));
+                break;
+            }
+
+            cur = cur->next;
+        }
 
         if (!result) {
-            // allocate fail
             S3ERROR("Failed to allocate bucket list result");
             xmlFreeParserCtxt(xmlcontext);
             return NULL;

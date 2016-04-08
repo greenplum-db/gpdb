@@ -141,8 +141,8 @@ bool SignRequestV4(string method, HeaderContent *h, string region, string path,
     memcpy(date_str, timestamp_str, 8);
     date_str[8] = '\0';
 
-    // XXX need to do more than this, incase of non-ASCII characters
-    // sort queries
+    // XXX sort queries automatically
+    // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
     string query_encoded = uri_encode(query);
     find_replace(query_encoded, "%26", "&");
     find_replace(query_encoded, "%3D", "=");

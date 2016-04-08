@@ -81,6 +81,7 @@ TEST(ListBucket, s3) {
     ASSERT_NE(r, (void *)NULL);
     EXPECT_EQ(16, r->contents.size());
 
+    // leave this snippet here, for future debugging
     /*
      * char urlbuf[256];
      * vector<BucketContent *>::iterator i;
@@ -107,18 +108,6 @@ TEST(ListBucket, s3_1024) {
     ASSERT_NE(r, (void *)NULL);
     EXPECT_EQ(1024, r->contents.size());
 
-    /*
-     * char urlbuf[256];
-     * vector<BucketContent *>::iterator i;
-     * for (i = r->contents.begin(); i != r->contents.end(); i++) {
-     *     BucketContent *p = *i;
-     *     sprintf(urlbuf, "https://s3-%s.amazonaws.com/%s/%s", S3REGION,
-     * S3BUCKET,
-     *             p->Key().c_str());
-     *     printf("%s, %d\n", urlbuf, p->Size());
-     * }
-     */
-
     delete r;
 }
 
@@ -132,18 +121,6 @@ TEST(ListBucket, s3_5120) {
 
     ASSERT_NE(r, (void *)NULL);
     EXPECT_EQ(5120, r->contents.size());
-
-    /*
-     * char urlbuf[256];
-     * vector<BucketContent *>::iterator i;
-     * for (i = r->contents.begin(); i != r->contents.end(); i++) {
-     *     BucketContent *p = *i;
-     *     sprintf(urlbuf, "https://s3-%s.amazonaws.com/%s/%s", S3REGION,
-     * S3BUCKET,
-     *             p->Key().c_str());
-     *     printf("%s, %d\n", urlbuf, p->Size());
-     * }
-     */
 
     delete r;
 }
