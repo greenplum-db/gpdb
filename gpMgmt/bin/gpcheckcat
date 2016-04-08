@@ -167,6 +167,7 @@ class Global():
         self.totalCheckRun = 0
         self.checkStatus = True
         self.failedChecks = []
+        self.missing_attr_tables = []
 
 
 GV = Global()
@@ -4534,6 +4535,8 @@ class GPObject:
                         each.report()
             myprint('')
 
+
+
         # Report foreign key issues
         if len(self.foreignkeyIssues):
             for catname, issues in self.foreignkeyIssues.iteritems():
@@ -4559,6 +4562,24 @@ class GPObject:
             myprint('')
 
         myprint = _myprint
+
+        # Collect all tables with missing issues for later reporting
+        if len(self.missingIssues):
+            db = connect2(GV.cfg[1], utilityMode=False)
+            oid_query = "select (select nspname from pg_namespace where oid=relnamespace) || '.' || relname from pg_class where oid=%d"
+            type_query = "select (select nspname from pg_namespace where oid=relnamespace) || '.' || relname from pg_class where reltype=%d"
+            for table in self.missingIssues:
+                for issue in self.missingIssues[table]:
+                    # Get schemaname.tablename corresponding to oid
+                    for key in issue.pkeys:
+                        if 'relid' in key or key in ['ev_class', 'reloid', 'fmterrtbl']:
+                            tablename = db.query(oid_query % issue.pkeys[key]).getresult()[0][0]
+                            GV.missing_attr_tables.append( (tablename, issue.segids) )
+                        elif key == 'oid':
+                            tablename = db.query(type_query % issue.pkeys[key]).getresult()[0][0]
+                            GV.missing_attr_tables.append( (tablename, issue.segids) )
+
+
 
     def __cmp__(self, other):
         if isinstance(other, GPObject):
@@ -4781,6 +4802,37 @@ def checkcatReport():
             if par.isTopLevel():
                 reportAllIssuesRecursive(par, GPObjectGraph)
         myprint('')
+
+        # Report tables with missing attributes in a more usable format
+        if len(GV.missing_attr_tables):
+            # Expand partition tables
+            db = connect2(GV.cfg[1], utilityMode=False)
+            parent_tables = [t[0] for t in db.query("SELECT DISTINCT (schemaname || '.' || tablename) FROM pg_partitions").getresult()]
+            partition_leaves_sql = """
+            SELECT x.partitionschemaname || '.' || x.partitiontablename
+            FROM (
+                 SELECT distinct schemaname, tablename, partitionschemaname, partitiontablename, partitionlevel
+                 FROM pg_partitions
+                 WHERE schemaname || '.' || tablename in (%s)
+                 ) as X,
+            (SELECT schemaname, tablename maxtable, max(partitionlevel) maxlevel
+             FROM pg_partitions
+             group by (tablename, schemaname)
+            ) as Y
+            WHERE x.schemaname = y.schemaname and x.tablename = Y.maxtable and x.partitionlevel = Y.maxlevel;
+            """ % ("'" + "', '".join([pg.escape_string(t) for t in parent_tables]) + "'")
+
+            GV.missing_attr_tables = list(set(GV.missing_attr_tables))
+            myprint('----------------------------------------------------')
+            myprint("    Tables with missing issues:")
+            for table, segids in GV.missing_attr_tables:
+                if table in parent_tables:
+                    for part_table in db.query(partition_leaves_sql).getresult():
+                        GV.missing_attr_tables.append( (part_table[0], segids) )
+            for table, segids in sorted(GV.missing_attr_tables):
+                myprint("        Table %s.%s on segment(s) %s" % (GV.dbname, table, segids[1:-1]))
+            myprint('')
+            myprint('')
 
     notReported = set(GV.failedChecks).difference(reportedCheck)
     if len(notReported) > 0:
