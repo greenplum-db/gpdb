@@ -173,6 +173,10 @@ sync_tools: opt_write_test /opt/releng/apache-ant
 	@cd releng/make/dependencies; \
 	 (umask 002; ANT_OPTS="-Djavax.net.ssl.trustStore=$(BLD_TOP)/releng/make/dependencies/cacerts" /opt/releng/apache-ant/bin/ant -DBLD_ARCH=$(BLD_ARCH) resolve);
 	@echo "Resolve finished";
+ifneq "$(findstring rhel,$(BLD_ARCH))" ""
+	@echo "Init Anaconda for building"
+	@if [ ! -d $(BLD_TOP)/ext/$(BLD_ARCH)/conda/.index ]; then  $(BLD_TOP)/ext/$(BLD_ARCH)/conda/init.sh; fi
+endif
 
 clean_tools: opt_write_test
 	@cd releng/make/dependencies; \

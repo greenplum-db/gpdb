@@ -111,7 +111,6 @@ fi
 
 cat <<EOF
 export PYTHONPATH
-export PYTHONHOME
 EOF
 
 cat <<EOF

@@ -41,6 +41,7 @@
       <dependency org="Pivotal"         name="libhdfs3"        rev="2.2.30"         conf="osx106_x86->osx106_x86" />
       <dependency org="PyYAML"          name="yaml"            rev="0.1.1"          conf="osx106_x86->osx106_x86" />
       <dependency org="Python"          name="python"          rev="2.6.2"          conf="osx106_x86->osx106_x86" />
+      <dependency org="Conda"           name="miniconda"       rev="3.12.0"         conf="rhel5_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64" />
       <dependency org="apache"          name="apr"             rev="1.2.12"         conf="osx106_x86->osx106_x86" />
       <dependency org="apache"          name="apr-util"        rev="1.2.12"         conf="osx106_x86->osx106_x86" />
       <dependency org="bzip"            name="bzip2"           rev="1.0.6"          conf="osx106_x86->osx106_x86" />

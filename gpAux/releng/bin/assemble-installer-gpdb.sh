@@ -338,6 +338,9 @@ generate-pulse-installer-header(){
 		fi
 		
 		installDir=\`basename \${installPath}\`
+		if [ -x \${installPath}/ext/python/init.sh ]; then
+			\${installPath}/ext/python/init.sh
+		fi
 		symlinkPath=\`dirname \${installPath}\`
 		symlinkLink=greenplum-db
 		if [ x"\${symlinkLink}" != x"\${installDir}" ]; then

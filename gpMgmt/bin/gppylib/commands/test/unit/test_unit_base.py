@@ -21,6 +21,7 @@ class WorkerPoolTestCase(unittest.TestCase):
         w.addCommand(c2)
         w.join()
         w.print_progress(2)
+        w.haltWork(); # Needed if python 2.7
         self.assertTrue(mock1.called_with('100.00% of jobs completed'))
 
     @patch('gppylib.commands.base.gplog.get_default_logger')
@@ -28,4 +29,5 @@ class WorkerPoolTestCase(unittest.TestCase):
         w = WorkerPool(numWorkers=32)
         w.print_progress(0)
         w.join()
+        w.haltWork();  # Needed if python 2.7
         self.assertTrue(mock1.called_with('0.00% of jobs completed'))

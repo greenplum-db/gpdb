@@ -859,6 +859,9 @@ endif
 ifneq "$($(BLD_ARCH)_PYTHON)" ""
 	mkdir -p $(LOADERSINSTLOC_EXT)/python
 	(cd $($(BLD_ARCH)_PYTHON) && $(TAR) cf - $(BLD_PYTHON_FILESET)) | (cd $(LOADERSINSTLOC_EXT)/python/ && $(TAR) xpf -)$(check_pipe_for_errors)
+ifneq "$(findstring rhel,$(BLD_ARCH))" ""
+	(cd $(BLD_PYTHON) && ./init.sh )
+endif
 endif
 	mkdir -p $(LOADERSINSTLOC_LIB)
 ifneq "$(LOADERS_FILESET_LIB)" ""
@@ -1222,6 +1225,16 @@ copylibs : thirdparty-dist copy-rsa-libs copy-nbu-libs
 	fi
 	# Create the python directory to flag to build scripts that python has been handled
 	mkdir -p $(INSTLOC)/ext/python
+ifneq "$(findstring rhel,$(BLD_ARCH))" ""
+	@if [ ! -z "$(BLD_PYTHON)" ]; then \
+	    echo "Copying python, $(BLD_PYTHON_FILESET), from $(BLD_PYTHON) into $(INSTLOC)/ext/python..."; \
+	    (cd $(BLD_PYTHON) && cp -rf envs  init.sh  LICENSE.txt  pkgs  $(INSTLOC)/ext/python/ ); \
+	    ( $(INSTLOC)/ext/python/init.sh ); \
+		echo "...DONE"; \
+	else \
+	    echo "INFO: Python not found on this platform, $(BLD_ARCH), not copying it into the GPDB package."; \
+	fi
+else
 	@if [ ! -z "$(BLD_PYTHON)" ]; then \
 	    echo "Copying python, $(BLD_PYTHON_FILESET), from $(BLD_PYTHON) into $(INSTLOC)/ext/python..."; \
 	    (cd $(BLD_PYTHON) && $(TAR) cf - $(BLD_PYTHON_FILESET)) | (cd $(INSTLOC)/ext/python/ && $(TAR) xpf -); \
@@ -1229,6 +1242,7 @@ copylibs : thirdparty-dist copy-rsa-libs copy-nbu-libs
 	else \
 	    echo "INFO: Python not found on this platform, $(BLD_ARCH), not copying it into the GPDB package."; \
 	fi
+endif
 	mkdir -p $(INSTLOC)/etc
 	mkdir -p $(INSTLOC)/include
 ifeq "$(findstring $(BLD_ARCH),aix5_ppc_32 aix5_ppc_64 win32 win64)" ""
@@ -1533,3 +1547,4 @@ endif
 unittest-check:
 	$(MAKE) -C ../src/backend unittest-check
 	$(MAKE) -C ../src/bin unittest-check
+
