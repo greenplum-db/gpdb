@@ -938,7 +938,7 @@ pg_plan_queries(List *querytrees, ParamListInfo boundParams,
 
 		foreach(rtable_list, query->rtable)
 		{
-			RangeTableEntry *rte = (RangeTableEntry *) lfirst(rtable_list);
+			RangeTblEntry *rte = (RangeTblEntry *) lfirst(rtable_list);
 			/* Check if underlying relation is still valid. */
 			prep_underlying_relation = relation_open(rte->relid, AccessShareLock);
 
