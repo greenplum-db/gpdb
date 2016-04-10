@@ -410,9 +410,9 @@ DATA(insert (	1988   1700 1700 4 f 1757	403 ));
 DATA(insert (	1988   1700 1700 5 f 1756	403 ));
 
 /* btree complex */
-DATA(insert (	2003   193 193 3 f 3481	403 ));
+DATA(insert (	2003   193 193 1 f 3481	403 ));
 DATA(insert (	2003   193 193 2 f 3483	403 ));
-DATA(insert (	2003   193 193 1 f 3469	403 ));
+DATA(insert (	2003   193 193 3 f 3469	403 ));
 DATA(insert (	2003   193 193 4 f 3484 403 ));
 DATA(insert (	2003   193 193 5 f 3482	403 ));
 
