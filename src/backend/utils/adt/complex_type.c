@@ -835,9 +835,13 @@ pg_cpow(Complex x, Complex y)
 	if (re(&x) == 0.0 && im(&x) == 0.0)
 	{
 		if (yi == 0.0)
+		{
 			INIT_COMPLEX(&z, dp_pow(0.0, yr), 0);
+		}
 		else
+		{
 			INIT_COMPLEX(&z, get_float8_nan(), get_float8_nan());
+		}
 	}
 	else if ((yi == 0.0) && (yr == (k = (int) yr)) && (abs(k) <= 65536))
 	{
