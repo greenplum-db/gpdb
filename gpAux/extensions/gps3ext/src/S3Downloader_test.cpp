@@ -160,6 +160,8 @@ void DownloadTest(const char *url, const char *region, uint64_t file_size,
     }
 
     ASSERT_STREQ(md5_str, m.Get());
+
+    d->destroy();
     delete d;
     free(buf);
 }

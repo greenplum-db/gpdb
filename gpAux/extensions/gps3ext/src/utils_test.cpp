@@ -54,8 +54,10 @@ TEST(utils, md5) {
 
 #define TEST_STRING "The quick brown fox jumps over the lazy dog"
 TEST(utils, base64) {
+    char *encoded = NULL;
     EXPECT_STREQ("VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw==",
-                 Base64Encode(TEST_STRING, strlen(TEST_STRING)));
+                 encoded = Base64Encode(TEST_STRING, strlen(TEST_STRING)));
+    free(encoded);
 }
 
 TEST(utils, sha256) {

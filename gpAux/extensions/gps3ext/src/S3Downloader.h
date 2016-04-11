@@ -142,6 +142,8 @@ struct ListBucketResult {
     string Prefix;
     unsigned int MaxKeys;
     vector<BucketContent*> contents;
+
+    ~ListBucketResult();
 };
 
 BucketContent* CreateBucketContentItem(string key, uint64_t size);

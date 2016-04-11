@@ -106,6 +106,12 @@ Datum s3_import(PG_FUNCTION_ARGS) {
             }
             delete myData;
         }
+
+        /*
+         * Cleanup function for the XML library.
+         */
+        xmlCleanupParser();
+
         PG_RETURN_INT32(0);
     }
 
