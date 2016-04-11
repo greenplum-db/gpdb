@@ -4819,12 +4819,14 @@ def checkcatReport():
             GV.missing_attr_tables = list(set(GV.missing_attr_tables))
             myprint('----------------------------------------------------')
             myprint("    Tables with missing issues:")
+            myprint("        Format [database name].[schema name].[table name].[segment id]:")
             for table, segids in GV.missing_attr_tables:
                 if table in parent_tables:
                     for part_table in db.query(partition_leaves_sql).getresult():
                         GV.missing_attr_tables.append( (part_table[0], segids) )
             for table, segids in sorted(GV.missing_attr_tables):
-                myprint("        Table %s.%s on segment(s) %s" % (GV.dbname, table, segids[1:-1]))
+                for id in segids[1:-1].split(','):
+                    myprint("        Table %s.%s.%s" % (GV.dbname, table, id))
             myprint('')
             myprint('')
 

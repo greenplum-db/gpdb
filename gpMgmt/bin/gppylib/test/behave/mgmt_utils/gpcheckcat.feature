@@ -56,12 +56,12 @@ Feature: gpcheckcat tests
         Then psql should return a return code of 0
         When the user runs "gpcheckcat miss_attr"
         Then gpcheckcat should print Missing to stdout
-        And gpcheckcat should print Table miss_attr.public.heap_table on segment\(s\) -1 to stdout
-        And gpcheckcat should print Table miss_attr.public.heap_part_table on segment\(s\) -1 to stdout
-        And gpcheckcat should print Table miss_attr.public.heap_part_table_1_prt_p1_2_prt_1 on segment\(s\) -1 to stdout
-        And gpcheckcat should print Table miss_attr.public.ao_table on segment\(s\) -1 to stdout
-        And gpcheckcat should print Table miss_attr.public.ao_part_table on segment\(s\) -1 to stdout
-        And gpcheckcat should print Table miss_attr.public.ao_part_table_1_prt_p1_2_prt_1 on segment\(s\) -1 to stdout
+        And gpcheckcat should print Table miss_attr.public.heap_table.-1 to stdout
+        And gpcheckcat should print Table miss_attr.public.heap_part_table.-1 to stdout
+        And gpcheckcat should print Table miss_attr.public.heap_part_table_1_prt_p1_2_prt_1.-1 to stdout
+        And gpcheckcat should print Table miss_attr.public.ao_table.-1 to stdout
+        And gpcheckcat should print Table miss_attr.public.ao_part_table.-1 to stdout
+        And gpcheckcat should print Table miss_attr.public.ao_part_table_1_prt_p1_2_prt_1.-1 to stdout
         Examples:
           | attrname   | tablename     |
           | attrelid   | pg_attribute  |
@@ -89,10 +89,10 @@ Feature: gpcheckcat tests
         Then psql should return a return code of 0
         When the user runs "gpcheckcat miss_attr"
         Then gpcheckcat should print Missing to stdout
-        And gpcheckcat should print Table miss_attr.public.heap_table_idx on segment\(s\) -1 to stdout
-        And gpcheckcat should print Table miss_attr.public.heap_part_table_idx on segment\(s\) -1 to stdout
-        And gpcheckcat should print Table miss_attr.public.ao_table_idx on segment\(s\) -1 to stdout
-        And gpcheckcat should print Table miss_attr.public.ao_part_table_idx on segment\(s\) -1 to stdout
+        And gpcheckcat should print Table miss_attr.public.heap_table_idx.-1 to stdout
+        And gpcheckcat should print Table miss_attr.public.heap_part_table_idx.-1 to stdout
+        And gpcheckcat should print Table miss_attr.public.ao_table_idx.-1 to stdout
+        And gpcheckcat should print Table miss_attr.public.ao_part_table_idx.-1 to stdout
         Examples:
           | attrname   | tablename    |
           | indexrelid | pg_index     |
@@ -110,9 +110,28 @@ Feature: gpcheckcat tests
         Then psql should return a return code of 0
         When the user runs "gpcheckcat miss_attr"
         Then gpcheckcat should print Missing to stdout
-        And gpcheckcat should print Table miss_attr.public.part_external_1_prt_p_2 on segment\(s\) -1 to stdout
+        And gpcheckcat should print Table miss_attr.public.part_external_1_prt_p_2.-1 to stdout
         Examples:
           | attrname   | tablename     |
           | reloid     | pg_exttable   |
           | fmterrtbl  | pg_exttable   |
           | conrelid   | pg_constraint |
+
+    Scenario: gpcheckcat should print out tables with missing attributes in a readable format
+        Given database "miss_attr" is dropped and recreated
+        And there is a "heap" table "public.heap_table" in "miss_attr" with data
+        And there is a "ao" table "public.ao_table" in "miss_attr" with data
+        When the user runs "gpcheckcat miss_attr"
+        And gpcheckcat should return a return code of 0
+        Then gpcheckcat should not print Missing to stdout
+        And the user runs "psql miss_attr -c "SET allow_system_table_mods='dml'; DELETE FROM pg_attribute where attrelid='heap_table'::regclass::oid;""
+        Then psql should return a return code of 0
+        And an attribute of table "ao_table" in database "miss_attr" is deleted on segment with content id "0"
+        And psql should return a return code of 0
+        And an attribute of table "ao_table" in database "miss_attr" is deleted on segment with content id "1"
+        And psql should return a return code of 0
+        When the user runs "gpcheckcat miss_attr"
+        Then gpcheckcat should print Missing to stdout
+        And gpcheckcat should print Table miss_attr.public.heap_table.-1 to stdout
+        And gpcheckcat should print Table miss_attr.public.ao_table.0 to stdout
+        And gpcheckcat should print Table miss_attr.public.ao_table.1 to stdout
