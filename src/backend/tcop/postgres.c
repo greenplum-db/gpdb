@@ -45,6 +45,7 @@
 #include "access/printtup.h"
 #include "access/xact.h"
 #include "catalog/pg_type.h"
+#include "catalog/heap.h"
 #include "commands/async.h"
 #include "commands/prepare.h"
 #include "libpq/libpq.h"
@@ -927,11 +928,22 @@ pg_plan_queries(List *querytrees, ParamListInfo boundParams,
 {
 	List	   *stmt_list = NIL;
 	ListCell   *query_list;
+	ListCell   *rtable_list;
+	Relation   prep_underlying_relation;
 
 	foreach(query_list, querytrees)
 	{
 		Query	   *query = (Query *) lfirst(query_list);
 		Node *stmt;
+
+		foreach(rtable_list, query->rtable)
+		{
+			RangeTblEntry *rte = (RangeTblEntry *) lfirst(rtable_list);
+			/* Check if underlying relation is still valid. */
+			prep_underlying_relation = relation_open(rte->relid, AccessShareLock);
+
+			relation_close(prep_underlying_relation, AccessShareLock);
+		}
 
 		if (query->commandType == CMD_UTILITY)
 		{
