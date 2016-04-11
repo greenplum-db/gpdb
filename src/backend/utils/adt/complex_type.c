@@ -864,8 +864,10 @@ pg_cpow(Complex x, Complex y)
 		/* Let theta = i * yr; */
 		theta = dp_mul(i, yr);
 		if (yi == 0.0)
+		{
 			/* Let rho = pow(r, yr); */
 			rho = dp_pow(r, yr);
+		}
 		else
 		{
 			/* rearrangement of cexp(x * clog(y)) */
