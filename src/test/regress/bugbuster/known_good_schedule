@@ -1,4 +1,4 @@
-#
+##
 ## TODO: list test sequence and test dependencies.
 ##
 test: executor functions heapscan1 indexscan subquery world DMLstmnt optquery

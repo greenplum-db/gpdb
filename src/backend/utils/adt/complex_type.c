@@ -183,7 +183,7 @@ complex_in(PG_FUNCTION_ARGS)
 	if ('\0' == *num)
 	{
 		ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-		   errmsg("invalid input syntax for type complex: \"%s\"", orig_num),
+						errmsg("invalid input syntax for type complex: \"%s\"", orig_num),
 						errOmitLocation(true)));
 	}
 
@@ -246,7 +246,7 @@ complex_in(PG_FUNCTION_ARGS)
 	if ('\0' != *num)
 	{
 		ereport(ERROR, (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-		   errmsg("invalid input syntax for type complex: \"%s\"", orig_num),
+						errmsg("invalid input syntax for type complex: \"%s\"", orig_num),
 						errOmitLocation(true)));
 	}
 
@@ -277,7 +277,7 @@ complex_part_out(char **p, char *limit, double part)
 			}
 			else
 			{
-				int			ndig = DBL_DIG + extra_float_digits;
+				int	ndig = DBL_DIG + extra_float_digits;
 
 				if (ndig < 1)
 				{
@@ -303,6 +303,7 @@ complex_out(PG_FUNCTION_ARGS)
 	*p = '\0';
 	complex_part_out(&p, limit, re(num));
 	p += snprintf(p, limit - p, " %c ", (im(num) >= 0 || isnan(im(num))) ? '+' : '-');
+	
 	/*
 	 * Complex numbers with 0 imaginary part have different meaning wheter the imaginary part
 	 * is -0 or 0. E.x. sqrt(-1 + 0i) = 0 + 1i V.S. sqrt(-1 - 0i) = 0 - 1i. So we must output
@@ -478,11 +479,11 @@ complex_hash(PG_FUNCTION_ARGS)
 	 */
 	if (0 == key.x)
 	{
-		key.x = 0;
+		key.x = (float8) 0;
 	}
 	if (0 == key.y)
 	{
-		key.y = 0;
+		key.y = (float8) 0;
 	}
 
 	return hash_any((unsigned char *) &key, sizeof(key));
@@ -839,7 +840,9 @@ pg_cpow(Complex x, Complex y)
 			INIT_COMPLEX(&z, get_float8_nan(), get_float8_nan());
 	}
 	else if ((yi == 0.0) && (yr == (k = (int) yr)) && (abs(k) <= 65536))
+	{
 		z = pg_cpow_n(x, k);
+	}
 	else
 	{
 		/* We must check overflow each step, so we can't use cpow directly */
