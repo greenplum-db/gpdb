@@ -589,11 +589,11 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			*/
 			if (0 == complex_real)
 			{
-				complex_real = (double) 0;
+				complex_real = (float8) 0;
 			}
 			if (0 == complex_imag)
 			{
-				complex_imag = (double) 0;
+				complex_imag = (float8) 0;
 			}
 				
 			INIT_COMPLEX(&complex_buf, complex_real, complex_imag);
