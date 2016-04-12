@@ -1111,7 +1111,13 @@ create_external_path(PlannerInfo *root, RelOptInfo *rel)
 	
     pathnode->path.locus = cdbpathlocus_from_baserel(root, rel); 
     pathnode->path.motionHazard = false;
-	pathnode->path.rescannable = rel->isrescannable;
+
+	/*
+	 * Mark external tables as non-rescannable. While rescan is possible,
+	 * it can lead to surprising results if the external table produces
+	 * different results when invoked twice.
+	 */
+	pathnode->path.rescannable = false;
 
 	cost_externalscan(pathnode, root, rel);
 	

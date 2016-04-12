@@ -1356,6 +1356,24 @@ INSERT INTO test_ext_heap_join SELECT i, i || '_number' FROM generate_series(1, 
 SELECT COUNT(*) FROM test_ext_heap_join, exttab_heap_join_1;
 SELECT COUNT(*) FROM gp_read_error_log('exttab_heap_join_1');
 
+
+-- Test rescanning an external table.
+--
+-- All executor node types need to support "rescan", including external tables,
+-- even though it can be horrendously expensive. Hopefully the planner will not
+-- choose a plan that rescans an external table too often. At the moment, this
+-- query does generate such a plan however, so we can use it for testing rescan
+-- support.
+
+CREATE EXTERNAL WEB TABLE echotable (c1 int, c2 int, c3 int) EXECUTE
+'echo "1,2,3"; echo "4,5,6";' FORMAT 'TEXT' (DELIMITER ',');
+
+create table test_ext_foo (c1 int, c2 int4);
+insert into test_ext_foo select g, g from generate_series(1, 20) g;
+
+select * from test_ext_foo as o
+where 4 > (select i.c1 from echotable as i where i.c2 = o.c2);
+
 \! rm @abs_srcdir@/data/tableless.csv
 
 -- start_ignore

@@ -2073,7 +2073,6 @@ _outRelOptInfo(StringInfo str, RelOptInfo *node)
 	WRITE_CHAR_FIELD(rejectlimittype);
 	WRITE_OID_FIELD(fmterrtbl);
 	WRITE_INT_FIELD(ext_encoding);
-	WRITE_BOOL_FIELD(isrescannable);
 	WRITE_BOOL_FIELD(writable);
 	WRITE_NODE_FIELD(baserestrictinfo);
 	WRITE_NODE_FIELD(joininfo);
