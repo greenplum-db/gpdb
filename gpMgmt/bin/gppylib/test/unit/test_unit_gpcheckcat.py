@@ -16,10 +16,13 @@ class GpCheckCatTestCase(GpTestCase):
         self.subject = imp.load_source('gpcheckcat', gpcheckcat_file)
 
         self.subject.logger = Mock(spec=['log', 'info', 'debug', 'error'])
-        self.db_connection = Mock(spec=[])
+        self.db_connection = Mock(spec=['close'])
 
         self.unique_index_violation_check = Mock(spec=['runCheck'])
         self.unique_index_violation_check.runCheck.return_value = []
+
+        self.leaked_schema_dropper = Mock(spec=['drop_leaked_schemas'])
+        self.leaked_schema_dropper.drop_leaked_schemas.return_value = []
 
         # MagicMock: we are choosing to trust the implementation of GV.cfg
         # If we wanted full coverage we would make this a normal Mock()
@@ -54,7 +57,7 @@ class GpCheckCatTestCase(GpTestCase):
     def test_running_unique_index_violation_check__when_no_violations_are_found__passes_the_check(self):
         self.subject.runOneCheck('unique_index_violation')
 
-        self.assertEqual(self.subject.GV.checkStatus, True)
+        self.assertTrue(self.subject.GV.checkStatus)
         self.subject.setError.assert_not_called()
 
     def test_running_unique_index_violation_check__when_violations_are_found__fails_the_check(self):
@@ -65,7 +68,7 @@ class GpCheckCatTestCase(GpTestCase):
 
         self.subject.runOneCheck('unique_index_violation')
 
-        self.assertEqual(self.subject.GV.checkStatus, False)
+        self.assertFalse(self.subject.GV.checkStatus)
         self.subject.setError.assert_any_call(self.subject.ERROR_NOREPAIR)
 
     def test_checkcat_report__after_running_unique_index_violations_check__reports_violations(self):
@@ -83,16 +86,33 @@ class GpCheckCatTestCase(GpTestCase):
         self.assertIn(expected_message1, log_messages)
         self.assertIn(expected_message2, log_messages)
 
-    def test_drop_leaked_schemas__drops_orphaned_and_leaked_schemas(self):
-        self.db_connection.mock_add_spec(['close', 'query'])
-        self.subject.getLeakedSchemas = Mock(return_value=["fake_leak_1", "fake_leak_2"])
+    def test_drop_leaked_schemas__when_no_leaked_schemas_exist__passes_gpcheckcat(self):
+        self.subject.drop_leaked_schemas(self.leaked_schema_dropper, self.db_connection)
 
-        self.subject.dropLeakedSchemas(dbname="fake_db")
+        self.subject.setError.assert_not_called()
 
-        drop_query_expected_list = [call('DROP SCHEMA IF EXISTS \"fake_leak_1\" CASCADE;\n'),
-                                    call('DROP SCHEMA IF EXISTS \"fake_leak_2\" CASCADE;\n')]
-        self.db_connection.query.assert_has_calls(drop_query_expected_list)
+    def test_drop_leaked_schemas____when_leaked_schemas_exist__finds_and_drops_leaked_schemas(self):
+        self.leaked_schema_dropper.drop_leaked_schemas.return_value = ['schema1', 'schema2']
 
+        self.subject.drop_leaked_schemas(self.leaked_schema_dropper, self.db_connection)
+
+        self.leaked_schema_dropper.drop_leaked_schemas.assert_called_once_with(self.db_connection)
+
+    def test_drop_leaked_schemas__when_leaked_schemas_exist__passes_gpcheckcat(self):
+        self.leaked_schema_dropper.drop_leaked_schemas.return_value = ['schema1', 'schema2']
+
+        self.subject.drop_leaked_schemas(self.leaked_schema_dropper, self.db_connection)
+
+        self.subject.setError.assert_not_called()
+
+    def test_drop_leaked_schemas__when_leaked_schemas_exist__reports_which_schemas_are_dropped(self):
+        self.leaked_schema_dropper.drop_leaked_schemas.return_value = ['schema1', 'schema2']
+
+        self.subject.drop_leaked_schemas(self.leaked_schema_dropper, "some_db_name")
+
+        expected_message = "Found and dropped 2 unbound temporary schemas"
+        log_messages = [args[0][1] for args in self.subject.logger.log.call_args_list]
+        self.assertIn(expected_message, log_messages)
 
 if __name__ == '__main__':
     run_tests()

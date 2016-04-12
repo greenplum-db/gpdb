@@ -82,7 +82,7 @@ install: generate_greenplum_path_file
 	mkdir -p $(prefix)/lib/python	
 	mkdir -p $(prefix)/sbin
 
-	#symlink gpcheckcat from bin to bin/lib to mainitain backward compatibility
+	#symlink gpcheckcat from bin to bin/lib to maintain backward compatibility
 	if [ -f bin/gpcheckcat  ]; then \
 		ln -sf ../gpcheckcat bin/lib/gpcheckcat; \
 	fi

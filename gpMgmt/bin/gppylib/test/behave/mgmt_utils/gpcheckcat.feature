@@ -15,11 +15,13 @@ Feature: gpcheckcat tests
         And psql should print pg_temp_ to stdout
         And psql should print (1 row) to stdout
         When the user runs "gpcheckcat leak"
+        Then gpchekcat should return a return code of 0
         And the user runs "psql leak -f gppylib/test/behave/mgmt_utils/steps/data/gpcheckcat/leaked_schema.sql"
         Then psql should return a return code of 0
         And psql should print (0 rows) to stdout
         And verify that the schema "good_schema" exists in "leak"
         And the user runs "dropdb leak"
+        And verify that a log was created by gpcheckcat in the user's "gpAdminLogs" directory
 
     Scenario: gpcheckcat should report unique index violations
         Given database "test_index" is dropped and recreated

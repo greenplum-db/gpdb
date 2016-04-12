@@ -24,6 +24,7 @@ import sys
 from datetime import datetime
 from time import localtime, strftime
 
+
 TIMESTAMP = datetime.now().strftime("%Y%m%d%H%M%S")
 REPAIR_SCRIPT = 'runsql_%s.sh' % TIMESTAMP
 
@@ -35,6 +36,7 @@ try:
     from pygresql.pgdb import DatabaseError
     from pygresql import pg
     from gpcheckcat_modules.unique_index_violation_check import UniqueIndexViolationCheck
+    from gpcheckcat_modules.leaked_schema_dropper import LeakedSchemaDropper
 except ImportError, e:
     sys.exit('Error: unable to import module: ' + str(e))
 
@@ -1866,56 +1868,6 @@ def checkPGClass():
             logger.error("...")
 
 
-def getLeakedSchemas():
-    logger.info('-----------------------------------')
-    logger.info('Checking for leaked temporary schemas')
-    db = connect2(GV.cfg[1], utilityMode=False)
-
-    leaked_schemas = []
-    # This query does a union of all the leaked temp schemas on the master as well as all the segments.
-    # The first part of the query uses gp_dist_random which gets the leaked schemas from only the segments
-    # The second part of the query gets the leaked temp schemas from just the master
-
-
-    # The simpler form of this query that pushed the union into the
-    # inner select does not run correctly on 3.2.x
-    qry = '''
-    SELECT distinct nspname as schema
-    FROM (
-      SELECT nspname, replace(nspname, 'pg_temp_','')::int as sess_id
-      FROM   gp_dist_random('pg_namespace')
-      WHERE  nspname ~ '^pg_temp_[0-9]+'
-    ) n LEFT OUTER JOIN pg_stat_activity x using (sess_id)
-    WHERE x.sess_id is null
-    UNION
-    SELECT nspname as schema
-    FROM (
-      SELECT nspname, replace(nspname, 'pg_temp_','')::int as sess_id
-      FROM   pg_namespace
-      WHERE  nspname ~ '^pg_temp_[0-9]+'
-    ) n LEFT OUTER JOIN pg_stat_activity x using (sess_id)
-    WHERE x.sess_id is null
-    '''
-    try:
-        curs = db.query(qry)
-        if curs.ntuples() == 0:
-            logger.info('[OK] temporary schemas')
-        else:
-            GV.checkStatus = False
-            setError(ERROR_REMOVE)
-            logger.info('[FAIL] temporary schemas')
-            logger.error('found %d unbound temporary schemas' % curs.ntuples())
-            for row in curs.getresult():
-                logger.error("  ... %s" % row[0])
-                leaked_schemas.append(row[0])
-    except Exception, e:
-        setError(ERROR_NOREPAIR)
-        myprint('[ERROR] executing test: checkPGNamespace')
-        myprint('  Execution error: ' + str(e))
-
-    return leaked_schemas
-
-
 #############
 def checkPGNamespace():
     # Check for objects in various catalogs that are in a schema that has
@@ -2049,6 +2001,26 @@ def addDemoteConstraint(seg, repair_sequence):
 
 
 #############
+def drop_leaked_schemas(leaked_schema_dropper, dbname):
+    logger.info('-----------------------------------')
+    logger.info('Checking for leaked temporary schemas')
+
+    db_connection = connect(database=dbname)
+    try:
+        dropped_schemas = leaked_schema_dropper.drop_leaked_schemas(db_connection)
+        if not dropped_schemas:
+            logger.info('[OK] temporary schemas')
+        else:
+            logger.info('[FAIL] temporary schemas')
+            myprint("Found and dropped %d unbound temporary schemas" % len(dropped_schemas))
+            logger.error('Dropped leaked schemas \'%s\' in the database \'%s\'' % (dropped_schemas, dbname))
+    except Exception, e:
+        setError(ERROR_NOREPAIR)
+        myprint('  Execution error: ' + str(e))
+    finally:
+        db_connection.close()
+
+
 def checkDepend():
     # Check for dependencies on non-existent objects
     logger.info('-----------------------------------')
@@ -3839,31 +3811,6 @@ def checkOwnersRepair():
     else:
         return None, None
 
-
-def dropLeakedSchemas(dbname):
-    leaked_schemas = getLeakedSchemas()
-
-    if len(leaked_schemas) <= 0:
-        return
-
-    myprint("Dropping leaked schemas '%s' in the database '%s' " % (leaked_schemas, dbname))
-    db = connect(database=dbname)
-    try:
-        for schema in leaked_schemas:
-            # the query will return unquoted schema names
-            # but we only search for schemas with name like pg_temp_[0-9](see the method getLeakedSchemas),
-            # so we don't really need to quote the sql statement
-            qry = 'DROP SCHEMA IF EXISTS "%s" CASCADE;\n' % schema
-            logger.info(qry)
-            db.query(qry)
-    except Exception, e:
-        setError(ERROR_NOREPAIR)
-        myprint('  Execution error: ' + str(e))
-    finally:
-        if db is not None:
-            db.close()
-
-
 def checkPoliciesRepair():
     # changes to distribution policies
     if len(GV.Policies) > 0:
@@ -4879,6 +4826,7 @@ if __name__ == '__main__':
     GV.report_cfg = getReportConfiguration()
     GV.max_content = max([GV.cfg[dbid]['content'] for dbid in GV.cfg])
     GV.catalog = getCatalog()
+    leaked_schema_dropper = LeakedSchemaDropper()
 
     for dbname in GV.alldb:
 
@@ -4892,7 +4840,8 @@ if __name__ == '__main__':
                 % (GV.opt['-U'], GV.dbname, GV.report_cfg[-1]['port'], GV.version))
         myprint('-------------------------------------------------------------------')
 
-        dropLeakedSchemas(dbname)
+        drop_leaked_schemas(leaked_schema_dropper, dbname)
+
         if GV.opt['-R']:
             name = GV.opt['-R']
             try:
