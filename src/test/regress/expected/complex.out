@@ -1280,11 +1280,10 @@ SELECT COMPLEX '5+3i' ^ 4.5::FLOAT8 = power(COMPLEX(5,3),COMPLEX(4.5,0)) AS tr;
 (1 row)
 
 SELECT COMPLEX(5,4)::POINT = POINT(5,4) AS tr;
- tr 
-----
- t
-(1 row)
-
+ERROR:  operator does not exist: point = point
+LINE 1: SELECT COMPLEX(5,4)::POINT = POINT(5,4) AS tr;
+                                   ^
+HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
 SELECT POINT(5,4)::COMPLEX = COMPLEX(5,4) AS tr;
  tr 
 ----

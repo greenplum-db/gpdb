@@ -12,8 +12,7 @@ ERROR:  ORDER BY position 3 is not in select list
 LINE 1: SELECT name, #thepath FROM iexit ORDER BY 1, 2, 3;
                                                         ^
 SELECT * FROM toyemp WHERE name = 'sharon' ORDER BY 1, 2, 3;
-  name  | age | location | annualsal 
---------+-----+----------+-----------
- sharon |  25 | (15,12)  |     12000
-(1 row)
-
+ERROR:  could not identify an ordering operator for type point
+LINE 1: SELECT * FROM toyemp WHERE name = 'sharon' ORDER BY 1, 2, 3;
+                                                                  ^
+HINT:  Use an explicit ordering operator or modify the query.

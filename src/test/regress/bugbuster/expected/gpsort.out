@@ -1241,23 +1241,15 @@ LINE 1: select col19 from gpsort_alltypes order by col19 desc;
                                                    ^
 HINT:  Use an explicit ordering operator or modify the query.
 select col20 from gpsort_alltypes order by col20 asc;
- col20 
--------
- (0,0)
- (0,1)
- (1,1)
- (2,1)
-(4 rows)
-
+ERROR:  could not identify an ordering operator for type point
+LINE 1: select col20 from gpsort_alltypes order by col20 asc;
+                                                   ^
+HINT:  Use an explicit ordering operator or modify the query.
 select col20 from gpsort_alltypes order by col20 desc;
- col20 
--------
- (2,1)
- (1,1)
- (0,1)
- (0,0)
-(4 rows)
-
+ERROR:  could not identify an ordering operator for type point
+LINE 1: select col20 from gpsort_alltypes order by col20 desc;
+                                                   ^
+HINT:  Use an explicit ordering operator or modify the query.
 select col21 from gpsort_alltypes order by col21 asc;
 ERROR:  could not identify an ordering operator for type polygon
 LINE 1: select col21 from gpsort_alltypes order by col21 asc;
