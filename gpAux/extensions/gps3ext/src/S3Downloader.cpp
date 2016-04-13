@@ -611,15 +611,17 @@ static bool extractContent(ListBucketResult *result, xmlNode *root_element,
                 contNode = contNode->next;
             }
 
-            if (key && (size > 0)) {  // skip empty item
-                BucketContent *item = CreateBucketContentItem(key, size);
-                if (item) {
-                    result->contents.push_back(item);
+            if (key) {
+                if (size > 0) {  // skip empty item
+                    BucketContent *item = CreateBucketContentItem(key, size);
+                    if (item) {
+                        result->contents.push_back(item);
+                    } else {
+                        S3ERROR("Faild to create item for %s", key);
+                    }
                 } else {
-                    S3ERROR("Faild to create item for %s", key);
+                    S3INFO("Size of %s is " PRIu64 ", skip it", key, size);
                 }
-            } else {
-                S3INFO("Size of %s is %llu, skip", key, size);
             }
 
             if (key_size) {
