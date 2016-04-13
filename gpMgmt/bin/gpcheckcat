@@ -3022,9 +3022,9 @@ def checkTableMissingEntry(cat):
             logger_with_level('  %s has %d issue(s)' % (catname, nrows))
             fields = curs.listfields()
             log_literal(logger, log_level, "    " + " | ".join(fields))
-            for row in curs.getresult():
-                log_literal(logger, log_level, "    " + " | ".join(map(str, row)))
             results = curs.getresult()
+            for row in results:
+                log_literal(logger, log_level, "    " + " | ".join(map(str, row)))
             processMissingDuplicateEntryResult(catname, fields, results, "missing")
             if catname == 'pg_type':
                 generateVerifyFile(catname, fields, results, 'missing_extraneous')
@@ -3309,9 +3309,9 @@ def checkTableDuplicateEntry(cat):
 
             fields = curs.listfields()
             log_literal(logger, logging.ERROR, "    " + " | ".join(fields))
-            for row in curs.getresult():
-                log_literal(logger, logging.ERROR, "    " + " | ".join(map(str, row)))
             results = curs.getresult()
+            for row in results:
+                log_literal(logger, logging.ERROR, "    " + " | ".join(map(str, row)))
             processMissingDuplicateEntryResult(catname, fields, results, "duplicate")
             if catname == 'pg_type':
                 generateVerifyFile(catname, fields, results, 'duplicate')
