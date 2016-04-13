@@ -1054,9 +1054,6 @@ extern Datum pg_advisory_unlock_all(PG_FUNCTION_ARGS);
 /* access/transam/twophase.c */
 extern Datum pg_prepared_xact(PG_FUNCTION_ARGS);
 
-/* catalog/pg_conversion.c */
-extern Datum pg_convert_using(PG_FUNCTION_ARGS);
-
 /* commands/prepare.c */
 extern Datum pg_prepared_statement(PG_FUNCTION_ARGS);
 

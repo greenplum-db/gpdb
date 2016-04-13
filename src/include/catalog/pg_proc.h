@@ -2400,9 +2400,6 @@ DESCR("convert string with specified destination encoding name");
 DATA(insert OID = 1813 (  convert		   PGNSP PGUID 12 1 0 f f t f s 3 17 "17 19 19" _null_ _null_ _null_	pg_convert - _null_ ));
 DESCR("convert string with specified encoding names");
 
-DATA(insert OID = 1619 (  convert_using    PGNSP PGUID 12 1 0 f f t f s 2 17 "25 25" _null_ _null_ _null_  pg_convert_using - _null_ ));
-DESCR("convert string with specified conversion name");
-
 DATA(insert OID = 1264 (  pg_char_to_encoding	   PGNSP PGUID 12 1 0 f f t f s 1 23 "19" _null_ _null_ _null_	PG_char_to_encoding - _null_ ));
 DESCR("convert encoding name to encoding id");
 
