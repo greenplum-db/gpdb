@@ -601,12 +601,14 @@ static bool extractContent(ListBucketResult *result, xmlNode *root_element,
             uint64_t size = 0;
 
             while (contNode != NULL) {
+                // no memleak here, every content has only one Key/Size node
                 if (!xmlStrcmp(contNode->name, (const xmlChar *)"Key")) {
                     key = (char *)xmlNodeGetContent(contNode);
                 }
                 if (!xmlStrcmp(contNode->name, (const xmlChar *)"Size")) {
                     key_size = (char *)xmlNodeGetContent(contNode);
-                    size = atoll((const char *)key_size);
+                    // Size of S3 file is a natural number, don't worry
+                    size = (uint64_t)atoll((const char *)key_size);
                 }
                 contNode = contNode->next;
             }
