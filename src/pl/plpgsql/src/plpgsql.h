@@ -83,6 +83,7 @@ enum PLpgSQL_stmt_types
 	PLPGSQL_STMT_EXIT,
 	PLPGSQL_STMT_RETURN,
 	PLPGSQL_STMT_RETURN_NEXT,
+	PLPGSQL_STMT_RETURN_QUERY,
 	PLPGSQL_STMT_RAISE,
 	PLPGSQL_STMT_EXECSQL,
 	PLPGSQL_STMT_DYNEXECUTE,
@@ -487,6 +488,13 @@ typedef struct
 	PLpgSQL_expr *expr;
 	int			retvarno;
 } PLpgSQL_stmt_return_next;
+
+typedef struct
+{								/* RETURN QUERY statement */
+	int			cmd_type;
+	int			lineno;
+	PLpgSQL_expr *query;
+} PLpgSQL_stmt_return_query;
 
 typedef struct
 {								/* RAISE statement			*/

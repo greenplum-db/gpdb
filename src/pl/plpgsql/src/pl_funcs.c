@@ -452,6 +452,8 @@ plpgsql_stmt_typename(PLpgSQL_stmt *stmt)
 			return _("return");
 		case PLPGSQL_STMT_RETURN_NEXT:
 			return _("return next");
+		case PLPGSQL_STMT_RETURN_QUERY:
+			return "RETURN QUERY";
 		case PLPGSQL_STMT_RAISE:
 			return _("raise");
 		case PLPGSQL_STMT_EXECSQL:
@@ -495,6 +497,7 @@ static void free_fors(PLpgSQL_stmt_fors *stmt);
 static void free_exit(PLpgSQL_stmt_exit *stmt);
 static void free_return(PLpgSQL_stmt_return *stmt);
 static void free_return_next(PLpgSQL_stmt_return_next *stmt);
+static void free_return_query(PLpgSQL_stmt_return_query *stmt);
 static void free_raise(PLpgSQL_stmt_raise *stmt);
 static void free_execsql(PLpgSQL_stmt_execsql *stmt);
 static void free_dynexecute(PLpgSQL_stmt_dynexecute *stmt);
@@ -541,6 +544,9 @@ free_stmt(PLpgSQL_stmt *stmt)
 			break;
 		case PLPGSQL_STMT_RETURN_NEXT:
 			free_return_next((PLpgSQL_stmt_return_next *) stmt);
+			break;
+		case PLPGSQL_STMT_RETURN_QUERY:
+			free_return_query((PLpgSQL_stmt_return_query *) stmt);
 			break;
 		case PLPGSQL_STMT_RAISE:
 			free_raise((PLpgSQL_stmt_raise *) stmt);
@@ -689,6 +695,14 @@ free_return_next(PLpgSQL_stmt_return_next *stmt)
 }
 
 static void
+free_return_query(PLpgSQL_stmt_return_query *stmt)
+{
+	ListCell   *lc;
+
+	free_expr(stmt->query);
+}
+
+static void
 free_raise(PLpgSQL_stmt_raise *stmt)
 {
 	ListCell   *lc;
@@ -804,6 +818,7 @@ static void dump_fors(PLpgSQL_stmt_fors *stmt);
 static void dump_exit(PLpgSQL_stmt_exit *stmt);
 static void dump_return(PLpgSQL_stmt_return *stmt);
 static void dump_return_next(PLpgSQL_stmt_return_next *stmt);
+static void dump_return_query(PLpgSQL_stmt_return_query *stmt);
 static void dump_raise(PLpgSQL_stmt_raise *stmt);
 static void dump_execsql(PLpgSQL_stmt_execsql *stmt);
 static void dump_dynexecute(PLpgSQL_stmt_dynexecute *stmt);
@@ -860,6 +875,9 @@ dump_stmt(PLpgSQL_stmt *stmt)
 			break;
 		case PLPGSQL_STMT_RETURN_NEXT:
 			dump_return_next((PLpgSQL_stmt_return_next *) stmt);
+			break;
+		case PLPGSQL_STMT_RETURN_QUERY:
+			dump_return_query((PLpgSQL_stmt_return_query *) stmt);
 			break;
 		case PLPGSQL_STMT_RAISE:
 			dump_raise((PLpgSQL_stmt_raise *) stmt);
@@ -1151,6 +1169,15 @@ dump_return_next(PLpgSQL_stmt_return_next *stmt)
 		dump_expr(stmt->expr);
 	else
 		printf("NULL");
+	printf("\n");
+}
+
+static void
+dump_return_query(PLpgSQL_stmt_return_query *stmt)
+{
+	dump_ind();
+	printf("RETURN QUERY ");
+	dump_expr(stmt->query);
 	printf("\n");
 }
 
