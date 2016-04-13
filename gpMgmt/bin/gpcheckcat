@@ -4562,16 +4562,18 @@ class GPObject:
             db = connect2(GV.cfg[1], utilityMode=False)
             oid_query = "select (select nspname from pg_namespace where oid=relnamespace) || '.' || relname from pg_class where oid=%d"
             type_query = "select (select nspname from pg_namespace where oid=relnamespace) || '.' || relname from pg_class where reltype=%d"
-            for table in self.missingIssues:
-                for issue in self.missingIssues[table]:
+            for issues in self.missingIssues.values() :
+                for issue in issues:
                     # Get schemaname.tablename corresponding to oid
                     for key in issue.pkeys:
                         if 'relid' in key or key in ['ev_class', 'reloid', 'fmterrtbl']:
-                            tablename = db.query(oid_query % issue.pkeys[key]).getresult()[0][0]
-                            GV.missing_attr_tables.append( (tablename, issue.segids) )
+                            table_list = db.query(oid_query % issue.pkeys[key]).getresult()
+                            if table_list:
+                                GV.missing_attr_tables.append( (table_list[0][0], issue.segids) )
                         elif key == 'oid':
-                            tablename = db.query(type_query % issue.pkeys[key]).getresult()[0][0]
-                            GV.missing_attr_tables.append( (tablename, issue.segids) )
+                            table_list = db.query(type_query % issue.pkeys[key]).getresult()
+                            if table_list:
+                                GV.missing_attr_tables.append( (table_list[0][0], issue.segids) )
 
 
 
