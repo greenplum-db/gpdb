@@ -565,13 +565,15 @@ static bool extractContent(ListBucketResult *result, xmlNode *root_element,
     while (cur != NULL) {
         if (key) {
             xmlFree(key);
+            key = NULL;
         }
 
         if (!xmlStrcmp(cur->name, (const xmlChar *)"IsTruncated")) {
-            if (!strncmp(content = (char *)xmlNodeGetContent(cur), "true", 4)) {
-                is_truncated = true;
-            }
+            content = (char *)xmlNodeGetContent(cur);
             if (content) {
+                if (!strncmp(content, "true", 4)) {
+                    is_truncated = true;
+                }
                 xmlFree(content);
             }
         }
@@ -589,6 +591,8 @@ static bool extractContent(ListBucketResult *result, xmlNode *root_element,
             if (content) {
                 result->Prefix = content;
                 xmlFree(content);
+                // content is not used anymore in this loop
+                content = NULL;
             }
         }
 
@@ -620,13 +624,11 @@ static bool extractContent(ListBucketResult *result, xmlNode *root_element,
 
             if (key_size) {
                 xmlFree(key_size);
+                key_size = NULL;
             }
         }
 
         cur = cur->next;
-
-        content = NULL;
-        key_size = NULL;
     }
 
     marker = (is_truncated && key) ? key : "";
@@ -693,7 +695,11 @@ ListBucketResult *ListBucket(string schema, string region, string bucket,
         xmlNodePtr cur = root_element->xmlChildrenNode;
         while (cur != NULL) {
             if (!xmlStrcmp(cur->name, (const xmlChar *)"Code")) {
-                S3ERROR("Server returns error \"%s\"", xmlNodeGetContent(cur));
+                char *content = (char *)xmlNodeGetContent(cur);
+                if (content) {
+                    S3ERROR("Server returns error \"%s\"", content);
+                    xmlFree(content);
+                }
                 break;
             }
 
