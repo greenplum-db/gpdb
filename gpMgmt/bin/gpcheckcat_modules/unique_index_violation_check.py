@@ -33,6 +33,7 @@ class UniqueIndexViolationCheck:
         violations = []
 
         for (table_oid, index_name, table_name, column_names) in unique_indexes:
+            column_names = self.__strip_opclass(column_names)
             sql = self.get_violated_segments_query(table_name, column_names)
             violated_segments = db_connection.query(sql).getresult()
             if violated_segments:
@@ -48,3 +49,8 @@ class UniqueIndexViolationCheck:
         return self.violated_segments_query % (
             column_names, table_name, column_names, column_names, column_names, table_name, column_names, column_names
         )
+
+    def __strip_opclass(self, index_arguments):
+        column_names_with_opclass = index_arguments.split(', ')
+        column_names = [string.split(' ')[0] for string in column_names_with_opclass]
+        return ', '.join(column_names)
