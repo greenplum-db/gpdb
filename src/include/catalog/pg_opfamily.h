@@ -159,6 +159,8 @@ DATA(insert OID = 2745 (	2742	array_ops		PGNSP PGUID ));
 DATA(insert OID = 2968 (	403		uuid_ops		PGNSP PGUID ));
 DATA(insert OID = 2969 (	405		uuid_ops		PGNSP PGUID ));
 
+/* Complex Number type */
+DATA(insert OID = 3221 (	403		complex_ops		PGNSP PGUID ));
 
 DATA(insert OID = 7080 (	403		xlogloc_ops		PGNSP PGUID ));
 

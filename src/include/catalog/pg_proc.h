@@ -2780,6 +2780,10 @@ DESCR("(internal)");
 DATA(insert OID = 1783 ( int2					PGNSP PGUID 12 1 0 f f t f i 1 21 "1700" _null_ _null_ _null_ numeric_int2 - _null_ ));
 DESCR("(internal)");
 
+/* Complex Number type */
+DATA(insert OID = 3057 ( complex_cmp			PGNSP PGUID 12 1 0 f f t f i 2 23 "193 193" _null_ _null_ _null_	complex_cmp - _null_ ));
+DESCR("compare two complex numbers");
+
 /* formatting */
 DATA(insert OID = 1770 ( to_char			PGNSP PGUID 12 1 0 f f t f s 2	25 "1184 25" _null_ _null_ _null_  timestamptz_to_char - _null_ ));
 DESCR("format timestamp with time zone to text");
