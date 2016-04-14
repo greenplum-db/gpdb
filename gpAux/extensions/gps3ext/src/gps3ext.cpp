@@ -2,27 +2,28 @@
 
 #include <cstdlib>
 
+#include <pthread.h>
+#include <signal.h>
+
 #include "postgres.h"
+
 #include "funcapi.h"
 
 #include "access/extprotocol.h"
 #include "catalog/pg_proc.h"
+#include "fmgr.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
-#include "fmgr.h"
 
-#include "S3ExtWrapper.h"
-#include "S3Common.h"
-#include "S3Log.h"
-#include "utils.h"
+#include <openssl/err.h>
 
 #include "gps3ext.h"
-#include "gps3conf.h"
-
-#include <signal.h>
-#include <pthread.h>
-#include <openssl/err.h>
+#include "s3common.h"
+#include "s3conf.h"
+#include "s3log.h"
+#include "s3utils.h"
+#include "s3wrapper.h"
 
 /* Do the module magic dance */
 
@@ -164,14 +165,6 @@ Datum s3_import(PG_FUNCTION_ARGS) {
                                       "configurations and net connection",
                                       s3ext_segid, s3ext_segnum)));
         }
-        /*
-                  if(strcasecmp(parsed_url->protocol, p_name) != 0) {
-                  elog(ERROR, "internal error: s3prot called with a different
-                  protocol
-                  (%s)",
-                  parsed_url->protocol);
-                  }
-        */
 
         EXTPROTOCOL_SET_USER_CTX(fcinfo, myData);
 

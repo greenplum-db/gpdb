@@ -1,7 +1,9 @@
 #ifndef _GPS3EXT_H_
 #define _GPS3EXT_H_
 #include <string>
+
 #include <signal.h>
+#include <sys/types.h>
 
 // GPDB's global val
 extern volatile bool QueryCancelPending;

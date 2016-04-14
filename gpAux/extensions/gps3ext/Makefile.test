@@ -1,9 +1,38 @@
+# Options
+DEBUG_S3 = y
+DEBUG_S3_CURL = n
+AWS_TEST = y
+FAKE_TEST = y
+BIG_FILE_TEST =y
+
+# Flags
 CPP = g++
-CFLAGS = -g3 -std=c++98 -fPIC -fprofile-arcs -ftest-coverage -DDEBUGS3 -DAWSTEST -DFAKETEST
 INCLUDES = -Isrc -Ilib -I/usr/include/libxml2
 LDFLAGS = -lpthread -lcrypto -lcurl -lxml2 -lgcov
+CFLAGS = -O2 -g3 -std=c++98 -fPIC -fprofile-arcs -ftest-coverage
 
-testcources = src/gps3conf_test.cpp src/utils_test.cpp src/S3Downloader_test.cpp src/S3Common_test.cpp src/S3ExtWrapper_test.cpp src/S3Log_test.cpp
+ifeq ($(DEBUG_S3),y)
+	CFLAGS += -DDEBUG_S3
+endif
+
+ifeq ($(DEBUG_S3_CURL),y)
+	CFLAGS += -DDEBUG_S3_CURL
+endif
+
+ifeq ($(AWS_TEST),y)
+	CFLAGS += -DAWS_TEST
+endif
+
+ifeq ($(FAKE_TEST),y)
+	CFLAGS += -DFAKE_TEST
+endif
+
+ifeq ($(BIG_FILE_TEST),y)
+	CFLAGS += -DBIG_FILE_TEST
+endif
+
+# Google TEST
+testcources = src/s3conf_test.cpp src/s3utils_test.cpp src/s3downloader_test.cpp src/s3common_test.cpp src/s3wrapper_test.cpp src/s3log_test.cpp
 
 testapp = s3test
 testobjs = $(testcources:.cpp=.o)
@@ -44,8 +73,8 @@ coverage: test
 	@gcov -r $(testcources) | grep -v test.cpp | grep -A 2 "src/.*.cpp"
 
 clean:
-	rm -f $(testapp) src/*.o src/*.a lib/*.o *.o *.a
 	rm -f *.gcov src/*.gcov src/*.gcda src/*.gcno
+	rm -f $(testapp) *.so src/*.o src/*.a lib/*.o *.o *.a
 
 distclean: clean
 	rm -f tags cscope.*

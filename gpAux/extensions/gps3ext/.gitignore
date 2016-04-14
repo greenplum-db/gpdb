@@ -48,3 +48,5 @@ core
 *.gcda
 *.gcno
 s3test
+
+s3.conf

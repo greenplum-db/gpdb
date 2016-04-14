@@ -1,6 +1,0 @@
-#!/usr/bin/python
-
-import sys
-
-if __name__ == "__main__":
-    print ''.join(chr(int(i,16)) for i in sys.argv[1:])
