@@ -271,6 +271,7 @@ typedef struct MKContext {
     int strxfrmConstantFactor;
 
     TupleDesc tupdesc;
+    Relation indexRel;
     MemTupleBinding *mt_bind;
 
     /* Limit the sort?  If 0 then we sort all input values, else we keep only the first limit-many values */
@@ -284,8 +285,6 @@ typedef struct MKContext {
 
     /* enforce Unique, for index build */
     bool enforceUnique;
-
-    Relation indexRel;
 } MKContext;
 
 /**

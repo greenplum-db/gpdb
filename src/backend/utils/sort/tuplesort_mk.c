@@ -875,6 +875,7 @@ tuplesort_begin_index_mk(Relation indexRel,
 {
     Tuplesortstate_mk *state = tuplesort_begin_common(NULL, workMem, randomAccess, true);
     MemoryContext oldcontext;
+    TupleDesc tupdesc;
 
     oldcontext = MemoryContextSwitchTo(state->sortcontext);
 
@@ -882,7 +883,7 @@ tuplesort_begin_index_mk(Relation indexRel,
         PG_TRACE3(tuplesort__begin, enforceUnique, workMem, randomAccess);
 
     state->nKeys = RelationGetNumberOfAttributes(indexRel);
-    state->tupDesc = RelationGetDescr(indexRel);
+    tupdesc = RelationGetDescr(indexRel);
 
     state->copytup = copytup_index;
     state->writetup = writetup_index;
@@ -898,7 +899,7 @@ tuplesort_begin_index_mk(Relation indexRel,
 			state->cmpScanKey,
             tupsort_fetch_datum_itup,
             freetup_index,
-            state->tupDesc, 0, 0);
+            tupdesc, 0, 0);
    
     state->mkctxt.enforceUnique = enforceUnique;
     state->mkctxt.indexRel = indexRel;

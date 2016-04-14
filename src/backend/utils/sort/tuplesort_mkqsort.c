@@ -292,7 +292,7 @@ void mk_qsort_impl(MKEntry *a, int left, int right, int lv, bool lvdown, MKConte
 		/*
 		 * [lastInLow+1,firstInHigh-1] defines the pivot region which was all equal at level lv.  So increase the level and compare that region!
 		 */
-        mk_qsort_impl(a, lastInLow+1, firstInHigh-1, lv+1, true, ctxt, seenNull || mke_is_null(a+lastInLow+1)); /* a + lastInLow + 1 points to the pivot */
+		mk_qsort_impl(a, lastInLow+1, firstInHigh-1, lv+1, true, ctxt, seenNull || mke_is_null(a+lastInLow+1)); /* a + lastInLow + 1 points to the pivot */
 	}
 	else
 	{
