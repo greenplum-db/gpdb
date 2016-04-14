@@ -22,8 +22,8 @@
     </configurations>
 
     <dependencies>
-      <dependency org="emc"             name="optimizer"       rev="1.627"          conf="osx106_x86->osx106_x86_32;rhel5_x86_64->rhel5_x86_64;suse10_x86_64->suse10_x86_64;suse11_x86_64->suse10_x86_64" />
-      <dependency org="emc"             name="libgpos"         rev="1.135"          conf="osx106_x86->osx106_x86_32;rhel5_x86_64->rhel5_x86_64;suse10_x86_64->suse10_x86_64;suse11_x86_64->suse10_x86_64" />
+      <dependency org="emc"             name="optimizer"       rev="1.628"          conf="osx106_x86->osx106_x86_32;rhel5_x86_64->rhel5_x86_64;suse10_x86_64->suse10_x86_64;suse11_x86_64->suse10_x86_64" />
+      <dependency org="emc"             name="libgpos"         rev="1.136"          conf="osx106_x86->osx106_x86_32;rhel5_x86_64->rhel5_x86_64;suse10_x86_64->suse10_x86_64;suse11_x86_64->suse10_x86_64" />
       <dependency org="xerces"          name="xerces-c"        rev="3.1.1-p1"       conf="osx106_x86->osx106_x86_32;rhel5_x86_64->rhel5_x86_64;suse10_x86_64->suse10_x86_64;suse11_x86_64->suse10_x86_64" />
       <dependency org="OpenSSL"         name="openssl"         rev="0.9.8zg"        conf="osx106_x86->osx105_x86;aix5_ppc_32->aix5_ppc_32;aix5_ppc_64->aix5_ppc_64;hpux_ia64->hpux_ia64;rhel5_x86_32->rhel5_x86_32;rhel5_x86_64->rhel5_x86_64;rhel6_x86_64->rhel6_x86_64;sol10_x86_32->sol10_x86_32;sol10_x86_64->sol10_x86_64;sol10_sparc_32->sol10_sparc_32;sol10_sparc_64->sol10_sparc_64;suse10_x86_64->suse10_x86_64;suse11_x86_64->suse11_x86_64" />
       <dependency org="emc"             name="DDBoostSDK"      rev="3.0.0.3-446710" conf="rhel5_x86_64->rhel5_x86_64" />
