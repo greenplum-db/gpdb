@@ -232,15 +232,16 @@ uint64_t ParserCallback(void *contents, uint64_t size, uint64_t nmemb,
 
 // invoked by s3_import(), need to be exception safe
 char *get_opt_s3(const char *url, const char *key) {
-    const char *key_f = NULL;
+    const char *key_start = NULL;
     const char *key_tailing = NULL;
-    char *key_val = NULL;
-    int val_len = 0;
+    char *value = NULL;
+    int value_len = 0;
 
     if (!url || !key) {
         return NULL;
     }
 
+    // construct the key to search " key="
     char *key2search = (char *)malloc(strlen(key) + 3);
     if (!key2search) {
         S3ERROR("Can't allocate memory for string");
@@ -254,43 +255,46 @@ char *get_opt_s3(const char *url, const char *key) {
     key2search[key_len + 1] = '=';
     key2search[key_len + 2] = 0;
 
-    // printf("key2search=%s\n", key2search);
+    // get the whole options string (strip "url ")
     const char *delimiter = " ";
     const char *options = strstr(url, delimiter);
     if (!options) {
         goto FAIL;
     }
-    key_f = strstr(options, key2search);
-    if (key_f == NULL) {
+
+    // get the string " key=blah1 key2=blah2 ..."
+    key_start = strstr(options, key2search);
+    if (key_start == NULL) {
         goto FAIL;
     }
 
-    key_f += strlen(key2search);
-    if (*key_f == ' ') {
+    // get the string "blah1 key2=blah2 ..."
+    key_start += strlen(key2search);
+    if (*key_start == ' ') {
         goto FAIL;
     }
-    // printf("key_f=%s\n", key_f);
 
-    key_tailing = strstr(key_f, delimiter);
-    // printf("key_tailing=%s\n", key_tailing);
-    val_len = 0;
+    // get the string "key2=blah2 ..."
+    key_tailing = strstr(key_start, delimiter);
+    // get the length of "blah1"
     if (key_tailing) {
-        val_len = strlen(key_f) - strlen(key_tailing);
+        value_len = strlen(key_start) - strlen(key_tailing);
     } else {
-        val_len = strlen(key_f);
+        value_len = strlen(key_start);
     }
 
-    key_val = (char *)malloc(val_len + 1);
-    if (!key_val) {
+    // get the string "blah1"
+    value = (char *)malloc(value_len + 1);
+    if (!value) {
         goto FAIL;
     }
 
-    memcpy(key_val, key_f, val_len);
-    key_val[val_len] = 0;
+    memcpy(value, key_start, value_len);
+    value[value_len] = 0;
 
     free(key2search);
 
-    return key_val;
+    return value;
 FAIL:
     if (key2search) {
         free(key2search);

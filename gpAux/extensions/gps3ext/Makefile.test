@@ -3,7 +3,7 @@ DEBUG_S3 = y
 DEBUG_S3_CURL = n
 AWS_TEST = y
 FAKE_TEST = y
-BIG_FILE_TEST =y
+BIG_FILE_TEST = y
 
 # Flags
 CPP = g++
