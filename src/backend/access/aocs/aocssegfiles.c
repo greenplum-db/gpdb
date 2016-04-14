@@ -24,6 +24,7 @@
 #include "cdb/cdbvars.h"
 #include "executor/spi.h"
 #include "nodes/makefuncs.h"
+#include "port.h"
 #include "utils/acl.h"
 #include "utils/syscache.h"
 #include "utils/numeric.h"
@@ -1843,8 +1844,12 @@ PrintPgaocssegAndGprelationNodeEntries(AOCSFileSegInfo **allseginfo, int totalse
 			break;
 		}
 
-		strncat(segnumArray, tmp, sizeof(tmp));
-		strncat(segnumArray, delimiter, sizeof(delimiter));
+		/*
+		 * The original code "strncat(segnumArray, tmp, sizeof(tmp))" is simple
+		 * and safe, but the compiler complains much by law of [-Wstrncat-size].
+		 */
+		strlcat(segnumArray, tmp, sizeof(segnumArray));
+		strlcat(segnumArray, delimiter, sizeof(segnumArray));
 	}
 	elog(LOG, "pg_aocsseg segno entries: %s", segnumArray);
 
@@ -1861,8 +1866,9 @@ PrintPgaocssegAndGprelationNodeEntries(AOCSFileSegInfo **allseginfo, int totalse
 				break;
 			}
 
-			strncat(segnumArray, tmp, sizeof(tmp));
-			strncat(segnumArray, delimiter, sizeof(delimiter));
+			/* Use strlcat instead of strncat to stop compiler complaining. */
+			strlcat(segnumArray, tmp, sizeof(segnumArray));
+			strlcat(segnumArray, delimiter, sizeof(segnumArray));
 		}
 	}
 	elog(LOG, "gp_relation_node segno entries: %s", segnumArray);
