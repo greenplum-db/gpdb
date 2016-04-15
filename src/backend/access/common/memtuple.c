@@ -486,7 +486,9 @@ static uint32 compute_memtuple_size_using_bind(
 
 		/* Varlen stuff */
 		/* We plan to convert to short varlena even if it is not currently */
-		if(bind->flag == MTB_ByRef && value_type_could_short(values[i], attr->atttypid)) 
+		if (bind->flag == MTB_ByRef &&
+			attr->attstorage != 'p' &&
+			value_type_could_short(values[i], attr->atttypid))
 		{
 			data_length += VARSIZE_ANY_EXHDR_D(values[i]) + VARHDRSZ_SHORT;
 		}
@@ -800,7 +802,8 @@ MemTuple memtuple_form_to_align(
 					Assert((varlen_start - (char *) mtup) + attr_len <= len);
 					memcpy(varlen_start, DatumGetPointer(values[i]), attr_len);
 				}
-				else if(value_type_could_short(values[i], attr->atttypid))
+				else if (attr->attstorage != 'p' &&
+						 value_type_could_short(values[i], attr->atttypid))
 				{
 					attr_len = VARSIZE_D(values[i]) - VARHDRSZ + VARHDRSZ_SHORT;
 					*varlen_start = VARSIZE_TO_SHORT_D(values[i]);
