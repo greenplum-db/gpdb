@@ -1446,28 +1446,29 @@ class GpArray:
                            hostname, address, port, fslocation, replicationPort)
                 segments.append(seg)
         
-        for seg in segments:
-            datcatloc = dbconn.execSQL(conn, '''
-                select fsloc.fselocation || '/' ||
-                       case when db.dattablespace = 1663
-                          then 'base'
-                          else db.dattablespace::text
-                       end || '/'||db.oid as catloc
-                from pg_Database db, pg_tablespace ts,
-                     (SELECT dbid, fs.oid, fselocation
-                      FROM pg_catalog.gp_segment_configuration
-                      JOIN pg_catalog.pg_filespace_entry on (dbid = fsedbid)
-                      JOIN pg_catalog.pg_filespace fs on (fsefsoid = fs.oid)) fsloc
-                      where db.dattablespace = ts.oid
-                      and ts.spcfsoid = fsloc.oid
-                      and fsloc.dbid = %d 
-            ''' % seg.dbid)
-            seg.catdirs = []
-            for row in datcatloc:
-                seg.catdirs.append(row[0])
-
+        datcatloc = dbconn.execSQL(conn, '''
+            select fsloc.dbid, fsloc.fselocation || '/' ||
+                   case when db.dattablespace = 1663
+                      then 'base'
+                      else db.dattablespace::text
+                   end || '/'||db.oid as catloc
+            from pg_Database db, pg_tablespace ts,
+                 (SELECT dbid, fs.oid, fselocation
+                  FROM pg_catalog.gp_segment_configuration
+                  JOIN pg_catalog.pg_filespace_entry on (dbid = fsedbid)
+                  JOIN pg_catalog.pg_filespace fs on (fsefsoid = fs.oid)) fsloc
+                  where db.dattablespace = ts.oid
+                  and ts.spcfsoid = fsloc.oid''')
         conn.close()
-        
+        catlocmap = {}
+        for row in datcatloc:
+            if catlocmap.has_key(row[0]):
+                catlocmap[row[0]].append(row[1])
+            else:
+                catlocmap[row[0]] = [row[1]]
+        for seg in segments:
+            seg.catdirs = catlocmap[seg.dbid]
+
         origSegments = [seg.copy() for seg in segments]
         
         if strategy_rows.rowcount == 0:
