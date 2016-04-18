@@ -1071,6 +1071,7 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 	}
 	CommitTransactionCommand();
 	CurrentResourceOwner = save;
+
 	return true;
 }
 

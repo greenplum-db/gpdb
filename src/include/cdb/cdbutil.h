@@ -93,6 +93,7 @@ typedef struct CdbComponentDatabases
 	int			my_segindex;	/* the content of this database */
 	bool		my_isprimary;	/* the isprimary flag of this database */
 	int		fts_version;	/* the version of fts */
+	int			current_refcount; /* current refcount of usage for this instance */
 } CdbComponentDatabases;
 
 /*
@@ -127,6 +128,9 @@ extern void cdb_cleanup(int code, Datum arg  __attribute__((unused)) );
  *
  */
 extern CdbComponentDatabases *getCdbComponentDatabases(void);
+
+/* Invalidate CdbComponentDatabases cache */
+extern void invalidateCdbCache(void);
 
 /*
  * freeCdbComponentDatabases() releases the palloc'd storage returned by

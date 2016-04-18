@@ -42,12 +42,18 @@
 #include "postmaster/checkpoint.h"
 #include "catalog/indexing.h"
 #include "utils/faultinjection.h"
+#include "utils/inval.h"
 
 /*
  * Helper Functions
  */
+static CdbComponentDatabases* copyCdbComponentDatabases(CdbComponentDatabases *source_pointer);
+static void populateCdbComponentDatabasesCache(CdbComponentDatabases *p1);
 static int	CdbComponentDatabaseInfoCompare(const void *p1, const void *p2);
+static void populateCdbComponentDatabasesCache(CdbComponentDatabases *p1);
+static void deallocateCdbComponentDatabases();
 static void freeCdbComponentDatabaseInfo(CdbComponentDatabaseInfo *cdi);
+static void GpSegConfigCacheCallback(Datum arg, Oid relid);
 
 static void getAddressesForDBid(CdbComponentDatabaseInfo *c, int elevel);
 
@@ -57,6 +63,69 @@ struct segment_ip_cache_entry {
 	char key[NAMEDATALEN];
 	char hostinfo[NI_MAXHOST];
 };
+
+static CdbComponentDatabases current_component_databases; /* Last created component_databases */
+
+static bool isInitialized = false; /* Is CdbComponentDatabases cache initialized */
+static bool isValid = true; /* Is cache instance valid currently? */
+
+/* Copy one CdbComponentDatabases instance into another CdbComponentDatabases instance*/
+CdbComponentDatabases*
+copyCdbComponentDatabases(CdbComponentDatabases *source_pointer)
+{
+	CdbComponentDatabases *return_val = NULL;
+
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+
+	return_val = palloc0(sizeof(CdbComponentDatabases));
+
+	return_val->segment_db_info =
+		(CdbComponentDatabaseInfo *) palloc0(sizeof(CdbComponentDatabaseInfo) * (source_pointer->total_segment_dbs));
+
+	return_val->entry_db_info =
+		(CdbComponentDatabaseInfo *) palloc0(sizeof(CdbComponentDatabaseInfo) * (source_pointer->total_entry_dbs));
+
+	memcpy(return_val->segment_db_info, (source_pointer->segment_db_info), ((sizeof(CdbComponentDatabaseInfo)) *
+																																										(source_pointer->total_segment_dbs)));
+	memcpy(return_val->entry_db_info, (source_pointer->entry_db_info), ((sizeof(CdbComponentDatabaseInfo)) *
+																																								(source_pointer->total_entry_dbs)));
+
+	return_val->total_segment_dbs = source_pointer->total_segment_dbs;
+	return_val->total_entry_dbs = source_pointer->total_entry_dbs;
+	return_val->total_segments = source_pointer->total_segments;
+	return_val->my_dbid = source_pointer->my_dbid;
+	return_val->my_segindex = source_pointer->my_segindex;
+	
+	return return_val;
+}
+
+/* Populate the CdbComponentDatabases cache with given instance */
+void
+populateCdbComponentDatabasesCache(CdbComponentDatabases *p1)
+{
+
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+	current_component_databases.segment_db_info =
+		(CdbComponentDatabaseInfo *) palloc0(sizeof(CdbComponentDatabaseInfo) * (p1->total_segment_dbs));
+
+	current_component_databases.entry_db_info =
+		(CdbComponentDatabaseInfo *) palloc0(sizeof(CdbComponentDatabaseInfo) * (p1->total_entry_dbs));
+
+	memcpy(current_component_databases.segment_db_info, (p1->segment_db_info), ((sizeof(CdbComponentDatabaseInfo)) * (p1->total_segment_dbs)));
+	memcpy(current_component_databases.entry_db_info, (p1->entry_db_info), ((sizeof(CdbComponentDatabaseInfo)) * (p1->total_entry_dbs)));
+
+	current_component_databases.total_segment_dbs = p1->total_segment_dbs;
+	current_component_databases.total_entry_dbs = p1->total_entry_dbs;
+	current_component_databases.total_segments = p1->total_segments;
+	current_component_databases.my_dbid = p1->my_dbid;
+	current_component_databases.my_segindex = p1->my_segindex;
+}
+
+void
+GpSegConfigCacheCallback(Datum arg, Oid relid)
+{
+	isValid = false;
+}
 
 /*
  * getCdbComponentDatabases
@@ -70,6 +139,44 @@ getCdbComponentInfo(bool DNSLookupAsError)
 {
 	CdbComponentDatabaseInfo *pOld = NULL;
 	CdbComponentDatabases *component_databases = NULL;
+
+	/*
+	 * Check if CdbComponentDatabases is initialized. If
+	 * not, initialize cache
+	 */
+	if (isInitialized == false)
+	{
+		CacheRegisterSyscacheCallback(GPSEGCONFIGID,
+									GpSegConfigCacheCallback,
+									(Datum) 0);
+
+		isInitialized = true;
+	}
+
+	AcceptInvalidationMessages();
+	/*
+	/*
+	 * Check if cache is invalidated. If it is
+	 * invalid, we need to deallocate current cache
+	 * instance
+	 */
+	if(isValid == false)
+	{
+		deallocateCdbComponentDatabases();
+	}
+
+	/* Check if there is currently an instance present
+	 * in the cache. If it is present, we return a copy
+	 * of the instance
+	 */
+	if (current_component_databases.current_refcount > 0)
+	{
+		CdbComponentDatabases *return_val = NULL;
+
+		current_component_databases.current_refcount++;
+
+		return(copyCdbComponentDatabases(&(current_component_databases)));
+	}
 
 	Relation gp_seg_config_rel;
 	HeapTuple gp_seg_config_tuple = NULL;
@@ -368,6 +475,15 @@ getCdbComponentInfo(bool DNSLookupAsError)
 		}
 	}
 
+	component_databases->current_refcount = 1;
+
+	current_component_databases.current_refcount = 1;
+
+	populateCdbComponentDatabasesCache(component_databases);
+	isValid = true;
+
+	isValid = true;
+
 	return component_databases;
 }
 
@@ -384,6 +500,40 @@ getCdbComponentDatabases(void)
 	return getCdbComponentInfo(true);
 }
 
+/*
+ * Deallocate cached CdbComponentDatabases instance
+ */
+void
+deallocateCdbComponentDatabases()
+{
+	int	i;
+
+	if (current_component_databases.segment_db_info != NULL)
+	{
+		for (i = 0; i < current_component_databases.total_segment_dbs; i++)
+		{
+			CdbComponentDatabaseInfo *cdi = &current_component_databases.segment_db_info[i];
+
+			freeCdbComponentDatabaseInfo(cdi);
+		}
+
+		pfree(current_component_databases.segment_db_info);
+	}
+
+	if (current_component_databases.entry_db_info != NULL)
+	{
+		for (i = 0; i < current_component_databases.total_entry_dbs; i++)
+		{
+			CdbComponentDatabaseInfo *cdi = &current_component_databases.entry_db_info[i];
+
+			freeCdbComponentDatabaseInfo(cdi);
+		}
+
+		pfree(current_component_databases.entry_db_info);
+	}
+
+	current_component_databases.current_refcount = 0;
+}
 
 /*
  * freeCdbComponentDatabases
