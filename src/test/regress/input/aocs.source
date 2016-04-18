@@ -409,8 +409,13 @@ commit;
 select count(*) from tenk_aocs5_temp_pres_rows;
 
 -- RULES
-create rule aocs_rule_update as on insert to tenk_aocs5 do instead update foo_aocs set two=2;
-create rule aocs_rule_delete as on insert to tenk_aocs5 do instead delete from foo_aocs where unique1=1;
+insert into tenk_aocs5(unique1, unique2) values (1, 99998889);
+create rule ao_rule_update as on insert to tenk_aocs5 do instead update tenk_aocs5 set two=2;
+insert into tenk_aocs5(unique1, unique2) values (2, 99998889);
+select distinct two from tenk_aocs5;
+create rule ao_rule_delete as on update to tenk_aocs5 do instead delete from tenk_aocs5 where unique1=1;
+insert into tenk_aocs5(unique1, unique2) values (3, 99998889); -- should go through both rules
+select * from tenk_aocs5 where unique1=1;
 
 ---------------------
 -- UAO

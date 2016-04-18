@@ -816,10 +816,22 @@ select count(*) from tenk_ao5_temp_pres_rows;
 (1 row)
 
 -- RULES
-create rule ao_rule_update as on insert to tenk_ao5 do instead update foo_ao set two=2;
-ERROR:  relation "foo_ao" does not exist
-create rule ao_rule_delete as on insert to tenk_ao5 do instead delete from foo_ao where unique1=1;
-ERROR:  relation "foo_ao" does not exist
+insert into tenk_ao5(unique1, unique2) values (1, 99998889);
+create rule ao_rule_update as on insert to tenk_ao5 do instead update tenk_ao5 set two=2;
+insert into tenk_ao5(unique1, unique2) values (2, 99998889);
+select distinct two from tenk_ao5;
+ two 
+-----
+   2
+(1 row)
+
+create rule ao_rule_delete as on update to tenk_ao5 do instead delete from tenk_ao5 where unique1=1;
+insert into tenk_ao5(unique1, unique2) values (3, 99998889); -- should go through both rules
+select * from tenk_ao5 where unique1=1;
+ unique1 | unique2 | two | four | ten | twenty | hundred | thousand | twothousand | fivethous | tenthous | odd | even | stringu1 | stringu2 | string4 
+---------+---------+-----+------+-----+--------+---------+----------+-------------+-----------+----------+-----+------+----------+----------+---------
+(0 rows)
+
 ---------------------
 -- UAO
 ---------------------
