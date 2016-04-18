@@ -4432,6 +4432,13 @@ CTranslatorDXLToPlStmt::PplanDML
 			aclmode = ACL_INSERT;
 			break;
 		}
+		case gpdxl::EdxldmlSentinel:
+		default:
+		{
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion
+				GPOS_WSZ_LIT("Unexpected error during plan generation."));
+			break;
+		}
 	}
 	
 	IMDId *pmdidTargetTable = pdxlop->Pdxltabdesc()->Pmdid();
