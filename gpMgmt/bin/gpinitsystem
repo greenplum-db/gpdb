@@ -1013,10 +1013,10 @@ ARRAY_REORDER() {
             ;;
     esac
 
-    QE_REORDER_ARRAY=(`$ECHO ${QE_PRIMARY_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -k2,2|$TR '\n' ' '`)
+    QE_REORDER_ARRAY=(`$ECHO ${QE_PRIMARY_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k2,2|$TR '\n' ' '`)
     QE_PRIMARY_ARRAY=(${QE_REORDER_ARRAY[@]})
     if [ $MIRROR_TYPE -eq 1 ];then
-	QE_REORDER_ARRAY=(`$ECHO ${QE_MIRROR_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -k2,2|$TR '\n' ' '`)
+	QE_REORDER_ARRAY=(`$ECHO ${QE_MIRROR_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k2,2|$TR '\n' ' '`)
 	QE_MIRROR_ARRAY=(${QE_REORDER_ARRAY[@]})
     fi
     LOG_MSG "[INFO]:-End Function $FUNCNAME"
@@ -1461,10 +1461,10 @@ CREATE_QES_MIRROR () {
 		;;
 	esac
 
-	REORDERING=(`$ECHO ${QE_PRIMARY_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -k5,5|$TR '\n' ' '`)
+	REORDERING=(`$ECHO ${QE_PRIMARY_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k5,5|$TR '\n' ' '`)
 	PRIMARIES_ORDERED_BY_CONTENT_ID=(${REORDERING[@]})
 
-	REORDERING=(`$ECHO ${QE_MIRROR_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -k5,5|$TR '\n' ' '`)
+	REORDERING=(`$ECHO ${QE_MIRROR_ARRAY[@]}|$TR ' ' '\n'|$SORT -t$S -n -k5,5|$TR '\n' ' '`)
 	MIRRORS_ORDERED_BY_CONTENT_ID=(${REORDERING[@]})
 
 	PARALLEL_SETUP  $PARALLEL_STATUS_FILE
