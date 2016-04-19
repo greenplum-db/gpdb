@@ -294,6 +294,9 @@ CreateFileSpace(CreateFileSpaceStmt *stmt)
 
 		/* Done with the hash, cleanup */
 		hash_destroy(segHash);
+
+		/* Cleanup component info */
+		freeCdbComponentDatabases(segments);
 	}
 
 	/* 
