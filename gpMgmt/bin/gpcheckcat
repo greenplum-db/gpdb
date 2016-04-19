@@ -3405,41 +3405,66 @@ def duplicatePersistentEntryQuery(catname, pkey, excol, state):
     return qry
 
 # -------------------------------------------------------------------------------
-def checkUniqueIndexViolation():
+
+
+def __log_begin_unique_index_violation():
     logger.info('-----------------------------------')
     logger.info('Performing check: checking for violated unique indexes')
+
+
+def check_unique_index_violation_table_duplication():
+    __log_begin_unique_index_violation()
     db_connection = connect2(GV.cfg[1], utilityMode=False)
+    violations = []
+    try:
+        violations = UniqueIndexViolationCheck().run_check_table_duplication(db_connection)
+    except Exception, e:
+        setError(ERROR_NOREPAIR)
+        myprint('  Execution error: ' + str(e))
 
-    violations = UniqueIndexViolationCheck().runCheck(db_connection)
+    check_name = 'table duplication on unique indexes'
+    __log_end_unique_index_violation(check_name, violations)
 
-    checkname = 'unique index violation(s)'
+
+def check_unique_index_violation_index_duplication():
+    __log_begin_unique_index_violation()
+    db_connection = connect2(GV.cfg[1], utilityMode=False)
+    violations = []
+    try:
+        violations = UniqueIndexViolationCheck().run_check_index_duplication(db_connection)
+    except Exception, e:
+        setError(ERROR_NOREPAIR)
+        myprint('  Execution error: ' + str(e))
+
+    check_name = 'index duplication on unique indexes'
+    __log_end_unique_index_violation(check_name, violations)
+
+
+def __log_end_unique_index_violation(check_name, violations):
     if violations:
-        logger.info('[FAIL]  %s' % checkname)
+        logger.info('[FAIL]  %s' % check_name)
         GV.checkStatus = False
         setError(ERROR_NOREPAIR)
-        log_unique_index_violations(violations)
+        log_output = ['\n    segment_id | index_name | table_name | column_names']
+        log_output.append('    ---------------------------------------------------')
+
+        for violation in violations:
+            error_object = getGPObject(violation['table_oid'], violation['table_name'])
+            issue = CatUniqueIndexViolationIssue(violation['table_name'],
+                                                 violation['index_name'])
+            error_object.addDuplicateIssue(issue)
+
+            for seg_id in violation['violated_segments']:
+                log_output.append('    %s | %s | %s | %s' % (
+                    seg_id,
+                    violation['index_name'],
+                    violation['table_name'],
+                    violation['column_names'],
+                ))
+
+        logger.error('\n'.join(log_output))
     else:
-        logger.info('[OK]  %s' % checkname)
-
-def log_unique_index_violations(violations):
-    log_output = ['\n    segment_id | index_name | table_name | column_names']
-    log_output.append('    ---------------------------------------------------')
-
-    for violation in violations:
-        error_object = getGPObject(violation['table_oid'], violation['table_name'])
-        issue = CatUniqueIndexViolationIssue(violation['table_name'],
-                                             violation['index_name'])
-        error_object.addDuplicateIssue(issue)
-
-        for seg_id in violation['violated_segments']:
-            log_output.append('    %s | %s | %s | %s' % (
-                seg_id,
-                violation['index_name'],
-                violation['table_name'],
-                violation['column_names'],
-            ))
-
-    logger.error('\n'.join(log_output))
+        logger.info('[OK]  %s' % check_name)
 
 
 ############################################################################
@@ -3482,12 +3507,20 @@ name_repair = {
 ############################################################################
 
 all_checks = {
-    "unique_index_violation":
+    "table_duplicate":
         {
-            "description": "Check for violated unique indexes",
-            "fn": lambda: checkUniqueIndexViolation(),
+            "description": "Check for unique index violation on table",
+            "fn": lambda: check_unique_index_violation_table_duplication(),
             "version": "main",
             "order": 1,
+            "online": True
+        },
+    "index_duplicate":
+        {
+            "description": "Check for unique index violation on index",
+            "fn": lambda: check_unique_index_violation_index_duplication(),
+            "version": "main",
+            "order": 2,
             "online": True
         },
     "duplicate":
@@ -3495,7 +3528,7 @@ all_checks = {
             "description": "Check for duplicate entries",
             "fn": lambda: checkDuplicateEntry(),
             "version": 'main',
-            "order": 2,
+            "order": 3,
             "online": True
         },
     "missing_extraneous":
@@ -3503,7 +3536,7 @@ all_checks = {
             "description": "Cross consistency check for missing or extraneous entries",
             "fn": lambda: checkMissingEntry(),
             "version": 'main',
-            "order": 3,
+            "order": 4,
             "online": True
         },
     "inconsistent":
@@ -3511,7 +3544,7 @@ all_checks = {
             "description": "Cross consistency check for master segment inconsistency",
             "fn": lambda: checkInconsistentEntry(),
             "version": 'main',
-            "order": 4,
+            "order": 5,
             "online": True
         },
     "foreign_key":
@@ -3519,7 +3552,7 @@ all_checks = {
             "description": "Check foreign keys",
             "fn": lambda: checkForeignKey(),
             "version": 'main',
-            "order": 5,
+            "order": 6,
             "online": True
         },
     "acl":
@@ -3527,7 +3560,7 @@ all_checks = {
             "description": "Cross consistency check for access control privileges",
             "fn": lambda: checkACL(),
             "version": 'main',
-            "order": 6,
+            "order": 7,
             "online": True
         },
     "persistent":
@@ -3535,7 +3568,7 @@ all_checks = {
             "description": "Check persistent tables",
             "fn": lambda: checkPersistentTables(),
             "version": 'main',
-            "order": 7,
+            "order": 8,
             "online": False
         },
     "pgclass":
@@ -3543,7 +3576,7 @@ all_checks = {
             "description": "Check pg_class entry that does not have any correspond pg_attribute entry",
             "fn": lambda: checkPGClass(),
             "version": 'main',
-            "order": 8,
+            "order": 9,
             "online": False
         },
     "namespace":
@@ -3551,7 +3584,7 @@ all_checks = {
             "description": "Check for schemas with a missing schema definition",
             "fn": lambda: checkPGNamespace(),
             "version": 'main',
-            "order": 9,
+            "order": 10,
             "online": False
         },
     "distribution_policy":
@@ -3559,7 +3592,7 @@ all_checks = {
             "description": "Check constraints on randomly distributed tables",
             "fn": lambda: checkDistribPolicy(),
             "version": 'main',
-            "order": 10,
+            "order": 11,
             "online": False
         },
     "dependency":
@@ -3567,7 +3600,7 @@ all_checks = {
             "description": "Check for dependency on non-existent objects",
             "fn": lambda: checkDepend(),
             "version": 'main',
-            "order": 11,
+            "order": 12,
             "online": False
         },
     "owner":
@@ -3575,7 +3608,7 @@ all_checks = {
             "description": "Check table ownership that is inconsistent with the master database",
             "fn": lambda: checkOwners(),
             "version": 'main',
-            "order": 12,
+            "order": 13,
             "online": True
         },
     "part_integrity":
@@ -3583,7 +3616,7 @@ all_checks = {
             "description": "Check pg_partition branch integrity, partition with oids, partition distribution policy",
             "fn": lambda: checkPartitionIntegrity(),
             "version": 'main',
-            "order": 13,
+            "order": 14,
             "online": True
         },
     "part_constraint":
@@ -3591,7 +3624,7 @@ all_checks = {
             "description": "Check constraints on partitioned tables",
             "fn": lambda: checkPartitionRegularity(),
             "version": 'main',
-            "order": 14,
+            "order": 15,
             "online": True
         },
     "duplicate_persistent":
@@ -3599,7 +3632,7 @@ all_checks = {
             "description": "Check for duplicate gp_persistent_relation_node entries",
             "fn": lambda: checkDuplicatePersistentEntry(),
             "version": 'main',
-            "order": 15,
+            "order": 16,
             "online": True
         }
 }
