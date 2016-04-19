@@ -1364,12 +1364,6 @@ select foo_p.b, foo_p.t from foo_p inner join bar on foo_p.a = bar.k  where foo_
 (10 rows)
 
 drop function if exists mytest(integer);
-select gp_fault_inject(12,0);
- gp_fault_inject 
------------------
-               0
-(1 row)
-
 --start_ignore
 drop table if exists orders_test;
 NOTICE:  table "orders_test" does not exist, skipping
@@ -1534,12 +1528,6 @@ NOTICE:  CREATE TABLE will create partition "orders_test_1_prt_p1_5_2_prt_sp2_3_
 NOTICE:  CREATE TABLE will create partition "orders_test_1_prt_p1_5_2_prt_sp2_3_prt_4" for table "orders_test_1_prt_p1_5_2_prt_sp2"
 drop table orders_test;
 -- select pg_sleep(60);
-select logdatabase, logseverity, logstate, logquery, logmessage from gp_toolkit.__gp_log_master_ext where logmessage like '% select gp_fault_inject(12,0);' order by logtime desc limit 1;
- logdatabase | logseverity | logstate | logquery |                logmessage                
--------------+-------------+----------+----------+------------------------------------------
- regression  | LOG         | 00000    |          | statement: select gp_fault_inject(12,0);
-(1 row)
-
 -- start_ignore
 drop schema qp_query_execution cascade;
 NOTICE:  drop cascades to table bar

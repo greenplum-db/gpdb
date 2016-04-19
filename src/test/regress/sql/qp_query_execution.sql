@@ -564,7 +564,6 @@ select foo_p.b, foo_p.t from foo_p inner join bar on foo_p.a = bar.k  where foo_
 
 drop function if exists mytest(integer);
 
-select gp_fault_inject(12,0);
 --start_ignore
 drop table if exists orders_test;
 --end_ignore
@@ -673,9 +672,6 @@ WITH (appendonly=true, checksum=true, blocksize=368640, compresslevel=9) PARTITI
 drop table orders_test;
 
 -- select pg_sleep(60);
-
-select logdatabase, logseverity, logstate, logquery, logmessage from gp_toolkit.__gp_log_master_ext where logmessage like '% select gp_fault_inject(12,0);' order by logtime desc limit 1;
-
 -- start_ignore
 drop schema qp_query_execution cascade;
 -- end_ignore
