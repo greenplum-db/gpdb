@@ -3588,9 +3588,9 @@ DROP TABLE qp_misc_jiras.abc_tbl8621;
 ERROR:  table "abc_tbl8621" does not exist
 -- end_ignore
 create table qp_misc_jiras.abc_tbl8621 (a int, b int) with (appendonly=true, orientation=column) distributed by (a);
-create index abc_idx on qp_misc_jiras.abc_tbl8621 using bitmap(a);
-insert into qp_misc_jiras.abc_tbl8621 select i, i+1 from generate_series(1,100000)i;
-insert into qp_misc_jiras.abc_tbl8621 select i, i+1 from generate_series(1,100000)i;
+create index abc_idx on qp_misc_jiras.abc_tbl8621 using bitmap(b);
+insert into qp_misc_jiras.abc_tbl8621 select 1, i from generate_series(1,100000)i;
+insert into qp_misc_jiras.abc_tbl8621 select 1, i from generate_series(1,100000)i;
 -- start_ignore
 DROP TABLE qp_misc_jiras.abc_tbl8621;
 -- end_ignore
