@@ -556,138 +556,6 @@ create table qp_misc_jiras.tbl5219_test (i int, j int);
 insert into qp_misc_jiras.tbl5219_test select i, i%10 from generate_series(0, 99) i;
 select case when 1=2 then rank() over(partition by j order by i) end from qp_misc_jiras.tbl5219_test;
 drop table qp_misc_jiras.tbl5219_test;
--- start_ignore
-create language plpgsql;
--- end_ignore
-DROP TYPE IF EXISTS qp_misc_jiras.tbl4958_percent_cont_type CASCADE;
-CREATE TYPE qp_misc_jiras.tbl4958_percent_cont_type AS (
-        rn real,
-        frn integer,
-        crn integer,
-        frn_val numeric,
-        crn_val numeric
-);
-
-CREATE OR REPLACE FUNCTION qp_misc_jiras.tbl4958_percent_cont_sfunc_p( state qp_misc_jiras.tbl4958_percent_cont_type, percentile real, val numeric, rank bigint, count bigint  )
-        RETURNS qp_misc_jiras.tbl4958_percent_cont_type
-AS $$
-BEGIN
-        IF state.rn = 0 THEN
-                state.rn := 1 + ( percentile * ( count - 1 ) );
-        END IF;
-
-        IF rank = floor( state.rn ) THEN
-                state.frn := rank;
-                state.frn_val := val;
-        END IF;
-
-        IF rank = ceil( state.rn ) THEN
-                state.crn := rank;
-                state.crn_val := val;
-        END IF;
-
-        RETURN state;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION qp_misc_jiras.tbl4958_percent_cont_ffunc_p( state qp_misc_jiras.tbl4958_percent_cont_type )
-        RETURNS numeric
-AS $$
-DECLARE
-        v1 real;
-        v2 real;
-BEGIN
-        IF state.crn = state.frn AND state.crn = state.rn THEN
-                RETURN state.frn_val;
-        END IF;
-
-        v1 := ( state.crn - state.rn ) * state.frn_val;
-        v2 := ( state.rn - state.frn ) * state.crn_val;
-
-        RETURN v1 + v2;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP AGGREGATE IF EXISTS qp_misc_jiras.tbl4958_percent_cont( real, numeric, bigint, bigint );
-CREATE AGGREGATE qp_misc_jiras.tbl4958_percent_cont( real, numeric, bigint, bigint ) (
-        sfunc = qp_misc_jiras.tbl4958_percent_cont_sfunc_p,
-        stype = qp_misc_jiras.tbl4958_percent_cont_type,
-        finalfunc = qp_misc_jiras.tbl4958_percent_cont_ffunc_p,
-        initcond = '( 0, 0, 0, 0, 0 )'
-);
-
-drop table if exists qp_misc_jiras.tbl4958_test;
-create table qp_misc_jiras.tbl4958_test (i int, j int, k int);
-insert into qp_misc_jiras.tbl4958_test select i, i%36, i%109 from generate_series(0, 999999) i;
--- start_ignore
-select qp_misc_jiras.tbl4958_percent_cont(0.90, i::numeric, j, k) from qp_misc_jiras.tbl4958_test;
--- end_ignore
-
-drop table qp_misc_jiras.tbl4958_test;
-drop aggregate qp_misc_jiras.tbl4958_percent_cont(real, numeric, bigint, bigint);
-drop type qp_misc_jiras.tbl4958_percent_cont_type cascade;
-
-DROP TYPE IF EXISTS qp_misc_jiras.tbl4958_percent_cont_type CASCADE;
-CREATE TYPE qp_misc_jiras.tbl4958_percent_cont_type AS (
-        rn real,
-        frn integer,
-        crn integer,
-        frn_val numeric,
-        crn_val numeric
-);
-
-
-
-
-
-CREATE OR REPLACE FUNCTION qp_misc_jiras.tbl4958_percent_cont_sfunc_p( state qp_misc_jiras.tbl4958_percent_cont_type, percentile real, val numeric, rank bigint, count bigint  )
-        RETURNS qp_misc_jiras.tbl4958_percent_cont_type
-AS $$
-        select case when ($1.rn = 0 and $4 != floor ($1.rn) and $4 != ceil ($1.rn))
-                        then (1 + ( $2 * ( $5 - 1 ) ), $1.frn, $1.crn, $1.frn_val, $1.crn_val)::qp_misc_jiras.tbl4958_percent_cont_type
-                    when $1.rn = 0 and $4 != floor($1.rn) and $4 = ceil($1.rn)
-                        then (1 + ( $2 * ( $5 - 1 ) ), $1.frn, $4, $1.frn_val, $3)::qp_misc_jiras.tbl4958_percent_cont_type
-                    when $1.rn = 0 and $4 = floor($1.rn) and $4 != ceil($1.rn)
-                        then (1 + ( $2 * ( $5 - 1 ) ), $4, $1.crn, $3, $1.crn_val)::qp_misc_jiras.tbl4958_percent_cont_type
-                    when $1.rn = 0 and $4 = floor($1.rn) and $4 = ceil($1.rn)
-                        then (1 + ( $2 * ( $5 - 1 ) ), $4, $4, $3, $3)::qp_misc_jiras.tbl4958_percent_cont_type
-                    when $1.rn != 0 and $4 != floor($1.rn) and $4 = ceil($1.rn)
-                        then ($1.rn, $1.frn, $4, $1.frn_val, $3)::qp_misc_jiras.tbl4958_percent_cont_type
-                    when $1.rn != 0 and $4 = floor($1.rn) and $4 != ceil($1.rn)
-                        then ($1.rn, $4, $1.crn, $3, $1.crn_val)::qp_misc_jiras.tbl4958_percent_cont_type
-                    when $1.rn != 0 and $4 = floor($1.rn) and $4 = ceil($1.rn)
-                        then ($1.rn, $4, $4, $3, $3)::qp_misc_jiras.tbl4958_percent_cont_type
-                    else
-                        $1
-               end;
-$$ LANGUAGE SQL;
-
-CREATE OR REPLACE FUNCTION qp_misc_jiras.tbl4958_percent_cont_ffunc_p( state qp_misc_jiras.tbl4958_percent_cont_type )
-        RETURNS numeric
-AS $$
-        select case when $1.crn = $1.frn and $1.crn = $1.rn then $1.frn_val
-                    else (($1.crn - $1.rn ) * $1.frn_val + ($1.rn - $1.frn) * $1.crn_val)::numeric
-                    end;
-$$ LANGUAGE SQL;
-
-DROP AGGREGATE IF EXISTS qp_misc_jiras.tbl4958_percent_cont( real, numeric, bigint, bigint );
-CREATE AGGREGATE qp_misc_jiras.tbl4958_percent_cont( real, numeric, bigint, bigint ) (
-        sfunc = qp_misc_jiras.tbl4958_percent_cont_sfunc_p,
-        stype = qp_misc_jiras.tbl4958_percent_cont_type,
-        finalfunc = qp_misc_jiras.tbl4958_percent_cont_ffunc_p,
-        initcond = '( 0, 0, 0, 0, 0 )'
-);
-
-drop table if exists qp_misc_jiras.tbl4958_test;
-create table qp_misc_jiras.tbl4958_test (i int, j int, k int);
-insert into qp_misc_jiras.tbl4958_test select i, i%36, i%109 from generate_series(0, 999999) i;
--- start_ignore
-select qp_misc_jiras.tbl4958_percent_cont(0.90, i::numeric, j, k) from qp_misc_jiras.tbl4958_test;
--- end_ignore
-
-drop table qp_misc_jiras.tbl4958_test;
-drop aggregate qp_misc_jiras.tbl4958_percent_cont(real,numeric,bigint,bigint);
-drop type qp_misc_jiras.tbl4958_percent_cont_type cascade;
 select n
 from ( select row_number() over (partition by x) from (values (0)) as t(x) ) as r(n)
 group by n;
@@ -2302,20 +2170,14 @@ drop table qp_misc_jiras.bar_6325;
 DROP TABLE qp_misc_jiras.abc_tbl8621;
 -- end_ignore
 
-CREATE TABLE qp_misc_jiras.abc_tbl8621 (a int, b int) WITH (appendonly=true, orientation=column);
-INSERT INTO qp_misc_jiras.abc_tbl8621 select generate_series(1,1000);
-INSERT INTO qp_misc_jiras.abc_tbl8621 select generate_series(1,1000);
-alter table qp_misc_jiras.abc_tbl8621 set distributed randomly;
-alter table qp_misc_jiras.abc_tbl8621 set distributed by (a);
-create index abc_idx on qp_misc_jiras.abc_tbl8621 using bitmap (a);
-insert into qp_misc_jiras.abc_tbl8621 select i, i+1 from generate_series(1, 2000000)i;
-insert into qp_misc_jiras.abc_tbl8621 select i % 100, (i+1) % 100 from generate_series(1,20*1000*1000) i;
+create table qp_misc_jiras.abc_tbl8621 (a int, b int) with (appendonly=true, orientation=column) distributed by (a);
+create index abc_idx on qp_misc_jiras.abc_tbl8621 using bitmap(a);
+insert into qp_misc_jiras.abc_tbl8621 select i, i+1 from generate_series(1,100000)i;
+insert into qp_misc_jiras.abc_tbl8621 select i, i+1 from generate_series(1,100000)i;
 
 -- start_ignore
 DROP TABLE qp_misc_jiras.abc_tbl8621;
 -- end_ignore
-
-
 
 -- start_ignore
 drop table if exists qp_misc_jiras.tbl8860_1;
