@@ -113,7 +113,7 @@ readindextuple(readindexinfo *info, Datum *values, bool *nulls)
 	values[1] = ItemPointerGetDatum(&itup->t_tid);
 
 	if (info->hrel == NULL)
-		values[2] = PointerGetDatum(cstring_to_text(AOTupleIdToString((AOTupleId *)&itup->t_tid))); 
+		values[2] = PointerGetDatum(cstring_to_text(AOTupleIdToString((AOTupleId *)&itup->t_tid)));
 	else
 		values[2] = PointerGetDatum(cstring_to_text("N/A"));
 
@@ -154,6 +154,18 @@ readindex(PG_FUNCTION_ARGS)
 	if (SRF_IS_FIRSTCALL())
 	{
 		Oid		irelid = PG_GETARG_OID(0);
+
+		/* By default we want readindex to return everything. Optionally use the boolean value to skip the corresponding column values from the base table
+		 for ex both are valid:
+		 CREATE OR REPLACE FUNCTION readindex(oid) RETURNS SETOF record AS '$libdir/indexscan', 'readindex' LANGUAGE C STRICT;  -- returns everything
+		 CREATE OR REPLACE FUNCTION readindex(oid, bool) RETURNS SETOF record AS '$libdir/indexscan', 'readindex' LANGUAGE C STRICT; -- skips the corresponding values if the 2nd arg is true
+		*/
+		bool skipValues = false;
+		if(!PG_ARGISNULL(1))
+		{
+			skipValues = PG_GETARG_BOOL(1);
+		}
+
 		TupleDesc	tupdesc;
 		MemoryContext oldcontext;
 		AttrNumber		outattnum;
@@ -164,8 +176,12 @@ readindex(PG_FUNCTION_ARGS)
 
 		irel = index_open(irelid, AccessShareLock);
 		itupdesc = RelationGetDescr(irel);
-		outattnum = FIXED_COLUMN + itupdesc->natts;
+		outattnum = FIXED_COLUMN;
 
+		if(!skipValues)
+		{
+			outattnum += itupdesc->natts;
+		}
 		funcctx = SRF_FIRSTCALL_INIT();
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 		tupdesc = CreateTemplateTupleDesc(outattnum, false);
@@ -176,10 +192,13 @@ readindex(PG_FUNCTION_ARGS)
 		TupleDescInitEntry(tupdesc, attno++, "istatus", TEXTOID, -1, 0);
 		TupleDescInitEntry(tupdesc, attno++, "hstatus", TEXTOID, -1, 0);
 
-		for (i = 0; i < itupdesc->natts; i++)
+		if(!skipValues)
 		{
-			Form_pg_attribute attr = itupdesc->attrs[i];
-			TupleDescInitEntry(tupdesc, attno++, NameStr(attr->attname), attr->atttypid, attr->atttypmod, 0);
+			for (i = 0; i < itupdesc->natts; i++)
+			{
+				Form_pg_attribute attr = itupdesc->attrs[i];
+				TupleDescInitEntry(tupdesc, attno++, NameStr(attr->attname), attr->atttypid, attr->atttypmod, 0);
+			}
 		}
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
