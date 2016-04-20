@@ -1469,7 +1469,9 @@ CTranslatorUtils::PdrgpbsGroupBy
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Group by clause"));
 	}
 
-	if (1 != gpdb::UlListLength(plGroupClause))
+	const ULONG ulGroupClause = gpdb::UlListLength(plGroupClause);
+	GPOS_ASSERT(0 < ulGroupClause);
+	if (1 < ulGroupClause)
 	{
 		// multiple grouping sets
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Multiple grouping sets specifications"));
