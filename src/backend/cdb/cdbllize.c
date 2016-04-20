@@ -447,6 +447,12 @@ static Node *ParallelizeCorrelatedSubPlanUpdateFlowMutator(Node *node)
  * 				 	 	 \_SeqScan (no quals)
  * 	This transformed plan can be executed in a parallel setting since the correlation
  * 	is now part of the result node which executes in the same slice as the outer plan node.
+ *
+ * XXX: This relies on the planner to not generate other kinds of scans, like
+ * IndexScans. We don't have the machinery in place to rescan those with different
+ * parameters. We could support e.g. IndexScans as long as the index qual doesn't
+ * refer to the outer parameter, but the planner isn't currently smart enough to
+ * distinguish that, so we just disable index scans altogether in a subplan.
  */
 static Node* ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerContext *ctx)
 {
@@ -475,7 +481,8 @@ static Node* ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelat
 	if (IsA(node, SeqScan)
 		|| IsA(node, AppendOnlyScan)
 		|| IsA(node, AOCSScan)
-		|| IsA(node, ShareInputScan))
+		|| IsA(node, ShareInputScan)
+		|| IsA(node, ExternalScan))
 	{
 		Plan *scanPlan = (Plan *) node;
 		/**
