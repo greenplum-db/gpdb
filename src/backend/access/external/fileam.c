@@ -299,15 +299,10 @@ void
 external_rescan(FileScanDesc scan)
 {
 
-	if (!scan->fs_noop)
-	{
-		/* may need to open file since beginscan doens't do it for us */
-		if (!scan->fs_file)
-			open_external_readable_source(scan);
+	/* Close previous scan if it was already open */
+	external_stopscan(scan);
 
-		/* seek to beginning of data source so we can start over */
-		url_rewind((URL_FILE*)scan->fs_file, RelationGetRelationName(scan->fs_rd));
-	}
+	/* The first call to external_getnext will re-open the scan */
 
 	/* reset some parse state variables */
 	scan->fs_pstate->fe_eof = false;
