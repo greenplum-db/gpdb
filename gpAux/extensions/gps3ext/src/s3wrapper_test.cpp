@@ -224,6 +224,19 @@ TEST(ExtWrapper, normal_2segs) {
         64 * 1024, "db05de0ec7e0808268e2363d3572dc7f", 1, 2, 64 * 1024 * 1024);
 }
 
+TEST(ExtWrapper, gzipped) {
+    ExtWrapperTest(
+        "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/gzipped/",
+        64 * 1024, "7b2260e9a3a3f26e84aa28dc2124f68f", 0, 1, 123 * 1024);
+}
+
+TEST(ExtWrapper, gzipped_normal1) {
+    ExtWrapperTest(
+        "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/"
+        "gzipped_normal1/",
+        64 * 1024, "eacb7b210d3f7703ee06d16f520b103e", 0, 1, 64 * 1024 * 1024);
+}
+
 #ifdef BIG_FILE_TEST
 TEST(ExtWrapper, normal_3segs) {
     ExtWrapperTest(
@@ -276,6 +289,13 @@ TEST(ExtWrapper, normal2_3segs) {
     ExtWrapperTest(
         "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset2/normal/",
         64 * 1024, "00675684b6d6697571f22baaf407c6df", 2, 3, 64 * 1024 * 1024);
+}
+
+TEST(ExtWrapper, gzipped_normal2) {
+    ExtWrapperTest(
+        "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset2/"
+        "gzipped_normal2/",
+        64 * 1024, "a930794bc885bccf6eed45bd40367a7d", 0, 1, 64 * 1024 * 1024);
 }
 #endif
 

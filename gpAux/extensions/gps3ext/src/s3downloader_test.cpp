@@ -242,14 +242,12 @@ void S3DwonloadTest(const char *url, const char *region, uint64_t file_size,
 }
 
 TEST(S3Downloader, simple) {
-    printf("Try downloading data0014\n");
     S3DwonloadTest(
         "http://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/small17/"
         "data0014",
         "us-west-2", 4420346, "68c4a63b721e7af0ae945ce109ca87ad", 4,
         1024 * 1024, 65536);
 
-    printf("Try downloading data0016\n");
     S3DwonloadTest(
         "http://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/small17/"
         "data0016",
@@ -258,27 +256,29 @@ TEST(S3Downloader, simple) {
 }
 
 TEST(S3Downloader, httpssimple) {
-    printf("Try downloading data0014\n");
     S3DwonloadTest(
-        "http://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/small17/"
+        "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/small17/"
         "data0014",
         "us-west-2", 4420346, "68c4a63b721e7af0ae945ce109ca87ad", 4,
         1024 * 1024, 65536);
 
-    printf("Try downloading data0016\n");
     S3DwonloadTest(
-        "http://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/small17/"
+        "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/small17/"
         "data0016",
         "us-west-2", 2536018, "0fd502a303eb8f138f5916ec357721b1", 4,
         1024 * 1024, 65536);
 }
 
+TEST(S3Downloader, gzipped) {
+    S3DwonloadTest(
+        "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/gzipped/"
+        "data0001.gz",
+        "us-west-2", 328950, "b958fb80b98605a6095e6ebc4b9b4786", 3, 1024 * 1024,
+        65536);
+}
+
 #ifdef BIG_FILE_TEST
 TEST(S3Downloader, bigfile) {
-    // InitLog();
-    // s3ext_loglevel = EXT_DEBUG;
-    // s3ext_logtype = STDERR_LOG;
-    printf("Try downloading big file 1\n");
     S3DwonloadTest(
         "http://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset2/hugefile/"
         "airlinedata1.csv",

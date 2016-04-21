@@ -17,6 +17,7 @@
 #include <cstring>
 
 #include <curl/curl.h>
+#include <zlib.h>
 
 #include "s3common.h"
 
@@ -27,6 +28,11 @@ struct Range {
     uint64_t offset;
     uint64_t len;
 };
+
+typedef enum compression_type {
+    S3_ZIP_NONE,
+    S3_ZIP_GZIP,
+} compression_type_t;
 
 class OffsetMgr {
    public:
@@ -79,15 +85,24 @@ class BlockingBuffer {
     Range nextpos;
 };
 
-struct Downloader {
+struct zstream_info {
+    z_stream zstream;
+    bool inited;
+    unsigned char* in;
+    unsigned char* out;
+    uint64_t have_out;
+    uint64_t done_out;
+};
+
+class Downloader {
+   public:
     Downloader(uint8_t part_num);
     ~Downloader();
     bool init(string url, string region, uint64_t size, uint64_t chunksize,
               S3Credential* pcred);
     bool get(char* buf, uint64_t& len);
     void destroy();
-    // reset
-    // init(url)
+
    private:
     const uint8_t num;
     pthread_t* threads;
@@ -95,6 +110,16 @@ struct Downloader {
     OffsetMgr* o;
     uint64_t chunkcount;
     uint64_t readlen;
+
+    unsigned char magic_bytes[4];
+    uint8_t magic_bytes_num;
+    compression_type_t compression;
+    bool set_compression();
+
+    bool plain_get(char* buf, uint64_t& len);
+
+    struct zstream_info* z_info;
+    bool zstream_get(char* buf, uint64_t& len);
 };
 
 struct Bufinfo {

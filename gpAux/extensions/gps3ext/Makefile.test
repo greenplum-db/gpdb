@@ -3,12 +3,12 @@ DEBUG_S3 = y
 DEBUG_S3_CURL = n
 AWS_TEST = y
 FAKE_TEST = y
-BIG_FILE_TEST = y
+BIG_FILE_TEST = n
 
 # Flags
 CPP = g++
 INCLUDES = -Isrc -Ilib -I/usr/include/libxml2
-LDFLAGS = -lpthread -lcrypto -lcurl -lxml2 -lgcov
+LDFLAGS = -lpthread -lcrypto -lcurl -lxml2 -lgcov -lz
 CFLAGS = -O2 -g3 -std=c++98 -fPIC -fprofile-arcs -ftest-coverage
 
 ifeq ($(DEBUG_S3),y)

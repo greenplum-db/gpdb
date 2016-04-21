@@ -9,6 +9,7 @@
 #include <curl/curl.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
+#include <zlib.h>
 
 #include "gps3ext.h"
 #include "s3downloader.h"
@@ -84,14 +85,24 @@ bool BlockingBuffer::Init() {
 
 // ret < len means EMPTY
 uint64_t BlockingBuffer::Read(char *buf, uint64_t len) {
+    // QueryCancelPending stops s3_import(), this check is not needed if
+    // s3_import() every time calls BlockingBuffer->Read() only once,
+    // otherwise(as we do in Downloader->get() for decompression feature),
+    // first call sets buffer to STATUS_EMPTY, second call hangs.
+    if (QueryCancelPending) {
+        S3INFO("Buffer reading is interrupted by GPDB");
+        return 0;
+    }
+
     // assert buf not null
     // assert len > 0, len < this->bufcap
     pthread_mutex_lock(&this->stat_mutex);
     while (this->status == BlockingBuffer::STATUS_EMPTY) {
         pthread_cond_wait(&this->stat_cond, &this->stat_mutex);
     }
+
     uint64_t left_data_length = this->realsize - this->readpos;
-    int length_to_read = std::min(len, left_data_length);
+    uint64_t length_to_read = std::min(len, left_data_length);
 
     memcpy(buf, this->bufferdata + this->readpos, length_to_read);
     if (left_data_length >= len) {
@@ -212,7 +223,13 @@ void *DownloadThreadfunc(void *data) {
 }
 
 Downloader::Downloader(uint8_t part_num)
-    : num(part_num), o(NULL), chunkcount(0), readlen(0) {
+    : num(part_num),
+      o(NULL),
+      chunkcount(0),
+      readlen(0),
+      magic_bytes_num(0),
+      compression(S3_ZIP_NONE),
+      z_info(NULL) {
     this->threads = (pthread_t *)malloc(num * sizeof(pthread_t));
     if (this->threads)
         memset((void *)this->threads, 0, num * sizeof(pthread_t));
@@ -250,23 +267,82 @@ bool Downloader::init(string url, string region, uint64_t size,
         pthread_create(&this->threads[i], NULL, DownloadThreadfunc,
                        this->buffers[i]);
     }
+
     readlen = 0;
     chunkcount = 0;
+    memset(this->magic_bytes, 0, 4);
+
+    return true;
+}
+
+bool Downloader::set_compression() {
+    if ((this->magic_bytes[0] == 0x1f) && (this->magic_bytes[1] == 0x8b)) {
+        this->compression = S3_ZIP_GZIP;
+
+        this->z_info = new zstream_info();
+        this->z_info->inited = false;
+        this->z_info->in = NULL;
+        this->z_info->out = NULL;
+        this->z_info->done_out = 0;
+        this->z_info->have_out = 0;
+    } else {
+        this->compression = S3_ZIP_NONE;
+    }
+
     return true;
 }
 
 bool Downloader::get(char *data, uint64_t &len) {
+    if (this->magic_bytes_num == 0) {
+        // get first 4(at least 2) bytes to check if this file is compressed
+        BlockingBuffer *buf = buffers[this->chunkcount % this->num];
+
+        if ((this->magic_bytes_num = buf->Read((char *)this->magic_bytes, 4)) >
+            1) {
+            this->set_compression();
+        }
+    }
+
+    switch (this->compression) {
+        case S3_ZIP_GZIP:
+            return this->zstream_get(data, len);
+            break;
+        default:
+            return this->plain_get(data, len);
+    }
+}
+
+bool Downloader::plain_get(char *data, uint64_t &len) {
     uint64_t filelen = this->o->Size();
+    uint64_t tmplen = 0;
 
 RETRY:
+    // confirm there is no more available data, done with this file
     if (this->readlen == filelen) {
         len = 0;
         return true;
     }
 
     BlockingBuffer *buf = buffers[this->chunkcount % this->num];
-    uint64_t tmplen = buf->Read(data, len);
+
+    // get data from this->magic_bytes, or buf->Read(), or both
+    if (this->readlen < this->magic_bytes_num) {
+        if ((this->readlen + len) <= this->magic_bytes_num) {
+            memcpy(data, this->magic_bytes + this->readlen, len);
+            tmplen = len;
+        } else {
+            memcpy(data, this->magic_bytes + this->readlen,
+                   this->magic_bytes_num - this->readlen);
+            tmplen = this->magic_bytes_num - this->readlen +
+                     buf->Read(data + this->magic_bytes_num - this->readlen,
+                               this->readlen + len - this->magic_bytes_num);
+        }
+    } else {
+        tmplen = buf->Read(data, len);
+    }
+
     this->readlen += tmplen;
+
     if (tmplen < len) {
         this->chunkcount++;
         if (buf->Error()) {
@@ -286,21 +362,164 @@ RETRY:
     return true;
 }
 
+bool Downloader::zstream_get(char *data, uint64_t &len) {
+    uint64_t filelen = this->o->Size();
+
+#define S3_ZIP_CHUNKSIZE 256 * 1024
+    uint32_t left_out = 0;
+    zstream_info *zinfo = this->z_info;
+    z_stream *strm = &zinfo->zstream;
+
+RETRY:
+    // fail-safe, incase(very unlikely) there is a infinite-loop bug. For
+    // instance, S3 returns wrong file size which is larger than actual the
+    // number. Never happened, but better be careful.
+    if (this->chunkcount > (this->o->Size() / this->o->Chunksize() + 2)) {
+        if (zinfo->inited) {
+            inflateEnd(strm);
+        }
+        len = 0;
+        return false;
+    }
+
+    // no more available data to read, decompress or copy, done with this file
+    if (this->readlen == filelen && !(zinfo->have_out - zinfo->done_out) &&
+        !strm->avail_in) {
+        if (zinfo->inited) {
+            inflateEnd(strm);
+        }
+        len = 0;
+        return true;
+    }
+
+    BlockingBuffer *buf = buffers[this->chunkcount % this->num];
+
+    // strm is the structure used by zlib to decompress stream
+    if (!zinfo->inited) {
+        strm->zalloc = Z_NULL;
+        strm->zfree = Z_NULL;
+        strm->opaque = Z_NULL;
+        strm->avail_in = 0;
+        strm->next_in = Z_NULL;
+
+        zinfo->in = (unsigned char *)malloc(S3_ZIP_CHUNKSIZE);
+        zinfo->out = (unsigned char *)malloc(S3_ZIP_CHUNKSIZE);
+        if (!zinfo->in || !zinfo->out) {
+            S3ERROR("Failed to allocate memory");
+            return false;
+        }
+        // 47 is the number of windows bits, to make sure zlib could recognize
+        // and decode gzip stream
+        if (inflateInit2(strm, 47) != Z_OK) {
+            S3ERROR("Failed to init gzip function");
+            return false;
+        }
+
+        zinfo->inited = true;
+    }
+
+    do {
+        // copy decompressed data
+        left_out = zinfo->have_out - zinfo->done_out;
+        if (left_out > len) {
+            memcpy(data, zinfo->out + zinfo->done_out, len);
+            zinfo->done_out += len;
+            break;
+        } else if (left_out) {
+            memcpy(data, zinfo->out + zinfo->done_out, left_out);
+            zinfo->done_out = 0;
+            zinfo->have_out = 0;
+            len = left_out;
+            break;
+        }
+
+        // get another decompressed chunk
+        if (this->readlen && (strm->avail_in != 0)) {
+            strm->avail_out = S3_ZIP_CHUNKSIZE;
+            strm->next_out = zinfo->out;
+
+            switch (inflate(strm, Z_NO_FLUSH)) {
+                case Z_STREAM_ERROR:
+                case Z_NEED_DICT:
+                case Z_DATA_ERROR:
+                case Z_MEM_ERROR:
+                    S3ERROR("Failed to decompress data");
+                    inflateEnd(strm);
+                    return false;
+            }
+
+            zinfo->have_out = S3_ZIP_CHUNKSIZE - strm->avail_out;
+        }
+
+        // get another compressed chunk
+        // from magic_bytes, or buf->Read(), or both
+        if (!zinfo->have_out) {
+            if (this->readlen < this->magic_bytes_num) {
+                memcpy(zinfo->in, this->magic_bytes + this->readlen,
+                       this->magic_bytes_num - this->readlen);
+                strm->avail_in =
+                    this->magic_bytes_num - this->readlen +
+                    buf->Read((char *)zinfo->in + this->magic_bytes_num -
+                                  this->readlen,
+                              S3_ZIP_CHUNKSIZE - this->magic_bytes_num +
+                                  this->readlen);
+            } else {
+                strm->avail_in = buf->Read((char *)zinfo->in, S3_ZIP_CHUNKSIZE);
+            }
+
+            if (buf->Error()) {
+                S3ERROR("Error occurs while downloading, skip");
+                inflateEnd(strm);
+                return false;
+            }
+            strm->next_in = zinfo->in;
+
+            // readlen is the read size of orig file, not the decompressed
+            this->readlen += strm->avail_in;
+
+            // done with *reading* this compressed file, still need to confirm
+            // it's all decompressed and transferred/get()
+            if (strm->avail_in == 0) {
+                this->chunkcount++;
+                goto RETRY;
+            }
+        }
+    } while (1);
+
+    return true;
+}
+
 void Downloader::destroy() {
     for (int i = 0; i < this->num; i++) {
         if (this->threads && this->threads[i]) pthread_cancel(this->threads[i]);
     }
+
     for (int i = 0; i < this->num; i++) {
         if (this->threads && this->threads[i])
             pthread_join(this->threads[i], NULL);
         if (this->buffers && this->buffers[i]) delete this->buffers[i];
     }
+
     if (this->o) delete this->o;
 }
 
 Downloader::~Downloader() {
     if (this->threads) free(this->threads);
     if (this->buffers) free(this->buffers);
+
+    if (this->z_info) {
+        if (this->z_info->in) {
+            free(this->z_info->in);
+            this->z_info->in = NULL;
+        }
+        if (this->z_info->out) {
+            free(this->z_info->out);
+            this->z_info->out = NULL;
+        }
+
+        delete this->z_info;
+        this->z_info = NULL;
+    }
 }
 
 // return the number of items
@@ -622,7 +841,7 @@ static bool extractContent(ListBucketResult *result, xmlNode *root_element,
                         S3ERROR("Faild to create item for %s", key);
                     }
                 } else {
-                    S3INFO("Size of %s is " PRIu64 ", skip it", key, size);
+                    S3INFO("Size of \"%s\" is %" PRIu64 ", skip it", key, size);
                 }
             }
 
