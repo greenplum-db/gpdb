@@ -19,7 +19,7 @@
 
 #define DEFAULT_TYPDELIM		','
 
-extern void DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid);
+extern void DefineType(List *names, List *parameters, Oid newOid, Oid newArrayOid);
 extern void RemoveType(List *names, DropBehavior behavior, bool missing_ok);
 extern void RemoveTypeById(Oid typeOid);
 extern void DefineDomain(CreateDomainStmt *stmt);

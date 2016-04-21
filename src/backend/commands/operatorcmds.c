@@ -63,7 +63,8 @@ static void AlterOperatorOwner_internal(Relation rel, Oid operOid, Oid newOwnerI
  * 'parameters' is a list of DefElem
  */
 void
-DefineOperator(List *names, List *parameters, Oid newOid)
+DefineOperator(List *names, List *parameters,
+			   Oid newOid, Oid newCommutatorOid, Oid newNegatorOid)
 {
 	char	   *oprName;
 	Oid			oprNamespace;
@@ -172,7 +173,9 @@ DefineOperator(List *names, List *parameters, Oid newOid)
 				   joinName,	/* optional join sel. procedure name */
 				   canMerge,	/* operator merges */
 				   canHash,	/* operator hashes */
-				   newOid);
+				   newOid,
+				   &newCommutatorOid,
+				   &newNegatorOid);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -183,7 +186,9 @@ DefineOperator(List *names, List *parameters, Oid newOid)
 		stmt->args = NIL;
 		stmt->definition = parameters;
 		stmt->newOid = opOid;
-		stmt->shadowOid = 0;
+		stmt->commutatorOid = newCommutatorOid;
+		stmt->negatorOid = newNegatorOid;
+		stmt->arrayOid = InvalidOid;
 		CdbDispatchUtilityStatement((Node *) stmt, "DefineOperator");
 	}
 }

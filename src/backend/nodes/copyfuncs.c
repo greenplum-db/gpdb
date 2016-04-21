@@ -3286,10 +3286,12 @@ _copyDefineStmt(DefineStmt *from)
 	COPY_NODE_FIELD(defnames);
 	COPY_NODE_FIELD(args);
 	COPY_NODE_FIELD(definition);
-	COPY_SCALAR_FIELD(newOid);
-	COPY_SCALAR_FIELD(shadowOid);
 	COPY_SCALAR_FIELD(ordered);  /* CDB */
 	COPY_SCALAR_FIELD(trusted);  /* CDB */
+	COPY_SCALAR_FIELD(newOid);
+	COPY_SCALAR_FIELD(arrayOid);
+	COPY_SCALAR_FIELD(commutatorOid);
+	COPY_SCALAR_FIELD(negatorOid);
 
 	return newnode;
 }

@@ -1180,11 +1180,12 @@ ProcessUtility(Node *parsetree,
 						break;
 					case OBJECT_OPERATOR:
 						Assert(stmt->args == NIL);
-						DefineOperator(stmt->defnames, stmt->definition, stmt->newOid);
+						DefineOperator(stmt->defnames, stmt->definition,
+									   stmt->newOid, stmt->commutatorOid, stmt->negatorOid);
 						break;
 					case OBJECT_TYPE:
 						Assert(stmt->args == NIL);
-						DefineType(stmt->defnames, stmt->definition, stmt->newOid, stmt->shadowOid);
+						DefineType(stmt->defnames, stmt->definition, stmt->newOid, stmt->arrayOid);
 						break;
 					case OBJECT_EXTPROTOCOL:
 						Assert(stmt->args == NIL);

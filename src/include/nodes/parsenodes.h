@@ -1907,10 +1907,18 @@ typedef struct DefineStmt
 	List	   *defnames;		/* qualified name (list of Value strings) */
 	List	   *args;			/* a list of TypeName (if needed) */
 	List	   *definition;		/* a list of DefElem */
-	Oid			newOid;			/* for MPP only, the new Oid of the object */
-	Oid			shadowOid;
 	bool        ordered;        /* signals ordered aggregates */
 	bool		trusted;		/* used only for PROTOCOL as this point */
+
+	/*
+	 * These are filled in by the dispatcher, when sending the command
+	 * to segments.
+	 */
+	Oid			newOid;			/* the new Oid of the object */
+	Oid			arrayOid;		/* for CREATE TYPE, array type's OID */
+	Oid			commutatorOid;	/* for CREATE OPERATOR, commutator's OID */
+	Oid			negatorOid;		/* for CREATE OPERATOR, negator's OID */
+
 } DefineStmt;
 
 /* ----------------------

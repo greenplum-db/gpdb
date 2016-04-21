@@ -2997,10 +2997,12 @@ _outDefineStmt(StringInfo str, DefineStmt *node)
 	WRITE_NODE_FIELD(defnames);
 	WRITE_NODE_FIELD(args);
 	WRITE_NODE_FIELD(definition);
-	WRITE_OID_FIELD(newOid);
-	WRITE_OID_FIELD(shadowOid);
 	WRITE_BOOL_FIELD(ordered);  /* CDB */
 	WRITE_BOOL_FIELD(trusted);  /* CDB */
+	WRITE_OID_FIELD(newOid);
+	WRITE_OID_FIELD(arrayOid);
+	WRITE_OID_FIELD(commutatorOid);
+	WRITE_OID_FIELD(negatorOid);
 }
 
 static void
