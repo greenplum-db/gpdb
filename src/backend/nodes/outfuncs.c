@@ -2525,6 +2525,7 @@ _outAlterTableStmt(StringInfo str, AlterTableStmt *node)
 	{
 		WRITE_OID_FIELD(oidInfo[m].relOid);
 		WRITE_OID_FIELD(oidInfo[m].comptypeOid);
+		WRITE_OID_FIELD(oidInfo[m].comptypeArrayOid);
 		WRITE_OID_FIELD(oidInfo[m].toastOid);
 		WRITE_OID_FIELD(oidInfo[m].toastIndexOid);
 		WRITE_OID_FIELD(oidInfo[m].toastComptypeOid);

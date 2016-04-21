@@ -1077,6 +1077,7 @@ _readAlterTableStmt(void)
 		{
 			READ_OID_FIELD(oidInfo[m].relOid);
 			READ_OID_FIELD(oidInfo[m].comptypeOid);
+			READ_OID_FIELD(oidInfo[m].comptypeArrayOid);
 			READ_OID_FIELD(oidInfo[m].toastOid);
 			READ_OID_FIELD(oidInfo[m].toastIndexOid);
 			READ_OID_FIELD(oidInfo[m].toastComptypeOid);
