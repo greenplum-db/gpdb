@@ -34,10 +34,10 @@ Distributed by: (a)
  before_heap_ins_trig |      7
 (1 row)
 
-       List of data types
- Schema |  Name   | Description 
---------+---------+-------------
- public | complex | 
+            List of data types
+ Schema |       Name        | Description 
+--------+-------------------+-------------
+ public | user_defined_type | 
 (1 row)
 
                              List of operators

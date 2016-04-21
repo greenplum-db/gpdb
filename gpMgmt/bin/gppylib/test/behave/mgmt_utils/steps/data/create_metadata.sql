@@ -18,7 +18,7 @@ CREATE TRIGGER before_heap_ins_trig BEFORE INSERT ON heap_table
 FOR EACH ROW EXECUTE PROCEDURE trigger_func();
 
 -- Create a user-defined type
-CREATE TYPE complex AS (r real, i real);
+CREATE TYPE user_defined_type AS (r real, i real);
 
 -- Create aggregate functions
 CREATE AGGREGATE newcnt ("any") (
