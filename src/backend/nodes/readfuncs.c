@@ -2754,7 +2754,6 @@ _readCreateCastStmt(void)
 	READ_DONE();
 }
 
-#ifndef COMPILING_BINARY_FUNCS
 static DropCastStmt *
 _readDropCastStmt(void)
 {
@@ -2767,7 +2766,6 @@ _readDropCastStmt(void)
 
 	READ_DONE();
 }
-#endif /* COMPILING_BINARY_FUNCS */
 
 static CreateOpClassStmt *
 _readCreateOpClassStmt(void)
@@ -2775,11 +2773,13 @@ _readCreateOpClassStmt(void)
 	READ_LOCALS(CreateOpClassStmt);
 
 	READ_NODE_FIELD(opclassname);
+	READ_NODE_FIELD(opfamilyname);
 	READ_STRING_FIELD(amname);
 	READ_NODE_FIELD(datatype);
 	READ_NODE_FIELD(items);
 	READ_BOOL_FIELD(isDefault);
 	READ_OID_FIELD(opclassOid);
+	READ_OID_FIELD(opfamilyOid);
 
 	READ_DONE();
 }
@@ -2798,7 +2798,29 @@ _readCreateOpClassItem(void)
 	READ_DONE();
 }
 
-#ifndef COMPILING_BINARY_FUNCS
+static CreateOpFamilyStmt *
+_readCreateOpFamilyStmt(void)
+{
+	READ_LOCALS(CreateOpFamilyStmt);
+	READ_NODE_FIELD(opfamilyname);
+	READ_STRING_FIELD(amname);
+	READ_OID_FIELD(newOid);
+
+	READ_DONE();
+}
+
+static AlterOpFamilyStmt *
+_readAlterOpFamilyStmt(void)
+{
+	READ_LOCALS(AlterOpFamilyStmt);
+	READ_NODE_FIELD(opfamilyname);
+	READ_STRING_FIELD(amname);
+	READ_BOOL_FIELD(isDrop);
+	READ_NODE_FIELD(items);
+
+	READ_DONE();
+}
+
 static RemoveOpClassStmt *
 _readRemoveOpClassStmt(void)
 {
@@ -2810,7 +2832,18 @@ _readRemoveOpClassStmt(void)
 
 	READ_DONE();
 }
-#endif /* COMPILING_BINARY_FUNCS */
+
+static RemoveOpFamilyStmt *
+_readRemoveOpFamilyStmt(void)
+{
+	READ_LOCALS(RemoveOpFamilyStmt);
+	READ_NODE_FIELD(opfamilyname);
+	READ_STRING_FIELD(amname);
+	READ_ENUM_FIELD(behavior, DropBehavior);
+	READ_BOOL_FIELD(missing_ok);
+
+	READ_DONE();
+}
 
 static CreateConversionStmt *
 _readCreateConversionStmt(void)
@@ -3107,6 +3140,7 @@ static ParseNodeInfo infoAr[] =
 	{"ALTERFUNCTIONSTMT", (ReadFn)_readAlterFunctionStmt},
 	{"ALTEROBJECTSCHEMASTMT", (ReadFn)_readAlterObjectSchemaStmt},
 	{"ALTEROWNERSTMT", (ReadFn)_readAlterOwnerStmt},
+	{"ALTEROPFAMILYSTMT", (ReadFn)_readAlterOpFamilyStmt},
 	{"ALTERPARTITIONCMD", (ReadFn)_readAlterPartitionCmd},
 	{"ALTERPARTITIONID", (ReadFn)_readAlterPartitionId},
 	{"ALTERROLESETSTMT", (ReadFn)_readAlterRoleSetStmt},
@@ -3145,6 +3179,7 @@ static ParseNodeInfo infoAr[] =
 	{"CREATEFUNCSTMT", (ReadFn)_readCreateFunctionStmt},
 	{"CREATEOPCLASS", (ReadFn)_readCreateOpClassStmt},
 	{"CREATEOPCLASSITEM", (ReadFn)_readCreateOpClassItem},
+	{"CREATEOPFAMILYSTMT", (ReadFn)_readCreateOpFamilyStmt},
 	{"CREATEPLANGSTMT", (ReadFn)_readCreatePLangStmt},
 	{"CREATEROLESTMT", (ReadFn)_readCreateRoleStmt},
 	{"CREATESCHEMASTMT", (ReadFn)_readCreateSchemaStmt},
@@ -3205,6 +3240,7 @@ static ParseNodeInfo infoAr[] =
 	{"RELABELTYPE", (ReadFn)_readRelabelType},
 	{"REMOVEFUNCSTMT", (ReadFn)_readRemoveFuncStmt},
 	{"REMOVEOPCLASS", (ReadFn)_readRemoveOpClassStmt},
+	{"REMOVEOPFAMILY", (ReadFn)_readRemoveOpFamilyStmt},
 	{"RENAMESTMT", (ReadFn)_readRenameStmt},
 	{"ROW", (ReadFn)_readRowExpr},
 	{"ROWCOMPAREEXPR", (ReadFn)_readRowCompareExpr},

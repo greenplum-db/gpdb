@@ -1947,7 +1947,15 @@ typedef struct CreateOpClassStmt
 	TypeName   *datatype;		/* datatype of indexed column */
 	List	   *items;			/* List of CreateOpClassItem nodes */
 	bool		isDefault;		/* Should be marked as default for type? */
+
+	/*
+	 * When dispatched from QD to QEs, opclassOid is the OID to use for
+	 * the opclass, and opfamilyOid is the OID of the operator family
+	 * to associate it with.
+	 */
 	Oid			opclassOid;
+	Oid			opfamilyOid;
+	bool		createOpFamily;
 } CreateOpClassStmt;
 
 #define OPCLASS_ITEM_OPERATOR		1
@@ -1977,6 +1985,9 @@ typedef struct CreateOpFamilyStmt
 	NodeTag		type;
 	List	   *opfamilyname;	/* qualified name (list of Value strings) */
 	char	   *amname;			/* name of index AM opfamily is for */
+
+	Oid			newOid;			/* Created opfamily's OID, when dispatched
+								 * from QD to QEs */
 } CreateOpFamilyStmt;
 
 /* ----------------------

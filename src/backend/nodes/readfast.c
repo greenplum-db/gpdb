@@ -1376,30 +1376,6 @@ _readDefineStmt(void)
 
 }
 
-static DropCastStmt *
-_readDropCastStmt(void)
-{
-	READ_LOCALS(DropCastStmt);
-	READ_NODE_FIELD(sourcetype);
-	READ_NODE_FIELD(targettype);
-	READ_ENUM_FIELD(behavior, DropBehavior); Assert(local_node->behavior <= DROP_CASCADE);
-	READ_BOOL_FIELD(missing_ok);
-
-	READ_DONE();
-}
-
-static RemoveOpClassStmt *
-_readRemoveOpClassStmt(void)
-{
-	READ_LOCALS(RemoveOpClassStmt);
-	READ_NODE_FIELD(opclassname);
-	READ_STRING_FIELD(amname);
-	READ_ENUM_FIELD(behavior, DropBehavior); Assert(local_node->behavior <= DROP_CASCADE);
-	READ_BOOL_FIELD(missing_ok);
-
-	READ_DONE();
-}
-
 static CopyStmt *
 _readCopyStmt(void)
 {
@@ -3040,8 +3016,17 @@ readNodeBinary(void)
 			case T_CreateOpClassItem:
 				return_value = _readCreateOpClassItem();
 				break;
+			case T_CreateOpFamilyStmt:
+				return_value = _readCreateOpFamilyStmt();
+				break;
+			case T_AlterOpFamilyStmt:
+				return_value = _readAlterOpFamilyStmt();
+				break;
 			case T_RemoveOpClassStmt:
 				return_value = _readRemoveOpClassStmt();
+				break;
+			case T_RemoveOpFamilyStmt:
+				return_value = _readRemoveOpFamilyStmt();
 				break;
 			case T_CreateConversionStmt:
 				return_value = _readCreateConversionStmt();
