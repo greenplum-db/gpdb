@@ -94,7 +94,7 @@ DefineExtProtocol(List *name, List *parameters, Oid newOid, bool trusted)
 		stmt->args = NIL;
 		stmt->definition = parameters;
 		stmt->newOid = protOid;
-		stmt->shadowOid = 0;
+		stmt->arrayOid = stmt->commutatorOid = stmt->negatorOid = InvalidOid;
 		stmt->ordered = false;
 		stmt->trusted = trusted;
 		CdbDispatchUtilityStatement((Node *) stmt, "DefineExtprotocol");

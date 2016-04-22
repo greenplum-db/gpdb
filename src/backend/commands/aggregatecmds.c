@@ -234,7 +234,7 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 		stmt->args = args;
 		stmt->definition = parameters;
 		stmt->newOid = aggOid;
-		stmt->shadowOid = 0;
+		stmt->arrayOid = stmt->commutatorOid = stmt->negatorOid = InvalidOid;
 		stmt->ordered = ordered;
 		CdbDispatchUtilityStatement((Node *) stmt, "DefineAggregate");
 	}

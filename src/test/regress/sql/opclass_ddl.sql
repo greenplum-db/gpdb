@@ -1,0 +1,62 @@
+-- The following is a cut-down version of PostgreSQL 9.3's "alter_generic"
+-- test, containing the opclass and opfamily parts of that test. Backported
+-- to GPDB, because we have no other tests for the opclass and opfamily DDL
+-- commands. These can be removed once we merge with 9.3 (the DROP+CREATE
+-- with same name tests are not in the upstream version though!)
+
+-- Clean up in case a prior regression run failed
+SET client_min_messages TO 'warning';
+
+DROP ROLE IF EXISTS regtest_alter_user1;
+DROP ROLE IF EXISTS regtest_alter_user2;
+DROP ROLE IF EXISTS regtest_alter_user3;
+
+RESET client_min_messages;
+
+CREATE USER regtest_alter_user3;
+CREATE USER regtest_alter_user2;
+CREATE USER regtest_alter_user1 IN ROLE regtest_alter_user3;
+
+CREATE SCHEMA alt_nsp1;
+
+GRANT ALL ON SCHEMA alt_nsp1 TO public;
+
+SET search_path = alt_nsp1, public;
+
+--
+-- OpFamily and OpClass
+--
+CREATE OPERATOR FAMILY alt_opf1 USING hash;
+CREATE OPERATOR FAMILY alt_opf2 USING hash;
+
+-- Drop, and create another opfamily with same name. Should work, unless
+-- we forgot to dispatch the DROP to a segment.
+DROP OPERATOR FAMILY alt_opf1 USING hash;
+CREATE OPERATOR FAMILY alt_opf1 USING hash;
+
+ALTER OPERATOR FAMILY alt_opf1 USING hash OWNER TO regtest_alter_user1;
+ALTER OPERATOR FAMILY alt_opf2 USING hash OWNER TO regtest_alter_user1;
+
+CREATE OPERATOR CLASS alt_opc1 FOR TYPE uuid USING hash AS STORAGE uuid;
+CREATE OPERATOR CLASS alt_opc2 FOR TYPE uuid USING hash AS STORAGE uuid;
+
+-- Also test DROP+CREATE for opclasses
+DROP OPERATOR CLASS alt_opc1 USING hash;
+CREATE OPERATOR CLASS alt_opc1 FOR TYPE uuid USING hash AS STORAGE uuid;
+
+ALTER OPERATOR CLASS alt_opc1 USING hash OWNER TO regtest_alter_user1;
+ALTER OPERATOR CLASS alt_opc2 USING hash OWNER TO regtest_alter_user1;
+
+SET SESSION AUTHORIZATION regtest_alter_user1;
+
+ALTER OPERATOR FAMILY alt_opf1 USING hash RENAME TO alt_opf2;  -- failed (name conflict)
+ALTER OPERATOR FAMILY alt_opf1 USING hash RENAME TO alt_opf3;  -- OK
+ALTER OPERATOR FAMILY alt_opf2 USING hash OWNER TO regtest_alter_user2;  -- failed (no role membership)
+ALTER OPERATOR FAMILY alt_opf2 USING hash OWNER TO regtest_alter_user3;  -- OK
+
+ALTER OPERATOR CLASS alt_opc1 USING hash RENAME TO alt_opc2;  -- failed (name conflict)
+ALTER OPERATOR CLASS alt_opc1 USING hash RENAME TO alt_opc3;  -- OK
+ALTER OPERATOR CLASS alt_opc2 USING hash OWNER TO regtest_alter_user2;  -- failed (no role membership)
+ALTER OPERATOR CLASS alt_opc2 USING hash OWNER TO regtest_alter_user3;  -- OK
+
+RESET SESSION AUTHORIZATION;

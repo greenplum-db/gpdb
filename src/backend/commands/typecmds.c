@@ -99,7 +99,7 @@ static void remove_type_encoding(Oid typid);
  *		Registers a new type.
  */
 void
-DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
+DefineType(List *names, List *parameters, Oid newOid, Oid newArrayOid)
 {
 	char	   *typeName;
 	Oid			typeNamespace;
@@ -185,7 +185,8 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 				stmt->args = NIL;
 				stmt->definition = NIL;
 				stmt->newOid = typoid;
-				stmt->shadowOid = shadowOid;
+				stmt->arrayOid = newArrayOid;
+				stmt->commutatorOid = stmt->negatorOid = InvalidOid;
 				CdbDispatchUtilityStatement((Node *) stmt, "DefineType");
 			}
 			return;
@@ -433,9 +434,9 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_PROC,
 					   NameListToString(analyzeName));
 
-	/*  Preassign array type OID so we can insert it in pg_type.typarray */
+	/* Preassign array type OID so we can insert it in pg_type.typarray */
 	pg_type = heap_open(TypeRelationId, AccessShareLock);
-	array_oid = shadowOid;
+	array_oid = newArrayOid;
 	if (!OidIsValid(array_oid))
 	{
 		array_oid = GetNewOid(pg_type);
@@ -489,7 +490,7 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 		/* alignment must be 'i' or 'd' for arrays */
 		alignment = (alignment == 'd') ? 'd' : 'i';
 
-		shadowOid = TypeCreateWithOid(
+		TypeCreateWithOid(
 			   array_type,		/* type name */
 			   typeNamespace,	/* namespace */
 			   InvalidOid,		/* relation oid (n/a here) */
@@ -532,7 +533,7 @@ DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid)
 		stmt->args = NIL;
 		stmt->definition = parameters;
 		stmt->newOid = typoid;
-		stmt->shadowOid = shadowOid;
+		stmt->arrayOid = array_oid;
 		CdbDispatchUtilityStatement((Node *) stmt, "DefineType");
 	}
 }

@@ -24,10 +24,13 @@
 #include "access/transam.h"
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
+#include "catalog/pg_amop.h"
+#include "catalog/pg_amproc.h"
 #include "catalog/pg_auth_members.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_exttable.h"
+#include "catalog/pg_largeobject.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_pltemplate.h"
 #include "catalog/pg_resqueue.h"
@@ -37,8 +40,10 @@
 #include "catalog/pg_filespace_entry.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_resqueue.h"
+#include "catalog/pg_rewrite.h"
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_tidycat.h"
+#include "catalog/pg_trigger.h"
 
 #include "catalog/gp_configuration.h"
 #include "catalog/gp_configuration.h"
@@ -847,6 +852,41 @@ relationId == PgFileSpaceEntryToastIndex ||
 	return false;
 }
 
+/*
+ * OIDs for catalog object are normally allocated in the master, and
+ * executor nodes should just use the OIDs passed by the master. But
+ * there are some exceptions.
+ */
+static bool
+RelationNeedsSynchronizedOIDs(Relation relation)
+{
+	if (IsSystemNamespace(RelationGetNamespace(relation)))
+	{
+		switch(RelationGetRelid(relation))
+		{
+			/*
+			 * pg_largeobject is more like a user table, and has
+			 * different contents in each segment and master.
+			 */
+			case LargeObjectRelationId:
+				return false;
+
+			/* We don't currently synchronize the OIDs of these catalogs. */
+			case RewriteRelationId:
+			case TriggerRelationId:
+			case AccessMethodOperatorRelationId:
+			case AccessMethodProcedureRelationId:
+				return false;
+		}
+
+		/*
+		 * All other system catalogs are assumed to need synchronized
+		 * OIDs.
+		 */
+		return true;
+	}
+	return false;
+}
 
 /*
  * GetNewOid
@@ -889,7 +929,6 @@ GetNewOid(Relation relation)
 	/* If no OID index, just hand back the next OID counter value */
 	if (!OidIsValid(oidIndex))
 	{
-		Oid result;
 		/*
 		 * System catalogs that have OIDs should *always* have a unique OID
 		 * index; we should only take this path for user tables. Give a
@@ -899,26 +938,25 @@ GetNewOid(Relation relation)
 			elog(WARNING, "generating possibly-non-unique OID for \"%s\"",
 				 RelationGetRelationName(relation));
 
-		result=  GetNewObjectId();
-		
-		if (IsSystemNamespace(RelationGetNamespace(relation)))
-		{
-			if (Gp_role == GP_ROLE_EXECUTE)
-			{
-				elog(DEBUG1,"Allocating Oid %u on relid %u %s in EXECUTE mode",result,relation->rd_id,RelationGetRelationName(relation));
-			}
-			if (Gp_role == GP_ROLE_DISPATCH)
-			{
-				elog(DEBUG5,"Allocating Oid %u on relid %u %s in DISPATCH mode",result,relation->rd_id,RelationGetRelationName(relation));
-			}
-		}
-		return result;
+		return GetNewObjectId();
 	}
 
 	/* Otherwise, use the index to find a nonconflicting OID */
 	indexrel = index_open(oidIndex, AccessShareLock);
 	newOid = GetNewOidWithIndex(relation, indexrel);
 	index_close(indexrel, AccessShareLock);
+
+	/*
+	 * Most catalog objects need to have the same OID in the master and all
+	 * segments. When creating a new object, the master should allocate the
+	 * OID and tell the segments to use the same, so segments should have no
+	 * need to ever allocate OIDs on their own. Therefore, give a WARNING if
+	 * GetNewOid() is called in a segment. (There are a few exceptions, see
+	 * RelationNeedsSynchronizedOIDs()).
+	 */
+	if (Gp_role == GP_ROLE_EXECUTE && RelationNeedsSynchronizedOIDs(relation))
+		elog(WARNING, "allocated OID %u for relation \"%s\" in segment",
+			 newOid, RelationGetRelationName(relation));
 
 	return newOid;
 }
@@ -963,21 +1001,6 @@ GetNewOidWithIndex(Relation relation, Relation indexrel)
 
 		index_endscan(scan);
 	} while (collides);
-	
-	if (IsSystemNamespace(RelationGetNamespace(relation)))
-	{
-		if (Gp_role == GP_ROLE_EXECUTE)
-		{
-			if (relation->rd_id != 2604 /* pg_attrdef */ && relation->rd_id != 2606 /* pg_constraint */ && relation->rd_id != 2615 /* pg_namespace */) 
-				elog(DEBUG1,"Allocating Oid %u with index on relid %u %s in EXECUTE mode",newOid,relation->rd_id, RelationGetRelationName(relation));
-			else
-				elog(DEBUG4,"Allocating Oid %u with index on relid %u %s in EXECUTE mode",newOid,relation->rd_id, RelationGetRelationName(relation));
-		}
-		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			elog(DEBUG5,"Allocating Oid %u with index on relid %u %s in DISPATCH mode",newOid,relation->rd_id,  RelationGetRelationName(relation));
-		}
-	}
 
 	return newOid;
 }

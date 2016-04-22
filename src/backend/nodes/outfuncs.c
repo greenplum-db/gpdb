@@ -2525,6 +2525,7 @@ _outAlterTableStmt(StringInfo str, AlterTableStmt *node)
 	{
 		WRITE_OID_FIELD(oidInfo[m].relOid);
 		WRITE_OID_FIELD(oidInfo[m].comptypeOid);
+		WRITE_OID_FIELD(oidInfo[m].comptypeArrayOid);
 		WRITE_OID_FIELD(oidInfo[m].toastOid);
 		WRITE_OID_FIELD(oidInfo[m].toastIndexOid);
 		WRITE_OID_FIELD(oidInfo[m].toastComptypeOid);
@@ -2996,10 +2997,12 @@ _outDefineStmt(StringInfo str, DefineStmt *node)
 	WRITE_NODE_FIELD(defnames);
 	WRITE_NODE_FIELD(args);
 	WRITE_NODE_FIELD(definition);
-	WRITE_OID_FIELD(newOid);
-	WRITE_OID_FIELD(shadowOid);
 	WRITE_BOOL_FIELD(ordered);  /* CDB */
 	WRITE_BOOL_FIELD(trusted);  /* CDB */
+	WRITE_OID_FIELD(newOid);
+	WRITE_OID_FIELD(arrayOid);
+	WRITE_OID_FIELD(commutatorOid);
+	WRITE_OID_FIELD(negatorOid);
 }
 
 static void
@@ -3039,11 +3042,13 @@ _outCreateOpClassStmt(StringInfo str, CreateOpClassStmt *node)
 {
 	WRITE_NODE_TYPE("CREATEOPCLASS");
 	WRITE_NODE_FIELD(opclassname);
+	WRITE_NODE_FIELD(opfamilyname);
 	WRITE_STRING_FIELD(amname);
 	WRITE_NODE_FIELD(datatype);
 	WRITE_NODE_FIELD(items);
 	WRITE_BOOL_FIELD(isDefault);
 	WRITE_OID_FIELD(opclassOid);
+	WRITE_OID_FIELD(opfamilyOid);
 }
 
 static void
@@ -3059,10 +3064,39 @@ _outCreateOpClassItem(StringInfo str, CreateOpClassItem *node)
 }
 
 static void
+_outCreateOpFamilyStmt(StringInfo str, CreateOpFamilyStmt *node)
+{
+	WRITE_NODE_TYPE("CREATEOPFAMILY");
+	WRITE_NODE_FIELD(opfamilyname);
+	WRITE_STRING_FIELD(amname);
+	WRITE_OID_FIELD(newOid);
+}
+
+static void
+_outAlterOpFamilyStmt(StringInfo str, AlterOpFamilyStmt *node)
+{
+	WRITE_NODE_TYPE("ALTEROPFAMILY");
+	WRITE_NODE_FIELD(opfamilyname);
+	WRITE_STRING_FIELD(amname);
+	WRITE_BOOL_FIELD(isDrop);
+	WRITE_NODE_FIELD(items);
+}
+
+static void
 _outRemoveOpClassStmt(StringInfo str, RemoveOpClassStmt *node)
 {
 	WRITE_NODE_TYPE("REMOVEOPCLASS");
 	WRITE_NODE_FIELD(opclassname);
+	WRITE_STRING_FIELD(amname);
+	WRITE_ENUM_FIELD(behavior, DropBehavior);
+	WRITE_BOOL_FIELD(missing_ok);
+}
+
+static void
+_outRemoveOpFamilyStmt(StringInfo str, RemoveOpFamilyStmt *node)
+{
+	WRITE_NODE_TYPE("REMOVEOPFAMILY");
+	WRITE_NODE_FIELD(opfamilyname);
 	WRITE_STRING_FIELD(amname);
 	WRITE_ENUM_FIELD(behavior, DropBehavior);
 	WRITE_BOOL_FIELD(missing_ok);
@@ -4751,8 +4785,17 @@ _outNode(StringInfo str, void *obj)
 			case T_CreateOpClassItem:
 				_outCreateOpClassItem(str,obj);
 				break;
+			case T_CreateOpFamilyStmt:
+				_outCreateOpFamilyStmt(str,obj);
+				break;
+			case T_AlterOpFamilyStmt:
+				_outAlterOpFamilyStmt(str,obj);
+				break;
 			case T_RemoveOpClassStmt:
 				_outRemoveOpClassStmt(str,obj);
+				break;
+			case T_RemoveOpFamilyStmt:
+				_outRemoveOpFamilyStmt(str,obj);
 				break;
 			case T_CreateConversionStmt:
 				_outCreateConversionStmt(str,obj);

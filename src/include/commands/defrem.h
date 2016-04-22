@@ -69,7 +69,8 @@ extern void AlterFunctionNamespace(List *name, List *argtypes, bool isagg,
 					   const char *newschema);
 
 /* commands/operatorcmds.c */
-extern void DefineOperator(List *names, List *parameters, Oid newOid);
+extern void DefineOperator(List *names, List *parameters,
+			   Oid newOid, Oid newCommutatorOid, Oid newNegatorOid);
 extern void RemoveOperator(RemoveFuncStmt *stmt);
 extern void RemoveOperatorById(Oid operOid);
 extern void AlterOperatorOwner(List *name, TypeName *typeName1,

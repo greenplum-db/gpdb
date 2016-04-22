@@ -3286,10 +3286,12 @@ _copyDefineStmt(DefineStmt *from)
 	COPY_NODE_FIELD(defnames);
 	COPY_NODE_FIELD(args);
 	COPY_NODE_FIELD(definition);
-	COPY_SCALAR_FIELD(newOid);
-	COPY_SCALAR_FIELD(shadowOid);
 	COPY_SCALAR_FIELD(ordered);  /* CDB */
 	COPY_SCALAR_FIELD(trusted);  /* CDB */
+	COPY_SCALAR_FIELD(newOid);
+	COPY_SCALAR_FIELD(arrayOid);
+	COPY_SCALAR_FIELD(commutatorOid);
+	COPY_SCALAR_FIELD(negatorOid);
 
 	return newnode;
 }
@@ -3632,6 +3634,9 @@ _copyCreateOpClassStmt(CreateOpClassStmt *from)
 	COPY_NODE_FIELD(items);
 	COPY_SCALAR_FIELD(isDefault);
 
+	COPY_SCALAR_FIELD(opclassOid);
+	COPY_SCALAR_FIELD(opfamilyOid);
+
 	return newnode;
 }
 
@@ -3658,6 +3663,7 @@ _copyCreateOpFamilyStmt(CreateOpFamilyStmt *from)
 
 	COPY_NODE_FIELD(opfamilyname);
 	COPY_STRING_FIELD(amname);
+	COPY_SCALAR_FIELD(newOid);
 
 	return newnode;
 }

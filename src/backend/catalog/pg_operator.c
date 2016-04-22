@@ -50,7 +50,8 @@ static Oid OperatorLookup(List *operatorName,
 static Oid OperatorShellMake(const char *operatorName,
 				  Oid operatorNamespace,
 				  Oid leftTypeId,
-				  Oid rightTypeId);
+				  Oid rightTypeId,
+				  Oid newOid);
 
 static void OperatorUpd(Oid baseId, Oid commId, Oid negId);
 
@@ -58,7 +59,7 @@ static Oid get_other_operator(List *otherOp,
 				   Oid otherLeftTypeId, Oid otherRightTypeId,
 				   const char *operatorName, Oid operatorNamespace,
 				   Oid leftTypeId, Oid rightTypeId,
-				   bool isCommutator);
+				   bool isCommutator, Oid newOid);
 
 static void makeOperatorDependencies(HeapTuple tuple);
 
@@ -212,7 +213,8 @@ static Oid
 OperatorShellMake(const char *operatorName,
 				  Oid operatorNamespace,
 				  Oid leftTypeId,
-				  Oid rightTypeId)
+				  Oid rightTypeId,
+				  Oid newOid)
 {
 	Oid			operatorObjectId;
 	int			i;
@@ -273,6 +275,9 @@ OperatorShellMake(const char *operatorName,
 	 * create a new operator tuple
 	 */
 	tup = caql_form_tuple(pcqCtx, values, nulls);
+
+	if (OidIsValid(newOid))
+		HeapTupleSetOid(tup, newOid);
 
 	/*
 	 * insert our "shell" operator tuple
@@ -366,34 +371,6 @@ OperatorShellMake(const char *operatorName,
  *	 call caql_insert
  */
 Oid
-OperatorCreate(const char *operatorName,
-			   Oid operatorNamespace,
-			   Oid leftTypeId,
-			   Oid rightTypeId,
-			   List *procedureName,
-			   List *commutatorName,
-			   List *negatorName,
-			   List *restrictionName,
-			   List *joinName,
-			   bool canMerge,
-			   bool canHash)
-{
-	return
-	OperatorCreateWithOid(operatorName,
-			   operatorNamespace,
-			   leftTypeId,
-			   rightTypeId,
-			   procedureName,
-			   commutatorName,
-			   negatorName,
-			   restrictionName,
-			   joinName,
-			   canMerge,
-			   canHash,
-			   0);
-}
-			   
-Oid
 OperatorCreateWithOid(const char *operatorName,
 			   Oid operatorNamespace,
 			   Oid leftTypeId,
@@ -405,7 +382,9 @@ OperatorCreateWithOid(const char *operatorName,
 			   List *joinName,
 			   bool canMerge,
 			   bool canHash,
-			   Oid newOid)
+			   Oid newOid,
+			   Oid *newCommutatorOid,
+			   Oid *newNegatorOid)
 {
 	Relation	pg_operator_desc;
 	HeapTuple	tup;
@@ -569,7 +548,9 @@ OperatorCreateWithOid(const char *operatorName,
 										  rightTypeId, leftTypeId,
 										  operatorName, operatorNamespace,
 										  leftTypeId, rightTypeId,
-										  true);
+										  true,
+										  *newCommutatorOid);
+		*newCommutatorOid = commutatorId;
 
 		/*
 		 * self-linkage to this operator; will fix below. Note that only
@@ -589,7 +570,9 @@ OperatorCreateWithOid(const char *operatorName,
 									   leftTypeId, rightTypeId,
 									   operatorName, operatorNamespace,
 									   leftTypeId, rightTypeId,
-									   false);
+									   false,
+									   *newNegatorOid);
+		*newNegatorOid = negatorId;
 	}
 	else
 		negatorId = InvalidOid;
@@ -674,7 +657,7 @@ OperatorCreateWithOid(const char *operatorName,
 static Oid
 get_other_operator(List *otherOp, Oid otherLeftTypeId, Oid otherRightTypeId,
 				   const char *operatorName, Oid operatorNamespace,
-				   Oid leftTypeId, Oid rightTypeId, bool isCommutator)
+				   Oid leftTypeId, Oid rightTypeId, bool isCommutator, Oid newOid)
 {
 	Oid			other_oid;
 	bool		otherDefined;
@@ -690,6 +673,12 @@ get_other_operator(List *otherOp, Oid otherLeftTypeId, Oid otherRightTypeId,
 	if (OidIsValid(other_oid))
 	{
 		/* other op already in catalogs */
+		if (newOid != InvalidOid && newOid != other_oid)
+		{
+			/* but the caller thought it shouldn't be */
+			elog(ERROR, "operator %s already exists with OID: %u", operatorName,
+				 other_oid);
+		}
 		return other_oid;
 	}
 
@@ -723,7 +712,8 @@ get_other_operator(List *otherOp, Oid otherLeftTypeId, Oid otherRightTypeId,
 	other_oid = OperatorShellMake(otherName,
 								  otherNamespace,
 								  otherLeftTypeId,
-								  otherRightTypeId);
+								  otherRightTypeId,
+								  newOid);
 	return other_oid;
 }
 

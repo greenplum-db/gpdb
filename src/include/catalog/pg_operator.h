@@ -1005,18 +1005,6 @@ DATA(insert OID = 7096 (  "%"    PGNSP PGUID b f f 1186  1186 1186         0  0 
 /*
  * function prototypes
  */
-extern Oid OperatorCreate(const char *operatorName,
-			   Oid operatorNamespace,
-			   Oid leftTypeId,
-			   Oid rightTypeId,
-			   List *procedureName,
-			   List *commutatorName,
-			   List *negatorName,
-			   List *restrictionName,
-			   List *joinName,
-			   bool canMerge,
-			   bool canHash);
-
 extern Oid OperatorCreateWithOid(const char *operatorName,
 			   Oid operatorNamespace,
 			   Oid leftTypeId,
@@ -1028,6 +1016,8 @@ extern Oid OperatorCreateWithOid(const char *operatorName,
 			   List *joinName,
 			   bool canMerge,
 			   bool canHash,
-			   Oid newOid);
+			   Oid newOid,
+			   Oid *newCommutatorOid,
+			   Oid *newNegatorId);
 
 #endif   /* PG_OPERATOR_H */
