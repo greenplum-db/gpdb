@@ -188,6 +188,7 @@ extern bool Disable_persistent_recovery_logging;
 extern bool	Debug_persistent_store_print;
 extern bool Debug_persistent_bootstrap_print;
 extern bool persistent_integrity_checks;
+extern bool validate_previous_free_tid;
 extern bool disable_persistent_diagnostic_dump;
 extern bool debug_persistent_ptcat_verification;
 extern bool debug_print_persistent_checks;

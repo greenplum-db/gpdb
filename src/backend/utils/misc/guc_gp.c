@@ -201,6 +201,7 @@ bool		Debug_persistent_store_print = false;
 int			Debug_persistent_store_print_level = LOG;
 bool		Debug_persistent_bootstrap_print = false;
 bool		persistent_integrity_checks = true;
+bool		validate_previous_free_tid = true;
 bool		disable_persistent_diagnostic_dump = false;
 bool		debug_persistent_ptcat_verification = false;
 bool		debug_print_persistent_checks = false;
@@ -1826,6 +1827,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&persistent_integrity_checks,
 		false, NULL, NULL
+	},
+
+	{
+		{"validate_previous_free_tid", PGC_SUSET, UNGROUPED,
+			gettext_noop("When set checks that the previous free TID of the current free tuple is a valid free tuple."),
+			NULL,
+			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&validate_previous_free_tid,
+		true, NULL, NULL
 	},
 
 	{
