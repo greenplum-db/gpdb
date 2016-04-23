@@ -1623,7 +1623,10 @@ spi_printtup(TupleTableSlot *slot, DestReceiver *self)
 	{
 		tuptable->free = 256;
 		tuptable->alloced += tuptable->free;
-		tuptable->vals = (HeapTuple *) repalloc_huge(tuptable->vals,
+		/* 74a379b984d4df91acec2436a16c51caee3526af uses repalloc_huge(),
+		 * but this is not yet backported from PG
+		 */
+		tuptable->vals = (HeapTuple *) repalloc(tuptable->vals,
 									  tuptable->alloced * sizeof(HeapTuple));
 	}
 
