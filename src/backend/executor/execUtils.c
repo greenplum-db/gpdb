@@ -2057,6 +2057,7 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 		/* If top slice was delegated to QEs, get num of rows processed. */
 		if (sliceRunsOnQE(currentSlice))
 		{
+			/* FIXME: diagnostics: does cdbdisp_sumCmdTuples() return 32 or 64 bit */
 			estate->es_processed +=
 				cdbdisp_sumCmdTuples(pr, LocallyExecutingSliceIndex(estate));
 			estate->es_lastoid =

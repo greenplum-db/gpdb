@@ -122,8 +122,8 @@ typedef struct GppcTm
 typedef struct GppcSPIResultData
 {
 	struct GppcSPITupleTableData   *tuptable; /**< opaque pointer to the internal data */
-	uint32_t						processed; /**< number of affected rows by the operation */
-	uint32_t						current; /**< position of tuples now looking at */
+	uint64_t						processed; /**< number of affected rows by the operation */
+	uint64_t						current; /**< position of tuples now looking at */
 	int								rescode; /**< result code of last operation */
 } GppcSPIResultData;
 

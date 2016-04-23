@@ -1320,6 +1320,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	float4		relTuples;
 	float4		relPages;
 	int			ret;
+	/* 32 bit - assume that number of tuples will not > 2B */
 	int			sampleTuples;
 	Datum	   *vals;
 	bool	   *nulls;
@@ -1439,6 +1440,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 			 */
 			ret = SPI_execute(str.data, false, 0);
 			Assert(ret > 0);
+			Assert(SPI_processed < INT_MAX);
 			sampleTuples = SPI_processed;
 
 			optimizer = optimizerBackup;

@@ -771,6 +771,7 @@ DumpCatalogDXL(PG_FUNCTION_ARGS)
 //
 //---------------------------------------------------------------------------
 
+	// FIXME: diagnostics: should return uint64
 static int extractFrozenQueryPlanAndExecute(char *pcQuery)
 {
 	Assert(pcQuery);
@@ -808,10 +809,12 @@ static int extractFrozenQueryPlanAndExecute(char *pcQuery)
 
 	ExecutorEnd(pqueryDesc);
 
+	// FIXME: diagnostics: should use uint64
 	int iProcessed = (int) pqueryDesc->es_processed;
 
 	FreeQueryDesc(pqueryDesc);
 
+	// FIXME: diagnostics: should return uint64
 	return iProcessed;
 }
 
@@ -824,6 +827,7 @@ static int extractFrozenQueryPlanAndExecute(char *pcQuery)
 //
 //---------------------------------------------------------------------------
 
+	// FIXME: diagnostics: should return uint64
 static int extractFrozenPlanAndExecute(char *pcSerializedPS)
 {
 	Assert(pcSerializedPS);
@@ -854,10 +858,12 @@ static int extractFrozenPlanAndExecute(char *pcSerializedPS)
 
 	ExecutorEnd(pqueryDesc);
 
+	// FIXME: diagnostics: should use uint64
 	int iProcessed = (int) pqueryDesc->es_processed;
 
 	FreeQueryDesc(pqueryDesc);
 
+	// FIXME: diagnostics: should return uint64
 	return iProcessed;
 }
 
@@ -883,10 +889,12 @@ static int executeXMLPlan(char *szXml)
 
 	ExecutorEnd(pqueryDesc);
 
+	// FIXME: diagnostics: should use uint64
 	int iProcessed = (int) pqueryDesc->es_processed;
 
 	FreeQueryDesc(pqueryDesc);
 
+	// FIXME: diagnostics: should return uint64
 	return iProcessed;
 }
 

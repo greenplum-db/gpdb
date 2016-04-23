@@ -522,8 +522,8 @@ xpath_table(PG_FUNCTION_ARGS)
 
 	int			numpaths;
 	int			ret;
-	int			proc;
-	int			i;
+	uint64			proc;
+	uint64			i;
 	int			j;
 	int			rownr;			/* For issuing multiple rows from one original
 								 * document */
@@ -629,7 +629,6 @@ xpath_table(PG_FUNCTION_ARGS)
 			 query_buf.data);
 
 	proc = SPI_processed;
-	/* elog(DEBUG1,"xpath_table: SPI returned %d rows",proc); */
 	tuptable = SPI_tuptable;
 	spi_tupdesc = tuptable->tupdesc;
 

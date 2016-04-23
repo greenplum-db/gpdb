@@ -1501,7 +1501,7 @@ gp_update_aocol_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 	Relation		aosegrel;
 	bool			connected = false;
 	char			aoseg_relname[NAMEDATALEN];
-	int				proc;
+	int				proc; /* 32 bit, only holds number of segments */
 	int				ret;
 	float8			total_count = 0;
 	MemoryContext	oldcontext = CurrentMemoryContext;
@@ -1539,7 +1539,7 @@ gp_update_aocol_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 
 		/* Do the query. */
 		ret = SPI_execute(sqlstmt.data, false, 0);
-		proc = SPI_processed;
+		proc = (int) SPI_processed;
 
 
 		if (ret > 0 && SPI_tuptable != NULL)
@@ -1677,7 +1677,7 @@ aocol_compression_ratio_internal(Relation parentrel)
 	Relation		aosegrel;
 	bool			connected = false;
 	char			aocsseg_relname[NAMEDATALEN];
-	int				proc;
+	int				proc; /* 32 bit, only holds number of segments */
 	int				ret;
 	int64			eof = 0;
 	int64			eof_uncompressed = 0;
@@ -1725,7 +1725,7 @@ aocol_compression_ratio_internal(Relation parentrel)
 
 		/* Do the query. */
 		ret = SPI_execute(sqlstmt.data, false, 0);
-		proc = SPI_processed;
+		proc = (int) SPI_processed;
 
 
 		if (ret > 0 && SPI_tuptable != NULL)
