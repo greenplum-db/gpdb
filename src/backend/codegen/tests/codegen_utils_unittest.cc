@@ -1776,6 +1776,73 @@ TEST_F(CodegenUtilsTest, ExternalFunctionTest) {
   EXPECT_EQ(42, StaticIntWrapper::Get());
 }
 
+TEST_F(CodegenUtilsTest, VariadicExternalFunctionTest) {
+  // Test a function with overloads an external function that contains
+  // variable length arguments : printf and sprintf
+
+  // Register printf with takes variable arguments past char*
+  llvm::Function* llvm_printf_function =
+      codegen_utils_->RegisterExternalFunction(printf);
+  ASSERT_NE(llvm_printf_function, nullptr);
+  ASSERT_EQ(
+      (codegen_utils_->GetFunctionType<int, char*>(true)->getPointerTo()),
+      llvm_printf_function->getType());
+
+  // Register sprintf with takes variable arguments past char*, char*
+  llvm::Function* llvm_sprintf_function =
+      codegen_utils_->RegisterExternalFunction(sprintf);
+  ASSERT_NE(llvm_sprintf_function, nullptr);
+  ASSERT_EQ(
+      (codegen_utils_->GetFunctionType<int, char*, char*>(true)->getPointerTo()),
+      llvm_sprintf_function->getType());
+
+  char sprintf_with_three_args_buffer[16], sprintf_with_four_args_buffer[16];
+
+  // Create a simple function that calls sprintf with 3 and 4 arguments and uses
+  // the buffers allocated above
+  typedef void (*SprintfTestType)();
+  llvm::Function* sprintf_test =
+      codegen_utils_->CreateFunction<SprintfTestType>("sprintf_test");
+  llvm::BasicBlock* main_block =
+      codegen_utils_->CreateBasicBlock( "main", sprintf_test);
+
+  codegen_utils_->ir_builder()->SetInsertPoint(main_block);
+  codegen_utils_->ir_builder()->CreateCall(
+      llvm_printf_function, {
+          codegen_utils_->GetConstant("%s %d"),
+          codegen_utils_->GetConstant("Zero is another way of saying "),
+          codegen_utils_->GetConstant(0)
+      });
+  codegen_utils_->ir_builder()->CreateCall(
+      llvm_sprintf_function, {
+          codegen_utils_->GetConstant(sprintf_with_three_args_buffer),
+          codegen_utils_->GetConstant("%d"),
+          codegen_utils_->GetConstant(42)
+      });
+  codegen_utils_->ir_builder()->CreateCall(
+      llvm_sprintf_function, {
+          codegen_utils_->GetConstant(sprintf_with_four_args_buffer),
+          codegen_utils_->GetConstant("%d %s"),
+          codegen_utils_->GetConstant(51),
+          codegen_utils_->GetConstant("fifty-one")
+      });
+  codegen_utils_->ir_builder()->CreateRetVoid();
+
+  // Check that the module is well-formed and prepare the generated wrapper
+  // functions for execution.
+  EXPECT_FALSE(llvm::verifyModule(*codegen_utils_->module()));
+  EXPECT_TRUE(codegen_utils_->PrepareForExecution(
+      CodegenUtils::OptimizationLevel::kNone,
+      true));
+
+  SprintfTestType llvm_sprintf_test =
+      codegen_utils_->GetFunctionPointer<SprintfTestType>("sprintf_test");
+  llvm_sprintf_test();
+
+  ASSERT_EQ(strcmp(sprintf_with_three_args_buffer, "42"), 0);
+  ASSERT_EQ(strcmp(sprintf_with_four_args_buffer, "51 fifty-one"), 0);
+}
+
 TEST_F(CodegenUtilsTest, RecursionTest) {
   // Test a version of the factorial function that works by recursion.
   typedef unsigned (*FactorialRecursiveFn) (unsigned);

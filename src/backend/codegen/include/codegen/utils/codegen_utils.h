@@ -162,11 +162,12 @@ class CodegenUtils {
    *
    * @tparam ReturnType The function's return type.
    * @tparam ArgumentTypes The types of any number of arguments to the function.
+   * @param  is_var_arg Whether the function has trailing variable arguments list
    * @return A pointer to the complete function type-signature's equivalent as
    *         an LLVM FunctionType in this CodegenUtils's context.
    **/
   template <typename ReturnType, typename... ArgumentTypes>
-  llvm::FunctionType* GetFunctionType();
+  llvm::FunctionType* GetFunctionType(const bool is_var_arg = false);
 
   /**
    * @brief Get an LLVM constant based on a C++ value.
@@ -231,6 +232,7 @@ class CodegenUtils {
    * @tparam FuncType FunctionType. e.g ReturnType (*)(ArgumenTypes)
    *
    * @param name The function's name.
+   * @param is_var_arg Whether the function has trailing variable arguments list
    * @param linkage The linkage visibility of the function. Defaults to
    *        ExternalLinkage, which makes the function visible and callable from
    *        anywhere.
@@ -240,6 +242,7 @@ class CodegenUtils {
   template <typename FuncType>
   llvm::Function* CreateFunction(
       const llvm::Twine& name,
+      const bool is_var_arg = false,
       const llvm::GlobalValue::LinkageTypes linkage
           = llvm::GlobalValue::ExternalLinkage);
 
@@ -294,12 +297,14 @@ class CodegenUtils {
    *        so that the registered function will also be callable by its name
    *        in C++ source code compiled by ClangCompiler (see
    *        ClangCompiler::GenerateExternalFunctionDeclarations()).
+   * @param is_var_arg Whether the function has trailing variable arguments list
    * @return A callable LLVM function.
    **/
   template <typename ReturnType, typename... ArgumentTypes>
   llvm::Function* RegisterExternalFunction(
       ReturnType (*external_function)(ArgumentTypes...),
-      const std::string& name = "") {
+      const std::string& name = "",
+      const bool is_var_arg = false) {
     external_functions_.emplace_back(
         name.empty() ? GenerateExternalFunctionName()
                      : name,
@@ -310,8 +315,19 @@ class CodegenUtils {
     }
 
     return CreateFunctionImpl<ReturnType, ArgumentTypes...>(
-        external_functions_.back().first);
+        external_functions_.back().first, is_var_arg);
   }
+
+  template <typename ReturnType, typename... ArgumentTypes>
+  llvm::Function* RegisterExternalFunction(
+      ReturnType (*external_function)(ArgumentTypes..., ...),
+      const std::string& name = "") {
+    return RegisterExternalFunction(
+        reinterpret_cast<ReturnType (*) (ArgumentTypes...)>(external_function),
+        name,
+        true);
+  }
+
 
   /**
    * @brief Optimize the code in the module managed by this CodegenUtils before
@@ -412,6 +428,7 @@ class CodegenUtils {
   template <typename ReturnType, typename... ArgumentTypes>
   llvm::Function* CreateFunctionImpl(
       const llvm::Twine& name,
+      const bool is_var_arg = false,
       const llvm::GlobalValue::LinkageTypes linkage
           = llvm::GlobalValue::ExternalLinkage);
 
@@ -781,12 +798,12 @@ class TypeVectorBuilder<HeadType, TailTypes...> {
 }  // namespace codegen_utils_detail
 
 template <typename ReturnType, typename... ArgumentTypes>
-llvm::FunctionType* CodegenUtils::GetFunctionType() {
+llvm::FunctionType* CodegenUtils::GetFunctionType(const bool is_var_arg) {
   std::vector<llvm::Type*> argument_types;
   codegen_utils_detail::TypeVectorBuilder<ArgumentTypes...>::AppendTypes(
       this,
       &argument_types);
-  return llvm::FunctionType::get(GetType<ReturnType>(), argument_types, false);
+  return llvm::FunctionType::get(GetType<ReturnType>(), argument_types, is_var_arg);
 }
 
 // ----------------------------------------------------------------------------
@@ -985,9 +1002,10 @@ class FunctionTypeUnpacker<ReturnType(*)(ArgumentTypes...)> {
   static llvm::Function* CreateFunctionImpl(
       CodegenUtils* codegen_utils,
       const llvm::Twine& name,
+      const bool is_var_arg,
       const llvm::GlobalValue::LinkageTypes linkage) {
     return codegen_utils->CreateFunctionImpl<ReturnType, ArgumentTypes...>(
-        name, linkage);
+        name, is_var_arg, linkage);
   }
 
   static auto GetFunctionPointerImpl(gpcodegen::CodegenUtils* codegen_utils,
@@ -1002,17 +1020,19 @@ class FunctionTypeUnpacker<ReturnType(*)(ArgumentTypes...)> {
 template <typename FunctionType>
 llvm::Function* CodegenUtils::CreateFunction(
     const llvm::Twine& name,
+    const bool is_var_arg,
     const llvm::GlobalValue::LinkageTypes linkage) {
   return codegen_utils_detail::FunctionTypeUnpacker<FunctionType>::
-      CreateFunctionImpl(this, name, linkage);
+      CreateFunctionImpl(this, name, is_var_arg, linkage);
 }
 
 template <typename ReturnType, typename... ArgumentTypes>
 llvm::Function* CodegenUtils::CreateFunctionImpl(
     const llvm::Twine& name,
+    const bool is_var_arg,
     const llvm::GlobalValue::LinkageTypes linkage) {
   return llvm::Function::Create(
-      GetFunctionType<ReturnType, ArgumentTypes...>(),
+      GetFunctionType<ReturnType, ArgumentTypes...>(is_var_arg),
       linkage,
       name,
       module_.get());
