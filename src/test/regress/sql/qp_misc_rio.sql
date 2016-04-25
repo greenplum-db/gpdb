@@ -552,7 +552,7 @@ RETURNS void
 AS $$
     BEGIN
         EXECUTE 'TRUNCATE TABLE tbl_truncate_load;';
-        EXECUTE 'INSERT INTO tbl_truncate_load SELECT i, i FROM generate_series(1, 10000000) i;';
+        EXECUTE 'INSERT INTO tbl_truncate_load SELECT i, i FROM generate_series(1, 500000) i;';
     END;
 $$ LANGUAGE plpgsql;
 
@@ -567,9 +567,9 @@ SELECT current_setting('gp_autostats_mode_in_functions');
 SELECT set_config('gp_autostats_mode_in_functions', 'ON_NO_STATS', False);
 
 TRUNCATE TABLE tbl_truncate_load;
-INSERT INTO tbl_truncate_load SELECT i, i FROM generate_series(1, 1000000) i;
+INSERT INTO tbl_truncate_load SELECT i, i FROM generate_series(1, 100000) i;
 -- check if the difference between reltuples and number of records for table tbl_truncate_load is within +-5%
-SELECT CASE WHEN abs(reltuples-1000000)/1000000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
+SELECT CASE WHEN abs(reltuples-100000)/100000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
             ELSE 'reltuples and number of records for table tbl_truncate_load are inconsistent'
        END AS remark
 FROM pg_class WHERE oid='tbl_truncate_load'::regclass;
@@ -578,7 +578,7 @@ SELECT COUNT(*) FROM tbl_truncate_load;
 
 SELECT func_truncate_load_plpgsql();
 -- check if the difference between reltuples and number of records for table tbl_truncate_load is within +-5%
-SELECT CASE WHEN abs(reltuples-10000000)/10000000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
+SELECT CASE WHEN abs(reltuples-500000)/500000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
             ELSE 'reltuples and number of records for table tbl_truncate_load are inconsistent'
        END AS remark
 FROM pg_class WHERE oid='tbl_truncate_load'::regclass;
@@ -589,10 +589,10 @@ SELECT count(*) FROM tbl_truncate_load;
 SELECT set_config('gp_autostats_mode_in_functions', 'NONE', False);
 
 TRUNCATE TABLE tbl_truncate_load;
-INSERT INTO tbl_truncate_load SELECT i, i FROM generate_series(1, 1000000) i;
+INSERT INTO tbl_truncate_load SELECT i, i FROM generate_series(1, 100000) i;
 
 -- check if the difference between reltuples and number of records for table tbl_truncate_load is within +-5%
-SELECT CASE WHEN abs(reltuples-1000000)/1000000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
+SELECT CASE WHEN abs(reltuples-100000)/100000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
             ELSE 'reltuples and number of records for table tbl_truncate_load are inconsistent'
        END AS remark
 FROM pg_class WHERE oid='tbl_truncate_load'::regclass;
@@ -602,7 +602,7 @@ SELECT COUNT(*) FROM tbl_truncate_load;
 SELECT func_truncate_load_plpgsql();
 
 -- check if the difference between reltuples and number of records for table tbl_truncate_load is within +-5%
-SELECT CASE WHEN abs(reltuples-10000000)/10000000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
+SELECT CASE WHEN abs(reltuples-500000)/500000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
             ELSE 'reltuples and number of records for table tbl_truncate_load are inconsistent'
        END AS remark
 FROM pg_class WHERE oid='tbl_truncate_load'::regclass;
