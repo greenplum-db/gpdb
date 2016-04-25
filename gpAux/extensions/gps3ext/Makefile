@@ -1,10 +1,11 @@
 # Options
 DEBUG_S3 = n
 DEBUG_S3_CURL = n
+DEBUG_S3_SYMBOL = y
 
 # Flags
 SHLIB_LINK = -lstdc++ -lxml2 -lpthread -lcrypto -lcurl -lz
-PG_CPPFLAGS = -O2 -g -std=c++98 -fPIC -I$(libpq_srcdir) -Isrc -Ilib -I/usr/include/libxml2 -I$(libpq_srcdir)/postgresql/server/utils
+PG_CPPFLAGS = -O2 -std=c++98 -fPIC -I$(libpq_srcdir) -Isrc -Ilib -I/usr/include/libxml2 -I$(libpq_srcdir)/postgresql/server/utils
 
 ifeq ($(DEBUG_S3),y)
 	PG_CPPFLAGS += -DDEBUG_S3
@@ -12,6 +13,10 @@ endif
 
 ifeq ($(DEBUG_S3_CURL),y)
 	PG_CPPFLAGS += -DDEBUG_S3_CURL
+endif
+
+ifeq ($(DEBUG_S3_SYMBOL),y)
+	PG_CPPFLAGS += -g
 endif
 
 # Targets

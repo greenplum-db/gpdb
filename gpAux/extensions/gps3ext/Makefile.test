@@ -12,83 +12,78 @@ LDFLAGS = -lpthread -lcrypto -lcurl -lxml2 -lgcov -lz
 CFLAGS = -O2 -g3 -std=c++98 -fPIC -fprofile-arcs -ftest-coverage
 
 ifeq ($(DEBUG_S3),y)
-	CFLAGS += -DDEBUG_S3
+	CPPFLAGS += -DDEBUG_S3
 endif
 
 ifeq ($(DEBUG_S3_CURL),y)
-	CFLAGS += -DDEBUG_S3_CURL
+	CPPFLAGS += -DDEBUG_S3_CURL
 endif
 
 ifeq ($(AWS_TEST),y)
-	CFLAGS += -DAWS_TEST
+	CPPFLAGS += -DAWS_TEST
 endif
 
 ifeq ($(FAKE_TEST),y)
-	CFLAGS += -DFAKE_TEST
+	CPPFLAGS += -DFAKE_TEST
 endif
 
 ifeq ($(BIG_FILE_TEST),y)
-	CFLAGS += -DBIG_FILE_TEST
+	CPPFLAGS += -DBIG_FILE_TEST
 endif
-
-# Google TEST
-testcources = src/s3conf_test.cpp src/s3utils_test.cpp src/s3downloader_test.cpp src/s3common_test.cpp src/s3wrapper_test.cpp src/s3log_test.cpp
-
-testapp = s3test
-testobjs = $(testcources:.cpp=.o)
-
-GTEST_DIR = ../gtest
-
-# Usually you shouldn't tweak such internal variables, indicated by a
-# trailing _.
-GTEST_SRCS_ = $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h $(GTEST_HEADERS)
 
 all: test
 
-$(testobjs) gtest-all.o gtest_main.o: INCLUDES += -I$(GTEST_DIR)/include -I$(GTEST_DIR)/
+# Google TEST
+TEST_SRC_FILES = src/s3conf_test.cpp src/s3utils_test.cpp src/s3downloader_test.cpp src/s3common_test.cpp src/s3wrapper_test.cpp src/s3log_test.cpp
+TEST_OBJS = $(TEST_SRC_FILES:.cpp=.o)
+TEST_APP = s3test
 
-# For simplicity and to avoid depending on Google Test's
-# implementation details, the dependencies specified below are
-# conservative and not optimized. This is fine as Google Test
-# compiles fast and for ordinary users its source rarely changes.
+DEP_FILES := $(patsubst %.cpp,%.d,$(TEST_SRC_FILES))
+-include $(DEP_FILES)
+
+GTEST_DIR = ../gtest
+GTEST_SRCS_ = $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h $(GTEST_HEADERS)
+
+$(TEST_OBJS) gtest-all.o gtest_main.o: INCLUDES += -I$(GTEST_DIR)/include -I$(GTEST_DIR)/
+
 gtest-all.o : $(GTEST_SRCS_)
-	$(CXX) $(CPPFLAGS) $(INCLUDES) $(CXXFLAGS) -c $(GTEST_DIR)/src/gtest-all.cc
+	$(CXX) $(INCLUDES) $(CXXFLAGS) -c $(GTEST_DIR)/src/gtest-all.cc
 
 gtest_main.o : $(GTEST_SRCS_)
-	$(CXX) $(CPPFLAGS) $(INCLUDES) $(CXXFLAGS) -c $(GTEST_DIR)/src/gtest_main.cc
+	$(CXX) $(INCLUDES) $(CXXFLAGS) -c $(GTEST_DIR)/src/gtest_main.cc
 
 gtest_main.a : gtest-all.o gtest_main.o
 	$(AR) $(ARFLAGS) $@ $^
 
 %.o: %.cpp
-	$(CPP) $(CFLAGS) $(INCLUDES) -c $< -o $@
+	$(CPP) $(CPPFLAGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
-buildtest: gtest_main.a $(testobjs)
-	$(CPP) $(CPPFLAGS) $(CXXFLAGS) $^ -o $(testapp) $(LDFLAGS)
+$(TEST_APP): gtest_main.a $(TEST_OBJS)
+	$(CPP) $^ -o $(TEST_APP) $(LDFLAGS)
 
-test: buildtest
-	@./$(testapp) || echo "done"
+buildtest: $(TEST_APP)
+
+test: $(TEST_APP)
+	-@./$(TEST_APP)
 
 coverage: test
-	@gcov -r $(testcources) | grep -v test.cpp | grep -A 2 "src/.*.cpp"
+	@gcov -r $(TEST_SRC_FILES) | grep -v test.cpp | grep -A 2 "src/.*.cpp"
 
 clean:
 	rm -f *.gcov src/*.gcov src/*.gcda src/*.gcno
-	rm -f $(testapp) *.so src/*.o src/*.a lib/*.o *.o *.a
+	rm -f $(TEST_APP) *.so src/*.o src/*.d lib/*.o lib/*.d *.o *.a
 
 distclean: clean
 	rm -f tags cscope.*
 
 tags:
-	etags src/*.cpp src/*.h
+	ctags --c++-kinds=+p --fields=+iaS --extra=+q src/*.cpp src/*.h
+	cscope -bq src/*.cpp src/*.h
 
 lint:
 	cppcheck -v --enable=warning src/*.cpp src/*.h
 
-style:
-	astyle -s4 src/*.cpp src/*.h
-
 format:
 	clang-format -style="{BasedOnStyle: Google, IndentWidth: 4}" -i src/*.cpp src/*.h
 
-.PHONY: test coverage clean distclean lint style format
+.PHONY: buildtest test coverage clean distclean tags lint format
