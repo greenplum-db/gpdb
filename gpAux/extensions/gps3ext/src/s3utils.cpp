@@ -265,7 +265,7 @@ uint64_t DataBuffer::append(const char *buf, uint64_t len) {
     }
 }
 
-Config::Config(string filename) : _conf(NULL) {
+Config::Config(const string &filename) : _conf(NULL) {
     if (filename != "") this->_conf = ini_load(filename.c_str());
     if (this->_conf == NULL) {
 #ifndef DEBUG_S3
@@ -278,7 +278,8 @@ Config::~Config() {
     if (this->_conf) ini_free(this->_conf);
 }
 
-string Config::Get(string sec, string key, string defaultvalue) {
+string Config::Get(const string &sec, const string &key,
+                   const string &defaultvalue) {
     string ret = defaultvalue;
     if ((key == "") || (sec == "")) return ret;
 
@@ -289,7 +290,8 @@ string Config::Get(string sec, string key, string defaultvalue) {
     return ret;
 }
 
-bool Config::Scan(string sec, string key, const char *scanfmt, void *dst) {
+bool Config::Scan(const string &sec, const string &key, const char *scanfmt,
+                  void *dst) {
     if ((key == "") || (sec == "")) return false;
 
     if (this->_conf) {

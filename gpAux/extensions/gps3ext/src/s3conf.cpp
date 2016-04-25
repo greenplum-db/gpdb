@@ -59,7 +59,8 @@ Config* s3cfg = NULL;
 
 // not thread safe!!
 // invoked by s3_import(), need to be exception safe
-bool InitConfig(string conf_path, string section /*not used currently*/) {
+bool InitConfig(const string& conf_path,
+                const string& section /*not used currently*/) {
     try {
         if (conf_path == "") {
 #ifndef DEBUG_S3

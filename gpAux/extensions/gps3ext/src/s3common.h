@@ -45,8 +45,9 @@ class HeaderContent {
     std::map<HeaderField, string> fields;
 };
 
-bool SignRequestV4(string method, HeaderContent* h, string region, string path,
-                   string query, const S3Credential& cred);
+bool SignRequestV4(const string& method, HeaderContent* h,
+                   const string& orig_region, const string& path,
+                   const string& query, const S3Credential& cred);
 
 class UrlParser {
    public:

@@ -15,8 +15,9 @@
 using std::string;
 using std::stringstream;
 
-bool SignRequestV4(string method, HeaderContent *h, string region, string path,
-                   string query, const S3Credential &cred) {
+bool SignRequestV4(const string &method, HeaderContent *h,
+                   const string &orig_region, const string &path,
+                   const string &query, const S3Credential &cred) {
     time_t t;
     struct tm tm_info;
     char date_str[17];
@@ -62,6 +63,7 @@ bool SignRequestV4(string method, HeaderContent *h, string region, string path,
     sha256_hex(canonical_str.str().c_str(), canonical_hex);
 
     // http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
+    string region = orig_region;
     find_replace(region, "external-1", "us-east-1");
 
     stringstream string2sign_str;

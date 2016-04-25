@@ -3,17 +3,17 @@
 
 class S3Reader_fake : public S3Reader {
    public:
-    S3Reader_fake(string url);
+    S3Reader_fake(const string &url);
     virtual ~S3Reader_fake();
     virtual bool Init(int segid, int segnum, int chunksize);
     virtual bool Destroy();
     virtual bool ValidateURL();
 
    protected:
-    virtual string getKeyURL(const string key);
+    virtual string getKeyURL(const string &key);
 };
 
-S3Reader_fake::S3Reader_fake(string url) : S3Reader(url) {}
+S3Reader_fake::S3Reader_fake(const string &url) : S3Reader(url) {}
 
 S3Reader_fake::~S3Reader_fake() {}
 
@@ -42,7 +42,7 @@ bool S3Reader_fake::Init(int segid, int segnum, int chunksize) {
         S3ERROR("validate url fail %s\n", this->url.c_str());
     }
 
-    this->keylist = ListBucket_FakeHTTP("localhost", this->bucket.c_str());
+    this->keylist = ListBucket_FakeHTTP("localhost", this->bucket);
 
     if (!this->keylist) {
         return false;
@@ -52,7 +52,7 @@ bool S3Reader_fake::Init(int segid, int segnum, int chunksize) {
     return this->filedownloader ? true : false;
 }
 
-string S3Reader_fake::getKeyURL(const string key) {
+string S3Reader_fake::getKeyURL(const string &key) {
     stringstream sstr;
     sstr << this->schema << "://"
          << "localhost/";

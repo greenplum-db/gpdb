@@ -50,7 +50,7 @@ void OffsetMgr::Reset(uint64_t n) {
     pthread_mutex_unlock(&this->offset_lock);
 }
 
-BlockingBuffer::BlockingBuffer(string url, OffsetMgr *o)
+BlockingBuffer::BlockingBuffer(const string &url, OffsetMgr *o)
     : sourceurl(url),
       status(BlockingBuffer::STATUS_EMPTY),
       eof(false),
@@ -169,8 +169,8 @@ uint64_t BlockingBuffer::Fill() {
     return (readlen == (uint64_t)-1) ? -1 : this->realsize;
 }
 
-BlockingBuffer *BlockingBuffer::CreateBuffer(string url, string region,
-                                             OffsetMgr *o,
+BlockingBuffer *BlockingBuffer::CreateBuffer(const string &url,
+                                             const string &region, OffsetMgr *o,
                                              S3Credential *pcred) {
     BlockingBuffer *ret = NULL;
     if (url == "") return NULL;
@@ -203,7 +203,7 @@ void *DownloadThreadfunc(void *data) {
 
         if (buffer->EndOfFile()) break;
 
-        if (filled_size == (uint64_t)-1) { // Error
+        if (filled_size == (uint64_t)-1) {  // Error
             if (buffer->Error()) {
                 break;
             } else {
@@ -238,7 +238,7 @@ Downloader::Downloader(uint8_t part_num)
     }
 }
 
-bool Downloader::init(string url, string region, uint64_t size,
+bool Downloader::init(const string &url, const string &region, uint64_t size,
                       uint64_t chunksize, S3Credential *pcred) {
     if (!this->threads || !this->buffers) {
         return false;
@@ -540,7 +540,7 @@ static uint64_t WriterCallback(void *contents, uint64_t size, uint64_t nmemb,
     return nmemb;
 }
 
-HTTPFetcher::HTTPFetcher(string url, OffsetMgr *o)
+HTTPFetcher::HTTPFetcher(const string &url, OffsetMgr *o)
     : BlockingBuffer(url, o), method(GET), urlparser(url.c_str()) {
     this->curl = curl_easy_init();
     if (this->curl) {
@@ -566,7 +566,7 @@ bool HTTPFetcher::SetMethod(Method m) {
     return true;
 }
 
-bool HTTPFetcher::AddHeaderField(HeaderField f, string v) {
+bool HTTPFetcher::AddHeaderField(HeaderField f, const string &v) {
     if (v == "") {
         S3INFO("Skip adding empty field for %s", GetFieldString(f));
         return false;
@@ -672,7 +672,7 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
     return bi.len;
 }
 
-S3Fetcher::S3Fetcher(string url, string region, OffsetMgr *o,
+S3Fetcher::S3Fetcher(const string &url, const string &region, OffsetMgr *o,
                      const S3Credential &cred)
     : HTTPFetcher(url, o) {
     this->cred = cred;
@@ -689,7 +689,7 @@ BucketContent::~BucketContent() {}
 
 BucketContent::BucketContent() : key(""), size(0) {}
 
-BucketContent *CreateBucketContentItem(string key, uint64_t size) {
+BucketContent *CreateBucketContentItem(const string &key, uint64_t size) {
     if (key == "") return NULL;
 
     BucketContent *ret = new BucketContent();
@@ -704,9 +704,9 @@ BucketContent *CreateBucketContentItem(string key, uint64_t size) {
 
 // require curl 7.17 higher
 // http://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketGET.html
-xmlParserCtxtPtr DoGetXML(string region, string bucket, string url,
-                          string prefix, const S3Credential &cred,
-                          string marker) {
+xmlParserCtxtPtr DoGetXML(const string &region, const string &url,
+                          const string &prefix, const S3Credential &cred,
+                          const string &marker) {
     stringstream host;
     host << "s3-" << region << ".amazonaws.com";
 
@@ -873,8 +873,9 @@ static bool extractContent(ListBucketResult *result, xmlNode *root_element,
     return true;
 }
 
-ListBucketResult *ListBucket(string schema, string region, string bucket,
-                             string prefix, const S3Credential &cred) {
+ListBucketResult *ListBucket(const string &schema, const string &region,
+                             const string &bucket, const string &prefix,
+                             const S3Credential &cred) {
     string marker = "";
 
     stringstream host;
@@ -908,7 +909,7 @@ ListBucketResult *ListBucket(string schema, string region, string bucket,
             }
         }
 
-        xmlcontext = DoGetXML(region, bucket, url.str(), prefix, cred, marker);
+        xmlcontext = DoGetXML(region, url.str(), prefix, cred, marker);
         if (!xmlcontext) {
             S3ERROR("Failed to list bucket for %s", url.str().c_str());
             delete result;
@@ -966,7 +967,8 @@ ListBucketResult::~ListBucketResult() {
     }
 }
 
-ListBucketResult *ListBucket_FakeHTTP(string host, string bucket) {
+ListBucketResult *ListBucket_FakeHTTP(const string &host,
+                                      const string &bucket) {
     std::stringstream sstr;
     sstr << "http://" << host << "/" << bucket;
 

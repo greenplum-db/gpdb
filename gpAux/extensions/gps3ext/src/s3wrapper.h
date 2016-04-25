@@ -10,7 +10,7 @@ using std::string;
 
 class S3ExtBase {
    public:
-    S3ExtBase(string url);
+    S3ExtBase(const string& url);
     virtual ~S3ExtBase();
     virtual bool Init(int segid, int segnum, int chunksize) = 0;
     virtual bool TransferData(char* data, uint64_t& len) = 0;
@@ -37,14 +37,14 @@ class S3ExtBase {
 
 class S3Reader : public S3ExtBase {
    public:
-    S3Reader(string url);
+    S3Reader(const string& url);
     virtual ~S3Reader();
     virtual bool Init(int segid, int segnum, int chunksize);
     virtual bool TransferData(char* data, uint64_t& len);
     virtual bool Destroy();
 
    protected:
-    virtual string getKeyURL(const string key);
+    virtual string getKeyURL(const string& key);
     void getNextDownloader();
 
     // private:

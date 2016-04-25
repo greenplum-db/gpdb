@@ -21,7 +21,7 @@ S3ExtBase *CreateExtWrapper(const char *url) {
     }
 }
 
-S3ExtBase::S3ExtBase(string url) {
+S3ExtBase::S3ExtBase(const string &url) {
     this->url = url;
 
     // get following from config
@@ -42,7 +42,7 @@ S3ExtBase::~S3ExtBase() {}
 
 S3Reader::~S3Reader() {}
 
-S3Reader::S3Reader(string url) : S3ExtBase(url) {
+S3Reader::S3Reader(const string &url) : S3ExtBase(url) {
     this->contentindex = -1;
     this->filedownloader = NULL;
     this->keylist = NULL;
@@ -144,7 +144,7 @@ void S3Reader::getNextDownloader() {
     return;
 }
 
-string S3Reader::getKeyURL(const string key) {
+string S3Reader::getKeyURL(const string &key) {
     stringstream sstr;
     sstr << this->schema << "://"
          << "s3-" << this->region << ".amazonaws.com/";
