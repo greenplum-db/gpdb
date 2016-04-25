@@ -63,7 +63,7 @@ string S3Reader_fake::getKeyURL(const string key) {
 bool S3Reader_fake::ValidateURL() {
     this->schema = "http";
     this->region = "raycom";
-    int ibegin, iend;
+    unsigned int ibegin, iend;
     ibegin = find_Nth(this->url, 3, "/");
     iend = find_Nth(this->url, 4, "/");
 

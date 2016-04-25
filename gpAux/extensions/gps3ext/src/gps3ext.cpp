@@ -121,7 +121,6 @@ Datum s3_import(PG_FUNCTION_ARGS) {
         curl_global_init(CURL_GLOBAL_ALL);
         thread_setup();
 
-        const char *p_name = "s3";
         char *url_with_options = EXTPROTOCOL_GET_URL(fcinfo);
         char *url = truncate_options(url_with_options);
 
@@ -196,9 +195,4 @@ Datum s3_import(PG_FUNCTION_ARGS) {
  */
 Datum s3_export(PG_FUNCTION_ARGS) { PG_RETURN_INT32(0); }
 
-Datum s3_validate_urls(PG_FUNCTION_ARGS) {
-    int nurls;
-    int i;
-    ValidatorDirection direction;
-    PG_RETURN_VOID();
-}
+Datum s3_validate_urls(PG_FUNCTION_ARGS) { PG_RETURN_VOID(); }

@@ -48,7 +48,7 @@ class S3Reader : public S3ExtBase {
     void getNextDownloader();
 
     // private:
-    int contentindex;
+    unsigned int contentindex;
     Downloader* filedownloader;
     ListBucketResult* keylist;
 };

@@ -9,7 +9,7 @@ BIG_FILE_TEST = n
 CPP = g++
 INCLUDES = -Isrc -Ilib -I/usr/include/libxml2
 LDFLAGS = -lpthread -lcrypto -lcurl -lxml2 -lgcov -lz
-CFLAGS = -O2 -g3 -std=c++98 -fPIC -fprofile-arcs -ftest-coverage
+CFLAGS = -O2 -g3 -std=c++98 -Wall -fPIC -fprofile-arcs -ftest-coverage
 
 ifeq ($(DEBUG_S3),y)
 	CPPFLAGS += -DDEBUG_S3

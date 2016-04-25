@@ -211,10 +211,9 @@ bool S3ExtBase::ValidateURL() {
     // http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
 
     const char *awsdomain = ".amazonaws.com";
-    int ibegin = 0;
-    int iend = url.find("://");
-    if (iend == string::npos) {  // -1
-        // error
+    unsigned int ibegin = 0;
+    unsigned int iend = url.find("://");
+    if (iend == string::npos) {  // Error
         return false;
     }
 
@@ -250,11 +249,6 @@ bool S3ExtBase::ValidateURL() {
 
     this->prefix = url.substr(iend + 1, url.length() - iend - 1);
 
-    /*
-    if (url.back() != '/') {
-        return false;
-    }
-    */
     return true;
 }
 

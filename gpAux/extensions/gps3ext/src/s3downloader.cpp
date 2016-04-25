@@ -139,8 +139,7 @@ uint64_t BlockingBuffer::Fill() {
         if (leftlen != 0) {
             readlen = this->fetchdata(offset, this->bufferdata + this->realsize,
                                       leftlen);
-            // XXX fix the returning type
-            if (readlen == -1) {
+            if (readlen == (uint64_t)-1) {
                 S3DEBUG("Failed to fetch data from libcurl");
             } else {
                 S3DEBUG("Got %llu bytes from libcurl", readlen);
@@ -148,32 +147,26 @@ uint64_t BlockingBuffer::Fill() {
         } else {
             readlen = 0;  // EOF
         }
-        if (readlen == 0) {  // EOF!!
-            // if (this->realsize == 0) {
+
+        if (readlen == 0) {  // EOF
             this->eof = true;
-            //}
             S3DEBUG("Reached the end of file");
             break;
-        } else if (readlen == -1) {  // Error, network error or sth.
-            // perror, retry
+        } else if (readlen == (uint64_t)-1) {  // Error
             this->error = true;
-            // Ensure status is still empty
-            // this->status = BlockingBuffer::STATUS_READY;
-            // pthread_cond_signal(&this->stat_cond);
             S3ERROR("Failed to download file");
             break;
-        } else {  // > 0
+        } else {
             offset += readlen;
             leftlen -= readlen;
             this->realsize += readlen;
-            // this->status = BlockingBuffer::STATUS_READY;
         }
     }
     this->status = BlockingBuffer::STATUS_READY;
     pthread_cond_signal(&this->stat_cond);
 
     pthread_mutex_unlock(&this->stat_mutex);
-    return (readlen == -1) ? -1 : this->realsize;
+    return (readlen == (uint64_t)-1) ? -1 : this->realsize;
 }
 
 BlockingBuffer *BlockingBuffer::CreateBuffer(string url, string region,
@@ -202,15 +195,15 @@ void *DownloadThreadfunc(void *data) {
         }
 
         filled_size = buffer->Fill();
-        // XXX fix the returning type
-        if (filled_size == -1) {
+        if (filled_size == (uint64_t)-1) {
             S3DEBUG("Failed to fill downloading buffer");
         } else {
             S3DEBUG("Size of filled data is %llu", filled_size);
         }
+
         if (buffer->EndOfFile()) break;
-        if (filled_size == -1) {  // Error
-            // retry?
+
+        if (filled_size == (uint64_t)-1) { // Error
             if (buffer->Error()) {
                 break;
             } else {
@@ -548,7 +541,7 @@ static uint64_t WriterCallback(void *contents, uint64_t size, uint64_t nmemb,
 }
 
 HTTPFetcher::HTTPFetcher(string url, OffsetMgr *o)
-    : BlockingBuffer(url, o), urlparser(url.c_str()), method(GET) {
+    : BlockingBuffer(url, o), method(GET), urlparser(url.c_str()) {
     this->curl = curl_easy_init();
     if (this->curl) {
 #if DEBUG_S3_CURL
@@ -594,7 +587,7 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
     int retry_time = 3;
     Bufinfo bi;
     CURL *curl_handle = this->curl;
-    struct curl_slist *chunk;
+    struct curl_slist *chunk = NULL;
     char rangebuf[128];
     long respcode;
 
@@ -628,6 +621,10 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
         }
 
         chunk = this->headers.GetList();
+        if (!chunk) {
+            S3ERROR("Failed to construct curl header");
+            return -1;
+        }
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
 
         CURLcode res = curl_easy_perform(curl_handle);
@@ -667,7 +664,11 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
     if (curl_handle) {
         this->curl = curl_handle;
     }
-    curl_slist_free_all(chunk);
+
+    if (chunk) {
+        curl_slist_free_all(chunk);
+    }
+
     return bi.len;
 }
 

@@ -233,7 +233,6 @@ uint64_t ParserCallback(void *contents, uint64_t size, uint64_t nmemb,
 // invoked by s3_import(), need to be exception safe
 char *get_opt_s3(const char *url, const char *key) {
     char *key_start = NULL;
-    char *key_tailing = NULL;
     char *value_start = NULL;
     char *value = NULL;
     char *ptr = NULL;
