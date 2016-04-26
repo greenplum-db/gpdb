@@ -714,9 +714,11 @@ COptTasks::PdrgPssLoad
 	}
 	GPOS_CATCH_EX(ex)
 	{
-		GPOS_RESET_EX;
-
+		if (GPOS_MATCH_EX(ex, gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError)) {
+			GPOS_RETHROW(ex);
+		}
 		elog(DEBUG2, "\n[OPT]: Using default search strategy");
+		GPOS_RESET_EX;
 	}
 	GPOS_CATCH_END;
 
@@ -1673,13 +1675,6 @@ COptTasks::PvEvalExprFromDXLTask
 		if (fReleaseCache)
 		{
 			CMDCache::Shutdown();
-		}
-		// Catch GPDB exceptions
-		if (GPOS_MATCH_EX(ex, gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError))
-		{
-			elog(NOTICE, "Found non const expression. Please check log for more information.");
-			GPOS_RESET_EX;
-			return NULL;
 		}
 		if (FErrorOut(ex))
 		{

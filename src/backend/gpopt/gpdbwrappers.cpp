@@ -216,6 +216,8 @@
 #define GP_WRAP_END	\
 		}	\
 	}	\
+	EmitErrorReport(); \
+	FlushErrorState(); \
 	GPOS_RAISE(gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError)
 
 using namespace gpos;
