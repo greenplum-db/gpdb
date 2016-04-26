@@ -2484,7 +2484,6 @@ url_fflush(URL_FILE *file, CopyState pstate)
 void
 url_rewind(URL_FILE *file, const char *relname)
 {
-	char *url = file->url;
     switch(file->type)
     {
 		case CFTYPE_FILE:

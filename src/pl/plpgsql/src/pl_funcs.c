@@ -697,8 +697,6 @@ free_return_next(PLpgSQL_stmt_return_next *stmt)
 static void
 free_return_query(PLpgSQL_stmt_return_query *stmt)
 {
-	ListCell   *lc;
-
 	free_expr(stmt->query);
 }
 

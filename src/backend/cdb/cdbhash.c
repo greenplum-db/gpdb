@@ -227,7 +227,6 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 	Complex		complex_buf;
 	double		complex_real;
 	double		complex_imag;
-	AclItem		*aclitem_ptr;
 	
 	Cash		cash_buf;
 	pg_uuid_t  *uuid_buf;
