@@ -121,7 +121,6 @@ typedef struct AllocBlockData
 	AllocSet	aset;			/* aset that owns this block */
 	AllocBlock	next;			/* next block in aset's blocks list */
 	char	   *freeptr;		/* start of free space in this block */
-	char	   *endptr;			/* end of space in this block */
 } AllocBlockData;
 
 /*
@@ -231,7 +230,7 @@ static MemoryContextMethods AllocSetMethods = {
 static void dump_allocset_block(FILE *file, AllocBlock block)
 {
 	// block start/free/end pointer
-	fprintf(file, "\t%p|%p|%p\n", block, block->freeptr, block->endptr);
+	fprintf(file, "\t%p|%p|%p\n", block, block->freeptr, UserPtr_GetEndAddress(block));
 
 	AllocChunk chunk = (AllocChunk) (((char *)block) + ALLOC_BLOCKHDRSZ);
 	while ((char *) chunk < (char *) block->freeptr)
@@ -852,7 +851,6 @@ AllocSetContextCreate(MemoryContext parent,
                                (unsigned long)blksize);
 		block->aset = context;
 		block->freeptr = ((char *) block) + ALLOC_BLOCKHDRSZ;
-		block->endptr = ((char *) block) + blksize;
 		block->next = context->blocks;
 		context->blocks = block;
 		/* Mark block as not to be released at reset time */
@@ -1031,7 +1029,7 @@ AllocSetReset(MemoryContext context)
 		}
 		else
 		{
-			size_t freesz = block->endptr - (char *) block;
+			size_t freesz = UserPtr_GetUserPtrSize(block);
 
 			/* Normal case, release the block */
             MemoryContextNoteFree(&set->header, freesz);
@@ -1084,7 +1082,7 @@ AllocSetDelete(MemoryContext context)
 	while (block != NULL)
 	{
 		AllocBlock	next = block->next;
-		size_t freesz = block->endptr - (char *) block;
+		size_t freesz = UserPtr_GetUserPtrSize(block);
         MemoryContextNoteFree(&set->header, freesz);
 
 #ifdef CLOBBER_FREED_MEMORY
@@ -1148,7 +1146,7 @@ AllocSetAllocImpl(MemoryContext context, Size size, bool isHeader)
                                "Out of memory.  Failed on request of size %lu bytes.",
                                (unsigned long)size);
 		block->aset = set;
-		block->freeptr = block->endptr = ((char *) block) + blksize;
+		block->freeptr = UserPtr_GetEndAddress(block);
 
 		chunk = (AllocChunk) (((char *) block) + ALLOC_BLOCKHDRSZ);
 		chunk->size = chunk_size;
@@ -1243,7 +1241,7 @@ AllocSetAllocImpl(MemoryContext context, Size size, bool isHeader)
 	 */
 	if ((block = set->blocks) != NULL)
 	{
-		Size		availspace = block->endptr - block->freeptr;
+		Size		availspace = UserPtr_GetEndAddress(block) - block->freeptr;
 
 		if (availspace < (chunk_size + ALLOC_CHUNKHDRSZ))
 		{
@@ -1341,7 +1339,6 @@ AllocSetAllocImpl(MemoryContext context, Size size, bool isHeader)
 
 		block->aset = set;
 		block->freeptr = ((char *) block) + ALLOC_BLOCKHDRSZ;
-		block->endptr = ((char *) block) + blksize;
 
 		/*
 		 * If this is the first block of the set, make it the "keeper" block.
@@ -1366,7 +1363,7 @@ AllocSetAllocImpl(MemoryContext context, Size size, bool isHeader)
 	chunk = (AllocChunk) (block->freeptr);
 
 	block->freeptr += (chunk_size + ALLOC_CHUNKHDRSZ);
-	Assert(block->freeptr <= block->endptr);
+	Assert(block->freeptr <= UserPtr_GetEndAddress(block));
 
 	chunk->sharedHeader = NULL;
 	chunk->size = chunk_size;
@@ -1490,7 +1487,7 @@ AllocSetFreeImpl(MemoryContext context, void *pointer, bool isHeader)
 		else
 			prevblock->next = block->next;
 
-		freesz = block->endptr - (char *) block;
+		freesz = UserPtr_GetUserPtrSize(block);
 		MemoryContextNoteFree(&set->header, freesz);
 		gp_free(block);
 	}
@@ -1646,7 +1643,7 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
 			   (chunk->size + ALLOC_BLOCKHDRSZ + ALLOC_CHUNKHDRSZ));
 
 		/* Do the realloc */
-        oldblksize = block->endptr - (char *)block;
+        oldblksize = UserPtr_GetUserPtrSize(block);
 		chksize = MAXALIGN(size);
 		blksize = chksize + ALLOC_BLOCKHDRSZ + ALLOC_CHUNKHDRSZ;
 		block = (AllocBlock) gp_realloc(block, blksize);
@@ -1655,7 +1652,7 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
                                &set->header, CDB_MCXT_WHERE(&set->header),
                                "Out of memory.  Failed on request of size %lu bytes.",
                                (unsigned long)size);
-		block->freeptr = block->endptr = ((char *) block) + blksize;
+		block->freeptr = ((char *) block) + blksize;
 
 		/* Update pointers since block has likely been moved */
 		chunk = (AllocChunk) (((char *) block) + ALLOC_BLOCKHDRSZ);
@@ -1791,14 +1788,14 @@ AllocSet_GetStats(MemoryContext context, uint64 *nBlocks, uint64 *nChunks,
     for (block = set->blocks; block != NULL; block = block->next)
     {
     	*nBlocks = *nBlocks + 1;
-    	currentAllocated += block->endptr - ((char *) block);
+    	currentAllocated += UserPtr_GetUserPtrSize(block);
 	}
 
     /* Space at end of first block is available for use. */
     if (set->blocks)
     {
     	*nChunks = *nChunks + 1;
-    	*currentAvailable += set->blocks->endptr - set->blocks->freeptr;
+    	*currentAvailable += UserPtr_GetEndAddress(set->blocks) - set->blocks->freeptr;
     }
 
     /* Freelists.  Count usable space only, not chunk headers. */
