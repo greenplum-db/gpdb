@@ -317,54 +317,53 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 	}
 }
 
-#define UsablePointerOfMalloc(malloc_start)	\
-					((void*)(((char *)(malloc_start)) + sizeof(size_t)))
+#define GetAllocPayload(ptr)	\
+					((void*)(((char *)(ptr)) + sizeof(size_t)))
 
-#define MallocStartFromUsablePointer(usable_pointer)	\
+#define GetAllocHeader(usable_pointer)	\
 					((void*)(((char *)(usable_pointer)) - sizeof(size_t)))
 
-#define GetUsableSize(malloc_pointer)	\
-					(*(size_t *)(malloc_pointer))
+#define GetAllocPayloadSize(ptr)	\
+					(*(size_t *)(ptr))
 
-#define SetUsableSize(malloc_pointer, size)	\
-					(*((size_t*)malloc_pointer) = size)
+#define SetAllocPayloadSize(ptr, size)	\
+					(*((size_t*)ptr) = size)
 
-#define MallocSizeFromUsableSize(size) \
-					(size + sizeof(size_t))
-
+#define GetAllocSizeFromPayloadSize(payload_size) \
+					(payload_size + sizeof(size_t))
 
 static void* malloc_and_store_size(size_t size)
 {
-	size_t malloc_size = MallocSizeFromUsableSize(size);
+	size_t malloc_size = GetAllocSizeFromPayloadSize(size);
 	void* malloc_pointer = malloc(malloc_size);
 	if (NULL == malloc_pointer)
 	{
 		return NULL;
 	}
 
-	SetUsableSize(malloc_pointer, size);
-	return UsablePointerOfMalloc(malloc_pointer);
+	SetAllocPayloadSize(malloc_pointer, size);
+	return GetAllocPayload(malloc_pointer);
 }
 
 static void* realloc_and_store_size(void* usable_pointer, size_t new_usable_size)
 {
-	void* realloc_pointer = realloc(MallocStartFromUsablePointer(usable_pointer), MallocSizeFromUsableSize(new_usable_size));
+	void* realloc_pointer = realloc(GetAllocHeader(usable_pointer), GetAllocSizeFromPayloadSize(new_usable_size));
 
 	if (NULL == realloc_pointer)
 	{
 		return NULL;
 	}
-	SetUsableSize(realloc_pointer, new_usable_size);
-	return UsablePointerOfMalloc(realloc_pointer);
+	SetAllocPayloadSize(realloc_pointer, new_usable_size);
+	return GetAllocPayload(realloc_pointer);
 }
 
 static void free_with_stored_size(void *usable_pointer)
 {
-	void* malloc_pointer = MallocStartFromUsablePointer(usable_pointer);
-	size_t usable_size = GetUsableSize(malloc_pointer);
+	void* malloc_pointer = GetAllocHeader(usable_pointer);
+	size_t usable_size = GetAllocPayloadSize(malloc_pointer);
 	Assert(usable_size > 0);
 	free(malloc_pointer);
-	VmemTracker_ReleaseVmem(MallocSizeFromUsableSize(usable_size));
+	VmemTracker_ReleaseVmem(GetAllocSizeFromPayloadSize(usable_size));
 }
 
 /* Reserves vmem from vmem tracker and allocates memory by calling malloc/calloc */
@@ -372,7 +371,7 @@ static void *gp_malloc_internal(int64 requested_size)
 {
 	void *usable_pointer = NULL;
 
-	size_t size_with_overhead = MallocSizeFromUsableSize(requested_size);
+	size_t size_with_overhead = GetAllocSizeFromPayloadSize(requested_size);
 
 	Assert(size_with_overhead >= 0 && size_with_overhead <= 0x7fffffff);
 
@@ -380,7 +379,7 @@ static void *gp_malloc_internal(int64 requested_size)
 	if (MemoryAllocation_Success == stat)
 	{
 		usable_pointer = malloc_and_store_size(requested_size);
-		Assert(GetUsableSize(MallocStartFromUsablePointer(usable_pointer)) == requested_size);
+		Assert(GetAllocPayloadSize(GetAllocHeader(usable_pointer)) == requested_size);
 
 #ifdef USE_TEST_UTILS
 		if (gp_simex_init && gp_simex_run && gp_simex_class == SimExESClass_OOM && usable_pointer)
@@ -388,7 +387,7 @@ static void *gp_malloc_internal(int64 requested_size)
 			SimExESSubClass subclass = SimEx_CheckInject();
 			if (subclass == SimExESSubClass_OOM_ReturnNull)
 			{
-				free(MallocStartFromUsablePointer(usable_pointer));
+				free(GetAllocHeader(usable_pointer));
 				usable_pointer = NULL;
 			}
 		}
@@ -442,7 +441,7 @@ void *gp_realloc(void *ptr, int64 new_size)
 		return ret;
 	}
 
-	size_t old_size = GetUsableSize(ptr);
+	size_t old_size = GetAllocPayloadSize(ptr);
 	int64 size_diff = (new_size - old_size);
 
 	if(new_size <= old_size || MemoryAllocation_Success == VmemTracker_ReserveVmem(size_diff))
@@ -455,7 +454,7 @@ void *gp_realloc(void *ptr, int64 new_size)
 			SimExESSubClass subclass = SimEx_CheckInject();
 			if (subclass == SimExESSubClass_OOM_ReturnNull)
 			{
-				free(MallocStartFromUsablePointer(ret));
+				free(GetAllocHeader(ret));
 				ret = NULL;
 			}
 		}
