@@ -137,6 +137,12 @@ extern void MemoryContextFreeImpl(void *pointer, const char* file, const char *f
 #define VmemPtr_GetEndAddress(ptr) \
 		(((char *)ptr) + UserPtrSizeToVmemPtrSize(VmemPtr_GetUserPtrSize(ptr)))
 
+#define UserPtr_GetUserPtrSize(ptr) \
+		(VmemPtr_GetUserPtrSize(UserPtrToVmemPtr(ptr)))
+
+#define UserPtr_GetEndAddress(ptr) \
+		(((char *)ptr) + UserPtr_GetUserPtrSize(ptr))
+
 /*
  * The result of palloc() is always word-aligned, so we can skip testing
  * alignment of the pointer when deciding which MemSet variant to use.
