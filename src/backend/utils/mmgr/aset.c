@@ -1040,7 +1040,7 @@ AllocSetReset(MemoryContext context)
 			/* Wipe freed memory for debugging purposes */
 			memset(block, 0x7F, block->freeptr - ((char *) block));
 #endif
-			gp_free2(block, freesz);
+			gp_free(block);
 		}
 		block = next;
 	}
@@ -1091,7 +1091,7 @@ AllocSetDelete(MemoryContext context)
 		/* Wipe freed memory for debugging purposes */
 		memset(block, 0x7F, block->freeptr - ((char *) block));
 #endif
-		gp_free2(block, freesz);
+		gp_free(block);
 		block = next;
 	}
 
@@ -1492,7 +1492,7 @@ AllocSetFreeImpl(MemoryContext context, void *pointer, bool isHeader)
 
 		freesz = block->endptr - (char *) block;
 		MemoryContextNoteFree(&set->header, freesz);
-		gp_free2(block, freesz);
+		gp_free(block);
 	}
 	else
 	{
@@ -1649,7 +1649,7 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
         oldblksize = block->endptr - (char *)block;
 		chksize = MAXALIGN(size);
 		blksize = chksize + ALLOC_BLOCKHDRSZ + ALLOC_CHUNKHDRSZ;
-		block = (AllocBlock) gp_realloc(block, oldblksize, blksize);
+		block = (AllocBlock) gp_realloc(block, blksize);
 		if (block == NULL)
             MemoryContextError(ERRCODE_OUT_OF_MEMORY,
                                &set->header, CDB_MCXT_WHERE(&set->header),

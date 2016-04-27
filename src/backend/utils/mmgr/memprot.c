@@ -317,53 +317,95 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 	}
 }
 
-/* Reserves vmem from vmem tracker and allocates memory by calling malloc/calloc */
-static void *gp_malloc_internal(int64 sz1, int64 sz2, bool ismalloc)
+#define UsablePointerOfMalloc(malloc_start)	\
+					((void*)(((char *)(malloc_start)) + sizeof(size_t)))
+
+#define MallocStartFromUsablePointer(usable_pointer)	\
+					((void*)(((char *)(usable_pointer)) - sizeof(size_t)))
+
+#define GetUsableSize(malloc_pointer)	\
+					(*(size_t *)(malloc_pointer))
+
+#define SetUsableSize(malloc_pointer, size)	\
+					(*((size_t*)malloc_pointer) = size)
+
+#define MallocSizeFromUsableSize(size) \
+					(size + sizeof(size_t))
+
+
+static void* malloc_and_store_size(size_t size)
 {
-	int64 sz = sz1;
-	void *ret = NULL;
+	size_t malloc_size = MallocSizeFromUsableSize(size);
+	void* malloc_pointer = malloc(malloc_size);
+	if (NULL == malloc_pointer)
+	{
+		return NULL;
+	}
 
-	if(!ismalloc)
-		sz *= sz2;
+	SetUsableSize(malloc_pointer, size);
+	return UsablePointerOfMalloc(malloc_pointer);
+}
 
-	Assert(sz >=0 && sz <= 0x7fffffff);
+static void* realloc_and_store_size(void* usable_pointer, size_t new_usable_size)
+{
+	void* realloc_pointer = realloc(MallocStartFromUsablePointer(usable_pointer), MallocSizeFromUsableSize(new_usable_size));
 
-	MemoryAllocationStatus stat = VmemTracker_ReserveVmem(sz);
+	if (NULL == realloc_pointer)
+	{
+		return NULL;
+	}
+	SetUsableSize(realloc_pointer, new_usable_size);
+	return UsablePointerOfMalloc(realloc_pointer);
+}
+
+static void free_with_stored_size(void *usable_pointer)
+{
+	void* malloc_pointer = MallocStartFromUsablePointer(usable_pointer);
+	size_t usable_size = GetUsableSize(malloc_pointer);
+	Assert(usable_size > 0);
+	free(malloc_pointer);
+	VmemTracker_ReleaseVmem(MallocSizeFromUsableSize(usable_size));
+}
+
+/* Reserves vmem from vmem tracker and allocates memory by calling malloc/calloc */
+static void *gp_malloc_internal(int64 requested_size)
+{
+	void *usable_pointer = NULL;
+
+	size_t size_with_overhead = MallocSizeFromUsableSize(requested_size);
+
+	Assert(size_with_overhead >= 0 && size_with_overhead <= 0x7fffffff);
+
+	MemoryAllocationStatus stat = VmemTracker_ReserveVmem(size_with_overhead);
 	if (MemoryAllocation_Success == stat)
 	{
-		if(ismalloc)
-		{
-			ret = malloc(sz);
-		}
-		else
-		{
-			ret = calloc(sz1, sz2);
-		}
+		usable_pointer = malloc_and_store_size(requested_size);
+		Assert(GetUsableSize(MallocStartFromUsablePointer(usable_pointer)) == requested_size);
 
 #ifdef USE_TEST_UTILS
-		if (gp_simex_init && gp_simex_run && gp_simex_class == SimExESClass_OOM && ret)
+		if (gp_simex_init && gp_simex_run && gp_simex_class == SimExESClass_OOM && usable_pointer)
 		{
 			SimExESSubClass subclass = SimEx_CheckInject();
 			if (subclass == SimExESSubClass_OOM_ReturnNull)
 			{
-				free(ret);
-				ret = NULL;
+				free(MallocStartFromUsablePointer(usable_pointer));
+				usable_pointer = NULL;
 			}
 		}
 #endif
 
-		if(!ret)
+		if(!usable_pointer)
 		{
-			VmemTracker_ReleaseVmem(sz);
-			gp_failed_to_alloc(MemoryFailure_SystemMemoryExhausted, 0, sz);
+			VmemTracker_ReleaseVmem(size_with_overhead);
+			gp_failed_to_alloc(MemoryFailure_SystemMemoryExhausted, 0, size_with_overhead);
 
 			return NULL;
 		}
 
-		return ret;
+		return usable_pointer;
 	}
 
-	gp_failed_to_alloc(stat, 0, sz);
+	gp_failed_to_alloc(stat, 0, size_with_overhead);
 
 	return NULL;
 }
@@ -380,29 +422,15 @@ void *gp_malloc(int64 sz)
 
 	if(gp_mp_inited)
 	{
-		return gp_malloc_internal(sz, 0, true);
+		return gp_malloc_internal(sz);
 	}
 
-	ret = malloc(sz);
-	return ret;
-}
-
-/* Allocates a (sz1 * sz2) bytes of memory */
-void *gp_calloc(int64 sz1, int64 sz2)
-{
-	void *ret;
-
-	if(gp_mp_inited)
-	{
-		return gp_malloc_internal(sz1, sz2, false);
-	}
-
-	ret = calloc(sz1, sz2);
+	ret = malloc_and_store_size(sz);
 	return ret;
 }
 
 /* Reallocates memory, respecting vmem protection, if enabled */
-void *gp_realloc(void *ptr, int64 sz, int64 newsz)
+void *gp_realloc(void *ptr, int64 new_size)
 {
 	Assert(!gp_mp_inited || MemoryProtection_IsOwnerThread());
 
@@ -410,15 +438,16 @@ void *gp_realloc(void *ptr, int64 sz, int64 newsz)
 
 	if(!gp_mp_inited)
 	{
-		ret = realloc(ptr, newsz);
+		ret = realloc_and_store_size(ptr, new_size);
 		return ret;
 	}
 
-	int64 size_diff = (newsz - sz);
+	size_t old_size = GetUsableSize(ptr);
+	int64 size_diff = (new_size - old_size);
 
-	if(newsz <= sz || MemoryAllocation_Success == VmemTracker_ReserveVmem(size_diff))
+	if(new_size <= old_size || MemoryAllocation_Success == VmemTracker_ReserveVmem(size_diff))
 	{
-		ret = realloc(ptr, newsz);
+		ret = realloc_and_store_size(ptr, new_size);
 
 #ifdef USE_TEST_UTILS
 		if (gp_simex_init && gp_simex_run && gp_simex_class == SimExESClass_OOM && ret)
@@ -426,7 +455,7 @@ void *gp_realloc(void *ptr, int64 sz, int64 newsz)
 			SimExESSubClass subclass = SimEx_CheckInject();
 			if (subclass == SimExESSubClass_OOM_ReturnNull)
 			{
-				free(ret);
+				free(MallocStartFromUsablePointer(ret));
 				ret = NULL;
 			}
 		}
@@ -437,7 +466,7 @@ void *gp_realloc(void *ptr, int64 sz, int64 newsz)
 			Assert(0 < size_diff);
 			VmemTracker_ReleaseVmem(size_diff);
 
-			gp_failed_to_alloc(MemoryFailure_SystemMemoryExhausted, 0, sz);
+			gp_failed_to_alloc(MemoryFailure_SystemMemoryExhausted, 0, old_size);
 			return NULL;
 		}
 
@@ -448,11 +477,8 @@ void *gp_realloc(void *ptr, int64 sz, int64 newsz)
 }
 
 /* Frees memory and releases vmem accordingly */
-void gp_free2(void *ptr, int64 sz)
+void gp_free(void *ptr)
 {
 	Assert(!gp_mp_inited || MemoryProtection_IsOwnerThread());
-
-	Assert(sz);
-	free(ptr);
-	VmemTracker_ReleaseVmem(sz);
+	free_with_stored_size(ptr);
 }
