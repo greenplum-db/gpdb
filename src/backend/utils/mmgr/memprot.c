@@ -317,53 +317,38 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 	}
 }
 
-#define GetAllocPayload(ptr)	\
-					((void*)(((char *)(ptr)) + sizeof(size_t)))
-
-#define GetAllocHeader(usable_pointer)	\
-					((void*)(((char *)(usable_pointer)) - sizeof(size_t)))
-
-#define GetAllocPayloadSize(ptr)	\
-					(*(size_t *)(ptr))
-
-#define SetAllocPayloadSize(ptr, size)	\
-					(*((size_t*)ptr) = size)
-
-#define GetAllocSizeFromPayloadSize(payload_size) \
-					(payload_size + sizeof(size_t))
-
 static void* malloc_and_store_size(size_t size)
 {
-	size_t malloc_size = GetAllocSizeFromPayloadSize(size);
+	size_t malloc_size = UserPtrSizeToVmemPtrSize(size);
 	void* malloc_pointer = malloc(malloc_size);
 	if (NULL == malloc_pointer)
 	{
 		return NULL;
 	}
 
-	SetAllocPayloadSize(malloc_pointer, size);
-	return GetAllocPayload(malloc_pointer);
+	VmemPtr_SetUserPtrSize(malloc_pointer, size);
+	return VmemPtrToUserPtr(malloc_pointer);
 }
 
 static void* realloc_and_store_size(void* usable_pointer, size_t new_usable_size)
 {
-	void* realloc_pointer = realloc(GetAllocHeader(usable_pointer), GetAllocSizeFromPayloadSize(new_usable_size));
+	void* realloc_pointer = realloc(UserPtrToVmemPtr(usable_pointer), UserPtrSizeToVmemPtrSize(new_usable_size));
 
 	if (NULL == realloc_pointer)
 	{
 		return NULL;
 	}
-	SetAllocPayloadSize(realloc_pointer, new_usable_size);
-	return GetAllocPayload(realloc_pointer);
+	VmemPtr_SetUserPtrSize(realloc_pointer, new_usable_size);
+	return VmemPtrToUserPtr(realloc_pointer);
 }
 
 static void free_with_stored_size(void *usable_pointer)
 {
-	void* malloc_pointer = GetAllocHeader(usable_pointer);
-	size_t usable_size = GetAllocPayloadSize(malloc_pointer);
+	void* malloc_pointer = UserPtrToVmemPtr(usable_pointer);
+	size_t usable_size = VmemPtr_GetUserPtrSize(malloc_pointer);
 	Assert(usable_size > 0);
 	free(malloc_pointer);
-	VmemTracker_ReleaseVmem(GetAllocSizeFromPayloadSize(usable_size));
+	VmemTracker_ReleaseVmem(UserPtrSizeToVmemPtrSize(usable_size));
 }
 
 /* Reserves vmem from vmem tracker and allocates memory by calling malloc/calloc */
@@ -371,7 +356,7 @@ static void *gp_malloc_internal(int64 requested_size)
 {
 	void *usable_pointer = NULL;
 
-	size_t size_with_overhead = GetAllocSizeFromPayloadSize(requested_size);
+	size_t size_with_overhead = UserPtrSizeToVmemPtrSize(requested_size);
 
 	Assert(size_with_overhead >= 0 && size_with_overhead <= 0x7fffffff);
 
@@ -379,7 +364,7 @@ static void *gp_malloc_internal(int64 requested_size)
 	if (MemoryAllocation_Success == stat)
 	{
 		usable_pointer = malloc_and_store_size(requested_size);
-		Assert(GetAllocPayloadSize(GetAllocHeader(usable_pointer)) == requested_size);
+		Assert(VmemPtr_GetUserPtrSize(UserPtrToVmemPtr(usable_pointer)) == requested_size);
 
 #ifdef USE_TEST_UTILS
 		if (gp_simex_init && gp_simex_run && gp_simex_class == SimExESClass_OOM && usable_pointer)
@@ -387,7 +372,7 @@ static void *gp_malloc_internal(int64 requested_size)
 			SimExESSubClass subclass = SimEx_CheckInject();
 			if (subclass == SimExESSubClass_OOM_ReturnNull)
 			{
-				free(GetAllocHeader(usable_pointer));
+				free(UserPtrToVmemPtr(usable_pointer));
 				usable_pointer = NULL;
 			}
 		}
@@ -441,7 +426,7 @@ void *gp_realloc(void *ptr, int64 new_size)
 		return ret;
 	}
 
-	size_t old_size = GetAllocPayloadSize(ptr);
+	size_t old_size = VmemPtr_GetUserPtrSize(ptr);
 	int64 size_diff = (new_size - old_size);
 
 	if(new_size <= old_size || MemoryAllocation_Success == VmemTracker_ReserveVmem(size_diff))
@@ -454,7 +439,7 @@ void *gp_realloc(void *ptr, int64 new_size)
 			SimExESSubClass subclass = SimEx_CheckInject();
 			if (subclass == SimExESSubClass_OOM_ReturnNull)
 			{
-				free(GetAllocHeader(ret));
+				free(UserPtrToVmemPtr(ret));
 				ret = NULL;
 			}
 		}

@@ -117,6 +117,26 @@ extern void MemoryContextFreeImpl(void *pointer, const char* file, const char *f
 #define repalloc(ptr, sz) MemoryContextReallocImpl(ptr, (sz), __FILE__, PG_FUNCNAME_MACRO, __LINE__)
 #define pfree(ptr) MemoryContextFreeImpl(ptr, __FILE__, PG_FUNCNAME_MACRO, __LINE__)
 
+/* Gets the payload of a vmem pointer */
+#define VmemPtrToUserPtr(ptr)	\
+					((void*)(((char *)(ptr)) + sizeof(size_t)))
+
+
+#define UserPtrToVmemPtr(usable_pointer)	\
+					((void*)(((char *)(usable_pointer)) - sizeof(size_t)))
+
+#define VmemPtr_GetUserPtrSize(ptr)	\
+					(*(size_t *)(ptr))
+
+#define VmemPtr_SetUserPtrSize(ptr, size)	\
+					(*((size_t*)ptr) = size)
+
+#define UserPtrSizeToVmemPtrSize(payload_size) \
+					(payload_size + sizeof(size_t))
+
+#define VmemPtr_GetEndAddress(ptr) \
+		(((char *)ptr) + UserPtrSizeToVmemPtrSize(VmemPtr_GetUserPtrSize(ptr)))
+
 /*
  * The result of palloc() is always word-aligned, so we can skip testing
  * alignment of the pointer when deciding which MemSet variant to use.
