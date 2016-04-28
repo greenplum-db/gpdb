@@ -24,7 +24,6 @@
 #include "cdb/cdbvars.h"
 #include "executor/spi.h"
 #include "nodes/makefuncs.h"
-#include "port.h"
 #include "utils/acl.h"
 #include "utils/syscache.h"
 #include "utils/numeric.h"
@@ -1835,25 +1834,23 @@ PrintPgaocssegAndGprelationNodeEntries(AOCSFileSegInfo **allseginfo, int totalse
 	char tmp[10] = {0};
 	memset(segnumArray, 0, sizeof(segnumArray));
 
+	char		*head = segnumArray;
+	const char	*tail = segnumArray + sizeof(segnumArray);
+
 	for (int i = 0 ; i < totalsegs; i++)
 	{
 		snprintf(tmp, sizeof(tmp), "%d", allseginfo[i]->segno);
 
-		if (strlen(segnumArray) + strlen(tmp) + strlen(delimiter) >= 600)
-		{
+		if (strlen(tmp) + strlen(delimiter) >= (tail - head))
 			break;
-		}
 
-		/*
-		 * The original code "strncat(segnumArray, tmp, sizeof(tmp))" is simple
-		 * and safe, but the compiler complains much by law of [-Wstrncat-size].
-		 */
-		strlcat(segnumArray, tmp, sizeof(segnumArray));
-		strlcat(segnumArray, delimiter, sizeof(segnumArray));
+		head += strlcpy(head, tmp, tail - head);
+		head += strlcpy(head, delimiter, tail - head);
 	}
 	elog(LOG, "pg_aocsseg segno entries: %s", segnumArray);
 
 	memset(segnumArray, 0, sizeof(segnumArray));
+	head = segnumArray;
 
 	for (int i = 0; i < AOTupleId_MaxSegmentFileNum; i++)
 	{
@@ -1861,14 +1858,11 @@ PrintPgaocssegAndGprelationNodeEntries(AOCSFileSegInfo **allseginfo, int totalse
 		{
 			snprintf(tmp, sizeof(tmp), "%d", i);
 
-			if (strlen(segnumArray) + strlen(tmp) + strlen(delimiter) >= 600)
-			{
+			if (strlen(tmp) + strlen(delimiter) >= (tail - head))
 				break;
-			}
 
-			/* Use strlcat instead of strncat to stop compiler complaining. */
-			strlcat(segnumArray, tmp, sizeof(segnumArray));
-			strlcat(segnumArray, delimiter, sizeof(segnumArray));
+			head += strlcpy(head, tmp, tail - head);
+			head += strlcpy(head, delimiter, tail - head);
 		}
 	}
 	elog(LOG, "gp_relation_node segno entries: %s", segnumArray);
