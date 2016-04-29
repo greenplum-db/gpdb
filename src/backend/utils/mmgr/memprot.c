@@ -317,7 +317,7 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 	}
 }
 
-static void* malloc_and_store_size(size_t size)
+static void* malloc_and_store_header(size_t size)
 {
 	size_t malloc_size = UserPtrSizeToVmemPtrSize(size);
 	void* malloc_pointer = malloc(malloc_size);
@@ -326,24 +326,30 @@ static void* malloc_and_store_size(size_t size)
 		return NULL;
 	}
 
-	VmemPtr_SetUserPtrSize(malloc_pointer, size);
+	VmemPtr_Initialize(malloc_pointer, size);
 	return VmemPtrToUserPtr(malloc_pointer);
 }
 
 static void* realloc_and_store_size(void* usable_pointer, size_t new_usable_size)
 {
+	Assert(*VmemPtrToHeaderChecksumPtr(UserPtrToVmemPtr(usable_pointer)) == VMEM_HEADER_CHECKSUM);
+	Assert(*VmemPtrToFooterChecksumPtr(UserPtrToVmemPtr(usable_pointer)) == VMEM_FOOTER_CHECKSUM);
+
 	void* realloc_pointer = realloc(UserPtrToVmemPtr(usable_pointer), UserPtrSizeToVmemPtrSize(new_usable_size));
 
 	if (NULL == realloc_pointer)
 	{
 		return NULL;
 	}
-	VmemPtr_SetUserPtrSize(realloc_pointer, new_usable_size);
+	VmemPtr_Initialize(realloc_pointer, new_usable_size);
 	return VmemPtrToUserPtr(realloc_pointer);
 }
 
 static void free_with_stored_size(void *usable_pointer)
 {
+	Assert(*VmemPtrToHeaderChecksumPtr(UserPtrToVmemPtr(usable_pointer)) == VMEM_HEADER_CHECKSUM);
+	Assert(*VmemPtrToFooterChecksumPtr(UserPtrToVmemPtr(usable_pointer)) == VMEM_FOOTER_CHECKSUM);
+
 	void* malloc_pointer = UserPtrToVmemPtr(usable_pointer);
 	size_t usable_size = VmemPtr_GetUserPtrSize(malloc_pointer);
 	Assert(usable_size > 0);
@@ -363,7 +369,7 @@ static void *gp_malloc_internal(int64 requested_size)
 	MemoryAllocationStatus stat = VmemTracker_ReserveVmem(size_with_overhead);
 	if (MemoryAllocation_Success == stat)
 	{
-		usable_pointer = malloc_and_store_size(requested_size);
+		usable_pointer = malloc_and_store_header(requested_size);
 		Assert(VmemPtr_GetUserPtrSize(UserPtrToVmemPtr(usable_pointer)) == requested_size);
 
 #ifdef USE_TEST_UTILS
@@ -409,7 +415,7 @@ void *gp_malloc(int64 sz)
 		return gp_malloc_internal(sz);
 	}
 
-	ret = malloc_and_store_size(sz);
+	ret = malloc_and_store_header(sz);
 	return ret;
 }
 
