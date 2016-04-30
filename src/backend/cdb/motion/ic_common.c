@@ -271,7 +271,7 @@ InitMotionLayerIPC(void)
 	/*activated = false;*/
 	savedSeqServerFd = -1;
 
-	InitMotionUDPIFC(&UDP_listenerFd, &Gp_listener_port);
+	InitMotionUDPIFC(&UDP_listenerFd, (uint16 *) &Gp_listener_port);
 
 	elog(DEBUG1, "Interconnect listening on udp port %d", Gp_listener_port);
 }

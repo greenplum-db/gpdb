@@ -59,7 +59,7 @@ bfz_zlib_write_ex(bfz_t *thiz, const char *buffer, int size)
 {
 	struct bfz_zlib_freeable_stuff *fs = (void *) thiz->freeable_stuff;
 
-	ssize_t written = gfile_write(fs->gfile, buffer, size);
+	ssize_t written = gfile_write(fs->gfile, (void *)buffer, size);
 	if (written < 0)
 	{
 		ereport(ERROR,

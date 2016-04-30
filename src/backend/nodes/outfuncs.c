@@ -404,7 +404,7 @@ _outScanInfo(StringInfo str, Scan *node)
 		 * subquery, but this is serialized elsewhere in outSubqueryScan, no
 		 * need to duplicate it here
 		 */
-		if (rte->type != RTE_SUBQUERY)
+		if (rte->rtekind != RTE_SUBQUERY)
 		{
 			_outNode(str,rte);
 		}

@@ -1666,7 +1666,7 @@ _SPI_execute_plan(_SPI_plan * plan, ParamListInfo paramLI,
 	volatile int res = 0;
 	Snapshot	saveActiveSnapshot;
 	const char *saved_query_string;
-	const char *current_query_string = NULL;
+	char *current_query_string = NULL;
 
 	/* Be sure to restore ActiveSnapshot on error exit */
 	saveActiveSnapshot = ActiveSnapshot;
