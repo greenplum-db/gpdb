@@ -270,7 +270,7 @@ bool Downloader::init(string url, string region, uint64_t size,
 
     readlen = 0;
     chunkcount = 0;
-    memset(this->magic_bytes, 0, 4);
+    memset(this->magic_bytes, 0, sizeof(this->magic_bytes));
 
     return true;
 }
@@ -280,6 +280,11 @@ bool Downloader::set_compression() {
         this->compression = S3_ZIP_GZIP;
 
         this->z_info = new zstream_info();
+        if (!this->z_info) {
+            S3ERROR("Failed to allocate memory");
+            return false;
+        }
+
         this->z_info->inited = false;
         this->z_info->in = NULL;
         this->z_info->out = NULL;
@@ -297,9 +302,11 @@ bool Downloader::get(char *data, uint64_t &len) {
         // get first 4(at least 2) bytes to check if this file is compressed
         BlockingBuffer *buf = buffers[this->chunkcount % this->num];
 
-        if ((this->magic_bytes_num = buf->Read((char *)this->magic_bytes, 4)) >
-            1) {
-            this->set_compression();
+        if ((this->magic_bytes_num = buf->Read(
+                 (char *)this->magic_bytes, sizeof(this->magic_bytes))) > 1) {
+            if (!this->set_compression()) {
+                return false;
+            }
         }
     }
 
@@ -365,6 +372,8 @@ RETRY:
 bool Downloader::zstream_get(char *data, uint64_t &len) {
     uint64_t filelen = this->o->Size();
 
+// S3_ZIP_CHUNKSIZE is simply the buffer size for feeding data to and
+// pulling data from the zlib routines. 256K is recommended by zlib.
 #define S3_ZIP_CHUNKSIZE 256 * 1024
     uint32_t left_out = 0;
     zstream_info *zinfo = this->z_info;
