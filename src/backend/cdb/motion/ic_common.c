@@ -271,7 +271,10 @@ InitMotionLayerIPC(void)
 	/*activated = false;*/
 	savedSeqServerFd = -1;
 
-	InitMotionUDPIFC(&UDP_listenerFd, (uint16 *) &Gp_listener_port);
+	/* use a local uint16 to remove warning of 'incompatible type' */
+	uint16 port;
+	InitMotionUDPIFC(&UDP_listenerFd, &port);
+	Gp_listener_port = port;
 
 	elog(DEBUG1, "Interconnect listening on udp port %d", Gp_listener_port);
 }
