@@ -32,6 +32,7 @@
 #include "utils/faultinjector.h"
 #include "utils/hsearch.h"
 #include "miscadmin.h"
+#include "utils/guc.h"
 
 #ifdef FAULT_INJECTOR
 
@@ -567,7 +568,7 @@ FaultInjector_InjectFaultIfSet(
 			
 			break;
 		case FaultInjectorTypeSleep:
-			ereport(LOG, 
+			ereport(fault_injector_log_level,
 					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
@@ -608,7 +609,7 @@ FaultInjector_InjectFaultIfSet(
 					FileRep_SetSegmentState(SegmentStateFault, FaultTypeIO);
 					break;
 			}
-			ereport(LOG, 
+			ereport(fault_injector_log_level,
 					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
@@ -671,7 +672,7 @@ FaultInjector_InjectFaultIfSet(
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 			break;
 		case FaultInjectorTypeInfiniteLoop:
-			ereport(LOG, 
+			ereport(fault_injector_log_level,
 					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
@@ -695,7 +696,7 @@ FaultInjector_InjectFaultIfSet(
 			}
 			break;
 		case FaultInjectorTypeDataCorruption:
-			ereport(LOG, 
+			ereport(fault_injector_log_level,
 					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));							
@@ -705,7 +706,7 @@ FaultInjector_InjectFaultIfSet(
 		{
 			FaultInjectorEntry_s	*entry;
 			
-			ereport(LOG, 
+			ereport(fault_injector_log_level,
 					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
@@ -718,14 +719,14 @@ FaultInjector_InjectFaultIfSet(
 
 			if (entry != NULL)
 			{
-				ereport(LOG, 
+				ereport(fault_injector_log_level,
 					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entry->faultInjectorType])));	
 			}
 			else
 			{
-				ereport(LOG, 
+				ereport(fault_injector_log_level,
 						(errmsg("fault 'NULL', fault name:'%s'  ",
 								FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier])));				
 
@@ -740,7 +741,7 @@ FaultInjector_InjectFaultIfSet(
 			break;
 		}
 		case FaultInjectorTypeSkip:
-			ereport(LOG, 
+			ereport(fault_injector_log_level,
 					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));							
@@ -750,7 +751,7 @@ FaultInjector_InjectFaultIfSet(
 		{
 			char	*buffer = NULL;
 			
-			ereport(LOG, 
+			ereport(fault_injector_log_level,
 					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
@@ -767,7 +768,7 @@ FaultInjector_InjectFaultIfSet(
 		case FaultInjectorTypeReset:
 		case FaultInjectorTypeStatus:
 			
-			ereport(LOG, 
+			ereport(fault_injector_log_level,
 					(errmsg("unexpected error, fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
@@ -790,7 +791,7 @@ FaultInjector_InjectFaultIfSet(
 			 * has HOLD_INTERRUPTS() .. RESUME_INTERRUPTS() around it, otherwise
 			 * the interrupt could be handled inside the fault injector itself
 			 */
-			ereport(LOG,
+			ereport(fault_injector_log_level,
 					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
@@ -802,7 +803,7 @@ FaultInjector_InjectFaultIfSet(
 
 		case FaultInjectorTypeFinishPending:
 		{
-			ereport(LOG,
+			ereport(fault_injector_log_level,
 					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
@@ -828,7 +829,7 @@ FaultInjector_InjectFaultIfSet(
 
 		default:
 			
-			ereport(LOG, 
+			ereport(fault_injector_log_level,
 					(errmsg("unexpected error, fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	

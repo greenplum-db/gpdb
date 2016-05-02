@@ -83,6 +83,7 @@ set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
 set gp_autostats_mode = none;
 set gp_hashjoin_metadata_memory_percent=0;
+set fault_injector_log_level=INFO;
 
 begin;
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;

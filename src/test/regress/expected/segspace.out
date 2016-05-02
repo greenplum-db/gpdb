@@ -83,8 +83,10 @@ set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
 set gp_autostats_mode = none;
 set gp_hashjoin_metadata_memory_percent=0;
+set fault_injector_log_level=INFO;
 begin;
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
+INFO:  fault triggered, fault name:'exec_hashjoin_new_batch' fault type:'interrupt'
 ERROR:  canceling MPP operation  (seg0 slice2 gcaragea-mbp.local:40070 pid=48717)
 rollback;
 -- check used segspace after test
@@ -123,6 +125,7 @@ set gp_hashjoin_metadata_memory_percent=0;
 begin;
 insert into segspace_t1_created
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
+INFO:  fault triggered, fault name:'exec_hashjoin_new_batch' fault type:'interrupt'
 ERROR:  canceling MPP operation  (seg0 gcaragea-mbp.local:40070 pid=48717)
 rollback;
 -- check used segspace after test
@@ -165,6 +168,7 @@ create table segspace_t1_created AS
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'i1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INFO:  fault triggered, fault name:'exec_hashjoin_new_batch' fault type:'interrupt'
 ERROR:  canceling MPP operation  (seg0 gcaragea-mbp.local:40070 pid=48717)
 rollback;
 -- check used segspace after test

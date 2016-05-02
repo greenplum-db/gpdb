@@ -79,6 +79,8 @@ static const char *assign_debug_persistent_store_print_level(const char *newval,
 										  bool doit, GucSource source);
 static const char *assign_debug_database_command_print_level(const char *newval,
 										  bool doit, GucSource source);
+static const char *assign_fault_injector_log_level(const char *newval,
+										  bool doit, GucSource source);
 static const char *assign_optimizer_log_failure(const char *newval,
 							 bool doit, GucSource source);
 static const char *assign_optimizer_minidump(const char *newval,
@@ -367,6 +369,7 @@ static char *Debug_persistent_print_level_str;
 static char *Debug_persistent_recovery_print_level_str;
 static char *Debug_persistent_store_print_level_str;
 static char *Debug_database_command_print_level_str;
+static char *fault_injector_log_level_str;
 static char *gp_log_format_string;
 static char *gp_workfile_caching_loglevel_str;
 static char *gp_sessionstate_loglevel_str;
@@ -453,6 +456,9 @@ bool		dml_ignore_target_partition_check = false;
 char	   *gp_idf_deduplicate_str;
 
 bool		fts_diskio_check = false;
+
+/* gpfaultinjector gucs */
+int			fault_injector_log_level = LOG;
 
 /* Planner gucs */
 bool		enable_seqscan = true;
@@ -5145,6 +5151,19 @@ struct config_string ConfigureNamesString_gp[] =
 		"log", assign_debug_database_command_print_level, NULL
 	},
 
+
+	{
+		{"fault_injector_log_level", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Sets fault_injectr message levels that are sent to the client."),
+			gettext_noop("Valid values are DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, "
+			"INFO, NOTICE, WARNING, ERROR, LOG, FATAL, and PANIC. Each level "
+						"includes all the levels that follow it."),
+			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL
+		},
+		&fault_injector_log_level_str,
+		"log", assign_fault_injector_log_level, NULL
+	},
+
 	{
 		{"gp_session_role", PGC_BACKEND, GP_WORKER_IDENTITY,
 			gettext_noop("Reports the default role for the session."),
@@ -5681,6 +5700,13 @@ assign_debug_database_command_print_level(const char *newval,
 										  bool doit, GucSource source)
 {
 	return (assign_msglvl(&Debug_database_command_print_level, newval, doit, source));
+}
+
+static const char *
+assign_fault_injector_log_level(const char *newval,
+										  bool doit, GucSource source)
+{
+	return (assign_msglvl(&fault_injector_log_level, newval, doit, source));
 }
 
 static const char *
