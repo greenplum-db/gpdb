@@ -68,7 +68,6 @@ typedef struct
 	PlannerGlobal *glob;
 	indexed_tlist *subplan_itlist;
 	int			rtoffset;
-	bool		use_scan_slot;
 } fix_upper_expr_context;
 
 /*
@@ -96,8 +95,7 @@ static bool fix_scan_expr_walker(Node *node, fix_scan_expr_context *context);
 static void set_join_references(PlannerGlobal *glob, Join *join, int rtoffset);
 static void set_inner_join_references(PlannerGlobal *glob, Plan *inner_plan,
 									  indexed_tlist *outer_itlist);
-static void set_upper_references(PlannerGlobal *glob, Plan *plan, int rtoffset,
-					 bool use_scan_slot);
+static void set_upper_references(PlannerGlobal *glob, Plan *plan, int rtoffset);
 static void set_dummy_tlist_references(Plan *plan, int rtoffset);
 static indexed_tlist *build_tlist_index(List *tlist);
 static Var *search_indexed_tlist_for_var(Var *var,
@@ -129,8 +127,7 @@ static List *fix_child_hashclauses(PlannerGlobal *glob,
 static Node *fix_upper_expr(PlannerGlobal *glob,
 			   Node *node,
 			   indexed_tlist *subplan_itlist,
-			   int rtoffset,
-			   bool use_scan_slot);
+			   int rtoffset);
 static Node *fix_upper_expr_mutator(Node *node,
 									fix_upper_expr_context *context);
 static bool fix_opfuncids_walker(Node *node, void *context);
@@ -255,7 +252,6 @@ static void set_plan_references_output_asserts(PlannerGlobal *glob, Plan *plan)
 
 		Assert((var->varno == INNER
 				|| var->varno == OUTER
-				|| var->varno == 0		/* GPDB uses 0 for scan tuple slot. */
 				|| (var->varno > 0 && var->varno <= list_length(glob->finalrtable)))
 				&& "Plan contains var that refer outside the rtable.");
 
@@ -447,8 +443,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 		(List *)fix_upper_expr(glob,
 							   (Node *)plan->flow->hashExpr,
 							   plan_itlist,
-							   rtoffset,
-							   false);
+							   rtoffset);
         pfree(plan_itlist);
     }
 
@@ -778,10 +773,10 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 			}
 			break;
 		case T_Agg:
-			set_upper_references(glob, plan, rtoffset, true);
+			set_upper_references(glob, plan, rtoffset);
 			break;
 		case T_Window:
-			set_upper_references(glob, plan, rtoffset, true);
+			set_upper_references(glob, plan, rtoffset);
 			{
 				indexed_tlist  *subplan_itlist =
 					build_tlist_index(plan->lefttree->targetlist);
@@ -806,11 +801,11 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 						if (window_edge_is_delayed(frame->trail))
 							frame->trail->val =
 								fix_upper_expr(glob, frame->trail->val,
-											   subplan_itlist, rtoffset, true);
+											   subplan_itlist, rtoffset);
 						if (window_edge_is_delayed(frame->lead))
 							frame->lead->val =
 								fix_upper_expr(glob, frame->lead->val,
-											   subplan_itlist, rtoffset, true);
+											   subplan_itlist, rtoffset);
 					}
 				}
 				pfree(subplan_itlist);
@@ -826,7 +821,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 				 */
 				if (splan->plan.lefttree != NULL)
 				{
-					set_upper_references(glob, plan, rtoffset, false);
+					set_upper_references(glob, plan, rtoffset);
 				}
 				splan->plan.targetlist =
 					fix_scan_list(glob, splan->plan.targetlist, rtoffset);
@@ -839,7 +834,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 			}
 			break;
 		case T_Repeat:
-			set_upper_references(glob, plan, rtoffset, false); /* GPDB code uses OUTER. */
+			set_upper_references(glob, plan, rtoffset);
 			break;
 		case T_Append:
 			{
@@ -897,7 +892,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 					build_tlist_index(plan->lefttree->targetlist);
 
 				motion->hashExpr = (List *)
-					fix_upper_expr(glob, (Node*) motion->hashExpr, childplan_itlist, rtoffset, false);
+					fix_upper_expr(glob, (Node*) motion->hashExpr, childplan_itlist, rtoffset);
 
 #ifdef USE_ASSERT_CHECKING
 				/* 1. Assert that the Motion node has same number of hash data types as that of hash expressions*/
@@ -1570,8 +1565,7 @@ set_inner_join_references(PlannerGlobal *glob, Plan *inner_plan,
  * the expression.
  */
 static void
-set_upper_references(PlannerGlobal *glob, Plan *plan, int rtoffset,
-					 bool use_scan_slot)
+set_upper_references(PlannerGlobal *glob, Plan *plan, int rtoffset)
 {
 	Plan	   *subplan = plan->lefttree;
 	indexed_tlist *subplan_itlist;
@@ -1593,8 +1587,7 @@ set_upper_references(PlannerGlobal *glob, Plan *plan, int rtoffset,
 			newexpr = fix_upper_expr(glob,
 					(Node *) tle->expr,
 					subplan_itlist,
-					rtoffset,
-					use_scan_slot);
+					rtoffset);
 		tle = flatCopyTargetEntry(tle);
 		tle->expr = (Expr *) newexpr;
 		output_targetlist = lappend(output_targetlist, tle);
@@ -1605,8 +1598,7 @@ set_upper_references(PlannerGlobal *glob, Plan *plan, int rtoffset,
 		fix_upper_expr(glob,
 					   (Node *) plan->qual,
 					   subplan_itlist,
-					   rtoffset,
-					   use_scan_slot);
+					   rtoffset);
 
 	pfree(subplan_itlist);
 }
@@ -2095,27 +2087,18 @@ fix_join_expr_mutator(Node *node, fix_join_expr_context *context)
  * The resulting tree is a copy of the original in which all Var nodes have
  * varno = OUTER, varattno = resno of corresponding subplan target.
  * The original tree is not modified.
- *
- * GPDB: Some of our executor nodes use the scantuple slot.  Caller may
- * indicate use of 0 (instead of OUTER) for varno by passing true in
- * use_scan_slot.  
- *
- * XXX We could do away with the need for use_scan_slot by adjusting the
- *     executor!
  */
 static Node *
 fix_upper_expr(PlannerGlobal *glob,
 			   Node *node,
 			   indexed_tlist *subplan_itlist,
-			   int rtoffset,
-			   bool use_scan_slot)
+			   int rtoffset)
 {
 	fix_upper_expr_context context;
 
 	context.glob = glob;
 	context.subplan_itlist = subplan_itlist;
 	context.rtoffset = rtoffset;
-	context.use_scan_slot = use_scan_slot;
 
 	return fix_upper_expr_mutator(node, &context);
 }
@@ -2124,16 +2107,9 @@ static Node *
 fix_upper_expr_mutator(Node *node, fix_upper_expr_context *context)
 {
 	Var		   *newvar;
-	Index		slot_varno;
 
 	if (node == NULL)
 		return NULL;
-
-	/* GPDB executor uses scantuple instead of outertuple in some cases. */
-	if (context->use_scan_slot)
-		slot_varno = 0;
-	else
-		slot_varno = OUTER;
 
 	if (IsA(node, Var))
 	{
@@ -2141,7 +2117,7 @@ fix_upper_expr_mutator(Node *node, fix_upper_expr_context *context)
 
 		newvar = search_indexed_tlist_for_var(var,
 											  context->subplan_itlist,
-											  slot_varno,
+											  OUTER,
 											  context->rtoffset);
 		if (!newvar)
 			elog(ERROR, "variable not found in subplan target list");
@@ -2152,7 +2128,7 @@ fix_upper_expr_mutator(Node *node, fix_upper_expr_context *context)
 	{
 		newvar = search_indexed_tlist_for_non_var(node,
 												  context->subplan_itlist,
-												  slot_varno);
+												  OUTER);
 		if (newvar)
 			return (Node *) newvar;
 	}
