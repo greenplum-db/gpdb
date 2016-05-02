@@ -502,7 +502,7 @@ invoke_agg_trans_func(FmgrInfo *transfn, int numargs, Datum transValue,
 
 /*
  * Advance all the aggregates for one input tuple.	The input tuple
- * has been stored in tmpcontext->ecxt_scantuple, so that it is accessible
+ * has been stored in tmpcontext->ecxt_outertuple, so that it is accessible
  * to ExecEvalExpr.  pergroup is the array of per-group structs to use
  * (this might be in a hashtable entry).
  *
@@ -908,8 +908,8 @@ find_unaggregated_cols_walker(Node *node, Bitmapset **colnos)
 	{
 		Var		   *var = (Var *) node;
 
-		/* setrefs.c should have set the varno to 0 */
-		Assert(var->varno == 0);
+		/* setrefs.c should have set the varno to OUTER */
+		Assert(var->varno == OUTER);
 		Assert(var->varlevelsup == 0);
 		*colnos = bms_add_member(*colnos, var->varattno);
 		return false;
@@ -1311,7 +1311,7 @@ agg_retrieve_direct(AggState *aggstate)
 					maybe_passthru = true;
 				
 				/* set up for first advance aggregates call */
-				tmpcontext->ecxt_scantuple = firstSlot;
+				tmpcontext->ecxt_outertuple = firstSlot;
 
 				/*
 				 * Process each outer-plan tuple, and then fetch the next one,
@@ -1348,7 +1348,7 @@ agg_retrieve_direct(AggState *aggstate)
 					Gpmon_M_Incr(GpmonPktFromAggState(aggstate), GPMON_QEXEC_M_ROWSIN); 
                                         CheckSendPlanStateGpmonPkt(&aggstate->ss.ps);
 					/* set up for next advance aggregates call */
-					tmpcontext->ecxt_scantuple = outerslot;
+					tmpcontext->ecxt_outertuple = outerslot;
 
 					/*
 					 * If we are grouping, check whether we've crossed a group
@@ -1397,7 +1397,7 @@ agg_retrieve_direct(AggState *aggstate)
 								outer_grouping == input_grouping)
 							{
 								has_partial_agg = true;
-								tmpcontext->ecxt_scantuple = outerslot;
+								tmpcontext->ecxt_outertuple = outerslot;
 								advance_aggregates(aggstate, pergroup, &(aggstate->mem_manager));
 							}
 							
@@ -1436,7 +1436,7 @@ agg_retrieve_direct(AggState *aggstate)
 
 			/* finalize the pass-through tuple */
 			ResetExprContext(tmpcontext);
-			tmpcontext->ecxt_scantuple = outerslot;
+			tmpcontext->ecxt_outertuple = outerslot;
 
 			advance_aggregates(aggstate, perpassthru, &(aggstate->mem_manager));
 		}
@@ -1477,9 +1477,9 @@ agg_retrieve_direct(AggState *aggstate)
 		 * references to non-aggregated input columns, so no problem.)
 		 */
 		if (passthru_ready)
-			econtext->ecxt_scantuple = outerslot;
+			econtext->ecxt_outertuple = outerslot;
 		else
-			econtext->ecxt_scantuple = firstSlot;
+			econtext->ecxt_outertuple = firstSlot;
 
 		/*
 		 * We obtain GROUP_ID from the input tuples when this is
@@ -1489,7 +1489,7 @@ agg_retrieve_direct(AggState *aggstate)
 			(passthru_ready && is_middle_rollup_agg)) &&
 			input_has_grouping)
 			econtext->group_id =
-				get_grouping_groupid(econtext->ecxt_scantuple,
+				get_grouping_groupid(econtext->ecxt_outertuple,
 									 node->grpColIdx[node->numCols-node->numNullCols-1]);
 		else
 			econtext->group_id = node->rollupGSTimes;
@@ -1499,7 +1499,7 @@ agg_retrieve_direct(AggState *aggstate)
 			 (passthru_ready && is_middle_rollup_agg)) &&
 			input_has_grouping)
 			econtext->grouping =
-				get_grouping_groupid(econtext->ecxt_scantuple,
+				get_grouping_groupid(econtext->ecxt_outertuple,
 									 node->grpColIdx[node->numCols-node->numNullCols-2]);
 		else
 			econtext->grouping = node->grouping;
@@ -1542,7 +1542,7 @@ agg_retrieve_direct(AggState *aggstate)
 			 */
 			if (node->numNullCols > 0)
 			{
-				ExecModifyMemTuple(econtext->ecxt_scantuple,
+				ExecModifyMemTuple(econtext->ecxt_outertuple,
 							aggstate->replValues,
 							aggstate->replIsnull,
 							aggstate->doReplace
@@ -1650,15 +1650,15 @@ agg_retrieve_hash_table(AggState *aggstate)
 		 * Use the representative input tuple for any references to
 		 * non-aggregated input columns in the qual and tlist.
 		 */
-		econtext->ecxt_scantuple = firstSlot;
+		econtext->ecxt_outertuple = firstSlot;
 
 		if (is_final_rollup_agg && input_has_grouping)
 		{
 			econtext->group_id =
-				get_grouping_groupid(econtext->ecxt_scantuple,
+				get_grouping_groupid(econtext->ecxt_outertuple,
 									 node->grpColIdx[node->numCols-node->numNullCols-1]);
 			econtext->grouping =
-				get_grouping_groupid(econtext->ecxt_scantuple,
+				get_grouping_groupid(econtext->ecxt_outertuple,
 									 node->grpColIdx[node->numCols-node->numNullCols-2]);
 		}
 		else
