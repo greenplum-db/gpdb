@@ -201,7 +201,7 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE c
 --
 -- should get 100 and 123 as the values
 --
-select * from direct_test where value = 123123 order by key;
+select * from direct_test where value = '123123' order by key;
 INFO:  Dispatch command to ALL contents
  key | value  
 -----+--------
@@ -209,7 +209,7 @@ INFO:  Dispatch command to ALL contents
  123 | 123123
 (2 rows)
 
-delete from direct_test where value = 123123;
+delete from direct_test where value = '123123';
 INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents

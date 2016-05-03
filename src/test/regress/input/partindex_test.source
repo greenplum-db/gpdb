@@ -281,9 +281,9 @@ order by indKey;
 
 -- dropped cols in the ind expr 
 -- index expr varno are different
-create index i41 on part_table3_1_prt_part3_2_prt_usa(lower(amount));
-create index i42 on part_table3_1_prt_part2_2_prt_usa(lower(amount));
-create index i43 on part_table3_1_prt_part2_2_prt_asia(lower(amount));
+create index i41 on part_table3_1_prt_part3_2_prt_usa(ceil(amount));
+create index i42 on part_table3_1_prt_part2_2_prt_usa(ceil(amount));
+create index i43 on part_table3_1_prt_part2_2_prt_asia(ceil(amount));
 
 -- 1 extra index on expression shoule show up with constraints of part3/part2
 select indExprs, partCons from gp_build_logical_index('part_table3'::regclass)

@@ -540,7 +540,7 @@ order by partcons;
 -- ************************************************************
 -- * Scenario 3
 -- * 	- multi-level partitions
--- *  - truncate partition
+-- * 	- truncate partition
 -- * 	- dropped columns
 -- ************************************************************
 --
@@ -698,17 +698,17 @@ order by indKey;
 
 -- dropped cols in the ind expr 
 -- index expr varno are different
-create index i41 on part_table3_1_prt_part3_2_prt_usa(lower(amount));
-create index i42 on part_table3_1_prt_part2_2_prt_usa(lower(amount));
-create index i43 on part_table3_1_prt_part2_2_prt_asia(lower(amount));
+create index i41 on part_table3_1_prt_part3_2_prt_usa(ceil(amount));
+create index i42 on part_table3_1_prt_part2_2_prt_usa(ceil(amount));
+create index i43 on part_table3_1_prt_part2_2_prt_asia(ceil(amount));
 -- 1 extra index on expression shoule show up with constraints of part3/part2
 select indExprs, partCons from gp_build_logical_index('part_table3'::regclass)
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 where indexprs is NOT NULL and partcons is NOT NULL
 order by indKey;
-                                                                                                                                 indexprs                                                                                                                                  |                            partcons                            
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------
- ({FUNCEXPR :funcid 870 :funcresulttype 25 :funcretset false :funcformat 0 :args ({FUNCEXPR :funcid 1688 :funcresulttype 25 :funcretset false :funcformat 2 :args ({VAR :varno 1 :varattno 4 :vartype 1700 :vartypmod 655366 :varlevelsup 0 :varnoold 1 :varoattno 4})})}) | ((date >= '01-01-2009'::date) AND (date < '01-01-2011'::date))
+                                                                                         indexprs                                                                                          |                            partcons                            
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------
+ ({FUNCEXPR :funcid 1711 :funcresulttype 1700 :funcretset false :funcformat 0 :args ({VAR :varno 1 :varattno 4 :vartype 1700 :vartypmod 655366 :varlevelsup 0 :varnoold 1 :varoattno 4})}) | ((date >= '01-01-2009'::date) AND (date < '01-01-2011'::date))
 (1 row)
 
 -- dropped cols in the ind pred
@@ -719,9 +719,9 @@ select indPred, indExprs, defaultLevels, partCons from gp_build_logical_index('p
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2)
 where indexprs is NOT NULL and partcons is NOT NULL
 order by indKey;
- indpred |                                                                                                                                 indexprs                                                                                                                                  | defaultlevels |                            partcons                            
----------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+----------------------------------------------------------------
-         | ({FUNCEXPR :funcid 870 :funcresulttype 25 :funcretset false :funcformat 0 :args ({FUNCEXPR :funcid 1688 :funcresulttype 25 :funcretset false :funcformat 2 :args ({VAR :varno 1 :varattno 4 :vartype 1700 :vartypmod 655366 :varlevelsup 0 :varnoold 1 :varoattno 4})})}) |               | ((date >= '01-01-2009'::date) AND (date < '01-01-2011'::date))
+ indpred |                                                                                         indexprs                                                                                          | defaultlevels |                            partcons                            
+---------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+----------------------------------------------------------------
+         | ({FUNCEXPR :funcid 1711 :funcresulttype 1700 :funcretset false :funcformat 0 :args ({VAR :varno 1 :varattno 4 :vartype 1700 :vartypmod 655366 :varlevelsup 0 :varnoold 1 :varoattno 4})}) |               | ((date >= '01-01-2009'::date) AND (date < '01-01-2011'::date))
 (1 row)
 
 --
