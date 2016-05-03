@@ -5154,7 +5154,7 @@ struct config_string ConfigureNamesString_gp[] =
 
 	{
 		{"fault_injector_log_level", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Sets fault_injectr message levels that are sent to the client."),
+			gettext_noop("Sets fault_injector message levels that are logged."),
 			gettext_noop("Valid values are DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, "
 			"INFO, NOTICE, WARNING, ERROR, LOG, FATAL, and PANIC. Each level "
 						"includes all the levels that follow it."),
