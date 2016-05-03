@@ -520,34 +520,8 @@ drop table tab_sour cascade;
 drop table fun_tree;
 drop table logtable;
 drop table db;
-create language plpgsql;
 create table stress_source as select a from generate_series(1,12000) a;
 create table stress_table (a int primary key, b int);
-create or replace function stress_test() returns text as
-                                        $body$
-                                                declare
-                                                        mycounter record;
-                                                begin
-                                                        truncate stress_table;
-                                                for mycounter in
-                                                        select a from stress_source order by 1 loop
-                                                        insert into stress_table values(mycounter.a, mycounter.a * 10000);
-                                                end loop;
-                                                for mycounter in
-                                                        select a from stress_source order by 1 loop
-                                                        update stress_table set b = b + mycounter.a where a = mycounter.a;
-                                                end loop;
-
-                                                        return 'ok';
-                                                end;
-                                        $body$
-                                                language plpgsql volatile strict;
--- end_ignore
-
-select stress_test();
-
--- start_ignore
-drop function stress_test();
 create or replace function stress_test() returns text as
                                         $body$
                                                 declare
