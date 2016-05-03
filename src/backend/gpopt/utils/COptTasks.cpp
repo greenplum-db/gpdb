@@ -113,7 +113,7 @@ using namespace gpdbcost;
 #define GPOPT_ERROR_BUFFER_SIZE 10 * 1024 * 1024
 
 // definition of default AutoMemoryPool
-#define AUTO_MEM_POOL(amp) CAutoMemoryPool amp(CAutoMemoryPool::ElcExc, CMemoryPoolManager::EatTracker, optimizer_parallel)
+#define AUTO_MEM_POOL(amp) CAutoMemoryPool amp(CAutoMemoryPool::ElcExc, CMemoryPoolManager::EatTracker, false /* fThreadSafe */)
 
 // default id for the source system
 const CSystemId sysidDefault(IMDId::EmdidGPDB, GPOS_WSZ_STR_LENGTH("GPDB"));
@@ -516,23 +516,12 @@ COptTasks::Execute
 {
 	Assert(pfunc);
 
-	if (optimizer_parallel)
-	{
-		// be-aware that parallel optimizer mode may conflict with GPDB signal handlers,
-		// this mode should be avoided unless optimizer is spawned in a different process
-		if (gpos_set_threads(4, 4))
-		{
-			elog(ERROR, "unable to set number of threads in gpos");
-			return;
-		}
-	}
-
 	// initialize DXL support
 	InitDXL();
 
 	bool abort_flag = false;
 
-	CAutoMemoryPool amp(CAutoMemoryPool::ElcNone, CMemoryPoolManager::EatTracker, optimizer_parallel);
+	CAutoMemoryPool amp(CAutoMemoryPool::ElcNone, CMemoryPoolManager::EatTracker, false /* fThreadSafe */);
 	IMemoryPool *pmp = amp.Pmp();
 	CHAR *err_buf = SzAllocate(pmp, GPOPT_ERROR_BUFFER_SIZE);
 
@@ -1009,16 +998,6 @@ COptTasks::PvOptimizeTask
 			CConstExprEvaluatorProxy ceevalproxy(pmp, &mda);
 			IConstExprEvaluator *pceeval =
 					GPOS_NEW(pmp) CConstExprEvaluatorDXL(pmp, &mda, &ceevalproxy);
-
-			// preload metadata if optimizer uses multiple threads
-			if (optimizer_parallel)
-			{
-				// install opt context in TLS
-				pocconf->AddRef();
-				pceeval->AddRef();
-				CAutoOptCtxt aoc(pmp, &mda, pceeval, pocconf);
-				CTranslatorUtils::PreloadMD(pmp, &mda, sysidDefault, (Query*) poctx->m_pquery);
-			}
 
 			CDXLNode *pdxlnQuery = ptrquerytodxl->PdxlnFromQuery();
 			DrgPdxln *pdrgpdxlnQueryOutput = ptrquerytodxl->PdrgpdxlnQueryOutput();

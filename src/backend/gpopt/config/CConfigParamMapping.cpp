@@ -111,13 +111,6 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elem[] =
 		},
 
 		{
-		EopttraceParallel,
-		&optimizer_parallel,
-		false, // m_fNegate
-		GPOS_WSZ_LIT("Enable using threads in optimization engine.")
-		},
-
-		{
 		EopttraceMinidump,
 		&optimizer_minidump,
 		false, // m_fNegate
