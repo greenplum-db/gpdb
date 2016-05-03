@@ -171,3 +171,36 @@ Feature: gpcheckcat tests
         When the user runs "gpcheckcat -R persistent db1"
         Then gpcheckcat should print Failed test\(s\) that are not reported here: persistent to stdout
 
+    Scenario: gpcheckcat should raise exception if the database already contains a function "readindex(oid, bool)" in the schema gp_toolkit
+        Given database "test_readindex_exists" is dropped and recreated
+        When the user runs "psql test_readindex_exists -f 'gppylib/test/behave/mgmt_utils/steps/data/gpcheckcat/create_readindex_function.sql'"
+        And the user runs "gpcheckcat test_readindex_exists"
+        Then gpcheckcat should return a return code of 3
+        And gpcheckcat should print Function readindex\(oid,bool\) already exists in schema gp_toolkit to stdout
+        And the user runs "dropdb test_readindex_exists"
+        And verify that a log was created by gpcheckcat in the user's "gpAdminLogs" directory
+
+    Scenario: gpcheckcat should raise exception if the database already contains a type "readindex_type" in the schema gp_toolkit
+        Given database "test_readindex_type_exists" is dropped and recreated
+        When the user runs "psql test_readindex_type_exists -f 'gppylib/test/behave/mgmt_utils/steps/data/gpcheckcat/create_readindex_type.sql'"
+        And the user runs "gpcheckcat test_readindex_type_exists"
+        Then gpcheckcat should return a return code of 3
+        And gpcheckcat should print Type readindex_type already exists in schema gp_toolkit to stdout
+        And the user runs "dropdb test_readindex_type_exists"
+        And verify that a log was created by gpcheckcat in the user's "gpAdminLogs" directory
+
+    Scenario: gpcheckcat should report duplicate index values
+        Given database "test_duplicate_index" is dropped and recreated
+        When the user runs "gpcheckcat test_duplicate_index"
+        Then gpcheckcat should return a return code of 0
+        Given duplicate index values for index "pg_compression_compname_index" in database "test_duplicate_index"
+        When the user runs "gpstop -ar"
+        Then gpstart should return a return code of 0
+        When the user runs "gpcheckcat test_duplicate_index"
+        Then gpcheckcat should not return a return code of 0
+        And gpcheckcat should print Table pg_compression has a violated unique index: pg_compression_compname_index to stdout
+        Then gpcheckcat should not return a return code of 0
+        And verify that the function "readindex" does not exist in schema "gp_toolkit" in database "test_duplicate_index"
+        Then verify that the type "readindex_type" does not exist in schema "gp_toolkit" in database "test_duplicate_index"
+        And the user runs "dropdb test_duplicate_index"
+        And verify that a log was created by gpcheckcat in the user's "gpAdminLogs" directory

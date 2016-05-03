@@ -8,7 +8,6 @@ import tarfile
 import thread
 from collections import defaultdict
 from datetime import datetime
-
 import yaml
 
 from gppylib.commands.gp import SegmentStart, GpStandbyStart
@@ -3817,3 +3816,56 @@ def impl(context, path, num):
     result = validate_local_path(path)
     if result != int(num):
         raise Exception("expected %s items but found %s items in path %s" % (num, result, path) )
+
+@given('verify that the function "{function}" does not exist in schema "{schema}" in database "{dbname}"')
+@when('verify that the function "{function}" does not exist in schema "{schema}" in database "{dbname}"')
+@then('verify that the function "{function}" does not exist in schema "{schema}" in database "{dbname}"')
+def impl(context, function, schema, dbname):
+    get_gp_toolkit_oid_sql = "select oid from pg_namespace where nspname ='{0}'".format(schema)
+    check_function_exists_query = "select count(*) from pg_proc where proname='{0}' " \
+                                  "and proargtypes[0]='oid'::regtype and proargtypes[1]='bool'::regtype " \
+                                  "and pronargs=2 " \
+                                  "and pronamespace=({1})".format(function, get_gp_toolkit_oid_sql)
+
+    row_count = getRows(dbname, check_function_exists_query)[0][0]
+    if row_count != 0:
+        raise Exception('Function %s exists in %s' % (function, dbname))
+
+@given('verify that the type "{type_name}" does not exist in schema "{schema}" in database "{dbname}"')
+@when('verify that the type "{type_name}" does not exist in schema "{schema}" in database "{dbname}"')
+@then('verify that the type "{type_name}" does not exist in schema "{schema}" in database "{dbname}"')
+def impl(context, type_name, schema, dbname):
+    get_gp_toolkit_oid_sql = "select oid from pg_namespace where nspname ='{0}'".format(schema)
+    check_type_exists_query = "SELECT count(*) FROM pg_type WHERE typname='{0}' and typnamespace=({1})".format(type_name, get_gp_toolkit_oid_sql)
+    row_count = getRows(dbname, check_type_exists_query)[0][0]
+    if row_count != 0:
+        raise Exception('Type %s exists in %s' % (type_name, dbname))
+
+@given('duplicate index values for index "{index_name}" in database "{database_name}"')
+@then('duplicate index values for index "{index_name}" in database "{database_name}"')
+@when('duplicate index values for index "{index_name}" in database "{database_name}"')
+def impl(context, index_name, database_name):
+    database_oid_sql = "SELECT oid from pg_database where datname='%s'" % database_name
+    index_relid_sql = "SELECT indexrelid from pg_index where indexrelid = '%s'::regclass::oid;" % index_name
+    with dbconn.connect(dbconn.DbURL(dbname=database_name)) as conn:
+        database_oid = dbconn.execSQLForSingleton(conn, database_oid_sql)
+        index_relid = dbconn.execSQLForSingleton(conn, index_relid_sql)
+
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
+
+    if primary_segs:
+        # we only want to inject index fault in one of the segments , so we will pick the first one
+        ps = primary_segs[0]
+        segment_index_file_path = __get_index_file_path(ps.getSegmentDataDirectory(), database_oid, index_relid)
+        __inject_index_fault(context, segment_index_file_path)
+
+    master_index_file_path= __get_index_file_path(master_data_dir, database_oid, index_relid)
+    __inject_index_fault(context, master_index_file_path)
+
+def __inject_index_fault(context, index_file_path):
+    copy_command = "cp gppylib/test/behave/mgmt_utils/steps/data/gpcheckcat/duplicate_index_repro %s" % index_file_path
+    run_command(context, copy_command)
+
+def __get_index_file_path(datadir, database_oid, index_relid):
+   return os.path.join(datadir, 'base', str(database_oid), str(index_relid))

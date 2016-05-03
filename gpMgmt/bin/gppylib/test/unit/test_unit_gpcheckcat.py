@@ -19,8 +19,9 @@ class GpCheckCatTestCase(GpTestCase):
         self.subject.logger = Mock(spec=['log', 'info', 'debug', 'error'])
         self.db_connection = Mock(spec=['close', 'query'])
 
-        self.unique_index_violation_check = Mock(spec=['runCheck'])
-        self.unique_index_violation_check.runCheck.return_value = []
+        self.unique_index_violation_check = Mock(spec=['run_check_table_duplication','run_check_index_duplication'])
+        self.unique_index_violation_check.run_check_table_duplication.return_value = []
+        self.unique_index_violation_check.run_check_index_duplication.return_value = []
 
         self.leaked_schema_dropper = Mock(spec=['drop_leaked_schemas'])
         self.leaked_schema_dropper.drop_leaked_schemas.return_value = []
@@ -35,7 +36,7 @@ class GpCheckCatTestCase(GpTestCase):
 
         self.apply_patches([
             patch("gpcheckcat.pg.connect", return_value=self.db_connection),
-            patch("gpcheckcat.UniqueIndexViolationCheck", return_value=self.unique_index_violation_check),
+            patch("gpcheckcat.UniqueIndexViolationCheck", return_value=self.unique_index_violation_check)
         ])
 
     def test_running_unknown_check__raises_exception(self):
@@ -51,37 +52,65 @@ class GpCheckCatTestCase(GpTestCase):
     #     # figure out how to enforce the order of calls;
     #     # at a minimum, check the order number of the static list gpcheckcat.all_checks
 
-    def test_running_unique_index_violation_check__makes_the_check(self):
-        self.subject.runOneCheck('unique_index_violation')
+    def test_running_unique_index_violation_table_duplication_check__makes_the_check(self):
+        self.subject.runOneCheck('table_duplicate')
 
-        self.unique_index_violation_check.runCheck.assert_called_with(self.db_connection)
-
-    def test_running_unique_index_violation_check__when_no_violations_are_found__passes_the_check(self):
-        self.subject.runOneCheck('unique_index_violation')
+        self.unique_index_violation_check.run_check_table_duplication.assert_called_with(self.db_connection)
 
         self.assertTrue(self.subject.GV.checkStatus)
         self.subject.setError.assert_not_called()
 
-    def test_running_unique_index_violation_check__when_violations_are_found__fails_the_check(self):
-        self.unique_index_violation_check.runCheck.return_value = [
+    def test_running_unique_index_violation_table_duplication_check__when_violations_are_found__fails_the_check(self):
+        self.unique_index_violation_check.run_check_table_duplication.return_value = [
             dict(table_oid=123, table_name='stephen_table', index_name='finger', column_names='c1, c2', violated_segments=[-1,8]),
             dict(table_oid=456, table_name='larry_table', index_name='stock', column_names='c1', violated_segments=[-1]),
         ]
 
-        self.subject.runOneCheck('unique_index_violation')
+        self.subject.runOneCheck('table_duplicate')
 
         self.assertFalse(self.subject.GV.checkStatus)
         self.subject.setError.assert_any_call(self.subject.ERROR_NOREPAIR)
 
-    def test_checkcat_report__after_running_unique_index_violations_check__reports_violations(self):
-        self.unique_index_violation_check.runCheck.return_value = [
+    def test_checkcat_report__after_running_unique_index_violation_table_duplication_check__reports_violations(self):
+        self.unique_index_violation_check.run_check_table_duplication.return_value = [
             dict(table_oid=123, table_name='stephen_table', index_name='finger', column_names='c1, c2', violated_segments=[-1,8]),
             dict(table_oid=456, table_name='larry_table', index_name='stock', column_names='c1', violated_segments=[-1]),
         ]
-        self.subject.runOneCheck('unique_index_violation')
+        self.subject.runOneCheck('table_duplicate')
 
         self.subject.checkcatReport()
+        self.__assert_unique_index_violations_message()
 
+    def test_running_unique_index_violation_index_duplication_check__makes_the_check(self):
+        self.subject.runOneCheck('index_duplicate')
+
+        self.unique_index_violation_check.run_check_index_duplication.assert_called_with(self.db_connection)
+
+        self.assertTrue(self.subject.GV.checkStatus)
+        self.subject.setError.assert_not_called()
+
+    def test_running_unique_index_violation_index_duplication_check__when_violations_are_found__fails_the_check(self):
+        self.unique_index_violation_check.run_check_index_duplication.return_value = [
+            dict(table_oid=123, table_name='stephen_table', index_name='finger', column_names='c1, c2', violated_segments=[-1,8]),
+            dict(table_oid=456, table_name='larry_table', index_name='stock', column_names='c1', violated_segments=[-1]),
+        ]
+
+        self.subject.runOneCheck('index_duplicate')
+
+        self.assertFalse(self.subject.GV.checkStatus)
+        self.subject.setError.assert_any_call(self.subject.ERROR_NOREPAIR)
+
+    def test_checkcat_report__after_running_unique_index_violation_index_duplication_check__reports_violations(self):
+        self.unique_index_violation_check.run_check_index_duplication.return_value = [
+            dict(table_oid=123, table_name='stephen_table', index_name='finger', column_names='c1, c2', violated_segments=[-1,8]),
+            dict(table_oid=456, table_name='larry_table', index_name='stock', column_names='c1', violated_segments=[-1]),
+        ]
+        self.subject.runOneCheck('index_duplicate')
+
+        self.subject.checkcatReport()
+        self.__assert_unique_index_violations_message()
+
+    def __assert_unique_index_violations_message(self):
         expected_message1 = '    Table stephen_table has a violated unique index: finger'
         expected_message2 = '    Table larry_table has a violated unique index: stock'
         log_messages = [args[0][1] for args in self.subject.logger.log.call_args_list]

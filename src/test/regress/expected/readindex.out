@@ -1,0 +1,29 @@
+CREATE OR REPLACE FUNCTION readindex(oid) RETURNS SETOF record AS '$libdir/indexscan', 'readindex' LANGUAGE C STRICT;
+select  gp_segment_id,readindex('pg_compression_compname_index'::regclass) from gp_id ;
+ gp_segment_id |                             readindex
+---------------+-------------------------------------------------------------------
+            -1 | ("(1,1)","(0,4)",N/A,USED,"XMIN_COMITTTED XMAX_INVALID",none)
+            -1 | ("(1,2)","(0,2)",N/A,USED,"XMIN_COMITTTED XMAX_INVALID",quicklz)
+            -1 | ("(1,3)","(0,3)",N/A,USED,"XMIN_COMITTTED XMAX_INVALID",rle_type)
+            -1 | ("(1,4)","(0,1)",N/A,USED,"XMIN_COMITTTED XMAX_INVALID",zlib)
+(4 rows)
+
+CREATE OR REPLACE FUNCTION readindex(oid,bool) RETURNS SETOF record AS '$libdir/indexscan', 'readindex' LANGUAGE C STRICT;
+select  gp_segment_id,readindex('pg_compression_compname_index'::regclass, true) from gp_id;
+ gp_segment_id |                        readindex
+---------------+----------------------------------------------------------
+            -1 | ("(1,1)","(0,4)",N/A,USED,"XMIN_COMITTTED XMAX_INVALID")
+            -1 | ("(1,2)","(0,2)",N/A,USED,"XMIN_COMITTTED XMAX_INVALID")
+            -1 | ("(1,3)","(0,3)",N/A,USED,"XMIN_COMITTTED XMAX_INVALID")
+            -1 | ("(1,4)","(0,1)",N/A,USED,"XMIN_COMITTTED XMAX_INVALID")
+(4 rows)
+
+select  gp_segment_id,readindex('pg_compression_compname_index'::regclass, false) from gp_id;
+ gp_segment_id |                             readindex
+---------------+-------------------------------------------------------------------
+            -1 | ("(1,1)","(0,4)",N/A,USED,"XMIN_COMITTTED XMAX_INVALID",none)
+            -1 | ("(1,2)","(0,2)",N/A,USED,"XMIN_COMITTTED XMAX_INVALID",quicklz)
+            -1 | ("(1,3)","(0,3)",N/A,USED,"XMIN_COMITTTED XMAX_INVALID",rle_type)
+            -1 | ("(1,4)","(0,1)",N/A,USED,"XMIN_COMITTTED XMAX_INVALID",zlib)
+(4 rows)
+
