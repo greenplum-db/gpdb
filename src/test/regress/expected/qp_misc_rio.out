@@ -1,56 +1,54 @@
--- ----------------------------------------------------------------------
--- Test: 1
--- ----------------------------------------------------------------------
+-- All the tables, functions, etc. in this test file are created in
+-- qp_misc_rio schema, so that they don't interfere with other tests
+-- running in parallel.
 -- start_ignore
-create role qp_misc_rio_role with login createdb Superuser;
-SET ROLE qp_misc_rio_role;
 create schema qp_misc_rio;
-set search_path to qp_misc_rio;
+CREATE LANGUAGE plpythonu;
 -- end_ignore
-RESET ALL;
 -- ----------------------------------------------------------------------
--- Test: 2
+-- Test: 2 (schema drop)
 -- ----------------------------------------------------------------------
---start_ignore
-set search_path to qp_misc_rio;
-drop schema if exists hotel;
-NOTICE:  schema "hotel" does not exist, skipping
---end_ignore
-select
+select 
     table_schema, table_name, column_name, ordinal_position
-from
+from 
     information_schema.columns
-where
-    table_schema ='hotel'
+where 
+    table_schema ='test_schema'
     and ordinal_position =1;
  table_schema | table_name | column_name | ordinal_position 
 --------------+------------+-------------+------------------
 (0 rows)
 
---start_ignore
-create schema hotel;
---end_ignore
-select table_schema, table_name,column_name,ordinal_position from information_schema.columns where table_schema ='hotel' and ordinal_position =1;
+create schema test_schema;
+create table test_schema.test_table(c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- EXPECT NO ERROR of 'violates check constraint' BEFORE drop schema
+select table_schema, table_name,column_name,ordinal_position 
+from information_schema.columns 
+where table_schema ='test_schema' and ordinal_position =1;
+ table_schema | table_name | column_name | ordinal_position 
+--------------+------------+-------------+------------------
+ test_schema  | test_table | c           |                1
+(1 row)
+
+drop table test_schema.test_table;
+drop SCHEMA test_schema;
+-- EXPECT NO ERROR of 'violates check constraint' AFTER drop schema
+select table_schema, table_name,column_name,ordinal_position 
+from information_schema.columns 
+where table_schema ='test_schema' and ordinal_position =1;
  table_schema | table_name | column_name | ordinal_position 
 --------------+------------+-------------+------------------
 (0 rows)
 
---start_ignore
-drop SCHEMA hotel;
--- end_ignore
-select table_catalog, table_schema, table_name from information_schema.columns where ordinal_position=1 and table_schema='information_schema' order by ordinal_position, table_name limit 7;
- table_catalog |    table_schema    |            table_name             
----------------+--------------------+-----------------------------------
- regression    | information_schema | administrable_role_authorizations
- regression    | information_schema | applicable_roles
- regression    | information_schema | attributes
- regression    | information_schema | check_constraint_routine_usage
- regression    | information_schema | check_constraints
- regression    | information_schema | column_domain_usage
- regression    | information_schema | column_privileges
-(7 rows)
-
-select * FROM (select attnum::information_schema.cardinal_number from pg_attribute where attnum > 0) q where attnum = 4 limit 10;
+-- EXPECT NO ERROR of 'violates check constraint'
+select * 
+FROM (
+	select attnum::information_schema.cardinal_number 
+	from pg_attribute 
+	where attnum > 0) q 
+where attnum = 4 limit 10;
  attnum 
 --------
       4
@@ -65,18 +63,14 @@ select * FROM (select attnum::information_schema.cardinal_number from pg_attribu
       4
 (10 rows)
 
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 3
 -- ----------------------------------------------------------------------
 --start_ignore
-set search_path to qp_misc_rio;
 drop resource queue t3_test_q;
 --end_ignore
 -- Create resource queue with cost_overcommit=true
--- start_ignore
 create resource queue t3_test_q with (active_statements = 6,max_cost=5e+06 ,cost_overcommit=true, min_cost=50000);
--- end_ignore
 select * from pg_resqueue where rsqname='t3_test_q';
   rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
 -----------+---------------+--------------+---------------+--------------------
@@ -84,9 +78,7 @@ select * from pg_resqueue where rsqname='t3_test_q';
 (1 row)
 
 -- Increase cost threshold
--- start_ignore
 alter resource queue t3_test_q with (max_cost=7e6);
--- end_ignore
 select * from pg_resqueue where rsqname='t3_test_q';
   rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
 -----------+---------------+--------------+---------------+--------------------
@@ -94,103 +86,53 @@ select * from pg_resqueue where rsqname='t3_test_q';
 (1 row)
 
 -- Decrease cost threshold
--- start_ignore
 alter resource queue t3_test_q with (max_cost=1e2);
--- end_ignore
 select * from pg_resqueue where rsqname='t3_test_q';
   rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
 -----------+---------------+--------------+---------------+--------------------
  t3_test_q |             6 |          100 | t             |              50000
 (1 row)
 
---start_ignore
 drop resource queue t3_test_q;
---end_ignore
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 4
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 SELECT to_date(to_char(20110521, '99999999'),'YYYYMMDD'), to_char(20110521,'99999999'), 20110521;
   to_date   |  to_char  | ?column? 
 ------------+-----------+----------
  05-21-2011 |  20110521 | 20110521
 (1 row)
 
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 5
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 select mregr_pvalues(4, array[1,i]) from generate_series(1, 500) i;
  mregr_pvalues 
 ---------------
  {0,0}
 (1 row)
 
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 6
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 select row();
  row 
 -----
  ()
 (1 row)
 
-RESET ALL;
--- ----------------------------------------------------------------------
--- Test: 7
--- ----------------------------------------------------------------------
---start_ignore
-set search_path to qp_misc_rio;
-drop table if exists A;
-NOTICE:  table "a" does not exist, skipping
-drop table if exists B;
-NOTICE:  table "b" does not exist, skipping
-create table A (
-col_with_default numeric DEFAULT 0,
-col_with_default_drop_default character varying(30) DEFAULT 'test1',
-col_with_constraint numeric UNIQUE
-) distributed BY (col_with_constraint);
-NOTICE:  CREATE TABLE / UNIQUE will create implicit index "a_col_with_constraint_key" for table "a"
-create table B as select * from A;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'col_with_constraint' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
---end_ignore
--- start_ignore 
--- create issue in gpdb for orca. remove this after the issue is resolved
-select localoid::regclass, attrnums from gp_distribution_policy p left join pg_class c on (p.localoid = c.oid) where c.relname in ('a', 'b') order by 1,2;
- localoid | attrnums 
-----------+----------
- a        | {3}
- b        | {3}
-(2 rows)
-
--- end_ignore
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 8
 -- ----------------------------------------------------------------------
---start_ignore
 set search_path to qp_misc_rio;
-drop table if exists tbl_t8;
-NOTICE:  table "tbl_t8" does not exist, skipping
---end_ignore
 create table tbl_t8 (c1 int, c2 int) with (appendonly=true, compresstype=none, compresslevel=2) distributed by (c1);
 insert into tbl_t8 values (1,2);
-drop table tbl_t8;
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 9
 -- ----------------------------------------------------------------------
---start_ignore
+-- Expect NO ERROR like "ERROR:  Unexpected internal error (cdbsetop.c)"
 set search_path to qp_misc_rio;
-drop table if exists tb_function_test;
-NOTICE:  table "tb_function_test" does not exist, skipping
 create table tb_function_test(a numeric,b numeric,c numeric,d character varying(20),e character varying(20)) distributed by (b,c);
---end_ignore
 select *,row_number() over(partition by a,b,c order by d),row_number() over(partition by a,b,c order by e) from tb_function_test where  b=1;
  a | b | c | d | e | row_number | row_number 
 ---+---+---+---+---+------------+------------
@@ -211,15 +153,11 @@ select *,row_number() over(partition by a,b,c order by d),row_number() over(part
 ---+---+---+---+---+------------+------------
 (0 rows)
 
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 10
 -- ----------------------------------------------------------------------
---start_ignore
+-- Test \d+ after drop partition
 set search_path to qp_misc_rio;
-drop table if exists t10_t;
-NOTICE:  table "t10_t" does not exist, skipping
---end_ignore
 create table t10_t ( a int, b text) partition by range(a) (start (1) end (100) every(20));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -277,21 +215,12 @@ Has OIDs: no
 Distributed by: (a)
 Partition by: (a)
 
-drop index t10_t_a;
-WARNING:  Only dropped the index "t10_t_a"
-HINT:  To drop other indexes on child partitions, drop each one explicitly.
-drop table t10_t;
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 11
 -- ----------------------------------------------------------------------
---start_ignore
 set search_path to qp_misc_rio;
-drop table if exists t11_t;
-NOTICE:  table "t11_t" does not exist, skipping
 create table t11_t(a bigint, b bigint) distributed by (a);
 insert into t11_t select a, a / 10 from generate_series(1, 100)a;
---end_ignore
 select sum((select count(*) from t11_t group by b having b = s.b)) as sum_col from (select * from t11_t order by a)s group by b order by sum_col;
  sum_col 
 ---------
@@ -308,68 +237,11 @@ select sum((select count(*) from t11_t group by b having b = s.b)) as sum_col fr
      100
 (11 rows)
 
-RESET ALL;
--- ----------------------------------------------------------------------
--- Test: 12
--- ----------------------------------------------------------------------
--- start_ignore
-set search_path to qp_misc_rio;
-drop table if exists t12_t1;
-NOTICE:  table "t12_t1" does not exist, skipping
-CREATE TABLE t12_t1(c1 int, c2 varchar);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-INSERT INTO t12_t1 select generate_series(1,1000), 'aaa';
-INSERT INTO t12_t1 select generate_series(1001,2000), 'bbb';
--- end_ignore
---aggregate width should be 8
-SELECT count(*) from (select * from t12_t1) as a;
- count 
--------
-  2000
-(1 row)
-
---width should be 8
-SELECT * from (select * from t12_t1) as a order by c1 limit 10;
- c1 | c2  
-----+-----
-  1 | aaa
-  2 | aaa
-  3 | aaa
-  4 | aaa
-  5 | aaa
-  6 | aaa
-  7 | aaa
-  8 | aaa
-  9 | aaa
- 10 | aaa
-(10 rows)
-
-SELECT max(a.c1) as col1, min(a.c1), avg(a.c1) from (select * from t12_t1) as a order by col1 limit 10;
- col1 | min |  avg   
-------+-----+--------
- 2000 |   1 | 1000.5
-(1 row)
-
-select a.c1 * b.c1 as col1, a.c1, b.c1 from t12_t1 a, t12_t1 b order by a.c1, b.c1 limit 4;
- col1 | c1 | c1 
-------+----+----
-    1 |  1 |  1
-    2 |  1 |  2
-    3 |  1 |  3
-    4 |  1 |  4
-(4 rows)
-
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 14
 -- ----------------------------------------------------------------------
---start_ignore
 set search_path to qp_misc_rio;
-drop table if exists tbl_t14;
-NOTICE:  table "tbl_t14" does not exist, skipping
 create table tbl_t14 as select * from gp_id DISTRIBUTED RANDOMLY;
---end_ignore
 select array(select dbid from gp_id);
  ?column? 
 ----------
@@ -382,14 +254,10 @@ select array(select dbid from tbl_t14);
  {-1}
 (1 row)
 
---start_ignore
-drop table tbl_t14;
-RESET ALL;
---end_ignore
 -- ----------------------------------------------------------------------
 -- Test: 15
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
+-- aggregate over partition by 
 select state,
        sum(revenue) over (partition by state)
 from
@@ -401,40 +269,10 @@ group by 1,b.revenue;
  B     |   1
 (1 row)
 
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 16
 -- ----------------------------------------------------------------------
---start_ignore
 set search_path to qp_misc_rio;
-drop view if exists testtable0000 cascade;
-NOTICE:  view "testtable0000" does not exist, skipping
-drop view if exists testtable0001 cascade;
-NOTICE:  view "testtable0001" does not exist, skipping
-drop view if exists testtable0002 cascade;
-NOTICE:  view "testtable0002" does not exist, skipping
-drop view if exists testtable0003 cascade;
-NOTICE:  view "testtable0003" does not exist, skipping
-drop view if exists testtable0004 cascade;
-NOTICE:  view "testtable0004" does not exist, skipping
-drop view if exists testtable0005 cascade;
-NOTICE:  view "testtable0005" does not exist, skipping
-drop view if exists testtable0006 cascade;
-NOTICE:  view "testtable0006" does not exist, skipping
-drop table if exists testtable0000 cascade;
-NOTICE:  table "testtable0000" does not exist, skipping
-drop table if exists testtable0001 cascade;
-NOTICE:  table "testtable0001" does not exist, skipping
-drop table if exists testtable0002 cascade;
-NOTICE:  table "testtable0002" does not exist, skipping
-drop table if exists testtable0003 cascade;
-NOTICE:  table "testtable0003" does not exist, skipping
-drop table if exists testtable0004 cascade;
-NOTICE:  table "testtable0004" does not exist, skipping
-drop table if exists testtable0005 cascade;
-NOTICE:  table "testtable0005" does not exist, skipping
-drop table if exists testtable0006 cascade;
-NOTICE:  table "testtable0006" does not exist, skipping
 CREATE TABLE testtable0000 AS SELECT spend, row_number() OVER (PARTITION BY 0) AS i, (spend % 2) AS r
 FROM (select generate_series(1,10) as spend) x DISTRIBUTED RANDOMLY;
 CREATE TABLE testtable0001 AS SELECT *, CASE WHEN (i % 6 = 0) THEN '00'
@@ -479,7 +317,6 @@ JOIN (SELECT s1,
            FROM testtable0001 GROUP BY s1)
 	   AS miro_foo
 ON testtable0001.s1 = miro_foo.s1;
---end_ignore
 SELECT MIN(s1_xform), MIN(s1_xform) FROM testtable0002;
     min    |    min    
 -----------+-----------
@@ -501,7 +338,6 @@ FROM testtable0002 GROUP BY s1 order by s1;
  55 |   1 |     1 |     1
 (6 rows)
 
---start_ignore
 CREATE VIEW testtable0003
 AS SELECT testtable0002.*,
           miro_foo.s2_xform
@@ -512,7 +348,6 @@ JOIN (SELECT s2,
            FROM testtable0002 GROUP BY s2)
 	   AS miro_foo
 ON testtable0002.s2 = miro_foo.s2;
---end_ignore
 SELECT MIN(s2_xform), MIN(s2_xform) FROM testtable0003;
     min    |    min    
 -----------+-----------
@@ -534,7 +369,6 @@ FROM testtable0003 GROUP BY s2 order by s2;
  55 |   1 |     1 |     1
 (6 rows)
 
---start_ignore
 CREATE VIEW testtable0004
 AS SELECT testtable0003.*,
           miro_foo.s3_xform
@@ -545,7 +379,6 @@ JOIN (SELECT s3,
            FROM testtable0003 GROUP BY s3)
 	   AS miro_foo
 ON testtable0003.s3 = miro_foo.s3;
---end_ignore
 SELECT MIN(s3_xform), MIN(s3_xform) FROM testtable0004;
     min    |    min    
 -----------+-----------
@@ -567,7 +400,6 @@ FROM testtable0004 GROUP BY s3 order by s3;
  55 |   1 |     1 |     1
 (6 rows)
 
---start_ignore
 CREATE VIEW testtable0005
 AS SELECT testtable0004.*,
           miro_foo.s4_xform
@@ -578,7 +410,6 @@ JOIN (SELECT s4,
            FROM testtable0004 GROUP BY s4)
 	   AS miro_foo
 ON testtable0004.s4 = miro_foo.s4;
---end_ignore
 SELECT MIN(s4_xform), MIN(s4_xform) FROM testtable0005;
     min    |    min    
 -----------+-----------
@@ -600,7 +431,6 @@ FROM testtable0005 GROUP BY s4 order by s4;
  55 |   1 |     1 |     1
 (6 rows)
 
---start_ignore
 CREATE VIEW testtable0006
 AS SELECT testtable0005.*,
           miro_foo.s5_xform
@@ -611,7 +441,6 @@ JOIN (SELECT s5,
            FROM testtable0005 GROUP BY s5)
 	   AS miro_foo
 ON testtable0005.s5 = miro_foo.s5;
---end_ignore
 SELECT MIN(s5_xform), MIN(s5_xform) FROM testtable0006;
     min    |    min    
 -----------+-----------
@@ -633,42 +462,37 @@ FROM testtable0006 GROUP BY s5 order by s5;
  55 |   1 |     1 |     1
 (6 rows)
 
---start_ignore
-drop view if exists testtable0006 cascade;
-drop view if exists testtable0005 cascade;
-drop view if exists testtable0004 cascade;
-drop view if exists testtable0003 cascade;
-drop view if exists testtable0002 cascade;
-drop table if exists testtable0001 cascade;
-drop table if exists testtable0000 cascade;
-RESET ALL;
---end_ignore
 -- ----------------------------------------------------------------------
 -- Test: 17
 -- ----------------------------------------------------------------------
---start_ignore
-set search_path to qp_misc_rio;
-drop table if exists regtest_65536;
-NOTICE:  table "regtest_65536" does not exist, skipping
-drop table if exists regtest_8191;
-NOTICE:  table "regtest_8191" does not exist, skipping
-drop table if exists regtest_8192;
-NOTICE:  table "regtest_8192" does not exist, skipping
-drop table if exists regtest_8;
-NOTICE:  table "regtest_8" does not exist, skipping
 -- series boundary is 8
 CREATE TEMPORARY TABLE regtest_8 AS
 SELECT 1::FLOAT8 AS y,
        ARRAY(SELECT no::FLOAT8
              FROM generate_series(1,8) AS no ) AS x
 DISTRIBUTED BY (y);
+SELECT mregr_coef(y, x) FROM regtest_8;
+                                                                         mregr_coef                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {0.00490196078431373,0.00980392156862745,0.0147058823529412,0.0196078431372549,0.0245098039215686,0.0294117647058824,0.0343137254901961,0.0392156862745098}
+(1 row)
+
+SELECT mregr_coef(y, x)
+FROM (
+      SELECT 1::FLOAT8 AS y,
+      ARRAY( SELECT no::FLOAT8 FROM generate_series(1,8) AS no ) AS x
+) AS one_row_subquery;
+                                                                         mregr_coef                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {0.00490196078431373,0.00980392156862745,0.0147058823529412,0.0196078431372549,0.0245098039215686,0.0294117647058824,0.0343137254901961,0.0392156862745098}
+(1 row)
+
 -- series boundary is 8191
 CREATE TEMPORARY TABLE regtest_8191 AS
 SELECT 1::FLOAT8 AS y,
        ARRAY(SELECT no::FLOAT8
              FROM generate_series(1,8191) AS no ) AS x
 DISTRIBUTED BY (y);
---end_ignore
 SELECT mregr_coef(y, x) FROM regtest_8191;
 ERROR:  pseudoinverse: matrix dimensions too large
 SELECT mregr_coef(y, x)
@@ -678,13 +502,11 @@ FROM (
 ) AS one_row_subquery;
 ERROR:  pseudoinverse: matrix dimensions too large
 -- series boundary is 8192
--- start_ignore
 CREATE TEMPORARY TABLE regtest_8192 AS
 SELECT 1::FLOAT8 AS y,
        ARRAY(SELECT no::FLOAT8
              FROM generate_series(1,8192) AS no ) AS x
 DISTRIBUTED BY (y);
--- end_ignore
 SELECT mregr_coef(y, x) FROM regtest_8192;
 ERROR:  pseudoinverse: matrix dimensions too large
 SELECT mregr_coef(y, x)
@@ -694,71 +516,45 @@ FROM (
 ) AS one_row_subquery;
 ERROR:  pseudoinverse: matrix dimensions too large
 -- create temporary table with series 2^16 and select the table
--- start_ignore
 CREATE TEMPORARY TABLE regtest_65536 AS
 SELECT 1::FLOAT8 AS y,
       ARRAY(SELECT no::FLOAT8
             FROM generate_series(1,(2^16)::INTEGER) AS no ) AS x
 DISTRIBUTED BY (y);
--- end_ignore
--- SELECT mregr_coef(y, x) FROM regtest_65536;
+SELECT mregr_coef(y, x) FROM regtest_65536;
+ERROR:  number of independent variables is too large  (seg2 slice1 xzhangmac:25434 pid=20150)
 SELECT mregr_coef(y, x)
 FROM (
       SELECT 1::FLOAT8 AS y,
       ARRAY( SELECT no::FLOAT8 FROM generate_series(1,(2^16)::INTEGER) AS no ) AS x
 ) AS one_row_subquery;
 ERROR:  number of independent variables is too large
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 18
 -- ----------------------------------------------------------------------
--- start_ignore
 set search_path to qp_misc_rio;
-DROP FUNCTION t18_pytest();
-ERROR:  function t18_pytest() does not exist
-CREATE LANGUAGE plpythonu;
-ERROR:  language "plpythonu" already exists
 CREATE FUNCTION t18_pytest() RETURNS VOID LANGUAGE plpythonu AS $$
   plpy.execute("SHOW client_min_messages")
 $$;
--- end_ignore
 SELECT t18_pytest();
  t18_pytest 
 ------------
  
 (1 row)
 
--- start_ignore
 DROP FUNCTION t18_pytest();
 CREATE FUNCTION t18_pytest() RETURNS VARCHAR LANGUAGE plpythonu AS $$
   return plpy.execute("SELECT setting FROM pg_settings WHERE name='client_min_messages'")[0]['setting']
 $$;
--- end_ignore
 SELECT t18_pytest();
  t18_pytest 
 ------------
  notice
 (1 row)
 
--- start_ignore
-DROP FUNCTION t18_pytest();
--- end_ignore
-RESET ALL;
--- ----------------------------------------------------------------------
--- Test: 19
--- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
- select distinct paramname from gp_toolkit.gp_param_setting('allow_system_table_mods');
-        paramname        
--------------------------
- allow_system_table_mods
-(1 row)
-
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 20
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 select distinct paramname
 from gp_toolkit.gp_param_setting('allow_system_table_mods');
         paramname        
@@ -773,17 +569,10 @@ from gp_toolkit.gp_param_setting('max_resource_queues');
  max_resource_queues
 (1 row)
 
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 21
 -- ----------------------------------------------------------------------
--- start_ignore
 set search_path to qp_misc_rio;
-drop table if exists parts cascade;
-NOTICE:  table "parts" does not exist, skipping
-drop table if exists shipped cascade;
-NOTICE:  table "shipped" does not exist, skipping
-drop table if exists int4_tbl;
 create table parts (
     partnum     text,
     cost        float8
@@ -803,27 +592,14 @@ create view shipped_view as
 insert into parts (partnum, cost) values (1, 1234.56);
 insert into shipped (ordnum, partnum, value)
     values (0, 1, (select cost from parts where partnum = 1));
--- end_ignore
 select * from shipped_view ORDER BY 1,2;
  ttype | ordnum | partnum | value 
 -------+--------+---------+-------
 (0 rows)
 
--- start_ignore
-create table int4_tbl (f1 int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into int4_tbl values(123456), (-2147483647), (0), (-123456), (2147483647);
-update shipped set value = 11
-       from int4_tbl a join int4_tbl b on (a.f1 = (select f1 from int4_tbl c where c.f1=b.f1));
-update shipped set value = 11
-       from int4_tbl a join int4_tbl b on (a.f1 = (select f1 from int4_tbl c where c.f1=b.f1));
-RESET ALL;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: 22
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 -- SMALLINT: [-32768, 32767]
 SELECT matrix_add(ARRAY[32767]::SMALLINT[], ARRAY[1]::SMALLINT[]);
 ERROR:  int value out of range: overflow
@@ -890,37 +666,25 @@ SELECT matrix_multiply(ARRAY[ARRAY[16000000]]::INT[], ARRAY[ARRAY[32000000]]::IN
  {{1243611136}}
 (1 row)
 
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 23
 -- ----------------------------------------------------------------------
 set search_path to qp_misc_rio;
--- start_ignore
-DROP FUNCTION IF EXISTS func_array_argument_plpythonu(FLOAT8[]);
-NOTICE:  function func_array_argument_plpythonu(float8[]) does not exist, skipping
 CREATE OR REPLACE FUNCTION func_array_argument_plpythonu(arg FLOAT8[])
 RETURNS FLOAT8
 AS $$
     return arg[0];
 $$ LANGUAGE plpythonu;
--- end_ignore
 SELECT func_array_argument_plpythonu('{1,2,3}');
  func_array_argument_plpythonu 
 -------------------------------
                              1
 (1 row)
 
--- start_ignore
-DROP FUNCTION IF EXISTS func_array_argument_plpythonu(FLOAT8[]);
-RESET ALL;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: 24
 -- ----------------------------------------------------------------------
--- start_ignore
 set search_path to qp_misc_rio;
-DROP FUNCTION IF EXISTS func_setof_spi_in_iterator_plpythonu();
-NOTICE:  function func_setof_spi_in_iterator_plpythonu() does not exist, skipping
 CREATE OR REPLACE FUNCTION func_setof_spi_in_iterator_plpythonu()
 RETURNS SETOF text
 AS $$
@@ -929,7 +693,6 @@ AS $$
         yield s
         plpy.execute('select 2')
 $$ LANGUAGE plpythonu;
--- end_ignore
 SELECT func_setof_spi_in_iterator_plpythonu();
  func_setof_spi_in_iterator_plpythonu 
 --------------------------------------
@@ -939,21 +702,10 @@ SELECT func_setof_spi_in_iterator_plpythonu();
  World
 (4 rows)
 
--- start_ignore
-DROP FUNCTION IF EXISTS func_setof_spi_in_iterator_plpythonu();
-RESET ALL;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: 25
 -- ----------------------------------------------------------------------
--- start_ignore
 set search_path to qp_misc_rio;
-DROP FUNCTION IF EXISTS func_split_plpythonu(INT8);
-NOTICE:  function func_split_plpythonu(int8) does not exist, skipping
-DROP TYPE IF EXISTS tuple_split CASCADE;
-NOTICE:  type "tuple_split" does not exist, skipping
-DROP LANGUAGE plpythonu;
-CREATE LANGUAGE plpythonu;
 CREATE TYPE tuple_split AS (a INT8, b INT8);
 CREATE OR REPLACE FUNCTION func_split_plpythonu(input INT8)
 RETURNS SETOF tuple_split
@@ -961,7 +713,6 @@ AS $$
     yield [input, input];
     yield [input, input]
 $$ LANGUAGE plpythonu;
--- end_ignore
 SELECT * FROM func_split_plpythonu(10);
  a  | b  
 ----+----
@@ -983,29 +734,10 @@ SELECT (func_split_plpythonu(10)).*;
  10 | 10
 (2 rows)
 
--- start_ignore
-DROP FUNCTION IF EXISTS func_split_plpythonu(INT8);
-DROP TYPE IF EXISTS tuple_split CASCADE;
-RESET ALL;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: 26
 -- ----------------------------------------------------------------------
--- start_ignore
 set search_path to qp_misc_rio;
-set role qp_misc_rio_role;
-DROP FUNCTION IF EXISTS func_exec_query_plpythonu( text );
-NOTICE:  function func_exec_query_plpythonu(text) does not exist, skipping
-DROP LANGUAGE plpythonu CASCADE;
-NOTICE:  drop cascades to function ow_count_operator(text,text)
-NOTICE:  drop cascades to function mapreduce(text,text)
-NOTICE:  drop cascades to function mapreduce(text)
-NOTICE:  drop cascades to function execute(text)
-NOTICE:  drop cascades to function python_path()
-NOTICE:  drop cascades to function python_version()
-NOTICE:  drop cascades to function count_operator(text,text)
-NOTICE:  drop cascades to function check_row_count(text,integer)
-CREATE LANGUAGE plpythonu;
 CREATE OR REPLACE FUNCTION func_exec_query_plpythonu( query text )
 RETURNS boolean
 AS $$
@@ -1021,7 +753,6 @@ AS $$
 
     return 'true'
 $$ LANGUAGE plpythonu;
--- end_ignore
 SELECT func_exec_query_plpythonu( 'SELECT 1' );
 NOTICE:  {'?column?': 1}
 CONTEXT:  PL/Python function "func_exec_query_plpythonu"
@@ -1038,30 +769,22 @@ CONTEXT:  PL/Python function "func_exec_query_plpythonu"
  t
 (1 row)
 
--- start_ignore
-DROP FUNCTION IF EXISTS func_exec_query_plpythonu( text );
-RESET ALL;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: 27
 -- ----------------------------------------------------------------------
--- start_ignore
 set search_path to qp_misc_rio;
-DROP FUNCTION IF EXISTS func_truncate_load_plpgsql();
-NOTICE:  function func_truncate_load_plpgsql() does not exist, skipping
-DROP TABLE IF EXISTS tbl_truncate_load;
-NOTICE:  table "tbl_truncate_load" does not exist, skipping
+set gp_autostats_mode to 'ON_NO_STATS';
+set gp_autostats_mode_in_functions to 'NONE';
 -- prepare function and table
 CREATE OR REPLACE FUNCTION func_truncate_load_plpgsql()
 RETURNS void
 AS $$
     BEGIN
         EXECUTE 'TRUNCATE TABLE tbl_truncate_load;';
-        EXECUTE 'INSERT INTO tbl_truncate_load SELECT i, i FROM generate_series(1, 10000000) i;';
+        EXECUTE 'INSERT INTO tbl_truncate_load SELECT i, i FROM generate_series(1, 500000) i;';
     END;
 $$ LANGUAGE plpgsql;
 CREATE TABLE tbl_truncate_load (c1 int, c2 int) DISTRIBUTED BY (c1);
--- end_ignore
 -- show default GUC value for gp_autostats_mode_in_functions
 SELECT current_setting('gp_autostats_mode');
  current_setting 
@@ -1083,9 +806,9 @@ SELECT set_config('gp_autostats_mode_in_functions', 'ON_NO_STATS', False);
 (1 row)
 
 TRUNCATE TABLE tbl_truncate_load;
-INSERT INTO tbl_truncate_load SELECT i, i FROM generate_series(1, 1000000) i;
+INSERT INTO tbl_truncate_load SELECT i, i FROM generate_series(1, 100000) i;
 -- check if the difference between reltuples and number of records for table tbl_truncate_load is within +-5%
-SELECT CASE WHEN abs(reltuples-1000000)/1000000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
+SELECT CASE WHEN abs(reltuples-100000)/100000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
             ELSE 'reltuples and number of records for table tbl_truncate_load are inconsistent'
        END AS remark
 FROM pg_class WHERE oid='tbl_truncate_load'::regclass;
@@ -1095,9 +818,9 @@ FROM pg_class WHERE oid='tbl_truncate_load'::regclass;
 (1 row)
 
 SELECT COUNT(*) FROM tbl_truncate_load;
-  count  
----------
- 1000000
+ count  
+--------
+ 100000
 (1 row)
 
 SELECT func_truncate_load_plpgsql();
@@ -1107,7 +830,7 @@ SELECT func_truncate_load_plpgsql();
 (1 row)
 
 -- check if the difference between reltuples and number of records for table tbl_truncate_load is within +-5%
-SELECT CASE WHEN abs(reltuples-10000000)/10000000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
+SELECT CASE WHEN abs(reltuples-500000)/500000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
             ELSE 'reltuples and number of records for table tbl_truncate_load are inconsistent'
        END AS remark
 FROM pg_class WHERE oid='tbl_truncate_load'::regclass;
@@ -1117,9 +840,9 @@ FROM pg_class WHERE oid='tbl_truncate_load'::regclass;
 (1 row)
 
 SELECT count(*) FROM tbl_truncate_load;
-  count   
-----------
- 10000000
+ count  
+--------
+ 500000
 (1 row)
 
 -- test function with GUC value for gp_autostats_mode_in_functions as NONE
@@ -1130,9 +853,9 @@ SELECT set_config('gp_autostats_mode_in_functions', 'NONE', False);
 (1 row)
 
 TRUNCATE TABLE tbl_truncate_load;
-INSERT INTO tbl_truncate_load SELECT i, i FROM generate_series(1, 1000000) i;
+INSERT INTO tbl_truncate_load SELECT i, i FROM generate_series(1, 100000) i;
 -- check if the difference between reltuples and number of records for table tbl_truncate_load is within +-5%
-SELECT CASE WHEN abs(reltuples-1000000)/1000000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
+SELECT CASE WHEN abs(reltuples-100000)/100000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
             ELSE 'reltuples and number of records for table tbl_truncate_load are inconsistent'
        END AS remark
 FROM pg_class WHERE oid='tbl_truncate_load'::regclass;
@@ -1142,9 +865,9 @@ FROM pg_class WHERE oid='tbl_truncate_load'::regclass;
 (1 row)
 
 SELECT COUNT(*) FROM tbl_truncate_load;
-  count  
----------
- 1000000
+ count  
+--------
+ 100000
 (1 row)
 
 SELECT func_truncate_load_plpgsql();
@@ -1154,7 +877,7 @@ SELECT func_truncate_load_plpgsql();
 (1 row)
 
 -- check if the difference between reltuples and number of records for table tbl_truncate_load is within +-5%
-SELECT CASE WHEN abs(reltuples-10000000)/10000000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
+SELECT CASE WHEN abs(reltuples-500000)/500000 < 0.05 THEN 'reltuples and number of records for table tbl_truncate_load are consistent'
             ELSE 'reltuples and number of records for table tbl_truncate_load are inconsistent'
        END AS remark
 FROM pg_class WHERE oid='tbl_truncate_load'::regclass;
@@ -1164,31 +887,17 @@ FROM pg_class WHERE oid='tbl_truncate_load'::regclass;
 (1 row)
 
 SELECT count(*) FROM tbl_truncate_load;
-  count   
-----------
- 10000000
+ count  
+--------
+ 500000
 (1 row)
 
 -- clean up
--- start_ignore
-DROP FUNCTION IF EXISTS func_truncate_load_plpgsql();
-DROP TABLE IF EXISTS tbl_truncate_load;
 RESET ALL;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: 28
 -- ----------------------------------------------------------------------
--- start_ignore
 set search_path to qp_misc_rio;
-set role qp_misc_rio_role;
-DROP FUNCTION IF EXISTS func_oneline_plpythonu();
-NOTICE:  function func_oneline_plpythonu() does not exist, skipping
-DROP FUNCTION IF EXISTS func_multiline1_plpythonu();
-NOTICE:  function func_multiline1_plpythonu() does not exist, skipping
-DROP FUNCTION IF EXISTS func_multiline2_plpythonu();
-NOTICE:  function func_multiline2_plpythonu() does not exist, skipping
-DROP FUNCTION IF EXISTS func_multiline3_plpythonu();
-NOTICE:  function func_multiline3_plpythonu() does not exist, skipping
 CREATE OR REPLACE FUNCTION func_oneline_plpythonu()
 RETURNS text
 AS $$
@@ -1222,7 +931,6 @@ x = """
   # This is not a comment so the quotes at the end of the line do end the string """
 return x
 $$ LANGUAGE plpythonu;
--- end_ignore
 SELECT func_oneline_plpythonu() UNION ALL
 SELECT func_multiline1_plpythonu() UNION ALL
 SELECT func_multiline2_plpythonu() UNION ALL
@@ -1245,17 +953,9 @@ SELECT func_multiline3_plpythonu();
    # This is not a comment so the quotes at the end of the line do end the string 
 (4 rows)
 
--- start_ignore
-DROP FUNCTION IF EXISTS func_oneline_plpythonu();
-DROP FUNCTION IF EXISTS func_multiline1_plpythonu();
-DROP FUNCTION IF EXISTS func_multiline2_plpythonu();
-DROP FUNCTION IF EXISTS func_multiline3_plpythonu();
-RESET ALL;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: 29
 -- ----------------------------------------------------------------------
-set search_path to qp_misc_rio;
 SELECT * FROM pg_pltemplate WHERE tmplname LIKE '%pljava%' ORDER BY tmplname;
  tmplname | tmpltrusted |     tmplhandler      | tmplinline | tmplvalidator |  tmpllibrary   | tmplacl 
 ----------+-------------+----------------------+------------+---------------+----------------+---------
@@ -1263,17 +963,12 @@ SELECT * FROM pg_pltemplate WHERE tmplname LIKE '%pljava%' ORDER BY tmplname;
  pljavau  | f           | pljavau_call_handler |            |               | $libdir/pljava | 
 (2 rows)
 
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 30
 -- ----------------------------------------------------------------------
--- start_ignore
 set search_path to qp_misc_rio;
-DROP TABLE IF EXISTS nt;
-NOTICE:  table "nt" does not exist, skipping
 CREATE TABLE nt (i INT, j INT) DISTRIBUTED BY (j);
 INSERT INTO nt SELECT i, i FROM generate_series(1,10) i;
--- end_ignore
 SELECT lag(j) OVER (ORDER BY i ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) FROM nt;
 ERROR:  window function "lag" cannot be used with a framed window specification
 LINE 1: SELECT lag(j) OVER (ORDER BY i ROWS BETWEEN UNBOUNDED PRECED...
@@ -1302,168 +997,93 @@ SELECT lead(x) OVER (wx) FROM (SELECT 1 AS x, 2 AS y, 3 AS z) s WINDOW w AS (PAR
      
 (1 row)
 
--- start_ignore
-DROP TABLE IF EXISTS nt;
-RESET ALL;
--- end_ignore
--- ----------------------------------------------------------------------
--- Test: 31
--- ----------------------------------------------------------------------
--- start_ignore
-set search_path to qp_misc_rio;
-DROP FUNCTION IF EXISTS func_split_plpythonu(INT8);
-NOTICE:  function func_split_plpythonu(int8) does not exist, skipping
-DROP TYPE IF EXISTS tuple_split CASCADE;
-NOTICE:  type "tuple_split" does not exist, skipping
-CREATE TYPE tuple_split AS (a INT8, b INT8);
-CREATE OR REPLACE FUNCTION func_split_plpythonu(input INT8)
-RETURNS SETOF tuple_split
-AS $$
-    yield [input, input];
-    yield [input, input]
-$$ LANGUAGE plpythonu;
--- end_ignore
-SELECT * FROM func_split_plpythonu(10);
- a  | b  
-----+----
- 10 | 10
- 10 | 10
-(2 rows)
-
-SELECT func_split_plpythonu(10);
- func_split_plpythonu 
-----------------------
- (10,10)
- (10,10)
-(2 rows)
-
-SELECT (func_split_plpythonu(10)).*;
- a  | b  
-----+----
- 10 | 10
- 10 | 10
-(2 rows)
-
--- start_ignore
-DROP FUNCTION IF EXISTS func_split_plpythonu(INT8);
-DROP TYPE IF EXISTS tuple_split CASCADE;
-RESET ALL;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: 32
 -- ----------------------------------------------------------------------
--- start_ignore
 set search_path to qp_misc_rio;
-DROP TABLE IF EXISTS tbl_test_data_1;
-NOTICE:  table "tbl_test_data_1" does not exist, skipping
-DROP TABLE IF EXISTS tbl_test_data_2;
-NOTICE:  table "tbl_test_data_2" does not exist, skipping
-DROP TABLE IF EXISTS tbl_test_data_3;
-NOTICE:  table "tbl_test_data_3" does not exist, skipping
-DROP TABLE IF EXISTS tbl_test_data_4;
-NOTICE:  table "tbl_test_data_4" does not exist, skipping
 -- Infinity value
-CREATE TABLE tbl_test_data_1(x float, y float) DISTRIBUTED BY (x);
-INSERT INTO tbl_test_data_1 VALUES(1,10);
-INSERT INTO tbl_test_data_1 VALUES('Infinity',20);
--- end_ignore
-SELECT mregr_coef(y,array[x,1]::float[]) FROM tbl_test_data_1;
+CREATE TABLE tbl_test_data(x float, y float) DISTRIBUTED BY (x);
+INSERT INTO tbl_test_data VALUES(1,10);
+INSERT INTO tbl_test_data VALUES('Infinity',20);
+SELECT mregr_coef(y,array[x,1]::float[]) FROM tbl_test_data;
 ERROR:  design matrix is not finite  (seg2 slice1 vm4.chorus:40000 pid=28847)
-SELECT mregr_r2(y,array[x,1]::float[]) FROM tbl_test_data_1;
+SELECT mregr_r2(y,array[x,1]::float[]) FROM tbl_test_data;
 ERROR:  design matrix is not finite  (seg2 slice1 vm4.chorus:40000 pid=28847)
-SELECT mregr_tstats(y,array[x,1]::float[]) FROM tbl_test_data_1;
+SELECT mregr_tstats(y,array[x,1]::float[]) FROM tbl_test_data;
 ERROR:  design matrix is not finite  (seg2 slice1 vm4.chorus:40000 pid=28847)
-SELECT mregr_pvalues(y,array[x,1]::float[]) FROM tbl_test_data_1;
+SELECT mregr_pvalues(y,array[x,1]::float[]) FROM tbl_test_data;
 ERROR:  design matrix is not finite  (seg2 slice1 vm4.chorus:40000 pid=28847)
 -- -Infinity value
--- start_ignore
-CREATE TABLE tbl_test_data_2(x float, y float) DISTRIBUTED BY (x);
-INSERT INTO tbl_test_data_2 VALUES(1,10);
-INSERT INTO tbl_test_data_2 VALUES('-Infinity',20);
--- end_ignore
-SELECT mregr_coef(y,array[x,1]::float[]) FROM tbl_test_data_2;
+DELETE FROM tbl_test_data;
+INSERT INTO tbl_test_data VALUES(1,10);
+INSERT INTO tbl_test_data VALUES('-Infinity',20);
+SELECT mregr_coef(y,array[x,1]::float[]) FROM tbl_test_data;
 ERROR:  design matrix is not finite  (seg2 slice1 vm4.chorus:40000 pid=28847)
-SELECT mregr_r2(y,array[x,1]::float[]) FROM tbl_test_data_2;
+SELECT mregr_r2(y,array[x,1]::float[]) FROM tbl_test_data;
 ERROR:  design matrix is not finite  (seg2 slice1 vm4.chorus:40000 pid=28847)
-SELECT mregr_tstats(y,array[x,1]::float[]) FROM tbl_test_data_2;
+SELECT mregr_tstats(y,array[x,1]::float[]) FROM tbl_test_data;
 ERROR:  design matrix is not finite  (seg2 slice1 vm4.chorus:40000 pid=28847)
-SELECT mregr_pvalues(y,array[x,1]::float[]) FROM tbl_test_data_2;
+SELECT mregr_pvalues(y,array[x,1]::float[]) FROM tbl_test_data;
 ERROR:  design matrix is not finite  (seg2 slice1 vm4.chorus:40000 pid=28847)
 -- NaN value
--- start_ignore
-CREATE TABLE tbl_test_data_3(x float, y float) DISTRIBUTED BY (x);
-INSERT INTO tbl_test_data_3 VALUES(1,10);
-INSERT INTO tbl_test_data_3 VALUES('NaN',20);
--- end_ignore
-SELECT mregr_coef(y,array[x,1]::float[]) FROM tbl_test_data_3;
+DELETE FROM tbl_test_data;
+INSERT INTO tbl_test_data VALUES(1,10);
+INSERT INTO tbl_test_data VALUES('NaN',20);
+SELECT mregr_coef(y,array[x,1]::float[]) FROM tbl_test_data;
 ERROR:  design matrix is not finite  (seg2 slice1 vm4.chorus:40000 pid=28847)
-SELECT mregr_r2(y,array[x,1]::float[]) FROM tbl_test_data_3;
+SELECT mregr_r2(y,array[x,1]::float[]) FROM tbl_test_data;
 ERROR:  design matrix is not finite  (seg2 slice1 vm4.chorus:40000 pid=28847)
-SELECT mregr_tstats(y,array[x,1]::float[]) FROM tbl_test_data_3;
+SELECT mregr_tstats(y,array[x,1]::float[]) FROM tbl_test_data;
 ERROR:  design matrix is not finite  (seg2 slice1 vm4.chorus:40000 pid=28847)
-SELECT mregr_pvalues(y,array[x,1]::float[]) FROM tbl_test_data_3;
+SELECT mregr_pvalues(y,array[x,1]::float[]) FROM tbl_test_data;
 ERROR:  design matrix is not finite  (seg2 slice1 vm4.chorus:40000 pid=28847)
 -- NULL value
--- start_ignore
-CREATE TABLE tbl_test_data_4(x float, y float) DISTRIBUTED BY (x);
-INSERT INTO tbl_test_data_4 VALUES(1,10);
-INSERT INTO tbl_test_data_4 VALUES(NULL,20);
--- end_ignore
-SELECT mregr_r2(y,array[x,1]::float[]) FROM tbl_test_data_4;
+DELETE FROM tbl_test_data;
+INSERT INTO tbl_test_data VALUES(1,10);
+INSERT INTO tbl_test_data VALUES(NULL,20);
+SELECT mregr_coef(y,array[x,1]::float[]) FROM tbl_test_data;
+ mregr_coef 
+------------
+ {5,5}
+(1 row)
+
+SELECT mregr_r2(y,array[x,1]::float[]) FROM tbl_test_data;
  mregr_r2 
 ----------
         1
 (1 row)
 
-SELECT mregr_tstats(y,array[x,1]::float[]) FROM tbl_test_data_4;
+SELECT mregr_tstats(y,array[x,1]::float[]) FROM tbl_test_data;
     mregr_tstats     
 ---------------------
  {Infinity,Infinity}
 (1 row)
 
-SELECT mregr_pvalues(y,array[x,1]::float[]) FROM tbl_test_data_4;
+SELECT mregr_pvalues(y,array[x,1]::float[]) FROM tbl_test_data;
  mregr_pvalues 
 ---------------
  {NaN,NaN}
 (1 row)
 
--- start_ignore
-DROP TABLE IF EXISTS tbl_test_data_1;
-DROP TABLE IF EXISTS tbl_test_data_2;
-DROP TABLE IF EXISTS tbl_test_data_3;
-DROP TABLE IF EXISTS tbl_test_data_4;
-RESET ALL;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: 33
 -- ----------------------------------------------------------------------
---start_ignore
 set search_path to qp_misc_rio;
-drop table if exists ccdd1;
-NOTICE:  table "ccdd1" does not exist, skipping
 create table ccdd1 (a, b) as (select 1, 1 union select 1, 1 union select 1, 1);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
---end_ignore
 select * from ccdd1;
  a | b 
 ---+---
  1 | 1
 (1 row)
 
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 34
 -- ----------------------------------------------------------------------
--- start_ignore
+-- This is expected to fail, with an error along the lines of:
+-- function cannot execute on segment because it accesses relation "public.testdata_in"
 set search_path to qp_misc_rio;
-DROP FUNCTION IF EXISTS func_plpythonu(INT);
-NOTICE:  function func_plpythonu(pg_catalog.int4) does not exist, skipping
-DROP TABLE IF EXISTS testdata_out;
-NOTICE:  table "testdata_out" does not exist, skipping
-DROP TABLE IF EXISTS testdata_in;
-NOTICE:  table "testdata_in" does not exist, skipping
--- end_ignore
 CREATE TABLE testdata_in ( c1 INT, c2 INT ) DISTRIBUTED BY (c1);
 INSERT INTO testdata_in SELECT i, i FROM generate_series(1,100) i;
 CREATE TABLE testdata_out ( c1 INT, c2 INT ) DISTRIBUTED BY (c1);
@@ -1479,20 +1099,11 @@ Traceback (most recent call last):
   PL/Python function "func_plpythonu", line 3, in <module>
     return plpy.execute(sqlstm);
 PL/Python function "func_plpythonu"
-DROP FUNCTION IF EXISTS func_plpythonu(INT);
-DROP TABLE IF EXISTS testdata_out;
-DROP TABLE IF EXISTS testdata_in;
-RESET ALL;
 -- ----------------------------------------------------------------------
 -- Test: 35
 -- ----------------------------------------------------------------------
--- start_ignore
 set search_path to qp_misc_rio;
-DROP FUNCTION IF EXISTS func_plpythonu(INT);
-NOTICE:  function func_plpythonu(pg_catalog.int4) does not exist, skipping
-DROP LANGUAGE plpythonu CASCADE;
-CREATE LANGUAGE plpythonu;
-CREATE OR REPLACE FUNCTION func_plpythonu(x INT)
+CREATE OR REPLACE FUNCTION func_plpythonu2(x INT)
 RETURNS INT
 AS $$
      plpy.execute('DROP TABLE IF EXISTS tbl_plpythonu;')
@@ -1501,85 +1112,29 @@ AS $$
          plpy.execute('INSERT INTO tbl_plpythonu VALUES(%d)' % i);
      return plpy.execute('SELECT COUNT(*) AS col FROM tbl_plpythonu;')[0]['col']
  $$ LANGUAGE plpythonu;
-SELECT func_plpythonu(200);
+SELECT func_plpythonu2(200);
 NOTICE:  table "tbl_plpythonu" does not exist, skipping
 CONTEXT:  SQL statement "DROP TABLE IF EXISTS tbl_plpythonu;"
-PL/Python function "func_plpythonu"
- func_plpythonu 
-----------------
-            200
+PL/Python function "func_plpythonu2"
+ func_plpythonu2 
+-----------------
+             200
 (1 row)
 
-DROP FUNCTION IF EXISTS func_plpythonu(INT);
--- end_ignore
-RESET ALL;
--- ----------------------------------------------------------------------
--- Test: 39
--- ----------------------------------------------------------------------
--- start_ignore
-set search_path to qp_misc_rio;
-create schema co_nestloop_idxscan;
-create table co_nestloop_idxscan.foo (id bigint, data text) with (appendonly=true, orientation=column);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-create table co_nestloop_idxscan.bar (id bigint);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
--- Changing the text to be smaller doesn't repro the issue
-insert into co_nestloop_idxscan.foo select 1, repeat('xxxxxxxxxx', 100000);
-insert into co_nestloop_idxscan.bar values (1);
-create index foo_id_idx on co_nestloop_idxscan.foo(id);
--- end_ignore
--- test with hash join
-select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
- id 
-----
-  1
-(1 row)
-
--- test with nested loop join
-set enable_hashjoin=off;
-select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
- id 
-----
-  1
-(1 row)
-
--- test with nested loop join and index scan
-set enable_seqscan = off;
-select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
- id 
-----
-  1
-(1 row)
-
--- start_ignore
-drop schema co_nestloop_idxscan cascade;
-NOTICE:  drop cascades to table co_nestloop_idxscan.bar
-NOTICE:  drop cascades to append only columnar table co_nestloop_idxscan.foo
-RESET ALL;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: 38
 -- ----------------------------------------------------------------------
--- start_ignore
 set search_path to qp_misc_rio;
-DROP TABLE IF EXISTS emp cascade;
-NOTICE:  drop cascades to table stud_emp
-NOTICE:  drop cascades to function overpaid(emp)
-NOTICE:  drop cascades to rule _RETURN on view xmlview4
-NOTICE:  drop cascades to view xmlview4
-NOTICE:  drop cascades to rule _RETURN on view toyemp
-NOTICE:  drop cascades to view toyemp
--- Create a non-privileged user triggertest_nopriv_a
+-- start_ignore
 drop role if exists triggertest_nopriv_a;
+drop role if exists triggertest_nopriv_b;
+-- end_ignore
+-- Create a non-privileged user triggertest_nopriv_a
 create role triggertest_nopriv_a with login ;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 -- Create another non-privileged user triggertest_nopriv_b
-drop role if exists triggertest_nopriv_b;
 create role triggertest_nopriv_b with login ;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
--- end_ignore
 GRANT ALL ON SCHEMA qp_misc_rio TO triggertest_nopriv_a;
 GRANT ALL ON SCHEMA qp_misc_rio TO triggertest_nopriv_b;
 -- Connect as non-privileged user "triggertest_nopriv_a"
@@ -1590,7 +1145,6 @@ select user;
  triggertest_nopriv_a
 (1 row)
 
--- start_ignore
 -- Create test table emp
 CREATE TABLE emp (
     empname           text NOT NULL,
@@ -1598,7 +1152,6 @@ CREATE TABLE emp (
 );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'empname' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
--- end_ignore
 -- Create a trigger function process_emp_audit()
 begin;
 create or replace function process_emp_audit() returns trigger as $$
@@ -1614,10 +1167,8 @@ create trigger emp_audit
 after insert on emp
     for each row execute procedure process_emp_audit();
 -- Verified the trigger works correctly
--- start_ignore
 insert into emp values ('Tammy', 100000);
 NOTICE:  100000  (seg0 krajaraman:25432 pid=59721)
--- end_ignore
 -- connect as non-privileged user "triggertest_nopriv_b"
 SET ROLE triggertest_nopriv_b;
 select user;
@@ -1655,10 +1206,8 @@ create trigger my_emp_audit
 after insert on my_emp
     for each row execute procedure process_emp_audit();
 -- Verified trigger can be run correctly
--- start_ignore
 insert into my_emp values ('Tammy', 100000);
 NOTICE:  100000  (seg0 krajaraman:25432 pid=59721)
--- end_ignore
 -- Now to confirm that we only check trigger function's EXECUTE
 -- permission at trigger create time, but not at trigger run time
 -- by revoking EXECUTE permission from triggertest_nopriv_b after
@@ -1671,23 +1220,41 @@ SET ROLE triggertest_nopriv_b;
 -- Verified that the existing trigger can still work
 -- even the current user does NOT have the EXECUTE permission
 -- on the trigger function.
--- start_ignore
 insert into my_emp values ('Sammy', 100001);
 NOTICE:  100001  (seg1 krajaraman:25433 pid=59722)
--- end_ignore
 -- Clean up
-DROP TRIGGER my_emp_audit on my_emp;
-DROP TABLE IF EXISTS my_emp;
-SET ROLE triggertest_nopriv_a;
-DROP TRIGGER emp_audit on emp;
-DROP FUNCTION process_emp_audit();
-DROP TABLE IF EXISTS emp;
-RESET ALL;
+RESET ROLE;
 -- ----------------------------------------------------------------------
--- Test: 40
+-- Test: row_number() in subquery, with grouping in outer query
 -- ----------------------------------------------------------------------
+set search_path to qp_misc_rio;
+create table bfv_legacy_mpp2(a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into bfv_legacy_mpp2 values (generate_series(1,10));
+select  median(a), avg(a)
+from
+(
+    select a,row_number() over (order by a)
+    from bfv_legacy_mpp2
+) sub1
+group by a
+order by a;
+ median | avg 
+--------+-----
+      1 |   1
+      2 |   2
+      3 |   3
+      4 |   4
+      5 |   5
+      6 |   6
+      7 |   7
+      8 |   8
+      9 |   9
+     10 |  10
+(10 rows)
+
 -- start_ignore
-SET ROLE qp_misc_rio_role;
 drop schema qp_misc_rio cascade;
 NOTICE:  drop cascades to table qp_misc_rio.ccdd1
 NOTICE:  drop cascades to table qp_misc_rio.int4_tbl
@@ -1701,4 +1268,3 @@ NOTICE:  drop cascades to table qp_misc_rio.tb_function_test
 NOTICE:  drop cascades to table qp_misc_rio.b
 NOTICE:  drop cascades to table qp_misc_rio.a
 -- end_ignore
-RESET ALL;
