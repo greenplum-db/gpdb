@@ -3465,6 +3465,10 @@ Feature: Validate command line arguments
         And the timestamp from gpcrondump is stored
         Then verify the metadata dump file does not contain "ALTER TABLE rank_1_prt_p1 SET SCHEMA aaa"
         Then verify the metadata dump file does not contain "ALTER TABLE rank_1_prt_p2 SET SCHEMA aaa"
+        When the user runs "gpcrondump -a -x bkdb -t withpartition.rank"
+        And the timestamp from gpcrondump is stored
+        Then verify the metadata dump file does contain "ALTER TABLE rank_1_prt_p1 SET SCHEMA aaa"
+        Then verify the metadata dump file does contain "ALTER TABLE rank_1_prt_p2 SET SCHEMA aaa"
 
     # THIS SHOULD BE THE LAST TEST
     @backupfire

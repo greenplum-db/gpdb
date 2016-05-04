@@ -6249,7 +6249,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			appendPQExpBuffer(query,
 			    "SELECT partitionschemaname, partitiontablename FROM pg_catalog.pg_partitions "
 				" WHERE partitionschemaname != schemaname AND schemaname = ");
-			appendStringLiteralConn(query, tbinfo->dobj.namespace, g_conn);
+			appendStringLiteralConn(query, tbinfo->dobj.namespace->dobj.name, g_conn);
 			appendPQExpBuffer(query, " AND tablename = ");
 			appendStringLiteralConn(query, tbinfo->dobj.name, g_conn);
 

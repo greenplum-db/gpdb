@@ -157,7 +157,12 @@ def impl(context, directory):
     master_dump_dir = directory if len(directory.strip()) != 0 else master_data_dir
     metadata_path = __get_dump_metadata_path(context, master_dump_dir)
 
-    with gzip.open(metadata_path, 'r') as fd:
+    # gzip in python 2.6 does not support __exit__, so it cannot be used in "with"
+    # with gzip.open(metadata_path, 'r') as fd:
+
+    fd = None
+    try:
+        fd = gzip.open(metadata_path, 'r')
         line = None
         for line in fd:
             if (line[:3] == comment_start_expr):
@@ -170,6 +175,9 @@ def impl(context, directory):
                         raise Exception("Value of Type in the comment line '%s' of the metadata_file '%s' does not fall under the expected list %s. Please check if the value is correct" %(type_v, metadata_file, types))
         if not line:
             raise Exception('Metadata file has no data')
+    finally:
+        if fd:
+            fd.close()
 
 @given('verify the metadata dump file does not contain "{target}"')
 @when('verify the metadata dump file does not contain "{target}"')
@@ -177,13 +185,38 @@ def impl(context, directory):
 def impl(context, target):
     metadata_path = __get_dump_metadata_path(context, master_data_dir)
 
-    with gzip.open(metadata_path, 'r') as fd:
+    fd = None
+    try:
+        fd = gzip.open(metadata_path, 'r')
         line = None
         for line in fd:
             if target in line:
                 raise Exception("Unexpectedly found %s in metadata file %s" % (target, metadata_path))
         if not line:
             raise Exception('Metadata file has no data')
+    finally:
+        if fd:
+            fd.close()
+
+@given('verify the metadata dump file does contain "{target}"')
+@when('verify the metadata dump file does contain "{target}"')
+@then('verify the metadata dump file does contain "{target}"')
+def impl(context, target):
+    metadata_path = __get_dump_metadata_path(context, master_data_dir)
+
+    fd = None
+    try:
+        fd = gzip.open(metadata_path, 'r')
+        line = None
+        for line in fd:
+            if target in line:
+                return
+        if not line:
+            raise Exception('Metadata file has no data')
+        raise Exception("Missing text %s in metadata file %s" % (target, metadata_path))
+    finally:
+        if fd:
+            fd.close()
 
 def __get_dump_metadata_path(context, dump_dir):
     filename = "gp_dump_1_1_%s.gz" % context.backup_timestamp
