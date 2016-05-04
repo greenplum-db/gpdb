@@ -429,6 +429,12 @@ char	   *gp_hadoop_connector_version = "";	/* old GUC; now it's a global
 char	   *gp_hadoop_target_version;
 char	   *gp_hadoop_home;
 
+/* PostGIS Integration GUCs */
+char	   *gdal_datapath;    /* Path of gdal data*/
+char	   *gdal_enabled_drivers; /* the list of enabled drivers in gdal*/
+char		enable_outdb_rasters;  /* the flag about whether enable outdb function or not*/
+
+
 /* Time based authentication GUC */
 char	   *gp_auth_time_override_str = NULL;
 
@@ -3416,6 +3422,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false, NULL, NULL
 	},
 
+	{
+		{"postgis.enable_outdb_rasters", PGC_SUSET, CUSTOM_OPTIONS,
+			gettext_noop("Enable Out-DB raster bands"),
+			gettext_noop("If true, rasters can access data located outside the database"),
+			GUC_GPDB_ADDOPT | GUC_NOT_IN_SAMPLE
+		},
+		&enable_outdb_rasters,
+		true, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
@@ -5495,6 +5511,26 @@ struct config_string ConfigureNamesString_gp[] =
 		},
 		&gp_hadoop_home,
 		"", NULL, NULL
+	},
+
+	{
+		{"postgis.gdal_datapath", PGC_SUSET, CUSTOM_OPTIONS,
+			gettext_noop("Path to GDAL data files."),
+			gettext_noop("Physical path to directory containing GDAL data files (sets the GDAL_DATA config option)."),
+			GUC_GPDB_ADDOPT
+		},
+		&gdal_datapath,
+		"", NULL, NULL
+	},
+
+	{
+		{"postgis.gdal_enabled_drivers", PGC_SUSET, CUSTOM_OPTIONS,
+			gettext_noop("Enabled GDAL drivers."),
+			gettext_noop("List of enabled GDAL drivers by short name. To enable/disable all drivers, use 'ENABLE_ALL' or 'DISABLE_ALL' (sets the GDAL_SKIP config option)."),
+			GUC_GPDB_ADDOPT
+		},
+		&gdal_enabled_drivers,
+		"GTiff PNG JPEG GIF XYZ", NULL, NULL
 	},
 
 	{

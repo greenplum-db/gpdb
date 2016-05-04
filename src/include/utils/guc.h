@@ -493,6 +493,11 @@ extern char  *gp_hadoop_connector_version; /* connector version (internal use on
 extern char  *gp_hadoop_target_version; /* the target hadoop distro/version */
 extern char  *gp_hadoop_home;    /* $HADOOP_HOME on all segments */
 
+/* PostGIS Integration GUCs */
+extern char  *gdal_datapath;	/* Path of gdal data*/
+extern char  *gdal_enabled_drivers; /* the list of enabled drivers in gdal */
+extern char  enable_outdb_rasters;	/* the flag about whether enable outdb function or not */
+
 /* Time based authentication GUC */
 extern char  *gp_auth_time_override_str;
 
