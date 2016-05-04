@@ -74,10 +74,8 @@ select count(*) > 0 from segspace_view_gp_workfile_mgr_reset_segspace;
 ------------ Interrupting SELECT query that spills -------------------
 
 -- enable the fault injector
---start_ignore
-\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
---end_ignore
+\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2 | grep ERROR
+\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2 | grep ERROR
 
 set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
@@ -88,6 +86,8 @@ begin;
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
 rollback;
 
+\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2 | grep "fault injection state:"
+
 -- check used segspace after test
 reset statement_mem;
 select max(size) from segspace_view_gp_workfile_segspace;
@@ -96,10 +96,8 @@ select max(size) from segspace_view_gp_workfile_segspace;
 ------------ Interrupting INSERT INTO query that spills -------------------
 
 -- enable the fault injector
---start_ignore
-\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
---end_ignore
+\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2 | grep ERROR
+\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2 | grep ERROR
 
 drop table if exists segspace_t1_created;
 create table segspace_t1_created (i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int, i8 int) DISTRIBUTED BY (i1);
@@ -116,6 +114,8 @@ SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE 
 
 rollback;
 
+\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2 | grep "fault injection state:"
+
 -- check used segspace after test
 reset statement_mem;
 select max(size) from segspace_view_gp_workfile_segspace;
@@ -127,10 +127,8 @@ drop table if exists segspace_t1_created;
 ------------ Interrupting CREATE TABLE AS query that spills -------------------
 
 -- enable the fault injector
---start_ignore
-\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
---end_ignore
+\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2 | grep ERROR
+\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2 | grep ERROR
 
 drop table if exists segspace_t1_created;
 set gp_workfile_type_hashjoin=buffile;
@@ -144,6 +142,8 @@ create table segspace_t1_created AS
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
 
 rollback;
+
+\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2 | grep "fault injection state:"
 
 -- check used segspace after test
 reset statement_mem;
