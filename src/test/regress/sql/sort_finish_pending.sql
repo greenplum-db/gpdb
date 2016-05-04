@@ -6,7 +6,7 @@ insert into _tmp_table select i, i % 100, i % 10000, i % 75 from generate_series
 set statement_mem="2MB";
 set gp_enable_mk_sort=on;
 set gp_cte_sharing=on;
-set fault_injector_log_level=INFO;
+
 
 --start_ignore
 \! gpfaultinjector -f execsort_mksort_mergeruns -y reset --seg_dbid 2

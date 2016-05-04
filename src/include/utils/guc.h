@@ -204,7 +204,6 @@ extern bool Debug_datumstream_write_use_small_initial_buffers;
 extern int	Debug_persistent_store_print_level;
 extern bool	Debug_database_command_print;
 extern int	Debug_database_command_print_level;
-extern int	fault_injector_log_level;
 extern int	gp_max_databases;
 extern int	gp_max_tablespaces;
 extern int	gp_max_filespaces;
