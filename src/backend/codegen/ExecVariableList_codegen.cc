@@ -402,7 +402,12 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 
   for (int attnum = 0; attnum < max_attr; ++attnum) {
     Form_pg_attribute thisatt = att[attnum];
-    off = att_align(off, thisatt->attalign);
+
+    if ( thisatt->attcacheoff > 0 ) {
+      off = thisatt->attcacheoff;
+    }else {
+      off = att_align(off, thisatt->attalign);
+    }
 
     // If any thisatt is varlen
     if (thisatt->attlen < 0) {
