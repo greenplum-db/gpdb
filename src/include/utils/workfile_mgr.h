@@ -198,13 +198,8 @@ bool WorkfileQueryspace_AddWorkfile(void);
 void WorkfileQueryspace_SubtractWorkfile(int32 nFiles);
 
 /* Serialization functions */
-void outfuncs_workfile_mgr_init(List *rtable);
-void outfuncs_workfile_mgr_end(void);
 void outfast_workfile_mgr_init(List *rtable);
 void outfast_workfile_mgr_end(void);
-
-/* Debugging functions */
-void workfile_mgr_print_set(workfile_set *work_set);
 
 /* Workfile error reporting */
 typedef enum WorkfileError
