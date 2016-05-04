@@ -127,7 +127,6 @@ cdbexplain_recvExecStats(struct PlanState              *planstate,
  */
 struct CdbExplain_ShowStatCtx *
 cdbexplain_showExecStatsBegin(struct QueryDesc *queryDesc,
-                              MemoryContext     explaincxt,
                               instr_time        querystarttime);
 
 /*
