@@ -9,6 +9,7 @@
 //    Contains different code generators
 //
 //---------------------------------------------------------------------------
+#include <algorithm>
 #include <cstdint>
 #include <string>
 
@@ -114,65 +115,19 @@ ExecVariableListCodegen::ExecVariableListCodegen
     ExecVariableListFn* ptr_to_regular_func_ptr,
     ProjectionInfo* proj_info,
     TupleTableSlot* slot) :
-    BaseCodegen(
-        kExecVariableListPrefix,
-        regular_func_ptr,
-        ptr_to_regular_func_ptr),
+        BaseCodegen(kExecVariableListPrefix, regular_func_ptr, ptr_to_regular_func_ptr),
         proj_info_(proj_info),
-        slot_(slot){
-}
-
-static inline int GetMax(int* numbers, int length) {
-  int i, max=-1;
-  for(i=0; i < length; i++){
-    if ( numbers[i] > max ) {
-      max = numbers[i];
-    }
-  }
-  return max;
+        slot_(slot) {
 }
 
 
-/**
- * @brief Generate code for the code path ExecVariableList > slot_getattr >
- * _slot_getsomeattrs > slot_deform_tuple.
- *
- * @param codegen_utils
- *
- * @return true on successful generation; false otherwise.
- *
- * @note Generate code for code path ExecVariableList > slot_getattr >
- * _slot_getsomeattrs > slot_deform_tuple. The regular implementation of
- * ExecvariableList, for each attribute <i>A</i> in the target list, retrieves
- * the slot that <i>A</> comes from and calls slot_getattr. slot_get_attr() will
- * eventually call slot_deform_tuple (through _slot_getsomeattrs), which fetches
- * all yet unread attributes of the slot until the given attribute.
- *
- * This function generates the code for the case that all the
- * attributes in target list use the same slot (created during a
- * scan i.e, ecxt_scantuple). Moreover, instead of looping over the target
- * list one at a time, this approach uses slot_getattr only once, with the
- * largest attribute index from the target list.
- *
- * If during code generation time, the completion is not possible (e.g., attributes
- * use different slots), then function returns false and codegen manager
- * will manager the clean up.
- *
- * This implementation does not support:
- *  (1) Null attributes
- *  (2) Variable length attributes
- *  (3) Attributes passed by reference
- *
- * If at execution time, we see any of the above types of attributes, we fall backs to
- * the regular function.
- */
 bool ExecVariableListCodegen::GenerateExecVariableList(
     gpcodegen::CodegenUtils* codegen_utils) {
 
   assert(NULL != codegen_utils);
 
   ElogWrapper elogwrapper(codegen_utils);
-  COMPILE_ASSERT(sizeof(Datum) == sizeof(int64));
+  static_assert(sizeof(Datum) == sizeof(int64));
 
   if ( NULL == proj_info_->pi_varSlotOffsets ) {
     elog(DEBUG1, "Cannot codegen ExecVariableList because varSlotOffsets are null");
@@ -189,7 +144,9 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   }
 
   // Find the largest attribute index in projInfo->pi_targetlist
-  int max_attr = GetMax(proj_info_->pi_varNumbers, list_length(proj_info_->pi_targetlist));
+  int max_attr = *std::max_element(
+      proj_info_->pi_varNumbers,
+      proj_info_->pi_varNumbers + list_length(proj_info_->pi_targetlist));
 
   // System attribute
   if(max_attr <= 0)
@@ -338,7 +295,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
       irb->CreateLoad( codegen_utils->GetPointerToMember(
           llvm_heaptuple_t_data, &HeapTupleHeaderData::t_infomask));
 
-  // Check if tuple slot has nulls and fall back accordingly
+  // Check  and fall back accordingly
   irb->CreateCondBr(
       irb->CreateICmpNE(
           irb->CreateAnd(
@@ -483,6 +440,9 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   irb->CreateStore(codegen_utils->GetConstant<long>(off),
                    llvm_slot_PRIVATE_tts_off_ptr);
 
+  // slot->PRIVATE_tts_nvalid = attnum;
+  irb->CreateStore(llvm_max_attr, llvm_slot_PRIVATE_tts_nvalid_ptr);
+
   // slot->PRIVATE_tts_slow = slow;
   llvm::Value* llvm_slot_PRIVATE_tts_slow_ptr /* bool* */=
       codegen_utils->GetPointerToMember(
@@ -501,28 +461,26 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   // }
 
   // TODO: Convert these to loops
+  llvm::Value* llvm_num_bytes = irb->CreateMul(
+      codegen_utils->GetConstant(sizeof(Datum)),
+      irb->CreateZExtOrTrunc(
+        irb->CreateSub(llvm_max_attr, llvm_attno),
+        codegen_utils->GetType<size_t>()));
   codegen_utils->ir_builder()->CreateCall(
       llvm_memset, {
           irb->CreateBitCast(
               irb->CreateInBoundsGEP(llvm_slot_PRIVATE_tts_values, {llvm_attno}),
               codegen_utils->GetType<void*>()),
-              codegen_utils->GetConstant(0),
-              irb->CreateMul(codegen_utils->GetConstant(sizeof(Datum)),
-                             irb->CreateZExtOrTrunc(irb->CreateSub(llvm_max_attr, llvm_attno),
-                                                    codegen_utils->GetType<size_t>()))});
+          codegen_utils->GetConstant(0),
+          llvm_num_bytes});
 
   codegen_utils->ir_builder()->CreateCall(
       llvm_memset, {
           irb->CreateBitCast(
               irb->CreateInBoundsGEP(llvm_slot_PRIVATE_tts_isnull, {llvm_attno}),
               codegen_utils->GetType<void*>()),
-              codegen_utils->GetConstant((int) true),
-              irb->CreateMul(codegen_utils->GetConstant(sizeof(Datum)),
-                             irb->CreateZExtOrTrunc(irb->CreateSub(llvm_max_attr, llvm_attno),
-                                                    codegen_utils->GetType<size_t>()))});
-
-  // slot->PRIVATE_tts_nvalid = attnum;
-  irb->CreateStore(llvm_max_attr, llvm_slot_PRIVATE_tts_nvalid_ptr);
+          codegen_utils->GetConstant((int) true),
+          llvm_num_bytes});
 
   // TupSetVirtualTuple(slot);
   irb->CreateStore(
@@ -583,13 +541,11 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 bool ExecVariableListCodegen::GenerateCodeInternal(CodegenUtils* codegen_utils) {
   bool isGenerated = GenerateExecVariableList(codegen_utils);
 
-  if (isGenerated)
-  {
+  if (isGenerated) {
     elog(DEBUG1, "ExecVariableList was generated successfully!");
     return true;
   }
-  else
-  {
+  else {
     elog(DEBUG1, "ExecVariableList generation failed!");
     return false;
   }

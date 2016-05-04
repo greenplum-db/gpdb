@@ -318,9 +318,6 @@ ExecAllocTableSlot(TupleTable table)
 	return &(table->array[slotnum]);
 }
 
-extern void
-slot_deform_tuple(TupleTableSlot *slot, int natts);
-
 /* ----------------------------------------------------------------
  *				  tuple table slot accessor functions
  * ----------------------------------------------------------------

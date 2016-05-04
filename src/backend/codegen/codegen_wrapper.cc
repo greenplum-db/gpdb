@@ -111,7 +111,7 @@ void* ExecVariableListCodegenEnroll(
     ExecVariableListFn regular_func_ptr,
     ExecVariableListFn* ptr_to_chosen_func_ptr,
     ProjectionInfo* proj_info,
-	TupleTableSlot* slot) {
+	  TupleTableSlot* slot) {
   ExecVariableListCodegen* generator = CodegenEnroll<ExecVariableListCodegen>(
       regular_func_ptr, ptr_to_chosen_func_ptr, proj_info, slot);
   return generator;

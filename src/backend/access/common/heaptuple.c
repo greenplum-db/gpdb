@@ -1241,10 +1241,6 @@ _slot_getsomeattrs(TupleTableSlot *slot, int attnum)
 	attno = HeapTupleHeaderGetNatts(tuple->t_data);
 	attno = Min(attno, attnum);
 
-	/*
-	 * This macro will decide whether to inline regular slot_deform_tuple or
-	 * call regular / generated slot_deform_tuple if USE_CODEGEN is defined
-	 */
 	slot_deform_tuple(slot, attno);
 
 	/*

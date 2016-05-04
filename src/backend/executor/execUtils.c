@@ -690,9 +690,7 @@ ExecGetResultType(PlanState *planstate)
 }
 
 extern void
-ExecVariableList(ProjectionInfo *projInfo,
-				 Datum *values,
-				 bool *isnull);
+ExecVariableList(ProjectionInfo *projInfo, Datum *values, bool *isnull);
 
 /* ----------------
  *		ExecBuildProjectionInfo
@@ -815,14 +813,10 @@ ExecBuildProjectionInfo(List *targetList,
 					lastScanVar = Max(lastScanVar, attnum);
 					break;
 			}
-			char	   *slotptr = ((char *) projInfo->pi_exprContext) + varSlotOffsets[resind];
-			TupleTableSlot *varSlot = *((TupleTableSlot **) slotptr);
-
 		}
 		projInfo->pi_lastInnerVar = lastInnerVar;
 		projInfo->pi_lastOuterVar = lastOuterVar;
 		projInfo->pi_lastScanVar = lastScanVar;
-
 	}
 	else
 	{

@@ -14,9 +14,6 @@
 
 #include <string>
 #include <vector>
-extern "C" {
-#include "utils/elog.h"
-}
 #include "codegen/utils/codegen_utils.h"
 #include "codegen/codegen_interface.h"
 
