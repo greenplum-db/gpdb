@@ -21,11 +21,14 @@ bool S3Reader_fake::Destroy() {
     if (this->filedownloader) {
         this->filedownloader->destroy();
         delete this->filedownloader;
+        this->filedownloader = NULL;
     }
 
     if (this->keylist) {
         delete this->keylist;
+        this->keylist = NULL;
     }
+
     return true;
 }
 
@@ -113,6 +116,39 @@ void ExtWrapperTest(const char *url, uint64_t buffer_size, const char *md5_str,
     free(buf);
 }
 
+#define BUF_SIZE 64 * 1024
+void ReaderTest(const char *url_with_options, const char *md5_str) {
+    MD5Calc m;
+    S3Reader *reader = NULL;
+    int data_len = BUF_SIZE;
+    char *data_buf = (char *)malloc(BUF_SIZE);
+
+    ASSERT_NE((void *)NULL, data_buf);
+
+    thread_setup();
+
+    reader = reader_init(url_with_options);
+
+    s3ext_segid = 0;
+    s3ext_segnum = 1;
+
+    do {
+        data_len = BUF_SIZE;
+
+        ASSERT_TRUE(reader_transfer_data(reader, data_buf, data_len));
+
+        m.Update(data_buf, data_len);
+    } while (data_len);
+
+    EXPECT_STREQ(md5_str, m.Get());
+
+    thread_cleanup();
+
+    free(data_buf);
+
+    EXPECT_TRUE(reader_cleanup(&reader));
+}
+
 TEST(ExtWrapper, ValidateURL_normal) {
     S3ExtBase *myData;
     myData = new S3Reader(
@@ -193,6 +229,67 @@ TEST(ExtWrapper, ValidateURL_apnortheast21) {
 }
 
 #ifdef AWS_TEST
+
+TEST(ExtWrapper, reader_init) {
+    S3Reader *reader = NULL;
+
+    EXPECT_EQ((void *)NULL, reader = reader_init((const char *)NULL));
+    if (reader) {
+        reader_cleanup(&reader);
+    }
+
+    EXPECT_EQ((void *)NULL,
+              reader = reader_init("s3://s3-us-west-2.amazonaws.com/"
+                                   "s3test.pivotal.io/threebytes/ "
+                                   "config=/not_exist/s3.conf"));
+    if (reader) {
+        reader_cleanup(&reader);
+    }
+}
+
+TEST(ExtWrapper, reader_test_3bytes) {
+    ReaderTest(
+        "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/threebytes/ "
+        "config=test/s3.conf",
+        "fe7d81814e02eb1296757e75bb3c6be9");
+}
+
+TEST(ExtWrapper, reader_test_small17) {
+    ReaderTest(
+        "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/small17/ "
+        "config=test/s3.conf",
+        "138fc555074671912125ba692c678246");
+}
+
+TEST(ExtWrapper, reader_test_gzipped) {
+    ReaderTest(
+        "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/gzipped/ "
+        "config=test/s3.conf",
+        "7b2260e9a3a3f26e84aa28dc2124f68f");
+}
+
+TEST(ExtWrapper, reader_test_gzipped_normal1) {
+    ReaderTest(
+        "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/"
+        "gzipped_normal1/ config=test/s3.conf",
+        "eacb7b210d3f7703ee06d16f520b103e");
+}
+
+#ifdef BIG_FILE_TEST
+TEST(ExtWrapper, reader_test_hugefile) {
+    ReaderTest(
+        "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset2/hugefile/ "
+        "config=test/s3.conf",
+        "75baaa39f2b1544ed8af437c2cad86b7");
+}
+
+TEST(ExtWrapper, reader_test_gzipped_normal2) {
+    ReaderTest(
+        "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset2/"
+        "gzipped_normal2/ config=test/s3.conf",
+        "a930794bc885bccf6eed45bd40367a7d");
+}
+#endif
 
 TEST(ExtWrapper, normal_region_default) {
     ExtWrapperTest(

@@ -84,6 +84,9 @@ bool BlockingBuffer::Init() {
 }
 
 // ret < len means EMPTY
+// that's why it checks if left_data_lentgh is larger than *or equal to* len
+// below[1], provides a chance ret is 0, which is smaller than len. Otherwise,
+// other funcs won't know when to read next buffer.
 uint64_t BlockingBuffer::Read(char *buf, uint64_t len) {
     // QueryCancelPending stops s3_import(), this check is not needed if
     // s3_import() every time calls BlockingBuffer->Read() only once,
@@ -105,7 +108,7 @@ uint64_t BlockingBuffer::Read(char *buf, uint64_t len) {
     uint64_t length_to_read = std::min(len, left_data_length);
 
     memcpy(buf, this->bufferdata + this->readpos, length_to_read);
-    if (left_data_length >= len) {
+    if (left_data_length >= len) { // [1]
         this->readpos += len;  // not empty
     } else {                   // empty, reset everything
         this->readpos = 0;
@@ -318,7 +321,7 @@ bool Downloader::plain_get(char *data, uint64_t &len) {
 
 RETRY:
     // confirm there is no more available data, done with this file
-    if (this->readlen == filelen) {
+    if (this->readlen >= filelen) {
         len = 0;
         return true;
     }
@@ -331,11 +334,14 @@ RETRY:
             memcpy(data, this->magic_bytes + this->readlen, len);
             tmplen = len;
         } else {
-            memcpy(data, this->magic_bytes + this->readlen,
-                   this->magic_bytes_num - this->readlen);
-            tmplen = this->magic_bytes_num - this->readlen +
-                     buf->Read(data + this->magic_bytes_num - this->readlen,
-                               this->readlen + len - this->magic_bytes_num);
+            uint64_t rest_magic_num = this->magic_bytes_num - this->readlen;
+            memcpy(data, this->magic_bytes + this->readlen, rest_magic_num);
+            tmplen = rest_magic_num;
+
+            // whether we need to buf->Read()
+            if (this->magic_bytes_num < filelen) {
+                tmplen += buf->Read(data + rest_magic_num, len - rest_magic_num);
+            }
         }
     } else {
         tmplen = buf->Read(data, len);
@@ -385,7 +391,7 @@ RETRY:
     }
 
     // no more available data to read, decompress or copy, done with this file
-    if (this->readlen == filelen && !(zinfo->have_out - zinfo->done_out) &&
+    if ((this->readlen >= filelen) && !(zinfo->have_out - zinfo->done_out) &&
         !strm->avail_in) {
         if (zinfo->inited) {
             inflateEnd(strm);
@@ -457,14 +463,15 @@ RETRY:
         // from magic_bytes, or buf->Read(), or both
         if (!zinfo->have_out) {
             if (this->readlen < this->magic_bytes_num) {
-                memcpy(zinfo->in, this->magic_bytes + this->readlen,
-                       this->magic_bytes_num - this->readlen);
-                strm->avail_in =
-                    this->magic_bytes_num - this->readlen +
-                    buf->Read((char *)zinfo->in + this->magic_bytes_num -
-                                  this->readlen,
-                              S3_ZIP_CHUNKSIZE - this->magic_bytes_num +
-                                  this->readlen);
+                uint64_t rest_magic_num = this->magic_bytes_num - this->readlen;
+                memcpy(zinfo->in, this->magic_bytes + this->readlen, rest_magic_num);
+                strm->avail_in = rest_magic_num;
+
+                // whether we need to buf->Read()
+                if (this->magic_bytes_num < filelen) {
+                    strm->avail_in += buf->Read((char *)zinfo->in + rest_magic_num,
+                                                S3_ZIP_CHUNKSIZE - rest_magic_num);
+                }
             } else {
                 strm->avail_in = buf->Read((char *)zinfo->in, S3_ZIP_CHUNKSIZE);
             }
@@ -481,7 +488,7 @@ RETRY:
 
             // done with *reading* this compressed file, still need to confirm
             // it's all decompressed and transferred/get()
-            if (strm->avail_in == 0) {
+            if (strm->avail_in < S3_ZIP_CHUNKSIZE) {
                 this->chunkcount++;
                 goto RETRY;
             }
@@ -493,16 +500,27 @@ RETRY:
 
 void Downloader::destroy() {
     for (int i = 0; i < this->num; i++) {
-        if (this->threads && this->threads[i]) pthread_cancel(this->threads[i]);
+        if (this->threads && this->threads[i]) {
+            pthread_cancel(this->threads[i]);
+        }
     }
 
     for (int i = 0; i < this->num; i++) {
-        if (this->threads && this->threads[i])
+        if (this->threads && this->threads[i]) {
             pthread_join(this->threads[i], NULL);
-        if (this->buffers && this->buffers[i]) delete this->buffers[i];
+            this->threads[i] = 0;
+        }
+
+        if (this->buffers && this->buffers[i]) {
+            delete this->buffers[i];
+            this->buffers[i] = NULL;
+        }
     }
 
-    if (this->o) delete this->o;
+    if (this->o) {
+        delete this->o;
+        this->o = NULL;
+    }
 }
 
 Downloader::~Downloader() {
@@ -620,6 +638,8 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
             continue;
         }
 
+        this->headers.FreeList();
+        this->headers.CreateList();
         chunk = this->headers.GetList();
         if (!chunk) {
             S3ERROR("Failed to construct curl header");
@@ -665,9 +685,7 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
         this->curl = curl_handle;
     }
 
-    if (chunk) {
-        curl_slist_free_all(chunk);
-    }
+    this->headers.FreeList();
 
     return bi.len;
 }
@@ -751,6 +769,7 @@ xmlParserCtxtPtr DoGetXML(const string &region, const string &url,
         return NULL;
     }
 
+    header->CreateList();
     struct curl_slist *chunk = header->GetList();
 
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
@@ -772,9 +791,12 @@ xmlParserCtxtPtr DoGetXML(const string &region, const string &url,
             S3ERROR("XML is downloaded but failed to be parsed");
         }
     }
-    curl_slist_free_all(chunk);
+
     curl_easy_cleanup(curl);
+
+    header->FreeList();
     delete header;
+
     return xml.ctxt;
 }
 
@@ -928,13 +950,20 @@ ListBucketResult *ListBucket(const string &schema, const string &region,
 
         xmlNodePtr cur = root_element->xmlChildrenNode;
         while (cur != NULL) {
+#ifdef S3_CHK_CFG
+            if (!xmlStrcmp(cur->name, (const xmlChar *)"Message")) {
+#else
             if (!xmlStrcmp(cur->name, (const xmlChar *)"Code")) {
+#endif
                 char *content = (char *)xmlNodeGetContent(cur);
                 if (content) {
-                    S3ERROR("Server returns error \"%s\"", content);
+                    S3ERROR("Amazon S3 returns error \"%s\"", content);
                     xmlFree(content);
                 }
-                break;
+                delete result;
+                xmlFreeParserCtxt(xmlcontext);
+                xmlFreeDoc(doc);
+                return NULL;
             }
 
             cur = cur->next;

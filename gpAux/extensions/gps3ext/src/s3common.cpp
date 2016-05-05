@@ -8,6 +8,8 @@
 #include <sstream>
 #include <string>
 
+#include <openssl/err.h>
+
 #include "s3common.h"
 #include "s3conf.h"
 #include "s3utils.h"
@@ -143,7 +145,7 @@ const char *HeaderContent::Get(HeaderField f) {
     return ret;
 }
 
-struct curl_slist *HeaderContent::GetList() {
+void HeaderContent::CreateList() {
     struct curl_slist *chunk = NULL;
     std::map<HeaderField, std::string>::iterator it;
     for (it = this->fields.begin(); it != this->fields.end(); it++) {
@@ -151,8 +153,26 @@ struct curl_slist *HeaderContent::GetList() {
         sstr << GetFieldString(it->first) << ": " << it->second;
         chunk = curl_slist_append(chunk, sstr.str().c_str());
     }
-    return chunk;
+
+    this->header_list = chunk;
 }
+
+void HeaderContent::FreeList() {
+    struct curl_slist *chunk = this->GetList();
+
+    if (chunk) {
+        curl_slist_free_all(chunk);
+        this->header_list = NULL;
+    }
+}
+
+struct curl_slist *HeaderContent::GetList() {
+    return this->header_list;
+}
+
+HeaderContent::HeaderContent() { this->header_list = NULL; }
+
+HeaderContent::~HeaderContent() { this->FreeList(); }
 
 UrlParser::UrlParser(const char *url) {
     this->schema = NULL;
@@ -321,4 +341,47 @@ char *truncate_options(const char *url_with_options) {
     url[url_len] = 0;
 
     return url;
+}
+
+#define MUTEX_TYPE pthread_mutex_t
+#define MUTEX_SETUP(x) pthread_mutex_init(&(x), NULL)
+#define MUTEX_CLEANUP(x) pthread_mutex_destroy(&(x))
+#define MUTEX_LOCK(x) pthread_mutex_lock(&(x))
+#define MUTEX_UNLOCK(x) pthread_mutex_unlock(&(x))
+#define THREAD_ID pthread_self()
+
+/* This array will store all of the mutexes available to OpenSSL. */
+static MUTEX_TYPE *mutex_buf = NULL;
+
+static void locking_function(int mode, int n, const char *file, int line) {
+    if (mode & CRYPTO_LOCK)
+        MUTEX_LOCK(mutex_buf[n]);
+    else
+        MUTEX_UNLOCK(mutex_buf[n]);
+}
+
+static unsigned long id_function(void) { return ((unsigned long)THREAD_ID); }
+
+int thread_setup(void) {
+    int i;
+
+    mutex_buf =
+        (pthread_mutex_t *)malloc(CRYPTO_num_locks() * sizeof(MUTEX_TYPE));
+    if (!mutex_buf) return 0;
+    for (i = 0; i < CRYPTO_num_locks(); i++) MUTEX_SETUP(mutex_buf[i]);
+    CRYPTO_set_id_callback(id_function);
+    CRYPTO_set_locking_callback(locking_function);
+    return 1;
+}
+
+int thread_cleanup(void) {
+    int i;
+
+    if (!mutex_buf) return 0;
+    CRYPTO_set_id_callback(NULL);
+    CRYPTO_set_locking_callback(NULL);
+    for (i = 0; i < CRYPTO_num_locks(); i++) MUTEX_CLEANUP(mutex_buf[i]);
+    free(mutex_buf);
+    mutex_buf = NULL;
+    return 1;
 }

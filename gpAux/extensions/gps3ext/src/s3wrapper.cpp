@@ -86,6 +86,8 @@ bool S3Reader::Init(int segid, int segnum, int chunksize) {
                 S3INFO("Keylist of bucket is empty");
                 if (initretry) {
                     S3INFO("Retry listing bucket");
+                    delete this->keylist;
+                    this->keylist = NULL;
                     continue;
                 } else {
                     S3ERROR("Quit initialization because keylist is empty");
@@ -194,10 +196,12 @@ bool S3Reader::Destroy() {
         if (this->filedownloader) {
             this->filedownloader->destroy();
             delete this->filedownloader;
+            this->filedownloader = NULL;
         }
 
         if (this->keylist) {
             delete this->keylist;
+            this->keylist = NULL;
         }
     } catch (...) {
         S3ERROR("Caught an exception, aborting");
@@ -211,8 +215,8 @@ bool S3ExtBase::ValidateURL() {
     // http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
 
     const char *awsdomain = ".amazonaws.com";
-    unsigned int ibegin = 0;
-    unsigned int iend = url.find("://");
+    size_t ibegin = 0;
+    size_t iend = url.find("://");
     if (iend == string::npos) {  // Error
         return false;
     }
@@ -268,3 +272,112 @@ bool S3Protocol_t::Write(char *data, size_t &len) {
     return true;
 }
 */
+
+// invoked by s3_import(), need to be exception safe
+S3Reader *reader_init(const char *url_with_options) {
+    try {
+        if (!url_with_options) {
+            return NULL;
+        }
+
+        /* first call. do any desired init */
+        curl_global_init(CURL_GLOBAL_ALL);
+
+        char *url = truncate_options(url_with_options);
+        if (!url) {
+            return NULL;
+        }
+
+        char *config_path = get_opt_s3(url_with_options, "config");
+        if (!config_path) {
+            // no config path in url, use default value
+            // data_folder/gpseg0/s3/s3.conf
+            config_path = strdup("s3/s3.conf");
+        }
+
+        bool result = InitConfig(config_path, "");
+        if (!result) {
+            free(url);
+            free(config_path);
+            return NULL;
+        } else {
+            ClearConfig();
+            free(config_path);
+        }
+
+        InitLog();
+
+        S3Reader *reader = (S3Reader *)CreateExtWrapper(url);
+
+        free(url);
+
+        if (!reader) {
+            return NULL;
+        }
+
+        if (!reader->Init(s3ext_segid, s3ext_segnum, s3ext_chunksize)) {
+            reader->Destroy();
+            delete reader;
+            return NULL;
+        }
+
+        return reader;
+    } catch (...) {
+        S3ERROR("Caught an exception, aborting");
+        return NULL;
+    }
+}
+
+// invoked by s3_import(), need to be exception safe
+bool reader_transfer_data(S3Reader *reader, char *data_buf, int &data_len) {
+    try {
+        if (!reader || !data_buf || (data_len < 0)) {
+            return false;
+        }
+
+        if (data_len == 0) {
+            return true;
+        }
+
+        uint64_t read_len = data_len;
+        if (!reader->TransferData(data_buf, read_len)) {
+            return false;
+        }
+
+        // sure read_len <= data_len here, hence truncation will never happen
+        data_len = (int)read_len;
+    } catch (...) {
+        S3ERROR("Caught an exception, aborting");
+        return false;
+    }
+
+    return true;
+}
+
+// invoked by s3_import(), need to be exception safe
+bool reader_cleanup(S3Reader **reader) {
+    try {
+        if (*reader) {
+            if (!(*reader)->Destroy()) {
+                delete *reader;
+                *reader = NULL;
+                return false;
+            }
+
+            delete *reader;
+            *reader = NULL;
+        } else {
+            return false;
+        }
+
+        /*
+         * Cleanup function for the XML library.
+         */
+        xmlCleanupParser();
+    } catch (...) {
+        S3ERROR("Caught an exception, aborting");
+        return false;
+    }
+
+    return true;
+}

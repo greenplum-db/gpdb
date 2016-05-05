@@ -52,7 +52,8 @@ mkgphdfs:
 
 .PHONY:
 mks3ext:
-	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gps3ext USE_PGXS=1 install
+	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -B -C gps3ext USE_PGXS=1 install
+	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -B -C gps3ext -f Makefile.chkcfg USE_PGXS=1 install
 
 # Only include include these files when running enterprise build
 ENTERPRISE_TARGETS="mkdbgen mkgphdfs mkorafce mkplr mkpljava"

@@ -52,11 +52,10 @@ TEST(Common, HeaderContent) {
     }
 
     if (h) {
+        h->CreateList();
         curl_slist *l = h->GetList();
         ASSERT_NE((void *)NULL, l);
-        if (l) {
-            curl_slist_free_all(l);
-        }
+        h->FreeList();
     }
 
     if (h) delete h;

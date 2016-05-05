@@ -18,15 +18,17 @@ class S3ExtBase {
     virtual bool ValidateURL();
 
     string get_region() { return this->region; }
+    string get_bucket() { return this->bucket; }
+    string get_prefix() { return this->prefix; }
 
    protected:
     S3Credential cred;
 
     string url;
     string schema;
+    string region;
     string bucket;
     string prefix;
-    string region;
 
     int segid;
     int segnum;
@@ -56,5 +58,11 @@ class S3Reader : public S3ExtBase {
 class S3Writer : public S3ExtBase {};
 
 extern "C" S3ExtBase* CreateExtWrapper(const char* url);
+
+S3Reader* reader_init(const char* url_with_options);
+
+bool reader_transfer_data(S3Reader* reader, char* data_buf, int& data_len);
+
+bool reader_cleanup(S3Reader** reader);
 
 #endif

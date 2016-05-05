@@ -112,7 +112,7 @@ class Downloader {
     uint64_t readlen;
 
     unsigned char magic_bytes[4];
-    uint8_t magic_bytes_num;
+    uint64_t magic_bytes_num;
     compression_type_t compression;
     bool set_compression();
 

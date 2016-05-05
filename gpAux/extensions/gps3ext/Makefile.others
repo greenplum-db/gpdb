@@ -9,7 +9,7 @@ BIG_FILE_TEST = n
 CPP = g++
 INCLUDES = -Isrc -Ilib -I/usr/include/libxml2
 LDFLAGS = -lpthread -lcrypto -lcurl -lxml2 -lgcov -lz
-CFLAGS = -O2 -g3 -std=c++98 -Wall -fPIC -fprofile-arcs -ftest-coverage
+CPPFLAGS = -O2 -g3 -std=c++98 -Wall -fPIC -fprofile-arcs -ftest-coverage
 
 ifeq ($(DEBUG_S3),y)
 	CPPFLAGS += -DDEBUG_S3
@@ -55,13 +55,13 @@ gtest_main.o : $(GTEST_SRCS_)
 gtest_main.a : gtest-all.o gtest_main.o
 	$(AR) $(ARFLAGS) $@ $^
 
-%.o: %.cpp
-	$(CPP) $(CPPFLAGS) $(INCLUDES) -MMD -MP -c $< -o $@
+buildtest: $(TEST_APP)
 
 $(TEST_APP): gtest_main.a $(TEST_OBJS)
 	$(CPP) $^ -o $(TEST_APP) $(LDFLAGS)
 
-buildtest: $(TEST_APP)
+%.o: %.cpp
+	$(CPP) $(CPPFLAGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 test: $(TEST_APP)
 	-@./$(TEST_APP)

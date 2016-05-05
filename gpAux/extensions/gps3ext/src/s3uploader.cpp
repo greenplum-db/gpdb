@@ -213,6 +213,7 @@ const char *GetUploadId(const char *host, const char *bucket,
         return NULL;
     }
 
+    header->CreateList();
     struct curl_slist *chunk = header->GetList();
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
 
@@ -223,7 +224,7 @@ const char *GetUploadId(const char *host, const char *bucket,
                 curl_easy_strerror(res));
 
     xmlParseChunk(xml.ctxt, "", 0, 1);
-    curl_slist_free_all(chunk);
+    header->FreeList();
     curl_easy_cleanup(curl);
 
     if (!xml.ctxt) {
@@ -248,6 +249,7 @@ const char *GetUploadId(const char *host, const char *bucket,
     xmlDocPtr doc = xml.ctxt->myDoc;
     xmlFreeParserCtxt(xml.ctxt);
     xmlFreeDoc(doc);
+    delete header;
 
     return upload_id;
 }
@@ -335,6 +337,7 @@ const char *PartPutS3Object(const char *host, const char *bucket,
         return NULL;
     }
 
+    header->CreateList();
     struct curl_slist *chunk = header->GetList();
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
 
@@ -371,8 +374,10 @@ const char *PartPutS3Object(const char *host, const char *bucket,
     const char *etag = etag_to_end.substr(0, etag_len).c_str();
 
     if (etag) {
-        curl_slist_free_all(chunk);
+        header->FreeList();
+        delete header;
         curl_easy_cleanup(curl);
+
         return strdup(etag);
     }
 
@@ -410,8 +415,10 @@ const char *PartPutS3Object(const char *host, const char *bucket,
     xmlFreeParserCtxt(xml.ctxt);
     xmlFreeDoc(doc);
 
-    curl_slist_free_all(chunk);
     curl_easy_cleanup(curl);
+
+    header->FreeList();
+    delete header;
 
     return NULL;
 }
@@ -519,6 +526,7 @@ bool CompleteMultiPutS3(const char *host, const char *bucket,
         return false;
     }
 
+    header->CreateList();
     struct curl_slist *chunk = header->GetList();
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
 
@@ -573,7 +581,7 @@ bool CompleteMultiPutS3(const char *host, const char *bucket,
         std::cout << "Error: " << response_code << std::endl;
     }
 
-    curl_slist_free_all(chunk);
+    delete header;
     curl_easy_cleanup(curl);
     free(body_data);
 

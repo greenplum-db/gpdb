@@ -10,6 +10,7 @@
 
 #include "http_parser.h"
 #include "s3log.h"
+
 using std::string;
 
 struct S3Credential {
@@ -35,13 +36,16 @@ enum Method { GET, PUT, POST, DELETE, HEAD };
 
 class HeaderContent {
    public:
-    HeaderContent(){};
-    ~HeaderContent(){};
+    HeaderContent();
+    ~HeaderContent();
     bool Add(HeaderField f, const string& value);
     const char* Get(HeaderField f);
+    void CreateList();
     struct curl_slist* GetList();
+    void FreeList();
 
    private:
+    struct curl_slist* header_list;
     std::map<HeaderField, string> fields;
 };
 
@@ -80,5 +84,9 @@ uint64_t ParserCallback(void* contents, uint64_t size, uint64_t nmemb,
 char* get_opt_s3(const char* url, const char* key);
 
 char* truncate_options(const char* url_with_options);
+
+int thread_setup(void);
+
+int thread_cleanup(void);
 
 #endif  // __S3_COMMON_H__

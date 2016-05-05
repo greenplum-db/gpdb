@@ -65,6 +65,8 @@ bool InitConfig(const string& conf_path,
         if (conf_path == "") {
 #ifndef DEBUG_S3
             write_log("Config file is not specified\n");
+#else
+            S3ERROR("Config file is not specified");
 #endif
             return false;
         }
@@ -75,6 +77,8 @@ bool InitConfig(const string& conf_path,
         if (!s3cfg || !s3cfg->Handle()) {
 #ifndef DEBUG_S3
             write_log("Failed to parse config file\n");
+#else
+            S3ERROR("Failed to parse config file");
 #endif
             if (s3cfg) {
                 delete s3cfg;
@@ -86,11 +90,24 @@ bool InitConfig(const string& conf_path,
         Config* cfg = s3cfg;
         bool ret = false;
         string content;
-        content = cfg->Get("default", "loglevel", "INFO");
+
+#ifdef S3_CHK_CFG
+        if (s3ext_loglevel == -1) {
+            content = cfg->Get("default", "loglevel", "WARNING");
+            s3ext_loglevel = getLogLevel(content.c_str());
+        }
+
+        if (s3ext_logtype == -1) {
+            content = cfg->Get("default", "logtype", "INTERNAL");
+            s3ext_logtype = getLogType(content.c_str());
+        }
+#else
+        content = cfg->Get("default", "loglevel", "WARNING");
         s3ext_loglevel = getLogLevel(content.c_str());
 
         content = cfg->Get("default", "logtype", "INTERNAL");
         s3ext_logtype = getLogType(content.c_str());
+#endif
 
         s3ext_accessid = cfg->Get("default", "accessid", "");
         s3ext_secret = cfg->Get("default", "secret", "");
