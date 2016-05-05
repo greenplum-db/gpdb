@@ -65,6 +65,8 @@ bool InitConfig(const string& conf_path,
         if (conf_path == "") {
 #ifndef DEBUG_S3
             write_log("Config file is not specified\n");
+#else
+            S3ERROR("Config file is not specified");
 #endif
             return false;
         }
@@ -75,6 +77,8 @@ bool InitConfig(const string& conf_path,
         if (!s3cfg || !s3cfg->Handle()) {
 #ifndef DEBUG_S3
             write_log("Failed to parse config file\n");
+#else
+            S3ERROR("Failed to parse config file");
 #endif
             if (s3cfg) {
                 delete s3cfg;

@@ -43,9 +43,15 @@ LOGLEVEL getLogLevel(const char* v);
     if (EXT_WARNING <= s3ext_loglevel) \
     PRINTFUNCTION(EXT_WARNING, LOG_FMT message NEWLINE, LOG_ARGS("W"), ##args)
 
+#ifdef S3_CHK_CFG
+#define S3ERROR(message, args...)    \
+    if (EXT_ERROR <= s3ext_loglevel) \
+    PRINTFUNCTION(EXT_ERROR, "%s " message NEWLINE, "Failed:", ##args)
+#else
 #define S3ERROR(message, args...)    \
     if (EXT_ERROR <= s3ext_loglevel) \
     PRINTFUNCTION(EXT_ERROR, LOG_FMT message NEWLINE, LOG_ARGS("E"), ##args)
+#endif
 
 void InitLog();
 

@@ -18,15 +18,17 @@ class S3ExtBase {
     virtual bool ValidateURL();
 
     string get_region() { return this->region; }
+    string get_bucket() { return this->bucket; }
+    string get_prefix() { return this->prefix; }
 
    protected:
     S3Credential cred;
 
     string url;
     string schema;
+    string region;
     string bucket;
     string prefix;
-    string region;
 
     int segid;
     int segnum;
@@ -43,8 +45,9 @@ class S3Reader : public S3ExtBase {
     virtual bool TransferData(char* data, uint64_t& len);
     virtual bool Destroy();
 
-   protected:
     virtual string getKeyURL(const string& key);
+
+   protected:
     void getNextDownloader();
 
     // private:
