@@ -30,6 +30,7 @@
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
+#include "utils/memutils.h"
 
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbmirroredfilesysobj.h"
@@ -168,6 +169,7 @@ CreateFileSpace(CreateFileSpaceStmt *stmt)
 		segHashElem				*segElem;
 		HASH_SEQ_STATUS          status;
 		bool					 found;
+		MemoryContext			 oldcontext;
 
 		/* Get the segment information */
 		segments = getCdbComponentDatabases();
@@ -198,6 +200,13 @@ CreateFileSpace(CreateFileSpaceStmt *stmt)
 		segHash = hash_create("filespace segHash", 
 							  numsegs, &segInfo, segFlags);
 		
+		/*
+		 * Ensure that the hostname which is copied out of the CdbComponentDatabase
+		 * struct survives serialization down to the QE's when the struct is freed
+		 * at the end of this processing.
+		 */
+		oldcontext = MemoryContextSwitchTo(CurTransactionContext);
+
 		/* 
 		 * Pass 1 - Loop through all locations specified in the statement:
 		 *   - segHash[dbid] => { _, FileSpaceEntry} 
@@ -247,9 +256,10 @@ CreateFileSpace(CreateFileSpaceStmt *stmt)
 								dbid)));
 
 			Assert(segElem->fse);  /* should have been populated in pass 1 */
-			segElem->fse->hostname  = hostname;
+			segElem->fse->hostname  = pstrdup(hostname);
 			segElem->fse->contentid = contentid;
 		}
+
 		for (i = 0; i < segments->total_segment_dbs; i++)
 		{
 			int32		dbid	  = segments->segment_db_info[i].dbid;
@@ -267,7 +277,7 @@ CreateFileSpace(CreateFileSpaceStmt *stmt)
 								dbid)));
 
 			Assert(segElem->fse);  /* should have been populated in pass 1 */
-			segElem->fse->hostname  = hostname;
+			segElem->fse->hostname  = pstrdup(hostname);
 			segElem->fse->contentid = contentid;
 		}
 
@@ -294,6 +304,8 @@ CreateFileSpace(CreateFileSpaceStmt *stmt)
 
 		/* Done with the hash, cleanup */
 		hash_destroy(segHash);
+
+		MemoryContextSwitchTo(oldcontext);
 
 		/* Cleanup component info */
 		freeCdbComponentDatabases(segments);
