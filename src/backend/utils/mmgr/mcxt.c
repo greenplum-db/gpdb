@@ -442,7 +442,7 @@ MemoryContextError(int errorcode, MemoryContext context,
 		 *
 		 * XXX What is the right way of doing this?
 		 */
-		*(int *) NULL = errorcode;
+		((void(*)()) NULL)();
 	}
 
 	if(errorcode != ERRCODE_OUT_OF_MEMORY && errorcode != ERRCODE_INTERNAL_ERROR)
@@ -605,7 +605,7 @@ static void
 MemoryContext_LogContextStats(uint64 siblingCount, uint64 allAllocated,
 		uint64 allFreed, uint64 curAvailable, const char *contextName)
 {
-	write_stderr("context: %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %s\n", \
+	write_stderr("context: " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", %s\n", \
 	siblingCount, (allAllocated - allFreed), curAvailable, \
 	allAllocated, allFreed, contextName);
 }

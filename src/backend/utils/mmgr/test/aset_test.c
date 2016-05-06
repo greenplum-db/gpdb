@@ -7,9 +7,12 @@
 
 #define NEW_ALLOC_SIZE 1024
 
-extern MemoryAccount *MemoryAccountTreeLogicalRoot;
-extern MemoryAccount *TopMemoryAccount;
-extern MemoryAccount *MemoryAccountMemoryAccount;
+extern MemoryAccount* MemoryAccountMemoryAccount;
+extern MemoryAccount* RolloverMemoryAccount;
+extern MemoryAccount* AlienExecutorMemoryAccount;
+
+extern MemoryAccountIdType liveAccountStartId;
+extern MemoryAccountIdType nextAccountId;
 
 #define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
 
@@ -40,6 +43,14 @@ void SetupMemoryDataStructures(void **state)
 void
 TeardownMemoryDataStructures(void **state)
 {
+	/*
+	 * Ensure that no existing allocation refers to any short-living accounts. All
+	 * short living accounts live in MemoryAccountMemoryAccount which is soon going
+	 * to be reset via TopMemoryContext reset.
+	 */
+	MemoryAccounting_Reset();
+	MemoryAccounting_SwitchAccount(MEMORY_OWNER_TYPE_Rollover);
+
 	MemoryContextReset(TopMemoryContext); /* TopMemoryContext deletion is not supported */
 
 	/* These are needed to be NULL for calling MemoryContextInit() */
@@ -51,15 +62,25 @@ TeardownMemoryDataStructures(void **state)
 	 * try to setup memory account data structure again during the
 	 * execution of the next test.
 	 */
-	MemoryAccountTreeLogicalRoot = NULL;
-	TopMemoryAccount = NULL;
 	MemoryAccountMemoryAccount = NULL;
 	RolloverMemoryAccount = NULL;
 	SharedChunkHeadersMemoryAccount = NULL;
-	ActiveMemoryAccount = NULL;
 	AlienExecutorMemoryAccount = NULL;
 	MemoryAccountMemoryContext = NULL;
+
+	ActiveMemoryAccountId = MEMORY_OWNER_TYPE_Undefined;
+
+	for (int longLivingIdx = MEMORY_OWNER_TYPE_LogicalRoot; longLivingIdx <= MEMORY_OWNER_TYPE_END_LONG_LIVING; longLivingIdx++)
+	{
+		longLivingMemoryAccountArray[longLivingIdx] = NULL;
+	}
+
+	shortLivingMemoryAccountArray = NULL;
+
+	liveAccountStartId = MEMORY_OWNER_TYPE_START_SHORT_LIVING;
+	nextAccountId = MEMORY_OWNER_TYPE_START_SHORT_LIVING;
 }
+
 
 /*
  * Any change of global outstanding allocation balance should come
@@ -70,12 +91,12 @@ TeardownMemoryDataStructures(void **state)
 void
 test__MemoryAccounting_Allocate__ChargesOnlyActiveAccount(void **state)
 {
-	MemoryAccount *newActiveAccount = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
+	MemoryAccountIdType newActiveAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
 
 	/* Make sure we have a new active account other than Rollover */
-	MemoryAccount *oldActiveAccount = MemoryAccounting_SwitchAccount(newActiveAccount);
+	MemoryAccountIdType oldActiveAccount = MemoryAccounting_SwitchAccount(newActiveAccountId);
 
-	assert_true(ActiveMemoryAccount == newActiveAccount);
+	assert_true(ActiveMemoryAccountId == newActiveAccountId);
 
 	uint64 prevOutstanding = MemoryAccountingOutstandingBalance;
 
@@ -83,10 +104,12 @@ test__MemoryAccounting_Allocate__ChargesOnlyActiveAccount(void **state)
 
 	void *testAlloc = palloc(NEW_ALLOC_SIZE);
 
+	MemoryAccount* newActiveAccount = MemoryAccounting_ConvertIdToAccount(newActiveAccountId);
 	/*
 	 * Any change of outstanding balance is coming from new allocation
 	 * and the associated shared header allocation
 	 */
+	assert_true(MemoryAccountingOutstandingBalance - prevOutstanding > 0);
 	assert_true((newActiveAccount->allocated - newActiveAccount->freed) +
 			(SharedChunkHeadersMemoryAccount->allocated - prevSharedHeaderAlloc) ==
 					(MemoryAccountingOutstandingBalance - prevOutstanding));
@@ -148,14 +171,15 @@ test__MemoryAccounting_Allocate__AdjustsPeak(void **state)
 void
 test__MemoryAccounting_Free__FreesOldGenFromRollover(void **state)
 {
-	assert_true(ActiveMemoryAccount == TopMemoryAccount);
+	assert_true(ActiveMemoryAccountId == MEMORY_OWNER_TYPE_Top);
 
-	uint64 activeBalance = ActiveMemoryAccount->allocated - ActiveMemoryAccount->freed;
+	MemoryAccount* activeAccount = MemoryAccounting_ConvertIdToAccount(ActiveMemoryAccountId);
+	uint64 activeBalance = activeAccount->allocated - activeAccount->freed;
 	uint64 oldRolloverBalance = RolloverMemoryAccount->allocated - RolloverMemoryAccount->freed;
 
 	void *testAlloc = palloc(NEW_ALLOC_SIZE);
 
-	assert_true(activeBalance < (ActiveMemoryAccount->allocated - ActiveMemoryAccount->freed));
+	assert_true(activeBalance < (activeAccount->allocated - activeAccount->freed));
 
 	MemoryAccounting_Reset();
 
@@ -245,10 +269,10 @@ test__AllocAllocInfo__SharesHeader(void **state)
 void
 test__AllocAllocInfo__ChargesSharedChunkHeadersMemoryAccount(void **state)
 {
-	MemoryAccount *newActiveAccount = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
+	MemoryAccountIdType newActiveAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
 
 	/* Make sure we have a new active account to force a new shared header allocation */
-	MemoryAccount *oldActiveAccount = MemoryAccounting_SwitchAccount(newActiveAccount);
+	MemoryAccountIdType oldActiveAccountId = MemoryAccounting_SwitchAccount(newActiveAccountId);
 
 	uint64 prevSharedBalance = SharedChunkHeadersMemoryAccount->allocated - SharedChunkHeadersMemoryAccount->freed;
 
@@ -265,7 +289,7 @@ test__AllocAllocInfo__ChargesSharedChunkHeadersMemoryAccount(void **state)
 	pfree(testAlloc);
 }
 
-/* Tests whether we use null account header if there is no ActiveMemoryAccount */
+/* Tests whether we use null account header if there is ActiveMemoryAccountId is invalid */
 void
 test__AllocAllocInfo__UsesNullAccountHeader(void **state)
 {
@@ -279,12 +303,10 @@ test__AllocAllocInfo__UsesNullAccountHeader(void **state)
 	assert_true(newSet->sharedHeaderList == NULL);
 	assert_true(newSet->nullAccountHeader == NULL);
 
-	MemoryAccount *oldActive = ActiveMemoryAccount;
-	MemoryAccount *oldShared = SharedChunkHeadersMemoryAccount;
-
 	/* Turning off memory monitoring */
-	ActiveMemoryAccount = NULL;
-	/* Also make SharedChunkHeadersMemoryAccount NULL to avoid assert failure */
+	ActiveMemoryAccountId = MEMORY_OWNER_TYPE_Undefined;
+
+	/* Also make SharedChunkHeadersMemoryAccount undefined to avoid assert failure */
 	SharedChunkHeadersMemoryAccount = NULL;
 
 	/* Allocate from the new context which should trigger a nullAccountHeader creation*/
@@ -296,12 +318,11 @@ test__AllocAllocInfo__UsesNullAccountHeader(void **state)
 	/* The new chunk should use the nullAccountHeader of the Aset */
 	assert_true(header->sharedHeader != NULL && header->sharedHeader == newSet->nullAccountHeader);
 
-	ActiveMemoryAccount = oldActive;
-	SharedChunkHeadersMemoryAccount = oldShared;
-
 	pfree(testAlloc);
 
 	MemoryContextDelete(newContext);
+
+	SharedChunkHeadersMemoryAccount = MemoryAccounting_ConvertIdToAccount(MEMORY_OWNER_TYPE_SharedChunkHeader);
 }
 
 /*
@@ -319,11 +340,11 @@ test__AllocAllocInfo__LooksAheadInSharedHeaderList(void **state)
 	 */
 	void *testAlloc1 = palloc(NEW_ALLOC_SIZE);
 
-	MemoryAccount *newActiveAccount1 = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
+	MemoryAccountIdType newActiveAccount1 = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
 	/* Make sure we have a new active account to force a new shared header allocation */
-	MemoryAccount *oldActiveAccount = MemoryAccounting_SwitchAccount(newActiveAccount1);
+	MemoryAccountIdType oldActiveAccount = MemoryAccounting_SwitchAccount(newActiveAccount1);
 
-	/* This will trigger a new sharedHeader creation because of the new ActiveMemoryAccount */
+	/* This will trigger a new sharedHeader creation because of the new ActiveMemoryAccountId */
 	void *testAlloc2 = palloc(NEW_ALLOC_SIZE);
 
 	StandardChunkHeader *header1 = (StandardChunkHeader *)
@@ -350,7 +371,7 @@ test__AllocAllocInfo__LooksAheadInSharedHeaderList(void **state)
 	assert_true(header3->sharedHeader == header1->sharedHeader);
 
 	/* Now we are triggering a third sharedHeader creation */
-	MemoryAccount *newActiveAccount2 = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
+	MemoryAccountIdType newActiveAccount2 = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
 	/* Make sure we have a new active account to force a new shared header allocation */
 	oldActiveAccount = MemoryAccounting_SwitchAccount(newActiveAccount2);
 
@@ -428,11 +449,11 @@ test__AllocAllocInfo__InsertsIntoSharedHeaderList(void **state)
 	 */
 	void *testAlloc1 = palloc(NEW_ALLOC_SIZE);
 
-	MemoryAccount *newActiveAccount1 = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
+	MemoryAccountIdType newActiveAccount1 = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
 	/* Make sure we have a new active account to force a new shared header allocation */
 	MemoryAccounting_SwitchAccount(newActiveAccount1);
 
-	/* This will trigger a new sharedHeader creation because of the new ActiveMemoryAccount */
+	/* This will trigger a new sharedHeader creation because of the new ActiveMemoryAccountId */
 	void *testAlloc2 = palloc(NEW_ALLOC_SIZE);
 
 	StandardChunkHeader *header1 = (StandardChunkHeader *)
@@ -442,7 +463,7 @@ test__AllocAllocInfo__InsertsIntoSharedHeaderList(void **state)
 		((char *) testAlloc2 - STANDARDCHUNKHEADERSIZE);
 
 	/* Now we are triggering a third sharedHeader creation */
-	MemoryAccount *newActiveAccount2 = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
+	MemoryAccountIdType newActiveAccount2 = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
 	/* Make sure we have a new active account to force a new shared header allocation */
 	MemoryAccounting_SwitchAccount(newActiveAccount2);
 
@@ -462,7 +483,7 @@ test__AllocAllocInfo__InsertsIntoSharedHeaderList(void **state)
 	 * look ahead up to depth 3, but we maintain all the sharedHeaders in the
 	 * sharedHeaderList
 	 */
-	MemoryAccount *newActiveAccount3 = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
+	MemoryAccountIdType newActiveAccount3 = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
 	MemoryAccounting_SwitchAccount(newActiveAccount3);
 
 	void *testAlloc4 = palloc(NEW_ALLOC_SIZE);
@@ -507,11 +528,11 @@ test__AllocFreeInfo__SharedChunkHeadersMemoryAccountIgnoresNullHeader(void **sta
 	assert_true(newSet->sharedHeaderList == NULL);
 	assert_true(newSet->nullAccountHeader == NULL);
 
-	MemoryAccount *oldActive = ActiveMemoryAccount;
-	MemoryAccount *oldShared = SharedChunkHeadersMemoryAccount;
+	MemoryAccountIdType oldActive = ActiveMemoryAccountId;
+	MemoryAccountIdType oldShared = SharedChunkHeadersMemoryAccount;
 
 	/* Turning off memory monitoring */
-	ActiveMemoryAccount = NULL;
+	ActiveMemoryAccountId = MEMORY_OWNER_TYPE_Undefined;
 
 	#ifdef USE_ASSERT_CHECKING
 	    expect_any(ExceptionalCondition,conditionName);
@@ -525,7 +546,7 @@ test__AllocFreeInfo__SharedChunkHeadersMemoryAccountIgnoresNullHeader(void **sta
 		PG_TRY();
 		{
 			/*
-			 * ActiveMemoryAccount is NULL, but SharedChunkHeadersMemoryAccount is
+			 * ActiveMemoryAccountId is invalid, but SharedChunkHeadersMemoryAccount is
 			 * *not* null. This should trigger an assertion
 			 */
 			void *testAlloc = MemoryContextAlloc(newContext, NEW_ALLOC_SIZE);
@@ -563,7 +584,7 @@ test__AllocFreeInfo__SharedChunkHeadersMemoryAccountIgnoresNullHeader(void **sta
 	 */
 	SharedChunkHeadersMemoryAccount = oldShared;
 	/* Activate the memory accounting */
-	ActiveMemoryAccount = oldActive;
+	ActiveMemoryAccountId = oldActive;
 
 	uint64 sharedBalance = SharedChunkHeadersMemoryAccount->allocated - SharedChunkHeadersMemoryAccount->freed;
 
@@ -592,11 +613,11 @@ test__AllocFreeInfo__ReusesNullHeader(void **state)
 	assert_true(newSet->sharedHeaderList == NULL);
 	assert_true(newSet->nullAccountHeader == NULL);
 
-	MemoryAccount *oldActive = ActiveMemoryAccount;
-	MemoryAccount *oldShared = SharedChunkHeadersMemoryAccount;
+	MemoryAccountIdType oldActive = ActiveMemoryAccountId;
+	MemoryAccount* oldShared = SharedChunkHeadersMemoryAccount;
 
 	/* Turning off memory monitoring */
-	ActiveMemoryAccount = NULL;
+	ActiveMemoryAccountId = MEMORY_OWNER_TYPE_Undefined;
 	/* Also make SharedChunkHeadersMemoryAccount NULL to avoid assert failure */
 	SharedChunkHeadersMemoryAccount = NULL;
 
@@ -618,7 +639,7 @@ test__AllocFreeInfo__ReusesNullHeader(void **state)
 	assert_true(header1->sharedHeader != NULL && header1->sharedHeader == newSet->nullAccountHeader &&
 			header1->sharedHeader == header2->sharedHeader);
 
-	ActiveMemoryAccount = oldActive;
+	ActiveMemoryAccountId = oldActive;
 	SharedChunkHeadersMemoryAccount = oldShared;
 
 	pfree(testAlloc1);
@@ -631,10 +652,10 @@ test__AllocFreeInfo__ReusesNullHeader(void **state)
 void
 test__AllocFreeInfo__FreesObsoleteHeader(void **state)
 {
-	MemoryAccount *newActiveAccount = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
+	MemoryAccountIdType newActiveAccount = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
 
 	/* Make sure we have a new active account to force a new shared header allocation */
-	MemoryAccount *oldActiveAccount = MemoryAccounting_SwitchAccount(newActiveAccount);
+	MemoryAccountIdType oldActiveAccount = MemoryAccounting_SwitchAccount(newActiveAccount);
 
 	uint64 prevSharedBalance = SharedChunkHeadersMemoryAccount->allocated - SharedChunkHeadersMemoryAccount->freed;
 
@@ -671,17 +692,19 @@ test__AllocFreeInfo__FreesObsoleteHeader(void **state)
 void
 test__AllocFreeInfo__FreesOnlyOwnerAccount(void **state)
 {
-	MemoryAccount *newAccount = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
-	MemoryAccount *oldActiveAccount = MemoryAccounting_SwitchAccount(newAccount);
+	MemoryAccountIdType newAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
+	MemoryAccountIdType oldActiveAccountId = MemoryAccounting_SwitchAccount(newAccountId);
 
 	/* This chunk should record newAccount as the owner */
 	void *testAlloc = palloc(NEW_ALLOC_SIZE);
 
-	MemoryAccounting_SwitchAccount(oldActiveAccount);
+	MemoryAccounting_SwitchAccount(oldActiveAccountId);
 
-	assert_true(ActiveMemoryAccount != newAccount);
+	assert_true(ActiveMemoryAccountId != newAccountId);
 
-	uint64 originalActiveBalance = ActiveMemoryAccount->allocated - ActiveMemoryAccount->freed;
+	MemoryAccount* activeAccount = MemoryAccounting_ConvertIdToAccount(ActiveMemoryAccountId);
+	MemoryAccount* newAccount = MemoryAccounting_ConvertIdToAccount(newAccountId);
+	uint64 originalActiveBalance = activeAccount->allocated - activeAccount->freed;
 	uint64 newAccountBalance = newAccount->allocated - newAccount->freed;
 	uint64 newAccountFreed = newAccount->freed;
 	uint64 sharedFreed = SharedChunkHeadersMemoryAccount->freed;
@@ -693,7 +716,7 @@ test__AllocFreeInfo__FreesOnlyOwnerAccount(void **state)
 	 * Make sure that the active account is unchanged while the owner account
 	 * balance was reduced
 	 */
-	assert_true(ActiveMemoryAccount->allocated - ActiveMemoryAccount->freed == originalActiveBalance);
+	assert_true(activeAccount->allocated - activeAccount->freed == originalActiveBalance);
 	/* Balance was released from newAccount */
 	assert_true(newAccount->allocated - newAccount->freed <= newAccountBalance - NEW_ALLOC_SIZE);
 
@@ -754,23 +777,24 @@ test__AllocSetAllocImpl__LargeAllocInOutstandingBalance(void **state)
 void
 test__AllocSetAllocImpl__LargeAllocInActiveMemoryAccount(void **state)
 {
-	MemoryAccount *newActiveAccount = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
+	MemoryAccountIdType newActiveAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_Hash);
 
 	/* Make sure we have a new active account other than Rollover */
-	MemoryAccount *oldActiveAccount = MemoryAccounting_SwitchAccount(newActiveAccount);
+	MemoryAccountIdType oldActiveAccount = MemoryAccounting_SwitchAccount(newActiveAccountId);
 
 	uint64 prevOutstanding = MemoryAccountingOutstandingBalance;
 
 	uint64 prevSharedHeaderAlloc = SharedChunkHeadersMemoryAccount->allocated;
 
-	uint64 prevActiveAlloc = ActiveMemoryAccount->allocated;
+	uint64 prevActiveAlloc = MemoryAccounting_GetAccountCurrentBalance(ActiveMemoryAccountId);
 
 	int chunkSize = ALLOC_CHUNK_LIMIT + 1;
 	/* This chunk should record newAccount as the owner */
 	void *testAlloc = palloc(chunkSize);
 
+	MemoryAccount *newActiveAccount = MemoryAccounting_ConvertIdToAccount(newActiveAccountId);
 	/*
-	 * All the new allocation should go to ActiveMemoryAccount, and the
+	 * All the new allocation should go to active memory account, and the
 	 * SharedChunkHeadersMemoryAccount should contribute to add up to
 	 * the outstanding balance change
 	 */

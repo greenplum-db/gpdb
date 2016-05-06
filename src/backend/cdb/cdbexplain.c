@@ -70,8 +70,8 @@ typedef struct CdbExplain_StatHdr
     int         bnotes;         /* offset to extra text area */
     int         enotes;         /* offset to end of extra text area */
 
-    int			memAccountTreeNodeCount;     /* How many mem account we serialized */
-    int			memAccountTreeStartOffset; /* Where in the header our mem account tree is serialized */
+    int			memAccountCount;     /* How many mem account we serialized */
+    int			memAccountStartOffset; /* Where in the header our memory account array is serialized */
 
     CdbExplain_SliceWorker  worker;     /* qExec's overall stats for slice */
 
@@ -131,7 +131,12 @@ typedef struct CdbExplain_SliceSummary
     int             segindex0;      /* segment id of workers[0] */
     CdbExplain_SliceWorker *workers;    /* -> array [0..nworker-1] of SliceWorker */
 
-    SerializedMemoryAccount **memoryTreeRoots; /* Array of pointers to pseudo roots [0...nworker-1] */
+    /*
+     * We use void ** as we don't have access to MemoryAccount struct, which is private to
+     * memory accounting framework
+     */
+    void **memoryAccounts; /* Array of pointers to serialized memory accounts array, one array per worker [0...nworker-1]. */
+    MemoryAccountIdType *memoryAccountCount; /* Array of memory account counts, one per slice */
 
     CdbExplain_Agg  peakmemused; /* Summary of SliceWorker stats over all of the slice's workers */
 
@@ -393,11 +398,11 @@ cdbexplain_sendExecStats(QueryDesc *queryDesc)
     cdbexplain_collectSliceStats(planstate, &ctx.hdr.worker);
 
     /* Append MemoryAccount Tree */
-    ctx.hdr.memAccountTreeStartOffset = ctx.buf.len - hoff;
+    ctx.hdr.memAccountStartOffset = ctx.buf.len - hoff;
     initStringInfo(&memoryAccountTreeBuffer);
     uint totalSerialized = MemoryAccounting_Serialize(&memoryAccountTreeBuffer);
 
-    ctx.hdr.memAccountTreeNodeCount = totalSerialized;
+    ctx.hdr.memAccountCount = totalSerialized;
     appendBinaryStringInfo(&ctx.buf, memoryAccountTreeBuffer.data, memoryAccountTreeBuffer.len);
     pfree(memoryAccountTreeBuffer.data);
 
@@ -540,7 +545,7 @@ cdbexplain_recvExecStats(struct PlanState              *planstate,
         if ((size_t)statcell->len < sizeof(*hdr) ||
             (size_t)statcell->len != (sizeof(*hdr) - sizeof(hdr->inst) +
             							hdr->nInst * sizeof(hdr->inst) +
-            							hdr->memAccountTreeNodeCount * sizeof(SerializedMemoryAccount) +
+            							hdr->memAccountCount * MemoryAccounting_SizeOfAccountInBytes() +
             							hdr->enotes - hdr->bnotes) ||
             statcell->len != hdr->enotes ||
             hdr->segindex < -1 ||
@@ -662,7 +667,7 @@ cdbexplain_collectSliceStats(PlanState                 *planstate,
 
     out_worker->vmem_reserved = (double) VmemTracker_GetMaxReservedVmemBytes();
 
-    out_worker->memory_accounting_global_peak = (double) MemoryAccountingPeakBalance;
+    out_worker->memory_accounting_global_peak = (double) MemoryAccounting_GetGlobalPeak();
 
 }                               /* cdbexplain_collectSliceStats */
 
@@ -716,7 +721,8 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr        *hdr,
         ss->segindex0 = recvstatctx->segindexMin;
         ss->nworker = recvstatctx->segindexMax + 1 - ss->segindex0;
         ss->workers = (CdbExplain_SliceWorker *)palloc0(ss->nworker * sizeof(ss->workers[0]));
-        ss->memoryTreeRoots = (SerializedMemoryAccount **)palloc0(ss->nworker * sizeof(ss->memoryTreeRoots[0]));
+        ss->memoryAccounts = (void **)palloc0(ss->nworker * sizeof(ss->memoryAccounts[0]));
+        ss->memoryAccountCount = (MemoryAccountIdType *)palloc0(ss->nworker * sizeof(ss->memoryAccountCount[0]));
     }
 
     /* Save a copy of this SliceWorker instance in the worker array. */
@@ -727,18 +733,18 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr        *hdr,
     *ssw = hdr->worker;
 
     const char *originalSerializedMemoryAccountingStartAddress = ((const char*) hdr) +
-    		hdr->memAccountTreeStartOffset;
+    		hdr->memAccountStartOffset;
 
-    size_t bitCount = sizeof(SerializedMemoryAccount) * hdr->memAccountTreeNodeCount;
+    size_t byteCount = MemoryAccounting_SizeOfAccountInBytes() * hdr->memAccountCount;
     /*
      * We need to copy of the serialized bits. These bits have shorter lifespan
      * and can get out of scope before we finish explain analyze.
      */
-    void *copiedSerializedMemoryAccountingStartAddress = palloc(bitCount);
-    memcpy(copiedSerializedMemoryAccountingStartAddress, originalSerializedMemoryAccountingStartAddress, bitCount);
+    void *copiedSerializedMemoryAccountingStartAddress = palloc(byteCount);
+    memcpy(copiedSerializedMemoryAccountingStartAddress, originalSerializedMemoryAccountingStartAddress, byteCount);
 
-    ss->memoryTreeRoots[iworker] = MemoryAccounting_Deserialize(copiedSerializedMemoryAccountingStartAddress,
-    		hdr->memAccountTreeNodeCount);
+    ss->memoryAccounts[iworker] = copiedSerializedMemoryAccountingStartAddress;
+    ss->memoryAccountCount[iworker] = hdr->memAccountCount;
 
     /* Rollup of per-worker stats into SliceSummary */
     cdbexplain_agg_upd(&ss->peakmemused, hdr->worker.peakmemused, hdr->segindex);
@@ -802,7 +808,7 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
     si->workmemused     = instr->workmemused;
     si->workmemwanted   = instr->workmemwanted;
     si->workfileCreated  = instr->workfileCreated;
-	si->peakMemBalance	 = MemoryAccounting_GetPeak(planstate->memoryAccount);
+	si->peakMemBalance	 = MemoryAccounting_GetAccountPeakBalance(planstate->plan->memoryAccountId);
 	si->firststart      = instr->firststart;
 	si->numPartScanned = instr->numPartScanned;
 }                               /* cdbexplain_collectStatsFromNode */
@@ -1464,10 +1470,10 @@ cdbexplain_showExecStats(struct PlanState              *planstate,
     	    appendStringInfoFill(str, 2*indent, ' ');
     		appendStringInfo(str, "slice %d, seg %d\n", curSliceId, iWorker);
 
-    		MemoryAccounting_ToString(&(ctx->slices[curSliceId].memoryTreeRoots[iWorker]->memoryAccount), str, indent + 1);
+    		MemoryAccounting_CombinedAccountArrayToString(ctx->slices[curSliceId].memoryAccounts[iWorker],
+    				ctx->slices[curSliceId].memoryAccountCount[iWorker], str, indent + 1);
     	}
     }
-
 
     /*
      * Executor memory used by this individual node, if it allocates from a

@@ -227,7 +227,7 @@ typedef struct QueryDesc
 	char		*portal_name;	/* NULL for unnamed portal */
 
 	/* The overall memory consumption account (i.e., outside of an operator) */
-	MemoryAccount *memoryAccount;
+	MemoryAccountIdType memoryAccountId;
 
 	QueryDispatchDesc *ddesc;
 

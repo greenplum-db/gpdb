@@ -257,12 +257,10 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	Assert(queryDesc->estate == NULL);
 	Assert(queryDesc->plannedstmt != NULL);
 
-	if (NULL == queryDesc->memoryAccount)
-	{
-		queryDesc->memoryAccount = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_EXECUTOR);
-	}
+	Assert(queryDesc->memoryAccountId == MEMORY_OWNER_TYPE_Undefined);
+	queryDesc->memoryAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_EXECUTOR);
 
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccount);
+	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
 
 	Assert(queryDesc->plannedstmt->intoPolicy == NULL
 		   || queryDesc->plannedstmt->intoPolicy->ptype == POLICYTYPE_PARTITIONED);
@@ -830,9 +828,9 @@ ExecutorRun(QueryDesc *queryDesc,
 
 	Assert(estate != NULL);
 
-	Assert(NULL != queryDesc->memoryAccount);
+	Assert(MEMORY_OWNER_TYPE_Undefined != queryDesc->memoryAccountId);
 
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccount);
+	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
 
 	/*
 	 * Set dynamicTableScanInfo to the one in estate, and reset its value at
@@ -1030,9 +1028,9 @@ ExecutorEnd(QueryDesc *queryDesc)
 
 	Assert(estate != NULL);
 
-	Assert(queryDesc->memoryAccount);
+	Assert(MEMORY_OWNER_TYPE_Undefined != queryDesc->memoryAccountId);
 
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccount);
+	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
 
 	if (DEBUG1 >= log_min_messages)
 	{
@@ -1192,9 +1190,9 @@ ExecutorRewind(QueryDesc *queryDesc)
 
 	Assert(estate != NULL);
 
-	Assert(NULL != queryDesc->memoryAccount);
+	Assert(MEMORY_OWNER_TYPE_Undefined != queryDesc->memoryAccountId);
 
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccount);
+	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
 
 	/* It's probably not sensible to rescan updating queries */
 	Assert(queryDesc->operation == CMD_SELECT);
