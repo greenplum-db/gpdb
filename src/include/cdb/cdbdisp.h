@@ -27,11 +27,6 @@ struct QueryDesc;                   /* #include "executor/execdesc.h" */
 struct SegmentDatabaseDescriptor;   /* #include "cdb/cdbconn.h" */
 struct pollfd;
 
-typedef enum
-{
-	GP_DISPATCH_COMMAND_TYPE_QUERY,
-	GP_DISPATCH_COMMAND_TYPE_DTX_PROTOCOL
-} GpDispatchCommandType;
 
 /*
  * Parameter structure for Greenplum Database Queries
@@ -104,28 +99,9 @@ typedef enum DispatchWaitMode
  */
 typedef struct DispatchCommandParms
 {
-	GpDispatchCommandType			mppDispatchCommandType;
-	DispatchCommandQueryParms		queryParms;
-	DispatchCommandDtxProtocolParms	dtxProtocolParms;
-	
 	char		*query_text;
 	int			query_text_len;
-	
-	int			localSlice;
-	
-	/*
-	 * options for controlling certain behavior
-	 * on the remote backend before query processing. Like
-	 * explicitly opening a transaction.
-	 */
-	int			txnOptions;
-	
-	/*
-	 * store the command here, so that we make sure that every
-	 * thread gets the same command-id
-	 */
-	int			cmdID;
-	
+
 	/*
 	 * db_count: The number of segdbs that this thread is responsible
 	 * for dispatching the command to.
@@ -133,15 +109,6 @@ typedef struct DispatchCommandParms
 	 */
 	int			db_count;
 	
-	
-	/*
-	 * Session auth info
-	 */
-	Oid			sessUserId;
-	Oid			outerUserId;
-	Oid			currUserId;
-	bool		sessUserId_is_super;
-	bool		outerUserId_is_super;
 
 	/*
 	 * dispatchResultPtrArray: Array[0..db_count-1] of CdbDispatchResult*
@@ -179,7 +146,6 @@ typedef struct CdbDispatchCmdThreads
 	struct DispatchCommandParms *dispatchCommandParmsAr;
 	int	dispatchCommandParmsArSize;
 	int	threadCount;
-	
 }   CdbDispatchCmdThreads;
 
 typedef struct CdbDispatchDirectDesc
@@ -196,6 +162,7 @@ typedef struct CdbDispatcherState
 {
 	struct CdbDispatchResults    *primaryResults;
 	struct CdbDispatchCmdThreads *dispatchThreads;
+	MemoryContext dispatchStateContext;
 } CdbDispatcherState;
 
 /*--------------------------------------------------------------------*/
@@ -222,7 +189,7 @@ typedef struct CdbDispatcherState
  * caller must wait for execution to end by calling CdbCheckDispatchResult().
  *
  * The CdbDispatchResults object owns some malloc'ed storage, so the caller
- * must make certain to free it by calling cdbdisp_destroyDispatchResults().
+ * must make certain to free it by calling cdbdisp_destroyDispatchState().
  *
  * When dispatchResults->cancelOnError is false, strCommand is to be
  * dispatched to every connected gang member if possible, despite any
@@ -234,11 +201,8 @@ typedef struct CdbDispatcherState
  */
 void
 cdbdisp_dispatchToGang(struct CdbDispatcherState *ds,
-					   GpDispatchCommandType		mppDispatchCommandType,
-					   void							*commandTypeParms,
                        struct Gang					*gp,
                        int							sliceIndex,
-                       unsigned int					maxSlices,
                        CdbDispatchDirectDesc		*direct);
 
 /*
@@ -324,12 +288,12 @@ cdbdisp_dispatchDtxProtocolCommand(DtxProtocolCommand		dtxProtocolCommand,
  * The caller, after calling CdbCheckDispatchResult(), can
  * examine the CdbDispatchResults objects, can keep them as
  * long as needed, and ultimately must free them with
- * cdbdisp_destroyDispatchResults() prior to deallocation
+ * cdbdisp_destroyDispatchState() prior to deallocation
  * of the memory context from which they were allocated.
  *
  * NB: Callers should use PG_TRY()/PG_CATCH() if needed to make
  * certain that the CdbDispatchResults objects are destroyed by
- * cdbdisp_destroyDispatchResults() in case of error.
+ * cdbdisp_destroyDispatchState() in case of error.
  * To wait for completion, check for errors, and clean up, it is
  * suggested that the caller use cdbdisp_finishCommand().
  */
@@ -408,12 +372,12 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
  * The caller, after calling CdbCheckDispatchResult(), can
  * examine the CdbDispatchResults objects, can keep them as
  * long as needed, and ultimately must free them with
- * cdbdisp_destroyDispatchResults() prior to deallocation
+ * cdbdisp_destroyDispatchState() prior to deallocation
  * of the caller's memory context.
  *
  * NB: Callers should use PG_TRY()/PG_CATCH() if needed to make
  * certain that the CdbDispatchResults objects are destroyed by
- * cdbdisp_destroyDispatchResults() in case of error.
+ * cdbdisp_destroyDispatchState() in case of error.
  * To wait for completion, check for errors, and clean up, it is
  * suggested that the caller use cdbdisp_finishCommand().
  */
@@ -433,7 +397,7 @@ cdbdisp_dispatchPlan(struct QueryDesc              *queryDesc,
  *
  * NB: Callers should use PG_TRY()/PG_CATCH() if needed to make
  * certain that the CdbDispatchResults objects are destroyed by
- * cdbdisp_destroyDispatchResults() in case of error.
+ * cdbdisp_destroyDispatchState() in case of error.
  * To wait for completion, check for errors, and clean up, it is
  * suggested that the caller use cdbdisp_finishCommand().
  */
@@ -457,18 +421,6 @@ CdbDispatchUtilityStatement(struct Node *stmt, char* debugCaller __attribute__((
 void
 CdbDispatchUtilityStatement_NoTwoPhase(struct Node *stmt, char* debugCaller __attribute__((unused)) );
 
-/*
- * create a CdbDispatchCmdThreads object that holds the dispatch
- * threads state, and an array of dispatch command params. 
- */
-CdbDispatchCmdThreads *
-cdbdisp_makeDispatchThreads(int paramCount);
-
-/*
- * free all memory allocated for a CdbDispatchCmdThreads object.
- */
-void
-cdbdisp_destroyDispatchThreads(CdbDispatchCmdThreads *dThreads);
 
 /* used to take the current Transaction Snapshot and serialized a version of it
  * into the static variable serializedDtxContextInfo */

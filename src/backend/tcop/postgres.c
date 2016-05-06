@@ -4781,6 +4781,9 @@ PostgresMain(int argc, char *argv[],
 					/* Set statement_timestamp() */
  					SetCurrentStatementStartTimestamp();
  					
+					/* get the slice number# */
+					localSlice = pq_getmsgint(&input_message, 4);
+
 					/* get the client command serial# */
 					gp_command_count = pq_getmsgint(&input_message, 4);
 					
@@ -4795,9 +4798,6 @@ PostgresMain(int argc, char *argv[],
 					if(pq_getmsgbyte(&input_message) == 1)
 						ouid_is_super = true;	
 					cuid = pq_getmsgint(&input_message, 4);		
-					
-					/* get the slice number# */
-					localSlice = pq_getmsgint(&input_message, 4);
 					
 					rootIdx = pq_getmsgint(&input_message, 4);
 
