@@ -16,7 +16,6 @@
 #define ALLOW_isnan
 #include "postgres.h"
 #include "gpopt/translate/CTranslatorScalarToDXL.h"
-#include "gpopt/translate/CTranslatorPlStmtToDXL.h"
 #include "gpopt/translate/CTranslatorQueryToDXL.h"
 #include "gpopt/translate/CTranslatorUtils.h"
 #include "gpopt/translate/CCTEListEntry.h"
@@ -222,110 +221,6 @@ CTranslatorScalarToDXL::PdxlnScIdFromParam
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorScalarToDXL::PdxlnSubPlanFromSubPlan
-//
-//	@doc:
-//		Create a DXL SubPlan node for a from a GPDB SubPlan
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorScalarToDXL::PdxlnSubPlanFromSubPlan
-	(
-	const Expr *pexpr,
-	const CMappingVarColId* pmapvarcolid
-	)
-{
-	GPOS_ASSERT(IsA(pexpr, SubPlan));
-	GPOS_ASSERT(NULL != m_pparammapping);
-
-	const SubPlan * psubplan = (SubPlan *)pexpr;
-
-	// outer references
-	DrgPdxlcr *pdrgdxlcr = GPOS_NEW(m_pmp) DrgPdxlcr(m_pmp);
-	DrgPmdid *pdrgmdid = GPOS_NEW(m_pmp) DrgPmdid(m_pmp);
-
-	ListCell *plc = NULL;
-	ULONG ul = 0;
-
-	ForEachWithCount (plc, psubplan->args, ul)
-	{
-		Var *pvar = (Var*) lfirst(plc);
-
-		// get the param id
-		ULONG ulParamId = gpdb::IListNth(psubplan->parParam, ul);
-
-		// insert mapping
-		if (NULL == m_pparammapping->Pscid(ulParamId))
-		{
-			CDXLNode *pdxln = PdxlnScIdFromVar((Expr *)pvar, pmapvarcolid);
-			CDXLScalarIdent *pdxlopIdent = CDXLScalarIdent::PdxlopConvert(pdxln->Pdxlop());
-			pdxlopIdent->AddRef();
-			m_pparammapping->FInsertMapping(ulParamId, pdxlopIdent);
-			pdxln->Release();
-		}
-
-		// column name
-		const CWStringBase *pstr = pmapvarcolid->PstrColName(m_ulQueryLevel, pvar, m_eplsphoptype);
-		// column id
-		ULONG ulId = 0;
-
-		if(0 != pvar->varattno)
-		{
-			ulId = pmapvarcolid->UlColId(m_ulQueryLevel, pvar, m_eplsphoptype);
-		}
-		else
-		{
-			ulId = m_pidgtorCol->UlNextId();
-		}
-
-		CMDName *pmdname = GPOS_NEW(m_pmp) CMDName(m_pmp, pstr);
-
-		// create a column reference for the given var
-		CDXLColRef *pdxlcr = GPOS_NEW(m_pmp) CDXLColRef(m_pmp, pmdname, ulId);
-
-		pdrgdxlcr->Append(pdxlcr);
-		pdrgmdid->Append(GPOS_NEW(m_pmp) CMDIdGPDB(pvar->vartype));
-	}
-	
-	// translate subplan test expression
-	CDXLNode *pdxlnTestExpr = NULL;
-	if (NULL != psubplan->testexpr)
-	{	
-		pdxlnTestExpr = PdxlnScOpFromExpr((Expr *)psubplan->testexpr, pmapvarcolid);
-	}
-
-	IMDId *pmdid = GPOS_NEW(m_pmp) CMDIdGPDB(psubplan->firstColType);
-
-	// create the DXL node holding the scalar subplan
-	EdxlSubPlanType edxlsubplantype = CTranslatorUtils::Edxlsubplantype(psubplan->subLinkType);
-	CDXLNode *pdxln = GPOS_NEW(m_pmp) CDXLNode
-										(
-										m_pmp,
-										GPOS_NEW(m_pmp) CDXLScalarSubPlan
-															(
-															m_pmp,
-															pmdid,
-															pdrgdxlcr,
-															pdrgmdid,
-															edxlsubplantype,
-															pdxlnTestExpr
-															)
-										);
-
-	// get the actual sub plan from the plstmt
-	Plan *pplanChild = (Plan *) gpdb::PvListNth(m_pplstmt->subplans, psubplan->plan_id - 1);
-
-	// Since a sub plan has relational children, we create a new translator to handle its translation
-	CTranslatorPlStmtToDXL trplstmttodxl(m_pmp, m_pmda, m_pidgtorCol, m_pplstmt, m_pparammapping);
-
-	CDXLNode *pdxlnSubPlan = trplstmttodxl.PdxlnFromPlan(pplanChild);
-
-	pdxln->AddChild(pdxlnSubPlan);
-
-	return pdxln;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CTranslatorScalarToDXL::PdxlnScOpFromExpr
 //
 //	@doc:
@@ -363,8 +258,6 @@ CTranslatorScalarToDXL::PdxlnScOpFromExpr
 		{T_NullIfExpr, &CTranslatorScalarToDXL::PdxlnScNullIfFromExpr},
 		{T_RelabelType, &CTranslatorScalarToDXL::PdxlnScCastFromRelabelType},
 		{T_CoerceToDomain, &CTranslatorScalarToDXL::PdxlnScCoerceFromCoerce},
-		{T_Param, &CTranslatorScalarToDXL::PdxlnPlanFromParam},
-		{T_SubPlan, &CTranslatorScalarToDXL::PdxlnSubPlanFromSubPlan},
 		{T_SubLink, &CTranslatorScalarToDXL::PdxlnFromSublink},
 		{T_ArrayExpr, &CTranslatorScalarToDXL::PdxlnArray},
 		{T_ArrayRef, &CTranslatorScalarToDXL::PdxlnArrayRef},
@@ -2106,77 +1999,6 @@ CTranslatorScalarToDXL::PdxlnExistSubqueryFromSublink
 	pdxln->AddChild(pdxlnRoot);
 
 	return pdxln;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorScalarToDXL::PdxlnPlanFromParam
-//
-//	@doc:
-//		Create a DXL InitPlan/Var node from a GPDB PARAM node
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorScalarToDXL::PdxlnPlanFromParam
-	(
-	const Expr *pexpr,
-	const CMappingVarColId * // pmapvarcolid
-	)
-{
-	const Param *pparam = (Param *) pexpr;
-	// check first if this param can be translated into a scalar id (from a subplan)
-	CDXLNode *pdxln = PdxlnScIdFromParam((Param *) pexpr);
-	if (NULL != pdxln)
-	{
-		return pdxln;
-	}
-
-	// TODO: Need to handle when parameters that are passed to the plan
-
-	if (PARAM_EXEC == pparam->paramkind)
-	{
-		return PdxlnInitPlanFromParam(pparam);
-	}
-	else
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("External Parameters"));
-	}
-	return NULL;
-}
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorScalarToDXL::PdxlnInitPlanFromParam
-//
-//	@doc:
-//		Create a DXL InitPlan node from a GPDB PARAM node
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorScalarToDXL::PdxlnInitPlanFromParam
-	(
-	const Param *pparam
-	)
-	const
-{
-	GPOS_ASSERT(NULL != pparam);
-
-	// TODO: Need to handle when parameters that are passed to the plan
-	CDXLNode *pdxlnInitPlan = GPOS_NEW(m_pmp) CDXLNode(m_pmp, GPOS_NEW(m_pmp) CDXLScalarInitPlan(m_pmp));
-
-	GPOS_ASSERT(NULL != m_pplstmt->subplans && "We only support parameters that are generated by initplans");
-
-	// Get the plan defining the param
-	GPOS_ASSERT(gpdb::UlListLength(m_pplstmt->subplans) >= pparam->paramid && "Parameter ID not found");
-
-	Plan *ppl = (Plan *) gpdb::PvListNth(m_pplstmt->subplans, pparam->paramid);
-
-	GPOS_ASSERT(NULL != ppl);
-
-	// Since an init plan is not a scalar node, we create a new PlStmt translator to handle its translation
-	CTranslatorPlStmtToDXL trplstmttodxl(m_pmp, m_pmda, m_pidgtorCol, m_pplstmt, m_pparammapping);
-	CDXLNode *pdxlnSubPlan = trplstmttodxl.PdxlnFromPlan(ppl);
-	GPOS_ASSERT(NULL != pdxlnSubPlan);
-	pdxlnInitPlan->AddChild(pdxlnSubPlan);
-
-	return pdxlnInitPlan;
 }
 
 //---------------------------------------------------------------------------

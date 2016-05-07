@@ -25,7 +25,6 @@
 #include "gpopt/translate/CTranslatorExprToDXL.h"
 #include "gpopt/translate/CTranslatorUtils.h"
 #include "gpopt/translate/CTranslatorQueryToDXL.h"
-#include "gpopt/translate/CTranslatorPlStmtToDXL.h"
 #include "gpopt/translate/CTranslatorDXLToPlStmt.h"
 #include "gpopt/translate/CTranslatorDXLToQuery.h"
 #include "gpopt/translate/CContextDXLToPlStmt.h"
@@ -1248,64 +1247,6 @@ COptTasks::PvOptimizeMinidumpTask
 	return NULL;
 }
 
-
-//---------------------------------------------------------------------------
-//	@function:
-//		COptTasks::PvDXLFromPlstmtTask
-//
-//	@doc:
-//		task that does the translation from planned stmt to XML
-//
-//---------------------------------------------------------------------------
-void*
-COptTasks::PvDXLFromPlstmtTask
-	(
-	void *pv
-	)
-{
-	GPOS_ASSERT(NULL != pv);
-
-	SOptContext *poctx = SOptContext::PoptctxtConvert(pv);
-
-	GPOS_ASSERT(NULL != poctx->m_pplstmt);
-	GPOS_ASSERT(NULL == poctx->m_szPlanDXL);
-
-	AUTO_MEM_POOL(amp);
-	IMemoryPool *pmp = amp.Pmp();
-
-	CIdGenerator idgtor(1);
-
-	// relcache MD provider
-	CMDProviderRelcache *pmdpr = GPOS_NEW(pmp) CMDProviderRelcache(pmp);
-
-	{
-		CAutoMDAccessor amda(pmp, pmdpr, sysidDefault);
-
-		CMappingParamIdScalarId mapps(pmp);
-
-		CTranslatorPlStmtToDXL tplstmtdxl(pmp, amda.Pmda(), &idgtor, (PlannedStmt*) poctx->m_pplstmt, &mapps);
-		CDXLNode *pdxlnPlan = tplstmtdxl.PdxlnFromPlstmt();
-
-		GPOS_ASSERT(NULL != pdxlnPlan);
-
-		CWStringDynamic str(pmp);
-		COstreamString oss(&str);
-
-		// get chosen plan number
-		ULLONG ullPlanId =  (ULLONG) optimizer_plan_id;
-		CWStringDynamic *pstrDXL = CDXLUtils::PstrSerializePlan(pmp, pdxlnPlan, ullPlanId, 0 /*ullPlanSpaceSize*/, true /*fSerializeHeaderFooter*/, true /*fIndent*/);
-
-		poctx->m_szPlanDXL = SzFromWsz(pstrDXL->Wsz());
-
-		// cleanup
-		GPOS_DELETE(pstrDXL);
-		pdxlnPlan->Release();
-	}
-
-	return NULL;
-}
-
-
 //---------------------------------------------------------------------------
 //	@function:
 //		COptTasks::PvPlstmtFromDXLTask
@@ -1801,34 +1742,6 @@ COptTasks::SzDXL
 	octx.Free(octx.epinQuery, octx.epinQueryDXL);
 
 	return octx.m_szQueryDXL;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		COptTasks::SzDXL
-//
-//	@doc:
-//		serializes planned stmt to DXL
-//
-//---------------------------------------------------------------------------
-char *
-COptTasks::SzDXL
-	(
-	PlannedStmt *pplstmt
-	)
-{
-	Assert(pplstmt);
-
-	SOptContext octx;
-	octx.m_pplstmt = pplstmt;
-	octx.m_fSerializePlanDXL = true;
-	Execute(&PvDXLFromPlstmtTask, &octx);
-
-	// clean up context
-	octx.Free(octx.epinPlStmt, octx.epinPlanDXL);
-
-	return octx.m_szPlanDXL;
 }
 
 

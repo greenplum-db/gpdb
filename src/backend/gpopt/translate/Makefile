@@ -34,6 +34,5 @@ OBJS =  CMappingColIdVar.o \
 		CTranslatorDXLToQuery.o \
 		CTranslatorQueryToDXL.o \
 		CTranslatorDXLToPlStmt.o \
-		CTranslatorPlStmtToDXL.o
 
 include $(top_srcdir)/src/backend/common.mk
