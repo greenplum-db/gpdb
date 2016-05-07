@@ -33,6 +33,6 @@ OBJS =  CMappingColIdVar.o \
 		CTranslatorRelcacheToDXL.o \
 		CTranslatorDXLToQuery.o \
 		CTranslatorQueryToDXL.o \
-		CTranslatorDXLToPlStmt.o \
+		CTranslatorDXLToPlStmt.o 
 
 include $(top_srcdir)/src/backend/common.mk

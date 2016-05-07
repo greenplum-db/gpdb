@@ -14,12 +14,6 @@ language c strict;
 create function gpoptutils.RestorePlanFromFile(text) returns text as '/Users/solimm1/greenplum-db-devel/lib/libgpoptudf.dylib', 'RestorePlanFromFile'
 language c strict;
 
-create function gpoptutils.DumpPlanDXL(text) returns text as '/Users/solimm1/greenplum-db-devel/lib/libgpoptudf.dylib', 'DumpPlanDXL'
-language c strict;
-
-create function gpoptutils.DumpPlanToDXLFile(text, text) returns int as '/Users/solimm1/greenplum-db-devel/lib/libgpoptudf.dylib', 'DumpPlanToDXLFile'
-language c strict;
-
 create function gpoptutils.RestorePlanDXL(text) returns text as '/Users/solimm1/greenplum-db-devel/lib/libgpoptudf.dylib', 'RestorePlanDXL' language c strict;
 
 create function gpoptutils.RestorePlanFromDXLFile(text) returns text as '/Users/solimm1/greenplum-db-devel/lib/libgpoptudf.dylib', 'RestorePlanFromDXLFile' language c strict;
