@@ -90,7 +90,7 @@
 #include "parser/parser.h"
 #include "rewrite/rewriteHandler.h"
 #include "storage/backendid.h"
-#include "storage/procsignal.h"
+#include "storage/sinval.h"
 #include "storage/smgr.h"
 #include "tcop/utility.h"
 #include "utils/acl.h"
@@ -17157,7 +17157,7 @@ PreCommit_on_commit_actions(void)
 	 * is not visible yet.  Skipping this under the catchup handler
 	 * should be ok in known cases.
 	 */
-	if (AmIInSIGUSR1Handler())
+	if (in_process_catchup_event)
 		return;
 
 	foreach(l, on_commits)
