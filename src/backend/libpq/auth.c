@@ -2441,6 +2441,7 @@ InitializeLDAPConnection(Port *port, LDAP **ldap)
 		{
 			ereport(LOG, (errmsg("could not initialize LDAP: code: %d, msg: %s", r, ldap_err2string(r))));
 			*ldap = NULL;
+			return STATUS_ERROR;
 		}
 	}
 	else
@@ -2610,7 +2611,7 @@ CheckLDAPAuth(Port *port)
 		{
 			ereport(LOG,
 					(errmsg("could not perform initial LDAP bind for ldapbinddn \"%s\" on server \"%s\": error code %d",
-						  port->hba->ldapbinddn, port->hba->ldapserver, r)));
+						  port->hba->ldapbinddn, port->hba->ldapserver, ldap_err2string(r))));
 			return STATUS_ERROR;
 		}
 
@@ -2722,8 +2723,8 @@ CheckLDAPAuth(Port *port)
 	if (r != LDAP_SUCCESS)
 	{
 		ereport(LOG,
-				(errmsg("LDAP login failed for user \"%s\" on server \"%s\": error code %d",
-						fulluser, port->hba->ldapserver, r)));
+				(errmsg("LDAP login failed for user \"%s\" on server \"%s\": %s",
+						fulluser, port->hba->ldapserver, ldap_err2string(r))));
 		pfree(fulluser);
 		return STATUS_ERROR;
 	}
