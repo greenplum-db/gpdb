@@ -45,7 +45,7 @@ typedef void (*ExecVariableListFn) (struct ProjectionInfo *projInfo, Datum *valu
 
 #define init_codegen()
 #define call_ExecVariableList(projInfo, values, isnull) ExecVariableList(projInfo, values, isnull)
-#define enroll_ExecVariableList(regular_func, ptr_to_chosen_func, proj_info, slot)
+#define enroll_ExecVariableList_codegen(regular_func, ptr_to_chosen_func, proj_info, slot)
 
 #else
 
