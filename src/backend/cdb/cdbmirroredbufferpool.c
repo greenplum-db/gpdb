@@ -1508,7 +1508,7 @@ bool MirroredBufferPool_Truncate(
 		{
 			if (Debug_filerep_print)
 				ereport(LOG,
-					(errmsg("could not sent file truncate request to mirror "), 
+					(errmsg("could not send file truncate request to mirror "),
 							FileRep_ReportRelationPath(
 													   open->mirrorFilespaceLocation,
 													   open->relFileNode,
