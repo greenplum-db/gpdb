@@ -1256,6 +1256,11 @@ void PersistentStore_ReadTuple(
 	pfree(nulls);
 }
 
+/*
+ * Check if the free TID is valid. If not, the free list is corrupted and we
+ * pretend there are no free tuples to reset the free list. The corrupted free
+ * list will be detached and cleaned during recovery or pt rebuild.
+ */
 static bool PersistentStore_ValidateFreeTID(
 	PersistentStoreData 		*storeData,
 	PersistentStoreSharedData 	*storeSharedData,
@@ -1285,33 +1290,48 @@ static bool PersistentStore_ValidateFreeTID(
 	if (storeSharedData->maxFreeOrderNum == 1 && ItemPointerCompare(previousFreeTid, &freeTid) != 0)
 	{
 		tidIsValid = false;
-		elog(WARNING, "Expected to have previous FreeTID at %s equal to itself (found %s, %s)",
-			 ItemPointerToString(&freeTid),
-			 ItemPointerToString2(previousFreeTid),
-			 storeData->tableName);
+		ereport(WARNING,
+				(errmsg("integrity check for PT freeTid failed"),
+				 errdetail("expected to have previous FreeTID at %s equal to itself (found %s, %s)",
+						ItemPointerToString(&freeTid),
+						ItemPointerToString2(previousFreeTid),
+						storeData->tableName)));
 	}
 
 	if (PersistentStore_IsZeroTid(previousFreeTid))
 	{
 		tidIsValid = false;
-		elog(WARNING, "Expected to have previous FreeTID at %s to be free (found %s, %s).",
-			 ItemPointerToString(&freeTid),
-			 ItemPointerToString2(previousFreeTid),
-			 storeData->tableName);
+		ereport(WARNING,
+				(errmsg("integrity check for PT freeTid failed"),
+				 errdetail("expected to have previous FreeTID at %s to be free (found %s, %s)",
+						ItemPointerToString(&freeTid),
+						ItemPointerToString2(previousFreeTid),
+						storeData->tableName)));
 	}
 
 	if (persistentSerialNum != expectedPersistentSerialNum)
 	{
 		tidIsValid = false;
-		elog(WARNING, "Expected persistent store tuple at %s to have order number " INT64_FORMAT " (found " INT64_FORMAT ", '%s').",
-			 ItemPointerToString(&freeTid),
-			 expectedPersistentSerialNum,
-			 persistentSerialNum,
-			 storeData->tableName);
+		ereport(WARNING,
+				(errmsg("integrity check for PT freeTid failed"),
+				 errdetail("expected persistent store tuple at %s to have order number " INT64_FORMAT " (found " INT64_FORMAT ", '%s')",
+						ItemPointerToString(&freeTid),
+						expectedPersistentSerialNum,
+						persistentSerialNum,
+						storeData->tableName)));
 	}
 
 	pfree(values);
 	heap_freetuple(tupleCopy);
+
+	// If the free TID is not valid, switch to a new free list here
+	if (!tidIsValid)
+	{
+		storeSharedData->maxFreeOrderNum = 0;
+		MemSet(&storeSharedData->freeTid, 0, sizeof(ItemPointerData));
+		ereport(WARNING,
+				(errmsg("switched to new free TID list")));
+	}
 
 	return tidIsValid;
 }
@@ -1348,23 +1368,13 @@ static bool PersistentStore_GetFreeTuple(
 
 	Assert(storeSharedData->freeTid.ip_posid != 0);
 
-	/*
-	 * Check if the current free TID is valid. If not, the free list is corrupted and we
-	 * pretend there are no free tuples to reset the free list. The corrupted free list
-	 * will be detached and cleaned during recovery.
-	 */
 	if (!PersistentStore_ValidateFreeTID(
 								storeData,
 								storeSharedData,
 								storeSharedData->freeTid,
 								&previousFreeTid,
 								storeSharedData->maxFreeOrderNum))
-	{
-		storeSharedData->maxFreeOrderNum = 0;
-		MemSet(&storeSharedData->freeTid, 0, sizeof(ItemPointerData));
-		elog(WARNING, "PersistentStore_GetFreeTuple: Detected free TID list corruption. Switching to new free TID list.");
 		return false;
-	}
 
 	*freeTid = storeSharedData->freeTid;
 	storeSharedData->maxFreeOrderNum--;
@@ -1377,11 +1387,6 @@ static bool PersistentStore_GetFreeTuple(
 			 ItemPointerToString(&storeSharedData->freeTid),
 			 storeData->tableName);
 
-	/* 
-	 * Check if the current free TID is valid. If not, the free list is corrupted and we
-	 * pretend there are no free tuples to reset the free list. The corrupted free list
-	 * will be detached and cleaned during recovery.
-	 */
 	if (validate_previous_free_tid &&
 		storeSharedData->maxFreeOrderNum > 0 &&
 		!PersistentStore_ValidateFreeTID(
@@ -1390,12 +1395,7 @@ static bool PersistentStore_GetFreeTuple(
 										storeSharedData->freeTid,
 										&previousFreeTid,
 										storeSharedData->maxFreeOrderNum))
-	{
-		storeSharedData->maxFreeOrderNum = 0;
-		MemSet(&storeSharedData->freeTid, 0, sizeof(ItemPointerData));
-		elog(WARNING, "PersistentStore_GetFreeTuple: Detected free TID list corruption. Switching to new free TID list.");
 		return false;
-	}
 
 	return true;
 }
@@ -1507,34 +1507,25 @@ void PersistentStore_FreeTuple(
 
 	persistentRel = (*storeData->openRel)();
 
-	storeSharedData->maxFreeOrderNum++;
-	if (storeSharedData->maxFreeOrderNum == 1)
-	{
-		prevFreeTid = *persistentTid;		// So non-zero PreviousFreeTid indicates free.
-	}
-	else
+	if (storeSharedData->maxFreeOrderNum > 0)
 	{
 		ItemPointerData		tmpPrevFreeTid;
 		prevFreeTid = storeSharedData->freeTid;
 
-		/*
-		 * Let us validate and have sanity check to make sure the prevFreeTid is really free. If
-		 * PersistentStore_ValidateFreeTID returns false, we need to reset the free list and
-		 * initialize a new root free TID. The previous corrupted free list will be detached and
-		 * cleaned during recovery.
-		 */
-		if (validate_previous_free_tid &&
-			!PersistentStore_ValidateFreeTID(
-										storeData,
-										storeSharedData,
-										prevFreeTid,
-										&tmpPrevFreeTid,
-										storeSharedData->maxFreeOrderNum - 1))
-		{
-			prevFreeTid = *persistentTid;
-			storeSharedData->maxFreeOrderNum = 1;
-			elog(WARNING, "PersistentStore_FreeTuple: Detected free TID list corruption. Switching to new free TID list.");
-		}
+		// Let us validate and have sanity check to make sure the prevFreeTid is really free.
+		if (validate_previous_free_tid)
+			PersistentStore_ValidateFreeTID(
+									storeData,
+									storeSharedData,
+									prevFreeTid,
+									&tmpPrevFreeTid,
+									storeSharedData->maxFreeOrderNum);
+	}
+
+	storeSharedData->maxFreeOrderNum++;
+	if (storeSharedData->maxFreeOrderNum == 1)
+	{
+		prevFreeTid = *persistentTid;		// So non-zero PreviousFreeTid indicates free.
 	}
 	storeSharedData->freeTid = *persistentTid;
 
