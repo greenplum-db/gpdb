@@ -220,7 +220,7 @@ typedef struct ReturnSetInfo
 
 typedef struct ExecVariableListCodegenInfo
 {
-	/* Pointer to store SlotDeformTupleCodegen from Codegen */
+	/* Pointer to store ExecVariableListCodegen from Codegen */
 	void* code_generator;
 	/* Function pointer that points to either regular or generated slot_deform_tuple */
 	ExecVariableListFn ExecVariableList_fn;

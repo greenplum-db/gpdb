@@ -298,9 +298,7 @@ InitScanStateRelationDetails(ScanState *scanState, Plan *plan, EState *estate)
 
 	Relation currentRelation = ExecOpenScanRelation(estate, ((Scan *)plan)->scanrelid);
 	scanState->ss_currentRelation = currentRelation;
-	// Create slot here
 	ExecAssignScanType(scanState, RelationGetDescr(currentRelation));
-	// Create projInfo
 	ExecAssignScanProjectionInfo(scanState);
 
 	ProjectionInfo *projInfo = scanState->ps.ps_ProjInfo;
