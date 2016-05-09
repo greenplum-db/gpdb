@@ -64,7 +64,7 @@ $(TEST_APP): gtest_main.a $(TEST_OBJS)
 	$(CPP) $(CPPFLAGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 s3chkcfg: src/s3chkcfg.cpp src/s3conf.cpp src/s3downloader.cpp src/s3wrapper.cpp src/s3utils.cpp src/s3log.cpp src/s3common.cpp lib/http_parser.cpp lib/ini.cpp
-	$(CPP) $^ -o $@ $(CPPFLAGS) -DS3_CHK_CFG $(INCLUDES) $(LDFLAGS)
+	$(CPP) $^ -o $@ -O2 -g3 -std=c++98 -Wall -DS3_CHK_CFG -DDEBUG_S3 $(INCLUDES) $(LDFLAGS)
 
 test: $(TEST_APP)
 	-@./$(TEST_APP)

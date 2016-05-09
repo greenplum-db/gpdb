@@ -10,7 +10,6 @@
 
 volatile bool QueryCancelPending = false;
 
-char *app_name = NULL;
 S3Reader *wrapper = NULL;
 
 void print_template() {
@@ -27,15 +26,12 @@ void print_template() {
 
 void print_usage(FILE *stream) {
     fprintf(stream,
-            "Usage: %s -c \"s3://endpoint/bucket/prefix "
-            "config=path_to_config_file\", to check the configuration.\n",
-            app_name);
-    fprintf(stream,
-            "       %s -d \"s3://endpoint/bucket/prefix "
-            "config=path_to_config_file\", to download and output to stdout.\n",
-            app_name);
-    fprintf(stream, "       %s -t, to show the config template.\n", app_name);
-    fprintf(stream, "       %s -h, to show this help.\n", app_name);
+            "Usage: s3chkcfg -c \"s3://endpoint/bucket/prefix "
+            "config=path_to_config_file\", to check the configuration.\n"
+            "       s3chkcfg -d \"s3://endpoint/bucket/prefix "
+            "config=path_to_config_file\", to download and output to stdout.\n"
+            "       s3chkcfg -t, to show the config template.\n"
+            "       s3chkcfg -h, to show this help.\n");
 }
 
 bool read_config(char *config) {
@@ -52,6 +48,11 @@ ListBucketResult *list_bucket(char *url) {
     S3Credential g_cred = {s3ext_accessid, s3ext_secret};
 
     wrapper = new S3Reader(url);
+    if (!wrapper) {
+        fprintf(stderr, "Failed to allocate wrapper\n");
+        return NULL;
+    }
+
     if (!wrapper->ValidateURL()) {
         fprintf(stderr, "Failed: URL is not valid.\n");
         return NULL;
@@ -90,12 +91,12 @@ bool check_config(char *url_with_options) {
     char *config_path = get_opt_s3(url_with_options, "config");
 
     if (!read_config(config_path)) {
-        return 1;
+        return false;
     }
 
     ListBucketResult *r = list_bucket(url_str);
     if (!r) {
-        return 1;
+        return false;
     } else {
         if (print_contents(r)) {
             printf("Yea! Your configuration works well.\n");
@@ -110,7 +111,7 @@ bool check_config(char *url_with_options) {
     free(url_str);
     free(config_path);
 
-    return 0;
+    return true;
 }
 
 #define BUF_SIZE 64 * 1024
@@ -123,7 +124,7 @@ bool s3_download(char *url_with_options) {
 
     char *buf = (char *)malloc(BUF_SIZE);
     if (!buf) {
-        return 1;
+        goto FAIL;
     }
 
     if (!read_config(config_path)) {
@@ -169,12 +170,22 @@ bool s3_download(char *url_with_options) {
         delete d;
     }
 
+    free(url_str);
+    free(config_path);
     free(buf);
     delete r;
 
-    return 0;
+    return true;
 
 FAIL:
+    if (url_str) {
+        free(url_str);
+    }
+
+    if (config_path) {
+        free(config_path);
+    }
+
     if (buf) {
         free(buf);
     }
@@ -188,14 +199,12 @@ FAIL:
         delete r;
     }
 
-    return 1;
+    return false;
 }
 
 int main(int argc, char *argv[]) {
-    int32_t opt = 0;
-    bool ret = 0;
-
-    app_name = argv[0];
+    int opt = 0;
+    int ret = 0;
 
     s3ext_logtype = STDERR_LOG;
     s3ext_loglevel = EXT_ERROR;
