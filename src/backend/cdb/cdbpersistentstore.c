@@ -1327,6 +1327,7 @@ static bool PersistentStore_ValidateFreeTID(
 	// If the free TID is not valid, switch to a new free list here
 	if (!tidIsValid)
 	{
+		ItemPointerSet(previousFreeTid, 0, 0);
 		storeSharedData->maxFreeOrderNum = 0;
 		MemSet(&storeSharedData->freeTid, 0, sizeof(ItemPointerData));
 		ereport(WARNING,
@@ -1378,7 +1379,7 @@ static bool PersistentStore_GetFreeTuple(
 
 	*freeTid = storeSharedData->freeTid;
 	storeSharedData->maxFreeOrderNum--;
-	storeSharedData->freeTid = previousFreeTid; /* previousFreeTid is set inside the ValidateFreeTID function */
+	ItemPointerCopy(&previousFreeTid, &storeSharedData->freeTid); // previousFreeTid set inside the ValidateFreeTID function
 
 	if (Debug_persistent_store_print)
 		elog(PersistentStore_DebugPrintLevel(), 
@@ -1517,7 +1518,7 @@ void PersistentStore_FreeTuple(
 			PersistentStore_ValidateFreeTID(
 									storeData,
 									storeSharedData,
-									prevFreeTid,
+									storeSharedData->freeTid,
 									&tmpPrevFreeTid,
 									storeSharedData->maxFreeOrderNum);
 	}
@@ -1525,7 +1526,7 @@ void PersistentStore_FreeTuple(
 	storeSharedData->maxFreeOrderNum++;
 	if (storeSharedData->maxFreeOrderNum == 1)
 	{
-		prevFreeTid = *persistentTid;		// So non-zero PreviousFreeTid indicates free.
+		ItemPointerCopy(persistentTid, &prevFreeTid);  // So non-zero PreviousFreeTid indicates free.
 	}
 	storeSharedData->freeTid = *persistentTid;
 
