@@ -800,8 +800,8 @@ pg_cpow_n(Complex x, int k)
 		 * or k*a = 2*m*pi + pi, or k*a = 2*m*pi + pi/2, or k*a = 2*m*pi + 3*pi/2,
 		 * we will get a result with 0 real part or with 0 imaginary part.
 		 */
-		CHECKFLOATVAL(re(&z), isinf(re(&x)) || isinf(im(&x)) || isinf(k), true);
-		CHECKFLOATVAL(im(&z), isinf(re(&x)) || isinf(im(&x)) || isinf(k), true);
+		CHECKFLOATVAL(re(&z), isinf(re(&x)) || isinf(im(&x)), true);
+		CHECKFLOATVAL(im(&z), isinf(re(&x)) || isinf(im(&x)), true);
 		return z;
 	}
 }
