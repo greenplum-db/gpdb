@@ -466,10 +466,10 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 			rettype = value;
 			value = PQgetvalue(result, 0, 2);   /* Column 2: pronargs */
 			nargs = (int) strtol(value, (char **) NULL, 10);
-			
-			/* 
-			 * Arrays are formated as:  "{value,value,...}" 
-			 * of which we only want "value,value, ..." 
+
+			/*
+			 * Arrays are formatted as:  "{value,value,...}"
+			 * of which we only want "value,value, ..."
 			 * so find the part of the string between the braces
 			 */
 			if (!PQgetisnull(result, 0, 3))   /* Column 3: proargnames */
@@ -2467,10 +2467,10 @@ void mapred_run_queries(PGconn *conn, mapred_document_t *doc)
 							PQprintOpt options;
 							memset(&options, 0, sizeof(options));
 
-							/* 
-							 * Formating:
-							 *   STDOUT = fancy formating
-							 *   FILE   = plain formating
+							/*
+							 * Formatting:
+							 *   STDOUT = fancy formatting
+							 *   FILE   = plain formatting
 							 */
 							if (outfile == stdout)
 							{
@@ -2935,9 +2935,9 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 						 !strncasecmp("python",   obj->u.function.language, 6))
 				{
 					/*
-					 * Python very stuborn about not letting you manually 
+					 * Python very stubborn about not letting you manually
 					 * adjust line number.  So instead we take the stupid route
-					 * and just insert N newlines. 
+					 * and just insert N newlines.
 					*/
 					int i;
 					bufcat(&buffer, "$$\n");
@@ -2976,9 +2976,9 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 				XASSERT(obj->name);
 				XASSERT(transition);
 				XASSERT(transition->name);
-			
-				/* 
-				 * If the reducer depends on an object that hasn't be created
+
+				/*
+				 * If the reducer depends on an object that hasn't been created
 				 * then return false, it will be resolved during a second pass
 				 */
 				if ((transition && !transition->created) ||
@@ -2986,7 +2986,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					(finalizer  && !finalizer->created))
 				{
 					if (global_print_flag && global_debug_flag)
-						printf("-- defering REDUCE %s\n", obj->name);
+						printf("-- deferring REDUCE %s\n", obj->name);
 					break;
 				}
 				if (global_print_flag || global_debug_flag)
@@ -3078,9 +3078,9 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					qbuffer = makebuffer(1024, 1024);
 				else
 					bufreset(qbuffer);
-				
-				/* 
-				 * If the task depends on an object that hasn't be created then
+
+				/*
+				 * If the task depends on an object that hasn't been created then
 				 * return false, it will be resolved during a second pass
 				 */
 				if ((input   && !input->created)  ||
@@ -3090,9 +3090,9 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					if (global_print_flag && global_debug_flag)
 					{
 						if (obj->u.task.execute)
-							printf("-- defering EXECUTION\n");
+							printf("-- deferring EXECUTION\n");
 						else
-							printf("-- defering TASK %s\n", obj->name);
+							printf("-- deferring TASK %s\n", obj->name);
 					}
 					break;
 				}
