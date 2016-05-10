@@ -27,6 +27,8 @@ DEFINE:
   - TRANSITION:
       NAME:     myAdd
       LANGUAGE: perlu
+      PARAMETERS: [state integer, value integer]
+      RETURNS: value integer
       FUNCTION: |
         my ($state, $value) = @_;
         return $state + $value;
