@@ -1,0 +1,32 @@
+%YAML 1.1
+---
+VERSION:         1.0.0.1
+
+DEFINE:
+  - INPUT:
+      NAME:      access_logs
+      FILE:      @hostname@:@abs_srcdir@/data/person.data
+      COLUMNS:
+        - name text
+        - age integer
+        - location point
+
+  - MAP:
+      NAME:       bracketize
+      LANGUAGE:   perlu
+      PARAMETERS: age integer
+      RETURNS:    [key text, value integer]
+      FUNCTION:  |
+        use POSIX qw(ceil floor);
+        my ($age) = @_;
+        my ($lower, $upper) = (floor($age/10.0)*10, ceil($age/10.0)*10);
+        $upper += 10 if ($lower == $upper);
+        my ($bracket) = "$lower => age < $upper";
+        return [{"key" => $bracket, "value" => 1}] ;
+
+EXECUTE:
+  - RUN:
+      SOURCE:    access_logs
+      MAP:       bracketize
+      REDUCE:    SUM
+

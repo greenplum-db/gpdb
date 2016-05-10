@@ -366,9 +366,31 @@ susan  | 78|(6.579,3)
 
 (3 rows)
 --
--- Test 5) Tests a basic reduce function
+-- Test 5) Tests a basic reduce function and the builtin counterpart
 --
 SELECT mapreduce('@abs_srcdir@/yml/agebracket.yml') ORDER BY 1;
+mapreduce
+---------------------
+STDERR> mapreduce_73703_run_1
+STDERR> 
+STDOUT>
+key            |value
+---------------+-----
+0 => age < 10  |    2
+10 => age < 20 |    6
+20 => age < 30 |    6
+30 => age < 40 |    8
+40 => age < 50 |    4
+50 => age < 60 |    5
+60 => age < 70 |    4
+70 => age < 80 |    6
+80 => age < 90 |    6
+90 => age < 100|    3
+(10 rows)
+
+
+(3 rows)
+SELECT mapreduce('@abs_srcdir@/yml/agebracket_builtin.yml') ORDER BY 1;
 mapreduce
 ---------------------
 STDERR> mapreduce_73703_run_1
