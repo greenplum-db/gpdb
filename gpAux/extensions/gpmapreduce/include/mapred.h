@@ -201,11 +201,11 @@ typedef struct {
 
 	mapred_plist_t     *parameters;     /* points into input plist */
 	mapred_plist_t     *grouping;
-	mapred_plist_t     *returns;	
+	mapred_plist_t     *returns;
 } mapred_task_t;
 
 
-/* 
+/*
  * Whenever a function returns more than a single column an abstract
  * data type will be transparently created.
  */
@@ -213,7 +213,7 @@ typedef struct {
 	mapred_plist_t     *returns;
 } mapred_adt_t;
 
-typedef struct 
+typedef struct
 {
 	char   *buffer;
 	size_t  bufsize;

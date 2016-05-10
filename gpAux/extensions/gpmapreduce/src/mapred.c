@@ -68,7 +68,7 @@ const char *default_return_names[MAPRED_MAXKIND+1][2] =
 };
 
 
-/* 
+/*
  * libpq Errors that we care about
  * (would be better to add <errcodes.h> to the include path)
  */
@@ -89,7 +89,7 @@ void   ignore_notice_handler(void *arg, const PGresult *res);
 void    print_notice_handler(void *arg, const PGresult *res);
 void    mapred_setup_columns(PGconn *conn, mapred_object_t *obj);
 
-boolean mapred_create_object(PGconn *conn, mapred_document_t *doc, 
+boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 							 mapred_object_t *obj);
 void    mapred_remove_object(PGconn *conn, mapred_document_t *doc,
 							 mapred_object_t *obj);
@@ -97,10 +97,10 @@ void      mapred_run_queries(PGconn *conn, mapred_document_t *doc);
 
 void mapred_resolve_dependencies(PGconn *conn, mapred_document_t *doc);
 void mapred_resolve_ref(mapred_olist_t *olist, mapred_reference_t *ref);
-void mapred_resolve_object(PGconn *conn, mapred_document_t *doc, 
+void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 						   mapred_object_t *obj, int *exec_count);
 
-void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc, 
+void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 								mapred_object_t *obj);
 
 /* Wrappers around malloc/free to handle error conditions more cleanly */
@@ -161,7 +161,7 @@ int mapred_obj_error(mapred_object_t *obj, char *fmt, ...)
 		fprintf(stderr, ", at line %d\n", obj->line);
 	else
 		fprintf(stderr, "\n");
-	
+
 	return MAPRED_PARSE_ERROR;
 }
 
@@ -196,19 +196,19 @@ static void mapred_obj_debug(mapred_object_t *obj)
 		case MAPRED_COMBINER:
 		case MAPRED_FINALIZER:
 		{
-			fprintf(stderr, "  LANGUAGE: %s\n", obj->u.function.language ? 
+			fprintf(stderr, "  LANGUAGE: %s\n", obj->u.function.language ?
 					obj->u.function.language : "-");
 			fprintf(stderr, "  PARAMETERS: [");
 			for (plist = obj->u.function.parameters; plist; plist = plist->next)
 			{
-				fprintf(stderr, "%s %s%s", plist->name, plist->type, 
+				fprintf(stderr, "%s %s%s", plist->name, plist->type,
 						plist->next ? ", " : "");
 			}
 			fprintf(stderr,"]\n");
 			fprintf(stderr, "  RETURNS: [");
 			for (plist = obj->u.function.returns; plist; plist = plist->next)
 			{
-				fprintf(stderr, "%s %s%s", plist->name, plist->type, 
+				fprintf(stderr, "%s %s%s", plist->name, plist->type,
 						plist->next ? ", " : "");
 			}
 			fprintf(stderr,"]\n");
@@ -248,7 +248,7 @@ void bufreset(buffer_t *b)
 	b->buffer[0] = '\0';
 }
 
-/* 
+/*
  * A simple wrapper around a strncpy that handles resizing an input buffer
  * when needed.
  */
@@ -262,7 +262,7 @@ void bufcat(buffer_t **bufp, char* str)
 
 	b = *bufp;
 	len = strlen(str);
-	
+
 	/* If the buffer is too small, grow it */
 	if (b->bufsize <= b->position + len)
 	{
@@ -293,11 +293,11 @@ void bufcat(buffer_t **bufp, char* str)
  * smarter, but this is preferable to dumping them to libpq's default
  * of dumping them to stderr.
  */
-void ignore_notice_handler(void *arg, const PGresult *res) 
+void ignore_notice_handler(void *arg, const PGresult *res)
 {
 }
 
-void print_notice_handler(void *arg, const PGresult *res) 
+void print_notice_handler(void *arg, const PGresult *res)
 {
 	char *error = PQresultErrorMessage(res);
 	if (!strncmp(error, DISTRIBUTION_NOTICE, strlen(DISTRIBUTION_NOTICE)-1))
@@ -308,15 +308,15 @@ void print_notice_handler(void *arg, const PGresult *res)
 	fprintf(stderr, "%s", error);
 }
 
-/* 
+/*
  * If a function is already defined in the database we need to be able to
- * lookup the function information directly from the catalog.  This is 
+ * lookup the function information directly from the catalog.  This is
  * fairly similar to func_get_detail in backend/parser/parse_func.c, but
- * the lookup from yaml is slightly different because we don't know the 
+ * the lookup from yaml is slightly different because we don't know the
  * context that the function is in, but we _might_ have been told some
  * of the parameter information already.
  */
-void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc, 
+void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 								mapred_object_t *obj)
 {
 	PGresult			*result	 = NULL;
@@ -331,7 +331,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 	const int			STR_LEN  = 50;
 	char				str[STR_LEN];
 	int					i, nargs;
-	
+
 	XASSERT(doc);
 	XASSERT(obj);
 	XASSERT(obj->kind == MAPRED_MAPPER     ||
@@ -342,12 +342,12 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 	obj->internal = true;
 	obj->u.function.internal_returns = NULL;
 
-	XTRY 
+	XTRY
 	{
 		buffer = makebuffer(1024, 1024);
 
 		/* Try to lookup the specified function */
-		bufcat(&buffer, 
+		bufcat(&buffer,
 			   "SELECT proretset, prorettype::regtype, pronargs,\n"
 			   "       proargnames, proargmodes, \n"
 			   "       (proargtypes::regtype[])[0:pronargs] as proargtypes,\n"
@@ -355,7 +355,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 
 		/*
 		 * If we have return types defined in the yaml then we want to resolve
-		 * them to their authorative names for comparison purposes. 
+		 * them to their authorative names for comparison purposes.
 		 */
 		if (obj->u.function.returns)
 		{
@@ -407,17 +407,17 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 			snprintf(str, STR_LEN, "]\n  AND pronargs=%d\n", nargs);
 			bufcat(&buffer, str);
 		}
-		
+
 		/* Run the SQL */
 		if (global_print_flag || global_debug_flag)
 			printf("%s", buffer->buffer);
 		result = PQexec(conn, buffer->buffer);
 		bufreset(buffer);
-		
+
 		if (PQresultStatus(result) != PGRES_TUPLES_OK)
 		{
-			/* 
-			 * The SQL statement failed: 
+			/*
+			 * The SQL statement failed:
 			 * Most likely scenario is a bad datatype causing the regtype cast
 			 * to fail.
 			 */
@@ -459,7 +459,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 			char        *name, *nametokens = NULL;
 			char        *mode, *modetokens = NULL;
 			boolean     name_end, mode_end;
-				
+
 			value = PQgetvalue(result, 0, 0);   /* Column 0: proretset */
 			retset = (value[0] == 't');
 			value = PQgetvalue(result, 0, 1);   /* Column 1: prorettype */
@@ -516,7 +516,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 
 			/*
 			 * These constraints should all be enforced in the catalog, so
-			 * if something is wrong then it's a coding error above. 
+			 * if something is wrong then it's a coding error above.
 			 */
 			XASSERT(rettype);
 			XASSERT(argtypes);
@@ -540,8 +540,8 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 				name = strtok_r(tmp2, ",", &nametokens);
 				mode = strtok_r(tmp3, ",", &modetokens);
 
-				/* 
-				 * Name and mode are used for IN/OUT parameters and may not be 
+				/*
+				 * Name and mode are used for IN/OUT parameters and may not be
 				 * present.  In the event that they are we are looking for:
 				 *   - the "i" (in) arguments
 				 *   - the "b" (inout) arguments
@@ -554,8 +554,8 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 				 * up as "" (two quotes, not an empty string) if there is an
 				 * argnames defined.
 				 *
-				 * If argmodes is not defined then all names in proargnames 
-				 * refer to input arguments.  
+				 * If argmodes is not defined then all names in proargnames
+				 * refer to input arguments.
 				 */
 
 				while (mode && strcmp(mode, "i") && strcmp(mode, "b"))
@@ -573,7 +573,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 					i++;
 					XASSERT(i <= nargs);
 
-					/* 
+					/*
 					 * If a name was not specified by the user, and was not
 					 * specified by the in/out parameters then we assign it a
 					 * default name.
@@ -588,7 +588,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 						 * two arguments */
 						else if (i <= 2)
 							name = (char*) default_parameter_names[obj->kind][i-1];
-						
+
 						/*
 						 * If we still didn't decide on a name, make up
 						 * something useless.
@@ -599,7 +599,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 							name = str;
 						}
 					}
-					
+
 					if (!plist)
 					{
 						plist = mapred_malloc(sizeof(mapred_plist_t));
@@ -616,7 +616,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 						plist->type = copyscalar(type);
 						plist->next = (mapred_plist_t *) NULL;
 					}
-					
+
 					/* Procede to the next parameter */
 					type = strtok_r(NULL, ",", &typetokens);
 					if (!name_end)
@@ -652,7 +652,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 				tmp3 = NULL;
 			}
 
-			/* 
+			/*
 			 * Check that the number of parameters received is appropriate.
 			 * This would be better moved to a generalized validation routine.
 			 */
@@ -724,8 +724,8 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 			else
 				obj->u.function.mode = MAPRED_MODE_SINGLE;
 
-			/* 
-			 * Determine the return type information, there are 3 primary 
+			/*
+			 * Determine the return type information, there are 3 primary
 			 * subcases:
 			 *
 			 *  1) Function is defined with OUT/TABLE parameters.
@@ -747,13 +747,13 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 				type = strtok_r(tmp1, ",", &typetokens);
 				name = strtok_r(tmp2, ",", &nametokens);
 				mode = strtok_r(tmp3, ",", &modetokens);
-				
+
 				i = 1;
 				while (mode)
 				{
-					while (mode && 
-						   strcmp(mode, "o") && 
-						   strcmp(mode, "b") && 
+					while (mode &&
+						   strcmp(mode, "o") &&
+						   strcmp(mode, "b") &&
 						   strcmp(mode, "t"))
 					{
 						/* skip input parameters */
@@ -767,7 +767,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 
 						newitem = mapred_malloc(sizeof(mapred_plist_t));
 
-						/* 
+						/*
 						 * Note we haven't made local copies of these, we will
 						 * do this after resolution when validating against any
 						 * RETURNS defined in the yaml, if any.
@@ -786,9 +786,9 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 							snprintf( str, STR_LEN, "column%d", i);
 							newitem->name = copyscalar(str);
 						}
-						
+
 						newitem->type = copyscalar(type);
-						
+
 						newitem->next = NULL;
 
 						if (plist)
@@ -811,7 +811,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 				tmp3 = NULL;
 			}
 
-			/* 
+			/*
 			 * If the arguments were not defined in the function definition then
 			 * we check to see if this was a complex type by looking up the type
 			 * information in pg_attribute.
@@ -826,12 +826,12 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 					   "  AND  a.attnum > 0\n"
 					   "  AND  c.reltype = '");
 				bufcat(&buffer, rettype);
-				bufcat(&buffer, 
+				bufcat(&buffer,
 					   "'::regtype\n"
 					   "ORDER BY -attnum");
 				result2 = PQexec(conn, buffer->buffer);
 				bufreset(buffer);
-				
+
 				if (PQresultStatus(result2) != PGRES_TUPLES_OK)
 				{
 					char *error = PQresultErrorMessage(result);
@@ -856,7 +856,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 				}
 			}
 
-			/* 
+			/*
 			 * If the return types were not defined in either the argument list
 			 * nor the catalog then we assume it is a simple type.
 			 */
@@ -877,17 +877,17 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 				returns->next = NULL;
 			}
 
-			/* 
+			/*
 			 * We now should have a returns list, compare it against the RETURNS
 			 * list given in the yaml.  The yaml overrides return names, but can
 			 * not override return types.  If the return types are incompatible
-			 * raise an error.  
+			 * raise an error.
 			 */
 			obj->u.function.internal_returns = returns;
 			if (obj->u.function.returns)
 			{
-				/* 
-				 * The first thing to do is normalize the given return types 
+				/*
+				 * The first thing to do is normalize the given return types
 				 * with their formal names.  This will, for example turn a type
 				 * like "float8" => "double precision".  The input name might
 				 * be correct (float8) but we need it represented as the formal
@@ -899,8 +899,8 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 				while (plist)
 				{
 					XASSERT(type);  /* should be an equal number */
-					
-					/* 
+
+					/*
 					 * If we have a type specified replace it with the one we
 					 * resolved from the select stmt, otherwise just keep it
 					 * as NULL and fill it in during the compare against what
@@ -909,8 +909,8 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 					if (plist->type)
 					{
 						mapred_free(plist->type);
-						
-						/* 
+
+						/*
 						 * When in an array the typname may get wrapped in
 						 * double quotes, if so we need to strip them back out.
 						 */
@@ -937,8 +937,8 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 				{
 					XASSERT(plist->name);   /* always defined in YAML */
 					XASSERT(plist2->type);  /* always defined in SQL */
-					
-					/* 
+
+					/*
 					 * In the YAML it is possible to have a name without a type,
 					 * if that is the case then simply take the SQL type.
 					 */
@@ -984,12 +984,12 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 					 */
 					else
 					{
-						/* 
+						/*
 						 * Manufacture a name for a column based on default
-						 * naming rules. 
+						 * naming rules.
 						 */
 						name = (char*) NULL;
-						if (i <= 2) 
+						if (i <= 2)
 							name = (char*) default_return_names[obj->kind][i-1];
 						if (!name)
 						{
@@ -998,7 +998,7 @@ void lookup_function_in_catalog(PGconn *conn, mapred_document_t *doc,
 						}
 						plist->name = copyscalar(name);
 					}
-				}				
+				}
 			}
 		}
 	}
@@ -1035,7 +1035,7 @@ void mapred_run_document(PGconn *conn, mapred_document_t *doc)
 	/* Establish a name-prefix for temporary objects */
 	doc->prefix = mapred_malloc(64);
 	snprintf(doc->prefix, 64, "mapreduce_%d_", PQbackendPID(conn));
-	
+
 
 	/*
 	 * Resolution of dependecies was defered until now so that
@@ -1052,8 +1052,8 @@ void mapred_run_document(PGconn *conn, mapred_document_t *doc)
 	{
 
 		/*
-		 * Setting gp_mapreduce_define will disable logging of sql 
-		 * statements. 
+		 * Setting gp_mapreduce_define will disable logging of sql
+		 * statements.
 		 */
 #ifndef INTERNAL_BUILD
 		result = PQexec(conn, "set gp_mapreduce_define=true");
@@ -1079,9 +1079,9 @@ void mapred_run_document(PGconn *conn, mapred_document_t *doc)
 		if (global_verbose_flag)
 			fprintf(stderr, "  - Creating Objects\n");
 
-		/* 
-		 * we don't try to create any executes until all non-executes are 
-		 * successfully created 
+		/*
+		 * we don't try to create any executes until all non-executes are
+		 * successfully created
 		 */
 		executes = false;
 		do
@@ -1096,24 +1096,23 @@ void mapred_run_document(PGconn *conn, mapred_document_t *doc)
 				doc->errors = makebuffer(1024, 1024);
 			else
 				bufreset(doc->errors);
-			
 
-			/* 
+			/*
 			 * Loop through the objects, creating each in turn.
 			 * If an object has dependencies that have not been created yet
 			 * it will return false and we will make additional passes through
-			 * the object list 
-			 */  
+			 * the object list
+			 */
 			done  = true;
 			for (olist = doc->objects; olist; olist = olist->next)
 			{
 				mapred_object_t *obj = olist->object;
-				if (!obj->created && 
+				if (!obj->created &&
 					(executes || obj->kind != MAPRED_EXECUTION))
 				{
 					if (global_verbose_flag && obj->kind != MAPRED_ADT)
 					{
-						fprintf(stderr, "    - %s:\n", 
+						fprintf(stderr, "    - %s:\n",
 								mapred_kind_name[obj->kind]);
 						fprintf(stderr, "       NAME: %s\n", obj->name);
 					}
@@ -1124,10 +1123,10 @@ void mapred_run_document(PGconn *conn, mapred_document_t *doc)
 						progress = true;
 				}
 			}
-			
+
 			/*
 			 * If all non-execute objects have been created then switch over
-			 * and start creating the execution jobs 
+			 * and start creating the execution jobs
 			 */
 			if (done && !executes)
 			{
@@ -1135,8 +1134,7 @@ void mapred_run_document(PGconn *conn, mapred_document_t *doc)
 				done = false;
 			}
 
-			
-			/* 
+			/*
 			 * If we looped through the list, we are not done, and no progress
 			 * was made then we have an infinite cycle and should probably stop.
 			 */
@@ -1144,7 +1142,7 @@ void mapred_run_document(PGconn *conn, mapred_document_t *doc)
 			{
 				if (doc->errors && doc->errors->position > 0)
 					fprintf(stderr, "%s", doc->errors->buffer);
-				XRAISE(MAPRED_PARSE_ERROR, 
+				XRAISE(MAPRED_PARSE_ERROR,
 					   "Unable to make forward progress creating objects\n");
 			}
 
@@ -1172,7 +1170,7 @@ void mapred_run_document(PGconn *conn, mapred_document_t *doc)
 	{
 
 		/*
-		 * disable statement logging before deleting objects 
+		 * disable statement logging before deleting objects
 		 */
 #ifndef INTERNAL_BUILD
 		result = PQexec(conn, "set gp_mapreduce_define=true");
@@ -1215,7 +1213,7 @@ void mapred_resolve_dependencies(PGconn *conn, mapred_document_t *doc)
 
 }
 
-void mapred_resolve_object(PGconn *conn, mapred_document_t *doc, 
+void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 						   mapred_object_t *obj, int *exec_count)
 {
 	mapred_olist_t  *newlist;
@@ -1230,7 +1228,7 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 			break;
 
 		case MAPRED_INPUT:
-			/* 
+			/*
 			 * For FILE/GPFDIST/EXEC inputs we will create a name-prefixed
 			 * version of the object to prevent name collisions, and then
 			 * create a second temporary view over the external table to
@@ -1257,9 +1255,9 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 				snprintf(newinput->u.input.desc, len,
 						 "select * from %s%s",
 						 doc->prefix, obj->name);
-				
-				/* 
-				 * Find parent input in the doclist and add the new object 
+
+				/*
+				 * Find parent input in the doclist and add the new object
 				 * immediately after it.
 				 */
 				for (parent = doc->objects;
@@ -1280,7 +1278,7 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 		case MAPRED_FINALIZER:
 
 
-			/* 
+			/*
 			 * If the function is an internal function then we try to resolve
 			 * the function by looking it up in the catalog.
 			 */
@@ -1298,10 +1296,10 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 				XASSERT(false);
 			}
 
-			/* 
-			 * The function types may manufacture a dependency on an adt, 
+			/*
+			 * The function types may manufacture a dependency on an adt,
 			 * but have no other dependencies.
-			 */		
+			 */
 			else if (obj->u.function.returns->next)
 			{
 				sub = mapred_malloc(sizeof(mapred_object_t));
@@ -1309,10 +1307,10 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 				sub->kind = MAPRED_ADT;
 				len = strlen(doc->prefix) + strlen(obj->name) + 7;
 				sub->name = mapred_malloc(len);
-				snprintf(sub->name, len, "%s%s_rtype", 
+				snprintf(sub->name, len, "%s%s_rtype",
 						 doc->prefix, obj->name);
 				sub->u.adt.returns = obj->u.function.returns;
-				
+
 				obj->u.function.rtype.name = sub->name;
 				obj->u.function.rtype.object = sub;
 
@@ -1351,7 +1349,6 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 				sub->line = obj->line;
 				strncpy(sub->name, obj->u.reducer.transition.name, len);
 
-				
 				newlist = mapred_malloc(sizeof(mapred_olist_t));
 				newlist->object = sub;
 				newlist->next = doc->objects;
@@ -1372,7 +1369,7 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 				sub->name = mapred_malloc(len);
 				sub->line = obj->line;
 				strncpy(sub->name, obj->u.reducer.combiner.name, len);
-				
+
 				newlist = mapred_malloc(sizeof(mapred_olist_t));
 				newlist->object = sub;
 				newlist->next = doc->objects;
@@ -1393,7 +1390,7 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 				sub->name = mapred_malloc(len);
 				sub->line = obj->line;
 				strncpy(sub->name, obj->u.reducer.finalizer.name, len);
-				
+
 				newlist = mapred_malloc(sizeof(mapred_olist_t));
 				newlist->object = sub;
 				newlist->next = doc->objects;
@@ -1411,10 +1408,10 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 		case MAPRED_TASK:
 		case MAPRED_EXECUTION:
 		{
-			/* 
+			/*
 			 * Resolving a task may require recursion to resolve other
-			 * tasks to work out parameter lists.  We keep track of 
-			 * our resolution state in order to detect potential 
+			 * tasks to work out parameter lists.  We keep track of
+			 * our resolution state in order to detect potential
 			 * infinite recursion issues.
 			 */
 			if (obj->u.task.flags & mapred_task_resolved)
@@ -1448,7 +1445,7 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 			{
 				mapred_resolve_ref(doc->objects, &obj->u.task.input);
 				sub = obj->u.task.input.object;
-				
+
 				/* If we can't find the input, throw an error */
 				if (!sub)
 				{
@@ -1458,8 +1455,8 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 					XRAISE(MAPRED_PARSE_ERROR, "Object Resolution Failure");
 				}
 
-				/* 
-				 * The input must either be an INPUT or a TASK 
+				/*
+				 * The input must either be an INPUT or a TASK
 				 */
 				switch (sub->kind)
 				{
@@ -1470,22 +1467,22 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 						/* This objects input is the sub objects output */
 						mapred_resolve_object(conn, doc, sub, exec_count);
 						break;
-							
+
 						/* Otherwise generate an error */
 					default:
 
 						/* SOURCE wasn't an INPUT */
 						mapred_obj_error(obj, "SOURCE '%s' is neither an INPUT nor a TASK",
-										 obj->u.task.input.name);	
+										 obj->u.task.input.name);
 						XRAISE(MAPRED_PARSE_ERROR, "Object Resolution Failure");
 				}
 			}
-			
+
 			if (obj->u.task.mapper.name)
 			{
 				mapred_resolve_ref(doc->objects, &obj->u.task.mapper);
 				sub = obj->u.task.mapper.object;
-				
+
 				if (!sub)
 				{
 					/* Create an internal map function */
@@ -1529,7 +1526,7 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 			{
 				mapred_resolve_ref(doc->objects, &obj->u.task.reducer);
 				sub = obj->u.task.reducer.object;
-				
+
 				if (!sub)
 				{
 					/* FIXME: non-yaml reducers */
@@ -1538,7 +1535,7 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 				{   /* Validate Reducer */
 					mapred_resolve_object(conn, doc, sub, exec_count);
 				}
-				else 
+				else
 				{   /* It's an object, but not a REDUCER */
 					mapred_obj_error(obj, "REDUCE '%s' is not a REDUCE object",
 									 obj->u.task.reducer.name);
@@ -1565,7 +1562,7 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 					XRAISE(MAPRED_PARSE_ERROR, "Object Resolution Failure");
 				}
 			}
-	
+
 			/* clear resolving bit and set resolved bit */
 			obj->u.task.flags &= !mapred_task_resolving;
 			obj->u.task.flags |= mapred_task_resolved;
@@ -1580,7 +1577,7 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
 		mapred_obj_debug(obj);
 }
 
-/* 
+/*
  * mapred_setup_columns -
  *   setup column lists (input, output, grouping, etc)
  *
@@ -1588,7 +1585,7 @@ void mapred_resolve_object(PGconn *conn, mapred_document_t *doc,
  *   but for some things (defined in the database rather than in
  *   the YAML, eg QUERY INPUTS) we can not determine the columns
  *   until the object has been created.  Which can trickle down to
- *   any object that depends on it.  
+ *   any object that depends on it.
  *
  *   For this reason we don't setup the columns during the parse phase,
  *   but rather just before or just after we actually create the object
@@ -1607,8 +1604,8 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 
 		case MAPRED_INPUT:
 
-			/* 
-			 * Should be called after creation, otherwise catalog queries 
+			/*
+			 * Should be called after creation, otherwise catalog queries
 			 * could fail.
 			 */
 			XASSERT(obj->created);
@@ -1617,12 +1614,12 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 			if (obj->u.input.type == MAPRED_INPUT_TABLE ||
 				obj->u.input.type == MAPRED_INPUT_QUERY)
 			{
-				/* 
+				/*
 				 * This gets the ordered list of columns for the first
 				 * input of the given name in the user's search path.
 				 */
 				buffer_t *buffer = makebuffer(1024, 1024);
-				bufcat(&buffer, 
+				bufcat(&buffer,
 					   "SELECT  attname, "
 					   "        pg_catalog.format_type(atttypid, atttypmod)\n"
 					   "FROM    pg_catalog.pg_attribute\n"
@@ -1631,13 +1628,13 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 					bufcat(&buffer, obj->u.input.desc);
 				else
 					bufcat(&buffer, obj->name);
-				bufcat(&buffer, 
+				bufcat(&buffer,
 					   "')::regclass\n"
 					   "ORDER BY   -attnum;\n\n");
-			
+
 				if (global_debug_flag)
-					printf("%s", buffer->buffer);			
-						
+					printf("%s", buffer->buffer);
+
 				result = PQexec(conn, buffer->buffer);
 				mapred_free(buffer);
 
@@ -1650,7 +1647,7 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 					/* Destroy any previous default values we setup */
 					mapred_destroy_plist(&obj->u.input.columns);
 
-					/* 
+					/*
 					 * The columns were sorted reverse order above so
 					 * the list can be generated back -> front
 					 */
@@ -1658,7 +1655,7 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 					{
 						char *name = PQgetvalue(result, i, 0);
 						char *type = PQgetvalue(result, i, 1);
-					
+
 						/* Add the column to the list */
 						newitem = mapred_malloc(sizeof(mapred_plist_t));
 						newitem->name = mapred_malloc(strlen(name)+1);
@@ -1688,7 +1685,7 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 					{
 						mapred_obj_error(obj, "Table '%s' not found", name);
 					}
-					else 
+					else
 					{
 						mapred_obj_error(obj, "Table '%s' unknown error: %s", name, error);
 					}
@@ -1717,10 +1714,10 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 
 			XASSERT(transition);
 			XASSERT(transition->u.function.parameters);
-			obj->u.reducer.parameters = 
+			obj->u.reducer.parameters =
 				transition->u.function.parameters->next;
 
-			/* 
+			/*
 			 * Use the return result of:
 			 *   1) The finalizer
 			 *   2) The combiner, or
@@ -1735,16 +1732,16 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 			else if (obj->u.reducer.combiner.name)
 				sub = obj->u.reducer.combiner.object;
 			else
-				sub = obj->u.reducer.transition.object;			 
-					
+				sub = obj->u.reducer.transition.object;
+
 			if (sub)
 				obj->u.reducer.returns = sub->u.function.returns;
 
 			if (!obj->u.reducer.returns)
 			{
-				/* 
-				 * If unable to determine the returns based on the reducer 
-				 * components (generally due to use of SQL functions) then 
+				/*
+				 * If unable to determine the returns based on the reducer
+				 * components (generally due to use of SQL functions) then
 				 * use the default of a single text column named "value".
 				 */
 				obj->u.reducer.returns = mapred_malloc(sizeof(mapred_plist_t));
@@ -1762,8 +1759,8 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 			mapred_plist_t *scan;
 			mapred_plist_t *last = NULL;
 
-			/* 
-			 * The input must either be an INPUT or a TASK 
+			/*
+			 * The input must either be an INPUT or a TASK
 			 */
 			sub = obj->u.task.input.object;
 			switch (sub->kind)
@@ -1773,20 +1770,20 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 					break;
 
 				case MAPRED_TASK:
-					/* union the input tasks returns and grouping */					
+					/* union the input tasks returns and grouping */
 					for (scan = sub->u.task.grouping;
-						 scan; 
+						 scan;
 						 scan = scan->next)
 					{
 						if (!last)
 						{
-							obj->u.task.parameters = 
+							obj->u.task.parameters =
 								mapred_malloc(sizeof(mapred_plist_t));
 							last = obj->u.task.parameters;
 						}
 						else
 						{
-							last->next = 
+							last->next =
 								mapred_malloc(sizeof(mapred_plist_t));
 							last = last->next;
 						}
@@ -1800,13 +1797,13 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 					{
 						if (!last)
 						{
-							obj->u.task.parameters = 
+							obj->u.task.parameters =
 								mapred_malloc(sizeof(mapred_plist_t));
 							last = obj->u.task.parameters;
 						}
 						else
 						{
-							last->next = 
+							last->next =
 								mapred_malloc(sizeof(mapred_plist_t));
 							last = last->next;
 						}
@@ -1815,15 +1812,15 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 						last->next = NULL;
 					}
 					break;
-							
+
 				default:
 					/* Should have already been validated */
 					XASSERT(false);
 			}
-			
+
 			if (obj->u.task.mapper.name)
 			{
-				sub = obj->u.task.mapper.object;				
+				sub = obj->u.task.mapper.object;
 				if (!sub)
 				{
 					/* FIXME: Lookup function in database */
@@ -1842,7 +1839,7 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 
 						default:
 							/* Should have already been validated */
-							XASSERT(false); 
+							XASSERT(false);
 					}
 				}
 			}
@@ -1852,12 +1849,12 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 				mapred_clist_t *keys;
 				mapred_plist_t *source;
 
-				/* 
+				/*
 				 * The grouping columns for a task are the columns produced
 				 * by the input/mapper that are not consumed by the reducer.
-				 * 
+				 *
 				 * A special exception is made for a column named "key" which
-				 * is always a grouping column. 
+				 * is always a grouping column.
 				 *
 				 * FIXME: deal with non-yaml map functions
 				 *
@@ -1868,11 +1865,11 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 				else
 					source = obj->u.task.parameters;
 
-				sub = obj->u.task.reducer.object;				
+				sub = obj->u.task.reducer.object;
 				if (!sub)
 				{
 					/*
-					 * The output of a built in function is defined to be 
+					 * The output of a built in function is defined to be
 					 * "value", with an input of "value", everything else
 					 * is defined to be a grouping column.
 					 */
@@ -1883,13 +1880,13 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 						{
 							if (!last)
 							{
-								obj->u.task.grouping = 
+								obj->u.task.grouping =
 									mapred_malloc(sizeof(mapred_plist_t));
 								last = obj->u.task.grouping;
 							}
 							else
 							{
-								last->next = 
+								last->next =
 									mapred_malloc(sizeof(mapred_plist_t));
 								last = last->next;
 							}
@@ -1901,15 +1898,15 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 				}
 				else
 				{
-					/* Validate Reducer */					
+					/* Validate Reducer */
 					XASSERT(sub->kind == MAPRED_REDUCER);
 
-					/* 
+					/*
 					 * source is the set of input columns that the reducer has
-					 * to work with.  
+					 * to work with.
 					 *
 					 * Loop the reducer "keys" clause to determine what keys are
-					 * present.  
+					 * present.
 					 */
 					last = NULL;
 					for (keys = sub->u.reducer.keys; keys; keys = keys->next)
@@ -1920,8 +1917,8 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 						 */
 						if (keys->value[0] == '*' && keys->value[1] == '\0')
 						{
-							/* 
-							 * Add all sources not found in either parameters, 
+							/*
+							 * Add all sources not found in either parameters,
 							 * or explicitly mentioned in keys
 							 */
 							for (scan = source; scan; scan = scan->next)
@@ -1929,8 +1926,8 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 								mapred_plist_t *pscan;
 								mapred_clist_t *kscan;
 
-								for (pscan = sub->u.reducer.parameters; 
-									 pscan; 
+								for (pscan = sub->u.reducer.parameters;
+									 pscan;
 									 pscan = pscan->next)
 								{
 									if (!strcasecmp(scan->name, pscan->name))
@@ -1938,8 +1935,8 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 								}
 								if (pscan)
 									continue;   /* found in parameters */
-								for (kscan = sub->u.reducer.keys; 
-									 kscan; 
+								for (kscan = sub->u.reducer.keys;
+									 kscan;
 									 kscan = kscan->next)
 								{
 									if (!strcasecmp(scan->name, kscan->value))
@@ -1951,13 +1948,13 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 								/* we have an unmatched source, add to grouping */
 								if (!last)
 								{
-									obj->u.task.grouping = 
+									obj->u.task.grouping =
 										mapred_malloc(sizeof(mapred_plist_t));
 									last = obj->u.task.grouping;
 								}
 								else
 								{
-									last->next = 
+									last->next =
 										mapred_malloc(sizeof(mapred_plist_t));
 									last = last->next;
 								}
@@ -1975,13 +1972,13 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 									/* we have a match, add the key to grouping */
 									if (!last)
 									{
-										obj->u.task.grouping = 
+										obj->u.task.grouping =
 											mapred_malloc(sizeof(mapred_plist_t));
 										last = obj->u.task.grouping;
 									}
 									else
 									{
-										last->next = 
+										last->next =
 											mapred_malloc(sizeof(mapred_plist_t));
 										last = last->next;
 									}
@@ -1994,10 +1991,10 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 					}
 				}
 			}
-			
+
 			/*
-			 * If there is a reducer then the "returns" columns are the 
-			 * output of the reducer, and must be unioned with the grouping 
+			 * If there is a reducer then the "returns" columns are the
+			 * output of the reducer, and must be unioned with the grouping
 			 * columns for final output.
 			 *
 			 * If there is no reducer then the returns columns are the
@@ -2007,7 +2004,7 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 			{
 				/*
 				 * If it is a built in function then we'll just fall into the
-				 * default of a single text column named "value". 
+				 * default of a single text column named "value".
 				 */
 				sub = obj->u.task.reducer.object;
 				if (sub)
@@ -2027,9 +2024,9 @@ void mapred_setup_columns(PGconn *conn, mapred_object_t *obj)
 
 			if (!obj->u.task.returns)
 			{
-				/* 
-				 * If unable to determine the returns based on the reducer 
-				 * components (generally due to use of SQL functions) then 
+				/*
+				 * If unable to determine the returns based on the reducer
+				 * components (generally due to use of SQL functions) then
 				 * use the default of a single text column named "value".
 				 */
 				obj->u.task.returns = mapred_malloc(sizeof(mapred_plist_t));
@@ -2067,7 +2064,7 @@ void mapred_destroy_object(mapred_object_t **objh)
 {
 	mapred_object_t *obj;
 
-	/* 
+	/*
 	 * We are passed a handle to the object, get the actual pointer and point
 	 * the handle to NULL so that it is not stale once we free the list below.
 	 */
@@ -2075,7 +2072,7 @@ void mapred_destroy_object(mapred_object_t **objh)
 		return;
 	obj = *objh;
 	*objh = (mapred_object_t *) NULL;
-	
+
 	/* What fields are valid is dependent on what kind of object it is */
 	scalarfree(obj->name);
 	switch (obj->kind)
@@ -2111,7 +2108,7 @@ void mapred_destroy_object(mapred_object_t **objh)
 			scalarfree(obj->u.function.body);
 			scalarfree(obj->u.function.language);
 			mapred_destroy_plist(&obj->u.function.parameters);
-			
+
 			if( obj->internal &&
 					obj->u.function.internal_returns != obj->u.function.returns )
 				mapred_destroy_plist(&obj->u.function.internal_returns);
@@ -2151,7 +2148,7 @@ void mapred_destroy_olist(mapred_olist_t **olisth)
 	mapred_olist_t *olist;
 	mapred_olist_t *next;
 
-	/* 
+	/*
 	 * We are passed a handle to the olist, get the actual pointer and point
 	 * the handle to NULL so that it is not stale once we free the list below.
 	 */
@@ -2176,7 +2173,7 @@ void mapred_destroy_clist(mapred_clist_t **clisth)
 	mapred_clist_t *clist;
 	mapred_clist_t *next;
 
-	/* 
+	/*
 	 * We are passed a handle to the olist, get the actual pointer and point
 	 * the handle to NULL so that it is not stale once we free the list below.
 	 */
@@ -2200,7 +2197,7 @@ void mapred_destroy_plist(mapred_plist_t **plisth)
 	mapred_plist_t *plist;
 	mapred_plist_t *next;
 
-	/* 
+	/*
 	 * We are passed a handle to the olist, get the actual pointer and point
 	 * the handle to NULL so that it is not stale once we free the list below.
 	 */
@@ -2235,11 +2232,11 @@ void mapred_run_queries(PGconn *conn, mapred_document_t *doc)
 	FILE            *outfile = stdout;
 	buffer_t        *buffer  = NULL;
 
-	XTRY 
+	XTRY
 	{
 		/* allocates 512 bytes, extending by 512 bytes if we run out. */
 		buffer = makebuffer(512, 512);
-		
+
 		/* Loop through all objects */
 		for (olist = doc->objects; olist; olist = olist->next)
 		{
@@ -2251,7 +2248,7 @@ void mapred_run_queries(PGconn *conn, mapred_document_t *doc)
 
 				/* Reset the buffer from any previous executions */
 				bufreset(buffer);
-				
+
 				output = olist->object->u.task.output.object;
 
 				/*
@@ -2262,7 +2259,7 @@ void mapred_run_queries(PGconn *conn, mapred_document_t *doc)
 				if (output && output->u.output.type == MAPRED_OUTPUT_TABLE)
 				{
 					/* does the table already exist? */
-					bufcat(&buffer, 
+					bufcat(&buffer,
 						   "SELECT n.nspname \n"
 						   "FROM   pg_catalog.pg_class c JOIN \n"
 						   "       pg_catalog.pg_namespace n on \n"
@@ -2323,7 +2320,7 @@ void mapred_run_queries(PGconn *conn, mapred_document_t *doc)
 						bufcat(&buffer, output->u.output.desc);
 						bufcat(&buffer, " (");
 					}
-					else 
+					else
 					{
 						/* exists, mode is neither replace or append => error */
 						mapred_obj_error(output, "Table '%s' already exists",
@@ -2344,14 +2341,13 @@ void mapred_run_queries(PGconn *conn, mapred_document_t *doc)
 				bufcat(&buffer, "SELECT * FROM ");
 				bufcat(&buffer, olist->object->name);
 
-				/* 
+				/*
 				 * add the DISTRIBUTED BY clause for output tables
 				 * OR, the ORDER BY clause for other output formats
 				 */
 				if (output && output->u.output.type == MAPRED_OUTPUT_TABLE)
 				{
-
-					/* 
+					/*
 					 * If there are no key columns then leave off the
 					 * distributed by clause and let the server choose.
 					 */
@@ -2367,15 +2363,15 @@ void mapred_run_queries(PGconn *conn, mapred_document_t *doc)
 							bufcat(&buffer, columns->name);
 							if (columns->next)
 								bufcat(&buffer, ", ");
-							columns = columns->next;				   
+							columns = columns->next;
 						}
 						bufcat(&buffer, ")");
 					}
 					else
 					{
-						/* 
+						/*
 						 * don't have any hints for what the distribution keys
-						 * should be, so we do nothing and let the database 
+						 * should be, so we do nothing and let the database
 						 * decide
 						 */
 					}
@@ -2392,7 +2388,7 @@ void mapred_run_queries(PGconn *conn, mapred_document_t *doc)
 							bufcat(&buffer, columns->name);
 							if (columns->next || olist->object->u.task.returns)
 								bufcat(&buffer, ", ");
-							columns = columns->next;	   
+							columns = columns->next;
 						}
 						columns = olist->object->u.task.returns;
 						while (columns)
@@ -2400,7 +2396,7 @@ void mapred_run_queries(PGconn *conn, mapred_document_t *doc)
 							bufcat(&buffer, columns->name);
 							if (columns->next)
 								bufcat(&buffer, ", ");
-							columns = columns->next;			   
+							columns = columns->next;
 						}
 					}
 				}
@@ -2456,9 +2452,9 @@ void mapred_run_queries(PGconn *conn, mapred_document_t *doc)
 						outfile = stdout;
 					}
 
-					/* 
-					 * Enable notices for user queries since they may contain 
-					 * debugging info. 
+					/*
+					 * Enable notices for user queries since they may contain
+					 * debugging info.
 					 */
 					PQsetNoticeReceiver(conn, print_notice_handler, NULL);
 					result = PQexec(conn, buffer->buffer);
@@ -2491,11 +2487,11 @@ void mapred_run_queries(PGconn *conn, mapred_document_t *doc)
 								/* "\t" is our default delimiter */
 								options.fieldSep  = "\t";
 							}
-						
+
 							PQprint(outfile, result, &options);
 							break;
 						}
-						
+
 						/* OUTPUT is a table */
 						case PGRES_COMMAND_OK:
 							fprintf(stderr, "DONE\n");
@@ -2521,7 +2517,7 @@ void mapred_run_queries(PGconn *conn, mapred_document_t *doc)
 	{
 		if (result)
 			PQclear(result);
-					
+
 		if (NULL != outfile && outfile != stdout)
 		{
 			fclose(outfile);
@@ -2535,9 +2531,7 @@ void mapred_run_queries(PGconn *conn, mapred_document_t *doc)
 }
 
 
-
-
-boolean mapred_create_object(PGconn *conn, mapred_document_t *doc, 
+boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 							 mapred_object_t *obj)
 {
 	mapred_clist_t *clist    = NULL;
@@ -2568,7 +2562,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					case MAPRED_INPUT_TABLE:
 						/* Nothing to actually create */
 						obj->created = true;
-						break;  
+						break;
 
 					case MAPRED_INPUT_FILE:
 					case MAPRED_INPUT_GPFDIST:
@@ -2579,8 +2573,8 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 						bufcat(&buffer, doc->prefix);
 						bufcat(&buffer, obj->name);
 						bufcat(&buffer, "(");
-						for (plist = obj->u.input.columns; 
-							 plist; 
+						for (plist = obj->u.input.columns;
+							 plist;
 							 plist = plist->next)
 						{
 							bufcat(&buffer, plist->name);
@@ -2591,8 +2585,8 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 						}
 						bufcat(&buffer, ")\n");
 						bufcat(&buffer, "  LOCATION(");
-						for (clist = obj->u.input.files; 
-							 clist; 
+						for (clist = obj->u.input.files;
+							 clist;
 							 clist = clist->next)
 						{
 							char *domain_port, *path, *p = NULL;
@@ -2624,8 +2618,8 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 							domain_port = clist->value;
 							path        = p+1;
 
-							/* 
-							 * Overwrite the / separating the domain:port from the path 
+							/*
+							 * Overwrite the / separating the domain:port from the path
 							 * with a nul and move back one byte to check for a trailing ':'.
 							 * We put the / back in when copying into the destination buffer.
 							 */
@@ -2640,7 +2634,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 							}
 
 							/*
-							 * We allow a trailing ':'  (e.g. host:/filepath) 
+							 * We allow a trailing ':'  (e.g. host:/filepath)
 							 * but we must not copy it into the external table url.
 							 */
 							if (*p == ':')
@@ -2665,9 +2659,9 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 							bufcat(&buffer, "  FORMAT 'CSV'");
 						else
 							bufcat(&buffer, "  FORMAT 'TEXT'");
-						if (obj->u.input.delimiter || 
-							obj->u.input.escape    || 
-							obj->u.input.quote     || 
+						if (obj->u.input.delimiter ||
+							obj->u.input.escape    ||
+							obj->u.input.quote     ||
 							obj->u.input.null)
 						{
 							bufcat(&buffer, " ( ");
@@ -2697,11 +2691,11 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 							}
 							bufcat(&buffer, ")");
 						}
-						
+
 						if (obj->u.input.error_limit > 0)
 						{
 							char intbuf[11];
-							snprintf(intbuf, 11, "%d", 
+							snprintf(intbuf, 11, "%d",
 									 obj->u.input.error_limit);
 
 							bufcat(&buffer, "\n  SEGMENT REJECT LIMIT ");
@@ -2718,8 +2712,8 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 						bufcat(&buffer, doc->prefix);
 						bufcat(&buffer, obj->name);
 						bufcat(&buffer, "(");
-						for (plist = obj->u.input.columns; 
-							 plist; 
+						for (plist = obj->u.input.columns;
+							 plist;
 							 plist = plist->next)
 						{
 							bufcat(&buffer, plist->name);
@@ -2736,8 +2730,8 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 							bufcat(&buffer, "  FORMAT 'CSV'");
 						else
 							bufcat(&buffer, "  FORMAT 'TEXT'");
-						if (obj->u.input.delimiter || 
-							obj->u.input.quote     || 
+						if (obj->u.input.delimiter ||
+							obj->u.input.quote     ||
 							obj->u.input.null)
 						{
 							bufcat(&buffer, " ( ");
@@ -2765,7 +2759,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 						if (obj->u.input.error_limit > 0)
 						{
 							char intbuf[11];
-							snprintf(intbuf, 11, "%d", 
+							snprintf(intbuf, 11, "%d",
 									 obj->u.input.error_limit);
 
 							bufcat(&buffer, "\n  SEGMENT REJECT LIMIT ");
@@ -2777,8 +2771,8 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					case MAPRED_INPUT_QUERY:
 						XASSERT(obj->u.input.desc);
 
-						/* 
-						 *  CREATE TEMPORARY VIEW <name> AS 
+						/*
+						 *  CREATE TEMPORARY VIEW <name> AS
 						 *  <desc>;
 						 */
 						bufcat(&buffer, "CREATE TEMPORARY VIEW ");
@@ -2797,7 +2791,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 				break;
 
 			case MAPRED_OUTPUT:
-				/* 
+				/*
 				 * Outputs have no backend objects created directly.
 				 * For output tables we may issue a create table as
 				 * select, but that occurs at run-time.
@@ -2809,7 +2803,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 				/*
 				 * The function types have different defaults and generate
 				 * slightly different error messages, but basically do the
-				 * same thing.  
+				 * same thing.
 				 */
 			case MAPRED_MAPPER:
 			case MAPRED_TRANSITION:
@@ -2826,7 +2820,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 				if (global_print_flag || global_debug_flag)
 					printf("-- %s %s\n", ckind, obj->name);
 
-				/* 
+				/*
 				 * Nothing to do if we already looked up the function in the
 				 * catalog.
 				 */
@@ -2845,7 +2839,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 				XASSERT(obj->u.function.rtype.name);
 				XASSERT(NULL == obj->u.function.internal_returns);
 
-				/* 
+				/*
 				 * fill in the buffer:
 				 *
 				 *    CREATE FUNCTION <name>(<parameters>)
@@ -2853,7 +2847,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 				 *    $$
 				 *    <body>
 				 *    $$ [STRICT] [IMMUTABLE];
-				 *     
+				 *
 				 */
 				bufcat(&buffer, "CREATE FUNCTION ");
 				bufcat(&buffer, doc->prefix);
@@ -2861,8 +2855,8 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 				bufcat(&buffer, "(");
 
 				/* Handle parameter list */
-				for (plist = obj->u.function.parameters; 
-					 plist; 
+				for (plist = obj->u.function.parameters;
+					 plist;
 					 plist = plist->next)
 				{
 					bufcat(&buffer, plist->name);
@@ -2878,7 +2872,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					bufcat(&buffer, "SETOF ");
 				bufcat(&buffer, obj->u.function.rtype.name);
 
-				/* 
+				/*
 				 * Handle LANGUAGE clause, every langauge but 'C' and 'SQL'
 				 * has 'pl' prefixing it
 				 */
@@ -2894,15 +2888,15 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					bufcat(&buffer, " LANGUAGE pl");
 					bufcat(&buffer, obj->u.function.language);
 				}
-			
+
 				/* python only has an untrusted form */
 				if (!strcasecmp("python", obj->u.function.language))
 					bufcat(&buffer, "u");
 
-				
+
 				bufcat(&buffer, " AS ");
 
-				/* 
+				/*
 				 * Handle procedural language specific formatting for the
 				 * function definition.
 				 *
@@ -2952,9 +2946,9 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					bufcat(&buffer, obj->u.function.body);
 					if (buffer->buffer[buffer->position-1] != '\n')
 						bufcat(&buffer, "\n");
-					bufcat(&buffer, "$$");					
+					bufcat(&buffer, "$$");
 				}
-				else 
+				else
 				{
 					/* Some generic other language, take our best guess */
 					bufcat(&buffer, "$$");
@@ -2967,11 +2961,10 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					bufcat(&buffer, " STRICT");
 				if (obj->u.function.flags & mapred_function_immutable)
 					bufcat(&buffer, " IMMUTABLE");
-				
+
 				/* All done */
 				bufcat(&buffer, ";\n\n");
 				break;
-			
 
 			case MAPRED_REDUCER:
 			{
@@ -3013,8 +3006,8 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 				bufcat(&buffer, obj->name);
 				bufcat(&buffer, " (");
 
-				/* 
-				 * Get the state type, and write out the aggregate parameters 
+				/*
+				 * Get the state type, and write out the aggregate parameters
 				 * based on the parameter list of the transition function.
 				 */
 				plist = transition->u.function.parameters;
@@ -3112,7 +3105,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 						printf("-- TASK %s\n", obj->name);
 				}
 
-				/* 
+				/*
 				 * 1) Handle the INPUT, two cases:
 				 *   1a) There is no MAP/REDUCE:  "SELECT * FROM <input>"
 				 *   1b) There is a MAP and/or REDUCE:  "<input>"
@@ -3141,7 +3134,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 						bufcat(&qbuffer, input->name);
 				}
 
-				/* 
+				/*
 				 * How we get the columns depends a bit on the input.
 				 * Is the input actually an "MAPRED_INPUT" object, or is it
 				 * a "MAPRED_TASK" object?
@@ -3155,7 +3148,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					case MAPRED_TASK:
 						columns    = input->u.task.returns;
 						ingrouping = input->u.task.grouping;
-					
+
 						if (!columns)
 						{
 							mapred_obj_error(obj, "Unable to determine return "
@@ -3173,11 +3166,11 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 						break;
 				}
 				XASSERT(columns);
-				
+
 				/*
 				 * 2) Handle the MAPPER, two cases
 				 *  2a) The Mapper returns an generated ADT that needs extraction
-				 *           "SELECT key(m), ... 
+				 *           "SELECT key(m), ...
 				 *            FROM (SELECT <map(...) as m FROM <input>) mapsubq
 				 *  2b) The Mapper returns a single column:
 				 *           "SELECT <map>(...) FROM <input>"
@@ -3238,7 +3231,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 									bufcat(&buffer, plist->name);
 									break;
 								}
-					
+
 						/* Check if this parameter is in global_plist */
 						if (!scan)
 							for (scan = global_plist; scan; scan = scan->next)
@@ -3246,8 +3239,8 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 								{
 									/*
 									 * (HACK)
-									 * Note that global_plist overloads the 
-									 * plist structure using the "type" field 
+									 * Note that global_plist overloads the
+									 * plist structure using the "type" field
 									 * to store "value".
 									 * (HACK)
 									 */
@@ -3259,15 +3252,15 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 								}
 
 
-						/* 
-						 * If we couldn't find it issue a warning and 
-						 * set to NULL 
+						/*
+						 * If we couldn't find it issue a warning and
+						 * set to NULL
 						 */
 						if (!scan)
 						{
 							if (global_verbose_flag)
 								fprintf(stderr, "       ");
-							fprintf(stderr, 
+							fprintf(stderr,
 									"WARNING: unset parameter - "
 									"%s(%s => NULL)\n",
 									mapper->name, plist->name);
@@ -3290,18 +3283,18 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 						bufcat(&buffer, ") mapxq\n");
 						/*
 						 * Need to work this through, it seems that m is true
-						 * whenever a column is null, which is not the desired 
+						 * whenever a column is null, which is not the desired
 						 * behavior.
 						 *
-						 * Look more closely at "grep" code for why we want it, 
+						 * Look more closely at "grep" code for why we want it,
 						 * and "oreilly" code for why we don't.
 						 *
-						 * For the moment the compromise is that we do it only 
-						 * for SINGLE mode functions, since MULTI mode can 
+						 * For the moment the compromise is that we do it only
+						 * for SINGLE mode functions, since MULTI mode can
 						 * control it's own filtering without this.
 						 */
 						if (mapper->u.function.mode != MAPRED_MODE_MULTI)
-							bufcat(&buffer, "WHERE m is not null");   
+							bufcat(&buffer, "WHERE m is not null");
 					}
 					else
 					{
@@ -3310,9 +3303,9 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 						bufcat(&buffer, qbuffer->buffer);
 					}
 
-					/* 
-					 * Swap the buffer into the qbuffer for input as the next 
-					 * stage of the query pipeline. 
+					/*
+					 * Swap the buffer into the qbuffer for input as the next
+					 * stage of the query pipeline.
 					 */
 					swap = qbuffer;
 					qbuffer = buffer;
@@ -3323,7 +3316,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					columns  = mapper->u.function.returns;
 					ingrouping = NULL;
 				}
-				
+
 				/*
 				 * 3) Handle the Reducer, several sub-cases:
 				 */
@@ -3332,15 +3325,15 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					/*
 					 * Step 1:   Determine grouping columns
 					 *    Find which columns are returned from the previous
-					 *    stage that are NOT parameters to the reducer.  
+					 *    stage that are NOT parameters to the reducer.
 					 */
 					grouping = last = NULL;
 					if (!reducer)
 					{
-						/* 
+						/*
 						 * We have a reducer, but it isn't listed in the YAML.
 						 * How to work out parameter handling still needs to
-						 * be worked out.  For now we just assume that this 
+						 * be worked out.  For now we just assume that this
 						 * sort of function always takes a single "value" column
 						 * and returns a "value" column.
 						 */
@@ -3350,13 +3343,13 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 							{
 								if (grouping)
 								{
-									last->next = 
+									last->next =
 										mapred_malloc(sizeof(mapred_plist_t));
 									last = last->next;
 								}
 								else
 								{
-									grouping = 
+									grouping =
 										mapred_malloc(sizeof(mapred_plist_t));
 									last = grouping;
 								}
@@ -3365,14 +3358,14 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 								last->next = NULL;
 							}
 						}
-					} 
+					}
 					else
 					{   /* The reducer exists in the YAML */
-					
+
 						/* We precalculated the grouping columns */
 						grouping = obj->u.task.grouping;
 					}
-				
+
 					/* Fill in the buffer */
 					bufcat(&buffer, "SELECT ");
 					for (plist = grouping; plist; plist = plist->next)
@@ -3380,7 +3373,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 						bufcat(&buffer, plist->name);
 						bufcat(&buffer, ", ");
 					}
-				
+
 					/* Call the aggregation function */
 					if (reducer && !reducer->internal)
 						bufcat(&buffer, doc->prefix);
@@ -3408,20 +3401,20 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 										bufcat(&buffer, plist->name);
 										break;
 									}
-					
+
 							/* Check if this parameter is in global_plist */
 							if (!scan)
 							{
-								for (scan = global_plist; 
-									 scan; 
+								for (scan = global_plist;
+									 scan;
 									 scan = scan->next)
 								{
 									if (!strcasecmp(plist->name, scan->name))
 									{
 										/*
 										 * (HACK)
-										 * Note that global_plist overloads the 
-										 * plist structure using the "type" 
+										 * Note that global_plist overloads the
+										 * plist structure using the "type"
 										 * field to store "value".
 										 * (HACK)
 										 */
@@ -3434,15 +3427,15 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 								}
 							}
 
-							/* 
-							 * If we couldn't find it issue a warning 
-							 * and set to NULL 
+							/*
+							 * If we couldn't find it issue a warning
+							 * and set to NULL
 							 */
 							if (!scan)
 							{
 								if (global_verbose_flag)
 									fprintf(stderr, "       ");
-								fprintf(stderr, 
+								fprintf(stderr,
 										"WARNING: unset parameter - "
 										"%s(%s => NULL)\n",
 										reducer->name, plist->name);
@@ -3452,9 +3445,9 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 							if (plist->next)
 								bufcat(&buffer, ", ");
 						}
-						
+
 						/* Handle ORDERING, if specified */
-						clist = reducer->u.reducer.ordering;						
+						clist = reducer->u.reducer.ordering;
 						if (clist)
 							bufcat(&buffer, " ORDER BY ");
 						for(; clist; clist = clist->next)
@@ -3467,9 +3460,9 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					}
 					else
 					{
-						/* 
-						 * non-yaml reducer always takes "value" as the 
-						 * input column 
+						/*
+						 * non-yaml reducer always takes "value" as the
+						 * input column
 						 */
 
 						/* Check if "value" is one of the input columns */
@@ -3488,7 +3481,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 									bufcat(&buffer, "value");
 									break;
 								}
-					
+
 						/* Check if this parameter is in global_plist */
 						if (!scan)
 							for (scan = global_plist; scan; scan = scan->next)
@@ -3496,8 +3489,8 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 								{
 									/*
 									 * (HACK)
-									 * Note that global_plist overloads the 
-									 * plist structure using the "type" field 
+									 * Note that global_plist overloads the
+									 * plist structure using the "type" field
 									 * to store "value".
 									 * (HACK)
 									 */
@@ -3507,12 +3500,12 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 									bufcat(&buffer, plist->type);
 									break;
 								}
-						
+
 						if (!scan)
 						{
 							if (global_verbose_flag)
 								fprintf(stderr, "       ");
-							fprintf(stderr, 
+							fprintf(stderr,
 									"WARNING: unset parameter - "
 									"%s(value => NULL)\n",
 									obj->u.task.reducer.name);
@@ -3527,11 +3520,11 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 						plist = reducer->u.reducer.returns;
 						XASSERT(plist);  /* Need to have a return! */
 
-						/* 
+						/*
 						 * If the reducer has a finalizer we push it outside of
 						 * the context of the UDA so that we can properly handle
 						 * set returning/column returning functions.
-						 */						   
+						 */
 						if (reducer->u.reducer.finalizer.name)
 							bufcat(&buffer, "r");
 						else
@@ -3539,9 +3532,9 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					}
 					else
 					{
-						/* 
-						 * non-yaml reducer always return a single column 
-						 * named "value" 
+						/*
+						 * non-yaml reducer always return a single column
+						 * named "value"
 						 */
 						bufcat(&buffer, "value");
 					}
@@ -3567,20 +3560,18 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 						}
 					}
 
-
-					/* 
-					 * Swap the buffer into the qbuffer for input as the next 
-					 * stage of the query pipeline. 
+					/*
+					 * Swap the buffer into the qbuffer for input as the next
+					 * stage of the query pipeline.
 					 */
 					swap = qbuffer;
 					qbuffer = buffer;
 					buffer = swap;
 					bufreset(buffer);
 
-
-					/* 
+					/*
 					 * Add the return columns to the grouping columns and set
-					 * it to the current columns.  
+					 * it to the current columns.
 					 *
 					 * Note that unlike the columns set by the mapper or the
 					 * input this is a list that must be de-allocated.
@@ -3591,9 +3582,9 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					columns->next = grouping;
 					columns = last;
 
-					/* 
-					 * If the reducer had a finalizer we push it into another 
-					 * nested subquery since user defined aggregates aren't 
+					/*
+					 * If the reducer had a finalizer we push it into another
+					 * nested subquery since user defined aggregates aren't
 					 * allowed to return sets.
 					 *
 					 * NOTE: this code mostly duplicates the MAP code above
@@ -3616,8 +3607,8 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 							bufcat(&buffer, "SELECT ");
 
 							/* the grouping columns */
-							for (plist = grouping; 
-								 plist; 
+							for (plist = grouping;
+								 plist;
 								 plist = plist->next)
 							{
 								bufcat(&buffer, plist->name);
@@ -3625,7 +3616,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 							}
 							plist2 = finalizer->u.function.internal_returns;
 							for (plist = finalizer->u.function.returns;
-								 plist; 
+								 plist;
 								 plist = plist->next)
 							{
 								if( finalizer->internal )
@@ -3648,15 +3639,15 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 							bufcat(&buffer, "\nFROM (");
 						}
 
-						/* 
-						 * Call the function on the returned state from 
+						/*
+						 * Call the function on the returned state from
 						 * the reducer.
 						 */
 						bufcat(&buffer, "SELECT ");
-						
+
 						/* grouping columns */
-						for (plist = grouping; 
-							 plist; 
+						for (plist = grouping;
+							 plist;
 							 plist = plist->next)
 						{
 							bufcat(&buffer, plist->name);
@@ -3678,16 +3669,16 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 						bufcat(&buffer, qbuffer->buffer);
 						bufcat(&buffer, ") redxq\n");
 
-						/* 
-						 * If we have that extra layer of wrapping 
+						/*
+						 * If we have that extra layer of wrapping
 						 * then close it off
 						 */
 						if (finalizer->u.function.returns->next)
 							bufcat(&buffer, ") redsubq\n");
 
-						/* 
-						 * Swap the buffer into the qbuffer for input as the next 
-						 * stage of the query pipeline. 
+						/*
+						 * Swap the buffer into the qbuffer for input as the next
+						 * stage of the query pipeline.
 						 */
 						swap = qbuffer;
 						qbuffer = buffer;
@@ -3707,7 +3698,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 				bufcat(&buffer, qbuffer->buffer);
 				bufcat(&buffer, ";\n\n");
 
-				/* 
+				/*
 				 * If there was a reducer then we have to release the columns
 				 * list, otherwise it is a pointer to an existing list and can
 				 * be ignored.
@@ -3728,12 +3719,12 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 			case MAPRED_ADT:
 				XASSERT(obj->name);
 				mapred_setup_columns(conn, obj);
-				
-				/* 
-				 * ADT's have generated names that already include the 
-				 * document prefix 
+
+				/*
+				 * ADT's have generated names that already include the
+				 * document prefix
 				 */
-				bufcat(&buffer, "CREATE TYPE ");				
+				bufcat(&buffer, "CREATE TYPE ");
 				bufcat(&buffer, obj->name);
 				bufcat(&buffer, " as (");
 				for (plist = obj->u.adt.returns; plist; plist = plist->next)
@@ -3754,12 +3745,12 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 		if (buffer->position > 0)
 		{
 
-			/* 
+			/*
 			 * In print-only mode we do everything but run the queries
 			 * ie, we still create and destroy objects.
 			 */
 			if (global_print_flag || global_debug_flag)
-				printf("%s", buffer->buffer);			
+				printf("%s", buffer->buffer);
 
 			/*
 			 * Try to create the object, but failure should not terminate
@@ -3775,17 +3766,17 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 			else
 			{
 				char *error = PQresultErrorField(result, PG_DIAG_SQLSTATE);
-				
+
 				/* rollback to savepoint */
 				PQexec(conn, "ROLLBACK TO SAVEPOINT mapreduce_save");
 				PQexec(conn, "RELEASE SAVEPOINT mapreduce_save");
 
-				/* 
+				/*
 				 * If we have an "object does not exist" error from a SQL input
 				 * then it may just be a dependency issue, so we don't error
 				 * right away.
 				 */
-				if (obj->kind != MAPRED_INPUT || 
+				if (obj->kind != MAPRED_INPUT ||
 					obj->u.input.type != MAPRED_INPUT_QUERY ||
 					strcmp(error, OBJ_DOES_NOT_EXIST))
 				{
@@ -3795,12 +3786,12 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					XRAISE(MAPRED_SQL_ERROR, "Object creation Failure");
 				}
 				if (global_verbose_flag)
-					fprintf(stderr, "       Error: %s\n", 
+					fprintf(stderr, "       Error: %s\n",
 							PQresultErrorField(result, PG_DIAG_MESSAGE_PRIMARY));
 
-				/* 
+				/*
 				 * If it is an error that we think we can recover from then we don't
-				 * log the error immediately, but write it to a buffer in the event 
+				 * log the error immediately, but write it to a buffer in the event
 				 * that recovery wasn't successful.
 				 */
 				if (doc->errors)
@@ -3828,7 +3819,7 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 			}
 		}
 
-		/* 
+		/*
 		 * INPUTS setup columns AFTER creation.
 		 * All other objects handle it above prior to creation.
 		 */
@@ -3893,7 +3884,7 @@ void mapred_remove_object(PGconn *conn, mapred_document_t *doc, mapred_object_t 
 					case MAPRED_INPUT_QUERY:
 						bufcat(&buffer, "DROP VIEW IF EXISTS ");
 						bufcat(&buffer, obj->name);
-						bufcat(&buffer, " CASCADE;\n");					
+						bufcat(&buffer, " CASCADE;\n");
 						break;
 
 					case MAPRED_INPUT_NONE:
@@ -3910,7 +3901,7 @@ void mapred_remove_object(PGconn *conn, mapred_document_t *doc, mapred_object_t 
 				/*
 				 * The function types have different defaults and generate
 				 * slightly different error messages, but basically do the
-				 * same thing.  
+				 * same thing.
 				 */
 			case MAPRED_MAPPER:
 			case MAPRED_TRANSITION:
@@ -3923,8 +3914,8 @@ void mapred_remove_object(PGconn *conn, mapred_document_t *doc, mapred_object_t 
 					bufcat(&buffer, doc->prefix);
 				bufcat(&buffer, obj->name);
 				bufcat(&buffer, "(");
-				for (plist = obj->u.function.parameters; 
-					 plist; 
+				for (plist = obj->u.function.parameters;
+					 plist;
 					 plist = plist->next)
 				{  /* Handle parameter list */
 					bufcat(&buffer, plist->type);
@@ -3933,7 +3924,7 @@ void mapred_remove_object(PGconn *conn, mapred_document_t *doc, mapred_object_t 
 				}
 				bufcat(&buffer, ") CASCADE;\n");
 				break;
-			
+
 
 			case MAPRED_REDUCER:
 			{
@@ -3952,10 +3943,10 @@ void mapred_remove_object(PGconn *conn, mapred_document_t *doc, mapred_object_t 
 				bufcat(&buffer, obj->name);
 				bufcat(&buffer, "(");
 
-				/* 
+				/*
 				 * The first parameter of the transition function is the 'state'
-				 * and is not listed as a parameter of the reducer, but all the 
-				 * rest of the parameters are 
+				 * and is not listed as a parameter of the reducer, but all the
+				 * rest of the parameters are
 				 */
 				plist = transition->u.function.parameters;
 				for (plist = plist->next; plist; plist = plist->next)
@@ -3991,7 +3982,7 @@ void mapred_remove_object(PGconn *conn, mapred_document_t *doc, mapred_object_t 
 		{
 			PGresult   *result;
 
-			/* 
+			/*
 			 * In print-only mode we do everything but run the queries
 			 * ie, we still create and destroy objects.
 			 */
@@ -4005,12 +3996,12 @@ void mapred_remove_object(PGconn *conn, mapred_document_t *doc, mapred_object_t 
 			else
 			{
 				char *error = PQresultErrorField(result, PG_DIAG_SQLSTATE);
-				
-				/* 
+
+				/*
 				 * Errors that we can expect/ignore:
 				 *
 				 *     IN_FAILED_SQL_TRANSACTION -
-				 *        another error has occured and the transaction was 
+				 *        another error has occured and the transaction was
 				 *        aborted
 				 *
 				 */
@@ -4019,10 +4010,10 @@ void mapred_remove_object(PGconn *conn, mapred_document_t *doc, mapred_object_t 
 					if (global_verbose_flag)
 						fprintf(stderr, "    - ");
 					if (obj->name)
-						fprintf(stderr, 
+						fprintf(stderr,
 								"[WARNING] Error dropping '%s'\n", obj->name);
 					else
-						fprintf(stderr, 
+						fprintf(stderr,
 								"[WARNING] Error dropping unnamed object\n");
 					if (global_verbose_flag)
 						fprintf(stderr, "    - ");
