@@ -2347,16 +2347,11 @@ smgrSortDeletesList(
 	*list = ptrArray[0];
 	prev = ptrArray[0];
 	collapseCount = 0;
-	i = 0;
-	while (true)
-	{
-		i++;	// Start processing elements after the first one.
 
-		if (i == *listCount)
-		{
-			prev->next = NULL;
-			break;
-		}
+	// Start processing elements after the first one.
+	for (i = 1; i < *listCount; i++)
+	{
+		bool		collapse = false;
 
 		current = ptrArray[i];
 
@@ -2370,13 +2365,30 @@ smgrSortDeletesList(
 								&prev->fsObjName,
 								&current->fsObjName) == 0))
 		{
+			/*
+			 * If there are two sequential entries for the same object, it should
+			 * be a CREATE-DROP pair (XXX: why?). Sanity check that it really is.
+			 * NOTE: We cannot elog(ERROR) here, because that would leave the list in
+			 * an inconsistent state.
+			 */
 			if (prev->dropForCommit)
-				elog(ERROR, "Expected a CREATE for file-system object name '%s'",
+			{
+				collapse = false;
+				elog(WARNING, "Expected a CREATE for file-system object name '%s'",
 					PersistentFileSysObjName_ObjectName(&prev->fsObjName));
-			if (!current->dropForCommit)
-				elog(ERROR, "Expected a DROP for file-system object name '%s'",
+			}
+			else if (!current->dropForCommit)
+			{
+				collapse = false;
+				elog(WARNING, "Expected a DROP for file-system object name '%s'",
 					PersistentFileSysObjName_ObjectName(&current->fsObjName));
+			}
+			else
+				collapse = true;
+		}
 
+		if (collapse)
+		{
 			prev->dropForCommit = true;				// Make the CREATE a DROP.
 			prev->sameTransCreateDrop = true;	// Don't ignore DROP on abort.
 			collapseCount++;
@@ -2403,6 +2415,7 @@ smgrSortDeletesList(
 			prev = current;
 		}
 	}
+	prev->next = NULL;
 
 	pfree(ptrArray);
 
