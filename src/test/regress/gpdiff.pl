@@ -150,6 +150,8 @@ sub gpdiff_files
     my ($f1, $f2, $d2d) = @_;
     my $need_equiv = 0;
     my @tmpfils;
+    my $newf1;
+    my $newf2;
 
     # need gnu diff on solaris
     if ($Config{'osname'} =~ m/solaris|sunos/i)
@@ -157,40 +159,22 @@ sub gpdiff_files
         $ATMDIFF = "gdiff";
     }
 
-    for my $ii (1..2)
-    {
-        my $tmpnam;
-
-        for (;;)
-        {
-            my $tmpfh;
-
-            $tmpnam = tmpnam();
-            sysopen($tmpfh, $tmpnam, O_RDWR | O_CREAT | O_EXCL) && last;
-        }
-
-        push @tmpfils, $tmpnam;
-    }
-
-    my $newf1 = shift @tmpfils;
-    my $newf2 = shift @tmpfils;
-
 #    print $glob_atmsort_args, "\n";
 
     if (defined($d2d) && exists($d2d->{equiv}))
     {
         # assume f1 and f2 are the same...
         atmsort::atmsort_init(%glob_atmsort_args, DO_EQUIV => 'compare');
-        atmsort::run($f1, $newf1);
+        $newf1 = atmsort::run($f1);
 
         atmsort::atmsort_init(%glob_atmsort_args, DO_EQUIV => 'make');
-        atmsort::run($f2, $newf2);
+        $newf2 = atmsort::run($f2);
     }
     else
     {
         atmsort::atmsort_init(%glob_atmsort_args);
-        atmsort::run($f1, $newf1);
-        atmsort::run($f2, $newf2);
+        $newf1 = atmsort::run($f1);
+        $newf2 = atmsort::run($f2);
     }
 
     my $args = join(" ", @ARGV, $newf1, $newf2);

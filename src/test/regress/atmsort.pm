@@ -20,6 +20,7 @@ package atmsort;
 use strict;
 use warnings;
 use File::Spec;
+use File::Temp qw/ tempfile /;
 
 # Load explain.pm from the same directory where atmsort.pm is.
 use FindBin;
@@ -1627,19 +1628,21 @@ L_push_outarr:
 } # end bigloop
 
 
-# The arguments are input and output file names
+# The arguments is the input filename. The output filename is returned as it
+# is generated in this function to avoid races around the temporary filename
+# creation.
 sub run
 {
     my $infname = shift;
-    my $outfname = shift;
 
     open my $infh,  '<', $infname  or die "could not open $infname: $!";
-    open my $outfh, '>', $outfname or die "could not open $outfname: $!";
+    my ($outfh, $outfname) = tempfile();
 
     run_fhs($infh, $outfh);
 
     close $infh;
     close $outfh;
+    return $outfname;
 }
 
 # The arguments are input and output file handles
