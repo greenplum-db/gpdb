@@ -545,7 +545,7 @@ convert_sourcefiles_in(char *source, char *dest, char *suffix)
 		{
 			char		cmd[MAXPGPATH * 3];
 			snprintf(cmd, sizeof(cmd),
-					 SYSTEMQUOTE "%s/gpstringsubs.pl %s" SYSTEMQUOTE, bindir, destfile);
+					 SYSTEMQUOTE "%s %s" SYSTEMQUOTE, gpstringsubsprog, destfile);
 			if (run_diff(cmd, destfile) != 0)
 			{
 				fprintf(stderr, _("%s: could not convert %s\n"),
