@@ -17,6 +17,8 @@ use warnings;
 use POSIX;
 use File::Spec;
 use Config;
+use Getopt::Long qw(GetOptions);
+Getopt::Long::Configure qw(pass_through);
 
 # Load atmsort module from the same dir as this script
 use FindBin;
@@ -139,11 +141,28 @@ sub lazy_pod2usage
 }
 
 my %glob_atmsort_args;
-our $ATMDIFF = "diff";
+# need gnu diff on solaris
+our $ATMDIFF = ($Config{'osname'} =~ m/solaris|sunos/i) ? 'gdiff' : 'diff';
 
-my $glob_ignore_headers;
 my $glob_ignore_plans;
 my $glob_init_file = [];
+
+sub print_version
+{
+    my $VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r }; # must be all one line, for MakeMaker
+
+    my $whichdiff = `which $ATMDIFF`;
+    chomp $whichdiff;
+    print "$0 version $VERSION\n";
+    print "Type \'gpdiff.pl --help\' for more information on the standard options\n";
+    print "$0 calls the \"", $whichdiff, "\" utility:\n\n";
+
+    my $outi = `$ATMDIFF -v`;
+    $outi =~ s/^/   /gm;
+    print $outi, "\n";
+
+    exit(1);
+}
 
 sub gpdiff_files
 {
@@ -158,8 +177,6 @@ sub gpdiff_files
     {
         $ATMDIFF = "gdiff";
     }
-
-#    print $glob_atmsort_args, "\n";
 
     if (defined($d2d) && exists($d2d->{equiv}))
     {
@@ -318,155 +335,19 @@ sub filefunc
 
 if (1)
 {
-    my $man         = 0;
-    my $help        = 0;
-    my $verzion     = 0;
-    my $verbose     = 0;
-    my $pmsg        = "";
-    my @arg2;              # arg list for diff
-    my %init_dup;
+    my $pmsg = "";
 
-#    getatm();
+    GetOptions(
+        "man" => sub { lazy_pod2usage(-msg => $pmsg, -exitstatus => 0, -verbose => 2) },
+        "help" => sub { lazy_pod2usage(-msg => $pmsg, -exitstatus => 1) },
+        "version|v" => \&print_version ,
+        "verbose|Verbose" => \$glob_atmsort_args{VERBOSE},
+        "gpd_ignore_headers|gp_ignore_headers" => \$glob_atmsort_args{IGNORE_HEADERS},
+        "gpd_ignore_plans|gp_ignore_plans" => \$glob_atmsort_args{IGNORE_PLANS},
+        "gpd_init|gp_init=s" => \@{$glob_atmsort_args{INIT_FILES}}
+    );
 
-    # check for man or help args
-    if (scalar(@ARGV))
-    {
-        my $argc = -1;
-        my $maxarg = scalar(@ARGV);
-
-        while (($argc+1) < $maxarg)
-        {
-            $argc++;
-            my $arg = $ARGV[$argc];
-
-            unless ($arg =~ m/^\-/)
-            {
-                # even if no dash, might be a value for a dash arg...
-                push @arg2, $arg;
-                next;
-            }
-
-            # ENGINF-180: ignore header formatting
-            if ($arg =~ m/^\-(\-)*(gpd\_ignore\_headers|gp\_ignore\_headers)$/i)
-            {
-                $glob_ignore_headers = 1;
-                next;
-            }
-            if ($arg =~ m/^\-(\-)*(gpd\_ignore\_plans|gp\_ignore\_plans)$/i)
-            {
-                $glob_ignore_plans = 1;
-                next;
-            }
-            if ($arg =~ m/^\-(\-)*(gpd\_init|gp\_init)(\=)*(.*)$/i)
-            {
-                if ($arg =~ m/\=/) # check if "=filename"
-                {
-                    my @foo = split (/\=/, $arg, 2);
-
-                    die "no init file" unless (2 == scalar(@foo));
-
-                    my $init_file = pop @foo;
-
-                    # ENGINF-200: allow multiple init files
-                    if (exists($init_dup{$init_file}))
-                    {
-                        warn "duplicate init file \'$init_file\', skipping...";
-                    }
-                    else
-                    {
-                        push @{$glob_init_file}, $init_file;
-
-                        $init_dup{$init_file} = 1;
-                    }
-                }
-                else # next arg must be init file
-                {
-                    $argc++;
-
-                    die "no init file" unless (defined($ARGV[$argc]));
-
-                    my $init_file = $ARGV[$argc];
-
-                    # ENGINF-200: allow multiple init files
-                    if (exists($init_dup{$init_file}))
-                    {
-                        warn "duplicate init file \'$init_file\', skipping...";
-                    }
-                    else
-                    {
-                        push @{$glob_init_file}, $init_file;
-
-                        $init_dup{$init_file} = 1;
-                    }
-                }
-                next;
-            }
-            if ($arg =~ m/^\-(\-)*(v|version)$/)
-            {
-                $verzion = 1;
-                next;
-            }
-            if ($arg =~ m/^\-(\-)*(V|verbose)$/)
-            {
-                $verbose = 1;
-                next;
-            }
-            if ($arg =~ m/^\-(\-)*(man|help|\?)$/i)
-            {
-                if ($arg =~ m/man/i)
-                {
-                    $man = 1;
-                }
-                else
-                {
-                    $help = 1;
-                }
-                next;
-            }
-
-            # put all "dash" args on separate list for diff
-            push @arg2, $arg;
-
-        } # end for
-    }
-    else
-    {
-        $pmsg = "missing an operand after \`gpdiff\'";
-        $help = 1;
-    }
-
-    if ((1 == scalar(@ARGV)) && (!($help || $man || $verzion)))
-    {
-        $pmsg = "unknown operand: $ARGV[0]";
-        $help = 1;
-    }
-
-    if ($verzion)
-    {
-        my $VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r }; # must be all one line, for MakeMaker
-
-        # need gnu diff on solaris
-        if ($Config{'osname'} =~ m/solaris|sunos/i)
-        {
-            $ATMDIFF = "gdiff";
-        }
-        my $whichdiff = `which $ATMDIFF`;
-        chomp $whichdiff;
-        print "$0 version $VERSION\n";
-        print "Type \'gpdiff.pl --help\' for more information on the standard options\n";
-        print "$0 calls the \"", $whichdiff, "\" utility:\n\n";
-
-        my $outi = `$ATMDIFF -v`;
-
-        $outi =~ s/^/   /gm;
-
-        print $outi, "\n";
-
-        exit(1);
-    }
-
-    lazy_pod2usage(-msg => $pmsg, -exitstatus => 1) if $help;
-    lazy_pod2usage(-msg => $pmsg, -exitstatus => 0, -verbose => 2) if $man;
+    lazy_pod2usage(-msg => $pmsg, -exitstatus => 1) unless (scalar(@ARGV) >= 2);
 
     my $f2 = pop @ARGV;
     my $f1 = pop @ARGV;
@@ -479,43 +360,6 @@ if (1)
         }
     }
     exit(2) unless ((-e $f1) && (-e $f2));
-
-    # use the "stripped" arg list for diff
-    @ARGV = ();
-
-    # remove the filenames
-    pop @arg2;
-    pop @arg2;
-
-    push(@ARGV, @arg2);
-
-    if ($verbose)
-    {
-        $glob_atmsort_args{VERBOSE} = 1;
-    }
-
-    # ENGINF-180: tell atmsort to ignore header formatting (globally)
-    if ($glob_ignore_headers)
-    {
-        $glob_atmsort_args{IGNORE_HEADERS} = 1;
-    }
-
-    # Tell atmsort to ignore plan content if -gpd_ignore_plans is set
-    if ($glob_ignore_plans)
-    {
-        $glob_atmsort_args{IGNORE_PLANS} = 1;
-    }
-
-    # ENGINF-200: allow multiple init files
-    if (defined($glob_init_file) && scalar(@{$glob_init_file}))
-    {
-        # MPP-12262: test here, because we don't get status for atmsort call
-        for my $init_file (@{$glob_init_file})
-        {
-            die "no such file: $init_file" unless (-e $init_file);
-        }
-        @{$glob_atmsort_args{INIT_FILES}} = @{$glob_init_file};
-    }
 
     exit(filefunc($f1, $f2));
 }
