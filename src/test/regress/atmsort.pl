@@ -4,6 +4,7 @@
 # Author: Jeffrey I Cohen
 #
 
+#use Pod::Usage #see lazy_pod2usage()
 use Getopt::Long;
 #use Data::Dumper; # only used by commented-out debug statements.
 use strict;
