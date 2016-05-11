@@ -368,30 +368,11 @@ sub lazy_pod2usage
 
 my $glob_id = "";
 
-# optional set of prefixes to identify sql statements, query output,
-# and sorted lines (for testing purposes)
-#my $apref = 'a: ';
-#my $bpref = 'b: ';
-#my $cpref = 'c: ';
-#my $dpref = 'S: ';
-my $apref = '';
-my $bpref = '';
-my $cpref = '';
-my $dpref = '';
-
-my $glob_compare_equiv;
-my $glob_make_equiv_expected;
-my $glob_ignore_headers;
-my $glob_ignore_plans;
-my $glob_ignore_whitespace;
 my $glob_init;
 
 my $glob_orderwarn;
 my $glob_verbose;
 my $glob_fqo;
-
-# array of "expected" rows from first query of equiv region
-my $equiv_expected_rows;
 
 my $man  = 0;
 my $help = 0;
