@@ -136,13 +136,11 @@ GPPKG_PLATFORMS=rhel5_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64
 # Compiler options
 #---------------------------------------------------------------------
 
-INLINE_FLAGS=-finline-limit=1800
-
-OPTFLAGS="$(strip $(BLD_CFLAGS) -O3 -funroll-loops -fargument-noalias-global -fno-omit-frame-pointer $(COPTX) -g $(INLINE_FLAGS) $(TRACE_GCC_FLAG))"
-PROFFLAGS="$(strip $(BLD_CFLAGS) -O3 -funroll-loops -fargument-noalias-global -fno-omit-frame-pointer $(COPTX) -g $(INLINE_FLAGS) $(TRACE_GCC_FLAG))"
+OPTFLAGS="$(strip $(BLD_CFLAGS) -fno-omit-frame-pointer $(COPTX) -g $(TRACE_GCC_FLAG))"
+PROFFLAGS="$(strip $(BLD_CFLAGS) -fno-omit-frame-pointer $(COPTX) -g $(TRACE_GCC_FLAG))"
 
 ifeq (on, ${GPDBGINLINE})
-CFLAGS_INLINE=$(INLINE_FLAGS)
+CFLAGS_INLINE=
 else
 CFLAGS_INLINE=-fno-inline
 endif
