@@ -2148,7 +2148,7 @@ partMakePartition(HeapTuple tuple, TupleDesc tupdesc)
 
 /*
  * Construct a PartitionNode-PartitionRule tree for the given part.
- * Recurs to contruct branches.  Note that the ParitionRule (and,
+ * Recurs to construct branches.  Note that the PartitionRule (and,
  * hence, the Oid) of the given part itself is not included in the
  * result.
  *
