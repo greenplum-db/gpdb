@@ -1271,6 +1271,9 @@ static bool PersistentStore_ValidateFreeTID(
 	int64				persistentSerialNum;
 	bool				tidIsValid = true;
 
+	if (storeSharedData->maxFreeOrderNum <= 0)
+		return true; /* No tuple to check */
+
 	values = (Datum*)palloc(storeData->numAttributes * sizeof(Datum));
 	PersistentStore_ReadTuple(
 					storeData,
@@ -1386,7 +1389,6 @@ static bool PersistentStore_GetFreeTuple(
 			 storeData->tableName);
 
 	if (validate_previous_free_tid &&
-		storeSharedData->maxFreeOrderNum > 0 &&
 		!PersistentStore_ValidateFreeTID(
 										storeData,
 										storeSharedData,
@@ -1503,24 +1505,21 @@ void PersistentStore_FreeTuple(
 
 	persistentRel = (*storeData->openRel)();
 
-	if (storeSharedData->maxFreeOrderNum > 0)
+	prevFreeTid = storeSharedData->freeTid;
+	if (validate_previous_free_tid)
 	{
-		ItemPointerData		tmpPrevFreeTid;
-		prevFreeTid = storeSharedData->freeTid;
-
 		/* Let us validate and have sanity check to make sure the prevFreeTid is really free. */
-		if (validate_previous_free_tid)
-			PersistentStore_ValidateFreeTID(
-									storeData,
-									storeSharedData,
-									&tmpPrevFreeTid);
+		ItemPointerData tmpPrevFreeTid;
+		PersistentStore_ValidateFreeTID(
+								storeData,
+								storeSharedData,
+								&tmpPrevFreeTid);
 	}
 
 	storeSharedData->maxFreeOrderNum++;
 	if (storeSharedData->maxFreeOrderNum == 1)
-	{
 		ItemPointerCopy(persistentTid, &prevFreeTid);  /* So non-zero PreviousFreeTid indicates free. */
-	}
+
 	storeSharedData->freeTid = *persistentTid;
 
 	PersistentStore_FormTupleSetOurs(
