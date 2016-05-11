@@ -3690,6 +3690,9 @@ select * from deep_part_1_prt_female_2_prt_5_3_prt_5;
 insert into deep_part values (9, 9, 10, 'F');
 select * from deep_part;
 
+-- Incorrect relation OID in pg_partition_oid()
+select pg_partition_oid(1, deep_part.*) from deep_part;
+
 drop table input2;
 drop table input1;
 drop table part_tab;

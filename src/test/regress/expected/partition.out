@@ -7786,6 +7786,9 @@ select * from deep_part;
  5 | 5 | 5 | M    
 (6 rows)
 
+-- Incorrect relation OID in pg_partition_oid()
+select pg_partition_oid(1, deep_part.*) from deep_part;
+ERROR:  relation with OID 1 does not exist
 drop table input2;
 drop table input1;
 drop table part_tab;

@@ -1064,6 +1064,10 @@ static void InitPMI(PartitionMatchInfo *pmi, Oid partitionOid, MemoryContext mct
 
 	pmi->partitionOid = partitionOid;
 	pmi->partitionInfo = RelationBuildPartitionDescByOid(pmi->partitionOid, false);
+	if (!pmi->partitionInfo)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_TABLE),
+				 errmsg("relation with OID %u does not exist", partitionOid)));
 
 	pmi->partitionState = createPartitionState(pmi->partitionInfo, 0);
 
