@@ -1,7 +1,5 @@
 #!/usr/bin/env perl
 #
-# $Header$
-#
 # copyright (c) 2008-2010 GreenPlum.  All rights reserved.  
 # Author: Jeffrey I Cohen
 #

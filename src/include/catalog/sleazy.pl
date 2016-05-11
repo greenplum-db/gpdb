@@ -1,11 +1,4 @@
 #!/usr/bin/perl
-#
-# $Header: $
-#
-# copyright (c) 
-# Author: 
-#
-# SLZY_HDR_END
 
 use POSIX;
 use Pod::Usage;

@@ -1,17 +1,8 @@
 #!/usr/bin/env perl
 #
-# $Header$
-#
 # copyright (c) 2007, 2008, 2009 GreenPlum.  All rights reserved.  
 # Author: Jeffrey I Cohen
 #
-#
-
-# Pod::Usage is loaded lazily when needed, if the --help or other such option
-# is actually used. Loading the module takes some time, which adds up when
-# running hundreds of regression tests, and gpdiff.pl calls this script twice
-# for every test. See lazy_pod2usage().
-#use Pod::Usage;
 
 use Getopt::Long;
 #use Data::Dumper; # only used by commented-out debug statements.
@@ -359,7 +350,10 @@ Address bug reports and comments to: jcohen@greenplum.com
 
 =cut
 
-# Calls pod2usage, but lodas the module first.
+# Calls pod2usage, but loads the module first.
+# Pod::Usage is loaded lazily when needed, if the --help or other such option
+# is actually used. Loading the module takes some time, which adds up when
+# running hundreds of regression tests.
 sub lazy_pod2usage
 {
     require Pod::Usage;

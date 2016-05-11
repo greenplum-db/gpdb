@@ -1,7 +1,5 @@
 #!/usr/bin/env perl
 #
-# $Header$
-#
 # copyright (c) 2006, 2007, 2008, 2009 
 # Author: Jeffrey I Cohen
 #

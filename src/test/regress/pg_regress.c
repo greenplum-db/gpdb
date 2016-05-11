@@ -1879,8 +1879,7 @@ run_single_test(const char *test, test_function tfunc)
 
 /*
  * Find the other binaries that we need. Currently, gpdiff.pl and
- * gpstringsubs.pl. gpdiff.pl in turn will call atmsort.pl and explain.pl,
- * but it's up to gpdiff.pl to find them.
+ * gpstringsubs.pl.
  */
 static void
 find_helper_programs(const char *argv0)

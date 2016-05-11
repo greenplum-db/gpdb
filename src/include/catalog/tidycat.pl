@@ -1,11 +1,7 @@
 #!/usr/bin/perl
 #
-# $Header$
-#
 # copyright (c) 2009, 2010, 2011
 # Author: Jeffrey I Cohen
-#
-# SLZY_HDR_END
 
 use POSIX;
 use Pod::Usage;
