@@ -247,7 +247,8 @@ CreateFileSpace(CreateFileSpaceStmt *stmt)
 								dbid)));
 
 			Assert(segElem->fse);  /* should have been populated in pass 1 */
-			segElem->fse->hostname  = hostname;
+			if (hostname != NULL)
+				segElem->fse->hostname  = pstrdup(hostname);
 			segElem->fse->contentid = contentid;
 		}
 		for (i = 0; i < segments->total_segment_dbs; i++)
@@ -267,7 +268,8 @@ CreateFileSpace(CreateFileSpaceStmt *stmt)
 								dbid)));
 
 			Assert(segElem->fse);  /* should have been populated in pass 1 */
-			segElem->fse->hostname  = hostname;
+			if (hostname != NULL)
+				segElem->fse->hostname  = pstrdup(hostname);
 			segElem->fse->contentid = contentid;
 		}
 
