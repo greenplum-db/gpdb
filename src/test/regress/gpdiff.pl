@@ -149,7 +149,7 @@ my $glob_init_file = [];
 
 sub print_version
 {
-    my $VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r }; # must be all one line, for MakeMaker
+    my $VERSION = do { my @r = ('4.3.99.00' =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r }; # must be all one line, for MakeMaker
 
     my $whichdiff = `which $ATMDIFF`;
     chomp $whichdiff;
