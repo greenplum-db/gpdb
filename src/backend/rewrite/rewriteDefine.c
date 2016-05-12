@@ -33,7 +33,7 @@
 #include "utils/rel.h"
 #include "utils/syscache.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbmirroredfilesysobj.h"
 #include "catalog/heap.h"
 #include "cdb/cdbpersistentfilesysobj.h"

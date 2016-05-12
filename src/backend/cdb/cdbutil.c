@@ -34,7 +34,7 @@
 #include "cdb/cdbmotion.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbgang.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/ml_ipc.h"			/* listener_setup */
 #include "cdb/cdbtm.h"
 #include "cdb/cdbfts.h"

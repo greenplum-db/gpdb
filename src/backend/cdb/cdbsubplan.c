@@ -12,7 +12,7 @@
 #include "postgres.h"
 #include "executor/nodeSubplan.h"		/* For ExecSetParamPlan */
 #include "executor/executor.h"          /* For CreateExprContext */
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbplan.h"
 #include "cdb/cdbllize.h"
 #include "cdb/cdbsubplan.h"

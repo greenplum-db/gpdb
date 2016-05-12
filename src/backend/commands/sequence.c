@@ -36,7 +36,7 @@
 #include "utils/resowner.h"
 #include "utils/syscache.h"
 
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdoublylinked.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"

@@ -66,7 +66,7 @@
 #include "utils/memutils.h"
 #include "utils/syscache.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 
 
 /* result structure for get_rels_with_domain() */

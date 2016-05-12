@@ -61,7 +61,7 @@
 #include "cdb/cdbutil.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/ml_ipc.h"
 #include "cdb/cdbmotion.h"

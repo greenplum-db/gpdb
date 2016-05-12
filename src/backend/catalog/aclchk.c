@@ -53,7 +53,7 @@
 #include "utils/rel.h"
 #include "utils/syscache.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 
 
 static void ExecGrant_Relation(InternalGrant *grantStmt);

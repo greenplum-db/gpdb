@@ -49,4 +49,7 @@ extern void remove_unused_initplans(Plan *plan, PlannerInfo *root);
 extern int32 cdbhash_const(Const *pconst, int iSegments);
 extern int32 cdbhash_const_list(List *plConsts, int iSegments);
 
+extern Node *exec_make_plan_constant(struct PlannedStmt *stmt, bool is_SRI);
+extern Node *planner_make_plan_constant(struct PlannerInfo *root, Node *n, bool is_SRI);
+extern void remove_subquery_in_RTEs(Node *node);
 #endif   /* CDBMUTATE_H */

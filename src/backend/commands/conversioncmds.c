@@ -30,7 +30,7 @@
 #include "utils/syscache.h"
 
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 
 static void AlterConversionOwner_internal(Relation rel, Oid conversionOid,
 							  Oid newOwnerId);

@@ -15,7 +15,7 @@
 #include "cdb/cdbpersistentstore.h"
 #include "cdb/cdbpersistentcheck.h"
 #include "cdb/cdbtm.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 
 #include "storage/itemptr.h"
 #include "access/genam.h"

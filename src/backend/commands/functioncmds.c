@@ -58,7 +58,7 @@
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 
 static void AlterFunctionOwner_internal(cqContext *pcqCtx,
 										Relation rel, HeapTuple tup, 

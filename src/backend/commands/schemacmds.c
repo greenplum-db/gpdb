@@ -33,7 +33,7 @@
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
 

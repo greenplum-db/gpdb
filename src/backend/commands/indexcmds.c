@@ -59,7 +59,7 @@
 #include "utils/syscache.h"
 #include "utils/faultinjector.h"
 
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"

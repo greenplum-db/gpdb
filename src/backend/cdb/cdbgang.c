@@ -34,7 +34,7 @@ extern char *default_tablespace;
 
 #include "cdb/cdbconn.h"		/* SegmentDatabaseDescriptor */
 #include "cdb/cdbfts.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbgang.h"		/* me */
 #include "cdb/cdbtm.h"			/* discardDtxTransaction() */
 #include "cdb/cdbutil.h"		/* CdbComponentDatabaseInfo */

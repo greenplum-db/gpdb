@@ -15,7 +15,7 @@
 #include "catalog/pg_filespace_entry.h"
 #include "catalog/pg_proc.h"
 #include "cdb/cdbresynchronizechangetracking.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbpersistentdatabase.h"
 #include "cdb/cdbpersistentfilespace.h"
 #include "cdb/cdbpersistentrelation.h"

@@ -22,6 +22,8 @@
 #include "storage/shmem.h"
 #include "storage/ipc.h"
 #include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
+#include "cdb/cdbdisp_dtx.h"
 #include "cdb/cdbdtxcontextinfo.h"
 
 #include "cdb/cdbvars.h"

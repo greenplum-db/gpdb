@@ -50,7 +50,7 @@
 #include "utils/syscache.h"
 
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 
 static void AlterOperatorOwner_internal(Relation rel, Oid operOid, Oid newOwnerId);
 

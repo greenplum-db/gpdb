@@ -61,6 +61,9 @@
 #include "mb/pg_wchar.h"
 #include "pg_config_paths.h"
 
+#include "utils/hsearch.h"
+#include "nodes/pg_list.h"
+#include "cdb/cdbpartition.h"
 
 static int	pqPutMsgBytes(const void *buf, size_t len, PGconn *conn);
 static int	pqSendSome(PGconn *conn, int len);
@@ -1272,7 +1275,52 @@ PQenv2encoding(void)
 	return encoding;
 }
 
+/*
+ * This routine would only be called in main thread.
+ */
+struct HTAB *
+PQprocessAoTupCounts(struct PartitionNode *parts, struct HTAB *ht,
+					 void *aotupcounts, int naotupcounts)
+{
+	PQaoRelTupCount *ao = (PQaoRelTupCount *) aotupcounts;
 
+	if (naotupcounts)
+	{
+		int	j;
 
+		for (j = 0; j < naotupcounts; j++)
+		{
+			if (OidIsValid(ao->aorelid))
+			{
+				bool found;
+				PQaoRelTupCount *entry;
 
+				if (!ht)
+				{
+					HASHCTL	ctl;
 
+					/*
+					 * reasonable assumption?
+					 */
+					long num_buckets = list_length(all_partition_relids(parts));
+					num_buckets /= num_partition_levels(parts);
+
+					ctl.keysize = sizeof(Oid);
+					ctl.entrysize = sizeof(*entry);
+					ht = hash_create("AO hash map", num_buckets, &ctl, HASH_ELEM);
+				}
+
+				entry = hash_search(ht, &(ao->aorelid), HASH_ENTER, &found);
+
+				if (found)
+					entry->tupcount += ao->tupcount;
+				else
+					entry->tupcount = ao->tupcount;
+
+			}
+			ao++;
+		}
+	}
+
+	return ht;
+}

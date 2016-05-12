@@ -29,6 +29,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbtm.h"
 #include "cdb/ml_ipc.h"
 #include "lib/stringinfo.h"

@@ -32,7 +32,7 @@
 #include "utils/fmgroids.h"
 
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 
 /*
  *	DefineExtprotocol
