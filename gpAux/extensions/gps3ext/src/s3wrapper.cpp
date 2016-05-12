@@ -211,8 +211,8 @@ bool S3ExtBase::ValidateURL() {
     // http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
 
     const char *awsdomain = ".amazonaws.com";
-    unsigned int ibegin = 0;
-    unsigned int iend = url.find("://");
+    size_t ibegin = 0;
+    size_t iend = url.find("://");
     if (iend == string::npos) {  // Error
         return false;
     }

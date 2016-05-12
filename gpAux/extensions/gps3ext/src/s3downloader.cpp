@@ -928,13 +928,20 @@ ListBucketResult *ListBucket(const string &schema, const string &region,
 
         xmlNodePtr cur = root_element->xmlChildrenNode;
         while (cur != NULL) {
+#ifdef S3_CHK_CFG
+            if (!xmlStrcmp(cur->name, (const xmlChar *)"Message")) {
+#else
             if (!xmlStrcmp(cur->name, (const xmlChar *)"Code")) {
+#endif
                 char *content = (char *)xmlNodeGetContent(cur);
                 if (content) {
                     S3ERROR("Server returns error \"%s\"", content);
                     xmlFree(content);
                 }
-                break;
+                delete result;
+                xmlFreeParserCtxt(xmlcontext);
+                xmlFreeDoc(doc);
+                return NULL;
             }
 
             cur = cur->next;
