@@ -2801,9 +2801,9 @@ insert into qp_misc_jiras.tbl13491_h values (1, lpad('a', 100000, 'b'));
 create table qp_misc_jiras.tbl13491_aocol with (appendonly=true, orientation=column) as select * from qp_misc_jiras.tbl13491_h distributed by (a);
 truncate table qp_misc_jiras.tbl13491_h;
 \t off
-select * from qp_misc_jiras.tbl13491_aocol;
+select str = lpad('a', 100000, 'b') from qp_misc_jiras.tbl13491_aocol;
 drop table qp_misc_jiras.tbl13491_h;
-select * from qp_misc_jiras.tbl13491_aocol;
+select str = lpad('a', 100000, 'b') from qp_misc_jiras.tbl13491_aocol;
 drop table qp_misc_jiras.tbl13491_aocol;
 -- start_ignore
 drop function if exists test();
