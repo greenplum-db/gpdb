@@ -3743,6 +3743,13 @@ processCancelRequest(Port *port, void *pkt, MsgType code)
 	int			i;
 #endif
 
+	/*
+	 * Close the socket connected with QD, since we will not use it anymore, and
+	 * QD is waiting for the close
+	 */
+	closesocket(port->sock);
+	port->sock = -1;
+
 	backendPID = (int) ntohl(canc->backendPID);
 	cancelAuthCode = (long) ntohl(canc->cancelAuthCode);
 
