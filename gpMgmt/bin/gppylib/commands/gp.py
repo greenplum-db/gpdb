@@ -773,7 +773,8 @@ class GpSegStartCmd(Command):
                  mirrormode, numContentsInCluster, era,
                  timeout=SEGMENT_TIMEOUT_DEFAULT, verbose=False, 
                  ctxt=LOCAL, remoteHost=None, pickledTransitionData=None,
-                 specialMode=None, wrapper=None, wrapper_args=None):
+                 specialMode=None, wrapper=None, wrapper_args=None,
+                 logfileDirectory=False):
 
         # Referenced by calling code (in operations/startSegments.py), create a clone
         self.dblist = [x for x in segments]
@@ -789,6 +790,8 @@ class GpSegStartCmd(Command):
         cmdStr = str(c)
         logger.debug(cmdStr)
 
+        if (logfileDirectory):
+            cmdStr = cmdStr + " -l '" + logfileDirectory + "'"
         Command.__init__(self,name,cmdStr,ctxt,remoteHost)
 
 
@@ -817,7 +820,7 @@ class GpSegChangeMirrorModeCmd(Command):
 #-----------------------------------------------
 class GpSegStopCmd(Command):
     def __init__(self, name, gphome, version,mode,dbs,timeout=SEGMENT_STOP_TIMEOUT_DEFAULT,
-                 verbose=False, ctxt=LOCAL, remoteHost=None):
+                 verbose=False, ctxt=LOCAL, remoteHost=None, logfileDirectory=False):
         self.gphome=gphome
         self.dblist=dbs
         self.dirportlist=[]
@@ -837,6 +840,8 @@ class GpSegStopCmd(Command):
         self.cmdStr="$GPHOME/sbin/gpsegstop.py %s -D %s -m %s -t %s -V '%s'"  %\
                         (setverbose,dirstr,mode,timeout,version)
 
+        if (logfileDirectory):
+            self.cmdStr = self.cmdStr + " -l '" + logfileDirectory + "'"
         Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
 
 
@@ -967,7 +972,7 @@ class NewGpStop(Command):
 
 #-----------------------------------------------
 class GpStop(Command):
-    def __init__(self, name, masterOnly=False, verbose=False, quiet=False, restart=False, fast=False, force=False, datadir=None,ctxt=LOCAL, remoteHost=None):
+    def __init__(self, name, masterOnly=False, verbose=False, quiet=False, restart=False, fast=False, force=False, datadir=None, ctxt=LOCAL, remoteHost=None, logfileDirectory=False):
         self.cmdStr="$GPHOME/bin/gpstop -a"
         if masterOnly:
             self.cmdStr += " -m"
@@ -983,6 +988,8 @@ class GpStop(Command):
             self.cmdStr += " -v"
         if quiet:
             self.cmdStr += " -q"
+        if logfileDirectory:
+            self.cmdStr += " -l '" + logfileDirectory + "'"
         Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
 
     @staticmethod

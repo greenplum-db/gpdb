@@ -208,7 +208,7 @@ if [ -d $DATADIRS ]; then
 fi
 mkdir $DATADIRS
 mkdir $QDDIR
-mkdir $QDDIR/gpAdminLogs
+mkdir $DATADIRS/gpAdminLogs
 
 for dir in ${DIRVEC[@]} ${DIRVEC_MIRROR[@]}
 do
@@ -348,17 +348,17 @@ fi
 if [ -f "${CLUSTER_CONFIG_POSTGRES_ADDONS}" ]; then
     echo "=========================================================================================="
     echo "executing:"
-    echo "  $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $QDDIR/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} \"$@\""
+    echo "  $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} \"$@\""
     echo "=========================================================================================="
     echo ""
-    $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $QDDIR/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} "$@"
+    $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} "$@"
 else
     echo "=========================================================================================="
     echo "executing:"
-    echo "  $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $QDDIR/gpAdminLogs \"$@\""
+    echo "  $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs \"$@\""
     echo "=========================================================================================="
     echo ""
-    $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $QDDIR/gpAdminLogs "$@"
+    $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs "$@"
 fi
 RETURN=$?
 

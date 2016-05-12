@@ -63,7 +63,7 @@ class GpStop:
     def __init__(self,mode,master_datadir=None,
                  parallel=DEFAULT_NUM_WORKERS,quiet=False,masteronly=False,sighup=False,
                  interactive=False,stopstandby=False,restart=False,
-                 timeout=SEGMENT_STOP_TIMEOUT_DEFAULT):
+                 timeout=SEGMENT_STOP_TIMEOUT_DEFAULT,logfileDirectory=False):
         self.mode=mode
         self.master_datadir=master_datadir
         self.pool = None
@@ -77,6 +77,7 @@ class GpStop:
         self.restart=restart
         self.hadFailures = False
         self.timeout=timeout
+        self.logfileDirectory=logfileDirectory
 
         # some variables that will be assigned during run() 
         self.gphome = None
@@ -118,7 +119,7 @@ class GpStop:
                     self._stop_segments()                                
                     self._stop_gpmmon()
                     self._stop_gpsmon()
-                    self._remove_shared_memory()
+                    self._remove_shared_memory() # this creates a new logfile - why?
                 finally:
                     # Reenable Ctrl-C
                     self.cleanup()
@@ -497,7 +498,8 @@ class GpStop:
             logger.debug("Dispatching command to shutdown %d segments on host: %s" % (len(dbs), hostname))
             cmd=gp.GpSegStopCmd("remote segment starts on host '%s'" % hostname, self.gphome,self.gpversion,
                                 mode=self.mode, dbs=dbs, timeout=self.timeout,
-                                verbose=logging_is_verbose(),ctxt=base.REMOTE, remoteHost=hostname)
+                                verbose=logging_is_verbose(),ctxt=base.REMOTE, remoteHost=hostname,
+                                logfileDirectory=self.logfileDirectory)
             self.pool.addCommand(cmd)
             dispatch_count+=1
         
@@ -748,6 +750,7 @@ class GpStop:
 
     @staticmethod
     def createProgram(options, args):
+        logfileDirectory = options.ensure_value("logfileDirectory", False)
         if options.mode != 'smart':
             if options.fast or options.immediate:
                 raise ProgramArgumentValidationException("Can not mix --mode options with older deprecated '-f,-i,-s'")
@@ -788,7 +791,8 @@ class GpStop:
                         interactive=options.interactive,
                         stopstandby=options.stop_standby,
                         restart=options.restart,
-                        timeout=options.timeout)
+                        timeout=options.timeout,
+                        logfileDirectory=logfileDirectory)
 
 if __name__ == '__main__':
     simple_main( GpStop.createParser, GpStop.createProgram)

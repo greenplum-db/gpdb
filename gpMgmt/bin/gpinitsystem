@@ -1510,7 +1510,7 @@ STOP_QD_PRODUCTION () {
     if [ -f $GPSTOP ]; then
 	GPSTOP_OPTS=$(OUTPUT_LEVEL_OPTS)
 	export MASTER_DATA_DIRECTORY=${MASTER_DIRECTORY}/${SEG_PREFIX}-1
-	$GPSTOP -a -i -m -d $MASTER_DATA_DIRECTORY $GPSTOP_OPTS
+	$GPSTOP -a -l $LOG_DIR -i -m -d $MASTER_DATA_DIRECTORY $GPSTOP_OPTS
 	RETVAL=$?
 	case $RETVAL in
 	    0 ) LOG_MSG "[INFO]:-Successfully shutdown the new Greenplum instance" ;;
@@ -1558,7 +1558,7 @@ START_QD_PRODUCTION () {
     if [ -f $GPSTART ]; then
 	GPSTART_OPTS=$(OUTPUT_LEVEL_OPTS)
 	export MASTER_DATA_DIRECTORY=${MASTER_DIRECTORY}/${SEG_PREFIX}-1
-	$GPSTART -a -d $MASTER_DATA_DIRECTORY $GPSTART_OPTS
+	$GPSTART -a -l $LOG_DIR -d $MASTER_DATA_DIRECTORY $GPSTART_OPTS
 
         if [ $? -eq 0 ];then
             LOG_MSG "[INFO]:-Successfully started new Greenplum instance"
@@ -1576,7 +1576,7 @@ START_QD_PRODUCTION () {
             if [ -f $GPSTOP ]; then
 		GPSTOP_OPTS=$(OUTPUT_LEVEL_OPTS)
                 export MASTER_DATA_DIRECTORY=${MASTER_DIRECTORY}/${SEG_PREFIX}-1
-                $GPSTOP -a -i -d $MASTER_DATA_DIRECTORY $GPSTOP_OPTS
+                $GPSTOP -a -l $LOG_DIR -i -d $MASTER_DATA_DIRECTORY $GPSTOP_OPTS
 
                 RETVAL=$?
                 case $RETVAL in
@@ -1977,17 +1977,17 @@ if [ x"" != x"$PG_CONF_ADD_FILE" ]; then
 	fi
 fi
 if [ x"" != x"$LOG_DIR" ];then
-        CHK_DIR $LOG_DIR
+        CHK_DIR $LOG_DIR "" 1
         if [ $EXISTS -eq 1 ]; then
-                LOG_MSG "[WARN]:-Log directory $LOG_DIR does not exist, using default log directory" 1
-                EXIT_STATUS=1
-                BACKOUT_FILE=$DEFLOGDIR/backout_${PROG_NAME}_${USER_NAME}_${CUR_DATE}_$FILE_TIME
+                ERROR_EXIT "[FATAL]:-Log directory $LOG_DIR does not exist!" 2
         else
                 LOG_FILE=$LOG_DIR/${PROG_NAME}_${CUR_DATE}.log
                 BACKOUT_FILE=$LOG_DIR/backout_${PROG_NAME}_${USER_NAME}_${CUR_DATE}_$FILE_TIME
         fi
 else
         BACKOUT_FILE=$DEFLOGDIR/backout_${PROG_NAME}_${USER_NAME}_${CUR_DATE}_$FILE_TIME
+        # set $LOG_DIR to $DEFLOGDIR, so $LOG_DIR can be used everywhere
+        LOG_DIR=$DEFLOGDIR
 fi
 
 LOG_MSG "[INFO]:-Start Main"

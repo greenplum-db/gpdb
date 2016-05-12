@@ -130,7 +130,8 @@ class GpSegStart:
     """
 
     def __init__(self, dblist, gpversion, collation, mirroringMode, num_cids, era, 
-                 timeout, pickledTransitionData, specialMode, wrapper, wrapper_args):
+                 timeout, pickledTransitionData, specialMode, wrapper, wrapper_args,
+                 logfileDirectory=False):
 
         # validate/store arguments
         #
@@ -166,6 +167,8 @@ class GpSegStart:
         self.pool                  = base.WorkerPool(numWorkers=len(dblist))
         self.logger                = logger
         self.overall_status        = None
+
+        self.logfileDirectory      = logfileDirectory
 
     def getOverallStatusKeys(self):
         return self.overall_status.dirmap.keys()
@@ -545,6 +548,7 @@ class GpSegStart:
         """
         Create program expected by simple_main
         """
+        logfileDirectory = options.ensure_value("logfileDirectory", False)
         return GpSegStart(options.dblist,
                           options.gpversion,
                           options.collation,
@@ -555,7 +559,8 @@ class GpSegStart:
                           options.pickledTransitionData,
                           options.specialMode,
                           options.wrapper,
-                          options.wrapper_args)
+                          options.wrapper_args,
+                          logfileDirectory=logfileDirectory)
 
 #------------------------------------------------------------------------- 
 if __name__ == '__main__':
