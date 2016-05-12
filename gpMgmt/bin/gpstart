@@ -71,8 +71,8 @@ class GpStart:
         self.interactive=interactive
         self.timeout=timeout
         self.wrapper=wrapper;
-        self.wrapper_args=wrapper_args
-        self.skip_standby_check=skip_standby_check
+        self.wrapper_args=wrapper_args;
+        self.skip_standby_check=skip_standby_check;
         self.logfileDirectory=logfileDirectory
         
         #
