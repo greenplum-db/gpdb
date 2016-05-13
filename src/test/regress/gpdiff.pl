@@ -1,16 +1,8 @@
 #!/usr/bin/env perl
 #
-# $Header$
-#
 # Copyright (c) 2007, 2008, 2009 GreenPlum.  All rights reserved.
 # Author: Jeffrey I Cohen
 #
-#
-# Pod::Usage is loaded lazily when needed, if the --help or other such option
-# is actually used. Loading the module takes some time, which adds up when
-# running hundreds of regression tests, and gpdiff.pl calls this script twice
-# for every test. See lazy_pod2usage().
-#use Pod::Usage;
 
 use strict;
 use warnings;
@@ -69,7 +61,7 @@ on the standard options.  The following options are specific to gpdiff:
 
 =item B<-gpd_ignore_headers>
 
-gpdiff/atmsort expect Postgresql "psql-style" output for SELECT
+gpdiff/atmsort expect PostgreSQL "psql-style" output for SELECT
 statements, with a two line header composed of the column names,
 separated by vertical bars (|), and a "separator" line of dashes and
 pluses beneath, followed by the row output.  The psql utility performs
@@ -95,11 +87,11 @@ specify multiple initialization files, use multiple gpd_init arguments, eg:
 
 =head1 DESCRIPTION
 
-gpdiff compares files using diff after processing them with atmsort.pl.
+gpdiff compares files using diff after processing them with atmsort.pm.
 This comparison is designed to ignore certain Greenplum-specific
 informational messages, as well as handle the cases where query output
 order may differ for a multi-segment Greenplum database versus a
-single Postgresql instance.  Type "atmsort.pl --man" for more details.
+single PostgreSQL instance.  Type "atmsort.pl --man" for more details.
 gpdiff is invoked by pg_regress as part of "make install-check".
 In this case the diff options are something like:
 
@@ -128,12 +120,16 @@ Jeffrey I Cohen
 
 Copyright (c) 2007, 2008, 2009 GreenPlum.  All rights reserved.
 
-Address bug reports and comments to: jcohen@greenplum.com
+Address bug reports and comments to: bugs@greenplum.org
 
 
 =cut
 
-# Calls pod2usage, but lodas the module first.
+# Calls pod2usage, but loads the module first.
+# Pod::Usage is loaded lazily when needed, if the --help or other such option
+# is actually used. Loading the module takes some time, which adds up when
+# running hundreds of regression tests, and pg_regress calls this script twice
+# for every test.
 sub lazy_pod2usage
 {
     require Pod::Usage;

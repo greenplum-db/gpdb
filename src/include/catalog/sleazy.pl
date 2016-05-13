@@ -1,11 +1,4 @@
 #!/usr/bin/perl
-#
-# $Header: $
-#
-# copyright (c) 
-# Author: 
-#
-# SLZY_HDR_END
 
 use POSIX;
 use Pod::Usage;
@@ -267,7 +260,7 @@ Jeffrey I Cohen
 
 Copyright (c) 2012, 2013 Greenplum.  All rights reserved.  
 
-Address bug reports and comments to: jcohen@greenplum.com
+Address bug reports and comments to: bugs@greenplum.org
 
 =cut
 # SLZY_POD_HDR_END

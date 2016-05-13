@@ -1,7 +1,5 @@
 #!/usr/bin/env perl
 #
-# $Header$
-#
 # Copyright (c) 2007-2010 GreenPlum.  All rights reserved.  
 # Author: Jeffrey I Cohen
 #
@@ -100,7 +98,7 @@ Jeffrey I Cohen
 
 Copyright (c) 2007-2010 GreenPlum.  All rights reserved.  
 
-Address bug reports and comments to: jcohen@greenplum.com
+Address bug reports and comments to: bugs@greenplum.org
 
 
 =cut
