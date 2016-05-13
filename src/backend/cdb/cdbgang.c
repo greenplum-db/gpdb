@@ -2799,6 +2799,10 @@ disconnectAndDestroyAllGangs(void)
 	if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 		elog(LOG, "disconnectAndDestroyAllGangs done");
 
+	/*
+	 * As all the reader and writer gangs are destroyed, reset the
+	 * corresponding GangContext to prevent leaks
+	 */
 	if (NULL != GangContext)
 	{
 		MemoryContextReset(GangContext);
