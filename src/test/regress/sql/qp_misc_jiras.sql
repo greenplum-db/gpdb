@@ -1073,7 +1073,7 @@ WHERE T.SQ = 1
 
 drop table qp_misc_jiras.ins_cr_nds_dt, qp_misc_jiras.ins_cr_nds_mstr, qp_misc_jiras.m_ccr_cvr_nds_t99, qp_misc_jiras.m_ccr_mthy_cr_nds_t00;
 
-reset gp_select_invisible;
+set gp_select_invisible=false;
 
 create table qp_misc_jiras.tbl6448 (x "char");
 insert into qp_misc_jiras.tbl6448 values ('a');
