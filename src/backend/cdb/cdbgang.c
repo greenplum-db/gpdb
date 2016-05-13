@@ -2798,6 +2798,11 @@ disconnectAndDestroyAllGangs(void)
 
 	if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 		elog(LOG, "disconnectAndDestroyAllGangs done");
+
+	if (NULL != GangContext)
+	{
+		MemoryContextReset(GangContext);
+	}
 }
 
 bool
