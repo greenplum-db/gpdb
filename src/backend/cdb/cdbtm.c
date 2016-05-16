@@ -1029,6 +1029,7 @@ doDtxPhase2Retry(void)
 				/*
 				 * KLUDGE: FtsHandleGangConnectionFailure will need a special
 				 * transaction context to tell it not to raise an ERROR...
+				 * todo: really?
 				 */
 				setDistributedTransactionContext(DTX_CONTEXT_QD_RETRY_PHASE_2);
 				elog(DTM_DEBUG5,
@@ -1559,11 +1560,11 @@ initTM(void)
 			PG_TRY();
 			{
 				/*
-				 * detectFailedConnections could throw ERROR, so
+				 * FtsNotifyProber could throw ERROR, so
 				 * we should catch it if it happens.
 				 */
 				if (!first)
-					detectFailedConnections();
+					FtsNotifyProber();
 
 				initTM_recover_as_needed();
 				succeeded = true;
@@ -3164,7 +3165,6 @@ cdbtm_performDeferredRecovery(void)
 			*shmDtmRecoveryDeferred = false;
 			elog(NOTICE, "Releasing segworker groups for deferred recovery.");
 			disconnectAndDestroyAllGangs();
-			resetSessionForPrimaryGangLoss();
 		}
 		releaseTmLock();
 		CheckForResetSession();

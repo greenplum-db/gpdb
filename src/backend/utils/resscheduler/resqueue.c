@@ -473,7 +473,7 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 		 */
 		if (ResourceCleanupIdleGangs)
 		{
-			cleanupIdleReaderGangs();
+			disconnectAndDestroyIdleReaderGangs();
 		}
 
 		/*

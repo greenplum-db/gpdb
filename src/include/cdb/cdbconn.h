@@ -75,14 +75,14 @@ cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc);
 
 
 /* Connect to a QE as a client via libpq. */
-bool                            /* returns true if connected */
+void
 cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
 		  const char *gpqeid,
 		  const char *options);
 
 /* Set the slice index for error messages related to this QE. */
-bool
-cdbconn_setSliceIndex(SegmentDatabaseDescriptor    *segdbDesc,
-                      int                           sliceIndex);
+void
+cdbconn_setSliceIndex(SegmentDatabaseDescriptor *segdbDesc, int sliceIndex,
+		MemoryContext mcxt);
 
 #endif   /* CDBCONN_H */

@@ -248,7 +248,11 @@ getCdbComponentInfo(bool DNSLookupAsError)
 			pRow->filerep_port = -1;
 
 		getAddressesForDBid(pRow, DNSLookupAsError ? ERROR : LOG);
-		pRow->hostip = pRow->hostaddrs[0];
+
+		/* We make sure we get a valid hostip here */
+		if(pRow->hostaddrs[0] == NULL)
+			elog(ERROR, "Cannot resolve network address for dbid=%d", dbid);
+		pRow->hostip = pstrdup(pRow->hostaddrs[0]);
 	}
 
 	/*
@@ -439,6 +443,9 @@ freeCdbComponentDatabaseInfo(CdbComponentDatabaseInfo *cdi)
 
 	if (cdi->address != NULL)
 		pfree(cdi->address);
+
+	if (cdi->hostip != NULL)
+		pfree(cdi->hostip);
 
 	for (i=0; i < COMPONENT_DBS_MAX_ADDRS; i++)
 	{

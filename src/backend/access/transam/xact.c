@@ -4201,7 +4201,7 @@ AbortTransaction(void)
 	if (QueryCancelCleanup)
 	{
 		QueryCancelCleanup = false;
-		cleanupIdleReaderGangs();
+		disconnectAndDestroyIdleReaderGangs();
 	}
 
 	/* If memprot decides to kill process, make sure we destroy all processes

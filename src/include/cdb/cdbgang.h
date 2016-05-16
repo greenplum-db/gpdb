@@ -23,8 +23,9 @@ typedef enum GangType
 {
 	GANGTYPE_UNALLOCATED,       /* a root slice executed by the qDisp */
 	GANGTYPE_ENTRYDB_READER,    /* a 1-gang with read access to the entry db */
-	GANGTYPE_PRIMARY_READER,    /* a 1-gang or N-gang to read the segment dbs */
-	GANGTYPE_PRIMARY_WRITER    /* the N-gang that can update the segment dbs */
+	GANGTYPE_SINGLETON_READER,  /* a 1-gang to read the segment dbs */
+	GANGTYPE_PRIMARY_READER,    /* a N-gang to read the segment dbs */
+	GANGTYPE_PRIMARY_WRITER     /* the N-gang that can update the segment dbs */
 } GangType;
 
 /*
@@ -46,22 +47,20 @@ typedef struct Gang
 	/* the named portal that owns this gang, NULL if none */
 	char		*portal_name;
 
-	/* Array of QEs/segDBs that make up this gang */
+	/*
+	 * Array of QEs/segDBs that make up this gang.
+	 * Sorted by segment index.
+	 */
 	struct SegmentDatabaseDescriptor *db_descriptors;	
 
 	/* For debugging purposes only. These do not add any actual functionality. */
-	bool		active;
-	bool		all_valid_segdbs_connected;
 	bool		allocated;
 
 	/* should be destroyed in cleanupGang() if set*/
 	bool		noReuse;
-
-	/* MPP-24003: pointer to array of segment database info for each reader and writer gang. */
-	struct		CdbComponentDatabaseInfo *segment_database_info;
 } Gang;
 
-extern Gang *allocateGang(GangType type, int size, int content, char *portal_name);
+extern Gang *allocateReaderGang(GangType type, char *portal_name);
 extern Gang *allocateWriterGang(void);
 
 struct DirectDispatchInfo;
@@ -77,13 +76,10 @@ extern void disconnectAndDestroyAllGangs(void);
 
 extern void CheckForResetSession(void);
 
-extern List * getAllReaderGangs(void);
-
 extern List * getAllIdleReaderGangs(void);
 
 extern List * getAllBusyReaderGangs(void);
 
-extern void detectFailedConnections(void);
 
 extern CdbComponentDatabases *getComponentDatabases(void);
 
@@ -95,16 +91,16 @@ extern Gang *findGangById(int gang_id);
 
 
 /*
- * cleanupIdleReaderGangs() and cleanupAllIdleGangs().
+ * disconnectAndDestroyIdleReaderGangs() and disconnectAndDestroyAllIdleGangs().
  *
  * These two routines are used when a session has been idle for a while (waiting for the
  * client to send us SQL to execute).  The idea is to consume less resources while sitting idle.
  *
  * Only call these from an idle session.
  */
-extern void cleanupIdleReaderGangs(void);
+extern void disconnectAndDestroyIdleReaderGangs(void);
 
-extern void cleanupAllIdleGangs(void);
+extern void disconnectAndDestroyAllIdleGangs(void);
 
 extern void cleanupPortalGangs(Portal portal);
 
@@ -288,10 +284,10 @@ extern void InitSliceTable(struct EState *estate, int nMotions, int nSubplans);
 extern Slice *getCurrentSlice(struct EState* estate, int sliceIndex);
 extern bool sliceRunsOnQD(Slice *slice);
 extern bool sliceRunsOnQE(Slice *slice);
-extern int sliceCalculateNumSendingProcesses(Slice *slice, int numSegmentsInCluster);
+extern int sliceCalculateNumSendingProcesses(Slice *slice);
 
 extern void InitRootSlices(QueryDesc *queryDesc);
-extern void AssignGangs(QueryDesc *queryDesc, int utility_segment_index);
+extern void AssignGangs(QueryDesc *queryDesc);
 extern void ReleaseGangs(QueryDesc *queryDesc);
 
 #ifdef USE_ASSERT_CHECKING

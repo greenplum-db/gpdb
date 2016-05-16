@@ -977,19 +977,20 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
         sendSlice->rootIndex = recvSlice->rootIndex;
 
 		/* The gang beneath a Motion will be a reader. */
-		sendSlice->gangType = GANGTYPE_PRIMARY_READER;
+		if (sendFlow->flotype != FLOW_SINGLETON)
+		{
+			sendSlice->gangSize = getgpsegmentCount();
+			sendSlice->gangType = GANGTYPE_PRIMARY_READER;
+		}
+		else
+		{
+			sendSlice->gangSize = 1;
+			sendSlice->gangType =
+					sendFlow->segindex == -1 ?
+							GANGTYPE_ENTRYDB_READER : GANGTYPE_SINGLETON_READER;
+		}
 
-	    /* How many sending processes in the dispatcher array? Note that targeted dispatch may reduce this number in practice */
-		sendSlice->gangSize = 1;
-	    if (sendFlow->flotype != FLOW_SINGLETON)
-	    	sendSlice->gangSize = getgpsegmentCount();
-
-        /* Does sending slice need 1-gang with read-only access to entry db? */
-        if (sendFlow->flotype == FLOW_SINGLETON &&
-            sendFlow->segindex == -1)
-            sendSlice->gangType = GANGTYPE_ENTRYDB_READER;
-
-        sendSlice->numGangMembersToBeActive = sliceCalculateNumSendingProcesses(sendSlice, getgpsegmentCount());
+        sendSlice->numGangMembersToBeActive = sliceCalculateNumSendingProcesses(sendSlice);
 
 		if (node->motionType == MOTIONTYPE_FIXED && node->numOutputSegs == 1)
 		{
@@ -1004,7 +1005,7 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 			{
 				Assert(recvSlice->gangSize == 1);
 				Assert(node->outputSegIdx[0] >= 0
-					   ? (recvSlice->gangType == GANGTYPE_PRIMARY_READER || 
+					   ? (recvSlice->gangType == GANGTYPE_SINGLETON_READER ||
 						  recvSlice->gangType == GANGTYPE_ENTRYDB_READER)
 					   : recvSlice->gangType == GANGTYPE_ENTRYDB_READER);
 			}

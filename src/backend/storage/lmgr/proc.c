@@ -1554,7 +1554,7 @@ HandleClientWaitTimeout(void)
 	 */
 	if (gangsExist())
 	{
-		cleanupAllIdleGangs();
+		disconnectAndDestroyAllIdleGangs();
 	}
 
 }

@@ -794,6 +794,7 @@ appendGangAndDirectDispatchInfo(StringInfo str, PlanState *planstate, int sliceI
 
 		case GANGTYPE_PRIMARY_WRITER:
 		case GANGTYPE_PRIMARY_READER:
+		case GANGTYPE_SINGLETON_READER:
 		{
 			int numSegments;
 			appendStringInfo(str, "  (slice%d;", sliceId);
