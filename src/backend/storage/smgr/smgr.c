@@ -123,6 +123,9 @@ static PendingDelete *PendingDelete_AddEntry(
 {
 	PendingDelete *pending;
 
+	if (!ItemPointerIsValid(persistentTid))
+		elog(ERROR, "tried to delete a relation with invalid persistent TID");
+
 	/* Add the filespace to the list of stuff to delete at abort */
 	pending = (PendingDelete *)
 		MemoryContextAllocZero(TopMemoryContext, sizeof(PendingDelete));
