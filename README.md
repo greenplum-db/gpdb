@@ -204,6 +204,63 @@ make installcheck-bugbuster
   some tests are known to fail with Greenplum. The
   __installcheck-good__ schedule excludes those tests.
 
+## Development with Docker (alpha)
+
+We provide a docker image with all dependencies required to compile and test
+GPDB. You can view the dependency dockerfile at `./docker/base/Dockerfile`.
+The image is hosted on docker hub at `pivotaldata/gpdb-devel`. This docker
+image is currently under heavy development.
+
+Known issues:
+* The `installcheck-good` make target has at least 4 failures, some of which
+  are non-deterministic
+
+### Running regression tests with Docker
+
+1. Create a docker host with 8gb RAM and 4 cores
+    ```bash
+    docker-machine create -d virtualbox --virtualbox-cpu-count 4 --virtualbox-disk-size 50000 --virtualbox-memory 8192 gpdb
+    eval $(docker-machine env gpdb)
+    ```
+
+1. Build your code on gpdb-devel rootfs
+    ```bash
+    cd [path/to/gpdb]
+    docker build .
+    # image beefc4f3 built
+    ```
+    The top level Dockerfile will automatically sync your current working
+    directory into the docker image. This means that any code you are working
+    on will automatically be built and ready for testing in the docker context
+
+1. Log into docker image
+    ```bash
+    docker run -it beefc4f3
+    ```
+
+1. As `gpadmin` user run `installcheck-good`
+    ```bash
+    su gpadmin
+    cd /workspace/gpdb
+    make installcheck-good
+    ```
+
+### Caveats
+
+* No Space Left On Device
+    On macOS the docker-machine vm can periodically become full with unused images.
+    You can clear these images with a combination of docker commands.
+    ```bash
+    # assuming no currently running containers
+    # remove all stopped containers from cache
+    docker ps -aq | xargs -n 1 docker rm
+    # remove all untagged images
+    docker images -aq --filter dangling=true | xargs -n 1 docker rmi
+    ```
+
+    Alternatively you can use the (beta) Native macOS docker client now available
+    in docker 1.12.
+
 ## Glossary
 
 * __QD__
