@@ -741,6 +741,22 @@ class TypeMaker<ReferentType&> {
   }
 };
 
+// Partial specialization for C/C++ array types, which are converted to their
+// corresponding llvm array types
+template <typename ArrayElementType, size_t N>
+class TypeMaker<ArrayElementType[N]>{
+  public:
+    static llvm::Type* Get(llvm::LLVMContext* context) {
+      llvm::Type* unit_type = codegen_utils_detail::TypeMaker<ArrayElementType>::Get(context);
+      return llvm::ArrayType::get(unit_type, N);
+    }
+
+    static llvm::Type* GetAnnotated(llvm::LLVMContext* context) {
+      llvm::Type* unit_type = codegen_utils_detail::TypeMaker<ArrayElementType>::Get(context);
+      return llvm::ArrayType::get(unit_type, N);
+    }
+};
+
 }  // namespace codegen_utils_detail
 
 template <typename CppType>
