@@ -76,9 +76,9 @@ bool InitConfig(const string& conf_path,
         s3cfg = new Config(conf_path);
         if (!s3cfg || !s3cfg->Handle()) {
 #ifndef DEBUG_S3
-            write_log("Failed to parse config file, or it doesn't exist\n");
+            write_log("Failed to parse config file \"%s\", or it doesn't exist\n", conf_path.c_str());
 #else
-            S3ERROR("Failed to parse config file, or it doesn't exist");
+            S3ERROR("Failed to parse config file \"%s\", or it doesn't exist", conf_path.c_str());
 #endif
             if (s3cfg) {
                 delete s3cfg;

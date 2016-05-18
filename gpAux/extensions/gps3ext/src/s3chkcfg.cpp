@@ -7,6 +7,7 @@ int main(int argc, char *argv[]) {
     int ret = 0;
 
     s3ext_logtype = STDERR_LOG;
+    s3ext_loglevel = EXT_ERROR;
 
     if (argc == 1) {
         print_usage(stderr);
