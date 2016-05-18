@@ -14,7 +14,8 @@ WANTED_DIRS = \
 		gp_distribution_policy \
 		gp_internal_tools \
 		gp_cancel_query \
-		indexscan
+		indexscan \
+		intarray
 
 
 ifeq ($(with_openssl),yes)
