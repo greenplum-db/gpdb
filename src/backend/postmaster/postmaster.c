@@ -541,7 +541,7 @@ static bool StopServices(int excludeFlags, int signal);
 static char *GetServerProcessTitle(int pid);
 static void sigusr1_handler(SIGNAL_ARGS);
 static void dummy_handler(SIGNAL_ARGS);
-static void CleanupBackend(int pid, int exitstatus, bool resetRequired);
+static void CleanupBackend(int pid, int exitstatus);
 static void HandleChildCrash(int pid, int exitstatus, const char *procname);
 static void LogChildExit(int lev, const char *procname,
 			 int pid, int exitstatus);
@@ -4401,8 +4401,6 @@ static void do_reaper()
 
         Assert(pid != 0);
 
-		bool resetRequired = freeProcEntryAndReturnReset(pid);
-
 		if (Debug_print_server_processes)
 		{
 			char *procName;
@@ -4746,7 +4744,7 @@ static void do_reaper()
 						if (subProc->cleanupBackend == true)
 						{
 							Assert(subProc->procName && strcmp(subProc->procName, "perfmon process") != 0);
-							CleanupBackend(pid, exitstatus, resetRequired);
+							CleanupBackend(pid, exitstatus);
 						}
 
 						/*
@@ -4935,7 +4933,7 @@ static void do_reaper()
 		if (pid == AutoVacPID)
 		{
 			AutoVacPID = 0;
-			if (!EXIT_STATUS_0(exitstatus) && !EXIT_STATUS_1(exitstatus) && resetRequired)
+			if (!EXIT_STATUS_0(exitstatus) && !EXIT_STATUS_1(exitstatus))
 				HandleChildCrash(pid, exitstatus,
 								 _("autovacuum launcher process"));
 			continue;
@@ -5011,7 +5009,7 @@ static void do_reaper()
 		/*
 		 * Else do standard backend child cleanup.
 		 */
-		CleanupBackend(pid, exitstatus, resetRequired);
+		CleanupBackend(pid, exitstatus);
 	}							/* loop over pending child-death reports */
 
 	/*
@@ -5202,8 +5200,7 @@ GetServerProcessTitle(int pid)
  */
 static void
 CleanupBackend(int pid,
-			   int exitstatus,	/* child's exit status. */
-			   bool resetRequired) /* postmaster reset is required */
+			   int exitstatus)	/* child's exit status. */
 {
 	Dlelem	   *curr;
 
@@ -5228,7 +5225,7 @@ CleanupBackend(int pid,
 	}
 #endif
 
-	if (!EXIT_STATUS_0(exitstatus) && !EXIT_STATUS_1(exitstatus) && resetRequired)
+	if (!EXIT_STATUS_0(exitstatus) && !EXIT_STATUS_1(exitstatus))
 	{
 		HandleChildCrash(pid, exitstatus, _("server process"));
 		return;

@@ -70,6 +70,15 @@ PGPROC	   *MyProc = NULL;
 /* Special for MPP reader gangs */
 PGPROC	   *lockHolderProcPtr = NULL;
 
+/*
+ * This spinlock protects the freelist of recycled PGPROC structures.
+ * We cannot use an LWLock because the LWLock manager depends on already
+ * having a PGPROC and a wait semaphore!  But these structures are touched
+ * relatively infrequently (only at backend startup or shutdown) and not for
+ * very long, so a spinlock is okay.
+ */
+NON_EXEC_STATIC slock_t *ProcStructLock = NULL;
+
 /* Pointers to shared-memory structures */
 NON_EXEC_STATIC PROC_HDR *ProcGlobal = NULL;
 NON_EXEC_STATIC PGPROC *AuxiliaryProcs = NULL;
@@ -91,6 +100,7 @@ static void ProcKill(int code, Datum arg);
 static void AuxiliaryProcKill(int code, Datum arg);
 static bool CheckStatementTimeout(void);
 
+
 /*
  * Report shared-memory space needed by InitProcGlobal.
  */
@@ -105,6 +115,8 @@ ProcGlobalShmemSize(void)
 	size = add_size(size, mul_size(NUM_AUXILIARY_PROCS, sizeof(PGPROC)));
 	/* MyProcs, including autovacuum */
 	size = add_size(size, mul_size(MaxBackends, sizeof(PGPROC)));
+	/* ProcStructLock */
+	size = add_size(size, sizeof(slock_t));
 
 	return size;
 }
@@ -206,6 +218,7 @@ InitProcGlobal(int mppLocalProcessCounter)
 	for (i = 0; i < autovacuum_max_workers; i++)
 	{
 		PGSemaphoreCreate(&(procs[i].sem));
+		InitSharedLatch(&(procs[i].procLatch));
 		procs[i].links.next = ProcGlobal->autovacFreeProcs;
 		ProcGlobal->autovacFreeProcs = MAKE_OFFSET(&procs[i]);
 	}
@@ -214,122 +227,13 @@ InitProcGlobal(int mppLocalProcessCounter)
 	for (i = 0; i < NUM_AUXILIARY_PROCS; i++)
 	{
 		AuxiliaryProcs[i].pid = 0;		/* marks auxiliary proc as not in use */
-		AuxiliaryProcs[i].postmasterResetRequired = true;
 		PGSemaphoreCreate(&(AuxiliaryProcs[i].sem));
 		InitSharedLatch(&(AuxiliaryProcs[i].procLatch));
 	}
-}
 
-/*
- * Prepend -- prepend the entry to the free list of ProcGlobal.
- *
- * Use pg_atomic_compare_exchange_u32/64 to avoid using lock and guarantee atomic operation.
- */
-static void
-Prepend(PGPROC *myProc)
-{
-	int pid = myProc->pid;
-	
-	myProc->pid = 0;
-	
-	int32 casResult = false;
-	
-	/* Update freeProcs atomically. */
-	while (!casResult)
-	{
-		myProc->links.next = ProcGlobal->freeProcs;
-		
-		if (sizeof(unsigned long) == sizeof(uint64)) 
-		{
-			casResult = pg_atomic_compare_exchange_u64((pg_atomic_uint64 *)&ProcGlobal->freeProcs,
-														(uint64 *)&myProc->links.next,
-														MAKE_OFFSET(myProc));
-		}
-		else
-		{
-			Assert(sizeof(unsigned long) == sizeof(uint32));
-			casResult = pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&ProcGlobal->freeProcs,
-														(uint32 *)&myProc->links.next,
-														MAKE_OFFSET(myProc));
-		}
-		
-		if (gp_debug_pgproc && !casResult)
-		{
-			elog(LOG, "need to retry moving PGPROC entry to freelist: pid=%d "
-				 "(myOffset=%ld, oldHeadOffset=%ld, newHeadOffset=%ld)",
-				 pid, MAKE_OFFSET(myProc), myProc->links.next, ProcGlobal->freeProcs);
-		}
-		
-	}
-
-	/* Atomically increment numFreeProcs */
-	pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&ProcGlobal->numFreeProcs, 1);
-}
-
-
-/*
- * RemoveFirst -- remove the first entry in the free list of ProcGlobal.
- *
- * Use pg_atomic_compare_exchange_u32/64 to avoid using lock and guarantee atomic operation.
- */
-static PGPROC *
-RemoveFirst()
-{
-	volatile PROC_HDR *procglobal = ProcGlobal;
-	SHMEM_OFFSET myOffset;
-	PGPROC *freeProc = NULL;
-
-	/*
-	 * Decrement numFreeProcs before removing the first entry from the
-	 * free list.
-	 */
-	pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&procglobal->numFreeProcs, 1);
-
-	int32 casResult = false;
-	while(!casResult)
-	{
-		myOffset = procglobal->freeProcs;
-
-		if (myOffset == INVALID_OFFSET)
-		{
-			freeProc = NULL;
-			break;
-		}
-		
-		freeProc = (PGPROC *) MAKE_PTR(myOffset);
-
-		if (sizeof(unsigned long) == sizeof(uint64)) 
-		{
-			casResult = pg_atomic_compare_exchange_u64((pg_atomic_uint64 *)&((PROC_HDR *)procglobal)->freeProcs,
-														(uint64 *)&myOffset,
-														freeProc->links.next);
-		}
-		else
-		{
-			casResult = pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)&((PROC_HDR *)procglobal)->freeProcs,
-														(uint32 *)&myOffset,
-														freeProc->links.next);
-
-		}
-
-		if (gp_debug_pgproc && !casResult)
-		{
-			elog(LOG, "need to retry allocating a PGPROC entry: pid=%d (oldHeadOffset=%ld, newHeadOffset=%ld)",
-				 MyProcPid, myOffset, procglobal->freeProcs);
-		}
-
-	}
-
-	if (freeProc == NULL)
-	{
-		/*
-		 * Increment numFreeProcs since we didn't remove any entry from
-		 * the free list.
-		 */
-		pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&procglobal->numFreeProcs, 1);
-	}
-
-	return freeProc;
+	/* Create ProcStructLock spinlock, too */
+	ProcStructLock = (slock_t *) ShmemAlloc(sizeof(slock_t));
+	SpinLockInit(ProcStructLock);
 }
 
 /*
@@ -340,6 +244,7 @@ InitProcess(void)
 {
 	/* use volatile pointer to prevent code rearrangement */
 	volatile PROC_HDR *procglobal = ProcGlobal;
+	SHMEM_OFFSET myOffset;
 	int			i;
 
 	/*
@@ -359,22 +264,54 @@ InitProcess(void)
 	 */
 	InitializeLatchSupport();
 
-	MyProc = RemoveFirst();
-	
-	if (MyProc == NULL)
+	/*
+	 * Try to get a proc struct from the free list.  If this fails, we must be
+	 * out of PGPROC structures (not to mention semaphores).
+	 *
+	 * While we are holding the ProcStructLock, also copy the current shared
+	 * estimate of spins_per_delay to local storage.
+	 */
+	SpinLockAcquire(ProcStructLock);
+
+	set_spins_per_delay(procglobal->spins_per_delay);
+
+	if (IsAutoVacuumWorkerProcess())
+		myOffset = procglobal->autovacFreeProcs;
+	else
+		myOffset = procglobal->freeProcs;
+
+	if (myOffset != INVALID_OFFSET)
 	{
+		MyProc = (PGPROC *) MAKE_PTR(myOffset);
+		if (IsAutoVacuumWorkerProcess())
+			procglobal->autovacFreeProcs = MyProc->links.next;
+		else
+			procglobal->freeProcs = MyProc->links.next;
+
+		procglobal->numFreeProcs--;		/* we removed an entry from the list. */
+		Assert(procglobal->numFreeProcs >= 0);
+
+		SpinLockRelease(ProcStructLock);
+	}
+	else
+	{
+		/*
+		 * If we reach here, all the PGPROCs are in use.  This is one of the
+		 * possible places to detect "too many backends", so give the standard
+		 * error message.  XXX do we need to give a different failure message
+		 * in the autovacuum case?
+		 */
+		SpinLockRelease(ProcStructLock);
 		ereport(FATAL,
 				(errcode(ERRCODE_TOO_MANY_CONNECTIONS),
 				 errmsg("sorry, too many clients already")));
 	}
-	
+
 	if (gp_debug_pgproc)
 	{
 		elog(LOG, "allocating PGPROC entry for pid %d, freeProcs (prev offset, new offset): (%ld, %ld)",
 			 MyProcPid, MAKE_OFFSET(MyProc), MyProc->links.next);
 	}
-
-	set_spins_per_delay(procglobal->spins_per_delay);
 
 	int mppLocalProcessSerial = pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&procglobal->mppLocalProcessCounter, 1);
 
@@ -414,7 +351,6 @@ InitProcess(void)
 	MyProc->roleId = InvalidOid;
 	MyProc->inVacuum = false;
 	MyProc->isAutovacuum = IsAutoVacuumWorkerProcess();
-	MyProc->postmasterResetRequired = true;
 	MyProc->lwWaiting = false;
 	MyProc->lwExclusive = false;
 	MyProc->lwWaitLink = NULL;
@@ -529,7 +465,6 @@ InitAuxiliaryProcess(void)
 	PGPROC	   *auxproc;
 	int			proctype;
 	int			i;
-	uint32 		expected;
 
 	/*
 	 * ProcGlobal should be set up already (if we are a backend, we inherit
@@ -549,30 +484,39 @@ InitAuxiliaryProcess(void)
 	InitializeLatchSupport();
 
 	/*
-	 * Find a free auxproc entry. Use compare_and_swap to avoid locking.
+	 * We use the ProcStructLock to protect assignment and releasing of
+	 * AuxiliaryProcs entries.
+	 *
+	 * While we are holding the ProcStructLock, also copy the current shared
+	 * estimate of spins_per_delay to local storage.
+	 */
+	SpinLockAcquire(ProcStructLock);
+
+	set_spins_per_delay(ProcGlobal->spins_per_delay);
+
+	/*
+	 * Find a free auxproc ... *big* trouble if there isn't one ...
 	 */
 	for (proctype = 0; proctype < NUM_AUXILIARY_PROCS; proctype++)
 	{
 		auxproc = &AuxiliaryProcs[proctype];
-		expected = 0;
-		if (pg_atomic_compare_exchange_u32((pg_atomic_uint32 *)(&(auxproc->pid)),
-								&expected,
-								MyProcPid))
-		{
-			/* Find a free entry, break here. */
+		if (auxproc->pid == 0)
 			break;
-		}
 	}
-	
 	if (proctype >= NUM_AUXILIARY_PROCS)
 	{
+		SpinLockRelease(ProcStructLock);
 		elog(FATAL, "all AuxiliaryProcs are in use");
 	}
 
-	set_spins_per_delay(ProcGlobal->spins_per_delay);
+	/* Mark auxiliary proc as in use by me */
+	/* use volatile pointer to prevent code rearrangement */
+	((volatile PGPROC *) auxproc)->pid = MyProcPid;
 
 	MyProc = auxproc;
 	lockHolderProcPtr = auxproc;
+
+	SpinLockRelease(ProcStructLock);
 
 	/*
 	 * Initialize all fields of MyProc, except for the semaphore which was
@@ -592,7 +536,6 @@ InitAuxiliaryProcess(void)
     MyProc->mppIsWriter = false;
 	MyProc->inVacuum = false;
 	MyProc->isAutovacuum = false;
-	MyProc->postmasterResetRequired = true;
 	MyProc->lwWaiting = false;
 	MyProc->lwExclusive = false;
 	MyProc->lwWaitLink = NULL;
@@ -636,7 +579,7 @@ bool
 HaveNFreeProcs(int n)
 {
 	Assert(n >= 0);
-	
+
 	return (ProcGlobal->numFreeProcs >= n);
 }
 
@@ -773,6 +716,9 @@ static void update_spins_per_delay()
 static void
 ProcKill(int code, Datum arg)
 {
+	/* use volatile pointer to prevent code rearrangement */
+	volatile PROC_HDR *procglobal = ProcGlobal;
+	PGPROC	   *proc;
 	Assert(MyProc != NULL);
 
 	/* Make sure we're out of the sync rep lists */
@@ -816,25 +762,43 @@ ProcKill(int code, Datum arg)
 	 */
 	LWLockReleaseAll();
 
-	/* Release ownership of the process's latch, too */
-	DisownLatch(&MyProc->procLatch);
-
-	/* Update shared estimate of spins_per_delay */
-	update_spins_per_delay();
-
 	LocalDistribXactRef_Release(&MyProc->localDistribXactRef);
     MyProc->mppLocalProcessSerial = 0;
     MyProc->mppSessionId = 0;
     MyProc->mppIsWriter = false;
+	MyProc->pid = 0;
+	
+	/*
+	 * Clear MyProc first; then disown the process latch.  This is so that
+	 * signal handlers won't try to clear the process latch after it's no
+	 * longer ours.
+	 */
+	proc = MyProc;
+	MyProc = NULL;
+	DisownLatch(&proc->procLatch);
 
-	if (code == 0 || code == 1)
+	SpinLockAcquire(ProcStructLock);
+
+	/* Return PGPROC structure (and semaphore) to freelist */
+	if (IsAutoVacuumWorkerProcess())
 	{
-		MyProc->postmasterResetRequired = false;
+		proc->links.next = procglobal->autovacFreeProcs;
+		procglobal->autovacFreeProcs = MAKE_OFFSET(proc);
+	}
+	else
+	{
+		proc->links.next = procglobal->freeProcs;
+		procglobal->freeProcs = MAKE_OFFSET(proc);
 	}
 
-	/* PGPROC struct isn't mine anymore */
-	MyProc = NULL;
-	lockHolderProcPtr = NULL;
+	procglobal->numFreeProcs++;	/* we added an entry */
+
+	/* Update shared estimate of spins_per_delay */
+	update_spins_per_delay();
+
+	SpinLockRelease(ProcStructLock);
+
+	elog(LOG, "ProcKill called for pid %d", MyProcPid);
 
 	/*
 	 * This process is no longer present in shared memory in any meaningful
@@ -843,6 +807,10 @@ ProcKill(int code, Datum arg)
 	if (IsUnderPostmaster && !IsAutoVacuumWorkerProcess()
 		&& MyPMChildSlot > 0)
 		MarkPostmasterChildInactive();
+
+	/* wake autovac launcher if needed -- see comments in FreeWorkerInfo */
+	if (AutovacuumLauncherPid != 0)
+		kill(AutovacuumLauncherPid, SIGUSR1);
 }
 
 /*
@@ -871,23 +839,17 @@ AuxiliaryProcKill(int code, Datum arg)
 	/* Update shared estimate of spins_per_delay */
 	update_spins_per_delay();
 
-	if (code == 0 || code == 1)
-	{
-		MyProc->postmasterResetRequired = false;
-	}
-
 	/*
-	 * If the parent process of this auxiliary process does not exist,
-	 * we want to set the proc array entry free here. The postmaster may
-	 * not own this process, so that it can't set the entry free. This
-	 * could happen to the filerep subprocesses when the filerep main
-	 * process dies unexpectedly.
+	 * If the parent process of this auxiliary process does not exist, we
+	 * have trouble. Besides the obvious case that the postmaster is gone,
+	 * this could happen to filerep subprocesses when the filerep main
+	 * process dies unexpectedly. The postmaster will receive the SIGCHLD
+	 * signal when we exit in that case. Make sure we exit with non-zero (and
+	 * not 1 either) exit status, to force the postmaster to reset the system
+	 * if that happens.
 	 */
 	if (!ParentProcIsAlive())
-	{
-		MyProc->pid = 0;
-		MyProc->postmasterResetRequired = true;
-	}
+		proc_exit(10);
 
 	/* PGPROC struct isn't mine anymore */
 	MyProc = NULL;
@@ -1405,7 +1367,7 @@ ProcSendSignal(int pid)
 bool
 enable_sig_alarm(int delayms, bool is_statement_timeout)
 {
- 	TimestampTz fin_time;
+	TimestampTz fin_time;
 	struct itimerval timeval;
 
 	if (is_statement_timeout)
@@ -1845,104 +1807,4 @@ void ProcNewMppSessionId(int *newSessionId)
 
     	MySessionState->sessionId = *newSessionId;
     }
-}
-
-/*
- * freeAuxiliaryProcEntryAndReturnReset -- free proc entry in AuxiliaryProcs array,
- * and return the postmasterResetRequired value.
- *
- * We don't need to hold a lock to update auxiliary proc entry, since
- * no one will be using the given entry.
- *
- * If inArray is not NULL, it will be set to true when the given pid is found
- * in AuxiliaryProcs array.
- */
-bool
-freeAuxiliaryProcEntryAndReturnReset(int pid, bool *inArray)
-{
-	bool resetRequired = true;
-	bool myInArray = false;
-
-	for (int i=0; i < NUM_AUXILIARY_PROCS; i++)
-	{
-		PGPROC *myProc = &AuxiliaryProcs[i];
-		
-		if (myProc->pid == pid)
-		{
-			resetRequired = myProc->postmasterResetRequired;
-
-			/* Set this entry to free */
-			myProc->pid = 0;
-
-			myInArray = true;
-						
-			break;
-		}
-	}
-
-	if (inArray != NULL)
-	{
-		*inArray = myInArray;
-	}
-
-	if (myInArray && gp_debug_pgproc)
-	{
-		elog(LOG, "setting auxiliary proc to free: pid=%d (resetRequired=%d)",
-			 pid, resetRequired);
-	}
-
-	return resetRequired;
-}
-
-/*
- * freeProcEntryAndReturnReset -- free proc entry in PGPROC or AuxiliaryProcs array,
- * and return the postmasterResetRequired value.
- *
- * To avoid holding a lock on PGPROC structure, we use compare_and_swap to put
- * PGPROC entry back to the free list.
- */
-bool
-freeProcEntryAndReturnReset(int pid)
-{
-	Assert(ProcGlobal != NULL);
-	bool resetRequired = true;
-	
-	PGPROC *procs = ProcGlobal->procs;
-	
-    /* Return PGPROC structure to freelist */
-	for (int i = 0; i < MaxBackends; i++)
-	{
-		PGPROC *myProc = &procs[i];
-
-		if (myProc->pid == pid)
-		{
-			resetRequired = myProc->postmasterResetRequired;
-			myProc->postmasterResetRequired = true;
-
-			Prepend(myProc);
-
-			if (gp_debug_pgproc)
-			{
-				elog(LOG, "moving PGPROC entry to freelist: pid=%d (resetRequired=%d)",
-					 pid, resetRequired);
-				elog(LOG, "freeing PGPROC entry for pid %d, freeProcs (prev offset, new offset): (%ld, %ld)",
-					 pid, myProc->links.next, MAKE_OFFSET(myProc));
-			}
-			
-			return resetRequired;
-		}
-	}
-
-	bool found = false;
-	resetRequired = freeAuxiliaryProcEntryAndReturnReset(pid, &found);
-	
-	if (found)
-		return resetRequired;
-	
-	if (gp_debug_pgproc)
-	{
-		elog(LOG, "proc entry not found: pid=%d", pid);
-	}
-
-	return resetRequired;
 }

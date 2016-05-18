@@ -96,7 +96,6 @@ struct PGPROC
     int         mppSessionId;   /* serial num of the qDisp process */
     int         mppLocalProcessSerial;  /* this backend's PGPROC serial num */
     bool		mppIsWriter;	/* The writer gang member, holder of locks */
-	bool		postmasterResetRequired; /* Whether postmaster reset is required when this child exits */
 
 	bool		inVacuum;		/* true if current xact is a LAZY VACUUM */
 	bool		isAutovacuum;	/* true if it's autovacuum */
@@ -175,16 +174,8 @@ typedef struct PROC_HDR
     /* Counter for assigning serial numbers to processes */
     int         mppLocalProcessCounter;
 
-	/*
-	 * Number of free PGPROC entries.
-	 *
-	 * Note that this value is not updated synchronously with freeProcs.
-	 * Thus, in some small time window, this value may not reflect
-	 * the real number of free entries in freeProcs. However, since
-	 * this is only used to check whether there are enough free entries
-	 * to be reserved for superusers, it is okay.
-	 */
-	int numFreeProcs;
+	/* Number of free PGPROC entries in freeProcs list. */
+	int			numFreeProcs;
 
 } PROC_HDR;
 
@@ -259,6 +250,5 @@ extern void ResLockWaitCancel(void);
 extern bool ProcGetMppLocalProcessCounter(int *mppLocalProcessCounter);
 extern bool ProcCanSetMppSessionId(void);
 extern void ProcNewMppSessionId(int *newSessionId);
-extern bool freeAuxiliaryProcEntryAndReturnReset(int pid, bool *inArray);
-extern bool freeProcEntryAndReturnReset(int pid);
+
 #endif   /* PROC_H */
