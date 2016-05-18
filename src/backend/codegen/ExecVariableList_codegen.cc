@@ -168,6 +168,15 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   // BasicBlock of function entry.
   llvm::BasicBlock* entry_block = codegen_utils->CreateBasicBlock(
       "entry", ExecVariableList_func);
+  // BasicBlock for checking correct slot
+  llvm::BasicBlock* slot_check_block = codegen_utils->CreateBasicBlock(
+      "slot_check", ExecVariableList_func);
+  // BasicBlock for checking tuple type.
+  llvm::BasicBlock* tuple_type_check_block = codegen_utils->CreateBasicBlock(
+      "tuple_type_check", ExecVariableList_func);
+  // BasicBlock for heap tuple check.
+  llvm::BasicBlock* heap_tuple_check_block = codegen_utils->CreateBasicBlock(
+      "heap_tuple_check", ExecVariableList_func);
   // BasicBlock for main.
   llvm::BasicBlock* main_block = codegen_utils->CreateBasicBlock(
       "main", ExecVariableList_func);
@@ -192,11 +201,16 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 
   // Entry block
   // -----------
-  // We check if enrolled and input slots are the same, so that everything
-  // is fine and we do not need to fall back.
 
   irb->SetInsertPoint(entry_block);
+  // We start a sequence of checks to ensure that everything is fine and
+  // we do not need to fall back.
+  irb->CreateBr(slot_check_block);
 
+  // Slot check block
+  // ----------------
+
+  irb->SetInsertPoint(slot_check_block);
   llvm::Value* llvm_econtext =
       irb->CreateLoad(codegen_utils->GetPointerToMember(
           llvm_projInfo_arg, &ProjectionInfo::pi_exprContext));
@@ -214,9 +228,54 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 
   irb->CreateCondBr(
       irb->CreateICmpEQ(llvm_slot, llvm_slot_arg),
-      main_block /* true */,
+      tuple_type_check_block /* true */,
       fallback_block /* false */
   );
+
+  // Tuple type check block
+  // ----------------------
+  // We fall back if we see a virtual tuple or mem tuple,
+  // but it's possible to partially handle those cases also
+
+  irb->SetInsertPoint(tuple_type_check_block);
+  llvm::Value* llvm_slot_PRIVATE_tts_flags_ptr =
+      codegen_utils->GetPointerToMember(
+          llvm_slot, &TupleTableSlot::PRIVATE_tts_flags);
+  llvm::Value* llvm_slot_PRIVATE_tts_memtuple =
+      irb->CreateLoad(codegen_utils->GetPointerToMember(
+          llvm_slot, &TupleTableSlot::PRIVATE_tts_memtuple));
+
+  // (slot->PRIVATE_tts_flags & TTS_VIRTUAL) != 0
+  llvm::Value* llvm_tuple_is_virtual = irb->CreateICmpNE(
+      irb->CreateAnd(
+          irb->CreateLoad(llvm_slot_PRIVATE_tts_flags_ptr),
+          codegen_utils->GetConstant(TTS_VIRTUAL)),
+          codegen_utils->GetConstant(0));
+
+  // slot->PRIVATE_tts_memtuple != NULL
+  llvm::Value* llvm_tuple_has_memtuple = irb->CreateICmpNE(
+      llvm_slot_PRIVATE_tts_memtuple, codegen_utils->GetConstant((MemTuple) NULL));
+
+  // Fall back if tuple is virtual or memtuple is null
+  irb->CreateCondBr(
+      irb->CreateOr(llvm_tuple_is_virtual, llvm_tuple_has_memtuple),
+      fallback_block /*true*/, heap_tuple_check_block /*false*/);
+
+  // HeapTuple check block
+  // ---------------------
+  // We fall back if the given tuple is not a heaptuple.
+
+  irb->SetInsertPoint(heap_tuple_check_block);
+  // In _slot_getsomeattrs, check if: TupGetHeapTuple(slot) != NULL
+  llvm::Value* llvm_slot_PRIVATE_tts_heaptuple =
+      irb->CreateLoad(codegen_utils->GetPointerToMember(
+          llvm_slot, &TupleTableSlot::PRIVATE_tts_heaptuple));
+  llvm::Value* llvm_tuple_has_heaptuple = irb->CreateICmpNE(
+      llvm_slot_PRIVATE_tts_heaptuple,
+      codegen_utils->GetConstant((HeapTuple) NULL));
+  irb->CreateCondBr(llvm_tuple_has_heaptuple,
+                    main_block /*true*/,
+                    fallback_block /*false*/);
 
   // Main block
   // ----------
@@ -224,14 +283,6 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   // Note that we do not need to check the type of the tuple, since previous check
   // guarantees that the we use the enrolled slot, which includes a heap tuple.
   irb->SetInsertPoint(main_block);
-
-  llvm::Value* llvm_slot_PRIVATE_tts_flags_ptr =
-      codegen_utils->GetPointerToMember(
-          llvm_slot, &TupleTableSlot::PRIVATE_tts_flags);
-
-  llvm::Value* llvm_slot_PRIVATE_tts_heaptuple =
-      irb->CreateLoad(codegen_utils->GetPointerToMember(
-          llvm_slot, &TupleTableSlot::PRIVATE_tts_heaptuple));
 
   llvm::Value* llvm_heaptuple_t_data =
       irb->CreateLoad(codegen_utils->GetPointerToMember(
@@ -596,10 +647,15 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 
   // Fall back block
   // ---------------
-  // Fall back and log it for debugging purposes.
+  // Note: We collect error code information, based on the block from which we fall back,
+  // and log it for debugging purposes.
   irb->SetInsertPoint(fallback_block);
+  llvm::PHINode* llvm_error = irb->CreatePHI(codegen_utils->GetType<int>(), 4);
+  llvm_error->addIncoming(codegen_utils->GetConstant(0), slot_check_block);
+  llvm_error->addIncoming(codegen_utils->GetConstant(1), tuple_type_check_block);
+  llvm_error->addIncoming(codegen_utils->GetConstant(2), heap_tuple_check_block);
 
-  elogwrapper.CreateElog(DEBUG1, "Falling back to regular ExecVariableList, enrolled slot is different from input slot");
+  elogwrapper.CreateElog(DEBUG1, "Falling back to regular ExecVariableList, reason = %d", llvm_error);
 
   codegen_utils->CreateFallback<ExecVariableListFn>(
       codegen_utils->RegisterExternalFunction(GetRegularFuncPointer()),
