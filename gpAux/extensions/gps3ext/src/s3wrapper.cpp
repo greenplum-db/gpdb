@@ -280,7 +280,6 @@ S3Reader *reader_init(const char *url_with_options) {
             return NULL;
         }
 
-        /* first call. do any desired init */
         curl_global_init(CURL_GLOBAL_ALL);
 
         char *url = truncate_options(url_with_options);

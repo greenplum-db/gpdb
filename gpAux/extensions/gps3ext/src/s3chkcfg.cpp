@@ -1,7 +1,3 @@
-#include <unistd.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-
 #include "s3chkcfg.h"
 
 volatile bool QueryCancelPending = false;
@@ -11,7 +7,6 @@ int main(int argc, char *argv[]) {
     int ret = 0;
 
     s3ext_logtype = STDERR_LOG;
-    s3ext_loglevel = EXT_ERROR;
 
     if (argc == 1) {
         print_usage(stderr);
@@ -68,7 +63,6 @@ bool read_config(const char *config) {
 
     ret = InitConfig(config, "default");
     s3ext_logtype = STDERR_LOG;
-    s3ext_loglevel = EXT_ERROR;
 
     return ret;
 }
@@ -89,7 +83,7 @@ uint8_t print_contents(ListBucketResult *r) {
     vector<BucketContent *>::iterator i;
 
     for (i = r->contents.begin(); i != r->contents.end(); i++) {
-        if (count > 8) {
+        if ((s3ext_loglevel <= EXT_WARNING) && count > 8) {
             printf("... ...\n");
             break;
         }
@@ -115,6 +109,8 @@ bool check_config(const char *url_with_options) {
         free(url_str);
         return false;
     }
+
+    curl_global_init(CURL_GLOBAL_ALL);
 
     S3Reader *wrapper = NULL;
     ListBucketResult *result = NULL;
@@ -177,8 +173,7 @@ bool s3_download(const char *url_with_options) {
         goto FAIL;
     }
 
-    s3ext_logtype = REMOTE_LOG;
-    s3ext_loglevel = EXT_ERROR;
+    s3ext_logtype = STDERR_LOG;
 
     wrapper = reader_init(url_with_options);
     if (!wrapper) {
@@ -208,7 +203,6 @@ bool s3_download(const char *url_with_options) {
     }
 
     free(data_buf);
-    // delete wrapper;
 
     return true;
 

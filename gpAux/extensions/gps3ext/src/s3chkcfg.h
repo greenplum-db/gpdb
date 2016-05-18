@@ -1,6 +1,10 @@
 #ifndef __S3_CHK_CFG__
 #define __S3_CHK_CFG__
 
+#include <unistd.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include "s3common.h"
 #include "s3conf.h"
 #include "s3downloader.h"

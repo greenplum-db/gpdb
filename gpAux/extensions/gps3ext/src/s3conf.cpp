@@ -76,9 +76,9 @@ bool InitConfig(const string& conf_path,
         s3cfg = new Config(conf_path);
         if (!s3cfg || !s3cfg->Handle()) {
 #ifndef DEBUG_S3
-            write_log("Failed to parse config file\n");
+            write_log("Failed to parse config file, or it doesn't exist\n");
 #else
-            S3ERROR("Failed to parse config file");
+            S3ERROR("Failed to parse config file, or it doesn't exist");
 #endif
             if (s3cfg) {
                 delete s3cfg;
@@ -91,20 +91,17 @@ bool InitConfig(const string& conf_path,
         bool ret = false;
         string content;
 
-#ifdef S3_CHK_CFG
         if (s3ext_loglevel == -1) {
             content = cfg->Get("default", "loglevel", "WARNING");
             s3ext_loglevel = getLogLevel(content.c_str());
         }
 
+#ifdef S3_CHK_CFG
         if (s3ext_logtype == -1) {
             content = cfg->Get("default", "logtype", "INTERNAL");
             s3ext_logtype = getLogType(content.c_str());
         }
 #else
-        content = cfg->Get("default", "loglevel", "WARNING");
-        s3ext_loglevel = getLogLevel(content.c_str());
-
         content = cfg->Get("default", "logtype", "INTERNAL");
         s3ext_logtype = getLogType(content.c_str());
 #endif
