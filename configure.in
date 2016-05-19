@@ -628,26 +628,26 @@ AC_SUBST(enable_orca)
 #
 # Enable code generation
 #
-PGAC_ARG_BOOL(enable, codegen, no, [  --enable-codegen       enable code generation],
+PGAC_ARG_BOOL(enable, codegen, no, [  --enable-codegen        enable code generation],
               [AC_DEFINE([USE_CODEGEN], 1,
                          [Define to 1 to enable code generation. (--enable-codegen)])])
 AC_MSG_RESULT([checking whether to build with codegen... $enable_codegen])
 AC_SUBST(enable_codegen)
 
+PGAC_ARG_REQ(with, codegen-prefix,
+             [  --with-codegen-prefix="PATH;PATH"  semicolon separated prefix search path for LLVM and Clang],
+             [AS_IF([test "${enable_codegen}" = no],
+					[AC_MSG_WARN([--with-codegen-prefix used without --enable-codegen])])])
 
 AS_IF([test "$enable_codegen" = yes],
 [ # then
-   AC_CHECK_PROG(CMAKE, cmake, yes)
-   AS_IF([test "${CMAKE}" != yes], [AC_MSG_ERROR(['cmake is required for building GPDB with codegen enabled'])])
-
-   PGAC_ARG_OPTARG(with, codegen-prefix, [  --with-codegen-prefix   semicolon separated prefix search path for LLVM and Clang],
-                   [codegen_prefix=], [codegen_prefix=$withval])
+   GPAC_PATH_CMAKE
 
    cd src/backend/codegen
    AS_IF([test "${prefix}" = NONE], [prefix=${ac_default_prefix}])
    AS_IF([test "${enable_debug}" = yes], [build_type="Debug"], [build_type="Release"])
 
-   CMAKE_CMD="cmake -DCMAKE_PREFIX_PATH="${codegen_prefix}" -DCMAKE_INSTALL_PREFIX=${prefix} -DCMAKE_BUILD_TYPE=${build_type} ."
+   CMAKE_CMD="${CMAKE} -DCMAKE_PREFIX_PATH="${with_codegen_prefix}" -DCMAKE_INSTALL_PREFIX=${prefix} -DCMAKE_BUILD_TYPE=${build_type} ."
    echo "Executing cmake command : ${CMAKE_CMD}"
    AS_IF([${CMAKE_CMD}], [], [AC_MSG_ERROR(['error while configuring codegen.'])])
    cd -
@@ -940,15 +940,8 @@ AC_SUBST(with_libcurl)
 #
 # libapr. Used for gpfdist.
 #
-AC_ARG_WITH(apr-config,
-[AS_HELP_STRING([--with-apr-config=PATH],[path to apr-1-config])],
-[], [with_apr_config=yes])
-
-if test "$with_apr_config" = yes; then
-  AC_PATH_PROGS(APR_1_CONFIG, apr-1-config)
-else
-  APR_1_CONFIG=$with_apr_config
-fi
+PGAC_ARG_REQ(with, apr-config,
+             [  --with-apr-config=PATH  path to apr-1-config utility])
 AC_SUBST(with_apr_config)
 
 #
@@ -1147,20 +1140,8 @@ if test "$with_krb5" = yes ; then
   fi
 fi
 
-#
-# Find APR headers and libraries
-#
-
-if test -n "$APR_1_CONFIG"; then
-  apr_includes=`"$APR_1_CONFIG" --includes`
-  apr_link_ld_libs=`"$APR_1_CONFIG" --link-ld --libs`
-  apr_cflags=`"$APR_1_CONFIG" --cflags`
-  apr_cppflags=`"$APR_1_CONFIG" --cppflags`
-  CPPFLAGS="$CPPFLAGS $apr_includes $apr_cppflags"
-  CFLAGS="$CFLAGS $apr_cflags"
-fi
-
 if test "$enable_gpfdist" = yes ; then
+  GPAC_PATH_APR_1_CONFIG
   # If the 'apr-1-config --link-ld' produced correct output, -lapr-1 is already
   # in LIBS, hence AC_SEARCH_LIBS rather than AC_CHECK_LIB. (and the autoconf
   # manual recommends always using AC_SEARCH_LIBS rather than AC_CHECK_LIB
@@ -1312,9 +1293,13 @@ if test "$enable_gpfdist" = yes; then
     AC_CHECK_HEADERS([winsock2.h])
   fi
 
-  AC_CHECK_HEADER(yaml.h, [], [AC_MSG_WARN([header file <yaml.h> is not found. disabling transformations for gpfdist.])])
-  AC_CHECK_HEADER(apr_getopt.h, [], [AC_MSG_ERROR([header file <apr_getopt.h> is required])])
-  AC_CHECK_HEADER(event.h, [], [AC_MSG_ERROR([header file <event.h> is required])])
+  AC_CHECK_HEADERS(yaml.h, [], [AC_MSG_WARN([header file <yaml.h> is not found. disabling transformations for gpfdist.])])
+  AC_CHECK_HEADERS(event.h, [], [AC_MSG_ERROR([header file <event.h> is required for gpfdist])])
+
+  ac_save_CPPFLAGS=$CPPFLAGS
+  CPPFLAGS="$apr_includes $CPPFLAGS"
+  AC_CHECK_HEADERS(apr_getopt.h, [], [AC_MSG_ERROR(['header file <apr_getopt.h> is required for gpfdist'])])
+  CPPFLAGS=$ac_save_CPPFLAGS
 fi
 
 if test "$with_zlib" = yes; then
@@ -1974,11 +1959,11 @@ fi
 
 if test $ac_cv_func_fseeko = yes; then
 AC_SYS_LARGEFILE
-AC_SUBST(enable_largefile)
+enable_largefile=yes
 else
 enable_largefile=no
-AC_SUBST(enable_largefile)
 fi
+AC_SUBST(enable_largefile)
 
 # Check for largefile support (must be after AC_SYS_LARGEFILE)
 AC_CHECK_SIZEOF([off_t])
@@ -2193,6 +2178,3 @@ AC_CONFIG_HEADERS([src/interfaces/ecpg/include/ecpg_config.h],
                   [echo >src/interfaces/ecpg/include/stamp-h])
 
 AC_OUTPUT
-
-# Warn about unknown options
-PGAC_ARG_CHECK

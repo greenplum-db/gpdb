@@ -297,6 +297,14 @@ perl_privlibexp		= @perl_privlibexp@
 perl_useshrplib		= @perl_useshrplib@
 perl_embed_ldflags	= @perl_embed_ldflags@
 
+# apr-1-config
+
+APR_1_CONFIG		= @APR_1_CONFIG@
+apr_includes		= @apr_includes@
+apr_link_ld_libs	= @apr_link_ld_libs@
+apr_cflags			= @apr_cflags@
+apr_cppflags		= @apr_cppflags@
+
 # Miscellaneous
 
 AWK	= @AWK@
@@ -306,7 +314,6 @@ MSGMERGE = @MSGMERGE@
 PYTHON	= @PYTHON@
 TAR	= @TAR@
 XGETTEXT = @XGETTEXT@
-APR_1_CONFIG = @APR_1_CONFIG@
 
 GZIP	= gzip
 BZIP2	= bzip2

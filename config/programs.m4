@@ -225,3 +225,57 @@ AC_DEFUN([PGAC_CHECK_STRIP],
   AC_SUBST(STRIP_STATIC_LIB)
   AC_SUBST(STRIP_SHARED_LIB)
 ])# PGAC_CHECK_STRIP
+
+
+# GPAC_PATH_CMAKE
+# ---------------
+# Check for the 'cmake' program which is required for compiling
+# Greenplum with Code Generation
+AC_DEFUN([GPAC_PATH_CMAKE],
+[
+if test -z "$CMAKE"; then
+  AC_PATH_PROGS(CMAKE, cmake)
+fi
+
+if test -n "$CMAKE"; then
+  gpac_cmake_version=`$CMAKE --version 2>/dev/null | sed q`
+  if test -z "$gpac_cmake_version"; then
+    AC_MSG_ERROR([cmake is required for codegen, unable to identify version])
+  fi
+  AC_MSG_NOTICE([using $gpac_cmake_version])
+else
+  AC_MSG_ERROR([cmake is required for codegen, unable to find binary])
+fi
+]) # GPAC_PATH_CMAKE
+
+
+# GPAC_PATH_APR_1_CONFIG
+# ----------------------
+# Check for apr-1-config, used by gpfdist
+AC_DEFUN([GPAC_PATH_APR_1_CONFIG],
+[
+if test x"$with_apr_config" != x; then
+  APR_1_CONFIG=$with_apr_config
+fi
+if test -z "$APR_1_CONFIG"; then
+  AC_PATH_PROGS(APR_1_CONFIG, apr-1-config)
+fi
+
+if test -n "$APR_1_CONFIG"; then
+  gpac_apr_1_config_version=`$APR_1_CONFIG --version 2>/dev/null | sed q`
+  if test -z "$gpac_apr_1_config_version"; then
+    AC_MSG_ERROR([apr-1-config is required for gpfdist, unable to identify version])
+  fi
+  AC_MSG_NOTICE([using apr-1-config $gpac_apr_1_config_version])
+  apr_includes=`"$APR_1_CONFIG" --includes`
+  apr_link_ld_libs=`"$APR_1_CONFIG" --link-ld --libs`
+  apr_cflags=`"$APR_1_CONFIG" --cflags`
+  apr_cppflags=`"$APR_1_CONFIG" --cppflags`
+  AC_SUBST(apr_includes)
+  AC_SUBST(apr_link_ld_libs)
+  AC_SUBST(apr_cflags)
+  AC_SUBST(apr_cppflags)
+else
+  AC_MSG_ERROR([apr-1-config is required for gpfdist, unable to find binary])
+fi
+]) # GPAC_PATH_APR_1_CONFIG

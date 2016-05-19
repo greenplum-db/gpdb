@@ -325,28 +325,3 @@ if test "$pgac_cv_type_locale_t" = 'yes (in xlocale.h)'; then
   AC_DEFINE(LOCALE_T_IN_XLOCALE, 1,
             [Define to 1 if `locale_t' requires <xlocale.h>.])
 fi])])# PGAC_HEADER_XLOCALE
-
-# backport from Autoconf 2.61a
-# http://git.savannah.gnu.org/gitweb/?p=autoconf.git;a=commitdiff;h=f0c325537a22105536ac8c4e88656e50f9946486
-
-# AC_FUNC_FSEEKO
-# --------------
-AN_FUNCTION([ftello], [AC_FUNC_FSEEKO])
-AN_FUNCTION([fseeko], [AC_FUNC_FSEEKO])
-AC_DEFUN([AC_FUNC_FSEEKO],
-[_AC_SYS_LARGEFILE_MACRO_VALUE(_LARGEFILE_SOURCE, 1,
-   [ac_cv_sys_largefile_source],
-   [Define to 1 to make fseeko visible on some hosts (e.g. glibc 2.2).],
-   [[#include <sys/types.h> /* for off_t */
-     #include <stdio.h>]],
-   [[int (*fp) (FILE *, off_t, int) = fseeko;
-     return fseeko (stdin, 0, 0) && fp (stdin, 0, 0);]])
-
-# We used to try defining _XOPEN_SOURCE=500 too, to work around a bug
-# in glibc 2.1.3, but that breaks too many other things.
-# If you want fseeko and ftello with glibc, upgrade to a fixed glibc.
-if test $ac_cv_sys_largefile_source != unknown; then
-  AC_DEFINE(HAVE_FSEEKO, 1,
-    [Define to 1 if fseeko (and presumably ftello) exists and is declared.])
-fi
-])# AC_FUNC_FSEEKO

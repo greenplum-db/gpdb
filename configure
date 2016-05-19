@@ -658,6 +658,11 @@ CURL_LIBS
 CURL_CFLAGS
 CURL_CONFIG
 have_yaml
+apr_cppflags
+apr_cflags
+apr_link_ld_libs
+apr_includes
+APR_1_CONFIG
 ADDON_DIR
 ZIC
 python_additional_libs
@@ -698,7 +703,6 @@ ELF_SYS
 EGREP
 GREP
 with_apr_config
-APR_1_CONFIG
 with_libcurl
 with_rt
 with_zlib
@@ -1502,7 +1506,7 @@ Optional Features:
   --enable-ntuplestore    enable debug_ntuplestore (for debugging)
   --enable-testutils      enable testing utilities
   --enable-orca           enable ORCA optimizer
-  --enable-codegen       enable code generation
+  --enable-codegen        enable code generation
   --enable-snmp           enable snmp for MIB and alerts via TRAP/INFORM
   --enable-connectemc     enable connect emc support
   --enable-ddboost        enable DD Boost support
@@ -1522,7 +1526,7 @@ Optional Packages:
   --with-libraries=DIRS   look for additional libraries in DIRS
   --with-libs=DIRS        alternative spelling of --with-libraries
   --with-pgport=PORTNUM   change default port number [5432]
-  --with-codegen-prefix   semicolon separated prefix search path for LLVM and Clang
+  --with-codegen-prefix="PATH;PATH"  semicolon separated prefix search path for LLVM and Clang
   --with-tcl              build Tcl modules (PL/Tcl)
   --with-tclconfig=DIR    tclConfig.sh is in DIR
   --with-perl             build Perl modules (PL/Perl)
@@ -1541,7 +1545,7 @@ Optional Packages:
   --without-zlib          do not use Zlib
   --without-rt            do not use Realtime Library
   --without-libcurl       do not use libcurl
-  --with-apr-config=PATH  path to apr-1-config
+  --with-apr-config=PATH  path to apr-1-config utility
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
 
 Some influential environment variables:
@@ -5350,26 +5354,57 @@ $as_echo "checking whether to build with codegen... $enable_codegen" >&6; }
 
 
 
+pgac_args="$pgac_args with_codegen_prefix"
+
+
+# Check whether --with-codegen-prefix was given.
+if test "${with_codegen_prefix+set}" = set; then :
+  withval=$with_codegen_prefix;
+  case $withval in
+    yes)
+      as_fn_error $? "argument required for --with-codegen-prefix option" "$LINENO" 5
+      ;;
+    no)
+      as_fn_error $? "argument required for --with-codegen-prefix option" "$LINENO" 5
+      ;;
+    *)
+      if test "${enable_codegen}" = no; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --with-codegen-prefix used without --enable-codegen" >&5
+$as_echo "$as_me: WARNING: --with-codegen-prefix used without --enable-codegen" >&2;}
+fi
+      ;;
+  esac
+
+fi
+
+
+
 if test "$enable_codegen" = yes; then :
    # then
-   # Extract the first word of "cmake", so it can be a program name with args.
-set dummy cmake; ac_word=$2
+
+if test -z "$CMAKE"; then
+  for ac_prog in cmake
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_prog_CMAKE+:} false; then :
+if ${ac_cv_path_CMAKE+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  if test -n "$CMAKE"; then
-  ac_cv_prog_CMAKE="$CMAKE" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+  case $CMAKE in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_CMAKE="$CMAKE" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
 for as_dir in $PATH
 do
   IFS=$as_save_IFS
   test -z "$as_dir" && as_dir=.
     for ac_exec_ext in '' $ac_executable_extensions; do
   if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_prog_CMAKE="yes"
+    ac_cv_path_CMAKE="$as_dir/$ac_word$ac_exec_ext"
     $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
@@ -5377,9 +5412,10 @@ done
   done
 IFS=$as_save_IFS
 
+  ;;
+esac
 fi
-fi
-CMAKE=$ac_cv_prog_CMAKE
+CMAKE=$ac_cv_path_CMAKE
 if test -n "$CMAKE"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: $CMAKE" >&5
 $as_echo "$CMAKE" >&6; }
@@ -5389,38 +5425,20 @@ $as_echo "no" >&6; }
 fi
 
 
-   if test "${CMAKE}" != yes; then :
-  as_fn_error $? "'cmake is required for building GPDB with codegen enabled'" "$LINENO" 5
+  test -n "$CMAKE" && break
+done
+
 fi
 
-
-pgac_args="$pgac_args with_codegen_prefix"
-
-
-# Check whether --with-codegen-prefix was given.
-if test "${with_codegen_prefix+set}" = set; then :
-  withval=$with_codegen_prefix;
-  case $withval in
-    yes)
-      codegen_prefix=
-      ;;
-    no)
-      :
-      ;;
-    *)
-      with_codegen_prefix=yes
-codegen_prefix=$withval
-      ;;
-  esac
-
+if test -n "$CMAKE"; then
+  gpac_cmake_version=`$CMAKE --version 2>/dev/null | sed q`
+  if test -z "$gpac_cmake_version"; then
+    as_fn_error $? "cmake is required for codegen, unable to identify version" "$LINENO" 5
+  fi
+  { $as_echo "$as_me:${as_lineno-$LINENO}: using $gpac_cmake_version" >&5
+$as_echo "$as_me: using $gpac_cmake_version" >&6;}
 else
-  with_codegen_prefix=no
-fi
-
-
-
-if test "$with_codegen_prefix" = yes; then
-  :
+  as_fn_error $? "cmake is required for codegen, unable to find binary" "$LINENO" 5
 fi
 
 
@@ -5434,7 +5452,7 @@ else
   build_type="Release"
 fi
 
-   CMAKE_CMD="cmake -DCMAKE_PREFIX_PATH="${codegen_prefix}" -DCMAKE_INSTALL_PREFIX=${prefix} -DCMAKE_BUILD_TYPE=${build_type} ."
+   CMAKE_CMD="${CMAKE} -DCMAKE_PREFIX_PATH="${with_codegen_prefix}" -DCMAKE_INSTALL_PREFIX=${prefix} -DCMAKE_BUILD_TYPE=${build_type} ."
    echo "Executing cmake command : ${CMAKE_CMD}"
    if ${CMAKE_CMD}; then :
 
@@ -6387,63 +6405,27 @@ fi
 # libapr. Used for gpfdist.
 #
 
+pgac_args="$pgac_args with_apr_config"
+
+
 # Check whether --with-apr-config was given.
 if test "${with_apr_config+set}" = set; then :
   withval=$with_apr_config;
-else
-  with_apr_config=yes
+  case $withval in
+    yes)
+      as_fn_error $? "argument required for --with-apr-config option" "$LINENO" 5
+      ;;
+    no)
+      as_fn_error $? "argument required for --with-apr-config option" "$LINENO" 5
+      ;;
+    *)
+
+      ;;
+  esac
+
 fi
 
 
-if test "$with_apr_config" = yes; then
-  for ac_prog in apr-1-config
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_APR_1_CONFIG+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $APR_1_CONFIG in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_APR_1_CONFIG="$APR_1_CONFIG" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_APR_1_CONFIG="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-APR_1_CONFIG=$ac_cv_path_APR_1_CONFIG
-if test -n "$APR_1_CONFIG"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $APR_1_CONFIG" >&5
-$as_echo "$APR_1_CONFIG" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-  test -n "$APR_1_CONFIG" && break
-done
-
-else
-  APR_1_CONFIG=$with_apr_config
-fi
 
 
 #
@@ -8950,20 +8932,78 @@ fi
   fi
 fi
 
-#
-# Find APR headers and libraries
-#
+if test "$enable_gpfdist" = yes ; then
+
+if test x"$with_apr_config" != x; then
+  APR_1_CONFIG=$with_apr_config
+fi
+if test -z "$APR_1_CONFIG"; then
+  for ac_prog in apr-1-config
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_APR_1_CONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $APR_1_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_APR_1_CONFIG="$APR_1_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_APR_1_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+APR_1_CONFIG=$ac_cv_path_APR_1_CONFIG
+if test -n "$APR_1_CONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $APR_1_CONFIG" >&5
+$as_echo "$APR_1_CONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$APR_1_CONFIG" && break
+done
+
+fi
 
 if test -n "$APR_1_CONFIG"; then
+  gpac_apr_1_config_version=`$APR_1_CONFIG --version 2>/dev/null | sed q`
+  if test -z "$gpac_apr_1_config_version"; then
+    as_fn_error $? "apr-1-config is required for gpfdist, unable to identify version" "$LINENO" 5
+  fi
+  { $as_echo "$as_me:${as_lineno-$LINENO}: using apr-1-config $gpac_apr_1_config_version" >&5
+$as_echo "$as_me: using apr-1-config $gpac_apr_1_config_version" >&6;}
   apr_includes=`"$APR_1_CONFIG" --includes`
   apr_link_ld_libs=`"$APR_1_CONFIG" --link-ld --libs`
   apr_cflags=`"$APR_1_CONFIG" --cflags`
   apr_cppflags=`"$APR_1_CONFIG" --cppflags`
-  CPPFLAGS="$CPPFLAGS $apr_includes $apr_cppflags"
-  CFLAGS="$CFLAGS $apr_cflags"
+
+
+
+
+else
+  as_fn_error $? "apr-1-config is required for gpfdist, unable to find binary" "$LINENO" 5
 fi
 
-if test "$enable_gpfdist" = yes ; then
   # If the 'apr-1-config --link-ld' produced correct output, -lapr-1 is already
   # in LIBS, hence AC_SEARCH_LIBS rather than AC_CHECK_LIB. (and the autoconf
   # manual recommends always using AC_SEARCH_LIBS rather than AC_CHECK_LIB
@@ -10228,31 +10268,53 @@ done
 
   fi
 
+  for ac_header in yaml.h
+do :
   ac_fn_c_check_header_mongrel "$LINENO" "yaml.h" "ac_cv_header_yaml_h" "$ac_includes_default"
 if test "x$ac_cv_header_yaml_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_YAML_H 1
+_ACEOF
 
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: header file <yaml.h> is not found. disabling transformations for gpfdist." >&5
 $as_echo "$as_me: WARNING: header file <yaml.h> is not found. disabling transformations for gpfdist." >&2;}
 fi
 
+done
 
-  ac_fn_c_check_header_mongrel "$LINENO" "apr_getopt.h" "ac_cv_header_apr_getopt_h" "$ac_includes_default"
-if test "x$ac_cv_header_apr_getopt_h" = xyes; then :
-
-else
-  as_fn_error $? "header file <apr_getopt.h> is required" "$LINENO" 5
-fi
-
-
+  for ac_header in event.h
+do :
   ac_fn_c_check_header_mongrel "$LINENO" "event.h" "ac_cv_header_event_h" "$ac_includes_default"
 if test "x$ac_cv_header_event_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_EVENT_H 1
+_ACEOF
 
 else
-  as_fn_error $? "header file <event.h> is required" "$LINENO" 5
+  as_fn_error $? "header file <event.h> is required for gpfdist" "$LINENO" 5
 fi
 
+done
 
+
+  ac_save_CPPFLAGS=$CPPFLAGS
+  CPPFLAGS="$apr_includes $CPPFLAGS"
+  for ac_header in apr_getopt.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "apr_getopt.h" "ac_cv_header_apr_getopt_h" "$ac_includes_default"
+if test "x$ac_cv_header_apr_getopt_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_APR_GETOPT_H 1
+_ACEOF
+
+else
+  as_fn_error $? "'header file <apr_getopt.h> is required for gpfdist'" "$LINENO" 5
+fi
+
+done
+
+  CPPFLAGS=$ac_save_CPPFLAGS
 fi
 
 if test "$with_zlib" = yes; then
@@ -14692,11 +14754,11 @@ rm -rf conftest*
 
 fi
 
-
+enable_largefile=yes
 else
 enable_largefile=no
-
 fi
+
 
 # Check for largefile support (must be after AC_SYS_LARGEFILE)
 # The cast to long int works around a bug in the HP C Compiler
@@ -17030,15 +17092,3 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
-
-# Warn about unknown options
-for pgac_var in `set | sed 's/=.*//' | $EGREP 'with_|enable_'`; do
-  for pgac_arg in $pgac_args with_gnu_ld; do
-    if test "$pgac_var" = "$pgac_arg"; then
-      continue 2
-    fi
-  done
-  pgac_txt=`echo $pgac_var | sed 's/_/-/g'`
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: option ignored: --$pgac_txt" >&5
-$as_echo "$as_me: WARNING: option ignored: --$pgac_txt" >&2;}
-done
