@@ -3,7 +3,7 @@
 #include "ini.cpp"
 
 TEST(Config, basic) {
-    InitConfig("test/s3test.conf", "");
+    InitConfig("test/data/s3test.conf", "");
 
     EXPECT_STREQ("secret_test", s3ext_secret.c_str());
     EXPECT_STREQ("accessid_test", s3ext_accessid.c_str());

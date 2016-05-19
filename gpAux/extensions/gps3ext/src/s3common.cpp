@@ -19,23 +19,24 @@ using std::stringstream;
 
 #define DATE_STR_LEN 8
 #define TIME_STAMP_STR_LEN 17
+#define SHA256_DIGEST_STRING_LENGTH 65
 bool SignRequestV4(const string &method, HeaderContent *h,
                    const string &orig_region, const string &path,
                    const string &query, const S3Credential &cred) {
     time_t t;
     struct tm tm_info;
-    char date_str[DATE_STR_LEN];
-    char timestamp_str[TIME_STAMP_STR_LEN];
+    char date_str[DATE_STR_LEN + 1] = { 0 };
+    char timestamp_str[TIME_STAMP_STR_LEN] = { 0 };
 
-    char canonical_hex[SHA256_DIGEST_STRING_LENGTH];
-    char signature_hex[SHA256_DIGEST_STRING_LENGTH];
+    char canonical_hex[SHA256_DIGEST_STRING_LENGTH] = { 0 };
+    char signature_hex[SHA256_DIGEST_STRING_LENGTH] = { 0 };
 
     string signed_headers;
 
-    unsigned char key_date[SHA256_DIGEST_LENGTH];
-    unsigned char key_region[SHA256_DIGEST_LENGTH];
-    unsigned char key_service[SHA256_DIGEST_LENGTH];
-    unsigned char signing_key[SHA256_DIGEST_LENGTH];
+    unsigned char key_date[SHA256_DIGEST_LENGTH] = { 0 };
+    unsigned char key_region[SHA256_DIGEST_LENGTH] = { 0 };
+    unsigned char key_service[SHA256_DIGEST_LENGTH] = { 0 };
+    unsigned char signing_key[SHA256_DIGEST_LENGTH] = { 0 };
 
     /* YYYYMMDD'T'HHMMSS'Z' */
     t = time(NULL);
@@ -44,7 +45,6 @@ bool SignRequestV4(const string &method, HeaderContent *h,
 
     h->Add(X_AMZ_DATE, timestamp_str);
     memcpy(date_str, timestamp_str, DATE_STR_LEN);
-    date_str[DATE_STR_LEN] = '\0';
 
     // Note: better to sort queries automatically
     // for more information refer to Amazon S3 document:

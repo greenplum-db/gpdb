@@ -2,7 +2,7 @@
 #include "gtest/gtest.h"
 
 TEST(Logger, simple) {
-    InitConfig("test/s3test.conf", "");
+    InitConfig("test/data/s3test.conf", "");
     InitLog();
     fprintf(stderr, "Hello, log type %d\n", s3ext_logtype);
     S3DEBUG("Hello, DEBUG");

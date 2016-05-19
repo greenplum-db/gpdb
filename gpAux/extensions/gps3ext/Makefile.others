@@ -7,7 +7,7 @@ BIG_FILE_TEST = n
 
 # Flags
 CPP = g++
-INCLUDES = -Isrc -Ilib -I/usr/include/libxml2
+INCLUDES = -Isrc -Iinclude -Itest -Ilib -I/usr/include/libxml2
 LDFLAGS = -lpthread -lcrypto -lcurl -lxml2 -lgcov -lz
 CPPFLAGS = -O2 -g3 -std=c++98 -Wall -fPIC -fprofile-arcs -ftest-coverage
 
@@ -34,7 +34,7 @@ endif
 all: test
 
 # Google TEST
-TEST_SRC_FILES = src/s3conf_test.cpp src/s3utils_test.cpp src/s3downloader_test.cpp src/s3common_test.cpp src/s3wrapper_test.cpp src/s3log_test.cpp
+TEST_SRC_FILES = test/s3conf_test.cpp test/s3utils_test.cpp test/s3downloader_test.cpp test/s3common_test.cpp test/s3wrapper_test.cpp test/s3log_test.cpp
 TEST_OBJS = $(TEST_SRC_FILES:.cpp=.o)
 TEST_APP = s3test
 
@@ -71,7 +71,7 @@ coverage: test
 
 clean:
 	rm -f *.gcov src/*.gcov src/*.gcda src/*.gcno
-	rm -f $(TEST_APP) *.so src/*.o src/*.d lib/*.o lib/*.d *.o *.a
+	rm -f $(TEST_APP) *.so src/*.o src/*.d lib/*.o lib/*.d *.o *.a test/*.o
 
 distclean: clean
 	rm -f tags cscope.*
@@ -81,9 +81,9 @@ tags:
 	cscope -bq src/*.cpp src/*.h
 
 lint:
-	cppcheck -v --enable=warning src/*.cpp src/*.h
+	cppcheck -v --enable=warning src/*.cpp src/*.h test/*.cpp test/*.h
 
 format:
-	clang-format -style="{BasedOnStyle: Google, IndentWidth: 4}" -i src/*.cpp src/*.h
+	clang-format -style="{BasedOnStyle: Google, IndentWidth: 4}" -i src/*.cpp src/*.h test/*.cpp test/*.h
 
 .PHONY: buildtest test coverage clean distclean tags lint format
