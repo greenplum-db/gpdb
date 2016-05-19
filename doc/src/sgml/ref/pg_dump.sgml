@@ -296,20 +296,9 @@ PostgreSQL documentation
       <term><option>--ignore-version</></term>
       <listitem>
        <para>
-        Ignore version mismatch between
-        <application>pg_dump</application> and the database server.
+        This option has been deprecated.
        </para>
 
-       <para>
-        <application>pg_dump</application> can dump from servers running
-        previous releases of <productname>PostgreSQL</>, but very old
-        versions are not supported anymore (currently, those prior to 7.0).
-        Dumping from a server newer than <application>pg_dump</application>
-        is likely not to work at all.
-        Use this option if you need to override the version check (and
-        if <application>pg_dump</application> then fails, don't say
-        you weren't warned).
-       </para>
       </listitem>
      </varlistentry>
 

@@ -155,17 +155,7 @@ PostgreSQL documentation
       <term><option>--ignore-version</></term>
       <listitem>
        <para>
-        Ignore version mismatch between
-        <application>pg_dumpall</application> and the database server.
-       </para>
-
-       <para>
-        <application>pg_dumpall</application> can handle databases
-        from previous releases of <productname>PostgreSQL</>, but very
-        old versions are not supported anymore (currently prior to
-        7.0).  Use this option if you need to override the version
-        check (and if <application>pg_dumpall</application> then
-        fails, don't say you weren't warned).
+	    This option has been deprecated.
        </para>
       </listitem>
      </varlistentry>
