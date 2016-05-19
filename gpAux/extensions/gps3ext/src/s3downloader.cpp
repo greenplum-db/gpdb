@@ -606,8 +606,11 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
     Bufinfo bi;
     CURL *curl_handle = this->curl;
     struct curl_slist *chunk = NULL;
-    char rangebuf[128];
+    char rangebuf[128] = { 0 };
     long respcode;
+
+    snprintf(rangebuf, 128, "bytes=%" PRIu64 "-%" PRIu64, offset,
+             offset + len - 1);
 
     while (retry_time--) {
         // "Don't call cleanup() if you intend to transfer more files, re-using
@@ -628,9 +631,6 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
         curl_easy_setopt(curl_handle, CURLOPT_LOW_SPEED_TIME,
                          s3ext_low_speed_time);
 
-        memset(rangebuf, 0, 128);
-        snprintf(rangebuf, 128, "bytes=%" PRIu64 "-%" PRIu64, offset,
-                 offset + len - 1);
         this->AddHeaderField(RANGE, rangebuf);
         this->AddHeaderField(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
         if (!this->processheader()) {

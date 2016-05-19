@@ -1,3 +1,4 @@
+// Required by building cpp dynamic library via Makefile of GPDB.
 #define PGDLLIMPORT "C"
 
 #include <signal.h>

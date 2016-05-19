@@ -13,8 +13,7 @@ using std::stringstream;
 // invoked by s3_import(), need to be exception safe
 S3ExtBase *CreateExtWrapper(const char *url) {
     try {
-        S3ExtBase *ret = new S3Reader(url);
-        return ret;
+        return new S3Reader(url);
     } catch (...) {
         S3ERROR("Caught an exception, aborting");
         return NULL;

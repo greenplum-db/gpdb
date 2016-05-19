@@ -17,34 +17,37 @@
 using std::string;
 using std::stringstream;
 
+#define DATE_STR_LEN 8
+#define TIME_STAMP_STR_LEN 17
 bool SignRequestV4(const string &method, HeaderContent *h,
                    const string &orig_region, const string &path,
                    const string &query, const S3Credential &cred) {
     time_t t;
     struct tm tm_info;
-    char date_str[17];
-    char timestamp_str[17];
+    char date_str[DATE_STR_LEN];
+    char timestamp_str[TIME_STAMP_STR_LEN];
 
-    char canonical_hex[65];
-    char signature_hex[65];
+    char canonical_hex[SHA256_DIGEST_STRING_LENGTH];
+    char signature_hex[SHA256_DIGEST_STRING_LENGTH];
 
     string signed_headers;
 
-    unsigned char kDate[SHA256_DIGEST_LENGTH];
-    unsigned char kRegion[SHA256_DIGEST_LENGTH];
-    unsigned char kService[SHA256_DIGEST_LENGTH];
-    unsigned char signingkey[SHA256_DIGEST_LENGTH];
+    unsigned char key_date[SHA256_DIGEST_LENGTH];
+    unsigned char key_region[SHA256_DIGEST_LENGTH];
+    unsigned char key_service[SHA256_DIGEST_LENGTH];
+    unsigned char signing_key[SHA256_DIGEST_LENGTH];
 
     /* YYYYMMDD'T'HHMMSS'Z' */
     t = time(NULL);
     gmtime_r(&t, &tm_info);
-    strftime(timestamp_str, 17, "%Y%m%dT%H%M%SZ", &tm_info);
+    strftime(timestamp_str, TIME_STAMP_STR_LEN, "%Y%m%dT%H%M%SZ", &tm_info);
 
     h->Add(X_AMZ_DATE, timestamp_str);
-    memcpy(date_str, timestamp_str, 8);
-    date_str[8] = '\0';
+    memcpy(date_str, timestamp_str, DATE_STR_LEN);
+    date_str[DATE_STR_LEN] = '\0';
 
-    // XXX sort queries automatically
+    // Note: better to sort queries automatically
+    // for more information refer to Amazon S3 document:
     // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
     string query_encoded = uri_encode(query);
     find_replace(query_encoded, "%26", "&");
@@ -61,7 +64,6 @@ bool SignRequestV4(const string &method, HeaderContent *h,
                   << h->Get(X_AMZ_CONTENT_SHA256);
     signed_headers = "host;x-amz-content-sha256;x-amz-date";
 
-    // printf("\n%s\n\n", canonical_str.str().c_str());
     sha256_hex(canonical_str.str().c_str(), canonical_hex);
 
     // http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
@@ -74,18 +76,17 @@ bool SignRequestV4(const string &method, HeaderContent *h,
                     << date_str << "/" << region << "/s3/aws4_request\n"
                     << canonical_hex;
 
-    // printf("\n%s\n\n", string2sign_str.str().c_str());
     stringstream kSecret;
     kSecret << "AWS4" << cred.secret;
 
-    sha256hmac(date_str, kDate, kSecret.str().c_str(),
+    sha256hmac(date_str, key_date, kSecret.str().c_str(),
                strlen(kSecret.str().c_str()));
-    sha256hmac(region.c_str(), kRegion, (char *)kDate, SHA256_DIGEST_LENGTH);
-    sha256hmac("s3", kService, (char *)kRegion, SHA256_DIGEST_LENGTH);
-    sha256hmac("aws4_request", signingkey, (char *)kService,
+    sha256hmac(region.c_str(), key_region, (char *)key_date, SHA256_DIGEST_LENGTH);
+    sha256hmac("s3", key_service, (char *)key_region, SHA256_DIGEST_LENGTH);
+    sha256hmac("aws4_request", signing_key, (char *)key_service,
                SHA256_DIGEST_LENGTH);
     sha256hmac_hex(string2sign_str.str().c_str(), signature_hex,
-                   (char *)signingkey, SHA256_DIGEST_LENGTH);
+                   (char *)signing_key, SHA256_DIGEST_LENGTH);
 
     stringstream signature_header;
     signature_header << "AWS4-HMAC-SHA256 Credential=" << cred.keyid << "/"
@@ -129,11 +130,11 @@ const char *GetFieldString(HeaderField f) {
 }
 
 bool HeaderContent::Add(HeaderField f, const std::string &v) {
-    if (!v.empty()) {
-        this->fields[f] = std::string(v);
-        return true;
-    } else {
+    if (v.empty()) {
         return false;
+    } else {
+        this->fields[f] = v;
+        return true;
     }
 }
 
