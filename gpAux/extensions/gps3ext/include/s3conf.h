@@ -58,6 +58,4 @@ extern int s3ext_low_speed_limit;
 extern int s3ext_low_speed_time;
 
 // not thread safe!! call it only once.
-bool InitConfig(const string &path, const string &section);
-
-void ClearConfig();
+bool InitConfig(const string &path, const string section);

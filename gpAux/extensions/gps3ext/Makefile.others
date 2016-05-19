@@ -77,13 +77,13 @@ distclean: clean
 	rm -f tags cscope.*
 
 tags:
-	ctags --c++-kinds=+p --fields=+iaS --extra=+q src/*.cpp src/*.h
-	cscope -bq src/*.cpp src/*.h
+	ctags --c++-kinds=+p --fields=+iaS --extra=+q src/*.cpp test/*.cpp include/*.h
+	cscope -bq src/*.cpp test/*.cpp include/*.h
 
 lint:
-	cppcheck -v --enable=warning src/*.cpp src/*.h test/*.cpp test/*.h
+	cppcheck -v --enable=warning src/*.cpp test/*.cpp include/*.h
 
 format:
-	clang-format -style="{BasedOnStyle: Google, IndentWidth: 4}" -i src/*.cpp src/*.h test/*.cpp test/*.h
+	clang-format -style="{BasedOnStyle: Google, IndentWidth: 4}" -i src/*.cpp test/*.cpp include/*.h
 
 .PHONY: buildtest test coverage clean distclean tags lint format

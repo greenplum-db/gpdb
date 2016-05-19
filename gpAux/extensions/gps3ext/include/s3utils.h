@@ -19,9 +19,6 @@ using std::string;
 
 bool gethttpnow(char datebuf[65]);
 
-bool lowercase(char* out, const char* in);
-void _tolower(char* buf);
-
 bool trim(char* out, const char* in, const char* trimed = " \t\r\n");
 
 bool sha1hmac(const char* str, unsigned char out_hash[20], const char* secret,
@@ -57,44 +54,6 @@ class MD5Calc {
     unsigned char md5[17];
     string result;
 };
-
-#if 0
-#include <condition_variable>
-#include <mutex>
-#include <queue>
-using std::mutex;
-using std::condition_variable;
-using std::queue;
-using std::unique_lock;
-
-template <typename Data>
-class concurrent_queue {
-   private:
-    queue<Data> _q;
-    mutable mutex _m;
-    condition_variable _c;
-
-   public:
-    void enQ(Data const& data) {
-        _m.lock();
-        bool isEmpty = _q.empty();
-        _q.push(data);
-        if (isEmpty) {
-            _c.notify_all();
-        }
-        _m.unlock();
-    }
-
-    void deQ(Data& popped_value) {
-        unique_lock<mutex> lk(_m);
-        while (_q.empty()) {
-            _c.wait(lk);
-        }
-        popped_value = _q.front();
-        _q.pop();
-    }
-};
-#endif
 
 class DataBuffer {
    public:

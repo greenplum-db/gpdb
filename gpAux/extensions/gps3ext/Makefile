@@ -26,3 +26,9 @@ OBJS = lib/http_parser.o lib/ini.o src/gps3ext.o src/s3conf.o src/s3common.o src
 # Launch
 PGXS := $(shell pg_config --pgxs)
 include $(PGXS)
+
+test:
+	make -f Makefile.others test
+
+coverage:
+	make -f Makefile.others coverage

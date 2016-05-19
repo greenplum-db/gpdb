@@ -46,13 +46,6 @@ bool gethttpnow(char datebuf[65]) {  //('D, d M Y H:i:s T')
     return true;
 }
 
-void _tolower(char *buf) {
-    do {
-        if (*buf >= 'A' && *buf <= 'Z') *buf |= 0x60;
-    } while (*buf++);
-    return;
-}
-
 bool trim(char *out, const char *in, const char *trimed) {
     int targetlen;
 

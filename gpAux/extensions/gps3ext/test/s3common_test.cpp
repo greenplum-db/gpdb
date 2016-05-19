@@ -5,14 +5,12 @@
 TEST(Common, UrlParser) {
     UrlParser *p = new UrlParser(
         "https://www.google.com/search?sclient=psy-ab&site=&source=hp");
-    EXPECT_NE((void *)NULL, p);
+    ASSERT_NE((void *)NULL, p);
 
-    if (p) {
-        EXPECT_STREQ("https", p->Schema());
-        EXPECT_STREQ("www.google.com", p->Host());
-        EXPECT_STREQ("/search", p->Path());
-        delete p;
-    }
+    EXPECT_STREQ("https", p->Schema());
+    EXPECT_STREQ("www.google.com", p->Host());
+    EXPECT_STREQ("/search", p->Path());
+    delete p;
 }
 
 TEST(Common, UrlParser_LongURL) {
@@ -21,14 +19,12 @@ TEST(Common, UrlParser_LongURL) {
         "data1234?partNumber=1&uploadId=."
         "CXn7YDXxGo7aDLxEyX5wxaDivCw5ACWfaMQts8_4M6."
         "NbGeeaI1ikYlO5zWZOpclVclZRAq5758oCxk_DtiX5BoyiMr7Ym6TKiEqqmNpsE-");
-    EXPECT_NE((void *)NULL, p);
+    ASSERT_NE((void *)NULL, p);
 
-    if (p) {
-        EXPECT_STREQ("http", p->Schema());
-        EXPECT_STREQ("s3-us-west-2.amazonaws.com", p->Host());
-        EXPECT_STREQ("/metro.pivotal.io/test/data1234", p->Path());
-        delete p;
-    }
+    EXPECT_STREQ("http", p->Schema());
+    EXPECT_STREQ("s3-us-west-2.amazonaws.com", p->Host());
+    EXPECT_STREQ("/metro.pivotal.io/test/data1234", p->Path());
+    delete p;
 }
 
 #define HOSTSTR "www.google.com"
@@ -37,28 +33,22 @@ TEST(Common, UrlParser_LongURL) {
 
 TEST(Common, HeaderContent) {
     HeaderContent *h = new HeaderContent();
-    EXPECT_NE((void *)NULL, h);
+    ASSERT_NE((void *)NULL, h);
 
-    if (h) {
-        ASSERT_TRUE(h->Add(HOST, HOSTSTR));
-        ASSERT_TRUE(h->Add(RANGE, RANGESTR));
-        ASSERT_TRUE(h->Add(CONTENTMD5, MD5STR));
-    }
+    ASSERT_TRUE(h->Add(HOST, HOSTSTR));
+    ASSERT_TRUE(h->Add(RANGE, RANGESTR));
+    ASSERT_TRUE(h->Add(CONTENTMD5, MD5STR));
 
-    if (h) {
-        EXPECT_STREQ(HOSTSTR, h->Get(HOST));
-        EXPECT_STREQ(RANGESTR, h->Get(RANGE));
-        EXPECT_STREQ(MD5STR, h->Get(CONTENTMD5));
-    }
+    EXPECT_STREQ(HOSTSTR, h->Get(HOST));
+    EXPECT_STREQ(RANGESTR, h->Get(RANGE));
+    EXPECT_STREQ(MD5STR, h->Get(CONTENTMD5));
 
-    if (h) {
-        h->CreateList();
-        curl_slist *l = h->GetList();
-        ASSERT_NE((void *)NULL, l);
-        h->FreeList();
-    }
+    h->CreateList();
+    curl_slist *l = h->GetList();
+    ASSERT_NE((void *)NULL, l);
+    h->FreeList();
 
-    if (h) delete h;
+    delete h;
 }
 
 TEST(Common, UrlOptions) {

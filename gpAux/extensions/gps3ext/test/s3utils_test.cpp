@@ -1,12 +1,6 @@
 #include "s3utils.cpp"
 #include "gtest/gtest.h"
 
-TEST(Utils, lower) {
-    char data[] = "aAbBcCdDEeFfGgHhIiJjKkLlMmNnOopPQqRrSsTtuUVvwWxXYyZz";
-    _tolower(data);
-    EXPECT_STREQ("aabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz", data);
-}
-
 // Tests factorial of positive numbers.
 TEST(Utils, trim) {
     char data[] = " \t\n\r  abc \r\r\n\r \t";
@@ -74,82 +68,6 @@ TEST(Utils, sha256hmac) {
         "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8",
         hash_str);
 }
-
-#if 0
-concurrent_queue<int> q;
-void *worker(void *a) {
-    int r;
-    while (1) {
-        q.deQ(r);
-        if (r == -1) break;
-    }
-    return NULL;
-}
-
-#define num_threads 5
-
-TEST(queue, simple) {
-    pthread_t thread_id[num_threads];
-    for (int tnum = 0; tnum < num_threads; tnum++) {
-        pthread_create(&thread_id[tnum], NULL, &worker, NULL);
-    }
-    int r = 1024;
-    while (r--) {
-        q.enQ(r);
-    }
-
-    for (int i = 0; i < num_threads; i++) {
-        q.enQ(-1);
-    }
-
-    for (int i = 0; i < num_threads; i++) {
-        pthread_join(thread_id[i], NULL);
-    }
-}
-#endif
-
-#if 0
-#include <memory>
-using std::shared_ptr;
-using std::make_shared;
-
-TEST(databuffer, simple) {
-    MD5Calc m;
-
-    shared_ptr<DataBuffer> pdata = make_shared<DataBuffer>((uint64_t)128);
-    EXPECT_EQ(pdata->len(), 0);
-    EXPECT_TRUE(pdata->empty());
-    EXPECT_FALSE(pdata->full());
-
-    EXPECT_EQ(pdata->append(TEST_STRING, strlen(TEST_STRING)), 43);
-    EXPECT_FALSE(pdata->empty());
-    EXPECT_EQ(pdata->len(), 43);
-    m.Update(pdata->getdata(), 43);
-    EXPECT_STREQ("9e107d9d372bb6826bd81d3542a419d6", m.Get());
-    EXPECT_EQ(pdata->append(TEST_STRING, strlen(TEST_STRING)), 43);
-    EXPECT_EQ(pdata->append(TEST_STRING, strlen(TEST_STRING)), 42);
-    EXPECT_EQ(pdata->append(TEST_STRING, strlen(TEST_STRING)), 0);
-
-    EXPECT_TRUE(pdata->full());
-
-    m.Update(pdata->getdata(), 128);
-    EXPECT_STREQ("67e3cb156ceb62e5f114f075a8ef3063", m.Get());
-
-    pdata->reset();
-    EXPECT_EQ(pdata->len(), 0);
-    EXPECT_TRUE(pdata->empty());
-    EXPECT_FALSE(pdata->full());
-
-    EXPECT_EQ(pdata->append(TEST_STRING, strlen(TEST_STRING)), 43);
-    EXPECT_FALSE(pdata->empty());
-    EXPECT_EQ(pdata->len(), 43);
-    m.Update(pdata->getdata(), 43);
-    EXPECT_STREQ("9e107d9d372bb6826bd81d3542a419d6", m.Get());
-    EXPECT_EQ(pdata->append(TEST_STRING, strlen(TEST_STRING)), 43);
-    EXPECT_EQ(pdata->append(TEST_STRING, strlen(TEST_STRING)), 42);
-    EXPECT_EQ(pdata->append(TEST_STRING, strlen(TEST_STRING)), 0);
-}
-#endif
 
 TEST(Utils, Config) {
     Config c("test/data/s3test.conf");

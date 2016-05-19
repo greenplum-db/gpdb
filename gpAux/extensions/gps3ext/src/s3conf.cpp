@@ -17,8 +17,6 @@
 #include "s3log.h"
 #include "s3utils.h"
 
-//#include <cdb/cdbvars.h>
-
 #ifndef DEBUG_S3
 extern "C" {
 void write_log(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
@@ -55,12 +53,10 @@ struct sockaddr_in s3ext_logserveraddr;
 struct sockaddr_un s3ext_logserverpath;
 int32_t s3ext_logsock_local = -1;
 int32_t s3ext_logsock_udp = -1;
-Config* s3cfg = NULL;
 
 // not thread safe!!
 // invoked by s3_import(), need to be exception safe
-bool InitConfig(const string& conf_path,
-                const string& section /*not used currently*/) {
+bool InitConfig(const string& conf_path, const string section = "default") {
     try {
         if (conf_path == "") {
 #ifndef DEBUG_S3
@@ -71,61 +67,40 @@ bool InitConfig(const string& conf_path,
             return false;
         }
 
-        if (s3cfg) delete s3cfg;
-
-        s3cfg = new Config(conf_path);
-        if (!s3cfg || !s3cfg->Handle()) {
+        Config *s3cfg = new Config(conf_path);
+        if (s3cfg == NULL || !s3cfg->Handle()) {
 #ifndef DEBUG_S3
             write_log("Failed to parse config file \"%s\", or it doesn't exist\n", conf_path.c_str());
 #else
             S3ERROR("Failed to parse config file \"%s\", or it doesn't exist", conf_path.c_str());
 #endif
-            if (s3cfg) {
-                delete s3cfg;
-                s3cfg = NULL;
-            }
+            delete s3cfg;
             return false;
         }
 
-        Config* cfg = s3cfg;
-        bool ret = false;
-        string content;
+        string content = s3cfg->Get(section.c_str(), "loglevel", "WARNING");
+        s3ext_loglevel = getLogLevel(content.c_str());
 
-        if (s3ext_loglevel == -1) {
-            content = cfg->Get("default", "loglevel", "WARNING");
-            s3ext_loglevel = getLogLevel(content.c_str());
-        }
-
-#ifdef S3_CHK_CFG
-        if (s3ext_logtype == -1) {
-            content = cfg->Get("default", "logtype", "INTERNAL");
-            s3ext_logtype = getLogType(content.c_str());
-        }
-#else
-        content = cfg->Get("default", "logtype", "INTERNAL");
+#ifndef S3_CHK_CFG
+        content = s3cfg->Get(section.c_str(), "logtype", "INTERNAL");
         s3ext_logtype = getLogType(content.c_str());
 #endif
 
-        s3ext_accessid = cfg->Get("default", "accessid", "");
-        s3ext_secret = cfg->Get("default", "secret", "");
-        s3ext_token = cfg->Get("default", "token", "");
+        s3ext_accessid = s3cfg->Get(section.c_str(), "accessid", "");
+        s3ext_secret = s3cfg->Get(section.c_str(), "secret", "");
+        s3ext_token = s3cfg->Get(section.c_str(), "token", "");
 
-#ifdef DEBUG_S3
-// s3ext_loglevel = EXT_DEBUG;
-// s3ext_logtype = LOCAL_LOG;
-#endif
+        s3ext_logpath = s3cfg->Get(section.c_str(), "logpath", "/tmp/.s3log.sock");
+        s3ext_logserverhost = s3cfg->Get(section.c_str(), "logserverhost", "127.0.0.1");
 
-        s3ext_logpath = cfg->Get("default", "logpath", "/tmp/.s3log.sock");
-        s3ext_logserverhost = cfg->Get("default", "logserverhost", "127.0.0.1");
-
-        ret = cfg->Scan("default", "logserverport", "%d", &s3ext_logserverport);
+        bool ret = s3cfg->Scan(section.c_str(), "logserverport", "%d", &s3ext_logserverport);
         if (!ret) {
             s3ext_logserverport = 1111;
         }
 
-        ret = cfg->Scan("default", "threadnum", "%d", &s3ext_threadnum);
+        ret = s3cfg->Scan(section.c_str(), "threadnum", "%d", &s3ext_threadnum);
         if (!ret) {
-            S3INFO("Failed to get thread number, use default value 4");
+            S3INFO("The thread number is set to default value 4");
             s3ext_threadnum = 4;
         }
         if (s3ext_threadnum > 8) {
@@ -137,9 +112,9 @@ bool InitConfig(const string& conf_path,
             s3ext_threadnum = 1;
         }
 
-        ret = cfg->Scan("default", "chunksize", "%d", &s3ext_chunksize);
+        ret = s3cfg->Scan(section.c_str(), "chunksize", "%d", &s3ext_chunksize);
         if (!ret) {
-            S3INFO("Failed to get chunksize, use default value 64MB");
+            S3INFO("The chunksize is set to default value 64MB");
             s3ext_chunksize = 64 * 1024 * 1024;
         }
         if (s3ext_chunksize > 128 * 1024 * 1024) {
@@ -151,24 +126,19 @@ bool InitConfig(const string& conf_path,
             s3ext_chunksize = 2 * 1024 * 1024;
         }
 
-        ret = cfg->Scan("default", "low_speed_limit", "%d",
-                        &s3ext_low_speed_limit);
+        ret = s3cfg->Scan(section.c_str(), "low_speed_limit", "%d", &s3ext_low_speed_limit);
         if (!ret) {
-            S3INFO(
-                "Failed to get low_speed_limit, use default value %d bytes/s",
-                10240);
+            S3INFO("The low_speed_limit is set to default value %d bytes/s", 10240);
             s3ext_low_speed_limit = 10240;
         }
 
-        ret =
-            cfg->Scan("default", "low_speed_time", "%d", &s3ext_low_speed_time);
+        ret = s3cfg->Scan(section.c_str(), "low_speed_time", "%d", &s3ext_low_speed_time);
         if (!ret) {
-            S3INFO("Failed to get low_speed_time, use default value %d seconds",
-                   60);
+            S3INFO("The low_speed_time is set to default value %d seconds", 60);
             s3ext_low_speed_time = 60;
         }
 
-        content = cfg->Get("default", "encryption", "true");
+        content = s3cfg->Get(section.c_str(), "encryption", "true");
         s3ext_encryption = to_bool(content);
 
 #ifdef DEBUG_S3
@@ -178,21 +148,11 @@ bool InitConfig(const string& conf_path,
         s3ext_segid = GpIdentity.segindex;
         s3ext_segnum = GpIdentity.numsegments;
 #endif
+
+        delete s3cfg;
     } catch (...) {
         return false;
     }
 
     return true;
-}
-
-// invoked by s3_import(), need to be exception safe
-void ClearConfig() {
-    try {
-        if (s3cfg) {
-            delete s3cfg;
-            s3cfg = NULL;
-        }
-    } catch (...) {
-        return;
-    }
 }

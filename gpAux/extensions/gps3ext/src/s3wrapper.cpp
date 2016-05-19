@@ -293,13 +293,12 @@ S3Reader *reader_init(const char *url_with_options) {
             config_path = strdup("s3/s3.conf");
         }
 
-        bool result = InitConfig(config_path, "");
+        bool result = InitConfig(config_path, "default");
         if (!result) {
             free(url);
             free(config_path);
             return NULL;
         } else {
-            ClearConfig();
             free(config_path);
         }
 
