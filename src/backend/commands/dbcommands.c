@@ -61,7 +61,7 @@
 #include "utils/pg_locale.h"
 #include "utils/syscache.h"
 
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbsrlz.h"

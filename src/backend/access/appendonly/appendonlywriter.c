@@ -25,7 +25,7 @@
 #include "utils/lsyscache.h"
 
 #include "cdb/cdbvars.h"			  /* Gp_role              */
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbutil.h"
 #include "utils/tqual.h"

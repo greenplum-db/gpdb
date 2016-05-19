@@ -20,7 +20,7 @@
 #include "utils/builtins.h"
 
 #include "gp-libpq-fe.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbvars.h"
 
 /* This must match enum LockTagType! */

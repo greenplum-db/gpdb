@@ -1071,7 +1071,7 @@ pg_stat_get_queue_elapsed_wait(PG_FUNCTION_ARGS)
 #endif
 #include "lib/stringinfo.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 
 /**
  * We no longer support pg_renice_session. For the time being issue an error.

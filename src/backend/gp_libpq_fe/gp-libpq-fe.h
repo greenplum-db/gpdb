@@ -244,6 +244,9 @@ typedef struct
 #endif
 } PQaoRelTupCount;
 
+struct PartitionNode;
+struct HTAB;
+
 /* ----------------
  * Exported functions of libpq
  * ----------------
@@ -593,6 +596,10 @@ extern int	PQdsplen(const char *s, int encoding);
 
 /* Get encoding id from environment variable PGCLIENTENCODING */
 extern int	PQenv2encoding(void);
+
+extern struct HTAB *
+PQprocessAoTupCounts(struct PartitionNode *parts, struct HTAB *ht,
+					 void *aotupcounts, int naotupcounts);
 
 /* === in fe-auth.c === */
 

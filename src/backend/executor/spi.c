@@ -34,7 +34,7 @@
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbdtxcontextinfo.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "miscadmin.h"
 #include "commands/dbcommands.h"	/* get_database_name() */
 #include "postmaster/postmaster.h"		/* PostPortNumber */

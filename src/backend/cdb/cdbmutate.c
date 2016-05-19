@@ -10,17 +10,23 @@
 
 #include "postgres.h"
 
-#include "optimizer/clauses.h"
 #include "parser/analyze.h"		/* for createRandomDistribution() */
 #include "parser/parsetree.h"	/* for rt_fetch() */
-#include "utils/lsyscache.h"	/* for getatttypetypmod() */
-#include "nodes/makefuncs.h"	/* for makeVar() */
 #include "parser/parse_expr.h"	/* for expr_type() */
 #include "parser/parse_oper.h"	/* for compatible_oper_opid() */
 #include "utils/relcache.h"     /* RelationGetPartitioningKey() */
 #include "optimizer/tlist.h"	/* get_sortgroupclause_tle() */
 #include "optimizer/predtest.h"
 #include "optimizer/var.h"
+#include "parser/parse_relation.h"
+#include "utils/lsyscache.h"
+#include "utils/datum.h"
+#include "utils/syscache.h"
+#include "utils/portal.h"
+#include "optimizer/clauses.h"
+#include "optimizer/planmain.h"
+#include "catalog/catquery.h"
+#include "nodes/makefuncs.h"
 
 #include "commands/tablecmds.h"
 #include "commands/tablespace.h"
@@ -29,9 +35,8 @@
 #include "catalog/pg_type.h"
 
 #include "catalog/pg_proc.h"
-#include "utils/syscache.h"
 
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbhash.h"        /* isGreenplumDbHashable() */
 #include "cdb/cdbllize.h"
 #include "cdb/cdbmutate.h"
@@ -58,6 +63,23 @@ typedef struct ApplyMotionState
     int         numInitPlanMotionNodes;
     List       *initPlans;
 }	ApplyMotionState;
+
+typedef struct
+{
+	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
+	bool single_row_insert;
+} pre_dispatch_function_evaluation_context;
+
+static void
+bindCurrentOfParams(char *cursor_name,
+					Oid target_relid,
+					ItemPointer ctid,
+					int *gp_segment_id,
+					Oid *tableoid);
+
+static Node *
+pre_dispatch_function_evaluation_mutator(Node *node,
+										 pre_dispatch_function_evaluation_context * context);
 
 /*
  * Forward Declarations
@@ -2810,3 +2832,485 @@ void remove_unused_initplans(Plan *plan, PlannerInfo *root)
 	bms_free(rte_params);
 }
 
+Node *
+planner_make_plan_constant(struct PlannerInfo *root, Node *n, bool is_SRI)
+{
+	pre_dispatch_function_evaluation_context pcontext;
+
+	planner_init_plan_tree_base(&pcontext.base, root);
+	pcontext.single_row_insert = is_SRI;
+
+	return plan_tree_mutator(n, pre_dispatch_function_evaluation_mutator, &pcontext);
+}
+
+/*
+ * Evaluate functions to constants.
+ */
+Node *
+exec_make_plan_constant(struct PlannedStmt *stmt, bool is_SRI)
+{
+	pre_dispatch_function_evaluation_context pcontext;
+
+	Assert(stmt);
+	exec_init_plan_tree_base(&pcontext.base, stmt);
+	pcontext.single_row_insert = is_SRI;
+
+	return plan_tree_mutator((Node *)stmt->planTree, pre_dispatch_function_evaluation_mutator, &pcontext);
+}
+
+/*
+ * Remove subquery field in RTE's with subquery kind.
+ */
+void
+remove_subquery_in_RTEs(Node *node)
+{
+    if (node == NULL)
+    {
+        return;
+    }
+
+    if (IsA(node, RangeTblEntry))
+    {
+        RangeTblEntry *rte = (RangeTblEntry *) node;
+
+        if (RTE_SUBQUERY == rte->rtekind && NULL != rte->subquery)
+        {
+            /*
+             * replace subquery with a dummy subquery
+             */
+            rte->subquery = makeNode(Query);
+        }
+
+        return;
+    }
+
+    if (IsA(node, List))
+    {
+        List *list = (List *) node;
+        ListCell *lc = NULL;
+		
+		foreach(lc, list)
+        {
+            remove_subquery_in_RTEs((Node *) lfirst(lc));
+        }
+    }
+}
+
+#define GP_PARTITION_SELECTION_OID 6084
+#define GP_PARTITION_EXPANSION_OID 6085
+#define GP_PARTITION_INVERSE_OID 6086
+ 
+/*
+ * Let's evaluate all STABLE functions that have constant args before
+ * dispatch, so we get a consistent view across QEs
+ *
+ * Also, if this is a single_row insert, let's evaluate nextval() and
+ * currval() before dispatching
+ */
+static Node *
+pre_dispatch_function_evaluation_mutator(Node *node,
+										 pre_dispatch_function_evaluation_context *context)
+{
+	Node * new_node = 0;
+	
+	if (node == NULL)
+		return NULL;
+
+	if (IsA(node, Param))
+	{
+		Param *param = (Param *) node;
+
+		/* Not replaceable, so just copy the Param (no need to recurse) */
+		return (Node *) copyObject(param);
+	}
+	else if (IsA(node, FuncExpr))
+	{
+		FuncExpr *expr = (FuncExpr *) node;
+		List *args;
+		ListCell *arg;
+		Expr *simple;
+		FuncExpr *newexpr;
+		bool has_nonconst_input;
+
+		Form_pg_proc funcform;
+		EState *estate;
+		ExprState *exprstate;
+		MemoryContext oldcontext;
+		Datum const_val;
+		bool const_is_null;
+		int16 resultTypLen;
+		bool resultTypByVal;
+
+		Oid	funcid;
+		HeapTuple func_tuple;
+
+		/*
+		 * Reduce constants in the FuncExpr's arguments. We know args is
+		 * either NIL or a List node, so we can call expression_tree_mutator
+		 * directly rather than recursing to self.
+		 */
+		args = (List *) expression_tree_mutator((Node *) expr->args,
+												pre_dispatch_function_evaluation_mutator,
+												(void *) context);
+										
+		funcid = expr->funcid;
+
+		newexpr = makeNode(FuncExpr);
+		newexpr->funcid = expr->funcid;
+		newexpr->funcresulttype = expr->funcresulttype;
+		newexpr->funcretset = expr->funcretset;
+		newexpr->funcformat = expr->funcformat;
+		newexpr->args = args;
+
+		/*
+		 * Check for constant inputs
+		 */
+		has_nonconst_input = false;
+		
+		foreach(arg, args)
+		{
+			if (!IsA(lfirst(arg), Const))
+			{
+				has_nonconst_input = true;
+				break;
+			}
+		}
+		
+		if (!has_nonconst_input)
+		{
+			bool is_seq_func = false;
+			bool tup_or_set;
+			cqContext *pcqCtx;
+
+			pcqCtx = caql_beginscan(NULL,
+									cql("SELECT * FROM pg_proc " " WHERE oid = :1 ", ObjectIdGetDatum(funcid)));
+
+			func_tuple = caql_getnext(pcqCtx);
+
+			if (!HeapTupleIsValid(func_tuple))
+				elog(ERROR, "cache lookup failed for function %u", funcid);
+
+			funcform = (Form_pg_proc) GETSTRUCT(func_tuple);
+
+			/* can't handle set returning or row returning functions */
+			tup_or_set = (funcform->proretset || type_is_rowtype(funcform->prorettype));
+
+			caql_endscan(pcqCtx);
+			
+			/* can't handle it */
+			if (tup_or_set)
+			{
+				/* 
+				 * We haven't mutated this node, but we still return the
+				 * mutated arguments.
+				 *
+				 * If we don't do this, we'll miss out on transforming function
+				 * arguments which are themselves functions we need to mutated.
+				 * For example, select foo(now()).
+				 */
+				return (Node *)newexpr;
+			}
+
+			/* 
+			 * Ignored evaluation of gp_partition stable functions.
+			 * TODO: refactor gp_partition stable functions to be truly
+			 * stable
+			 */
+			if (funcid == GP_PARTITION_SELECTION_OID 
+				|| funcid == GP_PARTITION_EXPANSION_OID 
+				|| funcid == GP_PARTITION_INVERSE_OID)
+			{
+				return (Node *)newexpr;
+			}
+
+			/* 
+			 * Here we want to mark any statement that is
+			 * going to use a sequence as dirty.  Doing this means that the
+			 * QD will flush the xlog which will also flush any xlog writes that
+			 * the sequence server might do. 
+			 */
+			if (funcid == NEXTVAL_FUNC_OID || funcid == CURRVAL_FUNC_OID ||
+				funcid == SETVAL_FUNC_OID)
+			{
+				ExecutorMarkTransactionUsesSequences();
+				is_seq_func = true;
+			}
+
+			if (funcform->provolatile == PROVOLATILE_IMMUTABLE)
+				/* okay */ ;
+			else if (funcform->provolatile == PROVOLATILE_STABLE)
+				/* okay */ ;
+			else if (context->single_row_insert && is_seq_func)
+				;/* Volatile, but special sequence function */
+			else
+				return (Node *)newexpr;
+
+			/*
+			 * Ok, we have a function that is STABLE (or IMMUTABLE), with
+			 * constant args. Let's try to evaluate it.
+			 */
+
+			/*
+			 * To use the executor, we need an EState.
+			 */
+			estate = CreateExecutorState();
+
+			/* We can use the estate's working context to avoid memory leaks. */
+			oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
+
+			/*
+			 * Prepare expr for execution.
+			 */
+			exprstate = ExecPrepareExpr((Expr *) newexpr, estate);
+
+			/*
+			 * And evaluate it.
+			 *
+			 * It is OK to use a default econtext because none of the
+			 * ExecEvalExpr() code used in this situation will use econtext.
+			 * That might seem fortuitous, but it's not so unreasonable --- a
+			 * constant expression does not depend on context, by definition,
+			 * n'est-ce pas?
+			 */
+			const_val = ExecEvalExprSwitchContext(exprstate,
+												  GetPerTupleExprContext(estate),
+												  &const_is_null, NULL);
+
+			/* Get info needed about result datatype */
+			get_typlenbyval(expr->funcresulttype, &resultTypLen, &resultTypByVal);
+
+			/* Get back to outer memory context */
+			MemoryContextSwitchTo(oldcontext);
+
+			/* Must copy result out of sub-context used by expression eval */
+			if (!const_is_null)
+				const_val = datumCopy(const_val, resultTypByVal, resultTypLen);
+
+			/* Release all the junk we just created */
+			FreeExecutorState(estate);
+
+			/*
+			 * Make the constant result node.
+			 */
+			simple = (Expr *) makeConst(expr->funcresulttype, -1, resultTypLen,
+										const_val, const_is_null,
+										resultTypByVal);
+
+			/* successfully simplified it */
+			if (simple)
+				return (Node *) simple;
+		}
+
+		/*
+		 * The expression cannot be simplified any further, so build and
+		 * return a replacement FuncExpr node using the possibly-simplified
+		 * arguments.
+		 */
+		return (Node *) newexpr;
+	}
+	else if (IsA(node, OpExpr))
+	{
+		OpExpr *expr = (OpExpr *) node;
+		List *args;
+
+		OpExpr *newexpr;
+
+		/*
+		 * Reduce constants in the OpExpr's arguments.  We know args is either
+		 * NIL or a List node, so we can call expression_tree_mutator directly
+		 * rather than recursing to self.
+		 */
+		args = (List *) expression_tree_mutator((Node *) expr->args,
+												pre_dispatch_function_evaluation_mutator,
+												(void *) context);
+
+		/*
+		 * Need to get OID of underlying function.	Okay to scribble on input
+		 * to this extent.
+		 */
+		set_opfuncid(expr);
+
+		newexpr = makeNode(OpExpr);
+		newexpr->opno = expr->opno;
+		newexpr->opfuncid = expr->opfuncid;
+		newexpr->opresulttype = expr->opresulttype;
+		newexpr->opretset = expr->opretset;
+		newexpr->args = args;
+
+		return (Node *) newexpr;
+	}
+	else if (IsA(node, CurrentOfExpr))
+	{
+		/*
+		 * updatable cursors 
+		 *
+		 * During constant folding, the CurrentOfExpr's gp_segment_id, ctid, 
+		 * and tableoid fields are filled in with observed values from the 
+		 * referenced cursor. For more detail, see bindCurrentOfParams below.
+		 */
+		CurrentOfExpr *expr = (CurrentOfExpr *) node,
+					  *newexpr = copyObject(expr);
+
+		bindCurrentOfParams(newexpr->cursor_name,
+							newexpr->target_relid,
+			   		   		&newexpr->ctid,
+					  	   	&newexpr->gp_segment_id,
+					  	   	&newexpr->tableoid);
+		return (Node *) newexpr;
+	}
+	
+	/*
+	 * For any node type not handled above, we recurse using
+	 * plan_tree_mutator, which will copy the node unchanged but try to
+	 * simplify its arguments (if any) using this routine.
+	 */
+	new_node = plan_tree_mutator(node,
+								 pre_dispatch_function_evaluation_mutator,
+								 (void *) context);
+
+	return new_node;
+}
+
+/*
+ * bindCurrentOfParams
+ *
+ * During constant folding, we evaluate STABLE functions to give QEs a consistent view
+ * of the query. At this stage, we will also bind observed values of 
+ * gp_segment_id/ctid/tableoid into the CurrentOfExpr.
+ * This binding must happen only after planning, otherwise we disrupt prepared statements.
+ * Furthermore, this binding must occur before dispatch, because a QE lacks the 
+ * the information needed to discern whether it's responsible for the currently 
+ * positioned tuple.
+ *
+ * The design of this parameter binding is very tightly bound to the parse/analyze
+ * and subsequent planning of DECLARE CURSOR. We depend on the "is_simply_updatable"
+ * calculation of parse/analyze to decide whether CURRENT OF makes sense for the
+ * referenced cursor. Moreover, we depend on the ensuing planning of DECLARE CURSOR
+ * to provide the junk metadata of gp_segment_id/ctid/tableoid (per tuple).
+ *
+ * This function will lookup the portal given by "cursor_name". If it's simply updatable,
+ * we'll glean gp_segment_id/ctid/tableoid from the portal's most recently fetched 
+ * (raw) tuple. We bind this information into the CurrentOfExpr to precisely identify
+ * the currently scanned tuple, ultimately for consumption of TidScan/execQual by the QEs.
+ */
+static void
+bindCurrentOfParams(char *cursor_name, Oid target_relid, ItemPointer ctid, int *gp_segment_id, Oid *tableoid)
+{
+	char *table_name;
+	Portal portal;
+	QueryDesc *queryDesc;
+	AttrNumber gp_segment_id_attno;
+	AttrNumber ctid_attno;
+	AttrNumber tableoid_attno;
+	bool isnull;
+	Datum value;
+
+	portal = GetPortalByName(cursor_name);
+	if (!PortalIsValid(portal))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_CURSOR_STATE),
+				 errmsg("cursor \"%s\" does not exist", cursor_name)));
+
+	queryDesc = PortalGetQueryDesc(portal);
+	if (queryDesc == NULL)
+		ereport(ERROR, 
+				(errcode(ERRCODE_INVALID_CURSOR_STATE),
+				 errmsg("cursor \"%s\" is held from a previous transaction", cursor_name)));
+
+	/* obtain table_name for potential error messages */
+	table_name = get_rel_name(target_relid);
+
+	/* 
+	 * The referenced cursor must be simply updatable. This has already
+	 * been discerned by parse/analyze for the DECLARE CURSOR of the given
+	 * cursor. This flag assures us that gp_segment_id, ctid, and tableoid (if necessary)
+ 	 * will be available as junk metadata, courtesy of preprocess_targetlist.
+	 */
+	if (!portal->is_simply_updatable)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_CURSOR_STATE),
+				 errmsg("cursor \"%s\" is not a simply updatable scan of table \"%s\"",
+						cursor_name, table_name)));
+
+	/* 
+	 * The target relation must directly match the cursor's relation. This throws out
+	 * the simple case in which a cursor is declared against table X and the update is
+	 * issued against Y. Moreover, this disallows some subtler inheritance cases where
+	 * Y inherits from X. While such cases could be implemented, it seems wiser to
+	 * simply error out cleanly.
+	 */
+	Index varno = extractSimplyUpdatableRTEIndex(queryDesc->plannedstmt->rtable);
+	Oid cursor_relid = getrelid(varno, queryDesc->plannedstmt->rtable);
+	if (target_relid != cursor_relid)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_CURSOR_STATE),
+				 errmsg("cursor \"%s\" is not a simply updatable scan of table \"%s\"",
+						cursor_name, table_name)));
+	/* 
+	 * The cursor must have a current result row: per the SQL spec, it's 
+	 * an error if not.
+	 */
+	if (portal->atStart || portal->atEnd)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_CURSOR_STATE),
+				 errmsg("cursor \"%s\" is not positioned on a row", cursor_name)));
+
+	/*
+	 * As mentioned above, if parse/analyze recognized this cursor as simply
+	 * updatable during DECLARE CURSOR, then its subsequent planning must have
+	 * made gp_segment_id, ctid, and tableoid available as junk for each tuple.
+	 *
+	 * To retrieve this junk metadeta, we leverage the EState's junkfilter against
+	 * the raw tuple yielded by the highest most node in the plan.
+	 */
+	TupleTableSlot *slot = queryDesc->planstate->ps_ResultTupleSlot;
+	Insist(!TupIsNull(slot));
+	Assert(queryDesc->estate->es_junkFilter);
+
+	/* extract gp_segment_id metadata */
+	gp_segment_id_attno = ExecFindJunkAttribute(queryDesc->estate->es_junkFilter, "gp_segment_id");
+	if (!AttributeNumberIsValid(gp_segment_id_attno))
+		elog(ERROR, "could not find junk gp_segment_id column");
+	value = ExecGetJunkAttribute(slot, gp_segment_id_attno, &isnull);
+	if (isnull)
+		elog(ERROR, "gp_segment_id is NULL");
+	*gp_segment_id = DatumGetInt32(value);
+
+	/* extract ctid metadata */
+	ctid_attno = ExecFindJunkAttribute(queryDesc->estate->es_junkFilter, "ctid");
+	if (!AttributeNumberIsValid(ctid_attno))
+		elog(ERROR, "could not find junk ctid column");
+	value = ExecGetJunkAttribute(slot, ctid_attno, &isnull);
+	if (isnull)
+		elog(ERROR, "ctid is NULL");
+	ItemPointerCopy(DatumGetItemPointer(value), ctid);
+
+	/* 
+	 * extract tableoid metadata
+	 *
+	 * DECLARE CURSOR planning only includes tableoid metadata when
+	 * scrolling a partitioned table, as this is the only case in which
+	 * gp_segment_id/ctid alone do not suffice to uniquely identify a tuple.
+	 */
+	tableoid_attno = ExecFindJunkAttribute(queryDesc->estate->es_junkFilter, "tableoid");
+	if (AttributeNumberIsValid(tableoid_attno))
+	{
+		value = ExecGetJunkAttribute(slot, tableoid_attno, &isnull);
+		if (isnull)
+			elog(ERROR, "tableoid is NULL");
+		*tableoid = DatumGetObjectId(value);
+
+		/*
+		 * This is our last opportunity to verify that the physical table given
+		 * by tableoid is, indeed, simply updatable.
+		 */
+		if (!isSimplyUpdatableRelation(*tableoid))
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("%s is not updatable",
+							get_rel_name_partition(*tableoid))));
+	} else
+		*tableoid = InvalidOid;
+
+	pfree(table_name);
+}

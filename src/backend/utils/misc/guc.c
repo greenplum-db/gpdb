@@ -65,7 +65,7 @@
 #include "utils/ps_status.h"
 #include "utils/tzparser.h"
 #include "utils/xml.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbvars.h"
 
 #ifdef USE_SSL

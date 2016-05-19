@@ -18,7 +18,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbconn.h"
 #include "cdb/cdbutil.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "access/xact.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbtm.h"

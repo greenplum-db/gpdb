@@ -108,6 +108,7 @@
 #include "mb/pg_wchar.h"
 
 #include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbrelsize.h"

@@ -23,7 +23,7 @@
 #include "catalog/pg_resqueue.h"
 #include "nodes/makefuncs.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "commands/comment.h"
 #include "commands/defrem.h"
 #include "commands/queue.h"

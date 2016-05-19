@@ -33,7 +33,7 @@
 #include "gp-libpq-fe.h"
 #include "lib/stringinfo.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "utils/int8.h"
 #include "utils/lsyscache.h"
 #include "cdb/cdboidsync.h"

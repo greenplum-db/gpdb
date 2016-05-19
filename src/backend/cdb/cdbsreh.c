@@ -21,7 +21,7 @@
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_depend.h"
 #include "catalog/pg_type.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"

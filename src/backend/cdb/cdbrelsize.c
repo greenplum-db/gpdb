@@ -19,7 +19,7 @@
 #include "catalog/catalog.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "gp-libpq-fe.h"
 #include "lib/stringinfo.h"
 #include "utils/int8.h"
