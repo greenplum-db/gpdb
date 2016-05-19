@@ -32,9 +32,17 @@ int main(int argc, char *argv[]) {
                 print_usage(stderr);
                 exit(EXIT_FAILURE);
         }
+
+        break;
     }
 
-    return ret;
+    if (!ret) {
+        fprintf(stderr, "Failed. Please check the arguments.\n\n");
+        print_usage(stderr);
+        exit(EXIT_FAILURE);
+    } else {
+        exit(EXIT_SUCCESS);
+    }
 }
 
 void print_template() {
