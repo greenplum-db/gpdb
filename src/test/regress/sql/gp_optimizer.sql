@@ -1280,3 +1280,26 @@ explain select * from orca.index_test where a = 5 and c = 5;
 -- clean up
 drop schema orca cascade;
 reset optimizer_segments;
+
+-- Check if ORCA can handle GPDB's error properly
+drop table if exists orca_exc_handle;
+create table orca_exc_handle(
+	a int primary key,
+	b char
+);
+
+insert into orca_exc_handle select i, i from generate_Series(1,4) as i; 
+
+-- enable the fault injector
+--start_ignore
+\! gpfaultinjector -f opt_relcache_translator_catalog_access -y error --seg_dbid 1
+--end_ignore
+
+select a from orca_exc_handle;
+-- reset the fault injector
+--start_ignore
+\! gpfaultinjector -f opt_relcache_translator_catalog_access -y reset --seg_dbid 1
+--end_ignore
+
+drop table orca_exc_handle;
+-- End of Check if ORCA can handle GPDB's error properly

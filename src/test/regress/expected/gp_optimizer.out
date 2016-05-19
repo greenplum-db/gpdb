@@ -10132,3 +10132,37 @@ NOTICE:  drop cascades to table orca.r
 NOTICE:  drop cascades to table orca.bar2
 NOTICE:  drop cascades to table orca.bar1
 reset optimizer_segments;
+-- Check if ORCA can handle GPDB's error properly
+drop table if exists orca_exc_handle;
+NOTICE:  table "orca_exc_handle" does not exist, skipping
+create table orca_exc_handle(
+	a int primary key,
+	b char
+);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "orca_exc_handle_pkey" for table "orca_exc_handle"
+insert into orca_exc_handle select i, i from generate_Series(1,4) as i; 
+-- enable the fault injector
+--start_ignore
+\! gpfaultinjector -f opt_relcache_translator_catalog_access -y error --seg_dbid 1
+20160425:14:59:22:001357 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Starting gpfaultinjector with args: -f opt_relcache_translator_catalog_access -y error --seg_dbid 1
+20160425:14:59:22:001357 gpfaultinjector:krajaraman:krajaraman-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160425:14:59:22:001357 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Obtaining Segment details from master...
+20160425:14:59:22:001357 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Injecting fault on 1 segment(s)
+20160425:14:59:22:001357 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Injecting fault on krajaraman:/Users/krajaraman/gitdev/gpdb64/gpAux/gpdemo/datadirs/qddir/demoDataDir-1:content=-1:dbid=1:mode=s:status=u
+20160425:14:59:22:001357 gpfaultinjector:krajaraman:krajaraman-[INFO]:-DONE
+--end_ignore
+select a from orca_exc_handle;
+ERROR:  fault triggered, fault name:'opt_relcache_translator_catalog_access' fault type:'error' (faultinjector.c:671)
+ERROR:  GPDB exception. Aborting GPORCA plan generation. (CGPOptimizer.cpp:66)
+-- reset the fault injector
+--start_ignore
+\! gpfaultinjector -f opt_relcache_translator_catalog_access -y reset --seg_dbid 1
+20160425:14:59:23:001374 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Starting gpfaultinjector with args: -f opt_relcache_translator_catalog_access -y reset --seg_dbid 1
+20160425:14:59:23:001374 gpfaultinjector:krajaraman:krajaraman-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160425:14:59:23:001374 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Obtaining Segment details from master...
+20160425:14:59:23:001374 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Injecting fault on 1 segment(s)
+20160425:14:59:23:001374 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Injecting fault on krajaraman:/Users/krajaraman/gitdev/gpdb64/gpAux/gpdemo/datadirs/qddir/demoDataDir-1:content=-1:dbid=1:mode=s:status=u
+20160425:14:59:23:001374 gpfaultinjector:krajaraman:krajaraman-[INFO]:-DONE
+--end_ignore
+drop table orca_exc_handle;
+-- End of Check if ORCA can handle GPDB's error properly
