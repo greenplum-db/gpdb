@@ -11,20 +11,11 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
-// #include <thread>
 #include <memory>
-#include <vector>
+
 #include "s3conf.h"
 #include "s3log.h"
 #include "s3utils.h"
-
-using std::vector;
-// using std::shared_ptr;
-// using std::make_shared;
-
-#ifndef UNIX_PATH_MAX
-#define UNIX_PATH_MAX 108
-#endif
 
 #ifndef DEBUG_S3
 extern "C" {
@@ -32,33 +23,19 @@ void write_log(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 }
 #endif
 
-// fake implement
 void _LogMessage(const char* fmt, va_list args) {
     char buf[1024];
-    int len = vsnprintf(buf, sizeof(buf), fmt, args);
-    if (len >= 1024) len = 1023;
-    buf[len] = 0;
+    vsnprintf(buf, sizeof(buf), fmt, args);
 #ifdef DEBUG_S3
-    fprintf(stderr, "%s\n", buf);
+    fprintf(stderr, "%s", buf);
 #else
     write_log("%s", buf);
 #endif
 }
 
-void _send_to_local(const char* fmt, va_list args) {
-    char buf[1024];
-    int len = vsnprintf(buf, sizeof(buf), fmt, args);
-    if (len >= 1024) len = 1023;
-    buf[len] = 0;
-    sendto(s3ext_logsock_local, buf, len, 0,
-           (struct sockaddr*)&s3ext_logserverpath, sizeof(struct sockaddr_un));
-}
-
 void _send_to_remote(const char* fmt, va_list args) {
     char buf[1024];
     int len = vsnprintf(buf, sizeof(buf), fmt, args);
-    if (len >= 1024) len = 1023;
-    buf[len] = 0;
     sendto(s3ext_logsock_udp, buf, len, 0,
            (struct sockaddr*)&s3ext_logserveraddr, sizeof(struct sockaddr_in));
 }
@@ -77,9 +54,6 @@ void LogMessage(LOGLEVEL loglevel, const char* fmt, ...) {
         case REMOTE_LOG:
             _send_to_remote(fmt, args);
             break;
-        case LOCAL_LOG:
-            _send_to_local(fmt, args);
-            break;
         default:
             break;
     }
@@ -94,16 +68,6 @@ void InitLog() {
         if (loginited) {
             return;
         }
-        s3ext_logsock_local = socket(PF_UNIX, SOCK_DGRAM, 0);
-        if (s3ext_logsock_local < 0) {
-            perror("Failed to create socket while InitLog()");
-        }
-
-        /* start with a clean address structure */
-        memset(&s3ext_logserverpath, 0, sizeof(struct sockaddr_un));
-        s3ext_logserverpath.sun_family = AF_UNIX;
-        snprintf(s3ext_logserverpath.sun_path, UNIX_PATH_MAX, "%s",
-                 s3ext_logpath.c_str());
 
         s3ext_logsock_udp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
         if (s3ext_logsock_udp < 0) {
@@ -124,7 +88,6 @@ void InitLog() {
 LOGTYPE getLogType(const char* v) {
     if (!v) return STDERR_LOG;
     if (strcmp(v, "REMOTE") == 0) return REMOTE_LOG;
-    if (strcmp(v, "LOCAL") == 0) return LOCAL_LOG;
     if (strcmp(v, "INTERNAL") == 0) return INTERNAL_LOG;
     return STDERR_LOG;
 }

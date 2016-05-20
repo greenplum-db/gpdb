@@ -1,14 +1,14 @@
 ## Build
 
-`make` to build the extension for GPDB.
+`make -B` to build the extension for GPDB.
+
+`make -B -f Makefile.chkcfg` to build `s3chkcfg`.
 
 ## Test
 
 ### Run Unit Tests
 
 `make -f Makefile.others test`
-
-Some tests need [unite](https://github.com/lij55/unite) to serve the test contents and recevie log.
 
 ### Test Code Coverage
 

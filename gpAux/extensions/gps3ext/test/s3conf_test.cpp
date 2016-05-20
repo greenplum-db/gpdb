@@ -28,7 +28,6 @@ TEST(Config, Basic) {
 
     EXPECT_EQ(1111, s3ext_logserverport);
     EXPECT_STREQ("127.0.0.1", s3ext_logserverhost.c_str());
-    EXPECT_STREQ("'/tmp/abcde'", s3ext_logpath.c_str());
 
     EXPECT_EQ(1024, s3ext_low_speed_limit);
     EXPECT_EQ(600, s3ext_low_speed_time);
@@ -48,4 +47,11 @@ TEST(Config, SpecialSectionLowValues) {
 
     EXPECT_EQ(1, s3ext_threadnum);
     EXPECT_EQ(2 * 1024 * 1024, s3ext_chunksize);
+}
+
+TEST(Config, SpecialSectionWrongKeyName) {
+    InitConfig("test/data/s3test.conf", "special_wrongkeyname");
+
+    EXPECT_EQ(4, s3ext_threadnum);
+    EXPECT_EQ(64 * 1024 * 1024, s3ext_chunksize);
 }

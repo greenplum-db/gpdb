@@ -3,10 +3,20 @@
 
 TEST(Logger, simple) {
     InitConfig("test/data/s3test.conf", "default");
+
     InitLog();
-    fprintf(stderr, "Hello, log type %d\n", s3ext_logtype);
-    S3DEBUG("Hello, DEBUG");
-    S3ERROR("Hello, ERROR");
+
+    s3ext_logtype = STDERR_LOG;
+    S3DEBUG("Hello, STDERR DEBUG");
+    S3ERROR("Hello, STDERR ERROR");
+
+    s3ext_logtype = INTERNAL_LOG;
+    S3DEBUG("Hello, INTERNAL DEBUG");
+    S3ERROR("Hello, INTERNAL ERROR");
+
+    s3ext_logtype = REMOTE_LOG;
+    S3DEBUG("Hello, REMOTE DEBUG");
+    S3ERROR("Hello, REMOTE ERROR");
 }
 
 TEST(Logger, getstr) {
@@ -20,7 +30,6 @@ TEST(Logger, getstr) {
 
     EXPECT_EQ(STDERR_LOG, getLogType("STDERR"));
     EXPECT_EQ(REMOTE_LOG, getLogType("REMOTE"));
-    EXPECT_EQ(LOCAL_LOG, getLogType("LOCAL"));
     EXPECT_EQ(INTERNAL_LOG, getLogType("INTERNAL"));
     EXPECT_EQ(STDERR_LOG, getLogType(""));
     EXPECT_EQ(STDERR_LOG, getLogType(NULL));

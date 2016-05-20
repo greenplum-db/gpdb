@@ -37,7 +37,6 @@ int32_t s3ext_low_speed_limit = 10240;
 int32_t s3ext_low_speed_time = 60;
 
 string s3ext_logserverhost;
-string s3ext_logpath;
 string s3ext_accessid;
 string s3ext_secret;
 string s3ext_token;
@@ -50,8 +49,6 @@ int32_t s3ext_segnum = -1;
 
 string s3ext_config_path;
 struct sockaddr_in s3ext_logserveraddr;
-struct sockaddr_un s3ext_logserverpath;
-int32_t s3ext_logsock_local = -1;
 int32_t s3ext_logsock_udp = -1;
 
 // not thread safe!!
@@ -90,7 +87,6 @@ bool InitConfig(const string& conf_path, const string section = "default") {
         s3ext_secret = s3cfg->Get(section.c_str(), "secret", "");
         s3ext_token = s3cfg->Get(section.c_str(), "token", "");
 
-        s3ext_logpath = s3cfg->Get(section.c_str(), "logpath", "/tmp/.s3log.sock");
         s3ext_logserverhost = s3cfg->Get(section.c_str(), "logserverhost", "127.0.0.1");
 
         bool ret = s3cfg->Scan(section.c_str(), "logserverport", "%d", &s3ext_logserverport);

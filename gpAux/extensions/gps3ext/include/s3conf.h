@@ -1,9 +1,6 @@
 #include <string>
 using std::string;
 
-// local socket to send log
-extern int s3ext_logsock_local;
-
 // udp socket to send log
 extern int s3ext_logsock_udp;
 
@@ -31,9 +28,6 @@ extern int s3ext_logserverport;
 // remote server address if use external log server
 extern string s3ext_logserverhost;
 
-// local Unix domain socket path if local log
-extern string s3ext_logpath;
-
 // s3 access id
 extern string s3ext_accessid;
 
@@ -51,7 +45,6 @@ extern string s3ext_config_path;
 
 // server address where log msg is sent to
 extern struct sockaddr_in s3ext_logserveraddr;
-extern struct sockaddr_un s3ext_logserverpath;
 
 // low speed timeout
 extern int s3ext_low_speed_limit;

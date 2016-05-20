@@ -27,8 +27,19 @@ OBJS = lib/http_parser.o lib/ini.o src/gps3ext.o src/s3conf.o src/s3common.o src
 PGXS := $(shell pg_config --pgxs)
 include $(PGXS)
 
+format:
+	@make -f Makefile.others format
+
+lint:
+	@make -f Makefile.others lint
+
+tags:
+	@make -f Makefile.others tags
+
 test:
-	make -f Makefile.others test
+	@make -f Makefile.others test
 
 coverage:
-	make -f Makefile.others coverage
+	@make -f Makefile.others coverage
+
+.PHONY: format lint tags test coverage
