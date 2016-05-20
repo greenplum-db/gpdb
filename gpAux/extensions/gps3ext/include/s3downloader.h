@@ -9,17 +9,17 @@
 
 #include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <map>
 #include <string>
 #include <vector>
-// #include <cstdint>
-#include <cstring>
 
 #include <curl/curl.h>
 #include <zlib.h>
 
 #include "s3common.h"
+#include "s3url_parser.h"
 
 using std::vector;
 
@@ -141,7 +141,7 @@ class HTTPFetcher : public BlockingBuffer {
     virtual bool processheader() { return true; };
     CURL* curl;
     Method method;
-    HeaderContent headers;
+    HTTPHeaders headers;
     UrlParser urlparser;
 };
 
@@ -189,11 +189,9 @@ struct BucketContent {
     uint64_t size;
 };
 
-// need free
+// It is caller's responsibility to free returned memory.
 ListBucketResult* ListBucket(const string& schema, const string& region,
                              const string& bucket, const string& prefix,
                              const S3Credential& cred);
-
-ListBucketResult* ListBucket_FakeHTTP(const string& host, const string& bucket);
 
 #endif

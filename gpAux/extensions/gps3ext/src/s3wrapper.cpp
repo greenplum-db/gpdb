@@ -302,7 +302,7 @@ S3Reader *reader_init(const char *url_with_options) {
             free(config_path);
         }
 
-        InitLog();
+        InitRemoteLog();
 
         S3Reader *reader = (S3Reader *)CreateExtWrapper(url);
 

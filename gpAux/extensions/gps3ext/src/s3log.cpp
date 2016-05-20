@@ -10,14 +10,14 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
-#include <string>
 #include <memory>
+#include <string>
 
 #include "s3conf.h"
 #include "s3log.h"
 #include "s3utils.h"
 
-#ifndef DEBUG_S3
+#ifndef S3_STANDALONE
 extern "C" {
 void write_log(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 }
@@ -26,7 +26,7 @@ void write_log(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 void _LogMessage(const char* fmt, va_list args) {
     char buf[1024];
     vsnprintf(buf, sizeof(buf), fmt, args);
-#ifdef DEBUG_S3
+#ifdef S3_STANDALONE
     fprintf(stderr, "%s", buf);
 #else
     write_log("%s", buf);
@@ -51,7 +51,7 @@ void LogMessage(LOGLEVEL loglevel, const char* fmt, ...) {
         case STDERR_LOG:
             vfprintf(stderr, fmt, args);
             break;
-        case REMOTE_LOG:
+        case REMOTE_LOG:  // `socat UDP-RECV:[port] STDOUT` to listen
             _send_to_remote(fmt, args);
             break;
         default:
@@ -63,7 +63,7 @@ void LogMessage(LOGLEVEL loglevel, const char* fmt, ...) {
 static bool loginited = false;
 
 // invoked by s3_import(), need to be exception safe
-void InitLog() {
+void InitRemoteLog() {
     try {
         if (loginited) {
             return;
@@ -71,7 +71,7 @@ void InitLog() {
 
         s3ext_logsock_udp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
         if (s3ext_logsock_udp < 0) {
-            perror("Failed to create socket while InitLog()");
+            perror("Failed to create socket while InitRemoteLog()");
         }
 
         memset(&s3ext_logserveraddr, 0, sizeof(struct sockaddr_in));

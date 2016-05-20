@@ -10,7 +10,9 @@
 
 #include "s3common.h"
 #include "s3downloader.h"
+#include "s3http_headers.h"
 #include "s3uploader.h"
+#include "s3url_parser.h"
 #include "s3utils.h"
 
 using std::string;
@@ -187,7 +189,7 @@ const char *GetUploadId(const char *host, const char *bucket,
 
     url << "http://" << host << "/" << bucket << "/" << obj_name;
 
-    HeaderContent *header = new HeaderContent();
+    HTTPHeaders *header = new HTTPHeaders();
     header->Add(HOST, host);
     header->Add(CONTENTTYPE, "application/x-www-form-urlencoded");
     UrlParser p(url.str().c_str());
@@ -203,7 +205,7 @@ const char *GetUploadId(const char *host, const char *bucket,
         curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
 
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&xml);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, ParserCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, XMLParserCallback);
 
         curl_easy_setopt(curl, CURLOPT_POST, 1L);
 
@@ -290,7 +292,7 @@ const char *PartPutS3Object(const char *host, const char *bucket,
 
     url << "?partNumber=" << part_number << "&uploadId=" << upload_id;
 
-    HeaderContent *header = new HeaderContent();
+    HTTPHeaders *header = new HTTPHeaders();
     header->Add(HOST, host);
     // MIME type doesn't matter actually, server wouldn't store it either
     header->Add(CONTENTTYPE, "text/plain");
@@ -331,7 +333,7 @@ const char *PartPutS3Object(const char *host, const char *bucket,
         curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_write_callback);
 
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&xml);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, ParserCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, XMLParserCallback);
     } else {
         free(header_buf);
         return NULL;
@@ -484,7 +486,7 @@ bool CompleteMultiPutS3(const char *host, const char *bucket,
     }
     struct MemoryData read_data = {body_data, body_size};
 
-    HeaderContent *header = new HeaderContent();
+    HTTPHeaders *header = new HTTPHeaders();
     header->Add(HOST, host);
     header->Add(CONTENTTYPE, "application/xml");
     header->Add(CONTENTLENGTH, std::to_string(body_size));
@@ -521,7 +523,7 @@ bool CompleteMultiPutS3(const char *host, const char *bucket,
         curl_easy_setopt(curl, CURLOPT_POST, 1L);
 
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&xml);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, ParserCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, XMLParserCallback);
     } else {
         return false;
     }

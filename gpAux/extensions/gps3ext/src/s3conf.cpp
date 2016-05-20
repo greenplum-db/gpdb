@@ -17,7 +17,7 @@
 #include "s3log.h"
 #include "s3utils.h"
 
-#ifndef DEBUG_S3
+#ifndef S3_STANDALONE
 extern "C" {
 void write_log(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 }
@@ -56,7 +56,7 @@ int32_t s3ext_logsock_udp = -1;
 bool InitConfig(const string& conf_path, const string section = "default") {
     try {
         if (conf_path == "") {
-#ifndef DEBUG_S3
+#ifndef S3_STANDALONE
             write_log("Config file is not specified\n");
 #else
             S3ERROR("Config file is not specified");
@@ -64,12 +64,15 @@ bool InitConfig(const string& conf_path, const string section = "default") {
             return false;
         }
 
-        Config *s3cfg = new Config(conf_path);
+        Config* s3cfg = new Config(conf_path);
         if (s3cfg == NULL || !s3cfg->Handle()) {
-#ifndef DEBUG_S3
-            write_log("Failed to parse config file \"%s\", or it doesn't exist\n", conf_path.c_str());
+#ifndef S3_STANDALONE
+            write_log(
+                "Failed to parse config file \"%s\", or it doesn't exist\n",
+                conf_path.c_str());
 #else
-            S3ERROR("Failed to parse config file \"%s\", or it doesn't exist", conf_path.c_str());
+            S3ERROR("Failed to parse config file \"%s\", or it doesn't exist",
+                    conf_path.c_str());
 #endif
             delete s3cfg;
             return false;
@@ -87,9 +90,11 @@ bool InitConfig(const string& conf_path, const string section = "default") {
         s3ext_secret = s3cfg->Get(section.c_str(), "secret", "");
         s3ext_token = s3cfg->Get(section.c_str(), "token", "");
 
-        s3ext_logserverhost = s3cfg->Get(section.c_str(), "logserverhost", "127.0.0.1");
+        s3ext_logserverhost =
+            s3cfg->Get(section.c_str(), "logserverhost", "127.0.0.1");
 
-        bool ret = s3cfg->Scan(section.c_str(), "logserverport", "%d", &s3ext_logserverport);
+        bool ret = s3cfg->Scan(section.c_str(), "logserverport", "%d",
+                               &s3ext_logserverport);
         if (!ret) {
             s3ext_logserverport = 1111;
         }
@@ -122,13 +127,16 @@ bool InitConfig(const string& conf_path, const string section = "default") {
             s3ext_chunksize = 2 * 1024 * 1024;
         }
 
-        ret = s3cfg->Scan(section.c_str(), "low_speed_limit", "%d", &s3ext_low_speed_limit);
+        ret = s3cfg->Scan(section.c_str(), "low_speed_limit", "%d",
+                          &s3ext_low_speed_limit);
         if (!ret) {
-            S3INFO("The low_speed_limit is set to default value %d bytes/s", 10240);
+            S3INFO("The low_speed_limit is set to default value %d bytes/s",
+                   10240);
             s3ext_low_speed_limit = 10240;
         }
 
-        ret = s3cfg->Scan(section.c_str(), "low_speed_time", "%d", &s3ext_low_speed_time);
+        ret = s3cfg->Scan(section.c_str(), "low_speed_time", "%d",
+                          &s3ext_low_speed_time);
         if (!ret) {
             S3INFO("The low_speed_time is set to default value %d seconds", 60);
             s3ext_low_speed_time = 60;
@@ -137,7 +145,7 @@ bool InitConfig(const string& conf_path, const string section = "default") {
         content = s3cfg->Get(section.c_str(), "encryption", "true");
         s3ext_encryption = to_bool(content);
 
-#ifdef DEBUG_S3
+#ifdef S3_STANDALONE
         s3ext_segid = 0;
         s3ext_segnum = 1;
 #else

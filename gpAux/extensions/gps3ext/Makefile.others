@@ -1,40 +1,20 @@
 # Options
-DEBUG_S3 = y
 DEBUG_S3_CURL = n
-AWS_TEST = y
-FAKE_TEST = y
-BIG_FILE_TEST = n
 
 # Flags
 CPP = g++
-INCLUDES = -Isrc -Iinclude -Itest -Ilib -I/usr/include/libxml2
+INCLUDES = -Isrc -Iinclude -Ilib -I/usr/include/libxml2
 LDFLAGS = -lpthread -lcrypto -lcurl -lxml2 -lgcov -lz
-CPPFLAGS = -O2 -g3 -std=c++98 -Wall -fPIC -fprofile-arcs -ftest-coverage
-
-ifeq ($(DEBUG_S3),y)
-	CPPFLAGS += -DDEBUG_S3
-endif
+CPPFLAGS = -O2 -g3 -std=c++98 -Wall -fPIC -DS3_STANDALONE -fprofile-arcs -ftest-coverage
 
 ifeq ($(DEBUG_S3_CURL),y)
 	CPPFLAGS += -DDEBUG_S3_CURL
 endif
 
-ifeq ($(AWS_TEST),y)
-	CPPFLAGS += -DAWS_TEST
-endif
-
-ifeq ($(FAKE_TEST),y)
-	CPPFLAGS += -DFAKE_TEST
-endif
-
-ifeq ($(BIG_FILE_TEST),y)
-	CPPFLAGS += -DBIG_FILE_TEST
-endif
-
 all: test
 
 # Google TEST
-TEST_SRC_FILES = test/s3conf_test.cpp test/s3utils_test.cpp test/s3downloader_test.cpp test/s3common_test.cpp test/s3wrapper_test.cpp test/s3log_test.cpp
+TEST_SRC_FILES = test/s3conf_test.cpp test/s3utils_test.cpp test/s3downloader_test.cpp test/s3common_test.cpp test/s3wrapper_test.cpp test/s3log_test.cpp test/s3url_parser_test.cpp test/s3http_headers_test.cpp test/s3thread_test.cpp
 TEST_OBJS = $(TEST_SRC_FILES:.cpp=.o)
 TEST_APP = s3test
 
