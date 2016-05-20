@@ -15,7 +15,7 @@ TEST(Config, Basic) {
     EXPECT_STREQ("accessid_test", s3ext_accessid.c_str());
     EXPECT_STREQ("ABCDEFGabcdefg", s3ext_token.c_str());
 
-#ifdef DEBUG_S3
+#ifdef S3_STANDALONE
     EXPECT_EQ(0, s3ext_segid);
     EXPECT_EQ(1, s3ext_segnum);
 #endif

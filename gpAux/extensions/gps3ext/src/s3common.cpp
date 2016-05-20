@@ -9,6 +9,7 @@
 #include <string>
 
 #include <openssl/err.h>
+#include <openssl/sha.h>
 
 #include "s3common.h"
 #include "s3conf.h"
@@ -17,42 +18,38 @@
 using std::string;
 using std::stringstream;
 
-#define DATE_STR_LEN 8
+static string encode_query_str(const string &query);
+
+#define DATE_STR_LEN 9
 #define TIME_STAMP_STR_LEN 17
 #define SHA256_DIGEST_STRING_LENGTH 65
 bool SignRequestV4(const string &method, HeaderContent *h,
                    const string &orig_region, const string &path,
                    const string &query, const S3Credential &cred) {
-    time_t t;
     struct tm tm_info;
-    char date_str[DATE_STR_LEN + 1] = { 0 };
-    char timestamp_str[TIME_STAMP_STR_LEN] = { 0 };
+    char date_str[DATE_STR_LEN] = {0};
+    char timestamp_str[TIME_STAMP_STR_LEN] = {0};
 
-    char canonical_hex[SHA256_DIGEST_STRING_LENGTH] = { 0 };
-    char signature_hex[SHA256_DIGEST_STRING_LENGTH] = { 0 };
+    char canonical_hex[SHA256_DIGEST_STRING_LENGTH] = {0};
+    char signature_hex[SHA256_DIGEST_STRING_LENGTH] = {0};
 
-    string signed_headers;
-
-    unsigned char key_date[SHA256_DIGEST_LENGTH] = { 0 };
-    unsigned char key_region[SHA256_DIGEST_LENGTH] = { 0 };
-    unsigned char key_service[SHA256_DIGEST_LENGTH] = { 0 };
-    unsigned char signing_key[SHA256_DIGEST_LENGTH] = { 0 };
+    unsigned char key_date[SHA256_DIGEST_LENGTH] = {0};
+    unsigned char key_region[SHA256_DIGEST_LENGTH] = {0};
+    unsigned char key_service[SHA256_DIGEST_LENGTH] = {0};
+    unsigned char signing_key[SHA256_DIGEST_LENGTH] = {0};
 
     /* YYYYMMDD'T'HHMMSS'Z' */
-    t = time(NULL);
+    time_t t = time(NULL);
     gmtime_r(&t, &tm_info);
     strftime(timestamp_str, TIME_STAMP_STR_LEN, "%Y%m%dT%H%M%SZ", &tm_info);
 
-    h->Add(X_AMZ_DATE, timestamp_str);
-    memcpy(date_str, timestamp_str, DATE_STR_LEN);
+    // for unit test convenient
+    if (!h->Get(X_AMZ_DATE)) {
+        h->Add(X_AMZ_DATE, timestamp_str);
+    }
+    memcpy(date_str, h->Get(X_AMZ_DATE), DATE_STR_LEN - 1);
 
-    // Note: better to sort queries automatically
-    // for more information refer to Amazon S3 document:
-    // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
-    string query_encoded = uri_encode(query);
-    find_replace(query_encoded, "%26", "&");
-    find_replace(query_encoded, "%3D", "=");
-
+    string query_encoded = encode_query_str(query);
     stringstream canonical_str;
 
     canonical_str << method << "\n"
@@ -62,7 +59,7 @@ bool SignRequestV4(const string &method, HeaderContent *h,
                   << "\nx-amz-date:" << h->Get(X_AMZ_DATE) << "\n\n"
                   << "host;x-amz-content-sha256;x-amz-date\n"
                   << h->Get(X_AMZ_CONTENT_SHA256);
-    signed_headers = "host;x-amz-content-sha256;x-amz-date";
+    string signed_headers = "host;x-amz-content-sha256;x-amz-date";
 
     sha256_hex(canonical_str.str().c_str(), canonical_hex);
 
@@ -72,7 +69,7 @@ bool SignRequestV4(const string &method, HeaderContent *h,
 
     stringstream string2sign_str;
     string2sign_str << "AWS4-HMAC-SHA256\n"
-                    << timestamp_str << "\n"
+                    << h->Get(X_AMZ_DATE) << "\n"
                     << date_str << "/" << region << "/s3/aws4_request\n"
                     << canonical_hex;
 
@@ -81,7 +78,8 @@ bool SignRequestV4(const string &method, HeaderContent *h,
 
     sha256hmac(date_str, key_date, kSecret.str().c_str(),
                strlen(kSecret.str().c_str()));
-    sha256hmac(region.c_str(), key_region, (char *)key_date, SHA256_DIGEST_LENGTH);
+    sha256hmac(region.c_str(), key_region, (char *)key_date,
+               SHA256_DIGEST_LENGTH);
     sha256hmac("s3", key_service, (char *)key_region, SHA256_DIGEST_LENGTH);
     sha256hmac("aws4_request", signing_key, (char *)key_service,
                SHA256_DIGEST_LENGTH);
@@ -182,7 +180,6 @@ UrlParser::UrlParser(const char *url) {
     this->fullurl = NULL;
 
     if (!url) {
-        // throw exception
         return;
     }
 
@@ -203,7 +200,6 @@ UrlParser::UrlParser(const char *url) {
         return;
     }
 
-    // std::cout<<u.field_set<<std::endl;
     this->schema = extract_field(&u, UF_SCHEMA);
     this->host = extract_field(&u, UF_HOST);
     this->path = extract_field(&u, UF_PATH);
@@ -240,8 +236,6 @@ uint64_t ParserCallback(void *contents, uint64_t size, uint64_t nmemb,
                         void *userp) {
     uint64_t realsize = size * nmemb;
     struct XMLInfo *pxml = (struct XMLInfo *)userp;
-
-    // printf("%.*s",realsize, (char*)contents);
 
     if (!pxml->ctxt) {
         pxml->ctxt = xmlCreatePushParserCtxt(NULL, NULL, (const char *)contents,
@@ -342,6 +336,17 @@ char *truncate_options(const char *url_with_options) {
     url[url_len] = 0;
 
     return url;
+}
+
+// Note: better to sort queries automatically
+// for more information refer to Amazon S3 document:
+// http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
+static string encode_query_str(const string &query) {
+    string query_encoded = uri_encode(query);
+    find_replace(query_encoded, "%26", "&");
+    find_replace(query_encoded, "%3D", "=");
+
+    return query_encoded;
 }
 
 #define MUTEX_TYPE pthread_mutex_t

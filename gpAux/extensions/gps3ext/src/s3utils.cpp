@@ -28,7 +28,7 @@
 
 using std::string;
 
-#ifndef DEBUG_S3
+#ifndef S3_STANDALONE
 extern "C" {
 void write_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 }
@@ -261,7 +261,7 @@ uint64_t DataBuffer::append(const char *buf, uint64_t len) {
 Config::Config(const string &filename) : _conf(NULL) {
     if (filename != "") this->_conf = ini_load(filename.c_str());
     if (this->_conf == NULL) {
-#ifndef DEBUG_S3
+#ifndef S3_STANDALONE
         write_log("Failed to load config file\n");
 #endif
     }
