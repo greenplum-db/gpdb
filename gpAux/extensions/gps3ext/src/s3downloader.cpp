@@ -108,9 +108,9 @@ uint64_t BlockingBuffer::Read(char *buf, uint64_t len) {
     uint64_t length_to_read = std::min(len, left_data_length);
 
     memcpy(buf, this->bufferdata + this->readpos, length_to_read);
-    if (left_data_length >= len) { // [1]
-        this->readpos += len;  // not empty
-    } else {                   // empty, reset everything
+    if (left_data_length >= len) {  // [1]
+        this->readpos += len;       // not empty
+    } else {                        // empty, reset everything
         this->readpos = 0;
 
         if (this->status == BlockingBuffer::STATUS_READY) {
@@ -340,7 +340,8 @@ RETRY:
 
             // whether we need to buf->Read()
             if (this->magic_bytes_num < filelen) {
-                tmplen += buf->Read(data + rest_magic_num, len - rest_magic_num);
+                tmplen +=
+                    buf->Read(data + rest_magic_num, len - rest_magic_num);
             }
         }
     } else {
@@ -464,13 +465,15 @@ RETRY:
         if (!zinfo->have_out) {
             if (this->readlen < this->magic_bytes_num) {
                 uint64_t rest_magic_num = this->magic_bytes_num - this->readlen;
-                memcpy(zinfo->in, this->magic_bytes + this->readlen, rest_magic_num);
+                memcpy(zinfo->in, this->magic_bytes + this->readlen,
+                       rest_magic_num);
                 strm->avail_in = rest_magic_num;
 
                 // whether we need to buf->Read()
                 if (this->magic_bytes_num < filelen) {
-                    strm->avail_in += buf->Read((char *)zinfo->in + rest_magic_num,
-                                                S3_ZIP_CHUNKSIZE - rest_magic_num);
+                    strm->avail_in +=
+                        buf->Read((char *)zinfo->in + rest_magic_num,
+                                  S3_ZIP_CHUNKSIZE - rest_magic_num);
                 }
             } else {
                 strm->avail_in = buf->Read((char *)zinfo->in, S3_ZIP_CHUNKSIZE);
@@ -606,7 +609,7 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
     Bufinfo bi;
     CURL *curl_handle = this->curl;
     struct curl_slist *chunk = NULL;
-    char rangebuf[128] = { 0 };
+    char rangebuf[128] = {0};
     long respcode;
 
     snprintf(rangebuf, 128, "bytes=%" PRIu64 "-%" PRIu64, offset,

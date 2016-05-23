@@ -1,34 +1,14 @@
 # Options
-DEBUG_S3 = y
 DEBUG_S3_CURL = n
-AWS_TEST = y
-FAKE_TEST = y
-BIG_FILE_TEST = n
 
 # Flags
 CPP = g++
-INCLUDES = -Isrc -Iinclude -Itest -Ilib -I/usr/include/libxml2
+INCLUDES = -Isrc -Iinclude -Ilib -I/usr/include/libxml2
 LDFLAGS = -lpthread -lcrypto -lcurl -lxml2 -lgcov -lz
-CPPFLAGS = -O2 -g3 -std=c++98 -Wall -fPIC -fprofile-arcs -ftest-coverage
-
-ifeq ($(DEBUG_S3),y)
-	CPPFLAGS += -DDEBUG_S3
-endif
+CPPFLAGS = -O2 -g3 -std=c++98 -Wall -fPIC -DS3_STANDALONE -fprofile-arcs -ftest-coverage
 
 ifeq ($(DEBUG_S3_CURL),y)
 	CPPFLAGS += -DDEBUG_S3_CURL
-endif
-
-ifeq ($(AWS_TEST),y)
-	CPPFLAGS += -DAWS_TEST
-endif
-
-ifeq ($(FAKE_TEST),y)
-	CPPFLAGS += -DFAKE_TEST
-endif
-
-ifeq ($(BIG_FILE_TEST),y)
-	CPPFLAGS += -DBIG_FILE_TEST
 endif
 
 all: test

@@ -53,6 +53,6 @@ LOGLEVEL getLogLevel(const char* v);
     PRINTFUNCTION(EXT_ERROR, LOG_FMT message NEWLINE, LOG_ARGS("E"), ##args)
 #endif
 
-void InitLog();
+void InitRemoteLog();
 
 #endif  // __S3LOG__

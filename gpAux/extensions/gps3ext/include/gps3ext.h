@@ -8,8 +8,7 @@
 // GPDB's global val
 extern volatile bool QueryCancelPending;
 
-// TODO include GpId from proper place
-// TODO change to function getsegid() and getgpsegmentCount()
+// TODO change to functions getgpsegmentId() and getgpsegmentCount()
 typedef int32_t int32;
 typedef int32 int4;
 typedef struct GpId {
