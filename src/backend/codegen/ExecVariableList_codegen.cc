@@ -294,11 +294,6 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
       irb->CreateLoad( codegen_utils->GetPointerToMember(
           llvm_heaptuple_t_data, &HeapTupleHeaderData::t_infomask));
 
-  llvm::Value* llvm_hasnulls = irb->CreateTrunc(
-      irb->CreateAnd(llvm_heaptuple_t_data_t_infomask,
-                     codegen_utils->GetConstant<uint16>(HEAP_HASNULL)),
-                     codegen_utils->GetType<bool>());
-
   // Implementation for : {{{
   // attno = HeapTupleHeaderGetNatts(tuple->t_data);
   // attno = Min(attno, attnum);
@@ -349,7 +344,6 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   int off = 0;
   TupleDesc tupleDesc = slot_->tts_tupleDescriptor;
   Form_pg_attribute* att = tupleDesc->attrs;
-  bool tuple_desc_has_nulls = false;
 
   // For each attribute we use three blocks to i) check for null,
   // ii) handle null case, and iii) handle not null case.
@@ -395,9 +389,6 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
     // If attribute can be null, then create blocks to handle
     // null and not null cases.
     if (!thisatt->attnotnull) {
-      // This attribute may be null
-      tuple_desc_has_nulls = true;
-
       // Create blocks
       is_null_block = codegen_utils->CreateBasicBlock(
           "is_null_block_"+attnum, ExecVariableList_func);
@@ -418,7 +409,7 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
       llvm::Value* llvm_expr_2 = irb->CreateTrunc(
           irb->CreateShl(codegen_utils->GetConstant(1),
                          irb->CreateAnd(llvm_attnum,
-                                        codegen_utils->GetConstant(7))),
+                                        codegen_utils->GetConstant(0x07))),
                                         codegen_utils->GetType<int8>());
       // !(Exp_1 & Expr_2)
       llvm::Value* llvm_att_isnull = irb->CreateNot(
@@ -426,17 +417,19 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
                            codegen_utils->GetType<bool>()));
       // }}
 
+      llvm::Value* llvm_hasnulls = irb->CreateTrunc(
+          irb->CreateAnd(llvm_heaptuple_t_data_t_infomask,
+                         codegen_utils->GetConstant<uint16>(HEAP_HASNULL)),
+                         codegen_utils->GetType<bool>());
+
       // hasnulls && att_isnull(attnum, bp)
       llvm::Value* llvm_is_null = irb->CreateAnd(
           llvm_hasnulls, llvm_att_isnull);
 
       irb->CreateCondBr(
-          irb->CreateICmpEQ(
-              llvm_is_null,
-              codegen_utils->GetConstant<bool>(true)),
-              is_null_block, /* true */
-              is_not_null_block /* false */
-      );
+          llvm_is_null,
+          is_null_block, /* true */
+          is_not_null_block /* false */);
       //}}} End of if (hasnulls && att_isnull(attnum, bp))
 
       // Is null block
@@ -467,13 +460,9 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 
       irb->SetInsertPoint(is_not_null_block);
 
-    }
+    } // End of if (!thisatt->attnotnull)
 
-    if ( thisatt->attcacheoff > 0 ) {
-      off = thisatt->attcacheoff;
-    }else {
-      off = att_align(off, thisatt->attalign);
-    }
+    off = att_align(off, thisatt->attalign);
 
     // values[attnum] = fetchatt(thisatt, tp + off) {{{
     llvm::Value* llvm_next_t_data_ptr =
@@ -561,22 +550,6 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 
   // slot->PRIVATE_tts_nvalid = attnum;
   irb->CreateStore(llvm_max_attr, llvm_slot_PRIVATE_tts_nvalid_ptr);
-
-  // slot->PRIVATE_tts_slow = slow; {{{
-  llvm::Value* llvm_slot_PRIVATE_tts_slow_ptr /* bool* */=
-      codegen_utils->GetPointerToMember(
-          llvm_slot, &TupleTableSlot::PRIVATE_tts_slow);
-
-  // if we have null or variable length attributes then we set slow to true
-  if (tuple_desc_has_nulls) {
-    irb->CreateStore(codegen_utils->GetConstant<bool>(true),
-                     llvm_slot_PRIVATE_tts_slow_ptr);
-  }
-  else {
-    irb->CreateStore(codegen_utils->GetConstant<bool>(false),
-                     llvm_slot_PRIVATE_tts_slow_ptr);
-  }
-  // }}}
 
   // End of slot_deform_tuple
 
