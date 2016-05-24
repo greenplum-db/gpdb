@@ -63,9 +63,8 @@ bool SignRequestV4(const string &method, HTTPHeaders *h,
     string query_encoded = encode_query_str(query);
     stringstream canonical_str;
 
-    canonical_str << method << "\n"
-                  << path << "\n"
-                  << query_encoded << "\nhost:" << h->Get(HOST)
+    canonical_str << method << "\n" << path << "\n" << query_encoded
+                  << "\nhost:" << h->Get(HOST)
                   << "\nx-amz-content-sha256:" << h->Get(X_AMZ_CONTENT_SHA256)
                   << "\nx-amz-date:" << h->Get(X_AMZ_DATE) << "\n\n"
                   << "host;x-amz-content-sha256;x-amz-date\n"
@@ -79,8 +78,7 @@ bool SignRequestV4(const string &method, HTTPHeaders *h,
     find_replace(region, "external-1", "us-east-1");
 
     stringstream string2sign_str;
-    string2sign_str << "AWS4-HMAC-SHA256\n"
-                    << h->Get(X_AMZ_DATE) << "\n"
+    string2sign_str << "AWS4-HMAC-SHA256\n" << h->Get(X_AMZ_DATE) << "\n"
                     << date_str << "/" << region << "/s3/aws4_request\n"
                     << canonical_hex;
 
@@ -126,7 +124,7 @@ uint64_t XMLParserCallback(void *contents, uint64_t size, uint64_t nmemb,
 }
 
 // Returns string lengh till next occurence of given character.
-static int strlen_to_next_char(const char* ptr, char ch) {
+static int strlen_to_next_char(const char *ptr, char ch) {
     int len = 0;
     while ((*ptr != '\0') && (*ptr != ch)) {
         len++;

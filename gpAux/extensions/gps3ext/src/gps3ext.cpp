@@ -18,11 +18,12 @@
 #include "utils/memutils.h"
 
 #include "gps3ext.h"
+#include "gpreader.h"
 #include "s3common.h"
 #include "s3conf.h"
 #include "s3log.h"
+#include "s3thread.h"
 #include "s3utils.h"
-#include "s3wrapper.h"
 
 /* Do the module magic dance */
 
@@ -82,10 +83,11 @@ Datum s3_import(PG_FUNCTION_ARGS) {
 
         s3reader = reader_init(url_with_options);
         if (!s3reader) {
-            ereport(ERROR, (0, errmsg("Failed to init S3 extension, segid = "
-                                      "%d, segnum = %d, please check your "
-                                      "configurations and net connection",
-                                      s3ext_segid, s3ext_segnum)));
+            ereport(ERROR, (0, errmsg(
+                                   "Failed to init S3 extension, segid = "
+                                   "%d, segnum = %d, please check your "
+                                   "configurations and net connection",
+                                   s3ext_segid, s3ext_segnum)));
         }
 
         check_essential_config();

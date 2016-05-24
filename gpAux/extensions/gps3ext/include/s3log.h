@@ -9,7 +9,13 @@
 #include "s3conf.h"
 
 // log level
-enum LOGLEVEL { EXT_FATAL, EXT_ERROR, EXT_WARNING, EXT_INFO, EXT_DEBUG };
+enum LOGLEVEL {
+    EXT_FATAL,
+    EXT_ERROR,
+    EXT_WARNING,
+    EXT_INFO,
+    EXT_DEBUG
+};
 
 // log type
 enum LOGTYPE {

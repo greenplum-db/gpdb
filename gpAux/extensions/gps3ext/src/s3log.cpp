@@ -62,27 +62,22 @@ void LogMessage(LOGLEVEL loglevel, const char* fmt, ...) {
 
 static bool loginited = false;
 
-// invoked by s3_import(), need to be exception safe
 void InitRemoteLog() {
-    try {
-        if (loginited) {
-            return;
-        }
-
-        s3ext_logsock_udp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-        if (s3ext_logsock_udp < 0) {
-            perror("Failed to create socket while InitRemoteLog()");
-        }
-
-        memset(&s3ext_logserveraddr, 0, sizeof(struct sockaddr_in));
-        s3ext_logserveraddr.sin_family = AF_INET;
-        s3ext_logserveraddr.sin_port = htons(s3ext_logserverport);
-        inet_aton(s3ext_logserverhost.c_str(), &s3ext_logserveraddr.sin_addr);
-
-        loginited = true;
-    } catch (...) {
+    if (loginited) {
         return;
     }
+
+    s3ext_logsock_udp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (s3ext_logsock_udp < 0) {
+        perror("Failed to create socket while InitRemoteLog()");
+    }
+
+    memset(&s3ext_logserveraddr, 0, sizeof(struct sockaddr_in));
+    s3ext_logserveraddr.sin_family = AF_INET;
+    s3ext_logserveraddr.sin_port = htons(s3ext_logserverport);
+    inet_aton(s3ext_logserverhost.c_str(), &s3ext_logserveraddr.sin_addr);
+
+    loginited = true;
 }
 
 LOGTYPE getLogType(const char* v) {

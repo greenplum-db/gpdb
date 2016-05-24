@@ -7,9 +7,15 @@ class UrlParser {
    public:
     UrlParser(const char* url);
     ~UrlParser();
-    const char* Schema() { return this->schema; };
-    const char* Host() { return this->host; };
-    const char* Path() { return this->path; };
+    const char* Schema() {
+        return this->schema;
+    };
+    const char* Host() {
+        return this->host;
+    };
+    const char* Path() {
+        return this->path;
+    };
 
     /* data */
    private:

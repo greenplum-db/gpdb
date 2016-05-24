@@ -12,7 +12,7 @@
 #include <zlib.h>
 
 #include "gps3ext.h"
-#include "s3downloader.h"
+#include "s3reader.h"
 #include "s3http_headers.h"
 #include "s3log.h"
 #include "s3url_parser.h"
@@ -144,7 +144,7 @@ uint64_t BlockingBuffer::Fill() {
         if (leftlen != 0) {
             readlen = this->fetchdata(offset, this->bufferdata + this->realsize,
                                       leftlen);
-            if (readlen == (uint64_t)-1) {
+            if (readlen == (uint64_t) - 1) {
                 S3DEBUG("Failed to fetch data from libcurl");
             } else {
                 S3DEBUG("Got %llu bytes from libcurl", readlen);
@@ -157,7 +157,7 @@ uint64_t BlockingBuffer::Fill() {
             this->eof = true;
             S3DEBUG("Reached the end of file");
             break;
-        } else if (readlen == (uint64_t)-1) {  // Error
+        } else if (readlen == (uint64_t) - 1) {  // Error
             this->error = true;
             S3ERROR("Failed to download file");
             break;
@@ -171,7 +171,7 @@ uint64_t BlockingBuffer::Fill() {
     pthread_cond_signal(&this->stat_cond);
 
     pthread_mutex_unlock(&this->stat_mutex);
-    return (readlen == (uint64_t)-1) ? -1 : this->realsize;
+    return (readlen == (uint64_t) - 1) ? -1 : this->realsize;
 }
 
 BlockingBuffer *BlockingBuffer::CreateBuffer(const string &url,
@@ -200,7 +200,7 @@ void *DownloadThreadfunc(void *data) {
         }
 
         filled_size = buffer->Fill();
-        if (filled_size == (uint64_t)-1) {
+        if (filled_size == (uint64_t) - 1) {
             S3DEBUG("Failed to fill downloading buffer");
         } else {
             S3DEBUG("Size of filled data is %llu", filled_size);
@@ -208,7 +208,7 @@ void *DownloadThreadfunc(void *data) {
 
         if (buffer->EndOfFile()) break;
 
-        if (filled_size == (uint64_t)-1) {  // Error
+        if (filled_size == (uint64_t) - 1) {  // Error
             if (buffer->Error()) {
                 break;
             } else {

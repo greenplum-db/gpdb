@@ -1,4 +1,4 @@
-#include "s3downloader.cpp"
+#include "s3reader.cpp"
 #include "gtest/gtest.h"
 
 volatile bool QueryCancelPending = false;

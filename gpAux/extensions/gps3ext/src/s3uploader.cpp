@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 
 #include "s3common.h"
-#include "s3downloader.h"
+#include "s3reader.h"
 #include "s3http_headers.h"
 #include "s3uploader.h"
 #include "s3url_parser.h"

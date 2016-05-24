@@ -1,7 +1,8 @@
-#include "s3wrapper.cpp"
+#include "gpreader.cpp"
 #include "gtest/gtest.h"
+#include "s3extbase.cpp"
 
-TEST(ExtWrapper, ValidateURL_normal) {
+TEST(ExtBase, ValidateURL_normal) {
     S3ExtBase *myData;
     myData = new S3Reader(
         "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal");
@@ -12,7 +13,7 @@ TEST(ExtWrapper, ValidateURL_normal) {
     delete myData;
 }
 
-TEST(ExtWrapper, ValidateURL_default) {
+TEST(ExtBase, ValidateURL_default) {
     S3ExtBase *myData;
     myData =
         new S3Reader("s3://s3.amazonaws.com/s3test.pivotal.io/dataset1/normal");
@@ -23,7 +24,7 @@ TEST(ExtWrapper, ValidateURL_default) {
     delete myData;
 }
 
-TEST(ExtWrapper, ValidateURL_useast1) {
+TEST(ExtBase, ValidateURL_useast1) {
     S3ExtBase *myData;
     myData = new S3Reader(
         "s3://s3-us-east-1.amazonaws.com/s3test.pivotal.io/dataset1/normal");
@@ -34,7 +35,7 @@ TEST(ExtWrapper, ValidateURL_useast1) {
     delete myData;
 }
 
-TEST(ExtWrapper, ValidateURL_eucentral1) {
+TEST(ExtBase, ValidateURL_eucentral1) {
     S3ExtBase *myData;
     myData = new S3Reader(
         "s3://s3.eu-central-1.amazonaws.com/s3test.pivotal.io/dataset1/normal");
@@ -45,7 +46,7 @@ TEST(ExtWrapper, ValidateURL_eucentral1) {
     delete myData;
 }
 
-TEST(ExtWrapper, ValidateURL_eucentral11) {
+TEST(ExtBase, ValidateURL_eucentral11) {
     S3ExtBase *myData;
     myData = new S3Reader(
         "s3://s3-eu-central-1.amazonaws.com/s3test.pivotal.io/dataset1/normal");
@@ -56,7 +57,7 @@ TEST(ExtWrapper, ValidateURL_eucentral11) {
     delete myData;
 }
 
-TEST(ExtWrapper, ValidateURL_apnortheast2) {
+TEST(ExtBase, ValidateURL_apnortheast2) {
     S3ExtBase *myData;
     myData = new S3Reader(
         "s3://s3.ap-northeast-2.amazonaws.com/s3test.pivotal.io/dataset1/"
@@ -68,7 +69,7 @@ TEST(ExtWrapper, ValidateURL_apnortheast2) {
     delete myData;
 }
 
-TEST(ExtWrapper, ValidateURL_apnortheast21) {
+TEST(ExtBase, ValidateURL_apnortheast21) {
     S3ExtBase *myData;
     myData = new S3Reader(
         "s3://s3-ap-northeast-2.amazonaws.com/s3test.pivotal.io/dataset1/"
