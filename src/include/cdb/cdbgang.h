@@ -81,7 +81,7 @@ extern void CheckForResetSession(void);
 
 extern List * getAllIdleReaderGangs(void);
 
-extern List * getAllBusyReaderGangs(void);
+extern List * getAllAllocatedReaderGangs(void);
 
 
 extern CdbComponentDatabases *getComponentDatabases(void);

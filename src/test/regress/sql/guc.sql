@@ -165,9 +165,28 @@ END;
 $$
     LANGUAGE plpgsql NO SQL;
 
+SELECT * from test_set_in_loop();
 
-select * from test_set_in_loop();
 
-drop table if exists test_cursor_set_table;
-drop function if exists test_set_in_loop();
-drop function if exists test_call_set_command();
+CREATE FUNCTION test_set_within_initplan () RETURNS numeric
+AS $$
+DECLARE
+	result numeric;
+	tmp RECORD;
+BEGIN
+	result = 1;
+	execute 'SET gp_workfile_limit_per_query=524;';
+	select into tmp * from test_cursor_set_table limit 100;
+	return result;
+END;
+$$
+	LANGUAGE plpgsql NO SQL;
+
+
+CREATE TABLE test_initplan_set_table as select * from test_set_within_initplan();
+
+
+DROP TABLE if exists test_initplan_set_table;
+DROP TABLE if exists test_cursor_set_table;
+DROP FUNCTION if exists test_set_in_loop();
+DROP FUNCTION if exists test_call_set_command();

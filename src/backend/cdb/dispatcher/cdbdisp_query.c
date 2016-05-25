@@ -1548,7 +1548,7 @@ cdbdisp_dispatchSetCommandToAllGangs(const char *strCommand,
 
 	Gang *primaryGang;
 	List *idleReaderGangs;
-	List *busyReaderGangs;
+	List *allocatedReaderGangs;
 	ListCell *le;
 
 	int nsegdb = getgpsegmentCount();
@@ -1581,12 +1581,12 @@ cdbdisp_dispatchSetCommandToAllGangs(const char *strCommand,
 								  "cdbdisp_dispatchSetCommandToAllGangs");
 
 	idleReaderGangs = getAllIdleReaderGangs();
-	busyReaderGangs = getAllBusyReaderGangs();
+	allocatedReaderGangs = getAllAllocatedReaderGangs();
 
 	/*
 	 * Dispatch the command.
 	 */
-	gangCount = 1 + list_length(idleReaderGangs);
+	gangCount = 1 + list_length(idleReaderGangs) + list_length(allocatedReaderGangs);
 
 	ds->primaryResults = NULL;
 	ds->dispatchThreads = NULL;
@@ -1607,11 +1607,22 @@ cdbdisp_dispatchSetCommandToAllGangs(const char *strCommand,
 	 *Can not send set command to busy gangs, so those gangs
 	 *can not be reused because their GUC is not set.
 	 */
-	foreach(le, busyReaderGangs)
+	foreach(le, allocatedReaderGangs)
 	{
 		Gang *rg = lfirst(le);
 
-		rg->noReuse = true;
+		if (rg->portal_name != NULL)
+		{
+			/*
+			 * For named portal (like CURSOR), SET command will not be dispatched.
+			 * Meanwhile such gang should not be reused because it's guc was not set.
+			 */
+			rg->noReuse = true;
+		}
+		else
+		{
+			cdbdisp_dispatchToGang(ds, rg, -1, DEFAULT_DISP_DIRECT);
+		}
 	}
 }
 	
