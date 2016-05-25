@@ -14255,7 +14255,7 @@ dumpACL(Archive *fout, CatalogId objCatId, DumpId objDumpId,
 	 */
 	if (strlen(initacls) != 0 || strlen(initracls) != 0)
 	{
-		appendPQExpBuffer(sql, "SELECT binary_upgrade_set_record_init_privs(true);\n");
+		appendPQExpBuffer(sql, "SELECT pg_catalog.binary_upgrade_set_record_init_privs(true);\n");
 		if (!buildACLCommands(name, subname, nspname, type, initacls, initracls, owner,
 							  "", fout->remoteVersion, sql))
 			exit_horribly(NULL,
