@@ -149,6 +149,7 @@ readindex(PG_FUNCTION_ARGS)
 	readindexinfo	   *info;
 	Relation	irel = NULL;
 	Relation	hrel = NULL;
+	MemoryContext oldcontext;
 
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
@@ -156,7 +157,6 @@ readindex(PG_FUNCTION_ARGS)
 	{
 		Oid		irelid = PG_GETARG_OID(0);
 		TupleDesc	tupdesc;
-		MemoryContext oldcontext;
 		AttrNumber		outattnum;
 		TupleDesc	itupdesc;
 		int			i;
@@ -240,7 +240,9 @@ readindex(PG_FUNCTION_ARGS)
 			 * across calls (we wouldn't have a chance to release it, if the
 			 * function isn't run to completion.)
 			 */
+			oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 			info->page = palloc(BLCKSZ);
+			MemoryContextSwitchTo(oldcontext);
 
 			MIRROREDLOCK_BUFMGR_LOCK;
 			buf = ReadBuffer(irel, info->blkno);
