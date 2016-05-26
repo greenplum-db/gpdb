@@ -38,6 +38,7 @@
 #include "utils/vmem_tracker.h"
 #include "utils/session_state.h"
 #include "utils/gp_atomic.h"
+#include "utils/gp_alloc.h"
 
 #define SHMEM_OOM_TIME "last vmem oom time"
 

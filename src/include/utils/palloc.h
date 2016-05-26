@@ -117,82 +117,6 @@ extern void MemoryContextFreeImpl(void *pointer, const char* file, const char *f
 #define repalloc(ptr, sz) MemoryContextReallocImpl(ptr, (sz), __FILE__, PG_FUNCNAME_MACRO, __LINE__)
 #define pfree(ptr) MemoryContextFreeImpl(ptr, __FILE__, PG_FUNCNAME_MACRO, __LINE__)
 
-#define VMEM_HEADER_CHECKSUM 0x7f7f7f7f
-#define VMEM_FOOTER_CHECKSUM 0x5f5f5f5f
-
-typedef int64 HeaderChecksumType;
-typedef int64 FooterChecksumType;
-
-typedef struct VmemHeader
-{
-	HeaderChecksumType checksum;
-	size_t size;
-} VmemHeader;
-
-/* Gets the payload of a vmem pointer */
-#define VmemPtrToUserPtr(ptr)	\
-					((void*)(((char *)(ptr)) + sizeof(VmemHeader)))
-
-#define UserPtrToVmemPtr(usable_pointer)	\
-					((void*)(((char *)(usable_pointer)) - sizeof(VmemHeader)))
-
-#define VmemPtrToSizePtr(ptr) \
-		((size_t *)(((char *)ptr) + offsetof(VmemHeader, size)))
-
-#define VmemPtr_GetUserPtrSize(ptr)	\
-					(*VmemPtrToSizePtr(ptr))
-
-#define VmemPtr_SetUserPtrSize(ptr, size)	\
-					(*VmemPtrToSizePtr(ptr) = size)
-
-#define VmemPtr_SetHeaderChecksum(ptr)	\
-					(*((HeaderChecksumType *)ptr) = VMEM_HEADER_CHECKSUM)
-
-
-#define UserPtrSizeToVmemPtrSize(payload_size) \
-					(sizeof(VmemHeader) + payload_size + sizeof(FooterChecksumType))
-
-#define VmemPtr_GetEndAddress(ptr) \
-		(((char *)ptr) + UserPtrSizeToVmemPtrSize(VmemPtr_GetUserPtrSize(ptr)))
-
-#define UserPtr_GetUserPtrSize(ptr) \
-		(VmemPtr_GetUserPtrSize(UserPtrToVmemPtr(ptr)))
-
-#define UserPtr_GetEndAddress(ptr) \
-		(((char *)ptr) + UserPtr_GetUserPtrSize(ptr))
-
-#define VmemPtrToHeaderChecksumPtr(ptr) \
-		((HeaderChecksumType *) ptr)
-
-#define VmemPtrToFooterChecksumPtr(ptr) \
-		((FooterChecksumType *)(((char *)VmemPtr_GetEndAddress(ptr)) - sizeof(FooterChecksumType)))
-
-#define VmemPtr_SetFooterChecksum(ptr) \
-		(*VmemPtrToFooterChecksumPtr(ptr) = VMEM_FOOTER_CHECKSUM)
-
-#define VmemPtr_VerifyHeaderChecksum(ptr) \
-		(Assert(*VmemPtrToHeaderChecksumPtr(ptr) == VMEM_HEADER_CHECKSUM))
-
-#define VmemPtr_VerifyFooterChecksum(ptr) \
-		(Assert(*VmemPtrToFooterChecksumPtr(ptr) == VMEM_FOOTER_CHECKSUM))
-
-#define UserPtr_VerifyHeaderChecksum(ptr) \
-		(Assert(*VmemPtrToHeaderChecksumPtr(UserPtrToVmemPtr(ptr)) == VMEM_HEADER_CHECKSUM))
-
-#define UserPtr_VerifyFooterChecksum(ptr) \
-		(Assert(*VmemPtrToFooterChecksumPtr(UserPtrToVmemPtr(ptr)) == VMEM_FOOTER_CHECKSUM))
-
-#define VmemPtr_Initialize(ptr, size) \
-		VmemPtr_SetUserPtrSize(ptr, size); \
-		VmemPtr_SetHeaderChecksum(ptr); \
-		VmemPtr_SetFooterChecksum(ptr)
-
-#define UserPtr_VerifyChecksum(ptr) \
-		UserPtr_VerifyHeaderChecksum(usable_pointer); \
-		UserPtr_VerifyFooterChecksum(usable_pointer)
-
-
-
 /*
  * The result of palloc() is always word-aligned, so we can skip testing
  * alignment of the pointer when deciding which MemSet variant to use.
@@ -266,17 +190,5 @@ extern void UpdateTimeAtomically(volatile OOMTimeType* time_var);
 		MemoryContextStats(TopMemoryContext);\
 	}\
 }
-
-#ifdef USE_SYSV_SEMAPHORES
-extern void *gp_malloc(int64 sz); 
-extern void *gp_realloc(void *ptr, int64 newsz);
-extern void gp_free(void *ptr);
-
-#else
-#define gp_malloc(sz) malloc(sz)
-#define gp_calloc(sz1, sz2) calloc((sz1), (sz2))
-#define gp_realloc(ptr, sz1, sz2) realloc((ptr), (sz2))
-#define gp_free2(ptr, sz) free(ptr)
-#endif
 
 #endif   /* PALLOC_H */
