@@ -1,0 +1,1321 @@
+-- @description function_in_from_withfunc2_15.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_stb(func2_sql_int_imm(5)) order by 1; 
+ func1_nosql_stb 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_150.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_vol(func2_nosql_vol(5)) order by 1; 
+ func1_mod_setint_vol 
+----------------------
+                    9
+                   10
+                   11
+                   12
+(4 rows)
+
+-- @description function_in_from_withfunc2_151.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_vol(func2_nosql_stb(5)) order by 1; 
+ func1_mod_setint_vol 
+----------------------
+                    9
+                   10
+                   11
+                   12
+(4 rows)
+
+-- @description function_in_from_withfunc2_152.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_vol(func2_nosql_imm(5)) order by 1; 
+ func1_mod_setint_vol 
+----------------------
+                    9
+                   10
+                   11
+                   12
+(4 rows)
+
+-- @description function_in_from_withfunc2_153.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_vol(func2_sql_int_vol(5)) order by 1; 
+ func1_mod_setint_vol 
+----------------------
+                    9
+                   10
+                   11
+                   12
+(4 rows)
+
+-- @description function_in_from_withfunc2_154.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_vol(func2_sql_int_stb(5)) order by 1; 
+ func1_mod_setint_vol 
+----------------------
+                    9
+                   10
+                   11
+                   12
+(4 rows)
+
+-- @description function_in_from_withfunc2_155.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_vol(func2_sql_int_imm(5)) order by 1; 
+ func1_mod_setint_vol 
+----------------------
+                    9
+                   10
+                   11
+                   12
+(4 rows)
+
+-- @description function_in_from_withfunc2_156.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_vol(func2_read_int_vol(5)) order by 1; 
+ func1_mod_setint_vol 
+----------------------
+                    9
+                   10
+                   11
+                   12
+(4 rows)
+
+-- @description function_in_from_withfunc2_157.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_vol(func2_read_int_stb(5)) order by 1; 
+ func1_mod_setint_vol 
+----------------------
+                    9
+                   10
+                   11
+                   12
+(4 rows)
+
+-- @description function_in_from_withfunc2_158.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_vol(func2_mod_int_vol(5)) order by 1; 
+ func1_mod_setint_vol 
+----------------------
+                    9
+                   10
+                   11
+                   12
+(4 rows)
+
+-- @description function_in_from_withfunc2_159.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_vol(func2_mod_int_stb(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_159.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_withfunc2_16.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_stb(func2_read_int_vol(5)) order by 1; 
+ func1_nosql_stb 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_160.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_stb(func2_nosql_vol(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_160.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
+PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement
+-- @description function_in_from_withfunc2_161.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_stb(func2_nosql_stb(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_161.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
+PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement
+-- @description function_in_from_withfunc2_162.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_stb(func2_nosql_imm(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_162.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
+PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement
+-- @description function_in_from_withfunc2_163.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_stb(func2_sql_int_vol(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_163.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
+PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement
+-- @description function_in_from_withfunc2_164.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_stb(func2_sql_int_stb(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_164.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
+PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement
+-- @description function_in_from_withfunc2_165.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_stb(func2_sql_int_imm(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_165.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
+PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement
+-- @description function_in_from_withfunc2_166.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_stb(func2_read_int_vol(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_166.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
+PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement
+-- @description function_in_from_withfunc2_167.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_stb(func2_read_int_stb(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_167.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
+PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement
+-- @description function_in_from_withfunc2_168.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_stb(func2_mod_int_vol(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_168.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c >  $1 "
+PL/pgSQL function "func1_mod_setint_stb" line 4 at SQL statement
+-- @description function_in_from_withfunc2_169.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_mod_setint_stb(func2_mod_int_stb(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_169.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_withfunc2_17.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_stb(func2_read_int_stb(5)) order by 1; 
+ func1_nosql_stb 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_18.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_stb(func2_mod_int_vol(5)) order by 1; 
+ func1_nosql_stb 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_19.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_stb(func2_mod_int_stb(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_19.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_withfunc2_2.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_vol(func2_nosql_imm(5)) order by 1; 
+ func1_nosql_vol 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_20.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_imm(func2_nosql_vol(5)) order by 1; 
+ func1_nosql_imm 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_21.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_imm(func2_nosql_stb(5)) order by 1; 
+ func1_nosql_imm 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_22.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_imm(func2_nosql_imm(5)) order by 1; 
+ func1_nosql_imm 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_23.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_imm(func2_sql_int_vol(5)) order by 1; 
+ func1_nosql_imm 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_24.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_imm(func2_sql_int_stb(5)) order by 1; 
+ func1_nosql_imm 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_25.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_imm(func2_sql_int_imm(5)) order by 1; 
+ func1_nosql_imm 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_26.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_imm(func2_read_int_vol(5)) order by 1; 
+ func1_nosql_imm 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_27.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_imm(func2_read_int_stb(5)) order by 1; 
+ func1_nosql_imm 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_28.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_imm(func2_mod_int_vol(5)) order by 1; 
+ func1_nosql_imm 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_29.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_imm(func2_mod_int_stb(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_29.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_withfunc2_3.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_vol(func2_sql_int_vol(5)) order by 1; 
+ func1_nosql_vol 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_30.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_nosql_vol(5)) order by 1; 
+ func1_sql_int_vol 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_31.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_nosql_stb(5)) order by 1; 
+ func1_sql_int_vol 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_32.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_nosql_imm(5)) order by 1; 
+ func1_sql_int_vol 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_33.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_sql_int_vol(5)) order by 1; 
+ func1_sql_int_vol 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_34.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_sql_int_stb(5)) order by 1; 
+ func1_sql_int_vol 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_35.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_sql_int_imm(5)) order by 1; 
+ func1_sql_int_vol 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_36.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_read_int_vol(5)) order by 1; 
+ func1_sql_int_vol 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_37.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_read_int_stb(5)) order by 1; 
+ func1_sql_int_vol 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_38.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_mod_int_vol(5)) order by 1; 
+ func1_sql_int_vol 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_39.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_mod_int_stb(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_39.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_withfunc2_4.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_vol(func2_sql_int_stb(5)) order by 1; 
+ func1_nosql_vol 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_40.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_nosql_vol(5)) order by 1; 
+ func1_sql_int_stb 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_41.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_nosql_stb(5)) order by 1; 
+ func1_sql_int_stb 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_42.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_nosql_imm(5)) order by 1; 
+ func1_sql_int_stb 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_43.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_sql_int_vol(5)) order by 1; 
+ func1_sql_int_stb 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_44.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_sql_int_stb(5)) order by 1; 
+ func1_sql_int_stb 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_45.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_sql_int_imm(5)) order by 1; 
+ func1_sql_int_stb 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_46.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_read_int_vol(5)) order by 1; 
+ func1_sql_int_stb 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_47.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_read_int_stb(5)) order by 1; 
+ func1_sql_int_stb 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_48.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_mod_int_vol(5)) order by 1; 
+ func1_sql_int_stb 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_49.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_mod_int_stb(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_49.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_withfunc2_5.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_vol(func2_sql_int_imm(5)) order by 1; 
+ func1_nosql_vol 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_50.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_nosql_vol(5)) order by 1; 
+ func1_sql_int_imm 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_51.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_nosql_stb(5)) order by 1; 
+ func1_sql_int_imm 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_52.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_nosql_imm(5)) order by 1; 
+ func1_sql_int_imm 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_53.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_sql_int_vol(5)) order by 1; 
+ func1_sql_int_imm 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_54.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_sql_int_stb(5)) order by 1; 
+ func1_sql_int_imm 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_55.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_sql_int_imm(5)) order by 1; 
+ func1_sql_int_imm 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_56.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_read_int_vol(5)) order by 1; 
+ func1_sql_int_imm 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_57.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_read_int_stb(5)) order by 1; 
+ func1_sql_int_imm 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_58.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_mod_int_vol(5)) order by 1; 
+ func1_sql_int_imm 
+-------------------
+                 7
+(1 row)
+
+-- @description function_in_from_withfunc2_59.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_mod_int_stb(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_59.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_withfunc2_6.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_vol(func2_read_int_vol(5)) order by 1; 
+ func1_nosql_vol 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_60.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_nosql_vol(5)) order by 1; 
+ func1_sql_setint_vol 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_61.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_nosql_stb(5)) order by 1; 
+ func1_sql_setint_vol 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_62.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_nosql_imm(5)) order by 1; 
+ func1_sql_setint_vol 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_63.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_sql_int_vol(5)) order by 1; 
+ func1_sql_setint_vol 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_64.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_sql_int_stb(5)) order by 1; 
+ func1_sql_setint_vol 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_65.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_sql_int_imm(5)) order by 1; 
+ func1_sql_setint_vol 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_66.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_read_int_vol(5)) order by 1; 
+ func1_sql_setint_vol 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_67.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_read_int_stb(5)) order by 1; 
+ func1_sql_setint_vol 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_68.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_mod_int_vol(5)) order by 1; 
+ func1_sql_setint_vol 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_69.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_mod_int_stb(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_69.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_withfunc2_7.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_vol(func2_read_int_stb(5)) order by 1; 
+ func1_nosql_vol 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_70.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_nosql_vol(5)) order by 1; 
+ func1_sql_setint_stb 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_71.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_nosql_stb(5)) order by 1; 
+ func1_sql_setint_stb 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_72.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_nosql_imm(5)) order by 1; 
+ func1_sql_setint_stb 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_73.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_sql_int_vol(5)) order by 1; 
+ func1_sql_setint_stb 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_74.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_sql_int_stb(5)) order by 1; 
+ func1_sql_setint_stb 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_75.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_sql_int_imm(5)) order by 1; 
+ func1_sql_setint_stb 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_76.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_read_int_vol(5)) order by 1; 
+ func1_sql_setint_stb 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_77.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_read_int_stb(5)) order by 1; 
+ func1_sql_setint_stb 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_78.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_mod_int_vol(5)) order by 1; 
+ func1_sql_setint_stb 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_79.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_mod_int_stb(5)) order by 1; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_withfunc2_79.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_withfunc2_8.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_vol(func2_mod_int_vol(5)) order by 1; 
+ func1_nosql_vol 
+-----------------
+               7
+(1 row)
+
+-- @description function_in_from_withfunc2_80.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_nosql_vol(5)) order by 1; 
+ func1_sql_setint_imm 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_81.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_nosql_stb(5)) order by 1; 
+ func1_sql_setint_imm 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_82.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_nosql_imm(5)) order by 1; 
+ func1_sql_setint_imm 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_83.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_sql_int_vol(5)) order by 1; 
+ func1_sql_setint_imm 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_84.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_sql_int_stb(5)) order by 1; 
+ func1_sql_setint_imm 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_85.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_sql_int_imm(5)) order by 1; 
+ func1_sql_setint_imm 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_86.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_read_int_vol(5)) order by 1; 
+ func1_sql_setint_imm 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+
+-- @description function_in_from_withfunc2_87.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_read_int_stb(5)) order by 1; 
+ func1_sql_setint_imm 
+----------------------
+                    6
+                    7
+                    8
+                    9
+                   10
+                   11
+(6 rows)
+

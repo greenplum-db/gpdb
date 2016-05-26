@@ -1,7 +1,7 @@
 # ----------
-# Optimizer functional test suite
+# Optimizer functional test suite part 1
 # ----------
-test: composite_keys_gpdb_1 composite_keys_gpdb_2 composite_keys_gpdb_3
+test: composite_keys_gpdb_1 composite_keys_gpdb_2 composite_keys_gpdb_3 builtin_normal builtin_dqa
 test: partitionindexes
 test: staticselection
 test: cte_functest_inlining_enabled cte_queries_inlining_enabled
@@ -9,3 +9,11 @@ test: cte_queries_inlining_disabled cte_functest_inlining_disabled
 test: lastj lastj_hash lineitem create_table_default_distribution_on create_table_default_distribution_off indexapply create_table_as_11_alter_table
 test: analyze_rootpartition
 
+# ----------
+# Optimizer functional test suite part 2
+# ----------
+test: of_partition_1 of_partition_2 of_partition_3 of_partition_4 of_partition_5 of_partition_6 of_partition_7 of_partition_8 of_partition_9 of_partition_10 of_partition_11
+test: of_triggers of_groupingfunction
+test: dml_functional_1 dml_functional_2 dml_functional_3 dml_functional_4 dml_functional_5 dml_functional_6 dml_functional_7
+test: functionProperty_01 functionProperty_02 functionProperty_03 functionProperty_04 functionProperty_05 functionProperty_06 functionProperty_07 functionProperty_08 functionProperty_09
+test: functionProperty_10 functionProperty_11 functionProperty_12 functionProperty_13 functionProperty_14 functionProperty_15 functionProperty_16 functionProperty_17 functionProperty_18

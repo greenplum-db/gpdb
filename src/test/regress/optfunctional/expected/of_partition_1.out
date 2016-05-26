@@ -1,0 +1,3001 @@
+-- start_ignore
+create schema sql_partition_1_50;
+set search_path to sql_partition_1_50;
+-- end_ignore
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_char;
+NOTICE:  table "mpp21090_changedistpolicy_dml_pttab_char" does not exist, skipping
+CREATE TABLE mpp21090_changedistpolicy_dml_pttab_char
+(
+    col1 char,
+    col2 char,
+    col3 char,
+    col4 char,
+    col5 int
+) DISTRIBUTED BY (col1) PARTITION BY LIST(col2)(partition partone VALUES('a','b','c','d','e','f','g','h') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo VALUES('i','j','k','l','m','n','o','p') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree VALUES('q','r','s','t','u','v','w','x'));
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_char_1_prt_partone" for table "mpp21090_changedistpolicy_dml_pttab_char"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_char_1_prt_parttwo" for table "mpp21090_changedistpolicy_dml_pttab_char"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_char_1_prt_partthree" for table "mpp21090_changedistpolicy_dml_pttab_char"
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_char VALUES('g','g','a','g',0);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_char ORDER BY 1,2,3,4;
+ col1 | col2 | col3 | col4 | col5 
+------+------+------+------+------
+ g    | g    | a    | g    |    0
+(1 row)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_char DROP COLUMN col4;
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_char VALUES('g','g','b',1);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_char ORDER BY 1,2,3,4;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ g    | g    | a    |    0
+ g    | g    | b    |    1
+(2 rows)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_char SET DISTRIBUTED BY (col3);
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_char SELECT 'a', 'a','c', 2;
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_char ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ a    | a    | c    |    2
+ g    | g    | a    |    0
+ g    | g    | b    |    1
+(3 rows)
+
+UPDATE mpp21090_changedistpolicy_dml_pttab_char SET col3 ='c' WHERE col3 ='b';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_char ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ a    | a    | c    |    2
+ g    | g    | a    |    0
+ g    | g    | c    |    1
+(3 rows)
+
+DELETE FROM mpp21090_changedistpolicy_dml_pttab_char WHERE col3 ='c';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_char ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ g    | g    | a    |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_date;
+NOTICE:  table "mpp21090_changedistpolicy_dml_pttab_date" does not exist, skipping
+CREATE TABLE mpp21090_changedistpolicy_dml_pttab_date
+(
+    col1 date,
+    col2 date,
+    col3 char,
+    col4 date,
+    col5 int
+) DISTRIBUTED BY (col1) PARTITION BY RANGE(col2)(partition partone start('2013-12-01') end('2013-12-31') WITH(APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start('2013-12-31') end('2014-01-01') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start('2014-01-01') end('2014-02-01'));
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_date_1_prt_partone" for table "mpp21090_changedistpolicy_dml_pttab_date"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_date_1_prt_parttwo" for table "mpp21090_changedistpolicy_dml_pttab_date"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_date_1_prt_partthree" for table "mpp21090_changedistpolicy_dml_pttab_date"
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_date VALUES('2013-12-30','2013-12-30','a','2013-12-30',0);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_date ORDER BY 1,2,3,4;
+    col1    |    col2    | col3 |    col4    | col5 
+------------+------------+------+------------+------
+ 12-30-2013 | 12-30-2013 | a    | 12-30-2013 |    0
+(1 row)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_date DROP COLUMN col4;
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_date VALUES('2013-12-30','2013-12-30','b',1);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_date ORDER BY 1,2,3,4;
+    col1    |    col2    | col3 | col5 
+------------+------------+------+------
+ 12-30-2013 | 12-30-2013 | a    |    0
+ 12-30-2013 | 12-30-2013 | b    |    1
+(2 rows)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_date SET DISTRIBUTED BY (col3);
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_date SELECT '2014-01-01', '2014-01-01','c', 2;
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_date ORDER BY 1,2,3;
+    col1    |    col2    | col3 | col5 
+------------+------------+------+------
+ 12-30-2013 | 12-30-2013 | a    |    0
+ 12-30-2013 | 12-30-2013 | b    |    1
+ 01-01-2014 | 01-01-2014 | c    |    2
+(3 rows)
+
+UPDATE mpp21090_changedistpolicy_dml_pttab_date SET col3 ='c' WHERE col3 ='b';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_date ORDER BY 1,2,3;
+    col1    |    col2    | col3 | col5 
+------------+------------+------+------
+ 12-30-2013 | 12-30-2013 | a    |    0
+ 12-30-2013 | 12-30-2013 | c    |    1
+ 01-01-2014 | 01-01-2014 | c    |    2
+(3 rows)
+
+DELETE FROM mpp21090_changedistpolicy_dml_pttab_date WHERE col3 ='c';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_date ORDER BY 1,2,3;
+    col1    |    col2    | col3 | col5 
+------------+------------+------+------
+ 12-30-2013 | 12-30-2013 | a    |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_decimal;
+NOTICE:  table "mpp21090_changedistpolicy_dml_pttab_decimal" does not exist, skipping
+CREATE TABLE mpp21090_changedistpolicy_dml_pttab_decimal
+(
+    col1 decimal,
+    col2 decimal,
+    col3 char,
+    col4 decimal,
+    col5 int
+) DISTRIBUTED BY (col1) PARTITION BY RANGE(col2)(partition partone start(1.00) end(10.00)  WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start(10.00) end(20.00) WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start(20.00) end(30.00));
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_decimal_1_prt_partone" for table "mpp21090_changedistpolicy_dml_pttab_decimal"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_decimal_1_prt_parttwo" for table "mpp21090_changedistpolicy_dml_pttab_decimal"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_decimal_1_prt_partthree" for table "mpp21090_changedistpolicy_dml_pttab_decimal"
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_decimal VALUES(2.00,2.00,'a',2.00,0);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_decimal ORDER BY 1,2,3,4;
+ col1 | col2 | col3 | col4 | col5 
+------+------+------+------+------
+ 2.00 | 2.00 | a    | 2.00 |    0
+(1 row)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_decimal DROP COLUMN col4;
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_decimal VALUES(2.00,2.00,'b',1);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_decimal ORDER BY 1,2,3,4;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ 2.00 | 2.00 | a    |    0
+ 2.00 | 2.00 | b    |    1
+(2 rows)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_decimal SET DISTRIBUTED BY (col3);
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_decimal SELECT 1.00, 1.00,'c', 2;
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_decimal ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ 1.00 | 1.00 | c    |    2
+ 2.00 | 2.00 | a    |    0
+ 2.00 | 2.00 | b    |    1
+(3 rows)
+
+UPDATE mpp21090_changedistpolicy_dml_pttab_decimal SET col3 ='c' WHERE col3 ='b';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_decimal ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ 1.00 | 1.00 | c    |    2
+ 2.00 | 2.00 | a    |    0
+ 2.00 | 2.00 | c    |    1
+(3 rows)
+
+DELETE FROM mpp21090_changedistpolicy_dml_pttab_decimal WHERE col3 ='c';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_decimal ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ 2.00 | 2.00 | a    |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_float;
+NOTICE:  table "mpp21090_changedistpolicy_dml_pttab_float" does not exist, skipping
+CREATE TABLE mpp21090_changedistpolicy_dml_pttab_float
+(
+    col1 float,
+    col2 float,
+    col3 char,
+    col4 float,
+    col5 int
+) DISTRIBUTED BY (col1) PARTITION BY RANGE(col2)(partition partone start(1.00) end(10.00)  WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start(10.00) end(20.00) WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start(20.00) end(30.00));
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_float_1_prt_partone" for table "mpp21090_changedistpolicy_dml_pttab_float"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_float_1_prt_parttwo" for table "mpp21090_changedistpolicy_dml_pttab_float"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_float_1_prt_partthree" for table "mpp21090_changedistpolicy_dml_pttab_float"
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_float VALUES(2.00,2.00,'a',2.00,0);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_float ORDER BY 1,2,3,4;
+ col1 | col2 | col3 | col4 | col5 
+------+------+------+------+------
+    2 |    2 | a    |    2 |    0
+(1 row)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_float DROP COLUMN col4;
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_float VALUES(2.00,2.00,'b',1);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_float ORDER BY 1,2,3,4;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+    2 |    2 | a    |    0
+    2 |    2 | b    |    1
+(2 rows)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_float SET DISTRIBUTED BY (col3);
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_float SELECT 1.00, 1.00,'c', 2;
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_float ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+    1 |    1 | c    |    2
+    2 |    2 | a    |    0
+    2 |    2 | b    |    1
+(3 rows)
+
+UPDATE mpp21090_changedistpolicy_dml_pttab_float SET col3 ='c' WHERE col3 ='b';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_float ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+    1 |    1 | c    |    2
+    2 |    2 | a    |    0
+    2 |    2 | c    |    1
+(3 rows)
+
+DELETE FROM mpp21090_changedistpolicy_dml_pttab_float WHERE col3 ='c';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_float ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+    2 |    2 | a    |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_int;
+NOTICE:  table "mpp21090_changedistpolicy_dml_pttab_int" does not exist, skipping
+CREATE TABLE mpp21090_changedistpolicy_dml_pttab_int
+(
+    col1 int,
+    col2 int,
+    col3 char,
+    col4 int,
+    col5 int
+) DISTRIBUTED BY (col1) PARTITION BY RANGE(col2)(partition partone start(1) end(10001) WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start(10001) end(20001) WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start(20001) end(30001));
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_int_1_prt_partone" for table "mpp21090_changedistpolicy_dml_pttab_int"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_int_1_prt_parttwo" for table "mpp21090_changedistpolicy_dml_pttab_int"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_int_1_prt_partthree" for table "mpp21090_changedistpolicy_dml_pttab_int"
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_int VALUES(10000,10000,'a',10000,0);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int ORDER BY 1,2,3,4;
+ col1  | col2  | col3 | col4  | col5 
+-------+-------+------+-------+------
+ 10000 | 10000 | a    | 10000 |    0
+(1 row)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_int DROP COLUMN col4;
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_int VALUES(10000,10000,'b',1);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int ORDER BY 1,2,3,4;
+ col1  | col2  | col3 | col5 
+-------+-------+------+------
+ 10000 | 10000 | a    |    0
+ 10000 | 10000 | b    |    1
+(2 rows)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_int SET DISTRIBUTED BY (col3);
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_int SELECT 20000, 20000,'c', 2;
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int ORDER BY 1,2,3;
+ col1  | col2  | col3 | col5 
+-------+-------+------+------
+ 10000 | 10000 | a    |    0
+ 10000 | 10000 | b    |    1
+ 20000 | 20000 | c    |    2
+(3 rows)
+
+UPDATE mpp21090_changedistpolicy_dml_pttab_int SET col3 ='c' WHERE col3 ='b';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int ORDER BY 1,2,3;
+ col1  | col2  | col3 | col5 
+-------+-------+------+------
+ 10000 | 10000 | a    |    0
+ 10000 | 10000 | c    |    1
+ 20000 | 20000 | c    |    2
+(3 rows)
+
+DELETE FROM mpp21090_changedistpolicy_dml_pttab_int WHERE col3 ='c';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int ORDER BY 1,2,3;
+ col1  | col2  | col3 | col5 
+-------+-------+------+------
+ 10000 | 10000 | a    |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_int4;
+NOTICE:  table "mpp21090_changedistpolicy_dml_pttab_int4" does not exist, skipping
+CREATE TABLE mpp21090_changedistpolicy_dml_pttab_int4
+(
+    col1 int4,
+    col2 int4,
+    col3 char,
+    col4 int4,
+    col5 int
+) DISTRIBUTED BY (col1) PARTITION BY RANGE(col2)(partition partone start(1) end(100000001)  WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start(100000001) end(200000001) WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start(200000001) end(300000001));
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_int4_1_prt_partone" for table "mpp21090_changedistpolicy_dml_pttab_int4"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_int4_1_prt_parttwo" for table "mpp21090_changedistpolicy_dml_pttab_int4"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_int4_1_prt_partthree" for table "mpp21090_changedistpolicy_dml_pttab_int4"
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_int4 VALUES(20000000,20000000,'a',20000000,0);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int4 ORDER BY 1,2,3,4;
+   col1   |   col2   | col3 |   col4   | col5 
+----------+----------+------+----------+------
+ 20000000 | 20000000 | a    | 20000000 |    0
+(1 row)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_int4 DROP COLUMN col4;
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_int4 VALUES(20000000,20000000,'b',1);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int4 ORDER BY 1,2,3,4;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 20000000 | 20000000 | a    |    0
+ 20000000 | 20000000 | b    |    1
+(2 rows)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_int4 SET DISTRIBUTED BY (col3);
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_int4 SELECT 10000000, 10000000,'c', 2;
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int4 ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 10000000 | 10000000 | c    |    2
+ 20000000 | 20000000 | a    |    0
+ 20000000 | 20000000 | b    |    1
+(3 rows)
+
+UPDATE mpp21090_changedistpolicy_dml_pttab_int4 SET col3 ='c' WHERE col3 ='b';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int4 ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 10000000 | 10000000 | c    |    2
+ 20000000 | 20000000 | a    |    0
+ 20000000 | 20000000 | c    |    1
+(3 rows)
+
+DELETE FROM mpp21090_changedistpolicy_dml_pttab_int4 WHERE col3 ='c';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int4 ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 20000000 | 20000000 | a    |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_int8;
+NOTICE:  table "mpp21090_changedistpolicy_dml_pttab_int8" does not exist, skipping
+CREATE TABLE mpp21090_changedistpolicy_dml_pttab_int8
+(
+    col1 int8,
+    col2 int8,
+    col3 char,
+    col4 int8,
+    col5 int
+) DISTRIBUTED BY (col1) PARTITION BY RANGE(col2)(partition partone start(1) end(1000000000000000001)  WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start(1000000000000000001) end(2000000000000000001) WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start(2000000000000000001) end(3000000000000000001));
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_int8_1_prt_partone" for table "mpp21090_changedistpolicy_dml_pttab_int8"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_int8_1_prt_parttwo" for table "mpp21090_changedistpolicy_dml_pttab_int8"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_int8_1_prt_partthree" for table "mpp21090_changedistpolicy_dml_pttab_int8"
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_int8 VALUES(200000000000000000,200000000000000000,'a',200000000000000000,0);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int8 ORDER BY 1,2,3,4;
+        col1        |        col2        | col3 |        col4        | col5 
+--------------------+--------------------+------+--------------------+------
+ 200000000000000000 | 200000000000000000 | a    | 200000000000000000 |    0
+(1 row)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_int8 DROP COLUMN col4;
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_int8 VALUES(200000000000000000,200000000000000000,'b',1);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int8 ORDER BY 1,2,3,4;
+        col1        |        col2        | col3 | col5 
+--------------------+--------------------+------+------
+ 200000000000000000 | 200000000000000000 | a    |    0
+ 200000000000000000 | 200000000000000000 | b    |    1
+(2 rows)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_int8 SET DISTRIBUTED BY (col3);
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_int8 SELECT 1000000000000000000, 1000000000000000000,'c', 2;
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int8 ORDER BY 1,2,3;
+        col1         |        col2         | col3 | col5 
+---------------------+---------------------+------+------
+  200000000000000000 |  200000000000000000 | a    |    0
+  200000000000000000 |  200000000000000000 | b    |    1
+ 1000000000000000000 | 1000000000000000000 | c    |    2
+(3 rows)
+
+UPDATE mpp21090_changedistpolicy_dml_pttab_int8 SET col3 ='c' WHERE col3 ='b';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int8 ORDER BY 1,2,3;
+        col1         |        col2         | col3 | col5 
+---------------------+---------------------+------+------
+  200000000000000000 |  200000000000000000 | a    |    0
+  200000000000000000 |  200000000000000000 | c    |    1
+ 1000000000000000000 | 1000000000000000000 | c    |    2
+(3 rows)
+
+DELETE FROM mpp21090_changedistpolicy_dml_pttab_int8 WHERE col3 ='c';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_int8 ORDER BY 1,2,3;
+        col1        |        col2        | col3 | col5 
+--------------------+--------------------+------+------
+ 200000000000000000 | 200000000000000000 | a    |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_interval;
+NOTICE:  table "mpp21090_changedistpolicy_dml_pttab_interval" does not exist, skipping
+CREATE TABLE mpp21090_changedistpolicy_dml_pttab_interval
+(
+    col1 interval,
+    col2 interval,
+    col3 char,
+    col4 interval,
+    col5 int
+) DISTRIBUTED BY (col1) PARTITION BY RANGE(col2)(partition partone start('1 sec') end('1 min')  WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start('1 min') end('1 hour') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start('1 hour') end('12 hours'));
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_interval_1_prt_partone" for table "mpp21090_changedistpolicy_dml_pttab_interval"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_interval_1_prt_parttwo" for table "mpp21090_changedistpolicy_dml_pttab_interval"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_interval_1_prt_partthree" for table "mpp21090_changedistpolicy_dml_pttab_interval"
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_interval VALUES('10 secs','10 secs','a','10 secs',0);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_interval ORDER BY 1,2,3,4;
+   col1    |   col2    | col3 |   col4    | col5 
+-----------+-----------+------+-----------+------
+ @ 10 secs | @ 10 secs | a    | @ 10 secs |    0
+(1 row)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_interval DROP COLUMN col4;
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_interval VALUES('10 secs','10 secs','b',1);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_interval ORDER BY 1,2,3,4;
+   col1    |   col2    | col3 | col5 
+-----------+-----------+------+------
+ @ 10 secs | @ 10 secs | a    |    0
+ @ 10 secs | @ 10 secs | b    |    1
+(2 rows)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_interval SET DISTRIBUTED BY (col3);
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_interval SELECT '11 hours', '11 hours','c', 2;
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_interval ORDER BY 1,2,3;
+    col1    |    col2    | col3 | col5 
+------------+------------+------+------
+ @ 10 secs  | @ 10 secs  | a    |    0
+ @ 10 secs  | @ 10 secs  | b    |    1
+ @ 11 hours | @ 11 hours | c    |    2
+(3 rows)
+
+UPDATE mpp21090_changedistpolicy_dml_pttab_interval SET col3 ='c' WHERE col3 ='b';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_interval ORDER BY 1,2,3;
+    col1    |    col2    | col3 | col5 
+------------+------------+------+------
+ @ 10 secs  | @ 10 secs  | a    |    0
+ @ 10 secs  | @ 10 secs  | c    |    1
+ @ 11 hours | @ 11 hours | c    |    2
+(3 rows)
+
+DELETE FROM mpp21090_changedistpolicy_dml_pttab_interval WHERE col3 ='c';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_interval ORDER BY 1,2,3;
+   col1    |   col2    | col3 | col5 
+-----------+-----------+------+------
+ @ 10 secs | @ 10 secs | a    |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_numeric;
+NOTICE:  table "mpp21090_changedistpolicy_dml_pttab_numeric" does not exist, skipping
+CREATE TABLE mpp21090_changedistpolicy_dml_pttab_numeric
+(
+    col1 numeric,
+    col2 numeric,
+    col3 char,
+    col4 numeric,
+    col5 int
+) DISTRIBUTED BY (col1) PARTITION BY RANGE(col2)(partition partone start(1.000000) end(10.000000)  WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start(10.000000) end(20.000000) WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start(20.000000) end(30.000000));
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_numeric_1_prt_partone" for table "mpp21090_changedistpolicy_dml_pttab_numeric"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_numeric_1_prt_parttwo" for table "mpp21090_changedistpolicy_dml_pttab_numeric"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_numeric_1_prt_partthree" for table "mpp21090_changedistpolicy_dml_pttab_numeric"
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_numeric VALUES(2.000000,2.000000,'a',2.000000,0);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_numeric ORDER BY 1,2,3,4;
+   col1   |   col2   | col3 |   col4   | col5 
+----------+----------+------+----------+------
+ 2.000000 | 2.000000 | a    | 2.000000 |    0
+(1 row)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_numeric DROP COLUMN col4;
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_numeric VALUES(2.000000,2.000000,'b',1);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_numeric ORDER BY 1,2,3,4;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 2.000000 | 2.000000 | a    |    0
+ 2.000000 | 2.000000 | b    |    1
+(2 rows)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_numeric SET DISTRIBUTED BY (col3);
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_numeric SELECT 1.000000, 1.000000,'c', 2;
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_numeric ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 1.000000 | 1.000000 | c    |    2
+ 2.000000 | 2.000000 | a    |    0
+ 2.000000 | 2.000000 | b    |    1
+(3 rows)
+
+UPDATE mpp21090_changedistpolicy_dml_pttab_numeric SET col3 ='c' WHERE col3 ='b';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_numeric ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 1.000000 | 1.000000 | c    |    2
+ 2.000000 | 2.000000 | a    |    0
+ 2.000000 | 2.000000 | c    |    1
+(3 rows)
+
+DELETE FROM mpp21090_changedistpolicy_dml_pttab_numeric WHERE col3 ='c';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_numeric ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 2.000000 | 2.000000 | a    |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_time;
+NOTICE:  table "mpp21090_changedistpolicy_dml_pttab_time" does not exist, skipping
+CREATE TABLE mpp21090_changedistpolicy_dml_pttab_time
+(
+    col1 time,
+    col2 time,
+    col3 char,
+    col4 time,
+    col5 int
+) DISTRIBUTED BY (col1) PARTITION BY RANGE(col2)(partition partone start('12:00:00') end('18:00:00')  WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start('18:00:00') end('24:00:00') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start('0:00:00') end('11:00:00'));
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_time_1_prt_partthree" for table "mpp21090_changedistpolicy_dml_pttab_time"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_time_1_prt_partone" for table "mpp21090_changedistpolicy_dml_pttab_time"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_time_1_prt_parttwo" for table "mpp21090_changedistpolicy_dml_pttab_time"
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_time VALUES('12:00:00','12:00:00','a','12:00:00',0);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_time ORDER BY 1,2,3,4;
+   col1   |   col2   | col3 |   col4   | col5 
+----------+----------+------+----------+------
+ 12:00:00 | 12:00:00 | a    | 12:00:00 |    0
+(1 row)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_time DROP COLUMN col4;
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_time VALUES('12:00:00','12:00:00','b',1);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_time ORDER BY 1,2,3,4;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 12:00:00 | 12:00:00 | a    |    0
+ 12:00:00 | 12:00:00 | b    |    1
+(2 rows)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_time SET DISTRIBUTED BY (col3);
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_time SELECT '1:00:00', '1:00:00','c', 2;
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_time ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 01:00:00 | 01:00:00 | c    |    2
+ 12:00:00 | 12:00:00 | a    |    0
+ 12:00:00 | 12:00:00 | b    |    1
+(3 rows)
+
+UPDATE mpp21090_changedistpolicy_dml_pttab_time SET col3 ='c' WHERE col3 ='b';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_time ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 01:00:00 | 01:00:00 | c    |    2
+ 12:00:00 | 12:00:00 | a    |    0
+ 12:00:00 | 12:00:00 | c    |    1
+(3 rows)
+
+DELETE FROM mpp21090_changedistpolicy_dml_pttab_time WHERE col3 ='c';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_time ORDER BY 1,2,3;
+   col1   |   col2   | col3 | col5 
+----------+----------+------+------
+ 12:00:00 | 12:00:00 | a    |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_timestamp;
+NOTICE:  table "mpp21090_changedistpolicy_dml_pttab_timestamp" does not exist, skipping
+CREATE TABLE mpp21090_changedistpolicy_dml_pttab_timestamp
+(
+    col1 timestamp,
+    col2 timestamp,
+    col3 char,
+    col4 timestamp,
+    col5 int
+) DISTRIBUTED BY (col1) PARTITION BY RANGE(col2)(partition partone start('2013-12-01 12:00:00') end('2013-12-31 12:00:00') WITH(APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start('2013-12-31 12:00:00') end('2014-01-01 12:00:00') inclusive WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start('2014-01-02 12:00:00') end('2014-02-01 12:00:00'));
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_timestamp_1_prt_partone" for table "mpp21090_changedistpolicy_dml_pttab_timestamp"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_timestamp_1_prt_parttwo" for table "mpp21090_changedistpolicy_dml_pttab_timestamp"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_timestamp_1_prt_partthree" for table "mpp21090_changedistpolicy_dml_pttab_timestamp"
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_timestamp VALUES('2013-12-30 12:00:00','2013-12-30 12:00:00','a','2013-12-30 12:00:00',0);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_timestamp ORDER BY 1,2,3,4;
+           col1           |           col2           | col3 |           col4           | col5 
+--------------------------+--------------------------+------+--------------------------+------
+ Mon Dec 30 12:00:00 2013 | Mon Dec 30 12:00:00 2013 | a    | Mon Dec 30 12:00:00 2013 |    0
+(1 row)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_timestamp DROP COLUMN col4;
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_timestamp VALUES('2013-12-30 12:00:00','2013-12-30 12:00:00','b',1);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_timestamp ORDER BY 1,2,3,4;
+           col1           |           col2           | col3 | col5 
+--------------------------+--------------------------+------+------
+ Mon Dec 30 12:00:00 2013 | Mon Dec 30 12:00:00 2013 | a    |    0
+ Mon Dec 30 12:00:00 2013 | Mon Dec 30 12:00:00 2013 | b    |    1
+(2 rows)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_timestamp SET DISTRIBUTED BY (col3);
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_timestamp SELECT '2014-01-01 12:00:00', '2014-01-01 12:00:00','c', 2;
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_timestamp ORDER BY 1,2,3;
+           col1           |           col2           | col3 | col5 
+--------------------------+--------------------------+------+------
+ Mon Dec 30 12:00:00 2013 | Mon Dec 30 12:00:00 2013 | a    |    0
+ Mon Dec 30 12:00:00 2013 | Mon Dec 30 12:00:00 2013 | b    |    1
+ Wed Jan 01 12:00:00 2014 | Wed Jan 01 12:00:00 2014 | c    |    2
+(3 rows)
+
+UPDATE mpp21090_changedistpolicy_dml_pttab_timestamp SET col3 ='c' WHERE col3 ='b';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_timestamp ORDER BY 1,2,3;
+           col1           |           col2           | col3 | col5 
+--------------------------+--------------------------+------+------
+ Mon Dec 30 12:00:00 2013 | Mon Dec 30 12:00:00 2013 | a    |    0
+ Mon Dec 30 12:00:00 2013 | Mon Dec 30 12:00:00 2013 | c    |    1
+ Wed Jan 01 12:00:00 2014 | Wed Jan 01 12:00:00 2014 | c    |    2
+(3 rows)
+
+DELETE FROM mpp21090_changedistpolicy_dml_pttab_timestamp WHERE col3 ='c';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_timestamp ORDER BY 1,2,3;
+           col1           |           col2           | col3 | col5 
+--------------------------+--------------------------+------+------
+ Mon Dec 30 12:00:00 2013 | Mon Dec 30 12:00:00 2013 | a    |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_changedistpolicy_dml_pttab_timestamptz;
+NOTICE:  table "mpp21090_changedistpolicy_dml_pttab_timestamptz" does not exist, skipping
+CREATE TABLE mpp21090_changedistpolicy_dml_pttab_timestamptz
+(
+    col1 timestamptz,
+    col2 timestamptz,
+    col3 char,
+    col4 timestamptz,
+    col5 int
+) DISTRIBUTED BY (col1) PARTITION BY RANGE(col2)(partition partone start('2013-12-01 12:00:00 PST') end('2013-12-31 12:00:00 PST') WITH(APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=column),partition parttwo start('2013-12-31 12:00:00 PST') end('2014-01-01 12:00:00 PST') WITH (APPENDONLY=true, COMPRESSLEVEL=5, ORIENTATION=row),partition partthree start('2014-01-01 12:00:00 PST') end('2014-02-01 12:00:00 PST'));
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_timestamptz_1_prt_partone" for table "mpp21090_changedistpolicy_dml_pttab_timestamptz"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_timestamptz_1_prt_parttwo" for table "mpp21090_changedistpolicy_dml_pttab_timestamptz"
+NOTICE:  CREATE TABLE will create partition "mpp21090_changedistpolicy_dml_pttab_timestamptz_1_prt_partthree" for table "mpp21090_changedistpolicy_dml_pttab_timestamptz"
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_timestamptz VALUES('2013-12-30 12:00:00 PST','2013-12-30 12:00:00 PST','a','2013-12-30 12:00:00 PST',0);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_timestamptz ORDER BY 1,2,3,4;
+             col1             |             col2             | col3 |             col4             | col5 
+------------------------------+------------------------------+------+------------------------------+------
+ Mon Dec 30 12:00:00 2013 PST | Mon Dec 30 12:00:00 2013 PST | a    | Mon Dec 30 12:00:00 2013 PST |    0
+(1 row)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_timestamptz DROP COLUMN col4;
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_timestamptz VALUES('2013-12-30 12:00:00 PST','2013-12-30 12:00:00 PST','b',1);
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_timestamptz ORDER BY 1,2,3,4;
+             col1             |             col2             | col3 | col5 
+------------------------------+------------------------------+------+------
+ Mon Dec 30 12:00:00 2013 PST | Mon Dec 30 12:00:00 2013 PST | a    |    0
+ Mon Dec 30 12:00:00 2013 PST | Mon Dec 30 12:00:00 2013 PST | b    |    1
+(2 rows)
+
+ALTER TABLE mpp21090_changedistpolicy_dml_pttab_timestamptz SET DISTRIBUTED BY (col3);
+INSERT INTO mpp21090_changedistpolicy_dml_pttab_timestamptz SELECT '2014-01-01 12:00:00 PST', '2014-01-01 12:00:00 PST','c', 2;
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_timestamptz ORDER BY 1,2,3;
+             col1             |             col2             | col3 | col5 
+------------------------------+------------------------------+------+------
+ Mon Dec 30 12:00:00 2013 PST | Mon Dec 30 12:00:00 2013 PST | a    |    0
+ Mon Dec 30 12:00:00 2013 PST | Mon Dec 30 12:00:00 2013 PST | b    |    1
+ Wed Jan 01 12:00:00 2014 PST | Wed Jan 01 12:00:00 2014 PST | c    |    2
+(3 rows)
+
+UPDATE mpp21090_changedistpolicy_dml_pttab_timestamptz SET col3 ='c' WHERE col3 ='b';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_timestamptz ORDER BY 1,2,3;
+             col1             |             col2             | col3 | col5 
+------------------------------+------------------------------+------+------
+ Mon Dec 30 12:00:00 2013 PST | Mon Dec 30 12:00:00 2013 PST | a    |    0
+ Mon Dec 30 12:00:00 2013 PST | Mon Dec 30 12:00:00 2013 PST | c    |    1
+ Wed Jan 01 12:00:00 2014 PST | Wed Jan 01 12:00:00 2014 PST | c    |    2
+(3 rows)
+
+DELETE FROM mpp21090_changedistpolicy_dml_pttab_timestamptz WHERE col3 ='c';
+SELECT * FROM mpp21090_changedistpolicy_dml_pttab_timestamptz ORDER BY 1,2,3;
+             col1             |             col2             | col3 | col5 
+------------------------------+------------------------------+------+------
+ Mon Dec 30 12:00:00 2013 PST | Mon Dec 30 12:00:00 2013 PST | a    |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_char;
+NOTICE:  table "mpp21090_defpt_dropcol_addcol_dml_char" does not exist, skipping
+CREATE TABLE mpp21090_defpt_dropcol_addcol_dml_char
+(
+    col1 char,
+    col2 char,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+NOTICE:  CREATE TABLE will create partition "mpp21090_defpt_dropcol_addcol_dml_char_1_prt_def" for table "mpp21090_defpt_dropcol_addcol_dml_char"
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_char VALUES('x','x','a',0);
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_char DROP COLUMN col4;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_char SELECT 'z','z','b';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_char ORDER BY 1,2,3;
+ col1 | col2 | col3 
+------+------+------
+ x    | x    | a
+ z    | z    | b
+(2 rows)
+
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_char ADD COLUMN col5 char;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_char SELECT 'x','x','c','x';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_char ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ x    | x    | a    | 
+ x    | x    | c    | x
+ z    | z    | b    | 
+(3 rows)
+
+UPDATE mpp21090_defpt_dropcol_addcol_dml_char SET col1 = '-' WHERE col2 = 'z' AND col1 = 'z';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_char ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ -    | z    | b    | 
+ x    | x    | a    | 
+ x    | x    | c    | x
+(3 rows)
+
+-- Update partition key
+UPDATE mpp21090_defpt_dropcol_addcol_dml_char SET col2 = '-' WHERE col2 = 'z' AND col1 = '-';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_char ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ -    | -    | b    | 
+ x    | x    | a    | 
+ x    | x    | c    | x
+(3 rows)
+
+DELETE FROM mpp21090_defpt_dropcol_addcol_dml_char WHERE col2 = '-';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_char ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ x    | x    | a    | 
+ x    | x    | c    | x
+(2 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_date;
+NOTICE:  table "mpp21090_defpt_dropcol_addcol_dml_date" does not exist, skipping
+CREATE TABLE mpp21090_defpt_dropcol_addcol_dml_date
+(
+    col1 date,
+    col2 date,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+NOTICE:  CREATE TABLE will create partition "mpp21090_defpt_dropcol_addcol_dml_date_1_prt_def" for table "mpp21090_defpt_dropcol_addcol_dml_date"
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_date VALUES('2013-12-31','2013-12-31','a',0);
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_date DROP COLUMN col4;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_date SELECT '2014-02-10','2014-02-10','b';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_date ORDER BY 1,2,3;
+    col1    |    col2    | col3 
+------------+------------+------
+ 12-31-2013 | 12-31-2013 | a
+ 02-10-2014 | 02-10-2014 | b
+(2 rows)
+
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_date ADD COLUMN col5 date;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_date SELECT '2013-12-31','2013-12-31','c','2013-12-31';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_date ORDER BY 1,2,3;
+    col1    |    col2    | col3 |    col5    
+------------+------------+------+------------
+ 12-31-2013 | 12-31-2013 | a    | 
+ 12-31-2013 | 12-31-2013 | c    | 12-31-2013
+ 02-10-2014 | 02-10-2014 | b    | 
+(3 rows)
+
+UPDATE mpp21090_defpt_dropcol_addcol_dml_date SET col1 = '2014-01-01' WHERE col2 = '2014-02-10' AND col1 = '2014-02-10';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_date ORDER BY 1,2,3;
+    col1    |    col2    | col3 |    col5    
+------------+------------+------+------------
+ 12-31-2013 | 12-31-2013 | a    | 
+ 12-31-2013 | 12-31-2013 | c    | 12-31-2013
+ 01-01-2014 | 02-10-2014 | b    | 
+(3 rows)
+
+-- Update partition key
+UPDATE mpp21090_defpt_dropcol_addcol_dml_date SET col2 = '2014-01-01' WHERE col2 = '2014-02-10' AND col1 = '2014-01-01';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_date ORDER BY 1,2,3;
+    col1    |    col2    | col3 |    col5    
+------------+------------+------+------------
+ 12-31-2013 | 12-31-2013 | a    | 
+ 12-31-2013 | 12-31-2013 | c    | 12-31-2013
+ 01-01-2014 | 01-01-2014 | b    | 
+(3 rows)
+
+DELETE FROM mpp21090_defpt_dropcol_addcol_dml_date WHERE col2 = '2014-01-01';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_date ORDER BY 1,2,3;
+    col1    |    col2    | col3 |    col5    
+------------+------------+------+------------
+ 12-31-2013 | 12-31-2013 | a    | 
+ 12-31-2013 | 12-31-2013 | c    | 12-31-2013
+(2 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_decimal;
+NOTICE:  table "mpp21090_defpt_dropcol_addcol_dml_decimal" does not exist, skipping
+CREATE TABLE mpp21090_defpt_dropcol_addcol_dml_decimal
+(
+    col1 decimal,
+    col2 decimal,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+NOTICE:  CREATE TABLE will create partition "mpp21090_defpt_dropcol_addcol_dml_decimal_1_prt_def" for table "mpp21090_defpt_dropcol_addcol_dml_decimal"
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_decimal VALUES(2.00,2.00,'a',0);
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_decimal DROP COLUMN col4;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_decimal SELECT 35.00,35.00,'b';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_decimal ORDER BY 1,2,3;
+ col1  | col2  | col3 
+-------+-------+------
+  2.00 |  2.00 | a
+ 35.00 | 35.00 | b
+(2 rows)
+
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_decimal ADD COLUMN col5 decimal;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_decimal SELECT 2.00,2.00,'c',2.00;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_decimal ORDER BY 1,2,3;
+ col1  | col2  | col3 | col5 
+-------+-------+------+------
+  2.00 |  2.00 | a    |     
+  2.00 |  2.00 | c    | 2.00
+ 35.00 | 35.00 | b    |     
+(3 rows)
+
+UPDATE mpp21090_defpt_dropcol_addcol_dml_decimal SET col1 = 1.00 WHERE col2 = 35.00 AND col1 = 35.00;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_decimal ORDER BY 1,2,3;
+ col1 | col2  | col3 | col5 
+------+-------+------+------
+ 1.00 | 35.00 | b    |     
+ 2.00 |  2.00 | a    |     
+ 2.00 |  2.00 | c    | 2.00
+(3 rows)
+
+-- Update partition key
+UPDATE mpp21090_defpt_dropcol_addcol_dml_decimal SET col2 = 1.00 WHERE col2 = 35.00 AND col1 = 1.00;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_decimal ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ 1.00 | 1.00 | b    |     
+ 2.00 | 2.00 | a    |     
+ 2.00 | 2.00 | c    | 2.00
+(3 rows)
+
+DELETE FROM mpp21090_defpt_dropcol_addcol_dml_decimal WHERE col2 = 1.00;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_decimal ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+ 2.00 | 2.00 | a    |     
+ 2.00 | 2.00 | c    | 2.00
+(2 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_float;
+NOTICE:  table "mpp21090_defpt_dropcol_addcol_dml_float" does not exist, skipping
+CREATE TABLE mpp21090_defpt_dropcol_addcol_dml_float
+(
+    col1 float,
+    col2 float,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+NOTICE:  CREATE TABLE will create partition "mpp21090_defpt_dropcol_addcol_dml_float_1_prt_def" for table "mpp21090_defpt_dropcol_addcol_dml_float"
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_float VALUES(2.00,2.00,'a',0);
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_float DROP COLUMN col4;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_float SELECT 35.00,35.00,'b';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_float ORDER BY 1,2,3;
+ col1 | col2 | col3 
+------+------+------
+    2 |    2 | a
+   35 |   35 | b
+(2 rows)
+
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_float ADD COLUMN col5 float;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_float SELECT 2.00,2.00,'c',2.00;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_float ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+    2 |    2 | a    |     
+    2 |    2 | c    |    2
+   35 |   35 | b    |     
+(3 rows)
+
+UPDATE mpp21090_defpt_dropcol_addcol_dml_float SET col1 = 1.00 WHERE col2 = 35.00 AND col1 = 35.00;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_float ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+    1 |   35 | b    |     
+    2 |    2 | a    |     
+    2 |    2 | c    |    2
+(3 rows)
+
+-- Update partition key
+UPDATE mpp21090_defpt_dropcol_addcol_dml_float SET col2 = 1.00 WHERE col2 = 35.00 AND col1 = 1.00;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_float ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+    1 |    1 | b    |     
+    2 |    2 | a    |     
+    2 |    2 | c    |    2
+(3 rows)
+
+DELETE FROM mpp21090_defpt_dropcol_addcol_dml_float WHERE col2 = 1.00;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_float ORDER BY 1,2,3;
+ col1 | col2 | col3 | col5 
+------+------+------+------
+    2 |    2 | a    |     
+    2 |    2 | c    |    2
+(2 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_int;
+NOTICE:  table "mpp21090_defpt_dropcol_addcol_dml_int" does not exist, skipping
+CREATE TABLE mpp21090_defpt_dropcol_addcol_dml_int
+(
+    col1 int,
+    col2 int,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+NOTICE:  CREATE TABLE will create partition "mpp21090_defpt_dropcol_addcol_dml_int_1_prt_def" for table "mpp21090_defpt_dropcol_addcol_dml_int"
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_int VALUES(20000,20000,'a',0);
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_int DROP COLUMN col4;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_int SELECT 35000,35000,'b';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int ORDER BY 1,2,3;
+ col1  | col2  | col3 
+-------+-------+------
+ 20000 | 20000 | a
+ 35000 | 35000 | b
+(2 rows)
+
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_int ADD COLUMN col5 int;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_int SELECT 20000,20000,'c',20000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int ORDER BY 1,2,3;
+ col1  | col2  | col3 | col5  
+-------+-------+------+-------
+ 20000 | 20000 | a    |      
+ 20000 | 20000 | c    | 20000
+ 35000 | 35000 | b    |      
+(3 rows)
+
+UPDATE mpp21090_defpt_dropcol_addcol_dml_int SET col1 = 10000 WHERE col2 = 35000 AND col1 = 35000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int ORDER BY 1,2,3;
+ col1  | col2  | col3 | col5  
+-------+-------+------+-------
+ 10000 | 35000 | b    |      
+ 20000 | 20000 | a    |      
+ 20000 | 20000 | c    | 20000
+(3 rows)
+
+-- Update partition key
+UPDATE mpp21090_defpt_dropcol_addcol_dml_int SET col2 = 10000 WHERE col2 = 35000 AND col1 = 10000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int ORDER BY 1,2,3;
+ col1  | col2  | col3 | col5  
+-------+-------+------+-------
+ 10000 | 10000 | b    |      
+ 20000 | 20000 | a    |      
+ 20000 | 20000 | c    | 20000
+(3 rows)
+
+DELETE FROM mpp21090_defpt_dropcol_addcol_dml_int WHERE col2 = 10000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int ORDER BY 1,2,3;
+ col1  | col2  | col3 | col5  
+-------+-------+------+-------
+ 20000 | 20000 | a    |      
+ 20000 | 20000 | c    | 20000
+(2 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_int4;
+NOTICE:  table "mpp21090_defpt_dropcol_addcol_dml_int4" does not exist, skipping
+CREATE TABLE mpp21090_defpt_dropcol_addcol_dml_int4
+(
+    col1 int4,
+    col2 int4,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+NOTICE:  CREATE TABLE will create partition "mpp21090_defpt_dropcol_addcol_dml_int4_1_prt_def" for table "mpp21090_defpt_dropcol_addcol_dml_int4"
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_int4 VALUES(20000000,20000000,'a',0);
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_int4 DROP COLUMN col4;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_int4 SELECT 35000000,35000000,'b';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int4 ORDER BY 1,2,3;
+   col1   |   col2   | col3 
+----------+----------+------
+ 20000000 | 20000000 | a
+ 35000000 | 35000000 | b
+(2 rows)
+
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_int4 ADD COLUMN col5 int4;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_int4 SELECT 20000000,20000000,'c',20000000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int4 ORDER BY 1,2,3;
+   col1   |   col2   | col3 |   col5   
+----------+----------+------+----------
+ 20000000 | 20000000 | a    |         
+ 20000000 | 20000000 | c    | 20000000
+ 35000000 | 35000000 | b    |         
+(3 rows)
+
+UPDATE mpp21090_defpt_dropcol_addcol_dml_int4 SET col1 = 10000000 WHERE col2 = 35000000 AND col1 = 35000000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int4 ORDER BY 1,2,3;
+   col1   |   col2   | col3 |   col5   
+----------+----------+------+----------
+ 10000000 | 35000000 | b    |         
+ 20000000 | 20000000 | a    |         
+ 20000000 | 20000000 | c    | 20000000
+(3 rows)
+
+-- Update partition key
+UPDATE mpp21090_defpt_dropcol_addcol_dml_int4 SET col2 = 10000000 WHERE col2 = 35000000 AND col1 = 10000000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int4 ORDER BY 1,2,3;
+   col1   |   col2   | col3 |   col5   
+----------+----------+------+----------
+ 10000000 | 10000000 | b    |         
+ 20000000 | 20000000 | a    |         
+ 20000000 | 20000000 | c    | 20000000
+(3 rows)
+
+DELETE FROM mpp21090_defpt_dropcol_addcol_dml_int4 WHERE col2 = 10000000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int4 ORDER BY 1,2,3;
+   col1   |   col2   | col3 |   col5   
+----------+----------+------+----------
+ 20000000 | 20000000 | a    |         
+ 20000000 | 20000000 | c    | 20000000
+(2 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_int8;
+NOTICE:  table "mpp21090_defpt_dropcol_addcol_dml_int8" does not exist, skipping
+CREATE TABLE mpp21090_defpt_dropcol_addcol_dml_int8
+(
+    col1 int8,
+    col2 int8,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+NOTICE:  CREATE TABLE will create partition "mpp21090_defpt_dropcol_addcol_dml_int8_1_prt_def" for table "mpp21090_defpt_dropcol_addcol_dml_int8"
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_int8 VALUES(2000000000000000000,2000000000000000000,'a',0);
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_int8 DROP COLUMN col4;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_int8 SELECT 3500000000000000000,3500000000000000000,'b';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int8 ORDER BY 1,2,3;
+        col1         |        col2         | col3 
+---------------------+---------------------+------
+ 2000000000000000000 | 2000000000000000000 | a
+ 3500000000000000000 | 3500000000000000000 | b
+(2 rows)
+
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_int8 ADD COLUMN col5 int8;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_int8 SELECT 2000000000000000000,2000000000000000000,'c',2000000000000000000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int8 ORDER BY 1,2,3;
+        col1         |        col2         | col3 |        col5         
+---------------------+---------------------+------+---------------------
+ 2000000000000000000 | 2000000000000000000 | a    |                    
+ 2000000000000000000 | 2000000000000000000 | c    | 2000000000000000000
+ 3500000000000000000 | 3500000000000000000 | b    |                    
+(3 rows)
+
+UPDATE mpp21090_defpt_dropcol_addcol_dml_int8 SET col1 = 1000000000000000000 WHERE col2 = 3500000000000000000 AND col1 = 3500000000000000000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int8 ORDER BY 1,2,3;
+        col1         |        col2         | col3 |        col5         
+---------------------+---------------------+------+---------------------
+ 1000000000000000000 | 3500000000000000000 | b    |                    
+ 2000000000000000000 | 2000000000000000000 | a    |                    
+ 2000000000000000000 | 2000000000000000000 | c    | 2000000000000000000
+(3 rows)
+
+-- Update partition key
+UPDATE mpp21090_defpt_dropcol_addcol_dml_int8 SET col2 = 1000000000000000000 WHERE col2 = 3500000000000000000 AND col1 = 1000000000000000000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int8 ORDER BY 1,2,3;
+        col1         |        col2         | col3 |        col5         
+---------------------+---------------------+------+---------------------
+ 1000000000000000000 | 1000000000000000000 | b    |                    
+ 2000000000000000000 | 2000000000000000000 | a    |                    
+ 2000000000000000000 | 2000000000000000000 | c    | 2000000000000000000
+(3 rows)
+
+DELETE FROM mpp21090_defpt_dropcol_addcol_dml_int8 WHERE col2 = 1000000000000000000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_int8 ORDER BY 1,2,3;
+        col1         |        col2         | col3 |        col5         
+---------------------+---------------------+------+---------------------
+ 2000000000000000000 | 2000000000000000000 | a    |                    
+ 2000000000000000000 | 2000000000000000000 | c    | 2000000000000000000
+(2 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_interval;
+NOTICE:  table "mpp21090_defpt_dropcol_addcol_dml_interval" does not exist, skipping
+CREATE TABLE mpp21090_defpt_dropcol_addcol_dml_interval
+(
+    col1 interval,
+    col2 interval,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+NOTICE:  CREATE TABLE will create partition "mpp21090_defpt_dropcol_addcol_dml_interval_1_prt_def" for table "mpp21090_defpt_dropcol_addcol_dml_interval"
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_interval VALUES('1 hour','1 hour','a',0);
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_interval DROP COLUMN col4;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_interval SELECT '14 hours','14 hours','b';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_interval ORDER BY 1,2,3;
+    col1    |    col2    | col3 
+------------+------------+------
+ @ 1 hour   | @ 1 hour   | a
+ @ 14 hours | @ 14 hours | b
+(2 rows)
+
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_interval ADD COLUMN col5 interval;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_interval SELECT '1 hour','1 hour','c','1 hour';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_interval ORDER BY 1,2,3;
+    col1    |    col2    | col3 |   col5   
+------------+------------+------+----------
+ @ 1 hour   | @ 1 hour   | a    | 
+ @ 1 hour   | @ 1 hour   | c    | @ 1 hour
+ @ 14 hours | @ 14 hours | b    | 
+(3 rows)
+
+UPDATE mpp21090_defpt_dropcol_addcol_dml_interval SET col1 = '12 hours' WHERE col2 = '14 hours' AND col1 = '14 hours';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_interval ORDER BY 1,2,3;
+    col1    |    col2    | col3 |   col5   
+------------+------------+------+----------
+ @ 1 hour   | @ 1 hour   | a    | 
+ @ 1 hour   | @ 1 hour   | c    | @ 1 hour
+ @ 12 hours | @ 14 hours | b    | 
+(3 rows)
+
+-- Update partition key
+UPDATE mpp21090_defpt_dropcol_addcol_dml_interval SET col2 = '12 hours' WHERE col2 = '14 hours' AND col1 = '12 hours';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_interval ORDER BY 1,2,3;
+    col1    |    col2    | col3 |   col5   
+------------+------------+------+----------
+ @ 1 hour   | @ 1 hour   | a    | 
+ @ 1 hour   | @ 1 hour   | c    | @ 1 hour
+ @ 12 hours | @ 12 hours | b    | 
+(3 rows)
+
+DELETE FROM mpp21090_defpt_dropcol_addcol_dml_interval WHERE col2 = '12 hours';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_interval ORDER BY 1,2,3;
+   col1   |   col2   | col3 |   col5   
+----------+----------+------+----------
+ @ 1 hour | @ 1 hour | a    | 
+ @ 1 hour | @ 1 hour | c    | @ 1 hour
+(2 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_numeric;
+NOTICE:  table "mpp21090_defpt_dropcol_addcol_dml_numeric" does not exist, skipping
+CREATE TABLE mpp21090_defpt_dropcol_addcol_dml_numeric
+(
+    col1 numeric,
+    col2 numeric,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+NOTICE:  CREATE TABLE will create partition "mpp21090_defpt_dropcol_addcol_dml_numeric_1_prt_def" for table "mpp21090_defpt_dropcol_addcol_dml_numeric"
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_numeric VALUES(2.000000,2.000000,'a',0);
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_numeric DROP COLUMN col4;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_numeric SELECT 35.000000,35.000000,'b';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_numeric ORDER BY 1,2,3;
+   col1    |   col2    | col3 
+-----------+-----------+------
+  2.000000 |  2.000000 | a
+ 35.000000 | 35.000000 | b
+(2 rows)
+
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_numeric ADD COLUMN col5 numeric;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_numeric SELECT 2.000000,2.000000,'c',2.000000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_numeric ORDER BY 1,2,3;
+   col1    |   col2    | col3 |   col5   
+-----------+-----------+------+----------
+  2.000000 |  2.000000 | a    |         
+  2.000000 |  2.000000 | c    | 2.000000
+ 35.000000 | 35.000000 | b    |         
+(3 rows)
+
+UPDATE mpp21090_defpt_dropcol_addcol_dml_numeric SET col1 = 1.000000 WHERE col2 = 35.000000 AND col1 = 35.000000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_numeric ORDER BY 1,2,3;
+   col1   |   col2    | col3 |   col5   
+----------+-----------+------+----------
+ 1.000000 | 35.000000 | b    |         
+ 2.000000 |  2.000000 | a    |         
+ 2.000000 |  2.000000 | c    | 2.000000
+(3 rows)
+
+-- Update partition key
+UPDATE mpp21090_defpt_dropcol_addcol_dml_numeric SET col2 = 1.000000 WHERE col2 = 35.000000 AND col1 = 1.000000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_numeric ORDER BY 1,2,3;
+   col1   |   col2   | col3 |   col5   
+----------+----------+------+----------
+ 1.000000 | 1.000000 | b    |         
+ 2.000000 | 2.000000 | a    |         
+ 2.000000 | 2.000000 | c    | 2.000000
+(3 rows)
+
+DELETE FROM mpp21090_defpt_dropcol_addcol_dml_numeric WHERE col2 = 1.000000;
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_numeric ORDER BY 1,2,3;
+   col1   |   col2   | col3 |   col5   
+----------+----------+------+----------
+ 2.000000 | 2.000000 | a    |         
+ 2.000000 | 2.000000 | c    | 2.000000
+(2 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_text;
+NOTICE:  table "mpp21090_defpt_dropcol_addcol_dml_text" does not exist, skipping
+CREATE TABLE mpp21090_defpt_dropcol_addcol_dml_text
+(
+    col1 text,
+    col2 text,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+NOTICE:  CREATE TABLE will create partition "mpp21090_defpt_dropcol_addcol_dml_text_1_prt_def" for table "mpp21090_defpt_dropcol_addcol_dml_text"
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_text VALUES('abcdefghijklmnop','abcdefghijklmnop','a',0);
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_text DROP COLUMN col4;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_text SELECT 'xyz','xyz','b';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_text ORDER BY 1,2,3;
+       col1       |       col2       | col3 
+------------------+------------------+------
+ abcdefghijklmnop | abcdefghijklmnop | a
+ xyz              | xyz              | b
+(2 rows)
+
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_text ADD COLUMN col5 text;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_text SELECT 'abcdefghijklmnop','abcdefghijklmnop','c','abcdefghijklmnop';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_text ORDER BY 1,2,3;
+       col1       |       col2       | col3 |       col5       
+------------------+------------------+------+------------------
+ abcdefghijklmnop | abcdefghijklmnop | a    | 
+ abcdefghijklmnop | abcdefghijklmnop | c    | abcdefghijklmnop
+ xyz              | xyz              | b    | 
+(3 rows)
+
+UPDATE mpp21090_defpt_dropcol_addcol_dml_text SET col1 = 'qrstuvwxyz' WHERE col2 = 'xyz' AND col1 = 'xyz';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_text ORDER BY 1,2,3;
+       col1       |       col2       | col3 |       col5       
+------------------+------------------+------+------------------
+ abcdefghijklmnop | abcdefghijklmnop | a    | 
+ abcdefghijklmnop | abcdefghijklmnop | c    | abcdefghijklmnop
+ qrstuvwxyz       | xyz              | b    | 
+(3 rows)
+
+-- Update partition key
+UPDATE mpp21090_defpt_dropcol_addcol_dml_text SET col2 = 'qrstuvwxyz' WHERE col2 = 'xyz' AND col1 = 'qrstuvwxyz';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_text ORDER BY 1,2,3;
+       col1       |       col2       | col3 |       col5       
+------------------+------------------+------+------------------
+ abcdefghijklmnop | abcdefghijklmnop | a    | 
+ abcdefghijklmnop | abcdefghijklmnop | c    | abcdefghijklmnop
+ qrstuvwxyz       | qrstuvwxyz       | b    | 
+(3 rows)
+
+DELETE FROM mpp21090_defpt_dropcol_addcol_dml_text WHERE col2 = 'qrstuvwxyz';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_text ORDER BY 1,2,3;
+       col1       |       col2       | col3 |       col5       
+------------------+------------------+------+------------------
+ abcdefghijklmnop | abcdefghijklmnop | a    | 
+ abcdefghijklmnop | abcdefghijklmnop | c    | abcdefghijklmnop
+(2 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_time;
+NOTICE:  table "mpp21090_defpt_dropcol_addcol_dml_time" does not exist, skipping
+CREATE TABLE mpp21090_defpt_dropcol_addcol_dml_time
+(
+    col1 time,
+    col2 time,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+NOTICE:  CREATE TABLE will create partition "mpp21090_defpt_dropcol_addcol_dml_time_1_prt_def" for table "mpp21090_defpt_dropcol_addcol_dml_time"
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_time VALUES('12:00:00','12:00:00','a',0);
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_time DROP COLUMN col4;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_time SELECT '11:30:00','11:30:00','b';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_time ORDER BY 1,2,3;
+   col1   |   col2   | col3 
+----------+----------+------
+ 11:30:00 | 11:30:00 | b
+ 12:00:00 | 12:00:00 | a
+(2 rows)
+
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_time ADD COLUMN col5 time;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_time SELECT '12:00:00','12:00:00','c','12:00:00';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_time ORDER BY 1,2,3;
+   col1   |   col2   | col3 |   col5   
+----------+----------+------+----------
+ 11:30:00 | 11:30:00 | b    | 
+ 12:00:00 | 12:00:00 | a    | 
+ 12:00:00 | 12:00:00 | c    | 12:00:00
+(3 rows)
+
+UPDATE mpp21090_defpt_dropcol_addcol_dml_time SET col1 = '1:00:00' WHERE col2 = '11:30:00' AND col1 = '11:30:00';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_time ORDER BY 1,2,3;
+   col1   |   col2   | col3 |   col5   
+----------+----------+------+----------
+ 01:00:00 | 11:30:00 | b    | 
+ 12:00:00 | 12:00:00 | a    | 
+ 12:00:00 | 12:00:00 | c    | 12:00:00
+(3 rows)
+
+-- Update partition key
+UPDATE mpp21090_defpt_dropcol_addcol_dml_time SET col2 = '1:00:00' WHERE col2 = '11:30:00' AND col1 = '1:00:00';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_time ORDER BY 1,2,3;
+   col1   |   col2   | col3 |   col5   
+----------+----------+------+----------
+ 01:00:00 | 01:00:00 | b    | 
+ 12:00:00 | 12:00:00 | a    | 
+ 12:00:00 | 12:00:00 | c    | 12:00:00
+(3 rows)
+
+DELETE FROM mpp21090_defpt_dropcol_addcol_dml_time WHERE col2 = '1:00:00';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_time ORDER BY 1,2,3;
+   col1   |   col2   | col3 |   col5   
+----------+----------+------+----------
+ 12:00:00 | 12:00:00 | a    | 
+ 12:00:00 | 12:00:00 | c    | 12:00:00
+(2 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_timestamp;
+NOTICE:  table "mpp21090_defpt_dropcol_addcol_dml_timestamp" does not exist, skipping
+CREATE TABLE mpp21090_defpt_dropcol_addcol_dml_timestamp
+(
+    col1 timestamp,
+    col2 timestamp,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+NOTICE:  CREATE TABLE will create partition "mpp21090_defpt_dropcol_addcol_dml_timestamp_1_prt_def" for table "mpp21090_defpt_dropcol_addcol_dml_timestamp"
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_timestamp VALUES('2013-12-31 12:00:00','2013-12-31 12:00:00','a',0);
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_timestamp DROP COLUMN col4;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_timestamp SELECT '2014-02-10 12:00:00','2014-02-10 12:00:00','b';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_timestamp ORDER BY 1,2,3;
+           col1           |           col2           | col3 
+--------------------------+--------------------------+------
+ Tue Dec 31 12:00:00 2013 | Tue Dec 31 12:00:00 2013 | a
+ Mon Feb 10 12:00:00 2014 | Mon Feb 10 12:00:00 2014 | b
+(2 rows)
+
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_timestamp ADD COLUMN col5 timestamp;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_timestamp SELECT '2013-12-31 12:00:00','2013-12-31 12:00:00','c','2013-12-31 12:00:00';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_timestamp ORDER BY 1,2,3;
+           col1           |           col2           | col3 |           col5           
+--------------------------+--------------------------+------+--------------------------
+ Tue Dec 31 12:00:00 2013 | Tue Dec 31 12:00:00 2013 | a    | 
+ Tue Dec 31 12:00:00 2013 | Tue Dec 31 12:00:00 2013 | c    | Tue Dec 31 12:00:00 2013
+ Mon Feb 10 12:00:00 2014 | Mon Feb 10 12:00:00 2014 | b    | 
+(3 rows)
+
+UPDATE mpp21090_defpt_dropcol_addcol_dml_timestamp SET col1 = '2014-01-01 12:00:00' WHERE col2 = '2014-02-10 12:00:00' AND col1 = '2014-02-10 12:00:00';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_timestamp ORDER BY 1,2,3;
+           col1           |           col2           | col3 |           col5           
+--------------------------+--------------------------+------+--------------------------
+ Tue Dec 31 12:00:00 2013 | Tue Dec 31 12:00:00 2013 | a    | 
+ Tue Dec 31 12:00:00 2013 | Tue Dec 31 12:00:00 2013 | c    | Tue Dec 31 12:00:00 2013
+ Wed Jan 01 12:00:00 2014 | Mon Feb 10 12:00:00 2014 | b    | 
+(3 rows)
+
+-- Update partition key
+UPDATE mpp21090_defpt_dropcol_addcol_dml_timestamp SET col2 = '2014-01-01 12:00:00' WHERE col2 = '2014-02-10 12:00:00' AND col1 = '2014-01-01 12:00:00';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_timestamp ORDER BY 1,2,3;
+           col1           |           col2           | col3 |           col5           
+--------------------------+--------------------------+------+--------------------------
+ Tue Dec 31 12:00:00 2013 | Tue Dec 31 12:00:00 2013 | a    | 
+ Tue Dec 31 12:00:00 2013 | Tue Dec 31 12:00:00 2013 | c    | Tue Dec 31 12:00:00 2013
+ Wed Jan 01 12:00:00 2014 | Wed Jan 01 12:00:00 2014 | b    | 
+(3 rows)
+
+DELETE FROM mpp21090_defpt_dropcol_addcol_dml_timestamp WHERE col2 = '2014-01-01 12:00:00';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_timestamp ORDER BY 1,2,3;
+           col1           |           col2           | col3 |           col5           
+--------------------------+--------------------------+------+--------------------------
+ Tue Dec 31 12:00:00 2013 | Tue Dec 31 12:00:00 2013 | a    | 
+ Tue Dec 31 12:00:00 2013 | Tue Dec 31 12:00:00 2013 | c    | Tue Dec 31 12:00:00 2013
+(2 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_defpt_dropcol_addcol_dml_timestamptz;
+NOTICE:  table "mpp21090_defpt_dropcol_addcol_dml_timestamptz" does not exist, skipping
+CREATE TABLE mpp21090_defpt_dropcol_addcol_dml_timestamptz
+(
+    col1 timestamptz,
+    col2 timestamptz,
+    col3 char,
+    col4 int
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def
+);
+NOTICE:  CREATE TABLE will create partition "mpp21090_defpt_dropcol_addcol_dml_timestamptz_1_prt_def" for table "mpp21090_defpt_dropcol_addcol_dml_timestamptz"
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_timestamptz VALUES('2013-12-31 12:00:00 PST','2013-12-31 12:00:00 PST','a',0);
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_timestamptz DROP COLUMN col4;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_timestamptz SELECT '2014-02-10 12:00:00 PST','2014-02-10 12:00:00 PST','b';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_timestamptz ORDER BY 1,2,3;
+             col1             |             col2             | col3 
+------------------------------+------------------------------+------
+ Tue Dec 31 12:00:00 2013 PST | Tue Dec 31 12:00:00 2013 PST | a
+ Mon Feb 10 12:00:00 2014 PST | Mon Feb 10 12:00:00 2014 PST | b
+(2 rows)
+
+ALTER TABLE mpp21090_defpt_dropcol_addcol_dml_timestamptz ADD COLUMN col5 timestamptz;
+INSERT INTO mpp21090_defpt_dropcol_addcol_dml_timestamptz SELECT '2013-12-31 12:00:00 PST','2013-12-31 12:00:00 PST','c','2013-12-31 12:00:00 PST';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_timestamptz ORDER BY 1,2,3;
+             col1             |             col2             | col3 |             col5             
+------------------------------+------------------------------+------+------------------------------
+ Tue Dec 31 12:00:00 2013 PST | Tue Dec 31 12:00:00 2013 PST | a    | 
+ Tue Dec 31 12:00:00 2013 PST | Tue Dec 31 12:00:00 2013 PST | c    | Tue Dec 31 12:00:00 2013 PST
+ Mon Feb 10 12:00:00 2014 PST | Mon Feb 10 12:00:00 2014 PST | b    | 
+(3 rows)
+
+UPDATE mpp21090_defpt_dropcol_addcol_dml_timestamptz SET col1 = '2014-01-01 12:00:00 PST' WHERE col2 = '2014-02-10 12:00:00 PST' AND col1 = '2014-02-10 12:00:00 PST';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_timestamptz ORDER BY 1,2,3;
+             col1             |             col2             | col3 |             col5             
+------------------------------+------------------------------+------+------------------------------
+ Tue Dec 31 12:00:00 2013 PST | Tue Dec 31 12:00:00 2013 PST | a    | 
+ Tue Dec 31 12:00:00 2013 PST | Tue Dec 31 12:00:00 2013 PST | c    | Tue Dec 31 12:00:00 2013 PST
+ Wed Jan 01 12:00:00 2014 PST | Mon Feb 10 12:00:00 2014 PST | b    | 
+(3 rows)
+
+-- Update partition key
+UPDATE mpp21090_defpt_dropcol_addcol_dml_timestamptz SET col2 = '2014-01-01 12:00:00 PST' WHERE col2 = '2014-02-10 12:00:00 PST' AND col1 = '2014-01-01 12:00:00 PST';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_timestamptz ORDER BY 1,2,3;
+             col1             |             col2             | col3 |             col5             
+------------------------------+------------------------------+------+------------------------------
+ Tue Dec 31 12:00:00 2013 PST | Tue Dec 31 12:00:00 2013 PST | a    | 
+ Tue Dec 31 12:00:00 2013 PST | Tue Dec 31 12:00:00 2013 PST | c    | Tue Dec 31 12:00:00 2013 PST
+ Wed Jan 01 12:00:00 2014 PST | Wed Jan 01 12:00:00 2014 PST | b    | 
+(3 rows)
+
+DELETE FROM mpp21090_defpt_dropcol_addcol_dml_timestamptz WHERE col2 = '2014-01-01 12:00:00 PST';
+SELECT * FROM mpp21090_defpt_dropcol_addcol_dml_timestamptz ORDER BY 1,2,3;
+             col1             |             col2             | col3 |             col5             
+------------------------------+------------------------------+------+------------------------------
+ Tue Dec 31 12:00:00 2013 PST | Tue Dec 31 12:00:00 2013 PST | a    | 
+ Tue Dec 31 12:00:00 2013 PST | Tue Dec 31 12:00:00 2013 PST | c    | Tue Dec 31 12:00:00 2013 PST
+(2 rows)
+
+-- @author prabhd
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS dropped_col_tab;
+NOTICE:  table "dropped_col_tab" does not exist, skipping
+CREATE TABLE dropped_col_tab(
+col1 int,
+col2 decimal,
+col3 char,
+col4 date,
+col5 int
+) distributed by (col1);
+INSERT INTO dropped_col_tab VALUES(0,0.00,'a','2014-01-01',0);
+SELECT * FROM dropped_col_tab ORDER BY 1,2,3;
+ col1 | col2 | col3 |    col4    | col5 
+------+------+------+------------+------
+    0 | 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+ALTER TABLE dropped_col_tab DROP COLUMN col1;
+NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+ALTER TABLE dropped_col_tab DROP COLUMN col2;
+ALTER TABLE dropped_col_tab DROP COLUMN col3;
+ALTER TABLE dropped_col_tab DROP COLUMN col4;
+ALTER TABLE dropped_col_tab DROP COLUMN col5;
+INSERT INTO dropped_col_tab SELECT 1;
+ERROR:  INSERT has more expressions than target columns
+SELECT * FROM dropped_col_tab;
+--
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS oidtab;
+NOTICE:  table "oidtab" does not exist, skipping
+CREATE TABLE oidtab(
+col1 serial,
+col2 decimal,
+col3 char,
+col4 boolean,
+col5 int
+) WITH OIDS DISTRIBUTED by(col4);
+NOTICE:  CREATE TABLE will create implicit sequence "oidtab_col1_seq" for serial column "oidtab.col1"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+ALTER TABLE oidtab DROP COLUMN col2;
+INSERT INTO oidtab(col3,col4,col5) SELECT 'a',True,1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 | col4 | col5 
+------+------+------+------
+    1 | a    | t    |    1
+(1 row)
+
+DROP TABLE IF EXISTS tempoid;
+NOTICE:  table "tempoid" does not exist, skipping
+CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+UPDATE oidtab SET col4=False WHERE col3 = 'a' AND col5 = 1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 | col4 | col5 
+------+------+------+------
+    1 | a    | f    |    1
+(1 row)
+
+SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
+ count 
+-------
+     1
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS oidtab;
+CREATE TABLE oidtab(
+col1 serial,
+col2 decimal,
+col3 char,
+col4 char,
+col5 int
+) WITH OIDS DISTRIBUTED by(col4);
+NOTICE:  CREATE TABLE will create implicit sequence "oidtab_col1_seq" for serial column "oidtab.col1"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+ALTER TABLE oidtab DROP COLUMN col2;
+INSERT INTO oidtab(col3,col4,col5) SELECT 'a','z',1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 | col4 | col5 
+------+------+------+------
+    1 | a    | z    |    1
+(1 row)
+
+DROP TABLE IF EXISTS tempoid;
+CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+UPDATE oidtab SET col4='-' WHERE col3 = 'a' AND col5 = 1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 | col4 | col5 
+------+------+------+------
+    1 | a    | -    |    1
+(1 row)
+
+SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
+ count 
+-------
+     1
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS oidtab;
+CREATE TABLE oidtab(
+col1 serial,
+col2 decimal,
+col3 char,
+col4 date,
+col5 int
+) WITH OIDS DISTRIBUTED by(col4);
+NOTICE:  CREATE TABLE will create implicit sequence "oidtab_col1_seq" for serial column "oidtab.col1"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+ALTER TABLE oidtab DROP COLUMN col2;
+INSERT INTO oidtab(col3,col4,col5) SELECT 'a','2013-12-31',1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |    col4    | col5 
+------+------+------------+------
+    1 | a    | 12-31-2013 |    1
+(1 row)
+
+DROP TABLE IF EXISTS tempoid;
+CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+UPDATE oidtab SET col4='2014-01-01' WHERE col3 = 'a' AND col5 = 1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |    col4    | col5 
+------+------+------------+------
+    1 | a    | 01-01-2014 |    1
+(1 row)
+
+SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
+ count 
+-------
+     1
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS oidtab;
+CREATE TABLE oidtab(
+col1 serial,
+col2 decimal,
+col3 char,
+col4 decimal,
+col5 int
+) WITH OIDS DISTRIBUTED by(col4);
+NOTICE:  CREATE TABLE will create implicit sequence "oidtab_col1_seq" for serial column "oidtab.col1"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+ALTER TABLE oidtab DROP COLUMN col2;
+INSERT INTO oidtab(col3,col4,col5) SELECT 'a',2.00,1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 | col4 | col5 
+------+------+------+------
+    1 | a    | 2.00 |    1
+(1 row)
+
+DROP TABLE IF EXISTS tempoid;
+CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+UPDATE oidtab SET col4=1.00 WHERE col3 = 'a' AND col5 = 1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 | col4 | col5 
+------+------+------+------
+    1 | a    | 1.00 |    1
+(1 row)
+
+SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
+ count 
+-------
+     1
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS oidtab;
+CREATE TABLE oidtab(
+col1 serial,
+col2 decimal,
+col3 char,
+col4 float,
+col5 int
+) WITH OIDS DISTRIBUTED by(col4);
+NOTICE:  CREATE TABLE will create implicit sequence "oidtab_col1_seq" for serial column "oidtab.col1"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+ALTER TABLE oidtab DROP COLUMN col2;
+INSERT INTO oidtab(col3,col4,col5) SELECT 'a',2.00,1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 | col4 | col5 
+------+------+------+------
+    1 | a    |    2 |    1
+(1 row)
+
+DROP TABLE IF EXISTS tempoid;
+CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+UPDATE oidtab SET col4=1.00 WHERE col3 = 'a' AND col5 = 1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 | col4 | col5 
+------+------+------+------
+    1 | a    |    1 |    1
+(1 row)
+
+SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
+ count 
+-------
+     1
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS oidtab;
+CREATE TABLE oidtab(
+col1 serial,
+col2 decimal,
+col3 char,
+col4 int4,
+col5 int
+) WITH OIDS DISTRIBUTED by(col4);
+NOTICE:  CREATE TABLE will create implicit sequence "oidtab_col1_seq" for serial column "oidtab.col1"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+ALTER TABLE oidtab DROP COLUMN col2;
+INSERT INTO oidtab(col3,col4,col5) SELECT 'a',2000000000,1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |    col4    | col5 
+------+------+------------+------
+    1 | a    | 2000000000 |    1
+(1 row)
+
+DROP TABLE IF EXISTS tempoid;
+CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+UPDATE oidtab SET col4=1000000000 WHERE col3 = 'a' AND col5 = 1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |    col4    | col5 
+------+------+------------+------
+    1 | a    | 1000000000 |    1
+(1 row)
+
+SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
+ count 
+-------
+     1
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS oidtab;
+CREATE TABLE oidtab(
+col1 serial,
+col2 decimal,
+col3 char,
+col4 int8,
+col5 int
+) WITH OIDS DISTRIBUTED by(col4);
+NOTICE:  CREATE TABLE will create implicit sequence "oidtab_col1_seq" for serial column "oidtab.col1"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+ALTER TABLE oidtab DROP COLUMN col2;
+INSERT INTO oidtab(col3,col4,col5) SELECT 'a',2000000000000000000,1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |        col4         | col5 
+------+------+---------------------+------
+    1 | a    | 2000000000000000000 |    1
+(1 row)
+
+DROP TABLE IF EXISTS tempoid;
+CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+UPDATE oidtab SET col4=1000000000000000000 WHERE col3 = 'a' AND col5 = 1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |        col4         | col5 
+------+------+---------------------+------
+    1 | a    | 1000000000000000000 |    1
+(1 row)
+
+SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
+ count 
+-------
+     1
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS oidtab;
+CREATE TABLE oidtab(
+col1 serial,
+col2 decimal,
+col3 char,
+col4 int,
+col5 int
+) WITH OIDS DISTRIBUTED by(col4);
+NOTICE:  CREATE TABLE will create implicit sequence "oidtab_col1_seq" for serial column "oidtab.col1"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+ALTER TABLE oidtab DROP COLUMN col2;
+INSERT INTO oidtab(col3,col4,col5) SELECT 'a',20000,1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 | col4  | col5 
+------+------+-------+------
+    1 | a    | 20000 |    1
+(1 row)
+
+DROP TABLE IF EXISTS tempoid;
+CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+UPDATE oidtab SET col4=10000 WHERE col3 = 'a' AND col5 = 1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 | col4  | col5 
+------+------+-------+------
+    1 | a    | 10000 |    1
+(1 row)
+
+SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
+ count 
+-------
+     1
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS oidtab;
+CREATE TABLE oidtab(
+col1 serial,
+col2 decimal,
+col3 char,
+col4 interval,
+col5 int
+) WITH OIDS DISTRIBUTED by(col4);
+NOTICE:  CREATE TABLE will create implicit sequence "oidtab_col1_seq" for serial column "oidtab.col1"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+ALTER TABLE oidtab DROP COLUMN col2;
+INSERT INTO oidtab(col3,col4,col5) SELECT 'a','1 day',1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |  col4   | col5 
+------+------+---------+------
+    1 | a    | @ 1 day |    1
+(1 row)
+
+DROP TABLE IF EXISTS tempoid;
+CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+UPDATE oidtab SET col4='1 hour' WHERE col3 = 'a' AND col5 = 1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |   col4   | col5 
+------+------+----------+------
+    1 | a    | @ 1 hour |    1
+(1 row)
+
+SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
+ count 
+-------
+     1
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS oidtab;
+CREATE TABLE oidtab(
+col1 serial,
+col2 decimal,
+col3 char,
+col4 numeric,
+col5 int
+) WITH OIDS DISTRIBUTED by(col4);
+NOTICE:  CREATE TABLE will create implicit sequence "oidtab_col1_seq" for serial column "oidtab.col1"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+ALTER TABLE oidtab DROP COLUMN col2;
+INSERT INTO oidtab(col3,col4,col5) SELECT 'a',2.000000,1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |   col4   | col5 
+------+------+----------+------
+    1 | a    | 2.000000 |    1
+(1 row)
+
+DROP TABLE IF EXISTS tempoid;
+CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+UPDATE oidtab SET col4=1.000000 WHERE col3 = 'a' AND col5 = 1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |   col4   | col5 
+------+------+----------+------
+    1 | a    | 1.000000 |    1
+(1 row)
+
+SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
+ count 
+-------
+     1
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS oidtab;
+CREATE TABLE oidtab(
+col1 serial,
+col2 decimal,
+col3 char,
+col4 text,
+col5 int
+) WITH OIDS DISTRIBUTED by(col4);
+NOTICE:  CREATE TABLE will create implicit sequence "oidtab_col1_seq" for serial column "oidtab.col1"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+ALTER TABLE oidtab DROP COLUMN col2;
+INSERT INTO oidtab(col3,col4,col5) SELECT 'a','abcdefghijklmnop',1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |       col4       | col5 
+------+------+------------------+------
+    1 | a    | abcdefghijklmnop |    1
+(1 row)
+
+DROP TABLE IF EXISTS tempoid;
+CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+UPDATE oidtab SET col4='qrstuvwxyz' WHERE col3 = 'a' AND col5 = 1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |    col4    | col5 
+------+------+------------+------
+    1 | a    | qrstuvwxyz |    1
+(1 row)
+
+SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
+ count 
+-------
+     1
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS oidtab;
+CREATE TABLE oidtab(
+col1 serial,
+col2 decimal,
+col3 char,
+col4 time,
+col5 int
+) WITH OIDS DISTRIBUTED by(col4);
+NOTICE:  CREATE TABLE will create implicit sequence "oidtab_col1_seq" for serial column "oidtab.col1"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+ALTER TABLE oidtab DROP COLUMN col2;
+INSERT INTO oidtab(col3,col4,col5) SELECT 'a','12:00:00',1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |   col4   | col5 
+------+------+----------+------
+    1 | a    | 12:00:00 |    1
+(1 row)
+
+DROP TABLE IF EXISTS tempoid;
+CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+UPDATE oidtab SET col4='1:00:00' WHERE col3 = 'a' AND col5 = 1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |   col4   | col5 
+------+------+----------+------
+    1 | a    | 01:00:00 |    1
+(1 row)
+
+SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
+ count 
+-------
+     1
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS oidtab;
+CREATE TABLE oidtab(
+col1 serial,
+col2 decimal,
+col3 char,
+col4 timestamp,
+col5 int
+) WITH OIDS DISTRIBUTED by(col4);
+NOTICE:  CREATE TABLE will create implicit sequence "oidtab_col1_seq" for serial column "oidtab.col1"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+ALTER TABLE oidtab DROP COLUMN col2;
+INSERT INTO oidtab(col3,col4,col5) SELECT 'a','2013-12-31 12:00:00',1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |           col4           | col5 
+------+------+--------------------------+------
+    1 | a    | Tue Dec 31 12:00:00 2013 |    1
+(1 row)
+
+DROP TABLE IF EXISTS tempoid;
+CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+UPDATE oidtab SET col4='2014-01-01 12:00:00' WHERE col3 = 'a' AND col5 = 1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |           col4           | col5 
+------+------+--------------------------+------
+    1 | a    | Wed Jan 01 12:00:00 2014 |    1
+(1 row)
+
+SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
+ count 
+-------
+     1
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS oidtab;
+CREATE TABLE oidtab(
+col1 serial,
+col2 decimal,
+col3 char,
+col4 timestamptz,
+col5 int
+) WITH OIDS DISTRIBUTED by(col4);
+NOTICE:  CREATE TABLE will create implicit sequence "oidtab_col1_seq" for serial column "oidtab.col1"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+ALTER TABLE oidtab DROP COLUMN col2;
+INSERT INTO oidtab(col3,col4,col5) SELECT 'a','2013-12-31 12:00:00 PST',1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |             col4             | col5 
+------+------+------------------------------+------
+    1 | a    | Tue Dec 31 12:00:00 2013 PST |    1
+(1 row)
+
+DROP TABLE IF EXISTS tempoid;
+CREATE TABLE tempoid as SELECT oid,col1,col3,col4,col5 FROM oidtab ORDER BY 1;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+UPDATE oidtab SET col4='2014-01-01 12:00:00 PST' WHERE col3 = 'a' AND col5 = 1;
+SELECT * FROM oidtab ORDER BY 1,2,3,4;
+ col1 | col3 |             col4             | col5 
+------+------+------------------------------+------
+    1 | a    | Wed Jan 01 12:00:00 2014 PST |    1
+(1 row)
+
+SELECT * FROM ((SELECT COUNT(*) FROM oidtab) UNION (SELECT COUNT(*) FROM tempoid, oidtab WHERE tempoid.oid = oidtab.oid AND tempoid.col5 = oidtab.col5))foo;
+ count 
+-------
+     1
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_drop_distcol_dml_boolean;
+NOTICE:  table "mpp21090_drop_distcol_dml_boolean" does not exist, skipping
+CREATE TABLE mpp21090_drop_distcol_dml_boolean(
+col1 boolean,
+col2 decimal,
+col3 char,
+col4 date,
+col5 int
+)  with (appendonly= true) distributed by (col1);
+INSERT INTO mpp21090_drop_distcol_dml_boolean VALUES(True,0.00,'a','2014-01-01',0);
+SELECT * FROM mpp21090_drop_distcol_dml_boolean ORDER BY 1,2,3,4;
+ col1 | col2 | col3 |    col4    | col5 
+------+------+------+------------+------
+ t    | 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+ALTER TABLE mpp21090_drop_distcol_dml_boolean DROP COLUMN col1;
+NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+INSERT INTO mpp21090_drop_distcol_dml_boolean SELECT 1.00,'b','2014-01-02',1;
+SELECT * FROM mpp21090_drop_distcol_dml_boolean ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | b    | 01-02-2014 |    1
+(2 rows)
+
+UPDATE mpp21090_drop_distcol_dml_boolean SET col3='c' WHERE col3 = 'b' AND col5 = 1;
+SELECT * FROM mpp21090_drop_distcol_dml_boolean ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | c    | 01-02-2014 |    1
+(2 rows)
+
+DELETE FROM mpp21090_drop_distcol_dml_boolean WHERE col3='c';
+SELECT * FROM mpp21090_drop_distcol_dml_boolean ORDER BY 1,2,3,4;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_drop_distcol_dml_boolean;
+CREATE TABLE mpp21090_drop_distcol_dml_boolean(
+col1 boolean,
+col2 decimal,
+col3 char,
+col4 date,
+col5 int
+)  with (appendonly= true, orientation= column) distributed by (col1);
+INSERT INTO mpp21090_drop_distcol_dml_boolean VALUES(True,0.00,'a','2014-01-01',0);
+SELECT * FROM mpp21090_drop_distcol_dml_boolean ORDER BY 1,2,3,4;
+ col1 | col2 | col3 |    col4    | col5 
+------+------+------+------------+------
+ t    | 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+ALTER TABLE mpp21090_drop_distcol_dml_boolean DROP COLUMN col1;
+NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+INSERT INTO mpp21090_drop_distcol_dml_boolean SELECT 1.00,'b','2014-01-02',1;
+SELECT * FROM mpp21090_drop_distcol_dml_boolean ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | b    | 01-02-2014 |    1
+(2 rows)
+
+UPDATE mpp21090_drop_distcol_dml_boolean SET col3='c' WHERE col3 = 'b' AND col5 = 1;
+SELECT * FROM mpp21090_drop_distcol_dml_boolean ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | c    | 01-02-2014 |    1
+(2 rows)
+
+DELETE FROM mpp21090_drop_distcol_dml_boolean WHERE col3='c';
+SELECT * FROM mpp21090_drop_distcol_dml_boolean ORDER BY 1,2,3,4;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_drop_distcol_dml_boolean;
+CREATE TABLE mpp21090_drop_distcol_dml_boolean(
+col1 boolean,
+col2 decimal,
+col3 char,
+col4 date,
+col5 int
+) distributed by (col1);
+INSERT INTO mpp21090_drop_distcol_dml_boolean VALUES(True,0.00,'a','2014-01-01',0);
+SELECT * FROM mpp21090_drop_distcol_dml_boolean ORDER BY 1,2,3,4;
+ col1 | col2 | col3 |    col4    | col5 
+------+------+------+------------+------
+ t    | 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+ALTER TABLE mpp21090_drop_distcol_dml_boolean DROP COLUMN col1;
+NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+INSERT INTO mpp21090_drop_distcol_dml_boolean SELECT 1.00,'b','2014-01-02',1;
+SELECT * FROM mpp21090_drop_distcol_dml_boolean ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | b    | 01-02-2014 |    1
+(2 rows)
+
+UPDATE mpp21090_drop_distcol_dml_boolean SET col3='c' WHERE col3 = 'b' AND col5 = 1;
+SELECT * FROM mpp21090_drop_distcol_dml_boolean ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | c    | 01-02-2014 |    1
+(2 rows)
+
+DELETE FROM mpp21090_drop_distcol_dml_boolean WHERE col3='c';
+SELECT * FROM mpp21090_drop_distcol_dml_boolean ORDER BY 1,2,3,4;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_drop_distcol_dml_char;
+NOTICE:  table "mpp21090_drop_distcol_dml_char" does not exist, skipping
+CREATE TABLE mpp21090_drop_distcol_dml_char(
+col1 char,
+col2 decimal,
+col3 char,
+col4 date,
+col5 int
+)  with (appendonly= true) distributed by (col1);
+INSERT INTO mpp21090_drop_distcol_dml_char VALUES('z',0.00,'a','2014-01-01',0);
+SELECT * FROM mpp21090_drop_distcol_dml_char ORDER BY 1,2,3,4;
+ col1 | col2 | col3 |    col4    | col5 
+------+------+------+------------+------
+ z    | 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+ALTER TABLE mpp21090_drop_distcol_dml_char DROP COLUMN col1;
+NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+INSERT INTO mpp21090_drop_distcol_dml_char SELECT 1.00,'b','2014-01-02',1;
+SELECT * FROM mpp21090_drop_distcol_dml_char ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | b    | 01-02-2014 |    1
+(2 rows)
+
+UPDATE mpp21090_drop_distcol_dml_char SET col3='c' WHERE col3 = 'b' AND col5 = 1;
+SELECT * FROM mpp21090_drop_distcol_dml_char ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | c    | 01-02-2014 |    1
+(2 rows)
+
+DELETE FROM mpp21090_drop_distcol_dml_char WHERE col3='c';
+SELECT * FROM mpp21090_drop_distcol_dml_char ORDER BY 1,2,3,4;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_drop_distcol_dml_char;
+CREATE TABLE mpp21090_drop_distcol_dml_char(
+col1 char,
+col2 decimal,
+col3 char,
+col4 date,
+col5 int
+)  with (appendonly= true, orientation= column) distributed by (col1);
+INSERT INTO mpp21090_drop_distcol_dml_char VALUES('z',0.00,'a','2014-01-01',0);
+SELECT * FROM mpp21090_drop_distcol_dml_char ORDER BY 1,2,3,4;
+ col1 | col2 | col3 |    col4    | col5 
+------+------+------+------------+------
+ z    | 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+ALTER TABLE mpp21090_drop_distcol_dml_char DROP COLUMN col1;
+NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+INSERT INTO mpp21090_drop_distcol_dml_char SELECT 1.00,'b','2014-01-02',1;
+SELECT * FROM mpp21090_drop_distcol_dml_char ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | b    | 01-02-2014 |    1
+(2 rows)
+
+UPDATE mpp21090_drop_distcol_dml_char SET col3='c' WHERE col3 = 'b' AND col5 = 1;
+SELECT * FROM mpp21090_drop_distcol_dml_char ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | c    | 01-02-2014 |    1
+(2 rows)
+
+DELETE FROM mpp21090_drop_distcol_dml_char WHERE col3='c';
+SELECT * FROM mpp21090_drop_distcol_dml_char ORDER BY 1,2,3,4;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_drop_distcol_dml_char;
+CREATE TABLE mpp21090_drop_distcol_dml_char(
+col1 char,
+col2 decimal,
+col3 char,
+col4 date,
+col5 int
+) distributed by (col1);
+INSERT INTO mpp21090_drop_distcol_dml_char VALUES('z',0.00,'a','2014-01-01',0);
+SELECT * FROM mpp21090_drop_distcol_dml_char ORDER BY 1,2,3,4;
+ col1 | col2 | col3 |    col4    | col5 
+------+------+------+------------+------
+ z    | 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+ALTER TABLE mpp21090_drop_distcol_dml_char DROP COLUMN col1;
+NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+INSERT INTO mpp21090_drop_distcol_dml_char SELECT 1.00,'b','2014-01-02',1;
+SELECT * FROM mpp21090_drop_distcol_dml_char ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | b    | 01-02-2014 |    1
+(2 rows)
+
+UPDATE mpp21090_drop_distcol_dml_char SET col3='c' WHERE col3 = 'b' AND col5 = 1;
+SELECT * FROM mpp21090_drop_distcol_dml_char ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | c    | 01-02-2014 |    1
+(2 rows)
+
+DELETE FROM mpp21090_drop_distcol_dml_char WHERE col3='c';
+SELECT * FROM mpp21090_drop_distcol_dml_char ORDER BY 1,2,3,4;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_drop_distcol_dml_date;
+NOTICE:  table "mpp21090_drop_distcol_dml_date" does not exist, skipping
+CREATE TABLE mpp21090_drop_distcol_dml_date(
+col1 date,
+col2 decimal,
+col3 char,
+col4 date,
+col5 int
+)  with (appendonly= true) distributed by (col1);
+INSERT INTO mpp21090_drop_distcol_dml_date VALUES('2013-12-31',0.00,'a','2014-01-01',0);
+SELECT * FROM mpp21090_drop_distcol_dml_date ORDER BY 1,2,3,4;
+    col1    | col2 | col3 |    col4    | col5 
+------------+------+------+------------+------
+ 12-31-2013 | 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+ALTER TABLE mpp21090_drop_distcol_dml_date DROP COLUMN col1;
+NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+INSERT INTO mpp21090_drop_distcol_dml_date SELECT 1.00,'b','2014-01-02',1;
+SELECT * FROM mpp21090_drop_distcol_dml_date ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | b    | 01-02-2014 |    1
+(2 rows)
+
+UPDATE mpp21090_drop_distcol_dml_date SET col3='c' WHERE col3 = 'b' AND col5 = 1;
+SELECT * FROM mpp21090_drop_distcol_dml_date ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | c    | 01-02-2014 |    1
+(2 rows)
+
+DELETE FROM mpp21090_drop_distcol_dml_date WHERE col3='c';
+SELECT * FROM mpp21090_drop_distcol_dml_date ORDER BY 1,2,3,4;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_drop_distcol_dml_date;
+CREATE TABLE mpp21090_drop_distcol_dml_date(
+col1 date,
+col2 decimal,
+col3 char,
+col4 date,
+col5 int
+)  with (appendonly= true, orientation= column) distributed by (col1);
+INSERT INTO mpp21090_drop_distcol_dml_date VALUES('2013-12-31',0.00,'a','2014-01-01',0);
+SELECT * FROM mpp21090_drop_distcol_dml_date ORDER BY 1,2,3,4;
+    col1    | col2 | col3 |    col4    | col5 
+------------+------+------+------------+------
+ 12-31-2013 | 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+ALTER TABLE mpp21090_drop_distcol_dml_date DROP COLUMN col1;
+NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+INSERT INTO mpp21090_drop_distcol_dml_date SELECT 1.00,'b','2014-01-02',1;
+SELECT * FROM mpp21090_drop_distcol_dml_date ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | b    | 01-02-2014 |    1
+(2 rows)
+
+UPDATE mpp21090_drop_distcol_dml_date SET col3='c' WHERE col3 = 'b' AND col5 = 1;
+SELECT * FROM mpp21090_drop_distcol_dml_date ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | c    | 01-02-2014 |    1
+(2 rows)
+
+DELETE FROM mpp21090_drop_distcol_dml_date WHERE col3='c';
+SELECT * FROM mpp21090_drop_distcol_dml_date ORDER BY 1,2,3,4;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_drop_distcol_dml_date;
+CREATE TABLE mpp21090_drop_distcol_dml_date(
+col1 date,
+col2 decimal,
+col3 char,
+col4 date,
+col5 int
+) distributed by (col1);
+INSERT INTO mpp21090_drop_distcol_dml_date VALUES('2013-12-31',0.00,'a','2014-01-01',0);
+SELECT * FROM mpp21090_drop_distcol_dml_date ORDER BY 1,2,3,4;
+    col1    | col2 | col3 |    col4    | col5 
+------------+------+------+------------+------
+ 12-31-2013 | 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+ALTER TABLE mpp21090_drop_distcol_dml_date DROP COLUMN col1;
+NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+INSERT INTO mpp21090_drop_distcol_dml_date SELECT 1.00,'b','2014-01-02',1;
+SELECT * FROM mpp21090_drop_distcol_dml_date ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | b    | 01-02-2014 |    1
+(2 rows)
+
+UPDATE mpp21090_drop_distcol_dml_date SET col3='c' WHERE col3 = 'b' AND col5 = 1;
+SELECT * FROM mpp21090_drop_distcol_dml_date ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | c    | 01-02-2014 |    1
+(2 rows)
+
+DELETE FROM mpp21090_drop_distcol_dml_date WHERE col3='c';
+SELECT * FROM mpp21090_drop_distcol_dml_date ORDER BY 1,2,3,4;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+\echo --start_ignore
+--start_ignore
+\echo --end_ignore
+--end_ignore
+DROP TABLE IF EXISTS mpp21090_drop_distcol_dml_decimal;
+NOTICE:  table "mpp21090_drop_distcol_dml_decimal" does not exist, skipping
+CREATE TABLE mpp21090_drop_distcol_dml_decimal(
+col1 decimal,
+col2 decimal,
+col3 char,
+col4 date,
+col5 int
+)  with (appendonly= true) distributed by (col1);
+INSERT INTO mpp21090_drop_distcol_dml_decimal VALUES(2.00,0.00,'a','2014-01-01',0);
+SELECT * FROM mpp21090_drop_distcol_dml_decimal ORDER BY 1,2,3,4;
+ col1 | col2 | col3 |    col4    | col5 
+------+------+------+------------+------
+ 2.00 | 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+ALTER TABLE mpp21090_drop_distcol_dml_decimal DROP COLUMN col1;
+NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+INSERT INTO mpp21090_drop_distcol_dml_decimal SELECT 1.00,'b','2014-01-02',1;
+SELECT * FROM mpp21090_drop_distcol_dml_decimal ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | b    | 01-02-2014 |    1
+(2 rows)
+
+UPDATE mpp21090_drop_distcol_dml_decimal SET col3='c' WHERE col3 = 'b' AND col5 = 1;
+SELECT * FROM mpp21090_drop_distcol_dml_decimal ORDER BY 1,2,3;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+ 1.00 | c    | 01-02-2014 |    1
+(2 rows)
+
+DELETE FROM mpp21090_drop_distcol_dml_decimal WHERE col3='c';
+SELECT * FROM mpp21090_drop_distcol_dml_decimal ORDER BY 1,2,3,4;
+ col2 | col3 |    col4    | col5 
+------+------+------------+------
+ 0.00 | a    | 01-01-2014 |    0
+(1 row)
+
+-- start_ignore
+drop schema sql_partition_1_50 cascade;
+NOTICE:  drop cascades to append only table mpp21090_drop_distcol_dml_decimal
+NOTICE:  drop cascades to table mpp21090_drop_distcol_dml_date
+NOTICE:  drop cascades to table mpp21090_drop_distcol_dml_char
+NOTICE:  drop cascades to table mpp21090_drop_distcol_dml_boolean
+NOTICE:  drop cascades to table tempoid
+NOTICE:  drop cascades to table oidtab
+NOTICE:  drop cascades to default for table oidtab column col1
+NOTICE:  drop cascades to table dropped_col_tab
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_timestamptz_1_prt_def
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_timestamptz
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_timestamp_1_prt_def
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_timestamp
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_time_1_prt_def
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_time
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_text_1_prt_def
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_text
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_numeric_1_prt_def
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_numeric
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_interval_1_prt_def
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_interval
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_int8_1_prt_def
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_int8
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_int4_1_prt_def
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_int4
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_int_1_prt_def
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_int
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_float_1_prt_def
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_float
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_decimal_1_prt_def
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_decimal
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_date_1_prt_def
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_date
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_char_1_prt_def
+NOTICE:  drop cascades to table mpp21090_defpt_dropcol_addcol_dml_char
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_timestamptz_1_prt_partthree
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_timestamptz_1_prt_partthree on table mpp21090_changedistpolicy_dml_pttab_timestamptz_1_prt_partthree
+NOTICE:  drop cascades to append only table mpp21090_changedistpolicy_dml_pttab_timestamptz_1_prt_parttwo
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_timestamptz_1_prt_parttwo_c on append only table mpp21090_changedistpolicy_dml_pttab_timestamptz_1_prt_parttwo
+NOTICE:  drop cascades to append only columnar table mpp21090_changedistpolicy_dml_pttab_timestamptz_1_prt_partone
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_timestamptz_1_prt_partone_c on append only columnar table mpp21090_changedistpolicy_dml_pttab_timestamptz_1_prt_partone
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_timestamptz
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_timestamp_1_prt_partthree
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_timestamp_1_prt_partthree_c on table mpp21090_changedistpolicy_dml_pttab_timestamp_1_prt_partthree
+NOTICE:  drop cascades to append only table mpp21090_changedistpolicy_dml_pttab_timestamp_1_prt_parttwo
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_timestamp_1_prt_parttwo_che on append only table mpp21090_changedistpolicy_dml_pttab_timestamp_1_prt_parttwo
+NOTICE:  drop cascades to append only columnar table mpp21090_changedistpolicy_dml_pttab_timestamp_1_prt_partone
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_timestamp_1_prt_partone_che on append only columnar table mpp21090_changedistpolicy_dml_pttab_timestamp_1_prt_partone
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_timestamp
+NOTICE:  drop cascades to append only table mpp21090_changedistpolicy_dml_pttab_time_1_prt_parttwo
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_time_1_prt_parttwo_check on append only table mpp21090_changedistpolicy_dml_pttab_time_1_prt_parttwo
+NOTICE:  drop cascades to append only columnar table mpp21090_changedistpolicy_dml_pttab_time_1_prt_partone
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_time_1_prt_partone_check on append only columnar table mpp21090_changedistpolicy_dml_pttab_time_1_prt_partone
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_time_1_prt_partthree
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_time_1_prt_partthree_check on table mpp21090_changedistpolicy_dml_pttab_time_1_prt_partthree
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_time
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_numeric_1_prt_partthree
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_numeric_1_prt_partthree_che on table mpp21090_changedistpolicy_dml_pttab_numeric_1_prt_partthree
+NOTICE:  drop cascades to append only table mpp21090_changedistpolicy_dml_pttab_numeric_1_prt_parttwo
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_numeric_1_prt_parttwo_check on append only table mpp21090_changedistpolicy_dml_pttab_numeric_1_prt_parttwo
+NOTICE:  drop cascades to append only columnar table mpp21090_changedistpolicy_dml_pttab_numeric_1_prt_partone
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_numeric_1_prt_partone_check on append only columnar table mpp21090_changedistpolicy_dml_pttab_numeric_1_prt_partone
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_numeric
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_interval_1_prt_partthree
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_interval_1_prt_partthree_ch on table mpp21090_changedistpolicy_dml_pttab_interval_1_prt_partthree
+NOTICE:  drop cascades to append only table mpp21090_changedistpolicy_dml_pttab_interval_1_prt_parttwo
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_interval_1_prt_parttwo_chec on append only table mpp21090_changedistpolicy_dml_pttab_interval_1_prt_parttwo
+NOTICE:  drop cascades to append only columnar table mpp21090_changedistpolicy_dml_pttab_interval_1_prt_partone
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_interval_1_prt_partone_chec on append only columnar table mpp21090_changedistpolicy_dml_pttab_interval_1_prt_partone
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_interval
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_int8_1_prt_partthree
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_int8_1_prt_partthree_check on table mpp21090_changedistpolicy_dml_pttab_int8_1_prt_partthree
+NOTICE:  drop cascades to append only table mpp21090_changedistpolicy_dml_pttab_int8_1_prt_parttwo
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_int8_1_prt_parttwo_check on append only table mpp21090_changedistpolicy_dml_pttab_int8_1_prt_parttwo
+NOTICE:  drop cascades to append only columnar table mpp21090_changedistpolicy_dml_pttab_int8_1_prt_partone
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_int8_1_prt_partone_check on append only columnar table mpp21090_changedistpolicy_dml_pttab_int8_1_prt_partone
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_int8
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_int4_1_prt_partthree
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_int4_1_prt_partthree_check on table mpp21090_changedistpolicy_dml_pttab_int4_1_prt_partthree
+NOTICE:  drop cascades to append only table mpp21090_changedistpolicy_dml_pttab_int4_1_prt_parttwo
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_int4_1_prt_parttwo_check on append only table mpp21090_changedistpolicy_dml_pttab_int4_1_prt_parttwo
+NOTICE:  drop cascades to append only columnar table mpp21090_changedistpolicy_dml_pttab_int4_1_prt_partone
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_int4_1_prt_partone_check on append only columnar table mpp21090_changedistpolicy_dml_pttab_int4_1_prt_partone
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_int4
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_int_1_prt_partthree
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_int_1_prt_partthree_check on table mpp21090_changedistpolicy_dml_pttab_int_1_prt_partthree
+NOTICE:  drop cascades to append only table mpp21090_changedistpolicy_dml_pttab_int_1_prt_parttwo
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_int_1_prt_parttwo_check on append only table mpp21090_changedistpolicy_dml_pttab_int_1_prt_parttwo
+NOTICE:  drop cascades to append only columnar table mpp21090_changedistpolicy_dml_pttab_int_1_prt_partone
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_int_1_prt_partone_check on append only columnar table mpp21090_changedistpolicy_dml_pttab_int_1_prt_partone
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_int
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_float_1_prt_partthree
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_float_1_prt_partthree_check on table mpp21090_changedistpolicy_dml_pttab_float_1_prt_partthree
+NOTICE:  drop cascades to append only table mpp21090_changedistpolicy_dml_pttab_float_1_prt_parttwo
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_float_1_prt_parttwo_check on append only table mpp21090_changedistpolicy_dml_pttab_float_1_prt_parttwo
+NOTICE:  drop cascades to append only columnar table mpp21090_changedistpolicy_dml_pttab_float_1_prt_partone
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_float_1_prt_partone_check on append only columnar table mpp21090_changedistpolicy_dml_pttab_float_1_prt_partone
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_float
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_decimal_1_prt_partthree
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_decimal_1_prt_partthree_che on table mpp21090_changedistpolicy_dml_pttab_decimal_1_prt_partthree
+NOTICE:  drop cascades to append only table mpp21090_changedistpolicy_dml_pttab_decimal_1_prt_parttwo
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_decimal_1_prt_parttwo_check on append only table mpp21090_changedistpolicy_dml_pttab_decimal_1_prt_parttwo
+NOTICE:  drop cascades to append only columnar table mpp21090_changedistpolicy_dml_pttab_decimal_1_prt_partone
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_decimal_1_prt_partone_check on append only columnar table mpp21090_changedistpolicy_dml_pttab_decimal_1_prt_partone
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_decimal
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_date_1_prt_partthree
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_date_1_prt_partthree_check on table mpp21090_changedistpolicy_dml_pttab_date_1_prt_partthree
+NOTICE:  drop cascades to append only table mpp21090_changedistpolicy_dml_pttab_date_1_prt_parttwo
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_date_1_prt_parttwo_check on append only table mpp21090_changedistpolicy_dml_pttab_date_1_prt_parttwo
+NOTICE:  drop cascades to append only columnar table mpp21090_changedistpolicy_dml_pttab_date_1_prt_partone
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_date_1_prt_partone_check on append only columnar table mpp21090_changedistpolicy_dml_pttab_date_1_prt_partone
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_date
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_char_1_prt_partthree
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_char_1_prt_partthree_check on table mpp21090_changedistpolicy_dml_pttab_char_1_prt_partthree
+NOTICE:  drop cascades to append only table mpp21090_changedistpolicy_dml_pttab_char_1_prt_parttwo
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_char_1_prt_parttwo_check on append only table mpp21090_changedistpolicy_dml_pttab_char_1_prt_parttwo
+NOTICE:  drop cascades to append only columnar table mpp21090_changedistpolicy_dml_pttab_char_1_prt_partone
+NOTICE:  drop cascades to constraint mpp21090_changedistpolicy_dml_pttab_char_1_prt_partone_check on append only columnar table mpp21090_changedistpolicy_dml_pttab_char_1_prt_partone
+NOTICE:  drop cascades to table mpp21090_changedistpolicy_dml_pttab_char
+-- end_ignore

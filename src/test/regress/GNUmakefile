@@ -182,6 +182,7 @@ installcheck-optfunctional: all
 	@echo "================================"
 	@echo "Installcheck-optfunctional starting ... "
 	@echo "================================"
+	export PGOPTIONS='-c optimizer=on' && \
 	$(pg_regress_call_opt) --psqldir=$(PSQLDIR) --schedule=$(srcdir)/optfunctional/optfunctional_schedule --srcdir=$(abs_srcdir)/optfunctional
 
 testbouncer: all

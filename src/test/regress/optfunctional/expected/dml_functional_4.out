@@ -1,0 +1,3531 @@
+-- start_ignore
+create schema functional_226_300;
+set search_path to functional_226_300;
+-- end_ignore
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+NOTICE:  table "dml_heap_r" does not exist, skipping
+DROP TABLE IF EXISTS dml_heap_s;
+NOTICE:  table "dml_heap_s" does not exist, skipping
+DROP TABLE IF EXISTS dml_heap_p;
+NOTICE:  table "dml_heap_p" does not exist, skipping
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml HAWQ 
+-- @db_name dmldb
+-- @description test20: Negative tests Insert column of different data type
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+   113
+(1 row)
+
+SELECT COUNT(*) FROM ( SELECT ('a')::int, dml_heap_r.b,10 FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.b)foo;
+ERROR:  invalid input syntax for integer: "a"
+LINE 1: SELECT COUNT(*) FROM ( SELECT ('a')::int, dml_heap_r.b,10 FR...
+                                       ^
+INSERT INTO dml_heap_r SELECT ('a')::int, dml_heap_r.b,10 FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.b;
+ERROR:  invalid input syntax for integer: "a"
+LINE 1: INSERT INTO dml_heap_r SELECT ('a')::int, dml_heap_r.b,10 FR...
+                                       ^
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+   113
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml HAWQ 
+-- @db_name dmldb
+-- @description test21: Negative test case. INSERT has more expressions than target columns
+SELECT COUNT(*) FROM dml_heap_s;
+ count 
+-------
+   113
+(1 row)
+
+SELECT COUNT(*) FROM (SELECT COUNT(*) as a, dml_heap_r.* FROM dml_heap_r, dml_heap_s WHERE dml_heap_s.a = dml_heap_r.a GROUP BY dml_heap_r.a, dml_heap_r.b, dml_heap_r.c)foo;
+ count 
+-------
+   110
+(1 row)
+
+INSERT INTO dml_heap_s SELECT COUNT(*) as a, dml_heap_r.* FROM dml_heap_r, dml_heap_s WHERE dml_heap_s.a = dml_heap_r.a GROUP BY dml_heap_r.a, dml_heap_r.b, dml_heap_r.c;
+ERROR:  INSERT has more expressions than target columns
+SELECT COUNT(*) FROM dml_heap_s;
+ count 
+-------
+   113
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml HAWQ 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description test3: Multiple constant tuple Inserts
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+   113
+(1 row)
+
+INSERT INTO dml_heap_r values(NULL,NULL,NULL),(10,10,'text');
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+   115
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml HAWQ 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description test4: Insert with generate_series
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+   113
+(1 row)
+
+INSERT INTO dml_heap_r values(generate_series(1,10), generate_series(1,100), 'text');
+SELECT COUNT(*) FROM dml_heap_r WHERE c ='text';
+ count 
+-------
+   100
+(1 row)
+
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+   213
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml HAWQ 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description test5: Insert with generate_series and NULL
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+   113
+(1 row)
+
+INSERT INTO dml_heap_r values(generate_series(1,10),NULL,'text');
+SELECT * FROM dml_heap_r WHERE c ='text' ORDER BY 1;
+ a  | b |  c   
+----+---+------
+  1 |   | text
+  2 |   | text
+  3 |   | text
+  4 |   | text
+  5 |   | text
+  6 |   | text
+  7 |   | text
+  8 |   | text
+  9 |   | text
+ 10 |   | text
+(10 rows)
+
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+   123
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml HAWQ 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description test6: Insert with generate_series
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+   113
+(1 row)
+
+TRUNCATE TABLE dml_heap_r;
+INSERT INTO dml_heap_r SELECT generate_series(1,10);
+SELECT * FROM dml_heap_r ORDER BY 1;
+ a  | b  | c 
+----+----+---
+  1 | -1 | 
+  2 | -1 | 
+  3 | -1 | 
+  4 | -1 | 
+  5 | -1 | 
+  6 | -1 | 
+  7 | -1 | 
+  8 | -1 | 
+  9 | -1 | 
+ 10 | -1 | 
+(10 rows)
+
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+    10
+(1 row)
+
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+    10
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+SELECT truncate_dml_heap_r(); 
+ERROR:  function truncate_dml_heap_r() does not exist
+LINE 1: SELECT truncate_dml_heap_r();
+               ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml HAWQ 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description test7: Insert with generate_series
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+   113
+(1 row)
+
+INSERT INTO dml_heap_r SELECT generate_series(1,10), generate_series(1,10),'text';
+SELECT COUNT(*) FROM dml_heap_r WHERE c ='text';
+ count 
+-------
+    10
+(1 row)
+
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+   123
+(1 row)
+
+	
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml HAWQ 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description test8: Insert with generate_series
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+   113
+(1 row)
+
+INSERT INTO dml_heap_r SELECT * from generate_series(1,10);
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+   123
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml HAWQ 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description test9: Join on the non-distribution key of target table
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+   113
+(1 row)
+
+SELECT COUNT(*) FROM (SELECT dml_heap_r.* FROM dml_heap_r,dml_heap_s  WHERE dml_heap_r.b = dml_heap_s.b)foo;
+ count 
+-------
+   111
+(1 row)
+
+INSERT INTO dml_heap_r SELECT dml_heap_r.* FROM dml_heap_r,dml_heap_s  WHERE dml_heap_r.b = dml_heap_s.b;
+SELECT COUNT(*) FROM dml_heap_r;
+ count 
+-------
+   224
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test1: Update to constant value
+SELECT COUNT(*) FROM dml_heap_r WHERE c ='text';
+ count 
+-------
+     0
+(1 row)
+
+UPDATE dml_heap_r SET c = 'text';
+SELECT COUNT(*) FROM dml_heap_r WHERE c ='text';
+ count 
+-------
+   113
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test10: Update distcol with predicate in subquery
+UPDATE dml_heap_r SET a = dml_heap_r.a + 1 FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.a and dml_heap_s.b in (SELECT dml_heap_s.b + dml_heap_r.a FROM dml_heap_s,dml_heap_r WHERE dml_heap_r.a > 10);
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test11: Update with aggregate in subquery 
+SELECT COUNT(*) FROM dml_heap_s WHERE b = (SELECT COUNT(*) FROM dml_heap_s);
+ count 
+-------
+     0
+(1 row)
+
+UPDATE dml_heap_s SET b = (SELECT COUNT(*) FROM dml_heap_s) FROM dml_heap_r WHERE dml_heap_r.a = dml_heap_s.b;
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 127.0.0.1:25432 pid=69127)
+SELECT COUNT(*) FROM dml_heap_s WHERE b = (SELECT COUNT(*) FROM dml_heap_s);
+ count 
+-------
+     0
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test12: Update and limit in subquery
+SELECT COUNT(*) FROM dml_heap_r WHERE a = 1;
+ count 
+-------
+     3
+(1 row)
+
+UPDATE dml_heap_r SET a = (SELECT DISTINCT(b) FROM dml_heap_s ORDER BY 1 LIMIT 1) FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.a;
+SELECT COUNT(*) FROM dml_heap_r WHERE a = 1;
+ count 
+-------
+   103
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test13: Update multiple columns 
+SELECT COUNT(*) FROM dml_heap_r WHERE b is NULL;
+ count 
+-------
+    12
+(1 row)
+
+SELECT dml_heap_s.a + 10 FROM dml_heap_r,dml_heap_s WHERE dml_heap_r.a = dml_heap_s.a ORDER BY 1 LIMIT 1;
+ ?column? 
+----------
+       11
+(1 row)
+
+SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
+ sum 
+-----
+   3
+(1 row)
+
+UPDATE dml_heap_r SET a = dml_heap_s.a + 10 ,b = NULL FROM dml_heap_s WHERE dml_heap_r.a = dml_heap_s.a;
+SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
+ sum 
+-----
+    
+(1 row)
+
+SELECT COUNT(*) FROM dml_heap_r WHERE b is NULL;
+ count 
+-------
+   112
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test14: Update multiple columns 
+SELECT COUNT(*) FROM dml_heap_r WHERE c='z';
+ count 
+-------
+     0
+(1 row)
+
+SELECT dml_heap_s.a ,dml_heap_s.b,'z' FROM dml_heap_r,dml_heap_s WHERE dml_heap_r.a = dml_heap_s.b ORDER BY 1,2 LIMIT 1;
+ a | b | ?column? 
+---+---+----------
+ 1 | 1 | z
+(1 row)
+
+UPDATE dml_heap_r SET (a,b,c) = (dml_heap_s.a ,dml_heap_s.b,'z') FROM dml_heap_s WHERE dml_heap_r.a = dml_heap_s.b;
+ERROR:  multiple updates to a row by the same query is not allowed  (seg1 127.0.0.1:25433 pid=69128)
+SELECT * FROM dml_heap_r WHERE c='z' ORDER BY 1 LIMIT 1;
+ a | b | c 
+---+---+---
+(0 rows)
+
+SELECT COUNT(*) FROM dml_heap_r WHERE c='z';
+ count 
+-------
+     0
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description update_test15: Update with prepare plans 
+PREPARE plan_upd as UPDATE dml_heap_r SET a = dml_heap_s.a +1 FROM dml_heap_s WHERE dml_heap_r.a = dml_heap_s.b ;
+EXECUTE plan_upd;
+ERROR:  multiple updates to a row by the same query is not allowed  (seg1 127.0.0.1:25433 pid=69128)
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test16: Update and case 
+SELECT COUNT(*) FROM dml_heap_r WHERE a = 100 ;
+ count 
+-------
+     1
+(1 row)
+
+UPDATE dml_heap_r SET a = (SELECT case when c = 'r' then MAX(b) else 100 end FROM dml_heap_r GROUP BY c ORDER BY 1 LIMIT 1) ;
+SELECT COUNT(*) FROM dml_heap_r WHERE a = 100 ;
+ count 
+-------
+   113
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @gpopt 1.532
+-- @execute_all_plans True
+-- @description update_test17: Negative test - Update with sub-query returning more than one row
+SELECT SUM(a) FROM dml_heap_r;
+ sum  
+------
+ 5106
+(1 row)
+
+UPDATE dml_heap_r SET a = ( SELECT DISTINCT(b) FROM dml_heap_s ) FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.a;
+ERROR:  One or more assertions failed  (seg2 slice3 127.0.0.1:25434 pid=69132)
+DETAIL:  Expected no more than one row to be returned by expression
+SELECT SUM(a) FROM dml_heap_r;
+ sum  
+------
+ 5106
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @gpopt 1.532
+-- @execute_all_plans True
+-- @description update_test18: Negative test - Update with sub-query returning more than one row
+SELECT SUM(b) FROM dml_heap_r;
+ sum  
+------
+ 5050
+(1 row)
+
+UPDATE dml_heap_r SET b = (SELECT dml_heap_r.b FROM dml_heap_r,dml_heap_s WHERE dml_heap_r.a = dml_heap_s.a );
+ERROR:  One or more assertions failed  (seg0 127.0.0.1:25432 pid=69127)
+DETAIL:  Expected no more than one row to be returned by expression
+SELECT SUM(b) FROM dml_heap_r;
+ sum  
+------
+ 5050
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description update_test19: Negative test - Update with aggregates 
+SELECT SUM(b) FROM dml_heap_r;
+ sum  
+------
+ 5050
+(1 row)
+
+UPDATE dml_heap_r SET b = MAX(dml_heap_s.b) FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.a;
+ERROR:  cannot use aggregate function in UPDATE
+LINE 1: UPDATE dml_heap_r SET b = MAX(dml_heap_s.b) FROM dml_heap_s ...
+                                  ^
+SELECT SUM(b) FROM dml_heap_r;
+ sum  
+------
+ 5050
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test2: Update and set distribution key to constant
+SELECT COUNT(*) FROM (SELECT DISTINCT(b) FROM dml_heap_s)foo;
+ count 
+-------
+   101
+(1 row)
+
+UPDATE dml_heap_s SET b = 10;
+SELECT COUNT(*) FROM (SELECT DISTINCT(b) FROM dml_heap_s)foo;
+ count 
+-------
+     1
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description update_test20: Negative test - Update WHERE join returns more than one tuple with different values.
+DROP TABLE IF EXISTS dml_heap_u;
+NOTICE:  table "dml_heap_u" does not exist, skipping
+DROP TABLE IF EXISTS dml_heap_v;
+NOTICE:  table "dml_heap_v" does not exist, skipping
+CREATE TABLE dml_heap_u as SELECT i as a, 1 as b  FROM generate_series(1,10)i;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+CREATE TABLE dml_heap_v as SELECT i as a ,i as b FROM generate_series(1,10)i;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+SELECT SUM(a) FROM dml_heap_v;
+ sum 
+-----
+  55
+(1 row)
+
+UPDATE dml_heap_v SET a = dml_heap_u.a FROM dml_heap_u WHERE dml_heap_u.b = dml_heap_v.b;
+ERROR:  multiple updates to a row by the same query is not allowed  (seg1 127.0.0.1:25433 pid=69128)
+SELECT SUM(a) FROM dml_heap_v;
+ sum 
+-----
+  55
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test21: Update with joins on multiple table
+UPDATE dml_heap_r SET a = dml_heap_r.b+1 FROM dml_heap_p,dml_heap_s WHERE dml_heap_r.b = dml_heap_s.b and dml_heap_r.a = dml_heap_p.b+1;
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 127.0.0.1:25432 pid=69127)
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test22: Update on table wit composite distribution key
+UPDATE dml_heap_p SET a = dml_heap_p.b % 2 FROM dml_heap_r WHERE dml_heap_p.b::int = dml_heap_r.b::int and dml_heap_p.a = dml_heap_r.a;
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test23: Update on table wit composite distribution key
+UPDATE dml_heap_p SET b = (dml_heap_p.b * 1.1)::int FROM dml_heap_r WHERE dml_heap_p.b = dml_heap_r.a and dml_heap_p.b = dml_heap_r.b;
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test3: Update to default value 
+SELECT SUM(a) FROM dml_heap_r;
+ sum  
+------
+ 5106
+(1 row)
+
+UPDATE dml_heap_r SET a = DEFAULT; 
+SELECT SUM(a) FROM dml_heap_r;
+ sum 
+-----
+    
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test4: Update to default value
+SELECT SUM(a) FROM dml_heap_r;
+ sum  
+------
+ 5106
+(1 row)
+
+SELECT SUM(b) FROM dml_heap_r;
+ sum  
+------
+ 5050
+(1 row)
+
+UPDATE dml_heap_r SET a = DEFAULT, b = DEFAULT; 
+SELECT SUM(a) FROM dml_heap_r;
+ sum 
+-----
+    
+(1 row)
+
+SELECT SUM(b) FROM dml_heap_r;
+ sum  
+------
+ -113
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test5: Update and reset the value
+SELECT COUNT(*) FROM (SELECT DISTINCT(a) FROM dml_heap_r)foo;
+ count 
+-------
+   101
+(1 row)
+
+UPDATE dml_heap_r SET a = a;
+SELECT COUNT(*) FROM (SELECT DISTINCT(a) FROM dml_heap_r)foo;
+ count 
+-------
+   101
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test6: Update and generate_series
+SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
+ sum 
+-----
+   3
+(1 row)
+
+SELECT COUNT(*) FROM dml_heap_r WHERE c ='n';
+ count 
+-------
+     0
+(1 row)
+
+UPDATE dml_heap_r SET a = generate_series(1,10), c ='n';
+ERROR:  multiple updates to a row by the same query is not allowed  (seg1 127.0.0.1:25433 pid=69128)
+SELECT COUNT(*) FROM dml_heap_r WHERE c ='n';
+ count 
+-------
+     0
+(1 row)
+
+SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
+ sum 
+-----
+   3
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test7: Update distcol where join on target table non dist key
+SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
+ sum 
+-----
+   3
+(1 row)
+
+UPDATE dml_heap_r SET a = dml_heap_r.a + 1 FROM dml_heap_s WHERE dml_heap_r.a = dml_heap_s.a;
+SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
+ sum 
+-----
+    
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test8: Update and from values
+SELECT SUM(b) FROM dml_heap_r WHERE b = 20;
+ sum 
+-----
+  20
+(1 row)
+
+UPDATE dml_heap_r SET a = v.i + 1 FROM (VALUES(100, 20)) as v(i, j) WHERE dml_heap_r.b = v.j;
+SELECT SUM(b) FROM dml_heap_r WHERE b = 20;
+ sum 
+-----
+  20
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_heap_r;
+DROP TABLE IF EXISTS dml_heap_s;
+DROP TABLE IF EXISTS dml_heap_p;
+CREATE TABLE dml_heap_r (a int , b int default -1, c text) DISTRIBUTED BY (a);
+CREATE TABLE dml_heap_p (a numeric, b decimal , c boolean , d text , e int) DISTRIBUTED BY (a,b);
+CREATE TABLE dml_heap_s as select dml_heap_r.b, dml_heap_r.a, dml_heap_r.c from dml_heap_r, dml_heap_p WHERE dml_heap_r.a = dml_heap_p.a;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+ALTER TABLE dml_heap_s SET DISTRIBUTED BY (b);
+INSERT INTO dml_heap_p SELECT id * 1.012, id * 1.1, true, 'new', id as d FROM (SELECT * FROM generate_series(1,100) as id) AS x;
+INSERT INTO dml_heap_p VALUES(generate_series(1,10),NULL,false,'pn',NULL);
+INSERT INTO dml_heap_p VALUES(NULL,1,false,'pn',NULL),(1,NULL,false,'pn',0),(NULL,NULL,false,'pn',0);
+INSERT INTO dml_heap_s VALUES(generate_series(1,100),generate_series(1,100),'s');
+INSERT INTO dml_heap_s VALUES(NULL,NULL,'sn'),(1,NULL,'sn'),(NULL,0,'sn');
+INSERT INTO dml_heap_s VALUES(generate_series(1,10),NULL,'sn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,100),generate_series(1,100),'r');
+INSERT INTO dml_heap_r VALUES(NULL,NULL,'rn'),(1,NULL,'rn'),(NULL,0,'rn');
+INSERT INTO dml_heap_r VALUES(generate_series(1,10),NULL,'rn');
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @execute_all_plans True
+-- @description update_test9: Update with Joins and set to constant value
+SELECT COUNT(*) FROM dml_heap_s WHERE b = 10;
+ count 
+-------
+     2
+(1 row)
+
+UPDATE dml_heap_s SET b = 10 FROM dml_heap_r WHERE dml_heap_r.b = dml_heap_s.a;
+SELECT COUNT(*) FROM dml_heap_s WHERE b = 10;
+ count 
+-------
+   102
+(1 row)
+
+-- start_ignore
+DROP TABLE IF EXISTS a;
+NOTICE:  table "a" does not exist, skipping
+CREATE TABLE a( a int) partition by range(a)(start(1) end(10) every(1),default partition a);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "a_1_prt_a" for table "a"
+NOTICE:  CREATE TABLE will create partition "a_1_prt_2" for table "a"
+NOTICE:  CREATE TABLE will create partition "a_1_prt_3" for table "a"
+NOTICE:  CREATE TABLE will create partition "a_1_prt_4" for table "a"
+NOTICE:  CREATE TABLE will create partition "a_1_prt_5" for table "a"
+NOTICE:  CREATE TABLE will create partition "a_1_prt_6" for table "a"
+NOTICE:  CREATE TABLE will create partition "a_1_prt_7" for table "a"
+NOTICE:  CREATE TABLE will create partition "a_1_prt_8" for table "a"
+NOTICE:  CREATE TABLE will create partition "a_1_prt_9" for table "a"
+NOTICE:  CREATE TABLE will create partition "a_1_prt_10" for table "a"
+INSERT INTO a SELECT generate_series(1,10);
+DROP TABLE IF EXISTS e;
+NOTICE:  table "e" does not exist, skipping
+DROP TABLE IF EXISTS f;
+NOTICE:  table "f" does not exist, skipping
+CREATE TABLE e( b int,a int) with (appendonly = true) partition by range(a)(start(1) end(10) every(1),default partition def);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "e_1_prt_def" for table "e"
+NOTICE:  CREATE TABLE will create partition "e_1_prt_2" for table "e"
+NOTICE:  CREATE TABLE will create partition "e_1_prt_3" for table "e"
+NOTICE:  CREATE TABLE will create partition "e_1_prt_4" for table "e"
+NOTICE:  CREATE TABLE will create partition "e_1_prt_5" for table "e"
+NOTICE:  CREATE TABLE will create partition "e_1_prt_6" for table "e"
+NOTICE:  CREATE TABLE will create partition "e_1_prt_7" for table "e"
+NOTICE:  CREATE TABLE will create partition "e_1_prt_8" for table "e"
+NOTICE:  CREATE TABLE will create partition "e_1_prt_9" for table "e"
+NOTICE:  CREATE TABLE will create partition "e_1_prt_10" for table "e"
+CREATE TABLE f(b int, a int) with (appendonly = true, orientation=column) partition by range(a)(start(1) end(10) every(1),default partition def);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'b' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "f_1_prt_def" for table "f"
+NOTICE:  CREATE TABLE will create partition "f_1_prt_2" for table "f"
+NOTICE:  CREATE TABLE will create partition "f_1_prt_3" for table "f"
+NOTICE:  CREATE TABLE will create partition "f_1_prt_4" for table "f"
+NOTICE:  CREATE TABLE will create partition "f_1_prt_5" for table "f"
+NOTICE:  CREATE TABLE will create partition "f_1_prt_6" for table "f"
+NOTICE:  CREATE TABLE will create partition "f_1_prt_7" for table "f"
+NOTICE:  CREATE TABLE will create partition "f_1_prt_8" for table "f"
+NOTICE:  CREATE TABLE will create partition "f_1_prt_9" for table "f"
+NOTICE:  CREATE TABLE will create partition "f_1_prt_10" for table "f"
+INSERT INTO f SELECT i,i FROM generate_series(1,10)i;
+INSERT INTO e SELECT i,i FROM generate_series(1,10)i;
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description MPP-19227 Check the error message on AO/CO tables when we issue updates
+UPDATE f SET a = NULL from a where a.a = f.a;
+UPDATE e SET a = NULL from a where a.a = e.a;
+-- start_ignore
+DROP TABLE IF EXISTS r;
+NOTICE:  table "r" does not exist, skipping
+CREATE TABLE r ( a int, b int, x int, y int ) distributed randomly;
+DROP TABLE IF EXISTS r_p;
+NOTICE:  table "r_p" does not exist, skipping
+CREATE TABLE r_p ( a int, b int, x int, y int ) distributed randomly
+partition by list(a) ( VALUES (0), VALUES (1) );
+NOTICE:  CREATE TABLE will create partition "r_p_1_prt_1" for table "r_p"
+NOTICE:  CREATE TABLE will create partition "r_p_1_prt_2" for table "r_p"
+DROP TABLE IF EXISTS s;
+NOTICE:  table "s" does not exist, skipping
+CREATE TABLE s ( c int, d int, e int ) distributed randomly;
+INSERT INTO s VALUES
+(0,0,0),(0,0,1),(0,1,0),(0,1,1),(1,0,0),(1,0,1),(1,1,0),(1,1,1);
+INSERT INTO r VALUES
+    (0, 0, 1, 1),
+    (0, 1, 2, 2),
+    (0, 1, 2, 2),
+    (1, 0, 3, 3),
+    (1, 0, 3, 3),
+    (1, 0, 3, 3),
+    (1, 1, 4, 4),
+    (1, 1, 4, 4),
+    (1, 1, 4, 4),
+    (1, 1, 4, 4);
+INSERT INTO r_p VALUES
+    (0, 0, 1, 1),
+    (0, 1, 2, 2),
+    (0, 1, 2, 2),
+    (1, 0, 3, 3),
+    (1, 0, 3, 3),
+    (1, 0, 3, 3),
+    (1, 1, 4, 4),
+    (1, 1, 4, 4),
+    (1, 1, 4, 4),
+    (1, 1, 4, 4);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml HAWQ
+-- @db_name dmldb
+-- @description MPP-20083
+SELECT COUNT(*) 
+FROM r, s c, s d, s e
+WHERE r.a = c.c AND r.a = d.d AND r.a = e.e;
+ count 
+-------
+   640
+(1 row)
+
+SELECT COUNT(*)
+FROM r_p, s c, s d, s e
+WHERE r_p.a = c.c AND r_p.a = d.d AND r_p.a = e.e;
+ count 
+-------
+   640
+(1 row)
+
+-- start_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description Mpp-20207
+DROP TABLE if exists altable;
+NOTICE:  table "altable" does not exist, skipping
+CREATE TABLE altable(a int, b text, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description Mpp-20207
+ALTER TABLE altable DROP COLUMN b;
+ALTER TABLE altable ADD CONSTRAINT c_check CHECK (c > 0);
+INSERT INTO altable(a, c) VALUES(0, 10);
+SELECT * FROM altable ORDER BY 1;
+ a | c  
+---+----
+ 0 | 10
+(1 row)
+
+DELETE FROM altable WHERE c = -10;
+SELECT * FROM altable ORDER BY 1;
+ a | c  
+---+----
+ 0 | 10
+(1 row)
+
+DELETE FROM altable WHERE c = 10;
+SELECT * FROM altable ORDER BY 1;
+ a | c 
+---+---
+(0 rows)
+
+DELETE FROM altable WHERE c = 10;
+SELECT * FROM altable ORDER BY 1;
+ a | c 
+---+---
+(0 rows)
+
+-- start_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description Mpp-20207
+DROP TABLE if exists altable;
+CREATE TABLE altable(a int, b text, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @gpopt 1.532
+-- @description Mpp-20207
+ALTER TABLE altable DROP COLUMN b;
+ALTER TABLE altable ADD CONSTRAINT c_check CHECK (c > 0);
+INSERT INTO altable(a, c) VALUES(0, -10);
+ERROR:  One or more assertions failed  (seg0 127.0.0.1:25432 pid=69127)
+DETAIL:  Check constraint c_check for table altable was violated
+SELECT * FROM altable ORDER BY 1;
+ a | c 
+---+---
+(0 rows)
+
+INSERT INTO altable(a, c) VALUES(0, 10);
+SELECT * FROM altable ORDER BY 1;
+ a | c  
+---+----
+ 0 | 10
+(1 row)
+
+-- start_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description Mpp-20207
+DROP TABLE if exists altable;
+CREATE TABLE altable(a int, b text, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @gpopt 1.532
+-- @description Mpp-20207
+ALTER TABLE altable DROP COLUMN b;
+ALTER TABLE altable ADD CONSTRAINT c_check CHECK (c > 0);
+INSERT INTO altable(a, c) VALUES(0, 10);
+SELECT * FROM altable ORDER BY 1;
+ a | c  
+---+----
+ 0 | 10
+(1 row)
+
+UPDATE altable SET c = -10;
+ERROR:  One or more assertions failed  (seg0 127.0.0.1:25432 pid=69127)
+DETAIL:  Check constraint c_check for table altable was violated
+SELECT * FROM altable ORDER BY 1;
+ a | c  
+---+----
+ 0 | 10
+(1 row)
+
+UPDATE altable SET c = 1;
+SELECT * FROM altable ORDER BY 1;
+ a | c 
+---+---
+ 0 | 1
+(1 row)
+
+-- start_ignore
+DROP TABLE IF EXISTS r;
+CREATE TABLE r ( a int, b int, c int) distributed by (a);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml
+-- @product_version gpdb: [4.3-]
+-- @gucs gp_autostats_mode=none;test_print_direct_dispatch_info=true
+-- @db_name dmldb
+-- @description direct dispatch test
+INSERT INTO r VALUES (1,1,1);
+-- start_ignore
+DROP TABLE IF EXISTS r;
+CREATE TABLE r ( a int, b int, c int) distributed by (a);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml
+-- @product_version gpdb: [4.3-]
+-- @gucs gp_autostats_mode=none;test_print_direct_dispatch_info=true
+-- @db_name dmldb
+-- @description direct dispatch test
+INSERT INTO r VALUES (default,default,default);
+-- start_ignore
+DROP TABLE IF EXISTS r;
+CREATE TABLE r ( a int, b int, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml
+-- @product_version gpdb: [4.3-]
+-- @gucs gp_autostats_mode=none;test_print_direct_dispatch_info=true
+-- @db_name dmldb
+-- @description Negative test for direct dispatch
+INSERT INTO r VALUES (1,1,1),(3,3,3);
+-- start_ignore
+DROP TABLE IF EXISTS a;
+DROP TABLE IF EXISTS r;
+CREATE TABLE r ( a int, b int, c int) distributed by (a);
+CREATE TABLE a (a int) distributed by (a);
+INSERT INTO a VALUES(1);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml
+-- @product_version gpdb: [4.3-]
+-- @gucs gp_autostats_mode=none;test_print_direct_dispatch_info=true
+-- @db_name dmldb
+-- @description Negative test for direct dispatch. insert with select
+INSERT INTO r select 1,a,1 from a;
+-- start_ignore
+DROP TABLE IF EXISTS m; 
+NOTICE:  table "m" does not exist, skipping
+CREATE TABLE m ();
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+set allow_system_table_mods='DML';
+delete from gp_distribution_policy where localoid='m'::regclass;
+reset allow_system_table_mods;
+ALTER TABLE m ADD column a integer default null;
+ALTER TABLE m ADD column b integer default null;
+ALTER TABLE m ADD column c integer default null;
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml
+-- @product_version gpdb: [4.3-]
+-- @gucs gp_autostats_mode=none;test_print_direct_dispatch_info=true
+-- @db_name dmldb
+-- @description Negative test for direct dispatch. Master only table
+INSERT INTO m VALUES(1,1,1);
+-- start_ignore
+DROP TABLE IF EXISTS r;
+CREATE TABLE r ( a int, b int, c int) distributed randomly;
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml
+-- @product_version gpdb: [4.3-]
+-- @gucs gp_autostats_mode=none;test_print_direct_dispatch_info=true
+-- @db_name dmldb
+-- @description Negative test for direct dispatch. Randomly distributed table
+INSERT INTO r VALUES (1,1,1);
+INSERT INTO r VALUES (1,1,1),(3,3,3);
+-- start_ignore
+DROP TABLE IF EXISTS r;
+CREATE TABLE r ( a int, b int, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO r VALUES(1,1,1);
+-- end_ignore
+-- @author prabhd
+-- @created 2012-12-05 12:00:00
+-- @modified 2012-12-05 12:00:00
+-- @tags dml
+-- @product_version gpdb: [4.3-]
+-- @gucs gp_autostats_mode=none;test_print_direct_dispatch_info=true
+-- @db_name dmldb
+-- @description update and direct dispatch 
+UPDATE r SET a = 10;
+SELECT * from r;
+ a  | b | c 
+----+---+---
+ 10 | 1 | 1
+(1 row)
+
+-- start_ignore
+DROP TABLE IF EXISTS r;
+CREATE TABLE r ( a int, b int, c int) distributed by (a);
+INSERT INTO r VALUES(1,1,1);
+-- end_ignore
+-- @author prabhd
+-- @created 2012-12-05 12:00:00
+-- @modified 2012-12-05 12:00:00
+-- @tags dml
+-- @product_version gpdb: [4.3-]
+-- @gucs gp_autostats_mode=none;test_print_direct_dispatch_info=true
+-- @db_name dmldb
+-- @description delete and direct dispatch 
+DELETE FROM r WHERE a = 10;
+SELECT * from r;
+ a | b | c 
+---+---+---
+ 1 | 1 | 1
+(1 row)
+
+-- start_ignore
+drop table if exists m;
+drop table if exists zzz;
+NOTICE:  table "zzz" does not exist, skipping
+create table zzz(a int primary key, b int) distributed by (a);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "zzz_pkey" for table "zzz"
+-- create master-only table
+create table m(); 
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+set allow_system_table_mods='DML';
+delete from gp_distribution_policy where localoid='m'::regclass;
+reset allow_system_table_mods;
+alter table m add column a int;
+alter table m add column b int;
+-- generate data for m
+insert into m select i, i%5 from generate_series(1,10)i;
+insert into zzz select a,b from m;
+-- end_ignore
+-- @author ramans2
+-- @created 2013-10-30 12:00:00 
+-- @modified 2013-10-30 12:00:00
+-- @tags dml 
+-- @db_name dmldb
+-- @description MPP-21536: Duplicated rows inserted when ORCA is turned on
+delete from zzz where a in (select a from m);
+select * from zzz order by 1, 2;
+ a | b 
+---+---
+(0 rows)
+
+-- start_ignore
+drop table if exists m;
+drop table if exists zzz;
+create table zzz(a int primary key, b int) distributed by (a);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "zzz_pkey" for table "zzz"
+-- create master-only table
+create table m(); 
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+set allow_system_table_mods='DML';
+delete from gp_distribution_policy where localoid='m'::regclass;
+reset allow_system_table_mods;
+alter table m add column a int;
+alter table m add column b int;
+-- generate data for m
+insert into m select i, i%5 from generate_series(1,10)i;
+insert into zzz select a,b from m;
+-- end_ignore
+-- @author ramans2
+-- @created 2013-10-30 12:00:00 
+-- @modified 2013-10-30 12:00:00
+-- @tags dml 
+-- @db_name dmldb
+-- @description MPP-21536: Duplicated rows inserted when ORCA is turned on
+delete from zzz where b in (select a from m);
+select * from zzz order by 1, 2;
+ a  | b 
+----+---
+  5 | 0
+ 10 | 0
+(2 rows)
+
+-- start_ignore
+drop table if exists m;
+drop table if exists yyy;
+NOTICE:  table "yyy" does not exist, skipping
+create table yyy(a int, b int) distributed randomly;
+-- create master-only table
+create table m(); 
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+alter table m add column a int;
+alter table m add column b int;
+-- generate data for m
+insert into m select i, i%5 from generate_series(1,10)i;
+insert into yyy select a,b from m;
+-- end_ignore
+-- @author ramans2
+-- @created 2013-10-30 12:00:00 
+-- @modified 2013-10-30 12:00:00
+-- @tags dml 
+-- @db_name dmldb
+-- @description MPP-21536: Duplicated rows inserted when ORCA is turned on
+delete from yyy where a in (select a from m);
+select * from yyy order by 1, 2;
+ a | b 
+---+---
+(0 rows)
+
+-- start_ignore
+drop table if exists m;
+drop table if exists yyy;
+create table yyy(a int, b int) distributed randomly;
+-- create master-only table
+create table m(); 
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+alter table m add column a int;
+alter table m add column b int;
+-- generate data for m
+insert into m select i, i%5 from generate_series(1,10)i;
+insert into yyy select a,b from m;
+-- end_ignore
+-- @author ramans2
+-- @created 2013-10-30 12:00:00 
+-- @modified 2013-10-30 12:00:00
+-- @tags dml 
+-- @db_name dmldb
+-- @description MPP-21536: Duplicated rows inserted when ORCA is turned on
+delete from yyy where b in (select a from m);
+select * from yyy order by 1, 2;
+ a  | b 
+----+---
+  5 | 0
+ 10 | 0
+(2 rows)
+
+-- start_ignore
+drop table if exists m;
+drop table if exists zzz;
+create table zzz(a int primary key, b int) distributed by (a);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "zzz_pkey" for table "zzz"
+-- create master-only table
+create table m(); 
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+set allow_system_table_mods='DML';
+delete from gp_distribution_policy where localoid='m'::regclass;
+reset allow_system_table_mods;
+alter table m add column a int;
+alter table m add column b int;
+-- generate data for m
+insert into m select i, i%5 from generate_series(1,10)i;
+-- end_ignore
+-- @author ramans2
+-- @created 2013-10-30 12:00:00 
+-- @modified 2013-10-30 12:00:00
+-- @tags dml 
+-- @db_name dmldb
+-- @description MPP-21536: Duplicated rows inserted when ORCA is turned on
+insert into zzz select a,b from m;
+select * from zzz order by 1, 2;
+ a  | b 
+----+---
+  1 | 1
+  2 | 2
+  3 | 3
+  4 | 4
+  5 | 0
+  6 | 1
+  7 | 2
+  8 | 3
+  9 | 4
+ 10 | 0
+(10 rows)
+
+-- start_ignore
+drop table if exists m;
+drop table if exists yyy;
+create table yyy(a int, b int) distributed randomly;
+-- create master-only table
+create table m(); 
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+alter table m add column a int;
+alter table m add column b int;
+-- generate data for m
+insert into m select i, i%5 from generate_series(1,10)i;
+-- end_ignore
+-- @author ramans2
+-- @created 2013-10-30 12:00:00 
+-- @modified 2013-10-30 12:00:00
+-- @tags dml 
+-- @db_name dmldb
+-- @description MPP-21536: Duplicated rows inserted when ORCA is turned on
+insert into yyy select a,b from m;
+select * from yyy order by 1, 2;
+ a  | b 
+----+---
+  1 | 1
+  2 | 2
+  3 | 3
+  4 | 4
+  5 | 0
+  6 | 1
+  7 | 2
+  8 | 3
+  9 | 4
+ 10 | 0
+(10 rows)
+
+-- start_ignore
+drop table if exists m;
+drop table if exists zzz;
+create table zzz(a int primary key, b int) distributed by (a);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "zzz_pkey" for table "zzz"
+-- create master-only table
+create table m();
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+set allow_system_table_mods='DML';
+delete from gp_distribution_policy where localoid='m'::regclass;
+reset allow_system_table_mods;
+alter table m add column a int;
+alter table m add column b int;
+-- generate data for m
+insert into m select i, i%3 from generate_series(3,10)i;
+insert into zzz select a,b from m;
+-- end_ignore
+-- @author ramans2
+-- @created 2013-10-30 12:00:00 
+-- @modified 2013-10-30 12:00:00
+-- @tags dml 
+-- @db_name dmldb
+-- @description MPP-21536: Duplicated rows inserted when ORCA is turned on
+set optimizer_enable_master_only_queries=on;
+update zzz set a=m.b from m where m.a=zzz.b;
+select * from zzz order by 1, 2;
+ a  | b 
+----+---
+  3 | 0
+  4 | 1
+  5 | 2
+  6 | 0
+  7 | 1
+  8 | 2
+  9 | 0
+ 10 | 1
+(8 rows)
+
+-- start_ignore
+drop table if exists m;
+drop table if exists zzz;
+create table zzz(a int primary key, b int) distributed by (a);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "zzz_pkey" for table "zzz"
+-- create master-only table
+create table m();
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+set allow_system_table_mods='DML';
+delete from gp_distribution_policy where localoid='m'::regclass;
+reset allow_system_table_mods;
+alter table m add column a int;
+alter table m add column b int;
+-- generate data for m
+insert into m select i, i%5 from generate_series(1,10)i;
+insert into zzz select a,b from m;
+-- end_ignore
+-- @author ramans2
+-- @created 2013-10-30 12:00:00 
+-- @modified 2013-10-30 12:00:00
+-- @tags dml 
+-- @db_name dmldb
+-- @description MPP-21536: Duplicated rows inserted when ORCA is turned on
+update zzz set b=m.b from m where m.a=zzz.a;
+select * from zzz order by 1, 2;
+ a  | b 
+----+---
+  1 | 1
+  2 | 2
+  3 | 3
+  4 | 4
+  5 | 0
+  6 | 1
+  7 | 2
+  8 | 3
+  9 | 4
+ 10 | 0
+(10 rows)
+
+-- start_ignore
+drop table if exists m;
+drop table if exists yyy;
+create table yyy(a int, b int) distributed randomly;
+-- create master-only table
+create table m(); 
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+alter table m add column a int;
+alter table m add column b int;
+-- generate data for m
+insert into m select i, i%5 from generate_series(1,10)i;
+insert into yyy select a,b from m;
+-- end_ignore
+-- @author ramans2
+-- @created 2013-10-30 12:00:00 
+-- @modified 2013-10-30 12:00:00
+-- @tags dml 
+-- @db_name dmldb
+-- @description MPP-21536: Duplicated rows inserted when ORCA is turned on
+update yyy set a=m.b from m where m.a=yyy.b;
+select * from yyy order by 1, 2;
+ a  | b 
+----+---
+  1 | 1
+  1 | 1
+  2 | 2
+  2 | 2
+  3 | 3
+  3 | 3
+  4 | 4
+  4 | 4
+  5 | 0
+ 10 | 0
+(10 rows)
+
+-- start_ignore
+drop table if exists m;
+drop table if exists yyy;
+create table yyy(a int, b int) distributed randomly;
+-- create master-only table
+create table m(); 
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+alter table m add column a int;
+alter table m add column b int;
+-- generate data for m
+insert into m select i, i%5 from generate_series(1,10)i;
+insert into yyy select a,b from m;
+-- end_ignore
+-- @author ramans2
+-- @created 2013-10-30 12:00:00 
+-- @modified 2013-10-30 12:00:00
+-- @tags dml 
+-- @db_name dmldb
+-- @description MPP-21536: Duplicated rows inserted when ORCA is turned on
+update yyy set b=m.b from m where m.a=yyy.a;
+select * from yyy order by 1, 2;
+ a  | b 
+----+---
+  1 | 1
+  2 | 2
+  3 | 3
+  4 | 4
+  5 | 0
+  6 | 1
+  7 | 2
+  8 | 3
+  9 | 4
+ 10 | 0
+(10 rows)
+
+-- start_ignore
+drop table if exists r;
+create table r (a int primary key, b int) distributed by (a);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "r_pkey" for table "r"
+insert into r values(1,1);
+-- end_ignore
+-- @author prabhd
+-- @created 2014-03-10 12:00:00
+-- @modified 2014-03-10 12:00:00
+-- @tags dml MPP-21622
+-- @db_name dmldb
+-- @product_version gpdb: [4.3.0.0-] 
+-- @optimizer_mode on
+-- @description MPP-21622 Update with primary key: only sort if the primary key is updated
+--start_ignore
+explain update r set b = 5;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Update  (cost=0.00..431.07 rows=1 width=1)
+   ->  Result  (cost=0.00..431.00 rows=1 width=26)
+         ->  Assert  (cost=0.00..431.00 rows=1 width=22)
+               Assert Cond: NOT functional_226_300.r.a IS NULL
+               ->  Split  (cost=0.00..431.00 rows=1 width=22)
+                     ->  Result  (cost=0.00..431.00 rows=1 width=22)
+                           ->  Table Scan on r  (cost=0.00..431.00 rows=1 width=18)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 1.633
+(9 rows)
+
+--end_ignore
+update r set b = 5;
+select * from r order by 1,2;
+ a | b 
+---+---
+ 1 | 5
+(1 row)
+
+--start_ignore
+explain update r set a = 5;
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Update  (cost=0.00..431.07 rows=1 width=1)
+   ->  Result  (cost=0.00..431.00 rows=1 width=26)
+         ->  Sort  (cost=0.00..431.00 rows=1 width=22)
+               Sort Key: "ColRef_0010"
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=22)
+                     Hash Key: a
+                     ->  Assert  (cost=0.00..431.00 rows=1 width=22)
+                           Assert Cond: NOT a IS NULL
+                           ->  Split  (cost=0.00..431.00 rows=1 width=22)
+                                 ->  Result  (cost=0.00..431.00 rows=1 width=22)
+                                       ->  Table Scan on r  (cost=0.00..431.00 rows=1 width=18)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 1.633
+(13 rows)
+
+--end_ignore
+update r set a = 5;
+select * from r order by 1,2;
+ a | b 
+---+---
+ 5 | 5
+(1 row)
+
+-- start_ignore
+drop table if exists orca;
+NOTICE:  table "orca" does not exist, skipping
+create table orca (a int not null);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- end_ignore
+-- @author prabhd
+-- @created 2014-02-25 12:00:00
+-- @modified 2014-02-25 12:00:00
+-- @tags dml MPP-22046
+-- @db_name dmldb
+-- @gpopt 1.532
+-- @gucs client_min_messages='log';gp_log_gang="verbose"
+-- @optimizer_mode on
+-- @description MPP-22046
+insert into orca values(null);        
+ERROR:  One or more assertions failed  (seg1 127.0.0.1:25433 pid=69128)
+DETAIL:  Not null constraint for column a of table orca was violated
+-- start_ignore
+drop table if exists dml_multi_pt_update;
+NOTICE:  table "dml_multi_pt_update" does not exist, skipping
+create table dml_multi_pt_update(a int, b int, c int,d int )
+distributed by (a)
+partition by range(b)
+subpartition by range(c) 
+subpartition template (default subpartition subothers,start (1) end(7) every (4) )
+(default partition others, start(1) end(5) every(3));
+NOTICE:  CREATE TABLE will create partition "dml_multi_pt_update_1_prt_others" for table "dml_multi_pt_update"
+NOTICE:  CREATE TABLE will create partition "dml_multi_pt_update_1_prt_2" for table "dml_multi_pt_update"
+NOTICE:  CREATE TABLE will create partition "dml_multi_pt_update_1_prt_3" for table "dml_multi_pt_update"
+NOTICE:  CREATE TABLE will create partition "dml_multi_pt_update_1_prt_others_2_prt_subothers" for table "dml_multi_pt_update_1_prt_others"
+NOTICE:  CREATE TABLE will create partition "dml_multi_pt_update_1_prt_others_2_prt_2" for table "dml_multi_pt_update_1_prt_others"
+NOTICE:  CREATE TABLE will create partition "dml_multi_pt_update_1_prt_others_2_prt_3" for table "dml_multi_pt_update_1_prt_others"
+NOTICE:  CREATE TABLE will create partition "dml_multi_pt_update_1_prt_2_2_prt_subothers" for table "dml_multi_pt_update_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "dml_multi_pt_update_1_prt_2_2_prt_2" for table "dml_multi_pt_update_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "dml_multi_pt_update_1_prt_2_2_prt_3" for table "dml_multi_pt_update_1_prt_2"
+NOTICE:  CREATE TABLE will create partition "dml_multi_pt_update_1_prt_3_2_prt_subothers" for table "dml_multi_pt_update_1_prt_3"
+NOTICE:  CREATE TABLE will create partition "dml_multi_pt_update_1_prt_3_2_prt_2" for table "dml_multi_pt_update_1_prt_3"
+NOTICE:  CREATE TABLE will create partition "dml_multi_pt_update_1_prt_3_2_prt_3" for table "dml_multi_pt_update_1_prt_3"
+-- end_ignore
+-- @author prabhd
+-- @created 2014-02-24 12:00:00
+-- @modified 2014-02-24 12:00:00
+-- @tags dml
+-- @optimizer_mode=on
+-- @db_name dmldb
+-- @gucs client_min_messages='log'
+-- @description MPP-22599 DML queries that fallback to planner don't check for updates on the distribution key. This test will fail once Multi-level partitioned tables are supported in ORCA.
+update dml_multi_pt_update set a = 1;
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+NOTICE:  table "dml_union_r" does not exist, skipping
+DROP TABLE IF EXISTS dml_union_s;
+NOTICE:  table "dml_union_s" does not exist, skipping
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test1:  With UNION/INTERSECT/EXCEPT in dml_union_subquery
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+DELETE FROM dml_union_r WHERE a in (SELECT a FROM dml_union_r UNION SELECT a FROM dml_union_s);
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+     5
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test10:  With UNION/INTERSECT/EXCEPT in the predicate condition
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+DELETE FROM dml_union_r WHERE a = (SELECT a FROM dml_union_r UNION SELECT a FROM dml_union_s ORDER BY a LIMIT 1);
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   116
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test11:  With UNION/INTERSECT/EXCEPT in the predicate condition
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+DELETE FROM dml_union_r WHERE a = (SELECT a FROM dml_union_r INTERSECT SELECT a FROM dml_union_s ORDER BY a LIMIT 1);
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   116
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test12:  With UNION/INTERSECT/EXCEPT in the predicate condition
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+DELETE FROM dml_union_r WHERE a = (SELECT a FROM dml_union_r EXCEPT SELECT a FROM dml_union_s ORDER BY a LIMIT 1);
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test13:  With UNION/INTERSECT/EXCEPT 
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+DELETE FROM dml_union_r USING (SELECT a FROM dml_union_r UNION SELECT a FROM dml_union_s) foo WHERE foo.a = dml_union_r.a;
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+     5
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test14:  With UNION/INTERSECT/EXCEPT 
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+DELETE FROM dml_union_r USING (SELECT a FROM dml_union_r INTERSECT SELECT a FROM dml_union_s) foo WHERE foo.a = dml_union_r.a;
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+     5
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test15:  With UNION/INTERSECT/EXCEPT 
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+DELETE FROM dml_union_r USING (SELECT a FROM dml_union_r EXCEPT SELECT a FROM dml_union_s) foo WHERE foo.a = dml_union_r.a;
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test16:  Using Partition table 
+SELECT COUNT(*) FROM dml_union_s;
+ count 
+-------
+   115
+(1 row)
+
+DELETE FROM dml_union_s USING (SELECT a FROM dml_union_r UNION SELECT a FROM dml_union_s_1_prt_def) foo;
+SELECT COUNT(*) FROM dml_union_s;
+ count 
+-------
+     0
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test17:  Using Partition table 
+SELECT COUNT(*) FROM dml_union_s;
+ count 
+-------
+   115
+(1 row)
+
+DELETE FROM dml_union_s USING (SELECT * FROM dml_union_r UNION SELECT * FROM dml_union_s_1_prt_def) foo WHERE foo.d = dml_union_s.d;
+SELECT COUNT(*) FROM dml_union_s;
+ count 
+-------
+    93
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test2:  With UNION/INTERSECT/EXCEPT in dml_union_subquery
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+DELETE FROM dml_union_r WHERE a in (SELECT a FROM dml_union_r UNION ALL SELECT a FROM dml_union_s);
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+     5
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test3:  With UNION/INTERSECT/EXCEPT in dml_union_subquery
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+DELETE FROM dml_union_r WHERE a in (SELECT a FROM dml_union_r INTERSECT SELECT a FROM dml_union_s);
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+     5
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test4:  With UNION/INTERSECT/EXCEPT in dml_union_subquery
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+DELETE FROM dml_union_r WHERE a in (SELECT a FROM dml_union_r INTERSECT ALL SELECT a FROM dml_union_s);
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+     5
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test5:  With UNION/INTERSECT/EXCEPT in dml_union_subquery
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+DELETE FROM dml_union_r WHERE a in (SELECT a FROM dml_union_r EXCEPT SELECT a FROM dml_union_s);
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test6:  With UNION/INTERSECT/EXCEPT in dml_union_subquery
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+DELETE FROM dml_union_r WHERE a in (SELECT a FROM dml_union_r EXCEPT ALL SELECT a FROM dml_union_s);
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test7:  With UNION/INTERSECT/EXCEPT in the predicate condition ( 0 rows)
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+DELETE FROM dml_union_r WHERE a = (SELECT NULL UNION SELECT NULL); 
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test8:  With UNION/INTERSECT/EXCEPT in the predicate condition ( 0 rows )
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+DELETE FROM dml_union_r WHERE a = (SELECT NULL INTERSECT SELECT NULL);
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+-- start_ignore
+-- @author prabhd  
+-- @created 2012-12-05 12:00:00  
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+DROP TABLE IF EXISTS dml_union_r;
+DROP TABLE IF EXISTS dml_union_s;
+CREATE TABLE dml_union_r (
+        a int CONSTRAINT r_check_a CHECK(a <> -1),
+        b int,
+        c text,
+        d numeric)
+DISTRIBUTED BY (a);
+CREATE TABLE dml_union_s (
+        a int ,
+        b int not NULL,
+        c text ,
+        d numeric default 10.00)
+DISTRIBUTED BY (b)
+PARTITION BY range(d) (
+        start(1) end(1001) every(100),
+        default partition def
+);
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_def" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_2" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_3" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_4" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_5" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_6" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_7" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_8" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_9" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_10" for table "dml_union_s"
+NOTICE:  CREATE TABLE will create partition "dml_union_s_1_prt_11" for table "dml_union_s"
+INSERT INTO dml_union_r SELECT generate_series(1,100), generate_series(1,100) * 3,'r', generate_series(1,100) % 6;
+INSERT INTO dml_union_r VALUES(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL),(NULL,NULL,'text',NULL);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_r VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+INSERT INTO dml_union_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) ;
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,1,'text',1),(2,2,'text',2),(3,3,'text',3),(4,4,'text',4),(5,5,'text',5);
+INSERT INTO dml_union_s VALUES(1,2,'text',3),(2,3,'text',4),(3,4,'text',5),(4,5,'text',6),(5,6,'text',7);
+-- end_ignore
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description union_delete_test9:  With UNION/INTERSECT/EXCEPT in the predicate condition( 0 rows )
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+DELETE FROM dml_union_r WHERE a = (SELECT NULL EXCEPT SELECT NULL); 
+SELECT COUNT(*) FROM dml_union_r;
+ count 
+-------
+   120
+(1 row)
+
+-- start_ignore
+drop schema functional_226_300 cascade;
+NOTICE:  drop cascades to table dml_union_s_1_prt_11
+NOTICE:  drop cascades to constraint dml_union_s_1_prt_11_check on table dml_union_s_1_prt_11
+NOTICE:  drop cascades to table dml_union_s_1_prt_10
+NOTICE:  drop cascades to constraint dml_union_s_1_prt_10_check on table dml_union_s_1_prt_10
+NOTICE:  drop cascades to table dml_union_s_1_prt_9
+NOTICE:  drop cascades to constraint dml_union_s_1_prt_9_check on table dml_union_s_1_prt_9
+NOTICE:  drop cascades to table dml_union_s_1_prt_8
+NOTICE:  drop cascades to constraint dml_union_s_1_prt_8_check on table dml_union_s_1_prt_8
+NOTICE:  drop cascades to table dml_union_s_1_prt_7
+NOTICE:  drop cascades to constraint dml_union_s_1_prt_7_check on table dml_union_s_1_prt_7
+NOTICE:  drop cascades to table dml_union_s_1_prt_6
+NOTICE:  drop cascades to constraint dml_union_s_1_prt_6_check on table dml_union_s_1_prt_6
+NOTICE:  drop cascades to table dml_union_s_1_prt_5
+NOTICE:  drop cascades to constraint dml_union_s_1_prt_5_check on table dml_union_s_1_prt_5
+NOTICE:  drop cascades to table dml_union_s_1_prt_4
+NOTICE:  drop cascades to constraint dml_union_s_1_prt_4_check on table dml_union_s_1_prt_4
+NOTICE:  drop cascades to table dml_union_s_1_prt_3
+NOTICE:  drop cascades to constraint dml_union_s_1_prt_3_check on table dml_union_s_1_prt_3
+NOTICE:  drop cascades to table dml_union_s_1_prt_2
+NOTICE:  drop cascades to constraint dml_union_s_1_prt_2_check on table dml_union_s_1_prt_2
+NOTICE:  drop cascades to table dml_union_s_1_prt_def
+NOTICE:  drop cascades to table dml_union_s
+NOTICE:  drop cascades to table dml_union_r
+NOTICE:  drop cascades to constraint r_check_a on table dml_union_r
+NOTICE:  drop cascades to table dml_multi_pt_update_1_prt_3_2_prt_3
+NOTICE:  drop cascades to constraint dml_multi_pt_update_1_prt_3_check on table dml_multi_pt_update_1_prt_3_2_prt_3
+NOTICE:  drop cascades to constraint dml_multi_pt_update_1_prt_3_2_prt_3_check on table dml_multi_pt_update_1_prt_3_2_prt_3
+NOTICE:  drop cascades to table dml_multi_pt_update_1_prt_3_2_prt_2
+NOTICE:  drop cascades to constraint dml_multi_pt_update_1_prt_3_check on table dml_multi_pt_update_1_prt_3_2_prt_2
+NOTICE:  drop cascades to constraint dml_multi_pt_update_1_prt_3_2_prt_2_check on table dml_multi_pt_update_1_prt_3_2_prt_2
+NOTICE:  drop cascades to table dml_multi_pt_update_1_prt_3_2_prt_subothers
+NOTICE:  drop cascades to constraint dml_multi_pt_update_1_prt_3_check on table dml_multi_pt_update_1_prt_3_2_prt_subothers
+NOTICE:  drop cascades to table dml_multi_pt_update_1_prt_3
+NOTICE:  drop cascades to constraint dml_multi_pt_update_1_prt_3_check on table dml_multi_pt_update_1_prt_3
+NOTICE:  drop cascades to table dml_multi_pt_update_1_prt_2_2_prt_3
+NOTICE:  drop cascades to constraint dml_multi_pt_update_1_prt_2_check on table dml_multi_pt_update_1_prt_2_2_prt_3
+NOTICE:  drop cascades to constraint dml_multi_pt_update_1_prt_2_2_prt_3_check on table dml_multi_pt_update_1_prt_2_2_prt_3
+NOTICE:  drop cascades to table dml_multi_pt_update_1_prt_2_2_prt_2
+NOTICE:  drop cascades to constraint dml_multi_pt_update_1_prt_2_check on table dml_multi_pt_update_1_prt_2_2_prt_2
+NOTICE:  drop cascades to constraint dml_multi_pt_update_1_prt_2_2_prt_2_check on table dml_multi_pt_update_1_prt_2_2_prt_2
+NOTICE:  drop cascades to table dml_multi_pt_update_1_prt_2_2_prt_subothers
+NOTICE:  drop cascades to constraint dml_multi_pt_update_1_prt_2_check on table dml_multi_pt_update_1_prt_2_2_prt_subothers
+NOTICE:  drop cascades to table dml_multi_pt_update_1_prt_2
+NOTICE:  drop cascades to constraint dml_multi_pt_update_1_prt_2_check on table dml_multi_pt_update_1_prt_2
+NOTICE:  drop cascades to table dml_multi_pt_update_1_prt_others_2_prt_3
+NOTICE:  drop cascades to constraint dml_multi_pt_update_1_prt_others_2_prt_3_check on table dml_multi_pt_update_1_prt_others_2_prt_3
+NOTICE:  drop cascades to table dml_multi_pt_update_1_prt_others_2_prt_2
+NOTICE:  drop cascades to constraint dml_multi_pt_update_1_prt_others_2_prt_2_check on table dml_multi_pt_update_1_prt_others_2_prt_2
+NOTICE:  drop cascades to table dml_multi_pt_update_1_prt_others_2_prt_subothers
+NOTICE:  drop cascades to table dml_multi_pt_update_1_prt_others
+NOTICE:  drop cascades to table dml_multi_pt_update
+NOTICE:  drop cascades to table orca
+NOTICE:  drop cascades to table r
+NOTICE:  drop cascades to table m
+NOTICE:  drop cascades to table yyy
+NOTICE:  drop cascades to table zzz
+NOTICE:  drop cascades to table a
+NOTICE:  drop cascades to table altable
+NOTICE:  drop cascades to constraint c_check on table altable
+NOTICE:  drop cascades to table s
+NOTICE:  drop cascades to table r_p_1_prt_2
+NOTICE:  drop cascades to constraint r_p_1_prt_2_check on table r_p_1_prt_2
+NOTICE:  drop cascades to table r_p_1_prt_1
+NOTICE:  drop cascades to constraint r_p_1_prt_1_check on table r_p_1_prt_1
+NOTICE:  drop cascades to table r_p
+NOTICE:  drop cascades to append only columnar table f_1_prt_10
+NOTICE:  drop cascades to constraint f_1_prt_10_check on append only columnar table f_1_prt_10
+NOTICE:  drop cascades to append only columnar table f_1_prt_9
+NOTICE:  drop cascades to constraint f_1_prt_9_check on append only columnar table f_1_prt_9
+NOTICE:  drop cascades to append only columnar table f_1_prt_8
+NOTICE:  drop cascades to constraint f_1_prt_8_check on append only columnar table f_1_prt_8
+NOTICE:  drop cascades to append only columnar table f_1_prt_7
+NOTICE:  drop cascades to constraint f_1_prt_7_check on append only columnar table f_1_prt_7
+NOTICE:  drop cascades to append only columnar table f_1_prt_6
+NOTICE:  drop cascades to constraint f_1_prt_6_check on append only columnar table f_1_prt_6
+NOTICE:  drop cascades to append only columnar table f_1_prt_5
+NOTICE:  drop cascades to constraint f_1_prt_5_check on append only columnar table f_1_prt_5
+NOTICE:  drop cascades to append only columnar table f_1_prt_4
+NOTICE:  drop cascades to constraint f_1_prt_4_check on append only columnar table f_1_prt_4
+NOTICE:  drop cascades to append only columnar table f_1_prt_3
+NOTICE:  drop cascades to constraint f_1_prt_3_check on append only columnar table f_1_prt_3
+NOTICE:  drop cascades to append only columnar table f_1_prt_2
+NOTICE:  drop cascades to constraint f_1_prt_2_check on append only columnar table f_1_prt_2
+NOTICE:  drop cascades to append only columnar table f_1_prt_def
+NOTICE:  drop cascades to append only columnar table f
+NOTICE:  drop cascades to append only table e_1_prt_10
+NOTICE:  drop cascades to constraint e_1_prt_10_check on append only table e_1_prt_10
+NOTICE:  drop cascades to append only table e_1_prt_9
+NOTICE:  drop cascades to constraint e_1_prt_9_check on append only table e_1_prt_9
+NOTICE:  drop cascades to append only table e_1_prt_8
+NOTICE:  drop cascades to constraint e_1_prt_8_check on append only table e_1_prt_8
+NOTICE:  drop cascades to append only table e_1_prt_7
+NOTICE:  drop cascades to constraint e_1_prt_7_check on append only table e_1_prt_7
+NOTICE:  drop cascades to append only table e_1_prt_6
+NOTICE:  drop cascades to constraint e_1_prt_6_check on append only table e_1_prt_6
+NOTICE:  drop cascades to append only table e_1_prt_5
+NOTICE:  drop cascades to constraint e_1_prt_5_check on append only table e_1_prt_5
+NOTICE:  drop cascades to append only table e_1_prt_4
+NOTICE:  drop cascades to constraint e_1_prt_4_check on append only table e_1_prt_4
+NOTICE:  drop cascades to append only table e_1_prt_3
+NOTICE:  drop cascades to constraint e_1_prt_3_check on append only table e_1_prt_3
+NOTICE:  drop cascades to append only table e_1_prt_2
+NOTICE:  drop cascades to constraint e_1_prt_2_check on append only table e_1_prt_2
+NOTICE:  drop cascades to append only table e_1_prt_def
+NOTICE:  drop cascades to append only table e
+NOTICE:  drop cascades to table dml_heap_s
+NOTICE:  drop cascades to table dml_heap_p
+NOTICE:  drop cascades to table dml_heap_r
+NOTICE:  drop cascades to table dml_heap_v
+NOTICE:  drop cascades to table dml_heap_u
+-- end_ignore
