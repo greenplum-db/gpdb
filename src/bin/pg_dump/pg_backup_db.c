@@ -39,6 +39,7 @@ _check_database_version(ArchiveHandle *AH)
 {
 	const char *remoteversion_str;
 	int			remoteversion;
+	PGresult   *res;
 
 	remoteversion_str = PQparameterStatus(AH->connection, "server_version");
 	remoteversion = PQserverVersion(AH->connection);
@@ -58,6 +59,20 @@ _check_database_version(ArchiveHandle *AH)
 				  remoteversion_str, progname, PG_VERSION);
 		exit_horribly(NULL, "aborting because of server version mismatch\n");
 	}
+
+	/*
+	 * When running against 9.0 or later, check if we are in recovery mode,
+	 * which means we are on a hot standby.
+	 */
+	if (remoteversion >= 90000)
+	{
+		res = ExecuteSqlQueryForSingleRow((Archive *) AH, "SELECT pg_catalog.pg_is_in_recovery()");
+
+		AH->public.isStandby = (strcmp(PQgetvalue(res, 0, 0), "t") == 0);
+		PQclear(res);
+	}
+	else
+		AH->public.isStandby = false;
 }
 
 /*
