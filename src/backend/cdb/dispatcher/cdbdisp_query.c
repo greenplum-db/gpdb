@@ -673,14 +673,13 @@ cdbdisp_dispatchUtilityStatement(struct Node *stmt,
 	 * should come back as "SELECT n" and should not reflect other commands
 	 * inserted by rewrite rules.  True means we want the status.
 	 */
-	q->canSetTag = true;		/* ? */
+	q->canSetTag = true;
 
 	/*
 	 * serialized the stmt tree, and create the sql statement: mppexec ....
 	 */
 	serializedQuerytree =
-		serializeNode((Node *) q, &serializedQuerytree_len,
-					  NULL /*uncompressed_size */);
+		serializeNode((Node *) q, &serializedQuerytree_len, NULL /*uncompressed_size */);
 
 	Assert(serializedQuerytree != NULL);
 
@@ -733,24 +732,21 @@ cdbdisp_dispatchRMCommand(const char *strCommand,
 		/*
 		 * Wait for all QEs to finish.	Don't cancel. 
 		 */
-		CdbCheckDispatchResult((struct CdbDispatcherState *) &ds,
-							   DISPATCH_WAIT_NONE);
+		CdbCheckDispatchResult((struct CdbDispatcherState *) &ds, DISPATCH_WAIT_NONE);
 	}
 	PG_CATCH();
 	{
 		/*
 		 * Something happend, clean up after ourselves
 		 */
-		CdbCheckDispatchResult((struct CdbDispatcherState *) &ds,
-							   DISPATCH_WAIT_NONE);
+		CdbCheckDispatchResult((struct CdbDispatcherState *) &ds, DISPATCH_WAIT_NONE);
 
 		cdbdisp_destroyDispatcherState((struct CdbDispatcherState *) &ds);
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
 
-	resultSets =
-		cdbdisp_returnResults(ds.primaryResults, errmsgbuf, numresults);
+	resultSets = cdbdisp_returnResults(ds.primaryResults, errmsgbuf, numresults);
 
 	cdbdisp_destroyDispatcherState((struct CdbDispatcherState *) &ds);
 
@@ -1017,18 +1013,7 @@ fillSliceVector(SliceTable *sliceTbl, int rootIdx,
 }
 
 /*
- * Special Greenplum-only method for executing SQL statements.	Specifies a global
- * transaction context that the statement should be executed within.
- *
- * This should *ONLY* ever be used by the Greenplum Database Query Dispatcher and NEVER (EVER)
- * by anyone else.
- *
- * snapshot - serialized form of Snapshot data.
- * xid		- Global Transaction Id to use.
- * flags	- specifies additional processing instructions to the remote server.
- *			  e.g.	Auto explicitly start a transaction before executing this
- *			  statement.
- * gp_command_count - Client request serial# to be passed to the qExec.
+ * Build a query string to be dispatched bo QE.
  */
 static char *
 PQbuildGpQueryString(MemoryContext cxt, DispatchCommandParms * pParms,
@@ -1046,7 +1031,7 @@ PQbuildGpQueryString(MemoryContext cxt, DispatchCommandParms * pParms,
 	int	sliceinfo_len = pQueryParms->serializedSliceInfolen;
 	const char *snapshotInfo = pQueryParms->serializedDtxContextInfo;
 	int	snapshotInfo_len = pQueryParms->serializedDtxContextInfolen;
-	int	flags = 0;		/* unused flags */
+	int	flags = 0; /* unused flags */
 	int	localSlice = 0; /* localSlice; place holder; set later in dupQueryTextAndSetSliceId */
 	int	rootIdx = pQueryParms->rootIdx;
 	const char *seqServerHost = pQueryParms->seqServerHost;
@@ -1099,7 +1084,7 @@ PQbuildGpQueryString(MemoryContext cxt, DispatchCommandParms * pParms,
 
 	*pos++ = 'M';
 
-	pos += 4;					/* place holder for message length */
+	pos += 4; /* place holder for message length */
 
 	tmp = htonl(localSlice);
 	memcpy(pos, &tmp, sizeof(localSlice));
@@ -1331,17 +1316,6 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 		}
 	}
 
-	/*
-	 * Now we need to call CDBDispatchCommand once per slice.  Each such
-	 * call dispatches a MPPEXEC command to each of the QEs assigned to
-	 * the slice.
-	 *
-	 * The QE information goes in two places: (1) in the argument to the
-	 * function CDBDispatchCommand, and (2) in the serialized
-	 * command sent to the QEs.
-	 *
-	 * So, for each slice in the tree...
-	 */
 	for (iSlice = 0; iSlice < nSlices; iSlice++)
 	{
 		CdbDispatchDirectDesc direct;

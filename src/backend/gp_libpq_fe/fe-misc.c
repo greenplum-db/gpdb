@@ -65,11 +65,10 @@
 #include "nodes/pg_list.h"
 #include "cdb/cdbpartition.h"
 
-static int	pqPutMsgBytes(const void *buf, size_t len, PGconn *conn);
-static int	pqSendSome(PGconn *conn, int len);
-static int pqSocketCheck(PGconn *conn, int forRead, int forWrite,
-			  time_t end_time);
-static int	pqSocketPoll(int sock, int forRead, int forWrite, time_t end_time);
+static int pqPutMsgBytes(const void *buf, size_t len, PGconn *conn);
+static int pqSendSome(PGconn *conn, int len);
+static int pqSocketCheck(PGconn *conn, int forRead, int forWrite, time_t end_time);
+static int pqSocketPoll(int sock, int forRead, int forWrite, time_t end_time);
 
 
 /*
@@ -382,8 +381,8 @@ pqPutInt(int value, size_t bytes, PGconn *conn)
 int
 pqCheckOutBufferSpace(size_t bytes_needed, PGconn *conn)
 {
-	int			newsize = conn->outBufSize;
-	char	   *newbuf;
+	int	newsize = conn->outBufSize;
+	char *newbuf;
 
 	if (bytes_needed <= (size_t) newsize)
 		return 0;
@@ -839,9 +838,9 @@ definitelyFailed:
 static int
 pqSendSome(PGconn *conn, int len)
 {
-	char	   *ptr = conn->outBuffer;
-	int			remaining = conn->outCount;
-	int			result = 0;
+	char *ptr = conn->outBuffer;
+	int	remaining = conn->outCount;
+	int	result = 0;
 
 	if (conn->sock < 0)
 	{
@@ -853,8 +852,8 @@ pqSendSome(PGconn *conn, int len)
 	/* while there's still data to send */
 	while (len > 0)
 	{
-		int			sent;
-		char		sebuf[256];
+		int sent;
+		char sebuf[256];
 		
 #ifndef WIN32
 		sent = send(conn->sock, ptr, len, 0);

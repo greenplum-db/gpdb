@@ -68,8 +68,7 @@ static List *availableReaderGangs1 = NIL;
 static Gang *primaryWriterGang = NULL;
 
 /*
- * Every gang created must have a unique identifier, so the QD and Dispatch Agents can agree
- * about what they are talking about.
+ * Every gang created must have a unique identifier
  */
 #define PRIMARY_WRITER_GANG_ID 1
 static int gang_id_counter = 2;
