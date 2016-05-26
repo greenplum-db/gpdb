@@ -9,6 +9,7 @@
 #include "executor/execWorkfile.h"
 #include "utils/tuplestorenew.h"
 #include "utils/memutils.h"
+#include "utils/gp_alloc.h"
 
 #include "cdb/cdbvars.h"                /* currentSliceId */
 

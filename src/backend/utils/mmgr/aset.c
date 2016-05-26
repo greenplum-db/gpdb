@@ -68,6 +68,7 @@
 
 #include "utils/memutils.h"
 #include "utils/memaccounting.h"
+#include "utils/gp_alloc.h"
 
 #include "miscadmin.h"
 
