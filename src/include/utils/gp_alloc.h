@@ -39,7 +39,7 @@ typedef struct VmemHeader
 	 */
 	HeaderChecksumType checksum;
 #endif
-	/* The size of the allocation, without the header/footer overhead */
+	/* The size of the usable allocation, i.e., without the header/footer overhead */
 	size_t size;
 } VmemHeader;
 
@@ -55,56 +55,56 @@ extern void gp_free(void *ptr);
  * Converts a user pointer to a VMEM pointer by going backward
  * to get the header address
  */
-#define UserPtrToVmemPtr(usable_pointer)	\
+#define UserPtr_GetVmemPtr(usable_pointer)	\
 					((void*)(((char *)(usable_pointer)) - sizeof(VmemHeader)))
 
 /* Gets the pointer to size field in the VmemHeader */
-#define VmemPtrToSizePtr(ptr) \
+#define VmemPtr_GetSizePtr(ptr) \
 		((size_t *)(((char *)ptr) + offsetof(VmemHeader, size)))
 
-/* Extracts the size of a Vmem pointer */
+/* Extracts the size of the user pointer from a Vmem pointer */
 #define VmemPtr_GetUserPtrSize(ptr)	\
-					(*VmemPtrToSizePtr(ptr))
+					(*VmemPtr_GetSizePtr(ptr))
 
 /*
- * Stores the size of a Vmem pointer in the header for
+ * Stores the size of the user pointer in the header for
  * later use by others such as gp_free
  */
 #define VmemPtr_SetUserPtrSize(ptr, size)	\
-					(*VmemPtrToSizePtr(ptr) = size)
+					(*VmemPtr_GetSizePtr(ptr) = size)
 
 #ifdef GP_ALLOC_DEBUG
 /* Extracts the header checksum pointer */
-#define VmemPtrToHeaderChecksumPtr(ptr) \
+#define VmemPtr_GetPointerToHeaderChecksum(ptr) \
 		((HeaderChecksumType *) (ptr + offsetof(VmemHeader, checksum)))
 
 /* Stores a checksum in the header for debugging purpose */
 #define VmemPtr_SetHeaderChecksum(ptr)	\
-		(*VmemPtrToHeaderChecksumPtr(ptr) = VMEM_HEADER_CHECKSUM)
+		(*VmemPtr_GetPointerToHeaderChecksum(ptr) = VMEM_HEADER_CHECKSUM)
 
 /* Extracts the footer checksum pointer */
-#define VmemPtrToFooterChecksumPtr(ptr) \
+#define VmemPtr_GetPointerToFooterChecksum(ptr) \
 		((FooterChecksumType *)(((char *)VmemPtr_GetEndAddress(ptr)) - sizeof(FooterChecksumType)))
 
 /* Stores a checksum in the footer for debugging purpose */
 #define VmemPtr_SetFooterChecksum(ptr) \
-		(*VmemPtrToFooterChecksumPtr(ptr) = VMEM_FOOTER_CHECKSUM)
+		(*VmemPtr_GetPointerToFooterChecksum(ptr) = VMEM_FOOTER_CHECKSUM)
 
 /* Checks if the header checksum of a Vmem pointer matches */
 #define VmemPtr_VerifyHeaderChecksum(ptr) \
-		(Assert(*VmemPtrToHeaderChecksumPtr(ptr) == VMEM_HEADER_CHECKSUM))
+		(Assert(*VmemPtr_GetPointerToHeaderChecksum(ptr) == VMEM_HEADER_CHECKSUM))
 
 /* Checks if the footer checksum of a Vmem pointer matches */
 #define VmemPtr_VerifyFooterChecksum(ptr) \
-		(Assert(*VmemPtrToFooterChecksumPtr(ptr) == VMEM_FOOTER_CHECKSUM))
+		(Assert(*VmemPtr_GetPointerToFooterChecksum(ptr) == VMEM_FOOTER_CHECKSUM))
 
 /* Checks if the header checksum of a user pointer matches */
 #define UserPtr_VerifyHeaderChecksum(ptr) \
-		(Assert(*VmemPtrToHeaderChecksumPtr(UserPtrToVmemPtr(ptr)) == VMEM_HEADER_CHECKSUM))
+		(Assert(*VmemPtr_GetPointerToHeaderChecksum(UserPtr_GetVmemPtr(ptr)) == VMEM_HEADER_CHECKSUM))
 
 /* Checks if the footer checksum of a user pointer matches */
 #define UserPtr_VerifyFooterChecksum(ptr) \
-		(Assert(*VmemPtrToFooterChecksumPtr(UserPtrToVmemPtr(ptr)) == VMEM_FOOTER_CHECKSUM))
+		(Assert(*VmemPtr_GetPointerToFooterChecksum(UserPtr_GetVmemPtr(ptr)) == VMEM_FOOTER_CHECKSUM))
 
 /* Checks if the header footer checksum of a user pointer matche */
 #define UserPtr_VerifyChecksum(ptr) \
@@ -126,11 +126,11 @@ extern void gp_free(void *ptr);
 
 /* Extracts the size from an user pointer */
 #define UserPtr_GetUserPtrSize(ptr) \
-		(VmemPtr_GetUserPtrSize(UserPtrToVmemPtr(ptr)))
+		(VmemPtr_GetUserPtrSize(UserPtr_GetVmemPtr(ptr)))
 
 /* Extracts the Vmem size from an user pointer */
 #define UserPtr_GetVmemPtrSize(ptr) \
-		(UserPtrSizeToVmemPtrSize(VmemPtr_GetUserPtrSize(UserPtrToVmemPtr(ptr))))
+		(UserPtrSizeToVmemPtrSize(VmemPtr_GetUserPtrSize(UserPtr_GetVmemPtr(ptr))))
 
 /* The end address of a user pointer */
 #define UserPtr_GetEndAddress(ptr) \

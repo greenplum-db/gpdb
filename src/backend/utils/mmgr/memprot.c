@@ -341,10 +341,10 @@ static void* malloc_and_store_metadata(size_t size)
  */
 static void* realloc_and_store_size(void* usable_pointer, size_t new_usable_size)
 {
-	Assert(*VmemPtrToHeaderChecksumPtr(UserPtrToVmemPtr(usable_pointer)) == VMEM_HEADER_CHECKSUM);
-	Assert(*VmemPtrToFooterChecksumPtr(UserPtrToVmemPtr(usable_pointer)) == VMEM_FOOTER_CHECKSUM);
+	Assert(*VmemPtrToHeaderChecksumPtr(UserPtr_GetVmemPtr(usable_pointer)) == VMEM_HEADER_CHECKSUM);
+	Assert(*VmemPtrToFooterChecksumPtr(UserPtr_GetVmemPtr(usable_pointer)) == VMEM_FOOTER_CHECKSUM);
 
-	void* realloc_pointer = realloc(UserPtrToVmemPtr(usable_pointer), UserPtrSizeToVmemPtrSize(new_usable_size));
+	void* realloc_pointer = realloc(UserPtr_GetVmemPtr(usable_pointer), UserPtrSizeToVmemPtrSize(new_usable_size));
 
 	if (NULL == realloc_pointer)
 	{
@@ -367,7 +367,7 @@ static void *gp_malloc_internal(int64 requested_size)
 	if (MemoryAllocation_Success == stat)
 	{
 		usable_pointer = malloc_and_store_metadata(requested_size);
-		Assert(VmemPtr_GetUserPtrSize(UserPtrToVmemPtr(usable_pointer)) == requested_size);
+		Assert(VmemPtr_GetUserPtrSize(UserPtr_GetVmemPtr(usable_pointer)) == requested_size);
 
 #ifdef USE_TEST_UTILS
 		if (gp_simex_init && gp_simex_run && gp_simex_class == SimExESClass_OOM && usable_pointer)
@@ -375,7 +375,7 @@ static void *gp_malloc_internal(int64 requested_size)
 			SimExESSubClass subclass = SimEx_CheckInject();
 			if (subclass == SimExESSubClass_OOM_ReturnNull)
 			{
-				free(UserPtrToVmemPtr(usable_pointer));
+				free(UserPtr_GetVmemPtr(usable_pointer));
 				usable_pointer = NULL;
 			}
 		}
@@ -442,7 +442,7 @@ void *gp_realloc(void *ptr, int64 new_size)
 			SimExESSubClass subclass = SimEx_CheckInject();
 			if (subclass == SimExESSubClass_OOM_ReturnNull)
 			{
-				free(UserPtrToVmemPtr(ret));
+				free(UserPtr_GetVmemPtr(ret));
 				ret = NULL;
 			}
 		}
@@ -468,10 +468,10 @@ void gp_free(void *user_pointer)
 {
 	Assert(!gp_mp_inited || MemoryProtection_IsOwnerThread());
 
-	Assert(*VmemPtrToHeaderChecksumPtr(UserPtrToVmemPtr(user_pointer)) == VMEM_HEADER_CHECKSUM);
-	Assert(*VmemPtrToFooterChecksumPtr(UserPtrToVmemPtr(user_pointer)) == VMEM_FOOTER_CHECKSUM);
+	Assert(*VmemPtrToHeaderChecksumPtr(UserPtr_GetVmemPtr(user_pointer)) == VMEM_HEADER_CHECKSUM);
+	Assert(*VmemPtrToFooterChecksumPtr(UserPtr_GetVmemPtr(user_pointer)) == VMEM_FOOTER_CHECKSUM);
 
-	void* malloc_pointer = UserPtrToVmemPtr(user_pointer);
+	void* malloc_pointer = UserPtr_GetVmemPtr(user_pointer);
 	size_t usable_size = VmemPtr_GetUserPtrSize(malloc_pointer);
 	Assert(usable_size > 0);
 	free(malloc_pointer);
