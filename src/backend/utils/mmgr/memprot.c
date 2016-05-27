@@ -318,7 +318,11 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 	}
 }
 
-static void* malloc_and_store_header(size_t size)
+/*
+ * malloc the requested "size" and additional memory for metadata and store header and/or
+ * footer metadata information. Caller is in charge to update Vmem counter accordingly.
+ */
+static void* malloc_and_store_metadata(size_t size)
 {
 	size_t malloc_size = UserPtrSizeToVmemPtrSize(size);
 	void* malloc_pointer = malloc(malloc_size);
@@ -331,6 +335,10 @@ static void* malloc_and_store_header(size_t size)
 	return VmemPtrToUserPtr(malloc_pointer);
 }
 
+/*
+ * realloc the requested "size" and additional memory for metadata and store header and/or
+ * footer metadata information. Caller is in charge to update Vmem counter accordingly.
+ */
 static void* realloc_and_store_size(void* usable_pointer, size_t new_usable_size)
 {
 	Assert(*VmemPtrToHeaderChecksumPtr(UserPtrToVmemPtr(usable_pointer)) == VMEM_HEADER_CHECKSUM);
@@ -346,18 +354,6 @@ static void* realloc_and_store_size(void* usable_pointer, size_t new_usable_size
 	return VmemPtrToUserPtr(realloc_pointer);
 }
 
-static void free_with_stored_size(void *usable_pointer)
-{
-	Assert(*VmemPtrToHeaderChecksumPtr(UserPtrToVmemPtr(usable_pointer)) == VMEM_HEADER_CHECKSUM);
-	Assert(*VmemPtrToFooterChecksumPtr(UserPtrToVmemPtr(usable_pointer)) == VMEM_FOOTER_CHECKSUM);
-
-	void* malloc_pointer = UserPtrToVmemPtr(usable_pointer);
-	size_t usable_size = VmemPtr_GetUserPtrSize(malloc_pointer);
-	Assert(usable_size > 0);
-	free(malloc_pointer);
-	VmemTracker_ReleaseVmem(UserPtrSizeToVmemPtrSize(usable_size));
-}
-
 /* Reserves vmem from vmem tracker and allocates memory by calling malloc/calloc */
 static void *gp_malloc_internal(int64 requested_size)
 {
@@ -370,7 +366,7 @@ static void *gp_malloc_internal(int64 requested_size)
 	MemoryAllocationStatus stat = VmemTracker_ReserveVmem(size_with_overhead);
 	if (MemoryAllocation_Success == stat)
 	{
-		usable_pointer = malloc_and_store_header(requested_size);
+		usable_pointer = malloc_and_store_metadata(requested_size);
 		Assert(VmemPtr_GetUserPtrSize(UserPtrToVmemPtr(usable_pointer)) == requested_size);
 
 #ifdef USE_TEST_UTILS
@@ -416,7 +412,7 @@ void *gp_malloc(int64 sz)
 		return gp_malloc_internal(sz);
 	}
 
-	ret = malloc_and_store_header(sz);
+	ret = malloc_and_store_metadata(sz);
 	return ret;
 }
 
@@ -457,7 +453,7 @@ void *gp_realloc(void *ptr, int64 new_size)
 			Assert(0 < size_diff);
 			VmemTracker_ReleaseVmem(size_diff);
 
-			gp_failed_to_alloc(MemoryFailure_SystemMemoryExhausted, 0, old_size);
+			gp_failed_to_alloc(MemoryFailure_SystemMemoryExhausted, 0, new_size);
 			return NULL;
 		}
 
@@ -468,8 +464,16 @@ void *gp_realloc(void *ptr, int64 new_size)
 }
 
 /* Frees memory and releases vmem accordingly */
-void gp_free(void *ptr)
+void gp_free(void *user_pointer)
 {
 	Assert(!gp_mp_inited || MemoryProtection_IsOwnerThread());
-	free_with_stored_size(ptr);
+
+	Assert(*VmemPtrToHeaderChecksumPtr(UserPtrToVmemPtr(user_pointer)) == VMEM_HEADER_CHECKSUM);
+	Assert(*VmemPtrToFooterChecksumPtr(UserPtrToVmemPtr(user_pointer)) == VMEM_FOOTER_CHECKSUM);
+
+	void* malloc_pointer = UserPtrToVmemPtr(user_pointer);
+	size_t usable_size = VmemPtr_GetUserPtrSize(malloc_pointer);
+	Assert(usable_size > 0);
+	free(malloc_pointer);
+	VmemTracker_ReleaseVmem(UserPtrSizeToVmemPtrSize(usable_size));
 }

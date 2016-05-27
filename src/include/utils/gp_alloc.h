@@ -29,25 +29,23 @@ typedef int64 FooterChecksumType;
 
 #endif
 
+/* The VmemHeader prepends user pointer in all Vmem allocations */
 typedef struct VmemHeader
 {
 #ifdef GP_ALLOC_DEBUG
+	/*
+	 * Checksum to verify that we are not trying to free a memory not allocated
+	 * using gp_malloc
+	 */
 	HeaderChecksumType checksum;
 #endif
+	/* The size of the allocation, without the header/footer overhead */
 	size_t size;
 } VmemHeader;
 
-#ifdef USE_SYSV_SEMAPHORES
 extern void *gp_malloc(int64 sz);
 extern void *gp_realloc(void *ptr, int64 newsz);
 extern void gp_free(void *ptr);
-
-#else
-#define gp_malloc(sz) malloc(sz)
-#define gp_calloc(sz1, sz2) calloc((sz1), (sz2))
-#define gp_realloc(ptr, sz1, sz2) realloc((ptr), (sz2))
-#define gp_free2(ptr, sz) free(ptr)
-#endif
 
 /* Gets the actual usable payload address of a vmem pointer */
 #define VmemPtrToUserPtr(ptr)	\
@@ -130,10 +128,15 @@ extern void gp_free(void *ptr);
 #define UserPtr_GetUserPtrSize(ptr) \
 		(VmemPtr_GetUserPtrSize(UserPtrToVmemPtr(ptr)))
 
+/* Extracts the Vmem size from an user pointer */
+#define UserPtr_GetVmemPtrSize(ptr) \
+		(UserPtrSizeToVmemPtrSize(VmemPtr_GetUserPtrSize(UserPtrToVmemPtr(ptr))))
+
 /* The end address of a user pointer */
 #define UserPtr_GetEndAddress(ptr) \
 		(((char *)ptr) + UserPtr_GetUserPtrSize(ptr))
 
+/* Initialize header/footer of a Vmem pointer */
 #define VmemPtr_Initialize(ptr, size) \
 		VmemPtr_SetUserPtrSize(ptr, size); \
 		VmemPtr_SetHeaderChecksum(ptr); \

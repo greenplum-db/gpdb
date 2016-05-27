@@ -1653,7 +1653,7 @@ AllocSetRealloc(MemoryContext context, void *pointer, Size size)
                                &set->header, CDB_MCXT_WHERE(&set->header),
                                "Out of memory.  Failed on request of size %lu bytes.",
                                (unsigned long)size);
-		block->freeptr = ((char *) block) + blksize;
+		block->freeptr = UserPtr_GetEndAddress(block);
 
 		/* Update pointers since block has likely been moved */
 		chunk = (AllocChunk) (((char *) block) + ALLOC_BLOCKHDRSZ);
