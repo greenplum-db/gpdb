@@ -21,6 +21,8 @@
 
 static StringInfoData outputBuffer;
 
+static void write_stderr_mock(const char *fmt,...);
+
 /* We will capture write_stderr output using write_stderr_mock */
 #define write_stderr write_stderr_mock
 
@@ -55,7 +57,7 @@ void write_stderr_mock(const char *fmt,...);
  * Mocks the function write_stderr and captures the output in
  * the global outputBuffer
  */
-void
+static void
 write_stderr_mock(const char *fmt,...)
 {
     va_list		ap;
