@@ -343,7 +343,7 @@ cdbdisp_dtxParmsInit(struct CdbDispatcherState *ds,
 }
 
 /*
- * Special Greenplum Database-only method for executing DTX protocol commands.
+ * Build a dtx protocol command string to be dispatched to QE.
  */
 static char *
 PQbuildGpDtxProtocolCommand(MemoryContext cxt,
@@ -373,7 +373,7 @@ PQbuildGpDtxProtocolCommand(MemoryContext cxt,
 
 	*pos++ = 'T';
 
-	pos += 4;					/* place holder for message length */
+	pos += 4; /* place holder for message length */
 
 	tmp = htonl(dtxProtocolCommand);
 	memcpy(pos, &tmp, 4);

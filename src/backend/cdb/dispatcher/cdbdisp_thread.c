@@ -109,16 +109,6 @@ cdbdisp_dispatchToGang_internal(struct CdbDispatcherState *ds,
 	Assert(gangSize <= largestGangsize());
 	db_descriptors = gp->db_descriptors;
 
-	/*
-	 * The most threads we could have is segdb_count / gp_connections_per_thread, rounded up.
-	 * This is equivalent to 1 + (segdb_count-1) / gp_connections_per_thread.
-	 * We allocate enough memory for this many DispatchCommandParms structures,
-	 * even though we may not use them all.
-	 *
-	 * We can only use gp->size here if we're not dealing with a
-	 * singleton gang. It is safer to always use the max number of segments we are
-	 * controlling (largestGangsize).
-	 */
 	Assert(gp_connections_per_thread >= 0);
 	Assert(ds->dispatchThreads != NULL);
 	/*
@@ -590,7 +580,7 @@ thread_DispatchOut(DispatchCommandParms * pParms)
 
 			if (PQstatus(dispatchResult->segdbDesc->conn) == CONNECTION_BAD)
 			{
-				char	   *msg;
+				char *msg;
 
 				msg = PQerrorMessage(dispatchResult->segdbDesc->conn);
 
@@ -1161,7 +1151,7 @@ dispatchCommand(CdbDispatchResult * dispatchResult,
 	 */
 	if (PQsendGpQuery_shared(conn, (char *) query_text, query_text_len) == 0)
 	{
-		char	   *msg = PQerrorMessage(segdbDesc->conn);
+		char *msg = PQerrorMessage(segdbDesc->conn);
 
 		if (DEBUG3 >= log_min_messages)
 			write_log("PQsendMPPQuery_shared error %s %s",
