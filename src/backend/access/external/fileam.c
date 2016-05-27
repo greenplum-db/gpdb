@@ -1661,12 +1661,6 @@ close_external_source(FILE *dataSource, bool failOnError, const char *relname)
 	{
 		url_fclose((URL_FILE*) f, failOnError, relname);
 	}
-
-	if (g_dataSourceCtx != NULL)
-	{
-		MemoryContextDelete(g_dataSourceCtx);
-		g_dataSourceCtx = NULL;
-	}
 }
 
 /*
@@ -1819,6 +1813,18 @@ void AtAbort_ExtTables(void)
 {
 	close_external_source(g_dataSource, false, NULL);
 	g_dataSource = NULL;
+}
+
+/*
+ * Delete g_dataSourceCtx memory context.
+ */
+void Delete_dataSourceCtx(void)
+{
+  if (g_dataSourceCtx != NULL)
+  {
+    MemoryContextDelete(g_dataSourceCtx);
+    g_dataSourceCtx = NULL;
+  }
 }
 
 void

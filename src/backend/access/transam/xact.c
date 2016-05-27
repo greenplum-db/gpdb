@@ -3535,6 +3535,8 @@ CommitTransaction(void)
 	CallXactCallbacks(XACT_EVENT_COMMIT);
 	CallXactCallbacksOnce(XACT_EVENT_COMMIT);
 
+	Delete_dataSourceCtx();
+
 	ResourceOwnerRelease(TopTransactionResourceOwner,
 						 RESOURCE_RELEASE_BEFORE_LOCKS,
 						 true, true);
@@ -4127,6 +4129,8 @@ AbortTransaction(void)
 	{
 		CallXactCallbacks(XACT_EVENT_ABORT);
 		CallXactCallbacksOnce(XACT_EVENT_ABORT);
+
+		Delete_dataSourceCtx();
 
 		ResourceOwnerRelease(TopTransactionResourceOwner,
 							 RESOURCE_RELEASE_BEFORE_LOCKS,
