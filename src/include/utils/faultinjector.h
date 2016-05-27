@@ -162,6 +162,7 @@ typedef enum FaultInjectorIdentifier_e {
 	
 	MallocFailure,
 	AbortTransactionFail,
+	WorkfileCreationFail,
 
 	UpdateCommittedEofInPersistentTable,
 

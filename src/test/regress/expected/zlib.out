@@ -1,0 +1,25 @@
+DROP TABLE IF EXISTS test_zlib;
+NOTICE:  table "test_zlib" does not exist, skipping
+CREATE TABLE test_zlib (i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int, i8 int) WITH (APPENDONLY=true) DISTRIBUTED BY (i1) ;
+INSERT INTO test_zlib SELECT i,i,i,i,i,i,i,i FROM generate_series (0,999999) i;
+set gp_workfile_type_hashjoin=bfz;
+SET gp_workfile_compress_algorithm=zlib;
+SET statement_mem=5000;
+--start_ignore
+\! gpfaultinjector -f workfile_creation_failure -y reset --seg_dbid 2
+20160526:18:17:56:025697 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y reset --seg_dbid 2
+20160526:18:17:56:025697 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160526:18:17:56:025697 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Obtaining Segment details from master...
+20160526:18:17:56:025697 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on 1 segment(s)
+20160526:18:17:56:025697 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on nikos-mac:/Users/narmenatzoglou/gitdev/gpdb/github_updated/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
+20160526:18:17:56:025697 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+\! gpfaultinjector -f workfile_creation_failure -y error --seg_dbid 2
+20160526:18:17:56:025709 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y error --seg_dbid 2
+20160526:18:17:56:025709 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160526:18:17:56:025709 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Obtaining Segment details from master...
+20160526:18:17:56:025709 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on 1 segment(s)
+20160526:18:17:56:025709 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on nikos-mac:/Users/narmenatzoglou/gitdev/gpdb/github_updated/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
+20160526:18:17:56:025709 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+--end_ignore
+SELECT COUNT(t1.*) FROM test_zlib AS t1, test_zlib AS t2 WHERE t1.i1=t2.i2;
+ERROR:  fault triggered, fault name:'workfile_creation_failure' fault type:'error' (faultinjector.c:673)  (seg0 slice2 127.0.0.1:25432 pid=25695)

@@ -251,6 +251,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault to simulate memory allocation failure */
 	_("transaction_abort_failure"),
 		/* inject fault to simulate transaction abort failure  */
+	_("workfile_creation_failure"),
+	  /* inject fault to simulate workfile creation failure  */
 	_("update_committed_eof_in_persistent_table"),
 		/* inject fault before committed EOF is updated in gp_persistent_relation_node for Append Only segment files */
 	_("exec_simple_query_end_command"),
@@ -1147,6 +1149,7 @@ FaultInjector_NewHashEntry(
 		case LocalTmRecordTransactionCommit:
 		case Checkpoint:
 		case AbortTransactionFail:
+		case WorkfileCreationFail:
 		case UpdateCommittedEofInPersistentTable:
 		case ExecSortBeforeSorting:
 		case FaultDuringExecDynamicTableScan:
