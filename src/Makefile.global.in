@@ -197,6 +197,10 @@ python_additional_libs	= @python_additional_libs@
 python_configdir	= @python_configdir@
 python_version		= @python_version@
 
+XERCES_LIBDIR		= @XERCES_LDFLAGS@
+XERCES_INCLUDEDIR	= @XERCES_INCLUDEDIR@
+XERCES_INCLUDEFLAGS = @XERCES_INCLUDEFLAGS@
+
 krb_srvtab = @krb_srvtab@
 
 TCLSH			= @TCLSH@

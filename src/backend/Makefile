@@ -15,15 +15,10 @@ top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 
 BLD_TOP = $(top_builddir)/gpAux
-ifeq ($(enable_orca),yes)
-include $(BLD_TOP)/releng/releng.mk
-endif
-
 
 ifdef ADDON_DIR
 include $(BLD_TOP)/$(ADDON_DIR)/src/Makefile
 endif
-
 
 SUBDIRS = access bootstrap catalog parser commands executor \
 	fts lib libpq gp_libpq_fe main nodes optimizer port postmaster regex \
@@ -31,7 +26,11 @@ SUBDIRS = access bootstrap catalog parser commands executor \
 	$(ADDON_SUBDIR)
 
 ifeq ($(enable_orca),yes)
+include $(BLD_TOP)/releng/releng.mk
 SUBDIRS += gpopt
+LIBS += -lgpopt -lgpos -lnaucrates -lgpdbcost
+LIBS += -L./gpopt/ -ldxltranslators
+LIBS += $(XERCES_LIBDIR) -lxerces-c
 endif
 
 ifeq ($(enable_codegen),yes)
@@ -67,16 +66,6 @@ LIBS := $(filter-out -lpgport, $(LIBS)) $(LDAP_LIBS_BE) $(CONNECTEMCLIB)
 
 # The backend doesn't need everything that's in LIBS, however
 LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses, $(LIBS))
-
-# adding orca libraries
-ifeq ($(enable_orca),yes)
-LIBS := $(LIBS) -L$(LIBGPOS)/$(OBJDIR_DEFAULT) -lgpos
-LIBS := $(LIBS) -L$(XERCES_LIBDIR) -lxerces-c-3.1
-LIBS := $(LIBS) -L$(OPTIMIZER)/libnaucrates/$(OBJDIR_DEFAULT) -lnaucrates
-LIBS := $(LIBS) -L$(OPTIMIZER)/libgpdbcost/$(OBJDIR_DEFAULT) -lgpdbcost
-LIBS := $(LIBS) -L$(OPTIMIZER)/libgpopt/$(OBJDIR_DEFAULT) -lgpopt
-LIBS := $(LIBS) -L$(top_builddir)/src/backend/gpopt -ldxltranslators
-endif
 
 # adding codegen libraries
 ifeq ($(enable_codegen),yes)

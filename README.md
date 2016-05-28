@@ -147,7 +147,11 @@ PGPORT=15432 make installcheck-good
 
 ## Build GPDB with GPORCA
 
-Only need to change the `configure` with additional option `--enable-orca`.
+To compile GPDB with the GPORCA query planner, the `configure` script needs to
+be invoked with an additional option: `--enable-orca`. If GPORCA was built from
+source together with the modified version of the Xerces-C library required by
+GPORCA, or you have GPXerces-C installed in a non-standard directory, the
+install location of the library need to be configured with `--with-xerces=DIR`.
 ```
 # Configure build environment to install at /usr/local/gpdb
 # Enable GPORCA
@@ -161,6 +165,11 @@ Once build and started, run `psql` and check the GPOPT (e.g. GPORCA) version:
 
 ```
 select gp_opt_version();
+```
+To enable GPORCA for queries, set the optimizer GUC to on:
+
+```
+set optimizer = on;
 ```
 
 ## Build GPDB with code generation enabled
