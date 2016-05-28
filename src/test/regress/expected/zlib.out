@@ -7,6 +7,7 @@ INSERT INTO test_zlib_hashjoin SELECT i,i,i,i,i,i,i,i FROM
 SET gp_workfile_type_hashjoin=bfz;
 SET gp_workfile_compress_algorithm=zlib;
 SET statement_mem=5000;
+--Fail after workfile creation and before add it to workfile set
 --start_ignore
 \! gpfaultinjector -f workfile_creation_failure -y reset --seg_dbid 2
 20160527:09:53:03:034973 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y reset --seg_dbid 2
@@ -35,6 +36,7 @@ INSERT INTO test_zlib_hagg SELECT i,i,i,i FROM
 	(select generate_series(1, nsegments * 300000) as i from 
 	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
 SET statement_mem=2000;
+--Fail after workfile creation and before add it to workfile set
 --start_ignore
 \! gpfaultinjector -f workfile_creation_failure -y reset --seg_dbid 2
 20160527:09:53:04:035000 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y reset --seg_dbid 2

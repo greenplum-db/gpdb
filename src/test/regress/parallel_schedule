@@ -137,3 +137,6 @@ test: limit copy2 temp domain rangefuncs prepare without_oid conversion truncate
 #test: tablespace
 test: variadic_parameters
 test: default_parameters
+
+# test workfiles compressed using zlib
+test: zlib
