@@ -13,12 +13,14 @@
 #include "codegen/codegen_wrapper.h"
 #include "codegen/codegen_manager.h"
 #include "codegen/ExecVariableList_codegen.h"
+#include "codegen/ExecQual_codegen.h"
 
 #include "codegen/utils/codegen_utils.h"
 
 using gpcodegen::CodegenManager;
 using gpcodegen::BaseCodegen;
 using gpcodegen::ExecVariableListCodegen;
+using gpcodegen::ExecQualCodegen;
 
 // Current code generator manager that oversees all code generators
 static void* ActiveCodeGeneratorManager = nullptr;
@@ -116,3 +118,13 @@ void* ExecVariableListCodegenEnroll(
       regular_func_ptr, ptr_to_chosen_func_ptr, proj_info, slot);
   return generator;
 }
+
+void* ExecQualCodegenEnroll(
+    ExecQualFn regular_func_ptr,
+    ExecQualFn* ptr_to_chosen_func_ptr,
+    PlanState *planstate) {
+  ExecQualCodegen* generator = CodegenEnroll<ExecQualCodegen>(
+      regular_func_ptr, ptr_to_chosen_func_ptr, planstate);
+  return generator;
+}
+
