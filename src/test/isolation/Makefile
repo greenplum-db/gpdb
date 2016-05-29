@@ -24,11 +24,19 @@ pg_regress.o:
 	$(MAKE) -C $(top_builddir)/src/test/regress pg_regress.o
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/pg_regress.o .
 
-pqsignal.o:
-	$(MAKE) -C $(top_builddir)/src/test/regress pqsignal.o
-	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/pqsignal.o .
+gpstringsubs.pl: gpstringsubs.pl
+	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/gpstringsubs.pl
 
-pg_isolation_regress$(X): isolation_main.o pg_regress.o pqsignal.o
+gpdiff.pl: atmsort.pm explain.pm
+	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/gpdiff.pl
+
+atmsort.pm:
+	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/atmsort.pm
+
+explain.pm:
+	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/explain.pm
+
+pg_isolation_regress$(X): isolation_main.o pg_regress.o
 	$(CC) $(CFLAGS) $^ $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@
 
 isolationtester$(X): $(OBJS) | submake-libpq submake-libpgport
@@ -66,13 +74,14 @@ endif
 # so do not clean them here
 clean distclean:
 	rm -f isolationtester$(X) pg_isolation_regress$(X) $(OBJS) isolation_main.o
-	rm -f pg_regress.o pqsignal.o
+	rm -f pg_regress.o
+	rm -f gpstringsubs.pl gpdiff.pl atmsort.pm explain.pm
 	rm -rf $(pg_regress_clean_files)
 
 maintainer-clean: distclean
 	rm -f specparse.c specscanner.c
 
-installcheck: all
+installcheck: all gpdiff.pl gpstringsubs.pl
 	./pg_isolation_regress --psqldir='$(PSQLDIR)' --inputdir=$(srcdir) --schedule=$(srcdir)/isolation_schedule
 
 # Version of the install check test that includes the prepared_transactions test
