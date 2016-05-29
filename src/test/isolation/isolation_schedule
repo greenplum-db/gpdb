@@ -1,0 +1,4 @@
+
+# GPDB-specific tests
+
+test: ao-serializable-read
