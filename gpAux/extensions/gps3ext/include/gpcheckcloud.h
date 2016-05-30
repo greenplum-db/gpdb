@@ -5,11 +5,11 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
+#include "gpreader.h"
 #include "s3common.h"
 #include "s3conf.h"
-#include "s3reader.h"
 #include "s3log.h"
-#include "gpreader.h"
+#include "s3reader.h"
 #include "s3thread.h"
 
 #define BUF_SIZE 64 * 1024

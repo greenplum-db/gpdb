@@ -63,8 +63,9 @@ bool SignRequestV4(const string &method, HTTPHeaders *h,
     string query_encoded = encode_query_str(query);
     stringstream canonical_str;
 
-    canonical_str << method << "\n" << path << "\n" << query_encoded
-                  << "\nhost:" << h->Get(HOST)
+    canonical_str << method << "\n"
+                  << path << "\n"
+                  << query_encoded << "\nhost:" << h->Get(HOST)
                   << "\nx-amz-content-sha256:" << h->Get(X_AMZ_CONTENT_SHA256)
                   << "\nx-amz-date:" << h->Get(X_AMZ_DATE) << "\n\n"
                   << "host;x-amz-content-sha256;x-amz-date\n"
@@ -78,7 +79,8 @@ bool SignRequestV4(const string &method, HTTPHeaders *h,
     find_replace(region, "external-1", "us-east-1");
 
     stringstream string2sign_str;
-    string2sign_str << "AWS4-HMAC-SHA256\n" << h->Get(X_AMZ_DATE) << "\n"
+    string2sign_str << "AWS4-HMAC-SHA256\n"
+                    << h->Get(X_AMZ_DATE) << "\n"
                     << date_str << "/" << region << "/s3/aws4_request\n"
                     << canonical_hex;
 

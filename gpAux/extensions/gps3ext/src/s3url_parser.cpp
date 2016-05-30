@@ -33,9 +33,9 @@ UrlParser::UrlParser(const char *url) {
     CHECK_OR_DIE_MSG(result == 0, "Failed to parse URL %s at field %d",
                      this->fullurl, result);
 
-    this->schema = extract_field(&url_parser, UF_SCHEMA);
-    this->host = extract_field(&url_parser, UF_HOST);
-    this->path = extract_field(&url_parser, UF_PATH);
+    this->schema = extractField(&url_parser, UF_SCHEMA);
+    this->host = extractField(&url_parser, UF_HOST);
+    this->path = extractField(&url_parser, UF_PATH);
 }
 
 UrlParser::~UrlParser() {
@@ -50,7 +50,7 @@ UrlParser::~UrlParser() {
     this->fullurl = NULL;
 }
 
-char *UrlParser::extract_field(const struct http_parser_url *url_parser,
+char *UrlParser::extractField(const struct http_parser_url *url_parser,
                                http_parser_url_fields i) {
     if ((url_parser->field_set & (1 << i)) == 0) {
         return NULL;

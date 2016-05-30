@@ -19,7 +19,7 @@ extern void StringAppendPrintf(std::string *output, const char *format, ...);
             std::string _error_str;                                         \
             StringAppendPrintf(&_error_str, _format, _args);                \
             std::stringstream _err_msg;                                     \
-            _err_msg << _error_str << "Function: " << __func__              \
+            _err_msg << _error_str << ", Function: " << __func__              \
                      << ", File: " << __FILE__ << "(" << __LINE__ << "). "; \
             throw std::runtime_error(_err_msg.str());                       \
         }                                                                   \
@@ -32,8 +32,8 @@ extern void StringAppendPrintf(std::string *output, const char *format, ...);
     do {                                                                     \
         if (!(_condition)) {                                                 \
             std::stringstream _err_msg;                                      \
-            _err_msg << "Failed expression: " << #_condition                 \
-                     << ", Function: " << __func__ << ", File: " << __FILE__ \
+            _err_msg << "Failed expression: (" << #_condition                 \
+                     << "), Function: " << __func__ << ", File: " << __FILE__ \
                      << "(" << __LINE__ << "). ";                            \
             throw std::runtime_error(_err_msg.str());                        \
         }                                                                    \

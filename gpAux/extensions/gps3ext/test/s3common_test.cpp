@@ -86,53 +86,53 @@ TEST(Common, UrlOptions) {
         option = NULL;
     }
 
-    EXPECT_STREQ("secret_test",
-                 option = get_opt_s3(
-                     "s3://neverland.amazonaws.com secret=secret_test "
-                     "blah=whatever accessid=\".\\!@#$%^&*()DFGHJK\" "
-                     "chunksize=3456789 KingOfTheWorld=sanpang",
-                     "secret"));
+    EXPECT_STREQ(
+        "secret_test",
+        option = get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
+                            "blah=whatever accessid=\".\\!@#$%^&*()DFGHJK\" "
+                            "chunksize=3456789 KingOfTheWorld=sanpang",
+                            "secret"));
     if (option) {
         free(option);
         option = NULL;
     }
 
-    EXPECT_STREQ("secret_test",
-                 option = get_opt_s3(
-                     "s3://neverland.amazonaws.com secret=secret_test "
-                     "blah= accessid=\".\\!@#$%^&*()DFGHJK\" "
-                     "chunksize=3456789 KingOfTheWorld=sanpang",
-                     "secret"));
+    EXPECT_STREQ(
+        "secret_test",
+        option = get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
+                            "blah= accessid=\".\\!@#$%^&*()DFGHJK\" "
+                            "chunksize=3456789 KingOfTheWorld=sanpang",
+                            "secret"));
     if (option) {
         free(option);
         option = NULL;
     }
 
-    EXPECT_STREQ("3456789",
-                 option = get_opt_s3(
-                     "s3://neverland.amazonaws.com secret=secret_test "
-                     "chunksize=3456789 KingOfTheWorld=sanpang ",
-                     "chunksize"));
+    EXPECT_STREQ(
+        "3456789",
+        option = get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
+                            "chunksize=3456789 KingOfTheWorld=sanpang ",
+                            "chunksize"));
     if (option) {
         free(option);
         option = NULL;
     }
 
-    EXPECT_STREQ("3456789",
-                 option = get_opt_s3(
-                     "s3://neverland.amazonaws.com   secret=secret_test "
-                     "chunksize=3456789  KingOfTheWorld=sanpang ",
-                     "chunksize"));
+    EXPECT_STREQ(
+        "3456789",
+        option = get_opt_s3("s3://neverland.amazonaws.com   secret=secret_test "
+                            "chunksize=3456789  KingOfTheWorld=sanpang ",
+                            "chunksize"));
     if (option) {
         free(option);
         option = NULL;
     }
 
-    EXPECT_STREQ("=sanpang",
-                 option = get_opt_s3(
-                     "s3://neverland.amazonaws.com secret=secret_test "
-                     "chunksize=3456789 KingOfTheWorld==sanpang ",
-                     "KingOfTheWorld"));
+    EXPECT_STREQ(
+        "=sanpang",
+        option = get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
+                            "chunksize=3456789 KingOfTheWorld==sanpang ",
+                            "KingOfTheWorld"));
     if (option) {
         free(option);
         option = NULL;
@@ -145,29 +145,27 @@ TEST(Common, UrlOptions) {
     EXPECT_THROW(get_opt_s3("s3://neverland.amazonaws.com", "secret"),
                  std::runtime_error);
 
-    EXPECT_THROW(get_opt_s3(
-                     "s3://neverland.amazonaws.com secret=secret_test "
-                     "blah=whatever accessid= chunksize=3456789 "
-                     "KingOfTheWorld=sanpang",
-                     "accessid"),
+    EXPECT_THROW(get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
+                            "blah=whatever accessid= chunksize=3456789 "
+                            "KingOfTheWorld=sanpang",
+                            "accessid"),
                  std::runtime_error);
 
-    EXPECT_THROW(get_opt_s3(
-                     "s3://neverland.amazonaws.com secret=secret_test "
-                     "blah=whatever chunksize=3456789 KingOfTheWorld=sanpang",
-                     ""),
-                 std::runtime_error);
+    EXPECT_THROW(
+        get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
+                   "blah=whatever chunksize=3456789 KingOfTheWorld=sanpang",
+                   ""),
+        std::runtime_error);
 
-    EXPECT_THROW(get_opt_s3(
-                     "s3://neverland.amazonaws.com secret=secret_test "
-                     "blah=whatever chunksize=3456789 KingOfTheWorld=sanpang",
-                     NULL),
-                 std::runtime_error);
+    EXPECT_THROW(
+        get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
+                   "blah=whatever chunksize=3456789 KingOfTheWorld=sanpang",
+                   NULL),
+        std::runtime_error);
 
-    EXPECT_THROW(get_opt_s3(
-                     "s3://neverland.amazonaws.com secret=secret_test "
-                     "chunksize=3456789 KingOfTheWorld=sanpang ",
-                     "chunk size"),
+    EXPECT_THROW(get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
+                            "chunksize=3456789 KingOfTheWorld=sanpang ",
+                            "chunk size"),
                  std::runtime_error);
 }
 

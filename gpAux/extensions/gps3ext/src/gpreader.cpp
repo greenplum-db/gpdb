@@ -1,11 +1,12 @@
 #include <sstream>
 #include <string>
 
+#include "gpreader.h"
 #include "gps3ext.h"
 #include "s3conf.h"
 #include "s3log.h"
-#include "gpreader.h"
 #include "s3utils.h"
+#include "s3macros.h"
 
 using std::string;
 using std::stringstream;
@@ -70,8 +71,9 @@ bool S3Reader::Init(int segid, int segnum, int chunksize) {
     return true;
 }
 
+// Start a downloader for next file (s3 key).
 bool S3Reader::getNextDownloader() {
-    // delete previous downloader
+    // 1. delete previous downloader if exists.
     if (this->filedownloader) {
         filedownloader->destroy();
         delete this->filedownloader;
@@ -83,31 +85,26 @@ bool S3Reader::getNextDownloader() {
         return true;
     }
 
-    // construct a new downloader
-    if (this->concurrent_num > 0) {
-        this->filedownloader = new Downloader(this->concurrent_num);
-    } else {
-        S3ERROR("Failed to create filedownloader due to threadnum");
-        return false;
-    }
+    // 2. construct a new downloader with argument: concurrent_num
+    this->filedownloader = new Downloader(this->concurrent_num);
+    CHECK_OR_DIE_MSG(this->filedownloader != NULL, "%s", "Failed to construct filedownloader.");
 
-    if (!this->filedownloader) {
-        S3ERROR("Failed to create filedownloader");
-        return false;
-    }
+    // 3. Get KeyURL which downloader will download from S3.
     BucketContent *c = this->keylist->contents[this->contentindex];
-    string keyurl = this->getKeyURL(c->Key());
-    S3DEBUG("key: %s, size: %llu", keyurl.c_str(), c->Size());
+    string keyurl = this->getKeyURL(c->getName());
+    S3DEBUG("key: %s, size: %llu", keyurl.c_str(), c->getSize());
 
-    if (!filedownloader->init(keyurl, this->region, c->Size(), this->chunksize,
-                              &this->cred)) {
+    // 4. Initialize and kick off Downloader.
+    bool ok = filedownloader->init(keyurl, this->region, c->getSize(), this->chunksize,
+                                  &this->cred);
+    if (ok) {
+    		// for now, every segment downloads its assigned files(mod)
+    		// better to build a workqueue in case not all segments are available
+    		this->contentindex += this->segnum;
+    } else {
         delete this->filedownloader;
         this->filedownloader = NULL;
         return false;
-    } else {  // move to next file
-        // for now, every segment downloads its assigned files(mod)
-        // better to build a workqueue in case not all segments are available
-        this->contentindex += this->segnum;
     }
 
     return true;
@@ -123,25 +120,25 @@ string S3Reader::getKeyURL(const string &key) {
 
 // Read data from downloader
 bool S3Reader::TransferData(char *data, uint64_t &len) {
-    if (!this->filedownloader) {
+    if (this->filedownloader == NULL) {
         S3INFO("No files to download, exit");
         len = 0;
         return true;
     }
-    uint64_t buflen;
+
 RETRY:
-    buflen = len;
-    bool result = this->filedownloader->get(data, buflen);
-    if (!result) {
-        S3ERROR("Failed to get data from filedownloader");
+	uint64_t buflen = len;
+    bool ok = this->filedownloader->get(data, buflen);
+    if (!ok) {
+        S3ERROR("Failed to get data from file downloader");
         return false;
     }
     if (buflen == 0) {
-        if (!this->getNextDownloader()) {
+        if (! this->getNextDownloader()) {
             return false;
         }
 
-        if (this->filedownloader) {
+        if (this->filedownloader != NULL) {
             S3INFO("Time to download new file");
             goto RETRY;
         }
@@ -213,8 +210,7 @@ S3Reader *reader_init(const char *url_with_options) {
         }
 
         return reader;
-    }
-    catch (...) {
+    } catch (...) {
         S3ERROR("Caught an exception, aborting");
         return NULL;
     }
@@ -238,8 +234,7 @@ bool reader_transfer_data(S3Reader *reader, char *data_buf, int &data_len) {
 
         // sure read_len <= data_len here, hence truncation will never happen
         data_len = (int)read_len;
-    }
-    catch (...) {
+    } catch (...) {
         S3ERROR("Caught an exception, aborting");
         return false;
     }
@@ -265,8 +260,7 @@ bool reader_cleanup(S3Reader **reader) {
 
         // Cleanup function for the XML library.
         xmlCleanupParser();
-    }
-    catch (...) {
+    } catch (...) {
         S3ERROR("Caught an exception, aborting");
         return false;
     }

@@ -98,8 +98,8 @@ uint8_t print_contents(ListBucketResult *r) {
         }
 
         BucketContent *p = *i;
-        snprintf(urlbuf, 256, "%s", p->Key().c_str());
-        printf("File: %s, Size: %" PRIu64 "\n", urlbuf, p->Size());
+        snprintf(urlbuf, 256, "%s", p->getName().c_str());
+        printf("File: %s, Size: %" PRIu64 "\n", urlbuf, p->getSize());
 
         count++;
     }

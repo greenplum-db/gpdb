@@ -46,7 +46,9 @@ void HTTPHeaders::CreateList() {
     this->header_list = headers;
 }
 
-struct curl_slist *HTTPHeaders::GetList() { return this->header_list; }
+struct curl_slist *HTTPHeaders::GetList() {
+    return this->header_list;
+}
 
 void HTTPHeaders::FreeList() {
     if (this->header_list) {

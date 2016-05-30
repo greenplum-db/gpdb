@@ -12,11 +12,12 @@
 #include <zlib.h>
 
 #include "gps3ext.h"
-#include "s3reader.h"
 #include "s3http_headers.h"
 #include "s3log.h"
+#include "s3reader.h"
 #include "s3url_parser.h"
 #include "s3utils.h"
+#include "s3macros.h"
 
 using std::stringstream;
 
@@ -144,7 +145,7 @@ uint64_t BlockingBuffer::Fill() {
         if (leftlen != 0) {
             readlen = this->fetchdata(offset, this->bufferdata + this->realsize,
                                       leftlen);
-            if (readlen == (uint64_t) - 1) {
+            if (readlen == (uint64_t)-1) {
                 S3DEBUG("Failed to fetch data from libcurl");
             } else {
                 S3DEBUG("Got %llu bytes from libcurl", readlen);
@@ -157,7 +158,7 @@ uint64_t BlockingBuffer::Fill() {
             this->eof = true;
             S3DEBUG("Reached the end of file");
             break;
-        } else if (readlen == (uint64_t) - 1) {  // Error
+        } else if (readlen == (uint64_t)-1) {  // Error
             this->error = true;
             S3ERROR("Failed to download file");
             break;
@@ -171,7 +172,7 @@ uint64_t BlockingBuffer::Fill() {
     pthread_cond_signal(&this->stat_cond);
 
     pthread_mutex_unlock(&this->stat_mutex);
-    return (readlen == (uint64_t) - 1) ? -1 : this->realsize;
+    return (readlen == (uint64_t)-1) ? -1 : this->realsize;
 }
 
 BlockingBuffer *BlockingBuffer::CreateBuffer(const string &url,
@@ -200,7 +201,7 @@ void *DownloadThreadfunc(void *data) {
         }
 
         filled_size = buffer->Fill();
-        if (filled_size == (uint64_t) - 1) {
+        if (filled_size == (uint64_t)-1) {
             S3DEBUG("Failed to fill downloading buffer");
         } else {
             S3DEBUG("Size of filled data is %llu", filled_size);
@@ -208,7 +209,7 @@ void *DownloadThreadfunc(void *data) {
 
         if (buffer->EndOfFile()) break;
 
-        if (filled_size == (uint64_t) - 1) {  // Error
+        if (filled_size == (uint64_t)-1) {  // Error
             if (buffer->Error()) {
                 break;
             } else {
@@ -228,6 +229,7 @@ Downloader::Downloader(uint8_t part_num)
       magic_bytes_num(0),
       compression(S3_ZIP_NONE),
       z_info(NULL) {
+	CHECK_OR_DIE(this->num != 0);
     this->threads = (pthread_t *)malloc(num * sizeof(pthread_t));
     if (this->threads)
         memset((void *)this->threads, 0, num * sizeof(pthread_t));
@@ -710,7 +712,7 @@ bool S3Fetcher::processheader() {
 // CreateBucketContentItem
 BucketContent::~BucketContent() {}
 
-BucketContent::BucketContent() : key(""), size(0) {}
+BucketContent::BucketContent() : name(""), size(0) {}
 
 BucketContent *CreateBucketContentItem(const string &key, uint64_t size) {
     if (key == "") return NULL;
@@ -720,7 +722,7 @@ BucketContent *CreateBucketContentItem(const string &key, uint64_t size) {
         S3ERROR("Can't create bucket list, no enough memory?");
         return NULL;
     }
-    ret->key = key;
+    ret->name = key;
     ret->size = size;
     return ret;
 }
@@ -805,8 +807,8 @@ xmlParserCtxtPtr DoGetXML(const string &region, const string &url,
     return xml.ctxt;
 }
 
-static bool extractContent(ListBucketResult *result, xmlNode *root_element,
-                           string &marker) {
+bool extractContent(ListBucketResult *result, xmlNode *root_element,
+                    string &marker) {
     if (!result || !root_element) {
         return false;
     }
@@ -904,6 +906,9 @@ static bool extractContent(ListBucketResult *result, xmlNode *root_element,
 ListBucketResult *ListBucket(const string &schema, const string &region,
                              const string &bucket, const string &prefix,
                              const S3Credential &cred) {
+    // To get next up to 1000 keys.
+    // If marker is empty, get first 1000 then.
+    // S3 will return the last key as the next marker.
     string marker = "";
 
     stringstream host;

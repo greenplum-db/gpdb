@@ -14,30 +14,34 @@ endif
 all: test
 
 # Google TEST
-TEST_SRC_FILES = test/s3conf_test.cpp test/s3utils_test.cpp test/gpreader_test.cpp test/s3common_test.cpp test/s3log_test.cpp test/s3url_parser_test.cpp test/s3http_headers_test.cpp test/s3thread_test.cpp test/s3reader_test.cpp
+TEST_SRC_FILES = test/s3conf_test.cpp test/s3utils_test.cpp test/gpreader_test.cpp test/s3common_test.cpp test/s3log_test.cpp test/s3url_parser_test.cpp test/s3http_headers_test.cpp test/s3thread_test.cpp test/s3reader_test.cpp test/s3bucket_reader_test.cpp test/s3interface_test.cpp
 TEST_OBJS = $(TEST_SRC_FILES:.cpp=.o)
 TEST_APP = s3test
 
 DEP_FILES := $(patsubst %.cpp,%.d,$(TEST_SRC_FILES))
 -include $(DEP_FILES)
 
+GMOCK_DIR = ../gmock
 GTEST_DIR = ../gtest
-GTEST_SRCS_ = $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h $(GTEST_HEADERS)
 
-$(TEST_OBJS) gtest-all.o gtest_main.o: INCLUDES += -I$(GTEST_DIR)/include -I$(GTEST_DIR)/
+$(TEST_OBJS) gtest_main.o gtest-all.o gmock-all.o: INCLUDES += -I$(GTEST_DIR)/ -I$(GMOCK_DIR)/ -I$(GTEST_DIR)/src -I$(GMOCK_DIR)/src -I$(GTEST_DIR)/include -I$(GMOCK_DIR)/include
 
-gtest-all.o : $(GTEST_SRCS_)
+gmock-all.o :
+	$(CXX) $(INCLUDES) $(CXXFLAGS) -c $(GMOCK_DIR)/src/gmock-all.cc
+	
+gtest-all.o :
 	$(CXX) $(INCLUDES) $(CXXFLAGS) -c $(GTEST_DIR)/src/gtest-all.cc
 
-gtest_main.o : $(GTEST_SRCS_)
+gtest_main.o :
 	$(CXX) $(INCLUDES) $(CXXFLAGS) -c $(GTEST_DIR)/src/gtest_main.cc
 
-gtest_main.a : gtest-all.o gtest_main.o
-	$(AR) $(ARFLAGS) $@ $^
+gtest_main.a : gtest_main.o gtest-all.o gmock-all.o
+	$(AR) -rv $@ $^
 
 buildtest: $(TEST_APP)
 
-$(TEST_APP): gtest_main.a $(TEST_OBJS)
+# Keep gtest_main.a at end, otherwise linker will report undefined symbol error.
+$(TEST_APP): $(TEST_OBJS) gtest_main.a
 	$(CPP) $^ -o $(TEST_APP) $(LDFLAGS)
 
 %.o: %.cpp

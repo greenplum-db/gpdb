@@ -3,8 +3,8 @@
 
 #include <string>
 
-#include "s3reader.h"
 #include "s3extbase.h"
+#include "s3reader.h"
 
 using std::string;
 
