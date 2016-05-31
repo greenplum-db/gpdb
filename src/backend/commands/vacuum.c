@@ -3279,6 +3279,25 @@ repair_frag(VRelStats *vacrelstats, Relation onerel,
 			 * processing this or a higher numbered block.
 			 * ---
 			 */
+
+			/*
+			 * In PostgreSQL, we assume that the first pass of vacuum already
+			 * set the hint bit. However, we cannot rely on that in GPDB,
+			 * because of gp_disable_tuple_hints GUC. If it's ever set, then
+			 * the first pass might've seen that all the hint bits on the page
+			 * were already set, but the backend that set those bits didn't
+			 * mark the buffer as dirty. If the buffer is subsequently evicted
+			 * from the buffer cache, the hint bit updates are lost, and we
+			 * will see them as not set here, even though they were set in the
+			 * first pass.
+			 *
+			 * To fix that, just call HeapTupleSatisfiesVacuum() here to set
+			 * the hint bits again, if not set already.
+			 */
+			LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
+			(void) HeapTupleSatisfiesVacuum(tuple.t_data, OldestXmin, buf);
+			LockBuffer(buf, BUFFER_LOCK_UNLOCK);
+
 			if (!(tuple.t_data->t_infomask & HEAP_XMIN_COMMITTED))
 			{
 				if (tuple.t_data->t_infomask & HEAP_MOVED_IN)
