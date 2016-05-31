@@ -1815,18 +1815,6 @@ void AtAbort_ExtTables(void)
 	g_dataSource = NULL;
 }
 
-/*
- * Delete g_dataSourceCtx memory context.
- */
-void Delete_dataSourceCtx(void)
-{
-  if (g_dataSourceCtx != NULL)
-  {
-    MemoryContextDelete(g_dataSourceCtx);
-    g_dataSourceCtx = NULL;
-  }
-}
-
 void
 gfile_printf_then_putc_newline(const char*format,...)
 {
@@ -1857,7 +1845,7 @@ gfile_malloc(size_t size)
 {
 	if (g_dataSourceCtx == NULL)
 	{
-		g_dataSourceCtx = AllocSetContextCreate(TopMemoryContext,
+		g_dataSourceCtx = AllocSetContextCreate(TopTransactionContext,
 												"DataSourceContext",
 												ALLOCSET_SMALL_MINSIZE,
 												ALLOCSET_SMALL_INITSIZE,

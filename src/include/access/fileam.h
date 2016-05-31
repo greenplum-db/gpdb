@@ -70,7 +70,6 @@ extern Oid external_insert(ExternalInsertDesc extInsertDesc, HeapTuple instup);
 extern void external_insert_finish(ExternalInsertDesc extInsertDesc);
 extern void external_set_env_vars(extvar_t *extvar, char* uri, bool csv, char* escape, char* quote, bool header, uint32 scancounter);
 extern void AtAbort_ExtTables(void);
-extern void Delete_dataSourceCtx(void);
 char*	linenumber_atoi(char buffer[20],int64 linenumber);
 
 
