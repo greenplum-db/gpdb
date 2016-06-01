@@ -182,10 +182,7 @@ initNextIndexToScan(DynamicIndexScanState *node)
 		Relation currentRelation = OpenScanRelationByOid(*pid);
 		indexState->ss.ss_currentRelation = currentRelation;
 
-		for (int i=0; i < DYNAMICINDEXSCAN_NSLOTS; i++)
-		{
-			indexState->ss.ss_ScanTupleSlot[i].tts_tableOid = *pid;
-		}
+		indexState->ss.ss_ScanTupleSlot->tts_tableOid = *pid;
 
 		ExecAssignScanType(&indexState->ss, RelationGetDescr(currentRelation));
 

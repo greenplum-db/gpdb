@@ -211,6 +211,7 @@ DynamicScan_UpdateScanStateForNewPart(ScanState *scanState, Relation newRelation
 	scanState->ss_currentRelation = newRelation;
 	ExecAssignScanType(scanState, RelationGetDescr(newRelation));
 	Oid newOid = RelationGetRelid(newRelation);
+
 	/*
 	 * Inside ExecInitScanTupleSlot() we set the tuple table slot's oid
 	 * to range table entry's relid, which for partitioned table always set
@@ -220,11 +221,7 @@ DynamicScan_UpdateScanStateForNewPart(ScanState *scanState, Relation newRelation
 	 * to return correct partition oid, we need to update
 	 * our tuple table slot's oid to reflect the partition oid.
 	 */
-	for (int i = 0; i < DYNAMIC_SCAN_NSLOTS; i++)
-	{
-		scanState->ss_ScanTupleSlot[i].tts_tableOid = newOid;
-	}
-
+	scanState->ss_ScanTupleSlot->tts_tableOid = newOid;
 	scanState->tableType = getTableType(scanState->ss_currentRelation);
 }
 
