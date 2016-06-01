@@ -118,12 +118,12 @@ SELECT max(*) FROM filter_test;
 ERROR:  function max() does not exist
 LINE 1: SELECT max(*) FROM filter_test;
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT max(*) FILTER (WHERE i < 5) FROM filter_test;
 ERROR:  function max() does not exist
 LINE 1: SELECT max(*) FILTER (WHERE i < 5) FROM filter_test;
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- Use old sort implementation
 set gp_enable_mk_sort=off;
 --- TEST MAX(i)
@@ -445,7 +445,7 @@ FROM filter_test ORDER BY j, i;
 ERROR:  function row_number(integer) does not exist
 LINE 1: select i, j, row_number() filter (WHERE i % 2 = 1) over (par...
                      ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select i, rank() over (order by i) from filter_test ORDER BY i;
  i  | rank 
 ----+------
@@ -465,7 +465,7 @@ select i, rank() filter (where true) over (order by i) from filter_test ORDER BY
 ERROR:  function rank(integer) does not exist
 LINE 1: select i, rank() filter (where true) over (order by i) from ...
                   ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select i, ntile(3) over (order by i) from filter_test ORDER BY i;
  i  | ntile 
 ----+-------
@@ -546,19 +546,19 @@ select i(t) filter (where true) from (select maketuple() as t) x order by i(t);
 ERROR:  function i(filter_test) does not exist
 LINE 1: select i(t) filter (where true) from (select maketuple() as ...
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 drop function maketuple();
 --- TEST non-exsistant function => same error
 select chocolate(i) from filter_test;
 ERROR:  function chocolate(integer) does not exist
 LINE 1: select chocolate(i) from filter_test;
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select chocolate(i) filter (where true) from filter_test;
 ERROR:  function chocolate(integer) does not exist
 LINE 1: select chocolate(i) filter (where true) from filter_test;
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 --- TEST filter from outside scope => error
 select * from (select i from filter_test where j = 1) x1, 
               (select sum(i) filter (where i < x1.i) from filter_test where j = 2) x2;

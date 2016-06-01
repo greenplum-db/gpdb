@@ -317,12 +317,12 @@ SELECT scalar_1(TABLE(select 1));  -- TableValue expression does not match type
 ERROR:  function scalar_1(anytable) does not exist
 LINE 1: SELECT scalar_1(TABLE(select 1));
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT scalar_5(TABLE(select 1));  -- TableValue shouldn't match "anyelement"
 ERROR:  function scalar_5(anytable) does not exist
 LINE 1: SELECT scalar_5(TABLE(select 1));
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- Normal scalar input / table output functions
 -- begin equivalent */
 SELECT row(a+5, b)::example from example;
@@ -747,12 +747,12 @@ SELECT scalar_tf_1(TABLE(select 1));  -- TableValue expression does not match ty
 ERROR:  function scalar_tf_1(anytable) does not exist
 LINE 1: SELECT scalar_tf_1(TABLE(select 1));
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT scalar_tf_6(TABLE(select 1));  -- TableValue expression does not anyelement
 ERROR:  function scalar_tf_6(anytable) does not exist
 LINE 1: SELECT scalar_tf_6(TABLE(select 1));
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- Table Functions   table input / table output
 -- begin equivalent
 SELECT * FROM example order by a, b;
@@ -1364,7 +1364,7 @@ SELECT * from nameres(TABLE(SELECT 5));  -- should fail
 ERROR:  function nameres(anytable) does not exist
 LINE 1: SELECT * from nameres(TABLE(SELECT 5));
                       ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 CREATE FUNCTION nameres(anytable) RETURNS int
     AS '@abs_srcdir@/regress.so', 'multiset_scalar_value' LANGUAGE C READS SQL DATA;
 SELECT * from nameres(5);                -- should work
@@ -1384,7 +1384,7 @@ SELECT * from nameres(5);                -- should fail
 ERROR:  function nameres(integer) does not exist
 LINE 1: SELECT * from nameres(5);
                       ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT * from nameres(TABLE(SELECT 5));  -- should work
  nameres 
 ---------
@@ -1396,12 +1396,12 @@ SELECT * from nameres(5);                -- should fail
 ERROR:  function nameres(integer) does not exist
 LINE 1: SELECT * from nameres(5);
                       ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT * from nameres(TABLE(SELECT 5));  -- should fail
 ERROR:  function nameres(anytable) does not exist
 LINE 1: SELECT * from nameres(TABLE(SELECT 5));
                       ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- Error: anytable does NOT match anyelement
 CREATE FUNCTION nameres(anyelement) returns int 
   AS $$ SELECT $1 $$ LANGUAGE SQL CONTAINS SQL;
@@ -1409,7 +1409,7 @@ SELECT * FROM nameres( TABLE( SELECT 1) ); -- should fail
 ERROR:  function nameres(anytable) does not exist
 LINE 1: SELECT * FROM nameres( TABLE( SELECT 1) );
                       ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 DROP FUNCTION nameres(anyelement);
 -- Must support resjunk scatter by clauses
 explain SELECT * FROM multiset_5( TABLE( SELECT * FROM example SCATTER BY a+1) );
@@ -2047,7 +2047,7 @@ SELECT multiset_2( (SELECT a from example) );       -- not a TableValue expressi
 ERROR:  function multiset_2(integer) does not exist
 LINE 1: SELECT multiset_2( (SELECT a from example) );
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT multiset_2( TABLE(SELECT * from example) );  -- not in the from clause
 ERROR:  table functions must be invoked in FROM clause
 SELECT multiset_3( TABLE(SELECT a from example) );  -- not in the from clause
@@ -2879,12 +2879,12 @@ SELECT extract(day from id) FROM project( TABLE( SELECT * FROM history ), 1);
 ERROR:  function pg_catalog.date_part(unknown, integer) does not exist
 LINE 1: SELECT extract(day from id) FROM project( TABLE( SELECT * FR...
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT "time"+1 FROM project( TABLE( SELECT * FROM history ), 2);
 ERROR:  operator does not exist: timestamp without time zone + integer
 LINE 1: SELECT "time"+1 FROM project( TABLE( SELECT * FROM history )...
                      ^
-HINT:  No operator matches the given name and argument type(s). You may need to add explicit type casts.
+HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
 -- ERROR: select columns projected out by the function
 SELECT id  FROM project( TABLE( SELECT * FROM history ), 2);
 ERROR:  column "id" does not exist
@@ -3075,7 +3075,7 @@ PREPARE p2 AS SELECT * FROM multiset_2( $1 ) order by a, b;
 ERROR:  function multiset_2(unknown) does not exist
 LINE 1: PREPARE p2 AS SELECT * FROM multiset_2( $1 ) order by a, b;
                                     ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 PREPARE p3(anytable) AS SELECT * FROM multiset_5( $1 ) order by a, b;
 ERROR:  type "anytable" is not a valid parameter for PREPARE
 -- FAIL: $1 is not a constant

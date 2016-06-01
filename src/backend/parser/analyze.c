@@ -4220,8 +4220,7 @@ static Node* grouped_window_mutator(Node *node, void *context)
 			ereport(ERROR,
 					(errcode(ERRCODE_WINDOWING_ERROR),
 					 errmsg("unresolved grouping key in window query"),
-					 errhint("You may need to use explicit aliases and/or to refer to grouping "
-							 "keys in the same way throughout the query.")));
+					 errhint("You might need to use explicit aliases and/or to refer to grouping keys in the same way throughout the query.")));
 	}
 	else
 	{

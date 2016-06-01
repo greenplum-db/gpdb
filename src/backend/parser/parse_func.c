@@ -345,7 +345,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 				 errmsg("function %s() does not exist",
 						NameListToString(funcname)),
 				 errhint("No function matches the given name and argument types. "
-						 "You may need to add explicit type casts."),
+						 "You might need to add explicit type casts."),
 				 parser_errposition(pstate, location)));
 	}
 

@@ -26,7 +26,7 @@ select dfunc(10, 20, 30);  -- fail
 ERROR:  function dfunc(integer, integer, integer) does not exist
 LINE 1: select dfunc(10, 20, 30);
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 drop function dfunc();  -- fail
 ERROR:  function dfunc() does not exist
 drop function dfunc(int);  -- fail
@@ -93,7 +93,7 @@ select dfunc();  -- fail: which dfunc should be called? int or text
 ERROR:  function dfunc() is not unique
 LINE 1: select dfunc();
                ^
-HINT:  Could not choose a best candidate function. You may need to add explicit type casts.
+HINT:  Could not choose a best candidate function. You might need to add explicit type casts.
 select dfunc('Hi');  -- ok
    dfunc   
 -----------
@@ -136,17 +136,17 @@ select dfunc();  -- fail
 ERROR:  function dfunc() is not unique
 LINE 1: select dfunc();
                ^
-HINT:  Could not choose a best candidate function. You may need to add explicit type casts.
+HINT:  Could not choose a best candidate function. You might need to add explicit type casts.
 select dfunc(1);  -- fail
 ERROR:  function dfunc(integer) is not unique
 LINE 1: select dfunc(1);
                ^
-HINT:  Could not choose a best candidate function. You may need to add explicit type casts.
+HINT:  Could not choose a best candidate function. You might need to add explicit type casts.
 select dfunc(1, 2);  -- fail
 ERROR:  function dfunc(integer, integer) is not unique
 LINE 1: select dfunc(1, 2);
                ^
-HINT:  Could not choose a best candidate function. You may need to add explicit type casts.
+HINT:  Could not choose a best candidate function. You might need to add explicit type casts.
 select dfunc(1, 2, 3);  -- ok
  dfunc 
 -------
@@ -199,7 +199,7 @@ select dfunc();  -- fail
 ERROR:  function dfunc() does not exist
 LINE 1: select dfunc();
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select dfunc(10);
  dfunc 
 -------
