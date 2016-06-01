@@ -744,30 +744,26 @@ ExecInitSubPlan(SubPlanState *node, EState *estate, int eflags)
 			 * we will simply substitute the actual value from
 			 * the external parameters.
 			 */
-			if (Gp_role == GP_ROLE_EXECUTE
-					&& subplan->is_initplan)
+			if (Gp_role == GP_ROLE_EXECUTE && subplan->is_initplan)
 			{	
 				ParamListInfo paramInfo = estate->es_param_list_info;
 				ParamExternData *prmExt = NULL;
 				int extParamIndex = -1;
-				
+
 				Assert(paramInfo);
 				Assert(paramInfo->numParams > 0);
-				
-				/* 
+
+				/*
 				 * To locate the value of this pre-evaluated parameter, we need to find
-				 * its location in the external parameter list.  
+				 * its location in the external parameter list.
 				 */
 				extParamIndex = paramInfo->numParams - estate->es_plannedstmt->nCrossLevelParams + paramid;
-				
-				/* Ensure that the plan is actually an initplan */
-				Assert(subplan->is_initplan && "Subplan is not an initplan. Parameter has not been evaluated in preprocess_initplan.");
-				
+
 				prmExt = &paramInfo->params[extParamIndex];
-								
+
 				/* Make sure the types are valid */
 				Assert(OidIsValid(prmExt->ptype) && "Invalid Oid for pre-evaluated parameter.");				
-				
+
 				/** Hurray! Copy value from external parameter and don't bother setting up execPlan. */
 				prmExec->execPlan = NULL;
 				prmExec->isnull = prmExt->isnull;
