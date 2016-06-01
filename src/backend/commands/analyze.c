@@ -1352,40 +1352,6 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 }
 
 
-/*
- * A convenience routine, to fetch two float4's from the current SPI result.
- *
- * The result set is expected to contain a single row, with a single
- * float4 array column, with two values in the array.
- */
-static void
-spi_getSingleResultRowArrayAsTwoFloat4(float4 *out1, float *out2)
-{
-	Datum		arrayDatum;
-	bool		isNull;
-	Datum	   *values = NULL;
-	int			valuesLength;
-
-    Assert(SPI_tuptable != NULL);
-    Assert(SPI_processed == 1);
-
-    arrayDatum = heap_getattr(SPI_tuptable->vals[0], 1, SPI_tuptable->tupdesc, &isNull);
-    Assert(!isNull);
-
-    deconstruct_array(DatumGetArrayTypeP(arrayDatum),
-            FLOAT4OID,
-            sizeof(float4),
-            true,
-            'i',
-            &values, NULL, &valuesLength);
-    Assert(valuesLength == 2);
-
-	*out1 = DatumGetFloat4(values[0]);
-	*out2 = DatumGetFloat4(values[1]);
-    pfree(values);
-}
-
-
 /**
  * This method estimates reltuples/relpages for a relation. To do this, it employs
  * the built-in function 'gp_statistics_estimate_reltuples_relpages'. If the table to be
@@ -1426,9 +1392,11 @@ analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples, float4 *rel
 	{
 		Oid			singleOid = lfirst_oid(lc);
 		StringInfoData	sqlstmt;
-		float4      tuples;
-		float4      pages;
 		int			ret;
+		Datum		arrayDatum;
+		bool		isNull;
+		Datum	   *values = NULL;
+		int			valuesLength;
 
 		initStringInfo(&sqlstmt);
 
@@ -1455,9 +1423,20 @@ analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples, float4 *rel
 		Assert(SPI_tuptable != NULL);
 		Assert(SPI_processed == 1);
 
-		spi_getSingleResultRowArrayAsTwoFloat4(&tuples, &pages);
-		*relTuples += tuples;
-		*relPages += pages;
+		arrayDatum = heap_getattr(SPI_tuptable->vals[0], 1, SPI_tuptable->tupdesc, &isNull);
+		if (isNull)
+			elog(ERROR, "could not get estimated number of tuples and pages for relation %u", singleOid);
+
+		deconstruct_array(DatumGetArrayTypeP(arrayDatum),
+						  FLOAT4OID,
+						  sizeof(float4),
+						  true,
+						  'i',
+						  &values, NULL, &valuesLength);
+		Assert(valuesLength == 2);
+
+		*relTuples += DatumGetFloat4(values[0]);
+		*relPages += DatumGetFloat4(values[1]);
 
 		SPI_finish();
 	}
@@ -1478,10 +1457,10 @@ analyzeEstimateIndexpages(Relation onerel, Relation indrel, BlockNumber *indexPa
 {
 	StringInfoData 	sqlstmt;
 	int			ret;
-	float4      tuples;
-	float4      pages;
-
-	*indexPages = 0;
+	Datum		arrayDatum;
+	bool		isNull;
+	Datum	   *values = NULL;
+	int			valuesLength;
 
 	initStringInfo(&sqlstmt);
 
@@ -1508,9 +1487,20 @@ analyzeEstimateIndexpages(Relation onerel, Relation indrel, BlockNumber *indexPa
 	if (SPI_processed != 1)
 		elog(ERROR, "unexpected number of rows returned for internal analyze query");
 
-	spi_getSingleResultRowArrayAsTwoFloat4(&tuples, &pages);
+    arrayDatum = heap_getattr(SPI_tuptable->vals[0], 1, SPI_tuptable->tupdesc, &isNull);
+	if (isNull)
+		elog(ERROR, "could not get estimated number of tuples and pages for index \"%s\"",
+			 RelationGetRelationName(indrel));
 
-	*indexPages = (BlockNumber) pages;
+    deconstruct_array(DatumGetArrayTypeP(arrayDatum),
+            FLOAT4OID,
+            sizeof(float4),
+            true,
+            'i',
+            &values, NULL, &valuesLength);
+    Assert(valuesLength == 2);
+
+	*indexPages = DatumGetFloat4(values[1]);
 
 	SPI_finish();
 
