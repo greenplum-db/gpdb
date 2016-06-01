@@ -134,6 +134,8 @@ step.
 Also deadlocks with oneself are possible, usually only achiveable with several
 open cursors:
     ResCheckSelfDeadLock(LOCK *lock);
+
+NOTE: This specifically is not applicable to case when cost is not being used.
 -----------------------------------------------------------------------------
 
 Lock Design
@@ -270,16 +272,18 @@ however the symbol RESLOCK_DEBUG must be defined before they are enabled
 
 -----------------------------------------------------------------------------
 
-Notes
+Resource Queue Cost Checking Not Enabled
 -----
+The behaviour of disabling cost based checking for Resource Queues is a bit different.
+To disable cost based checking, use resource_usecost GUC and set it to false. This will
+lead to Resource Queues not using plan cost based checks and the only checks that will be used
+will be number of active statements and memory limit checks. This is for ensuring that taking
+Resource Queue Slot locks at time of query admission is safe and that this does not lead to
+problems later on. In case where plan cost based checking is enabled, we need to take the lock
+at Portal creation time so that the plan is generated and the cost based checking can be done successfully.
+With no cost based checking, we take the lock at query admission and release the lock only at end of transaction.
+This is in line with way other heavyweight locks are managed.
+Please note that SET SESSION AUTHORIZATION and SET ROLE inside explicit transactions are not allowed since Resource Queue Slot locks are now
+held across entire life of transaction
 
-[1] "Managed by the Resource Scheduler" - this deserves some explanation,
-     In the current incarnation of the code it means:
-
-       portal->queueId != InvalidOid
-       portal->releaseResLock == true
-
-     
-     Typically every portal gets queueId set at creation, but this may get 
-     reset when the to-lock-or-not-to-lock decision comes around (see 
-     ResLockPortal).
+-----------------------------------------------------------------------------

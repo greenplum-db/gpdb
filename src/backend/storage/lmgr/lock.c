@@ -2229,6 +2229,12 @@ PostPrepare_Locks(TransactionId xid)
 		LWLockRelease(partitionLock);
 	}							/* loop over partitions */
 
+	/* If holding a Resource Queue Slot lock, release it */
+	if (ResourceScheduler && !superuser() && !ResourceQueueUseCost)
+	{
+		ResLockPreEmptiveUnlock();
+	}
+
 	END_CRIT_SECTION();
 }
 

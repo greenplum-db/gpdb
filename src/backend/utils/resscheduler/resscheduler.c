@@ -559,6 +559,7 @@ ResLockPortal(Portal portal, QueryDesc *qDesc)
 	 */
 	if (queueid != InvalidOid)
 	{
+		memset(&incData, 0x00, sizeof(incData));
 
 		/*
 		 * Check the source tag to see if the original statement is suitable for
@@ -774,6 +775,7 @@ ResLockUtilityPortal(Portal portal, float4 ignoreCostLimit)
 		/*
 		 * Setup the resource portal increments, ready to be added.
 		 */
+		memset(&incData, 0x00, sizeof(incData));
 		incData.pid = MyProc->pid;
 		incData.portalId = portal->portalId;
 		incData.increments[RES_COUNT_LIMIT] = 1;
@@ -904,6 +906,11 @@ SetResQueueId(void)
 	/* to cave the code of cache part, we provide a resource owner here if no
 	 * existing */
 	ResourceOwner owner = NULL;
+
+	if (!ResourceQueueUseCost && IsTransactionBlock())
+	{
+		PreventTransactionChain(NULL, "Set cached Resource Queue ID");
+	}
 
 	if (CurrentResourceOwner == NULL)
 	{
@@ -1085,5 +1092,115 @@ ResHandleUtilityStmt(Portal portal, Node *stmt)
 			portal->holdingResLock = ResLockUtilityPortal(portal, resQueue->ignorecostlimit);
 		}
 		portal->status = PORTAL_ACTIVE;
+	}
+}
+
+/*
+ * Pre lock the current slot in Resource Queue
+ * By preemptive here, we mean here that the RQ slot lock
+ * is preemptively taken before any other lock. This avoids
+ * deadlocks since we are in a mode of pessimistic locking (not
+ * essentially since we will need a RQ slot anyways so take it here)
+ * Resource Queue Slot locks can be taken at two points
+ * in query processing. We either take them when creating portals
+ * or at query admission time. The method pre locks the Resource
+ * Queue slot lock at query admission. This is necessary to avoid
+ * deadlocks with shared database object locks such as relation locks.
+ * This is only applicable if Resource Queue's cost based checking is
+ * turned off. If it is applicable, this method should not be called.
+ */
+bool
+ResLockPreEmptivelock(ResPortalIncrement *incrementSet)
+{
+	bool returnReleaseOk = false;
+	LOCKTAG	tag;
+	Oid	queueid;
+	int32	lockResult = 0;
+
+	queueid = GetResQueueId();
+
+	Assert(incrementSet != NULL);
+
+	if (ResourceQueueUseCost)
+	{
+		return false;
+	}
+	/*
+	* Check we have a valid queue before going any further.
+	*/
+	if (queueid != InvalidOid)
+	{
+		returnReleaseOk = true;
+
+		/*
+		* Get the resource lock.
+		*/
+#ifdef RESLOCK_DEBUG
+elog(DEBUG1, "acquire resource lock for queue %u (portal %u)",
+queueid, portal->portalId);
+#endif
+		SET_LOCKTAG_RESOURCE_QUEUE(tag, queueid);
+
+		PG_TRY();
+		{
+			lockResult = ResLockAcquire(&tag, incrementSet);
+		}
+		PG_CATCH();
+		{
+			/*
+			* We might have been waiting for a resource queue lock when we get
+			* here. Calling ResLockRelease without calling ResLockWaitCancel will
+			* cause the locallock to be cleaned up, but will leave the global
+			* variable lockAwaited still pointing to the locallock hash
+			* entry.
+			*/
+			ResLockWaitCancel();
+
+			/* Change status to no longer waiting for lock */
+			pgstat_report_waiting(PGBE_WAITING_NONE);
+
+			/* If we had acquired the resource queue lock, release it and clean up */
+			ResLockRelease(&tag, INVALID_PORTALID);
+
+			PG_RE_THROW();
+		}
+		PG_END_TRY();
+
+		Assert((lockResult != LOCKACQUIRE_NOT_AVAIL));
+	}
+
+	return returnReleaseOk;
+}
+
+/*
+ * Pre release the currently locked Resource Queue slot
+ * This method unlocks the currently held Resource Queue slot
+ * lock for the backend. This is only applicable for cases when
+ * Resource Queue's cost based checking is turned off.
+ * Note that with the current design, a backend can hold a single
+ * Resource Queue slot lock at a time, hence we tag the increment set
+ * with current backend's PID and Invalid Portal ID.
+*/
+void
+ResLockPreEmptiveUnlock()
+{
+	LOCKTAG tag;
+	Oid     queueid;
+
+	queueid = GetResQueueId();
+
+	/*
+	 * Check we have a valid queue before going any further.
+	*/
+	if (queueid != InvalidOid)
+	{
+		SET_LOCKTAG_RESOURCE_QUEUE(tag, queueid);
+
+	#ifdef RESLOCK_DEBUG
+			elog(DEBUG1, "release resource lock for queue %u",
+			queueid);
+	#endif
+
+		ResLockRelease(&tag, INVALID_PORTALID);
 	}
 }

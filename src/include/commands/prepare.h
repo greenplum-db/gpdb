@@ -15,6 +15,7 @@
 
 #include "executor/execdesc.h"
 #include "utils/timestamp.h"
+#include "utils/resscheduler.h"
 
 struct TupOutputState;                  /* #include "executor/executor.h" */
 
@@ -41,7 +42,10 @@ typedef struct
 	List	   *query_list;		/* list of queries, rewritten, in case of replan */
 	List	   *argtype_list;	/* list of parameter type OIDs */
 	TimestampTz prepare_time;	/* the time when the stmt was prepared */
+	bool		take_lock;  /* Take a Resource Queue Slot lock */
+	bool		lock_isacquired;  /* If Resource Queue Slot lock is already taken */
 	bool		from_sql;		/* stmt prepared via SQL, not FE/BE protocol? */
+	ResPortalIncrement *incData;  /* For case when Resource Queue Slot lock has to be taken */
 	MemoryContext context;		/* context containing this query */
 } PreparedStatement;
 
@@ -64,6 +68,8 @@ extern void StorePreparedStatement(const char *stmt_name,
 					   const char *commandTag,
 					   List *query_list,
 					   List *argtype_list,
+					   bool takeLock,
+					   ResPortalIncrement *incData,
 					   bool from_sql);
 extern PreparedStatement *FetchPreparedStatement(const char *stmt_name,
 					   bool throwError);
