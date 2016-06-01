@@ -627,8 +627,7 @@ DefineIndex(RangeVar *heapRelation,
 		/* create the index on the QEs first, so we can get their stats when we create on the QD */
 		if (stmt)
 		{
-			Assert(stmt->idxOids == 0 ||
-				   stmt->idxOids == (List*)NULL);
+			Assert(stmt->idxOids == NIL);
 			stmt->idxOids = NIL;
 			stmt->idxOids = lappend_oid(stmt->idxOids, indexRelationId);
 			stmt->idxOids = lappend_oid(stmt->idxOids, iiopaque->comptypeOid);
