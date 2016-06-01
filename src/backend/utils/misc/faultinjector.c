@@ -24,7 +24,7 @@
 #include "cdb/cdbfilerep.h"
 #include "cdb/cdbfilerepservice.h"
 #include "cdb/cdbresynchronizechangetracking.h"
-#include "postmaster/checkpoint.h"
+#include "postmaster/bgwriter.h"
 #include "cdb/cdbutil.h"
 #include "postmaster/fts.h"
 #include "storage/spin.h"

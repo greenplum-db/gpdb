@@ -52,7 +52,7 @@
 #include "commands/view.h"
 #include "miscadmin.h"
 #include "optimizer/planmain.h"
-#include "postmaster/checkpoint.h"
+#include "postmaster/bgwriter.h"
 #include "rewrite/rewriteDefine.h"
 #include "rewrite/rewriteRemove.h"
 #include "storage/fd.h"
