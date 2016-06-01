@@ -156,7 +156,7 @@ ExecScan(ScanState *node,
 		 * when the qual is nil ... saves only a few cycles, but they add up
 		 * ...
 		 */
-		if (!qual || ExecQual(qual, econtext, false))
+		if (!qual || call_ExecQual(node->ps, qual, econtext, false))
 		{
 			/*
 			 * Found a satisfactory scan tuple.
