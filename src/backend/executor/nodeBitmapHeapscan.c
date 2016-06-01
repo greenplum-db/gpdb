@@ -51,7 +51,6 @@
 
 
 static TupleTableSlot *BitmapHeapNext(BitmapHeapScanState *node);
-static void bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres);
 
 /*
  * Initialize the heap scan descriptor if it is not initialized.
@@ -363,7 +362,7 @@ BitmapHeapNext(BitmapHeapScanState *node)
  * builds an array indicating which tuples on the page are both potentially
  * interesting according to the bitmap, and visible according to the snapshot.
  */
-static void
+void
 bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres)
 {
 	MIRROREDLOCK_BUFMGR_DECLARE;
