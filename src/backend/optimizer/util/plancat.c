@@ -44,6 +44,7 @@
 
 
 /* GUC parameter */
+bool		constraint_exclusion = false;
 
 static List *get_relation_constraints(PlannerInfo *root,
 									  Oid relationObjectId, RelOptInfo *rel,
