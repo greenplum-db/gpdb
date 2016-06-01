@@ -1191,22 +1191,8 @@ _outAggref(StringInfo str, Aggref *node)
 	WRITE_UINT_FIELD(agglevelsup);
 	WRITE_BOOL_FIELD(aggstar);
 	WRITE_BOOL_FIELD(aggdistinct);
-
-    /*
-     * CDB: This field was added after the MPP 2.1p2 release.  Upstream of
-     * the planner, it's unused and zero, in which case we skip writing it
-     * because we don't want it written into the catalog.  Allows downward
-     * compatibility in case the database is opened using an older release.
-     */
-    if (node->aggstage != 0)
-	    WRITE_ENUM_FIELD(aggstage, AggStage);
-
-    /* 
-     * CDB: to minimize upgrade impact we only write out the aggorder
-     * field when it is present
-     */
-    if (node->aggorder != NULL)
-        WRITE_NODE_FIELD(aggorder);
+	WRITE_ENUM_FIELD(aggstage, AggStage);
+	WRITE_NODE_FIELD(aggorder);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -1261,11 +1247,7 @@ _outFuncExpr(StringInfo str, FuncExpr *node)
 	WRITE_BOOL_FIELD(funcretset);
 	WRITE_ENUM_FIELD(funcformat, CoercionForm);
 	WRITE_NODE_FIELD(args);
-	
-	if (node->is_tablefunc)
-	{
-		WRITE_BOOL_FIELD(is_tablefunc);  /* GPDB */
-	}
+	WRITE_BOOL_FIELD(is_tablefunc);  /* GPDB */
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -3498,21 +3480,10 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_NODE_FIELD(windowClause);
 	WRITE_NODE_FIELD(distinctClause);
 	WRITE_NODE_FIELD(sortClause);
-	if (node->scatterClause != NIL)
-	{
-		WRITE_NODE_FIELD(scatterClause);
-	}
-
-	/*
-	 * To minimize the upgrade impact, we only write out cteList, hasRecursive,
-	 * hasModifyingCTE when cteList is present..
-	 */
-	if (node->cteList != NIL)
-	{
-		WRITE_NODE_FIELD(cteList);
-		WRITE_BOOL_FIELD(hasRecursive);
-		WRITE_BOOL_FIELD(hasModifyingCTE);
-	}
+	WRITE_NODE_FIELD(scatterClause);
+	WRITE_NODE_FIELD(cteList);
+	WRITE_BOOL_FIELD(hasRecursive);
+	WRITE_BOOL_FIELD(hasModifyingCTE);
 	WRITE_NODE_FIELD(limitOffset);
 	WRITE_NODE_FIELD(limitCount);
 	WRITE_NODE_FIELD(rowMarks);
