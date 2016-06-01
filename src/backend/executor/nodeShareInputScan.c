@@ -32,6 +32,7 @@
 #include "utils/debugbreak.h"
 #include "utils/tuplesort.h"
 #include "postmaster/primary_mirror_mode.h"
+#include "utils/gp_alloc.h"
 
 typedef struct ShareInput_Lk_Context
 {

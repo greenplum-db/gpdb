@@ -76,7 +76,7 @@ extern void gp_free(void *ptr);
 #ifdef GP_ALLOC_DEBUG
 /* Extracts the header checksum pointer */
 #define VmemPtr_GetPointerToHeaderChecksum(ptr) \
-		((HeaderChecksumType *) (ptr + offsetof(VmemHeader, checksum)))
+		((HeaderChecksumType *) (((char *)ptr) + offsetof(VmemHeader, checksum)))
 
 /* Stores a checksum in the header for debugging purpose */
 #define VmemPtr_SetHeaderChecksum(ptr)	\

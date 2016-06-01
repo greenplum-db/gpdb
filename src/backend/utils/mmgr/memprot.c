@@ -341,8 +341,8 @@ static void* malloc_and_store_metadata(size_t size)
  */
 static void* realloc_and_store_size(void* usable_pointer, size_t new_usable_size)
 {
-	Assert(*VmemPtrToHeaderChecksumPtr(UserPtr_GetVmemPtr(usable_pointer)) == VMEM_HEADER_CHECKSUM);
-	Assert(*VmemPtrToFooterChecksumPtr(UserPtr_GetVmemPtr(usable_pointer)) == VMEM_FOOTER_CHECKSUM);
+	Assert(*VmemPtr_GetPointerToHeaderChecksum(UserPtr_GetVmemPtr(usable_pointer)) == VMEM_HEADER_CHECKSUM);
+	Assert(*VmemPtr_GetPointerToHeaderChecksum(UserPtr_GetVmemPtr(usable_pointer)) == VMEM_FOOTER_CHECKSUM);
 
 	void* realloc_pointer = realloc(UserPtr_GetVmemPtr(usable_pointer), UserPtrSizeToVmemPtrSize(new_usable_size));
 
@@ -468,8 +468,8 @@ void gp_free(void *user_pointer)
 {
 	Assert(!gp_mp_inited || MemoryProtection_IsOwnerThread());
 
-	Assert(*VmemPtrToHeaderChecksumPtr(UserPtr_GetVmemPtr(user_pointer)) == VMEM_HEADER_CHECKSUM);
-	Assert(*VmemPtrToFooterChecksumPtr(UserPtr_GetVmemPtr(user_pointer)) == VMEM_FOOTER_CHECKSUM);
+	Assert(*VmemPtr_GetPointerToHeaderChecksum(UserPtr_GetVmemPtr(user_pointer)) == VMEM_HEADER_CHECKSUM);
+	Assert(*VmemPtr_GetPointerToFooterChecksum(UserPtr_GetVmemPtr(user_pointer)) == VMEM_FOOTER_CHECKSUM);
 
 	void* malloc_pointer = UserPtr_GetVmemPtr(user_pointer);
 	size_t usable_size = VmemPtr_GetUserPtrSize(malloc_pointer);
