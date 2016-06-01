@@ -41,6 +41,7 @@
 #include "utils/gp_alloc.h"
 
 #define SHMEM_OOM_TIME "last vmem oom time"
+#define MAX_REQUESTABLE_SIZE 0x7fffffff
 
 /*
  * Last OOM time of a segment. Maintained in shared memory.
@@ -342,7 +343,7 @@ static void* malloc_and_store_metadata(size_t size)
 static void* realloc_and_store_size(void* usable_pointer, size_t new_usable_size)
 {
 	Assert(*VmemPtr_GetPointerToHeaderChecksum(UserPtr_GetVmemPtr(usable_pointer)) == VMEM_HEADER_CHECKSUM);
-	Assert(*VmemPtr_GetPointerToHeaderChecksum(UserPtr_GetVmemPtr(usable_pointer)) == VMEM_FOOTER_CHECKSUM);
+	Assert(*VmemPtr_GetPointerToFooterChecksum(UserPtr_GetVmemPtr(usable_pointer)) == VMEM_FOOTER_CHECKSUM);
 
 	void* realloc_pointer = realloc(UserPtr_GetVmemPtr(usable_pointer), UserPtrSizeToVmemPtrSize(new_usable_size));
 
@@ -361,7 +362,7 @@ static void *gp_malloc_internal(int64 requested_size)
 
 	size_t size_with_overhead = UserPtrSizeToVmemPtrSize(requested_size);
 
-	Assert(size_with_overhead >= 0 && size_with_overhead <= 0x7fffffff);
+	Assert(size_with_overhead >= 0 && size_with_overhead <= MAX_REQUESTABLE_SIZE);
 
 	MemoryAllocationStatus stat = VmemTracker_ReserveVmem(size_with_overhead);
 	if (MemoryAllocation_Success == stat)
@@ -429,7 +430,7 @@ void *gp_realloc(void *ptr, int64 new_size)
 		return ret;
 	}
 
-	size_t old_size = VmemPtr_GetUserPtrSize(ptr);
+	size_t old_size = UserPtr_GetUserPtrSize(ptr);
 	int64 size_diff = (new_size - old_size);
 
 	if(new_size <= old_size || MemoryAllocation_Success == VmemTracker_ReserveVmem(size_diff))
