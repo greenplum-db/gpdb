@@ -1752,8 +1752,8 @@ AlterDatabase(AlterDatabaseStmt *stmt)
 	Relation	rel;
 	HeapTuple	tuple,
 				newtuple;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
+	ScanKeyData scankey;
+	SysScanDesc scan;
 	ListCell   *option;
 	int			connlimit = -1;
 	DefElem    *dconnlimit = NULL;
@@ -1789,15 +1789,13 @@ AlterDatabase(AlterDatabaseStmt *stmt)
 	 * connections.
 	 */
 	rel = heap_open(DatabaseRelationId, RowExclusiveLock);
-
-	pcqCtx = caql_addrel(cqclr(&cqc), rel);
-
-	tuple = caql_getfirst(
-			pcqCtx,
-			cql("SELECT * FROM pg_database" 
-				" WHERE datname = :1 FOR UPDATE", 
-				CStringGetDatum(stmt->dbname)));
-
+	ScanKeyInit(&scankey,
+				Anum_pg_database_datname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				NameGetDatum(stmt->dbname));
+	scan = systable_beginscan(rel, DatabaseNameIndexId, true,
+							  SnapshotNow, 1, &scankey);
+	tuple = systable_getnext(scan);
 	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_DATABASE),
@@ -1822,10 +1820,14 @@ AlterDatabase(AlterDatabaseStmt *stmt)
 		new_record_repl[Anum_pg_database_datconnlimit - 1] = true;
 	}
 
-	newtuple = caql_modify_current(pcqCtx, new_record,
-								   new_record_nulls, new_record_repl);
-	caql_update_current(pcqCtx, newtuple); 
-	/* and Update indexes (implicit) */
+	newtuple = heap_modify_tuple(tuple, RelationGetDescr(rel), new_record,
+								new_record_nulls, new_record_repl);
+	simple_heap_update(rel, &tuple->t_self, newtuple);
+
+	/* Update indexes */
+	CatalogUpdateIndexes(rel, newtuple);
+
+	systable_endscan(scan);
 
 	/* MPP-6929: metadata tracking */
 	if (Gp_role == GP_ROLE_DISPATCH)
