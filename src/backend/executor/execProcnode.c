@@ -753,12 +753,6 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 
 	if (result != NULL)
 	{
-
-#ifdef USE_CODEGEN
-		// Set the default location for ExecQual
-		result->ExecQual_gen_info.ExecQual_fn = ExecQual;
-#endif
-
 		enroll_ExecQual_codegen(ExecQual,
 	          &result->ExecQual_gen_info.ExecQual_fn, result);
 

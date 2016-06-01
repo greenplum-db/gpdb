@@ -13,7 +13,7 @@
 #include <cstdint>
 #include <string>
 
-#include "codegen/ExecQual_codegen.h"
+#include "codegen/exec_qual_codegen.h"
 #include "codegen/utils/clang_compiler.h"
 #include "codegen/utils/utility.h"
 #include "codegen/utils/instance_method_wrappers.h"
@@ -123,13 +123,13 @@ bool ExecQualCodegen::GenerateExecQual(
 
   ElogWrapper elogwrapper(codegen_utils);
 
-  llvm::Function* ExecQual_func = codegen_utils->
+  llvm::Function* exec_qual_func = codegen_utils->
         CreateFunction<ExecQualFn>(
             GetUniqueFuncName());
 
   // BasicBlock of function entry.
   llvm::BasicBlock* entry_block = codegen_utils->CreateBasicBlock(
-      "entry", ExecQual_func);
+      "entry", exec_qual_func);
 
   auto irb = codegen_utils->ir_builder();
 
@@ -139,7 +139,7 @@ bool ExecQualCodegen::GenerateExecQual(
 
   codegen_utils->CreateFallback<ExecQualFn>(
       codegen_utils->RegisterExternalFunction(GetRegularFuncPointer()),
-      ExecQual_func);
+	  exec_qual_func);
   return true;
 }
 
