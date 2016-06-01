@@ -468,6 +468,7 @@ log_autostats=off	# print additional autostats information
 #max_resource_queues = 9		# no. of resource queues to create.
 #max_resource_portals_per_transaction = 64	# no. of portals per backend.
 #resource_select_only = on		# resource lock SELECT queries only.
+#resource_usecost = on		# resource queue use cost checking.
 #resource_cleanup_gangs_on_wait = on	# Cleanup idle reader gangs before
 										# resource lockwait.
 gp_resqueue_memory_policy = 'eager_free'	# memory request based queueing. 

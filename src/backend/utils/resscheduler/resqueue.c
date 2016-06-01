@@ -741,6 +741,9 @@ ResLockCheckLimit(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *incrementS
 
 			case RES_COST_LIMIT:
 			{
+				if (!ResourceQueueUseCost)
+					break;
+
 				Assert((limits[i].threshold_is_max));
 
 				/* Setup whether to increment or decrement the cost. */

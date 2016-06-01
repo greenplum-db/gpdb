@@ -49,6 +49,7 @@ int		MaxResourcePortalsPerXact;				/* Max # tracked portals -
 												 * per backend . */
 bool	ResourceSelectOnly;						/* Only lock SELECT/DECLARE? */
 bool	ResourceCleanupIdleGangs;				/* Cleanup idle gangs? */
+bool	ResourceQueueUseCost;				/* Use Cost checking */
 
 
 /*
@@ -1063,6 +1064,7 @@ ResHandleUtilityStmt(Portal portal, Node *stmt)
 	if (Gp_role == GP_ROLE_DISPATCH
 		&& ResourceScheduler
 		&& (!ResourceSelectOnly)
+		&& ResourceQueueUseCost
 		&& !superuser())
 	{
 		Assert(!LWLockHeldExclusiveByMe(ResQueueLock));
