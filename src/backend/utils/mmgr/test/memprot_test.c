@@ -66,6 +66,30 @@ size_t CalculateVmemSizeFromUserSize(size_t user_size)
 	return chosen_vmem_size;
 }
 
+/*
+ * This method calculates a new size of a pointer given a ratio to the original size.
+ * The returned size will be between he maximum requestable size and zero
+ */
+size_t CalculateReallocSize(size_t original_size, float delta)
+{
+	assert_true(delta >= 0.0);
+
+	size_t new_size = ((float)original_size) * delta;
+
+	// overflow
+	if (delta > 1.0 && new_size < original_size)
+	{
+		return MAX_REQUESTABLE_SIZE;
+	}
+
+	if (new_size > MAX_REQUESTABLE_SIZE)
+	{
+		return MAX_REQUESTABLE_SIZE;
+	}
+
+	return new_size;
+}
+
 void* AllocateWithCheck(size_t size)
 {
 	size_t chosen_vmem_size = CalculateVmemSizeFromUserSize(size);
@@ -103,6 +127,43 @@ void* AllocateWithCheck(size_t size)
 	return NULL;
 }
 
+/*
+ * Calls gp_realloc, testing that the pointer is properly resized. Returns
+ * the newly resized pointer.
+ */
+void* ReallocateWithCheck(void* ptr, size_t requested_size)
+{
+	size_t orig_user_size = UserPtr_GetUserPtrSize(ptr);
+	size_t orig_vmem_size = CalculateVmemSizeFromUserSize(orig_user_size);
+
+	// If the size change is negative, we release vmem
+	if (requested_size > orig_user_size)
+	{
+		expect_value(VmemTracker_ReserveVmem, newlyRequestedBytes, requested_size - orig_user_size);
+		will_return(VmemTracker_ReserveVmem, MemoryAllocation_Success);
+	}
+	else
+	{
+		// ReleaseVmem will release the size difference
+		//expect_value(VmemTracker_ReleaseVmem, toBeFreedRequested, -1 * size_difference);
+	}
+
+	void *realloc_ptr =	gp_realloc(ptr, requested_size);
+	assert_true(ptr == realloc_ptr || requested_size != orig_user_size);
+
+	assert_true(requested_size == UserPtr_GetUserPtrSize(realloc_ptr));
+
+
+	// Check vmem size has been recalculated
+	size_t realloc_vmem_size = orig_vmem_size + (requested_size - orig_user_size);
+	assert_true(realloc_vmem_size == UserPtr_GetVmemPtrSize(realloc_ptr));
+
+	return realloc_ptr;
+}
+
+/*
+ * Frees a user pointer, checking against the original user size
+ */
 void* FreeWithCheck(void* ptr, size_t size)
 {
 	size_t stored_size = UserPtr_GetUserPtrSize(ptr);
@@ -141,6 +202,33 @@ test__gp_malloc__stores_size_in_header(void **state)
 }
 
 /*
+ * Checks if the gp_realloc is storing size information in the header
+ */
+void
+test__gp_realloc__stores_size_in_header(void **state)
+{
+	size_t sizes[] = {50, 1024, MAX_REQUESTABLE_SIZE - sizeof(VmemHeader) - sizeof(FooterChecksumType)};
+	// Ratio of new size to original size for realloc calls
+	float deltas[] = {0.1, 0.5, 1, 1.5, 2};
+
+	for (int idx = 0; idx < sizeof(sizes)/sizeof(sizes[0]); idx++)
+	{
+		for (int didx = 0; didx < sizeof(deltas)/sizeof(deltas[0]); didx++)
+		{
+			size_t original_size = sizes[idx];
+			float chosen_delta = deltas[didx];
+			size_t requested_size = CalculateReallocSize(original_size, chosen_delta);
+
+			void *ptr = AllocateWithCheck(original_size);
+
+			printf("Orig size: %d, requested size:%d\n", original_size, requested_size);
+			ptr = ReallocateWithCheck(ptr, requested_size);
+			FreeWithCheck(ptr, requested_size);
+		}
+	}
+}
+
+/*
  * Checks if the gp_malloc is storing size information in the header
  */
 void
@@ -168,6 +256,7 @@ main(int argc, char* argv[])
 
 	const UnitTest tests[] = {
 			unit_test_setup_teardown(test__gp_malloc__stores_size_in_header, MemProtTestSetup, MemProtTestTeardown),
+			unit_test_setup_teardown(test__gp_realloc__stores_size_in_header, MemProtTestSetup, MemProtTestTeardown),
 			unit_test_setup_teardown(test__gp_free__stores_size_in_header, MemProtTestSetup, MemProtTestTeardown),
 	};
 
