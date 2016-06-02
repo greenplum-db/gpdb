@@ -99,9 +99,10 @@ add_paths_to_joinrel(PlannerInfo *root,
 	 * 1. Consider mergejoin paths where both relations must be explicitly
 	 * sorted.
 	 */
-	if (root->config->enable_mergejoin ||
+	if ((root->config->enable_mergejoin ||
         root->config->mpp_trying_fallback_plan ||
-        jointype == JOIN_FULL)
+        jointype == JOIN_FULL) &&
+        jointype != JOIN_LASJ_NOTIN)
 	    sort_inner_and_outer(root, joinrel, outerrel, innerrel,
 						     restrictlist, mergeclause_list, jointype);
 
