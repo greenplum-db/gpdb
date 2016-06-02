@@ -658,53 +658,6 @@ DefineIndex(RangeVar *heapRelation,
 		 * which can cause a non-local deadlock if we've already
 		 * dispatched
 		 */
-		indexRelationId =
-			index_create(relationId, indexRelationName, indexRelationId,
-						 indexInfo, accessMethodId, tablespaceId, classObjectId,
-						 coloptions, reloptions, primary, isconstraint,
-						 &(stmt->constrOid),
-						 allowSystemTableModsDDL, skip_build, concurrent, altconname);
-
-        /*
-         * Dispatch the command to all primary and mirror segment dbs.
-         * Start a global transaction and reconfigure cluster if needed.
-         * Wait for QEs to finish.  Exit via ereport(ERROR,...) if error.
-         */
-        if (stmt->concurrent)
-        {
-			volatile struct CdbDispatcherState ds = {NULL, NULL};
-
-			PG_TRY();
-			{
-				/*
-				 * Dispatch the command to all primary and mirror segdbs.
-				 * Doesn't start a global transaction.  Doesn't wait for
-				 * the QEs to finish execution.
-				 */
-				cdbdisp_dispatchUtilityStatement((Node *)stmt,
-												 true,      /* cancelOnError */
-												 false,      /* startTransaction */
-												 true,      /* withSnapshot */
-												 (struct CdbDispatcherState *)&ds,
-												 "DefineIndex");
-				/* Wait for all QEs to finish.	Throw up if error. */
-				cdbdisp_finishCommand((struct CdbDispatcherState *)&ds, NULL, NULL);
-			}
-			PG_CATCH();
-			{
-				/* If dispatched, stop QEs and clean up after them. */
-				if (ds.primaryResults)
-					cdbdisp_handleError((struct CdbDispatcherState *)&ds);
-
-				PG_RE_THROW();
-				/* not reached */
-			}
-			PG_END_TRY();
-        }
-        else
-		{
-        	CdbDispatchUtilityStatement((Node *)stmt, "DefineIndex");
-		}
 	}
 
 	/* save lockrelid for below, then close rel */
@@ -714,14 +667,20 @@ DefineIndex(RangeVar *heapRelation,
 	else
 		heap_close(rel, heap_lockmode);
 
-	if (!shouldDispatch)
-	{
-		indexRelationId =
-			index_create(relationId, indexRelationName, indexRelationId,
-						 indexInfo, accessMethodId, tablespaceId, classObjectId,
-						 coloptions, reloptions, primary, isconstraint, &(stmt->constrOid),
-						 allowSystemTableModsDDL, skip_build, concurrent, altconname);
-	}
+	indexRelationId =
+		index_create(relationId, indexRelationName, indexRelationId,
+					 indexInfo, accessMethodId, tablespaceId, classObjectId,
+					 coloptions, reloptions, primary, isconstraint, &(stmt->constrOid),
+					 allowSystemTableModsDDL, skip_build, concurrent, altconname);
+
+	/*
+	 * Dispatch the command to all primary and mirror segment dbs.
+	 * Start a global transaction and reconfigure cluster if needed.
+	 * Wait for QEs to finish.  Exit via ereport(ERROR,...) if error.
+	 * (For a concurrent build, we do this later, see below.)
+	 */
+	if (shouldDispatch && !concurrent)
+		CdbDispatchUtilityStatement((Node *) stmt, "DefineIndex");
 
 	if (!concurrent)
 		return;					/* We're done, in the standard case */
@@ -747,6 +706,48 @@ DefineIndex(RangeVar *heapRelation,
 	LockRelationIdForSession(&heaprelid, ShareUpdateExclusiveLock);
 
 	CommitTransactionCommand();
+
+	/*
+	 * We dispatch the command to QEs after we've committed the creation of
+	 * the empty index in the master, but before we proceed to fill it.
+	 * This ensures that if something goes wrong, we don't end up in
+	 * a state where the index exists on some segments but not the master.
+	 * It also ensures that the index is only marked as valid on the
+	 * master, after it's been successfully built and marked as valid on
+	 * all the segments.
+	 */
+	if (shouldDispatch)
+	{
+		volatile struct CdbDispatcherState ds = {NULL, NULL};
+
+		PG_TRY();
+		{
+			/*
+			 * Dispatch the command to all primary and mirror segdbs.
+			 * Doesn't start a global transaction.  Doesn't wait for
+			 * the QEs to finish execution.
+			 */
+			cdbdisp_dispatchUtilityStatement((Node *) stmt,
+											 true,      /* cancelOnError */
+											 false,      /* startTransaction */
+											 true,      /* withSnapshot */
+											 (struct CdbDispatcherState *)&ds,
+											 "DefineIndex");
+			/* Wait for all QEs to finish.	Throw up if error. */
+			cdbdisp_finishCommand((struct CdbDispatcherState *)&ds, NULL, NULL);
+		}
+		PG_CATCH();
+		{
+			/* If dispatched, stop QEs and clean up after them. */
+			if (ds.primaryResults)
+				cdbdisp_handleError((struct CdbDispatcherState *)&ds);
+
+			PG_RE_THROW();
+			/* not reached */
+		}
+		PG_END_TRY();
+	}
+
 	StartTransactionCommand();
 
 	/*
