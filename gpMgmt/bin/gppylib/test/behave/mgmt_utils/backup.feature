@@ -457,7 +457,6 @@ Feature: Validate command line arguments
         And the table names in "bkdb" is stored
         And tables in "bkdb" should not contain any data
 
-    @foo
     Scenario: Metadata-only restore with global objects (-G)
         Given the test is initialized
         And there is schema "schema_heap" exists in "bkdb"
@@ -3464,6 +3463,18 @@ Feature: Validate command line arguments
         And the timestamp from gpcrondump is stored
         Then verify the metadata dump file does contain "ALTER TABLE rank_1_prt_p1 SET SCHEMA aaa"
         Then verify the metadata dump file does contain "ALTER TABLE rank_1_prt_p2 SET SCHEMA aaa"
+
+    Scenario: Database owner can be assigned to role containing special characters
+        Given the test is initialized
+        When the user runs "psql -c 'ALTER DATABASE bkdb OWNER TO "Foo%user"'"
+        And there is a "ao" table "public.ao_table" in "bkdb" with data
+        When the user runs "gpcrondump -a -x bkdb"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        And verify that the "cdatabase" file in " " dir contains "OWNER = "Foo%user""
+        When the user runs gpdbrestore with the stored timestamp
+        Then gpdbrestore should return a return code of 0
+        And verify that the owner of "bkdb" is "Foo%user"
 
     # THIS SHOULD BE THE LAST TEST
     @backupfire

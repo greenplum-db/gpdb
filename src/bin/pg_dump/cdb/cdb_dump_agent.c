@@ -7885,7 +7885,7 @@ dumpDatabaseDefinition()
 	}
 	if (strlen(dba) > 0)
 	{
-		appendPQExpBuffer(creaQry, " OWNER = %s", dba);
+		appendPQExpBuffer(creaQry, " OWNER = %s", fmtId(dba));
 	}
 
 	if (strlen(tablespace) > 0 && strcmp(tablespace, "pg_default") != 0)
