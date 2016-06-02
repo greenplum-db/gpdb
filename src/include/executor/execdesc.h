@@ -61,6 +61,9 @@ typedef struct QueryDesc
 	bool		extended_query;   /* simple or extended query protocol? */
 	char		*portal_name;	/* NULL for unnamed portal */
 	
+	/* The overall memory consumption account (i.e., outside of an operator) */
+	MemoryAccount *memoryAccount;
+
 	/* CDB: EXPLAIN ANALYZE statistics */
 	struct CdbExplain_ShowStatCtx  *showstatctx;
 	

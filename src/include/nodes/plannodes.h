@@ -163,9 +163,6 @@ typedef struct PlannedStmt
 	/* What is the memory reserved for this query's execution? */
 	uint64		query_mem;
 
-	/* The overall memory consumption account (i.e., outside of an operator) */
-	MemoryAccount *memoryAccount;
-
 	/*
 	 * List of TupleDescNodes, one for each transient record type, when a
 	 * PlannedStmt is transferred from QD to QEs
