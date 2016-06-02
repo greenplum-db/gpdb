@@ -5,26 +5,6 @@
 
 #include "../cdbdisp_query.c"
 
-void
-__wrap_clear_relsize_cache(void)
-{
-	mock();
-}
-
-int
-__wrap_RootSliceIndex(EState *estate)
-{
-	return (int) mock();
-}
-
-char *
-__wrap_serializeNode(Node *node, int *size, int *uncompressed_size_out)
-{
-	optional_assignment(uncompressed_size_out);
-
-	return (char *)mock();
-}
-
 /*
  * Mocked object initializations required for dispatchPlan.
  */
@@ -37,8 +17,9 @@ _init_cdbdisp_dispatchPlan(QueryDesc *queryDesc)
 	queryDesc->operation = CMD_NOTHING;
 	queryDesc->plannedstmt = (PlannedStmt *)palloc0(sizeof(PlannedStmt));
 
-	will_be_called(__wrap_clear_relsize_cache);
-	will_return(__wrap_RootSliceIndex,0);
+	will_be_called(clear_relsize_cache);
+	expect_any(RootSliceIndex, estate);
+	will_return(RootSliceIndex,0);
 }
 
 /*
@@ -70,8 +51,12 @@ test__cdbdisp_dispatchPlan__Overflow_plan_size_in_kb(void **state)
 	 */
 	queryDesc->plannedstmt->planTree->nMotionNodes = INT_MAX-1;
 
-	will_assign_value(__wrap_serializeNode, uncompressed_size_out, INT_MAX-1);
-	will_return(__wrap_serializeNode, NULL);
+	will_assign_value(serializeNode, uncompressed_size_out, INT_MAX-1);
+	expect_any(serializeNode, node);
+	expect_any(serializeNode, size);
+	expect_any(serializeNode, uncompressed_size_out);
+
+	will_return(serializeNode, NULL);
 
 	PG_TRY();
 	{

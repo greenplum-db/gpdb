@@ -19,17 +19,6 @@ _init_cdbdisp_makeResult()
 	return results;
 }
 
-PQExpBuffer __wrap_createPQExpBuffer(void)
-{
-	return (PQExpBuffer) mock();
-}
-
-void
-__wrap_destroyPQExpBuffer(PQExpBuffer str)
-{
-	mock();
-}
-
 /*
  * Test cdbdisp_makeResult would return NULL if OOM happens
  */
@@ -45,8 +34,9 @@ test__cdbdisp_makeResult__oom(void **state)
 	/*
 	 * createPQExpBuffer is supposed to return NULL in OOM cases
 	 */
-	will_return(__wrap_createPQExpBuffer, NULL);
-	will_be_called(__wrap_destroyPQExpBuffer);
+	will_return(createPQExpBuffer, NULL);
+	expect_any(destroyPQExpBuffer, str);
+	will_be_called(destroyPQExpBuffer);
 	result = cdbdisp_makeResult(results, segdbDesc, 0);
 	assert_true(result == NULL);
 }
