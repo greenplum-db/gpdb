@@ -65,11 +65,9 @@ bool InitConfig(const string& conf_path, const string section = "default") {
     Config* s3cfg = new Config(conf_path);
     if (s3cfg == NULL || !s3cfg->Handle()) {
 #ifndef S3_STANDALONE
-        write_log("Failed to parse config file \"%s\", or it doesn't exist\n",
-                  conf_path.c_str());
+        write_log("Failed to parse config file \"%s\", or it doesn't exist\n", conf_path.c_str());
 #else
-        S3ERROR("Failed to parse config file \"%s\", or it doesn't exist",
-                conf_path.c_str());
+        S3ERROR("Failed to parse config file \"%s\", or it doesn't exist", conf_path.c_str());
 #endif
         delete s3cfg;
         return false;
@@ -87,11 +85,9 @@ bool InitConfig(const string& conf_path, const string section = "default") {
     s3ext_secret = s3cfg->Get(section.c_str(), "secret", "");
     s3ext_token = s3cfg->Get(section.c_str(), "token", "");
 
-    s3ext_logserverhost =
-        s3cfg->Get(section.c_str(), "logserverhost", "127.0.0.1");
+    s3ext_logserverhost = s3cfg->Get(section.c_str(), "logserverhost", "127.0.0.1");
 
-    bool ret = s3cfg->Scan(section.c_str(), "logserverport", "%d",
-                           &s3ext_logserverport);
+    bool ret = s3cfg->Scan(section.c_str(), "logserverport", "%d", &s3ext_logserverport);
     if (!ret) {
         s3ext_logserverport = 1111;
     }
@@ -124,15 +120,13 @@ bool InitConfig(const string& conf_path, const string section = "default") {
         s3ext_chunksize = 2 * 1024 * 1024;
     }
 
-    ret = s3cfg->Scan(section.c_str(), "low_speed_limit", "%d",
-                      &s3ext_low_speed_limit);
+    ret = s3cfg->Scan(section.c_str(), "low_speed_limit", "%d", &s3ext_low_speed_limit);
     if (!ret) {
         S3INFO("The low_speed_limit is set to default value %d bytes/s", 10240);
         s3ext_low_speed_limit = 10240;
     }
 
-    ret = s3cfg->Scan(section.c_str(), "low_speed_time", "%d",
-                      &s3ext_low_speed_time);
+    ret = s3cfg->Scan(section.c_str(), "low_speed_time", "%d", &s3ext_low_speed_time);
     if (!ret) {
         S3INFO("The low_speed_time is set to default value %d seconds", 60);
         s3ext_low_speed_time = 60;

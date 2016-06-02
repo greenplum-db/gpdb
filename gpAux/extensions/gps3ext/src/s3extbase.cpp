@@ -46,8 +46,7 @@ void S3ExtBase::SetSchema() {
 // http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
 void S3ExtBase::SetRegion() {
     size_t ibegin =
-        this->url.find("://s3") +
-        strlen("://s3");  // index of character('.' or '-') after "3"
+        this->url.find("://s3") + strlen("://s3");  // index of character('.' or '-') after "3"
     size_t iend = this->url.find(".amazonaws.com");
 
     if (iend == string::npos) {
@@ -68,11 +67,29 @@ void S3ExtBase::SetRegion() {
 void S3ExtBase::SetBucketAndPrefix() {
     size_t ibegin = find_Nth(this->url, 3, "/");
     size_t iend = find_Nth(this->url, 4, "/");
-    if ((iend == string::npos) || (ibegin == string::npos)) {
+
+    if (ibegin == string::npos) {
         return;
     }
-    this->bucket = this->url.substr(ibegin + 1, iend - ibegin - 1);
-    this->prefix = this->url.substr(iend + 1, this->url.length() - iend - 1);
+    // s3://s3-region.amazonaws.com/bucket
+    if (iend == string::npos) {
+        this->bucket = url.substr(ibegin + 1, url.length() - ibegin);
+        this->prefix = "";
+        return;
+    }
+
+    this->bucket = url.substr(ibegin + 1, iend - ibegin - 1);
+
+    // s3://s3-region.amazonaws.com/bucket/
+    if (iend == url.length()) {
+        this->prefix = "";
+        return;
+    }
+
+    ibegin = find_Nth(url, 4, "/");
+    // s3://s3-region.amazonaws.com/bucket/prefix
+    // s3://s3-region.amazonaws.com/bucket/prefix/whatever
+    this->prefix = url.substr(ibegin + 1, url.length() - ibegin - 1);
 }
 
 bool S3ExtBase::ValidateURL() {
@@ -80,6 +97,5 @@ bool S3ExtBase::ValidateURL() {
     this->SetRegion();
     this->SetBucketAndPrefix();
 
-    return !(this->schema.empty() || this->region.empty() ||
-             this->bucket.empty());
+    return !(this->schema.empty() || this->region.empty() || this->bucket.empty());
 }

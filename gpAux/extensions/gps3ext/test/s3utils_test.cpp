@@ -48,9 +48,7 @@ TEST(Utils, md5) {
 TEST(Utils, sha256) {
     char hash_str[65] = {0};
     EXPECT_TRUE(sha256_hex(TEST_STRING, hash_str));
-    EXPECT_STREQ(
-        "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592",
-        hash_str);
+    EXPECT_STREQ("d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592", hash_str);
 }
 
 TEST(Utils, sha1hmac) {
@@ -64,9 +62,7 @@ TEST(Utils, sha1hmac) {
 TEST(Utils, sha256hmac) {
     char hash_str[65] = {0};
     EXPECT_TRUE(sha256hmac_hex(TEST_STRING, hash_str, "key", 3));
-    EXPECT_STREQ(
-        "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8",
-        hash_str);
+    EXPECT_STREQ("f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8", hash_str);
 }
 
 TEST(Utils, Config) {

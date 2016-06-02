@@ -36,8 +36,8 @@ void _LogMessage(const char* fmt, va_list args) {
 void _send_to_remote(const char* fmt, va_list args) {
     char buf[1024];
     int len = vsnprintf(buf, sizeof(buf), fmt, args);
-    sendto(s3ext_logsock_udp, buf, len, 0,
-           (struct sockaddr*)&s3ext_logserveraddr, sizeof(struct sockaddr_in));
+    sendto(s3ext_logsock_udp, buf, len, 0, (struct sockaddr*)&s3ext_logserveraddr,
+           sizeof(struct sockaddr_in));
 }
 
 void LogMessage(LOGLEVEL loglevel, const char* fmt, ...) {

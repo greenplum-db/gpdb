@@ -34,9 +34,8 @@ static string encode_query_str(const string &query) {
 #define DATE_STR_LEN 9
 #define TIME_STAMP_STR_LEN 17
 #define SHA256_DIGEST_STRING_LENGTH 65
-bool SignRequestV4(const string &method, HTTPHeaders *h,
-                   const string &orig_region, const string &path,
-                   const string &query, const S3Credential &cred) {
+void SignRequestV4(const string &method, HTTPHeaders *h, const string &orig_region,
+                   const string &path, const string &query, const S3Credential &cred) {
     struct tm tm_info;
     char date_str[DATE_STR_LEN] = {0};
     char timestamp_str[TIME_STAMP_STR_LEN] = {0};
@@ -87,37 +86,33 @@ bool SignRequestV4(const string &method, HTTPHeaders *h,
     stringstream kSecret;
     kSecret << "AWS4" << cred.secret;
 
-    sha256hmac(date_str, key_date, kSecret.str().c_str(),
-               strlen(kSecret.str().c_str()));
-    sha256hmac(region.c_str(), key_region, (char *)key_date,
-               SHA256_DIGEST_LENGTH);
+    sha256hmac(date_str, key_date, kSecret.str().c_str(), strlen(kSecret.str().c_str()));
+    sha256hmac(region.c_str(), key_region, (char *)key_date, SHA256_DIGEST_LENGTH);
     sha256hmac("s3", key_service, (char *)key_region, SHA256_DIGEST_LENGTH);
-    sha256hmac("aws4_request", signing_key, (char *)key_service,
-               SHA256_DIGEST_LENGTH);
-    sha256hmac_hex(string2sign_str.str().c_str(), signature_hex,
-                   (char *)signing_key, SHA256_DIGEST_LENGTH);
+    sha256hmac("aws4_request", signing_key, (char *)key_service, SHA256_DIGEST_LENGTH);
+    sha256hmac_hex(string2sign_str.str().c_str(), signature_hex, (char *)signing_key,
+                   SHA256_DIGEST_LENGTH);
 
     stringstream signature_header;
-    signature_header << "AWS4-HMAC-SHA256 Credential=" << cred.keyid << "/"
-                     << date_str << "/" << region << "/"
+    signature_header << "AWS4-HMAC-SHA256 Credential=" << cred.keyid << "/" << date_str << "/"
+                     << region << "/"
                      << "s3"
                      << "/aws4_request,SignedHeaders=" << signed_headers
                      << ",Signature=" << signature_hex;
 
     h->Add(AUTHORIZATION, signature_header.str());
 
-    return true;
+    return;
 }
 
 // return the number of items
-uint64_t XMLParserCallback(void *contents, uint64_t size, uint64_t nmemb,
-                           void *userp) {
+uint64_t XMLParserCallback(void *contents, uint64_t size, uint64_t nmemb, void *userp) {
     uint64_t realsize = size * nmemb;
     struct XMLInfo *pxml = (struct XMLInfo *)userp;
 
     if (!pxml->ctxt) {
-        pxml->ctxt = xmlCreatePushParserCtxt(NULL, NULL, (const char *)contents,
-                                             realsize, "resp.xml");
+        pxml->ctxt =
+            xmlCreatePushParserCtxt(NULL, NULL, (const char *)contents, realsize, "resp.xml");
     } else {
         xmlParseChunk(pxml->ctxt, (const char *)contents, realsize, 0);
     }
@@ -145,8 +140,7 @@ char *get_opt_s3(const char *url, const char *key) {
     // construct the key to search " key="
     int key_len = strlen(key);
     char *key2search = (char *)malloc(key_len + 3);
-    CHECK_OR_DIE_MSG(key2search != NULL,
-                     "Can not allocate %d bytes memory for key string",
+    CHECK_OR_DIE_MSG(key2search != NULL, "Can not allocate %d bytes memory for key string",
                      key_len + 3);
 
     snprintf(key2search, key_len + 3, " %s=", key);
@@ -163,14 +157,11 @@ char *get_opt_s3(const char *url, const char *key) {
     // get the length of string "blah1"
     int value_len = strlen_to_next_char(value_start, ' ');
 
-    CHECK_OR_DIE_MSG(value_len != 0, "Can not find value of %s in %s", key,
-                     url);
+    CHECK_OR_DIE_MSG(value_len != 0, "Can not find value of %s in %s", key, url);
 
     // get the string "blah1"
     char *value = strndup(value_start, value_len);
-    CHECK_OR_DIE_MSG(value != NULL,
-                     "Can not allocate %d bytes memory for value string",
-                     value_len);
+    CHECK_OR_DIE_MSG(value != NULL, "Can not allocate %d bytes memory for value string", value_len);
 
     return value;
 }
@@ -183,9 +174,7 @@ char *truncate_options(const char *url_with_options) {
 
     // get the string of url
     char *url = strndup(url_with_options, url_len);
-    CHECK_OR_DIE_MSG(url != NULL,
-                     "Can not allocate %d bytes memory for value string",
-                     url_len);
+    CHECK_OR_DIE_MSG(url != NULL, "Can not allocate %d bytes memory for value string", url_len);
 
     return url;
 }

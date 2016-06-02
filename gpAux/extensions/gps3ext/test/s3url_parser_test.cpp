@@ -3,8 +3,7 @@
 #include "s3macros.h"
 
 TEST(UrlParser, Routine) {
-    UrlParser *p = new UrlParser(
-        "https://www.google.com/search?sclient=psy-ab&site=&source=hp");
+    UrlParser *p = new UrlParser("https://www.google.com/search?sclient=psy-ab&site=&source=hp");
     ASSERT_NE((void *)NULL, p);
 
     EXPECT_STREQ("https", p->Schema());

@@ -1,11 +1,21 @@
 # Options
 DEBUG_S3_CURL = n
+ARCH=$(shell uname -s)
+GCOV=gcov
 
 # Flags
 CPP = g++
 INCLUDES = -Isrc -Iinclude -Ilib -I/usr/include/libxml2
-LDFLAGS = -lpthread -lcrypto -lcurl -lxml2 -lgcov -lz
+LDFLAGS = -lpthread -lcrypto -lcurl -lxml2 -lz
 CPPFLAGS = -O2 -g3 -std=c++98 -Wall -fPIC -DS3_STANDALONE -fprofile-arcs -ftest-coverage
+
+ifeq "$(ARCH)" "Darwin"
+	LDFLAGS += -coverage
+	GCOV += -a
+else
+	LDFLAGS += -lgcov
+	GCOV += -r
+endif
 
 ifeq ($(DEBUG_S3_CURL),y)
 	CPPFLAGS += -DDEBUG_S3_CURL
@@ -14,7 +24,7 @@ endif
 all: test
 
 # Google TEST
-TEST_SRC_FILES = test/s3conf_test.cpp test/s3utils_test.cpp test/gpreader_test.cpp test/s3common_test.cpp test/s3log_test.cpp test/s3url_parser_test.cpp test/s3http_headers_test.cpp test/s3thread_test.cpp test/s3reader_test.cpp test/s3bucket_reader_test.cpp test/s3interface_test.cpp
+TEST_SRC_FILES = test/s3conf_test.cpp test/s3utils_test.cpp test/gpreader_test.cpp test/s3common_test.cpp test/s3log_test.cpp test/s3url_parser_test.cpp test/s3http_headers_test.cpp test/s3thread_test.cpp test/s3reader_test.cpp test/s3bucket_reader_test.cpp test/s3interface_test.cpp test/s3restful_service_test.cpp
 TEST_OBJS = $(TEST_SRC_FILES:.cpp=.o)
 TEST_APP = s3test
 
@@ -48,10 +58,11 @@ $(TEST_APP): $(TEST_OBJS) gtest_main.a
 	$(CPP) $(CPPFLAGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 test: $(TEST_APP)
+	-rm -rf *.gcda *.gcov test/*.gcda test/*.gcov
 	-@./$(TEST_APP)
 
 coverage: test
-	@gcov -r $(TEST_SRC_FILES) | grep -v test.cpp | grep -A 2 "src/.*.cpp"
+	@$(GCOV) $(TEST_SRC_FILES) | grep -v test.cpp | grep -A 2 "src/.*.cpp"
 
 clean:
 	rm -f *.gcov src/*.gcov src/*.gcda src/*.gcno
@@ -61,13 +72,13 @@ distclean: clean
 	rm -f tags cscope.*
 
 tags:
-	ctags --c++-kinds=+p --fields=+iaS --extra=+q src/*.cpp test/*.cpp include/*.h
-	cscope -bq src/*.cpp test/*.cpp include/*.h
+	ctags --c++-kinds=+p --fields=+iaS --extra=+q src/*.cpp test/*.cpp include/*.h lib/*.cpp lib/*.h
+	cscope -bq src/*.cpp test/*.cpp include/*.h lib/*.cpp lib/*.h
 
 lint:
 	cppcheck -v --enable=warning src/*.cpp test/*.cpp include/*.h
 
 format:
-	clang-format -style="{BasedOnStyle: Google, IndentWidth: 4}" -i src/*.cpp test/*.cpp include/*.h
+	clang-format -style="{BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 100}" -i src/*.cpp test/*.cpp include/*.h
 
 .PHONY: buildtest test coverage clean distclean tags lint format

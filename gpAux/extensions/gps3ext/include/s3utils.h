@@ -20,21 +20,17 @@ bool gethttpnow(char datebuf[65]);
 
 bool trim(char* out, const char* in, const char* trimed = " \t\r\n");
 
-bool sha1hmac(const char* str, unsigned char out_hash[20], const char* secret,
-              int secret_len);
+bool sha1hmac(const char* str, unsigned char out_hash[20], const char* secret, int secret_len);
 
-bool sha1hmac_hex(const char* str, char out_hash_hex[41], const char* secret,
-                  int secret_len);
+bool sha1hmac_hex(const char* str, char out_hash_hex[41], const char* secret, int secret_len);
 
 bool sha256(const char* string, unsigned char out_hash[32]);
 
 bool sha256_hex(const char* string, char out_hash_hex[65]);
 
-bool sha256hmac(const char* str, unsigned char out_hash[32], const char* secret,
-                int secret_len);
+bool sha256hmac(const char* str, unsigned char out_hash[32], const char* secret, int secret_len);
 
-bool sha256hmac_hex(const char* str, char out_hash_hex[65], const char* secret,
-                    int secret_len);
+bool sha256hmac_hex(const char* str, char out_hash_hex[65], const char* secret, int secret_len);
 
 size_t find_Nth(const string& str,  // where to work
                 unsigned N,         // N'th ocurrence
@@ -77,10 +73,8 @@ class Config {
    public:
     Config(const string& filename);
     ~Config();
-    string Get(const string& sec, const string& key,
-               const string& defaultvalue);
-    bool Scan(const string& sec, const string& key, const char* scanfmt,
-              void* dst);
+    string Get(const string& sec, const string& key, const string& defaultvalue);
+    bool Scan(const string& sec, const string& key, const char* scanfmt, void* dst);
     void* Handle() { return (void*)this->_conf; };
 
    private:

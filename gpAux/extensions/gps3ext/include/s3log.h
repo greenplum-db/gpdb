@@ -27,8 +27,7 @@ LOGLEVEL getLogLevel(const char* v);
 #define PRINTFUNCTION(i, format, ...) LogMessage(i, format, __VA_ARGS__)
 
 #define LOG_FMT "[%s]#%d#(%0X)%s:%d  "
-#define LOG_ARGS(LOGLEVELSTR) \
-    LOGLEVELSTR, s3ext_segid, pthread_self(), __FILE__, __LINE__
+#define LOG_ARGS(LOGLEVELSTR) LOGLEVELSTR, s3ext_segid, pthread_self(), __FILE__, __LINE__
 #define NEWLINE "\n"
 
 #define S3DEBUG(message, args...)    \

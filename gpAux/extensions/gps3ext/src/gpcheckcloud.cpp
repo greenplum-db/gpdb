@@ -79,9 +79,8 @@ bool read_config(const char *config) {
 ListBucketResult *list_bucket(S3Reader *wrapper) {
     S3Credential g_cred = {s3ext_accessid, s3ext_secret};
 
-    ListBucketResult *r =
-        ListBucket("https", wrapper->get_region(), wrapper->get_bucket(),
-                   wrapper->get_prefix(), g_cred);
+    ListBucketResult *r = ListBucket("https", wrapper->get_region(), wrapper->get_bucket(),
+                                     wrapper->get_prefix(), g_cred);
 
     return r;
 }

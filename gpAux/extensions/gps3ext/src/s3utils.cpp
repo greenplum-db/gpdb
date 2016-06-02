@@ -56,8 +56,7 @@ bool trim(char *out, const char *in, const char *trimed) {
     targetlen = strlen(in);
 
     while (targetlen > 0) {
-        if (strchr(trimed, in[targetlen - 1]) ==
-            NULL)  // can't find stripped char
+        if (strchr(trimed, in[targetlen - 1]) == NULL)  // can't find stripped char
             break;
         else
             targetlen--;
@@ -78,8 +77,7 @@ bool trim(char *out, const char *in, const char *trimed) {
 }
 
 // not returning the normal hex result, might have '\0'
-bool sha1hmac(const char *str, unsigned char out_hash[20], const char *secret,
-              int secret_len) {
+bool sha1hmac(const char *str, unsigned char out_hash[20], const char *secret, int secret_len) {
     if (!str) return false;
 
     unsigned int len = 32;
@@ -95,8 +93,7 @@ bool sha1hmac(const char *str, unsigned char out_hash[20], const char *secret,
     return true;
 }
 
-bool sha1hmac_hex(const char *str, char out_hash_hex[41], const char *secret,
-                  int secret_len) {
+bool sha1hmac_hex(const char *str, char out_hash_hex[41], const char *secret, int secret_len) {
     if (!str) return false;
 
     unsigned char hash[20];
@@ -139,8 +136,7 @@ bool sha256_hex(const char *string, char out_hash_hex[65]) {
     return true;
 }
 
-bool sha256hmac(const char *str, unsigned char out_hash[32], const char *secret,
-                int secret_len) {
+bool sha256hmac(const char *str, unsigned char out_hash[32], const char *secret, int secret_len) {
     if (!str) return false;
 
     unsigned int len = 32;
@@ -156,8 +152,7 @@ bool sha256hmac(const char *str, unsigned char out_hash[32], const char *secret,
     return true;
 }
 
-bool sha256hmac_hex(const char *str, char out_hash_hex[65], const char *secret,
-                    int secret_len) {
+bool sha256hmac_hex(const char *str, char out_hash_hex[65], const char *secret, int secret_len) {
     if (!str) return false;
 
     unsigned char hash[SHA256_DIGEST_LENGTH];  // 32
@@ -227,8 +222,7 @@ const char *MD5Calc::Get() {
     MD5_Final(this->md5, &c);
     std::stringstream ss;
     for (int i = 0; i < 16; i++)
-        ss << std::hex << std::setw(2) << std::setfill('0')
-           << (int)this->md5[i];
+        ss << std::hex << std::setw(2) << std::setfill('0') << (int)this->md5[i];
     this->result = ss.str();
 
     // Reset MD5 context
@@ -271,8 +265,7 @@ Config::~Config() {
     if (this->_conf) ini_free(this->_conf);
 }
 
-string Config::Get(const string &sec, const string &key,
-                   const string &defaultvalue) {
+string Config::Get(const string &sec, const string &key, const string &defaultvalue) {
     string ret = defaultvalue;
     if ((key == "") || (sec == "")) return ret;
 
@@ -283,8 +276,7 @@ string Config::Get(const string &sec, const string &key,
     return ret;
 }
 
-bool Config::Scan(const string &sec, const string &key, const char *scanfmt,
-                  void *dst) {
+bool Config::Scan(const string &sec, const string &key, const char *scanfmt, void *dst) {
     if ((key == "") || (sec == "")) return false;
 
     if (this->_conf) {
@@ -295,8 +287,7 @@ bool Config::Scan(const string &sec, const string &key, const char *scanfmt,
 
 bool to_bool(std::string str) {
     std::transform(str.begin(), str.end(), str.begin(), ::tolower);
-    if ((str == "yes") || (str == "true") || (str == "y") || (str == "t") ||
-        (str == "1")) {
+    if ((str == "yes") || (str == "true") || (str == "y") || (str == "t") || (str == "1")) {
         return true;
     } else {
         return false;

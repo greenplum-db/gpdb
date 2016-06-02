@@ -59,8 +59,7 @@ Datum s3_import(PG_FUNCTION_ARGS) {
 
     /* Must be called via the external table format manager */
     if (!CALLED_AS_EXTPROTOCOL(fcinfo))
-        elog(ERROR,
-             "extprotocol_import: not called by external protocol manager");
+        elog(ERROR, "extprotocol_import: not called by external protocol manager");
 
     /* Get our internal description of the protocol */
     s3reader = (S3Reader *)EXTPROTOCOL_GET_USER_CTX(fcinfo);

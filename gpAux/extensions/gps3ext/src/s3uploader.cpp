@@ -23,8 +23,8 @@ struct debug_data {
     char trace_ascii; /* 1 or 0 */
 };
 
-static void dump_debug_data(const char *text, FILE *stream, unsigned char *ptr,
-                            size_t size, char nohex) {
+static void dump_debug_data(const char *text, FILE *stream, unsigned char *ptr, size_t size,
+                            char nohex) {
     size_t i;
     size_t c;
 
@@ -33,8 +33,7 @@ static void dump_debug_data(const char *text, FILE *stream, unsigned char *ptr,
     if (nohex) /* without the hex output, we can fit more on screen */
         width = 0x40;
 
-    fprintf(stream, "%s, %10.10ld bytes (0x%8.8lx)\n", text, (long)size,
-            (long)size);
+    fprintf(stream, "%s, %10.10ld bytes (0x%8.8lx)\n", text, (long)size, (long)size);
 
     for (i = 0; i < size; i += width) {
         fprintf(stream, "%4.4lx: ", (long)i);
@@ -51,17 +50,13 @@ static void dump_debug_data(const char *text, FILE *stream, unsigned char *ptr,
         for (c = 0; (c < width) && (i + c < size); c++) {
             /* check for 0D0A; if found, skip past and start a new line of
              * output */
-            if (nohex && (i + c + 1 < size) && ptr[i + c] == 0x0D &&
-                ptr[i + c + 1] == 0x0A) {
+            if (nohex && (i + c + 1 < size) && ptr[i + c] == 0x0D && ptr[i + c + 1] == 0x0A) {
                 i += (c + 2 - width);
                 break;
             }
-            fprintf(stream, "%c", (ptr[i + c] >= 0x20) && (ptr[i + c] < 0x80)
-                                      ? ptr[i + c]
-                                      : '.');
+            fprintf(stream, "%c", (ptr[i + c] >= 0x20) && (ptr[i + c] < 0x80) ? ptr[i + c] : '.');
             /* check again for 0D0A, to avoid an extra \n if it's at width */
-            if (nohex && (i + c + 2 < size) && ptr[i + c + 1] == 0x0D &&
-                ptr[i + c + 2] == 0x0A) {
+            if (nohex && (i + c + 2 < size) && ptr[i + c + 1] == 0x0D && ptr[i + c + 2] == 0x0A) {
                 i += (c + 3 - width);
                 break;
             }
@@ -71,8 +66,8 @@ static void dump_debug_data(const char *text, FILE *stream, unsigned char *ptr,
     fflush(stream);
 }
 
-static int trace_debug_data(CURL *handle, curl_infotype type, char *data,
-                            size_t size, void *userp) {
+static int trace_debug_data(CURL *handle, curl_infotype type, char *data, size_t size,
+                            void *userp) {
     struct debug_data *config = (struct debug_data *)userp;
     const char *text;
     (void)handle; /* prevent compiler warning */
@@ -103,8 +98,7 @@ static int trace_debug_data(CURL *handle, curl_infotype type, char *data,
             break;
     }
 
-    dump_debug_data(text, stderr, (unsigned char *)data, size,
-                    config->trace_ascii);
+    dump_debug_data(text, stderr, (unsigned char *)data, size, config->trace_ascii);
     return 0;
 }
 #endif
@@ -115,12 +109,10 @@ struct MemoryData {
 };
 
 // return the number of items
-static size_t mem_read_callback(void *ptr, size_t size, size_t nmemb,
-                                void *userp) {
+static size_t mem_read_callback(void *ptr, size_t size, size_t nmemb, void *userp) {
     struct MemoryData *puppet = (struct MemoryData *)userp;
     size_t realsize = size * nmemb;
-    size_t nmemb2read =
-        realsize < puppet->sizeleft ? nmemb : (puppet->sizeleft / size);
+    size_t nmemb2read = realsize < puppet->sizeleft ? nmemb : (puppet->sizeleft / size);
     size_t n2read = nmemb2read * size;
 
     // printf("n2read = %d, nmemb2read = %d, realsize = %d, puppet->sizeleft =
@@ -136,8 +128,7 @@ static size_t mem_read_callback(void *ptr, size_t size, size_t nmemb,
 }
 
 // return the number of items
-static size_t header_write_callback(void *contents, size_t size, size_t nmemb,
-                                    void *userp) {
+static size_t header_write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     size_t realsize = size * nmemb;
     struct MemoryData *puppet = (struct MemoryData *)userp;
 
@@ -157,8 +148,8 @@ static size_t header_write_callback(void *contents, size_t size, size_t nmemb,
 }
 
 // XXX need free
-const char *GetUploadId(const char *host, const char *bucket,
-                        const char *obj_name, const S3Credential &cred) {
+const char *GetUploadId(const char *host, const char *bucket, const char *obj_name,
+                        const S3Credential &cred) {
     // POST /ObjectName?uploads HTTP/1.1
     // Host: BucketName.s3.amazonaws.com
     // Date: date
@@ -222,8 +213,7 @@ const char *GetUploadId(const char *host, const char *bucket,
     CURLcode res = curl_easy_perform(curl);
 
     if (res != CURLE_OK)
-        fprintf(stderr, "curl_easy_perform() failed: %s\n",
-                curl_easy_strerror(res));
+        fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 
     xmlParseChunk(xml.ctxt, "", 0, 1);
     header->FreeList();
@@ -257,9 +247,8 @@ const char *GetUploadId(const char *host, const char *bucket,
 }
 
 // XXX need free
-const char *PartPutS3Object(const char *host, const char *bucket,
-                            const char *obj_name, const S3Credential &cred,
-                            const char *data, uint64_t data_size,
+const char *PartPutS3Object(const char *host, const char *bucket, const char *obj_name,
+                            const S3Credential &cred, const char *data, uint64_t data_size,
                             uint64_t part_number, const char *upload_id) {
     std::stringstream url;
     std::stringstream path_with_query;
@@ -298,8 +287,7 @@ const char *PartPutS3Object(const char *host, const char *bucket,
     header->Add(CONTENTTYPE, "text/plain");
     header->Add(CONTENTLENGTH, std::to_string(data_size));
     UrlParser p(url.str().c_str());
-    path_with_query << p.Path() << "?partNumber=" << part_number
-                    << "&uploadId=" << upload_id;
+    path_with_query << p.Path() << "?partNumber=" << part_number << "&uploadId=" << upload_id;
     SignPUTv2(header, path_with_query.str(), cred);
 
     CURL *curl = curl_easy_init();
@@ -345,8 +333,7 @@ const char *PartPutS3Object(const char *host, const char *bucket,
 
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK)
-        fprintf(stderr, "curl_easy_perform() failed: %s\n",
-                curl_easy_strerror(res));
+        fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 
     // to get the Etag from response
     // HTTP/1.1 200 OK
@@ -425,9 +412,8 @@ const char *PartPutS3Object(const char *host, const char *bucket,
     return NULL;
 }
 
-bool CompleteMultiPutS3(const char *host, const char *bucket,
-                        const char *obj_name, const char *upload_id,
-                        const char **etag_array, uint64_t count,
+bool CompleteMultiPutS3(const char *host, const char *bucket, const char *obj_name,
+                        const char *upload_id, const char **etag_array, uint64_t count,
                         const S3Credential &cred) {
     std::stringstream url;
     std::stringstream path_with_query;
@@ -471,9 +457,8 @@ bool CompleteMultiPutS3(const char *host, const char *bucket,
 
     body << "<CompleteMultipartUpload>\n";
     for (uint64_t i = 0; i < count; ++i) {
-        body << "  <Part>\n    <PartNumber>" << i + 1
-             << "</PartNumber>\n    <ETag>" << etag_array[i]
-             << "</ETag>\n  </Part>\n";
+        body << "  <Part>\n    <PartNumber>" << i + 1 << "</PartNumber>\n    <ETag>"
+             << etag_array[i] << "</ETag>\n  </Part>\n";
     }
     body << "</CompleteMultipartUpload>";
 
@@ -534,8 +519,7 @@ bool CompleteMultiPutS3(const char *host, const char *bucket,
 
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK)
-        fprintf(stderr, "curl_easy_perform() failed: %s\n",
-                curl_easy_strerror(res));
+        fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 
     // HTTP/1.1 200 OK
     // x-amz-id-2: Uuag1LuByRx9e6j5Onimru9pO4ZVKnJ2Qz7/C1NPcfTWAtRPfTaOFg==

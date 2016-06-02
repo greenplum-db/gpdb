@@ -7,12 +7,12 @@
 #include "gpreader.h"
 #include "gps3ext.h"
 #include "reader.h"
+#include "reader_params.h"
 #include "s3bucket_reader.h"
 #include "s3conf.h"
 #include "s3log.h"
 #include "s3macros.h"
 #include "s3utils.h"
-#include "reader_params.h"
 
 using std::string;
 using std::stringstream;
@@ -31,68 +31,67 @@ S3BucketReader::S3BucketReader() : Reader() {
     this->needNewReader = true;
 }
 
-S3BucketReader::~S3BucketReader() {
-    this->close();
-}
+S3BucketReader::~S3BucketReader() { this->close(); }
 
 void S3BucketReader::setS3interface(S3Interface *s3) { this->s3interface = s3; }
 
-void S3BucketReader::open(const ReaderParams& params) {
-	this->url 		= params.getUrl();
-	this->segId 		= params.getSegId();
-	this->segNum 	= params.getSegNum();
-	this->cred		= params.getCred();
+void S3BucketReader::open(const ReaderParams &params) {
+    this->url = params.getUrl();
+    this->segId = params.getSegId();
+    this->segNum = params.getSegNum();
+    this->cred = params.getCred();
 
     this->validateURL();
     this->keyList = this->listBucketWithRetry(3);
     return;
 }
 
-BucketContent* S3BucketReader::getNextKey() {
-	this->keyIndex = (this->keyIndex == (unsigned int)-1) ? this->segId : this->keyIndex + this->segNum;
+BucketContent *S3BucketReader::getNextKey() {
+    this->keyIndex =
+        (this->keyIndex == (unsigned int)-1) ? this->segId : this->keyIndex + this->segNum;
 
-	if (this->keyIndex >= this->keyList->contents.size()) {
-		return NULL;
-	}
+    if (this->keyIndex >= this->keyList->contents.size()) {
+        return NULL;
+    }
 
-	return this->keyList->contents[this->keyIndex];
+    return this->keyList->contents[this->keyIndex];
 }
 
-const ReaderParams& S3BucketReader::getReaderParams(BucketContent* key) {
-	ReaderParams *params = new ReaderParams();
-	params->setKeyUrl(this->getKeyURL(key->getName()));
-	params->setRegion(this->region);
-	params->setSize(key->getSize());
-	params->setChunkSize(this->chunkSize);
-	S3DEBUG("key: %s, size: %" PRIu64, params->getKeyUrl().c_str(), params->getSize());
-	return *params;
+const ReaderParams &S3BucketReader::getReaderParams(BucketContent *key) {
+    ReaderParams *params = new ReaderParams();
+    params->setKeyUrl(this->getKeyURL(key->getName()));
+    params->setRegion(this->region);
+    params->setSize(key->getSize());
+    params->setChunkSize(this->chunkSize);
+    S3DEBUG("key: %s, size: %" PRIu64, params->getKeyUrl().c_str(), params->getSize());
+    return *params;
 }
 
 uint64_t S3BucketReader::read(char *buf, uint64_t count) {
-	CHECK_OR_DIE(this->upstreamReader != NULL);
+    CHECK_OR_DIE(this->upstreamReader != NULL);
 
-	while (true) {
-		if (this->needNewReader) {
-			BucketContent *key = this->getNextKey();
-			if (key == NULL) {
-				S3DEBUG("Read finished for segment: %d", this->segId);
-				return 0;
-			}
+    while (true) {
+        if (this->needNewReader) {
+            BucketContent *key = this->getNextKey();
+            if (key == NULL) {
+                S3DEBUG("Read finished for segment: %d", this->segId);
+                return 0;
+            }
 
-			this->upstreamReader->open(getReaderParams(key));
-			this->needNewReader = false;
-		}
+            this->upstreamReader->open(getReaderParams(key));
+            this->needNewReader = false;
+        }
 
-		uint64_t readCount = this->upstreamReader->read(buf, count);
+        uint64_t readCount = this->upstreamReader->read(buf, count);
 
-		if (readCount != 0) {
-			return readCount;
-		}
+        if (readCount != 0) {
+            return readCount;
+        }
 
-		// Finished one file, continue to next
-		this->upstreamReader->close();
-		this->needNewReader = true;
-	}
+        // Finished one file, continue to next
+        this->upstreamReader->close();
+        this->needNewReader = true;
+    }
 }
 
 void S3BucketReader::close() {
@@ -101,7 +100,7 @@ void S3BucketReader::close() {
         this->keyList = NULL;
     }
 
-	return;
+    return;
 }
 
 // Set schema to 'https' or 'http'
@@ -118,7 +117,7 @@ void S3BucketReader::SetSchema() {
 }
 
 ListBucketResult *S3BucketReader::listBucketWithRetry(int retries) {
-	CHECK_OR_DIE(this->s3interface != NULL);
+    CHECK_OR_DIE(this->s3interface != NULL);
 
     while (retries--) {
         ListBucketResult *result = this->s3interface->ListBucket(
@@ -127,13 +126,11 @@ ListBucketResult *S3BucketReader::listBucketWithRetry(int retries) {
             return result;
         }
 
-        S3INFO("Can't get keylist from bucket %s, retrying ...",
-               this->bucket.c_str());
+        S3INFO("Can't get keylist from bucket %s, retrying ...", this->bucket.c_str());
     }
 
     S3ERROR("Failed to list bucket for URL: %s", this->url.c_str());
-    CHECK_OR_DIE_MSG(false, "Failed to list bucket with retries: %s",
-                     this->url.c_str());
+    CHECK_OR_DIE_MSG(false, "Failed to list bucket with retries: %s", this->url.c_str());
     // return NULL;  Not needed, as CHECK_OR_DIE_MSG will return always.
 }
 
@@ -149,8 +146,7 @@ string S3BucketReader::getKeyURL(const string &key) {
 // http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
 void S3BucketReader::SetRegion() {
     size_t ibegin =
-        this->url.find("://s3") +
-        strlen("://s3");  // index of character('.' or '-') after "3"
+        this->url.find("://s3") + strlen("://s3");  // index of character('.' or '-') after "3"
     size_t iend = this->url.find(".amazonaws.com");
 
     if (iend == string::npos) {
@@ -171,11 +167,29 @@ void S3BucketReader::SetRegion() {
 void S3BucketReader::SetBucketAndPrefix() {
     size_t ibegin = find_Nth(this->url, 3, "/");
     size_t iend = find_Nth(this->url, 4, "/");
-    if ((iend == string::npos) || (ibegin == string::npos)) {
+
+    if (ibegin == string::npos) {
         return;
     }
-    this->bucket = this->url.substr(ibegin + 1, iend - ibegin - 1);
-    this->prefix = this->url.substr(iend + 1, this->url.length() - iend - 1);
+    // s3://s3-region.amazonaws.com/bucket
+    if (iend == string::npos) {
+        this->bucket = url.substr(ibegin + 1, url.length() - ibegin);
+        this->prefix = "";
+        return;
+    }
+
+    this->bucket = url.substr(ibegin + 1, iend - ibegin - 1);
+
+    // s3://s3-region.amazonaws.com/bucket/
+    if (iend == url.length()) {
+        this->prefix = "";
+        return;
+    }
+
+    ibegin = find_Nth(url, 4, "/");
+    // s3://s3-region.amazonaws.com/bucket/prefix
+    // s3://s3-region.amazonaws.com/bucket/prefix/whatever
+    this->prefix = url.substr(ibegin + 1, url.length() - ibegin - 1);
 }
 
 void S3BucketReader::validateURL() {

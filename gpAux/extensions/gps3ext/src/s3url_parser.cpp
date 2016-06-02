@@ -24,14 +24,11 @@ UrlParser::UrlParser(const char *url) {
     this->fullurl = NULL;
 
     this->fullurl = strdup(url);
-    CHECK_OR_DIE_MSG(this->fullurl != NULL, "%s",
-                     "Could not allocate memory for fullurl");
+    CHECK_OR_DIE_MSG(this->fullurl != NULL, "%s", "Could not allocate memory for fullurl");
 
     struct http_parser_url url_parser;
-    int result = http_parser_parse_url(this->fullurl, strlen(this->fullurl),
-                                       false, &url_parser);
-    CHECK_OR_DIE_MSG(result == 0, "Failed to parse URL %s at field %d",
-                     this->fullurl, result);
+    int result = http_parser_parse_url(this->fullurl, strlen(this->fullurl), false, &url_parser);
+    CHECK_OR_DIE_MSG(result == 0, "Failed to parse URL %s at field %d", this->fullurl, result);
 
     this->schema = extractField(&url_parser, UF_SCHEMA);
     this->host = extractField(&url_parser, UF_HOST);
@@ -50,12 +47,10 @@ UrlParser::~UrlParser() {
     this->fullurl = NULL;
 }
 
-char *UrlParser::extractField(const struct http_parser_url *url_parser,
-                               http_parser_url_fields i) {
+char *UrlParser::extractField(const struct http_parser_url *url_parser, http_parser_url_fields i) {
     if ((url_parser->field_set & (1 << i)) == 0) {
         return NULL;
     }
 
-    return strndup(this->fullurl + url_parser->field_data[i].off,
-                   url_parser->field_data[i].len);
+    return strndup(this->fullurl + url_parser->field_data[i].off, url_parser->field_data[i].len);
 }

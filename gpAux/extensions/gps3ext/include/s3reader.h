@@ -19,9 +19,11 @@
 #include <zlib.h>
 
 #include "s3common.h"
+#include "s3macros.h"
 #include "s3url_parser.h"
 
 using std::vector;
+using std::stringstream;
 
 struct Range {
     /* data */
@@ -52,8 +54,8 @@ class OffsetMgr {
 
 class BlockingBuffer {
    public:
-    static BlockingBuffer* CreateBuffer(const string& url, const string& region,
-                                        OffsetMgr* o, S3Credential* pcred);
+    static BlockingBuffer* CreateBuffer(const string& url, const string& region, OffsetMgr* o,
+                                        S3Credential* pcred);
     BlockingBuffer(const string& url, OffsetMgr* o);
     virtual ~BlockingBuffer();
     bool Init();
@@ -98,8 +100,8 @@ class Downloader {
    public:
     Downloader(uint8_t part_num);
     ~Downloader();
-    bool init(const string& url, const string& region, uint64_t size,
-              uint64_t chunksize, S3Credential* pcred);
+    bool init(const string& url, const string& region, uint64_t size, uint64_t chunksize,
+              S3Credential* pcred);
     bool get(char* buf, uint64_t& len);
     void destroy();
 
@@ -138,7 +140,7 @@ class HTTPFetcher : public BlockingBuffer {
 
    protected:
     uint64_t fetchdata(uint64_t offset, char* data, uint64_t len);
-    virtual bool processheader() { return true; };
+    virtual void signHeader() {}
     CURL* curl;
     Method method;
     HTTPHeaders headers;
@@ -147,12 +149,11 @@ class HTTPFetcher : public BlockingBuffer {
 
 class S3Fetcher : public HTTPFetcher {
    public:
-    S3Fetcher(const string& url, const string& region, OffsetMgr* o,
-              const S3Credential& cred);
+    S3Fetcher(const string& url, const string& region, OffsetMgr* o, const S3Credential& cred);
     ~S3Fetcher(){};
 
    protected:
-    virtual bool processheader();
+    virtual void signHeader();
 
    private:
     string region;
@@ -161,43 +162,30 @@ class S3Fetcher : public HTTPFetcher {
 
 struct BucketContent;
 
+// To avoid double delete and core dump, always use new to create
+// ListBucketResult object,
+// unless we upgrade to c++ 11. Reason is we delete ListBucketResult in close()
+// explicitly.
 struct ListBucketResult {
     string Name;
     string Prefix;
-    unsigned int MaxKeys;
-    vector<BucketContent *> contents;
+    vector<BucketContent*> contents;
 
     ~ListBucketResult();
 };
 
-BucketContent* CreateBucketContentItem(const string& key, uint64_t size);
-
 struct BucketContent {
-    friend BucketContent* CreateBucketContentItem(const string& key,
-                                                  uint64_t size);
-    BucketContent();
-    ~BucketContent();
+    BucketContent() : name(""), size(0) {}
+    BucketContent(string name, uint64_t size) {
+        this->name = name;
+        this->size = size;
+    }
+    ~BucketContent() {}
     string getName() const { return this->name; };
     uint64_t getSize() const { return this->size; };
-
-   private:
-    // BucketContent(const BucketContent& b) = delete;
-    // BucketContent operator=(const BucketContent& b) = delete;
 
     string name;
     uint64_t size;
 };
-
-xmlParserCtxtPtr DoGetXML(const string &region, const string &url,
-                          const string &prefix, const S3Credential &cred,
-                          const string &marker);
-
-bool extractContent(ListBucketResult* result, xmlNode* root_element,
-                    string& marker);
-
-// It is caller's responsibility to free returned memory.
-ListBucketResult* ListBucket(const string& schema, const string& region,
-                             const string& bucket, const string& prefix,
-                             const S3Credential& cred);
 
 #endif

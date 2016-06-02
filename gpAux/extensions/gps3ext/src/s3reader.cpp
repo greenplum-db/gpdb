@@ -14,15 +14,14 @@
 #include "gps3ext.h"
 #include "s3http_headers.h"
 #include "s3log.h"
+#include "s3macros.h"
 #include "s3reader.h"
 #include "s3url_parser.h"
 #include "s3utils.h"
-#include "s3macros.h"
 
 using std::stringstream;
 
-OffsetMgr::OffsetMgr(uint64_t m, uint64_t c)
-    : maxsize(m), chunksize(c), curpos(0) {
+OffsetMgr::OffsetMgr(uint64_t m, uint64_t c) : maxsize(m), chunksize(c), curpos(0) {
     pthread_mutex_init(&this->offset_lock, NULL);
 }
 
@@ -143,8 +142,7 @@ uint64_t BlockingBuffer::Fill() {
     this->realsize = 0;
     while (this->realsize < this->bufcap) {
         if (leftlen != 0) {
-            readlen = this->fetchdata(offset, this->bufferdata + this->realsize,
-                                      leftlen);
+            readlen = this->fetchdata(offset, this->bufferdata + this->realsize, leftlen);
             if (readlen == (uint64_t)-1) {
                 S3DEBUG("Failed to fetch data from libcurl");
             } else {
@@ -175,8 +173,7 @@ uint64_t BlockingBuffer::Fill() {
     return (readlen == (uint64_t)-1) ? -1 : this->realsize;
 }
 
-BlockingBuffer *BlockingBuffer::CreateBuffer(const string &url,
-                                             const string &region, OffsetMgr *o,
+BlockingBuffer *BlockingBuffer::CreateBuffer(const string &url, const string &region, OffsetMgr *o,
                                              S3Credential *pcred) {
     BlockingBuffer *ret = NULL;
     if (url == "") return NULL;
@@ -229,7 +226,7 @@ Downloader::Downloader(uint8_t part_num)
       magic_bytes_num(0),
       compression(S3_ZIP_NONE),
       z_info(NULL) {
-	CHECK_OR_DIE(this->num != 0);
+    CHECK_OR_DIE(this->num != 0);
     this->threads = (pthread_t *)malloc(num * sizeof(pthread_t));
     if (this->threads)
         memset((void *)this->threads, 0, num * sizeof(pthread_t));
@@ -245,8 +242,8 @@ Downloader::Downloader(uint8_t part_num)
     }
 }
 
-bool Downloader::init(const string &url, const string &region, uint64_t size,
-                      uint64_t chunksize, S3Credential *pcred) {
+bool Downloader::init(const string &url, const string &region, uint64_t size, uint64_t chunksize,
+                      S3Credential *pcred) {
     if (!this->threads || !this->buffers) {
         return false;
     }
@@ -258,14 +255,13 @@ bool Downloader::init(const string &url, const string &region, uint64_t size,
     }
 
     for (int i = 0; i < this->num; i++) {
-        this->buffers[i] = BlockingBuffer::CreateBuffer(
-            url, region, o, pcred);  // decide buffer according to url
+        this->buffers[i] =
+            BlockingBuffer::CreateBuffer(url, region, o, pcred);  // decide buffer according to url
         if (!this->buffers[i]->Init()) {
             S3ERROR("Failed to init blocking buffer");
             return false;
         }
-        pthread_create(&this->threads[i], NULL, DownloadThreadfunc,
-                       this->buffers[i]);
+        pthread_create(&this->threads[i], NULL, DownloadThreadfunc, this->buffers[i]);
     }
 
     readlen = 0;
@@ -302,8 +298,8 @@ bool Downloader::get(char *data, uint64_t &len) {
         // get first 4(at least 2) bytes to check if this file is compressed
         BlockingBuffer *buf = buffers[this->chunkcount % this->num];
 
-        if ((this->magic_bytes_num = buf->Read(
-                 (char *)this->magic_bytes, sizeof(this->magic_bytes))) > 1) {
+        if ((this->magic_bytes_num =
+                 buf->Read((char *)this->magic_bytes, sizeof(this->magic_bytes))) > 1) {
             if (!this->set_compression()) {
                 return false;
             }
@@ -344,8 +340,7 @@ RETRY:
 
             // whether we need to buf->Read()
             if (this->magic_bytes_num < filelen) {
-                tmplen +=
-                    buf->Read(data + rest_magic_num, len - rest_magic_num);
+                tmplen += buf->Read(data + rest_magic_num, len - rest_magic_num);
             }
         }
     } else {
@@ -396,8 +391,7 @@ RETRY:
     }
 
     // no more available data to read, decompress or copy, done with this file
-    if ((this->readlen >= filelen) && !(zinfo->have_out - zinfo->done_out) &&
-        !strm->avail_in) {
+    if ((this->readlen >= filelen) && !(zinfo->have_out - zinfo->done_out) && !strm->avail_in) {
         if (zinfo->inited) {
             inflateEnd(strm);
         }
@@ -469,15 +463,13 @@ RETRY:
         if (!zinfo->have_out) {
             if (this->readlen < this->magic_bytes_num) {
                 uint64_t rest_magic_num = this->magic_bytes_num - this->readlen;
-                memcpy(zinfo->in, this->magic_bytes + this->readlen,
-                       rest_magic_num);
+                memcpy(zinfo->in, this->magic_bytes + this->readlen, rest_magic_num);
                 strm->avail_in = rest_magic_num;
 
                 // whether we need to buf->Read()
                 if (this->magic_bytes_num < filelen) {
-                    strm->avail_in +=
-                        buf->Read((char *)zinfo->in + rest_magic_num,
-                                  S3_ZIP_CHUNKSIZE - rest_magic_num);
+                    strm->avail_in += buf->Read((char *)zinfo->in + rest_magic_num,
+                                                S3_ZIP_CHUNKSIZE - rest_magic_num);
                 }
             } else {
                 strm->avail_in = buf->Read((char *)zinfo->in, S3_ZIP_CHUNKSIZE);
@@ -550,8 +542,7 @@ Downloader::~Downloader() {
 }
 
 // return the number of items
-static uint64_t WriterCallback(void *contents, uint64_t size, uint64_t nmemb,
-                               void *userp) {
+static uint64_t WriterCallback(void *contents, uint64_t size, uint64_t nmemb, void *userp) {
     uint64_t realsize = size * nmemb;
     Bufinfo *p = reinterpret_cast<Bufinfo *>(userp);
 
@@ -616,8 +607,7 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
     char rangebuf[128] = {0};
     long respcode;
 
-    snprintf(rangebuf, 128, "bytes=%" PRIu64 "-%" PRIu64, offset,
-             offset + len - 1);
+    snprintf(rangebuf, 128, "bytes=%" PRIu64 "-%" PRIu64, offset, offset + len - 1);
 
     while (retry_time--) {
         // "Don't call cleanup() if you intend to transfer more files, re-using
@@ -633,17 +623,12 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
         curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&bi);
 
         // consider low speed as timeout
-        curl_easy_setopt(curl_handle, CURLOPT_LOW_SPEED_LIMIT,
-                         s3ext_low_speed_limit);
-        curl_easy_setopt(curl_handle, CURLOPT_LOW_SPEED_TIME,
-                         s3ext_low_speed_time);
+        curl_easy_setopt(curl_handle, CURLOPT_LOW_SPEED_LIMIT, s3ext_low_speed_limit);
+        curl_easy_setopt(curl_handle, CURLOPT_LOW_SPEED_TIME, s3ext_low_speed_time);
 
         this->AddHeaderField(RANGE, rangebuf);
         this->AddHeaderField(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
-        if (!this->processheader()) {
-            S3ERROR("Failed to sign while fetching data, retry");
-            continue;
-        }
+        this->signHeader();
 
         this->headers.FreeList();
         this->headers.CreateList();
@@ -669,14 +654,13 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
         }
 
         if (res != CURLE_OK) {
-            S3ERROR("curl_easy_perform() failed: %s, retry",
-                    curl_easy_strerror(res));
+            S3ERROR("curl_easy_perform() failed: %s, retry", curl_easy_strerror(res));
             bi.len = -1;
             continue;
         } else {
             curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &respcode);
-            S3DEBUG("Fetched %llu, %llu - %llu, response code is %ld", len,
-                    offset, offset + len - 1, respcode);
+            S3DEBUG("Fetched %llu, %llu - %llu, response code is %ld", len, offset,
+                    offset + len - 1, respcode);
 
             if ((respcode != 200) && (respcode != 206)) {
                 S3ERROR("get %.*s, retry", (int)bi.len, data);
@@ -704,296 +688,8 @@ S3Fetcher::S3Fetcher(const string &url, const string &region, OffsetMgr *o,
     this->region = region;
 }
 
-bool S3Fetcher::processheader() {
-    return SignRequestV4("GET", &this->headers, this->region,
-                         this->urlparser.Path(), "", this->cred);
-}
-
-// CreateBucketContentItem
-BucketContent::~BucketContent() {}
-
-BucketContent::BucketContent() : name(""), size(0) {}
-
-BucketContent *CreateBucketContentItem(const string &key, uint64_t size) {
-    if (key == "") return NULL;
-
-    BucketContent *ret = new BucketContent();
-    if (!ret) {
-        S3ERROR("Can't create bucket list, no enough memory?");
-        return NULL;
-    }
-    ret->name = key;
-    ret->size = size;
-    return ret;
-}
-
-// require curl 7.17 higher
-// http://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketGET.html
-xmlParserCtxtPtr DoGetXML(const string &region, const string &url,
-                          const string &prefix, const S3Credential &cred,
-                          const string &marker) {
-    stringstream host;
-    host << "s3-" << region << ".amazonaws.com";
-
-    CURL *curl = curl_easy_init();
-
-    if (curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-#if DEBUG_S3_CURL
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-#endif
-        curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
-    } else {
-        S3ERROR("Can't create curl instance, no enough memory?");
-        return NULL;
-    }
-
-    XMLInfo xml;
-    xml.ctxt = NULL;
-
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&xml);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, XMLParserCallback);
-
-    HTTPHeaders *header = new HTTPHeaders();
-    if (!header) {
-        S3ERROR("Can allocate memory for header");
-        return NULL;
-    }
-
-    header->Add(HOST, host.str());
-    UrlParser p(url.c_str());
-    header->Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
-
-    std::stringstream query;
-    if (marker != "") {
-        query << "marker=" << marker << "&";
-    }
-    query << "prefix=" << prefix;
-
-    if (!SignRequestV4("GET", header, region, p.Path(), query.str(), cred)) {
-        S3ERROR("Failed to sign in DoGetXML()");
-        delete header;
-        return NULL;
-    }
-
-    header->CreateList();
-    struct curl_slist *chunk = header->GetList();
-
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
-
-    CURLcode res = curl_easy_perform(curl);
-
-    if (res != CURLE_OK) {
-        S3ERROR("curl_easy_perform() failed: %s", curl_easy_strerror(res));
-        if (xml.ctxt) {
-            xmlDocPtr doc = xml.ctxt->myDoc;
-            xmlFreeParserCtxt(xml.ctxt);
-            xmlFreeDoc(doc);
-            xml.ctxt = NULL;
-        }
-    } else {
-        if (xml.ctxt) {
-            xmlParseChunk(xml.ctxt, "", 0, 1);
-        } else {
-            S3ERROR("XML is downloaded but failed to be parsed");
-        }
-    }
-
-    curl_easy_cleanup(curl);
-
-    header->FreeList();
-    delete header;
-
-    return xml.ctxt;
-}
-
-bool extractContent(ListBucketResult *result, xmlNode *root_element,
-                    string &marker) {
-    if (!result || !root_element) {
-        return false;
-    }
-
-    xmlNodePtr cur;
-    bool is_truncated = false;
-    char *content = NULL;
-    char *key = NULL;
-    char *key_size = NULL;
-
-    cur = root_element->xmlChildrenNode;
-    while (cur != NULL) {
-        if (key) {
-            xmlFree(key);
-            key = NULL;
-        }
-
-        if (!xmlStrcmp(cur->name, (const xmlChar *)"IsTruncated")) {
-            content = (char *)xmlNodeGetContent(cur);
-            if (content) {
-                if (!strncmp(content, "true", 4)) {
-                    is_truncated = true;
-                }
-                xmlFree(content);
-            }
-        }
-
-        if (!xmlStrcmp(cur->name, (const xmlChar *)"Name")) {
-            content = (char *)xmlNodeGetContent(cur);
-            if (content) {
-                result->Name = content;
-                xmlFree(content);
-            }
-        }
-
-        if (!xmlStrcmp(cur->name, (const xmlChar *)"Prefix")) {
-            content = (char *)xmlNodeGetContent(cur);
-            if (content) {
-                result->Prefix = content;
-                xmlFree(content);
-                // content is not used anymore in this loop
-                content = NULL;
-            }
-        }
-
-        if (!xmlStrcmp(cur->name, (const xmlChar *)"Contents")) {
-            xmlNodePtr contNode = cur->xmlChildrenNode;
-            uint64_t size = 0;
-
-            while (contNode != NULL) {
-                // no memleak here, every content has only one Key/Size node
-                if (!xmlStrcmp(contNode->name, (const xmlChar *)"Key")) {
-                    key = (char *)xmlNodeGetContent(contNode);
-                }
-                if (!xmlStrcmp(contNode->name, (const xmlChar *)"Size")) {
-                    key_size = (char *)xmlNodeGetContent(contNode);
-                    // Size of S3 file is a natural number, don't worry
-                    size = (uint64_t)atoll((const char *)key_size);
-                }
-                contNode = contNode->next;
-            }
-
-            if (key) {
-                if (size > 0) {  // skip empty item
-                    BucketContent *item = CreateBucketContentItem(key, size);
-                    if (item) {
-                        result->contents.push_back(item);
-                    } else {
-                        S3ERROR("Faild to create item for %s", key);
-                    }
-                } else {
-                    S3INFO("Size of \"%s\" is %" PRIu64 ", skip it", key, size);
-                }
-            }
-
-            if (key_size) {
-                xmlFree(key_size);
-                key_size = NULL;
-            }
-        }
-
-        cur = cur->next;
-    }
-
-    marker = (is_truncated && key) ? key : "";
-
-    if (key) {
-        xmlFree(key);
-    }
-
-    return true;
-}
-
-// It is caller's responsibility to free returned memory.
-ListBucketResult *ListBucket(const string &schema, const string &region,
-                             const string &bucket, const string &prefix,
-                             const S3Credential &cred) {
-    // To get next up to 1000 keys.
-    // If marker is empty, get first 1000 then.
-    // S3 will return the last key as the next marker.
-    string marker = "";
-
-    stringstream host;
-    host << "s3-" << region << ".amazonaws.com";
-
-    S3DEBUG("Host url is %s", host.str().c_str());
-
-    ListBucketResult *result = new ListBucketResult();
-    if (!result) {
-        S3ERROR("Failed to allocate bucket list result");
-        return NULL;
-    }
-
-    stringstream url;
-    xmlParserCtxtPtr xmlcontext = NULL;
-
-    do {
-        if (prefix != "") {
-            url << schema << "://" << host.str() << "/" << bucket << "?";
-
-            if (marker != "") {
-                url << "marker=" << marker << "&";
-            }
-
-            url << "prefix=" << prefix;
-        } else {
-            url << schema << "://" << bucket << "." << host.str() << "?";
-
-            if (marker != "") {
-                url << "marker=" << marker;
-            }
-        }
-
-        xmlcontext = DoGetXML(region, url.str(), prefix, cred, marker);
-        if (!xmlcontext) {
-            S3ERROR("Failed to list bucket for %s", url.str().c_str());
-            delete result;
-            return NULL;
-        }
-
-        xmlDocPtr doc = xmlcontext->myDoc;
-        xmlNode *root_element = xmlDocGetRootElement(xmlcontext->myDoc);
-        if (!root_element) {
-            S3ERROR("Failed to parse returned xml of bucket list");
-            delete result;
-            xmlFreeParserCtxt(xmlcontext);
-            xmlFreeDoc(doc);
-            return NULL;
-        }
-
-        xmlNodePtr cur = root_element->xmlChildrenNode;
-        while (cur != NULL) {
-            if (!xmlStrcmp(cur->name, (const xmlChar *)"Message")) {
-                char *content = (char *)xmlNodeGetContent(cur);
-                if (content) {
-                    S3ERROR("Amazon S3 returns error \"%s\"", content);
-                    xmlFree(content);
-                }
-                delete result;
-                xmlFreeParserCtxt(xmlcontext);
-                xmlFreeDoc(doc);
-                return NULL;
-            }
-
-            cur = cur->next;
-        }
-
-        if (!extractContent(result, root_element, marker)) {
-            S3ERROR("Failed to extract key from bucket list");
-            delete result;
-            xmlFreeParserCtxt(xmlcontext);
-            xmlFreeDoc(doc);
-            return NULL;
-        }
-
-        // clear url
-        url.str("");
-
-        // always cleanup
-        xmlFreeParserCtxt(xmlcontext);
-        xmlFreeDoc(doc);
-        xmlcontext = NULL;
-    } while (marker != "");
-
-    return result;
+void S3Fetcher::signHeader() {
+    SignRequestV4("GET", &this->headers, this->region, this->urlparser.Path(), "", this->cred);
 }
 
 ListBucketResult::~ListBucketResult() {

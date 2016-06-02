@@ -15,7 +15,7 @@ class S3BucketReader : public Reader {
     S3BucketReader();
     ~S3BucketReader();
 
-    void open(const ReaderParams& params);
+    void open(const ReaderParams &params);
     uint64_t read(char *buf, uint64_t count);
     void close();
 
@@ -23,7 +23,7 @@ class S3BucketReader : public Reader {
     void setUpstreamReader(Reader *reader) { this->upstreamReader = reader; }
 
     void validateURL();
-    ListBucketResult* listBucketWithRetry(int retries);
+    ListBucketResult *listBucketWithRetry(int retries);
 
    protected:
     // Get URL for a S3 object/file.
@@ -48,13 +48,13 @@ class S3BucketReader : public Reader {
     bool needNewReader;
 
     ListBucketResult *keyList;  // List of matched keys/files.
-    unsigned int keyIndex;  // BucketContent index of keylist->contents.
+    unsigned int keyIndex;      // BucketContent index of keylist->contents.
 
     void SetSchema();
     void SetRegion();
     void SetBucketAndPrefix();
-    BucketContent* getNextKey();
-	const ReaderParams& getReaderParams(BucketContent* key);
+    BucketContent *getNextKey();
+    const ReaderParams &getReaderParams(BucketContent *key);
 };
 
 #endif
