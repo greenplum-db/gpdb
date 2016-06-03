@@ -129,7 +129,7 @@ elog_error(int level, char *explain, int force)
 		if (pgxml_errorMsg == NULL)
 		{
 			ereport(level, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-							errmsg(explain)));
+							errmsg("%s", explain)));
 		}
 		else
 		{
