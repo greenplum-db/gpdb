@@ -331,9 +331,8 @@ static void* malloc_and_store_metadata(size_t size)
 	{
 		return NULL;
 	}
-
-	VmemPtr_Initialize(malloc_pointer, size);
-	return VmemPtrToUserPtr(malloc_pointer);
+	VmemPtr_Initialize((VmemHeader*) malloc_pointer, size);
+	return VmemPtrToUserPtr((VmemHeader*) malloc_pointer);
 }
 
 /*
@@ -351,8 +350,8 @@ static void* realloc_and_store_size(void* usable_pointer, size_t new_usable_size
 	{
 		return NULL;
 	}
-	VmemPtr_Initialize(realloc_pointer, new_usable_size);
-	return VmemPtrToUserPtr(realloc_pointer);
+	VmemPtr_Initialize((VmemHeader*) realloc_pointer, new_usable_size);
+	return VmemPtrToUserPtr((VmemHeader*) realloc_pointer);
 }
 
 /* Reserves vmem from vmem tracker and allocates memory by calling malloc/calloc */
@@ -473,7 +472,7 @@ void gp_free(void *user_pointer)
 	Assert(*VmemPtr_GetPointerToFooterChecksum(UserPtr_GetVmemPtr(user_pointer)) == VMEM_FOOTER_CHECKSUM);
 
 	void* malloc_pointer = UserPtr_GetVmemPtr(user_pointer);
-	size_t usable_size = VmemPtr_GetUserPtrSize(malloc_pointer);
+	size_t usable_size = VmemPtr_GetUserPtrSize((VmemHeader*) malloc_pointer);
 	Assert(usable_size > 0);
 	free(malloc_pointer);
 	VmemTracker_ReleaseVmem(UserPtrSizeToVmemPtrSize(usable_size));
