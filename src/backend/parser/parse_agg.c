@@ -83,18 +83,19 @@ check_call(ParseState *pstate, Node *call)
 	 */
 	if (min_varlevel == 0 && is_agg)
 	{
-		if (checkExprHasAggs((Node *)((Aggref *)call)->args))
+		Aggref *agg = (Aggref *) call;
+
+		if (checkExprHasAggs((Node *) agg->args))
 			ereport(ERROR,
 					(errcode(ERRCODE_GROUPING_ERROR),
-					 errmsg("aggregate function calls cannot be nested")));
-		
-		if (checkExprHasWindFuncs((Node *)((Aggref *)call)->args))
-		{
+					 errmsg("aggregate function calls cannot be nested"),
+					 parser_errposition(pstate,
+							   locate_agg_of_level((Node *) agg->args, 0))));
+
+		if (checkExprHasWindFuncs((Node *) agg->args))
 			ereport(ERROR,
 					(errcode(ERRCODE_GROUPING_ERROR),
-					 errmsg("window functions may not be used as arguments to "
-							"aggregates")));
-		}
+					 errmsg("window functions may not be used as arguments to aggregates")));
 	}
 
 	/*
@@ -107,8 +108,7 @@ check_call(ParseState *pstate, Node *call)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_GROUPING_ERROR),
-					 errmsg("cannot use window function as an argument "
-							"to another window function")));
+					 errmsg("cannot use window function as an argument to another window function")));
 		}
 	}
 

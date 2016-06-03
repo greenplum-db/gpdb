@@ -8854,6 +8854,7 @@ sortby:		a_expr USING qual_all_Op opt_nulls_order
 					$$->sortby_dir = SORTBY_USING;
 					$$->sortby_nulls = $4;
 					$$->useOp = $3;
+					$$->location = @3;
 				}
 			| a_expr ASC opt_nulls_order
 				{
@@ -8862,6 +8863,7 @@ sortby:		a_expr USING qual_all_Op opt_nulls_order
 					$$->sortby_dir = SORTBY_ASC;
 					$$->sortby_nulls = $3;
 					$$->useOp = NIL;
+					$$->location = -1;		/* no operator */
 				}
 			| a_expr DESC opt_nulls_order
 				{
@@ -8870,6 +8872,7 @@ sortby:		a_expr USING qual_all_Op opt_nulls_order
 					$$->sortby_dir = SORTBY_DESC;
 					$$->sortby_nulls = $3;
 					$$->useOp = NIL;
+					$$->location = -1;		/* no operator */
 				}
 			| a_expr opt_nulls_order
 				{
@@ -8878,6 +8881,7 @@ sortby:		a_expr USING qual_all_Op opt_nulls_order
 					$$->sortby_dir = SORTBY_DEFAULT;
 					$$->sortby_nulls = $2;
 					$$->useOp = NIL;
+					$$->location = -1;		/* no operator */
 				}
 		;
 
@@ -11246,6 +11250,7 @@ func_expr:	simple_func FILTER '(' WHERE a_expr ')'
 					sortby->sortby_dir = SORTBY_DEFAULT;
 					sortby->sortby_nulls = SORTBY_NULLS_DEFAULT;
 					sortby->useOp = NIL;
+					sortby->location = -1;		/* no operator */
 					n->sortClause = list_make1(sortby);
 					n->location = @1;
 					$$ = (Node *) n;

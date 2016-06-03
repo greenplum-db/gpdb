@@ -75,6 +75,8 @@ LINE 1: delete from;
 -- no such relation 
 delete from nonesuch;
 ERROR:  relation "nonesuch" does not exist
+LINE 1: delete from nonesuch;
+                    ^
 --
 -- DROP
  

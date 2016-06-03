@@ -30,6 +30,12 @@ typedef struct
 
 typedef struct
 {
+	int			var_location;
+	int			sublevels_up;
+} locate_var_of_level_context;
+
+typedef struct
+{
 	Index		varno;
 	int			varattno;
 } contain_var_reference_context;
@@ -53,6 +59,8 @@ typedef struct
 
 static bool contain_var_clause_walker(Node *node, void *context);
 static bool contain_vars_of_level_walker(Node *node, int *sublevels_up);
+static bool locate_var_of_level_walker(Node *node,
+						   locate_var_of_level_context *context);
 static bool pull_var_clause_walker(Node *node,
 					   pull_var_clause_context *context);
 static Node *flatten_join_alias_vars_mutator(Node *node,
@@ -318,6 +326,79 @@ contain_vars_of_level_walker(Node *node, int *sublevels_up)
 	return expression_tree_walker(node,
 								  contain_vars_of_level_walker,
 								  (void *) sublevels_up);
+}
+
+/*
+ * locate_var_of_level
+ *	  Find the parse location of any Var of the specified query level.
+ *
+ * Returns -1 if no such Var is in the querytree, or if they all have
+ * unknown parse location.  (The former case is probably caller error,
+ * but we don't bother to distinguish it from the latter case.)
+ *
+ * Will recurse into sublinks.  Also, may be invoked directly on a Query.
+ *
+ * Note: it might seem appropriate to merge this functionality into
+ * contain_vars_of_level, but that would complicate that function's API.
+ * Currently, the only uses of this function are for error reporting,
+ * and so shaving cycles probably isn't very important.
+ */
+int
+locate_var_of_level(Node *node, int levelsup)
+{
+	locate_var_of_level_context context;
+
+	context.var_location = -1;	/* in case we find nothing */
+	context.sublevels_up = levelsup;
+
+	(void) query_or_expression_tree_walker(node,
+										   locate_var_of_level_walker,
+										   (void *) &context,
+										   0);
+
+	return context.var_location;
+}
+
+static bool
+locate_var_of_level_walker(Node *node,
+						   locate_var_of_level_context *context)
+{
+	if (node == NULL)
+		return false;
+	if (IsA(node, Var))
+	{
+		Var		   *var = (Var *) node;
+
+		if (var->varlevelsup == context->sublevels_up &&
+			var->location >= 0)
+		{
+			context->var_location = var->location;
+			return true;		/* abort tree traversal and return true */
+		}
+		return false;
+	}
+	if (IsA(node, CurrentOfExpr))
+	{
+		/* since CurrentOfExpr doesn't carry location, nothing we can do */
+		return false;
+	}
+	/* No extra code needed for PlaceHolderVar; just look in contained expr */
+	if (IsA(node, Query))
+	{
+		/* Recurse into subselects */
+		bool		result;
+
+		context->sublevels_up++;
+		result = query_tree_walker((Query *) node,
+								   locate_var_of_level_walker,
+								   (void *) context,
+								   0);
+		context->sublevels_up--;
+		return result;
+	}
+	return expression_tree_walker(node,
+								  locate_var_of_level_walker,
+								  (void *) context);
 }
 
 /*

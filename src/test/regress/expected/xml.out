@@ -6,6 +6,8 @@ INSERT INTO xmltest VALUES (1, '<value>one</value>');
 INSERT INTO xmltest VALUES (2, '<value>two</value>');
 INSERT INTO xmltest VALUES (3, '<wrong');
 ERROR:  invalid XML content
+LINE 1: INSERT INTO xmltest VALUES (3, '<wrong');
+                                       ^
 DETAIL:  Entity: line 1: parser error : Couldn't find end of Start Tag wrong line 1
 <wrong
       ^

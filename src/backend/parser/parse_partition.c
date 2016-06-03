@@ -474,9 +474,6 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 				 parser_errposition(pstate, pBy->location)));
 	}
 
-	/* Clear error position. */
-	pstate->p_breadcrumb.node = NULL;
-
 	/*
 	 * Determine namespace and name to use for the child table.
 	 */

@@ -38,12 +38,13 @@
 
 static Node *coerce_type_typmod(Node *node,
 				   Oid targetTypeId, int32 targetTypMod,
-				   CoercionForm cformat, bool isExplicit,
-				   bool hideInputCoercion);
+				   CoercionForm cformat, int location,
+				   bool isExplicit, bool hideInputCoercion);
 static void hide_coercion_node(Node *node);
 static Node *build_coercion_expression(Node *node, CoercionPathType pathtype, Oid funcId,
 						  Oid targetTypeId, int32 targetTypMod,
-						  CoercionForm cformat, bool isExplicit);
+						  CoercionForm cformat, int location,
+						  bool isExplicit);
 static Node *coerce_record_to_complex(ParseState *pstate, Node *node,
 						 Oid targetTypeId,
 						 CoercionContext ccontext,
@@ -96,7 +97,7 @@ coerce_to_target_type(ParseState *pstate, Node *expr, Oid exprtype,
 	 */
 	result = coerce_type_typmod(result,
 								targettype, targettypmod,
-								cformat,
+								cformat, location,
 								(cformat != COERCE_IMPLICIT_CAST),
 								(result != expr && !IsA(result, Const)
 								 && !IsA(result, Var)));
@@ -206,6 +207,7 @@ coerce_type(ParseState *pstate, Node *node,
 		Oid			baseTypeId;
 		int32		baseTypeMod;
 		Type		targetType;
+		ParseCallbackState pcbstate;
 
 		/*
 		 * If the target type is a domain, we want to call its base type's
@@ -224,6 +226,19 @@ coerce_type(ParseState *pstate, Node *node,
 		newcon->constlen = typeLen(targetType);
 		newcon->constbyval = typeByVal(targetType);
 		newcon->constisnull = con->constisnull;
+		/* Use the leftmost of the constant's and coercion's locations */
+		if (location < 0)
+			newcon->location = con->location;
+		else if (con->location >= 0 && con->location < location)
+			newcon->location = con->location;
+		else
+			newcon->location = location;
+
+		/*
+		 * Set up to point at the constant's text if the input routine
+		 * throws an error.
+		 */
+		setup_parser_errposition_callback(&pcbstate, pstate, con->location);
 
 		/*
 		 * We pass typmod -1 to the input routine, primarily because existing
@@ -240,6 +255,8 @@ coerce_type(ParseState *pstate, Node *node,
 												 -1);
 		else
 			newcon->constvalue = stringTypeDatum(targetType, NULL, -1);
+
+		cancel_parser_errposition_callback(&pcbstate);
 
 		result = (Node *) newcon;
 
@@ -275,7 +292,8 @@ coerce_type(ParseState *pstate, Node *node,
 			paramno > toppstate->p_numparams)
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_PARAMETER),
-					 errmsg("there is no parameter $%d", paramno)));
+					 errmsg("there is no parameter $%d", paramno),
+					 parser_errposition(pstate, param->location)));
 
 		if (toppstate->p_paramtypes[paramno - 1] == UNKNOWNOID)
 		{
@@ -295,7 +313,8 @@ coerce_type(ParseState *pstate, Node *node,
 							paramno),
 					 errdetail("%s versus %s",
 						format_type_be(toppstate->p_paramtypes[paramno - 1]),
-							   format_type_be(targetTypeId))));
+							   format_type_be(targetTypeId)),
+					 parser_errposition(pstate, param->location)));
 		}
 
 		param->paramtype = targetTypeId;
@@ -307,6 +326,11 @@ coerce_type(ParseState *pstate, Node *node,
 		 * that a run-time length check/coercion will occur if needed.
 		 */
 		param->paramtypmod = -1;
+
+		/* Use the leftmost of the param's and coercion's locations */
+		if (location >= 0 &&
+			(param->location < 0 || location < param->location))
+			param->location = location;
 
 		return (Node *) param;
 	}
@@ -351,6 +375,11 @@ coerce_type(ParseState *pstate, Node *node,
 
 			/* do unknownout(Var) */
 			fe = makeFuncExpr(outfunc, CSTRINGOID, list_make1(node), cformat);
+			fe->location = location;
+
+			if (location >= 0 &&
+				(fixvar->location < 0 || location < fixvar->location))
+			fixvar->location = location;
 
 			/* 
 			 * Now pass the above as an argument to the input function of the
@@ -364,6 +393,8 @@ coerce_type(ParseState *pstate, Node *node,
 										Int32GetDatum(-1),
 										false, true));
 			fe = makeFuncExpr(infunc, targetTypeId, args, cformat);
+			fe->location = location;
+
 			return (Node *)fe;
 
 		}
@@ -389,7 +420,7 @@ coerce_type(ParseState *pstate, Node *node,
 
 			result = build_coercion_expression(node, pathtype, funcId,
 											   baseTypeId, baseTypeMod,
-											   cformat,
+											   cformat, location,
 										  (cformat != COERCE_IMPLICIT_CAST));
 
 			/*
@@ -891,7 +922,7 @@ coerce_to_domain(Node *arg, Oid baseTypeId, int32 baseTypeMod, Oid typeId,
 	{
 		if (baseTypeMod >= 0)
 			arg = coerce_type_typmod(arg, baseTypeId, baseTypeMod,
-									 COERCE_IMPLICIT_CAST,
+									 COERCE_IMPLICIT_CAST, location,
 									 (cformat != COERCE_IMPLICIT_CAST),
 									 false);
 	}
@@ -934,8 +965,8 @@ coerce_to_domain(Node *arg, Oid baseTypeId, int32 baseTypeMod, Oid typeId,
  */
 static Node *
 coerce_type_typmod(Node *node, Oid targetTypeId, int32 targetTypMod,
-				   CoercionForm cformat, bool isExplicit,
-				   bool hideInputCoercion)
+				   CoercionForm cformat, int location,
+				   bool isExplicit, bool hideInputCoercion)
 {
 	Oid			funcId;
 	CoercionPathType	pathtype;
@@ -957,7 +988,8 @@ coerce_type_typmod(Node *node, Oid targetTypeId, int32 targetTypMod,
 
 		node = build_coercion_expression(node, pathtype, funcId,
 										 targetTypeId, targetTypMod,
-										 cformat, isExplicit);
+										 cformat, location,
+										 isExplicit);
 	}
 
 	return node;
@@ -1004,7 +1036,8 @@ hide_coercion_node(Node *node)
 static Node *
 build_coercion_expression(Node *node, CoercionPathType pathtype, Oid funcId,
 						  Oid targetTypeId, int32 targetTypMod,
-						  CoercionForm cformat, bool isExplicit)
+						  CoercionForm cformat, int location,
+						  bool isExplicit)
 {
 	int		 nargs = 0;
 
@@ -1047,6 +1080,7 @@ build_coercion_expression(Node *node, CoercionPathType pathtype, Oid funcId,
 	if (pathtype == COERCION_PATH_FUNC)
 	{
 		/* We build an ordinary FuncExpr with special arguments */
+		FuncExpr   *fexpr;
 		List	   *args;
 		Const	  *cons;
 
@@ -1080,7 +1114,9 @@ build_coercion_expression(Node *node, CoercionPathType pathtype, Oid funcId,
 			args = lappend(args, cons);
 		}
 
-		return (Node *) makeFuncExpr(funcId, targetTypeId, args, cformat);
+		fexpr = makeFuncExpr(funcId, targetTypeId, args, cformat);
+		fexpr->location = location;
+		return (Node *) fexpr;
 	}
 	else if (pathtype == COERCION_PATH_ARRAYCOERCE)
 	{
@@ -1154,10 +1190,11 @@ coerce_record_to_complex(ParseState *pstate, Node *node,
 	{
 		int			rtindex = ((Var *) node)->varno;
 		int			sublevels_up = ((Var *) node)->varlevelsup;
+		int			vlocation = ((Var *) node)->location;
 		RangeTblEntry *rte;
 
 		rte = GetRTEByRangeTablePosn(pstate, rtindex, sublevels_up);
-		expandRTE(rte, rtindex, sublevels_up, -1, false,
+		expandRTE(rte, rtindex, sublevels_up, vlocation, false,
 				  NULL, &args);
 	}
 	else
