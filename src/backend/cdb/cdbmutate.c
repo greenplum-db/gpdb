@@ -2875,10 +2875,15 @@ remove_subquery_in_RTEs(Node *node)
 
         if (RTE_SUBQUERY == rte->rtekind && NULL != rte->subquery)
         {
-            /*
-             * replace subquery with a dummy subquery
-             */
-            rte->subquery = makeNode(Query);
+			/*
+			 * Replace subquery with a dummy subquery.
+			 *
+			 * XXX: We could save a lot more memory by deep-freeing the many
+			 * fields in the Query too. But I'm not sure which of them might
+			 * be shared by other objects in the tree.
+			 */
+			pfree(rte->subquery);
+			rte->subquery = makeNode(Query);
         }
 
         return;

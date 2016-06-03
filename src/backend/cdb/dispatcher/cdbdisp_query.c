@@ -84,8 +84,6 @@ typedef struct DispatchCommandQueryParms
 	int primary_gang_id;
 } DispatchCommandQueryParms;
 
-static void stripPlanBeforeDispatch(PlannedStmt *plan);
-
 static void
 CdbDispatchUtilityStatement_Internal(struct Node *stmt,
 									 bool needTwoPhase,
@@ -284,8 +282,6 @@ cdbdisp_dispatchPlan(struct QueryDesc *queryDesc,
 	{
 		verify_shared_snapshot_ready();
 	}
-
-	stripPlanBeforeDispatch(queryDesc->plannedstmt);
 
 	/*
 	 * serialized plan tree. Note that we're called for a single
@@ -776,16 +772,6 @@ CdbDispatchUtilityStatement_NoTwoPhase(struct Node *stmt,
 	CdbDispatchUtilityStatement_Internal(stmt,
 										 false,
 										 "CdbDispatchUtilityStatement_NoTwoPhase");
-}
-
-/*
- * Remove subquery field in RTE's with subquery kind. This is an optimization used
- * to reduce plan size before serialization for dispatching.
- */
-static void
-stripPlanBeforeDispatch(PlannedStmt *plan)
-{
-	remove_subquery_in_RTEs((Node *) plan->rtable);
 }
 
 /*

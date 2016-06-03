@@ -192,6 +192,12 @@ static void postprocess_plan(PlannedStmt *plan)
 	globNew->share.nextPlanId = 0;
 	globNew->subplans = plan->subplans;
 	(void) apply_shareinput_xslice(plan->planTree, globNew);
+
+	/*
+	 * To save on memory, and on the network bandwidth when the plan is dispatched
+	 * QEs, strip all subquery RTEs of the original Query objects.
+	 */
+	remove_subquery_in_RTEs((Node *) plan->rtable);
 }
 #endif
 
@@ -462,7 +468,12 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 
 	top_plan = zap_trivial_result(root, top_plan);
 
-	
+	/*
+	 * To save on memory, and on the network bandwidth when the plan is dispatched
+	 * QEs, strip all subquery RTEs of the original Query objects.
+	 */
+	remove_subquery_in_RTEs((Node *) glob->finalrtable);
+
 	/* build the PlannedStmt result */
 	result = makeNode(PlannedStmt);
 	
