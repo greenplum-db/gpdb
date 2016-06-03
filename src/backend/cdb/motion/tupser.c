@@ -10,6 +10,7 @@
  */
 #include "postgres.h"
 
+#include "access/htup.h"
 #include "catalog/catquery.h"
 #include "catalog/pg_type.h"
 #include "nodes/execnodes.h" //SliceTable
@@ -444,7 +445,7 @@ SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo * pSerInfo, TupleChunkList 
 		addByteStringToChunkList(tcList, (char *)&tsh, sizeof(TupSerHeader), &pSerInfo->chunkCache);
 		/* If we don't have any attributes which have been toasted, we
 		 * can be very very simple: just send the raw data. */
-		if ((tsh.infomask & (HEAP_HASEXTERNAL | HEAP_HASEXTENDED)) == 0)
+		if ((tsh.infomask & HEAP_HASEXTERNAL) == 0)
 		{
 			if (nullslen)
 			{
@@ -749,7 +750,7 @@ SerializeTupleDirect(HeapTuple tuple, SerTupInfo * pSerInfo, struct directTransp
 			tsh.infomask = t_data->t_infomask;
 
 			if (dataSize + tsh.tuplen > b->prilen ||
-				(tsh.infomask & (HEAP_HASEXTERNAL | HEAP_HASEXTENDED)) != 0)
+				(tsh.infomask & HEAP_HASEXTERNAL) != 0)
 				return 0;
 
 			pos = b->pri + TUPLE_CHUNK_HEADER_SIZE;
@@ -1156,7 +1157,7 @@ CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo * pSerInfo)
 			pos += sizeof(TupSerHeader);	
 			/* if the tuple had toasted elements we have to deserialize
 			 * the old slow way. */
-			if ((tshp->infomask & (HEAP_HASEXTERNAL | HEAP_HASEXTENDED)) != 0)
+			if ((tshp->infomask & HEAP_HASEXTERNAL) != 0)
 			{
 				serData.cursor += sizeof(TupSerHeader);
 
