@@ -3820,3 +3820,13 @@ def impl(context, path, num):
     result = validate_local_path(path)
     if result != int(num):
         raise Exception("expected %s items but found %s items in path %s" % (num, result, path) )
+
+
+@when('the entry for the table "{user_table}" is removed from "{catalog_table}" in the database "{db_name}"')
+def impl(context, user_table, catalog_table, db_name):
+    delete_qry = "delete from %s where relname='%s';" % (catalog_table, user_table)
+
+    with dbconn.connect(dbconn.DbURL(dbname=db_name)) as conn:
+        for qry in ["set allow_system_table_mods='dml';", "set allow_segment_dml=true;", delete_qry]:
+            dbconn.execSQL(conn, qry)
+            conn.commit()
