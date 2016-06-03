@@ -110,6 +110,8 @@ set enable_bitmapscan=on;
 
 select * from bm_test where a in (1,3,5);
 
+drop table if exists bm_test;
+
 -- Create a heap table.
 CREATE TABLE card_heap_table_w_bitmap (id INTEGER, v VARCHAR) DISTRIBUTED BY (id);
 
