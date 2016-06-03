@@ -40,6 +40,8 @@ static StringInfoData outputBuffer;
 #undef fclose
 #define fclose(fileHandle)
 
+void write_stderr_mock(const char *fmt,...);
+
 #include "../memaccounting.c"
 
 #define EXPECT_EXCEPTION()     \
