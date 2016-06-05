@@ -45,7 +45,7 @@ static Node *transformAssignmentIndirection(ParseState *pstate,
 							   int location);
 static List *ExpandColumnRefStar(ParseState *pstate, ColumnRef *cref,
 					bool targetlist);
-static List *ExpandAllTables(ParseState *pstate);
+static List *ExpandAllTables(ParseState *pstate, int location);
 static List *ExpandIndirectionStar(ParseState *pstate, A_Indirection *ind,
 					  bool targetlist);
 static int	FigureColnameInternal(Node *node, char **name);
@@ -102,19 +102,10 @@ transformTargetList(ParseState *pstate, List *targetlist)
 {
 	List	   *p_target = NIL;
 	ListCell   *o_target;
-	ParseStateBreadCrumb    savebreadcrumb;
-
-	/* CDB: Push error location stack.  Must pop before return! */
-	Assert(pstate);
-	savebreadcrumb = pstate->p_breadcrumb;
-	pstate->p_breadcrumb.pop = &savebreadcrumb;
 
 	foreach(o_target, targetlist)
 	{
 		ResTarget  *res = (ResTarget *) lfirst(o_target);
-
-		/* CDB: Drop a breadcrumb in case of error. */
-		pstate->p_breadcrumb.node = (Node *)res;
 
 		/*
 		 * Check for "something.*".  Depending on the complexity of the
@@ -161,10 +152,6 @@ transformTargetList(ParseState *pstate, List *targetlist)
 												false));
 	}
 
-	/* CDB: Pop error location stack. */
-	Assert(pstate->p_breadcrumb.pop == &savebreadcrumb);
-	pstate->p_breadcrumb = savebreadcrumb;
-
 	return p_target;
 }
 
@@ -182,19 +169,10 @@ transformExpressionList(ParseState *pstate, List *exprlist)
 {
 	List	   *result = NIL;
 	ListCell   *lc;
-	ParseStateBreadCrumb    savebreadcrumb;
-
-	/* CDB: Push error location stack.  Must pop before return! */
-	Assert(pstate);
-	savebreadcrumb = pstate->p_breadcrumb;
-	pstate->p_breadcrumb.pop = &savebreadcrumb;
 
 	foreach(lc, exprlist)
 	{
 		Node	   *e = (Node *) lfirst(lc);
-
-		/* CDB: Drop a breadcrumb in case of error. */
-		pstate->p_breadcrumb.node = (Node *)e;
 
 		/*
 		 * Check for "something.*".  Depending on the complexity of the
@@ -236,10 +214,6 @@ transformExpressionList(ParseState *pstate, List *exprlist)
 		result = lappend(result,
 						 transformExpr(pstate, e));
 	}
-
-	/* CDB: Pop error location stack. */
-	Assert(pstate->p_breadcrumb.pop == &savebreadcrumb);
-	pstate->p_breadcrumb = savebreadcrumb;
 
 	return result;
 }
@@ -883,7 +857,7 @@ ExpandColumnRefStar(ParseState *pstate, ColumnRef *cref,
 		if (!targetlist)
 			elog(ERROR, "invalid use of *");
 
-		return ExpandAllTables(pstate);
+		return ExpandAllTables(pstate, cref->location);
 	}
 	else
 	{
@@ -939,7 +913,9 @@ ExpandColumnRefStar(ParseState *pstate, ColumnRef *cref,
 		rte = refnameRangeTblEntry(pstate, schemaname, relname, cref->location,
 								   &sublevels_up);
 		if (rte == NULL)
-			rte = addImplicitRTE(pstate, makeRangeVar(schemaname, relname, cref->location), cref->location);
+			rte = addImplicitRTE(pstate,
+								 makeRangeVar(schemaname, relname,
+											  cref->location));
 
 		/* Require read access --- see comments in setTargetTable() */
 		rte->requiredPerms |= ACL_SELECT;
@@ -947,7 +923,8 @@ ExpandColumnRefStar(ParseState *pstate, ColumnRef *cref,
 		rtindex = RTERangeTablePosn(pstate, rte, &sublevels_up);
 
 		if (targetlist)
-			return expandRelAttrs(pstate, rte, rtindex, sublevels_up, cref->location);
+			return expandRelAttrs(pstate, rte, rtindex, sublevels_up,
+								  cref->location);
 		else
 		{
 			List	   *vars;
@@ -969,7 +946,7 @@ ExpandColumnRefStar(ParseState *pstate, ColumnRef *cref,
  * etc.
  */
 static List *
-ExpandAllTables(ParseState *pstate)
+ExpandAllTables(ParseState *pstate, int location)
 {
 	List	   *target = NIL;
 	ListCell   *l;
@@ -978,7 +955,8 @@ ExpandAllTables(ParseState *pstate)
 	if (!pstate->p_varnamespace)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("SELECT * with no tables specified is not valid")));
+				 errmsg("SELECT * with no tables specified is not valid"),
+				 parser_errposition(pstate, location)));
 
 	foreach(l, pstate->p_varnamespace)
 	{
@@ -989,7 +967,8 @@ ExpandAllTables(ParseState *pstate)
 		rte->requiredPerms |= ACL_SELECT;
 
 		target = list_concat(target,
-							 expandRelAttrs(pstate, rte, rtindex, 0, -1));
+							 expandRelAttrs(pstate, rte, rtindex, 0,
+											location));
 	}
 
 	return target;
@@ -1060,12 +1039,16 @@ ExpandIndirectionStar(ParseState *pstate, A_Indirection *ind,
 			((Var *) expr)->varattno == InvalidAttrNumber)
 		{
 			Var		   *var = (Var *) expr;
+			Var		   *newvar;
 
-			fieldnode = (Node *) makeVar(var->varno,
-										 i + 1,
-										 att->atttypid,
-										 att->atttypmod,
-										 var->varlevelsup);
+			newvar = makeVar(var->varno,
+							 i + 1,
+							 att->atttypid,
+							 att->atttypmod,
+							 var->varlevelsup);
+			newvar->location = var->location;
+
+			fieldnode = (Node *) newvar;
 		}
 		else
 		{
@@ -1134,7 +1117,7 @@ expandRecordVariable(ParseState *pstate, Var *var, int levelsup)
 				   *lvar;
 		int			i;
 
-		expandRTE(rte, var->varno, 0, -1, false,
+		expandRTE(rte, var->varno, 0, var->location, false,
 				  &names, &vars);
 
 		tupleDesc = CreateTemplateTupleDesc(list_length(vars), false);

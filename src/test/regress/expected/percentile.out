@@ -1006,13 +1006,13 @@ select b, percentile_disc(0.1) within group (order by a) from perct;
 ERROR:  column "perct.b" must appear in the GROUP BY clause or be used in an aggregate function
 -- nested aggregate
 select percentile_cont(count(*)) within group (order by a) from perct;
-ERROR:  argument of percentile function must not contain variables
+ERROR:  argument of percentile function must not contain aggregates
 LINE 1: select percentile_cont(count(*)) within group (order by a) f...
                                ^
 select sum(percentile_cont(0.22) within group (order by a)) from perct;
 ERROR:  aggregate function calls cannot be nested
 LINE 1: select sum(percentile_cont(0.22) within group (order by a)) ...
-               ^
+                   ^
 -- OVER clause
 select percentile_cont(0.3333) within group (order by a) over (partition by a%2) from perct;
 ERROR:  window OVER clause can only be used with an aggregate
@@ -1032,15 +1032,15 @@ LINE 1: select percentile_disc('a') within group (order by a) from p...
 select count(median(a)) from perct;
 ERROR:  aggregate function calls cannot be nested
 LINE 1: select count(median(a)) from perct;
-               ^
+                     ^
 select median(count(*)) from perct;
 ERROR:  argument of percentile function must not contain aggregates
 LINE 1: select median(count(*)) from perct;
-                      ^
+               ^
 select percentile_cont(0.2) within group (order by count(*) over()) from perct;
 ERROR:  argument of percentile function must not contain window functions
-LINE 1: ...elect percentile_cont(0.2) within group (order by count(*) o...
-                                                             ^
+LINE 1: select percentile_cont(0.2) within group (order by count(*) ...
+               ^
 select percentile_disc(0.1) within group (order by group_id()) from perct;
 ERROR:  argument of percentile function must not contain grouping(), or group_id()
 LINE 1: select percentile_disc(0.1) within group (order by group_id(...
@@ -1054,7 +1054,7 @@ LINE 1: select percentile_cont((select 0.1 from gp_id)) within group...
 select percentile_cont(random()) within group (order by a) from perct;
 ERROR:  argument of percentile function must not contain volatile functions
 LINE 1: select percentile_cont(random()) within group (order by a) f...
-                               ^
+        ^
 -- out of range
 select percentile_cont(-0.1) within group (order by a) from perct;
 ERROR:  input is out of range
@@ -1069,12 +1069,12 @@ ERROR:  correlated subquery cannot contain percentile functions
 select * from perct limit median(a);
 ERROR:  argument of LIMIT must not contain variables
 LINE 1: select * from perct limit median(a);
-                                  ^
+                                         ^
 -- multiple sort key
 select percentile_cont(0.8) within group (order by a, a + 1, a + 2) from perct;
 ERROR:  function "percentile_cont(double precision)" cannot accept more than one expression in ORDER BY
-LINE 1: select percentile_cont(0.8) within group (order by a, a + 1,...
-                               ^
+LINE 1: ...elect percentile_cont(0.8) within group (order by a, a + 1, ...
+                                                             ^
 -- set-returning
 select generate_series(1, 2), median(a) from perct;
 ERROR:  set-valued function called in context that cannot accept a set
@@ -1085,23 +1085,23 @@ ERROR:  WITHIN GROUP aggregate cannot be used in GROUPING SETS query
 select median('text') from perct;
 ERROR:  function "median(unknown)" is not unique
 LINE 1: select median('text') from perct;
-                      ^
+               ^
 HINT:  Could not choose a best candidate function. You might need to add explicit type casts.
 select percentile_cont(now()) within group (order by a) from percts;
 ERROR:  function "percentile_cont(timestamp with time zone)" does not exist
 LINE 1: select percentile_cont(now()) within group (order by a) from...
-                               ^
+               ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select percentile_cont(0.5) within group (order by point(0,0)) from perct;
 ERROR:  function "percentile_cont(double precision) ORDER BY (point)" does not exist
-LINE 1: ...elect percentile_cont(0.5) within group (order by point(0,0)...
-                                                             ^
+LINE 1: select percentile_cont(0.5) within group (order by point(0,0...
+               ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- outer reference is not allowed for now
 select (select a from perct where median(t.a) = 5) from perct t;
 ERROR:  percentile functions cannot reference columns from outer queries
 LINE 1: select (select a from perct where median(t.a) = 5) from perc...
-                                                 ^
+                                          ^
 -- MPP-22219
 select count(*) from
 (SELECT b.dkey_a, MEDIAN(B.VALUE)

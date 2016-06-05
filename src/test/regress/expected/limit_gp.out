@@ -75,3 +75,12 @@ SELECT dkey, substring(tval from 1 for 2) as str  from (SELECT * from mksort_lim
 (3 rows)
 
 DROP TABLE  mksort_limit_test_table;
+-- Check invalid things in LIMIT
+select * from generate_series(1,10) g limit g;
+ERROR:  argument of LIMIT must not contain variables
+LINE 1: select * from generate_series(1,10) g limit g;
+                                                    ^
+select * from generate_series(1,10) g limit count(*);
+ERROR:  argument of LIMIT must not contain aggregates
+LINE 1: select * from generate_series(1,10) g limit count(*);
+                                                    ^

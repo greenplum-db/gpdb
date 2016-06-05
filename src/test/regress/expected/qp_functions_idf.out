@@ -602,11 +602,11 @@ LINE 1: select median( median(a)) from perct;
 select median(percentile_cont(0.5) within group (order by a)) from perct;
 ERROR:  argument of percentile function must not contain aggregates
 LINE 1: select median(percentile_cont(0.5) within group (order by a)...
-                      ^
+               ^
 select a, percentile_disc(0.1234567890)  within group ( order by avg(a)) from perct group by a;
 ERROR:  argument of percentile function must not contain aggregates
-LINE 1: ...ntile_disc(0.1234567890)  within group ( order by avg(a)) fr...
-                                                             ^
+LINE 1: select a, percentile_disc(0.1234567890)  within group ( orde...
+                  ^
 select a,median( ( count (*) )) from perct group by 1 limit 2;
 ERROR:  argument of percentile function must not contain aggregates
 LINE 1: select a,median( ( count (*) )) from perct group by 1 limit ...
@@ -639,12 +639,12 @@ ERROR:  aggregates not allowed in GROUP BY clause
 -- SQL with Outer aggregate reference and IDF
 select ( (select sum(a) from perct group by b having median(t.a) < 5 limit 1 ) ) from perct t;
 ERROR:  percentile functions cannot reference columns from outer queries
-LINE 1: ...select sum(a) from perct group by b having median(t.a) < 5 l...
+LINE 1: ...ect ( (select sum(a) from perct group by b having median(t.a...
                                                              ^
 select ( select percentile_cont(0.6) within group (order by t.a) from perct where a <10 limit 1 )  from perct t;
 ERROR:  percentile functions cannot reference columns from outer queries
-LINE 1: ...elect percentile_cont(0.6) within group (order by t.a) from ...
-                                                             ^
+LINE 1: select ( select percentile_cont(0.6) within group (order by ...
+                        ^
 -- SQL with Group by () and IDF
 select a,median(b) from perct group by ();
 ERROR:  column "perct.a" must appear in the GROUP BY clause or be used in an aggregate function
@@ -670,8 +670,8 @@ ERROR:  window OVER clause can only be used with an aggregate
 -- SQL with IDF , aggregate func and over clause within IDF : ERROR
 select percentile_cont(0.2) within group (order by stddev(b) over() ) from perct;
 ERROR:  argument of percentile function must not contain window functions
-LINE 1: ...elect percentile_cont(0.2) within group (order by stddev(b) ...
-                                                             ^
+LINE 1: select percentile_cont(0.2) within group (order by stddev(b)...
+               ^
 select median(avg(a) over()) from perct;
 ERROR:  argument of percentile function must not contain window functions
 LINE 1: select median(avg(a) over()) from perct;

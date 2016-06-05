@@ -2348,17 +2348,29 @@ LINE 2: partition by range (i, j)
 -- should work
 insert into b values(1, '2008-06-11');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(1, '2008-06-11');
+                    ^
 insert into b values(11, '2009-08-24');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(11, '2009-08-24');
+                    ^
 insert into b values(25, '2010-01-22');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(25, '2010-01-22');
+                    ^
 insert into b values(90, '2011-05-04');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(90, '2011-05-04');
+                    ^
 -- shouldn't work
 insert into b values(1, '2019-01-01');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(1, '2019-01-01');
+                    ^
 insert into b values(91, '2008-05-05');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(91, '2008-05-05');
+                    ^
  
 select * from b_1_prt_1;
 ERROR:  relation "b_1_prt_1" does not exist
@@ -2396,37 +2408,67 @@ LINE 3: partition by range(n, t, s)
 -- should work
 insert into b values(1, 2000.99, '2007-01-01 00:00:00', 'AAA');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(1, 2000.99, '2007-01-01 00:00:00', 'AAA...
+                    ^
 insert into b values(2, 2000.99, '2007-01-01 00:00:00', 'BBB');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(2, 2000.99, '2007-01-01 00:00:00', 'BBB...
+                    ^
 insert into b values(3, 4000.95, '2007-01-01 00:00:00', 'AAA');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(3, 4000.95, '2007-01-01 00:00:00', 'AAA...
+                    ^
 insert into b values(6, 3000, '2007-02-02 15:30:00', 'BBC');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 15:30:00', 'BBC');
+                    ^
 insert into b values(6, 3000, '2007-02-02 15:30:00', 'CC');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 15:30:00', 'CC');
+                    ^
 insert into b values(6, 3000, '2007-02-02 16:00:00'::timestamp - 
 					'1 second'::interval, 'BBZZZZZZZZZZ');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 16:00:00'::timesta...
+                    ^
 -- should fail
 insert into b values(6, 3000, '2007-02-02 15:30:00', 'CCCCCCC');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 15:30:00', 'CCCCCC...
+                    ^
 insert into b values(4, 5000, '2007-01-01 12:00:00', 'BCC');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(4, 5000, '2007-01-01 12:00:00', 'BCC');
+                    ^
 insert into b values(5, 8000, '2007-01-01 12:00:00', 'ZZZ');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(5, 8000, '2007-01-01 12:00:00', 'ZZZ');
+                    ^
 insert into b values(6, 3000, '2007-02-02 16:00:00', 'ABZZZZZZZZZZ');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 16:00:00', 'ABZZZZ...
+                    ^
 insert into b values(6, 1000, '2007-02-02 16:00:00', 'ABZZZZZZZZZZ');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 1000, '2007-02-02 16:00:00', 'ABZZZZ...
+                    ^
 insert into b values(6, 3000, '2006-02-02 16:00:00', 'ABZZZZZZZZZZ');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2006-02-02 16:00:00', 'ABZZZZ...
+                    ^
 insert into b values(6, 3000, '2007-02-02 00:00:00', 'A');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 00:00:00', 'A');
+                    ^
 -- NULL tests
 insert into b default values;
 ERROR:  relation "b" does not exist
+LINE 1: insert into b default values;
+                    ^
 insert into b values(6, 3000, '2007-01-01 12:00:00', NULL);
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-01-01 12:00:00', NULL);
+                    ^
 drop table b;
 ERROR:  table "b" does not exist
 -- check that we detect subpartitions partitioning a column that is already

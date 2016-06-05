@@ -2520,6 +2520,7 @@ _copySortBy(SortBy *from)
 	COPY_SCALAR_FIELD(sortby_nulls);
 	COPY_NODE_FIELD(useOp);
 	COPY_NODE_FIELD(node);
+	COPY_SCALAR_FIELD(location);
 
 	return newnode;
 }

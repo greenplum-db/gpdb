@@ -139,8 +139,6 @@ SELECT a,b,c,CASE c WHEN IS NOT DISTINCT FROM b THEN a
                     ELSE c END 
   FROM mytable; 
 ERROR:  CASE types character varying and integer cannot be matched
-LINE 1: SELECT a,b,c,CASE c WHEN IS NOT DISTINCT FROM b THEN a
-                          ^
 --
 -- DECODE(): Oracle compatibility
 --
@@ -332,8 +330,6 @@ SELECT a,b,"decode"(a,1,1),
 -- Negative test: type mismatches
 SELECT b,c,decode(c,'a',ARRAY[1,2],'e',ARRAY[3,4],'o',ARRAY[5,6],'u',ARRAY[7,8],'i',ARRAY[9,10],0) as newb from mytable;
 ERROR:  CASE types integer and integer[] cannot be matched
-LINE 1: SELECT b,c,decode(c,'a',ARRAY[1,2],'e',ARRAY[3,4],'o',ARRAY[...
-                          ^
 --
 -- Clean up
 --

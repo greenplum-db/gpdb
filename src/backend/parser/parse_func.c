@@ -25,6 +25,7 @@
 #include "catalog/pg_window.h"
 #include "funcapi.h"
 #include "nodes/makefuncs.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/walkers.h"
 #include "parser/parse_agg.h"
 #include "parser/parse_clause.h"
@@ -406,7 +407,8 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					errmsg("could not find array type for data type %s",
-						   format_type_be(newa->element_typeid))));
+						   format_type_be(newa->element_typeid)),
+					parser_errposition(pstate, exprLocation((Node *) vargs))));
 		newa->multidims = false;
 
 		fargs = lappend(fargs, newa);
@@ -422,6 +424,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 		funcexpr->funcretset = retset;
 		funcexpr->funcformat = COERCE_EXPLICIT_CALL;
 		funcexpr->args = fargs;
+		funcexpr->location = location;
 
 		retval = (Node *) funcexpr;
 	}
@@ -554,7 +557,8 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 							func_signature_string(funcname, nargs, 
 												  actual_arg_types)),
 					 errhint("The filter clause is only supported over functions "
-							 "defined as STRICT.")));
+							 "defined as STRICT."),
+					 parser_errposition(pstate, location)));
 		}
 
 		if (retset)
@@ -598,6 +602,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 		aggref->args        = fargs;
 		aggref->aggstar     = agg_star;
 		aggref->aggdistinct = agg_distinct;
+		aggref->location = location;
 
 		transformAggregateCall(pstate, aggref, agg_order);
 

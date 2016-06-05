@@ -194,6 +194,10 @@ exprLocation(Node *expr)
 			/* the location points at ROW or (, which must be leftmost */
 			loc = ((RowExpr *) expr)->location;
 			break;
+		case T_TableValueExpr:
+			/* the location points at TABLE, which must be leftmost */
+			loc = ((TableValueExpr *) expr)->location;
+			break;
 		case T_RowCompareExpr:
 			/* just use leftmost argument's location */
 			loc = exprLocation((Node *) ((RowCompareExpr *) expr)->largs);

@@ -106,18 +106,32 @@ LINE 1: SELECT COMPLEX '-10e-400i';
 -- bad input  
 INSERT INTO complex_ttbl(c) VALUES ('');
 ERROR:  invalid input syntax for type complex: ""
+LINE 1: INSERT INTO complex_ttbl(c) VALUES ('');
+                                            ^
 INSERT INTO complex_ttbl(c) VALUES ('    ');
 ERROR:  invalid input syntax for type complex:"    "
+LINE 1: INSERT INTO complex_ttbl(c) VALUES ('    ');
+                                            ^
 INSERT INTO complex_ttbl(c) VALUES ('xyi');
 ERROR:  invalid input syntax for type complex:"xyi"
+LINE 1: INSERT INTO complex_ttbl(c) VALUES ('xyi');
+                                            ^
 INSERT INTO complex_ttbl(c) VALUES ('i'); 
 ERROR:  invalid input syntax for type complex:"i"
+LINE 1: INSERT INTO complex_ttbl(c) VALUES ('i');
+                                            ^
 INSERT INTO complex_ttbl(c) VALUES ('5.0.0 + 1i'); 
 ERROR:  invalid input syntax for type complex: "5.0.0 + 1i"
+LINE 1: INSERT INTO complex_ttbl(c) VALUES ('5.0.0 + 1i');
+                                            ^
 INSERT INTO complex_ttbl(c) VALUES ('5.0 + 1 i');  
 ERROR:  invalid input syntax for type complex: "5.0 + 1 i"
+LINE 1: INSERT INTO complex_ttbl(c) VALUES ('5.0 + 1 i');
+                                            ^
 INSERT INTO complex_ttbl(c) VALUES ('5.0 + i1');    
 ERROR:  invalid input syntax for type complex:"i1"
+LINE 1: INSERT INTO complex_ttbl(c) VALUES ('5.0 + i1');
+                                            ^
 -- re
 SELECT re(COMPLEX(5, 3)) AS five;
  five 

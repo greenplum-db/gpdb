@@ -27,3 +27,8 @@ SELECT dkey, substring(tval from 1 for 2) as str from (SELECT * from mksort_limi
 SELECT dkey, substring(tval from 1 for 2) as str  from (SELECT * from mksort_limit_test_table ORDER BY dkey DESC LIMIT 5000) as temp ORDER BY jkey DESC LIMIT 3;
 
 DROP TABLE  mksort_limit_test_table;
+
+-- Check invalid things in LIMIT
+
+select * from generate_series(1,10) g limit g;
+select * from generate_series(1,10) g limit count(*);

@@ -414,8 +414,6 @@ SELECT dup(22);
 
 SELECT dup('xyz');	-- fails
 ERROR:  could not determine anyarray/anyelement type because input has type "unknown"
-LINE 1: SELECT dup('xyz');
-               ^
 SELECT dup('xyz'::text);
         dup        
 -------------------

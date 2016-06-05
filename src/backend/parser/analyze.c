@@ -386,9 +386,6 @@ do_parse_analyze(Node *parseTree, ParseState *pstate)
 	/* CDB: Pop error context callback stack. */
 	error_context_stack = errcontext.previous;
 
-	/* CDB: All breadcrumbs should have been popped. */
-	Assert(!pstate->p_breadcrumb.pop);
-
 	/* don't need to access result relation any more */
 	release_pstate_resources(pstate);
 
@@ -509,7 +506,6 @@ static void
 parse_analyze_error_callback(void *parsestate)
 {
     ParseState             *pstate = (ParseState *)parsestate;
-    ParseStateBreadCrumb   *bc;
     int                     location = -1;
 
     /* No-op if errposition has already been set. */
@@ -519,23 +515,6 @@ parse_analyze_error_callback(void *parsestate)
     /* NOTICE messages don't need any extra baggage. */
     if (elog_getelevel() == NOTICE)
         return;
-
-    /*
-	 * Backtrack through trail of breadcrumbs to find a node with location
-	 * info. A null node ptr tells us to keep quiet rather than give a
-	 * misleading pointer to a token which may be far from the actual problem.
-     */
-    for (bc = &pstate->p_breadcrumb; bc && bc->node; bc = bc->pop)
-    {
-        location = parse_expr_location((Expr *)bc->node);
-        if (location >= 0)
-            break;
-    }
-
-    /* Shush the parent query's error callback if we found a location or null */
-    if (bc &&
-        pstate->parentParseState)
-        pstate->parentParseState->p_breadcrumb.node = NULL;
 
     /* Report approximate offset of error from beginning of statement text. */
     if (location >= 0)
@@ -839,9 +818,6 @@ transformDeleteStmt(ParseState *pstate, DeleteStmt *stmt)
 	qry->returningList = transformReturningList(pstate, stmt->returningList);
 #endif
 
-	/* CDB: Cursor position not available for errors below this point. */
-	pstate->p_breadcrumb.node = NULL;
-
 	/* done building the range table and jointree */
 	qry->rtable = pstate->p_rtable;
 	qry->jointree = makeFromExpr(pstate->p_joinlist, qual);
@@ -1030,9 +1006,6 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 		{
 			List	   *sublist = (List *) lfirst(lc);
 
-			/* CDB: In case of error, note which sublist is involved. */
-			pstate->p_breadcrumb.node = (Node *)sublist;
-
 			/* Do basic expression transformation (same as a ROW() expr) */
 			sublist = transformExpressionList(pstate, sublist);
 
@@ -1062,9 +1035,6 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 
 			exprsLists = lappend(exprsLists, sublist);
 		}
-
-		/* CDB: Clear error location. */
-		pstate->p_breadcrumb.node = NULL;
 
 		/*
 		 * There mustn't have been any table references in the expressions,
@@ -1187,10 +1157,6 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt,
 													stmt->returningList);
 	}
 #endif
-
-
-	/* CDB: Cursor position not available for errors below this point. */
-	pstate->p_breadcrumb.node = NULL;
 
 	/* done building the range table and jointree */
 	qry->rtable = pstate->p_rtable;
@@ -3561,9 +3527,6 @@ transformRuleStmt(ParseState *pstate, RuleStmt *stmt,
 	stmt->whereClause = transformWhereClause(pstate, stmt->whereClause,
 											 "WHERE");
 
-    /* CDB: Cursor position not available for errors below this point. */
-    pstate->p_breadcrumb.node = NULL;
-
 	if (list_length(pstate->p_rtable) != 2)		/* naughty, naughty... */
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
@@ -4503,9 +4466,6 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 	qry->limitCount = transformLimitClause(pstate, stmt->limitCount,
 										   "LIMIT");
 
-    /* CDB: Cursor position not available for errors below this point. */
-    pstate->p_breadcrumb.node = NULL;
-
 	/* handle any SELECT INTO/CREATE TABLE AS spec */
 	qry->intoClause = NULL;
 	if (stmt->intoClause)
@@ -4704,9 +4664,6 @@ transformValuesClause(ParseState *pstate, SelectStmt *stmt)
 											"OFFSET");
 	qry->limitCount = transformLimitClause(pstate, stmt->limitCount,
 										   "LIMIT");
-
-    /* CDB: Cursor position not available for errors below this point. */
-    pstate->p_breadcrumb.node = NULL;
 
 	if (stmt->lockingClause)
 		ereport(ERROR,
@@ -5103,9 +5060,6 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
 											"OFFSET");
 	qry->limitCount = transformLimitClause(pstate, limitCount,
 										   "LIMIT");
-
-    /* CDB: Cursor position not available for errors below this point. */
-    pstate->p_breadcrumb.node = NULL;
 
 	/*
 	 * Handle SELECT INTO/CREATE TABLE AS.
@@ -5597,9 +5551,6 @@ transformUpdateStmt(ParseState *pstate, UpdateStmt *stmt)
         fixup_unknown_vars_in_targetlist(pstate, qry->returningList);
     }
 
-    /* CDB: Cursor position not available for errors below this point. */
-    pstate->p_breadcrumb.node = NULL;
-
 	qry->rtable = pstate->p_rtable;
 	qry->jointree = makeFromExpr(pstate->p_joinlist, qual);
 
@@ -5654,9 +5605,6 @@ transformUpdateStmt(ParseState *pstate, UpdateStmt *stmt)
 			elog(ERROR, "UPDATE target count mismatch --- internal error");
 		origTarget = (ResTarget *) lfirst(origTargetList);
 		Assert(IsA(origTarget, ResTarget));
-
-        /* CDB: Drop a breadcrumb in case of error. */
-        pstate->p_breadcrumb.node = (Node *)origTarget;
 
 		attrno = attnameAttNum(pstate->p_target_relation,
 							   origTarget->name, true);
@@ -5718,9 +5666,6 @@ transformReturningList(ParseState *pstate, List *returningList)
 
 	/* transform RETURNING identically to a SELECT targetlist */
 	rlist = transformTargetList(pstate, returningList);
-
-    /* CDB: Cursor position not available for errors below this point. */
-    pstate->p_breadcrumb.node = NULL;
 
 	/* check for disallowed stuff */
 

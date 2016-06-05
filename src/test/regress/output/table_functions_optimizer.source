@@ -2088,6 +2088,8 @@ SELECT count(*) FROM example HAVING TABLE(select a from example) is not null;
 ERROR:  invalid use of TABLE value expression
 SELECT sum(a) over (partition by TABLE(select * from example) order by b) from example;
 ERROR:  could not identify an ordering operator for type anytable
+LINE 1: SELECT sum(a) over (partition by TABLE(select * from example...
+                                         ^
 HINT:  Use an explicit ordering operator or modify the query.
 -- ERROR raised internally by user code when we don't see an output tuple
 -- that matches expectations
@@ -2897,28 +2899,18 @@ LINE 1: SELECT "time" FROM project( TABLE( SELECT * FROM history ), ...
 /* Invalid projection position */
 SELECT * FROM project( TABLE( SELECT * FROM pg_am ), NULL);
 ERROR:  unable to resolve type for function (regress.c:2172)
-LINE 2: SELECT * FROM project( TABLE( SELECT * FROM pg_am ), NULL);
-                      ^
 SELECT * FROM project( TABLE( SELECT * FROM pg_am ), -1);
 ERROR:  invalid column position -1 (regress.c:2175)
-LINE 1: SELECT * FROM project( TABLE( SELECT * FROM pg_am ), -1);
-                      ^
 SELECT * FROM project( TABLE( SELECT * FROM pg_am ), 0);
 ERROR:  invalid column position 0 (regress.c:2175)
-LINE 1: SELECT * FROM project( TABLE( SELECT * FROM pg_am ), 0);
-                      ^
 SELECT * FROM project( TABLE( SELECT * FROM pg_am ), 100);
 ERROR:  invalid column position 100 (regress.c:2175)
-LINE 1: SELECT * FROM project( TABLE( SELECT * FROM pg_am ), 100);
-                      ^
 SELECT * FROM project( TABLE( SELECT * FROM pg_am ), (ARRAY[2,3])[1]);
 ERROR:  unable to resolve function argument (execQual.c:5348)
-LINE 1: SELECT * FROM project( TABLE( SELECT * FROM pg_am ), (ARRAY[...
-                      ^
+LINE 1: ... FROM project( TABLE( SELECT * FROM pg_am ), (ARRAY[2,3])[1]...
+                                                             ^
 SELECT * FROM project( TABLE( SELECT * FROM pg_am ), (ROW(1, '')::example_r).a);
 ERROR:  unable to resolve function argument (execQual.c:5348)
-LINE 1: SELECT * FROM project( TABLE( SELECT * FROM pg_am ), (ROW(1,...
-                      ^
 -- ========================
 -- User data exmaple
 -- ========================
@@ -3081,12 +3073,12 @@ ERROR:  type "anytable" is not a valid parameter for PREPARE
 -- FAIL: $1 is not a constant
 PREPARE p4 AS SELECT * FROM project( TABLE( SELECT * FROM pg_am ), $1);
 ERROR:  unable to resolve function argument (execQual.c:5348)
-LINE 1: PREPARE p4 AS SELECT * FROM project( TABLE( SELECT * FROM pg...
-                                    ^
+LINE 1: ...AS SELECT * FROM project( TABLE( SELECT * FROM pg_am ), $1);
+                                                                  ^
 PREPARE p5(integer) AS SELECT * FROM project( TABLE( SELECT * FROM pg_am ), $1);
 ERROR:  unable to resolve function argument (execQual.c:5348)
-LINE 1: PREPARE p5(integer) AS SELECT * FROM project( TABLE( SELECT ...
-                                             ^
+LINE 1: ...AS SELECT * FROM project( TABLE( SELECT * FROM pg_am ), $1);
+                                                                  ^
 -- PASS: We allow table functions with describe to be prepared.  This can
 -- theoretically require need for reparse/replan, but that requires more
 -- general support of prepared statements in conjunction with a plan cache.
