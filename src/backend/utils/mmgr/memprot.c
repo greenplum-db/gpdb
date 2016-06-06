@@ -492,6 +492,7 @@ void gp_free(void *user_pointer)
 	void* malloc_pointer = UserPtr_GetVmemPtr(user_pointer);
 	size_t usable_size = VmemPtr_GetUserPtrSize((VmemHeader*) malloc_pointer);
 	Assert(usable_size > 0);
+	UserPtr_VerifyChecksum(user_pointer);
 	free(malloc_pointer);
 	VmemTracker_ReleaseVmem(UserPtrSizeToVmemPtrSize(usable_size));
 }

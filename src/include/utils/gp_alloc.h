@@ -21,11 +21,11 @@
 typedef int64 HeaderChecksumType;
 typedef int64 FooterChecksumType;
 
-#define FooterChecksumSize (sizeof(FooterChecksumType))
+#define FOOTER_CHECKSUM_SIZE (sizeof(FooterChecksumType))
 
 #else
 
-#define FooterChecksumSize 0
+#define FOOTER_CHECKSUM_SIZE 0
 
 #endif
 
@@ -85,7 +85,7 @@ VmemPtr_SetUserPtrSize(VmemHeader *ptr, size_t user_size)
 static inline size_t
 UserPtrSizeToVmemPtrSize(size_t payload_size)
 {
-	return (sizeof(VmemHeader) + payload_size + FooterChecksumSize);
+	return (sizeof(VmemHeader) + payload_size + FOOTER_CHECKSUM_SIZE);
 }
 
 /* Gets the end address of a Vmem pointer */
@@ -130,6 +130,12 @@ VmemPtr_VerifyFooterChecksum(VmemHeader *ptr)
 	Assert(*VmemPtr_GetPointerToFooterChecksum(ptr) == VMEM_FOOTER_CHECKSUM);
 }
 
+#else
+/* Convert header and footer checksum functions as no-op */
+#define VmemPtr_SetHeaderChecksum(ptr)
+#define VmemPtr_SetFooterChecksum(ptr)
+#define VmemPtr_VerifyHeaderChecksum(ptr)
+#define VmemPtr_VerifyFooterChecksum(ptr)
 #endif
 
 /* Extracts the size from an user pointer */
@@ -160,6 +166,14 @@ VmemPtr_Initialize(VmemHeader *ptr, size_t size)
 	VmemPtr_SetUserPtrSize(ptr, size);
 	VmemPtr_SetHeaderChecksum(ptr);
 	VmemPtr_SetFooterChecksum(ptr);
+}
+
+/* Checks the header and footer checksum of an user pointer */
+static inline void
+UserPtr_VerifyChecksum(void *ptr)
+{
+	VmemPtr_VerifyHeaderChecksum(UserPtr_GetVmemPtr(ptr));
+	VmemPtr_VerifyFooterChecksum(UserPtr_GetVmemPtr(ptr));
 }
 
 #endif   /* GP_ALLOC_H */
