@@ -80,11 +80,11 @@ test__bfz_zlib_init__palloc_write(void **state)
 	bfz.mode = BFZ_MODE_APPEND;
 	bfz.fd = -1;
 
-	Size beforeAlloc = MemoryContextGetPeakSpace(TopMemoryContext);
+	Size beforeAlloc = MemoryContextGetPeakSpace(TopTransactionContext);
 
 	bfz_zlib_init(&bfz);
 
-	Size afterAlloc = MemoryContextGetPeakSpace(TopMemoryContext);
+	Size afterAlloc = MemoryContextGetPeakSpace(TopTransactionContext);
 
 	int memZlib = zlib_memory_needed(true /* isWrite */);
 
@@ -100,11 +100,11 @@ test__bfz_zlib_init__palloc_read(void **state)
 	bfz.mode = BFZ_MODE_SCAN;
 	bfz.fd = -1;
 
-	Size beforeAlloc = MemoryContextGetPeakSpace(TopMemoryContext);
+	Size beforeAlloc = MemoryContextGetPeakSpace(TopTransactionContext);
 
 	bfz_zlib_init(&bfz);
 
-	Size afterAlloc = MemoryContextGetPeakSpace(TopMemoryContext);
+	Size afterAlloc = MemoryContextGetPeakSpace(TopTransactionContext);
 
 	int memZlib = zlib_memory_needed(false /* isWrite */);
 
@@ -115,6 +115,13 @@ int
 main(int argc, char* argv[])
 {
 	cmockery_parse_arguments(argc, argv);
+
+	TopTransactionContext =
+		AllocSetContextCreate(TopMemoryContext,
+							  "TopTransactionContext",
+							  ALLOCSET_DEFAULT_MINSIZE,
+							  ALLOCSET_DEFAULT_INITSIZE,
+							  ALLOCSET_DEFAULT_MAXSIZE);
 
 	const UnitTest tests[] = {
 		unit_test(test__bfz_zlib_init__palloc_write),
