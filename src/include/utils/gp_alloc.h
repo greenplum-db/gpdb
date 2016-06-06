@@ -54,7 +54,7 @@ extern void gp_free(void *ptr);
 
 /* Gets the actual usable payload address of a vmem pointer */
 #define VmemPtrToUserPtr(ptr)	\
-					((void*)((ptr)->data))
+					((void*)(&(ptr)->data))
 
 /*
  * Converts a user pointer to a VMEM pointer by going backward
@@ -77,11 +77,11 @@ extern void gp_free(void *ptr);
 #ifdef GP_ALLOC_DEBUG
 /* Stores a checksum in the header for debugging purpose */
 #define VmemPtr_SetHeaderChecksum(ptr)	\
-		(ptr->checksum = VMEM_HEADER_CHECKSUM)
+		((ptr)->checksum = VMEM_HEADER_CHECKSUM)
 
 /* Checks if the header checksum of a Vmem pointer matches */
 #define VmemPtr_VerifyHeaderChecksum(ptr) \
-		(Assert(ptr->checksum == VMEM_HEADER_CHECKSUM))
+		(Assert((ptr)->checksum == VMEM_HEADER_CHECKSUM))
 
 /* Extracts the footer checksum pointer */
 #define VmemPtr_GetPointerToFooterChecksum(ptr) \
