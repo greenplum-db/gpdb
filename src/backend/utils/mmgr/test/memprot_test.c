@@ -9,6 +9,13 @@ static void our_free(void* ptr);
 
 #include "../memprot.c"
 
+static bool is_assert_checking =
+#ifdef USE_ASSERT_CHECKING
+		true;
+#else
+		false;
+#endif
+
 #define EXPECT_EXCEPTION()     \
 	expect_any(ExceptionalCondition,conditionName); \
 	expect_any(ExceptionalCondition,errorType); \
@@ -68,21 +75,16 @@ size_t CalculateVmemSizeFromUserSize(size_t user_size)
 
 /*
  * This method calculates a new size of a pointer given a ratio to the original size.
- * The returned size will be between he maximum requestable size and zero
+ * The returned size will be between the maximum requestable size and zero
  */
-size_t CalculateReallocSize(size_t original_size, float delta)
+size_t CalculateReallocSize(size_t original_size, float ratio)
 {
-	assert_true(delta >= 0.0);
+	assert_true(ratio >= 0.0);
 
-	size_t new_size = ((float)original_size) * delta;
+	size_t new_size = ((float)original_size) * ratio;
 
-	// overflow
-	if (delta > 1.0 && new_size < original_size)
-	{
-		return MAX_REQUESTABLE_SIZE;
-	}
-
-	if (new_size > MAX_REQUESTABLE_SIZE)
+	/* Overflow or exceeding the max allowed allocation size */
+	if ((ratio > 1.0 && new_size < original_size) || (new_size > MAX_REQUESTABLE_SIZE))
 	{
 		return MAX_REQUESTABLE_SIZE;
 	}
@@ -90,11 +92,12 @@ size_t CalculateReallocSize(size_t original_size, float delta)
 	return new_size;
 }
 
+/* Wrapper around gp_malloc that executes basic sets of tests during allocations */
 void* AllocateWithCheck(size_t size)
 {
 	size_t chosen_vmem_size = CalculateVmemSizeFromUserSize(size);
 
-	if (chosen_vmem_size > 0x7fffffff)
+	if (is_assert_checking && chosen_vmem_size > 0x7fffffff)
 	{
 		EXPECT_EXCEPTION();
 	}
@@ -109,7 +112,7 @@ void* AllocateWithCheck(size_t size)
 	{
 		void *ptr = gp_malloc(size);
 
-		if (chosen_vmem_size > 0x7fffffff)
+		if (is_assert_checking && chosen_vmem_size > 0x7fffffff)
 		{
 			assert_true(false);
 		}
@@ -133,19 +136,50 @@ void* AllocateWithCheck(size_t size)
  */
 void* ReallocateWithCheck(void* ptr, size_t requested_size)
 {
+	/*
+	 * Nothing to check for a null pointer in optimized build as we will just crash
+	 * and this is consistent with existing behavior of repalloc.
+	 */
+	if (NULL == ptr)
+	{
+		if (is_assert_checking)
+		{
+			/* The gp_realloc should fail assert for null pointer check */
+			EXPECT_EXCEPTION();
+			PG_TRY();
+			{
+				void * new_ptr = gp_realloc(ptr, requested_size);
+				assert_true(false);
+			}
+			PG_CATCH();
+			{
+
+			}
+			PG_END_TRY();
+		}
+
+		/*
+		 * For release build or for debug build after failing the assertion in gp_realloc,
+		 * we don't have any further execution to check
+		 */
+		return NULL;
+	}
+
 	size_t orig_user_size = UserPtr_GetUserPtrSize(ptr);
 	size_t orig_vmem_size = CalculateVmemSizeFromUserSize(orig_user_size);
+	size_t size_difference = requested_size - orig_user_size;
 
-	// If the size change is negative, we release vmem
+	/* If the size change is negative, we release vmem */
 	if (requested_size > orig_user_size)
 	{
 		expect_value(VmemTracker_ReserveVmem, newlyRequestedBytes, requested_size - orig_user_size);
 		will_return(VmemTracker_ReserveVmem, MemoryAllocation_Success);
 	}
-	else
+	else if (requested_size < orig_user_size)
 	{
-		// ReleaseVmem will release the size difference
-		//expect_value(VmemTracker_ReleaseVmem, toBeFreedRequested, -1 * size_difference);
+		/* ReleaseVmem will release the size difference */
+		expect_value(VmemTracker_ReleaseVmem, toBeFreedRequested, abs(size_difference));
+		will_be_called(VmemTracker_ReleaseVmem);
 	}
 
 	void *realloc_ptr =	gp_realloc(ptr, requested_size);
@@ -155,7 +189,7 @@ void* ReallocateWithCheck(void* ptr, size_t requested_size)
 
 
 	// Check vmem size has been recalculated
-	size_t realloc_vmem_size = orig_vmem_size + (requested_size - orig_user_size);
+	size_t realloc_vmem_size = orig_vmem_size + size_difference;
 	assert_true(realloc_vmem_size == UserPtr_GetVmemPtrSize(realloc_ptr));
 
 	return realloc_ptr;
@@ -166,10 +200,6 @@ void* ReallocateWithCheck(void* ptr, size_t requested_size)
  */
 void FreeWithCheck(void* ptr, size_t size)
 {
-	bool debug = false;
-#ifdef USE_ASSERT_CHECKING
-	debug = true;
-#endif
 	size_t vmem_size = 0;
 
 	/*
@@ -178,8 +208,9 @@ void FreeWithCheck(void* ptr, size_t size)
 	 */
 	if (NULL == ptr)
 	{
-		if (debug)
+		if (is_assert_checking)
 		{
+			/* The gp_free should fail assert for null pointer check */
 			EXPECT_EXCEPTION();
 			PG_TRY();
 			{
@@ -193,6 +224,10 @@ void FreeWithCheck(void* ptr, size_t size)
 			PG_END_TRY();
 		}
 
+		/*
+		 * For release build or for debug build after failing the assertion in gp_free,
+		 * we don't have any further execution to check
+		 */
 		return;
 	}
 
@@ -205,7 +240,7 @@ void FreeWithCheck(void* ptr, size_t size)
 	our_free_expected_pointer = ((char*)ptr - sizeof(VmemHeader));
 	our_free_input_pointer = NULL;
 
-	if (!debug || size != 0)
+	if (!is_assert_checking || size != 0)
 	{
 		// The expect_value's chosen_vmem_size will check the size calculation with overhead
 		expect_value(VmemTracker_ReleaseVmem, toBeFreedRequested, vmem_size);
@@ -214,7 +249,7 @@ void FreeWithCheck(void* ptr, size_t size)
 
 	assert_true(our_free_expected_pointer != our_free_input_pointer);
 
-	if (debug && size == 0)
+	if (is_assert_checking && size == 0)
 	{
 		EXPECT_EXCEPTION();
 	}
@@ -273,63 +308,46 @@ test__gp_malloc_calls_vmem_tracker_when_mp_init_true(void **state)
 }
 
 /*
- * Checks if the gp_malloc is storing size information in the header
+ * Tests the basic functionality of gp_malloc and gp_free
  */
 void
-test__gp_malloc__stores_size_in_header(void **state)
+test__gp_malloc_and_free__basic_tests(void **state)
 {
-	size_t sizes[] = {50, 1024, 1024L * 1024L * 1024L * 2L, 1024L * 1024L * 1024L * 5L};
-
-	for (int idx = 0; idx < sizeof(sizes)/sizeof(sizes[0]); idx++)
-	{
-		size_t chosen_size = sizes[idx];
-		AllocateWithCheck(chosen_size);
-	}
-}
-
-/*
- * Checks if the gp_realloc is storing size information in the header
- */
-void
-test__gp_realloc__stores_size_in_header(void **state)
-{
-	size_t sizes[] = {50, 1024, MAX_REQUESTABLE_SIZE - sizeof(VmemHeader) - sizeof(FooterChecksumType)};
-	// Ratio of new size to original size for realloc calls
-	float deltas[] = {0, 0.1, 0.5, 1, 1.5, 2};
-
-	for (int idx = 0; idx < sizeof(sizes)/sizeof(sizes[0]); idx++)
-	{
-		for (int didx = 0; didx < sizeof(deltas)/sizeof(deltas[0]); didx++)
-		{
-			size_t original_size = sizes[idx];
-			float chosen_delta = deltas[didx];
-			size_t requested_size = CalculateReallocSize(original_size, chosen_delta);
-
-			void *ptr = AllocateWithCheck(original_size);
-			if (NULL != ptr)
-			{
-				ptr = ReallocateWithCheck(ptr, requested_size);
-				FreeWithCheck(ptr, requested_size);
-			}
-		}
-	}
-}
-
-/*
- * Checks if the gp_malloc is storing size information in the header
- */
-void
-test__gp_free__FreesAndReleasesVmem(void **state)
-{
-	size_t sizes[] = {50, 1024, 1024L * 1024L * 1024L * 2L, 1024L * 1024L * 1024L * 5L};
+	size_t sizes[] = {50, 1024, MAX_REQUESTABLE_SIZE - sizeof(VmemHeader) - sizeof(FooterChecksumType),
+			1024L * 1024L * 1024L * 2L, 1024L * 1024L * 1024L * 5L};
 
 	for (int idx = 0; idx < sizeof(sizes)/sizeof(sizes[0]); idx++)
 	{
 		size_t chosen_size = sizes[idx];
 		void *ptr = AllocateWithCheck(chosen_size);
-
-		// For invalid size we will only have null pointer, which we don't try to free
 		FreeWithCheck(ptr, chosen_size);
+	}
+}
+
+/*
+ * Tests the basic functionality of gp_realloc
+ */
+void
+test__gp_realloc__basic_tests(void **state)
+{
+	size_t sizes[] = {50, 1024, MAX_REQUESTABLE_SIZE - sizeof(VmemHeader) - sizeof(FooterChecksumType)};
+	// Ratio of new size to original size for realloc calls
+	float fractions[] = {0, 0.1, 0.5, 1, 1.5, 2};
+
+	for (int idx = 0; idx < sizeof(sizes)/sizeof(sizes[0]); idx++)
+	{
+		for (int didx = 0; didx < sizeof(fractions)/sizeof(fractions[0]); didx++)
+		{
+			size_t original_size = sizes[idx];
+			float chosen_fraction = fractions[didx];
+			size_t requested_size = CalculateReallocSize(original_size, chosen_fraction);
+
+			printf("Original vs. requested: %ld, %ld", original_size, requested_size);
+
+			void *ptr = AllocateWithCheck(original_size);
+			ptr = ReallocateWithCheck(ptr, requested_size);
+			FreeWithCheck(ptr, requested_size);
+		}
 	}
 }
 
@@ -341,9 +359,8 @@ main(int argc, char* argv[])
 	const UnitTest tests[] = {
 			unit_test_setup_teardown(test__gp_malloc_no_vmem_tracker_when_mp_init_false, MemProtTestSetup, MemProtTestTeardown),
 			unit_test_setup_teardown(test__gp_malloc_calls_vmem_tracker_when_mp_init_true, MemProtTestSetup, MemProtTestTeardown),
-			unit_test_setup_teardown(test__gp_malloc__stores_size_in_header, MemProtTestSetup, MemProtTestTeardown),
-			unit_test_setup_teardown(test__gp_realloc__stores_size_in_header, MemProtTestSetup, MemProtTestTeardown),
-			unit_test_setup_teardown(test__gp_free__FreesAndReleasesVmem, MemProtTestSetup, MemProtTestTeardown),
+			unit_test_setup_teardown(test__gp_malloc_and_free__basic_tests, MemProtTestSetup, MemProtTestTeardown),
+			unit_test_setup_teardown(test__gp_realloc__basic_tests, MemProtTestSetup, MemProtTestTeardown),
 	};
 
 	return run_tests(tests);
