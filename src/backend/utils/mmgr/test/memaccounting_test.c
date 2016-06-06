@@ -40,7 +40,16 @@ static StringInfoData outputBuffer;
 #undef fclose
 #define fclose(fileHandle)
 
+void write_stderr_mock(const char *fmt,...);
+
 #include "../memaccounting.c"
+
+#define EXPECT_EXCEPTION()     \
+	expect_any(ExceptionalCondition,conditionName); \
+	expect_any(ExceptionalCondition,errorType); \
+	expect_any(ExceptionalCondition,fileName); \
+	expect_any(ExceptionalCondition,lineNumber); \
+    will_be_called_with_sideeffect(ExceptionalCondition, &_ExceptionalCondition, NULL);\
 
 /*
  * Mocks the function write_stderr and captures the output in
@@ -1281,19 +1290,12 @@ test__MemoryAccounting_GetAccountName__Validate(void **state)
 	}
 
 #ifdef USE_ASSERT_CHECKING
-    expect_any(ExceptionalCondition,conditionName);
-    expect_any(ExceptionalCondition,errorType);
-    expect_any(ExceptionalCondition,fileName);
-    expect_any(ExceptionalCondition,lineNumber);
-
-    will_be_called_with_sideeffect(ExceptionalCondition, &_ExceptionalCondition, NULL);
-
-    MemoryAccount *newAccount = NULL;
+    MemoryAccount *newAccount = CreateMemoryAccountImpl(0, 0, ActiveMemoryAccount);
     /* Test if within memory-limit strings cause assertion failure */
 	PG_TRY();
 	{
 		/* 0 is an invalid memory owner type, so it should fail an assertion */
-		newAccount = CreateMemoryAccountImpl(0, 0, ActiveMemoryAccount);
+		EXPECT_EXCEPTION();
 		char *accountName = MemoryAccounting_GetAccountName(newAccount);
 		assert_true(false);
 	}
@@ -1303,6 +1305,7 @@ test__MemoryAccounting_GetAccountName__Validate(void **state)
 	PG_END_TRY();
 
 	pfree(newAccount);
+	newAccount = NULL;
 #endif
 }
 
