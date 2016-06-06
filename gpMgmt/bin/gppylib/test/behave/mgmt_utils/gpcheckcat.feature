@@ -158,6 +158,15 @@ Feature: gpcheckcat tests
         And the user runs "dropdb db2"
         And the path "gpcheckcat.repair.*" is removed from current working directory
 
+    @foo
+    Scenario: gpcheckcat foreign key check should find missing catalog entries.
+        Given database "db_fkey" is dropped and recreated
+        And there is a "heap" table "gpadmin_tbl" in "db_fkey" with data
+        When the entry for the table "gpadmin_tbl" is removed from "pg_catalog.pg_class" in the database "db_fkey"
+        And the user runs "gpcheckcat -R foreign_key db_fkey"
+        Then gpcheckcat should print No pg_class entry for pg_attribute column to stdout
+        And the user runs "dropdb db_fkey"
+
     @persistent
     Scenario: gpcheckcat should find persistence errors
         Given database "db1" is dropped and recreated
