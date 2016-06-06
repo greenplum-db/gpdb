@@ -401,7 +401,7 @@ static char *alterTableCmdString(AlterTableType subtype);
 Oid
 DefineRelation(CreateStmt *stmt, char relkind, char relstorage)
 {
-	volatile struct CdbDispatcherState ds = {NULL, NULL};
+	volatile struct CdbDispatcherState ds = {NULL, NULL, NULL};
 
     Oid reloid = 0;
     Assert(stmt->relation->schemaname == NULL || strlen(stmt->relation->schemaname)>0);
@@ -872,7 +872,7 @@ DefineRelation_int(CreateStmt *stmt,
 extern void
 DefineExternalRelation(CreateExternalStmt *createExtStmt)
 {
-	volatile struct CdbDispatcherState ds = {NULL, NULL};
+	volatile struct CdbDispatcherState ds = {NULL, NULL, NULL};
 	CreateStmt				  *createStmt = makeNode(CreateStmt);
 	ExtTableTypeDesc 		  *exttypeDesc = (ExtTableTypeDesc *)createExtStmt->exttypedesc;
 	SingleRowErrorDesc 		  *singlerowerrorDesc = NULL;

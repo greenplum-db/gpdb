@@ -603,7 +603,7 @@ static void copy_append_only_segment_file(
 void
 createdb(CreatedbStmt *stmt)
 {
-	volatile struct CdbDispatcherState ds = {NULL, NULL};
+	volatile struct CdbDispatcherState ds = {NULL, NULL, NULL};
 
 	PG_TRY();
 	{

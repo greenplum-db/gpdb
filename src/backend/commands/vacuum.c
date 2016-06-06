@@ -5293,7 +5293,7 @@ dispatchVacuum(VacuumStmt *vacstmt, VacuumStatsContext *ctx)
 	Query	   *q = NULL;
 
 	/* should these be marked volatile ? */
-	volatile struct CdbDispatcherState ds = {NULL, NULL};
+	volatile struct CdbDispatcherState ds = {NULL, NULL, NULL};
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(vacstmt);

@@ -435,7 +435,7 @@ void
 CdbSetGucOnAllGangs(const char *strCommand,
 					bool cancelOnError, bool needTwoPhase)
 {
-	volatile CdbDispatcherState ds = { NULL, NULL };
+	volatile CdbDispatcherState ds = {NULL, NULL, NULL};
 	const bool	withSnapshot = true;
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),

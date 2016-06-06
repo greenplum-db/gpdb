@@ -94,7 +94,7 @@ cdbCopyStart(CdbCopy *c, char *copyCmd)
 {
 	int			seg;
 	MemoryContext oldcontext;
-	CdbDispatcherState ds = {NULL, NULL};
+	CdbDispatcherState ds = {NULL, NULL, NULL};
 	List	   *parsetree_list;
 	Node	   *parsetree = NULL;
 	List	   *querytree_list;
