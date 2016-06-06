@@ -365,11 +365,11 @@ inline void
 AllocAllocInfo(AllocSet set, AllocChunk chunk, bool isHeader) __attribute__((always_inline));
 
 inline bool
-MemoryAccounting_Allocate(struct MemoryAccount* memoryAccount, struct MemoryContextData *context,
+MemoryAccounting_Allocate(struct MemoryAccount* memoryAccount,
 		Size allocatedSize) __attribute__((always_inline));
 
 inline bool
-MemoryAccounting_Free(struct MemoryAccount* memoryAccount, uint16 memoryAccountGeneration, struct MemoryContextData *context,
+MemoryAccounting_Free(struct MemoryAccount* memoryAccount, uint16 memoryAccountGeneration,
 		Size allocatedSize) __attribute__((always_inline));
 
 /*
@@ -384,8 +384,7 @@ MemoryAccounting_Free(struct MemoryAccount* memoryAccount, uint16 memoryAccountG
  * If the return value is false, the underlying memory allocator should fail.
  */
 bool
-MemoryAccounting_Allocate(struct MemoryAccount* memoryAccount,
-		struct MemoryContextData *context, Size allocatedSize)
+MemoryAccounting_Allocate(struct MemoryAccount* memoryAccount, Size allocatedSize)
 {
 	Assert(memoryAccount->allocated + allocatedSize >=
 			memoryAccount->allocated);
@@ -424,7 +423,7 @@ MemoryAccounting_Allocate(struct MemoryAccount* memoryAccount,
  * of accessing an invalid pointer.
  */
 bool
-MemoryAccounting_Free(MemoryAccount* memoryAccount, uint16 memoryAccountGeneration, struct MemoryContextData *context, Size allocatedSize)
+MemoryAccounting_Free(MemoryAccount* memoryAccount, uint16 memoryAccountGeneration, Size allocatedSize)
 {
 	if (memoryAccountGeneration != MemoryAccountingCurrentGeneration)
 	{
