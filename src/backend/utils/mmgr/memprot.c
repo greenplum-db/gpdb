@@ -420,6 +420,7 @@ void *gp_malloc(int64 sz)
 void *gp_realloc(void *ptr, int64 new_size)
 {
 	Assert(!gp_mp_inited || MemoryProtection_IsOwnerThread());
+	Assert(NULL != ptr);
 
 	void *ret = NULL;
 
@@ -450,11 +451,27 @@ void *gp_realloc(void *ptr, int64 new_size)
 
 		if(!ret)
 		{
-			Assert(0 < size_diff);
-			VmemTracker_ReleaseVmem(size_diff);
+			/*
+			 * There is no guarantee that realloc would not fail during a shrinkage.
+			 * But, we haven't touched Vmem at all for a shrinkage. So, nothing to undo.
+			 */
+			if (size_diff > 0)
+			{
+				VmemTracker_ReleaseVmem(size_diff);
+			}
 
 			gp_failed_to_alloc(MemoryFailure_SystemMemoryExhausted, 0, new_size);
 			return NULL;
+		}
+
+		if (size_diff < 0)
+		{
+			/*
+			 * As there is no guarantee that a shrinkage during realloc would not fail,
+			 * we follow a lazy approach of adjusting VMEM during shrinkage. Upon a
+			 * successful realloc, we finally release a VMEM, which should virtually never fail.
+			 */
+			VmemTracker_ReleaseVmem(-1 * size_diff);
 		}
 
 		return ret;
