@@ -378,7 +378,6 @@ MemoryAccounting_Free(struct MemoryAccount* memoryAccount, uint16 memoryAccountG
  *	 	underlying allocator to record allocation request.
  *
  * memoryAccount: where to record this allocation
- * context: the context where this memory belongs
  * allocatedSize: the final amount of memory returned by the allocator (with overhead)
  *
  * If the return value is false, the underlying memory allocator should fail.
@@ -414,7 +413,6 @@ MemoryAccounting_Allocate(struct MemoryAccount* memoryAccount, Size allocatedSiz
  *		This function records the amount of memory freed.
  *
  * memoryAccount: where to record this allocation
- * context: the context where this memory belongs
  * allocatedSize: the final amount of memory returned by the allocator (with overhead)
  *
  * Note: the memoryAccount can be an invalid pointer if the generation of
