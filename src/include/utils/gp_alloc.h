@@ -41,12 +41,7 @@ typedef struct VmemHeader
 #endif
 	/* The size of the usable allocation, i.e., without the header/footer overhead */
 	size_t size;
-	/* Payload - must be last */
-	char data[1];
 } VmemHeader;
-
-#define VMEM_HEADER_SIZE offsetof(VmemHeader, data)
-
 
 extern void *gp_malloc(int64 sz);
 extern void *gp_realloc(void *ptr, int64 newsz);
@@ -56,7 +51,7 @@ extern void gp_free(void *ptr);
 static inline
 void* VmemPtrToUserPtr(VmemHeader *ptr)
 {
-	return ((void*)(&(ptr)->data));
+	return (void *)(((char *)ptr) + sizeof(VmemHeader));
 }
 
 /*
@@ -66,7 +61,7 @@ void* VmemPtrToUserPtr(VmemHeader *ptr)
 static inline VmemHeader*
 UserPtr_GetVmemPtr(void *usable_pointer)
 {
-	return ((VmemHeader*)(((char *)(usable_pointer)) - VMEM_HEADER_SIZE));
+	return ((VmemHeader*)(((char *)(usable_pointer)) - sizeof(VmemHeader)));
 }
 
 /* Extracts the size of the user pointer from a Vmem pointer */
@@ -90,7 +85,7 @@ VmemPtr_SetUserPtrSize(VmemHeader *ptr, size_t user_size)
 static inline size_t
 UserPtrSizeToVmemPtrSize(size_t payload_size)
 {
-	return (VMEM_HEADER_SIZE + payload_size + FooterChecksumSize);
+	return (sizeof(VmemHeader) + payload_size + FooterChecksumSize);
 }
 
 /* Gets the end address of a Vmem pointer */
