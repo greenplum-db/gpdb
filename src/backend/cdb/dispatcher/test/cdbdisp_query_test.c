@@ -42,14 +42,9 @@ test__cdbdisp_dispatchPlan__Overflow_plan_size_in_kb(void **state)
 	 * Set max plan to a value that will require handling INT32
 	 * overflow of the current plan size
 	 */
-	gp_max_plan_size = INT_MAX;
+	gp_max_plan_size = 1024;
 
 	queryDesc->plannedstmt->planTree = (struct Plan *)palloc0(sizeof(struct Plan));
-
-	/*
-	 * Set num_slices and uncompressed_size to be INT_MAX-1 to force overflow
-	 */
-	queryDesc->plannedstmt->planTree->nMotionNodes = INT_MAX-1;
 
 	will_assign_value(serializeNode, uncompressed_size_out, INT_MAX-1);
 	expect_any(serializeNode, node);
@@ -74,11 +69,11 @@ test__cdbdisp_dispatchPlan__Overflow_plan_size_in_kb(void **state)
 
 		StringInfo message = makeStringInfo();
 		appendStringInfo(message,
-						 "Query plan size limit exceeded, current size: "  UINT64_FORMAT "KB, max allowed size: %dKB",
-						 ((INT_MAX-1)*(INT_MAX-1)/(uint64)1024), INT_MAX);
+						 "Query plan size limit exceeded, current size: " UINT64_FORMAT "KB, max allowed size: 1024KB",
+						 ((INT_MAX-1)/(uint64)1024));
 
 		if (edata->elevel == ERROR &&
-			strncmp(edata->message, message->data, message->len))
+			strncmp(edata->message, message->data, message->len) == 0)
 		{
 			success = true;
 		}

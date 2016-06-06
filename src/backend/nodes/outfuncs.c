@@ -4069,7 +4069,6 @@ _outSlice(StringInfo str, Slice *node)
 	WRITE_BOOL_FIELD(directDispatch.isDirectDispatch);
 	WRITE_NODE_FIELD(directDispatch.contentIds); /* List of int */
 	WRITE_DUMMY_FIELD(primaryGang);
-	WRITE_INT_FIELD(primary_gang_id);
 	WRITE_INT_FIELD(parentIndex); /* List of int index */
 	WRITE_NODE_FIELD(children); /* List of int index */
 	WRITE_NODE_FIELD(primaryProcesses); /* List of (CDBProcess *) */

@@ -141,7 +141,7 @@ static void dumpRMOnlyDtx(HTAB *htab, StringInfoData *buff);
 static bool doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand, int flags,
 										 char* gid, DistributedTransactionId gxid,
 										 bool *badGangs, bool raiseError, CdbDispatchDirectDesc *direct,
-										 char *serializedArgument, int serializedArgumentLen);
+										 char *serializedDtxContextInfo, int serializedDtxContextInfoLen);
 static void doPrepareTransaction(void);
 static void doInsertForgetCommitted(void);
 static void doNotifyingCommitPrepared(void);
@@ -2225,15 +2225,15 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand, int flags,
 							 char* gid, DistributedTransactionId gxid,
 							 bool *badGangs, bool raiseError,
 							 CdbDispatchDirectDesc *direct,
-							 char *serializedArgument,
-							 int serializedArgumentLen)
+							 char *serializedDtxContextInfo,
+							 int serializedDtxContextInfoLen)
 {
-	int			i, resultCount, numOfFailed = 0;
+	int i, resultCount, numOfFailed = 0;
 
-	char		*dtxProtocolCommandStr = 0;
+	char *dtxProtocolCommandStr = 0;
 
-	struct pg_result	**results = NULL;
-	StringInfoData		errbuf;
+	struct pg_result **results = NULL;
+	StringInfoData errbuf;
 
 	dtxProtocolCommandStr = DtxProtocolCommandToString(dtxProtocolCommand);
 
@@ -2253,7 +2253,7 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand, int flags,
 												 dtxProtocolCommandStr,
 												 gid, gxid,
 												 &errbuf, &resultCount, badGangs, direct,
-												 serializedArgument, serializedArgumentLen);
+												 serializedDtxContextInfo, serializedDtxContextInfoLen);
 
 	if (errbuf.len > 0)
 	{
