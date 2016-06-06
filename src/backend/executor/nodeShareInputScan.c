@@ -32,6 +32,7 @@
 #include "utils/debugbreak.h"
 #include "utils/tuplesort.h"
 #include "postmaster/primary_mirror_mode.h"
+#include "utils/gp_alloc.h"
 
 typedef struct ShareInput_Lk_Context
 {
@@ -578,7 +579,7 @@ static void shareinput_clean_lk_ctxt(ShareInput_Lk_Context *lk_ctxt)
 		lk_ctxt->del_done = false;
 	}
 
-	gp_free2 (lk_ctxt, sizeof(ShareInput_Lk_Context));
+	gp_free(lk_ctxt);
 }
 
 static void XCallBack_ShareInput_FIFO(XactEvent ev, void* vp)

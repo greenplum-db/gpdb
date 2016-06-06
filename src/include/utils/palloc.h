@@ -191,17 +191,4 @@ extern void UpdateTimeAtomically(volatile OOMTimeType* time_var);
 	}\
 }
 
-#ifdef USE_SYSV_SEMAPHORES
-extern void *gp_malloc(int64 sz); 
-extern void *gp_calloc(int64 nmemb, int64 sz); 
-extern void *gp_realloc(void *ptr, int64 sz, int64 newsz); 
-extern void gp_free2(void *ptr, int64 sz); 
-
-#else
-#define gp_malloc(sz) malloc(sz)
-#define gp_calloc(sz1, sz2) calloc((sz1), (sz2))
-#define gp_realloc(ptr, sz1, sz2) realloc((ptr), (sz2))
-#define gp_free2(ptr, sz) free(ptr)
-#endif
-
 #endif   /* PALLOC_H */

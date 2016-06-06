@@ -9,6 +9,7 @@
 #include "executor/execWorkfile.h"
 #include "utils/tuplestorenew.h"
 #include "utils/memutils.h"
+#include "utils/gp_alloc.h"
 
 #include "cdb/cdbvars.h"                /* currentSliceId */
 
@@ -436,7 +437,7 @@ static NTupleStorePage *nts_get_free_page(NTupleStore *nts)
 
 				if(nts->page_cnt >= page_max)
 				{
-					gp_free2(page_next, sizeof(NTupleStorePage));
+					gp_free(page_next);
 					--nts->page_cnt;
 				}
 				else
@@ -609,7 +610,7 @@ static void ntuplestore_cleanup(NTupleStore *ts, bool fNormal)
 	while(p)
 	{
 		NTupleStorePage *pnext = nts_page_next(p); 
-		gp_free2(p, sizeof(NTupleStorePage));
+		gp_free(p);
 		p = pnext;
 	}
 
@@ -617,7 +618,7 @@ static void ntuplestore_cleanup(NTupleStore *ts, bool fNormal)
 	while(p)
 	{
 		NTupleStorePage *pnext = nts_page_next(p); 
-		gp_free2(p, sizeof(NTupleStorePage));
+		gp_free(p);
 		p = pnext;
 	}
 
@@ -638,7 +639,7 @@ static void ntuplestore_cleanup(NTupleStore *ts, bool fNormal)
 		ts->work_set = NULL;
 	}
 
-	gp_free2(ts, sizeof(NTupleStore));
+	gp_free(ts);
 }
 
 static void XCallBack_NTS(XactEvent event, void *nts)
