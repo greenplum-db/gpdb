@@ -1240,7 +1240,7 @@ AllocSetAllocImpl(MemoryContext context, Size size, bool isHeader)
 	 */
 	if ((block = set->blocks) != NULL)
 	{
-		Size		availspace = UserPtr_GetEndAddress(block) - block->freeptr;
+		Size		availspace = (char*)UserPtr_GetEndAddress(block) - block->freeptr;
 
 		if (availspace < (chunk_size + ALLOC_CHUNKHDRSZ))
 		{
@@ -1794,7 +1794,7 @@ AllocSet_GetStats(MemoryContext context, uint64 *nBlocks, uint64 *nChunks,
     if (set->blocks)
     {
     	*nChunks = *nChunks + 1;
-    	*currentAvailable += UserPtr_GetEndAddress(set->blocks) - set->blocks->freeptr;
+    	*currentAvailable += (char*)UserPtr_GetEndAddress(set->blocks) - set->blocks->freeptr;
     }
 
     /* Freelists.  Count usable space only, not chunk headers. */
