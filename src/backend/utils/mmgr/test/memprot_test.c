@@ -236,6 +236,42 @@ void FreeWithCheck(void* ptr, size_t size)
 	PG_END_TRY();
 }
 
+void
+VerifyStoredSize(void* ptr, size_t expected_user_size)
+{
+	size_t stored_size = *((size_t *)((((char *) ptr) - sizeof(VmemHeader)) + offsetof(VmemHeader, size)));
+	assert_true(stored_size == expected_user_size);
+}
+
+/* Checks if we bypass vmem tracker when mp_init is false */
+void
+test__gp_malloc_no_vmem_tracker_when_mp_init_false(void **state)
+{
+	gp_mp_inited = false;
+
+	const size_t alloc_size = 10;
+	/* No expected calls to VMEM tracker as the mp is not initialized */
+	void * alloc = gp_malloc(alloc_size);
+	assert_true(alloc != NULL);
+	VerifyStoredSize(alloc, alloc_size);
+}
+
+/* Checks if we call vmem tracker when mp_init is true */
+void
+test__gp_malloc_calls_vmem_tracker_when_mp_init_true(void **state)
+{
+	gp_mp_inited = true;
+	const size_t alloc_size = 10;
+
+	expect_value(VmemTracker_ReserveVmem, newlyRequestedBytes, CalculateVmemSizeFromUserSize(alloc_size));
+	will_return(VmemTracker_ReserveVmem, MemoryAllocation_Success);
+
+	/* No expected calls to VMEM tracker as the mp is not initialized */
+	void * alloc = gp_malloc(alloc_size);
+	assert_true(alloc != NULL);
+	VerifyStoredSize(alloc, alloc_size);
+}
+
 /*
  * Checks if the gp_malloc is storing size information in the header
  */
@@ -303,6 +339,8 @@ main(int argc, char* argv[])
 	cmockery_parse_arguments(argc, argv);
 
 	const UnitTest tests[] = {
+			unit_test_setup_teardown(test__gp_malloc_no_vmem_tracker_when_mp_init_false, MemProtTestSetup, MemProtTestTeardown),
+			unit_test_setup_teardown(test__gp_malloc_calls_vmem_tracker_when_mp_init_true, MemProtTestSetup, MemProtTestTeardown),
 			unit_test_setup_teardown(test__gp_malloc__stores_size_in_header, MemProtTestSetup, MemProtTestTeardown),
 			unit_test_setup_teardown(test__gp_realloc__stores_size_in_header, MemProtTestSetup, MemProtTestTeardown),
 			unit_test_setup_teardown(test__gp_free__FreesAndReleasesVmem, MemProtTestSetup, MemProtTestTeardown),
