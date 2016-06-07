@@ -44,20 +44,20 @@ class ReaderParams {
         this->region = region;
     }
 
-    uint64_t getSize() const {
-        return size;
+    uint64_t getKeySize() const {
+        return keySize;
     }
 
-    void setSize(uint64_t size) {
-        this->size = size;
+    void setKeySize(uint64_t size) {
+        this->keySize = size;
     }
 
-    const string& getUrl() const {
-        return url;
+    const string& getUrlToLoad() const {
+        return urlToLoad;
     }
 
-    void setUrl(const string& url) {
-        this->url = url;
+    void setUrlToLoad(const string& url) {
+        this->urlToLoad = url;
     }
 
     int getSegId() const {
@@ -76,12 +76,21 @@ class ReaderParams {
         this->segNum = segNum;
     }
 
+    uint8_t getNumOfChunks() const {
+        return numOfChunks;
+    }
+
+    void setNumOfChunks(uint8_t numOfChunks) {
+        this->numOfChunks = numOfChunks;
+    }
+
    private:
-    string url;     // original url to read/write.
-    string keyUrl;  // key url in s3 bucket.
+    string urlToLoad;  // original url to read/write.
+    string keyUrl;     // key url in s3 bucket.
     string region;
-    uint64_t size;       // key/file size.
-    uint64_t chunkSize;  // chunk size
+    uint64_t keySize;     // key/file size.
+    uint64_t chunkSize;   // chunk size
+    uint8_t numOfChunks;  // number of chunks(threads).
     S3Credential cred;
     int segId;
     int segNum;

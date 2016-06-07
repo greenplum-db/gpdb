@@ -1,7 +1,6 @@
 #include "s3interface.cpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "restful_service.cpp"
 
 using ::testing::AtLeast;
 using ::testing::Return;
@@ -120,13 +119,13 @@ class S3ServiceTest : public testing::Test {
 };
 
 TEST_F(S3ServiceTest, ListBucketThrowExceptionWhenBucketStringIsEmpty) {
-    EXPECT_THROW(s3service->ListBucket("", "", "", "", cred), std::runtime_error);
+    EXPECT_THROW(s3service->listBucket("", "", "", "", cred), std::runtime_error);
 }
 
 TEST_F(S3ServiceTest, ListBucketWithWrongRegion) {
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
-    EXPECT_EQ((void *)NULL, s3service->ListBucket(schema, "nonexist", "", "", cred));
+    EXPECT_EQ((void *)NULL, s3service->listBucket(schema, "nonexist", "", "", cred));
 }
 
 TEST_F(S3ServiceTest, ListBucketWithWrongBucketName) {
@@ -147,7 +146,7 @@ TEST_F(S3ServiceTest, ListBucketWithWrongBucketName) {
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
-    EXPECT_EQ((void *)NULL, s3service->ListBucket(schema, "us-west-2", "foo/bar", "", cred));
+    EXPECT_EQ((void *)NULL, s3service->listBucket(schema, "us-west-2", "foo/bar", "", cred));
 }
 
 TEST_F(S3ServiceTest, ListBucketWithNormalBucket) {
@@ -164,7 +163,7 @@ TEST_F(S3ServiceTest, ListBucketWithNormalBucket) {
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
     ListBucketResult *result =
-        s3service->ListBucket(schema, "us-west-2", "s3test.pivotal.io", "threebytes/", cred);
+        s3service->listBucket(schema, "us-west-2", "s3test.pivotal.io", "threebytes/", cred);
     ASSERT_NE((void *)NULL, result);
     EXPECT_EQ(1, result->contents.size());
 }
@@ -174,7 +173,7 @@ TEST_F(S3ServiceTest, ListBucketWithBucketWith1000Keys) {
         .WillOnce(Return(this->buildListBucketResponse(1000, false)));
 
     ListBucketResult *result =
-        s3service->ListBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
+        s3service->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
     ASSERT_NE((void *)NULL, result);
     EXPECT_EQ(1000, result->contents.size());
 }
@@ -185,7 +184,7 @@ TEST_F(S3ServiceTest, ListBucketWithBucketWith1001Keys) {
         .WillOnce(Return(this->buildListBucketResponse(1, false)));
 
     ListBucketResult *result =
-        s3service->ListBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
+        s3service->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
     ASSERT_NE((void *)NULL, result);
     EXPECT_EQ(1001, result->contents.size());
 }
@@ -200,7 +199,7 @@ TEST_F(S3ServiceTest, ListBucketWithBucketWithMoreThan1000Keys) {
         .WillOnce(Return(this->buildListBucketResponse(120, false)));
 
     ListBucketResult *result =
-        s3service->ListBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
+        s3service->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
     ASSERT_NE((void *)NULL, result);
     EXPECT_EQ(5120, result->contents.size());
 }
@@ -214,7 +213,7 @@ TEST_F(S3ServiceTest, ListBucketWithBucketWithTruncatedResponse) {
         .WillOnce(Return(EmptyResponse));
 
     ListBucketResult *result =
-        s3service->ListBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
+        s3service->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
     EXPECT_EQ((void *)NULL, result);
 }
 
@@ -225,7 +224,7 @@ TEST_F(S3ServiceTest, ListBucketWithBucketWithZeroSizedKeys) {
         .WillOnce(Return(this->buildListBucketResponse(120, false, 8)));
 
     ListBucketResult *result =
-        s3service->ListBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
+        s3service->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
     ASSERT_NE((void *)NULL, result);
     EXPECT_EQ(1120, result->contents.size());
 }
@@ -235,7 +234,7 @@ TEST_F(S3ServiceTest, ListBucketWithEmptyBucket) {
         .WillOnce(Return(this->buildListBucketResponse(0, false, 0)));
 
     ListBucketResult *result =
-        s3service->ListBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
+        s3service->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
     ASSERT_NE((void *)NULL, result);
     EXPECT_EQ(0, result->contents.size());
 }
@@ -245,7 +244,7 @@ TEST_F(S3ServiceTest, ListBucketWithAllZeroedFilesBucket) {
         .WillOnce(Return(this->buildListBucketResponse(0, false, 2)));
 
     ListBucketResult *result =
-        s3service->ListBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
+        s3service->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
     ASSERT_NE((void *)NULL, result);
     EXPECT_EQ(0, result->contents.size());
 }
@@ -254,7 +253,7 @@ TEST_F(S3ServiceTest, ListBucketWithErrorResponse) {
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
     EXPECT_EQ((void *)NULL,
-              s3service->ListBucket(schema, "nonexist", "s3test.pivotal.io", "s3files/", cred));
+              s3service->listBucket(schema, "nonexist", "s3test.pivotal.io", "s3files/", cred));
 }
 
 TEST_F(S3ServiceTest, ListBucketWithErrorReturnedXML) {
@@ -265,7 +264,7 @@ TEST_F(S3ServiceTest, ListBucketWithErrorReturnedXML) {
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
     EXPECT_EQ((void *)NULL,
-              s3service->ListBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred));
+              s3service->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred));
 }
 
 TEST_F(S3ServiceTest, ListBucketWithNonRootXML) {
@@ -276,5 +275,58 @@ TEST_F(S3ServiceTest, ListBucketWithNonRootXML) {
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
     EXPECT_EQ((void *)NULL,
-              s3service->ListBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred));
+              s3service->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred));
+}
+
+TEST_F(S3ServiceTest, fetchDataRoutine) {
+    vector<uint8_t> raw;
+
+    srand(time(NULL));
+
+    for (int i = 0; i < 100; i++) {
+        raw.push_back(rand() & 0xFF);
+    }
+
+    Response response(OK, raw);
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
+    char buffer[100];
+    uint64_t len = s3service->fetchData(
+        0, buffer, 100, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region,
+        cred);
+
+    EXPECT_EQ(0, memcmp(buffer, raw.data(), 100));
+    EXPECT_EQ(100, len);
+}
+
+TEST_F(S3ServiceTest, fetchDataNULLBuffer) {
+    EXPECT_THROW(s3service->fetchData(
+                     0, NULL, 100, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
+                     region, cred),
+                 std::runtime_error);
+}
+
+TEST_F(S3ServiceTest, fetchDataFailedResponse) {
+    vector<uint8_t> raw;
+    raw.resize(100);
+    Response response(FAIL, raw);
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
+    char buffer[100];
+
+    EXPECT_THROW(s3service->fetchData(
+                     0, buffer, 100,
+                     "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, cred),
+                 std::runtime_error);
+}
+
+TEST_F(S3ServiceTest, fetchDataPartialResponse) {
+    vector<uint8_t> raw;
+    raw.resize(80);
+    Response response(OK, raw);
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
+    char buffer[100];
+
+    EXPECT_THROW(s3service->fetchData(
+                     0, buffer, 100,
+                     "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, cred),
+                 std::runtime_error);
 }

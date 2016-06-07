@@ -4,11 +4,11 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-#include "gpreader.h"
 #include "gps3ext.h"
 #include "reader.h"
 #include "reader_params.h"
 #include "s3bucket_reader.h"
+#include "s3common.h"
 #include "s3conf.h"
 #include "s3log.h"
 #include "s3macros.h"
@@ -35,12 +35,8 @@ S3BucketReader::~S3BucketReader() {
     this->close();
 }
 
-void S3BucketReader::setS3interface(S3Interface *s3) {
-    this->s3interface = s3;
-}
-
 void S3BucketReader::open(const ReaderParams &params) {
-    this->url = params.getUrl();
+    this->url = params.getUrlToLoad();
     this->segId = params.getSegId();
     this->segNum = params.getSegNum();
     this->cred = params.getCred();
@@ -61,14 +57,14 @@ BucketContent *S3BucketReader::getNextKey() {
     return this->keyList->contents[this->keyIndex];
 }
 
-const ReaderParams &S3BucketReader::getReaderParams(BucketContent *key) {
-    ReaderParams *params = new ReaderParams();
-    params->setKeyUrl(this->getKeyURL(key->getName()));
-    params->setRegion(this->region);
-    params->setSize(key->getSize());
-    params->setChunkSize(this->chunkSize);
-    S3DEBUG("key: %s, size: %" PRIu64, params->getKeyUrl().c_str(), params->getSize());
-    return *params;
+ReaderParams S3BucketReader::getReaderParams(BucketContent *key) {
+    ReaderParams params = ReaderParams();
+    params.setKeyUrl(this->getKeyURL(key->getName()));
+    params.setRegion(this->region);
+    params.setKeySize(key->getSize());
+    params.setChunkSize(this->chunkSize);
+    S3DEBUG("key: %s, size: %" PRIu64, params.getKeyUrl().c_str(), params.getKeySize());
+    return params;
 }
 
 uint64_t S3BucketReader::read(char *buf, uint64_t count) {
@@ -124,7 +120,7 @@ ListBucketResult *S3BucketReader::listBucketWithRetry(int retries) {
     CHECK_OR_DIE(this->s3interface != NULL);
 
     while (retries--) {
-        ListBucketResult *result = this->s3interface->ListBucket(
+        ListBucketResult *result = this->s3interface->listBucket(
             this->schema, this->region, this->bucket, this->prefix, this->cred);
         if (result != NULL) {
             return result;

@@ -5,7 +5,7 @@
 
 #include "reader.h"
 #include "s3interface.h"
-#include "s3reader.h"
+#include "s3key_reader.h"
 
 using std::string;
 
@@ -19,7 +19,10 @@ class S3BucketReader : public Reader {
     uint64_t read(char *buf, uint64_t count);
     void close();
 
-    void setS3interface(S3Interface *s3);
+    void setS3interface(S3Interface *s3) {
+        this->s3interface = s3;
+    }
+
     void setUpstreamReader(Reader *reader) {
         this->upstreamReader = reader;
     }
@@ -56,7 +59,7 @@ class S3BucketReader : public Reader {
     void SetRegion();
     void SetBucketAndPrefix();
     BucketContent *getNextKey();
-    const ReaderParams &getReaderParams(BucketContent *key);
+    ReaderParams getReaderParams(BucketContent *key);
 };
 
 #endif

@@ -9,7 +9,7 @@
 #include "s3http_headers.h"
 #include "s3log.h"
 #include "s3macros.h"
-#include "s3restul_service.h"
+#include "s3restful_service.h"
 
 using namespace std;
 
@@ -43,9 +43,14 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers,
 
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.GetList());
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceCallback);
+
+    // consider low speed as timeout
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, s3ext_low_speed_limit);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, s3ext_low_speed_time);
 
     map<string, string>::const_iterator iter = params.find("debug");
     if (iter != params.end() && iter->second == "true") {
@@ -63,7 +68,7 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers,
         response.clearBuffer();
         response.setStatus(FAIL);
         response.setMessage(
-            string("failed to talk to s3 service ").append(curl_easy_strerror(res)));
+            string("Failed to talk to s3 service ").append(curl_easy_strerror(res)));
     } else {
         response.setStatus(OK);
         response.setMessage("Success");

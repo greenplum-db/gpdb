@@ -11,9 +11,9 @@
 
 #include "gps3ext.h"
 #include "s3http_headers.h"
+#include "s3key_reader.h"
 #include "s3log.h"
 #include "s3macros.h"
-#include "s3reader.h"
 #include "s3url_parser.h"
 #include "s3utils.h"
 
@@ -238,7 +238,7 @@ void S3Service::parseBucketXML(ListBucketResult *result, xmlNode *root_element, 
 // service unstable, so that caller could retry.
 //
 // Caller should delete returned object.
-ListBucketResult *S3Service::ListBucket(const string &schema, const string &region,
+ListBucketResult *S3Service::listBucket(const string &schema, const string &region,
                                         const string &bucket, const string &prefix,
                                         const S3Credential &cred) {
     stringstream host;
@@ -269,4 +269,43 @@ ListBucketResult *S3Service::ListBucket(const string &schema, const string &regi
     } while (!marker.empty());
 
     return result;
+}
+
+uint64_t S3Service::fetchData(uint64_t offset, char *data, uint64_t len, const string &sourceUrl,
+                              const string &region, const S3Credential &cred) {
+    CHECK_OR_DIE(data != NULL);
+
+    HTTPHeaders headers;
+    map<string, string> params;
+    UrlParser parser(sourceUrl.c_str());
+
+    char rangeBuf[128] = {0};
+    snprintf(rangeBuf, 128, "bytes=%" PRIu64 "-%" PRIu64, offset, offset + len - 1);
+
+    headers.Add(HOST, parser.Host());
+    headers.Add(RANGE, rangeBuf);
+    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+
+    SignRequestV4("GET", &headers, region, parser.Path(), "", cred);
+
+    Response resp = service->get(sourceUrl, headers, params);
+    if (resp.getStatus() == OK) {
+        vector<uint8_t> &responseData = resp.getRawData();
+        CHECK_OR_DIE_MSG(responseData.size() == len, "%s", "Response is not fully received.");
+
+        std::copy(responseData.begin(), responseData.end(), data);
+        return responseData.size();
+    } else {
+        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+                         resp.getMessage().c_str());
+    }
+
+    return 0;
+}
+
+ListBucketResult::~ListBucketResult() {
+    vector<BucketContent *>::iterator i;
+    for (i = this->contents.begin(); i != this->contents.end(); i++) {
+        delete *i;
+    }
 }

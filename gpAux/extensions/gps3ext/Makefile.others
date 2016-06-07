@@ -1,7 +1,6 @@
 # Options
 DEBUG_S3_CURL = n
-ARCH=$(shell uname -s)
-GCOV=gcov
+ARCH = $(shell uname -s)
 
 # Flags
 CPP = g++
@@ -11,10 +10,8 @@ CPPFLAGS = -O2 -g3 -std=c++98 -Wall -fPIC -DS3_STANDALONE -fprofile-arcs -ftest-
 
 ifeq "$(ARCH)" "Darwin"
 	LDFLAGS += -coverage
-	GCOV += -a
 else
 	LDFLAGS += -lgcov
-	GCOV += -r
 endif
 
 ifeq ($(DEBUG_S3_CURL),y)
@@ -24,7 +21,7 @@ endif
 all: test
 
 # Google TEST
-TEST_SRC_FILES = test/s3conf_test.cpp test/s3utils_test.cpp test/gpreader_test.cpp test/s3common_test.cpp test/s3log_test.cpp test/s3url_parser_test.cpp test/s3http_headers_test.cpp test/s3thread_test.cpp test/s3reader_test.cpp test/s3bucket_reader_test.cpp test/s3interface_test.cpp test/s3restful_service_test.cpp test/uncompress_reader_test.cpp
+TEST_SRC_FILES = test/s3conf_test.cpp test/s3utils_test.cpp test/s3common_test.cpp test/s3log_test.cpp test/s3url_parser_test.cpp test/s3http_headers_test.cpp test/s3thread_test.cpp test/s3bucket_reader_test.cpp test/s3interface_test.cpp test/s3restful_service_test.cpp test/uncompress_reader_test.cpp test/s3key_reader_test.cpp
 TEST_OBJS = $(TEST_SRC_FILES:.cpp=.o)
 TEST_APP = s3test
 
@@ -38,7 +35,7 @@ $(TEST_OBJS) gtest_main.o gtest-all.o gmock-all.o: INCLUDES += -I$(GTEST_DIR)/ -
 
 gmock-all.o :
 	$(CXX) $(INCLUDES) $(CXXFLAGS) -c $(GMOCK_DIR)/src/gmock-all.cc
-	
+
 gtest-all.o :
 	$(CXX) $(INCLUDES) $(CXXFLAGS) -c $(GTEST_DIR)/src/gtest-all.cc
 
@@ -62,7 +59,7 @@ test: $(TEST_APP)
 	-@./$(TEST_APP)
 
 coverage: test
-	@$(GCOV) $(TEST_SRC_FILES) | grep -v test.cpp | grep -A 2 "src/.*.cpp"
+	@gcov $(TEST_SRC_FILES) | grep -A 1 "src/.*.cpp"
 
 clean:
 	rm -f *.gcov src/*.gcov src/*.gcda src/*.gcno

@@ -50,7 +50,7 @@ TEST(S3RESTfulService, GetWithoutURL) {
     Response resp = service.get(url, headers, params);
 
     EXPECT_EQ(FAIL, resp.getStatus());
-    EXPECT_EQ("failed to talk to s3 service URL using bad/illegal format or missing URL",
+    EXPECT_EQ("Failed to talk to s3 service URL using bad/illegal format or missing URL",
               resp.getMessage());
 }
 

@@ -65,8 +65,10 @@ class Response {
 
 class RESTfulService {
    public:
-    RESTfulService();
-    virtual ~RESTfulService();
+    RESTfulService() {
+    }
+    virtual ~RESTfulService() {
+    }
 
     virtual Response get(const string& url, HTTPHeaders& headers,
                          const map<string, string>& params) = 0;

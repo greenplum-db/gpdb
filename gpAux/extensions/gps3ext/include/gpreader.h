@@ -4,7 +4,8 @@
 #include <string>
 
 #include "s3extbase.h"
-#include "s3reader.h"
+#include "s3interface.h"
+#include "s3key_reader.h"
 
 using std::string;
 
