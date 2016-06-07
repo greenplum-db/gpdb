@@ -81,10 +81,12 @@ test__bfz_zlib_init__palloc_write(void **state)
 	bfz.fd = -1;
 
 	Size beforeAlloc = MemoryContextGetPeakSpace(TopTransactionContext);
+	assert_true(TopTransactionContext != CurrentMemoryContext);
 
 	bfz_zlib_init(&bfz);
 
 	Size afterAlloc = MemoryContextGetPeakSpace(TopTransactionContext);
+	assert_true(TopTransactionContext != CurrentMemoryContext);
 
 	int memZlib = zlib_memory_needed(true /* isWrite */);
 
@@ -101,10 +103,12 @@ test__bfz_zlib_init__palloc_read(void **state)
 	bfz.fd = -1;
 
 	Size beforeAlloc = MemoryContextGetPeakSpace(TopTransactionContext);
+	assert_true(TopTransactionContext != CurrentMemoryContext);
 
 	bfz_zlib_init(&bfz);
 
 	Size afterAlloc = MemoryContextGetPeakSpace(TopTransactionContext);
+	assert_true(TopTransactionContext != CurrentMemoryContext);
 
 	int memZlib = zlib_memory_needed(false /* isWrite */);
 
