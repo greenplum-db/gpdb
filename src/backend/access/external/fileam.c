@@ -1813,12 +1813,6 @@ void AtAbort_ExtTables(void)
 {
 	close_external_source(g_dataSource, false, NULL);
 	g_dataSource = NULL;
-
-	/*
-	 * g_dataSourceCtx is allocated in TopTransactionContext, so
-	 * it's going away.
-	 */
-	g_dataSourceCtx = NULL;
 }
 
 void
