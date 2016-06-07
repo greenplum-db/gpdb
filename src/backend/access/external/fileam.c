@@ -1815,6 +1815,14 @@ void AtAbort_ExtTables(void)
 	g_dataSource = NULL;
 }
 
+/*
+ * Reset g_dataSourceCtx variable on EOX.
+ */
+void AtEOXact_ResetDataSourceCtx(void)
+{
+	g_dataSourceCtx = NULL;
+}
+
 void
 gfile_printf_then_putc_newline(const char*format,...)
 {
