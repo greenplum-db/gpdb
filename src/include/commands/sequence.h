@@ -81,6 +81,7 @@ typedef struct xl_seq_rec
 {
 	RelFileNode 	node;
 	ItemPointerData persistentTid;
+	bool	tidAllowedToBeZero;
 	int64 			persistentSerialNum;
 
 	/* SEQUENCE TUPLE DATA FOLLOWS AT THE END */

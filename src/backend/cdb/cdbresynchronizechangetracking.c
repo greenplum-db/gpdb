@@ -534,6 +534,7 @@ static void ChangeTracking_AddRelationChangeInfo(
 									  RelFileNode *relFileNode,
 									  BlockNumber blockNumber,
 									  ItemPointer persistentTid,
+										bool	tidAllowedToBeZero,
 									  int64	  	  persistentSerialNum)
 {
 	RelationChangeInfo	*relationChangeInfo;
@@ -545,6 +546,7 @@ static void ChangeTracking_AddRelationChangeInfo(
 	relationChangeInfo->relFileNode = 			*relFileNode;
 	relationChangeInfo->blockNumber = 			blockNumber;
 	relationChangeInfo->persistentTid = 		*persistentTid;
+	relationChangeInfo->tidAllowedToBeZero = tidAllowedToBeZero;
 	relationChangeInfo->persistentSerialNum = 	persistentSerialNum;
 
 	(*relationChangeInfoArrayCount)++;
@@ -613,6 +615,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->heapnode.node),
 													   xlrec->block,
 													   &xlrec->heapnode.persistentTid,
+														 xlrec->heapnode.tidAllowedToBeZero,
 													   xlrec->heapnode.persistentSerialNum);
 					break;
 				}
@@ -635,6 +638,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->target.node),
 													   ItemPointerGetBlockNumber(&(xlrec->target.tid)),
 													   &xlrec->target.persistentTid,
+														 xlrec->target.tidAllowedToBeZero,
 													   xlrec->target.persistentSerialNum);
 					break;
 				}
@@ -649,6 +653,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->target.node),
 													   ItemPointerGetBlockNumber(&(xlrec->target.tid)),
 													   &xlrec->target.persistentTid,
+														 xlrec->target.tidAllowedToBeZero,
 													   xlrec->target.persistentSerialNum);
 					break;
 				}
@@ -669,6 +674,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->target.node),
 													   newblock,
 													   &xlrec->target.persistentTid,
+														 xlrec->target.tidAllowedToBeZero,
 													   xlrec->target.persistentSerialNum);
 					if(!samepage)
 						ChangeTracking_AddRelationChangeInfo(
@@ -678,6 +684,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 														   &(xlrec->target.node),
 														   oldblock,
 														   &xlrec->target.persistentTid,
+															 xlrec->target.tidAllowedToBeZero,
 														   xlrec->target.persistentSerialNum);
 						
 					break;
@@ -693,6 +700,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->heapnode.node),
 													   xlrec->block,
 													   &xlrec->heapnode.persistentTid,
+														 xlrec->heapnode.tidAllowedToBeZero,
 													   xlrec->heapnode.persistentSerialNum);
 					break;
 				}
@@ -707,6 +715,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->heapnode.node),
 													   xlrec->blkno,
 													   &xlrec->heapnode.persistentTid,
+														 xlrec->heapnode.tidAllowedToBeZero,
 													   xlrec->heapnode.persistentSerialNum);
 					break;
 				}
@@ -722,6 +731,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->target.node),
 													   block,
 													   &xlrec->target.persistentTid,
+														 xlrec->target.tidAllowedToBeZero,
 													   xlrec->target.persistentSerialNum);
 					break;
 				}
@@ -737,6 +747,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->target.node),
 													   block,
 													   &xlrec->target.persistentTid,
+														 xlrec->target.tidAllowedToBeZero,
 													   xlrec->target.persistentSerialNum);
 					break;
 				}
@@ -763,6 +774,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->target.node),
 													   BlockIdGetBlockNumber(&blkid),
 													   &xlrec->target.persistentTid,
+														 xlrec->target.tidAllowedToBeZero,
 													   xlrec->target.persistentSerialNum);
 					
 					if(info == XLOG_BTREE_INSERT_META)
@@ -773,6 +785,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 														   &(xlrec->target.node),
 														   BTREE_METAPAGE,
 														   &xlrec->target.persistentTid,
+															 xlrec->target.tidAllowedToBeZero,
 														   xlrec->target.persistentSerialNum);
 
 					break;
@@ -791,6 +804,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 						relationChangeInfoMaxSize, &(xlrec->node),
 						xlrec->leftsib,
 						&xlrec->persistentTid,
+						xlrec->tidAllowedToBeZero,
 						xlrec->persistentSerialNum);
 
 					/* new right page */
@@ -800,6 +814,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 						relationChangeInfoMaxSize, &(xlrec->node),
 						xlrec->rightsib,
 						&xlrec->persistentTid,
+						xlrec->tidAllowedToBeZero,
 						xlrec->persistentSerialNum);
 
 					/* next block (orig page's rightlink) */
@@ -811,6 +826,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 							relationChangeInfoMaxSize, &(xlrec->node),
 							xlrec->rnext,
 							&xlrec->persistentTid,
+							xlrec->tidAllowedToBeZero,
 							xlrec->persistentSerialNum);
 					}
 					break;
@@ -826,6 +842,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->btreenode.node),
 													   xlrec->block,
 													   &xlrec->btreenode.persistentTid,
+														 xlrec->btreenode.tidAllowedToBeZero,
 													   xlrec->btreenode.persistentSerialNum);
 					break;
 				}
@@ -845,6 +862,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 														   &(xlrec->target.node),
 														   block,
 														   &xlrec->target.persistentTid,
+															 xlrec->target.tidAllowedToBeZero,
 														   xlrec->target.persistentSerialNum);
 					
 					if (xlrec->rightblk != P_NONE)
@@ -855,6 +873,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 														   &(xlrec->target.node),
 														   xlrec->rightblk,
 														   &xlrec->target.persistentTid,
+															 xlrec->target.tidAllowedToBeZero,
 														   xlrec->target.persistentSerialNum);
 
 					if (xlrec->leftblk != P_NONE)
@@ -865,6 +884,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 														   &(xlrec->target.node),
 														   xlrec->leftblk,
 														   &xlrec->target.persistentTid,
+															 xlrec->target.tidAllowedToBeZero,
 														   xlrec->target.persistentSerialNum);
 					
 					if (xlrec->deadblk != P_NONE)
@@ -875,6 +895,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 														   &(xlrec->target.node),
 														   xlrec->deadblk,
 														   &xlrec->target.persistentTid,
+															 xlrec->target.tidAllowedToBeZero,
 														   xlrec->target.persistentSerialNum);						
 					
 					if (info == XLOG_BTREE_DELETE_PAGE_META)
@@ -885,6 +906,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 														   &(xlrec->target.node),
 														   BTREE_METAPAGE,
 														   &xlrec->target.persistentTid,
+															 xlrec->target.tidAllowedToBeZero,
 														   xlrec->target.persistentSerialNum);
 					break;
 				}
@@ -899,6 +921,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->btreenode.node),
 													   xlrec->rootblk,
 													   &xlrec->btreenode.persistentTid,
+														 xlrec->btreenode.tidAllowedToBeZero,
 													   xlrec->btreenode.persistentSerialNum);	
 					 
 					/* newroot always updates the meta page */
@@ -909,6 +932,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->btreenode.node),
 													   BTREE_METAPAGE,
 													   &xlrec->btreenode.persistentTid,
+														 xlrec->btreenode.tidAllowedToBeZero,
 													   xlrec->btreenode.persistentSerialNum);	
 					
 					break;
@@ -932,6 +956,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->bm_node),
 													   xlrec->bm_new_blkno,
 													   &xlrec->bm_persistentTid,
+														 xlrec->bm_tidAllowedToBeZero,
 													   xlrec->bm_persistentSerialNum);
 					break;
 				}
@@ -946,6 +971,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->bm_node),
 													   xlrec->bm_lov_blkno,
 													   &xlrec->bm_persistentTid,
+														 xlrec->bm_tidAllowedToBeZero,
 													   xlrec->bm_persistentSerialNum);
 					
 					if (xlrec->bm_is_new_lov_blkno)
@@ -956,6 +982,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 														   &(xlrec->bm_node),
 														   BM_METAPAGE,
 														   &xlrec->bm_persistentTid,
+															 xlrec->bm_tidAllowedToBeZero,
 														   xlrec->bm_persistentSerialNum);
 					break;
 				}
@@ -970,6 +997,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->bm_node),
 													   BM_METAPAGE,
 													   &xlrec->bm_persistentTid,
+														 xlrec->bm_tidAllowedToBeZero,
 													   xlrec->bm_persistentSerialNum);
 					break;
 				}
@@ -984,6 +1012,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->bm_node),
 													   xlrec->bm_lov_blkno,
 													   &xlrec->bm_persistentTid,
+														 xlrec->bm_tidAllowedToBeZero,
 													   xlrec->bm_persistentSerialNum);
 					break;
 				}
@@ -998,6 +1027,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->bm_node),
 													   xlrec->bm_lov_blkno,
 													   &xlrec->bm_persistentTid,
+														 xlrec->bm_tidAllowedToBeZero,
 													   xlrec->bm_persistentSerialNum);
 
 					ChangeTracking_AddRelationChangeInfo(
@@ -1007,6 +1037,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->bm_node),
 													   xlrec->bm_blkno,
 													   &xlrec->bm_persistentTid,
+														 xlrec->bm_tidAllowedToBeZero,
 													   xlrec->bm_persistentSerialNum);
 					
 					if (!xlrec->bm_is_last)
@@ -1017,6 +1048,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 														   &(xlrec->bm_node),
 														   xlrec->bm_next_blkno,
 														   &xlrec->bm_persistentTid,
+															 xlrec->bm_tidAllowedToBeZero,
 														   xlrec->bm_persistentSerialNum);
 					break;
 				}
@@ -1031,6 +1063,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->bm_node),
 													   xlrec->bm_blkno,
 													   &xlrec->bm_persistentTid,
+														 xlrec->bm_tidAllowedToBeZero,
 													   xlrec->bm_persistentSerialNum);
 					break;
 				}
@@ -1045,6 +1078,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->bm_node),
 													   xlrec->bm_first_blkno,
 													   &xlrec->bm_persistentTid,
+														 xlrec->bm_tidAllowedToBeZero,
 													   xlrec->bm_persistentSerialNum);
 					
 					if (xlrec->bm_two_pages)
@@ -1055,6 +1089,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 														   &(xlrec->bm_node),
 														   xlrec->bm_second_blkno,
 														   &xlrec->bm_persistentTid,
+															 xlrec->bm_tidAllowedToBeZero,
 														   xlrec->bm_persistentSerialNum);
 					
 					if (xlrec->bm_new_lastpage)
@@ -1065,6 +1100,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 														   &(xlrec->bm_node),
 														   xlrec->bm_lov_blkno,
 														   &xlrec->bm_persistentTid,
+															 xlrec->bm_tidAllowedToBeZero,
 														   xlrec->bm_persistentSerialNum);
 						
 					break;
@@ -1087,6 +1123,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xlrec->node),
 													   0, /* seq_redo touches block 0 only */
 													   &xlrec->persistentTid,
+														 xlrec->tidAllowedToBeZero,
 													   xlrec->persistentSerialNum);
 
 					break;
@@ -1111,6 +1148,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xldata->node),
 													   xldata->blkno,
 													   &xldata->persistentTid,
+														 xldata->tidAllowedToBeZero,
 													   xldata->persistentSerialNum);
 					break;
 				}
@@ -1125,6 +1163,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xldata->node),
 													   xldata->blkno,
 													   &xldata->persistentTid,
+														 xldata->tidAllowedToBeZero,
 													   xldata->persistentSerialNum);
 					break;
 				}
@@ -1143,6 +1182,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xldata->node),
 													   xldata->origblkno,
 													   &xldata->persistentTid,
+														 xldata->tidAllowedToBeZero,
 													   xldata->persistentSerialNum);
 
 					/* now log all the pages that we split into */					
@@ -1163,6 +1203,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 														   &(xldata->node),
 														   gistp->blkno,
 														   &xldata->persistentTid,
+															 xldata->tidAllowedToBeZero,
 														   xldata->persistentSerialNum);
 						
 						/* skip over all index tuples. we only care about block numbers */
@@ -1187,6 +1228,7 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 													   &(xldata->node),
 													   GIST_ROOT_BLKNO,
 													   &xldata->persistentTid,
+														 xldata->tidAllowedToBeZero,
 													   xldata->persistentSerialNum);
 					break;
 				}

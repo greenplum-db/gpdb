@@ -34,6 +34,8 @@ typedef struct MirroredBufferPoolBulkLoadInfo
 
 	ItemPointerData				persistentTid;
 
+	bool tidAllowedToBeZero;
+
 	int64						persistentSerialNum;
 
 } MirroredBufferPoolBulkLoadInfo;

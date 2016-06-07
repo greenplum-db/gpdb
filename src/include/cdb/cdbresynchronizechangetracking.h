@@ -165,6 +165,7 @@ typedef struct RelationChangeInfo
 	BlockNumber 	blockNumber;
 	ItemPointerData persistentTid;
 	int64	  		persistentSerialNum;
+	bool	tidAllowedToBeZero;
 } RelationChangeInfo;
 
 extern void ChangeTracking_GetRelationChangeInfoFromXlog(
@@ -408,4 +409,3 @@ extern void ChangeTracking_DoFullCompactingRoundIfNeeded(void);
 extern void ChangeTracking_CreateTransientLog(void);
 
 #endif   /* CDBRESYNCHRONIZECHANGETRACKING_H */
-

@@ -221,6 +221,7 @@ typedef struct xl_btreetid
 {
 	RelFileNode node;
 	ItemPointerData persistentTid;
+	bool tidAllowedToBeZero;
 	int64 persistentSerialNum;
 	ItemPointerData tid;		/* changed tuple id */
 } xl_btreetid;
@@ -236,6 +237,7 @@ inline static void xl_btreetid_set(
 {
 	btreeid->node = rel->rd_node;
 	btreeid->persistentTid = rel->rd_segfile0_relationnodeinfo.persistentTid;
+	btreeid->tidAllowedToBeZero = rel->rd_segfile0_relationnodeinfo.tidAllowedToBeZero;
 	btreeid->persistentSerialNum = rel->rd_segfile0_relationnodeinfo.persistentSerialNum;
 	ItemPointerSet(&(btreeid->tid), itup_blkno, itup_off);
 }
@@ -244,6 +246,7 @@ typedef struct xl_btreenode
 {
 	RelFileNode node;
 	ItemPointerData persistentTid;
+	bool tidAllowedToBeZero;
 	int64 persistentSerialNum;
 } xl_btreenode;
 
@@ -254,6 +257,7 @@ inline static void xl_btreenode_set(
 {
 	btreenode->node = rel->rd_node;
 	btreenode->persistentTid = rel->rd_segfile0_relationnodeinfo.persistentTid;
+	btreenode->tidAllowedToBeZero = rel->rd_segfile0_relationnodeinfo.tidAllowedToBeZero;
 	btreenode->persistentSerialNum = rel->rd_segfile0_relationnodeinfo.persistentSerialNum;
 }
 
@@ -311,6 +315,7 @@ typedef struct xl_btree_split
 	OffsetNumber firstright;	/* first item moved to right page */
 
 	ItemPointerData persistentTid;
+	bool tidAllowedToBeZero;
 	int64		persistentSerialNum;
 
 	/*

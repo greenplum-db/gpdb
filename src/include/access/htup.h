@@ -501,6 +501,7 @@ typedef struct xl_heaptid
 	RelFileNode node;
 	ItemPointerData persistentTid;
 	int64 persistentSerialNum;
+	bool tidAllowedToBeZero;
 	ItemPointerData tid;		/* changed tuple id */
 } xl_heaptid;
 
@@ -511,6 +512,7 @@ typedef struct xl_heapnode
 	RelFileNode node;
 	ItemPointerData persistentTid;
 	int64 persistentSerialNum;
+	bool	tidAllowedToBeZero;
 } xl_heapnode;
 
 /* This is what we need to know about delete */

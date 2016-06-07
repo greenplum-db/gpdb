@@ -71,6 +71,8 @@ typedef struct PersistentEndXactFileSysActionInfo
 
 	ItemPointerData			persistentTid;
 
+	bool tidAllowedToBeZero;
+
 	int64					persistentSerialNum;
 
 } PersistentEndXactFileSysActionInfo;
@@ -197,4 +199,3 @@ extern void PersistentEndXactRec_Deserialize(
 	uint8						**nextData);
 
 #endif   /* PERSISTENTENDXACTREC_H */
-

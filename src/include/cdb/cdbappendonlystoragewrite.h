@@ -93,6 +93,7 @@ typedef struct AppendOnlyStorageWrite
 	int32		segmentFileNum;
 
 	ItemPointerData 	persistentTid;
+	bool tidAllowedToBeZero;
 	int64				persistentSerialNum;
 			/*
 			 * Persistence information for current write open.
@@ -518,4 +519,3 @@ extern char *AppendOnlyStorageWrite_ContextStr(
 	AppendOnlyStorageWrite		*storageWrite);
 
 #endif   /* CDBAPPENDONLYSTORAGEWRITE_H */
-

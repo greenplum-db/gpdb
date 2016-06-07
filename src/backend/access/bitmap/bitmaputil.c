@@ -821,6 +821,7 @@ _bitmap_log_newpage(Relation rel, uint8 info, Buffer buf)
 
 	xlNewPage.bm_node = rel->rd_node;
 	xlNewPage.bm_persistentTid = rel->rd_segfile0_relationnodeinfo.persistentTid;
+	xlNewPage.bm_tidAllowedToBeZero = rel->rd_segfile0_relationnodeinfo.tidAllowedToBeZero;
 	xlNewPage.bm_persistentSerialNum = rel->rd_segfile0_relationnodeinfo.persistentSerialNum;
 	xlNewPage.bm_new_blkno = BufferGetBlockNumber(buf);
 

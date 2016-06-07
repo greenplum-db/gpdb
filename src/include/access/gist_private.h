@@ -106,6 +106,7 @@ typedef struct gistxlogPageUpdate
 {
 	RelFileNode 	node;
 	ItemPointerData persistentTid;
+	bool tidAllowedToBeZero;
 	int64 			persistentSerialNum;
 	BlockNumber 	blkno;
 
@@ -126,6 +127,7 @@ typedef struct gistxlogPageSplit
 {
 	RelFileNode 	node;
 	ItemPointerData persistentTid;
+	bool tidAllowedToBeZero;
 	int64 			persistentSerialNum;
 
 	BlockNumber  origblkno;		/* splitted page */
@@ -144,6 +146,7 @@ typedef struct gistxlogCreateIndex
 {
 	RelFileNode 	node;
 	ItemPointerData persistentTid;
+	bool tidAllowedToBeZero;
 	int64 			persistentSerialNum;
 
 } gistxlogCreateIndex;
@@ -164,6 +167,7 @@ typedef struct gistxlogPageDelete
 {
 	RelFileNode 	node;
 	ItemPointerData persistentTid;
+	bool tidAllowedToBeZero;
 	int64 			persistentSerialNum;
 	BlockNumber 	blkno;
 } gistxlogPageDelete;
