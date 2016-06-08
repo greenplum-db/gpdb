@@ -4090,6 +4090,7 @@ _copyCreateSchemaStmt(CreateSchemaStmt *from)
 	COPY_NODE_FIELD(schemaElts);
 	COPY_SCALAR_FIELD(istemp);
 	COPY_SCALAR_FIELD(schemaOid);
+	COPY_SCALAR_FIELD(toastSchemaOid);
 
 	return newnode;
 }

@@ -2355,6 +2355,7 @@ _readCreateSchemaStmt(void)
 	local_node->schemaElts = 0;
 	READ_BOOL_FIELD(istemp);
 	READ_OID_FIELD(schemaOid);
+	READ_OID_FIELD(toastSchemaOid);
 
 	READ_DONE();
 }

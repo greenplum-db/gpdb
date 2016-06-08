@@ -3995,6 +3995,7 @@ _outCreateSchemaStmt(StringInfo str, CreateSchemaStmt *node)
 	WRITE_STRING_FIELD(authid);
 	WRITE_BOOL_FIELD(istemp);
 	WRITE_OID_FIELD(schemaOid);
+	WRITE_OID_FIELD(toastSchemaOid);
 }
 
 static void

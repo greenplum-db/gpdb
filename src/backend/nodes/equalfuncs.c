@@ -1884,6 +1884,7 @@ _equalCreateSchemaStmt(CreateSchemaStmt *a, CreateSchemaStmt *b)
 	COMPARE_NODE_FIELD(schemaElts);
 	COMPARE_SCALAR_FIELD(istemp);
 	COMPARE_SCALAR_FIELD(schemaOid);
+	COMPARE_SCALAR_FIELD(toastSchemaOid);
 
 	return true;
 }
