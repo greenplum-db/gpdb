@@ -1807,12 +1807,20 @@ void readHeaderLine(CopyState pstate)
 }
 
 /*
- * Free external resources on Abort.
- */
-void AtAbort_ExtTables(void)
+* Free external resources on end of transaction.
+*/
+void AtEOXact_ExtTables(bool isCommit)
 {
-	close_external_source(g_dataSource, false, NULL);
-	g_dataSource = NULL;
+	if (g_dataSource)
+	{
+		if (isCommit)
+		{
+			/* There shouldn't be any external tables still open at commit*/
+			elog(WARNING, "external table reference leak");
+		}
+		close_external_source(g_dataSource, false, NULL);
+		g_dataSource = NULL;
+	}
 }
 
 /*
@@ -1820,6 +1828,7 @@ void AtAbort_ExtTables(void)
  */
 void AtEOXact_ResetDataSourceCtx(void)
 {
+	/* g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.*/
 	g_dataSourceCtx = NULL;
 }
 

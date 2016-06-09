@@ -3354,7 +3354,12 @@ CommitTransaction(void)
 	 */
 	AtEOXact_UpdateFlatFiles(true);
 
-	/* reset g_dataSourceCtx
+	/*
+	 * Free external resources
+	 */
+	AtEOXact_ExtTables(true);
+
+	/* Reset g_dataSourceCtx
 	 * g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.
 	 */
 	AtEOXact_ResetDataSourceCtx();
@@ -4005,7 +4010,7 @@ AbortTransaction(void)
 	 */
 	AfterTriggerEndXact(false);
 	AtAbort_Portals();
-	AtAbort_ExtTables();
+	AtEOXact_ExtTables(false);
 
 	/* reset g_dataSourceCtx
 	 * g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.
