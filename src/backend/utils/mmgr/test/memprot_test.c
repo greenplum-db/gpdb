@@ -114,7 +114,7 @@ static void* AllocateWithCheck(size_t size)
 	size_t chosen_vmem_size = CalculateVmemSizeFromUserSize(size);
 
 	/* Too big allocation should fail assert checking */
-	if (is_assert_checking && chosen_vmem_size > 0x7fffffff)
+	if (is_assert_checking && chosen_vmem_size > MAX_REQUESTABLE_SIZE)
 	{
 		EXPECT_EXCEPTION();
 	}
@@ -130,7 +130,7 @@ static void* AllocateWithCheck(size_t size)
 		void *ptr = gp_malloc(size);
 
 		/* size limit is only checked in assert build */
-		if (is_assert_checking && chosen_vmem_size > 0x7fffffff)
+		if (is_assert_checking && chosen_vmem_size > MAX_REQUESTABLE_SIZE)
 		{
 			assert_true(false);
 		}
@@ -376,10 +376,10 @@ main(int argc, char* argv[])
 	cmockery_parse_arguments(argc, argv);
 
 	const UnitTest tests[] = {
-			unit_test_setup_teardown(test__gp_malloc_no_vmem_tracker_when_mp_init_false, MemProtTestSetup, MemProtTestTeardown),
-			unit_test_setup_teardown(test__gp_malloc_calls_vmem_tracker_when_mp_init_true, MemProtTestSetup, MemProtTestTeardown),
-			unit_test_setup_teardown(test__gp_malloc_and_free__basic_tests, MemProtTestSetup, MemProtTestTeardown),
-			unit_test_setup_teardown(test__gp_realloc__basic_tests, MemProtTestSetup, MemProtTestTeardown),
+		unit_test_setup_teardown(test__gp_malloc_no_vmem_tracker_when_mp_init_false, MemProtTestSetup, MemProtTestTeardown),
+		unit_test_setup_teardown(test__gp_malloc_calls_vmem_tracker_when_mp_init_true, MemProtTestSetup, MemProtTestTeardown),
+		unit_test_setup_teardown(test__gp_malloc_and_free__basic_tests, MemProtTestSetup, MemProtTestTeardown),
+		unit_test_setup_teardown(test__gp_realloc__basic_tests, MemProtTestSetup, MemProtTestTeardown),
 	};
 
 	return run_tests(tests);

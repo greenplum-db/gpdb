@@ -46,7 +46,7 @@
 /*
  * Last OOM time of a segment. Maintained in shared memory.
  */
-volatile OOMTimeType* segmentOOMTime = 0;
+volatile OOMTimeType *segmentOOMTime = 0;
 
 /*
  * We don't report memory usage of current process multiple times
@@ -323,12 +323,17 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
  * malloc the requested "size" and additional memory for metadata and store header and/or
  * footer metadata information. Caller is in charge to update Vmem counter accordingly.
  */
-static void* malloc_and_store_metadata(size_t size)
+static void *malloc_and_store_metadata(size_t size)
 {
-	size_t malloc_size = UserPtrSizeToVmemPtrSize(size);
-	void* malloc_pointer = malloc(malloc_size);
+	size_t malloc_size = UserPtrSize_GetVmemPtrSize(size);
+	void *malloc_pointer = malloc(malloc_size);
 	if (NULL == malloc_pointer)
 	{
+		/*
+		 * A NULL pointer from the underlying allocator will be returned as-is
+		 * and the caller is supposed to convert it to error or other ways it
+		 * sees fit.
+		 */
 		return NULL;
 	}
 	VmemPtr_Initialize((VmemHeader*) malloc_pointer, size);
@@ -339,12 +344,12 @@ static void* malloc_and_store_metadata(size_t size)
  * realloc the requested "size" and additional memory for metadata and store header and/or
  * footer metadata information. Caller is in charge to update Vmem counter accordingly.
  */
-static void* realloc_and_store_size(void* usable_pointer, size_t new_usable_size)
+static void *realloc_and_store_metadata(void *usable_pointer, size_t new_usable_size)
 {
 	Assert(UserPtr_GetVmemPtr(usable_pointer)->checksum == VMEM_HEADER_CHECKSUM);
 	Assert(*VmemPtr_GetPointerToFooterChecksum(UserPtr_GetVmemPtr(usable_pointer)) == VMEM_FOOTER_CHECKSUM);
 
-	void* realloc_pointer = realloc(UserPtr_GetVmemPtr(usable_pointer), UserPtrSizeToVmemPtrSize(new_usable_size));
+	void *realloc_pointer = realloc(UserPtr_GetVmemPtr(usable_pointer), UserPtrSize_GetVmemPtrSize(new_usable_size));
 
 	if (NULL == realloc_pointer)
 	{
@@ -359,7 +364,8 @@ static void *gp_malloc_internal(int64 requested_size)
 {
 	void *usable_pointer = NULL;
 
-	size_t size_with_overhead = UserPtrSizeToVmemPtrSize(requested_size);
+	Assert(requested_size > 0);
+	size_t size_with_overhead = UserPtrSize_GetVmemPtrSize(requested_size);
 
 	Assert(size_with_overhead >= 0 && size_with_overhead <= MAX_REQUESTABLE_SIZE);
 
@@ -426,7 +432,7 @@ void *gp_realloc(void *ptr, int64 new_size)
 
 	if(!gp_mp_inited)
 	{
-		ret = realloc_and_store_size(ptr, new_size);
+		ret = realloc_and_store_metadata(ptr, new_size);
 		return ret;
 	}
 
@@ -435,7 +441,7 @@ void *gp_realloc(void *ptr, int64 new_size)
 
 	if(new_size <= old_size || MemoryAllocation_Success == VmemTracker_ReserveVmem(size_diff))
 	{
-		ret = realloc_and_store_size(ptr, new_size);
+		ret = realloc_and_store_metadata(ptr, new_size);
 
 #ifdef USE_TEST_UTILS
 		if (gp_simex_init && gp_simex_run && gp_simex_class == SimExESClass_OOM && ret)
@@ -489,10 +495,10 @@ void gp_free(void *user_pointer)
 	Assert(UserPtr_GetVmemPtr(user_pointer)->checksum == VMEM_HEADER_CHECKSUM);
 	Assert(*VmemPtr_GetPointerToFooterChecksum(UserPtr_GetVmemPtr(user_pointer)) == VMEM_FOOTER_CHECKSUM);
 
-	void* malloc_pointer = UserPtr_GetVmemPtr(user_pointer);
+	void *malloc_pointer = UserPtr_GetVmemPtr(user_pointer);
 	size_t usable_size = VmemPtr_GetUserPtrSize((VmemHeader*) malloc_pointer);
 	Assert(usable_size > 0);
 	UserPtr_VerifyChecksum(user_pointer);
 	free(malloc_pointer);
-	VmemTracker_ReleaseVmem(UserPtrSizeToVmemPtrSize(usable_size));
+	VmemTracker_ReleaseVmem(UserPtrSize_GetVmemPtrSize(usable_size));
 }

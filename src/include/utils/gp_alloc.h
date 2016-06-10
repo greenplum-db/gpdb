@@ -83,7 +83,7 @@ VmemPtr_SetUserPtrSize(VmemHeader *ptr, size_t user_size)
 
 /* Converts a user pointer size to Vmem pointer size by adding header and footer overhead */
 static inline size_t
-UserPtrSizeToVmemPtrSize(size_t payload_size)
+UserPtrSize_GetVmemPtrSize(size_t payload_size)
 {
 	return (sizeof(VmemHeader) + payload_size + FOOTER_CHECKSUM_SIZE);
 }
@@ -91,7 +91,7 @@ UserPtrSizeToVmemPtrSize(size_t payload_size)
 /* Gets the end address of a Vmem pointer */
 static void* VmemPtr_GetEndAddress(VmemHeader *ptr)
 {
-	return (((char *)ptr) + UserPtrSizeToVmemPtrSize(VmemPtr_GetUserPtrSize(ptr)));
+	return (((char *)ptr) + UserPtrSize_GetVmemPtrSize(VmemPtr_GetUserPtrSize(ptr)));
 }
 
 #ifdef GP_ALLOC_DEBUG
@@ -149,12 +149,12 @@ UserPtr_GetUserPtrSize(void *ptr)
 static size_t
 UserPtr_GetVmemPtrSize(void *ptr)
 {
-	return UserPtrSizeToVmemPtrSize(VmemPtr_GetUserPtrSize(UserPtr_GetVmemPtr(ptr)));
+	return UserPtrSize_GetVmemPtrSize(VmemPtr_GetUserPtrSize(UserPtr_GetVmemPtr(ptr)));
 }
 
 /* The end address of a user pointer */
 static void*
-UserPtr_GetEndAddress(void *ptr)
+UserPtr_GetEndPtr(void *ptr)
 {
 	return (((char *)ptr) + UserPtr_GetUserPtrSize(ptr));
 }
