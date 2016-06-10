@@ -137,8 +137,8 @@ static void* AllocateWithCheck(size_t size)
 
 		size_t stored_size = *((size_t *)((((char *) ptr) - sizeof(VmemHeader)) + offsetof(VmemHeader, size)));
 		assert_true(stored_size == size);
-		/* Also check for correctness of UserPtr_GetEndAddress as an API */
-		assert_true(UserPtr_GetEndAddress(ptr) == ((char*)ptr + size));
+		/* Also check for correctness of UserPtr_GetEndPtr as an API */
+		assert_true(UserPtr_GetEndPtr(ptr) == ((char*)ptr + size));
 
 		return ptr;
 	}
@@ -210,7 +210,7 @@ static void* ReallocateWithCheck(void* ptr, size_t requested_size)
 	/* Check vmem size has been recalculated */
 	size_t realloc_vmem_size = orig_vmem_size + size_difference;
 	assert_true(realloc_vmem_size == UserPtr_GetVmemPtrSize(realloc_ptr));
-	assert_true(UserPtr_GetEndAddress(realloc_ptr) == ((char*)realloc_ptr + requested_size));
+	assert_true(UserPtr_GetEndPtr(realloc_ptr) == ((char*)realloc_ptr + requested_size));
 
 	return realloc_ptr;
 }
