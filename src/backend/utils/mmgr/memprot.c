@@ -492,9 +492,6 @@ void gp_free(void *user_pointer)
 	Assert(!gp_mp_inited || MemoryProtection_IsOwnerThread());
 	Assert(NULL != user_pointer);
 
-	Assert(UserPtr_GetVmemPtr(user_pointer)->checksum == VMEM_HEADER_CHECKSUM);
-	Assert(*VmemPtr_GetPointerToFooterChecksum(UserPtr_GetVmemPtr(user_pointer)) == VMEM_FOOTER_CHECKSUM);
-
 	void *malloc_pointer = UserPtr_GetVmemPtr(user_pointer);
 	size_t usable_size = VmemPtr_GetUserPtrSize((VmemHeader*) malloc_pointer);
 	Assert(usable_size > 0);
