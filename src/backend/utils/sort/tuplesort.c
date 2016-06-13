@@ -104,12 +104,12 @@
 #include "catalog/catquery.h"
 #include "catalog/pg_amop.h"
 #include "catalog/pg_operator.h"
+#include "executor/execWorkfile.h"
 #include "executor/instrument.h"        /* Instrumentation */
 #include "executor/nodeSort.h"  		/* Gpmon */ 
 #include "lib/stringinfo.h"             /* StringInfo */
 #include "miscadmin.h"
 #include "utils/datum.h"
-#include "executor/execWorkfile.h"
 #include "utils/logtape.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
@@ -1533,14 +1533,14 @@ bool
 tuplesort_gettupleslot(Tuplesortstate *state, bool forward,
 					   TupleTableSlot *slot)
 {
-	return tuplesort_gettupleslot_pos(state, &state->pos, forward, slot);
+	return tuplesort_gettupleslot_pos(state, &state->pos, forward, slot, CurrentMemoryContext);
 }
 
 bool
 tuplesort_gettupleslot_pos(Tuplesortstate *state, TuplesortPos *pos,
-		bool forward, TupleTableSlot *slot)
+		bool forward, TupleTableSlot *slot, MemoryContext mcontext)
 {
-	MemoryContext oldcontext = MemoryContextSwitchTo(state->sortcontext);
+	MemoryContext oldcontext = MemoryContextSwitchTo(mcontext);
 	SortTuple	stup;
 	bool		should_free = false;
 
