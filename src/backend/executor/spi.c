@@ -2020,9 +2020,8 @@ _SPI_pquery(QueryDesc * queryDesc, bool fire_triggers, long tcount)
 			 * If the Active portal already hold a lock on the queue, we cannot
 			 * acquire it again.
 			 */
-			if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler &&
-					!superuser()
-			   )
+			if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler && ResourceQueueUseCost
+				&& !superuser())
 			{
 				/*
 				 * This is SELECT, so we should have planTree anyway.

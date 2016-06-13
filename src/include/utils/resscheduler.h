@@ -28,6 +28,7 @@ extern int	MaxResourceQueues;
 extern int	MaxResourcePortalsPerXact;
 extern bool	ResourceSelectOnly;
 extern bool	ResourceCleanupIdleGangs;
+extern bool ResourceQueueUseCost;
 
 extern Oid MyQueueId; /* resource queue for current role. */
 
@@ -179,6 +180,8 @@ extern void AtCommit_ResScheduler(void);
 extern void AtAbort_ResScheduler(void);
 extern void ResHandleUtilityStmt(Portal portal, Node *stmt);
 extern bool ResLockUtilityPortal(Portal portal, float4 ignoreCostLimit);
+extern bool ResLockPreEmptivelock(ResPortalIncrement *incrementSet);
+extern void ResLockPreEmptiveUnlock(void);
 
 /**
  * Assert that the in-memory state matches the catalog table.

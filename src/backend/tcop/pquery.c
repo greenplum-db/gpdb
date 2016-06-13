@@ -251,7 +251,7 @@ ProcessQuery(Portal portal,
 	 * we are superuser.
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH && 
-		ResourceScheduler && 
+		ResourceScheduler && ResourceQueueUseCost &&
 		(!ResourceSelectOnly || portal->sourceTag == T_SelectStmt) && 
 		stmt->canSetTag
 		&& !superuser())
@@ -784,6 +784,7 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 				 */
 				if (Gp_role == GP_ROLE_DISPATCH
 						&& ResourceScheduler
+						&& ResourceQueueUseCost
 						&& !superuser() )
 				{
 					/* 
@@ -821,6 +822,7 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 				if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE
 						&& Gp_role == GP_ROLE_DISPATCH
 						&& gp_session_id > -1
+						&& ResourceQueueUseCost
 						&& superuser())
 				{
 					queryDesc->plannedstmt->query_mem = ResourceQueueGetSuperuserQueryMemoryLimit();

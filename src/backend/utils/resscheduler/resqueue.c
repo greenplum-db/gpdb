@@ -127,7 +127,7 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 	bool			found;
 	ResourceOwner	owner;
 	ResQueue		queue;
-	int				status;
+	int				status = 0;
 
 	/* Setup the lock method bits. */
 	Assert(locktag->locktag_lockmethodid == RESOURCE_LOCKMETHOD);
@@ -227,7 +227,7 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 														HASH_ENTER_NULL,
 														&found);
 	locallock->proclock = proclock;
-    if (!proclock)
+	if (!proclock)
 	{
 		/* Not enough shmem for the proclock. */
 		if (lock->nRequested == 0)
@@ -306,38 +306,42 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 	}
 	PG_END_TRY();
 
-	/*
-	 * If the query cost is smaller than the ignore cost limit for this queue
-	 * then don't try to take a lock at all.
-	 */
-	if (incrementSet->increments[RES_COST_LIMIT] < queue->ignorecostlimit)
+	if (ResourceQueueUseCost)
 	{
-		/* Decrement requested. */
-		lock->nRequested--;
-		lock->requested[lockmode]--;
-		Assert((lock->nRequested >= 0) && (lock->requested[lockmode] >= 0));
-
-		/* Clean up this lock. */
-        if (proclock->nLocks == 0)
-		    RemoveLocalLock(locallock);
-
-		ResCleanUpLock(lock, proclock, hashcode, false);
-
-		LWLockRelease(ResQueueLock);
-		LWLockRelease(partitionLock);
-
 		/*
-		 * To avoid queue accounting problems, we will need to reset the
-		 * queueId and portalId for this portal *after* returning from
-		 * here.
-		 */
-		return LOCKACQUIRE_NOT_AVAIL;
+		 * If the query cost is smaller than the ignore cost limit for this queue
+		 * then don't try to take a lock at all.
+		*/
+		if (incrementSet->increments[RES_COST_LIMIT] < queue->ignorecostlimit)
+		{
+			/* Decrement requested. */
+			lock->nRequested--;
+			lock->requested[lockmode]--;
+			Assert((lock->nRequested >= 0) && (lock->requested[lockmode] >= 0));
+
+			/* Clean up this lock. */
+			if (proclock->nLocks == 0)
+				RemoveLocalLock(locallock);
+
+			ResCleanUpLock(lock, proclock, hashcode, false);
+
+			LWLockRelease(ResQueueLock);
+			LWLockRelease(partitionLock);
+
+			/*
+			 * To avoid queue accounting problems, we will need to reset the
+			 * queueId and portalId for this portal *after* returning from
+			 * here.
+			 */
+			return LOCKACQUIRE_NOT_AVAIL;
+		}
+
 	}
 
 	/*
-	 * Otherwise, we are going to take a lock, Add an increment to the 
+	 * Otherwise, we are going to take a lock, Add an increment to the
 	 * increment hash for this process.
-	 */
+	*/
 	incrementSet = ResIncrementAdd(incrementSet, proclock, owner);
 	if (!incrementSet)
 	{
@@ -375,15 +379,15 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 		Assert((lock->nRequested >= 0) && (lock->requested[lockmode] >= 0));
 
 		/* Clean up this lock. */
-        if (proclock->nLocks == 0)
-    		RemoveLocalLock(locallock);
+		if (proclock->nLocks == 0)
+			RemoveLocalLock(locallock);
 
 		ResCleanUpLock(lock, proclock, hashcode, false);
 
 		/* Kill off the increment. */
 		MemSet(&portalTag, 0, sizeof(ResPortalTag));
 		portalTag.pid = incrementSet->pid;
-		portalTag.portalId = incrementSet->portalId;
+		portalTag.portalId = ResourceQueueUseCost ? incrementSet->portalId : INVALID_PORTALID;
 
 		ResIncrementRemove(&portalTag);
 
@@ -400,6 +404,7 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 		 * queue, so record this in the local lock hash, and grant it.
 		 */
 		ResGrantLock(lock, proclock);
+
 		ResLockUpdateLimit(lock, proclock, incrementSet, true);
 
 		LWLockRelease(ResQueueLock);
@@ -436,11 +441,10 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 
 			ResCleanUpLock(lock, proclock, hashcode, false);
 
-
 			/* Kill off the increment. */
 			MemSet(&portalTag, 0, sizeof(ResPortalTag));
 			portalTag.pid = incrementSet->pid;
-			portalTag.portalId = incrementSet->portalId;
+			portalTag.portalId = ResourceQueueUseCost ? incrementSet->portalId : INVALID_PORTALID;
 
 			ResIncrementRemove(&portalTag);
 
@@ -624,7 +628,7 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 			RemoveLocalLock(locallock);
 		}
 		/* no need to do the wakeups */
-		ResCleanUpLock(lock, proclock, hashcode, false);
+		ResCleanUpLock(lock, proclock, hashcode, true);
 		LWLockRelease(ResQueueLock);
 		LWLockRelease(partitionLock);
 		return false;			
@@ -633,6 +637,7 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	/*
 	 * Un-grant the lock.
 	 */
+
 	ResUnGrantLock(lock, proclock);
 	ResLockUpdateLimit(lock, proclock, incrementSet, false);
 
@@ -741,6 +746,9 @@ ResLockCheckLimit(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *incrementS
 
 			case RES_COST_LIMIT:
 			{
+				if (!ResourceQueueUseCost)
+					break;
+
 				Assert((limits[i].threshold_is_max));
 
 				/* Setup whether to increment or decrement the cost. */
@@ -750,7 +758,7 @@ ResLockCheckLimit(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *incrementS
 
 					/* Check if this will overcommit */
 					if (increment_amt > limits[i].threshold_value)
-						will_overcommit = true;
+					will_overcommit = true;
 
 					if (queue->overcommit)
 					{
@@ -759,15 +767,15 @@ ResLockCheckLimit(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *incrementS
 						 * blowout the limit if noone else is active!
 						 */
 						if ((limits[i].current_value + increment_amt > limits[i].threshold_value) &&
-							(limits[i].current_value > 0.1))
-							over_limit = true;
-					} 
+						(limits[i].current_value > 0.1))
+						over_limit = true;
+					}
 					else
 					{
 						/*
-						 * No autocommit, so always fail statements that
-						 * blowout the limit.
-						 */
+						* No autocommit, so always fail statements that
+						* blowout the limit.
+						*/
 						if (limits[i].current_value + increment_amt > limits[i].threshold_value)
 							over_limit = true;
 					}
@@ -778,8 +786,8 @@ ResLockCheckLimit(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *incrementS
 				}
 
 #ifdef RESLOCK_DEBUG
-				elog(DEBUG1, "checking cost limit threshold %.2f current %.2f",
-					 limits[i].threshold_value, limits[i].current_value);
+	elog(DEBUG1, "checking cost limit threshold %.2f current %.2f",
+		 limits[i].threshold_value, limits[i].current_value);
 #endif
 			}
 			break;
@@ -1184,7 +1192,7 @@ ResProcLockRemoveSelfAndWakeup(LOCK *lock)
 
 		MemSet(&portalTag, 0, sizeof(ResPortalTag));
 		portalTag.pid = proc->pid;
-		portalTag.portalId = proc->waitPortalId;
+		portalTag.portalId = ResourceQueueUseCost ? proc->waitPortalId : INVALID_PORTALID;
 
 		incrementSet = ResIncrementFind(&portalTag);
 		if (!incrementSet)
@@ -1303,7 +1311,7 @@ ResRemoveFromWaitQueue(PGPROC *proc, uint32 hashcode)
 	 */
 	MemSet(&portalTag, 0, sizeof(ResPortalTag));
 	portalTag.pid = MyProc->pid;
-	portalTag.portalId = MyProc->waitPortalId;
+	portalTag.portalId = ResourceQueueUseCost ? MyProc->waitPortalId : INVALID_PORTALID;
 
 	LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
 	ResIncrementRemove(&portalTag);
@@ -1474,7 +1482,7 @@ ResIncrementAdd(ResPortalIncrement *incSet, PROCLOCK *proclock, ResourceOwner ow
 	/*  Set up the key.*/
 	MemSet(&portaltag, 0, sizeof(ResPortalTag));
 	portaltag.pid = incSet->pid;
-	portaltag.portalId = incSet->portalId;
+	portaltag.portalId = ResourceQueueUseCost ? incSet->portalId : INVALID_PORTALID;
 
 	/* Add (or find) the value. */
 	incrementSet = (ResPortalIncrement *)
@@ -1553,7 +1561,7 @@ ResIncrementRemove(ResPortalTag *portaltag)
 	bool				found;
 
 	Assert(LWLockHeldExclusiveByMe(ResQueueLock));
-	
+
 	incrementSet = (ResPortalIncrement *)
 		hash_search(ResPortalIncrementHash, (void *)portaltag, HASH_REMOVE, &found);
 

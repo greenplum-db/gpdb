@@ -1453,6 +1453,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&ResourceScheduler,
 		true, NULL, NULL
 	},
+
+	{
+		{"resource_usecost", PGC_POSTMASTER, RESOURCES_MGM,
+			gettext_noop("Use cost based checking in resource queues."),
+			NULL
+		},
+		&ResourceQueueUseCost,
+		true, NULL, NULL
+	},
+
 	{
 		{"resource_select_only", PGC_POSTMASTER, RESOURCES_MGM,
 			gettext_noop("Enable resource locking of SELECT only."),

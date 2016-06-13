@@ -3329,6 +3329,8 @@ CommitTransaction(void)
 	/* Close any open regular cursors */
 	AtCommit_Portals();
 
+	ResLockPreEmptiveUnlock();
+
 	/* Perform any Resource Scheduler commit procesing. */
 	if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler)
 		AtCommit_ResScheduler();
@@ -3717,6 +3719,7 @@ PrepareTransaction(void)
 	/* Close any open regular cursors */
 	AtCommit_Portals();
 
+	ResLockPreEmptiveUnlock();
 	/*
 	 * Let ON COMMIT management do its thing (must happen after closing
 	 * cursors, to avoid dangling-reference problems)
@@ -4016,6 +4019,8 @@ AbortTransaction(void)
 	 * g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.
 	 */
 	AtEOXact_ResetDataSourceCtx();
+
+	ResLockPreEmptiveUnlock();
 
 	/* Perform any Resource Scheduler abort procesing. */
 	if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler)

@@ -130,6 +130,8 @@ PrepareQuery(PrepareStmt *stmt, const char *queryString)
 						   commandTag,
 						   query_list_copy,
 						   stmt->argtype_oids,
+						   false,
+						   NULL,
 						   true);
 }
 
@@ -156,6 +158,11 @@ ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
 
 	/* Look it up in the hash table */
 	entry = FetchPreparedStatement(stmt->name, true);
+
+	if (entry->take_lock && entry->lock_isacquired)
+	{
+		ResLockPreEmptivelock(entry->incData);
+	}
 
 	qcontext = entry->context;
 
@@ -256,6 +263,12 @@ ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
 	if (estate)
 		FreeExecutorState(estate);
 
+	if (entry->lock_isacquired)
+	{
+		ResLockPreEmptiveUnlock();
+		entry->lock_isacquired = false;
+	}
+
 	/* No need to pfree other memory, MemoryContext will be reset */
 }
 
@@ -346,6 +359,8 @@ StorePreparedStatement(const char *stmt_name,
 					   const char *commandTag,
 					   List *query_list,
 					   List *argtype_list,
+					   bool takeLock,
+					   ResPortalIncrement *incData,
 					   bool from_sql)
 {
 	PreparedStatement *entry;
@@ -405,6 +420,9 @@ StorePreparedStatement(const char *stmt_name,
 	entry->argtype_list = argtype_list;
 	entry->context = entrycxt;
 	entry->prepare_time = GetCurrentStatementStartTimestamp();
+	entry->take_lock = takeLock;
+	entry->lock_isacquired = takeLock;
+	entry->incData = incData;
 	entry->from_sql = from_sql;
 
 	MemoryContextSwitchTo(oldcxt);

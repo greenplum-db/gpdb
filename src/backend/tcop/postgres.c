@@ -85,6 +85,7 @@
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbgang.h"
+#include "cdb/memquota.h"
 #include "cdb/ml_ipc.h"
 #include "utils/guc.h"
 #include "access/twophase.h"
@@ -1531,6 +1532,8 @@ exec_simple_query(const char *query_string, const char *seqServerHost, int seqSe
 	bool		was_logged = false;
 	bool		isTopLevel = false;
 	char		msec_str[32];
+	ResPortalIncrement	incData;
+	bool takeLock = false;
 
 	if (Gp_role != GP_ROLE_EXECUTE)
 	{
@@ -1684,7 +1687,92 @@ exec_simple_query(const char *query_string, const char *seqServerHost, int seqSe
 
 		/* If we got a cancel signal in parsing or prior command, quit */
 		CHECK_FOR_INTERRUPTS();
-		
+
+		/* Check if resource scheduling is enabled and process accordingly */
+		if (Gp_role == GP_ROLE_DISPATCH && !superuser() && ResourceScheduler && !ResourceQueueUseCost)
+		{
+			memset(&incData, 0x00, sizeof(incData));
+			switch (nodeTag(parsetree))
+			{
+
+				/*
+			 	* For INSERT/UPDATE/DELETE Skip if we have specified only SELECT,
+			 	* otherwise drop through to handle like a SELECT.
+			 	*/
+				case T_InsertStmt:
+				case T_DeleteStmt:
+				case T_UpdateStmt:
+				{
+					if (ResourceSelectOnly)
+					{
+						takeLock = false;
+						break;
+					}
+				}
+
+				case T_SelectStmt:
+				case T_DeclareCursorStmt:
+				{
+					/*
+				 	* Setup the resource portal increments, ready to be added.
+					*/
+					incData.pid = MyProc->pid;
+					// Setup with INVALID_PORTALID as in this case we have one increment per session, not per portal
+					incData.portalId = INVALID_PORTALID;
+					incData.increments[RES_COUNT_LIMIT] = 1;
+
+					if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
+					{
+						Assert(gp_resqueue_memory_policy == RESQUEUE_MEMORY_POLICY_AUTO ||
+								gp_resqueue_memory_policy == RESQUEUE_MEMORY_POLICY_EAGER_FREE);
+
+						uint64 queryMemory = ResourceQueueGetQueryMemoryLimit(NULL, GetResQueueId());
+						Assert(queryMemory > 0);
+						if (gp_log_resqueue_memory)
+						{
+							elog(gp_resqueue_memory_log_level, "query requested %.0fKB", (double) queryMemory / 1024.0);
+						}
+
+						incData.increments[RES_MEMORY_LIMIT] = (Cost) queryMemory;
+					}
+					else 
+					{
+						Assert(gp_resqueue_memory_policy == RESQUEUE_MEMORY_POLICY_NONE);
+						incData.increments[RES_MEMORY_LIMIT] = (Cost) 0.0;				
+					}
+					takeLock = true;
+				}
+				break;
+
+				case T_CopyStmt:
+				{
+					incData.pid = MyProc->pid;
+					// Setup with INVALID_PORTALID as in this case we have one increment per session, not per portal
+					incData.portalId = INVALID_PORTALID;
+					incData.increments[RES_COUNT_LIMIT] = 1;
+					incData.increments[RES_MEMORY_LIMIT] = (Cost) 0.0;
+
+					takeLock = true;
+				}
+				break;
+
+				/*
+				 * We do not want to lock any of these query types.
+				*/
+				default:
+				{
+
+					takeLock = false;
+				}
+				break;
+			}
+
+			if (takeLock)
+			{
+				ResLockPreEmptivelock(&incData);
+			}
+		}
+
 		/*
 		 * Set up a snapshot if parse analysis/planning will need one.
 		 */
@@ -1836,7 +1924,6 @@ exec_simple_query(const char *query_string, const char *seqServerHost, int seqSe
 		 */
 		EndCommand(completionTag, dest);
 	}							/* end loop over parsetrees */
-
 	/*
 	 * Close down transaction statement, if one is open.
 	 */
@@ -1895,6 +1982,8 @@ exec_parse_message(const char *query_string,	/* string to execute */
 	bool		save_log_statement_stats = log_statement_stats;
 	char		msec_str[32];
 	NodeTag		sourceTag = T_Query;
+	ResPortalIncrement	incData;
+	bool takeLock = false;
 
 	/*
 	 * Report query to various monitoring facilities.
@@ -1981,6 +2070,87 @@ exec_parse_message(const char *query_string,	/* string to execute */
 		Node	   *parsetree = (Node *) linitial(parsetree_list);
 		Snapshot        mySnapshot = NULL;
 		int			i;
+
+		memset(&incData, 0x00, sizeof(incData));
+		switch (nodeTag(parsetree))
+		{
+
+			/*
+			* For INSERT/UPDATE/DELETE Skip if we have specified only SELECT,
+			* otherwise drop through to handle like a SELECT.
+			*/
+			case T_InsertStmt:
+			case T_DeleteStmt:
+			case T_UpdateStmt:
+			{
+				if (ResourceSelectOnly)
+				{
+					takeLock = false;
+					break;
+				}
+			}
+
+			case T_SelectStmt:
+			case T_DeclareCursorStmt:
+			{
+				/*
+				* Setup the resource portal increments, ready to be added.
+				*/
+				incData.pid = MyProc->pid;
+				// Setup with INVALID_PORTALID as in this case we have one increment per session, not per portal
+				incData.portalId = INVALID_PORTALID;
+				incData.increments[RES_COUNT_LIMIT] = 1;
+
+				if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
+				{
+					Assert(gp_resqueue_memory_policy == RESQUEUE_MEMORY_POLICY_AUTO ||
+							gp_resqueue_memory_policy == RESQUEUE_MEMORY_POLICY_EAGER_FREE);
+
+					uint64 queryMemory = ResourceQueueGetQueryMemoryLimit(NULL, GetResQueueId());
+					Assert(queryMemory > 0);
+					if (gp_log_resqueue_memory)
+					{
+						elog(gp_resqueue_memory_log_level, "query requested %.0fKB", (double) queryMemory / 1024.0);
+					}
+
+					incData.increments[RES_MEMORY_LIMIT] = (Cost) queryMemory;
+				}
+				else
+				{
+					Assert(gp_resqueue_memory_policy == RESQUEUE_MEMORY_POLICY_NONE);
+					incData.increments[RES_MEMORY_LIMIT] = (Cost) 0.0;
+				}
+				takeLock = true;
+			}
+			break;
+
+			case T_CopyStmt:
+			{
+				incData.pid = MyProc->pid;
+				// Setup with INVALID_PORTALID as in this case we have one increment per session, not per portal
+				incData.portalId = INVALID_PORTALID;
+				incData.increments[RES_COUNT_LIMIT] = 1;
+				incData.increments[RES_MEMORY_LIMIT] = (Cost) 0.0;
+
+				takeLock = true;
+			}
+			break;
+
+			/*
+			 * We do not want to lock any of these query types.
+			*/
+			default:
+			{
+
+				takeLock = false;
+			}
+			break;
+		}
+
+		if (takeLock)
+		{
+			ResLockPreEmptivelock(&incData);
+		}
 
 		/*
 		 * Get the command name for possible use in status display.
@@ -2092,6 +2262,8 @@ exec_parse_message(const char *query_string,	/* string to execute */
 							   commandTag,
 							   querytree_list,
 							   param_list,
+							   takeLock,
+							   &incData,
 							   false);
 	}
 	else
@@ -2107,6 +2279,9 @@ exec_parse_message(const char *query_string,	/* string to execute */
 		pstmt->query_list = querytree_list;
 		pstmt->argtype_list = param_list;
 		pstmt->from_sql = false;
+		pstmt->take_lock = takeLock;
+		pstmt->lock_isacquired = takeLock;
+		pstmt->incData = &incData;
 		pstmt->context = unnamed_stmt_context;
 		/* XXX prepare_time and from_sql default to 0! Correct? */
 		/* Now the unnamed statement is complete and valid */
@@ -2557,6 +2732,7 @@ exec_execute_message(const char *portal_name, int64 max_rows)
 	bool		execute_is_fetch = false;
 	bool		was_logged = false;
 	char		msec_str[32];
+	PreparedStatement *current_stmt = NULL;
 
 	/* Adjust destination to tell printtup.c what to do */
 	dest = whereToSendOutput;
@@ -2650,6 +2826,20 @@ exec_execute_message(const char *portal_name, int64 max_rows)
 		else
 			prepStmtName = "<unnamed>";
 		portalParams = portal->portalParams;
+	}
+
+	current_stmt = FetchPreparedStatement(prepStmtName, false);
+
+	/*
+	 * When the prepared statement was first stored in the structure, ResourceQueueUseCost
+	 * Queue Slot lock was acquired. This is for case when a stored prepared statement is
+	 * executed */
+	if (current_stmt)
+	{
+		if (current_stmt->take_lock && !(current_stmt->lock_isacquired))
+		{
+			ResLockPreEmptivelock(current_stmt->incData);
+		}
 	}
 
 	/*

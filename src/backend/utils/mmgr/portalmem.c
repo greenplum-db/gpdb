@@ -379,6 +379,7 @@ PortalDrop(Portal portal, bool isTopCommit)
 	 */
 	PortalHashTableDelete(portal);
 
+	if (ResourceScheduler && ResourceQueueUseCost)
         ResUnLockPortal(portal);
 
 	/* let portalcmds.c clean up the state it knows about */
@@ -889,6 +890,20 @@ TotalResPortalIncrements(int pid, Oid queueid, Cost *totalIncrements, int *num)
 	/* ensure the total is initialized to zero */
 	for (i = 0; i < NUM_RES_LIMIT_TYPES; i++)
 		totalIncrements[i] = 0;
+
+	// This function is driven by portals, but in the case when ResourceQueueUseCost == false
+	//   we don't have a portal. Therefore attempt to collect the increment directly (with
+	//   portalId = INVALID_PORTALID)
+	if (!ResourceQueueUseCost) {
+		MemSet(&portalTag, 0, sizeof(ResPortalTag));
+		portalTag.pid = pid;
+		portalTag.portalId = INVALID_PORTALID;
+		incrementSet = ResIncrementFind(&portalTag);
+		if (incrementSet) {
+			for (i = 0; i < NUM_RES_LIMIT_TYPES; i++)
+				totalIncrements[i] += incrementSet->increments[i];
+		}
+	}
 
 	hash_seq_init(&status, PortalHashTable);
 
