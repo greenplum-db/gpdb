@@ -423,6 +423,8 @@ extern Datum pg_size_pretty(PG_FUNCTION_ARGS);
 extern Datum gp_statistics_estimate_reltuples_relpages_oid(PG_FUNCTION_ARGS);
 
 /* genfile.c */
+extern bytea *read_binary_file(const char *filename,
+						 int64 seek_offset, int64 bytes_to_read);
 extern Datum pg_stat_file(PG_FUNCTION_ARGS);
 extern Datum pg_read_file(PG_FUNCTION_ARGS);
 extern Datum pg_ls_dir(PG_FUNCTION_ARGS);

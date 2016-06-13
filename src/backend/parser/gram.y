@@ -183,7 +183,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 		AlterTableStmt AlterUserStmt AlterUserSetStmt AlterRoleStmt
 		AlterRoleSetStmt AnalyzeStmt ClosePortalStmt ClusterStmt 
 		CommentStmt ConstraintsSetStmt CopyStmt CreateAsStmt CreateCastStmt
-		CreateDomainStmt CreateExternalStmt CreateFileSpaceStmt CreateGroupStmt
+		CreateDomainStmt CreateExtensionStmt CreateExternalStmt CreateFileSpaceStmt CreateGroupStmt
 		CreateOpClassStmt
 		CreateOpFamilyStmt AlterOpFamilyStmt CreatePLangStmt
 		CreateQueueStmt CreateSchemaStmt CreateSeqStmt CreateStmt 
@@ -229,10 +229,10 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 %type <list>	createdb_opt_list alterdb_opt_list copy_opt_list
 				ext_on_clause_list format_opt format_opt_list format_def_list transaction_mode_list
-				ext_opt_encoding_list
+				ext_opt_encoding_list create_extension_opt_list
 %type <defelt>	createdb_opt_item alterdb_opt_item copy_opt_item
 				ext_on_clause_item format_opt_item format_def_item transaction_mode_item
-				ext_opt_encoding_item
+				ext_opt_encoding_item create_extension_opt_item
 
 %type <ival>	opt_lock lock_type cast_context
 %type <boolean>	opt_force opt_or_replace
@@ -499,7 +499,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	DESC DISABLE_P DISTINCT DISTRIBUTED DO DOCUMENT_P DOMAIN_P DOUBLE_P DROP DXL
 
 	EACH ELSE ENABLE_P ENCODING ENCRYPTED END_P ENUM_P ERRORS ESCAPE EVERY EXCEPT 
-	EXCHANGE EXCLUDE EXCLUDING EXCLUSIVE EXECUTE EXISTS EXPLAIN EXTERNAL EXTRACT
+	EXCHANGE EXCLUDE EXCLUDING EXCLUSIVE EXECUTE EXISTS EXPLAIN EXTENSION EXTERNAL EXTRACT
 
 	FALSE_P FAMILY FETCH FIELDS FILESPACE FILL FILTER FIRST_P FLOAT_P FOLLOWING FOR 
     FORCE FOREIGN FORMAT FORMATTER FORWARD FREEZE FROM FULL FUNCTION
@@ -1008,6 +1008,7 @@ stmt :
 			| CreateCastStmt
 			| CreateConversionStmt
 			| CreateDomainStmt
+			| CreateExtensionStmt
 			| CreateExternalStmt
 			| CreateFileSpaceStmt
 			| CreateFunctionStmt
@@ -5025,6 +5026,54 @@ CreateTableSpaceStmt: CREATE TABLESPACE name OptOwner FILESPACE name
 
 /*****************************************************************************
  *
+ *		QUERY:
+ *             CREATE EXTENSION extension
+ *             [ WITH ] [ SCHEMA schema ] [ VERSION version ] [ FROM oldversion ]
+ *
+ *****************************************************************************/
+
+CreateExtensionStmt: CREATE EXTENSION name opt_with create_extension_opt_list
+				{
+					CreateExtensionStmt *n = makeNode(CreateExtensionStmt);
+					n->extname = $3;
+					n->if_not_exists = false;
+					n->options = $5;
+					$$ = (Node *) n;
+				}
+				| CREATE EXTENSION IF_P NOT EXISTS name opt_with create_extension_opt_list
+				{
+					CreateExtensionStmt *n = makeNode(CreateExtensionStmt);
+					n->extname = $6;
+					n->if_not_exists = true;
+					n->options = $8;
+					$$ = (Node *) n;
+				}
+		;
+
+create_extension_opt_list:
+			create_extension_opt_list create_extension_opt_item
+				{ $$ = lappend($1, $2); }
+			| /* EMPTY */
+				{ $$ = NIL; }
+		;
+
+create_extension_opt_item:
+			SCHEMA name
+				{
+					$$ = makeDefElem("schema", (Node *)makeString($2));
+				}
+			| VERSION_P Sconst
+				{
+					$$ = makeDefElem("new_version", (Node *)makeString($2));
+				}
+			| FROM Sconst
+				{
+					$$ = makeDefElem("old_version", (Node *)makeString($2));
+				}
+		;
+
+/*****************************************************************************
+ *
  *		QUERIES :
  *				CREATE TRIGGER ...
  *				DROP TRIGGER ...
@@ -5705,6 +5754,7 @@ drop_type:	TABLE									{ $$ = OBJECT_TABLE; }
 			| DOMAIN_P								{ $$ = OBJECT_DOMAIN; }
 			| CONVERSION_P							{ $$ = OBJECT_CONVERSION; }
 			| SCHEMA								{ $$ = OBJECT_SCHEMA; }
+			| EXTENSION								{ $$ = OBJECT_EXTENSION; }
 			| FILESPACE								{ $$ = OBJECT_FILESPACE; }
 			| TABLESPACE							{ $$ = OBJECT_TABLESPACE; }
 			| PROTOCOL								{ $$ = OBJECT_EXTPROTOCOL; }
@@ -5748,7 +5798,7 @@ TruncateStmt:
  *	The COMMENT ON statement can take different forms based upon the type of
  *	the object associated with the comment. The form of the statement is:
  *
- *	COMMENT ON [ [ DATABASE | DOMAIN | INDEX | SEQUENCE | TABLE | TYPE | VIEW |
+ *	COMMENT ON [ [ DATABASE | DOMAIN | EXTENSION | INDEX | SEQUENCE | TABLE | TYPE | VIEW |
  *				   CONVERSION | LANGUAGE | OPERATOR CLASS | LARGE OBJECT |
  *				   CAST | COLUMN | SCHEMA | TABLESPACE | ROLE ] <objname> |
  *				 AGGREGATE <aggname> (arg1, ...) |
@@ -5895,6 +5945,7 @@ comment_type:
 			| VIEW								{ $$ = OBJECT_VIEW; }
 			| CONVERSION_P						{ $$ = OBJECT_CONVERSION; }
 			| TABLESPACE						{ $$ = OBJECT_TABLESPACE; }
+			| EXTENSION							{ $$ = OBJECT_EXTENSION; }
 			| ROLE								{ $$ = OBJECT_ROLE; }
 			| FILESPACE                         { $$ = OBJECT_FILESPACE; }
 			| RESOURCE QUEUE                    { $$ = OBJECT_RESQUEUE; }
@@ -7085,6 +7136,14 @@ RenameStmt: ALTER AGGREGATE func_name aggr_args RENAME TO name
 					n->renameType = OBJECT_FILESPACE;
 					n->subname = $3;
 					n->newname = $6;
+					$$ = (Node *)n;
+				}
+			| ALTER EXTENSION any_name SET SCHEMA name
+				{
+					AlterObjectSchemaStmt *n = makeNode(AlterObjectSchemaStmt);
+					n->objectType = OBJECT_EXTENSION;
+					n->object = $3;
+					n->newschema = $6;
 					$$ = (Node *)n;
 				}
 			| ALTER FUNCTION func_name func_args RENAME TO name
@@ -12295,6 +12354,7 @@ unreserved_keyword:
 			| EXCLUSIVE
 			| EXECUTE
 			| EXPLAIN
+			| EXTENSION
 			| EXTERNAL
 			| FAMILY
 			| FIELDS

@@ -41,6 +41,7 @@ NamespaceCreate(const char *nspName, Oid ownerId, Oid forceOid)
 	cqContext	cqc;
 	cqContext	cqc2;
 	cqContext  *pcqCtx;
+	ObjectAddress myself;
 
 	/* sanity checks */
 	if (!nspName)
@@ -91,6 +92,14 @@ NamespaceCreate(const char *nspName, Oid ownerId, Oid forceOid)
 
 	/* Record dependency on owner */
 	recordDependencyOnOwner(NamespaceRelationId, nspoid, ownerId);
+
+	/* Record dependencies */
+	myself.classId = NamespaceRelationId;
+	myself.objectId = nspoid;
+	myself.objectSubId = 0;
+
+	/* dependency on extension */
+	recordDependencyOnCurrentExtension(&myself, false);
 
 	return nspoid;
 }

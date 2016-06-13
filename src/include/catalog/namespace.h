@@ -37,6 +37,7 @@ typedef struct _FuncCandidateList
 typedef void (*RangeVarGetRelidCallback) (const RangeVar *relation, Oid relId,
 										   Oid oldRelId, void *callback_arg);
 
+extern Oid	get_namespace_oid(const char *nspname, bool missing_ok);
 extern Oid	RangeVarGetRelid(const RangeVar *relation, bool failOK);
 extern Oid  RangeVarGetRelidExtended(const RangeVar *relation,
 						 LOCKMODE lockmode, bool missing_ok, bool nowait,

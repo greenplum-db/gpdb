@@ -557,6 +557,8 @@ GenerateTypeDependencies(Oid typeNamespace,
 		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 
 		recordDependencyOnOwner(TypeRelationId, typeObjectId, owner);
+		/* dependency on extension */
+		recordDependencyOnCurrentExtension(&myself, false);
 	}
 
 	/* Normal dependencies on the I/O functions */

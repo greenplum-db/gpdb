@@ -956,4 +956,6 @@ makeOperatorDependencies(HeapTuple tuple)
 	/* Dependency on owner */
 	recordDependencyOnOwner(OperatorRelationId, HeapTupleGetOid(tuple),
 							oper->oprowner);
+	/* dependency on extension */
+	recordDependencyOnCurrentExtension(&myself, false);
 }

@@ -53,23 +53,10 @@ enum {
 	GUC_ERROR = 100
 };
 
-struct name_value_pair
-{
-	char       *name;
-	char       *value;
-	struct name_value_pair *next;
-};
-
 static unsigned int ConfigFileLineno;
 
 /* flex fails to supply a prototype for yylex, so provide one */
 int GUC_yylex(void);
-
-static bool ParseConfigFile(const char *config_file, const char *calling_file,
-							int depth, GucContext context, int elevel,
-							struct name_value_pair **head_p,
-							struct name_value_pair **tail_p);
-static void free_name_value_list(struct name_value_pair * list);
 static char *GUC_scanstr(const char *s);
 
 %}
@@ -198,7 +185,7 @@ ProcessConfigFile(GucContext context)
  * where an error will lead to immediate process exit anyway; so there is
  * no point in contorting the code so it can clean up nicely.
  */
-static bool
+bool
 ParseConfigFile(const char *config_file, const char *calling_file,
 				int depth, GucContext context, int elevel,
 				struct name_value_pair **head_p,
@@ -381,7 +368,7 @@ cleanup_exit:
 /*
  * Free a list of name/value pairs, including the names and the values
  */
-static void
+void
 free_name_value_list(struct name_value_pair *list)
 {
 	struct name_value_pair *item;

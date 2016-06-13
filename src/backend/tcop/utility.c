@@ -504,6 +504,7 @@ check_xact_readonly(Node *parsetree)
 		case T_CreateQueueStmt:
 		case T_CreateRoleStmt:
 		case T_IndexStmt:
+		case T_CreateExtensionStmt:
 		case T_CreatePLangStmt:
 		case T_CreateOpClassStmt:
 		case T_CreateOpFamilyStmt:
@@ -660,6 +661,14 @@ ProcessDropStatement(DropStmt *stmt)
 				 * RemoveExtProtocol does its own permissions checks
 				 */
 				RemoveExtProtocol(names, stmt->behavior, stmt->missing_ok);
+				break;
+
+			case OBJECT_EXTENSION:
+				
+				/*
+				 * RemoveExtension does its own permissions checks
+				 */
+				RemoveExtension(names, stmt->behavior, stmt->missing_ok);
 				break;
 
 			default:
@@ -1254,6 +1263,10 @@ ProcessUtility(Node *parsetree,
 							false, /* expanded from partitioning? */
 							stmt);
 			}
+			break;
+
+		case T_CreateExtensionStmt:
+			CreateExtension((CreateExtensionStmt *) parsetree);
 			break;
 
 		case T_RuleStmt:		/* CREATE RULE */
@@ -1976,6 +1989,9 @@ CreateCommandTag(Node *parsetree)
 				case OBJECT_EXTPROTOCOL:
 					tag = "DROP PROTOCOL";
 					break;					
+				case OBJECT_EXTENSION:
+					tag = "DROP EXTENSION";
+					break;
 				default:
 					tag = "???";
 			}
@@ -2200,6 +2216,10 @@ CreateCommandTag(Node *parsetree)
 
 		case T_IndexStmt:
 			tag = "CREATE INDEX";
+			break;
+
+		case T_CreateExtensionStmt:
+			tag = "CREATE EXTENSION";
 			break;
 
 		case T_RuleStmt:
@@ -2614,6 +2634,10 @@ GetCommandLogLevel(Node *parsetree)
 			break;
 
 		case T_IndexStmt:
+			lev = LOGSTMT_DDL;
+			break;
+
+		case T_CreateExtensionStmt:
 			lev = LOGSTMT_DDL;
 			break;
 

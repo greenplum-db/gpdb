@@ -106,6 +106,70 @@ requireSuperuser(void)
 			  (errmsg("only superuser may access generic file functions"))));
 }
 
+/*
+ * Read a section of a file, returning it as bytea
+ *
+ * Caller is responsible for all permissions checking.
+ *
+ * We read the whole of the file when bytes_to_read is negative.
+ */
+bytea *
+read_binary_file(const char *filename, int64 seek_offset, int64 bytes_to_read)
+{
+	bytea	   *buf;
+	size_t		nbytes;
+	FILE	   *file;
+
+	if (bytes_to_read < 0)
+	{
+		if (seek_offset < 0)
+			bytes_to_read = -seek_offset;
+		else
+		{
+			struct stat fst;
+
+			if (stat(filename, &fst) < 0)
+				ereport(ERROR,
+						(errcode_for_file_access(),
+						 errmsg("could not stat file \"%s\": %m", filename)));
+
+			bytes_to_read = fst.st_size - seek_offset;
+		}
+	}
+
+	/* not sure why anyone thought that int64 length was a good idea */
+	if (bytes_to_read > (MaxAllocSize - VARHDRSZ))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("requested length too large")));
+
+	if ((file = AllocateFile(filename, PG_BINARY_R)) == NULL)
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not open file \"%s\" for reading: %m",
+						filename)));
+
+	if (fseeko(file, (off_t) seek_offset,
+			   (seek_offset >= 0) ? SEEK_SET : SEEK_END) != 0)
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not seek in file \"%s\": %m", filename)));
+
+	buf = (bytea *) palloc((Size) bytes_to_read + VARHDRSZ);
+
+	nbytes = fread(VARDATA(buf), 1, (size_t) bytes_to_read, file);
+
+	if (ferror(file))
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not read file \"%s\": %m", filename)));
+
+	SET_VARSIZE(buf, nbytes + VARHDRSZ);
+
+	FreeFile(file);
+
+	return buf;
+}
 
 /*
  * Read a section of a file, returning it as text

@@ -36,6 +36,7 @@
 #include "catalog/pg_database.h"
 #include "catalog/pg_depend.h"
 #include "catalog/pg_extprotocol.h"
+#include "catalog/pg_extension.h"
 #include "catalog/pg_filespace.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_namespace.h"
@@ -53,6 +54,7 @@
 #include "commands/comment.h"
 #include "commands/dbcommands.h"
 #include "commands/defrem.h"
+#include "commands/extension.h"
 #include "commands/extprotocolcmds.h"
 #include "commands/filespace.h"
 #include "commands/proclang.h"
@@ -467,6 +469,7 @@ findAutoDeletableObjects(const ObjectAddress *object,
 				break;
 			case DEPENDENCY_AUTO:
 			case DEPENDENCY_INTERNAL:
+			case DEPENDENCY_EXTENSION:
 				/* recurse */
 				otherObject.classId = foundDep->classid;
 				otherObject.objectId = foundDep->objid;
@@ -612,6 +615,7 @@ recursiveDeletion(const ObjectAddress *object,
 				/* no problem */
 				break;
 			case DEPENDENCY_INTERNAL:
+			case DEPENDENCY_EXTENSION:
 
 				/*
 				 * This object is part of the internal implementation of
@@ -915,6 +919,7 @@ deleteDependentObjects(const ObjectAddress *object,
 				break;
 			case DEPENDENCY_AUTO:
 			case DEPENDENCY_INTERNAL:
+			case DEPENDENCY_EXTENSION:
 
 				/*
 				 * We propagate the DROP without complaint even in the
@@ -1044,6 +1049,10 @@ doDeletion(const ObjectAddress *object)
 
 		case OCLASS_FILESPACE:
 			RemoveFileSpaceById(object->objectId);
+			break;
+
+		case OCLASS_EXTENSION:
+			RemoveExtensionById(object->objectId);
 			break;
 
 			/*
@@ -1796,6 +1805,10 @@ getObjectClass(const ObjectAddress *object)
 			Assert(object->objectSubId == 0);
 			return OCLASS_EXTPROTOCOL;
 
+		case ExtensionRelationId:
+			Assert(object->objectSubId == 0);
+			return OCLASS_EXTENSION;
+
 		case CompressionRelationId:
 			Assert(object->objectSubId == 0);
 			return OCLASS_COMPRESSION;
@@ -2186,6 +2199,18 @@ getObjectDescription(const ObjectAddress *object)
 					elog(ERROR, "cache lookup failed for filespace %u",
 						 object->objectId);
 				appendStringInfo(&buffer, _("filespace %s"), fsname);
+				break;
+			}				
+
+		case OCLASS_EXTENSION:
+			{
+				char       *extname;
+
+				extname = get_extension_name(object->objectId);
+				if (!extname)
+					elog(ERROR, "cache lookup failed for extension %u",
+						 object->objectId);
+				appendStringInfo(&buffer, _("extension %s"), extname);
 				break;
 			}				
 

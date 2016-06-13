@@ -33,6 +33,7 @@
 #include "access/xact.h"
 #include "catalog/namespace.h"
 #include "commands/async.h"
+#include "commands/extension.h"
 #include "commands/vacuum.h"
 #include "commands/variable.h"
 #include "funcapi.h"
@@ -168,6 +169,8 @@ static const char *show_tcp_keepalives_interval(void);
 static const char *show_tcp_keepalives_count(void);
 static bool assign_autovacuum_max_workers(int newval, bool doit, GucSource source);
 static bool assign_maxconnections(int newval, bool doit, GucSource source);
+
+static bool verify_list_syntax(const char *liststring);
 
 static const char *assign_application_name(const char *newval, bool doit, GucSource source);
 static bool assign_autovacuum_warning(bool newval, bool doit, GucSource source);
@@ -1998,6 +2001,7 @@ static struct config_string ConfigureNamesString[] =
 		&log_error_verbosity_str,
 		"default", assign_log_error_verbosity, NULL
 	},
+
 	{
 		{"log_statement", PGC_SUSET, LOGGING_WHAT,
 			gettext_noop("Sets the type of statements logged."),
@@ -7565,6 +7569,37 @@ assign_allow_system_table_mods(const char *newval,
 	}
 
 	return newval;
+}
+
+static bool
+verify_list_syntax(const char *liststring)
+{
+	char	   *rawname;
+	List	   *namelist;
+
+	if (!liststring || liststring[0] == '\0')
+		return true;
+
+	/* Need a modifiable copy of string */
+	rawname = pstrdup(liststring);
+
+	/* Parse string into list of identifiers */
+	if (!SplitIdentifierString(rawname, ',', &namelist))
+	{
+		/* syntax error in name list */
+		ereport(WARNING,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("List syntax is invalid. \"%s\"",
+						rawname)));
+		list_free(namelist);
+		pfree(rawname);
+		return false;
+	}
+
+	pfree(rawname);
+	list_free(namelist);
+
+	return true;
 }
 
 static const char *

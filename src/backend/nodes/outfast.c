@@ -714,6 +714,16 @@ _outOuterJoinInfo(StringInfo str, OuterJoinInfo *node)
  *****************************************************************************/
 
 static void
+_outCreateExtensionStmt(StringInfo str, CreateExtensionStmt *node)
+{
+	WRITE_NODE_TYPE("CREATEEXTENSIONSTMT");
+	WRITE_STRING_FIELD(extname);
+	WRITE_BOOL_FIELD(if_not_exists);
+	WRITE_NODE_FIELD(options);
+	WRITE_ENUM_FIELD(create_ext_state, CreateExtensionState);
+}
+
+static void
 _outCreateStmt(StringInfo str, CreateStmt *node)
 {
 	WRITE_NODE_TYPE("CREATESTMT");
@@ -1560,6 +1570,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_AppendRelInfo:
 				_outAppendRelInfo(str, obj);
+				break;
+			case T_CreateExtensionStmt:
+				_outCreateExtensionStmt(str, obj);
 				break;
 
 
