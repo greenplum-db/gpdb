@@ -32,7 +32,8 @@ select DISTINCT S from (select row_number() over(partition by i1 order by i2) AS
  1
 (1 row)
 
--- test if shared input scan deletes memory correctly when QuerFinishPending and its child has been eagerly freed
+-- test if shared input scan deletes memory correctly when QuerFinishPending and its child has been eagerly freed,
+-- where the child is a Sort node
 drop table if exists testsisc;
 NOTICE:  table "testsisc" does not exist, skipping
 create table testsisc (i1 int, i2 int, i3 int, i4 int); 
@@ -72,6 +73,8 @@ LIMIT 2;
      1
 (2 rows)
 
+-- test if shared input scan deletes memory correctly when QuerFinishPending and its child has been eagerly freed,
+-- where the child is a Sort node and sort_mk algorithm is used
 set gp_enable_mk_sort=on;
 --start_ignore
 \! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
@@ -100,5 +103,35 @@ LIMIT 2;
      1
 (2 rows)
 
-reset optimizer;
 reset gp_enable_mk_sort;
+set optimizer=off;
+-- test if shared input scan deletes memory correctly when QuerFinishPending and its child has been eagerly freed,
+-- where the child is a Materialize node
+set statement_mem="5MB";
+set gp_cte_sharing=on;
+--start_ignore
+\! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
+20160613:16:17:13:089857 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f execshare_input_next -y reset --seg_dbid 2
+20160613:16:17:13:089857 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160613:16:17:13:089857 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Obtaining Segment details from master...
+20160613:16:17:13:089857 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on 1 segment(s)
+20160613:16:17:13:089857 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on nikos-mac:/Users/narmenatzoglou/gitdev/gpdb/github_updated/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
+20160613:16:17:13:089857 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+-- Set QueryFinishPending to true after SharedInputScan has retrieved the first tuple. 
+-- This will eagerly free the memory context of shared input scan's child node.  
+\! gpfaultinjector -f execshare_input_next -y finish_pending --seg_dbid 2
+20160613:16:17:14:089869 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f execshare_input_next -y finish_pending --seg_dbid 2
+20160613:16:17:14:089869 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160613:16:17:14:089869 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Obtaining Segment details from master...
+20160613:16:17:14:089869 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on 1 segment(s)
+20160613:16:17:14:089869 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on nikos-mac:/Users/narmenatzoglou/gitdev/gpdb/github_updated/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
+20160613:16:17:14:089869 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+--end_ignore 
+ 
+with ctesisc as (select i1 as c1,i3 as c2 from testsisc) select count(*) > 0 from ctesisc as t1, ctesisc as t2 where t1.c1 = t2.c2;
+ ?column? 
+----------
+ t
+(1 row)
+
+reset optimizer;
