@@ -1533,7 +1533,7 @@ bool
 tuplesort_gettupleslot(Tuplesortstate *state, bool forward,
 					   TupleTableSlot *slot)
 {
-	return tuplesort_gettupleslot_pos(state, &state->pos, forward, slot, CurrentMemoryContext);
+	return tuplesort_gettupleslot_pos(state, &state->pos, forward, slot, state->sortcontext);
 }
 
 bool

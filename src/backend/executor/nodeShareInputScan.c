@@ -211,7 +211,7 @@ ShareInputNext(ShareInputScanState *node)
 		{
 			if(gp_enable_mk_sort)
 			{
-				gotOK = tuplesort_gettupleslot_pos_mk(node->ts_state->sortstore_mk, (TuplesortPos_mk *)node->ts_pos, forward, slot);
+				gotOK = tuplesort_gettupleslot_pos_mk(node->ts_state->sortstore_mk, (TuplesortPos_mk *)node->ts_pos, forward, slot, CurrentMemoryContext);
 			}
 			else
 			{

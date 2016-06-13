@@ -40,4 +40,18 @@ select COUNT(i2) over(partition by i1)
 from testsisc
 LIMIT 2;
 
+set gp_enable_mk_sort=on;
+
+--start_ignore
+\! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
+-- Set QueryFinishPending to true after SharedInputScan has retrieved the first tuple. 
+-- This will eagerly free the memory context of shared input scan's child node.  
+\! gpfaultinjector -f execshare_input_next -y finish_pending --seg_dbid 2
+--end_ignore
+
+select COUNT(i2) over(partition by i1)
+from testsisc
+LIMIT 2;
+
 reset optimizer;
+reset gp_enable_mk_sort;

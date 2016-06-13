@@ -118,7 +118,7 @@ extern void tuplesort_performsort(Tuplesortstate *state);
 extern void tuplesort_performsort_mk(Tuplesortstate_mk *state);
 
 extern bool tuplesort_gettupleslot_pos(Tuplesortstate *state, TuplesortPos *pos, bool forward, TupleTableSlot *slot, MemoryContext mcontext);
-extern bool tuplesort_gettupleslot_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos, bool forward, TupleTableSlot *slot);
+extern bool tuplesort_gettupleslot_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos, bool forward, TupleTableSlot *slot, MemoryContext mcontext);
 
 extern bool tuplesort_gettupleslot(Tuplesortstate *state, bool forward, TupleTableSlot *slot);
 extern bool tuplesort_gettupleslot_mk(Tuplesortstate_mk *state, bool forward, TupleTableSlot *slot);
