@@ -48,6 +48,7 @@
 #include "catalog/pg_type.h"
 #include "catalog/pg_window.h"
 #include "catalog/pg_tidycat.h"
+#include "catalog/gp_segment_config.h"
 #include "utils/syscache.h"
 
 
@@ -321,6 +322,17 @@ static const struct cachedesc cacheinfo[] = {
 			0
 		},
 		4
+	},
+	{GpSegmentConfigRelationId,				/* GPSEGCONFIGID */
+		GpSegmentConfigDbidIndexId,
+		1,
+		{
+			Anum_gp_segment_configuration_dbid,
+			0,
+			0,
+			0
+		},
+		16
 	},
 	{IndexRelationId,					/* INDEXRELID */
 		IndexRelidIndexId,
