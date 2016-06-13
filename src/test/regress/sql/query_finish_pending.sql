@@ -28,7 +28,6 @@ insert into testsisc select i, i % 1000, i % 100000, i % 75 from
 set gp_resqueue_print_operator_memory_limits=on;
 set statement_mem='2MB';
 set gp_enable_mk_sort=off;
-set optimizer=off;
 
 --start_ignore
 \! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
@@ -59,7 +58,6 @@ from testsisc
 LIMIT 2;
 
 reset gp_enable_mk_sort;
-set optimizer=off;
 
 -- test if shared input scan deletes memory correctly when QuerFinishPending and its child has been eagerly freed,
 -- where the child is a Materialize node
@@ -74,5 +72,3 @@ set gp_cte_sharing=on;
 --end_ignore 
  
 with ctesisc as (select i1 as c1,i3 as c2 from testsisc) select count(*) > 0 from ctesisc as t1, ctesisc as t2 where t1.c1 = t2.c2;
-
-reset optimizer;
