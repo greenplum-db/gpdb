@@ -4729,7 +4729,7 @@ PostgresMain(int argc, char *argv[],
 					send_ready_for_query = true;
 				}
 				break;
-            case 'M':           /* MPP dispatched stmt from QD */
+            case 'M': /* MPP dispatched stmt from QD */
 				{
 					/* This is exactly like 'Q' above except we peel off and
 					 * set the snapshot information right away.
@@ -4755,24 +4755,22 @@ PostgresMain(int argc, char *argv[],
 					int serializedQueryDispatchDesclen = 0;
 					int seqServerHostlen = 0;
 					int seqServerPort = -1;
-					
-					int		localSlice;
-					int		rootIdx;
-					int		primary_gang_id;
+
+					int localSlice, i;
+					int rootIdx;
+					int numSlices;
+					int *sliceIndexGangIdMap;
 					TimestampTz statementStart;
-					Oid 	suid;
-					Oid 	ouid;
-					Oid 	cuid;
-					bool	suid_is_super = false;
-					bool	ouid_is_super = false;
+					Oid suid;
+					Oid ouid;
+					Oid cuid;
+					bool suid_is_super = false;
+					bool ouid_is_super = false;
 
 					int unusedFlags;
 
 					/* Set statement_timestamp() */
  					SetCurrentStatementStartTimestamp();
- 					
-					/* get the slice number# */
-					localSlice = pq_getmsgint(&input_message, 4);
 
 					/* get the client command serial# */
 					gp_command_count = pq_getmsgint(&input_message, 4);
@@ -4791,8 +4789,6 @@ PostgresMain(int argc, char *argv[],
 					
 					rootIdx = pq_getmsgint(&input_message, 4);
 
-					primary_gang_id = pq_getmsgint(&input_message, 4);
-
 					statementStart = pq_getmsgint64(&input_message);
 					/*
 					 * Should we set the CurrentStatementStartTimestamp to the 
@@ -4802,8 +4798,6 @@ PostgresMain(int argc, char *argv[],
 					 * 
 					 * Or both?
 					 */
-					//SetCurrentStatementStartTimestampToMaster(statementStart);
-					
 					/* read ser string lengths */
 					query_string_len = pq_getmsgint(&input_message, 4);
 					serializedQuerytreelen = pq_getmsgint(&input_message, 4);
@@ -4847,8 +4841,32 @@ PostgresMain(int argc, char *argv[],
 					if (seqServerHostlen > 0)
 						seqServerHost = pq_getmsgbytes(&input_message, seqServerHostlen);
 
+					numSlices = pq_getmsgint(&input_message, 4);
+					if (numSlices > 0)
+					{
+						sliceIndexGangIdMap = palloc(sizeof(int) * numSlices);
+						for (i = 0; i < numSlices; ++i)
+						{
+							sliceIndexGangIdMap[i] = pq_getmsgint(&input_message, 4);
+						}
+					}
+
 					pq_getmsgend(&input_message);
-					 
+
+					/* get the slice number# */
+					if (numSlices > 0)
+					{
+						Assert(qe_gang_id > 0);
+
+						for (localSlice = 0; localSlice < numSlices; ++localSlice)
+						{
+							if (sliceIndexGangIdMap[localSlice] == qe_gang_id)
+								break;
+						}
+
+						pfree(sliceIndexGangIdMap);
+					}
+
 					elog((Debug_print_full_dtm ? LOG : DEBUG5), "MPP dispatched stmt from QD: %s.",query_string);
 
 					if (suid > 0)				
@@ -4919,7 +4937,6 @@ PostgresMain(int argc, char *argv[],
 					const char *gid;
 
 					DistributedTransactionId gxid;
-					int	primary_gang_id;
 					int serializedSnapshotlen;
 					const char *serializedSnapshot;
 
@@ -4947,8 +4964,6 @@ PostgresMain(int argc, char *argv[],
 					/* get the distributed transaction id */
 					gxid = (DistributedTransactionId) pq_getmsgint(&input_message, 4);
 					
-					primary_gang_id = pq_getmsgint(&input_message, 4);
-
 					serializedSnapshotlen = pq_getmsgint(&input_message, 4);
 
 					/* read in the snapshot info/ DtxContext */
@@ -4960,18 +4975,14 @@ PostgresMain(int argc, char *argv[],
 					/*
 					 * This is for debugging.  Otherwise we don't need to deserialize this
 					 */
-					DtxContextInfo_Deserialize(
-							serializedSnapshot, serializedSnapshotlen,
-							&TempDtxContextInfo);
+					DtxContextInfo_Deserialize(serializedSnapshot, serializedSnapshotlen, &TempDtxContextInfo);
 
 					pq_getmsgend(&input_message);
 
 					// Do not touch DTX context.
-
 					exec_mpp_dtx_protocol_command(dtxProtocolCommand, flags, loggingStr, gid, gxid, &TempDtxContextInfo);
 
 					send_ready_for_query = true;
-
             	}
 				break;
 
