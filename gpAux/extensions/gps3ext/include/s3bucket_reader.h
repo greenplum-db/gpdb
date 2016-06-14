@@ -20,7 +20,9 @@ class S3BucketReader : public Reader {
     void close();
 
     void setS3interface(S3Interface *s3);
-    void setUpstreamReader(Reader *reader) { this->upstreamReader = reader; }
+    void setUpstreamReader(Reader *reader) {
+        this->upstreamReader = reader;
+    }
 
     void validateURL();
     ListBucketResult *listBucketWithRetry(int retries);

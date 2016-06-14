@@ -23,9 +23,15 @@ class S3ExtBase {
     // Check whether URL is valid or not.
     virtual bool ValidateURL();
 
-    string get_region() { return this->region; }
-    string get_bucket() { return this->bucket; }
-    string get_prefix() { return this->prefix; }
+    string get_region() {
+        return this->region;
+    }
+    string get_bucket() {
+        return this->bucket;
+    }
+    string get_prefix() {
+        return this->prefix;
+    }
 
    protected:
     S3Credential cred;

@@ -31,9 +31,13 @@ S3BucketReader::S3BucketReader() : Reader() {
     this->needNewReader = true;
 }
 
-S3BucketReader::~S3BucketReader() { this->close(); }
+S3BucketReader::~S3BucketReader() {
+    this->close();
+}
 
-void S3BucketReader::setS3interface(S3Interface *s3) { this->s3interface = s3; }
+void S3BucketReader::setS3interface(S3Interface *s3) {
+    this->s3interface = s3;
+}
 
 void S3BucketReader::open(const ReaderParams &params) {
     this->url = params.getUrl();

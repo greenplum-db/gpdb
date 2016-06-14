@@ -5,7 +5,8 @@
 
 class Reader {
    public:
-    virtual ~Reader() {}
+    virtual ~Reader() {
+    }
 
     virtual void open(const ReaderParams &params) = 0;
 

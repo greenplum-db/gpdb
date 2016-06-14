@@ -16,7 +16,8 @@ class MockS3RESTfulService : public RESTfulService {
 
 class XMLGenerator {
    public:
-    XMLGenerator() : isTruncated(false) {}
+    XMLGenerator() : isTruncated(false) {
+    }
 
     XMLGenerator *setName(string name) {
         this->name = name;
@@ -81,7 +82,9 @@ class S3ServiceTest : public testing::Test {
     }
 
     // TearDown() is invoked immediately after a test finishes.
-    virtual void TearDown() { delete s3service; }
+    virtual void TearDown() {
+        delete s3service;
+    }
 
     Response buildListBucketResponse(int numOfContent, bool isTruncated, int numOfZeroKeys = 0) {
         XMLGenerator generator;

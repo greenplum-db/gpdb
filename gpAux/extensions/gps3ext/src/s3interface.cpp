@@ -22,7 +22,8 @@ using std::stringstream;
 
 class XMLContextHolder {
    public:
-    XMLContextHolder(xmlParserCtxtPtr ctx) : context(ctx) {}
+    XMLContextHolder(xmlParserCtxtPtr ctx) : context(ctx) {
+    }
     ~XMLContextHolder() {
         if (context != NULL) {
             xmlFreeDoc(context->myDoc);
@@ -34,9 +35,11 @@ class XMLContextHolder {
     xmlParserCtxtPtr context;
 };
 
-S3Service::S3Service() : service(NULL) {}
+S3Service::S3Service() : service(NULL) {
+}
 
-S3Service::~S3Service() {}
+S3Service::~S3Service() {
+}
 
 // S3 requires query parameters specified alphabetically.
 string S3Service::getUrl(const string &prefix, const string &schema, const string &host,

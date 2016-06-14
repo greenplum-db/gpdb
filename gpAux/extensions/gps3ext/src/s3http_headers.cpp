@@ -15,9 +15,13 @@
 using std::string;
 using std::stringstream;
 
-HTTPHeaders::HTTPHeaders() { this->header_list = NULL; }
+HTTPHeaders::HTTPHeaders() {
+    this->header_list = NULL;
+}
 
-HTTPHeaders::~HTTPHeaders() { this->FreeList(); }
+HTTPHeaders::~HTTPHeaders() {
+    this->FreeList();
+}
 
 bool HTTPHeaders::Add(HeaderField f, const std::string &v) {
     if (v.empty()) {

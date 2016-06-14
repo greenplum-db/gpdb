@@ -106,4 +106,6 @@ Datum s3_import(PG_FUNCTION_ARGS) {
  * Export data out of GPDB.
  * invoked by GPDB, be careful with C++ exceptions.
  */
-Datum s3_export(PG_FUNCTION_ARGS) { PG_RETURN_INT32(0); }
+Datum s3_export(PG_FUNCTION_ARGS) {
+    PG_RETURN_INT32(0);
+}

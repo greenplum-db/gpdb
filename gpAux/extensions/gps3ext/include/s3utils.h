@@ -54,13 +54,23 @@ class DataBuffer {
    public:
     DataBuffer(uint64_t size);
     ~DataBuffer();
-    void reset() { length = 0; };
+    void reset() {
+        length = 0;
+    };
 
     uint64_t append(const char* buf, uint64_t len);  // ret < len means full
-    const char* getdata() { return data; };
-    uint64_t len() { return this->length; };
-    bool full() { return maxsize == length; };
-    bool empty() { return 0 == length; };
+    const char* getdata() {
+        return data;
+    };
+    uint64_t len() {
+        return this->length;
+    };
+    bool full() {
+        return maxsize == length;
+    };
+    bool empty() {
+        return 0 == length;
+    };
 
    private:
     const uint64_t maxsize;
@@ -75,7 +85,9 @@ class Config {
     ~Config();
     string Get(const string& sec, const string& key, const string& defaultvalue);
     bool Scan(const string& sec, const string& key, const char* scanfmt, void* dst);
-    void* Handle() { return (void*)this->_conf; };
+    void* Handle() {
+        return (void*)this->_conf;
+    };
 
    private:
     ini_t* _conf;

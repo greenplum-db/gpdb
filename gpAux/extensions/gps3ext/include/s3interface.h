@@ -6,7 +6,8 @@
 
 class S3Interface {
    public:
-    virtual ~S3Interface() {}
+    virtual ~S3Interface() {
+    }
 
     // It is caller's responsibility to free returned memory.
     virtual ListBucketResult* ListBucket(const string& schema, const string& region,
@@ -21,7 +22,9 @@ class S3Service : public S3Interface {
     ListBucketResult* ListBucket(const string& schema, const string& region, const string& bucket,
                                  const string& prefix, const S3Credential& cred);
 
-    void setRESTfulService(RESTfulService* service) { this->service = service; }
+    void setRESTfulService(RESTfulService* service) {
+        this->service = service;
+    }
 
    private:
     string getUrl(const string& prefix, const string& schema, const string& host,

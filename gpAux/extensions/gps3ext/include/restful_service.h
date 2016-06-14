@@ -17,20 +17,34 @@ enum ResponseStatus {
 
 class Response {
    public:
-    Response() : status(FAIL) {}
-    Response(ResponseStatus status, const vector<uint8_t>& buf) : status(status), buffer(buf) {}
+    Response() : status(FAIL) {
+    }
+    Response(ResponseStatus status, const vector<uint8_t>& buf) : status(status), buffer(buf) {
+    }
 
-    bool isSuccess() { return status == OK; }
+    bool isSuccess() {
+        return status == OK;
+    }
 
-    vector<uint8_t>& getRawData() { return buffer; }
+    vector<uint8_t>& getRawData() {
+        return buffer;
+    }
 
-    const string& getMessage() const { return message; }
+    const string& getMessage() const {
+        return message;
+    }
 
-    void setMessage(const string& message) { this->message = message; }
+    void setMessage(const string& message) {
+        this->message = message;
+    }
 
-    const ResponseStatus& getStatus() const { return status; }
+    const ResponseStatus& getStatus() const {
+        return status;
+    }
 
-    void setStatus(const ResponseStatus& status) { this->status = status; }
+    void setStatus(const ResponseStatus& status) {
+        this->status = status;
+    }
 
     void appendBuffer(char* ptr, size_t size) {
         // TODO: Fix eclipse warning.

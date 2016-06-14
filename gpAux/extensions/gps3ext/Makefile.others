@@ -24,7 +24,7 @@ endif
 all: test
 
 # Google TEST
-TEST_SRC_FILES = test/s3conf_test.cpp test/s3utils_test.cpp test/gpreader_test.cpp test/s3common_test.cpp test/s3log_test.cpp test/s3url_parser_test.cpp test/s3http_headers_test.cpp test/s3thread_test.cpp test/s3reader_test.cpp test/s3bucket_reader_test.cpp test/s3interface_test.cpp test/s3restful_service_test.cpp
+TEST_SRC_FILES = test/s3conf_test.cpp test/s3utils_test.cpp test/gpreader_test.cpp test/s3common_test.cpp test/s3log_test.cpp test/s3url_parser_test.cpp test/s3http_headers_test.cpp test/s3thread_test.cpp test/s3reader_test.cpp test/s3bucket_reader_test.cpp test/s3interface_test.cpp test/s3restful_service_test.cpp test/uncompress_reader_test.cpp
 TEST_OBJS = $(TEST_SRC_FILES:.cpp=.o)
 TEST_APP = s3test
 
@@ -79,6 +79,6 @@ lint:
 	cppcheck -v --enable=warning src/*.cpp test/*.cpp include/*.h
 
 format:
-	clang-format -style="{BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 100}" -i src/*.cpp test/*.cpp include/*.h
+	clang-format -style="{BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 100, AllowShortFunctionsOnASingleLine: None}" -i src/*.cpp test/*.cpp include/*.h
 
 .PHONY: buildtest test coverage clean distclean tags lint format

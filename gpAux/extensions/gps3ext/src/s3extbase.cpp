@@ -27,7 +27,8 @@ S3ExtBase::S3ExtBase(const string &url) {
     S3INFO("File is splited to %d each", s3ext_chunksize);
 }
 
-S3ExtBase::~S3ExtBase() {}
+S3ExtBase::~S3ExtBase() {
+}
 
 // Set schema to 'https' or 'http'
 void S3ExtBase::SetSchema() {

@@ -39,11 +39,17 @@ typedef enum compression_type {
 class OffsetMgr {
    public:
     OffsetMgr(uint64_t maxsize, uint64_t chunksize);
-    ~OffsetMgr() { pthread_mutex_destroy(&this->offset_lock); };
+    ~OffsetMgr() {
+        pthread_mutex_destroy(&this->offset_lock);
+    };
     Range NextOffset();  // ret.len == 0 means EOF
     void Reset(uint64_t n);
-    uint64_t Chunksize() { return this->chunksize; };
-    uint64_t Size() { return this->maxsize; };
+    uint64_t Chunksize() {
+        return this->chunksize;
+    };
+    uint64_t Size() {
+        return this->maxsize;
+    };
 
    private:
     pthread_mutex_t offset_lock;
@@ -59,8 +65,12 @@ class BlockingBuffer {
     BlockingBuffer(const string& url, OffsetMgr* o);
     virtual ~BlockingBuffer();
     bool Init();
-    bool EndOfFile() { return this->eof; };
-    bool Error() { return this->error; };
+    bool EndOfFile() {
+        return this->eof;
+    };
+    bool Error() {
+        return this->error;
+    };
 
     uint64_t Read(char* buf, uint64_t len);
     uint64_t Fill();
@@ -140,7 +150,8 @@ class HTTPFetcher : public BlockingBuffer {
 
    protected:
     uint64_t fetchdata(uint64_t offset, char* data, uint64_t len);
-    virtual void signHeader() {}
+    virtual void signHeader() {
+    }
     CURL* curl;
     Method method;
     HTTPHeaders headers;
@@ -175,14 +186,20 @@ struct ListBucketResult {
 };
 
 struct BucketContent {
-    BucketContent() : name(""), size(0) {}
+    BucketContent() : name(""), size(0) {
+    }
     BucketContent(string name, uint64_t size) {
         this->name = name;
         this->size = size;
     }
-    ~BucketContent() {}
-    string getName() const { return this->name; };
-    uint64_t getSize() const { return this->size; };
+    ~BucketContent() {
+    }
+    string getName() const {
+        return this->name;
+    };
+    uint64_t getSize() const {
+        return this->size;
+    };
 
     string name;
     uint64_t size;

@@ -18,7 +18,9 @@ static void locking_function(int mode, int n, const char *file, int line) {
         MUTEX_UNLOCK(mutex_buf[n]);
 }
 
-static unsigned long id_function(void) { return ((unsigned long)THREAD_ID); }
+static unsigned long id_function(void) {
+    return ((unsigned long)THREAD_ID);
+}
 
 int thread_setup(void) {
     int i;

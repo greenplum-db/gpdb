@@ -13,10 +13,13 @@
 
 using namespace std;
 
-S3RESTfulService::S3RESTfulService() {}
+S3RESTfulService::S3RESTfulService() {
+}
 
-S3RESTfulService::~S3RESTfulService() {}
+S3RESTfulService::~S3RESTfulService() {
+}
 
+// curl's write function callback.
 size_t RESTfulServiceCallback(char *ptr, size_t size, size_t nmemb, void *userp) {
     size_t realsize = size * nmemb;
     Response *resp = (Response *)userp;
@@ -24,6 +27,11 @@ size_t RESTfulServiceCallback(char *ptr, size_t size, size_t nmemb, void *userp)
     return realsize;
 }
 
+// get() will execute HTTP GET RESTful API with given url/headers/params,
+// and return raw response content.
+//
+// This method does not care about response format, caller need to handle
+// response format accordingly.
 Response S3RESTfulService::get(const string &url, HTTPHeaders &headers,
                                const map<string, string> &params) {
     Response response;

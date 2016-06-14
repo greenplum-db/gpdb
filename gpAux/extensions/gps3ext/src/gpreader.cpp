@@ -17,7 +17,8 @@ S3Reader::S3Reader(const string &url) : S3ExtBase(url) {
     this->keylist = NULL;
 }
 
-S3Reader::~S3Reader() {}
+S3Reader::~S3Reader() {
+}
 
 bool S3Reader::Init(int segid, int segnum, int chunksize) {
     // set segment id and num

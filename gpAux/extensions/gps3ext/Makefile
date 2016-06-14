@@ -16,7 +16,7 @@ endif
 
 # Targets
 MODULE_big = gps3ext
-OBJS = lib/http_parser.o lib/ini.o src/gps3ext.o src/s3conf.o src/s3common.o src/gpreader.o src/s3utils.o src/s3log.o src/s3url_parser.o src/s3http_headers.o src/s3thread.o src/s3extbase.o src/s3reader.o src/s3interface.o src/s3restful_service.o
+OBJS = lib/http_parser.o lib/ini.o src/gps3ext.o src/s3conf.o src/s3common.o src/gpreader.o src/s3utils.o src/s3log.o src/s3url_parser.o src/s3http_headers.o src/s3thread.o src/s3extbase.o src/s3reader.o src/s3interface.o src/s3restful_service.o src/uncompress_reader.o
 
 # Launch
 PGXS := $(shell pg_config --pgxs)
