@@ -448,6 +448,7 @@ _outSequence(StringInfo str, Sequence *node)
 	WRITE_NODE_TYPE("SEQUENCE");
 	_outPlanInfo(str, (Plan *)node);
 	WRITE_NODE_FIELD(subplans);
+	WRITE_NODE_FIELD(static_selector);
 }
 
 static void

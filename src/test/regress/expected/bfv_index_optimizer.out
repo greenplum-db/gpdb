@@ -137,8 +137,8 @@ explain SELECT count(*)
 FROM bfv_tab2_facttable1 ft, bfv_tab2_dimdate dt, bfv_tab2_dimtabl1 dt1
 WHERE ft.wk_id = dt.wk_id
 AND ft.id = dt1.id;
-                                                                      QUERY PLAN                                                                       
--------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                   QUERY PLAN                                                                    
+-------------------------------------------------------------------------------------------------------------------------------------------------
  Aggregate  (cost=0.00..862.16 rows=1 width=8)
    ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.16 rows=1 width=8)
          ->  Aggregate  (cost=0.00..862.16 rows=1 width=8)
@@ -153,15 +153,14 @@ AND ft.id = dt1.id;
                                        ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=7 width=4)
                                              ->  Table Scan on bfv_tab2_dimtabl1  (cost=0.00..431.00 rows=3 width=4)
                                        ->  Sequence  (cost=0.00..0.16 rows=1 width=2)
-                                             ->  Partition Selector for bfv_tab2_facttable1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-                                                   Partitions selected:  20 (out of 20)
+                                             Partitions selected: 20 (out of 20)
                                              ->  Bitmap Table Scan on bfv_tab2_facttable1 (dynamic scan id: 1)  (cost=0.00..0.16 rows=1 width=2)
                                                    Recheck Cond: bfv_tab2_facttable1.id = bfv_tab2_dimtabl1.id
                                                    ->  Bitmap Index Scan on idx_bfv_tab2_facttable1_1_prt_dflt  (cost=0.00..0.00 rows=0 width=0)
                                                          Index Cond: bfv_tab2_facttable1.id = bfv_tab2_dimtabl1.id
  Settings:  optimizer=on
- Optimizer status: PQO version 1.621
-(22 rows)
+ Optimizer status: PQO version 1.633
+(21 rows)
 
 -- start_ignore
 create language plpythonu;

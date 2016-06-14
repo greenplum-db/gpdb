@@ -103,7 +103,7 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
 			     const char *qlabel,
                  StringInfo str, int indent, ExplainState *es);
 static void
-show_static_part_selection(Plan *plan, int indent, StringInfo str);
+show_static_part_selection(PartitionSelector *ps, Sequence *parent, StringInfo str, int indent, ExplainState *es);
 
 static const char *explain_get_index_name(Oid indexId);
 
@@ -1667,7 +1667,24 @@ explain_outNode(StringInfo str,
 								NULL, outerPlan(plan),
 								NULL, NULL,
 								str, indent, es);
-				show_static_part_selection(plan, indent, str);
+				if (((PartitionSelector *) plan)->staticSelection)
+				{
+					/*
+					 * We should not encounter static selectors as part of the
+					 * normal plan traversal: they are handled specially, as
+					 * part of a Sequence node.
+					 */
+					elog(WARNING, "unexpected static PartitionSelector");
+				}
+			}
+			break;
+		case T_Sequence:
+			{
+				Sequence *s = (Sequence *) plan;
+
+				if (s->static_selector)
+					show_static_part_selection(s->static_selector, s,
+											   str, indent, es);
 			}
 			break;
 		default:
@@ -2291,15 +2308,25 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
 
 /*
  * Show the number of statically selected partitions if available.
+ *
+ * This is similar to show_upper_qual(), but the "printablePredicate" produced
+ * by ORCA is a bit special: INNER Vars refer to the child of the Sequence node
+ * we are part of.
  */
 static void
-show_static_part_selection(Plan *plan, int indent, StringInfo str)
+show_static_part_selection(PartitionSelector *ps, Sequence *parent,
+						   StringInfo str, int indent, ExplainState *es)
 {
-	PartitionSelector *ps = (PartitionSelector *) plan;
-
-	if (! ps->staticSelection)
-	{
+	if (!ps->staticSelection)
 		return;
+
+	if (ps->printablePredicate)
+	{
+		show_upper_qual(list_make1(ps->printablePredicate),
+						"Partition Selector",
+						NULL, NULL,
+						NULL, (Plan *) parent,
+						str, indent, es);
 	}
 
 	int nPartsSelected = list_length(ps->staticPartOids);
@@ -2309,7 +2336,7 @@ show_static_part_selection(Plan *plan, int indent, StringInfo str)
 		appendStringInfoString(str, "  ");
 	}
 
-	appendStringInfo(str, "  Partitions selected:  %d (out of %d)\n", nPartsSelected, nPartsTotal);
+	appendStringInfo(str, "  Partitions selected: %d (out of %d)\n", nPartsSelected, nPartsTotal);
 }
 
 /*

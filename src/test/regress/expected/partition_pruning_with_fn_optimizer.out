@@ -34,88 +34,94 @@ NOTICE:  CREATE TABLE will create partition "ds_4_1_prt_p200803" for table "ds_4
 -- Known_opt_diff: MPP-21316
 -- end_ignore
 explain select * from ds_4 where month_id = '200800';
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
-   ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
-         ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-               Filter: month_id::text = '200800'::text
-         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=72)
+   ->  Sequence  (cost=0.00..431.00 rows=1 width=72)
+         Partition Selector: ds_4.month_id = '200800'::text::character varying
+         Partitions selected: 1 (out of 4)
+         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=72)
                Filter: month_id::text = '200800'::text
  Settings:  optimizer=on
-(7 rows)
+ Optimizer status: PQO version 1.633
+(8 rows)
 
 -- now we can evaluate this function at planning/prune time
 -- start_ignore
 -- Known_opt_diff: MPP-21316
 -- end_ignore
 explain select * from ds_4 where month_id::int = 200800;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
-   ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
-         ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=72)
+   ->  Sequence  (cost=0.00..431.00 rows=1 width=72)
+         Partitions selected: 4 (out of 4)
+         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=72)
                Filter: int4(month_id) = 200800
  Settings:  optimizer=on
-(6 rows)
+ Optimizer status: PQO version 1.633
+(7 rows)
 
 -- this will be satisfied by 200800
 -- start_ignore
 -- Known_opt_diff: MPP-21316
 -- end_ignore
 explain select * from ds_4 where month_id::int - 801 < 200000;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
-   ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
-         ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=72)
+   ->  Sequence  (cost=0.00..431.00 rows=1 width=72)
+         Partitions selected: 4 (out of 4)
+         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=72)
                Filter: (int4(month_id) - 801) < 200000
  Settings:  optimizer=on
-(6 rows)
+ Optimizer status: PQO version 1.633
+(7 rows)
 
 -- test OR case -- should NOT get pruning
 explain select * from ds_4 where month_id::int - 801 < 200000 OR count_vas > 10;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
-   ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
-         ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=72)
+   ->  Sequence  (cost=0.00..431.00 rows=1 width=72)
+         Partitions selected: 4 (out of 4)
+         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=72)
                Filter: (int4(month_id) - 801) < 200000 OR count_vas > 10
  Settings:  optimizer=on
-(6 rows)
+ Optimizer status: PQO version 1.633
+(7 rows)
 
 -- test AND case -- should still get pruning
 -- start_ignore
 -- Known_opt_diff: MPP-21316
 -- end_ignore
 explain select * from ds_4 where month_id::int - 801 < 200000 AND count_vas > 10;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
-   ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
-         ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=72)
+   ->  Sequence  (cost=0.00..431.00 rows=1 width=72)
+         Partitions selected: 4 (out of 4)
+         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=72)
                Filter: (int4(month_id) - 801) < 200000 AND count_vas > 10
  Settings:  optimizer=on
-(6 rows)
+ Optimizer status: PQO version 1.633
+(7 rows)
 
 -- test expression case : should get pruning
 -- start_ignore
 -- Known_opt_diff: MPP-21316
 -- end_ignore
 explain select * from ds_4 where case when month_id = '200800' then 100 else 2 end = 100;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
-   ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
-         ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=72)
+   ->  Sequence  (cost=0.00..431.00 rows=1 width=72)
+         Partitions selected: 4 (out of 4)
+         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=72)
                Filter: CASE WHEN month_id::text = '200800'::text THEN 100 ELSE 2 END = 100
  Settings:  optimizer=on
-(6 rows)
+ Optimizer status: PQO version 1.633
+(7 rows)
 
 -- test expression case : should get pruning
 -- start_ignore
@@ -124,28 +130,30 @@ explain select * from ds_4 where case when month_id = '200800' then 100 else 2 e
 explain select * from ds_4 where case when month_id = '200800' then NULL else 2 end IS NULL;
                                               QUERY PLAN                                               
 -------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
-   ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
-         ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=72)
+   ->  Sequence  (cost=0.00..431.00 rows=1 width=72)
+         Partitions selected: 4 (out of 4)
+         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=72)
                Filter: CASE WHEN month_id::text = '200800'::text THEN NULL::integer ELSE 2 END IS NULL
  Settings:  optimizer=on
-(6 rows)
+ Optimizer status: PQO version 1.633
+(7 rows)
 
 -- should still get pruning here -- count_vas is only used in the path for month id = 200800
 -- start_ignore
 -- Known_opt_diff: MPP-21316
 -- end_ignore
 explain select * from ds_4 where case when month_id::int = 200800 then count_vas else 2 end IS NULL;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
-   ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
-         ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=72)
+   ->  Sequence  (cost=0.00..431.00 rows=1 width=72)
+         Partitions selected: 4 (out of 4)
+         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=72)
                Filter: CASE WHEN int4(month_id) = 200800 THEN count_vas ELSE 2 END IS NULL
  Settings:  optimizer=on
-(6 rows)
+ Optimizer status: PQO version 1.633
+(7 rows)
 
 -- do one that matches a couple partitions
 -- start_ignore
@@ -154,13 +162,14 @@ explain select * from ds_4 where case when month_id::int = 200800 then count_vas
 explain select * from ds_4 where month_id::int in (200801, 1,55,6,6,6,6,66,565,65,65,200803);
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
-   ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
-         ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=72)
+   ->  Sequence  (cost=0.00..431.00 rows=1 width=72)
+         Partitions selected: 4 (out of 4)
+         ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=72)
                Filter: int4(month_id) = ANY ('{200801,1,55,6,6,6,6,66,565,65,65,200803}'::integer[])
  Settings:  optimizer=on
-(6 rows)
+ Optimizer status: PQO version 1.633
+(7 rows)
 
 -- cleanup
 drop table ds_4;
@@ -223,35 +232,37 @@ insert into ds_2(month_id) values('200809');
 -- end_ignore
 set optimizer_segments=2;
 explain select * from ds_2 where month_id::int in (200808, 1315) order by month_id;
-                                            QUERY PLAN                                            
---------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=72)
    Merge Key: month_id
-   ->  Sort  (cost=0.00..431.00 rows=1 width=80)
+   ->  Sort  (cost=0.00..431.00 rows=1 width=72)
          Sort Key: month_id
-         ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
-               ->  Partition Selector for ds_2 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-               ->  Dynamic Table Scan on ds_2 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
+         ->  Sequence  (cost=0.00..431.00 rows=1 width=72)
+               Partitions selected: 10 (out of 10)
+               ->  Dynamic Table Scan on ds_2 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=72)
                      Filter: int4(month_id) = ANY ('{200808,1315}'::integer[])
  Settings:  optimizer=on; optimizer_segments=2
-(9 rows)
+ Optimizer status: PQO version 1.633
+(10 rows)
 
 -- start_ignore
 -- Known_opt_diff: MPP-21316
 -- end_ignore
 explain  select * from ds_2 where month_id::int in (200808, 200801, 2008010) order by month_id;
-                                            QUERY PLAN                                            
---------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=72)
    Merge Key: month_id
-   ->  Sort  (cost=0.00..431.00 rows=1 width=80)
+   ->  Sort  (cost=0.00..431.00 rows=1 width=72)
          Sort Key: month_id
-         ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
-               ->  Partition Selector for ds_2 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-               ->  Dynamic Table Scan on ds_2 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
+         ->  Sequence  (cost=0.00..431.00 rows=1 width=72)
+               Partitions selected: 10 (out of 10)
+               ->  Dynamic Table Scan on ds_2 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=72)
                      Filter: int4(month_id) = ANY ('{200808,200801,2008010}'::integer[])
  Settings:  optimizer=on; optimizer_segments=2
-(9 rows)
+ Optimizer status: PQO version 1.633
+(10 rows)
 
 reset optimizer_segments;
 select * from ds_2 where month_id::int in (200907, 1315) order by month_id;

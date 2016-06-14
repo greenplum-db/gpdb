@@ -8137,17 +8137,15 @@ select * from orca.t order by 1,2;
 explain select * from orca.t order by 1,2;
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=32)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=32)
    Merge Key: timest, user_id
    ->  Sequence  (cost=0.00..431.00 rows=1 width=32)
-         ->  Partition Selector for t (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-               Partitions selected:  6 (out of 6)
          ->  Sort  (cost=0.00..431.00 rows=1 width=32)
                Sort Key: timest, user_id
                ->  Dynamic Table Scan on t (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=32)
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.630
-(10 rows)
+ Optimizer status: PQO version 1.633
+(8 rows)
 
 select tag2, tag1 from orca.t order by 1, 2;;
  tag2  | tag1  
@@ -8226,10 +8224,8 @@ set optimizer_plan_id = 2;
 explain select * from orca.t_date where user_id=9;
                                                    QUERY PLAN                                                   
 ----------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..437.00 rows=1 width=28)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..437.00 rows=1 width=28)
    ->  Sequence  (cost=0.00..437.00 rows=1 width=28)
-         ->  Partition Selector for t_date (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-               Partitions selected:  6 (out of 6)
          ->  Result  (cost=0.00..437.00 rows=1 width=28)
                ->  Append  (cost=0.00..437.00 rows=1 width=28)
                      ->  Dynamic Index Scan on t_date (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=58)
@@ -8237,8 +8233,8 @@ explain select * from orca.t_date where user_id=9;
                      ->  Dynamic Table Scan on t_date (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=58)
                            Filter: user_id = 9::numeric
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.602
-(12 rows)
+ Optimizer status: PQO version 1.633
+(10 rows)
 
 select * from orca.t_date where user_id=9;
    timest   | user_id | tag1  | tag2  
@@ -8281,10 +8277,8 @@ set optimizer_plan_id = 2;
 explain select * from orca.t_text where user_id=9;
                                                    QUERY PLAN                                                   
 ----------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..437.00 rows=1 width=28)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..437.00 rows=1 width=28)
    ->  Sequence  (cost=0.00..437.00 rows=1 width=28)
-         ->  Partition Selector for t_text (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-               Partitions selected:  3 (out of 3)
          ->  Result  (cost=0.00..437.00 rows=1 width=28)
                ->  Append  (cost=0.00..437.00 rows=1 width=28)
                      ->  Dynamic Index Scan on t_text (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=58)
@@ -8292,8 +8286,8 @@ explain select * from orca.t_text where user_id=9;
                      ->  Dynamic Table Scan on t_text (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=58)
                            Filter: user_id = 9::numeric
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.602
-(12 rows)
+ Optimizer status: PQO version 1.633
+(10 rows)
 
 select * from orca.t_text where user_id=9;
    timest   | user_id | tag1  | tag2  
@@ -8348,17 +8342,15 @@ select disable_xform('CXformDynamicGet2DynamicTableScan');
 (1 row)
 
 explain select * from orca.t_employee where user_id = 2;
-                                                QUERY PLAN                                                
-----------------------------------------------------------------------------------------------------------
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..6.00 rows=1 width=28)
    ->  Sequence  (cost=0.00..6.00 rows=1 width=28)
-         ->  Partition Selector for t_employee (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-               Partitions selected:  2 (out of 2)
          ->  Dynamic Index Scan on t_employee (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=28)
                Index Cond: user_id = 2::numeric
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.602
-(8 rows)
+ Optimizer status: PQO version 1.633
+(6 rows)
 
 select * from orca.t_employee where user_id = 2;
    timest   | user_id | tag1  |     emp      
@@ -8401,10 +8393,8 @@ set optimizer_plan_id = 2;
 explain select * from orca.t_ceeval_ints where user_id=4;
                                                       QUERY PLAN                                                       
 -----------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..437.00 rows=1 width=28)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..437.00 rows=1 width=28)
    ->  Sequence  (cost=0.00..437.00 rows=1 width=28)
-         ->  Partition Selector for t_ceeval_ints (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-               Partitions selected:  3 (out of 3)
          ->  Result  (cost=0.00..437.00 rows=1 width=28)
                ->  Append  (cost=0.00..437.00 rows=1 width=28)
                      ->  Dynamic Index Scan on t_ceeval_ints (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=58)
@@ -8412,8 +8402,8 @@ explain select * from orca.t_ceeval_ints where user_id=4;
                      ->  Dynamic Table Scan on t_ceeval_ints (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=58)
                            Filter: user_id = 4::numeric
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.602
-(12 rows)
+ Optimizer status: PQO version 1.633
+(10 rows)
 
 select * from orca.t_ceeval_ints where user_id=4;
  user_id | category_id | tag1  | tag2  
@@ -9213,20 +9203,18 @@ insert into orca.bm_dyn_test values(2, 5, '2');
 set optimizer_enable_bitmapscan=on;
 -- gather on 1 segment because of direct dispatch
 explain select * from orca.bm_dyn_test where i=2 and t='2';
-                                                QUERY PLAN                                                 
------------------------------------------------------------------------------------------------------------
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..0.00 rows=1 width=16)
    ->  Sequence  (cost=0.00..0.00 rows=1 width=16)
-         ->  Partition Selector for bm_dyn_test (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-               Partitions selected:  6 (out of 6)
          ->  Bitmap Table Scan on bm_dyn_test (dynamic scan id: 1)  (cost=0.00..0.00 rows=1 width=16)
                Recheck Cond: i = 2
                Filter: i = 2 AND t = '2'::text
                ->  Bitmap Index Scan on bm_dyn_test_idx_1_prt_part0  (cost=0.00..0.00 rows=0 width=0)
                      Index Cond: i = 2
  Settings:  optimizer=on
- Optimizer status: PQO version 1.602
-(11 rows)
+ Optimizer status: PQO version 1.633
+(9 rows)
 
 select * from orca.bm_dyn_test where i=2 and t='2';
  i | j | t 
@@ -9750,8 +9738,6 @@ ORDER BY 1 asc ;
                                              ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
                                                    ->  Table Scan on my_tt_agg_opt  (cost=0.00..431.00 rows=1 width=62)
                                        ->  Sequence  (cost=0.00..874.01 rows=1 width=8)
-                                             ->  Partition Selector for my_tq_agg_opt_part (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-                                                   Partitions selected:  2 (out of 2)
                                              ->  Result  (cost=0.00..874.01 rows=1 width=8)
                                                    ->  Append  (cost=0.00..874.01 rows=1 width=8)
                                                          ->  Nested Loop  (cost=0.00..437.00 rows=1 width=132)

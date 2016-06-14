@@ -4174,7 +4174,31 @@ CTranslatorDXLToPlStmt::PplanSequence
 
 		Plan *pplanChild = PplFromDXL(pdxlnChild, &dxltrctxChild, pplan, pdrgpdxltrctxPrevSiblings);
 
-		psequence->subplans = gpdb::PlAppendElement(psequence->subplans, pplanChild);
+		/*
+		 * When the plan comes out from ORCA, a "static" partition
+		 * selection is represented by a subplan that looks like this:
+		 *
+		 * Sequence
+		 *   -> Partition Selector
+		 *   -> Dynamic Table Scan
+		 *
+		 * The Partition Selector node is a bit special though, as it
+		 * modifies the behaviour of its sibling Dynamic Table Scan
+		 * node, and the printablePredicate can contain Vars that
+		 * refer to a child of the Sequence node, rather than
+		 * children of the PartititionSelector node itself. So in the
+		 * Plan tree, we want to put it in the dedicated
+		 * static_selector field, rather than having it as just
+		 * another child node of the Sequence.
+		 */
+		if (IsA(pplanChild, PartitionSelector))
+		{
+			psequence->static_selector = (PartitionSelector *) pplanChild;
+		}
+		else
+		{
+			psequence->subplans = gpdb::PlAppendElement(psequence->subplans, pplanChild);
+		}
 		pplan->nMotionNodes += pplanChild->nMotionNodes;
 	}
 

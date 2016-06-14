@@ -870,19 +870,18 @@ INFO:  Dispatch command to ALL contents
 (1 row)
 
 explain select count(*) from mpp7638 where a =1;
-                                                    QUERY PLAN                                                     
--------------------------------------------------------------------------------------------------------------------
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
  Aggregate  (cost=0.00..431.00 rows=1 width=8)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
          ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
                ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
-                     ->  Partition Selector for mpp7638 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-                           Partitions selected:  9 (out of 9)
+                     Partitions selected: 9 (out of 9)
                      ->  Dynamic Table Scan on mpp7638 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=4)
                            Filter: a = 1
  Settings:  optimizer=on
- Optimizer status: PQO version 1.624
-(10 rows)
+ Optimizer status: PQO version 1.633
+(9 rows)
 
 alter table mpp7638 set distributed by (a, b, c);
 INFO:  Dispatch command to ALL contents

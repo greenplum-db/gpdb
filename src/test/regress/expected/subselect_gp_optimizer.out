@@ -86,16 +86,15 @@ NOTICE:  CREATE TABLE will create partition "csq_t2_1_prt_4" for table "csq_t2"
 insert into csq_t1 select * from csq_t1_base;
 insert into csq_t2 select * from csq_t2_base;
 explain select * from csq_t1 where csq_t1.x >ALL (select csq_t2.x from csq_t2 where csq_t2.y=csq_t1.y) order by 1;
-                                                                       QUERY PLAN                                                                       
---------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
  Result  (cost=0.00..1293.00 rows=1 width=8)
    Filter: (subplan)
    ->  Sort  (cost=0.00..431.00 rows=1 width=8)
          Sort Key: csq_t1.x
-         ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=8)
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
                ->  Sequence  (cost=0.00..431.00 rows=1 width=8)
-                     ->  Partition Selector for csq_t1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-                           Partitions selected:  4 (out of 4)
+                     Partitions selected: 4 (out of 4)
                      ->  Dynamic Table Scan on csq_t1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=8)
    SubPlan 1
      ->  Result  (cost=0.00..431.00 rows=1 width=1)
@@ -107,14 +106,13 @@ explain select * from csq_t1 where csq_t1.x >ALL (select csq_t2.x from csq_t2 wh
                                    ->  Result  (cost=0.00..431.00 rows=1 width=4)
                                          Filter: csq_t2.y = $1
                                          ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
-                                               ->  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..431.00 rows=1 width=8)
+                                               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
                                                      ->  Sequence  (cost=0.00..431.00 rows=1 width=8)
-                                                           ->  Partition Selector for csq_t2 (dynamic scan id: 2)  (cost=10.00..100.00 rows=50 width=4)
-                                                                 Partitions selected:  4 (out of 4)
+                                                           Partitions selected: 4 (out of 4)
                                                            ->  Dynamic Table Scan on csq_t2 (dynamic scan id: 2)  (cost=0.00..431.00 rows=1 width=8)
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
-(26 rows)
+ Optimizer status: PQO version 1.633
+(24 rows)
 
 select * from csq_t1 where csq_t1.x >ALL (select csq_t2.x from csq_t2 where csq_t2.y=csq_t1.y) order by 1; -- expected (4,2)
  x | y 
@@ -1193,26 +1191,25 @@ CASE
 	ELSE 'Q2'::text END  AS  cc,  1 AS nn
 FROM t_mpp_20470 b;
 explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
-                                                                                 QUERY PLAN                                                                                  
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                                QUERY PLAN                                                                                 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Window  (cost=0.00..862.00 rows=1 width=16)
-   ->  Gather Motion 2:1  (slice3; segments: 2)  (cost=0.00..862.00 rows=2 width=12)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=2 width=12)
          ->  Result  (cost=0.00..862.00 rows=1 width=12)
                ->  Result  (cost=0.00..862.00 rows=1 width=16)
                      ->  Hash Left Join  (cost=0.00..862.00 rows=1 width=16)
                            Hash Cond: public.t_mpp_20470.col_name::text = public.t_mpp_20470.col_name::text
-                           ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=8)
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
                                  Hash Key: public.t_mpp_20470.col_name
                                  ->  Sequence  (cost=0.00..431.00 rows=1 width=8)
-                                       ->  Partition Selector for t_mpp_20470 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
-                                             Partitions selected:  2 (out of 2)
+                                       Partitions selected: 2 (out of 2)
                                        ->  Dynamic Table Scan on t_mpp_20470 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=8)
                            ->  Hash  (cost=431.00..431.00 rows=1 width=16)
                                  ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=16)
                                        Group By: public.t_mpp_20470.col_name
                                        ->  Sort  (cost=0.00..431.00 rows=1 width=16)
                                              Sort Key: public.t_mpp_20470.col_name
-                                             ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=0.00..431.00 rows=1 width=16)
+                                             ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
                                                    Hash Key: public.t_mpp_20470.col_name
                                                    ->  Result  (cost=0.00..431.00 rows=1 width=16)
                                                          ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=16)
@@ -1220,12 +1217,11 @@ explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
                                                                ->  Sort  (cost=0.00..431.00 rows=1 width=12)
                                                                      Sort Key: public.t_mpp_20470.col_name
                                                                      ->  Sequence  (cost=0.00..431.00 rows=1 width=12)
-                                                                           ->  Partition Selector for t_mpp_20470 (dynamic scan id: 2)  (cost=10.00..100.00 rows=50 width=4)
-                                                                                 Partitions selected:  2 (out of 2)
+                                                                           Partitions selected: 2 (out of 2)
                                                                            ->  Dynamic Table Scan on t_mpp_20470 (dynamic scan id: 2)  (cost=0.00..431.00 rows=1 width=12)
  Settings:  optimizer=on; optimizer_segments=3
- Optimizer status: PQO version 1.621
-(30 rows)
+ Optimizer status: PQO version 1.633
+(28 rows)
 
 drop view v1_mpp_20470;
 drop table t_mpp_20470;

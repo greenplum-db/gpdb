@@ -1756,16 +1756,15 @@ NOTICE:  CREATE TABLE will create partition "tbl6833_anl_1_prt_bb_1" for table "
 NOTICE:  CREATE TABLE will create partition "tbl6833_anl_1_prt_bb_2" for table "tbl6833_anl"
 analyze qp_misc_jiras.tbl6833_anl;
 explain select * from qp_misc_jiras.tbl6833_anl; -- should not hit cdbRelSize();
-                                                QUERY PLAN                                                 
------------------------------------------------------------------------------------------------------------
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
    ->  Sequence  (cost=0.00..431.00 rows=1 width=12)
-         ->  Partition Selector for tbl6833_anl (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-               Partitions selected:  2 (out of 2)
+         Partitions selected: 2 (out of 2)
          ->  Dynamic Table Scan on tbl6833_anl (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=12)
  Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(7 rows)
+ Optimizer status: PQO version 1.633
+(6 rows)
 
 select relname, reltuples, relpages from pg_class where relname like 'tbl6833_anl%'; -- should show relpages = 1.0
         relname         | reltuples | relpages 
@@ -1780,16 +1779,15 @@ NOTICE:  CREATE TABLE will create partition "tbl6833_vac_1_prt_bb_1" for table "
 NOTICE:  CREATE TABLE will create partition "tbl6833_vac_1_prt_bb_2" for table "tbl6833_vac"
 vacuum qp_misc_jiras.tbl6833_vac;
 explain select * from qp_misc_jiras.tbl6833_vac; -- should not hit cdbRelSize();
-                                                QUERY PLAN                                                 
------------------------------------------------------------------------------------------------------------
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
    ->  Sequence  (cost=0.00..431.00 rows=1 width=12)
-         ->  Partition Selector for tbl6833_vac (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-               Partitions selected:  2 (out of 2)
+         Partitions selected: 2 (out of 2)
          ->  Dynamic Table Scan on tbl6833_vac (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=12)
  Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(7 rows)
+ Optimizer status: PQO version 1.633
+(6 rows)
 
 select relname, reltuples, relpages from pg_class where relname like 'tbl6833_vac%'; -- should show relpages = 1.0
         relname         | reltuples | relpages 
