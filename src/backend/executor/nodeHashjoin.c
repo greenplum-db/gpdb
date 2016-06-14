@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeHashjoin.c,v 1.85.2.1 2007/02/02 00:07:28 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeHashjoin.c,v 1.89 2007/02/02 00:07:03 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -259,8 +259,7 @@ ExecHashJoin(HashJoinState *node)
 		 * again.)
 		 */
 		node->hj_OuterNotEmpty = false;
-
-	} /* if (hashtable == NULL) */
+	}
 
 	/*
 	 * run the hash join process
@@ -324,7 +323,7 @@ ExecHashJoin(HashJoinState *node)
 				node->hj_NeedNewOuter = true;
 				continue;		/* loop around for a new outer tuple */
 			}
-		}  /* if (node->hj_NeedNewOuter) */
+		}
 
 		/*
 		 * OK, scan the selected hash bucket for matches
@@ -352,7 +351,7 @@ ExecHashJoin(HashJoinState *node)
 			/*
 			 * we've got a match, but still need to test non-hashed quals
 			 */
-			inntuple = ExecStoreMemTuple(HJTUPLE_MINTUPLE(curtuple),
+			inntuple = ExecStoreMinimalTuple(HJTUPLE_MINTUPLE(curtuple),
 										 node->hj_HashTupleSlot,
 										 false);	/* don't pfree */
 			econtext->ecxt_innertuple = inntuple;
@@ -545,9 +544,8 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 								 ExecGetResultType(innerPlanState(hjstate)));
 			break;
 		default:
-			elog(LOG, "unrecognized join type: %d",
+			elog(ERROR, "unrecognized join type: %d",
 				 (int) node->join.jointype);
-			Assert(false);
 	}
 
 	/*
@@ -685,14 +683,13 @@ ExecEndHashJoin(HashJoinState *node)
  */
 static TupleTableSlot *
 ExecHashJoinOuterGetTuple(PlanState *outerNode,
-		HashJoinState *hjstate,
-		uint32 *hashvalue)
+						  HashJoinState *hjstate,
+						  uint32 *hashvalue)
 {
 	HashJoinTable hashtable = hjstate->hj_HashTable;
 	int			curbatch = hashtable->curbatch;
 	TupleTableSlot *slot;
 	ExprContext    *econtext;
-
 	HashState *hashState = (HashState *) innerPlanState(hjstate);
 
 	/* Read tuples from outer relation only if it's the first batch */
@@ -728,6 +725,7 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 					hjstate->hj_nonequijoin;
 			if (ExecHashGetHashValue(hashState, hashtable, econtext,
 						hjstate->hj_OuterHashKeys,
+						true,
 						keep_nulls,
 						hashvalue,
 						&hashkeys_null
@@ -742,7 +740,7 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 			 * That tuple couldn't match because of a NULL, so discard it
 			 * and continue with the next one.
 			 */
-		} /* for (;;) */
+		}
 
 		/*
 		 * We have just reached the end of the first pass. Try to switch to a
@@ -1096,13 +1094,13 @@ ExecHashJoinGetSavedTuple(HashJoinBatchSide *batchside,
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not read from temporary file")));
-	return ExecStoreMemTuple(tuple, tupleSlot, true);
+	return ExecStoreMinimalTuple(tuple, tupleSlot, true);
 }
 
 
 void
 ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
-{		
+{
 	/*
 	 * In a multi-batch join, we currently have to do rescans the hard way,
 	 * primarily because batch temp files may have already been released. But

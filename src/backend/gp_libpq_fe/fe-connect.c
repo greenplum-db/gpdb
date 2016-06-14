@@ -140,63 +140,78 @@ static const PQconninfoOption PQconninfoOptions[] = {
 	 * still try to set it.
 	 */
 	{"authtype", "PGAUTHTYPE", DefaultAuthtype, NULL,
-	"Database-Authtype", "D", 20},
+	"Database-Authtype", "D", 20, -1},
 
 	{"service", "PGSERVICE", NULL, NULL,
-	"Database-Service", "", 20},
+	"Database-Service", "", 20, -1},
 
 	{"user", "PGUSER", NULL, NULL,
-	"Database-User", "", 20},
+		"Database-User", "", 20,
+	offsetof(struct pg_conn, pguser)},
 
 	{"password", "PGPASSWORD", NULL, NULL,
-	"Database-Password", "*", 20},
+		"Database-Password", "*", 20,
+	offsetof(struct pg_conn, pgpass)},
 
 	{"connect_timeout", "PGCONNECT_TIMEOUT", NULL, NULL,
-	"Connect-timeout", "", 10}, /* strlen(INT32_MAX) == 10 */
+		"Connect-timeout", "", 10,		/* strlen(INT32_MAX) == 10 */
+	offsetof(struct pg_conn, connect_timeout)},
 
 	{"dbname", "PGDATABASE", NULL, NULL,
-	"Database-Name", "", 20},
+		"Database-Name", "", 20,
+	offsetof(struct pg_conn, dbName)},
 
 	/* 
 	 * For GPDB internal usage, don't honour PGHOST, as this will always lead to
 	 * unexpected behaviour.
 	 */
-	{"host", NULL, NULL, NULL,
-	"Database-Host", "", 40},
+	{"host", "PGHOST", NULL, NULL,
+		"Database-Host", "", 40,
+	offsetof(struct pg_conn, pghost)},
 
 	{"hostaddr", "PGHOSTADDR", NULL, NULL,
-	"Database-Host-IP-Address", "", 45},
+		"Database-Host-IP-Address", "", 45,
+	offsetof(struct pg_conn, pghostaddr)},
 
 	{"port", "PGPORT", DEF_PGPORT_STR, NULL,
-	"Database-Port", "", 6},
+		"Database-Port", "", 6,
+	offsetof(struct pg_conn, pgport)},
 
 	/*
 	 * "tty" is no longer used either, but keep it present for backwards
 	 * compatibility.
 	 */
 	{"tty", "PGTTY", DefaultTty, NULL,
-	"Backend-Debug-TTY", "D", 40},
+		"Backend-Debug-TTY", "D", 40,
+	offsetof(struct pg_conn, pgtty)},
 
 	{"options", "PGOPTIONS", DefaultOption, NULL,
-	"Backend-Debug-Options", "D", 40},
+		"Backend-Debug-Options", "D", 40,
+	offsetof(struct pg_conn, pgoptions)},
 
 	{"application_name", "PGAPPNAME", NULL, NULL,
-	"Application-Name", "", 64},
+		"Application-Name", "", 64,
+	offsetof(struct pg_conn, appname)},
 
 	{"fallback_application_name", NULL, NULL, NULL,
-	"Fallback-Application-Name", "", 64},
+		"Fallback-Application-Name", "", 64,
+	offsetof(struct pg_conn, fbappname)},
 
 	{"keepalives", NULL, NULL, NULL,
-	"TCP-Keepalives", "", 1},	/* should be just '0' or '1' */
+		"TCP-Keepalives", "", 1,
+	offsetof(struct pg_conn, keepalives)},
 
 	{"keepalives_idle", NULL, NULL, NULL,
-	"TCP-Keepalives-Idle", "", 10},		/* strlen(INT32_MAX) == 10 */
+		"TCP-Keepalives-Idle", "", 10,
+	offsetof(struct pg_conn, keepalives_idle)},		/* strlen(INT32_MAX) == 10 */
 
 	{"keepalives_interval", NULL, NULL, NULL,
-	"TCP-Keepalives-Interval", "", 10}, /* strlen(INT32_MAX) == 10 */
+		"TCP-Keepalives-Interval", "", 10,
+	offsetof(struct pg_conn, keepalives_interval)}, /* strlen(INT32_MAX) == 10 */
 
 	{"keepalives_count", NULL, NULL, NULL,
-	"TCP-Keepalives-Count", "", 10},	/* strlen(INT32_MAX) == 10 */
+		"TCP-Keepalives-Count", "", 10,
+	offsetof(struct pg_conn, keepalives_count)},	/* strlen(INT32_MAX) == 10 */
 
 	/*
 	 * Internal QD to QE communications don't use SSL, but we need this
@@ -209,30 +224,30 @@ static const PQconninfoOption PQconninfoOptions[] = {
 	 * to exclude them since none of them are mandatory.
 	 */
 	{"sslmode", "PGSSLMODE", "disable", NULL,
-	"SSL-Mode", "", 8,		/* sizeof("disable") == 8 */},
+	"SSL-Mode", "", 8, -1		/* sizeof("disable") == 8 */},
 
 	{"sslcompression", "PGSSLCOMPRESSION", "1", NULL,
-	"SSL-Compression", "", 1},
+	"SSL-Compression", "", 1, -1},
 
 	{"sslcert", "PGSSLCERT", NULL, NULL,
-	"SSL-Client-Cert", "", 64},
+	"SSL-Client-Cert", "", 64, -1},
 
 	{"sslkey", "PGSSLKEY", NULL, NULL,
-	"SSL-Client-Key", "", 64},
+	"SSL-Client-Key", "", 64, -1},
 
 	{"sslrootcert", "PGSSLROOTCERT", NULL, NULL,
-	"SSL-Root-Certificate", "", 64},
+	"SSL-Root-Certificate", "", 64, -1},
 
 	{"sslcrl", "PGSSLCRL", NULL, NULL,
-	"SSL-Revocation-List", "", 64},
+	"SSL-Revocation-List", "", 64, -1},
 
 	{"requirepeer", "PGREQUIREPEER", NULL, NULL,
-	"Require-Peer", "", 10},
+	"Require-Peer", "", 10, -1},
 
 #if defined(KRB5) || defined(ENABLE_GSS) || defined(ENABLE_SSPI)
 	/* Kerberos and GSSAPI authentication support specifying the service name */
 	{"krbsrvname", "PGKRBSRVNAME", PG_KRB_SRVNAM, NULL,
-	"Kerberos-service-name", "", 20},
+	"Kerberos-service-name", "", 20, -1},
 #endif
 
 #if defined(ENABLE_GSS) && defined(ENABLE_SSPI)
@@ -242,23 +257,27 @@ static const PQconninfoOption PQconninfoOptions[] = {
 	 * default
 	 */
 	{"gsslib", "PGGSSLIB", NULL, NULL,
-	"GSS-library", "", 7,	/* sizeof("gssapi") = 7 */},
+	"GSS-library", "", 7, -1	/* sizeof("gssapi") = 7 */},
 	
 #endif
 
 
     /* CDB: qExec wants some info from qDisp before GUCs are processed */
-    {"gpqeid", NULL, "", NULL,
-	"gp-debug-qeid", "D", 40},
+	{"gpqeid", NULL, "", NULL,
+		"gp-debug-qeid", "D", 40,
+	offsetof(struct pg_conn, gpqeid)},
 	
 	{"gpqdid", NULL, "", NULL,
-	"gp-debug-qdid", "D", 40},
+		"gp-debug-qdid", "D", 40,
+	offsetof(struct pg_conn, gpqdid)},
 	
 	{"gpdaid", NULL, "", NULL,
-	"gp-debug-daid", "D", 40},
+		"gp-debug-daid", "D", 40,
+	offsetof(struct pg_conn, gpdaid)},
 
 	{"replication", NULL, NULL, NULL,
-	"Replication", "D", 5},
+		"Replication", "D", 5,
+	offsetof(struct pg_conn, replication)},
 
 	/* Terminating entry --- MUST BE LAST */
 	{NULL, NULL, NULL, NULL,
@@ -296,7 +315,7 @@ static int	connectDBStart(PGconn *conn);
 static int	connectDBComplete(PGconn *conn);
 static PGPing internal_ping(PGconn *conn);
 static PGconn *makeEmptyPGconn(void);
-static void fillPGconn(PGconn *conn, PQconninfoOption *connOptions);
+static bool fillPGconn(PGconn *conn, PQconninfoOption *connOptions);
 static void freePGconn(PGconn *conn);
 static void closePGconn(PGconn *conn);
 static PQconninfoOption *conninfo_init(PQExpBuffer errorMessage);
@@ -526,7 +545,12 @@ PQconnectStartParams(const char *const *keywords,
 	/*
 	 * Move option values into conn structure
 	 */
-	fillPGconn(conn, connOptions);
+	if (!fillPGconn(conn, connOptions))
+	{
+		conn->status = CONNECTION_BAD;
+		PQconninfoFree(connOptions);
+		return conn;
+	}
 
 	/*
 	 * Free the option info - all is in conn now
@@ -606,61 +630,42 @@ PQconnectStart(const char *conninfo)
 	return conn;
 }
 
-static void
+/*
+ * Move option values into conn structure
+ *
+ * Don't put anything cute here --- intelligence should be in
+ * connectOptions2 ...
+ *
+ * Returns true on success. On failure, returns false and sets error message.
+ */
+static bool
 fillPGconn(PGconn *conn, PQconninfoOption *connOptions)
 {
-	const char *tmp;
+	const PQconninfoOption *option;	
+	const char*	tmp;
 
-	/*
-	 * Move option values into conn structure
-	 *
-	 * Don't put anything cute here --- intelligence should be in
-	 * connectOptions2 ...
-	 *
-	 * XXX: probably worth checking strdup() return value here...
-	 */
-	tmp = conninfo_getval(connOptions, "hostaddr");
-	conn->pghostaddr = tmp ? strdup(tmp) : NULL;
-	tmp = conninfo_getval(connOptions, "host");
-	conn->pghost = tmp ? strdup(tmp) : NULL;
-	tmp = conninfo_getval(connOptions, "port");
-	conn->pgport = tmp ? strdup(tmp) : NULL;
-	tmp = conninfo_getval(connOptions, "tty");
-	conn->pgtty = tmp ? strdup(tmp) : NULL;
-	tmp = conninfo_getval(connOptions, "options");
-	conn->pgoptions = tmp ? strdup(tmp) : NULL;
-	tmp = conninfo_getval(connOptions, "application_name");
-	conn->appname = tmp ? strdup(tmp) : NULL;
-	tmp = conninfo_getval(connOptions, "fallback_application_name");
-	conn->fbappname = tmp ? strdup(tmp) : NULL;
-	tmp = conninfo_getval(connOptions, "dbname");
-	conn->dbName = tmp ? strdup(tmp) : NULL;
-	tmp = conninfo_getval(connOptions, "user");
-	conn->pguser = tmp ? strdup(tmp) : NULL;
-	tmp = conninfo_getval(connOptions, "password");
-	conn->pgpass = tmp ? strdup(tmp) : NULL;
-	tmp = conninfo_getval(connOptions, "connect_timeout");
-	conn->connect_timeout = tmp ? strdup(tmp) : NULL;
-	tmp = conninfo_getval(connOptions, "keepalives");
-	conn->keepalives = tmp ? strdup(tmp) : NULL;
-	tmp = conninfo_getval(connOptions, "keepalives_idle");
-	conn->keepalives_idle = tmp ? strdup(tmp) : NULL;
-	tmp = conninfo_getval(connOptions, "keepalives_interval");
-	conn->keepalives_interval = tmp ? strdup(tmp) : NULL;
-	tmp = conninfo_getval(connOptions, "keepalives_count");
-	conn->keepalives_count = tmp ? strdup(tmp) : NULL;
+	for (option = PQconninfoOptions; option->keyword; option++)
+	{
+		if (option->connofs >= 0)	
+		{
+			const char *tmp = conninfo_getval(connOptions, option->keyword);
 
-	/*
-	 * Internal communications from QD to QE don't use SSL
-	 */
-	tmp = conninfo_getval(connOptions, "gpqeid");
-	conn->gpqeid = tmp ? strdup(tmp) : NULL;
-	
-	tmp = conninfo_getval(connOptions, "gpqdid");
-	conn->gpqdid = tmp ? strdup(tmp) : NULL;
-	
-	tmp = conninfo_getval(connOptions, "gpdaid");
-	conn->gpdaid = tmp ? strdup(tmp) : NULL;
+			if (tmp)
+			{
+				char      **connmember = (char **) ((char *) conn + option->connofs);
+
+				if (*connmember)
+					free(*connmember);
+				*connmember = strdup(tmp);
+				if (*connmember == NULL)
+				{
+					printfPQExpBuffer(&conn->errorMessage,
+						 libpq_gettext("out of memory\n"));
+					return false;
+				}
+			}
+		}
+	}
 
 	/*
 	 * All we want to do here is figure out if this out-bound
@@ -683,8 +688,8 @@ fillPGconn(PGconn *conn, PQconninfoOption *connOptions)
 			}
 		}
 	}
-	tmp = conninfo_getval(connOptions, "replication");
-	conn->replication = tmp ? strdup(tmp) : NULL;
+
+	return true;
 }
 
 /*
@@ -717,7 +722,12 @@ connectOptions1(PGconn *conn, const char *conninfo)
 	/*
 	 * Move option values into conn structure
 	 */
-	fillPGconn(conn, connOptions);
+	if (!fillPGconn(conn, connOptions))
+	{
+		conn->status = CONNECTION_BAD;
+		PQconninfoFree(connOptions);
+		return false;
+	}
 
 	/*
 	 * Free the option info - all is in conn now
@@ -747,6 +757,8 @@ connectOptions2(PGconn *conn)
 		if (conn->dbName)
 			free(conn->dbName);
 		conn->dbName = strdup(conn->pguser);
+		if (!conn->dbName)
+			goto oom_error;
 	}
 
 	/*
@@ -759,7 +771,11 @@ connectOptions2(PGconn *conn)
 		conn->pgpass = PasswordFromFile(conn->pghost, conn->pgport,
 										conn->dbName, conn->pguser);
 		if (conn->pgpass == NULL)
+		{
 			conn->pgpass = strdup(DefaultPassword);
+			if (!conn->pgpass)
+				goto oom_error;
+		}
 		else
 			conn->dot_pgpass_used = true;
 	}
@@ -829,6 +845,12 @@ connectOptions2(PGconn *conn)
 	conn->options_valid = true;
 
 	return true;
+
+oom_error:
+	conn->status = CONNECTION_BAD;
+	printfPQExpBuffer(&conn->errorMessage,
+			libpq_gettext("out of memory\n"));
+	return false;
 }
 
 /*
@@ -921,6 +943,8 @@ PQsetdbLogin(const char *pghost, const char *pgport, const char *pgoptions,
 			if (conn->dbName)
 				free(conn->dbName);
 			conn->dbName = strdup(dbName);
+			if (!conn->dbName)
+				goto oom_error;
 		}
 	}
 
@@ -933,6 +957,8 @@ PQsetdbLogin(const char *pghost, const char *pgport, const char *pgoptions,
 		if (conn->pghost)
 			free(conn->pghost);
 		conn->pghost = strdup(pghost);
+		if (!conn->pghost)
+			goto oom_error;
 	}
 
 	if (pgport && pgport[0] != '\0')
@@ -940,6 +966,8 @@ PQsetdbLogin(const char *pghost, const char *pgport, const char *pgoptions,
 		if (conn->pgport)
 			free(conn->pgport);
 		conn->pgport = strdup(pgport);
+		if (!conn->pgport)
+			goto oom_error;
 	}
 
 	if (pgoptions && pgoptions[0] != '\0')
@@ -947,6 +975,8 @@ PQsetdbLogin(const char *pghost, const char *pgport, const char *pgoptions,
 		if (conn->pgoptions)
 			free(conn->pgoptions);
 		conn->pgoptions = strdup(pgoptions);
+		if (!conn->pgoptions)
+			goto oom_error;
 	}
 
 	if (pgtty && pgtty[0] != '\0')
@@ -954,6 +984,8 @@ PQsetdbLogin(const char *pghost, const char *pgport, const char *pgoptions,
 		if (conn->pgtty)
 			free(conn->pgtty);
 		conn->pgtty = strdup(pgtty);
+		if (!conn->pgtty)
+			goto oom_error;
 	}
 
 	if (login && login[0] != '\0')
@@ -961,6 +993,8 @@ PQsetdbLogin(const char *pghost, const char *pgport, const char *pgoptions,
 		if (conn->pguser)
 			free(conn->pguser);
 		conn->pguser = strdup(login);
+		if (!conn->pguser)
+			goto oom_error;
 	}
 
 	if (pwd && pwd[0] != '\0')
@@ -968,6 +1002,8 @@ PQsetdbLogin(const char *pghost, const char *pgport, const char *pgoptions,
 		if (conn->pgpass)
 			free(conn->pgpass);
 		conn->pgpass = strdup(pwd);
+		if (!conn->pgpass)
+			goto oom_error;
 	}
 
 	/*
@@ -982,6 +1018,12 @@ PQsetdbLogin(const char *pghost, const char *pgport, const char *pgoptions,
 	if (connectDBStart(conn))
 		(void) connectDBComplete(conn);
 
+	return conn;
+
+oom_error:
+	conn->status = CONNECTION_BAD;
+	printfPQExpBuffer(&conn->errorMessage,
+			libpq_gettext("out of memory\n"));
 	return conn;
 }
 
@@ -1667,6 +1709,7 @@ keep_going:						/* We will come back to here until there is
 					if (!IS_AF_UNIX(addr_cur->ai_family))
 					{
 						int			on = 1;
+						int			reuse = 1;
 						int			usekeepalives = useKeepalives(conn);
 						int			err = 0;
 
@@ -1699,7 +1742,17 @@ keep_going:						/* We will come back to here until there is
 						else if (!setKeepalivesWin32(conn))
 							err = 1;
 #endif /* SIO_KEEPALIVE_VALS */
-#endif /* WIN32 */
+#endif /* WIN32 */				
+
+						/* Need to set SO_REUSEADDR so the TCP port can be 
+						 * reused, or else, master might run out of TCP port */	
+						if (setsockopt(conn->sock, SOL_SOCKET, SO_REUSEADDR, (char *) &reuse, sizeof(reuse)) == -1)
+						{
+							appendPQExpBuffer(&conn->errorMessage, 
+									  libpq_gettext("setsockopt(SO_REUSEADDR) failed: %s\n"),
+									  SOCK_STRERROR(SOCK_ERRNO, sebuf, sizeof(sebuf)));
+							err = 1;
+						}
 
 						if (err)
 						{
@@ -3115,6 +3168,14 @@ parseServiceFile(const char *serviceFile,
 						{
 							if (options[i].val == NULL)
 								options[i].val = strdup(val);
+							if (!options[i].val)
+							{
+								printfPQExpBuffer(errorMessage,
+										libpq_gettext("out of memory\n"));
+								fclose(f);
+								return 3;
+							}
+							
 							found_keyword = true;
 							break;
 						}
@@ -3520,6 +3581,14 @@ conninfo_array_parse(const char *const * keywords, const char *const * values,
 								if (options[k].val)
 									free(options[k].val);
 								options[k].val = strdup(str_option->val);
+								if (!options[k].val)
+								{
+									printfPQExpBuffer(errorMessage,
+											libpq_gettext("out of memory\n"));
+									PQconninfoFree(options);
+									PQconninfoFree(dbname_options);
+									return NULL;
+								}
 								break;
 							}
 						}
@@ -4310,41 +4379,12 @@ PQoptions(const PGconn *conn)
 }
 
 /* GPDB function to retrieve QE-backend details (motion listener) */
-int	PQgetQEdetail(PGconn *conn, bool alwaysFetch)
+int
+PQgetQEdetail(PGconn *conn)
 {
 	if (!conn || (PQstatus(conn) == CONNECTION_BAD))
 		return -1;
-	
-	/* return it immediately if we've already fetched it. */
-	if (!alwaysFetch && conn->motion_listener != 0)
-		return conn->motion_listener;
 
-	/* reset to 0 */
-	conn->motion_listener = 0;
-	
-	/* send a request to fetch the motion listener port. */
-	pqPacketSend(conn, 'W', NULL, 0 );
-
-	conn->asyncStatus = PGASYNC_BUSY;	
-	
-	/* wait for a response. */
-	if (PG_PROTOCOL_MAJOR(conn->pversion) >= 3)
-		pqParseInput3(conn);
-	else
-		return -1;
-	
-	while (conn->motion_listener == 0)
-	{
-		pqWait(TRUE, FALSE, conn);
-		if (pqReadData(conn) < 0)
-			return -1;
-		
-		if (PG_PROTOCOL_MAJOR(conn->pversion) >= 3)
-			pqParseInput3(conn);
-		else
-			return -1;
-	}
-	
 	return conn->motion_listener;
 }
 
@@ -4729,6 +4769,12 @@ PasswordFromFile(char *hostname, char *port, char *dbname, char *username)
 			continue;
 		ret = strdup(t);
 		fclose(fp);
+
+		if (!ret)
+		{
+			/* Out of memory. XXX: an error message would be nice. */
+			return NULL;
+		}
 
 		/* De-escape password. */
 		for (p1 = p2 = ret; *p1 != ':' && *p1 != '\0'; ++p1, ++p2)

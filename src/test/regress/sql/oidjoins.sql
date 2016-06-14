@@ -361,6 +361,10 @@ SELECT	ctid, typelem
 FROM	pg_catalog.pg_type fk 
 WHERE	typelem != 0 AND 
 	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type pk WHERE pk.oid = fk.typelem);
+SELECT  ctid, typarray 
+FROM    pg_catalog.pg_type fk 
+WHERE   typarray != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type pk WHERE pk.oid = fk.typarray);
 SELECT	ctid, typinput 
 FROM	pg_catalog.pg_type fk 
 WHERE	typinput != 0 AND 

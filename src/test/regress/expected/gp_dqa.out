@@ -803,6 +803,8 @@ select distinct count(distinct b) as c1, count(distinct c) as c2, d, a from gp_d
 
 select distinct count(distinct b) as c1, count(distinct c) as c2, d from gp_dqa_r, gp_dqa_s group by d, a order by d,a;
 ERROR:  for SELECT DISTINCT, ORDER BY expressions must appear in select list
+LINE 1: ...as c2, d from gp_dqa_r, gp_dqa_s group by d, a order by d,a;
+                                                                     ^
 select distinct count(distinct b) as c1, count(distinct c) as c2, d from gp_dqa_r, gp_dqa_s group by d, a order by d;
  c1 | c2 | d  
 ----+----+----

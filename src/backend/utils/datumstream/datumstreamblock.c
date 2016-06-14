@@ -2221,9 +2221,10 @@ DatumStreamBlockWrite_DenseHasSpaceDelta(
 	if (dsw->has_null)
 	{
 		/*
-		 * The first item already incremented always_null_bitmap_count.
+		 * Adding delta value will add a false bit to null_bitmap.
+		 * So, must account for it.
 		 */
-		nullSize = DatumStreamBitMap_Size(dsw->always_null_bitmap_count);
+		nullSize = DatumStreamBitMap_Size(dsw->always_null_bitmap_count + 1);
 	}
 
 	DatumStreamBlockWrite_DenseRleSpace(dsw, false, &headerSize, &rleSize);

@@ -46,12 +46,7 @@ insert into copytest values(E'esc\\ape',E'a\\r\\\r\\\n\\nb',4);
 copy copytest to '@abs_builddir@/results/copytest.csv' csv;
 create temp table copytest2 (like copytest);
 copy copytest2 from '@abs_builddir@/results/copytest.csv' csv;
-copy copytest2 from '@abs_builddir@/results/copytest.csv' csv LOG ERRORS INTO errtable SEGMENT REJECT LIMIT 10 ROWS;
-NOTICE:  Error table "errtable" does not exist. Auto generating an error table with the same name
-WARNING:  The error table was created in the same transaction as this operation. It will get dropped if transaction rolls back even if bad rows are present
-HINT:  To avoid this create the error table ahead of time using: CREATE TABLE <name> (cmdtime timestamp with time zone, relname text, filename text, linenum integer, bytenum integer, errmsg text, rawdata text, rawbytes bytea)
-NOTICE:  Dropping the auto-generated unused error table
-HINT:  Use KEEP in LOG INTO clause to force keeping the error table alive
+copy copytest2 from '@abs_builddir@/results/copytest.csv' csv LOG ERRORS SEGMENT REJECT LIMIT 10 ROWS;
 select * from copytest except select * from copytest2 order by 1,2,3;
  style | test | filler 
 -------+------+--------

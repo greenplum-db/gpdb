@@ -200,8 +200,9 @@ order by partcons;
 --
 -- ************************************************************
 -- * Scenario 3
--- * 	- multi-level partitions 
--- * 	- dropped columns 
+-- * 	- multi-level partitions
+-- * 	- truncate partition
+-- * 	- dropped columns
 -- ************************************************************
 --
 create table part_table3
@@ -227,11 +228,27 @@ subpartition by list(region)
 	)
 );
 
+-- insert some data
+insert into part_table3 values ('2008-02-02', 'usa', 'Texas', 10.05), ('2008-03-03', 'asia', 'China', 1.01);
+insert into part_table3 values ('2009-02-02', 'usa', 'Texas', 10.05), ('2009-03-03', 'asia', 'China', 1.01);
+
 -- index on atts 1, 4
 create index i1 on part_table3(date, amount); 
 select indKey, defaultLevels, partCons from gp_build_logical_index('part_table3'::regclass)
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
 
+-- truncate partitions until table is empty
+select * from part_table3;
+truncate part_table3_1_prt_part1_2_prt_asia;
+select * from part_table3;
+alter table part_table3 truncate partition for (rank(1));
+select * from part_table3;
+alter table part_table3 alter partition part2 truncate partition usa;
+select * from part_table3;
+alter table part_table3 truncate partition part2;
+select * from part_table3;
+
+-- drop column region1
 alter table part_table3 drop column region1;  
 select indKey, defaultLevels, partCons from gp_build_logical_index('part_table3'::regclass)
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
@@ -264,9 +281,9 @@ order by indKey;
 
 -- dropped cols in the ind expr 
 -- index expr varno are different
-create index i41 on part_table3_1_prt_part3_2_prt_usa(lower(amount));
-create index i42 on part_table3_1_prt_part2_2_prt_usa(lower(amount));
-create index i43 on part_table3_1_prt_part2_2_prt_asia(lower(amount));
+create index i41 on part_table3_1_prt_part3_2_prt_usa(ceil(amount));
+create index i42 on part_table3_1_prt_part2_2_prt_usa(ceil(amount));
+create index i43 on part_table3_1_prt_part2_2_prt_asia(ceil(amount));
 
 -- 1 extra index on expression shoule show up with constraints of part3/part2
 select indExprs, partCons from gp_build_logical_index('part_table3'::regclass)

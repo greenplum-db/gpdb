@@ -29,7 +29,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_amop.h,v 1.77 2007/01/05 22:19:52 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_amop.h,v 1.79 2007/02/06 02:59:12 tgl Exp $
  *
  * NOTES
  *	 the genbki.sh script reads this file and generates .bki
@@ -409,6 +409,13 @@ DATA(insert (	1988   1700 1700 3 f 1752	403 ));
 DATA(insert (	1988   1700 1700 4 f 1757	403 ));
 DATA(insert (	1988   1700 1700 5 f 1756	403 ));
 
+/* btree complex */
+DATA(insert (	3221   195 195 1 f 3481	403 ));
+DATA(insert (	3221   195 195 2 f 3483	403 ));
+DATA(insert (	3221   195 195 3 f 3469	403 ));
+DATA(insert (	3221   195 195 4 f 3484 403 ));
+DATA(insert (	3221   195 195 5 f 3482	403 ));
+
 /*
  *	btree bool
  */
@@ -509,6 +516,16 @@ DATA(insert (	397   2277 2277 3 f 1070	403 ));
 DATA(insert (	397   2277 2277 4 f 1075	403 ));
 DATA(insert (	397   2277 2277 5 f 1073	403 ));
 
+/* 
+ * btree uuid_ops 
+ */
+ 
+DATA(insert (	2968  2950 2950 1 f	2974	403 ));
+DATA(insert (	2968  2950 2950 2 f 2976	403 ));
+DATA(insert (	2968  2950 2950 3 f 2972	403 ));
+DATA(insert (	2968  2950 2950 4 f 2977	403 ));
+DATA(insert (	2968  2950 2950 5 f 2975	403 ));
+
 /*
  *	hash index _ops
  */
@@ -522,12 +539,20 @@ DATA(insert (	435   1082 1082 1 f 1093	405 ));
 /* float_ops */
 DATA(insert (	1971   700 700 1 f  620	405 ));
 DATA(insert (	1971   701 701 1 f  670	405 ));
+DATA(insert (	1971   700 701 1 f 1120	405 ));
+DATA(insert (	1971   701 700 1 f 1130	405 ));
 /* network_ops */
 DATA(insert (	1975   869 869 1 f 1201	405 ));
 /* integer_ops */
 DATA(insert (	1977   21 21 1 f	94	405 ));
 DATA(insert (	1977   23 23 1 f	96	405 ));
 DATA(insert (	1977   20 20 1 f	410	405 ));
+DATA(insert (	1977   21 23 1 f	532	405 ));
+DATA(insert (	1977   21 20 1 f   1862	405 ));
+DATA(insert (	1977   23 21 1 f	533	405 ));
+DATA(insert (	1977   23 20 1 f	15	405 ));
+DATA(insert (	1977   20 21 1 f   1868	405 ));
+DATA(insert (	1977   20 23 1 f	416	405 ));
 /* interval_ops */
 DATA(insert (	1983   1186 1186 1 f 1330	405 ));
 /* macaddr_ops */
@@ -572,6 +597,9 @@ DATA(insert (	2232   19 19 1 f 2334	405 ));
 DATA(insert (	2235   1033 1033 1 f  974	405 ));
 /* numeric_ops */
 DATA(insert (	1998   1700 1700 1 f 1752 405 ));
+/* uuid_ops */ 
+DATA(insert (	2969   2950 2950 1 f 2972 405 ));
+
 
 /*
  *	gist box_ops

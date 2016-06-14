@@ -17,9 +17,9 @@
 #define IC_SHORT_PACKET_LIMIT (10) /* MPP-10351: treat some short-packets as drops */
 
 struct SliceTable;                          /* #include "nodes/execnodes.h" */
+struct EState;                              /* #include "nodes/execnodes.h" */
 
 /* listener filedescriptors */
-extern int		TCP_listenerFd;
 extern int		UDP_listenerFd;
 
 /*
@@ -100,10 +100,10 @@ extern int  GetSeqServerFD(void);
  *	 mySliceId - the index of the slice in the slicetable that we are a member of.
  *
  */
-extern void SetupInterconnect(EState *estate);
-extern void SetupUDPInterconnect(EState *estate);
-extern void SetupUDPIFCInterconnect(EState *estate);
-extern void SetupTCPInterconnect(EState *estate);
+extern void SetupInterconnect(struct EState *estate);
+extern void SetupUDPInterconnect(struct EState *estate);
+extern void SetupUDPIFCInterconnect(struct EState *estate);
+extern void SetupTCPInterconnect(struct EState *estate);
 
 /* The TeardownInterconnect() function should be called at the end of executing
  * a DML statement to close down all TCP socket resources that were setup during

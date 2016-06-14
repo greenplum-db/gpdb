@@ -10,17 +10,23 @@
 
 #include "postgres.h"
 
-#include "optimizer/clauses.h"
 #include "parser/analyze.h"		/* for createRandomDistribution() */
 #include "parser/parsetree.h"	/* for rt_fetch() */
-#include "utils/lsyscache.h"	/* for getatttypetypmod() */
-#include "nodes/makefuncs.h"	/* for makeVar() */
 #include "parser/parse_expr.h"	/* for expr_type() */
 #include "parser/parse_oper.h"	/* for compatible_oper_opid() */
 #include "utils/relcache.h"     /* RelationGetPartitioningKey() */
 #include "optimizer/tlist.h"	/* get_sortgroupclause_tle() */
 #include "optimizer/predtest.h"
 #include "optimizer/var.h"
+#include "parser/parse_relation.h"
+#include "utils/lsyscache.h"
+#include "utils/datum.h"
+#include "utils/syscache.h"
+#include "utils/portal.h"
+#include "optimizer/clauses.h"
+#include "optimizer/planmain.h"
+#include "catalog/catquery.h"
+#include "nodes/makefuncs.h"
 
 #include "commands/tablecmds.h"
 #include "commands/tablespace.h"
@@ -29,9 +35,8 @@
 #include "catalog/pg_type.h"
 
 #include "catalog/pg_proc.h"
-#include "utils/syscache.h"
 
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbhash.h"        /* isGreenplumDbHashable() */
 #include "cdb/cdbllize.h"
 #include "cdb/cdbmutate.h"
@@ -58,6 +63,23 @@ typedef struct ApplyMotionState
     int         numInitPlanMotionNodes;
     List       *initPlans;
 }	ApplyMotionState;
+
+typedef struct
+{
+	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
+	bool single_row_insert;
+} pre_dispatch_function_evaluation_context;
+
+static void
+bindCurrentOfParams(char *cursor_name,
+					Oid target_relid,
+					ItemPointer ctid,
+					int *gp_segment_id,
+					Oid *tableoid);
+
+static Node *
+pre_dispatch_function_evaluation_mutator(Node *node,
+										 pre_dispatch_function_evaluation_context * context);
 
 /*
  * Forward Declarations
@@ -259,9 +281,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	    Assert(rte->rtekind == RTE_RELATION);
 
 	    targetPolicy = GpPolicyFetch(CurrentMemoryContext, rte->relid);
-
-        if (targetPolicy)
-            targetPolicyType = targetPolicy->ptype;
+		targetPolicyType = targetPolicy->ptype;
     }
 
 	switch (query->commandType)
@@ -273,18 +293,17 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 			{
 				List   *hashExpr;
 				ListCell *exp1;
-				int			maxattrs = 200;
 				
 				if (query->intoPolicy != NULL)
 				{
 					targetPolicy = query->intoPolicy;
 					Assert(query->intoPolicy->ptype == POLICYTYPE_PARTITIONED);
 					Assert(query->intoPolicy->nattrs >= 0);
-					Assert(query->intoPolicy->nattrs <= 1024);
+					Assert(query->intoPolicy->nattrs <= MaxPolicyAttributeNumber);
 				}
 				else if (gp_create_table_random_default_distribution)
 				{
-					targetPolicy = createRandomDistribution(maxattrs);
+					targetPolicy = createRandomDistribution();
 					ereport(NOTICE,
 						(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
 						 errmsg("Using default RANDOM distribution since no distribution was specified."),
@@ -292,15 +311,17 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 				}
 				else
 				{
-					/* User did not specify a DISTRIBUTED BY clause */
-				
-					targetPolicy = palloc0(sizeof(GpPolicy)- sizeof(targetPolicy->attrs) + maxattrs * sizeof(targetPolicy->attrs[0]));
-					targetPolicy->nattrs = 0;
-					
-					targetPolicy->ptype = POLICYTYPE_PARTITIONED;
-					
 					/* Find out what the flow is partitioned on */
 					hashExpr = plan->flow->hashExpr;
+
+					/* User did not specify a DISTRIBUTED BY clause */
+					if (hashExpr)
+						targetPolicy = palloc0(sizeof(GpPolicy)- sizeof(targetPolicy->attrs) + list_length(hashExpr) * sizeof(targetPolicy->attrs[0]));
+					else
+						targetPolicy = palloc0(sizeof(GpPolicy));
+
+					targetPolicy->ptype = POLICYTYPE_PARTITIONED;
+					targetPolicy->nattrs = 0;
 					
 					if(hashExpr)
 						foreach(exp1, hashExpr)
@@ -348,6 +369,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 									{
 										/* If it is, use it to partition the result table, to avoid
 										 * unnecessary redistibution of data */
+										Assert(targetPolicy->nattrs < MaxPolicyAttributeNumber);
 										targetPolicy->attrs[targetPolicy->nattrs++] = n;
 										found_expr = true;
 										break;
@@ -460,6 +482,13 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
                 {
                     if (plan->flow->numSortCols > list_length(query->sortClause))
                         plan->flow->numSortCols = list_length(query->sortClause);
+
+                    Insist(focusPlan(plan, true, false));
+                }
+                else if (plan->flow->numOrderbyCols > 0 && plan->flow->numSortCols > 0)
+                {
+                    if (plan->flow->numSortCols > plan->flow->numOrderbyCols)
+                        plan->flow->numSortCols = plan->flow->numOrderbyCols;
 
                     Insist(focusPlan(plan, true, false));
                 }
@@ -784,47 +813,6 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
         subplan->qDispSliceId = state.nextMotionID++;
     }
 
-#ifdef USE_ASSERT_CHECKING
-	/* Check whether plan brings back the tuples to their original segments so they
-	 * can be updated */
-	if (query->commandType == CMD_DELETE ||
-        query->commandType == CMD_UPDATE)
-	{
-		if (targetPolicyType == POLICYTYPE_ENTRY)
-		{
-			/* target table is master-only */
-			Assert(list_length(root->resultRelations) == 1);
-			Assert(result->flow->flotype == FLOW_SINGLETON && result->flow->segindex == -1);
-		}
-		else if (result->nMotionNodes > state.numInitPlanMotionNodes)
-		{
-			/* target table is distributed and plan involves motion nodes */
-			/*
-			 * Currently, we require all DML plans with Motion to have an ExplicitRedistribute
-			 * motion on top or (for partitioned tables) an Append node with ExplicitRedistribute
-			 * child plans
-			 */
-			if (list_length(root->resultRelations) == 1)
-			{
-				/* non-partitioned table */
-				Assert(IsA(result, Motion) && ((Motion *) result)->motionType == MOTIONTYPE_EXPLICIT);
-			}
-			else
-			{
-				/* updating a partitioned table */
-				Assert(IsA(result, Append));
-				ListCell *lcAppend;
-				foreach(lcAppend, ((Append *) result)->appendplans)
-				{
-					Plan *appendPlan = (Plan *) lfirst(lcAppend);
-					Assert(IsA(appendPlan, Motion) &&
-							((Motion *) appendPlan)->motionType == MOTIONTYPE_EXPLICIT);
-				}
-			}
-		}
-	}
-#endif
-
     /* 
 	 * Discard subtrees of Query node that aren't needed for execution. 
 	 * Note the targetlist (query->targetList) is used in execution of
@@ -965,7 +953,7 @@ apply_motion_mutator(Node *node, ApplyMotionState * context)
                                                            flow->numSortCols,
                                                            flow->sortColIdx,
                                                            flow->sortOperators,
-														   flow->nullsFirst,
+                                                           flow->nullsFirst,
                                                            true /* useExecutorVarFormat */);
             }
             else
@@ -1734,16 +1722,6 @@ cdbmutate_warn_ctid_without_segid(struct PlannerInfo *root, struct RelOptInfo *r
 }                               /* cdbmutate_warn_ctid_without_segid */
 
 
-
-#include "catalog/catalog.h"
-#include "catalog/indexing.h"
-#include "catalog/dependency.h"
-#include "catalog/pg_constraint.h"
-#include "catalog/pg_depend.h"
-#include "miscadmin.h"
-#include "utils/builtins.h"
-#include "utils/fmgroids.h"
-
 /*
  * Code that mutate the tree for share input
  *
@@ -2038,13 +2016,14 @@ static bool shareinput_find_sharenode(ApplyShareInputContext *ctxt, int share_id
 }
 
 /* 
- * First walk on shareinput xslice.  It does the following,
- *  	1. build the sharedNodes in context.
- *  	2. Build teh sliceMask in context.
- *  	3. If a shared is cross slice, mark the shared node xslice.
- *  	4. Build a list a share on QD
+ * First walk on shareinput xslice.  It does the following:
+ *
+ * 1. Build the sharedNodes in context.
+ * 2. Build the sliceMarks in context.
+ * 3. Build a list a share on QD
  */
-static bool shareinput_mutator_xslice_1(Node* node, ApplyShareInputContext *ctxt, bool fPop)
+static bool
+shareinput_mutator_xslice_1(Node* node, ApplyShareInputContext *ctxt, bool fPop)
 {
 	Plan *plan = (Plan *) node;
 
@@ -2067,7 +2046,7 @@ static bool shareinput_mutator_xslice_1(Node* node, ApplyShareInputContext *ctxt
 		ShareInputScan *sisc = (ShareInputScan *) plan;
 		int motId = shareinput_peekmot(ctxt);
 		Plan *shared = plan->lefttree;
-		
+
 		Assert(sisc->plan.flow);
 		if(sisc->plan.flow->flotype == FLOW_SINGLETON)
 		{
@@ -2075,13 +2054,57 @@ static bool shareinput_mutator_xslice_1(Node* node, ApplyShareInputContext *ctxt
 				ctxt->qdShares = list_append_unique_int(ctxt->qdShares, sisc->share_id);
 		}
 
+		if (shared)
+		{
+			Assert(shareinput_find_sharenode(ctxt, sisc->share_id, NULL) == false);
+			Assert(get_plan_share_id(plan) == get_plan_share_id(shared));
+			set_plan_driver_slice(shared, motId);
+
+			ctxt->sharedNodes = lappend(ctxt->sharedNodes, shared);
+			ctxt->sliceMarks = lappend_int(ctxt->sliceMarks, motId);
+		}
+	}
+
+	return true;
+}
+
+/*
+ * Second pass on shareinput xslice.  It marks the shared node xslice,
+ * if a 'shared' is cross-slice.
+ */
+static bool
+shareinput_mutator_xslice_2(Node* node, ApplyShareInputContext *ctxt, bool fPop)
+{
+	Plan	   *plan = (Plan *) node;
+
+	if (fPop)
+	{
+		if (IsA(plan, Motion))
+			shareinput_popmot(ctxt);
+		return false;
+	}
+
+	if (IsA(plan, Motion))
+	{
+		Motion	   *motion = (Motion *) plan;
+		shareinput_pushmot(ctxt, motion->motionID);
+		return true;
+	}
+
+	if (IsA(plan, ShareInputScan))
+	{
+		ShareInputScan *sisc = (ShareInputScan *) plan;
+		int			motId = shareinput_peekmot(ctxt);
+		Plan	   *shared = plan->lefttree;
+
 		if(!shared)
 		{
 			ShareNodeWithSliceMark plan_slicemark = {NULL /* plan */,0 /* slice_mark */};
 			int  shareSliceId = 0;
 			
 			shareinput_find_sharenode(ctxt, sisc->share_id, &plan_slicemark);
-			Assert(NULL != plan_slicemark.plan);
+			if (plan_slicemark.plan == NULL)
+				elog(ERROR, "could not find shared input node with id %d", sisc->share_id);
 
 			shareSliceId = get_plan_driver_slice(plan_slicemark.plan);
 
@@ -2095,26 +2118,18 @@ static bool shareinput_mutator_xslice_1(Node* node, ApplyShareInputContext *ctxt
 				sisc->driver_slice = motId;
 			}
 		}
-		else
-		{
-			Assert(shareinput_find_sharenode(ctxt, sisc->share_id, NULL) == false);
-			Assert(get_plan_share_id(plan) == get_plan_share_id(shared));
-			set_plan_driver_slice(shared, motId);
-		
-			ctxt->sharedNodes = lappend(ctxt->sharedNodes, shared);
-			ctxt->sliceMarks = lappend_int(ctxt->sliceMarks, motId); 
-		}
 	}
 				
 	return true;
 }
 
 /* 
- * Second pass
+ * Third pass:
  * 	1. Mark shareinput scan xslice,
  * 	2. Bulid a list of QD slices
  */
-static bool shareinput_mutator_xslice_2(Node *node, ApplyShareInputContext *ctxt, bool fPop)
+static bool
+shareinput_mutator_xslice_3(Node *node, ApplyShareInputContext *ctxt, bool fPop)
 {
 	Plan *plan = (Plan *) node;
 
@@ -2141,6 +2156,10 @@ static bool shareinput_mutator_xslice_2(Node *node, ApplyShareInputContext *ctxt
 		ShareType stype = SHARE_NOTSHARED;
 
 		shareinput_find_sharenode(ctxt, sisc->share_id, &plan_slicemark);
+
+		if(!plan_slicemark.plan)
+			elog(ERROR, "sub-plan for share_id %d cannot be NULL", sisc->share_id);
+
 		stype = get_plan_share_type(plan_slicemark.plan);
 
 		switch(stype)
@@ -2169,11 +2188,11 @@ static bool shareinput_mutator_xslice_2(Node *node, ApplyShareInputContext *ctxt
 }
 
 /* 
- * The third pass.  If a shareinput is running on QD, then all slices in this share 
- * must be on QD.  Move them to QD.
+ * The fourth pass.  If a shareinput is running on QD, then all slices in
+ * this share must be on QD.  Move them to QD.
  */
-
-static bool shareinput_mutator_xslice_3(Node *node, ApplyShareInputContext *ctxt, bool fPop)
+static bool
+shareinput_mutator_xslice_4(Node *node, ApplyShareInputContext *ctxt, bool fPop)
 {
 	Plan *plan = (Plan *) node;
 	int motId = shareinput_peekmot(ctxt);
@@ -2244,9 +2263,12 @@ static bool assign_plannode_id_walker(Node *node, ApplyShareInputContext *ctxt, 
 	return true;
 }
 
-Plan *apply_shareinput_xslice(Plan *plan, PlannerGlobal *glob)
+Plan *
+apply_shareinput_xslice(Plan *plan, PlannerGlobal *glob)
 {
 	ApplyShareInputContext *ctxt = &glob->share;
+	ListCell *lp;
+
 	ctxt->sharedNodes = NULL;
 	ctxt->sliceMarks = NULL;
 	ctxt->motStack = NULL;
@@ -2256,27 +2278,27 @@ Plan *apply_shareinput_xslice(Plan *plan, PlannerGlobal *glob)
 	ctxt->nextPlanId = 0;
 
 	shareinput_pushmot(ctxt, 0);
-	
-	ListCell *lp = NULL;
+
 	/* 
 	 * Walk the tree.  See comment for each pass for what each pass will do.
-	 * Note: We depends on the contxt of between the passes, so do not reset 
-	 * the context between calls.
+	 * The context is used to carry information from one pass to another,
+	 * as well as within a pass.
 	 */
 
-    /*
-     * a subplan might have a SharedScan consumer while the SharedScan producer
-     * is in the main plan,
-     * we need to store SharedScan nodes in main plan into traversal context
-     *  before traversing subplans
-     */
-	shareinput_walker(shareinput_mutator_xslice_1, (Node *) plan, ctxt);
+	/*
+	 * A subplan might have a SharedScan consumer while the SharedScan
+	 * producer is in the main plan, or vice versa. So in the first pass, we
+	 * walk through all plans and collect all producer subplans into the
+	 * context, before processing the consumers.
+	 */
 	foreach (lp, glob->subplans)
 	{
 		Plan	   *subplan = (Plan *) lfirst(lp);
 		shareinput_walker(shareinput_mutator_xslice_1, (Node *) subplan, ctxt);
 	}
+	shareinput_walker(shareinput_mutator_xslice_1, (Node *) plan, ctxt);
 
+	/* Now walk the tree again, and process all the consumers. */
 	foreach (lp, glob->subplans)
 	{
 		Plan	   *subplan = (Plan *) lfirst(lp);
@@ -2290,6 +2312,13 @@ Plan *apply_shareinput_xslice(Plan *plan, PlannerGlobal *glob)
 		shareinput_walker(shareinput_mutator_xslice_3, (Node *) subplan, ctxt);
 	}
 	shareinput_walker(shareinput_mutator_xslice_3, (Node *) plan, ctxt);
+
+	foreach (lp, glob->subplans)
+	{
+		Plan	   *subplan = (Plan *) lfirst(lp);
+		shareinput_walker(shareinput_mutator_xslice_4, (Node *) subplan, ctxt);
+	}
+	shareinput_walker(shareinput_mutator_xslice_4, (Node *) plan, ctxt);
 
 	return plan;
 }
@@ -2654,11 +2683,10 @@ static void remove_unused_initplans_helper(Plan *plan, Bitmapset **usedParams, B
 			find_params_walker((Node *) motion->hashExpr, &context);
 			break;
 		}
-		case T_SubPlan:
+		case T_Window:
 		{
-			SubPlan *subplan = (SubPlan *) subplan;
-			find_params_walker((Node *) subplan->testexpr, &context);
-			find_params_walker((Node *) subplan->args, &context);
+			Window *w = (Window *) plan;
+			find_params_walker((Node *) w->windowKeys, &context);
 			break;
 		}
 		default:
@@ -2684,64 +2712,42 @@ static void remove_unused_initplans_helper(Plan *plan, Bitmapset **usedParams, B
 
 	if (NIL != plan->initPlan)
 	{
-		/* gather initplans from current node, and keep track of their param ids */
-		List *paramids = NIL;
-		List *planids = NIL;
+		List	   *newInitPlans = NIL;
+		ListCell *lc;
 
-		ListCell *lc = NULL;
 		foreach (lc, plan->initPlan)
 		{
 			SubPlan *initplan = (SubPlan *) lfirst(lc);
+			ListCell *lc_paramid;
+			bool		anyused;
+
 			Assert(initplan->is_initplan);
-			Assert(1 == list_length(initplan->setParam));
 
-			planids = lappend_int(planids, initplan->plan_id);
-			paramids = lappend_int(paramids, linitial_int(initplan->setParam));
-		}
-
-		/* remove from these lists the params that are used */
-		int paramid = bms_first_from(context.paramids, 0);
-		while (0 <= paramid)
-		{
-			int index = list_find_int(paramids, paramid);
-			if (0 <= index)
+			/* Are any of this Init Plan's output parameters actually used? */
+			anyused = false;
+			foreach (lc_paramid, initplan->setParam)
 			{
-				int planid = list_nth_int(planids, index);
-				paramids = list_delete_int(paramids, paramid);
-				planids = list_delete_int(planids, planid);
+				int			paramid = lfirst_int(lc_paramid);
+
+				if (bms_is_member(paramid, context.paramids))
+				{
+					anyused = true;
+					break;
+				}
 			}
 
-			paramid = bms_first_from(context.paramids, paramid + 1);
-		}
-
-		/* delete unused initplans */
-		List *oldInitPlans = plan->initPlan;
-		plan->initPlan = NIL;
-
-		foreach (lc, oldInitPlans)
-		{
-			SubPlan *initplan = (SubPlan *) lfirst(lc);
-			if (0 > list_find_int(planids, initplan->plan_id))
-			{
-				plan->initPlan = lappend(plan->initPlan, initplan);
-			}
+			/* If none of its params are used, leave out from the new list */
+			if (anyused)
+				newInitPlans = lappend(newInitPlans, initplan);
 			else
-			{
-				pfree(initplan);
-			}
+				elog(DEBUG2, "removing unused InitPlan %s", initplan->plan_name);
 		}
 
 		/* remove unused params */
-		foreach (lc, paramids)
-		{
-			int paramid = lfirst_int(lc);
-			plan->allParam = bms_del_member(plan->allParam, paramid);
-		}
+		plan->allParam = bms_intersect(plan->allParam, context.paramids);
 
-		/* cleanup */
-		list_free(oldInitPlans);
-		list_free(planids);
-		list_free(paramids);
+		list_free(plan->initPlan);
+		plan->initPlan = newInitPlans;
 	}
 
 	Bitmapset *oldbms = *usedParams;
@@ -2826,3 +2832,490 @@ void remove_unused_initplans(Plan *plan, PlannerInfo *root)
 	bms_free(rte_params);
 }
 
+Node *
+planner_make_plan_constant(struct PlannerInfo *root, Node *n, bool is_SRI)
+{
+	pre_dispatch_function_evaluation_context pcontext;
+
+	planner_init_plan_tree_base(&pcontext.base, root);
+	pcontext.single_row_insert = is_SRI;
+
+	return plan_tree_mutator(n, pre_dispatch_function_evaluation_mutator, &pcontext);
+}
+
+/*
+ * Evaluate functions to constants.
+ */
+Node *
+exec_make_plan_constant(struct PlannedStmt *stmt, bool is_SRI)
+{
+	pre_dispatch_function_evaluation_context pcontext;
+
+	Assert(stmt);
+	exec_init_plan_tree_base(&pcontext.base, stmt);
+	pcontext.single_row_insert = is_SRI;
+
+	return plan_tree_mutator((Node *)stmt->planTree, pre_dispatch_function_evaluation_mutator, &pcontext);
+}
+
+/*
+ * Remove subquery field in RTE's with subquery kind.
+ */
+void
+remove_subquery_in_RTEs(Node *node)
+{
+    if (node == NULL)
+    {
+        return;
+    }
+
+    if (IsA(node, RangeTblEntry))
+    {
+        RangeTblEntry *rte = (RangeTblEntry *) node;
+
+        if (RTE_SUBQUERY == rte->rtekind && NULL != rte->subquery)
+        {
+			/*
+			 * Replace subquery with a dummy subquery.
+			 *
+			 * XXX: We could save a lot more memory by deep-freeing the many
+			 * fields in the Query too. But I'm not sure which of them might
+			 * be shared by other objects in the tree.
+			 */
+			pfree(rte->subquery);
+			rte->subquery = makeNode(Query);
+        }
+
+        return;
+    }
+
+    if (IsA(node, List))
+    {
+        List *list = (List *) node;
+        ListCell *lc = NULL;
+		
+		foreach(lc, list)
+        {
+            remove_subquery_in_RTEs((Node *) lfirst(lc));
+        }
+    }
+}
+
+#define GP_PARTITION_SELECTION_OID 6084
+#define GP_PARTITION_EXPANSION_OID 6085
+#define GP_PARTITION_INVERSE_OID 6086
+ 
+/*
+ * Let's evaluate all STABLE functions that have constant args before
+ * dispatch, so we get a consistent view across QEs
+ *
+ * Also, if this is a single_row insert, let's evaluate nextval() and
+ * currval() before dispatching
+ */
+static Node *
+pre_dispatch_function_evaluation_mutator(Node *node,
+										 pre_dispatch_function_evaluation_context *context)
+{
+	Node * new_node = 0;
+	
+	if (node == NULL)
+		return NULL;
+
+	if (IsA(node, Param))
+	{
+		Param *param = (Param *) node;
+
+		/* Not replaceable, so just copy the Param (no need to recurse) */
+		return (Node *) copyObject(param);
+	}
+	else if (IsA(node, FuncExpr))
+	{
+		FuncExpr *expr = (FuncExpr *) node;
+		List *args;
+		ListCell *arg;
+		Expr *simple;
+		FuncExpr *newexpr;
+		bool has_nonconst_input;
+
+		Form_pg_proc funcform;
+		EState *estate;
+		ExprState *exprstate;
+		MemoryContext oldcontext;
+		Datum const_val;
+		bool const_is_null;
+		int16 resultTypLen;
+		bool resultTypByVal;
+
+		Oid	funcid;
+		HeapTuple func_tuple;
+
+		/*
+		 * Reduce constants in the FuncExpr's arguments. We know args is
+		 * either NIL or a List node, so we can call expression_tree_mutator
+		 * directly rather than recursing to self.
+		 */
+		args = (List *) expression_tree_mutator((Node *) expr->args,
+												pre_dispatch_function_evaluation_mutator,
+												(void *) context);
+										
+		funcid = expr->funcid;
+
+		newexpr = makeNode(FuncExpr);
+		newexpr->funcid = expr->funcid;
+		newexpr->funcresulttype = expr->funcresulttype;
+		newexpr->funcretset = expr->funcretset;
+		newexpr->funcformat = expr->funcformat;
+		newexpr->args = args;
+
+		/*
+		 * Check for constant inputs
+		 */
+		has_nonconst_input = false;
+		
+		foreach(arg, args)
+		{
+			if (!IsA(lfirst(arg), Const))
+			{
+				has_nonconst_input = true;
+				break;
+			}
+		}
+		
+		if (!has_nonconst_input)
+		{
+			bool is_seq_func = false;
+			bool tup_or_set;
+			cqContext *pcqCtx;
+
+			pcqCtx = caql_beginscan(NULL,
+									cql("SELECT * FROM pg_proc " " WHERE oid = :1 ", ObjectIdGetDatum(funcid)));
+
+			func_tuple = caql_getnext(pcqCtx);
+
+			if (!HeapTupleIsValid(func_tuple))
+				elog(ERROR, "cache lookup failed for function %u", funcid);
+
+			funcform = (Form_pg_proc) GETSTRUCT(func_tuple);
+
+			/* can't handle set returning or row returning functions */
+			tup_or_set = (funcform->proretset || type_is_rowtype(funcform->prorettype));
+
+			caql_endscan(pcqCtx);
+			
+			/* can't handle it */
+			if (tup_or_set)
+			{
+				/* 
+				 * We haven't mutated this node, but we still return the
+				 * mutated arguments.
+				 *
+				 * If we don't do this, we'll miss out on transforming function
+				 * arguments which are themselves functions we need to mutated.
+				 * For example, select foo(now()).
+				 */
+				return (Node *)newexpr;
+			}
+
+			/* 
+			 * Ignored evaluation of gp_partition stable functions.
+			 * TODO: refactor gp_partition stable functions to be truly
+			 * stable
+			 */
+			if (funcid == GP_PARTITION_SELECTION_OID 
+				|| funcid == GP_PARTITION_EXPANSION_OID 
+				|| funcid == GP_PARTITION_INVERSE_OID)
+			{
+				return (Node *)newexpr;
+			}
+
+			/* 
+			 * Here we want to mark any statement that is
+			 * going to use a sequence as dirty.  Doing this means that the
+			 * QD will flush the xlog which will also flush any xlog writes that
+			 * the sequence server might do. 
+			 */
+			if (funcid == NEXTVAL_FUNC_OID || funcid == CURRVAL_FUNC_OID ||
+				funcid == SETVAL_FUNC_OID)
+			{
+				ExecutorMarkTransactionUsesSequences();
+				is_seq_func = true;
+			}
+
+			if (funcform->provolatile == PROVOLATILE_IMMUTABLE)
+				/* okay */ ;
+			else if (funcform->provolatile == PROVOLATILE_STABLE)
+				/* okay */ ;
+			else if (context->single_row_insert && is_seq_func)
+				;/* Volatile, but special sequence function */
+			else
+				return (Node *)newexpr;
+
+			/*
+			 * Ok, we have a function that is STABLE (or IMMUTABLE), with
+			 * constant args. Let's try to evaluate it.
+			 */
+
+			/*
+			 * To use the executor, we need an EState.
+			 */
+			estate = CreateExecutorState();
+
+			/* We can use the estate's working context to avoid memory leaks. */
+			oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
+
+			/*
+			 * Prepare expr for execution.
+			 */
+			exprstate = ExecPrepareExpr((Expr *) newexpr, estate);
+
+			/*
+			 * And evaluate it.
+			 *
+			 * It is OK to use a default econtext because none of the
+			 * ExecEvalExpr() code used in this situation will use econtext.
+			 * That might seem fortuitous, but it's not so unreasonable --- a
+			 * constant expression does not depend on context, by definition,
+			 * n'est-ce pas?
+			 */
+			const_val = ExecEvalExprSwitchContext(exprstate,
+												  GetPerTupleExprContext(estate),
+												  &const_is_null, NULL);
+
+			/* Get info needed about result datatype */
+			get_typlenbyval(expr->funcresulttype, &resultTypLen, &resultTypByVal);
+
+			/* Get back to outer memory context */
+			MemoryContextSwitchTo(oldcontext);
+
+			/* Must copy result out of sub-context used by expression eval */
+			if (!const_is_null)
+				const_val = datumCopy(const_val, resultTypByVal, resultTypLen);
+
+			/* Release all the junk we just created */
+			FreeExecutorState(estate);
+
+			/*
+			 * Make the constant result node.
+			 */
+			simple = (Expr *) makeConst(expr->funcresulttype, -1, resultTypLen,
+										const_val, const_is_null,
+										resultTypByVal);
+
+			/* successfully simplified it */
+			if (simple)
+				return (Node *) simple;
+		}
+
+		/*
+		 * The expression cannot be simplified any further, so build and
+		 * return a replacement FuncExpr node using the possibly-simplified
+		 * arguments.
+		 */
+		return (Node *) newexpr;
+	}
+	else if (IsA(node, OpExpr))
+	{
+		OpExpr *expr = (OpExpr *) node;
+		List *args;
+
+		OpExpr *newexpr;
+
+		/*
+		 * Reduce constants in the OpExpr's arguments.  We know args is either
+		 * NIL or a List node, so we can call expression_tree_mutator directly
+		 * rather than recursing to self.
+		 */
+		args = (List *) expression_tree_mutator((Node *) expr->args,
+												pre_dispatch_function_evaluation_mutator,
+												(void *) context);
+
+		/*
+		 * Need to get OID of underlying function.	Okay to scribble on input
+		 * to this extent.
+		 */
+		set_opfuncid(expr);
+
+		newexpr = makeNode(OpExpr);
+		newexpr->opno = expr->opno;
+		newexpr->opfuncid = expr->opfuncid;
+		newexpr->opresulttype = expr->opresulttype;
+		newexpr->opretset = expr->opretset;
+		newexpr->args = args;
+
+		return (Node *) newexpr;
+	}
+	else if (IsA(node, CurrentOfExpr))
+	{
+		/*
+		 * updatable cursors 
+		 *
+		 * During constant folding, the CurrentOfExpr's gp_segment_id, ctid, 
+		 * and tableoid fields are filled in with observed values from the 
+		 * referenced cursor. For more detail, see bindCurrentOfParams below.
+		 */
+		CurrentOfExpr *expr = (CurrentOfExpr *) node,
+					  *newexpr = copyObject(expr);
+
+		bindCurrentOfParams(newexpr->cursor_name,
+							newexpr->target_relid,
+			   		   		&newexpr->ctid,
+					  	   	&newexpr->gp_segment_id,
+					  	   	&newexpr->tableoid);
+		return (Node *) newexpr;
+	}
+	
+	/*
+	 * For any node type not handled above, we recurse using
+	 * plan_tree_mutator, which will copy the node unchanged but try to
+	 * simplify its arguments (if any) using this routine.
+	 */
+	new_node = plan_tree_mutator(node,
+								 pre_dispatch_function_evaluation_mutator,
+								 (void *) context);
+
+	return new_node;
+}
+
+/*
+ * bindCurrentOfParams
+ *
+ * During constant folding, we evaluate STABLE functions to give QEs a consistent view
+ * of the query. At this stage, we will also bind observed values of 
+ * gp_segment_id/ctid/tableoid into the CurrentOfExpr.
+ * This binding must happen only after planning, otherwise we disrupt prepared statements.
+ * Furthermore, this binding must occur before dispatch, because a QE lacks the 
+ * the information needed to discern whether it's responsible for the currently 
+ * positioned tuple.
+ *
+ * The design of this parameter binding is very tightly bound to the parse/analyze
+ * and subsequent planning of DECLARE CURSOR. We depend on the "is_simply_updatable"
+ * calculation of parse/analyze to decide whether CURRENT OF makes sense for the
+ * referenced cursor. Moreover, we depend on the ensuing planning of DECLARE CURSOR
+ * to provide the junk metadata of gp_segment_id/ctid/tableoid (per tuple).
+ *
+ * This function will lookup the portal given by "cursor_name". If it's simply updatable,
+ * we'll glean gp_segment_id/ctid/tableoid from the portal's most recently fetched 
+ * (raw) tuple. We bind this information into the CurrentOfExpr to precisely identify
+ * the currently scanned tuple, ultimately for consumption of TidScan/execQual by the QEs.
+ */
+static void
+bindCurrentOfParams(char *cursor_name, Oid target_relid, ItemPointer ctid, int *gp_segment_id, Oid *tableoid)
+{
+	char *table_name;
+	Portal portal;
+	QueryDesc *queryDesc;
+	AttrNumber gp_segment_id_attno;
+	AttrNumber ctid_attno;
+	AttrNumber tableoid_attno;
+	bool isnull;
+	Datum value;
+
+	portal = GetPortalByName(cursor_name);
+	if (!PortalIsValid(portal))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_CURSOR_STATE),
+				 errmsg("cursor \"%s\" does not exist", cursor_name)));
+
+	queryDesc = PortalGetQueryDesc(portal);
+	if (queryDesc == NULL)
+		ereport(ERROR, 
+				(errcode(ERRCODE_INVALID_CURSOR_STATE),
+				 errmsg("cursor \"%s\" is held from a previous transaction", cursor_name)));
+
+	/* obtain table_name for potential error messages */
+	table_name = get_rel_name(target_relid);
+
+	/* 
+	 * The referenced cursor must be simply updatable. This has already
+	 * been discerned by parse/analyze for the DECLARE CURSOR of the given
+	 * cursor. This flag assures us that gp_segment_id, ctid, and tableoid (if necessary)
+ 	 * will be available as junk metadata, courtesy of preprocess_targetlist.
+	 */
+	if (!portal->is_simply_updatable)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_CURSOR_STATE),
+				 errmsg("cursor \"%s\" is not a simply updatable scan of table \"%s\"",
+						cursor_name, table_name)));
+
+	/* 
+	 * The target relation must directly match the cursor's relation. This throws out
+	 * the simple case in which a cursor is declared against table X and the update is
+	 * issued against Y. Moreover, this disallows some subtler inheritance cases where
+	 * Y inherits from X. While such cases could be implemented, it seems wiser to
+	 * simply error out cleanly.
+	 */
+	Index varno = extractSimplyUpdatableRTEIndex(queryDesc->plannedstmt->rtable);
+	Oid cursor_relid = getrelid(varno, queryDesc->plannedstmt->rtable);
+	if (target_relid != cursor_relid)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_CURSOR_STATE),
+				 errmsg("cursor \"%s\" is not a simply updatable scan of table \"%s\"",
+						cursor_name, table_name)));
+	/* 
+	 * The cursor must have a current result row: per the SQL spec, it's 
+	 * an error if not.
+	 */
+	if (portal->atStart || portal->atEnd)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_CURSOR_STATE),
+				 errmsg("cursor \"%s\" is not positioned on a row", cursor_name)));
+
+	/*
+	 * As mentioned above, if parse/analyze recognized this cursor as simply
+	 * updatable during DECLARE CURSOR, then its subsequent planning must have
+	 * made gp_segment_id, ctid, and tableoid available as junk for each tuple.
+	 *
+	 * To retrieve this junk metadeta, we leverage the EState's junkfilter against
+	 * the raw tuple yielded by the highest most node in the plan.
+	 */
+	TupleTableSlot *slot = queryDesc->planstate->ps_ResultTupleSlot;
+	Insist(!TupIsNull(slot));
+	Assert(queryDesc->estate->es_junkFilter);
+
+	/* extract gp_segment_id metadata */
+	gp_segment_id_attno = ExecFindJunkAttribute(queryDesc->estate->es_junkFilter, "gp_segment_id");
+	if (!AttributeNumberIsValid(gp_segment_id_attno))
+		elog(ERROR, "could not find junk gp_segment_id column");
+	value = ExecGetJunkAttribute(slot, gp_segment_id_attno, &isnull);
+	if (isnull)
+		elog(ERROR, "gp_segment_id is NULL");
+	*gp_segment_id = DatumGetInt32(value);
+
+	/* extract ctid metadata */
+	ctid_attno = ExecFindJunkAttribute(queryDesc->estate->es_junkFilter, "ctid");
+	if (!AttributeNumberIsValid(ctid_attno))
+		elog(ERROR, "could not find junk ctid column");
+	value = ExecGetJunkAttribute(slot, ctid_attno, &isnull);
+	if (isnull)
+		elog(ERROR, "ctid is NULL");
+	ItemPointerCopy(DatumGetItemPointer(value), ctid);
+
+	/* 
+	 * extract tableoid metadata
+	 *
+	 * DECLARE CURSOR planning only includes tableoid metadata when
+	 * scrolling a partitioned table, as this is the only case in which
+	 * gp_segment_id/ctid alone do not suffice to uniquely identify a tuple.
+	 */
+	tableoid_attno = ExecFindJunkAttribute(queryDesc->estate->es_junkFilter, "tableoid");
+	if (AttributeNumberIsValid(tableoid_attno))
+	{
+		value = ExecGetJunkAttribute(slot, tableoid_attno, &isnull);
+		if (isnull)
+			elog(ERROR, "tableoid is NULL");
+		*tableoid = DatumGetObjectId(value);
+
+		/*
+		 * This is our last opportunity to verify that the physical table given
+		 * by tableoid is, indeed, simply updatable.
+		 */
+		if (!isSimplyUpdatableRelation(*tableoid))
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("%s is not updatable",
+							get_rel_name_partition(*tableoid))));
+	} else
+		*tableoid = InvalidOid;
+
+	pfree(table_name);
+}

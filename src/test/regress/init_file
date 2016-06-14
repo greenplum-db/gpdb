@@ -103,6 +103,9 @@ s/\(COptTasks\.cpp:\d+\)//
 m/\(cdbdisp\.c:\d+\)/
 s/\(cdbdisp\.c:\d+\)//
 
+m/\(plpython\.c:\d+\)/
+s/\(plpython\.c:\d+\)//
+
 #In alter_table_distribution_policy tests, some test cases emit NOTICE message
 #like the following
 #drop cascades to function pg_atsdb_211851_2_4_out.
@@ -111,4 +114,11 @@ s/\(cdbdisp\.c:\d+\)//
 m/^NOTICE:.*drop cascades to.*/
 s/^NOTICE:.*drop cascades to.*/^NOTICE: drop cascades to /
 
+# Mask out some numbers (parts of partition names) that vary from run to run.
+m/overlaps existing partition "r\d+"/
+s/overlaps existing partition "r\d+"/partition "r##########"/
+
+# Mask out some numbers (part of temp table schema) that vary from run to run.
+m/Table "pg_temp_\d+.temp/
+s/Table "pg_temp_\d+.temp/Table "pg_temp_#####/
 -- end_matchsubs

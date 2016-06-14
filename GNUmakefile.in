@@ -1,7 +1,7 @@
 #
 # PostgreSQL top level makefile
 #
-# $PostgreSQL: pgsql/GNUmakefile.in,v 1.45 2006/08/18 19:58:05 adunstan Exp $
+# $PostgreSQL: pgsql/GNUmakefile.in,v 1.46 2007/02/09 15:55:57 petere Exp $
 #
 
 subdir =
@@ -24,6 +24,7 @@ all:
 	$(MAKE) -C contrib/gp_internal_tools all
 	$(MAKE) -C contrib/gp_cancel_query all
 	$(MAKE) -C contrib/indexscan all
+	$(MAKE) -C gpAux/extensions mapreduce
 	@echo "All of Greenplum Database successfully made. Ready to install."
 
 install:
@@ -42,6 +43,7 @@ install:
 	$(MAKE) -C contrib/gp_cancel_query $@
 	$(MAKE) -C contrib/indexscan $@ 
 	$(MAKE) -C gpMgmt $@
+	$(MAKE) -C gpAux/extensions $@
 
 	@echo "Greenplum Database installation complete."
 
@@ -85,6 +87,7 @@ clean:
 	$(MAKE) -C contrib/gp_internal_tools $@
 	$(MAKE) -C contrib/gp_cancel_query $@
 	$(MAKE) -C contrib/indexscan $@
+	$(MAKE) -C gpAux/extensions $@
 # Garbage from autoconf:
 	@rm -rf autom4te.cache/
 
@@ -92,6 +95,7 @@ clean:
 # will be gone too soon.
 distclean maintainer-clean:
 #	-$(MAKE) -C doc $@
+	-$(MAKE) -C gpAux/extensions $@
 	-$(MAKE) -C contrib $@
 	-$(MAKE) -C config $@
 	-$(MAKE) -C src $@
@@ -101,8 +105,9 @@ distclean maintainer-clean:
 
 check: all
 
-check installcheck installcheck-parallel installcheck-good:
+check installcheck installcheck-parallel installcheck-good installcheck-optfunctional:
 	$(MAKE) -C src/test $@
+	$(MAKE) -C gpAux/extensions $@
 
 GNUmakefile: GNUmakefile.in $(top_builddir)/config.status
 	./config.status $@
@@ -128,8 +133,7 @@ opt_files = \
 	src/tools src/tutorial \
 	$(addprefix src/pl/, plperl plpython tcl)
 
-#docs_files = doc/postgres.tar.gz doc/src doc/TODO.detail
-docs_files :=
+docs_files =
 
 postgresql-base-$(VERSION).tar: distdir
 	$(TAR) -c $(addprefix --exclude $(distdir)/, $(docs_files) $(opt_files) src/test) \

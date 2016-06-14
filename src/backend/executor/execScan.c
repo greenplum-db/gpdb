@@ -9,11 +9,12 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execScan.c,v 1.38.2.2 2007/02/02 00:07:27 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execScan.c,v 1.41 2007/02/02 00:07:03 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
+#include "codegen/codegen_wrapper.h"
 
 #include "executor/executor.h"
 #include "miscadmin.h"
@@ -155,7 +156,7 @@ ExecScan(ScanState *node,
 		 * when the qual is nil ... saves only a few cycles, but they add up
 		 * ...
 		 */
-		if (!qual || ExecQual(qual, econtext, false))
+		if (!qual || call_ExecQual(node->ps, qual, econtext, false))
 		{
 			/*
 			 * Found a satisfactory scan tuple.
@@ -232,6 +233,7 @@ tlist_matches_tupdesc(PlanState *ps, List *tlist, Index varno, TupleDesc tupdesc
 		if (!var || !IsA(var, Var))
 			return false;		/* tlist item not a Var */
 
+		/* if these Asserts fail, planner messed up */
 		Assert(var->varlevelsup == 0);
 		if (var->varattno != attrno)
 			return false;		/* out of order */
@@ -251,7 +253,7 @@ tlist_matches_tupdesc(PlanState *ps, List *tlist, Index varno, TupleDesc tupdesc
 			(var->vartypmod != att_tup->atttypmod &&
 			 var->vartypmod != -1))
 			return false;		/* type mismatch */
-			
+
 		tlist_item = lnext(tlist_item);
 	}
 
@@ -298,6 +300,12 @@ InitScanStateRelationDetails(ScanState *scanState, Plan *plan, EState *estate)
 	scanState->ss_currentRelation = currentRelation;
 	ExecAssignScanType(scanState, RelationGetDescr(currentRelation));
 	ExecAssignScanProjectionInfo(scanState);
+
+	ProjectionInfo *projInfo = scanState->ps.ps_ProjInfo;
+	if (NULL != projInfo && projInfo->pi_isVarList){
+		enroll_ExecVariableList_codegen(ExecVariableList,
+				&projInfo->ExecVariableList_gen_info.ExecVariableList_fn, projInfo, scanState->ss_ScanTupleSlot);
+	}
 
 	scanState->tableType = getTableType(scanState->ss_currentRelation);
 }

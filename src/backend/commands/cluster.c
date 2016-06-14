@@ -12,7 +12,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/cluster.c,v 1.154.2.2 2007/09/29 18:05:28 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/cluster.c,v 1.158 2007/03/29 00:15:37 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -46,7 +46,7 @@
 #include "utils/syscache.h"
 #include "utils/relcache.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdboidsync.h"
 #include "cdb/cdbpersistentfilesysobj.h"
 
@@ -478,10 +478,10 @@ check_index_is_clusterable(Relation OldHeap, Oid indexOid, bool recheck)
 						 errmsg("cannot cluster on index \"%s\" because access method does not handle null values",
 								RelationGetRelationName(OldIndex)),
 						 recheck
-						 ? errhint("You may be able to work around this by marking column \"%s\" NOT NULL, or use ALTER TABLE ... SET WITHOUT CLUSTER to remove the cluster specification from the table.",
-								   NameStr(OldHeap->rd_att->attrs[colno - 1]->attname))
-						 : errhint("You may be able to work around this by marking column \"%s\" NOT NULL.",
-								   NameStr(OldHeap->rd_att->attrs[colno - 1]->attname))));
+						 ? errhint("You might be able to work around this by marking column \"%s\" NOT NULL, or use ALTER TABLE ... SET WITHOUT CLUSTER to remove the cluster specification from the table.",
+						 NameStr(OldHeap->rd_att->attrs[colno - 1]->attname))
+						 : errhint("You might be able to work around this by marking column \"%s\" NOT NULL.",
+					  NameStr(OldHeap->rd_att->attrs[colno - 1]->attname))));
 		}
 		else if (colno < 0)
 		{
@@ -722,6 +722,7 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 	Oid			aOid = InvalidOid;
 	Oid			aiOid = InvalidOid;
 	Oid			*comptypeOid = NULL;
+	Oid			*comptypeArrayOid = NULL;
 	Oid         blkdirOid = InvalidOid;
 	Oid         blkdirIdxOid = InvalidOid;
 	Oid         visimapOid = InvalidOid;
@@ -763,6 +764,7 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 	aiOid = oidInfo->aosegIndexOid;
 	aosegComptypeOid = &oidInfo->aosegComptypeOid;
 	comptypeOid = &oidInfo->comptypeOid;
+	comptypeArrayOid = &oidInfo->comptypeArrayOid;
 	blkdirOid = oidInfo->aoblkdirOid;
 	blkdirIdxOid = oidInfo->aoblkdirIndexOid;
 	aoblkdirComptypeOid = &oidInfo->aoblkdirComptypeOid;
@@ -814,6 +816,7 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 										  allowSystemTableModsDDL,
 										  /* valid_opts */ true,
 										  comptypeOid,
+										  comptypeArrayOid,
 						 				  /* persistentTid */ NULL,
 						 				  /* persistentSerialNum */ NULL);
 
@@ -872,6 +875,9 @@ copy_heap_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex)
 	bool	   *isnull;
 	IndexScanDesc scan;
 	HeapTuple	tuple;
+	TransactionId myxid = GetCurrentTransactionId();
+	CommandId	mycid = GetCurrentCommandId();
+	bool		use_wal;
 
 	/*
 	 * Open the relations we need.
@@ -892,6 +898,17 @@ copy_heap_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex)
 	natts = newTupDesc->natts;
 	values = (Datum *) palloc0(natts * sizeof(Datum));
 	isnull = (bool *) palloc0(natts * sizeof(bool));
+
+	/*
+	 * We need to log the copied data in WAL iff WAL archiving is enabled AND
+	 * it's not a temp rel.  (Since we know the target relation is new and
+	 * can't have any FSM data, we can always tell heap_insert to ignore FSM,
+	 * even when using WAL.)
+	 */
+	use_wal = XLogArchivingActive() && !NewHeap->rd_istemp;
+
+	/* use_wal off requires rd_targblock be initially invalid */
+	Assert(NewHeap->rd_targblock == InvalidBlockNumber);
 
 	/*
 	 * Scan through the OldHeap on the OldIndex and copy each tuple into the
@@ -940,7 +957,7 @@ copy_heap_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex)
 		if (NewHeap->rd_rel->relhasoids)
 			HeapTupleSetOid(copiedTuple, HeapTupleGetOid(tuple));
 
-		simple_heap_insert(NewHeap, copiedTuple);
+		heap_insert(NewHeap, copiedTuple, mycid, use_wal, false, myxid);
 
 		heap_freetuple(copiedTuple);
 
@@ -951,6 +968,9 @@ copy_heap_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex)
 
 	pfree(values);
 	pfree(isnull);
+
+	if (!use_wal)
+		heap_sync(NewHeap);
 
 	index_close(OldIndex, NoLock);
 	heap_close(OldHeap, NoLock);

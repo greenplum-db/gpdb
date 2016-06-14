@@ -42,7 +42,8 @@ CreateAOAuxiliaryTable(
 	char aoauxiliary_relname[NAMEDATALEN];
 	char aoauxiliary_idxname[NAMEDATALEN];
 	bool shared_relation;
-	Oid relOid, aoauxiliary_relid, aoauxiliary_idxid;
+	Oid relOid, aoauxiliary_relid = InvalidOid;
+	Oid aoauxiliary_idxid;
 	ObjectAddress baseobject;
 	ObjectAddress aoauxiliaryobject;
 
@@ -105,6 +106,7 @@ CreateAOAuxiliaryTable(
 	 * destroyed when its master is, so there is no need to handle
 	 * the aovisimap relation as temp.
 	 */
+	Oid unusedArrayOid = InvalidOid;
 	aoauxiliary_relid = heap_create_with_catalog(aoauxiliary_relname,
 											     PG_AOSEGMENT_NAMESPACE,
 											     rel->rd_rel->reltablespace,
@@ -124,6 +126,7 @@ CreateAOAuxiliaryTable(
 											     true,
 												 /* valid_opts */ false,
 											     aoauxiliaryComptypeOid,
+												 &unusedArrayOid,
 											     /* persistentTid */ NULL,
 											     /* persistentSerialNum */ NULL);
 

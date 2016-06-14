@@ -722,7 +722,7 @@ tuplestore_gettupleslot_pos(Tuplestorestate *state, TuplestorePos *pos, bool for
 
 	if (tuple)
 	{
-		ExecStoreMemTuple(tuple, slot, should_free);
+		ExecStoreMinimalTuple(tuple, slot, should_free);
 		return true;
 	}
 	else

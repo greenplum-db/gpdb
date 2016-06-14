@@ -283,8 +283,6 @@
 /* #define ACLDEBUG */
 /* #define RTDEBUG */
 
-/* #define WATCH_VISIBILITY_IN_ACTION */
-
 /*
  * This define lets the system header files know we are interested in features up to Posix 6
  *

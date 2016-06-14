@@ -57,7 +57,6 @@
 #endif
 
 #ifdef USE_SSL
-
 #include <openssl/ssl.h>
 #if (SSLEAY_VERSION_NUMBER >= 0x00907000L)
 #include <openssl/conf.h>

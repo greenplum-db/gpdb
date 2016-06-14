@@ -11,10 +11,8 @@
 #ifndef CDBCAT_H
 #define CDBCAT_H
 
-#include "access/genam.h"
-#include "access/heapam.h"
-#include "catalog/gp_id.h"
-#include "catalog/gp_policy.h"
+#include "access/attnum.h"
+#include "utils/relcache.h"
 
 extern void checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr,
 									  int nidxatts, bool isprimary, 

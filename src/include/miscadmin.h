@@ -13,7 +13,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/miscadmin.h,v 1.190.2.2 2009/12/09 21:58:29 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/miscadmin.h,v 1.194 2007/04/16 18:29:56 alvherre Exp $
  *
  * NOTES
  *	  some of the information in this file should be moved to other files.
@@ -81,6 +81,8 @@ extern volatile bool ClientConnectionLost;
 
 /* these are marked volatile because they are examined by signal handlers: */
 extern volatile bool ImmediateInterruptOK;
+extern volatile bool ImmediateDieOK;
+extern volatile bool TermSignalReceived;
 extern PGDLLIMPORT volatile int32 InterruptHoldoffCount;
 extern PGDLLIMPORT volatile int32 CritSectionCount;
 
@@ -365,6 +367,7 @@ extern char *make_absolute_path(const char *path);
 
 /* in utils/misc/superuser.c */
 extern bool superuser(void);	/* current user is superuser */
+extern bool procRoleIsSuperuser(void); /* proc role id is superuser */
 extern bool superuser_arg(Oid roleid);	/* given user is superuser */
 
 

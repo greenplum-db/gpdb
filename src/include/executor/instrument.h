@@ -36,7 +36,6 @@ typedef struct Instrumentation
     double		workmemused;    /* CDB: work_mem actually used (bytes) */
     double		workmemwanted;  /* CDB: work_mem to avoid scratch i/o (bytes) */
 	instr_time	firststart;		/* CDB: Start time of first iteration of node */
-	bool		workfileReused; /* TRUE if cached workfiles reused in this node */
 	bool		workfileCreated;/* TRUE if workfiles are created in this node */
 	int		numPartScanned; /* Number of part tables scanned */
     struct CdbExplain_NodeSummary  *cdbNodeSummary; /* stats from all qExecs */

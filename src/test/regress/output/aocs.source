@@ -8,7 +8,7 @@ declare
 begin
 
   execute 'select relname from pg_class where oid=(select segrelid from pg_class, pg_appendonly where relname=''' || relname || ''' and relid = pg_class.oid)' into aosegname;
-  if aosegname > 0 then
+  if aosegname is not null then
 	  execute 'select tupcount from pg_aoseg.' || aosegname into tupcount;
   end if;
   return tupcount;
@@ -35,24 +35,40 @@ CREATE TABLE tenk_heap_for_aocs (
 -- create few AO tables. test various reloptions combinations. use a sample
 -- of them (the first 4) for later testing.
 --
--- valid
+-- valid combinations
 CREATE TABLE tenk_aocs1 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, checksum=true) distributed by(unique1);
 CREATE TABLE tenk_aocs2 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=0, blocksize=262144) distributed by(unique1);
 CREATE TABLE tenk_aocs3 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=6, blocksize=1048576, checksum=true) distributed by(unique1);
 CREATE TABLE tenk_aocs4 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=1, compresstype=zlib) distributed by(unique1);
-CREATE TABLE tenk_aocs5 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=6, compresstype=zlib, blocksize=1048576, checksum=true) distributed by(unique1);
--- invalid
-CREATE TABLE tenk_aocs6 (like tenk_heap_for_aocs) with (appendonly=false, orientation=column, compresslevel=6, checksum=true) distributed by(unique1);
+CREATE TABLE tenk_aocs5 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=6, compresstype=zlib) distributed by(unique1);
+CREATE TABLE tenk_aocs6 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=6, compresstype=zlib, blocksize=1048576, checksum=true) distributed by(unique1);
+-- invalid combinations
+-- col instead of column
+CREATE TABLE tenk_aocs7 (like tenk_heap_for_aocs) with (appendonly=true, orientation=col) distributed by(unique1);
+ERROR:  invalid parameter value for "orientation": "col"
+-- no parentheses surrounding storage options
+CREATE TABLE tenk_aocs8 (like tenk_heap_for_aocs) with appendonly=true, orientation=column distributed by(unique1);
+ERROR:  syntax error at or near "appendonly"
+LINE 1: ...E TABLE tenk_aocs8 (like tenk_heap_for_aocs) with appendonly...
+                                                             ^
+-- no comma separating storage options
+CREATE TABLE tenk_aocs9 (like tenk_heap_for_aocs) with (appendonly=true orientation=column) distributed by(unique1);
+ERROR:  syntax error at or near "orientation"
+LINE 1: ...9 (like tenk_heap_for_aocs) with (appendonly=true orientatio...
+                                                             ^
+-- appendonly=false with orientation=column should not work
+CREATE TABLE tenk_aocs10 (like tenk_heap_for_aocs) with (appendonly=false, orientation=column, compresslevel=6, checksum=true) distributed by(unique1);
 ERROR:  invalid option 'compresslevel' for base relation. Only valid for Append Only relations
-CREATE TABLE tenk_aocs7 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=6, compresstype=zlib) distributed by(unique1);
-CREATE TABLE tenk_aocs8 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, blocksize=100) distributed by(unique1);
+-- block size must be between 8KB and 2MB w/ 8KB multiple
+CREATE TABLE tenk_aocs11 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, blocksize=100) distributed by(unique1);
 ERROR:  block size must be between 8KB and 2MB and be an 8KB multiple. Got 100
-CREATE TABLE tenk_aocs9 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=0, compresstype=zlib) distributed by(unique1);
+-- cannot have compresslevel 0
+CREATE TABLE tenk_aocs12 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=0, compresstype=zlib) distributed by(unique1);
 ERROR:  compresstype can't be used with compresslevel 0
--- cs without ao is invalid.
-CREATE TABLE tenk_aocs10 (like tenk_heap_for_aocs) with (orientation=column) distributed by(unique1);
+-- orientation=column must be combined with appendonly=true
+CREATE TABLE tenk_aocs13 (like tenk_heap_for_aocs) with (orientation=column) distributed by(unique1);
 ERROR:  invalid option "orientation" for base relation. Only valid for Append Only relations
--------------------- 
+--------------------
 -- catalog checks
 --------------------
 -- check pg_appendonly
@@ -63,8 +79,8 @@ SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM 
  tenk_aocs2 |    262144 |              |             0 | t
  tenk_aocs3 |   1048576 | zlib         |             6 | t
  tenk_aocs4 |     32768 | zlib         |             1 | t
- tenk_aocs5 |   1048576 | zlib         |             6 | t
- tenk_aocs7 |     32768 | zlib         |             6 | t
+ tenk_aocs5 |     32768 | zlib         |             6 | t
+ tenk_aocs6 |   1048576 | zlib         |             6 | t
 (6 rows)
 
 -------------------- 
@@ -118,6 +134,7 @@ INSERT INTO tenk_aocs1 SELECT * FROM tenk_heap_for_aocs;
 INSERT INTO tenk_aocs2 SELECT * FROM tenk_heap_for_aocs;
 INSERT INTO tenk_aocs3 SELECT * FROM tenk_heap_for_aocs;
 INSERT INTO tenk_aocs4 SELECT * FROM tenk_heap_for_aocs;
+INSERT INTO tenk_aocs5 SELECT * FROM tenk_heap_for_aocs;
 -- mix and match some
 INSERT INTO tenk_aocs1 SELECT * FROM tenk_aocs1;
 INSERT INTO tenk_aocs2 SELECT * FROM tenk_aocs3;
@@ -374,8 +391,8 @@ SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM 
  tenk_aocs2 |    262144 |              |             0 | t
  tenk_aocs3 |   1048576 | zlib         |             6 | t
  tenk_aocs4 |     32768 | zlib         |             1 | t
- tenk_aocs5 |   1048576 | zlib         |             6 | t
- tenk_aocs7 |     32768 | zlib         |             6 | t
+ tenk_aocs5 |     32768 | zlib         |             6 | t
+ tenk_aocs6 |   1048576 | zlib         |             6 | t
 (6 rows)
 
 SELECT count(*) FROM tenk_aocs1;
@@ -402,6 +419,10 @@ SELECT count(*) FROM tenk_aocs4;
  10000
 (1 row)
 
+-- INHERITS
+-- This is not supported in aocs and should error out
+CREATE TABLE tenk_inherits_tenk_aocs1() INHERITS (tenk_aocs1);
+ERROR:  cannot inherit relation "tenk_aocs1" as it is column oriented
 -- NYI
 -- test get_ao_compression_ratio. use uncompressed table, so result is always 1.
 -- SELECT get_ao_compression_ratio('tenk_aocs2');
@@ -438,6 +459,40 @@ SELECT count(*) FROM tenk_aocs4;
  10000
 (1 row)
 
+-- LIKE
+-- Should not copy storage options if not specified
+CREATE TABLE tenk_like_nocopy_storage (LIKE tenk_aocs1);
+SELECT count(*) FROM pg_class WHERE relstorage = 'c' AND relname = 'tenk_like_nocopy_storage';
+ count
+-------
+     0
+(1 row)
+
+-- Check tables are truly decoupled
+CREATE TABLE tenk_truly_decoupled (LIKE tenk_aocs4);
+ALTER TABLE tenk_aocs4 DROP COLUMN two;
+SELECT count(two) FROM tenk_truly_decoupled;
+ count
+-------
+     0
+(1 row)
+
+-- DOMAIN
+CREATE DOMAIN aocs_domain_constraint AS VARCHAR
+    DEFAULT 'Default value for varchar.'
+    CONSTRAINT constr1
+    NOT NULL
+    CHECK (length(VALUE) > 16 AND length(VALUE) < 50);
+CREATE TABLE aocs_with_domain_constraint (id integer, vc1 aocs_domain_constraint)
+    WITH (appendonly=true, orientation=column) DISTRIBUTED BY (id);
+-- The following should succeed
+INSERT INTO aocs_with_domain_constraint (id, vc1) VALUES (1, 'Long enough, but not too long.;');
+INSERT INTO aocs_with_domain_constraint (id, vc1) VALUES (2, 'This is purrfect.');
+-- The following should fail
+INSERT INTO aocs_with_domain_constraint (id, vc1) VALUES (3, 'Not long enough.');
+ERROR:  value for domain aocs_domain_constraint violates check constraint "aocs_domain_constraint_check"
+INSERT INTO aocs_with_domain_constraint (id, vc1) VALUES (4, NULL);
+ERROR:  domain aocs_domain_constraint does not allow null values
 -- JOIN
 SELECT count(*) FROM tenk_aocs1 t1, tenk_aocs2 t2 where t1.unique1 = t2.unique2;
  count 
@@ -447,6 +502,67 @@ SELECT count(*) FROM tenk_aocs1 t1, tenk_aocs2 t2 where t1.unique1 = t2.unique2;
 
 SELECT count(*) FROM tenk_aocs1 t1, tenk_heap_for_aocs t2 where t1.unique1 = t2.unique2;
  count 
+-------
+ 10000
+(1 row)
+
+SELECT count(*) FROM tenk_aocs1 t1 INNER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2);
+ count
+-------
+ 10000
+(1 row)
+
+SELECT count(*) FROM tenk_aocs1 t1 LEFT OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2);
+ count
+-------
+ 10000
+(1 row)
+
+SELECT count(*) FROM tenk_aocs1 t1 RIGHT OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2);
+ count
+-------
+ 10000
+(1 row)
+
+SELECT count(*) FROM tenk_aocs1 t1 FULL OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2);
+ count
+-------
+ 10000
+(1 row)
+
+SELECT count(*) FROM tenk_aocs1 t1 INNER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
+ count
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM tenk_aocs1 t1 LEFT OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
+ count
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM tenk_aocs1 t1 RIGHT OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
+ count
+-------
+     1
+(1 row)
+
+SELECT count(*) FROM tenk_aocs1 t1 FULL OUTER JOIN tenk_aocs2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
+ count
+-------
+     1
+(1 row)
+
+CREATE TABLE empty_aocs_table_for_join (like tenk_heap_for_aocs) with (appendonly=true, orientation=column) distributed by (unique1);
+SELECT count(*) FROM tenk_aocs1 t1 INNER JOIN empty_aocs_table_for_join t2 ON (t1.unique1 = t2.unique2);
+ count
+-------
+     0
+(1 row)
+
+SELECT count(*) FROM tenk_aocs1 t1 LEFT OUTER JOIN empty_aocs_table_for_join t2 ON (t1.unique1 = t2.unique2);
+ count
 -------
  10000
 (1 row)
@@ -464,6 +580,12 @@ SELECT unique1 FROM tenk_heap_for_aocs EXCEPT SELECT unique1 FROM tenk_aocs3;
 
 -- TRUNCATE
 TRUNCATE tenk_aocs2;
+SELECT count(*) FROM tenk_aocs2;
+ count
+-------
+     0
+(1 row)
+
 -- OID with aocs NYI
 -- OIDS
 -- 
@@ -508,6 +630,62 @@ select * from co where j = 2;
  12 | 2 | bbbb
 (6 rows)
 
+create index co_ij on co (i, j) with (fillfactor=10);
+alter index co_ij set (fillfactor=20);
+reindex index co_ij;
+select indexname from pg_indexes where tablename = 'co' order by indexname;
+ indexname
+-----------
+ co_ij
+ co_j
+ co_jk
+ co_k
+(4 rows)
+
+alter table co alter j type bigint;
+ERROR:  cannot alter indexed column
+HINT:  DROP the index first, and recreate it after the ALTER
+alter table co rename j to j_renamed;
+alter table co drop column j_renamed;
+select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'co' order by attname, tablename;
+ tablename | attname | avg_width | n_distinct
+-----------+---------+-----------+------------
+ co        | i       |         4 |         -1
+ co        | k       |         5 |         -1
+(2 rows)
+
+create index co_i on co (i) where i = 9;
+analyze co;
+select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'co' order by attname, tablename;
+ tablename | attname | avg_width | n_distinct
+-----------+---------+-----------+------------
+ co        | i       |         4 |  -0.666667
+ co        | k       |         5 |       -0.5
+(2 rows)
+
+select indexname from pg_indexes where tablename = 'co' order by indexname;
+ indexname
+-----------
+ co_i
+ co_k
+(2 rows)
+
+select * from co where i = 9;
+ i | k
+---+---
+ 9 | b
+ 9 | b
+(2 rows)
+
+alter index co_i rename to co_i_renamed;
+select indexname from pg_indexes where tablename = 'co' order by indexname;
+  indexname
+--------------
+ co_i_renamed
+ co_k
+(2 rows)
+
+drop index if exists co_i_renamed;
 drop table if exists co;
 create table co (i int, j int, k varchar) with(appendonly=true, orientation=column);
 insert into co values (1,1,'a'), (2,2,'aa'), (3,3,'aaa'), (4,4,'aaaa'),
@@ -544,29 +722,199 @@ select * from co where j = 2;
  11 | 2 | bbb
 (6 rows)
 
+-- Select specific columns.  This covers the case when block directory
+-- entries for only specific columns need to be loaded during index
+-- scan.
+select i from co where j = 2;
+ i  
+----
+  9
+ 11
+  2
+ 10
+ 10
+ 12
+(6 rows)
+
+select j,i from co where k = 'aaa' or k = 'bbb';
+ j | i  
+---+----
+ 3 |  3
+ 3 | 11
+ 2 | 11
+(3 rows)
+
+-- small test on a performance bug in bitmap indexes due to large tid gaps
+insert into co select i, 0, 'aaaaaaa' from generate_series(1, 20) i;
+insert into co select i, 1, 'aaa' from generate_series(1, 20) i;
+insert into co select i, 2, 'a' from generate_series(1, 20) i;
+select distinct j from co where j > -1 and j < 3 order by j;
+ j 
+---
+ 0
+ 1
+ 2
+(3 rows)
+
+-- Test clustering errors out
+cluster co_j_cluster on co_j;
+ERROR:  "co_j" is an index
+-- TEMP TABLES w/ INDEXES
+create temp table temp_tenk_aocs5 with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
+    as select * from tenk_aocs5 distributed by (unique1);
+create index temp_even_index on temp_tenk_aocs5 (even);
+select count(*) from temp_tenk_aocs5;
+ count
+-------
+ 10000
+(1 row)
+
+select tablename, indexname, indexdef from pg_indexes where tablename = 'temp_tenk_aocs5';
+    tablename    |    indexname    |                              indexdef
+-----------------+-----------------+--------------------------------------------------------------------
+ temp_tenk_aocs5 | temp_even_index | CREATE INDEX temp_even_index ON temp_tenk_aocs5 USING btree (even)
+(1 row)
+
+insert into temp_tenk_aocs5(unique1, unique2) values (99998888, 99998888);
+update temp_tenk_aocs5 set unique2 = 99998889 where unique2 = 99998888;
+delete from temp_tenk_aocs5 where unique2 = 99998889;
+select count(*) from temp_tenk_aocs5;
+ count
+-------
+ 10000
+(1 row)
+
+truncate table temp_tenk_aocs5;
+vacuum analyze temp_tenk_aocs5;
+\d temp_tenk_aocs5
+Append-Only Columnar Table "pg_temp_274.temp_tenk_aocs5"
+   Column    |  Type   | Modifiers
+-------------+---------+-----------
+ unique1     | integer |
+ unique2     | integer |
+ two         | integer |
+ four        | integer |
+ ten         | integer |
+ twenty      | integer |
+ hundred     | integer |
+ thousand    | integer |
+ twothousand | integer |
+ fivethous   | integer |
+ tenthous    | integer |
+ odd         | integer |
+ even        | integer |
+ stringu1    | name    |
+ stringu2    | name    |
+ string4     | name    |
+Checksum: t
+Indexes:
+    "temp_even_index" btree (even)
+Distributed by: (unique1)
+
+insert into temp_tenk_aocs5(unique1, unique2) values (99998888, 99998888);
+select unique1 from temp_tenk_aocs5;
+ unique1
+----------
+ 99998888
+(1 row)
+
+-- TEMP TABLES w/ COMMIT DROP AND USING PREPARE
+begin;
+prepare tenk_aocs5_prep(int4) as select * from tenk_aocs5 where unique1 > 8000;
+create temp table tenk_aocs5_temp_drop with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
+    on commit drop as execute tenk_aocs5_prep(8095);
+select count(*) from tenk_aocs5_temp_drop;
+ count
+-------
+  1999
+(1 row)
+
+commit;
+select count(*) from tenk_aocs5_temp_drop;
+ERROR:  relation "tenk_aocs5_temp_drop" does not exist
+LINE 1: select count(*) from tenk_aocs5_temp_drop;
+                             ^
+-- TEMP TABLES w/ COMMIT DELETE ROWS
+begin;
+create temp table tenk_aocs5_temp_delete_rows with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
+    on commit delete rows as select * from tenk_aocs5 where unique1 > 8000 distributed by (unique1);
+select count(*) from tenk_aocs5_temp_delete_rows;
+ count
+-------
+  1999
+(1 row)
+
+commit;
+select count(*) from tenk_aocs5_temp_delete_rows;
+ count
+-------
+     0
+(1 row)
+
+-- TEMP TABLES w/ COMMIT PRESERVE ROWS
+begin;
+create temp table tenk_aocs5_temp_pres_rows with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
+    on commit preserve rows as select * from tenk_aocs5 where unique1 > 8000 distributed by (unique1);
+select count(*) from tenk_aocs5_temp_pres_rows;
+ count
+-------
+  1999
+(1 row)
+
+commit;
+select count(*) from tenk_aocs5_temp_pres_rows;
+ count
+-------
+  1999
+(1 row)
+
+-- RULES
+insert into tenk_aocs5(unique1, unique2) values (1, 99998889);
+create rule ao_rule_update as on insert to tenk_aocs5 do instead update tenk_aocs5 set two=2;
+insert into tenk_aocs5(unique1, unique2) values (2, 99998889);
+select distinct two from tenk_aocs5;
+ two 
+-----
+   2
+(1 row)
+
+create rule ao_rule_delete as on update to tenk_aocs5 do instead delete from tenk_aocs5 where unique1=1;
+insert into tenk_aocs5(unique1, unique2) values (3, 99998889); -- should go through both rules
+select * from tenk_aocs5 where unique1=1;
+ unique1 | unique2 | two | four | ten | twenty | hundred | thousand | twothousand | fivethous | tenthous | odd | even | stringu1 | stringu2 | string4 
+---------+---------+-----+------+-----+--------+---------+----------+-------------+-----------+----------+-----+------+----------+----------+---------
+(0 rows)
+
 ---------------------
 -- UAO
 ---------------------
 -- DELETE
-DELETE FROM tenk_aocs1 WHERE unique1 = 1;
--- UPDATE
-UPDATE tenk_aocs1 SET unique2 = 1 WHERE unique2 = 2;
--------------------- 
--- unsupported sql 
---------------------
--- ALTER
-ALTER TABLE tenk_aocs1 RENAME TO tenk_renamed;
-ALTER TABLE tenk_renamed ADD COLUMN newcol int default 10;
-ALTER TABLE tenk_renamed ALTER COLUMN twothousand SET NOT NULL;
-ALTER TABLE tenk_renamed ADD COLUMN newcol2 int NOT NULL; -- should fail
-ERROR:  ADD COLUMN with no default value in append-only tables is not yet supported.
-SELECT count(*) FROM tenk_renamed;
+select count(*) from gp_toolkit.__gp_aocsseg_name('tenk_aocs1') where modcount > 0;
  count 
 -------
- 9999
+     0
 (1 row)
 
-ALTER TABLE tenk_renamed RENAME TO tenk_aocs1;
+DELETE FROM tenk_aocs1 WHERE unique1 = 1;
+-- modcount after DELETE must increment to flag table should be included in
+-- incremental backup
+select count(*) from gp_toolkit.__gp_aocsseg_name('tenk_aocs1') where modcount > 0;
+ count 
+-------
+    16
+(1 row)
+
+-- UPDATE
+UPDATE tenk_aocs1 SET unique2 = 1 WHERE unique2 = 2;
+UPDATE tenk_aocs1 SET two = 2;
+-- modcount after UPDATE must increment to flag table should be included in
+-- incremental backup
+select count(*) from gp_toolkit.__gp_aocsseg_name('tenk_aocs1') where modcount > 1;
+ count 
+-------
+    16
+(1 row)
+
 --------------------
 -- system columns
 --------------------
@@ -641,3 +989,61 @@ select * from aocs_unknown;
  10 | unknown | 
 (10 rows)
 
+-- Check compression and distribution
+create table aocs_compress_table (id int, v varchar)
+    with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1) distributed by (id);
+create table aocs_compress_results(table_size int, aocs_compress_id_index_size int, aocs_compress_v_index_size int) distributed randomly;
+create index aocs_compress_id_index on aocs_compress_table (id);
+create index aocs_compress_v_index on aocs_compress_table (v);
+insert into aocs_compress_results values (pg_relation_size('aocs_compress_table'), pg_relation_size('aocs_compress_id_index'), pg_relation_size('aocs_compress_v_index'));
+insert into aocs_compress_table (id, v) values (1, 'ifyouwantto99knowwhatist8329histhenkeepreadingit;;untilyou]findoutyoureyeshurtandyoustil0ldontknow103kwhatitisdoyouunderstandmeyetandifyoustillwanttoknowthenyoupleasekeepreading');
+insert into aocs_compress_results values (pg_relation_size('aocs_compress_table'), pg_relation_size('aocs_compress_id_index'), pg_relation_size('aocs_compress_v_index'));
+-- compression ratio should be between 1.2 and 1.3
+select get_ao_compression_ratio('aocs_compress_table') > 1.2 and get_ao_compression_ratio('aocs_compress_table') < 1.3;
+ ?column? 
+----------
+ t
+(1 row)
+
+select get_ao_distribution('aocs_compress_table');
+ get_ao_distribution
+---------------------
+ (0,1)
+(1 row)
+
+truncate table aocs_compress_table; -- after truncate, reclaim space from the table and index
+insert into aocs_compress_results values (pg_relation_size('aocs_compress_table'), pg_relation_size('aocs_compress_id_index'), pg_relation_size('aocs_compress_v_index'));
+select count(*) from (select distinct * from aocs_compress_results) temp; -- should give 2 after reclaiming space
+ count
+-------
+     2
+(1 row)
+
+-- test case for append optimized columnar bitmap scan when row level bitmap is promoted to page level
+drop table if exists bms_ao_bug;
+create table bms_ao_bug
+(c1 int not null,
+c2 int not null,
+c3 char(100) not null)
+with (appendonly=true, orientation=column, compresstype=zlib)
+distributed by (c1)
+;
+insert into bms_ao_bug select 1, 1, a.c1::char(100) from generate_series(1, 2000000) a(c1);
+create index bms_ao_bug_ix1 on bms_ao_bug (c2);
+set enable_seqscan=off;
+set work_mem=256;
+WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
+select 
+a.c1,
+count(*) row_cnt
+from bms_ao_bug a 
+where a.c2 = 1
+group by 
+a.c1
+;
+ c1 | row_cnt 
+----+---------
+  1 | 2000000
+(1 row)
+
+drop table bms_ao_bug;

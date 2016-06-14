@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/explain.c,v 1.153 2007/01/05 22:19:26 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/explain.c,v 1.155 2007/02/19 02:23:11 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -53,7 +53,6 @@ extern StringInfo OptVersion();
 typedef struct ExplainState
 {
 	/* options */
-	bool		printTList;		/* print plan targetlists */
 	bool		printAnalyze;	/* print actual times */
 	/* other states */
 	PlannedStmt *pstmt;			/* top of plan */
@@ -63,10 +62,6 @@ typedef struct ExplainState
     struct CdbExplain_ShowStatCtx  *showstatctx;    /* EXPLAIN ANALYZE info */
     Slice          *currentSlice;   /* slice whose nodes we are visiting */
     ErrorData      *deferredError;  /* caught error to be re-thrown */
-    MemoryContext   explaincxt;     /* mem pool for palloc()ing buffers etc. */
-    TupOutputState *tupOutputState; /* for sending output to client */
-	StringInfoData  outbuf;         /* the output buffer */
-    StringInfoData  workbuf;        /* a scratch buffer */
 } ExplainState;
 
 extern bool Test_print_direct_dispatch_info;
@@ -74,12 +69,6 @@ extern bool Test_print_direct_dispatch_info;
 static void ExplainOneQuery(Query *query, ExplainStmt *stmt,
 							const char *queryString,
 							ParamListInfo params, TupOutputState *tstate);
-static void
-ExplainOnePlan_internal(PlannedStmt *plannedstmt,
-                        ExplainStmt    *stmt,
-                        const char *queryString, ParamListInfo params,
-                        TupOutputState *tstate,
-                        ExplainState   *es);
 
 #ifdef USE_ORCA
 static void ExplainDXL(Query *query, ExplainStmt *stmt,
@@ -93,8 +82,6 @@ static void explain_outNode(StringInfo str,
 				Plan *plan, PlanState *planstate,
 				Plan *outer_plan,
 				int indent, ExplainState *es);
-static void show_plan_tlist(Plan *plan,
-				StringInfo str, int indent, ExplainState *es);
 static void show_scan_qual(List *qual, const char *qlabel,
 			   int scanrelid, Plan *scan_plan, Plan *outer_plan,
 			   StringInfo str, int indent, ExplainState *es);
@@ -214,78 +201,55 @@ static void
 ExplainDXL(Query *query, ExplainStmt *stmt, const char *queryString,
 				ParamListInfo params, TupOutputState *tstate)
 {
-    MemoryContext   oldcxt = CurrentMemoryContext;
-    MemoryContext   explaincxt;
-	ExplainState    explainState;
-    ExplainState   *es = &explainState;
+	MemoryContext oldcxt = CurrentMemoryContext;
+	ExplainState explainState;
+	ExplainState *es = &explainState;
+	StringInfoData buf;
+	bool		save_enumerate;
 
-    /* Create EXPLAIN memory context. */
-    explaincxt = AllocSetContextCreate(CurrentMemoryContext,
-                                       "EXPLAIN working storage",
-                                       ALLOCSET_DEFAULT_MINSIZE,
-                                       ALLOCSET_DEFAULT_INITSIZE,
-                                       ALLOCSET_DEFAULT_MAXSIZE);
+	/* Initialize ExplainState structure. */
+	memset(es, 0, sizeof(*es));
+	es->showstatctx = NULL;
+	es->deferredError = NULL;
+	es->pstmt = NULL;
 
-    /* Initialize ExplainState structure. */
-    memset(es, 0, sizeof(*es));
-    es->explaincxt = explaincxt;
-    es->showstatctx = NULL;
-    es->deferredError = NULL;
-    es->tupOutputState = tstate;
-    es->pstmt = NULL;
+	initStringInfo(&buf);
 
-    /* Allocate output buffer and a scratch buffer. */
-    MemoryContextSwitchTo(explaincxt);
-    initStringInfoOfSize(&es->workbuf, 1000);
-	initStringInfoOfSize(&es->outbuf, 16000);
-    MemoryContextSwitchTo(oldcxt);
+	save_enumerate = optimizer_enumerate_plans;
 
-    bool enumerate = optimizer_enumerate_plans;
+	/* Do the EXPLAIN. */
+	PG_TRY();
+	{
+		// enable plan enumeration before calling optimizer
+		optimizer_enumerate_plans = true;
 
-    /* Do the EXPLAIN. */
-    PG_TRY();
-    {
-    	// enable plan enumeration before calling optimizer
-    	optimizer_enumerate_plans = true;
+		// optimize query using optimizer and get generated plan in DXL format
+		char *dxl = SzDXLPlan(query);
 
-    	// optimize query using optimizer and get generated plan in DXL format
-    	char *dxl = SzDXLPlan(query);
+		// restore old value of enumerate plans GUC
+		optimizer_enumerate_plans = save_enumerate;
 
-    	// restore old value of enumerate plans GUC
-    	optimizer_enumerate_plans = enumerate;
+		if (dxl == NULL)
+			elog(NOTICE, "Optimizer failed to produce plan");
+		else
+		{
+			do_text_output_multiline(tstate, dxl);
+			do_text_output_oneline(tstate, ""); /* separator line */
+			pfree(dxl);
+		}
 
-    	if (NULL == dxl)
-    	{
-    		elog(NOTICE, "Optimizer failed to produce plan");
-    	}
-    	else
-    	{
-    		do_text_output_multiline(es->tupOutputState, dxl);
-    		do_text_output_oneline(es->tupOutputState, ""); /* separator line */
-    		pfree(dxl);
-    	}
+		/* Free the memory we used. */
+		MemoryContextSwitchTo(oldcxt);
+	}
+	PG_CATCH();
+	{
+		// restore old value of enumerate plans GUC
+		optimizer_enumerate_plans = save_enumerate;
 
-    	 /* Free the memory we used. */
-    	MemoryContextSwitchTo(oldcxt);
-    	MemoryContextDelete(explaincxt);
-    }
-    PG_CATCH();
-    {
-    	// restore old value of enumerate plans GUC
-    	optimizer_enumerate_plans = enumerate;
-
-    	/* Free the memory we used. */
-    	if (CurrentMemoryContext == explaincxt)
-    	{
-    		MemoryContextSwitchTo(oldcxt);
-    	}
-
-    	MemoryContextDelete(explaincxt);
-
-    	/* Exit to next error handler. */
-    	PG_RE_THROW();
-    }
-    PG_END_TRY();
+		/* Exit to next error handler. */
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
 }
 #endif
 
@@ -384,70 +348,15 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ExplainStmt *stmt,
 			   ParamListInfo params,
 			   TupOutputState *tstate)
 {
-    MemoryContext   oldcxt = CurrentMemoryContext;
-    MemoryContext   explaincxt;
-	ExplainState    explainState;
-    ExplainState   *es = &explainState;
-
-    /* Create EXPLAIN memory context. */
-    explaincxt = AllocSetContextCreate(CurrentMemoryContext,
-                                       "EXPLAIN working storage",
-                                       ALLOCSET_DEFAULT_MINSIZE,
-                                       ALLOCSET_DEFAULT_INITSIZE,
-                                       ALLOCSET_DEFAULT_MAXSIZE);
-
-    /* Initialize ExplainState structure. */
-    memset(es, 0, sizeof(*es));
-    es->explaincxt = explaincxt;
-    es->showstatctx = NULL;
-    es->deferredError = NULL;
-    es->tupOutputState = tstate;
-    es->pstmt = plannedstmt;
-
-    /* Allocate output buffer and a scratch buffer. */
-    MemoryContextSwitchTo(explaincxt);
-    initStringInfoOfSize(&es->workbuf, 1000);
-	initStringInfoOfSize(&es->outbuf, 16000);
-    MemoryContextSwitchTo(oldcxt);
-
-    /* Do the EXPLAIN. */
-    PG_TRY();
-    {
-        ExplainOnePlan_internal(plannedstmt, stmt,
-                                queryString, params, tstate, es);
-    }
-    PG_CATCH();
-    {
-        /* Free the memory we used. */
-        if (CurrentMemoryContext == explaincxt)
-            MemoryContextSwitchTo(oldcxt);
-        MemoryContextDelete(explaincxt);
-
-        /* Exit to next error handler. */
-        PG_RE_THROW();
-    }
-    PG_END_TRY();
-
-    /* Free the memory we used. */
-    MemoryContextSwitchTo(oldcxt);
-    MemoryContextDelete(explaincxt);
-}                               /* ExplainOnePlan */
-
-void
-ExplainOnePlan_internal(PlannedStmt *plannedstmt,
-                        ExplainStmt    *stmt,
-                        const char *queryString, ParamListInfo params,
-                        TupOutputState *tstate,
-                        ExplainState   *es)
-{
-    MemoryContext   oldcxt = CurrentMemoryContext;
 	QueryDesc  *queryDesc;
 	instr_time	starttime;
 	double		totaltime = 0;
-    StringInfo  buf = &es->outbuf;
+	ExplainState *es;
+    StringInfoData buf;
     EState     *estate = NULL;
 	int			eflags;
     int         nb;
+	MemoryContext explaincxt = CurrentMemoryContext;
 
 	/*
 	 * Use a snapshot with an updated command ID to ensure this query sees
@@ -460,6 +369,10 @@ ExplainOnePlan_internal(PlannedStmt *plannedstmt,
 			                    ActiveSnapshot, InvalidSnapshot,
 								None_Receiver, params,
 								stmt->analyze);
+
+	/* Initialize ExplainState structure. */
+	es = (ExplainState *) palloc0(sizeof(ExplainState));
+	es->pstmt = queryDesc->plannedstmt;
 
     /*
      * Start timing.
@@ -474,7 +387,6 @@ ExplainOnePlan_internal(PlannedStmt *plannedstmt,
     if (stmt->analyze)
     {
         es->showstatctx = cdbexplain_showExecStatsBegin(queryDesc,
-                                                        es->explaincxt,
                                                         starttime);
 
         /* Attach workarea to QueryDesc so ExecSetParamPlan() can find it. */
@@ -520,7 +432,8 @@ ExplainOnePlan_internal(PlannedStmt *plannedstmt,
         }
         PG_CATCH();
         {
-            es->deferredError = explain_defer_error(es);
+			MemoryContextSwitchTo(explaincxt);
+			es->deferredError = explain_defer_error(es);
         }
         PG_END_TRY();
 
@@ -535,6 +448,7 @@ ExplainOnePlan_internal(PlannedStmt *plannedstmt,
         }
         PG_CATCH();
         {
+			MemoryContextSwitchTo(explaincxt);
             es->deferredError = explain_defer_error(es);
         }
         PG_END_TRY();
@@ -562,9 +476,6 @@ ExplainOnePlan_internal(PlannedStmt *plannedstmt,
 		char	   *s;
 		char	   *f;
 
-        /* Switch to EXPLAIN memory context. */
-        MemoryContextSwitchTo(es->explaincxt);
-
 		if (queryDesc->plannedstmt->planTree && estate->es_sliceTable)
 		{
         	Node   *saved_es_sliceTable;
@@ -588,17 +499,13 @@ ExplainOnePlan_internal(PlannedStmt *plannedstmt,
 				f = format_node_dump(s);
 			pfree(s);
 
-            /* Restore caller's memory context. */
-            MemoryContextSwitchTo(oldcxt);
-
-			do_text_output_multiline(es->tupOutputState, f);
+			do_text_output_multiline(tstate, f);
 			pfree(f);
-			do_text_output_oneline(es->tupOutputState, ""); /* separator line */
+			do_text_output_oneline(tstate, ""); /* separator line */
 		}
-
-        /* Restore caller's memory context. */
-        MemoryContextSwitchTo(oldcxt);
 	}
+
+	initStringInfo(&buf);
 
     /*
      * Produce the EXPLAIN report into buf.  (Sometimes we get internal errors
@@ -634,7 +541,7 @@ ExplainOnePlan_internal(PlannedStmt *plannedstmt,
 					Assert(!"Unexpected statement type");
 					break;
 			}
-			appendStringInfo(buf, "%s", cmdName);
+			appendStringInfo(&buf, "%s", cmdName);
 
 			if (IsA(childPlan, Motion))
 			{
@@ -649,12 +556,12 @@ ExplainOnePlan_internal(PlannedStmt *plannedstmt,
 			{
 				numSegments = 1;
 			}
-			appendStringInfo(buf, " (slice%d; segments: %d)", sliceNum, numSegments);
-			appendStringInfo(buf, "  (rows=%.0f width=%d)\n", ceil(childPlan->plan_rows / numSegments), childPlan->plan_width);
-			appendStringInfo(buf, "  ->  ");
+			appendStringInfo(&buf, " (slice%d; segments: %d)", sliceNum, numSegments);
+			appendStringInfo(&buf, "  (rows=%.0f width=%d)\n", ceil(childPlan->plan_rows / numSegments), childPlan->plan_width);
+			appendStringInfo(&buf, "  ->  ");
 			indent = 3;
 		}
-	    explain_outNode(buf, childPlan, queryDesc->planstate,
+	    explain_outNode(&buf, childPlan, queryDesc->planstate,
 					    NULL, indent, es);
     }
     PG_CATCH();
@@ -662,7 +569,7 @@ ExplainOnePlan_internal(PlannedStmt *plannedstmt,
         es->deferredError = explain_defer_error(es);
 
         /* Keep a NUL at the end of the output buffer. */
-        buf->data[Min(buf->len, buf->maxlen-1)] = '\0';
+        buf.data[Min(buf.len, buf.maxlen-1)] = '\0';
     }
     PG_END_TRY();
 
@@ -707,21 +614,21 @@ ExplainOnePlan_internal(PlannedStmt *plannedstmt,
 				if (instr->ntuples == 0)
 					continue;
 
-				if (trig->tgisconstraint &&
-				(conname = GetConstraintNameForTrigger(trig->tgoid)) != NULL)
+				if (OidIsValid(trig->tgconstraint) &&
+					(conname = get_constraint_name(trig->tgconstraint)) != NULL)
 				{
-					appendStringInfo(buf, "Trigger for constraint %s",
+					appendStringInfo(&buf, "Trigger for constraint %s",
 									 conname);
 					pfree(conname);
 				}
 				else
-					appendStringInfo(buf, "Trigger %s", trig->tgname);
+					appendStringInfo(&buf, "Trigger %s", trig->tgname);
 
 				if (numrels > 1)
-					appendStringInfo(buf, " on %s",
+					appendStringInfo(&buf, " on %s",
 							RelationGetRelationName(rInfo->ri_RelationDesc));
 
-				appendStringInfo(buf, ": time=%.3f calls=%.0f\n",
+				appendStringInfo(&buf, ": time=%.3f calls=%.0f\n",
 								 1000.0 * instr->total,
 								 instr->ntuples);
 			}
@@ -732,33 +639,32 @@ ExplainOnePlan_internal(PlannedStmt *plannedstmt,
      * Display per-slice and whole-query statistics.
      */
     if (stmt->analyze)
-        cdbexplain_showExecStatsEnd(queryDesc->plannedstmt, es->showstatctx, buf, estate);
+        cdbexplain_showExecStatsEnd(queryDesc->plannedstmt, es->showstatctx, &buf, estate);
 
     /*
      * Show non-default GUC settings that might have affected the plan.
      */
-    nb = gp_guc_list_show(buf, "Settings:  ", "%s=%s; ", PGC_S_DEFAULT,
+    nb = gp_guc_list_show(&buf, "Settings:  ", "%s=%s; ", PGC_S_DEFAULT,
                            gp_guc_list_for_explain);
     if (nb > 0)
     {
-        truncateStringInfo(buf, buf->len - 2);  /* drop final "; " */
-        appendStringInfoChar(buf, '\n');
+        truncateStringInfo(&buf, buf.len - 2);  /* drop final "; " */
+        appendStringInfoChar(&buf, '\n');
     }
 
 #ifdef USE_ORCA
     /* Display optimizer status: either 'legacy query optimizer' or Orca version number */
     if (optimizer_explain_show_status)
     {
-
-    	appendStringInfo(buf, "Optimizer status: ");
+		appendStringInfo(&buf, "Optimizer status: ");
     	if (queryDesc->plannedstmt->planGen == PLANGEN_PLANNER)
     	{
-    		appendStringInfo(buf, "legacy query optimizer\n");
+			appendStringInfo(&buf, "legacy query optimizer\n");
     	}
     	else /* PLANGEN_OPTIMIZER */
     	{
     		StringInfo str = OptVersion();
-    		appendStringInfo(buf, "PQO version %s\n", str->data);
+			appendStringInfo(&buf, "PQO version %s\n", str->data);
 			pfree(str->data);
 			pfree(str);
     	}
@@ -769,21 +675,18 @@ ExplainOnePlan_internal(PlannedStmt *plannedstmt,
      * Display final elapsed time.
      */
 	if (stmt->analyze)
-		appendStringInfo(buf, "Total runtime: %.3f ms\n",
+		appendStringInfo(&buf, "Total runtime: %.3f ms\n",
 						 1000.0 * totaltime);
 
     /*
      * Send EXPLAIN report to client.  Some might have been sent already
      * by explain_outNode().
      */
-    if (buf->len > 0)
-        do_text_output_multiline(es->tupOutputState, buf->data);
+    if (buf.len > 0)
+        do_text_output_multiline(tstate, buf.data);
 
     /*
 	 * Close down the query and free resources.
-     *
-     * We don't have to pfree() our buffers because the caller frees them by
-     * deleting explaincxt.
      *
      * For EXPLAIN ANALYZE, if a qExec failed or gave an error, ExecutorEnd()
      * will reissue the error locally at this point.  Intercept any such error
@@ -795,6 +698,7 @@ ExplainOnePlan_internal(PlannedStmt *plannedstmt,
     }
     PG_CATCH();
     {
+		MemoryContextSwitchTo(explaincxt);
         es->deferredError = explain_defer_error(es);
     }
     PG_END_TRY();
@@ -814,7 +718,7 @@ ExplainOnePlan_internal(PlannedStmt *plannedstmt,
         ErrorData  *edata = es->deferredError;
 
         /* Tell client the command ended successfully. */
-        EndCommand("EXPLAIN", es->tupOutputState->dest->mydest);
+        EndCommand("EXPLAIN", tstate->dest->mydest);
 
         /* Resume handling the error.  Clean up and send the NOTICE message. */
         es->deferredError = NULL;
@@ -867,7 +771,6 @@ explain_defer_error(ExplainState *es)
         PG_RE_THROW();
 
     /* Save the error info and expunge it from the error system. */
-    MemoryContextSwitchTo(es->explaincxt);
     edata = CopyErrorData();
     FlushErrorState();
 
@@ -890,6 +793,7 @@ appendGangAndDirectDispatchInfo(StringInfo str, PlanState *planstate, int sliceI
 
 		case GANGTYPE_PRIMARY_WRITER:
 		case GANGTYPE_PRIMARY_READER:
+		case GANGTYPE_SINGLETON_READER:
 		{
 			int numSegments;
 			appendStringInfo(str, "  (slice%d;", sliceId);
@@ -1376,6 +1280,7 @@ explain_outNode(StringInfo str,
 			{
 				RangeTblEntry *rte = rt_fetch(((Scan *) plan)->scanrelid,
 											  es->rtable);
+				Node	   *funcexpr;
 				char	   *proname;
 
 				/* Assert it's on a RangeFunction */
@@ -1387,10 +1292,10 @@ explain_outNode(StringInfo str,
 				 * happen if the optimizer simplified away the function call,
 				 * for example).
 				 */
-				if (rte->funcexpr && IsA(rte->funcexpr, FuncExpr))
+				funcexpr = ((FunctionScan *) plan)->funcexpr;
+				if (funcexpr && IsA(funcexpr, FuncExpr))
 				{
-					FuncExpr   *funcexpr = (FuncExpr *) rte->funcexpr;
-					Oid			funcid = funcexpr->funcid;
+					Oid			funcid = ((FuncExpr *) funcexpr)->funcid;
 
 					/* We only show the func name, not schema name */
 					proname = get_func_name(funcid);
@@ -1451,11 +1356,8 @@ explain_outNode(StringInfo str,
 	appendStringInfoChar(str, '\n');
 
 #ifdef DEBUG_EXPLAIN
-				appendStringInfo(str, "plan->targetlist=%s\n", nodeToString(plan->targetlist));
+	appendStringInfo(str, "plan->targetlist=%s\n", nodeToString(plan->targetlist));
 #endif
-	/* target list */
-	if (es->printTList)
-		show_plan_tlist(plan, str, indent, es);
 
 	/* quals, sort keys, etc */
 	switch (nodeTag(plan))
@@ -2002,7 +1904,6 @@ explain_outNode(StringInfo str,
 			for (i = 0; i < indent; i++)
 				appendStringInfo(str, "  ");
 			appendStringInfo(str, "  %s\n", sp->plan_name);
-            Assert(!sps->cdbextratextbuf);
 
 			for (i = 0; i < indent; i++)
 				appendStringInfo(str, "  ");
@@ -2015,67 +1916,8 @@ explain_outNode(StringInfo str,
 		}
 	}
 
-    /* CDB: Empty the output buffer if it's more than half full. */
-    if (str->len*2 > str->maxlen)
-    {
-        do_text_output_multiline(es->tupOutputState, str->data);
-        truncateStringInfo(str, 0);
-    }
-
     es->currentSlice = currentSlice;    /* restore */
 }                               /* explain_outNode */
-
-/*
- * Show the targetlist of a plan node
- */
-static void
-show_plan_tlist(Plan *plan,
-				StringInfo str, int indent, ExplainState *es)
-{
-	List	   *context;
-	bool		useprefix;
-	ListCell   *lc;
-	int			i;
-
-	/* No work if empty tlist (this occurs eg in bitmap indexscans) */
-	if (plan->targetlist == NIL)
-		return;
-	/* Suppress printing the targetlist of Append and Sequence. */
-	if (IsA(plan, Append) || IsA(plan, Sequence))
-		return;
-
-	/* TODO: Likewise for RecursiveUnion */
-	//if (IsA(plan, RecursiveUnion))
-	//        return;
-
-	/* Set up deparsing context */
-	context = deparse_context_for_plan(OUTER, (Node *) plan, INNER,
-			(Node *) plan, es->rtable);
-	//es->pstmt->subplans);
-	useprefix = list_length(es->rtable) > 1;
-
-	/* Emit line prefix */
-	for (i = 0; i < indent; i++)
-		appendStringInfo(str, "  ");
-	appendStringInfo(str, "  Output: ");
-
-	/* Deparse each non-junk result column */
-	i = 0;
-	foreach(lc, plan->targetlist)
-	{
-		TargetEntry *tle = (TargetEntry *) lfirst(lc);
-
-		if (tle->resjunk)
-			continue;
-		if (i++ > 0)
-			appendStringInfo(str, ", ");
-		appendStringInfoString(str,
-							   deparse_expression((Node *) tle->expr, context,
-												  useprefix, false));
-	}
-
-	appendStringInfoChar(str, '\n');
-}
 
 /*
  * Show a qualifier expression for a scan plan node

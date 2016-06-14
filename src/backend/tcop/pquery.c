@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tcop/pquery.c,v 1.111.2.1 2007/02/18 19:49:30 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tcop/pquery.c,v 1.113 2007/02/18 19:49:25 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -34,7 +34,7 @@
 #include "nodes/makefuncs.h"
 #include "utils/acl.h"
 #include "catalog/catalog.h"
-#include "postmaster/autovacuum.h"
+#include "postmaster/autostats.h"
 #include "postmaster/backoff.h"
 #include "cdb/ml_ipc.h"
 #include "cdb/memquota.h"
@@ -101,10 +101,12 @@ CreateQueryDesc(PlannedStmt *plannedstmt,
 	qd->tupDesc = NULL;
 	qd->estate = NULL;
 	qd->planstate = NULL;
-	
+	qd->memoryAccount = NULL;
+
 	qd->extended_query = false; /* default value */
 	qd->portal_name = NULL;
 
+	qd->ddesc = NULL;
 	qd->gpmon_pkt = NULL;
 	
     if (Gp_role != GP_ROLE_EXECUTE)
@@ -229,6 +231,7 @@ ProcessQuery(Portal portal,
 		queryDesc = CreateQueryDesc(stmt, portal->sourceText,
 									ActiveSnapshot, InvalidSnapshot,
 									dest, params, false);
+	queryDesc->ddesc = portal->ddesc;
 
 	if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
 	{			
@@ -258,7 +261,7 @@ ProcessQuery(Portal portal,
 		if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
 			queryDesc->plannedstmt->query_mem = ResourceQueueGetQueryMemoryLimit(queryDesc->plannedstmt, portal->queueId);
 		
-		portal->releaseResLock = ResLockPortal(portal, queryDesc);
+		portal->holdingResLock = ResLockPortal(portal, queryDesc);
 	}
 
 	portal->status = PORTAL_ACTIVE;
@@ -351,6 +354,8 @@ ProcessQuery(Portal portal,
 		}
 	}
 
+	autostats_get_cmdtype(queryDesc, &cmdType, &relationOid);
+
 	/*
 	 * Now, we close down all the scans and free allocated resources.
 	 */
@@ -420,8 +425,6 @@ ProcessQuery(Portal portal,
 				ExecuteTruncate(truncStmt);
 			}
 		}
-	
-		autostats_get_cmdtype(stmt, &cmdType, &relationOid);
 
 		/* MPP-4407. Logging number of tuples modified. */
 		if (relationOid != InvalidOid)
@@ -675,7 +678,7 @@ FetchStatementTargetList(Node *stmt)
  */
 void
 PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
-			const char *seqServerHost, int seqServerPort)
+			const char *seqServerHost, int seqServerPort, QueryDispatchDesc *ddesc)
 {
 	Portal		saveActivePortal;
 	Snapshot	saveActiveSnapshot;
@@ -692,8 +695,10 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 	/* Set up the sequence server */
 	SetupSequenceServer(seqServerHost, seqServerPort);
 
-	portal->releaseResLock = false;
+	portal->holdingResLock = false;
     
+	portal->ddesc = ddesc;
+
     /*
 	 * Set up global portal context pointers.  (Should we set QueryContext?)
 	 */
@@ -749,6 +754,7 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 											None_Receiver,
 											params,
 											false);
+				queryDesc->ddesc = ddesc;
 				
 				if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
 				{			
@@ -794,7 +800,7 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 					 */ 
 					if (SPI_context() && 
 						saveActivePortal && 
-						saveActivePortal->releaseResLock)
+						saveActivePortal->holdingResLock)
 					{
 						portal->status = PORTAL_QUEUE;
 						if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
@@ -806,7 +812,7 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 						
 						if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
 							queryDesc->plannedstmt->query_mem = ResourceQueueGetQueryMemoryLimit(queryDesc->plannedstmt, portal->queueId);
-						portal->releaseResLock = ResLockPortal(portal, queryDesc);
+						portal->holdingResLock = ResLockPortal(portal, queryDesc);
 					}
 				}
 
@@ -1621,18 +1627,13 @@ PortalRunMulti(Portal portal, bool isTopLevel,
 			 * process utility functions (create, destroy, etc..)
 			 *
 			 * These are assumed canSetTag if they're the only stmt in the
-			 * portal, with the following exception:
-			 *
-			 *  A COPY FROM that specifies a non-existent error table, will
-			 *  be transformed (parse_analyze) into a (CreateStmt, CopyStmt).
-			 *  XXX Maybe this should be treated like DECLARE CURSOR?
+			 * portal.
 			 */
-			if (list_length(portal->stmts) == 1 || portal->sourceTag == T_CopyStmt)
+			if (list_length(portal->stmts) == 1)
 				PortalRunUtility(portal, stmt, isTopLevel, dest, completionTag);
 			else
 				PortalRunUtility(portal, stmt, isTopLevel, altdest, NULL);
 		}
-		
 
 		/*
 		 * Increment command counter between queries, but not after the last

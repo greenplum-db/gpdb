@@ -105,7 +105,7 @@ BufFileCreateTemp(const char *filePrefix, bool interXact)
 	File		pfile;
 	bool		closeAtEOXact = !interXact;
 
-	pfile = OpenTemporaryFile(filePrefix, 1, /* extentseqnum */
+	pfile = OpenTemporaryFile(filePrefix,
 							  true, /* makenameunique */
 							  true, /* create */
 							  true, /* delOnClose */
@@ -183,7 +183,7 @@ BufFileCreateTemp_ReaderWriter(const char *filePrefix, bool isWriter,
 							   bool interXact)
 {
 	bool closeAtEOXact = !interXact;
-	File pfile = OpenTemporaryFile(filePrefix, 1, /* extentseqnum */
+	File pfile = OpenTemporaryFile(filePrefix,
 								   false, /* makenameunique */
 								   isWriter, /* create */
 								   isWriter, /* delOnClose */

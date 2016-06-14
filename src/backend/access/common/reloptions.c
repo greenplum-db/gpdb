@@ -49,28 +49,29 @@ isDefaultAO(void)
  * Accumulate a new datum for one AO storage option.
  */
 static void
-accumAOStorageOpt(char *name, int namelen, char *value,
+accumAOStorageOpt(char *name, char *value,
 				  ArrayBuildState *astate, bool *foundAO, bool *aovalue)
 {
-	text *t = NULL;
-	bool boolval;
-	int intval, len;
+	text	   *t;
+	bool		boolval;
+	int			intval;
+	StringInfoData buf;
+
 	Assert(astate);
-	if (namelen == strlen(SOPT_APPENDONLY) &&
-		pg_strcasecmp(SOPT_APPENDONLY, name) == 0)
+
+	initStringInfo(&buf);
+
+	if (pg_strcasecmp(SOPT_APPENDONLY, name) == 0)
 	{
 		if (!parse_bool(value, &boolval))
-			elog(ERROR, "invalid bool value \"%s\" for "
-					 "storage option \"%s\"", value, name);
+			elog(ERROR, "invalid bool value \"%s\" for storage option \"%s\"",
+				 value, name);
 		/* "appendonly" option is explicitly specified. */
 		if (foundAO != NULL)
 			*foundAO = true;
 		if (aovalue != NULL)
 			*aovalue = boolval;
-		len = VARHDRSZ + strlen(SOPT_APPENDONLY) + 1 + strlen(value);
-		/* +1 leaves room for sprintf's trailing null */
-		t = (text *) palloc(len + 1);
-		SET_VARSIZE(t, len);
+
 		/*
 		 * Record value of "appendonly" option as true always.  Return
 		 * the value specified by user in aovalue.  Setting
@@ -80,57 +81,36 @@ accumAOStorageOpt(char *name, int namelen, char *value,
 		 * successful, we keep the user specified value for
 		 * appendonly.
 		 */
-		sprintf(VARDATA(t), "%s=%s", SOPT_APPENDONLY, "true");
+		appendStringInfo(&buf, "%s=%s", SOPT_APPENDONLY, "true");
 	}
-	else if (namelen == strlen(SOPT_BLOCKSIZE) &&
-			 pg_strcasecmp(SOPT_BLOCKSIZE, name) == 0)
+	else if (pg_strcasecmp(SOPT_BLOCKSIZE, name) == 0)
 	{
 		if (!parse_int(value, &intval, 0 /* unit flags */,
 					   NULL /* hint message */))
-			elog(ERROR, "invalid integer value \"%s\" for "
-				 "storage option \"%s\"", value, name);
-		len = VARHDRSZ + strlen(SOPT_BLOCKSIZE) + 1 + strlen(value);
-		/* +1 leaves room for sprintf's trailing null */
-		t = (text *) palloc(len + 1);
-		SET_VARSIZE(t, len);
-		sprintf(VARDATA(t), "%s=%d", SOPT_BLOCKSIZE, intval);
+			elog(ERROR, "invalid integer value \"%s\" for storage option \"%s\"",
+				 value, name);
+		appendStringInfo(&buf, "%s=%d", SOPT_BLOCKSIZE, intval);
 	}
-	else if (namelen == strlen(SOPT_COMPTYPE) &&
-			 pg_strcasecmp(SOPT_COMPTYPE, name) == 0)
+	else if (pg_strcasecmp(SOPT_COMPTYPE, name) == 0)
 	{
-		len = VARHDRSZ + strlen(SOPT_COMPTYPE) + 1 + strlen(value);
-		/* +1 leaves room for sprintf's trailing null */
-		t = (text *) palloc(len + 1);
-		SET_VARSIZE(t, len);
-		sprintf(VARDATA(t), "%s=%s", SOPT_COMPTYPE, value);
+		appendStringInfo(&buf, "%s=%s", SOPT_COMPTYPE, value);
 	}
-	else if (namelen == strlen(SOPT_COMPLEVEL) &&
-			 pg_strcasecmp(SOPT_COMPLEVEL, name) == 0)
+	else if (pg_strcasecmp(SOPT_COMPLEVEL, name) == 0)
 	{
 		if (!parse_int(value, &intval, 0 /* unit flags */,
 					   NULL /* hint message */))
-			elog(ERROR, "invalid integer value \"%s\" for "
-				 "storage option \"%s\"", value, name);
-		len = VARHDRSZ + strlen(SOPT_COMPLEVEL) + 1 + strlen(value);
-		/* +1 leaves room for sprintf's trailing null */
-		t = (text *) palloc(len + 1);
-		SET_VARSIZE(t, len);
-		sprintf(VARDATA(t), "%s=%d", SOPT_COMPLEVEL, intval);
+			elog(ERROR, "invalid integer value \"%s\" for storage option \"%s\"",
+				 value, name);
+		appendStringInfo(&buf, "%s=%d", SOPT_COMPLEVEL, intval);
 	}
-	else if (namelen == strlen(SOPT_CHECKSUM) &&
-			 pg_strcasecmp(SOPT_CHECKSUM, name) == 0)
+	else if (pg_strcasecmp(SOPT_CHECKSUM, name) == 0)
 	{
 		if (!parse_bool(value, &boolval))
-			elog(ERROR, "invalid bool value \"%s\" for "
-					 "storage option \"%s\"", value, name);
-		len = VARHDRSZ + strlen(SOPT_CHECKSUM) + 1 + strlen(value);
-		/* +1 leaves room for sprintf's trailing null */
-		t = (text *) palloc(len + 1);
-		SET_VARSIZE(t, len);
-		sprintf(VARDATA(t), "%s=%s", SOPT_CHECKSUM, boolval?"true":"false");
+			elog(ERROR, "invalid bool value \"%s\" for storage option \"%s\"",
+				 value, name);
+		appendStringInfo(&buf, "%s=%s", SOPT_CHECKSUM, boolval ? "true" : "false");
 	}
-	else if (namelen == strlen(SOPT_ORIENTATION) &&
-			 pg_strcasecmp(SOPT_ORIENTATION, name) == 0)
+	else if (pg_strcasecmp(SOPT_ORIENTATION, name) == 0)
 	{
 		if ((pg_strcasecmp(value, "row") != 0) &&
 			(pg_strcasecmp(value, "column") != 0))
@@ -138,18 +118,19 @@ accumAOStorageOpt(char *name, int namelen, char *value,
 			elog(ERROR, "invalid value \"%s\" for storage option \"%s\"",
 				 value, name);
 		}
-		len = VARHDRSZ + strlen(SOPT_ORIENTATION) + 1 + strlen(value);
-		/* +1 leaves room for sprintf's trailing null */
-		t = (text *) palloc(len + 1);
-		SET_VARSIZE(t, len);
-		sprintf(VARDATA(t), "%s=%s", SOPT_ORIENTATION, value);
+		appendStringInfo(&buf, "%s=%s", SOPT_ORIENTATION, value);
 	}
 	else
 	{
 		elog(ERROR, "invalid storage option \"%s\"", name);
 	}
+
+	t = cstring_to_text(buf.data);
+
 	accumArrayResult(astate, PointerGetDatum(t), /* disnull */ false,
 					 TEXTOID, CurrentMemoryContext);
+	pfree(t);
+	pfree(buf.data);
 }
 
 /*
@@ -317,28 +298,15 @@ transformRelOptions(Datum oldOptions, List *defList,
 			 * have just "name", assume "name=true" is meant.
 			 */
 
-			bool need_free_value = false;
 			if (def->arg != NULL)
-			{
-				value = defGetString(def, &need_free_value);
-			}
+				value = defGetString(def);
 			else
-			{
 				value = "true";
-			}
 			len = VARHDRSZ + strlen(def->defname) + 1 + strlen(value);
 			/* +1 leaves room for sprintf's trailing null */
 			t = (text *) palloc(len + 1);
 			SET_VARSIZE(t, len);
 			sprintf(VARDATA(t), "%s=%s", def->defname, value);
-
-			if (need_free_value)
-			{
-				pfree(value);
-				value = NULL;
-			}
-
-			AssertImply(need_free_value, NULL == value);
 
 			astate = accumArrayResult(astate, PointerGetDatum(t),
 									  false, TEXTOID,
@@ -502,7 +470,7 @@ parseAOStorageOpts(const char *opts_str, bool *aovalue)
 					for (value_st = value; *value_st != '\0'; ++value_st)
 						*(char *)value_st = pg_tolower(*value_st);
 					Assert(name);
-					accumAOStorageOpt(name, strlen(name), value, astate,
+					accumAOStorageOpt(name, value, astate,
 									  &foundAO, aovalue);
 					pfree(name);
 					name = NULL;
@@ -536,8 +504,7 @@ parseAOStorageOpts(const char *opts_str, bool *aovalue)
 		 * specified by user.  This is needed to validate the array of
 		 * datums constructed from user specified options.
 		 */
-		accumAOStorageOpt(SOPT_APPENDONLY, strlen(SOPT_APPENDONLY),
-						  "true", astate, NULL, NULL);
+		accumAOStorageOpt(SOPT_APPENDONLY, "true", astate, NULL, NULL);
 	}
 
 	lbs[0] = 1;
@@ -946,7 +913,7 @@ parseRelOptions(Datum options, int numkeywords, const char *const * keywords,
 
 /*
  * Merge user-specified reloptions with pre-configured default storage
- * options and return a StdRdObtions object.
+ * options and return a StdRdOptions object.
  */
 bytea *
 default_reloptions(Datum reloptions, bool validate, char relkind,

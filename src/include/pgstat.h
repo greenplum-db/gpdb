@@ -5,7 +5,7 @@
  *
  *	Copyright (c) 2001-2009, PostgreSQL Global Development Group
  *
- *	$PostgreSQL: pgsql/src/include/pgstat.h,v 1.52 2007/01/05 22:19:50 momjian Exp $
+ *	$PostgreSQL: pgsql/src/include/pgstat.h,v 1.54 2007/02/09 16:12:19 tgl Exp $
  * ----------
  */
 #ifndef PGSTAT_H

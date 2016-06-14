@@ -20,15 +20,37 @@
 # parameters, which are marked below, require a server shutdown and restart to
 # take effect.
 #
+# This file is read on server startup and when the server receives a
+# SIGHUP.  If you edit the file on a running system, you have to SIGHUP the
+# server for the changes to take effect, or use "pg_ctl reload". Some
+# settings, which are marked below, require a server shutdown and restart
+# to take effect.
+#
 # Any parameter can also be given as a command-line option to the server, e.g.,
 # "postgres -c log_connections=on".  Some parameters can be changed at run time
 # with the "SET" SQL command.
 #
-# Memory units:  kB = kilobytes        Time units:  ms  = milliseconds
-#                MB = megabytes                     s   = seconds
-#                GB = gigabytes                     min = minutes
-#                                                   h   = hours
-#                                                   d   = days
+# Memory units:  kB = kilobytes MB = megabytes GB = gigabytes
+# Time units:    ms = milliseconds s = seconds min = minutes h = hours d = days
+
+
+#---------------------------------------------------------------------------
+# FILE LOCATIONS
+#---------------------------------------------------------------------------
+
+# The default values of these variables are driven from the -D command line
+# switch or PGDATA environment variable, represented here as ConfigDir.
+
+#data_directory = 'ConfigDir'		# use data in another directory
+					# (change requires restart)
+#hba_file = 'ConfigDir/pg_hba.conf'	# host-based authentication file
+					# (change requires restart)
+#ident_file = 'ConfigDir/pg_ident.conf'	# ident configuration file
+					# (change requires restart)
+
+# If external_pid_file is not explicitly set, no extra PID file is written.
+#external_pid_file = '(none)'		# write an extra PID file
+					# (change requires restart)
 
 
 #------------------------------------------------------------------------------
@@ -473,7 +495,7 @@ max_appendonly_tables = 10000 # Maximum number of append only tables that can
 #backslash_quote = safe_encoding	# on, off, or safe_encoding
 #escape_string_warning = on
 #regex_flavor = advanced		# advanced, extended, or basic
-#standard_conforming_strings = off
+#standard_conforming_strings = on
 
 
 # - Other Platforms and Clients -

@@ -11,6 +11,8 @@
  *-------------------------------------------------------------------------
  */
 
+#include "postgres.h"
+
 #include "cdb/cdbvarblock.h"
 
 static VarBlockByteLen VarBlockGetItemLen(

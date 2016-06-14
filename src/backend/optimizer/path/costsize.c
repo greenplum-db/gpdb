@@ -55,7 +55,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/costsize.c,v 1.174 2007/01/10 18:06:03 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/costsize.c,v 1.177 2007/01/22 20:00:39 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -69,12 +69,15 @@
 #include "optimizer/clauses.h"
 #include "optimizer/cost.h"
 #include "optimizer/pathnode.h"
+#include "optimizer/planmain.h"
+#include "parser/parse_expr.h"
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
 #include "utils/selfuncs.h"
 #include "utils/tuplesort.h"
 
 #include "cdb/cdbpath.h"        /* cdbpath_rows() */
+#include "cdb/cdbvars.h"
 
 #define LOG2(x)  (log(x) / 0.693147180559945)
 
@@ -98,11 +101,14 @@ Cost		disable_cost = 1.0e9;
 /* CDB: The enable_xxx globals have been moved to allpaths.c */
 
 typedef struct
-	{
-		PlannerInfo *root;
-		QualCost	total;
-	} cost_qual_eval_context;
+{
+	PlannerInfo *root;
+	QualCost	total;
+} cost_qual_eval_context;
 
+static MergeScanSelCache *cached_scansel(PlannerInfo *root,
+										 RestrictInfo *rinfo,
+										 PathKey *pathkey);
 static bool cost_qual_eval_walker(Node *node, cost_qual_eval_context *context);
 static Selectivity approx_selectivity(PlannerInfo *root, List *quals,
 				   JoinType jointype);
@@ -1131,17 +1137,19 @@ cost_functionscan(Path *path, PlannerInfo *root, RelOptInfo *baserel)
 	Cost		startup_cost = 0;
 	Cost		run_cost = 0;
 	Cost		cpu_per_tuple;
+	RangeTblEntry *rte;
+	QualCost	exprcost;
 
 	/* Should only be applied to base relations that are functions */
 	Assert(baserel->relid > 0);
-	Assert(baserel->rtekind == RTE_FUNCTION);
+	rte = rt_fetch(baserel->relid, root->parse->rtable);
+	Assert(rte->rtekind == RTE_FUNCTION);
 
-	/*
-	 * For now, estimate function's cost at one operator eval per function
-	 * call.  Someday we should revive the function cost estimate columns in
-	 * pg_proc...
-	 */
-	cpu_per_tuple = cpu_operator_cost;
+	/* Estimate costs of executing the function expression */
+	cost_qual_eval_node(&exprcost, rte->funcexpr, root);
+
+	startup_cost += exprcost.startup;
+	cpu_per_tuple = exprcost.per_tuple;
 
 	/* Add scanning CPU costs */
 	startup_cost += baserel->baserestrictcost.startup;
@@ -1410,6 +1418,10 @@ cost_agg(Path *path, PlannerInfo *root,
 	 * there's roundoff error we might do the wrong thing.  So be sure that
 	 * the computations below form the same intermediate values in the same
 	 * order.
+	 *
+	 * Note: ideally we should use the pg_proc.procost costs of each
+	 * aggregate's component functions, but for now that seems like an
+	 * excessive amount of work.
 	 */
 	if (aggstrategy == AGG_PLAIN)
 	{
@@ -1701,8 +1713,6 @@ cost_mergejoin(MergePath *path, PlannerInfo *root)
 	Path	   *outer_path = path->jpath.outerjoinpath;
 	Path	   *inner_path = path->jpath.innerjoinpath;
 	List	   *mergeclauses = path->path_mergeclauses;
-	Oid		   *mergeFamilies = path->path_mergeFamilies;
-	int		   *mergeStrategies = path->path_mergeStrategies;
 	List	   *outersortkeys = path->outersortkeys;
 	List	   *innersortkeys = path->innersortkeys;
 	Cost		startup_cost = 0;
@@ -1711,7 +1721,6 @@ cost_mergejoin(MergePath *path, PlannerInfo *root)
 	Selectivity merge_selec;
 	QualCost	merge_qual_cost;
 	QualCost	qp_qual_cost;
-	RestrictInfo *firstclause;
 	double		outer_path_rows = PATH_ROWS(root, outer_path);
 	double		inner_path_rows = PATH_ROWS(root, inner_path);
 	double		outer_rows,
@@ -1785,34 +1794,47 @@ cost_mergejoin(MergePath *path, PlannerInfo *root)
 	 * (unless it's an outer join, in which case the outer side has to be
 	 * scanned all the way anyway).  Estimate fraction of the left and right
 	 * inputs that will actually need to be scanned. We use only the first
-	 * (most significant) merge clause for this purpose.
-	 *
-	 * Since this calculation is somewhat expensive, and will be the same for
-	 * all mergejoin paths associated with the merge clause, we cache the
-	 * results in the RestrictInfo node.  XXX that won't work anymore once
-	 * we support multiple possible orderings!
+	 * (most significant) merge clause for this purpose.  Since
+	 * mergejoinscansel() is a fairly expensive computation, we cache the
+	 * results in the merge clause RestrictInfo.
 	 */
 	if (mergeclauses && path->jpath.jointype != JOIN_FULL)
 	{
-		firstclause = (RestrictInfo *) linitial(mergeclauses);
-		if (firstclause->left_mergescansel < 0) /* not computed yet? */
-			mergejoinscansel(root, (Node *) firstclause->clause,
-							 mergeFamilies[0],
-							 mergeStrategies[0],
-							 &firstclause->left_mergescansel,
-							 &firstclause->right_mergescansel);
+		RestrictInfo *firstclause = (RestrictInfo *) linitial(mergeclauses);
+		List	   *opathkeys;
+		List	   *ipathkeys;
+		PathKey	   *opathkey;
+		PathKey	   *ipathkey;
+		MergeScanSelCache *cache;
 
-		if (bms_is_subset(firstclause->left_relids, outer_path->parent->relids))
+		/* Get the input pathkeys to determine the sort-order details */
+		opathkeys = outersortkeys ? outersortkeys : outer_path->pathkeys;
+		ipathkeys = innersortkeys ? innersortkeys : inner_path->pathkeys;
+		Assert(opathkeys);
+		Assert(ipathkeys);
+		opathkey = (PathKey *) linitial(opathkeys);
+		ipathkey = (PathKey *) linitial(ipathkeys);
+		/* debugging check */
+		if (opathkey->pk_opfamily != ipathkey->pk_opfamily ||
+			opathkey->pk_strategy != ipathkey->pk_strategy ||
+			opathkey->pk_nulls_first != ipathkey->pk_nulls_first)
+			elog(ERROR, "left and right pathkeys do not match in mergejoin");
+
+		/* Get the selectivity with caching */
+		cache = cached_scansel(root, firstclause, opathkey);
+
+		if (bms_is_subset(firstclause->left_relids,
+						  outer_path->parent->relids))
 		{
 			/* left side of clause is outer */
-			outerscansel = firstclause->left_mergescansel;
-			innerscansel = firstclause->right_mergescansel;
+			outerscansel = cache->leftscansel;
+			innerscansel = cache->rightscansel;
 		}
 		else
 		{
 			/* left side of clause is inner */
-			outerscansel = firstclause->right_mergescansel;
-			innerscansel = firstclause->left_mergescansel;
+			outerscansel = cache->rightscansel;
+			innerscansel = cache->leftscansel;
 		}
 		if (path->jpath.jointype == JOIN_LEFT || 
 			path->jpath.jointype == JOIN_LASJ ||
@@ -1914,6 +1936,54 @@ cost_mergejoin(MergePath *path, PlannerInfo *root)
 
 	path->jpath.path.startup_cost = startup_cost;
 	path->jpath.path.total_cost = startup_cost + run_cost;
+}
+
+/*
+ * run mergejoinscansel() with caching
+ */
+static MergeScanSelCache *
+cached_scansel(PlannerInfo *root, RestrictInfo *rinfo, PathKey *pathkey)
+{
+	MergeScanSelCache *cache;
+	ListCell   *lc;
+	Selectivity leftscansel,
+				rightscansel;
+	MemoryContext oldcontext;
+
+	/* Do we have this result already? */
+	foreach(lc, rinfo->scansel_cache)
+	{
+		cache = (MergeScanSelCache *) lfirst(lc);
+		if (cache->opfamily == pathkey->pk_opfamily &&
+			cache->strategy == pathkey->pk_strategy &&
+			cache->nulls_first == pathkey->pk_nulls_first)
+			return cache;
+	}
+
+	/* Nope, do the computation */
+	mergejoinscansel(root,
+					 (Node *) rinfo->clause,
+					 pathkey->pk_opfamily,
+					 pathkey->pk_strategy,
+					 pathkey->pk_nulls_first,
+					 &leftscansel,
+					 &rightscansel);
+
+	/* Cache the result in suitably long-lived workspace */
+	oldcontext = MemoryContextSwitchTo(root->planner_cxt);
+
+	cache = (MergeScanSelCache *) palloc(sizeof(MergeScanSelCache));
+	cache->opfamily = pathkey->pk_opfamily;
+	cache->strategy = pathkey->pk_strategy;
+	cache->nulls_first = pathkey->pk_nulls_first;
+	cache->leftscansel = leftscansel;
+	cache->rightscansel = rightscansel;
+
+	rinfo->scansel_cache = lappend(rinfo->scansel_cache, cache);
+
+	MemoryContextSwitchTo(oldcontext);
+
+	return cache;
 }
 
 /*
@@ -2149,7 +2219,8 @@ cost_hashjoin(HashPath *path, PlannerInfo *root)
  * cost_qual_eval
  *		Estimate the CPU costs of evaluating a WHERE clause.
  *		The input can be either an implicitly-ANDed list of boolean
- *		expressions, or a list of RestrictInfo nodes.
+ *		expressions, or a list of RestrictInfo nodes.  (The latter is
+ *		preferred since it allows caching of the results.)
  *		The result includes both a one-time (startup) component,
  *		and a per-evaluation component.
  */
@@ -2175,17 +2246,35 @@ cost_qual_eval(QualCost *cost, List *quals, PlannerInfo *root)
 	*cost = context.total;
 }
 
+/*
+ * cost_qual_eval_node
+ *		As above, for a single RestrictInfo or expression.
+ */
+void
+cost_qual_eval_node(QualCost *cost, Node *qual, PlannerInfo *root)
+{
+	cost_qual_eval_context context;
+
+	context.root = root;
+	context.total.startup = 0;
+	context.total.per_tuple = 0;
+
+	cost_qual_eval_walker(qual, &context);
+
+	*cost = context.total;
+}
+
 static bool
-cost_qual_eval_walker(Node *node,  cost_qual_eval_context *context)
+cost_qual_eval_walker(Node *node, cost_qual_eval_context *context)
 {
 	if (node == NULL)
 		return false;
 
 	/*
 	 * RestrictInfo nodes contain an eval_cost field reserved for this
-	 * routine's use, so that it's not necessary to evaluate the qual clause's
-	 * cost more than once.  If the clause's cost hasn't been computed yet,
-	 * the field's startup value will contain -1.
+	 * routine's use, so that it's not necessary to evaluate the qual
+	 * clause's cost more than once.  If the clause's cost hasn't been
+	 * computed yet, the field's startup value will contain -1.
 	 */
 	if (IsA(node, RestrictInfo))
 	{
@@ -2198,16 +2287,14 @@ cost_qual_eval_walker(Node *node,  cost_qual_eval_context *context)
 			locContext.root = context->root;
 			locContext.total.startup = 0;
 			locContext.total.per_tuple = 0;
-
 			/*
-			 * For an OR clause, recurse into the marked-up tree so that we
-			 * set the eval_cost for contained RestrictInfos too.
+			 * For an OR clause, recurse into the marked-up tree so that
+			 * we set the eval_cost for contained RestrictInfos too.
 			 */
 			if (rinfo->orclause)
 				cost_qual_eval_walker((Node *) rinfo->orclause, &locContext);
 			else
 				cost_qual_eval_walker((Node *) rinfo->clause, &locContext);
-
 			/*
 			 * If the RestrictInfo is marked pseudoconstant, it will be tested
 			 * only once, so treat its cost as all startup cost.
@@ -2227,19 +2314,34 @@ cost_qual_eval_walker(Node *node,  cost_qual_eval_context *context)
 	}
 
 	/*
-	 * Our basic strategy is to charge one cpu_operator_cost for each operator
-	 * or function node in the given tree.	Vars and Consts are charged zero,
-	 * and so are boolean operators (AND, OR, NOT). Simplistic, but a lot
-	 * better than no model at all.
+	 * For each operator or function node in the given tree, we charge the
+	 * estimated execution cost given by pg_proc.procost (remember to
+	 * multiply this by cpu_operator_cost).
+	 *
+	 * Vars and Consts are charged zero, and so are boolean operators (AND,
+	 * OR, NOT). Simplistic, but a lot better than no model at all.
 	 *
 	 * Should we try to account for the possibility of short-circuit
-	 * evaluation of AND/OR?
+	 * evaluation of AND/OR?  Probably *not*, because that would make the
+	 * results depend on the clause ordering, and we are not in any position
+	 * to expect that the current ordering of the clauses is the one that's
+	 * going to end up being used.  (Is it worth applying order_qual_clauses
+	 * much earlier in the planning process to fix this?)
 	 */
-	if (IsA(node, FuncExpr) ||
-		IsA(node, OpExpr) ||
-		IsA(node, DistinctExpr) ||
-		IsA(node, NullIfExpr))
-		context->total.per_tuple += cpu_operator_cost;
+	if (IsA(node, FuncExpr))
+	{
+		context->total.per_tuple +=
+			get_func_cost(((FuncExpr *) node)->funcid) * cpu_operator_cost;
+	}
+	else if (IsA(node, OpExpr) ||
+			 IsA(node, DistinctExpr) ||
+			 IsA(node, NullIfExpr))
+	{
+		/* rely on struct equivalence to treat these all alike */
+		set_opfuncid((OpExpr *) node);
+		context->total.per_tuple +=
+			get_func_cost(((OpExpr *) node)->opfuncid) * cpu_operator_cost;
+	}
 	else if (IsA(node, ScalarArrayOpExpr))
 	{
 		/*
@@ -2249,20 +2351,50 @@ cost_qual_eval_walker(Node *node,  cost_qual_eval_context *context)
 		ScalarArrayOpExpr *saop = (ScalarArrayOpExpr *) node;
 		Node	   *arraynode = (Node *) lsecond(saop->args);
 
-		context->total.per_tuple +=
+		set_sa_opfuncid(saop);
+		context->total.per_tuple += get_func_cost(saop->opfuncid) *
 			cpu_operator_cost * estimate_array_length(arraynode) * 0.5;
+	}
+	else if (IsA(node, CoerceViaIO))
+	{
+		CoerceViaIO *iocoerce = (CoerceViaIO *) node;
+		Oid         iofunc;
+		Oid         typioparam;
+		bool        typisvarlena;
+
+		/* check the result type's input function */
+		getTypeInputInfo(iocoerce->resulttype, &iofunc, &typioparam);
+		context->total.per_tuple += get_func_cost(iofunc) * cpu_operator_cost;
+		/* check the input type's output function */
+		getTypeOutputInfo(exprType((Node *) iocoerce->arg), &iofunc, &typisvarlena);
+		context->total.per_tuple += get_func_cost(iofunc) * cpu_operator_cost;
+	}
+	else if (IsA(node, ArrayCoerceExpr))
+	{
+		ArrayCoerceExpr *acoerce = (ArrayCoerceExpr *) node;
+		Node	   *arraynode = (Node *) acoerce->arg;
+
+		if (OidIsValid(acoerce->elemfuncid))
+			context->total.per_tuple += cpu_operator_cost * estimate_array_length(arraynode);
 	}
 	else if (IsA(node, RowCompareExpr))
 	{
 		/* Conservatively assume we will check all the columns */
 		RowCompareExpr *rcexpr = (RowCompareExpr *) node;
+		ListCell   *lc;
 
-		context->total.per_tuple += cpu_operator_cost * list_length(rcexpr->opnos);
+		foreach(lc, rcexpr->opnos)
+		{
+			Oid		opid = lfirst_oid(lc);
+
+			context->total.per_tuple += get_func_cost(get_opcode(opid)) *
+				cpu_operator_cost;
+		}
 	}
-	else if (IsA(node, CurrentOfExpr)) 
+	else if (IsA(node, CurrentOfExpr))
 	{
-		/* This is noticeably more expensive than a typical operator */
-		context->total.per_tuple += 100 * cpu_operator_cost;
+		/* Report high cost to prevent selection of anything but TID scan */
+		context->total.startup += disable_cost;
 	}
 	else if (IsA(node, SubLink))
 	{
@@ -2331,7 +2463,8 @@ cost_qual_eval_walker(Node *node,  cost_qual_eval_context *context)
 				/* assume we need 50% of the tuples */
 				context->total.per_tuple += 0.50 * plan_run_cost;
 				/* also charge a cpu_operator_cost per row examined */
-				context->total.per_tuple += 0.50 * plan->plan_rows * cpu_operator_cost;
+				context->total.per_tuple +=
+					0.50 * plan->plan_rows * cpu_operator_cost;
 			}
 			else
 			{
@@ -2355,6 +2488,7 @@ cost_qual_eval_walker(Node *node,  cost_qual_eval_context *context)
 		}
 	}
 
+	/* recurse into children */
 	return expression_tree_walker(node, cost_qual_eval_walker,
 								  (void *) context);
 }
@@ -2753,16 +2887,15 @@ join_in_selectivity(JoinPath *path, PlannerInfo *root)
 void
 set_function_size_estimates(PlannerInfo *root, RelOptInfo *rel)
 {
-	/*
-	 * Estimate number of rows the function itself will return.
-	 *
-	 * XXX no idea how to do this yet; but we can at least check whether
-	 * function returns set or not...
-	 */
-    if (rel->onerow)
-        rel->tuples = 1;
-    else
-	    rel->tuples = 1000;
+	RangeTblEntry *rte;
+
+	/* Should only be applied to base relations that are functions */
+	Assert(rel->relid > 0);
+	rte = rt_fetch(rel->relid, root->parse->rtable);
+	Assert(rte->rtekind == RTE_FUNCTION);
+
+	/* Estimate number of rows the function itself will return */
+	rel->tuples = clamp_row_est(expression_returns_set_rows(rte->funcexpr));
 
 	/* Now estimate number of output rows, etc */
 	set_baserel_size_estimates(root, rel);

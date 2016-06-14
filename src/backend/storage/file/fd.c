@@ -54,9 +54,6 @@
 #include "storage/ipc.h"
 #include "utils/guc.h"
 #include "utils/workfile_mgr.h"
-
-/* Debug_filerep_print guc temporaly added for troubleshooting */
-#include "utils/guc.h"
 #include "utils/faultinjector.h"
 
 // Provide some indirection here in case we have problems with lseek and
@@ -236,6 +233,7 @@ static File AllocateVfd(void);
 static void FreeVfd(File file);
 
 static int	FileAccess(File file);
+static char *make_database_relative(const char *filename);
 static void AtProcExit_Files(int code, Datum arg);
 static void CleanupTempFiles(bool isProcExit);
 static void RemovePgTempFilesInDir(const char *tmpdirname);
@@ -454,7 +452,7 @@ set_max_safe_fds(void)
 	if (max_safe_fds < FD_MINFREE)
 		ereport(FATAL,
 				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
-				 errmsg("insufficient file handles available to start server process"),
+				 errmsg("insufficient file descriptors available to start server process"),
 				 errdetail("System allows %d, we need at least %d.",
 						   max_safe_fds + NUM_RESERVED_FDS,
 						   FD_MINFREE + NUM_RESERVED_FDS)));
@@ -496,7 +494,7 @@ tryAgain:
 
 		ereport(LOG,
 				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
-				 errmsg("out of file handles: %m; release and retry")));
+				 errmsg("out of file descriptors: %m; release and retry")));
 		errno = 0;
 		if (ReleaseLruFile())
 			goto tryAgain;
@@ -567,8 +565,7 @@ LruDelete(File file)
 
 	/* close the file */
 	if (close(vfdP->fd))
-		elog(ERROR, "could not close file \"%s\": %m",
-			 vfdP->fileName);
+		elog(ERROR, "could not close file \"%s\": %m", vfdP->fileName);
 
 	--nfile;
 	vfdP->fd = VFD_CLOSED;
@@ -748,6 +745,29 @@ FreeVfd(File file)
 	VfdCache[0].nextFree = file;
 }
 
+/*
+ * make_database_relative()
+ *		Prepend DatabasePath to the given file name.
+ *
+ * Result is a palloc'd string.
+ */
+static char *
+make_database_relative(const char *filename)
+{
+	char	   *buf;
+
+	Assert(!is_absolute_path(filename));
+	buf = (char *) palloc(PATH_MAX);
+	if (snprintf(buf, PATH_MAX, "%s/%s", getCurrentTempFilePath, filename) > PATH_MAX)
+	{
+		ereport(ERROR,
+				(errmsg("cannot generate path %s/%s", getCurrentTempFilePath,
+						filename)));
+	}
+
+	return buf;
+}
+
 /* returns 0 on success, -1 on re-open failure (with errno set) */
 static int
 FileAccess(File file)
@@ -869,13 +889,7 @@ FileNameOpenFile(FileName fileName, int fileFlags, int fileMode)
 	File		fd;
 	char	   *fname;
 
-	Assert(!is_absolute_path(fileName));
-	fname = (char*)palloc(PATH_MAX);
-	if (snprintf(fname, PATH_MAX, "%s/%s", getCurrentTempFilePath, fileName) > PATH_MAX)
-	{
-		ereport(ERROR, (errmsg("cannot generate path %s/%s", getCurrentTempFilePath,
-                        fileName)));
-	}
+	fname = make_database_relative(fileName);
 	fd = PathNameOpenFile(fname, fileFlags, fileMode);
 	pfree(fname);
 	return fd;
@@ -888,11 +902,10 @@ FileNameOpenFile(FileName fileName, int fileFlags, int fileMode)
  * should be unique to this particular OpenTemporaryFile() request and
  * distinct from any others in concurrent use on the same host.  As a
  * convenience for monitoring and debugging, the given 'fileName' string
- * and 'extentseqnum' are embedded in the file name.
+ * is embedded in the file name.
  *
- * If 'makenameunique' is false, then 'fileName' and 'extentseqnum' identify a
- * new or existing temporary file which other processes also could open and
- * share.
+ * If 'makenameunique' is false, then 'fileName' identify a new or existing
+ * temporary file which other processes also could open and share.
  *
  * If 'create' is true, a new file is created.  If successful, a valid vfd
  * index (>0) is returned; otherwise an error is thrown.
@@ -916,22 +929,20 @@ FileNameOpenFile(FileName fileName, int fileFlags, int fileMode)
  */
 File
 OpenTemporaryFile(const char   *fileName,
-                  int           extentseqnum,
                   bool          makenameunique,
                   bool          create,
                   bool          delOnClose,
                   bool          closeAtEOXact)
 {
 
-	char	tempfilepath[MAXPGPATH];
+	char		tempfilepath[MAXPGPATH];
+    char		tempfileprefix[MAXPGPATH];
+	int			len;
 
 	Assert(fileName);
     AssertImply(makenameunique, create && delOnClose);
 
-
-    char tempfileprefix[MAXPGPATH];
-
-    int len = GetTempFilePrefix(tempfileprefix, MAXPGPATH, fileName);
+    len = GetTempFilePrefix(tempfileprefix, MAXPGPATH, fileName);
     insist_log(len <= MAXPGPATH - 1, "could not generate temporary file name");
 
     if (makenameunique)
@@ -941,18 +952,14 @@ OpenTemporaryFile(const char   *fileName,
 		 * database instance.
 		 */
 		snprintf(tempfilepath, sizeof(tempfilepath),
-				 "%s_%d_%04d.%ld",
-				 tempfileprefix,
-				 MyProcPid,
-                 extentseqnum,
-                 tempFileCounter++);
+				 "%s_%d.%ld", tempfileprefix,
+				 MyProcPid, tempFileCounter++);
 	}
 	else
 	{
         snprintf(tempfilepath, sizeof(tempfilepath),
-				 "%s.%04d",
-				 tempfileprefix,
-				 extentseqnum);
+				 "%s",
+				 tempfileprefix);
 	}
 
     return OpenNamedFile(tempfilepath, create, delOnClose, closeAtEOXact);
@@ -969,20 +976,23 @@ OpenNamedFile(const char   *fileName,
                   bool          delOnClose,
                   bool          closeAtEOXact)
 {
-	char	tempfilepath[MAXPGPATH];
+	char		tempfilepath[MAXPGPATH];
+	File		file;
+	int			fileFlags;
+
 	strncpy(tempfilepath, fileName, sizeof(tempfilepath));
 
 	/*
-	 * File flags when open the file.  Note: we don't use O_EXCL, in case there is an orphaned
+	 * Open the file.  Note: we don't use O_EXCL, in case there is an orphaned
 	 * temp file that can be reused.
 	 */
-	int fileFlags = O_RDWR | PG_BINARY;
+	fileFlags = O_RDWR | PG_BINARY;
 	if (create)
-	{
 		fileFlags |= O_TRUNC | O_CREAT;
-	}
 
-	File file = FileNameOpenFile(tempfilepath, fileFlags, 0600);
+	file = FileNameOpenFile(tempfilepath,
+							fileFlags,
+							0600);
 
 	if (file <= 0)
 	{
@@ -999,19 +1009,20 @@ OpenNamedFile(const char   *fileName,
 		 * just did the same thing.  If it doesn't work then we'll bomb out on
 		 * the second create attempt, instead.
 		 */
-		dirpath = (char*)palloc(PATH_MAX);
-		snprintf(dirpath, PATH_MAX, "%s/%s", getCurrentTempFilePath, PG_TEMP_FILES_DIR);
+		dirpath = make_database_relative(PG_TEMP_FILES_DIR);
 		mkdir(dirpath, S_IRWXU);
 		pfree(dirpath);
 
-		file = FileNameOpenFile(tempfilepath, fileFlags, 0600);
+		file = FileNameOpenFile(tempfilepath,
+								fileFlags,
+								0600);
 		if (file <= 0)
 			elog(ERROR, "could not create temporary file \"%s\": %m",
 			     tempfilepath);
 	}
 
 	/* Mark it for deletion at close */
-	if(delOnClose)
+	if (delOnClose)
 		VfdCache[file].fdstate |= FD_TEMPORARY;
 
 	/* Mark it to be closed at end of transaction. */
@@ -1188,23 +1199,6 @@ FileWrite(File file, char *buffer, int amount)
 			   file, VfdCache[file].fileName,
 			   VfdCache[file].seekPos, amount, buffer));
 
-	/* Added temporary for troubleshooting */
-	if (Debug_filerep_print)
-		elog(LOG, "FileWrite: %d (%s) " INT64_FORMAT " %d %p",
-		 file, VfdCache[file].fileName,
-		 VfdCache[file].seekPos, amount, buffer);
-	else
-		FileRep_InsertLogEntry(
-							   "FileWrite",
-							   FileRep_GetFlatFileIdentifier(VfdCache[file].fileName, ""),
-							   FileRepRelationTypeFlatFile,
-							   FileRepOperationWrite,
-							   FILEREP_UNDEFINED,
-							   FILEREP_UNDEFINED,
-							   FileRepAckStateNotInitialized,
-							   VfdCache[file].seekPos,
-							   amount);
-
 	returnCode = FileAccess(file);
 	if (returnCode < 0)
 		return returnCode;
@@ -1331,28 +1325,6 @@ FileSync(File file)
 	return returnCode;
 }
 
-/*
- * Get the size of a physical file by using fstat()
- *
- * Returns size in bytes if successful, < 0 otherwise
- */
-int64
-FileDiskSize(File file)
-{
-	int returnCode = 0;
-
-	returnCode = FileAccess(file);
-	if (returnCode < 0)
-		return returnCode;
-
-	struct stat buf;
-	returnCode = fstat(VfdCache[file].fd, &buf);
-	if (returnCode < 0)
-		return returnCode;
-
-	return (int64) buf.st_size;
-}
-
 int64
 FileSeek(File file, int64 offset, int whence)
 {
@@ -1369,7 +1341,8 @@ FileSeek(File file, int64 offset, int whence)
 		switch (whence)
 		{
 			case SEEK_SET:
-				Assert(offset >= INT64CONST(0));
+				if (offset < 0)
+					elog(ERROR, "invalid seek offset: %ld", offset);
 				VfdCache[file].seekPos = offset;
 				break;
 			case SEEK_CUR:
@@ -1383,7 +1356,7 @@ FileSeek(File file, int64 offset, int whence)
 											   offset, whence);
 				break;
 			default:
-				Assert(!"invalid whence");
+				elog(ERROR, "invalid whence: %d", whence);
 				break;
 		}
 	}
@@ -1392,7 +1365,8 @@ FileSeek(File file, int64 offset, int whence)
 		switch (whence)
 		{
 			case SEEK_SET:
-				Assert(offset >= INT64CONST(0));
+				if (offset < 0)
+					elog(ERROR, "invalid seek offset: " INT64_FORMAT, offset);
 				if (VfdCache[file].seekPos != offset)
 					VfdCache[file].seekPos = pg_lseek64(VfdCache[file].fd,
 												   offset, whence);
@@ -1407,11 +1381,33 @@ FileSeek(File file, int64 offset, int whence)
 											   offset, whence);
 				break;
 			default:
-				Assert(!"invalid whence");
+				elog(ERROR, "invalid whence: %d", whence);
 				break;
 		}
 	}
 	return VfdCache[file].seekPos;
+}
+
+/*
+ * Get the size of a physical file by using fstat()
+ *
+ * Returns size in bytes if successful, < 0 otherwise
+ */
+int64
+FileDiskSize(File file)
+{
+	int			returnCode = 0;
+	struct stat buf;
+
+	returnCode = FileAccess(file);
+	if (returnCode < 0)
+		return returnCode;
+
+	returnCode = fstat(VfdCache[file].fd, &buf);
+	if (returnCode < 0)
+		return returnCode;
+
+	return (int64) buf.st_size;
 }
 
 int64
@@ -1509,7 +1505,7 @@ AllocateFile(const char *name, const char *mode)
 	 */
 	if (numAllocatedDescs >= MAX_ALLOCATED_DESCS ||
 		numAllocatedDescs >= max_safe_fds - 1)
-		elog(ERROR, "could not allocate file: out of file handles");
+		elog(ERROR, "too many private files demanded");
 
 TryAgain:
 	if ((file = fopen(name, mode)) != NULL)
@@ -1529,12 +1525,26 @@ TryAgain:
 
 		ereport(LOG,
 				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
-				 errmsg("out of file handles: %m; release and retry")));
+				 errmsg("out of file descriptors: %m; release and retry")));
 		errno = 0;
 		if (ReleaseLruFile())
 			goto TryAgain;
 		errno = save_errno;
 	}
+
+	/*
+	 * TEMPORARY hack to log the Windows error code on fopen failures, in
+	 * hopes of diagnosing some hard-to-reproduce problems.
+	 */
+#ifdef WIN32
+	{
+		int			save_errno = errno;
+
+		elog(LOG, "Windows fopen(\"%s\",\"%s\") failed: code %lu, errno %d",
+			 name, mode, GetLastError(), save_errno);
+		errno = save_errno;
+	}
+#endif
 
 	return NULL;
 }
@@ -1547,7 +1557,7 @@ TryAgain:
 static int
 FreeDesc(AllocateDesc *desc)
 {
-	int			result = 0;
+	int			result;
 
 	/* Close the underlying object */
 	switch (desc->kind)
@@ -1559,7 +1569,8 @@ FreeDesc(AllocateDesc *desc)
 			result = closedir(desc->desc.dir);
 			break;
 		default:
-			Assert(false);
+			elog(ERROR, "AllocateDesc kind not recognized");
+			result = 0;			/* keep compiler quiet */
 			break;
 	}
 
@@ -1593,7 +1604,7 @@ FreeFile(FILE *file)
 	}
 
 	/* Only get here if someone passes us a file not in allocatedDescs */
-	elog(LOG, "file to be closed was not opened through the virtual file descriptor system");
+	elog(WARNING, "file passed to FreeFile was not obtained from AllocateFile");
 	Assert(false);
 
 	return fclose(file);
@@ -1624,7 +1635,7 @@ AllocateDir(const char *dirname)
 	 */
 	if (numAllocatedDescs >= MAX_ALLOCATED_DESCS ||
 		numAllocatedDescs >= max_safe_fds - 1)
-		elog(ERROR, "could not allocate directory: out of file handles");
+		elog(ERROR, "too many private dirs demanded");
 
 TryAgain:
 	if ((dir = opendir(dirname)) != NULL)
@@ -1644,7 +1655,7 @@ TryAgain:
 
 		ereport(LOG,
 				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
-				 errmsg("out of file handles: %m; release and retry")));
+				 errmsg("out of file descriptors: %m; release and retry")));
 		errno = 0;
 		if (ReleaseLruFile())
 			goto TryAgain;
@@ -1731,7 +1742,7 @@ FreeDir(DIR *dir)
 	}
 
 	/* Only get here if someone passes us a dir not in allocatedDescs */
-	elog(LOG, "directory to be closed was not opened through the virtual file descriptor system");
+	elog(WARNING, "dir passed to FreeDir was not obtained from AllocateDir");
 	Assert(false);
 
 	return closedir(dir);

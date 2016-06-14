@@ -1,12 +1,8 @@
 #!/usr/bin/env perl
 #
-# $Header$
-#
 # copyright (c) 2007, 2008, 2009 GreenPlum.  All rights reserved.  
 # Author: Jeffrey I Cohen
 #
-#
-
 # Pod::Usage is loaded lazily when needed, if the --help or other such option
 # is actually used. Loading the module takes some time, which adds up when
 # running hundreds of regression tests, and gpdiff.pl calls this script twice
@@ -55,7 +51,7 @@ Options:
 
 =item B<-ignore_headers> 
 
-gpdiff/atmsort expect Postgresql "psql-style" output for SELECT
+gpdiff/atmsort expect PostgreSQL "psql-style" output for SELECT
 statements, with a two line header composed of the column names,
 separated by vertical bars (|), and a "separator" line of dashes and
 pluses beneath, followed by the row output.  The psql utility performs
@@ -143,7 +139,7 @@ since unORDERed query output does not have a guaranteed order.  Note
 that for diff to work correctly, statements that do use ORDER BY must
 have a fully-specified order.  The utility gpdiff.pl invokes atmsort
 in order to compare the Greenplum test results against standard
-Postgresql.
+PostgreSQL.
 
 The log content must look something like:
 
@@ -158,7 +154,7 @@ The log content must look something like:
  (3 rows)
 
 The log file must contain SELECT statements, followed by the query
-output in the standard Postgresql format, ie a set of named columns, a
+output in the standard PostgreSQL format, ie a set of named columns, a
 separator line constructed of dashes and plus signs, and the rows,
 followed by an "(N rows)" row count.  The SELECT statement must be
 unambiguous, eg no embedded SQL keywords like INSERT, UPDATE, or
@@ -354,12 +350,12 @@ Jeffrey I Cohen
 
 Copyright (c) 2007, 2008, 2009 GreenPlum.  All rights reserved.  
 
-Address bug reports and comments to: jcohen@greenplum.com
+Address bug reports and comments to: bugs@greenplum.org
 
 
 =cut
 
-# Calls pod2usage, but lodas the module first.
+# Calls pod2usage, but loads the module first.
 sub lazy_pod2usage
 {
     require Pod::Usage;
@@ -368,30 +364,11 @@ sub lazy_pod2usage
 
 my $glob_id = "";
 
-# optional set of prefixes to identify sql statements, query output,
-# and sorted lines (for testing purposes)
-#my $apref = 'a: ';
-#my $bpref = 'b: ';
-#my $cpref = 'c: ';
-#my $dpref = 'S: ';
-my $apref = '';
-my $bpref = '';
-my $cpref = '';
-my $dpref = '';
-
-my $glob_compare_equiv;
-my $glob_make_equiv_expected;
-my $glob_ignore_headers;
-my $glob_ignore_plans;
-my $glob_ignore_whitespace;
 my $glob_init;
 
 my $glob_orderwarn;
 my $glob_verbose;
 my $glob_fqo;
-
-# array of "expected" rows from first query of equiv region
-my $equiv_expected_rows;
 
 my $man  = 0;
 my $help = 0;

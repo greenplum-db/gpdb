@@ -235,10 +235,11 @@ DROP TABLE tmp2;
 -- is run in parallel with foreign_key.sql.
 CREATE TEMP TABLE PKTABLE (ptest1 int PRIMARY KEY) distributed by (ptest1);
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "pktable_pkey" for table "pktable"
+INSERT INTO PKTABLE VALUES(42);
 CREATE TEMP TABLE FKTABLE (ftest1 inet);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'ftest1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
--- This next should fail, because inet=int does not exist
+-- This next should fail, because int=inet does not exist
 ALTER TABLE FKTABLE ADD FOREIGN KEY(ftest1) references pktable;
 ERROR:  foreign key constraint "fktable_ftest1_fkey" cannot be implemented
 DETAIL:  Key columns "ftest1" and "ptest1" are of incompatible types: inet and integer.
@@ -247,25 +248,38 @@ DETAIL:  Key columns "ftest1" and "ptest1" are of incompatible types: inet and i
 ALTER TABLE FKTABLE ADD FOREIGN KEY(ftest1) references pktable(ptest1);
 ERROR:  foreign key constraint "fktable_ftest1_fkey" cannot be implemented
 DETAIL:  Key columns "ftest1" and "ptest1" are of incompatible types: inet and integer.
--- This should succeed, even though they are different types
--- because varchar=int does exist
 DROP TABLE FKTABLE;
-CREATE TEMP TABLE FKTABLE (ftest1 varchar);
+-- This should succeed, even though they are different types,
+-- because int=int8 exists and is a member of the integer opfamily
+CREATE TEMP TABLE FKTABLE (ftest1 int8);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'ftest1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ALTER TABLE FKTABLE ADD FOREIGN KEY(ftest1) references pktable;
-WARNING:  foreign key constraint "fktable_ftest1_fkey" will require costly sequential scans
-DETAIL:  Key columns "ftest1" and "ptest1" are of different types: character varying and integer.
-WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
--- As should this
-ALTER TABLE FKTABLE ADD FOREIGN KEY(ftest1) references pktable(ptest1);
-WARNING:  foreign key constraint "fktable_ftest1_fkey1" will require costly sequential scans
-DETAIL:  Key columns "ftest1" and "ptest1" are of different types: character varying and integer.
-WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
-DROP TABLE pktable cascade;
-NOTICE:  drop cascades to constraint fktable_ftest1_fkey1 on table fktable
-NOTICE:  drop cascades to constraint fktable_ftest1_fkey on table fktable
-DROP TABLE fktable;
+-- Check it actually works
+INSERT INTO FKTABLE VALUES(42);		-- should succeed
+INSERT INTO FKTABLE VALUES(43);		-- should fail
+DROP TABLE FKTABLE;
+-- This should fail, because we'd have to cast numeric to int which is
+-- not an implicit coercion (or use numeric=numeric, but that's not part
+-- of the integer opfamily)
+CREATE TEMP TABLE FKTABLE (ftest1 numeric);
+ALTER TABLE FKTABLE ADD FOREIGN KEY(ftest1) references pktable;
+ERROR:  foreign key constraint "fktable_ftest1_fkey" cannot be implemented
+DETAIL:  Key columns "ftest1" and "ptest1" are of incompatible types: numeric and integer.
+DROP TABLE FKTABLE;
+DROP TABLE PKTABLE;
+-- On the other hand, this should work because int implicitly promotes to
+-- numeric, and we allow promotion on the FK side
+CREATE TEMP TABLE PKTABLE (ptest1 numeric PRIMARY KEY);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "pktable_pkey" for table "pktable"
+INSERT INTO PKTABLE VALUES(42);
+CREATE TEMP TABLE FKTABLE (ftest1 int);
+ALTER TABLE FKTABLE ADD FOREIGN KEY(ftest1) references pktable;
+-- Check it actually works
+INSERT INTO FKTABLE VALUES(42);		-- should succeed
+INSERT INTO FKTABLE VALUES(43);		-- should fail
+DROP TABLE FKTABLE;
+DROP TABLE PKTABLE;
 CREATE TEMP TABLE PKTABLE (ptest1 int, ptest2 inet,
                            PRIMARY KEY(ptest1, ptest2))
                            distributed by (ptest1);
@@ -468,7 +482,8 @@ NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "atacc1_test_key" f
 insert into atacc1 (test) values (2);
 -- should fail
 insert into atacc1 (test) values (2);
-ERROR:  duplicate key violates unique constraint "atacc1_test_key"  (seg1 usxxshenem1.local:40001 pid=85314)
+ERROR:  duplicate key value violates unique constraint "atacc1_test_key"
+DETAIL:  Key (test)=(2) already exists.
 -- should succeed
 insert into atacc1 (test) values (4);
 -- try adding a unique oid constraint
@@ -483,8 +498,8 @@ insert into atacc1 (test) values (2);
 -- add a unique constraint (fails)
 alter table atacc1 add constraint atacc_test1 unique (test);
 NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "atacc1_test_key" for table "atacc1"
-ERROR:  could not create unique index  (seg1 usxxshenem1.local:40001 pid=85314)
-DETAIL:  Table contains duplicate values.
+ERROR:  could not create unique index "atacc1_test_key"
+DETAIL:  Key (test)=(2) is duplicated.
 insert into atacc1 (test) values (3);
 drop table atacc1;
 -- let's do one where the unique constraint fails
@@ -503,7 +518,8 @@ NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "atacc1_test_key" f
 insert into atacc1 (test,test2) values (4,4);
 -- should fail
 insert into atacc1 (test,test2) values (4,4);
-ERROR:  duplicate key violates unique constraint "atacc1_test_key"  (seg1 usxxshenem1.local:40001 pid=85314)
+ERROR:  duplicate key value violates unique constraint "atacc1_test_key"
+DETAIL:  Key (test, test2)=(4, 4) already exists.
 -- should all succeed
 insert into atacc1 (test,test2) values (4,5);
 insert into atacc1 (test,test2) values (5,4);
@@ -531,7 +547,8 @@ ERROR:  UNIQUE index must contain all columns in the distribution key of relatio
 -- should fail for @@ second one @@
 insert into atacc1 (test2, test) values (3, 3);
 insert into atacc1 (test2, test) values (2, 3);
-ERROR:  duplicate key violates unique constraint "atacc1_test_key"  (seg0 usxxshenem1.local:40000 pid=85313)
+ERROR:  duplicate key value violates unique constraint "atacc1_test_key"
+DETAIL:  Key (test)=(3) already exists.
 drop table atacc1;
 -- test primary key constraint adding
 create table atacc1 ( test int ) with oids distributed by (test);
@@ -543,7 +560,8 @@ NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "atacc1_pkey" 
 insert into atacc1 (test) values (2);
 -- should fail
 insert into atacc1 (test) values (2);
-ERROR:  duplicate key violates unique constraint "atacc1_pkey"  (seg1 usxxshenem1.local:40001 pid=85314)
+ERROR:  duplicate key value violates unique constraint "atacc1_pkey"
+DETAIL:  Key (test)=(2) already exists.
 -- should succeed
 insert into atacc1 (test) values (4);
 -- inserting NULL should fail
@@ -567,8 +585,8 @@ insert into atacc1 (test) values (2);
 -- add a primary key (fails)
 alter table atacc1 add constraint atacc_test1 primary key (test);
 NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "atacc1_pkey" for table "atacc1"
-ERROR:  could not create unique index  (seg1 usxxshenem1.local:40001 pid=85314)
-DETAIL:  Table contains duplicate values.
+ERROR:  could not create unique index "atacc1_pkey"
+DETAIL:  Key (test)=(2) is duplicated.
 insert into atacc1 (test) values (3);
 drop table atacc1;
 -- let's do another one where the primary key constraint fails when added
@@ -611,7 +629,8 @@ ERROR:  multiple primary keys for table "atacc1" are not allowed
 insert into atacc1 (test,test2) values (4,4);
 -- should fail
 insert into atacc1 (test,test2) values (4,4);
-ERROR:  duplicate key violates unique constraint "atacc1_pkey"  (seg1 usxxshenem1.local:40001 pid=85314)
+ERROR:  duplicate key value violates unique constraint "atacc1_pkey"
+DETAIL:  Key (test, test2)=(4, 4) already exists.
 insert into atacc1 (test,test2) values (NULL,3);
 ERROR:  One or more assertions failed  (seg0 antova-mbp.local:40010 pid=87501)
 DETAIL:  Not null constraint for column test of table atacc1 was violated
@@ -634,7 +653,8 @@ NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "atacc1_pkey" for
 -- only first should succeed
 insert into atacc1 (test2, test) values (3, 3);
 insert into atacc1 (test2, test) values (2, 3);
-ERROR:  duplicate key violates unique constraint "atacc1_pkey"  (seg0 usxxshenem1.local:40000 pid=85313)
+ERROR:  duplicate key value violates unique constraint "atacc1_pkey"
+DETAIL:  Key (test)=(3) already exists.
 insert into atacc1 (test2, test) values (1, NULL);
 ERROR:  One or more assertions failed  (seg0 antova-mbp.local:40010 pid=87501)
 DETAIL:  Not null constraint for column test of table atacc1 was violated
@@ -946,13 +966,13 @@ ERROR:  "myview" is not a table
 drop view myview;
 -- test some commands to make sure they fail on the dropped column
 analyze atacc1(a);
-ERROR:  Relation atacc1 does not have an attribute named a.
+ERROR:  column "a" of relation "atacc1" does not exist
 analyze atacc1("........pg.dropped.1........");
-ERROR:  Relation atacc1 does not have an attribute named ........pg.dropped.1.........
+ERROR:  column "........pg.dropped.1........" of relation "atacc1" does not exist
 vacuum analyze atacc1(a);
-ERROR:  Relation atacc1 does not have an attribute named a.
+ERROR:  column "a" of relation "atacc1" does not exist
 vacuum analyze atacc1("........pg.dropped.1........");
-ERROR:  Relation atacc1 does not have an attribute named ........pg.dropped.1.........
+ERROR:  column "........pg.dropped.1........" of relation "atacc1" does not exist
 comment on column atacc1.a is 'testing';
 ERROR:  column "a" of relation "atacc1" does not exist
 comment on column atacc1."........pg.dropped.1........" is 'testing';
@@ -1709,6 +1729,56 @@ select * from ao1;
  dd   |    4 | 5    | 
 (4 rows)
 
+alter table ao1 alter column col2 set default 2;
+select adsrc from pg_attrdef pdef, pg_attribute pattr
+    where pdef.adrelid='ao1'::regclass and pdef.adrelid=pattr.attrelid and pdef.adnum=pattr.attnum and pattr.attname='col2';
+ adsrc
+-------
+ 2
+(1 row)
+
+alter table ao1 rename col2 to col2_renamed;
+-- check dropping column
+alter table ao1 drop column col4;
+select attname from pg_attribute where attrelid='ao1'::regclass and attname='col4';
+ attname
+---------
+(0 rows)
+
+-- change the storage type of a column
+alter table ao1 alter column col3 set storage plain;
+select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
+ attname | attstorage
+---------+------------
+ col3    | p
+(1 row)
+
+alter table ao1 alter column col3 set storage main;
+select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
+ attname | attstorage
+---------+------------
+ col3    | m
+(1 row)
+
+alter table ao1 alter column col3 set storage external;
+select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
+ attname | attstorage
+---------+------------
+ col3    | e
+(1 row)
+
+alter table ao1 alter column col3 set storage extended;
+select attname, attstorage from pg_attribute where attrelid='ao1'::regclass and attname='col3';
+ attname | attstorage
+---------+------------
+ col3    | x
+(1 row)
+
+-- cannot set reloption appendonly
+alter table ao1 set (appendonly=true, compresslevel=5, fillfactor=50);
+ERROR:  cannot SET reloption "appendonly"
+alter table ao1 reset (appendonly, compresslevel, fillfactor);
+ERROR:  cannot SET reloption "appendonly"
 ---
 --- check catalog contents after alter table on AO tables 
 ---
@@ -1757,7 +1827,7 @@ create table ao1(col1 varchar(2), col2 int) WITH (APPENDONLY=TRUE) distributed r
 alter table ao1 add column col3 char(1) not null default NULL; 
 -- this should fail (same behavior as heap tables)
 insert into ao1(col1, col2) values('a', 10);
-ERROR:  NULL value in column "col3" violates not-null constraint (COptTasks.cpp:1289)
+ERROR:  null value in column "col3" violates not-null constraint
 ---
 --- alter add with no default should continue to fail
 ---
@@ -1768,14 +1838,13 @@ insert into ao1 values('1');
 insert into ao1 values('1');
 insert into ao1 values('1');
 alter table ao1 add column col2 char(1);
-ERROR:  ADD COLUMN with no default value in append-only tables is not yet supported.
 select * from ao1;
- col1 
-------
- 1
- 1
- 1
- 1
+ col1 | col2 
+------+------
+ 1    | 
+ 1    | 
+ 1    | 
+ 1    | 
 (4 rows)
 
 --
@@ -1889,7 +1958,7 @@ WITH (APPENDONLY=TRUE, ORIENTATION=column) distributed randomly;
 alter table aoco1 add column col3 char(1) not null default NULL; 
 -- this should fail (same behavior as heap tables)
 insert into aoco1 (col1, col2) values('a', 10);
-ERROR:  NULL value in column "col3" violates not-null constraint (COptTasks.cpp:1289)
+ERROR:  null value in column "col3" violates not-null constraint
 drop table if exists aoco1;
 create table aoco1(col1 varchar(2), col2 int not null)
 WITH (APPENDONLY=TRUE, ORIENTATION=column) distributed randomly;
@@ -1923,14 +1992,13 @@ insert into aoco1 values('1');
 insert into aoco1 values('1');
 insert into aoco1 values('1');
 alter table aoco1 add column col2 char(1);
-ERROR:  ADD COLUMN with no default value in append-only tables is not yet supported.
 select * from aoco1;
- col1 
-------
- 1
- 1
- 1
- 1
+ col1 | col2 
+------+------
+ 1    | 
+ 1    | 
+ 1    | 
+ 1    | 
 (4 rows)
 
 drop table aoco1;
@@ -1946,9 +2014,9 @@ create domain zipcode as text
 constraint c1 not null;
 -- following should fail
 alter table ao1 add column col2 zipcode;
-ERROR:  ADD COLUMN with no default value in append-only tables is not yet supported.
+ERROR:  domain zipcode does not allow null values  (seg1 localhost:40001 pid=17627)
 alter table ao1 add column col2 zipcode default NULL;
-ERROR:  domain zipcode does not allow null values  (seg1 usxxshenem1.local:40001 pid=85314)
+ERROR:  domain zipcode does not allow null values  (seg1 localhost:40001 pid=17627)
 select * from ao1;
  col1  
 -------
@@ -2043,6 +2111,139 @@ select * from testbug_char5 order by 1,2;
  201208 |    3333 | 1     | 2    
 (9 rows)
 
+-- Test exchanging partition and then rolling back
+begin work;
+create table testbug_char5_exchange (timest character varying(6), user_id numeric(16,0) NOT NULL, tag1 char(5), tag2 char(5))
+  with (appendonly=true, compresstype=zlib, compresslevel=3) distributed by (user_id);
+insert into testbug_char5_exchange values ('201205', 3333, '2', '2');
+alter table testbug_char5 truncate partition part201205;
+select count(*) from testbug_char5;
+ count
+-------
+     7
+(1 row)
+
+alter table testbug_char5 exchange partition part201205 with table testbug_char5_exchange;
+select count(*) from testbug_char5;
+ count
+-------
+     8
+(1 row)
+
+rollback work;
+select count(*) from testbug_char5;
+ count
+-------
+     9
+(1 row)
+
+-- Test AO hybrid partitioning scheme (range and list) w/ subpartitions
+create table ao_multi_level_part_table (date date, region text, region1 text, amount decimal(10,2))
+  with (appendonly=true, compresstype=zlib, compresslevel=1)
+  partition by range(date) subpartition by list(region) (
+    partition part1 start(date '2008-01-01') end(date '2009-01-01')
+      (subpartition usa values ('usa'), subpartition asia values ('asia'), default subpartition def),
+    partition part2 start(date '2009-01-01') end(date '2010-01-01')
+      (subpartition usa values ('usa'), subpartition asia values ('asia')));
+-- insert some data
+insert into ao_multi_level_part_table values ('2008-02-02', 'usa', 'Texas', 10.05), ('2008-03-03', 'asia', 'China', 1.01);
+insert into ao_multi_level_part_table values ('2009-02-02', 'usa', 'Utah', 10.05), ('2009-03-03', 'asia', 'Japan', 1.01);
+-- add a partition that is not a default partition
+alter table ao_multi_level_part_table add partition part3 start(date '2010-01-01') end(date '2012-01-01') with (appendonly=true)
+  (subpartition usa values ('usa'), subpartition asia values ('asia'), default subpartition def);
+-- Add default partition (defaults to heap storage unless set with AO)
+alter table ao_multi_level_part_table add default partition yearYYYY (default subpartition def);
+select count(*) from pg_appendonly where relid='ao_multi_level_part_table_1_prt_yearyyyy'::regclass;
+ count
+-------
+     0
+(1 row)
+
+alter table ao_multi_level_part_table drop partition yearYYYY;
+NOTICE:  dropped partition "yearyyyy" for relation "ao_multi_level_part_table" and its children
+alter table ao_multi_level_part_table add default partition yearYYYY with (appendonly=true) (default subpartition def);
+select count(*) from pg_appendonly where relid='ao_multi_level_part_table_1_prt_yearyyyy'::regclass;
+ count
+-------
+     1
+(1 row)
+
+-- index on atts 1, 4
+create index ao_mlp_idx on ao_multi_level_part_table(date, amount);
+select indexname from pg_indexes where tablename='ao_multi_level_part_table';
+ indexname
+------------
+ ao_mlp_idx
+(1 row)
+
+alter index ao_mlp_idx rename to ao_mlp_idx_renamed;
+select indexname from pg_indexes where tablename='ao_multi_level_part_table';
+     indexname
+--------------------
+ ao_mlp_idx_renamed
+(1 row)
+
+-- truncate partitions until table is empty
+select * from ao_multi_level_part_table;
+    date    | region | region1 | amount
+------------+--------+---------+--------
+ 02-02-2008 | usa    | Texas   |  10.05
+ 02-02-2009 | usa    | Utah    |  10.05
+ 03-03-2008 | asia   | China   |   1.01
+ 03-03-2009 | asia   | Japan   |   1.01
+(4 rows)
+
+truncate ao_multi_level_part_table_1_prt_part1_2_prt_asia;
+select * from ao_multi_level_part_table;
+    date    | region | region1 | amount
+------------+--------+---------+--------
+ 02-02-2008 | usa    | Texas   |  10.05
+ 02-02-2009 | usa    | Utah    |  10.05
+ 03-03-2009 | asia   | Japan   |   1.01
+(3 rows)
+
+alter table ao_multi_level_part_table truncate partition for (rank(1));
+NOTICE:  truncated partition "part1" for relation "ao_multi_level_part_table" and its children
+select * from ao_multi_level_part_table;
+    date    | region | region1 | amount
+------------+--------+---------+--------
+ 02-02-2009 | usa    | Utah    |  10.05
+ 03-03-2009 | asia   | Japan   |   1.01
+(2 rows)
+
+alter table ao_multi_level_part_table alter partition part2 truncate partition usa;
+NOTICE:  truncated partition "usa" for partition "part2" of relation "ao_multi_level_part_table"
+select * from ao_multi_level_part_table;
+    date    | region | region1 | amount
+------------+--------+---------+--------
+ 03-03-2009 | asia   | Japan   |   1.01
+(1 row)
+
+alter table ao_multi_level_part_table truncate partition part2;
+NOTICE:  truncated partition "part2" for relation "ao_multi_level_part_table" and its children
+select * from ao_multi_level_part_table;
+ date | region | region1 | amount
+------+--------+---------+--------
+(0 rows)
+
+-- drop column in the partition table
+select count(*) from pg_attribute where attrelid='ao_multi_level_part_table'::regclass and attname = 'region1';
+ count
+-------
+     1
+(1 row)
+
+alter table ao_multi_level_part_table drop column region1;
+select count(*) from pg_attribute where attrelid='ao_multi_level_part_table'::regclass and attname = 'region1';
+ count
+-------
+     0
+(1 row)
+
+-- splitting top partition of a multi-level partition should not work
+alter table ao_multi_level_part_table split partition part3 at (date '2011-01-01') into (partition part3, partition part4);
+ERROR:  cannot split partition with child partitions
+HINT:  Try splitting the child partitions.
 --
 -- Check index scan
 --
@@ -2150,6 +2351,37 @@ set search_path=public;
 drop schema if exists mpp17582 cascade;
 NOTICE:  drop cascades to table mpp17582.load
 NOTICE:  drop cascades to table mpp17582.dim
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_yearyyyy_2_prt_def
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_yearyyyy
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_def
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_def
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_asia
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_asia
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_2_prt_asia_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_asia
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_usa
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_usa
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_2_prt_usa_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_usa
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part3
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_asia
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part2_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_asia
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part2_2_prt_asia_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_asia
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_usa
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part2_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_usa
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part2_2_prt_usa_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_usa
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part2
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part2_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part2
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_def
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_def
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_asia
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_asia
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_2_prt_asia_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_asia
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_usa
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_usa
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_2_prt_usa_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_usa
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part1
+NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1
+NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table
 NOTICE:  drop cascades to table mpp17582.testbug_char5_1_prt_part201208
 NOTICE:  drop cascades to constraint testbug_char5_1_prt_part201208_check on table mpp17582.testbug_char5_1_prt_part201208
 NOTICE:  drop cascades to append only table mpp17582.testbug_char5_1_prt_part201207
@@ -2163,3 +2395,27 @@ NOTICE:  drop cascades to constraint testbug_char5_1_prt_part201204_check on app
 NOTICE:  drop cascades to append only columnar table mpp17582.testbug_char5_1_prt_part201203
 NOTICE:  drop cascades to constraint testbug_char5_1_prt_part201203_check on append only columnar table mpp17582.testbug_char5_1_prt_part201203
 NOTICE:  drop cascades to table mpp17582.testbug_char5
+-- Test for tuple descriptor leak during row splitting
+DROP TABLE IF EXISTS split_tupdesc_leak;
+NOTICE:  table "split_tupdesc_leak" does not exist, skipping
+CREATE TABLE split_tupdesc_leak
+(
+   ym character varying(6) NOT NULL,
+   suid character varying(50) NOT NULL,
+   genre_ids character varying(20)[]
+) 
+WITH (APPENDONLY=true, ORIENTATION=row, COMPRESSTYPE=zlib, OIDS=FALSE)
+DISTRIBUTED BY (suid)
+PARTITION BY LIST(ym)
+(
+	DEFAULT PARTITION p_split_tupdesc_leak_ym  WITH (appendonly=true, orientation=row, compresstype=zlib)
+);
+NOTICE:  CREATE TABLE will create partition "split_tupdesc_leak_1_prt_p_split_tupdesc_leak_ym" for table "split_tupdesc_leak"
+INSERT INTO split_tupdesc_leak VALUES ('201412','0001EC1TPEvT5SaJKIR5yYXlFQ7tS','{0}');
+ALTER TABLE split_tupdesc_leak SPLIT DEFAULT PARTITION AT ('201412')
+	INTO (PARTITION p_split_tupdesc_leak_ym, PARTITION p_split_tupdesc_leak_ym_201412);
+NOTICE:  exchanged partition "p_split_tupdesc_leak_ym" of relation "split_tupdesc_leak" with relation "pg_temp_323542"
+NOTICE:  dropped partition "p_split_tupdesc_leak_ym" for relation "split_tupdesc_leak"
+NOTICE:  CREATE TABLE will create partition "split_tupdesc_leak_1_prt_p_split_tupdesc_leak_ym_201412" for table "split_tupdesc_leak"
+NOTICE:  CREATE TABLE will create partition "split_tupdesc_leak_1_prt_p_split_tupdesc_leak_ym" for table "split_tupdesc_leak"
+DROP TABLE split_tupdesc_leak;

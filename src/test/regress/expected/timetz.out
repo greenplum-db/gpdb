@@ -17,6 +17,8 @@ INSERT INTO TIMETZ_TBL VALUES ('2003-07-07 15:36:39 America/New_York');
 -- this should fail (the timezone offset is not known)
 INSERT INTO TIMETZ_TBL VALUES ('15:36:39 America/New_York');
 ERROR:  invalid input syntax for type time with time zone: "15:36:39 America/New_York"
+LINE 1: INSERT INTO TIMETZ_TBL VALUES ('15:36:39 America/New_York');
+                                       ^
 SELECT f1 AS "Time TZ" FROM TIMETZ_TBL ORDER BY 1;
     Time TZ     
 ----------------
@@ -90,7 +92,7 @@ SELECT f1 + time with time zone '00:01' AS "Illegal" FROM TIMETZ_TBL;
 ERROR:  operator does not exist: time with time zone + time with time zone
 LINE 1: SELECT f1 + time with time zone '00:01' AS "Illegal" FROM TI...
                   ^
-HINT:  No operator matches the given name and argument type(s). You may need to add explicit type casts.
+HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
 --- basic sanity of sample timezones
 set timezone = 'America/New_York';
 SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as NYC;

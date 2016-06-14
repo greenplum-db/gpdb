@@ -701,34 +701,58 @@ UpdateFileSegInfo_internal(Relation parentrel,
 	new_record_nulls = palloc0(sizeof(bool) * pg_aoseg_dsc->natts);
 	new_record_repl = palloc0(sizeof(bool) * pg_aoseg_dsc->natts);
 
+	old_eof = fastgetattr(tuple,
+			Anum_pg_aoseg_eof,
+			pg_aoseg_dsc,
+			&isNull);
+
+	if(isNull)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("got invalid pg_aoseg eof value: NULL")));
+
+	/*
+	 * For AO by design due to append-only nature,
+	 * new end-of-file (EOF) to be recorded in aoseg table has to be greater
+	 * than currently stored EOF value, as new writes must move it forward only.
+	 * If new end-of-file value is less than currently stored end-of-file
+	 * something is incorrect and updating the same will yeild incorrect result
+	 * during reads. Hence abort the write transaction trying to update the
+	 * incorrect EOF value.
+	 */
 	if (eof < 0)
 	{
-		old_eof = fastgetattr(tuple,
-								Anum_pg_aoseg_eof,
-								pg_aoseg_dsc,
-								&isNull);
-
-		if(isNull)
-			ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				errmsg("got invalid pg_aoseg eof value: NULL")));
 
 		eof = DatumGetFloat8(old_eof);
 	}
+	else if (eof < DatumGetFloat8(old_eof))
+	{
+		elog(ERROR, "Unexpected compressed EOF for relation %s, relfilenode %u, segment file %d. "
+			"EOF " INT64_FORMAT " to be updated cannot be smaller than current EOF %f in pg_aoseg",
+			RelationGetRelationName(parentrel), parentrel->rd_node.relNode,
+			segno, eof, DatumGetFloat8(old_eof));
+	}
+
+	old_eof_uncompressed = fastgetattr(tuple,
+			Anum_pg_aoseg_eofuncompressed,
+			pg_aoseg_dsc,
+			&isNull);
+
+	if(isNull)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("got invalid pg_aoseg eofuncompressed value: NULL")));
 
 	if (eof_uncompressed < 0)
 	{
-		old_eof_uncompressed = fastgetattr(tuple,
-								Anum_pg_aoseg_eofuncompressed,
-								pg_aoseg_dsc,
-								&isNull);
-
-		if(isNull)
-			ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				errmsg("got invalid pg_aoseg eofuncompressed value: NULL")));
-
 		eof_uncompressed = DatumGetFloat8(old_eof_uncompressed);
+	}
+	else if (eof_uncompressed < DatumGetFloat8(old_eof_uncompressed))
+	{
+		elog(ERROR, "Unexpected EOF for relation %s, relfilenode %u, segment file %d."
+			"EOF " INT64_FORMAT " to be updated cannot be smaller than current EOF %f in pg_aoseg",
+			RelationGetRelationName(parentrel), parentrel->rd_node.relNode,
+			segno, eof_uncompressed, DatumGetFloat8(old_eof_uncompressed));
 	}
 	
 	/* get the current tuple count so we can add to it */
@@ -2131,21 +2155,23 @@ PrintPgaosegAndGprelationNodeEntries(FileSegInfo **allseginfo, int totalsegs, bo
 	char tmp[10] = {0};
 	memset(segnumArray, 0, sizeof(segnumArray));
 
+	char		*head = segnumArray;
+	const char	*tail = segnumArray + sizeof(segnumArray);
+
 	for (int i = 0 ; i < totalsegs && allseginfo; i++)
 	{
 		snprintf(tmp, sizeof(tmp), "%d:%jd", allseginfo[i]->segno, allseginfo[i]->eof);
 
-		if (strlen(segnumArray) + strlen(tmp) + strlen(delimiter) >= 1000)
-		{
-			break;
-		}
+        if (strlen(tmp) + strlen(delimiter) >= (tail - head))
+            break;
 
-		strncat(segnumArray, tmp, sizeof(tmp));
-		strncat(segnumArray, delimiter, sizeof(delimiter));
+        head += strlcpy(head, tmp, tail - head);
+        head += strlcpy(head, delimiter, tail - head);
 	}
 	elog(LOG, "pg_aoseg segno:eof entries: %s", segnumArray);
 
 	memset(segnumArray, 0, sizeof(segnumArray));
+	head = segnumArray;
 
 	for (int i = 0; i < AOTupleId_MaxSegmentFileNum; i++)
 	{
@@ -2153,13 +2179,11 @@ PrintPgaosegAndGprelationNodeEntries(FileSegInfo **allseginfo, int totalsegs, bo
 		{
 			snprintf(tmp, sizeof(tmp), "%d", i);
 
-			if (strlen(segnumArray) + strlen(tmp) + strlen(delimiter) >= 1000)
-			{
+			if (strlen(tmp) + strlen(delimiter) >= (tail - head))
 				break;
-			}
 
-			strncat(segnumArray, tmp, sizeof(tmp));
-			strncat(segnumArray, delimiter, sizeof(delimiter));
+			head += strlcpy(head, tmp, tail - head);
+			head += strlcpy(head, delimiter, tail - head);
 		}
 	}
 	elog(LOG, "gp_relation_node segno entries: %s", segnumArray);

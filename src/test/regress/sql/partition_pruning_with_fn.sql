@@ -203,7 +203,7 @@ drop table dnsdata cascade;
 drop function public.reverse(text) cascade;
 
 
-Create or replace function public.MyFunc(int) Returns text as $BODY$
+Create or replace function public.ZeroFunc(int) Returns int as $BODY$
 BEGIN
   RETURN 0;
 END;
@@ -215,13 +215,13 @@ create table mytable(i int, j int);
 insert into mytable select x, x+1 from generate_series(1, 100000) as x;
 analyze mytable;
 
-CREATE INDEX mytable_idx1 ON mytable USING bitmap(myfunc(i));
+CREATE INDEX mytable_idx1 ON mytable USING bitmap(zerofunc(i));
 
 
-select * from mytable where MyFunc(i)=0 and i=100 order by i;
+select * from mytable where ZeroFunc(i)=0 and i=100 order by i;
 
-select * from mytable where MyFunc(i)=0 and i=-1 order by i;
+select * from mytable where ZeroFunc(i)=0 and i=-1 order by i;
 
 -- cleanup
-drop function MyFunc(int) cascade;
+drop function ZeroFunc(int) cascade;
 drop table mytable cascade;

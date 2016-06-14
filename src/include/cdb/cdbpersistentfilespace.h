@@ -12,10 +12,7 @@
 #include "access/persistentfilesysobjname.h"
 #include "access/xlogmm.h"
 #include "cdb/cdbsharedoidsearch.h"
-#include "cdb/cdbdoublylinked.h"
-#include "storage/fd.h"
 #include "storage/itemptr.h"
-#include "utils/palloc.h"
 #include "cdb/cdbpersistentfilesysobj.h"
 
 extern void PersistentFilespace_Reset(void);

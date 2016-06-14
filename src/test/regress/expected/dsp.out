@@ -814,8 +814,7 @@ External location: file:///tmp/test.txt
 
 create external table ext_t2 (a int, b int)
     location ('file:///tmp/test.txt') format 'text'
-    log errors into err_t2 segment reject limit 100;
-NOTICE:  Error table "err_t2" does not exist. Auto generating an error table with the same name
+    log errors segment reject limit 100;
 \d+ ext_t2
             External table "public.ext_t2"
  Column |  Type   | Modifiers | Storage | Description 
@@ -828,26 +827,41 @@ Format type: text
 Format options: delimiter '	' null '\N' escape '\'
 External location: file:///tmp/test.txt
 Segment reject limit: 100 rows
-Error table: err_t2
-
-\d+ err_t2
-                          Table "public.err_t2"
-  Column  |           Type           | Modifiers | Storage  | Description 
-----------+--------------------------+-----------+----------+-------------
- cmdtime  | timestamp with time zone |           | plain    | 
- relname  | text                     |           | extended | 
- filename | text                     |           | extended | 
- linenum  | integer                  |           | plain    | 
- bytenum  | integer                  |           | plain    | 
- errmsg   | text                     |           | extended | 
- rawdata  | text                     |           | extended | 
- rawbytes | bytea                    |           | extended | 
-Has OIDs: no
-Distributed randomly
+Error Log in File
 
 drop external table ext_t1;
 drop external table ext_t2;
-drop table err_t2;
+-- Make sure gp_default_storage_options GUC value is set in newly created cdbgangs
+-- after previous idle cdbgang is stopped
+SET gp_vmem_idle_resource_timeout=30;
+SET gp_default_storage_options='appendonly=true,blocksize=32768,compresstype=none,checksum=true,orientation=row';
+\! sleep 1
+CREATE TABLE check_guc_value_after_new_cdbgang (a int) DISTRIBUTED RANDOMLY;
+SELECT DISTINCT relid::regclass FROM pg_appendonly WHERE relid='check_guc_value_after_new_cdbgang'::regclass;
+               relid               
+-----------------------------------
+ check_guc_value_after_new_cdbgang
+(1 row)
+
+SELECT DISTINCT relid::regclass FROM gp_dist_random('pg_appendonly') WHERE relid='check_guc_value_after_new_cdbgang'::regclass;
+               relid               
+-----------------------------------
+ check_guc_value_after_new_cdbgang
+(1 row)
+
+SELECT DISTINCT relname, reloptions FROM pg_class WHERE relname='check_guc_value_after_new_cdbgang';
+              relname              |    reloptions     
+-----------------------------------+-------------------
+ check_guc_value_after_new_cdbgang | {appendonly=true}
+(1 row)
+
+SELECT DISTINCT relname, reloptions FROM gp_dist_random('pg_class') WHERE relname='check_guc_value_after_new_cdbgang';
+              relname              |    reloptions     
+-----------------------------------+-------------------
+ check_guc_value_after_new_cdbgang | {appendonly=true}
+(1 row)
+
+RESET gp_vmem_idle_resource_timeout;
 -- cleanup
 \c postgres
 drop database dsp1;

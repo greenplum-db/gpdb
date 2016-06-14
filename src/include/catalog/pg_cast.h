@@ -11,7 +11,7 @@
  * Portions Copyright (c) 2006-2010, Greenplum inc
  * Copyright (c) 2002-2008, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_cast.h,v 1.28 2007/01/05 22:19:52 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_cast.h,v 1.31 2007/02/03 14:06:55 petere Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -329,7 +329,7 @@ DATA(insert ( 1266	 25  939 i ));
 DATA(insert (	25 1266  938 e ));
 DATA(insert ( 1700	 25 1688 i ));
 DATA(insert (	25 1700 1686 e ));
-DATA(insert (  142   25    0 e ));
+DATA(insert (  142   25 2922 e ));
 DATA(insert (   25  142	2896 e ));
 
 /*
@@ -369,7 +369,7 @@ DATA(insert ( 1266 1043  939 a ));
 DATA(insert ( 1043 1266  938 e ));
 DATA(insert ( 1700 1043 1688 a ));
 DATA(insert ( 1043 1700 1686 e ));
-DATA(insert (  142 1043    0 e ));
+DATA(insert (  142 1043 2922 e ));
 DATA(insert ( 1043  142 2896 e ));
 
 /*
@@ -410,7 +410,7 @@ DATA(insert ( 1266 1042  939 a ));
 DATA(insert ( 1042 1266  938 e ));
 DATA(insert ( 1700 1042 1688 a ));
 DATA(insert ( 1042 1700 1686 e ));
-DATA(insert (  142 1042    0 e ));
+DATA(insert (  142 1042 2922 e ));
 
 /*
  * Length-coercion functions
@@ -426,6 +426,21 @@ DATA(insert ( 1560 1560 1685 i ));
 DATA(insert ( 1562 1562 1687 i ));
 DATA(insert ( 1700 1700 1703 i ));
 
+/* casts to and from uuid */ 
+DATA(insert (   25 2950 2964 a ));
+DATA(insert ( 2950   25 2965 a ));
+DATA(insert ( 1043 2950 2964 a ));
+DATA(insert ( 2950 1043 2965 a ));
+
+/* complex type */
+DATA(insert OID=9069 (701  195 3584 i));
+DATA(insert OID=9070 (700  195 3585 i));
+DATA(insert OID=9088 (20   195 3586 i));
+DATA(insert OID=9089 (23   195 3587 i));
+DATA(insert OID=9090 (21   195 3588 i));
+DATA(insert OID=9091 (600  195 0 e));
+DATA(insert OID=9092 (195  600 0 e));
+DATA(insert OID=9093 (1700 195 3592 i));
 /*
  * CDB: Allow explicit cast from tid to int8
  */

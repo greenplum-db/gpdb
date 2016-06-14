@@ -19,6 +19,10 @@ contribdir = $(top_builddir)/contrib
 # port number for temp-installation test postmaster
 TEMP_PORT = 5$(DEF_PGPORT)
 
+# Greenplum regression tests use $PGPORT
+PGPORT?=15432
+
+
 # where to find psql for testing an existing installation
 PSQLDIR = $(bindir)
 
@@ -45,7 +49,7 @@ EXTRADEFS = '-DHOST_TUPLE="$(host_tuple)"' \
 
 
 # The frontend doesn't need everything that's in LIBS, some are backend only
-LIBS := $(filter-out -llapack -lblas -lf2c -lresolv -lbz2, $(LIBS))
+LIBS := $(filter-out -lresolv -lbz2, $(LIBS))
 # This program isn't interactive, so doesn't need these
 LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl -lz, $(LIBS))
 
@@ -158,6 +162,7 @@ includecheck:
 
 pg_regress_call = ./pg_regress --inputdir=$(srcdir) --multibyte=$(MULTIBYTE) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/init_file
 pg_regress_call_bb = ./pg_regress --inputdir=$(srcdir)/bugbuster --outputdir=$(srcdir)/bugbuster --multibyte=$(MULTIBYTE) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/init_file
+pg_regress_call_opt = ./pg_regress --inputdir=$(srcdir)/optfunctional --outputdir=$(srcdir)/optfunctional --multibyte=$(MULTIBYTE) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/optfunctional/init_file
 
 check: all upg2-setup ugpart-setup
 	$(pg_regress_call) --temp-install=./tmp_check --top-builddir=$(top_builddir) --srcdir=$(abs_srcdir) --temp-port=$(TEMP_PORT) --schedule=$(srcdir)/parallel_schedule 
@@ -172,6 +177,12 @@ installcheck-good: all
 	bash kerberos/setup_test.sh; \
 	PGUSER="gpadmin/kerberos-test" $(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --srcdir=$(abs_srcdir) --host=`hostname`; \
 	fi
+
+installcheck-optfunctional: all
+	@echo "================================"
+	@echo "Installcheck-optfunctional starting ... "
+	@echo "================================"
+	$(pg_regress_call_opt) --psqldir=$(PSQLDIR) --schedule=$(srcdir)/optfunctional/optfunctional_schedule --srcdir=$(abs_srcdir)/optfunctional
 
 testbouncer: all
 	bash -c "bouncer/setup.sh"

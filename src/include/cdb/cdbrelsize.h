@@ -12,7 +12,7 @@
 #ifndef CDBRELSIZE_H_
 #define CDBRELSIZE_H_
 
-#include "utils/rel.h"
+#include "utils/relcache.h"
 
 extern void clear_relsize_cache(void);
 

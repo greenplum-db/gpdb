@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.316 2007/01/05 22:19:24 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.317 2007/02/14 01:58:56 tgl Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -59,6 +59,7 @@
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbsreh.h"
 #include "commands/tablecmds.h"
+#include "commands/typecmds.h"
 #include "miscadmin.h"
 #include "optimizer/clauses.h"
 #include "optimizer/var.h"
@@ -104,7 +105,8 @@ static Oid AddNewRelationType(const char *typeName,
 				   Oid typeNamespace,
 				   Oid new_rel_oid,
 				   char new_rel_kind,
-				   Oid ownerid);
+				   Oid ownerid,
+				   Oid new_array_type);
 static void RelationRemoveInheritance(Oid relid);
 static Oid StoreRelCheck(Relation rel, char *ccname, char *ccbin, Oid conoid);
 static Node* cookConstraint (ParseState *pstate,
@@ -391,8 +393,7 @@ heap_create(const char *relname,
 		}
 		
 
-		if (Debug_check_for_invalid_persistent_tid &&
-			!Persistent_BeforePersistenceWork() &&
+		if (!Persistent_BeforePersistenceWork() &&
 			PersistentStore_IsZeroTid(&rel->rd_segfile0_relationnodeinfo.persistentTid))
 		{	
 			elog(ERROR, 
@@ -529,29 +530,57 @@ CheckAttributeType(const char *attname, Oid atttypid)
 {
 	char		att_typtype = get_typtype(atttypid);
 
-	/*
-	 * Warn user, but don't fail, if column to be created has UNKNOWN type
-	 * (usually as a result of a 'retrieve into' - jolly)
-	 *
-	 * Refuse any attempt to create a pseudo-type column.
-	 */
-	/* GPDB: The QD should've checked these already. In QE, just accept it. */
-	if (Gp_role == GP_ROLE_EXECUTE)
-		return;
-
-	if (atttypid == UNKNOWNOID)
-		ereport(WARNING,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("column \"%s\" has type \"unknown\"", attname),
-				 errdetail("Proceeding with relation creation anyway.")));
-	else if (att_typtype == 'p')
+	if (Gp_role != GP_ROLE_EXECUTE)
 	{
-		/* Special hack for pg_statistic: allow ANYARRAY during initdb */
-		if (atttypid != ANYARRAYOID || IsUnderPostmaster)
-			ereport(ERROR,
+		if (atttypid == UNKNOWNOID)
+		{
+			/*
+			 * Warn user, but don't fail, if column to be created has UNKNOWN type
+			 * (usually as a result of a 'retrieve into' - jolly)
+			 */
+			ereport(WARNING,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("column \"%s\" has pseudo-type %s",
-							attname, format_type_be(atttypid))));
+					 errmsg("column \"%s\" has type \"unknown\"", attname),
+					 errdetail("Proceeding with relation creation anyway.")));
+		}
+		else if (att_typtype == TYPTYPE_PSEUDO)
+		{
+			/*
+			 * Refuse any attempt to create a pseudo-type column, except for
+			 * a special hack for pg_statistic: allow ANYARRAY during initdb
+			 */
+			if (atttypid != ANYARRAYOID || IsUnderPostmaster)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						 errmsg("column \"%s\" has pseudo-type %s",
+								attname, format_type_be(atttypid))));
+		}
+		else if (att_typtype == TYPTYPE_COMPOSITE)
+		{
+			/*
+			 * For a composite type, recurse into its attributes.  You might
+			 * think this isn't necessary, but since we allow system catalogs
+			 * to break the rule, we have to guard against the case.
+			 */
+			Relation relation;
+			TupleDesc tupdesc;
+			int i;
+
+			relation = relation_open(get_typ_typrelid(atttypid), AccessShareLock);
+
+			tupdesc = RelationGetDescr(relation);
+
+			for (i = 0; i < tupdesc->natts; i++)
+			{
+				Form_pg_attribute attr = tupdesc->attrs[i];
+
+				if (attr->attisdropped)
+					continue;
+				CheckAttributeType(NameStr(attr->attname), attr->atttypid);
+			}
+
+			relation_close(relation, AccessShareLock);
+		}
 	}
 }
 
@@ -1121,34 +1150,37 @@ AddNewRelationType(const char *typeName,
 				   Oid typeNamespace,
 				   Oid new_rel_oid,
 				   char new_rel_kind,
-				   Oid ownerid)
+				   Oid ownerid,
+				   Oid new_array_type)
 {
 	return
-		TypeCreate(typeName,	/* type name */
-				   typeNamespace,		/* type namespace */
-				   new_rel_oid, /* relation oid */
+		TypeCreate(typeName,		/* type name */
+				   typeNamespace,	/* type namespace */
+				   new_rel_oid, 	/* relation oid */
 				   new_rel_kind,	/* relation kind */
-				   ownerid,             /* owner's ID */
-				   -1,			/* internal size (varlena) */
-				   'c',			/* type-type (complex) */
-				   ',',			/* default array delimiter */
-				   F_RECORD_IN, /* input procedure */
+				   ownerid,			/* owner's ID */
+				   -1,				/* internal size (varlena) */
+				   'c',				/* type-type (complex) */
+				   DEFAULT_TYPDELIM,/* default array delimiter */
+				   F_RECORD_IN,		/* input procedure */
 				   F_RECORD_OUT,	/* output procedure */
-				   F_RECORD_RECV,		/* receive procedure */
-				   F_RECORD_SEND,		/* send procedure */
-				   InvalidOid,	/* typmodin procedure - none */
-				   InvalidOid,	/* typmodout procedure - none */
-				   InvalidOid,	/* analyze procedure - default */
-				   InvalidOid,	/* array element type - irrelevant */
-				   InvalidOid,	/* domain base type - irrelevant */
-				   NULL,		/* default value - none */
-				   NULL,		/* default binary representation */
-				   false,		/* passed by reference */
-				   'd',			/* alignment - must be the largest! */
-				   'x',			/* fully TOASTable */
-				   -1,			/* typmod */
-				   0,			/* array dimensions for typBaseType */
-				   false);		/* Type NOT NULL */
+				   F_RECORD_RECV,	/* receive procedure */
+				   F_RECORD_SEND,	/* send procedure */
+				   InvalidOid,		/* typmodin procedure - none */
+				   InvalidOid,		/* typmodout procedure - none */
+				   InvalidOid,		/* analyze procedure - default */
+				   InvalidOid,		/* array element type - irrelevant */
+				   false,			/* this is not an array type */
+				   new_array_type,	/* array type if any */
+				   InvalidOid,		/* domain base type - irrelevant */
+				   NULL,			/* default value - none */
+				   NULL,			/* default binary representation */
+				   false,			/* passed by reference */
+				   'd',				/* alignment - must be the largest! */
+				   'x',				/* fully TOASTable */
+				   -1,				/* typmod */
+				   0,				/* array dimensions for typBaseType */
+				   false);			/* Type NOT NULL */
 }
 
 void
@@ -1168,8 +1200,7 @@ InsertGpRelationNodeTuple(
 //	cqContext	cqc;
 //	cqContext  *pcqCtx;
 
-	if (Debug_check_for_invalid_persistent_tid &&
-		!Persistent_BeforePersistenceWork() &&
+	if (!Persistent_BeforePersistenceWork() &&
 		PersistentStore_IsZeroTid(persistentTid))
 	{	
 		elog(ERROR, 
@@ -1238,8 +1269,7 @@ UpdateGpRelationNodeTuple(
 	bool		repl_repl[Natts_gp_relation_node];
 	HeapTuple	newtuple;
 
-	if (Debug_check_for_invalid_persistent_tid &&
-		!Persistent_BeforePersistenceWork() &&
+	if (!Persistent_BeforePersistenceWork() &&
 		PersistentStore_IsZeroTid(persistentTid))
 	{	
 		elog(ERROR, 
@@ -1331,6 +1361,7 @@ heap_create_with_catalog(const char *relname,
 						 bool allow_system_table_mods,
 						 bool valid_opts,
 						 Oid *comptypeOid,
+						 Oid *comptypeArrayOid,
 						 ItemPointer persistentTid,
 						 int64 *persistentSerialNum)
 {
@@ -1338,9 +1369,15 @@ heap_create_with_catalog(const char *relname,
 	Relation	gp_relation_node_desc;
 	Relation	new_rel_desc;
 	Oid			new_type_oid;
+	Oid			new_array_oid = InvalidOid;
 	bool		appendOnlyRel;
 	StdRdOptions *stdRdOptions;
 	int			safefswritesize = gp_safefswritesize;
+
+	if (PointerIsValid(comptypeArrayOid))
+	{
+	    new_array_oid = *comptypeArrayOid;
+	}
 
 	pg_class_desc = heap_open(RelationRelationId, RowExclusiveLock);
 
@@ -1450,7 +1487,23 @@ heap_create_with_catalog(const char *relname,
 	}
 
 	/*
-	 * since defining a relation also defines a complex type, we add a new
+	 * Decide whether to create an array type over the relation's rowtype.
+	 * We do not create any array types for system catalogs (ie, those made
+	 * during initdb).  We create array types for regular composite types ...
+	 * but not, eg, for toast tables or sequences.
+	 */
+	if (IsUnderPostmaster &&
+		relkind == RELKIND_COMPOSITE_TYPE &&
+		!OidIsValid(new_array_oid))
+	{
+		/* OK, so pre-assign a type OID for the array type */
+		Relation pg_type = heap_open(TypeRelationId, AccessShareLock);
+		new_array_oid = GetNewOid(pg_type);
+		heap_close(pg_type, AccessShareLock);
+	}
+
+	/*
+	 * Since defining a relation also defines a complex type, we add a new
 	 * system type corresponding to the new relation.
 	 *
 	 * NOTE: we could get a unique-index failure here, in case the same name
@@ -1471,34 +1524,38 @@ heap_create_with_catalog(const char *relname,
 											  relnamespace,
 											  relid,
 											  relkind,
-											  ownerid);
+											  ownerid,
+											  new_array_oid);
 		else
 		{
-			new_type_oid = TypeCreateWithOid(relname,	/* type name */
-					   relnamespace,		/* type namespace */
-					   relid, /* relation oid */
-					   relkind,	/* relation kind */
+			new_type_oid = TypeCreateWithOid(
+					   relname,			/* type name */
+					   relnamespace,	/* type namespace */
+					   relid,			/* relation oid */
+					   relkind,			/* relation kind */
 					   ownerid,
-					   -1,			/* internal size (varlena) */
-					   'c',			/* type-type (complex) */
-					   ',',			/* default array delimiter */
-					   F_RECORD_IN, /* input procedure */
+					   -1,				/* internal size (varlena) */
+					   'c',				/* type-type (complex) */
+					   DEFAULT_TYPDELIM,/* default array delimiter */
+					   F_RECORD_IN, 	/* input procedure */
 					   F_RECORD_OUT,	/* output procedure */
-					   F_RECORD_RECV,		/* receive procedure */
-					   F_RECORD_SEND,		/* send procedure */
-					   InvalidOid,	/* typmodin procedure - none */
-					   InvalidOid,	/* typmodout procedure - none */
-					   InvalidOid,	/* analyze procedure - default */
-					   InvalidOid,	/* array element type - irrelevant */
-					   InvalidOid,	/* domain base type - irrelevant */
-					   NULL,		/* default value - none */
-					   NULL,		/* default binary representation */
-					   false,		/* passed by reference */
-					   'd',			/* alignment - must be the largest! */
-					   'x',			/* fully TOASTable */
-					   -1,			/* typmod */
-					   0,			/* array dimensions for typBaseType */
-					   false,		/* Type NOT NULL */
+					   F_RECORD_RECV,	/* receive procedure */
+					   F_RECORD_SEND,	/* send procedure */
+					   InvalidOid,		/* typmodin procedure - none */
+					   InvalidOid,		/* typmodout procedure - none */
+					   InvalidOid,		/* analyze procedure - default */
+					   InvalidOid,		/* array element type - irrelevant */
+					   false,			/* this is not an array type */
+					   new_array_oid,	/* array type if any */	
+					   InvalidOid,		/* domain base type - irrelevant */
+					   NULL,			/* default value - none */
+					   NULL,			/* default binary representation */
+					   false,			/* passed by reference */
+					   'd',				/* alignment - must be the largest! */
+					   'x',				/* fully TOASTable */
+					   -1,				/* typmod */
+					   0,				/* array dimensions for typBaseType */
+					   false,			/* Type NOT NULL */
 					   *comptypeOid,
 					   0);
 		}
@@ -1506,6 +1563,54 @@ heap_create_with_catalog(const char *relname,
 
 	if (comptypeOid)
 		*comptypeOid = new_type_oid;
+
+	/*
+	 * Now make the array type if wanted.
+	 */
+	if (OidIsValid(new_array_oid))
+	{
+		char	*relarrayname;
+
+		relarrayname = makeArrayTypeName(relname, relnamespace);
+
+		TypeCreateWithOid(
+						relarrayname,		/* type name */
+						relnamespace,		/* type namespace */
+						InvalidOid,			/* relation oid */
+						0,					/* relation kind */
+						ownerid,
+						-1,					/* internal size (varlena) */
+						TYPTYPE_BASE,		/* type-type (complex) */
+						DEFAULT_TYPDELIM,	/* default array delimiter */
+						F_ARRAY_IN,			/* input procedure */
+						F_ARRAY_OUT,		/* output procedure */
+						F_ARRAY_RECV,		/* receive procedure */
+						F_ARRAY_SEND,		/* send procedure */
+						InvalidOid,			/* typmodin procedure */
+						InvalidOid,			/* typmodout procedure */
+						InvalidOid,			/* analyze procedure - default */
+						new_type_oid,		/* array element type - irrelevant */
+						true,				/* this is not an array type */
+						InvalidOid,			/* array type if any */		
+						InvalidOid,			/* domain base type - irrelevant */
+						NULL,				/* default value - none */
+						NULL,				/* default binary representation */
+						false,				/* passed by reference */
+						'd',				/* alignment - must be the largest! */
+						'x',				/* fully TOASTable */
+						-1,					/* typmod */
+						0,					/* array dimensions for typBaseType */
+						false,				/* Type NOT NULL */
+						new_array_oid,
+						0);
+
+		if (PointerIsValid(comptypeArrayOid))
+		{
+			*comptypeArrayOid = new_array_oid;
+		}
+		pfree(relarrayname);
+	}
+
 	/*
 	 * now create an entry in pg_class for the relation.
 	 *
@@ -2054,9 +2159,8 @@ RemoveAttrDefaultById(Oid attrdefId)
 	relation_close(myrel, NoLock);
 }
 
-static void
-remove_gp_relation_node_and_schedule_drop(
-	Relation	rel)
+void
+remove_gp_relation_node_and_schedule_drop(Relation rel)
 {
 	PersistentFileSysRelStorageMgr relStorageMgr;
 	
@@ -2153,8 +2257,6 @@ void
 heap_drop_with_catalog(Oid relid)
 {
 	Relation	rel;
-	const struct GpPolicy *policy;
-	bool		removePolicy = false;
 	bool		is_part_child = false;
 	bool		is_appendonly_rel;
 	bool		is_external_rel;
@@ -2169,16 +2271,6 @@ heap_drop_with_catalog(Oid relid)
 
 	is_appendonly_rel = (RelationIsAoRows(rel) || RelationIsAoCols(rel));
 	is_external_rel = RelationIsExternal(rel);
-
-	/*
- 	 * Get the distribution policy and figure out if it is to be removed.
- 	 */
-	policy = rel->rd_cdbpolicy;
-	if (policy &&
-		policy->ptype == POLICYTYPE_PARTITIONED &&
-		Gp_role == GP_ROLE_DISPATCH &&
-		relkind == RELKIND_RELATION)
-		removePolicy = true;
 
 	/*
 	 * Schedule unlinking of the relation's physical file at commit.
@@ -2258,9 +2350,9 @@ heap_drop_with_catalog(Oid relid)
 		RemoveExtTableEntry(relid);
 
 	/*
- 	 * delete distribution policy if present
+	 * Remove distribution policy, if any.
  	 */
-	if (removePolicy)
+	if (relkind == RELKIND_RELATION)
 		GpPolicyRemove(relid);
 
 	/*
@@ -2321,28 +2413,8 @@ StoreAttrDefault(Relation rel, AttrNumber attnum, Node *expr, Oid attrdefOid)
 			cql("INSERT INTO pg_attrdef ", 
 				NULL));
 
-	elogif(Debug_check_for_invalid_persistent_tid, LOG,
-			 "StoreAttrDefault[1] relation %u/%u/%u '%s', isPresent %s, serial number " INT64_FORMAT ", TID %s",
-			 adrel->rd_node.spcNode,
-			 adrel->rd_node.dbNode,
-			 adrel->rd_node.relNode,
-			 NameStr(adrel->rd_rel->relname),
-			 (adrel->rd_segfile0_relationnodeinfo.isPresent ? "true" : "false"),
-			 adrel->rd_segfile0_relationnodeinfo.persistentSerialNum,
-			 ItemPointerToString(&adrel->rd_segfile0_relationnodeinfo.persistentTid));
-
 	// Fetch gp_persistent_relation_node information that will be added to XLOG record.
 	RelationFetchGpRelationNodeForXLog(adrel);
-
-	elogif(Debug_check_for_invalid_persistent_tid, LOG,
-			 "StoreAttrDefault[2] relation %u/%u/%u '%s', isPresent %s, serial number " INT64_FORMAT ", TID %s",
-			 adrel->rd_node.spcNode,
-			 adrel->rd_node.dbNode,
-			 adrel->rd_node.relNode,
-			 NameStr(adrel->rd_rel->relname),
-			 (adrel->rd_segfile0_relationnodeinfo.isPresent ? "true" : "false"),
-			 adrel->rd_segfile0_relationnodeinfo.persistentSerialNum,
-			 ItemPointerToString(&adrel->rd_segfile0_relationnodeinfo.persistentTid));
 
 	tuple = caql_form_tuple(adrcqCtx, values, nulls);
 
@@ -2490,6 +2562,9 @@ StoreRelCheck(Relation rel, char *ccname, char *ccbin, Oid conOid)
 						  keycount,		/* # attrs in the constraint */
 						  InvalidOid,	/* not a domain constraint */
 						  InvalidOid,	/* Foreign key fields */
+						  NULL,
+						  NULL,
+						  NULL,
 						  NULL,
 						  0,
 						  ' ',
@@ -3314,214 +3389,4 @@ insert_ordered_unique_oid(List *list, Oid datum)
 	/* Insert datum into list after 'prev' */
 	lappend_cell_oid(list, prev, datum);
 	return list;
-}
-
-/*
- * setNewRelfilenodeCommon
- *
- * Replaces relfilenode and updates pg_class / gp_relation_node.
- * If the updating relation is gp_relation_node's index, the caller
- * should rebuild the index by index_build().
- */
-static void
-setNewRelfilenodeCommon(Relation relation, Oid newrelfilenode)
-{
-	RelFileNode newrnode;
-	Relation	pg_class;
-	HeapTuple	tuple;
-	Form_pg_class rd_rel;
-	bool		isAppendOnly;
-	Relation	gp_relation_node;
-	bool		is_gp_relation_node_index;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
-
-	/*
-	 * Find the pg_class tuple for the given relation.	This is not used
-	 * during bootstrap, so okay to use heap_update always.
-	 */
-	pg_class = heap_open(RelationRelationId, RowExclusiveLock);
-	gp_relation_node = heap_open(GpRelationNodeRelationId, RowExclusiveLock);
-
-	pcqCtx = caql_addrel(cqclr(&cqc), pg_class);
-
-	tuple = caql_getfirst(
-			pcqCtx,
-			cql("SELECT * FROM pg_class "
-				" WHERE oid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(RelationGetRelid(relation))));
-
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "could not find tuple for relation %u",
-			 RelationGetRelid(relation));
-	rd_rel = (Form_pg_class) GETSTRUCT(tuple);
-
-	/* schedule unlinking old relfilenode */
-	remove_gp_relation_node_and_schedule_drop(relation);
-
-	/* create another storage file. Is it a little ugly ? */
-	/* NOTE: any conflict in relfilenode value will be caught here */
-	newrnode = relation->rd_node;
-	newrnode.relNode = newrelfilenode;
-
-	isAppendOnly = (relation->rd_rel->relstorage == RELSTORAGE_AOROWS || 
-					relation->rd_rel->relstorage == RELSTORAGE_AOCOLS);
-	
-	if (!isAppendOnly)
-	{
-		SMgrRelation srel;
-
-		PersistentFileSysRelStorageMgr localRelStorageMgr;
-		PersistentFileSysRelBufpoolKind relBufpoolKind;
-		
-		GpPersistentRelationNode_GetRelationInfo(
-											relation->rd_rel->relkind,
-											relation->rd_rel->relstorage,
-											relation->rd_rel->relam,
-											&localRelStorageMgr,
-											&relBufpoolKind);
-		Assert(localRelStorageMgr == PersistentFileSysRelStorageMgr_BufferPool);
-		
-		srel = smgropen(newrnode);
-	
-		MirroredFileSysObj_TransactionCreateBufferPoolFile(
-											srel,
-											relBufpoolKind,
-											relation->rd_isLocalBuf,
-											NameStr(relation->rd_rel->relname),
-											/* doJustInTimeDirCreate */ true,
-											/* bufferPoolBulkLoad */ false,
-											&relation->rd_segfile0_relationnodeinfo.persistentTid,
-											&relation->rd_segfile0_relationnodeinfo.persistentSerialNum);
-		smgrclose(srel);
-	}
-	else
-	{
-		MirroredFileSysObj_TransactionCreateAppendOnlyFile(
-											&newrnode,
-											/* segmentFileNum */ 0,
-											NameStr(relation->rd_rel->relname),
-											/* doJustInTimeDirCreate */ true,
-											&relation->rd_segfile0_relationnodeinfo.persistentTid,
-											&relation->rd_segfile0_relationnodeinfo.persistentSerialNum);
-	}
-
-	if (Debug_check_for_invalid_persistent_tid &&
-		!Persistent_BeforePersistenceWork() &&
-		PersistentStore_IsZeroTid(&relation->rd_segfile0_relationnodeinfo.persistentTid))
-	{	
-		elog(ERROR, 
-			 "setNewRelfilenodeCommon has invalid TID (0,0) for relation %u/%u/%u '%s', serial number " INT64_FORMAT,
-			 newrnode.spcNode,
-			 newrnode.dbNode,
-			 newrnode.relNode,
-			 NameStr(relation->rd_rel->relname),
-			 relation->rd_segfile0_relationnodeinfo.persistentSerialNum);
-	}
-
-	relation->rd_segfile0_relationnodeinfo.isPresent = true;
-	
-	if (Debug_persistent_print)
-		elog(Persistent_DebugPrintLevel(), 
-			 "setNewRelfilenodeCommon: NEW '%s', Append-Only '%s', persistent TID %s and serial number " INT64_FORMAT,
-			 relpath(newrnode),
-			 (isAppendOnly ? "true" : "false"),
-			 ItemPointerToString(&relation->rd_segfile0_relationnodeinfo.persistentTid),
-			 relation->rd_segfile0_relationnodeinfo.persistentSerialNum);
-
-	/* Update GETSTRUCT fields of the pg_class row */
-	rd_rel->relfilenode = newrelfilenode;
-	rd_rel->relpages = 0;		/* it's empty until further notice */
-	rd_rel->reltuples = 0;
-
-	/*
-	 * If the swapping relation is an index of gp_relation_node,
-	 * updating itself is bogus; if gp_relation_node has old indexlist,
-	 * CatalogUpdateIndexes updates old index file, and is crash-unsafe.
-	 * Hence, here we skip it and count on later index_build.
-	 * (Or should we add index_build() call after CCI beflow in this case?)
-	 */
-	is_gp_relation_node_index = relation->rd_index &&
-								relation->rd_index->indrelid == GpRelationNodeRelationId;
-	InsertGpRelationNodeTuple(
-						gp_relation_node,
-						relation->rd_id,
-						NameStr(relation->rd_rel->relname),
-						newrelfilenode,
-						/* segmentFileNum */ 0,
-						/* updateIndex */ !is_gp_relation_node_index,
-						&relation->rd_segfile0_relationnodeinfo.persistentTid,
-						relation->rd_segfile0_relationnodeinfo.persistentSerialNum);
-
-	caql_update_current(pcqCtx, tuple);
-	/* and Update indexes (implicit) */
-
-	heap_freetuple(tuple);
-
-	heap_close(pg_class, RowExclusiveLock);
-
-	heap_close(gp_relation_node, RowExclusiveLock);
-
-	/* Make sure the relfilenode change is visible */
-	CommandCounterIncrement();
-}
-
-/*
- * setNewRelfilenode		- assign a new relfilenode value to the relation
- *
- * Caller must already hold exclusive lock on the relation.
- */
-Oid
-setNewRelfilenode(Relation relation)
-{
-	Oid			newrelfilenode;
-
-	/* Can't change relfilenode for nailed tables (indexes ok though) */
-	Assert(!relation->rd_isnailed ||
-		   relation->rd_rel->relkind == RELKIND_INDEX);
-	/* Can't change for shared tables or indexes */
-	Assert(!relation->rd_rel->relisshared);
-
-	/* Allocate a new relfilenode */
-	newrelfilenode = GetNewRelFileNode(relation->rd_rel->reltablespace,
-									   relation->rd_rel->relisshared,
-									   NULL);
-
-	if (Gp_role == GP_ROLE_EXECUTE)
-	{
-		elog(DEBUG1, "setNewRelfilenode called in EXECUTE mode, "
-			 "newrelfilenode=%d", newrelfilenode);
-	}
-
-	setNewRelfilenodeCommon(relation, newrelfilenode);
-
-	return newrelfilenode;
-}
-
-/*
- * Greenplum specific routine.
- *
- * setNewRelfilenodeToOid		- assign a new relfilenode value to the relation
- *
- * Caller must already hold exclusive lock on the relation.
- */
-Oid
-setNewRelfilenodeToOid(Relation relation, Oid newrelfilenode)
-{
-	/* Can't change relfilenode for nailed tables (indexes ok though) */
-	Assert(!relation->rd_isnailed ||
-		   relation->rd_rel->relkind == RELKIND_INDEX);
-	/* Can't change for shared tables or indexes */
-	Assert(!relation->rd_rel->relisshared);
-
-	elog(DEBUG3, "setNewRelfilenodeToOid called.  newrelfilenode = %d",
-		 newrelfilenode);
-
-	CheckNewRelFileNodeIsOk(newrelfilenode, relation->rd_rel->reltablespace,
-							relation->rd_rel->relisshared, NULL);
-
-	setNewRelfilenodeCommon(relation, newrelfilenode);
-
-	return newrelfilenode;
 }

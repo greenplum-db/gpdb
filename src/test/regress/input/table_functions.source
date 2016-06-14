@@ -164,6 +164,10 @@ CREATE FUNCTION error(INOUT setof example)
 CREATE FUNCTION error() RETURNS TABLE(a setof example) 
     AS $$ SELECT * FROM example $$ LANGUAGE SQL READS SQL DATA;
 
+/* ERROR: anytable cannot have default value */
+CREATE FUNCTION error(a anytable DEFAULT TABLE(select 1,'test')) RETURNS TABLE(a int, b text)
+    AS '@abs_builddir@/regress@DLSUFFIX@', 'multiset_example' LANGUAGE C;
+
 /* Negative test cases around the "anytable" type */
 CREATE TABLE fail(x anytable);
 CREATE TYPE  fail AS (x anytable);
@@ -987,7 +991,7 @@ DEALLOCATE p1;
 
 -- FAIL: can't pass anytable as prepare argument
 PREPARE p2 AS SELECT * FROM multiset_2( $1 ) order by a, b;
-PREPARE p3(anytable) AS SELECT * FROM multiset_5( $1 ) order by a, b;
+PREPARE p3(anytable) AS SELECT * FROM multiset_5( $1 );
 
 -- FAIL: $1 is not a constant
 PREPARE p4 AS SELECT * FROM project( TABLE( SELECT * FROM pg_am ), $1);

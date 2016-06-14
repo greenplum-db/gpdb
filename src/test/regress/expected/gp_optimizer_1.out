@@ -14,7 +14,7 @@ set optimizer_enable_master_only_queries = on;
 -- master only tables
 create schema orca;
 create table orca.r();
-NOTICE:  Table has no attributes to distribute on.
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 set allow_system_table_mods='DML';
 delete from gp_distribution_policy where localoid='orca.r'::regclass;
 reset allow_system_table_mods;
@@ -22,7 +22,7 @@ alter table orca.r add column a int;
 alter table orca.r add column b int;
 insert into orca.r select i, i/3 from generate_series(1,20) i;
 create table orca.s();
-NOTICE:  Table has no attributes to distribute on.
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 set allow_system_table_mods='DML';
 delete from gp_distribution_policy where localoid='orca.s'::regclass;
 reset allow_system_table_mods;
@@ -2210,6 +2210,8 @@ SELECT 1 AS one FROM orca.foo group by x1 having 1 < 2;
 
 SELECT x1 AS one FROM orca.foo having 1 < 2;
 ERROR:  column "foo.x1" must appear in the GROUP BY clause or be used in an aggregate function
+LINE 1: SELECT x1 AS one FROM orca.foo having 1 < 2;
+               ^
 -- distinct clause
 select distinct 1, null;
  ?column? | ?column? 
@@ -3146,11 +3148,11 @@ select r.* from orca.r, orca.s where s.c=2;
 ----------------------------------------------------------------------
 set optimizer=off;
 create table orca.m();
-NOTICE:  Table has no attributes to distribute on.
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 alter table orca.m add column a int;
 alter table orca.m add column b int;
 create table orca.m1();
-NOTICE:  Table has no attributes to distribute on.
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 alter table orca.m1 add column a int;
 alter table orca.m1 add column b int;
 insert into orca.m select i-1, i%2 from generate_series(1,35) i;
@@ -4357,10 +4359,183 @@ select array[array[a,b]], array[b] from orca.r;
 (21 rows)
 
 -- setops
-select a, b from m union select b,a from orca.m;
-ERROR:  relation "m" does not exist
-SELECT a from m UNION ALL select b from orca.m UNION ALL select a+b from orca.m group by 1;
-ERROR:  relation "m" does not exist
+select a, b from orca.m union select b,a from orca.m;
+ a  | b  
+----+----
+  0 |  1
+  0 |  3
+  0 |  5
+  0 |  7
+  0 |  9
+  0 | 11
+  0 | 13
+  0 | 15
+  0 | 17
+  0 | 19
+  0 | 21
+  0 | 23
+  0 | 25
+  0 | 27
+  0 | 29
+  0 | 31
+  0 | 33
+  1 |  0
+  1 |  1
+  1 |  2
+  1 |  4
+  1 |  6
+  1 |  8
+  1 | -1
+  1 | 10
+  1 | 12
+  1 | 14
+  1 | 16
+  1 | 18
+  1 | 20
+  1 | 22
+  1 | 24
+  1 | 26
+  1 | 28
+  1 | 30
+  1 | 32
+  1 | 34
+  2 |  1
+  3 |  0
+  4 |  1
+  5 |  0
+  6 |  1
+  7 |  0
+  8 |  1
+  9 |  0
+ -1 |  1
+ 10 |  1
+ 11 |  0
+ 12 |  1
+ 13 |  0
+ 14 |  1
+ 15 |  0
+ 16 |  1
+ 17 |  0
+ 18 |  1
+ 19 |  0
+ 20 |  1
+ 21 |  0
+ 22 |  1
+ 23 |  0
+ 24 |  1
+ 25 |  0
+ 26 |  1
+ 27 |  0
+ 28 |  1
+ 29 |  0
+ 30 |  1
+ 31 |  0
+ 32 |  1
+ 33 |  0
+ 34 |  1
+(71 rows)
+
+SELECT a from orca.m UNION ALL select b from orca.m UNION ALL select a+b from orca.m group by 1;
+ a  
+----
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  1
+  2
+  2
+  2
+  3
+  3
+  4
+  5
+  5
+  6
+  7
+  7
+  8
+  9
+  9
+ -1
+ 10
+ 11
+ 11
+ 12
+ 13
+ 13
+ 14
+ 15
+ 15
+ 16
+ 17
+ 17
+ 18
+ 19
+ 19
+ 20
+ 21
+ 21
+ 22
+ 23
+ 23
+ 24
+ 25
+ 25
+ 26
+ 27
+ 27
+ 28
+ 29
+ 29
+ 30
+ 31
+ 31
+ 32
+ 33
+ 33
+ 34
+ 35
+(96 rows)
+
 ----------------------------------------------------------------------
 set optimizer=off;
 drop table if exists orca.foo;
@@ -6105,7 +6280,50 @@ select row_number() over(order by foo.a+ bar.a)/count(*) from orca.foo inner joi
 (400 rows)
 
 select count(*) over(partition by b order by a range between 1 preceding and (select count(*) from orca.bar) following) from orca.foo;
-ERROR:  no parameter found for initplan subquery (cdbsubplan.c:265)
+ count 
+-------
+    16
+    16
+    16
+    16
+    16
+    15
+    14
+    13
+    12
+    11
+    10
+     9
+     8
+     7
+     6
+     5
+     4
+     3
+     2
+     1
+    16
+    16
+    16
+    16
+    16
+    15
+    14
+    13
+    12
+    11
+    10
+     9
+     8
+     7
+     6
+     5
+     4
+     3
+     2
+     1
+(40 rows)
+
 select a+1, rank() over(partition by b+1 order by a+1) from orca.foo order by 1, 2;
  ?column? | rank 
 ----------+------
@@ -7916,6 +8134,24 @@ select * from orca.t order by 1,2;
  201208 |       2 | tag1  | tag2 
 (7 rows)
 
+-- test EXPLAIN support of partition selection nodes, while we're at it.
+explain select * from orca.t order by 1,2;
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)  (cost=16113.11..16515.11 rows=160800 width=92)
+   Merge Key: orca.t.timest, orca.t.user_id
+   ->  Sort  (cost=16113.11..16515.11 rows=80400 width=92)
+         Sort Key: orca.t.timest, orca.t.user_id
+         ->  Append  (cost=0.00..2208.00 rows=80400 width=92)
+               ->  Append-only Columnar Scan on t_1_prt_part201203 t  (cost=0.00..368.00 rows=13400 width=92)
+               ->  Append-only Scan on t_1_prt_part201204 t  (cost=0.00..368.00 rows=13400 width=92)
+               ->  Seq Scan on t_1_prt_part201205 t  (cost=0.00..368.00 rows=13400 width=92)
+               ->  Append-only Columnar Scan on t_1_prt_part201206 t  (cost=0.00..368.00 rows=13400 width=92)
+               ->  Append-only Scan on t_1_prt_part201207 t  (cost=0.00..368.00 rows=13400 width=92)
+               ->  Seq Scan on t_1_prt_part201208 t  (cost=0.00..368.00 rows=13400 width=92)
+ Settings:  optimizer=off; optimizer_segments=3
+(12 rows)
+
 select tag2, tag1 from orca.t order by 1, 2;;
  tag2  | tag1  
 -------+-------
@@ -8622,41 +8858,6 @@ SELECT f3, myagg3(f1) from (select * from array_table order by f1 limit 10) as f
  c  | {3,6}
 (3 rows)
 
--- Functions that are wrongly annotated in the catalog as NOSQL
-CREATE TABLE orca.test_part (i int) PARTITION BY RANGE(i) (start(1) exclusive end(2) inclusive);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "test_part_1_prt_1" for table "test_part"
-CREATE TABLE orca.test_distributed(i int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-INSERT INTO orca.test_distributed SELECT i from generate_series(1,2) i;
--- Function pg_get_partition_rule_def(oid, bool)
-SELECT pg_get_partition_rule_def(pr1.oid, true) AS partitionboundary ,n.nspname AS schemaname, cl.relname AS tablename 
-FROM orca.test_distributed, pg_namespace n, pg_namespace n2, pg_class cl
-LEFT JOIN pg_tablespace sp ON cl.reltablespace = sp.oid, pg_class cl2
-LEFT JOIN pg_tablespace sp3 ON cl2.reltablespace = sp3.oid, pg_partition pp, pg_partition_rule pr1
-WHERE pp.paristemplate = false AND pp.parrelid = cl.oid AND pr1.paroid = pp.oid AND cl2.oid = pr1.parchildrelid
-AND cl.relnamespace = n.oid AND cl2.relnamespace = n2.oid and cl.relname ='test_part';
-           partitionboundary           | schemaname | tablename 
----------------------------------------+------------+-----------
- START (1) EXCLUSIVE END (2) INCLUSIVE | orca       | test_part
- START (1) EXCLUSIVE END (2) INCLUSIVE | orca       | test_part
-(2 rows)
-
--- Function pg_get_partition_rule_def(oid)
-SELECT pg_get_partition_rule_def(pr1.oid) AS partitionboundary ,n.nspname AS schemaname, cl.relname AS tablename 
-FROM orca.test_distributed, pg_namespace n, pg_namespace n2, pg_class cl
-LEFT JOIN pg_tablespace sp ON cl.reltablespace = sp.oid, pg_class cl2
-LEFT JOIN pg_tablespace sp3 ON cl2.reltablespace = sp3.oid, pg_partition pp, pg_partition_rule pr1
-WHERE pp.paristemplate = false AND pp.parrelid = cl.oid AND pr1.paroid = pp.oid AND cl2.oid = pr1.parchildrelid
-AND cl.relnamespace = n.oid AND cl2.relnamespace = n2.oid and cl.relname ='test_part';
-           partitionboundary           | schemaname | tablename 
----------------------------------------+------------+-----------
- START (1) EXCLUSIVE END (2) INCLUSIVE | orca       | test_part
- START (1) EXCLUSIVE END (2) INCLUSIVE | orca       | test_part
-(2 rows)
-
 -- MPP-22453: wrong result in indexscan when the indexqual compares different data types
 create table mpp22453(a int, d date);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
@@ -8916,24 +9117,25 @@ select c.cid cid,
 from cust c, sales s, datedim d
 where c.cid = s.cid and s.date_sk = d.date_sk and
       ((d.year = 2001 and lower(s.type) = 't1' and plusone(d.moy) = 5) or (d.moy = 4 and upper(s.type) = 'T2'));
-                                                                QUERY PLAN                                                                
-------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice3; segments: 2)  (cost=0.07..0.19 rows=4 width=72)
-   ->  Hash Join  (cost=0.07..0.19 rows=2 width=72)
-         Hash Cond: s.date_sk = d.date_sk
-         Join Filter: (d.year = 2001 AND lower(s.type) = 't1'::text AND plusone(d.moy) = 5) OR (d.moy = 4 AND upper(s.type) = 'T2'::text)
-         ->  Hash Join  (cost=0.01..0.07 rows=2 width=104)
-               Hash Cond: s.cid = c.cid
-               ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..0.02 rows=1 width=40)
-                     Hash Key: s.cid
-                     ->  Seq Scan on sales s  (cost=0.00..0.00 rows=1 width=40)
-               ->  Hash  (cost=0.00..0.00 rows=1 width=68)
-                     ->  Seq Scan on cust c  (cost=0.00..0.00 rows=1 width=68)
-         ->  Hash  (cost=0.03..0.03 rows=1 width=12)
-               ->  Broadcast Motion 2:2  (slice2; segments: 2)  (cost=0.00..0.03 rows=1 width=12)
-                     ->  Seq Scan on datedim d  (cost=0.00..0.00 rows=1 width=12)
+                                                                      QUERY PLAN                                                                      
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=2704.25..885451.68 rows=110 width=72)
+   ->  Hash Join  (cost=2704.25..885451.68 rows=37 width=72)
+         Hash Cond: s.cid = c.cid
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=1852.75..884597.69 rows=6 width=8)
+               Hash Key: s.cid
+               ->  Hash Join  (cost=1852.75..884597.36 rows=6 width=8)
+                     Hash Cond: s.date_sk = d.date_sk
+                     Join Filter: (d.year = 2001 AND lower(s.type) = 't1'::text AND plusone(d.moy) = 5) OR (d.moy = 4 AND upper(s.type) = 'T2'::text)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1357.00 rows=13967 width=40)
+                           Hash Key: s.date_sk
+                           ->  Seq Scan on sales s  (cost=0.00..519.00 rows=13967 width=40)
+                     ->  Hash  (cost=879.00..879.00 rows=25967 width=12)
+                           ->  Seq Scan on datedim d  (cost=0.00..879.00 rows=25967 width=12)
+         ->  Hash  (cost=434.00..434.00 rows=11134 width=68)
+               ->  Seq Scan on cust c  (cost=0.00..434.00 rows=11134 width=68)
  Settings:  optimizer=off; optimizer_segments=3
-(15 rows)
+(16 rows)
 
 reset optimizer_segments;
 -- Bitmap indexes
@@ -9662,7 +9864,7 @@ drop table idxscan_outer;
 drop table idxscan_inner;
 drop table if exists ggg;
 NOTICE:  table "ggg" does not exist, skipping
-set optimizer_release_mdcache=off;
+set optimizer_metadata_caching=on;
 create table ggg (a char(1), b char(2), d char(3));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -9722,6 +9924,14 @@ explain select * from orca.index_test where a = 5 and c = 5;
  Settings:  optimizer=off
 (4 rows)
 
+-- renaming columns
+select * from (values (2),(null)) v(k);
+ k 
+---
+  
+ 2
+(2 rows)
+
 -- clean up
 drop schema orca cascade;
 NOTICE:  drop cascades to table orca.index_test
@@ -9760,10 +9970,6 @@ NOTICE:  drop cascades to constraint p1_1_prt_pp2_check on table orca.p1_1_prt_p
 NOTICE:  drop cascades to table orca.p1_1_prt_pp1
 NOTICE:  drop cascades to constraint p1_1_prt_pp1_check on table orca.p1_1_prt_pp1
 NOTICE:  drop cascades to table orca.p1
-NOTICE:  drop cascades to table orca.test_distributed
-NOTICE:  drop cascades to table orca.test_part_1_prt_1
-NOTICE:  drop cascades to constraint test_part_1_prt_1_check on table orca.test_part_1_prt_1
-NOTICE:  drop cascades to table orca.test_part
 NOTICE:  drop cascades to table orca.tab2
 NOTICE:  drop cascades to table orca.tab1
 NOTICE:  drop cascades to table orca.twf2

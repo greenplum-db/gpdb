@@ -1,12 +1,12 @@
 External Scan in Greenplum Database
 ===================================
 
-External scan is used to scan special kind of database tables called "external
-tables". Unlike an ordinary database table the data of an external table is 
+External scan is used to scan a special kind of database tables called "external
+tables". Unlike an ordinary database table the data of an external table is
 external to the database directories. It can be on a flat file on some other
 directory or come from an http server for example, and the external access layer
-is incharge of reaching that data source and interpret it. A user issueing a 
-query against an external table should not notice the difference between an 
+is in charge of reaching that data source and interpret it. A user issuing a
+query against an external table should not notice the difference between an
 external table and a base table - as the query will return rows as if it came
 from a regular table.
 
@@ -25,39 +25,40 @@ EXTERNAL TABLE command):
  1. data is on a file on the server.
  2. data is served by an http server.
  3. data is served by a gpfdist process (basically a special case http server).
- 
+
 We use libcurl to access the data. If the data is on a file on the server
 libcurl will open it with fopen() and if the file comes from an http server
 there are other special libcurl functions that will issue an http request to the
 http server and read the data as if it's a file.
 
-see open_external_file() in fileam.c for specifics.
+See open_external_file() in fileam.c for specifics.
 
 
 Data processing
 ---------------
 
-Data is retreived from the data source via the libcurl url_fread() function. It
+Data is retrieved from the data source via the libcurl url_fread() function. It
 is then parsed in a way that is identical to how the COPY command parses data.
-When a complete row is parsed together with its attributes it is converted to a 
+When a complete row is parsed together with its attributes it is converted to a
 heap tuple and propagated up to the next node.
+
 
 Proccess
 --------
 
-this is roughly how the call stack looks like:
+This is roughly what the call stack looks like:
 
     return new tuple
     --> form a tuple
         --> convert row attributes to internal format with input functions
             --> parse a data row according to COPY rules
-                --> get data from file 
+                --> get data from file
                     --> open external file (or remote source)
-                    
+
 Errors
 ------
 
-Of course there will be occassions where a query against an external table will
+Of course there will be occasions where a query against an external table will
 fail as the access layer will not manage to parse the user data properly due to
 "bad data" (e.g: data row with too many attributes). In that case a COPY style
 error will be reported and external scan cancelled.

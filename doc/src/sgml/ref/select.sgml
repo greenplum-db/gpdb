@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/select.sgml,v 1.96 2007/01/09 16:59:20 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/select.sgml,v 1.99 2007/02/01 19:10:25 momjian Exp $
 PostgreSQL documentation
 -->
 
@@ -280,7 +280,7 @@ and <replaceable class="parameter">with_query</replaceable> can be:
         result sets, but any function can be used.)  This acts as
         though its output were created as a temporary table for the
         duration of this single <command>SELECT</command> command. An
-        alias may also be used. If an alias is written, a column alias
+        alias can also be used. If an alias is written, a column alias
         list can also be written to provide substitute names for one
         or more attributes of the function's composite return type. If
         the function has been defined as returning the <type>record</>
@@ -325,7 +325,7 @@ and <replaceable class="parameter">with_query</replaceable> can be:
         <literal>USING (<replaceable
         class="parameter">join_column</replaceable> [, ...])</literal>.
         See below for the meaning.  For <literal>CROSS JOIN</literal>,
-        none of these clauses may appear.
+        none of these clauses can appear.
        </para>
 
        <para>
@@ -580,7 +580,7 @@ HAVING <replaceable class="parameter">condition</replaceable>
    </para>
     
    <para>
-    Currently, <literal>FOR UPDATE</> and <literal>FOR SHARE</> may not be
+    Currently, <literal>FOR UPDATE</> and <literal>FOR SHARE</> cannot be
     specified either for a <literal>UNION</> result or for any input of a
     <literal>UNION</>.
    </para>
@@ -626,7 +626,7 @@ HAVING <replaceable class="parameter">condition</replaceable>
    </para>
     
    <para>
-    Currently, <literal>FOR UPDATE</> and <literal>FOR SHARE</> may not be
+    Currently, <literal>FOR UPDATE</> and <literal>FOR SHARE</> cannot be
     specified either for an <literal>INTERSECT</> result or for any input of
     an <literal>INTERSECT</>.
    </para>
@@ -668,7 +668,7 @@ HAVING <replaceable class="parameter">condition</replaceable>
    </para>
     
    <para>
-    Currently, <literal>FOR UPDATE</> and <literal>FOR SHARE</> may not be
+    Currently, <literal>FOR UPDATE</> and <literal>FOR SHARE</> cannot be
     specified either for an <literal>EXCEPT</> result or for any input of
     an <literal>EXCEPT</>.
    </para>
@@ -716,7 +716,7 @@ SELECT name FROM distributors ORDER BY code;
 </programlisting>
     A limitation of this feature is that an <literal>ORDER BY</>
     clause applying to the result of a <literal>UNION</>,
-    <literal>INTERSECT</>, or <literal>EXCEPT</> clause may only
+    <literal>INTERSECT</>, or <literal>EXCEPT</> clause can only
     specify an output column name or number, not an expression.
    </para>
 
@@ -730,11 +730,11 @@ SELECT name FROM distributors ORDER BY code;
    </para>
     
    <para>
-    Optionally one may add the key word <literal>ASC</> (ascending) or
+    Optionally one can add the key word <literal>ASC</> (ascending) or
     <literal>DESC</> (descending) after any expression in the
     <literal>ORDER BY</> clause.  If not specified, <literal>ASC</> is
     assumed by default.  Alternatively, a specific ordering operator
-    name may be specified in the <literal>USING</> clause.
+    name can be specified in the <literal>USING</> clause.
     An ordering operator must be a less-than or greater-than
     member of some btree operator family.
     <literal>ASC</> is usually equivalent to <literal>USING &lt;</> and
@@ -787,7 +787,7 @@ SELECT name FROM distributors ORDER BY code;
     <literal>ORDER BY</> (see above).  Note that the <quote>first
     row</quote> of each set is unpredictable unless <literal>ORDER
     BY</> is used to ensure that the desired row appears first.  For
-    example,
+    example:
 <programlisting>
 SELECT DISTINCT ON (location) location, time, report
     FROM weather_reports
@@ -830,7 +830,7 @@ OFFSET <replaceable class="parameter">start</replaceable>
     When using <literal>LIMIT</>, it is a good idea to use an
     <literal>ORDER BY</> clause that constrains the result rows into a
     unique order.  Otherwise you will get an unpredictable subset of
-    the query's rows &mdash; you may be asking for the tenth through
+    the query's rows &mdash; you might be asking for the tenth through
     twentieth rows, but tenth through twentieth in what ordering?  You
     don't know what ordering unless you specify <literal>ORDER BY</>.
    </para>
@@ -930,15 +930,15 @@ FOR SHARE [ OF <replaceable class="parameter">table_name</replaceable> [, ...] ]
 
    <para>
     <literal>FOR UPDATE</literal> and <literal>FOR SHARE</literal> cannot be
-    used in contexts where returned rows can't be clearly identified with
-    individual table rows; for example they can't be used with aggregation.
+    used in contexts where returned rows cannot be clearly identified with
+    individual table rows; for example they cannot be used with aggregation.
    </para>
 
   <caution>
    <para>
     Avoid locking a row and then modifying it within a later savepoint or
     <application>PL/pgSQL</application> exception block.  A subsequent
-    rollback would cause the lock to be lost.  For example,
+    rollback would cause the lock to be lost.  For example:
 <programlisting>
 BEGIN;
 SELECT * FROM mytable WHERE key = 1 FOR UPDATE;
@@ -1182,9 +1182,9 @@ SELECT distributors.* WHERE distributors.name = 'Westward';
    <title>Namespace Available to <literal>GROUP BY</literal> and <literal>ORDER BY</literal></title>
 
    <para>
-    In the SQL-92 standard, an <literal>ORDER BY</literal> clause may
+    In the SQL-92 standard, an <literal>ORDER BY</literal> clause can
     only use result column names or numbers, while a <literal>GROUP
-    BY</literal> clause may only use expressions based on input column
+    BY</literal> clause can only use expressions based on input column
     names.  <productname>PostgreSQL</productname> extends each of
     these clauses to allow the other choice as well (but it uses the
     standard's interpretation if there is ambiguity).

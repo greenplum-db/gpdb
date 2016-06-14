@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planner.c,v 1.211 2007/01/10 18:06:03 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planner.c,v 1.213 2007/02/19 07:03:29 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -51,17 +51,17 @@
 #include "cdb/cdbpath.h"        /* cdbpath_segments */
 #include "cdb/cdbpathtoplan.h"  /* cdbpathtoplan_create_flow() */
 #include "cdb/cdbpartition.h" /* query_has_external_partition() */
+#include "cdb/cdbplan.h"
 #include "cdb/cdbgroup.h" /* grouping_planner extensions */
 #include "cdb/cdbsetop.h" /* motion utilities */
 #include "cdb/cdbsubselect.h"   /* cdbsubselect_flatten_sublinks() */
+#include "cdb/cdbvars.h"
 
 /* GUC parameter */
 double cursor_tuple_fraction = DEFAULT_CURSOR_TUPLE_FRACTION;
 
 /* Hook for plugins to get control in planner() */
 planner_hook_type planner_hook = NULL;
-
-ParamListInfo PlannerBoundParamList = NULL;		/* current boundParams */
 
 /* Expression kind codes for preprocess_expression */
 #define EXPRKIND_QUAL		0
@@ -178,7 +178,6 @@ static void postprocess_plan(PlannedStmt *plan)
 	/* initialize */
 	globNew->paramlist = NIL;
 	globNew->subrtables = NIL;
-	globNew->rewindPlanIDs = NULL;
 	globNew->finalrtable = NIL;
 	globNew->relationOids = NIL;
 	globNew->invalItems = NIL;
@@ -192,6 +191,12 @@ static void postprocess_plan(PlannedStmt *plan)
 	globNew->share.nextPlanId = 0;
 	globNew->subplans = plan->subplans;
 	(void) apply_shareinput_xslice(plan->planTree, globNew);
+
+	/*
+	 * To save on memory, and on the network bandwidth when the plan is dispatched
+	 * QEs, strip all subquery RTEs of the original Query objects.
+	 */
+	remove_subquery_in_RTEs((Node *) plan->rtable);
 }
 #endif
 
@@ -327,9 +332,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	}
 
 	/*
-	 * The planner can be called recursively (an example is when
-	 * eval_const_expressions tries to pre-evaluate an SQL function).
-	 *
 	 * Set up global state for this planner invocation.  This data is needed
 	 * across all levels of sub-Query that might exist in the given command,
 	 * so we keep it in a separate struct that's linked to by each per-Query
@@ -341,7 +343,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	glob->paramlist = NIL;
 	glob->subplans = NIL;
 	glob->subrtables = NIL;
-	glob->rewindPlanIDs = NULL;
 	glob->finalrtable = NIL;
 	glob->relationOids = NIL;
 	glob->invalItems = NIL;
@@ -465,7 +466,12 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 
 	top_plan = zap_trivial_result(root, top_plan);
 
-	
+	/*
+	 * To save on memory, and on the network bandwidth when the plan is dispatched
+	 * QEs, strip all subquery RTEs of the original Query objects.
+	 */
+	remove_subquery_in_RTEs((Node *) glob->finalrtable);
+
 	/* build the PlannedStmt result */
 	result = makeNode(PlannedStmt);
 	
@@ -478,7 +484,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	result->utilityStmt = parse->utilityStmt;
 	result->intoClause = parse->intoClause;
 	result->subplans = glob->subplans;
-	result->rewindPlanIDs = glob->rewindPlanIDs;
 	result->returningLists = root->returningLists;
 	result->result_partitions = root->result_partitions;
 	result->result_aosegnos = root->result_aosegnos;
@@ -556,6 +561,8 @@ subquery_planner(PlannerGlobal *glob,
 	root->query_level = parent_root ? parent_root->query_level + 1 : 1;
 	root->parent_root = parent_root;
 	root->planner_cxt = CurrentMemoryContext;
+	root->init_plans = NIL;
+	root->eq_classes = NIL;
 	root->init_plans = NIL;
 
 	root->list_cteplaninfo = NIL;
@@ -879,38 +886,18 @@ preprocess_expression(PlannerInfo *root, Node *expr, int kind)
 	/*
 	 * Simplify constant expressions.
 	 *
+	 * Note: one essential effect here is to insert the current actual values
+	 * of any default arguments for functions.  To ensure that happens, we
+	 * *must* process all expressions here.  Previous PG versions sometimes
+	 * skipped const-simplification if it didn't seem worth the trouble, but
+	 * we can't do that anymore.
+	 *
 	 * Note: this also flattens nested AND and OR expressions into N-argument
 	 * form.  All processing of a qual expression after this point must be
 	 * careful to maintain AND/OR flatness --- that is, do not generate a tree
 	 * with AND directly under AND, nor OR directly under OR.
-	 *
-	 * Because this is a relatively expensive process, we skip it when the
-	 * query is trivial, such as "SELECT 2+2;". The
-	 * expression will only be evaluated once anyway, so no point in
-	 * pre-simplifying; we can't execute it any faster than the executor can,
-	 * and we will waste cycles copying the tree.  Notice however that we
-	 * still must do it for quals (to get AND/OR flatness); and if we are in a
-	 * subquery we should not assume it will be done only once.
-	 *
-	 * However, if targeted dispatch is enabled then we WILL optimize
-	 *           VALUES lists because targeted dispatch will benefit from this
-	 *           -- it IS more expensive to evaluate it on the executor
-	 *           without doing it first in the planner because the planner
-	 *           may determine that only a single segment is required!
 	 */
-	if (kind != EXPRKIND_VALUES && (
-			root->parse->jointree->fromlist != NIL ||
-			kind == EXPRKIND_QUAL ||
-
-			/* note that we could optimize the direct dispatch case
-			 *   by only doing the simplification for the distribution
-			 *   key columns.
-			 */
-			(root->config->gp_enable_direct_dispatch && kind == EXPRKIND_TARGET ) ||
-			root->query_level > 1))
-	{
-		expr = eval_const_expressions(root, expr);
-	}
+	expr = eval_const_expressions(root, expr);
 
 	/*
 	 * If it's a qual or havingQual, canonicalize it.
@@ -1049,6 +1036,7 @@ inheritance_planner(PlannerInfo *root)
 		subroot.in_info_list = (List *)
 			adjust_appendrel_attrs(&subroot, (Node *) root->in_info_list,
 								   appinfo);
+		subroot.init_plans = NIL;
 		/* There shouldn't be any OJ info to translate, as yet */
 		Assert(subroot.oj_info_list == NIL);
 
@@ -1122,6 +1110,9 @@ inheritance_planner(PlannerInfo *root)
 		parse->rtable = subroot.parse->rtable;
 
 		subplans = lappend(subplans, subplan);
+
+		/* Make sure any initplans from this rel get into the outer list */
+		root->init_plans = list_concat(root->init_plans, subroot.init_plans);
 
 		/* Build target-relations list for the executor */
 		resultRelations = lappend_int(resultRelations, appinfo->child_relid);
@@ -1284,6 +1275,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	List	   *tlist = parse->targetList;
 	int64		offset_est = 0;
 	int64		count_est = 0;
+	double		limit_tuples = -1.0;
 	Plan	   *result_plan;
 	List	   *current_pathkeys = NIL;
 	CdbPathLocus current_locus;
@@ -1300,10 +1292,19 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	
 	CdbPathLocus_MakeNull(&current_locus); 
 	
-	/* Tweak caller-supplied tuple_fraction if have LIMIT/OFFSET */
-	if (parse->limitCount || parse->limitOffset)
-		tuple_fraction = preprocess_limit(root, tuple_fraction,
-										  &offset_est, &count_est);
+    /* Tweak caller-supplied tuple_fraction if have LIMIT/OFFSET */
+    if (parse->limitCount || parse->limitOffset)
+    {
+        tuple_fraction = preprocess_limit(root, tuple_fraction,
+                                          &offset_est, &count_est);
+
+        /*
+         * If we have a known LIMIT, and don't have an unknown OFFSET, we can
+         * estimate the effects of using a bounded sort.
+         */
+        if (count_est > 0 && offset_est >= 0)
+            limit_tuples = (double) count_est + (double) offset_est;
+    }
 
 	if (parse->setOperations)
 	{
@@ -1331,9 +1332,10 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		 * operation's result.  We have to do this before overwriting the sort
 		 * key information...
 		 */
-		current_pathkeys = make_pathkeys_for_sortclauses(set_sortclauses,
-													result_plan->targetlist);
-		current_pathkeys = canonicalize_pathkeys(root, current_pathkeys);
+		current_pathkeys = make_pathkeys_for_sortclauses(root,
+														 set_sortclauses,
+													result_plan->targetlist,
+														 true);
 
 		/*
 		 * We should not need to call preprocess_targetlist, since we must be
@@ -1358,9 +1360,10 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		/*
 		 * Calculate pathkeys that represent result ordering requirements
 		 */
-		sort_pathkeys = make_pathkeys_for_sortclauses(parse->sortClause,
-													  tlist);
-		sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
+		sort_pathkeys = make_pathkeys_for_sortclauses(root,
+													  parse->sortClause,
+													  tlist,
+													  true);
 	}
 	else if ( parse->windowClause && parse->targetList &&
 			  contain_windowref((Node *)parse->targetList, NULL) )
@@ -1377,7 +1380,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		 */
 		root->group_pathkeys = NIL;
 		root->sort_pathkeys =
-			make_pathkeys_for_sortclauses(parse->sortClause, tlist);
+			make_pathkeys_for_sortclauses(root, parse->sortClause, tlist, true);
 
 		
 		result_plan = window_planner(root, tuple_fraction, &current_pathkeys);
@@ -1385,8 +1388,8 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		/* Recover sort pathkeys for use later.  These may or may not
 		 * match the current_pathkeys resulting from the window plan.  
 		 */
-		sort_pathkeys = make_pathkeys_for_sortclauses(parse->sortClause,
-													  result_plan->targetlist);
+		sort_pathkeys = make_pathkeys_for_sortclauses(root, parse->sortClause,
+													  result_plan->targetlist,true);
 		sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
 	}
 	else
@@ -1435,6 +1438,21 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 					 errmsg("WITHIN GROUP aggregate cannot be used in GROUPING SETS query")));
 
 		/*
+		 * Calculate pathkeys that represent grouping/ordering requirements.
+		 * Stash them in PlannerInfo so that query_planner can canonicalize
+		 * them after EquivalenceClasses have been formed.
+		 */
+		root->group_pathkeys =
+			make_pathkeys_for_groupclause(root,
+										  parse->groupClause,
+										  tlist);
+		root->sort_pathkeys =
+			make_pathkeys_for_sortclauses(root,
+										  parse->sortClause,
+										  tlist,
+										  false);
+
+		/*
 		 * Will need actual number of aggregates for estimating costs.
 		 *
 		 * Note: we do not attempt to detect duplicate aggregates here; a
@@ -1469,16 +1487,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		sub_tlist = register_ordered_aggs(tlist, 
 										  root->parse->havingQual, 
 										  sub_tlist);
-
-		/*
-		 * Calculate pathkeys that represent grouping/ordering requirements.
-		 * Stash them in PlannerInfo so that query_planner can canonicalize
-		 * them.
-		 */
-		root->group_pathkeys =
-			make_pathkeys_for_groupclause(parse->groupClause, tlist);
-		root->sort_pathkeys =
-			make_pathkeys_for_sortclauses(parse->sortClause, tlist);
 
 		/*
 		 * Figure out whether we need a sorted result from query_planner.
@@ -1621,8 +1629,8 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 				 * the previous root->parse Query node, which makes the current
 				 * sort_pathkeys invalid.
  				 */
- 				sort_pathkeys = make_pathkeys_for_sortclauses(parse->sortClause,
-															  result_plan->targetlist);
+ 				sort_pathkeys = make_pathkeys_for_sortclauses(root, parse->sortClause,
+															  result_plan->targetlist, true);
 				sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
 			}
 		}
@@ -1867,8 +1875,8 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 					 * the previous root->parse Query node, which makes the current
 					 * sort_pathkeys invalid.
 					 */
-					sort_pathkeys = make_pathkeys_for_sortclauses(parse->sortClause,
-																  result_plan->targetlist);
+					sort_pathkeys = make_pathkeys_for_sortclauses(root, parse->sortClause,
+																  result_plan->targetlist, true);
 					sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
 					CdbPathLocus_MakeNull(&current_locus);
 				}
@@ -1935,9 +1943,9 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		
 		if ( Gp_role == GP_ROLE_DISPATCH && CdbPathLocus_IsPartitioned(current_locus) )
 		{
-			List *distinct_pathkeys = make_pathkeys_for_sortclauses(parse->distinctClause,
-																	result_plan->targetlist);
-			bool needMotion = !cdbpathlocus_collocates(current_locus, distinct_pathkeys, false /*exact_match*/);
+			List *distinct_pathkeys = make_pathkeys_for_sortclauses(root, parse->distinctClause,
+																	result_plan->targetlist, true);
+			bool needMotion = !cdbpathlocus_collocates(root, current_locus, distinct_pathkeys, false /*exact_match*/);
 			
 			/* Apply the preunique optimization, if enabled and worthwhile. */
 			if ( root->config->gp_enable_preunique && needMotion )
@@ -2024,13 +2032,20 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	{
 		if (!pathkeys_contained_in(sort_pathkeys, current_pathkeys))
 		{
-			result_plan = (Plan *)
-				make_sort_from_sortclauses(root,
-										   parse->sortClause,
-										   result_plan);
+			result_plan = (Plan *) make_sort_from_pathkeys(root,
+														   result_plan,
+														   sort_pathkeys, limit_tuples, false);
+			if (result_plan == NULL)
+				elog(ERROR, "could not find sort pathkeys in result target list");
 			current_pathkeys = sort_pathkeys;
 			mark_sort_locus(result_plan);
 		}
+
+		/*
+ 		 * Update numOrderbyCols to length of sort_pathkeys.
+		 * For cdb: decide which sort attribute should be preserved by merge gather motion 
+ 		 */
+		result_plan->flow->numOrderbyCols = list_length(sort_pathkeys);
 	}
 
 	/*

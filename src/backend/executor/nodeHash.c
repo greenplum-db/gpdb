@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeHash.c,v 1.107.2.1 2007/06/01 15:58:01 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeHash.c,v 1.110 2007/01/30 01:33:36 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -135,7 +135,8 @@ MultiExecHash(HashState *node)
 		econtext->ecxt_innertuple = slot;
 		bool hashkeys_null = false;
 
-		if (ExecHashGetHashValue(node, hashtable, econtext, hashkeys, node->hs_keepnull, &hashvalue, &hashkeys_null))
+		if (ExecHashGetHashValue(node, hashtable, econtext, hashkeys, false,
+								 node->hs_keepnull, &hashvalue, &hashkeys_null))
 		{
 			ExecHashTableInsert(node, hashtable, slot, hashvalue);
 		}
@@ -149,7 +150,6 @@ MultiExecHash(HashState *node)
 				return NULL;
 			}
 		}
-
 	}
 
 	/* Now we have set up all the initial batches & primary overflow batches. */
@@ -284,7 +284,7 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 	ListCell   *ho;
 	MemoryContext oldcxt;
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccount);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccount);
 	{
 
 	Hash *node = (Hash *) hashState->ps.plan;
@@ -358,19 +358,23 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 	 * Also remember whether the join operators are strict.
 	 */
 	nkeys = list_length(hashOperators);
-	hashtable->hashfunctions = (FmgrInfo *) palloc(nkeys * sizeof(FmgrInfo));
+	hashtable->outer_hashfunctions =
+		(FmgrInfo *) palloc(nkeys * sizeof(FmgrInfo));
+	hashtable->inner_hashfunctions =
+		(FmgrInfo *) palloc(nkeys * sizeof(FmgrInfo));
 	hashtable->hashStrict = (bool *) palloc(nkeys * sizeof(bool));
 	i = 0;
 	foreach(ho, hashOperators)
 	{
 		Oid			hashop = lfirst_oid(ho);
-		Oid			hashfn;
+		Oid			left_hashfn;
+		Oid			right_hashfn;
 
-		hashfn = get_op_hash_function(hashop);
-		if (!OidIsValid(hashfn))
+		if (!get_op_hash_functions(hashop, &left_hashfn, &right_hashfn))
 			elog(ERROR, "could not find hash function for hash operator %u",
 				 hashop);
-		fmgr_info(hashfn, &hashtable->hashfunctions[i]);
+		fmgr_info(left_hashfn, &hashtable->outer_hashfunctions[i]);
+		fmgr_info(right_hashfn, &hashtable->inner_hashfunctions[i]);
 		hashtable->hashStrict[i] = op_strict(hashop);
 		i++;
 	}
@@ -653,7 +657,7 @@ ExecHashTableDestroy(HashState *hashState, HashJoinTable hashtable)
 	Assert(hashtable);
 	Assert(!hashtable->eagerlyReleased);
 	
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccount);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccount);
 	{
 
 	/*
@@ -923,7 +927,7 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 	int			batchno;
 	int			hashTupleSize;
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccount);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccount);
 	{
 	PlanState *ps = &hashState->ps;
 
@@ -1005,17 +1009,19 @@ bool
 ExecHashGetHashValue(HashState *hashState, HashJoinTable hashtable,
 					 ExprContext *econtext,
 					 List *hashkeys,
+					 bool outer_tuple,
 					 bool keep_nulls,
 					 uint32 *hashvalue,
 					 bool *hashkeys_null)
 {
 	uint32		hashkey = 0;
+	FmgrInfo   *hashfunctions;
 	ListCell   *hk;
 	int			i = 0;
 	MemoryContext oldContext;
 	bool		result = true;
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccount);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccount);
 	{
 
 	Assert(hashkeys_null);
@@ -1029,6 +1035,11 @@ ExecHashGetHashValue(HashState *hashState, HashJoinTable hashtable,
 	ResetExprContext(econtext);
 
 	oldContext = MemoryContextSwitchTo(econtext->ecxt_per_tuple_memory);
+
+	if (outer_tuple)
+		hashfunctions = hashtable->outer_hashfunctions;
+	else
+		hashfunctions = hashtable->inner_hashfunctions;
 
 	foreach(hk, hashkeys)
 	{
@@ -1075,8 +1086,7 @@ ExecHashGetHashValue(HashState *hashState, HashJoinTable hashtable,
 			/* Compute the hash function */
 			uint32		hkey;
 
-			hkey = DatumGetUInt32(FunctionCall1(&hashtable->hashfunctions[i],
-												keyval));
+			hkey = DatumGetUInt32(FunctionCall1(&hashfunctions[i], keyval));
 			hashkey ^= hkey;
 		}
 
@@ -1147,7 +1157,7 @@ ExecScanHashBucket(HashState *hashState, HashJoinState *hjstate,
 	HashJoinTuple hashTuple = hjstate->hj_CurTuple;
 	uint32		hashvalue = hjstate->hj_CurHashValue;
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccount);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccount);
 	{
 	/*
 	 * hj_CurTuple is NULL to start scanning a new bucket, or the address of
@@ -1169,7 +1179,7 @@ ExecScanHashBucket(HashState *hashState, HashJoinState *hjstate,
 			TupleTableSlot *inntuple;
 
 			/* insert hashtable's tuple into exec slot so ExecQual sees it */
-			inntuple = ExecStoreMemTuple(HJTUPLE_MINTUPLE(hashTuple),
+			inntuple = ExecStoreMinimalTuple(HJTUPLE_MINTUPLE(hashTuple),
 					hjstate->hj_HashTupleSlot,
 					false);	/* do not pfree */
 			econtext->ecxt_innertuple = inntuple;
@@ -1201,11 +1211,11 @@ ExecScanHashBucket(HashState *hashState, HashJoinState *hjstate,
  */
 void
 ExecHashTableReset(HashState *hashState, HashJoinTable hashtable)
-{	
+{
 	MemoryContext oldcxt;
 	int			nbuckets = 0;
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccount);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccount);
 	{
 	Assert(hashtable);
 	Assert(!hashtable->eagerlyReleased);
@@ -1258,7 +1268,7 @@ ExecHashTableExplainInit(HashState *hashState, HashJoinState *hjstate,
     MemoryContext   oldcxt;
     int             nbatch = Max(hashtable->nbatch, 1);
 
-    START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccount);
+    START_MEMORY_ACCOUNT(hashState->ps.memoryAccount);
     {
     /* Switch to a memory context that survives until ExecutorEnd. */
     oldcxt = MemoryContextSwitchTo(hjstate->js.ps.state->es_query_cxt);
@@ -1546,7 +1556,7 @@ ExecHashTableExplainBatchEnd(HashState *hashState, HashJoinTable hashtable)
     HashJoinBatchData  *batch = NULL;
     int                 i;
     
-    START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccount);
+    START_MEMORY_ACCOUNT(hashState->ps.memoryAccount);
     {
     Assert(!hashtable->eagerlyReleased);
     Assert(hashtable->batches);

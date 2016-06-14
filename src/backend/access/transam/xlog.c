@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/access/transam/xlog.c,v 1.260 2007/01/05 22:19:23 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/access/transam/xlog.c,v 1.269 2007/05/20 21:08:19 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -33,9 +33,11 @@
 #include "access/xact.h"
 #include "access/xlog_internal.h"
 #include "access/xlogmm.h"
+#include "access/xlogdefs.h"
 #include "access/xlogutils.h"
 #include "catalog/catalog.h"
 #include "catalog/catversion.h"
+#include "catalog/pg_authid.h"
 #include "catalog/pg_control.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_database.h"
@@ -46,8 +48,8 @@
 #include "libpq/hba.h"
 #include "miscadmin.h"
 #include "pgstat.h"
+#include "postmaster/bgwriter.h"
 #include "postmaster/postmaster.h"
-#include "postmaster/checkpoint.h"
 #include "storage/bufpage.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
@@ -82,77 +84,6 @@
 #include "cdb/cdbresynchronizechangetracking.h"
 #include "cdb/cdbpersistentfilesysobj.h"
 #include "cdb/cdbpersistentcheck.h"
-
-/*
- *	Because O_DIRECT bypasses the kernel buffers, and because we never
- *	read those buffers except during crash recovery, it is a win to use
- *	it in all cases where we sync on each write().	We could allow O_DIRECT
- *	with fsync(), but because skipping the kernel buffer forces writes out
- *	quickly, it seems best just to use it for O_SYNC.  It is hard to imagine
- *	how fsync() could be a win for O_DIRECT compared to O_SYNC and O_DIRECT.
- *	Also, O_DIRECT is never enough to force data to the drives, it merely
- *	tries to bypass the kernel cache, so we still need O_SYNC or fsync().
- */
-
-/*
- * This chunk of hackery attempts to determine which file sync methods
- * are available on the current platform, and to choose an appropriate
- * default method.	We assume that fsync() is always available, and that
- * configure determined whether fdatasync() is.
- */
-#if defined(O_SYNC)
-#define BARE_OPEN_SYNC_FLAG		O_SYNC
-#elif defined(O_FSYNC)
-#define BARE_OPEN_SYNC_FLAG		O_FSYNC
-#endif
-#ifdef BARE_OPEN_SYNC_FLAG
-#define OPEN_SYNC_FLAG			(BARE_OPEN_SYNC_FLAG | PG_O_DIRECT)
-#endif
-
-#if defined(O_DSYNC)
-#if defined(OPEN_SYNC_FLAG)
-/* O_DSYNC is distinct? */
-#if O_DSYNC != BARE_OPEN_SYNC_FLAG
-#define OPEN_DATASYNC_FLAG		(O_DSYNC | PG_O_DIRECT)
-#endif
-#else							/* !defined(OPEN_SYNC_FLAG) */
-/* Win32 only has O_DSYNC */
-#define OPEN_DATASYNC_FLAG		(O_DSYNC | PG_O_DIRECT)
-#endif
-#endif
-
-/*
- * We don't want the default for Solaris to be OPEN_DATASYNC, because
- * (for some reason) it is absurdly slow.
- */
-#if !defined(pg_on_solaris) && defined(OPEN_DATASYNC_FLAG)
-#define DEFAULT_SYNC_METHOD_STR "open_datasync"
-#define DEFAULT_SYNC_METHOD		SYNC_METHOD_OPEN
-#define DEFAULT_SYNC_FLAGBIT	OPEN_DATASYNC_FLAG
-#elif defined(HAVE_FDATASYNC)
-#define DEFAULT_SYNC_METHOD_STR "fdatasync"
-#define DEFAULT_SYNC_METHOD		SYNC_METHOD_FDATASYNC
-#define DEFAULT_SYNC_FLAGBIT	0
-#elif defined(HAVE_FSYNC_WRITETHROUGH_ONLY)
-#define DEFAULT_SYNC_METHOD_STR "fsync_writethrough"
-#define DEFAULT_SYNC_METHOD		SYNC_METHOD_FSYNC_WRITETHROUGH
-#define DEFAULT_SYNC_FLAGBIT	0
-#else
-#define DEFAULT_SYNC_METHOD_STR "fsync"
-#define DEFAULT_SYNC_METHOD		SYNC_METHOD_FSYNC
-#define DEFAULT_SYNC_FLAGBIT	0
-#endif
-
-
-/*
- * Limitation of buffer-alignment for direct IO depends on OS and filesystem,
- * but XLOG_BLCKSZ is assumed to be enough for it.
- */
-#ifdef O_DIRECT
-#define ALIGNOF_XLOG_BUFFER		XLOG_BLCKSZ
-#else
-#define ALIGNOF_XLOG_BUFFER		ALIGNOF_BUFFER
-#endif
 
 
 /* File path names (all relative to $PGDATA) */
@@ -679,7 +610,6 @@ char	*writeBufAligned = NULL;
  */
 static volatile sig_atomic_t got_SIGHUP = false;
 static volatile sig_atomic_t shutdown_requested = false;
-static volatile sig_atomic_t promote_triggered = false;
 
 /*
  * Flag set when executing a restore command, to tell SIGTERM signal handler
@@ -1249,6 +1179,19 @@ begin:;
 			rdt->next = NULL;
 		}
 	}
+
+	/*
+	 * If we backed up any full blocks and online backup is not in progress,
+	 * mark the backup blocks as removable.  This allows the WAL archiver to
+	 * know whether it is safe to compress archived WAL data by transforming
+	 * full-block records into the non-full-block format.
+	 *
+	 * Note: we could just set the flag whenever !forcePageWrites, but
+	 * defining it like this leaves the info bit free for some potential
+	 * other use in records without any backup blocks.
+	 */
+	if ((info & XLR_BKP_BLOCK_MASK) && !Insert->forcePageWrites)
+		info |= XLR_BKP_REMOVABLE;
 
 	/*
 	 * If there isn't enough space on the current XLOG page for a record
@@ -4521,7 +4464,7 @@ XLogReadTimeLineHistory(TimeLineID targetTLI)
 	/*
 	 * Parse the file...
 	 */
-	while (fgets(fline, MAXPGPATH, fd) != NULL)
+	while (fgets(fline, sizeof(fline), fd) != NULL)
 	{
 		/* skip leading whitespace and check for # comment */
 		char	   *ptr;
@@ -5595,7 +5538,7 @@ XLogReadRecoveryCommandFile(int emode)
 	/*
 	 * Parse the file...
 	 */
-	while (fgets(cmdline, MAXPGPATH, fd) != NULL)
+	while (fgets(cmdline, sizeof(cmdline), fd) != NULL)
 	{
 		/* skip leading whitespace and check for # comment */
 		char	   *ptr;
@@ -6602,16 +6545,6 @@ StartupXLOG(void)
 	else if (ControlFile->state != DB_SHUTDOWNED)
 		InRecovery = true;
 
-	/*
-	 * We need to create the pg_distributedlog directory if we are
-	 * upgrading from before 3.1.1.4 patch.
-	 *
-	 * Force a recovery to replay into the distributed log the
-	 * recent distributed transaction commits.
-	 */
-	if (DistributedLog_UpgradeCheck(InRecovery))
-		InRecovery = true;
-
 	if (InRecovery && !IsUnderPostmaster)
 	{
 		ereport(FATAL,
@@ -7085,6 +7018,22 @@ StartupXLOG(void)
 		 * same fake-relcache facility that WAL replay uses.
 		 */
 		XLogInitRelationCache();
+
+		/*
+		 * Setup syscache so that PT tuples may be updated using usual
+		 * heap access methods.  This is safe because:
+		 *
+		 *   1. Catalog cache is backend local.
+		 *
+		 *   2. The backend handling this pass (pass 1) of recovery is
+		 *   about to exit.  Rebuilding PT is the last operation
+		 *   performed by this backend.
+		 *
+		 *   3. At the beginning of pass 2, we are initializing
+		 *   catlaog cache, see StartupProcessMain()
+		 */
+		if (IsUnderPostmaster)
+			InitCatalogCache();
 
 		/*
 		 * During startup after we have performed recovery is the only place we
@@ -9060,8 +9009,8 @@ RecoveryRestartPoint(const CheckPoint *checkPoint)
 {
 //	int			elapsed_secs;
 	int			rmid;
-	uint _logId = 0;
-	uint _logSeg = 0;
+	uint32 _logId = 0;
+	uint32 _logSeg = 0;
 
 	/* use volatile pointer to prevent code rearrangement */
 	volatile XLogCtlData *xlogctl = XLogCtl;
@@ -9412,6 +9361,10 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 			xlog_redo_print_extended_checkpoint_info(beginLoc, record);
 		}
 	}
+	else if (info == XLOG_NOOP)
+	{
+		/* nothing to do here */
+	}
 	else if (info == XLOG_SWITCH)
 	{
 		/* nothing to do here */
@@ -9526,6 +9479,10 @@ xlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 				}
 			}
 		}
+	}
+	else if (info == XLOG_NOOP)
+	{
+		appendStringInfo(buf, "xlog no-op");
 	}
 	else if (info == XLOG_NEXTOID)
 	{

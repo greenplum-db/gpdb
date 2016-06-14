@@ -1517,7 +1517,8 @@ select * from PField_v1 where pfname = 'PF0_2' order by slotname;
 -- Finally we want errors
 --
 insert into PField values ('PF1_1', 'should fail due to unique index');
-ERROR:  duplicate key violates unique constraint "pfield_name"
+ERROR:  duplicate key value violates unique constraint "pfield_name"
+DETAIL:  Key (name)=(PF1_1) already exists.
 update PSlot set backlink = 'WS.not.there' where slotname = 'PS.base.a1';
 ERROR:  WS.not.there         does not exist
 CONTEXT:  PL/pgSQL function "tg_backlink_a" line 16 at assignment
@@ -1531,7 +1532,8 @@ update PSlot set slotlink = 'XX.illegal' where slotname = 'PS.base.a1';
 ERROR:  illegal slotlink beginning with XX
 CONTEXT:  PL/pgSQL function "tg_slotlink_a" line 16 at assignment
 insert into HSlot values ('HS', 'base.hub1', 1, '');
-ERROR:  duplicate key violates unique constraint "hslot_name"
+ERROR:  duplicate key value violates unique constraint "hslot_name"
+DETAIL:  Key (slotname)=(HS.base.hub1.1      ) already exists.
 insert into HSlot values ('HS', 'base.hub1', 20, '');
 ERROR:  no manual manipulation of HSlot
 delete from HSlot;
@@ -2908,3 +2910,119 @@ select footest();
 ERROR:  query returned more than one row
 CONTEXT:  PL/pgSQL function "footest" line 4 at execute statement
 drop function footest();
+
+-- Test anonymous code blocks.
+DO $$
+DECLARE r record;
+BEGIN
+    FOR r IN SELECT rtrim(roomno) AS roomno, comment FROM Room ORDER BY roomno
+    LOOP
+        RAISE NOTICE '%, %', r.roomno, r.comment;
+    END LOOP;
+END$$;
+NOTICE:  001, Entrance
+NOTICE:  002, Office
+NOTICE:  003, Office
+NOTICE:  004, Technical
+NOTICE:  101, Office
+NOTICE:  102, Conference
+NOTICE:  103, Restroom
+NOTICE:  104, Technical
+NOTICE:  105, Office
+NOTICE:  106, Office
+-- these are to check syntax error reporting
+DO LANGUAGE plpgsql $$begin return 1; end$$;
+ERROR:  RETURN cannot have a parameter in function returning void
+LINE 1: DO LANGUAGE plpgsql $$begin return 1; end$$;
+                                           ^
+DO $$
+DECLARE r record;
+BEGIN
+    FOR r IN SELECT rtrim(roomno) AS roomno, foo FROM Room ORDER BY roomno
+    LOOP
+        RAISE NOTICE '%, %', r.roomno, r.comment;
+    END LOOP;
+END$$;
+ERROR:  column "foo" does not exist
+LINE 1: SELECT rtrim(roomno) AS roomno, foo FROM Room ORDER BY roomn...
+                                        ^
+QUERY:  SELECT rtrim(roomno) AS roomno, foo FROM Room ORDER BY roomno
+CONTEXT:  PL/pgSQL function inline_code_block line 4 at FOR over SELECT rows
+-- Check handling of errors thrown from/into anonymous code blocks.
+do $outer$
+begin
+  for i in 1..10 loop
+   begin
+    execute $ex$
+      do $$
+      declare x int = 0;
+      begin
+        x := 1 / x;
+      end;
+      $$;
+    $ex$;
+  exception when division_by_zero then
+    raise notice 'caught division by zero';
+  end;
+  end loop;
+end;
+$outer$;
+NOTICE:  caught division by zero
+NOTICE:  caught division by zero
+NOTICE:  caught division by zero
+NOTICE:  caught division by zero
+NOTICE:  caught division by zero
+NOTICE:  caught division by zero
+NOTICE:  caught division by zero
+NOTICE:  caught division by zero
+NOTICE:  caught division by zero
+NOTICE:  caught division by zero
+-- tests for RETURN QUERY
+create function ret_query1(out int, out int) returns setof record as $$
+begin
+    $1 := -1;
+    $2 := -2;
+    return next;
+    return query select x + 1, x * 10 from generate_series(0, 10) s (x);
+    return next;
+end;
+$$ language plpgsql;
+select * from ret_query1();
+ column1 | column2
+---------+---------
+      -1 |      -2
+       1 |       0
+       2 |      10
+       3 |      20
+       4 |      30
+       5 |      40
+       6 |      50
+       7 |      60
+       8 |      70
+       9 |      80
+      10 |      90
+      11 |     100
+      -1 |      -2
+(13 rows)
+
+create type record_type as (x text, y int, z boolean);
+create or replace function ret_query2(lim int) returns setof record_type as $$
+begin
+    return query select md5(s.x::text), s.x, s.x > 0
+                 from generate_series(-8, lim) s (x) where s.x % 2 = 0;
+end;
+$$ language plpgsql;
+select * from ret_query2(8);
+                x                 | y  | z
+----------------------------------+----+---
+ a8d2ec85eaf98407310b72eb73dda247 | -8 | f
+ 596a3d04481816330f07e4f97510c28f | -6 | f
+ 0267aaf632e87a63288a08331f22c7c3 | -4 | f
+ 5d7b9adcbe1c629ec722529dd12e5129 | -2 | f
+ cfcd208495d565ef66e7dff9f98764da |  0 | f
+ c81e728d9d4c2f636f067f89cc14862c |  2 | t
+ a87ff679a2f3e71d9181a67b7542122c |  4 | t
+ 1679091c5a880faf6fb5e6087eb1b2dc |  6 | t
+ c9f0f895fb98ab9159f51fd0297e236d |  8 | t
+(9 rows)
+

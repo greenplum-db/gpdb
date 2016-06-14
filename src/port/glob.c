@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  */
 
-/* $Id: glob.c,v 1.8 2007/01/01 09:29:37 sebastian Exp $ */
+/* $Id: glob.c,v 1.7 2007/11/10 09:56:37 dmitry Exp $ */
 
 /*
  * glob(3) -- a superset of the one defined in POSIX 1003.2.
@@ -60,7 +60,9 @@
  * gl_matchc:
  *	Number of matches in the current invocation of glob.
  */
-#include "postgres.h"
+#ifdef WIN32
+#define DEFAULT_SLASH '\\'
+#define IS_SLASH(c) ((c) == '/' || (c) == DEFAULT_SLASH)
 #define _POSIX_
 #include <limits.h>
 #undef _POSIX_
@@ -70,15 +72,14 @@
 #ifndef S_ISLNK
 #define S_ISLNK(m) (0)
 #endif
-
-#define DEFAULT_SLASH '\\'
-#define ARG_MAX 20
-#define IS_SLASH(x) ((x)=='\\')
+#else
+#define DEFAULT_SLASH '/'
+#define IS_SLASH(c) ((c) == DEFAULT_SLASH || (c) == '\\')
+#endif
 
 #include <sys/stat.h>
 
 #include <ctype.h>
-#include <dirent.h>
 #ifndef WIN32
 #include <sys/param.h>
 #include <pwd.h>
@@ -89,6 +90,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <dirent.h>
+
+#ifndef MAXPATHLEN
+#ifdef PATH_MAX
+#define MAXPATHLEN PATH_MAX
+#elif defined(MAX_PATH)
+#define MAXPATHLEN MAX_PATH
+#else
+#define MAXPATHLEN 256 /* seems reasonable */ 
+#endif
+#endif
 
 #define	DOLLAR		'$'
 #define	DOT		'.'
@@ -115,7 +128,15 @@
 #define	M_MASK		0xffff
 #define	M_ASCII		0x00ff
 
+#ifdef WIN32
+typedef unsigned short Char;
+typedef unsigned int u_int;
+typedef unsigned char u_char;
+#define ARG_MAX (256 * 1024)
+#define lstat(path, sb) stat((path), (sb))
+#else
 typedef u_short Char;
+#endif
 
 #else
 
@@ -160,9 +181,8 @@ static int	 match(Char *, Char *, Char *);
 #ifdef DEBUG
 static void	 qprintf(const char *, Char *);
 #endif
-#define MAXPATHLEN MAXPGPATH
 
-_declspec(dllexport) int
+int
 glob(pattern, flags, errfunc, pglob)
 	const char *pattern;
 	int flags, (*errfunc)(const char *, int);
@@ -377,6 +397,11 @@ globtilde(pattern, patbuf, patbuf_len, pglob)
 		;
 
 	*h = EOS;
+
+#if 0
+	if (h == (char *)eb)
+		return what;
+#endif
 
 	if (((char *) patbuf)[0] == EOS) {
 		/*
@@ -809,7 +834,7 @@ match(name, pat, patend)
 }
 
 /* Free allocated data belonging to a glob_t structure. */
-_declspec(dllexport) void
+void
 globfree(pglob)
 	glob_t *pglob;
 {
@@ -831,11 +856,10 @@ g_opendir(str, pglob)
 	register Char *str;
 	glob_t *pglob;
 {
-	char buf[MAXPATHLEN];
+	char buf[MAXPATHLEN] = ".";
 
-	if (!*str)
-		strlcpy(buf, ".", sizeof buf);
-	else {
+	if (*str)
+	{
 		if (g_Ctoc(str, buf, sizeof(buf)))
 			return(NULL);
 	}

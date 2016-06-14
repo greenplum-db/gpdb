@@ -183,14 +183,7 @@ CMappingColIdVarPlStmt::PvarFromDXLNodeScId
 		// lookup column in the left child translation context
 		const TargetEntry *pte = pdxltrctxLeft->Pte(ulColId);
 
-		if (pdxltrctxLeft->FParentAggNode())
-		{
-			// variable appears in an Agg node: varno must be 0 as expected by GPDB
-			// TODO: Jan 26, 2011; clean this up once MPP-12034 is fixed
-			GPOS_ASSERT(NULL != pte);
-			idxVarno = 0;
-		}
-		else if (NULL != pte)
+		if (NULL != pte)
 		{
 			// identifier comes from left child
 			idxVarno = OUTER;

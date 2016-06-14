@@ -44,6 +44,7 @@
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "utils/faultinjector.h"
+#include "utils/sharedsnapshot.h"
 
 #include "access/xact.h"		/* setting the shared xid */
 

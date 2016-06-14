@@ -826,7 +826,12 @@ findFunc(char *fname)
 	Oid			funcid = InvalidOid;
 	List	   *names = list_make1(makeString(fname));
 
-	ptr = clist = FuncnameGetCandidates(names, 1, false /* whether expand variadic */);
+	ptr = clist = FuncnameGetCandidates(
+									  names,
+									  1,
+									  false /* whether expand variadic */,
+									  false /* whether expand default */);
+
 	list_free(names);
 
 	if (!ptr)

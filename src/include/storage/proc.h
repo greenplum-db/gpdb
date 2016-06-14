@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/proc.h,v 1.93 2007/01/16 13:28:57 alvherre Exp $
+ * $PostgreSQL: pgsql/src/include/storage/proc.h,v 1.98 2007/04/16 18:30:04 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -96,7 +96,6 @@ struct PGPROC
     int         mppSessionId;   /* serial num of the qDisp process */
     int         mppLocalProcessSerial;  /* this backend's PGPROC serial num */
     bool		mppIsWriter;	/* The writer gang member, holder of locks */
-	bool		postmasterResetRequired; /* Whether postmaster reset is required when this child exits */
 
 	bool		inVacuum;		/* true if current xact is a LAZY VACUUM */
 	bool		isAutovacuum;	/* true if it's autovacuum */
@@ -167,22 +166,16 @@ typedef struct PROC_HDR
 	PGPROC *procs;
 	/* Head of list of free PGPROC structures */
 	SHMEM_OFFSET freeProcs;
+	/* Head of list of autovacuum's free PGPROC structures */
+	SHMEM_OFFSET autovacFreeProcs;
 	/* Current shared estimate of appropriate spins_per_delay value */
 	int			spins_per_delay;
 
     /* Counter for assigning serial numbers to processes */
     int         mppLocalProcessCounter;
 
-	/*
-	 * Number of free PGPROC entries.
-	 *
-	 * Note that this value is not updated synchronously with freeProcs.
-	 * Thus, in some small time window, this value may not reflect
-	 * the real number of free entries in freeProcs. However, since
-	 * this is only used to check whether there are enough free entries
-	 * to be reserved for superusers, it is okay.
-	 */
-	int numFreeProcs;
+	/* Number of free PGPROC entries in freeProcs list. */
+	int			numFreeProcs;
 
 } PROC_HDR;
 
@@ -257,6 +250,5 @@ extern void ResLockWaitCancel(void);
 extern bool ProcGetMppLocalProcessCounter(int *mppLocalProcessCounter);
 extern bool ProcCanSetMppSessionId(void);
 extern void ProcNewMppSessionId(int *newSessionId);
-extern bool freeAuxiliaryProcEntryAndReturnReset(int pid, bool *inArray);
-extern bool freeProcEntryAndReturnReset(int pid);
+
 #endif   /* PROC_H */

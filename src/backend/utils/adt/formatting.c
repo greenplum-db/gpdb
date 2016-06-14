@@ -1,7 +1,7 @@
 /* -----------------------------------------------------------------------
  * formatting.c
  *
- * $PostgreSQL: pgsql/src/backend/utils/adt/formatting.c,v 1.116.2.4 2009/03/12 00:53:41 tgl Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/adt/formatting.c,v 1.128 2007/02/17 03:11:32 momjian Exp $
  *
  *
  *	 Portions Copyright (c) 1999-2008, PostgreSQL Global Development Group
@@ -122,6 +122,7 @@
  */
 #define MAXFLOATWIDTH	60
 #define MAXDOUBLEWIDTH	500
+
 
 
 /* ----------
@@ -425,6 +426,7 @@ typedef struct
 				ddd,
 				mm,
 				ms,
+				iyear,
 				year,
 				bc,
 				ww,
@@ -3865,7 +3867,6 @@ NUM_prepare_locale(NUMProc *Np)
 		 */
 		if (lconv->decimal_point && *lconv->decimal_point)
 			Np->decimal = lconv->decimal_point;
-
 		else
 			Np->decimal = ".";
 
@@ -3903,7 +3904,6 @@ NUM_prepare_locale(NUMProc *Np)
 		Np->L_negative_sign = "-";
 		Np->L_positive_sign = "+";
 		Np->decimal = ".";
-
 		Np->L_thousands_sep = ",";
 		Np->L_currency_symbol = " ";
 	}

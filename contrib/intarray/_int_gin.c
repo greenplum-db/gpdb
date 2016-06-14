@@ -157,7 +157,7 @@ ginint4_consistent(PG_FUNCTION_ARGS)
 
 				/* result is not lossy */
 				*recheck = false;
-				res = ginconsistent(query, check);
+				res = gin_bool_consistent(query, check);
 			}
 			break;
 		default:

@@ -1,11 +1,21 @@
 #!/usr/bin/env python
-import re, os, signal, time, filecmp, stat, fileinput
+import filecmp
+import fileinput
+import os
+import re
+import signal
+import stat
+import time
+import glob
+import shutil
+
 import yaml
-from gppylib.commands.gp import GpStart, chk_local_db_running
+
 from gppylib.commands.base import Command, ExecutionError, REMOTE
+from gppylib.commands.gp import chk_local_db_running
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray, MODE_SYNCHRONIZED
-from pygresql import pg
+from gppylib.operations.backup_utils import pg, escapeDoubleQuoteInSQLString
 
 PARTITION_START_DATE = '2010-01-01'
 PARTITION_END_DATE = '2013-01-01'
@@ -137,7 +147,14 @@ def check_return_code(context, ret_code):
         emsg = ""
         if context.error_message:
             emsg += context.error_message
-        raise Exception("expected return code '%s' does not equal acutal return code '%s' %s" % (ret_code, context.ret_code, emsg))
+        raise Exception("expected return code '%s' does not equal actual return code '%s' %s" % (ret_code, context.ret_code, emsg))
+
+def check_not_return_code(context, ret_code):
+    if context.ret_code == int(ret_code):
+        emsg = ""
+        if context.error_message:
+            emsg += context.error_message
+        raise Exception("return code unexpectedly equals '%s' %s" % (ret_code, emsg))
 
 def check_database_is_running(context):
     if not 'PGPORT' in os.environ:
@@ -242,15 +259,21 @@ def get_table_data_to_file(filename, tablename, dbname):
                                 from pg_class as c
                                     inner join pg_namespace as n
                                     on c.relnamespace = n.oid
-                                where (n.nspname || '.' || c.relname = '%s')
-                                    or c.relname = '%s'
+                                where (n.nspname || '.' || c.relname = E'%s')
+                                    or c.relname = E'%s'
                         ) as q;
-                """ % (tablename, tablename)
+                """ % (pg.escape_string(tablename), pg.escape_string(tablename))
     query = order_sql
     conn = dbconn.connect(dbconn.DbURL(dbname=dbname))
     try:
         res = dbconn.execSQLForSingleton(conn, query)
-        data_sql = "COPY (select gp_segment_id, * from %s order by %s) TO '%s'" %(tablename.strip(), res, filename)
+        # check if tablename is fully qualified <schema_name>.<table_name>
+        if '.' in tablename:
+            schema_name, table_name = tablename.split('.')
+            data_sql = '''COPY (select gp_segment_id, * from "%s"."%s" order by %s) TO '%s' ''' % (escapeDoubleQuoteInSQLString(schema_name, False),
+                                                                                                   escapeDoubleQuoteInSQLString(table_name, False), res, filename)
+        else:
+            data_sql = '''COPY (select gp_segment_id, * from "%s" order by %s) TO '%s' ''' %(escapeDoubleQuoteInSQLString(tablename, False), res, filename)
         query = data_sql
         dbconn.execSQL(conn, query)
         conn.commit()
@@ -274,6 +297,16 @@ def validate_restore_data(context, tablename, dbname, backedup_table=None):
     restore_file = os.path.join(current_dir, './gppylib/test/data', tablename.strip() + "_restore")
     diff_backup_restore_data(context, backup_file, restore_file)
 
+def validate_restore_data_in_file(context, tablename, dbname, file_name, backedup_table=None):
+    filename = file_name + "_restore"
+    get_table_data_to_file(filename, tablename, dbname)
+    current_dir = os.getcwd()
+    if backedup_table != None:
+        backup_file = os.path.join(current_dir, './gppylib/test/data', backedup_table.strip() + "_backup")
+    else:
+        backup_file = os.path.join(current_dir, './gppylib/test/data', file_name + "_backup")
+    restore_file = os.path.join(current_dir, './gppylib/test/data', file_name + "_restore")
+    diff_backup_restore_data(context, backup_file, restore_file)
 
 def validate_db_data(context, dbname, expected_table_count):
     tbls = get_table_names(dbname)
@@ -297,6 +330,10 @@ def backup_data(context, tablename, dbname):
     filename = tablename + "_backup"
     get_table_data_to_file(filename, tablename, dbname)
 
+def backup_data_to_file(context, tablename, dbname, filename):
+    filename = filename + "_backup"
+    get_table_data_to_file(filename, tablename, dbname)
+
 def check_partition_table_exists(context, dbname, schemaname, table_name, table_type=None, part_level=1, part_number=1):
     partitions = get_partition_names(schemaname, table_name, dbname, part_level, part_number)
     if not partitions:
@@ -304,12 +341,19 @@ def check_partition_table_exists(context, dbname, schemaname, table_name, table_
     return check_table_exists(context, dbname, partitions[0][0].strip(), table_type) 
 
 def check_table_exists(context, dbname, table_name, table_type=None, host=None, port=0, user=None):
-
-    SQL = """
-            select oid::regclass, relkind, relstorage, reloptions \
-            from pg_class \
-            where oid = '%s'::regclass; \
-          """ % table_name
+    if '.' in table_name:
+        schemaname, tablename = table_name.split('.')
+        SQL = """
+              select c.oid, c.relkind, c.relstorage, c.reloptions
+              from pg_class c, pg_namespace n
+              where c.relname = '%s' and n.nspname = '%s' and c.relnamespace = n.oid;
+              """ % (pg.escape_string(tablename), pg.escape_string(schemaname))
+    else:
+        SQL = """
+              select oid, relkind, relstorage, reloptions \
+              from pg_class \
+              where relname = E'%s'; \
+              """ % pg.escape_string(table_name)
 
     table_row = None 
     with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname)) as conn:
@@ -359,8 +403,10 @@ def drop_external_table_if_exists(context, table_name, dbname):
         drop_external_table(context, table_name=table_name, dbname=dbname)
 
 def drop_table_if_exists(context, table_name, dbname, host=None, port=0, user=None):
-    if check_table_exists(context, table_name=table_name, dbname=dbname, host=host, port=port, user=user):
-        drop_table(context, table_name=table_name, dbname=dbname, host=host, port=port, user=user)
+    SQL = 'drop table if exists %s' % table_name
+    with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname)) as conn:
+        dbconn.execSQL(conn, SQL)
+        conn.commit()
 
 def drop_external_table(context, table_name, dbname, host=None, port=0, user=None):
     SQL = 'drop external table %s' % table_name
@@ -468,7 +514,7 @@ def create_mixed_storage_partition(context, tablename, dbname):
     create_table_str = "Create table %s (%s) Distributed randomly \
                         Partition by list(Column2)  \
                         Subpartition by range(Column3) Subpartition Template ( \
-                        subpartition s_1  start(date '2010-01-01') end(date '2011-01-01') with (appendonly=true, orientation=column, compresstype=quicklz, compresslevel=1), \
+                        subpartition s_1  start(date '2010-01-01') end(date '2011-01-01') with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1), \
                         subpartition s_2  start(date '2011-01-01') end(date '2012-01-01') with (appendonly=true, orientation=row, compresstype=zlib, compresslevel=1), \
                         subpartition s_3  start(date '2012-01-01') end(date '2013-01-01') with (appendonly=true, orientation=column), \
                         subpartition s_4  start(date '2013-01-01') end(date '2014-01-01') with (appendonly=true, orientation=row), \
@@ -487,7 +533,7 @@ def create_external_partition(context, tablename, dbname, port, filename):
     table_definition = 'Column1 int, Column2 varchar(20), Column3 date'
     create_table_str = "Create table %s (%s) Distributed randomly \
                         Partition by range(Column3) ( \
-                        partition p_1  start(date '2010-01-01') end(date '2011-01-01') with (appendonly=true, orientation=column, compresstype=quicklz, compresslevel=1), \
+                        partition p_1  start(date '2010-01-01') end(date '2011-01-01') with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1), \
                         partition p_2  start(date '2011-01-01') end(date '2012-01-01') with (appendonly=true, orientation=row, compresstype=zlib, compresslevel=1), \
                         partition s_3  start(date '2012-01-01') end(date '2013-01-01') with (appendonly=true, orientation=column), \
                         partition s_4  start(date '2013-01-01') end(date '2014-01-01') with (appendonly=true, orientation=row), \
@@ -801,26 +847,27 @@ def get_hosts(dbname='template1'):
     get_hosts_sql = "select distinct hostname from gp_segment_configuration where role='p';"
     return getRows(dbname, get_hosts_sql)
 
-def get_backup_dir_for_host(hostname, dbname='template1'):
-    get_backup_dir_sql = "select f.fselocation from pg_filespace_entry f inner join gp_segment_configuration g on \
-                            f.fsedbid=g.dbid and g.role='p' and g.hostname = '%s'" % (hostname)
-    return getRows(dbname, get_backup_dir_sql)
-   
-def cleanup_dir(context, host, location):
-    cleanup_cmd = "gpssh -h %s -e 'rm -rf %s/db_dumps %s/gpcrondump.pid'" % (host, location, location)
-    run_command(context, cleanup_cmd)
-    if context.exception:
-        raise context.exception
-    
+def get_backup_dirs_for_hosts(dbname='template1'):
+    get_backup_dir_sql = "select hostname,f.fselocation from pg_filespace_entry f inner join gp_segment_configuration g on f.fsedbid=g.dbid and g.role='p'"
+    results = getRows(dbname, get_backup_dir_sql)
+    dir_map = {}
+    for res in results:
+        host,dir = res
+        dir_map.setdefault(host,[]).append(dir)
+    return dir_map
+
 def cleanup_backup_files(context, dbname, location=None):
-    hosts = get_hosts(dbname)
-    for host in hosts:
+    dir_map = get_backup_dirs_for_hosts(dbname)
+    for host in dir_map:
         if location:
-            cleanup_dir(context, host[0], location)
+            cmd_str = "ssh %s 'DIR=%s;if [ -d \"$DIR/db_dumps/\" ]; then rm -rf $DIR/db_dumps $DIR/gpcrondump.pid; fi'"
+            cmd = cmd_str % (host, location)
         else:
-            dirs = get_backup_dir_for_host(host[0], dbname)
-            for dir in dirs:
-                cleanup_dir(context, host[0], dir[0])
+            cmd_str = "ssh %s 'for DIR in %s; do if [ -d \"$DIR/db_dumps/\" ]; then rm -rf $DIR/db_dumps $DIR/gpcrondump.pid; fi; done'"
+            cmd = cmd_str % (host, " ".join(dir_map[host]))
+        run_command(context, cmd)
+        if context.exception:
+            raise context.exception
 
 def cleanup_report_files(context, master_data_dir):
     if not master_data_dir:
@@ -932,7 +979,14 @@ def create_large_num_partitions(table_type, table_name, db_name, num_partitions=
                                       """ % (table_name, condition, num_partitions)
     execute_sql(db_name, create_large_partitions_sql)
 
-    verify_table_exists_sql = """select count(*) from pg_class where relname = '%s'""" % table_name
+    if '.' in table_name:
+        schema, table = table_name.split('.')
+        verify_table_exists_sql = """select count(*) from pg_class c, pg_namespace n
+                                     where c.relname = E'%s' and n.nspname = E'%s' and c.relnamespace = n.oid;
+                                  """ % (table, schema)
+    else:
+        verify_table_exists_sql = """select count(*) from pg_class where relname = E'%s'""" % table_name
+
     num_rows = getRows(db_name, verify_table_exists_sql)[0][0] 
     if num_rows != 1:
         raise Exception('Creation of table "%s:%s" failed. Num rows in pg_class = %s' % (db_name, table_name, num_rows))
@@ -1334,16 +1388,15 @@ def wait_till_resync_transition(host='localhost', port=os.environ.get('PGPORT'),
         return True 
 
 def check_dump_dir_exists(context, dbname):
-    hosts = get_hosts(dbname)
-    for host in hosts:
-	dirs = get_backup_dir_for_host(host[0], dbname)
-	for dir in dirs:
-	    cmd = "gpssh -h %s 'if [ -d %s/db_dumps/ ]; then echo 'EXISTS'; else echo 'NOT FOUND'; fi'" % (host[0], dir[0])
-	    run_command(context, cmd)
-	    if context.exception:
-		raise context.exception
-	    if 'EXISTS' in context.stdout_message:
-		raise Exception("db_dumps directory is present in master/segments.")
+    dir_map = get_backup_dirs_for_hosts(dbname)
+    cmd_str = "ssh %s 'for DIR in %s; do if [ -d \"$DIR/db_dumps/\" ]; then echo \"$DIR EXISTS\"; else echo \"$DIR NOT FOUND\"; fi; done'"
+    for host in dir_map:
+        cmd = cmd_str % (host, " ".join(dir_map[host]))
+        run_command(context, cmd)
+        if context.exception:
+            raise context.exception
+        if 'EXISTS' in context.stdout_message:
+            raise Exception("db_dumps directory is present in master/segments.")
 
 def verify_restored_table_is_analyzed(context, table_name, dbname):
     ROW_COUNT_SQL = """SELECT count(*) FROM %s""" % table_name
@@ -1401,3 +1454,25 @@ def check_count_for_specific_query(dbname, query, nrows):
         result = dbconn.execSQLForSingleton(conn, NUM_ROWS_QUERY)
     if result != nrows:
         raise Exception('%d rows in table %s.%s, expected row count = %d' % (result, dbname, tablename, nrows))
+
+def get_primary_segment_host_port():
+    """
+    return host, port of primary segment (dbid 2)
+    """
+    FIRST_PRIMARY_DBID = 2
+    get_psegment_sql = 'select hostname, port from gp_segment_configuration where dbid=%i;' % FIRST_PRIMARY_DBID
+    with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
+        cur = dbconn.execSQL(conn, get_psegment_sql)
+        rows = cur.fetchall()
+        primary_seg_host = rows[0][0]
+        primary_seg_port = rows[0][1]
+    return primary_seg_host, primary_seg_port
+
+def remove_local_path(dirname):
+    list = glob.glob(os.path.join(os.path.curdir, dirname))
+    for dir in list:
+        shutil.rmtree(dir, ignore_errors=True)
+
+def validate_local_path(path):
+    list = glob.glob(os.path.join(os.path.curdir, path))
+    return len(list)

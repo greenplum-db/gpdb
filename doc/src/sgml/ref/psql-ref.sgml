@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/psql-ref.sgml,v 1.180 2007/01/20 16:57:31 neilc Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/psql-ref.sgml,v 1.183 2007/02/01 19:10:24 momjian Exp $
 PostgreSQL documentation
 -->
 
@@ -582,7 +582,7 @@ PostgreSQL documentation
     An alternative way to specify connection parameters is in a
 	<parameter>conninfo</parameter>	string, which is used instead of a 
 	database name. This mechanism give you very wide control over the 
-	connection. For example,
+	connection. For example:
 <programlisting>
 $ <userinput>psql "service=myservice sslmode=require"</userinput>
 </programlisting>

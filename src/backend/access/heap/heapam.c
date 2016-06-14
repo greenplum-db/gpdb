@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/heap/heapam.c,v 1.224 2007/01/09 22:00:59 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/heap/heapam.c,v 1.230 2007/03/29 00:15:37 tgl Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -28,6 +28,7 @@
  *		heap_update		- replace a tuple in a relation with another tuple
  *		heap_markpos	- mark scan position
  *		heap_restrpos	- restore position to marked location
+ *		heap_sync		- sync heap, for when no WAL has been written
  *
  * NOTES
  *	  This file contains the heap_ routines which implement
@@ -55,6 +56,7 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "storage/procarray.h"
+#include "storage/smgr.h"
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/relcache.h"
@@ -257,16 +259,6 @@ heapgetpage(HeapScanDesc scan, BlockNumber page, bool backward)
 				ItemPointerSet(&(loctup.t_self), page, lineoff);
 
 				valid = HeapTupleSatisfiesVisibility(scan->rs_rd, &loctup, snapshot, buffer);
-#ifdef WATCH_VISIBILITY_IN_ACTION
-				elog(LOG, "VISIBILITY(%s) %s %s",
-				     (valid ? "true" : "false"),
-	     		     RelationGetRelationName(scan->rs_rd),
-				     WatchVisibilityInActionString(
-				     			page,
-				     			lineoff,
-				     			&loctup,
-				     			snapshot));
-#endif
 				if (valid)
 				{
 					t_xmax = HeapTupleHeaderGetXmax(loctup.t_data);
@@ -478,46 +470,9 @@ heapgettup(HeapScanDesc scan,
 													 tuple,
 													 snapshot,
 													 scan->rs_cbuf);
-#ifdef WATCH_VISIBILITY_IN_ACTION
-//				if (gp_watch_visibility_in_action)
-				{
-					bool keyMatches = true;
-
-					/*
-					 * Always test the key reguardless if it is visible.
-					 */
-					if (key != NULL)
-						HeapKeyTest(tuple, RelationGetDescr(scan->rs_rd),
-									nkeys, key, keyMatches);
-
-					/*
-					 * Log when the key matches.
-					 */
-					if (keyMatches)
-					{
-						elog(LOG, "VISIBILITY(%s) %s %s",
-						     (valid ? "true" : "false"),
-			     		     RelationGetRelationName(scan->rs_rd),
-						     WatchVisibilityInActionString(page,lineoff,tuple,snapshot));
-					}
-
-					if (valid && !keyMatches)
-						valid = false;
-				}
-//				else
-//				{
-//					/*
-//					 * Normal path copied from below...
-//					 */
-//					if (valid && key != NULL)
-//						HeapKeyTest(tuple, RelationGetDescr(scan->rs_rd),
-//									nkeys, key, valid);
-//				}
-#else
 				if (valid && key != NULL)
 					HeapKeyTest(tuple, RelationGetDescr(scan->rs_rd),
 								nkeys, key, valid);
-#endif
 
 				if (valid)
 				{
@@ -880,7 +835,12 @@ relation_open(Oid relationId, LOCKMODE lockmode)
 	r = RelationIdGetRelation(relationId);
 
 	if (!RelationIsValid(r))
-		elog(ERROR, "could not open relation with OID %u", relationId);
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_TABLE),
+				 errmsg("relation not found (OID %u)", relationId),
+				 errdetail("This can be validly caused by a concurrent delete operation on this object.")));
+	}
 
 	pgstat_initstats(r);
 	
@@ -957,7 +917,12 @@ try_relation_open(Oid relationId, LOCKMODE lockmode, bool noWait)
 	r = RelationIdGetRelation(relationId);
 
 	if (!RelationIsValid(r))
-		elog(ERROR, "could not open relation with OID %u", relationId);
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_TABLE),
+				 errmsg("relation not found (OID %u)", relationId),
+				 errdetail("This can be validly caused by a concurrent delete operation on this object.")));
+	}
 
 	pgstat_initstats(r);
 
@@ -1050,7 +1015,12 @@ CdbOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
 	rel = CdbTryOpenRelation(relid, reqmode, noWait, lockUpgraded);
 
 	if (!RelationIsValid(rel))
-		elog(ERROR, "could not open relation with OID %u", relid);
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_TABLE),
+				 errmsg("relation not found (OID %u)", relid),
+				 errdetail("This can be validly caused by a concurrent delete operation on this object.")));
+	}
 
 	return rel;
 
@@ -1136,7 +1106,12 @@ relation_open_nowait(Oid relationId, LOCKMODE lockmode)
 	r = RelationIdGetRelation(relationId);
 
 	if (!RelationIsValid(r))
-		elog(ERROR, "could not open relation with OID %u", relationId);
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_TABLE),
+				 errmsg("relation not found (OID %u)", relationId),
+				 errdetail("This can be validly caused by a concurrent delete operation on this object.")));
+	}
 
 	return r;
 }
@@ -1825,17 +1800,6 @@ heap_release_fetch(Relation relation,
 	 */
 	valid = HeapTupleSatisfiesVisibility(relation, tuple, snapshot, buffer);
 
-#ifdef WATCH_VISIBILITY_IN_ACTION
-	elog(LOG, "VISIBILITY(%s) %s %s",
-	     (valid ? "true" : "false"),
-	     RelationGetRelationName(relation),
-	     WatchVisibilityInActionString(
-	     			ItemPointerGetBlockNumber(tid),
-	     			offnum,
-	     			tuple,
-	     			snapshot));
-#endif
-
 	LockBuffer(buffer, BUFFER_LOCK_UNLOCK);
 	
 	MIRROREDLOCK_BUFMGR_UNLOCK;
@@ -1987,16 +1951,6 @@ heap_get_latest_tid(Relation relation,
 		 * result candidate.
 		 */
 		valid = HeapTupleSatisfiesVisibility(relation, &tp, snapshot, buffer);
-#ifdef WATCH_VISIBILITY_IN_ACTION
-		elog(LOG, "VISIBILITY(%s) %s %s",
-		     (valid ? "true" : "false"),
-		     RelationGetRelationName(relation),
-		     WatchVisibilityInActionString(
-		     			ItemPointerGetBlockNumber(&ctid),
-		     			offnum,
-		     			&tp,
-		     			snapshot));
-#endif
 		if (valid)
 			*tid = ctid;
 
@@ -2100,10 +2054,13 @@ heap_log_tuple_insert(Relation rel, Buffer buffer, HeapTuple tup, bool isFrozen)
  * that all new tuples go into new pages not containing any tuples from other
  * transactions, that the relation gets fsync'd before commit, and that the
  * transaction emits at least one WAL record to ensure RecordTransactionCommit
- * will decide to WAL-log the commit.
+ * will decide to WAL-log the commit.  (See also heap_sync() comments)
  *
  * use_fsm is passed directly to RelationGetBufferForTuple, which see for
  * more info.
+ *
+ * Note that use_wal and use_fsm will be applied when inserting into the
+ * heap's TOAST table, too, if the tuple requires any out-of-line data.
  *
  * The return value is the OID assigned to the tuple (either here or by the
  * caller), or InvalidOid if no OID.  The header fields of *tup are updated
@@ -2172,9 +2129,10 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 	 * Note: below this point, heaptup is the data we actually intend to store
 	 * into the relation; tup is the caller's original untoasted data.
 	 */
-	if (HeapTupleHasExternal(tup) ||
-		(MAXALIGN(tup->t_len) > TOAST_TUPLE_THRESHOLD))
-		heaptup = toast_insert_or_update(relation, tup, NULL, NULL, TOAST_TUPLE_TARGET, isFrozen);
+	if (HeapTupleHasExternal(tup) || tup->t_len > TOAST_TUPLE_THRESHOLD)
+		heaptup = toast_insert_or_update(relation, tup, NULL, NULL,
+										 TOAST_TUPLE_TARGET, isFrozen,
+										 use_wal, use_fsm);
 	else
 		heaptup = tup;
 	
@@ -2235,8 +2193,10 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
  *	simple_heap_insert - insert a tuple
  *
  * Currently, this routine differs from heap_insert only in supplying
- * a default command ID.  But it should be used rather than using
- * heap_insert directly in most places where we are modifying system catalogs.
+ * a default command ID and not allowing access to the speedup options.
+ *
+ * This should be used rather than using heap_insert directly in most places
+ * where we are modifying system catalogs.
  */
 Oid
 simple_heap_insert(Relation relation, HeapTuple tup)
@@ -2888,7 +2848,6 @@ l2:
 	HeapTupleHeaderSetXmin(newtup->t_data, xid);
 	HeapTupleHeaderSetCmin(newtup->t_data, cid);
 	HeapTupleHeaderSetXmax(newtup->t_data, 0);	/* for cleanliness */
-	//newtup->t_tableOid = RelationGetRelid(relation);
 
 	/*
 	 * Replace cid with a combo cid if necessary.  Note that we already put
@@ -2907,13 +2866,13 @@ l2:
 	 * We need to invoke the toaster if there are already any out-of-line
 	 * toasted values present, or if the new tuple is over-threshold.
 	 */
-	newtupsize = MAXALIGN(newtup->t_len);
-
 	need_toast = (HeapTupleHasExternal(&oldtup) ||
 				  HeapTupleHasExternal(newtup) ||
-				  newtupsize > TOAST_TUPLE_THRESHOLD);
+				  newtup->t_len > TOAST_TUPLE_THRESHOLD);
 
 	pagefree = PageGetFreeSpace((Page) dp);
+
+	newtupsize = MAXALIGN(newtup->t_len);
 
 	if (need_toast || newtupsize > pagefree)
 	{
@@ -2941,7 +2900,8 @@ l2:
 		 */
 		if (need_toast)
 		{
-			heaptup = toast_insert_or_update(relation, newtup, &oldtup, NULL, TOAST_TUPLE_TARGET, false);
+			heaptup = toast_insert_or_update(relation, newtup, &oldtup, NULL,
+											 TOAST_TUPLE_TARGET, false, true, true);
 			newtupsize = MAXALIGN(heaptup->t_len);
 		}
 		else
@@ -5449,4 +5409,42 @@ heap2_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 	}
 	else
 		appendStringInfo(buf, "UNKNOWN");
+}
+
+/*
+ *	heap_sync		- sync a heap, for use when no WAL has been written
+ *
+ * This forces the heap contents (including TOAST heap if any) down to disk.
+ * If we skipped using WAL, and it's not a temp relation, we must force the
+ * relation down to disk before it's safe to commit the transaction.  This
+ * requires writing out any dirty buffers and then doing a forced fsync.
+ *
+ * Indexes are not touched.  (Currently, index operations associated with
+ * the commands that use this are WAL-logged and so do not need fsync.
+ * That behavior might change someday, but in any case it's likely that
+ * any fsync decisions required would be per-index and hence not appropriate
+ * to be done here.)
+ */
+void
+heap_sync(Relation rel)
+{
+	/* temp tables never need fsync */
+	if (rel->rd_istemp)
+		return;
+
+	/* main heap */
+	FlushRelationBuffers(rel);
+	/* FlushRelationBuffers will have opened rd_smgr */
+	smgrimmedsync(rel->rd_smgr);
+
+	/* toast heap, if any */
+	if (OidIsValid(rel->rd_rel->reltoastrelid))
+	{
+		Relation		toastrel;
+
+		toastrel = heap_open(rel->rd_rel->reltoastrelid, AccessShareLock);
+		FlushRelationBuffers(toastrel);
+		smgrimmedsync(toastrel->rd_smgr);
+		heap_close(toastrel, AccessShareLock);
+	}
 }

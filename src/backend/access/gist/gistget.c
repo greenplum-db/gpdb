@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/gist/gistget.c,v 1.63 2007/01/05 22:19:22 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/gist/gistget.c,v 1.64 2007/01/20 18:43:35 neilc Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -93,8 +93,8 @@ gistgettuple(PG_FUNCTION_ARGS)
 	 * If we have produced an index tuple in the past and the executor has
 	 * informed us we need to mark it as "killed", do so now.
 	 */
-	if (scan->kill_prior_tuple && ItemPointerIsValid(&(scan->currentItemData)))
-		killtuple(scan->indexRelation, so, &(scan->currentItemData));
+	if (scan->kill_prior_tuple && ItemPointerIsValid(&(so->curpos)))
+		killtuple(scan->indexRelation, so, &(so->curpos));
 
 	/*
 	 * Get the next tuple that matches the search key. If asked to skip killed
@@ -141,7 +141,8 @@ gistgetmulti(PG_FUNCTION_ARGS)
  * tuples. Returns true iff a matching tuple was found.
  */
 static int
-gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids, int maxtids, bool ignore_killed_tuples)
+gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids,
+		 int maxtids, bool ignore_killed_tuples)
 {
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
@@ -158,7 +159,7 @@ gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids, int maxtids, b
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 
-	if (ItemPointerIsValid(&scan->currentItemData) == false)
+	if (ItemPointerIsValid(&so->curpos) == false)
 	{
 		/* Being asked to fetch the first entry, so start at the root */
 		Assert(so->curbuf == InvalidBuffer);
@@ -189,7 +190,7 @@ gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids, int maxtids, b
 		while( ntids < maxtids && so->curPageData < so->nPageData )
 		{
 			tids[ ntids ] = scan->xs_ctup.t_self = so->pageData[ so->curPageData ].heapPtr;
-			ItemPointerSet(&scan->currentItemData,
+			ItemPointerSet(&so->curpos,
 							   BufferGetBlockNumber(so->curbuf), 
 							   so->pageData[ so->curPageData ].pageOffset);
 
@@ -302,7 +303,7 @@ gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids, int maxtids, b
 					tids[ ntids ] = scan->xs_ctup.t_self = 
 						so->pageData[ so->curPageData ].heapPtr;
 				
-					ItemPointerSet(&scan->currentItemData,
+					ItemPointerSet(&so->curpos,
 								   BufferGetBlockNumber(so->curbuf), 
 								   so->pageData[ so->curPageData ].pageOffset);
 

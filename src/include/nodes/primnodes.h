@@ -11,7 +11,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.123 2007/01/14 13:11:54 petere Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.125 2007/02/19 07:03:31 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -85,8 +85,10 @@ typedef struct RangeVar
 
 typedef struct TableOidInfo
 {
+	NodeTag		type;
 	Oid         relOid;			/* If the heap is (re-)created, create  with this relOid */
 	Oid         comptypeOid;
+	Oid         comptypeArrayOid;
 	Oid		    toastOid;		/* if toast table needed, use this for the relOid of the toast */
 	Oid		    toastIndexOid;	/* if toast table needed, use this for the relOid of the index */
 	Oid			toastComptypeOid;
@@ -113,9 +115,6 @@ typedef struct IntoClause
 	List	   *options;		/* options from WITH clause */
 	OnCommitAction onCommit;	/* what do we do at COMMIT? */
 	char	   *tableSpaceName; /* table space to use, or NULL */
-	
-	/* MPP */
-	TableOidInfo oidInfo;
 } IntoClause;
 
 
@@ -745,6 +744,49 @@ typedef struct RelabelType
 } RelabelType;
 
 /* ----------------
+ * CoerceViaIO
+ *
+ * CoerceViaIO represents a type coercion between two types whose textual
+ * representations are compatible, implemented by invoking the source type's
+ * typoutput function then the destination type's typinput function.
+ * ----------------
+ */
+
+typedef struct CoerceViaIO
+{
+	Expr		xpr;
+	Expr	   *arg;			/* input expression */
+	Oid			resulttype;		/* output type of coercion */
+	/* output typmod is not stored, but is presumed -1 */
+	CoercionForm coerceformat;	/* how to display this node */
+	int			location;		/* token location, or -1 if unknown */
+} CoerceViaIO;
+
+/* ----------------
+ * ArrayCoerceExpr
+ *
+ * ArrayCoerceExpr represents a type coercion from one array type to another,
+ * which is implemented by applying the indicated element-type coercion
+ * function to each element of the source array.  If elemfuncid is InvalidOid
+ * then the element types are binary-compatible, but the coercion still
+ * requires some effort (we have to fix the element type ID stored in the
+ * array header).
+ * ----------------
+ */
+
+typedef struct ArrayCoerceExpr
+{
+	Expr		xpr;
+	Expr	   *arg;			/* input expression (yields an array) */
+	Oid			elemfuncid;		/* OID of element coercion function, or 0 */
+	Oid			resulttype;		/* output type of coercion (an array type) */
+	int32		resulttypmod;	/* output typmod (also element typmod) */
+	bool		isExplicit;		/* conversion semantics flag to pass to func */
+	CoercionForm coerceformat;	/* how to display this node */
+	int			location;		/* token location, or -1 if unknown */
+} ArrayCoerceExpr;
+
+/* ----------------
  * ConvertRowtypeExpr
  *
  * ConvertRowtypeExpr represents a type coercion from one composite type
@@ -1335,6 +1377,8 @@ typedef struct Flow
 	AttrNumber	*sortColIdx;		/* their indexes in target list */
 	Oid			*sortOperators;		/* OID of operators to sort them by */
 	bool		*nullsFirst;
+
+	int			numOrderbyCols;		/* number of explicit order-by columns */
 	
 	/* If req_move is MOVEMENT_REPARTITION, these express the desired 
      * partitioning for a hash motion.  Else if flotype is FLOW_PARTITIONED,

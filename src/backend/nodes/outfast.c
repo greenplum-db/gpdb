@@ -103,6 +103,10 @@
 		appendBinaryStringInfo(str, (const char *)&slen, sizeof(int)); \
 		if (slen>0) appendBinaryStringInfo(str, node->fldname, strlen(node->fldname));}
 
+/* Write a parse location field (actually same as INT case) */
+#define WRITE_LOCATION_FIELD(fldname) \
+	{ appendBinaryStringInfo(str, (const char *)&node->fldname, sizeof(int)); }
+
 /* Write a Node field */
 #define WRITE_NODE_FIELD(fldname) \
 	(_outNode(str, node->fldname))
@@ -336,7 +340,6 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_NODE_FIELD(utilityStmt);
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_NODE_FIELD(subplans);
-	WRITE_NODE_FIELD(rewindPlanIDs);
 	WRITE_NODE_FIELD(returningLists);
 
 	WRITE_NODE_FIELD(result_partitions);
@@ -352,10 +355,8 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_INT_FIELD(nInitPlans);
 
 	/* Don't serialize policy */
-	WRITE_NODE_FIELD(sliceTable);
 
 	WRITE_UINT64_FIELD(query_mem);
-	WRITE_NODE_FIELD(transientTypeRecords);
 }
 
 static void
@@ -655,6 +656,8 @@ _outFlow(StringInfo str, Flow *node)
 	WRITE_OID_ARRAY(sortOperators, node->numSortCols);
 	WRITE_BOOL_ARRAY(nullsFirst, node->numSortCols);
 
+	WRITE_INT_FIELD(numOrderbyCols);
+
 	WRITE_NODE_FIELD(hashExpr);
 
 	WRITE_NODE_FIELD(flow_before_req_move);
@@ -727,6 +730,7 @@ _outCreateStmt(StringInfo str, CreateStmt *node)
 	WRITE_NODE_FIELD(distributedBy);
 	WRITE_OID_FIELD(oidInfo.relOid);
 	WRITE_OID_FIELD(oidInfo.comptypeOid);
+	WRITE_OID_FIELD(oidInfo.comptypeArrayOid);
 	WRITE_OID_FIELD(oidInfo.toastOid);
 	WRITE_OID_FIELD(oidInfo.toastIndexOid);
 	WRITE_OID_FIELD(oidInfo.toastComptypeOid);
@@ -749,7 +753,6 @@ _outCreateStmt(StringInfo str, CreateStmt *node)
 	WRITE_BOOL_FIELD(is_split_part);
 	WRITE_OID_FIELD(ownerid);
 	WRITE_BOOL_FIELD(buildAoBlkdir);
-	WRITE_BOOL_FIELD(is_error_table);
 	WRITE_NODE_FIELD(attr_encodings);
 }
 
@@ -857,7 +860,6 @@ _outColumnDef(StringInfo str, ColumnDef *node)
 	WRITE_INT_FIELD(attnum);
 	WRITE_OID_FIELD(default_oid);
 	WRITE_NODE_FIELD(raw_default);
-	WRITE_BOOL_FIELD(default_is_null);
 	WRITE_STRING_FIELD(cooked_default);
 	WRITE_NODE_FIELD(constraints);
 	WRITE_NODE_FIELD(encoding);
@@ -985,6 +987,10 @@ _outRangeTblEntry(StringInfo str, RangeTblEntry *node)
 	WRITE_OID_FIELD(checkAsUser);
 
 	WRITE_BOOL_FIELD(forceDistRandom);
+	/*
+	 * pseudocols is intentionally not serialized. It's only used in the planning
+	 * stage, so no need to transfer it to the QEs.
+	 */
 }
 
 static void
@@ -1197,6 +1203,9 @@ _outNode(StringInfo str, void *obj)
 			case T_PlannedStmt:
 				_outPlannedStmt(str,obj);
 				break;
+			case T_QueryDispatchDesc:
+				_outQueryDispatchDesc(str,obj);
+				break;
 			case T_Plan:
 				_outPlan(str, obj);
 				break;
@@ -1341,6 +1350,9 @@ _outNode(StringInfo str, void *obj)
 			case T_IntoClause:
 				_outIntoClause(str, obj);
 				break;
+			case T_TableOidInfo:
+				_outTableOidInfo(str, obj);
+				break;
 			case T_Var:
 				_outVar(str, obj);
 				break;
@@ -1391,6 +1403,12 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_RelabelType:
 				_outRelabelType(str, obj);
+				break;
+			case T_CoerceViaIO:
+				_outCoerceViaIO(str, obj);
+				break;
+			case T_ArrayCoerceExpr:
+				_outArrayCoerceExpr(str, obj);
 				break;
 			case T_ConvertRowtypeExpr:
 				_outConvertRowtypeExpr(str, obj);
@@ -1513,6 +1531,9 @@ _outNode(StringInfo str, void *obj)
 			case T_PlannerInfo:
 				_outPlannerInfo(str, obj);
 				break;
+			case T_PlannerParamItem:
+				_outPlannerParamItem(str, obj);
+				break;
 			case T_RelOptInfo:
 				_outRelOptInfo(str, obj);
 				break;
@@ -1522,8 +1543,8 @@ _outNode(StringInfo str, void *obj)
 			case T_CdbRelDedupInfo:
 				_outCdbRelDedupInfo(str, obj);
 				break;
-			case T_PathKeyItem:
-				_outPathKeyItem(str, obj);
+			case T_PathKey:
+				_outPathKey(str, obj);
 				break;
 			case T_RestrictInfo:
 				_outRestrictInfo(str, obj);
@@ -1649,8 +1670,17 @@ _outNode(StringInfo str, void *obj)
 			case T_CreateOpClassItem:
 				_outCreateOpClassItem(str,obj);
 				break;
+			case T_CreateOpFamilyStmt:
+				_outCreateOpFamilyStmt(str,obj);
+				break;
+			case T_AlterOpFamilyStmt:
+				_outAlterOpFamilyStmt(str,obj);
+				break;
 			case T_RemoveOpClassStmt:
 				_outRemoveOpClassStmt(str,obj);
+				break;
+			case T_RemoveOpFamilyStmt:
+				_outRemoveOpFamilyStmt(str,obj);
 				break;
 			case T_CreateConversionStmt:
 				_outCreateConversionStmt(str,obj);
@@ -1841,6 +1871,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_A_Indirection:
 				_outA_Indirection(str, obj);
+				break;
+			case T_A_ArrayExpr:
+				_outA_ArrayExpr(str,obj);
 				break;
 			case T_ResTarget:
 				_outResTarget(str, obj);

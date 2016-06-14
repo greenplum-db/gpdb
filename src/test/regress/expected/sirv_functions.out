@@ -1,226 +1,1976 @@
-drop schema if exists sirvf cascade;
-NOTICE:  schema "sirvf" does not exist, skipping
-create schema sirvf;
-set search_path=sirvf;
+-- ----------------------------------------------------------------------
+-- Test: setup_schema.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+create schema sirv_functions;
+set search_path to sirv_functions;
+-- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: world.sql
+-- ----------------------------------------------------------------------
 --
--- distributed tables
+-- PostgreSQL port of the MySQL "World" database.
 --
-create table read_dist(x int) distributed by (x);
-insert into read_dist select generate_series(1,10);
-create table scratch_dist(x int) distributed by (x);
-analyze read_dist;
-analyze scratch_dist;
+-- The sample data used in the world database is Copyright Statistics 
+-- Finland, http://www.stat.fi/worldinfigures.
 --
--- UDF that reads distributed tables and writes to distributed scratch tables
+-- Modified to use it with GPDB
+--start_ignore
+DROP TABLE IF EXISTS city cascade;
+NOTICE:  table "city" does not exist, skipping
+DROP TABLE IF EXISTS country cascade;
+NOTICE:  table "country" does not exist, skipping
+DROP TABLE IF EXISTS countrylanguage cascade;
+NOTICE:  table "countrylanguage" does not exist, skipping
+--end_ignore
+BEGIN;
+--SET client_encoding = 'LATIN1';
+CREATE TABLE city (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) distributed by(id);
+CREATE TABLE country (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) distributed by (code);
+CREATE TABLE countrylanguage (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)distributed by (countrycode,language);
+COPY city (id, name, countrycode, district, population) FROM stdin;
 --
-create or replace function f1_dist (i text) returns text as
-$$
+-- Data for Name: country; Type: TABLE DATA; Schema: public; Owner: chriskl
+--
+COPY country (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+--
+-- Data for Name: countrylanguage; Type: TABLE DATA; Schema: public; Owner: chriskl
+--
+COPY countrylanguage (countrycode, "language", isofficial, percentage) FROM stdin;
+ALTER TABLE ONLY city
+    ADD CONSTRAINT city_pkey PRIMARY KEY (id);
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "city_pkey" for table "city"
+ALTER TABLE ONLY country
+    ADD CONSTRAINT country_pkey PRIMARY KEY (code);
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "country_pkey" for table "country"
+ALTER TABLE ONLY countrylanguage
+    ADD CONSTRAINT countrylanguage_pkey PRIMARY KEY (countrycode, "language");
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "countrylanguage_pkey" for table "countrylanguage"
+COMMIT;
+ANALYZE city;
+ANALYZE country;
+ANALYZE countrylanguage;
+-- ----------------------------------------------------------------------
+-- Test: test1_ctas_select_list.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists sirv_test1_result1;
+NOTICE:  table "sirv_test1_result1" does not exist, skipping
+drop table if exists sirv_test1_result2;
+NOTICE:  table "sirv_test1_result2" does not exist, skipping
+--end_ignore
+CREATE or replace FUNCTION sirv_test1() RETURNS TEXT AS $$
 declare
-  v_c int;
+        result1 TEXT;
+        result2 TEXT;
+        result3 TEXT;
 begin
-  insert into scratch_dist select * from read_dist;
+        CREATE TABLE test_data1 (
+                x INT
+                , y INT
+        ) distributed by (x);
 
-  -- Some SELECT
-  select count(*) as count from scratch_dist into v_c;
 
-  delete from scratch_dist;
+        CREATE TABLE test_data2 (
+                x INT
+                , y VARCHAR
+        ) distributed by(x);
 
-  return 'abc' || v_c || '_' || i || '_dist';
-end;
+
+        EXECUTE 'INSERT INTO test_data1 VALUES (1,1)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (1,2)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (2,3)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (3,4)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (4,1)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (4,2)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (4,3)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (5,2)';
+
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''one'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''ONE'')';
+	EXECUTE 'INSERT INTO test_data2 VALUES (1, ''one'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''ONE'')';
+	EXECUTE 'INSERT INTO test_data2 VALUES (1, ''one'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''ONE'')';
+	EXECUTE 'INSERT INTO test_data2 VALUES (1, ''one'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''ONE'')';
+	
+	EXECUTE 'SELECT CASE WHEN count(*)>0 then ''PASS'' ELSE ''FAIL'' END FROM test_data1' into result1;
+
+	EXECUTE 'SELECT CASE WHEN count(*)>0 then ''PASS'' ELSE ''FAIL'' END FROM test_data2' into result2;
+
+	EXECUTE 'DROP TABLE test_data1';
+	EXECUTE 'DROP TABLE test_data2';
+
+	IF (result1 = 'PASS')  and  (result2 = 'PASS') THEN
+	   result3 = 'PASS';
+	else
+	   result3 = 'FAIL';
+
+	END IF;
+
+	return result3;
+
+end $$ language plpgsql volatile;
+--ctas with sirv in the select list
+--ctas with sirv in select list
+create table sirv_test1_result1 as select sirv_test1() as res distributed by (res);
+--workaround
+create table sirv_test1_result2 as select (select sirv_test1()) as res distributed by (res);
+--start_equiv
+select * from sirv_test1_result1;
+ res  
+------
+ PASS
+(1 row)
+
+select * from sirv_test1_result2;
+ res  
+------
+ PASS
+(1 row)
+
+--end_equiv
+-- ----------------------------------------------------------------------
+-- Test: test2_ctas_from_clause.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists countries_results;
+NOTICE:  table "countries_results" does not exist, skipping
+drop table if exists sirv_test2_result1;
+NOTICE:  table "sirv_test2_result1" does not exist, skipping
+drop table if exists sirv_test2_result2;
+NOTICE:  table "sirv_test2_result2" does not exist, skipping
+--end_ignore
+CREATE OR REPLACE FUNCTION sirv_test2 (min_languages integer, min_area float8, min_gnp float8)
+  RETURNS text
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+BEGIN
+  
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by(country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+  
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
+  
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN lang_delta || area_delta || gnp_delta ;
+
+END;
 $$
-language plpgsql volatile MODIFIES SQL DATA;
---
--- 1) CTAS with f1 in the targetlist
---
-create table t1 as select f1_dist('booya');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'f1_dist' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select * from t1;
-     f1_dist      
-------------------
- abc10_booya_dist
+    LANGUAGE plpgsql volatile;
+--ctas with sirv in the from clause
+create table sirv_test2_result1 as select * from sirv_test2(2,1000,1000) as res distributed by(res);
+--workaround
+create table sirv_test2_result2 as select * from (select (select sirv_test2(2,1000,1000)) as res) as foo distributed by(res);
+--start_equiv
+select * from sirv_test2_result1;
+        res        
+-------------------
+ 10170744008509700
 (1 row)
 
-drop table if exists t1;
--- workaround
-create table t1 as select (select f1_dist('booya'));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named '?column?' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select * from t1;
-     ?column?     
-------------------
- abc10_booya_dist
+select * from sirv_test2_result2;
+        res        
+-------------------
+ 10170744008509700
 (1 row)
 
-drop table if exists t1;
---
--- 2) CTAS with f1 in the from clause
---
-create table t1 as select * from f1_dist('booya');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'f1_dist' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select * from t1;
-     f1_dist      
-------------------
- abc10_booya_dist
+--end_equiv
+-- ----------------------------------------------------------------------
+-- Test: test3_insert_select_list.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists sirv_test3_result1;
+NOTICE:  table "sirv_test3_result1" does not exist, skipping
+drop table if exists sirv_test3_result2;
+NOTICE:  table "sirv_test3_result2" does not exist, skipping
+--end_ignore
+CREATE OR REPLACE FUNCTION sirv_test3 (min_languages integer, min_area float8, min_gnp float8)
+  RETURNS text
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by(country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
+  
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN lang_delta || area_delta || gnp_delta ;
+
+END;
+$$
+    LANGUAGE plpgsql volatile MODIFIES SQL DATA;
+create table sirv_test3_result1(id int,country_index text) distributed by(id);
+create table sirv_test3_result2(id int, country_index text) distributed by(id);
+--insert with sirv in the select list
+insert into sirv_test3_result1 select 1,sirv_test3(2,1000,1000);
+--workaround
+insert into sirv_test3_result2 select 1,(select sirv_test3(2,1000,1000));
+--start_equiv
+select * from sirv_test3_result1;
+ id |   country_index   
+----+-------------------
+  1 | 10170744008509700
 (1 row)
 
-drop table if exists t1;
--- workaround
-create table t1 as select * from (select (select f1_dist('booya'))) as A;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named '?column?' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select * from t1;
-     ?column?     
-------------------
- abc10_booya_dist
+select * from sirv_test3_result2;
+ id |   country_index   
+----+-------------------
+  1 | 10170744008509700
 (1 row)
 
-drop table if exists t1;
---
--- 3) Insert with f1_dist in the targetlist
---
-create table t1 (x text);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into t1 select f1_dist('booya');
-select * from t1;
-        x         
-------------------
- abc10_booya_dist
-(1 row)
-
-drop table if exists t1;
--- workaround
-create table t1 (x text);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into t1 select (select f1_dist('booya'));
-select * from t1;
-        x         
-------------------
- abc10_booya_dist
-(1 row)
-
-drop table if exists t1;
---
--- 4) Insert with f1 in the from clause
---
-create table t1 (x text);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into t1 select * from f1_dist('booya');
-select * from t1;
-        x         
-------------------
- abc10_booya_dist
-(1 row)
-
-drop table if exists t1;
--- workaround
-create table t1 (x text);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into t1 select * from (select (select f1_dist('booya'))) as A;
-select * from t1;
-        x         
-------------------
- abc10_booya_dist
-(1 row)
-
-drop table if exists t1;
---
--- Functions that returns records
---
-drop table if exists foo cascade;
-NOTICE:  table "foo" does not exist, skipping
-create table foo(i int, t text);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into foo select 1, 'hello world';
-create or replace function nextfoo(i int) returns foo as $$
+--end_equiv
+-- ----------------------------------------------------------------------
+-- Test: test4_insert_from_clause.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists sirv_test4_result1;
+NOTICE:  table "sirv_test4_result1" does not exist, skipping
+drop table if exists sirv_test4_result2;
+NOTICE:  table "sirv_test4_result2" does not exist, skipping
+--end_ignore
+CREATE OR REPLACE FUNCTION sirv_test4(gnp_diff float8, opt integer)  RETURNS FLOAT[] AS $$
 declare
-	r foo;
+        res FLOAT[];
+	tmp_values FLOAT[];
+	gnp_curr_val float8;
+        iter INT = 0;
 begin
-	execute 'select i+1, t  from foo order by i desc limit 1' into r;
-	return r;
+	gnp_curr_val = gnp_diff;
+
+        CREATE TEMP TABLE l_gnp (
+                gnp_values FLOAT[]
+        ) distributed by (gnp_values);
+
+        CREATE TEMP TABLE h_gnp(
+                gnp_values FLOAT[]
+        ) distributed by (gnp_values);
+
+       EXECUTE 'INSERT INTO l_gnp SELECT ARRAY(SELECT gnp FROM country where gnp < '  || gnp_diff || ' order by gnp desc)';
+       LOOP
+		iter = iter + 1;
+		TRUNCATE table h_gnp;
+		EXECUTE 'SELECT ARRAY(SELECT gnp FROM country where gnp > ' || gnp_curr_val || ' order by gnp desc LIMIT 50)'  INTO tmp_values;
+		EXECUTE 'INSERT INTO h_gnp(gnp_values) VALUES(array['|| array_to_string(tmp_values,',') ||'])';		
+
+                IF(iter > 5)THEN
+			EXIT;
+		ELSE 
+		     gnp_curr_val = gnp_curr_val + 500;
+		END IF;
+
+	END LOOP;
+
+			
+        IF(opt > 0) THEN
+	       EXECUTE 'SELECT gnp_values FROM h_gnp' INTO res;
+	ELSE
+	       EXECUTE 'SELECT gnp_values FROM l_gnp' INTO res;
+	END IF;
+	
+	DROP TABLE l_gnp;
+	DROP TABLE h_gnp;
+
+	RETURN res;
 end
-$$ language plpgsql READS SQL DATA;
--- Select statements
-select * from foo;
- i |      t      
----+-------------
- 1 | hello world
-(1 row)
-
-select * from nextfoo(1);
- i |      t      
----+-------------
- 2 | hello world
-(1 row)
-
--- Inserts
-insert into foo select * from nextfoo(1);
-select * from foo order by 1,2;
- i |      t      
----+-------------
- 1 | hello world
- 2 | hello world
-(2 rows)
-
-insert into foo(t) select f.t from nextfoo(1) f;
-select * from foo order by 1,2;
- i |      t      
----+-------------
- 1 | hello world
- 2 | hello world
-   | hello world
-(3 rows)
-
--- More complex expression
-insert into foo(t) select f.t || '100' from nextfoo(1) f;
-select * from foo order by 1,2;
- i |       t        
----+----------------
- 1 | hello world
- 2 | hello world
-   | hello world
-   | hello world100
+$$ LANGUAGE plpgsql volatile MODIFIES SQL DATA;
+create table sirv_test4_result1(res float[]) distributed by(res);
+create table sirv_test4_result2(res float[]) distributed by(res);
+--insert with sirv in the from clause
+insert into sirv_test4_result1 select * from sirv_test4(20000,0);
+insert into sirv_test4_result1 select * from sirv_test4(25000,1);
+insert into sirv_test4_result1 select * from sirv_test4(30000,0);
+insert into sirv_test4_result1 select * from sirv_test4(35000,1);
+--workaround
+insert into sirv_test4_result2 select * from (select (select sirv_test4(20000,0))) AS FOO;
+insert into sirv_test4_result2 select * from (select (select sirv_test4(25000,1))) AS FOO;
+insert into sirv_test4_result2 select * from (select (select sirv_test4(30000,0))) AS FOO;
+insert into sirv_test4_result2 select * from (select (select sirv_test4(35000,1))) AS FOO;
+--start_equiv
+select * from sirv_test4_result1 order by res;
+                                                                                                                                                                                                                                                                                                                                                                                                              res                                                                                                                                                                                                                                                                                                                                                                                                              
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {19770,19756,19008,17843,17121,17000,16904,16321,15846,15706,14194,13714,12178,11863,11705,11500,11345,10692,10226,10162,9472,9333,9217,9174,9131,8571,8444,8287,8255,8005,7526,7137,6964,6871,6648,6398,6366,6353,6313,6232,6064,6041,5976,5951,5749,5493,5333,5332,5328,5121,4988,4834,4787,4768,4401,4397,4251,4173,4127,3750,3563,3527,3512,3501,3459,3377,3205,3101,2891,2841,2731,2642,2425,2357,2352,2328,2223,2108,2036,2012,1990,1988,1941,1813,1706,1694,1687,1630,1626,1579,1536,1449,1292,1263,1208,1206,1197,1119,1061,1054,1043,998,935,903,870,828,818,776,746,722,681,650,630,612,612,571,536,510,435,382,372,334,320,318,299,293,285,283,261,258,256,212,199,197,182,146,141,109,105,100,97,96,63.2,60,40.7,9,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+ {27037,24375,21929,20831,20594,20208,20026,19770,19756,19008,17843,17121,17000,16904,16321,15846,15706,14194,13714,12178,11863,11705,11500,11345,10692,10226,10162,9472,9333,9217,9174,9131,8571,8444,8287,8255,8005,7526,7137,6964,6871,6648,6398,6366,6353,6313,6232,6064,6041,5976,5951,5749,5493,5333,5332,5328,5121,4988,4834,4787,4768,4401,4397,4251,4173,4127,3750,3563,3527,3512,3501,3459,3377,3205,3101,2891,2841,2731,2642,2425,2357,2352,2328,2223,2108,2036,2012,1990,1988,1941,1813,1706,1694,1687,1630,1626,1579,1536,1449,1292,1263,1208,1206,1197,1119,1061,1054,1043,998,935,903,870,828,818,776,746,722,681,650,630,612,612,571,536,510,435,382,372,334,320,318,299,293,285,283,261,258,256,212,199,197,182,146,141,109,105,100,97,96,63.2,60,40.7,9,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+ {8510700,3787042,2133367,1424285,1378330,1161755,982268,776739,598862,553233,447114,414972,371362,351182,340238,320749,276608,264478,256254,249704,226492,211860,210721,195746,180375,174099,166448,151697,145895,137635,121914,120724,116729,116416,105954,102896,97477,95023,86503,84982,82710,75921,72949,69213,65984,65707,65107,64140,61289,55017}
+ {8510700,3787042,2133367,1424285,1378330,1161755,982268,776739,598862,553233,447114,414972,371362,351182,340238,320749,276608,264478,256254,249704,226492,211860,210721,195746,180375,174099,166448,151697,145895,137635,121914,120724,116729,116416,105954,102896,97477,95023,86503,84982,82710,75921,72949,69213,65984,65707,65107,64140,61289,55017}
 (4 rows)
 
---
--- Nested function calls.
---
-create table t1 as select substring(f1_dist('booya'),0,3);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'substring' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select * from t1;
- substring 
------------
- ab
+select * from sirv_test4_result2 order by res;
+                                                                                                                                                                                                                                                                                                                                                                                                              res                                                                                                                                                                                                                                                                                                                                                                                                              
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {19770,19756,19008,17843,17121,17000,16904,16321,15846,15706,14194,13714,12178,11863,11705,11500,11345,10692,10226,10162,9472,9333,9217,9174,9131,8571,8444,8287,8255,8005,7526,7137,6964,6871,6648,6398,6366,6353,6313,6232,6064,6041,5976,5951,5749,5493,5333,5332,5328,5121,4988,4834,4787,4768,4401,4397,4251,4173,4127,3750,3563,3527,3512,3501,3459,3377,3205,3101,2891,2841,2731,2642,2425,2357,2352,2328,2223,2108,2036,2012,1990,1988,1941,1813,1706,1694,1687,1630,1626,1579,1536,1449,1292,1263,1208,1206,1197,1119,1061,1054,1043,998,935,903,870,828,818,776,746,722,681,650,630,612,612,571,536,510,435,382,372,334,320,318,299,293,285,283,261,258,256,212,199,197,182,146,141,109,105,100,97,96,63.2,60,40.7,9,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+ {27037,24375,21929,20831,20594,20208,20026,19770,19756,19008,17843,17121,17000,16904,16321,15846,15706,14194,13714,12178,11863,11705,11500,11345,10692,10226,10162,9472,9333,9217,9174,9131,8571,8444,8287,8255,8005,7526,7137,6964,6871,6648,6398,6366,6353,6313,6232,6064,6041,5976,5951,5749,5493,5333,5332,5328,5121,4988,4834,4787,4768,4401,4397,4251,4173,4127,3750,3563,3527,3512,3501,3459,3377,3205,3101,2891,2841,2731,2642,2425,2357,2352,2328,2223,2108,2036,2012,1990,1988,1941,1813,1706,1694,1687,1630,1626,1579,1536,1449,1292,1263,1208,1206,1197,1119,1061,1054,1043,998,935,903,870,828,818,776,746,722,681,650,630,612,612,571,536,510,435,382,372,334,320,318,299,293,285,283,261,258,256,212,199,197,182,146,141,109,105,100,97,96,63.2,60,40.7,9,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+ {8510700,3787042,2133367,1424285,1378330,1161755,982268,776739,598862,553233,447114,414972,371362,351182,340238,320749,276608,264478,256254,249704,226492,211860,210721,195746,180375,174099,166448,151697,145895,137635,121914,120724,116729,116416,105954,102896,97477,95023,86503,84982,82710,75921,72949,69213,65984,65707,65107,64140,61289,55017}
+ {8510700,3787042,2133367,1424285,1378330,1161755,982268,776739,598862,553233,447114,414972,371362,351182,340238,320749,276608,264478,256254,249704,226492,211860,210721,195746,180375,174099,166448,151697,145895,137635,121914,120724,116729,116416,105954,102896,97477,95023,86503,84982,82710,75921,72949,69213,65984,65707,65107,64140,61289,55017}
+(4 rows)
+
+--end_equiv
+-- ----------------------------------------------------------------------
+-- Test: test5_ctas_multiple_sirv.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists sirv_test5_result1;
+NOTICE:  table "sirv_test5_result1" does not exist, skipping
+drop table if exists sirv_test5_result2;
+NOTICE:  table "sirv_test5_result2" does not exist, skipping
+--end_ignore
+CREATE or replace FUNCTION sirv_test5_fun1() RETURNS TEXT AS $$
+declare
+        result1 TEXT;
+        result2 TEXT;
+        result3 TEXT;
+begin
+
+        EXECUTE 'CREATE TABLE test_data1 (
+                x INT
+                , y INT
+        ) distributed by(x)';
+
+	EXECUTE 'CREATE TABLE test_data2 (
+                x INT
+                , y VARCHAR
+        ) distributed by(x)';
+
+
+        EXECUTE 'INSERT INTO test_data1 VALUES (1,1)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (1,2)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (2,3)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (3,4)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (4,1)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (4,2)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (4,3)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (5,2)';
+
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''one'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''ONE'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''one'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (2, ''two'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (2, ''TWO'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (3, ''three'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (7, ''seven'')';
+
+	
+	EXECUTE 'SELECT CASE WHEN count(*)>0 then ''PASS'' ELSE ''FAIL'' END FROM test_data1' INTO result1;
+
+	EXECUTE 'SELECT CASE WHEN count(*)>0 then ''PASS'' ELSE ''FAIL'' END FROM test_data2' INTO result2;
+
+	EXECUTE 'DROP TABLE test_data1';
+	EXECUTE 'DROP TABLE test_data2';
+
+	IF (result1 = 'PASS')  and  (result2 = 'PASS') THEN
+	   result3 = 'PASS';
+	else
+	   result3 = 'FAIL';
+
+	END IF;
+
+	return result3;
+
+end $$ language plpgsql volatile MODIFIES SQL DATA;
+CREATE OR REPLACE FUNCTION sirv_test5_fun2 (min_languages integer, min_area float8, min_gnp float8)
+  RETURNS text
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
+  
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN lang_delta || area_delta || gnp_delta ;
+
+END;
+$$
+    LANGUAGE plpgsql volatile MODIFIES SQL DATA;
+CREATE OR REPLACE FUNCTION sirv_test5_fun3 (min_languages integer, min_area float8, min_gnp float8)
+  RETURNS float
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by(country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN lang_delta +  area_delta +  gnp_delta ;
+
+END;
+$$
+    LANGUAGE plpgsql volatile MODIFIES SQL DATA;
+CREATE OR REPLACE FUNCTION sirv_test5_fun4(gnp_diff float8, opt integer)  RETURNS FLOAT[] AS $$
+declare
+        res FLOAT[];
+	tmp_values FLOAT[];
+	gnp_curr_val float8;
+        iter INT = 0;
+begin
+	gnp_curr_val = gnp_diff;
+
+        CREATE TEMP TABLE l_gnp (
+                gnp_values FLOAT[]
+        ) distributed by(gnp_values);
+
+        CREATE TEMP TABLE h_gnp(
+                gnp_values FLOAT[]
+        ) distributed by (gnp_values);
+
+       EXECUTE 'INSERT INTO l_gnp SELECT ARRAY(SELECT gnp FROM country where gnp < '  || gnp_diff || ' order by gnp desc)';
+       LOOP
+		iter = iter + 1;
+		TRUNCATE table h_gnp;
+		EXECUTE 'SELECT ARRAY(SELECT gnp FROM country where gnp > ' || gnp_curr_val || ' order by gnp desc LIMIT 50)'  INTO tmp_values;
+		EXECUTE 'INSERT INTO h_gnp(gnp_values) VALUES(array['|| array_to_string(tmp_values,',') ||'])';		
+
+                IF(iter > 5)THEN
+			EXIT;
+		ELSE 
+		     gnp_curr_val = gnp_curr_val + 500;
+		END IF;
+
+	END LOOP;
+
+			
+        IF(opt > 0) THEN
+	       EXECUTE 'SELECT gnp_values FROM h_gnp' INTO res;
+	ELSE
+	       EXECUTE 'SELECT gnp_values FROM l_gnp' INTO res;
+	END IF;
+
+	EXECUTE 'DROP table l_gnp';
+        EXECUTE 'DROP table h_gnp';
+	RETURN res;
+end
+$$ LANGUAGE plpgsql volatile MODIFIES SQL DATA;
+--select list
+create table sirv_test5_result1 as select 'sirv_test1:' || sirv_test5_fun1() as field1,
+                                          'sirv_test5_fun2:' || substring(sirv_test5_fun2(2,1000,1000),0,5) as field2,
+                                          1.5 * sirv_test5_fun3(2,1000,1000) as field3,
+                                          ARRAY[1.0::float,2.0::float] || sirv_test5_fun4(20000,0) as field4
+distributed by (field1);
+select * from sirv_test5_result1;
+     field1      |        field2        |  field3  |                                                                                                                                                                                                                                                                                                                                                                                         field4                                                                                                                                                                                                                                                                                                                                                                                          
+-----------------+----------------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ sirv_test1:PASS | sirv_test5_fun2:1017 | 38376165 | {1,2,19770,19756,19008,17843,17121,17000,16904,16321,15846,15706,14194,13714,12178,11863,11705,11500,11345,10692,10226,10162,9472,9333,9217,9174,9131,8571,8444,8287,8255,8005,7526,7137,6964,6871,6648,6398,6366,6353,6313,6232,6064,6041,5976,5951,5749,5493,5333,5332,5328,5121,4988,4834,4787,4768,4401,4397,4251,4173,4127,3750,3563,3527,3512,3501,3459,3377,3205,3101,2891,2841,2731,2642,2425,2357,2352,2328,2223,2108,2036,2012,1990,1988,1941,1813,1706,1694,1687,1630,1626,1579,1536,1449,1292,1263,1208,1206,1197,1119,1061,1054,1043,998,935,903,870,828,818,776,746,722,681,650,630,612,612,571,536,510,435,382,372,334,320,318,299,293,285,283,261,258,256,212,199,197,182,146,141,109,105,100,97,96,63.2,60,40.7,9,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
 (1 row)
 
-drop table if exists t1;
-create table t1 as select * from substring(f1_dist('booya'),0,3);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'substring' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select * from t1;
- substring 
------------
- ab
+--from clause
+create table sirv_test5_result2  as select * from sirv_test5_fun1() as field1,
+                                                           substring(sirv_test5_fun2(2,1000,1000),0,5) as field2,
+                                                           sirv_test5_fun3(2,1000,1000) as field3,
+                                                           sirv_test5_fun4(20000,0) as field4
+distributed by (field1);
+select * from sirv_test5_result2;
+ field1 | field2 |  field3  |                                                                                                                                                                                                                                                                                                                                                                                       field4                                                                                                                                                                                                                                                                                                                                                                                        
+--------+--------+----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ PASS   | 1017   | 25584110 | {19770,19756,19008,17843,17121,17000,16904,16321,15846,15706,14194,13714,12178,11863,11705,11500,11345,10692,10226,10162,9472,9333,9217,9174,9131,8571,8444,8287,8255,8005,7526,7137,6964,6871,6648,6398,6366,6353,6313,6232,6064,6041,5976,5951,5749,5493,5333,5332,5328,5121,4988,4834,4787,4768,4401,4397,4251,4173,4127,3750,3563,3527,3512,3501,3459,3377,3205,3101,2891,2841,2731,2642,2425,2357,2352,2328,2223,2108,2036,2012,1990,1988,1941,1813,1706,1694,1687,1630,1626,1579,1536,1449,1292,1263,1208,1206,1197,1119,1061,1054,1043,998,935,903,870,828,818,776,746,722,681,650,630,612,612,571,536,510,435,382,372,334,320,318,299,293,285,283,261,258,256,212,199,197,182,146,141,109,105,100,97,96,63.2,60,40.7,9,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
 (1 row)
 
-drop table if exists t1;
---
--- MPP-16071. Multiple sirvfs in the from clause
---
-create table t1 as select * from f1_dist('booya1') a, f1_dist('booya2');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select * from t1;
-         a         |      f1_dist      
--------------------+-------------------
- abc10_booya1_dist | abc10_booya2_dist
+-- ----------------------------------------------------------------------
+-- Test: test6_insert_select_multiple_sirv.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists sirv_test6_result1;
+NOTICE:  table "sirv_test6_result1" does not exist, skipping
+drop table if exists sirv_test6_result2;
+NOTICE:  table "sirv_test6_result2" does not exist, skipping
+--end_ignore
+CREATE or replace FUNCTION sirv_test6_fun1() RETURNS TEXT AS $$
+declare
+        result1 TEXT;
+        result2 TEXT;
+        result3 TEXT;
+begin
+
+        EXECUTE 'CREATE TABLE test_data1 (
+                x INT
+                , y INT
+        ) distributed by(x)';
+
+	EXECUTE 'CREATE TABLE test_data2 (
+                x INT
+                , y VARCHAR
+        ) distributed by(x)';
+
+
+        EXECUTE 'INSERT INTO test_data1 VALUES (1,1)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (1,2)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (2,3)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (3,4)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (4,1)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (4,2)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (4,3)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (5,2)';
+
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''one'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''ONE'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''one'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (2, ''two'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (2, ''TWO'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (3, ''three'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (7, ''seven'')';
+
+	
+	EXECUTE 'SELECT CASE WHEN count(*)>0 then ''PASS'' ELSE ''FAIL'' END FROM test_data1' INTO result1;
+
+	EXECUTE 'SELECT CASE WHEN count(*)>0 then ''PASS'' ELSE ''FAIL'' END FROM test_data2' INTO result2;
+
+	EXECUTE 'DROP TABLE test_data1';
+	EXECUTE 'DROP TABLE test_data2';
+
+	IF (result1 = 'PASS')  and  (result2 = 'PASS') THEN
+	   result3 = 'PASS';
+	else
+	   result3 = 'FAIL';
+
+	END IF;
+
+	return result3;
+
+end $$ language plpgsql volatile MODIFIES SQL DATA;
+CREATE OR REPLACE FUNCTION sirv_test6_fun2 (min_languages integer, min_area float8, min_gnp float8)
+  RETURNS text
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
+  
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN lang_delta || area_delta || gnp_delta ;
+
+END;
+$$
+    LANGUAGE plpgsql volatile MODIFIES SQL DATA;
+CREATE OR REPLACE FUNCTION sirv_test6_fun3 (min_languages integer, min_area float8, min_gnp float8)
+  RETURNS float
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by(country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN lang_delta +  area_delta +  gnp_delta ;
+
+END;
+$$
+    LANGUAGE plpgsql volatile MODIFIES SQL DATA;
+CREATE OR REPLACE FUNCTION sirv_test6_fun4(gnp_diff float8, opt integer)  RETURNS FLOAT[] AS $$
+declare
+        res FLOAT[];
+	tmp_values FLOAT[];
+	gnp_curr_val float8;
+        iter INT = 0;
+begin
+	gnp_curr_val = gnp_diff;
+
+        CREATE TEMP TABLE l_gnp (
+                gnp_values FLOAT[]
+        ) distributed by(gnp_values);
+
+        CREATE TEMP TABLE h_gnp(
+                gnp_values FLOAT[]
+        ) distributed by (gnp_values);
+
+       EXECUTE 'INSERT INTO l_gnp SELECT ARRAY(SELECT gnp FROM country where gnp < '  || gnp_diff || ' order by gnp desc)';
+       LOOP
+		iter = iter + 1;
+		TRUNCATE table h_gnp;
+		EXECUTE 'SELECT ARRAY(SELECT gnp FROM country where gnp > ' || gnp_curr_val || ' order by gnp desc LIMIT 50)'  INTO tmp_values;
+		EXECUTE 'INSERT INTO h_gnp(gnp_values) VALUES(array['|| array_to_string(tmp_values,',') ||'])';		
+
+                IF(iter > 5)THEN
+			EXIT;
+		ELSE 
+		     gnp_curr_val = gnp_curr_val + 500;
+		END IF;
+
+	END LOOP;
+
+			
+        IF(opt > 0) THEN
+	       EXECUTE 'SELECT gnp_values FROM h_gnp' INTO res;
+	ELSE
+	       EXECUTE 'SELECT gnp_values FROM l_gnp' INTO res;
+	END IF;
+
+	EXECUTE 'DROP table l_gnp';
+        EXECUTE 'DROP table h_gnp';
+	RETURN res;
+end
+$$ LANGUAGE plpgsql volatile MODIFIES SQL DATA;
+--select list
+create table sirv_test6_result1 (field1 text, field2 text, field3 float, field4 float[]) distributed by (field1);
+create table sirv_test6_result2 (field1 text, field2 text, field3 float, field4 float[]) distributed by (field1);
+insert into sirv_test6_result1   select 'sirv_test6_fun1:' || sirv_test6_fun1() as field1,
+                                          'sirv_test6_fun2:' || substring(sirv_test6_fun2(2,1000,1000),0,5) as field2,
+                                          1.5 * sirv_test6_fun3(2,1000,1000) as field3,
+                                          ARRAY[1.0::float,2.0::float] || sirv_test6_fun4(20000,0);
+select * from sirv_test6_result1;
+        field1        |        field2        |  field3  |                                                                                                                                                                                                                                                                                                                                                                                         field4                                                                                                                                                                                                                                                                                                                                                                                          
+----------------------+----------------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ sirv_test6_fun1:PASS | sirv_test6_fun2:1017 | 38376165 | {1,2,19770,19756,19008,17843,17121,17000,16904,16321,15846,15706,14194,13714,12178,11863,11705,11500,11345,10692,10226,10162,9472,9333,9217,9174,9131,8571,8444,8287,8255,8005,7526,7137,6964,6871,6648,6398,6366,6353,6313,6232,6064,6041,5976,5951,5749,5493,5333,5332,5328,5121,4988,4834,4787,4768,4401,4397,4251,4173,4127,3750,3563,3527,3512,3501,3459,3377,3205,3101,2891,2841,2731,2642,2425,2357,2352,2328,2223,2108,2036,2012,1990,1988,1941,1813,1706,1694,1687,1630,1626,1579,1536,1449,1292,1263,1208,1206,1197,1119,1061,1054,1043,998,935,903,870,828,818,776,746,722,681,650,630,612,612,571,536,510,435,382,372,334,320,318,299,293,285,283,261,258,256,212,199,197,182,146,141,109,105,100,97,96,63.2,60,40.7,9,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
 (1 row)
 
-drop table if exists t1;
+--from clause
+insert into  sirv_test6_result2  select * from     sirv_test6_fun1() as field1,
+                                                           substring(sirv_test6_fun2(2,1000,1000),0,5) as field2,
+                                                           sirv_test6_fun3(2,1000,1000) as field3,
+                                                           sirv_test6_fun4(20000,0);
+select * from sirv_test6_result2;
+ field1 | field2 |  field3  |                                                                                                                                                                                                                                                                                                                                                                                       field4                                                                                                                                                                                                                                                                                                                                                                                        
+--------+--------+----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ PASS   | 1017   | 25584110 | {19770,19756,19008,17843,17121,17000,16904,16321,15846,15706,14194,13714,12178,11863,11705,11500,11345,10692,10226,10162,9472,9333,9217,9174,9131,8571,8444,8287,8255,8005,7526,7137,6964,6871,6648,6398,6366,6353,6313,6232,6064,6041,5976,5951,5749,5493,5333,5332,5328,5121,4988,4834,4787,4768,4401,4397,4251,4173,4127,3750,3563,3527,3512,3501,3459,3377,3205,3101,2891,2841,2731,2642,2425,2357,2352,2328,2223,2108,2036,2012,1990,1988,1941,1813,1706,1694,1687,1630,1626,1579,1536,1449,1292,1263,1208,1206,1197,1119,1061,1054,1043,998,935,903,870,828,818,776,746,722,681,650,630,612,612,571,536,510,435,382,372,334,320,318,299,293,285,283,261,258,256,212,199,197,182,146,141,109,105,100,97,96,63.2,60,40.7,9,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test7_ctas_nested_function_calls.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists sirv_test7_result1;
+NOTICE:  table "sirv_test7_result1" does not exist, skipping
+drop table if exists sirv_test7_result2;
+NOTICE:  table "sirv_test7_result2" does not exist, skipping
+--end_ignore
+CREATE or replace FUNCTION sirv_test7_fun1() RETURNS TEXT AS $$
+declare
+        result1 TEXT;
+        result2 TEXT;
+        result3 TEXT;
+begin
+
+        EXECUTE 'CREATE TABLE test_data1 (
+                x INT
+                , y INT
+        ) distributed by (x)';
+
+	EXECUTE 'CREATE TABLE test_data2 (
+                x INT
+                , y VARCHAR
+        ) distributed by (x)';
+
+
+        EXECUTE 'INSERT INTO test_data1 VALUES (1,1)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (1,2)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (2,3)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (3,4)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (4,1)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (4,2)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (4,3)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (5,2)';
+
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''one'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''ONE'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''one'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (2, ''two'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (2, ''TWO'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (3, ''three'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (7, ''seven'')';
+
+	
+	EXECUTE 'SELECT CASE WHEN count(*)>0 then ''PASS'' ELSE ''FAIL'' END FROM test_data1' INTO result1;
+
+	EXECUTE 'SELECT CASE WHEN count(*)>0 then ''PASS'' ELSE ''FAIL'' END FROM test_data2' INTO result2;
+
+	EXECUTE 'DROP TABLE test_data1';
+	EXECUTE 'DROP TABLE test_data2';
+
+	IF (result1 = 'PASS')  and  (result2 = 'PASS') THEN
+	   result3 = 'PASS';
+	else
+	   result3 = 'FAIL';
+
+	END IF;
+
+	return result3;
+
+end $$ language plpgsql volatile;
+create or replace function call_sirv_test7_fun1(i int) RETURNS text as $$
+declare 
+  res text = '';
+  temp text = '';
+  iter int = 0;
+begin
+	LOOP
+		EXECUTE 'SELECT sirv_test7_fun1()'  INTO temp;
+                res = res || temp;
+
+                IF(iter > i)THEN
+			EXIT;
+		END IF;
+		iter = iter + 1;
+
+	END LOOP;
+
+        return res;
+end $$ language plpgsql volatile;
+   
+--ctas with nested calls in select list
+create table sirv_test7_result1 as select call_sirv_test7_fun1(5) as field1 ,1 distributed by (field1);
+select * from sirv_test7_result1;
+            field1            | ?column? 
+------------------------------+----------
+ PASSPASSPASSPASSPASSPASSPASS |        1
+(1 row)
+
+CREATE OR REPLACE FUNCTION sirv_test7_fun2 (min_languages integer, min_area float8, min_gnp float8)
+  RETURNS text
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN lang_delta || area_delta || gnp_delta ;
+
+END;
+$$
+    LANGUAGE plpgsql volatile;
+CREATE OR REPLACE FUNCTION sirv_test7_fun3 (res text,min_languages integer, min_area float8, min_gnp float8)
+  RETURNS text
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN res || lang_delta ||  area_delta ||  gnp_delta ;
+
+END;
+$$
+    LANGUAGE plpgsql volatile;
+--ctas with nested calls in the from clause
+create table sirv_test7_result2 as select * from sirv_test7_fun3(sirv_test7_fun2(2,1000,1000),3,2000,2000) as field1 distributed by (field1);
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (entry db pbld2:12010 pid=29278) (cdbdisp.c:1324)
+DETAIL:  
+SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)"
+PL/pgSQL function "sirv_test7_fun3" line 7 at execute statement
+select * from sirv_test7_result2;
+ERROR:  relation "sirv_test7_result2" does not exist
+LINE 1: select * from sirv_test7_result2;
+                      ^
+-- ----------------------------------------------------------------------
+-- Test: test8_insert_nested_function_calls.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists sirv_test8_result1;
+NOTICE:  table "sirv_test8_result1" does not exist, skipping
+drop table if exists sirv_test8_result2;
+NOTICE:  table "sirv_test8_result2" does not exist, skipping
+--end_ignore
+CREATE or replace FUNCTION sirv_test8_fun1() RETURNS TEXT AS $$
+declare
+        result1 TEXT;
+        result2 TEXT;
+        result3 TEXT;
+begin
+
+        EXECUTE 'CREATE TABLE test_data1 (
+                x INT
+                , y INT
+        ) distributed by (x)';
+
+	EXECUTE 'CREATE TABLE test_data2 (
+                x INT
+                , y VARCHAR
+        ) distributed by (x)';
+
+
+        EXECUTE 'INSERT INTO test_data1 VALUES (1,1)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (1,2)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (2,3)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (3,4)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (4,1)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (4,2)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (4,3)';
+        EXECUTE 'INSERT INTO test_data1 VALUES (5,2)';
+
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''one'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''ONE'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (1, ''one'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (2, ''two'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (2, ''TWO'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (3, ''three'')';
+        EXECUTE 'INSERT INTO test_data2 VALUES (7, ''seven'')';
+
+	
+	EXECUTE 'SELECT CASE WHEN count(*)>0 then ''PASS'' ELSE ''FAIL'' END FROM test_data1' INTO result1;
+
+	EXECUTE 'SELECT CASE WHEN count(*)>0 then ''PASS'' ELSE ''FAIL'' END FROM test_data2' INTO result2;
+
+	EXECUTE 'DROP TABLE test_data1';
+	EXECUTE 'DROP TABLE test_data2';
+
+	IF (result1 = 'PASS')  and  (result2 = 'PASS') THEN
+	   result3 = 'PASS';
+	else
+	   result3 = 'FAIL';
+
+	END IF;
+
+	return result3;
+
+end $$ language plpgsql volatile MODIFIES SQL DATA;
+create or replace function call_sirv_test8_fun1(i int) RETURNS text as $$
+declare 
+  res text = '';
+  temp text = '';
+  iter int = 0;
+begin
+	LOOP
+		EXECUTE 'SELECT sirv_test8_fun1()'  INTO temp;
+                res = res || temp;
+
+                IF(iter > i)THEN
+			EXIT;
+		END IF;
+		iter = iter + 1;
+
+	END LOOP;
+
+        return res;
+end $$ language plpgsql volatile MODIFIES SQL DATA;
+   
+--insert select with nested calls in select list
+create table sirv_test8_result1 (field1 text, field2 int, field3 date) distributed by (field2);
+insert into sirv_test8_result1 select call_sirv_test8_fun1(5),1,'2000-01-01';
+insert into sirv_test8_result1 select call_sirv_test8_fun1(3),2,'2000-01-01';
+insert into sirv_test8_result1 select call_sirv_test8_fun1(1),3,'2000-01-01';
+select * from sirv_test8_result1 order by field2;
+            field1            | field2 |   field3   
+------------------------------+--------+------------
+ PASSPASSPASSPASSPASSPASSPASS |      1 | 01-01-2000
+ PASSPASSPASSPASSPASS         |      2 | 01-01-2000
+ PASSPASSPASS                 |      3 | 01-01-2000
+(3 rows)
+
+CREATE OR REPLACE FUNCTION sirv_test8_fun2 (min_languages integer, min_area float8, min_gnp float8)
+  RETURNS text
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN lang_delta || area_delta || gnp_delta ;
+
+END;
+$$
+    LANGUAGE plpgsql volatile MODIFIES SQL DATA;
+CREATE OR REPLACE FUNCTION sirv_test8_fun3 (res text,min_languages integer, min_area float8, min_gnp float8)
+  RETURNS text
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN res || lang_delta ||  area_delta ||  gnp_delta ;
+
+END;
+$$
+    LANGUAGE plpgsql volatile MODIFIES SQL DATA;
+--insert select with nested calls in the from clause
+create table sirv_test8_result2 (field1 text, field2 int) distributed by (field2);
+insert into sirv_test8_result2 select * from sirv_test8_fun3(sirv_test8_fun2(2,1000,1000),3,2000,2000),(select 1) FOO;
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (entry db pbld2:12010 pid=29278) (cdbdisp.c:1324)
+DETAIL:  
+SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)"
+PL/pgSQL function "sirv_test8_fun3" line 7 at execute statement
+select * from sirv_test8_result2 order by field2;
+ field1 | field2 
+--------+--------
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: test9_negative_tests_srf.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists sirv_test9_resul1;
+NOTICE:  table "sirv_test9_resul1" does not exist, skipping
+drop table if exists sirv_test9_result2;
+NOTICE:  table "sirv_test9_result2" does not exist, skipping
+drop type if exists test9_holder;
+NOTICE:  type "test9_holder" does not exist, skipping
+drop table if exists test9_countries cascade;
+NOTICE:  table "test9_countries" does not exist, skipping
+--end_ignore
+CREATE  TABLE test9_countries (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code);
+CREATE OR REPLACE FUNCTION sirv_test9_fun1 (min_languages integer, min_area float8, min_gnp float8)
+  RETURNS setof  test9_countries
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+  r test9_countries;
+BEGIN
+
+  for r in 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > min_languages and country.surfacearea >  min_area  and country.gnp > min_gnp order by lang_total.lang_count desc 
+           ) loop
+  return next r;
+  end loop;
+
+  return;
+  
+
+END;
+$$
+    LANGUAGE plpgsql volatile;
+--ctas with srf should not apply init plan changes. this is not supported
+--should fail
+--create table sirv_test9_result1 as select sirv_test9_fun1(2,1000,1000);
+--create table sirv_test9_result1 as select * from sirv_test9_fun1(2,1000,1000);
+create type test9_holder as (lang_delta int, area_delta float8, gnp_delta float8);
+CREATE OR REPLACE FUNCTION sirv_test9_fun2 (res text,min_languages integer, min_area float8, min_gnp float8)
+  RETURNS setof text
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+  r test9_holder%rowtype;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  for r in SELECT max(lang_count - min_languages), max(area - min_area),max( gnp -  min_gnp) FROM countries_results group by country_code order by country_code loop
+  return next r.lang_delta || r.area_delta || r.gnp_delta;
+  end loop;
+
+  EXECUTE 'DROP TABLE countries_results';
+  
+
+  RETURN;
+
+END;
+$$
+    LANGUAGE plpgsql volatile;
+--ctas with srf should not apply init plan changes. this is not supported
+--should fail
+--create table sirv_test9_result1 as select sirv_test9_fun2('result',2,1000,1000);
+--create table sirv_test9_result1 as select * from sirv_test9_fun2('result',2,1000,1000);
+-- ----------------------------------------------------------------------
+-- Test: test10_insert_negative_tests_srf.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists sirv_test10_result1;
+NOTICE:  table "sirv_test10_result1" does not exist, skipping
+drop table if exists sirv_test10_result2;
+NOTICE:  table "sirv_test10_result2" does not exist, skipping
+drop table if exists countries cascade;
+NOTICE:  table "countries" does not exist, skipping
+drop type if exists sirv_test10_holder;
+NOTICE:  type "sirv_test10_holder" does not exist, skipping
+--end_ignore
+CREATE  TABLE countries (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code);
+CREATE OR REPLACE FUNCTION sirv_test10_srf1 (min_languages integer, min_area float8, min_gnp float8)
+  RETURNS setof  countries
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+  r countries;
+BEGIN
+
+  for r in 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > min_languages and country.surfacearea >  min_area  and country.gnp > min_gnp order by lang_total.lang_count desc 
+           ) loop
+  return next r;
+  end loop;
+
+  return;
+  
+
+END;
+$$
+    LANGUAGE plpgsql volatile READS SQL DATA;
+--insert select with srf should not apply init plan changes. this is not supported
+create table sirv_test10_result1(field1 countries,country_code text,country_name text, lang_count int, area float, gnp float) distributed by (country_code);
+--should fail
+--ignore error messages
+--start_ignore 
+insert into sirv_test10_result1 select sirv_test10_srf1(2,1000,1000);
+ERROR:  function cannot execute on segment because it accesses relation "sirv_functions.country" (functions.c:155)  (seg0 slice1 pbld2:12011 pid=29727) (cdbdisp.c:1324)
+DETAIL:  
+SQL statement " ( with lang_total as ( select count(*) as lang_count,country.code,countrylanguage.countrycode from country join countrylanguage on (country.code=countrylanguage.countrycode) group by country.code,countrylanguage.countrycode order by country.code ) select country.code,country.name, lang_count, country.surfacearea, country.gnp from country left outer join lang_total on (lang_total.code = country.code) where lang_count >  $1  and country.surfacearea >  $2  and country.gnp >  $3  order by lang_total.lang_count desc )"
+PL/pgSQL function "sirv_test10_srf1" line 8 at for over select rows
+insert into sirv_test10_result1 select sirv_test10_srf1 from sirv_test10_srf1(2,1000,1000);
+ERROR:  function cannot execute on segment because it accesses relation "sirv_functions.country" (functions.c:155)  (entry db pbld2:12010 pid=29278) (cdbdisp.c:1324)
+DETAIL:  
+SQL statement " ( with lang_total as ( select count(*) as lang_count,country.code,countrylanguage.countrycode from country join countrylanguage on (country.code=countrylanguage.countrycode) group by country.code,countrylanguage.countrycode order by country.code ) select country.code,country.name, lang_count, country.surfacearea, country.gnp from country left outer join lang_total on (lang_total.code = country.code) where lang_count >  $1  and country.surfacearea >  $2  and country.gnp >  $3  order by lang_total.lang_count desc )"
+PL/pgSQL function "sirv_test10_srf1" line 8 at for over select rows
+--end_ignore
+select * from sirv_test10_result1; --should return 0 rows
+ field1 | country_code | country_name | lang_count | area | gnp 
+--------+--------------+--------------+------------+------+-----
+(0 rows)
+
+--user defined type
+create type sirv_test10_holder as (lang_delta int, area_delta float8, gnp_delta float8);
+CREATE OR REPLACE FUNCTION sirv_test10_srf2 (res text,min_languages integer, min_area float8, min_gnp float8)
+  RETURNS setof text
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+  r sirv_test10_holder%rowtype;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  for r in SELECT max(lang_count - min_languages), max(area - min_area),max( gnp -  min_gnp) FROM countries_results group by country_code order by country_code loop
+  return next r.lang_delta || r.area_delta || r.gnp_delta;
+  end loop;
+  
+  EXECUTE 'DROP table countries_results';
+  
+
+  RETURN;
+
+END;
+$$
+    LANGUAGE plpgsql volatile MODIFIES SQL DATA;
+create table sirv_test10_result2(res text) distributed by (res);
+--insert select with srf should not apply init plan changes. this is not supported
+--should fail
+--ignore error messages
+--start_ignore
+insert into sirv_test10_result2 select sirv_test10_srf2('result',2,1000,1000);
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg0 slice1 pbld2:12011 pid=29759) (cdbdisp.c:1324)
+DETAIL:  
+SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)"
+PL/pgSQL function "sirv_test10_srf2" line 8 at execute statement
+insert into sirv_test10_result2 select * from sirv_test10_srf2('result',2,1000,1000);
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (entry db pbld2:12010 pid=29278) (cdbdisp.c:1324)
+DETAIL:  
+SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)"
+PL/pgSQL function "sirv_test10_srf2" line 8 at execute statement
+--end_ignore
+select * from sirv_test10_result2; --should return 0 rows
+ res 
+-----
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: test11_ctas_non_constant_args.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists sirv_test11_input;
+NOTICE:  table "sirv_test11_input" does not exist, skipping
+--end_ignore
+CREATE OR REPLACE FUNCTION sirv_test11 (min_languages integer, min_area float8, min_gnp float8)
+  RETURNS text
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by(country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
+  
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN lang_delta || area_delta || gnp_delta ;
+
+END;
+$$
+    LANGUAGE plpgsql volatile;
+create table sirv_test11_input as select trunc(0.5 * 5) as lang_count,surfacearea, gnp from country where continent = 'Asia' distributed by (lang_count);
+--ctas with sirv taking non constant arguments. should not apply init plan changes. 
+-- ----------------------------------------------------------------------
+-- Test: test12_insert_non_constant_args.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists sirv_test12_input;
+NOTICE:  table "sirv_test12_input" does not exist, skipping
+drop table if exists sirv_test12_result1;
+NOTICE:  table "sirv_test12_result1" does not exist, skipping
+--end_ignore
+CREATE OR REPLACE FUNCTION sirv_test12 (min_languages integer, min_area float8, min_gnp float8)
+  RETURNS text
+AS $$
+DECLARE
+  lang_delta int;
+  area_delta float8;
+  gnp_delta float8;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by(country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
+  
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN lang_delta || area_delta || gnp_delta ;
+
+END;
+$$
+    LANGUAGE plpgsql volatile;
+create table sirv_test12_input as select trunc(0.5 * 5) as lang_count,surfacearea, gnp from country where continent = 'Asia' distributed by (lang_count);
+create table sirv_test12_result1 (res text) distributed by (res);
+--insert select with sirv taking non constant arguments. should not apply init plan changes. 
+--should fail
+--ignore error messages
+--start_ignore
+insert into sirv_test12_result1 select sirv_test12(lang_count::int,surfacearea::float,gnp::float) from sirv_test12_input;
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg1 slice1 pbld2:12012 pid=27128) (cdbdisp.c:1324)
+DETAIL:  
+SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by(country_code)"
+PL/pgSQL function "sirv_test12" line 7 at execute statement
+insert into sirv_test12_result1 select * from (select sirv_test12(lang_count::int,surfacearea::float,gnp::float) from sirv_test12_input) FOO;
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg1 slice1 pbld2:12012 pid=27159) (cdbdisp.c:1324)
+DETAIL:  
+SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by(country_code)"
+PL/pgSQL function "sirv_test12" line 7 at execute statement
+--end_ignore
+select * from sirv_test12_result1;
+ res 
+-----
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: test13_ctas_plpython.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop language if exists plpythonu cascade;
+NOTICE:  drop cascades to function public.count_operator(text,text)
+drop table if exists sirv_test13_result1;
+NOTICE:  table "sirv_test13_result1" does not exist, skipping
+drop table if exists sirv_test13_result2;
+NOTICE:  table "sirv_test13_result2" does not exist, skipping
+--end_ignore
+CREATE LANGUAGE plpythonu;
+CREATE or replace FUNCTION sirv_test13_fun1 ()
+  RETURNS text
+AS $$
+  plpy.execute('CREATE TABLE test_data1 (x INT, y INT) distributed by (x)')
+  plpy.execute('CREATE TABLE test_data2 (x INT, y VARCHAR) distributed by (x)')
+
+  for i in range(10):
+    plpy.execute('INSERT INTO test_data1 VALUES (' + str(i) + ',' + str(i) + ')')
+
+  for i in range(10):
+    plpy.execute('INSERT INTO test_data2 VALUES (' + str(i) + ',\'' + str(i) + '\')')
+
+  result1 = plpy.execute ('SELECT CASE WHEN count(*)>0 then \'PASS\' ELSE \'FAIL\' END FROM test_data1')
+  result2 = plpy.execute ('SELECT CASE WHEN count(*)>0 then \'PASS\' ELSE \'FAIL\' END FROM test_data2')
+
+  if ((result1 is not None) & (result2 is not None)):
+    result3 = 'PASS'
+  else:
+    result3 = 'FAIL'
+
+  plpy.execute('DROP TABLE test_data1')
+  plpy.execute('DROP TABLE test_data2')
+  return result3
+  
+$$ LANGUAGE plpythonu MODIFIES SQL DATA;
+CREATE OR REPLACE FUNCTION sirv_test13_fun2(gnp_diff float8, opt integer)  RETURNS FLOAT[] AS $$
+  gnp_curr_val = gnp_diff;
+  plpy.execute('CREATE TEMP TABLE l_gnp ( gnp_values FLOAT[]) distributed by (gnp_values)')
+  plpy.execute('CREATE TEMP TABLE h_gnp ( gnp_values FLOAT[]) distributed by (gnp_values)')
+
+  plpy.execute('INSERT INTO l_gnp SELECT ARRAY(SELECT gnp FROM country where gnp < ' + str(gnp_diff) + ' order by gnp desc)')
+  
+  gnp_curr_val = gnp_diff
+
+  for i in range(5):
+    plpy.execute('TRUNCATE table h_gnp')
+    plpy.execute('INSERT INTO h_gnp SELECT ARRAY(SELECT gnp FROM country where gnp > ' +  str(gnp_curr_val) + ' order by gnp desc LIMIT 50)')
+    gnp_curr_val = gnp_curr_val + 500
+
+  if(opt > 0):
+    res = plpy.execute('SELECT gnp_values from h_gnp')
+  else:
+    res = plpy.execute('SELECT gnp_values from l_gnp')
+  
+  plpy.execute('DROP TABLE l_gnp')
+  plpy.execute('DROP TABLE h_gnp')
+ 
+  return res[0]["gnp_values"]
+
+$$ LANGUAGE plpythonu MODIFIES SQL DATA;
+--select list
+create table sirv_test13_result1 as select 'sirv_test1:' || sirv_test13_fun1() as field1,
+                                          ARRAY[1.0::float,2.0::float] || sirv_test13_fun2(20000,0) as field2
+distributed by (field1);
+select * from sirv_test13_result1;
+     field1      |                                                                                                                                                                                                                                                                                                                                                                                         field2                                                                                                                                                                                                                                                                                                                                                                                          
+-----------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ sirv_test1:PASS | {1,2,19770,19756,19008,17843,17121,17000,16904,16321,15846,15706,14194,13714,12178,11863,11705,11500,11345,10692,10226,10162,9472,9333,9217,9174,9131,8571,8444,8287,8255,8005,7526,7137,6964,6871,6648,6398,6366,6353,6313,6232,6064,6041,5976,5951,5749,5493,5333,5332,5328,5121,4988,4834,4787,4768,4401,4397,4251,4173,4127,3750,3563,3527,3512,3501,3459,3377,3205,3101,2891,2841,2731,2642,2425,2357,2352,2328,2223,2108,2036,2012,1990,1988,1941,1813,1706,1694,1687,1630,1626,1579,1536,1449,1292,1263,1208,1206,1197,1119,1061,1054,1043,998,935,903,870,828,818,776,746,722,681,650,630,612,612,571,536,510,435,382,372,334,320,318,299,293,285,283,261,258,256,212,199,197,182,146,141,109,105,100,97,96,63.2,60,40.7,9,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+(1 row)
+
+--from clause
+create table sirv_test13_result2  as select * from sirv_test13_fun1() as field1,
+                                                            sirv_test13_fun2(20000,0) as field2
+distributed by (field1);
+select * from sirv_test13_result2;
+ field1 |                                                                                                                                                                                                                                                                                                                                                                                       field2                                                                                                                                                                                                                                                                                                                                                                                        
+--------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ PASS   | {19770,19756,19008,17843,17121,17000,16904,16321,15846,15706,14194,13714,12178,11863,11705,11500,11345,10692,10226,10162,9472,9333,9217,9174,9131,8571,8444,8287,8255,8005,7526,7137,6964,6871,6648,6398,6366,6353,6313,6232,6064,6041,5976,5951,5749,5493,5333,5332,5328,5121,4988,4834,4787,4768,4401,4397,4251,4173,4127,3750,3563,3527,3512,3501,3459,3377,3205,3101,2891,2841,2731,2642,2425,2357,2352,2328,2223,2108,2036,2012,1990,1988,1941,1813,1706,1694,1687,1630,1626,1579,1536,1449,1292,1263,1208,1206,1197,1119,1061,1054,1043,998,935,903,870,828,818,776,746,722,681,650,630,612,612,571,536,510,435,382,372,334,320,318,299,293,285,283,261,258,256,212,199,197,182,146,141,109,105,100,97,96,63.2,60,40.7,9,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test14_insert_select_plpython.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop language if exists plpythonu cascade;
+NOTICE:  drop cascades to function sirv_test13_fun2(double precision,integer)
+NOTICE:  drop cascades to function sirv_test13_fun1()
+drop table if exists sirv_test14_result1;
+NOTICE:  table "sirv_test14_result1" does not exist, skipping
+--end_ignore
+CREATE LANGUAGE plpythonu;
+CREATE or replace FUNCTION sirv_test14_fun1 ()
+  RETURNS text
+AS $$
+  plpy.execute('CREATE TABLE test_data1 (x INT, y INT) distributed by (x)')
+  plpy.execute('CREATE TABLE test_data2 (x INT, y VARCHAR) distributed by (x)')
+
+  for i in range(10):
+    plpy.execute('INSERT INTO test_data1 VALUES (' + str(i) + ',' + str(i) + ')')
+
+  for i in range(10):
+    plpy.execute('INSERT INTO test_data2 VALUES (' + str(i) + ',\'' + str(i) + '\')')
+
+  result1 = plpy.execute ('SELECT CASE WHEN count(*)>0 then \'PASS\' ELSE \'FAIL\' END FROM test_data1')
+  result2 = plpy.execute ('SELECT CASE WHEN count(*)>0 then \'PASS\' ELSE \'FAIL\' END FROM test_data2')
+
+  if ((result1 is not None) & (result2 is not None)):
+    result3 = 'PASS'
+  else:
+    result3 = 'FAIL'
+
+  plpy.execute('DROP TABLE test_data1')
+  plpy.execute('DROP TABLE test_data2')
+  return result3
+  
+$$ LANGUAGE plpythonu MODIFIES SQL DATA;
+CREATE OR REPLACE FUNCTION sirv_test14_fun2(gnp_diff float8, opt integer)  RETURNS FLOAT[] AS $$
+  gnp_curr_val = gnp_diff;
+  plpy.execute('CREATE TEMP TABLE l_gnp ( gnp_values FLOAT[]) distributed by (gnp_values)')
+  plpy.execute('CREATE TEMP TABLE h_gnp ( gnp_values FLOAT[]) distributed by (gnp_values)')
+
+  plpy.execute('INSERT INTO l_gnp SELECT ARRAY(SELECT gnp FROM country where gnp < ' + str(gnp_diff) + ' order by gnp desc)')
+  
+  gnp_curr_val = gnp_diff
+
+  for i in range(5):
+    plpy.execute('TRUNCATE table h_gnp')
+    plpy.execute('INSERT INTO h_gnp SELECT ARRAY(SELECT gnp FROM country where gnp > ' +  str(gnp_curr_val) + ' order by gnp desc LIMIT 50)')
+    gnp_curr_val = gnp_curr_val + 500
+
+  if(opt > 0):
+    res = plpy.execute('SELECT gnp_values from h_gnp')
+  else:
+    res = plpy.execute('SELECT gnp_values from l_gnp')
+  
+  plpy.execute('DROP TABLE l_gnp')
+  plpy.execute('DROP TABLE h_gnp')
+ 
+  return res[0]["gnp_values"]
+
+$$ LANGUAGE plpythonu MODIFIES SQL DATA;
+--select list
+create table sirv_test14_result1 (field1 text, field2 float[]) distributed by (field1);
+insert into sirv_test14_result1 select 'sirv_test1:' || sirv_test14_fun1(),
+                                          ARRAY[1.0::float,2.0::float] || sirv_test14_fun2(20000,0);
+select * from sirv_test14_result1;
+     field1      |                                                                                                                                                                                                                                                                                                                                                                                         field2                                                                                                                                                                                                                                                                                                                                                                                          
+-----------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ sirv_test1:PASS | {1,2,19770,19756,19008,17843,17121,17000,16904,16321,15846,15706,14194,13714,12178,11863,11705,11500,11345,10692,10226,10162,9472,9333,9217,9174,9131,8571,8444,8287,8255,8005,7526,7137,6964,6871,6648,6398,6366,6353,6313,6232,6064,6041,5976,5951,5749,5493,5333,5332,5328,5121,4988,4834,4787,4768,4401,4397,4251,4173,4127,3750,3563,3527,3512,3501,3459,3377,3205,3101,2891,2841,2731,2642,2425,2357,2352,2328,2223,2108,2036,2012,1990,1988,1941,1813,1706,1694,1687,1630,1626,1579,1536,1449,1292,1263,1208,1206,1197,1119,1061,1054,1043,998,935,903,870,828,818,776,746,722,681,650,630,612,612,571,536,510,435,382,372,334,320,318,299,293,285,283,261,258,256,212,199,197,182,146,141,109,105,100,97,96,63.2,60,40.7,9,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+(1 row)
+
+--from clause
+insert into sirv_test14_result1 select * from sirv_test14_fun1(),sirv_test14_fun2(20000,0);
+select * from sirv_test14_result1;
+     field1      |                                                                                                                                                                                                                                                                                                                                                                                         field2                                                                                                                                                                                                                                                                                                                                                                                          
+-----------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ PASS            | {19770,19756,19008,17843,17121,17000,16904,16321,15846,15706,14194,13714,12178,11863,11705,11500,11345,10692,10226,10162,9472,9333,9217,9174,9131,8571,8444,8287,8255,8005,7526,7137,6964,6871,6648,6398,6366,6353,6313,6232,6064,6041,5976,5951,5749,5493,5333,5332,5328,5121,4988,4834,4787,4768,4401,4397,4251,4173,4127,3750,3563,3527,3512,3501,3459,3377,3205,3101,2891,2841,2731,2642,2425,2357,2352,2328,2223,2108,2036,2012,1990,1988,1941,1813,1706,1694,1687,1630,1626,1579,1536,1449,1292,1263,1208,1206,1197,1119,1061,1054,1043,998,935,903,870,828,818,776,746,722,681,650,630,612,612,571,536,510,435,382,372,334,320,318,299,293,285,283,261,258,256,212,199,197,182,146,141,109,105,100,97,96,63.2,60,40.7,9,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+ sirv_test1:PASS | {1,2,19770,19756,19008,17843,17121,17000,16904,16321,15846,15706,14194,13714,12178,11863,11705,11500,11345,10692,10226,10162,9472,9333,9217,9174,9131,8571,8444,8287,8255,8005,7526,7137,6964,6871,6648,6398,6366,6353,6313,6232,6064,6041,5976,5951,5749,5493,5333,5332,5328,5121,4988,4834,4787,4768,4401,4397,4251,4173,4127,3750,3563,3527,3512,3501,3459,3377,3205,3101,2891,2841,2731,2642,2425,2357,2352,2328,2223,2108,2036,2012,1990,1988,1941,1813,1706,1694,1687,1630,1626,1579,1536,1449,1292,1263,1208,1206,1197,1119,1061,1054,1043,998,935,903,870,828,818,776,746,722,681,650,630,612,612,571,536,510,435,382,372,334,320,318,299,293,285,283,261,258,256,212,199,197,182,146,141,109,105,100,97,96,63.2,60,40.7,9,6,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+(2 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: test15_ctas_with_udt.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists sirv_test15_result1;
+NOTICE:  table "sirv_test15_result1" does not exist, skipping
+drop table if exists sirv_test15_result2;
+NOTICE:  table "sirv_test15_result2" does not exist, skipping
+drop type if exists sirv_test15_holder cascade;
+NOTICE:  type "sirv_test15_holder" does not exist, skipping
+drop table if exists sirv_test15_output cascade;
+NOTICE:  table "sirv_test15_output" does not exist, skipping
+drop table if exists sirv_test15_result3;
+NOTICE:  table "sirv_test15_result3" does not exist, skipping
+drop table if exists sirv_test15_result4;
+NOTICE:  table "sirv_test15_result4" does not exist, skipping
+--end_ignore
+--function returning udt
+CREATE TYPE sirv_test15_holder as (lang_delta int, area_delta float8, gnp_delta float8);
+CREATE OR REPLACE FUNCTION sirv_test15_fun1 (min_languages integer, min_area float8, min_gnp float8)
+RETURNS  sirv_test15_holder
+AS $$
+DECLARE
+res sirv_test15_holder;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into res;
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN res;
+
+END;
+$$
+    LANGUAGE plpgsql volatile;
+--ctas with sirv returning udt in select list and from clause
+create table sirv_test15_result1 as select 1 as field1,sirv_test15_fun1(2,1000,1000) as field2 distributed by (field1);
+select * from sirv_test15_result1;
+ field1 |        field2         
+--------+-----------------------
+      1 | (10,17074400,8509700)
+(1 row)
+
+create table sirv_test15_result2 as select * from (select 1 as field1) FOO,sirv_test15_fun1(2,1000,1000) as field2 distributed by (field1);
+select * from sirv_test15_result2;
+ field1 | lang_delta | area_delta | gnp_delta 
+--------+------------+------------+-----------
+      1 |         10 |   17074400 |   8509700
+(1 row)
+
+--function returning a table type
+create table sirv_test15_output (lang_delta int, area_delta float8, gnp_delta float8) distributed by (lang_delta);
+CREATE OR REPLACE FUNCTION sirv_test15_fun2 (min_languages integer, min_area float8, min_gnp float8)
+RETURNS  sirv_test15_output
+AS $$
+DECLARE
+res sirv_test15_output%rowtype;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into res;
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN res;
+
+END;
+$$
+    LANGUAGE plpgsql volatile;
+--ctas with sirv returning table type in select list and from clause
+create table sirv_test15_result3 as select 1 as field1,sirv_test15_fun2(2,1000,1000) as field2 distributed by (field1);
+select * from sirv_test15_result3;
+ field1 |        field2         
+--------+-----------------------
+      1 | (10,17074400,8509700)
+(1 row)
+
+create table sirv_test15_result4 as select * from (select 1 as field1) FOO,sirv_test15_fun2(2,1000,1000) as field2 distributed by (field1);
+select * from sirv_test15_result4;
+ field1 | lang_delta | area_delta | gnp_delta 
+--------+------------+------------+-----------
+      1 |         10 |   17074400 |   8509700
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test16_insert_select_with_udt.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists sirv_test16_result1;
+NOTICE:  table "sirv_test16_result1" does not exist, skipping
+drop table if exists sirv_test16_result2;
+NOTICE:  table "sirv_test16_result2" does not exist, skipping
+drop type if exists sirv_test16_holder cascade;
+NOTICE:  type "sirv_test16_holder" does not exist, skipping
+drop table if exists sirv_test16_output cascade;
+NOTICE:  table "sirv_test16_output" does not exist, skipping
+--end_ignore
+--function returning udt
+CREATE TYPE sirv_test16_holder as (lang_delta int, area_delta float8, gnp_delta float8);
+CREATE OR REPLACE FUNCTION sirv_test16_fun1 (min_languages integer, min_area float8, min_gnp float8)
+RETURNS  sirv_test16_holder
+AS $$
+DECLARE
+res sirv_test16_holder;
+BEGIN
+
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into res;
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN res;
+
+END;
+$$
+    LANGUAGE plpgsql volatile MODIFIES SQL DATA;
+--insert select with sirv returning udt in select list and from clause
+create table sirv_test16_result1 (field1 int, field2 sirv_test16_holder) distributed by (field1);
+insert into sirv_test16_result1 select 1,sirv_test16_fun1(2,1000,1000);
+select * from sirv_test16_result1;
+ field1 |        field2         
+--------+-----------------------
+      1 | (10,17074400,8509700)
+(1 row)
+
+insert into sirv_test16_result1 select * from (select 2) FOO,(select sirv_test16_fun1(2,1000,1000)) FOO1;
+select * from sirv_test16_result1 order by field1;
+ field1 |        field2         
+--------+-----------------------
+      1 | (10,17074400,8509700)
+      2 | (10,17074400,8509700)
+(2 rows)
+
+--function returning a table type
+create table sirv_test16_output (lang_delta int, area_delta float8, gnp_delta float8) distributed by (lang_delta);
+CREATE OR REPLACE FUNCTION sirv_test16_fun2 (min_languages integer, min_area float8, min_gnp float8)
+RETURNS  sirv_test16_output
+AS $$
+DECLARE
+res sirv_test16_output%rowtype;
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into res;
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN res;
+
+END;
+$$
+    LANGUAGE plpgsql volatile MODIFIES SQL DATA;
+--ctas with sirv returning table type in select list and from clause
+create table sirv_test16_result2 (field1 int, field2 sirv_test16_output) distributed by (field1);
+--select list
+insert into sirv_test16_result2 select 1,sirv_test16_fun2(2,1000,1000);
+select * from sirv_test16_result2;
+ field1 |        field2         
+--------+-----------------------
+      1 | (10,17074400,8509700)
+(1 row)
+
+--from clause
+insert into sirv_test16_result2 select * from (select 2) FOO,(select sirv_test16_fun2(2,1000,1000)) FOO1;
+select * from sirv_test16_result2 order by field1;
+ field1 |        field2         
+--------+-----------------------
+      1 | (10,17074400,8509700)
+      2 | (10,17074400,8509700)
+(2 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: test17_negative_sirv_composite_type.sql
+-- ----------------------------------------------------------------------
+-- start_matchsubs
+-- m/psql:.*ERROR:.*/
+-- s/psql:.*ERROR:.*/ERROR_MESSAGE/
+-- end_matchsubs
+--start_ignore
+drop table if exists countries_results;
+NOTICE:  table "countries_results" does not exist, skipping
+--end_ignore
+CREATE OR REPLACE FUNCTION sirv_test17_fun1 (min_languages integer, min_area float8, min_gnp float8, OUT lang_delta int, OUT area_delta float8, OUT gnp_delta float8)
+AS $$
+
+BEGIN
+
+  EXECUTE 'CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)';
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
+  EXECUTE 'DROP TABLE countries_results';
+
+  RETURN;
+
+END;
+$$
+    LANGUAGE plpgsql volatile;
+--ctas with a function returning anonymous composite type
+--function returning record
+CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code);
+CREATE OR REPLACE FUNCTION sirv_test17_fun2 (min_languages integer, min_area float8, min_gnp float8) RETURNS record
+AS $$
+DECLARE
+
+res record;
+
+BEGIN
+
+  EXECUTE 'INSERT INTO countries_results 
+  	   ( with lang_total as
+            ( select count(*) as lang_count,country.code,countrylanguage.countrycode
+              from country join countrylanguage on (country.code=countrylanguage.countrycode)
+              group by country.code,countrylanguage.countrycode order by country.code
+            )
+            select country.code,country.name, lang_count, country.surfacearea, country.gnp
+            from country left outer join lang_total
+            on (lang_total.code = country.code)
+            where lang_count > ' || min_languages || ' and country.surfacearea > ' || min_area || ' and country.gnp > ' || min_gnp
+            || ' order by lang_total.lang_count desc 
+           )';
+  
+
+  EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into res;
+
+
+  RETURN res;
+
+END;
+$$
+    LANGUAGE plpgsql volatile;
+--ctas with a function returning record
+DROP TABLE countries_results;
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop schema sirv_functions cascade;
+NOTICE:  drop cascades to function sirv_test17_fun2(integer,double precision,double precision)
+NOTICE:  drop cascades to function sirv_test17_fun1(integer,double precision,double precision)
+NOTICE:  drop cascades to table sirv_test16_result2
+NOTICE:  drop cascades to function sirv_test16_fun2(integer,double precision,double precision)
+NOTICE:  drop cascades to table sirv_test16_output
+NOTICE:  drop cascades to table sirv_test16_result1
+NOTICE:  drop cascades to function sirv_test16_fun1(integer,double precision,double precision)
+NOTICE:  drop cascades to type sirv_test16_holder
+NOTICE:  drop cascades to table sirv_test15_result4
+NOTICE:  drop cascades to table sirv_test15_result3
+NOTICE:  drop cascades to function sirv_test15_fun2(integer,double precision,double precision)
+NOTICE:  drop cascades to table sirv_test15_output
+NOTICE:  drop cascades to table sirv_test15_result2
+NOTICE:  drop cascades to table sirv_test15_result1
+NOTICE:  drop cascades to function sirv_test15_fun1(integer,double precision,double precision)
+NOTICE:  drop cascades to type sirv_test15_holder
+NOTICE:  drop cascades to table sirv_test14_result1
+NOTICE:  drop cascades to function sirv_test14_fun2(double precision,integer)
+NOTICE:  drop cascades to function sirv_test14_fun1()
+NOTICE:  drop cascades to table sirv_test13_result2
+NOTICE:  drop cascades to table sirv_test13_result1
+NOTICE:  drop cascades to table sirv_test12_result1
+NOTICE:  drop cascades to table sirv_test12_input
+NOTICE:  drop cascades to function sirv_test12(integer,double precision,double precision)
+NOTICE:  drop cascades to table sirv_test11_input
+NOTICE:  drop cascades to function sirv_test11(integer,double precision,double precision)
+NOTICE:  drop cascades to table sirv_test10_result2
+NOTICE:  drop cascades to function sirv_test10_srf2(text,integer,double precision,double precision)
+NOTICE:  drop cascades to type sirv_test10_holder
+NOTICE:  drop cascades to table sirv_test10_result1
+NOTICE:  drop cascades to function sirv_test10_srf1(integer,double precision,double precision)
+NOTICE:  drop cascades to table countries
+NOTICE:  drop cascades to function sirv_test9_fun2(text,integer,double precision,double precision)
+NOTICE:  drop cascades to type test9_holder
+NOTICE:  drop cascades to function sirv_test9_fun1(integer,double precision,double precision)
+NOTICE:  drop cascades to table test9_countries
+NOTICE:  drop cascades to table sirv_test8_result2
+NOTICE:  drop cascades to function sirv_test8_fun3(text,integer,double precision,double precision)
+NOTICE:  drop cascades to function sirv_test8_fun2(integer,double precision,double precision)
+NOTICE:  drop cascades to table sirv_test8_result1
+NOTICE:  drop cascades to function call_sirv_test8_fun1(integer)
+NOTICE:  drop cascades to function sirv_test8_fun1()
+NOTICE:  drop cascades to function sirv_test7_fun3(text,integer,double precision,double precision)
+NOTICE:  drop cascades to function sirv_test7_fun2(integer,double precision,double precision)
+NOTICE:  drop cascades to table sirv_test7_result1
+NOTICE:  drop cascades to function call_sirv_test7_fun1(integer)
+NOTICE:  drop cascades to function sirv_test7_fun1()
+NOTICE:  drop cascades to table sirv_test6_result2
+NOTICE:  drop cascades to table sirv_test6_result1
+NOTICE:  drop cascades to function sirv_test6_fun4(double precision,integer)
+NOTICE:  drop cascades to function sirv_test6_fun3(integer,double precision,double precision)
+NOTICE:  drop cascades to function sirv_test6_fun2(integer,double precision,double precision)
+NOTICE:  drop cascades to function sirv_test6_fun1()
+NOTICE:  drop cascades to table sirv_test5_result2
+NOTICE:  drop cascades to table sirv_test5_result1
+NOTICE:  drop cascades to function sirv_test5_fun4(double precision,integer)
+NOTICE:  drop cascades to function sirv_test5_fun3(integer,double precision,double precision)
+NOTICE:  drop cascades to function sirv_test5_fun2(integer,double precision,double precision)
+NOTICE:  drop cascades to function sirv_test5_fun1()
+NOTICE:  drop cascades to table sirv_test4_result2
+NOTICE:  drop cascades to table sirv_test4_result1
+NOTICE:  drop cascades to function sirv_test4(double precision,integer)
+NOTICE:  drop cascades to table sirv_test3_result2
+NOTICE:  drop cascades to table sirv_test3_result1
+NOTICE:  drop cascades to function sirv_test3(integer,double precision,double precision)
+NOTICE:  drop cascades to table sirv_test2_result2
+NOTICE:  drop cascades to table sirv_test2_result1
+NOTICE:  drop cascades to function sirv_test2(integer,double precision,double precision)
+NOTICE:  drop cascades to table sirv_test1_result2
+NOTICE:  drop cascades to table sirv_test1_result1
+NOTICE:  drop cascades to function sirv_test1()
+NOTICE:  drop cascades to table countrylanguage
+NOTICE:  drop cascades to table country
+NOTICE:  drop cascades to table city
+-- end_ignore

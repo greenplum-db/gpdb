@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/init/miscinit.c,v 1.159.2.2 2009/12/09 21:58:29 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/init/miscinit.c,v 1.162 2007/02/15 23:23:23 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -525,7 +525,7 @@ InitializeSessionUserId(const char *rolename)
 	 *
 	 * We do not enforce them for the autovacuum process either.
 	 */
-	if (IsUnderPostmaster && !IsAutoVacuumProcess())
+	if (IsUnderPostmaster && !IsAutoVacuumWorkerProcess())
 	{
 		/*
 		 * Is role allowed to login at all?
@@ -587,7 +587,7 @@ void
 InitializeSessionUserIdStandalone(void)
 {
 	/* This function should only be called in a single-user backend. */
-	AssertState(!IsUnderPostmaster || IsAutoVacuumProcess() || am_startup);
+	AssertState(!IsUnderPostmaster || IsAutoVacuumWorkerProcess() || am_startup);
 
 	/* call only once */
 	AssertState(!OidIsValid(AuthenticatedUserId));
@@ -1253,7 +1253,7 @@ ValidatePgVersion(const char *path)
 						path),
 				 errdetail("File \"%s\" does not contain valid data.",
 						   full_path),
-				 errhint("You may need to run gprecoversegment.sh")));
+				 errhint("You might need to run gprecoversegment.sh")));
 
 	FreeFile(file);
 

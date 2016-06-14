@@ -227,6 +227,18 @@ typedef struct WindowStatePerLevelData
 	FrameBufferEntry *curr_entry_buf;
 	FrameBufferEntry *trail_entry_buf;
 	FrameBufferEntry *lead_entry_buf;
+	
+	/* A char buffer to temporarily hold serialized data before
+	*  writing them to the frame buffer, and keep deserialized
+	*  data when reading from the frame buffer.
+	*
+	* Use this pre-allocated buffer to avoid doing
+	* palloc/pfree many times.
+	*
+	* The size of this array is specified by 'max_size'.
+	*/
+	char *serial_array;
+	Size max_size;
 }	WindowStatePerLevelData;
 
 /*
@@ -1167,7 +1179,7 @@ serializeEntry(WindowStatePerLevel level_state,
 {
 	int			key_no;
 	char	   *written_pos;
-	TupleTableSlot *slot = econtext->ecxt_scantuple;
+	TupleTableSlot *slot = econtext->ecxt_outertuple;
 
 	*p_len = 0;
 	Assert(*p_serial_entry != NULL);
@@ -1303,7 +1315,7 @@ adjustEdgesAfterAppend(WindowStatePerLevel level_state,
 {
 	WindowFrameBuffer buffer = level_state->frame_buffer;
 	ExprContext *econtext = wstate->ps.ps_ExprContext;
-	TupleTableSlot *inserting_tuple = econtext->ecxt_scantuple;
+	TupleTableSlot *inserting_tuple = econtext->ecxt_outertuple;
 
 	/*
 	 * If the current_row_reader for the buffer is not set, set it to point to
@@ -1338,7 +1350,7 @@ adjustEdgesAfterAppend(WindowStatePerLevel level_state,
 				 (EDGE_IS_BOUND_FOLLOWING(level_state->frame->trail) ||
 				  EDGE_IS_DELAYED(level_state->frame->trail)))
 		{
-			econtext->ecxt_scantuple = wstate->curslot;
+			econtext->ecxt_outertuple = wstate->curslot;
 			forwardEdgeForRange(level_state, wstate,
 								level_state->frame->trail,
 								level_state->trail_expr,
@@ -1346,7 +1358,7 @@ adjustEdgesAfterAppend(WindowStatePerLevel level_state,
 								level_state->trail_reader,
 								false);
 
-			econtext->ecxt_scantuple = inserting_tuple;
+			econtext->ecxt_outertuple = inserting_tuple;
 		}
 	}
 
@@ -1413,14 +1425,14 @@ adjustEdgesAfterAppend(WindowStatePerLevel level_state,
 			}
 			else if (EDGE_IS_BOUND(level_state->frame->lead))
 			{
-				econtext->ecxt_scantuple = wstate->curslot;
+				econtext->ecxt_outertuple = wstate->curslot;
 				forwardEdgeForRange(level_state, wstate,
 									level_state->frame->lead,
 									level_state->lead_expr,
 									level_state->lead_range_expr,
 									level_state->lead_reader,
 									true);
-				econtext->ecxt_scantuple = inserting_tuple;
+				econtext->ecxt_outertuple = inserting_tuple;
 			}
 			else
 			{
@@ -1444,11 +1456,11 @@ appendToFrameBuffer(WindowStatePerLevel level_state,
 	ExprContext *econtext = wstate->ps.ps_ExprContext;
 
 	Assert(buffer->is_rows == level_state->is_rows);
-	MemSet(wstate->serial_array, 0, wstate->max_size);
+	MemSet(level_state->serial_array, 0, level_state->max_size);
 	serializeEntry(level_state, econtext,
-				   &(wstate->serial_array), &(wstate->max_size), &len);
+				   &(level_state->serial_array), &(level_state->max_size), &len);
 
-	ntuplestore_acc_put_data(buffer->writer, (void *)(wstate->serial_array), len);
+	ntuplestore_acc_put_data(buffer->writer, (void *)(level_state->serial_array), len);
 
 	adjustEdgesAfterAppend(level_state, wstate, last_peer);
 
@@ -2074,18 +2086,18 @@ computeTransValuesThroughScan(WindowStatePerLevel level_state,
 				}
 				else
 				{
-					TupleTableSlot *slot = econtext->ecxt_scantuple;
+					TupleTableSlot *slot = econtext->ecxt_outertuple;
 					bool		found;
 
 					found = ntuplestore_acc_current_tupleslot(wstate->input_buffer->writer,
 															  wstate->spare);
 					Assert(found);
 
-					econtext->ecxt_scantuple = wstate->spare;
+					econtext->ecxt_outertuple = wstate->spare;
 					add_tuple_to_trans(funcstate, wstate, econtext, false);
 
 					/* Reset back to its orginial value */
-					econtext->ecxt_scantuple = slot;
+					econtext->ecxt_outertuple = slot;
 				}
 			}
 		}
@@ -2172,15 +2184,15 @@ computeFrameValue(WindowStatePerLevel level_state,
 			}
 			else
 			{
-				TupleTableSlot *slot = econtext->ecxt_scantuple;
+				TupleTableSlot *slot = econtext->ecxt_outertuple;
 
 				ntuplestore_acc_current_tupleslot(wstate->input_buffer->writer,
 												  wstate->spare);
-				econtext->ecxt_scantuple = wstate->spare;
+				econtext->ecxt_outertuple = wstate->spare;
 				add_tuple_to_trans(funcstate, wstate, econtext, false);
 
 				/* Reset back to its orginial value */
-				econtext->ecxt_scantuple = slot;
+				econtext->ecxt_outertuple = slot;
 			}
 		}
 
@@ -3000,12 +3012,22 @@ makeWindowState(Window * window, EState *estate)
 	wstate->level_state = NULL;
 
 	numlevels = list_length(window->windowKeys);
+	wstate->numlevels = numlevels;
+
 	if (numlevels > 0)
+	{
 		wstate->level_state = (WindowStatePerLevel)
-			palloc0(numlevels * sizeof(WindowStatePerLevelData));
+			palloc0(wstate->numlevels * sizeof(WindowStatePerLevelData));
+
+		for (int level = 0; level < wstate->numlevels; level++)
+		{
+			WindowStatePerLevel level_state = &wstate->level_state[level];
+			level_state->serial_array = palloc0(FRAMEBUFFER_ENTRY_SIZE);
+			level_state->max_size = FRAMEBUFFER_ENTRY_SIZE;
+		}
+	}
 	else
 		wstate->level_state = NULL;
-	wstate->numlevels = numlevels;
 
 	wstate->transcontext = AllocSetContextCreate(CurrentMemoryContext,
 												 "TransContext",
@@ -3017,13 +3039,6 @@ makeWindowState(Window * window, EState *estate)
 											   ALLOCSET_DEFAULT_MINSIZE,
 											   ALLOCSET_DEFAULT_INITSIZE,
 											   ALLOCSET_DEFAULT_MAXSIZE);
-
-	/*
-	 * We allocate the buffer to be 1K initially, which should be sufficient
-	 * for most cases.
-	 */
-	wstate->serial_array = palloc0(FRAMEBUFFER_ENTRY_SIZE);
-	wstate->max_size = FRAMEBUFFER_ENTRY_SIZE;
 
 	return wstate;
 }
@@ -3348,7 +3363,7 @@ invokeTrivialFuncs(WindowState * wstate, bool *found)
 
 		if (funcstate->trivial_frame)
 		{
-			econtext->ecxt_scantuple = wstate->curslot;
+			econtext->ecxt_outertuple = wstate->curslot;
 			add_tuple_to_trans(funcstate, wstate, econtext, false);
 
 			if (funcstate->isAgg)
@@ -3997,7 +4012,7 @@ get_delay_edge(WindowFrameEdge * edge,
 
 	Assert(EDGE_IS_DELAYED(edge));
 
-	econtext->ecxt_scantuple = wstate->curslot;
+	econtext->ecxt_outertuple = wstate->curslot;
 	if (TupIsNull(wstate->curslot))
 		ereport(ERROR,
 				(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
@@ -4849,12 +4864,9 @@ ExecWindow(WindowState * wstate)
 	econtext = wstate->ps.ps_ExprContext;
 
 	/* Fetch the current_row */
-	econtext->ecxt_scantuple = fetchCurrentRow(wstate);
+	econtext->ecxt_outertuple = fetchCurrentRow(wstate);
 
-	econtext->ecxt_outertuple =
-		econtext->ecxt_scantuple;		/* XXX really need this? */
-
-	if (TupIsNull(econtext->ecxt_scantuple))
+	if (TupIsNull(econtext->ecxt_outertuple))
 	{
 		ExecEagerFreeWindow(wstate);
 
@@ -4886,7 +4898,7 @@ ExecWindow(WindowState * wstate)
 				 (wstate->cur_slot_key_break != -1 &&
 				  level >= wstate->cur_slot_key_break)))
 			{
-				econtext->ecxt_scantuple = wstate->curslot;
+				econtext->ecxt_outertuple = wstate->curslot;
 				incrementCurrentRow(level_state->frame_buffer, wstate);
 			}
 		}
@@ -4911,7 +4923,7 @@ ExecWindow(WindowState * wstate)
 
 	ResetExprContext(econtext);
 
-	econtext->ecxt_scantuple = wstate->curslot;
+	econtext->ecxt_outertuple = wstate->curslot;
 	econtext->ecxt_outertuple = wstate->curslot;
 
 	invokeWindowFuncs(wstate);
@@ -5079,10 +5091,10 @@ processTupleSlot(WindowState * wstate, TupleTableSlot * slot, bool last_peer)
 				}
 
 				/*
-				 * Set econtext->ecxt_scantuple because the range frame needs
+				 * Set econtext->ecxt_outertuple because the range frame needs
 				 * this for order keys.
 				 */
-				econtext->ecxt_scantuple = wstate->priorslot;
+				econtext->ecxt_outertuple = wstate->priorslot;
 				appendToFrameBuffer(level_state, wstate, last_peer);
 
 				/*
@@ -5154,8 +5166,7 @@ processTupleSlot(WindowState * wstate, TupleTableSlot * slot, bool last_peer)
 				else
 				{
 					/* Add this tuple to its transition value */
-					econtext->ecxt_scantuple = slot;
-					econtext->ecxt_outertuple = slot;	/* XXX really need this? */
+					econtext->ecxt_outertuple = slot;
 
 					add_tuple_to_trans(funcstate, wstate, econtext, true);
 
@@ -5178,7 +5189,7 @@ checkOutputReady(WindowState * wstate)
 	int			level;
 	ExprContext *econtext = wstate->ps.ps_ExprContext;
 
-	econtext->ecxt_scantuple = wstate->curslot;
+	econtext->ecxt_outertuple = wstate->curslot;
 
 	if (wstate->input_buffer->part_break)
 		return true;
@@ -5267,7 +5278,7 @@ init_bound_frame_edge_expr(WindowFrameEdge * edge, TupleDesc desc,
 	ltype = desc->attrs[attnum - 1]->atttypid;
 	rtype = exprType(edge->val);
 
-	varexpr = (Expr *)makeVar(0, attnum, ltype, vartypmod, 0);
+	varexpr = (Expr *) makeVar(OUTER, attnum, ltype, vartypmod, 0);
 
 	expr = (Expr *)edge->val;
 
@@ -5467,7 +5478,7 @@ make_eq_exprstate(WindowState * wstate, Expr *expr1, Expr *expr2)
 /*
  * exec_eq_exprstate
  * Executes eq_exprstate made in make_eq_exprstate() and returns
- * bool result. It sets ecxt_scantuple to the current slot
+ * bool result. It sets ecxt_outertuple to the current slot
  * so that Vars contained in eq_exprstate point to the current row.
  */
 static bool
@@ -5481,7 +5492,7 @@ exec_eq_exprstate(WindowState * wstate, ExprState *eq_exprstate)
 	Assert(IsA(eq_exprstate->expr, OpExpr));
 
 	/* Make sure Var in eq_expr points to the current slot */
-	econtext->ecxt_scantuple = wstate->curslot;
+	econtext->ecxt_outertuple = wstate->curslot;
 
 	oldctx = MemoryContextSwitchTo(econtext->ecxt_per_tuple_memory);
 	result = DatumGetBool(ExecEvalExpr(eq_exprstate, econtext, &isnull, NULL));
@@ -6027,7 +6038,7 @@ windowBufferNextLastAgg(WindowBufferCursor cursor)
 		FrameBufferEntry *entry = level_state->curr_entry_buf;
 		bool		found;
 		ExprContext *econtext = wstate->ps.ps_ExprContext;
-		TupleTableSlot *slot = econtext->ecxt_scantuple;
+		TupleTableSlot *slot = econtext->ecxt_outertuple;
 		Size		len;
 
 		found = ntuplestore_acc_current_tupleslot(wstate->input_buffer->writer,
@@ -6041,13 +6052,13 @@ windowBufferNextLastAgg(WindowBufferCursor cursor)
 		 * cursor, we do this here. It is actually not so bad, as it's done in
 		 * memory.
 		 */
-		econtext->ecxt_scantuple = wstate->spare;
-		MemSet(wstate->serial_array, 0, wstate->max_size);
+		econtext->ecxt_outertuple = wstate->spare;
+		MemSet(level_state->serial_array, 0, level_state->max_size);
 		serializeEntry(level_state, econtext,
-					   &(wstate->serial_array), &(wstate->max_size), &len);
-		entry = deserializeEntry(level_state, entry, wstate->serial_array, len);
+					   &(level_state->serial_array), &(level_state->max_size), &len);
+		entry = deserializeEntry(level_state, entry, level_state->serial_array, len);
 		/* Get back the slot. */
-		econtext->ecxt_scantuple = slot;
+		econtext->ecxt_outertuple = slot;
 		/* We never use this again as it's the logical last row. */
 		cursor->use_last_agg = false;
 
@@ -6223,6 +6234,12 @@ ExecEndWindow(WindowState * node)
 
 		freeFrameBufferEntry(level_state->lead_entry_buf);
 		level_state->lead_entry_buf = NULL;
+
+		if (level_state->serial_array != NULL)
+		{
+			pfree(level_state->serial_array);
+			level_state->serial_array = NULL;
+		}
 	}
 
 	ExecEagerFreeWindow(node);
@@ -6241,8 +6258,6 @@ ExecEndWindow(WindowState * node)
 
 	if (node->cmpcontext != NULL)
 		MemoryContextDelete(node->cmpcontext);
-
-	pfree(node->serial_array);
 
 	if (node->numlevels > 0)
 		pfree(node->level_state);

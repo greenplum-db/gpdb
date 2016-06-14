@@ -34,11 +34,11 @@ ERROR:  syntax error at or near "BEGIN"
 LINE 2: BEGIN
         ^
 SAVEPOINT my_savepoint;
-ERROR:  SAVEPOINT may only be used in transaction blocks
+ERROR:  SAVEPOINT can only be used in transaction blocks
 insert into testswapna  values(1,101,'F');
 ERROR:  relation "testswapna" does not exist
 ROLLBACK TO SAVEPOINT my_savepoint;
-ERROR:  ROLLBACK TO SAVEPOINT may only be used in transaction blocks
+ERROR:  ROLLBACK TO SAVEPOINT can only be used in transaction blocks
 insert into testswapna values(2,201,'M');
 ERROR:  relation "testswapna" does not exist
 \echo -- start_ignore

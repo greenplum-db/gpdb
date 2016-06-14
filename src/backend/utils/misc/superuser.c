@@ -24,6 +24,7 @@
 #include "catalog/pg_authid.h"
 #include "utils/inval.h"
 #include "utils/syscache.h"
+#include "storage/proc.h"
 #include "miscadmin.h"
 
 
@@ -49,6 +50,14 @@ superuser(void)
 	return superuser_arg(GetUserId());
 }
 
+/*
+ * Is my role id a super user.
+ */
+bool
+procRoleIsSuperuser(void)
+{
+	return superuser_arg(MyProc->roleId);
+}
 
 /*
  * The specified role has Postgres superuser privileges

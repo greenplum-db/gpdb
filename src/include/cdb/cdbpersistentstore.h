@@ -9,14 +9,13 @@
 #ifndef CDBPERSISTENTSTORE_H
 #define CDBPERSISTENTSTORE_H
 
-#include "utils/palloc.h"
-#include "storage/fd.h"
+#include "miscadmin.h"
 #include "access/persistentfilesysobjname.h"
 #include "catalog/gp_global_sequence.h"
 #include "storage/itemptr.h"
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "utils/rel.h"
+#include "utils/relcache.h"
 #include "cdb/cdbfilerepprimary.h"
 #include "cdb/cdbdirectopen.h"
 #include "utils/guc.h"
@@ -521,6 +520,10 @@ extern void PersistentStore_Init(
 	int 						attNumPreviousFreeTid);
 
 extern void PersistentStore_ResetFreeList(
+	PersistentStoreData 		*storeData,
+	PersistentStoreSharedData 	*storeSharedData);
+
+extern uint64 PersistentStore_RebuildFreeList(
 	PersistentStoreData 		*storeData,
 	PersistentStoreSharedData 	*storeSharedData);
 

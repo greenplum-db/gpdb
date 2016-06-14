@@ -350,32 +350,22 @@ cdbpullup_exprHasSubplanRef(Expr *expr)
 
 
 /*
- * cdbpullup_findPathKeyItemInTargetList
+ * cdbpullup_findPathKeyExprInTargetList
  *
- * Searches the equivalence class 'pathkey' for a PathKeyItem that
+ * Searches the equivalence class of a given PathKey for a member that
  * uses no rels outside the 'relids' set, and either is a member of
  * 'targetlist', or uses no Vars that are not in 'targetlist'.
  *
- * If found, returns the chosen PathKeyItem and sets the output variables.
- * - If the item's Vars (if any) are in targetlist, but the item itself is not:
- *      *ptargetindex = 0
- * - Else if the targetlist is a List of TargetEntry nodes:
- *      *ptargetindex gets the matching TargetEntry's resno (which is the
- *          1-based position of the TargetEntry in the targetlist); or 0.
- * - Else if the targetlist is a plain List of Expr without TargetEntry nodes:
- *      *ptargetindex gets the 1-based position of the matching entry in the
- *          targetlist, or 0 if the expr is not in the targetlist.
+ * If found, returns the chosen member's expression, otherwise returns
+ *  NULL
  *
- * Otherwise returns NULL and sets *ptargetindex = 0.
- *
- * 'pathkey' is a List of PathKeyItem.
- * 'relids' is the set of relids that may occur in the targetlist exprs.
+ * 'item' is a PathKey.
  * 'targetlist' is a List of TargetEntry or merely a List of Expr.
  *
  * NB: We ignore the presence or absence of a RelabelType node atop either
- * expr in determining whether a PathKeyItem expr matches a targetlist expr.
+ * expr in determining whether a PathKey expr matches a targetlist expr.
  *
- * (A RelabelType node might have been placed atop a PathKeyItem's expr to
+ * (A RelabelType node might have been placed atop a PathKey's expr to
  * match its type to the sortop's input operand type, when the types are
  * binary compatible but not identical... such as VARCHAR and TEXT.  The
  * RelabelType node merely documents the representational equivalence but
@@ -383,85 +373,64 @@ cdbpullup_exprHasSubplanRef(Expr *expr)
  * atop an argument of a function or operator, but generally not atop a
  * targetlist expr.)
  */
-PathKeyItem *
-cdbpullup_findPathKeyItemInTargetList(List         *pathkey,
-                                      Relids        relids,
-                                      List         *targetlist,
-                                      AttrNumber   *ptargetindex)   // OUT (optional)
+Expr *
+cdbpullup_findPathKeyExprInTargetList(PathKey *item, List *targetlist)
 {
-    ListCell   *pathkeycell;
+	ListCell *lc;
+	EquivalenceClass *eclass = item->pk_eclass;
 
-    if (ptargetindex)
-       *ptargetindex = 0;
+	foreach(lc, eclass->ec_members)
+	{
+		EquivalenceMember *em = (EquivalenceMember *) lfirst(lc);
+		Expr	   *key = (Expr *) em->em_expr;
 
-    foreach(pathkeycell, pathkey)
-    {
-        PathKeyItem    *item = (PathKeyItem *)lfirst(pathkeycell);
-        TargetEntry    *tle;
+		/* A constant is OK regardless of the target list */
+		if (em->em_is_const)
+			return key;
 
-        Assert(IsA(item, PathKeyItem));
+		if (targetlist)
+		{
+			/* Ignore possible RelabelType node atop the PathKey expr. */
+			if (IsA(key, RelabelType))
+				key = ((RelabelType *)key)->arg;
 
-        /* Constant expr?  Return it. */
-        if (item->cdb_num_relids == 0)
-            return item;
+			/* Check if targetlist is a List of TargetEntry */
+			if (IsA(linitial(targetlist), TargetEntry))
+			{
+				TargetEntry *tle;
 
-        /* Bail if targetlist is empty. */
-        if (!targetlist)
-            break;
+				tle = tlist_member_ignoring_RelabelType(key, targetlist);
+				if (tle)
+					return key;
+			}
+			/* Planner's RelOptInfo targetlists don't have TargetEntry nodes */
+			else
+			{
+				ListCell *tcell;
 
-        /* Consider this item if all of its rels are in 'relids'. */
-        if (bms_is_subset(item->cdb_key_relids, relids))
-        {
-            Expr       *key = (Expr *)item->key;
+				foreach(tcell, targetlist)
+				{
+					Expr *expr = (Expr *) lfirst(tcell);
 
-            /* Ignore possible RelabelType node atop the PathKeyItem expr. */
-            if (IsA(key, RelabelType))
-                key = ((RelabelType *)key)->arg;
+					if (IsA(expr, RelabelType))
+						expr = ((RelabelType *)expr)->arg;
 
-            /* Return this item if the whole expr is in targetlist. */
-            if (IsA(linitial(targetlist), TargetEntry))
-            {
-                /* This targetlist is a List of TargetEntry. */
-                tle = tlist_member_ignoring_RelabelType(key, targetlist);
-                if (tle)
-                {
-                    if (ptargetindex)
-                        *ptargetindex = tle->resno;
-                    return item;
-                }
-            }
+					if (equal(expr, key))
+						return key;
+				}
+			}
 
-            /* Planner's RelOptInfo targetlists don't have TargetEntry nodes. */
-            else
-            {
-                ListCell   *cell;
-                AttrNumber  targetindex = 1;
+			/* Return this item if all referenced Vars are in targetlist. */
+			if (!IsA(key, Var) &&
+				!cdbpullup_missingVarWalker((Node *) key, targetlist))
+			{
+				return key;
+			}
+		}
+	}
 
-                foreach(cell, targetlist)
-                {
-                    Expr   *expr = (Expr *)lfirst(cell);
-
-                    if (IsA(expr, RelabelType))
-                        expr = ((RelabelType *)expr)->arg;
-
-		            if (equal(expr, key))
-                    {
-                        if (ptargetindex)
-                            *ptargetindex = targetindex;
-                        return item;
-                    }
-                    targetindex++;
-                }
-            }
-
-            /* Return this item if all referenced Vars are in targetlist. */
-            if (!IsA(key, Var) &&
-                !cdbpullup_missingVarWalker((Node *)key, targetlist))
-                return item;
-        }
-    }
-    return NULL;
-}                               /* cdbpullup_findPathKeyItemInTargetList */
+	return NULL;
+}
 
 
 /*

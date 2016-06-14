@@ -1,0 +1,602 @@
+-- ----------------------------------------------------------------------
+-- Test: setup_schema.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+create schema qp_resource_queue;
+set search_path to qp_resource_queue;
+-- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop role if exists tbl16369_user1;
+NOTICE:  role "tbl16369_user1" does not exist, skipping
+NOTICE:  role "tbl16369_user1" does not exist, skipping  (seg1 nikos-mac:25433 pid=58771)
+NOTICE:  role "tbl16369_user1" does not exist, skipping  (seg0 nikos-mac:25432 pid=58769)
+NOTICE:  role "tbl16369_user1" does not exist, skipping  (seg2 nikos-mac:25434 pid=58772)
+drop role if exists tbl16369_user3;
+NOTICE:  role "tbl16369_user3" does not exist, skipping
+NOTICE:  role "tbl16369_user3" does not exist, skipping  (seg1 nikos-mac:25433 pid=58771)
+NOTICE:  role "tbl16369_user3" does not exist, skipping  (seg0 nikos-mac:25432 pid=58769)
+NOTICE:  role "tbl16369_user3" does not exist, skipping  (seg2 nikos-mac:25434 pid=58772)
+drop resource queue tbl16369_resq1;
+ERROR:  resource queue "tbl16369_resq1" does not exist
+drop resource queue tbl16369_resq3;
+ERROR:  resource queue "tbl16369_resq3" does not exist
+drop function if exists tbl16369_func1();
+NOTICE:  function tbl16369_func1() does not exist, skipping
+drop function if exists tbl16369_func2();
+NOTICE:  function tbl16369_func2() does not exist, skipping
+drop function if exists tbl16369_func3(refcursor, refcursor);
+NOTICE:  function tbl16369_func3(refcursor,refcursor) does not exist, skipping
+drop function if exists tbl16369_func4();
+NOTICE:  function tbl16369_func4() does not exist, skipping
+drop function if exists tbl16369_func5();
+NOTICE:  function tbl16369_func5() does not exist, skipping
+drop function if exists tbl16369_func6();
+NOTICE:  function tbl16369_func6() does not exist, skipping
+drop function if exists tbl16369_func7();
+NOTICE:  function tbl16369_func7() does not exist, skipping
+drop function if exists tbl16369_func8();
+NOTICE:  function tbl16369_func8() does not exist, skipping
+drop function if exists tbl16369_func9();
+NOTICE:  function tbl16369_func9() does not exist, skipping
+drop function if exists tbl16369_func10(param_numcount integer);
+NOTICE:  function tbl16369_func10(pg_catalog.int4) does not exist, skipping
+drop function if exists tbl16369_func11(param_numcount integer);
+NOTICE:  function tbl16369_func11(pg_catalog.int4) does not exist, skipping
+drop function if exists tbl16369_func12();
+NOTICE:  function tbl16369_func12() does not exist, skipping
+drop table if exists tbl16369_test;
+NOTICE:  table "tbl16369_test" does not exist, skipping
+drop table if exists tbl16369_zipcode_gis;
+NOTICE:  table "tbl16369_zipcode_gis" does not exist, skipping
+drop table if exists tbl16369_test1;
+NOTICE:  table "tbl16369_test1" does not exist, skipping
+drop table if exists tbl16369_x;
+NOTICE:  table "tbl16369_x" does not exist, skipping
+-- end_ignore
+create resource queue tbl16369_resq1 WITH (ACTIVE_STATEMENTS=1);
+CREATE ROLE tbl16369_user1 LOGIN PASSWORD 'tbl16369pwd' NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE tbl16369_resq1;
+create resource queue tbl16369_resq3 WITH (ACTIVE_STATEMENTS=1, MEMORY_LIMIT='200MB');
+CREATE ROLE tbl16369_user3 LOGIN PASSWORD 'tbl16369pwd' NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE RESOURCE QUEUE tbl16369_resq3;
+-- start_ignore
+drop role if exists gpadmin;
+create role gpadmin login superuser;
+-- end_ignore
+grant gpadmin to tbl16369_user1;
+grant gpadmin to tbl16369_user3;
+Drop table if exists tbl16369_test;
+NOTICE:  table "tbl16369_test" does not exist, skipping
+create table tbl16369_test(col text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE tbl16369_zipcode_gis ( zipcode INTEGER, zip_col1 INTEGER, zip_col2 INTEGER ) DISTRIBUTED BY ( zipcode );
+insert into tbl16369_test values ('789'),('789'),('789'),('789'),('789'),('789');
+create table tbl16369_test1(a text, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into tbl16369_test1 values ('456',456),('012',12),('901',901),('678',678),('789',789),('345',345);
+insert into tbl16369_test1 values ('456',456),('012',12),('901',901),('678',678),('789',789),('345',345);
+create table tbl16369_x(x int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into tbl16369_x values (456),(12),(901),(678),(789),(345);
+insert into tbl16369_x values (456),(12),(901),(678),(789),(345);
+INSERT INTO tbl16369_zipcode_gis VALUES ( 94403, 123, 123 );
+INSERT INTO tbl16369_zipcode_gis VALUES ( 94404, 321, 321 );
+INSERT INTO tbl16369_zipcode_gis VALUES ( 90405, 234, 234 );
+CREATE FUNCTION tbl16369_func1() RETURNS tbl16369_test AS $$
+DECLARE
+         res tbl16369_test;
+BEGIN
+         select * into res from tbl16369_test;
+         return res;
+END;
+$$ LANGUAGE plpgsql READS SQL DATA;
+CREATE FUNCTION tbl16369_func2() RETURNS tbl16369_test AS $$
+DECLARE
+         rec tbl16369_test;
+         ref refcursor;
+BEGIN
+         OPEN ref FOR SELECT * FROM tbl16369_test;
+         FETCH ref into rec;
+         CLOSE ref;
+         RETURN rec;
+END;
+$$ LANGUAGE plpgsql READS SQL DATA;
+CREATE FUNCTION tbl16369_func3(refcursor, refcursor) RETURNS SETOF refcursor AS $$
+BEGIN
+    OPEN $1 FOR SELECT * FROM tbl16369_zipcode_gis;
+    RETURN NEXT $1;
+     OPEN $2 FOR SELECT * FROM tbl16369_test;
+     RETURN NEXT $2;
+END;
+$$ LANGUAGE plpgsql READS SQL DATA;
+CREATE FUNCTION tbl16369_func4() RETURNS tbl16369_test AS $$
+DECLARE
+        res tbl16369_test;
+BEGIN
+        select tbl16369_func1() into res;
+        return res;
+END;
+$$ LANGUAGE plpgsql READS SQL DATA;
+CREATE FUNCTION tbl16369_func5() RETURNS tbl16369_test AS $$
+DECLARE
+        res tbl16369_test;
+BEGIN
+        select tbl16369_func2() into res;
+        return res;
+END;
+$$ LANGUAGE plpgsql READS SQL DATA;
+CREATE FUNCTION tbl16369_func6() RETURNS setof refcursor AS $$
+DECLARE
+        ref1 refcursor;
+BEGIN
+        select tbl16369_func3('a','b') into ref1;
+        return next ref1;
+END;
+$$ LANGUAGE plpgsql READS SQL DATA;
+CREATE FUNCTION tbl16369_func7() RETURNS tbl16369_test AS $$
+DECLARE
+        ref refcursor;
+        rec tbl16369_test;
+BEGIN
+     OPEN ref FOR SELECT tbl16369_func1();
+     FETCH ref into rec;
+     CLOSE ref;
+     RETURN rec;
+END;
+$$ LANGUAGE plpgsql READS SQL DATA;
+CREATE FUNCTION tbl16369_func8() RETURNS tbl16369_test AS $$
+DECLARE
+     ref refcursor;
+     rec tbl16369_test;
+BEGIN
+     OPEN ref FOR SELECT tbl16369_func2();
+     FETCH ref into rec;
+     CLOSE ref;
+     RETURN rec;
+END;
+$$ LANGUAGE plpgsql READS SQL DATA;
+CREATE FUNCTION tbl16369_func9() RETURNS setof refcursor AS $$
+DECLARE
+     ref refcursor;
+     ref1 refcursor;
+BEGIN
+     OPEN ref FOR SELECT tbl16369_func3('a','b');
+     FETCH ref into ref1;
+     CLOSE ref;
+     RETURN next ref1;
+END;
+$$ LANGUAGE plpgsql READS SQL DATA;
+CREATE OR REPLACE FUNCTION tbl16369_func10(param_numcount integer)
+RETURNS tbl16369_test AS $$
+DECLARE res tbl16369_test;
+BEGIN
+   IF param_numcount < 0 THEN
+       RAISE EXCEPTION 'Negative numbers are not allowed';
+   ELSIF param_numcount > 0 THEN
+      RAISE NOTICE 'Yo there I''m number %, next: %', param_numcount, param_numcount -1;
+      res:= tbl16369_func10(param_numcount - 1);
+   ELSE
+      RAISE INFO 'Alas we are at the end of our journey';
+      select * into res from tbl16369_test;
+   END IF;
+      RETURN res;
+END;
+$$ LANGUAGE plpgsql READS SQL DATA;
+CREATE OR REPLACE FUNCTION tbl16369_func11(param_numcount integer) RETURNS tbl16369_test AS $$
+DECLARE res tbl16369_test; ref refcursor;
+BEGIN
+    IF param_numcount < 0 THEN
+         RAISE EXCEPTION 'Negative numbers are not allowed';
+    ELSIF param_numcount > 0 THEN
+         RAISE NOTICE 'Yo there I''m number %, next: %', param_numcount, param_numcount -1;
+         res := tbl16369_func11(param_numcount - 1);
+    ELSE
+         RAISE INFO 'Alas we are at the end of our journey';
+         open ref for select * from tbl16369_test;
+         FETCH ref into res;
+         CLOSE ref;
+    END IF;
+    RETURN res;
+END;
+$$ LANGUAGE plpgsql READS SQL DATA;
+CREATE FUNCTION tbl16369_func12() RETURNS float AS $$
+DECLARE
+    ref refcursor;
+    res float;
+BEGIN
+    OPEN ref FOR select avg(foo.b) from (select tbl16369_test1.b from tbl16369_test,tbl16369_test1 where tbl16369_test.col=tbl16369_test1.a and tbl16369_test1.b in (select x from tbl16369_x)) as foo;
+    FETCH ref into res;
+    CLOSE ref;
+    RETURN res;
+END;
+$$ LANGUAGE plpgsql READS SQL DATA;
+Drop table if exists zipcode_gis;
+NOTICE:  table "zipcode_gis" does not exist, skipping
+Drop table if exists x;
+NOTICE:  table "x" does not exist, skipping
+Drop table if exists test1;
+NOTICE:  table "test1" does not exist, skipping
+Drop function complexquery();
+ERROR:  function complexquery() does not exist
+Drop table if exists test;
+NOTICE:  table "test" does not exist, skipping
+create table test(col text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE zipcode_gis ( zipcode INTEGER, zip_col1 INTEGER, zip_col2 INTEGER ) DISTRIBUTED BY ( zipcode );
+insert into test values ('456'),('789'),('012'),('345'),('678'),('901');
+create table test1(a text, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into test1 values ('456',456),('012',12),('901',901),('678',678),('789',789),('345',345);
+insert into test1 values ('654',456),('210',12),('109',901),('876',678),('987',789),('543',345);
+create table x(x int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into x values (456),(12),(901),(678),(789),(345);
+insert into x values (456),(12),(901),(678),(789),(345);
+select avg(foo.b) from (select test1.b from test,test1 where test.col=test1.a and test1.b in (select x from x)) as foo;
+       avg        
+------------------
+ 530.166666666667
+(1 row)
+
+CREATE FUNCTION complexquery() RETURNS float AS $$
+DECLARE
+        ref refcursor;
+	res float;
+BEGIN
+    OPEN ref FOR select avg(foo.b) from (select test1.b from test,test1 where test.col=test1.a and test1.b in (select x from x)) as foo;
+    FETCH ref into res;
+    CLOSE ref;
+    RETURN res;
+END;
+$$ LANGUAGE plpgsql;
+-- ----------------------------------------------------------------------
+-- Test: test01_simple_function.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func1();
+ tbl16369_func1 
+----------------
+ (789)
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test02_fn_with_simple_cursor.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func2();
+ tbl16369_func2 
+----------------
+ (789)
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test03_fn_with_cursor_as_arg_rtntype.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func3('a','b');
+ tbl16369_func3 
+----------------
+ a
+ b
+(2 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: test04_nested_simple_qry_calls_simple_qry.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func4();
+ tbl16369_func4 
+----------------
+ ("(789)")
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test05_nested_simple_qry_calls_cursor.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func5();
+ tbl16369_func5 
+----------------
+ ("(789)")
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test06_nested_simple_qry_calls_cursor_as_arg_rtntype.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func6();
+ tbl16369_func6 
+----------------
+ a
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test07_nested_cursor_calls_simple_query_tbl16369_user1.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func7();
+ tbl16369_func7 
+----------------
+ ("(789)")
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test07_nested_cursor_calls_simple_query_tbl16369_user3.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func7();
+ tbl16369_func7 
+----------------
+ ("(789)")
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test08_nested_cursor_calls_cursor_tbl16369_user1.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func8();
+ tbl16369_func8 
+----------------
+ ("(789)")
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test08_nested_cursor_calls_cursor_tbl16369_user3.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func8();
+ tbl16369_func8 
+----------------
+ ("(789)")
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test09_nested_cursor_calls_cursor_as_arg_rtntype_tbl16369_user1.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func9();
+ tbl16369_func9 
+----------------
+ a
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test09_nested_cursor_calls_cursor_as_arg_rtntype_tbl16369_user3.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func9();
+ tbl16369_func9 
+----------------
+ a
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test10_recursive_plpgsql_functions.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func10(5);
+NOTICE:  Yo there I'm number 5, next: 4
+NOTICE:  Yo there I'm number 4, next: 3
+CONTEXT:  SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+NOTICE:  Yo there I'm number 3, next: 2
+CONTEXT:  SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+NOTICE:  Yo there I'm number 2, next: 1
+CONTEXT:  SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+NOTICE:  Yo there I'm number 1, next: 0
+CONTEXT:  SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+INFO:  Alas we are at the end of our journey
+CONTEXT:  SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+ tbl16369_func10 
+-----------------
+ (789)
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test11_recursive_plpgsql_functions_with_curosr.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func11(5);
+NOTICE:  Yo there I'm number 5, next: 4
+NOTICE:  Yo there I'm number 4, next: 3
+CONTEXT:  SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+NOTICE:  Yo there I'm number 3, next: 2
+CONTEXT:  SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+NOTICE:  Yo there I'm number 2, next: 1
+CONTEXT:  SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+NOTICE:  Yo there I'm number 1, next: 0
+CONTEXT:  SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+INFO:  Alas we are at the end of our journey
+CONTEXT:  SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+ tbl16369_func11 
+-----------------
+ (789)
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test12_funtion_with_complex_query.sql
+-- ----------------------------------------------------------------------
+select avg(foo.b) from (select test1.b from test,test1 where test.col=test1.a and test1.b in (select x from x)) as foo;
+       avg        
+------------------
+ 530.166666666667
+(1 row)
+
+select complexquery();
+   complexquery   
+------------------
+ 530.166666666667
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test13_funtion_with_complex_query_in_cursor.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func12();
+ tbl16369_func12 
+-----------------
+             789
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: test14_multiple_function_calls.sql
+-- ----------------------------------------------------------------------
+select tbl16369_func1(),tbl16369_func2(),tbl16369_func4(),tbl16369_func5(),tbl16369_func10(5), tbl16369_func11(5), tbl16369_func12(), generate_series(1,10);
+NOTICE:  Yo there I'm number 5, next: 4
+NOTICE:  Yo there I'm number 4, next: 3
+CONTEXT:  SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+NOTICE:  Yo there I'm number 3, next: 2
+CONTEXT:  SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+NOTICE:  Yo there I'm number 2, next: 1
+CONTEXT:  SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+NOTICE:  Yo there I'm number 1, next: 0
+CONTEXT:  SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+INFO:  Alas we are at the end of our journey
+CONTEXT:  SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+SQL statement "SELECT  tbl16369_func10( $1  - 1)"
+PL/pgSQL function "tbl16369_func10" line 7 at assignment
+NOTICE:  Yo there I'm number 5, next: 4
+NOTICE:  Yo there I'm number 4, next: 3
+CONTEXT:  SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+NOTICE:  Yo there I'm number 3, next: 2
+CONTEXT:  SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+NOTICE:  Yo there I'm number 2, next: 1
+CONTEXT:  SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+NOTICE:  Yo there I'm number 1, next: 0
+CONTEXT:  SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+INFO:  Alas we are at the end of our journey
+CONTEXT:  SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+SQL statement "SELECT  tbl16369_func11( $1  - 1)"
+PL/pgSQL function "tbl16369_func11" line 7 at assignment
+ tbl16369_func1 | tbl16369_func2 | tbl16369_func4 | tbl16369_func5 | tbl16369_func10 | tbl16369_func11 | tbl16369_func12 | generate_series 
+----------------+----------------+----------------+----------------+-----------------+-----------------+-----------------+-----------------
+ (789)          | (789)          | ("(789)")      | ("(789)")      | (789)           | (789)           |             789 |               1
+ (789)          | (789)          | ("(789)")      | ("(789)")      | (789)           | (789)           |             789 |               2
+ (789)          | (789)          | ("(789)")      | ("(789)")      | (789)           | (789)           |             789 |               3
+ (789)          | (789)          | ("(789)")      | ("(789)")      | (789)           | (789)           |             789 |               4
+ (789)          | (789)          | ("(789)")      | ("(789)")      | (789)           | (789)           |             789 |               5
+ (789)          | (789)          | ("(789)")      | ("(789)")      | (789)           | (789)           |             789 |               6
+ (789)          | (789)          | ("(789)")      | ("(789)")      | (789)           | (789)           |             789 |               7
+ (789)          | (789)          | ("(789)")      | ("(789)")      | (789)           | (789)           |             789 |               8
+ (789)          | (789)          | ("(789)")      | ("(789)")      | (789)           | (789)           |             789 |               9
+ (789)          | (789)          | ("(789)")      | ("(789)")      | (789)           | (789)           |             789 |              10
+(10 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop schema qp_resource_queue cascade;
+NOTICE:  drop cascades to function complexquery()
+NOTICE:  drop cascades to table x
+NOTICE:  drop cascades to table test1
+NOTICE:  drop cascades to table zipcode_gis
+NOTICE:  drop cascades to table test
+NOTICE:  drop cascades to function tbl16369_func12()
+NOTICE:  drop cascades to function tbl16369_func11(integer)
+NOTICE:  drop cascades to function tbl16369_func10(integer)
+NOTICE:  drop cascades to function tbl16369_func9()
+NOTICE:  drop cascades to function tbl16369_func8()
+NOTICE:  drop cascades to function tbl16369_func7()
+NOTICE:  drop cascades to function tbl16369_func6()
+NOTICE:  drop cascades to function tbl16369_func5()
+NOTICE:  drop cascades to function tbl16369_func4()
+NOTICE:  drop cascades to function tbl16369_func3(refcursor,refcursor)
+NOTICE:  drop cascades to function tbl16369_func2()
+NOTICE:  drop cascades to function tbl16369_func1()
+NOTICE:  drop cascades to table tbl16369_x
+NOTICE:  drop cascades to table tbl16369_test1
+NOTICE:  drop cascades to table tbl16369_zipcode_gis
+NOTICE:  drop cascades to table tbl16369_test
+drop role if exists tbl16369_user1;
+drop role if exists tbl16369_user3;
+drop resource queue tbl16369_resq1;
+drop resource queue tbl16369_resq3;
+-- end_ignore

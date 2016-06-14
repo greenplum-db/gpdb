@@ -307,6 +307,7 @@ class GpInjectFaultProgram:
 			      "reset (remove fault injection), status (report fault injection status), " \
 			      "segv (inject a SEGV), " \
 			      "interrupt (inject an Interrupt), " \
+			      "finish_pending (set QueryFinishPending to true), " \
 			      "checkpoint_and_panic (inject a panic following checkpoint) ")
         addTo.add_option("-z", "--sleep_time_s", dest="sleepTimeSeconds", type="int", default="10" ,
                             metavar="<sleepTime>",
@@ -380,11 +381,13 @@ class GpInjectFaultProgram:
 			      "local_tm_record_transaction_commit (inject fault for local transactions after transaction commit is recorded and flushed in xlog ), " \
 			      "malloc_failure (inject fault to simulate memory allocation failure), " \
 			      "transaction_abort_failure (inject fault to simulate transaction abort failure), " \
+			      "workfile_creation_failure (inject fault to simulate workfile creation failure), " \
 			      "update_committed_eof_in_persistent_table (inject fault before committed EOF is updated in gp_persistent_relation_node for Append Only segment files), " \
 			      "exec_simple_query_end_command (inject fault before EndCommand in exec_simple_query), " \
 			      "multi_exec_hash_large_vmem (allocate large vmem using palloc inside MultiExecHash to attempt to exceed vmem limit), " \
 			      "execsort_before_sorting (inject fault in nodeSort after receiving all tuples and before sorting), " \
 			      "execsort_mksort_mergeruns (inject fault in MKSort during the mergeruns phase), " \
+			      "execshare_input_next (inject fault after shared input scan retrieved a tuple), " \
 			      "base_backup_post_create_checkpoint (inject fault after requesting checkpoint as part of basebackup), " \
 			      "compaction_before_segmentfile_drop (inject fault after compaction, but before the drop of the segment file), "  \
 			      "compaction_before_cleanup_phase (inject fault after compaction and drop, but before the cleanup phase), " \

@@ -27,10 +27,15 @@ DIRS = initdb ipcclean pg_basebackup pg_ctl pg_dump \
 	psql scripts pg_config pg_controldata pg_resetxlog \
 	gpmirrortransition \
 	gp_workfile_mgr \
-	gp_session_state
+	gp_session_state \
+	gpoptutils
 
 ifeq ($(PORTNAME), win32)
 DIRS+=pgevent
+endif
+
+ifeq ($(enable_gpfdist), yes)
+DIRS+=gpfdist
 endif
 
 all install installdirs uninstall distprep clean distclean maintainer-clean:

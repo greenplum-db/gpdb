@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/bootstrap/bootstrap.c,v 1.228 2007/01/05 22:19:24 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/bootstrap/bootstrap.c,v 1.232 2007/02/16 02:10:07 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -36,7 +36,6 @@
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "postmaster/bgwriter.h"
-#include "postmaster/checkpoint.h"
 #include "postmaster/primary_mirror_mode.h"
 #include "replication/walreceiver.h"
 #include "storage/freespace.h"
@@ -121,42 +120,21 @@ struct typinfo
 	Oid			outproc;
 };
 
-/* MUST STAY SORTED */
 static const struct typinfo TypInfo[] = {
-	{"_aclitem", 1034, ACLITEMOID, -1, false, 'i', 'x',
-	F_ARRAY_IN, F_ARRAY_OUT},
-	{"_char", 1002, CHAROID, -1, false, 'i', 'x',
-	F_ARRAY_IN, F_ARRAY_OUT},
-	{"_int4", INT4ARRAYOID, INT4OID, -1, false, 'i', 'x',
-	F_ARRAY_IN, F_ARRAY_OUT},
-	{"_oid", 1028, OIDOID, -1, false, 'i', 'x',
-	F_ARRAY_IN, F_ARRAY_OUT},
-	{"_text", 1009, TEXTOID, -1, false, 'i', 'x',
-	F_ARRAY_IN, F_ARRAY_OUT},
 	{"bool", BOOLOID, 0, 1, true, 'c', 'p',
 	F_BOOLIN, F_BOOLOUT},
-	{"bigint", INT8OID, 0, 8, true, 'd', 'p',
-	F_INT8IN, F_INT8OUT},
 	{"bytea", BYTEAOID, 0, -1, false, 'i', 'x',
 	F_BYTEAIN, F_BYTEAOUT},
 	{"char", CHAROID, 0, 1, true, 'c', 'p',
 	F_CHARIN, F_CHAROUT},
-	{"cid", CIDOID, 0, 4, true, 'i', 'p',
-	F_CIDIN, F_CIDOUT},
-	{"float4", FLOAT4OID, 0, 4, FLOAT4PASSBYVAL, 'i', 'p',
-	F_FLOAT4IN, F_FLOAT4OUT},
 	{"int2", INT2OID, 0, 2, true, 's', 'p',
 	F_INT2IN, F_INT2OUT},
-	{"int2vector", INT2VECTOROID, INT2OID, -1, false, 'i', 'p',
-	F_INT2VECTORIN, F_INT2VECTOROUT},
 	{"int4", INT4OID, 0, 4, true, 'i', 'p',
 	F_INT4IN, F_INT4OUT},
+	{"float4", FLOAT4OID, 0, 4, FLOAT4PASSBYVAL, 'i', 'p',
+	F_FLOAT4IN, F_FLOAT4OUT},
 	{"name", NAMEOID, CHAROID, NAMEDATALEN, false, 'i', 'p',
 	F_NAMEIN, F_NAMEOUT},
-	{"oid", OIDOID, 0, 4, true, 'i', 'p',
-	F_OIDIN, F_OIDOUT},
-	{"oidvector", OIDVECTOROID, OIDOID, -1, false, 'i', 'p',
-	F_OIDVECTORIN, F_OIDVECTOROUT},
 	{"regclass", REGCLASSOID, 0, 4, true, 'i', 'p',
 	F_REGCLASSIN, F_REGCLASSOUT},
 	{"regproc", REGPROCOID, 0, 4, true, 'i', 'p',
@@ -165,10 +143,28 @@ static const struct typinfo TypInfo[] = {
 	F_REGTYPEIN, F_REGTYPEOUT},
 	{"text", TEXTOID, 0, -1, false, 'i', 'x',
 	F_TEXTIN, F_TEXTOUT},
+	{"oid", OIDOID, 0, 4, true, 'i', 'p',
+	F_OIDIN, F_OIDOUT},
 	{"tid", TIDOID, 0, 6, false, 's', 'p',
 	F_TIDIN, F_TIDOUT},
 	{"xid", XIDOID, 0, 4, true, 'i', 'p',
-	F_XIDIN, F_XIDOUT}
+	F_XIDIN, F_XIDOUT},
+	{"cid", CIDOID, 0, 4, true, 'i', 'p',
+	F_CIDIN, F_CIDOUT},
+	{"int2vector", INT2VECTOROID, INT2OID, -1, false, 'i', 'p',
+	F_INT2VECTORIN, F_INT2VECTOROUT},
+	{"oidvector", OIDVECTOROID, OIDOID, -1, false, 'i', 'p',
+	F_OIDVECTORIN, F_OIDVECTOROUT},
+	{"_int4", INT4ARRAYOID, INT4OID, -1, false, 'i', 'x',
+	F_ARRAY_IN, F_ARRAY_OUT},
+	{"_text", 1009, TEXTOID, -1, false, 'i', 'x',
+	F_ARRAY_IN, F_ARRAY_OUT},
+	{"_oid", 1028, OIDOID, -1, false, 'i', 'x',
+	F_ARRAY_IN, F_ARRAY_OUT},
+	{"_char", 1002, CHAROID, -1, false, 'i', 'x',
+	F_ARRAY_IN, F_ARRAY_OUT},
+	{"_aclitem", 1034, ACLITEMOID, -1, false, 'i', 'x',
+	F_ARRAY_IN, F_ARRAY_OUT}
 };
 
 static const int n_types = sizeof(TypInfo) / sizeof(struct typinfo);
@@ -551,7 +547,7 @@ BootstrapModeMain(void)
 	 * Do backend-like initialization for bootstrap mode
 	 */
 	InitProcess();
-	InitPostgres(NULL, InvalidOid, NULL, NULL);
+	(void) InitPostgres(NULL, InvalidOid, NULL, NULL);
 
 	/* Initialize stuff for bootstrap-file processing */
 	for (i = 0; i < MAXATTR; i++)
@@ -1006,27 +1002,11 @@ gettype(char *type)
 	}
 	else
 	{
-		/* binary search */
-		int low, high;
-
-		low = 0;
-		high = n_types - 1;
-
-		while (low <= high)
+		for (i = 0; i < n_types; i++)
 		{
-			int middle = low + (high - low)/2;
-			int res;
-
-			res = strncmp(TypInfo[middle].name, type, NAMEDATALEN);
-			elog(DEBUG1, "testing %s against %s", type, TypInfo[middle].name);
-			if (res == 0)
-				return middle;
-			else if (res < 0)
-				low = middle + 1;
-			else
-				high = middle - 1;
+			if (strncmp(type, TypInfo[i].name, NAMEDATALEN) == 0)
+				return i;
 		}
-
 		elog(DEBUG4, "external type: %s", type);
 		rel = heap_open(TypeRelationId, NoLock);
 		scan = heap_beginscan(rel, SnapshotNow, 0, NULL);

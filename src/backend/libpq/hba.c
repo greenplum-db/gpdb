@@ -2136,7 +2136,6 @@ load_ident(void)
 }
 
 
-
 /*
  *	Determine what authentication method should be used when accessing database
  *	"database" from frontend "raddr", user "user".	Return the method and

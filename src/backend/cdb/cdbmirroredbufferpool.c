@@ -16,6 +16,7 @@
 #include <signal.h>
 
 #include "access/xlogmm.h"
+#include "catalog/pg_tablespace.h"
 #include "cdb/cdbfilerepprimary.h"
 #include "cdb/cdbmirroredbufferpool.h"
 #include "cdb/cdbfilerepresyncmanager.h"
@@ -1507,7 +1508,7 @@ bool MirroredBufferPool_Truncate(
 		{
 			if (Debug_filerep_print)
 				ereport(LOG,
-					(errmsg("could not sent file truncate request to mirror "), 
+					(errmsg("could not send file truncate request to mirror "),
 							FileRep_ReportRelationPath(
 													   open->mirrorFilespaceLocation,
 													   open->relFileNode,

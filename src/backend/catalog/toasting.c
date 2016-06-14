@@ -211,6 +211,7 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	 * XXX would it make sense to apply the master's reloptions to the toast
 	 * table?
 	 */
+	Oid unusedTypArrayOid = InvalidOid;
 	toast_relid = heap_create_with_catalog(toast_relname,
 										   PG_TOAST_NAMESPACE,
 										   rel->rd_rel->reltablespace,
@@ -230,6 +231,7 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 										   true,
 										   /* valid_opts */ false,
 										   comptypeOid,
+										   &unusedTypArrayOid,
 										   /* persistentTid */ NULL,
 										   /* persistentSerialNum */ NULL);
 

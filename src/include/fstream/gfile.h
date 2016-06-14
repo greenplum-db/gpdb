@@ -89,4 +89,6 @@ void gfile_printf_then_putc_newline(const char*format,...) __attribute__ ((__for
 void*gfile_malloc(size_t size);
 void gfile_free(void*a);
 
+int gz_file_open(gfile_t *fd);
+
 #endif

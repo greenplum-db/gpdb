@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/index.c,v 1.276 2007/01/09 02:14:11 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/index.c,v 1.282 2007/03/29 00:15:37 tgl Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -64,13 +64,12 @@
 #include "utils/tuplesort.h"
 #include "utils/faultinjector.h"
 
-#include "cdb/cdbvars.h"
-#include "cdb/cdbanalyze.h"
-#include "cdb/cdboidsync.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbaocsam.h"
-
+#include "cdb/cdbvars.h"
+#include "cdb/cdboidsync.h"
 #include "cdb/cdbmirroredfilesysobj.h"
+#include "cdb/cdbpersistentfilesysobj.h"
 
 /* state info for validate_index bulkdelete callback */
 typedef struct
@@ -810,7 +809,7 @@ index_create(Oid heapRelationId,
 
 			/* Shouldn't have any expressions */
 			if (indexInfo->ii_Expressions)
-				elog(ERROR, "constraints can't have index expressions");
+				elog(ERROR, "constraints cannot have index expressions");
 
 			Insist(constrOid != NULL);
 			*constrOid = CreateConstraintEntry(constraintName,
@@ -824,6 +823,9 @@ index_create(Oid heapRelationId,
 											   indexInfo->ii_NumIndexAttrs,
 											   InvalidOid,	/* no domain */
 											   InvalidOid,	/* no foreign key */
+											   NULL,
+											   NULL,
+											   NULL,
 											   NULL,
 											   0,
 											   ' ',
@@ -1248,7 +1250,6 @@ static void
 index_update_stats(Relation rel, bool hasindex, bool isprimary,
 				   Oid reltoastidxid, double reltuples)
 {
-	BlockNumber relpages = RelationGetNumberOfBlocks(rel);
 	Oid			relid = RelationGetRelid(rel);
 	Relation	pg_class;
 	HeapTuple	tuple;
@@ -1365,6 +1366,9 @@ index_update_stats(Relation rel, bool hasindex, bool isprimary,
 			rd_rel->reltuples = (float4) reltuples;
 			dirty = true;
 		}
+
+		BlockNumber relpages = RelationGetNumberOfBlocks(rel);
+
 		if (rd_rel->relpages != (int32) relpages)
 		{
 			rd_rel->relpages = (int32) relpages;
@@ -1389,6 +1393,188 @@ index_update_stats(Relation rel, bool hasindex, bool isprimary,
 
 	heap_close(pg_class, RowExclusiveLock);
 }
+
+/*
+ * setNewRelfilenode		- assign a new relfilenode value to the relation
+ *
+ * Caller must already hold exclusive lock on the relation.
+ *
+ * Replaces relfilenode and updates pg_class / gp_relation_node.
+ * If the updating relation is gp_relation_node's index, the caller
+ * should rebuild the index by index_build().
+ *
+ * GPDB: you can pass newrelfilenode to assign a particular relfilenode. If
+ * InvalidOid, an unused one is allocated.
+ */
+Oid
+setNewRelfilenode(Relation relation)
+{
+	return setNewRelfilenodeToOid(relation, InvalidOid);
+}
+Oid
+setNewRelfilenodeToOid(Relation relation, Oid newrelfilenode)
+{
+	RelFileNode newrnode;
+	SMgrRelation srel;
+	Relation	pg_class;
+	HeapTuple	tuple;
+	Form_pg_class rd_rel;
+	bool		isAppendOnly;
+	Relation	gp_relation_node;
+	bool		is_gp_relation_node_index;
+
+	/* Can't change relfilenode for nailed tables (indexes ok though) */
+	Assert(!relation->rd_isnailed ||
+		   relation->rd_rel->relkind == RELKIND_INDEX);
+	/* Can't change for shared tables or indexes */
+	Assert(!relation->rd_rel->relisshared);
+
+	if (newrelfilenode == InvalidOid)
+	{
+		/* Allocate a new relfilenode */
+		newrelfilenode = GetNewRelFileNode(relation->rd_rel->reltablespace,
+										   relation->rd_rel->relisshared,
+										   NULL);
+
+		if (Gp_role == GP_ROLE_EXECUTE)
+			elog(DEBUG1, "setNewRelfilenode called in EXECUTE mode, "
+				 "newrelfilenode=%d", newrelfilenode);
+	}
+	else
+	{
+		CheckNewRelFileNodeIsOk(newrelfilenode, relation->rd_rel->reltablespace,
+								relation->rd_rel->relisshared, NULL);
+
+		elog(DEBUG3, "setNewRelfilenodeToOid called.  newrelfilenode = %d",
+			 newrelfilenode);
+	}
+
+	/*
+	 * Find the pg_class tuple for the given relation.	This is not used
+	 * during bootstrap, so okay to use heap_update always.
+	 */
+	pg_class = heap_open(RelationRelationId, RowExclusiveLock);
+	gp_relation_node = heap_open(GpRelationNodeRelationId, RowExclusiveLock);
+
+	tuple = SearchSysCacheCopy(RELOID,
+							   ObjectIdGetDatum(RelationGetRelid(relation)),
+							   0, 0, 0);
+	if (!HeapTupleIsValid(tuple))
+		elog(ERROR, "could not find tuple for relation %u",
+			 RelationGetRelid(relation));
+	rd_rel = (Form_pg_class) GETSTRUCT(tuple);
+
+	/* schedule unlinking old relfilenode */
+	remove_gp_relation_node_and_schedule_drop(relation);
+
+	/* create another storage file. Is it a little ugly ? */
+	/* NOTE: any conflict in relfilenode value will be caught here */
+	newrnode = relation->rd_node;
+	newrnode.relNode = newrelfilenode;
+
+	isAppendOnly = (relation->rd_rel->relstorage == RELSTORAGE_AOROWS ||
+					relation->rd_rel->relstorage == RELSTORAGE_AOCOLS);
+	if (!isAppendOnly)
+	{
+		PersistentFileSysRelStorageMgr localRelStorageMgr;
+		PersistentFileSysRelBufpoolKind relBufpoolKind;
+
+		GpPersistentRelationNode_GetRelationInfo(
+											relation->rd_rel->relkind,
+											relation->rd_rel->relstorage,
+											relation->rd_rel->relam,
+											&localRelStorageMgr,
+											&relBufpoolKind);
+		Assert(localRelStorageMgr == PersistentFileSysRelStorageMgr_BufferPool);
+
+		srel = smgropen(newrnode);
+
+		MirroredFileSysObj_TransactionCreateBufferPoolFile(
+											srel,
+											relBufpoolKind,
+											relation->rd_isLocalBuf,
+											NameStr(relation->rd_rel->relname),
+											/* doJustInTimeDirCreate */ true,
+											/* bufferPoolBulkLoad */ false,
+											&relation->rd_segfile0_relationnodeinfo.persistentTid,
+											&relation->rd_segfile0_relationnodeinfo.persistentSerialNum);
+		smgrclose(srel);
+	}
+	else
+	{
+		MirroredFileSysObj_TransactionCreateAppendOnlyFile(
+											&newrnode,
+											/* segmentFileNum */ 0,
+											NameStr(relation->rd_rel->relname),
+											/* doJustInTimeDirCreate */ true,
+											&relation->rd_segfile0_relationnodeinfo.persistentTid,
+											&relation->rd_segfile0_relationnodeinfo.persistentSerialNum);
+	}
+
+	if (!Persistent_BeforePersistenceWork() &&
+		PersistentStore_IsZeroTid(&relation->rd_segfile0_relationnodeinfo.persistentTid))
+	{
+		elog(ERROR,
+			 "setNewRelfilenodeCommon has invalid TID (0,0) for relation %u/%u/%u '%s', serial number " INT64_FORMAT,
+			 newrnode.spcNode,
+			 newrnode.dbNode,
+			 newrnode.relNode,
+			 NameStr(relation->rd_rel->relname),
+			 relation->rd_segfile0_relationnodeinfo.persistentSerialNum);
+	}
+
+	relation->rd_segfile0_relationnodeinfo.isPresent = true;
+
+	if (Debug_persistent_print)
+		elog(Persistent_DebugPrintLevel(),
+			 "setNewRelfilenodeCommon: NEW '%s', Append-Only '%s', persistent TID %s and serial number " INT64_FORMAT,
+			 relpath(newrnode),
+			 (isAppendOnly ? "true" : "false"),
+			 ItemPointerToString(&relation->rd_segfile0_relationnodeinfo.persistentTid),
+			 relation->rd_segfile0_relationnodeinfo.persistentSerialNum);
+
+	/* Update GETSTRUCT fields of the pg_class row */
+	rd_rel->relfilenode = newrelfilenode;
+	rd_rel->relpages = 0;		/* it's empty until further notice */
+	rd_rel->reltuples = 0;
+
+	/*
+	 * If the swapping relation is an index of gp_relation_node,
+	 * updating itself is bogus; if gp_relation_node has old indexlist,
+	 * CatalogUpdateIndexes updates old index file, and is crash-unsafe.
+	 * Hence, here we skip it and count on later index_build.
+	 * (Or should we add index_build() call after CCI beflow in this case?)
+	 */
+	is_gp_relation_node_index = relation->rd_index &&
+								relation->rd_index->indrelid == GpRelationNodeRelationId;
+	InsertGpRelationNodeTuple(
+						gp_relation_node,
+						relation->rd_id,
+						NameStr(relation->rd_rel->relname),
+						newrelfilenode,
+						/* segmentFileNum */ 0,
+						/* updateIndex */ !is_gp_relation_node_index,
+						&relation->rd_segfile0_relationnodeinfo.persistentTid,
+						relation->rd_segfile0_relationnodeinfo.persistentSerialNum);
+
+	simple_heap_update(pg_class, &tuple->t_self, tuple);
+	CatalogUpdateIndexes(pg_class, tuple);
+
+	heap_freetuple(tuple);
+
+	heap_close(pg_class, RowExclusiveLock);
+
+	heap_close(gp_relation_node, RowExclusiveLock);
+
+	/* Make sure the relfilenode change is visible */
+	CommandCounterIncrement();
+
+	/* Mark the rel as having a new relfilenode in current transaction */
+	RelationCacheMarkNewRelfilenode(relation);
+
+	return newrelfilenode;
+}
+
 
 /*
  * index_build - invoke access-method-specific index build procedure
@@ -1690,7 +1876,7 @@ IndexBuildHeapScan(Relation heapRelation,
 			LockBuffer(scan->rs_cbuf, BUFFER_LOCK_SHARE);
 
 			switch (HeapTupleSatisfiesVacuum(heapTuple->t_data, OldestXmin,
-											 scan->rs_cbuf, true))
+											 scan->rs_cbuf))
 			{
 				case HEAPTUPLE_DEAD:
 					/* Definitely dead, we can ignore it */

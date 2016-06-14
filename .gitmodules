@@ -1,36 +1,36 @@
 [submodule "gpAux/client"]
 	path = gpAux/client
-	url = ssh://git@stash.eng.pivotal.io:2222/gpdb/clients.git
+	url = git@github.com:greenplum-db/gpclients.git
 	branch = master
 [submodule "gpAux/extensions/plr/source"]
 	path = gpAux/extensions/plr/source
-	url = ssh://git@stash.eng.pivotal.io:2222/gpdb/plr.git
+	url = git@github.com:greenplum-db/plr.git
 	branch = master
 [submodule "gpAux/extensions/tpch/source"]
 	path = gpAux/extensions/tpch/source
-	url = ssh://git@stash.eng.pivotal.io:2222/gpdb/tpch.git
+	url = git@github.com:greenplum-db/tpch.git
 	branch = master
 [submodule "gpAux/extensions/pgbouncer/source"]
 	path = gpAux/extensions/pgbouncer/source
-	url = ssh://git@stash.eng.pivotal.io:2222/gpdb/pgbouncer.git
+	url = git@github.com:greenplum-db/pgbouncer.git
 	branch = master
 [submodule "gpAux/extensions/postgis-2.0.3/source"]
 	path = gpAux/extensions/postgis-2.0.3/source
-	url = ssh://git@stash.eng.pivotal.io:2222/gpdb/postgis.git
+	url = git@github.com:greenplum-db/postgis.git
 	branch = master
 [submodule "gpAux/addon"]
 	path = gpAux/addon
-	url = ssh://git@stash.eng.pivotal.io:2222/gpdb/addon.git
+	url = git@github.com:greenplum-db/gpaddon.git
 	branch = master
 [submodule "gpAux/extensions/gp_filedump"]
 	path = gpAux/extensions/gp_filedump
-	url = ssh://git@stash.eng.pivotal.io:2222/gpdb/gp_filedump.git
+	url = git@github.com:greenplum-db/gp_filedump.git
 	branch = master
 [submodule "gpMgmt/bin/pythonSrc/ext"]
 	path = gpMgmt/bin/pythonSrc/ext
-	url = ssh://git@stash.eng.pivotal.io:2222/gpdb/pythonsrc-ext.git
+	url = git@github.com:greenplum-db/pythonsrc-ext.git
 	branch = master
-[submodule "gpAux/extensions/gpfdist/ext"]
-	path = gpAux/extensions/gpfdist/ext
-	url = ssh://git@stash.eng.pivotal.io:2222/gpdb/gpfdist-ext.git
+[submodule "src/bin/gpfdist/ext"]
+	path = src/bin/gpfdist/ext
+	url = git@github.com:greenplum-db/gpfdist-ext.git
 	branch = master

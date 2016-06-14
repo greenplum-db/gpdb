@@ -1,0 +1,33 @@
+VERSION: 1.0.0.1
+DATABASE: odbcdb 
+USER: gpadmin
+HOST: mdw
+PORT: 16789
+
+GPLOAD:
+  INPUT:
+    - SOURCE:
+        LOCAL_HOSTNAME:
+          - mdw
+        PORT: 1981
+        FILE:
+          - /data/home/gpadmin/yydzero/work/sample.csv
+    - COLUMNS:
+        - id: int
+        - msg: text
+    - FORMAT: csv
+    - QUOTE: '"'
+    - FULLY_QUALIFIED_DOMAIN_NAME: true
+  OUTPUT:
+    - TABLE: test
+    - MODE: merge
+    - MATCH_COLUMNS:
+        - id
+    - UPDATE_COLUMNS:
+        - msg
+    - MAPPING:
+        id: id
+        msg: msg
+
+  PRELOAD:
+    - REUSE_TABLES: true 

@@ -93,7 +93,7 @@ typedef struct WindowInfo
 	bool	needauxcount;
 	
 	AttrNumber *partkey_attrs;
-	Oid		   *partkey_operators;
+	Oid		   *partkey_operators;		/* array of equality operators */
 	List	   *key_list;
 	
 	/* coplan assembly */
@@ -1773,7 +1773,7 @@ static Plan *plan_common_subquery(PlannerInfo *root, List *lower_tlist,
 	/* If an order hint is specified, try for it.   */
 	if ( order_hint != NIL )
 	{
-		root->query_pathkeys = make_pathkeys_for_sortclauses(order_hint, lower_tlist);
+		root->query_pathkeys = make_pathkeys_for_sortclauses(root, order_hint, lower_tlist, true);
 		root->sort_pathkeys = root->query_pathkeys;
 	}
 
@@ -1855,10 +1855,9 @@ Plan *assure_collocation_and_order(
 	
 	if ( sortclause != NIL )
 	{
-		sort_pathkeys = make_pathkeys_for_sortclauses(sortclause, input_plan->targetlist);
+		sort_pathkeys = make_pathkeys_for_sortclauses(root, sortclause, input_plan->targetlist, true);
 		if ( root != NULL )
 			sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
-		Assert(sort_pathkeys != NULL);
 	}
 	
 	if ( partkey_len == 0 ) /* Plan for single process locus. */
@@ -1898,12 +1897,12 @@ Plan *assure_collocation_and_order(
 			if ( 0 >= n-- ) break;
 			dist_keys = lappend(dist_keys, lfirst(lc));
 		}
-		dist_pathkeys = make_pathkeys_for_sortclauses(dist_keys, input_plan->targetlist);
+		dist_pathkeys = make_pathkeys_for_sortclauses(root, dist_keys, input_plan->targetlist, true);
 		if ( root != NULL )
 			dist_pathkeys = canonicalize_pathkeys(root, dist_pathkeys);
 		
 		/* Assure the required distribution. */
-		if ( ! cdbpathlocus_collocates(input_locus, dist_pathkeys, false /*exact_match*/) )
+		if ( ! cdbpathlocus_collocates(root, input_locus, dist_pathkeys, false /*exact_match*/) )
 		{
 			foreach (lc, dist_keys)
 			{
@@ -1962,10 +1961,9 @@ Plan *assure_order(
 
 	if ( sortclause != NIL )
 	{
-		sort_pathkeys = make_pathkeys_for_sortclauses(sortclause, input_plan->targetlist);
+		sort_pathkeys = make_pathkeys_for_sortclauses(root, sortclause, input_plan->targetlist, true);
 		if ( root != NULL )
 			sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
-		Assert(sort_pathkeys != NULL);
 	}
 
 	if(sort_pathkeys != NULL)
@@ -2007,7 +2005,7 @@ static Plan *plan_trivial_window_query(PlannerInfo *root, WindowContext *context
 								  &pathkeys);
 								  
 	
-	window_pathkeys = make_pathkeys_for_sortclauses(winfo->sortclause, lower_tlist);
+	window_pathkeys = make_pathkeys_for_sortclauses(root, winfo->sortclause, lower_tlist, true);
 	window_pathkeys = canonicalize_pathkeys(root, window_pathkeys);
 	
 	/* Assure needed colocation and order. */
@@ -2650,9 +2648,6 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 	if ( hasagg )
 	{
 		Plan *join_plan = NULL;
-		Oid		   *mergefamilies;
-		int		   *mergestrategies;
-		bool	   *mergenullsfirst;
 		
 		agg_plan = add_join_to_wrapper(root, agg_plan, agg_subquery, join_tlist,
 									   winfo->partkey_len,
@@ -2674,8 +2669,11 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 		 */		
 		 if ( winfo->partkey_len > 0 )
 		 {
-			List *mergeclauses = NIL;
-			
+			List	   *mergeclauses = NIL;
+			Oid		   *mergefamilies = palloc(sizeof(Oid) * winfo->partkey_len);
+			int		   *mergestrategies = palloc(sizeof(int) * winfo->partkey_len);
+			bool	   *mergenullsfirst = palloc(sizeof(bool) * winfo->partkey_len);
+
 			for ( i = 0; i < winfo->partkey_len; i++ )
 			{
 				TargetEntry *tle;
@@ -2690,11 +2688,15 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 									   0);
 
 				mc = make_mergeclause(lft, rgt);
-				mergeclauses = lappend(mergeclauses, mc);
-			}
 
-			build_mergejoin_strat_arrays(mergeclauses, &mergefamilies,
-										 &mergestrategies, &mergenullsfirst);
+				if (!mc->mergeopfamilies)
+					elog(ERROR, "failed to find mergejoinable operator family for partition key");
+
+				mergeclauses = lappend(mergeclauses, mc);
+				mergefamilies[i] = linitial_oid(mc->mergeopfamilies);
+				mergestrategies[i] = BTLessStrategyNumber;
+				mergenullsfirst[i] = false;
+			}
 
 			mergeclauses = get_actual_clauses(mergeclauses);
 			join_plan = (Plan *) make_mergejoin(join_tlist,
@@ -2859,7 +2861,7 @@ static Plan *plan_parallel_window_query(PlannerInfo *root, WindowContext *contex
 						
 		root->group_pathkeys = NIL;
 		root->sort_pathkeys = 
-			make_pathkeys_for_sortclauses(root->parse->sortClause, targetlist);
+			make_pathkeys_for_sortclauses(root, root->parse->sortClause, targetlist, true);
 		root->query_pathkeys = root->sort_pathkeys;
 		
 		query_planner(root, targetlist, 0.0, &cheapest_path, &sorted_path, &ngroups);
@@ -3281,17 +3283,11 @@ static RangeTblEntry *rte_for_coplan(
 			/* TODO Fix this cheesy estimate. */
 			double d = new_plan->plan_rows / 100.0;
 			long num_groups = (d < 0)? 0: ( d > LONG_MAX )? LONG_MAX: (long)d;
-			int			i;
-			Oid		   *eqOperators;
-
-			eqOperators = (Oid *) palloc(winfo->partkey_len * sizeof(Oid));
-			for (i = 0; i < winfo->partkey_len; i++)
-				eqOperators[i] = get_equality_op_for_ordering_op(winfo->partkey_operators[i]);
 
 			new_plan = (Plan*)
 				make_agg(root, coplan->targetlist, NULL,
 						 AGG_SORTED, false,
-						 winfo->partkey_len, winfo->partkey_attrs, eqOperators,
+						 winfo->partkey_len, winfo->partkey_attrs, winfo->partkey_operators,
 						 num_groups,
 						 0, /* num_nullcols */
 						 0, /* input_grouping */
@@ -4095,15 +4091,6 @@ Plan *wrap_plan(PlannerInfo *root, Plan *plan, Query *query,
 	subquery->returningLists = NIL;
 	
 	... */
-
-	/* Reconstruct equi_key_list since the rtable has changed.
-	 * XXX we leak the old one.
-	 */
-	root->equi_key_list =
-		construct_equivalencekey_list(root->equi_key_list,
-									  resno_map,
-									  ((SubqueryScan *)plan)->subplan->targetlist,
-									  subq_tlist);
 
 	/* Construct the new pathkeys */
 	if (p_pathkeys != NULL)

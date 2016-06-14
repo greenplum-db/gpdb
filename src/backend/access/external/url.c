@@ -2481,66 +2481,6 @@ url_fflush(URL_FILE *file, CopyState pstate)
     }
 }
 
-void
-url_rewind(URL_FILE *file, const char *relname)
-{
-	char *url = file->url;
-    switch(file->type)
-    {
-		case CFTYPE_FILE:
-			fstream_rewind(file->u.file.fp);
-			break;
-
-		case CFTYPE_EXEC:
-			/* we'll need to execute the command again */
-			assert(0); /* There is no way the following code is right. */
-			url_fclose(file, true, relname);
-
-			/* most of these are null fo us. */
-			url_fopen(url, false, NULL, NULL, NULL, 0);
-			break;
-
-#ifdef USE_CURL
-		case CFTYPE_CURL:
-			/* halt transaction */
-			{
-				CURLMcode e;
-				if (!file->u.curl.for_write)
-				{
-					// TODO: Is this for reading only?
-					e = curl_multi_remove_handle(multi_handle, file->u.curl.handle);
-					if (CURLM_OK != e)
-						elog(ERROR, "internal error curl_multi_remove_handle (%d - %s)", e, curl_easy_strerror(e));
-
-					/* restart */
-					e = curl_multi_add_handle(multi_handle, file->u.curl.handle);
-					if (CURLM_OK != e)
-						elog(ERROR, "internal error curl_multi_add_handle (%d - %s)", e, curl_easy_strerror(e));
-				}
-
-				/* ditch buffer - write will recreate - resets stream pos*/
-				if (file->u.curl.in.ptr)
-					free(file->u.curl.in.ptr);
-
-				file->u.curl.gp_proto = 0;
-				file->u.curl.error = file->u.curl.eof = 0;
-				memset(&file->u.curl.in, 0, sizeof(file->u.curl.in));
-				memset(&file->u.curl.block, 0, sizeof(file->u.curl.block));
-			}
-			break;
-#endif
-
-		case CFTYPE_CUSTOM:
-			elog(ERROR, "rewind support not yet implemented in custom protocol");
-			break;
-			
-		default: /* unknown or supported type - oh dear */
-			break;
-
-    }
-}
-
-
 /*
  * interpretError - formats a brief message and/or the exit code from pclose()
  * 		(or wait4()).

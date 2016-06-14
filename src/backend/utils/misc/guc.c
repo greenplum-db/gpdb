@@ -11,7 +11,7 @@
  * Written by Peter Eisentraut <peter_e@gmx.net>.
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/misc/guc.c,v 1.369 2007/01/19 16:58:46 petere Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/misc/guc.c,v 1.563 2010/07/20 00:34:44 rhaas Exp $
  *
  *--------------------------------------------------------------------
  */
@@ -50,7 +50,6 @@
 #include "pgstat.h"
 #include "postmaster/autovacuum.h"
 #include "postmaster/bgwriter.h"
-#include "postmaster/checkpoint.h"
 #include "postmaster/postmaster.h"
 #include "postmaster/syslogger.h"
 #include "replication/walsender.h"
@@ -65,7 +64,7 @@
 #include "utils/ps_status.h"
 #include "utils/tzparser.h"
 #include "utils/xml.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbvars.h"
 
 #ifdef USE_SSL
@@ -112,6 +111,11 @@ extern bool fullPageWrites;
 #ifdef USE_SSL
 extern char *SSLCipherSuites;
 #endif
+
+#ifdef USE_SSL
+extern char *SSLCipherSuites;
+#endif
+
 
 static const char *assign_log_destination(const char *value,
 					   bool doit, GucSource source);
@@ -162,6 +166,8 @@ static const char *show_IntervalStyle(void);
 static const char *show_tcp_keepalives_idle(void);
 static const char *show_tcp_keepalives_interval(void);
 static const char *show_tcp_keepalives_count(void);
+static bool assign_autovacuum_max_workers(int newval, bool doit, GucSource source);
+static bool assign_maxconnections(int newval, bool doit, GucSource source);
 
 static const char *assign_application_name(const char *newval, bool doit, GucSource source);
 static bool assign_autovacuum_warning(bool newval, bool doit, GucSource source);
@@ -1046,7 +1052,7 @@ static struct config_bool ConfigureNamesBool[] =
 			GUC_REPORT
 		},
 		&standard_conforming_strings,
-		false, NULL, NULL
+		true, NULL, NULL
 	},
 
 	{
@@ -1175,16 +1181,19 @@ static struct config_int ConfigureNamesInt[] =
 	 * number.
 	 *
 	 * MaxBackends is limited to INT_MAX/4 because some places compute
-	 * 4*MaxBackends without any overflow check.  Likewise we have to limit
-	 * NBuffers to INT_MAX/2.
+	 * 4*MaxBackends without any overflow check.  This check is made on
+	 * assign_maxconnections, since MaxBackends is computed as MaxConnections +
+	 * autovacuum_max_workers.
+	 *
+	 * Likewise we have to limit NBuffers to INT_MAX/2.
 	 */
 	{
 		{"max_connections", PGC_POSTMASTER, CONN_AUTH_SETTINGS,
 			gettext_noop("Sets the maximum number of concurrent connections."),
 			NULL
 		},
-		&MaxBackends,
-		200, 10, MAX_MAX_BACKENDS, NULL, NULL
+		&MaxConnections,
+		200, 10, MAX_MAX_BACKENDS, assign_maxconnections, NULL
 	},
 
 	{
@@ -1241,17 +1250,13 @@ static struct config_int ConfigureNamesInt[] =
 	{
 		{"work_mem", PGC_USERSET, DEPRECATED_OPTIONS,
 			gettext_noop("Sets the maximum memory to be used for query workspaces."),
-			gettext_noop("This much memory may be used by each internal "
+			gettext_noop("This much memory can be used by each internal "
 						 "sort operation and hash table before switching to "
 						 "temporary disk files."),
 			GUC_UNIT_KB | GUC_GPDB_ADDOPT
 		},
 		&work_mem,
-#ifdef USE_ASSERT_CHECKING      /* allow executor testing with low memory */
-        32768, 2 * BLCKSZ / 1024, MAX_KILOBYTES, NULL, NULL
-#else
-		32768, 8 * BLCKSZ / 1024, MAX_KILOBYTES, NULL, NULL
-#endif
+        32768, 64, MAX_KILOBYTES, NULL, NULL
 	},
 
 	{
@@ -1361,7 +1366,7 @@ static struct config_int ConfigureNamesInt[] =
 #ifdef LOCK_DEBUG
 	{
 		{"trace_lock_oidmin", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("no description available"),
+			gettext_noop("No description available."),
 			NULL,
 			GUC_NOT_IN_SAMPLE
 		},
@@ -1370,7 +1375,7 @@ static struct config_int ConfigureNamesInt[] =
 	},
 	{
 		{"trace_lock_table", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("no description available"),
+			gettext_noop("No description available."),
 			NULL,
 			GUC_NOT_IN_SAMPLE
 		},
@@ -1622,6 +1627,15 @@ static struct config_int ConfigureNamesInt[] =
 		},
 		&block_size,
 		BLCKSZ, BLCKSZ, BLCKSZ, NULL, NULL
+	},
+	{
+		/* see max_connections */
+		{"autovacuum_max_workers", PGC_POSTMASTER, AUTOVACUUM,
+			gettext_noop("Sets the maximum number of simultaneously running autovacuum worker processes."),
+			NULL
+		},
+		&autovacuum_max_workers,
+		3, 1, INT_MAX / 4, assign_autovacuum_max_workers, NULL
 	},
 
 	{
@@ -2138,7 +2152,9 @@ static struct config_string ConfigureNamesString[] =
 	{
 		{"lc_numeric", PGC_USERSET, CLIENT_CONN_LOCALE,
 			gettext_noop("Sets the locale for formatting numbers."),
-			NULL
+			NULL,
+			/* Please don't remove GUC_GPDB_ADDOPT or lc_numeric won't work correctly */
+			GUC_GPDB_ADDOPT
 		},
 		&locale_numeric,
 		"C", locale_numeric_assign, NULL
@@ -2249,7 +2265,7 @@ static struct config_string ConfigureNamesString[] =
 	{
 		{"log_directory", PGC_SIGHUP, DEFUNCT_OPTIONS,
 			gettext_noop("Defunct: Sets the destination directory for log files."),
-			gettext_noop("May be specified as relative to the data directory "
+			gettext_noop("Can be specified as relative to the data directory "
 						 "or as absolute path."),
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL
 		},
@@ -2467,7 +2483,7 @@ static struct config_string ConfigureNamesString[] =
 		&external_pid_file,
 		NULL, assign_canonical_path, NULL
 	},
-
+			
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, NULL, NULL, NULL
@@ -6423,8 +6439,7 @@ ParseLongOption(const char *string, char **name, char **value)
 	if (string[equal_pos] == '=')
 	{
 		*name = guc_malloc(FATAL, equal_pos + 1);
-		strncpy(*name, string, equal_pos);
-		(*name)[equal_pos] = '\0';
+		strlcpy(*name, string, equal_pos + 1);
 
 		*value = guc_strdup(FATAL, &string[equal_pos + 1]);
 	}
@@ -6731,6 +6746,33 @@ GUCArrayReset(ArrayType *array)
 	return newarray;
 }
 
+static bool
+assign_maxconnections(int newval, bool doit, GucSource source)
+{
+	if (doit)
+	{
+		if (newval + autovacuum_max_workers > INT_MAX / 4)
+			return false;
+
+		MaxBackends = newval + autovacuum_max_workers;
+	}
+
+	return true;
+}
+
+static bool
+assign_autovacuum_max_workers(int newval, bool doit, GucSource source)
+{
+	if (doit)
+	{
+		if (newval + MaxConnections > INT_MAX / 4)
+			return false;
+
+		MaxBackends = newval + MaxConnections;
+	}
+
+	return true;
+}
 
 /*
  * assign_hook subroutines

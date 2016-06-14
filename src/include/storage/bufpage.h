@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/bufpage.h,v 1.69 2007/01/05 22:19:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/storage/bufpage.h,v 1.71 2007/02/21 20:02:17 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -362,6 +362,7 @@ extern Page PageGetTempPage(Page page, Size specialSize);
 extern void PageRestoreTempPage(Page tempPage, Page oldPage);
 extern int	PageRepairFragmentation(Page page, OffsetNumber *unused);
 extern Size PageGetFreeSpace(Page page);
+extern Size PageGetExactFreeSpace(Page page);
 extern void PageIndexTupleDelete(Page page, OffsetNumber offset);
 extern void PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems);
 

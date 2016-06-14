@@ -452,14 +452,43 @@ select * from t1,
 (select * from t1 where a=1 and a=2 and a > (select t2.b from t2)) foo
 where t1.a = foo.a;
 
-explain select gp_segment_id, relname, relowner from gp_dist_random('pg_class') 
-where relname like 'gp_%' and gp_segment_id=0
-except 
-select i, relname, relowner from pg_class, generate_series(-1, (select max(content) 
-from gp_configuration)) i order by 1;
-
 drop table if exists t1;
 drop table if exists t2;
+
+--
+-- Test for a bug we used to have with eliminating InitPlans. The subplan,
+-- (select max(content) from y), was eliminated when it shouldn't have been.
+-- The query is supposed to return 0 rows, but returned > 0 when the bug was
+-- present.
+--
+CREATE TABLE initplan_x (i int4, t text);
+insert into initplan_x values
+ (1, 'foobar1'),
+ (2, 'foobar2'),
+ (3, 'foobar3'),
+ (4, 'foobar4'),
+ (5, 'foobar5');
+
+CREATE TABLE initplan_y (content int4);
+insert into initplan_y values (5);
+
+select i, t from initplan_x
+except
+select g, t from initplan_x,
+                 generate_series(0, (select max(content) from initplan_y)) g
+order by 1;
+
+drop table if exists initplan_x;
+drop table if exists initplan_y;
+
+--
+-- Test Initplans that return multiple params.
+--
+create table initplan_test(i int, j int, m int);
+insert into initplan_test values (1,1,1);
+select * from initplan_test where row(j, m) = (select j, m from initplan_test where i = 1);
+
+drop table initplan_test;
 
 --
 -- apply parallelization for subplan MPP-24563
@@ -530,3 +559,31 @@ SELECT p.id
               SELECT 1
               UNION ALL
               SELECT 0)) p;
+
+--
+-- Verify another bug in the IN-clause pull-up code. This returned some
+-- rows from xsupplier twice, because of a bug in detecting whether a
+-- Redistribute node was needed.
+--
+CREATE TABLE xlineitem (l_orderkey int4, l_suppkey int4) distributed by (l_orderkey);
+insert into xlineitem select g+3, g from generate_series(10,100) g;
+insert into xlineitem select g+1, g from generate_series(10,100) g;
+insert into xlineitem select g, g from generate_series(10,100) g;
+
+CREATE TABLE xsupplier (s_suppkey int4, s_name text) distributed by (s_suppkey);
+insert into xsupplier select g, 'foo' || g from generate_series(1,10) g;
+
+select s_name from xsupplier
+where s_suppkey in (
+  select g.l_suppkey from xlineitem g
+) ;
+
+--
+-- Another case that failed at one point. (A planner bug in pulling up a
+-- subquery with constant distribution key, 1, in the outer queries.)
+--
+create table nested_in_tbl(tc1 int, tc2 int) distributed by (tc1);
+select * from nested_in_tbl t1  where tc1 in
+  (select 1 from nested_in_tbl t2 where tc1 in
+    (select 1 from nested_in_tbl t3 where t3.tc2 = t2.tc2));
+drop table nested_in_tbl;

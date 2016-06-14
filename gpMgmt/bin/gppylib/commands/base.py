@@ -155,6 +155,8 @@ class WorkerPool(object):
         self.logger.debug("WorkerPool haltWork()")
         for w in self.workers:
             w.haltWork()    
+        for i in range(0,self.numWorkers):
+            self.work_queue.put('dummy command')
 
 
 class OperationWorkerPool(WorkerPool):
@@ -204,8 +206,8 @@ class Worker(Thread):
                     self.cmd = self.pool.getNextWorkItem(timeout=self.timeout)
                 except TypeError:
                     # misleading exception raised during interpreter shutdown
-                    return
-                
+                    return 
+
                 if self.cmd is not None and not self.shouldStop:
                     self.logger.debug("[%s] got cmd: %s" % (self.name,self.cmd.cmdStr))
                     self.cmd.run()
@@ -411,7 +413,7 @@ class LocalExecutionContext(ExecutionContext):
         self.stdin = stdin
         pass
     
-    def execute(self,cmd):
+    def execute(self, cmd, wait=True):
         # prepend env. variables from ExcecutionContext.propagate_env_map
         # e.g. Given {'FOO': 1, 'BAR': 2}, we'll produce "FOO=1 BAR=2 ..."
         for k, v in self.__class__.propagate_env_map.iteritems():
@@ -428,11 +430,11 @@ class LocalExecutionContext(ExecutionContext):
                                        stdin=subprocess.PIPE,
                                        stderr=subprocess.PIPE, 
                                        stdout=subprocess.PIPE, close_fds=True)
-        
-        (rc,stdout_value,stderr_value)=self.proc.communicate2(input=self.stdin)
-        self.completed=True
-         
-        cmd.set_results(CommandResult(rc,"".join(stdout_value),"".join(stderr_value),self.completed,self.halt))
+        if wait:
+            (rc,stdout_value,stderr_value)=self.proc.communicate2(input=self.stdin)
+            self.completed=True
+            cmd.set_results(CommandResult(
+                rc,"".join(stdout_value),"".join(stderr_value),self.completed,self.halt))
 
     def cancel(self,cmd):
         if self.proc:
@@ -688,7 +690,14 @@ class Command:
             return "%s cmdStr='%s'  had result: %s" % (self.name,self.cmdStr,self.results)
         else:
             return "%s cmdStr='%s'" % (self.name,self.cmdStr)
-        
+
+    # Start a process that will execute the command but don't wait for
+    # it to complete.  Return the Popen object instead.
+    def runNoWait(self):
+        faultPoint = os.getenv('GP_COMMAND_FAULT_POINT')
+        if not faultPoint or (self.name and not self.name.startswith(faultPoint)):
+            self.exec_context.execute(self, wait=False)
+            return self.exec_context.proc
 
     def run(self,validateAfter=False):
         faultPoint = os.getenv('GP_COMMAND_FAULT_POINT')

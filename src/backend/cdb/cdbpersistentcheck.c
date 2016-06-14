@@ -15,7 +15,7 @@
 #include "cdb/cdbpersistentstore.h"
 #include "cdb/cdbpersistentcheck.h"
 #include "cdb/cdbtm.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 
 #include "storage/itemptr.h"
 #include "access/genam.h"
@@ -1125,15 +1125,15 @@ Persistent_PostDTMRecv_NonDBSpecificPTCatVerification(void)
 {
 	PGresult  **pgresultSets = NULL;
 	StringInfoData errmsgbuf;
-	PGresult   *rs = NULL;
-	int i;
+	int			nresults;
+	int			i;
 	const char *cmdbuf = "select * from gp_nondbspecific_ptcat_verification()";
 
 	initStringInfo(&errmsgbuf);
 
 	/* call to all QE to perform verifications */
 	pgresultSets = cdbdisp_dispatchRMCommand(cmdbuf, /* withSnapshot */false,
-											 &errmsgbuf, NULL);
+											 &errmsgbuf, &nresults);
 
 	if (errmsgbuf.len > 0)
 	{
@@ -1144,13 +1144,8 @@ Persistent_PostDTMRecv_NonDBSpecificPTCatVerification(void)
 		pfree(errmsgbuf.data);
 	}
 
-	rs = pgresultSets[0];
-	i=0;
-
-	do
-	{
-		PQclear(rs);
-	} while ((rs = pgresultSets[++i]) != NULL);
+	for (i = 0; i < nresults; i++)
+		PQclear(pgresultSets[i]);
 
 	pfree(errmsgbuf.data);
 	free(pgresultSets);
@@ -1165,15 +1160,15 @@ Persistent_PostDTMRecv_DBSpecificPTCatVerification(void)
 {
 	PGresult  **pgresultSets = NULL;
 	StringInfoData errmsgbuf;
-	PGresult   *rs = NULL;
-	int i =0;
+	int			nresults;
+	int			i;
 	const char *cmdbuf = "select * from gp_dbspecific_ptcat_verification()";
 
 	initStringInfo(&errmsgbuf);
 
 	/* call to all QE to perform verifications */
 	pgresultSets = cdbdisp_dispatchRMCommand(cmdbuf, /* withSnapshot */false,
-											 &errmsgbuf, NULL);
+											 &errmsgbuf, &nresults);
 
 	/* display error messages */
 	if (errmsgbuf.len > 0)
@@ -1185,12 +1180,8 @@ Persistent_PostDTMRecv_DBSpecificPTCatVerification(void)
 		pfree(errmsgbuf.data);
 	}
 
-	rs = pgresultSets[0];
-	i=0;
-	do
-	{
-		PQclear(rs);
-	} while ((rs = pgresultSets[++i]) != NULL);
+	for (i = 0; i < nresults; i++)
+		PQclear(pgresultSets[i]);
 
 	pfree(errmsgbuf.data);
 	free(pgresultSets);

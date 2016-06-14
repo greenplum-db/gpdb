@@ -115,40 +115,6 @@
 	<ivy:cachepath pathid="ivy-classpath" conf="${gpgnet.configuration}"/>
   </target>
 
-  <target name="ivy-retrieve-checkstyle"
-          description="Retrieve Ivy-managed artifacts for the checkstyle configurations">
-    <ivy:retrieve pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"/>
-    <ivy:cachepath pathid="checkstyle-classpath" conf="checkstyle"/>
-  </target>
-
-  <!-- ================================================================== -->
-  <!-- Run optional third-party tool targets                              --> 
-  <!-- ================================================================== -->
-
-  <target name="checkstyle" depends="ivy-retrieve-checkstyle,check-for-checkstyle" if="checkstyle.present" description="Run optional third-party tool targets">
-       <taskdef resource="checkstyletask.properties">
-         <classpath refid="checkstyle-classpath"/>
-       </taskdef>
-  
-	<mkdir dir="${test.build.dir}"/>
-  	
-  	<checkstyle config="${test.src.dir}/sun_checks.xml"
-  		failOnViolation="false">
-      <fileset dir="${src.dir}" includes="*.java"/>
-      <formatter type="xml" toFile="${test.build.dir}/checkstyle-errors.xml"/>
-  	</checkstyle>
-
-  	<xslt style="${test.src.dir}/checkstyle-noframes-sorted.xsl"
-        in="${test.build.dir}/checkstyle-errors.xml"
-        out="${test.build.dir}/checkstyle-errors.html"/>
-  </target>
-	
-  <target name="check-for-checkstyle">
-    <available property="checkstyle.present" resource="checkstyletask.properties">
-       <classpath refid="checkstyle-classpath"/>
-    </available>  	
-  </target>
-
   <target name="javadoc" depends="ivy-retrieve-hadoop" description="Create Javadocs">
     <delete dir="${javadoc.dir}" />
     <mkdir dir="${javadoc.dir}"/>

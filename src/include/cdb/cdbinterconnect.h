@@ -16,6 +16,7 @@
 
 struct directTransportBuffer;
 
+#include "cdb/cdbselect.h"
 #include "cdb/tupser.h"
 #include "cdb/tupchunk.h"
 #include "cdb/tupchunklist.h"
@@ -23,6 +24,7 @@ struct directTransportBuffer;
 struct CdbProcess;                          /* #include "nodes/execnodes.h" */
 struct Slice;                               /* #include "nodes/execnodes.h" */
 struct SliceTable;                          /* #include "nodes/execnodes.h" */
+struct EState;                              /* #include "nodes/execnodes.h" */
 
 typedef struct icpkthdr
 {
@@ -414,14 +416,14 @@ typedef struct MotionNodeEntry
 	 * Variable that records the total number of senders to this motion node.
 	 * This is expected to always be (number of qExecs).
 	 */
-	uint            num_senders;
+	uint32          num_senders;
 
 	/*
 	 * Variable that tracks number of senders that have reported end-of-stream
 	 * for this motion node.  When the local node sends end-of-stream, that is
 	 * also recorded.
 	 */
-	uint            num_stream_ends_recvd;
+	uint32          num_stream_ends_recvd;
 
 	bool            cleanedUp;
 	bool            valid;
@@ -513,7 +515,7 @@ typedef struct ChunkTransportState
 	int			sliceId;
 
 	/* Estate pointer for this statement (UDP-IC specific) */
-	EState		*estate;
+	struct EState *estate;
 
 	/* Function pointers to our send/receive functions */
 	bool (*SendChunk)(MotionLayerState *mlStates, struct ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, MotionConn *conn, TupleChunkListItem tcItem, int16 motionId);

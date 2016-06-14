@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/plancat.c,v 1.131 2007/01/09 02:14:13 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/plancat.c,v 1.132 2007/01/20 23:13:01 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -44,6 +44,7 @@
 
 
 /* GUC parameter */
+bool		constraint_exclusion = false;
 
 static List *get_relation_constraints(PlannerInfo *root,
 									  Oid relationObjectId, RelOptInfo *rel,
@@ -232,8 +233,10 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 
 			/*
 			 * Fetch the ordering operators associated with the index, if any.
+			 * We expect that all ordering-capable indexes use btree's
+			 * strategy numbers for the ordering operators.
 			 */
-			if (indexRelation->rd_am->amorderstrategy > 0)
+			if (indexRelation->rd_am->amcanorder)
 			{
 				int			nstrat = indexRelation->rd_am->amstrategies;
 
@@ -245,17 +248,17 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 
 					if (opt & INDOPTION_DESC)
 					{
-						fwdstrat = indexRelation->rd_am->amdescorder;
-						revstrat = indexRelation->rd_am->amorderstrategy;
+						fwdstrat = BTGreaterStrategyNumber;
+						revstrat = BTLessStrategyNumber;
 					}
 					else
 					{
-						fwdstrat = indexRelation->rd_am->amorderstrategy;
-						revstrat = indexRelation->rd_am->amdescorder;
+						fwdstrat = BTLessStrategyNumber;
+						revstrat = BTGreaterStrategyNumber;
 					}
 					/*
 					 * Index AM must have a fixed set of strategies for it
-					 * to make sense to specify amorderstrategy, so we
+					 * to make sense to specify amcanorder, so we
 					 * need not allow the case amstrategies == 0.
 					 */
 					if (fwdstrat > 0)
@@ -356,9 +359,6 @@ get_external_relation_info(Oid relationObjectId, RelOptInfo *rel)
 	rel->ext_encoding = extentry->encoding;
 	rel->writable = extentry->iswritable;
 
-	/* any external tables are non-rescannable. */
-	rel->isrescannable = false;
-
 }
 
 /*
@@ -382,7 +382,6 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
 	double		density;
     int32       tuple_width;
     BlockNumber curpages = 0;
-	int64	size = 0;
 
     *default_stats_used = false;
 
@@ -418,53 +417,14 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
 	}
 	else
 	{
-
 		/*
-		 * Let's ask the QEs for the size of the relation.
-		 * In the future, it would be better to send the command to only one QE.
-		 *
-		 * NOTE: External tables should always have >0 values in pg_class
-		 * (created this way). Therefore we should never get here. However, as
-		 * a security measure (if values in pg_class were somehow changed) we
-		 * plug in our 1K pages 1M tuples estimate here as well, and skip
-		 * cdbRelSize as we can't calculate ext table size.
+		 * Put default estimates in case no statistics are available. This saves cost of asking QEs
 		 */
-		if(!RelationIsExternal(rel))
-		{
-		    size = cdbRelSize(rel);
-		}
-		else
-		{
-			/*
-			 * Estimate a default of 1000 pages - see comment above.
-			 * NOTE: if you change this look at AddNewRelationTuple in heap.c).
-			 */
-			size = 1000 * BLCKSZ;
-		}
-
-
-		if (size < 0)
-		{
-			curpages = 100;
-			*default_stats_used = true;
-		}
-		else
-		{
-			curpages = size / BLCKSZ;  /* average blocks per primary segment DB */
-		}
-
-		if (curpages == 0 && size > 0)
-			curpages = 1;
+		curpages = RelationIsExternal(rel) ? DEFAULT_EXTERNAL_TABLE_PAGES : DEFAULT_INTERNAL_TABLE_PAGES;
 	}
 
 	/* report estimated # pages */
 	*pages = curpages;
-	/* quick exit if rel is clearly empty */
-	if (curpages == 0)
-	{
-		*tuples = 0;
-		return;
-	}
 
 	/*
 	 * If it's an index, discount the metapage.  This is a kluge
@@ -842,6 +802,29 @@ relation_excluded_by_constraints(PlannerInfo *root, RelOptInfo *rel, RangeTblEnt
 
 		if (!contain_mutable_functions((Node *) rinfo->clause))
 			safe_restrictions = lappend(safe_restrictions, rinfo->clause);
+	}
+
+	/*
+	 * GPDB: Check if there's a constant False condition. That's unlikely
+	 * to help much in most cases, as we'll create a Result node with
+	 * a False one-time filter anyway, so the underlying plan will not
+	 * be executed in any case. But we can avoid some planning overhead.
+	 * Also, the Result node might be put under a Motion node, so we avoid
+	 * a little bit of network traffic at execution time, if we can eliminate
+	 * the relation altogether here.
+	 */
+	foreach(lc, rel->baserestrictinfo)
+	{
+		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
+
+		if (IsA(rinfo->clause, Const))
+		{
+			Const *c = (Const *) rinfo->clause;
+
+			if (c->consttype == BOOLOID &&
+				(c->constisnull || DatumGetBool(c->constvalue) == false))
+				return true;
+		}
 	}
 
 	if (predicate_refuted_by(safe_restrictions, safe_restrictions))

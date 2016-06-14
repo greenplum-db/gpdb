@@ -18,6 +18,9 @@
 
 #include "pg_regress.h"
 
+#include <sys/stat.h>
+#include <sys/types.h>
+
 /*
  * start a psql test process for specified file (including redirection),
  * and return process ID
@@ -34,6 +37,7 @@ psql_start_test(const char *testname,
 	char		expectfile[MAXPGPATH] = "";
 	char		psql_cmd[MAXPGPATH * 3];
 	char		use_utility_mode = 0;
+	char	   *lastslash;
 
 	/* generalise later */
 	if (strcmp(testname, "upg2") == 0)
@@ -54,6 +58,31 @@ psql_start_test(const char *testname,
 	snprintf(outfile, sizeof(outfile), "%s/results/%s.out",
 			 outputdir, testname);
 
+	/*
+	 * If the test name contains slashes, create intermediary results
+	 * directory.
+	 */
+	if ((lastslash = strrchr(outfile, '/')) != NULL)
+	{
+		char		resultdir[MAXPGPATH];
+
+		memcpy(resultdir, outfile, lastslash - outfile);
+		resultdir[lastslash - outfile] = '\0';
+		if (mkdir(resultdir, S_IRWXU | S_IRWXG | S_IRWXO) < 0)
+		{
+			if (errno == EEXIST)
+			{
+				/* exists already, that's OK */
+			}
+			else
+			{
+				fprintf(stderr, _("could not create directory \"%s\": %s\n"),
+						resultdir, strerror(errno));
+				exit_nicely(2);
+			}
+		}
+	}
+	
 	if (optimizer_enabled)
 	{
 		snprintf(expectfile, sizeof(expectfile), "%s/expected/%s_optimizer.out",

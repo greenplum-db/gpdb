@@ -92,10 +92,10 @@ static void ResetOutput(ArchiveHandle *AH, OutputContext savedContext);
 /* Public */
 Archive *
 CreateArchive(const char *FileSpec, const ArchiveFormat fmt,
-			  const int compression)
+			  const int compression, ArchiveMode mode)
 
 {
-	ArchiveHandle *AH = _allocAH(FileSpec, fmt, compression, archModeWrite);
+	ArchiveHandle *AH = _allocAH(FileSpec, fmt, compression, mode);
 
 	return (Archive *) AH;
 }
@@ -1005,10 +1005,20 @@ SetOutput(ArchiveHandle *AH, char *filename, int compression)
 #endif
 	{							/* Use fopen */
 #ifndef USE_DDBOOST
-		if (fn >= 0)
-			AH->OF = fdopen(dup(fn), PG_BINARY_W);
+		if (AH->mode == archModeAppend)
+		{
+			if (fn >= 0)
+				AH->OF = fdopen(dup(fn), PG_BINARY_A);
+			else
+				AH->OF = fopen(filename, PG_BINARY_A);
+		}
 		else
-			AH->OF = fopen(filename, PG_BINARY_W);
+		{
+			if (fn >= 0)
+				AH->OF = fdopen(dup(fn), PG_BINARY_W);
+			else
+				AH->OF = fopen(filename, PG_BINARY_W);
+		}
 		AH->gzOut = 0;
 #endif
 	}
@@ -2546,6 +2556,7 @@ _getObjectDescription(PQExpBuffer buf, TocEntry *te, ArchiveHandle *AH)
 		strcmp(type, "FUNCTION") == 0 ||
 		strcmp(type, "OPERATOR") == 0 ||
 		strcmp(type, "OPERATOR CLASS") == 0 ||
+		strcmp(type, "OPERATOR FAMILY") == 0 ||
 		strcmp(type, "PROTOCOL") == 0)
 	{
 		/* Chop "DROP " off the front and make a modifiable copy */
@@ -2747,6 +2758,7 @@ _printTocEntry(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt, bool isDat
 			strcmp(te->desc, "FUNCTION") == 0 ||
 			strcmp(te->desc, "OPERATOR") == 0 ||
 			strcmp(te->desc, "OPERATOR CLASS") == 0 ||
+			strcmp(te->desc, "OPERATOR FAMILY") == 0 ||
 			strcmp(te->desc, "SCHEMA") == 0 ||
 			strcmp(te->desc, "TABLE") == 0 ||
 			strcmp(te->desc, "EXTERNAL TABLE") == 0 ||

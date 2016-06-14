@@ -37,9 +37,8 @@ catullus - function definitions
 ===============================
 
 catullus.pl is part of the tidycat suite dedicated to function
-definitions in pg_proc.h and basic bootstrap types in pg_type.h.  For
-example, the function definition for int2 equality is defined using
-this DATA statement:
+definitions in pg_proc.h.  For example, the function definition for int2
+equality is defined using this DATA statement:
 
 DATA(insert OID = 63 ( int2eq  PGNSP PGUID 12 f f t f i 2 16 f "21 21" _null_ _null_ _null_ int2eq - _null_ ));
 DESCR("equal");
@@ -50,13 +49,10 @@ pg_proc.sql file with SQL-like definitions to generate them:
 CREATE FUNCTION int2eq(int2, int2) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'int2eq' WITH (OID=63, DESCRIPTION="equal");
 
 When catullus.pl is run, it converts these SQL statements to DATA
-macros and updates the contents of pg_proc.h and pg_type.h.  In
-Greenplum, the entire set of pg_proc bootstrap DATA is automatically
-generated, and the majority of pg_type.h DATA is generated from
-pg_type.sql and tidycat table definitions spread throught the catalog
-header files.  The generated statments retain the order and comments
-of the original, hand-coded statements (with some additional comments
-describing input and return types).
+macros and updates the contents of pg_proc_gp.h.  In Greenplum, all functions
+inherited from PostgreSQL are in pg_proc.h, like in PostgreSQL, but additional
+lines are kept in pg_proc_gp.h, which is generated from pg_proc.sql. tidycat
+table definitions spread throughout the catalog header files.
 
 pablopcatso - graphing table dependencies
 =========================================

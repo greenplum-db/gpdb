@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/functions.c,v 1.108.2.2 2007/04/02 18:49:36 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/functions.c,v 1.110 2007/02/02 00:02:55 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -38,7 +38,7 @@
 #include "optimizer/clauses.h"
 #include "executor/spi.h"
 #include "cdb/memquota.h"
-#include "postmaster/autovacuum.h"
+#include "postmaster/autostats.h"
 
 /*
  * We have an execution_state record for each query in a function.	Each
@@ -246,21 +246,15 @@ init_sql_fcache(FmgrInfo *finfo)
 	Datum		tmp;
 	bool		isNull;
 	ListCell * list_item;
-	cqContext  *pcqCtx;
 
 	fcache = (SQLFunctionCachePtr) palloc0(sizeof(SQLFunctionCache));
 
 	/*
 	 * get the procedure tuple corresponding to the given function Oid
 	 */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_proc "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(foid)));
-
-	procedureTuple = caql_getnext(pcqCtx);
-
+	procedureTuple = SearchSysCache(PROCOID,
+									ObjectIdGetDatum(foid),
+									0, 0, 0);
 	if (!HeapTupleIsValid(procedureTuple))
 		elog(ERROR, "cache lookup failed for function %u", foid);
 	procedureStruct = (Form_pg_proc) GETSTRUCT(procedureTuple);
@@ -326,9 +320,10 @@ init_sql_fcache(FmgrInfo *finfo)
 	/*
 	 * Parse and rewrite the queries in the function text.
 	 */
-	tmp = caql_getattr(pcqCtx,
-					   Anum_pg_proc_prosrc,
-					   &isNull);
+	tmp = SysCacheGetAttr(PROCOID,
+						  procedureTuple,
+						  Anum_pg_proc_prosrc,
+						  &isNull);
 	if (isNull)
 		elog(ERROR, "null prosrc for function %u", foid);
 	fcache->src = TextDatumGetCString(tmp);
@@ -404,7 +399,7 @@ init_sql_fcache(FmgrInfo *finfo)
 											  fcache,
 											  fcache->readonly_func);
 
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(procedureTuple);
 
 	finfo->fn_extra = (void *) fcache;
 }
@@ -578,7 +573,7 @@ postquel_end(execution_state *es)
 			{
 				Oid			relationOid = InvalidOid; 					/* relation that is modified */
 				AutoStatsCmdType cmdType = AUTOSTATS_CMDTYPE_SENTINEL; 	/* command type */
-				autostats_get_cmdtype(es->qd->plannedstmt, &cmdType, &relationOid);
+				autostats_get_cmdtype(es->qd, &cmdType, &relationOid);
 				auto_stats(cmdType, relationOid, es->qd->es_processed, true /* inFunction */);
 			}
 		}

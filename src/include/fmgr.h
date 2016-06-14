@@ -570,5 +570,18 @@ extern PGFunction lookup_external_function(void *filehandle, char *funcname);
 extern void load_file(const char *filename, bool restricted);
 extern void **find_rendezvous_variable(const char *varName);
 
+/*
+ * Support for aggregate functions
+ *
+ * This is actually in executor/nodeAgg.c, but we declare it here since the
+ * whole point is for callers of it to not be overly friendly with nodeAgg.
+ */
+
+/* AggCheckCallContext can return one of the following codes, or 0: */
+#define AGG_CONTEXT_AGGREGATE   1       /* regular aggregate */
+#define AGG_CONTEXT_WINDOW      2       /* window function */
+
+extern int AggCheckCallContext(FunctionCallInfo fcinfo,
+                    MemoryContext *aggcontext);
 
 #endif   /* FMGR_H */

@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.191 2007/01/05 22:19:55 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.195 2007/02/19 07:03:31 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -43,7 +43,8 @@ typedef enum NodeTag
 	T_SliceTable,
 	T_ShareNodeEntry,
 	T_PartitionState,
-	
+	T_QueryDispatchDesc,
+
 	/*
 	 * TAGS FOR PLAN NODES (plannodes.h)
 	 */
@@ -181,6 +182,8 @@ typedef enum NodeTag
 	T_FieldSelect,
 	T_FieldStore,
 	T_RelabelType,
+	T_CoerceViaIO,
+	T_ArrayCoerceExpr,
 	T_ConvertRowtypeExpr,
 	T_CaseExpr,
 	T_CaseWhen,
@@ -217,6 +220,7 @@ typedef enum NodeTag
 	T_PartBoundExpr,
 	T_PartBoundInclusionExpr,
 	T_PartBoundOpenExpr,
+	T_TableOidInfo,
 
 	/*
 	 * TAGS FOR EXPRESSION STATE NODES (execnodes.h)
@@ -234,6 +238,8 @@ typedef enum NodeTag
 	T_SubPlanState,
 	T_FieldSelectState,
 	T_FieldStoreState,
+	T_CoerceViaIOState,
+	T_ArrayCoerceExprState,
 	T_ConvertRowtypeExprState,
 	T_CaseExprState,
 	T_CaseWhenState,
@@ -281,7 +287,9 @@ typedef enum NodeTag
 	T_MaterialPath,
 	T_UniquePath,
 	T_CtePath,
-	T_PathKeyItem,
+	T_EquivalenceClass,
+	T_EquivalenceMember,
+	T_PathKey,
 	T_RestrictInfo,
 	T_InnerIndexscanInfo,
 	T_OuterJoinInfo,
@@ -358,6 +366,7 @@ typedef enum NodeTag
 	T_CreateFunctionStmt,
 	T_AlterFunctionStmt,
 	T_RemoveFuncStmt,
+	T_DoStmt,
 	T_RenameStmt,
 	T_RuleStmt,
 	T_NotifyStmt,
@@ -398,7 +407,10 @@ typedef enum NodeTag
 	T_CreateCastStmt,
 	T_DropCastStmt,
 	T_CreateOpClassStmt,
+	T_CreateOpFamilyStmt,
+	T_AlterOpFamilyStmt,
 	T_RemoveOpClassStmt,
+	T_RemoveOpFamilyStmt,
 	T_PrepareStmt,
 	T_ExecuteStmt,
 	T_DeallocateStmt,
@@ -437,6 +449,7 @@ typedef enum NodeTag
 	T_FuncCall,
 	T_A_Indices,
 	T_A_Indirection,
+	T_A_ArrayExpr,
 	T_ResTarget,
 	T_TypeCast,
 	T_SortBy,
@@ -484,6 +497,7 @@ typedef enum NodeTag
 	 */
 	T_TriggerData = 900,		/* in commands/trigger.h */
 	T_ReturnSetInfo,			/* in nodes/execnodes.h */
+	T_InlineCodeBlock,			/* in nodes/parsenodes.h */
     T_HashBitmap,               /* in nodes/tidbitmap.h */
     T_StreamBitmap,             /* in nodes/tidbitmap.h */
 	T_FormatterData,            /* in access/formatter.h */

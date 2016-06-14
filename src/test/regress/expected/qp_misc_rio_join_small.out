@@ -1,0 +1,135 @@
+-- start_ignore
+drop table if exists my_tt_agg_small;
+NOTICE:  table "my_tt_agg_small" does not exist, skipping
+drop table if exists my_tq_agg_small;
+NOTICE:  table "my_tq_agg_small" does not exist, skipping
+drop index if exists my_tt_agg_small_event_ts_ix;
+NOTICE:  index "my_tt_agg_small_event_ts_ix" does not exist, skipping
+--
+-- Greenplum Database database dump
+--
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = off;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+SET escape_string_warning = off;
+SET search_path = public, pg_catalog;
+SET default_tablespace = '';
+SET default_with_oids = false;
+--
+-- Name: my_tt_agg_small; Type: TABLE; Schema: public; Tablespace: 
+--
+CREATE TABLE my_tt_agg_small (
+    symbol character(16),
+    event_ts bigint,
+    trade_price numeric,
+    trade_volume bigint
+) DISTRIBUTED BY (symbol);
+-- end_ignore
+--
+-- Data for Name: my_tt_agg_small; Type: TABLE DATA; Schema: public;
+--
+COPY my_tt_agg_small (symbol, event_ts, trade_price, trade_volume) FROM stdin;
+--
+-- Greenplum Database database dump complete
+--
+--
+-- Greenplum Database database dump
+--
+--
+-- Name: my_tq_agg_small; Type: TABLE; Schema: public; Tablespace: 
+--
+CREATE TABLE my_tq_agg_small (
+    ets bigint,
+    sym character varying(16),
+    bid_price numeric,
+    ask_price numeric,
+    end_ts bigint
+) DISTRIBUTED BY (ets);
+--
+-- Data for Name: my_tq_agg_small; Type: TABLE DATA; Schema: public;
+--
+COPY my_tq_agg_small (ets, sym, bid_price, ask_price, end_ts) FROM stdin;
+--
+-- Name: my_tq_agg_small_ets_end_ts_ix; Type: INDEX; Schema: public; Tablespace: 
+--
+CREATE INDEX my_tq_agg_small_ets_end_ts_ix ON my_tq_agg_small USING btree (ets, end_ts);
+--
+-- Greenplum Database database dump complete
+--
+set enable_hashjoin=off;
+create index my_tt_agg_small_event_ts_ix on my_tt_agg_small(event_ts);
+analyze my_tt_agg_small;
+SELECT (tt.event_ts / 100000) / 5 * 5 as fivemin
+      , COUNT(*)
+   FROM my_tt_agg_small tt
+      , my_tq_agg_small tq
+  WHERE tq.sym      =  tt.symbol
+    AND tt.event_ts >= tq.ets
+    AND tt.event_ts <  tq.end_ts
+  GROUP BY 1
+  ORDER BY 1 asc ;
+   fivemin    | count 
+--------------+-------
+ 201011261010 |    51
+ 201011261015 |    74
+ 201011261020 |    11
+ 201011261025 |     3
+ 201011261030 |    43
+ 201011261035 |     6
+ 201011261040 |     7
+ 201011261045 |    21
+ 201011261050 |     3
+ 201011261055 |     6
+ 201011261100 |    13
+ 201011261105 |     3
+ 201011261110 |    18
+ 201011261115 |    40
+ 201011261120 |    15
+ 201011261125 |    13
+ 201011261130 |    26
+ 201011261135 |    13
+ 201011261140 |    21
+ 201011261145 |     8
+ 201011261150 |    19
+ 201011261155 |     4
+ 201011261200 |    12
+ 201011261205 |    15
+ 201011261210 |    11
+ 201011261215 |    20
+ 201011261220 |     8
+ 201011261225 |    10
+ 201011261230 |     6
+ 201011261235 |     6
+ 201011261240 |     1
+ 201011261245 |     3
+ 201011261250 |     2
+ 201011261255 |    18
+ 201011261300 |    14
+ 201011261305 |    10
+ 201011261310 |     5
+ 201011261315 |    17
+ 201011261320 |    23
+ 201011261325 |    25
+ 201011261330 |    11
+ 201011261335 |    16
+ 201011261340 |    26
+ 201011261345 |     2
+ 201011261350 |    19
+ 201011261355 |    34
+ 201011261400 |     6
+ 201011261405 |    30
+ 201011261410 |    23
+ 201011261415 |    14
+ 201011261420 |    22
+ 201011261425 |    19
+ 201011261430 |    32
+ 201011261435 |    15
+(54 rows)
+
+ 
+-- start_ignore
+drop table if exists my_tt_agg_small;
+drop table if exists my_tq_agg_small;
+drop index if exists my_tt_agg_small_event_ts_ix;
+-- end_ignore

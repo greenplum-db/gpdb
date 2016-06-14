@@ -1,0 +1,317 @@
+-- count number of certain operators in a given plan
+-- start_ignore
+create language plpythonu;
+-- end_ignore
+create or replace function count_operator(explain_query text, operator text) returns int as
+$$
+rv = plpy.execute(explain_query)
+search_text = operator
+result = 0
+for i in range(len(rv)):
+    cur_line = rv[i]['QUERY PLAN']
+    if search_text.lower() in cur_line.lower():
+        result = result+1
+return result
+$$
+language plpythonu;
+--
+-- Testing queries with subqueries with nested scalar functions
+-- 
+create table q68t792_temp(u_vtgnr varchar(6), u_zj varchar(2), u_folio varchar(2)) distributed by (u_vtgnr, u_zj, u_folio);
+insert into q68t792_temp select x ||'1' , x || '', x || '' from generate_series(30,99) x;
+SELECT  u_vtgnr, u_zj, u_folio                                                                                                                                 
+FROM  q68t792_temp a  
+WHERE 
+u_zj = 
+(SELECT substr(max(case when cast(u_zj as integer) < 50 then '20' || u_zj else '19' || u_zj end),3,2) 
+ FROM q68t792_temp b WHERE a.u_vtgnr = b.u_vtgnr) 
+AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr = c.u_vtgnr  and a.u_zj = c.u_zj) 
+order by u_vtgnr, u_zj, u_folio;
+ u_vtgnr | u_zj | u_folio 
+---------+------+---------
+ 301     | 30   | 30
+ 311     | 31   | 31
+ 321     | 32   | 32
+ 331     | 33   | 33
+ 341     | 34   | 34
+ 351     | 35   | 35
+ 361     | 36   | 36
+ 371     | 37   | 37
+ 381     | 38   | 38
+ 391     | 39   | 39
+ 401     | 40   | 40
+ 411     | 41   | 41
+ 421     | 42   | 42
+ 431     | 43   | 43
+ 441     | 44   | 44
+ 451     | 45   | 45
+ 461     | 46   | 46
+ 471     | 47   | 47
+ 481     | 48   | 48
+ 491     | 49   | 49
+ 501     | 50   | 50
+ 511     | 51   | 51
+ 521     | 52   | 52
+ 531     | 53   | 53
+ 541     | 54   | 54
+ 551     | 55   | 55
+ 561     | 56   | 56
+ 571     | 57   | 57
+ 581     | 58   | 58
+ 591     | 59   | 59
+ 601     | 60   | 60
+ 611     | 61   | 61
+ 621     | 62   | 62
+ 631     | 63   | 63
+ 641     | 64   | 64
+ 651     | 65   | 65
+ 661     | 66   | 66
+ 671     | 67   | 67
+ 681     | 68   | 68
+ 691     | 69   | 69
+ 701     | 70   | 70
+ 711     | 71   | 71
+ 721     | 72   | 72
+ 731     | 73   | 73
+ 741     | 74   | 74
+ 751     | 75   | 75
+ 761     | 76   | 76
+ 771     | 77   | 77
+ 781     | 78   | 78
+ 791     | 79   | 79
+ 801     | 80   | 80
+ 811     | 81   | 81
+ 821     | 82   | 82
+ 831     | 83   | 83
+ 841     | 84   | 84
+ 851     | 85   | 85
+ 861     | 86   | 86
+ 871     | 87   | 87
+ 881     | 88   | 88
+ 891     | 89   | 89
+ 901     | 90   | 90
+ 911     | 91   | 91
+ 921     | 92   | 92
+ 931     | 93   | 93
+ 941     | 94   | 94
+ 951     | 95   | 95
+ 961     | 96   | 96
+ 971     | 97   | 97
+ 981     | 98   | 98
+ 991     | 99   | 99
+(70 rows)
+
+SELECT  u_vtgnr, u_zj, u_folio                                                                                                                                 
+FROM  q68t792_temp a  
+WHERE 
+u_zj = 
+(SELECT substr(max(case when cast(u_zj as integer) < 50 then '20' || u_zj else '19' || u_zj end),3,2) 
+ FROM q68t792_temp b WHERE a.u_vtgnr <= b.u_vtgnr) 
+AND u_folio = (SELECT max(u_folio)  FROM q68t792_temp c WHERE a.u_vtgnr <= c.u_vtgnr  and a.u_zj <= c.u_zj)
+order by u_vtgnr, u_zj, u_folio;
+ u_vtgnr | u_zj | u_folio 
+---------+------+---------
+ 991     | 99   | 99
+(1 row)
+
+drop table q68t792_temp;
+--
+-- Fix bug in Expression to DXL translation for correlated queries when optimizer is turned on.
+--
+set optimizer = on;
+DROP TABLE IF EXISTS t1 CASCADE;
+NOTICE:  table "t1" does not exist, skipping
+DROP TABLE IF EXISTS t2 CASCADE;
+NOTICE:  table "t2" does not exist, skipping
+DROP TABLE IF EXISTS x CASCADE;
+NOTICE:  table "x" does not exist, skipping
+CREATE TABLE t1 (a int, b int) DISTRIBUTED BY (a);
+CREATE TABLE t2 (a int, b int) DISTRIBUTED BY (a);
+CREATE TABLE x (a int) DISTRIBUTED BY (a);
+-- intent is to: expect to have 'table scan' operator in query plan
+select count_operator('explain select * from x where a=  (select sum(t1.a)  from t1 inner join (select x.a as outer_ref, * from t2) as foo on (foo.a=t1.a+ outer_ref)  group by foo.a);', 'Table Scan') > 0;
+ ?column? 
+----------
+ t
+(1 row)
+
+DROP TABLE t1;
+DROP TABLE t2;
+DROP TABLE x;
+reset optimizer;
+SET statement_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = off;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+SET escape_string_warning = off;
+SET default_with_oids = false;
+CREATE TABLE test_r_rvv_stada_dim_konst (
+    dim_bezei character varying(50) NOT NULL,
+    dim_elem_lvl smallint NOT NULL,
+    dim_elem_nr character varying(12) NOT NULL,
+    dim_elem_id character varying(12) NOT NULL,
+    dim_elem_bezei character varying(50) NOT NULL,
+    dim_parent_nr smallint,
+    dim_bed character varying(150)
+) DISTRIBUTED RANDOMLY;
+CREATE TABLE test_sf_dd_land_vm (
+    land_elem_nr smallint NOT NULL,
+    land_elem_bezei character varying(50) NOT NULL,
+    land_typ smallint NOT NULL,
+    land_id character varying(2),
+    land_nr smallint,
+    land_bezei character varying(50),
+    land_bezei_krz character varying(15),
+    land_abc_kz character varying(1),
+    land_seg_qis_nr smallint,
+    land_seg_qis_bezei character varying(50),
+    land_seg_geo_nr smallint,
+    land_seg_geo_bezei character varying(50),
+    region_nr smallint,
+    region_bezei character varying(50),
+    sm_region_nr smallint,
+    sm_region_bezei character varying(50),
+    land_ges_nr smallint NOT NULL,
+    land_ges_bezei character varying(50) NOT NULL
+) DISTRIBUTED RANDOMLY;
+COPY test_r_rvv_stada_dim_konst (dim_bezei, dim_elem_lvl, dim_elem_nr, dim_elem_id, dim_elem_bezei, dim_parent_nr, dim_bed) FROM stdin;
+COPY test_sf_dd_land_vm (land_elem_nr, land_elem_bezei, land_typ, land_id, land_nr, land_bezei, land_bezei_krz, land_abc_kz, land_seg_qis_nr, land_seg_qis_bezei, land_seg_geo_nr, land_seg_geo_bezei, region_nr, region_bezei, sm_region_nr, sm_region_bezei, land_ges_nr, land_ges_bezei) FROM stdin;
+select konst.dim_elem_bezei  as natcat_zone_elem_bezei,
+		konst.dim_elem_bezei  as natcat_zone_elem_id,
+		case when konst.dim_elem_lvl = 2 then (select land.land_nr from test_sf_dd_land_vm land where land.land_id=konst.dim_elem_bezei)     end as land_nr  
+from
+    test_r_rvv_stada_dim_konst konst     ,test_r_rvv_stada_dim_konst gesamt
+where
+    konst.dim_bezei     = 'NatCat-Zone'   and gesamt.dim_bezei    = 'NatCat-Zone'   and gesamt.dim_elem_lvl = 0;
+      natcat_zone_elem_bezei      |       natcat_zone_elem_id        | land_nr 
+----------------------------------+----------------------------------+---------
+ 832e21f9da1ad55895637d00686fdb42 | 832e21f9da1ad55895637d00686fdb42 |        
+ ec8989f78fab481d87f43ecacca55aa1 | ec8989f78fab481d87f43ecacca55aa1 |        
+ fc8baa6879e639926be3916810962e13 | fc8baa6879e639926be3916810962e13 |        
+ d877c55797fd430ce8150363cd86058f | d877c55797fd430ce8150363cd86058f |        
+ 35b3855dc94445aa82615b66f73f5be9 | 35b3855dc94445aa82615b66f73f5be9 |        
+ 578ed5a4eecf5a15803abdc49f6152d6 | 578ed5a4eecf5a15803abdc49f6152d6 |        
+ e6d96502596d7e7887b76646c5f615d9 | e6d96502596d7e7887b76646c5f615d9 |        
+ 365f939403a7e61514b0f74b6809290f | 365f939403a7e61514b0f74b6809290f |        
+ b6eb281e772f7b8fc9404fba1fbbb06a | b6eb281e772f7b8fc9404fba1fbbb06a |        
+ a441cb7c28e1f94b7d8e7e1be1f07310 | a441cb7c28e1f94b7d8e7e1be1f07310 |        
+ 78b0fb7d034c46f13890008e6f36806b | 78b0fb7d034c46f13890008e6f36806b |        
+ 49b10fbde180f30ecd23a4155ecc5a6f | 49b10fbde180f30ecd23a4155ecc5a6f |        
+ 5034bc3fd2a153aad8f903a3df44d08a | 5034bc3fd2a153aad8f903a3df44d08a |        
+ 2c61ebff5a7f675451467527df66788d | 2c61ebff5a7f675451467527df66788d |        
+ f4864963ac0643d1b73ec6580f283042 | f4864963ac0643d1b73ec6580f283042 |        
+ ada53304c5b9e4a839615b6e8f908eb6 | ada53304c5b9e4a839615b6e8f908eb6 |        
+ 78fe5b68956805618673ba3f04999ae8 | 78fe5b68956805618673ba3f04999ae8 |        
+ b0c597f91004d4355059ffeee1f30393 | b0c597f91004d4355059ffeee1f30393 |        
+ 5e4ac03d7827ca48ed305a0d80cd5aa1 | 5e4ac03d7827ca48ed305a0d80cd5aa1 |        
+ 326069604c6a5df905ad7524ff6fd845 | 326069604c6a5df905ad7524ff6fd845 |        
+ 0776809bccf9f0ce17bea87f017c1b9f | 0776809bccf9f0ce17bea87f017c1b9f |        
+ f81e986ee4c9f80d6002bf5302b3ea87 | f81e986ee4c9f80d6002bf5302b3ea87 |        
+ e4541ed56cf3de37439937a54e5d6f38 | e4541ed56cf3de37439937a54e5d6f38 |        
+ 131d5a3daa39b73050f40a62372ee44e | 131d5a3daa39b73050f40a62372ee44e |        
+ ffe7470430a737c4ce6dc74bea0155d5 | ffe7470430a737c4ce6dc74bea0155d5 |        
+ 8381363cab61eb967e4bb45a8d44b7e0 | 8381363cab61eb967e4bb45a8d44b7e0 |        
+ dec371fcaec103c77f726ecf6f045d19 | dec371fcaec103c77f726ecf6f045d19 |        
+ 3fbe674f00bdce9f04865f793d7b555a | 3fbe674f00bdce9f04865f793d7b555a |        
+ 484c5aa99688af4038b3980324f1232c | 484c5aa99688af4038b3980324f1232c |        
+ 57c7d11cd49333e3f722204c63016da9 | 57c7d11cd49333e3f722204c63016da9 |        
+ e7333d76e27e6772a960a972a8d6598e | e7333d76e27e6772a960a972a8d6598e |        
+ ba8eaeec35b54c67fea9bb1645a489a8 | ba8eaeec35b54c67fea9bb1645a489a8 |        
+ 375dcc1c4dec844c30d1a9a33d6e04af | 375dcc1c4dec844c30d1a9a33d6e04af |        
+ e060bb629c10e1b143614cc1e9ccdc67 | e060bb629c10e1b143614cc1e9ccdc67 |        
+ ecab6653cedb98ded1c7416c0d114df7 | ecab6653cedb98ded1c7416c0d114df7 |        
+ 06202b87153d246b5acbf8ed52301f6e | 06202b87153d246b5acbf8ed52301f6e |        
+ f2f72863a84704b5c9ba7a8aa051f73d | f2f72863a84704b5c9ba7a8aa051f73d |        
+ 2708c3704f3c6a7b3a9e685289b412aa | 2708c3704f3c6a7b3a9e685289b412aa |        
+(38 rows)
+
+-- test queries that should run on the master
+drop table if exists mpp_bfv_1;
+create table mpp_bfv_1(col1 int, col2 text, col3 numeric) distributed by (col1);
+-- this cannot go to the _setup file, because it is not propagated here
+-- start_ignore
+select disable_xform('CXformIndexGet2IndexScan');
+            disable_xform             
+--------------------------------------
+ CXformIndexGet2IndexScan is disabled
+(1 row)
+
+set optimizer_enable_master_only_queries = on;
+-- end_ignore
+-- query that mentions no tables should have no motions
+select count_operator('explain select substr(''abc'', 2)', 'Motion');
+ count_operator 
+----------------
+              0
+(1 row)
+
+-- queries that mention only master only tables (such as catalog tables)
+-- should have no motions
+select count_operator('explain select relname from pg_class where relname = ''pg_class''', 'Motion');
+ count_operator 
+----------------
+              0
+(1 row)
+
+select count_operator('explain select attname from pg_attribute where attname = ''attstorage''', 'Motion');
+ count_operator 
+----------------
+              0
+(1 row)
+
+-- queries with master-only TVFs and no distributed trabes have no motions
+select count_operator('explain select * from generate_series(1,10)', 'Motion');
+ count_operator 
+----------------
+              0
+(1 row)
+
+-- queries over distributed tables should have motions
+select count_operator('explain select col2 from mpp_bfv_1;', 'Motion');
+ count_operator 
+----------------
+              1
+(1 row)
+
+drop table mpp_bfv_1;
+-- this cannot go to the _teardown file, because it is not propagated here
+-- start_ignore
+select enable_xform('CXformIndexGet2IndexScan');
+            enable_xform             
+-------------------------------------
+ CXformIndexGet2IndexScan is enabled
+(1 row)
+
+-- end_ignore
+drop table if exists mpp_bfv_2;
+create table mpp_bfv_2(a int, b text, primary key (a)) distributed by (a);
+-- stop falling back to planner when catalog functions are encountered
+explain select pg_column_size('mpp_bfv_2');
+                   QUERY PLAN                   
+------------------------------------------------
+ Result  (cost=0.00..0.00 rows=1 width=4)
+   ->  Result  (cost=0.00..0.00 rows=1 width=1)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 1.621
+(4 rows)
+
+explain select pg_lock_status();
+                   QUERY PLAN                   
+------------------------------------------------
+ Result  (cost=0.00..0.00 rows=1 width=8)
+   ->  Result  (cost=0.00..0.00 rows=1 width=1)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 1.621
+(4 rows)
+
+select pg_get_constraintdef(pg_constraint.oid) from pg_constraint, pg_class where conrelid=pg_class.oid and pg_class.relname='mpp_bfv_2';
+ pg_get_constraintdef 
+----------------------
+ PRIMARY KEY (a)
+(1 row)
+
+drop table mpp_bfv_2;
+drop table test_r_rvv_stada_dim_konst;
+drop table test_sf_dd_land_vm;
+drop function count_operator(text,text);

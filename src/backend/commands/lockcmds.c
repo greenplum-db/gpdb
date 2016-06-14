@@ -21,7 +21,7 @@
 #include "utils/acl.h"
 #include "utils/lsyscache.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 
 
 /*

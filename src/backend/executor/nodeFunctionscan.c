@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeFunctionscan.c,v 1.42 2007/01/05 22:19:28 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeFunctionscan.c,v 1.43 2007/02/19 02:23:11 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -151,7 +151,6 @@ FunctionScanState *
 ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 {
 	FunctionScanState *scanstate;
-	RangeTblEntry *rte;
 	Oid			funcrettype;
 	TypeFuncClass functypclass;
 	TupleDesc	tupdesc = NULL;
@@ -201,16 +200,10 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
     ItemPointerSet(&scanstate->cdb_mark_ctid, 0, 0);
 
 	/*
-	 * get info about function
-	 */
-	rte = rt_fetch(node->scan.scanrelid, estate->es_range_table);
-	Assert(rte->rtekind == RTE_FUNCTION);
-
-	/*
 	 * Now determine if the function returns a simple or composite type, and
 	 * build an appropriate tupdesc.
 	 */
-	functypclass = get_expr_result_type(rte->funcexpr,
+	functypclass = get_expr_result_type(node->funcexpr,
 										&funcrettype,
 										&tupdesc);
 
@@ -224,7 +217,7 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 	else if (functypclass == TYPEFUNC_SCALAR)
 	{
 		/* Base data type, i.e. scalar */
-		char	   *attname = strVal(linitial(rte->eref->colnames));
+		char	   *attname = strVal(linitial(node->funccolnames));
 
 		tupdesc = CreateTemplateTupleDesc(1, false);
 		TupleDescInitEntry(tupdesc,
@@ -236,9 +229,9 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 	}
 	else if (functypclass == TYPEFUNC_RECORD)
 	{
-		tupdesc = BuildDescFromLists(rte->eref->colnames,
-									 rte->funccoltypes,
-									 rte->funccoltypmods);
+		tupdesc = BuildDescFromLists(node->funccolnames,
+									 node->funccoltypes,
+									 node->funccoltypmods);
 	}
 	else
 	{
@@ -260,7 +253,7 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 	 * Other node-specific setup
 	 */
 	scanstate->tuplestorestate = NULL;
-	scanstate->funcexpr = ExecInitExpr((Expr *) rte->funcexpr,
+	scanstate->funcexpr = ExecInitExpr((Expr *) node->funcexpr,
 									   (PlanState *) scanstate);
 
 	/*

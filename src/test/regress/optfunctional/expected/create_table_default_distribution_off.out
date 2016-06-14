@@ -1,0 +1,66 @@
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+create schema create_table_default_distribution_off;
+set search_path to create_table_default_distribution_off;
+set gp_create_table_random_default_distribution=off;
+-- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: sql_default_distribution_sensitive/create_table_basic.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+DROP TABLE IF EXISTS hobbies_r;
+NOTICE:  table "hobbies_r" does not exist, skipping
+CREATE TABLE hobbies_r (
+	name		text,
+	person 		text
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'name' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+DROP TABLE IF EXISTS tenk1;
+NOTICE:  table "tenk1" does not exist, skipping
+CREATE TABLE tenk1 (
+	unique1		int4,
+	unique2		int4,
+	two			int4,
+	four		int4,
+	ten			int4,
+	twenty		int4,
+	hundred		int4,
+	thousand	int4,
+	twothousand	int4,
+	fivethous	int4,
+	tenthous	int4,
+	odd			int4,
+	even		int4,
+	stringu1	name,
+	stringu2	name,
+	string4		name
+) WITH OIDS;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+-- end_ignore
+select attrnums from gp_distribution_policy where
+  localoid = 'hobbies_r'::regclass;
+ attrnums 
+----------
+ {1}
+(1 row)
+
+select attrnums from gp_distribution_policy where
+  localoid = 'tenk1'::regclass;
+ attrnums 
+----------
+ {1}
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop schema create_table_default_distribution_off cascade;
+NOTICE:  drop cascades to table tenk1
+NOTICE:  drop cascades to table hobbies_r
+-- end_ignore

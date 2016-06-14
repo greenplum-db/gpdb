@@ -600,3 +600,16 @@ SELECT * from perl_spi_prepared_row('(1, 2)');
  1 | 2
 (1 row)
 
+-- simple test of a DO block
+DO $$
+  $a = 'This is a test';
+  elog(NOTICE, $a);
+$$ LANGUAGE plperl;
+NOTICE:  This is a test
+CONTEXT:  PL/Perl anonymous code block
+-- check that restricted operations are rejected in a plperl DO block
+DO $$ use Config; $$ LANGUAGE plperl;
+ERROR:  creation of Perl function failed
+DETAIL:  Unable to load Config.pm into plperl at line 1.
+BEGIN failed--compilation aborted at line 1.
+CONTEXT:  PL/Perl anonymous code block

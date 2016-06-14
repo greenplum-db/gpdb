@@ -16,7 +16,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/selfuncs.c,v 1.219 2007/01/09 02:14:14 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/selfuncs.c,v 1.226 2007/02/19 07:03:31 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1511,58 +1511,30 @@ nulltestsel(PlannerInfo *root, NullTestType nulltesttype,
 /*
  * strip_array_coercion - strip binary-compatible relabeling from an array expr
  *
- * For array values, the parser doesn't generate simple RelabelType nodes,
- * but function calls of array_type_coerce() or array_type_length_coerce().
- * If we want to cope with binary-compatible situations we have to look
- * through these calls whenever the element-type coercion is binary-compatible.
+ * For array values, the parser normally generates ArrayCoerceExpr conversions,
+ * but it seems possible that RelabelType might show up.  Also, the planner
+ * is not currently tense about collapsing stacked ArrayCoerceExpr nodes,
+ * so we need to be ready to deal with more than one level.
  */
 static Node *
 strip_array_coercion(Node *node)
 {
-	/* could be more than one level, so loop */
-	for (;;)
-	{
-		if (node && IsA(node, RelabelType))
-		{
-			/* We don't really expect this case, but may as well cope */
-			node = (Node *) ((RelabelType *) node)->arg;
-		}
-		else if (node && IsA(node, FuncExpr))
-		{
-			FuncExpr   *fexpr = (FuncExpr *) node;
-			Node	   *arg1;
-			Oid			src_elem_type;
-			Oid			tgt_elem_type;
-			Oid			funcId;
-
-			/* must be the right function(s) */
-			if (!(fexpr->funcid == F_ARRAY_TYPE_COERCE ||
-				  fexpr->funcid == F_ARRAY_TYPE_LENGTH_COERCE))
-				break;
-
-			/* fetch source and destination array element types */
-			arg1 = (Node *) linitial(fexpr->args);
-			src_elem_type = get_element_type(exprType(arg1));
-			if (src_elem_type == InvalidOid)
-				break;			/* probably shouldn't happen */
-			tgt_elem_type = get_element_type(fexpr->funcresulttype);
-			if (tgt_elem_type == InvalidOid)
-				break;			/* probably shouldn't happen */
-
-			/* find out how to coerce */
-			if (!find_coercion_pathway(tgt_elem_type, src_elem_type,
-									   COERCION_EXPLICIT, &funcId))
-				break;			/* definitely shouldn't happen */
-
-			if (OidIsValid(funcId))
-				break;			/* non-binary-compatible coercion */
-
-			node = arg1;		/* OK to look through the node */
-		}
-		else
-			break;
-	}
-	return node;
+    for (;;)
+    {
+        if (node && IsA(node, ArrayCoerceExpr) &&
+            ((ArrayCoerceExpr *) node)->elemfuncid == InvalidOid)
+        {
+            node = (Node *) ((ArrayCoerceExpr *) node)->arg;
+        }
+        else if (node && IsA(node, RelabelType))
+        {
+            /* We don't really expect this case, but may as well cope */
+            node = (Node *) ((RelabelType *) node)->arg;
+        }
+        else
+            break;
+    }
+    return node;
 }
 
 /*
@@ -2241,8 +2213,8 @@ icnlikejoinsel(PG_FUNCTION_ARGS)
  * we can estimate how much of the input will actually be read.  This
  * can have a considerable impact on the cost when using indexscans.
  *
- * clause should be a clause already known to be mergejoinable.  opfamily and
- * strategy specify the sort ordering being used.
+ * clause should be a clause already known to be mergejoinable.  opfamily,
+ * strategy, and nulls_first specify the sort ordering being used.
  *
  * *leftscan is set to the fraction of the left-hand variable expected
  * to be scanned (0 to 1), and similarly *rightscan for the right-hand
@@ -2250,7 +2222,7 @@ icnlikejoinsel(PG_FUNCTION_ARGS)
  */
 void
 mergejoinscansel(PlannerInfo *root, Node *clause,
-				 Oid opfamily, int strategy,
+				 Oid opfamily, int strategy, bool nulls_first,
 				 Selectivity *leftscan,
 				 Selectivity *rightscan)
 {
@@ -2343,18 +2315,49 @@ mergejoinscansel(PlannerInfo *root, Node *clause,
 	/*
 	 * Now, the fraction of the left variable that will be scanned is the
 	 * fraction that's <= the right-side maximum value.  But only believe
-	 * non-default estimates, else stick with our 1.0.
+	 * non-default estimates, else stick with our 1.0.  Also, if the sort
+	 * order is nulls-first, we're going to have to read over any nulls too.
 	 */
 	selec = scalarineqsel(root, leop, false, &leftvar,
 						  rightmax, op_righttype);
 	if (selec != DEFAULT_INEQ_SEL)
+	{
+		HeapTuple leftStatsTuple = NULL;
+
+		if (nulls_first)
+			leftStatsTuple = getStatsTuple(&leftvar);
+
+		if (nulls_first && HeapTupleIsValid(leftStatsTuple))
+		{
+			Form_pg_statistic stats;
+
+			stats = (Form_pg_statistic) GETSTRUCT(leftStatsTuple);
+			selec += stats->stanullfrac;
+			CLAMP_PROBABILITY(selec);
+		}
 		*leftscan = selec;
+	}
 
 	/* And similarly for the right variable. */
 	selec = scalarineqsel(root, revleop, false, &rightvar,
 						  leftmax, op_lefttype);
 	if (selec != DEFAULT_INEQ_SEL)
+	{
+		HeapTuple rightStatsTuple = NULL;
+
+		if (nulls_first)
+			rightStatsTuple = getStatsTuple(&rightvar);
+
+		if (nulls_first && HeapTupleIsValid(rightStatsTuple))
+		{
+			Form_pg_statistic stats;
+
+			stats = (Form_pg_statistic) GETSTRUCT(rightStatsTuple);
+			selec += stats->stanullfrac;
+			CLAMP_PROBABILITY(selec);
+		}
 		*rightscan = selec;
+	}
 
 	/*
 	 * Only one of the two fractions can really be less than 1.0; believe the
@@ -2474,7 +2477,7 @@ add_unique_group_var(PlannerInfo *root, List *varinfos,
  *		expressional index for which we have statistics, then we treat the
  *		whole expression as though it were just a Var.
  *	2.	If the list contains Vars of different relations that are known equal
- *		due to equijoin clauses, then drop all but one of the Vars from each
+ *		due to equivalence classes, then drop all but one of the Vars from each
  *		known-equal set, keeping the one with smallest estimated # of values
  *		(since the extra values of the others can't appear in joined rows).
  *		Note the reason we only consider Vars of different relations is that
@@ -2494,10 +2497,9 @@ add_unique_group_var(PlannerInfo *root, List *varinfos,
  *	4.	If there are Vars from multiple rels, we repeat step 3 for each such
  *		rel, and multiply the results together.
  * Note that rels not containing grouped Vars are ignored completely, as are
- * join clauses other than the equijoin clauses used in step 2.  Such rels
- * cannot increase the number of groups, and we assume such clauses do not
- * reduce the number either (somewhat bogus, but we don't have the info to
- * do better).
+ * join clauses.  Such rels cannot increase the number of groups, and we
+ * assume such clauses do not reduce the number either (somewhat bogus,
+ * but we don't have the info to do better).
  */
 double
 estimate_num_groups(PlannerInfo *root, List *groupExprs, double input_rows)
@@ -5381,7 +5383,7 @@ gincostestimate(PG_FUNCTION_ARGS)
 	Cost	   *indexTotalCost = (Cost *) PG_GETARG_POINTER(5);
 	Selectivity *indexSelectivity = (Selectivity *) PG_GETARG_POINTER(6);
 	double	   *indexCorrelation = (double *) PG_GETARG_POINTER(7);
-
+	
 	genericcostestimate(root, index, indexQuals, outer_rel, 0.0,
 						indexStartupCost, indexTotalCost,
 						indexSelectivity, indexCorrelation);

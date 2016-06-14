@@ -293,6 +293,8 @@ group by ten
 having exists (select 1 from onek b
                where sum(distinct a.four + b.four) = b.four);
 ERROR:  aggregates not allowed in WHERE clause
+LINE 4:                where sum(distinct a.four + b.four) = b.four)...
+                             ^
 --
 -- test for bitwise integer aggregates
 --
@@ -714,25 +716,25 @@ select array_agg(distinct a,b,c order by i)
 ERROR:  function array_agg(integer, integer, text) does not exist
 LINE 1: select array_agg(distinct a,b,c order by i)
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select array_agg(distinct a,b,c order by a,b+1)
   from (values (1,1,'foo')) v(a,b,c), generate_series(1,2) i;
 ERROR:  function array_agg(integer, integer, text) does not exist
 LINE 1: select array_agg(distinct a,b,c order by a,b+1)
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select array_agg(distinct a,b,c order by a,b,i,c)
   from (values (1,1,'foo')) v(a,b,c), generate_series(1,2) i;
 ERROR:  function array_agg(integer, integer, text) does not exist
 LINE 1: select array_agg(distinct a,b,c order by a,b,i,c)
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select array_agg(distinct a,a,c order by a,b)
   from (values (1,1,'foo')) v(a,b,c), generate_series(1,2) i;
 ERROR:  function array_agg(integer, integer, text) does not exist
 LINE 1: select array_agg(distinct a,a,c order by a,b)
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- string_agg tests
 select string_agg(a) from (values('aaaa'),('bbbb'),('cccc')) g(a);
   string_agg  
@@ -804,12 +806,12 @@ SELECT a(aggtest order by a) from aggtest;   -- function-like column reference
 ERROR:  function a(aggtest) does not exist
 LINE 1: SELECT a(aggtest order by a) from aggtest;
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT nosuchagg(a order by a) FROM aggtest; -- no such function
 ERROR:  function nosuchagg(smallint) does not exist
 LINE 1: SELECT nosuchagg(a order by a) FROM aggtest;
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT lag(a order by a) from aggtest;       -- window function (no window clause)
 ERROR:  ORDER BY specified, but lag is not an ordered aggregate function
 LINE 1: SELECT lag(a order by a) from aggtest;
@@ -925,3 +927,92 @@ select distinct t1.two, t2.two, t1.four, t2.four from tenk1 t1, tenk1 t2 where t
    1 |   1 |    3 |    3
 (4 rows)
 
+-- Test for a planner bug we used to have, when this query gets planned
+-- as a merge join. This should perform a merge join between 'l' and 'ps',
+-- using both pk and sk as the merge keys. Due to the bug, the planner
+-- used mix up the columns in the path keys, and used incorrect columns
+-- as the merge keys. (This is a modified version of a TPC-H query)
+create table l (ok bigint, pk integer, sk integer, quantity numeric) distributed by (ok);
+create table ps (pk integer, sk integer, availqty integer) distributed by (pk);
+insert into l select g%5, 50-g, g, 5 from generate_series(1, 50) g;
+insert into ps select g, 50-g, 10 from generate_series(1, 25) g;
+select  g.pk, g.sk, ps.availqty
+from ps,
+     (select sum(l.quantity) as qty_sum, l.pk, l.sk
+      from l
+      group by l.pk, l.sk ) g
+where g.pk = ps.pk and g.sk = ps.sk
+and ps.availqty > g.qty_sum ;
+ pk | sk | availqty 
+----+----+----------
+  6 | 44 |       10
+  3 | 47 |       10
+ 21 | 29 |       10
+ 15 | 35 |       10
+ 20 | 30 |       10
+ 25 | 25 |       10
+ 13 | 37 |       10
+ 22 | 28 |       10
+  7 | 43 |       10
+ 16 | 34 |       10
+ 24 | 26 |       10
+ 10 | 40 |       10
+ 19 | 31 |       10
+  8 | 42 |       10
+  9 | 41 |       10
+  4 | 46 |       10
+ 14 | 36 |       10
+  5 | 45 |       10
+ 11 | 39 |       10
+ 18 | 32 |       10
+ 12 | 38 |       10
+  2 | 48 |       10
+ 23 | 27 |       10
+  1 | 49 |       10
+ 17 | 33 |       10
+(25 rows)
+
+-- the same, but force a merge join and sorted agg.
+set enable_hashagg=off;
+set enable_hashjoin=off;
+set enable_mergejoin=on;
+select  g.pk, g.sk, ps.availqty
+from ps,
+     (select sum(l.quantity) as qty_sum, l.pk, l.sk
+      from l
+      group by l.pk, l.sk ) g
+where g.pk = ps.pk and g.sk = ps.sk
+and ps.availqty > g.qty_sum ;
+ pk | sk | availqty 
+----+----+----------
+  1 | 49 |       10
+  2 | 48 |       10
+  3 | 47 |       10
+  4 | 46 |       10
+  5 | 45 |       10
+  6 | 44 |       10
+  7 | 43 |       10
+  8 | 42 |       10
+  9 | 41 |       10
+ 10 | 40 |       10
+ 11 | 39 |       10
+ 12 | 38 |       10
+ 13 | 37 |       10
+ 14 | 36 |       10
+ 15 | 35 |       10
+ 16 | 34 |       10
+ 17 | 33 |       10
+ 18 | 32 |       10
+ 19 | 31 |       10
+ 20 | 30 |       10
+ 21 | 29 |       10
+ 22 | 28 |       10
+ 23 | 27 |       10
+ 24 | 26 |       10
+ 25 | 25 |       10
+(25 rows)
+
+reset enable_hashagg;
+reset enable_hashjoin;
+reset enable_mergejoin;
+drop table l, ps;

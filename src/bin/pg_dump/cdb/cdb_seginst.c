@@ -75,6 +75,8 @@ GetDumpSegmentDatabaseArray(PGconn *pConn,
 							SegmentDatabaseArray *pSegDBAr,
 							ActorSet actors,
 							char *dump_set_str,
+							char *pszDBName,
+							char *pszUserName,
 							bool dataOnly,
 							bool schemaOnly)
 {
@@ -252,8 +254,8 @@ GetDumpSegmentDatabaseArray(PGconn *pConn,
 		pSegDB->role = (content == -1 ? ROLE_MASTER : ROLE_SEGDB);
 		pSegDB->port = atoi(PQgetvalue(pRes, i, i_port));
 		pSegDB->pszHost = strdup(PQgetvalue(pRes, i, i_host));
-		pSegDB->pszDBName = PQdb(pConn);
-		pSegDB->pszDBUser = PQuser(pConn);
+		pSegDB->pszDBName = pszDBName;
+		pSegDB->pszDBUser = pszUserName;
 		pSegDB->pszDBPswd = PQpass(pConn);
 
 		if (pSegDB->role == ROLE_MASTER)

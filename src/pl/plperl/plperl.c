@@ -96,7 +96,7 @@ typedef struct plperl_proc_desc
 {
 	char	   *proname;		/* name of the sql function */
 	TransactionId fn_xmin;
-	CommandId       fn_cmin;
+	ItemPointerData fn_tid;
 	plperl_interp_desc *interp; /* interpreter it's created in */
 	bool		fn_readonly;
 	bool		lanpltrusted;
@@ -225,12 +225,9 @@ Datum		plperlu_call_handler(PG_FUNCTION_ARGS);
 Datum		plperlu_validator(PG_FUNCTION_ARGS);
 
 /* inline functions are currently Postgres only */
-#undef INLINE_FUNCTION_SUPPORT
-#ifdef INLINE_FUNCTION_SUPPORT
 Datum plperl_inline_handler(PG_FUNCTION_ARGS);
 Datum plperlu_inline_handler(PG_FUNCTION_ARGS);
 static void plperl_inline_callback(void *arg);
-#endif
 
 void		_PG_init(void);
 
@@ -1607,7 +1604,6 @@ plperl_call_handler(PG_FUNCTION_ARGS)
 	return retval;
 }
 
-#ifdef INLINE_FUNCTION_SUPPORT
 /*
  * The inline handler runs anonymous code blocks (DO blocks).
  */
@@ -1699,7 +1695,6 @@ plperl_inline_handler(PG_FUNCTION_ARGS)
 
 	PG_RETURN_VOID();
 }
-#endif
 
 /*
  * The validator is called during CREATE FUNCTION to validate the function
@@ -1791,7 +1786,6 @@ plperlu_call_handler(PG_FUNCTION_ARGS)
 	return plperl_call_handler(fcinfo);
 }
 
-#ifdef INLINE_FUNCTION_SUPPORT
 PG_FUNCTION_INFO_V1(plperlu_inline_handler);
 
 Datum
@@ -1799,7 +1793,6 @@ plperlu_inline_handler(PG_FUNCTION_ARGS)
 {
 	return plperl_inline_handler(fcinfo);
 }
-#endif
 
 PG_FUNCTION_INFO_V1(plperlu_validator);
 
@@ -2336,7 +2329,7 @@ validate_plperl_function(plperl_proc_ptr *proc_ptr, HeapTuple procTup)
 		 * function's pg_proc entry without changing its OID.
 		 ************************************************************/
 		uptodate = (prodesc->fn_xmin == HeapTupleHeaderGetXmin(procTup->t_data) &&
-				prodesc->fn_cmin == HeapTupleHeaderGetCmin(procTup->t_data));
+				ItemPointerEquals(&prodesc->fn_tid, &procTup->t_self));
 
 		if (uptodate)
 			return true;
@@ -2437,7 +2430,7 @@ compile_plperl_function(Oid fn_oid, bool is_trigger)
 					(errcode(ERRCODE_OUT_OF_MEMORY),
 					 errmsg("out of memory")));
 		prodesc->fn_xmin = HeapTupleHeaderGetXmin(procTup->t_data);
-		prodesc->fn_cmin = HeapTupleHeaderGetCmin(procTup->t_data);
+		prodesc->fn_tid = procTup->t_self;
 
 		/* Remember if function is STABLE/IMMUTABLE */
 		prodesc->fn_readonly =
@@ -3669,7 +3662,6 @@ plperl_compile_callback(void *arg)
 		errcontext("compilation of PL/Perl function \"%s\"", procname);
 }
 
-#ifdef INLINE_FUNCTION_SUPPORT
 /*
  * Provide error context for the inline handler
  */
@@ -3678,7 +3670,6 @@ plperl_inline_callback(void *arg)
 {
 	errcontext("PL/Perl anonymous code block");
 }
-#endif
 
 
 /*

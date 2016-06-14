@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gin/ginget.c,v 1.4.2.1 2007/06/04 15:59:19 teodor Exp $
+ *			$PostgreSQL: pgsql/src/backend/access/gin/ginget.c,v 1.7 2007/02/01 04:16:08 neilc Exp $
  *-------------------------------------------------------------------------
  */
 
@@ -162,7 +162,7 @@ startScanKey(Relation index, GinState *ginstate, GinScanKey key)
 	if (GinFuzzySearchLimit > 0)
 	{
 		/*
-		 * If all of keys more than treshold we will try to reduce result,
+		 * If all of keys more than threshold we will try to reduce result,
 		 * we hope (and only hope, for intersection operation of array our
 		 * supposition isn't true), that total result will not more than
 		 * minimal predictNumberResult.
@@ -457,6 +457,7 @@ scanGetItem(IndexScanDesc scan, ItemPointerData *item)
 }
 
 #define GinIsNewKey(s)		( ((GinScanOpaque) scan->opaque)->keys == NULL )
+#define GinIsVoidRes(s)		( ((GinScanOpaque) scan->opaque)->isVoidRes == true )
 
 Datum
 gingetmulti(PG_FUNCTION_ARGS)
@@ -473,9 +474,9 @@ gingetmulti(PG_FUNCTION_ARGS)
  
 	if (GinIsNewKey(scan))
 		newScanKey(scan);
- 
+
 	startScan(scan);
- 
+
 	while (true)
 	{
 		ItemPointerData	tid;
@@ -507,6 +508,9 @@ gingettuple(PG_FUNCTION_ARGS)
 
 	if (GinIsNewKey(scan))
 		newScanKey(scan);
+
+	if (GinIsVoidRes(scan))
+		PG_RETURN_BOOL(false);
 
 	startScan(scan);
 	res = scanGetItem(scan, &scan->xs_ctup.t_self);

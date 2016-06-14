@@ -85,10 +85,10 @@ where ordinal_position = 20;
  pg_catalog         | pg_statistic         | stavalues3         |               20
  pg_catalog         | pg_partitions        | parenttablespace   |               20
  information_schema | attributes           | datetime_precision |               20
- pg_catalog         | pg_type              | typnotnull         |               20
- pg_catalog         | pg_proc              | proacl             |               20
+ pg_catalog         | pg_type              | typstorage         |               20
+ pg_catalog         | pg_proc              | proargnames        |               20
  pg_catalog         | pg_class             | reltriggers        |               20
- pg_catalog         | pg_am                | amrestrpos         |               20
+ pg_catalog         | pg_am                | ambuild            |               20
  information_schema | columns              | collation_catalog  |               20
  information_schema | domains              | udt_catalog        |               20
  information_schema | parameters           | numeric_scale      |               20

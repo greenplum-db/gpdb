@@ -15,12 +15,15 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 
+#include "catalog/pg_authid.h"
 #include "cdb/cdbtm.h"
 #include "libpq/libpq-be.h"
 #include "miscadmin.h"
 #include "storage/shmem.h"
 #include "storage/ipc.h"
 #include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
+#include "cdb/cdbdisp_dtx.h"
 #include "cdb/cdbdtxcontextinfo.h"
 
 #include "cdb/cdbvars.h"
@@ -39,6 +42,7 @@
 #include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
+#include "utils/sharedsnapshot.h"
 
 extern bool Test_print_direct_dispatch_info;
 extern struct Port *MyProcPort;
@@ -129,7 +133,6 @@ static void recoverTM(void);
 static bool recoverInDoubtTransactions(void);
 static HTAB *gatherRMInDoubtTransactions(void);
 static void abortRMInDoubtTransactions(HTAB *htab);
-static void cleanRMResultSets(PGresult **pgresultSets);
 
 static void dumpAllDtx(void);
 /* static void resolveInDoubtDtx(void); */
@@ -138,7 +141,7 @@ static void dumpRMOnlyDtx(HTAB *htab, StringInfoData *buff);
 static bool doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand, int flags,
 										 char* gid, DistributedTransactionId gxid,
 										 bool *badGangs, bool raiseError, CdbDispatchDirectDesc *direct,
-										 char *serializedArgument, int serializedArgumentLen);
+										 char *serializedDtxContextInfo, int serializedDtxContextInfoLen);
 static void doPrepareTransaction(void);
 static void doInsertForgetCommitted(void);
 static void doNotifyingCommitPrepared(void);
@@ -155,7 +158,7 @@ static void performDtxProtocolCommitPrepared(const char *gid, bool raiseErrorIfN
 static void performDtxProtocolAbortPrepared(const char *gid, bool raiseErrorIfNotFound);
 static DistributedTransactionId determineSegmentMaxDistributedXid(void);
 
-extern void resetSessionForPrimaryGangLoss(void);
+extern void resetSessionForPrimaryGangLoss(bool resetSession);
 extern void CheckForResetSession(void);
 
 /**
@@ -791,7 +794,7 @@ doNotifyingCommitPrepared(void)
 		 * at the top in PostgresMain.
 		 */
 		elog(NOTICE, "Releasing segworker group to retry broadcast.");
-		disconnectAndDestroyAllGangs();
+		disconnectAndDestroyAllGangs(true);
 
 		/*
 		 * This call will at a minimum change the session id so we will
@@ -868,7 +871,7 @@ doNotifyingAbort(void)
 				 * Reset the dispatch logic and disconnect from any segment that didn't respond to our abort.
 				 */
 				elog(NOTICE, "Releasing segworker groups to finish aborting the transaction.");
-				disconnectAndDestroyAllGangs();
+				disconnectAndDestroyAllGangs(true);
 
 				/*
 				 * This call will at a minimum change the session id so we will
@@ -927,7 +930,7 @@ doNotifyingAbort(void)
 			 * Reset the dispatch logic (i.e. deallocate gang) so we can attempt a retry.
 			 */
 			elog(NOTICE, "Releasing segworker groups to retry broadcast.");
-			disconnectAndDestroyAllGangs();
+			disconnectAndDestroyAllGangs(true);
 
 			/*
 			 * This call will at a minimum change the session id so we will
@@ -1026,8 +1029,7 @@ doDtxPhase2Retry(void)
 				}
 
 				/*
-				 * KLUDGE: FtsHandleGangConnectionFailure will need a special
-				 * transaction context to tell it not to raise an ERROR...
+				 * Todo: Maybe we don't need DTX_CONTEXT_QD_RETRY_PHASE_2 anymore.
 				 */
 				setDistributedTransactionContext(DTX_CONTEXT_QD_RETRY_PHASE_2);
 				elog(DTM_DEBUG5,
@@ -1038,17 +1040,35 @@ doDtxPhase2Retry(void)
 
 				currentGxact->retryPhase2RecursionStop = true;
 
-				succeeded = doDispatchDtxProtocolCommand(dtxProtocolCommand, /* flags */ 0,
-														 currentGxact->gid, currentGxact->gxid,
-														 &badGangs, /* raiseError */ false,
-														 &direct, NULL, 0);
+				/*
+				 * We don't want doDispatchDtxProtocolCommand to raise error. But it will call
+				 * createGang to allocate a writer gang, which could fail and error out.
+				 *
+				 * We catch the error and log a FATAL error instead of a PANIC.
+				 */
+				PG_TRY();
+				{
+					succeeded = doDispatchDtxProtocolCommand(dtxProtocolCommand, /* flags */ 0,
+															 currentGxact->gid, currentGxact->gxid,
+															 &badGangs, /* raiseError */ false,
+															 &direct, NULL, 0);
+				}
+				PG_CATCH();
+				{
+					succeeded = false;
+				}
+				PG_END_TRY();
+
 				if (!succeeded)
 				{
 					elog(FATAL, "A retry of the distributed transaction '%s Prepared' broadcast failed to one or more segments for gid = %s.",
 						 prepareKind, currentGxact->gid);
 				}
-				elog(NOTICE, "Retry of the distributed transaction '%s Prepared' broadcast succeeded to the segments for gid = %s.",
-					 prepareKind, currentGxact->gid);
+				else
+				{
+					elog(NOTICE, "Retry of the distributed transaction '%s Prepared' broadcast succeeded to the segments for gid = %s.",
+							prepareKind, currentGxact->gid);
+				}
 
 				/*
 				 * Global locking order: ProcArrayLock then DTM lock since
@@ -1238,7 +1258,7 @@ rollbackDtxTransaction(void)
 			 * segments.  What's left are possibily prepared transactions.
 			 */
 			elog(WARNING, "Releasing segworker groups since one or more segment connections failed.  This will abort the transactions in the segments that did not get prepared.");
-			disconnectAndDestroyAllGangs();
+			disconnectAndDestroyAllGangs(true);
 
 			/*
 			 * This call will at a minimum change the session id so we will
@@ -1263,7 +1283,7 @@ rollbackDtxTransaction(void)
 		 * segments.
 		 */
 		elog(NOTICE, "Releasing segworker groups to finish aborting the transaction.");
-		disconnectAndDestroyAllGangs();
+		disconnectAndDestroyAllGangs(true);
 
 		/*
 		 * This call will at a minimum change the session id so we will
@@ -1331,7 +1351,7 @@ rollbackDtxTransaction(void)
 		 * segment instances.  And, we will abort the transactions in the
 		 * segments.
 		 */
-		disconnectAndDestroyAllGangs();
+		disconnectAndDestroyAllGangs(true);
 
 		/*
 		 * This call will at a minimum change the session id so we will
@@ -1558,11 +1578,11 @@ initTM(void)
 			PG_TRY();
 			{
 				/*
-				 * detectFailedConnections could throw ERROR, so
+				 * FtsNotifyProber could throw ERROR, so
 				 * we should catch it if it happens.
 				 */
 				if (!first)
-					detectFailedConnections();
+					FtsNotifyProber();
 
 				initTM_recover_as_needed();
 				succeeded = true;
@@ -2205,15 +2225,15 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand, int flags,
 							 char* gid, DistributedTransactionId gxid,
 							 bool *badGangs, bool raiseError,
 							 CdbDispatchDirectDesc *direct,
-							 char *serializedArgument,
-							 int serializedArgumentLen)
+							 char *serializedDtxContextInfo,
+							 int serializedDtxContextInfoLen)
 {
-	int			i, resultCount, numOfFailed = 0;
+	int i, resultCount, numOfFailed = 0;
 
-	char		*dtxProtocolCommandStr = 0;
+	char *dtxProtocolCommandStr = 0;
 
-	struct pg_result	**results = NULL;
-	StringInfoData		errbuf;
+	struct pg_result **results = NULL;
+	StringInfoData errbuf;
 
 	dtxProtocolCommandStr = DtxProtocolCommandToString(dtxProtocolCommand);
 
@@ -2233,7 +2253,7 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand, int flags,
 												 dtxProtocolCommandStr,
 												 gid, gxid,
 												 &errbuf, &resultCount, badGangs, direct,
-												 serializedArgument, serializedArgumentLen);
+												 serializedDtxContextInfo, serializedDtxContextInfoLen);
 
 	if (errbuf.len > 0)
 	{
@@ -2284,7 +2304,9 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand, int flags,
 	pfree(errbuf.data);
 
 	/* Now we clean up the results array. */
-	cleanRMResultSets(results);
+	for (i = 0; i < resultCount; i++)
+		PQclear(results[i]);
+	free(results);
 
 	return (numOfFailed == 0);
 }
@@ -2354,7 +2376,9 @@ dispatchDtxCommand(const char *cmd, bool withSnapshot, bool raiseError)
 	pfree(errbuf.data);
 
 	/* Now we clean up the results array. */
-	cleanRMResultSets(results);
+	for (i = 0; i < resultCount; i++)
+		PQclear(results[i]);
+	free(results);
 
 	return (numOfFailed == 0);
 }
@@ -3158,8 +3182,7 @@ cdbtm_performDeferredRecovery(void)
 
 			*shmDtmRecoveryDeferred = false;
 			elog(NOTICE, "Releasing segworker groups for deferred recovery.");
-			disconnectAndDestroyAllGangs();
-			resetSessionForPrimaryGangLoss();
+			disconnectAndDestroyAllGangs(true);
 		}
 		releaseTmLock();
 		CheckForResetSession();
@@ -3193,7 +3216,7 @@ recoverInDoubtTransactions(void)
 
 	saved_currentGxact = currentGxact;
 
-	for (i = 0; i < *shmNumGxacts; i++)
+	for (i = 0; i < *shmNumGxacts; )
 	{
 		TMGXACT *gxact = shmGxactArray[i];
 
@@ -3202,11 +3225,13 @@ recoverInDoubtTransactions(void)
 		 */
 		if (saved_currentGxact != NULL && gxact == saved_currentGxact)
 		{
+			i++;
 			continue;
 		}
 		else if (gxact->state == DTX_STATE_ACTIVE_NOT_DISTRIBUTED)
 		{
 			/* should take care of other sessions. */
+			i++;
 			continue;
 		}
 
@@ -3245,6 +3270,9 @@ recoverInDoubtTransactions(void)
 
 		getTmLock();
 
+		/* This routine would call releaseGxact_UnderLocks, which
+		 * would decrease *shmNumGxacts and do a swap, so no need
+		 * to increase i */
 		doInsertForgetCommitted();
 
 		releaseTmLock();
@@ -3401,7 +3429,6 @@ determineSegmentMaxDistributedXid(void)
 
 	for (i = 0; i < resultCount; i++)
 		PQclear(results[i]);
-
 	free(results);
 
 	return max;
@@ -3420,16 +3447,17 @@ determineSegmentMaxDistributedXid(void)
 static HTAB *
 gatherRMInDoubtTransactions(void)
 {
-	PGresult  **pgresultSets = NULL;
+	PGresult  **pgresultSets;
+	int			nresultSets;
 	StringInfoData errmsgbuf;
 	const char *cmdbuf = "select gid from pg_prepared_xacts";
-	PGresult  **rs;
+	PGresult   *rs;
 
 	InDoubtDtx *lastDtx = NULL;
 
 	HASHCTL		hctl;
 	HTAB	   *htab = NULL;
-
+	int			i;
 	int			j,
 				rows;
 	bool		found;
@@ -3438,7 +3466,7 @@ gatherRMInDoubtTransactions(void)
 
 	/* call to all QE to get in-doubt transactions */
 	pgresultSets = cdbdisp_dispatchRMCommand(cmdbuf, /* withSnapshot */false,
-											 &errmsgbuf, NULL);
+											 &errmsgbuf, &nresultSets);
 
 	/* display error messages */
 	if (errmsgbuf.len > 0)
@@ -3457,9 +3485,10 @@ gatherRMInDoubtTransactions(void)
 	pfree(errmsgbuf.data);
 
 	/* If any result set is nonempty, there are in-doubt transactions. */
-	for (rs = pgresultSets; *rs; ++rs)
+	for (i = 0; i < nresultSets; i++)
 	{
-		rows = PQntuples(*rs);
+		rs  = pgresultSets[i];
+		rows = PQntuples(rs);
 
 		for (j = 0; j < rows; j++)
 		{
@@ -3485,7 +3514,7 @@ gatherRMInDoubtTransactions(void)
 				}
 			}
 
-			gid = PQgetvalue(*rs, j, 0);
+			gid = PQgetvalue(rs, j, 0);
 
 			/* Now we can add entry to hash table */
 			lastDtx = (InDoubtDtx *) hash_search(htab, gid, HASH_ENTER, &found);
@@ -3504,7 +3533,9 @@ gatherRMInDoubtTransactions(void)
 		}
 	}
 
-	cleanRMResultSets(pgresultSets);
+	for (i = 0; i < nresultSets; i++)
+		PQclear(pgresultSets[i]);
+	free(pgresultSets);
 
 	return htab;
 }
@@ -3568,27 +3599,6 @@ abortRMInDoubtTransactions(HTAB *htab)
 		doAbortInDoubt(entry->gid);
 
 	}
-}
-
-/*
- * cleanRMResultSets:
- * Goes the set of PGresults passed in and clears and frees them.
- */
-static void
-cleanRMResultSets(PGresult **pgresultSets)
-{
-	/* TODO: need to handle multiple dbs in a segment case */
-	/*
-	 int tolaldbs = CdbClusterDefinition->segment_count * CdbClusterDefinition->db_count;
-	 */
-	int			i = 0;
-	PGresult   *rs = pgresultSets[0];
-
-	do
-	{
-		PQclear(rs);
-	} while ((rs = pgresultSets[++i]) != NULL);
-	free(pgresultSets);
 }
 
 /*
@@ -4178,18 +4188,11 @@ int dtxCurrentPhase1Count(void)
 static void
 performDtxProtocolPrepare(const char *gid)
 {
-	/*
-	 * Temporarily serialize prepare work in-order to compensate for
-	 * the Postgres parallelism bug described in MPP-1484.
-	 */
-	LWLockAcquire(TemporarySerializePreparesLock, LW_EXCLUSIVE);
-
 	StartTransactionCommand();
 
 	elog(DTM_DEBUG5, "performDtxProtocolCommand going to call PrepareTransactionBlock for distributed transaction (id = '%s')", gid);
 	if (!PrepareTransactionBlock((char *)gid))
 	{
-		LWLockRelease(TemporarySerializePreparesLock);
 		elog(ERROR, "Prepare of distributed transaction %s failed", gid);
 		return;
 	}
@@ -4203,8 +4206,6 @@ performDtxProtocolPrepare(const char *gid)
 	elog(DTM_DEBUG5, "Prepare of distributed transaction succeeded (id = '%s')", gid);
 
 	setDistributedTransactionContext( DTX_CONTEXT_QE_PREPARED );
-
-	LWLockRelease(TemporarySerializePreparesLock);
 }
 
 /**
@@ -4469,7 +4470,7 @@ performDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 						gid, contextInfo->nestingLevel, GetCurrentTransactionNestLevel())));
 			}
 			
-			uint i = GetCurrentTransactionNestLevel() - contextInfo->nestingLevel;
+			unsigned int i = GetCurrentTransactionNestLevel() - contextInfo->nestingLevel;
 			while (i > 0)
 			{
 				RollbackAndReleaseCurrentSubTransaction();

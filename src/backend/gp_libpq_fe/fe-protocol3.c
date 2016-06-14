@@ -2326,7 +2326,8 @@ build_startup_packet(const PGconn *conn, char *packet,
 			if (pg_strcasecmp(val, "default") != 0)
 				ADD_STARTUP_OPTION(next_eo->pgName, val);
 		}
-		ADD_STARTUP_OPTION("options", conn->pgoptions);
+		if (conn->pgoptions && conn->pgoptions[0])
+			ADD_STARTUP_OPTION("options", conn->pgoptions);
 	}
 
 	/* Add trailing terminator */

@@ -58,15 +58,20 @@ select * from atsdb where i = 1;
 drop table atsdb;
 
 -- Now try AO
-create table atsdb_ao (i int, j text) distributed by (i);
+create table atsdb_ao (i int, j text) with (appendonly=true) distributed by (i);
 insert into atsdb_ao select i, (i+1)::text from generate_series(1, 100) i;
 insert into atsdb_ao select i, (i+1)::text from generate_series(1, 100) i;
 -- check that we're an AO table
-explain select count(*) from atsdb_ao;
+select count(*) from pg_appendonly where relid='atsdb_ao'::regclass;
 select count(*) from atsdb_ao;
 alter table atsdb_ao set distributed by (j);
 -- Still AO?
-explain select count(*) from atsdb_ao;
+select count(*) from pg_appendonly where relid='atsdb_ao'::regclass;
+select count(*) from atsdb_ao;
+-- check alter, vacuum analyze, and then alter
+delete from atsdb_ao where i = any(array(select generate_series(1,90)));
+vacuum analyze atsdb_ao;
+alter table atsdb_ao set distributed randomly;
 select count(*) from atsdb_ao;
 drop table atsdb_ao;
 

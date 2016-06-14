@@ -21,7 +21,7 @@
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_depend.h"
 #include "catalog/pg_type.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
@@ -38,16 +38,7 @@
 #include "utils/syscache.h"
 #include "nodes/makefuncs.h"
 
-static void OpenErrorTable(CdbSreh *cdbsreh, RangeVar *errortable);
-static void InsertIntoErrorTable(CdbSreh *cdbsreh);
-static void CloseErrorTable(CdbSreh *cdbsreh);
-static void DropErrorTable(CdbSreh *cdbsreh);
 static int  GetNextSegid(CdbSreh *cdbsreh);
-static void VerifyErrorTableAttr(Form_pg_attribute *attr, 
-								 int attrnum, 
-								 const char *expected_attname,
-								 Oid expected_atttype,
-								 char *relname);
 static void PreprocessByteaData(char *src);
 static void ErrorLogWrite(CdbSreh *cdbsreh);
 
@@ -87,9 +78,8 @@ int gp_initial_bad_row_limit = 1000;
  * the other variables are set later on, when they are known.
  */
 CdbSreh *
-makeCdbSreh(bool is_keep, bool reusing_existing_errtable,
-			int rejectlimit, bool is_limit_in_rows, 
-			RangeVar *errortable, char *filename, char *relname,
+makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
+			char *filename, char *relname,
 			bool log_to_file)
 {
 	CdbSreh	*h;
@@ -105,23 +95,14 @@ makeCdbSreh(bool is_keep, bool reusing_existing_errtable,
 	h->is_limit_in_rows = is_limit_in_rows;
 	h->rejectcount = 0;
 	h->is_server_enc = false;
-	h->is_keep = is_keep;
-	h->should_drop = false; /* we'll decide later */
-	h->reusing_errtbl = reusing_existing_errtable;
 	h->cdbcopy = NULL;
-	h->errtbl = NULL;
 	h->lastsegid = 0;
 	h->consec_csv_err = 0;
-	AssertImply(log_to_file, errortable == NULL);
 	h->log_to_file = log_to_file;
 
 	snprintf(h->filename, sizeof(h->filename),
 			 "%s", filename ? filename : "<stdin>");
 
-	/* error table was specified open it (and create it first if necessary) */
-	if(errortable)
-		OpenErrorTable(h, errortable);
-	
 	/*
 	 * Create a temporary memory context that we can reset once per row to
 	 * recover palloc'd memory.  This avoids any problems with leaks inside
@@ -144,14 +125,6 @@ destroyCdbSreh(CdbSreh *cdbsreh)
 	/* delete the bad row context */
     MemoryContextDelete(cdbsreh->badrowcontext);
 	
-	/* close error table */
-	if (cdbsreh->errtbl)
-		CloseErrorTable(cdbsreh);
-	
-	/* drop error table if need to */
-	if (cdbsreh->should_drop && Gp_role == GP_ROLE_DISPATCH)
-		DropErrorTable(cdbsreh);
-	
 	pfree(cdbsreh);
 }
 
@@ -163,7 +136,7 @@ destroyCdbSreh(CdbSreh *cdbsreh)
  *
  * Some of the main actions are:
  *  - Keep track of reject limit. if reached make sure notify caller.
- *  - If error table used, call the error logger to log this error.
+ *  - If error logging used, call the error logger to log this error.
  *  - If QD COPY send the bad row to the QE COPY to deal with.
  *
  */
@@ -184,9 +157,9 @@ void HandleSingleRowError(CdbSreh *cdbsreh)
 	 * If not specified table or file, do nothing.  Otherwise,
 	 * record the error:
 	 *   QD - send the bad data row to a random QE (via roundrobin).
-	 *   QE - log the error in the error table or file.
+	 *   QE - log the error in the error log file.
 	 */
-	if (cdbsreh->errtbl || cdbsreh->log_to_file)
+	if (cdbsreh->log_to_file)
 	{
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
@@ -198,17 +171,7 @@ void HandleSingleRowError(CdbSreh *cdbsreh)
 		}
 		else
 		{
-			if (cdbsreh->errtbl)
-			{
-				/* Insert into error table */
-				Insist(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
-				InsertIntoErrorTable(cdbsreh);
-			}
-			else
-			{
-				Assert(cdbsreh->log_to_file);
-				ErrorLogWrite(cdbsreh);
-			}
+			ErrorLogWrite(cdbsreh);
 		}
 		
 	}
@@ -217,98 +180,7 @@ void HandleSingleRowError(CdbSreh *cdbsreh)
 }
 
 /*
- * OpenErrorTable
- *
- * Open the error table for this operation, and perform all necessary checks.
- */
-void OpenErrorTable(CdbSreh *cdbsreh, RangeVar *errortable)
-{
-	AclResult		aclresult;
-	AclMode			required_access = ACL_INSERT;
-	Oid				relOid;
-
-
-	/* Open and lock the error relation, using the appropriate lock type. */
-	cdbsreh->errtbl = heap_openrv(errortable, RowExclusiveLock);
-	
-	relOid = RelationGetRelid(cdbsreh->errtbl);
-	
-	/* Check relation permissions. */
-	aclresult = pg_class_aclcheck(relOid,
-								  GetUserId(),
-								  required_access);
-	if (aclresult != ACLCHECK_OK)
-		aclcheck_error(aclresult, ACL_KIND_CLASS,
-					   RelationGetRelationName(cdbsreh->errtbl));
-	
-	/* check read-only transaction */
-	if (XactReadOnly &&
-		!isTempNamespace(RelationGetNamespace(cdbsreh->errtbl)))
-		ereport(ERROR,
-				(errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION),
-				 errmsg("transaction is read-only")));
-	
-	/* make sure this is a regular relation */
-	if (cdbsreh->errtbl->rd_rel->relkind != RELKIND_RELATION)
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("\"%s\" exists in the database but is a non table relation",
-						RelationGetRelationName(cdbsreh->errtbl))));
-}
-
-/*
- * CloseErrorTable
- *
- * Done using the error table. Close it.
- */
-void CloseErrorTable(CdbSreh *cdbsreh)
-{
-	/* close the error relation */
-	if (cdbsreh->errtbl)
-		heap_close(cdbsreh->errtbl, NoLock);
-}
-
-/*
- * DropErrorTable
- *
- * Drop the error table from the database. This function will be called from
- * destroyCdbSreh when an autogenerated error table was not used in the COPY
- * operation granted KEEP wasn't specified.
- *
- */
-static
-void DropErrorTable(CdbSreh *cdbsreh)
-{
-	StringInfoData dropstmt;
-	RangeVar *errtbl_rv;
-	
-	Insist(Gp_role == GP_ROLE_DISPATCH);
-
-	ereport(NOTICE,
-			(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
-			 errmsg("Dropping the auto-generated unused error table"),
-			 errhint("Use KEEP in LOG INTO clause to force keeping the error table alive")));								
-	
-	initStringInfo(&dropstmt); 
-	
-	appendStringInfo(&dropstmt, "DROP TABLE %s.%s",
-					 quote_identifier(get_namespace_name(RelationGetNamespace(cdbsreh->errtbl))),
-					 quote_identifier(RelationGetRelationName(cdbsreh->errtbl)));
-	
-	errtbl_rv = makeRangeVar(get_namespace_name(RelationGetNamespace(cdbsreh->errtbl)),
-							 RelationGetRelationName(cdbsreh->errtbl), -1);
-
-	/* DROP the relation on the QD */
-	RemoveRelation(errtbl_rv,DROP_RESTRICT, NULL, RELKIND_RELATION);
-				   
-	/* dispatch the DROP to the QEs */
-	CdbDoCommand(dropstmt.data, false, /*no txn */ false);
-
-	pfree(dropstmt.data);
-}
-
-/*
- * Returns the fixed schema for error table/error log tuple.
+ * Returns the fixed schema for error log tuple.
  */
 static TupleDesc
 GetErrorTupleDesc(void)
@@ -410,60 +282,26 @@ FormErrorTuple(CdbSreh *cdbsreh)
 	/*
 	 * And now we can form the input tuple.
 	 */
-	if (RelationIsValid(cdbsreh->errtbl))
-		return heap_form_tuple(RelationGetDescr(cdbsreh->errtbl), values, nulls);
-	else
-		return heap_form_tuple(GetErrorTupleDesc(), values, nulls);
+	return heap_form_tuple(GetErrorTupleDesc(), values, nulls);
 }
-
-/*
- * InsertIntoErrorTable
- *
- * Insert the information in cdbsreh into the error table we are using.
- * The destination is a regular heap table in a writer gang, and tuplestore
- * if it's a reader gang.  The tuplestore data will be redirected to
- * the writer gang in the same session later.
- * By design the error table rows are inserted in a frozen fashion.
- */
-void
-InsertIntoErrorTable(CdbSreh *cdbsreh)
-{
-	HeapTuple	tuple;
-
-	tuple = FormErrorTuple(cdbsreh);
-
-	/* store and freeze the tuple */
-	frozen_heap_insert(cdbsreh->errtbl, tuple);
-
-	heap_freetuple(tuple);
-}
-
 
 /* 
  * ReportSrehResults
  *
  * When necessary emit a NOTICE that describes the end result of the
  * SREH operations. Information includes the total number of rejected
- * rows, and whether rows were ignored or logged into an error table.
+ * rows, and whether rows were ignored or logged into an error log file.
  */
 void ReportSrehResults(CdbSreh *cdbsreh, int total_rejected)
 {
 	if(total_rejected > 0)
 	{
-		if(cdbsreh && cdbsreh->errtbl)
-			ereport(NOTICE, 
-					(errmsg("Found %d data formatting errors (%d or more "
-							"input rows). Errors logged into error table \"%s\"", 
-							total_rejected, total_rejected,
-							RelationGetRelationName(cdbsreh->errtbl))));
-		else
-			ereport(NOTICE, 
-					(errmsg("Found %d data formatting errors (%d or more "
-							"input rows). Rejected related input data.", 
-							total_rejected, total_rejected)));
+		ereport(NOTICE,
+			(errmsg("Found %d data formatting errors (%d or more "
+			"input rows). Rejected related input data.",
+			total_rejected, total_rejected)));
 	}
 }
-
 
 /*
  * SendNumRowsRejected
@@ -481,235 +319,6 @@ void SendNumRowsRejected(int numrejected)
 	pq_beginmessage(&buf, 'j'); /* 'j' is the msg code for rejected records */
 	pq_sendint(&buf, numrejected, 4);
 	pq_endmessage(&buf);	
-}
-
-/*
- * ValidateErrorTableMetaData
- *
- * This function gets called if a user wants an already existing table to be
- * used as an error table for some COPY or external table operation with SREH.
- * In here we verify that the metadata of the user selected table matches the
- * predefined requirement for an error table.
- */
-void
-ValidateErrorTableMetaData(Relation rel)
-{
-	TupleDesc   tupDesc = RelationGetDescr(rel);
-	Form_pg_attribute *attr = tupDesc->attrs;
-	TupleConstr *constr = tupDesc->constr;
-	char		*relname = RelationGetRelationName(rel);
-	int			attr_count = tupDesc->natts;
-
-	/*
-	 * Verify it is an ordinary table.
-	 */
-	if (rel->rd_rel->relkind != RELKIND_RELATION)
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("error table \"%s\" is not a table", relname)));
-
-	/*
-	 * Verify it is a heap table.
-	 */
-	if (!RelationIsHeap(rel))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("error table \"%s\" is not a heap table", relname),
-				 errhint("Use a relation with heap storage type for error table")));
-
-	/*
-	 * Verify number of attributes match
-	 */
-	if (attr_count != NUM_ERRORTABLE_ATTR)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("Relation \"%s\" already exists and is not of a valid "
-						"error table format (expected %d attributes, found %d)",
-						relname, NUM_ERRORTABLE_ATTR, attr_count)));
-
-	/*
-	 * Verify this table is randomly-distributed.
-	 */
-	if (!GpPolicyIsRandomly(rel->rd_cdbpolicy))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("error table \"%s\" is not randomly distributed",
-						relname),
-				 errhint("Use a randomly-distributed realtion for error table")));
-
-	/*
-	 * Verify this table is not a partitioned or child partition table.
-	 */
-	if (rel_is_partitioned(RelationGetRelid(rel)) ||
-		rel_is_child_partition(RelationGetRelid(rel)))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("error table \"%s\" is a partitioned table",
-						relname),
-				 errdetail("Either root or child partition are not allowed as an error table")));
-
-	/*
-	 * Verify this table has no constraints.
-	 *
-	 * This errors out with DEFAULTs, CHECKs or NOT NULLs.
-	 *
-	 * Unique constraint is not allowed in randomly-distributed table
-	 * so we don't check it here.
-	 *
-	 * We never insert NULL values in some attributes, but allowing
-	 * NOT NULL for error table columns doesn't give much convenience
-	 * to the user anyway.  Likewise, DEFAULT values are not of interest
-	 * mostly, but it does not give much value to user, either.
-	 */
-	if (constr)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("Relation \"%s\" already exists and is not of a valid "
-						"error table format. If appears to have constraints "
-						"defined.", relname)));
-
-	/*
-	 * run through each attribute at a time and verify it's what we expect
-	 */
-	VerifyErrorTableAttr(attr, errtable_cmdtime, "cmdtime", TIMESTAMPTZOID, relname);
-	VerifyErrorTableAttr(attr, errtable_relname, "relname", TEXTOID, relname);
-	VerifyErrorTableAttr(attr, errtable_filename, "filename", TEXTOID, relname);
-	VerifyErrorTableAttr(attr, errtable_linenum, "linenum", INT4OID, relname);
-	VerifyErrorTableAttr(attr, errtable_bytenum, "bytenum", INT4OID, relname);
-	VerifyErrorTableAttr(attr, errtable_errmsg, "errmsg", TEXTOID, relname);
-	VerifyErrorTableAttr(attr, errtable_rawdata, "rawdata", TEXTOID, relname);
-	VerifyErrorTableAttr(attr, errtable_rawbytes, "rawbytes", BYTEAOID, relname);
-}
-
-/*
- * VerifyErrorTableAttr
- *
- * Called by ValidateErrorTableMetaData() on each table attribute to verify
- * that it has the right predefined name, type and other attr characteristics.
- */
-static void
-VerifyErrorTableAttr(Form_pg_attribute *attr,
-					 int attrnum,
-					 const char *expected_attname,
-					 Oid expected_atttype,
-					 char *relname)
-{
-	bool		cur_attisdropped = attr[attrnum - 1]->attisdropped;
-	Name		cur_attname = &(attr[attrnum - 1]->attname);
-	Oid			cur_atttype = attr[attrnum - 1]->atttypid;
-	int4		cur_attndims = attr[attrnum - 1]->attndims;
-
-	if(cur_attisdropped)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("Relation \"%s\" includes dropped attributes and is "
-						"therefore not of a valid error table format",
-						relname)));
-
-	if (namestrcmp(cur_attname, expected_attname) != 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("Relation \"%s\" is an invalid error table. Expected "
-						"attribute \"%s\" found \"%s\"",
-						relname, expected_attname, NameStr(*cur_attname))));
-
-	if(cur_atttype != expected_atttype)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("Relation \"%s\" is an invalid error table. Wrong data "
-						"type for attribute \"%s\"",
-						relname, NameStr(*cur_attname))));
-
-	if(cur_attndims > 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("Relation \"%s\" is an invalid error table. Attribute "
-						"\"%s\" has more than zero dimensions (array).",
-						relname, NameStr(*cur_attname))));
-}
-
-/*
- * IsErrorTable
- *
- * Returns true if relid is used as an error table, which has dependent object
- * that is an external table.  Though it's not great we didn't have a clear
- * definition of Error Table, it satisfies the current requirements.
- */
-bool
-IsErrorTable(Relation rel)
-{
-	cqContext	   *pcqCtx, *pcqCtxExt, ctxExt;
-	HeapTuple		tup;
-	Relation		extrel;
-	bool			result = false;
-
-	/* fast path to quick check */
-	if (!RelationIsHeap(rel))
-		return false;
-
-	/*
-	 * Otherwise, go deeper and play with pg_depend...
-	 */
-	pcqCtx = caql_beginscan(NULL,
-							cql("SELECT * FROM pg_depend "
-								" WHERE refclassid = :1 "
-								" AND refobjid = :2 "
-								" AND refobjsubid = :3 ",
-								ObjectIdGetDatum(RelationRelationId),
-								ObjectIdGetDatum(RelationGetRelid(rel)),
-								Int32GetDatum(0)));
-
-	extrel = relation_open(ExtTableRelationId, AccessShareLock);
-	pcqCtxExt = caql_addrel(cqclr(&ctxExt), extrel);
-
-	while (HeapTupleIsValid(tup = caql_getnext(pcqCtx)))
-	{
-		Form_pg_depend dep = (Form_pg_depend) GETSTRUCT(tup);
-		Oid				fmterrtbl;
-
-		fmterrtbl = caql_getoid(pcqCtxExt,
-								cql("SELECT fmterrtbl FROM pg_exttable "
-									" WHERE reloid = :1",
-									ObjectIdGetDatum(dep->objid)));
-		if (RelationGetRelid(rel) == fmterrtbl)
-		{
-			result = true;
-			break;
-		}
-	}
-
-	relation_close(extrel, AccessShareLock);
-
-	caql_endscan(pcqCtx);
-
-	return result;
-}
-
-/*
- * SetErrorTableVerdict
- *
- * Do we kill (DROP) the error table or let it live? This function is called 
- * at the end of execution of a COPY operation involving an error table. The
- * rule is - always keep it alive if KEEP was specified in the COPY command
- * otherwise DROP it only if no rows were rejected *and* if it was auto
- * generated at the start of this COPY command (did not exist before).
- */
-void
-SetErrorTableVerdict(CdbSreh *cdbsreh, int total_rejected)
-{
-	/* never let a QE decide whether to drop the table or not */
-	Insist(Gp_role == GP_ROLE_DISPATCH);
-	
-	/* this is for COPY use only, don't call this function for external tables */
-	Insist(cdbsreh->cdbcopy);
-		   
-	/* we can't get here if we don't have an open error table */
-	Insist(cdbsreh->errtbl);
-	
-	if(!cdbsreh->is_keep && !cdbsreh->reusing_errtbl && total_rejected == 0)
-	{
-		cdbsreh->should_drop = true; /* mark this table to be dropped */
-	}
 }
 
 /* Identify the reject limit type */
@@ -835,29 +444,6 @@ IsRejectLimitReached(CdbSreh *cdbsreh)
 }
 
 /*
- * emitSameTxnWarning()
- *
- * Warn the user that it's better to have the error table created in a
- * transaction that is older than the one that is using it. This mostly
- * can happen in COPY but also in some not so common external table use
- * cases (BEGIN, CREATE EXTERNAL TABLE with errtable, SELECT..., ...).
- */
-void emitSameTxnWarning(void)
-{	
-	ereport(WARNING, 
-			(errcode(ERRCODE_T_R_GP_ERROR_TABLE_MAY_DROP),
-			 errmsg("The error table was created in the same "
-					"transaction as this operation. It will get "
-					"dropped if transaction rolls back even if bad "
-					"rows are present"),
-			 errhint("To avoid this create the error table ahead "
-					"of time using: CREATE TABLE <name> (cmdtime "
-					"timestamp with time zone, relname text, "
-					"filename text, linenum integer, bytenum "
-					"integer, errmsg text, rawdata text, rawbytes "
-					"bytea)")));
-}
-/*
  * GetNextSegid
  *
  * Return the next sequential segment id of available segids (roundrobin).
@@ -876,10 +462,10 @@ int GetNextSegid(CdbSreh *cdbsreh)
 
 /*
  * This function is called when we are preparing to insert a bad row that
- * includes an encoding error into the bytea field of the error table 
+ * includes an encoding error into the bytea field of the error log file
  * (rawbytes). In rare occasions this bad row may also have an invalid bytea
  * sequence - a backslash not followed by a valid octal sequence - in which
- * case inserting into the error table will fail. In here we make a pass to
+ * case inserting into the error log file will fail. In here we make a pass to
  * detect if there's a risk of failing. If there isn't we just return. If there
  * is we remove the backslash and replace it with a x20 char. Yes, we are
  * actually modifying the user data, but this is a much better opion than
@@ -1282,7 +868,7 @@ gp_read_error_log(PG_FUNCTION_ARGS)
 			PQclear(context->segResults[i]);
 
 		/* XXX: better to copy to palloc'ed area */
-		free(context->segResults[i]);
+		free(context->segResults);
 	}
 
 	/*
@@ -1392,48 +978,6 @@ gp_truncate_error_log(PG_FUNCTION_ARGS)
 
 	relname = PG_GETARG_TEXT_P(0);
 
-	/*
-	 * Dispatch the work to segments.
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		int			i, resultCount = 0;
-		StringInfoData	sql, errbuf;
-		PGresult  **results;
-
-		initStringInfo(&sql);
-		initStringInfo(&errbuf);
-
-		appendStringInfo(&sql,
-						 "SELECT pg_catalog.gp_truncate_error_log('%s')",
-						 text_to_cstring(relname));
-
-		results = cdbdisp_dispatchRMCommand(sql.data, true, &errbuf,
-											&resultCount);
-
-		if (errbuf.len > 0)
-			elog(ERROR, "%s", errbuf.data);
-		Assert(resultCount > 0);
-
-		for (i = 0; i < resultCount; i++)
-		{
-			Datum		value;
-			bool		isnull;
-
-			if (PQresultStatus(results[i]) != PGRES_TUPLES_OK)
-				ereport(ERROR,
-						(errmsg("unexpected result from segment: %d",
-								PQresultStatus(results[i]))));
-
-			value = ResultToDatum(results[i], 0, 0, boolin, &isnull);
-			allResults &= (!isnull && DatumGetBool(value));
-			PQclear(results[i]);
-		}
-
-		pfree(errbuf.data);
-		pfree(sql.data);
-	}
-
 	relname_str = text_to_cstring(relname);
 	if (strcmp(relname_str, "*.*") == 0)
 	{
@@ -1478,6 +1022,48 @@ gp_truncate_error_log(PG_FUNCTION_ARGS)
 
 		/* We don't care if this fails or not. */
 		ErrorLogDelete(MyDatabaseId, relid);
+	}
+
+	/*
+	 * Dispatch the work to segments.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		int			i, resultCount = 0;
+		StringInfoData	sql, errbuf;
+		PGresult  **results;
+
+		initStringInfo(&sql);
+		initStringInfo(&errbuf);
+
+		appendStringInfo(&sql,
+						 "SELECT pg_catalog.gp_truncate_error_log(%s)",
+						 quote_literal_internal(text_to_cstring(relname)));
+
+		results = cdbdisp_dispatchRMCommand(sql.data, true, &errbuf,
+											&resultCount);
+
+		if (errbuf.len > 0)
+			elog(ERROR, "%s", errbuf.data);
+		Assert(resultCount > 0);
+
+		for (i = 0; i < resultCount; i++)
+		{
+			Datum		value;
+			bool		isnull;
+
+			if (PQresultStatus(results[i]) != PGRES_TUPLES_OK)
+				ereport(ERROR,
+						(errmsg("unexpected result from segment: %d",
+								PQresultStatus(results[i]))));
+
+			value = ResultToDatum(results[i], 0, 0, boolin, &isnull);
+			allResults &= (!isnull && DatumGetBool(value));
+			PQclear(results[i]);
+		}
+
+		pfree(errbuf.data);
+		pfree(sql.data);
 	}
 
 	/* Return true iif all segments return true. */

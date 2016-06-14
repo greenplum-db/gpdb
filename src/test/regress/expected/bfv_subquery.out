@@ -1,0 +1,294 @@
+-- count number of certain operators in a given plan
+-- start_ignore
+create language plpythonu;
+-- end_ignore
+create or replace function count_operator(explain_query text, operator text) returns int as
+$$
+rv = plpy.execute(explain_query)
+search_text = operator
+result = 0
+for i in range(len(rv)):
+    cur_line = rv[i]['QUERY PLAN']
+    if search_text.lower() in cur_line.lower():
+        result = result+1
+return result
+$$
+language plpythonu;
+--start_ignore
+DROP TABLE IF EXISTS bfv_subquery_p;
+NOTICE:  table "bfv_subquery_p" does not exist, skipping
+DROP TABLE IF EXISTS bfv_subquery_r;
+NOTICE:  table "bfv_subquery_r" does not exist, skipping
+--end_ignore
+-- subquery over partitioned table
+CREATE TABLE bfv_subquery_(a int, b int) partition by range(b) (start(1) end(10));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "bfv_subquery__1_prt_1" for table "bfv_subquery_"
+CREATE TABLE bfv_subquery_r (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO bfv_subquery_ SELECT i,i FROM generate_series(1,9)i;
+INSERT INTO bfv_subquery_r SELECT i,i FROM generate_series(1,9)i;
+SELECT a FROM bfv_subquery_r WHERE b < ( SELECT 0.5 * sum(a) FROM bfv_subquery_ WHERE b >= 3) ORDER BY 1;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+(9 rows)
+
+	
+--start_ignore
+drop table if exists bfv_subquery_r2;
+NOTICE:  table "bfv_subquery_r2" does not exist, skipping
+drop table if exists s;
+NOTICE:  table "s" does not exist, skipping
+--end_ignore
+-- subquery with distinct and outer references	
+create table bfv_subquery_r2(a int, b int) distributed by (a);
+create table bfv_subquery_s2(a int, b int) distributed by (a);
+insert into bfv_subquery_r2 values (1,1);
+insert into bfv_subquery_r2 values (2,1);
+insert into bfv_subquery_r2 values (2,NULL);
+insert into bfv_subquery_r2 values (NULL,0);
+insert into bfv_subquery_r2 values (NULL,NULL);
+insert into bfv_subquery_s2 values (2,2);
+insert into bfv_subquery_s2 values (1,0);
+insert into bfv_subquery_s2 values (1,1);
+select * from bfv_subquery_r2 
+where a = (select x.a from (select distinct a from bfv_subquery_s2 where bfv_subquery_s2.b = bfv_subquery_r2	.b) x);
+ a | b 
+---+---
+ 1 | 1
+(1 row)
+
+-- start_ignore
+DROP FUNCTION IF EXISTS csq_f(a int);
+NOTICE:  function csq_f(pg_catalog.int4) does not exist, skipping
+-- end_ignore
+CREATE FUNCTION csq_f(a int) RETURNS int AS $$ select $1 $$ LANGUAGE SQL;
+--start_ignore
+DROP TABLE IF EXISTS csq_r;
+NOTICE:  table "csq_r" does not exist, skipping
+--end_ignore
+CREATE TABLE csq_r(a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO csq_r VALUES (1);
+SELECT * FROM csq_r WHERE a IN (SELECT * FROM csq_f(csq_r.a));
+ a 
+---
+ 1
+(1 row)
+
+-- subquery in the select list
+--start_ignore
+drop table if exists  bfv_subquery_t1;
+NOTICE:  table "bfv_subquery_t1" does not exist, skipping
+drop table if exists  bfv_subquery_t2;
+NOTICE:  table "bfv_subquery_t2" does not exist, skipping
+--end_ignore
+create table  bfv_subquery_t1(i int, j int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table  bfv_subquery_t2(i int, j int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into  bfv_subquery_t1 select i, i%5 from generate_series(1,10)i;
+insert into  bfv_subquery_t2 values (1, 10);
+select count_operator('explain select bfv_subquery_t1.i, (select bfv_subquery_t1.i from bfv_subquery_t2) from bfv_subquery_t1;', 'Table Scan') > 0;
+ ?column? 
+----------
+ f
+(1 row)
+
+select count_operator('explain select bfv_subquery_t1.i, (select bfv_subquery_t1.i from bfv_subquery_t2) from bfv_subquery_t1;', 'Seq Scan') > 0;
+ ?column? 
+----------
+ t
+(1 row)
+
+select bfv_subquery_t1.i, (select bfv_subquery_t1.i from bfv_subquery_t2) from bfv_subquery_t1 order by 1, 2;
+ i  | ?column? 
+----+----------
+  1 |        1
+  2 |        2
+  3 |        3
+  4 |        4
+  5 |        5
+  6 |        6
+  7 |        7
+  8 |        8
+  9 |        9
+ 10 |       10
+(10 rows)
+
+-- start_ignore
+drop table if exists bfv_subquery_t3;
+NOTICE:  table "bfv_subquery_t3" does not exist, skipping
+drop table if exists bfv_subquery_s3;
+NOTICE:  table "bfv_subquery_s3" does not exist, skipping
+-- end_ignore
+create table bfv_subquery_t3(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into bfv_subquery_t3 values (1,4),(0,3);
+create table bfv_subquery_s3(i int, j int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- ALL subquery
+select * from bfv_subquery_t3 where a < all (select i from bfv_subquery_s3 limit 1) order by a;
+ a | b 
+---+---
+ 0 | 3
+ 1 | 4
+(2 rows)
+
+select * from bfv_subquery_t3 where a < all (select i from bfv_subquery_s3) order by a;
+ a | b 
+---+---
+ 0 | 3
+ 1 | 4
+(2 rows)
+
+select * from bfv_subquery_t3 where a < all (select i from bfv_subquery_s3 limit 2) order by a;
+ a | b 
+---+---
+ 0 | 3
+ 1 | 4
+(2 rows)
+
+select * from bfv_subquery_t3 where a < all (select i from bfv_subquery_s3) order by a;
+ a | b 
+---+---
+ 0 | 3
+ 1 | 4
+(2 rows)
+
+-- Direct Dispatch caused reader gang process hanging  on start_xact_command
+DROP TABLE IF EXISTS bfv_subquery_a1;
+NOTICE:  table "bfv_subquery_a1" does not exist, skipping
+DROP TABLE IF EXISTS bfv_subquery_b1;
+NOTICE:  table "bfv_subquery_b1" does not exist, skipping
+CREATE TABLE bfv_subquery_a1(i INT, j INT);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO bfv_subquery_a1(SELECT i, i * i FROM generate_series(1, 10) AS i);
+CREATE TABLE bfv_subquery_b1(i INT, j INT);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO bfv_subquery_b1(SELECT i, i * i FROM generate_series(1, 10) AS i);
+SELECT  bfv_subquery_a1.* FROM bfv_subquery_a1 INNER JOIN bfv_subquery_b1 ON  bfv_subquery_a1.i =  bfv_subquery_b1.i WHERE  bfv_subquery_a1.j NOT IN (SELECT j FROM bfv_subquery_a1 a2 where a2.j =  bfv_subquery_b1.j) and  bfv_subquery_a1.i = 1;
+ i | j 
+---+---
+(0 rows)
+
+DROP TABLE IF EXISTS bfv_subquery_a2;
+NOTICE:  table "bfv_subquery_a2" does not exist, skipping
+CREATE TABLE bfv_subquery_a2(i INT, j INT);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO bfv_subquery_a2(SELECT i, i * i FROM generate_series(1, 10) AS i);
+SELECT bfv_subquery_a2.* FROM bfv_subquery_a2 WHERE bfv_subquery_a2.j NOT IN (SELECT j FROM bfv_subquery_a2 a2 where a2.j = bfv_subquery_a2.j) and bfv_subquery_a2.i = 1;
+ i | j 
+---+---
+(0 rows)
+
+-- prohibit plans with Motions above outer references
+--start_ignore
+drop table if exists  bfv_subquery_foo1;
+NOTICE:  table "bfv_subquery_foo1" does not exist, skipping
+--end_ignore
+create table  bfv_subquery_foo1(a integer, b integer) distributed by (a);
+							 
+insert into  bfv_subquery_foo1 values(1,1);
+insert into  bfv_subquery_foo1 values(2,2);
+select 
+(select a from  bfv_subquery_foo1 inner1 where inner1.a=outer1.a  
+union 
+select b from  bfv_subquery_foo1 inner2 where inner2.b=outer1.b) 
+from  bfv_subquery_foo1 outer1;
+ ?column? 
+----------
+        1
+        2
+(2 rows)
+
+-- using of subqueries with unnest with IN or NOT IN predicates
+select 1 where 22 not in (SELECT unnest(array[1,2]));
+ ?column? 
+----------
+        1
+(1 row)
+
+select 1 where 22 in (SELECT unnest(array[1,2]));
+ ?column? 
+----------
+(0 rows)
+
+select 1 where 22  in (SELECT unnest(array[1,2,22]));
+ ?column? 
+----------
+        1
+(1 row)
+
+select 1 where 22 not in (SELECT unnest(array[1,2,22]));
+ ?column? 
+----------
+(0 rows)
+
+-- Error when using subquery : no parameter found for initplan subquery
+-- start_ignore
+drop table if exists mpp_t1;
+NOTICE:  table "mpp_t1" does not exist, skipping
+drop table if exists mpp_t2;
+NOTICE:  table "mpp_t2" does not exist, skipping
+drop table if exists mpp_t3;
+NOTICE:  table "mpp_t3" does not exist, skipping
+create table mpp_t1(a int,b int) distributed by (a); 
+create table mpp_t2(a int,b int) distributed by (b);
+create table mpp_t3(like mpp_t1);
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+-- end_ignore
+select * from mpp_t1 where a=1 and a=2 and a > (select mpp_t2.b from mpp_t2);
+ a | b 
+---+---
+(0 rows)
+
+select * from mpp_t1 where a<1 and a>2 and a > (select mpp_t2.b from mpp_t2);
+ a | b 
+---+---
+(0 rows)
+
+select * from mpp_t3 where a in ( select a from mpp_t1 where a<1 and a>2 and a > (select mpp_t2.b from mpp_t2));
+ a | b 
+---+---
+(0 rows)
+
+select * from mpp_t3 where a <1 and a=1 and a in ( select a from mpp_t1 where a > (select mpp_t2.b from mpp_t2));
+ a | b 
+---+---
+(0 rows)
+
+select * from mpp_t1 where a <1 and a=1 and a in ( select a from mpp_t1 where a > (select mpp_t2.b from mpp_t2));
+ a | b 
+---+---
+(0 rows)
+
+select * from mpp_t1 where a = (select a FROM mpp_t2 where mpp_t2.b > (select max(b) from mpp_t3 group by b) and mpp_t2.b=1 and mpp_t2.b=2);
+ a | b 
+---+---
+(0 rows)
+
+-- start_ignore
+drop table if exists mpp_t1;
+drop table if exists mpp_t2;
+drop table if exists mpp_t3;
+-- end_ignore

@@ -8,11 +8,11 @@ Set of Classes for executing unix commands.
 
 """
 import os
+import psutil
 import platform
 import socket
 import sys
 import signal
-import psi.process
 
 from gppylib.gplog import *
 from gppylib.commands.base import *
@@ -961,21 +961,15 @@ class FileGetOwnerUid(Command):
 #--------------get list of desecendant processes -------------------
 
 def getDescendentProcesses(pid):
-    ''' return all process which are descendant from the given processid ''' 
+    ''' return all process pids which are descendant from the given processid ''' 
 
-    children = list()
-    grandchildren = list()
+    children_pids = []
 
-    for p in psi.process.ProcessTable().values():
+    for p in psutil.Process(pid).children(recursive=True):
+        if p.is_running():
+            children_pids.append(p.pid)
 
-        if int(p.ppid) == int(pid):
-            children.append(int(p.pid))
-
-    # recursion
-    for child in children:
-        grandchildren.extend( getDescendentProcesses(child) )
-
-    return children + grandchildren
+    return children_pids 
 
         
 #--------------global variable initialization ----------------------

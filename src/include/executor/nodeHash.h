@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/nodeHash.h,v 1.42 2007/01/05 22:19:54 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/executor/nodeHash.h,v 1.44 2007/01/30 01:33:36 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -34,6 +34,7 @@ extern void ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 extern bool ExecHashGetHashValue(HashState *hashState, HashJoinTable hashtable,
 					 ExprContext *econtext,
 					 List *hashkeys,
+					 bool outer_tuple,
 					 bool keep_nulls,
 					 uint32 *hashvalue,
 					 bool *hashkeys_null);

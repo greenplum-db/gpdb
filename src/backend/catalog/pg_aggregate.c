@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_aggregate.c,v 1.84 2007/01/05 22:19:25 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_aggregate.c,v 1.85 2007/01/22 01:35:20 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -65,6 +65,7 @@ AggregateCreateWithOid(const char		*aggName,
 	Oid			finalfn = InvalidOid;	/* can be omitted */
 	Oid			sortop = InvalidOid;	/* can be omitted */
 	bool		hasPolyArg;
+	bool		hasInternalArg;
 	Oid			rettype;
 	Oid			finaltype;
 	Oid			prelimrettype;
@@ -83,16 +84,16 @@ AggregateCreateWithOid(const char		*aggName,
 	if (!aggtransfnName)
 		elog(ERROR, "aggregate must have a transition function");
 
-	/* check for polymorphic arguments */
+	/* check for polymorphic arguments and INTERNAL arguments */
 	hasPolyArg = false;
+	hasInternalArg = false;
 	for (i = 0; i < numArgs; i++)
 	{
 		if (aggArgTypes[i] == ANYARRAYOID ||
 			aggArgTypes[i] == ANYELEMENTOID)
-		{
 			hasPolyArg = true;
-			break;
-		}
+		else if (aggArgTypes[i] == INTERNALOID)
+			hasInternalArg = true;
 	}
 
 	/*
@@ -227,8 +228,20 @@ AggregateCreateWithOid(const char		*aggName,
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
 				 errmsg("cannot determine result data type"),
-		   errdetail("An aggregate returning \"anyarray\" or \"anyelement\" "
-					 "must have at least one argument of either type.")));
+				 errdetail("An aggregate returning \"anyarray\" or \"anyelement\" "
+						   "must have at least one argument of either type.")));
+
+	/*
+	 * Also, the return type can't be INTERNAL unless there's at least one
+	 * INTERNAL argument.  This is the same type-safety restriction we
+	 * enforce for regular functions, but at the level of aggregates.  We
+	 * must test this explicitly because we allow INTERNAL as the transtype.
+	 */
+	if (finaltype == INTERNALOID && !hasInternalArg)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+				 errmsg("unsafe use of pseudo-type \"internal\""),
+				 errdetail("A function returning \"internal\" must have at least one \"internal\" argument.")));
 
 	/* handle sortop, if supplied */
 	if (aggsortopName)
@@ -269,8 +282,12 @@ AggregateCreateWithOid(const char		*aggName,
 							  PointerGetDatum(NULL),	/* allParamTypes */
 							  PointerGetDatum(NULL),	/* parameterModes */
 							  PointerGetDatum(NULL),	/* parameterNames */
+							  NIL,						/* parameterDefaults */
+							  1,				/* procost */
+							  0,				/* prorows */
 							  PRODATAACCESS_NONE,		/* prodataaccess */
 							  procOid);
+
 	/*
 	 * Okay to create the pg_aggregate entry.
 	 */
@@ -397,9 +414,9 @@ lookup_agg_function(List *fnName,
 	 * function's return value.  it also returns the true argument types to
 	 * the function.
 	 */
-	fdresult = func_get_detail(fnName, NIL, nargs, input_types, false,
+	fdresult = func_get_detail(fnName, NIL, nargs, input_types, false, false,
 							   &fnOid, rettype, &retset, &retstrict,
-							   &retordered, &nvargs, &true_oid_array);
+							   &retordered, &nvargs, &true_oid_array, NULL);
 
 	/* only valid case is a normal function not returning a set */
 	if (fdresult != FUNCDETAIL_NORMAL || !OidIsValid(fnOid))

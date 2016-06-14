@@ -247,31 +247,6 @@ namespace gpdxl
 				const CMappingElementColIdParamId *pmecolidparamid
 				);
 
-			Expr *PsublinkFromDXLNodeScalarSubquery
-				(
-				const CDXLNode *pdxlnSubquery,
-				CMappingColIdVar *pmapcidvar
-				);
-
-			SubLink *PsublinkFromDXLNodeQuantifiedSubquery
-				(
-				const CDXLNode *pdxlnQuantifiedSubquery,
-				CMappingColIdVar *pmapcidvar
-				);
-
-			Expr *PsublinkFromDXLNodeSubqueryExists
-				(
-				const CDXLNode *pdxlnSubqueryExists,
-				CMappingColIdVar *pmapcidvar
-				);
-
-			// translate a DXL scalar ANY/ALL subquery
-			Expr *PexprFromDXLNodeSubqueryAnyAll
-				(
-				const CDXLNode *pdxlnSubqueryAnyAll,
-				CMappingColIdVar *pmapcidvar
-				);
-
 			// translate a scalar coalesce
 			Expr *PcoalesceFromDXLNodeScCoalesce
 				(

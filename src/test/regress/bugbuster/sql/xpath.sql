@@ -21,9 +21,9 @@ select xml_out((select * from readxml));
 
 select xml_out((select xml_in('<a>hello<a>')));
 
-select xmlcomment('<a>hello<\a>');
+select xmlcomment(E'<a>hello<\a>');
 select xmlcomment('adsfasdfasdfsadf');
-select xmlcomment('\n');
+select xmlcomment(E'\n');
 select xml('<hello></hello>');
 select xml('<a><say>speak</say><hello>say hello</hello></a>');
 select xml('hello');

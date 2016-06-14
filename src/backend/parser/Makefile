@@ -14,7 +14,8 @@ override CPPFLAGS := -I$(srcdir) $(CPPFLAGS)
 
 OBJS= analyze.o gram.o keywords.o parser.o parse_agg.o parse_clause.o parse_cte.o \
       parse_expr.o parse_func.o parse_node.o parse_oper.o parse_relation.o \
-      parse_type.o parse_coerce.o parse_target.o scansup.o parse_utilcmd.o kwlookup.o
+      parse_type.o parse_coerce.o parse_target.o scansup.o parse_utilcmd.o kwlookup.o \
+      parse_partition.o
 
 FLEXFLAGS = -CF
 

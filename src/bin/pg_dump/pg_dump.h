@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump.h,v 1.130.2.1 2007/02/19 15:05:21 mha Exp $
+ * $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump.h,v 1.133 2007/02/19 15:05:06 mha Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -116,6 +116,7 @@ typedef enum
 	DO_AGG,
 	DO_OPERATOR,
 	DO_OPCLASS,
+	DO_OPFAMILY,
 	DO_CONVERSION,
 	DO_TABLE,
 	DO_ATTRDEF,
@@ -242,6 +243,12 @@ typedef struct _opclassInfo
 	DumpableObject dobj;
 	char	   *rolname;
 } OpclassInfo;
+
+typedef struct _opfamilyInfo
+{
+	DumpableObject dobj;
+	char	   *rolname;
+} OpfamilyInfo;
 
 typedef struct _convInfo
 {
@@ -387,6 +394,7 @@ typedef struct _procLangInfo
 	DumpableObject dobj;
 	bool		lanpltrusted;
 	Oid			lanplcallfoid;
+	Oid			laninline;
 	Oid			lanvalidator;
 	char	   *lanacl;
 	char	   *lanowner;		/* name of owner, or empty string */
@@ -424,7 +432,7 @@ extern const char *EXT_PARTITION_NAME_POSTFIX;
  *	common utility functions
  */
 
-extern TableInfo *getSchemaData(int *numTablesPtr);
+extern TableInfo *getSchemaData(int *numTablesPtr, int g_role);
 
 typedef enum _OidOptions
 {
@@ -482,6 +490,7 @@ extern AggInfo *getAggregates(int *numAggregates);
 extern ExtProtInfo *getExtProtocols(int *numExtProtocols);
 extern OprInfo *getOperators(int *numOperators);
 extern OpclassInfo *getOpclasses(int *numOpclasses);
+extern OpfamilyInfo *getOpfamilies(int *numOpfamilies);
 extern ConvInfo *getConversions(int *numConversions);
 extern TableInfo *getTables(int *numTables);
 extern InhInfo *getInherits(int *numInherits);

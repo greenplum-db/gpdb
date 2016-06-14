@@ -129,7 +129,7 @@ elog_error(int level, char *explain, int force)
 		if (pgxml_errorMsg == NULL)
 		{
 			ereport(level, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-							errmsg(explain)));
+							errmsg("%s", explain)));
 		}
 		else
 		{
@@ -690,9 +690,7 @@ xpath_table(PG_FUNCTION_ARGS)
 	 * Create the tuplestore - work_mem is the max in-memory size before a
 	 * file is created on disk to hold it.
 	 */
-	tupstore =
-		tuplestore_begin_heap(rsinfo->allowedModes & SFRM_Materialize_Random,
-							  false, work_mem);
+	tupstore = tuplestore_begin_heap(true, false, work_mem);
 
 	MemoryContextSwitchTo(oldcontext);
 

@@ -24,7 +24,7 @@
 #include "cdb/cdbfilerep.h"
 #include "cdb/cdbfilerepservice.h"
 #include "cdb/cdbresynchronizechangetracking.h"
-#include "postmaster/checkpoint.h"
+#include "postmaster/bgwriter.h"
 #include "cdb/cdbutil.h"
 #include "postmaster/fts.h"
 #include "storage/spin.h"
@@ -95,6 +95,7 @@ FaultInjectorTypeEnumToString[] = {
 	_("status"),
 	_("segv"),
 	_("interrupt"),
+	_("finish_pending"),
 	_("checkpoint_and_panic"),
 	_("not recognized"),
 };
@@ -250,6 +251,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault to simulate memory allocation failure */
 	_("transaction_abort_failure"),
 		/* inject fault to simulate transaction abort failure  */
+	_("workfile_creation_failure"),
+	  /* inject fault to simulate workfile creation failure  */
 	_("update_committed_eof_in_persistent_table"),
 		/* inject fault before committed EOF is updated in gp_persistent_relation_node for Append Only segment files */
 	_("exec_simple_query_end_command"),
@@ -260,6 +263,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault in ExecSort before doing the actual sort */
 	_("execsort_mksort_mergeruns"),
 		/* inject fault in MKSort during the mergeruns phase */
+	_("execshare_input_next"),
+		/* inject fault after shared input scan retrieved a tuple */
 	_("base_backup_post_create_checkpoint"),
 		/* inject fault after creation of checkpoint when basebackup requested */
 	_("compaction_before_segmentfile_drop"),
@@ -799,6 +804,16 @@ FaultInjector_InjectFaultIfSet(
 			break;
 		}
 
+		case FaultInjectorTypeFinishPending:
+		{
+			ereport(LOG,
+					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
+			QueryFinishPending = true;
+			break;
+		}
+
 		case FaultInjectorTypeCheckpointAndPanic:
 		{
 			if (entryLocal->occurrence != FILEREP_UNDEFINED)
@@ -1049,7 +1064,6 @@ FaultInjector_NewHashEntry(
 		case FinishPreparedTransactionAbortPass2AbortingCreateNeeded:
 		case TwoPhaseTransactionCommitPrepared:
 		case TwoPhaseTransactionAbortPrepared:
-		case ExecSortMKSortMergeRuns:
 		
 //		case SubtransactionFlushToFile:
 //		case SubtransactionReadFromFile:
@@ -1137,12 +1151,14 @@ FaultInjector_NewHashEntry(
 		case LocalTmRecordTransactionCommit:
 		case Checkpoint:
 		case AbortTransactionFail:
+		case WorkfileCreationFail:
 		case UpdateCommittedEofInPersistentTable:
 		case ExecSortBeforeSorting:
 		case FaultDuringExecDynamicTableScan:
 		case FaultExecHashJoinNewBatch:
 		case RunawayCleanup:
-			
+		case ExecSortMKSortMergeRuns:
+		case ExecShareInputNext:
 			if (fileRepRole != FileRepNoRoleConfigured && fileRepRole != FileRepPrimaryRole)
 			{
 				FiLockRelease();

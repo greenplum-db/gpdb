@@ -50,8 +50,6 @@ PG_FUNCTION_INFO_V1(DumpPlan);
 PG_FUNCTION_INFO_V1(RestorePlan);
 PG_FUNCTION_INFO_V1(DumpPlanToFile);
 PG_FUNCTION_INFO_V1(RestorePlanFromFile);
-PG_FUNCTION_INFO_V1(DumpPlanDXL);
-PG_FUNCTION_INFO_V1(DumpPlanToDXLFile);
 PG_FUNCTION_INFO_V1(RestorePlanDXL);
 PG_FUNCTION_INFO_V1(RestorePlanFromDXLFile);
 PG_FUNCTION_INFO_V1(DumpMDObjDXL);
@@ -67,8 +65,6 @@ PG_FUNCTION_INFO_V1(RestoreQueryFromFile);
 PG_FUNCTION_INFO_V1(DumpQueryDXL);
 PG_FUNCTION_INFO_V1(DumpQueryToDXLFile);
 PG_FUNCTION_INFO_V1(DumpQueryFromFileToDXLFile);
-PG_FUNCTION_INFO_V1(RestoreQueryDXL);
-PG_FUNCTION_INFO_V1(RestoreQueryFromDXLFile);
 PG_FUNCTION_INFO_V1(DisableXform);
 PG_FUNCTION_INFO_V1(EnableXform);
 PG_FUNCTION_INFO_V1(LibraryVersion);
@@ -88,7 +84,6 @@ static char *getPlannedStmtBinary(char *szSqlText, size_t *piLength);
 static int extractFrozenPlanAndExecute(char *pcSerializedPS);
 static int extractFrozenQueryPlanAndExecute(char *pcQuery);
 static int executeXMLPlan(char *szXml);
-static int executeXMLQuery(char *szXml);
 static int translateQueryToFile(char *szSqlText, char *szFilename);
 
 //---------------------------------------------------------------------------
@@ -367,37 +362,6 @@ DumpQueryToFile(PG_FUNCTION_ARGS)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		DumpPlanDXL
-//
-//	@doc:
-//		Plan a query and dump out plan as xml text.
-// 		Input: sql query text
-// 		Output: plan in dxl
-//
-//---------------------------------------------------------------------------
-
-extern "C" {
-Datum
-DumpPlanDXL(PG_FUNCTION_ARGS)
-{
-	char *szSqlText = textToString(PG_GETARG_TEXT_P(0));
-
-	PlannedStmt *pplstmt = planQuery(szSqlText);
-
-	Assert(pplstmt);
-
-	char *szXmlString = COptTasks::SzDXL(pplstmt);
-	if (NULL == szXmlString)
-	{
-		elog(ERROR, "Error translating plan to DXL");
-	}
-
-	PG_RETURN_TEXT_P(stringToText(szXmlString));
-}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		DumpQueryDXL
 //
 //	@doc:
@@ -485,80 +449,6 @@ DumpQueryFromFileToDXLFile(PG_FUNCTION_ARGS)
 	PG_RETURN_INT32(iLen);
 }
 }
-
-//---------------------------------------------------------------------------
-//	@function:
-//		RestoreQueryDXL
-//
-//	@doc:
-//		Take an xml representation of a plan and execute it. Restores a query,
-//		along with meta-data from a bytea, executes it and returns number of rows.
-// 		Input: bytea corresponding to serialized query
-// 		Output: number of rows corresponding to execution of plan.
-//
-//---------------------------------------------------------------------------
-
-extern "C" {
-Datum
-RestoreQueryDXL(PG_FUNCTION_ARGS)
-{
-	char *szXmlString = textToString(PG_GETARG_TEXT_P(0));
-
-	int iProcessed = executeXMLQuery(szXmlString);
-
-	StringInfoData str;
-	initStringInfo(&str);
-	appendStringInfo(&str, "processed %d rows", iProcessed);
-
-	text *ptResult = stringToText(str.data);
-
-	PG_RETURN_TEXT_P(ptResult);
-}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		RestoreQueryFromDXLFile
-//
-//	@doc:
-//		Restores a query specified in DXL format in an XML file, executes it
-//		and returns number of rows.
-// 		Input: bytea corresponding to XML file name
-// 		Output: number of rows corresponding to execution of plan.
-//
-//---------------------------------------------------------------------------
-
-extern "C" {
-Datum
-RestoreQueryFromDXLFile(PG_FUNCTION_ARGS)
-{
-	char *szFilename = textToString(PG_GETARG_TEXT_P(0));
-
-	CFileReader fr;
-	fr.Open(szFilename);
-	ULLONG ullSize = fr.UllSize();
-
-	char *pcBuf = (char*) gpdb::GPDBAlloc(ullSize + 1);
-	fr.UlpRead((BYTE*)pcBuf, ullSize);
-	pcBuf[ullSize] = '\0';
-
-	fr.Close();
-
-	int	iProcessed = executeXMLQuery(pcBuf);
-
-	elog(NOTICE, "Processed %d rows.", iProcessed);
-	gpdb::GPDBFree(pcBuf);
-
-	StringInfoData str;
-	initStringInfo(&str);
-
-	appendStringInfo(&str, "Query processed %d rows", iProcessed);
-	text *ptResult = stringToText(str.data);
-
-	PG_RETURN_TEXT_P(ptResult);
-}
-}
-
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -741,39 +631,6 @@ RestorePlanFromDXLFile(PG_FUNCTION_ARGS)
 	text *ptResult = stringToText(str.data);
 
 	PG_RETURN_TEXT_P(ptResult);
-}
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		DumpPlanToDXLFile
-//
-//	@doc:
-//
-//
-//---------------------------------------------------------------------------
-
-extern "C" {
-Datum
-DumpPlanToDXLFile(PG_FUNCTION_ARGS)
-{
-	char *szSql = textToString(PG_GETARG_TEXT_P(0));
-	char *szFilename = textToString(PG_GETARG_TEXT_P(1));
-
-	PlannedStmt *pplstmt = planQuery(szSql);
-	Assert(pplstmt);
-
-	char *szXmlString = COptTasks::SzDXL(pplstmt);
-
-	int iLen = (int) gpos::clib::UlStrLen(szXmlString);
-
-	CFileWriter fw;
-	fw.Open(szFilename, S_IRUSR | S_IWUSR);
-	fw.Write(reinterpret_cast<const BYTE*>(szXmlString), iLen + 1);
-	fw.Close();
-
-	PG_RETURN_INT32(iLen);
-
 }
 }
 
@@ -1000,44 +857,6 @@ static int extractFrozenPlanAndExecute(char *pcSerializedPS)
 	return iProcessed;
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		executeXMLQuery
-//
-//	@doc:
-//
-//
-//---------------------------------------------------------------------------
-
-static int executeXMLQuery(char *szXml)
-{
-	Query *pquery = COptTasks::PqueryFromXML(szXml);
-
-	PlannedStmt *pplstmt = pg_plan_query(pquery, NULL);
-
-	DestReceiver *pdest = CreateDestReceiver(DestNone, NULL);
-	QueryDesc    *pqueryDesc = CreateQueryDesc(pplstmt, PStrDup("Internal Query") /*plan->query */,
-			ActiveSnapshot,
-			InvalidSnapshot,
-			pdest,
-			NULL /*paramLI*/,
-			false);
-
-	elog(NOTICE, "Executing thawed plan...");
-
-	ExecutorStart(pqueryDesc, 0);
-
-	ExecutorRun(pqueryDesc, ForwardScanDirection, 0);
-
-	ExecutorEnd(pqueryDesc);
-
-	int iProcessed = (int) pqueryDesc->es_processed;
-
-	FreeQueryDesc(pqueryDesc);
-
-	return iProcessed;
-}
-
 static int executeXMLPlan(char *szXml)
 {
 	PlannedStmt *pplstmt = COptTasks::PplstmtFromXML(szXml);
@@ -1088,7 +907,7 @@ RestoreQueryFromFile(PG_FUNCTION_ARGS)
 	CFileReader fr;
 	fr.Open(szFilename);
 	ULLONG ullSize = fr.UllSize();
-	elog(NOTICE, "(RestoreFromFile) Filesize is %d", ullSize);
+	elog(NOTICE, "(RestoreFromFile) Filesize is %llu", ullSize);
 
 	char *pcBuf = (char*) gpdb::GPDBAlloc(ullSize);
 	fr.UlpRead((BYTE*)pcBuf, ullSize);

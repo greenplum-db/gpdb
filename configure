@@ -657,6 +657,12 @@ HAVE_IPV6
 CURL_LIBS
 CURL_CFLAGS
 CURL_CONFIG
+have_yaml
+apr_cppflags
+apr_cflags
+apr_link_ld_libs
+apr_includes
+APR_1_CONFIG
 ADDON_DIR
 ZIC
 python_additional_libs
@@ -696,6 +702,7 @@ LDFLAGS_EX
 ELF_SYS
 EGREP
 GREP
+with_apr_config
 with_libcurl
 with_rt
 with_zlib
@@ -714,10 +721,13 @@ with_perl
 with_tcl
 enable_thread_safety
 INCLUDES
+enable_mapreduce
 enable_netbackup
 enable_ddboost
 enable_connectemc
 enable_snmp
+CMAKE
+enable_codegen
 enable_orca
 autodepend
 TAS
@@ -744,6 +754,7 @@ LCOV
 GCOV
 enable_profiling
 enable_debug
+enable_gpfdist
 enable_rpath
 enable_shared
 default_port
@@ -810,6 +821,7 @@ enable_shared
 enable_rpath
 enable_spinlocks
 enable_atomics
+enable_gpfdist
 enable_debug
 enable_profiling
 enable_coverage
@@ -821,10 +833,13 @@ enable_debugbreak
 enable_debugntuplestore
 enable_testutils
 enable_orca
+enable_codegen
+with_codegen_prefix
 enable_snmp
 enable_connectemc
 enable_ddboost
 enable_netbackup
+enable_mapreduce
 enable_thread_safety
 enable_thread_safety_force
 with_tcl
@@ -845,6 +860,7 @@ with_system_tzdata
 with_zlib
 with_rt
 with_libcurl
+with_apr_config
 with_gnu_ld
 enable_largefile
 '
@@ -1474,25 +1490,28 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-disable 64-bit integer date/time support
+  --disable-integer-datetimes disable 64-bit integer date/time support
   --disable-shared        do not build shared libraries
   --disable-rpath         do not embed shared library search path in executables
   --disable-spinlocks     do not use spinlocks
   --disable-atomics       do not use atomic operations
+  --disable-gpfdist       do not use gpfdist
   --enable-debug          build with debugging symbols (-g)
   --enable-profiling      build with profiling enabled
-build with coverage testing instrumentation
+  --enable-coverage       build with coverage testing instrumentation
   --enable-dtrace         build with DTrace support
   --enable-depend         turn on automatic dependency tracking
   --enable-cassert        enable assertion checks (for debugging)
-  --enable-debugbreak        enable debug_break and debug_break_n (for debugging)
-  --enable-ntuplestore      enable debug_ntuplestore (for debugging)
-  --enable-testutils        enable testing utilities
-  --enable-orca        enable ORCA optimizer
-  --enable-snmp        enable snmp for MIB and alerts via TRAP/INFORM
+  --enable-debugbreak     enable debug_break and debug_break_n (for debugging)
+  --enable-ntuplestore    enable debug_ntuplestore (for debugging)
+  --enable-testutils      enable testing utilities
+  --enable-orca           enable ORCA optimizer
+  --enable-codegen        enable code generation
+  --enable-snmp           enable snmp for MIB and alerts via TRAP/INFORM
   --enable-connectemc     enable connect emc support
-  --enable-ddboost     enable connect emc support
-  --enable-netbackup     enable NetBackup support
+  --enable-ddboost        enable DD Boost support
+  --enable-netbackup      enable NetBackup support
+  --enable-mapreduce      enable Greenplum Mapreduce support
   --disable-thread-safety  Do not make client libraries thread-safe
   --enable-thread-safety-force  force thread-safety despite thread test failure
   --disable-largefile     omit support for large files
@@ -1507,6 +1526,7 @@ Optional Packages:
   --with-libraries=DIRS   look for additional libraries in DIRS
   --with-libs=DIRS        alternative spelling of --with-libraries
   --with-pgport=PORTNUM   change default port number [5432]
+  --with-codegen-prefix="PATH;PATH"  semicolon separated prefix search path for LLVM and Clang
   --with-tcl              build Tcl modules (PL/Tcl)
   --with-tclconfig=DIR    tclConfig.sh is in DIR
   --with-perl             build Perl modules (PL/Perl)
@@ -1525,6 +1545,7 @@ Optional Packages:
   --without-zlib          do not use Zlib
   --without-rt            do not use Realtime Library
   --without-libcurl       do not use libcurl
+  --with-apr-config=PATH  path to apr-1-config utility
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
 
 Some influential environment variables:
@@ -3211,6 +3232,35 @@ else
   enable_atomics=yes
 
 fi
+
+
+
+#
+# gpfdist
+#
+
+pgac_args="$pgac_args enable_gpfdist"
+
+# Check whether --enable-gpfdist was given.
+if test "${enable_gpfdist+set}" = set; then :
+  enableval=$enable_gpfdist;
+  case $enableval in
+    yes)
+      :
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --enable-gpfdist option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  enable_gpfdist=yes
+
+fi
+
 
 
 
@@ -5266,9 +5316,152 @@ else
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: enable_orca" >&5
-$as_echo "enable_orca" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with ORCA... $enable_orca" >&5
+$as_echo "checking whether to build with ORCA... $enable_orca" >&6; }
 
+
+#
+# Enable code generation
+#
+
+pgac_args="$pgac_args enable_codegen"
+
+# Check whether --enable-codegen was given.
+if test "${enable_codegen+set}" = set; then :
+  enableval=$enable_codegen;
+  case $enableval in
+    yes)
+
+$as_echo "#define USE_CODEGEN 1" >>confdefs.h
+
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --enable-codegen option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  enable_codegen=no
+
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with codegen... $enable_codegen" >&5
+$as_echo "checking whether to build with codegen... $enable_codegen" >&6; }
+
+
+
+pgac_args="$pgac_args with_codegen_prefix"
+
+
+# Check whether --with-codegen-prefix was given.
+if test "${with_codegen_prefix+set}" = set; then :
+  withval=$with_codegen_prefix;
+  case $withval in
+    yes)
+      as_fn_error $? "argument required for --with-codegen-prefix option" "$LINENO" 5
+      ;;
+    no)
+      as_fn_error $? "argument required for --with-codegen-prefix option" "$LINENO" 5
+      ;;
+    *)
+      if test "${enable_codegen}" = no; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --with-codegen-prefix used without --enable-codegen" >&5
+$as_echo "$as_me: WARNING: --with-codegen-prefix used without --enable-codegen" >&2;}
+fi
+      ;;
+  esac
+
+fi
+
+
+
+if test "$enable_codegen" = yes; then :
+   # then
+
+if test -z "$CMAKE"; then
+  for ac_prog in cmake
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_CMAKE+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $CMAKE in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_CMAKE="$CMAKE" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_CMAKE="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+CMAKE=$ac_cv_path_CMAKE
+if test -n "$CMAKE"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $CMAKE" >&5
+$as_echo "$CMAKE" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$CMAKE" && break
+done
+
+fi
+
+if test -n "$CMAKE"; then
+  gpac_cmake_version=`$CMAKE --version 2>/dev/null | sed q`
+  if test -z "$gpac_cmake_version"; then
+    as_fn_error $? "cmake is required for codegen, unable to identify version" "$LINENO" 5
+  fi
+  { $as_echo "$as_me:${as_lineno-$LINENO}: using $gpac_cmake_version" >&5
+$as_echo "$as_me: using $gpac_cmake_version" >&6;}
+else
+  as_fn_error $? "cmake is required for codegen, unable to find binary" "$LINENO" 5
+fi
+
+
+   cd src/backend/codegen
+   if test "${prefix}" = NONE; then :
+  prefix=${ac_default_prefix}
+fi
+   if test "${enable_debug}" = yes; then :
+  build_type="Debug"
+else
+  build_type="Release"
+fi
+
+   CMAKE_CMD="${CMAKE} -DCMAKE_PREFIX_PATH="${with_codegen_prefix}" -DCMAKE_INSTALL_PREFIX=${prefix} -DCMAKE_BUILD_TYPE=${build_type} ."
+   echo "Executing cmake command : ${CMAKE_CMD}"
+   if ${CMAKE_CMD}; then :
+
+else
+  as_fn_error $? "'error while configuring codegen.'" "$LINENO" 5
+fi
+   cd -
+
+fi # fi
 
 #
 # --enable-snmp enables snmp mib and trap/inform
@@ -5365,8 +5558,8 @@ else
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $enable_ddboost" >&5
-$as_echo "$enable_ddboost" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with DD Boost support... $enable_ddboost" >&5
+$as_echo "checking whether to build with DD Boost support... $enable_ddboost" >&6; }
 
 
 #
@@ -5398,8 +5591,41 @@ else
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $enable_netbackup" >&5
-$as_echo "$enable_netbackup" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with NetBackup support... $enable_netbackup" >&5
+$as_echo "checking whether to build with NetBackup support... $enable_netbackup" >&6; }
+
+
+#
+# --enable-mapreduce enables GPMapreduce support
+#
+
+pgac_args="$pgac_args enable_mapreduce"
+
+# Check whether --enable-mapreduce was given.
+if test "${enable_mapreduce+set}" = set; then :
+  enableval=$enable_mapreduce;
+  case $enableval in
+    yes)
+
+$as_echo "#define USE_MAPREDUCE 1" >>confdefs.h
+
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --enable-mapreduce option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  enable_mapreduce=no
+
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with Greenplum Mapreduce... $enable_mapreduce" >&5
+$as_echo "checking whether to build with Greenplum Mapreduce... $enable_mapreduce" >&6; }
 
 
 #
@@ -6169,6 +6395,33 @@ if test "${with_libcurl+set}" = set; then :
 
 else
   with_libcurl=yes
+
+fi
+
+
+
+
+#
+# libapr. Used for gpfdist.
+#
+
+pgac_args="$pgac_args with_apr_config"
+
+
+# Check whether --with-apr-config was given.
+if test "${with_apr_config+set}" = set; then :
+  withval=$with_apr_config;
+  case $withval in
+    yes)
+      as_fn_error $? "argument required for --with-apr-config option" "$LINENO" 5
+      ;;
+    no)
+      as_fn_error $? "argument required for --with-apr-config option" "$LINENO" 5
+      ;;
+    *)
+
+      ;;
+  esac
 
 fi
 
@@ -7308,7 +7561,7 @@ else
         echo '%%'  > conftest.l
         if $pgac_candidate -t conftest.l 2>/dev/null | grep FLEX_SCANNER >/dev/null 2>&1; then
           pgac_flex_version=`$pgac_candidate --version 2>/dev/null`
-          if echo "$pgac_flex_version" | sed 's/[^0-9]/ /g' | $AWK '{ if ($1 = 2 && $2 = 5 && $3 >= 4) exit 0; else exit 1;}'
+          if echo "$pgac_flex_version" | sed 's/[^0-9]/ /g' | $AWK '{ if ($1 == 2 && ($2 > 5 || ($2 == 5 && $3 >= 4))) exit 0; else exit 1;}'
           then
             pgac_cv_path_flex=$pgac_candidate
             break 2
@@ -7406,7 +7659,7 @@ if test "$PERL"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: using perl $pgac_perl_version" >&5
 $as_echo "$as_me: using perl $pgac_perl_version" >&6;}
   if echo "$pgac_perl_version" | sed 's/[.a-z_]/ /g' | \
-    $AWK '{ if ($1 = 5 && $2 >= 6) exit 1; else exit 0;}'
+    $AWK '{ if ($1 == 5 && $2 >= 6) exit 1; else exit 0;}'
   then
     { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING:
 *** The installed version of Perl, $PERL, is too old to use with PostgreSQL.
@@ -8679,6 +8932,264 @@ fi
   fi
 fi
 
+if test "$enable_gpfdist" = yes ; then
+
+if test x"$with_apr_config" != x; then
+  APR_1_CONFIG=$with_apr_config
+fi
+if test -z "$APR_1_CONFIG"; then
+  for ac_prog in apr-1-config
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_APR_1_CONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $APR_1_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_APR_1_CONFIG="$APR_1_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_APR_1_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+APR_1_CONFIG=$ac_cv_path_APR_1_CONFIG
+if test -n "$APR_1_CONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $APR_1_CONFIG" >&5
+$as_echo "$APR_1_CONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$APR_1_CONFIG" && break
+done
+
+fi
+
+if test -n "$APR_1_CONFIG"; then
+  gpac_apr_1_config_version=`$APR_1_CONFIG --version 2>/dev/null | sed q`
+  if test -z "$gpac_apr_1_config_version"; then
+    as_fn_error $? "apr-1-config is required for gpfdist, unable to identify version" "$LINENO" 5
+  fi
+  { $as_echo "$as_me:${as_lineno-$LINENO}: using apr-1-config $gpac_apr_1_config_version" >&5
+$as_echo "$as_me: using apr-1-config $gpac_apr_1_config_version" >&6;}
+  apr_includes=`"$APR_1_CONFIG" --includes`
+  apr_link_ld_libs=`"$APR_1_CONFIG" --link-ld --libs`
+  apr_cflags=`"$APR_1_CONFIG" --cflags`
+  apr_cppflags=`"$APR_1_CONFIG" --cppflags`
+
+
+
+
+else
+  as_fn_error $? "apr-1-config is required for gpfdist, unable to find binary" "$LINENO" 5
+fi
+
+  # If the 'apr-1-config --link-ld' produced correct output, -lapr-1 is already
+  # in LIBS, hence AC_SEARCH_LIBS rather than AC_CHECK_LIB. (and the autoconf
+  # manual recommends always using AC_SEARCH_LIBS rather than AC_CHECK_LIB
+  # anyway)
+  _LIBS="$LIBS"
+  LIBS="$LIBS $apr_link_ld_libs"
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing apr_getopt_long" >&5
+$as_echo_n "checking for library containing apr_getopt_long... " >&6; }
+if ${ac_cv_search_apr_getopt_long+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char apr_getopt_long ();
+int
+main ()
+{
+return apr_getopt_long ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' apr-1; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_apr_getopt_long=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_apr_getopt_long+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_apr_getopt_long+:} false; then :
+
+else
+  ac_cv_search_apr_getopt_long=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_apr_getopt_long" >&5
+$as_echo "$ac_cv_search_apr_getopt_long" >&6; }
+ac_res=$ac_cv_search_apr_getopt_long
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+else
+  as_fn_error $? "libapr-1 is required for gpfdist" "$LINENO" 5
+fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing event_add" >&5
+$as_echo_n "checking for library containing event_add... " >&6; }
+if ${ac_cv_search_event_add+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char event_add ();
+int
+main ()
+{
+return event_add ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' event; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_event_add=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_event_add+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_event_add+:} false; then :
+
+else
+  ac_cv_search_event_add=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_event_add" >&5
+$as_echo "$ac_cv_search_event_add" >&6; }
+ac_res=$ac_cv_search_event_add
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+else
+  as_fn_error $? "libevent is required for gpfdist" "$LINENO" 5
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing yaml_parser_initialize" >&5
+$as_echo_n "checking for library containing yaml_parser_initialize... " >&6; }
+if ${ac_cv_search_yaml_parser_initialize+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char yaml_parser_initialize ();
+int
+main ()
+{
+return yaml_parser_initialize ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' yaml; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_yaml_parser_initialize=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_yaml_parser_initialize+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_yaml_parser_initialize+:} false; then :
+
+else
+  ac_cv_search_yaml_parser_initialize=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_yaml_parser_initialize" >&5
+$as_echo "$ac_cv_search_yaml_parser_initialize" >&6; }
+ac_res=$ac_cv_search_yaml_parser_initialize
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  have_yaml=yes
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libyaml is not found. disabling transformations for gpfdist." >&5
+$as_echo "$as_me: WARNING: libyaml is not found. disabling transformations for gpfdist." >&2;}
+fi
+
+  LIBS="$_LIBS"
+
+fi
+
 if test "$with_openssl" = yes ; then
     if test "$PORTNAME" != "win32"; then
      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for CRYPTO_new_ex_data in -lcrypto" >&5
@@ -9245,6 +9756,100 @@ fi
 
 fi
 
+# Check for EMC Connect
+if test "$enable_connectemc" = yes ; then
+  _LIBS="$LIBS"
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lemcconnect" >&5
+$as_echo_n "checking for main in -lemcconnect... " >&6; }
+if ${ac_cv_lib_emcconnect_main+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lemcconnect  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_emcconnect_main=yes
+else
+  ac_cv_lib_emcconnect_main=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_emcconnect_main" >&5
+$as_echo "$ac_cv_lib_emcconnect_main" >&6; }
+if test "x$ac_cv_lib_emcconnect_main" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBEMCCONNECT 1
+_ACEOF
+
+  LIBS="-lemcconnect $LIBS"
+
+else
+  as_fn_error $? "library 'emcconnect' is required for Connect EMC support" "$LINENO" 5
+fi
+
+  LIBS="$_LIBS"
+fi
+
+# Check for DD Boost
+if test "$enable_ddboost" = yes ; then
+  _LIBS="$LIBS"
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lDDBoost" >&5
+$as_echo_n "checking for main in -lDDBoost... " >&6; }
+if ${ac_cv_lib_DDBoost_main+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lDDBoost  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_DDBoost_main=yes
+else
+  ac_cv_lib_DDBoost_main=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_DDBoost_main" >&5
+$as_echo "$ac_cv_lib_DDBoost_main" >&6; }
+if test "x$ac_cv_lib_DDBoost_main" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBDDBOOST 1
+_ACEOF
+
+  LIBS="-lDDBoost $LIBS"
+
+else
+  as_fn_error $? "library 'DDBoost' is required for DD Boost support" "$LINENO" 5
+fi
+
+  LIBS="$_LIBS"
+fi
+
 ##
 ## Header files
 ##
@@ -9647,6 +10252,71 @@ done
 
 fi
 
+if test "$enable_gpfdist" = yes; then
+  if test "$PORTNAME" = "win32"; then
+    for ac_header in winsock2.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "winsock2.h" "ac_cv_header_winsock2_h" "$ac_includes_default"
+if test "x$ac_cv_header_winsock2_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_WINSOCK2_H 1
+_ACEOF
+
+fi
+
+done
+
+  fi
+
+  for ac_header in yaml.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "yaml.h" "ac_cv_header_yaml_h" "$ac_includes_default"
+if test "x$ac_cv_header_yaml_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_YAML_H 1
+_ACEOF
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: header file <yaml.h> is not found. disabling transformations for gpfdist." >&5
+$as_echo "$as_me: WARNING: header file <yaml.h> is not found. disabling transformations for gpfdist." >&2;}
+fi
+
+done
+
+  for ac_header in event.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "event.h" "ac_cv_header_event_h" "$ac_includes_default"
+if test "x$ac_cv_header_event_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_EVENT_H 1
+_ACEOF
+
+else
+  as_fn_error $? "header file <event.h> is required for gpfdist" "$LINENO" 5
+fi
+
+done
+
+
+  ac_save_CPPFLAGS=$CPPFLAGS
+  CPPFLAGS="$apr_includes $CPPFLAGS"
+  for ac_header in apr_getopt.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "apr_getopt.h" "ac_cv_header_apr_getopt_h" "$ac_includes_default"
+if test "x$ac_cv_header_apr_getopt_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_APR_GETOPT_H 1
+_ACEOF
+
+else
+  as_fn_error $? "'header file <apr_getopt.h> is required for gpfdist'" "$LINENO" 5
+fi
+
+done
+
+  CPPFLAGS=$ac_save_CPPFLAGS
+fi
+
 if test "$with_zlib" = yes; then
   ac_fn_c_check_header_mongrel "$LINENO" "zlib.h" "ac_cv_header_zlib_h" "$ac_includes_default"
 if test "x$ac_cv_header_zlib_h" = xyes; then :
@@ -9821,6 +10491,17 @@ fi
 
 fi
 
+if test "$enable_ddboost" = yes ; then
+  ac_fn_c_check_header_mongrel "$LINENO" "ddp_api.h" "ac_cv_header_ddp_api_h" "$ac_includes_default"
+if test "x$ac_cv_header_ddp_api_h" = xyes; then :
+
+else
+  as_fn_error $? "header file <ddp_api.h> is required for DD Boost" "$LINENO" 5
+fi
+
+
+fi
+
 # For processor affinity support in Linux on NUMA platforms such as
 # AMD x86_64, the 'numactl' or 'libnuma' package is required.  See
 #  http://lwn.net/Articles/67005/
@@ -9924,6 +10605,22 @@ done
 
 fi
 
+if test "$enable_mapreduce" = yes; then
+  for ac_header in yaml.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "yaml.h" "ac_cv_header_yaml_h" "$ac_includes_default"
+if test "x$ac_cv_header_yaml_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_YAML_H 1
+_ACEOF
+
+else
+  as_fn_error $? "YAML includes required for Greenplum Mapreduce" "$LINENO" 5
+fi
+
+done
+
+fi
 
 
 ##
@@ -12759,7 +13456,7 @@ if ${ac_cv_lib_ldap_r_ldap_simple_bind+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lldap_r $PTHREAD_LIBS $EXTRA_LDAP_LIBS $LIBS"
+LIBS="-lldap_r $PTHREAD_CFLAGS $PTHREAD_LIBS $EXTRA_LDAP_LIBS $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -14057,11 +14754,11 @@ rm -rf conftest*
 
 fi
 
-
+enable_largefile=yes
 else
 enable_largefile=no
-
 fi
+
 
 # Check for largefile support (must be after AC_SYS_LARGEFILE)
 # The cast to long int works around a bug in the HP C Compiler
@@ -15000,6 +15697,8 @@ $as_echo "$as_me: using CFLAGS=$CFLAGS" >&6;}
 $as_echo "$as_me: using CPPFLAGS=$CPPFLAGS" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: using LDFLAGS=$LDFLAGS" >&5
 $as_echo "$as_me: using LDFLAGS=$LDFLAGS" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}: using LIBS=$LIBS" >&5
+$as_echo "$as_me: using LIBS=$LIBS" >&6;}
 
 
 # prepare build tree if outside source tree
@@ -16393,15 +17092,3 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
-
-# Warn about unknown options
-for pgac_var in `set | sed 's/=.*//' | $EGREP 'with_|enable_'`; do
-  for pgac_arg in $pgac_args with_gnu_ld; do
-    if test "$pgac_var" = "$pgac_arg"; then
-      continue 2
-    fi
-  done
-  pgac_txt=`echo $pgac_var | sed 's/_/-/g'`
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: option ignored: --$pgac_txt" >&5
-$as_echo "$as_me: WARNING: option ignored: --$pgac_txt" >&2;}
-done

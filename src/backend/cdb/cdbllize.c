@@ -35,7 +35,6 @@
 #include "cdb/cdbplan.h"
 #include "cdb/cdbpullup.h"
 #include "cdb/cdbllize.h"
-#include "cdb/cdbcat.h"
 #include "cdb/cdbmutate.h"
 #include "optimizer/tlist.h"
 
@@ -291,7 +290,7 @@ cdbparallelize(PlannerInfo *root,
  * The plan and query arguments should not be null.
  * ----------------------------------------------------------------------- *
  */
-void
+static void
 prescan(Plan *plan, PlanProfile * context)
 {
 	if ( prescan_walker((Node *) plan, context) )
@@ -335,7 +334,8 @@ static Node *ParallelizeCorrelatedSubPlanUpdateFlowMutator(Node *node);
 /**
  * Does an expression contain a parameter?
  */
-static bool ContainsParamWalker(Node *expr, void *ctx)
+static bool
+ContainsParamWalker(Node *expr, void *ctx)
 {
 	Assert(ctx == NULL);
 
@@ -355,7 +355,8 @@ static bool ContainsParamWalker(Node *expr, void *ctx)
  * Replaces all vars in an expression with OUTER vars referring to the
  * targetlist contained in the context (ctx->outerTL).
  */
-static Node* MapVarsMutator(Node *expr, MapVarsMutatorContext *ctx)
+static Node *
+MapVarsMutator(Node *expr, MapVarsMutatorContext *ctx)
 {
 	Assert(ctx);
 
@@ -382,7 +383,8 @@ static Node* MapVarsMutator(Node *expr, MapVarsMutatorContext *ctx)
 /**
  * Add a materialize node to prevent rescan of subplan.
  */
-Plan *materialize_subplan(PlannerInfo *root, Plan *subplan)
+static Plan *
+materialize_subplan(PlannerInfo *root, Plan *subplan)
 {
 	Plan *mat = materialize_finished_plan(root, subplan);
 	((Material *)mat)->cdb_strict = true;
@@ -400,7 +402,8 @@ Plan *materialize_subplan(PlannerInfo *root, Plan *subplan)
  * Not listing every node type here, if further bug found due to not updating flow
  * after cdbparallelize, just simply add that node type here.
  * */
-static Node *ParallelizeCorrelatedSubPlanUpdateFlowMutator(Node *node)
+static Node *
+ParallelizeCorrelatedSubPlanUpdateFlowMutator(Node *node)
 {
 	Assert(is_plan_node(node));
 	switch (nodeTag(node))
@@ -448,8 +451,15 @@ static Node *ParallelizeCorrelatedSubPlanUpdateFlowMutator(Node *node)
  * 				 	 	 \_SeqScan (no quals)
  * 	This transformed plan can be executed in a parallel setting since the correlation
  * 	is now part of the result node which executes in the same slice as the outer plan node.
+ *
+ * XXX: This relies on the planner to not generate other kinds of scans, like
+ * IndexScans. We don't have the machinery in place to rescan those with different
+ * parameters. We could support e.g. IndexScans as long as the index qual doesn't
+ * refer to the outer parameter, but the planner isn't currently smart enough to
+ * distinguish that, so we just disable index scans altogether in a subplan.
  */
-static Node* ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerContext *ctx)
+static Node *
+ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerContext *ctx)
 {
 	if (node == NULL)
 		return NULL;
@@ -476,7 +486,8 @@ static Node* ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelat
 	if (IsA(node, SeqScan)
 		|| IsA(node, AppendOnlyScan)
 		|| IsA(node, AOCSScan)
-		|| IsA(node, ShareInputScan))
+		|| IsA(node, ShareInputScan)
+		|| IsA(node, ExternalScan))
 	{
 		Plan *scanPlan = (Plan *) node;
 		/**
@@ -665,7 +676,8 @@ static Node* ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelat
 /**
  * Parallelizes a correlated subplan. See ParallelizeCorrelatedSubPlanMutator for details.
  */
-Plan* ParallelizeCorrelatedSubPlan(PlannerInfo *root, SubPlan *spExpr, Plan *plan, Movement m, bool subPlanDistributed)
+Plan *
+ParallelizeCorrelatedSubPlan(PlannerInfo *root, SubPlan *spExpr, Plan *plan, Movement m, bool subPlanDistributed)
 {
 	ParallelizeCorrelatedPlanWalkerContext ctx;
 	ctx.base.node = (Node *) root;
@@ -687,7 +699,8 @@ Plan* ParallelizeCorrelatedSubPlan(PlannerInfo *root, SubPlan *spExpr, Plan *pla
  * - If the subplan is correlated, then it transforms the correlated into a form that is
  * executable
  */
-void ParallelizeSubplan(SubPlan *spExpr, PlanProfile *context)
+void
+ParallelizeSubplan(SubPlan *spExpr, PlanProfile *context)
 {
 	Assert(!spExpr->is_parallelized);
 
@@ -788,7 +801,7 @@ void ParallelizeSubplan(SubPlan *spExpr, PlanProfile *context)
  *    As in the case of the main plan, the actual Motion node is
  *    attached later.
  */
-bool
+static bool
 prescan_walker(Node *node, PlanProfile * context)
 {
 	if (node == NULL)
@@ -955,6 +968,17 @@ pull_up_Flow(Plan *plan, Plan *subplan, bool withSort)
                                                      model_flow->numSortCols,
                                                      model_flow->sortColIdx,
                                                      &new_flow->sortColIdx);
+
+			/* preserve subplan sort attributes*/
+			if (new_flow->numSortCols < model_flow->numOrderbyCols)
+			{
+				new_flow->numOrderbyCols = new_flow->numSortCols;
+			}
+			else
+			{
+				new_flow->numOrderbyCols = model_flow->numOrderbyCols;
+			}
+
 		    if (new_flow->numSortCols > 0)
 			{
                 ARRAYCOPY(new_flow->sortOperators,
@@ -978,6 +1002,9 @@ pull_up_Flow(Plan *plan, Plan *subplan, bool withSort)
             ARRAYCOPY(new_flow->nullsFirst,
                       model_flow->nullsFirst,
                       new_flow->numSortCols);
+
+			/* preserve subplan sort attributes*/
+            new_flow->numOrderbyCols = model_flow->numOrderbyCols;
 	    }
 	}   /* withSort */
 
@@ -1056,30 +1083,26 @@ broadcastPlan(Plan *plan, bool stable, bool rescannable)
  * This method is used to determine if motion nodes may be avoided for certain insert-select
  * statements. To do this it determines if the loci are compatible (ignoring relabeling).
  */
-
-static bool loci_compatible(List *hashExpr1, List *hashExpr2) 
+static bool
+loci_compatible(List *hashExpr1, List *hashExpr2)
 {
-	ListCell *cell1 = NULL;
-	ListCell *cell2 = NULL;
-	if (list_length(hashExpr1) != list_length(hashExpr2))
-	{
-		return false;
-	}
+	ListCell *cell1;
+	ListCell *cell2;
 
-	forboth (cell1, hashExpr1, cell2, hashExpr2) {
-		Expr *var1;
-		Expr *var2;
-		var1 = (Expr *) lfirst(cell1);
-		var2 = (Expr *) lfirst(cell2);
+	if (list_length(hashExpr1) != list_length(hashExpr2))
+		return false;
+
+	forboth (cell1, hashExpr1, cell2, hashExpr2)
+	{
+		Expr *var1 = (Expr *) lfirst(cell1);
+		Expr *var2 = (Expr *) lfirst(cell2);
 
 		/* right side variable may be encapsulated by a relabel node. motion, however, does not care about relabel nodes. */
 		if (IsA(var2, RelabelType))
 			var2 = ((RelabelType *)var2)->arg;
 		
 		if (!equal(var1, var2))
-		{
 			return false;
-		}
 	}
 	return true;
 }
@@ -1123,7 +1146,7 @@ repartitionPlan(Plan *plan, bool stable, bool rescannable, List *hashExpr)
  * Returns true if successful.  Returns false and doesn't change anything
  * if the request cannot be honored.
  */
-bool
+static bool
 adjustPlanFlow(Plan        *plan,
                bool         stable,
                bool         rescannable,

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_conversion.c,v 1.34 2007/01/05 22:19:25 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_conversion.c,v 1.38 2007/09/24 01:29:28 adunstan Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -159,16 +159,10 @@ ConversionDrop(Oid conversionOid, DropBehavior behavior)
 {
 	HeapTuple	tuple;
 	ObjectAddress object;
-	cqContext  *pcqCtx;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_conversion "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(conversionOid)));
-
-	tuple = caql_getnext(pcqCtx);
-
+	tuple = SearchSysCache(CONVOID,
+						   ObjectIdGetDatum(conversionOid),
+						   0, 0, 0);
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for conversion %u", conversionOid);
 
@@ -177,7 +171,7 @@ ConversionDrop(Oid conversionOid, DropBehavior behavior)
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CONVERSION,
 				  NameStr(((Form_pg_conversion) GETSTRUCT(tuple))->conname));
 
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(tuple);
 
 	/*
 	 * Do the deletion
@@ -298,79 +292,3 @@ FindConversion(const char *conname, Oid connamespace)
 	return conoid;
 }
 
-/*
- * Execute SQL99's CONVERT function.
- *
- * CONVERT <left paren> <character value expression>
- * USING <form-of-use conversion name> <right paren>
- *
- * TEXT convert_using(TEXT string, TEXT conversion_name)
- */
-Datum
-pg_convert_using(PG_FUNCTION_ARGS)
-{
-	text	   *string = PG_GETARG_TEXT_P(0);
-	text	   *conv_name = PG_GETARG_TEXT_P(1);
-	text	   *retval;
-	List	   *parsed_name;
-	Oid			convoid;
-	HeapTuple	tuple;
-	Form_pg_conversion body;
-	char	   *str;
-	char	   *result;
-	int			len;
-	cqContext  *pcqCtx;
-
-	/* Convert input string to null-terminated form */
-	len = VARSIZE(string) - VARHDRSZ;
-	str = palloc(len + 1);
-	memcpy(str, VARDATA(string), len);
-	*(str + len) = '\0';
-
-	/* Look up the conversion name */
-	parsed_name = textToQualifiedNameList(conv_name);
-	convoid = FindConversionByName(parsed_name);
-	if (!OidIsValid(convoid))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("conversion \"%s\" does not exist",
-						NameListToString(parsed_name))));
-
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_conversion "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(convoid)));
-
-	tuple = caql_getnext(pcqCtx);
-
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "cache lookup failed for conversion %u", convoid);
-	body = (Form_pg_conversion) GETSTRUCT(tuple);
-
-	/* Temporary result area should be more than big enough */
-	result = palloc(len * 4 + 1);
-
-	OidFunctionCall5(body->conproc,
-					 Int32GetDatum(body->conforencoding),
-					 Int32GetDatum(body->contoencoding),
-					 CStringGetDatum(str),
-					 CStringGetDatum(result),
-					 Int32GetDatum(len));
-
-	caql_endscan(pcqCtx);
-
-	/*
-	 * build text result structure. we cannot use textin() here, since textin
-	 * assumes that input string encoding is same as database encoding.
-	 */
-	len = strlen(result) + VARHDRSZ;
-	retval = palloc(len);
-	SET_VARSIZE(retval, len);
-	memcpy(VARDATA(retval), result, len - VARHDRSZ);
-
-	pfree(result);
-	pfree(str);
-
-	PG_RETURN_TEXT_P(retval);
-}

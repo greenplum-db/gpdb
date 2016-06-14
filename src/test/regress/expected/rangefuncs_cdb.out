@@ -100,9 +100,9 @@ select * from foo2, foost(3) z where foo2.f2 = z.f2;
 
 -- supposed to fail with ERROR - requires LATERAL
 select * from foo2, foost(foo2.fooid) z where foo2.f2 = z.f2;
-ERROR:  function expression in FROM may not refer to other relations of same query level
+ERROR:  function expression in FROM cannot refer to other relations of same query level
 LINE 1: select * from foo2, foost(foo2.fooid) z where foo2.f2 = z.f2...
-                            ^
+                                  ^
 -- function in subselect, without correlation
 select * from foo2 
 where f2 in (select f2 from foost(1) z where z.fooid = foo2.fooid) 
@@ -169,8 +169,6 @@ CONTEXT:  PL/Perl function "foor"
 --    Fails: record type not registered
 select (foor(1)).*;
 ERROR:  record type has not been registered
-LINE 1: select (foor(1)).*;
-                ^
 -- function in from clause 
 --    Fails: column definition list needed for "record"
 select * from foor(1);
@@ -201,9 +199,9 @@ select * from foo2, foor(3) z(fooid int, f2 int) where foo2.f2 = z.f2;
 -- supposed to fail with ERROR - requires LATERAL
 select * from foo2, foor(foo2.fooid) z(fooid int, f2 int) 
 where foo2.f2 = z.f2;
-ERROR:  function expression in FROM may not refer to other relations of same query level
+ERROR:  function expression in FROM cannot refer to other relations of same query level
 LINE 1: select * from foo2, foor(foo2.fooid) z(fooid int, f2 int) 
-                            ^
+                                 ^
 -- function in subselect, without correlation
 select * from foo2 
 where f2 in (select f2 from foor(1) z(fooid int, f2 int) 
@@ -310,9 +308,9 @@ select * from foo2, fooro(3) z where foo2.f2 = z.f2;
 
 -- supposed to fail with ERROR - requires LATERAL
 select * from foo2, fooro(foo2.fooid) z where foo2.f2 = z.f2;
-ERROR:  function expression in FROM may not refer to other relations of same query level
+ERROR:  function expression in FROM cannot refer to other relations of same query level
 LINE 1: select * from foo2, fooro(foo2.fooid) z where foo2.f2 = z.f2...
-                            ^
+                                  ^
 -- function in subselect, without correlation
 select * from foo2 
 where f2 in (select f2 from fooro(1) z where z.fooid = foo2.fooid) 
@@ -415,9 +413,9 @@ select * from foo2, foot(3) z where foo2.f2 = z.f2;
 
 -- supposed to fail with ERROR - requires LATERAL
 select * from foo2, foot(foo2.fooid) z where foo2.f2 = z.f2;
-ERROR:  function expression in FROM may not refer to other relations of same query level
+ERROR:  function expression in FROM cannot refer to other relations of same query level
 LINE 1: select * from foo2, foot(foo2.fooid) z where foo2.f2 = z.f2;
-                            ^
+                                 ^
 -- function in subselect, without correlation
 select * from foo2 
 where f2 in (select f2 from foot(1) z where z.fooid = foo2.fooid) 
@@ -798,8 +796,6 @@ SELECT dup(22);
 
 SELECT dup('xyz');	-- fails
 ERROR:  could not determine anyarray/anyelement type because input has type "unknown"
-LINE 1: SELECT dup('xyz');
-               ^
 SELECT dup('xyz'::text);
         dup        
 -------------------

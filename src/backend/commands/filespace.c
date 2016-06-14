@@ -31,7 +31,7 @@
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbmirroredfilesysobj.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbutil.h"
@@ -185,7 +185,7 @@ CreateFileSpace(CreateFileSpaceStmt *stmt)
 		 *   - segHash[dbid]      => {FileSpaceEntry}
 		 *
 		 * Note: the segHash is hashed on a 32 bit version of dbid.  This is due
-		 * to the existence of a int32_hash function, to accomadate this we must
+		 * to the existence of a int32_hash function, to accomodate this we must
 		 * be sure to upcast the 16 bit dbid to 32 bit versions before lookup in
 		 * the hash.
 		 */
@@ -247,9 +247,10 @@ CreateFileSpace(CreateFileSpaceStmt *stmt)
 								dbid)));
 
 			Assert(segElem->fse);  /* should have been populated in pass 1 */
-			segElem->fse->hostname  = hostname;
+			segElem->fse->hostname  = pstrdup(hostname);
 			segElem->fse->contentid = contentid;
 		}
+
 		for (i = 0; i < segments->total_segment_dbs; i++)
 		{
 			int32		dbid	  = segments->segment_db_info[i].dbid;
@@ -267,7 +268,7 @@ CreateFileSpace(CreateFileSpaceStmt *stmt)
 								dbid)));
 
 			Assert(segElem->fse);  /* should have been populated in pass 1 */
-			segElem->fse->hostname  = hostname;
+			segElem->fse->hostname  = pstrdup(hostname);
 			segElem->fse->contentid = contentid;
 		}
 
@@ -294,6 +295,9 @@ CreateFileSpace(CreateFileSpaceStmt *stmt)
 
 		/* Done with the hash, cleanup */
 		hash_destroy(segHash);
+
+		/* Cleanup component info */
+		freeCdbComponentDatabases(segments);
 	}
 
 	/* 
@@ -410,11 +414,11 @@ CreateFileSpace(CreateFileSpaceStmt *stmt)
 	values[Anum_pg_filespace_fsowner - 1] = ObjectIdGetDatum(ownerId);
 	tuple = caql_form_tuple(pcqCtx, values, nulls);
 
-	/* Keep oids synchonized between master and segments */
+	/* Keep oids synchronized between master and segments */
 	if (OidIsValid(stmt->fsoid))
 		HeapTupleSetOid(tuple, stmt->fsoid);
 
-	/* insert a new tuple */
+	/* Insert a new tuple */
 	fsoid = caql_insert(pcqCtx, tuple); /* implicit update of index as well */
 	Assert(OidIsValid(fsoid));
 
@@ -522,7 +526,7 @@ RemoveFileSpace(List *names, DropBehavior behavior, bool missing_ok)
 
 	/* 
 	 * Because rollback of filespace operations are difficult and expected
-	 * usage is anticipated to be light we remove concurency worries by
+	 * usage is anticipated to be light we remove concurrency worries by
 	 * taking a big lock up front.
 	 */
 	rel = heap_open(FileSpaceRelationId, AccessExclusiveLock);
@@ -619,7 +623,7 @@ RemoveFileSpace(List *names, DropBehavior behavior, bool missing_ok)
 	/* 
 	 * The persistent object layer is responsible for actually managing the
 	 * actual directory on disk.  Tell it that this filespace is removed by
-	 * this transaciton.  This marks the filespace as pending delete and it
+	 * this transaction.  This marks the filespace as pending delete and it
 	 * will be deleted iff the transaction commits.
 	 */
 	MirroredFileSysObj_ScheduleDropFilespaceDir(fsoid);
@@ -961,7 +965,7 @@ checkPathFormat(char *path)
  *    - Validate that the specified path does not exist
  *    - Validate that the parent directory exists
  *    - Validate that the parent is a directory.
- *    - Validate that the parent has apropriate permissions
+ *    - Validate that the parent has appropriate permissions
  *
  * Note: Passing these checks does not guarantee that everything is good.
  * In particular we have not checked anywhere that the paths are all 
@@ -1011,10 +1015,10 @@ checkPathPermissions(char *path)
 	/* 
 	 * Check write permissions of the parent directory 
 	 *
-	 * Note: Accornding to the BSD manual access shouldn't be used because it
-	 * is a security hole, but what they are actually refering to is the fact
+	 * Note: According to the BSD manual access shouldn't be used because it
+	 * is a security hole, but what they are actually referring to is the fact
 	 * that the permissions could change between the time of the check and the
-	 * time an action is taken.  This is primarily a courtousy check to produce
+	 * time an action is taken.  This is primarily a courtesy check to produce
 	 * a cleaner error message.  If the filesystem should change between now
 	 * and the actual mkdir() then the transaction will abort later with an
 	 * uglier error message, but it is not actually a security hole.

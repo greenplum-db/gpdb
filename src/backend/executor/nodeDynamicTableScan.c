@@ -106,10 +106,7 @@ initNextTableToScan(DynamicTableScanState *node)
 		 * to return correct partition oid, we need to update
 		 * our tuple table slot's oid to reflect the partition oid.
 		 */
-		for (int i = 0; i < DYNAMIC_TABLE_SCAN_NSLOTS; i++)
-		{
-			scanState->ss_ScanTupleSlot[i].tts_tableOid = *pid;
-		}
+		scanState->ss_ScanTupleSlot->tts_tableOid = *pid;
 
 		scanState->ss_currentRelation = OpenScanRelationByOid(*pid);
 		Relation lastScannedRel = OpenScanRelationByOid(node->lastRelOid);

@@ -3,12 +3,9 @@
 # Copyright (c) Greenplum Inc 2012. All Rights Reserved. 
 #
 
-import os
-import shutil
-import sys
 import unittest2 as unittest
-from gppylib.commands.base import Command, CommandResult, WorkerPool
-from mock import patch, MagicMock, Mock
+from gppylib.commands.base import Command, WorkerPool
+from mock import patch
 
 class WorkerPoolTestCase(unittest.TestCase):
 
@@ -22,6 +19,7 @@ class WorkerPoolTestCase(unittest.TestCase):
         w.join()
         w.print_progress(2)
         self.assertTrue(mock1.called_with('100.00% of jobs completed'))
+        w.haltWork()
 
     @patch('gppylib.commands.base.gplog.get_default_logger')
     def test_print_progress_none(self, mock1):
@@ -29,3 +27,4 @@ class WorkerPoolTestCase(unittest.TestCase):
         w.print_progress(0)
         w.join()
         self.assertTrue(mock1.called_with('0.00% of jobs completed'))
+        w.haltWork()

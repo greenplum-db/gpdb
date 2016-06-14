@@ -1,5 +1,6 @@
 export GP_JAVA_OPT='-Xmx1000m -XX:+DisplayVMOutputToStderr'
 export PATH=$JAVA_HOME/bin:$PATH
+export KRB5CCNAME=$GP_SEG_DATADIR/gpdb-gphdfs.krb5cc
 JAVA=$JAVA_HOME/bin/java
 CLASSPATH="$GPHOME"/"$GP_HADOOP_CONN_JARDIR"/$GP_HADOOP_CONN_VERSION.jar
 export HADOOP_COMMON_HOME="${HADOOP_HOME}"
@@ -113,11 +114,9 @@ fi
 JAVA_LIBRARY_PATH=''
 if [ -d "${HADOOP_HOME}/build/native" -o -d "${HADOOP_HOME}/lib/native" ]; then
   JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} -Xmx32m ${HADOOP_JAVA_PLATFORM_OPTS} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
-  
   if [ -d "$HADOOP_HOME/build/native" ]; then
     JAVA_LIBRARY_PATH=${HADOOP_HOME}/build/native/${JAVA_PLATFORM}/lib
   fi
-  
   if [ -d "${HADOOP_HOME}/lib/native" ]; then
     if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
       JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_HOME}/lib/native/${JAVA_PLATFORM}

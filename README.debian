@@ -27,8 +27,8 @@ pip install lockfile
 pip install paramiko
 pip install setuptools
 pip install epydoc
-pip install psi
-Note: debian8 required pip install --pre psi
+pip install psutil
+Note: debian8 required pip install --pre psutil
 
 sysctl.conf 
 kernel.shmmax = 500000000

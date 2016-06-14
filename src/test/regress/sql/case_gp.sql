@@ -516,3 +516,47 @@ select CASE 1
        WHEN IS DISTINCT FROM 2 THEN '1<>2'
        WHEN IS NOT DISTINCT FROM 1 THEN '1=1'
 END;
+
+--
+-- Case expression in group by
+--
+SELECT
+	CASE t.field1
+    	WHEN IS NOT DISTINCT FROM ''::text THEN 'Undefined'::character varying
+        ELSE t.field1
+	END AS field1
+	FROM ( SELECT 'test value'::text AS field1) t
+  	GROUP BY
+	CASE t.field1
+		WHEN IS NOT DISTINCT FROM ''::text THEN 'Undefined'::character varying
+		ELSE t.field1
+	END;
+	
+--
+-- Variant of case expression in group by
+--
+SELECT
+	CASE t.field1
+    	WHEN IS NOT DISTINCT FROM ''::text THEN 'Undefined'::character varying
+        ELSE t.field1
+	END AS field1
+	FROM ( SELECT 'test value'::text AS field1) t
+  	GROUP BY 1;
+	
+--
+-- decode in group by
+--	
+SELECT
+	decode(t.field1, ''::text, 'Undefined'::character varying, t.field1) as field1
+	FROM ( SELECT 'test value'::text AS field1) t
+  	GROUP BY
+	decode(t.field1, ''::text, 'Undefined'::character varying, t.field1);
+	
+--
+-- variant of decode in group by
+--
+	SELECT
+	decode(t.field1, ''::text, 'Undefined'::character varying, t.field1) as field1
+	FROM ( SELECT 'test value'::text AS field1) t
+  	GROUP BY 1;
+

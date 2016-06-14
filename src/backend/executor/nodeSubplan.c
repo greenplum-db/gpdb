@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeSubplan.c,v 1.82 2007/01/05 22:19:28 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeSubplan.c,v 1.85 2007/02/06 02:59:11 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -29,6 +29,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbtm.h"
 #include "cdb/ml_ipc.h"
 #include "lib/stringinfo.h"
@@ -141,7 +142,10 @@ ExecHashSubPlan(SubPlanState *node,
 	if (slotNoNulls(slot))
 	{
 		if (node->havehashrows &&
-			LookupTupleHashEntry(node->hashtable, slot, NULL) != NULL)
+			FindTupleHashEntry(node->hashtable,
+							   slot,
+							   node->cur_eq_funcs,
+							   node->lhs_hash_funcs) != NULL)
 		{
 			ExecClearTuple(slot);
 			return BoolGetDatum(true);
@@ -463,8 +467,8 @@ buildSubPlanHash(SubPlanState *node, ExprContext *econtext)
 
 	node->hashtable = BuildTupleHashTable(ncols,
 										  node->keyColIdx,
-										  node->eqfunctions,
-										  node->hashfunctions,
+										  node->tab_eq_funcs,
+										  node->tab_hash_funcs,
 										  nbuckets,
 										  sizeof(TupleHashEntryData),
 										  node->hashtablecxt,
@@ -482,8 +486,8 @@ buildSubPlanHash(SubPlanState *node, ExprContext *econtext)
 		}
 		node->hashnulls = BuildTupleHashTable(ncols,
 											  node->keyColIdx,
-											  node->eqfunctions,
-											  node->hashfunctions,
+											  node->tab_eq_funcs,
+											  node->tab_hash_funcs,
 											  nbuckets,
 											  sizeof(TupleHashEntryData),
 											  node->hashtablecxt,
@@ -582,10 +586,10 @@ findPartialMatch(TupleHashTable hashtable, TupleTableSlot *slot)
 	InitTupleHashIterator(hashtable, &hashiter);
 	while ((entry = ScanTupleHashTable(&hashiter)) != NULL)
 	{
-		ExecStoreMemTuple(entry->firstTuple, hashtable->tableslot, false);
-		if (!execTuplesUnequal(hashtable->tableslot, slot,
+		ExecStoreMinimalTuple(entry->firstTuple, hashtable->tableslot, false);
+		if (!execTuplesUnequal(slot, hashtable->tableslot,
 							   numCols, keyColIdx,
-							   hashtable->eqfunctions,
+							   hashtable->cur_eq_funcs,
 							   hashtable->tempcxt))
 		{
 			TermTupleHashIterator(&hashiter);
@@ -663,9 +667,10 @@ ExecInitSubPlan(SubPlanState *node, EState *estate, int eflags)
 	node->hashtempcxt = NULL;
 	node->innerecontext = NULL;
 	node->keyColIdx = NULL;
-	node->eqfunctions = NULL;
-	node->hashfunctions = NULL;
-    node->cdbextratextbuf = NULL;
+	node->tab_hash_funcs = NULL;
+	node->tab_eq_funcs = NULL;
+	node->lhs_hash_funcs = NULL;
+	node->cur_eq_funcs = NULL;
 
 	/*
 	 * create an EState for the subplan
@@ -682,8 +687,7 @@ ExecInitSubPlan(SubPlanState *node, EState *estate, int eflags)
 	sp_estate->es_plannedstmt = estate->es_plannedstmt;
 	sp_estate->es_param_list_info = estate->es_param_list_info;
 	sp_estate->es_param_exec_vals = estate->es_param_exec_vals;
-	sp_estate->es_tupleTable =
-		ExecCreateTupleTable(ExecCountSlotsNode(exec_subplan_get_plan(sp_estate->es_plannedstmt, subplan)) + 10);
+	sp_estate->es_tupleTable = NIL;
 	sp_estate->es_snapshot = estate->es_snapshot;
 	sp_estate->es_crosscheck_snapshot = estate->es_crosscheck_snapshot;
 	sp_estate->es_instrument = estate->es_instrument;
@@ -739,34 +743,37 @@ ExecInitSubPlan(SubPlanState *node, EState *estate, int eflags)
 			 * we will simply substitute the actual value from
 			 * the external parameters.
 			 */
-			if (Gp_role == GP_ROLE_EXECUTE
-					&& subplan->is_initplan)
+			if (Gp_role == GP_ROLE_EXECUTE && subplan->is_initplan)
 			{	
 				ParamListInfo paramInfo = estate->es_param_list_info;
 				ParamExternData *prmExt = NULL;
 				int extParamIndex = -1;
-				
+
 				Assert(paramInfo);
 				Assert(paramInfo->numParams > 0);
-				
-				/* 
+
+				/*
 				 * To locate the value of this pre-evaluated parameter, we need to find
-				 * its location in the external parameter list.  
+				 * its location in the external parameter list.
 				 */
 				extParamIndex = paramInfo->numParams - estate->es_plannedstmt->nCrossLevelParams + paramid;
-				
-				/* Ensure that the plan is actually an initplan */
-				Assert(subplan->is_initplan && "Subplan is not an initplan. Parameter has not been evaluated in preprocess_initplan.");
-				
+
 				prmExt = &paramInfo->params[extParamIndex];
-								
+
 				/* Make sure the types are valid */
-				Assert(OidIsValid(prmExt->ptype) && "Invalid Oid for pre-evaluated parameter.");				
-				
-				/** Hurray! Copy value from external parameter and don't bother setting up execPlan. */
-				prmExec->execPlan = NULL;
-				prmExec->isnull = prmExt->isnull;
-				prmExec->value = prmExt->value;
+				if (!OidIsValid(prmExt->ptype))
+				{
+					prmExec->execPlan = NULL;
+					prmExec->isnull = true;
+					prmExec->value = (Datum) 0;
+				}
+				else
+				{
+					/** Hurray! Copy value from external parameter and don't bother setting up execPlan. */
+					prmExec->execPlan = NULL;
+					prmExec->isnull = prmExt->isnull;
+					prmExec->value = prmExt->value;
+				}
 			}
 			else
 			{
@@ -784,7 +791,6 @@ ExecInitSubPlan(SubPlanState *node, EState *estate, int eflags)
 		int			ncols,
 					i;
 		TupleDesc	tupDesc;
-		TupleTable	tupTable;
 		TupleTableSlot *slot;
 		List	   *oplist,
 				   *lefttlist,
@@ -851,8 +857,10 @@ ExecInitSubPlan(SubPlanState *node, EState *estate, int eflags)
 
 		lefttlist = righttlist = NIL;
 		leftptlist = rightptlist = NIL;
-		node->eqfunctions = (FmgrInfo *) palloc(ncols * sizeof(FmgrInfo));
-		node->hashfunctions = (FmgrInfo *) palloc(ncols * sizeof(FmgrInfo));
+		node->tab_hash_funcs = (FmgrInfo *) palloc(ncols * sizeof(FmgrInfo));
+		node->tab_eq_funcs = (FmgrInfo *) palloc(ncols * sizeof(FmgrInfo));
+		node->lhs_hash_funcs = (FmgrInfo *) palloc(ncols * sizeof(FmgrInfo));
+		node->cur_eq_funcs = (FmgrInfo *) palloc(ncols * sizeof(FmgrInfo));
 		i = 1;
 		foreach(l, oplist)
 		{
@@ -862,7 +870,9 @@ ExecInitSubPlan(SubPlanState *node, EState *estate, int eflags)
 			Expr	   *expr;
 			TargetEntry *tle;
 			GenericExprState *tlestate;
-			Oid			hashfn;
+			Oid			rhs_eq_oper;
+			Oid			left_hashfn;
+			Oid			right_hashfn;
 
 			Assert(IsA(fstate, FuncExprState));
 			Assert(IsA(opexpr, OpExpr));
@@ -896,28 +906,27 @@ ExecInitSubPlan(SubPlanState *node, EState *estate, int eflags)
 			righttlist = lappend(righttlist, tlestate);
 			rightptlist = lappend(rightptlist, tle);
 
-			/* Lookup the combining function */
-			fmgr_info(opexpr->opfuncid, &node->eqfunctions[i - 1]);
-			node->eqfunctions[i - 1].fn_expr = (Node *) opexpr;
+			/* Lookup the equality function (potentially cross-type) */
+			fmgr_info(opexpr->opfuncid, &node->cur_eq_funcs[i - 1]);
+			node->cur_eq_funcs[i - 1].fn_expr = (Node *) opexpr;
 
-			/* Lookup the associated hash function */
-			hashfn = get_op_hash_function(opexpr->opno);
-			if (!OidIsValid(hashfn))
+			/* Look up the equality function for the RHS type */
+			if (!get_compatible_hash_operators(opexpr->opno,
+											   NULL, &rhs_eq_oper))
+				elog(ERROR, "could not find compatible hash operator for operator %u",
+					 opexpr->opno);
+			fmgr_info(get_opcode(rhs_eq_oper), &node->tab_eq_funcs[i - 1]);
+
+			/* Lookup the associated hash functions */
+			if (!get_op_hash_functions(opexpr->opno,
+									   &left_hashfn, &right_hashfn))
 				elog(ERROR, "could not find hash function for hash operator %u",
 					 opexpr->opno);
-			fmgr_info(hashfn, &node->hashfunctions[i - 1]);
+			fmgr_info(left_hashfn, &node->lhs_hash_funcs[i - 1]);
+			fmgr_info(right_hashfn, &node->tab_hash_funcs[i - 1]);
 
 			i++;
 		}
-
-		/*
-		 * Create a tupletable to hold these tuples.  (Note: we never bother
-		 * to free the tupletable explicitly; that's okay because it will
-		 * never store raw disk tuples that might have associated buffer pins.
-		 * The only resource involved is memory, which will be cleaned up by
-		 * freeing the query context.)
-		 */
-		tupTable = ExecCreateTupleTable(2);
 
 		/*
 		 * Construct tupdescs, slots and projection nodes for left and right
@@ -928,7 +937,7 @@ ExecInitSubPlan(SubPlanState *node, EState *estate, int eflags)
 		 * own innerecontext.
 		 */
 		tupDesc = ExecTypeFromTL(leftptlist, false);
-		slot = ExecAllocTableSlot(tupTable);
+		slot = ExecInitExtraTupleSlot(estate);
 		ExecSetSlotDescriptor(slot, tupDesc);
 		node->projLeft = ExecBuildProjectionInfo(lefttlist,
 												 NULL,
@@ -936,7 +945,7 @@ ExecInitSubPlan(SubPlanState *node, EState *estate, int eflags)
 												 NULL);
 
 		tupDesc = ExecTypeFromTL(rightptlist, false);
-		slot = ExecAllocTableSlot(tupTable);
+		slot = ExecInitExtraTupleSlot(estate);
 		ExecSetSlotDescriptor(slot, tupDesc);
 		node->projRight = ExecBuildProjectionInfo(righttlist,
 												  node->innerecontext,
@@ -996,7 +1005,6 @@ SubplanQueryDesc(QueryDesc * qd)
 	substmt->utilityStmt = stmt->utilityStmt;
 	substmt->intoClause = NULL;
 	substmt->subplans = stmt->subplans;
-	substmt->rewindPlanIDs = stmt->rewindPlanIDs;
 	substmt->returningLists = stmt->returningLists;
 	substmt->rowMarks = stmt->rowMarks;
 	substmt->relationOids = stmt->relationOids;
@@ -1018,6 +1026,7 @@ SubplanQueryDesc(QueryDesc * qd)
 							NULL,		/* Null destination for the QE */
 							qd->params,
 							qd->doInstrument);
+	subqd->ddesc = qd->ddesc;
 
 	return subqd;
 }
@@ -1048,8 +1057,6 @@ ExecSetParamPlan(SubPlanState *node, ExprContext *econtext,
 		planstate->plan != NULL &&
 		planstate->plan->dispatch == DISPATCH_PARALLEL)
 		shouldDispatch = true;
-
-	node->cdbextratextbuf = NULL;
 
 	/*
 	 * Reset memory high-water mark so EXPLAIN ANALYZE can report each
@@ -1283,16 +1290,9 @@ ExecSetParamPlan(SubPlanState *node, ExprContext *econtext,
             /* If EXPLAIN ANALYZE, collect execution stats from qExecs. */
             if (planstate->instrument)
             {
-                MemoryContext   savecxt;
-
                 /* Wait for all gangs to finish. */
 				CdbCheckDispatchResult(queryDesc->estate->dispatcherState,
 									   DISPATCH_WAIT_NONE);
-
-                /* Allocate buffer to pass extra message text to cdbexplain. */
-                savecxt = MemoryContextSwitchTo(gbl_queryDesc->estate->es_query_cxt);
-                node->cdbextratextbuf = makeStringInfo();
-                MemoryContextSwitchTo(savecxt);
 
                 /* Jam stats into subplan's Instrumentation nodes. */
                 explainRecvStats = true;

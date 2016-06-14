@@ -45,3 +45,15 @@ OptVersion(void)
 	elog(ERROR, "mock implementation of OptVersion called");
 	return (Datum) 0;
 }
+
+void
+InitGPOPT ()
+{
+	elog(ERROR, "mock implementation of InitGPOPT called");
+}
+
+void
+TerminateGPOPT ()
+{
+	elog(ERROR, "mock implementation of TerminateGPOPT called");
+}

@@ -817,7 +817,7 @@ gpdb::FclFuncCandidates
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_proc */
-		return FuncnameGetCandidates(plistNames, iArgs, true);
+		return FuncnameGetCandidates(plistNames, iArgs, false, false);
 	}
 	GP_WRAP_END;
 	return NULL;
@@ -1239,7 +1239,7 @@ gpdb::FCastFunc
 	return false;
 }
 
-uint
+unsigned int
 gpdb::UlCmpt
 	(
 	Oid oidOp,
@@ -1261,7 +1261,7 @@ gpdb::OidScCmp
 	(
 	Oid oidLeft, 
 	Oid oidRight,
-	uint ulCmpt
+	unsigned int ulCmpt
 	)
 {
 	GP_WRAP_START;
@@ -1431,14 +1431,13 @@ gpdb::PpnParts
 	int2 level,
 	Oid parent,
 	bool inctemplate,
-	MemoryContext mcxt,
 	bool includesubparts
 	)
 {
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_partition, pg_partition_rule */
-		return get_parts(relid, level, parent, inctemplate, mcxt, includesubparts);
+		return get_parts(relid, level, parent, inctemplate, includesubparts);
 	}
 	GP_WRAP_END;
 	return NULL;
@@ -1892,6 +1891,7 @@ gpdb::PvalMakeInteger
 		return makeInteger(i);
 	}
 	GP_WRAP_END;
+	return NULL;
 }
 
 Node *
@@ -2144,32 +2144,6 @@ gpdb::FOpHashJoinable
 	{
 		/* catalog tables: pg_operator */
 		return op_hashjoinable(opno);
-	}
-	GP_WRAP_END;
-	return false;
-}
-
-bool
-gpdb::FOpMergeJoinable
-	(
-	Oid opno,
-	Oid *leftOp,
-	Oid *rightOp
-	)
-{
-	GP_WRAP_START;
-	{
-		/* catalog tables: pg_operator, pg_amop, pg_opfamily */
-		if (op_mergejoinable(opno))
-		{
-			/*
-			 * XXX Like in check_mergejoinable, for the moment, continue to
-			 * force use of particular sortops
-			 */
-			Oid opfamily;
-			if (get_op_mergejoin_info(opno, leftOp, rightOp, &opfamily))
-				return true;
-		}
 	}
 	GP_WRAP_END;
 	return false;
@@ -2995,13 +2969,12 @@ gpdb::FInterpretOidsOption
 char *
 gpdb::SzDefGetString
 	(
-	DefElem *pdefelem,
-	bool *fNeedFree
+	DefElem *pdefelem
 	)
 {
 	GP_WRAP_START;
 	{
-		return defGetString(pdefelem, fNeedFree);
+		return defGetString(pdefelem);
 	}
 	GP_WRAP_END;
 	return NULL;
@@ -3105,7 +3078,7 @@ register_mdcache_invalidation_callbacks(void)
 		AGGFNOID,			/* pg_aggregate */
 		AMOPOPID,			/* pg_amop */
 		CASTSOURCETARGET,	/* pg_cast */
-		CONOID,				/* pg_constraint */
+		CONSTROID,			/* pg_constraint */
 		OPEROID,			/* pg_operator */
 		OPFAMILYOID,		/* pg_opfamily */
 		PARTOID,			/* pg_partition */

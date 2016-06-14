@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/pathnode.c,v 1.136 2007/01/10 18:06:04 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/pathnode.c,v 1.138 2007/02/06 02:59:12 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -29,7 +29,6 @@
 #include "parser/parse_expr.h"
 #include "parser/parse_oper.h"
 #include "parser/parsetree.h"
-#include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/selfuncs.h"
 #include "utils/lsyscache.h"
@@ -835,8 +834,7 @@ cdb_subpath_tried_postjoin_dedup(Path *path, Relids subqrelids)
  *    upon return, and not touched again by the caller, because we free it
  *    if we already know of a better path.  Likewise, a Path that is passed
  *    to add_path() must not be shared as a subpath of any other Path of the
- *    same join level.  Use pathnode_copy_node() to make a copy of the top
- *    Path node before calling add_path(); then it'll be ok to share the copy.
+ *    same join level.
  *
  *	  BUT: we do not pfree IndexPath objects, since they may be referenced as
  *	  children of BitmapHeapPaths as well as being paths in their own right.
@@ -1113,7 +1111,13 @@ create_external_path(PlannerInfo *root, RelOptInfo *rel)
 	
     pathnode->path.locus = cdbpathlocus_from_baserel(root, rel); 
     pathnode->path.motionHazard = false;
-	pathnode->path.rescannable = rel->isrescannable;
+
+	/*
+	 * Mark external tables as non-rescannable. While rescan is possible,
+	 * it can lead to surprising results if the external table produces
+	 * different results when invoked twice.
+	 */
+	pathnode->path.rescannable = false;
 
 	cost_externalscan(pathnode, root, rel);
 	
@@ -2211,7 +2215,7 @@ distinct_col_search(int colno, List *colnos, List *opids)
  * We assume hashed aggregation will work if each IN operator is marked
  * hashjoinable.  If the IN operators are cross-type, this could conceivably
  * fail: the aggregation will need a hashable equality operator for the RHS
- * datatype --- but it's pretty hard to conceive of a hash opclass that has
+ * datatype --- but it's pretty hard to conceive of a hash opfamily that has
  * cross-type hashing without support for hashing the individual types, so
  * we don't expend cycles here to support the case.  We could check
  * get_compatible_hash_operator() instead of just op_hashjoinable(), but the
@@ -2566,11 +2570,7 @@ create_nestloop_path(PlannerInfo *root,
  *      Consists of the ones to be used for merging ('mergeclauses') plus
  *      any others in 'restrict_clauses' that are to be applied after the
  *      merge.  We use them for motion planning.  (CDB)
- * 'mergefamilies' are the btree opfamily OIDs identifying the merge
- *		ordering for each merge clause
- * 'mergestrategies' are the btree operator strategies identifying the merge
- *		ordering for each merge clause
- * 'mergenullsfirst' are the nulls first/last flags for each merge clause
+
  * 'outersortkeys' are the sort varkeys for the outer relation
  *      or NIL to use existing ordering
  * 'innersortkeys' are the sort varkeys for the inner relation
@@ -2586,9 +2586,6 @@ create_mergejoin_path(PlannerInfo *root,
 					  List *pathkeys,
 					  List *mergeclauses,
                       List *allmergeclauses,    /*CDB*/
-					  Oid *mergefamilies,
-					  int *mergestrategies,
-					  bool *mergenullsfirst,
 					  List *outersortkeys,
 					  List *innersortkeys)
 {
@@ -2685,7 +2682,7 @@ create_mergejoin_path(PlannerInfo *root,
 
 			foreach(sortkeycell, innersortkeys)
 			{
-				List	   *keysublist = (List *) lfirst(sortkeycell);
+				PathKey	   *keysublist = (PathKey *) lfirst(sortkeycell);
 
 			    if (!CdbPathkeyEqualsConstant(keysublist))
 			    {
@@ -2718,9 +2715,6 @@ create_mergejoin_path(PlannerInfo *root,
 	pathnode->jpath.path.rescannable = outer_path->rescannable && inner_path->rescannable;
 
 	pathnode->path_mergeclauses = mergeclauses;
-	pathnode->path_mergeFamilies = mergefamilies;
-	pathnode->path_mergeStrategies = mergestrategies;
-	pathnode->path_mergeNullsFirst = mergenullsfirst;
 	pathnode->outersortkeys = outersortkeys;
 	pathnode->innersortkeys = innersortkeys;
 

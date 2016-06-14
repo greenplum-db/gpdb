@@ -794,20 +794,6 @@ make_list_aggs_for_rollup(PlannerInfo *root,
 		input_grouping = grouping;
 	}
 	
-	/* Remove the trailing grouping columns from the equivalence key list. */
-	if (last_group_no > 0)
-	{
-		int tmp_group_no;
-		for (tmp_group_no = 0; tmp_group_no < last_group_no; tmp_group_no++)
-		{
-			TargetEntry *tle = get_tle_by_resno(agg_node->targetlist,
-												groupColIdx[context->numGroupCols - 3 - tmp_group_no]);
-			root->equi_key_list = remove_pathkey_item(root->equi_key_list,
-													  (Node *)tle->expr);
-		}
-	}
-
-
 	/*
 	 * If we need an additional Agg node, we add it here. If the flow
 	 * is not a SINGLETON, we redistribute the data and add the last
@@ -1173,7 +1159,7 @@ generate_dqa_plan(PlannerInfo *root,
 		Assert(new_qual == NULL || IsA(new_qual, List));
 		
 		root->group_pathkeys =
-			make_pathkeys_for_groupclause(root->parse->groupClause,
+			make_pathkeys_for_groupclause(root, root->parse->groupClause,
 										  context->sub_tlist);
 		root->group_pathkeys = canonicalize_pathkeys(root, root->group_pathkeys);
 	}
@@ -1414,7 +1400,8 @@ plan_append_aggs_with_gather(PlannerInfo *root,
 	 * subplans to be used.
 	 */
 	context->subplan = gather_subplan;
-	context->path->locus.partkey = copyObject(context->input_locus.partkey);
+	context->path->locus.partkey_h = copyObject(context->input_locus.partkey_h);
+	context->path->locus.partkey_oj = copyObject(context->input_locus.partkey_oj);
 	context->pathkeys = NIL;
 
 	/* Compute how many number of subplans is needed. */
@@ -1540,7 +1527,8 @@ plan_append_aggs_with_rewrite(PlannerInfo *root,
 	 * subplans to be used.
 	 */
 	context->subplan = lefttree;
-	context->path->locus.partkey = copyObject(context->input_locus.partkey);
+	context->path->locus.partkey_h = copyObject(context->input_locus.partkey_h);
+	context->path->locus.partkey_oj = copyObject(context->input_locus.partkey_oj);
 	context->pathkeys = NIL;
 
 	/* Compute how many subplans is needed. */
@@ -2158,7 +2146,8 @@ plan_list_rollup_plans(PlannerInfo *root,
 	/* Generate the shared input subplans for all rollups. */
 	context->subplan = lefttree;
 	context->input_locus = context->path->locus;
-	context->input_locus.partkey = copyObject(context->path->locus.partkey);
+	context->input_locus.partkey_h = copyObject(context->path->locus.partkey_h);
+	context->input_locus.partkey_oj = copyObject(context->path->locus.partkey_oj);
 	context->pathkeys = NIL;
 
 	if (list_length(context->canonical_rollups) > 1)

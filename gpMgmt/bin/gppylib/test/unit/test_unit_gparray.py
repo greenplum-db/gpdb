@@ -18,15 +18,16 @@ class MyTestCase(unittest.TestCase):
     def test_spreadmirror_layout(self):
         """ Basic spread mirroring """
         mirror_type = 'spread'
-        interface_list = [1]
         primary_portbase = 5000
         mirror_portbase = 6000
+        interface_list = [1]
         primary_replication_portbase = 7000
         mirror_replication_portbase = 8000
+        dir_prefix = 'gpseg'
+
         hostlist = ['host1']
         primary_list = ['/db1']
         mirror_list = ['/mir1']
-        dir_prefix = 'gpseg'
         
         #need to have enough hosts otherwise we get exceptions
         with self.assertRaises(Exception):
@@ -44,31 +45,31 @@ class MyTestCase(unittest.TestCase):
         
         #now we have enough
         hostlist.append('host3')
-        self.mirrorlayout_test(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
-                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase)
+        self._validate_array(self.setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
+                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
         
         
         #enough
         hostlist = ['host1', 'host2', 'host3']
         primary_list = ['/db1', '/db2']
         mirror_list = ['/mir1', '/mir2']
-        self.mirrorlayout_test(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
-                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase)
+        self._validate_array(self.setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
+                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
 
         #typical thumper
         hostlist = ['sdw1', 'sdw2', 'sdw3', 'sdw4', 'sdw5']
         primary_list = ['/dbfast1', '/dbfast2', '/dbfast3', '/dbfast4']
         mirror_list = ['/dbfast1/mirror', '/dbfast2/mirror', '/dbfast3/mirror', '/dbfast4/mirror']
-        self.mirrorlayout_test(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
-                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase)
+        self._validate_array(self.setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
+                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
 
         #typical Thor
         hostlist = ['sdw1', 'sdw2', 'sdw3', 'sdw4', 'sdw5', 'sdw6', 'sdw7', 'sdw8', 'sdw9']
         primary_list = ['/dbfast1', '/dbfast2', '/dbfast3', '/dbfast4', '/dbfast5', '/dbfast6', '/dbfast7', '/dbfast8']
         mirror_list = ['/dbfast1/mirror', '/dbfast2/mirror', '/dbfast3/mirror', '/dbfast4/mirror',
                        '/dbfast5/mirror', '/dbfast6/mirror', '/dbfast7/mirror', '/dbfast8/mirror']
-        self.mirrorlayout_test(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
-                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase)
+        self._validate_array(self.setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
+                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
 
     def test_groupmirror_layout(self):
         """ Basic group mirroring """
@@ -78,10 +79,11 @@ class MyTestCase(unittest.TestCase):
         interface_list = [1]
         primary_replication_portbase = 7000
         mirror_replication_portbase = 8000
+        dir_prefix = 'gpseg'
+
         hostlist = ['host1']
         primary_list = ['/db1']
         mirror_list = ['/mir1']
-        dir_prefix = 'gpseg'
         
         #not enough
         with self.assertRaises(Exception):
@@ -103,20 +105,50 @@ class MyTestCase(unittest.TestCase):
         hostlist = ['sdw1', 'sdw2', 'sdw3', 'sdw4', 'sdw5']
         primary_list = ['/dbfast1', '/dbfast2', '/dbfast3', '/dbfast4']
         mirror_list = ['/dbfast1/mirror', '/dbfast2/mirror', '/dbfast3/mirror', '/dbfast4/mirror']
-        self.mirrorlayout_test(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
-                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase)
+        self._validate_array(self.setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
+                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
 
         #typical Thor
         hostlist = ['sdw1', 'sdw2', 'sdw3', 'sdw4', 'sdw5', 'sdw6', 'sdw7', 'sdw8', 'sdw9']
         primary_list = ['/dbfast1', '/dbfast2', '/dbfast3', '/dbfast4', '/dbfast5', '/dbfast6', '/dbfast7', '/dbfast8']
         mirror_list = ['/dbfast1/mirror', '/dbfast2/mirror', '/dbfast3/mirror', '/dbfast4/mirror',
                        '/dbfast5/mirror', '/dbfast6/mirror', '/dbfast7/mirror', '/dbfast8/mirror']
-        self.mirrorlayout_test(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
-                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase)        
+        self._validate_array(self.setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
+                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
 
+    def test_get_segment_list(self):
+        mirror_type = 'grouped'
+        primary_portbase = 5000
+        mirror_portbase = 6000
+        interface_list = [1]
+        primary_replication_portbase = 7000
+        mirror_replication_portbase = 8000
+        dir_prefix = 'gpseg'
 
-#------------------------------- non-test helper --------------------------------
-    def mirrorlayout_test(self, hostlist, interface_list, primary_list, primary_portbase, mirror_type, 
+        hostlist = ['sdw1', 'sdw2', 'sdw3', 'sdw4', 'sdw5']
+        primary_list = ['/dbfast1', '/dbfast2', '/dbfast3', '/dbfast4']
+        mirror_list = ['/dbfast1/mirror', '/dbfast2/mirror', '/dbfast3/mirror', '/dbfast4/mirror']
+
+        gparray = self.setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
+                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase)
+        self._validate_array(gparray)
+
+        # test without expansion segments
+        expansion_hosts = []
+        self._validate_get_segment_list(gparray, hostlist, expansion_hosts, primary_list)
+
+        # test with expansion segments
+        expansion_hosts = ['sdw6', 'sdw7']
+        rows =  createSegmentRows(expansion_hosts, interface_list, primary_list, primary_portbase, mirror_type,
+                                  mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase)
+        offset = len(hostlist) * len(primary_list) # need to continue numbering where the last createSegmentRows left off
+        for row in rows:
+            gparray.addExpansionSeg(row.content+offset, 'p' if convert_bool(row.isprimary) else 'm', row.dbid+offset,
+                                    'p' if convert_bool(row.isprimary) else 'm', row.host, row.address, row.port, row.fulldir, row.prPort)
+        self._validate_get_segment_list(gparray, hostlist, expansion_hosts, primary_list)
+
+#------------------------------- non-test helpers --------------------------------
+    def setup_gparray(self, hostlist, interface_list, primary_list, primary_portbase, mirror_type, 
                           mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase):
         master = GpDB(content = -1,
                     preferred_role = 'p',
@@ -150,9 +182,7 @@ class MyTestCase(unittest.TestCase):
             allrows.append(newrow)
         
         gparray = GpArray(allrows)
-                
-        self._validate_array(gparray)
-    
+        return gparray
         
     def _validate_array(self, gparray): 
         portdict = {}
@@ -171,7 +201,27 @@ class MyTestCase(unittest.TestCase):
             
         for count in portdict.values():
             self.assertEquals(expected_count, count)
-            
+
+    def _validate_get_segment_list(self, gparray, hostlist, expansion_hosts, primary_list):
+        hostlist.extend(expansion_hosts)
+        expected = []
+        for host in hostlist:
+            for primary in primary_list:
+                expected.append("host %s, primary %s" % (host, primary))
+
+        has_expansion_hosts = (len(expansion_hosts) > 0)
+        segments = gparray.getSegmentList(has_expansion_hosts)
+        actual = []
+        for segment in segments:
+            primary = segment.primaryDB
+            datadir = primary.datadir[0:primary.datadir.rindex("/")] # strip off the "/gpseg##" portion of the primary name for comparison
+            actual.append("host %s, primary %s" % (primary.hostname, datadir))
+        self.assertEquals(len(expected), len(actual))
+
+        expected = sorted(expected)
+        actual = sorted(actual)
+        for i in range(len(expected)):
+            self.assertEquals(expected[i], actual[i])
     
 def convert_bool(val):
     if val == 't':

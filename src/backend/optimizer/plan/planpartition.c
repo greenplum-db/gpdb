@@ -1064,6 +1064,10 @@ static void InitPMI(PartitionMatchInfo *pmi, Oid partitionOid, MemoryContext mct
 
 	pmi->partitionOid = partitionOid;
 	pmi->partitionInfo = RelationBuildPartitionDescByOid(pmi->partitionOid, false);
+	if (!pmi->partitionInfo)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_TABLE),
+				 errmsg("relation with OID %u does not exist", partitionOid)));
 
 	pmi->partitionState = createPartitionState(pmi->partitionInfo, 0);
 
@@ -1292,9 +1296,6 @@ make_mergeclause(Node *outer, Node *inner)
 	OpExpr	   *opxpr;
 	Expr	   *xpr;
 	RestrictInfo *rinfo;
-	Oid			leftOp;
-	Oid			rightOp;
-	Oid			opfamily;
 
 	opxpr = (OpExpr *) make_op(NULL, list_make1(makeString("=")),
 							   outer,
@@ -1304,15 +1305,7 @@ make_mergeclause(Node *outer, Node *inner)
 	xpr = make_notclause((Expr *) opxpr);
 
 	rinfo = make_restrictinfo(xpr, false, false, false, NULL);
-	/* fill in opfamily and other fields, like check_mergejoinable does */
-	if (get_op_mergejoin_info(opxpr->opno, &leftOp, &rightOp, &opfamily))
-	{
-		rinfo->mergejoinoperator = opxpr->opno;
-		rinfo->left_sortop = leftOp;
-		rinfo->right_sortop = rightOp;
-		rinfo->mergeopfamily = opfamily;
-	}
-	else
-		elog(ERROR, "partition key not mergejoinable");
+	rinfo->mergeopfamilies = get_mergejoin_opfamilies(opxpr->opno);
+
 	return rinfo;
 }

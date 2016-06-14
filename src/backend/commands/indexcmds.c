@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/indexcmds.c,v 1.152 2007/01/09 02:14:11 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/indexcmds.c,v 1.155 2007/02/01 19:10:26 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -59,7 +59,7 @@
 #include "utils/syscache.h"
 #include "utils/faultinjector.h"
 
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
@@ -377,8 +377,7 @@ DefineIndex(RangeVar *heapRelation,
                 (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
                  errmsg("append-only tables do not support unique indexes")));
 
-	amcanorder = (accessMethodForm->amorderstrategy > 0);
-
+	amcanorder = accessMethodForm->amcanorder;
 	amoptions = accessMethodForm->amoptions;
 
 	caql_endscan(amcqCtx);
@@ -392,7 +391,7 @@ DefineIndex(RangeVar *heapRelation,
 		if (list_length(rangetable) != 1 || getrelid(1, rangetable) != relationId)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
-					 errmsg("index expressions and predicates may refer only to the table being indexed")));
+					 errmsg("index expressions and predicates can refer only to the table being indexed")));
 	}
 
 	/*
@@ -628,8 +627,7 @@ DefineIndex(RangeVar *heapRelation,
 		/* create the index on the QEs first, so we can get their stats when we create on the QD */
 		if (stmt)
 		{
-			Assert(stmt->idxOids == 0 ||
-				   stmt->idxOids == (List*)NULL);
+			Assert(stmt->idxOids == NIL);
 			stmt->idxOids = NIL;
 			stmt->idxOids = lappend_oid(stmt->idxOids, indexRelationId);
 			stmt->idxOids = lappend_oid(stmt->idxOids, iiopaque->comptypeOid);
@@ -660,53 +658,6 @@ DefineIndex(RangeVar *heapRelation,
 		 * which can cause a non-local deadlock if we've already
 		 * dispatched
 		 */
-		indexRelationId =
-			index_create(relationId, indexRelationName, indexRelationId,
-						 indexInfo, accessMethodId, tablespaceId, classObjectId,
-						 coloptions, reloptions, primary, isconstraint,
-						 &(stmt->constrOid),
-						 allowSystemTableModsDDL, skip_build, concurrent, altconname);
-
-        /*
-         * Dispatch the command to all primary and mirror segment dbs.
-         * Start a global transaction and reconfigure cluster if needed.
-         * Wait for QEs to finish.  Exit via ereport(ERROR,...) if error.
-         */
-        if (stmt->concurrent)
-        {
-			volatile struct CdbDispatcherState ds = {NULL, NULL};
-
-			PG_TRY();
-			{
-				/*
-				 * Dispatch the command to all primary and mirror segdbs.
-				 * Doesn't start a global transaction.  Doesn't wait for
-				 * the QEs to finish execution.
-				 */
-				cdbdisp_dispatchUtilityStatement((Node *)stmt,
-												 true,      /* cancelOnError */
-												 false,      /* startTransaction */
-												 true,      /* withSnapshot */
-												 (struct CdbDispatcherState *)&ds,
-												 "DefineIndex");
-				/* Wait for all QEs to finish.	Throw up if error. */
-				cdbdisp_finishCommand((struct CdbDispatcherState *)&ds, NULL, NULL);
-			}
-			PG_CATCH();
-			{
-				/* If dispatched, stop QEs and clean up after them. */
-				if (ds.primaryResults)
-					cdbdisp_handleError((struct CdbDispatcherState *)&ds);
-
-				PG_RE_THROW();
-				/* not reached */
-			}
-			PG_END_TRY();
-        }
-        else
-		{
-        	CdbDispatchUtilityStatement((Node *)stmt, "DefineIndex");
-		}
 	}
 
 	/* save lockrelid for below, then close rel */
@@ -716,14 +667,20 @@ DefineIndex(RangeVar *heapRelation,
 	else
 		heap_close(rel, heap_lockmode);
 
-	if (!shouldDispatch)
-	{
-		indexRelationId =
-			index_create(relationId, indexRelationName, indexRelationId,
-						 indexInfo, accessMethodId, tablespaceId, classObjectId,
-						 coloptions, reloptions, primary, isconstraint, &(stmt->constrOid),
-						 allowSystemTableModsDDL, skip_build, concurrent, altconname);
-	}
+	indexRelationId =
+		index_create(relationId, indexRelationName, indexRelationId,
+					 indexInfo, accessMethodId, tablespaceId, classObjectId,
+					 coloptions, reloptions, primary, isconstraint, &(stmt->constrOid),
+					 allowSystemTableModsDDL, skip_build, concurrent, altconname);
+
+	/*
+	 * Dispatch the command to all primary and mirror segment dbs.
+	 * Start a global transaction and reconfigure cluster if needed.
+	 * Wait for QEs to finish.  Exit via ereport(ERROR,...) if error.
+	 * (For a concurrent build, we do this later, see below.)
+	 */
+	if (shouldDispatch && !concurrent)
+		CdbDispatchUtilityStatement((Node *) stmt, "DefineIndex");
 
 	if (!concurrent)
 		return;					/* We're done, in the standard case */
@@ -749,6 +706,48 @@ DefineIndex(RangeVar *heapRelation,
 	LockRelationIdForSession(&heaprelid, ShareUpdateExclusiveLock);
 
 	CommitTransactionCommand();
+
+	/*
+	 * We dispatch the command to QEs after we've committed the creation of
+	 * the empty index in the master, but before we proceed to fill it.
+	 * This ensures that if something goes wrong, we don't end up in
+	 * a state where the index exists on some segments but not the master.
+	 * It also ensures that the index is only marked as valid on the
+	 * master, after it's been successfully built and marked as valid on
+	 * all the segments.
+	 */
+	if (shouldDispatch)
+	{
+		volatile struct CdbDispatcherState ds = {NULL, NULL};
+
+		PG_TRY();
+		{
+			/*
+			 * Dispatch the command to all primary and mirror segdbs.
+			 * Doesn't start a global transaction.  Doesn't wait for
+			 * the QEs to finish execution.
+			 */
+			cdbdisp_dispatchUtilityStatement((Node *) stmt,
+											 true,      /* cancelOnError */
+											 false,      /* startTransaction */
+											 true,      /* withSnapshot */
+											 (struct CdbDispatcherState *)&ds,
+											 "DefineIndex");
+			/* Wait for all QEs to finish.	Throw up if error. */
+			cdbdisp_finishCommand((struct CdbDispatcherState *)&ds, NULL, NULL);
+		}
+		PG_CATCH();
+		{
+			/* If dispatched, stop QEs and clean up after them. */
+			if (ds.primaryResults)
+				cdbdisp_handleError((struct CdbDispatcherState *)&ds);
+
+			PG_RE_THROW();
+			/* not reached */
+		}
+		PG_END_TRY();
+	}
+
 	StartTransactionCommand();
 
 	/*
@@ -1640,19 +1639,24 @@ ReindexIndex(ReindexStmt *stmt)
 }
 
 /*
- * Perform REINDEX on each relation of the relids list.  The caller should
- * close the transaction before calling this since it opens and closes a
- * transaction per relation.  This is designed for QD/utility, and is not
- * useful for QE.
+ * Perform REINDEX on each relation of the relids list.  The function
+ * opens and closes a transaction per relation.  This is designed for
+ * QD/utility, and is not useful for QE.
  */
 static void
 ReindexRelationList(List *relids)
 {
 	ListCell   *lc;
 
-	/* The caller should have closed transaction (see function comments). */
-	Assert(!IsTransactionOrTransactionBlock());
 	Assert(Gp_role != GP_ROLE_EXECUTE);
+
+	/*
+	 * Commit ongoing transaction so that we can start a new
+	 * transaction per relation.
+	 */
+	CommitTransactionCommand();
+
+	SIMPLE_FAULT_INJECTOR(ReindexDB);
 
 	foreach (lc, relids)
 	{
@@ -1698,6 +1702,13 @@ ReindexRelationList(List *relids)
 
 		CommitTransactionCommand();
 	}
+
+	/*
+	 * We committed the transaction above, so start a new one before
+	 * returning.
+	 */
+	setupRegularDtxContext();
+	StartTransactionCommand();
 }
 
 /*
@@ -1732,7 +1743,7 @@ ReindexTable(ReindexStmt *stmt)
 		PartitionNode *pn;
 
 		pn = get_parts(relid, 0 /* level */, 0 /* parent */, false /* inctemplate */,
-			CurrentMemoryContext, true /* includesubparts */);
+					   true /* includesubparts */);
 		prels = all_partition_relids(pn);
 	}
 	else if (rel_is_child_partition(relid))
@@ -1798,13 +1809,8 @@ ReindexTable(ReindexStmt *stmt)
 		caql_endscan(pcqCtx);
 	}
 
-	/* Now reindex each rel in a separate transaction */
-	CommitTransactionCommand();
-
 	ReindexRelationList(relids);
 
-	setupRegularDtxContext();
-	StartTransactionCommand();
 	MemoryContextDelete(private_context);
 }
 
@@ -1920,15 +1926,7 @@ ReindexDatabase(ReindexStmt *stmt)
 	}
 	caql_endscan(pcqCtx);
 
-	/* Now reindex each rel in a separate transaction */
-	CommitTransactionCommand();
-
-	SIMPLE_FAULT_INJECTOR(ReindexDB);
-
 	ReindexRelationList(relids);
-
-	setupRegularDtxContext();
-	StartTransactionCommand();
 
 	MemoryContextDelete(private_context);
 }

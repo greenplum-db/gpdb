@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/plpgsql.h,v 1.81.2.3 2008/10/09 16:35:19 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/plpgsql.h,v 1.85 2007/02/09 03:35:34 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -71,7 +71,7 @@ enum
  * Execution tree node types
  * ----------
  */
-enum
+enum PLpgSQL_stmt_types
 {
 	PLPGSQL_STMT_BLOCK,
 	PLPGSQL_STMT_ASSIGN,
@@ -83,6 +83,7 @@ enum
 	PLPGSQL_STMT_EXIT,
 	PLPGSQL_STMT_RETURN,
 	PLPGSQL_STMT_RETURN_NEXT,
+	PLPGSQL_STMT_RETURN_QUERY,
 	PLPGSQL_STMT_RAISE,
 	PLPGSQL_STMT_EXECSQL,
 	PLPGSQL_STMT_DYNEXECUTE,
@@ -489,6 +490,13 @@ typedef struct
 } PLpgSQL_stmt_return_next;
 
 typedef struct
+{								/* RETURN QUERY statement */
+	int			cmd_type;
+	int			lineno;
+	PLpgSQL_expr *query;
+} PLpgSQL_stmt_return_query;
+
+typedef struct
 {								/* RAISE statement			*/
 	int			cmd_type;
 	int			lineno;
@@ -553,7 +561,7 @@ typedef struct PLpgSQL_function
 	char	   *fn_name;
 	Oid			fn_oid;
 	TransactionId fn_xmin;
-	CommandId	fn_cmin;
+	ItemPointerData fn_tid;
 	int			fn_functype;
 	PLpgSQL_func_hashkey *fn_hashkey;	/* back-link to hashtable key */
 	MemoryContext fn_cxt;
@@ -714,6 +722,8 @@ extern PLpgSQL_plugin **plugin_ptr;
  */
 extern PLpgSQL_function *plpgsql_compile(FunctionCallInfo fcinfo,
 				bool forValidator);
+extern PLpgSQL_function *plpgsql_compile_inline(FunctionCallInfo fcinfo, 
+				char *proc_source);
 extern int	plpgsql_parse_word(char *word);
 extern int	plpgsql_parse_dblword(char *word);
 extern int	plpgsql_parse_tripword(char *word);
@@ -739,6 +749,7 @@ extern void plpgsql_compile_error_callback(void *arg);
  */
 extern void _PG_init(void);
 extern Datum plpgsql_call_handler(PG_FUNCTION_ARGS);
+extern Datum plpgsql_inline_handler(PG_FUNCTION_ARGS);
 extern Datum plpgsql_validator(PG_FUNCTION_ARGS);
 
 /* ----------
@@ -781,6 +792,7 @@ extern void plpgsql_ns_rename(char *oldname, char *newname);
  */
 extern void plpgsql_convert_ident(const char *s, char **output, int numidents);
 extern const char *plpgsql_stmt_typename(PLpgSQL_stmt *stmt);
+extern void plpgsql_free_function_memory(PLpgSQL_function *func);
 extern void plpgsql_dumptree(PLpgSQL_function *func);
 
 /* ----------

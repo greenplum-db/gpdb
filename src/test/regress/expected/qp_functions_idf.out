@@ -1,0 +1,934 @@
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+RESET ALL;
+-- start_ignore
+create schema qp_idf;
+set search_path to qp_idf;
+create language plpythonu;
+create table perct as select a, a / 10 as b from generate_series(1, 100)a;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table perct2 as select a, a / 10 as b from generate_series(1, 100)a, generate_series(1, 2);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table perct3 as select a, b from perct, generate_series(1, 10)i where a % 7 < i;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table perct4 as select case when a % 10 = 5 then null else a end as a,
+        b, null::float as c from perct;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table percts as select '2012-01-01 00:00:00'::timestamp + interval '1day' * i as a,
+        i / 10 as b, i as c from generate_series(1, 100)i;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table perctsz as select '2012-01-01 00:00:00 UTC'::timestamptz + interval '1day' * i as a,
+        i / 10 as b, i as c from generate_series(1, 100)i;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table perctnum as select a, (a / 13)::float8  as b, (a * 1.9999 )::numeric as c  from generate_series(1, 100)a;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table perctint as select 
+'2006-01-01 13:10:13'::timestamp + interval '1day' * i as ts1,
+'2010-01-01 23:10:03'::timestamp + interval '1day 20 hours 12 minutes' * i as ts2,
+ '2006-01-01 13:10:13'::timestamptz + interval '10 minutes' * i as tstz1,
+'2006-01-01 13:10:13'::timestamptz + interval '12 hours 10 minutes' * i as tstz2, 
+interval '1 day 1 hour 12 secs' * i as days1,interval '42 minutes 10 seconds' * i as days2,
+random() * 9 + i  as b, 
+i as c from generate_series(1, 100)i;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'ts1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SET datestyle = "ISO, DMY";
+-- end_ignore
+--TIMESTAMPTZ
+select c, percentile_cont(0.9999) within group (order by tstz2 - tstz1) from perctint group by c  order by c limit 10;
+ c  |  percentile_cont  
+----+-------------------
+  1 | @ 12 hours
+  2 | @ 1 day
+  3 | @ 1 day 12 hours
+  4 | @ 2 days
+  5 | @ 2 days 12 hours
+  6 | @ 3 days
+  7 | @ 3 days 12 hours
+  8 | @ 4 days
+  9 | @ 4 days 12 hours
+ 10 | @ 5 days
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by tstz2 + days1 ) from perctint group by c  order by c limit 10;
+ c  |    percentile_cont     
+----+------------------------
+  1 | 2006-01-03 02:20:25-08
+  2 | 2006-01-04 15:30:37-08
+  3 | 2006-01-06 04:40:49-08
+  4 | 2006-01-07 17:51:01-08
+  5 | 2006-01-09 07:01:13-08
+  6 | 2006-01-10 20:11:25-08
+  7 | 2006-01-12 09:21:37-08
+  8 | 2006-01-13 22:31:49-08
+  9 | 2006-01-15 11:42:01-08
+ 10 | 2006-01-17 00:52:13-08
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by tstz2 - days1 ) from perctint group by c  order by c limit 10;
+ c  |    percentile_cont     
+----+------------------------
+  1 | 2006-01-01 00:20:01-08
+  2 | 2005-12-31 11:29:49-08
+  3 | 2005-12-30 22:39:37-08
+  4 | 2005-12-30 09:49:25-08
+  5 | 2005-12-29 20:59:13-08
+  6 | 2005-12-29 08:09:01-08
+  7 | 2005-12-28 19:18:49-08
+  8 | 2005-12-28 06:28:37-08
+  9 | 2005-12-27 17:38:25-08
+ 10 | 2005-12-27 04:48:13-08
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by tstz2 + interval '2 hours 3 minutes 10 secs' ) from perctint group by c  order by c limit 10;
+ c  |    percentile_cont     
+----+------------------------
+  1 | 2006-01-02 03:23:23-08
+  2 | 2006-01-02 15:33:23-08
+  3 | 2006-01-03 03:43:23-08
+  4 | 2006-01-03 15:53:23-08
+  5 | 2006-01-04 04:03:23-08
+  6 | 2006-01-04 16:13:23-08
+  7 | 2006-01-05 04:23:23-08
+  8 | 2006-01-05 16:33:23-08
+  9 | 2006-01-06 04:43:23-08
+ 10 | 2006-01-06 16:53:23-08
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by tstz2 - interval '1 hour' ) from perctint group by c  order by c limit 10;
+ c  |    percentile_cont     
+----+------------------------
+  1 | 2006-01-02 00:20:13-08
+  2 | 2006-01-02 12:30:13-08
+  3 | 2006-01-03 00:40:13-08
+  4 | 2006-01-03 12:50:13-08
+  5 | 2006-01-04 01:00:13-08
+  6 | 2006-01-04 13:10:13-08
+  7 | 2006-01-05 01:20:13-08
+  8 | 2006-01-05 13:30:13-08
+  9 | 2006-01-06 01:40:13-08
+ 10 | 2006-01-06 13:50:13-08
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by tstz2 + time '03:00' ) from perctint group by c  order by c limit 10;
+ c  |    percentile_cont     
+----+------------------------
+  1 | 2006-01-02 04:20:13-08
+  2 | 2006-01-02 16:30:13-08
+  3 | 2006-01-03 04:40:13-08
+  4 | 2006-01-03 16:50:13-08
+  5 | 2006-01-04 05:00:13-08
+  6 | 2006-01-04 17:10:13-08
+  7 | 2006-01-05 05:20:13-08
+  8 | 2006-01-05 17:30:13-08
+  9 | 2006-01-06 05:40:13-08
+ 10 | 2006-01-06 17:50:13-08
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by tstz2 - time '10:11:26' ) from perctint group by c  order by c limit 10;
+ c  |    percentile_cont     
+----+------------------------
+  1 | 2006-01-01 15:08:47-08
+  2 | 2006-01-02 03:18:47-08
+  3 | 2006-01-02 15:28:47-08
+  4 | 2006-01-03 03:38:47-08
+  5 | 2006-01-03 15:48:47-08
+  6 | 2006-01-04 03:58:47-08
+  7 | 2006-01-04 16:08:47-08
+  8 | 2006-01-05 04:18:47-08
+  9 | 2006-01-05 16:28:47-08
+ 10 | 2006-01-06 04:38:47-08
+(10 rows)
+
+select c , median( tstz2 - tstz1 ) from perctint group by c order by c limit 10 ;
+ c  |      median       
+----+-------------------
+  1 | @ 12 hours
+  2 | @ 1 day
+  3 | @ 1 day 12 hours
+  4 | @ 2 days
+  5 | @ 2 days 12 hours
+  6 | @ 3 days
+  7 | @ 3 days 12 hours
+  8 | @ 4 days
+  9 | @ 4 days 12 hours
+ 10 | @ 5 days
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by ts2::timestamptz -ts1:: timestamptz) from perctint group by c order by 2 limit 10;
+ c  |           percentile_cont            
+----+--------------------------------------
+  1 | @ 1462 days 6 hours 11 mins 50 secs
+  2 | @ 1463 days 2 hours 23 mins 50 secs
+  3 | @ 1463 days 22 hours 35 mins 50 secs
+  4 | @ 1464 days 18 hours 47 mins 50 secs
+  5 | @ 1465 days 14 hours 59 mins 50 secs
+  6 | @ 1466 days 11 hours 11 mins 50 secs
+  7 | @ 1467 days 7 hours 23 mins 50 secs
+  8 | @ 1468 days 3 hours 35 mins 50 secs
+  9 | @ 1468 days 23 hours 47 mins 50 secs
+ 10 | @ 1469 days 19 hours 59 mins 50 secs
+(10 rows)
+
+-- DATE
+select c, percentile_cont(0.9999) within group (order by ts2::date -ts1::date) from perctint group by c order by 2 limit 10;
+ c  | percentile_cont 
+----+-----------------
+  1 |            1462
+  2 |            1463
+  3 |            1464
+  4 |            1465
+  5 |            1466
+  7 |            1467
+  6 |            1467
+  8 |            1468
+  9 |            1469
+ 10 |            1470
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by ts2::date + integer '10' ) from perctint group by c order by 2 limit 10;
+ c  |    percentile_cont     
+----+------------------------
+  1 | 2010-01-13 00:00:00-08
+  2 | 2010-01-15 00:00:00-08
+  3 | 2010-01-17 00:00:00-08
+  4 | 2010-01-19 00:00:00-08
+  5 | 2010-01-21 00:00:00-08
+  6 | 2010-01-23 00:00:00-08
+  7 | 2010-01-24 00:00:00-08
+  8 | 2010-01-26 00:00:00-08
+  9 | 2010-01-28 00:00:00-08
+ 10 | 2010-01-30 00:00:00-08
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by ts2::date - integer '07' ) from perctint group by c order by 2 limit 10;
+ c  |    percentile_cont     
+----+------------------------
+  1 | 2009-12-27 00:00:00-08
+  2 | 2009-12-29 00:00:00-08
+  3 | 2009-12-31 00:00:00-08
+  4 | 2010-01-02 00:00:00-08
+  5 | 2010-01-04 00:00:00-08
+  6 | 2010-01-06 00:00:00-08
+  7 | 2010-01-07 00:00:00-08
+  8 | 2010-01-09 00:00:00-08
+  9 | 2010-01-11 00:00:00-08
+ 10 | 2010-01-13 00:00:00-08
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by ts2::date + days2 ) from perctint group by c order by 2 limit 10;
+ c  |   percentile_cont   
+----+---------------------
+  1 | 2010-01-03 00:42:10
+  2 | 2010-01-05 01:24:20
+  3 | 2010-01-07 02:06:30
+  4 | 2010-01-09 02:48:40
+  5 | 2010-01-11 03:30:50
+  6 | 2010-01-13 04:13:00
+  7 | 2010-01-14 04:55:10
+  8 | 2010-01-16 05:37:20
+  9 | 2010-01-18 06:19:30
+ 10 | 2010-01-20 07:01:40
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by ts2::date - days1 ) from perctint group by c order by 2 limit 10;
+ c  |   percentile_cont   
+----+---------------------
+  1 | 2010-01-01 22:59:48
+  2 | 2010-01-02 21:59:36
+  3 | 2010-01-03 20:59:24
+  4 | 2010-01-04 19:59:12
+  5 | 2010-01-05 18:59:00
+  7 | 2010-01-06 16:58:36
+  6 | 2010-01-06 17:58:48
+  8 | 2010-01-07 15:58:24
+  9 | 2010-01-08 14:58:12
+ 10 | 2010-01-09 13:58:00
+(10 rows)
+
+select median(ts2::date + interval '2 hours 10 minutes' ), percentile_cont(0.9999) within group (order by ts2::date + time '03:00' )    from perctint;
+       median        |    percentile_cont     
+---------------------+------------------------
+ 2010-04-04 14:10:00 | 2010-07-05 02:31:29.28
+(1 row)
+
+select c, percentile_cont(0.9999) within group (order by ts2::date - time '10:11:26' ) from perctint group by c order by 2 limit 10;
+ c  |   percentile_cont   
+----+---------------------
+  1 | 2010-01-02 13:48:34
+  2 | 2010-01-04 13:48:34
+  3 | 2010-01-06 13:48:34
+  4 | 2010-01-08 13:48:34
+  5 | 2010-01-10 13:48:34
+  6 | 2010-01-12 13:48:34
+  7 | 2010-01-13 13:48:34
+  8 | 2010-01-15 13:48:34
+  9 | 2010-01-17 13:48:34
+ 10 | 2010-01-19 13:48:34
+(10 rows)
+
+select c,median(ts2::date -ts1::date) from perctint group by c order by c limit 10;
+ c  | median 
+----+--------
+  1 |   1462
+  2 |   1463
+  3 |   1464
+  4 |   1465
+  5 |   1466
+  6 |   1467
+  7 |   1467
+  8 |   1468
+  9 |   1469
+ 10 |   1470
+(10 rows)
+
+-- TIMESTAMP
+select c, percentile_cont(0.9999) within group (order by ts2::timestamp - ts1::timestamp) from perctint group by c  order by c limit 10;
+ c  |           percentile_cont            
+----+--------------------------------------
+  1 | @ 1462 days 6 hours 11 mins 50 secs
+  2 | @ 1463 days 2 hours 23 mins 50 secs
+  3 | @ 1463 days 22 hours 35 mins 50 secs
+  4 | @ 1464 days 18 hours 47 mins 50 secs
+  5 | @ 1465 days 14 hours 59 mins 50 secs
+  6 | @ 1466 days 11 hours 11 mins 50 secs
+  7 | @ 1467 days 7 hours 23 mins 50 secs
+  8 | @ 1468 days 3 hours 35 mins 50 secs
+  9 | @ 1468 days 23 hours 47 mins 50 secs
+ 10 | @ 1469 days 19 hours 59 mins 50 secs
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by ts2::timestamp + days1 ) from perctint group by c  order by c limit 10;
+ c  |   percentile_cont   
+----+---------------------
+  1 | 2010-01-04 20:22:15
+  2 | 2010-01-07 17:34:27
+  3 | 2010-01-10 14:46:39
+  4 | 2010-01-13 11:58:51
+  5 | 2010-01-16 09:11:03
+  6 | 2010-01-19 06:23:15
+  7 | 2010-01-22 03:35:27
+  8 | 2010-01-25 00:47:39
+  9 | 2010-01-27 21:59:51
+ 10 | 2010-01-30 19:12:03
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by ts2::timestamp - days1 ) from perctint group by c  order by c limit 10;
+ c  |   percentile_cont   
+----+---------------------
+  1 | 2010-01-02 18:21:51
+  2 | 2010-01-03 13:33:39
+  3 | 2010-01-04 08:45:27
+  4 | 2010-01-05 03:57:15
+  5 | 2010-01-05 23:09:03
+  6 | 2010-01-06 18:20:51
+  7 | 2010-01-07 13:32:39
+  8 | 2010-01-08 08:44:27
+  9 | 2010-01-09 03:56:15
+ 10 | 2010-01-09 23:08:03
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by ts2::timestamp + interval '2 hours 3 minutes 10 secs' ) from perctint group by c  order by c limit 10;
+ c  |   percentile_cont   
+----+---------------------
+  1 | 2010-01-03 21:25:13
+  2 | 2010-01-05 17:37:13
+  3 | 2010-01-07 13:49:13
+  4 | 2010-01-09 10:01:13
+  5 | 2010-01-11 06:13:13
+  6 | 2010-01-13 02:25:13
+  7 | 2010-01-14 22:37:13
+  8 | 2010-01-16 18:49:13
+  9 | 2010-01-18 15:01:13
+ 10 | 2010-01-20 11:13:13
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by ts2::timestamp - interval '1 hour' ) from perctint group by c  order by c limit 10;
+ c  |   percentile_cont   
+----+---------------------
+  1 | 2010-01-03 18:22:03
+  2 | 2010-01-05 14:34:03
+  3 | 2010-01-07 10:46:03
+  4 | 2010-01-09 06:58:03
+  5 | 2010-01-11 03:10:03
+  6 | 2010-01-12 23:22:03
+  7 | 2010-01-14 19:34:03
+  8 | 2010-01-16 15:46:03
+  9 | 2010-01-18 11:58:03
+ 10 | 2010-01-20 08:10:03
+(10 rows)
+
+select median(ts2::timestamp + time '   12:00'), percentile_cont(0.9999) within group (order by ts2::timestamp + time '03:00' ) from perctint ;
+       median        |     percentile_cont     
+---------------------+-------------------------
+ 2010-04-05 11:16:03 | 2010-07-05 05:43:47.712
+(1 row)
+
+select c, percentile_cont(0.9999) within group (order by ts2::timestamp - time '10:11:26' ) from perctint group by c  order by c limit 10;
+ c  |   percentile_cont   
+----+---------------------
+  1 | 2010-01-03 09:10:37
+  2 | 2010-01-05 05:22:37
+  3 | 2010-01-07 01:34:37
+  4 | 2010-01-08 21:46:37
+  5 | 2010-01-10 17:58:37
+  6 | 2010-01-12 14:10:37
+  7 | 2010-01-14 10:22:37
+  8 | 2010-01-16 06:34:37
+  9 | 2010-01-18 02:46:37
+ 10 | 2010-01-19 22:58:37
+(10 rows)
+
+-- TIME
+select median(  time '01:00' + interval '3 hours') ;
+  median   
+-----------
+ @ 4 hours
+(1 row)
+
+select percentile_cont(0.77) within group ( order by time '01:00' + interval '3 hours') ;
+ percentile_cont 
+-----------------
+ @ 4 hours
+(1 row)
+
+select c, percentile_cont(0.9999) within group (order by time '11:11' + days2 ) from perctint group by c order by c limit 10;
+ c  |      percentile_cont       
+----+----------------------------
+  1 | @ 11 hours 53 mins 10 secs
+  2 | @ 12 hours 35 mins 20 secs
+  3 | @ 13 hours 17 mins 30 secs
+  4 | @ 13 hours 59 mins 40 secs
+  5 | @ 14 hours 41 mins 50 secs
+  6 | @ 15 hours 24 mins
+  7 | @ 16 hours 6 mins 10 secs
+  8 | @ 16 hours 48 mins 20 secs
+  9 | @ 17 hours 30 mins 30 secs
+ 10 | @ 18 hours 12 mins 40 secs
+(10 rows)
+
+-- interval
+select median(- interval '23 hours');
+     median     
+----------------
+ @ 23 hours ago
+(1 row)
+
+select median(interval '1 hour' / double precision '1.5');
+  median   
+-----------
+ @ 40 mins
+(1 row)
+
+select c, percentile_cont(0.9999) within group (order by days1 -days2 ) from perctint group by c order by c limit 10;
+ c  |         percentile_cont          
+----+----------------------------------
+  1 | @ 1 day 18 mins 2 secs
+  2 | @ 2 days 36 mins 4 secs
+  3 | @ 3 days 54 mins 6 secs
+  4 | @ 4 days 1 hour 12 mins 8 secs
+  5 | @ 5 days 1 hour 30 mins 10 secs
+  6 | @ 6 days 1 hour 48 mins 12 secs
+  7 | @ 7 days 2 hours 6 mins 14 secs
+  8 | @ 8 days 2 hours 24 mins 16 secs
+  9 | @ 9 days 2 hours 42 mins 18 secs
+ 10 | @ 10 days 3 hours 20 secs
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by ((days1 -days2) / double precision '1.75')) from perctint group by c order by c limit 10;
+ c  |             percentile_cont              
+----+------------------------------------------
+  1 | @ 13 hours 53 mins 9.714285 secs
+  2 | @ 1 day 3 hours 46 mins 19.428572 secs
+  3 | @ 1 day 17 hours 39 mins 29.142857 secs
+  4 | @ 2 days 7 hours 32 mins 38.857143 secs
+  5 | @ 2 days 21 hours 25 mins 48.571428 secs
+  6 | @ 3 days 11 hours 18 mins 58.285715 secs
+  7 | @ 4 days 1 hour 12 mins 8 secs
+  8 | @ 4 days 15 hours 5 mins 17.714285 secs
+  9 | @ 5 days 4 hours 58 mins 27.428572 secs
+ 10 | @ 5 days 18 hours 51 mins 37.142857 secs
+(10 rows)
+
+select c, percentile_cont(0.9999) within group (order by ((days1 + days2) * 1.2) ) from perctint group by c order by c limit 10;
+ c  |           percentile_cont            
+----+--------------------------------------
+  1 | @ 1 day 6 hours 50 mins 50.4 secs
+  2 | @ 2 days 13 hours 41 mins 40.8 secs
+  3 | @ 3 days 20 hours 32 mins 31.2 secs
+  4 | @ 4 days 27 hours 23 mins 21.6 secs
+  5 | @ 6 days 10 hours 14 mins 12 secs
+  6 | @ 7 days 17 hours 5 mins 2.4 secs
+  7 | @ 8 days 23 hours 55 mins 52.8 secs
+  8 | @ 9 days 30 hours 46 mins 43.2 secs
+  9 | @ 10 days 37 hours 37 mins 33.6 secs
+ 10 | @ 12 days 20 hours 28 mins 24 secs
+(10 rows)
+
+--numeric types
+select b, percentile_cont(0.9876) within group( order by c::numeric - 2.8765::numeric) from perctnum group by b order by b limit 10;
+ b | percentile_cont 
+---+-----------------
+ 0 |     20.84951364
+ 1 |     46.82341488
+ 2 |     72.82211488
+ 3 |     98.82081488
+ 4 |    124.81951488
+ 5 |    150.81821488
+ 6 |    176.81691488
+ 7 |    196.89031116
+(8 rows)
+
+select median( c::numeric + (0.2*0.99):: numeric) from perctnum;
+  median   
+-----------
+ 101.19295
+(1 row)
+
+select percentile_cont(1.00) within group( order by b::float8 + (110 / 13)::float8) from perctnum; 
+ percentile_cont 
+-----------------
+              15
+(1 row)
+
+--SQL with <> operator with IDF in HAVING clause
+select count(*),median(a) from perct group by b having median(b) <> 33 order by median(a);
+ count | median 
+-------+--------
+     9 |      5
+    10 |   14.5
+    10 |   24.5
+    10 |   34.5
+    10 |   44.5
+    10 |   54.5
+    10 |   64.5
+    10 |   74.5
+    10 |   84.5
+    10 |   94.5
+     1 |    100
+(11 rows)
+
+--SQL with multiple IDF conditions in HAVING clause
+select a, avg(b),percentile_cont(0.4) within group (order by a)  from perct group by a having percentile_cont(0.4) within group (order by a)  > 1 and percentile_cont(0.4) within group( order by a ) < 10  order by a;
+ a | avg | percentile_cont 
+---+-----+-----------------
+ 2 |   0 |               2
+ 3 |   0 |               3
+ 4 |   0 |               4
+ 5 |   0 |               5
+ 6 |   0 |               6
+ 7 |   0 |               7
+ 8 |   0 |               8
+ 9 |   0 |               9
+(8 rows)
+
+--SQL with multiple IDF conditions in HAVING clause (including median)
+select a, avg(b)  from perct group by a having percentile_cont(0.4) within group (order by a)  > median(b)  order by a desc limit 10;
+  a  | avg 
+-----+-----
+ 100 |  10
+  99 |   9
+  98 |   9
+  97 |   9
+  96 |   9
+  95 |   9
+  94 |   9
+  93 |   9
+  92 |   9
+  91 |   9
+(10 rows)
+
+--SQL with IDF and not in condition in HAVING clause
+select  median(b)  from perct group by a having median(a) not in (select avg(b) from perct4) order by median(b) desc limit 10;
+ median 
+--------
+     10
+      9
+      9
+      9
+      9
+      9
+      9
+      9
+      9
+      9
+(10 rows)
+
+--SQL with multiple IDF and not in condition in HAVING clause
+select count(*), median(b)  from perct group by a having median(a) not in ( select b from perct4 group by b having median(b) < 5 and percentile_disc(0.9) within group(order by a) > 3) order by median(b) limit 10;
+ count | median 
+-------+--------
+     1 |      0
+     1 |      0
+     1 |      0
+     1 |      0
+     1 |      0
+     1 |      1
+     1 |      1
+     1 |      1
+     1 |      1
+     1 |      1
+(10 rows)
+
+-- SQL with IDF and aggregate func and Over clause
+select variance(a) over(partition by median(b))from perct group by a,b order by b limit 10;
+      variance      
+--------------------
+ 7.5000000000000000
+ 7.5000000000000000
+ 7.5000000000000000
+ 7.5000000000000000
+ 7.5000000000000000
+ 7.5000000000000000
+ 7.5000000000000000
+ 7.5000000000000000
+ 7.5000000000000000
+ 9.1666666666666667
+(10 rows)
+
+-- SQL with IDF in aggregate function - MPP-16862
+select median( median(a)) from perct;
+ERROR:  argument of percentile function must not contain aggregates
+LINE 1: select median( median(a)) from perct;
+                       ^
+select median(percentile_cont(0.5) within group (order by a)) from perct;
+ERROR:  argument of percentile function must not contain aggregates
+LINE 1: select median(percentile_cont(0.5) within group (order by a)...
+                      ^
+select a, percentile_disc(0.1234567890)  within group ( order by avg(a)) from perct group by a;
+ERROR:  argument of percentile function must not contain aggregates
+LINE 1: ...ntile_disc(0.1234567890)  within group ( order by avg(a)) fr...
+                                                             ^
+select a,median( ( count (*) )) from perct group by 1 limit 2;
+ERROR:  argument of percentile function must not contain aggregates
+LINE 1: select a,median( ( count (*) )) from perct group by 1 limit ...
+                           ^
+-- SQL with IDF with SRF
+select gendates( '1992-01-01', '1998-08-02', 10 ), median('1day'::interval);
+ERROR:  function gendates(unknown, unknown, integer) does not exist
+LINE 1: select gendates( '1992-01-01', '1998-08-02', 10 ), median('1...
+               ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+-- SQL with IDF and OVER
+-- SQL with IDF and Windows function
+-- SQL with IDF on JOIN condition
+-- SQL with nested IDF
+select sum(median(a))  from perct ;
+ERROR:  aggregate function calls cannot be nested
+LINE 1: select sum(median(a))  from perct ;
+                   ^
+select median( median(0.9) ) ;
+ERROR:  argument of percentile function must not contain aggregates
+LINE 1: select median( median(0.9) ) ;
+                       ^
+select median( percentile_cont(0.2) within group( ORDER by 1)) ;
+ERROR:  argument of percentile function must not contain aggregates
+LINE 1: select median( percentile_cont(0.2) within group( ORDER by 1...
+                       ^
+-- SQL with IDF and Grouping Sets
+select a,median(b) from perct4 group by median(c);
+ERROR:  aggregates not allowed in GROUP BY clause
+LINE 1: select a,median(b) from perct4 group by median(c);
+                                                ^
+-- SQL with Outer aggregate reference and IDF
+select ( (select sum(a) from perct group by b having median(t.a) < 5 limit 1 ) ) from perct t;
+ERROR:  percentile functions cannot reference columns from outer queries
+LINE 1: ...select sum(a) from perct group by b having median(t.a) < 5 l...
+                                                             ^
+select ( select percentile_cont(0.6) within group (order by t.a) from perct where a <10 limit 1 )  from perct t;
+ERROR:  percentile functions cannot reference columns from outer queries
+LINE 1: ...elect percentile_cont(0.6) within group (order by t.a) from ...
+                                                             ^
+-- SQL with Group by () and IDF
+select a,median(b) from perct group by ();
+ERROR:  column "perct.a" must appear in the GROUP BY clause or be used in an aggregate function
+LINE 1: select a,median(b) from perct group by ();
+               ^
+select a,percentile_cont(0.7) within group(order by b) from perct group by ();
+ERROR:  column "perct.a" must appear in the GROUP BY clause or be used in an aggregate function
+LINE 1: select a,percentile_cont(0.7) within group(order by b) from ...
+               ^
+-- SQL with Cube and IDF
+-- SQL with GroupingSets and IDF
+select percentile_cont(0.7) within group (order by a) from perct4 group by grouping sets((b),(c), ());
+ERROR:  WITHIN GROUP aggregate cannot be used in GROUPING SETS query
+select median(a) from perct group by grouping sets((), (b));
+ERROR:  WITHIN GROUP aggregate cannot be used in GROUPING SETS query
+-- SQL with grouping and IDF
+select a, median(b) , grouping(c) , grouping(a) from perct4 group by grouping sets((a,c),a,c,());
+ERROR:  WITHIN GROUP aggregate cannot be used in GROUPING SETS query
+-- SQL with group_id and IDF
+select median(group_id()) from perct group by a,b;
+ERROR:  argument of percentile function must not contain grouping(), or group_id()
+LINE 1: select median(group_id()) from perct group by a,b;
+               ^
+-- SQL with IDF and windows func : ERROR
+select percentile_cont(0.2) within group (order by median(a) over()) from perct;
+ERROR:  window OVER clause can only be used with an aggregate
+-- SQL with IDF , aggregate func and over clause within IDF : ERROR
+select percentile_cont(0.2) within group (order by stddev(b) over() ) from perct;
+ERROR:  argument of percentile function must not contain window functions
+LINE 1: select percentile_cont(0.2) within group (order by stddev(b)...
+               ^
+select median(avg(a) over()) from perct;
+ERROR:  argument of percentile function must not contain window functions
+LINE 1: select median(avg(a) over()) from perct;
+               ^
+-- SQL with math expression as input to median
+select b+1 as col1 ,median(a+b) from perct group by b order by b desc;
+ col1 | median 
+------+--------
+   11 |    110
+   10 |  103.5
+    9 |   92.5
+    8 |   81.5
+    7 |   70.5
+    6 |   59.5
+    5 |   48.5
+    4 |   37.5
+    3 |   26.5
+    2 |   15.5
+    1 |      5
+(11 rows)
+
+select b^2, median((select median(a) from perct) - (select sum(a)/10+ median(a) from perct ) + b + 500) from perct group by b order by b desc ;
+ ?column? | median 
+----------+--------
+      100 |      5
+       81 |      4
+       64 |      3
+       49 |      2
+       36 |      1
+       25 |      0
+       16 |     -1
+        9 |     -2
+        4 |     -3
+        1 |     -4
+        0 |     -5
+(11 rows)
+
+-- PERCENTILE FUNCTION: SQL with math expression as input to IDF
+select b, percentile_disc(8*9/100 % 10 + 0.1::int) within group (order by a) from perct group by b order by b;
+ b  | percentile_disc 
+----+-----------------
+  0 |               1
+  1 |              10
+  2 |              20
+  3 |              30
+  4 |              40
+  5 |              50
+  6 |              60
+  7 |              70
+  8 |              80
+  9 |              90
+ 10 |             100
+(11 rows)
+
+-- SQL with IDF AND ORDER BY constant value
+select percentile_disc(0.05::int)  within group (order by a) from perct;
+ percentile_disc 
+-----------------
+               1
+(1 row)
+
+select percentile_disc(0.05::text) within group (order by a) from perct;
+ percentile_disc 
+-----------------
+               5
+(1 row)
+
+-- start_ignore
+CREATE SEQUENCE serial START 101;
+-- end_ignore
+select percentile_cont(0.5) within group (order by NEXTVAL('SERIAL')) from perct;
+ percentile_cont 
+-----------------
+           150.5
+(1 row)
+
+-- SQL with IDF and Date/Time Functions and Operators : Functions and Other operations
+select median(double precision '4.95' * interval '1 hour');
+      median       
+-------------------
+ @ 4 hours 57 mins
+(1 row)
+
+select median('19990101'::date);
+         median         
+------------------------
+ 1999-01-01 00:00:00-08
+(1 row)
+
+select median('19990101'::timestamp);
+       median        
+---------------------
+ 1999-01-01 00:00:00
+(1 row)
+
+select median('19990101'::timestamptz);
+         median         
+------------------------
+ 1999-01-01 00:00:00-08
+(1 row)
+
+select median (( EXTRACT(microseconds FROM TIMESTAMP '2012-04-04 14:54:37.843901-07')));
+  median  
+----------
+ 37843901
+(1 row)
+
+-- SQL contains IDF and group by ()
+select a,percentile_cont(0.9) within group (order by b) from perct4 group by a,() order by a limit 10;
+ a  | percentile_cont 
+----+-----------------
+  1 |               0
+  2 |               0
+  3 |               0
+  4 |               0
+  6 |               0
+  7 |               0
+  8 |               0
+  9 |               0
+ 10 |               1
+ 11 |               1
+(10 rows)
+
+select a,median(b) from perct group by a,() order by a limit 10;
+ a  | median 
+----+--------
+  1 |      0
+  2 |      0
+  3 |      0
+  4 |      0
+  5 |      0
+  6 |      0
+  7 |      0
+  8 |      0
+  9 |      0
+ 10 |      1
+(10 rows)
+
+select a, median(b) from perct4 GROUP BY GROUPING SETS((a)) order by a limit 10;
+ a  | median 
+----+--------
+  1 |      0
+  2 |      0
+  3 |      0
+  4 |      0
+  6 |      0
+  7 |      0
+  8 |      0
+  9 |      0
+ 10 |      1
+ 11 |      1
+(10 rows)
+
+select percentile_cont(0.7) within group (order by a) from perct group by grouping sets((b)) order by 1;
+ percentile_cont 
+-----------------
+             6.6
+            16.3
+            26.3
+            36.3
+            46.3
+            56.3
+            66.3
+            76.3
+            86.3
+            96.3
+             100
+(11 rows)
+
+select DISTINCT percentile_cont(0.7) within group (order by a) from perct group by grouping sets((b), (b)) order by 1;
+ percentile_cont 
+-----------------
+             6.6
+            16.3
+            26.3
+            36.3
+            46.3
+            56.3
+            66.3
+            76.3
+            86.3
+            96.3
+             100
+(11 rows)
+
+-- VIEW with IDF and its definition -- Median and subquery
+-- start_ignore
+create view idf_v1 as select median (( select median((select median(a) from perct)) from perct ));
+-- end_ignore
+select pg_get_viewdef('idf_v1');  
+                                                       pg_get_viewdef                                                        
+-----------------------------------------------------------------------------------------------------------------------------
+ SELECT median((SELECT median((SELECT median(float8(perct.a)) AS "median" FROM perct)) AS "median" FROM perct)) AS "median";
+(1 row)
+
+ 
+-- VIEW with IDF and its definition -- Percentile function with wrong input
+-- start_ignore
+create view idf_v4 as select percentile_disc(1.5) within group (order by a) as percentile_disc_a, percentile_disc( 0.9) within group (order by b) as percentile_disc_b  from perct;
+-- end_ignore
+-- Expected Error : input is out of range
+select * from idf_v4;
+ERROR:  input is out of range
+HINT:  Argument to percentile function must be between 0.0 and 1.0.
+-- SQL with IDF and distinct
+select distinct(median(b)) from perct group by a;
+ median 
+--------
+      0
+      1
+      2
+      3
+      4
+      5
+      6
+      7
+      8
+      9
+     10
+(11 rows)
+
+-- SQL with IDF and distinct on
+select distinct on (median(a)) median(a) ,b from perct group by b order by median(a),b;
+ median | b  
+--------+----
+      5 |  0
+   14.5 |  1
+   24.5 |  2
+   34.5 |  3
+   44.5 |  4
+   54.5 |  5
+   64.5 |  6
+   74.5 |  7
+   84.5 |  8
+   94.5 |  9
+    100 | 10
+(11 rows)
+
+-- start_ignore
+drop schema qp_idf cascade;
+NOTICE:  drop cascades to view idf_v4
+NOTICE:  drop cascades to rule _RETURN on view idf_v4
+NOTICE:  drop cascades to view idf_v1
+NOTICE:  drop cascades to rule _RETURN on view idf_v1
+NOTICE:  drop cascades to sequence serial
+NOTICE:  drop cascades to table perctint
+NOTICE:  drop cascades to table perctnum
+NOTICE:  drop cascades to table perctsz
+NOTICE:  drop cascades to table percts
+NOTICE:  drop cascades to table perct4
+NOTICE:  drop cascades to table perct3
+NOTICE:  drop cascades to table perct2
+NOTICE:  drop cascades to table perct
+-- end_ignore

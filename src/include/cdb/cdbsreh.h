@@ -11,7 +11,6 @@
 #ifndef CDBSREH_H
 #define CDBSREH_H
 
-#include "c.h"
 #include "fmgr.h"
 #include "cdb/cdbcopy.h"
 #include "utils/memutils.h"
@@ -71,14 +70,6 @@ typedef struct CdbSreh
 	int		rejectcount;	/* how many were rejected so far */
 	bool	is_limit_in_rows; /* ROWS = true, PERCENT = false */
 	
-	/* the error table */
-	Relation errtbl;		/* the error table we use (if any) */
-	
-	/* error table lifespan */
-	bool	is_keep;		/* if true error table should not get DROP'ed */
-	bool	reusing_errtbl; /* true if we are using an existing table (did not auto generate a new one) */
-	bool	should_drop;	/* true if we decide to DROP errtbl at end of execution (depends on previous 2 vars) */
-	
 	/* COPY only vars */
 	CdbCopy *cdbcopy;		/* for QD COPY to send bad rows to random QE */
 	int		lastsegid;		/* last QE COPY segid that QD COPY sent bad row to */
@@ -92,21 +83,16 @@ typedef struct CdbSreh
 
 extern int gp_initial_bad_row_limit;
 
-extern CdbSreh *makeCdbSreh(bool is_keep, bool reusing_existing_errtable,
-							int rejectlimit,
-							bool is_limit_in_rows, RangeVar *errtbl,
+extern CdbSreh *makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
 							char *filename, char *relname, bool log_to_file);
 extern void destroyCdbSreh(CdbSreh *cdbsreh);
 extern void HandleSingleRowError(CdbSreh *cdbsreh);
 extern void ReportSrehResults(CdbSreh *cdbsreh, int total_rejected);
 extern void SendNumRowsRejected(int numrejected);
-extern void ValidateErrorTableMetaData(Relation rel);
 extern bool IsErrorTable(Relation rel);
-extern void SetErrorTableVerdict(CdbSreh *cdbsreh, int total_rejected);
 extern void ErrorIfRejectLimitReached(CdbSreh *cdbsreh, CdbCopy *cdbCopy);
 extern bool ExceedSegmentRejectHardLimit(CdbSreh *cdbsreh);
 extern bool IsRejectLimitReached(CdbSreh *cdbsreh);
-extern void emitSameTxnWarning(void);
 extern void VerifyRejectLimit(char rejectlimittype, int rejectlimit);
 
 extern bool ErrorLogDelete(Oid databaseId, Oid relationId);

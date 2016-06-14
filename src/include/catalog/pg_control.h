@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_control.h,v 1.35 2007/01/05 22:19:52 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_control.h,v 1.38 2007/05/20 21:08:19 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -55,6 +55,7 @@ typedef struct CheckPoint
 /* XLOG info values for XLOG rmgr */
 #define XLOG_CHECKPOINT_SHUTDOWN		0x00
 #define XLOG_CHECKPOINT_ONLINE			0x10
+#define XLOG_NOOP						0x20
 #define XLOG_NEXTOID					0x30
 #define XLOG_SWITCH						0x40
 #define XLOG_BACKUP_END					0x50

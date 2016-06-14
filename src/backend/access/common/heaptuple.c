@@ -51,7 +51,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/heaptuple.c,v 1.114 2007/01/09 22:00:59 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/common/heaptuple.c,v 1.115 2007/02/09 03:35:33 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1242,7 +1242,6 @@ _slot_getsomeattrs(TupleTableSlot *slot, int attnum)
 	attno = Min(attno, attnum);
 
 	slot_deform_tuple(slot, attno);
-
 
 	/*
 	 * If tuple doesn't have all the atts indicated by tupleDesc, read the

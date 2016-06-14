@@ -2,6 +2,8 @@
 -- Basic syntax
 -- Expect: success
 -----------------------------------------------------------------------
+create database column_compression;
+\c column_compression
 prepare ccddlcheck as
 select attrelid::regclass as relname,
 attnum, attoptions from pg_class c, pg_attribute_encoding e
@@ -1175,7 +1177,7 @@ execute ccddlcheck;
 (2 rows)
 
 alter table ccddl split partition p1 at (5) into (partition p2, partition p3);
-NOTICE:  exchanged partition "p1" of relation "ccddl" with relation "pg_temp_4073245"
+NOTICE:  exchanged partition "p1" of relation "ccddl" with relation "pg_temp_706752"
 NOTICE:  dropped partition "p1" for relation "ccddl"
 NOTICE:  CREATE TABLE will create partition "ccddl_1_prt_p2" for table "ccddl"
 NOTICE:  CREATE TABLE will create partition "ccddl_1_prt_p3" for table "ccddl"
@@ -1212,7 +1214,7 @@ execute ccddlcheck;
 (6 rows)
 
 alter table ccddl alter partition p1 split partition sp1 at (10) into (partition sp2, partition sp3);
-NOTICE:  exchanged partition "sp1" of partition "p1" of relation "ccddl" with relation "pg_temp_4073487"
+NOTICE:  exchanged partition "sp1" of partition "p1" of relation "ccddl" with relation "pg_temp_707268"
 NOTICE:  dropped partition "sp1" for partition "p1" of relation "ccddl"
 NOTICE:  CREATE TABLE will create partition "ccddl_1_prt_p1_2_prt_sp2" for table "ccddl_1_prt_p1"
 NOTICE:  CREATE TABLE will create partition "ccddl_1_prt_p1_2_prt_sp3" for table "ccddl_1_prt_p1"
@@ -1230,7 +1232,7 @@ execute ccddlcheck;
 (8 rows)
 
 alter table ccddl alter partition p1 split partition sp2 at (5) into (partition sp2, partition sp2_5);
-NOTICE:  exchanged partition "sp2" of partition "p1" of relation "ccddl" with relation "pg_temp_4073487"
+NOTICE:  exchanged partition "sp2" of partition "p1" of relation "ccddl" with relation "pg_temp_707268"
 NOTICE:  dropped partition "sp2" for partition "p1" of relation "ccddl"
 NOTICE:  CREATE TABLE will create partition "ccddl_1_prt_p1_2_prt_sp2" for table "ccddl_1_prt_p1"
 NOTICE:  CREATE TABLE will create partition "ccddl_1_prt_p1_2_prt_sp2_5" for table "ccddl_1_prt_p1"
@@ -1692,8 +1694,7 @@ ERROR:  ENCODING clause only supported with column oriented partitioned tables
 -----------------------------------------------------------------------
 -- The basics
 drop type if exists int42 cascade;
-NOTICE:  drop cascades to function int42_out(int42)
-NOTICE:  drop cascades to function int42_in(cstring)
+NOTICE:  type "int42" does not exist, skipping
 create type int42;
 CREATE FUNCTION int42_in(cstring)
 RETURNS int42
@@ -1971,3 +1972,5 @@ select pg_get_partition_template_def('ccddl'::regclass, true, false);
 (1 row)
 
 drop table ccddl;
+\c regression
+drop database column_compression;

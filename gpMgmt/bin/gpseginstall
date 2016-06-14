@@ -330,7 +330,7 @@ def checkUsernames():
 
 def getAddUserCommand():
     if isLinux:
-        return "useradd -m %s" % options.user
+        return "useradd -r -m %s" % options.user
     else:
         return "groupadd %s; useradd -d /export/home/%s -m -g %s -s /bin/bash %s" % (options.user, options.user, options.user, options.user)
 

@@ -16,14 +16,22 @@
 #
 
 ignore: leastsquares
-test: decode_expr bitmapscan case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy
-test: filter gpctas gpdist matrix toast sublink sirv_functions table_functions olap_setup
+test: opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy gp_create_table
+test: filter gpctas gpdist matrix toast sublink sirv_functions table_functions olap_setup complex opclass_ddl bitmap_index
 
 test: dispatch
 
+# 'segspace' relies on the segment spill space to be 0, and uses fault injectors
+# so it needs to be in a group by itself
+test: segspace
+
+# 'query_finish_pending' sets QueryFinishPending flag to true during query execution using fault injectors
+# so it needs to be in a group by itself
+test: query_finish_pending
+
 test: gpdiffcheck gptokencheck information_schema gp_hashagg sequence_gp tidscan
 
-test: rangefuncs_cdb gp_dqa external_table subselect_gp indexjoin distributed_transactions olap_group olap_window_seq with_clause as_alias regex_gp partition1
+test: rangefuncs_cdb gp_dqa external_table subselect_gp subselect_gp2 indexjoin distributed_transactions olap_group olap_window_seq with_clause as_alias regex_gp partition1
 
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests. Unfortunately, 'partition' also assumes that there
@@ -48,19 +56,52 @@ test: vacuum_gp
 # FIXME: These tests no longer work, because they try to set
 # gp_interconnect_type, which doesn't work:
 # ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
-#test: gpic
-#test: gpic_bigtup
 
 ignore: gp_portal_error
-test: partition_indexing column_compression eagerfree mapred gpparams tidycat aocs co_nestloop_idxscan  gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic
+test: partition_indexing column_compression eagerfree mapred gpparams tidycat aocs co_nestloop_idxscan  gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic aoco_privileges
 ignore: icudp_full
 ignore: gp_delete_as_trunc
 
 test: resource_queue
+# gp_toolkit performs a vacuum and checks that it truncated the relation. That
+# might not happen if other backends are holding transactions open, preventing
+# vacuum from removing dead tuples.
+test: gp_toolkit
 
-test: filespace trig auth_constraint role rle portals_updatable plpgsql_cache timeseries resource_queue_function pg_stat_last_operation gp_numeric_agg gp_toolkit plan_size partindex_test direct_dispatch partition_pruning_with_fn dsp
+test: filespace trig auth_constraint role rle portals_updatable plpgsql_cache timeseries resource_queue_function pg_stat_last_operation gp_numeric_agg partindex_test direct_dispatch partition_pruning_with_fn dsp
 
-test: aggregate_with_groupingsets gp_optimizer 
+# direct dispatch tests
+test: bfv_dd bfv_dd_multicolumn bfv_dd_types
+
+test: catalog bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition DML_over_joins gp_optimizer 
+ 
+test: aggregate_with_groupingsets 
+
+test: nested_case_null
+
+test: qp_olap_mdqa 
+
+test: qp_with_clause 
+
+test: qp_misc 
+
+test: qp_misc_jiras
+
+test: bfv_cte bfv_joins bfv_statistic bfv_subquery bfv_planner bfv_legacy
+
+test: qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan
+test: qp_functions qp_misc_rio_join_small qp_misc_rio
+
+test: qp_correlated_query qp_targeted_dispatch
+
+test: qp_dpe qp_subquery qp_functions_idf qp_regexp qp_resource_queue
+
+test: qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4
+
+test: olap_setup
+test: qp_olap_group
+
+test: qp_query_execution
 
 ignore: tpch500GB_orca
 
@@ -70,4 +111,24 @@ ignore: tpch500GB_orca
 # so what's the point of that? Anyhow, the test is disabled for now..
 #test: orca_udfs
 
+# Tests for "compaction", i.e. VACUUM, of updatable append-only tables
+test: uao_compaction/full uao_compaction/outdated_partialindex uao_compaction/drop_column_update uao_compaction/eof_truncate uao_compaction/basic uao_compaction/outdatedindex uao_compaction/update_toast uao_compaction/outdatedindex_abort uao_compaction/delete_toast uao_compaction/alter_table_analyze uao_compaction/full_eof_truncate uao_compaction/full_threshold
+# TODO find why these tests fail in parellel, for now keeping them sequential
+test: uao_compaction/full_stats
+test: uao_compaction/stats
+test: uao_compaction/threshold
+test: uao_compaction/index_stats
+test: uao_compaction/index
+test: uao_compaction/drop_column
+test: uao_compaction/index2
+
+# Tests for "compaction", i.e. VACUUM, of updatable append-only column oriented tables
+test: uaocs_compaction/alter_table_analyze uaocs_compaction/basic uaocs_compaction/drop_column_update uaocs_compaction/eof_truncate uaocs_compaction/full uaocs_compaction/full_eof_truncate uaocs_compaction/full_threshold uaocs_compaction/outdated_partialindex uaocs_compaction/outdatedindex uaocs_compaction/outdatedindex_abort
+# TODO find why these tests fail in parellel, for now keeping them sequential
+test: uaocs_compaction/full_stats
+test: uaocs_compaction/stats
+test: uaocs_compaction/threshold
+test: uaocs_compaction/index_stats
+test: uaocs_compaction/index
+test: uaocs_compaction/drop_column
 # end of tests

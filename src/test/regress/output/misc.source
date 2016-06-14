@@ -543,9 +543,6 @@ SELECT user_relns() AS user_relns
  default_tbl
  defaultexpr_tbl
  dept
- distpol1
- distpol2
- distpol3
  dttm_com
  e_star
  emp
@@ -650,8 +647,9 @@ SELECT user_relns() AS user_relns
  timetz_tbl
  tinterval_tbl
  toyemp
+ usr_define_type
  varchar_tbl
-(147 rows)
+(145 rows)
 
 SELECT name(equipment(hobby_construct(text 'skywalking', text 'mer')));
  name 

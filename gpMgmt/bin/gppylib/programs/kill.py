@@ -8,7 +8,7 @@ from gppylib.gpparseopts import OptParser, OptChecker
 from gppylib.mainUtils import addStandardLoggingAndHelpOptions, ProgramArgumentValidationException
 from gppylib.commands.unix import kill_sequence, check_pid 
 from gppylib.operations.package import dereference_symlink
-from psi.process import Process, NoSuchProcessError
+from psutil import Process, NoSuchProcess
 
 logger = gplog.get_default_logger()
 
@@ -94,12 +94,13 @@ class KillProgram:
         
         try:    
             proc = Process(pid=pid)
-        except NoSuchProcessError, e:
+        except NoSuchProcess, e:
             raise KillError('Process with pid(%s) does not exist' % pid)
 
-        logger.info('process %s is %s' % (pid, proc.command.strip()))
+        command = ' '.join(proc.cmdline())
+        logger.info('process %s is %s' % (pid, command.strip()))
         
-        return proc.command.strip()
+        return command.strip()
 
     def terminate_process(self, pid):
        

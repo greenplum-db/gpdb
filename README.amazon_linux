@@ -43,7 +43,7 @@ sudo make install
 sudo pip install --upgrade pip
 as root
     pip install epydoc
-    pip install psi
+    pip install psutil
     pip install --upgrade lockfile
 
 # init GPDB

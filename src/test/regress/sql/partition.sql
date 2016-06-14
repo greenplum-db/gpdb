@@ -1342,7 +1342,7 @@ select partitiontablename, ao_ptotal(partitiontablename)
 from pg_partitions where tablename = 'ao_p';
 -- end_ignore
 -- try SREH
-copy ao_p from stdin log errors into ao_p_err segment reject limit 100;
+copy ao_p from stdin log errors segment reject limit 100;
 6
 7
 10000
@@ -3690,7 +3690,43 @@ select * from deep_part_1_prt_female_2_prt_5_3_prt_5;
 insert into deep_part values (9, 9, 10, 'F');
 select * from deep_part;
 
+-- Incorrect relation OID in pg_partition_oid()
+select pg_partition_oid(1, deep_part.*) from deep_part;
+
 drop table input2;
 drop table input1;
 drop table part_tab;
 drop table deep_part;
+
+-- Avoid TupleDesc leak when COPY partition table from files
+drop table if exists pt_td_leak;
+CREATE TABLE pt_td_leak
+(
+col1 int,
+col2 int,
+col3 int
+)
+distributed by (col1)
+partition by range(col2)
+(
+    partition part1 start(1) end(5),
+    partition part2 start(5) end(10)
+);
+
+insert into pt_td_leak select i,i,i from generate_series(1,9) i;
+copy pt_td_leak to '/tmp/pt_td_leak.out' csv;
+
+alter table pt_td_leak drop column col3;
+alter table pt_td_leak add column col3 int default 7;
+
+drop table if exists pt_td_leak_exchange;
+CREATE TABLE pt_td_leak_exchange ( col1 int, col2 int, col3 int) distributed by (col1);
+alter table pt_td_leak exchange partition part2 with table pt_td_leak_exchange;
+
+insert into pt_td_leak values(1,8,1);
+copy pt_td_leak from '/tmp/pt_td_leak.out' with delimiter ',';
+
+select * from pt_td_leak where col1 = 5;
+
+drop table pt_td_leak;
+drop table pt_td_leak_exchange;

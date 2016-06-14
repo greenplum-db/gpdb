@@ -386,3 +386,11 @@ return $q->{rows}->[0]->{a};
 $$ LANGUAGE plperl;
 SELECT * from perl_spi_prepared_row('(1, 2)');
 
+-- simple test of a DO block
+DO $$
+  $a = 'This is a test';
+  elog(NOTICE, $a);
+$$ LANGUAGE plperl;
+
+-- check that restricted operations are rejected in a plperl DO block
+DO $$ use Config; $$ LANGUAGE plperl;

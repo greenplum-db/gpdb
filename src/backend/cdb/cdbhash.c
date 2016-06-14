@@ -27,10 +27,12 @@
 #include "utils/nabstime.h"
 #include "utils/varbit.h"
 #include "utils/acl.h"
+#include "utils/uuid.h"
 #include "fmgr.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
+#include "utils/complex_type.h"
 #include "cdb/cdbhash.h"
 #include "cdb/cdbutil.h"
 
@@ -60,11 +62,11 @@
 #define FASTMOD(x,y)		((x) & ((y)-1))
 
 /* local function declarations */
-uint32		fnv1_32_buf(void *buf, size_t len, uint32 hashval);
-uint32		fnv1a_32_buf(void *buf, size_t len, uint32 hashval);
-int			inet_getkey(inet *addr, unsigned char *inet_key, int key_size);
-int			ignoreblanks(char *data, int len);
-int			ispowof2(int numsegs);
+static uint32 fnv1_32_buf(void *buf, size_t len, uint32 hashval);
+static uint32 fnv1a_32_buf(void *buf, size_t len, uint32 hashval);
+static int	inet_getkey(inet *addr, unsigned char *inet_key, int key_size);
+static int	ignoreblanks(char *data, int len);
+static int	ispowof2(int numsegs);
 
 
 /*================================================================
@@ -188,7 +190,6 @@ cdbhash(CdbHash *h, Datum datum, Oid type)
 void
 hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 {
-
 	void	   *buf = NULL;		/* pointer to the data */
 	size_t		len = 0;		/* length for the data buffer */
 	
@@ -220,13 +221,15 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 	
 	VarBit		*vbitptr;
 	
-	int2vector *i2vec_buf;
 	oidvector  *oidvec_buf;
+	Complex		*complex_ptr;
+	Complex		complex_buf;
+	double		complex_real;
+	double		complex_imag;
 	
 	Cash		cash_buf;
-	AclItem	   *aclitem_ptr;
-	uint32		aclitem_buf;
-	
+	pg_uuid_t  *uuid_buf;
+
 	/*
 	 * special case buffers
 	 */
@@ -542,17 +545,6 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			break;
 			
 		/*
-		 * We prepare the hash key for aclitems just like postgresql does.
-		 * (see code and comment in acl.c: hash_aclitem() ).
-		 */
-		case ACLITEMOID:
-			aclitem_ptr = DatumGetAclItemP(datum);
-			aclitem_buf = (uint32) (aclitem_ptr->ai_privs + aclitem_ptr->ai_grantee + aclitem_ptr->ai_grantor);
-			buf = &aclitem_buf;
-			len = sizeof(aclitem_buf);
-			break;
-			
-		/*
 		 * ANYARRAY is a pseudo-type. We use it to include
 		 * any of the array types (OIDs 1007-1033 in pg_type.h).
 		 * caller needs to be sure the type is ANYARRAYOID
@@ -565,24 +557,48 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			buf = VARDATA(arrbuf);
 			break;
 			
-		case INT2VECTOROID:
-			i2vec_buf = (int2vector *) DatumGetPointer(datum);
-			len = i2vec_buf->dim1 * sizeof(int2);
-			buf = (void *)i2vec_buf->values;
-			break;
-			
 		case OIDVECTOROID:	
 			oidvec_buf = (oidvector *) DatumGetPointer(datum);
 			len = oidvec_buf->dim1 * sizeof(Oid);
 			buf = oidvec_buf->values;
 			break;
 			
-		case CASHOID: /* cash is stored in int32 internally */
+		case CASHOID: /* cash is stored in int64 internally */
 			cash_buf = (* (Cash *)DatumGetPointer(datum));
 			len = sizeof(Cash);
 			buf = &cash_buf;
 			break;
+
+		/* pg_uuid_t is defined as a char array of size UUID_LEN in uuid.c */
+		case UUIDOID:
+			uuid_buf = DatumGetUUIDP(datum);
+			len = UUID_LEN;
+			buf = (char *)uuid_buf;
+			break;
 				
+		case COMPLEXOID:		
+			complex_ptr  = DatumGetComplexP(datum);
+			complex_real = re(complex_ptr);
+			complex_imag = im(complex_ptr);
+			/*
+			* On IEEE-float machines, minus zero and zero have different bit
+			* patterns but should compare as equal.  We must ensure that they
+			* have the same hash value, which is most easily done this way:
+			*/
+			if (complex_real == (float8) 0)
+			{
+				complex_real = 0.0;
+			}
+			if (complex_imag == (float8) 0)
+			{
+				complex_imag = 0.0;
+			}
+				
+			INIT_COMPLEX(&complex_buf, complex_real, complex_imag);
+			len = sizeof(Complex);
+			buf = (unsigned char *) &complex_buf;
+			break;
+
 		default:
 			ereport(ERROR,
 					(errcode(ERRCODE_CDB_FEATURE_NOT_YET),
@@ -592,7 +608,7 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 
 	/* do the hash using the selected algorithm */
 	hashFn(clientData, buf, len);
-	if(tofree)
+	if (tofree)
 		pfree(tofree);
 }
 
@@ -698,12 +714,17 @@ bool isGreenplumDbHashable(Oid typid)
 	/* we can hash all arrays */
 	if (typeIsArrayType(typid))
 		return true;
-	/*
-	 * if this type is a domain type, get its base type.
-	 */
+
+	/* if this type is a domain type, get its base type */
 	if (get_typtype(typid) == 'd')
 		typid = getBaseType(typid);
 	
+	/*
+	 * NB: Every GPDB-hashable datatype must also be mergejoinable, i.e.
+	 * must have a B-tree operator family. There is a sanity check for
+	 * that in the opr_sanity_gp regression test. If you modify the list
+	 * below, please also update the list in opr_sanity_gp!
+	 */
 	switch(typid)
 	{
 		case INT2OID:		
@@ -741,11 +762,11 @@ bool isGreenplumDbHashable(Oid typid)
 		case BITOID:
 		case VARBITOID:
 		case BOOLOID:			
-		case ACLITEMOID:
 		case ANYARRAYOID:	
-		case INT2VECTOROID:
 		case OIDVECTOROID:	
 		case CASHOID: 
+		case UUIDOID:
+		case COMPLEXOID:
 			return true;
 		default:
 			return false;
@@ -763,7 +784,7 @@ bool isGreenplumDbHashable(Oid typid)
  * returns:
  *	32 bit hash as a static hash type
  */
-uint32
+static uint32
 fnv1_32_buf(void *buf, size_t len, uint32 hval)
 {
 	unsigned char *bp = (unsigned char *) buf;	/* start of buffer */
@@ -801,7 +822,7 @@ fnv1_32_buf(void *buf, size_t len, uint32 hval)
  * returns:
  *	32 bit hash as a static hash type
  */
-uint32
+static uint32
 fnv1a_32_buf(void *buf, size_t len, uint32 hval)
 {
 	unsigned char *bp = (unsigned char *) buf;	/* start of buffer */
@@ -834,7 +855,8 @@ fnv1a_32_buf(void *buf, size_t len, uint32 hval)
  * Since network_cmp considers only ip_family, ip_bits, and ip_addr,
  * only these fields may be used in the hash; in particular don't use type.
  */
-int inet_getkey(inet *addr, unsigned char *inet_key, int key_size)
+static int
+inet_getkey(inet *addr, unsigned char *inet_key, int key_size)
 {
 	int			addrsize;
 	
@@ -870,7 +892,7 @@ int inet_getkey(inet *addr, unsigned char *inet_key, int key_size)
  * recalculating the length after ignoring any trailing blanks. The
  * actual data is remained unmodified.
  */
-int
+static int
 ignoreblanks(char *data, int len)
 {
 
@@ -890,9 +912,8 @@ ignoreblanks(char *data, int len)
 /*
  * returns 1 is the input int is a power of 2 and 0 otherwize.
  */
-int
+static int
 ispowof2(int numsegs)
 {
-
 	return !(numsegs & (numsegs - 1));
 }

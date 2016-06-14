@@ -2,6 +2,15 @@
 -- STANDARD DATA FOR olap_* TESTS.
 --
 
+-- start_ignore
+drop table if exists customer cascade;
+drop table if exists vendor cascade;
+drop table if exists product cascade;
+drop table if exists sale cascade;
+drop table if exists sale_ord cascade;
+drop table if exists util cascade;
+-- end_ignore
+
 create table customer 
 (
 	cn int not null,

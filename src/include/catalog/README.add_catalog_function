@@ -4,8 +4,7 @@ Steps to add a function to the catalogs
 The steps listed below should be followed if a new function needs to be added 
 to the catalog. For instance, if we want to add a new function, fn_sql(),
 that will expose the backend function, fn_be() as a built_in function,
-the following steps are needed. Note, the same set of steps need to be 
-followed if adding a new type.
+the following steps are needed.
 
 1. Get an unused OID by running the script unused_oids located in
    cdb-pg/src/include/catalog/unused_oids. Claim an unused OID. For eg, for our
@@ -16,16 +15,13 @@ followed if adding a new type.
    	CREATE FUNCTION fn_sql(int4, int4) RETURNS bool LANGUAGE 
   		internal VOLATILE NO SQL AS 'fn_be' 
 		WITH (OID=5075, DESCRIPTION="Description of the function");
-   If adding a new type, the type definition needs to be added to pg_type.sql.
 
 3. Run the following command in cdb-pg/src/include/catalog:
 
-   $ perl catullus.pl -procdef pg_proc.sql -prochdr pg_proc_gp.h -typedef pg_type.sql -typehdr pg_type.h
+   $ perl catullus.pl -procdef pg_proc.sql -prochdr pg_proc_gp.h
 
   catullus.pl will re-generate the pg_proc_gp.h file with the appropriate
-  DATA statement for the fn_sql function definition. If a new type 
-  was being added in pg_type.sql, pg_type.h would be updated with the 
-  appropriate DATA statements. 
+  DATA statement for the fn_sql function definition.
 
   For more information on catullus.pl, please refer to 
   cdb-pg/src/include/catalog/README.tidycat.
@@ -58,11 +54,10 @@ followed if adding a new type.
 		IS 'Description of the function';
 
 6. Run make distclean, make, gpinitsystem and you should be able to see your
-   newly added function in pg_proc. Newly added types will be visible in
-   pg_type.
+   newly added function in pg_proc.
 
 7. Make sure you run and possibly repair the upgrade regression test in
    install-check.
 
-8. Don't forget to "git add" and commit the generated files, pg_type.h and
-   pg_proc_gp.h, along with any modified files.
+8. Don't forget to "git add" and commit the generated file, pg_proc_gp.h,
+   along with any modified files.

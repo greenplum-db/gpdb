@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lock.c,v 1.175 2007/01/05 22:19:38 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lock.c,v 1.176 2007/02/01 19:10:28 momjian Exp $
  *
  * NOTES
  *	  A lock table is a shared memory hash table.  When
@@ -587,7 +587,7 @@ LockAcquire(const LOCKTAG *locktag,
 	{
 		if (Gp_role == GP_ROLE_EXECUTE && (gp_is_callback || !Gp_is_writer))
 		{	
-			if (lockHolderProcPtr == NULL || lockHolderProcPtr == MyProc)
+			if (lockHolderProcPtr == MyProc)
 			{
 				/* Find the guy who should manage our locks */
 				PGPROC * proc = FindProcByGpSessionId(gp_session_id);
@@ -605,19 +605,14 @@ LockAcquire(const LOCKTAG *locktag,
 					lockHolderProcPtr = proc;
 				}
 				else
-					elog(DEBUG1,"Could not find writer proc entry!");
+					elog(ERROR,"Could not find writer proc entry!");
 		
-					elog(DEBUG1,"Reader gang member trying to acquire a lock [%u,%u] %s %d",
+				elog(DEBUG1,"Reader gang member trying to acquire a lock [%u,%u] %s %d",
 						 locktag->locktag_field1, locktag->locktag_field2,
 						 lock_mode_names[lockmode], (int)locktag->locktag_type);
 			}
-				
 		}
 	}
-	
-	
-	
-	
 
 	/*
 	 * Otherwise we've got to mess with the shared lock table.
@@ -647,7 +642,7 @@ LockAcquire(const LOCKTAG *locktag,
 		ereport(ERROR,
 				(errcode(ERRCODE_OUT_OF_MEMORY),
 				 errmsg("out of shared memory"),
-		  errhint("You might need to increase max_locks_per_transaction.")));
+			errhint("You might need to increase max_locks_per_transaction.")));
 	}
 	locallock->lock = lock;
 
@@ -715,7 +710,7 @@ LockAcquire(const LOCKTAG *locktag,
 		ereport(ERROR,
 				(errcode(ERRCODE_OUT_OF_MEMORY),
 				 errmsg("out of shared memory"),
-		  errhint("You might need to increase max_locks_per_transaction.")));
+			errhint("You might need to increase max_locks_per_transaction.")));
 	}
 	locallock->proclock = proclock;
 
@@ -776,6 +771,19 @@ LockAcquire(const LOCKTAG *locktag,
 	}
 
 	/*
+	 * We shouldn't already hold the desired lock; else locallock table is
+	 * broken.
+	 */
+	if (proclock->holdMask & LOCKBIT_ON(lockmode))
+	{
+		LWLockRelease(partitionLock);
+		elog(ERROR, "lock %s on object %u/%u/%u is already held",
+			 lock_mode_names[lockmode],
+			 lock->tag.locktag_field1, lock->tag.locktag_field2,
+			 lock->tag.locktag_field3);
+	}
+
+	/*
 	 * lock->nRequested and lock->requested[] count the total number of
 	 * requests, whether granted or waiting, so increment those immediately.
 	 * The other counts don't increment till we get the lock.
@@ -783,54 +791,7 @@ LockAcquire(const LOCKTAG *locktag,
 	lock->nRequested++;
 	lock->requested[lockmode]++;
 	Assert((lock->nRequested > 0) && (lock->requested[lockmode] > 0));
-
-	/*
-	 * We shouldn't already hold the desired lock; else locallock table is
-	 * broken.
-	 */
-	if (Gp_role != GP_ROLE_UTILITY)
-	{
-		if (proclock->holdMask & LOCKBIT_ON(lockmode))
-		{
-			elog(LOG, "lock %s on object %u/%u/%u is already held",
-				 lock_mode_names[lockmode],
-				 lock->tag.locktag_field1, lock->tag.locktag_field2,
-				 lock->tag.locktag_field3);
-			if (MyProc == lockHolderProcPtr)
-			{
-				elog(LOG, "writer found lock %s on object %u/%u/%u that it didn't know it held",
-						 lock_mode_names[lockmode],
-						 lock->tag.locktag_field1, lock->tag.locktag_field2,
-						 lock->tag.locktag_field3);
-				GrantLock(lock, proclock, lockmode);
-				GrantLockLocal(locallock, owner);
-			}
-			else
-			{
-				if (MyProc != lockHolderProcPtr)
-				{
-					elog(LOG, "reader found lock %s on object %u/%u/%u which is already held by writer",
-						 lock_mode_names[lockmode],
-						 lock->tag.locktag_field1, lock->tag.locktag_field2,
-						 lock->tag.locktag_field3);
-				}
-				lock->nRequested--;
-				lock->requested[lockmode]--;
-			}
-			LWLockRelease(partitionLock);
-			return LOCKACQUIRE_ALREADY_HELD;
-		}
-		
-	}
-	else
-	if (proclock->holdMask & LOCKBIT_ON(lockmode))
-	{
-		elog(LOG, "lock %s on object %u/%u/%u is already held",
-			 lockMethodTable->lockModeNames[lockmode],
-			 lock->tag.locktag_field1, lock->tag.locktag_field2,
-			 lock->tag.locktag_field3);
-		Insist(false);
-	}
+	
 	/*
 	 * If lock requested conflicts with locks requested by waiters, must join
 	 * wait queue.	Otherwise, check for conflict with already-held locks.
@@ -1374,7 +1335,7 @@ WaitOnLock(LOCALLOCK *locallock, ResourceOwner owner)
  * NB: this does not clean up any locallock object that may exist for the lock.
  */
 void
-RemoveFromWaitQueue(PGPROC *proc, uint32 hashcode)
+RemoveFromWaitQueue(PGPROC *proc, uint32 hashcode, bool wakeupNeeded)
 {
 	LOCK	   *waitLock = proc->waitLock;
 	PROCLOCK   *proclock = proc->waitProcLock;
@@ -1418,7 +1379,7 @@ RemoveFromWaitQueue(PGPROC *proc, uint32 hashcode)
 	 */
 	CleanUpLock(waitLock, proclock,
 				LockMethods[lockmethodid], hashcode,
-				true);
+				wakeupNeeded);
 }
 
 /*
@@ -2708,7 +2669,7 @@ lock_twophase_recover(TransactionId xid, uint16 info,
 		ereport(ERROR,
 				(errcode(ERRCODE_OUT_OF_MEMORY),
 				 errmsg("out of shared memory"),
-		  errhint("You might need to increase max_locks_per_transaction.")));
+			errhint("You might need to increase max_locks_per_transaction.")));
 	}
 
 	/*
@@ -2773,7 +2734,7 @@ lock_twophase_recover(TransactionId xid, uint16 info,
 		ereport(ERROR,
 				(errcode(ERRCODE_OUT_OF_MEMORY),
 				 errmsg("out of shared memory"),
-		  errhint("You might need to increase max_locks_per_transaction.")));
+			errhint("You might need to increase max_locks_per_transaction.")));
 	}
 
 	/*

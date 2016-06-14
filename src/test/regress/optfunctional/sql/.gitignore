@@ -1,0 +1,7 @@
+composite_keys_gpdb_1.sql
+composite_keys_gpdb_2.sql
+composite_keys_gpdb_3.sql
+cte_queries_inlining_disabled.sql
+cte_queries_inlining_enabled.sql
+indexapply.sql
+create_table_as_11_alter_table.sql

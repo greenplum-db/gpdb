@@ -1,0 +1,350 @@
+-- Testing Dynamic Partition Elimination
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+create schema qp_dpe;
+set search_path to qp_dpe;
+SET datestyle = "ISO, DMY";
+-- end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: DPE not being applied for tables partitioned by a string column.
+-- ----------------------------------------------------------------------
+--
+-- both sides have varchar(10)
+--
+-- start_ignore
+create language plpythonu;
+-- end_ignore
+create or replace function count_operator(explain_query text, operator text) returns int as
+$$
+rv = plpy.execute(explain_query)
+search_text = operator
+result = 0
+for i in range(len(rv)):
+    cur_line = rv[i]['QUERY PLAN']
+    if search_text.lower() in cur_line.lower():
+        result = result+1
+return result
+$$
+language plpythonu;
+-- ----------------------------------------------------------------------
+-- Test: DPE not being applied for tables partitioned by a string column
+-- ----------------------------------------------------------------------
+--
+-- both sides have varchar(10)
+--
+-- start_ignore
+drop table if exists foo1;
+NOTICE:  table "foo1" does not exist, skipping
+drop table if exists foo2;
+NOTICE:  table "foo2" does not exist, skipping
+create table foo1 (i int, j varchar(10)) 
+partition by list(j)
+(partition p1 values('1'), partition p2 values('2'), partition p3 values('3'), partition p4 values('4'), partition p5 values('5'),partition p0 values('0'));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p1" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p2" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p3" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p4" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p5" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p0" for table "foo1"
+insert into foo1 select i , i%5 || '' from generate_series(1,100) i;
+create table foo2 (i int, j varchar(10));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo2 select i , i ||'' from generate_series(1,2) i;
+analyze foo1;
+analyze foo2;
+-- end_ignore
+select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Table Scan') > 0;
+ ?column? 
+----------
+ f
+(1 row)
+
+select count(*) from foo1,foo2 where foo1.j = foo2.j;
+ count 
+-------
+    40
+(1 row)
+
+--
+-- both sides have text
+--
+-- start_ignore
+drop table if exists foo1;
+drop table if exists foo2;
+create table foo1 (i int, j text) 
+partition by list(j)
+(partition p1 values('1'), partition p2 values('2'), partition p3 values('3'), partition p4 values('4'), partition p5 values('5'),partition p0 values('0'));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p1" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p2" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p3" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p4" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p5" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p0" for table "foo1"
+insert into foo1 select i , i%5 || '' from generate_series(1,100) i;
+create table foo2 (i int, j text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo2 select i , i ||'' from generate_series(1,2) i;
+analyze foo1;
+analyze foo2;
+-- end_ignore
+select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Table Scan') > 0;
+ ?column? 
+----------
+ f
+(1 row)
+
+select count(*) from foo1,foo2 where foo1.j = foo2.j;
+ count 
+-------
+    40
+(1 row)
+
+--
+-- partition side has text and other varchar(10)
+--
+-- start_ignore
+drop table if exists foo1;
+drop table if exists foo2;
+create table foo1 (i int, j text) 
+partition by list(j)
+(partition p1 values('1'), partition p2 values('2'), partition p3 values('3'), partition p4 values('4'), partition p5 values('5'),partition p0 values('0'));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p1" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p2" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p3" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p4" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p5" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p0" for table "foo1"
+insert into foo1 select i , i%5 || '' from generate_series(1,100) i;
+create table foo2 (i int, j varchar(10));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo2 select i , i ||'' from generate_series(1,2) i;
+analyze foo1;
+analyze foo2;
+-- end_ignore
+select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Table Scan') > 0;
+ ?column? 
+----------
+ f
+(1 row)
+
+select count(*) from foo1,foo2 where foo1.j = foo2.j;
+ count 
+-------
+    40
+(1 row)
+
+--
+-- partition side has varchar(10) and other side text
+--
+-- start_ignore
+drop table if exists foo1;
+drop table if exists foo2;
+create table foo1 (i int, j varchar(10)) 
+partition by list(j)
+(partition p1 values('1'), partition p2 values('2'), partition p3 values('3'), partition p4 values('4'), partition p5 values('5'),partition p0 values('0'));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p1" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p2" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p3" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p4" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p5" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p0" for table "foo1"
+insert into foo1 select i , i%5 || '' from generate_series(1,100) i;
+create table foo2 (i int, j text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo2 select i , i ||'' from generate_series(1,2) i;
+analyze foo1;
+analyze foo2;
+-- end_ignore
+select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Table Scan') > 0;
+ ?column? 
+----------
+ f
+(1 row)
+
+select count(*) from foo1,foo2 where foo1.j = foo2.j;
+ count 
+-------
+    40
+(1 row)
+
+--
+-- partition side has varchar(20) and other side varchar(10)
+--
+-- start_ignore
+drop table if exists foo1;
+drop table if exists foo2;
+create table foo1 (i int, j varchar(20)) 
+partition by list(j)
+(partition p1 values('1'), partition p2 values('2'), partition p3 values('3'), partition p4 values('4'), partition p5 values('5'),partition p0 values('0'));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p1" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p2" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p3" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p4" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p5" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p0" for table "foo1"
+insert into foo1 select i , i%5 || '' from generate_series(1,100) i;
+create table foo2 (i int, j text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo2 select i , i ||'' from generate_series(1,2) i;
+analyze foo1;
+analyze foo2;
+-- end_ignore
+select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Append') > 0;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count_operator('explain select count(*) from foo1,foo2 where foo1.j = foo2.j;', 'Dynamic Table Scan') > 0;
+ ?column? 
+----------
+ f
+(1 row)
+
+select count(*) from foo1,foo2 where foo1.j = foo2.j;
+ count 
+-------
+    40
+(1 row)
+
+RESET ALL;
+-- start_ignore
+drop table if exists foo1;
+drop table if exists foo2;
+create table foo1 (i int, j varchar(10))
+partition by list(j)
+(partition p1 values('1'), partition p2 values('2'), partition p3 values('3'), partition p4 values('4'), partition p5 values('5'),partition p0 values('0'));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p1" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p2" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p3" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p4" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p5" for table "foo1"
+NOTICE:  CREATE TABLE will create partition "foo1_1_prt_p0" for table "foo1"
+insert into foo1 select i , i%5 || '' from generate_series(1,100) i;
+create table foo2 (i int, j varchar(10));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo2 select i , i ||'' from generate_series(1,2) i;
+analyze foo1;
+analyze foo2;
+-- end_ignore
+-- ----------------------------------------------------------------------
+-- Should not apply DPE when the inner side has a subplan
+-- ----------------------------------------------------------------------
+select count_operator('explain select count(*) from foo1,foo2 where foo1.j =foo2.j;', 'Append') > 0;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count_operator('explain select count(*) from foo1,foo2 where foo1.j =foo2.j;', 'Dynamic Table Scan') > 0;
+ ?column? 
+----------
+ f
+(1 row)
+
+select count_operator('explain select count(*) from foo1,foo2 where foo1.j =foo2.j and foo2.i <= ALL(select 1 UNION select 2);', 'Dynamic Table Scan') > 0;
+ ?column? 
+----------
+ f
+(1 row)
+
+select count(*) from foo1,foo2 where foo1.j =foo2.j and foo2.i <= ALL(select 1 UNION select 2);
+ count 
+-------
+    20
+(1 row)
+
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: DPE: assertion failed with window function
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop table if exists pat;
+NOTICE:  table "pat" does not exist, skipping
+drop table if exists jpat;
+NOTICE:  table "jpat" does not exist, skipping
+create table pat(a int, b date) partition by range (b) (start ('2010-01-01') end ('2010-01-05') every (1), default partition other);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "pat_1_prt_other" for table "pat"
+NOTICE:  CREATE TABLE will create partition "pat_1_prt_2" for table "pat"
+NOTICE:  CREATE TABLE will create partition "pat_1_prt_3" for table "pat"
+NOTICE:  CREATE TABLE will create partition "pat_1_prt_4" for table "pat"
+NOTICE:  CREATE TABLE will create partition "pat_1_prt_5" for table "pat"
+insert into pat select i,date '2010-01-01' + i from generate_series(1, 10)i;
+create table jpat(a int, b date);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into jpat values(1, '2010-01-02');
+-- end_ignore
+select count_operator('explain select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);', 'Append') > 0;
+ ?column? 
+----------
+ t
+(1 row)
+
+select count_operator('explain select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);', 'Dynamic Table Scan') > 0;
+ ?column? 
+----------
+ f
+(1 row)
+
+select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);
+     b      | count | a | a 
+------------+-------+---+---
+ 01-02-2010 |     1 | 1 | 1
+(1 row)
+
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop schema qp_dpe cascade;
+-- end_ignore
+RESET ALL;

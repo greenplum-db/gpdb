@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/pg_dumpall.sgml,v 1.58.2.3 2007/03/26 17:23:45 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/pg_dumpall.sgml,v 1.65 2007/02/01 04:39:33 neilc Exp $
 PostgreSQL documentation
 -->
 
@@ -106,7 +106,7 @@ PostgreSQL documentation
         than <command>COPY</command>).  This will make restoration very slow;
         it is mainly useful for making dumps that can be loaded into
         non-<productname>PostgreSQL</productname> databases.  Note that
-        the restore may fail altogether if you have rearranged column order.
+        the restore might fail altogether if you have rearranged column order.
         The <option>-D</option> option is safer, though even slower.
        </para>
       </listitem>
@@ -130,6 +130,17 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
+      <term><option>-f <replaceable class="parameter">filename</replaceable></option></term>
+      <term><option>--file=<replaceable class="parameter">filename</replaceable></option></term>
+      <listitem>
+       <para>
+        Send output to the specified file.  If this is omitted, the
+        standard output is used.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
       <term><option>-g</option></term>
       <term><option>--globals-only</option></term>
       <listitem>
@@ -144,17 +155,7 @@ PostgreSQL documentation
       <term><option>--ignore-version</></term>
       <listitem>
        <para>
-        Ignore version mismatch between
-        <application>pg_dumpall</application> and the database server.
-       </para>
-
-       <para>
-        <application>pg_dumpall</application> can handle databases
-        from previous releases of <productname>PostgreSQL</>, but very
-        old versions are not supported anymore (currently prior to
-        7.0).  Use this option if you need to override the version
-        check (and if <application>pg_dumpall</application> then
-        fails, don't say you weren't warned).
+	    This option has been deprecated.
        </para>
       </listitem>
      </varlistentry>
@@ -194,12 +195,20 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>-r</option></term>
       <term><option>--resource-queues</option></term>
       <listitem>
        <para>
         Dump <literal>resource queues</literal> and <literal>role</literal>
         to <literal>resource queue</literal> associations. 
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--roles-only</option></term>
+      <listitem>
+       <para>
+        Dump only roles, no databases, tablespaces or filespaces.
        </para>
       </listitem>
      </varlistentry>
@@ -223,6 +232,16 @@ PostgreSQL documentation
         This is only relevant if <option>--disable-triggers</> is used.
         (Usually, it's better to leave this out, and instead start the
         resulting script as superuser.)
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>-t</option></term>
+      <term><option>--tablespaces-only</option></term>
+      <listitem>
+       <para>
+        Dump only tablespaces, no databases or roles.
        </para>
       </listitem>
      </varlistentry>
@@ -289,7 +308,7 @@ PostgreSQL documentation
         Output SQL-standard <command>SET SESSION AUTHORIZATION</> commands
         instead of <command>ALTER OWNER</> commands to determine object
         ownership.  This makes the dump more standards compatible, but
-        depending on the history of the objects in the dump, may not restore
+        depending on the history of the objects in the dump, might not restore
         properly.
        </para>
       </listitem>
@@ -304,6 +323,7 @@ PostgreSQL documentation
    <variablelist>
      <varlistentry>
       <term>-h <replaceable>host</replaceable></term>
+      <term>--host=<replaceable>host</replaceable></term>
       <listitem>
        <para>
         Specifies the host name of the machine on which the database
@@ -316,7 +336,21 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
+      <term>-l <replaceable>dbname</replaceable></term>
+      <term>--database=<replaceable>dbname</replaceable></term>
+      <listitem>
+       <para>
+         Specifies the name of the database to connect to to dump global
+         objects and discover what other databases should be dumped. If
+         not specified, the <quote>postgres</quote> database will be used,
+         and if that does not exist, <quote>template1</quote> will be used.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
       <term>-p <replaceable>port</replaceable></term>
+      <term>--port=<replaceable>port</replaceable></term>
       <listitem>
        <para>
         Specifies the TCP port or local Unix domain socket file
@@ -329,6 +363,7 @@ PostgreSQL documentation
 
      <varlistentry>
       <term>-U <replaceable>username</replaceable></term>
+      <term>--username=<replaceable>username</replaceable></term>
       <listitem>
        <para>
         Connect as the given user.
@@ -338,6 +373,7 @@ PostgreSQL documentation
 
      <varlistentry>
       <term>-W</term>
+      <term>--password</term>
       <listitem>
        <para>
         Force a password prompt.  This should happen automatically if

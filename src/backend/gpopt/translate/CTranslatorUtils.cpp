@@ -811,7 +811,7 @@ CTranslatorUtils::PdrgdxlcdComposite
 
 	for (ULONG ul = 0; ul < pdrgPmdCol->UlLength(); ul++)
 	{
-		CMDColumn *pmdcol = (*pdrgPmdCol)[ul];
+		IMDColumn *pmdcol = (*pdrgPmdCol)[ul];
 
 		CMDName *pmdColName = GPOS_NEW(pmp) CMDName(pmp, pmdcol->Mdname().Pstr());
 		IMDId *pmdidColType = pmdcol->PmdidType();
@@ -1469,9 +1469,11 @@ CTranslatorUtils::PdrgpbsGroupBy
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Group by clause"));
 	}
 
-	// grouping sets
-	if (1 != gpdb::UlListLength(plGroupClause))
+	const ULONG ulGroupClause = gpdb::UlListLength(plGroupClause);
+	GPOS_ASSERT(0 < ulGroupClause);
+	if (1 < ulGroupClause)
 	{
+		// multiple grouping sets
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Multiple grouping sets specifications"));
 	}
 
@@ -1482,9 +1484,9 @@ CTranslatorUtils::PdrgpbsGroupBy
 		return PdrgpbsRollup(pmp, pgrcl, ulCols, phmululGrpColPos, pbsGrpCols);
 	}
 
-	if (GROUPINGTYPE_GROUPING_SETS != pgrcl->groupType)
+	if (GROUPINGTYPE_CUBE == pgrcl->groupType)
 	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Rollup and cube"));
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Cube"));
 	}
 
 	DrgPbs *pdrgpbs = GPOS_NEW(pmp) DrgPbs(pmp);
@@ -1505,7 +1507,7 @@ CTranslatorUtils::PdrgpbsGroupBy
 		}
 		else if (IsA(pnodeGroupingSet, GroupingClause))
 		{
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Rollup and cube"));
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Multiple grouping sets specifications"));
 		}
 		else
 		{
@@ -3072,5 +3074,36 @@ CTranslatorUtils::PlAssertErrorMsgs
 	return plErrorMsgs;
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorUtils::UlNonSystemColumns
+//
+//	@doc:
+//		Return the count of non-system columns in the relation
+//
+//---------------------------------------------------------------------------
+ULONG
+CTranslatorUtils::UlNonSystemColumns
+	(
+	const IMDRelation *pmdrel
+	)
+{
+	GPOS_ASSERT(NULL != pmdrel);
+
+	ULONG ulNonSystemCols = 0;
+
+	const ULONG ulCols = pmdrel->UlColumns();
+	for (ULONG ul = 0; ul < ulCols; ul++)
+	{
+		const IMDColumn *pmdcol  = pmdrel->Pmdcol(ul);
+
+		if (!pmdcol->FSystemColumn())
+		{
+			ulNonSystemCols++;
+		}
+	}
+
+	return ulNonSystemCols;
+}
 
 // EOF

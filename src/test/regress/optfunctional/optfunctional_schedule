@@ -1,0 +1,11 @@
+# ----------
+# Optimizer functional test suite
+# ----------
+test: composite_keys_gpdb_1 composite_keys_gpdb_2 composite_keys_gpdb_3
+test: partitionindexes
+test: staticselection
+test: cte_functest_inlining_enabled cte_queries_inlining_enabled
+test: cte_queries_inlining_disabled cte_functest_inlining_disabled
+test: lastj lastj_hash lineitem create_table_default_distribution_on create_table_default_distribution_off indexapply create_table_as_11_alter_table
+test: analyze_rootpartition
+

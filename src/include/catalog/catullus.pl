@@ -1,11 +1,8 @@
 #!/usr/bin/perl
 #
-# $Header$
-#
 # copyright (c) 2011
 # Author: Jeffrey I Cohen
-#
-# SLZY_HDR_END
+
 use POSIX;
 use Pod::Usage;
 use Getopt::Long;
@@ -20,7 +17,7 @@ use warnings;
 
 =head1 NAME
 
-B<catullus.pl> - generate pg_proc and pg_type entries
+B<catullus.pl> - generate pg_proc entries
 
 =head1 VERSION
 
@@ -37,8 +34,6 @@ Options:
     -man        full documentation
     -procdef    sql definitions for pg_proc functions
     -prochdr    header file to modify (procedures)
-    -typedef    sql definitions for pg_type functions
-    -typehdr    header file to modify (types)
 
 =head1 OPTIONS
 
@@ -60,28 +55,13 @@ Options:
 
     header file to modify (normally pg_proc_gp.h).  The original file is copied to a .backup copy.
 
-=item B<-typedef> <filename> (Required)
-
-    sql definitions for pg_type functions (normally pg_type.sql)
-
-=item B<-typehdr> <filename> (Required)
-
-    header file to modify (normally pg_type.h).  The original file is copied to a .backup copy.
-
 
 =back
 
 =head1 DESCRIPTION
 
-catullus.pl converts annotated sql CREATE FUNCTION and CREATE TYPE
-statements into pg_proc and pg_type entries and updates pg_proc_gp.h and
-pg_type.h.
-
-The pg_type definitions are stored in pg_type.sql.  catullus reads
-these definitions and outputs DATA statements for loading the pg_type
-table.  In pg_type.h, it looks for a block of code delimited by the
-tokens TIDYCAT_BEGIN_PG_TYPE_GEN and TIDYCAT_END_PG_TYPE_GEN and
-substitutes the new generated code for the previous contents.
+catullus.pl converts annotated sql CREATE FUNCTION statements into
+pg_proc entries and updates pg_proc_gp.h.
 
 The pg_proc definitions are stored in pg_proc.sql.  catullus reads
 these definitions and, using type information from pg_type.sql,
@@ -105,7 +85,7 @@ Jeffrey I Cohen
 
 Copyright (c) 2011 Greenplum.  All rights reserved.  
 
-Address bug reports and comments to: jcohen@greenplum.com
+Address bug reports and comments to: bugs@greenplum.org
 
 =cut
 # SLZY_POD_HDR_END
@@ -140,16 +120,12 @@ BEGIN {
 	    my $s_man       = 0;     # full documentation
 	    my $s_procdef;           # sql definitions for pg_proc functions
 	    my $s_prochdr;           # header file to modify (procedures)
-	    my $s_typedef;           # sql definitions for pg_type functions
-	    my $s_typehdr;           # header file to modify (types)
 
     GetOptions(
 		'help|?'                                                 =>     \$s_help,
 		'man'                                                    =>     \$s_man,
 		'procdef|prosource|procsource|prosrc|procsrc=s'          =>     \$s_procdef,
 		'prochdr|proheader|procheader|prohdr=s'                  =>     \$s_prochdr,
-		'typedef|typdef|typesource|typsource|typesrc|typsrc=s'   =>     \$s_typedef,
-		'typehdr|typheader|typeheader|typhdr=s'                  =>     \$s_typehdr,
                )
         or pod2usage(2);
 
@@ -173,41 +149,15 @@ BEGIN {
 	    unless (defined($s_prochdr));
 	    die ("invalid argument for 'prochdr': file $s_prochdr does not exist")
 	    unless (defined($s_prochdr) && (-e $s_prochdr));
-	    die ("missing required argument for 'typedef'")
-	    unless (defined($s_typedef));
-	    die ("invalid argument for 'typedef': file $s_typedef does not exist")
-	    unless (defined($s_typedef) && (-e $s_typedef));
-	    die ("missing required argument for 'typehdr'")
-	    unless (defined($s_typehdr));
-	    die ("invalid argument for 'typehdr': file $s_typehdr does not exist")
-	    unless (defined($s_typehdr) && (-e $s_typehdr));
 	
 	$glob_glob->{procdef}    =  $s_procdef  if (defined($s_procdef));
 	$glob_glob->{prochdr}    =  $s_prochdr  if (defined($s_prochdr));
-	$glob_glob->{typedef}    =  $s_typedef  if (defined($s_typedef));
-	$glob_glob->{typehdr}    =  $s_typehdr  if (defined($s_typehdr));
 	
 	glob_validate();
 
 
 }
 # SLZY_CMDLINE_END
-
-# DO NOT extend this list!  All new types must have a default array type.
-my %array_type_exception_h = 
-	(
-	 pg_type => 1,
-	 pg_attribute => 1,
-	 pg_proc => 1,
-	 pg_class => 1,
-	 pg_authid => 1,
-	 pg_auth_members => 1,
-	 pg_database => 1,
-	 gp_global_sequence => 1,
-	 smgr => 1,
-	 unknown => 1,
-	 nb_classification => 1
-	);
 
 sub doformat
 {
@@ -343,6 +293,8 @@ sub get_fnoptlist
 		'returns\s+null\s+on\s+null\s+input|strict|immutable|stable|volatile|'.
 		'external\s+security\s+definer|external\s+security\s+invoker|' .
 		'security\s+definer|security\s+invoker|' .
+		'cost\s+(\d+)|' .
+		'rows\s+(\d+)|' .
 		'no\s+sql|contains\s+sql|reads\s+sql\s+data|modifies\s+sql\s+data|' .
 		'language\s+\S+|' .
 		'as\s+\\\'\S+\\\'(?:\s*,\s*\\\'\S+\\\')*';
@@ -380,6 +332,8 @@ sub make_opt
 
 	my $proname		= $fndef->{name};
 	my $prolang;
+	my $procost;
+	my $prorows;
 	my $provolatile;
 	my $proisstrict = 0;
 	my $prosecdef	= 0;
@@ -443,6 +397,20 @@ sub make_opt
 				$func_as = shift @foo;
 			}
 
+			if ($opt =~ m/^cost\s+(\d+)$/i)
+			{
+				die ("conflicting or redundant options: $opt")
+					if (defined($procost));
+				$procost = $1;
+			}
+			if ($opt =~ m/^rows\s+(\d+)$/i)
+			{
+				die ("conflicting or redundant options: $opt")
+					if (defined($prorows));
+
+				$prorows = $1;
+			}
+
 			$proisstrict = 1
 				if ($opt =~ m/^(strict|returns\s+null\s+on\s+null\s+input)$/i);
 			$proisstrict = 0
@@ -462,6 +430,8 @@ sub make_opt
 			pronamespace => "PGNSP", # pg_catalog
 			proowner	 => "PGUID", # admin
 			prolang		 => $prolang,
+			procost		 => $procost,
+			prorows		 => $prorows,
 			provariadic	 => 0,
 			proisagg	 => 0,
 			prosecdef	 => $prosecdef,
@@ -836,294 +806,6 @@ sub get_fnwithhash
 	return \%withh;
 } # end get_fnwithhash
 
-# old_order: preserve the original pg_proc order of definitions 
-sub old_order
-{
-	my $fh = shift;
-
-	my @ord1 =
-		(1242, 1243, 1244, 31, 1245, 33, 34, 35, 38, 39, 40, 41, 42, 43, 44,
-		 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 60, 61, 62, 63,
-		 64, 65, 66, 67, 68, 69, 70, 1246, 72, 73, 74, 77, 78, 79, 1252, 1254,
-		 1256, 1257, 1258, 84, 89, 101, 102, 103, 104, 105, 106, 107, 108, 109,
-		 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123,
-		 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137,
-		 138, 139, 140, 141, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153,
-		 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167,
-		 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181,
-		 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 200, 201, 202,
-		 203, 204, 205, 206, 207, 208, 6024, 3106, 3107, 209, 211, 212, 213,
-		 214, 215, 216, 217, 218, 219, 220, 221, 222, 6025, 3108, 3109, 223,
-		 224, 225, 226, 227, 228, 229, 2308, 2320, 2309, 2310, 230, 231, 232,
-		 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246,
-		 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260,
-		 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274,
-		 275, 277, 278, 279, 280, 281, 282, 283, 284, 285, 286, 287, 288, 289,
-		 290, 291, 292, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302, 303,
-		 304, 305, 306, 307, 308, 309, 310, 311, 312, 313, 314, 315, 316, 317,
-		 318, 319, 330, 636, 331, 333, 334, 335, 336, 337, 338, 332, 972, 1268,
-		 2785, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348, 350, 351, 842,
-		 354, 355, 356, 404, 357, 358, 359, 360, 377, 380, 381, 382, 2905, 361,
-		 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 401, 406,
-		 407, 408, 409, 440, 637, 441, 443, 444, 445, 446, 447, 448, 442, 425,
-		 438, 2786, 449, 450, 949, 451, 452, 453, 454, 455, 400, 456, 457, 329,
-		 398, 399, 422, 6432, 458, 459, 460, 461, 462, 463, 464, 465, 466, 467,
-		 468, 469, 470, 471, 472, 474, 475, 476, 477, 478, 479, 480, 481, 482,
-		 483, 652, 653, 714, 754, 1285, 1286, 655, 656, 657, 658, 659, 668,
-		 669, 676, 619, 677, 678, 679, 680, 681, 710, 716, 717, 720, 721, 722,
-		 723, 724, 725, 726, 727, 728, 729, 740, 741, 742, 743, 745, 746, 744,
-		 390, 391, 392, 393, 396, 747, 750, 751, 2091, 2092, 378, 379, 383,
-		 384, 394, 395, 515, 516, 6012, 2908, 2909, 2910, 3534, 3535, 3536,
-		 3537, 3538, 760, 761, 762, 763, 764, 765, 766, 768, 769, 770, 771,
-		 774, 638, 775, 777, 778, 779, 780, 781, 782, 776, 2561, 772, 2787,
-		 784, 785, 786, 787, 788, 789, 817, 818, 819, 838, 839, 840, 841, 846,
-		 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860,
-		 861, 820, 862, 863, 864, 865, 866, 867, 886, 887, 888, 889, 890, 891,
-		 892, 893, 894, 895, 896, 897, 898, 899, 919, 935, 940, 941, 942, 943,
-		 945, 947, 944, 946, 950, 951, 952, 953, 954, 955, 956, 957, 715, 958,
-		 828, 959, 960, 961, 962, 963, 964, 973, 975, 976, 977, 978, 979, 980,
-		 981, 982, 983, 984, 985, 986, 987, 988, 989, 990, 991, 992, 993, 994,
-		 995, 996, 997, 998, 999, 748, 749, 837, 948, 938, 939, 1026, 1029,
-		 1030, 1031, 1032, 1035, 1036, 1037, 1062, 1365, 1044, 1045, 1046,
-		 1047, 1048, 1049, 1050, 1051, 1052, 1053, 1063, 1064, 1078, 1080,
-		 1081, 1084, 1085, 1086, 1087, 1088, 1089, 1090, 1091, 1092, 1102,
-		 1103, 1104, 1105, 1106, 1107, 1138, 1139, 1140, 1141, 1142, 1143,
-		 1144, 1145, 1146, 1147, 1148, 1149, 1150, 1151, 1152, 1153, 1154,
-		 1155, 1156, 1157, 1158, 1159, 1160, 1161, 1162, 1163, 1164, 1165,
-		 1166, 1167, 1168, 1169, 1170, 1171, 1172, 1173, 1174, 2711, 1175,
-		 1295, 1176, 1177, 1178, 1179, 1180, 1181, 1188, 1189, 1190, 1191,
-		 1192, 1193, 1194, 1195, 1196, 1197, 1198, 1199, 1200, 1215, 1216,
-		 1993, 1217, 1218, 1219, 2857, 2804, 1230, 1236, 1237, 1238, 1239,
-		 1240, 1241, 1251, 1253, 1263, 1271, 1272, 1273, 1274, 1275, 1276,
-		 1277, 1278, 1279, 1280, 1281, 1287, 1288, 1289, 1290, 1291, 1292,
-		 1293, 1294, 1265, 2790, 2791, 2792, 2793, 2794, 2795, 2796, 1296,
-		 1297, 1298, 1299, 2647, 2648, 2649, 1300, 1301, 1302, 1303, 1304,
-		 1305, 1306, 1307, 1308, 1309, 1310, 1311, 1312, 1313, 1314, 1315,
-		 1316, 1317, 1318, 1319, 1326, 1339, 1340, 1341, 1342, 1343, 1344,
-		 1345, 1346, 1368, 1347, 1348, 1349, 1350, 1351, 1352, 1353, 1354,
-		 1355, 1356, 1357, 1358, 1359, 1364, 1367, 1369, 1370, 1372, 1373,
-		 1374, 1375, 1377, 1378, 1379, 1380, 1381, 1382, 1383, 1384, 1385,
-		 1386, 1388, 1389, 1390, 1376, 1394, 1395, 1396, 1397, 1398, 1400,
-		 1401, 1402, 1403, 1404, 1405, 1406, 1407, 1408, 1409, 1410, 1411,
-		 1412, 1413, 1414, 1415, 1416, 1417, 1418, 1419, 1421, 1422, 1423,
-		 1424, 1425, 1426, 1428, 1429, 1430, 1431, 1432, 1433, 1434, 1435,
-		 1436, 1437, 1438, 1439, 1440, 1441, 1442, 1443, 1444, 1445, 1446,
-		 1447, 1448, 1449, 1450, 1451, 1452, 1453, 1454, 1455, 1456, 1457,
-		 1458, 1459, 1460, 1461, 1462, 1463, 1464, 1465, 1466, 1467, 1468,
-		 1469, 1470, 1471, 1472, 1473, 1474, 1475, 1476, 1477, 1478, 1479,
-		 1480, 1481, 1482, 1483, 1484, 1485, 1486, 1487, 1488, 1489, 1490,
-		 1491, 1492, 1493, 1494, 1495, 1496, 1497, 1498, 1499, 1530, 1531,
-		 1532, 1533, 1534, 1540, 1541, 1542, 1543, 1544, 1545, 1556, 1564,
-		 1565, 1569, 1570, 1571, 1572, 1574, 1575, 1576, 1765, 1579, 1580,
-		 1581, 1582, 1592, 1593, 1594, 1595, 1596, 1598, 1599, 1600, 1601,
-		 1602, 1603, 1604, 1605, 1606, 1607, 1608, 1609, 1610, 1618, 1620,
-		 1621, 1622, 1623, 1624, 1631, 1632, 1633, 1634, 1635, 1636, 1637,
-		 1656, 1657, 1658, 1659, 1660, 1661, 1689, 868, 870, 871, 872, 873,
-		 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 936, 937,
-		 2087, 2284, 2285, 5018, 5019, 5020, 5021, 5022, 5023, 2088, 2089,
-		 2090, 1039, 810, 1717, 1813, 1619, 1264, 1597, 1638, 1639, 1573, 1640,
-		 1641, 1642, 1643, 1662, 1387, 1716, 1665, 5024, 5025, 5034, 5027,
-		 5028, 5037, 821, 822, 1644, 1645, 1646, 1647, 1648, 1649, 1650, 1651,
-		 1652, 1653, 1654, 1655, 1666, 1667, 1668, 1669, 1670, 1671, 1672,
-		 1673, 1674, 1675, 1676, 1677, 1678, 1679, 1680, 1681, 1682, 1683,
-		 1684, 1685, 1687, 1698, 1699, 436, 437, 752, 753, 767, 830, 831, 832,
-		 833, 834, 835, 836, 910, 911, 1267, 1427, 920, 921, 922, 923, 924,
-		 925, 926, 927, 928, 929, 930, 598, 599, 605, 635, 711, 683, 696, 697,
-		 698, 699, 730, 1362, 1713, 1714, 1715, 2196, 2197, 2198, 2199, 2627,
-		 2628, 2629, 2630, 2631, 2632, 2633, 1686, 1688, 1690, 1691, 1692,
-		 1693, 1696, 1697, 1701, 1702, 1703, 1704, 1705, 1706, 1707, 1708,
-		 1709, 1710, 1711, 2167, 1712, 1718, 1719, 1720, 1721, 1722, 1723,
-		 1724, 1725, 1726, 1727, 1728, 1729, 1730, 1731, 1732, 1733, 1734,
-		 1735, 1736, 1737, 1738, 2169, 1739, 1740, 1741, 1742, 1743, 1744,
-		 1745, 1746, 2170, 1747, 1748, 1749, 1750, 1764, 1004, 1766, 1767,
-		 1769, 1771, 1779, 1781, 1782, 1783, 1770, 1772, 1773, 1774, 1775,
-		 1776, 1777, 1778, 1780, 1768, 1282, 1283, 1798, 1799, 1810, 1811,
-		 1812, 1814, 1815, 1816, 1817, 1818, 1819, 1820, 1821, 1822, 1823,
-		 1824, 1825, 1826, 1827, 1828, 1829, 1830, 2512, 1831, 2513, 1832,
-		 1833, 3102, 7309, 3103, 1834, 1835, 1836, 7306, 7307, 7308, 1837,
-		 2514, 1838, 2596, 1839, 1840, 1841, 1842, 7008, 7009, 7010, 1843,
-		 6038, 1844, 1962, 1963, 3100, 6019, 6020, 3101, 1964, 2805, 2806,
-		 2807, 2808, 2809, 2810, 2811, 2812, 2813, 2814, 2815, 2816, 2817,
-		 1845, 1846, 1847, 1848, 1850, 1851, 1852, 1853, 1854, 1855, 1856,
-		 1857, 1858, 1859, 1860, 1861, 1892, 1893, 1894, 1895, 1896, 1897,
-		 1898, 1899, 1900, 1901, 1902, 1903, 1904, 1905, 1906, 1907, 1908,
-		 1909, 1910, 1911, 1912, 1913, 1914, 1915, 1922, 1923, 1924, 1925,
-		 1926, 1927, 1928, 1929, 1930, 1931, 1932, 1933, 1934, 1935, 2781,
-		 2782, 2783, 2784, 1936, 2026, 2274, 1937, 1938, 1939, 1940, 2853,
-		 2094, 1391, 1392, 1393, 1941, 1942, 1943, 1944, 1945, 6031, 6032,
-		 6033, 6034, 6039, 6042, 6071, 1946, 1947, 1948, 1949, 1950, 1951,
-		 1952, 1953, 1954, 1961, 1965, 1966, 1967, 1968, 1969, 2005, 2006,
-		 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2085, 2086, 2014, 2015,
-		 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2027, 2028, 2029, 2030,
-		 2031, 2032, 2033, 2034, 2035, 2036, 2037, 2038, 2041, 2042, 2043,
-		 2044, 2045, 2046, 2047, 2048, 2049, 2052, 2053, 2054, 2055, 2056,
-		 2057, 2058, 2059, 2069, 2070, 2071, 2072, 2073, 2074, 2075, 2076,
-		 2077, 2078, 2084, 1371, 1065, 2079, 2080, 2081, 2082, 2083, 2093,
-		 2854, 2855, 2171, 2878, 2172, 2173, 2848, 2849, 2852, 2850, 2851,
-		 2621, 2622, 2623, 2624, 2625, 2626, 6030, 6069, 6045, 6046, 6047,
-		 6048, 6049, 6050, 6051, 2971, 2100, 2101, 2102, 2103, 2104, 2105,
-		 2106, 2107, 2108, 2109, 2110, 2111, 2112, 2113, 2114, 2115, 2116,
-		 2117, 2118, 2119, 2120, 2121, 2122, 2123, 2124, 2125, 2126, 2127,
-		 2128, 2129, 2130, 2050, 2244, 2797, 3332, 2131, 2132, 2133, 2134,
-		 2135, 2136, 2137, 2138, 2139, 2140, 2141, 2142, 2143, 2144, 2145,
-		 2146, 2051, 2245, 2798, 3333, 2147, 2803, 2718, 2719, 2720, 2721,
-		 2722, 2723, 2641, 2642, 2643, 2644, 2645, 2646, 2148, 2149, 2150,
-		 2151, 2152, 2153, 2724, 2725, 2726, 2727, 2728, 2729, 2712, 2713,
-		 2714, 2715, 2716, 2717, 2154, 2155, 2156, 2157, 2158, 2159, 6013,
-		 2818, 2819, 2820, 2821, 2822, 2823, 2824, 2825, 2826, 2827, 2828,
-		 2829, 2160, 2161, 2162, 2163, 2164, 2165, 2166, 7000, 7001, 7002,
-		 7003, 7004, 7005, 7006, 7007, 7017, 7018, 7019, 7020, 7021, 7022,
-		 7023, 7024, 7025, 7026, 7027, 7028, 7029, 7030, 7031, 7032, 7033,
-		 7034, 7035, 7036, 7037, 7038, 7039, 7040, 7041, 7042, 7043, 7044,
-		 7045, 7046, 7047, 7232, 7256, 7272, 7288, 7012, 7013, 7014, 7015,
-		 7016, 7063, 7072, 7073, 7048, 7049, 7050, 7051, 7052, 7053, 7054,
-		 7055, 7056, 7057, 7058, 7059, 7060, 7061, 7062, 7064, 7065, 7066,
-		 7067, 7068, 7069, 7070, 7071, 7238, 7258, 7274, 7290, 7675, 7491,
-		 7493, 7495, 7497, 7499, 7501, 7503, 7505, 7507, 7509, 7511, 7513,
-		 7515, 7517, 7519, 7521, 7523, 7525, 7527, 7529, 7531, 7533, 7535,
-		 7537, 7539, 7541, 7543, 7545, 7547, 7549, 7551, 7553, 7555, 7557,
-		 7559, 7561, 7563, 7565, 7567, 7569, 7571, 7573, 7575, 7577, 7579,
-		 7581, 7583, 7585, 7587, 7589, 7591, 7593, 7595, 7597, 7599, 7601,
-		 7603, 7605, 7607, 7609, 7611, 7613, 7615, 7617, 7619, 7621, 7623,
-		 7625, 7627, 7629, 7631, 7633, 7635, 7637, 7639, 7641, 7643, 7645,
-		 7647, 7649, 7651, 7653, 7655, 7657, 7659, 7661, 7663, 7665, 7667,
-		 7669, 7671, 7673, 7211, 7212, 7213, 7226, 7228, 7230, 7250, 7252,
-		 7254, 7266, 7268, 7270, 7011, 7074, 7075, 7310, 7312, 7314, 7316,
-		 7318, 7320, 7322, 7324, 7326, 7328, 7330, 7332, 7334, 7336, 7338,
-		 7340, 7342, 7344, 7346, 7348, 7350, 7352, 7354, 7356, 7358, 7360,
-		 7362, 7364, 7366, 7368, 7370, 7372, 7374, 7376, 7378, 7380, 7382,
-		 7384, 7386, 7388, 7390, 7392, 7394, 7396, 7398, 7400, 7402, 7404,
-		 7406, 7408, 7410, 7412, 7414, 7416, 7418, 7420, 7422, 7424, 7426,
-		 7428, 7430, 7432, 7434, 7436, 7438, 7440, 7442, 7444, 7446, 7448,
-		 7450, 7452, 7454, 7456, 7458, 7460, 7462, 7464, 7466, 7468, 7470,
-		 7472, 7474, 7476, 7478, 7480, 7482, 7484, 7486, 7488, 7214, 7215,
-		 7216, 7220, 7222, 7224, 7244, 7246, 7248, 7260, 7262, 7264, 2174,
-		 2175, 2176, 2177, 2178, 2179, 2180, 2181, 2182, 2183, 2184, 2185,
-		 2186, 2187, 2188, 2189, 2190, 2191, 2192, 2193, 2194, 2195, 2896,
-		 2212, 2213, 2214, 2215, 2216, 2217, 2218, 2219, 2220, 2221, 1079,
-		 2246, 2247, 2248, 2250, 2251, 2252, 2253, 2254, 2255, 2256, 2257,
-		 2258, 2259, 2260, 2261, 2262, 2263, 2264, 2265, 2266, 2267, 2268,
-		 2269, 2270, 2271, 2272, 2273, 2390, 2391, 2392, 2393, 2394, 2395,
-		 3112, 3113, 3114, 3115, 3116, 3117, 3118, 3119, 3120, 3121, 3122,
-		 3123, 2705, 2706, 2707, 2708, 2709, 2710, 1269, 2322, 2323, 2324,
-		 2168, 2325, 2289, 2286, 2287, 2288, 2897, 2290, 2291, 2292, 2293,
-		 2294, 2295, 2296, 2297, 2298, 2299, 2300, 2301, 2302, 2303, 2304,
-		 2305, 2306, 2307, 2312, 2313, 2398, 2399, 2597, 2598, 2311, 2321,
-		 2338, 2339, 2340, 2341, 2342, 2343, 2344, 2351, 2352, 2353, 2354,
-		 2355, 2356, 2357, 2364, 2365, 2366, 2367, 2368, 2369, 2370, 2377,
-		 2378, 2379, 2380, 2381, 2382, 2383, 2520, 2521, 2522, 2523, 2524,
-		 2525, 2526, 2527, 2528, 2529, 2530, 2531, 2532, 2533, 2400, 2401,
-		 2402, 2403, 2404, 2405, 2406, 2407, 2408, 2409, 2410, 2411, 2412,
-		 2413, 2414, 2415, 2416, 2417, 2418, 2419, 2420, 2421, 2422, 2423,
-		 2424, 2425, 2426, 2427, 2428, 2429, 2430, 2431, 2432, 2433, 2434,
-		 2435, 2436, 2437, 2438, 2439, 2440, 2441, 2442, 2443, 2444, 2445,
-		 2446, 2447, 2448, 2449, 2450, 2451, 2452, 2453, 2454, 2455, 2456,
-		 2457, 2458, 2459, 2460, 2461, 2462, 2463, 2464, 2465, 2466, 2467,
-		 2468, 2469, 2470, 2471, 2472, 2473, 2474, 2475, 2476, 2477, 2478,
-		 2479, 2480, 2481, 2482, 2483, 2484, 2485, 2486, 2487, 2488, 2489,
-		 2490, 2491, 2492, 2493, 2494, 2495, 2496, 2497, 2498, 2499, 2500,
-		 2501, 2502, 2503, 2504, 2505, 2506, 2507, 2508, 2509, 2510, 2511,
-		 2599, 2856, 1066, 1067, 1068, 1069, 2515, 2516, 2517, 2518, 2519,
-		 2236, 2237, 2238, 2239, 2240, 2241, 2242, 2243, 2546, 2547, 2548,
-		 2549, 2550, 2556, 2557, 2558, 2559, 2560, 2562, 2563, 2564, 2565,
-		 2566, 2567, 2568, 2569, 2587, 2588, 2578, 2579, 2580, 2581, 2582,
-		 2583, 2584, 2585, 2586, 2591, 2592, 2730, 2731, 2732, 2733, 2734,
-		 2735, 2736, 2737, 2738, 2739, 2740, 2741, 2788, 3200, 3201, 3202,
-		 3203, 3204, 3205, 3206, 3208, 3209, 3210, 3211, 3212, 3213, 3214,
-		 3215, 3216, 3217, 3218, 3219, 3225, 3226, 3227, 3228, 3229, 3230,
-		 3240, 3252, 3253, 3254, 3255, 3267, 3268, 3256, 3257, 3258, 3259,
-		 3260, 3261, 3262, 3263, 3264, 3265, 3266, 3302, 3303, 3304, 3305,
-		 3312, 3313, 3314, 3315, 3318, 3319, 3331, 3320, 3321, 3322, 3323,
-		 3324, 6003, 6004, 6005, 6006, 6007, 6008, 3104, 6009, 6010, 3111,
-		 6011, 6015, 3105, 6016, 6017, 3110, 6018, 6014, 6021, 6022, 6023,
-		 6035, 6036, 6037, 6043, 6044, 6435, 6068, 7100, 7101, 7102, 7490,
-		 7492, 7494, 7496, 7498, 7500, 7502, 7504, 7506, 7508, 7510, 7512,
-		 7514, 7516, 7518, 7520, 7522, 7524, 7526, 7528, 7530, 7532, 7534,
-		 7536, 7538, 7540, 7542, 7544, 7546, 7548, 7550, 7552, 7554, 7556,
-		 7558, 7560, 7562, 7564, 7566, 7568, 7570, 7572, 7574, 7576, 7578,
-		 7580, 7582, 7584, 7586, 7588, 7590, 7592, 7594, 7596, 7598, 7600,
-		 7602, 7604, 7606, 7608, 7610, 7612, 7614, 7616, 7618, 7620, 7622,
-		 7624, 7626, 7628, 7630, 7632, 7634, 7636, 7638, 7640, 7642, 7644,
-		 7646, 7648, 7650, 7652, 7654, 7656, 7658, 7660, 7662, 7664, 7666,
-		 7668, 7670, 7672, 7674, 7208, 7209, 7210, 7227, 7229, 7231, 7251,
-		 7253, 7255, 7267, 7269, 7271, 7106, 7104, 7105, 7311, 7313, 7315,
-		 7317, 7319, 7321, 7323, 7325, 7327, 7329, 7331, 7333, 7335, 7337,
-		 7339, 7341, 7343, 7345, 7347, 7349, 7351, 7353, 7355, 7357, 7359,
-		 7361, 7363, 7365, 7367, 7369, 7371, 7373, 7375, 7377, 7379, 7381,
-		 7383, 7385, 7387, 7389, 7391, 7393, 7395, 7397, 7399, 7401, 7403,
-		 7405, 7407, 7409, 7411, 7413, 7415, 7417, 7419, 7421, 7423, 7425,
-		 7427, 7429, 7431, 7433, 7435, 7437, 7439, 7441, 7443, 7445, 7447,
-		 7449, 7451, 7453, 7455, 7457, 7459, 7461, 7463, 7465, 7467, 7469,
-		 7471, 7473, 7475, 7477, 7479, 7481, 7483, 7485, 7487, 7489, 7217,
-		 7218, 7219, 7221, 7223, 7225, 7245, 7247, 7249, 7261, 7263, 7265,
-		 7111, 7112, 7113, 7114, 7115, 7116, 7117, 7118, 7119, 7120, 7121,
-		 7122, 7123, 7124, 7125, 7126, 7127, 7128, 7129, 7130, 7131, 7132,
-		 7133, 7134, 7135, 7136, 7137, 7138, 7139, 7140, 7141, 7233, 7257,
-		 7273, 7289, 7103, 7107, 7108, 7109, 7110, 7165, 7166, 7167, 7168,
-		 7142, 7143, 7144, 7145, 7146, 7147, 7148, 7149, 7150, 7151, 7152,
-		 7153, 7154, 7155, 7157, 7158, 7159, 7160, 7161, 7162, 7163, 7164,
-		 7239, 7259, 7275, 7291, 7204, 7205, 7206, 7207, 7303, 7304, 7305,
-		 7169, 7170, 7171, 7172, 7173, 7174, 7178, 7179, 7180, 7181, 7182,
-		 2743, 2744, 2747, 2748, 2749, 2880, 2881, 2882, 2883, 2884, 2885,
-		 2886, 2887, 2888, 2889, 2890, 2891, 2892, 3050, 3051, 3001, 3002,
-		 3003, 3004, 3005, 3006, 3007, 3008, 3009, 3010, 3011, 9900, 9997,
-		 9998, 9999, 5032, 5040, 5041, 5042, 5044, 5045, 5046, 5047, 5048,
-		 5049, 5050, 5051, 5052, 5053, 5054, 5055, 5056, 5057, 5058, 5059,
-		 5060, 5061, 5062, 5063, 5064, 5065, 5066, 5067, 5068, 5069, 5070,
-		 5071, 5072, 5073, 5074);
-
-	my $ocomm =
-	{ 1242 => "1 - 99", 101 => "100 - 199", 200 => "200 - 299",
-	  300 => "300 - 399", 401 => "400 - 499", 701 => "700 - 799",
-	  817 => "800 - 899", 940 => "900 - 999", 1026 => "1000 - 1999",
-	  1102 => "1100 - 1199", 1200 => "1200 - 1299", 1300 => "1300 - 1399",
-	  1400 => "1400 - 1499", 1530 => "1500 - 1599", 1600 => "1600 - 1699"};
-
-	for my $oid (@ord1)
-	{
-		if (exists($fh->{$oid}))
-		{
-#			print "\n/* OIDS 500 - 599 */\n\n/* OIDS 600 - 699 */\n\n"
-#				if (652 == $oid);
-
-			if (0 && exists($ocomm->{$oid}))
-			{
-				print "\n/* OIDS " . $ocomm->{$oid} . " */\n\n";
-			}
-
-			if (0)
-			{
-				my $rawtxt = $fh->{$oid}->{rawtxt};
-
-				my @ggg = ($rawtxt =~ m/AS\s+\'\"(.*)\"\'/i);
-
-				if (scalar(@ggg))
-				{
-					my $m1 = shift @ggg;
-					my $m2 = $m1;
-					$m2 =~ s/\%([A-Fa-f0-9]{2})/pack('C', hex($1))/seg;
-					$m2 =~ s/\'\'/\'/g;
-					$m2 = '$$'.$m2.'$$';
-#					$m2 = quotemeta($m2);
-					$rawtxt =~ s/AS\s+\'\"(.*)\"\'/AS $m2/i;
-				}
-
-				print $rawtxt, ";\n";
-			}
-			else
-			{
-				printfndef($fh->{$oid});
-			}
-		}
-		else
-		{
-			print "/* MISSING: $oid */\n";
-		}
-
-	}
-	
-} # end old_order
-
 sub printfndef
 {
 	my $fndef = shift;
@@ -1157,6 +839,8 @@ sub printfndef
 		$nam . "  " . $tup->{pronamespace} . " " .
 		$tup->{proowner} . " " .
 		$tup->{prolang} . " " .
+		$tup->{procost} . " " .
+		$tup->{prorows} . " " .
 		($tup->{provariadic} ? $tup->{provariadic} : "0") . " " .
 		(exists($fndef->{with}->{proisagg}) ? $fndef->{with}->{proisagg} :
 		 ($tup->{proisagg} ? "t" : "f") ) . " " .
@@ -1165,6 +849,7 @@ sub printfndef
 		($tup->{proretset} ? "t" : "f") . " " .
 		($tup->{provolatile} ? $tup->{provolatile} : "_null_" ) . " " .
 		($tup->{pronargs} ? $tup->{pronargs} : 0) . " " .
+		($tup->{pronargdefaults} ? $tup->{pronargdefaults} : 0) . " " .
 		($tup->{prorettype} ? $tup->{prorettype} : '""') . " " .
 		(exists($fndef->{with}->{proiswin}) ? $fndef->{with}->{proiswin} :
 		 ($tup->{proiswin} ? "t" : "f")) . " " .
@@ -1172,6 +857,7 @@ sub printfndef
 		($tup->{proallargtypes} ? '"' . $tup->{proallargtypes} . '"'  : "_null_")  . " " .
 		($tup->{proargmodes} ? '"' . $tup->{proargmodes} . '"' : "_null_") . " " .
 		($tup->{proargnames} ? '"' . $tup->{proargnames} . '"' : "_null_") . " " .
+		($tup->{proargdefault} ? $tup->{proargdefaults} : "_null_") . " " .
 		(exists($fndef->{with}->{prosrc}) ? $fndef->{with}->{prosrc} :
 		 ($tup->{prosrc} ? $tup->{prosrc} : "_null_" )) . " " .
 		($tup->{probin} ? $tup->{probin} : "_null_") . " " .
@@ -1368,6 +1054,19 @@ sub doprocs()
 		make_opt($fndef);
 		make_rettype($fndef);
 		make_allargs($fndef);
+
+		# Fill in defaults for procost and prorows. (We have to do this
+		# after make_rettype, as we don't know if it's a set-returning function
+		# before that.
+		$fndef->{tuple}->{procost} = 1 unless defined($fndef->{tuple}->{procost});
+		if ($fndef->{tuple}->{proretset})
+		{
+		    $fndef->{tuple}->{prorows} = 1000 unless defined($fndef->{tuple}->{prorows});
+		}
+		else
+		{
+		    $fndef->{tuple}->{prorows} = 0
+		}
 	}
 
 #	print Data::Dumper->Dump(\@allfndef);
@@ -1391,23 +1090,10 @@ sub doprocs()
 
 	$bigstr .= $gen_hdr_str;
 
-	if (0)
+	# build definitions in same order as input file
+	for my $fndef (@allfndef)
 	{
-		# build definitions in "old" order
-		my %fh;
-		for my $fndef (@allfndef)
-		{
-			$fh{$fndef->{with}->{oid}} = $fndef;
-		}
-		old_order(\%fh);
-	}
-	else
-	{
-		# build definitions in same order as input file
-		for my $fndef (@allfndef)
-		{
-			$bigstr .= printfndef($fndef);
-		}
+		$bigstr .= printfndef($fndef);
 	}
 
 	$bigstr .= "\n";
@@ -1472,673 +1158,33 @@ sub doprocs()
 
 }
 
-# populate a type definition
-sub make_type
+# MAIN routine for pg_type parsing
+sub readtypes
 {
-	my %h1 = @_;
+	my $fh;
 
-	die ("no oid")
-		unless (exists($h1{with}) &&
-				exists($h1{with}->{oid}));
+	open $fh, "< pg_type.h"
+	    or die "cannot open pg_type.h: $!";
 
-	die ("no tuple")
-		unless (exists($h1{tuple}));
-
-	my @deflist;
-
-	# treat bootstrap tables (and nb_classification) special
-	if (($h1{tuple}->{typname} =~ 
-		m/^pg\_(type|attribute|proc|class|authid|auth_members|database)$/) ||
-		($h1{tuple}->{typname} eq "gp_global_sequence") ||
-		($h1{tuple}->{typname} eq "nb_classification"))
+	while (my $row = <$fh>)
 	{
-		my %boottabdef = (
-			typnamespace => "PGNSP", # pg_catalog
-			typowner	 => "PGUID", # admin
-			typlen         => -1,
-			typbyval       => "f",
-			typtype        => 'c', # composite
-			typisdefined   => "t",
-			typdelim       => ',', # except for box which uses ";"
-#			typrelid       => 0,
-			typelem        => 0,
-			typinput       => "record_in",
-			typoutput      => "record_out",
-			typreceive     => "record_recv",
-			typsend        => "record_send",
-			typmodin       => '-',
-			typmodout      => '-',
-			typanalyze     => undef,
-			typalign       => "d",
-			typstorage     => "x",
-			typnotnull     => 'f', # not a domain
-			typbasetype    => 0,   # not a domain
-			typtypmod      => -1,  # not a domain
-			typndims       => 0,
-			typdefaultbin  => undef,
-			typdefault     => undef
-			);
+	    # The DATA lines in pg_type.h look like this:
+	    #   DATA(insert OID = 16 (	bool	   ...));
+	    #
+	    # Extract the oid and the type name.
+	    $row =~ /^DATA\(insert\s+OID\s+=\s+(\d+)\s+\(\s+(\w+).*\)/ or next;
+	    my $oid = $1;
+	    my $typname = $2;
 
-		while (my ($kk, $vv) = each(%boottabdef))
-		{
-			$h1{tuple}->{$kk} = $vv;
-		}
-		die "no relid"
-			unless (exists($h1{with}->{relid}));
-		$h1{tuple}->{typrelid} = $h1{with}->{relid};
-
-		goto L_enddef;
+	    # save the oid for each typename for CREATE TYPE...ELEMENT lookup
+	    $glob_typeoidh{lc($typname)} = $oid;
 	}
-
-	# parse the rest of the definition
-	if (exists($h1{at}))
-	{
-		my @foo = split(/\n/, $h1{at});
-
-		for my $f1 (@foo)
-		{
-			# XXX XXX: complain about missing/extra commas here?
-
-			# remove spaces and trailing comma
-			$f1 =~ s/^\s+//;
-			$f1 =~ s/\s+$//;
-			$f1 =~ s/\,$//;
-
-			next unless (length($f1));
-			push @deflist, $f1;
-		}
-	}
-
-	# byvalue is false, unless passedbyvalue is set
-	$h1{tuple}->{typbyval} = "f";
-
-	$h1{tuple}->{typmodin} = '-';
-	$h1{tuple}->{typmodout} = '-';
-
-	for my $def (@deflist)
-	{
-		if ($def =~ m/passedbyvalue/i)
-		{
-			$h1{tuple}->{typbyval} = "t";
-			next;
-		}
-
-		# key = value pairs
-		my @baz = split(/\s*=\s*/, $def, 2);
-		die "bad def: $def"
-			unless (2 == scalar(@baz));
-
-		my $kk = shift @baz;
-		my $vv = shift @baz;
-
-		$kk =~ s/^\s+//;
-		$kk =~ s/\s+$//;
-		$vv =~ s/^\s+//;
-		$vv =~ s/\s+$//;
-
-		# get names of regproc functions
-		if ($kk =~ m/^(input|output|receive|send|analyze)$/i)
-		{
-			my $rproc = "typ" . lc($kk); # regproc name
-
-			# XXX XXX: fixup dummy_cast_functions
-			$vv =~ s/dummy\_cast\_functions\.//;
-
-			$h1{tuple}->{$rproc} = $vv;
-		}
-
-		if ($kk =~ m/^(typmodin|typmodout)$/i)
-		{
-			my $rproc = lc($kk); # regproc name
-			$h1{tuple}->{$rproc} = $vv;
-		}
-
-		if ($kk =~ m/^storage$/i)
-		{
-			die ("bad storage: $vv - must be PLAIN, EXTERNAL, EXTENDED, or MAIN")
-				unless ($vv =~ m/^(plain|external|extended|main)$/i);
-
-			# just use first character for storage type...
-			my $st1 = lc(substr($vv, 0, 1));
-
-			# ...except for eXtended
-			$st1 = "x" if ($vv =~ m/extended/i);
-			$h1{tuple}->{typstorage} = $st1;
-		}
-
-		if ($kk =~ m/^internallength$/i)
-		{
-			my $ilen;
-
-			$ilen = $vv;
-
-			$ilen = -1 if ($vv =~ m/^variable$/i);
-
-			# must be a number
-			die ("bad length: $vv")
-				unless ($ilen =~ m/^(\-)?\d+$/);
-
-			$h1{tuple}->{typlen} = $ilen;
-		}
-
-		if ($kk =~ m/^element$/i)
-		{
-			die ("bad element: $vv")
-				unless (exists($h1{typeoidh}) &&
-						exists($h1{typeoidh}->{lc($vv)}));
-
-			$h1{tuple}->{typelem} = $h1{typeoidh}->{lc($vv)};
-		}
-
-		if ($kk =~ m/^alignment$/i)
-		{
-			die ("bad aligment: $vv")
-				unless ($vv =~ m/^(char|short|int|int2|int4|double)$/);
-
-			# just use first character for alignment...
-			$h1{tuple}->{typalign} = lc(substr($vv, 0, 1));
-
-			# ...except for int2 (short)
-			$h1{tuple}->{typalign} = "s" if ($vv =~ m/^int2/i);
-		}
-
-		if ($kk =~ m/^delimiter$/i)
-		{
-			my $delim = $vv;
-
-			# remove trailing comma, quotes
-			$delim =~ s/\s*\,\s*$//;
-
-			$delim =~ s/\"\s*$//;
-			$delim =~ s/^\s*\"//;
-			$delim =~ s/\'\s*$//;
-			$delim =~ s/^\s*\'//; 
-
-			die ("bad delimiter: $vv")
-				unless (1 == length($delim));
-
-			$h1{tuple}->{typdelim} = $delim;
-		}
-
-	}
-
-L_enddef:
-
-	return (\%h1);
-}# end make_type
-
-# build DATA statements for array types
-sub print_arr_type
-{
-	my $tdef = shift;
-
-	return ""
-		unless (exists($tdef->{with}) &&
-				exists($tdef->{with}->{arrayoid}));
-
-	my $bigstr = 
-		"DATA(insert OID = {arrayoid} (\t_{typname}\t   " .
-		"{typnamespace} {typowner} " .
-		"-1 f b t " .
-		"{typdelim} 0\t" . 
-		"{oid} array_in array_out array_recv array_send " .
-		"{typmodin} {typmodout} - {typalign} x f 0 -1 0 _null_ _null_ ));";
-
-	my $t2def = {oid => $tdef->{with}->{oid}};
-	$t2def->{arrayoid} = $tdef->{with}->{arrayoid};
-
-	while (my ($kk, $vv) = each(%{$tdef->{tuple}}))
-	{
-		$t2def->{$kk} = $vv;
-
-		if ($kk =~ m/typdelim/)
-		{
-			$t2def->{$kk} = sprintf("\\0%o", ord($vv)); 
-		}
-		if ($kk =~ m/typalign/)
-		{
-			# typecmds.c:DefineType() "alignment must be 'i' or 'd' for arrays"
-			# XXX XXX: alignment is always "int" unless base type is "double"
-			$t2def->{$kk} = "i"
-				unless ($vv eq "d");
-		}
-	}
-
-	my $fmt = doformat($bigstr, $t2def);
-
-	return $fmt;
-
-} # end print_arr_type
-
-sub print_type
-{
-	my $tdef = shift;
-
-	my $bigstr =
-		"DATA(insert OID = {oid} (\t{typname}\t   {typnamespace} {typowner} " .
-		"{typlen} {typbyval} {typtype} {typisdefined} " .
-		"{typdelim} {typrelid}\t" .
-		"{typelem} {typinput} {typoutput} {typreceive} {typsend} " .
-		"{typmodin} {typmodout} " .
-		"{typanalyze} {typalign} {typstorage} {typnotnull} {typbasetype} " .
-		"{typtypmod} {typndims} {typdefaultbin} {typdefault} ));";
-
-	my $t2def = {oid => $tdef->{with}->{oid}};
-
-#	print Data::Dumper->Dump([$tdef]);
-
-	while (my ($kk, $vv) = each(%{$tdef->{tuple}}))
-	{
-		$t2def->{$kk} = $vv;
-
-		unless (defined($vv))
-		{
-			$t2def->{$kk} = '_null_';
-
-			# a null regproc is a dash...
-			if ($kk =~ m/^typ(input|output|receive|send|analyze)$/)
-			{
-				$t2def->{$kk} = "-";
-			}
-		}
-
-		if ($kk =~ m/typdelim/)
-		{
-			$t2def->{$kk} = sprintf("\\0%o", ord($vv)); 
-		}
-	}
-	
-	# XXX XXX: fixup for name
-	if ($t2def->{typname} eq "name")
-	{
-		# 64
-		$t2def->{typlen} = "NAMEDATALEN";
-	}
-
-	my $fmt = doformat($bigstr, $t2def);
-
-	if (exists($tdef->{with}->{description}))
-	{
-		$fmt .= "\nDESCR(" . $tdef->{with}->{description} . ");";
-	}
-
-	return $fmt;
-	
-} # end print_type
-
-# MAIN routine for pg_type generation
-sub dotypes
-{
-	
-	my $whole_file;
-	
-	{
-        # $$$ $$$ undefine input record separator (\n)
-        # and slurp entire file into variable
-		
-        local $/;
-        undef $/;
-		
-		my $fh;
-
-		open $fh, "< $glob_glob->{typedef}" 
-			or die "cannot open $glob_glob->{typedef}: $!";
-
-		$whole_file = <$fh>;
-		
-		close $fh;
-	}
-	
-	my $wf2 = $whole_file;
-
-	# substitute for all "(.*)" pairs an empty "()" :
-	#   for the case where "(" ends a line and ")" begins a line, 
-	#   and ".*" does not contain parens
-	#
-
-	# This expression converts a CREATE TYPE statement to a single
-	# line
-	$wf2 =~ s/\((?:\s*)$([^\(\)]*)^\s*\)/()/gsm;
-
-	# strip off the remainder of the CREATE TYPE statement after the type name
-	$wf2 =~ s/(^\s*CREATE TYPE\s+(?:\")?\w+(?:\")?)\(\).*/$1/gm;
-
-	# remove DROP TYPE
-	$wf2 =~ s/^\s*DROP TYPE.*//gmi;
-
-	# uncomment #defines
-	$wf2 =~ s/(^\s*\-\-\s*\#define)/\#define/gmi;
-
-	# uncomment ARRAY TYPE -- will substitute later
-	$wf2 =~ s/(^\s*\-\-\s*ARRAY TYPE)/ARRAY TYPE/gmi;
-
-#	$wf2 =~ s|^\s*(\-\-)(\s*$)|$2|gm;
-
-#	$wf2 =~ s|^\s*(\-\-)(.*)(\s*$)|/* $2 */$3|gm;
-	$wf2 =~ s|(\-\-)(.*)(\s*$)|/* $2 */$3|gm;
-
-#	$wf2 =~ s|/\*\s+\*/||gm;
-
-#	print $wf2;
-
-	my @lines = split(/\n/, $wf2);
-
-	my %raytypes;
-
-	# convert comments on adjacent lines to block comments
-	my $prevline = "";
-	my $wf3 = "";
-	for my $lin (@lines)
-	{
-		if ($lin =~ m|^\s*/\*.*\*/|)
-		{
-			if ($prevline =~ m|\*/\s*$|)
-			{
-				$prevline =~ s|\*/\s*$||;
-				$lin =~ s|(^\s*)/\*|$1\*\*|;
-			}
-		}
-		else
-		{
-			if ($prevline =~ m|^\s*\*\*.*\*/|)
-			{
-				$prevline =~ s|\*/\s*$|\n\*/|;
-			}
-		}
-
-		if ($lin =~ m/^\s*ARRAY TYPE/)
-		{
-			my @foo = ($lin =~ m/^\s*ARRAY TYPE\s+(.*)/);
-
-			die "bad array type name: $lin"
-				unless (scalar(@foo));
-
-			my $atyp = shift @foo;
-
-			# remove quotes
-			$atyp =~ s/\"//g; 
-			
-			die "duplicate array type reference: $atyp"
-				if (exists($raytypes{$atyp}));
-
-			$raytypes{$atyp} = -1;
-		}
-
-		$wf3 .= $prevline . "\n";
-		$prevline = $lin;
-	}
-	$wf3 .= $prevline . "\n";
-
-#	print $wf3;
-
-	my @alltypes = split(/\;\s*$/m, $whole_file);
-
-	my @alltypedef;
-
-	for my $atyp (@alltypes)
-	{
-		# filter comments
-		$atyp =~ s/^\s*\-\-.*//gm;
-
-		# filter empties
-		$atyp =~ s/^\s+$//gm;
-
-		# filter DROP TYPE
-		$atyp =~ s/^\s*DROP TYPE.*//i;
-
-		next unless (length($atyp));
-
-		my $raw = $atyp;
-
-		my @baz = ($atyp =~ m/^\s*CREATE TYPE (?:\")?(\w+)(?:\")?/im);
-
-		die "bad type $atyp"
-			unless (scalar(@baz));
-
-		my $typname = shift @baz;
-
-		$atyp =~ s/^\s*CREATE TYPE\s+[^\(]*\($//im;
-		my $w1 = get_fnwithhash($atyp);
-
-		# match up array oids - 
-		# if no match, assume array definition "trails" (immediately
-		# follows) the scalar
-		my $trailing_array = !(exists($raytypes{$typname}));
-
-		if ($trailing_array)
-		{
-			# if there isn't a "substitute location" for the array
-			# type of this type, then complain if we don't have an
-			# ARRAYOID, unless this is a pseudo type, or one of the
-			# bootstrap tables.
-
-			unless (exists($w1->{arrayoid}) ||
-					(exists($w1->{typtype}) &&
-					 ($w1->{typtype} eq "PSEUDO")))
-			{
-				die "missing ARRAYOID for array type for $typname"
-					unless (exists($array_type_exception_h{$typname}))
-			}
-		}
-		else
-		{
-			die "missing ARRAYOID for array type for $typname"
-				unless (exists($w1->{arrayoid}));
-
-			$raytypes{$typname} = $w1->{arrayoid};
-		}
-
-		# save the oid for each typename for CREATE TYPE...ELEMENT lookup
-		$glob_typeoidh{lc($typname)} = $w1->{oid}
-			if (exists($w1->{oid}));
-		$glob_typeoidh{"_" . lc($typname)} = $w1->{arrayoid}
-			if (exists($w1->{arrayoid}));
-
-		# remove WITH
-		$atyp =~ s/^\s*\) WITH .*//i;
-		
-		my $tdef = {
-			typname        => $typname,
-			typnamespace => "PGNSP", # pg_catalog
-			typowner	 => "PGUID", # admin
-#			typlen         => 0,
-#			typbyval       => 0,
-			typtype        => 'b', # "base" by default
-			typisdefined   => 't', # 
-			typdelim       => ',', # except for box which uses ";"
-			typrelid       => 0,
-			typelem        => 0,   # 
-			typinput       => undef,
-			typoutput      => undef,
-			typreceive     => undef,
-			typsend        => undef,
-			typmodin       => undef,
-			typmodout      => undef,
-			typanalyze     => undef,
-#			typalign       => 0,
-#			typstorage     => 0,
-			typnotnull     => 'f', # not a domain
-			typbasetype    => 0,   # not a domain
-			typtypmod      => -1,  # not a domain
-			typndims       => 0,
-			typdefaultbin  => undef,
-			typdefault     => undef
-
-		};
-		
-		# reset typtype from "base" to "pseudo" (or whatever)
-		if (exists($w1->{typtype}) && length($w1->{typtype}))
-		{
-			my $ttt = substr(lc($w1->{typtype}), 0, 1);
-
-			die "invalid type: $w1->{typtype} - valid types are BASE, COMPOSITE, DOMAIN, and PSEUDO"
-				unless ($ttt =~ m/^(b|c|d|p)$/);
-
-			$tdef->{typtype} = $ttt;
-		}
-		if ($tdef->{typtype} eq 'b')
-		{
-			unless (exists($w1->{arrayoid}))
-			{
-				die "missing ARRAYOID for array type for $typname"
-					unless (exists($array_type_exception_h{$typname}));
-			}
-		}
-			
-		my $t1def = {
-			tuple => $tdef, raw => $raw, with => $w1, 
-			trailing_array => $trailing_array, at=>$atyp};
-
-		push @alltypedef, $t1def;
-	} # end for my $atyp
-
-	my @wf4 = split(/\n/, $wf3);
-
-	# finish processing type definitions in second pass 
-	#
-	# sort the definitions by typename length so global replacement works, 
-	# eg replace "timestamptz" before "timestamp"
-	for my $t1def 
-		(sort {length($b->{tuple}->{typname}) <=> 
-				   length($a->{tuple}->{typname})}(@alltypedef))
-	{
-		my $t2def		 = make_type(%{$t1def}, typeoidh=>\%glob_typeoidh);
-		my $ttname		 = $t1def->{tuple}->{typname};
-		my $datstatement = print_type($t2def);
-		my $arrstatement = print_arr_type($t2def);
-
-		# rather than global replace the ARRAY and CREATE TYPE
-		# definitions with a regex, walk the file line by line to
-		# place trailing array defs after #defines...
-		for my $linnum (0..(scalar(@wf4)-1))
-		{
-			my $lin = $wf4[$linnum];
-
-			chomp($lin);
-			$wf4[$linnum] = $lin;
-			next
-				unless ($lin =~ m/^\s*(ARRAY|CREATE) TYPE (\")?$ttname(\")?/);
-
-			if ($lin =~ m/^\s*CREATE TYPE/)
-			{
-				$lin =~ s/^\s*CREATE TYPE $ttname\s*$/$datstatement/;
-				$lin =~ s/^\s*CREATE TYPE \"$ttname\"\s*$/$datstatement/;
-
-				if ($t1def->{trailing_array})
-				{
-					my $nextlin = $linnum + 1;
-					
-					# the "trailing array" definition immediately
-					# follows the scalar definition, unless the scalar
-					# is followed by a #define
-					if (($nextlin <= (scalar(@wf4)-1)) &&
-						($wf4[$nextlin] =~ m/^\s*\#define/))
-					{
-						$wf4[$nextlin] .= "\n" . $arrstatement;
-					}
-					else
-					{
-						$lin .= "\n" . $arrstatement;
-					}
-				}
-			}
-			else
-			{
-				$lin =~ s/^\s*ARRAY TYPE $ttname\s*$/$arrstatement/;
-				$lin =~ s/^\s*ARRAY TYPE \"$ttname\"\s*$/$arrstatement/;
-			}
-			$wf4[$linnum] = $lin;
-		} # end for my linnum
-	} # end for my t1def
-
-#	print Data::Dumper->Dump([\%raytypes]);
-#	print join("\n", @wf4);
-
-    my $verzion = "unknown";
-	$verzion = $glob_glob->{_sleazy_properties}->{version}
-	if (exists($glob_glob->{_sleazy_properties}) &&
-		exists($glob_glob->{_sleazy_properties}->{version}));
-
-	$verzion = $0 . " version " . $verzion;
-	my $nnow = localtime;
-	my $gen_hdr_str = "";
-#	$gen_hdr_str = "/* TIDYCAT_BEGIN_PG_TYPE_GEN \n\n";
-	$gen_hdr_str = "\n";
-	$gen_hdr_str .= "   WARNING: DO NOT MODIFY THE FOLLOWING SECTION: \n" .
-		"   Generated by " . $verzion . "\n" . 
-		"   on " . $nnow . "\n\n" . 
-		"   Please make your changes in " . $glob_glob->{typedef} . "\n*/\n\n";
-
-	my $bigstr = "";
-
-	$bigstr .= $gen_hdr_str;
-
-	# append generated DATA definitions
-	$bigstr .= join("\n", @wf4);
-
-	$bigstr .= "\n\n";
-
-	if (0)
-	{
-		print $bigstr;
-	}
-	else
-	{
-        # $$$ $$$ undefine input record separator (\n)
-        # and slurp entire file into variable
-		
-        local $/;
-        undef $/;
-		
-		my $tfh;
-
-		open $tfh, "< $glob_glob->{typehdr}" 
-			or die "cannot open $glob_glob->{typehdr}: $!";
-
-		my $target_file = <$tfh>;
-		
-		close $tfh;
-
-		my $prefx = quotemeta('TIDYCAT_BEGIN_PG_TYPE_GEN');
-		my $suffx = quotemeta('TIDYCAT_END_PG_TYPE_GEN');
-
-		my @zzz = ($target_file =~ 
-				   m/^\s*\/\*\s*$prefx\s*\s*$(.*)^\s*\/\*\s*$suffx\s*\*\/\s*$/ms);
-
-		die "bad target: $glob_glob->{typehdr}"
-			unless (scalar(@zzz));
-
-		my $rex = $zzz[0];
-
-		# replace carriage returns first, then quotemeta, then fix CR again...
-		$rex =~ s/\n/SLASHNNN/gm;
-		$rex = quotemeta($rex);
-		$rex =~ s/SLASHNNN/\\n/gm;
-
-		# substitute the new generated type definitions for the prior
-		# generated defitions in the target file
-		$target_file =~ s/$rex/$bigstr/ms;
-
-		# save a backup file
-		system "cp $glob_glob->{typehdr} $glob_glob->{typehdr}.backup";
-
-		my $outi;
-
-		open $outi, "> $glob_glob->{typehdr}" 
-			or die "cannot open $glob_glob->{typehdr} for write: $!";
-		
-		# rewrite the target file
-		print $outi $target_file;
-
-		close $outi;
-		
-	}
-
-} # end sub dotypes
+	close $fh;
+}
 
 if (1)
 {
-	dotypes();
+	readtypes();
 	doprocs();
 }
 
@@ -2180,28 +1226,12 @@ if (0)
          "short" : "header file to modify (procedures)",
          "type" : "file"
       },
-      {
-         "alias" : "typdef|typesource|typsource|typesrc|typsrc",
-         "long" : "sql definitions for pg_type functions (normally pg_type.sql)",
-         "name" : "typedef",
-         "required" : "1",
-         "short" : "sql definitions for pg_type functions",
-         "type" : "file"
-      },
-      {
-         "alias" : "typheader|typeheader|typhdr",
-         "long" : "header file to modify (normally pg_type.h).  The original file is copied to a .backup copy.",
-         "name" : "typehdr",
-         "required" : "1",
-         "short" : "header file to modify (types)",
-         "type" : "file"
-      }
    ],
    "long" : "$toplong",
    "properties" : {
       "slzy_date" : 1317671892
    },
-   "short" : "generate pg_proc and pg_type entries",
+   "short" : "generate pg_proc entries",
    "version" : "8"
 }
 
@@ -2215,17 +1245,10 @@ if (0)
 {
 	my $toplong = <<'EOF_toplong';
 catullus.pl converts annotated sql CREATE FUNCTION and CREATE TYPE
-statements into pg_proc and pg_type entries and updates pg_proc_gp.h and
-pg_type.h.
-
-The pg_type definitions are stored in pg_type.sql.  catullus reads
-these definitions and outputs DATA statements for loading the pg_type
-table.  In pg_type.h, it looks for a block of code delimited by the
-tokens TIDYCAT_BEGIN_PG_TYPE_GEN and TIDYCAT_END_PG_TYPE_GEN and
-substitutes the new generated code for the previous contents.
+statements into pg_proc and updates pg_proc_gp.h.
 
 The pg_proc definitions are stored in pg_proc.sql.  catullus reads
-these definitions and, using type information from pg_type.sql,
+these definitions and, using type information from pg_type.h,
 generates DATA statements for loading the pg_proc table.  In
 pg_proc_gp.h, it looks for a block of code delimited by the tokens
 TIDYCAT_BEGIN_PG_PROC_GEN and TIDYCAT_END_PG_PROC_GEN and substitutes

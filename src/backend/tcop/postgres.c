@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tcop/postgres.c,v 1.521 2007/01/05 22:19:39 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tcop/postgres.c,v 1.524 2007/02/17 19:33:32 tgl Exp $
  *
  * NOTES
  *	  this is the "main" module of the postgres backend and
@@ -79,11 +79,10 @@
 #include "utils/debugbreak.h"
 #include "mb/pg_wchar.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdblogsync.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbdtxcontextinfo.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbgang.h"
 #include "cdb/ml_ipc.h"
@@ -123,6 +122,7 @@ int			max_stack_depth = 100;
 
 /* wait N seconds to allow attach from a debugger */
 int			PostAuthDelay = 0;
+
 
 
 /* ----------------
@@ -186,6 +186,8 @@ static PreparedStatement *unnamed_stmt_pstmt = NULL;
 static const char *userDoption = NULL;	/* -D switch */
 
 static bool EchoQuery = false;	/* default don't echo */
+
+static bool DoingPqReading = false; /* in the middle of recv call of secure_read */
 
 extern pthread_t main_tid;
 #ifndef _WIN32
@@ -570,6 +572,17 @@ ReadCommand(StringInfo inBuf)
  * non-reentrant libc functions.  This restriction makes it safe for us
  * to allow interrupt service routines to execute nontrivial code while
  * we are waiting for input.
+ *
+ * When waiting in the main loop, we can process any interrupt immediately
+ * in the signal handler. In any other read from the client, like in a COPY
+ * FROM STDIN, we can't safely process a query cancel signal, because we might
+ * be in the middle of sending a message to the client, and jumping out would
+ * violate the protocol. Or rather, pqcomm.c would detect it and refuse to
+ * send any more messages to the client. But handling a SIGTERM is OK, because
+ * we're terminating the backend and don't need to send any more messages
+ * anyway. That means that we might not be able to send an error message to
+ * the client, but that seems better than waiting indefinitely, in case the
+ * client is not responding.
  */
 void
 prepare_for_client_read(void)
@@ -588,6 +601,18 @@ prepare_for_client_read(void)
 		QueryFinishPending = false;
 		CHECK_FOR_INTERRUPTS();
 	}
+	else
+	{
+		DoingPqReading = true;
+		/* Allow die interrupts to be processed while waiting */
+		ImmediateDieOK = true;
+
+		/* Process the ones that already arrived */
+		if (ProcDiePending)
+		{
+			CHECK_FOR_INTERRUPTS();
+		}
+	}
 }
 
 /*
@@ -605,8 +630,48 @@ client_read_ended(void)
 		DisableNotifyInterrupt();
 		DisableCatchupInterrupt();
 	}
+	else
+	{
+		ImmediateDieOK = false;
+		DoingPqReading = false;
+	}
 }
 
+/*
+ * prepare_for_client_write -- set up to possibly block on client output
+ *
+ * Like prepare_for_client_read, but for writing.
+ *
+ * NOTE: this routine may be called in dispatch thread;
+ */
+void
+prepare_for_client_write(void)
+{
+	/* Only enable this on main thread */
+	if (pthread_equal(main_tid, pthread_self()))
+	{
+		/* Allow die interrupts to be processed while waiting */
+		ImmediateDieOK = true;
+
+		/* And don't forget to detect one that already arrived */
+		if (ProcDiePending)
+			CHECK_FOR_INTERRUPTS();
+	}
+}
+
+/*
+ * client_read_ended -- get out of the client-output state
+ *
+ * This is called just after low-level writes.
+ */
+void
+client_write_ended(void)
+{
+	if (pthread_equal(main_tid, pthread_self()))
+	{
+		ImmediateDieOK = false;
+	}
+}
 
 /*
  * Parse a query string and pass it through the rewriter.
@@ -899,8 +964,8 @@ pg_plan_queries(List *querytrees, ParamListInfo boundParams,
  * query_string -- optional query text (C string).
  * serializedQuerytree[len]  -- Query node or (NULL,0) if plan provided.
  * serializedPlantree[len] -- PlannedStmt node, or (NULL,0) if query provided.
- * serializedParms[len] -- optional parameters
- * serializedSliceInfo[len] -- optional SliceTable
+ * serializedParams[len] -- optional parameters
+ * serializedQueryDispatchDesc[len] -- QueryDispatchDesc node, or (NULL,0) if query provided.
  * localSlice -- slice table index
  *
  * Caller may supply either a Query (representing utility command) or
@@ -911,7 +976,7 @@ exec_mpp_query(const char *query_string,
 			   const char * serializedQuerytree, int serializedQuerytreelen,
 			   const char * serializedPlantree, int serializedPlantreelen,
 			   const char * serializedParams, int serializedParamslen,
-			   const char * serializedSliceInfo, int serializedSliceInfolen,
+			   const char * serializedQueryDispatchDesc, int serializedQueryDispatchDesclen,
 			   const char * seqServerHost, int seqServerPort,
 			   int localSlice)
 {
@@ -922,6 +987,7 @@ exec_mpp_query(const char *query_string,
 	char		msec_str[32];
 	Node		   *utilityStmt = NULL;
 	PlannedStmt	   *plan = NULL;
+	QueryDispatchDesc *ddesc = NULL;
 	CmdType		commandType = CMD_UNKNOWN;
 	SliceTable *sliceTable = NULL;
     Slice      *slice = NULL;
@@ -992,53 +1058,45 @@ exec_mpp_query(const char *query_string,
 		
 		utilityStmt = query->utilityStmt;
 	}
-	
-	/*
-	 * Deserialize the slice table, if there is one, and set up the local slice.
-	 */
-    if (serializedSliceInfo != NULL && serializedSliceInfolen > 0)
-	{
-        sliceTable = (SliceTable *) deserializeNode(serializedSliceInfo, serializedSliceInfolen);
-		
-		sliceTable->localSlice = localSlice;
-		
-        if (!sliceTable ||
-            !IsA(sliceTable, SliceTable) ||
-            sliceTable->localSlice < 0 ||
-            sliceTable->localSlice >= list_length(sliceTable->slices))
-            elog(ERROR, "MPPEXEC: received invalid slice table:, %d", localSlice);
-		
-        slice = (Slice *)list_nth(sliceTable->slices, sliceTable->localSlice);
-        Insist(IsA(slice, Slice));
-		
-        /* Set global sliceid variable for elog. */
-        currentSliceId = sliceTable->localSlice;
-    }
-	
+
  	/*
      * Deserialize the query execution plan (a PlannedStmt node), if there is one.
      */
-    if (serializedPlantree != NULL && serializedPlantreelen > 0)
-    {
-    	plan = (PlannedStmt *) deserializeNode(serializedPlantree,serializedPlantreelen);
-		if ( !plan ||
-			!IsA(plan, PlannedStmt) ||
-			plan->sliceTable != NULL ||
-			plan->memoryAccount != NULL)
-		{
+	if (serializedPlantree != NULL && serializedPlantreelen > 0)
+	{
+		plan = (PlannedStmt *) deserializeNode(serializedPlantree,serializedPlantreelen);
+		if (!plan || !IsA(plan, PlannedStmt))
 			elog(ERROR, "MPPEXEC: receive invalid planned statement");
-		}
-		
-    	/*
-		 * Since we're running as a QE, we need to put the slice table 
-		 * and associated values determined by the QD that called MPPEXEC 
-		 * into the EState before we run the executor.  We can't do it now 
-		 * because our EState isn't ready. Instead, put it in PlannedStmt 
-		 * and let the code that sets up the QueryDesc sort it out.
-		 */
-		plan->sliceTable = (Node *) sliceTable; /* Cache for CreateQueryDesc */
     }
-	
+
+	/*
+     * Deserialize the extra execution information (a QueryDispatchDesc node), if there is one.
+     */
+    if (serializedQueryDispatchDesc != NULL && serializedQueryDispatchDesclen > 0)
+    {
+		ddesc = (QueryDispatchDesc *) deserializeNode(serializedQueryDispatchDesc,serializedQueryDispatchDesclen);
+		if (!ddesc || !IsA(ddesc, QueryDispatchDesc))
+			elog(ERROR, "MPPEXEC: received invalid QueryDispatchDesc with planned statement");
+
+        sliceTable = ddesc->sliceTable;
+
+		if (sliceTable)
+		{
+			if (!IsA(sliceTable, SliceTable) ||
+				sliceTable->localSlice < 0 ||
+				sliceTable->localSlice >= list_length(sliceTable->slices))
+				elog(ERROR, "MPPEXEC: received invalid slice table: %d", localSlice);
+
+			sliceTable->localSlice = localSlice;
+
+			slice = (Slice *)list_nth(sliceTable->slices, sliceTable->localSlice);
+			Insist(IsA(slice, Slice));
+
+			/* Set global sliceid variable for elog. */
+			currentSliceId = sliceTable->localSlice;
+		}
+    }
+
 	/*
 	 * Choose the command type from either the Query or the PlannedStmt.
 	 */
@@ -1224,13 +1282,13 @@ exec_mpp_query(const char *query_string,
 					(errcode(ERRCODE_IN_FAILED_SQL_TRANSACTION),
 					 errmsg("current transaction is aborted, "
 							"commands ignored until end of transaction block")));
-		
+
 		/* Make sure we are in a transaction command */
 		start_xact_command();
-		
+
 		/* If we got a cancel signal in parsing or prior command, quit */
 		CHECK_FOR_INTERRUPTS();
-		
+
 		/*
 		 * OK to analyze, rewrite, and plan this query.
 		 *
@@ -1238,12 +1296,10 @@ exec_mpp_query(const char *query_string,
 		 * these must outlive the execution context).
 		 */
 		oldcontext = MemoryContextSwitchTo(MessageContext);
-		
-		
-		
+
 		/* If we got a cancel signal in analysis or planning, quit */
 		CHECK_FOR_INTERRUPTS();
-		
+
 		/*
 		 * Create unnamed portal to run the query or queries in. If there
 		 * already is one, silently drop it.
@@ -1266,11 +1322,11 @@ exec_mpp_query(const char *query_string,
 						  MessageContext);
 
 		/* 
-		 * Start the portal.  No parameters here.
+		 * Start the portal.
 		 */
 		PortalStart(portal, paramLI, InvalidSnapshot,
-					seqServerHost, seqServerPort);
-		
+					seqServerHost, seqServerPort, ddesc);
+
 		/*
 		 * Select text output format, the default.
 		 */
@@ -1309,8 +1365,7 @@ exec_mpp_query(const char *query_string,
 		 * error, not one and then the other.
 		 */
 		finish_xact_command();
-		
-		
+
 		if (Debug_dtm_action == DEBUG_DTM_ACTION_FAIL_END_COMMAND &&
 			CheckDebugDtmActionSqlCommandTag(commandTag))
 		{
@@ -1325,7 +1380,6 @@ exec_mpp_query(const char *query_string,
 		 * aborted by error will not send an EndCommand report at all.)
 		 */
 		EndCommand(completionTag, dest);
-		
 	}							/* end loop over parsetrees */
 	
 	/*
@@ -1362,10 +1416,9 @@ exec_mpp_query(const char *query_string,
 		BackoffBackendEntryExit();
 	}
 
-
 	debug_query_string = NULL;
 }
-	
+
 static bool
 CheckDebugDtmActionProtocol(DtxProtocolCommand dtxProtocolCommand, 
 				DtxContextInfo *contextInfo)
@@ -1541,18 +1594,14 @@ exec_simple_query(const char *query_string, const char *seqServerHost, int seqSe
 	 */
 	parsetree_list = pg_parse_query(query_string);
 
-	/* Disable statement logging during mapreduce */
-	if (!gp_mapreduce_define)
+	/* Log immediately if dictated by log_statement */
+	if (check_log_statement(parsetree_list))
 	{
-		/* Log immediately if dictated by log_statement */
-		if (check_log_statement(parsetree_list))
-		{
-			ereport(LOG,
+		ereport(LOG,
 				(errmsg("statement: %s", query_string),
 				 errhidestmt(true),
 				 errdetail_execute(parsetree_list)));
-			was_logged = true;
-		}
+		was_logged = true;
 	}
 
 	/*
@@ -1691,7 +1740,7 @@ exec_simple_query(const char *query_string, const char *seqServerHost, int seqSe
 		 * Start the portal.  No parameters here.
 		 */
 		PortalStart(portal, NULL, InvalidSnapshot,
-					seqServerHost, seqServerPort);
+					seqServerHost, seqServerPort, NULL);
 
 		/*
 		 * Select the appropriate output format: text unless we are doing a
@@ -1804,22 +1853,20 @@ exec_simple_query(const char *query_string, const char *seqServerHost, int seqSe
 	/*
 	 * Emit duration logging if appropriate.
 	 */
-	if (!gp_mapreduce_define)
+	switch (check_log_duration(msec_str, was_logged))
 	{
-		switch (check_log_duration(msec_str, was_logged))
-		{
-			case 1:
-				ereport(LOG,
+		case 1:
+			ereport(LOG,
 					(errmsg("duration: %s ms", msec_str),
 					 errhidestmt(true)));
-				break;
-			case 2:
-				ereport(LOG, (errmsg("duration: %s ms  statement: %s",
-									 msec_str, query_string),
-							  errdetail_execute(parsetree_list),
-							  errhidestmt(true)));
-				break;
-		}
+			break;
+		case 2:
+			ereport(LOG,
+					(errmsg("duration: %s ms  statement: %s",
+							msec_str, query_string),
+					 errdetail_execute(parsetree_list),
+					 errhidestmt(true)));
+			break;
 	}
 
 	if (save_log_statement_stats)
@@ -1954,10 +2001,10 @@ exec_parse_message(const char *query_string,	/* string to execute */
 					(errcode(ERRCODE_IN_FAILED_SQL_TRANSACTION),
 					 errmsg("current transaction is aborted, "
 						"commands ignored until end of transaction block")));
-		
-        /*
-         * Set up a snapshot if parse analysis/planning will need one.
-         */
+
+		/*
+		 * Set up a snapshot if parse analysis/planning will need one.
+		 */
 		if (analyze_requires_snapshot(parsetree))
 		{
 			mySnapshot = CopySnapshot(GetTransactionSnapshot());
@@ -2021,7 +2068,6 @@ exec_parse_message(const char *query_string,	/* string to execute */
 		ActiveSnapshot = NULL;
 		if (mySnapshot)
 			FreeSnapshot(mySnapshot);
-		
 	}
 	else
 	{
@@ -2448,7 +2494,7 @@ exec_bind_message(StringInfo input_message)
 					  qContext);
 
 	PortalStart(portal, params, InvalidSnapshot,
-				savedSeqServerHost, savedSeqServerPort);
+				savedSeqServerHost, savedSeqServerPort, NULL);
 
 	/*
 	 * Apply the result format requests to the portal.
@@ -2610,7 +2656,7 @@ exec_execute_message(const char *portal_name, int64 max_rows)
 	 * Report query to various monitoring facilities.
 	 */
 	debug_query_string = sourceText ? sourceText : "<EXECUTE>";
-		
+
 	pgstat_report_activity(debug_query_string);
 
 	set_ps_display(portal->commandTag, false);
@@ -2761,6 +2807,10 @@ check_log_statement(List *stmt_list)
 {
 	ListCell   *stmt_item;
 
+	/* Disable statement logging during mapreduce */
+	if (gp_mapreduce_define)
+		return false;
+
 	if (log_statement == LOGSTMT_NONE)
 		return false;
 	if (log_statement == LOGSTMT_ALL)
@@ -2796,6 +2846,10 @@ check_log_statement(List *stmt_list)
 int
 check_log_duration(char *msec_str, bool was_logged)
 {
+	/* Disable statement logging during mapreduce */
+	if (gp_mapreduce_define)
+		return 0;
+
 	if (log_duration || log_min_duration_statement >= 0)
 	{
 		long		secs;
@@ -3265,6 +3319,7 @@ die(SIGNAL_ARGS)
 	{
 		InterruptPending = true;
 		ProcDiePending = true;
+		TermSignalReceived = true;
 
 		/* although we don't strictly need to set this to true since the
 		 * ProcDiePending will occur first.  We set this anyway since the
@@ -3277,9 +3332,22 @@ die(SIGNAL_ARGS)
 		 * If it's safe to interrupt, and we're waiting for input or a lock,
 		 * service the interrupt immediately
 		 */
-		if (ImmediateInterruptOK && InterruptHoldoffCount == 0 &&
-			CritSectionCount == 0)
+		if ((ImmediateInterruptOK || ImmediateDieOK) &&
+			InterruptHoldoffCount == 0 && CritSectionCount == 0)
 		{
+			if (ImmediateDieOK && !DoingPqReading)
+			{
+				/*
+				 * Getting here indicates that we have been interrupted during a
+				 * data message is under sending to client, so close the connection
+				 * immediately, since sending any more bytes may cause self dead
+				 * lock(though we can handle this using pq_send_mutex_lock() now, it
+				 * is better to avoid the unnecessary cost).
+				 */
+				close(MyProcPort->sock);
+				whereToSendOutput = DestNone;
+			}
+
 			/* bump holdoff count to make ProcessInterrupts() a no-op */
 			/* until we are done getting ready for it */
 			InterruptHoldoffCount++;
@@ -3472,6 +3540,7 @@ ProcessInterrupts(void)
 		ProcDiePending = false;
 		QueryCancelPending = false;		/* ProcDie trumps QueryCancel */
 		ImmediateInterruptOK = false;	/* not idle anymore */
+		ImmediateDieOK = false;		/* prevent re-entry */
 		DisableNotifyInterrupt();
 		DisableCatchupInterrupt();
 
@@ -3892,7 +3961,7 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 			case 'r':
 				/* send output (stdout and stderr) to the given file */
 				if (secure)
-					StrNCpy(OutputFileName, optarg, MAXPGPATH);
+					strlcpy(OutputFileName, optarg, MAXPGPATH);
 				break;
 
 			case 'S':
@@ -4341,6 +4410,10 @@ PostgresMain(int argc, char *argv[],
 		/* Need not flush since ReadyForQuery will do it. */
 	}
 
+	/* Also send GPDB QE-backend startup info (motion listener, version). */
+	if (Gp_role == GP_ROLE_EXECUTE)
+		sendQEDetails();
+
 	/* Welcome banner for standalone case */
 	if (whereToSendOutput == DestDebug)
 		printf("\nPostgreSQL stand-alone backend %s\n", PG_VERSION);
@@ -4656,7 +4729,7 @@ PostgresMain(int argc, char *argv[],
 					send_ready_for_query = true;
 				}
 				break;
-            case 'M':           /* MPP dispatched stmt from QD */
+            case 'M': /* MPP dispatched stmt from QD */
 				{
 					/* This is exactly like 'Q' above except we peel off and
 					 * set the snapshot information right away.
@@ -4671,7 +4744,7 @@ PostgresMain(int argc, char *argv[],
 					const char *serializedQuerytree = NULL;
 					const char *serializedPlantree = NULL;
 					const char *serializedParams = NULL;
-					const char *serializedSliceInfo = NULL;
+					const char *serializedQueryDispatchDesc = NULL;
 					const char *seqServerHost = NULL;
 					
 					int query_string_len = 0;
@@ -4679,25 +4752,25 @@ PostgresMain(int argc, char *argv[],
 					int serializedQuerytreelen = 0;
 					int serializedPlantreelen = 0;
 					int serializedParamslen = 0;
-					int serializedSliceInfolen = 0;
+					int serializedQueryDispatchDesclen = 0;
 					int seqServerHostlen = 0;
 					int seqServerPort = -1;
-					
-					int		localSlice;
-					int		rootIdx;
-					int		primary_gang_id;
+
+					int localSlice = -1, i;
+					int rootIdx;
+					int numSlices = 0;
 					TimestampTz statementStart;
-					Oid 	suid;
-					Oid 	ouid;
-					Oid 	cuid;
-					bool	suid_is_super = false;
-					bool	ouid_is_super = false;
+					Oid suid;
+					Oid ouid;
+					Oid cuid;
+					bool suid_is_super = false;
+					bool ouid_is_super = false;
 
 					int unusedFlags;
 
 					/* Set statement_timestamp() */
  					SetCurrentStatementStartTimestamp();
- 					
+
 					/* get the client command serial# */
 					gp_command_count = pq_getmsgint(&input_message, 4);
 					
@@ -4713,12 +4786,7 @@ PostgresMain(int argc, char *argv[],
 						ouid_is_super = true;	
 					cuid = pq_getmsgint(&input_message, 4);		
 					
-					/* get the slice number# */
-					localSlice = pq_getmsgint(&input_message, 4);
-					
 					rootIdx = pq_getmsgint(&input_message, 4);
-
-					primary_gang_id = pq_getmsgint(&input_message, 4);
 
 					statementStart = pq_getmsgint64(&input_message);
 					/*
@@ -4729,14 +4797,12 @@ PostgresMain(int argc, char *argv[],
 					 * 
 					 * Or both?
 					 */
-					//SetCurrentStatementStartTimestampToMaster(statementStart);
-					
 					/* read ser string lengths */
 					query_string_len = pq_getmsgint(&input_message, 4);
 					serializedQuerytreelen = pq_getmsgint(&input_message, 4);
 					serializedPlantreelen = pq_getmsgint(&input_message, 4);
 					serializedParamslen = pq_getmsgint(&input_message, 4);
-					serializedSliceInfolen = pq_getmsgint(&input_message, 4);
+					serializedQueryDispatchDesclen = pq_getmsgint(&input_message, 4);
 					serializedSnapshotlen = pq_getmsgint(&input_message, 4);
 						
 					/* read in the snapshot info */
@@ -4767,15 +4833,33 @@ PostgresMain(int argc, char *argv[],
 						
 					if (serializedParamslen > 0)
 						serializedParams = pq_getmsgbytes(&input_message,serializedParamslen);
-						
-					if (serializedSliceInfolen > 0)
-						serializedSliceInfo = pq_getmsgbytes(&input_message,serializedSliceInfolen);
+
+					if (serializedQueryDispatchDesclen > 0)
+						serializedQueryDispatchDesc = pq_getmsgbytes(&input_message,serializedQueryDispatchDesclen);
 
 					if (seqServerHostlen > 0)
 						seqServerHost = pq_getmsgbytes(&input_message, seqServerHostlen);
 
+					numSlices = pq_getmsgint(&input_message, 4);
+
+					Assert(qe_gang_id > 0);
+					for (i = 0; i < numSlices; ++i)
+					{
+						if (qe_gang_id == pq_getmsgint(&input_message, 4))
+						{
+							localSlice = i;
+						}
+					}
+
+					if (localSlice == -1 && numSlices > 0)
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_PROTOCOL_VIOLATION),
+								 errmsg("QE cannot find slice to execute")));
+					}
+
 					pq_getmsgend(&input_message);
-					 
+
 					elog((Debug_print_full_dtm ? LOG : DEBUG5), "MPP dispatched stmt from QD: %s.",query_string);
 
 					if (suid > 0)				
@@ -4825,9 +4909,9 @@ PostgresMain(int argc, char *argv[],
 									   serializedQuerytree, serializedQuerytreelen,
 									   serializedPlantree, serializedPlantreelen,
 									   serializedParams, serializedParamslen,
-									   serializedSliceInfo, serializedSliceInfolen,
+									   serializedQueryDispatchDesc, serializedQueryDispatchDesclen,
 									   seqServerHost, seqServerPort, localSlice);
-					
+
 					SetUserIdAndContext(GetOuterUserId(), false);
 
 					send_ready_for_query = true;
@@ -4846,7 +4930,6 @@ PostgresMain(int argc, char *argv[],
 					const char *gid;
 
 					DistributedTransactionId gxid;
-					int	primary_gang_id;
 					int serializedSnapshotlen;
 					const char *serializedSnapshot;
 
@@ -4874,8 +4957,6 @@ PostgresMain(int argc, char *argv[],
 					/* get the distributed transaction id */
 					gxid = (DistributedTransactionId) pq_getmsgint(&input_message, 4);
 					
-					primary_gang_id = pq_getmsgint(&input_message, 4);
-
 					serializedSnapshotlen = pq_getmsgint(&input_message, 4);
 
 					/* read in the snapshot info/ DtxContext */
@@ -4887,18 +4968,14 @@ PostgresMain(int argc, char *argv[],
 					/*
 					 * This is for debugging.  Otherwise we don't need to deserialize this
 					 */
-					DtxContextInfo_Deserialize(
-							serializedSnapshot, serializedSnapshotlen,
-							&TempDtxContextInfo);
+					DtxContextInfo_Deserialize(serializedSnapshot, serializedSnapshotlen, &TempDtxContextInfo);
 
 					pq_getmsgend(&input_message);
 
 					// Do not touch DTX context.
-
 					exec_mpp_dtx_protocol_command(dtxProtocolCommand, flags, loggingStr, gid, gxid, &TempDtxContextInfo);
 
 					send_ready_for_query = true;
-
             	}
 				break;
 
@@ -4933,12 +5010,6 @@ PostgresMain(int argc, char *argv[],
 					
 					exec_parse_message(query_string, stmt_name,
 									   paramTypes, numParams);
-				}
-				break;
-			case 'W':    /* GPDB QE-backend startup info (motion listener, version). */
-				{
-					sendQEDetails();
-					pq_flush();
 				}
 				break;
 

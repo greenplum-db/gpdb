@@ -57,6 +57,7 @@ extern Oid heap_create_with_catalog(const char *relname,
 						 bool allow_system_table_mods,
 						 bool valid_opts,
 						 Oid *comptypeOid, /* MPP */
+						 Oid *comptypeArrayOid, /* MPP */
 						 ItemPointer persistentTid,
 						 int64 *persistentSerialNum);
 
@@ -128,10 +129,6 @@ extern void CheckAttributeNamesTypes(TupleDesc tupdesc, char relkind);
 extern void CheckAttributeType(const char *attname, Oid atttypid);
 extern void SetRelationNumChecks(Relation rel, int numchecks);
 
-extern Oid setNewRelfilenode(Relation relation);
-
-extern Oid setNewRelfilenodeToOid(Relation relation, Oid newrelfilenode);
-
 /* MPP-6929: metadata tracking */
 extern void MetaTrackAddObject(Oid		classid, 
 							   Oid		objoid, 
@@ -151,5 +148,7 @@ extern void MetaTrackDropObject(Oid		classid,
 		|| ((relkind) == RELKIND_INDEX) \
 		|| ((relkind) == RELKIND_SEQUENCE) \
 		|| ((relkind) == RELKIND_VIEW)) 
+
+extern void remove_gp_relation_node_and_schedule_drop(Relation rel);
 
 #endif   /* HEAP_H */

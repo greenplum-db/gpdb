@@ -3,6 +3,9 @@
 -- Expect: success
 -----------------------------------------------------------------------
 
+create database column_compression;
+\c column_compression
+
 prepare ccddlcheck as
 select attrelid::regclass as relname,
 attnum, attoptions from pg_class c, pg_attribute_encoding e
@@ -706,3 +709,6 @@ select pg_get_partition_def('ccddl'::regclass, true);
 select pg_get_partition_template_def('ccddl'::regclass, true, false);
 
 drop table ccddl;
+
+\c regression
+drop database column_compression;

@@ -1,0 +1,54 @@
+                              Append-Only Columnar Table "public.aoco_table"
+ Column |  Type   | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
+--------+---------+-----------+---------+------------------+-------------------+------------+-------------
+ a      | integer |           | plain   | none             | 0                 | 32768      | 
+ b      | integer |           | plain   | none             | 0                 | 32768      | 
+Checksum: t
+Indexes:
+    "idx_b" btree (b)
+Has OIDs: no
+Options: appendonly=true, orientation=column
+Distributed by: (a)
+
+              Table "public.heap_table"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ a      | integer | not null  | plain   | 
+ b      | integer |           | plain   | 
+Indexes:
+    "idx_a" UNIQUE, btree (a)
+Triggers:
+    before_heap_ins_trig BEFORE INSERT ON heap_table FOR EACH ROW EXECUTE PROCEDURE trigger_func()
+Has OIDs: no
+Distributed by: (a)
+
+                            List of functions
+ Schema |     Name     | Result data type | Argument data types |  Type   
+--------+--------------+------------------+---------------------+---------
+ public | newcnt       | bigint           | "any"               | agg
+ public | trigger_func | trigger          |                     | trigger
+(2 rows)
+
+        tgname        | tgtype 
+----------------------+--------
+ before_heap_ins_trig |      7
+(1 row)
+
+            List of data types
+ Schema |       Name        | Description 
+--------+-------------------+-------------
+ public | user_defined_type | 
+(1 row)
+
+                             List of operators
+ Schema | Name | Left arg type | Right arg type | Result type | Description 
+--------+------+---------------+----------------+-------------+-------------
+ public | ##   | path          | path           | boolean     | intersect?
+(1 row)
+
+                List of conversions
+ Schema |  Name  | Source | Destination | Default? 
+--------+--------+--------+-------------+----------
+ public | myconv | LATIN1 | UTF8        | no
+(1 row)
+

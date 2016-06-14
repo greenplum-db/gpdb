@@ -1,0 +1,150 @@
+-- start_matchignore
+# match ignore the gpmon WARNING message
+m/^WARNING:  gpmon:.*Connection refused.*/
+s/^WARNING:  gpmon:.*Connection refused.*//
+
+# MPP-20400
+m/^WARNING:  gpmon:.*No buffer space available socket.*/
+s/^WARNING:  gpmon:.*No buffer space available socket.*//
+
+m/^ Optimizer status:.*/
+s/^ Optimizer status:.*//
+
+# We have disabled ignoring NOTICE statements because some tests rely on these
+# NOTICEs to verify that the test is correct e.g (vacuum). Ignoring them would
+# cause these tests to pass even when there is some discrepancy in the NOTICE
+# statements when they should actually fail. We would still like to ignore some
+# NOTICE statements which are harmless and show up regulary, will make it
+# easier to merge postgres tests and which keep changing with test runs.
+
+# The following NOTICE is generated when the user does not explicitly specify a
+# distribution policy for a table. It is to inform the user that the database
+# will pick a particular column in order to distribute the data. Merging tests
+# from postgres will cause the tests to output these messages and we would need
+# to manually modify the corresponding expected output. Hence we want to ignore
+# these.
+m/^NOTICE:.*Table doesn't have 'DISTRIBUTED BY' clause -- Using column named '.*' as the Greenplum Database data distribution key for this table./
+s/^NOTICE:.*Table doesn't have 'DISTRIBUTED BY' clause -- Using column named '.*' as the Greenplum Database data distribution key for this table.//
+
+# The following NOTICE is generated when a partitioned table is created. For
+# each child partition that gets created, it will generate a NOTICE saying that
+# it is creating that particular partition. Certain tests add anonymous
+# partitions and the names of these anonymous partitions will change across test
+# runs.
+# E.g CREATE TABLE will create partition "hhh_1_prt_r1987544232" for table "hhh" 
+#     CREATE TABLE will create partition "hhh_1_prt_r1987553186" for table "hhh"
+m/^NOTICE:.*CREATE TABLE will create partition ".*" for table ".*"/
+s/^NOTICE:.*CREATE TABLE will create partition ".*" for table ".*"//
+
+# The following NOTICE is generated when creating a role. It is to inform the
+# user that the database will assign the default resource queue to the role if
+# the user has not explicitly specified one. Merging tests from postgres will
+# cause the tests to output these messages and we would need to manually modify
+# the corresponding expected output. Hence we want to ignore these.
+m/^NOTICE:.*resource queue required -- using default resource queue ".*"/
+s/^NOTICE:.*resource queue required -- using default resource queue ".*"//
+
+# The following NOTICE is generated when a user creates an index on the parent
+# partition table. For each child partition, it informs the user that the
+# database will create an index for that parition. The messages might appear in
+# different order for the child partitions.
+m/NOTICE:.*building index for child partition ".*"/
+s/NOTICE:.*building index for child partition ".*"//
+
+# The following NOTICE is generated when a user tries to split a partition or
+# exchange a partition with the default partition.
+# In case of split partitions we end up creating temp tables to exchange the partitions
+# E.g exchanged partition "p1" of relation "parttest_t" with relation "pg_temp_4062621"
+m/^NOTICE:.*exchanged partition ".*" with relation ".*"/
+s/^NOTICE:.*exchanged partition ".*" with relation ".*"//
+
+# The following two NOTICEs are generated when user runs CREATE function. In
+# some cases, when the database creates a function internally, the NOTICE might
+# have OIDs embedded in it.
+# For e.g  NOTICE:  return type pg_atsdb_133977_2_3 is only a shell. It is not
+# really providing useful information to the user and hence can be ignored.
+m/^NOTICE:.*return type .* is only a shell/
+s/^NOTICE:.*return type .* is only a shell//
+
+m/^NOTICE:.*argument type .* is only a shell/
+s/^NOTICE:.*argument type .* is only a shell//
+
+# The following NOTICE is generated when a user creates a table with no
+# columns. E.g CREATE TABLE foo(). It is to inform the user that database
+# cannot find any columns on which to distribute the data. Merging tests from
+# postgres might cause the tests to output these messages and we would need to
+# manually modify the corresponding expected output. Hence we want to ignore
+# these.
+m/^NOTICE:.*Table has no attributes to distribute on./
+s/^NOTICE:.*Table has no attributes to distribute on.//
+
+# The following NOTICE is generated when user runs ANALYZE. The NOTICE message
+# generated seems to be non deterministic in that separate test runs produce
+# the NOTICE for different tables and different number of tables. For E.g in one
+# test run it produced the following NOTICE for pg_auth and in other it
+# produced a NOTICE for pg_auth and pg_auth_constraints.
+m/^NOTICE:.*ANALYZE detected all empty sample pages for table .*, please run VACUUM FULL for accurate estimation/
+s/^NOTICE:.*ANALYZE detected all empty sample pages for table .*, please run VACUUM FULL for accurate estimation//
+
+-- end_matchignore
+
+-- start_matchsubs
+#entry db matches
+m/\s+\(entry db(.*)+\spid=\d+\)/
+s/\s+\(entry db(.*)+\spid=\d+\)//
+
+#remove unecessary diffs due to SOMEFILE:SOMEFUNC
+m/\(SOMEFILE:SOMEFUNC\)/
+s/\(SOMEFILE:SOMEFUNC\)//
+
+m/\(COptTasks\.cpp:\d+\)/
+s/\(COptTasks\.cpp:\d+\)//
+
+m/\(cdbdisp\.c:\d+\)/
+s/\(cdbdisp\.c:\d+\)//
+
+m/\(plpython\.c:\d+\)/
+s/\(plpython\.c:\d+\)//
+
+#In alter_table_distribution_policy tests, some test cases emit NOTICE message
+#like the following
+#drop cascades to function pg_atsdb_211851_2_4_out.
+#The name contains OID embedded in it and it can change with test runs. We want
+#to remove these and diff the rest.
+m/^NOTICE:.*drop cascades to.*/
+s/^NOTICE:.*drop cascades to.*/^NOTICE: drop cascades to /
+
+# Mask out some numbers (parts of partition names) that vary from run to run.
+m/overlaps existing partition "r\d+"/
+s/overlaps existing partition "r\d+"/partition "r##########"/
+
+# Mask out some numbers (part of temp table schema) that vary from run to run.
+m/Table "pg_temp_\d+.temp/
+s/Table "pg_temp_\d+.temp/Table "pg_temp_#####/
+
+
+# For CTE tests
+m/.*ERROR:  function cannot execute on segment because it accesses relation.*/
+s/.*ERROR:.*/ERROR: error message might be different for CTE/
+
+m/.*ERROR:  query plan with multiple segworker groups is not supported.*/
+s/.*ERROR:.*/ERROR: error message might be different for CTE/
+
+m/.*ERROR:  UPDATE is not allowed in a non-volatile function.*/
+s/.*ERROR:.*/ERROR: error message might be different for CTE/
+
+m/.*ERROR:  function cannot execute on segment because it issues a non-SELECT statement.*/
+s/.*ERROR:.*/ERROR: error message might be different for CTE/
+
+m/HINT:  likely caused by a function that reads.*/
+s/(.*)/GP_IGNORE: $1/
+m/CONTEXT:  SQL statement.*/
+s/(.*)/GP_IGNORE: $1/
+m/PL\/pgSQL function/
+s/(.*)/GP_IGNORE: $1/
+m/.*SQL statement.*/
+s/(.*)/GP_IGNORE: $1/
+m/DETAIL:*/
+s/(.*)/GP_IGNORE: $1/
+
+-- end_matchsubs

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/heap/tuptoaster.c,v 1.68 2007/01/05 22:19:22 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/heap/tuptoaster.c,v 1.72 2007/03/29 00:15:37 tgl Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -33,6 +33,7 @@
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/tuptoaster.h"
+#include "access/xact.h"
 #include "catalog/catalog.h"
 #include "utils/fmgroids.h"
 #include "utils/pg_lzcompress.h"
@@ -155,7 +156,8 @@ do { \
 #define SET_VARSIZE_C(PTR)			(((varattrib_1b *) (PTR))->va_header |= 0x40)
 
 static void toast_delete_datum(Relation rel, Datum value);
-static Datum toast_save_datum(Relation rel, Datum value, bool isFrozen);
+static Datum toast_save_datum(Relation rel, Datum value, bool isFrozen,
+						bool use_wal, bool use_fsm);
 static struct varlena *toast_fetch_datum(struct varlena * attr);
 static struct varlena *toast_fetch_datum_slice(struct varlena * attr,
 						int32 sliceoffset, int32 length);
@@ -584,6 +586,7 @@ toast_delete(Relation rel, HeapTuple oldtup, MemTupleBinding *pbind)
  * Inputs:
  *	newtup: the candidate new tuple to be inserted
  *	oldtup: the old row version for UPDATE, or NULL for INSERT
+ *	use_wal, use_fsm: flags to be passed to heap_insert() for toast rows
  * Result:
  *	either newtup if no toasting is needed, or a palloc'd modified tuple
  *	that is what should actually get stored
@@ -608,7 +611,7 @@ static int compute_dest_tuplen(TupleDesc tupdesc, MemTupleBinding *pbind, bool h
 HeapTuple
 toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup, 
 					   MemTupleBinding *pbind, int toast_tuple_target,
-					   bool isFrozen)
+					   bool isFrozen, bool use_wal, bool use_fsm)
 {
 	HeapTuple	result_tuple;
 	TupleDesc	tupleDesc;
@@ -820,7 +823,8 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup,
 	 * Look for attributes with attstorage 'x' to compress.  Also find large
 	 * attributes with attstorage 'x' or 'e', and store them external.
 	 */
-	while (compute_dest_tuplen(tupleDesc, pbind, has_nulls, toast_values, toast_isnull) > maxDataLen)
+	while (compute_dest_tuplen(tupleDesc, pbind, has_nulls,
+							   toast_values, toast_isnull) > maxDataLen)
 	{
 		int			biggest_attno = -1;
 		int32		biggest_size = MAXALIGN(sizeof(varattrib));
@@ -881,7 +885,8 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup,
 	 * Second we look for attributes of attstorage 'x' or 'e' that are still
 	 * inline.
 	 */
-	while (compute_dest_tuplen(tupleDesc, pbind, has_nulls, toast_values, toast_isnull) > maxDataLen &&
+	while (compute_dest_tuplen(tupleDesc, pbind, has_nulls,
+							   toast_values, toast_isnull) > maxDataLen &&
 		   rel->rd_rel->reltoastrelid != InvalidOid)
 	{
 		int			biggest_attno = -1;
@@ -917,7 +922,7 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup,
 		i = biggest_attno;
 		old_value = toast_values[i];
 		toast_action[i] = 'p';
-		toast_values[i] = toast_save_datum(rel, toast_values[i], isFrozen);
+		toast_values[i] = toast_save_datum(rel, toast_values[i], isFrozen, use_wal, use_fsm);
 		if (toast_free[i])
 			pfree(DatumGetPointer(old_value));
 		toast_free[i] = true;
@@ -930,7 +935,8 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup,
 	 * Round 3 - this time we take attributes with storage 'm' into
 	 * compression
 	 */
-	while (compute_dest_tuplen(tupleDesc, pbind, has_nulls, toast_values, toast_isnull) > maxDataLen)
+	while (compute_dest_tuplen(tupleDesc, pbind, has_nulls,
+							   toast_values, toast_isnull) > maxDataLen)
 	{
 		int			biggest_attno = -1;
 		int32		biggest_size = MAXALIGN(sizeof(varattrib));
@@ -988,7 +994,8 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup,
 	/*
 	 * Finally we store attributes of type 'm' external, if possible.
 	 */
-	while (compute_dest_tuplen(tupleDesc, pbind, has_nulls, toast_values, toast_isnull) > maxDataLen &&
+	while (compute_dest_tuplen(tupleDesc, pbind, has_nulls,
+							   toast_values, toast_isnull) > maxDataLen &&
 		   rel->rd_rel->reltoastrelid != InvalidOid)
 	{
 		int			biggest_attno = -1;
@@ -1024,7 +1031,7 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup,
 		i = biggest_attno;
 		old_value = toast_values[i];
 		toast_action[i] = 'p';
-		toast_values[i] = toast_save_datum(rel, toast_values[i], isFrozen);
+		toast_values[i] = toast_save_datum(rel, toast_values[i], isFrozen, use_wal, use_fsm);
 		if (toast_free[i])
 			pfree(DatumGetPointer(old_value));
 		toast_free[i] = true;
@@ -1296,7 +1303,7 @@ toast_compress_datum(Datum value)
  * ----------
  */
 static Datum
-toast_save_datum(Relation rel, Datum value, bool isFrozen)
+toast_save_datum(Relation rel, Datum value, bool isFrozen, bool use_wal, bool use_fsm)
 {
 	Relation	toastrel;
 	Relation	toastidx;
@@ -1304,6 +1311,8 @@ toast_save_datum(Relation rel, Datum value, bool isFrozen)
 	TupleDesc	toasttupDesc;
 	Datum		t_values[3];
 	bool		t_isnull[3];
+	TransactionId myxid = GetCurrentTransactionId();
+	CommandId	mycid = GetCurrentCommandId();
 	varattrib  *result;
 	struct
 	{
@@ -1422,7 +1431,7 @@ toast_save_datum(Relation rel, Datum value, bool isFrozen)
 		if(!isFrozen)
 		{
 			/* the normal case. regular insert */
-			simple_heap_insert(toastrel, toasttup);
+			heap_insert(toastrel, toasttup, mycid, use_wal, use_fsm, myxid);
 		}
 		else
 		{

@@ -15,7 +15,7 @@ CT mode) that is active because there is no mirror to communicate data
 to.
 
 This recovery process performs two functions i.e. changetracking
-transition and then compaction of the changtracking log generated
+transition and then compaction of the changetracking log generated
 during modification to primary data in changetracking mode.
 
 During this CT transition phase, it seems like the database IO is
@@ -28,7 +28,7 @@ CT transition – FileRepPrimary_StartRecoveryInChangeTracking():
 
    If (the system completed transition from resync to insync) then Drop
    all the old CT log and CT meta file because the changes tracked in
-   them are no more required.  (A little complex to understand - Refer to
+   them are no longer required.  (A little complex to understand - Refer to
    ResyncTransition, ResyncMgr, Insync transition from resync manager
    part)
 
@@ -39,7 +39,7 @@ CT transition – FileRepPrimary_StartRecoveryInChangeTracking():
   mode, the CT files may or may not be present depending on if there was
   any past transition from resync to insync mode. If there are no CT
   files just create the CT meta file and mark incr resync (The reasoning
-  why we need to makr incr resync is still unclear)
+  why we need to make incr resync is still unclear)
 
 2. XlogInChangetrackingTransition()
 
@@ -53,7 +53,7 @@ CT transition – FileRepPrimary_StartRecoveryInChangeTracking():
 
   Every time a record is inserted into the xlog buffer in mem, the
   system maintains the last location where the record was inserted in
-  all the phases insync, ct or inresync. Lets call this location
+  all the phases insync, ct or inresync. Let's call this location
   'lastchangetrackingendloc'. This location points to the last record in
   the xlog which may or may not be on the disk depending on if the xlog
   was flushed or not.
@@ -65,7 +65,7 @@ CT transition – FileRepPrimary_StartRecoveryInChangeTracking():
   copy the records from the xlog from the latest redo/checkpoint
   location to ‘lastchangetrackingendloc’ to the CT full file. Only
   interesting records are copied. Info about these records will be
-  detailed under normal io operations. The need to copy records from
+  detailed under normal IO operations. The need to copy records from
   latest ckpt till the end is that there is no guarantee from the latest
   checkpoint which xlog records and thus the changes were flushed to the
   mirror.
@@ -94,7 +94,7 @@ IO during CT.
 
 Compaction shrinks the full CT file so that the system can avoid
 processing of large amount of records and thus at the same save disk
-space. There are too many details on how compaction works. Lets try to
+space. There are too many details on how compaction works. Let's try to
 understand it by simple illustration –
 
 Initially lets assume that following records were added to the CT full
@@ -204,7 +204,7 @@ Under InResyncTransition:
 
    Store last change tracked LSN into shared memory and in Change
    Tracking meta file (LSN has to be fsync-ed to persistent
-   media). Lets call it as 'endresync LSN'. Remember 'endResync LSN'
+   media). Let's call it as 'endresync LSN'. Remember 'endResync LSN'
    for future reference. Also make sure to write any remaining
    changetracking full log file data and fsync it.
 

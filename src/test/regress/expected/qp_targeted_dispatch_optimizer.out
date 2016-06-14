@@ -1,0 +1,1259 @@
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+create schema qp_targeted_dispatch;
+set search_path to qp_targeted_dispatch;
+set log_error_verbosity=terse;
+-- end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query01.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+Drop table direct_test;
+ERROR:  table "direct_test" does not exist
+Drop table direct_test_two_column; 
+ERROR:  table "direct_test_two_column" does not exist
+--end_ignore
+create table direct_test
+(
+  key int NULL,
+  value varchar(50) NULL
+)
+distributed by (key); 
+create table direct_test_two_column
+(
+  key1 int NULL,
+  key2 int NULL,
+  value varchar(50) NULL
+)
+distributed by (key1, key2);
+insert into direct_test values (100, 'cow');
+insert into direct_test_two_column values (100, 101, 'cow');
+-- enable printing of printing info
+set test_print_direct_dispatch_info=on;
+-- Constant single-row insert, one column in distribution
+-- DO direct dispatch
+insert into direct_test values (100, 'cow');
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+-- verify
+select * from direct_test order by key, value;
+INFO:  Dispatch command to ALL contents
+ key | value 
+-----+-------
+ 100 | cow
+ 100 | cow
+(2 rows)
+
+-- Constant single-row update, one column in distribution
+-- DO direct dispatch
+update direct_test set value = 'horse' where key = 100;
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+-- verify
+select * from direct_test order by key, value;
+INFO:  Dispatch command to ALL contents
+ key | value 
+-----+-------
+ 100 | horse
+ 100 | horse
+(2 rows)
+
+-- Constant single-row delete, one column in distribution
+-- DO direct dispatch
+delete from direct_test where key = 100;
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+-- verify
+select * from direct_test order by key, value;
+INFO:  Dispatch command to ALL contents
+ key | value 
+-----+-------
+(0 rows)
+
+-- Constant single-row insert, two columns in distribution
+-- DO direct dispatch
+insert into direct_test_two_column values (100, 101, 'cow');
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+-- verify
+select * from direct_test_two_column order by key1, key2, value;
+INFO:  Dispatch command to ALL contents
+ key1 | key2 | value 
+------+------+-------
+  100 |  101 | cow
+  100 |  101 | cow
+(2 rows)
+
+-- Constant single-row update, two columns in distribution
+-- DO direct dispatch
+update direct_test_two_column set value = 'horse' where key1 = 100 and key2 = 101;
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+-- verify
+select * from direct_test_two_column order by key1, key2, value;
+INFO:  Dispatch command to ALL contents
+ key1 | key2 | value 
+------+------+-------
+  100 |  101 | horse
+  100 |  101 | horse
+(2 rows)
+
+-- Constant single-row delete, two columns in distribution
+-- DO direct dispatch
+delete from direct_test_two_column where key1 = 100 and key2 = 101;
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+-- verify
+select * from direct_test_two_column order by key1, key2, value;
+INFO:  Dispatch command to ALL contents
+ key1 | key2 | value 
+------+------+-------
+(0 rows)
+
+-- Multiple row update, where clause lists multiple values which hash differently so no direct dispatch
+--
+-- note that if the hash function for values changes then certain segment configurations may actually 
+--                hash all these values to the same content! (and so test would change)
+--
+update direct_test set value = 'pig' where key in (1,2,3,4,5);
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+update direct_test_two_column set value = 'pig' where key1 = 100 and key2 in (1,2,3,4);
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+update direct_test_two_column set value = 'pig' where key1 in (100,101,102,103,104) and key2 in (1);
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+update direct_test_two_column set value = 'pig' where key1 in (100,101) and key2 in (1,2);
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--start_ignore
+Drop table direct_test;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+Drop table direct_test_two_column;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query02.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+Drop table direct_test1;
+ERROR:  table "direct_test1" does not exist
+--end_ignore
+create table direct_test1
+(
+  key int NULL,
+  value varchar(50) NULL
+)
+distributed by (key);
+insert into direct_test1 values (200, 'horse');
+-- enable printing of printing info
+set test_print_direct_dispatch_info=on;
+Begin;
+declare c0 cursor for select * from direct_test1 where value='horse';
+INFO:  Dispatch command to ALL contents
+select * from direct_test1 where value='horse';
+INFO:  Dispatch command to ALL contents
+ key | value 
+-----+-------
+ 200 | horse
+(1 row)
+
+select value from direct_test1 where value='horse';
+INFO:  Dispatch command to ALL contents
+ value 
+-------
+ horse
+(1 row)
+
+select * from direct_test1 where key=200;
+INFO:  Dispatch command to SINGLE content
+ key | value 
+-----+-------
+ 200 | horse
+(1 row)
+
+declare c1 cursor for select * from direct_test1 where key=200;
+INFO:  Dispatch command to SINGLE content
+fetch c1;
+ key | value 
+-----+-------
+ 200 | horse
+(1 row)
+
+fetch c0;
+ key | value 
+-----+-------
+ 200 | horse
+(1 row)
+
+fetch c1;
+ key | value 
+-----+-------
+(0 rows)
+
+fetch c0;
+ key | value 
+-----+-------
+(0 rows)
+
+End;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--start_ignore
+Drop table direct_test1;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query03.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+Drop table key_value_table cascade;
+ERROR:  table "key_value_table" does not exist
+--end_ignore
+create table key_value_table
+(
+  key int NULL,
+  value varchar(50) NULL
+)
+distributed by (key);
+insert into key_value_table values (200, 'horse');
+-- enable printing of printing info
+set test_print_direct_dispatch_info=on;
+Begin;
+SELECT * FROM key_value_table WHERE key = 200 FOR UPDATE;
+INFO:  Dispatch command to SINGLE content
+ key | value 
+-----+-------
+ 200 | horse
+(1 row)
+
+update key_value_table set value=300 where key =200;
+INFO:  Dispatch command to ALL contents
+savepoint s;
+update key_value_table set value=200 where key =300;
+INFO:  Dispatch command to ALL contents
+update key_value_table set value=300 where key =200;
+INFO:  Dispatch command to ALL contents
+rollback to s;
+commit;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+Begin;
+SELECT * FROM key_value_table WHERE key = 200 FOR UPDATE;
+INFO:  Dispatch command to SINGLE content
+ key | value 
+-----+-------
+ 200 | 300
+(1 row)
+
+savepoint s;
+update key_value_table set value=200 where key =300;
+INFO:  Dispatch command to ALL contents
+rollback;
+INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents
+savepoint s;
+ERROR:  SAVEPOINT can only be used in transaction blocks
+abort;
+WARNING:  there is no transaction in progress
+--start_ignore
+Drop table key_value_table cascade;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query04.sql
+-- ----------------------------------------------------------------------
+DROP TABLE IF EXISTS MWV_CDetail_TABLE;
+NOTICE:  table "mwv_cdetail_table" does not exist, skipping
+CREATE TABLE MWV_CDetail_TABLE(
+ ATTRIBUTE066 DATE,
+ ATTRIBUTE084 TIMESTAMP,
+ ATTRIBUTE097 BYTEA,
+ ATTRIBUTE096 BIGINT,
+ ATTRIBUTE032 VARCHAR (3),
+ ATTRIBUTE031 VARCHAR (20),
+ ATTRIBUTE151 VARCHAR (4000),
+ ATTRIBUTE037 VARCHAR (4000),
+ ATTRIBUTE047 VARCHAR (2048)
+)
+with (appendonly=true, orientation=column, compresstype=zlib)
+distributed by (attribute066)
+partition by range (attribute066)
+(
+--start (date '2000-01-01') inclusive end (date '2009-12-31') inclusive every (interval '1 week')
+start (date '2009-01-01') inclusive end (date '2009-12-31') inclusive every (interval '1 week')
+)
+;
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_1" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_2" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_3" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_4" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_5" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_6" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_7" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_8" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_9" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_10" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_11" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_12" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_13" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_14" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_15" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_16" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_17" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_18" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_19" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_20" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_21" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_22" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_23" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_24" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_25" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_26" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_27" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_28" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_29" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_30" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_31" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_32" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_33" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_34" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_35" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_36" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_37" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_38" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_39" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_40" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_41" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_42" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_43" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_44" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_45" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_46" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_47" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_48" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_49" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_50" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_51" for table "mwv_cdetail_table"
+NOTICE:  CREATE TABLE will create partition "mwv_cdetail_table_1_prt_52" for table "mwv_cdetail_table"
+--explain
+SELECT
+  ATTRIBUTE066,ATTRIBUTE032 ,ATTRIBUTE031
+ ,COUNT(*) AS CNT
+FROM 
+  MWV_CDETAIL_TABLE
+WHERE ATTRIBUTE066 = '2009-12-31'::date -           1 
+GROUP BY ATTRIBUTE066,ATTRIBUTE032 ,ATTRIBUTE031;
+ attribute066 | attribute032 | attribute031 | cnt 
+--------------+--------------+--------------+-----
+(0 rows)
+
+DROP TABLE IF EXISTS MWV_CDetail_TABLE;
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query05.sql
+-- ----------------------------------------------------------------------
+-- Targeted Dispatch to make sure it works fine for all possible data types. This test case is to check if it works fine for boolean and int data type
+--start_ignore
+DROP TABLE IF EXISTS boolean;
+NOTICE:  table "boolean" does not exist, skipping
+--end_ignore
+create table boolean (boo boolean, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'boo' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into boolean values ('f', 1);
+set test_print_direct_dispatch_info=on;
+insert into boolean values ('t', 2);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table boolean set distributed by (b);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into boolean values ('t', 1);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table boolean set distributed randomly;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into boolean values ('t', 1);
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+alter table boolean set distributed by (boo, b);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+select * from boolean where boo='t' and b=2;
+INFO:  Dispatch command to ALL contents
+ boo | b 
+-----+---
+ t   | 2
+(1 row)
+
+--start_ignore
+DROP TABLE if EXISTS boolean;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query06.sql
+-- ----------------------------------------------------------------------
+-- Targeted Dispatch to make sure it works fine for all possible data types. This test case is to check if it works fine for date and double precision data type
+--start_ignore
+Drop table if exists date;
+NOTICE:  table "date" does not exist, skipping
+--end_ignore
+create table date (date1 date, dp1 double precision);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'date1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into date values ('2001-11-11',234.23234);
+set test_print_direct_dispatch_info=on;
+insert into date values ('2001-11-12',234.2323);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table date set distributed by (dp1);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into date values ('2001-11-13',234.23234);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+insert into date values ('2001-11-14',234.2323);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table date set distributed by (date1, dp1);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+select * from date where date1='2001-11-12' and dp1=234.2323;
+INFO:  Dispatch command to SINGLE content
+   date1    |   dp1    
+------------+----------
+ 11-12-2001 | 234.2323
+(1 row)
+
+--start_ignore
+Drop table if exists date;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query07.sql
+-- ----------------------------------------------------------------------
+-- Targeted Dispatch to make sure it works fine for all possible data types. This test case is to check if it works fine for interval and Numeric data type
+--start_ignore
+Drop table if exists interval;
+NOTICE:  table "interval" does not exist, skipping
+--end_ignore
+create table interval (interval1 interval, num numeric);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'interval1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into interval values ('23',2345);
+set test_print_direct_dispatch_info=on;
+insert into interval values ('2',234);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table interval set distributed by (num);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into interval values ('24',234);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+insert into interval values ('26',2343);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table interval set distributed by (num,interval1);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+select * from interval where interval1='23' and num=2345;
+INFO:  Dispatch command to SINGLE content
+ interval1 | num  
+-----------+------
+ @ 23 secs | 2345
+(1 row)
+
+--start_ignore
+Drop table if exists interval;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query08.sql
+-- ----------------------------------------------------------------------
+-- This test case is to check if it works fine for real and smallint data type
+--start_ignore
+Drop table if exists real;
+NOTICE:  table "real" does not exist, skipping
+--end_ignore
+create table real (real1 real, si1 smallint) distributed by (real1);
+insert into real values (23, 4);
+set test_print_direct_dispatch_info=on;
+insert into real values (23, 4);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+Alter table real set distributed by (si1);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into real values (21, 3);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+insert into real values (21, 2);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+select * from real where real.si1=3;
+INFO:  Dispatch command to SINGLE content
+ real1 | si1 
+-------+-----
+    21 |   3
+(1 row)
+
+Alter table real set distributed by (si1,real1);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+select * from real where real1=21 and si1=3;
+INFO:  Dispatch command to ALL contents
+ real1 | si1 
+-------+-----
+    21 |   3
+(1 row)
+
+--start_ignore
+Drop table if exists real;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query09.sql
+-- ----------------------------------------------------------------------
+-- This test case is to check if it works fine for bytea and cidr data type
+--start_ignore
+Drop table if exists bytea;
+NOTICE:  table "bytea" does not exist, skipping
+--end_ignore
+create table bytea (bytea1 bytea, cidr1 cidr) distributed by (bytea1);
+insert into bytea values ('d','0.0.0.0');
+set test_print_direct_dispatch_info=on;
+insert into bytea values ('d','0.0.0.1');
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table bytea set distributed by (cidr1,bytea1);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into bytea values ('e','0.0.1.0');
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+select * from bytea where bytea1='d' and cidr1='0.0.0.1';
+INFO:  Dispatch command to ALL contents
+ bytea1 |   cidr1    
+--------+------------
+ d      | 0.0.0.1/32
+(1 row)
+
+--start_ignore
+Drop table if exists bytea;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query10.sql
+-- ----------------------------------------------------------------------
+-- This test case is to check if it works fine for inet and macaddr data type
+--start_ignore
+Drop table if exists inetmac;
+NOTICE:  table "inetmac" does not exist, skipping
+--end_ignore
+create table inetmac (inet1 inet, macaddr1 macaddr) distributed by (inet1);
+insert into inetmac values ('0.0.0.0','AA:AA:AA:AA:AA:AA');
+set test_print_direct_dispatch_info=on;
+insert into inetmac values ('0.0.0.0','AC:AA:AA:AA:AA:AA');
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table inetmac set distributed by (macaddr1);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into inetmac values ('0.0.0.2','AA:AA:AA:AA:AA:AC');
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table inetmac set distributed by (macaddr1,inet1);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into inetmac values ('0.0.0.2','AA:AA:AA:AA:AA:AC');
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+select * from inetmac where inet1='0.0.0.0' and macaddr1 ='AA:AA:AA:AA:AA:AA';
+INFO:  Dispatch command to SINGLE content
+  inet1  |     macaddr1      
+---------+-------------------
+ 0.0.0.0 | aa:aa:aa:aa:aa:aa
+(1 row)
+
+--start_ignore
+Drop table if exists inetmac;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query11.sql
+-- ----------------------------------------------------------------------
+-- This test case is to check if it works fine for money and int data type
+--start_ignore
+Drop table if exists money;
+NOTICE:  table "money" does not exist, skipping
+--end_ignore
+create table money (money1 money, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'money1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into money values ('34.23',5);
+set test_print_direct_dispatch_info=on;
+insert into money values ('34.23',2);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table money set distributed by (money1, b);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into money values ('34.13',2);
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+select * from money where money1='34.13' and b =2;
+INFO:  Dispatch command to SINGLE content
+ money1 | b 
+--------+---
+ $34.13 | 2
+(1 row)
+
+--start_ignore
+Drop table if exists money;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query12.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+Drop table if exists time2;
+NOTICE:  table "time2" does not exist, skipping
+--end_ignore
+create table time2 (time2 time with time zone, text1 text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'time2' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into time2 values ('00:00:00+1359', 'abcg');
+set test_print_direct_dispatch_info=on;
+insert into time2 values ('00:00:00+1359', 'abcf');
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table time2 set distributed by (text1);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into time2 values ('00:00:00+1352', 'abce');
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table time2 set distributed by (text1,time2);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into time2 values ('00:00:00+1352', 'abcd');
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+select * from time2 where time2='00:00:00+1359' and text1='abcg';
+INFO:  Dispatch command to SINGLE content
+     time2      | text1 
+----------------+-------
+ 00:00:00+13:59 | abcg
+(1 row)
+
+--start_ignore
+Drop table if exists time2;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query13.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+Drop table if exists timestamp;
+NOTICE:  table "timestamp" does not exist, skipping
+--end_ignore
+create table timestamp (timestamp1 timestamp without time zone, time2 timestamp with time zone);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'timestamp1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into timestamp values ('2004-12-13 01:51:15','2004-12-13 01:51:15+1359');
+set test_print_direct_dispatch_info=on;
+insert into timestamp values ('2004-12-13 01:51:15','2004-12-13 01:51:15+1359');
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table timestamp set distributed by (time2);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into timestamp values ('2004-12-13 01:51:25','2004-12-12 01:51:15+1359');
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table timestamp set distributed by (time2, timestamp1);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into timestamp values ('2004-12-13 01:51:25','2004-12-12 01:51:15+1359');
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+select * from timestamp where timestamp1='2004-12-13 01:51:25' and time2 ='2004-12-12 01:51:15+1359';
+INFO:  Dispatch command to SINGLE content
+        timestamp1        |            time2             
+--------------------------+------------------------------
+ Mon Dec 13 01:51:25 2004 | Sat Dec 11 03:52:15 2004 PST
+ Mon Dec 13 01:51:25 2004 | Sat Dec 11 03:52:15 2004 PST
+(2 rows)
+
+--start_ignore
+Drop table if exists timestamp;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query14.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists bit1;
+NOTICE:  table "bit1" does not exist, skipping
+--end_ignore
+create table bit1 (a bit(1), b int) distributed by (a);
+insert into bit1 values ('0', 23);
+set test_print_direct_dispatch_info=on;
+insert into bit1 values ('1', 23);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table bit1 set distributed by (b);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into bit1 values ('0', 24);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+alter table bit1 set distributed by (b,a);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into bit1 values ('0', 24);
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+select * from bit1 where a='0' and b =24;
+INFO:  Dispatch command to SINGLE content
+ a | b  
+---+----
+ 0 | 24
+ 0 | 24
+(2 rows)
+
+--start_ignore
+drop table if exists bit1;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query18.sql
+-- ----------------------------------------------------------------------
+--start_ignore
+Drop table if exists mpp7638;
+NOTICE:  table "mpp7638" does not exist, skipping
+--end_ignore
+create table mpp7638 (a int, b int, c int, d int) partition by range(d) (start(1) end(10) every(1));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "mpp7638_1_prt_1" for table "mpp7638"
+NOTICE:  CREATE TABLE will create partition "mpp7638_1_prt_2" for table "mpp7638"
+NOTICE:  CREATE TABLE will create partition "mpp7638_1_prt_3" for table "mpp7638"
+NOTICE:  CREATE TABLE will create partition "mpp7638_1_prt_4" for table "mpp7638"
+NOTICE:  CREATE TABLE will create partition "mpp7638_1_prt_5" for table "mpp7638"
+NOTICE:  CREATE TABLE will create partition "mpp7638_1_prt_6" for table "mpp7638"
+NOTICE:  CREATE TABLE will create partition "mpp7638_1_prt_7" for table "mpp7638"
+NOTICE:  CREATE TABLE will create partition "mpp7638_1_prt_8" for table "mpp7638"
+NOTICE:  CREATE TABLE will create partition "mpp7638_1_prt_9" for table "mpp7638"
+insert into mpp7638 select i, i+1, i+2, i+3 from generate_series(1, 2) i;
+insert into mpp7638 select i, i+1, i+2, i+3 from generate_series(1, 3) i;
+insert into mpp7638 select i, i+1, i+2, i+3 from generate_series(1, 4) i;
+insert into mpp7638 select i, i+1, i+2, i+3 from generate_series(1, 5) i;
+set test_print_direct_dispatch_info=on;
+insert into mpp7638 select i, i+1, i+2, i+3 from generate_series(1, 6) i;
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+select count(*) from mpp7638 where a =1;
+INFO:  Dispatch command to ALL contents
+ count 
+-------
+     5
+(1 row)
+
+explain select count(*) from mpp7638 where a =1;
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..431.00 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+               ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Partition Selector for mpp7638 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Partitions selected:  9 (out of 9)
+                     ->  Dynamic Table Scan on mpp7638 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=4)
+                           Filter: a = 1
+ Settings:  optimizer=on
+ Optimizer status: PQO version 1.624
+(10 rows)
+
+alter table mpp7638 set distributed by (a, b, c);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+select * from mpp7638 where a=1 and b=2 and c=3;
+INFO:  Dispatch command to SINGLE content
+ a | b | c | d 
+---+---+---+---
+ 1 | 2 | 3 | 4
+ 1 | 2 | 3 | 4
+ 1 | 2 | 3 | 4
+ 1 | 2 | 3 | 4
+ 1 | 2 | 3 | 4
+(5 rows)
+
+--start_ignore
+Drop table if exists mpp7638;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query19.sql
+-- ----------------------------------------------------------------------
+--Partition by range table should use targeted diaptch
+CREATE TABLE range_table (id INTEGER)
+ PARTITION BY RANGE (id)
+(START (0) END (200000) EVERY (100000)) ;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "range_table_1_prt_1" for table "range_table"
+NOTICE:  CREATE TABLE will create partition "range_table_1_prt_2" for table "range_table"
+INSERT INTO range_table(id) VALUES (0);
+CREATE INDEX id3 ON range_table USING BITMAP (id);
+NOTICE:  building index for child partition "range_table_1_prt_1"
+NOTICE:  building index for child partition "range_table_1_prt_2"
+set test_print_direct_dispatch_info=on;
+INSERT INTO range_table(id) VALUES (1);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+DROP INDEX id3;
+WARNING:  Only dropped the index "id3"
+HINT:  To drop other indexes on child partitions, drop each one explicitly.
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+CREATE INDEX id3 ON range_table USING BITMAP (id);
+NOTICE:  building index for child partition "range_table_1_prt_1"
+NOTICE:  building index for child partition "range_table_1_prt_2"
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INSERT INTO range_table(id) VALUES (2);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INSERT INTO range_table(id) VALUES (3);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INSERT INTO range_table(id) VALUES (4);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INSERT INTO range_table(id) VALUES (5);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INSERT INTO range_table(id) VALUES (5);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+select * from range_table where id =1;
+INFO:  Dispatch command to SINGLE content
+ id 
+----
+  1
+(1 row)
+
+select count(*) from range_table where id=1;
+INFO:  Dispatch command to ALL contents
+ count 
+-------
+     1
+(1 row)
+
+DROP TABLE range_table;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query20.sql
+-- ----------------------------------------------------------------------
+-- Table using inheritance, Rules and Insert-Select is not getting targeted even though Select is targeted.
+create table tblexecutions (date date not null, mykey bigint, "sequence" int not null, firm character varying(4) NOT NULL) distributed by ("sequence");
+create table tblexecutions_20080102 (CONSTRAINT tblexecutions_20080102_date_check CHECK (((date >= '2008-01-02'::date) AND (date <= '2008-01-02'::date)))) INHERITS (tblexecutions) distributed by ("sequence");
+CREATE TABLE tblexecutions_20080103 (CONSTRAINT tblexecutions_20080103_date_check CHECK (((date >= '2008-01-03'::date) AND (date <= '2008-01-03'::date)))) INHERITS (tblexecutions) distributed by ("sequence");
+CREATE TABLE tblexecutions_20080104 (CONSTRAINT tblexecutions_20080104_date_check CHECK (((date >= '2008-01-04'::date) AND (date <= '2008-01-04'::date)))) INHERITS (tblexecutions) distributed by ("sequence");
+create index tblexecutions_20080103_idx on tblexecutions_20080103 using bitmap (firm);
+CREATE RULE rule_tblexecutions_20080102 AS ON INSERT TO tblexecutions WHERE ((new.date >= '2008-01-02'::date) AND (new.date <= '2008-01-02'::date)) DO INSTEAD INSERT INTO tblexecutions_20080102 (date, mykey, "sequence", firm) VALUES (new.date, new.mykey, new."sequence", new.firm);
+CREATE RULE rule_tblexecutions_20080103 AS ON INSERT TO tblexecutions WHERE ((new.date >= '2008-01-03'::date) AND (new.date <= '2008-01-03'::date)) DO INSTEAD INSERT INTO tblexecutions_20080103 (date, mykey, "sequence", firm) VALUES (new.date, new.mykey, new."sequence", new.firm);
+CREATE RULE rule_tblexecutions_20080104 AS ON INSERT TO tblexecutions WHERE ((new.date >= '2008-01-04'::date) AND (new.date <= '2008-01-04'::date)) DO INSTEAD INSERT INTO tblexecutions_20080104 (date, mykey, "sequence", firm) VALUES (new.date, new.mykey, new."sequence", new.firm);
+insert into tblexecutions select '2008/01/02'::date + ((i % 3) || ' days')::interval, i*10, i, 'f' || to_char(random()*100, '99') from generate_series(1, 1000000) i;
+insert into tblexecutions select * from tblexecutions where sequence=10;
+set test_print_direct_dispatch_info=on;
+select count(*) from tblexecutions where sequence=10;
+INFO:  Dispatch command to SINGLE content
+ count 
+-------
+     2
+(1 row)
+
+DROP index tblexecutions_20080103_idx; 
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+drop rule rule_tblexecutions_20080104 on tblexecutions;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+drop rule rule_tblexecutions_20080103 on tblexecutions;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+drop rule rule_tblexecutions_20080102 on tblexecutions;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+DROP TABLE tblexecutions_20080104; 
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+DROP TABLE tblexecutions_20080103;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+DROP TABLE tblexecutions_20080102;  
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+DRop table tblexecutions;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query21.sql
+-- ----------------------------------------------------------------------
+--targeted dispatch for CTAS and Insert-Select, It doesn't work today still I have been asked to check in test cases and later move o/p to ans when we have this working. MPP_7620
+--start_ignore
+Drop table zoompp7620;
+ERROR:  table "zoompp7620" does not exist
+Drop table mpp7620;
+ERROR:  table "mpp7620" does not exist
+--end_ignore
+create table mpp7620
+(
+  key int NULL,
+  value varchar(50) NULL
+)
+distributed by (key);
+insert into mpp7620 values (200, 'horse');
+-- enable printing of printing info
+set test_print_direct_dispatch_info=on;
+Create table zoompp7620 as select * from mpp7620 where key=200;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=1232388"
+INFO:  Dispatch command to ALL contents
+CONTEXT:  SQL statement "select Ta.key, Ta.value from public.zoompp7620 as Ta  limit 7500 "
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into mpp7620 values (200, 200);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+insert into zoompp7620 select * from mpp7620 where key=200;
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=200;
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+select key from mpp7620 where mpp7620.key=200;
+INFO:  Dispatch command to SINGLE content
+ key 
+-----
+ 200
+ 200
+(2 rows)
+
+select * from (select * from mpp7620 where key=200) ss where key =200;
+INFO:  Dispatch command to SINGLE content
+ key | value 
+-----+-------
+ 200 | horse
+ 200 | 200
+(2 rows)
+
+explain select * from (select * from mpp7620 where key=200) ss where key =200; 
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=10)
+   ->  Table Scan on mpp7620  (cost=0.00..431.00 rows=1 width=10)
+         Filter: key = 200
+ Settings:  optimizer=on
+ Optimizer status: PQO version 1.624
+(5 rows)
+
+explain insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=200;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Insert  (cost=0.00..431.03 rows=1 width=4)
+   ->  Result  (cost=0.00..431.00 rows=1 width=20)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+               ->  Table Scan on mpp7620  (cost=0.00..431.00 rows=1 width=4)
+                     Filter: key = 200
+ Settings:  optimizer=on
+ Optimizer status: PQO version 1.624
+(7 rows)
+
+explain select key from mpp7620 where mpp7620.key=200;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=4)
+   ->  Table Scan on mpp7620  (cost=0.00..431.00 rows=1 width=4)
+         Filter: key = 200
+ Settings:  optimizer=on
+ Optimizer status: PQO version 1.624
+(5 rows)
+
+--start_ignore
+Drop table zoompp7620;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+Drop table mpp7620;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query22.sql
+-- ----------------------------------------------------------------------
+--Test case for Deepslice queries, since this is disabled right now we need to move correct o/p to expected result once feature is made available for Deepslice queries. QA-592
+--start_ignore
+drop table table_a cascade;
+ERROR:  table "table_a" does not exist
+drop sequence s;
+ERROR:  sequence "s" does not exist
+--end_ignore
+CREATE SEQUENCE s;
+CREATE TABLE table_a (a0 int, a1 int, a2 int, a3 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a0' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO table_a (a3, a2, a0, a1) VALUES (nextval('s'), nextval('s'), nextval('s'), nextval('s'));
+insert into table_a (a3,a2,a0,a1) values (1,2,3,4);
+set test_print_direct_dispatch_info=on;
+--Check to see distributed vs distributed randomly
+alter table table_a set distributed randomly;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+select max(a0) from table_a where a0=3;
+INFO:  Dispatch command to ALL contents
+ max 
+-----
+   3
+(1 row)
+
+alter table table_a set distributed by (a0);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+explain select * from table_a where a0=3;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..431.00 rows=1 width=16)
+   ->  Table Scan on table_a  (cost=0.00..431.00 rows=1 width=16)
+         Filter: a0 = 3
+ Settings:  optimizer=on
+ Optimizer status: PQO version 1.624
+(5 rows)
+
+explain select a0 from table_a where a0 in (select max(a1) from table_a);
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
+         Hash Cond: "outer".max = public.table_a.a0
+         ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=4)
+               Hash Key: max
+               ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Table Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               ->  Table Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 1.624
+(13 rows)
+
+select a0 from table_a where a0 in (select max(a1) from table_a);
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+ a0 
+----
+(0 rows)
+
+select max(a1) from table_a;
+INFO:  Dispatch command to ALL contents
+ max 
+-----
+   4
+(1 row)
+
+select max(a0) from table_a where a0=1;
+INFO:  Dispatch command to ALL contents
+ max 
+-----
+   1
+(1 row)
+
+explain select a0 from table_a where a0 in (select max(a1) from table_a where a0=1);
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=4)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=4)
+         Hash Cond: "outer".max = public.table_a.a0
+         ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=4)
+               Hash Key: max
+               ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Table Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
+                                       Filter: a0 = 1
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               ->  Table Scan on table_a  (cost=0.00..431.00 rows=1 width=4)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 1.624
+(14 rows)
+
+--start_ignore
+drop table table_a cascade;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+drop sequence s;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+--end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop schema qp_targeted_dispatch cascade;
+-- end_ignore
+RESET ALL;

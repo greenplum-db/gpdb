@@ -43,7 +43,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/error/elog.c,v 1.180 2007/01/20 14:45:35 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/error/elog.c,v 1.182 2007/02/11 11:59:26 mha Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -836,6 +836,33 @@ errcode_for_socket_access(void)
 	return 0;					/* return value does not matter */
 }
 
+/*
+ * Convert compact error code (ERRCODE_xxx) to 5-char SQLSTATE string,
+ * and put it into a 6-char buffer provided by caller.
+ */
+char *
+errcode_to_sqlstate(int errcode, char outbuf[6])
+{
+	int	i;
+
+	for (i = 0; i < 5; ++i)
+	{
+		outbuf[i] = PGUNSIXBIT(errcode);
+		errcode >>= 6;
+	}
+	outbuf[5] = '\0';
+	return &outbuf[5];
+}
+
+/*
+ * Convert SQLSTATE string to compact error code (ERRCODE_xxx).
+ */
+int
+sqlstate_to_errcode(const char *sqlstate)
+{
+	return MAKE_SQLSTATE(sqlstate[0], sqlstate[1], sqlstate[2],
+						 sqlstate[3], sqlstate[4]);
+}
 
 /*
  * This macro handles expansion of a format string and associated parameters;

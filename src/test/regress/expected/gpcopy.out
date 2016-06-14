@@ -100,8 +100,8 @@ COPY copy_regression_default1(b) from stdin;
 SELECT * FROM copy_regression_default1;
        a        |       b        
 ----------------+----------------
- a data         | b default data
  a default data | b data
+ a data         | b default data
 (2 rows)
 
 -- non constant default on non hash key in both text and csv
@@ -192,7 +192,7 @@ DROP TABLE copy_regression_out1;
 -- Zero column table
 -- ######################################################
 CREATE TABLE copy_regression_nocol();
-NOTICE:  Table has no attributes to distribute on.
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 -- copy in and out of zero column table..
 COPY copy_regression_nocol from stdin;
 COPY copy_regression_nocol from stdin;
@@ -239,8 +239,8 @@ SELECT * FROM copy_regression_text2;
  a text data |             | c text data |   | e text data
  a text data |             | c text data |   | 
  a text data |             | c text data |   | e text data
- a text data | b text data |             |   | e text data
              | b text data | c text data |   | e text data
+ a text data | b text data |             |   | e text data
 (5 rows)
 
 -- escape tests
@@ -469,7 +469,7 @@ DROP TABLE copy_regression_fnn;
 CREATE TABLE copy_regression_error1(a int, b int) distributed by(a);
 -- parse error on QE (extra column on line 6)
 COPY copy_regression_error1 from stdin;
-ERROR:  extra data after last expected column  (seg3 minithump2:50004 pid=16198)
+ERROR:  extra data after last expected column  (seg1 subraa4-mac:40001 pid=80440)
 CONTEXT:  COPY copy_regression_error1, line 6: "6	6	6"
 -- parse error on QD (missing column on line 3)
 COPY copy_regression_error1 from stdin;
@@ -478,11 +478,11 @@ CONTEXT:  COPY copy_regression_error1, line 3: "3"
 -- convert error on QD (invalid type line 2)
 COPY copy_regression_error1 from stdin;
 ERROR:  invalid input syntax for integer: "two"
-CONTEXT:  COPY copy_regression_error1, line 2, column a
+CONTEXT:  COPY copy_regression_error1, line 2, column two
 -- convert error on QE (invalid type line 5)
 COPY copy_regression_error1 from stdin;
-ERROR:  invalid input syntax for integer: "five"  (seg2 minithump2:50003 pid=16196)
-CONTEXT:  COPY copy_regression_error1, line 5, column b
+ERROR:  invalid input syntax for integer: "five"  (seg1 subraa4-mac:40001 pid=80440)
+CONTEXT:  COPY copy_regression_error1, line 5, column 5
 DROP TABLE copy_regression_error1;
 -- ######################################################
 -- NEWLINE
@@ -494,13 +494,13 @@ COPY copy_regression_newline from stdin with delimiter '|' newline 'lf';
 COPY copy_regression_newline from stdin with delimiter '|' newline 'lf' csv;
 -- negative: text
 COPY copy_regression_newline from stdin with delimiter '|' newline 'cr';
-ERROR:  extra data after last expected column
+ERROR:  extra data after last expected column  (seg0 subraa4-mac:40000 pid=80439)
 CONTEXT:  COPY copy_regression_newline, line 1: "1|1
 2|2
 "
 -- negative: csv
 COPY copy_regression_newline from stdin with delimiter '|' newline 'cr' csv;
-ERROR:  extra data after last expected column
+ERROR:  extra data after last expected column  (seg0 subraa4-mac:40000 pid=80439)
 CONTEXT:  COPY copy_regression_newline, line 1: "1|1
 2|2
 "
@@ -526,3 +526,165 @@ INSERT INTO force_quotes_tbl VALUES (123, 456, 'foo');
 COPY force_quotes_tbl TO stdout CSV FORCE QUOTE intcol, numcol, textcol;
 "123","456","foo"
 DROP TABLE force_quotes_tbl;
+-- Tests for error log
+DROP TABLE IF EXISTS errcopy, errcopy_err, errcopy_temp;
+NOTICE:  table "errcopy" does not exist, skipping
+NOTICE:  table "errcopy_err" does not exist, skipping
+NOTICE:  table "errcopy_temp" does not exist, skipping
+CREATE TABLE errcopy(a int, b int, c text) distributed by (a);
+INSERT INTO errcopy select i, i, case when i <> 5 then i end || '_text' from generate_series(1, 10)i;
+COPY errcopy to '/tmp/errcopy.csv' csv null '';
+-- check if not null constraint not affect error log.
+TRUNCATE errcopy;
+ALTER table errcopy ALTER c SET NOT null;
+COPY errcopy from '/tmp/errcopy.csv' csv null '' log errors segment reject limit 10 rows;
+ERROR:  null value in column "c" violates not-null constraint  (seg1 subraa4-mac:40001 pid=87506)
+CONTEXT:  COPY errcopy, line 7: "5,5,"
+SELECT * FROM errcopy;
+ a | b | c 
+---+---+---
+(0 rows)
+
+-- reject rows with invalid format for int 
+ALTER table errcopy ALTER c DROP NOT null;
+ALTER table errcopy DROP COLUMN c;
+ALTER table errcopy ADD COLUMN c int;
+COPY errcopy from '/tmp/errcopy.csv' csv null '' log errors segment reject limit 10 rows;
+NOTICE:  Found 9 data formatting errors (9 or more input rows). Rejected related input data.
+SELECT * FROM errcopy;
+ a | b | c 
+---+---+---
+ 5 | 5 |  
+(1 row)
+
+SELECT relname, errmsg, rawdata FROM gp_read_error_log('errcopy');
+ relname |                        errmsg                         |    rawdata    
+---------+-------------------------------------------------------+---------------
+ errcopy | invalid input syntax for integer: "1_text", column c  | 1,1,1_text    
+                                                                 : 
+ errcopy | invalid input syntax for integer: "3_text", column c  | 3,3,3_text    
+                                                                 : 
+ errcopy | invalid input syntax for integer: "7_text", column c  | 7,7,7_text    
+                                                                 : 
+ errcopy | invalid input syntax for integer: "9_text", column c  | 9,9,9_text    
+                                                                 : 
+ errcopy | invalid input syntax for integer: "2_text", column c  | 2,2,2_text    
+                                                                 : 
+ errcopy | invalid input syntax for integer: "4_text", column c  | 4,4,4_text    
+                                                                 : 
+ errcopy | invalid input syntax for integer: "6_text", column c  | 6,6,6_text    
+                                                                 : 
+ errcopy | invalid input syntax for integer: "8_text", column c  | 8,8,8_text    
+                                                                 : 
+ errcopy | invalid input syntax for integer: "10_text", column c | 10,10,10_text 
+                                                                 : 
+(9 rows)
+
+-- reject one row with extra column, one row with fewer columns
+TRUNCATE errcopy;
+SELECT gp_truncate_error_log('errcopy');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+COPY (select i::text || ',' || i::text || case when i = 4 then '' else ',' || i::text || case when i = 5 then ',5' else '' end end from generate_series(1, 10)i) to '/tmp/errcopy.csv';
+COPY errcopy from '/tmp/errcopy.csv' csv null '' log errors segment reject limit 10 rows;
+NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+SELECT * FROM errcopy ORDER BY a;
+ a  | b  | c  
+----+----+----
+  1 |  1 |  1
+  2 |  2 |  2
+  3 |  3 |  3
+  6 |  6 |  6
+  7 |  7 |  7
+  8 |  8 |  8
+  9 |  9 |  9
+ 10 | 10 | 10
+(8 rows)
+
+SELECT relname, errmsg, rawdata FROM gp_read_error_log('errcopy');
+ relname |                errmsg                 | rawdata 
+---------+---------------------------------------+---------
+ errcopy | missing data for column "c"           | 4,4     
+                                                 : 
+ errcopy | extra data after last expected column | 5,5,5,5 
+                                                 : 
+(2 rows)
+
+-- metacharacter
+TRUNCATE errcopy;
+COPY errcopy from stdin csv newline 'LF' log errors segment reject limit 3 rows;
+NOTICE:  Found 1 data formatting errors (1 or more input rows). Rejected related input data.
+SELECT * FROM errcopy;
+ a | b | c 
+---+---+---
+ 1 | 2 | 0
+ 1 | 3 | 3
+(2 rows)
+
+-- exceed reject limit
+TRUNCATE errcopy;
+SELECT gp_truncate_error_log('errcopy');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+COPY errcopy from stdin delimiter E'\t' log errors segment reject limit 3 rows;
+ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "b"
+CONTEXT:  COPY errcopy, line 3: "1       4"
+SELECT * FROM errcopy;
+ a | b | c 
+---+---+---
+(0 rows)
+
+SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('errcopy');
+ relname | filename | bytenum |           errmsg            
+---------+----------+---------+-----------------------------
+ errcopy | <stdin>  |         | missing data for column "b"
+ errcopy | <stdin>  |         | missing data for column "b"
+(2 rows)
+
+-- abort and keep
+TRUNCATE errcopy;
+SELECT gp_truncate_error_log('errcopy');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+COPY errcopy from stdin delimiter '/' log errors segment reject limit 3 rows;
+ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "b"  (seg0 subraa4-mac:40000 pid=87505)
+CONTEXT:  COPY errcopy, line 5: "1"
+SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('errcopy');
+ relname | filename | bytenum |                errmsg                 
+---------+----------+---------+---------------------------------------
+ errcopy | <stdin>  |         | missing data for column "c"
+ errcopy | <stdin>  |         | extra data after last expected column
+(2 rows)
+
+-- gp_initial_bad_row_limit guc test. This guc allows user to set the initial
+-- number of rows which can contain errors before the database stops loading
+-- the data. If there is a valid row within the first 'n' rows specified by
+-- this guc, the database continues to load the data. 
+DROP TABLE IF EXISTS test_first_segment_reject_limit;
+NOTICE:  table "test_first_segment_reject_limit" does not exist, skipping
+CREATE TABLE test_first_segment_reject_limit (a int, b text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SET gp_initial_bad_row_limit = 2;
+COPY test_first_segment_reject_limit FROM STDIN WITH DELIMITER '|' segment reject limit 20;
+ERROR:  All 2 first rows in this segment were rejected. Aborting operation regardless of REJECT LIMIT value. Last error was: missing data for column "b"
+CONTEXT:  COPY test_first_segment_reject_limit, line 2: "error1"
+-- should go through fine
+SET gp_initial_bad_row_limit = 6;
+COPY test_first_segment_reject_limit FROM STDIN WITH DELIMITER '|' segment reject limit 20;
+NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+SELECT COUNT(*) FROM test_first_segment_reject_limit;
+ count 
+-------
+     8
+(1 row)
+

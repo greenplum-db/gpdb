@@ -221,23 +221,27 @@ _bitmap_init_buildstate(Relation index, BMBuildState *bmstate)
 		Operator	optup;
 		Oid			eq_opr;
 		Oid			eq_function;
- 		Oid			hash_function;
+		Oid			left_hash_function;
+		Oid			right_hash_function;
 
 		optup = equality_oper(typid, false);
 		eq_opr = oprid(optup);
 		eq_function = oprfuncid(optup);
 		ReleaseOperator(optup);
- 		hash_function = get_op_hash_function(eq_opr);
- 		if (!OidIsValid(hash_function))
+
+		if (!get_op_hash_functions(eq_opr,
+								   &left_hash_function,
+								   &right_hash_function))
 		{
 			pfree(cur_bmbuild);
 			cur_bmbuild = NULL;
 			break;
 		}
 
+		Assert(left_hash_function == right_hash_function);
 		fmgr_info(eq_function, &cur_bmbuild->eq_funcs[i]);
-		fmgr_info(hash_function, &cur_bmbuild->hash_funcs[i]);
-        cur_bmbuild->hash_func_is_strict[i] = func_strict(hash_function);
+		fmgr_info(right_hash_function, &cur_bmbuild->hash_funcs[i]);
+        cur_bmbuild->hash_func_is_strict[i] = func_strict(right_hash_function);
 	}
 
 	if (cur_bmbuild)

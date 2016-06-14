@@ -1,0 +1,425 @@
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+create schema staticselection;
+set search_path to staticselection;
+create language plpythonu;
+create or replace function get_selected_parts(explain_query text) returns text as
+$$
+rv = plpy.execute(explain_query)
+search_text = 'Partition Selector'
+result = []
+result.append(0)
+result.append(0)
+for i in range(len(rv)):
+    cur_line = rv[i]['QUERY PLAN']
+    if search_text.lower() in cur_line.lower():
+        j = i+1
+        temp_line = rv[j]['QUERY PLAN']
+        while temp_line.find('Partitions selected:') == -1:
+            j += 1
+            if j == len(rv) - 1:
+                break
+            temp_line = rv[j]['QUERY PLAN']
+        
+        if temp_line.find('Partitions selected:') != -1:
+            result[0] = int(temp_line[temp_line.index('selected:  ')+10:temp_line.index(' (out')])
+            result[1] = int(temp_line[temp_line.index('out of')+6:temp_line.index(')')])
+return result
+$$
+language plpythonu;
+drop table if exists foo;
+NOTICE:  table "foo" does not exist, skipping
+create table foo(a int, b int, c int) partition by range (b) (start (1) end (101) every (10));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_3" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_4" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_5" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_6" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_7" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_8" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_9" for table "foo"
+NOTICE:  CREATE TABLE will create partition "foo_1_prt_10" for table "foo"
+insert into foo select generate_series(1,5), generate_series(1,100), generate_series(1,10);
+analyze foo;
+-- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: sql/static_selection_1.sql
+-- ----------------------------------------------------------------------
+-- @author elhela
+-- @created 2014-10-14 12:00:00 
+-- @modified 2014-10-14 12:00:00
+-- @description Tests for static partition selection (MPP-24709, GPSQL-2879)
+-- @tags MPP-24709 GPSQL-2879 ORCA HAWQ
+-- @product_version gpdb: [4.3.3.0-], hawq: [1.2.2.0-]
+-- @optimizer_mode on
+-- @gpopt 1.499
+select get_selected_parts('explain select * from foo;');
+ get_selected_parts 
+--------------------
+ [10, 10]
+(1 row)
+
+select * from foo;
+ a |  b  | c  
+---+-----+----
+ 1 |   1 |  1
+ 2 |   2 |  2
+ 1 |   6 |  6
+ 2 |   7 |  7
+ 1 |  11 |  1
+ 2 |  12 |  2
+ 1 |  16 |  6
+ 2 |  17 |  7
+ 1 |  21 |  1
+ 2 |  22 |  2
+ 1 |  26 |  6
+ 2 |  27 |  7
+ 1 |  31 |  1
+ 2 |  32 |  2
+ 1 |  36 |  6
+ 2 |  37 |  7
+ 1 |  41 |  1
+ 2 |  42 |  2
+ 1 |  46 |  6
+ 2 |  47 |  7
+ 1 |  51 |  1
+ 2 |  52 |  2
+ 1 |  56 |  6
+ 2 |  57 |  7
+ 1 |  61 |  1
+ 2 |  62 |  2
+ 1 |  66 |  6
+ 2 |  67 |  7
+ 1 |  71 |  1
+ 2 |  72 |  2
+ 1 |  76 |  6
+ 2 |  77 |  7
+ 1 |  81 |  1
+ 2 |  82 |  2
+ 1 |  86 |  6
+ 2 |  87 |  7
+ 1 |  91 |  1
+ 2 |  92 |  2
+ 1 |  96 |  6
+ 2 |  97 |  7
+ 3 |   3 |  3
+ 4 |   4 |  4
+ 5 |   5 |  5
+ 3 |   8 |  8
+ 4 |   9 |  9
+ 5 |  10 | 10
+ 3 |  13 |  3
+ 4 |  14 |  4
+ 5 |  15 |  5
+ 3 |  18 |  8
+ 4 |  19 |  9
+ 5 |  20 | 10
+ 3 |  23 |  3
+ 4 |  24 |  4
+ 5 |  25 |  5
+ 3 |  28 |  8
+ 4 |  29 |  9
+ 5 |  30 | 10
+ 3 |  33 |  3
+ 4 |  34 |  4
+ 5 |  35 |  5
+ 3 |  38 |  8
+ 4 |  39 |  9
+ 5 |  40 | 10
+ 3 |  43 |  3
+ 4 |  44 |  4
+ 5 |  45 |  5
+ 3 |  48 |  8
+ 4 |  49 |  9
+ 5 |  50 | 10
+ 3 |  53 |  3
+ 4 |  54 |  4
+ 5 |  55 |  5
+ 3 |  58 |  8
+ 4 |  59 |  9
+ 5 |  60 | 10
+ 3 |  63 |  3
+ 4 |  64 |  4
+ 5 |  65 |  5
+ 3 |  68 |  8
+ 4 |  69 |  9
+ 5 |  70 | 10
+ 3 |  73 |  3
+ 4 |  74 |  4
+ 5 |  75 |  5
+ 3 |  78 |  8
+ 4 |  79 |  9
+ 5 |  80 | 10
+ 3 |  83 |  3
+ 4 |  84 |  4
+ 5 |  85 |  5
+ 3 |  88 |  8
+ 4 |  89 |  9
+ 5 |  90 | 10
+ 3 |  93 |  3
+ 4 |  94 |  4
+ 5 |  95 |  5
+ 3 |  98 |  8
+ 4 |  99 |  9
+ 5 | 100 | 10
+(100 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/static_selection_2.sql
+-- ----------------------------------------------------------------------
+-- @author elhela
+-- @created 2014-10-14 12:00:00 
+-- @modified 2014-10-14 12:00:00
+-- @description Tests for static partition selection (MPP-24709, GPSQL-2879)
+-- @tags MPP-24709 GPSQL-2879 ORCA HAWQ
+-- @product_version gpdb: [4.3.3.0-], hawq: [1.2.2.0-]
+-- @optimizer_mode on
+-- @gpopt 1.499
+select get_selected_parts('explain select * from foo where b = 35;');
+ get_selected_parts 
+--------------------
+ [1, 10]
+(1 row)
+
+select * from foo where b = 35;
+ a | b  | c 
+---+----+---
+ 5 | 35 | 5
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/static_selection_3.sql
+-- ----------------------------------------------------------------------
+-- @author elhela
+-- @created 2014-10-14 12:00:00 
+-- @modified 2014-10-14 12:00:00
+-- @description Tests for static partition selection (MPP-24709, GPSQL-2879)
+-- @tags MPP-24709 GPSQL-2879 ORCA HAWQ
+-- @product_version gpdb: [4.3.3.0-], hawq: [1.2.2.0-]
+-- @optimizer_mode on
+-- @gpopt 1.499
+select get_selected_parts('explain select * from foo where b < 35;');
+ get_selected_parts 
+--------------------
+ [4, 10]
+(1 row)
+
+select * from foo where b < 35;
+ a | b  | c  
+---+----+----
+ 1 |  1 |  1
+ 2 |  2 |  2
+ 1 |  6 |  6
+ 2 |  7 |  7
+ 1 | 11 |  1
+ 2 | 12 |  2
+ 1 | 16 |  6
+ 2 | 17 |  7
+ 1 | 21 |  1
+ 2 | 22 |  2
+ 1 | 26 |  6
+ 2 | 27 |  7
+ 1 | 31 |  1
+ 2 | 32 |  2
+ 3 |  3 |  3
+ 4 |  4 |  4
+ 5 |  5 |  5
+ 3 |  8 |  8
+ 4 |  9 |  9
+ 5 | 10 | 10
+ 3 | 13 |  3
+ 4 | 14 |  4
+ 5 | 15 |  5
+ 3 | 18 |  8
+ 4 | 19 |  9
+ 5 | 20 | 10
+ 3 | 23 |  3
+ 4 | 24 |  4
+ 5 | 25 |  5
+ 3 | 28 |  8
+ 4 | 29 |  9
+ 5 | 30 | 10
+ 3 | 33 |  3
+ 4 | 34 |  4
+(34 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/static_selection_4.sql
+-- ----------------------------------------------------------------------
+-- @author elhela
+-- @created 2014-10-14 12:00:00 
+-- @modified 2014-10-14 12:00:00
+-- @description Tests for static partition selection (MPP-24709, GPSQL-2879)
+-- @tags MPP-24709 GPSQL-2879 ORCA HAWQ
+-- @product_version gpdb: [4.3.3.0-], hawq: [1.2.2.0-]
+-- @optimizer_mode on
+-- @gpopt 1.499
+select get_selected_parts('explain select * from foo where b in (5, 6, 14, 23);');
+ get_selected_parts 
+--------------------
+ [3, 10]
+(1 row)
+
+select * from foo where b in (5, 6, 14, 23);
+ a | b  | c 
+---+----+---
+ 1 |  6 | 6
+ 5 |  5 | 5
+ 4 | 14 | 4
+ 3 | 23 | 3
+(4 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/static_selection_5.sql
+-- ----------------------------------------------------------------------
+-- @author elhela
+-- @created 2014-10-14 12:00:00 
+-- @modified 2014-10-14 12:00:00
+-- @description Tests for static partition selection (MPP-24709, GPSQL-2879)
+-- @tags MPP-24709 GPSQL-2879 ORCA HAWQ
+-- @product_version gpdb: [4.3.3.0-], hawq: [1.2.2.0-]
+-- @optimizer_mode on
+-- @gpopt 1.499
+select get_selected_parts('explain select * from foo where b < 15 or b > 60;');
+ get_selected_parts 
+--------------------
+ [7, 10]
+(1 row)
+
+select * from foo where b < 15 or b > 60;
+ a |  b  | c  
+---+-----+----
+ 1 |   1 |  1
+ 2 |   2 |  2
+ 1 |   6 |  6
+ 2 |   7 |  7
+ 1 |  11 |  1
+ 2 |  12 |  2
+ 1 |  61 |  1
+ 2 |  62 |  2
+ 1 |  66 |  6
+ 2 |  67 |  7
+ 1 |  71 |  1
+ 2 |  72 |  2
+ 1 |  76 |  6
+ 2 |  77 |  7
+ 1 |  81 |  1
+ 2 |  82 |  2
+ 1 |  86 |  6
+ 2 |  87 |  7
+ 1 |  91 |  1
+ 2 |  92 |  2
+ 1 |  96 |  6
+ 2 |  97 |  7
+ 3 |   3 |  3
+ 4 |   4 |  4
+ 5 |   5 |  5
+ 3 |   8 |  8
+ 4 |   9 |  9
+ 5 |  10 | 10
+ 3 |  13 |  3
+ 4 |  14 |  4
+ 3 |  63 |  3
+ 4 |  64 |  4
+ 5 |  65 |  5
+ 3 |  68 |  8
+ 4 |  69 |  9
+ 5 |  70 | 10
+ 3 |  73 |  3
+ 4 |  74 |  4
+ 5 |  75 |  5
+ 3 |  78 |  8
+ 4 |  79 |  9
+ 5 |  80 | 10
+ 3 |  83 |  3
+ 4 |  84 |  4
+ 5 |  85 |  5
+ 3 |  88 |  8
+ 4 |  89 |  9
+ 5 |  90 | 10
+ 3 |  93 |  3
+ 4 |  94 |  4
+ 5 |  95 |  5
+ 3 |  98 |  8
+ 4 |  99 |  9
+ 5 | 100 | 10
+(54 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/static_selection_6.sql
+-- ----------------------------------------------------------------------
+-- @author elhela
+-- @created 2014-10-14 12:00:00 
+-- @modified 2014-10-14 12:00:00
+-- @description Tests for static partition selection (MPP-24709, GPSQL-2879)
+-- @tags MPP-24709 GPSQL-2879 ORCA HAWQ
+-- @product_version gpdb: [4.3.3.0-], hawq: [1.2.2.0-]
+-- @optimizer_mode on
+-- @gpopt 1.499
+select get_selected_parts('explain select * from foo where b = 150;');
+ get_selected_parts 
+--------------------
+ [0, 10]
+(1 row)
+
+select * from foo where b = 150;
+ a | b | c 
+---+---+---
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/static_selection_7.sql
+-- ----------------------------------------------------------------------
+-- @author elhela
+-- @created 2014-10-14 12:00:00 
+-- @modified 2014-10-14 12:00:00
+-- @description Tests for static partition selection (MPP-24709, GPSQL-2879)
+-- @tags MPP-24709 GPSQL-2879 ORCA HAWQ
+-- @product_version gpdb: [4.3.3.0-], hawq: [1.2.2.0-]
+-- @optimizer_mode on
+-- @gpopt 1.499
+select get_selected_parts('explain select * from foo where b = a*5;');
+ get_selected_parts 
+--------------------
+ [10, 10]
+(1 row)
+
+select * from foo where b = a*5;
+ a | b  | c 
+---+----+---
+ 5 | 25 | 5
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop schema staticselection cascade;
+NOTICE:  drop cascades to table foo_1_prt_10
+NOTICE:  drop cascades to constraint foo_1_prt_10_check on table foo_1_prt_10
+NOTICE:  drop cascades to table foo_1_prt_9
+NOTICE:  drop cascades to constraint foo_1_prt_9_check on table foo_1_prt_9
+NOTICE:  drop cascades to table foo_1_prt_8
+NOTICE:  drop cascades to constraint foo_1_prt_8_check on table foo_1_prt_8
+NOTICE:  drop cascades to table foo_1_prt_7
+NOTICE:  drop cascades to constraint foo_1_prt_7_check on table foo_1_prt_7
+NOTICE:  drop cascades to table foo_1_prt_6
+NOTICE:  drop cascades to constraint foo_1_prt_6_check on table foo_1_prt_6
+NOTICE:  drop cascades to table foo_1_prt_5
+NOTICE:  drop cascades to constraint foo_1_prt_5_check on table foo_1_prt_5
+NOTICE:  drop cascades to table foo_1_prt_4
+NOTICE:  drop cascades to constraint foo_1_prt_4_check on table foo_1_prt_4
+NOTICE:  drop cascades to table foo_1_prt_3
+NOTICE:  drop cascades to constraint foo_1_prt_3_check on table foo_1_prt_3
+NOTICE:  drop cascades to table foo_1_prt_2
+NOTICE:  drop cascades to constraint foo_1_prt_2_check on table foo_1_prt_2
+NOTICE:  drop cascades to table foo_1_prt_1
+NOTICE:  drop cascades to constraint foo_1_prt_1_check on table foo_1_prt_1
+NOTICE:  drop cascades to table foo
+NOTICE:  drop cascades to function get_selected_parts(text)
+-- end_ignore

@@ -112,7 +112,7 @@ trap "rm -f $TMPFILE ${OUTPUT_PREFIX}.bki.$$ ${OUTPUT_PREFIX}.description.$$ ${O
 # anything that could depend on platform or configuration.  (The right place
 # to handle those sorts of things is in initdb.c's bootstrap_template1().)
 
-# Get NAMEDATALEN from postgres_ext.h
+# Get NAMEDATALEN from pg_config_manual.h
 for dir in $INCLUDE_DIRS; do
     if [ -f "$dir/pg_config_manual.h" ]; then
         NAMEDATALEN=`grep '^#define[ 	]*NAMEDATALEN' $dir/pg_config_manual.h | $AWK '{ print $3 }'`

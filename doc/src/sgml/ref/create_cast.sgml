@@ -1,4 +1,4 @@
-<!-- $PostgreSQL: pgsql/doc/src/sgml/ref/create_cast.sgml,v 1.23 2006/09/16 00:30:17 momjian Exp $ -->
+<!-- $PostgreSQL: pgsql/doc/src/sgml/ref/create_cast.sgml,v 1.25 2007/02/01 00:28:18 momjian Exp $ -->
 
 <refentry id="SQL-CREATECAST">
  <refmeta>
@@ -33,7 +33,7 @@ CREATE CAST (<replaceable>sourcetype</replaceable> AS <replaceable>targettype</r
   <para>
    <command>CREATE CAST</command> defines a new cast.  A cast
    specifies how to perform a conversion between
-   two data types.  For example,
+   two data types.  For example:
 <programlisting>
 SELECT CAST(42 AS text);
 </programlisting>
@@ -44,7 +44,7 @@ SELECT CAST(42 AS text);
   </para>
 
   <para>
-   Two types may be <firstterm>binary compatible</firstterm>, which
+   Two types can be <firstterm>binary compatible</firstterm>, which
    means that they can be converted into one another <quote>for
    free</quote> without invoking any function.  This requires that
    corresponding values use the same internal representation.  For
@@ -64,7 +64,7 @@ SELECT CAST(42 AS text);
    If the cast is marked <literal>AS ASSIGNMENT</> then it can be invoked
    implicitly when assigning a value to a column of the target data type.
    For example, supposing that <literal>foo.f1</literal> is a column of
-   type <type>text</type>, then
+   type <type>text</type>, then:
 <programlisting>
 INSERT INTO foo (f1) VALUES (42);
 </programlisting>
@@ -85,7 +85,7 @@ SELECT 'The time is ' || now();
 </programlisting>
    will be allowed only if the cast from type <type>timestamp</> to
    <type>text</type> is marked <literal>AS IMPLICIT</>.  Otherwise it
-   will be necessary to write the cast explicitly, for example
+   will be necessary to write the cast explicitly, for example:
 <programlisting>
 SELECT 'The time is ' || CAST(now() AS text);
 </programlisting>
@@ -145,7 +145,7 @@ SELECT 'The time is ' || CAST(now() AS text);
 
      <listitem>
       <para>
-       The function used to perform the cast.  The function name may
+       The function used to perform the cast.  The function name can
        be schema-qualified.  If it is not, the function will be looked
        up in the schema search path.  The function's result data type must
        match the target type of the cast.   Its arguments are discussed below.
@@ -169,7 +169,7 @@ SELECT 'The time is ' || CAST(now() AS text);
 
      <listitem>
       <para>
-       Indicates that the cast may be invoked implicitly in assignment
+       Indicates that the cast can be invoked implicitly in assignment
        contexts.
       </para>
      </listitem>
@@ -180,14 +180,14 @@ SELECT 'The time is ' || CAST(now() AS text);
 
      <listitem>
       <para>
-       Indicates that the cast may be invoked implicitly in any context.
+       Indicates that the cast can be invoked implicitly in any context.
       </para>
      </listitem>
     </varlistentry>
    </variablelist>
 
   <para>
-   Cast implementation functions may have one to three arguments.
+   Cast implementation functions can have one to three arguments.
    The first argument type must be identical to the cast's source type.
    The second argument,
    if present, must be type <type>integer</>; it receives the type

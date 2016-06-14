@@ -679,3 +679,16 @@ def canStringBeParsedAsInt(str):
         return True
     except ValueError:
         return False
+
+def shellEscape(string):
+    """
+    shellEscape: Returns a string in which the shell-significant quoted-string characters are
+    escaped.
+    This function escapes the following characters: '"', '$', '`', '\', '!'
+    """
+    res = []
+    for ch in string:
+        if ch in ['\\', '`', '$', '!', '"']:
+            res.append('\\')
+        res.append(ch)
+    return ''.join(res)

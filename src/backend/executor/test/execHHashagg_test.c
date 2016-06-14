@@ -94,7 +94,7 @@ test__getSpillFile__Initialize_wfile_exception(void **state)
 	workfile_set *work_set = (workfile_set *) palloc0(sizeof(workfile_set));
 	SpillSet *spill_set = (SpillSet *) palloc0(sizeof(SpillSet) + (branching_factor-1) * sizeof (SpillFile));
 
-	SpillFile *spill_file = &spill_set->spill_files[0];
+	volatile SpillFile *spill_file = &spill_set->spill_files[0];
 	spill_file->file_info = NULL;
 
 	/* Make workfile_mgr_create_file throw an exception, using the side effect function */

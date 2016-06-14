@@ -99,6 +99,7 @@ Type Type_getCoerceIn(Type self, Type other)
 {
 	Oid  funcId;
 	Type coerce;
+	CoercionPathType	pathtype = COERCION_PATH_NONE;
 	Oid  fromOid = other->typeId;
 	Oid  toOid = self->typeId;
 
@@ -109,18 +110,20 @@ Type Type_getCoerceIn(Type self, Type other)
 			return coerce;
 	}
 
-	if (!find_coercion_pathway(toOid, fromOid, COERCION_EXPLICIT, &funcId))
+	pathtype = find_coercion_pathway(toOid, fromOid, COERCION_EXPLICIT, &funcId);
+	if (pathtype == COERCION_PATH_RELABELTYPE)
+	{
+		/*
+		 * Binary compatible type. No need for a special coercer
+		 */
+		return self;
+	}
+	else if (!OidIsValid(funcId))
 	{
 		elog(ERROR, "no conversion function from %s to %s",
 			 format_type_be(fromOid),
 			 format_type_be(toOid));
 	}
-
-	if(funcId == InvalidOid)
-		/*
-		 * Binary compatible type. No need for a special coercer
-		 */
-		return self;
 
 	if(self->inCoercions == 0)
 		self->inCoercions = HashMap_create(7, GetMemoryChunkContext(self));
@@ -134,6 +137,7 @@ Type Type_getCoerceOut(Type self, Type other)
 {
 	Oid  funcId;
 	Type coercer;
+	CoercionPathType	pathtype = COERCION_PATH_NONE;
 	Oid  fromOid = self->typeId;
 	Oid  toOid = other->typeId;
 
@@ -144,13 +148,15 @@ Type Type_getCoerceOut(Type self, Type other)
 			return coercer;
 	}
 
-	if(funcId == InvalidOid)
+	pathtype = find_coercion_pathway(toOid, fromOid, COERCION_EXPLICIT, &funcId);
+	if (pathtype == COERCION_PATH_RELABELTYPE)
+	{
 		/*
 		 * Binary compatible type. No need for a special coercer
 		 */
 		return self;
-
-	if (!find_coercion_pathway(toOid, fromOid, COERCION_EXPLICIT, &funcId))
+	}
+	else if (!OidIsValid(funcId))
 	{
 		elog(ERROR, "no conversion function from %s to %s",
 			 format_type_be(fromOid),

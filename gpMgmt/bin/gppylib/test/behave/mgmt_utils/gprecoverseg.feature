@@ -1,6 +1,5 @@
 @gprecoverseg
 Feature: gprecoverseg tests
-    @dca
     Scenario: gprecoverseg should not output bootstrap error on success
         Given the database is running
         And user kills a primary postmaster process
@@ -13,8 +12,6 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print Unhandled exception in thread started by <bound method Worker.__bootstrap to stdout
          
-    @wip
-    @dca
     Scenario: Pid corresponds to a non postgres process 
         Given the database is running
         and all the segments are running
@@ -29,7 +26,7 @@ Feature: gprecoverseg tests
         And the user runs "gprecoverseg -a" 
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print Unhandled exception in thread started by <bound method Worker.__bootstrap to stdout
-        And gprecoverseg should print Skipping to stop segment.*on host.*as it is not a postgres process to stdout
+        And gprecoverseg should print Skipping to stop segment.* on host.* since it is not a postgres process to stdout
         And all the segments are running
         And the segments are synchronized
         When the user runs "gprecoverseg -ra"
@@ -39,8 +36,6 @@ Feature: gprecoverseg tests
         And the backup pid file is deleted on "primary" segment
         And the background pid is killed on "primary" segment
 
-    @wip
-    @dca
     Scenario: Pid does not correspond to any running process 
         Given the database is running
         And all the segments are running
@@ -61,13 +56,14 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the backup pid file is deleted on "primary" segment
 
-    @dca
-    Scenario: gprecoveseg testing using gpfaultinjector 
+    Scenario: gprecoverseg full recovery testing, with gpfaultinjector putting cluster into change tracking
         Given the database is running
+        And the database "gptest1" does not exist
         And all the segments are running
         And the segments are synchronized
         And the information of a "mirror" segment on a remote host is saved
-        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y fault" with the saved mirror segment option
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y fault" with the saved "mirror" segment option
+        Given database "gptest1" exists
         Then the saved mirror segment is marked down in config
         And the saved mirror segment process is still running on that host
         And user can start transactions
@@ -75,3 +71,27 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         And all the segments are running
 
+    Scenario: gprecoverseg fails on corrupted change tracking logs, must run full recovery
+        Given the database is running
+        And the database "gptest1" does not exist
+        And all the segments are running
+        And the segments are synchronized
+        And the information of a "mirror" segment on a remote host is saved
+        And the information of the corresponding primary segment on a remote host is saved
+
+        When user runs the command "gpfaultinjector -f filerep_consumer  -m async -y fault" with the saved "mirror" segment option
+        Given database "gptest1" exists
+        Then the saved mirror segment is marked down in config
+
+        When user runs the command "gpfaultinjector -y skip -f change_tracking_disable" with the saved "primary" segment option
+        Given the database "gptest1" does not exist
+        Then wait until the segment state of the corresponding primary goes in ChangeTrackingDisabled
+
+        When the user runs "gprecoverseg -a"
+        Then gprecoverseg should print in change tracking disabled state, need to run recoverseg with -F option to stdout
+        And the saved mirror segment is marked down in config
+
+        When the user runs "gprecoverseg -a -F"
+        Then all the segments are running
+        And the segments are synchronized
+        And user runs the command "gpfaultinjector -y reset -f change_tracking_disable" with the saved "primary" segment option

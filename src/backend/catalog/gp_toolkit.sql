@@ -150,7 +150,7 @@ CREATE VIEW gp_toolkit.__gp_user_data_tables_readable
 AS
     SELECT *
     FROM gp_toolkit.__gp_user_tables aut
-    WHERE has_table_privilege(quote_ident(autnspname)||'.'||quote_ident(autrelname), 'select');
+    WHERE has_table_privilege(aut.autoid, 'select');
 
 GRANT SELECT ON TABLE gp_toolkit.__gp_user_data_tables_readable TO public;
 
@@ -2206,6 +2206,26 @@ $$
 LANGUAGE SQL;
 
 REVOKE ALL ON FUNCTION gp_toolkit.gp_workfile_cache_clear() FROM public;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.gp_dump_query_oids(text)
+--
+-- @in:
+--        text - SQL text
+-- @out:
+--        text - serialized json string of oids
+--
+-- @doc:
+--        Dump query oids for a given SQL text
+--
+--------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.gp_dump_query_oids(text)
+RETURNS text
+AS '$libdir/gpoptutils', 'gp_dump_query_oids' LANGUAGE C STRICT;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.gp_dump_query_oids(text) TO public;
 
 --------------------------------------------------------------------------------
 

@@ -96,16 +96,17 @@ typedef enum CdbLocusType
  * If locustype == CdbLocusType_Hashed:
  *      Rows are distributed on a hash function of the partitioning key.
  *      The 'partkey' field points to a pathkey list (see pathkeys.c).
- *      Each of the sets 'Ei' is represented as a pathkey: a List of
- *      PathKeyItems pointing to expressions that are constrained by
- *      equality predicates to be equal to one another.
+ *      Each of the sets 'Ei' is represented as a PathKey, and in particular
+ *      its equivalence class, which is a List of expressions that are
+ *      constrained by equality predicates to be equal to one another.
  *
  * If locustype == CdbLocusType_HashedOJ:
  *      Rows are distributed on a hash function of the partitioning key,
  *      the same as CdbLocusType_Hashed.  Each of the sets 'Ei' in the
- *      'partkey' list is represented as a List of pathkeys, where again,
- *      a pathkey is a List of PathKeyItems.  This case arises in the
- *      result of outer join.
+ *      'partkey' list is represented as a List of PathKeys, where again,
+ *      each pathkey represents an equivalence class. All the equivalence
+ *      classes can be considered as equal for the purposes of the locus in
+ *      a join relation. This case arises in the result of outer join.
  *
  * If locustype == CdbLocusType_Strewn:
  *      Rows are distributed according to a criterion that is unknown or
@@ -119,11 +120,13 @@ typedef enum CdbLocusType
 typedef struct CdbPathLocus
 {
     CdbLocusType    locustype;
-    List           *partkey;
+    List           *partkey_h;
+    List           *partkey_oj;
 } CdbPathLocus;
 
 #define CdbPathLocus_Degree(locus)          \
-            (list_length((locus).partkey))
+	(CdbPathLocus_IsHashed(locus) ? list_length((locus).partkey_h) :	\
+	 (CdbPathLocus_IsHashedOJ(locus) ? list_length((locus).partkey_oj) : 0))
 
 /*
  * CdbPathLocus_IsEqual
@@ -133,7 +136,8 @@ typedef struct CdbPathLocus
  */
 #define CdbPathLocus_IsEqual(a, b)              \
             ((a).locustype == (b).locustype &&  \
-             (a).partkey == (b).partkey)        \
+             (a).partkey_h == (b).partkey_oj &&		  \
+             (a).partkey_oj == (b).partkey_oj)        \
 
 /*
  * CdbPathLocus_IsBottleneck
@@ -174,31 +178,42 @@ typedef struct CdbPathLocus
 #define CdbPathLocus_IsStrewn(locus)        \
             ((locus).locustype == CdbLocusType_Strewn)
 
-#define CdbPathLocus_Make(plocus, _locustype, _partkey) \
+#define CdbPathLocus_MakeSimple(plocus, _locustype) \
     do {                                                \
         CdbPathLocus *_locus = (plocus);                \
         _locus->locustype = (_locustype);               \
-        _locus->partkey = (_partkey);                   \
-        Assert(_locus->partkey == NULL ||               \
-               cdbpathlocus_is_valid(*_locus));         \
+        _locus->partkey_h = NIL;                        \
+        _locus->partkey_oj = NIL;                       \
     } while (0)
 
 #define CdbPathLocus_MakeNull(plocus)                   \
-            CdbPathLocus_Make((plocus), CdbLocusType_Null, NIL)
+            CdbPathLocus_MakeSimple((plocus), CdbLocusType_Null)
 #define CdbPathLocus_MakeEntry(plocus)                  \
-            CdbPathLocus_Make((plocus), CdbLocusType_Entry, NIL)
+            CdbPathLocus_MakeSimple((plocus), CdbLocusType_Entry)
 #define CdbPathLocus_MakeSingleQE(plocus)               \
-            CdbPathLocus_Make((plocus), CdbLocusType_SingleQE, NIL)
+            CdbPathLocus_MakeSimple((plocus), CdbLocusType_SingleQE)
 #define CdbPathLocus_MakeGeneral(plocus)                \
-            CdbPathLocus_Make((plocus), CdbLocusType_General, NIL)
+            CdbPathLocus_MakeSimple((plocus), CdbLocusType_General)
 #define CdbPathLocus_MakeReplicated(plocus)             \
-            CdbPathLocus_Make((plocus), CdbLocusType_Replicated, NIL)
-#define CdbPathLocus_MakeHashed(plocus, partkey)        \
-            CdbPathLocus_Make((plocus), CdbLocusType_Hashed, (partkey))
-#define CdbPathLocus_MakeHashedOJ(plocus, partkey)      \
-            CdbPathLocus_Make((plocus), CdbLocusType_HashedOJ, (partkey))
+            CdbPathLocus_MakeSimple((plocus), CdbLocusType_Replicated)
+#define CdbPathLocus_MakeHashed(plocus, partkey_)       \
+    do {                                                \
+        CdbPathLocus *_locus = (plocus);                \
+        _locus->locustype = CdbLocusType_Hashed;		\
+        _locus->partkey_h = (partkey_);					\
+        _locus->partkey_oj = NIL;                       \
+        Assert(cdbpathlocus_is_valid(*_locus));         \
+    } while (0)
+#define CdbPathLocus_MakeHashedOJ(plocus, partkey_)     \
+    do {                                                \
+        CdbPathLocus *_locus = (plocus);                \
+        _locus->locustype = CdbLocusType_HashedOJ;		\
+        _locus->partkey_h = NIL;                        \
+        _locus->partkey_oj = (partkey_);				\
+        Assert(cdbpathlocus_is_valid(*_locus));         \
+    } while (0)
 #define CdbPathLocus_MakeStrewn(plocus)                 \
-            CdbPathLocus_Make((plocus), CdbLocusType_Strewn, NIL)
+            CdbPathLocus_MakeSimple((plocus), CdbLocusType_Strewn)
 
 /************************************************************************/
 
@@ -283,6 +298,20 @@ cdbpathlocus_pull_above_projection(struct PlannerInfo  *root,
  */
 bool
 cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist);
+
+/*
+ * cdbpathlocus_is_hashed_on_eclasses
+ *
+ * This function tests whether grouping on a given set of exprs can be done
+ * in place without motion.
+ *
+ * For a hashed locus, returns false if the partkey has any column whose
+ * equivalence class is not in 'eclasses' list.
+ *
+ * If 'ignore_constants' is true, any constants in the locus are ignored.
+ */
+bool
+cdbpathlocus_is_hashed_on_eclasses(CdbPathLocus locus, List *eclasses, bool ignore_constants);
 
 /*
  * cdbpathlocus_is_hashed_on_relids

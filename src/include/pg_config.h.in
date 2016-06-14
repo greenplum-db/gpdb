@@ -306,8 +306,14 @@
 /* Define to 1 if you have the `crypto' library (-lcrypto). */
 #undef HAVE_LIBCRYPTO
 
+/* Define to 1 if you have the `DDBoost' library (-lDDBoost). */
+#undef HAVE_LIBDDBOOST
+
 /* Define to 1 if you have the `eay32' library (-leay32). */
 #undef HAVE_LIBEAY32
+
+/* Define to 1 if you have the `emcconnect' library (-lemcconnect). */
+#undef HAVE_LIBEMCCONNECT
 
 /* Define to 1 if you have the `ldap' library (-lldap). */
 #undef HAVE_LIBLDAP
@@ -820,6 +826,9 @@
 
 /* Define to 1 to build with Greenplum ORCA optimizer. (--enable-orca) */
 #undef USE_ORCA
+
+/* Define to 1 to build with Codegen. (--enable-codegen) */
+#undef USE_CODEGEN 
 
 /* Define to 1 to build with PAM support. (--with-pam) */
 #undef USE_PAM

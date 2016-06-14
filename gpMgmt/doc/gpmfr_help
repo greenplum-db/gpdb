@@ -12,14 +12,16 @@ SYNOPSIS
 *****************************************************
 
 gpmfr --delete {LATEST | OLDEST | <timestamp>} [--remote] 
-  [--master-port=<master_port>] [--skip-ping] [-a] [-v | --verbose] 
+  [--master-port=<master_port>] [--ddboost-storage-unit=<storage_unit_name>]
+  [--skip-ping] [-a] [-v | --verbose]
 
 gpmfr {--replicate | --recover} {LATEST | OLDEST | <timestamp>} 
-  --max-streams <max_IO_streams> [--master-port=<master_port>] 
-  [--skip-ping] [-a] [-q | --quiet] [-v | --verbose]
+  --max-streams <max_IO_streams> [--ddboost-storage-unit=<storage_unit_name>]
+  [--master-port=<master_port>] [--skip-ping] [-a] [-q | --quiet] [-v | --verbose]
 
 gpmfr {--list | --list-files {LATEST | OLDEST | <timestamp>} } 
-  [--remote] [--master-port=<master_port>] [--skip-ping] 
+  [--ddboost-storage-unit=<storage_unit_name>] [--remote]
+  [--master-port=<master_port>] [--skip-ping]
   [-v | --verbose]
 
 gpmfr --show-streams [--skip-ping] [-v | --verbose]
@@ -196,6 +198,12 @@ OPTIONS
 
  Note: A backup set must be completely backed up to the local Domain 
  system before it can be replicated to the remote Data Domain system. 
+
+
+--ddboost-storage-unit=<storage_unit_name>
+
+ The storage unit on DDBoost Data Domain Server, if this option is not
+ specified, it defaults to the one in the cluster's config file.
 
 
 --remote 

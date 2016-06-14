@@ -16,7 +16,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/prepjointree.c,v 1.45 2007/01/05 22:19:32 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/prepjointree.c,v 1.47 2007/02/19 07:03:30 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -25,6 +25,7 @@
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/prep.h"
+#include "optimizer/subselect.h"
 #include "optimizer/tlist.h"
 #include "optimizer/var.h"
 #include "parser/parse_expr.h"
@@ -66,11 +67,133 @@ static Node *find_jointree_node_for_rel(Node *jtnode, int relid);
 
 extern void UpdateScatterClause(Query *query, List *newtlist);
 
+
 /*
  * pull_up_IN_clauses
+ *		Attempt to pull up top-level IN clauses to be treated like joins.
  *
- * CDB: This function has been moved into cdbsubselect.c.
+ * A clause "foo IN (sub-SELECT)" appearing at the top level of WHERE can
+ * be processed by pulling the sub-SELECT up to become a rangetable entry
+ * and handling the implied equality comparisons as join operators (with
+ * special join rules).
+ * This optimization *only* works at the top level of WHERE, because
+ * it cannot distinguish whether the IN ought to return FALSE or NULL in
+ * cases involving NULL inputs.  This routine searches for such clauses
+ * and does the necessary parsetree transformations if any are found.
+ *
+ * This routine has to run before preprocess_expression(), so the WHERE
+ * clause is not yet reduced to implicit-AND format.  That means we need
+ * to recursively search through explicit AND clauses, which are
+ * probably only binary ANDs.  We stop as soon as we hit a non-AND item.
+ *
+ * Returns the possibly-modified version of the given qual-tree node.
  */
+Node *
+pull_up_IN_clauses(PlannerInfo * root, List **rtrlist_inout, Node *node)
+{
+	if (node == NULL)
+		return NULL;
+	if (IsA(node, SubLink))
+	{
+		SubLink    *sublink = (SubLink *) node;
+		Node	   *subst;
+
+		/* Is it a convertible IN clause?  If not, return it as-is */
+		subst = convert_sublink_to_join(root, rtrlist_inout, sublink);
+		return subst;
+	}
+	if (and_clause(node))
+	{
+		List	   *newclauses = NIL;
+		ListCell   *l;
+
+		foreach(l, ((BoolExpr *) node)->args)
+		{
+			Node	   *oldclause = (Node *) lfirst(l);
+			Node	   *newclause = pull_up_IN_clauses(root, rtrlist_inout, oldclause);
+
+			if (newclause)
+				newclauses = lappend(newclauses, newclause);
+		}
+		return (Node *) make_ands_explicit(newclauses);
+	}
+	if (not_clause(node))
+	{
+		Node	   *arg = (Node *) get_notclausearg((Expr *) node);
+
+		/*
+		 *	 We normalize NOT subqueries using the following axioms:
+		 *
+		 *		 val NOT IN (subq)		 =>  val <> ALL (subq)
+		 *		 NOT val op ANY (subq)	 =>  val op' ALL (subq)
+		 *		 NOT val op ALL (subq)	 =>  val op' ANY (subq)
+		 */
+
+		if (IsA(arg, SubLink))
+		{
+			SubLink    *sublink = (SubLink *) arg;
+
+			if (sublink->subLinkType == ANY_SUBLINK)
+			{
+				sublink->subLinkType = ALL_SUBLINK;
+				sublink->testexpr = (Node *) canonicalize_qual(
+									 make_notclause((Expr *) sublink->testexpr));
+			}
+			else if (sublink->subLinkType == ALL_SUBLINK)
+			{
+				sublink->subLinkType = ANY_SUBLINK;
+				sublink->testexpr = (Node *) canonicalize_qual(
+									 make_notclause((Expr *) sublink->testexpr));
+			}
+			else if (sublink->subLinkType == EXISTS_SUBLINK)
+			{
+				sublink->subLinkType = NOT_EXISTS_SUBLINK;
+			}
+			else
+			{
+				return node;	/* do nothing for other sublinks */
+			}
+
+			return (Node *) pull_up_IN_clauses(root, rtrlist_inout, (Node *) sublink);
+		}
+		else if (not_clause(arg))
+		{
+			/* NOT NOT (expr) => (expr)  */
+			return (Node *) pull_up_IN_clauses(root, rtrlist_inout,
+									(Node *) get_notclausearg((Expr *) arg));
+		}
+		else if (or_clause(arg))
+		{
+			/* NOT OR (expr1) (expr2) => (expr1) AND (expr2) */
+			return (Node *) pull_up_IN_clauses(root, rtrlist_inout,
+									(Node *) canonicalize_qual((Expr *) node));
+			
+		}
+	}
+
+	/**
+	 * (expr) op SUBLINK
+	 */
+	if (IsA(node, OpExpr))
+	{
+		OpExpr *opexp = (OpExpr *) node;
+
+		if (list_length(opexp->args) == 2)
+		{
+			/**
+			 * Check if second arg is sublink
+			 */
+			Node *rarg = list_nth(opexp->args, 1);
+
+			if (IsA(rarg, SubLink))
+			{
+				return (Node *) convert_EXPR_to_join(root, rtrlist_inout, opexp);
+			}
+		}
+	}
+	/* Stop if not an AND */
+	return node;
+}
 
 /*
  * pull_up_subqueries
@@ -100,7 +223,7 @@ Node *
 pull_up_subqueries(PlannerInfo *root, Node *jtnode,
 				   bool below_outer_join, bool append_rel_member)
 {
-    if (jtnode == NULL)
+	if (jtnode == NULL)
 		return NULL;
 	if (IsA(jtnode, RangeTblRef))
 	{
@@ -124,7 +247,8 @@ pull_up_subqueries(PlannerInfo *root, Node *jtnode,
 		 * If we are looking at an append-relation member, we can't pull it up
 		 * unless is_safe_append_member says so.
 		 */
-		if (rte->rtekind == RTE_SUBQUERY && !rte->forceDistRandom &&
+		if (rte->rtekind == RTE_SUBQUERY &&
+			!rte->forceDistRandom &&
 			is_simple_subquery(root, rte->subquery) &&
 			(!below_outer_join || has_nullable_targetlist(rte->subquery)) &&
 			(!append_rel_member || is_safe_append_member(rte->subquery)))
@@ -277,6 +401,10 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	 */
 	subroot = makeNode(PlannerInfo);
 	subroot->parse = subquery;
+	subroot->glob = root->glob;
+	subroot->query_level = root->query_level;
+	subroot->planner_cxt = CurrentMemoryContext;
+	subroot->init_plans = NIL;
 	subroot->in_info_list = NIL;
 	subroot->append_rel_list = NIL;
 

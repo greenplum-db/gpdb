@@ -1,11 +1,7 @@
 #!/usr/bin/perl
 #
-# $Header$
-#
 # copyright (c) 2009, 2010, 2011
 # Author: Jeffrey I Cohen
-#
-# SLZY_HDR_END
 
 use POSIX;
 use Pod::Usage;
@@ -285,7 +281,7 @@ Jeffrey I Cohen
 
 Copyright (c) 2009-2012 Greenplum.  All rights reserved.  
 
-Address bug reports and comments to: jcohen@greenplum.com
+Address bug reports and comments to: bugs@greenplum.org
 
 =cut
 # SLZY_POD_HDR_END
@@ -533,6 +529,7 @@ sub sqltype_to_ctype
 		 bool					  => "bool", # boolean is the real sqltype
 		 boolean				  => "bool", 
 		 bytea					  => "bytea",
+		 float4					  => "float4",
 
 		 # Note: a quoted_char (or "char") is a single C char
 		 quoted_char			  => "char",
@@ -1688,7 +1685,7 @@ sub formattypedata
 	my ($oid, $tname, $reltype_oid) = @_;
 
 	my $bigstr = <<'EOF_bigstr';
-DATA(insert OID = RELTYPE_OID ( TABLENAME	    PGNSP PGUID -1 f c t \054 THEE_OID 0 record_in record_out record_recv record_send - d x f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = RELTYPE_OID ( TABLENAME	    PGNSP PGUID -1 f c t \054 THEE_OID 0 0 record_in record_out record_recv record_send - d x f 0 -1 0 _null_ _null_ ));
 EOF_bigstr
 
 $bigstr =~ s/TABLENAME/$tname/gm;
@@ -1703,7 +1700,7 @@ sub formattoasttypedata
 	my ($oid, $tname, $reltype_oid, $toast_oid, $toast_reltype) = @_;
 
 	my $bigstr = <<'EOF_bigstr';
-DATA(insert OID = TOAST_RELTYPE (pg_toast_THEE_OID TOASTNSP PGUID -1 f c t \054 TOAST_OID 0 record_in record_out record_recv record_send - d x f 0 -1 0 _null_ _null_));
+DATA(insert OID = TOAST_RELTYPE (pg_toast_THEE_OID TOASTNSP PGUID -1 f c t \054 TOAST_OID 0 0 record_in record_out record_recv record_send - d x f 0 -1 0 _null_ _null_));
 EOF_bigstr
 
 $bigstr =~ s/TABLENAME/$tname/gm;

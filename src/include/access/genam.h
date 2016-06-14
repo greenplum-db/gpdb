@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/genam.h,v 1.66 2007/01/05 22:19:50 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/genam.h,v 1.81 2009/08/01 20:59:17 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -81,8 +81,6 @@ typedef struct SysScanDescData
 	Relation	irel;			/* NULL if doing heap scan */
 	HeapScanDesc scan;			/* only valid in heap-scan case */
 	IndexScanDesc iscan;		/* only valid in index-scan case */
-
-	HiddenScanDesc hscan;		/* scan for "hidden" tuple if any */
 } SysScanDescData;
 
 typedef SysScanDescData *SysScanDesc;
@@ -136,6 +134,8 @@ extern FmgrInfo *index_getprocinfo(Relation irel, AttrNumber attnum,
 extern IndexScanDesc RelationGetIndexScan(Relation indexRelation,
 					 int nkeys, ScanKey key);
 extern void IndexScanEnd(IndexScanDesc scan);
+extern char *BuildIndexValueDescription(Relation indexRelation,
+						   Datum *values, bool *isnull);
 
 /*
  * heap-or-index access to system catalogs (in genam.c)

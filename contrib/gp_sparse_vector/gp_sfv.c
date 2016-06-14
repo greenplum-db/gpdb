@@ -223,6 +223,7 @@ SvecType *classify_document(char **features, int num_features, char **document, 
 		if (document[i] != NULL)
 		{
 		  item.key = document[i];
+		  item.data = NULL;
 		  if ((found_item = hsearch(item,FIND)) != NULL) {
 			/* Item is in the table */
 			histogram[*((int *)found_item->data)]++; //Increment the count at the appropriate ordinal

@@ -23,6 +23,8 @@ extern void ExecEndBitmapHeapScan(BitmapHeapScanState *node);
 extern void ExecBitmapHeapReScan(BitmapHeapScanState *node, ExprContext *exprCtxt);
 extern void ExecEagerFreeBitmapHeapScan(BitmapHeapScanState *node);
 
+extern void bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres);
+
 enum
 {
 	GPMON_BITMAPHEAPSCAN_PAGE = GPMON_QEXEC_M_NODE_START, 

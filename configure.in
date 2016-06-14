@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-dnl $PostgreSQL: pgsql/configure.in,v 1.497 2007/01/18 14:07:31 petere Exp $
+dnl $PostgreSQL: pgsql/configure.in,v 1.501 2007/02/07 00:28:54 petere Exp $
 dnl
 dnl Developers, please strive to achieve this order:
 dnl
@@ -148,7 +148,7 @@ PGAC_ARG_REQ(with, libs,      [  --with-libs=DIRS        alternative spelling of
 # 64-bit integer date/time storage: enabled by default.
 #
 AC_MSG_CHECKING([whether to build with 64-bit integer date/time support])
-PGAC_ARG_BOOL(enable, integer-datetimes, yes, [disable 64-bit integer date/time support],
+PGAC_ARG_BOOL(enable, integer-datetimes, yes, [  --disable-integer-datetimes disable 64-bit integer date/time support],
               [AC_DEFINE([USE_INTEGER_DATETIMES], 1,
                          [Define to 1 if you want 64-bit integer timestamp and interval support. (--enable-integer-datetimes)])])
 AC_MSG_RESULT([$enable_integer_datetimes])
@@ -221,6 +221,13 @@ PGAC_ARG_BOOL(enable, atomics, yes,
               [  --disable-atomics       do not use atomic operations])
 
 #
+# gpfdist
+#
+PGAC_ARG_BOOL(enable, gpfdist, yes,
+             [  --disable-gpfdist       do not use gpfdist])
+AC_SUBST(enable_gpfdist)
+
+#
 # --enable-debug adds -g to compiler flags
 #
 PGAC_ARG_BOOL(enable, debug, no,
@@ -238,7 +245,7 @@ AC_SUBST(enable_profiling)
 # --enable-coverage enables generation of code coverage metrics with gcov
 #
 PGAC_ARG_BOOL(enable, coverage, no,
-              [build with coverage testing instrumentation],
+              [  --enable-coverage       build with coverage testing instrumentation],
 [AC_CHECK_PROGS(GCOV, gcov)
 if test -z "$GCOV"; then
   AC_MSG_ERROR([gcov not found])
@@ -593,35 +600,63 @@ PGAC_ARG_BOOL(enable, cassert, no, [  --enable-cassert        enable assertion c
 #
 # Enable debug_break
 #
-PGAC_ARG_BOOL(enable, debugbreak, no, [  --enable-debugbreak        enable debug_break and debug_break_n (for debugging)],
+PGAC_ARG_BOOL(enable, debugbreak, no, [  --enable-debugbreak     enable debug_break and debug_break_n (for debugging)],
               [AC_DEFINE([USE_DEBUG_BREAK], 1,
                          [Define to 1 to build with debug_break capabilities. (--enable-debugbreak)])])
 
 # Enable debug ntuplestore
-PGAC_ARG_BOOL(enable, debugntuplestore, no, [  --enable-ntuplestore      enable debug_ntuplestore (for debugging)],
+PGAC_ARG_BOOL(enable, debugntuplestore, no, [  --enable-ntuplestore    enable debug_ntuplestore (for debugging)],
               [AC_DEFINE([USE_DEBUG_NTUPLESTORE], 1,
                          [Define to 1 to build with debug_ntuplestore. (--enable-ntuplestore)])])
 
 #
 # Enable testing utilities
 #
-PGAC_ARG_BOOL(enable, testutils, no, [  --enable-testutils        enable testing utilities],
+PGAC_ARG_BOOL(enable, testutils, no, [  --enable-testutils      enable testing utilities],
               [AC_DEFINE([USE_TEST_UTILS], 1,
                          [Define to 1 to build with testing utilities. (--enable-testutils)])])
 
 #
 # Enable Greenplum ORCA optimizer
 #
-PGAC_ARG_BOOL(enable, orca, no, [  --enable-orca        enable ORCA optimizer],
+PGAC_ARG_BOOL(enable, orca, no, [  --enable-orca           enable ORCA optimizer],
               [AC_DEFINE([USE_ORCA], 1,
                          [Define to 1 to build with Greenplum ORCA optimizer. (--enable-orca)])])
-AC_MSG_RESULT([enable_orca])
+AC_MSG_RESULT([checking whether to build with ORCA... $enable_orca])
 AC_SUBST(enable_orca)
+
+#
+# Enable code generation
+#
+PGAC_ARG_BOOL(enable, codegen, no, [  --enable-codegen        enable code generation],
+              [AC_DEFINE([USE_CODEGEN], 1,
+                         [Define to 1 to enable code generation. (--enable-codegen)])])
+AC_MSG_RESULT([checking whether to build with codegen... $enable_codegen])
+AC_SUBST(enable_codegen)
+
+PGAC_ARG_REQ(with, codegen-prefix,
+             [  --with-codegen-prefix="PATH;PATH"  semicolon separated prefix search path for LLVM and Clang],
+             [AS_IF([test "${enable_codegen}" = no],
+					[AC_MSG_WARN([--with-codegen-prefix used without --enable-codegen])])])
+
+AS_IF([test "$enable_codegen" = yes],
+[ # then
+   GPAC_PATH_CMAKE
+
+   cd src/backend/codegen
+   AS_IF([test "${prefix}" = NONE], [prefix=${ac_default_prefix}])
+   AS_IF([test "${enable_debug}" = yes], [build_type="Debug"], [build_type="Release"])
+
+   CMAKE_CMD="${CMAKE} -DCMAKE_PREFIX_PATH="${with_codegen_prefix}" -DCMAKE_INSTALL_PREFIX=${prefix} -DCMAKE_BUILD_TYPE=${build_type} ."
+   echo "Executing cmake command : ${CMAKE_CMD}"
+   AS_IF([${CMAKE_CMD}], [], [AC_MSG_ERROR(['error while configuring codegen.'])])
+   cd -
+]) # fi
 
 #
 # --enable-snmp enables snmp mib and trap/inform
 #
-PGAC_ARG_BOOL(enable, snmp, no, [  --enable-snmp        enable snmp for MIB and alerts via TRAP/INFORM],
+PGAC_ARG_BOOL(enable, snmp, no, [  --enable-snmp           enable snmp for MIB and alerts via TRAP/INFORM],
               [AC_DEFINE([USE_SNMP], 1,
                          [Define to 1 to build with snmp capabilities. (--enable-snmp)])])
 AC_MSG_RESULT([checking whether to build with snmp... $enable_snmp])
@@ -639,20 +674,29 @@ AC_SUBST(enable_connectemc)
 #
 # --enable-ddboost enables DD Boost support
 #
-PGAC_ARG_BOOL(enable, ddboost, no,  [  --enable-ddboost     enable connect emc support],
+PGAC_ARG_BOOL(enable, ddboost, no,  [  --enable-ddboost        enable DD Boost support],
               [AC_DEFINE([USE_DDBOOST], 1,
                          [Define to 1 to build with DD Boost capabilities. (--enable-ddboost)])])
-AC_MSG_RESULT([$enable_ddboost])
+AC_MSG_RESULT([checking whether to build with DD Boost support... $enable_ddboost])
 AC_SUBST(enable_ddboost)
 
 #
 # --enable-netbackup enables NetBackup support
 #
-PGAC_ARG_BOOL(enable, netbackup, no,  [  --enable-netbackup     enable NetBackup support],
+PGAC_ARG_BOOL(enable, netbackup, no,  [  --enable-netbackup      enable NetBackup support],
               [AC_DEFINE([USE_NETBACKUP], 1,
                          [Define to 1 to build with NetBackup capabilities. (--enable-netbackup)])])
-AC_MSG_RESULT([$enable_netbackup])
+AC_MSG_RESULT([checking whether to build with NetBackup support... $enable_netbackup])
 AC_SUBST(enable_netbackup)
+
+#
+# --enable-mapreduce enables GPMapreduce support
+#
+PGAC_ARG_BOOL(enable, mapreduce, no, [  --enable-mapreduce      enable Greenplum Mapreduce support],
+              [AC_DEFINE([USE_MAPREDUCE], 1,
+			             [Define to 1 to build with Mapreduce capabilities (--enable-mapreduce)])])
+AC_MSG_RESULT([checking whether to build with Greenplum Mapreduce... $enable_mapreduce])
+AC_SUBST(enable_mapreduce)
 
 #
 # Include directories
@@ -894,6 +938,13 @@ PGAC_ARG_BOOL(with, libcurl, yes,
 AC_SUBST(with_libcurl)
 
 #
+# libapr. Used for gpfdist.
+#
+PGAC_ARG_REQ(with, apr-config,
+             [  --with-apr-config=PATH  path to apr-1-config utility])
+AC_SUBST(with_apr_config)
+
+#
 # Elf
 #
 
@@ -1089,6 +1140,22 @@ if test "$with_krb5" = yes ; then
   fi
 fi
 
+if test "$enable_gpfdist" = yes ; then
+  GPAC_PATH_APR_1_CONFIG
+  # If the 'apr-1-config --link-ld' produced correct output, -lapr-1 is already
+  # in LIBS, hence AC_SEARCH_LIBS rather than AC_CHECK_LIB. (and the autoconf
+  # manual recommends always using AC_SEARCH_LIBS rather than AC_CHECK_LIB
+  # anyway)
+  _LIBS="$LIBS"
+  LIBS="$LIBS $apr_link_ld_libs"
+  AC_SEARCH_LIBS(apr_getopt_long, [apr-1], [], [AC_MSG_ERROR([libapr-1 is required for gpfdist])])
+  AC_SEARCH_LIBS(event_add, [event], [], [AC_MSG_ERROR([libevent is required for gpfdist])])
+
+  AC_SEARCH_LIBS(yaml_parser_initialize, [yaml], [have_yaml=yes], [AC_MSG_WARN([libyaml is not found. disabling transformations for gpfdist.])])
+  LIBS="$_LIBS"
+  AC_SUBST(have_yaml)
+fi
+
 if test "$with_openssl" = yes ; then
   dnl Order matters!
   if test "$PORTNAME" != "win32"; then
@@ -1130,6 +1197,20 @@ AC_SEARCH_LIBS(BZ2_bzDecompress, bz2)
 # Check for net-snmp
 if test "$enable_snmp" = yes ; then
 	AC_CHECK_LIB(netsnmp,  netsnmp_ds_set_string,  [], [AC_MSG_ERROR([library 'netsnmp' is required for snmp support])])
+fi
+
+# Check for EMC Connect
+if test "$enable_connectemc" = yes ; then
+  _LIBS="$LIBS"
+  AC_CHECK_LIB(emcconnect, main, [], [AC_MSG_ERROR([library 'emcconnect' is required for Connect EMC support])])
+  LIBS="$_LIBS"
+fi
+
+# Check for DD Boost
+if test "$enable_ddboost" = yes ; then
+  _LIBS="$LIBS"
+  AC_CHECK_LIB(DDBoost, main, [], [AC_MSG_ERROR([library 'DDBoost' is required for DD Boost support])])
+  LIBS="$_LIBS"
 fi
 
 ##
@@ -1207,6 +1288,20 @@ Use --without-readline to disable libedit support.])])])])
                 [AC_CHECK_HEADERS(readline/history.h)])])
 fi
 
+if test "$enable_gpfdist" = yes; then
+  if test "$PORTNAME" = "win32"; then
+    AC_CHECK_HEADERS([winsock2.h])
+  fi
+
+  AC_CHECK_HEADERS(yaml.h, [], [AC_MSG_WARN([header file <yaml.h> is not found. disabling transformations for gpfdist.])])
+  AC_CHECK_HEADERS(event.h, [], [AC_MSG_ERROR([header file <event.h> is required for gpfdist])])
+
+  ac_save_CPPFLAGS=$CPPFLAGS
+  CPPFLAGS="$apr_includes $CPPFLAGS"
+  AC_CHECK_HEADERS(apr_getopt.h, [], [AC_MSG_ERROR(['header file <apr_getopt.h> is required for gpfdist'])])
+  CPPFLAGS=$ac_save_CPPFLAGS
+fi
+
 if test "$with_zlib" = yes; then
   AC_CHECK_HEADER(zlib.h, [], [AC_MSG_ERROR([zlib header not found
 If you have zlib already installed, see config.log for details on the
@@ -1256,6 +1351,10 @@ if test "$with_bonjour" = yes ; then
   AC_CHECK_HEADER(DNSServiceDiscovery/DNSServiceDiscovery.h, [], [AC_MSG_ERROR([header file <DNSServiceDiscovery/DNSServiceDiscovery.h> is required for Bonjour])])
 fi
 
+if test "$enable_ddboost" = yes ; then
+  AC_CHECK_HEADER(ddp_api.h, [], [AC_MSG_ERROR([header file <ddp_api.h> is required for DD Boost])])
+fi
+
 # For processor affinity support in Linux on NUMA platforms such as
 # AMD x86_64, the 'numactl' or 'libnuma' package is required.  See
 #  http://lwn.net/Articles/67005/
@@ -1280,6 +1379,9 @@ if test "$with_rt" = yes; then
 			 [AC_MSG_ERROR([header file <time.h> is required for realtime library support])])
 fi
 
+if test "$enable_mapreduce" = yes; then
+  AC_CHECK_HEADERS(yaml.h, [], [AC_MSG_ERROR([YAML includes required for Greenplum Mapreduce])])
+fi
 
 
 ##
@@ -1650,7 +1752,7 @@ if test "$with_ldap" = yes ; then
       # on some platforms ldap_r fails to link without PTHREAD_LIBS
       AC_CHECK_LIB(ldap_r, ldap_simple_bind, [],
 		   [AC_MSG_ERROR([library 'ldap_r' is required for LDAP])],
-		   [$PTHREAD_LIBS $EXTRA_LDAP_LIBS])
+		   [$PTHREAD_CFLAGS $PTHREAD_LIBS $EXTRA_LDAP_LIBS])
       LDAP_LIBS_FE="-lldap_r $EXTRA_LDAP_LIBS"
     else
       LDAP_LIBS_FE="-lldap $EXTRA_LDAP_LIBS"
@@ -1857,11 +1959,11 @@ fi
 
 if test $ac_cv_func_fseeko = yes; then
 AC_SYS_LARGEFILE
-AC_SUBST(enable_largefile)
+enable_largefile=yes
 else
 enable_largefile=no
-AC_SUBST(enable_largefile)
 fi
+AC_SUBST(enable_largefile)
 
 # Check for largefile support (must be after AC_SYS_LARGEFILE)
 AC_CHECK_SIZEOF([off_t])
@@ -2020,6 +2122,7 @@ fi
 AC_MSG_NOTICE([using CFLAGS=$CFLAGS])
 AC_MSG_NOTICE([using CPPFLAGS=$CPPFLAGS])
 AC_MSG_NOTICE([using LDFLAGS=$LDFLAGS])
+AC_MSG_NOTICE([using LIBS=$LIBS])
 
 
 # prepare build tree if outside source tree
@@ -2075,6 +2178,3 @@ AC_CONFIG_HEADERS([src/interfaces/ecpg/include/ecpg_config.h],
                   [echo >src/interfaces/ecpg/include/stamp-h])
 
 AC_OUTPUT
-
-# Warn about unknown options
-PGAC_ARG_CHECK

@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/lsyscache.c,v 1.143 2007/01/10 18:06:04 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/lsyscache.c,v 1.148 2007/02/14 01:58:57 tgl Exp $
  *
  * NOTES
  *	  Eventually, the index information should go through here, too.
@@ -23,6 +23,7 @@
 #include "catalog/heap.h"                   /* SystemAttributeDefinition() */
 #include "catalog/pg_amop.h"
 #include "catalog/pg_amproc.h"
+#include "catalog/pg_constraint.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_operator.h"
@@ -160,76 +161,65 @@ get_opfamily_member(Oid opfamily, Oid lefttype, Oid righttype,
 }
 
 /*
- * get_op_mergejoin_info
- *		Given the OIDs of a (putatively) mergejoinable equality operator
- *		and a sortop defining the sort ordering of the lefthand input of
- *		the merge clause, determine whether this sort ordering is actually
- *		usable for merging.  If so, return the required sort ordering op
- *		for the righthand input, as well as the btree opfamily OID containing
- *		these operators and the operator strategy number of the two sortops
- *		(either BTLessStrategyNumber or BTGreaterStrategyNumber).
+ * get_ordering_op_properties
+ *		Given the OID of an ordering operator (a btree "<" or ">" operator),
+ *		determine its opfamily, its declared input datatype, and its
+ *		strategy number (BTLessStrategyNumber or BTGreaterStrategyNumber).
  *
- * We can mergejoin if we find the two operators in the same opfamily as
- * equality and either less-than or greater-than respectively.  If there
- * are multiple such opfamilies, assume we can use any one.
+ * Returns TRUE if successful, FALSE if no matching pg_amop entry exists.
+ * (This indicates that the operator is not a valid ordering operator.)
+ *
+ * Note: the operator could be registered in multiple families, for example
+ * if someone were to build a "reverse sort" opfamily.  This would result in
+ * uncertainty as to whether "ORDER BY USING op" would default to NULLS FIRST
+ * or NULLS LAST, as well as inefficient planning due to failure to match up
+ * pathkeys that should be the same.  So we want a determinate result here.
+ * Because of the way the syscache search works, we'll use the interpretation
+ * associated with the opfamily with smallest OID, which is probably
+ * determinate enough.  Since there is no longer any particularly good reason
+ * to build reverse-sort opfamilies, it doesn't seem worth expending any
+ * additional effort on ensuring consistency.
  */
-#ifdef NOT_YET
-/* eventually should look like this */
 bool
-get_op_mergejoin_info(Oid eq_op, Oid left_sortop,
-					  Oid *right_sortop, Oid *opfamily, int *opstrategy)
+get_ordering_op_properties(Oid opno,
+						   Oid *opfamily, Oid *opcintype, int16 *strategy)
 {
 	bool		result = false;
-	Oid			lefttype;
-	Oid			righttype;
 	CatCList   *catlist;
 	int			i;
 
-	/* Make sure output args are initialized even on failure */
-	*right_sortop = InvalidOid;
+	/* ensure outputs are initialized on failure */
 	*opfamily = InvalidOid;
-	*opstrategy = 0;
-
-	/* Need the righthand input datatype */
-	op_input_types(eq_op, &lefttype, &righttype);
+	*opcintype = InvalidOid;
+	*strategy = 0;
 
 	/*
-	 * Search through all the pg_amop entries containing the equality operator
+	 * Search pg_amop to see if the target operator is registered as the "<"
+	 * or ">" operator of any btree opfamily.
 	 */
 	catlist = SearchSysCacheList(AMOPOPID, 1,
-								 ObjectIdGetDatum(eq_op),
+								 ObjectIdGetDatum(opno),
 								 0, 0, 0);
 
 	for (i = 0; i < catlist->n_members; i++)
 	{
-		HeapTuple	op_tuple = &catlist->members[i]->tuple;
-		Form_pg_amop op_form = (Form_pg_amop) GETSTRUCT(op_tuple);
-		Oid			opfamily_id;
-		StrategyNumber op_strategy;
+		HeapTuple	tuple = &catlist->members[i]->tuple;
+		Form_pg_amop aform = (Form_pg_amop) GETSTRUCT(tuple);
 
 		/* must be btree */
-		if (op_form->amopmethod != BTREE_AM_OID)
-			continue;
-		/* must use the operator as equality */
-		if (op_form->amopstrategy != BTEqualStrategyNumber)
+		if (aform->amopmethod != BTREE_AM_OID)
 			continue;
 
-		/* See if sort operator is also in this opfamily with OK semantics */
-		opfamily_id = op_form->amopfamily;
-		op_strategy = get_op_opfamily_strategy(left_sortop, opfamily_id);
-		if (op_strategy == BTLessStrategyNumber ||
-			op_strategy == BTGreaterStrategyNumber)
+		if (aform->amopstrategy == BTLessStrategyNumber ||
+			aform->amopstrategy == BTGreaterStrategyNumber)
 		{
-			/* Yes, so find the corresponding righthand sortop */
-			*right_sortop = get_opfamily_member(opfamily_id,
-												righttype,
-												righttype,
-												op_strategy);
-			if (OidIsValid(*right_sortop))
+			/* Found it ... should have consistent input types */
+			if (aform->amoplefttype == aform->amoprighttype)
 			{
-				/* Found a workable mergejoin semantics */
-				*opfamily = opfamily_id;
-				*opstrategy = op_strategy;
+				/* Found a suitable opfamily, return info */
+				*opfamily = aform->amopfamily;
+				*opcintype = aform->amoplefttype;
+				*strategy = aform->amopstrategy;
 				result = true;
 				break;
 			}
@@ -240,71 +230,6 @@ get_op_mergejoin_info(Oid eq_op, Oid left_sortop,
 
 	return result;
 }
-#else
-/* temp implementation until planner gets smarter: left_sortop is output */
-bool
-get_op_mergejoin_info(Oid eq_op, Oid *left_sortop,
-					  Oid *right_sortop, Oid *opfamily)
-{
-	bool		result = false;
-	Oid			lefttype;
-	Oid			righttype;
-	CatCList   *catlist;
-	int			i;
-
-	/* Make sure output args are initialized even on failure */
-	*left_sortop = InvalidOid;
-	*right_sortop = InvalidOid;
-	*opfamily = InvalidOid;
-
-	/* Need the input datatypes */
-	op_input_types(eq_op, &lefttype, &righttype);
-
-	/*
-	 * Search through all the pg_amop entries containing the equality operator
-	 */
-	catlist = SearchSysCacheList(AMOPOPID, 1,
-								 ObjectIdGetDatum(eq_op),
-								 0, 0, 0);
-
-	for (i = 0; i < catlist->n_members; i++)
-	{
-		HeapTuple	op_tuple = &catlist->members[i]->tuple;
-		Form_pg_amop op_form = (Form_pg_amop) GETSTRUCT(op_tuple);
-		Oid			opfamily_id;
-
-		/* must be btree */
-		if (op_form->amopmethod != BTREE_AM_OID)
-			continue;
-		/* must use the operator as equality */
-		if (op_form->amopstrategy != BTEqualStrategyNumber)
-			continue;
-
-		opfamily_id = op_form->amopfamily;
-
-		/* Find the matching sortops */
-		*left_sortop = get_opfamily_member(opfamily_id,
-										   lefttype,
-										   lefttype,
-										   BTLessStrategyNumber);
-		*right_sortop = get_opfamily_member(opfamily_id,
-											righttype,
-											righttype,
-											BTLessStrategyNumber);
-		if (OidIsValid(*left_sortop) && OidIsValid(*right_sortop))
-		{
-			/* Found a workable mergejoin semantics */
-			*opfamily = opfamily_id;
-			result = true;
-			break;
-		}
-	}
-
-	ReleaseSysCacheList(catlist);
-
-	return result;
-}
-#endif
 
 /*
  * get_compare_function_for_ordering_op
@@ -321,61 +246,30 @@ get_op_mergejoin_info(Oid eq_op, Oid *left_sortop,
 bool
 get_compare_function_for_ordering_op(Oid opno, Oid *cmpfunc, bool *reverse)
 {
-	bool		result = false;
-	CatCList   *catlist;
-	int			i;
+	Oid			opfamily;
+	Oid			opcintype;
+	int16		strategy;
+
+	/* Find the operator in pg_amop */
+	if (get_ordering_op_properties(opno,
+								   &opfamily, &opcintype, &strategy))
+	{
+		/* Found a suitable opfamily, get matching support function */
+		*cmpfunc = get_opfamily_proc(opfamily,
+									 opcintype,
+									 opcintype,
+									 BTORDER_PROC);
+		if (!OidIsValid(*cmpfunc))				/* should not happen */
+			elog(ERROR, "missing support function %d(%u,%u) in opfamily %u",
+				 BTORDER_PROC, opcintype, opcintype, opfamily);
+		*reverse = (strategy == BTGreaterStrategyNumber);
+		return true;
+	}
 
 	/* ensure outputs are set on failure */
 	*cmpfunc = InvalidOid;
 	*reverse = false;
-
-	/*
-	 * Search pg_amop to see if the target operator is registered as the "<"
-	 * or ">" operator of any btree opfamily.  It's possible that it might be
-	 * registered both ways (if someone were to build a "reverse sort"
-	 * opfamily); assume we can use either interpretation.  (Note: the
-	 * existence of a reverse-sort opfamily would result in uncertainty as
-	 * to whether "ORDER BY USING op" would default to NULLS FIRST or NULLS
-	 * LAST.  Since there is no longer any particularly good reason to build
-	 * reverse-sort opfamilies, we don't bother expending any extra work to
-	 * make this more determinate.  In practice, because of the way the
-	 * syscache search works, we'll use the interpretation associated with
-	 * the opfamily with smallest OID, which is probably determinate enough.)
-	 */
-	catlist = SearchSysCacheList(AMOPOPID, 1,
-								 ObjectIdGetDatum(opno),
-								 0, 0, 0);
-
-	for (i = 0; i < catlist->n_members; i++)
-	{
-		HeapTuple	tuple = &catlist->members[i]->tuple;
-		Form_pg_amop aform = (Form_pg_amop) GETSTRUCT(tuple);
-
-		/* must be btree */
-		if (aform->amopmethod != BTREE_AM_OID)
-			continue;
-
-		if (aform->amopstrategy == BTLessStrategyNumber ||
-			aform->amopstrategy == BTGreaterStrategyNumber)
-		{
-			/* Found a suitable opfamily, get matching support function */
-			*reverse = (aform->amopstrategy == BTGreaterStrategyNumber);
-			*cmpfunc = get_opfamily_proc(aform->amopfamily,
-										 aform->amoplefttype,
-										 aform->amoprighttype,
-										 BTORDER_PROC);
-			if (!OidIsValid(*cmpfunc))				/* should not happen */
-				elog(ERROR, "missing support function %d(%u,%u) in opfamily %u",
-					 BTORDER_PROC, aform->amoplefttype, aform->amoprighttype,
-					 aform->amopfamily);
-			result = true;
-			break;
-		}
-	}
-
-	ReleaseSysCacheList(catlist);
-
-	return result;
+	return false;
 }
 
 /*
@@ -390,44 +284,20 @@ Oid
 get_equality_op_for_ordering_op(Oid opno)
 {
 	Oid			result = InvalidOid;
-	CatCList   *catlist;
-	int			i;
+	Oid			opfamily;
+	Oid			opcintype;
+	int16		strategy;
 
-	/*
-	 * Search pg_amop to see if the target operator is registered as the "<"
-	 * or ">" operator of any btree opfamily.  This is exactly like
-	 * get_compare_function_for_ordering_op except we don't care whether the
-	 * ordering op is "<" or ">" ... the equality operator will be the same
-	 * either way.
-	 */
-	catlist = SearchSysCacheList(AMOPOPID, 1,
-								 ObjectIdGetDatum(opno),
-								 0, 0, 0);
-
-	for (i = 0; i < catlist->n_members; i++)
+	/* Find the operator in pg_amop */
+	if (get_ordering_op_properties(opno,
+								   &opfamily, &opcintype, &strategy))
 	{
-		HeapTuple	tuple = &catlist->members[i]->tuple;
-		Form_pg_amop aform = (Form_pg_amop) GETSTRUCT(tuple);
-
-		/* must be btree */
-		if (aform->amopmethod != BTREE_AM_OID)
-			continue;
-
-		if (aform->amopstrategy == BTLessStrategyNumber ||
-			aform->amopstrategy == BTGreaterStrategyNumber)
-		{
-			/* Found a suitable opfamily, get matching equality operator */
-			result = get_opfamily_member(aform->amopfamily,
-										 aform->amoplefttype,
-										 aform->amoprighttype,
-										 BTEqualStrategyNumber);
-			if (OidIsValid(result))
-				break;
-			/* failure probably shouldn't happen, but keep looking if so */
-		}
+		/* Found a suitable opfamily, get matching equality operator */
+		result = get_opfamily_member(opfamily,
+									 opcintype,
+									 opcintype,
+									 BTEqualStrategyNumber);
 	}
-
-	ReleaseSysCacheList(catlist);
 
 	return result;
 }
@@ -491,22 +361,83 @@ get_ordering_op_for_equality_op(Oid opno, bool use_lhs_type)
 }
 
 /*
- * get_compatible_hash_operator
- *		Get the OID of a hash equality operator compatible with the given
- *		operator, but operating on its LHS or RHS datatype as specified.
+ * get_mergejoin_opfamilies
+ *		Given a putatively mergejoinable operator, return a list of the OIDs
+ *		of the btree opfamilies in which it represents equality.
  *
- * If the given operator is not cross-type, the result should be the same
- * operator, but in cross-type situations it is different.
+ * It is possible (though at present unusual) for an operator to be equality
+ * in more than one opfamily, hence the result is a list.  This also lets us
+ * return NIL if the operator is not found in any opfamilies.
  *
- * Returns InvalidOid if no compatible operator can be found.  (This indicates
- * that the operator should not have been marked oprcanhash.)
+ * The planner currently uses simple equal() tests to compare the lists
+ * returned by this function, which makes the list order relevant, though
+ * strictly speaking it should not be.  Because of the way syscache list
+ * searches are handled, in normal operation the result will be sorted by OID
+ * so everything works fine.  If running with system index usage disabled,
+ * the result ordering is unspecified and hence the planner might fail to
+ * recognize optimization opportunities ... but that's hardly a scenario in
+ * which performance is good anyway, so there's no point in expending code
+ * or cycles here to guarantee the ordering in that case.
  */
-Oid
-get_compatible_hash_operator(Oid opno, bool use_lhs_type)
+List *
+get_mergejoin_opfamilies(Oid opno)
 {
-	Oid			result = InvalidOid;
+	List	   *result = NIL;
 	CatCList   *catlist;
 	int			i;
+
+	/*
+	 * Search pg_amop to see if the target operator is registered as the "="
+	 * operator of any btree opfamily.
+	 */
+	catlist = SearchSysCacheList(AMOPOPID, 1,
+								 ObjectIdGetDatum(opno),
+								 0, 0, 0);
+
+	for (i = 0; i < catlist->n_members; i++)
+	{
+		HeapTuple	tuple = &catlist->members[i]->tuple;
+		Form_pg_amop aform = (Form_pg_amop) GETSTRUCT(tuple);
+
+		/* must be btree equality */
+		if (aform->amopmethod == BTREE_AM_OID &&
+			aform->amopstrategy == BTEqualStrategyNumber)
+			result = lappend_oid(result, aform->amopfamily);
+	}
+
+	ReleaseSysCacheList(catlist);
+
+	return result;
+}
+
+/*
+ * get_compatible_hash_operators
+ *		Get the OID(s) of hash equality operator(s) compatible with the given
+ *		operator, but operating on its LHS and/or RHS datatype.
+ *
+ * An operator for the LHS type is sought and returned into *lhs_opno if
+ * lhs_opno isn't NULL.  Similarly, an operator for the RHS type is sought
+ * and returned into *rhs_opno if rhs_opno isn't NULL.
+ *
+ * If the given operator is not cross-type, the results should be the same
+ * operator, but in cross-type situations they will be different.
+ *
+ * Returns true if able to find the requested operator(s), false if not.
+ * (This indicates that the operator should not have been marked oprcanhash.)
+ */
+bool
+get_compatible_hash_operators(Oid opno,
+							  Oid *lhs_opno, Oid *rhs_opno)
+{
+	bool		result = false;
+	CatCList   *catlist;
+	int			i;
+
+	/* Ensure output args are initialized on failure */
+	if (lhs_opno)
+		*lhs_opno = InvalidOid;
+	if (rhs_opno)
+		*rhs_opno = InvalidOid;
 
 	/*
 	 * Search pg_amop to see if the target operator is registered as the "="
@@ -525,22 +456,53 @@ get_compatible_hash_operator(Oid opno, bool use_lhs_type)
 		if (aform->amopmethod == HASH_AM_OID &&
 			aform->amopstrategy == HTEqualStrategyNumber)
 		{
-			/* Found a suitable opfamily, get matching single-type operator */
-			Oid		typid;
-
 			/* No extra lookup needed if given operator is single-type */
 			if (aform->amoplefttype == aform->amoprighttype)
 			{
-				result = opno;
+				if (lhs_opno)
+					*lhs_opno = opno;
+				if (rhs_opno)
+					*rhs_opno = opno;
+				result = true;
 				break;
 			}
-			typid = use_lhs_type ? aform->amoplefttype : aform->amoprighttype;
-			result = get_opfamily_member(aform->amopfamily,
-										 typid, typid,
-										 HTEqualStrategyNumber);
-			if (OidIsValid(result))
+			/*
+			 * Get the matching single-type operator(s).  Failure probably
+			 * shouldn't happen --- it implies a bogus opfamily --- but
+			 * continue looking if so.
+			 */
+			if (lhs_opno)
+			{
+				*lhs_opno = get_opfamily_member(aform->amopfamily,
+												aform->amoplefttype,
+												aform->amoplefttype,
+												HTEqualStrategyNumber);
+				if (!OidIsValid(*lhs_opno))
+					continue;
+				/* Matching LHS found, done if caller doesn't want RHS */
+				if (!rhs_opno)
+				{
+					result = true;
+					break;
+				}
+			}
+			if (rhs_opno)
+			{
+				*rhs_opno = get_opfamily_member(aform->amopfamily,
+												aform->amoprighttype,
+												aform->amoprighttype,
+												HTEqualStrategyNumber);
+				if (!OidIsValid(*rhs_opno))
+				{
+					/* Forget any LHS operator from this opfamily */
+					if (lhs_opno)
+						*lhs_opno = InvalidOid;
+					continue;
+				}
+				/* Matching RHS found, so done */
+				result = true;
 				break;
-			/* failure probably shouldn't happen, but keep looking if so */
+			}
 		}
 	}
 
@@ -550,28 +512,38 @@ get_compatible_hash_operator(Oid opno, bool use_lhs_type)
 }
 
 /*
- * get_op_hash_function
- *		Get the OID of the datatype-specific hash function associated with
- *		a hashable equality operator.
+ * get_op_hash_functions
+ *		Get the OID(s) of hash support function(s) compatible with the given
+ *		operator, operating on its LHS and/or RHS datatype as required.
  *
- * XXX API needs to be generalized for the case of different left and right
- * datatypes.
+ * A function for the LHS type is sought and returned into *lhs_procno if
+ * lhs_procno isn't NULL.  Similarly, a function for the RHS type is sought
+ * and returned into *rhs_procno if rhs_procno isn't NULL.
  *
- * Returns InvalidOid if no hash function can be found.  (This indicates
- * that the operator should not have been marked oprcanhash.)
+ * If the given operator is not cross-type, the results should be the same
+ * function, but in cross-type situations they will be different.
+ *
+ * Returns true if able to find the requested function(s), false if not.
+ * (This indicates that the operator should not have been marked oprcanhash.)
  */
-Oid
-get_op_hash_function(Oid opno)
+bool
+get_op_hash_functions(Oid opno,
+					  RegProcedure *lhs_procno, RegProcedure *rhs_procno)
 {
-	Oid			result = InvalidOid;
+	bool		result = false;
 	CatCList   *catlist;
 	int			i;
+
+	/* Ensure output args are initialized on failure */
+	if (lhs_procno)
+		*lhs_procno = InvalidOid;
+	if (rhs_procno)
+		*rhs_procno = InvalidOid;
 
 	/*
 	 * Search pg_amop to see if the target operator is registered as the "="
 	 * operator of any hash opfamily.  If the operator is registered in
-	 * multiple opfamilies, assume we can use the associated hash function from
-	 * any one.
+	 * multiple opfamilies, assume we can use any one.
 	 */
 	catlist = SearchSysCacheList(AMOPOPID, 1,
 								 ObjectIdGetDatum(opno),
@@ -585,12 +557,50 @@ get_op_hash_function(Oid opno)
 		if (aform->amopmethod == HASH_AM_OID &&
 			aform->amopstrategy == HTEqualStrategyNumber)
 		{
-			/* Found a suitable opfamily, get matching hash support function */
-			result = get_opfamily_proc(aform->amopfamily,
-									   aform->amoplefttype,
-									   aform->amoprighttype,
-									   HASHPROC);
-			break;
+			/*
+			 * Get the matching support function(s).  Failure probably
+			 * shouldn't happen --- it implies a bogus opfamily --- but
+			 * continue looking if so.
+			 */
+			if (lhs_procno)
+			{
+				*lhs_procno = get_opfamily_proc(aform->amopfamily,
+												aform->amoplefttype,
+												aform->amoplefttype,
+												HASHPROC);
+				if (!OidIsValid(*lhs_procno))
+					continue;
+				/* Matching LHS found, done if caller doesn't want RHS */
+				if (!rhs_procno)
+				{
+					result = true;
+					break;
+				}
+				/* Only one lookup needed if given operator is single-type */
+				if (aform->amoplefttype == aform->amoprighttype)
+				{
+					*rhs_procno = *lhs_procno;
+					result = true;
+					break;
+				}
+			}
+			if (rhs_procno)
+			{
+				*rhs_procno = get_opfamily_proc(aform->amopfamily,
+												aform->amoprighttype,
+												aform->amoprighttype,
+												HASHPROC);
+				if (!OidIsValid(*rhs_procno))
+				{
+					/* Forget any LHS function from this opfamily */
+					if (lhs_procno)
+						*lhs_procno = InvalidOid;
+					continue;
+				}
+				/* Matching RHS found, so done */
+				result = true;
+				break;
+			}
 		}
 	}
 
@@ -921,10 +931,37 @@ get_atttypetypmod(Oid relid, AttrNumber attnum,
 	caql_endscan(pcqCtx);
 }
 
-/*				---------- INDEX CACHE ----------						 */
+/*				---------- CONSTRAINT CACHE ----------					 */
 
-/*		watch this space...
+/*
+ * get_constraint_name
+ *		Returns the name of a given pg_constraint entry.
+ *
+ * Returns a palloc'd copy of the string, or NULL if no such constraint.
+ *
+ * NOTE: since constraint name is not unique, be wary of code that uses this
+ * for anything except preparing error messages.
  */
+char *
+get_constraint_name(Oid conoid)
+{
+	HeapTuple	tp;
+
+	tp = SearchSysCache(CONSTROID,
+						ObjectIdGetDatum(conoid),
+						0, 0, 0);
+	if (HeapTupleIsValid(tp))
+	{
+		Form_pg_constraint contup = (Form_pg_constraint) GETSTRUCT(tp);
+		char	   *result;
+
+		result = pstrdup(NameStr(contup->conname));
+		ReleaseSysCache(tp);
+		return result;
+	}
+	else
+		return NULL;
+}
 
 /*				---------- OPCLASS CACHE ----------						 */
 
@@ -1433,6 +1470,50 @@ get_type_name(Oid oid)
 
         return result;
 }
+
+/*
+ * get_func_cost
+ *		Given procedure id, return the function's procost field.
+ */
+float4
+get_func_cost(Oid funcid)
+{
+	HeapTuple	tp;
+	float4		result;
+
+	tp = SearchSysCache(PROCOID,
+						ObjectIdGetDatum(funcid),
+						0, 0, 0);
+	if (!HeapTupleIsValid(tp))
+		elog(ERROR, "cache lookup failed for function %u", funcid);
+
+	result = ((Form_pg_proc) GETSTRUCT(tp))->procost;
+	ReleaseSysCache(tp);
+	return result;
+}
+
+/*
+ * get_func_rows
+ *		Given procedure id, return the function's prorows field.
+ */
+float4
+get_func_rows(Oid funcid)
+{
+	HeapTuple	tp;
+	float4		result;
+
+	tp = SearchSysCache(PROCOID,
+						ObjectIdGetDatum(funcid),
+						0, 0, 0);
+	if (!HeapTupleIsValid(tp))
+		elog(ERROR, "cache lookup failed for function %u", funcid);
+
+	result = ((Form_pg_proc) GETSTRUCT(tp))->prorows;
+	ReleaseSysCache(tp);
+	return result;
+}
+
+/*				---------- RELATION CACHE ----------					 */
  
 /*
  * get_func_namespace
@@ -2846,10 +2927,9 @@ get_element_type(Oid typid)
 /*
  * get_array_type
  *
- *		Given the type OID, get the corresponding array type.
+ *		Given the type OID, get the corresponding "true" array type.
  *		Returns InvalidOid if no array type can be found.
  *
- * NB: this only considers varlena arrays to be true arrays.
  */
 Oid
 get_array_type(Oid typid)
@@ -2868,33 +2948,7 @@ get_array_type(Oid typid)
 
 	if (HeapTupleIsValid(tp))
 	{
-		Form_pg_type typtup = (Form_pg_type) GETSTRUCT(tp);
-		char	   *array_typename;
-		Oid			namespaceId;
-		cqContext  *namcqCtx;
-
-		array_typename = makeArrayTypeName(NameStr(typtup->typname));
-		namespaceId = typtup->typnamespace;
-
-		namcqCtx = caql_beginscan(
-				NULL,
-				cql("SELECT * FROM pg_type "
-					" WHERE typname = :1 "
-					" AND typnamespace = :2 ",
-					CStringGetDatum(array_typename),
-					ObjectIdGetDatum(namespaceId)));
-
-		tp = caql_getnext(namcqCtx);
-
-		pfree(array_typename);
-
-		if (HeapTupleIsValid(tp))
-		{
-			typtup = (Form_pg_type) GETSTRUCT(tp);
-			if (typtup->typlen == -1 && typtup->typelem == typid)
-				result = HeapTupleGetOid(tp);
-		}
-		caql_endscan(namcqCtx);
+		result = ((Form_pg_type) GETSTRUCT(tp))->typarray;
 	}
 
 	caql_endscan(pcqCtx);
@@ -3992,6 +4046,7 @@ get_check_constraint_expr_tree(Oid oidCheckconstraint)
 bool
 get_cast_func(Oid oidSrc, Oid oidDest, bool *is_binary_coercible, Oid *oidCastFunc)
 {
+	CoercionPathType	pathtype;
 	if (IsBinaryCoercible(oidSrc, oidDest))
 	{
 		*is_binary_coercible = true;
@@ -4000,8 +4055,11 @@ get_cast_func(Oid oidSrc, Oid oidDest, bool *is_binary_coercible, Oid *oidCastFu
 	}
 	
 	*is_binary_coercible = false;
-	
-	return find_coercion_pathway(oidDest, oidSrc, COERCION_IMPLICIT, oidCastFunc);
+
+	pathtype = find_coercion_pathway(oidDest, oidSrc, COERCION_IMPLICIT, oidCastFunc);
+	if (pathtype != COERCION_PATH_NONE)
+		return true;
+	return false;
 }
 
 /*

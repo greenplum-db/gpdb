@@ -183,19 +183,6 @@ generate_trgm(char *str, int slen)
 	return trg;
 }
 
-uint32
-trgm2int(trgm *ptr)
-{
-	uint32		val = 0;
-
-	val |= *(((unsigned char *) ptr));
-	val <<= 8;
-	val |= *(((unsigned char *) ptr) + 1);
-	val <<= 8;
-	val |= *(((unsigned char *) ptr) + 2);
-
-	return val;
-}
 
 PG_FUNCTION_INFO_V1(show_trgm);
 Datum		show_trgm(PG_FUNCTION_ARGS);

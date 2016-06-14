@@ -1,0 +1,95 @@
+--
+-- SETUP: Helper functions for query plan verification
+--
+--start_ignore
+create language plpythonu;
+drop schema if exists bfv_legacy cascade;
+--end_ignore
+
+create schema bfv_legacy;
+set search_path=bfv_legacy;
+
+create or replace function nonzero_width(explain_query text) returns bool as
+$$
+rv = plpy.execute(explain_query)
+#search_text = 'Index Scan'
+first_line = rv[0]['QUERY PLAN']
+row_width = int(first_line[first_line.find('width=')+6:first_line.rfind(')')])
+return row_width > -1
+$$
+language plpythonu;
+
+create or replace function count_operator(explain_query text, op_name text) returns int as
+$$
+rv = plpy.execute(explain_query)
+result = 0
+for i in range(len(rv)):
+    cur_line = rv[i]['QUERY PLAN']
+    if op_name.lower() in cur_line.lower():
+        result = result+1
+return result
+$$
+language plpythonu;
+
+--
+-- aggregate width should be non-zero
+--
+
+-- SETUP
+
+CREATE TABLE bfv_legacy_t1(c1 int, c2 varchar);
+INSERT INTO bfv_legacy_t1 select generate_series(1,1000), 'aaa';
+INSERT INTO bfv_legacy_t1 select generate_series(1001,2000), 'bbb';
+
+--aggregate width should be non-zero
+select nonzero_width('EXPLAIN SELECT count(*) from (select * from bfv_legacy_t1) as a;');
+
+--width should be non-zero
+select nonzero_width('EXPLAIN SELECT * from (select * from bfv_legacy_t1) as a;');
+
+select nonzero_width('EXPLAIN SELECT max(a.c1), min(a.c1), avg(a.c1) from (select * from bfv_legacy_t1) as a;');
+
+select nonzero_width('explain select a.c1 * b.c1, a.c1, b.c1 from bfv_legacy_t1 a, bfv_legacy_t1 b;');
+
+
+--
+--
+--
+
+create table bfv_s (
+    c_t       char(2),
+    c_o       int4,
+    c_p       text,
+    c_v       float8
+);
+
+insert into bfv_s (c_o, c_p, c_v) values (0, 1, 1234.56);
+
+create table bfv_int4_tbl (f1 int);
+insert into bfv_int4_tbl values(123456), (-2147483647), (0), (-123456), (2147483647);
+
+update bfv_s set c_v = 11
+from bfv_int4_tbl a join bfv_int4_tbl b on (a.f1 = (select f1 from bfv_int4_tbl c where c.f1=b.f1));
+
+update bfv_s set c_v = 11
+from bfv_int4_tbl a join bfv_int4_tbl b on (a.f1 = (select f1 from bfv_int4_tbl c where c.f1=b.f1));
+
+--
+--
+--
+
+-- start_matchsubs
+-- m/NOTICE:  Using default RANDOM distribution since no distribution was specified./
+-- s/^/GP_IGNORE: /
+-- m/HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows./
+-- s/^/GP_IGNORE: /
+-- end_matchsubs
+create table bfv_legacy_A (
+col_with_default numeric DEFAULT 0,
+col_with_default_drop_default character varying(30) DEFAULT 'test1',
+col_with_constraint numeric UNIQUE
+) distributed BY (col_with_constraint);
+
+create table bfv_legacy_B as select * from bfv_legacy_A;
+
+select localoid::regclass, attrnums from gp_distribution_policy p left join pg_class c on (p.localoid = c.oid) where c.relname in ('bfv_legacy_a', 'bfv_legacy_b') order by 1,2;

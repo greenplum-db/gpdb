@@ -9,25 +9,12 @@
 #ifndef CDBDIRECTOPEN_H
 #define CDBDIRECTOPEN_H
 
-#include "postgres.h"
-#include "miscadmin.h"
-#include "pgstat.h"
-#include "utils/palloc.h"
-#include "storage/fd.h"
-#include "storage/relfilenode.h"
-
-#include "catalog/catalog.h"
-#include "catalog/pg_namespace.h"
-#include "catalog/pg_authid.h"
-#include "catalog/pg_tablespace.h"
-#include "catalog/pg_class.h"
-#include "catalog/gp_persistent.h"
-#include "catalog/gp_global_sequence.h"
-#include "catalog/pg_appendonly.h"
-#include "catalog/index.h"
 #include "access/transam.h"
-#include "access/aosegfiles.h"
-#include "access/aocssegfiles.h"
+#include "catalog/catalog.h"
+#include "catalog/pg_class.h"
+#include "catalog/pg_tablespace.h"
+#include "catalog/index.h"
+#include "pgstat.h"
 
 /*
  * The goal here is to open any relations without going through

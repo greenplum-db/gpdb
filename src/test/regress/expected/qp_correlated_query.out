@@ -1,0 +1,3110 @@
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+create schema qp_correlated_query;
+set search_path to qp_correlated_query;
+-- end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: csq_heap_in.sql (Correlated Subquery: CSQ using IN clause (Heap))
+-- ----------------------------------------------------------------------
+-- start_ignore
+create table qp_csq_t1(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t1 values (1,2);
+insert into qp_csq_t1 values (3,4);
+insert into qp_csq_t1 values (5,6);
+insert into qp_csq_t1 values (7,8);
+create table qp_csq_t2(x int,y int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t2 values(1,1);
+insert into qp_csq_t2 values(3,9);
+insert into qp_csq_t2 values(5,25);
+insert into qp_csq_t2 values(7,49);
+create table qp_csq_t3(c int, d text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t3 values(1,'one');
+insert into qp_csq_t3 values(3,'three');
+insert into qp_csq_t3 values(5,'five');
+insert into qp_csq_t3 values(7,'seven');
+create table A(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into A values(1,1);
+insert into A values(19,5);
+insert into A values(99,62);
+insert into A values(1,1);
+insert into A values(78,-1);
+create table B(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into B values(1,43);
+insert into B values(88,1);
+insert into B values(-1,62);
+insert into B values(1,1);
+insert into B values(32,5);
+insert into B values(2,7);
+create table C(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into C values(1,889);
+insert into C values(288,1);
+insert into C values(-1,625);
+insert into C values(32,65);
+insert into C values(32,62);
+insert into C values(3,-1);
+insert into C values(99,7);
+insert into C values(78,62);
+insert into C values(2,7);
+-- end_ignore
+-- -- -- --
+-- Basic queries with IN clause
+-- -- -- --
+select a, x from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a in (select x);
+ a | x 
+---+---
+ 3 | 3
+ 5 | 5
+ 7 | 7
+ 1 | 1
+(4 rows)
+
+select A.i from A where A.i in (select B.i from B where A.i = B.i) order by A.i;
+ i 
+---
+ 1
+ 1
+(2 rows)
+
+-- Not supported select A.i, B.i, C.j from A, B, C where exists (select C.j from C where C.j = A.j and B.i in (select C.i from C where C.i = A.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
+select * from B where exists (select * from C,A where C.j = A.j and B.i in (select C.i from C where C.i = A.i and C.i != 10)) order by 1, 2;
+ i | j  
+---+----
+ 1 |  1
+ 1 | 43
+(2 rows)
+
+select * from B where exists (select * from C,A where C.j = A.j and B.i in (select C.i from C where C.i = A.i and C.i != 10)) order by 1, 2;
+ i | j  
+---+----
+ 1 |  1
+ 1 | 43
+(2 rows)
+
+-- Not supported select A.i, B.i, C.j from A, B, C where not exists (select C.j from C where C.j = A.j and B.i in (select C.i from C where C.i = A.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
+select * from B where not exists (select * from C,A where C.j = A.j and B.i in (select C.i from C where C.i = A.i and C.i != 10)) order by 1,2;
+ i  | j  
+----+----
+ -1 | 62
+  2 |  7
+ 32 |  5
+ 88 |  1
+(4 rows)
+
+select * from A where not exists (select * from C,B where C.j = A.j and B.i in (select C.i from C where C.i = B.i and C.i != 10));
+ i  | j 
+----+---
+ 19 | 5
+(1 row)
+
+select * from B where not exists (select * from C,A where C.j = A.j and B.i in (select C.i from C where C.i = A.i and C.i != 10)) order by 1,2;
+ i  | j  
+----+----
+ -1 | 62
+  2 |  7
+ 32 |  5
+ 88 |  1
+(4 rows)
+
+select * from A where not exists (select * from C,B where C.j = A.j and B.i in (select C.i from C where C.i = B.i and C.i != 10));
+ i  | j 
+----+---
+ 19 | 5
+(1 row)
+
+select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i in (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10; 
+ i  | i  |  j  
+----+----+-----
+ 99 | -1 |  -1
+ 99 | -1 |   1
+ 99 | -1 |   7
+ 99 | -1 |   7
+ 99 | -1 |  62
+ 99 | -1 |  62
+ 99 | -1 |  65
+ 99 | -1 | 625
+ 99 | -1 | 889
+ 99 |  1 |  -1
+(10 rows)
+
+select A.i, B.i, C.j from A, B, C where A.j in (select C.j from C where C.j = A.j and C.i in (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10; 
+ i  | i  |  j  
+----+----+-----
+ 99 | -1 |  -1
+ 99 | -1 |   1
+ 99 | -1 |   7
+ 99 | -1 |   7
+ 99 | -1 |  62
+ 99 | -1 |  62
+ 99 | -1 |  65
+ 99 | -1 | 625
+ 99 | -1 | 889
+ 99 |  1 |  -1
+(10 rows)
+
+select A.i, B.i, C.j from A, B, C where A.j = any(select sum(C.j) from C where C.j = A.j and C.i in (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
+ i  | i  |  j  
+----+----+-----
+ 99 | -1 |  -1
+ 99 | -1 |   1
+ 99 | -1 |   7
+ 99 | -1 |   7
+ 99 | -1 |  62
+ 99 | -1 |  62
+ 99 | -1 |  65
+ 99 | -1 | 625
+ 99 | -1 | 889
+ 99 |  1 |  -1
+(10 rows)
+
+select A.i, B.i, C.j from A, B, C where A.j in ( select C.j from C where exists(select C.i from C,A where C.i = A.i and C.i =10)) order by A.i, B.i, C.j limit 10;
+ i | i | j 
+---+---+---
+(0 rows)
+
+select A.i, B.i, C.j from A, B, C where A.j in (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
+ i | i | j 
+---+---+---
+(0 rows)
+
+-- -- -- --
+-- Basic queries with NOT IN clause
+-- -- -- --
+select a, x from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a not in (select x) order by a,x;
+ a | x 
+---+---
+ 1 | 3
+ 1 | 5
+ 1 | 7
+ 3 | 1
+ 3 | 5
+ 3 | 7
+ 5 | 1
+ 5 | 3
+ 5 | 7
+ 7 | 1
+ 7 | 3
+ 7 | 5
+(12 rows)
+
+select A.i from A where A.i not in (select B.i from B where A.i = B.i) order by A.i;
+ i  
+----
+ 19
+ 78
+ 99
+(3 rows)
+
+-- Not supported select A.i, B.i, C.j from A, B, C where exists (select C.j from C where C.j = A.j and B.i not in (select C.i from C where C.i = A.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
+select * from A where exists (select * from B,C where C.j = A.j and B.i not in (select sum(C.i) from C where C.i = B.i and C.i != 10)) order by 1,2;
+ i  | j  
+----+----
+  1 |  1
+  1 |  1
+ 78 | -1
+ 99 | 62
+(4 rows)
+
+select * from A,B where exists (select * from C where C.j = A.j and B.i not in (select C.i from C where C.i != 10)) order by 1,2,3,4;
+ i  | j  | i  | j 
+----+----+----+---
+  1 |  1 | 88 | 1
+  1 |  1 | 88 | 1
+ 78 | -1 | 88 | 1
+ 99 | 62 | 88 | 1
+(4 rows)
+
+select * from A where exists (select * from B,C where C.j = A.j and B.i not in (select sum(C.i) from C where C.i = B.i and C.i != 10)) order by 1,2;
+ i  | j  
+----+----
+  1 |  1
+  1 |  1
+ 78 | -1
+ 99 | 62
+(4 rows)
+
+select * from A,B where exists (select * from C where C.j = A.j and B.i not in (select C.i from C where C.i != 10)) order by 1,2,3,4;
+ i  | j  | i  | j 
+----+----+----+---
+  1 |  1 | 88 | 1
+  1 |  1 | 88 | 1
+ 78 | -1 | 88 | 1
+ 99 | 62 | 88 | 1
+(4 rows)
+
+-- Not supported select A.i, B.i, C.j from A, B, C where not exists (select C.j from C where C.j = A.j and B.i not in (select C.i from C where C.i = A.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
+select * from B where not exists (select * from A,C where C.j = A.j and B.i in (select max(C.i) from C where C.i = A.i and C.i != 10)) order by 1, 2;
+ i  | j  
+----+----
+ -1 | 62
+  2 |  7
+ 32 |  5
+ 88 |  1
+(4 rows)
+
+select * from B where not exists (select * from A,C where C.j = A.j and B.i not in (select max(C.i) from C where C.i = A.i and C.i != 10)) order by 1, 2;
+ i | j 
+---+---
+(0 rows)
+
+select * from A where not exists (select * from B,C where C.j = A.j and B.i not in (select max(C.i) from C where C.i = B.i and C.i != 10)) order by 1, 2;
+ i  | j  
+----+----
+  1 |  1
+  1 |  1
+ 19 |  5
+ 78 | -1
+ 99 | 62
+(5 rows)
+
+select * from B where not exists (select * from A,C where C.j = A.j and B.i in (select max(C.i) from C where C.i = A.i and C.i != 10)) order by 1, 2;
+ i  | j  
+----+----
+ -1 | 62
+  2 |  7
+ 32 |  5
+ 88 |  1
+(4 rows)
+
+select * from B where not exists (select * from A,C where C.j = A.j and B.i not in (select max(C.i) from C where C.i = A.i and C.i != 10)) order by 1, 2;
+ i | j 
+---+---
+(0 rows)
+
+select * from A where not exists (select * from B,C where C.j = A.j and B.i not in (select max(C.i) from C where C.i = B.i and C.i != 10)) order by 1, 2;
+ i  | j  
+----+----
+  1 |  1
+  1 |  1
+ 19 |  5
+ 78 | -1
+ 99 | 62
+(5 rows)
+
+select A.i, B.i, C.j from A, B, C where A.j not in (select C.j from C where C.j = A.j and C.i not in (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10; 
+ i  | i  |  j  
+----+----+-----
+ 19 | -1 |  -1
+ 19 | -1 |   1
+ 19 | -1 |   7
+ 19 | -1 |   7
+ 19 | -1 |  62
+ 19 | -1 |  62
+ 19 | -1 |  65
+ 19 | -1 | 625
+ 19 | -1 | 889
+ 19 |  1 |  -1
+(10 rows)
+
+select A.i, B.i, C.j from A, B, C where A.j = any(select sum(C.j) from C where C.j = A.j and C.i not in (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
+ i | i  | j  
+---+----+----
+ 1 | -1 | -1
+ 1 | -1 | -1
+ 1 | -1 |  1
+ 1 | -1 |  1
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 | 62
+ 1 | -1 | 62
+(10 rows)
+
+select A.i, B.i, C.j from A, B, C where A.j not in ( select C.j from C where exists(select C.i from C,A where C.i = A.i and C.i =10)) order by A.i, B.i, C.j limit 10;
+ i | i  | j  
+---+----+----
+ 1 | -1 | -1
+ 1 | -1 | -1
+ 1 | -1 |  1
+ 1 | -1 |  1
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 | 62
+ 1 | -1 | 62
+(10 rows)
+
+select A.i, B.i, C.j from A, B, C where A.j not in (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
+ i | i  | j  
+---+----+----
+ 1 | -1 | -1
+ 1 | -1 | -1
+ 1 | -1 |  1
+ 1 | -1 |  1
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 | 62
+ 1 | -1 | 62
+(10 rows)
+
+select A.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i in (select B.i from B where C.i = B.i and B.i !=10)) order by A.j limit 10;
+ j  
+----
+ 62
+ 62
+ 62
+ 62
+ 62
+ 62
+ 62
+ 62
+ 62
+ 62
+(10 rows)
+
+-- MPP-14222
+select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i not in (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
+ i | i  | j  
+---+----+----
+ 1 | -1 | -1
+ 1 | -1 | -1
+ 1 | -1 |  1
+ 1 | -1 |  1
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 | 62
+ 1 | -1 | 62
+(10 rows)
+
+select A.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i not in (select B.i from B where C.i = B.i and B.i !=10)) order by A.j limit 10;
+ j  
+----
+ -1
+ -1
+ -1
+ -1
+ -1
+ -1
+ -1
+ -1
+ -1
+ -1
+(10 rows)
+
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: csq_heap_any.sql - Correlated Subquery: CSQ using ANY clause (Heap)
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop table if exists qp_csq_t1;
+drop table if exists qp_csq_t2;
+drop table if exists qp_csq_t3;
+drop table if exists A;
+drop table if exists B;
+drop table if exists C;
+create table qp_csq_t1(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t1 values (1,2);
+insert into qp_csq_t1 values (3,4);
+insert into qp_csq_t1 values (5,6);
+insert into qp_csq_t1 values (7,8);
+create table qp_csq_t2(x int,y int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t2 values(1,1);
+insert into qp_csq_t2 values(3,9);
+insert into qp_csq_t2 values(5,25);
+insert into qp_csq_t2 values(7,49);
+create table qp_csq_t3(c int, d text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t3 values(1,'one');
+insert into qp_csq_t3 values(3,'three');
+insert into qp_csq_t3 values(5,'five');
+insert into qp_csq_t3 values(7,'seven');
+create table A(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into A values(1,1);
+insert into A values(19,5);
+insert into A values(99,62);
+insert into A values(1,1);
+insert into A values(78,-1);
+create table B(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into B values(1,43);
+insert into B values(88,1);
+insert into B values(-1,62);
+insert into B values(1,1);
+insert into B values(32,5);
+insert into B values(2,7);
+create table C(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into C values(1,889);
+insert into C values(288,1);
+insert into C values(-1,625);
+insert into C values(32,65);
+insert into C values(32,62);
+insert into C values(3,-1);
+insert into C values(99,7);
+insert into C values(78,62);
+insert into C values(2,7);
+-- end_ignore
+-- -- -- --
+-- Basic queries with ANY clause
+-- -- -- --
+select a, x from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = any (select x);
+ a | x 
+---+---
+ 1 | 1
+ 3 | 3
+ 5 | 5
+ 7 | 7
+(4 rows)
+
+select A.i from A where A.i = any (select B.i from B where A.i = B.i) order by A.i;
+ i 
+---
+ 1
+ 1
+(2 rows)
+
+select * from A where A.j = any (select C.j from C where C.j = A.j) order by 1,2;
+ i  | j  
+----+----
+  1 |  1
+  1 |  1
+ 78 | -1
+ 99 | 62
+(4 rows)
+
+select * from A,B where A.j = any (select C.j from C where C.j = A.j and B.i = any (select C.i from C)) order by 1,2,3,4;
+ i  | j  | i  | j  
+----+----+----+----
+  1 |  1 | -1 | 62
+  1 |  1 | -1 | 62
+  1 |  1 |  1 |  1
+  1 |  1 |  1 |  1
+  1 |  1 |  1 | 43
+  1 |  1 |  1 | 43
+  1 |  1 |  2 |  7
+  1 |  1 |  2 |  7
+  1 |  1 | 32 |  5
+  1 |  1 | 32 |  5
+ 78 | -1 | -1 | 62
+ 78 | -1 |  1 |  1
+ 78 | -1 |  1 | 43
+ 78 | -1 |  2 |  7
+ 78 | -1 | 32 |  5
+ 99 | 62 | -1 | 62
+ 99 | 62 |  1 |  1
+ 99 | 62 |  1 | 43
+ 99 | 62 |  2 |  7
+ 99 | 62 | 32 |  5
+(20 rows)
+
+select * from A where A.j = any (select C.j from C,B where C.j = A.j and B.i = any (select C.i from C)) order by 1,2;
+ i  | j  
+----+----
+  1 |  1
+  1 |  1
+ 78 | -1
+ 99 | 62
+(4 rows)
+
+select * from A where A.j = any (select C.j from C,B where C.j = A.j and B.i = any (select C.i from C where C.i != 10 and C.i = B.i)) order by 1,2;
+ i  | j  
+----+----
+  1 |  1
+  1 |  1
+ 78 | -1
+ 99 | 62
+(4 rows)
+
+select * from A,B where A.j = any (select C.j from C where C.j = A.j and B.i = any (select C.i from C where C.i != 10 and C.i = A.i)) order by 1,2,3,4; -- Not supported, should fail
+ERROR:  correlated subquery with skip-level correlations is not supported (subselect.c:395)
+select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i = any (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
+ i  | i  |  j  
+----+----+-----
+ 99 | -1 |  -1
+ 99 | -1 |   1
+ 99 | -1 |   7
+ 99 | -1 |   7
+ 99 | -1 |  62
+ 99 | -1 |  62
+ 99 | -1 |  65
+ 99 | -1 | 625
+ 99 | -1 | 889
+ 99 |  1 |  -1
+(10 rows)
+
+select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i = any (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
+ i  | i  |  j  
+----+----+-----
+ 99 | -1 |  -1
+ 99 | -1 |   1
+ 99 | -1 |   7
+ 99 | -1 |   7
+ 99 | -1 |  62
+ 99 | -1 |  62
+ 99 | -1 |  65
+ 99 | -1 | 625
+ 99 | -1 | 889
+ 99 |  1 |  -1
+(10 rows)
+
+select A.i, B.i, C.j from A, B, C where A.j = any ( select C.j from C where not exists(select C.i from C,A where C.i = A.i and C.i =10)) order by A.i, B.i, C.j limit 10;
+ i | i  | j  
+---+----+----
+ 1 | -1 | -1
+ 1 | -1 | -1
+ 1 | -1 |  1
+ 1 | -1 |  1
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 | 62
+ 1 | -1 | 62
+(10 rows)
+
+select A.i, B.i, C.j from A, B, C where A.j = any (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
+ i | i | j 
+---+---+---
+(0 rows)
+
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: Correlated Subquery: CSQ using ALL clause (Heap)
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop table if exists qp_csq_t1;
+drop table if exists qp_csq_t2;
+drop table if exists qp_csq_t3;
+drop table if exists A;
+drop table if exists B;
+drop table if exists C;
+create table qp_csq_t1(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t1 values (1,2);
+insert into qp_csq_t1 values (3,4);
+insert into qp_csq_t1 values (5,6);
+insert into qp_csq_t1 values (7,8);
+create table qp_csq_t2(x int,y int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t2 values(1,1);
+insert into qp_csq_t2 values(3,9);
+insert into qp_csq_t2 values(5,25);
+insert into qp_csq_t2 values(7,49);
+create table qp_csq_t3(c int, d text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t3 values(1,'one');
+insert into qp_csq_t3 values(3,'three');
+insert into qp_csq_t3 values(5,'five');
+insert into qp_csq_t3 values(7,'seven');
+create table A(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into A values(1,1);
+insert into A values(19,5);
+insert into A values(99,62);
+insert into A values(1,1);
+insert into A values(78,-1);
+create table B(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into B values(1,43);
+insert into B values(88,1);
+insert into B values(-1,62);
+insert into B values(1,1);
+insert into B values(32,5);
+insert into B values(2,7);
+create table C(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into C values(1,889);
+insert into C values(288,1);
+insert into C values(-1,625);
+insert into C values(32,65);
+insert into C values(32,62);
+insert into C values(3,-1);
+insert into C values(99,7);
+insert into C values(78,62);
+insert into C values(2,7);
+-- end_ignore
+-- -- -- --
+-- Basic queries with ALL clause
+-- -- -- --
+select a, x from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = all (select x) order by a;
+ a | x 
+---+---
+ 1 | 1
+ 3 | 3
+ 5 | 5
+ 7 | 7
+(4 rows)
+
+select A.i from A where A.i = all (select B.i from B where A.i = B.i) order by A.i;
+ i  
+----
+  1
+  1
+ 19
+ 78
+ 99
+(5 rows)
+
+select * from A,B where exists (select * from C where C.j = A.j and B.i = all (select min(C.j) from C)) order by 1,2,3,4;
+ i  | j  | i  | j  
+----+----+----+----
+  1 |  1 | -1 | 62
+  1 |  1 | -1 | 62
+ 78 | -1 | -1 | 62
+ 99 | 62 | -1 | 62
+(4 rows)
+
+select * from A,B where exists (select * from C where C.j = A.j and B.i = all (select min(C.j) from C where C.j = 1)) order by 1,2,3,4;
+ i  | j  | i | j  
+----+----+---+----
+  1 |  1 | 1 |  1
+  1 |  1 | 1 |  1
+  1 |  1 | 1 | 43
+  1 |  1 | 1 | 43
+ 78 | -1 | 1 |  1
+ 78 | -1 | 1 | 43
+ 99 | 62 | 1 |  1
+ 99 | 62 | 1 | 43
+(8 rows)
+
+select * from A,B where exists (select * from C where C.j = A.j and B.i = all (select min(C.j) from C where C.j = B.j)) order by 1,2,3,4; -- Should fail. Skip-level correlations are not supported
+ERROR:  correlated subquery with skip-level correlations is not supported (subselect.c:395)
+select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i = all (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10; -- Should fail (Sub-query returns more than one row)
+ERROR:  more than one row returned by a subquery used as an expression  (seg2 slice5 vraghavan.local:25434 pid=51919)
+select A.i, B.i, C.j from A, B, C where A.j = (select sum(C.j) from C where C.j = A.j and C.i = all (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
+ i | i  | j  
+---+----+----
+ 1 | -1 | -1
+ 1 | -1 | -1
+ 1 | -1 |  1
+ 1 | -1 |  1
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 | 62
+ 1 | -1 | 62
+(10 rows)
+
+select A.i, B.i, C.j from A, B, C where A.j < all ( select C.j from C where not exists(select C.i from C,A where C.i = A.i and C.i =10)) order by A.i, B.i, C.j limit 10;
+ i | i | j 
+---+---+---
+(0 rows)
+
+select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
+ i | i  | j  
+---+----+----
+ 1 | -1 | -1
+ 1 | -1 | -1
+ 1 | -1 |  1
+ 1 | -1 |  1
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 | 62
+ 1 | -1 | 62
+(10 rows)
+
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: Correlated Subquery: CSQ using EXISTS clause (Heap)
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop table if exists qp_csq_t1;
+drop table if exists qp_csq_t2;
+drop table if exists qp_csq_t3;
+drop table if exists A;
+drop table if exists B;
+drop table if exists C;
+create table qp_csq_t1(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t1 values (1,2);
+insert into qp_csq_t1 values (3,4);
+insert into qp_csq_t1 values (5,6);
+insert into qp_csq_t1 values (7,8);
+create table qp_csq_t2(x int,y int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t2 values(1,1);
+insert into qp_csq_t2 values(3,9);
+insert into qp_csq_t2 values(5,25);
+insert into qp_csq_t2 values(7,49);
+create table qp_csq_t3(c int, d text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t3 values(1,'one');
+insert into qp_csq_t3 values(3,'three');
+insert into qp_csq_t3 values(5,'five');
+insert into qp_csq_t3 values(7,'seven');
+create table A(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into A values(1,1);
+insert into A values(19,5);
+insert into A values(99,62);
+insert into A values(1,1);
+insert into A values(78,-1);
+create table B(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into B values(1,43);
+insert into B values(88,1);
+insert into B values(-1,62);
+insert into B values(1,1);
+insert into B values(32,5);
+insert into B values(2,7);
+create table C(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into C values(1,889);
+insert into C values(288,1);
+insert into C values(-1,625);
+insert into C values(32,65);
+insert into C values(32,62);
+insert into C values(3,-1);
+insert into C values(99,7);
+insert into C values(78,62);
+insert into C values(2,7);
+-- end_ignore
+-- -- -- -- 
+-- Basic queries with EXISTS clause
+-- -- -- --
+select b from qp_csq_t1 where exists(select * from qp_csq_t2 where y=a);
+ b 
+---
+ 2
+(1 row)
+
+select A.i from A where exists(select B.i from B where A.i = B.i) order by A.i;
+ i 
+---
+ 1
+ 1
+(2 rows)
+
+-- Not supported select A.i, B.i, C.j from A, B, C where exists (select C.j from C where C.j = A.j and exists (select C.i from C where C.i = A.i and C.i !=10)) order by A.i, B.i, C.j limit 20;
+select * from A where exists (select * from C where C.j = A.j) order by 1,2;
+ i  | j  
+----+----
+  1 |  1
+  1 |  1
+ 78 | -1
+ 99 | 62
+(4 rows)
+
+select * from A where exists (select * from C,B where C.j = A.j and exists (select * from C where C.i = B.i)) order by 1,2;
+ i  | j  
+----+----
+  1 |  1
+  1 |  1
+ 78 | -1
+ 99 | 62
+(4 rows)
+
+select * from A,B where exists (select * from C where C.j = A.j and exists (select * from C where C.i = B.i));
+ERROR:  correlated subquery with skip-level correlations is not supported (subselect.c:395)
+-- Not supported select A.i, B.i, C.j from A, B, C where exists (select C.j from C where C.j = A.j and exists (select sum(C.i) from C where C.i = A.i and C.i !=10)) order by A.i, B.i, C.j limit 20;
+select * from A where exists (select * from B, C where C.j = A.j and exists (select sum(C.i) from C where C.i != 10 and C.i = B.i)) order by 1, 2;
+ i  | j  
+----+----
+  1 |  1
+  1 |  1
+ 78 | -1
+ 99 | 62
+(4 rows)
+
+select * from A where exists (select * from C where C.j = A.j and exists (select sum(C.i) from C where C.i !=10 and C.i = A.i)) order by 1, 2; -- Should fail, not supported
+ERROR:  correlated subquery with skip-level correlations is not supported (subselect.c:395)
+select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and exists (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 20;
+ i  | i  |  j  
+----+----+-----
+ 99 | -1 |  -1
+ 99 | -1 |   1
+ 99 | -1 |   7
+ 99 | -1 |   7
+ 99 | -1 |  62
+ 99 | -1 |  62
+ 99 | -1 |  65
+ 99 | -1 | 625
+ 99 | -1 | 889
+ 99 |  1 |  -1
+ 99 |  1 |  -1
+ 99 |  1 |   1
+ 99 |  1 |   1
+ 99 |  1 |   7
+ 99 |  1 |   7
+ 99 |  1 |   7
+ 99 |  1 |   7
+ 99 |  1 |  62
+ 99 |  1 |  62
+ 99 |  1 |  62
+(20 rows)
+
+select A.i, B.i, C.j from A, B, C where exists (select C.j from C where C.j = A.j and exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 20;
+ i | i  |  j  
+---+----+-----
+ 1 | -1 |  -1
+ 1 | -1 |  -1
+ 1 | -1 |   1
+ 1 | -1 |   1
+ 1 | -1 |   7
+ 1 | -1 |   7
+ 1 | -1 |   7
+ 1 | -1 |   7
+ 1 | -1 |  62
+ 1 | -1 |  62
+ 1 | -1 |  62
+ 1 | -1 |  62
+ 1 | -1 |  65
+ 1 | -1 |  65
+ 1 | -1 | 625
+ 1 | -1 | 625
+ 1 | -1 | 889
+ 1 | -1 | 889
+ 1 |  1 |  -1
+ 1 |  1 |  -1
+(20 rows)
+
+-- Not supported select A.i, B.i, C.j from A, B, C where exists(select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where A.i = B.i and A.i !=10)) order by A.i, B.i, C.j limit 20;
+select * from A where exists (select * from C where C.j = A.j and not exists (select sum(B.i) from B where B.i = C.i));
+ i | j 
+---+---
+(0 rows)
+
+-- Not supported select A.i, B.i, C.j from A, B, C where exists(select * from C where C.i = A.i and exists (select C.j where C.j = B.j and A.j < 10)) order by A.i, B.i, C.j limit 20;
+select * from A where exists (select * from C where C.i = A.i and exists (select * from B where C.j = B.j and B.j < 10)) order by 1,2;
+ i  | j  
+----+----
+ 99 | 62
+(1 row)
+
+select * from A where exists (select * from C where C.i = A.i and exists (select * from B where C.j = B.j and A.j < 10));
+ERROR:  correlated subquery with skip-level correlations is not supported (subselect.c:395)
+select * from A where exists (select * from C where C.i = A.i and not exists (select * from B where C.j = B.j and B.j < 10)) order by 1,2;
+ i  | j  
+----+----
+  1 |  1
+  1 |  1
+ 78 | -1
+(3 rows)
+
+select * from A,B,C where C.i = A.i and exists (select C.j where C.j = B.j and A.j < 10);
+ i  | j  | i  | j  | i  | j  
+----+----+----+----+----+----
+ 78 | -1 | -1 | 62 | 78 | 62
+(1 row)
+
+-- -- -- --
+-- Basic queries with NOT EXISTS clause
+-- -- -- --
+select b from qp_csq_t1 where not exists(select * from qp_csq_t2 where y=a);
+ b 
+---
+ 4
+ 6
+ 8
+(3 rows)
+
+select A.i from A where not exists(select B.i from B where A.i = B.i) order by A.i;
+ i  
+----
+ 19
+ 78
+ 99
+(3 rows)
+
+-- Not supported select A.i, B.i, C.j from A, B, C where exists (select C.j from C where C.j = A.j and not exists (select C.i from C where C.i = A.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
+select * from A where not exists (select * from C,B where C.j = A.j and exists (select * from C where C.i = B.i and C.j < B.j)) order by 1,2;
+ i  | j  
+----+----
+  1 |  1
+  1 |  1
+ 19 |  5
+ 78 | -1
+ 99 | 62
+(5 rows)
+
+select * from A where exists (select * from C,B where C.j = A.j and not exists (select * from C where C.i = B.i and C.j < B.j)) order by 1,2;
+ i  | j  
+----+----
+  1 |  1
+  1 |  1
+ 78 | -1
+ 99 | 62
+(4 rows)
+
+select * from A where exists (select * from C,B where C.j = A.j and exists (select * from C where C.i = B.i and C.j < B.j)) order by 1,2;
+ i | j 
+---+---
+(0 rows)
+
+select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and not exists (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
+ i | i  | j  
+---+----+----
+ 1 | -1 | -1
+ 1 | -1 | -1
+ 1 | -1 |  1
+ 1 | -1 |  1
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 | 62
+ 1 | -1 | 62
+(10 rows)
+
+select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
+ i | i | j 
+---+---+---
+(0 rows)
+
+select C.j from C where not exists (select max(B.i) from B  where C.i = B.i having max(B.i) is not null) order by C.j;
+ j  
+----
+ -1
+  1
+  7
+ 62
+(4 rows)
+
+select C.j from C where not exists (select max(B.i) from B  where C.i = B.i offset 1000) order by C.j;
+  j  
+-----
+  -1
+   1
+   7
+   7
+  62
+  62
+  65
+ 625
+ 889
+(9 rows)
+
+select C.j from C where not exists (select rank() over (order by B.i) from B  where C.i = B.i) order by C.j;
+ j  
+----
+ -1
+  1
+  7
+ 62
+(4 rows)
+
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test:  Correlated Subquery: CSQ using DML (Heap) 
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop table if exists qp_csq_t1;
+drop table if exists qp_csq_t2;
+create table qp_csq_t1(a int, b int) distributed by (b);
+insert into qp_csq_t1 values (1,2);
+insert into qp_csq_t1 values (3,4);
+insert into qp_csq_t1 values (5,6);
+insert into qp_csq_t1 values (7,8);
+create table qp_csq_t2(x int,y int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t2 values(1,1);
+insert into qp_csq_t2 values(3,9);
+insert into qp_csq_t2 values(5,25);
+insert into qp_csq_t2 values(7,49);
+drop table if exists A;
+drop table if exists B;
+drop table if exists C;
+create table A(i integer, j integer) distributed by (j);
+insert into A values(1,1);
+insert into A values(19,5);
+insert into A values(99,62);
+insert into A values(1,1);
+insert into A values(78,-1);
+create table B(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into B values(1,43);
+insert into B values(88,1);
+insert into B values(-1,62);
+insert into B values(1,1);
+insert into B values(32,5);
+insert into B values(2,7);
+create table C(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into C values(1,889);
+insert into C values(288,1);
+insert into C values(-1,625);
+insert into C values(32,65);
+insert into C values(32,62);
+insert into C values(3,-1);
+insert into C values(99,7);
+insert into C values(78,62);
+insert into C values(2,7);
+-- end_ignore
+-- -- -- --
+-- Basic CSQ with UPDATE statements
+-- -- -- --
+select * from qp_csq_t1 order by a;
+ a | b 
+---+---
+ 1 | 2
+ 3 | 4
+ 5 | 6
+ 7 | 8
+(4 rows)
+
+update qp_csq_t1 set a = (select y from qp_csq_t2 where x=a) where b < 8;
+select * from qp_csq_t1 order by a;
+ a  | b 
+----+---
+  1 | 2
+  7 | 8
+  9 | 4
+ 25 | 6
+(4 rows)
+
+update qp_csq_t1 set a = 9999 where qp_csq_t1.a = (select max(x) from qp_csq_t2);
+select * from qp_csq_t1 order by a;
+  a   | b 
+------+---
+    1 | 2
+    9 | 4
+   25 | 6
+ 9999 | 8
+(4 rows)
+
+update qp_csq_t1 set a = (select max(y) from qp_csq_t2 where x=a) where qp_csq_t1.a = (select min(x) from qp_csq_t2);
+select * from qp_csq_t1 order by a;
+  a   | b 
+------+---
+    1 | 2
+    9 | 4
+   25 | 6
+ 9999 | 8
+(4 rows)
+
+update qp_csq_t1 set a = 8888 where (select (y*2)>b from qp_csq_t2 where a=x);
+select * from qp_csq_t1 order by a;
+  a   | b 
+------+---
+    1 | 2
+    9 | 4
+   25 | 6
+ 9999 | 8
+(4 rows)
+
+update qp_csq_t1 set a = 3333 where qp_csq_t1.a in (select x from qp_csq_t2);
+select * from qp_csq_t1 order by a;
+  a   | b 
+------+---
+    9 | 4
+   25 | 6
+ 3333 | 2
+ 9999 | 8
+(4 rows)
+
+update A set i = 11111 from C where C.i = A.i and exists (select C.j from C,B where C.j = B.j and A.j < 10);
+select * from A;
+   i   | j  
+-------+----
+    19 |  5
+    99 | 62
+ 11111 |  1
+ 11111 | -1
+ 11111 |  1
+(5 rows)
+
+update A set i = 22222 from C where C.i = A.i and not exists (select C.j from C,B where C.j = B.j and A.j < 10);
+select * from A;
+   i   | j  
+-------+----
+    19 |  5
+ 11111 |  1
+ 11111 | -1
+ 11111 |  1
+ 22222 | 62
+(5 rows)
+
+-- -- -- --
+-- Basic CSQ with DELETE statements
+-- -- -- --
+select * from qp_csq_t1 order by a;
+  a   | b 
+------+---
+    9 | 4
+   25 | 6
+ 3333 | 2
+ 9999 | 8
+(4 rows)
+
+delete from qp_csq_t1 where a <= (select min(y) from qp_csq_t2 where x=a);
+select * from qp_csq_t1 order by a;
+  a   | b 
+------+---
+    9 | 4
+   25 | 6
+ 3333 | 2
+ 9999 | 8
+(4 rows)
+
+delete from qp_csq_t1 where qp_csq_t1.a = (select x from qp_csq_t2);
+ERROR:  more than one row returned by a subquery used as an expression
+select * from qp_csq_t1 order by a;
+  a   | b 
+------+---
+    9 | 4
+   25 | 6
+ 3333 | 2
+ 9999 | 8
+(4 rows)
+
+delete from qp_csq_t1 where exists (select (y*2)>b from qp_csq_t2 where a=x);
+select * from qp_csq_t1 order by a;
+  a   | b 
+------+---
+    9 | 4
+   25 | 6
+ 3333 | 2
+ 9999 | 8
+(4 rows)
+
+delete from qp_csq_t1  where qp_csq_t1.a = (select x from qp_csq_t2 where a=x);
+select * from qp_csq_t1 order by a;
+  a   | b 
+------+---
+    9 | 4
+   25 | 6
+ 3333 | 2
+ 9999 | 8
+(4 rows)
+
+delete from  A TableA where exists (select C.j from C, B where C.j = B.j and TableA.j < 10);
+select * from A order by A.i;
+   i   | j  
+-------+----
+ 22222 | 62
+(1 row)
+
+delete from A TableA where not exists (select C.j from C,B where C.j = B.j and TableA.j < 10);
+select * from A order by A.i;
+ i | j 
+---+---
+(0 rows)
+
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: Correlated Subquery: CSQ using WHERE clause (Heap)
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop table if exists qp_csq_t1;
+drop table if exists qp_csq_t2;
+drop table if exists qp_csq_t3;
+drop table if exists A;
+drop table if exists B;
+drop table if exists C;
+create table qp_csq_t1(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t1 values (1,2);
+insert into qp_csq_t1 values (3,4);
+insert into qp_csq_t1 values (5,6);
+insert into qp_csq_t1 values (7,8);
+create table qp_csq_t2(x int,y int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t2 values(1,1);
+insert into qp_csq_t2 values(3,9);
+insert into qp_csq_t2 values(5,25);
+insert into qp_csq_t2 values(7,49);
+create table qp_csq_t3(c int, d text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t3 values(1,'one');
+insert into qp_csq_t3 values(3,'three');
+insert into qp_csq_t3 values(5,'five');
+insert into qp_csq_t3 values(7,'seven');
+create table A(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into A values(1,1);
+insert into A values(19,5);
+insert into A values(99,62);
+insert into A values(1,1);
+insert into A values(78,-1);
+create table B(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into B values(1,43);
+insert into B values(88,1);
+insert into B values(-1,62);
+insert into B values(1,1);
+insert into B values(32,5);
+insert into B values(2,7);
+create table C(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into C values(1,889);
+insert into C values(288,1);
+insert into C values(-1,625);
+insert into C values(32,65);
+insert into C values(32,62);
+insert into C values(3,-1);
+insert into C values(99,7);
+insert into C values(78,62);
+insert into C values(2,7);
+-- end_ignore
+-- -- -- --
+-- Basic queries with WHERE clause
+-- -- -- --
+select a, (select y from qp_csq_t2 where x=a) from qp_csq_t1 where b < 8 order by a;
+ a | ?column? 
+---+----------
+ 1 |        1
+ 3 |        9
+ 5 |       25
+(3 rows)
+
+select a, x from qp_csq_t2, qp_csq_t1 where qp_csq_t1.a = (select x) order by a;
+ a | x 
+---+---
+ 1 | 1
+ 3 | 3
+ 5 | 5
+ 7 | 7
+(4 rows)
+
+select a from qp_csq_t1 where (select (y*2)>b from qp_csq_t2 where a=x) order by a;
+ a 
+---
+ 3
+ 5
+ 7
+(3 rows)
+
+SELECT a, (SELECT d FROM qp_csq_t3 WHERE a=c) FROM qp_csq_t1 GROUP BY a order by a;
+ a | ?column? 
+---+----------
+ 1 | one
+ 3 | three
+ 5 | five
+ 7 | seven
+(4 rows)
+
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: Correlated Subquery: CSQ using HAVING clause (Heap) 
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop table if exists qp_csq_t1;
+drop table if exists qp_csq_t2;
+drop table if exists qp_csq_t3;
+drop table if exists A;
+drop table if exists B;
+drop table if exists C;
+drop table if exists csq_emp;
+NOTICE:  table "csq_emp" does not exist, skipping
+create table csq_emp(name text, department text, salary numeric);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'name' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into csq_emp values('a','adept',11200.00);
+insert into csq_emp values('b','adept',22222.00);
+insert into csq_emp values('c','bdept',99222.00);
+create table qp_csq_t1(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t1 values (1,2);
+insert into qp_csq_t1 values (3,4);
+insert into qp_csq_t1 values (5,6);
+insert into qp_csq_t1 values (7,8);
+create table qp_csq_t2(x int,y int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t2 values(1,1);
+insert into qp_csq_t2 values(3,9);
+insert into qp_csq_t2 values(5,25);
+insert into qp_csq_t2 values(7,49);
+create table qp_csq_t3(c int, d text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t3 values(1,'one');
+insert into qp_csq_t3 values(3,'three');
+insert into qp_csq_t3 values(5,'five');
+insert into qp_csq_t3 values(7,'seven');
+create table A(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into A values(1,1);
+insert into A values(19,5);
+insert into A values(99,62);
+insert into A values(1,1);
+insert into A values(78,-1);
+create table B(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into B values(1,43);
+insert into B values(88,1);
+insert into B values(-1,62);
+insert into B values(1,1);
+insert into B values(32,5);
+insert into B values(2,7);
+create table C(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into C values(1,889);
+insert into C values(288,1);
+insert into C values(-1,625);
+insert into C values(32,65);
+insert into C values(32,62);
+insert into C values(3,-1);
+insert into C values(99,7);
+insert into C values(78,62);
+insert into C values(2,7);
+-- end_ignore
+-- -- -- --
+-- Basic queries with HAVING clause
+-- -- -- -- 
+select A.i from A group by A.i having min(A.i) not in (select B.i from B where A.i = B.i) order by A.i;
+ i  
+----
+ 19
+ 78
+ 99
+(3 rows)
+
+select A.i, B.i, C.j from A, B, C group by A.j,A.i,B.i,C.j having max(A.j) = any(select max(C.j) from C where C.j = A.j) order by A.i, B.i, C.j limit 10; 
+ i | i  |  j  
+---+----+-----
+ 1 | -1 |  -1
+ 1 | -1 |   1
+ 1 | -1 |   7
+ 1 | -1 |  62
+ 1 | -1 |  65
+ 1 | -1 | 625
+ 1 | -1 | 889
+ 1 |  1 |  -1
+ 1 |  1 |   1
+ 1 |  1 |   7
+(10 rows)
+
+select A.i, B.i, C.j from A, B, C where exists (select C.j from C group by C.j having max(C.j) = all (select min(B.j) from B)) order by A.i, B.i, C.j limit 10;
+ i | i  | j  
+---+----+----
+ 1 | -1 | -1
+ 1 | -1 | -1
+ 1 | -1 |  1
+ 1 | -1 |  1
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 |  7
+ 1 | -1 | 62
+ 1 | -1 | 62
+(10 rows)
+
+SELECT name, department, salary FROM csq_emp ea group by name, department,salary
+  HAVING avg(salary) >
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department);
+ name | department | salary 
+------+------------+--------
+(0 rows)
+
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: Correlated Subquery: CSQ with multi-row subqueries (Heap)
+-- ----------------------------------------------------------------------
+--start_ignore
+drop table if exists Employee;
+NOTICE:  table "employee" does not exist, skipping
+drop table if exists product;
+NOTICE:  table "product" does not exist, skipping
+drop table if exists product_order;
+NOTICE:  table "product_order" does not exist, skipping
+drop table if exists job;
+NOTICE:  table "job" does not exist, skipping
+--end_ignore
+-- Multi-row queries (See http://www.java2s.com/Tutorial/Oracle/0040__Query-Select/0680__Multiple-Row-Subquery.htm)
+-- Using IN clause with multi-row subqueries
+create table Employee(
+      ID                 VARCHAR(4)         NOT NULL,
+      First_Name         VARCHAR(10),
+      Last_Name          VARCHAR(10),
+      Start_Date         DATE,
+      End_Date           DATE,
+      Salary             Decimal(8,2),
+      City               VARCHAR(10),
+      Description        VARCHAR(15)
+   ) distributed by(ID);
+insert into Employee(ID, First_Name, Last_Name, Start_Date, End_Date, Salary, City, Description) 
+    values ('01','Jason', 'Martin', to_date('19960725','YYYYMMDD'), to_date('20060725','YYYYMMDD'), 1234.56, 'Toronto',  'Programmer');
+insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary,  City, Description)
+    values ('02','Alison',   'Mathews', to_date('19760321','YYYYMMDD'), to_date('19860221','YYYYMMDD'), 6661.78, 'Vancouver','Tester');
+insert into Employee(ID, First_Name, Last_Name, Start_Date, End_Date, Salary, City, Description)
+    values('03','James',    'Smith',   to_date('19781212','YYYYMMDD'), to_date('19900315','YYYYMMDD'), 6544.78, 'Vancouver','Tester');
+insert into Employee(ID, First_Name, Last_Name, Start_Date, End_Date, Salary, City, Description)
+    values('04','Celia',    'Rice',    to_date('19821024','YYYYMMDD'), to_date('19990421','YYYYMMDD'), 2344.78, 'Vancouver','Manager');
+insert into Employee(ID, First_Name, Last_Name, Start_Date, End_Date, Salary, City, Description)
+    values('05','Robert',   'Black',   to_date('19840115','YYYYMMDD'), to_date('19980808','YYYYMMDD'), 2334.78, 'Vancouver','Tester');
+insert into Employee(ID, First_Name, Last_Name, Start_Date, End_Date, Salary, City, Description)
+    values('06','Linda',    'Green',   to_date('19870730','YYYYMMDD'), to_date('19960104','YYYYMMDD'), 4322.78,'New York',  'Tester');
+insert into Employee(ID, First_Name, Last_Name, Start_Date, End_Date, Salary, City, Description)
+    values('07','David',    'Larry',   to_date('19901231','YYYYMMDD'), to_date('19980212','YYYYMMDD'), 7897.78,'New York',  'Manager');
+insert into Employee(ID, First_Name, Last_Name, Start_Date, End_Date, Salary, City, Description)
+    values('08','James',    'Cat',     to_date('19960917','YYYYMMDD'), to_date('20020415','YYYYMMDD'), 1232.78,'Vancouver', 'Tester');
+select count(*) from Employee;
+ count 
+-------
+     8
+(1 row)
+
+SELECT id, first_name FROM employee WHERE id IN 
+    (SELECT id FROM employee WHERE first_name LIKE '%e%') order by id;
+ id | first_name 
+----+------------
+ 03 | James
+ 04 | Celia
+ 05 | Robert
+ 08 | James
+(4 rows)
+
+drop table Employee;
+-- Using UPDATE  (Update products that aren't selling)
+CREATE TABLE product (
+         product_name     VARCHAR(25) PRIMARY KEY,
+         product_price    decimal(4,2),
+         quantity_on_hand decimal(5,0),
+         last_stock_date  DATE
+    ) distributed by (product_name);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "product_pkey" for table "product"
+CREATE TABLE product_order (
+         product_name  VARCHAR(25),
+         salesperson   VARCHAR(3),
+         order_date    DATE,
+         quantity      decimal(4,2)
+    );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'product_name' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO product_order VALUES ('Product 1', 'CA', '14-JUL-03', 1);
+INSERT INTO product_order VALUES ('Product 2', 'BB', '14-JUL-03', 75);
+INSERT INTO product_order VALUES ('Product 3', 'GA', '14-JUL-03', 2);
+INSERT INTO product_order VALUES ('Product 4', 'GA', '15-JUL-03', 8);
+INSERT INTO product_order VALUES ('Product 4', 'GA', '15-JUL-03', 8);
+INSERT INTO product_order VALUES ('Product 6', 'CA', '16-JUL-03', 5);
+INSERT INTO product_order VALUES ('Product 7', 'CA', '17-JUL-03', 1);
+INSERT INTO product VALUES ('Product 1', 99,  1,    '15-JAN-03');
+INSERT INTO product VALUES ('Product 2', 75,  1000, '15-JAN-02');
+INSERT INTO product VALUES ('Product 3', 50,  100,  '15-JAN-03');
+INSERT INTO product VALUES ('Product 4', 25,  10000, null);
+INSERT INTO product VALUES ('Product 5', 9.95,1234, '15-JAN-04');
+INSERT INTO product VALUES ('Product 6', 45,  1,    TO_DATE('December 31, 2008, 11:30 P.M.','Month dd, YYYY, HH:MI P.M.'));
+select count(*) from product;
+ count 
+-------
+     6
+(1 row)
+
+UPDATE product SET product_price = product_price * .9 
+    where product_name NOT IN (SELECT DISTINCT product_name FROM product_order);
+SELECT * FROM  product order by product_name;
+ product_name | product_price | quantity_on_hand | last_stock_date 
+--------------+---------------+------------------+-----------------
+ Product 1    |         99.00 |                1 | 01-15-2003
+ Product 2    |         75.00 |             1000 | 01-15-2002
+ Product 3    |         50.00 |              100 | 01-15-2003
+ Product 4    |         25.00 |            10000 | 
+ Product 5    |          8.96 |             1234 | 01-15-2004
+ Product 6    |         45.00 |                1 | 12-31-2008
+(6 rows)
+
+drop table product;
+drop table product_order;
+-- Show products that aren't selling
+CREATE TABLE product (
+         product_name     VARCHAR(25) PRIMARY KEY,
+         product_price    decimal(4,2),
+         quantity_on_hand decimal(5,0),
+         last_stock_date  DATE
+    ) distributed by (product_name);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "product_pkey" for table "product"
+CREATE TABLE product_order (
+         product_name  VARCHAR(25),
+         salesperson   VARCHAR(3),
+         order_date    DATE,
+         quantity      decimal(4,2)
+    );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'product_name' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO product_order VALUES ('Product 1', 'CA', '14-JUL-03', 1);
+INSERT INTO product_order VALUES ('Product 2', 'BB', '14-JUL-03', 75);
+INSERT INTO product_order VALUES ('Product 3', 'GA', '14-JUL-03', 2);
+INSERT INTO product_order VALUES ('Product 4', 'GA', '15-JUL-03', 8);
+ INSERT INTO product_order VALUES ('Product 5', 'LB', '15-JUL-03', 20);
+INSERT INTO product_order VALUES ('Product 6', 'CA', '16-JUL-03', 5);
+INSERT INTO product_order VALUES ('Product 7', 'CA', '17-JUL-03', 1);
+INSERT INTO product VALUES ('Product 1', 99,  1,    '15-JAN-03');
+INSERT INTO product VALUES ('Product 2', 75,  1000, '15-JAN-02');
+INSERT INTO product VALUES ('Product 3', 50,  100,  '15-JAN-03');
+INSERT INTO product VALUES ('Product 4', 25,  10000, null);
+INSERT INTO product VALUES ('Product 5', 9.95,1234, '15-JAN-04');
+INSERT INTO product VALUES ('Product 6', 45,  1,    TO_DATE('December 31, 2008, 11:30 P.M.','Month dd, YYYY, HH:MI P.M.'));
+SELECT * FROM product_order ORDER BY product_name;
+ product_name | salesperson | order_date | quantity 
+--------------+-------------+------------+----------
+ Product 1    | CA          | 07-14-2003 |     1.00
+ Product 2    | BB          | 07-14-2003 |    75.00
+ Product 3    | GA          | 07-14-2003 |     2.00
+ Product 4    | GA          | 07-15-2003 |     8.00
+ Product 5    | LB          | 07-15-2003 |    20.00
+ Product 6    | CA          | 07-16-2003 |     5.00
+ Product 7    | CA          | 07-17-2003 |     1.00
+(7 rows)
+
+SELECT * FROM product
+	 WHERE  product_name NOT IN (SELECT DISTINCT product_name FROM product_order)
+	 ORDER BY product_name;
+ product_name | product_price | quantity_on_hand | last_stock_date 
+--------------+---------------+------------------+-----------------
+(0 rows)
+
+drop table product;
+drop table product_order;
+-- Uses NOT IN to check if an id is not in the list of id values in the employee table
+create table Employee(
+      EMPNO         INTEGER,
+      ENAME         VARCHAR(15),
+      HIREDATE      DATE,
+      ORIG_SALARY   INTEGER,
+      CURR_SALARY   INTEGER,
+      REGION        VARCHAR(1),
+      MANAGER_ID    INTEGER
+    );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'empno' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table job (
+      EMPNO         INTEGER,
+      jobtitle      VARCHAR(20)
+    );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'empno' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into job (EMPNO, Jobtitle) values (1,'Tester');
+insert into job (EMPNO, Jobtitle) values (2,'Accountant');
+insert into job (EMPNO, Jobtitle) values (3,'Developer');
+insert into job (EMPNO, Jobtitle) values (4,'COder');
+insert into job (EMPNO, Jobtitle) values (5,'Director');
+insert into job (EMPNO, Jobtitle) values (6,'Mediator');
+insert into job (EMPNO, Jobtitle) values (7,'Proffessor');
+insert into job (EMPNO, Jobtitle) values (8,'Programmer');
+insert into job (EMPNO, Jobtitle) values (9,'Developer');
+insert into Employee(EMPNO, EName, HIREDATE, ORIG_SALARY, CURR_SALARY, REGION, MANAGER_ID)
+    values (1, 'Jason', to_date('19960725','YYYYMMDD'), 1234, 8767, 'E', 2);
+insert into Employee(EMPNO, EName, HIREDATE, ORIG_SALARY, CURR_SALARY, REGION, MANAGER_ID)
+    values (2, 'John', to_date('19970715','YYYYMMDD'), 2341, 3456, 'W', 3);
+insert into Employee(EMPNO,  EName,   HIREDATE, ORIG_SALARY, CURR_SALARY, REGION, MANAGER_ID)
+    values (3, 'Joe', to_date('19860125','YYYYMMDD'), 4321, 5654, 'E', 3);
+insert into Employee(EMPNO, EName, HIREDATE, ORIG_SALARY, CURR_SALARY, REGION, MANAGER_ID)
+    values (4, 'Tom', to_date('20060913','YYYYMMDD'), 2413, 6787, 'W', 4);
+insert into Employee(EMPNO,  EName,   HIREDATE, ORIG_SALARY, CURR_SALARY, REGION, MANAGER_ID)
+    values (5, 'Jane', to_date('20050417','YYYYMMDD'), 7654, 4345, 'E',4);
+insert into Employee(EMPNO,  EName, HIREDATE, ORIG_SALARY, CURR_SALARY, REGION, MANAGER_ID)
+    values (6, 'James', to_date('20040718','YYYYMMDD'), 5679, 6546, 'W', 5);
+insert into Employee(EMPNO, EName, HIREDATE, ORIG_SALARY, CURR_SALARY, REGION, MANAGER_ID)
+    values (7, 'Jodd', to_date('20030720','YYYYMMDD'), 5438, 7658, 'E', 6);
+insert into Employee(EMPNO, EName, HIREDATE, ORIG_SALARY, CURR_SALARY, REGION)
+    values (8, 'Joke', to_date('20020101','YYYYMMDD'), 8765, 4543, 'W');
+insert into Employee(EMPNO, EName, HIREDATE, ORIG_SALARY, CURR_SALARY, REGION)
+    values (9, 'Jack',  to_date('20010829','YYYYMMDD'), 7896, 1232, 'E');
+SELECT empno, ename
+  FROM employee
+  WHERE empno NOT IN (SELECT empno FROM job);
+ empno | ename 
+-------+-------
+(0 rows)
+
+drop table employee;
+drop table job;
+-- Multiple Column Subqueries
+create table Employee(
+      ID                 VARCHAR(4) NOT NULL,
+      First_Name         VARCHAR(10),
+      Last_Name          VARCHAR(10),
+      Start_Date         DATE,
+      End_Date           DATE,
+      Salary             DECIMAL(8,2),
+      City               VARCHAR(10),
+      Description        VARCHAR(15)
+   );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary,  City, Description)
+     values ('01','Jason',    'Martin',  to_date('19960725','YYYYMMDD'), to_date('20060725','YYYYMMDD'), 1234.56, 'Toronto',  'Programmer');
+insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary,  City, Description)
+     values('02','Alison',   'Mathews', to_date('19760321','YYYYMMDD'), to_date('19860221','YYYYMMDD'), 6661.78, 'Vancouver','Tester');
+insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary,  City, Description)
+     values('03','James',    'Smith',   to_date('19781212','YYYYMMDD'), to_date('19900315','YYYYMMDD'), 6544.78, 'Vancouver','Tester');
+insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary,  City, Description)
+     values('04','Celia',    'Rice',    to_date('19821024','YYYYMMDD'), to_date('19990421','YYYYMMDD'), 2344.78, 'Vancouver','Manager');
+insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary,  City, Description)
+     values('05','Robert',   'Black',   to_date('19840115','YYYYMMDD'), to_date('19980808','YYYYMMDD'), 2334.78, 'Vancouver','Tester');
+insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary, City,  Description)
+     values('06','Linda',    'Green',   to_date('19870730','YYYYMMDD'), to_date('19960104','YYYYMMDD'), 4322.78,'New York',  'Tester');
+insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary, City,  Description)
+     values('07','David',    'Larry',   to_date('19901231','YYYYMMDD'), to_date('19980212','YYYYMMDD'), 7897.78,'New York',  'Manager');
+insert into Employee(ID,  First_Name, Last_Name, Start_Date, End_Date, Salary, City, Description)
+     values('08','James', 'Cat', to_date('19960917','YYYYMMDD'), to_date('20020415','YYYYMMDD'), 1232.78,'Vancouver', 'Tester');
+SELECT id, first_name, salary from employee
+    where (id, salary) IN
+        (SELECT id, MIN(salary) FROM employee GROUP BY id) order by id;
+ id | first_name | salary  
+----+------------+---------
+ 01 | Jason      | 1234.56
+ 02 | Alison     | 6661.78
+ 03 | James      | 6544.78
+ 04 | Celia      | 2344.78
+ 05 | Robert     | 2334.78
+ 06 | Linda      | 4322.78
+ 07 | David      | 7897.78
+ 08 | James      | 1232.78
+(8 rows)
+
+drop table Employee;
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: Correlated Subquery: CSQ in select list (Heap) 
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop table if exists qp_csq_t1;
+drop table if exists qp_csq_t2;
+drop table if exists qp_csq_t3;
+drop table if exists A;
+drop table if exists B;
+drop table if exists C;
+create table qp_csq_t1(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t1 values (1,2);
+insert into qp_csq_t1 values (3,4);
+insert into qp_csq_t1 values (5,6);
+insert into qp_csq_t1 values (7,8);
+create table qp_csq_t2(x int,y int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t2 values(1,1);
+insert into qp_csq_t2 values(3,9);
+insert into qp_csq_t2 values(5,25);
+insert into qp_csq_t2 values(7,49);
+create table qp_csq_t3(c int, d text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into qp_csq_t3 values(1,'one');
+insert into qp_csq_t3 values(3,'three');
+insert into qp_csq_t3 values(5,'five');
+insert into qp_csq_t3 values(7,'seven');
+create table A(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into A values(1,1);
+insert into A values(19,5);
+insert into A values(99,62);
+insert into A values(1,1);
+insert into A values(78,-1);
+create table B(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into B values(1,43);
+insert into B values(88,1);
+insert into B values(-1,62);
+insert into B values(1,1);
+insert into B values(32,5);
+insert into B values(2,7);
+create table C(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into C values(1,889);
+insert into C values(288,1);
+insert into C values(-1,625);
+insert into C values(32,65);
+insert into C values(32,62);
+insert into C values(3,-1);
+insert into C values(99,7);
+insert into C values(78,62);
+insert into C values(2,7);
+-- end_ignore
+-- -- -- --
+-- Basic queries in SELECT list
+-- -- -- --
+select A.i, (select C.j from C group by C.j having max(C.j) = any (select min(B.j) from B)) as C_j from A,B,C where A.i = 99 order by A.i, C_j limit 10;
+ i  | c_j 
+----+-----
+ 99 |   1
+ 99 |   1
+ 99 |   1
+ 99 |   1
+ 99 |   1
+ 99 |   1
+ 99 |   1
+ 99 |   1
+ 99 |   1
+ 99 |   1
+(10 rows)
+
+select (select avg(x) from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = any (select x)) as avg_x from qp_csq_t1 order by 1;
+ avg_x 
+-------
+     4
+     4
+     4
+     4
+(4 rows)
+
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: Correlated Subquery: CSQ with multiple columns (Heap)
+-- ----------------------------------------------------------------------
+drop table if exists A;
+drop table if exists B;
+drop table if exists C;
+create table A(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table B(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table C(i integer, j integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into A values(1,1);
+insert into A values(2,1);
+insert into A values(24,98);
+insert into A values(1,98);
+insert into B values(1,1);
+insert into B values(3,6);
+insert into C values(1,18);
+insert into C values(3,27);
+insert into C values(3,98);
+select A.i, B.i from A, B where (A.i,A.j) = (select B.i,B.j from B where B.i = A.i) order by A.i, B.i;
+ i | i 
+---+---
+ 1 | 1
+ 1 | 3
+(2 rows)
+
+select A.i, B.i from A, B where (A.i,A.j) = all(select B.i,B.j from B where B.i = A.i) order by A.i, B.i;
+ i  | i 
+----+---
+  1 | 1
+  1 | 3
+  2 | 1
+  2 | 3
+ 24 | 1
+ 24 | 3
+(6 rows)
+
+select A.i, B.i from A, B where not exists (select B.i,B.j from B where B.i = A.i) order by A.i, B.i;
+ i  | i 
+----+---
+  2 | 1
+  2 | 3
+ 24 | 1
+ 24 | 3
+(4 rows)
+
+select A.i, B.i from A, B where (A.i,A.j) in (select B.i,B.j from B where B.i = A.i) order by A.i, B.i;
+ i | i 
+---+---
+ 1 | 1
+ 1 | 3
+(2 rows)
+
+select A.i, B.i,C.i from A, B, C where (A.i,B.i) = any (select A.i, B.i from A,B where A.i = C.i and B.i = C.i) order by A.i, B.i, C.i;
+ i | i | i 
+---+---+---
+ 1 | 1 | 1
+ 1 | 1 | 1
+(2 rows)
+
+select A.i, B.i,C.i from A, B, C where not exists (select A.i, B.i from A,B where A.i = C.i and B.i = C.i) order by A.i, B.i, C.i;
+ i  | i | i 
+----+---+---
+  1 | 1 | 3
+  1 | 1 | 3
+  1 | 1 | 3
+  1 | 1 | 3
+  1 | 3 | 3
+  1 | 3 | 3
+  1 | 3 | 3
+  1 | 3 | 3
+  2 | 1 | 3
+  2 | 1 | 3
+  2 | 3 | 3
+  2 | 3 | 3
+ 24 | 1 | 3
+ 24 | 1 | 3
+ 24 | 3 | 3
+ 24 | 3 | 3
+(16 rows)
+
+select A.i, B.i,C.i from A, B, C where (A.i,B.i) in (select A.i, B.i from A,B where A.i = C.i and B.i = C.i) order by A.i, B.i, C.i;
+ i | i | i 
+---+---+---
+ 1 | 1 | 1
+ 1 | 1 | 1
+(2 rows)
+
+-- Not supported select A.i, B.i,C.i from A, B, C where (A.i,B.i) = any (select A.i, B.i from A,B where A.i < C.i and B.i = C.i and (A.i,B.i) in (select A.i, B.i from A,B where A.j = C.j)) order by A.i, B.i, C.i;
+select * from A,B,C where (A.i,B.i) = any (select A.i, B.i from A,B where A.i < C.i and B.i = C.i and C.i not in (select A.i from A where A.j = 1 and A.j = B.j)) order by 1,2,3,4,5,6;
+ i | j  | i | j | i | j  
+---+----+---+---+---+----
+ 1 |  1 | 3 | 6 | 3 | 27
+ 1 |  1 | 3 | 6 | 3 | 98
+ 1 | 98 | 3 | 6 | 3 | 27
+ 1 | 98 | 3 | 6 | 3 | 98
+ 2 |  1 | 3 | 6 | 3 | 27
+ 2 |  1 | 3 | 6 | 3 | 98
+(6 rows)
+
+select A.i as A_i, B.i as B_i,C.i as C_i from A, B, C where (A.i,B.i) = (select A.i, B.i from A,B where A.i = C.i and B.i = C.i) order by A_i, B_i, C_i; -- Should fail
+ERROR:  more than one row returned by a subquery used as an expression  (seg2 slice5 vraghavan.local:25434 pid=51919)
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: Misc Queries
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop table if exists with_test1 cascade;
+NOTICE:  table "with_test1" does not exist, skipping
+create table with_test1 (i int, t text, value int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into with_test1 select i%10, 'text' || i%20, i%30 from generate_series(0, 99) i;
+drop table if exists with_test2 cascade;
+NOTICE:  table "with_test2" does not exist, skipping
+create table with_test2 (i int, t text, value int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into with_test2 select i%100, 'text' || i%200, i%300 from generate_series(0, 999) i;
+insert into with_test2
+select i, i || '', total
+from (select i, sum(value) as total from with_test1 group by i) as tmp;
+-- end_ignore
+select with_test2.* from with_test2
+where value < any (select sum(value) from with_test1 group by i having i = with_test2.i) order by i, t, value;
+ i |    t    | value 
+---+---------+-------
+ 0 | text0   |     0
+ 0 | text0   |     0
+ 0 | text100 |     0
+ 0 | text100 |     0
+ 1 | text1   |     1
+ 1 | text1   |     1
+ 1 | text101 |     1
+ 1 | text101 |     1
+ 2 | text102 |     2
+ 2 | text102 |     2
+ 2 | text102 |   102
+ 2 | text102 |   102
+ 2 | text2   |     2
+ 2 | text2   |     2
+ 2 | text2   |   102
+ 3 | text103 |     3
+ 3 | text103 |     3
+ 3 | text103 |   103
+ 3 | text103 |   103
+ 3 | text3   |     3
+ 3 | text3   |     3
+ 3 | text3   |   103
+ 4 | text104 |     4
+ 4 | text104 |     4
+ 4 | text104 |   104
+ 4 | text104 |   104
+ 4 | text4   |     4
+ 4 | text4   |     4
+ 4 | text4   |   104
+ 5 | text105 |     5
+ 5 | text105 |     5
+ 5 | text105 |   105
+ 5 | text105 |   105
+ 5 | text5   |     5
+ 5 | text5   |     5
+ 5 | text5   |   105
+ 6 | text106 |     6
+ 6 | text106 |     6
+ 6 | text106 |   106
+ 6 | text106 |   106
+ 6 | text6   |     6
+ 6 | text6   |     6
+ 6 | text6   |   106
+ 7 | text107 |     7
+ 7 | text107 |     7
+ 7 | text107 |   107
+ 7 | text107 |   107
+ 7 | text7   |     7
+ 7 | text7   |     7
+ 7 | text7   |   107
+ 8 | text108 |     8
+ 8 | text108 |     8
+ 8 | text108 |   108
+ 8 | text108 |   108
+ 8 | text8   |     8
+ 8 | text8   |     8
+ 8 | text8   |   108
+ 9 | text109 |     9
+ 9 | text109 |     9
+ 9 | text109 |   109
+ 9 | text109 |   109
+ 9 | text9   |     9
+ 9 | text9   |     9
+ 9 | text9   |   109
+(64 rows)
+
+-- start_ignore
+drop table if exists csq_emp;
+    create table csq_emp(name text, department text, salary numeric);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'name' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+    insert into csq_emp values('a','adept',11200.00);
+    insert into csq_emp values('b','adept',22222.00);
+    insert into csq_emp values('c','bdept',99222.00);
+    insert into csq_emp values('d','adept',23211.00);
+    insert into csq_emp values('e','adept',45222.00);
+    insert into csq_emp values('f','adept',992222.00);
+    insert into csq_emp values('g','adept',90343.00);
+    insert into csq_emp values('h','adept',11200.00);
+    insert into csq_emp values('i','bdept',11200.00);
+    insert into csq_emp values('j','adept',11200.00);
+-- end_ignore
+SELECT name, department, salary FROM csq_emp ea
+  WHERE salary IN
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department;
+ name | department |  salary   
+------+------------+-----------
+ c    | bdept      |  99222.00
+ f    | adept      | 992222.00
+(2 rows)
+
+SELECT name, department, salary FROM csq_emp ea
+  WHERE  salary = ANY
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department;
+ name | department |  salary   
+------+------------+-----------
+ c    | bdept      |  99222.00
+ f    | adept      | 992222.00
+(2 rows)
+
+-- start_ignore
+drop table if exists with_test1 cascade;
+create table with_test1 (i int, t text, value int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into with_test1 select i%10, 'text' || i%20, i%30 from generate_series(0, 99) i;
+drop table if exists with_test2 cascade;
+create table with_test2 (i int, t text, value int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into with_test2 select i%100, 'text' || i%200, i%300 from generate_series(0, 999) i;
+insert into with_test2
+select i, i || '', total
+from (select i, sum(value) as total from with_test1 group by i) as tmp;
+-- end_ignore
+select with_test2.* from with_test2
+where value < all (select sum(value) from with_test1 group by i having i = with_test2.i) order by i, t, value;
+ i  |    t    | value 
+----+---------+-------
+  0 | text0   |     0
+  0 | text0   |     0
+  0 | text100 |     0
+  0 | text100 |     0
+  1 | text1   |     1
+  1 | text1   |     1
+  1 | text101 |     1
+  1 | text101 |     1
+  2 | text102 |     2
+  2 | text102 |     2
+  2 | text102 |   102
+  2 | text102 |   102
+  2 | text2   |     2
+  2 | text2   |     2
+  2 | text2   |   102
+  3 | text103 |     3
+  3 | text103 |     3
+  3 | text103 |   103
+  3 | text103 |   103
+  3 | text3   |     3
+  3 | text3   |     3
+  3 | text3   |   103
+  4 | text104 |     4
+  4 | text104 |     4
+  4 | text104 |   104
+  4 | text104 |   104
+  4 | text4   |     4
+  4 | text4   |     4
+  4 | text4   |   104
+  5 | text105 |     5
+  5 | text105 |     5
+  5 | text105 |   105
+  5 | text105 |   105
+  5 | text5   |     5
+  5 | text5   |     5
+  5 | text5   |   105
+  6 | text106 |     6
+  6 | text106 |     6
+  6 | text106 |   106
+  6 | text106 |   106
+  6 | text6   |     6
+  6 | text6   |     6
+  6 | text6   |   106
+  7 | text107 |     7
+  7 | text107 |     7
+  7 | text107 |   107
+  7 | text107 |   107
+  7 | text7   |     7
+  7 | text7   |     7
+  7 | text7   |   107
+  8 | text108 |     8
+  8 | text108 |     8
+  8 | text108 |   108
+  8 | text108 |   108
+  8 | text8   |     8
+  8 | text8   |     8
+  8 | text8   |   108
+  9 | text109 |     9
+  9 | text109 |     9
+  9 | text109 |   109
+  9 | text109 |   109
+  9 | text9   |     9
+  9 | text9   |     9
+  9 | text9   |   109
+ 10 | text10  |    10
+ 10 | text10  |    10
+ 10 | text10  |   110
+ 10 | text10  |   210
+ 10 | text10  |   210
+ 10 | text110 |    10
+ 10 | text110 |    10
+ 10 | text110 |   110
+ 10 | text110 |   110
+ 10 | text110 |   210
+ 11 | text11  |    11
+ 11 | text11  |    11
+ 11 | text11  |   111
+ 11 | text11  |   211
+ 11 | text11  |   211
+ 11 | text111 |    11
+ 11 | text111 |    11
+ 11 | text111 |   111
+ 11 | text111 |   111
+ 11 | text111 |   211
+ 12 | text112 |    12
+ 12 | text112 |    12
+ 12 | text112 |   112
+ 12 | text112 |   112
+ 12 | text112 |   212
+ 12 | text12  |    12
+ 12 | text12  |    12
+ 12 | text12  |   112
+ 12 | text12  |   212
+ 12 | text12  |   212
+ 13 | text113 |    13
+ 13 | text113 |    13
+ 13 | text113 |   113
+ 13 | text113 |   113
+ 13 | text113 |   213
+ 13 | text13  |    13
+ 13 | text13  |    13
+ 13 | text13  |   113
+ 13 | text13  |   213
+ 13 | text13  |   213
+ 14 | text114 |    14
+ 14 | text114 |    14
+ 14 | text114 |   114
+ 14 | text114 |   114
+ 14 | text114 |   214
+ 14 | text14  |    14
+ 14 | text14  |    14
+ 14 | text14  |   114
+ 14 | text14  |   214
+ 14 | text14  |   214
+ 15 | text115 |    15
+ 15 | text115 |    15
+ 15 | text115 |   115
+ 15 | text115 |   115
+ 15 | text115 |   215
+ 15 | text15  |    15
+ 15 | text15  |    15
+ 15 | text15  |   115
+ 15 | text15  |   215
+ 15 | text15  |   215
+ 16 | text116 |    16
+ 16 | text116 |    16
+ 16 | text116 |   116
+ 16 | text116 |   116
+ 16 | text116 |   216
+ 16 | text16  |    16
+ 16 | text16  |    16
+ 16 | text16  |   116
+ 16 | text16  |   216
+ 16 | text16  |   216
+ 17 | text117 |    17
+ 17 | text117 |    17
+ 17 | text117 |   117
+ 17 | text117 |   117
+ 17 | text117 |   217
+ 17 | text17  |    17
+ 17 | text17  |    17
+ 17 | text17  |   117
+ 17 | text17  |   217
+ 17 | text17  |   217
+ 18 | text118 |    18
+ 18 | text118 |    18
+ 18 | text118 |   118
+ 18 | text118 |   118
+ 18 | text118 |   218
+ 18 | text18  |    18
+ 18 | text18  |    18
+ 18 | text18  |   118
+ 18 | text18  |   218
+ 18 | text18  |   218
+ 19 | text119 |    19
+ 19 | text119 |    19
+ 19 | text119 |   119
+ 19 | text119 |   119
+ 19 | text119 |   219
+ 19 | text19  |    19
+ 19 | text19  |    19
+ 19 | text19  |   119
+ 19 | text19  |   219
+ 19 | text19  |   219
+ 20 | text120 |    20
+ 20 | text120 |    20
+ 20 | text120 |   120
+ 20 | text120 |   120
+ 20 | text120 |   220
+ 20 | text20  |    20
+ 20 | text20  |    20
+ 20 | text20  |   120
+ 20 | text20  |   220
+ 20 | text20  |   220
+ 21 | text121 |    21
+ 21 | text121 |    21
+ 21 | text121 |   121
+ 21 | text121 |   121
+ 21 | text121 |   221
+ 21 | text21  |    21
+ 21 | text21  |    21
+ 21 | text21  |   121
+ 21 | text21  |   221
+ 21 | text21  |   221
+ 22 | text122 |    22
+ 22 | text122 |    22
+ 22 | text122 |   122
+ 22 | text122 |   122
+ 22 | text122 |   222
+ 22 | text22  |    22
+ 22 | text22  |    22
+ 22 | text22  |   122
+ 22 | text22  |   222
+ 22 | text22  |   222
+ 23 | text123 |    23
+ 23 | text123 |    23
+ 23 | text123 |   123
+ 23 | text123 |   123
+ 23 | text123 |   223
+ 23 | text23  |    23
+ 23 | text23  |    23
+ 23 | text23  |   123
+ 23 | text23  |   223
+ 23 | text23  |   223
+ 24 | text124 |    24
+ 24 | text124 |    24
+ 24 | text124 |   124
+ 24 | text124 |   124
+ 24 | text124 |   224
+ 24 | text24  |    24
+ 24 | text24  |    24
+ 24 | text24  |   124
+ 24 | text24  |   224
+ 24 | text24  |   224
+ 25 | text125 |    25
+ 25 | text125 |    25
+ 25 | text125 |   125
+ 25 | text125 |   125
+ 25 | text125 |   225
+ 25 | text25  |    25
+ 25 | text25  |    25
+ 25 | text25  |   125
+ 25 | text25  |   225
+ 25 | text25  |   225
+ 26 | text126 |    26
+ 26 | text126 |    26
+ 26 | text126 |   126
+ 26 | text126 |   126
+ 26 | text126 |   226
+ 26 | text26  |    26
+ 26 | text26  |    26
+ 26 | text26  |   126
+ 26 | text26  |   226
+ 26 | text26  |   226
+ 27 | text127 |    27
+ 27 | text127 |    27
+ 27 | text127 |   127
+ 27 | text127 |   127
+ 27 | text127 |   227
+ 27 | text27  |    27
+ 27 | text27  |    27
+ 27 | text27  |   127
+ 27 | text27  |   227
+ 27 | text27  |   227
+ 28 | text128 |    28
+ 28 | text128 |    28
+ 28 | text128 |   128
+ 28 | text128 |   128
+ 28 | text128 |   228
+ 28 | text28  |    28
+ 28 | text28  |    28
+ 28 | text28  |   128
+ 28 | text28  |   228
+ 28 | text28  |   228
+ 29 | text129 |    29
+ 29 | text129 |    29
+ 29 | text129 |   129
+ 29 | text129 |   129
+ 29 | text129 |   229
+ 29 | text29  |    29
+ 29 | text29  |    29
+ 29 | text29  |   129
+ 29 | text29  |   229
+ 29 | text29  |   229
+ 30 | text130 |    30
+ 30 | text130 |    30
+ 30 | text130 |   130
+ 30 | text130 |   130
+ 30 | text130 |   230
+ 30 | text30  |    30
+ 30 | text30  |    30
+ 30 | text30  |   130
+ 30 | text30  |   230
+ 30 | text30  |   230
+ 31 | text131 |    31
+ 31 | text131 |    31
+ 31 | text131 |   131
+ 31 | text131 |   131
+ 31 | text131 |   231
+ 31 | text31  |    31
+ 31 | text31  |    31
+ 31 | text31  |   131
+ 31 | text31  |   231
+ 31 | text31  |   231
+ 32 | text132 |    32
+ 32 | text132 |    32
+ 32 | text132 |   132
+ 32 | text132 |   132
+ 32 | text132 |   232
+ 32 | text32  |    32
+ 32 | text32  |    32
+ 32 | text32  |   132
+ 32 | text32  |   232
+ 32 | text32  |   232
+ 33 | text133 |    33
+ 33 | text133 |    33
+ 33 | text133 |   133
+ 33 | text133 |   133
+ 33 | text133 |   233
+ 33 | text33  |    33
+ 33 | text33  |    33
+ 33 | text33  |   133
+ 33 | text33  |   233
+ 33 | text33  |   233
+ 34 | text134 |    34
+ 34 | text134 |    34
+ 34 | text134 |   134
+ 34 | text134 |   134
+ 34 | text134 |   234
+ 34 | text34  |    34
+ 34 | text34  |    34
+ 34 | text34  |   134
+ 34 | text34  |   234
+ 34 | text34  |   234
+ 35 | text135 |    35
+ 35 | text135 |    35
+ 35 | text135 |   135
+ 35 | text135 |   135
+ 35 | text135 |   235
+ 35 | text35  |    35
+ 35 | text35  |    35
+ 35 | text35  |   135
+ 35 | text35  |   235
+ 35 | text35  |   235
+ 36 | text136 |    36
+ 36 | text136 |    36
+ 36 | text136 |   136
+ 36 | text136 |   136
+ 36 | text136 |   236
+ 36 | text36  |    36
+ 36 | text36  |    36
+ 36 | text36  |   136
+ 36 | text36  |   236
+ 36 | text36  |   236
+ 37 | text137 |    37
+ 37 | text137 |    37
+ 37 | text137 |   137
+ 37 | text137 |   137
+ 37 | text137 |   237
+ 37 | text37  |    37
+ 37 | text37  |    37
+ 37 | text37  |   137
+ 37 | text37  |   237
+ 37 | text37  |   237
+ 38 | text138 |    38
+ 38 | text138 |    38
+ 38 | text138 |   138
+ 38 | text138 |   138
+ 38 | text138 |   238
+ 38 | text38  |    38
+ 38 | text38  |    38
+ 38 | text38  |   138
+ 38 | text38  |   238
+ 38 | text38  |   238
+ 39 | text139 |    39
+ 39 | text139 |    39
+ 39 | text139 |   139
+ 39 | text139 |   139
+ 39 | text139 |   239
+ 39 | text39  |    39
+ 39 | text39  |    39
+ 39 | text39  |   139
+ 39 | text39  |   239
+ 39 | text39  |   239
+ 40 | text140 |    40
+ 40 | text140 |    40
+ 40 | text140 |   140
+ 40 | text140 |   140
+ 40 | text140 |   240
+ 40 | text40  |    40
+ 40 | text40  |    40
+ 40 | text40  |   140
+ 40 | text40  |   240
+ 40 | text40  |   240
+ 41 | text141 |    41
+ 41 | text141 |    41
+ 41 | text141 |   141
+ 41 | text141 |   141
+ 41 | text141 |   241
+ 41 | text41  |    41
+ 41 | text41  |    41
+ 41 | text41  |   141
+ 41 | text41  |   241
+ 41 | text41  |   241
+ 42 | text142 |    42
+ 42 | text142 |    42
+ 42 | text142 |   142
+ 42 | text142 |   142
+ 42 | text142 |   242
+ 42 | text42  |    42
+ 42 | text42  |    42
+ 42 | text42  |   142
+ 42 | text42  |   242
+ 42 | text42  |   242
+ 43 | text143 |    43
+ 43 | text143 |    43
+ 43 | text143 |   143
+ 43 | text143 |   143
+ 43 | text143 |   243
+ 43 | text43  |    43
+ 43 | text43  |    43
+ 43 | text43  |   143
+ 43 | text43  |   243
+ 43 | text43  |   243
+ 44 | text144 |    44
+ 44 | text144 |    44
+ 44 | text144 |   144
+ 44 | text144 |   144
+ 44 | text144 |   244
+ 44 | text44  |    44
+ 44 | text44  |    44
+ 44 | text44  |   144
+ 44 | text44  |   244
+ 44 | text44  |   244
+ 45 | text145 |    45
+ 45 | text145 |    45
+ 45 | text145 |   145
+ 45 | text145 |   145
+ 45 | text145 |   245
+ 45 | text45  |    45
+ 45 | text45  |    45
+ 45 | text45  |   145
+ 45 | text45  |   245
+ 45 | text45  |   245
+ 46 | text146 |    46
+ 46 | text146 |    46
+ 46 | text146 |   146
+ 46 | text146 |   146
+ 46 | text146 |   246
+ 46 | text46  |    46
+ 46 | text46  |    46
+ 46 | text46  |   146
+ 46 | text46  |   246
+ 46 | text46  |   246
+ 47 | text147 |    47
+ 47 | text147 |    47
+ 47 | text147 |   147
+ 47 | text147 |   147
+ 47 | text147 |   247
+ 47 | text47  |    47
+ 47 | text47  |    47
+ 47 | text47  |   147
+ 47 | text47  |   247
+ 47 | text47  |   247
+ 48 | text148 |    48
+ 48 | text148 |    48
+ 48 | text148 |   148
+ 48 | text148 |   148
+ 48 | text148 |   248
+ 48 | text48  |    48
+ 48 | text48  |    48
+ 48 | text48  |   148
+ 48 | text48  |   248
+ 48 | text48  |   248
+ 49 | text149 |    49
+ 49 | text149 |    49
+ 49 | text149 |   149
+ 49 | text149 |   149
+ 49 | text149 |   249
+ 49 | text49  |    49
+ 49 | text49  |    49
+ 49 | text49  |   149
+ 49 | text49  |   249
+ 49 | text49  |   249
+ 50 | text150 |    50
+ 50 | text150 |    50
+ 50 | text150 |   150
+ 50 | text150 |   150
+ 50 | text150 |   250
+ 50 | text50  |    50
+ 50 | text50  |    50
+ 50 | text50  |   150
+ 50 | text50  |   250
+ 50 | text50  |   250
+ 51 | text151 |    51
+ 51 | text151 |    51
+ 51 | text151 |   151
+ 51 | text151 |   151
+ 51 | text151 |   251
+ 51 | text51  |    51
+ 51 | text51  |    51
+ 51 | text51  |   151
+ 51 | text51  |   251
+ 51 | text51  |   251
+ 52 | text152 |    52
+ 52 | text152 |    52
+ 52 | text152 |   152
+ 52 | text152 |   152
+ 52 | text152 |   252
+ 52 | text52  |    52
+ 52 | text52  |    52
+ 52 | text52  |   152
+ 52 | text52  |   252
+ 52 | text52  |   252
+ 53 | text153 |    53
+ 53 | text153 |    53
+ 53 | text153 |   153
+ 53 | text153 |   153
+ 53 | text153 |   253
+ 53 | text53  |    53
+ 53 | text53  |    53
+ 53 | text53  |   153
+ 53 | text53  |   253
+ 53 | text53  |   253
+ 54 | text154 |    54
+ 54 | text154 |    54
+ 54 | text154 |   154
+ 54 | text154 |   154
+ 54 | text154 |   254
+ 54 | text54  |    54
+ 54 | text54  |    54
+ 54 | text54  |   154
+ 54 | text54  |   254
+ 54 | text54  |   254
+ 55 | text155 |    55
+ 55 | text155 |    55
+ 55 | text155 |   155
+ 55 | text155 |   155
+ 55 | text155 |   255
+ 55 | text55  |    55
+ 55 | text55  |    55
+ 55 | text55  |   155
+ 55 | text55  |   255
+ 55 | text55  |   255
+ 56 | text156 |    56
+ 56 | text156 |    56
+ 56 | text156 |   156
+ 56 | text156 |   156
+ 56 | text156 |   256
+ 56 | text56  |    56
+ 56 | text56  |    56
+ 56 | text56  |   156
+ 56 | text56  |   256
+ 56 | text56  |   256
+ 57 | text157 |    57
+ 57 | text157 |    57
+ 57 | text157 |   157
+ 57 | text157 |   157
+ 57 | text157 |   257
+ 57 | text57  |    57
+ 57 | text57  |    57
+ 57 | text57  |   157
+ 57 | text57  |   257
+ 57 | text57  |   257
+ 58 | text158 |    58
+ 58 | text158 |    58
+ 58 | text158 |   158
+ 58 | text158 |   158
+ 58 | text158 |   258
+ 58 | text58  |    58
+ 58 | text58  |    58
+ 58 | text58  |   158
+ 58 | text58  |   258
+ 58 | text58  |   258
+ 59 | text159 |    59
+ 59 | text159 |    59
+ 59 | text159 |   159
+ 59 | text159 |   159
+ 59 | text159 |   259
+ 59 | text59  |    59
+ 59 | text59  |    59
+ 59 | text59  |   159
+ 59 | text59  |   259
+ 59 | text59  |   259
+ 60 | text160 |    60
+ 60 | text160 |    60
+ 60 | text160 |   160
+ 60 | text160 |   160
+ 60 | text160 |   260
+ 60 | text60  |    60
+ 60 | text60  |    60
+ 60 | text60  |   160
+ 60 | text60  |   260
+ 60 | text60  |   260
+ 61 | text161 |    61
+ 61 | text161 |    61
+ 61 | text161 |   161
+ 61 | text161 |   161
+ 61 | text161 |   261
+ 61 | text61  |    61
+ 61 | text61  |    61
+ 61 | text61  |   161
+ 61 | text61  |   261
+ 61 | text61  |   261
+ 62 | text162 |    62
+ 62 | text162 |    62
+ 62 | text162 |   162
+ 62 | text162 |   162
+ 62 | text162 |   262
+ 62 | text62  |    62
+ 62 | text62  |    62
+ 62 | text62  |   162
+ 62 | text62  |   262
+ 62 | text62  |   262
+ 63 | text163 |    63
+ 63 | text163 |    63
+ 63 | text163 |   163
+ 63 | text163 |   163
+ 63 | text163 |   263
+ 63 | text63  |    63
+ 63 | text63  |    63
+ 63 | text63  |   163
+ 63 | text63  |   263
+ 63 | text63  |   263
+ 64 | text164 |    64
+ 64 | text164 |    64
+ 64 | text164 |   164
+ 64 | text164 |   164
+ 64 | text164 |   264
+ 64 | text64  |    64
+ 64 | text64  |    64
+ 64 | text64  |   164
+ 64 | text64  |   264
+ 64 | text64  |   264
+ 65 | text165 |    65
+ 65 | text165 |    65
+ 65 | text165 |   165
+ 65 | text165 |   165
+ 65 | text165 |   265
+ 65 | text65  |    65
+ 65 | text65  |    65
+ 65 | text65  |   165
+ 65 | text65  |   265
+ 65 | text65  |   265
+ 66 | text166 |    66
+ 66 | text166 |    66
+ 66 | text166 |   166
+ 66 | text166 |   166
+ 66 | text166 |   266
+ 66 | text66  |    66
+ 66 | text66  |    66
+ 66 | text66  |   166
+ 66 | text66  |   266
+ 66 | text66  |   266
+ 67 | text167 |    67
+ 67 | text167 |    67
+ 67 | text167 |   167
+ 67 | text167 |   167
+ 67 | text167 |   267
+ 67 | text67  |    67
+ 67 | text67  |    67
+ 67 | text67  |   167
+ 67 | text67  |   267
+ 67 | text67  |   267
+ 68 | text168 |    68
+ 68 | text168 |    68
+ 68 | text168 |   168
+ 68 | text168 |   168
+ 68 | text168 |   268
+ 68 | text68  |    68
+ 68 | text68  |    68
+ 68 | text68  |   168
+ 68 | text68  |   268
+ 68 | text68  |   268
+ 69 | text169 |    69
+ 69 | text169 |    69
+ 69 | text169 |   169
+ 69 | text169 |   169
+ 69 | text169 |   269
+ 69 | text69  |    69
+ 69 | text69  |    69
+ 69 | text69  |   169
+ 69 | text69  |   269
+ 69 | text69  |   269
+ 70 | text170 |    70
+ 70 | text170 |    70
+ 70 | text170 |   170
+ 70 | text170 |   170
+ 70 | text170 |   270
+ 70 | text70  |    70
+ 70 | text70  |    70
+ 70 | text70  |   170
+ 70 | text70  |   270
+ 70 | text70  |   270
+ 71 | text171 |    71
+ 71 | text171 |    71
+ 71 | text171 |   171
+ 71 | text171 |   171
+ 71 | text171 |   271
+ 71 | text71  |    71
+ 71 | text71  |    71
+ 71 | text71  |   171
+ 71 | text71  |   271
+ 71 | text71  |   271
+ 72 | text172 |    72
+ 72 | text172 |    72
+ 72 | text172 |   172
+ 72 | text172 |   172
+ 72 | text172 |   272
+ 72 | text72  |    72
+ 72 | text72  |    72
+ 72 | text72  |   172
+ 72 | text72  |   272
+ 72 | text72  |   272
+ 73 | text173 |    73
+ 73 | text173 |    73
+ 73 | text173 |   173
+ 73 | text173 |   173
+ 73 | text173 |   273
+ 73 | text73  |    73
+ 73 | text73  |    73
+ 73 | text73  |   173
+ 73 | text73  |   273
+ 73 | text73  |   273
+ 74 | text174 |    74
+ 74 | text174 |    74
+ 74 | text174 |   174
+ 74 | text174 |   174
+ 74 | text174 |   274
+ 74 | text74  |    74
+ 74 | text74  |    74
+ 74 | text74  |   174
+ 74 | text74  |   274
+ 74 | text74  |   274
+ 75 | text175 |    75
+ 75 | text175 |    75
+ 75 | text175 |   175
+ 75 | text175 |   175
+ 75 | text175 |   275
+ 75 | text75  |    75
+ 75 | text75  |    75
+ 75 | text75  |   175
+ 75 | text75  |   275
+ 75 | text75  |   275
+ 76 | text176 |    76
+ 76 | text176 |    76
+ 76 | text176 |   176
+ 76 | text176 |   176
+ 76 | text176 |   276
+ 76 | text76  |    76
+ 76 | text76  |    76
+ 76 | text76  |   176
+ 76 | text76  |   276
+ 76 | text76  |   276
+ 77 | text177 |    77
+ 77 | text177 |    77
+ 77 | text177 |   177
+ 77 | text177 |   177
+ 77 | text177 |   277
+ 77 | text77  |    77
+ 77 | text77  |    77
+ 77 | text77  |   177
+ 77 | text77  |   277
+ 77 | text77  |   277
+ 78 | text178 |    78
+ 78 | text178 |    78
+ 78 | text178 |   178
+ 78 | text178 |   178
+ 78 | text178 |   278
+ 78 | text78  |    78
+ 78 | text78  |    78
+ 78 | text78  |   178
+ 78 | text78  |   278
+ 78 | text78  |   278
+ 79 | text179 |    79
+ 79 | text179 |    79
+ 79 | text179 |   179
+ 79 | text179 |   179
+ 79 | text179 |   279
+ 79 | text79  |    79
+ 79 | text79  |    79
+ 79 | text79  |   179
+ 79 | text79  |   279
+ 79 | text79  |   279
+ 80 | text180 |    80
+ 80 | text180 |    80
+ 80 | text180 |   180
+ 80 | text180 |   180
+ 80 | text180 |   280
+ 80 | text80  |    80
+ 80 | text80  |    80
+ 80 | text80  |   180
+ 80 | text80  |   280
+ 80 | text80  |   280
+ 81 | text181 |    81
+ 81 | text181 |    81
+ 81 | text181 |   181
+ 81 | text181 |   181
+ 81 | text181 |   281
+ 81 | text81  |    81
+ 81 | text81  |    81
+ 81 | text81  |   181
+ 81 | text81  |   281
+ 81 | text81  |   281
+ 82 | text182 |    82
+ 82 | text182 |    82
+ 82 | text182 |   182
+ 82 | text182 |   182
+ 82 | text182 |   282
+ 82 | text82  |    82
+ 82 | text82  |    82
+ 82 | text82  |   182
+ 82 | text82  |   282
+ 82 | text82  |   282
+ 83 | text183 |    83
+ 83 | text183 |    83
+ 83 | text183 |   183
+ 83 | text183 |   183
+ 83 | text183 |   283
+ 83 | text83  |    83
+ 83 | text83  |    83
+ 83 | text83  |   183
+ 83 | text83  |   283
+ 83 | text83  |   283
+ 84 | text184 |    84
+ 84 | text184 |    84
+ 84 | text184 |   184
+ 84 | text184 |   184
+ 84 | text184 |   284
+ 84 | text84  |    84
+ 84 | text84  |    84
+ 84 | text84  |   184
+ 84 | text84  |   284
+ 84 | text84  |   284
+ 85 | text185 |    85
+ 85 | text185 |    85
+ 85 | text185 |   185
+ 85 | text185 |   185
+ 85 | text185 |   285
+ 85 | text85  |    85
+ 85 | text85  |    85
+ 85 | text85  |   185
+ 85 | text85  |   285
+ 85 | text85  |   285
+ 86 | text186 |    86
+ 86 | text186 |    86
+ 86 | text186 |   186
+ 86 | text186 |   186
+ 86 | text186 |   286
+ 86 | text86  |    86
+ 86 | text86  |    86
+ 86 | text86  |   186
+ 86 | text86  |   286
+ 86 | text86  |   286
+ 87 | text187 |    87
+ 87 | text187 |    87
+ 87 | text187 |   187
+ 87 | text187 |   187
+ 87 | text187 |   287
+ 87 | text87  |    87
+ 87 | text87  |    87
+ 87 | text87  |   187
+ 87 | text87  |   287
+ 87 | text87  |   287
+ 88 | text188 |    88
+ 88 | text188 |    88
+ 88 | text188 |   188
+ 88 | text188 |   188
+ 88 | text188 |   288
+ 88 | text88  |    88
+ 88 | text88  |    88
+ 88 | text88  |   188
+ 88 | text88  |   288
+ 88 | text88  |   288
+ 89 | text189 |    89
+ 89 | text189 |    89
+ 89 | text189 |   189
+ 89 | text189 |   189
+ 89 | text189 |   289
+ 89 | text89  |    89
+ 89 | text89  |    89
+ 89 | text89  |   189
+ 89 | text89  |   289
+ 89 | text89  |   289
+ 90 | text190 |    90
+ 90 | text190 |    90
+ 90 | text190 |   190
+ 90 | text190 |   190
+ 90 | text190 |   290
+ 90 | text90  |    90
+ 90 | text90  |    90
+ 90 | text90  |   190
+ 90 | text90  |   290
+ 90 | text90  |   290
+ 91 | text191 |    91
+ 91 | text191 |    91
+ 91 | text191 |   191
+ 91 | text191 |   191
+ 91 | text191 |   291
+ 91 | text91  |    91
+ 91 | text91  |    91
+ 91 | text91  |   191
+ 91 | text91  |   291
+ 91 | text91  |   291
+ 92 | text192 |    92
+ 92 | text192 |    92
+ 92 | text192 |   192
+ 92 | text192 |   192
+ 92 | text192 |   292
+ 92 | text92  |    92
+ 92 | text92  |    92
+ 92 | text92  |   192
+ 92 | text92  |   292
+ 92 | text92  |   292
+ 93 | text193 |    93
+ 93 | text193 |    93
+ 93 | text193 |   193
+ 93 | text193 |   193
+ 93 | text193 |   293
+ 93 | text93  |    93
+ 93 | text93  |    93
+ 93 | text93  |   193
+ 93 | text93  |   293
+ 93 | text93  |   293
+ 94 | text194 |    94
+ 94 | text194 |    94
+ 94 | text194 |   194
+ 94 | text194 |   194
+ 94 | text194 |   294
+ 94 | text94  |    94
+ 94 | text94  |    94
+ 94 | text94  |   194
+ 94 | text94  |   294
+ 94 | text94  |   294
+ 95 | text195 |    95
+ 95 | text195 |    95
+ 95 | text195 |   195
+ 95 | text195 |   195
+ 95 | text195 |   295
+ 95 | text95  |    95
+ 95 | text95  |    95
+ 95 | text95  |   195
+ 95 | text95  |   295
+ 95 | text95  |   295
+ 96 | text196 |    96
+ 96 | text196 |    96
+ 96 | text196 |   196
+ 96 | text196 |   196
+ 96 | text196 |   296
+ 96 | text96  |    96
+ 96 | text96  |    96
+ 96 | text96  |   196
+ 96 | text96  |   296
+ 96 | text96  |   296
+ 97 | text197 |    97
+ 97 | text197 |    97
+ 97 | text197 |   197
+ 97 | text197 |   197
+ 97 | text197 |   297
+ 97 | text97  |    97
+ 97 | text97  |    97
+ 97 | text97  |   197
+ 97 | text97  |   297
+ 97 | text97  |   297
+ 98 | text198 |    98
+ 98 | text198 |    98
+ 98 | text198 |   198
+ 98 | text198 |   198
+ 98 | text198 |   298
+ 98 | text98  |    98
+ 98 | text98  |    98
+ 98 | text98  |   198
+ 98 | text98  |   298
+ 98 | text98  |   298
+ 99 | text199 |    99
+ 99 | text199 |    99
+ 99 | text199 |   199
+ 99 | text199 |   199
+ 99 | text199 |   299
+ 99 | text99  |    99
+ 99 | text99  |    99
+ 99 | text99  |   199
+ 99 | text99  |   299
+ 99 | text99  |   299
+(964 rows)
+
+RESET ALL;
+--start_ignore
+drop table if exists t1;
+NOTICE:  table "t1" does not exist, skipping
+CREATE OR REPLACE FUNCTION f(a int) RETURNS int AS $$ select $1 $$ LANGUAGE SQL;
+CREATE TABLE t1(a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO t1 VALUES (1);
+-- end_ignore
+SELECT * FROM t1 WHERE a IN (SELECT * FROM f(t1.a));
+ a 
+---
+ 1
+(1 row)
+
+SELECT * FROM t1 WHERE exists (SELECT * FROM f(t1.a));
+ a 
+---
+ 1
+(1 row)
+
+SELECT * FROM t1 where a not in (SELECT f FROM f(t1.a));
+ a 
+---
+(0 rows)
+
+RESET ALL;
+-- start_ignore
+CREATE TABLE tversion (
+    rnum integer NOT NULL,
+    c1 integer,
+    cver character(6),
+    cnnull integer,
+    ccnull character(1)
+) DISTRIBUTED BY (rnum);
+COPY tversion (rnum, c1, cver, cnnull, ccnull) FROM stdin;
+CREATE TABLE qp_tjoin1 (
+    rnum integer NOT NULL,
+    c1 integer,
+    c2 integer
+) DISTRIBUTED BY (rnum);
+CREATE TABLE qp_tjoin2 (
+    rnum integer NOT NULL,
+    c1 integer,
+    c2 character(2)
+) DISTRIBUTED BY (rnum);
+CREATE TABLE qp_tjoin3 (
+    rnum integer NOT NULL,
+    c1 integer,
+    c2 character(2)
+) DISTRIBUTED BY (rnum);
+CREATE TABLE qp_tjoin4 (
+    rnum integer NOT NULL,
+    c1 integer,
+    c2 character(2)
+) DISTRIBUTED BY (rnum);
+COPY qp_tjoin1 (rnum, c1, c2) FROM stdin;
+COPY qp_tjoin2 (rnum, c1, c2) FROM stdin;
+COPY qp_tjoin3 (rnum, c1, c2) FROM stdin;
+COPY qp_tjoin4 (rnum, c1, c2) FROM stdin;
+-- end_ignore
+select qp_tjoin1.rnum, qp_tjoin1.c1, case when 10 in ( select 1 from tversion ) then 'yes' else 'no' end from qp_tjoin1 order by rnum;
+ rnum | c1 | case 
+------+----+------
+    0 | 10 | no
+    1 | 20 | no
+    2 |    | no
+(3 rows)
+
+select rnum, c1, c2 from qp_tjoin2 where 50 not in ( select c2 from qp_tjoin1 where c2=25) order by rnum;
+ rnum | c1 | c2 
+------+----+----
+    0 | 10 | BB
+    1 | 15 | DD
+    2 |    | EE
+    3 | 10 | FF
+(4 rows)
+
+select rnum, c1, c2 from qp_tjoin2 where 20 > all ( select c1 from qp_tjoin1 where c1 = 100) order by rnum;
+ rnum | c1 | c2 
+------+----+----
+    0 | 10 | BB
+    1 | 15 | DD
+    2 |    | EE
+    3 | 10 | FF
+(4 rows)
+
+select rnum, c1, c2 from qp_tjoin2 where 75 > all ( select c2 from qp_tjoin1) order by rnum;
+ rnum | c1 | c2 
+------+----+----
+    0 | 10 | BB
+    1 | 15 | DD
+    2 |    | EE
+    3 | 10 | FF
+(4 rows)
+
+select rnum, c1, c2 from qp_tjoin2 where 20 > all ( select c1 from qp_tjoin1) order by rnum;
+ rnum | c1 | c2 
+------+----+----
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop schema qp_correlated_query cascade;
+-- end_ignore
+RESET ALL;

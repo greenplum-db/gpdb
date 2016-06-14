@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/cluster.sgml,v 1.38.2.1 2007/05/13 16:04:40 mha Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/cluster.sgml,v 1.40 2007/02/01 00:28:18 momjian Exp $
 PostgreSQL documentation
 -->
 
@@ -143,7 +143,7 @@ CLUSTER
     Because the planner records statistics about the ordering of
     tables, it is advisable to run <xref linkend="sql-analyze"
     endterm="sql-analyze-title"> on the newly clustered table.
-    Otherwise, the planner may make poor choices of query plans.
+    Otherwise, the planner might make poor choices of query plans.
    </para>
 
    <para>
@@ -155,7 +155,7 @@ CLUSTER
     entries are on random pages, so there is one disk page
     retrieved for every row moved. (<productname>PostgreSQL</productname> has
     a cache, but the majority of a big table will not fit in the cache.)
-    The other way to cluster a table is to use
+    The other way to cluster a table is to use:
 
 <programlisting>
 CREATE TABLE <replaceable class="parameter">newtable</replaceable> AS

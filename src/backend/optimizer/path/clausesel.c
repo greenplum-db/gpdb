@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/clausesel.c,v 1.82.2.1 2007/08/31 23:35:29 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/clausesel.c,v 1.84 2007/02/19 07:03:28 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

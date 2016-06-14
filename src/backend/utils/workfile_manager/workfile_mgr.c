@@ -60,7 +60,6 @@ static uint64 get_operator_work_mem(PlanState *ps);
 static CdbVisitOpt PlanNonCacheableWalker(PlanState *ps, void *context);
 static bool ExprNonCacheableWalker(Node *expr, void *ctx);
 static bool isFuncCacheable(Oid fn_oid);
-static CacheEntry *acquire_entry_retry(Cache *cache, workset_info *populate_param);
 static char *create_workset_directory(NodeTag node_type, int slice_id);
 
 
@@ -201,19 +200,17 @@ workfile_mgr_create_set(enum ExecWorkFileType type, bool can_be_reused, PlanStat
 	set_info.dir_path = dir_path;
 	set_info.session_start_time = GetCurrentTimestamp();
 	set_info.operator_work_mem = get_operator_work_mem(ps);
-	CacheEntry *newEntry = NULL;
 
-	PG_TRY();
+	CacheEntry *newEntry = Cache_AcquireEntry(workfile_mgr_cache, &set_info);
+
+	if (NULL == newEntry)
 	{
-		newEntry = acquire_entry_retry(workfile_mgr_cache, &set_info);
-	}
-	PG_CATCH();
-	{
-		/* Failed to acquire new entry, cache full. Clean up the directory we created. */
+		/* Could not acquire another entry from the cache - we filled it up */
+		elog(ERROR, "could not create workfile manager entry: exceeded number of concurrent spilling queries");
+
+		/* Clean up the directory we created. */
 		workfile_mgr_delete_set_directory(dir_path);
-		PG_RE_THROW();
 	}
-	PG_END_TRY();
 
 	/* Path has now been copied to the workfile_set. We can free it */
 	pfree(dir_path);
@@ -567,8 +564,8 @@ workfile_mgr_lookup_set(PlanState *ps)
 	set_info.dir_path = NULL;
 	set_info.operator_work_mem = get_operator_work_mem(ps);
 
-	CacheEntry *localEntry = acquire_entry_retry(workfile_mgr_cache, &set_info);
-	Assert(localEntry != NULL);
+	CacheEntry *localEntry = Cache_AcquireEntry(workfile_mgr_cache, &set_info);
+	Insist(NULL != localEntry);
 
 	workfile_set *local_work_set = (workfile_set *) CACHE_ENTRY_PAYLOAD(localEntry);
 
@@ -597,42 +594,6 @@ workfile_mgr_lookup_set(PlanState *ps)
 	}
 
 	return work_set;
-}
-
-/*
- * Acquire an entry from the cache. If the cache is full (reached gp_workfile_max_entries),
- * trigger evictions and try again.
- * If the cache remains full after max_retries, give up and error out.
- *
- * populate_param is the parameter to be passed to Cache_AcquireEntry. It
- * will be used to populate the entry before being returned.
- */
-static CacheEntry *
-acquire_entry_retry(Cache *cache, workset_info *populate_param)
-{
-	CacheEntry *localEntry = Cache_AcquireEntry(cache, populate_param);
-
-	int crt_retry = 0;
-	while (NULL == localEntry && crt_retry < MAX_EVICT_ATTEMPTS)
-	{
-		/*
-		 * We reached maximum number of entries in the cache. Evict something
-		 * then try again.
-		 */
-		int64 size_evicted = workfile_mgr_evict(MIN_EVICT_SIZE);
-		elog(gp_workfile_caching_loglevel, "Hit cache entries full, evicted " INT64_FORMAT " bytes", size_evicted);
-
-		localEntry = Cache_AcquireEntry(cache, populate_param);
-		crt_retry++;
-	}
-
-	if (NULL == localEntry)
-	{
-		/* Could not acquire another entry from the cache - we filled it up */
-		elog(ERROR, "could not create workfile manager entry: exceeded number of concurrent spilling queries");
-	}
-
-	return localEntry;
 }
 
 /*
@@ -951,26 +912,6 @@ workfile_mgr_compare_plan(workfile_set *work_set, workfile_set_plan *sf_plan)
 
 	workfile_mgr_close_file(work_set, plan_file);
 	return match;
-}
-
-/*
- * Runs the eviction algorithm to identify victims and evicts them. It attempts
- * to evict victims with cumulative size >= desiredSize
- *
- * Returns the actual cumulative size of all the sets evicted
- */
-int64
-workfile_mgr_evict(int64 size_requested)
-{
-	Assert(size_requested > 0);
-	Assert(NULL != workfile_mgr_cache);
-
-	int64 size_evicted = Cache_Evict(workfile_mgr_cache, size_requested);
-
-	elog(gp_workfile_caching_loglevel, "Eviction: requested=" INT64_FORMAT " evicted=" INT64_FORMAT,
-			size_requested, size_evicted);
-
-	return size_evicted;
 }
 
 /*

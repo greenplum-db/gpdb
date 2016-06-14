@@ -1,8 +1,8 @@
 # ----------
 # The first group of parallel test
-# $PostgreSQL: pgsql/src/test/regress/parallel_schedule,v 1.37 2007/01/20 17:15:43 neilc Exp $
+# $PostgreSQL: pgsql/src/test/regress/parallel_schedule,v 1.39 2007/02/09 03:35:35 tgl Exp $
 # ----------
-test: boolean char name varchar text int2 int4 int8 oid float4 float8 bit numeric
+test: boolean char name varchar text int2 int4 int8 oid float4 float8 bit numeric uuid
 
 # Depends on things setup during char, varchar and text
 test: strings
@@ -136,3 +136,8 @@ test: limit copy2 temp domain rangefuncs prepare without_oid conversion truncate
 # is quite different.
 #test: tablespace
 test: variadic_parameters
+test: default_parameters
+
+# test workfiles compressed using zlib
+# 'zlib' utilizes fault injectors so it needs to be in a group by itself
+test: zlib

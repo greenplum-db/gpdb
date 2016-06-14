@@ -1,5 +1,5 @@
 # -*-makefile-*-
-# $PostgreSQL: pgsql/src/Makefile.global.in,v 1.232 2006/10/08 17:15:33 tgl Exp $
+# $PostgreSQL: pgsql/src/Makefile.global.in,v 1.233 2007/02/09 15:55:57 petere Exp $
 
 #------------------------------------------------------------------------------
 # All PostgreSQL makefiles include this file and use the variables it sets,
@@ -166,25 +166,29 @@ sqlmansect_dummy = l
 with_perl	= @with_perl@
 with_python	= @with_python@
 with_tcl	= @with_tcl@
-with_java   = @with_java@
 with_openssl	= @with_openssl@
-with_libxml     = @with_libxml
+with_libxml     = @with_libxml@
 with_system_tzdata = @with_system_tzdata@
 with_zlib	= @with_zlib@
+with_apr_config	= @with_apr_config@
 enable_shared	= @enable_shared@
 enable_rpath	= @enable_rpath@
-enable_nls	= @enable_nls@
+# NLS is not supported in Greenplum, see comment documenting
+# this in configure.in
+# enable_nls	= @enable_nls@
 enable_debug	= @enable_debug@
 enable_dtrace	= @enable_dtrace@
 enable_coverage	= @enable_coverage@
 enable_thread_safety	= @enable_thread_safety@
 enable_largefile	= @enable_largefile@
 enable_orca		= @enable_orca@
+enable_codegen		= @enable_codegen@
+enable_gpfdist		= @enable_gpfdist@
 enable_snmp			= @enable_snmp@
-enable_email		= @enable_email@
 enable_connectemc	= @enable_connectemc@
 enable_ddboost	    = @enable_ddboost@
 enable_netbackup	= @enable_netbackup@
+enable_mapreduce    = @enable_mapreduce@
 
 python_includespec	= @python_includespec@
 python_libdir		= @python_libdir@
@@ -206,6 +210,7 @@ TCL_SHLIB_LD_LIBS	= @TCL_SHLIB_LD_LIBS@
 PTHREAD_CFLAGS		= @PTHREAD_CFLAGS@
 PTHREAD_LIBS		= @PTHREAD_LIBS@
 
+have_yaml 		= @have_yaml@
 have_docbook	= @have_docbook@
 DOCBOOKSTYLE	= @DOCBOOKSTYLE@
 COLLATEINDEX	= @COLLATEINDEX@
@@ -292,23 +297,13 @@ perl_privlibexp		= @perl_privlibexp@
 perl_useshrplib		= @perl_useshrplib@
 perl_embed_ldflags	= @perl_embed_ldflags@
 
-# Java
-ifneq (@JAVA@,)
-    # quoted to protect pathname with spaces
-	JAVA        = "@JAVA@"
-	JAVAC       = "@JAVAC@"
-	JAVAH       = "@JAVAH@"
-	JAR         = "@JAR@"
-	JAVADOC     = "@JAVADOC@"
-	JAVA_HOME   = @JAVA_HOME@
-	JAVAC_FLAGS = @JAVAC_FLAGS@
-else
-	JAVA        = $(missing) java
-	JAVAC       = $(missing) javac
-	JAVAH       = $(missing) javah
-	JAR         = $(missing) jar
-	JAVADOC     = $(missing) javadoc
-endif
+# apr-1-config
+
+APR_1_CONFIG		= @APR_1_CONFIG@
+apr_includes		= @apr_includes@
+apr_link_ld_libs	= @apr_link_ld_libs@
+apr_cflags			= @apr_cflags@
+apr_cppflags		= @apr_cppflags@
 
 # Miscellaneous
 
@@ -369,7 +364,9 @@ endif
 # Feature settings
 
 DEF_PGPORT = @default_port@
-WANTED_LANGUAGES = @WANTED_LANGUAGES@
+# NLS is not supported in Greenplum, see comment documenting
+# this in configure.in
+# WANTED_LANGUAGES = @WANTED_LANGUAGES@
 
 
 

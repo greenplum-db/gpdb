@@ -44,8 +44,7 @@ extern List *addAllTargetsToSortList(ParseState *pstate,
 
 extern List *addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 					List *sortlist, List *targetlist,
-					SortByDir sortby_dir, SortByNulls sortby_nulls,
-					List *sortby_opname, bool resolveUnknown);
+					SortBy *sortby, bool resolveUnknown);
 extern Index assignSortGroupRef(TargetEntry *tle, List *tlist);
 extern bool targetIsInSortGroupList(TargetEntry *tle, Oid sortop, List *sortList);
 

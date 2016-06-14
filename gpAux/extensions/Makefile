@@ -3,24 +3,64 @@
 default: all
 
 BLD_TOP=..
-include $(BLD_TOP)/Makefile.global
-include $(BLD_TOP)/Makefile.thirdparty
+include $(BLD_TOP)/Makefile.windows
 
-all: mkgpfdist mkdbgen mkgphdfs
+ext_dir=../ext
+
+top_builddir = ../..
+include $(top_builddir)/src/Makefile.global
+
+ENV_JAVA_HOME:=$(shell echo $$JAVA_HOME)
+ifneq (${ENV_JAVA_HOME},)
+	JAVA_HOME=${ENV_JAVA_HOME}
+endif
+
+ifneq ($(with_apr_config),)
+ifneq ($(with_apr_config),yes)
+	GPFDIST_FLAG='--with-apr-config=$(with_apr_config)'
+endif
+endif
+
+all: mkdbgen mkgphdfs mks3ext
 
 .PHONY:
-mkgpfdist:
-	$(MAKE) -f Makefile.gpfdist INSTLOC=$(INSTLOC)
+mapreduce:
+	if [ "$(enable_mapreduce)" = "yes" ]; then \
+		echo "gpmapreduce enabled"; \
+		$(MAKE) -C gpmapreduce; \
+	fi
 
-.PHONY:
-mkdbgen:
-	$(MAKE) -f Makefile.tpch INSTLOC=$(INSTLOC)
+install: mapreduce
+	if [ "$(enable_mapreduce)" = "yes" ]; then \
+		$(MAKE) -C gpmapreduce install; \
+	fi
+
+clean:
+	@if [ -f gpfdist/GNUmakefile ]; then $(MAKE) -C gpfdist clean; fi; \
+	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce clean; fi
+
+
+distclean:
+	@if [ -f gpfdist/GNUmakefile ]; then $(MAKE) -C gpfdist clean; fi; \
+	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce distclean; fi
 
 .PHONY:
 mkgphdfs:
 	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gphdfs USE_PGXS=1 docdir=$(INSTLOC)/docs install \
 		ANT=/opt/releng/apache-ant/bin/ant \
 		JAVA_HOME=${JAVA_HOME}
+
+.PHONY:
+mks3ext:
+	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -B -C gps3ext USE_PGXS=1 install
+	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -B -C gps3ext -f Makefile.check USE_PGXS=1 install
+
+# Only include include these files when running enterprise build
+ENTERPRISE_TARGETS="mkdbgen mkgphdfs mkorafce mkplr mkpljava"
+ifneq ($(findstring $(MAKECMDGOALS), $(ENTERPRISE_TARGETS)),)
+include $(BLD_TOP)/Makefile.global
+include $(BLD_TOP)/Makefile.thirdparty
+endif
 
 # Use $JAVA_HOME if specified, otherwise look for java in the likely places.
 # Note that Darwin's JVM layout is pretty weird.  JDK 1.6 apears to be the
@@ -46,6 +86,10 @@ JAR=${JAVA_HOME}/bin/jar
 JAVADOC=${JAVA_HOME}/bin/javadoc
 
 .PHONY:
+mkdbgen:
+	$(MAKE) -f Makefile.tpch INSTLOC=$(INSTLOC)
+
+.PHONY:
 mkpljava:
 	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C pljava \
 		JAVA_HOME=${JAVA_HOME} JAVA=${JAVA} JAVAC=${JAVAC} JAVAH=${JAVAH} JAR=${JAR} JAVADOC=${JAVADOC}  install
@@ -59,5 +103,12 @@ mkorafce:
 	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C orafce install USE_PGXS=1
 
 installcheck:
-	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C orafce installcheck USE_PGXS=1
-	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gphdfs installcheck USE_PGXS=1
+	if [ -d "$(ext_dir)" ]; then \
+		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C orafce installcheck USE_PGXS=1 ; \
+		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gphdfs installcheck USE_PGXS=1 ; \
+	fi
+
+installcheck-good: installcheck
+	if [ "$(enable_gpfdist)" = "yes" ]; then \
+		PATH=$(prefix)/bin:$(PATH) $(MAKE) -C gpfdist installcheck USE_PGXS=1 prefix=$(prefix) ; \
+	fi

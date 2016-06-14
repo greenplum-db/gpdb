@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/plannodes.h,v 1.89 2007/01/10 18:06:04 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/plannodes.h,v 1.90 2007/02/19 02:23:12 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -94,8 +94,6 @@ typedef struct PlannedStmt
 
 	List	   *subplans;		/* Plan trees for SubPlan expressions */
 
-	Bitmapset  *rewindPlanIDs;	/* indices of subplans that require REWIND */
-
 	/*
 	 * If the query has a returningList then the planner will store a list of
 	 * processed targetlists (one per result relation) here.  We must have a
@@ -149,28 +147,8 @@ typedef struct PlannedStmt
 	 */
 	struct GpPolicy  *intoPolicy;
 
-	/*
-	 * GPDB: This allows the slice table to accompany the plan as it
-	 * moves around the executor.
-	 *
-	 * Currently, the slice table should not be installed on the QD.
-	 * Rather is it shipped to QEs as a separate parameter to MPPEXEC.
-	 * The implementation of MPPEXEC, which runs on the QEs, installs
-	 * the slice table in the plan as required there.
-	 */
-	Node	   *sliceTable;
-
 	/* What is the memory reserved for this query's execution? */
 	uint64		query_mem;
-
-	/* The overall memory consumption account (i.e., outside of an operator) */
-	MemoryAccount *memoryAccount;
-
-	/*
-	 * List of TupleDescNodes, one for each transient record type, when a
-	 * PlannedStmt is transferred from QD to QEs
-	 */
-	List	   *transientTypeRecords;
 } PlannedStmt;
 
 
@@ -303,9 +281,6 @@ typedef struct Plan
 	 * How much memory (in KB) should be used to execute this plan node?
 	 */
 	uint64 operatorMemKB;
-
-	/* MemoryAccount to use for recording the memory usage of different plan nodes. */
-	MemoryAccount* memoryAccount;
 } Plan;
 
 /* ----------------
@@ -646,7 +621,10 @@ typedef struct SubqueryScan
 typedef struct FunctionScan
 {
 	Scan		scan;
-	/* no other fields needed at present */
+	Node	   *funcexpr;		/* expression tree for func call */
+	List	   *funccolnames;	/* output column names (string Value nodes) */
+	List	   *funccoltypes;	/* OID list of column type OIDs */
+	List	   *funccoltypmods; /* integer list of column typmods */
 } FunctionScan;
 
 /* ----------------
@@ -666,7 +644,7 @@ typedef struct TableFunctionScan
 typedef struct ValuesScan
 {
 	Scan		scan;
-	/* no other fields needed at present */
+	List	   *values_lists;	/* list of expression lists */
 } ValuesScan;
 
 /* ----------------
@@ -1013,7 +991,7 @@ typedef struct Window
 	int			numPartCols;	/* number of partitioning columns */
 	AttrNumber *partColIdx;		/* their indexes in the target list
 								 * of the window's outer plan.  */
-	Oid		   *partOperators;
+	Oid		   *partOperators;	/* equality operators */
 	List       *windowKeys;		/* list of WindowKey nodes */
 } Window;
 

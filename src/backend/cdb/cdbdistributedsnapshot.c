@@ -45,12 +45,7 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 	for (i = 0; i < count; i++)
 	{
 		if (localXid == inProgressEntryArray[i].localXid)
-		{
-			WATCH_VISIBILITY_ADDPAIR(
-				WATCH_VISIBILITY_XMIN_DISTRIBUTED_SNAPSHOT_IN_PROGRESS_FOUND_BY_LOCAL, isXmax);
-
 			return DISTRIBUTEDSNAPSHOT_COMMITTED_INPROGRESS;
-		}
 	}
 
 	/*
@@ -68,17 +63,10 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 		 * performance, too.
 		 */
 		if (distribXid == InvalidDistributedTransactionId)
-		{
-			WATCH_VISIBILITY_ADDPAIR(
-							WATCH_VISIBILITY_XMIN_LOCAL_DISTRIBUTED_CACHE_RETURNED_LOCAL, isXmax);
-
 			return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
-		}
 
 		// Fall below and evaluate the committed distributed transaction against
 		// the distributed snapshot.
-		WATCH_VISIBILITY_ADDPAIR(
-				WATCH_VISIBILITY_XMIN_LOCAL_DISTRIBUTED_CACHE_RETURNED_DISTRIB, isXmax);
 	}
 	else
 	{
@@ -95,9 +83,6 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 		{
 			DistributedTransactionTimeStamp checkDistribTimeStamp;
 			
-			WATCH_VISIBILITY_ADDPAIR(
-							WATCH_VISIBILITY_XMIN_NOT_KNOWN_BY_LOCAL_DISTRIBUTED_XACT, isXmax);
-
 			/*
 			 * Ok, now we must consult the distributed log.
 			 */
@@ -117,15 +102,7 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 				 * weeded out.
 				 */
 				if (checkDistribTimeStamp != header->distribTransactionTimeStamp)
-				{
-					WATCH_VISIBILITY_ADDPAIR( 
-							WATCH_VISIBILITY_XMIN_DIFF_DTM_START_IN_DISTRIBUTED_LOG, isXmax);
-									
 					return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
-				}
-				else
-					WATCH_VISIBILITY_ADDPAIR(
-							WATCH_VISIBILITY_XMIN_FOUND_IN_DISTRIBUTED_LOG, isXmax);
 			}
 			else
 			{
@@ -139,15 +116,9 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 												dslm->header.distribTransactionTimeStamp,
 												/* distribXid */ InvalidDistributedTransactionId);
 				
-				WATCH_VISIBILITY_ADDPAIR(
-						WATCH_VISIBILITY_XMIN_KNOWN_LOCAL_IN_DISTRIBUTED_LOG, isXmax);
-
 				return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
 			}
 		}
-		else
-			WATCH_VISIBILITY_ADDPAIR(
-					WATCH_VISIBILITY_XMIN_KNOWN_BY_LOCAL_DISTRIBUTED_XACT, isXmax);
 	}
 	
 	/*
@@ -173,22 +144,12 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 		Assert(header->xmin >= header->xminAllDistributedSnapshots);
 		
 		if (distribXid < dslm->header.xminAllDistributedSnapshots)
-		{
-			WATCH_VISIBILITY_ADDPAIR(
-					WATCH_VISIBILITY_XMIN_LESS_THAN_ALL_CURRENT_DISTRIBUTED, isXmax);
-
 			return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
-		}
 	}
 
 	/* Any xid < xmin is not in-progress */
 	if (distribXid < header->xmin)
-	{
-		WATCH_VISIBILITY_ADDPAIR(
-				WATCH_VISIBILITY_XMIN_LESS_THAN_DISTRIBUTED_SNAPSHOT_XMIN, isXmax);
-
 		return DISTRIBUTEDSNAPSHOT_COMMITTED_VISIBLE;
-	}
 
 	/* Any xid >= xmax is in-progress, distributed xmax points to the
 	 * committer, so it must be visible, so ">" instead of ">=" */
@@ -197,8 +158,6 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 		elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
 			 "distributedsnapshot committed but invisible: distribXid %d header->xmax %d header->xmin %d header->distribSnapshotId %d",
 			 distribXid, header->xmax, header->xmin, header->distribSnapshotId);
-		WATCH_VISIBILITY_ADDPAIR( 
-						WATCH_VISIBILITY_XMIN_GREATER_THAN_EQUAL_DISTRIBUTED_SNAPSHOT_XMAX, isXmax);
 
 		return DISTRIBUTEDSNAPSHOT_COMMITTED_INPROGRESS;
 	}
@@ -214,9 +173,6 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 			if (inProgressEntryArray[i].localXid == InvalidTransactionId)
 				inProgressEntryArray[i].localXid = localXid;
 			
-			WATCH_VISIBILITY_ADDPAIR(
-							WATCH_VISIBILITY_XMIN_DISTRIBUTED_SNAPSHOT_IN_PROGRESS_BY_DISTRIB, isXmax);
-
 			return DISTRIBUTEDSNAPSHOT_COMMITTED_INPROGRESS;
 		}
 	}
@@ -224,9 +180,6 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 	/*
 	 * Not in-progress, therefore visible.
 	 */
-	WATCH_VISIBILITY_ADDPAIR(
-					WATCH_VISIBILITY_XMIN_DISTRIBUTED_SNAPSHOT_NOT_IN_PROGRESS, isXmax);
-
 	return DISTRIBUTEDSNAPSHOT_COMMITTED_VISIBLE;
 }
 

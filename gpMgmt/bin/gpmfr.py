@@ -74,6 +74,8 @@ def mfr_parser():
     ddOpt.add_option("--show-streams", dest="showStreams", action="store_true",
                      default=False, help="Show I/O streams used for DD Boost" +
                      " MFR on local and remote Data Domains.")
+    ddOpt.add_option("--ddboost-storage-unit", dest="ddboost_storage_unit", action="store", default=None,
+                     help="Storage unit name in Data Domain server.")
     parser.add_option_group(ddOpt)
     optOpt = OptionGroup(parser, "Optional arguments used by operations")
     optOpt.add_option("--remote", dest="remote", action="store_true",
@@ -279,7 +281,7 @@ class DDSystem(object):
         5028: "Failed to connect to DD System, check hostname/IP address."
         }
 
-    def __init__(self, id):
+    def __init__(self, id, backup_dir=None, dd_storage_unit=None):
         self.id = id
         if id == "local":
             self.argSuffix = ""
@@ -290,9 +292,18 @@ class DDSystem(object):
             raise NotImplemented(
                 "Only local and remote DD systems are supported currently.")
         self._checkConfigExists(id)
-        self.defaultBackupDir = None
-        self.hostname = None
-        self._readConfig()
+
+        self.DDBackupDir = backup_dir
+        self.DDStorageUnit = dd_storage_unit
+
+        self.hostname, default_backup_dir, default_storage_unit = self._readConfig()
+
+        if not self.DDStorageUnit:
+            self.DDStorageUnit = default_storage_unit
+
+        if not self.DDBackupDir:
+            self.DDBackupDir = default_backup_dir
+
         self._replSourceLimit = None
         self._replDestLimit = None
 
@@ -365,26 +376,43 @@ class DDSystem(object):
         logger.error(msg + str(r))
         raise Exception(msg)
 
+    def findItem(self, pattern, line):
+        m = pattern.match(line)
+        if m:
+            return m.group(1)
+        else:
+            return None
+
     def _readConfig(self):
         """
         Run gpddboost to get default backup dir and DD hostname.
         """
+
+        default_hostname = None
+        default_backup_dir = None
+        default_ddboost_storage_unit = None
+
         phost = re.compile("Data Domain Hostname:([^ \t]*)")
         pdir = re.compile("Default Backup Directory:([^ \t]*)")
+        pstu = re.compile("Data Domain Storage Unit:([^ \t]*)")
+
         rc, lines = self._runDDBoost("--show-config")
+
         if rc != 0:
             code = self._parseError(lines)
             self.printErrorAndAbort(code)
+
         for l in lines:
-            m = pdir.match(l)
-            if m:
-                self.defaultBackupDir = m.group(1)
-            else:
-                m = phost.match(l)
-                if m:
-                    self.hostname = m.group(1)
-        if self.hostname is None or self.hostname == "":
+            if not default_hostname:
+                default_hostname = self.findItem(phost, l)
+            if not default_backup_dir:
+                default_backup_dir = self.findItem(pdir, l)
+            if not default_ddboost_storage_unit:
+                default_ddboost_storage_unit = self.findItem(pstu, l)
+
+        if default_hostname is None or default_hostname == "":
             raise Exception("Failed to obtain Data Domain configuration.")
+
         if self.id == "remote":
             # For remote Data Domain, default backup dir is not shown by
             # gpddboost.  Hence we employ the following ugly trick to get
@@ -398,11 +426,18 @@ class DDSystem(object):
                 code = self._parseError(lines)
                 self.printErrorAndAbort(code)
             for l in lines:
-                m = pdir.match(l)
-                if m:
-                    self.defaultBackupDir = m.group(1)
-        if self.defaultBackupDir is None or self.defaultBackupDir == "":
-            raise Exception("Failed to obtain Data Domain configuration.")
+                if not default_backup_dir:
+                    default_backup_dir = self.findItem(pdir, l)
+                if not default_ddboost_storage_unit:
+                    default_ddboost_storage_unit = self.findItem(pstu, l)
+
+        if default_backup_dir is None or default_backup_dir == "":
+            raise Exception("Failed to obtain backup directory from Data Domain configuration.")
+
+        if default_ddboost_storage_unit is None or default_ddboost_storage_unit == "":
+            raise Exception("Failed to obtain storage unit from Data Domain configuration.")
+
+        return default_hostname, default_backup_dir, default_ddboost_storage_unit
 
     def _ddBoostStreamCounts(self, regex):
         """
@@ -426,7 +461,7 @@ class DDSystem(object):
         Returns None if path not found on DD system.  Otherwise returns listing
         of files/directories, one per line.
         """
-        args = "--ls " + path
+        args = "--ls " + path + " --ddboost-storage-unit=" + self.DDStorageUnit
         rc, lines = self._runDDBoost(args)
         if rc != 0:
             code = self._parseError(lines)
@@ -436,7 +471,7 @@ class DDSystem(object):
         return lines
 
     def deleteFile(self, path):
-        args = "--del-file " + path
+        args = "--del-file " + path + " --ddboost-storage-unit=" + self.DDStorageUnit
         rc, lines = self._runDDBoost(args)
         if rc != 0:
             code = self._parseError(lines)
@@ -513,12 +548,12 @@ class DDSystem(object):
     def verifyLogin(self):
         """
         "gpddboost --verify" connects to DD system using configured username and
-        password.  gpddboost also creates "GPDB" storage unit on the DD system
-        if one doesn't exist.
+        password.  gpddboost also creates storage unit on the DD system if one
+        doesn't exist.
         """
-        rc, lines = self._runDDBoost("--verify")
+        rc, lines = self._runDDBoost("--verify --ddboost-storage-unit %s" % self.DDStorageUnit)
         if rc != 0:
-            logger.info("gpddboost --verify: %s" % "\n".join(lines))
+            logger.info("gpddboost --verify --ddboost-storage-unit %s: %s" % (self.DDStorageUnit, "\n".join(lines)))
             code = self._parseError(lines)
             self.printErrorAndAbort(code)
 
@@ -633,7 +668,7 @@ class Scheduler(object):
                 "Cannot start %d workers with %d backup files." %
                 (start + count, len(self.backupSet.backupFiles)))
         for bf in self.backupSet.backupFiles[start : start + count]:
-            bf.fullPath = "/".join([self.sourceDD.defaultBackupDir,
+            bf.fullPath = "/".join([self.sourceDD.DDBackupDir,
                                    self.backupSet.backupDate, bf.name])
             w = ReplicateWorker(bf, self.sourceDD, self.targetDD,
                                 self.replCancelEv, self.replAbortEv)
@@ -727,8 +762,8 @@ class Scheduler(object):
         else:
             for w in self.replWorkers:
                 w.join()
-            print "\nBackup '%s' transfered from %s to %s Data Domain." % \
-                  (self.backupSet.bt, self.sourceDD, self.targetDD)
+            print ("\nBackup '%s' transferred from %s to %s Data Domain." %
+                        (self.backupSet.bt, self.sourceDD, self.targetDD))
 
     def delete(self):
         """
@@ -768,7 +803,7 @@ class Scheduler(object):
             batch = files[workDone : workDone + batchSize]
             deleteWorkers = []
             for f in batch:
-                f.fullPath = "/".join([ddSystem.defaultBackupDir,
+                f.fullPath = "/".join([ddSystem.DDBackupDir,
                                       self.backupSet.backupDate, f.name])
                 dw = DeleteWorker(f, ddSystem)
                 dw.start()
@@ -825,17 +860,22 @@ class ReplicateWorker(Thread):
     def _ddBoostCmd(self):
         # TODO: This method needs to change in Phase II.
         cmd = DDBOOST_EXEC
+        ddboost_storage_unit = None
         if self.sourceDD.id == "local" and self.targetDD.id == "remote":
             cmd = cmd + " --replicate"
+            ddboost_storage_unit = self.sourceDD.DDStorageUnit
         elif self.sourceDD.id == "remote" and self.targetDD.id == "local":
             cmd = cmd + " --recover"
+            ddboost_storage_unit = self.targetDD.DDStorageUnit
         else:
             msg = "Invalid DD system pair: source = %s target = %s" % \
                   (self.sourceDD, self.targetDD)
             logger.error(msg)
             raise Exception(msg)
         cmd = cmd + " --from-file " + self.backupFile.fullPath + \
-                  " --to-file " + self.backupFile.fullPath
+                  " --to-file " + self.backupFile.fullPath + \
+                  " --ddboost-storage-unit " + ddboost_storage_unit
+
         return cmd
 
     def isInProgress(self):
@@ -1161,10 +1201,10 @@ class GpMfr(Operation):
 
     def execute(self):
         if self.options.remote:
-            self.ddSystem = DDSystem("remote")
+            self.ddSystem = DDSystem("remote", dd_storage_unit=self.options.ddboost_storage_unit)
         else:
-            self.ddSystem = DDSystem("local")
-        self.defaultDir = self.ddSystem.defaultBackupDir
+            self.ddSystem = DDSystem("local", dd_storage_unit=self.options.ddboost_storage_unit)
+        self.defaultDir = self.ddSystem.DDBackupDir
         if self.options.ping:
             self.checkDDReachable(self.ddSystem)
         if not self.options.showStreams:
@@ -1184,19 +1224,19 @@ class GpMfr(Operation):
             self.deleteBackup(self.timestamp)
         elif self.options.showStreams:
             localDD = self.ddSystem
-            remoteDD = DDSystem("remote")
+            remoteDD = DDSystem("remote", dd_storage_unit=self.options.ddboost_storage_unit)
             if self.options.ping:
                 self.checkDDReachable(remoteDD)
             self.showDDBoostIOStreams(localDD, remoteDD)
         elif self.options.replicate:
             sourceDD = self.ddSystem
-            targetDD = DDSystem("remote")
+            targetDD = DDSystem("remote", dd_storage_unit=self.options.ddboost_storage_unit)
             if self.options.ping:
                 self.checkDDReachable(targetDD)
             self.replicateBackup(self.timestamp, sourceDD, targetDD,
                                  int(self.options.maxStreams))
         elif self.options.recover:
-            sourceDD = DDSystem("remote")
+            sourceDD = DDSystem("remote", dd_storage_unit=self.options.ddboost_storage_unit)
             if self.options.ping:
                 self.checkDDReachable(sourceDD)
             targetDD = self.ddSystem
@@ -1441,8 +1481,7 @@ class GpMfr(Operation):
                 print "No valid backup set found on %s Data Domain." % sourceDD
                 return
         else:
-            print "Identifying backup files on %s Data Domain." % \
-                sourceDD
+            print "Identifying backup files on %s Data Domain." % sourceDD
             sourceBset = self._backupSet(bkptimestamp, sourceDD)
             if not sourceBset:
                 print "Backup '%s' not found on %s Data Domain." % \
@@ -1452,9 +1491,10 @@ class GpMfr(Operation):
             msg = "Backup '%s' does not appear to be a valid backup set."
             logger.error(msg % sourceBset.bt)
             return
-        msg = "Initiating transfer for %d files from %s to %s " + \
-              "Data Domain."
+
+        msg = "Initiating transfer for %d files from %s to %s Data Domain."
         print msg % (len(sourceBset.backupFiles), sourceDD, targetDD)
+
         targetBset = self._backupSet(sourceBset.bt, targetDD)
         if targetBset is not None:
             deleteTarget = False
@@ -1476,11 +1516,12 @@ class GpMfr(Operation):
                                       quiet=self.options.quiet)
                 scheduler.delete()
         else:
-            # Create "GPDB" storage unit on target Data Domain if one doesn't
+            # Create storage unit on target Data Domain if one doesn't
             # exist.
             targetDD.verifyLogin()
-        print "Using at the most %d I/O streams on each Data Domain." % \
-            maxStreams
+
+        print "Using at the most %d I/O streams on each Data Domain." % maxStreams
+
         scheduler = Scheduler(sourceBset, sourceDD, targetDD,
                               self.options.quiet)
         scheduler.replicate(maxStreams)

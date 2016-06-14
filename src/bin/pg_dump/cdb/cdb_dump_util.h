@@ -28,13 +28,13 @@
 #define DDBOOST_POOL_SIZE (32 * 1024 * 2048)
 #endif
 
-extern int getDDBoostCredential(char** hostname, char** user, char** password, char** log_level ,char** log_size, char **default_backup_directory, bool remote);
-extern int  setDDBoostCredential(char *hostname, char *user, char *password, char *log_level ,char *log_size, char *default_backup_directory, bool remote);
+extern int getDDBoostCredential(char** hostname, char** user, char** password, char** log_level ,char** log_size, char **default_backup_directory, char **ddboost_storage_unit, bool remote);
+extern int  setDDBoostCredential(char *hostname, char *user, char *password, char *log_level ,char *log_size, char *default_backup_directory, char *ddboost_storage_unit,  bool remote);
 extern int  parseDDBoostCredential(char *hostname, char *user, char *password, const char *progName);
 extern void rotate_dd_logs(const char *file_name, unsigned int num_of_files, unsigned int log_size);
 extern void _ddp_test_log(const void *session_ptr, const ddp_char_t *log_msg, ddp_severity_t severity);
 extern int initDDSystem(ddp_inst_desc_t *ddp_inst, ddp_conn_desc_t *ddp_conn, ddp_client_info_t *cl_info,
-                        char **dd_su_name, bool createStorageUnit, char **default_backup_directory, bool remote);
+                        char **ddboost_storage_unit, bool createStorageUnit, char **default_backup_directory, bool remote);
 #endif
 
 /* --------------------------------------------------------------------------------------------------
@@ -81,8 +81,8 @@ extern void DoCancelNotifyListen(PGconn *pConn, bool bListen,
 					 const char *pszSuffix);
 
 /* Checks if we should filter out tables when using incremental mode */
-extern bool isFilteringAllowedNow(int role, bool incrementalBackup, char *incrementalFilter); 
- 
+extern bool isFilteringAllowedNow(int role, bool incrementalBackup, char *incrementalFilter);
+
 /* frees data allocated inside an InputOptions struct */
 extern void FreeInputOptions(InputOptions * pInputOpts);
 
@@ -159,19 +159,30 @@ extern char *Base64ToData(char *pszIn, unsigned int *pOutLen);
 extern char *nextToken(register char **stringp, register const char *delim);
 extern int	parseDbidSet(int *dbidset, char *dump_set);
 extern char* formCompressionProgramString(char* compPg);
-extern void formDDBoostPsqlCommandLine(char** retVal, bool compUsed, const char* ddboostPg, const char* compProg, 
+extern void formDDBoostPsqlCommandLine(char** retVal, bool compUsed, const char* ddboostPg, const char* compProg,
 							const char* ddp_file_name, const char* dd_boost_buf_size,
-							const char* filter_script, const char* table_filter_file, 
-							int role, const char* psqlPg, bool postSchemaOnly);
-extern void formSegmentPsqlCommandLine(char** retVal, const char* inputFileSpec, 
-						bool compUsed, const char* compProg, const char* filter_script, 
+							const char* filter_script, const char* table_filter_file,
+							int role, const char* psqlPg, bool postSchemaOnly,
+							const char* change_schema_file, const char *schema_level_file,
+							const char* ddboost_storage_unit);
+
+extern void formSegmentPsqlCommandLine(char** retVal, const char* inputFileSpec,
+						bool compUsed, const char* compProg, const char* filter_script,
 						const char* table_filter_file, int role, const char* psqlPg, const char* catPg,
                         const char* gpNBURestorePg, const char* netbackupServiceHost, const char* netbackupBlockSize,
-						const char* change_schema);
-extern void formPostDataSchemaOnlyPsqlCommandLine(char** retVal, const char* inputFileSpec, 
+						const char* change_schema, const char* schema_level_file);
+
+extern void formPostDataSchemaOnlyPsqlCommandLine(char** retVal, const char* inputFileSpec,
 						bool compUsed, const char* compProg, const char* post_data_filter_script,
                         const char* table_filter_file, const char* psqlPg, const char* catPg,
-                        const char* gpNBURestorePg, const char* netbackupServiceHost, const char* netbackupBlockSize);
+                        const char* gpNBURestorePg, const char* netbackupServiceHost, const char* netbackupBlockSize,
+			const char* change_schema_file, const char *schema_level_file);
+
+extern void formFilterCommandLine(char** retVal, const char* filter_script, const char* table_filter_file,
+				int role, const char* change_schema_file, const char *schema_level_file);
+
+extern void formPostDataFilterCommandLine(char** retVal, const char* post_data_filter_script, const char* table_filter_file,
+					const char* change_schema_file, const char *schema_level_file);
 
 /* prototypes for hash table */
 

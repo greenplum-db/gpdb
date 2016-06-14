@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/planmain.h,v 1.97 2007/01/10 18:06:04 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/planmain.h,v 1.99 2007/01/22 01:35:22 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -132,6 +132,8 @@ extern Plan *create_plan(PlannerInfo *root, Path *path);
 extern SubqueryScan *make_subqueryscan(PlannerInfo *root, List *qptlist, List *qpqual,
 				  Index scanrelid, Plan *subplan, List *subrtable);
 extern Append *make_append(List *appendplans, bool isTarget, List *tlist);
+extern Sort *make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree,
+						List *pathkeys, double limit_tuples, bool add_keys_to_targetlist);
 extern Sort *make_sort_from_sortclauses(PlannerInfo *root, List *sortcls,
 						   Plan *lefttree);
 extern Sort *make_sort_from_groupcols(PlannerInfo *root, List *groupcls,
@@ -191,9 +193,6 @@ extern Repeat *make_repeat(List *tlist,
 						   uint64 grouping,
 						   Plan *subplan);
 extern bool is_projection_capable_plan(Plan *plan);
-extern Sort *make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree,
-                                     List *pathkeys, Relids relids,
-                                     bool add_keys_to_targetlist);
 extern Plan *add_sort_cost(PlannerInfo *root, Plan *input, 
 						   int numCols, 
 						   AttrNumber *sortColIdx, Oid *sortOperators);
@@ -215,43 +214,48 @@ extern int	join_collapse_limit;
 extern void add_base_rels_to_query(PlannerInfo *root, Node *jtnode);
 extern void build_base_rel_tlists(PlannerInfo *root, List *final_tlist);
 extern void add_IN_vars_to_tlists(PlannerInfo *root);
+extern void add_vars_to_targetlist(PlannerInfo *root, List *vars,
+								   Relids where_needed);
 extern List *deconstruct_jointree(PlannerInfo *root);
+extern void distribute_restrictinfo_to_rels(PlannerInfo *root,
+											RestrictInfo *restrictinfo);
 extern void process_implied_equality(PlannerInfo *root,
-						 Node *item1, Node *item2,
-						 Oid sortop1, Oid sortop2,
-						 Relids item1_relids, Relids item2_relids,
-						 bool delete_it);
+									 Oid opno,
+									 Expr *item1,
+									 Expr *item2,
+									 Relids qualscope,
+									 bool below_outer_join,
+									 bool both_const);
 extern void distribute_qual_to_rels(PlannerInfo *root, Node *clause,
-						bool is_deduced,
-						bool is_deduced_but_not_equijoin,
+						bool is_deduced, bool is_deduced_but_not_equijoin,
 						bool below_outer_join,
 						Relids qualscope,
 						Relids ojscope,
 						Relids outerjoin_nonnullable,
-						List **ptrToLocalEquiKeyList,
 						List **postponed_qual_list);
-extern void add_vars_to_targetlist(PlannerInfo *root, List *vars,
-					   Relids where_needed);
-
+extern RestrictInfo *build_implied_join_equality(Oid opno,
+							Expr *item1,
+							Expr *item2,
+							Relids qualscope);
 
 /*
  * prototypes for plan/setrefs.c
  */
-Plan *
-set_plan_references(PlannerGlobal *glob, Plan *plan, List *rtable);
+extern Plan *set_plan_references(PlannerGlobal *glob,
+								 Plan *plan,
+								 List *rtable);
 
-List *
-set_returning_clause_references(PlannerGlobal *glob,
+extern List *set_returning_clause_references(PlannerGlobal *glob,
 								List *rlist,
 								Plan *topplan,
 								Index resultRelation);
 
-extern void
-extract_query_dependencies(List *queries,
+extern void extract_query_dependencies(List *queries,
 						   List **relationOids,
 						   List **invalItems);
 extern void fix_opfuncids(Node *node);
 extern void set_opfuncid(OpExpr *opexpr);
+extern void set_sa_opfuncid(ScalarArrayOpExpr *opexpr);
 
 extern int num_distcols_in_grouplist(List *gc);
 

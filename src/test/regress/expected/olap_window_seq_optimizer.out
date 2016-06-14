@@ -202,10 +202,14 @@ select cn,
   count(*) over (order by cn range between '-11' preceding and '-2' following)
   from customer; -- error, negative values not permitted
 ERROR:  RANGE parameter cannot be negative
+LINE 2:   count(*) over (order by cn range between '-11' preceding a...
+                                                   ^
 select cn,
   sum(cn) over (order by cn range NULL preceding)
   from customer; -- we don't permit NULL
 ERROR:  RANGE parameter cannot be NULL
+LINE 2:   sum(cn) over (order by cn range NULL preceding)
+                                          ^
 select cn,
   sum(cn) over (order by cn range '1'::float8 preceding)
   from customer; -- this, however, should work
@@ -1231,6 +1235,8 @@ FROM sale;
 -- Reject DISTINCT qualified aggs when an ORDER BY is present
 SELECT count(distinct sale.pn) OVER (order by sale.pn) from sale;
 ERROR:  DISTINCT cannot be used with window specification containing an ORDER BY clause
+LINE 1: SELECT count(distinct sale.pn) OVER (order by sale.pn) from ...
+               ^
 -- Aggregate nesting --
 create table olap_tmp_for_window_seq(g integer, h integer, i integer, x integer);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'g' as the Greenplum Database data distribution key for this table.
@@ -8022,7 +8028,7 @@ group by
     2*b.g,
     lower(f);
 ERROR:  unresolved grouping key in window query
-HINT:  You may need to use explicit aliases and/or to refer to grouping keys in the same way throughout the query.
+HINT:  You might need to use explicit aliases and/or to refer to grouping keys in the same way throughout the query.
 -- End MPP-12082
 -- MPP-12913
 select count(*) over (partition by 1 order by cn rows between 1 preceding and 1 preceding) from sale;
@@ -8148,3 +8154,158 @@ select stddev(n) over(order by d range between current row and interval '1 day' 
                      |  89 | 89.0000000000000000 | 89
 (3 rows)
 
+-- This test examines the case that a statement invokes multiple lead functions,
+-- which are not sorted regarding the rows that they use and projected attributes are varlen.
+DROP TABLE IF EXISTS empsalary;
+NOTICE:  table "empsalary" does not exist, skipping
+CREATE TABLE empsalary(
+  depname varchar,
+  empno bigint,
+  salary char(8),
+  enroll_date date
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'depname' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO empsalary VALUES('develop', 8, '6000', '2006/10/01');
+INSERT INTO empsalary VALUES('develop', 11, '5200', '2007/08/15');
+INSERT INTO empsalary VALUES('develop', 9, '4500', '2008/01/01');
+-- First lead retrieves data from one tuple ahead, second lead function retrieves data from two tuples ahead, while third one
+-- gets data from one tuple ahead again.
+select * ,
+lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
+lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
+lead(empno,1) over (partition by depname order by salary desc) qianzhi11
+from empsalary;
+ depname | empno |  salary  | enroll_date | qianzhi1 | qianzhi2 | qianzhi11
+---------+-------+----------+-------------+----------+----------+-----------
+ develop |     8 | 6000     | 10-01-2006  | 5200     | 4500     |        11
+ develop |    11 | 5200     | 08-15-2007  | 4500     |          |         9
+ develop |     9 | 4500     | 01-01-2008  |          |          |
+(3 rows)
+
+-- Lead functions are in order.
+select * ,
+lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
+lead(empno,1) over (partition by depname order by salary desc) qianzhi11,
+lead(salary,2) over (partition by depname order by salary desc) qianzhi2
+from empsalary;
+ depname | empno |  salary  | enroll_date | qianzhi1 | qianzhi11 | qianzhi2
+---------+-------+----------+-------------+----------+-----------+----------
+ develop |     8 | 6000     | 10-01-2006  | 5200     |        11 | 4500
+ develop |    11 | 5200     | 08-15-2007  | 4500     |         9 |
+ develop |     9 | 4500     | 01-01-2008  |          |           |
+(3 rows)
+
+DROP TABLE IF EXISTS empsalary;
+CREATE TABLE empsalary(
+  depname varchar,
+  empno bigint,
+  salary numeric(22, 6),
+  enroll_date date
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'depname' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO empsalary VALUES('develop', 8, 6000, '2006/10/01');
+INSERT INTO empsalary VALUES('develop', 11, 5200, '2007/08/15');
+INSERT INTO empsalary VALUES('develop', 9, 4500, '2008/01/01');
+-- Similar to the first statement using numeric.
+select * ,
+lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
+lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
+lead(empno,1) over (partition by depname order by salary desc) qianzhi11
+from empsalary;
+ depname | empno |   salary    | enroll_date |  qianzhi1   |  qianzhi2   | qianzhi11
+---------+-------+-------------+-------------+-------------+-------------+-----------
+ develop |     8 | 6000.000000 | 10-01-2006  | 5200.000000 | 4500.000000 |        11
+ develop |    11 | 5200.000000 | 08-15-2007  | 4500.000000 |             |         9
+ develop |     9 | 4500.000000 | 01-01-2008  |             |             |
+(3 rows)
+
+DROP TABLE IF EXISTS empsalary;
+CREATE TABLE empsalary(
+  depname varchar,
+  empno bigint,
+  salary int,
+  enroll_date date
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'depname' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO empsalary VALUES('develop', 8, 6000, '2006/10/01');
+INSERT INTO empsalary VALUES('develop', 11, 5200, '2007/08/15');
+INSERT INTO empsalary VALUES('develop', 9, 4500, '2008/01/01');
+-- Similar to the first statement using int.
+select * ,
+lead(salary,1) over (partition by depname order by salary desc) qianzhi1,
+lead(salary,2) over (partition by depname order by salary desc) qianzhi2,
+lead(empno,1) over (partition by depname order by salary desc) qianzhi11
+from empsalary;
+ depname | empno | salary | enroll_date | qianzhi1 | qianzhi2 | qianzhi11
+---------+-------+--------+-------------+----------+----------+-----------
+ develop |     8 |   6000 | 10-01-2006  |     5200 |     4500 |        11
+ develop |    11 |   5200 | 08-15-2007  |     4500 |          |         9
+ develop |     9 |   4500 | 01-01-2008  |          |          |
+(3 rows)
+
+-- There was a bug at one point where the planner would not recognize that the
+-- distribution key of a subplan matched the distribution key needed for the
+-- PARTITION BY clause, and generated an unnecessary Motion node. The
+-- sub-optimal plan looked like this:
+--
+--                                                       QUERY PLAN                                
+--                       
+-- ----------------------------------------------------------------------------------------------------------------------
+--  Gather Motion 2:1  (slice3; segments: 2)  (cost=3.56..3.60 rows=5 width=12)
+--    ->  Window  (cost=3.56..3.60 rows=3 width=12)
+--          Partition By: bar.a
+--          Order By: bar.b
+--          ->  Sort  (cost=3.56..3.57 rows=3 width=12)
+--                Sort Key: bar.a, bar.b
+--                ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=1.21..3.50 rows=3 width=12)
+--                      Hash Key: bar.a
+--                      ->  Hash Join  (cost=1.21..3.40 rows=3 width=12)
+--                            Hash Cond: foo.a = bar.a
+--                            ->  Seq Scan on foo  (cost=0.00..2.10 rows=5 width=4)
+--                            ->  Hash  (cost=1.15..1.15 rows=3 width=8)
+--                                  ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.15 rows=3 width=8)
+--                                        Hash Key: bar.a
+--                                        ->  Seq Scan on bar  (cost=0.00..1.05 rows=3 width=8)
+-- (15 rows)
+--
+-- The Redistribute Motion node in the middle is not needed, because the
+-- subplan is already distributed by bar.a, but the planner failed to
+-- recognize that. The point of this test case is to test that that unneeded
+-- Motion node isn't there.
+create table foo (a int4) distributed by (a);
+create table bar (a int4, b int4) distributed by (a, b);
+insert into foo select g from generate_series(1, 10) g;
+insert into bar select g%2, g from generate_series(1, 5) g;
+select foo.a, sum(b) over (partition by bar.a order by bar.b) from foo, bar where foo.a = bar.a;
+ a | sum 
+---+-----
+ 1 |   1
+ 1 |   4
+ 1 |   9
+(3 rows)
+
+explain select foo.a, sum(b) over (partition by bar.a order by bar.b) from foo, bar where foo.a = bar.a;
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..862.00 rows=6 width=12)
+   ->  Result  (cost=0.00..862.00 rows=3 width=12)
+         ->  Window  (cost=0.00..862.00 rows=3 width=12)
+               Partition By: bar.a
+               Order By: bar.b
+               ->  Sort  (cost=0.00..862.00 rows=3 width=12)
+                     Sort Key: bar.a, bar.b
+                     ->  Hash Join  (cost=0.00..862.00 rows=3 width=12)
+                           Hash Cond: bar.a = foo.a
+                           ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=3 width=8)
+                                 Hash Key: bar.a
+                                 ->  Table Scan on bar  (cost=0.00..431.00 rows=3 width=8)
+                           ->  Hash  (cost=431.00..431.00 rows=5 width=4)
+                                 ->  Table Scan on foo  (cost=0.00..431.00 rows=5 width=4)
+ Settings:  gp_enable_sequential_window_plans=on; optimizer=on
+ Optimizer status: PQO version 1.622
+(16 rows)
+
+drop table foo, bar;

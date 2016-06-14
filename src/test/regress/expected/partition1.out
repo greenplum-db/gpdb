@@ -1016,7 +1016,7 @@ insert into ggg values (7, 7);
 insert into ggg values (8, 8);
 insert into ggg values (9, 9);
 insert into ggg values (10, 10);
-ERROR:  no partition for partitioning key  (seg1 slarimac:40001 pid=97860)
+ERROR:  no partition for partitioning key  (seg1 xzhangmac:40001 pid=94564)
 select * from ggg order by 1, 2;
  id | a 
 ----+---
@@ -1301,9 +1301,9 @@ select * from ggg;
 select * from ggg_1_prt_1;
  a | b | d 
 ---+---+---
- 2 | 7 | 3
  1 | 1 | 1
  1 | 3 | 1
+ 2 | 7 | 3
 (3 rows)
 
 select * from ggg_1_prt_2;
@@ -1315,12 +1315,12 @@ select * from ggg_1_prt_2;
 select * from ggg_1_prt_3;
  a | b | d 
 ---+---+---
- 1 | 5 | 6
- 1 | a | b
  2 | 2 | 1
  2 | 2 | 3
  2 | 2 | 4
  2 | c | c
+ 1 | 5 | 6
+ 1 | a | b
 (6 rows)
 
 drop table ggg cascade;
@@ -1389,8 +1389,8 @@ COPY foz FROM stdin DELIMITER '|';
 select * from foz_1_prt_1;
  i |     d      
 ---+------------
- 2 | 10-10-2001
  1 | 01-02-2001
+ 2 | 10-10-2001
 (2 rows)
 
 select * from foz_1_prt_2;
@@ -1529,7 +1529,7 @@ alter table hhh add partition cc end ('2010-01-01');
 NOTICE:  CREATE TABLE will create partition "hhh_1_prt_cc" for table "hhh"
 -- works - anonymous partition MPP-3350
 alter table hhh add partition end ('2010-02-01');
-NOTICE:  CREATE TABLE will create partition "hhh_1_prt_r1987544232" for table "hhh"
+NOTICE:  CREATE TABLE will create partition "hhh_1_prt_r1923969170" for table "hhh"
 -- MPP-3607 - ADD PARTITION with open intervals
 create table no_end1 (aa int, bb int) partition by range (bb)
 (partition foo start(3));
@@ -1809,11 +1809,11 @@ NOTICE:  dropped partition "boys" for relation "rank" and its children
 select * from rank ;
  id | rank |    year    | gender 
 ----+------+------------+--------
-  7 |    1 | 02-15-2002 | F
- 10 |    1 | 05-15-2005 | F
   6 |    1 | 01-15-2001 | F
   8 |    1 | 03-15-2003 | F
   9 |    1 | 04-15-2004 | F
+  7 |    1 | 02-15-2002 | F
+ 10 |    1 | 05-15-2005 | F
 (5 rows)
 
 -- MPP-3722: complain if for(value) matches the default partition 
@@ -2168,8 +2168,8 @@ insert into foz values(2, '2010-04-01');
 select * from foz;
  i |     d      
 ---+------------
- 2 | 04-01-2010
  1 | 04-01-2003
+ 2 | 04-01-2010
 (2 rows)
 
 select * from foz_1_prt_dsf;
@@ -2191,7 +2191,7 @@ insert into d values(1, 10);
 insert into d values(1, 11);
 insert into d values(1, 55);
 insert into d values(1, 70);
-ERROR:  no partition for partitioning key  (seg0 slarimac:40000 pid=97859)
+ERROR:  no partition for partitioning key  (seg0 xzhangmac:40000 pid=94563)
 select * from d;
  i | j  
 ---+----
@@ -2274,7 +2274,7 @@ NOTICE:  CREATE TABLE will create partition "d_1_prt_b" for table "d"
 insert into d values (1, 1);
 insert into d values (1, 2);
 insert into d values (1, NULL);
-ERROR:  no partition for partitioning key  (seg0 slarimac:40000 pid=97859)
+ERROR:  no partition for partitioning key  (seg0 xzhangmac:40000 pid=94563)
 drop table  d cascade;
 -- allow NULLs into the default partition
 create table d (i int,  j int) partition by range(j)
@@ -2308,10 +2308,10 @@ insert into d values(1, 1, 2);
 insert into d values(1, 3, 4);
 insert into d values(1, 100, 20);
 insert into d values(1, 100, 2000);
-ERROR:  no partition for partitioning key  (seg0 slarimac:40000 pid=97859)
+ERROR:  no partition for partitioning key  (seg0 xzhangmac:40000 pid=94563)
 insert into d values(1, '1000', '1001'), (1, '1001', '1002'), (1, '1003', '1004');
 insert into d values(1, 100, NULL);
-ERROR:  no partition for partitioning key  (seg0 slarimac:40000 pid=97859)
+ERROR:  no partition for partitioning key  (seg0 xzhangmac:40000 pid=94563)
 select * from d_1_prt_a;
  a | b | c 
 ---+---+---
@@ -2348,17 +2348,29 @@ LINE 2: partition by range (i, j)
 -- should work
 insert into b values(1, '2008-06-11');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(1, '2008-06-11');
+                    ^
 insert into b values(11, '2009-08-24');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(11, '2009-08-24');
+                    ^
 insert into b values(25, '2010-01-22');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(25, '2010-01-22');
+                    ^
 insert into b values(90, '2011-05-04');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(90, '2011-05-04');
+                    ^
 -- shouldn't work
 insert into b values(1, '2019-01-01');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(1, '2019-01-01');
+                    ^
 insert into b values(91, '2008-05-05');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(91, '2008-05-05');
+                    ^
  
 select * from b_1_prt_1;
 ERROR:  relation "b_1_prt_1" does not exist
@@ -2396,37 +2408,67 @@ LINE 3: partition by range(n, t, s)
 -- should work
 insert into b values(1, 2000.99, '2007-01-01 00:00:00', 'AAA');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(1, 2000.99, '2007-01-01 00:00:00', 'AAA...
+                    ^
 insert into b values(2, 2000.99, '2007-01-01 00:00:00', 'BBB');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(2, 2000.99, '2007-01-01 00:00:00', 'BBB...
+                    ^
 insert into b values(3, 4000.95, '2007-01-01 00:00:00', 'AAA');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(3, 4000.95, '2007-01-01 00:00:00', 'AAA...
+                    ^
 insert into b values(6, 3000, '2007-02-02 15:30:00', 'BBC');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 15:30:00', 'BBC');
+                    ^
 insert into b values(6, 3000, '2007-02-02 15:30:00', 'CC');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 15:30:00', 'CC');
+                    ^
 insert into b values(6, 3000, '2007-02-02 16:00:00'::timestamp - 
 					'1 second'::interval, 'BBZZZZZZZZZZ');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 16:00:00'::timesta...
+                    ^
 -- should fail
 insert into b values(6, 3000, '2007-02-02 15:30:00', 'CCCCCCC');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 15:30:00', 'CCCCCC...
+                    ^
 insert into b values(4, 5000, '2007-01-01 12:00:00', 'BCC');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(4, 5000, '2007-01-01 12:00:00', 'BCC');
+                    ^
 insert into b values(5, 8000, '2007-01-01 12:00:00', 'ZZZ');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(5, 8000, '2007-01-01 12:00:00', 'ZZZ');
+                    ^
 insert into b values(6, 3000, '2007-02-02 16:00:00', 'ABZZZZZZZZZZ');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 16:00:00', 'ABZZZZ...
+                    ^
 insert into b values(6, 1000, '2007-02-02 16:00:00', 'ABZZZZZZZZZZ');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 1000, '2007-02-02 16:00:00', 'ABZZZZ...
+                    ^
 insert into b values(6, 3000, '2006-02-02 16:00:00', 'ABZZZZZZZZZZ');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2006-02-02 16:00:00', 'ABZZZZ...
+                    ^
 insert into b values(6, 3000, '2007-02-02 00:00:00', 'A');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 00:00:00', 'A');
+                    ^
 -- NULL tests
 insert into b default values;
 ERROR:  relation "b" does not exist
+LINE 1: insert into b default values;
+                    ^
 insert into b values(6, 3000, '2007-01-01 12:00:00', NULL);
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-01-01 12:00:00', NULL);
+                    ^
 drop table b;
 ERROR:  table "b" does not exist
 -- check that we detect subpartitions partitioning a column that is already
@@ -2462,3 +2504,43 @@ NOTICE:  CREATE TABLE will create partition "a_1_prt_2_2_prt_3_3_prt_2" for tabl
 -- MPP-3988: allow same column in multiple partitioning keys at
 -- different levels -- so this is legal again...
 drop table if exists a;
+-- TEST: make sure GPOPT (aka pivotal query optimizer) fall back to legacy query optimizer 
+--       for queries with partition elimination over FULL OUTER JOIN
+--       between partitioned tables.
+-- SETUP
+-- start_ignore
+drop table if exists s1;
+NOTICE:  table "s1" does not exist, skipping
+drop table if exists s2;
+NOTICE:  table "s2" does not exist, skipping
+-- setup two partitioned tables s1 and s2
+create table s1 (d1 int, p1 int)
+distributed by (d1)
+partition by list (p1)
+(
+  values (0),
+  values (1));
+NOTICE:  CREATE TABLE will create partition "s1_1_prt_1" for table "s1"
+NOTICE:  CREATE TABLE will create partition "s1_1_prt_2" for table "s1"
+create table s2 (d2 int, p2 int)
+distributed by (d2)
+partition by list (p2)
+(
+  values (0),
+  values (1));
+NOTICE:  CREATE TABLE will create partition "s2_1_prt_1" for table "s2"
+NOTICE:  CREATE TABLE will create partition "s2_1_prt_2" for table "s2"
+-- end_ignore
+-- VERIFY
+-- expect GPOPT fall back to legacy query optimizer
+-- since GPOPT don't support partition elimination through full outer joins
+select * from s1 full outer join s2 on s1.d1 = s2.d2 and s1.p1 = s2.p2 where s1.p1 = 1;
+ d1 | p1 | d2 | p2 
+----+----+----+----
+(0 rows)
+
+-- CLEANUP
+-- start_ignore
+drop table if exists s1;
+drop table if exists s2;
+-- end_ignore

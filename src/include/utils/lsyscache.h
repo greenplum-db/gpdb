@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/lsyscache.h,v 1.112 2007/01/10 18:06:05 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/utils/lsyscache.h,v 1.117 2007/02/14 01:58:58 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -49,14 +49,17 @@ extern void get_op_opfamily_properties(Oid opno, Oid opfamily,
 						  bool *recheck);
 extern Oid	get_opfamily_member(Oid opfamily, Oid lefttype, Oid righttype,
 								int16 strategy);
-extern bool get_op_mergejoin_info(Oid eq_op, Oid *left_sortop,
-					  Oid *right_sortop, Oid *opfamily);
+extern bool get_ordering_op_properties(Oid opno,
+						   Oid *opfamily, Oid *opcintype, int16 *strategy);
 extern bool get_compare_function_for_ordering_op(Oid opno,
 												 Oid *cmpfunc, bool *reverse);
 extern Oid	get_equality_op_for_ordering_op(Oid opno);
 extern Oid	get_ordering_op_for_equality_op(Oid opno, bool use_lhs_type);
-extern Oid	get_compatible_hash_operator(Oid opno, bool use_lhs_type);
-extern Oid	get_op_hash_function(Oid opno);
+extern List *get_mergejoin_opfamilies(Oid opno);
+extern bool get_compatible_hash_operators(Oid opno,
+										  Oid *lhs_opno, Oid *rhs_opno);
+extern bool get_op_hash_functions(Oid opno,
+					  RegProcedure *lhs_procno, RegProcedure *rhs_procno);
 extern void get_op_btree_interpretation(Oid opno,
 							List **opfamilies, List **opstrats);
 extern bool ops_in_same_btree_opfamily(Oid opno1, Oid opno2);
@@ -69,6 +72,7 @@ extern Oid	get_atttype(Oid relid, AttrNumber attnum);
 extern int32 get_atttypmod(Oid relid, AttrNumber attnum);
 extern void get_atttypetypmod(Oid relid, AttrNumber attnum,
 				  Oid *typid, int32 *typmod);
+extern char *get_constraint_name(Oid conoid);
 extern Oid	get_opclass_family(Oid opclass);
 extern Oid	get_opclass_input_type(Oid opclass);
 extern RegProcedure get_opcode(Oid opno);
@@ -103,6 +107,8 @@ extern Oid get_agg_transtype(Oid aggid);
 extern bool is_agg_ordered(Oid aggid);
 extern bool has_agg_prelimfunc(Oid aggid);
 extern bool agg_has_prelim_or_invprelim_func(Oid aggid);
+extern float4 get_func_cost(Oid funcid);
+extern float4 get_func_rows(Oid funcid);
 extern Oid	get_relname_relid(const char *relname, Oid relnamespace);
 extern char *get_rel_name(Oid relid);
 extern char *get_rel_name_partition(Oid relid);

@@ -44,10 +44,6 @@ extern void
 GpRelationNodeEndScan(
 	GpRelationNodeScan 	*gpRelationNodeScan);
 
-extern HeapTuple ScanGpRelationNodeTuple(
-	Relation 	gp_relation_node,
-	Oid 		relationNode,
-	int32		segmentFileNum);
 extern HeapTuple FetchGpRelationNodeTuple(
 	Relation 	gp_relation_node,
 	Oid 		relationNode,

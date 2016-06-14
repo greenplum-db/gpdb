@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/alter.c,v 1.21 2007/01/05 22:19:25 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/alter.c,v 1.22 2007/01/23 05:07:17 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -35,7 +35,7 @@
 #include "utils/lsyscache.h"
 
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 
 
 /*
@@ -73,6 +73,10 @@ ExecRenameStmt(RenameStmt *stmt)
 
 		case OBJECT_OPCLASS:
 			RenameOpClass(stmt->object, stmt->subname, stmt->newname);
+			break;
+
+		case OBJECT_OPFAMILY:
+			RenameOpFamily(stmt->object, stmt->subname, stmt->newname);
 			break;
 
 		case OBJECT_ROLE:
@@ -236,6 +240,10 @@ ExecAlterOwnerStmt(AlterOwnerStmt *stmt)
 
 		case OBJECT_OPCLASS:
 			AlterOpClassOwner(stmt->object, stmt->addname, newowner);
+			break;
+
+		case OBJECT_OPFAMILY:
+			AlterOpFamilyOwner(stmt->object, stmt->addname, newowner);
 			break;
 
 		case OBJECT_SCHEMA:

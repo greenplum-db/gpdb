@@ -11,7 +11,9 @@
 #include "postgres.h"
 #include "miscadmin.h"
 #include "catalog/catquery.h" 
+#include "catalog/pg_exttable.h"
 #include "catalog/pg_namespace.h"
+#include "catalog/gp_policy.h"
 #include "catalog/indexing.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
@@ -21,8 +23,23 @@
 #include "cdb/cdbvars.h"		/* Gp_role */
 #include "catalog/pg_type.h"
 #include "utils/array.h"
+
 static void extract_INT2OID_array(Datum array_datum, int *lenp, int16 **vecp);
 
+/*
+ * createRandomDistribution -- Create a policy with random distribution
+ */
+GpPolicy *
+createRandomDistribution(void)
+{
+	GpPolicy   *p = NULL;
+
+	p = (GpPolicy *) palloc0(sizeof(GpPolicy));
+	p->ptype = POLICYTYPE_PARTITIONED;
+	p->nattrs = 0;
+
+	return p;
+}
 
 /*
  * GpPolicyCopy -- Return a copy of a GpPolicy object.
@@ -73,13 +90,13 @@ GpPolicyEqual(const GpPolicy *lft, const GpPolicy *rgt)
 /*
  * GpPolicyFetch
  *
- * Looks up a given Oid in the gp_distribution_policy table.
- * If found, returns an GpPolicy object (palloc'd in the specified
- * context) containing the info from the gp_distribution_policy row.
- * Else returns NULL.
+ * Looks up the distribution policy of given relation from
+ * gp_distribution_policy table (or by implicit rules for external tables)
+ * Returns an GpPolicy object, allocated in the specified context, containing
+ * the information.
  *
  * The caller is responsible for passing in a valid relation oid.  This
- * function does not check and assigns a policy of type POLICYTYPE_ENTRY
+ * function does not check, and assigns a policy of type POLICYTYPE_ENTRY
  * for any oid not found in gp_distribution_policy.
  */
 GpPolicy *
@@ -89,13 +106,60 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 	Relation	gp_policy_rel;
 	cqContext	cqc;
 	HeapTuple	gp_policy_tuple = NULL;
-	size_t		nb;
 
 	/*
 	 * Skip if qExec or utility mode.
 	 */
 	if (Gp_role != GP_ROLE_DISPATCH)
-		return NULL;
+	{
+		policy = (GpPolicy *) MemoryContextAlloc(mcxt, SizeOfGpPolicy(0));
+		policy->ptype = POLICYTYPE_ENTRY;
+		policy->nattrs = 0;
+
+		return policy;
+	}
+
+	/*
+	 * EXECUTE-type external tables have an "ON ..." specification, stored
+	 * in pg_exttable.location. See if it's "MASTER_ONLY". Other types of
+	 * external tables have a gp_distribution_policy row, like normal tables.
+	 */
+	if (get_rel_relstorage(tbloid) == RELSTORAGE_EXTERNAL)
+	{
+		/*
+		 * An external table really should have a pg_exttable entry, but
+		 * there's currently a transient state during creation of an external
+		 * table, where the pg_class entry has been created, and its loaded
+		 * into the relcache, before the pg_exttable entry has been created.
+		 * Silently ignore missing pg_exttable rows to cope with that.
+		 */
+		ExtTableEntry *e = GetExtTableEntryIfExists(tbloid);
+
+		/*
+		 * Writeable external tables have gp_distribution_policy entries,
+		 * like regular tables. Readable external tables are implicitly
+		 * randomly distributed, except for "EXECUTE ... ON MASTER" ones.
+		 */
+		if (e && !e->iswritable)
+		{
+			if (e->command)
+			{
+				char	   *on_clause = (char *) strVal(linitial(e->locations));
+
+				if (strcmp(on_clause, "MASTER_ONLY") == 0)
+				{
+					policy = (GpPolicy *) MemoryContextAlloc(mcxt, SizeOfGpPolicy(0));
+					policy->ptype = POLICYTYPE_ENTRY;
+					policy->nattrs = 0;
+					return policy;
+				}
+			}
+			policy = (GpPolicy *) MemoryContextAlloc(mcxt, SizeOfGpPolicy(0));
+			policy->ptype = POLICYTYPE_PARTITIONED;
+			policy->nattrs = 0;
+			return policy;
+		}
+	}
 
 	/*
 	 * We need to read the gp_distribution_policy table
@@ -112,9 +176,8 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 				ObjectIdGetDatum(tbloid)));
 
 	/*
-	 * Read first (and only ) tuple
+	 * Read first (and only) tuple
 	 */
-
 	if (HeapTupleIsValid(gp_policy_tuple))
 	{
 		bool		isNull;
@@ -128,7 +191,7 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 		 */
 		attr = heap_getattr(gp_policy_tuple, Anum_gp_policy_attrnums, 
 							RelationGetDescr(gp_policy_rel), &isNull);
-		
+
 		/*
 		 * Get distribution keys only if this table has a policy.
 		 */
@@ -137,10 +200,9 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 			extract_INT2OID_array(attr, &nattrs, &attrnums);
 			Assert(nattrs >= 0);
 		}
-			
-		/* Create an GpPolicy object. */
-		nb = sizeof(*policy) - sizeof(policy->attrs) + nattrs * sizeof(policy->attrs[0]);
-		policy = (GpPolicy *)MemoryContextAlloc(mcxt, nb);
+
+		/* Create a GpPolicy object. */
+		policy = (GpPolicy *) MemoryContextAlloc(mcxt, SizeOfGpPolicy(nattrs));
 		policy->ptype = POLICYTYPE_PARTITIONED;
 		policy->nattrs = nattrs;
 		for (i = 0; i < nattrs; i++)
@@ -152,14 +214,12 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 	/*
 	 * Cleanup the scan and relation objects.
 	 */
-
 	heap_close(gp_policy_rel, AccessShareLock);
 
 	/* Interpret absence of a valid policy row as POLICYTYPE_ENTRY */
 	if (policy == NULL)
 	{
-	    nb = sizeof(*policy) - sizeof(policy->attrs);
-    	policy = (GpPolicy *)MemoryContextAlloc(mcxt, nb);
+		policy = (GpPolicy *) MemoryContextAlloc(mcxt, SizeOfGpPolicy(0));
 		policy->ptype = POLICYTYPE_ENTRY;
 		policy->nattrs = 0;
 	}
@@ -193,7 +253,6 @@ extract_INT2OID_array(Datum array_datum, int *lenp, int16 **vecp)
 /*
  * Sets the policy of a table into the gp_distribution_policy table
  * from a GpPolicy structure.
- *
  */
 void
 GpPolicyStore(Oid tbloid, const GpPolicy *policy)
@@ -265,7 +324,6 @@ GpPolicyStore(Oid tbloid, const GpPolicy *policy)
 /*
  * Sets the policy of a table into the gp_distribution_policy table
  * from a GpPolicy structure.
- *
  */
 void
 GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
@@ -365,8 +423,7 @@ GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
 
 /*
  * Removes the policy of a table from the gp_distribution_policy table
- *
- * Callers must check that there actually *is* a policy for the relation.
+ * Does nothing if the policy doesn't exist.
  */
 void
 GpPolicyRemove(Oid tbloid)
@@ -380,17 +437,11 @@ GpPolicyRemove(Oid tbloid)
 	gp_policy_rel = heap_open(GpPolicyRelationId, RowExclusiveLock);
 
 	/* Delete the policy entry from the catalog. */
-	if (0 == caql_getcount(
-				caql_addrel(cqclr(&cqc), gp_policy_rel),
-				cql("DELETE FROM gp_distribution_policy "
-					" WHERE localoid = :1 ",
-					ObjectIdGetDatum(tbloid))))
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("distribution policy for relation \"%d\" does not exist",
-						tbloid)));
-	}
+	(void) caql_getcount(
+		caql_addrel(cqclr(&cqc), gp_policy_rel),
+		cql("DELETE FROM gp_distribution_policy "
+			" WHERE localoid = :1 ",
+			ObjectIdGetDatum(tbloid)));
 
 	/*
      * Close the gp_distribution_policy relcache entry without unlocking.
@@ -402,7 +453,7 @@ GpPolicyRemove(Oid tbloid)
 
 /*
  * Returns true only if the policy is a randomly distributed.  In other cases,
- * including non-distributed table case, returns fase.
+ * including non-distributed table case, returns false.
  */
 bool
 GpPolicyIsRandomly(GpPolicy *policy)
@@ -472,7 +523,7 @@ checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
 	 * If the existing policy is not a subset, we must either error out or
 	 * update the distribution policy. It might be tempting to say that even
 	 * when the policy is a subset, we should update it to match the index
-	 * definition. The problem then is that if the user actually wants to
+	 * definition. The problem then is that if the user actually wants a
 	 * distribution on (a, b) but then creates an index on (a, b, c) we'll
 	 * change the policy underneath them.
 	 *

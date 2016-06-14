@@ -33,10 +33,9 @@ import atexit
 import signal
 import pexpect
 import time
+import ConfigParser
 from gppylib.util import ssh_utils
 from gppylib.gpparseopts import OptParser
-from gppylib.gpcoverage import GpCoverage
-
 
 #
 # all the command line options
@@ -53,7 +52,8 @@ class __globals__:
     opt['-s'] = False
     argcmd = None
     session = None
-
+    DELAY_BEFORE_SEND = None
+    PROMPT_VALIDATION_TIMEOUT = None
 
 GV = __globals__()
 
@@ -75,10 +75,9 @@ def print_version():
 #############
 def parseCommandLine():
     try:
-        (options, args) = getopt.getopt(sys.argv[1:], '?evsh:f:D:u:', ['version'])
+        (options, args) = getopt.getopt(sys.argv[1:], '?evsh:f:D:u:d:t:', ['version'])
     except Exception, e:
         usage('Error: ' + str(e))
-
     for (switch, val) in options:
         if (switch == '-?'):              usage(0)
         elif (switch[1] in 'evDs'):    GV.opt[switch] = True
@@ -86,14 +85,49 @@ def parseCommandLine():
         elif (switch == '-h'):        GV.opt[switch].append(val)
         elif (switch == '--version'): print_version()
         elif (switch[1] in 'u'):      GV.USER = val
-
+        elif (switch == '-d'):        GV.DELAY_BEFORE_SEND = float(val)
+        elif (switch == '-t'):	      GV.PROMPT_VALIDATION_TIMEOUT = float(val)
     hf = (len(GV.opt['-h']) and 1 or 0) + (GV.opt['-f'] and 1 or 0)
     if hf != 1:
         usage('Error: please specify at least one of -h or -f args, but not both')
 
     if (len(args) >= 1):
         GV.argcmd = " ".join(args)
-           
+
+def parseConfigFile():
+    if GV.DELAY_BEFORE_SEND is not None and GV.PROMPT_VALIDATION_TIMEOUT is not None:
+        if GV.opt['-v']:
+            print 'Skip parsing gpssh.conf as both -d and -t are being used'
+        return
+
+    try:
+        config = ConfigParser.RawConfigParser()
+        config.read(os.environ.get('MASTER_DATA_DIRECTORY') + '/gpssh.conf')
+        if GV.DELAY_BEFORE_SEND is None:
+            GV.DELAY_BEFORE_SEND = config.getfloat('gpssh', 'delaybeforesend')
+        if GV.PROMPT_VALIDATION_TIMEOUT is None:
+            GV.PROMPT_VALIDATION_TIMEOUT = config.getfloat('gpssh', 'prompt_validation_timeout')
+    except Exception:
+        if GV.opt['-v']:
+            print '[WARN] Reference default values as $MASTER_DATA_DIRECTORY/gpssh.conf could not be found'
+
+        if GV.DELAY_BEFORE_SEND is None:
+            GV.DELAY_BEFORE_SEND = 0.05
+        if GV.PROMPT_VALIDATION_TIMEOUT is None:
+            GV.PROMPT_VALIDATION_TIMEOUT = 1.0
+
+    if GV.DELAY_BEFORE_SEND < 0.0:
+        print '[ERROR] delaybeforesend cannot be negative'
+        sys.exit(1)
+
+    if GV.PROMPT_VALIDATION_TIMEOUT <= 0.0:
+        print '[ERROR] prompt_validation_timeout cannot be negative or zero'
+        sys.exit(1)
+
+    if GV.opt['-v']:
+        print 'Using delaybeforesend %s and prompt_validation_timeout %s' % (GV.DELAY_BEFORE_SEND,
+                                                                             GV.PROMPT_VALIDATION_TIMEOUT)
+
 def sessionCleanup():
     while True:
         try:
@@ -152,7 +186,7 @@ def interactive():
             if not GV.session:
                 GV.session = ssh_utils.Session()
                 GV.session.verbose=GV.opt['-v']
-                GV.session.login(GV.opt['-h'], GV.USER)
+                GV.session.login(GV.opt['-h'], GV.USER, GV.DELAY_BEFORE_SEND, GV.PROMPT_VALIDATION_TIMEOUT)
                 GV.session.echoCommand=GV.opt['-e']
             if GV.opt['-s']:
                 GV.session.executeCommand("source {0}/greenplum_path.sh".format(os.environ["GPHOME"]))
@@ -161,22 +195,22 @@ def interactive():
             print '\n[Unexpected EOF from some hosts...]'
             pass
         except ssh_utils.Session.SessionCmdExit:
-                print ''
-                break
+            print ''
+            break
         except ssh_utils.Session.SessionError, e:
-                print 'Error: %s' % e
-                pass
+            print 'Error: %s' % e
+            pass
         except KeyboardInterrupt:
             print '\n[Interrupt...]'
             GV.session.reset()
             pass
 
-#############
-coverage = GpCoverage()
-coverage.start()
-
 try:
-    parseCommandLine()              #Read options from the command line
+    #Parse options from the command line
+    parseCommandLine()
+
+    #Parse gpssh.conf file
+    parseConfigFile()
 
     #Acquire the list of hosts from command line arguments
     hostlist = ssh_utils.HostList()
@@ -199,7 +233,7 @@ try:
             try:
                 GV.session = ssh_utils.Session()
                 GV.session.verbose=GV.opt['-v']
-                GV.session.login(GV.opt['-h'], GV.USER)
+                GV.session.login(GV.opt['-h'], GV.USER, GV.DELAY_BEFORE_SEND, GV.PROMPT_VALIDATION_TIMEOUT)
                 GV.session.echoCommand=GV.opt['-e']
                 if GV.opt['-s']:
                     GV.session.executeCommand("source {0}/greenplum_path.sh".format(os.environ["GPHOME"]))
@@ -220,6 +254,3 @@ try:
 except KeyboardInterrupt:
     sessionCleanup()
     sys.exit('\nInterrupted...')
-finally:
-    coverage.stop()
-    coverage.generate_report()

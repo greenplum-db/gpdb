@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/grant.sgml,v 1.62 2006/09/16 00:30:18 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/grant.sgml,v 1.64 2007/02/01 00:28:19 momjian Exp $
 PostgreSQL documentation
 -->
 
@@ -53,8 +53,8 @@ GRANT { CREATE | ALL [ PRIVILEGES ] }
 GRANT <replaceable class="PARAMETER">role</replaceable> [, ...] TO <replaceable class="PARAMETER">username</replaceable> [, ...] [ WITH ADMIN OPTION ]
 
 GRANT { SELECT | INSERT | ALL [PRIVILEGES] } 
-    ON PROTOCOL <replaceable>protocolname</replaceable> 
-    TO <replaceable class="PARAMETER">username</replaceable>
+    ON PROTOCOL <replaceable>protocolname</replaceable>
+    TO <replaceable class="PARAMETER">username</replaceable>
 
 </synopsis>
  </refsynopsisdiv>
@@ -91,8 +91,8 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
 
   <para>
    The key word <literal>PUBLIC</literal> indicates that the
-   privileges are to be granted to all roles, including those that may
-   be created later.  <literal>PUBLIC</literal> may be thought of as an
+   privileges are to be granted to all roles, including those that might
+   be created later.  <literal>PUBLIC</literal> can be thought of as an
    implicitly defined group that always includes all roles.
    Any particular role will have the sum
    of privileges granted directly to it, privileges granted to any role it
@@ -102,7 +102,7 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
 
   <para>
    If <literal>WITH GRANT OPTION</literal> is specified, the recipient
-   of the privilege may in turn grant it to others.  Without a grant
+   of the privilege can in turn grant it to others.  Without a grant
    option, the recipient cannot do that.  Grant options cannot be granted
    to <literal>PUBLIC</literal>.
   </para>
@@ -119,7 +119,7 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
   </para>
 
   <para>
-   Depending on the type of object, the initial default privileges may
+   Depending on the type of object, the initial default privileges might
    include granting some privileges to <literal>PUBLIC</literal>.
    The default is no public access for tables, schemas, and tablespaces;
    <literal>CONNECT</literal> privilege and <literal>TEMP</literal> table creation privilege
@@ -129,7 +129,7 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
    The object owner may of course revoke these privileges.  (For maximum
    security, issue the <command>REVOKE</command> in the same transaction that
    creates the object; then there is no window in which another user
-   may use the object.)
+   can use the object.)
   </para>
 
   <para>
@@ -325,7 +325,7 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
   </para>
 
   <para>
-   If <literal>WITH ADMIN OPTION</literal> is specified, the member may
+   If <literal>WITH ADMIN OPTION</literal> is specified, the member can
    in turn grant membership in the role to others, and revoke membership
    in the role as well.  Without the admin option, ordinary users cannot
    do that.  A role is not considered to hold <literal>WITH ADMIN
@@ -506,7 +506,7 @@ GRANT SELECT, UPDATE, INSERT ON mytable TO GROUP todos;
    If the <quote>Access privileges</quote> column is empty for a given object,
 it means the object has default privileges (that is, its privileges column
 is null).  Default privileges always include all privileges for the owner,
-and may include some privileges for <literal>PUBLIC</literal> depending on the
+and can include some privileges for <literal>PUBLIC</literal> depending on the
 object type, as explained above.  The first <command>GRANT</command> or
 <command>REVOKE</command> on an object
 will instantiate the default privileges (producing, for example,

@@ -116,3 +116,27 @@ DROP GROUP IF EXISTS tg1, tg2;
 
 DROP GROUP tg1;
 
+--create a schema with the same name as the logged in user name and try to drop and recreate a table
+drop database if exists drop_table_test;
+create database drop_table_test;
+
+\c drop_table_test
+--get the username and set it to a variable
+\set cur_user `echo $USER`
+
+CREATE SCHEMA :cur_user;
+
+
+--the following table will be created in the ":cur_user" schema because
+-- the search_path is '"$user",public'
+CREATE TABLE tbl_to_drop(i int);
+
+
+DROP TABLE tbl_to_drop;
+
+
+CREATE TABLE tbl_to_drop(i int);
+
+DROP SCHEMA :cur_user CASCADE;
+\c regression
+drop database drop_table_test;

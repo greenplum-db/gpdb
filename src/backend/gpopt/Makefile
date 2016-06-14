@@ -3,9 +3,6 @@
 # Makefile--
 #    Makefile for gpopt
 #
-# IDENTIFICATION
-#    $PostgreSQL: pgsql/src/backend/gpopt/Makefile,v 1.15 2008/02/19 10:30:07 petere Exp $
-#
 #-------------------------------------------------------------------------
 
 subdir = src/backend/gpopt
@@ -38,3 +35,5 @@ endif
 
 all:
 	 $(CXX)  $(ARCH_FLAGS) $(LDLIBFLAGS) -L$(LIBGPOS)/$(OBJDIR_DEFAULT) -lgpos -L$(XERCES_LIBDIR) -lxerces-c-3.1 -L$(OPTIMIZER)/libnaucrates/$(OBJDIR_DEFAULT) -lnaucrates -L$(OPTIMIZER)/libgpdbcost/$(OBJDIR_DEFAULT) -lgpdbcost -L$(OPTIMIZER)/libgpopt/$(OBJDIR_DEFAULT) -lgpopt -lpthread  -o libdxltranslators.$(LDSFX) $(shell find . -name '*.o' ! -name 'SUBSYS.o')
+install:
+	cp $(BLD_TOP)/../src/backend/gpopt/libdxltranslators.$(LDSFX) $(INSTLOC);

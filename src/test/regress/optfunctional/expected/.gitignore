@@ -1,0 +1,5 @@
+composite_keys_gpdb_1.out
+composite_keys_gpdb_2.out
+composite_keys_gpdb_3.out
+indexapply.out
+create_table_as_11_alter_table.out

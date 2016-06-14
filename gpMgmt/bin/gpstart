@@ -55,7 +55,8 @@ class GpStart:
                  quiet=False,
                  masteronly=False,
                  interactive=False,
-                 timeout=SEGMENT_TIMEOUT_DEFAULT
+                 timeout=SEGMENT_TIMEOUT_DEFAULT,
+                 logfileDirectory=False
                  ):
         assert(specialMode in [None, 'upgrade', 'maintenance'])
         self.specialMode=specialMode
@@ -72,6 +73,7 @@ class GpStart:
         self.wrapper=wrapper;
         self.wrapper_args=wrapper_args;
         self.skip_standby_check=skip_standby_check;
+        self.logfileDirectory=logfileDirectory
         
         #
         # Some variables that are set during execution
@@ -146,7 +148,8 @@ class GpStart:
             cmd=gp.GpStop("Shutting down master", masterOnly=True,
                           fast=True, quiet=logging_is_quiet(),
                           verbose=logging_is_verbose(),
-                          datadir=self.master_datadir)
+                          datadir=self.master_datadir,
+                          logfileDirectory=self.logfileDirectory)
             cmd.run()
             logger.debug("results of forcing master shutdown: %s" % cmd)
             #TODO: check results of command.
@@ -450,9 +453,11 @@ class GpStart:
             startMode = START_AS_MIRRORLESS
 
         localeData = ":".join([self.lc_collate,self.lc_monetary,self.lc_numeric])
+        # this will eventually start gpsegstart.py
         segmentStartOp = StartSegmentsOperation(self.pool,self.quiet, localeData, self.gpversion,
                                                 self.gphome, self.master_datadir, self.timeout, 
-                                                self.specialMode, self.wrapper, self.wrapper_args)
+                                                self.specialMode, self.wrapper, self.wrapper_args,
+                                                logfileDirectory=self.logfileDirectory)
         segmentStartResult = segmentStartOp.startSegments(self.gparray, segmentsToStart, startMode, self.era)
 
         # see if we have at least one segment per content
@@ -857,6 +862,7 @@ class GpStart:
 
     @staticmethod
     def createProgram(options, args):
+        logfileDirectory = options.ensure_value("logfileDirectory", False)
         proccount=os.environ.get('GP_MGMT_PROCESS_COUNT')
         if options.parallel == 64 and proccount is not None:
             options.parallel = int(proccount)
@@ -878,7 +884,8 @@ class GpStart:
                           timeout=options.timeout,
                           wrapper=options.wrapper,
                           wrapper_args=options.wrapper_args,
-                          skip_standby_check=options.skip_standby_check)
+                          skip_standby_check=options.skip_standby_check,
+                          logfileDirectory=logfileDirectory)
 
 if __name__ == '__main__':
     simple_main( GpStart.createParser, GpStart.createProgram)

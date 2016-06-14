@@ -5637,10 +5637,16 @@ ORDER BY sale.vn asc,sale.pn desc,sale.vn asc,sale.vn asc; --mvd 1,2->3
 -- Empty sets
 select * from sale group by ();
 ERROR:  column "sale.cn" must appear in the GROUP BY clause or be used in an aggregate function
+LINE 1: select * from sale group by ();
+               ^
 select * from sale group by grouping sets(());
 ERROR:  column "sale.cn" must appear in the GROUP BY clause or be used in an aggregate function
+LINE 1: select * from sale group by grouping sets(());
+               ^
 select * from sale group by grouping sets((), ());
 ERROR:  column "sale.cn" must appear in the GROUP BY clause or be used in an aggregate function
+LINE 1: select * from sale group by grouping sets((), ());
+               ^
 select count(*) from sale group by ();
  count 
 -------

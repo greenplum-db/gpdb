@@ -19,7 +19,7 @@
 
 #define DEFAULT_TYPDELIM		','
 
-extern void DefineType(List *names, List *parameters, Oid newOid, Oid shadowOid);
+extern void DefineType(List *names, List *parameters, Oid newOid, Oid newArrayOid);
 extern void RemoveType(List *names, DropBehavior behavior, bool missing_ok);
 extern void RemoveTypeById(Oid typeOid);
 extern void DefineDomain(CreateDomainStmt *stmt);
@@ -39,7 +39,8 @@ extern void AlterTypeOwnerInternal(Oid typeOid, Oid newOwnerId,
 								   bool hasDependEntry);
 extern void AlterTypeNamespace(List *names, const char *newschema);
 extern void AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid,
-						   bool errorOnTableType);
+									   bool isImplicitArray,
+									   bool errorOnTableType);
 extern void AlterType(AlterTypeStmt *stmt);
 extern void AlterType(AlterTypeStmt *stmt);
 

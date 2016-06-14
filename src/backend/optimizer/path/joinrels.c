@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/joinrels.c,v 1.83 2007/01/05 22:19:31 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/joinrels.c,v 1.86 2007/02/16 00:14:01 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -85,7 +85,8 @@ make_rels_by_joins(PlannerInfo *root, int level, List **joinrels)
 			other_rels = list_head(joinrels[1]);		/* consider all initial
 														 * rels */
 
-		if (old_rel->joininfo != NIL || has_join_restriction(root, old_rel))
+		if (old_rel->joininfo != NIL || old_rel->has_eclass_joins ||
+			has_join_restriction(root, old_rel))
 		{
 			/*
 			 * Note that if all available join clauses for this rel require
@@ -153,8 +154,8 @@ make_rels_by_joins(PlannerInfo *root, int level, List **joinrels)
 			 * participate in join-order restrictions --- then we might have
 			 * to force a bushy join plan.
 			 */
-			if (old_rel->joininfo == NIL &&
-				!has_join_restriction(root, old_rel))
+			if (old_rel->joininfo == NIL && !old_rel->has_eclass_joins &&
+				root->oj_info_list == NIL && !has_join_restriction(root, old_rel))
 				continue;
 
 			if (k == other_level)

@@ -1087,10 +1087,8 @@ CTranslatorDXLToPlStmt::PtsFromDXLTblScan
 	Index iRel = gpdb::UlListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
 
 	const CDXLTableDescr *pdxltabdesc = pdxlopTS->Pdxltabdesc();
-	
 	const IMDRelation *pmdrel = m_pmda->Pmdrel(pdxltabdesc->Pmdid());
-	const ULONG ulRelCols = pmdrel->UlColumns() - pmdrel->UlSystemColumns();
-	RangeTblEntry *prte = PrteFromTblDescr(pdxltabdesc, NULL /*pdxlid*/, ulRelCols, iRel, &dxltrctxbt);
+	RangeTblEntry *prte = PrteFromTblDescr(pdxltabdesc, NULL /*pdxlid*/, iRel, &dxltrctxbt);
 	GPOS_ASSERT(NULL != prte);
 	prte->requiredPerms |= ACL_SELECT;
 	m_pctxdxltoplstmt->AddRTE(prte);
@@ -1289,8 +1287,8 @@ CTranslatorDXLToPlStmt::PisFromDXLIndexScan
 	}
 
 	const IMDRelation *pmdrel = m_pmda->Pmdrel(pdxlopIndexScan->Pdxltabdesc()->Pmdid());
-	const ULONG ulRelCols = pmdrel->UlColumns() - pmdrel->UlSystemColumns();
-	RangeTblEntry *prte = PrteFromTblDescr(pdxlopIndexScan->Pdxltabdesc(), pdxlid, ulRelCols, iRel, &dxltrctxbt);
+
+	RangeTblEntry *prte = PrteFromTblDescr(pdxlopIndexScan->Pdxltabdesc(), pdxlid, iRel, &dxltrctxbt);
 	GPOS_ASSERT(NULL != prte);
 	prte->requiredPerms |= ACL_SELECT;
 	m_pctxdxltoplstmt->AddRTE(prte);
@@ -1871,6 +1869,9 @@ CTranslatorDXLToPlStmt::PplanFunctionScanFromDXLTVF
 	RangeTblEntry *prte = PrteFromDXLTVF(pdxlnTVF, pdxltrctxOut, &dxltrctxbt, pplan);
 	GPOS_ASSERT(NULL != prte);
 
+	pfuncscan->funcexpr = prte->funcexpr;
+	pfuncscan->funccolnames = prte->eref->colnames;
+
 	m_pctxdxltoplstmt->AddRTE(prte);
 
 	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
@@ -1914,8 +1915,8 @@ CTranslatorDXLToPlStmt::PplanFunctionScanFromDXLTVF
 
 		INT typMod = gpdb::IExprTypeMod((Node*) pte->expr);
 
-		prte->funccoltypes = gpdb::PlAppendOid(prte->funccoltypes, oidType);
-		prte->funccoltypmods = gpdb::PlAppendInt(prte->funccoltypmods, typMod);
+		pfuncscan->funccoltypes = gpdb::PlAppendOid(pfuncscan->funccoltypes, oidType);
+		pfuncscan->funccoltypmods = gpdb::PlAppendInt(pfuncscan->funccoltypmods, typMod);
 	}
 
 	SetParamIds(pplan);
@@ -3587,7 +3588,7 @@ CTranslatorDXLToPlStmt::PappendFromDXLAppend
 
 		TargetEntry *pte = MakeNode(TargetEntry);
 		pte->expr = (Expr *) pvar;
-		pte->resname = CTranslatorUtils::SzFromWsz(pdxlopScIdent->Pdxlcr()->Pmdname()->Pstr()->Wsz());
+		pte->resname = CTranslatorUtils::SzFromWsz(pdxlopPrel->PmdnameAlias()->Pstr()->Wsz());
 		pte->resno = attno;
 
 		// add column mapping to output translation context
@@ -4213,10 +4214,7 @@ CTranslatorDXLToPlStmt::PplanDTS
 	// add the new range table entry as the last element of the range table
 	Index iRel = gpdb::UlListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
 
-	const IMDRelation *pmdrel = m_pmda->Pmdrel(pdxlop->Pdxltabdesc()->Pmdid());
-	const ULONG ulRelCols = pmdrel->UlColumns() - pmdrel->UlSystemColumns();
-	
-	RangeTblEntry *prte = PrteFromTblDescr(pdxlop->Pdxltabdesc(), NULL /*pdxlid*/, ulRelCols, iRel, &dxltrctxbt);
+	RangeTblEntry *prte = PrteFromTblDescr(pdxlop->Pdxltabdesc(), NULL /*pdxlid*/, iRel, &dxltrctxbt);
 	GPOS_ASSERT(NULL != prte);
 	prte->requiredPerms |= ACL_SELECT;
 
@@ -4292,9 +4290,7 @@ CTranslatorDXLToPlStmt::PplanDIS
 	Index iRel = gpdb::UlListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
 
 	const IMDRelation *pmdrel = m_pmda->Pmdrel(pdxlop->Pdxltabdesc()->Pmdid());
-	const ULONG ulRelCols = pmdrel->UlColumns() - pmdrel->UlSystemColumns();
-
-	RangeTblEntry *prte = PrteFromTblDescr(pdxlop->Pdxltabdesc(), NULL /*pdxlid*/, ulRelCols, iRel, &dxltrctxbt);
+	RangeTblEntry *prte = PrteFromTblDescr(pdxlop->Pdxltabdesc(), NULL /*pdxlid*/, iRel, &dxltrctxbt);
 	GPOS_ASSERT(NULL != prte);
 	prte->requiredPerms |= ACL_SELECT;
 	m_pctxdxltoplstmt->AddRTE(prte);
@@ -4429,6 +4425,13 @@ CTranslatorDXLToPlStmt::PplanDML
 			aclmode = ACL_INSERT;
 			break;
 		}
+		case gpdxl::EdxldmlSentinel:
+		default:
+		{
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
+				GPOS_WSZ_LIT("Unexpected error during plan generation."));
+			break;
+		}
 	}
 	
 	IMDId *pmdidTargetTable = pdxlop->Pdxltabdesc()->Pmdid();
@@ -4447,10 +4450,9 @@ CTranslatorDXLToPlStmt::PplanDML
 	m_plResultRelations = gpdb::PlAppendInt(m_plResultRelations, iRel);
 
 	const IMDRelation *pmdrel = m_pmda->Pmdrel(pdxlop->Pdxltabdesc()->Pmdid());
-	const ULONG ulRelCols = pmdrel->UlColumns() - pmdrel->UlSystemColumns();
 
 	CDXLTableDescr *pdxltabdesc = pdxlop->Pdxltabdesc();
-	RangeTblEntry *prte = PrteFromTblDescr(pdxltabdesc, NULL /*pdxlid*/, ulRelCols, iRel, &dxltrctxbt);
+	RangeTblEntry *prte = PrteFromTblDescr(pdxltabdesc, NULL /*pdxlid*/, iRel, &dxltrctxbt);
 	GPOS_ASSERT(NULL != prte);
 	prte->requiredPerms |= aclmode;
 	m_pctxdxltoplstmt->AddRTE(prte);
@@ -4912,11 +4914,15 @@ CTranslatorDXLToPlStmt::PrteFromTblDescr
 	(
 	const CDXLTableDescr *pdxltabdesc,
 	const CDXLIndexDescr *pdxlid, // should be NULL unless we have an index-only scan
-	ULONG ulRelColumns,
 	Index iRel,
 	CDXLTranslateContextBaseTable *pdxltrctxbtOut
 	)
 {
+	GPOS_ASSERT(NULL != pdxltabdesc);
+
+	const IMDRelation *pmdrel = m_pmda->Pmdrel(pdxltabdesc->Pmdid());
+	const ULONG ulRelColumns = CTranslatorUtils::UlNonSystemColumns(pmdrel);
+
 	RangeTblEntry *prte = MakeNode(RangeTblEntry);
 	prte->rtekind = RTE_RELATION;
 
@@ -5676,7 +5682,6 @@ CTranslatorDXLToPlStmt::SetVarTypMod
 
 		if (IsA(pte->expr, Var))
 		{
-			pte->expr;
 			Var *var = (Var*) pte->expr;
 			var->vartypmod = *(*pdrgpi)[ul];
 		}
@@ -5963,9 +5968,8 @@ CTranslatorDXLToPlStmt::PplanBitmapTableScan
 	Index iRel = gpdb::UlListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
 
 	const IMDRelation *pmdrel = m_pmda->Pmdrel(pdxltabdesc->Pmdid());
-	const ULONG ulRelCols = pmdrel->UlColumns() - pmdrel->UlSystemColumns();
 
-	RangeTblEntry *prte = PrteFromTblDescr(pdxltabdesc, NULL /*pdxlid*/, ulRelCols, iRel, &dxltrctxbt);
+	RangeTblEntry *prte = PrteFromTblDescr(pdxltabdesc, NULL /*pdxlid*/, iRel, &dxltrctxbt);
 	GPOS_ASSERT(NULL != prte);
 	prte->requiredPerms |= ACL_SELECT;
 

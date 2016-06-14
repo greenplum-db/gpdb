@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/relscan.h,v 1.51 2007/01/05 22:19:51 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/relscan.h,v 1.52 2007/01/20 18:43:35 neilc Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -75,9 +75,6 @@ typedef struct IndexScanDescData
 
 	/* index access method's private state */
 	void	   *opaque;			/* access-method-specific info */
-	/* these fields are used by some but not all AMs: */
-	ItemPointerData currentItemData;	/* current index pointer */
-	ItemPointerData currentMarkData;	/* marked position, if any */
 
 	/*
 	 * xs_ctup/xs_cbuf are valid after a successful index_getnext. After
@@ -90,24 +87,6 @@ typedef struct IndexScanDescData
 } IndexScanDescData;
 
 typedef IndexScanDescData *IndexScanDesc;
-
-/*
- * HiddenScanDesc is used only in systable API.  This is intended to
- * supply additional tuples in catalog without bumping up the catalog
- * version.
- */
-typedef struct HiddenScanDescData
-{
-	Relation	hdn_rel;		/* base relation */
-	int			hdn_nkeys;		/* number of scan keys */
-	ScanKey		hdn_key;		/* array of scan key descriptors */
-	HeapTuple  *hdn_tuples;		/* in-memory array of tuples */
-	int			hdn_len;		/* number of hidden tuples */
-	HeapTuple	hdn_lasttuple;	/* just-fetched tuple */
-	int			hdn_idx;		/* current reading cursor */
-} HiddenScanDescData;
-
-typedef HiddenScanDescData *HiddenScanDesc;
 
 /*
  * used for scan of external relations with the file protocol

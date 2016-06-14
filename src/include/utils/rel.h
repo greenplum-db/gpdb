@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/rel.h,v 1.95 2007/01/09 02:14:16 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/utils/rel.h,v 1.100 2007/03/29 00:15:39 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -60,6 +60,7 @@ typedef struct Trigger
 	bool		tgenabled;
 	bool		tgisconstraint;
 	Oid			tgconstrrelid;
+	Oid			tgconstraint;
 	bool		tgdeferrable;
 	bool		tginitdeferred;
 	int16		tgnargs;
@@ -144,6 +145,8 @@ typedef struct RelationData
 	char		rd_indexvalid;	/* state of rd_indexlist: 0 = not valid, 1 =
 								 * valid, 2 = temporarily forced */
 	SubTransactionId rd_createSubid;	/* rel was created in current xact */
+	SubTransactionId rd_newRelfilenodeSubid;	/* new relfilenode assigned
+												 * in current xact */
 
 	/*
 	 * Debugging information, Values from CREATE TABLE, if present.
@@ -158,6 +161,9 @@ typedef struct RelationData
 	 * survived into; or zero if the rel was not created in the current top
 	 * transaction.  This should be relied on only for optimization purposes;
 	 * it is possible for new-ness to be "forgotten" (eg, after CLUSTER).
+	 * Likewise, rd_newRelfilenodeSubid is the ID of the highest subtransaction
+	 * the relfilenode change has survived into, or zero if not changed in
+	 * the current transaction (or we have forgotten changing it).
 	 */
 	Form_pg_class rd_rel;		/* RELATION tuple */
 	TupleDesc	rd_att;			/* tuple descriptor */

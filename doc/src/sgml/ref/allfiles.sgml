@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/allfiles.sgml,v 1.68 2006/09/18 19:54:01 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/allfiles.sgml,v 1.69 2007/01/23 05:07:16 tgl Exp $
 PostgreSQL documentation
 Complete list of usable sgml source files in this directory.
 -->
@@ -17,6 +17,7 @@ Complete list of usable sgml source files in this directory.
 <!entity alterLanguage      system "alter_language.sgml">
 <!entity alterOperator      system "alter_operator.sgml">
 <!entity alterOperatorClass system "alter_opclass.sgml">
+<!entity alterOperatorFamily system "alter_opfamily.sgml">
 <!entity alterResQueue      system "alter_resource_queue.sgml">
 <!entity alterRole          system "alter_role.sgml">
 <!entity alterSchema        system "alter_schema.sgml">
@@ -48,6 +49,7 @@ Complete list of usable sgml source files in this directory.
 <!entity createLanguage     system "create_language.sgml">
 <!entity createOperator     system "create_operator.sgml">
 <!entity createOperatorClass system "create_opclass.sgml">
+<!entity createOperatorFamily system "create_opfamily.sgml">
 <!entity createResQueue     system "create_resource_queue.sgml">
 <!entity createRole         system "create_role.sgml">
 <!entity createRule         system "create_rule.sgml">
@@ -65,6 +67,7 @@ Complete list of usable sgml source files in this directory.
 <!entity deallocate         system "deallocate.sgml">
 <!entity declare            system "declare.sgml">
 <!entity delete             system "delete.sgml">
+<!entity do                 system "do.sgml">
 <!entity dropAggregate      system "drop_aggregate.sgml">
 <!entity dropCast           system "drop_cast.sgml">
 <!entity dropConversion     system "drop_conversion.sgml">
@@ -77,6 +80,7 @@ Complete list of usable sgml source files in this directory.
 <!entity dropLanguage       system "drop_language.sgml">
 <!entity dropOperator       system "drop_operator.sgml">
 <!entity dropOperatorClass  system "drop_opclass.sgml">
+<!entity dropOperatorFamily  system "drop_opfamily.sgml">
 <!entity dropOwned          system "drop_owned.sgml">
 <!entity dropResQueue       system "drop_resource_queue.sgml">
 <!entity dropRole           system "drop_role.sgml">

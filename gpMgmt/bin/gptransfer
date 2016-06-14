@@ -2360,6 +2360,8 @@ class GpTransfer(object):
         self._src_databases = None
         self._dest_databases = None
 
+        self._src_dest_partition_table_mapping = None
+
         self._all_src_databases = get_user_databases(self._options.source_host,
                                              self._options.source_port,
                                              self._options.source_user)
@@ -2588,28 +2590,6 @@ class GpTransfer(object):
                 logger.warn(
                     'Failed to remove schema file %s.', schema_filename)
                 logger.warn('This file should be removed manually.')
-
-            # Restoring the full schema uses template0 as the template database
-            # This means that while the gp_toolkit schema is created in each database
-            # it is not populated.  Because of this we need to populate it ourselves.
-            url = DbURL(self._options.dest_host, self._options.dest_port,
-                        'template1', self._options.dest_user)
-            conn = connect(url)
-            databases = [db[0] for db in getUserDatabaseList(conn)]
-            conn.close()
-
-            toolkit_file = os.path.join(self._gphome, 'share', 'postgresql', 'gp_toolkit.sql')
-            logger.info('Populating gp_toolkit schema...')
-            for database in databases:
-                toolkit_cmd = PsqlFile('Create gptoolkit',
-                                self._options.dest_host,
-                                self._options.dest_port,
-                                self._options.dest_user,
-                                database,
-                                toolkit_file)
-                self._pool.addCommand(toolkit_cmd)
-            self._pool.join()
-            self._pool.check_results()
         else:
             # Make sure databases exist on destination system
             url = DbURL(self._options.dest_host, self._options.dest_port,
@@ -2859,6 +2839,10 @@ class GpTransfer(object):
             raise ProgramArgumentValidationException('--partition-transfer option cannot be '
                                                      'used with -d option')
 
+        if (self._options.partition_transfer and self._options.dest_database):
+            raise ProgramArgumentValidationException('--partition-transfer option cannot be '
+                                                     'used with --dest-database option')
+
         if (self._options.partition_transfer and self._options.drop):
             raise ProgramArgumentValidationException('--partition-transfer option cannot be used '
                                                      'with --drop option')
@@ -2974,7 +2958,7 @@ class GpTransfer(object):
                 not self._options.dest_database and \
                 not self._options.partition_transfer:
             raise ProgramArgumentValidationException('Source and destination systems cannot be '
-                                   'the same unless --dest-database option is '
+                                   'the same unless --dest-database or --partition-transfer option is '
                                    'set')
 
         if self._options.full and self._options.dest_database:
@@ -3169,6 +3153,9 @@ class GpTransfer(object):
         # --partition-transfer will have the exact database name for each destination table,
         # not support the regexp
         if self._options.partition_transfer:
+
+            self._src_dest_partition_table_mapping = dict()
+
             self._get_tables_from_partition_input_file()
             user_tables = get_user_tables(self._options.source_host,
                                           self._options.source_port,
@@ -3176,11 +3163,22 @@ class GpTransfer(object):
                                           self._src_databases,
                                           False,
                                           self._options.partition_transfer)
+
             # filter out non-exist source tables from source databases.
-            for tbl in self.src_dest_partition_table_mapping:
+            # key in dict: self._src_dest_partition_table_mapping maps to index of list: source_tables
+            key = 0
+            for i in range(len(self._src_prt_tables)):
+                tbl = self._src_prt_tables[i]
                 for user_tbl in user_tables:
                     if tbl == str(user_tbl):
                         source_tables.append(user_tbl)
+                        self._src_dest_partition_table_mapping[key] = self._dest_prt_tables[i]
+                        key += 1
+                        break
+
+            del self._src_prt_tables[:]
+            del self._dest_prt_tables[:]
+
             return source_tables
 
         if self._options.full:
@@ -3303,31 +3301,59 @@ class GpTransfer(object):
         read comma ',' separated partition table pair: <source, destination>,
         populate all source-destination pairs with their exact name(does not expect regexp).
         """
-        self.src_dest_partition_table_mapping = dict()
+        self._src_prt_tables = []
+        self._dest_prt_tables = []
         self._dest_databases = []
         self._src_databases = []
+        fqn_format = '<db_name>.<schema_name>.<table_name>'
+        logger.info('Reading partition table transfer pairs from input file %s', self._options.input_file)
         with open (self._options.input_file) as input_file:
             for line in input_file:
                 line = line.strip()
-                if line.startswith('#'):
+                if line.startswith('#') or line == '':
+                    logger.debug('Skipping blank lines and commented lines beginning with # (pound sign)')
                     continue
                 if ',' in line:
+                    if line.count(',') > 1:
+                        raise Exception('Wrong format found for table transfer pair "%s", use single comma '
+                                         'to separate source and destination table' % line)
                     src_table, dest_table = line.split(',')
                 else:
                     src_table = dest_table = line
 
                 # populate the mapping between source and destination table pair
                 src_table, dest_table = src_table.strip(), dest_table.strip()
-                if src_table == '' or dest_table == '':
-                    raise Exception('Can not specify empty table names')
-                if src_table == dest_table and self._options.source_host == self._options.dest_host:
-                    raise Exception('Can not transfer between same partition table %s' % src_table)
-                if (src_table in self.src_dest_partition_table_mapping and
-                    self.src_dest_partition_table_mapping[src_table] == dest_table):
-                    logger.warning('Duplicate entries found, source partition table %s, destination partition table %s ' %
-                                   (src_table, dest_table))
+
+                if src_table == '':
+                    raise Exception('Cannot specify empty source table name')
+
+                if dest_table == '':
+                    raise Exception('Cannot specify empty destination table name')
+
+                # gptransfer does not support special char '.' in db name, schema name or table name
+                if src_table.count(SCHEMA_DELIMITER) != 2:
+                    raise Exception('Source table name "%s" isn\'t fully qualified format: %s' %
+                                    (src_table, fqn_format))
+
+                if dest_table.count(SCHEMA_DELIMITER) != 2:
+                    raise Exception('Destination table name "%s" isn\'t fully qualified format: %s' %
+                                     (dest_table, fqn_format))
+
+                if (src_table == dest_table and self._options.source_host == self._options.dest_host and
+                   self._options.source_port == self._options.dest_port):
+                    raise Exception('Cannot transfer between same partition table %s' % src_table)
+
+                if src_table in self._src_prt_tables:
+                    indexes = [i for i, tbl in enumerate(self._src_prt_tables) if tbl == src_table]
+                    for i in indexes:
+                        if self._dest_prt_tables[i] == dest_table:
+                            logger.warning('Duplicate entries found, source partition table %s, destination partition table %s ' %
+                                          (src_table, dest_table))
                     continue
-                self.src_dest_partition_table_mapping[src_table] = dest_table
+
+                logger.debug('Getting source partition table "%s", destination partition table "%s"' % (src_table, dest_table))
+                self._src_prt_tables.append(src_table)
+                self._dest_prt_tables.append(dest_table)
 
                 src_db = split_fqn(src_table)[0]
                 if src_db not in self._src_databases:
@@ -3436,10 +3462,13 @@ class GpTransfer(object):
         table_pairs = list()
         seen = set()
 
-        for src_table in self._src_tables:
+        for i in range(len(self._src_tables)):
+
+            src_table = self._src_tables[i]
+
             if self._options.partition_transfer:
-                src_tbl_key = str(src_table)
-                dest_db, dest_schema, dest_tbl = split_fqn(self.src_dest_partition_table_mapping[src_tbl_key])
+                dest_prt_table = self._src_dest_partition_table_mapping[i]
+                dest_db, dest_schema, dest_tbl = split_fqn(dest_prt_table)
                 table_pair = GpTransferTablePair(src_table,
                                              GpTransferTable(dest_db,
                                                              dest_schema,
@@ -3459,6 +3488,9 @@ class GpTransfer(object):
             if table_pair not in seen:
                 seen.add(table_pair)
                 table_pairs.append(table_pair)
+
+        if self._src_dest_partition_table_mapping:
+            self._src_dest_partition_table_mapping.clear()
 
         logger.info('Number of tables to transfer: %s', len(table_pairs))
 
@@ -3606,7 +3638,7 @@ class GpTransfer(object):
         if len(src_tbl_columns) != len(dest_tbl_columns):
             return False
         for ordinal_pos in src_tbl_columns:
-            if src_tbl_columns[ordinal_pos] != dest_tbl_columns[ordinal_pos]:
+            if (ordinal_pos not in dest_tbl_columns) or (src_tbl_columns[ordinal_pos] != dest_tbl_columns[ordinal_pos]):
                 return False
         return True
 

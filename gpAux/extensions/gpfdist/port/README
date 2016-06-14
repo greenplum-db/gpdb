@@ -1,3 +1,0 @@
-This directory contains a replacement glob(3) function, for use on Windows
-Visual C++ builds. On all other platforms, we assume a working glob(3)
-function.

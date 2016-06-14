@@ -16,10 +16,7 @@
 #ifndef HTUPFIFO_H
 #define HTUPFIFO_H
 
-#ifdef WIN32
-typedef unsigned int uint;
-#endif
-
+#include "access/htup.h"
 
 /* An entry in the HeapTuple FIFO.	Entries are formed into queues. */
 typedef struct htf_entry_data
@@ -57,7 +54,7 @@ typedef struct htup_fifo_state
 	 * The maximum size that the FIFO is allowed to grow to, in bytes, before
 	 * it will cause an error to be reported.
 	 */
-	uint		max_mem_size;
+	uint32		max_mem_size;
 
 }	htup_fifo_state, *htup_fifo;
 

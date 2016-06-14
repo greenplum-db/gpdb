@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/gram.y,v 1.95.2.2 2009/02/02 20:25:50 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/gram.y,v 1.99 2007/02/19 03:18:51 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -45,6 +45,7 @@ static	PLpgSQL_stmt	*make_execsql_stmt(const char *sqlstart, int lineno);
 static	PLpgSQL_stmt	*make_fetch_stmt(int lineno, int curvar);
 static	PLpgSQL_stmt	*make_return_stmt(int lineno);
 static	PLpgSQL_stmt	*make_return_next_stmt(int lineno);
+static	PLpgSQL_stmt	*make_return_query_stmt(int lineno);
 static	void			 check_assignable(PLpgSQL_datum *datum);
 static	void			 read_into_target(PLpgSQL_rec **rec, PLpgSQL_row **row,
 										  bool *strict);
@@ -189,7 +190,6 @@ static	void			 check_labels(const char *start_label,
 %token	K_IS
 %token	K_LOG
 %token	K_LOOP
-%token	K_NEXT
 %token	K_NOT
 %token	K_NOTICE
 %token	K_NULL
@@ -494,7 +494,7 @@ decl_aliasitem	: T_WORD
 
 						plpgsql_convert_ident(yytext, &name, 1);
 						if (name[0] != '$')
-							yyerror("only positional parameters may be aliased");
+							yyerror("only positional parameters can be aliased");
 
 						plpgsql_ns_setlocal(false);
 						nsi = plpgsql_ns_lookup(name, NULL);
@@ -1167,9 +1167,20 @@ stmt_return		: K_RETURN lno
 						int	tok;
 
 						tok = yylex();
-						if (tok == K_NEXT)
+						if (tok == 0)
+							yyerror("unexpected end of function definition");
+						/*
+						 * To avoid making NEXT and QUERY effectively be
+						 * reserved words within plpgsql, recognize them
+						 * via yytext.
+						 */
+						if (pg_strcasecmp(yytext, "next") == 0)
 						{
 							$$ = make_return_next_stmt($2);
+						}
+						else if (pg_strcasecmp(yytext, "query") == 0)
+						{
+							$$ = make_return_query_stmt($2);
 						}
 						else
 						{
@@ -1726,9 +1737,7 @@ read_sql_construct(int until,
 		{
 			parenlevel--;
 			if (parenlevel < 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("mismatched parentheses")));
+				yyerror("mismatched parentheses");
 		}
 		/*
 		 * End of function definition is an error, and we don't expect to
@@ -1737,11 +1746,9 @@ read_sql_construct(int until,
 		 */
 		if (tok == 0 || tok == ';')
 		{
-			plpgsql_error_lineno = lno;
 			if (parenlevel != 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("mismatched parentheses")));
+				yyerror("mismatched parentheses");
+			plpgsql_error_lineno = lno;
 			if (isexpression)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
@@ -1809,6 +1816,7 @@ read_datatype(int tok)
 {
 	int					lno;
 	PLpgSQL_dstring		ds;
+	char			   *type_name;
 	PLpgSQL_type		*result;
 	bool				needspace = false;
 	int					parenlevel = 0;
@@ -1831,14 +1839,10 @@ read_datatype(int tok)
 	{
 		if (tok == 0)
 		{
-			plpgsql_error_lineno = lno;
 			if (parenlevel != 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("mismatched parentheses")));
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("incomplete datatype declaration")));
+				yyerror("mismatched parentheses");
+			else
+				yyerror("incomplete datatype declaration");
 		}
 		/* Possible followers for datatype in a declaration */
 		if (tok == K_NOT || tok == K_ASSIGN || tok == K_DEFAULT)
@@ -1860,9 +1864,14 @@ read_datatype(int tok)
 
 	plpgsql_push_back_token(tok);
 
+	type_name = plpgsql_dstring_get(&ds);
+
+	if (type_name[0] == '\0')
+		yyerror("missing datatype declaration");
+
 	plpgsql_error_lineno = lno;	/* in case of error in parse_datatype */
 
-	result = plpgsql_parse_datatype(plpgsql_dstring_get(&ds));
+	result = plpgsql_parse_datatype(type_name);
 
 	plpgsql_dstring_free(&ds);
 
@@ -1918,12 +1927,7 @@ make_execsql_stmt(const char *sqlstart, int lineno)
 		if (tok == K_INTO && prev_tok != K_INSERT)
 		{
 			if (have_into)
-			{
-				plpgsql_error_lineno = plpgsql_scanner_lineno();
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("INTO specified more than once")));
-			}
+				yyerror("INTO specified more than once");
 			have_into = true;
 			read_into_target(&rec, &row, &have_strict);
 			continue;
@@ -2024,7 +2028,8 @@ make_return_stmt(int lineno)
 	if (plpgsql_curr_compile->fn_retset)
 	{
 		if (yylex() != ';')
-			yyerror("RETURN cannot have a parameter in function returning set; use RETURN NEXT");
+			yyerror("RETURN cannot have a parameter in function "
+					"returning set; use RETURN NEXT or RETURN QUERY");
 	}
 	else if (plpgsql_curr_compile->out_param_varno >= 0)
 	{
@@ -2115,6 +2120,23 @@ make_return_next_stmt(int lineno)
 	}
 	else
 		new->expr = plpgsql_read_expression(';', ";");
+
+	return (PLpgSQL_stmt *) new;
+}
+
+
+static PLpgSQL_stmt *
+make_return_query_stmt(int lineno)
+{
+	PLpgSQL_stmt_return_query *new;
+
+	if (!plpgsql_curr_compile->fn_retset)
+		yyerror("cannot use RETURN QUERY in a non-SETOF function");
+
+	new = palloc0(sizeof(PLpgSQL_stmt_return_query));
+	new->cmd_type	= PLPGSQL_STMT_RETURN_QUERY;
+	new->lineno		= lineno;
+	new->query		= read_sql_construct(';', 0, ")", "", false, true, NULL);
 
 	return (PLpgSQL_stmt *) new;
 }

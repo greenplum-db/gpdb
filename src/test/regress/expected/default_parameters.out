@@ -1,0 +1,278 @@
+-- -----------------------------------------------------------------
+-- Test function default paramters
+-- -----------------------------------------------------------------
+-- test default polymorphic functions
+-- test basic functionality
+create function dfunc(a int = 1, int = 2) returns int as $$ select $1 + $2; $$ language sql;
+select dfunc();
+ dfunc 
+-------
+     3
+(1 row)
+
+select dfunc(10);
+ dfunc 
+-------
+    12
+(1 row)
+
+select dfunc(10, 20);
+ dfunc 
+-------
+    30
+(1 row)
+
+select dfunc(10, 20, 30);  -- fail
+ERROR:  function dfunc(integer, integer, integer) does not exist
+LINE 1: select dfunc(10, 20, 30);
+               ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+drop function dfunc();  -- fail
+ERROR:  function dfunc() does not exist
+drop function dfunc(int);  -- fail
+ERROR:  function dfunc(integer) does not exist
+drop function dfunc(int, int);  -- ok
+-- fail: defaults must be at end of argument list
+create function dfunc(a int = 1, b int) returns int as $$ select $1 + $2; $$ language sql;
+ERROR:  input parameters after one with a default value must also have defaults
+-- however, this should work:
+create function dfunc(a int = 1, out sum int, b int = 2) as $$ select $1 + $2; $$ language sql;
+select dfunc();
+ dfunc 
+-------
+     3
+(1 row)
+
+-- verify it lists properly
+\df dfunc
+                                           List of functions
+ Schema | Name  | Result data type |                    Argument data types                    |  Type  
+--------+-------+------------------+-----------------------------------------------------------+--------
+ public | dfunc | integer          | a integer DEFAULT 1, OUT sum integer, b integer DEFAULT 2 | normal
+(1 row)
+
+-- inout argmode test:
+drop function dfunc(int, int);
+create function dfunc(a inout int default 10, b int = 2) as $$ select $1 + $2; $$ language sql;
+select dfunc();
+ dfunc 
+-------
+    12
+(1 row)
+
+select dfunc(4);
+ dfunc 
+-------
+     6
+(1 row)
+
+select dfunc(4,5);
+ dfunc 
+-------
+     9
+(1 row)
+
+\df dfunc
+                                      List of functions
+ Schema | Name  | Result data type |               Argument data types               |  Type
+--------+-------+------------------+-------------------------------------------------+--------
+ public | dfunc | integer          | INOUT a integer DEFAULT 10, b integer DEFAULT 2 | normal
+(1 row)
+
+drop function dfunc(int, int);
+-- check implicit coercion 
+create function dfunc(a int DEFAULT 1.0, int DEFAULT '-1') returns int as $$ select $1 + $2; $$ language sql;
+select dfunc();
+ dfunc 
+-------
+     0
+(1 row)
+
+create function dfunc(a text DEFAULT 'Hello', b text DEFAULT 'World') returns text as $$ select $1 || ', ' || $2; $$ language sql;
+select dfunc();  -- fail: which dfunc should be called? int or text
+ERROR:  function dfunc() is not unique
+LINE 1: select dfunc();
+               ^
+HINT:  Could not choose a best candidate function. You might need to add explicit type casts.
+select dfunc('Hi');  -- ok
+   dfunc   
+-----------
+ Hi, World
+(1 row)
+
+select dfunc('Hi', 'City');  -- ok
+  dfunc   
+----------
+ Hi, City
+(1 row)
+
+select dfunc(0);  -- ok
+ dfunc 
+-------
+    -1
+(1 row)
+
+select dfunc(10, 20);  -- ok
+ dfunc 
+-------
+    30
+(1 row)
+
+drop function dfunc(int, int);
+drop function dfunc(text, text);
+-- ambiguity should be reported only if there's not a better match available
+create function dfunc(text) returns text as $$ select $1; $$ language sql;
+create function dfunc(int = 1, int = 2) returns int as $$ select 2; $$ language sql;
+create function dfunc(int = 1, int = 2, int = 3, int = 4) returns int as $$ select 4; $$ language sql;
+-- now, dfunc(nargs = 2) and dfunc(nargs = 4) are ambiguous when called
+-- with 0 to 2 arguments with input type int
+select dfunc('Hi');	-- ok, input type text
+ dfunc 
+-------
+ Hi
+(1 row)
+
+select dfunc();  -- fail
+ERROR:  function dfunc() is not unique
+LINE 1: select dfunc();
+               ^
+HINT:  Could not choose a best candidate function. You might need to add explicit type casts.
+select dfunc(1);  -- fail
+ERROR:  function dfunc(integer) is not unique
+LINE 1: select dfunc(1);
+               ^
+HINT:  Could not choose a best candidate function. You might need to add explicit type casts.
+select dfunc(1, 2);  -- fail
+ERROR:  function dfunc(integer, integer) is not unique
+LINE 1: select dfunc(1, 2);
+               ^
+HINT:  Could not choose a best candidate function. You might need to add explicit type casts.
+select dfunc(1, 2, 3);  -- ok
+ dfunc 
+-------
+     4
+(1 row)
+
+select dfunc(1, 2, 3, 4);  -- ok
+ dfunc 
+-------
+     4
+(1 row)
+
+drop function dfunc(text);
+drop function dfunc(int, int);
+drop function dfunc(int, int, int, int);
+-- default values are not allowed for output parameters
+create function dfunc(out int = 20) returns int as $$ select 1; $$ language sql;
+ERROR:  only input parameters can have default values
+-- polymorphic parameter test
+create function dfunc(anyelement = 'World'::text) returns text as $$ select 'Hello, ' || $1::text; $$ language sql;
+select dfunc();
+    dfunc     
+--------------
+ Hello, World
+(1 row)
+
+select dfunc(0);
+  dfunc   
+----------
+ Hello, 0
+(1 row)
+
+select dfunc(to_date('20081215','YYYYMMDD'));
+       dfunc       
+-------------------
+ Hello, 12-15-2008
+(1 row)
+
+select dfunc('City'::text);
+    dfunc    
+-------------
+ Hello, City
+(1 row)
+
+drop function dfunc(anyelement);
+-- check defaults for variadics
+create function dfunc(a variadic int[]) returns int as
+$$ select array_upper($1, 1) $$ language sql;
+select dfunc();  -- fail
+ERROR:  function dfunc() does not exist
+LINE 1: select dfunc();
+               ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+select dfunc(10);
+ dfunc 
+-------
+     1
+(1 row)
+
+select dfunc(10,20);
+ dfunc 
+-------
+     2
+(1 row)
+
+create or replace function dfunc(a variadic int[] default '{44,88,99}'::int[]) returns int as $$ select array_upper($1, 1) $$ language sql;
+select dfunc();  -- now ok
+ dfunc 
+-------
+     3
+(1 row)
+
+select dfunc(10);
+ dfunc 
+-------
+     1
+(1 row)
+
+select dfunc(10,20);
+ dfunc 
+-------
+     2
+(1 row)
+
+-- can change default value
+create or replace function dfunc(a variadic int[] default '{44,55,88,99}'::int[]) returns int as $$ select array_upper($1, 1) $$ language sql;
+select dfunc();
+ dfunc 
+-------
+     4
+(1 row)
+
+-- can't remove the default once it exists
+create or replace function dfunc(a variadic int[]) returns int as $$ select array_upper($1, 1) $$ language sql;
+ERROR:  cannot remove parameter defaults from existing function
+HINT:  Use DROP FUNCTION first.
+\df dfunc
+                                          List of functions
+ Schema | Name  | Result data type |                   Argument data types                   |  Type  
+--------+-------+------------------+---------------------------------------------------------+--------
+ public | dfunc | integer          | VARIADIC a integer[] DEFAULT '{44,55,88,99}'::integer[] | normal
+(1 row)
+
+drop function dfunc(a variadic int[]);
+-- test expression
+create function dfunc(a int, b double precision default random()*10) returns double precision as $$ select $1+$2; $$ language sql;
+\df dfunc
+                                                   List of functions
+ Schema | Name  | Result data type |                            Argument data types                            |  Type  
+--------+-------+------------------+---------------------------------------------------------------------------+--------
+ public | dfunc | double precision | a integer, b double precision DEFAULT (random() * (10)::double precision) | normal
+(1 row)
+
+create view dview as select random()*10, dfunc(4);
+select pg_get_viewdef('dview',true);
+                           pg_get_viewdef                           
+--------------------------------------------------------------------
+  SELECT random() * 10::double precision, public.dfunc(4) AS dfunc;
+(1 row)
+
+-- need drop cascade
+drop function dfunc(int, double precision);
+NOTICE:  rule _RETURN on view dview depends on function dfunc(integer,double precision)
+NOTICE:  view dview depends on rule _RETURN on view dview
+ERROR:  cannot drop function dfunc(integer,double precision) because other objects depend on it
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+drop function dfunc(int, double precision) cascade;
+NOTICE:  drop cascades to rule _RETURN on view dview
+NOTICE:  drop cascades to view dview

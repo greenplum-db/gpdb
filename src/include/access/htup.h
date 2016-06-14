@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/htup.h,v 1.89 2007/01/09 22:01:00 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/htup.h,v 1.91 2007/02/09 03:35:34 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -46,6 +46,7 @@
  * than a thousand or so columns.  TOAST won't help.
  */
 #define MaxHeapAttributeNumber	1600	/* 8 * 200 */
+#define MaxPolicyAttributeNumber MaxHeapAttributeNumber
 
 /*
  * Heap tuple header.  To avoid wasting space, the fields should be
@@ -327,34 +328,17 @@ do { \
 #define BITMAPLEN(NATTS)	(((int)(NATTS) + 7) / 8)
 
 /*
- * MaxTupleSize is the maximum allowed size of a tuple, including header and
- * MAXALIGN alignment padding.	Basically it's BLCKSZ minus the other stuff
- * that has to be on a disk page.  The "other stuff" includes access-method-
- * dependent "special space", which we assume will be no more than
- * MaxSpecialSpace bytes (currently, on heap pages it's actually zero).
- *
- * NOTE: we do not need to count an ItemId for the tuple because
- * sizeof(PageHeaderData) includes the first ItemId on the page.
- */
-#define MaxSpecialSpace  32
-
-#define MaxTupleSize	\
-	(BLCKSZ - MAXALIGN(sizeof(PageHeaderData) + MaxSpecialSpace))
-
-/*
  * MaxHeapTupleSize is the maximum allowed size of a heap tuple, including
  * header and MAXALIGN alignment padding.  Basically it's BLCKSZ minus the
  * other stuff that has to be on a disk page.  Since heap pages use no
  * "special space", there's no deduction for that.
  *
- * NOTE: we allow for the ItemId that must point to the tuple, ensuring that
- * an otherwise-empty page can indeed hold a tuple of this size.  Because
- * ItemIds and tuples have different alignment requirements, don't assume that
- * you can, say, fit 2 tuples of size MaxHeapTupleSize/2 on the same page.
+ * NOTE: we do not need to count an ItemId for the tuple because
+ * sizeof(PageHeaderData) includes the first ItemId on the page.  But beware
+ * of assuming that, say, you can fit 2 tuples of size MaxHeapTupleSize/2
+ * on the same page.
  */
-//#define MaxHeapTupleSize  (BLCKSZ - MAXALIGN(SizeOfPageHeaderData + sizeof(ItemIdData)))
-// Play it safe until I test better... Make MaxHeapTupleSize restricted to MaxTupleSize
-#define MaxHeapTupleSize MaxTupleSize
+#define MaxHeapTupleSize  (BLCKSZ - MAXALIGN(sizeof(PageHeaderData)))
 
 /*
  * MaxHeapTuplesPerPage is an upper bound on the number of tuples that can
@@ -630,7 +614,7 @@ typedef struct xl_heap_freeze
 extern CommandId HeapTupleHeaderGetCmin(HeapTupleHeader tup);
 extern CommandId HeapTupleHeaderGetCmax(HeapTupleHeader tup);
 extern void HeapTupleHeaderAdjustCmax(HeapTupleHeader tup,
-						  CommandId *cmax,
-						  bool *iscombo);
-						  
+									  CommandId *cmax,
+									  bool *iscombo);
+
 #endif   /* HTUP_H */

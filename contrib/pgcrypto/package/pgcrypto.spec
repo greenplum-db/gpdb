@@ -10,7 +10,7 @@ AutoProv:       no
 Provides:       pgcrypto = %{pgcrypto_ver} 
 
 %description
-The Pgcrypto package provides cryptographic package for the Greenplum Database.
+The Pgcrypto package provides cryptographic functions for the Greenplum Database.
 
 %install
 mkdir -p %{buildroot}/temp

@@ -1,0 +1,109 @@
+-- @Description Tests the basic behavior of (lazy) vacuum w.r.t. to the threshold guc.
+CREATE TABLE uaocs_threshold (a INT, b INT, c CHAR(128)) WITH (appendonly=true, orientation=column) distributed by (b);
+CREATE INDEX uaocs_threshold_index ON uaocs_threshold(a);
+INSERT INTO uaocs_threshold SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(1, 100) AS i;
+\set QUIET off
+VACUUM uaocs_threshold;
+VACUUM
+DELETE FROM uaocs_threshold WHERE a < 4;
+DELETE 3
+SELECT COUNT(*) FROM uaocs_threshold;
+ count 
+-------
+    97
+(1 row)
+
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     1 |      100 |     1
+(1 row)
+
+-- 97 visible tuples, no vacuum
+VACUUM uaocs_threshold;
+VACUUM
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     1 |      100 |     1
+(1 row)
+
+DELETE FROM uaocs_threshold WHERE a < 12;
+DELETE 8
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     1 |      100 |     1
+(1 row)
+
+-- 89 visible tuples, do vacuum
+VACUUM uaocs_threshold;
+VACUUM
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     2 |       89 |     1
+     1 |        0 |     1
+(2 rows)
+
+-- no invisible tuples, no vacuum
+VACUUM uaocs_threshold;
+VACUUM
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     2 |       89 |     1
+     1 |        0 |     1
+(2 rows)
+
+DELETE FROM uaocs_threshold WHERE a < 15;
+DELETE 3
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     2 |       89 |     1
+     1 |        0 |     1
+(2 rows)
+
+-- 3 invisible tuples, no vacuum
+VACUUM uaocs_threshold;
+VACUUM
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     2 |       89 |     1
+     1 |        0 |     1
+(2 rows)
+
+SET gp_appendonly_compaction_threshold=2;
+SET
+-- 3 invisible tuples, no vacuum
+VACUUM uaocs_threshold;
+VACUUM
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     1 |       86 |     1
+     2 |        0 |     1
+(2 rows)
+
+INSERT INTO uaocs_threshold SELECT i as a, i as b, 'hello world' as c FROM generate_series(100, 200) AS i;
+INSERT 0 101
+DELETE FROM uaocs_threshold WHERE a > 100 and a < 175;
+DELETE 74
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     2 |        0 |     1
+     1 |      187 |     1
+(2 rows)
+
+VACUUM uaocs_threshold;
+VACUUM
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+ segno | tupcount | state 
+-------+----------+-------
+     1 |        0 |     1
+     2 |      113 |     1
+(2 rows)
+

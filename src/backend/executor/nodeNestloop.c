@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeNestloop.c,v 1.43.2.1 2007/02/02 00:07:28 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeNestloop.c,v 1.45 2007/02/02 00:07:03 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

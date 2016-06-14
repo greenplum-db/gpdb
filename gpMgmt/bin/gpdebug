@@ -8,8 +8,7 @@
 """
 import os, signal, time
 
-from psi import AttrInsufficientPrivsError
-from psi.process import Process, ProcessTable, NoSuchProcessError
+import psutil
 
 from gppylib import gplog, pgconf
 from gppylib.db import dbconn
@@ -339,10 +338,11 @@ class GpDebugMain(YamlMain):
         ""
         self.logger.info("Era: %s" % self.options.era)
         self.orphans = []
-        for p in ProcessTable().values():
+        for p in psutil.process_iter():
             try:
-                d = dict(p.env)                
-            except AttrInsufficientPrivsError:
+                d = p.environ()
+                command = ' '.join(p.cmdline())
+            except psutil.Error:
                 continue
             e = d.get('GPERA')
             s = d.get('GPSESSID')
@@ -352,7 +352,7 @@ class GpDebugMain(YamlMain):
             if e is None:
                 continue
             if e != self.options.era:
-                self.orphans.append((e, s, str(p.pid), p.command.strip()))
+                self.orphans.append((e, s, str(p.pid), command.strip()))
                 continue
 
             # look for process in same era with a session id not in
@@ -369,7 +369,7 @@ class GpDebugMain(YamlMain):
                 if s == '0' or s in (self.options.sessionids or []):
                     continue
 
-            self.orphans.append((e, s, str(p.pid), p.command.strip()))
+            self.orphans.append((e, s, str(p.pid), command.strip()))
 
     def return_orphan_details(self):
         ""

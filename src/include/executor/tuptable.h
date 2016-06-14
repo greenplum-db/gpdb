@@ -19,9 +19,10 @@
 #include "access/heapam.h"
 #include "access/memtup.h"
 #include "storage/buf.h"
+#include "codegen/codegen_wrapper.h"
 
 /*----------
- * The executor stores tuples in a "tuple table" which is composed of
+ * The executor stores tuples in a "tuple table" which is a List of
  * independent TupleTableSlots.  There are several cases we need to handle:
  *		1. physical tuple in a disk buffer page
  *		2. physical tuple constructed in palloc'ed memory
@@ -112,7 +113,7 @@
 
 typedef struct TupleTableSlot
 {
-	NodeTag		type;		/* vestigial ... allows IsA tests */
+	NodeTag		type;
 	int         PRIVATE_tts_flags;      /* TTS_xxx flags */
 
 	/* Heap tuple stuff */
@@ -356,33 +357,21 @@ static inline bool slot_attisnull(TupleTableSlot *slot, int attnum)
 	return memtuple_attisnull(slot->PRIVATE_tts_memtuple, slot->tts_mt_bind, attnum);
 }
 
-/*
- * Tuple table data structure: an array of TupleTableSlots.
- */
-typedef struct TupleTableData
-{
-	int			size;			/* size of the table (number of slots) */
-	int			next;			/* next available slot number */
-	TupleTableSlot array[1];	/* VARIABLE LENGTH ARRAY - must be last */
-} TupleTableData;				/* VARIABLE LENGTH STRUCT */
-
-typedef TupleTableData *TupleTable;
-
 /* in executor/execTuples.c */
 extern void init_slot(TupleTableSlot *slot, TupleDesc tupdesc);
 
-extern TupleTable ExecCreateTupleTable(int tableSize);
-extern void ExecDropTupleTable(TupleTable table, bool shouldFree);
+extern TupleTableSlot *MakeTupleTableSlot(void);
+extern TupleTableSlot *ExecAllocTableSlot(List **tupleTable);
+extern void ExecResetTupleTable(List *tupleTable, bool shouldFree);
 extern TupleTableSlot *MakeSingleTupleTableSlot(TupleDesc tupdesc);
 extern void ExecDropSingleTupleTableSlot(TupleTableSlot *slot);
-extern TupleTableSlot *ExecAllocTableSlot(TupleTable table);
 extern void ExecSetSlotDescriptor(TupleTableSlot *slot, TupleDesc tupdesc); 
 
 extern TupleTableSlot *ExecStoreHeapTuple(HeapTuple tuple,
 			   TupleTableSlot *slot,
 			   Buffer buffer,
 			   bool shouldFree);
-extern TupleTableSlot *ExecStoreMemTuple(MemTuple mtup,
+extern TupleTableSlot *ExecStoreMinimalTuple(MemTuple mtup,
 					  TupleTableSlot *slot,
 					  bool shouldFree);
 
@@ -391,7 +380,6 @@ extern TupleTableSlot *ExecStoreVirtualTuple(TupleTableSlot *slot);
 extern TupleTableSlot *ExecStoreAllNullTuple(TupleTableSlot *slot);
 
 extern HeapTuple ExecCopySlotHeapTuple(TupleTableSlot *slot);
-extern HeapTuple ExecCopySlotHeapTupleTo(TupleTableSlot *slot, MemoryContext pctxt, char *dest, unsigned int *len);
 extern MemTuple ExecCopySlotMemTuple(TupleTableSlot *slot);
 extern MemTuple ExecCopySlotMemTupleTo(TupleTableSlot *slot, MemoryContext pctxt, char *dest, unsigned int *len);
 
@@ -411,8 +399,8 @@ static inline void *ExecFetchSlotGenericTuple(TupleTableSlot *slot, bool mtup_in
 
 static inline TupleTableSlot *ExecStoreGenericTuple(void *tup, TupleTableSlot *slot, bool shouldFree)
 {
-	if(is_heaptuple_memtuple((HeapTuple) tup))
-		return ExecStoreMemTuple((MemTuple) tup, slot, shouldFree);
+	if (is_heaptuple_memtuple((HeapTuple) tup))
+		return ExecStoreMinimalTuple((MemTuple) tup, slot, shouldFree);
 
 	return ExecStoreHeapTuple((HeapTuple) tup, slot, InvalidBuffer, shouldFree);
 }

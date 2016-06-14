@@ -1,6 +1,7 @@
 -- tests MPP-2614
 -- two segments no mirrors
 drop table if exists hashagg_test;
+NOTICE:  table "hashagg_test" does not exist, skipping
 create table hashagg_test (id1 int4, id2 int4, day date, grp text, v int4);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -47,4 +48,20 @@ select grp,sum(v) from hashagg_test where id1 = 1 and id2 = 1 and day between '1
  hi    |   9
  there |   6
 (2 rows)
+
+-- Test a window-aggregate (median) with a join where the join column
+-- is further constrained by a constant. And the constant is of different
+-- type (int4, while the column is bigint). We had a bug at one point
+-- where this threw an error.
+create table tbl_a (id bigint) distributed by (id);
+create table tbl_b (id bigint, t numeric) distributed by (id);
+insert into tbl_a values (1), (2), (3);
+insert into tbl_b values (1, 50), (1, 100), (1, 150), (2, 200), (4, 400);
+select tbl_a.id, median (t) from tbl_a, tbl_b
+where tbl_a.id = tbl_b.id and tbl_a.id = 1::int4
+group by tbl_a.id ;
+ id | median 
+----+--------
+  1 |    100
+(1 row)
 

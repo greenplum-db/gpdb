@@ -1,0 +1,69 @@
+# Options
+DEBUG_S3_CURL = n
+
+# Flags
+CPP = g++
+INCLUDES = -Isrc -Iinclude -Ilib -I/usr/include/libxml2
+LDFLAGS = -lpthread -lcrypto -lcurl -lxml2 -lgcov -lz
+CPPFLAGS = -O2 -g3 -std=c++98 -Wall -fPIC -DS3_STANDALONE -fprofile-arcs -ftest-coverage
+
+ifeq ($(DEBUG_S3_CURL),y)
+	CPPFLAGS += -DDEBUG_S3_CURL
+endif
+
+all: test
+
+# Google TEST
+TEST_SRC_FILES = test/s3conf_test.cpp test/s3utils_test.cpp test/s3downloader_test.cpp test/s3common_test.cpp test/s3wrapper_test.cpp test/s3log_test.cpp test/s3url_parser_test.cpp test/s3http_headers_test.cpp test/s3thread_test.cpp
+TEST_OBJS = $(TEST_SRC_FILES:.cpp=.o)
+TEST_APP = s3test
+
+DEP_FILES := $(patsubst %.cpp,%.d,$(TEST_SRC_FILES))
+-include $(DEP_FILES)
+
+GTEST_DIR = ../gtest
+GTEST_SRCS_ = $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h $(GTEST_HEADERS)
+
+$(TEST_OBJS) gtest-all.o gtest_main.o: INCLUDES += -I$(GTEST_DIR)/include -I$(GTEST_DIR)/
+
+gtest-all.o : $(GTEST_SRCS_)
+	$(CXX) $(INCLUDES) $(CXXFLAGS) -c $(GTEST_DIR)/src/gtest-all.cc
+
+gtest_main.o : $(GTEST_SRCS_)
+	$(CXX) $(INCLUDES) $(CXXFLAGS) -c $(GTEST_DIR)/src/gtest_main.cc
+
+gtest_main.a : gtest-all.o gtest_main.o
+	$(AR) $(ARFLAGS) $@ $^
+
+buildtest: $(TEST_APP)
+
+$(TEST_APP): gtest_main.a $(TEST_OBJS)
+	$(CPP) $^ -o $(TEST_APP) $(LDFLAGS)
+
+%.o: %.cpp
+	$(CPP) $(CPPFLAGS) $(INCLUDES) -MMD -MP -c $< -o $@
+
+test: $(TEST_APP)
+	-@./$(TEST_APP)
+
+coverage: test
+	@gcov -r $(TEST_SRC_FILES) | grep -v test.cpp | grep -A 2 "src/.*.cpp"
+
+clean:
+	rm -f *.gcov src/*.gcov src/*.gcda src/*.gcno
+	rm -f $(TEST_APP) *.so src/*.o src/*.d lib/*.o lib/*.d *.o *.a test/*.o
+
+distclean: clean
+	rm -f tags cscope.*
+
+tags:
+	ctags --c++-kinds=+p --fields=+iaS --extra=+q src/*.cpp test/*.cpp include/*.h
+	cscope -bq src/*.cpp test/*.cpp include/*.h
+
+lint:
+	cppcheck -v --enable=warning src/*.cpp test/*.cpp include/*.h
+
+format:
+	clang-format -style="{BasedOnStyle: Google, IndentWidth: 4}" -i src/*.cpp test/*.cpp include/*.h
+
+.PHONY: buildtest test coverage clean distclean tags lint format

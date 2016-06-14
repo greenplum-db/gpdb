@@ -59,6 +59,11 @@ bool		g_gp_supportsPartitioning = true;
 bool		g_gp_supportsPartitionTemplates = true;
 
 /*
+ * Operator families are only available from 8.3 and onwards.
+ */
+bool		g_gp_supportsOpfamilies = true;
+
+/*
  * Indicates whether or not the GPDB cluster supports column attributes.
  */
 bool g_gp_supportsAttributeEncoding = false;
@@ -1153,6 +1158,92 @@ getOperators(int *numOprs)
 	destroyPQExpBuffer(query);
 
 	return oprinfo;
+}
+
+
+/*
+ * getOpfamilies:
+ *	  read all opfamilies in the system catalogs and return them in the
+ * OpfamilyInfo* structure
+ *
+ *	numOpfamilies is set to the number of opfamilies read in
+ */
+/*	Declared in pg_dump.h */
+OpfamilyInfo *
+getOpfamilies(int *numOpfamilies)
+{
+	PGresult   *res;
+	int			ntups;
+	int			i;
+	PQExpBuffer query;
+	OpfamilyInfo *opfinfo;
+	int			i_tableoid;
+	int			i_oid;
+	int			i_opfname;
+	int			i_opfnamespace;
+	int			i_rolname;
+
+	/* Before 8.3, there is no separate concept of opfamilies */
+	if (g_gp_supportsOpfamilies == false)
+	{
+		*numOpfamilies = 0;
+		return NULL;
+	}
+
+	query = createPQExpBuffer();
+
+	/*
+	 * find all opfamilies, including builtin opfamilies; we filter out
+	 * system-defined opfamilies at dump-out time.
+	 */
+
+	/* Make sure we are in proper schema */
+	selectSourceSchema("pg_catalog");
+
+	appendPQExpBuffer(query, "SELECT tableoid, oid, opfname, "
+					  "opfnamespace, "
+					  "(%s opfowner) as rolname "
+					  "FROM pg_opfamily",
+					  username_subquery);
+
+	res = PQexec(g_conn, query->data);
+	check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
+
+	ntups = PQntuples(res);
+	*numOpfamilies = ntups;
+
+	opfinfo = (OpfamilyInfo *) malloc(ntups * sizeof(OpfamilyInfo));
+
+	i_tableoid = PQfnumber(res, "tableoid");
+	i_oid = PQfnumber(res, "oid");
+	i_opfname = PQfnumber(res, "opfname");
+	i_opfnamespace = PQfnumber(res, "opfnamespace");
+	i_rolname = PQfnumber(res, "rolname");
+
+	for (i = 0; i < ntups; i++)
+	{
+		opfinfo[i].dobj.objType = DO_OPFAMILY;
+		opfinfo[i].dobj.catId.tableoid = atooid(PQgetvalue(res, i, i_tableoid));
+		opfinfo[i].dobj.catId.oid = atooid(PQgetvalue(res, i, i_oid));
+		AssignDumpId(&opfinfo[i].dobj);
+		opfinfo[i].dobj.name = strdup(PQgetvalue(res, i, i_opfname));
+		opfinfo[i].dobj.namespace = findNamespace(atooid(PQgetvalue(res, i, i_opfnamespace)),
+												  opfinfo[i].dobj.catId.oid);
+		opfinfo[i].rolname = strdup(PQgetvalue(res, i, i_rolname));
+
+		/* Decide whether we want to dump it */
+		selectDumpableObject(&(opfinfo[i].dobj));
+
+		if (strlen(opfinfo[i].rolname) == 0)
+			mpp_err_msg(logWarn, progname, "WARNING: owner of operator family \"%s\" appears to be invalid\n",
+					  opfinfo[i].dobj.name);
+	}
+
+	PQclear(res);
+
+	destroyPQExpBuffer(query);
+
+	return opfinfo;
 }
 
 
@@ -2343,6 +2434,7 @@ getProcLangs(int *numProcLangs)
 	int			i_lanname;
 	int			i_lanpltrusted;
 	int			i_lanplcallfoid;
+	int			i_laninline;
 	int			i_lanvalidator;
 	int			i_lanacl;
 	int			i_lanowner;
@@ -2373,6 +2465,7 @@ getProcLangs(int *numProcLangs)
 	i_lanpltrusted = PQfnumber(res, "lanpltrusted");
 	i_lanplcallfoid = PQfnumber(res, "lanplcallfoid");
 	/* these may fail and return -1: */
+	i_laninline = PQfnumber(res, "laninline");
 	i_lanvalidator = PQfnumber(res, "lanvalidator");
 	i_lanacl = PQfnumber(res, "lanacl");
 	i_lanowner = PQfnumber(res, "lanowner");
@@ -2391,6 +2484,10 @@ getProcLangs(int *numProcLangs)
 			planginfo[i].lanvalidator = atooid(PQgetvalue(res, i, i_lanvalidator));
 		else
 			planginfo[i].lanvalidator = InvalidOid;
+		if (i_laninline >= 0)
+			planginfo[i].laninline = atooid(PQgetvalue(res, i, i_laninline));
+		else
+			planginfo[i].laninline = InvalidOid;
 		if (i_lanacl >= 0)
 			planginfo[i].lanacl = strdup(PQgetvalue(res, i, i_lanacl));
 		else
@@ -2565,7 +2662,7 @@ getTableAttrs(TableInfo *tblinfo, int numTables)
 	for (i = 0; i < ntups; i++)
 	{
 		oid = atoi(PQgetvalue(res, i, 0));
- 		typstorage = *(PQgetvalue(res, i, 1));
+		typstorage = *(PQgetvalue(res, i, 1));
 		if (insertIntoHashTable(oid, typstorage) < 0)
 		{		
 			mpp_err_msg(logError, progname, "Unable to insert the following values into hash table Oid: %u, typstorage: %c"

@@ -51,9 +51,18 @@ SELECT p1.oid, p1.proname
 FROM pg_proc as p1
 WHERE p1.prolang = 0 OR p1.prorettype = 0 OR
        p1.pronargs < 0 OR
+       p1.pronargdefaults < 0 OR
+       p1.pronargdefaults > p1.pronargs OR
        array_lower(p1.proargtypes, 1) != 0 OR
        array_upper(p1.proargtypes, 1) != p1.pronargs-1 OR
-       0::oid = ANY (p1.proargtypes);
+       0::oid = ANY (p1.proargtypes) OR
+       procost <= 0 OR
+       CASE WHEN proretset THEN prorows <= 0 ELSE prorows != 0 END;
+
+-- pronargdefaults should be 0 iff proargdefaults is null
+SELECT p1.oid, p1.proname
+FROM pg_proc AS p1
+WHERE (pronargdefaults <> 0) != (proargdefaults IS NOT NULL);
 
 -- Look for conflicting proc definitions (same names and input datatypes).
 -- (This test should be dead code now that we have the unique index
@@ -285,9 +294,6 @@ WHERE c.castfunc = p.oid AND
 -- As of 8.2, this finds the cast from cidr to inet, because that is a
 -- trivial binary coercion while the other way goes through inet_to_cidr().
 
--- As of 8.3, this finds casts from xml to text, varchar, and bpchar,
--- because the other direction has to go through xmlparse().
-
 SELECT *
 FROM pg_cast c
 WHERE c.castfunc = 0 AND
@@ -364,6 +370,14 @@ WHERE p1.oprnegate = p2.oid AND
 SELECT p1.oid, p1.oprname FROM pg_operator AS p1
 WHERE (p1.oprcanmerge OR p1.oprcanhash) AND NOT
     (p1.oprkind = 'b' AND p1.oprresult = 'bool'::regtype AND p1.oprcom != 0);
+
+-- What's more, the commutator had better be mergejoinable/hashjoinable too.
+
+SELECT p1.oid, p1.oprname, p2.oid, p2.oprname
+FROM pg_operator AS p1, pg_operator AS p2
+WHERE p1.oprcom = p2.oid AND
+    (p1.oprcanmerge != p2.oprcanmerge OR
+     p1.oprcanhash != p2.oprcanhash);
 
 -- Mergejoinable operators should appear as equality members of btree index
 -- opfamilies.
@@ -706,13 +720,16 @@ WHERE p1.amopopr = p2.oid AND p2.oprcode = p3.oid AND
     p1.amoplefttype != p1.amoprighttype AND
     p3.provolatile = 'v';
 
--- Multiple-datatype btree opclasses should provide closed sets of equality
+-- Multiple-datatype btree opfamilies should provide closed sets of equality
 -- operators; that is if you provide int2 = int4 and int4 = int8 then you
--- must also provide int2 = int8 (and commutators of all these).  This is
--- necessary because the planner tries to deduce additional qual clauses from
+-- should also provide int2 = int8 (and commutators of all these).  This is
+-- important because the planner tries to deduce additional qual clauses from
 -- transitivity of mergejoinable operators.  If there are clauses
--- int2var = int4var and int4var = int8var, the planner will deduce
--- int2var = int8var ... and it had better have a way to represent it.
+-- int2var = int4var and int4var = int8var, the planner will want to deduce
+-- int2var = int8var ... so there should be a way to represent that.  While
+-- a missing cross-type operator is now only an efficiency loss rather than
+-- an error condition, it still seems reasonable to insist that all built-in
+-- opfamilies be complete.
 
 -- check commutative closure
 SELECT p1.amoplefttype, p1.amoprighttype
@@ -741,6 +758,27 @@ WHERE p1.amopfamily = p2.amopfamily AND
                  p3.amoplefttype = p1.amoplefttype AND
                  p3.amoprighttype = p2.amoprighttype AND
                  p3.amopstrategy = 3);
+
+-- We also expect that built-in multiple-datatype hash opfamilies provide
+-- complete sets of cross-type operators.  Again, this isn't required, but
+-- it is reasonable to expect it for built-in opfamilies.
+
+-- if same family has x=x and y=y, it should have x=y
+SELECT p1.amoplefttype, p2.amoplefttype
+FROM pg_amop AS p1, pg_amop AS p2
+WHERE p1.amopfamily = p2.amopfamily AND
+    p1.amoplefttype = p1.amoprighttype AND
+    p2.amoplefttype = p2.amoprighttype AND
+    p1.amopmethod = (SELECT oid FROM pg_am WHERE amname = 'hash') AND
+    p2.amopmethod = (SELECT oid FROM pg_am WHERE amname = 'hash') AND
+    p1.amopstrategy = 1 AND p2.amopstrategy = 1 AND
+    p1.amoplefttype != p2.amoplefttype AND
+    NOT EXISTS(SELECT 1 FROM pg_amop p3 WHERE
+                 p3.amopfamily = p1.amopfamily AND
+                 p3.amoplefttype = p1.amoplefttype AND
+                 p3.amoprighttype = p2.amoplefttype AND
+                 p3.amopstrategy = 1);
+
 
 -- **************** pg_amproc ****************
 

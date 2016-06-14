@@ -56,21 +56,6 @@ typedef struct VacAttrStats *VacAttrStatsP;
 typedef Datum (*AnalyzeAttrFetchFunc) (VacAttrStatsP stats, int rownum,
 												   bool *isNull);
 
-typedef struct PgStatistic
-{
-	bool		stats_valid;
-	float4		stanullfrac;	/* fraction of entries that are NULL */
-	int4		stawidth;		/* average width of column values */
-	float4		stadistinct;	/* # distinct values */
-	int2		stakind[STATISTIC_NUM_SLOTS];
-	Oid			staop[STATISTIC_NUM_SLOTS];
-	int			numnumbers[STATISTIC_NUM_SLOTS];
-	float4	   *stanumbers[STATISTIC_NUM_SLOTS];
-	int			numvalues[STATISTIC_NUM_SLOTS];
-	Datum	   *stavalues[STATISTIC_NUM_SLOTS];
-	
-} PgStatistic;
-
 typedef struct VacAttrStats
 {
 	/*
@@ -79,6 +64,7 @@ typedef struct VacAttrStats
 	 */
 	Form_pg_attribute attr;		/* copy of pg_attribute row for column */
 	Form_pg_type attrtype;		/* copy of pg_type row for column */
+	char		relstorage;		/* pg_class.relstorage for table */
 	MemoryContext anl_context;	/* where to save long-lived data */
 
 	/*
@@ -96,8 +82,17 @@ typedef struct VacAttrStats
 	 * These fields are to be filled in by the compute_stats routine. (They
 	 * are initialized to zero when the struct is created.)
 	 */
-	PgStatistic pgstat;
-	
+	bool		stats_valid;
+	float4		stanullfrac;	/* fraction of entries that are NULL */
+	int4		stawidth;		/* average width of column values */
+	float4		stadistinct;	/* # distinct values */
+	int2		stakind[STATISTIC_NUM_SLOTS];
+	Oid			staop[STATISTIC_NUM_SLOTS];
+	int			numnumbers[STATISTIC_NUM_SLOTS];
+	float4	   *stanumbers[STATISTIC_NUM_SLOTS];
+	int			numvalues[STATISTIC_NUM_SLOTS];
+	Datum	   *stavalues[STATISTIC_NUM_SLOTS];
+
 	/*
 	 * These fields are private to the main ANALYZE code and should not be
 	 * looked at by type-specific functions.
@@ -110,45 +105,6 @@ typedef struct VacAttrStats
 	int			rowstride;
 } VacAttrStats;
 
-/*
- * The "vtlinks" array keeps information about each recently-updated tuple
- * ("recent" meaning its XMAX is too new to let us recycle the tuple).
- * We store the tuple's own TID as well as its t_ctid (its link to the next
- * newer tuple version).  Searching in this array allows us to follow update
- * chains backwards from newer to older tuples.  When we move a member of an
- * update chain, we must move *all* the live members of the chain, so that we
- * can maintain their t_ctid link relationships (we must not just overwrite
- * t_ctid in an existing tuple).
- *
- * Note: because t_ctid links can be stale (this would only occur if a prior
- * VACUUM crashed partway through), it is possible that new_tid points to an
- * empty slot or unrelated tuple.  We have to check the linkage as we follow
- * it, just as is done in EvalPlanQual.
- */
-typedef struct VTupleLinkData
-{
-	ItemPointerData new_tid;	/* t_ctid of an updated tuple */
-	ItemPointerData this_tid;	/* t_self of the tuple */
-} VTupleLinkData;
-
-typedef VTupleLinkData *VTupleLink;
-
-/*
- * VRelStats contains the data acquired by scan_heap for use later
- */
-typedef struct VRelStats
-{
-	/* miscellaneous statistics */
-	BlockNumber rel_pages;
-	double		rel_tuples;
-	Size		min_tlen;
-	Size		max_tlen;
-	bool		hasindex;
-	/* vtlinks array for tuple chain following - sorted by new_tid */
-	int			num_vtlinks;
-	VTupleLink	vtlinks;
-} VRelStats;
-
 typedef struct VacuumStatsContext
 {
 	MemoryContext ctx;
@@ -157,49 +113,18 @@ typedef struct VacuumStatsContext
 	VacAttrStats **vac_stats;
 } VacuumStatsContext;
 
-typedef enum VacuumStatsType
-{
-	PG_CLASS_STATS,
-	PG_STATISTIC_STATS
-} VacuumStatsType;
-
 /*
- * VUpdatedStats represents the base structure for the stats info for
- * both pg_class and pg_statistic. This is used to store the stats collected from
- * QE.
- *
- * Depending on the value for 'type', the object represents either VPgClassStats
- * or VPgStatisticStats.
+ * VPgClassStats is used to hold the stats information that are stored in
+ * pg_class. It is sent from QE to QD in a special libpq message , when a
+ * QE runs VACUUM on a table.
  */
-typedef struct VUpdatedStats
-{
-	VacuumStatsType type;
-	Oid relid;
-} VUpdatedStats;
-
 typedef struct VPgClassStats
 {
-	VUpdatedStats metadata;
+	Oid			relid;
 	BlockNumber rel_pages;
-	double rel_tuples;
+	double		rel_tuples;
 	BlockNumber empty_end_pages;
 } VPgClassStats;
-
-typedef struct VPgStatisticStats
-{
-	VUpdatedStats metadata;
-	
-	/* Represent tuples in pg_statistic table from QEs */
-	List *tuples;
-
-	/* The number of tuples corresponding each tuple in 'tuples'.  */
-	List *reltuples;
-
-	/* The corresponing attribute index */
-	int16 attno;
-	PgStatistic pgstat;
-} VPgStatisticStats;
-
 
 /* GUC parameters */
 extern PGDLLIMPORT int default_statistics_target; /* PGDLLIMPORT for PostGIS */
@@ -212,18 +137,23 @@ extern void vacuum(VacuumStmt *vacstmt, List *relids);
 extern void vac_open_indexes(Relation relation, LOCKMODE lockmode,
 				 int *nindexes, Relation **Irel);
 extern void vac_close_indexes(int nindexes, Relation *Irel, LOCKMODE lockmode);
-extern void vac_update_relstats(Relation rel,
-								BlockNumber num_pages,
-								double num_tuples,
-								bool hasindex,
-								TransactionId frozenxid,
-								List *updated_stats);
+extern void vac_update_relstats(Oid relid,
+					BlockNumber num_pages,
+					double num_tuples,
+					bool hasindex,
+					TransactionId frozenxid);
+extern void vac_update_relstats_from_list(Relation rel,
+							  BlockNumber num_pages, double num_tuples,
+							  bool hasindex, TransactionId frozenxid,
+										  List *updated_stats);
 extern void vacuum_set_xid_limits(VacuumStmt *vacstmt, bool sharedRel,
 					  TransactionId *oldestXmin,
 					  TransactionId *freezeLimit);
 extern void vac_update_datfrozenxid(void);
 extern bool vac_is_partial_index(Relation indrel);
 extern void vacuum_delay_point(void);
+
+extern bool vacuumStatement_IsTemporary(Relation onerel);
 
 extern bool vacuumStatement_IsInAppendOnlyDropPhase(VacuumStmt *vacstmt);
 extern bool vacummStatement_IsInAppendOnlyCleanupPhase(VacuumStmt *vacstmt);
@@ -235,13 +165,15 @@ extern bool vacuumStatement_IsInAppendOnlyPseudoCompactionPhase(VacuumStmt* vacs
 extern void lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats);
 extern void vacuum_appendonly_rel(Relation aorel, VacuumStmt *vacstmt);
 extern void vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot,
-		void* vacrelstats, bool isVacFull);
+										 BlockNumber *rel_pages, double *rel_tuples,
+										 bool *relhasindex);
 extern int vacuum_appendonly_indexes(Relation aoRelation, VacuumStmt *vacstmt, List* updated_stats);
 extern void vacuum_aocs_rel(Relation aorel, void *vacrelstats, bool isVacFull);
 extern void gen_oids_for_bitmaps(VacuumStmt *vacstmt, Relation onerel);
 extern List *get_oids_for_bitmap(List *all_extra_oids, Relation Irel, Relation onerel, int occurrence);
 
 /* in commands/analyze.c */
+extern void analyze_rel(Oid relid, VacuumStmt *vacstmt);
 extern void analyzeStatement(VacuumStmt *vacstmt, List *relids);
-extern void analyzeStmt(VacuumStmt *vacstmt, List *relids);
+//extern void analyzeStmt(VacuumStmt *vacstmt, List *relids);
 #endif   /* VACUUM_H */

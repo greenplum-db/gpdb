@@ -299,15 +299,10 @@ void
 external_rescan(FileScanDesc scan)
 {
 
-	if (!scan->fs_noop)
-	{
-		/* may need to open file since beginscan doens't do it for us */
-		if (!scan->fs_file)
-			open_external_readable_source(scan);
+	/* Close previous scan if it was already open */
+	external_stopscan(scan);
 
-		/* seek to beginning of data source so we can start over */
-		url_rewind((URL_FILE*)scan->fs_file, RelationGetRelationName(scan->fs_rd));
-	}
+	/* The first call to external_getnext will re-open the scan */
 
 	/* reset some parse state variables */
 	scan->fs_pstate->fe_eof = false;
@@ -369,7 +364,7 @@ external_endscan(FileScanDesc scan)
 	/*
 	 * if SREH was active:
 	 * 1) QEs: send a libpq message to QD with num of rows rejected in this segment
-	 * 2) Free SREH resources (includes closing the error table if used).
+	 * 2) Free SREH resources 
 	 */
 	if (scan->fs_pstate != NULL && scan->fs_pstate->errMode != ALL_OR_NOTHING)
 	{
@@ -768,7 +763,6 @@ else \
 \
 	ErrorData	*edata; \
 	MemoryContext oldcontext;\
-	bool	errmsg_is_a_copy = false; \
 \
 	/* SREH must only handle data errors. all other errors must not be caught */\
 	if(ERRCODE_TO_CATEGORY(elog_geterrcode()) != ERRCODE_DATA_EXCEPTION)\
@@ -797,19 +791,18 @@ else \
 		pstate->cdbsreh->errmsg = (char *) palloc((strlen(edata->message) + \
 												   strlen(pstate->cur_attname) + \
 												   10 + 1) * sizeof(char)); \
-		errmsg_is_a_copy = true; \
 		sprintf(pstate->cdbsreh->errmsg, "%s, column %s", \
 				edata->message, \
 				pstate->cur_attname); \
 	}\
 	else\
 	{\
-		pstate->cdbsreh->errmsg = edata->message; \
+		pstate->cdbsreh->errmsg = pstrdup(edata->message); \
 	}\
 \
 	HandleSingleRowError(pstate->cdbsreh); \
-\
-	if (errmsg_is_a_copy && !IsRejectLimitReached(pstate->cdbsreh)) \
+	FreeErrorData(edata);\
+	if (!IsRejectLimitReached(pstate->cdbsreh)) \
 		pfree(pstate->cdbsreh->errmsg); \
 }
 
@@ -1333,70 +1326,26 @@ InitParseState(CopyState pstate, Relation relation,
 	}
 	else
 	{
-		RangeVar   *errtbl_rv = NULL;
-		bool		log_to_file = false;
-		bool		curTxnCreatedErrtbl = false; /* errtbl created in current txn? */
-
 		/* select the SREH mode */
 		if (fmterrtbl == InvalidOid)
 		{
-			/* no error table */
+			/* no error log */
 			pstate->errMode = SREH_IGNORE;
 		}
 		else if (fmterrtbl == RelationGetRelid(relation))
 		{
 			/* errors into file */
 			pstate->errMode = SREH_LOG;
-			log_to_file = true;
-		}
-		else
-		{
-			/* with error table */
-
-			Relation rel;
-
-			pstate->errMode = SREH_LOG;
-
-			/*
-			 * we want to be sure that this error table is alive (wasn't dropped).
-			 * we must do this check until we have proper dependency recorded.
-			 */
-			LockRelationOid(fmterrtbl, AccessShareLock);
-			rel = RelationIdGetRelation(fmterrtbl);
-
-			if (rel == NULL)
-				ereport(ERROR, (errcode(ERRCODE_UNDEFINED_TABLE),
-								errmsg("The specified error table for this "
-									   "external table doesn't appear to "
-									   "exist in the database. It may have "
-									   "been dropped."),
-								errhint("Refresh your external table definition.")));
-
-			RelationDecrementReferenceCount(rel); /* must do this after RelationIdGetRelation() */
-
-
-			errtbl_rv = makeRangeVar(get_namespace_name(get_rel_namespace(fmterrtbl)),
-									 get_rel_name(fmterrtbl), -1);
-
-			if (rel->rd_createSubid != InvalidSubTransactionId)
-				curTxnCreatedErrtbl = true;
 		}
 
 		/* Single row error handling */
-		pstate->cdbsreh = makeCdbSreh(true, /* don't DROP errtable at end of execution */
-									  !curTxnCreatedErrtbl, /* really only relevant to COPY though */
-									  rejectlimit,
+		pstate->cdbsreh = makeCdbSreh(rejectlimit,
 									  islimitinrows,
-									  errtbl_rv,
 									  pstate->filename,
 									  (char *)pstate->cur_relname,
-									  log_to_file);
+									  true);
 
 		pstate->cdbsreh->relid = RelationGetRelid(relation);
-
-		/* if necessary warn the user of the risk of table getting dropped */
-		if (Gp_role == GP_ROLE_DISPATCH && curTxnCreatedErrtbl)
-			emitSameTxnWarning();
 
  		pstate->num_consec_csv_err = 0;
 	}
@@ -1712,12 +1661,6 @@ close_external_source(FILE *dataSource, bool failOnError, const char *relname)
 	{
 		url_fclose((URL_FILE*) f, failOnError, relname);
 	}
-
-	if (g_dataSourceCtx != NULL)
-	{
-		MemoryContextDelete(g_dataSourceCtx);
-		g_dataSourceCtx = NULL;
-	}
 }
 
 /*
@@ -1864,12 +1807,29 @@ void readHeaderLine(CopyState pstate)
 }
 
 /*
- * Free external resources on Abort.
+ * Free external resources on end of transaction.
  */
-void AtAbort_ExtTables(void)
+void AtEOXact_ExtTables(bool isCommit)
 {
-	close_external_source(g_dataSource, false, NULL);
-	g_dataSource = NULL;
+	if (g_dataSource)
+	{
+		if (isCommit)
+		{
+			/* There shouldn't be any external tables still open at commit*/
+			elog(WARNING, "external table reference leak");
+		}
+		close_external_source(g_dataSource, false, NULL);
+		g_dataSource = NULL;
+	}
+}
+
+/*
+ * Reset g_dataSourceCtx variable on EOX.
+ */
+void AtEOXact_ResetDataSourceCtx(void)
+{
+	/* g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.*/
+	g_dataSourceCtx = NULL;
 }
 
 void
@@ -1902,7 +1862,7 @@ gfile_malloc(size_t size)
 {
 	if (g_dataSourceCtx == NULL)
 	{
-		g_dataSourceCtx = AllocSetContextCreate(TopMemoryContext,
+		g_dataSourceCtx = AllocSetContextCreate(TopTransactionContext,
 												"DataSourceContext",
 												ALLOCSET_SMALL_MINSIZE,
 												ALLOCSET_SMALL_INITSIZE,
@@ -2593,6 +2553,8 @@ external_set_env_vars_ext(extvar_t *extvar, char* uri, bool csv, char* escape, c
 			extvar->GP_MASTER_HOST = pstrdup(qdinfo->hostip);
 		else
 			extvar->GP_MASTER_HOST = pstrdup(qdinfo->hostname);
+
+		freeCdbComponentDatabases(cdb_component_dbs);
 	}
 
 	if (MyProcPort)

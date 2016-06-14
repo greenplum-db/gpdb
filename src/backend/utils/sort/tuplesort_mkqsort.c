@@ -11,6 +11,7 @@
  */
 
 #include "postgres.h"
+#include "access/genam.h"
 #include "utils/tuplesort.h"
 #include "utils/tuplesort_mk.h"
 
@@ -302,7 +303,17 @@ void mk_qsort_impl(MKEntry *a, int left, int right, int lv, bool lvdown, MKConte
 		{
 			if ( ctxt->enforceUnique )
 			{
-			    ERROR_UNIQUENESS_VIOLATED();
+				Datum	values[INDEX_MAX_KEYS];
+				bool	isnull[INDEX_MAX_KEYS];
+		
+				index_deform_tuple((IndexTuple)(a+lastInLow+1)->ptr, ctxt->tupdesc, values, isnull);
+				ereport(ERROR,
+						(errcode(ERRCODE_UNIQUE_VIOLATION),
+						 errmsg("could not create unique index \"%s\"",
+								RelationGetRelationName(ctxt->indexRel)),
+						 errdetail("Key %s is duplicated.",
+								   BuildIndexValueDescription(ctxt->indexRel,
+															  values, isnull))));
 			}
 			else if ( ctxt->unique)
 			{

@@ -393,7 +393,7 @@ select linear_interpolate(5, 0, 'y0'::text, 100, 'y1'::text);
 ERROR:  function linear_interpolate(integer, integer, text, integer, text) does not exist
 LINE 1: select linear_interpolate(5, 0, 'y0'::text, 100, 'y1'::text)...
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- Check that  "divide by zero" returns null
 select linear_interpolate('2010-01-03T02:00:00'::timestamp, '2010-01-02T09:20:00'::timestamp, 2000::int4, '2010-01-02T09:20:00'::timestamp, 2250::int4);
  linear_interpolate 

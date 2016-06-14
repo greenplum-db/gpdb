@@ -259,10 +259,6 @@ extern bool xact_redo_get_info(
 extern void xact_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
 extern const char *IsoLevelAsUpperString(int IsoLevel);
 
-#ifdef WATCH_VISIBILITY_IN_ACTION
-extern char* WatchCurrentTransactionString(void);
-#endif
-
 extern bool FindXidInXidBuffer(XidBuffer *xidbuf,
 			       TransactionId xid, uint32 *cnt, int32 *index);
 extern void AddSortedToXidBuffer(XidBuffer *xidbuf, TransactionId *xids,

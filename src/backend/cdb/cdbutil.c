@@ -29,18 +29,16 @@
 #include "utils/memutils.h"
 #include "catalog/gp_configuration.h"
 #include "catalog/gp_segment_config.h"
-#include "cdb/cdbcat.h"
 #include "cdb/cdbutil.h"
 #include "nodes/execnodes.h"	/* Slice, SliceTable */
 #include "cdb/cdbmotion.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbgang.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/ml_ipc.h"			/* listener_setup */
 #include "cdb/cdbtm.h"
 #include "cdb/cdbfts.h"
 #include "libpq/ip.h"
-#include "postmaster/checkpoint.h"
 #include "catalog/indexing.h"
 #include "utils/faultinjection.h"
 
@@ -249,7 +247,11 @@ getCdbComponentInfo(bool DNSLookupAsError)
 			pRow->filerep_port = -1;
 
 		getAddressesForDBid(pRow, DNSLookupAsError ? ERROR : LOG);
-		pRow->hostip = pRow->hostaddrs[0];
+
+		/* We make sure we get a valid hostip here */
+		if(pRow->hostaddrs[0] == NULL)
+			elog(ERROR, "Cannot resolve network address for dbid=%d", dbid);
+		pRow->hostip = pstrdup(pRow->hostaddrs[0]);
 	}
 
 	/*
@@ -441,6 +443,9 @@ freeCdbComponentDatabaseInfo(CdbComponentDatabaseInfo *cdi)
 	if (cdi->address != NULL)
 		pfree(cdi->address);
 
+	if (cdi->hostip != NULL)
+		pfree(cdi->hostip);
+
 	for (i=0; i < COMPONENT_DBS_MAX_ADDRS; i++)
 	{
 		if (cdi->hostaddrs[i] != NULL)
@@ -491,7 +496,7 @@ cdb_cleanup(int code __attribute__((unused)) , Datum arg __attribute__((unused))
 {
 	elog(DEBUG1, "Cleaning up Greenplum components...");
 
-	disconnectAndDestroyAllGangs();
+	disconnectAndDestroyAllGangs(true);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -1291,4 +1296,38 @@ getgpsegmentCount(void)
 	verifyGpIdentityIsSet();
 	Assert(GpIdentity.numsegments > 0);
 	return GpIdentity.numsegments;
+}
+
+bool isSockAlive(int sock)
+{
+	int ret;
+	char buf;
+	int i = 0;
+
+	for(i = 0; i < 10; i++)
+	{
+#ifndef WIN32
+		ret = recv(sock, &buf, 1, MSG_PEEK | MSG_DONTWAIT);
+#else
+		ret = recv(sock, &buf, 1, MSG_PEEK | MSG_PARTIAL);
+#endif
+
+		if (ret == 0) /* socket has been closed. EOF */
+			return false;
+
+		if (ret > 0) /* data waiting on socket, it must be OK. */
+			return true;
+
+		if (ret == -1) /* error, or would be block. */
+		{
+			if (errno == EAGAIN || errno == EINPROGRESS)
+				return true; /* connection intact, no data available */
+			else if (errno == EINTR)
+				continue; /* interrupted by signal, retry at most 10 times */
+			else
+				return false;
+		}
+	}
+
+	return true;
 }

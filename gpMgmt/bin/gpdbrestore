@@ -6,8 +6,10 @@ from gppylib.mainUtils import addMasterDirectoryOptionForSingleClusterProgram, a
                               ExceptionNoStackTraceNeeded, ProgramArgumentValidationException, UserAbortedException
 import fnmatch
 import os
+import stat
 import sys
-from optparse import OptionGroup, OptionValueError
+from optparse import OptionGroup, OptionValueError, SUPPRESS_HELP
+from pygresql import pg
 
 try:
     import gpmfr
@@ -23,14 +25,8 @@ try:
     from gppylib.gparray import GpArray
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.operations import Operation
-    from gppylib.operations.backup_utils import check_dir_writable, generate_createdb_prefix, generate_master_dbdump_prefix, \
-                                                generate_report_filename, get_lines_from_file, check_schema_exists
-    from gppylib.operations.restore import GetDbName, GetDumpTables, RecoverRemoteDumps, RestoreDatabase, ValidateTimestamp, \
-                                           config_files_dumped, create_restore_plan, get_restore_dir, get_restore_tables_from_table_file, \
-                                           global_file_dumped, is_begin_incremental_run, is_incremental_restore, restore_cdatabase_file_with_nbu, \
-                                           restore_config_files_with_nbu, restore_global_file_with_nbu, restore_statistics_file_with_nbu, \
-                                           restore_increments_file_with_nbu, restore_partition_list_file_with_nbu, restore_report_file_with_nbu, \
-                                           restore_state_files_with_nbu, statistics_file_dumped, truncate_restore_tables, validate_tablenames
+    from gppylib.operations.backup_utils import *
+    from gppylib.operations.restore import *
     from gppylib.operations.utils import DEFAULT_NUM_WORKERS
     from gppylib.operations.unix import CheckFile, CheckRemoteFile, ListFilesByPattern, ListRemoteFilesByPattern
 except ImportError, e:
@@ -45,253 +41,202 @@ logger = gplog.get_default_logger()
 
 class GpdbRestore(Operation):
     def __init__(self, options, args):
+        self.context = Context(options)
+        self.options_list = " ".join(sys.argv[1:])
+        self.search_for_dbname = options.search_for_dbname
         # only one of -t, -b, -R, and -s can be provided
-        count = sum([1 for opt in ['db_timestamp', 'db_date_dir', 'db_host_path', 'search_for_dbname']
-                       if options.__dict__[opt] is not None])
+        count = sum([1 for opt in ['timestamp', 'db_date_dir', 'db_host_path', 'search_for_dbname'] if options.__dict__[opt]])
         if count == 0:
             raise ProgramArgumentValidationException("Must supply one of -t, -b, -R, or -s.")
         elif count > 1:
             raise ProgramArgumentValidationException("Only supply one of -t, -b, -R, or -s.")
 
-        if options.list_tables and options.db_timestamp is None:
+        if options.list_tables and not options.timestamp:
             raise ProgramArgumentValidationException("Need to supply -t <timestamp> for -L option")
 
-        if options.list_backup and options.db_timestamp is None:
+        if options.list_backup and not options.timestamp:
             raise ProgramArgumentValidationException("Need to supply -t <timestamp> for --list-backup option")
 
         if options.list_backup and options.drop_db:
             raise ProgramArgumentValidationException("Cannot specify --list-backup and -e together")
 
-        if options.masterDataDirectory is None:
+        if not options.masterDataDirectory:
             options.masterDataDirectory = gp.get_masterdatadir()
 
-        self.db_timestamp = options.db_timestamp
-        self.list_tables = options.list_tables
-        self.db_date_dir = options.db_date_dir
-        self.db_host_path = options.db_host_path
-        self.search_for_dbname = options.search_for_dbname.strip('"') if options.search_for_dbname is not None else options.search_for_dbname
-        self.drop_db = options.drop_db
-        self.restore_global = options.restore_global
-        self.restore_tables = options.restore_tables
-        self.batch_default = options.batch_default
-        self.keep_dump_files = options.keep_dump_files
-        self.no_analyze = options.no_analyze
-        self.no_plan = options.no_plan
-        self.no_ao_stats = options.no_ao_stats
-        self.backup_dir = options.backup_dir
-        self.table_file = options.table_file
-        self.list_backup = options.list_backup
-        self.redirected_restore_db = options.redirected_restore_db
-        self.report_status_dir = options.report_status_dir
-        self.truncate = options.truncate
-        self.change_schema = options.change_schema
-        self.restore_stats = options.restore_stats
-        self.metadata_only = options.metadata_only
-
-        if self.restore_stats:
-            self.no_analyze = True
+        if self.context.restore_stats:
+            self.context.no_analyze = True
 
         # NetBackup params
-        self.netbackup_service_host = options.netbackup_service_host
-        self.netbackup_block_size = options.netbackup_block_size
-        if options.local_dump_prefix:
-            self.dump_prefix = options.local_dump_prefix + '_'
-        else:
-            self.dump_prefix = options.local_dump_prefix
-
-        if self.truncate and not (self.restore_tables or self.table_file):
+        if self.context.truncate and not (self.context.restore_tables or self.context.table_file):
             raise Exception('--truncate can be specified only with -T or --table-file option')
 
-        if self.truncate and self.drop_db:
+        if self.context.truncate and self.context.drop_db:
             raise Exception('Cannot specify --truncate and -e together')
 
-        if self.restore_stats == "only" and self.drop_db:
+        if self.context.restore_stats == "only" and self.context.drop_db:
             raise Exception('Cannot specify --restore-stats only and -e together')
 
-        if self.table_file and self.restore_tables:
+        if self.context.table_file and self.context.restore_tables:
             raise Exception('Cannot specify -T and --table-file together')
 
-        if self.list_backup and self.restore_tables:
+        if self.context.list_backup and self.context.restore_tables:
             raise Exception('Cannot specify -T and --list-backup together')
 
-        if self.metadata_only and self.no_plan:
+        if self.context.metadata_only and self.context.no_plan:
             raise Exception('Cannot specify --noplan and -m together.')
 
-        if self.metadata_only and self.no_analyze:
+        if self.context.metadata_only and self.context.no_analyze:
             raise Exception('Cannot specify --noanalyze and -m together.')
 
-        if self.change_schema and not (self.restore_tables or self.table_file):
+        if self.context.change_schema and len(self.context.change_schema) == 0:
+            raise Exception('--change-schema name cannot be empty')
+
+        if self.context.change_schema and not (self.context.restore_tables or self.context.table_file):
             raise Exception('-T or --table-file option must be specified with the --change-schema option')
+        if self.context.change_schema and len(self.context.restore_schemas) > 0:
+            raise Exception('-S option cannot be used with --change-schema option')
 
-        if self.restore_tables is not None:
-            self.restore_tables = self.restore_tables.split(',')
+        if self.context.table_file:
+            self.context.restore_tables = get_restore_tables_from_table_file(self.context.table_file)
 
-        if self.table_file is not None:
-            self.restore_tables = get_restore_tables_from_table_file(self.table_file)
-
-        if self.db_host_path is not None:
+        if self.context.db_host_path:
             # MPP-13617
-            m = re.match(RE1, self.db_host_path)
+            m = re.match(RE1, self.context.db_host_path)
             if m:
-                self.db_host_path = m.groups()
+                self.context.db_host_path = m.groups()
             else:
-                self.db_host_path = self.db_host_path.split(':')
+                self.context.db_host_path = self.context.db_host_path.split(':')
 
-        if self.db_host_path and self.netbackup_service_host:
+        if self.context.db_host_path and self.context.netbackup_service_host:
             raise Exception('-R is not supported for restore with NetBackup.')
 
-        if self.search_for_dbname and self.netbackup_service_host:
+        if self.search_for_dbname and self.context.netbackup_service_host:
             raise Exception('-s is not supported with NetBackup.')
 
-        if self.db_date_dir and self.netbackup_service_host:
+        if self.context.db_date_dir and self.context.netbackup_service_host:
             raise Exception('-b is not supported with NetBackup.')
 
-        if self.list_tables and self.netbackup_service_host:
+        if self.context.list_tables and self.context.netbackup_service_host:
             raise Exception('-L is not supported with NetBackup.')
 
+        if self.context.redirected_restore_db:
+            check_funny_chars_in_names(self.context.redirected_restore_db, is_full_qualified_name = False)
+
+        if self.search_for_dbname:
+            check_funny_chars_in_names(self.search_for_dbname, is_full_qualified_name = False)
         # force non-interactive if list_backup
         if options.list_backup:
             self.interactive = False
         else:
             self.interactive = options.interactive
 
-        self.master_datadir = options.masterDataDirectory
-        self.master_port = self._get_master_port(self.master_datadir)
-
         self.gparray = None
 
         try:
-            if self.report_status_dir:
-                check_dir_writable(self.report_status_dir)
+            if self.context.report_status_dir:
+                check_dir_writable(self.context.report_status_dir)
         except Exception as e:
-            logger.warning('Directory %s should be writable' % self.report_status_dir)
+            logger.warning('Directory %s should be writable' % self.context.report_status_dir)
             raise Exception(str(e))
 
-        self.ddboost = options.ddboost
-        if self.ddboost:
-            if self.netbackup_service_host:
+        if self.context.ddboost_storage_unit and not self.context.ddboost:
+            raise Exception('Cannot use ddboost storage unit option without specifying --ddboost option.')
+
+        if self.context.ddboost:
+            if self.context.netbackup_service_host:
                 raise Exception('--ddboost option is not supported with NetBackup')
 
-            if self.db_host_path is not None:
+            if self.context.db_host_path:
                 raise ExceptionNoStackTraceNeeded("-R cannot be used with DDBoost parameters.")
-            elif self.backup_dir:
+            elif self.context.backup_dir:
                 raise ExceptionNoStackTraceNeeded('-u cannot be used with DDBoost parameters.')
             dd = gpmfr.DDSystem("local")
-            self.dump_dir = dd.defaultBackupDir
+            self.context.dump_dir = dd.DDBackupDir
         else:
-            self.dump_dir = 'db_dumps'
+            self.context.dump_dir = 'db_dumps'
 
     def execute(self):
-        if self.ddboost:
-            cmdline = 'gpddboost --sync --dir=%s' % self.master_datadir
+        if self.context.ddboost:
+            cmdline = 'gpddboost --sync --dir=%s' % self.context.master_datadir
+            if self.context.ddboost_storage_unit:
+                cmdline += ' --ddboost-storage-unit %s' % self.context.ddboost_storage_unit
             cmd = Command('DDBoost sync', cmdline)
             cmd.run(validateAfter=True)
 
-        self.gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.master_port), utility=True)
+        self.gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port, dbname='template1'), utility=True)
 
-        if self.netbackup_service_host:
+        if self.context.netbackup_service_host:
             logger.info("Restoring metadata files with NetBackup")
-            restore_state_files_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.db_timestamp, self.netbackup_service_host, self.netbackup_block_size)
-            restore_report_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.db_timestamp, self.netbackup_service_host, self.netbackup_block_size)
-            restore_cdatabase_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.db_timestamp, self.netbackup_service_host, self.netbackup_block_size)
-            if config_files_dumped(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.db_timestamp, self.netbackup_service_host):
-                restore_config_files_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.db_timestamp, self.master_port, self.netbackup_service_host, self.netbackup_block_size)
-            if global_file_dumped(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.db_timestamp, self.netbackup_service_host):
-                restore_global_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.db_timestamp, self.netbackup_service_host, self.netbackup_block_size)
-            if statistics_file_dumped(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.db_timestamp, self.netbackup_service_host):
-                restore_statistics_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.db_timestamp, self.netbackup_service_host, self.netbackup_block_size)
+            restore_state_files_with_nbu(self.context)
+            restore_file_with_nbu(self.context, "report")
+            restore_file_with_nbu(self.context, "cdatabase")
+            if check_file_dumped_with_nbu(self.context, "master_config"):
+                restore_config_files_with_nbu(self.context)
+            if check_file_dumped_with_nbu(self.context, "global"):
+                restore_file_with_nbu(self.context, "global")
+            if check_file_dumped_with_nbu(self.context, "stats"):
+                restore_file_with_nbu(self.context, "stats")
 
-        if self.list_tables and self.db_timestamp is not None:
+        self._gather_dump_info()
+
+        if self.context.list_tables and self.context.timestamp:
             return self._list_dump_tables()
 
-        info = self._gather_info()
+        info = self._gather_cluster_info()
 
-        if self.restore_stats == "only":
+        self.validate_tablename_from_filtering_options()
+
+        if self.context.restore_stats == "only":
             restore_type = "Statistics-Only Restore"
 
-        if self.metadata_only:
+        if self.context.metadata_only:
             restore_type = "Metadata-Only Restore"
 
-        elif is_incremental_restore(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, info['restore_timestamp']):
-            if self.restore_tables is not None:
+        elif is_incremental_restore(self.context):
+            if len(self.context.restore_tables) > 0:
                 restore_type = "Incremental Table Restore"
             else:
                 restore_type = "Incremental Restore"
-        elif self.restore_tables is not None:
+        elif len(self.context.restore_tables) > 0:
             restore_type = "Table Restore"
         else:
             restore_type = "Full Database"
 
+        if self.context.change_schema:
+            check_funny_chars_in_names(self.context.change_schema, is_full_qualified_name = False)
+            if not self.context.redirected_restore_db and not check_schema_exists(self.context.change_schema, self.context.restore_db):
+                raise Exception('Cannot restore tables to schema %s: schema does not exist' % self.context.change_schema)
+            elif self.context.redirected_restore_db and not check_schema_exists(self.context.change_schema, self.context.redirected_restore_db):
+                raise Exception('Cannot restore tables to the database %s: schema %s does not exist' % (self.context.redirected_restore_db, self.context.change_schema))
+
         self._output_info(info, restore_type)
-
-        if self.change_schema and not check_schema_exists(self.change_schema, info['restore_db']) and not self.redirected_restore_db:
-            raise Exception('Cannot restore tables to schema %s: schema does not exist' % self.change_schema)
-
-        if self.change_schema and self.redirected_restore_db:
-            if self.redirected_restore_db is not None:
-                if not check_schema_exists(self.change_schema, self.redirected_restore_db):
-                    raise Exception('Cannot restore tables to the database %s: schema %s does not exist' % (self.redirected_restore_db, self.change_schema))
 
         if self.interactive:
             if not userinput.ask_yesno(None, "\nContinue with Greenplum restore", 'N'):
                 raise UserAbortedException()
 
-        if self.db_host_path is not None:
-            host, path = self.db_host_path
-            RecoverRemoteDumps(host = host, path = path,
-                               restore_timestamp = info['restore_timestamp'],
-                               compress = info['compress'],
-                               restore_global = self.restore_global,
-                               batch_default = self.batch_default,
-                               master_datadir = self.master_datadir,
-                               master_port = self.master_port,
-                               dump_dir = self.dump_dir,
-                               dump_prefix = self.dump_prefix).run()
+        if self.context.db_host_path:
+            host, path = self.context.db_host_path
+            RecoverRemoteDumps(self.context, host = host, path = path).run()
 
-            if is_incremental_restore(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, info['restore_timestamp']):
-                raise Exception('-R is not supported for restore with incremental timestamp %s' % info['restore_timestamp'])
+            if is_incremental_restore(self.context):
+                raise Exception('-R is not supported for restore with incremental timestamp %s' % self.context.timestamp)
 
-        if not is_incremental_restore(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, info['restore_timestamp']) and self.list_backup:
+        if not is_incremental_restore(self.context) and self.context.list_backup:
             raise Exception('--list-backup is not supported for restore with full timestamps')
 
-        if self.restore_tables and self.truncate:
-            if self.redirected_restore_db:
-                truncate_restore_tables(self.restore_tables, self.master_port, self.redirected_restore_db)
-            else:
-                truncate_restore_tables(self.restore_tables, self.master_port, info['restore_db'])
+        if is_incremental_restore(self.context) and not self.context.no_plan:
+            if self.context.netbackup_service_host:
+                restore_file_with_nbu(self.context, "partition_list")
+                restore_file_with_nbu(self.context, "increments")
+            plan_file = create_restore_plan(self.context)
 
-        if is_begin_incremental_run(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, info['restore_timestamp'], self.no_plan):
-            if self.netbackup_service_host:
-                restore_partition_list_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, info['restore_timestamp'], self.netbackup_service_host, self.netbackup_block_size)
-                restore_increments_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, info['restore_timestamp'], self.netbackup_service_host, self.netbackup_block_size)
-            plan_file = create_restore_plan(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, info['restore_timestamp'], self.ddboost, self.netbackup_service_host, self.netbackup_block_size)
-
-            if self.list_backup and self.db_timestamp is not None:
+            if self.context.list_backup and self.context.timestamp:
                 return self._list_backup_timestamps(plan_file)
 
-        RestoreDatabase(restore_timestamp = info['restore_timestamp'],
-                        no_analyze = self.no_analyze,
-                        drop_db = self.drop_db,
-                        restore_global = self.restore_global,
-                        master_datadir = self.master_datadir,
-                        backup_dir = self.backup_dir,
-                        master_port = self.master_port,
-                        dump_dir = self.dump_dir,
-                        dump_prefix = self.dump_prefix,
-                        ddboost = self.ddboost,
-                        no_plan = self.no_plan,
-                        restore_tables = self.restore_tables,
-                        batch_default = self.batch_default,
-                        no_ao_stats = self.no_ao_stats,
-                        redirected_restore_db = self.redirected_restore_db,
-                        report_status_dir = self.report_status_dir,
-                        restore_stats = self.restore_stats,
-                        metadata_only = self.metadata_only,
-                        netbackup_service_host = self.netbackup_service_host,
-                        netbackup_block_size = self.netbackup_block_size,
-                        change_schema = self.change_schema).run()
+        RestoreDatabase(self.context).run()
 
-        if self.no_analyze and not self.restore_stats:
+        if self.context.no_analyze and not self.context.restore_stats:
             logger.warn('--------------------------------------------------------------------------------------------------')
             logger.warn('Analyze bypassed on request; database performance may be adversely impacted until analyze is done.')
             logger.warn('--------------------------------------------------------------------------------------------------')
@@ -305,44 +250,44 @@ class GpdbRestore(Operation):
 
         logger.info("Restore type               = %s" % restore_type)
 
-        if self.restore_tables is not None:
-            logger.info("Database name              = %s" % info['restore_db'])
+        if len(self.context.restore_tables) > 0:
+            logger.info("Database name              = %s" % self.context.restore_db)
             logger.info("------------------------------------------")
             logger.info("Table restore list")
             logger.info("------------------------------------------")
-            for restore_table in self.restore_tables:
+            for restore_table in self.context.restore_tables:
                 logger.info("Table                      = %s" % restore_table)
-            if info['table_counts']:
+            if self.table_counts:
                 logger.info("------------------------------------------")
                 logger.warn("Following tables have non-zero row counts %s" % WARN_MARK)
                 logger.info("------------------------------------------")
-                for table, count in info['table_counts']:
+                for table, count in self.table_counts:
                     logger.warn("Table:Row count            = %s:%s" % (table, count))
                 logger.info("------------------------------------------")
         else:
-            logger.info("Database to be restored    = %s" % info['restore_db'])
-            if self.drop_db:
+            logger.info("Database to be restored    = %s" % self.context.restore_db)
+            if self.context.drop_db:
                 logger.info("Drop and re-create db      = On")
             else:
                 logger.info("Drop and re-create db      = Off")
 
-        if self.db_timestamp is not None and self.restore_tables is None:
+        if self.context.timestamp and not self.context.restore_tables:
             logger.info("Restore method             = Restore specific timestamp")
-        if self.search_for_dbname is not None and self.restore_tables is None:
+        if self.search_for_dbname and not self.context.restore_tables:
             logger.info("Restore method             = Search for latest")
-        if self.redirected_restore_db is not None:
-            logger.info("Redirect Restore database  = %s" % self.redirected_restore_db)
-        if self.db_date_dir is not None and self.restore_tables is None:
+        if self.context.redirected_restore_db:
+            logger.info("Redirect Restore database  = %s" % self.context.redirected_restore_db)
+        if self.context.db_date_dir and not self.context.restore_tables:
             logger.info("Restore method             = Restore specific date")
-        if self.restore_tables is not None:
+        if len(self.context.restore_tables) > 0:
             logger.info("Restore method             = Specific table restore")
-        if self.db_host_path is not None:
-            host, path = self.db_host_path
+        if self.context.db_host_path:
+            host, path = self.context.db_host_path
             logger.info("Restore method             = Remote host")
             logger.info("Recovery hostname          = %s" % host)
             logger.info("Remote recovery path       = %s" % path)
-        logger.info("Restore timestamp          = %s" % info['restore_timestamp'])
-        if info['compress']:
+        logger.info("Restore timestamp          = %s" % self.context.timestamp)
+        if self.context.compress:
             logger.info("Restore compressed dump    = On")
         else:
             logger.info("Restore compressed dump    = Off")
@@ -354,32 +299,18 @@ class GpdbRestore(Operation):
         #logger.info("Restore type               = %s" % restore_type)
         """
 
-        if self.restore_global:
+        if self.context.restore_global:
             logger.info("Restore global objects     = On")
         else:
             logger.info("Restore global objects     = Off")
         logger.info("Array fault tolerance      = %s" % info['fault_action'])
         logger.info("------------------------------------------")
 
-    def _get_master_port(self, datadir):
-        """ TODO: This function will be widely used. Move it elsewhere?
-            Its necessity is a direct consequence of allowing the -d <master_data_directory> option. From this,
-            we need to deduce the proper port so that the GpArrays can be generated properly. """
-        logger.debug("Obtaining master's port from master data directory")
-        pgconf_dict = pgconf.readfile(datadir + "/postgresql.conf")
-        return pgconf_dict.int('port')
-
     def _list_dump_tables(self):
-        dump_tables = GetDumpTables(master_datadir = self.master_datadir,
-                                    backup_dir = self.backup_dir,
-                                    restore_timestamp = self.db_timestamp,
-                                    dump_dir = self.dump_dir,
-                                    dump_prefix = self.dump_prefix,
-                                    ddboost = self.ddboost,
-                                    netbackup_service_host = self.netbackup_service_host).run()
+        dump_tables = GetDumpTables(self.context).get_dump_tables()
 
         logger.info("--------------------------------------------------------------------")
-        logger.info("List of database tables for dump file with time stamp %s" % self.db_timestamp)
+        logger.info("List of database tables for dump file with time stamp %s" % self.context.timestamp)
         logger.info("--------------------------------------------------------------------")
         for schema, table, owner in dump_tables:
             logger.info("Table %s.%s Owner %s" % (schema, table, owner))
@@ -388,13 +319,16 @@ class GpdbRestore(Operation):
     def _list_backup_timestamps(self, plan_file):
         plan_file_contents = get_lines_from_file(plan_file)
         logger.info("--------------------------------------------------------------------")
-        logger.info("List of backup timestamps required for the restore time stamp %s" % self.db_timestamp)
+        logger.info("List of backup timestamps required for the restore time stamp %s" % self.context.timestamp)
         logger.info("--------------------------------------------------------------------")
         for line in plan_file_contents:
             logger.info("Backup Timestamp: %s" % (line.split(':')[0].strip()))
         logger.info("--------------------------------------------------------------------")
 
-    def _gather_info(self):
+    def _gather_cluster_info(self):
+        """
+        Checking cluster status, no primary should be down.
+        """
         fault_action = self.gparray.getFaultStrategy()
         primaries = [seg for seg in self.gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
         fail_count = len([seg for seg in primaries if seg.isSegmentDown()])
@@ -405,131 +339,151 @@ class GpdbRestore(Operation):
             logger.info("Use gprecoverseg utility to recover failed segment instances")
             raise ExceptionNoStackTraceNeeded("Unable to continue")
 
-        (restore_timestamp, restore_db, compress) = (None, None, None)
-        if self.db_timestamp is not None:
-            (restore_timestamp, restore_db, compress) = ValidateTimestamp(candidate_timestamp = self.db_timestamp,
-                                                                          master_datadir = self.master_datadir,
-                                                                          backup_dir = self.backup_dir,
-                                                                          dump_dir = self.dump_dir,
-                                                                          dump_prefix = self.dump_prefix,
-                                                                          netbackup_service_host = self.netbackup_service_host,
-                                                                          ddboost = self.ddboost).run()
-        elif self.db_date_dir is not None:
-            (restore_timestamp, restore_db, compress) = self._validate_db_date_dir()
-        elif self.db_host_path is not None:
-            (restore_timestamp, restore_db, compress) = self._validate_db_host_path()
-        elif self.search_for_dbname is not None:
-            (restore_timestamp, restore_db, compress) = self._search_for_latest()
+        return {'fault_action': fault_action,
+                'fail_count': fail_count}
 
-        if not self.drop_db:
-            dburl = dbconn.DbURL(port=self.master_port)
+    def _gather_dump_info(self):
+        """
+        Validate the restore timestamp, collect information of the dump path and location.
+        """
+
+        if self.context.timestamp:
+            (restore_timestamp, restore_db, compress) = ValidateTimestamp(self.context).run()
+            self.context.timestamp = restore_timestamp
+            self.context.restore_db = restore_db
+            self.context.compress = compress
+        elif self.context.db_date_dir:
+            self._validate_db_date_dir()
+        elif self.context.db_host_path:
+            self._validate_db_host_path()
+        elif self.search_for_dbname:
+            self._search_for_latest()
+
+        if not self.context.drop_db and not self.context.redirected_restore_db:
+            dburl = dbconn.DbURL(port=self.context.master_port)
             conn = dbconn.connect(dburl)
-            count = dbconn.execSQLForSingleton(conn, "select count(*) from pg_database where datname='%s';" % restore_db)
+            count = dbconn.execSQLForSingleton(conn, "select count(*) from pg_database where datname='%s';" % pg.escape_string(self.context.restore_db))
             # TODO: -e is needed even if the database doesn't exist yet?
             if count == 0:
-                raise ExceptionNoStackTraceNeeded("Database %s does not exist and -e option not supplied" % restore_db)
+                raise ExceptionNoStackTraceNeeded("Database %s does not exist and -e option not supplied" % self.context.restore_db)
 
         table_counts = []
-        if self.restore_tables is not None:
-            self.restore_tables = validate_tablenames(self.restore_tables)
 
-        if not self.db_host_path and not self.ddboost:
-            report_filename = generate_report_filename(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, restore_timestamp)
+        if not self.context.db_host_path and not self.context.ddboost:
+            report_filename = self.context.generate_filename("report")
             if not os.path.isfile(report_filename):
-                raise ExceptionNoStackTraceNeeded("Report file does not exist for the given restore timestamp %s: '%s'" % (restore_timestamp, report_filename))
+                raise ExceptionNoStackTraceNeeded("Report file does not exist for the given restore timestamp %s: '%s'" % (self.context.timestamp, report_filename))
 
-        return {'fault_action': fault_action,
-                'fail_count': fail_count,
-                'restore_timestamp': restore_timestamp,
-                'restore_db': restore_db,
-                'compress': compress,
-                'table_counts': table_counts}
+        if not self.context.db_host_path:
+            self.context.dump_host = None
+        else:
+            self.context.dump_host = self.context.db_host_path[0]
+
+        self.table_counts = table_counts
+
+    def validate_tablename_from_filtering_options(self):
+        """
+        This validates table name format and resolves duplicates of user inputs from any of the gpdbrestore filtering options
+        """
+
+        if len(self.context.restore_tables) > 0 or len(self.context.restore_schemas) > 0:
+            self.context.restore_tables, self.context.restore_schemas = check_table_name_format_and_duplicate(self.context.restore_tables, self.context.restore_schemas)
+
+        if not self.context.no_validate_table_name and len(self.context.restore_tables) > 0:
+
+            is_remote_service = self.context.ddboost or self.context.netbackup_service_host or self.context.db_host_path
+            if not is_remote_service and stat.S_ISFIFO(os.stat(self.context.generate_filename("dump")).st_mode):
+                logger.warn('Skipping validation of tables in dump file due to the use of named pipes')
+            else:
+                dumped_tables = GetDumpTables(self.context).get_dump_tables()
+                validate_tablenames_exist_in_dump_file(self.context.restore_tables, dumped_tables)
 
     def _validate_db_date_dir(self):
-        root = os.path.join(get_restore_dir(self.master_datadir, self.backup_dir), self.dump_dir, self.db_date_dir)
+        root = self.context.get_date_dir()
         if not os.path.isdir(root):
             raise ExceptionNoStackTraceNeeded("Directory %s does not exist" % root)
-        matching = ListFilesByPattern(root, "%s*" % generate_createdb_prefix(self.dump_prefix)).run()
+        prefix = self.context.generate_prefix("cdatabase")
+        matching = ListFilesByPattern(root, "%s*" % prefix).run()
         if len(matching) == 0:
             raise ExceptionNoStackTraceNeeded("Could not locate Master database dump files under %s" % root)
-        matching = sorted(matching, key=lambda x: int(x[len(generate_createdb_prefix(self.dump_prefix)):].strip()))
+        matching = sorted(matching, key=lambda x: int(x[len(prefix):].strip()))
         if len(matching) > 1:
             dates_and_times = []
             for match in matching:
-                temp = match[len(generate_createdb_prefix(self.dump_prefix)):]
+                temp = match[len(prefix):]
                 date, time = temp[0:8], temp[8:14]
                 dates_and_times.append((date, time))
-            restore_timestamp = self._select_multi_file(dates_and_times)
+            self.context.timestamp = self._select_multi_file(dates_and_times)
         else:
             match = matching[0]
-            temp = match[len(generate_createdb_prefix(self.dump_prefix)):]
-            restore_timestamp = temp[0:14]
-        restore_db = GetDbName(os.path.join(root, "%s%s" % (generate_createdb_prefix(self.dump_prefix), restore_timestamp))).run()
-        compressed_file = "%s%s.gz" % (generate_master_dbdump_prefix(self.dump_prefix), restore_timestamp)
-        compress = CheckFile(os.path.join(root, compressed_file)).run()
-        return (restore_timestamp, restore_db, compress)
+            temp = match[len(prefix):]
+            self.context.timestamp = temp[0:14]
+        self.context.restore_db = GetDbName(self.context.generate_filename("cdatabase")).run()
+        compressed_file = self.context.generate_filename("metadata")
+        self.context.compress = CheckFile(compressed_file).run()
 
     def _validate_db_host_path(self):
         # The format of the -R option should be 'hostname:path_to_dumpset', hence the length should be 2 (hostname, path_to_dumpset)
-        if len(self.db_host_path) != 2:
-            raise ProgramArgumentValidationException("The arguments of the -R flag are incorrect. The correct form should be as follows:\nIPv4_address:path_to_dumpset\n-OR-\n[IPv6_address]:path_to_dumpset\n", False)
+        if len(self.context.db_host_path) != 2:
+            raise ProgramArgumentValidationException("The arguments of the -R flag are incorrect. The correct form should be as "
+                                                     "follows:\nIPv4_address:path_to_dumpset\n-OR-\n[IPv6_address]:path_to_dumpset\n", False)
 
-        host, path = self.db_host_path
+        host, path = self.context.db_host_path
         logger.debug("The host is %s" % host)
         logger.debug("The path is %s" % path)
+        self.context.backup_dir = path[0:path.index(self.context.dump_dir)]
 
         Ping.local('Pinging %s' % host, host)
-        matching = ListRemoteFilesByPattern(path, "%s*" % generate_createdb_prefix(self.dump_prefix), host).run()
+        prefix = self.context.generate_prefix("cdatabase")
+        matching = ListRemoteFilesByPattern(path, "%s*" % prefix, host).run()
         if len(matching) == 0:
             raise ExceptionNoStackTraceNeeded("Could not locate Master database dump files at %s:%s" % (host, path))
-        matching = sorted(matching, key=lambda x: int(x[len(generate_createdb_prefix(self.dump_prefix)):].strip()))
+        matching = sorted(matching, key=lambda x: int(x[len(prefix):].strip()))
         if len(matching) > 1:
             dates_and_times = []
             for match in matching:
-                temp = match[len(generate_createdb_prefix(self.dump_prefix)):]
+                temp = match[len(prefix):]
                 date, time = temp[0:8], temp[8:14]
                 dates_and_times.append((date, time))
-            restore_timestamp = self._select_multi_file(dates_and_times)
+            self.context.timestamp = self._select_multi_file(dates_and_times)
         else:
             match = matching[0]
-            temp = match[len(generate_createdb_prefix(self.dump_prefix)):]
-            restore_timestamp = temp[0:14]
+            temp = match[len(prefix):]
+            self.context.timestamp = temp[0:14]
 
-        # TODO: do a local GetDbName after Scp
         handle, filename = mkstemp()
-        srcFile = os.path.join(path, "%s%s" % (generate_createdb_prefix(self.dump_prefix), restore_timestamp))
+        srcFile = self.context.generate_filename("cdatabase", directory=path)
         Scp('Copying cdatabase file', srcHost=host, srcFile=srcFile, dstFile=filename).run(validateAfter=True)
-        restore_db = GetDbName(filename).run()
+        self.context.restore_db = GetDbName(filename).run()
         os.remove(filename)
 
-        compressed_file = "%s%s.gz" % (generate_master_dbdump_prefix(self.dump_prefix), restore_timestamp)
-        compress = CheckRemoteFile(os.path.join(path, compressed_file), host).run()
-        return (restore_timestamp, restore_db, compress)
+        self.context.compress = CheckRemoteFile(srcFile, host).run()
 
     def _search_for_latest(self):
         logger.info("Scanning Master host for latest dump file set for database %s" % self.search_for_dbname)
-        root = os.path.join(get_restore_dir(self.master_datadir, self.backup_dir), self.dump_dir)
+        root = os.path.join(self.context.get_backup_root(), self.context.dump_dir)
         candidates, timestamps = [], []
+        prefix = self.context.generate_prefix("cdatabase")
         for path, dirs, files in os.walk(root):
-            matching = fnmatch.filter(files, "%s*" % generate_createdb_prefix(self.dump_prefix))
+            matching = fnmatch.filter(files, "%s*" % prefix)
             candidates.extend([(path, filename) for filename in matching])
         if len(candidates) == 0:
-            raise ExceptionNoStackTraceNeeded("No %s* files located" % generate_createdb_prefix(self.dump_prefix))
+            raise ExceptionNoStackTraceNeeded("No %s* files located" % prefix)
         for path, filename in candidates:
             db_name = GetDbName(os.path.join(path, filename)).run()
+            logger.info("Looking for %s, found %s" % (self.search_for_dbname, db_name))
             if self.search_for_dbname == db_name:
                 logger.info('Located dump file %s for database %s, adding to list' % (filename, self.search_for_dbname))
-                timestamps.append(int(filename[len(generate_createdb_prefix(self.dump_prefix)):]))
+                timestamps.append(int(filename[len(prefix):]))
             else:
                 logger.info("Dump file has incorrect database name of %s, skipping..." % db_name)
         if len(timestamps) == 0:
-            raise ExceptionNoStackTraceNeeded("No %s* files located with database %s" % (generate_createdb_prefix(self.dump_prefix), self.search_for_dbname))
-        restore_timestamp = str(max(timestamps))
-        logger.info("Identified latest dump timestamp for %s as %s" %  (self.search_for_dbname, restore_timestamp))
-        restore_db = self.search_for_dbname
-        compressed_file = os.path.join(get_restore_dir(self.master_datadir, self.backup_dir), self.dump_dir, restore_timestamp[0:8], "%s%s.gz" % (generate_master_dbdump_prefix(self.dump_prefix), restore_timestamp))
-        compress = CheckFile(compressed_file).run()
-        return (restore_timestamp, restore_db, compress)
+            raise ExceptionNoStackTraceNeeded("No %s* files located with database %s" % (prefix, self.search_for_dbname))
+        self.context.timestamp = str(max(timestamps))
+        logger.info("Identified latest dump timestamp for %s as %s" %  (self.search_for_dbname, self.context.timestamp))
+        self.context.restore_db = self.search_for_dbname
+        compressed_file = self.context.generate_filename("cdatabase")
+        self.context.compress = CheckFile(compressed_file).run()
 
     def _select_multi_file(self, dates_and_times):
         spc = "        "
@@ -596,7 +550,7 @@ def create_parser():
     addMasterDirectoryOptionForSingleClusterProgram(addTo)
 
     addTo = OptionGroup(parser, 'Restore options: ')
-    addTo.add_option('-t', dest='db_timestamp', metavar='<timestamp>',
+    addTo.add_option('-t', dest='timestamp', metavar='<timestamp>',
                      help="Timestamp key of backup file set that should be used for restore. Mandatory if -b, -R, -s are not supplied. Expects dumpset to reside on Greenplum array.")
     addTo.add_option('-L', action='store_true', dest='list_tables', default=False,
                      help="List table names in dump file, can only be used with -t <timestamp> option. Will display all tables in dump file, and then exit.")
@@ -612,8 +566,10 @@ def create_parser():
                      help="Dispatches work to segment hosts in batches of specified size [default: %s]" % DEFAULT_NUM_WORKERS)
     addTo.add_option('-G', dest='restore_global', action="callback", callback=restore_global_callback,
                      help="Restore global objects dump file if found in target dumpset. The global objects file is secured via the gpcrondump -G options, and has a filename of the form gp_global_1_1_<timestamp>. Specify \"-G only\" to only restore the global objects dump file or \"-G include\" to restore globals objects along with a normal restore. Defaults to \"include\" if neither argument is provided.")
-    addTo.add_option('-T', dest='restore_tables', metavar='<schema.tablename>',
-                     help="Restore a single table from a backup set. For multiple tables, supply a comma separated list of schema.tablenames. Note, table schema must exist in target database.")
+    addTo.add_option('-S', action='append', dest='restore_schemas', default=[], metavar='<schema name>',
+                     help="Perform schema level restore from a backup set. -S can be provided multiple times to include multiple schema names.")
+    addTo.add_option('-T', action='append', dest='restore_tables', default=[], metavar='<schema.tablename>',
+                     help="Restore a single table from a backup set. -T can be provided multiple times to include multiple schema.tablenames. Note, table schema must exist in target database.")
     addTo.add_option('-K', action='store_true', dest='keep_dump_files', default=False,
                      help="Retain temporary generated table dump files.")
     addTo.add_option('-m', action='store_true', dest='metadata_only', default=False,
@@ -638,6 +594,8 @@ def create_parser():
                      help="Different schema name to which tables will be restored")
     addTo.add_option('--restore-stats', dest='restore_stats', action="callback", callback=restore_stats_callback,
                      help="Restore database statistics. Analysis is skipped as if the --noanalyze flag were set.")
+    # --no-validate-table-name option used only for separating table restore and data restore phases, set as hidden
+    addTo.add_option('--no-validate-table-name', action='store_true', dest='no_validate_table_name', default=False, help=SUPPRESS_HELP)
     parser.add_option_group(addTo)
 
     # For Incremental Restore
@@ -657,6 +615,9 @@ def create_parser():
     # For DDBoost Restore
     ddOpt = OptionGroup(parser, "DDBoost")
     ddOpt.add_option('--ddboost', dest='ddboost', help="Dump to DDBoost using ~/.ddconfig", action="store_true", default=False)
+
+    ddOpt.add_option('--ddboost-storage-unit', dest='ddboost_storage_unit', default=None,
+                     help="Storage unit where backup files are retrieved from the ddboost server")
     parser.add_option_group(ddOpt)
 
     return parser

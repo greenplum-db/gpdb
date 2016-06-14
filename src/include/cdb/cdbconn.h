@@ -20,23 +20,22 @@
  */
 typedef struct SegmentDatabaseDescriptor
 {
-	/* segment_database_info
-	 *
+	/*
 	 * Points to the SegmentDatabaseInfo structure describing the
 	 * parameters for this segment database.  Information in this structure is
 	 * obtained from the Greenplum administrative schema tables.
 	 */
 	struct CdbComponentDatabaseInfo *segment_database_info;
 	
-	/* segindex
-	 *
+	/*
 	 * Identifies the segment this group of databases is serving.  This is the
-	 * segindex assigned to the segment in gp_segment_config
-	 */
-	int4         			segindex; /* this is actually the *content-id* */
-	
-    /* conn
+	 * content-id assigned to the segment in gp_segment_configuration.
 	 *
+	 * Identical to segment_database_info->segindex.
+	 */
+	int4         			segindex;
+	
+    /*
 	 * A non-NULL value points to the PGconn block of a successfully
 	 * established connection to the segment database.
 	 */
@@ -44,11 +43,12 @@ typedef struct SegmentDatabaseDescriptor
 	
 	/*
 	 * Error info saved when connection cannot be established.
+	 * ERRCODE_xxx (sqlstate encoded as an int) of first error, or 0.
 	 */
-    int                     errcode;        /* ERRCODE_xxx (sqlstate encoded as
-                                             * an int) of first error, or 0.
-                                             */
-	PQExpBufferData         error_message;  /* message text; '\n' at end */
+    int                     errcode;
+
+    /* message text; '\n' at end */
+	PQExpBufferData         error_message;
 
     /*
      * Connection info saved at most recent PQconnectdb.
@@ -75,14 +75,30 @@ cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc);
 
 
 /* Connect to a QE as a client via libpq. */
-bool                            /* returns true if connected */
+void
 cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
 		  const char *gpqeid,
 		  const char *options);
 
-/* Set the slice index for error messages related to this QE. */
-bool
-cdbconn_setSliceIndex(SegmentDatabaseDescriptor    *segdbDesc,
-                      int                           sliceIndex);
+/* Disconnect from QE */
+void cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc);
 
+/*
+ * Read result from connection and discard it.
+ *
+ * Retry at most N times.
+ *
+ * Return false if there'er still leftovers.
+ */
+bool cdbconn_discardResults(SegmentDatabaseDescriptor *segdbDesc,
+		int retryCount);
+
+/* Return if it's a bad connection */
+bool cdbconn_isBadConnection(SegmentDatabaseDescriptor *segdbDesc);
+
+/* Reset error message buffer */
+void cdbconn_resetQEErrorMessage(SegmentDatabaseDescriptor *segdbDesc);
+
+/* Set the slice index for error messages related to this QE. */
+void setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc, int sliceIndex, MemoryContext mcxt);
 #endif   /* CDBCONN_H */

@@ -243,16 +243,13 @@ read_bfz_buffer(bfz_t *bfz, char *buffer)
 bfz_t *
 bfz_create(const char *fileName, bool delOnClose, int compress)
 {
-	bfz_t	   *thiz;
-	MemoryContext oldcxt;
-
 	/*
 	 * Create bfz_t in the TopMemoryContext since this memory context
 	 * is still available when calling the transaction callback at the
 	 * time when the transaction aborts. See MPP-3396.
 	 */
-	oldcxt = MemoryContextSwitchTo(TopMemoryContext);
-	thiz = palloc0(sizeof(bfz_t));
+	MemoryContext oldcxt = MemoryContextSwitchTo(TopMemoryContext);
+	bfz_t *thiz = palloc0(sizeof(bfz_t));
 
 #if USE_ASSERT_CHECKING
 	bfz_t *ret_bfz =
@@ -279,16 +276,13 @@ bfz_create(const char *fileName, bool delOnClose, int compress)
 bfz_t *
 bfz_open(const char *fileName, bool delOnClose, int compress)
 {
-	bfz_t	   *new_bfz;
-	MemoryContext oldcxt;
-
 	/*
 	 * Create bfz_t in the TopMemoryContext since this memory context
 	 * is still available when calling the transaction callback at the
 	 * time when the transaction aborts.
 	 */
-	oldcxt = MemoryContextSwitchTo(TopMemoryContext);
-	new_bfz = palloc0(sizeof(bfz_t));
+	MemoryContext oldcxt = MemoryContextSwitchTo(TopMemoryContext);
+	bfz_t *new_bfz = palloc0(sizeof(bfz_t));
 	bfz_t *ret_bfz = bfz_create_internal(new_bfz, fileName,
 			true, /* open_existing */
 			delOnClose, compress);
@@ -519,10 +513,20 @@ bfz_scan_begin(bfz_t * thiz)
 				errmsg("could not seek in temporary file: %m")));
 
 	thiz->mode = BFZ_MODE_SCAN;
+
+	/*
+	 * Allocating in the TopMemoryContext since this memory context
+	 * is still available when calling the transaction callback at the
+	 * time when the transaction aborts.
+	 */
+	MemoryContext oldcxt = MemoryContextSwitchTo(TopMemoryContext);
+
 	compression_algorithms[thiz->compression_index].init(thiz);
 	fs = thiz->freeable_stuff;
 	fs->buffer_pointer = fs->buffer_end = fs->buffer;
 	fs->tot_bytes = 0L;
+
+	MemoryContextSwitchTo(oldcxt);
 
 	if (gp_workfile_faultinject)
 	{

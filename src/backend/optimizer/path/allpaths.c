@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/allpaths.c,v 1.156 2007/01/09 02:14:12 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/allpaths.c,v 1.159 2007/02/19 07:03:28 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -37,6 +37,7 @@
 #include "parser/parse_expr.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteManip.h"
+#include "utils/guc.h"
 #include "utils/lsyscache.h"
 
 #include "cdb/cdbllize.h"                   /* repartitionPlan */
@@ -490,6 +491,16 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 								   appinfo);
 
 		/*
+		 * We have to make child entries in the EquivalenceClass data
+		 * structures as well.
+		 */
+		if (rel->has_eclass_joins)
+		{
+			add_child_rel_equivalences(root, appinfo, rel, childrel);
+			childrel->has_eclass_joins = true;
+		}
+
+		/*
 		 * Copy the parent's attr_needed data as well, with appropriate
 		 * adjustment of relids and attribute numbers.
 		 */
@@ -554,14 +565,6 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
         rel->onerow = true;
     else if (list_length(subpaths) == 1)
         rel->onerow = ((Path *)linitial(subpaths))->parent->onerow;
-
-	/*
-	 * Set "raw tuples" count equal to "rows" for the appendrel; needed
-	 * because some places assume rel->tuples is valid for any baserel.
-     *
-     * CDB: Already set rel->tuples accurately above.
-	 */
-	/* rel->tuples = rel->rows; */
 
 	/*
 	 * Finally, build Append path and install it as the only access path for
@@ -767,25 +770,53 @@ void set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	List *pathkeys = NULL;
 	PlannerInfo *subroot = NULL;
 
-	/* If sharing is not allowed, we create a new subplan for this CTE. */
-	if (!root->config->gp_cte_sharing)
+	/*
+	 * If there is exactly one reference to this CTE in the query, or plan
+	 * sharing is disabled, create a new subplan for this CTE. It will
+	 * become simple subquery scan.
+	 *
+	 * NOTE: The check for "exactly one reference" is a bit fuzzy. The
+	 * references are counted in parse analysis phase, and it's possible
+	 * that we duplicate a reference during query planning. So the check
+	 * for number of references must be treated merely as a hint. If it
+	 * turns out that there are in fact multiple references to the same
+	 * CTE, even though we thought that there is only one, we might choose
+	 * a sub-optimal plan because we missed the opportunity to share the
+	 * subplan. That's acceptable for now.
+	 *
+	 * subquery tree will be modified if any qual is pushed down.
+	 * There's risk that it'd be confusing if the tree is used
+	 * later. At the moment InitPlan case uses the tree, but it
+	 * is called earlier than this pass always, so we don't avoid it.
+	 *
+	 * Also, we might want to think extracting "common"
+	 * qual expressions between multiple references, but
+	 * so far we don't support it.
+	 */
+	if (!root->config->gp_cte_sharing ||
+		(cte->cterefcount) == 1)
 	{
 		PlannerConfig *config = CopyPlannerConfig(root->config);
 
-		/**
-		 * Copy query node since subquery_planner may trash it and we need it intact
-		 * in case we need to create another plan for the CTE
+		/*
+		 * Having multiple SharedScans can lead to deadlocks. For now,
+		 * disallow sharing of ctes at lower levels.
+		 */
+		config->gp_cte_sharing = false;
+
+		/*
+		 * Copy query node since subquery_planner may trash it, and we need
+		 * it intact in case we need to create another plan for the CTE
 		 */
 		Query		  *subquery = (Query *) copyObject(cte->ctequery);
 
-		/**
-		 * Push down quals
+		/*
+		 * Push down quals, like we do in set_subquery_pathlist()
 		 */
 		subquery = push_down_restrict(root, rel, rte, rel->relid, subquery);
 
 		subplan = subquery_planner(cteroot->glob, subquery, cteroot,
 								   tuple_fraction, &subroot, config);
-		cteplaninfo->numNonSharedPlans++;
 
 		subrtable = subroot->parse->rtable;
 		pathkeys = subroot->query_pathkeys;
@@ -795,80 +826,47 @@ void set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 		 * this plan.
 		 */
 	}
-	
-	/*
-	 * If we never generate a subplan for this CTE, generate one here.
-	 * This subplan will not be used by InitPlans, so that they can be
-	 * shared if this CTE is referenced multiple times (excluding in InitPlans).
-	 * We also generate all shared plans here.
-	 */
-	else if (cteplaninfo->subplans == NULL)
-	{
-		PlannerConfig *config = CopyPlannerConfig(root->config);
-
-		/**
-		 * Having multiple SharedScans can lead to deadlocks. For now,
-		 * disallow sharing of ctes at lower levels.
-		 */
-		config->gp_cte_sharing = false;
-		/**
-		 * Copy query node since subquery_planner may trash it and we need it intact
-		 * in case we need to create another plan for the CTE
-		 */
-
-		Query		  *subquery = (Query *) copyObject(cte->ctequery);
-
-		if ((cte->cterefcount - cteplaninfo->numNonSharedPlans) == 1)
-		{
-			/*
-			 * If this CTE is referenced only once,
-			 * it will become simple subquery scan.
-			 * In that case, we can push down quals in the same way
-			 * as set_subqeury_pathlist().
-			 *
-			 * subquery tree will be modified if any qual is pushed down.
-			 * There's risk that it'd be confusing if the tree is used
-			 * later. At the moment InitPlan case uses the tree, but it
-			 * is called earlier than this pass always, so we don't avoid it.
-			 *
-			 * Also, we might want to think extracting "common"
-			 * qual expressions between multiple references, but
-			 * so far we don't support it.
-			 */
-			subquery = push_down_restrict(root, rel, rte, rel->relid, subquery);
-		}
-		subplan = subquery_planner(cteroot->glob, subquery, cteroot,
-								   tuple_fraction, &subroot, config);
-
-		List *subplans = share_plan(cteroot, subplan,
-									cte->cterefcount);
-		
-		cteplaninfo->subplans = subplans;
-		cteplaninfo->subrtable = subroot->parse->rtable;
-		cteplaninfo->pathkeys = subroot->query_pathkeys;
-		cteplaninfo->nextPlanId = 0;
-		
-		subplan = list_nth(cteplaninfo->subplans, cteplaninfo->nextPlanId);
-		cteplaninfo->nextPlanId++;
-
-		subrtable = subroot->parse->rtable;
-		pathkeys = subroot->query_pathkeys;
-	}
-
-	/*
-	 * The subplan has been generated in advance (see the above). We simply find
-	 * the subplan in the list stored in cteplaninfo.
-	 */
 	else
 	{
-		Assert(root->config->gp_cte_sharing && cteplaninfo->subplans != NULL);
-		Assert(cteplaninfo->nextPlanId < list_length(cteplaninfo->subplans));
-		subplan = list_nth(cteplaninfo->subplans, cteplaninfo->nextPlanId);
+		/*
+		 * If we haven't created a subplan for this CTE yet, do it now.
+		 * This subplan will not be used by InitPlans, so that they can be
+		 * shared if this CTE is referenced multiple times (excluding in
+		 * InitPlans).
+		 */
+		if (cteplaninfo->shared_plan == NULL)
+		{
+			PlannerConfig *config = CopyPlannerConfig(root->config);
+
+			/*
+			 * Copy query node since subquery_planner may trash it and we need it intact
+			 * in case we need to create another plan for the CTE
+			 */
+			Query		  *subquery = (Query *) copyObject(cte->ctequery);
+
+			/*
+			 * Having multiple SharedScans can lead to deadlocks. For now,
+			 * disallow sharing of ctes at lower levels.
+			 */
+			config->gp_cte_sharing = false;
+
+			subplan = subquery_planner(cteroot->glob, subquery, cteroot,
+									   tuple_fraction, &subroot, config);
+
+			cteplaninfo->shared_plan = prepare_plan_for_sharing(cteroot, subplan);
+			cteplaninfo->subrtable = subroot->parse->rtable;
+			cteplaninfo->pathkeys = subroot->query_pathkeys;
+		}
+
+		/*
+		 * Create another ShareInputScan to reference the already-created
+		 * subplan.
+		 */
+		subplan = share_prepared_plan(cteroot, cteplaninfo->shared_plan);
 		subrtable = cteplaninfo->subrtable;
 		pathkeys = cteplaninfo->pathkeys;
-		cteplaninfo->nextPlanId++;
 	}
-		
+
 	rel->subplan = subplan;
 	rel->subrtable = subrtable;
 

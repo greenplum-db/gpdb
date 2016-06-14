@@ -26,6 +26,7 @@ lib*dll.defautom4te.cache
 **/test/*.t
 **/tags
 *.pyc
+**/vagrant-local.yml
 
 # Local excludes in root directory
 /GNUmakefile
@@ -48,6 +49,5 @@ build.sh
 
 # Added
 *.swp
-*.out
 
 VERSION

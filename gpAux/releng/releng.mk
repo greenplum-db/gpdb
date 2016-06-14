@@ -16,16 +16,21 @@
 
 UNAME = $(shell uname)
 UNAME_P = $(shell uname -p)
+UNAME_M = $(shell uname -m)
 
 UNAME_ALL = $(UNAME).$(UNAME_P)
 
 # shared lib support
 ifeq (Darwin, $(UNAME))
-	ARCH_FLAGS = -m32
 	LDSFX = dylib
 else
-	ARCH_FLAGS = -m64
 	LDSFX = so
+endif
+
+ifeq (x86_64, $(UNAME_M))
+	ARCH_FLAGS = -m64
+else
+	ARCH_FLAGS = -m32
 endif
 
 ##-------------------------------------------------------------------------------------
@@ -38,7 +43,7 @@ endif
 
 # by default use optimized build libraries of GP Optimizer
 # use 'make BLD_TYPE=debug' to work with debug build libraries of GP Optimizer
-BLD_TYPE=opt
+BLD_TYPE?=opt
 
 OBJDIR_DEFAULT = .obj.$(UNAME_ALL)$(ARCH_FLAGS).$(BLD_TYPE)
 
@@ -105,13 +110,6 @@ else
 ifneq "$(wildcard /opt/releng/tools/R-Project/R/$(R_VER)/$(BLD_ARCH)/lib)" ""
 R_HOME = /opt/releng/tools/R-Project/R/$(R_VER)/$(BLD_ARCH)/lib/R
 endif
-endif
-
-GPERF_VERSION = $(shell grep 'name="gperf"' $(GREP_SED_VAR))
-ifneq "$(wildcard $(BLD_TOP)/ext/$(BLD_ARCH)/gperf-$(GPERF_VERSION)/bin/gperf)" ""
-GPERF_DIR = $(BLD_TOP)/ext/$(BLD_ARCH)/gperf-$(GPERF_VERSION)
-gperftmpPATH:=$(GPERF_DIR)/bin:$(PATH)
-export PATH=$(gperftmpPATH)
 endif
 
 display_dependent_vers:

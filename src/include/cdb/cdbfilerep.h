@@ -9,19 +9,16 @@
 #ifndef CDBFILEREP_H
 #define CDBFILEREP_H
 
-#include "c.h"
+#include <signal.h>
+
 #include "utils/pg_crc.h"
-#include "pg_config_manual.h"
 #include "storage/relfilenode.h"
 #include "access/xlogdefs.h"
-#include "cdb/cdbresynchronizechangetracking.h"
 #include "postmaster/primary_mirror_mode.h"
 #include "storage/fd.h"
 #include "storage/dbdirnode.h"
 #include "storage/lwlock.h"
 #include "storage/pg_sema.h"
-#include "storage/spin.h"
-#include "signal.h"
 #include "gpmon/gpmon.h"
 #include "utils/timestamp.h"
 

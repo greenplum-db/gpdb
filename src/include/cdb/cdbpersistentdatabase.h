@@ -9,12 +9,9 @@
 #ifndef CDBPERSISTENTDATABASE_H
 #define CDBPERSISTENTDATABASE_H
 
-#include "utils/palloc.h"
-#include "storage/fd.h"
 #include "storage/itemptr.h"
 #include "cdb/cdbsharedoidsearch.h"
 #include "access/persistentfilesysobjname.h"
-#include "cdb/cdbdoublylinked.h"
 #include "access/xlogmm.h"
 #include "cdb/cdbpersistentfilesysobj.h"
 

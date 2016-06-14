@@ -84,6 +84,7 @@ int			optreset;
 #include <limits.h>
 #include <regex.h>
 #include <sys/wait.h>
+#include "lib/stringinfo.h"
 
 #define DUMP_PREFIX (dump_prefix==NULL?"":dump_prefix)
 
@@ -206,6 +207,7 @@ static void dumpPlTemplateFunc(Oid funcOid, const char *templateField, PQExpBuff
 static void dumpCast(Archive *fout, CastInfo *cast);
 static void dumpOpr(Archive *fout, OprInfo *oprinfo);
 static void dumpOpclass(Archive *fout, OpclassInfo *opcinfo);
+static void dumpOpfamily(Archive *fout, OpfamilyInfo *opfinfo);
 static void dumpConversion(Archive *fout, ConvInfo *convinfo);
 static void dumpRule(Archive *fout, RuleInfo *rinfo);
 static void dumpAgg(Archive *fout, AggInfo *agginfo);
@@ -227,7 +229,8 @@ static void dumpACL(Archive *fout, CatalogId objCatId, DumpId objDumpId,
 static void getDependencies(void);
 static void setExtPartDependency(TableInfo *tblinfo, int numTables);
 static void getTableData(TableInfo *tblinfo, int numTables, bool oids);
-static char *format_function_arguments(FuncInfo *finfo, int nallargs,
+static char *format_function_arguments(FuncInfo *finfo, char *funcargs);
+static char *format_function_arguments_old(FuncInfo *finfo, int nallargs,
 						  char **allargtypes,
 						  char **argmodes,
 						  char **argnames);
@@ -264,6 +267,8 @@ static void installSignalHandlers(void);
 extern void reset(void);
 static bool testAttributeEncodingSupport(void);
 static bool isGPDB4300OrLater(void);
+static bool isGPDB(void);
+static bool isGPDB5000OrLater(void);
 Archive *makeArchive(char *filename);
 void updateDDBoostArchive(ArchiveHandle *AH);
 char *formPostDumpFilePathName(char *pszBackupDirectory, char *pszBackupKey, int pszInstID, int pszSegID);
@@ -274,7 +279,7 @@ char *formPostDumpFilePathName(char *pszBackupDirectory, char *pszBackupKey, int
 #include "ddp_api.h"
 static int dd_boost_enabled = 0; /* Is set to 1 if we are doing a backup onto Data Domain system */
 static int dd_boost_buf_size = 0;
-
+static char *ddboost_storage_unit = NULL;
 static void dumpDatabaseDefinitionToDDBoost(void);
 
 #ifndef MAX_PATH_NAME
@@ -295,12 +300,11 @@ static ddp_inst_desc_t ddp_inst = DDP_INVALID_DESCRIPTOR;
 static ddp_conn_desc_t ddp_conn = DDP_INVALID_DESCRIPTOR;
 
 static ddp_path_t path1 = {0};
-static char *DDP_SU_NAME = NULL;
 static char *DEFAULT_BACKUP_DIRECTORY = NULL;
 
 char *log_message_path = NULL;
 
-static int createDDBoostDir(ddp_conn_desc_t ddp_conn, char *storage_unit_name, char *path_name);
+static int createDDBoostDir(ddp_conn_desc_t ddp_conn, char *ddboost_storage_unit, char *path_name);
 static int updateArchiveWithDDFile(ArchiveHandle *AH, char *g_pszDDBoostFile, const char *g_pszDDBoostDir);
 #endif
 
@@ -354,6 +358,63 @@ testAttributeEncodingSupport(void)
 	destroyPQExpBuffer(query);
 
 	return isSupported;
+}
+
+/*
+ * Check if we are talking to GPDB
+ */
+static bool
+isGPDB(void)
+{
+	PQExpBuffer query;
+	PGresult   *res;
+	char	   *ver;
+	bool		retValue = false;
+
+	query = createPQExpBuffer();
+	appendPQExpBuffer(query, "select version()");
+	res = PQexec(g_conn, query->data);
+	check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
+
+	ver = (PQgetvalue(res, 0, 0));
+	if (strstr(ver, "Greenplum") != NULL)
+		retValue = true;
+
+	PQclear(res);
+	destroyPQExpBuffer(query);
+	return retValue;
+}
+
+/*
+ * If GPDB version is 5.0, pg_proc has provariadic column.
+ * When we have version() returns GPDB version instead of "main build dev" or
+ * something similar, we'll fix this function (MPP-17313)
+ */
+static bool
+isGPDB5000OrLater(void)
+{
+	bool	retValue = false;
+
+	if (isGPDB() == true)
+	{
+		PQExpBuffer query;
+		PGresult   *res;
+
+		query = createPQExpBuffer();
+		appendPQExpBuffer(query,"select attnum from pg_catalog.pg_attribute "
+						  "where attrelid = 'pg_catalog.pg_proc'::regclass "
+						  "and attname = 'provariadic'");
+		res = PQexec(g_conn, query->data);
+		check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
+
+		if (PQntuples(res) == 1)
+			retValue = true;
+
+		PQclear(res);
+		destroyPQExpBuffer(query);
+	}
+
+	return retValue;
 }
 
 
@@ -451,6 +512,7 @@ main(int argc, char **argv)
 		{"dd_boost_enabled", no_argument, NULL, 7},
 		{"dd_boost_dir", required_argument, NULL, 8},
 		{"dd_boost_buf_size", required_argument, NULL, 9},
+		{"ddboost-storage-unit", required_argument, NULL, 18},
 #endif
 		{"incremental-filter", required_argument, NULL, 10},
 		{"netbackup-service-host", required_argument, NULL, 11},
@@ -700,6 +762,9 @@ main(int argc, char **argv)
 			case 9:
 				sscanf(optarg, "%d", &dd_boost_buf_size);
 				break;
+			case 18:
+				ddboost_storage_unit = pg_strdup(optarg);
+				break;
 #endif
 			case 10:
 				incrementalFilter = pg_strdup(optarg);
@@ -824,7 +889,8 @@ main(int argc, char **argv)
 			exit(1);
 		}
 
-		ret = initDDSystem(&ddp_inst, &ddp_conn, &dd_client_info, &DDP_SU_NAME, false, &DEFAULT_BACKUP_DIRECTORY, false);
+		ret = initDDSystem(&ddp_inst, &ddp_conn, &dd_client_info, &ddboost_storage_unit, false, &DEFAULT_BACKUP_DIRECTORY, false);
+
 		if (ret)
 		{
 			mpp_err_msg(logError, progname, "Error connecting to DDboost. Check parameters\n");
@@ -1144,6 +1210,9 @@ dumpMain(bool oids, const char *dumpencoding, int outputBlobs, int plainText, Re
 	g_gp_supportsPartitioning = g_fout->remoteVersion >= 80209;
 	g_gp_supportsPartitionTemplates = g_fout->remoteVersion >= 80214;
 
+	/* Let cdb_dump_include functions know whether to include opfamilies */
+	g_gp_supportsOpfamilies = g_fout->remoteVersion >= 80300;
+
 	g_gp_supportsAttributeEncoding = testAttributeEncodingSupport();
 
 	/*
@@ -1157,7 +1226,7 @@ dumpMain(bool oids, const char *dumpencoding, int outputBlobs, int plainText, Re
 	 * Now scan the database and create DumpableObject structs for all the
 	 * objects we intend to dump. LOCK those objects in ACCESS SHARE mode.
 	 */
-	tblinfo = getSchemaData(&numTables);
+	tblinfo = getSchemaData(&numTables, g_role);
 
 	/*
 	 * If we got here it means we successfully got LOCKs on all our dumpable
@@ -1783,7 +1852,7 @@ dumpDatabase(Archive *AH)
 					  "FROM pg_database "
 					  "WHERE datname = ",
 					  username_subquery);
-	appendStringLiteralAH(dbQry, datname, AH);
+	appendStringLiteralConn(dbQry, datname, g_conn);
 
 	res = PQexec(g_conn, dbQry->data);
 	check_sql_result(res, g_conn, dbQry->data, PGRES_TUPLES_OK);
@@ -2495,6 +2564,9 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
 			if (!postDataSchemaOnly)
 			dumpOpclass(fout, (OpclassInfo *) dobj);
 			break;
+		case DO_OPFAMILY:
+			dumpOpfamily(fout, (OpfamilyInfo *) dobj);
+			break;
 		case DO_CONVERSION:
 			if (!postDataSchemaOnly)
 			dumpConversion(fout, (ConvInfo *) dobj);
@@ -3152,6 +3224,7 @@ dumpProcLang(Archive *fout, ProcLangInfo *plang)
 	char	   *qlanname;
 	char	   *lanschema;
 	FuncInfo   *funcInfo;
+	FuncInfo   *inlineInfo = NULL;
 	FuncInfo   *validatorInfo = NULL;
 
 	if (dataOnly)
@@ -3176,12 +3249,19 @@ dumpProcLang(Archive *fout, ProcLangInfo *plang)
 			validatorInfo = NULL;
 	}
 
+	if (OidIsValid(plang->laninline))
+	{
+		inlineInfo = findFuncByOid(plang->laninline);
+		if (inlineInfo != NULL && !inlineInfo->dobj.dump)
+			inlineInfo = NULL;
+	}
 	/*
 	 * If the functions are dumpable then emit a traditional CREATE LANGUAGE
 	 * with parameters.  Otherwise, dump only if shouldDumpProcLangs() says to
 	 * dump it.
 	 */
 	useParams = (funcInfo != NULL &&
+				 (inlineInfo != NULL || !OidIsValid(plang->laninline)) &&
 				 (validatorInfo != NULL || !OidIsValid(plang->lanvalidator)));
 
 	if (!useParams && !shouldDumpProcLangs())
@@ -3212,6 +3292,17 @@ dumpProcLang(Archive *fout, ProcLangInfo *plang)
 	{
 		appendPQExpBuffer(defqry, " HANDLER %s",
 						  fmtId(funcInfo->dobj.name));
+	
+		if (OidIsValid(plang->laninline))
+		{
+			appendPQExpBuffer(defqry, " INLINE ");
+			/* Cope with possibility that inline is in different schema */
+			if (inlineInfo->dobj.namespace != funcInfo->dobj.namespace)
+				appendPQExpBuffer(defqry, "%s.",
+							fmtId(inlineInfo->dobj.namespace->dobj.name));
+			appendPQExpBuffer(defqry, "%s",
+							  fmtId(inlineInfo->dobj.name));
+		}
 		if (OidIsValid(plang->lanvalidator))
 		{
 			appendPQExpBuffer(defqry, " VALIDATOR ");
@@ -3411,13 +3502,32 @@ dumpPlTemplateFunc(Oid funcOid, const char *templateField, PQExpBuffer buffer)
 /*
  * format_function_arguments: generate function name and argument list
  *
+ * This is used when we can rely on pg_get_function_arguments to format
+ * the argument list.
+ */
+static char *
+format_function_arguments(FuncInfo *finfo, char *funcargs)
+{
+	PQExpBufferData fn;
+
+	initPQExpBuffer(&fn);
+	appendPQExpBuffer(&fn, "%s(%s)", fmtId(finfo->dobj.name), funcargs);
+	return fn.data;
+}
+
+/*
+ * format_function_arguments_old: generate function name and argument list
+ *
  * The argument type names are qualified if needed.  The function name
  * is never qualified.
+ *
+ * This is used only with pre-GPDB 5.0 servers, so we aren't expecting to see
+ * DEFAULT arguments.
  *
  * Any or all of allargtypes, argmodes, argnames may be NULL.
  */
 static char *
-format_function_arguments(FuncInfo *finfo, int nallargs,
+format_function_arguments_old(FuncInfo *finfo, int nallargs,
 						  char **allargtypes,
 						  char **argmodes,
 						  char **argnames)
@@ -3601,6 +3711,8 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	char	   *proretset;
 	char	   *prosrc;
 	char	   *probin;
+	char       *funcargs;
+	char       *funcresult;
 	char	   *proallargtypes;
 	char	   *proargmodes;
 	char	   *proargnames;
@@ -3615,6 +3727,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	char	  **argmodes = NULL;
 	char	  **argnames = NULL;
 	bool		isGE43 = isGPDB4300OrLater();
+	bool		isGE50 = isGPDB5000OrLater();
 
 	/* Skip if not to be dumped */
 	if (!finfo->dobj.dump || dataOnly)
@@ -3629,15 +3742,34 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	selectSourceSchema(finfo->dobj.namespace->dobj.name);
 
 	/* Fetch function-specific details */
-	appendPQExpBuffer(query,
-					  "SELECT proretset, prosrc, probin, "
-					  "proallargtypes, proargmodes, proargnames, "
-					  "provolatile, proisstrict, prosecdef, %s"
-					  "(SELECT lanname FROM pg_catalog.pg_language WHERE oid = prolang) as lanname "
-					  "FROM pg_catalog.pg_proc "
-					  "WHERE oid = '%u'::pg_catalog.oid",
-					  (isGE43 ? "prodataaccess, " : ""),
-					  finfo->dobj.catId.oid);
+	if (isGE50)
+	{
+		/*
+		 * In GPDB 5.0 and up we rely on pg_get_function_arguments and
+		 * pg_get_function_result instead of examining proallargtypes etc.
+		 */
+		appendPQExpBuffer(query,
+						  "SELECT proretset, prosrc, probin, "
+						  "pg_catalog.pg_get_function_arguments(oid) as funcargs, "
+						  "pg_catalog.pg_get_function_result(oid) as funcresult, "
+						  "provolatile, proisstrict, prosecdef, prodataaccess, "
+						  "(SELECT lanname FROM pg_catalog.pg_language WHERE oid = prolang) as lanname "
+						  "FROM pg_catalog.pg_proc "
+						  "WHERE oid = '%u'::pg_catalog.oid",
+						  finfo->dobj.catId.oid);
+	}
+	else
+	{
+		appendPQExpBuffer(query,
+						  "SELECT proretset, prosrc, probin, "
+						  "proallargtypes, proargmodes, proargnames, "
+						  "provolatile, proisstrict, prosecdef, %s"
+						  "(SELECT lanname FROM pg_catalog.pg_language WHERE oid = prolang) as lanname "
+						  "FROM pg_catalog.pg_proc "
+						  "WHERE oid = '%u'::pg_catalog.oid",
+						  (isGE43 ? "prodataaccess, " : ""),
+						  finfo->dobj.catId.oid);
+	}
 
 	res = PQexec(g_conn, query->data);
 	check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
@@ -3654,9 +3786,19 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	proretset = PQgetvalue(res, 0, PQfnumber(res, "proretset"));
 	prosrc = PQgetvalue(res, 0, PQfnumber(res, "prosrc"));
 	probin = PQgetvalue(res, 0, PQfnumber(res, "probin"));
-	proallargtypes = PQgetvalue(res, 0, PQfnumber(res, "proallargtypes"));
-	proargmodes = PQgetvalue(res, 0, PQfnumber(res, "proargmodes"));
-	proargnames = PQgetvalue(res, 0, PQfnumber(res, "proargnames"));
+	if (isGE50)
+	{
+		funcargs = PQgetvalue(res, 0, PQfnumber(res, "funcargs"));
+		funcresult = PQgetvalue(res, 0, PQfnumber(res, "funcresult"));
+		proallargtypes = proargmodes = proargnames = NULL;
+	}
+	else
+	{
+		proallargtypes = PQgetvalue(res, 0, PQfnumber(res, "proallargtypes"));
+		proargmodes = PQgetvalue(res, 0, PQfnumber(res, "proargmodes"));
+		proargnames = PQgetvalue(res, 0, PQfnumber(res, "proargnames"));
+		funcargs = funcresult = NULL;
+	}
 	provolatile = PQgetvalue(res, 0, PQfnumber(res, "provolatile"));
 	proisstrict = PQgetvalue(res, 0, PQfnumber(res, "proisstrict"));
 	prosecdef = PQgetvalue(res, 0, PQfnumber(res, "prosecdef"));
@@ -3747,8 +3889,11 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 		}
 	}
 
-	funcsig = format_function_arguments(finfo, nallargs, allargtypes,
-										argmodes, argnames);
+	if (funcargs)
+		funcsig = format_function_arguments(finfo, funcargs);
+	else
+		funcsig = format_function_arguments_old(finfo, nallargs, allargtypes,
+												argmodes, argnames);
 	funcsig_tag = format_function_signature(finfo, false);
 
 	/*
@@ -3760,29 +3905,31 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 
 	appendPQExpBuffer(q, "CREATE FUNCTION %s ", funcsig);
 
-	/* switch between RETURNS SETOF RECORD and RETURNS TABLE functions */
-	if (!is_returns_table_function(nallargs, argmodes))
-	{
-		rettypename = getFormattedTypeName(finfo->prorettype, zeroAsOpaque);
-		appendPQExpBuffer(q, "RETURNS %s%s\n    %s\n    LANGUAGE %s",
-						  (proretset[0] == 't') ? "SETOF " : "",
-						  rettypename,
-						  asPart->data,
-						  fmtId(lanname));
-		free(rettypename);
-	}
+	if (funcresult)
+		appendPQExpBuffer(q, "RETURNS %s", funcresult);
 	else
 	{
-		char	   *func_cols;
-
-		func_cols = format_table_function_columns(finfo, nallargs, allargtypes,
-												  argmodes, argnames);
-		appendPQExpBuffer(q, "RETURNS TABLE %s\n    %s\n    LANGUAGE %s",
-						  func_cols,
-						  asPart->data,
-						  fmtId(lanname));
-		free(func_cols);
+		/* switch between RETURNS SETOF RECORD and RETURNS TABLE functions */
+		if (!is_returns_table_function(nallargs, argmodes))
+		{
+			rettypename = getFormattedTypeName(finfo->prorettype, zeroAsOpaque);
+			appendPQExpBuffer(q, "RETURNS %s%s",
+							  (proretset[0] == 't') ? "SETOF " : "",
+							  rettypename);
+			free(rettypename);
+		}
+		else
+		{
+			char	   *func_cols;
+			func_cols = format_table_function_columns(finfo, nallargs, allargtypes,
+													  argmodes, argnames);
+			appendPQExpBuffer(q, "RETURNS TABLE %s", func_cols);
+			free(func_cols);
+		}
 	}
+
+	appendPQExpBuffer(q, "\n    %s", asPart->data);
+	appendPQExpBuffer(q, "\n    LANGUAGE %s", fmtId(lanname));
 
 	if (provolatile[0] != PROVOLATILE_VOLATILE)
 	{
@@ -4556,6 +4703,264 @@ dumpOpclass(Archive *fout, OpclassInfo *opcinfo)
 				opcinfo->dobj.catId, 0, opcinfo->dobj.dumpId);
 
 	free(amname);
+	destroyPQExpBuffer(query);
+	destroyPQExpBuffer(q);
+	destroyPQExpBuffer(delq);
+}
+
+/*
+ * dumpOpfamily
+ *	  write out a single operator family definition
+ */
+static void
+dumpOpfamily(Archive *fout, OpfamilyInfo *opfinfo)
+{
+	PQExpBuffer query;
+	PQExpBuffer q;
+	PQExpBuffer delq;
+	PGresult   *res;
+	PGresult   *res_ops;
+	PGresult   *res_procs;
+	int			ntups;
+	int			i_amname;
+	int			i_amopstrategy;
+	int			i_amopreqcheck;
+	int			i_amopopr;
+	int			i_amprocnum;
+	int			i_amproc;
+	int			i_amproclefttype;
+	int			i_amprocrighttype;
+	char	   *amname;
+	char	   *amopstrategy;
+	char	   *amopreqcheck;
+	char	   *amopopr;
+	char	   *amprocnum;
+	char	   *amproc;
+	char	   *amproclefttype;
+	char	   *amprocrighttype;
+	bool		needComma;
+	int			i;
+
+	/* Skip if not to be dumped */
+	if (!opfinfo->dobj.dump || dataOnly)
+		return;
+
+	/*
+	 * We want to dump the opfamily only if (1) it contains "loose" operators
+	 * or functions, or (2) it contains an opclass with a different name or
+	 * owner.  Otherwise it's sufficient to let it be created during creation
+	 * of the contained opclass, and not dumping it improves portability of
+	 * the dump.  Since we have to fetch the loose operators/funcs anyway,
+	 * do that first.
+	 */
+
+	query = createPQExpBuffer();
+	q = createPQExpBuffer();
+	delq = createPQExpBuffer();
+
+	/* Make sure we are in proper schema so regoperator works correctly */
+	selectSourceSchema(opfinfo->dobj.namespace->dobj.name);
+
+	/*
+	 * Fetch only those opfamily members that are tied directly to the opfamily
+	 * by pg_depend entries.
+	 */
+	appendPQExpBuffer(query, "SELECT amopstrategy, amopreqcheck, "
+					  "amopopr::pg_catalog.regoperator "
+					  "FROM pg_catalog.pg_amop ao, pg_catalog.pg_depend "
+					  "WHERE refclassid = 'pg_catalog.pg_opfamily'::pg_catalog.regclass "
+					  "AND refobjid = '%u'::pg_catalog.oid "
+					  "AND classid = 'pg_catalog.pg_amop'::pg_catalog.regclass "
+					  "AND objid = ao.oid "
+					  "ORDER BY amopstrategy",
+					  opfinfo->dobj.catId.oid);
+
+	res_ops = PQexec(g_conn, query->data);
+	check_sql_result(res_ops, g_conn, query->data, PGRES_TUPLES_OK);
+
+	resetPQExpBuffer(query);
+
+	appendPQExpBuffer(query, "SELECT amprocnum, "
+					  "amproc::pg_catalog.regprocedure, "
+					  "amproclefttype::pg_catalog.regtype, "
+					  "amprocrighttype::pg_catalog.regtype "
+					  "FROM pg_catalog.pg_amproc ap, pg_catalog.pg_depend "
+					  "WHERE refclassid = 'pg_catalog.pg_opfamily'::pg_catalog.regclass "
+					  "AND refobjid = '%u'::pg_catalog.oid "
+					  "AND classid = 'pg_catalog.pg_amproc'::pg_catalog.regclass "
+					  "AND objid = ap.oid "
+					  "ORDER BY amprocnum",
+					  opfinfo->dobj.catId.oid);
+
+	res_procs = PQexec(g_conn, query->data);
+	check_sql_result(res_procs, g_conn, query->data, PGRES_TUPLES_OK);
+
+	if (PQntuples(res_ops) == 0 && PQntuples(res_procs) == 0)
+	{
+		/* No loose members, so check contained opclasses */
+		resetPQExpBuffer(query);
+
+		appendPQExpBuffer(query, "SELECT 1 "
+						  "FROM pg_catalog.pg_opclass c, pg_catalog.pg_opfamily f, pg_catalog.pg_depend "
+						  "WHERE f.oid = '%u'::pg_catalog.oid "
+						  "AND refclassid = 'pg_catalog.pg_opfamily'::pg_catalog.regclass "
+						  "AND refobjid = f.oid "
+						  "AND classid = 'pg_catalog.pg_opclass'::pg_catalog.regclass "
+						  "AND objid = c.oid "
+						  "AND (opcname != opfname OR opcnamespace != opfnamespace OR opcowner != opfowner) "
+						  "LIMIT 1",
+						  opfinfo->dobj.catId.oid);
+
+		res = PQexec(g_conn, query->data);
+		check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
+
+		if (PQntuples(res) == 0)
+		{
+			/* no need to dump it, so bail out */
+			PQclear(res);
+			PQclear(res_ops);
+			PQclear(res_procs);
+			destroyPQExpBuffer(query);
+			destroyPQExpBuffer(q);
+			destroyPQExpBuffer(delq);
+			return;
+		}
+
+		PQclear(res);
+	}
+
+	/* Get additional fields from the pg_opfamily row */
+	resetPQExpBuffer(query);
+
+	appendPQExpBuffer(query, "SELECT "
+					  "(SELECT amname FROM pg_catalog.pg_am WHERE oid = opfmethod) AS amname "
+					  "FROM pg_catalog.pg_opfamily "
+					  "WHERE oid = '%u'::pg_catalog.oid",
+					  opfinfo->dobj.catId.oid);
+
+	res = PQexec(g_conn, query->data);
+	check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
+
+	/* Expecting a single result only */
+	ntups = PQntuples(res);
+	if (ntups != 1)
+	{
+		write_msg(NULL, "Got %d rows instead of one from: %s",
+				  ntups, query->data);
+		exit_nicely();
+	}
+
+	i_amname = PQfnumber(res, "amname");
+
+	/* amname will still be needed after we PQclear res */
+	amname = strdup(PQgetvalue(res, 0, i_amname));
+
+	/*
+	 * DROP must be fully qualified in case same name appears in pg_catalog
+	 */
+	appendPQExpBuffer(delq, "DROP OPERATOR FAMILY %s",
+					  fmtId(opfinfo->dobj.namespace->dobj.name));
+	appendPQExpBuffer(delq, ".%s",
+					  fmtId(opfinfo->dobj.name));
+	appendPQExpBuffer(delq, " USING %s;\n",
+					  fmtId(amname));
+
+	/* Build the fixed portion of the CREATE command */
+	appendPQExpBuffer(q, "CREATE OPERATOR FAMILY %s",
+					  fmtId(opfinfo->dobj.name));
+	appendPQExpBuffer(q, " USING %s;\n",
+					  fmtId(amname));
+
+	PQclear(res);
+
+	/* Do we need an ALTER to add loose members? */
+	if (PQntuples(res_ops) > 0 || PQntuples(res_procs) > 0)
+	{
+		appendPQExpBuffer(q, "ALTER OPERATOR FAMILY %s",
+						  fmtId(opfinfo->dobj.name));
+		appendPQExpBuffer(q, " USING %s ADD\n    ",
+						  fmtId(amname));
+
+		needComma = false;
+
+		/*
+		 * Now fetch and print the OPERATOR entries (pg_amop rows).
+		 */
+		ntups = PQntuples(res_ops);
+
+		i_amopstrategy = PQfnumber(res_ops, "amopstrategy");
+		i_amopreqcheck = PQfnumber(res_ops, "amopreqcheck");
+		i_amopopr = PQfnumber(res_ops, "amopopr");
+
+		for (i = 0; i < ntups; i++)
+		{
+			amopstrategy = PQgetvalue(res_ops, i, i_amopstrategy);
+			amopreqcheck = PQgetvalue(res_ops, i, i_amopreqcheck);
+			amopopr = PQgetvalue(res_ops, i, i_amopopr);
+
+			if (needComma)
+				appendPQExpBuffer(q, " ,\n    ");
+
+			appendPQExpBuffer(q, "OPERATOR %s %s",
+							  amopstrategy, amopopr);
+			if (strcmp(amopreqcheck, "t") == 0)
+				appendPQExpBuffer(q, " RECHECK");
+
+			needComma = true;
+		}
+
+		/*
+		 * Now fetch and print the FUNCTION entries (pg_amproc rows).
+		 */
+		ntups = PQntuples(res_procs);
+
+		i_amprocnum = PQfnumber(res_procs, "amprocnum");
+		i_amproc = PQfnumber(res_procs, "amproc");
+		i_amproclefttype = PQfnumber(res_procs, "amproclefttype");
+		i_amprocrighttype = PQfnumber(res_procs, "amprocrighttype");
+
+		for (i = 0; i < ntups; i++)
+		{
+			amprocnum = PQgetvalue(res_procs, i, i_amprocnum);
+			amproc = PQgetvalue(res_procs, i, i_amproc);
+			amproclefttype = PQgetvalue(res_procs, i, i_amproclefttype);
+			amprocrighttype = PQgetvalue(res_procs, i, i_amprocrighttype);
+
+			if (needComma)
+				appendPQExpBuffer(q, " ,\n    ");
+
+			appendPQExpBuffer(q, "FUNCTION %s (%s, %s) %s",
+							  amprocnum, amproclefttype, amprocrighttype,
+							  amproc);
+
+			needComma = true;
+		}
+
+		appendPQExpBuffer(q, ";\n");
+	}
+
+	ArchiveEntry(fout, opfinfo->dobj.catId, opfinfo->dobj.dumpId,
+				 opfinfo->dobj.name,
+				 opfinfo->dobj.namespace->dobj.name,
+				 NULL,
+				 opfinfo->rolname,
+				 false, "OPERATOR FAMILY", q->data, delq->data, NULL,
+				 opfinfo->dobj.dependencies, opfinfo->dobj.nDeps,
+				 NULL, NULL);
+
+	/* Dump Operator Family Comments */
+	resetPQExpBuffer(q);
+	appendPQExpBuffer(q, "OPERATOR FAMILY %s",
+					  fmtId(opfinfo->dobj.name));
+	appendPQExpBuffer(q, " USING %s",
+					  fmtId(amname));
+	dumpComment(fout, q->data,
+				NULL, opfinfo->rolname,
+				opfinfo->dobj.catId, 0, opfinfo->dobj.dumpId);
+
+	free(amname);
+	PQclear(res_ops);
+	PQclear(res_procs);
 	destroyPQExpBuffer(query);
 	destroyPQExpBuffer(q);
 	destroyPQExpBuffer(delq);
@@ -5810,7 +6215,8 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				relname = pg_strdup(PQgetvalue(res, i, i_relname));
 				parname = pg_strdup(PQgetvalue(res, i, i_parname));
 				snprintf(tmpExtTable, sizeof(tmpExtTable), "%s%s", relname, EXT_PARTITION_NAME_POSTFIX);
-				appendPQExpBuffer(q, "ALTER TABLE %s ", fmtId(tbinfo->dobj.name));
+				appendPQExpBuffer(q, "ALTER TABLE %s.", fmtId(tbinfo->dobj.namespace->dobj.name));
+				appendPQExpBuffer(q, "%s ", fmtId(tbinfo->dobj.name));
 				appendPQExpBuffer(q, "EXCHANGE PARTITION %s ", fmtId(parname));
 				appendPQExpBuffer(q, "WITH TABLE %s WITHOUT VALIDATION; ", fmtId(tmpExtTable));
 
@@ -5827,7 +6233,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		appendPQExpBuffer(q, "\n");
 
 		/*
-		 * MPP-25549: Dump ALTER statements for subpartition tables being 
+		 * MPP-25549: Dump ALTER statements for subpartition tables being
 		 * set to different schema other than the parent
 		 */
 		if (g_gp_supportsPartitioning)
@@ -5840,12 +6246,13 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 			char *relname = NULL;
 			resetPQExpBuffer(query);
 
-			/* Prefixing the quoted object name in where clause with 'E' to avoid backslash escape warnings. */
-			appendPQExpBuffer(query, "SELECT "
-						"partitionschemaname, partitiontablename FROM pg_catalog.pg_partitions "
-						"WHERE partitionschemaname != schemaname AND tablename = ");
-
+			appendPQExpBuffer(query,
+			    "SELECT partitionschemaname, partitiontablename FROM pg_catalog.pg_partitions "
+				" WHERE partitionschemaname != schemaname AND schemaname = ");
+			appendStringLiteralConn(query, tbinfo->dobj.namespace->dobj.name, g_conn);
+			appendPQExpBuffer(query, " AND tablename = ");
 			appendStringLiteralConn(query, tbinfo->dobj.name, g_conn);
+
 			res = PQexec(g_conn, query->data);
 			check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
 
@@ -7093,17 +7500,17 @@ monitorThreadProc(void *arg __attribute__((unused)))
 	while (!bGotFinished)
 	{
 
-		/* Replacing select() by poll() here to overcome the limitations of 
+		/* Replacing select() by poll() here to overcome the limitations of
 		select() to handle large socket file descriptor values.
 		*/
 
 		pollInput->fd = sock;
 		pollInput->events = POLLIN;
-		pollInput->revents = 0; 
+		pollInput->revents = 0;
 		pollTimeout = 2000;
 		pollResult = poll(pollInput, 1, pollTimeout);
 
-		if(pollResult < 0) 
+		if(pollResult < 0)
 		{
 			mpp_err_msg(logError, progname, "poll failed for backup key %s, instid %d, segid %d failed\n",
 						g_CDBDumpKey, g_role, g_dbID);
@@ -7424,12 +7831,13 @@ dumpDatabaseDefinition()
 	 * get a good error message from sh if we can't write to the file
 	 */
 	fcat = fopen(pszBackupFileName, "w");
-	free(pszBackupFileName);
 	if (fcat == NULL)
 	{
 		mpp_err_msg(logError, progname, "Error creating file %s in gp_dump_agent",
 					pszBackupFileName);
+		exit_nicely();
 	}
+	free(pszBackupFileName);
 
 	fprintf(fcat, "--\n-- Database creation\n--\n\n");
 
@@ -7477,7 +7885,7 @@ dumpDatabaseDefinition()
 	}
 	if (strlen(dba) > 0)
 	{
-		appendPQExpBuffer(creaQry, " OWNER = %s", dba);
+		appendPQExpBuffer(creaQry, " OWNER = %s", fmtId(dba));
 	}
 
 	if (strlen(tablespace) > 0 && strcmp(tablespace, "pg_default") != 0)
@@ -7540,15 +7948,14 @@ dumpDatabaseDefinitionToDDBoost()
 	 * Make sure we can create this file before we spin off sh cause we don't
 	 * get a good error message from sh if we can't write to the file
 	 */
-	path1.su_name = DDP_SU_NAME;
+	path1.su_name = ddboost_storage_unit;
 	path1.path_name = g_pszDDBoostDir;
 
 	err = createDDBoostDir(ddp_conn, path1.su_name, path1.path_name);
 	if (err)
 	{
 		mpp_err_msg(logError, progname, "Error creating directory on ddboost\n");
-		free(pszBackupFileName);
-		return ;
+		exit_nicely();
 	}
 
 	path1.path_name = pszBackupFileName;
@@ -7558,8 +7965,7 @@ dumpDatabaseDefinitionToDDBoost()
 	{
 		mpp_err_msg(logError, progname, "Error creating file %s on ddboost from gp_dump_agent",
 					pszBackupFileName);
-		free(pszBackupFileName);
-		return ;
+		exit_nicely();
 	}
 	free(pszBackupFileName);
 
@@ -7568,7 +7974,7 @@ dumpDatabaseDefinitionToDDBoost()
 	if(err)
 	{
 		mpp_err_msg(logError, progname, "Write to cdatabase file failed\n");
-		return;
+		exit_nicely();
 	}
 
 	offset += ret_count;
@@ -7629,7 +8035,10 @@ dumpDatabaseDefinitionToDDBoost()
 	nmemb = strlen(creaQry->data);
 	err = ddp_write(handle, creaQry->data, nmemb, offset, &ret_count);
 	if (ret_count != nmemb)
+	{
 		mpp_err_msg(logError, progname, "write to cdatabase file failed on ddboost\n");
+		exit_nicely();
+	}
 
 	ddp_close_file(handle);
 	PQclear(res);
@@ -7778,7 +8187,7 @@ updateArchiveWithDDFile(ArchiveHandle *AH, char *g_pszDDBoostFile, const char *g
 	int err = 0;
 	char *dir_name = "db_dumps";
 
-	path1.su_name = DDP_SU_NAME;
+	path1.su_name = ddboost_storage_unit;
 
 	if (g_pszDDBoostDir)
 		path1.path_name  = pg_strdup(g_pszDDBoostDir);
@@ -7794,7 +8203,7 @@ updateArchiveWithDDFile(ArchiveHandle *AH, char *g_pszDDBoostFile, const char *g
 }
 
 int
-createDDBoostDir(ddp_conn_desc_t ddp_conn, char *storage_unit_name, char *path_name)
+createDDBoostDir(ddp_conn_desc_t ddp_conn, char *ddboost_storage_unit, char *path_name)
 {
 	char *pch = NULL;
 	ddp_path_t path = {0};
@@ -7807,7 +8216,7 @@ createDDBoostDir(ddp_conn_desc_t ddp_conn, char *storage_unit_name, char *path_n
 	pch = strtok(path_name, " /");
 	while(pch != NULL)
 	{
-		path.su_name = storage_unit_name;
+		path.su_name = ddboost_storage_unit;
 		strcat(full_path, "/");
 		strcat(full_path, pch);
 		path.path_name = full_path;
@@ -7834,25 +8243,31 @@ makeArchive(char *filename)
 	/* open the output file */
 	switch (fileFormat)
 	{
+		case 'a':
+		case 'A':
+			plainText = 1;
+			g_fout = CreateArchive(filename, archNull, 0, archModeAppend);
+			break;
+
 		case 'c':
 		case 'C':
-			g_fout = CreateArchive(filename, archCustom, compressLevel);
+			g_fout = CreateArchive(filename, archCustom, compressLevel, archModeWrite);
 			break;
 
 		case 'f':
 		case 'F':
-			g_fout = CreateArchive(filename, archFiles, compressLevel);
+			g_fout = CreateArchive(filename, archFiles, compressLevel, archModeWrite);
 			break;
 
 		case 'p':
 		case 'P':
 			plainText = 1;
-			g_fout = CreateArchive(filename, archNull, 0);
+			g_fout = CreateArchive(filename, archNull, 0, archModeWrite);
 			break;
 
 		case 't':
 		case 'T':
-			g_fout = CreateArchive(filename, archTar, compressLevel);
+			g_fout = CreateArchive(filename, archTar, compressLevel, archModeWrite);
 			break;
 
 		default:

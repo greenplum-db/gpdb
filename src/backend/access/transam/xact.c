@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/transam/xact.c,v 1.231 2007/01/05 22:19:23 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/transam/xact.c,v 1.234 2007/02/09 03:35:33 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -53,6 +53,7 @@
 #include "utils/memutils.h"
 #include "utils/relcache.h"
 #include "utils/resscheduler.h"
+#include "utils/sharedsnapshot.h"
 #include "access/distributedlog.h"
 #include "access/clog.h"
 #include "utils/vmem_tracker.h"
@@ -595,17 +596,6 @@ GetCurrentTransactionNestLevel(void)
 	return s->nestingLevel;
 }
 
-#ifdef WATCH_VISIBILITY_IN_ACTION
-#define MAX_WATCH_TRANSACTION_BUFFER 2000
-static int WatchBufferOffset = 0;
-static char WatchCurrentTransactionBuffer[MAX_WATCH_TRANSACTION_BUFFER];
-
-char* WatchCurrentTransactionString(void)
-{
-	return WatchCurrentTransactionBuffer;
-}
-#endif
-
 /*
  * We will return true for the Xid of the current subtransaction, any of
  * its subcommitted children, any of its parents, or any of their
@@ -631,19 +621,7 @@ TransactionIdIsCurrentTransactionIdInternal(TransactionId xid)
 				(TransactionIdIsValid(s->transactionId)))
 		{
 			if (TransactionIdEquals(xid, s->transactionId))
-			{
-#ifdef WATCH_VISIBILITY_IN_ACTION
-				if (s == &TopTransactionStateData)
-					WatchBufferOffset += snprintf(&WatchCurrentTransactionBuffer[WatchBufferOffset],
-										MAX_WATCH_TRANSACTION_BUFFER-WatchBufferOffset,
-										" is parent,");
-				else
-					WatchBufferOffset += snprintf(&WatchCurrentTransactionBuffer[WatchBufferOffset],
-										MAX_WATCH_TRANSACTION_BUFFER-WatchBufferOffset,
-										" is subtransaction,");
-#endif
 				return true;
-			}
 			foreach(cell, s->childXids)
 			{
 				if (TransactionIdEquals(xid, lfirst_xid(cell)))
@@ -653,15 +631,7 @@ TransactionIdIsCurrentTransactionIdInternal(TransactionId xid)
 				 * hence, can safely breakout if XID follows currentListNode XID.
 				 */
 				if (TransactionIdFollows(xid, lfirst_xid(cell)))
-				{
-#ifdef WATCH_VISIBILITY_IN_ACTION
-					WatchBufferOffset += snprintf(&WatchCurrentTransactionBuffer[WatchBufferOffset],
-										MAX_WATCH_TRANSACTION_BUFFER-WatchBufferOffset,
-										" subxid %u reached not checking ahead(childlist),",
-										lfirst_xid(cell));
-#endif
 					break;
-				}
 			}
 
 			/*
@@ -671,27 +641,13 @@ TransactionIdIsCurrentTransactionIdInternal(TransactionId xid)
 			 * So, can safely breakout.
 			 */
 			 if (TransactionIdFollows(xid, s->transactionId))
-			 {
-#ifdef WATCH_VISIBILITY_IN_ACTION
-				WatchBufferOffset += snprintf(&WatchCurrentTransactionBuffer[WatchBufferOffset],
-									MAX_WATCH_TRANSACTION_BUFFER-WatchBufferOffset,
-									" subxid %u reached not checking ahead(parent),",
-									s->transactionId);
-#endif
 				break;
-			 }
 		}
 
 		if (s->fastLink)
 		{
 			if (TransactionIdPrecedesOrEquals(xid, s->fastLink->transactionId))
 			{
-#ifdef WATCH_VISIBILITY_IN_ACTION
-				WatchBufferOffset += snprintf(&WatchCurrentTransactionBuffer[WatchBufferOffset],
-									MAX_WATCH_TRANSACTION_BUFFER-WatchBufferOffset,
-									" fast tracking search to subxid %u parent,",
-									s->fastLink->transactionId);
-#endif
 				s = s->fastLink;
 				continue;
 			}
@@ -714,14 +670,6 @@ TransactionIdIsCurrentTransactionId(TransactionId xid)
 	uint32		cnt = 0;
 	uint32		sub = 0;
 
-#ifdef WATCH_VISIBILITY_IN_ACTION
-	WatchBufferOffset = 0;
-
-	WatchBufferOffset += snprintf(&WatchCurrentTransactionBuffer[WatchBufferOffset],
-						MAX_WATCH_TRANSACTION_BUFFER-WatchBufferOffset,
-						"TransactionIdIsCurrentTransactionId xid %u",
-						xid);
-#endif
 	/*
 	 * We always say that BootstrapTransactionId is "not my transaction ID"
 	 * even when it is (ie, during bootstrap).	Along with the fact that
@@ -736,31 +684,13 @@ TransactionIdIsCurrentTransactionId(TransactionId xid)
 	 * any non-normal XID.
 	 */
 	if (!TransactionIdIsNormal(xid))
-	{
-#ifdef WATCH_VISIBILITY_IN_ACTION
-		WatchBufferOffset += snprintf(&WatchCurrentTransactionBuffer[WatchBufferOffset],
-							MAX_WATCH_TRANSACTION_BUFFER-WatchBufferOffset,
-							" not normal");
-#endif
 		return false;
-	}
 
     if ((DistributedTransactionContext == DTX_CONTEXT_QE_READER ||
 		 DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON))
 	{
-#ifdef WATCH_VISIBILITY_IN_ACTION
-		WatchBufferOffset += snprintf(&WatchCurrentTransactionBuffer[WatchBufferOffset],
-							MAX_WATCH_TRANSACTION_BUFFER-WatchBufferOffset,
-							" Segment Reader or Segment Entry DB singleton");
-#endif
-
 		if (TransactionIdEquals(xid, TopTransactionStateData.transactionId))
 		{
-#ifdef WATCH_VISIBILITY_IN_ACTION
-			WatchBufferOffset += snprintf(&WatchCurrentTransactionBuffer[WatchBufferOffset],
-											MAX_WATCH_TRANSACTION_BUFFER-WatchBufferOffset,
-											" is parent");
-#endif
 			elog((Debug_print_full_dtm ? LOG : DEBUG5),"qExec Reader CheckSharedSnapshotForSubtransaction(xid = %u) = true -- TOP", xid);
 			return true;
 		}
@@ -776,12 +706,7 @@ TransactionIdIsCurrentTransactionId(TransactionId xid)
 		 * into the shared snapshot which in turn is copied into subxbuf.
 		 */
 		isCurrentTransactionId = false;		/* Assume. */
-#ifdef WATCH_VISIBILITY_IN_ACTION
-		WatchBufferOffset += snprintf(&WatchCurrentTransactionBuffer[WatchBufferOffset],
-										MAX_WATCH_TRANSACTION_BUFFER-WatchBufferOffset,
-										" subcnt %d",
-										 SharedLocalSnapshotSlot->total_subcnt);
-#endif
+
 		/*
 		 * Cursor readers cannot directly access the writer shared
 		 * snapshot -- since it may have been modified by the writer
@@ -806,23 +731,6 @@ TransactionIdIsCurrentTransactionId(TransactionId xid)
 			isCurrentTransactionId = FindXidInXidBuffer(&subxbuf, xid, &cnt, &index);
 		}
 
-		if (isCurrentTransactionId)
-		{
-#ifdef WATCH_VISIBILITY_IN_ACTION
-			WatchBufferOffset += snprintf(&WatchCurrentTransactionBuffer[WatchBufferOffset],
-								 MAX_WATCH_TRANSACTION_BUFFER-WatchBufferOffset,
-								 " subxid matched at page: %d, index: %d",
-								 cnt, index);
-#endif
-		}
-		else
-		{
-#ifdef WATCH_VISIBILITY_IN_ACTION
-			WatchBufferOffset += snprintf(&WatchCurrentTransactionBuffer[WatchBufferOffset],
-								MAX_WATCH_TRANSACTION_BUFFER-WatchBufferOffset,
-								" subxid did not match");
-#endif
-		}
 		elog((Debug_print_full_dtm ? LOG : DEBUG5),
 		     "qExec Reader CheckSharedSnapshotForSubtransaction(xid = %u) = %s -- Subtransaction",
 		     xid, (isCurrentTransactionId ? "true" : "false"));
@@ -834,14 +742,7 @@ TransactionIdIsCurrentTransactionId(TransactionId xid)
 	Assert(DistributedTransactionContext != DTX_CONTEXT_QE_READER);
 	Assert(DistributedTransactionContext != DTX_CONTEXT_QE_ENTRY_DB_SINGLETON);
 
-#ifdef WATCH_VISIBILITY_IN_ACTION
-	WatchBufferOffset += snprintf(&WatchCurrentTransactionBuffer[WatchBufferOffset],
-						MAX_WATCH_TRANSACTION_BUFFER-WatchBufferOffset,
-						" normal check");
-#endif
-
-	bool flag = TransactionIdIsCurrentTransactionIdInternal(xid);
-	return flag;
+	return TransactionIdIsCurrentTransactionIdInternal(xid);
 }
 
 
@@ -2386,7 +2287,7 @@ OpenOrCreateSubtransIdFile(DistributedTransactionId dxid)
 	{
 		subxip_file = OpenTemporaryFile(
 			Subtransaction_filename(dxid),
-			1, false, true, true, false);
+			false, true, true, false);
 		// What should be done if this fails ??
 	}
 }
@@ -2791,7 +2692,7 @@ GetSubXidsInXidBuffer(void)
 			subxip_file = OpenTemporaryFile(
 				Subtransaction_filename(
 					SharedLocalSnapshotSlot->QDxid),
-				1, false, false, false, false);
+				false, false, false, false);
 
 			if (subxip_file == 0)
 			{
@@ -2857,7 +2758,7 @@ ShowSubtransactionsForSharedSnapshot(void)
 			subxip_file = OpenTemporaryFile(
 				Subtransaction_filename(
 					SharedLocalSnapshotSlot->QDxid),
-				1, false, false, false, false);
+				false, false, false, false);
 
 			if (subxip_file == 0)
 			{
@@ -3454,6 +3355,16 @@ CommitTransaction(void)
 	AtEOXact_UpdateFlatFiles(true);
 
 	/*
+	 * Free external resources
+	 */
+	AtEOXact_ExtTables(true);
+
+	/* Reset g_dataSourceCtx
+	 * g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.
+	 */
+	AtEOXact_ResetDataSourceCtx();
+
+	/*
 	 * Prepare all QE.
 	 */
 	prepareDtxTransaction();
@@ -3472,8 +3383,6 @@ CommitTransaction(void)
 	if (Debug_abort_after_distributed_prepared &&
 		isPreparedDtxTransaction())
 	{
-//		int *ptr = NULL;
-//		*ptr = 1;
 		elog(ERROR,"Raise an error as directed by Debug_abort_after_distributed_prepared");
 	}
 
@@ -3681,6 +3590,7 @@ CommitTransaction(void)
 	ResourceOwnerRelease(TopTransactionResourceOwner,
 						 RESOURCE_RELEASE_AFTER_LOCKS,
 						 true, true);
+
 
 	/* Check we've released all catcache entries */
 	AtEOXact_CatCache(true);
@@ -3915,9 +3825,13 @@ PrepareTransaction(void)
 	LWLockRelease(ProcArrayLock);
 
 	/*
-	 * This is all post-transaction cleanup.  Note that if an error is raised
-	 * here, it's too late to abort the transaction.  This should be just
-	 * noncritical resource releasing.	See notes in CommitTransaction.
+	 * In normal commit-processing, this is all non-critical post-transaction
+	 * cleanup.  When the transaction is prepared, however, it's important that
+	 * the locks and other per-backend resources are transfered to the
+	 * prepared transaction's PGPROC entry.  Note that if an error is raised
+	 * here, it's too late to abort the transaction. XXX: This probably should
+	 * be in a critical section, to force a PANIC if any of this fails, but
+	 * that cure could be worse than the disease.
 	 */
 
 	CallXactCallbacks(XACT_EVENT_PREPARE);
@@ -3951,6 +3865,13 @@ PrepareTransaction(void)
 	ResourceOwnerRelease(TopTransactionResourceOwner,
 						 RESOURCE_RELEASE_AFTER_LOCKS,
 						 true, true);
+	/*
+	 * Allow another backend to finish the transaction.  After
+	 * PostPrepare_Twophase(), the transaction is completely detached from
+	 * our backend.  The rest is just non-critical cleanup of backend-local
+	 * state.
+	 */
+	PostPrepare_Twophase();
 
 	/* Check we've released all catcache entries */
 	AtEOXact_CatCache(true);
@@ -4089,7 +4010,12 @@ AbortTransaction(void)
 	 */
 	AfterTriggerEndXact(false);
 	AtAbort_Portals();
-	AtAbort_ExtTables();
+	AtEOXact_ExtTables(false);
+
+	/* reset g_dataSourceCtx
+	 * g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.
+	 */
+	AtEOXact_ResetDataSourceCtx();
 
 	/* Perform any Resource Scheduler abort procesing. */
 	if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler)
@@ -4101,7 +4027,7 @@ AbortTransaction(void)
 	AtEOXact_LargeObject(false);	/* 'false' means it's abort */
 	AtAbort_Notify();
 	AtEOXact_UpdateFlatFiles(false);
-
+	AtAbort_Twophase();
 
 	willHaveObjectsFromSmgr =
 			PersistentEndXactRec_WillHaveObjectsFromSmgr(EndXactRecKind_Abort);
@@ -4290,14 +4216,14 @@ AbortTransaction(void)
 	if (QueryCancelCleanup)
 	{
 		QueryCancelCleanup = false;
-		cleanupIdleReaderGangs();
+		disconnectAndDestroyIdleReaderGangs();
 	}
 
 	/* If memprot decides to kill process, make sure we destroy all processes
 	 * so that all mem/resource will be freed
 	 */
 	if(elog_geterrcode() == ERRCODE_GP_MEMPROT_KILL)
-		disconnectAndDestroyAllGangs();
+		disconnectAndDestroyAllGangs(true);
 }
 
 /*
@@ -4943,7 +4869,7 @@ RequireTransactionChain(void *stmtNode, const char *stmtType)
 	ereport(ERROR,
 			(errcode(ERRCODE_NO_ACTIVE_SQL_TRANSACTION),
 	/* translator: %s represents an SQL statement name */
-			 errmsg("%s may only be used in transaction blocks",
+			 errmsg("%s can only be used in transaction blocks",
 					stmtType)));
 }
 

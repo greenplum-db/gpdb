@@ -1,0 +1,2621 @@
+
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+create schema qp_gist_indexes2;
+set search_path to qp_gist_indexes2;
+-- end_ignore
+
+-- ----------------------------------------------------------------------
+-- Test: test00DropTable.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable1;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test01create_table.sql
+-- ----------------------------------------------------------------------
+
+CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, property BOX, poli POLYGON, bullseye CIRCLE, v VARCHAR, t TEXT, f FLOAT, p POINT, c CIRCLE, filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?'
+ )
+ DISTRIBUTED BY (id);
+
+COPY GistTable1 FROM
+'@abs_srcdir@/bugbuster/data/PropertyInfo.txt'
+ CSV
+ ;
+-- ----------------------------------------------------------------------
+-- Test: test03IndexScan.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Sanity test GiST indexes.
+--     This does some simple queries that should use the index.  
+--     We can't see directly whether the index was used, but for each query 
+--     we can run "EXPLAIN" and see whether the query used the index.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
+
+-- INSERT some more data.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (66, 'Miller', 'Lubbock or leave it', '((3, 1300), (33, 1330))',
+   '( (66,660), (67, 650), (68, 660) )', '( (66, 66), 66)' );
+
+SET enable_seqscan = FALSE;
+
+-- We should be able to search the column that uses a geometric data type, 
+-- and of course we should find the right rows.  We should be able to search 
+-- using different "formats" (e.g. spacing) of the data, and in some cases 
+-- even different "order" of the data (if the data is converted to a 
+-- canonical form, as it is for the BOX data type and perhaps some other 
+-- data types), as long as data in all of those formats should be converted 
+-- to the same internal representation.
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= '((7052,250),(6050,20))';
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- start_ignore
+EXPLAIN 
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- end_ignore
+
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id;
+
+-- Alter the table and see if we get the same results.
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= '((7052,250),(6050,20))';
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- start_ignore
+EXPLAIN
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- end_ignore
+
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id;
+
+
+-- ----------------------------------------------------------------------
+-- Test: test04Insert.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Insert more data.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- INSERT some more data.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (76, 'James McMurtry', 'Levelland', '((1500, 1500), (1700, 1900))', 
+   '( (76, 77), (76, 75), (75, 77) )', '( (76, 76), 76)' );
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: test05Select.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Sanity test GiST indexes.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1
+ WHERE property IS NOT NULL
+ ORDER BY id;
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: test08UniqueAndPKey.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: 
+--     Test UNIQUE indexes and primary keys on geometric data types.  
+--     It turns out that columns with the geometric data types (at least 
+--     box, polygon, and circle, and probably any others) can't be part of 
+--     a distribution key.  And since Greenplum allows unique indexes only on 
+--     columns that are part of the distribution key, GiST indexes cannot 
+--     be unique.  And of course since primary keys rely on unique indexes, 
+--     if we can't have unique GiST indexes, then we can't have primary 
+--     keys on geometric data types.  So this script is basically a negative 
+--     test that verifies that we get reasonable error messages when we try 
+--     to create unique GiST indexes or pimary keys on gemoetric data types.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable2;
+-- end_ignore
+
+-- Test whether geometric types can be part of a primary key.
+CREATE TABLE GistTable2 (id INTEGER, property BOX)
+ DISTRIBUTED BY (property);
+CREATE TABLE GistTable2 (id INTEGER, poli POLYGON)
+ DISTRIBUTED BY (poli);
+CREATE TABLE GistTable2 (id INTEGER, bullseye CIRCLE)
+ DISTRIBUTED BY (bullseye);
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable2;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test09NegativeTests.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: 
+--     "Negative" tests.  Verify that we get reasonable error messages when 
+--     we try to do unreasonable things, such as create indexes on types that 
+--     do not support GiST (non-geometric types).
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- Try to create GiST indexes on non-geometric data types.
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (id);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (v);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (t);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (f);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (p);
+-- Try to create GiST indexes on a mix of geometric and 
+-- non-geometric types.
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (c, f);
+
+
+-- ----------------------------------------------------------------------
+-- Test: test10MultipleColumns.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: 
+--     Test multi-column indexes.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+-- Insert 2 more records, but insert them with the same value for BULLSEYE.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (212, 'Fahrenheit', 'Slightly north of Hades', '( (212, 212), (32, 32) )', '( (212, 212), (600, 600), (70, 70) )', '( (100,100), 212 )' );
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (100, 'Celsius', 'Barely north of Hades', '( (100, 100), (0, 0) )', '( (100, 100), (600, 600), (70, 70) )', '( (100,100), 212 )' );
+
+-- This should create an index that has duplicate entries for at least one 
+--  value of bullseye.
+CREATE INDEX i2 ON GistTable1 USING GIST(bullseye);
+
+CREATE INDEX i3 ON GistTable1 USING GIST(poli, bullseye);
+
+-- This should return 2 rows.
+SELECT id FROM GistTable1
+ WHERE bullseye ~= '( (100,100), 212 )';
+
+-- This should return 1 row.
+SELECT id FROM GistTable1
+ WHERE property ~= '( (212, 212), (32, 32) )';
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: test11WherePredicate.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
+--     statement.  This does some simple queries that should use the index.  
+--     We can't see directly whether the index was used, but for each query 
+--     we can run "EXPLAIN" and see whether the query used the index.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- Add another record that has NULL in the property field.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
+ VALUES (77, 'S. T. "Rip" Sunset', 'Lost Vegas',NULL,
+   '( (77, 77), (76, 78), (78, 76) )', '( (77, 77), 77)' );
+
+CREATE INDEX propertyIsNullIndex ON GistTable1 USING Gist (property)
+ WHERE property IS NULL;
+
+-- Add two more records that have NULL in the property field.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
+ VALUES (86, 'A. Gent', 'Washingtoon D.C.',NULL,
+   '( (86, 86), (85, 87), (87, 85) )', '( (86, 86), 86)' );
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
+ VALUES (99, 'FelDon Adams', 'Washingtoon D.C.',NULL,
+   '( (99, 99), (97, 98), (98, 97) )', '( (99, 99), 99)' );
+
+SET enable_seqscan = FALSE;
+
+-- We should be able to search the column that uses a geometric data type, 
+-- and of course we should find the right rows.  We should be able to search 
+-- using different "formats" (e.g. spacing) of the data, and in some cases 
+-- even different "order" of the data (if the data is converted to a 
+-- canonical form, as it is for the BOX data type and perhaps some other 
+-- data types), as long as data in all of those formats should be converted 
+-- to the same internal representation.
+SELECT owner, property FROM GistTable1 
+ WHERE property IS NULL;
+-- start_ignore
+EXPLAIN 
+SELECT owner, property FROM GistTable1 
+ WHERE property IS NULL
+ ORDER BY id
+ ;
+-- end_ignore
+
+-- Alter the table and see if we get the same results.
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id
+ ;
+-- start_ignore
+EXPLAIN
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id
+ ;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test13Vacuum.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- PURPOSE:
+--     Test VACUUM on GiST indexes.
+--     Also test somewhat larger data sets than most of my other GiST index 
+--     tests.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+--     2010-04-20 mgilkey
+--         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
+--         tables as well as heap tables, so I removed statement(s) such as 
+--         DELETE that can't be executed on AO and CO tables.
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable13;
+DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
+DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
+DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
+-- end_ignore
+
+CREATE TABLE GistTable13 (
+ id INTEGER,
+ property BOX,
+ filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
+ )
+ DISTRIBUTED BY (id);
+
+-- Register a function that converts TEXT to BOX data type.
+CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
+  $$
+    SELECT box_in(textout($1))
+  $$ LANGUAGE SQL;
+
+CREATE FUNCTION insertIntoGistTable13 (seed INTEGER) RETURNS VOID
+AS
+$$
+DECLARE 
+   str1 VARCHAR;
+   ss VARCHAR;
+   s2 VARCHAR;
+BEGIN
+   ss = CAST(seed AS VARCHAR);
+   s2 = CAST((seed - 1) AS VARCHAR);
+   str1 = '((' || ss || ', ' || ss || '), (' || s2 || ', ' || s2 || '))';
+   INSERT INTO GistTable13(id, property) VALUES (seed, TO_BOX(CAST(str1 AS TEXT)) );
+END;
+$$
+LANGUAGE PLPGSQL
+;
+
+CREATE FUNCTION insertManyIntoGistTable13 (startValue INTEGER, endValue INTEGER) RETURNS VOID
+AS
+$$
+DECLARE 
+   i INTEGER;
+BEGIN
+   i = startValue;
+   WHILE i <= endValue LOOP
+       PERFORM insertIntoGistTable13(i);
+       i = i + 1;
+   END LOOP;
+END;
+$$
+LANGUAGE PLPGSQL
+;
+
+-- Add some rows before we create the index.
+SELECT insertManyIntoGistTable13(1, 1000);
+
+-- Create the index.
+CREATE INDEX GistIndex13 ON GistTable13 USING GiST (property);
+SET enable_seqscan = FALSE;
+
+-- Add more rows after we create the index.
+SELECT insertManyIntoGistTable13(1001, 2000);
+
+ANALYZE GistTable13;
+
+-- Note that "=" for geometric data types means equal AREA, NOT COORDINATES.
+-- The "~=" operator means that the values (coordinates), not just the 
+-- AREA, are the same.
+SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+
+VACUUM GistTable13;
+
+ANALYZE GistTable13;
+
+SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+
+TRUNCATE TABLE GistTable13;
+
+-- Add some rows.
+SELECT insertManyIntoGistTable13(1, 1000);
+
+ANALYZE GistTable13;
+
+-- Note that "=" for geometric data types means equal AREA, NOT COORDINATES.
+-- The "~=" operator means that the values are the same, not just the 
+-- same AREA.
+SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable13;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test14Hash.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- PURPOSE:
+--     Test that you get a reasonable error message when you try to create a 
+--     HASH index (we no longer support those).
+-- AUTHOR: mgilkey
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable14;
+-- end_ignore
+
+CREATE TABLE GistTable14 (
+ id INTEGER,
+ property BOX
+ )
+ DISTRIBUTED BY (id);
+
+-- Try to create a hash index.
+CREATE INDEX GistIndex14a ON GistTable14 USING HASH (id);
+CREATE INDEX GistIndex14b ON GistTable14 USING HASH (property);
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable14;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test15ReindexDropIndex.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Sanity test GiST indexes.
+--     REINDEX
+--     DROP INDEX
+-- AUTHOR: mgilkey
+-- NOTES:
+--     Although we seemingly ignore the output of the EXPLAIN statements, 
+--     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
+--     or something similar in order to verify that the index was used.
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- start_ignore
+EXPLAIN SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- end_ignore
+
+REINDEX INDEX propertyBoxIndex;
+
+SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- start_ignore
+EXPLAIN SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- end_ignore
+
+DROP INDEX propertyBoxIndex;
+
+-- Obviously, this shouldn't use the index now that the index is gone.
+SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- start_ignore
+EXPLAIN SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+drop schema qp_gist_indexes2 cascade;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+create schema qp_gist_indexes2;
+set search_path to qp_gist_indexes2;
+-- end_ignore
+
+-- ----------------------------------------------------------------------
+-- Test: test00DropTable.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable1;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test01create_table.sql
+-- ----------------------------------------------------------------------
+
+CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, property BOX, poli POLYGON, bullseye CIRCLE, v VARCHAR, t TEXT, f FLOAT, p POINT, c CIRCLE, filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?'
+ )
+ WITH (APPENDONLY=True, COMPRESSTYPE=ZLIB, COMPRESSLEVEL=1)
+ DISTRIBUTED BY (id);
+
+COPY GistTable1 FROM
+'@abs_srcdir@/bugbuster/data/PropertyInfo.txt'
+ CSV
+ ;
+-- ----------------------------------------------------------------------
+-- Test: test03IndexScan.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Sanity test GiST indexes.
+--     This does some simple queries that should use the index.  
+--     We can't see directly whether the index was used, but for each query 
+--     we can run "EXPLAIN" and see whether the query used the index.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
+
+-- INSERT some more data.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (66, 'Miller', 'Lubbock or leave it', '((3, 1300), (33, 1330))',
+   '( (66,660), (67, 650), (68, 660) )', '( (66, 66), 66)' );
+
+SET enable_seqscan = FALSE;
+
+-- We should be able to search the column that uses a geometric data type, 
+-- and of course we should find the right rows.  We should be able to search 
+-- using different "formats" (e.g. spacing) of the data, and in some cases 
+-- even different "order" of the data (if the data is converted to a 
+-- canonical form, as it is for the BOX data type and perhaps some other 
+-- data types), as long as data in all of those formats should be converted 
+-- to the same internal representation.
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= '((7052,250),(6050,20))';
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- start_ignore
+EXPLAIN 
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- end_ignore
+
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id;
+
+-- Alter the table and see if we get the same results.
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= '((7052,250),(6050,20))';
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- start_ignore
+EXPLAIN
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- end_ignore
+
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id;
+
+
+-- ----------------------------------------------------------------------
+-- Test: test04Insert.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Insert more data.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- INSERT some more data.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (76, 'James McMurtry', 'Levelland', '((1500, 1500), (1700, 1900))', 
+   '( (76, 77), (76, 75), (75, 77) )', '( (76, 76), 76)' );
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: test05Select.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Sanity test GiST indexes.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1
+ WHERE property IS NOT NULL
+ ORDER BY id;
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: test08UniqueAndPKey.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: 
+--     Test UNIQUE indexes and primary keys on geometric data types.  
+--     It turns out that columns with the geometric data types (at least 
+--     box, polygon, and circle, and probably any others) can't be part of 
+--     a distribution key.  And since Greenplum allows unique indexes only on 
+--     columns that are part of the distribution key, GiST indexes cannot 
+--     be unique.  And of course since primary keys rely on unique indexes, 
+--     if we can't have unique GiST indexes, then we can't have primary 
+--     keys on geometric data types.  So this script is basically a negative 
+--     test that verifies that we get reasonable error messages when we try 
+--     to create unique GiST indexes or pimary keys on gemoetric data types.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable2;
+-- end_ignore
+
+-- Test whether geometric types can be part of a primary key.
+CREATE TABLE GistTable2 (id INTEGER, property BOX)
+ DISTRIBUTED BY (property);
+CREATE TABLE GistTable2 (id INTEGER, poli POLYGON)
+ DISTRIBUTED BY (poli);
+CREATE TABLE GistTable2 (id INTEGER, bullseye CIRCLE)
+ DISTRIBUTED BY (bullseye);
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable2;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test09NegativeTests.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: 
+--     "Negative" tests.  Verify that we get reasonable error messages when 
+--     we try to do unreasonable things, such as create indexes on types that 
+--     do not support GiST (non-geometric types).
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- Try to create GiST indexes on non-geometric data types.
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (id);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (v);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (t);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (f);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (p);
+-- Try to create GiST indexes on a mix of geometric and 
+-- non-geometric types.
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (c, f);
+
+
+-- ----------------------------------------------------------------------
+-- Test: test10MultipleColumns.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: 
+--     Test multi-column indexes.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+-- Insert 2 more records, but insert them with the same value for BULLSEYE.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (212, 'Fahrenheit', 'Slightly north of Hades', '( (212, 212), (32, 32) )', '( (212, 212), (600, 600), (70, 70) )', '( (100,100), 212 )' );
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (100, 'Celsius', 'Barely north of Hades', '( (100, 100), (0, 0) )', '( (100, 100), (600, 600), (70, 70) )', '( (100,100), 212 )' );
+
+-- This should create an index that has duplicate entries for at least one 
+--  value of bullseye.
+CREATE INDEX i2 ON GistTable1 USING GIST(bullseye);
+
+CREATE INDEX i3 ON GistTable1 USING GIST(poli, bullseye);
+
+-- This should return 2 rows.
+SELECT id FROM GistTable1
+ WHERE bullseye ~= '( (100,100), 212 )';
+
+-- This should return 1 row.
+SELECT id FROM GistTable1
+ WHERE property ~= '( (212, 212), (32, 32) )';
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: test11WherePredicate.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
+--     statement.  This does some simple queries that should use the index.  
+--     We can't see directly whether the index was used, but for each query 
+--     we can run "EXPLAIN" and see whether the query used the index.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- Add another record that has NULL in the property field.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
+ VALUES (77, 'S. T. "Rip" Sunset', 'Lost Vegas',NULL,
+   '( (77, 77), (76, 78), (78, 76) )', '( (77, 77), 77)' );
+
+CREATE INDEX propertyIsNullIndex ON GistTable1 USING Gist (property)
+ WHERE property IS NULL;
+
+-- Add two more records that have NULL in the property field.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
+ VALUES (86, 'A. Gent', 'Washingtoon D.C.',NULL,
+   '( (86, 86), (85, 87), (87, 85) )', '( (86, 86), 86)' );
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
+ VALUES (99, 'FelDon Adams', 'Washingtoon D.C.',NULL,
+   '( (99, 99), (97, 98), (98, 97) )', '( (99, 99), 99)' );
+
+SET enable_seqscan = FALSE;
+
+-- We should be able to search the column that uses a geometric data type, 
+-- and of course we should find the right rows.  We should be able to search 
+-- using different "formats" (e.g. spacing) of the data, and in some cases 
+-- even different "order" of the data (if the data is converted to a 
+-- canonical form, as it is for the BOX data type and perhaps some other 
+-- data types), as long as data in all of those formats should be converted 
+-- to the same internal representation.
+SELECT owner, property FROM GistTable1 
+ WHERE property IS NULL;
+-- start_ignore
+EXPLAIN 
+SELECT owner, property FROM GistTable1 
+ WHERE property IS NULL
+ ORDER BY id
+ ;
+-- end_ignore
+
+-- Alter the table and see if we get the same results.
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id
+ ;
+-- start_ignore
+EXPLAIN
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id
+ ;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test13Vacuum.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- PURPOSE:
+--     Test VACUUM on GiST indexes.
+--     Also test somewhat larger data sets than most of my other GiST index 
+--     tests.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+--     2010-04-20 mgilkey
+--         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
+--         tables as well as heap tables, so I removed statement(s) such as 
+--         DELETE that can't be executed on AO and CO tables.
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable13;
+DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
+DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
+DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
+-- end_ignore
+
+CREATE TABLE GistTable13 (
+ id INTEGER,
+ property BOX,
+ filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
+ )
+ DISTRIBUTED BY (id);
+
+-- Register a function that converts TEXT to BOX data type.
+CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
+  $$
+    SELECT box_in(textout($1))
+  $$ LANGUAGE SQL;
+
+CREATE FUNCTION insertIntoGistTable13 (seed INTEGER) RETURNS VOID
+AS
+$$
+DECLARE 
+   str1 VARCHAR;
+   ss VARCHAR;
+   s2 VARCHAR;
+BEGIN
+   ss = CAST(seed AS VARCHAR);
+   s2 = CAST((seed - 1) AS VARCHAR);
+   str1 = '((' || ss || ', ' || ss || '), (' || s2 || ', ' || s2 || '))';
+   INSERT INTO GistTable13(id, property) VALUES (seed, TO_BOX(CAST(str1 AS TEXT)) );
+END;
+$$
+LANGUAGE PLPGSQL
+;
+
+CREATE FUNCTION insertManyIntoGistTable13 (startValue INTEGER, endValue INTEGER) RETURNS VOID
+AS
+$$
+DECLARE 
+   i INTEGER;
+BEGIN
+   i = startValue;
+   WHILE i <= endValue LOOP
+       PERFORM insertIntoGistTable13(i);
+       i = i + 1;
+   END LOOP;
+END;
+$$
+LANGUAGE PLPGSQL
+;
+
+-- Add some rows before we create the index.
+SELECT insertManyIntoGistTable13(1, 1000);
+
+-- Create the index.
+CREATE INDEX GistIndex13 ON GistTable13 USING GiST (property);
+SET enable_seqscan = FALSE;
+
+-- Add more rows after we create the index.
+SELECT insertManyIntoGistTable13(1001, 2000);
+
+ANALYZE GistTable13;
+
+-- Note that "=" for geometric data types means equal AREA, NOT COORDINATES.
+-- The "~=" operator means that the values (coordinates), not just the 
+-- AREA, are the same.
+SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+
+VACUUM GistTable13;
+
+ANALYZE GistTable13;
+
+SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+
+TRUNCATE TABLE GistTable13;
+
+-- Add some rows.
+SELECT insertManyIntoGistTable13(1, 1000);
+
+ANALYZE GistTable13;
+
+-- Note that "=" for geometric data types means equal AREA, NOT COORDINATES.
+-- The "~=" operator means that the values are the same, not just the 
+-- same AREA.
+SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable13;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test14Hash.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- PURPOSE:
+--     Test that you get a reasonable error message when you try to create a 
+--     HASH index (we no longer support those).
+-- AUTHOR: mgilkey
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable14;
+-- end_ignore
+
+CREATE TABLE GistTable14 (
+ id INTEGER,
+ property BOX
+ )
+ DISTRIBUTED BY (id);
+
+-- Try to create a hash index.
+CREATE INDEX GistIndex14a ON GistTable14 USING HASH (id);
+CREATE INDEX GistIndex14b ON GistTable14 USING HASH (property);
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable14;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test15ReindexDropIndex.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Sanity test GiST indexes.
+--     REINDEX
+--     DROP INDEX
+-- AUTHOR: mgilkey
+-- NOTES:
+--     Although we seemingly ignore the output of the EXPLAIN statements, 
+--     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
+--     or something similar in order to verify that the index was used.
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- start_ignore
+EXPLAIN SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- end_ignore
+
+REINDEX INDEX propertyBoxIndex;
+
+SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- start_ignore
+EXPLAIN SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- end_ignore
+
+DROP INDEX propertyBoxIndex;
+
+-- Obviously, this shouldn't use the index now that the index is gone.
+SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- start_ignore
+EXPLAIN SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+drop schema qp_gist_indexes2 cascade;
+-- end_ignore
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+create schema qp_gist_indexes2;
+set search_path to qp_gist_indexes2;
+-- end_ignore
+
+-- ----------------------------------------------------------------------
+-- Test: test00DropTable.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable1;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test01create_table.sql
+-- ----------------------------------------------------------------------
+
+CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, property BOX, poli POLYGON, bullseye CIRCLE, v VARCHAR, t TEXT, f FLOAT, p POINT, c CIRCLE, filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?'
+ )
+ WITH (APPENDONLY=True)
+ DISTRIBUTED BY (id);
+
+COPY GistTable1 FROM
+'@abs_srcdir@/bugbuster/data/PropertyInfo.txt'
+ CSV
+ ;
+-- ----------------------------------------------------------------------
+-- Test: test03IndexScan.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Sanity test GiST indexes.
+--     This does some simple queries that should use the index.  
+--     We can't see directly whether the index was used, but for each query 
+--     we can run "EXPLAIN" and see whether the query used the index.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
+
+-- INSERT some more data.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (66, 'Miller', 'Lubbock or leave it', '((3, 1300), (33, 1330))',
+   '( (66,660), (67, 650), (68, 660) )', '( (66, 66), 66)' );
+
+SET enable_seqscan = FALSE;
+
+-- We should be able to search the column that uses a geometric data type, 
+-- and of course we should find the right rows.  We should be able to search 
+-- using different "formats" (e.g. spacing) of the data, and in some cases 
+-- even different "order" of the data (if the data is converted to a 
+-- canonical form, as it is for the BOX data type and perhaps some other 
+-- data types), as long as data in all of those formats should be converted 
+-- to the same internal representation.
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= '((7052,250),(6050,20))';
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- start_ignore
+EXPLAIN 
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- end_ignore
+
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id;
+
+-- Alter the table and see if we get the same results.
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= '((7052,250),(6050,20))';
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- start_ignore
+EXPLAIN
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- end_ignore
+
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id;
+
+
+-- ----------------------------------------------------------------------
+-- Test: test04Insert.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Insert more data.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- INSERT some more data.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (76, 'James McMurtry', 'Levelland', '((1500, 1500), (1700, 1900))', 
+   '( (76, 77), (76, 75), (75, 77) )', '( (76, 76), 76)' );
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: test05Select.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Sanity test GiST indexes.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1
+ WHERE property IS NOT NULL
+ ORDER BY id;
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: test08UniqueAndPKey.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: 
+--     Test UNIQUE indexes and primary keys on geometric data types.  
+--     It turns out that columns with the geometric data types (at least 
+--     box, polygon, and circle, and probably any others) can't be part of 
+--     a distribution key.  And since Greenplum allows unique indexes only on 
+--     columns that are part of the distribution key, GiST indexes cannot 
+--     be unique.  And of course since primary keys rely on unique indexes, 
+--     if we can't have unique GiST indexes, then we can't have primary 
+--     keys on geometric data types.  So this script is basically a negative 
+--     test that verifies that we get reasonable error messages when we try 
+--     to create unique GiST indexes or pimary keys on gemoetric data types.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable2;
+-- end_ignore
+
+-- Test whether geometric types can be part of a primary key.
+CREATE TABLE GistTable2 (id INTEGER, property BOX)
+ DISTRIBUTED BY (property);
+CREATE TABLE GistTable2 (id INTEGER, poli POLYGON)
+ DISTRIBUTED BY (poli);
+CREATE TABLE GistTable2 (id INTEGER, bullseye CIRCLE)
+ DISTRIBUTED BY (bullseye);
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable2;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test09NegativeTests.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: 
+--     "Negative" tests.  Verify that we get reasonable error messages when 
+--     we try to do unreasonable things, such as create indexes on types that 
+--     do not support GiST (non-geometric types).
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- Try to create GiST indexes on non-geometric data types.
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (id);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (v);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (t);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (f);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (p);
+-- Try to create GiST indexes on a mix of geometric and 
+-- non-geometric types.
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (c, f);
+
+
+-- ----------------------------------------------------------------------
+-- Test: test10MultipleColumns.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: 
+--     Test multi-column indexes.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+-- Insert 2 more records, but insert them with the same value for BULLSEYE.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (212, 'Fahrenheit', 'Slightly north of Hades', '( (212, 212), (32, 32) )', '( (212, 212), (600, 600), (70, 70) )', '( (100,100), 212 )' );
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (100, 'Celsius', 'Barely north of Hades', '( (100, 100), (0, 0) )', '( (100, 100), (600, 600), (70, 70) )', '( (100,100), 212 )' );
+
+-- This should create an index that has duplicate entries for at least one 
+--  value of bullseye.
+CREATE INDEX i2 ON GistTable1 USING GIST(bullseye);
+
+CREATE INDEX i3 ON GistTable1 USING GIST(poli, bullseye);
+
+-- This should return 2 rows.
+SELECT id FROM GistTable1
+ WHERE bullseye ~= '( (100,100), 212 )';
+
+-- This should return 1 row.
+SELECT id FROM GistTable1
+ WHERE property ~= '( (212, 212), (32, 32) )';
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: test11WherePredicate.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
+--     statement.  This does some simple queries that should use the index.  
+--     We can't see directly whether the index was used, but for each query 
+--     we can run "EXPLAIN" and see whether the query used the index.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- Add another record that has NULL in the property field.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
+ VALUES (77, 'S. T. "Rip" Sunset', 'Lost Vegas',NULL,
+   '( (77, 77), (76, 78), (78, 76) )', '( (77, 77), 77)' );
+
+CREATE INDEX propertyIsNullIndex ON GistTable1 USING Gist (property)
+ WHERE property IS NULL;
+
+-- Add two more records that have NULL in the property field.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
+ VALUES (86, 'A. Gent', 'Washingtoon D.C.',NULL,
+   '( (86, 86), (85, 87), (87, 85) )', '( (86, 86), 86)' );
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
+ VALUES (99, 'FelDon Adams', 'Washingtoon D.C.',NULL,
+   '( (99, 99), (97, 98), (98, 97) )', '( (99, 99), 99)' );
+
+SET enable_seqscan = FALSE;
+
+-- We should be able to search the column that uses a geometric data type, 
+-- and of course we should find the right rows.  We should be able to search 
+-- using different "formats" (e.g. spacing) of the data, and in some cases 
+-- even different "order" of the data (if the data is converted to a 
+-- canonical form, as it is for the BOX data type and perhaps some other 
+-- data types), as long as data in all of those formats should be converted 
+-- to the same internal representation.
+SELECT owner, property FROM GistTable1 
+ WHERE property IS NULL;
+-- start_ignore
+EXPLAIN 
+SELECT owner, property FROM GistTable1 
+ WHERE property IS NULL
+ ORDER BY id
+ ;
+-- end_ignore
+
+-- Alter the table and see if we get the same results.
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id
+ ;
+-- start_ignore
+EXPLAIN
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id
+ ;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test13Vacuum.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- PURPOSE:
+--     Test VACUUM on GiST indexes.
+--     Also test somewhat larger data sets than most of my other GiST index 
+--     tests.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+--     2010-04-20 mgilkey
+--         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
+--         tables as well as heap tables, so I removed statement(s) such as 
+--         DELETE that can't be executed on AO and CO tables.
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable13;
+DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
+DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
+DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
+-- end_ignore
+
+CREATE TABLE GistTable13 (
+ id INTEGER,
+ property BOX,
+ filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
+ )
+ DISTRIBUTED BY (id);
+
+-- Register a function that converts TEXT to BOX data type.
+CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
+  $$
+    SELECT box_in(textout($1))
+  $$ LANGUAGE SQL;
+
+CREATE FUNCTION insertIntoGistTable13 (seed INTEGER) RETURNS VOID
+AS
+$$
+DECLARE 
+   str1 VARCHAR;
+   ss VARCHAR;
+   s2 VARCHAR;
+BEGIN
+   ss = CAST(seed AS VARCHAR);
+   s2 = CAST((seed - 1) AS VARCHAR);
+   str1 = '((' || ss || ', ' || ss || '), (' || s2 || ', ' || s2 || '))';
+   INSERT INTO GistTable13(id, property) VALUES (seed, TO_BOX(CAST(str1 AS TEXT)) );
+END;
+$$
+LANGUAGE PLPGSQL
+;
+
+CREATE FUNCTION insertManyIntoGistTable13 (startValue INTEGER, endValue INTEGER) RETURNS VOID
+AS
+$$
+DECLARE 
+   i INTEGER;
+BEGIN
+   i = startValue;
+   WHILE i <= endValue LOOP
+       PERFORM insertIntoGistTable13(i);
+       i = i + 1;
+   END LOOP;
+END;
+$$
+LANGUAGE PLPGSQL
+;
+
+-- Add some rows before we create the index.
+SELECT insertManyIntoGistTable13(1, 1000);
+
+-- Create the index.
+CREATE INDEX GistIndex13 ON GistTable13 USING GiST (property);
+SET enable_seqscan = FALSE;
+
+-- Add more rows after we create the index.
+SELECT insertManyIntoGistTable13(1001, 2000);
+
+ANALYZE GistTable13;
+
+-- Note that "=" for geometric data types means equal AREA, NOT COORDINATES.
+-- The "~=" operator means that the values (coordinates), not just the 
+-- AREA, are the same.
+SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+
+VACUUM GistTable13;
+
+ANALYZE GistTable13;
+
+SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+
+TRUNCATE TABLE GistTable13;
+
+-- Add some rows.
+SELECT insertManyIntoGistTable13(1, 1000);
+
+ANALYZE GistTable13;
+
+-- Note that "=" for geometric data types means equal AREA, NOT COORDINATES.
+-- The "~=" operator means that the values are the same, not just the 
+-- same AREA.
+SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable13;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test14Hash.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- PURPOSE:
+--     Test that you get a reasonable error message when you try to create a 
+--     HASH index (we no longer support those).
+-- AUTHOR: mgilkey
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable14;
+-- end_ignore
+
+CREATE TABLE GistTable14 (
+ id INTEGER,
+ property BOX
+ )
+ DISTRIBUTED BY (id);
+
+-- Try to create a hash index.
+CREATE INDEX GistIndex14a ON GistTable14 USING HASH (id);
+CREATE INDEX GistIndex14b ON GistTable14 USING HASH (property);
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable14;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test15ReindexDropIndex.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Sanity test GiST indexes.
+--     REINDEX
+--     DROP INDEX
+-- AUTHOR: mgilkey
+-- NOTES:
+--     Although we seemingly ignore the output of the EXPLAIN statements, 
+--     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
+--     or something similar in order to verify that the index was used.
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- start_ignore
+EXPLAIN SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- end_ignore
+
+REINDEX INDEX propertyBoxIndex;
+
+SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- start_ignore
+EXPLAIN SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- end_ignore
+
+DROP INDEX propertyBoxIndex;
+
+-- Obviously, this shouldn't use the index now that the index is gone.
+SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- start_ignore
+EXPLAIN SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+drop schema qp_gist_indexes2 cascade;
+-- end_ignore
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+create schema qp_gist_indexes2;
+set search_path to qp_gist_indexes2;
+-- end_ignore
+
+-- ----------------------------------------------------------------------
+-- Test: test00DropTable.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable1;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test01create_table.sql
+-- ----------------------------------------------------------------------
+
+CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, property BOX, poli POLYGON, bullseye CIRCLE, v VARCHAR, t TEXT, f FLOAT, p POINT, c CIRCLE, filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?'
+ )
+ WITH (APPENDONLY=True, ORIENTATION='column', COMPRESSTYPE=ZLIB, COMPRESSLEVEL=1)
+ DISTRIBUTED BY (id);
+
+COPY GistTable1 FROM
+'@abs_srcdir@/bugbuster/data/PropertyInfo.txt'
+ CSV
+ ;
+-- ----------------------------------------------------------------------
+-- Test: test03IndexScan.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Sanity test GiST indexes.
+--     This does some simple queries that should use the index.  
+--     We can't see directly whether the index was used, but for each query 
+--     we can run "EXPLAIN" and see whether the query used the index.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
+
+-- INSERT some more data.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (66, 'Miller', 'Lubbock or leave it', '((3, 1300), (33, 1330))',
+   '( (66,660), (67, 650), (68, 660) )', '( (66, 66), 66)' );
+
+SET enable_seqscan = FALSE;
+
+-- We should be able to search the column that uses a geometric data type, 
+-- and of course we should find the right rows.  We should be able to search 
+-- using different "formats" (e.g. spacing) of the data, and in some cases 
+-- even different "order" of the data (if the data is converted to a 
+-- canonical form, as it is for the BOX data type and perhaps some other 
+-- data types), as long as data in all of those formats should be converted 
+-- to the same internal representation.
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= '((7052,250),(6050,20))';
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- start_ignore
+EXPLAIN 
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- end_ignore
+
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id;
+
+-- Alter the table and see if we get the same results.
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= '((7052,250),(6050,20))';
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- start_ignore
+EXPLAIN
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- end_ignore
+
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id;
+
+
+-- ----------------------------------------------------------------------
+-- Test: test04Insert.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Insert more data.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- INSERT some more data.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (76, 'James McMurtry', 'Levelland', '((1500, 1500), (1700, 1900))', 
+   '( (76, 77), (76, 75), (75, 77) )', '( (76, 76), 76)' );
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: test05Select.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Sanity test GiST indexes.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1
+ WHERE property IS NOT NULL
+ ORDER BY id;
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: test08UniqueAndPKey.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: 
+--     Test UNIQUE indexes and primary keys on geometric data types.  
+--     It turns out that columns with the geometric data types (at least 
+--     box, polygon, and circle, and probably any others) can't be part of 
+--     a distribution key.  And since Greenplum allows unique indexes only on 
+--     columns that are part of the distribution key, GiST indexes cannot 
+--     be unique.  And of course since primary keys rely on unique indexes, 
+--     if we can't have unique GiST indexes, then we can't have primary 
+--     keys on geometric data types.  So this script is basically a negative 
+--     test that verifies that we get reasonable error messages when we try 
+--     to create unique GiST indexes or pimary keys on gemoetric data types.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable2;
+-- end_ignore
+
+-- Test whether geometric types can be part of a primary key.
+CREATE TABLE GistTable2 (id INTEGER, property BOX)
+ DISTRIBUTED BY (property);
+CREATE TABLE GistTable2 (id INTEGER, poli POLYGON)
+ DISTRIBUTED BY (poli);
+CREATE TABLE GistTable2 (id INTEGER, bullseye CIRCLE)
+ DISTRIBUTED BY (bullseye);
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable2;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test09NegativeTests.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: 
+--     "Negative" tests.  Verify that we get reasonable error messages when 
+--     we try to do unreasonable things, such as create indexes on types that 
+--     do not support GiST (non-geometric types).
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- Try to create GiST indexes on non-geometric data types.
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (id);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (v);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (t);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (f);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (p);
+-- Try to create GiST indexes on a mix of geometric and 
+-- non-geometric types.
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (c, f);
+
+
+-- ----------------------------------------------------------------------
+-- Test: test10MultipleColumns.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: 
+--     Test multi-column indexes.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+-- Insert 2 more records, but insert them with the same value for BULLSEYE.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (212, 'Fahrenheit', 'Slightly north of Hades', '( (212, 212), (32, 32) )', '( (212, 212), (600, 600), (70, 70) )', '( (100,100), 212 )' );
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (100, 'Celsius', 'Barely north of Hades', '( (100, 100), (0, 0) )', '( (100, 100), (600, 600), (70, 70) )', '( (100,100), 212 )' );
+
+-- This should create an index that has duplicate entries for at least one 
+--  value of bullseye.
+CREATE INDEX i2 ON GistTable1 USING GIST(bullseye);
+
+CREATE INDEX i3 ON GistTable1 USING GIST(poli, bullseye);
+
+-- This should return 2 rows.
+SELECT id FROM GistTable1
+ WHERE bullseye ~= '( (100,100), 212 )';
+
+-- This should return 1 row.
+SELECT id FROM GistTable1
+ WHERE property ~= '( (212, 212), (32, 32) )';
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: test11WherePredicate.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
+--     statement.  This does some simple queries that should use the index.  
+--     We can't see directly whether the index was used, but for each query 
+--     we can run "EXPLAIN" and see whether the query used the index.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- Add another record that has NULL in the property field.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
+ VALUES (77, 'S. T. "Rip" Sunset', 'Lost Vegas',NULL,
+   '( (77, 77), (76, 78), (78, 76) )', '( (77, 77), 77)' );
+
+CREATE INDEX propertyIsNullIndex ON GistTable1 USING Gist (property)
+ WHERE property IS NULL;
+
+-- Add two more records that have NULL in the property field.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
+ VALUES (86, 'A. Gent', 'Washingtoon D.C.',NULL,
+   '( (86, 86), (85, 87), (87, 85) )', '( (86, 86), 86)' );
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
+ VALUES (99, 'FelDon Adams', 'Washingtoon D.C.',NULL,
+   '( (99, 99), (97, 98), (98, 97) )', '( (99, 99), 99)' );
+
+SET enable_seqscan = FALSE;
+
+-- We should be able to search the column that uses a geometric data type, 
+-- and of course we should find the right rows.  We should be able to search 
+-- using different "formats" (e.g. spacing) of the data, and in some cases 
+-- even different "order" of the data (if the data is converted to a 
+-- canonical form, as it is for the BOX data type and perhaps some other 
+-- data types), as long as data in all of those formats should be converted 
+-- to the same internal representation.
+SELECT owner, property FROM GistTable1 
+ WHERE property IS NULL;
+-- start_ignore
+EXPLAIN 
+SELECT owner, property FROM GistTable1 
+ WHERE property IS NULL
+ ORDER BY id
+ ;
+-- end_ignore
+
+-- Alter the table and see if we get the same results.
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id
+ ;
+-- start_ignore
+EXPLAIN
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id
+ ;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test13Vacuum.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- PURPOSE:
+--     Test VACUUM on GiST indexes.
+--     Also test somewhat larger data sets than most of my other GiST index 
+--     tests.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+--     2010-04-20 mgilkey
+--         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
+--         tables as well as heap tables, so I removed statement(s) such as 
+--         DELETE that can't be executed on AO and CO tables.
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable13;
+DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
+DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
+DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
+-- end_ignore
+
+CREATE TABLE GistTable13 (
+ id INTEGER,
+ property BOX,
+ filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
+ )
+ DISTRIBUTED BY (id);
+
+-- Register a function that converts TEXT to BOX data type.
+CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
+  $$
+    SELECT box_in(textout($1))
+  $$ LANGUAGE SQL;
+
+CREATE FUNCTION insertIntoGistTable13 (seed INTEGER) RETURNS VOID
+AS
+$$
+DECLARE 
+   str1 VARCHAR;
+   ss VARCHAR;
+   s2 VARCHAR;
+BEGIN
+   ss = CAST(seed AS VARCHAR);
+   s2 = CAST((seed - 1) AS VARCHAR);
+   str1 = '((' || ss || ', ' || ss || '), (' || s2 || ', ' || s2 || '))';
+   INSERT INTO GistTable13(id, property) VALUES (seed, TO_BOX(CAST(str1 AS TEXT)) );
+END;
+$$
+LANGUAGE PLPGSQL
+;
+
+CREATE FUNCTION insertManyIntoGistTable13 (startValue INTEGER, endValue INTEGER) RETURNS VOID
+AS
+$$
+DECLARE 
+   i INTEGER;
+BEGIN
+   i = startValue;
+   WHILE i <= endValue LOOP
+       PERFORM insertIntoGistTable13(i);
+       i = i + 1;
+   END LOOP;
+END;
+$$
+LANGUAGE PLPGSQL
+;
+
+-- Add some rows before we create the index.
+SELECT insertManyIntoGistTable13(1, 1000);
+
+-- Create the index.
+CREATE INDEX GistIndex13 ON GistTable13 USING GiST (property);
+SET enable_seqscan = FALSE;
+
+-- Add more rows after we create the index.
+SELECT insertManyIntoGistTable13(1001, 2000);
+
+ANALYZE GistTable13;
+
+-- Note that "=" for geometric data types means equal AREA, NOT COORDINATES.
+-- The "~=" operator means that the values (coordinates), not just the 
+-- AREA, are the same.
+SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+
+VACUUM GistTable13;
+
+ANALYZE GistTable13;
+
+SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+
+TRUNCATE TABLE GistTable13;
+
+-- Add some rows.
+SELECT insertManyIntoGistTable13(1, 1000);
+
+ANALYZE GistTable13;
+
+-- Note that "=" for geometric data types means equal AREA, NOT COORDINATES.
+-- The "~=" operator means that the values are the same, not just the 
+-- same AREA.
+SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable13;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test14Hash.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- PURPOSE:
+--     Test that you get a reasonable error message when you try to create a 
+--     HASH index (we no longer support those).
+-- AUTHOR: mgilkey
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable14;
+-- end_ignore
+
+CREATE TABLE GistTable14 (
+ id INTEGER,
+ property BOX
+ )
+ DISTRIBUTED BY (id);
+
+-- Try to create a hash index.
+CREATE INDEX GistIndex14a ON GistTable14 USING HASH (id);
+CREATE INDEX GistIndex14b ON GistTable14 USING HASH (property);
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable14;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test15ReindexDropIndex.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Sanity test GiST indexes.
+--     REINDEX
+--     DROP INDEX
+-- AUTHOR: mgilkey
+-- NOTES:
+--     Although we seemingly ignore the output of the EXPLAIN statements, 
+--     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
+--     or something similar in order to verify that the index was used.
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- start_ignore
+EXPLAIN SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- end_ignore
+
+REINDEX INDEX propertyBoxIndex;
+
+SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- start_ignore
+EXPLAIN SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- end_ignore
+
+DROP INDEX propertyBoxIndex;
+
+-- Obviously, this shouldn't use the index now that the index is gone.
+SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- start_ignore
+EXPLAIN SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+drop schema qp_gist_indexes2 cascade;
+-- end_ignore
+
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+create schema qp_gist_indexes2;
+set search_path to qp_gist_indexes2;
+-- end_ignore
+
+-- ----------------------------------------------------------------------
+-- Test: test00DropTable.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable1;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test01create_table.sql
+-- ----------------------------------------------------------------------
+
+CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, property BOX, poli POLYGON, bullseye CIRCLE, v VARCHAR, t TEXT, f FLOAT, p POINT, c CIRCLE, filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?'
+ )
+ WITH (APPENDONLY=True, ORIENTATION='column')
+ DISTRIBUTED BY (id);
+
+COPY GistTable1 FROM
+'@abs_srcdir@/bugbuster/data/PropertyInfo.txt'
+ CSV
+ ;
+-- ----------------------------------------------------------------------
+-- Test: test03IndexScan.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Sanity test GiST indexes.
+--     This does some simple queries that should use the index.  
+--     We can't see directly whether the index was used, but for each query 
+--     we can run "EXPLAIN" and see whether the query used the index.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
+
+-- INSERT some more data.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (66, 'Miller', 'Lubbock or leave it', '((3, 1300), (33, 1330))',
+   '( (66,660), (67, 650), (68, 660) )', '( (66, 66), 66)' );
+
+SET enable_seqscan = FALSE;
+
+-- We should be able to search the column that uses a geometric data type, 
+-- and of course we should find the right rows.  We should be able to search 
+-- using different "formats" (e.g. spacing) of the data, and in some cases 
+-- even different "order" of the data (if the data is converted to a 
+-- canonical form, as it is for the BOX data type and perhaps some other 
+-- data types), as long as data in all of those formats should be converted 
+-- to the same internal representation.
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= '((7052,250),(6050,20))';
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- start_ignore
+EXPLAIN 
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- end_ignore
+
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id;
+
+-- Alter the table and see if we get the same results.
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= '((7052,250),(6050,20))';
+SELECT owner, property FROM GistTable1 
+ WHERE property ~= ' ( ( 7052, 250 ) , (6050, 20) )';
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- start_ignore
+EXPLAIN
+SELECT owner, property FROM GistTable1
+ WHERE property ~= '( (6050, 20), (7052, 250) )';
+-- end_ignore
+
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id;
+
+
+-- ----------------------------------------------------------------------
+-- Test: test04Insert.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Insert more data.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- INSERT some more data.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (76, 'James McMurtry', 'Levelland', '((1500, 1500), (1700, 1900))', 
+   '( (76, 77), (76, 75), (75, 77) )', '( (76, 76), 76)' );
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: test05Select.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Sanity test GiST indexes.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1
+ WHERE property IS NOT NULL
+ ORDER BY id;
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: test08UniqueAndPKey.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: 
+--     Test UNIQUE indexes and primary keys on geometric data types.  
+--     It turns out that columns with the geometric data types (at least 
+--     box, polygon, and circle, and probably any others) can't be part of 
+--     a distribution key.  And since Greenplum allows unique indexes only on 
+--     columns that are part of the distribution key, GiST indexes cannot 
+--     be unique.  And of course since primary keys rely on unique indexes, 
+--     if we can't have unique GiST indexes, then we can't have primary 
+--     keys on geometric data types.  So this script is basically a negative 
+--     test that verifies that we get reasonable error messages when we try 
+--     to create unique GiST indexes or pimary keys on gemoetric data types.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable2;
+-- end_ignore
+
+-- Test whether geometric types can be part of a primary key.
+CREATE TABLE GistTable2 (id INTEGER, property BOX)
+ DISTRIBUTED BY (property);
+CREATE TABLE GistTable2 (id INTEGER, poli POLYGON)
+ DISTRIBUTED BY (poli);
+CREATE TABLE GistTable2 (id INTEGER, bullseye CIRCLE)
+ DISTRIBUTED BY (bullseye);
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable2;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test09NegativeTests.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: 
+--     "Negative" tests.  Verify that we get reasonable error messages when 
+--     we try to do unreasonable things, such as create indexes on types that 
+--     do not support GiST (non-geometric types).
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- Try to create GiST indexes on non-geometric data types.
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (id);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (v);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (t);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (f);
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (p);
+-- Try to create GiST indexes on a mix of geometric and 
+-- non-geometric types.
+CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (c, f);
+
+
+-- ----------------------------------------------------------------------
+-- Test: test10MultipleColumns.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: 
+--     Test multi-column indexes.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+-- Insert 2 more records, but insert them with the same value for BULLSEYE.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (212, 'Fahrenheit', 'Slightly north of Hades', '( (212, 212), (32, 32) )', '( (212, 212), (600, 600), (70, 70) )', '( (100,100), 212 )' );
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
+ VALUES (100, 'Celsius', 'Barely north of Hades', '( (100, 100), (0, 0) )', '( (100, 100), (600, 600), (70, 70) )', '( (100,100), 212 )' );
+
+-- This should create an index that has duplicate entries for at least one 
+--  value of bullseye.
+CREATE INDEX i2 ON GistTable1 USING GIST(bullseye);
+
+CREATE INDEX i3 ON GistTable1 USING GIST(poli, bullseye);
+
+-- This should return 2 rows.
+SELECT id FROM GistTable1
+ WHERE bullseye ~= '( (100,100), 212 )';
+
+-- This should return 1 row.
+SELECT id FROM GistTable1
+ WHERE property ~= '( (212, 212), (32, 32) )';
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: test11WherePredicate.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
+--     statement.  This does some simple queries that should use the index.  
+--     We can't see directly whether the index was used, but for each query 
+--     we can run "EXPLAIN" and see whether the query used the index.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- Add another record that has NULL in the property field.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
+ VALUES (77, 'S. T. "Rip" Sunset', 'Lost Vegas',NULL,
+   '( (77, 77), (76, 78), (78, 76) )', '( (77, 77), 77)' );
+
+CREATE INDEX propertyIsNullIndex ON GistTable1 USING Gist (property)
+ WHERE property IS NULL;
+
+-- Add two more records that have NULL in the property field.
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
+ VALUES (86, 'A. Gent', 'Washingtoon D.C.',NULL,
+   '( (86, 86), (85, 87), (87, 85) )', '( (86, 86), 86)' );
+INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
+ VALUES (99, 'FelDon Adams', 'Washingtoon D.C.',NULL,
+   '( (99, 99), (97, 98), (98, 97) )', '( (99, 99), 99)' );
+
+SET enable_seqscan = FALSE;
+
+-- We should be able to search the column that uses a geometric data type, 
+-- and of course we should find the right rows.  We should be able to search 
+-- using different "formats" (e.g. spacing) of the data, and in some cases 
+-- even different "order" of the data (if the data is converted to a 
+-- canonical form, as it is for the BOX data type and perhaps some other 
+-- data types), as long as data in all of those formats should be converted 
+-- to the same internal representation.
+SELECT owner, property FROM GistTable1 
+ WHERE property IS NULL;
+-- start_ignore
+EXPLAIN 
+SELECT owner, property FROM GistTable1 
+ WHERE property IS NULL
+ ORDER BY id
+ ;
+-- end_ignore
+
+-- Alter the table and see if we get the same results.
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id
+ ;
+-- start_ignore
+EXPLAIN
+SELECT id, property FROM GistTable1 
+ WHERE property IS NULL 
+ ORDER BY id
+ ;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test13Vacuum.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- PURPOSE:
+--     Test VACUUM on GiST indexes.
+--     Also test somewhat larger data sets than most of my other GiST index 
+--     tests.
+-- AUTHOR: mgilkey
+-- LAST MODIFIED:
+--     2010-04-20 mgilkey
+--         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
+--         tables as well as heap tables, so I removed statement(s) such as 
+--         DELETE that can't be executed on AO and CO tables.
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable13;
+DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
+DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
+DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
+-- end_ignore
+
+CREATE TABLE GistTable13 (
+ id INTEGER,
+ property BOX,
+ filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
+ )
+ DISTRIBUTED BY (id);
+
+-- Register a function that converts TEXT to BOX data type.
+CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
+  $$
+    SELECT box_in(textout($1))
+  $$ LANGUAGE SQL;
+
+CREATE FUNCTION insertIntoGistTable13 (seed INTEGER) RETURNS VOID
+AS
+$$
+DECLARE 
+   str1 VARCHAR;
+   ss VARCHAR;
+   s2 VARCHAR;
+BEGIN
+   ss = CAST(seed AS VARCHAR);
+   s2 = CAST((seed - 1) AS VARCHAR);
+   str1 = '((' || ss || ', ' || ss || '), (' || s2 || ', ' || s2 || '))';
+   INSERT INTO GistTable13(id, property) VALUES (seed, TO_BOX(CAST(str1 AS TEXT)) );
+END;
+$$
+LANGUAGE PLPGSQL
+;
+
+CREATE FUNCTION insertManyIntoGistTable13 (startValue INTEGER, endValue INTEGER) RETURNS VOID
+AS
+$$
+DECLARE 
+   i INTEGER;
+BEGIN
+   i = startValue;
+   WHILE i <= endValue LOOP
+       PERFORM insertIntoGistTable13(i);
+       i = i + 1;
+   END LOOP;
+END;
+$$
+LANGUAGE PLPGSQL
+;
+
+-- Add some rows before we create the index.
+SELECT insertManyIntoGistTable13(1, 1000);
+
+-- Create the index.
+CREATE INDEX GistIndex13 ON GistTable13 USING GiST (property);
+SET enable_seqscan = FALSE;
+
+-- Add more rows after we create the index.
+SELECT insertManyIntoGistTable13(1001, 2000);
+
+ANALYZE GistTable13;
+
+-- Note that "=" for geometric data types means equal AREA, NOT COORDINATES.
+-- The "~=" operator means that the values (coordinates), not just the 
+-- AREA, are the same.
+SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+
+VACUUM GistTable13;
+
+ANALYZE GistTable13;
+
+SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+
+TRUNCATE TABLE GistTable13;
+
+-- Add some rows.
+SELECT insertManyIntoGistTable13(1, 1000);
+
+ANALYZE GistTable13;
+
+-- Note that "=" for geometric data types means equal AREA, NOT COORDINATES.
+-- The "~=" operator means that the values are the same, not just the 
+-- same AREA.
+SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
+ WHERE property ~= '( (999,999), (998,998) )';
+
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable13;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test14Hash.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- PURPOSE:
+--     Test that you get a reasonable error message when you try to create a 
+--     HASH index (we no longer support those).
+-- AUTHOR: mgilkey
+-- end_ignore
+------------------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable14;
+-- end_ignore
+
+CREATE TABLE GistTable14 (
+ id INTEGER,
+ property BOX
+ )
+ DISTRIBUTED BY (id);
+
+-- Try to create a hash index.
+CREATE INDEX GistIndex14a ON GistTable14 USING HASH (id);
+CREATE INDEX GistIndex14b ON GistTable14 USING HASH (property);
+
+-- start_ignore
+DROP TABLE IF EXISTS GistTable14;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: test15ReindexDropIndex.sql
+-- ----------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- start_ignore
+-- PURPOSE: Sanity test GiST indexes.
+--     REINDEX
+--     DROP INDEX
+-- AUTHOR: mgilkey
+-- NOTES:
+--     Although we seemingly ignore the output of the EXPLAIN statements, 
+--     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
+--     or something similar in order to verify that the index was used.
+-- LAST MODIFIED:
+-- end_ignore
+------------------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- start_ignore
+EXPLAIN SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- end_ignore
+
+REINDEX INDEX propertyBoxIndex;
+
+SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- start_ignore
+EXPLAIN SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- end_ignore
+
+DROP INDEX propertyBoxIndex;
+
+-- Obviously, this shouldn't use the index now that the index is gone.
+SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- start_ignore
+EXPLAIN SELECT id FROM GistTable1 
+ WHERE property ~= '( (1,2), (3,4) )'
+ ORDER BY id;
+-- end_ignore
+
+
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+drop schema qp_gist_indexes2 cascade;
+-- end_ignore
+
+
+
+

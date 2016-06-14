@@ -40,7 +40,7 @@ to the segments, and collects the results.
   You will need to add the following Python modules (2.7 & 2.6 are
   supported) into your installation
 
-  * psi
+  * psutil
   * lockfile (>= 0.9.1)
   * paramiko
   * setuptools
@@ -74,6 +74,11 @@ throughout the codebase, but a few larger additions worth noting:
   manual is distributed separately (see http://gpdb.docs.pivotal.io),
   and only the reference pages used to build man pages are here.
 
+* __ci/__
+
+  Contains configuration files for the GPDB continuous integration system.
+ 
+
 * __src/backend/cdb/__
 
   Contains larger Greenplum-specific backend modules. For example,
@@ -104,6 +109,76 @@ throughout the codebase, but a few larger additions worth noting:
   FTS is a process that runs in the master node, and periodically
   polls the segments to maintain the status of each segment.
 
+## Build GPDB with Planner
+
+```
+# Clean environment
+make distclean
+
+# Configure build environment to install at /usr/local/gpdb
+./configure --prefix=/usr/local/gpdb
+
+# Compile and install
+make
+make install
+
+# Bring in greenplum environment into your running shell
+source /usr/local/gpdb/greenplum_path.sh
+
+# Start demo cluster (gpdemo-env.sh is created which contain
+# __PGPORT__ and __MASTER_DATA_DIRECTORY__ values)
+cd gpAux/gpdemo
+make cluster
+source gpdemo-env.sh
+```
+
+The directory and the TCP ports for the demo cluster can be changed on the fly:
+
+```
+DATADIRS=/tmp/gpdb-cluster MASTER_PORT=15432 PORT_BASE=25432 make cluster
+```
+
+The TCP port for the regression test can be changed on the fly:
+
+```
+PGPORT=15432 make installcheck-good
+```
+
+
+## Build GPDB with GPORCA
+
+Only need to change the `configure` with additional option `--enable-orca`.
+```
+# Configure build environment to install at /usr/local/gpdb
+# Enable GPORCA
+# Build with perl module (PL/Perl)
+# Build with python module (PL/Python)
+# Build with XML support
+./configure --enable-orca --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb
+```
+
+Once build and started, run `psql` and check the GPOPT (e.g. GPORCA) version:
+
+```
+select gp_opt_version();
+```
+
+## Build GPDB with code generation enabled
+
+To build GPDB with code generation (codegen) enabled, you will need cmake 2.8 or higher
+and a recent version of llvm and clang (include headers and developer libraries). Codegen utils
+is currently developed against the LLVM 3.7.X release series. You can find more details about the codegen feature,
+including details about obtaining the prerequisites, building and testing GPDB with codegen in the [Codegen README](src/backend/codegen).
+
+In short, you can change the `configure` with additional option
+`--enable-codegen`, optionally giving the path to llvm and clang libraries on
+your system.
+```
+# Configure build environment to install at /usr/local/gpdb
+# Enable CODEGEN
+./configure --enable-codegen --prefix=/usr/local/gpdb --with-codegen-prefix="/path/to/llvm;/path/to/clang"
+```
+
 ## Regression tests
 
 * The default regression tests
@@ -129,43 +204,6 @@ make installcheck-bugbuster
   some tests are known to fail with Greenplum. The
   __installcheck-good__ schedule excludes those tests.
 
-## Basic GPDB source configuration, compilation, gpdemo cluster creation and test execution example
-
-* Configure build environment
-
-```
-configure --prefix=<install location>
-```
-
-* Compilation and install
-
-```
-make
-make install
-```
-
-* Bring in greenplum environment into your running shell
-
-```
-source <install location>/greenplum_path.sh
-```
-
-* Start demo cluster (gpdemo-env.sh is created which contain
-  __PGPORT__ and __MASTER_DATA_DIRECTORY__ values)
-
-
-```
-cd gpAux/gpdemo
-make cluster
-source gpdemo-env.sh
-```
-
-* Run tests
-
-```
-make installcheck-good
-```
-
 ## Glossary
 
 * __QD__
@@ -180,3 +218,5 @@ make installcheck-good
 
 For Greenplum Database documentation, please check online docs:
 http://gpdb.docs.pivotal.io
+
+There is also a Vagrant-based quickstart guide for developers in `vagrant/README.md`.

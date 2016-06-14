@@ -74,7 +74,7 @@ extern void FtsShmemInit(void);
 extern bool FtsTestConnection(CdbComponentDatabaseInfo *db_to_test, bool full_scan);
 extern void FtsReConfigureMPP(bool create_new_gangs);
 extern void FtsHandleNetFailure(SegmentDatabaseDescriptor **, int);
-extern bool FtsHandleGangConnectionFailure(SegmentDatabaseDescriptor *, int);
+extern bool FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor *, int);
 
 extern bool verifyFtsSyncCount(void);
 extern void FtsCondSetTxnReadOnly(bool *);
@@ -84,6 +84,7 @@ extern void ftsUnlock(void);
 void FtsNotifyProber(void);
 
 extern bool isFtsReadOnlySet(void);
+extern uint64 getFtsVersion(void);
 
 /* markStandbyStatus forces persistent state change ?! */
 #define markStandbyStatus(dbid, state) (markSegDBPersistentState((dbid), (state)))

@@ -14,7 +14,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/dbcommands.c,v 1.190 2007/01/17 16:25:01 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/dbcommands.c,v 1.192 2007/02/09 16:12:18 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -46,7 +46,7 @@
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
 #include "pgstat.h"
-#include "postmaster/checkpoint.h"
+#include "postmaster/bgwriter.h"
 #include "storage/freespace.h"
 #include "storage/ipc.h"
 #include "storage/procarray.h"
@@ -60,12 +60,11 @@
 #include "utils/pg_locale.h"
 #include "utils/syscache.h"
 
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbcat.h"
 #include "cdb/cdbpersistentdatabase.h"
 #include "cdb/cdbpersistentrelation.h"
 #include "cdb/cdbmirroredfilesysobj.h"
@@ -1476,6 +1475,11 @@ dropdb(const char *dbname, bool missing_ok)
 	FreeSpaceMapForgetDatabase(InvalidOid, db_id);
 
 	/*
+	 * Tell the stats collector to forget it immediately, too.
+	 */
+	pgstat_drop_database(db_id);
+
+	/*
 	 * Tell bgwriter to forget any pending fsync requests for files in the
 	 * database; else it'll fail at next checkpoint.
 	 */
@@ -1688,7 +1692,7 @@ RenameDatabase(const char *oldname, const char *newname)
 	if (db_id == MyDatabaseId)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("current database may not be renamed")));
+				 errmsg("current database cannot be renamed")));
 
 	/*
 	 * Make sure the database does not have active sessions.  This is the same
@@ -1748,8 +1752,8 @@ AlterDatabase(AlterDatabaseStmt *stmt)
 	Relation	rel;
 	HeapTuple	tuple,
 				newtuple;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
+	ScanKeyData scankey;
+	SysScanDesc scan;
 	ListCell   *option;
 	int			connlimit = -1;
 	DefElem    *dconnlimit = NULL;
@@ -1785,15 +1789,13 @@ AlterDatabase(AlterDatabaseStmt *stmt)
 	 * connections.
 	 */
 	rel = heap_open(DatabaseRelationId, RowExclusiveLock);
-
-	pcqCtx = caql_addrel(cqclr(&cqc), rel);
-
-	tuple = caql_getfirst(
-			pcqCtx,
-			cql("SELECT * FROM pg_database" 
-				" WHERE datname = :1 FOR UPDATE", 
-				CStringGetDatum(stmt->dbname)));
-
+	ScanKeyInit(&scankey,
+				Anum_pg_database_datname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				NameGetDatum(stmt->dbname));
+	scan = systable_beginscan(rel, DatabaseNameIndexId, true,
+							  SnapshotNow, 1, &scankey);
+	tuple = systable_getnext(scan);
 	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_DATABASE),
@@ -1818,10 +1820,14 @@ AlterDatabase(AlterDatabaseStmt *stmt)
 		new_record_repl[Anum_pg_database_datconnlimit - 1] = true;
 	}
 
-	newtuple = caql_modify_current(pcqCtx, new_record,
-								   new_record_nulls, new_record_repl);
-	caql_update_current(pcqCtx, newtuple); 
-	/* and Update indexes (implicit) */
+	newtuple = heap_modify_tuple(tuple, RelationGetDescr(rel), new_record,
+								new_record_nulls, new_record_repl);
+	simple_heap_update(rel, &tuple->t_self, newtuple);
+
+	/* Update indexes */
+	CatalogUpdateIndexes(rel, newtuple);
+
+	systable_endscan(scan);
 
 	/* MPP-6929: metadata tracking */
 	if (Gp_role == GP_ROLE_DISPATCH)

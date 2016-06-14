@@ -2,7 +2,8 @@
 
 import os, signal, time, re
 import unittest2 as unittest
-import psi.process, subprocess
+import psutil
+from subprocess import PIPE
 
 class GpsshTestCase(unittest.TestCase):
 
@@ -12,12 +13,12 @@ class GpsshTestCase(unittest.TestCase):
         euid = os.getuid()
         count = 0
 
-        for p in psi.process.ProcessTable().values():
-            if p.euid != euid:
+        for p in psutil.process_iter():
+            if p.uids().effective != euid:
                 continue
-            if not re.search('ssh', p.command):
+            if not re.search('ssh', ' '.join(p.cmdline())):
                 continue
-            if p.ppid != 1:
+            if p.ppid() != 1:
                 continue
 
             count += 1
@@ -32,7 +33,7 @@ class GpsshTestCase(unittest.TestCase):
 
         before_count = self.searchForProcessOrChildren()
 
-        p = subprocess.Popen("gpssh -h localhost", shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = psutil.Popen("gpssh -h localhost", shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         pid = p.pid
 
         time.sleep(3)

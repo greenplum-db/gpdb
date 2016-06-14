@@ -99,7 +99,7 @@ InsertExtTableEntry(Oid 	tbloid,
 		values[Anum_pg_exttable_rejectlimit -1] = Int32GetDatum(rejectlimit);
 		values[Anum_pg_exttable_rejectlimittype - 1] = CharGetDatum(rejectlimittype);
 
-		/* if error table specified store its OID, otherwise put a NULL */
+		/* if error log specified store its OID, otherwise put a NULL */
 		if(fmtErrTblOid != InvalidOid)
 			values[Anum_pg_exttable_fmterrtbl - 1] = ObjectIdGetDatum(fmtErrTblOid);
 		else
@@ -138,7 +138,24 @@ InsertExtTableEntry(Oid 	tbloid,
 ExtTableEntry*
 GetExtTableEntry(Oid relid)
 {
-	
+	ExtTableEntry *extentry;
+
+	extentry = GetExtTableEntryIfExists(relid);
+	if (!extentry)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("missing pg_exttable entry for relation \"%s\"",
+						get_rel_name(relid))));
+	return extentry;
+}
+
+/*
+ * Like GetExtTableEntry(Oid), but returns NULL instead of throwing
+ * an error if no pg_exttable entry is found.
+ */
+ExtTableEntry*
+GetExtTableEntryIfExists(Oid relid)
+{
 	Relation	pg_exttable_rel;
 	HeapTuple	tuple;
 	cqContext	cqc;
@@ -154,8 +171,7 @@ GetExtTableEntry(Oid relid)
 				iswritable;
 	bool		isNull;
 	bool		locationNull = false;
-	
-	
+
 	pg_exttable_rel = heap_open(ExtTableRelationId, RowExclusiveLock);
 
 	tuple = caql_getfirst(
@@ -166,14 +182,13 @@ GetExtTableEntry(Oid relid)
 				ObjectIdGetDatum(relid)));
 
 	if (!HeapTupleIsValid(tuple))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("missing pg_exttable entry for relation \"%s\"",
-						get_rel_name(relid))));
-
+	{
+		heap_close(pg_exttable_rel, RowExclusiveLock);
+		return NULL;
+	}
 
 	extentry = (ExtTableEntry *) palloc0(sizeof(ExtTableEntry));
-	
+
 	/* get the location list */
 	locations = heap_getattr(tuple, 
 							 Anum_pg_exttable_location, 

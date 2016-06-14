@@ -11213,3 +11213,15 @@ select * from CO_1_create_table_storage_directive_RLE_TYPE_8192_1;
 (110 rows)
 
 DROP TABLE CO_1_create_table_storage_directive_RLE_TYPE_8192_1;
+--
+-- Test case to check boundary condition of CO block full,
+-- where nullBitMapSize is non-aligned and needs padding
+-- of 7 bits during block finalization.
+--
+CREATE TABLE rle_co_block_boundary (
+        distcol integer,
+        col1 BIGINT
+)
+WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3, blocksize=8192)
+DISTRIBUTED BY (distcol);
+COPY rle_co_block_boundary (distcol, col1) FROM stdin NULL AS 'NULL';

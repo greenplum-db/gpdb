@@ -13,7 +13,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/namespace.c,v 1.90 2007/01/05 22:19:24 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/namespace.c,v 1.92 2007/02/14 01:58:56 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -52,6 +52,7 @@
 #include "cdb/cdbvars.h"
 #include "tcop/utility.h"
 
+#include "cdb/cdbdisp_query.h"
 #include "cdb/cdbtm.h"
 
 /*
@@ -447,7 +448,7 @@ RangeVarGetCreationNamespace(const RangeVar *newRelation)
 			if (strcmp(newRelation->schemaname,namespaceName)!=0)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					  errmsg("temporary tables may not specify a schema name")));
+					  errmsg("temporary tables cannot specify a schema name")));
 		}
 		/* Initialize temp namespace if first time through */
 		if (!TempNamespaceValid(false))
@@ -774,16 +775,14 @@ TypeIsVisible(Oid typid)
  * such an entry it should react as though the call were ambiguous.
  *
  * GPDB: this function has been backported from PostgreSQL 8.4, to get
- * support for variadic arguments. We have not backported support for
- * default arguments, however, which means that all the mentions of default
- * arguments in the comments are moot.
+ * support for variadic arguments and default arguments.
  *
  */
 FuncCandidateList
 FuncnameGetCandidates(List *names, int nargs,
-					  bool expand_variadic)
+					  bool expand_variadic,
+					  bool expand_defaults)
 {
-	bool		expand_defaults = false; /* defaults not backported yet */
 	FuncCandidateList resultList = NULL;
 	bool		any_special = false;
 	char	   *schemaname;
@@ -846,7 +845,6 @@ FuncnameGetCandidates(List *names, int nargs,
 		/*
 		 * Check if function can match by using parameter defaults.
 		 */
-#ifdef DEFAULT_ARGS_NOT_IMPLEMENTED_YET
 		if (pronargs > nargs && expand_defaults)
 		{
 			/* Ignore if not enough default expressions */
@@ -856,7 +854,6 @@ FuncnameGetCandidates(List *names, int nargs,
 			any_special = true;
 		}
 		else
-#endif
 			use_defaults = false;
 
 		/* Ignore if it doesn't match requested argument count */
@@ -914,9 +911,7 @@ FuncnameGetCandidates(List *names, int nargs,
 		}
 		else
 			newResult->nvargs = 0;
-#ifdef DEFAULT_ARGS_NOT_IMPLEMENTED_YET
 		newResult->ndargs = use_defaults ? pronargs - nargs : 0;
-#endif
 
 		/*
 		 * Does it have the same arguments as something we already accepted?
@@ -955,13 +950,13 @@ FuncnameGetCandidates(List *names, int nargs,
 			}
 			else
 			{
-				int			cmp_nargs = newResult->nargs;
+				int			cmp_nargs = newResult->nargs - newResult->ndargs;
 
 				for (prevResult = resultList;
 					 prevResult;
 					 prevResult = prevResult->next)
 				{
-					if (cmp_nargs == prevResult->nargs &&
+					if (cmp_nargs == prevResult->nargs - prevResult->ndargs &&
 						memcmp(newResult->args,
 							   prevResult->args,
 							   cmp_nargs * sizeof(Oid)) == 0)
@@ -1118,7 +1113,8 @@ FunctionIsVisible(Oid funcid)
 
 		visible = false;
 
-		clist = FuncnameGetCandidates(list_make1(makeString(proname)), nargs, false);
+		clist = FuncnameGetCandidates(list_make1(makeString(proname)),
+									  nargs, false, false);
 
 		for (; clist; clist = clist->next)
 		{
@@ -1402,6 +1398,7 @@ OpernameGetCandidates(List *names, char oprkind)
 		newResult->oid = HeapTupleGetOid(opertup);
 		newResult->nargs = 2;
 		newResult->nvargs = 0;
+		newResult->ndargs = 0;
 		newResult->args[0] = operform->oprleft;
 		newResult->args[1] = operform->oprright;
 		newResult->next = resultList;
@@ -1698,16 +1695,10 @@ ConversionIsVisible(Oid conid)
 	Form_pg_conversion conform;
 	Oid			connamespace;
 	bool		visible;
-	cqContext  *pcqCtx;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_conversion "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(conid)));
-
-	contup = caql_getnext(pcqCtx);
-
+	contup = SearchSysCache(CONVOID,
+							ObjectIdGetDatum(conid),
+							0, 0, 0);
 	if (!HeapTupleIsValid(contup))
 		elog(ERROR, "cache lookup failed for conversion %u", conid);
 	conform = (Form_pg_conversion) GETSTRUCT(contup);
@@ -1736,7 +1727,7 @@ ConversionIsVisible(Oid conid)
 		visible = (ConversionGetConid(conname) == conid);
 	}
 
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(contup);
 
 	return visible;
 }
@@ -2369,12 +2360,15 @@ recomputeNamespacePath(void)
 static void
 InitTempTableNamespace(void)
 {
-	char		namespaceName[NAMEDATALEN];
-	int			fetchCount;
-	char	   *rolname;
-	CreateSchemaStmt *stmt;
+	InitTempTableNamespaceWithOids(InvalidOid);
+}
 
-	Assert(!OidIsValid(myTempNamespace));
+void
+InitTempTableNamespaceWithOids(Oid tempSchema)
+{
+	char		namespaceName[NAMEDATALEN];
+	Oid			namespaceId;
+	int			session_suffix;
 
 	/*
 	 * First, do permission check to see if we are authorized to make temp
@@ -2393,26 +2387,55 @@ InitTempTableNamespace(void)
 				 errmsg("permission denied to create temporary tables in database \"%s\"",
 						get_database_name(MyDatabaseId))));
 
-	/* 
+	/*
 	 * TempNamespace name creation rules are different depending on the
 	 * nature of the current connection role.
 	 */
 	switch (Gp_role)
 	{
 		case GP_ROLE_DISPATCH:
-			snprintf(namespaceName, sizeof(namespaceName), "pg_temp_%d", 
-					 gp_session_id);
+		case GP_ROLE_EXECUTE:
+			session_suffix = gp_session_id;
 			break;
 
 		case GP_ROLE_UTILITY:
-			snprintf(namespaceName, sizeof(namespaceName), "pg_temp_%d", 
-					 MyBackendId);
+			session_suffix = MyBackendId;
 			break;
 
 		default:
 			/* Should never hit this */
 			elog(ERROR, "invalid backend temp schema creation");
+			session_suffix = -1;	/* keep compiler quiet */
 			break;
+	}
+
+	snprintf(namespaceName, sizeof(namespaceName), "pg_temp_%d", session_suffix);
+
+	namespaceId = GetSysCacheOid(NAMESPACENAME,
+								 CStringGetDatum(namespaceName),
+								 0, 0, 0);
+
+	/*
+	 * GPDB: Delete old temp schema.
+	 *
+	 * Remove any vestigages of old temporary schema, if any.  This can
+	 * happen when an old session crashes and doesn't run normal session
+	 * shutdown.
+	 *
+	 * In postgres they try to reuse existing schemas in this case,
+	 * however that does not work well for us since the schemas may exist
+	 * on a segment by segment basis and we want to keep them syncronized
+	 * on oid.  The best way of dealing with this is to just delete the
+	 * old schemas.
+	 */
+	if (OidIsValid(namespaceId))
+	{
+		RemoveTempRelations(namespaceId);
+		RemoveSchemaById(namespaceId);
+		elog(DEBUG1, "Remove schema entry %u from pg_namespace",
+			 namespaceId);
+		namespaceId = InvalidOid;
+		CommandCounterIncrement();
 	}
 
 	/*
@@ -2423,34 +2446,46 @@ InitTempTableNamespace(void)
 	 * temp tables.  This works because the places that access the temp
 	 * namespace for my own backend skip permissions checks on it.
 	 */
+	namespaceId = NamespaceCreate(namespaceName, BOOTSTRAP_SUPERUSERID, tempSchema);
+	/* Advance command counter to make namespace visible */
+	CommandCounterIncrement();
 
-	/* 
-	 * CDB: Dispatch CREATE SCHEMA command.
-	 *
-	 * We need to keep the OID of temp schemas synchronized across the
-	 * cluster which means that we must go through regular dispatch
-	 * logic rather than letting every backend manage the 
+	/*
+	 * Okay, we've prepared the temp namespace ... but it's not committed yet,
+	 * so all our work could be undone by transaction rollback.  Set flag for
+	 * AtEOXact_Namespace to know what to do.
 	 */
-		
-	/* Lookup the name of the superuser */
+	myTempNamespace = namespaceId;
 
-	rolname = caql_getcstring_plus(
-					NULL,
-					&fetchCount,
-					NULL,
-					cql("SELECT rolname FROM pg_authid "
-						" WHERE oid = :1 ",
-						ObjectIdGetDatum(BOOTSTRAP_SUPERUSERID)));
+	/* It should not be done already. */
+	AssertState(myTempNamespaceSubID == InvalidSubTransactionId);
+	myTempNamespaceSubID = GetCurrentSubTransactionId();
 
-	Assert(fetchCount);  /* bootstrap user MUST exist */
+	namespaceSearchPathValid = false;	/* need to rebuild list */
 
-	/* Execute the internal DDL */
-	stmt = makeNode(CreateSchemaStmt);
-	stmt->schemaname = namespaceName;
-	stmt->istemp	 = true;
-	stmt->authid	 = rolname;
-	ProcessUtility((Node*) stmt, "(internal create temp schema command)",
-				   NULL, false, None_Receiver, NULL);
+	/*
+	 * GPDB: Dispatch a special CREATE SCHEMA command, to also create the
+	 * temp schema in all the segments.
+	 *
+	 * We need to keep the OID of the temp schema synchronized across the
+	 * cluster which means that we must go through regular dispatch
+	 * logic rather than letting every backend manage it.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		CreateSchemaStmt *stmt;
+
+		stmt = makeNode(CreateSchemaStmt);
+		stmt->istemp	 = true;
+		stmt->schemaOid = namespaceId;
+
+		/*
+		 * Dispatch the command to all primary and mirror segment dbs.
+		 * Starts a global transaction and reconfigures cluster if needed.
+		 * Waits for QEs to finish.  Exits via ereport(ERROR,...) if error.
+		 */
+		CdbDispatchUtilityStatement((Node *)stmt, "(internal create temp schema command)");
+	}
 }
 
 /*

@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_archiver.c,v 1.138.2.2 2007/08/06 01:38:24 tgl Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_archiver.c,v 1.142 2007/02/19 15:05:06 mha Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -87,10 +87,10 @@ static void ResetOutput(ArchiveHandle *AH, OutputContext savedContext);
 /* Public */
 Archive *
 CreateArchive(const char *FileSpec, const ArchiveFormat fmt,
-			  const int compression)
+			  const int compression, ArchiveMode mode)
 
 {
-	ArchiveHandle *AH = _allocAH(FileSpec, fmt, compression, archModeWrite);
+	ArchiveHandle *AH = _allocAH(FileSpec, fmt, compression, mode);
 
 	return (Archive *) AH;
 }
@@ -992,10 +992,20 @@ SetOutput(ArchiveHandle *AH, char *filename, int compression)
 	else
 #endif
 	{							/* Use fopen */
-		if (fn >= 0)
-			AH->OF = fdopen(dup(fn), PG_BINARY_W);
+		if (AH->mode == archModeAppend)
+		{
+			if (fn >= 0)
+				AH->OF = fdopen(dup(fn), PG_BINARY_A);
+			else
+				AH->OF = fopen(filename, PG_BINARY_A);
+		}
 		else
-			AH->OF = fopen(filename, PG_BINARY_W);
+		{
+			if (fn >= 0)
+				AH->OF = fdopen(dup(fn), PG_BINARY_W);
+			else
+				AH->OF = fopen(filename, PG_BINARY_W);
+		}
 		AH->gzOut = 0;
 	}
 
@@ -2509,6 +2519,7 @@ _getObjectDescription(PQExpBuffer buf, TocEntry *te, ArchiveHandle *AH)
 		strcmp(type, "FUNCTION") == 0 ||
 		strcmp(type, "OPERATOR") == 0 ||
 		strcmp(type, "OPERATOR CLASS") == 0 ||
+		strcmp(type, "OPERATOR FAMILY") == 0 ||
 		strcmp(type, "PROTOCOL") == 0)
 	{
 		/* Chop "DROP " off the front and make a modifiable copy */
@@ -2710,6 +2721,7 @@ _printTocEntry(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt, bool isDat
 			strcmp(te->desc, "FUNCTION") == 0 ||
 			strcmp(te->desc, "OPERATOR") == 0 ||
 			strcmp(te->desc, "OPERATOR CLASS") == 0 ||
+			strcmp(te->desc, "OPERATOR FAMILY") == 0 ||
 			strcmp(te->desc, "SCHEMA") == 0 ||
 			strcmp(te->desc, "TABLE") == 0 ||
 			strcmp(te->desc, "EXTERNAL TABLE") == 0 ||
@@ -2855,7 +2867,7 @@ ReadHead(ArchiveHandle *AH)
 						 (unsigned long) AH->intSize);
 
 		if (AH->intSize > sizeof(int))
-			write_msg(modulename, "WARNING: archive was made on a machine with larger integers, some operations may fail\n");
+			write_msg(modulename, "WARNING: archive was made on a machine with larger integers, some operations might fail\n");
 
 		if (AH->version >= K_VERS_1_7)
 			AH->offSize = (*AH->ReadBytePtr) (AH);

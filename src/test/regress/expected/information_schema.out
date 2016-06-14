@@ -10,11 +10,12 @@ explain
 SELECT attnum::information_schema.cardinal_number 
 from pg_attribute 
 where attnum > 0 and attrelid = 'r'::regclass;
-                          QUERY PLAN                          
+                          QUERY PLAN
 --------------------------------------------------------------
- Seq Scan on pg_attribute  (cost=0.00..48.81 rows=11 width=2)
-   Filter: attnum > 0 AND attrelid = 825279::oid
-(2 rows)
+ Seq Scan on pg_attribute  (cost=0.00..376.30 rows=5 width=2)
+   Filter: attnum > 0 AND attrelid = 1699317::oid
+ Settings:  enable_bitmapscan=off; enable_indexscan=off
+(3 rows)
 
 SELECT attnum::information_schema.cardinal_number 
 from pg_attribute 
@@ -36,11 +37,12 @@ from (SELECT attnum::information_schema.cardinal_number
       from pg_attribute 
       where attnum > 0 and attrelid = 'r'::regclass) q
 where attnum=2;
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
- Seq Scan on pg_attribute  (cost=0.00..61.39 rows=2 width=2)
-   Filter: attnum > 0 AND attrelid = 825279::oid AND attnum::information_schema.cardinal_number::integer = 2
-(2 rows)
+                                                  QUERY PLAN
+--------------------------------------------------------------------------------------------------------------
+ Seq Scan on pg_attribute  (cost=0.00..473.38 rows=1 width=2)
+   Filter: attnum > 0 AND attrelid = 1699317::oid AND attnum::information_schema.cardinal_number::integer = 2
+ Settings:  enable_bitmapscan=off; enable_indexscan=off
+(3 rows)
 
 SELECT *
 from (SELECT attnum::information_schema.cardinal_number 
@@ -73,7 +75,7 @@ and ordinal_position =1;
 select table_schema, table_name,column_name,ordinal_position
 from information_schema.columns
 where ordinal_position = 20;
-    table_schema    |      table_name      |    column_name     | ordinal_position 
+    table_schema    |      table_name      |    column_name     | ordinal_position
 --------------------+----------------------+--------------------+------------------
  information_schema | element_types        | interval_precision |               20
  gp_toolkit         | __gp_log_segment_ext | logdetail          |               20
@@ -83,10 +85,10 @@ where ordinal_position = 20;
  pg_catalog         | pg_statistic         | stavalues3         |               20
  pg_catalog         | pg_partitions        | parenttablespace   |               20
  information_schema | attributes           | datetime_precision |               20
- pg_catalog         | pg_type              | typnotnull         |               20
- pg_catalog         | pg_proc              | proacl             |               20
+ pg_catalog         | pg_type              | typstorage         |               20
+ pg_catalog         | pg_proc              | proargnames        |               20
  pg_catalog         | pg_class             | reltriggers        |               20
- pg_catalog         | pg_am                | amrestrpos         |               20
+ pg_catalog         | pg_am                | ambuild            |               20
  information_schema | columns              | collation_catalog  |               20
  information_schema | domains              | udt_catalog        |               20
  information_schema | parameters           | numeric_scale      |               20

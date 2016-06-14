@@ -258,6 +258,15 @@ RunawayCleaner_RunawayCleanupDoneForProcess(bool ignoredCleanup)
 		 */
 		RunawayCleaner_RunawayCleanupDoneForSession();
 	}
+
+	/*
+	 * Finally we are done with all critical cleanup, which includes releasing all our memory and
+	 * releasing our cleanup counter so that another session can be marked as runaway, if needed.
+	 * Now, we have some head room to actually record our usage.
+	 */
+	write_stderr("Logging memory usage because of runaway cleanup. Note, this is a post-cleanup logging and may be incomplete.");
+	MemoryAccounting_SaveToLog();
+	MemoryContextStats(TopMemoryContext);
 }
 
 /*

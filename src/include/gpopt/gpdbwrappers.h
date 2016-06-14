@@ -248,10 +248,10 @@ namespace gpdb {
 	bool FCastFunc(Oid oidSrc, Oid oidDest, bool *is_binary_coercible, Oid *oidCastFunc);
 	
 	// get type of operator
-	uint UlCmpt(Oid oidOp, Oid oidLeft, Oid oidRight);
+	unsigned int UlCmpt(Oid oidOp, Oid oidLeft, Oid oidRight);
 	
 	// get scalar comparison between given types
-	Oid OidScCmp(Oid oidLeft, Oid oidRight, uint ulCmpt);
+	Oid OidScCmp(Oid oidLeft, Oid oidRight, unsigned int ulCmpt);
 
 	// get equality operator for given type
 	Oid OidEqualityOp(Oid oidType);
@@ -293,7 +293,7 @@ namespace gpdb {
 	List *PlPartitionAttrs(Oid oid);
 
 	// parts of a partitioned table
-	PartitionNode *PpnParts(Oid relid, int2 level, Oid parent, bool inctemplate, MemoryContext mcxt, bool includesubparts);
+	PartitionNode *PpnParts(Oid relid, int2 level, Oid parent, bool inctemplate, bool includesubparts);
 
 	// keys of the relation with the given oid
 	List *PlRelationKeys(Oid relid);
@@ -432,9 +432,6 @@ namespace gpdb {
 
 	// is the given operator hash-joinable
 	bool FOpHashJoinable(Oid opno);
-
-	// is the given operator merge-joinable
-	bool FOpMergeJoinable(Oid opno, Oid *leftOp, Oid *rightOp);
 
 	// is the given operator strict
 	bool FOpStrict(Oid opno);
@@ -599,7 +596,7 @@ namespace gpdb {
 	bool FInterpretOidsOption(List *plOptions);
 	
 	// extract string value from defelem's value
-	char *SzDefGetString(DefElem *pdefelem, bool *fNeedFree);
+	char *SzDefGetString(DefElem *pdefelem);
 
 	// fold array expression constant values
 	Node *PnodeFoldArrayexprConstants(ArrayExpr *parrayexpr);

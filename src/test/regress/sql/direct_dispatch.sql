@@ -118,9 +118,9 @@ insert into direct_test (key, value) values (sqrt(100*10*10),123123);
 --
 -- should get 100 and 123 as the values
 --
-select * from direct_test where value = 123123 order by key;
+select * from direct_test where value = '123123' order by key;
 
-delete from direct_test where value = 123123;
+delete from direct_test where value = '123123';
 
 --------------------------------------------------------------------------------
 -- Multiple row update, where clause lists multiple values which hash differently so no direct dispatch

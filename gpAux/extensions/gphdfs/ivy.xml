@@ -15,13 +15,10 @@
       <conf name="runtime" description="runtime but not the artifact"/>
       <conf name="hadoop2" description="hadoop2.0 build configuration"/>
       <conf name="ut"      description="ut for hadoop 2.0+"/>
-      <!-- Private configurations -->
-      <conf name="checkstyle" visibility="private"/>
     </configurations>
 
     <dependencies>
       <dependency org="${org}"     name="${name}"    rev="${revision}"           conf="compile->master"/>
-      <dependency org="checkstyle" name="checkstyle" rev="${checkstyle.version}" conf="checkstyle->default"/>
 
       <dependency org="apache" name="hadoop-annotations" rev="${hadoop-common.revision}" conf="hadoop2->master"/>
       <dependency org="apache" name="hadoop-core"        rev="${revision}"               conf="hadoop2->master"/>

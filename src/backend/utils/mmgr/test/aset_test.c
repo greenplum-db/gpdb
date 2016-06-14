@@ -727,7 +727,7 @@ test__AllocSetAllocImpl__LargeAllocInNewBlock(void **state)
 	 * more chunk allocation, if it is not entirely used yet). Also, ensure that block's
 	 * freeptr is set to endptr (i.e., block is exclusively owned by this chunk).
 	 */
-	assert_true(set->blocks != NULL && set->blocks->next != NULL && set->blocks->next == block && set->blocks->next->endptr == set->blocks->next->freeptr);
+	assert_true(set->blocks != NULL && set->blocks->next != NULL && set->blocks->next == block && UserPtr_GetEndPtr(set->blocks->next) == set->blocks->next->freeptr);
 
 	pfree(testAlloc);
 }

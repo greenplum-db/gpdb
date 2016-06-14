@@ -35,7 +35,7 @@ SET_VERSION_SCRIPTS = \
 	bin/gpstate \
 	bin/gpstop \
 	bin/gpsys1 \
-	bin/lib/gpcheckcat \
+	bin/gpcheckcat \
 	sbin/gpaddconfig.py \
 	sbin/gpchangeuserpassword \
 	sbin/gpcheck_hostdump \
@@ -76,16 +76,22 @@ install: generate_greenplum_path_file
 	# Generate some python libraries
 	$(MAKE) -C bin all prefix=$(prefix)
 
-#	#Copy the management utilities
+	# Copy the management utilities
 	mkdir -p $(prefix)/bin
 	mkdir -p $(prefix)/lib
 	mkdir -p $(prefix)/lib/python	
 	mkdir -p $(prefix)/sbin
 
-	#Setup /lib/python contents
+	# Setup /lib/python contents
 	cp -rp bin/gppylib $(prefix)/lib/python
 	cp -rp bin/ext/* $(prefix)/lib/python
+
+	# Setup /bin contents
 	cp -rp bin $(prefix)
+	# Symlink gpcheckcat from bin to bin/lib to maintain backward compatibility
+	if [ -f $(prefix)/bin/gpcheckcat  ]; then \
+		ln -sf ../gpcheckcat $(prefix)/bin/lib/gpcheckcat; \
+	fi
 
 #ifeq "$(findstring $(BLD_ARCH),$(GPPKG_PLATFORMS))" ""
 #	@echo "Removing gppkg from distribution"

@@ -159,7 +159,6 @@ into			{ return K_INTO;			}
 is				{ return K_IS;				}
 log				{ return K_LOG;				}
 loop			{ return K_LOOP;			}
-next			{ return K_NEXT;			}
 not				{ return K_NOT;				}
 notice			{ return K_NOTICE;			}
 null			{ return K_NULL;			}

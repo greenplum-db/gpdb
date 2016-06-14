@@ -1,0 +1,1663 @@
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+create schema qp_regexp;
+set search_path to qp_regexp;
+-- end_ignore
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: creat-tbl-for-reg-exp.sql
+-- ----------------------------------------------------------------------
+drop table if exists phone_book;
+NOTICE:  table "phone_book" does not exist, skipping
+create table phone_book
+(
+lname char varying(25),
+fname char varying(25),
+state char(2),
+phone_num bigint
+)
+distributed by (lname);
+\copy public.phone_book from '@abs_srcdir@/data/phone_book.txt' delimiter as '|'
+drop table if exists phone_book_substr;
+NOTICE:  table "phone_book_substr" does not exist, skipping
+create table phone_book_substr
+(
+lname_substr char(3),
+lname char varying(25),
+fname char varying(25),
+state char(2),
+phone_num bigint
+)
+distributed by (lname_substr);
+--distributed by (substr(lname,1,2));
+insert into
+phone_book_substr
+(
+lname_substr,
+lname,
+fname,
+state,
+phone_num
+)
+select
+substr(lname,1,3),
+lname,
+fname,
+state,
+phone_num
+from phone_book
+order by lname
+;
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: query01.sql
+-- ----------------------------------------------------------------------
+-- Regular Expression
+SELECT regexp_matches('foobarbequebaz', '(bar)(beque)');
+ regexp_matches 
+----------------
+ {bar,beque}
+(1 row)
+
+SELECT regexp_matches('foobarbequebazilbarfbonk', '(b[^b]+)(b[^b]+)', 'g');
+ regexp_matches 
+----------------
+ {bar,beque}
+ {bazil,barf}
+(2 rows)
+
+SELECT regexp_matches('foobarbequebaz', 'barbeque');
+ regexp_matches 
+----------------
+ {barbeque}
+(1 row)
+
+SELECT foo FROM regexp_split_to_table('the quick brown fox jumped over the lazy dog', E'\\\s+') AS foo;
+  foo   
+--------
+ the
+ quick
+ brown
+ fox
+ jumped
+ over
+ the
+ lazy
+ dog
+(9 rows)
+
+SELECT regexp_split_to_array('the quick brown fox jumped over the lazy dog', E'\\s+');
+             regexp_split_to_array              
+------------------------------------------------
+ {the,quick,brown,fox,jumped,over,the,lazy,dog}
+(1 row)
+
+SELECT foo FROM regexp_split_to_table('the quick brown fox', E'\\s*') AS foo;
+ foo 
+-----
+ t
+ h
+ e
+ q
+ u
+ i
+ c
+ k
+ b
+ r
+ o
+ w
+ n
+ f
+ o
+ x
+(16 rows)
+
+SELECT '123' ~ E'^\\d{3}';
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT 'abc' SIMILAR TO 'abc'; 
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT 'abc' SIMILAR TO 'a'; 
+ ?column? 
+----------
+ f
+(1 row)
+
+SELECT 'abc' SIMILAR TO '%(b|d)%'; 
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT 'abc' SIMILAR TO '(b|c)%'; 
+ ?column? 
+----------
+ f
+(1 row)
+
+SELECT substring('foobar' from '%#"o_b#"%' for '#'); 
+ substring 
+-----------
+ oob
+(1 row)
+
+SELECT substring('foobar' from '#"o_b#"%' for '#'); 
+ substring 
+-----------
+ 
+(1 row)
+
+SELECT substring('foobar' from 'o.b'); 
+ substring 
+-----------
+ oob
+(1 row)
+
+SELECT substring('foobar' from 'o(.)b');
+ substring 
+-----------
+ o
+(1 row)
+
+SELECT regexp_replace('foobarbaz', 'b..', 'X');
+ regexp_replace 
+----------------
+ fooXbaz
+(1 row)
+
+                                   
+SELECT regexp_replace('foobarbaz', 'b..', 'X', 'g');
+ regexp_replace 
+----------------
+ fooXX
+(1 row)
+
+                                   
+SELECT regexp_replace('foobarbaz', 'b(..)', E'X\\1Y', 'g');
+ regexp_replace 
+----------------
+ fooXarYXazY
+(1 row)
+
+                                   
+SELECT SUBSTRING('XY1234Z', 'Y*([0-9]{1,3})'); 
+ substring 
+-----------
+ 123
+(1 row)
+
+SELECT SUBSTRING('XY1234Z', 'Y*?([0-9]{1,3})');
+ substring 
+-----------
+ 1
+(1 row)
+
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: reg-exp-like-qry003.sql
+-- ----------------------------------------------------------------------
+select count(*)
+from phone_book_substr
+;
+ count 
+-------
+ 17388
+(1 row)
+
+--17388
+---------------------------------------------------------
+-- NOT LIKE
+select count(*)
+from phone_book_substr
+where lname_substr LIKE 'Aa' ;
+ count 
+-------
+     0
+(1 row)
+
+--0 Rows.
+select count(*) 
+from phone_book_substr 
+where lname_substr LIKE 'A%' ;
+ count 
+-------
+   621
+(1 row)
+
+--621
+select count(*)
+from phone_book_substr
+where lname_substr LIKE 'Z%';
+ count 
+-------
+   621
+(1 row)
+
+--621
+select count(*)
+from phone_book_substr
+where lname_substr LIKE '_a_';
+ count 
+-------
+   648
+(1 row)
+
+--648
+select count(*)
+from phone_book_substr
+where lname_substr LIKE '_Z_';
+ count 
+-------
+     0
+(1 row)
+
+--0 Rows.
+select count(*)
+from phone_book_substr
+where lname_substr LIKE 'Abd';
+ count 
+-------
+     0
+(1 row)
+
+--0 Rows.
+select count(*)
+from phone_book_substr
+;
+ count 
+-------
+ 17388
+(1 row)
+
+--17388
+---------------------------------------------------------
+select lname_substr
+from phone_book_substr
+where lname_substr LIKE 'Aa' group by 1 order by 1;
+ lname_substr 
+--------------
+(0 rows)
+
+--0 Rows.
+select lname_substr 
+from phone_book_substr 
+where lname_substr LIKE 'A%' group by 1 order by 1;
+ lname_substr 
+--------------
+ Aad
+ Abe
+ Abf
+ Abg
+ Abh
+ Abi
+ Acj
+ Ack
+ Acl
+ Acm
+ Acn
+ Aco
+ Acp
+ Acq
+ Acr
+ Ads
+ Adt
+ Adu
+ Adv
+ Adw
+ Adx
+ Ady
+ Adz
+(23 rows)
+
+select count(*)
+from phone_book_substr
+where lname_substr LIKE 'A%';
+ count 
+-------
+   621
+(1 row)
+
+--621
+select lname_substr
+from phone_book_substr
+where lname_substr LIKE '_a_' group by 1 order by 1;
+ lname_substr 
+--------------
+ Aad
+ Bad
+ Cad
+ Dad
+ Ead
+ Fad
+ Gad
+ Had
+ Iad
+ Jad
+ Kad
+ Lad
+ Mad
+ Nad
+ Oad
+ Pad
+ Rad
+ Sad
+ Uad
+ Vad
+ Wad
+ Xad
+ Yad
+ Zad
+(24 rows)
+
+select lname_substr
+from phone_book_substr
+where lname_substr LIKE '_Z_' group by 1 order by 1;
+ lname_substr 
+--------------
+(0 rows)
+
+--0 Rows.
+select lname_substr
+from phone_book_substr
+where lname_substr LIKE 'Abd' group by 1 order by 1;
+ lname_substr 
+--------------
+(0 rows)
+
+--0 Rows.
+-- ~~ is equivalent to LIKE
+select count(*)
+from phone_book_substr
+where lname_substr ~~ 'A%';
+ count 
+-------
+   621
+(1 row)
+
+--621
+select count(*)
+from phone_book_substr
+where lname_substr ~~ '_b_';
+ count 
+-------
+  3240
+(1 row)
+
+--3240
+-- ILIKE  case sensitive LIKE
+select count(*)
+from phone_book_substr
+where lname_substr ILIKE 'a%';
+ count 
+-------
+   621
+(1 row)
+
+-- ~~* is equivalent to ILIKE
+select count(*)
+from phone_book_substr
+where lname_substr ~~* 'a%';
+ count 
+-------
+   621
+(1 row)
+
+--621
+select count(*)
+from phone_book_substr
+where lname_substr ~~* '_b_';
+ count 
+-------
+  3240
+(1 row)
+
+--3240
+-- NOT LIKE
+select lname_substr
+from phone_book_substr
+where lname_substr NOT LIKE 'Z%' group by 1 order by 1;
+ lname_substr 
+--------------
+ Aad
+ Abe
+ Abf
+ Abg
+ Abh
+ Abi
+ Acj
+ Ack
+ Acl
+ Acm
+ Acn
+ Aco
+ Acp
+ Acq
+ Acr
+ Ads
+ Adt
+ Adu
+ Adv
+ Adw
+ Adx
+ Ady
+ Adz
+ Bad
+ Bbe
+ Bbf
+ Bbg
+ Bbh
+ Bbi
+ Bcj
+ Bck
+ Bcl
+ Bcm
+ Bcn
+ Bco
+ Bcp
+ Bcq
+ Bcr
+ Bds
+ Bdt
+ Bdu
+ Bdv
+ Bdw
+ Bdx
+ Bdy
+ Bdz
+ Cad
+ Cbe
+ Cbf
+ Cbg
+ Cbh
+ Cbi
+ Ccj
+ Cck
+ Ccl
+ Ccm
+ Ccn
+ Cco
+ Ccp
+ Ccq
+ Ccr
+ Cds
+ Cdt
+ Cdu
+ Cdv
+ Cdw
+ Cdx
+ Cdy
+ Cdz
+ Dad
+ Dbe
+ Dbf
+ Dbg
+ Dbh
+ Dbi
+ Dcj
+ Dck
+ Dcl
+ Dcm
+ Dcn
+ Dco
+ Dcp
+ Dcq
+ Dcr
+ Dds
+ Ddt
+ Ddu
+ Ddv
+ Ddw
+ Ddx
+ Ddy
+ Ddz
+ Ead
+ Ebe
+ Ebf
+ Ebg
+ Ebh
+ Ebi
+ Ecj
+ Eck
+ Ecl
+ Ecm
+ Ecn
+ Eco
+ Ecp
+ Ecq
+ Ecr
+ Eds
+ Edt
+ Edu
+ Edv
+ Edw
+ Edx
+ Edy
+ Edz
+ Fad
+ Fbe
+ Fbf
+ Fbg
+ Fbh
+ Fbi
+ Fcj
+ Fck
+ Fcl
+ Fcm
+ Fcn
+ Fco
+ Fcp
+ Fcq
+ Fcr
+ Fds
+ Fdt
+ Fdu
+ Fdv
+ Fdw
+ Fdx
+ Fdy
+ Fdz
+ Gad
+ Gbe
+ Gbf
+ Gbg
+ Gbh
+ Gbi
+ Gcj
+ Gck
+ Gcl
+ Gcm
+ Gcn
+ Gco
+ Gcp
+ Gcq
+ Gcr
+ Gds
+ Gdt
+ Gdu
+ Gdv
+ Gdw
+ Gdx
+ Gdy
+ Gdz
+ Had
+ Hbe
+ Hbf
+ Hbg
+ Hbh
+ Hbi
+ Hcj
+ Hck
+ Hcl
+ Hcm
+ Hcn
+ Hco
+ Hcp
+ Hcq
+ Hcr
+ Hds
+ Hdt
+ Hdu
+ Hdv
+ Hdw
+ Hdx
+ Hdy
+ Hdz
+ Iad
+ Ibe
+ Ibf
+ Ibg
+ Ibh
+ Ibi
+ Icj
+ Ick
+ Icl
+ Icm
+ Icn
+ Ico
+ Icp
+ Icq
+ Icr
+ Ids
+ Idt
+ Idu
+ Idv
+ Idw
+ Idx
+ Idy
+ Idz
+ Jad
+ Jbe
+ Jbf
+ Jbg
+ Jbh
+ Jbi
+ Jcj
+ Jck
+ Jcl
+ Jcm
+ Jcn
+ Jco
+ Jcp
+ Jcq
+ Jcr
+ Jds
+ Jdt
+ Jdu
+ Jdv
+ Jdw
+ Jdx
+ Jdy
+ Jdz
+ Kad
+ Kbe
+ Kbf
+ Kbg
+ Kbh
+ Kbi
+ Kcj
+ Kck
+ Kcl
+ Kcm
+ Kcn
+ Kco
+ Kcp
+ Kcq
+ Kcr
+ Kds
+ Kdt
+ Kdu
+ Kdv
+ Kdw
+ Kdx
+ Kdy
+ Kdz
+ Ked
+ Kee
+ Kef
+ Keg
+ Keh
+ Kei
+ Kej
+ Kek
+ Kel
+ Kem
+ Ken
+ Keo
+ Kep
+ Keq
+ Ker
+ Kes
+ Ket
+ Keu
+ Kev
+ Kew
+ Kex
+ Key
+ Kez
+ Lad
+ Lbe
+ Lbf
+ Lbg
+ Lbh
+ Lbi
+ Lcj
+ Lck
+ Lcl
+ Lcm
+ Lcn
+ Lco
+ Lcp
+ Lcq
+ Lcr
+ Lds
+ Ldt
+ Ldu
+ Ldv
+ Ldw
+ Ldx
+ Ldy
+ Ldz
+ Lid
+ Lie
+ Lif
+ Lig
+ Lih
+ Lii
+ Lij
+ Lik
+ Lil
+ Lim
+ Lin
+ Lio
+ Lip
+ Liq
+ Lir
+ Lis
+ Lit
+ Liu
+ Liv
+ Liw
+ Lix
+ Liy
+ Liz
+ Mad
+ Mbe
+ Mbf
+ Mbg
+ Mbh
+ Mbi
+ Mcj
+ Mck
+ Mcl
+ Mcm
+ Mcn
+ Mco
+ Mcp
+ Mcq
+ Mcr
+ Mds
+ Mdt
+ Mdu
+ Mdv
+ Mdw
+ Mdx
+ Mdy
+ Mdz
+ Mod
+ Moe
+ Mof
+ Mog
+ Moh
+ Moi
+ Moj
+ Mok
+ Mol
+ Mom
+ Mon
+ Moo
+ Mop
+ Moq
+ Mor
+ Mos
+ Mot
+ Mou
+ Mov
+ Mow
+ Mox
+ Moy
+ Moz
+ Nad
+ Nbe
+ Nbf
+ Nbg
+ Nbh
+ Nbi
+ Ncj
+ Nck
+ Ncl
+ Ncm
+ Ncn
+ Nco
+ Ncp
+ Ncq
+ Ncr
+ Nds
+ Ndt
+ Ndu
+ Ndv
+ Ndw
+ Ndx
+ Ndy
+ Ndz
+ Nud
+ Nue
+ Nuf
+ Nug
+ Nuh
+ Nui
+ Nuj
+ Nuk
+ Nul
+ Num
+ Nun
+ Nuo
+ Nup
+ Nuq
+ Nur
+ Nus
+ Nut
+ Nuu
+ Nuv
+ Nuw
+ Nux
+ Nuy
+ Nuz
+ Oad
+ Obe
+ Obf
+ Obg
+ Obh
+ Obi
+ Ocj
+ Ock
+ Ocl
+ Ocm
+ Ocn
+ Oco
+ Ocp
+ Ocq
+ Ocr
+ Ods
+ Odt
+ Odu
+ Odv
+ Odw
+ Odx
+ Ody
+ Odz
+ Pad
+ Pbe
+ Pbf
+ Pbg
+ Pbh
+ Pbi
+ Pcj
+ Pck
+ Pcl
+ Pcm
+ Pcn
+ Pco
+ Pcp
+ Pcq
+ Pcr
+ Pds
+ Pdt
+ Pdu
+ Pdv
+ Pdw
+ Pdx
+ Pdy
+ Pdz
+ Rad
+ Rbe
+ Rbf
+ Rbg
+ Rbh
+ Rbi
+ Rcj
+ Rck
+ Rcl
+ Rcm
+ Rcn
+ Rco
+ Rcp
+ Rcq
+ Rcr
+ Rds
+ Rdt
+ Rdu
+ Rdv
+ Rdw
+ Rdx
+ Rdy
+ Rdz
+ Sad
+ Sbe
+ Sbf
+ Sbg
+ Sbh
+ Sbi
+ Scj
+ Sck
+ Scl
+ Scm
+ Scn
+ Sco
+ Scp
+ Scq
+ Scr
+ Sds
+ Sdt
+ Sdu
+ Sdv
+ Sdw
+ Sdx
+ Sdy
+ Sdz
+ Uad
+ Ube
+ Ubf
+ Ubg
+ Ubh
+ Ubi
+ Ucj
+ Uck
+ Ucl
+ Ucm
+ Ucn
+ Uco
+ Ucp
+ Ucq
+ Ucr
+ Uds
+ Udt
+ Udu
+ Udv
+ Udw
+ Udx
+ Udy
+ Udz
+ Vad
+ Vbe
+ Vbf
+ Vbg
+ Vbh
+ Vbi
+ Vcj
+ Vck
+ Vcl
+ Vcm
+ Vcn
+ Vco
+ Vcp
+ Vcq
+ Vcr
+ Vds
+ Vdt
+ Vdu
+ Vdv
+ Vdw
+ Vdx
+ Vdy
+ Vdz
+ Wad
+ Wbe
+ Wbf
+ Wbg
+ Wbh
+ Wbi
+ Wcj
+ Wck
+ Wcl
+ Wcm
+ Wcn
+ Wco
+ Wcp
+ Wcq
+ Wcr
+ Wds
+ Wdt
+ Wdu
+ Wdv
+ Wdw
+ Wdx
+ Wdy
+ Wdz
+ Xad
+ Xbe
+ Xbf
+ Xbg
+ Xbh
+ Xbi
+ Xcj
+ Xck
+ Xcl
+ Xcm
+ Xcn
+ Xco
+ Xcp
+ Xcq
+ Xcr
+ Xds
+ Xdt
+ Xdu
+ Xdv
+ Xdw
+ Xdx
+ Xdy
+ Xdz
+ Yad
+ Ybe
+ Ybf
+ Ybg
+ Ybh
+ Ybi
+ Ycj
+ Yck
+ Ycl
+ Ycm
+ Ycn
+ Yco
+ Ycp
+ Ycq
+ Ycr
+ Yds
+ Ydt
+ Ydu
+ Ydv
+ Ydw
+ Ydx
+ Ydy
+ Ydz
+(621 rows)
+
+-- !~~ is equivalent to NOT LIKE
+select count(*)
+from phone_book_substr
+where lname_substr !~~ 'A%';
+ count 
+-------
+ 16767
+(1 row)
+
+--16767
+select count(*)
+from phone_book_substr
+where lname_substr !~~ '_A%';
+ count 
+-------
+ 17388
+(1 row)
+
+--17388
+select count(*)
+from phone_book_substr
+where lname_substr !~~ '_b%';
+ count 
+-------
+ 14148
+(1 row)
+
+--14148
+select count(*)
+from phone_book_substr
+where lname_substr !~~ '_B%';
+ count 
+-------
+ 17388
+(1 row)
+
+--17388
+select count(*)
+from phone_book_substr
+where lname_substr !~~ '_b%';
+ count 
+-------
+ 14148
+(1 row)
+
+--14148
+-- !~~* is equivalent to NOT ILIKE
+select count(*)
+from phone_book_substr
+where lname_substr !~~* 'a%';
+ count 
+-------
+ 16767
+(1 row)
+
+--16767
+select count(*)
+from phone_book_substr
+where lname_substr !~~* '_A%';
+ count 
+-------
+ 16740
+(1 row)
+
+--16740
+select count(*)
+from phone_book_substr
+where lname_substr !~~* '_b%';
+ count 
+-------
+ 14148
+(1 row)
+
+--14148
+select count(*)
+from phone_book_substr
+where lname_substr !~~* '_B%';
+ count 
+-------
+ 14148
+(1 row)
+
+--14148
+select count(*)
+from phone_book_substr
+where lname_substr !~~* '_B_';
+ count 
+-------
+ 14148
+(1 row)
+
+--14148
+select count(*)
+from phone_book_substr
+where lname_substr !~~* '_b_';
+ count 
+-------
+ 14148
+(1 row)
+
+--14148
+-- ARRAY   
+--select array(select fname 
+--		from phone_book_substr 
+--		where lname_substr LIKE '%y%');
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: reg-exp-not-ilike-qry004.sql
+-- ----------------------------------------------------------------------
+--select count(*)
+--from phone_book_substr
+--;
+--17388
+---------------------------------------------------------
+-- ILIKE  case sensitive NOT ILIKE
+-- NOT ILIKE
+select count(*)
+from phone_book_substr
+where lname_substr NOT ILIKE 'a%';
+ count 
+-------
+ 16767
+(1 row)
+
+--16767
+select count(*) 
+from phone_book_substr 
+where lname_substr NOT ILIKE 'A%';
+ count 
+-------
+ 16767
+(1 row)
+
+--16767
+select count(*)
+from phone_book_substr
+where lname_substr NOT ILIKE 'Aa';
+ count 
+-------
+ 17388
+(1 row)
+
+--17388
+select count(*)
+from phone_book_substr
+where lname_substr NOT ILIKE '_a_';
+ count 
+-------
+ 16740
+(1 row)
+
+--16740
+select count(*)
+from phone_book_substr
+where lname_substr NOT ILIKE '_Z_';
+ count 
+-------
+ 17388
+(1 row)
+
+--17388
+select count(*)
+from phone_book_substr
+where lname_substr NOT ILIKE 'Abd';
+ count 
+-------
+ 17388
+(1 row)
+
+--17388
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: reg-exp-not-like-qry005.sql
+-- ----------------------------------------------------------------------
+select count(*)
+from phone_book_substr
+;
+ count 
+-------
+ 17388
+(1 row)
+
+--17388
+---------------------------------------------------------
+-- NOT LIKE
+select count(*)
+from phone_book_substr
+where lname_substr NOT LIKE 'Aa';
+ count 
+-------
+ 17388
+(1 row)
+
+--17388
+select count(*)
+from phone_book_substr
+where lname_substr NOT LIKE 'A%' ;
+ count 
+-------
+ 16767
+(1 row)
+
+--16767
+select count(*)
+from phone_book_substr
+where lname_substr NOT LIKE 'Z%';
+ count 
+-------
+ 16767
+(1 row)
+
+--16767
+select count(*)
+from phone_book_substr
+where lname_substr LIKE '_a_';
+ count 
+-------
+   648
+(1 row)
+
+--16740
+select count(*)
+from phone_book_substr
+where lname_substr NOT LIKE '_Z_';
+ count 
+-------
+ 17388
+(1 row)
+
+--17388
+select count(*)
+from phone_book_substr
+where lname_substr NOT LIKE 'Abd';
+ count 
+-------
+ 17388
+(1 row)
+
+--17388
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: reg-exp-not-tilde-ilike-qry007.sql
+-- ----------------------------------------------------------------------
+--select count(*)
+--from phone_book_substr
+--;
+--17388
+---------------------------------------------------------
+-- !~~* is equivalent to NOT ILIKE
+select count(*)
+from phone_book_substr
+where lname_substr !~~* 'A%';
+ count 
+-------
+ 16767
+(1 row)
+
+--16767
+select count(*)
+from phone_book_substr
+where lname_substr !~~* '_A%';
+ count 
+-------
+ 16740
+(1 row)
+
+--16740
+select count(*)
+from phone_book_substr
+where lname_substr !~~* '_b%';
+ count 
+-------
+ 14148
+(1 row)
+
+--14148
+select count(*)
+from phone_book_substr
+where lname_substr !~~* '_B%';
+ count 
+-------
+ 14148
+(1 row)
+
+--14148
+select count(*)
+from phone_book_substr
+where lname_substr !~~* 'B%';
+ count 
+-------
+ 16767
+(1 row)
+
+--16767
+select count(*)
+from phone_book_substr
+where lname_substr !~~* '_b_';
+ count 
+-------
+ 14148
+(1 row)
+
+--14148
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: reg-exp-similar-qry011.sql
+-- ----------------------------------------------------------------------
+--select count(*)
+--from phone_book_substr
+--;
+--17388
+---------------------------------------------------------
+-- SIMILAR TO
+-- | is equivalent to LOGICAL "OR"
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO '(A|B)%';
+ count 
+-------
+  1242
+(1 row)
+
+--1242
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO 'A%';
+ count 
+-------
+   621
+(1 row)
+
+--621
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO 'B%';
+ count 
+-------
+   621
+(1 row)
+
+--621
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO 'A%'
+OR lname_substr SIMILAR TO 'B%';
+ count 
+-------
+  1242
+(1 row)
+
+--1242
+-------------------------------------------
+-- * denotes repetition of the previous item zero or more times.
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO '(A|B)*';
+ count 
+-------
+     0
+(1 row)
+
+--0
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO 'A*';
+ count 
+-------
+     0
+(1 row)
+
+--0
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO 'B*';
+ count 
+-------
+     0
+(1 row)
+
+--0
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO 'A*'
+OR lname_substr SIMILAR TO 'B*';
+ count 
+-------
+     0
+(1 row)
+
+--0
+-------------------------------------------
+-- + denotes repetition of the previous item zero or more times.
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO '(A|B)+';
+ count 
+-------
+     0
+(1 row)
+
+--0
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO 'A+';
+ count 
+-------
+     0
+(1 row)
+
+--0
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO 'B+';
+ count 
+-------
+     0
+(1 row)
+
+--0
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO 'A+'
+OR lname_substr SIMILAR TO 'B+';
+ count 
+-------
+     0
+(1 row)
+
+--0
+-------------------------------------------
+-- [...] denotes specifies a character class.
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO '([A...]|[B...])';
+ count 
+-------
+     0
+(1 row)
+
+--0
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO '[A...]';
+ count 
+-------
+     0
+(1 row)
+
+--0
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO '[B...]';
+ count 
+-------
+     0
+(1 row)
+
+--0
+select count(*)
+from phone_book_substr
+where lname_substr SIMILAR TO '[A...]'
+OR lname_substr SIMILAR TO '[B...]';
+ count 
+-------
+     0
+(1 row)
+
+--0
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: reg-exp-tilde-like-qry013.sql
+-- ----------------------------------------------------------------------
+--select count(*)
+--from phone_book_substr
+--;
+--17388
+---------------------------------------------------------
+-- !~~ is equivalent to NOT LIKE
+select count(*)
+from phone_book_substr
+where lname_substr ~~ 'A%';
+ count 
+-------
+   621
+(1 row)
+
+--621
+select count(*)
+from phone_book_substr
+where lname_substr ~~ '_A%';
+ count 
+-------
+     0
+(1 row)
+
+--0
+select count(*)
+from phone_book_substr
+where lname_substr ~~ '_b%';
+ count 
+-------
+  3240
+(1 row)
+
+--3240
+select count(*)
+from phone_book_substr
+where lname_substr ~~ '_B%';
+ count 
+-------
+     0
+(1 row)
+
+--0
+select count(*)
+from phone_book_substr
+where lname_substr ~~ 'B%';
+ count 
+-------
+   621
+(1 row)
+
+--621
+select count(*)
+from phone_book_substr
+where lname_substr ~~ '_b_';
+ count 
+-------
+  3240
+(1 row)
+
+--3240
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: reg-exp-tilde-ilike-qry014.sql
+-- ----------------------------------------------------------------------
+--select count(*)
+--from phone_book_substr
+--;
+--17388
+---------------------------------------------------------
+-- ~~* is equivalent to ILIKE
+select count(*)
+from phone_book_substr
+where lname_substr ~~* 'A%';
+ count 
+-------
+   621
+(1 row)
+
+--621
+select count(*)
+from phone_book_substr
+where lname_substr ~~* '_A%';
+ count 
+-------
+   648
+(1 row)
+
+--648
+select count(*)
+from phone_book_substr
+where lname_substr ~~* '_b%';
+ count 
+-------
+  3240
+(1 row)
+
+--3240
+select count(*)
+from phone_book_substr
+where lname_substr ~~* '_B%';
+ count 
+-------
+  3240
+(1 row)
+
+--3240
+select count(*)
+from phone_book_substr
+where lname_substr ~~* 'B%';
+ count 
+-------
+   621
+(1 row)
+
+--621
+select count(*)
+from phone_book_substr
+where lname_substr ~~* '_b_';
+ count 
+-------
+  3240
+(1 row)
+
+--3240
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: drop-regexp.sql
+-- ----------------------------------------------------------------------
+drop table phone_book;
+drop table phone_book_substr;
+RESET ALL;
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop schema qp_regexp cascade;
+-- end_ignore
+RESET ALL;

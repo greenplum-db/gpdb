@@ -42,4 +42,7 @@ extern Selectivity join_selectivity(PlannerInfo *root, Oid op, List *args, JoinT
 void
 cdb_default_stats_warning_for_table(Oid reloid);
 
+#define DEFAULT_EXTERNAL_TABLE_PAGES 1000
+#define DEFAULT_INTERNAL_TABLE_PAGES 100
+
 #endif   /* PLANCAT_H */

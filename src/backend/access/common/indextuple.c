@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/indextuple.c,v 1.81 2007-02-27 23:48:06 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/common/indextuple.c,v 1.89 2009/08/01 19:59:41 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -403,6 +403,27 @@ nocache_index_getattr(IndexTuple tup,
 			off = att_align(off, att[attnum]->attalign);
 
 		return fetchatt(att[attnum], tp + off);
+	}
+}
+
+/*
+ * Convert an index tuple into Datum/isnull arrays.
+ *
+ * The caller must allocate sufficient storage for the output arrays.
+ * (INDEX_MAX_KEYS entries should be enough.)
+ */
+void
+index_deform_tuple(IndexTuple tup, TupleDesc tupleDescriptor,
+				   Datum *values, bool *isnull)
+{
+	int			i;
+
+	/* Assert to protect callers who allocate fixed-size arrays */
+	Assert(tupleDescriptor->natts <= INDEX_MAX_KEYS);
+
+	for (i = 0; i < tupleDescriptor->natts; i++)
+	{
+		values[i] = index_getattr(tup, i + 1, tupleDescriptor, &isnull[i]);
 	}
 }
 

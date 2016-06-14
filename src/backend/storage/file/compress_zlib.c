@@ -1,12 +1,15 @@
 /* compress_zlib.c */
 #include "c.h"
+#include "fstream/gfile.h"
 #include "storage/bfz.h"
 #include <zlib.h>
 
 struct bfz_zlib_freeable_stuff
 {
 	struct bfz_freeable_stuff super;
-	gzFile		f;
+
+	/* handle for the compressed file */
+	gfile_t *gfile;
 };
 
 /* This file implements bfz compression algorithm "zlib". */
@@ -23,91 +26,104 @@ bfz_zlib_close_ex(bfz_t * thiz)
 {
 	struct bfz_zlib_freeable_stuff *fs = (void *) thiz->freeable_stuff;
 
-	if (fs->f)
+	if (NULL != fs)
 	{
-		/* gzclose also closes thiz->fd */
-		gzclose(fs->f);
+		Assert(NULL != fs->gfile);
+
+		fs->gfile->close(fs->gfile);
+		pfree(fs->gfile);
+		fs->gfile = NULL;
+
+		pfree(fs);
+		thiz->freeable_stuff = NULL;
+	}
+
+	/*
+	 * gfile->close() does not close the underlying file descriptor.
+	 * Let's close it here.
+	 */
+	if (thiz->fd != -1)
+	{
+		close(thiz->fd);
 		thiz->fd = -1;
 	}
-	free(fs);
-	thiz->freeable_stuff = NULL;
 }
 
+/*
+ * bfz_zlib_write_ex
+ *   Write data to an opened compressed file.
+ *   An exception is thrown if the data cannot be written for any reason.
+ */
 static void
-gzwrite_fully(gzFile f, const char *buffer, int size)
-{
-	while (size)
-	{
-		int			i = gzwrite(f, (void *) buffer, size);
-
-		if (i <= 0)
-			ereport(ERROR,
-					(errcode(ERRCODE_IO_ERROR),
-					errmsg("could not write to temporary file: %m")));
-		buffer += i;
-		size -= i;
-	}
-}
-
-static int
-gzread_fully(gzFile f, char *buffer, int size)
-{
-	int			orig_size = size;
-
-	while (size)
-	{
-		int			i = gzread(f, buffer, size);
-
-		if (i < 0)
-			ereport(ERROR,
-					(errcode(ERRCODE_IO_ERROR),
-					errmsg("could not read from temporary file: %m")));
-		if (i == 0)
-			break;
-		buffer += i;
-		size -= i;
-	}
-	return orig_size - size;
-}
-
-static void
-bfz_zlib_write_ex(bfz_t * thiz, const char *buffer, int size)
+bfz_zlib_write_ex(bfz_t *thiz, const char *buffer, int size)
 {
 	struct bfz_zlib_freeable_stuff *fs = (void *) thiz->freeable_stuff;
 
-	gzwrite_fully(fs->f, buffer, size);
+	ssize_t written = gfile_write(fs->gfile, (void *)buffer, size);
+	if (written < 0)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("could not write to temporary file: %m")));
+	}
 }
 
+/*
+ * bfz_zlib_read_ex
+ *  Read data from an already opened compressed file.
+ *
+ *  The buffer pointer must be valid and have at least size bytes.
+ *  An exception is thrown if the data cannot be read for any reason.
+ */
 static int
-bfz_zlib_read_ex(bfz_t * thiz, char *buffer, int size)
+bfz_zlib_read_ex(bfz_t *thiz, char *buffer, int size)
 {
 	struct bfz_zlib_freeable_stuff *fs = (void *) thiz->freeable_stuff;
 
-	return gzread_fully(fs->f, buffer, size);
+	ssize_t read = gfile_read(fs->gfile, buffer, size);
+	if (read < 0)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("could not read from temporary file: %m")));
+	}
+
+	return read;
 }
 
+/*
+ * bfz_zlib_init
+ *  Initialize the zlib subsystem for a file.
+ *
+ *  The underlying file descriptor fd should already be opened
+ *  and valid. Memory is allocated in the current memory context.
+ */
 void
 bfz_zlib_init(bfz_t * thiz)
 {
-	struct bfz_zlib_freeable_stuff *fs = malloc(sizeof *fs);
+	Assert(TopMemoryContext == CurrentMemoryContext);
+	struct bfz_zlib_freeable_stuff *fs = palloc(sizeof *fs);
+	fs->gfile = palloc0(sizeof *fs->gfile);
 
-	if (!fs)
+	fs->gfile->fd.filefd = thiz->fd;
+	fs->gfile->compression = GZ_COMPRESSION;
+
+	if (thiz->mode == BFZ_MODE_APPEND)
+	{
+		fs->gfile->is_write = TRUE;
+	}
+
+	int res = gz_file_open(fs->gfile);
+
+	if (res == 1)
+	{
 		ereport(ERROR,
-			(errcode(ERRCODE_OUT_OF_MEMORY),
-			 errmsg("out of memory")));
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("gz_file_open failed: %m")));
+	}
 
 	thiz->freeable_stuff = &fs->super;
 	fs->super.read_ex = bfz_zlib_read_ex;
 	fs->super.write_ex = bfz_zlib_write_ex;
 	fs->super.close_ex = bfz_zlib_close_ex;
-
-	if (thiz->mode == BFZ_MODE_APPEND)
-		fs->f = gzdopen(thiz->fd, "wb1");
-	else
-		fs->f = gzdopen(thiz->fd, "rb");
-
-	if (!fs->f)
-		ereport(ERROR,
-				(errcode(ERRCODE_IO_ERROR),
-				errmsg("could not open temporary file: %m")));
 }

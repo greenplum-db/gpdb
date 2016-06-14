@@ -16,6 +16,7 @@
 #include "postgres.h"
 
 #include "access/reloptions.h"
+#include "access/transam.h"
 #include "access/url.h"
 #include "access/xlog_internal.h"
 #include "cdb/cdbappendonlyam.h"
@@ -200,6 +201,7 @@ bool		Debug_persistent_store_print = false;
 int			Debug_persistent_store_print_level = LOG;
 bool		Debug_persistent_bootstrap_print = false;
 bool		persistent_integrity_checks = true;
+bool		validate_previous_free_tid = true;
 bool		disable_persistent_diagnostic_dump = false;
 bool		debug_persistent_ptcat_verification = false;
 bool		debug_print_persistent_checks = false;
@@ -253,7 +255,6 @@ bool		gp_persistent_repair_global_sequence = false;
 bool		Debug_print_xlog_relation_change_info = false;
 bool		Debug_print_xlog_relation_change_info_skip_issues_only = false;
 bool		Debug_print_xlog_relation_change_info_backtrace_skip_issues = false;
-bool		Debug_check_for_invalid_persistent_tid = false;
 
 bool		Debug_filerep_crc_on = true;
 bool		Debug_filerep_print = false;
@@ -265,6 +266,7 @@ bool		filerep_inject_listener_fault = false;
 bool		filerep_inject_db_startup_fault = false;
 bool		filerep_inject_change_tracking_recovery_fault = false;
 bool		filerep_mirrorvalidation_during_resync = false;
+bool		log_filerep_to_syslogger = false;
 
 /* WAL based replication debug GUCs */
 bool		debug_walrepl_snd = false;
@@ -452,9 +454,6 @@ char	   *gp_idf_deduplicate_str;
 
 bool		fts_diskio_check = false;
 
-/* gp_disable_catalog_access_on_segment */
-bool		gp_disable_catalog_access_on_segment = false;
-
 /* Planner gucs */
 bool		enable_seqscan = true;
 bool		enable_indexscan = true;
@@ -470,7 +469,6 @@ bool		enable_hashjoin = true;
 bool		gp_enable_hashjoin_size_heuristic = false;
 bool		gp_enable_fallback_plan = true;
 bool		gp_enable_predicate_propagation = false;
-bool		constraint_exclusion = false;
 bool		gp_enable_multiphase_agg = true;
 bool		gp_enable_preunique = TRUE;
 bool		gp_eager_preunique = FALSE;
@@ -497,7 +495,7 @@ int			optimizer_cost_model;
 bool		optimizer_print_query;
 bool		optimizer_print_plan;
 bool		optimizer_print_xform;
-bool		optimizer_release_mdcache;
+bool		optimizer_metadata_caching;
 int		optimizer_mdcache_size;
 bool		optimizer_disable_xform_result_printing;
 bool		optimizer_print_memo_after_exploration;
@@ -508,7 +506,6 @@ bool		optimizer_print_expression_properties;
 bool		optimizer_print_group_properties;
 bool		optimizer_print_optimization_context;
 bool		optimizer_print_optimization_stats;
-bool		optimizer_parallel;
 bool		optimizer_local;
 int			optimizer_retries;
 /* array of xforms disable flags */
@@ -554,6 +551,8 @@ double		optimizer_damping_factor_filter;
 double		optimizer_damping_factor_join;
 double		optimizer_damping_factor_groupby;
 int			optimizer_segments;
+int			optimizer_join_arity_for_associativity_commutativity;
+int         optimizer_array_expansion_threshold;
 bool		optimizer_analyze_root_partition;
 bool		optimizer_analyze_midlevel_partition;
 bool		optimizer_enable_constant_expression_evaluation;
@@ -573,6 +572,12 @@ bool		optimizer_enable_derive_stats_all_groups;
 bool		optimizer_explain_show_status;
 bool		optimizer_prefer_scalar_dqa_multistage_agg;
 
+/**
+ * GUCs related to code generation.
+ **/
+bool		init_codegen;
+bool		codegen;
+
 /* Security */
 bool		gp_reject_internal_tcp_conn = true;
 
@@ -586,6 +591,9 @@ bool		gp_plpgsql_clear_cache_always = false;
 char	   *gp_default_storage_options = NULL;
 
 int			writable_external_table_bufsize = 64;
+
+IndexCheckType gp_indexcheck_insert = INDEX_CHECK_NONE;
+IndexCheckType gp_indexcheck_vacuum = INDEX_CHECK_NONE;
 
 struct config_bool ConfigureNamesBool_gp[] =
 {
@@ -1824,6 +1832,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"validate_previous_free_tid", PGC_SUSET, UNGROUPED,
+			gettext_noop("When set checks that the previous free TID of the current free tuple is a valid free tuple."),
+			NULL,
+			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&validate_previous_free_tid,
+		true, NULL, NULL
+	},
+
+	{
 		{"disable_persistent_diagnostic_dump", PGC_SUSET, DEVELOPER_OPTIONS,
 			gettext_noop("When set disables printing full PT on erros."),
 			NULL,
@@ -2030,16 +2048,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&Debug_print_xlog_relation_change_info_backtrace_skip_issues,
-		false, NULL, NULL
-	},
-
-	{
-		{"debug_check_for_invalid_persistent_tid", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Check for invalid persistent TID"),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_check_for_invalid_persistent_tid,
 		false, NULL, NULL
 	},
 
@@ -2335,6 +2343,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"log_filerep_to_syslogger", PGC_SUSET, DEVELOPER_OPTIONS,
+			gettext_noop("log all filerep related log messages to the server log files"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&log_filerep_to_syslogger,
+		true, NULL, NULL
+	},
+
+	{
 		{"debug_filerep_gcov", PGC_SUSET, DEVELOPER_OPTIONS,
 			gettext_noop("workaround for filerep gcov issue"),
 			NULL,
@@ -2351,7 +2369,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&Debug_filerep_config_print,
-		false, NULL, NULL
+		true, NULL, NULL
 	},
 
 	{
@@ -2755,12 +2773,11 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"optimizer_release_mdcache", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Release MDCache after each query."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		{"optimizer_metadata_caching", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("This guc enables the optimizer to cache and reuse metadata."),
+			NULL
 		},
-		&optimizer_release_mdcache,
+		&optimizer_metadata_caching,
 		true, NULL, NULL
 	},
 
@@ -2874,15 +2891,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false, NULL, NULL
 	},
 
-	{
-		{"optimizer_parallel", PGC_USERSET, LOGGING_WHAT,
-			gettext_noop("Enable using threads in optimization engine."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&optimizer_parallel,
-		false, NULL, NULL
-	},
 	{
 		{"optimizer_extract_dxl_stats", PGC_USERSET, LOGGING_WHAT,
 			gettext_noop("Extract plan stats in dxl."),
@@ -3373,16 +3381,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_disable_catalog_access_on_segment", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Disables non-builtin object access on segments"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
-		},
-		&gp_disable_catalog_access_on_segment,
-		false, NULL, NULL
-	},
-
-	{
 		{"dml_ignore_target_partition_check", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Ignores checking whether the user provided correct partition during a direct insert to a leaf partition"),
 			NULL,
@@ -3400,6 +3398,26 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&optimizer_prefer_scalar_dqa_multistage_agg,
 		true, NULL, NULL
+	},
+
+	{
+		{"init_codegen", PGC_POSTMASTER, DEVELOPER_OPTIONS,
+			gettext_noop("Enable just-in-time code generation."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&init_codegen,
+		false, NULL, NULL
+	},
+
+	{
+		{"codegen", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Perform just-in-time code generation."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&codegen,
+		false, NULL, NULL
 	},
 
 	/* End-of-list marker */
@@ -4250,16 +4268,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_qd_proc_offset", PGC_BACKEND, GP_WORKER_IDENTITY,
-			gettext_noop("The shmmem offset of the original QD backend that is handling this query"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
-		},
-		(int *) &gp_qd_proc_offset,
-		-1, -1, INT_MAX, NULL, NULL
-	},
-
-	{
 		{"gp_hashjoin_tuples_per_bucket", PGC_USERSET, GP_ARRAY_TUNING,
 			gettext_noop("Target density of hashtable used by Hashjoin during execution"),
 			gettext_noop("A smaller value will tend to produce larger hashtables, which increases join performance"),
@@ -4718,6 +4726,26 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"optimizer_array_expansion_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Item limit for expansion of arrays in WHERE clause to disjunctive form."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_array_expansion_threshold,
+		25, 0, INT_MAX, NULL, NULL
+	},
+
+	{
+		{"optimizer_join_arity_for_associativity_commutativity", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Maximum number of children n-ary-join have without disabling commutativity and associativity transform"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_join_arity_for_associativity_commutativity,
+		INT_MAX, 0, INT_MAX, NULL, NULL
+	},
+
+	{
 		{"optimizer_mdcache_size", PGC_USERSET, RESOURCES_MEM,
 			gettext_noop("Sets the size of MDCache."),
 			NULL,
@@ -4765,6 +4793,26 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&log_count_recovered_files_batch,
 		1000, 0, INT_MAX, NULL, NULL
+	},
+
+	{
+		{"gp_indexcheck_insert", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Validate that a unique index does not already have the new tid during insert."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
+		},
+		(int *) &gp_indexcheck_insert,
+		INDEX_CHECK_NONE, 0, INDEX_CHECK_ALL, NULL, NULL
+	},
+
+	{
+		{"gp_indexcheck_vacuum", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Validate index after lazy vacuum."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
+		},
+		(int *) &gp_indexcheck_vacuum,
+		INDEX_CHECK_NONE, 0, INDEX_CHECK_ALL, NULL, NULL
 	},
 
 	/* End-of-list marker */
@@ -5192,10 +5240,10 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 
 	{
-		{"gp_interconnect_type", PGC_BACKEND, GP_ARRAY_TUNING,
+		{"gp_interconnect_type", PGC_USERSET, GP_ARRAY_TUNING,
 			gettext_noop("Sets the protocol used for inter-node communication."),
-			gettext_noop("Valid values are \"tcp\", \"udp\" and \"udpifc\"."),
-			GUC_GPDB_ADDOPT
+			gettext_noop("Only support \"udpifc\" for now."),
+			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_DISALLOW_IN_FILE
 		},
 		&gp_interconnect_type_str,
 		"udpifc", gpvars_assign_gp_interconnect_type, gpvars_show_gp_interconnect_type
@@ -5526,7 +5574,7 @@ struct config_string ConfigureNamesString_gp[] =
 		{"gp_default_storage_options", PGC_USERSET, APPENDONLY_TABLES,
 			gettext_noop("Default options for appendonly storage."),
 			NULL,
-			GUC_NOT_IN_SAMPLE
+			GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
 		},
 		&gp_default_storage_options, "", assign_gp_default_storage_options, NULL
 	},

@@ -23,6 +23,7 @@
 #include "postgres.h"
 
 #include "access/xlogutils.h"
+#include "catalog/pg_tablespace.h"
 #include "storage/bufpage.h"
 #include "storage/smgr.h"
 #include "utils/hsearch.h"

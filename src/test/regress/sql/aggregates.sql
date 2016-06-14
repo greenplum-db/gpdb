@@ -415,3 +415,43 @@ select distinct two, sum(four) over() from tenk1 order by two;
 select distinct two, sum(four) from tenk1 group by two order by two;
 select distinct two, sum(four) from tenk1 group by two having sum(four) > 5000;
 select distinct t1.two, t2.two, t1.four, t2.four from tenk1 t1, tenk1 t2 where t1.hundred=t2.hundred order by t1.two, t1.four;
+
+
+-- Test for a planner bug we used to have, when this query gets planned
+-- as a merge join. This should perform a merge join between 'l' and 'ps',
+-- using both pk and sk as the merge keys. Due to the bug, the planner
+-- used mix up the columns in the path keys, and used incorrect columns
+-- as the merge keys. (This is a modified version of a TPC-H query)
+
+create table l (ok bigint, pk integer, sk integer, quantity numeric) distributed by (ok);
+create table ps (pk integer, sk integer, availqty integer) distributed by (pk);
+
+insert into l select g%5, 50-g, g, 5 from generate_series(1, 50) g;
+insert into ps select g, 50-g, 10 from generate_series(1, 25) g;
+
+select  g.pk, g.sk, ps.availqty
+from ps,
+     (select sum(l.quantity) as qty_sum, l.pk, l.sk
+      from l
+      group by l.pk, l.sk ) g
+where g.pk = ps.pk and g.sk = ps.sk
+and ps.availqty > g.qty_sum ;
+
+-- the same, but force a merge join and sorted agg.
+set enable_hashagg=off;
+set enable_hashjoin=off;
+set enable_mergejoin=on;
+
+select  g.pk, g.sk, ps.availqty
+from ps,
+     (select sum(l.quantity) as qty_sum, l.pk, l.sk
+      from l
+      group by l.pk, l.sk ) g
+where g.pk = ps.pk and g.sk = ps.sk
+and ps.availqty > g.qty_sum ;
+
+reset enable_hashagg;
+reset enable_hashjoin;
+reset enable_mergejoin;
+
+drop table l, ps;

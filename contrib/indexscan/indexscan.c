@@ -18,11 +18,10 @@ Datum readindex(PG_FUNCTION_ARGS);
 typedef struct _readindexinfo
 {
 	AttrNumber	outattnum;
-	Relation	irel;
-	Relation	hrel;
+	Oid			ireloid;
+	Oid			hreloid;
 	int			num_pages;
 	BlockNumber	blkno;
-	Buffer		buf;
 	Page		page;
 	BTPageOpaque opaque;
 	OffsetNumber offnum;
@@ -93,7 +92,7 @@ hstatus_text(HeapTupleHeader tuple, bool visible)
 }
 
 static void
-readindextuple(readindexinfo *info, Datum *values, bool *nulls)
+readindextuple(readindexinfo *info, Relation irel, Relation hrel, Datum *values, bool *nulls)
 {
 	BlockNumber blkno;
 	Page		page;
@@ -102,7 +101,7 @@ readindextuple(readindexinfo *info, Datum *values, bool *nulls)
 	HeapTupleData	htup;
 	Buffer		hbuf;
 	AttrNumber	attno;
-	TupleDesc	tupdesc = RelationGetDescr(info->irel);
+	TupleDesc	tupdesc = RelationGetDescr(irel);
 
 	blkno = info->blkno;
 	page = info->page;
@@ -112,16 +111,16 @@ readindextuple(readindexinfo *info, Datum *values, bool *nulls)
 
 	values[1] = ItemPointerGetDatum(&itup->t_tid);
 
-	if (info->hrel == NULL)
+	if (hrel == NULL)
 		values[2] = PointerGetDatum(cstring_to_text(AOTupleIdToString((AOTupleId *)&itup->t_tid))); 
 	else
 		values[2] = PointerGetDatum(cstring_to_text("N/A"));
 
 	values[3] = PointerGetDatum(istatus_text(PageGetItemId(page, offnum)));
 
-	if (info->hrel != NULL)
+	if (hrel != NULL)
 	{
-		if (heap_fetch(info->hrel, SnapshotAny, &htup, &hbuf, true, NULL))
+		if (heap_fetch(hrel, SnapshotAny, &htup, &hbuf, true, NULL))
 			values[4] = PointerGetDatum(hstatus_text(htup.t_data, true));
 		else if (htup.t_data)
 			values[4] = PointerGetDatum(hstatus_text(htup.t_data, false));
@@ -148,6 +147,8 @@ readindex(PG_FUNCTION_ARGS)
 {
 	FuncCallContext	   *funcctx;
 	readindexinfo	   *info;
+	Relation	irel = NULL;
+	Relation	hrel = NULL;
 
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
@@ -157,7 +158,6 @@ readindex(PG_FUNCTION_ARGS)
 		TupleDesc	tupdesc;
 		MemoryContext oldcontext;
 		AttrNumber		outattnum;
-		Relation	irel;
 		TupleDesc	itupdesc;
 		int			i;
 		AttrNumber	attno;
@@ -187,15 +187,19 @@ readindex(PG_FUNCTION_ARGS)
 		funcctx->user_fctx = (void *) info;
 
 		info->outattnum = outattnum;
-		info->irel = irel;
-		info->hrel = relation_open(irel->rd_index->indrelid, AccessShareLock);
-		if (info->hrel->rd_rel != NULL &&
-				(info->hrel->rd_rel->relstorage == 'a' ||
-				 info->hrel->rd_rel->relstorage == 'c'))
+		info->ireloid = irelid;
+
+		hrel = relation_open(irel->rd_index->indrelid, AccessShareLock);
+		if (hrel->rd_rel != NULL &&
+			(hrel->rd_rel->relstorage == 'a' ||
+			 hrel->rd_rel->relstorage == 'c'))
 		{
-			relation_close(info->hrel, AccessShareLock);
-			info->hrel = NULL;
+			relation_close(hrel, AccessShareLock);
+			hrel = NULL;
+			info->hreloid = InvalidOid;
 		}
+		else
+			info->hreloid = irel->rd_index->indrelid;
 		info->num_pages = RelationGetNumberOfBlocks(irel);
 		info->blkno = BTREE_METAPAGE + 1;
 		info->page = NULL;
@@ -205,6 +209,19 @@ readindex(PG_FUNCTION_ARGS)
 
 	funcctx = SRF_PERCALL_SETUP();
 	info = (readindexinfo *) funcctx->user_fctx;
+
+	/*
+	 * Open the relations (on first call, we did that above already).
+	 * We unfortunately have to look up the relcache entry on every call,
+	 * because if we store it in the cross-call context, we won't get a
+	 * chance to release it if the function isn't run to completion,
+	 * e.g. because of a LIMIT clause. We only lock the relation on the
+	 * first call, and keep the lock until completion, however.
+	 */
+	if (!irel)
+		irel = index_open(info->ireloid, NoLock);
+	if (!hrel && info->hreloid != InvalidOid)
+		hrel = heap_open(info->hreloid, NoLock);
 
 	while (info->blkno < info->num_pages)
 	{
@@ -216,18 +233,29 @@ readindex(PG_FUNCTION_ARGS)
 
 		if (info->page == NULL)
 		{
+			Buffer		buf;
+
+			/*
+			 * Make copy of the page, because we cannot hold a buffer pin
+			 * across calls (we wouldn't have a chance to release it, if the
+			 * function isn't run to completion.)
+			 */
+			info->page = MemoryContextAlloc(funcctx->multi_call_memory_ctx, BLCKSZ);
+
 			MIRROREDLOCK_BUFMGR_LOCK;
-			info->buf = ReadBuffer(info->irel, info->blkno);
-			info->page = BufferGetPage(info->buf);
+			buf = ReadBuffer(irel, info->blkno);
+			memcpy(info->page, BufferGetPage(buf), BLCKSZ);
+			ReleaseBuffer(buf);
+			MIRROREDLOCK_BUFMGR_UNLOCK;
+
 			info->opaque = (BTPageOpaque) PageGetSpecialPointer(info->page);
 			info->minoff = P_FIRSTDATAKEY(info->opaque);
 			info->maxoff = PageGetMaxOffsetNumber(info->page);
 			info->offnum = info->minoff;
-			MIRROREDLOCK_BUFMGR_UNLOCK;
 		}
 		if (!P_ISLEAF(info->opaque) || info->offnum > info->maxoff)
 		{
-			ReleaseBuffer(info->buf);
+			pfree(info->page);
 			info->page = NULL;
 			info->blkno++;
 			continue;
@@ -237,17 +265,22 @@ readindex(PG_FUNCTION_ARGS)
 
 		ItemPointerSet(&itid, info->blkno, info->offnum);
 		values[0] = ItemPointerGetDatum(&itid);
-		readindextuple(info, values, nulls);
+		readindextuple(info, irel, hrel, values, nulls);
 
 		info->offnum = OffsetNumberNext(info->offnum);
 
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 		result = HeapTupleGetDatum(tuple);
+
+		if (hrel != NULL)
+			heap_close(hrel, NoLock);
+		index_close(irel, NoLock);
+
 		SRF_RETURN_NEXT(funcctx, result);
 	}
 
-	if (info->hrel != NULL)
-		relation_close(info->hrel, AccessShareLock);
-	index_close(info->irel, AccessShareLock);
+	if (hrel != NULL)
+		heap_close(hrel, AccessShareLock);
+	index_close(irel, AccessShareLock);
 	SRF_RETURN_DONE(funcctx);
 }

@@ -201,7 +201,7 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE c
 --
 -- should get 100 and 123 as the values
 --
-select * from direct_test where value = 123123 order by key;
+select * from direct_test where value = '123123' order by key;
 INFO:  Dispatch command to ALL contents
  key | value  
 -----+--------
@@ -209,7 +209,7 @@ INFO:  Dispatch command to ALL contents
  123 | 123123
 (2 rows)
 
-delete from direct_test where value = 123123;
+delete from direct_test where value = '123123';
 INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
@@ -437,9 +437,9 @@ select * from direct_test;
 INFO:  Dispatch command to ALL contents
  key | value 
 -----+-------
-   2 | 100
      | cow
    1 | 100
+   2 | 100
 (3 rows)
 
 prepare test_update (int) as update direct_test set value = 'boo' where key = $1;
@@ -454,9 +454,9 @@ select * from direct_test;
 INFO:  Dispatch command to ALL contents
  key | value 
 -----+-------
+   1 | 100
    2 | boo
      | cow
-   1 | 100
 (3 rows)
 
 ------------------------
@@ -986,22 +986,23 @@ INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 EXPLAIN SELECT a.* FROM MPP_22019_a a INNER JOIN MPP_22019_b b ON a.i = b.i WHERE a.j NOT IN (SELECT j FROM MPP_22019_a a2 where a2.j = b.j) and a.i = 1;
-                                                QUERY PLAN                                                
-----------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..33.73 rows=2 width=8)
-   ->  Nested Loop  (cost=0.00..33.73 rows=2 width=8)
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=1176.34..4363211.36 rows=3707 width=8)
+   ->  Nested Loop  (cost=1176.34..4363211.36 rows=1236 width=8)
          Join Filter: (subplan)
-         ->  Seq Scan on mpp_22019_a a  (cost=0.00..13.91 rows=1 width=8)
-               Filter: i = 1 AND 1 = i
-         ->  Seq Scan on mpp_22019_b b  (cost=0.00..13.91 rows=1 width=8)
-               Filter: 1 = i AND i = 1
+         ->  Seq Scan on mpp_22019_a a  (cost=0.00..1176.25 rows=29 width=8)
+               Filter: i = 1
+         ->  Materialize  (cost=1176.34..1177.20 rows=29 width=8)
+               ->  Seq Scan on mpp_22019_b b  (cost=0.00..1176.25 rows=29 width=8)
+                     Filter: i = 1
          SubPlan 1
-           ->  Result  (cost=11.76..11.77 rows=1 width=4)
+           ->  Result  (cost=1176.34..1177.20 rows=29 width=4)
                  Filter: a2.j = $0
-                 ->  Materialize  (cost=11.76..11.77 rows=1 width=4)
-                       ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..11.76 rows=1 width=4)
-                             ->  Seq Scan on mpp_22019_a a2  (cost=0.00..11.76 rows=1 width=4)
-(13 rows)
+                 ->  Materialize  (cost=1176.34..1177.20 rows=29 width=4)
+                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1176.25 rows=29 width=4)
+                             ->  Seq Scan on mpp_22019_a a2  (cost=0.00..1176.25 rows=29 width=4)
+(14 rows)
 
 SELECT a.* FROM MPP_22019_a a INNER JOIN MPP_22019_b b ON a.i = b.i WHERE a.j NOT IN (SELECT j FROM MPP_22019_a a2 where a2.j = b.j) and a.i = 1;
 INFO:  Dispatch command to ALL contents

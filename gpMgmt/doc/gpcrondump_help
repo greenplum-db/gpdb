@@ -15,7 +15,8 @@ gpcrondump -x database_name
      [-u backup_directory] [-R post_dump_script] [--incremental] 
      [ -K <timestamp> [--list-backup-files] ] 
      [--prefix <prefix_string> [--list-filter-tables] ]
-     [-c] [-z] [-r] [-f <free_space_percent>] [-b] [-h] [-j | -k] 
+     [ -c  [ --cleanup-date yyyymmdd  |  --cleanup-total n ] ]
+     [-z] [-r] [-f <free_space_percent>] [-b] [-h] [-j | -k]
      [-g] [-G] [-C] [-d <master_data_directory>] [-B <parallel_processes>] 
      [-a] [-q] [-y <reportfile>] [-l <logfile_directory>]
      [--email-file <path_to_file> ] [-v]
@@ -23,7 +24,8 @@ gpcrondump -x database_name
      [--no-owner | --use-set-session-authorization] 
      [--no-privileges] [--rsyncable] 
      { [--ddboost [--replicate --max-streams <max_IO_streams> 
-     [--ddboost-skip-ping] ] ] } |
+     [--ddboost-skip-ping] ] 
+     [--ddboost-storage-unit=<storage_unit_name>] ] } |
      { [--netbackup-service-host <netbackup_server> 
      --netbackup-policy <netbackup_policy> 
      --netbackup-schedule <netbackup_schedule> 
@@ -38,7 +40,9 @@ gpcrondump --ddboost-host <ddboost_hostname>
 
 gpcrondump --ddboost-config-remove
 
-gpcrondump -o
+gpcrondump --ddboost-show-config [--ddboost-remote]
+
+gpcrondump -o  [ --cleanup-date yyyymmdd  |  --cleanup-total n ]
 
 gpcrondump -? 
 
@@ -161,7 +165,7 @@ OPTIONS
  processes depending on how many segment instances it needs to dump. 
 
 
--c (clear old dump files first) 
+-c (clear old dump files first)
 
  Specify this option to delete old backups before performing a back up. 
  In the db_dumps directory, the directory where the name is the oldest 
@@ -173,6 +177,9 @@ OPTIONS
  WARNING: Before using this option, ensure that incremental backups 
  required to perform the restore are not deleted. The gpdbrestore utility 
  option --list-backup lists the backup sets required to perform a backup. 
+
+ You can specify the option --cleanup-date or --cleanup-total to specify
+ backup sets to delete.
 
  If --ddboost is specified, only the old files on Data Domain Boost are 
  deleted. 
@@ -193,6 +200,35 @@ OPTIONS
  option is specified. 
 
 
+--cleanup-date=yyyymmdd
+
+ Remove backup sets for the date yyyy-mm-dd. The date format is yyyymmdd.
+ If multiple backup sets were created on the date, all the backup sets
+ for that date are deleted. If no backup sets are found, gpcrondump
+ returns a warning message and no backup sets are deleted. If the -c
+ option is specified, the backup process continues.
+
+ Valid only with the -c or -o option.
+
+ WARNING: Before using this option, ensure that incremental backups
+ required to perform the restore are not deleted. The gpdbrestore utility
+ option --list-backup lists the backup sets required to perform a backup.
+
+
+--cleanup-total=n
+
+ Remove the n oldest backup sets based on the backup timestamp. If there
+ are fewer than n backup sets, gpcrondump returns a warning message and
+ no backup sets are deleted. If the -c option is specified, the backup
+ process continues.
+
+ Valid only with the -c or -o option.
+
+ WARNING: Before using this option, ensure that incremental backups
+ required to perform the restore are not deleted. The gpdbrestore utility
+ option --list-backup lists the backup sets required to perform a backup.
+
+
 --column-inserts 
 
  Dump data as INSERT commands with column names. 
@@ -207,11 +243,24 @@ OPTIONS
 
 
 --ddboost [--replicate --max-streams <max_IO_streams> 
-  [--ddboost-skip-ping] ]
+  [--ddboost-skip-ping] ] [--ddboost-storage-unit=<storage_unit_name>]
 
  Use Data Domain Boost for this backup. Before using Data Domain Boost, 
  set up the Data Domain Boost credential, as described in the next option 
  below. 
+
+ --ddboost-storage-unit is optional, which provides a dynamic storage
+ unit where to replicate dump files between source and target DDBoost Servers,
+ backup directory defaults to the cluster's config file when the Data Domain
+ Boost credentials were set. If this option is not specified, it also defaults
+ to the cluster's config file.
+
+ Note: storage unit will be created on DDBoost server only if one does
+ not already exist and following options are not specified:
+
+ --incremental, --list-backup-file, --list-filter-tables, 
+ -o, --ddboost-config-remove
+
 
  The following option is recommended if --ddboost is specified. 
 
@@ -310,6 +359,12 @@ OPTIONS
  segments on the system. Do not enter this option with any other 
  gpcrondump option. 
 
+--ddboost-show-config
+ Show DDBoost and MFR related configuration information: DDBoost hostname,
+ username, default backup directory, default storage unit.
+
+ --ddboost-remote is optional, specify it to show the DDBoost and MFR
+ related configuration information for remote DDBoost server.
  
 --ddboost-skip-ping
 
@@ -324,9 +379,10 @@ OPTIONS
  Dump optimizer statistics from pg_statistic. Statistics are dumped in the
  master data directory to db_dumps/YYYYMMDD/gp_statistics_1_1_<timestamp>.
 
- If --ddboost is specified, the backup is located on the default storage
- unit in the directory specified by --ddboost-backupdir when the Data
- Domain Boost credentials were set.
+ If --ddboost is specified, the backup is located on the storage unit 
+ specified by --ddboost-storge-unit, or by default, the storage unit 
+ from cluster's config file, under the default directory configured by 
+ --ddboost-backupdir when the Data Domain Boost credentials were set.
 
 
 -E <encoding> 
@@ -363,10 +419,10 @@ OPTIONS
  files are dumped in the master or segment data directory to 
  db_dumps/YYYYMMDD/config_files_<timestamp>.tar. 
 
- If --ddboost is specified, the backup is located on the default storage 
- unit in the directory specified by --ddboost-backupdir when the Data 
- Domain Boost credentials were set.
-
+ If --ddboost is specified, the backup is located on the storage unit
+ specified by --ddboost-storge-unit, or by default, the storage unit
+ from cluster's config file, under the default directory configured by
+ --ddboost-backupdir when the Data Domain Boost credentials were set.
 
 -G (dump global objects) 
 
@@ -374,10 +430,10 @@ OPTIONS
  Global objects are dumped in the master data directory to 
  db_dumps/YYYYMMDD/gp_global_1_1_<timestamp>. 
  
- If --ddboost is specified, the backup is located on the default storage 
- unit in the directory specified by --ddboost-backupdir when the Data 
- Domain Boost credentials were set.
-
+ If --ddboost is specified, the backup is located on the storage unit
+ specified by --ddboost-storge-unit, or by default, the storage unit
+ from cluster's config file, under the default directory configured by
+ --ddboost-backupdir when the Data Domain Boost credentials were set.
 
 -h (record dump details) 
 
@@ -554,16 +610,19 @@ OPTIONS
  Do not output commands to set object privileges (GRANT/REVOKE commands). 
 
 
--o (clear old dump files only) 
+-o (clear old dump files only)
 
  Clear out old dump files only, but do not run a dump. This will remove 
  the oldest dump directory except the current date's dump directory. 
- All dump sets within that directory will be removed. 
+ All dump sets within that directory will be removed.
 
  WARNING: Before using this option, ensure that incremental backups 
  required to perform the restore are not deleted. The gpdbrestore utility 
  option --list-backup lists the backup sets required to perform a 
  restore. 
+
+ You can specify the option --cleanup-date or --cleanup-total to specify
+ backup sets to delete.
 
  If --ddboost is specified, only the old files on Data Domain Boost are 
  deleted. 
@@ -751,8 +810,8 @@ OPTIONS
 
 -x <database_name> 
 
- Required. The name of the Greenplum database to dump. Multiple databases 
- can be specified in a comma-separated list. 
+ Required. The name of the Greenplum database to dump. Specify multiple times for 
+ multiple databases. 
 
 
 -y <reportfile> 

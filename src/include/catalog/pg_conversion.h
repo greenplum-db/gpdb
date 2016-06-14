@@ -54,7 +54,7 @@
 
    create unique index on pg_conversion(conname, connamespace) with (indexid=2669, CamelCase=ConversionNameNsp, syscacheid=CONNAMENSP, syscache_nbuckets=128);
 
-   create unique index on pg_conversion(oid) with (indexid=2670, CamelCase=ConversionOid, syscacheid=CONOID, syscache_nbuckets=128);
+   create unique index on pg_conversion(oid) with (indexid=2670, CamelCase=ConversionOid, syscacheid=CONVOID, syscache_nbuckets=128);
 
    alter table pg_conversion add fk connamespace on pg_namespace(oid);
    alter table pg_conversion add fk conowner on pg_authid(oid);

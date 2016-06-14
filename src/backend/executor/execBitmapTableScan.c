@@ -301,6 +301,19 @@ BitmapTableScanBeginPartition(ScanState *node, AttrNumber *attMap)
 	}
 
 	scanState->needNewBitmapPage = true;
+	/*
+	 * In some cases, the BitmapTableScan needs to re-evaluate the
+	 * bitmap qual. This is determined by the recheckTuples and
+	 * isLossyBitmapPage flags, as well as the type of table.
+	 * The appropriate type of BitmapIndexScan will set this flag
+	 * as follows:
+	 *  Table/Index Type  Lossy    Recheck
+	 *	Heap                1        1
+	 * 	Ao/Lossy            1        0
+	 *	Ao/Non-Lossy        0        0
+	 *	Aocs/Lossy          1        0
+	 *	Aocs/Non-Lossy      0        0
+	 */
 	scanState->recheckTuples = true;
 
 	getBitmapTableScanMethod(node->tableType)->beginScanMethod(node);

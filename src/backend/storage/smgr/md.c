@@ -1740,7 +1740,7 @@ mdtruncate(SMgrRelation reln, BlockNumber nblocks, bool isTemp, bool allowNotFou
 			 */
 			BlockNumber lastsegblocks = nblocks - priorblocks;
 
-			if (!MirroredBufferPool_Truncate(&v->mdmir_open, lastsegblocks * BLCKSZ) < 0)
+			if (!MirroredBufferPool_Truncate(&v->mdmir_open, lastsegblocks * BLCKSZ))
 				ereport(ERROR,
 						(errcode_for_file_access(),
 						 errmsg("could not truncate relation %u/%u/%u to %u blocks: %m",
@@ -1764,7 +1764,7 @@ mdtruncate(SMgrRelation reln, BlockNumber nblocks, bool isTemp, bool allowNotFou
 		priorblocks += RELSEG_SIZE;
 	}
 #else
-	if (!MirroredBufferPool_Truncate(&v->mdmir_open, nblocks * BLCKSZ) < 0)
+	if (!MirroredBufferPool_Truncate(&v->mdmir_open, nblocks * BLCKSZ))
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not truncate relation %u/%u/%u to %u blocks: %m",

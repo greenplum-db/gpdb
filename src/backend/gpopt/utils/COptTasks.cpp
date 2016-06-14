@@ -25,12 +25,11 @@
 #include "gpopt/translate/CTranslatorExprToDXL.h"
 #include "gpopt/translate/CTranslatorUtils.h"
 #include "gpopt/translate/CTranslatorQueryToDXL.h"
-#include "gpopt/translate/CTranslatorPlStmtToDXL.h"
 #include "gpopt/translate/CTranslatorDXLToPlStmt.h"
-#include "gpopt/translate/CTranslatorDXLToQuery.h"
 #include "gpopt/translate/CContextDXLToPlStmt.h"
 #include "gpopt/translate/CTranslatorRelcacheToDXL.h"
 #include "gpopt/eval/CConstExprEvaluatorDXL.h"
+#include "gpopt/engine/CHint.h"
 
 #include "cdb/cdbvars.h"
 #include "utils/guc.h"
@@ -113,7 +112,7 @@ using namespace gpdbcost;
 #define GPOPT_ERROR_BUFFER_SIZE 10 * 1024 * 1024
 
 // definition of default AutoMemoryPool
-#define AUTO_MEM_POOL(amp) CAutoMemoryPool amp(CAutoMemoryPool::ElcExc, CMemoryPoolManager::EatMalloc, optimizer_parallel)
+#define AUTO_MEM_POOL(amp) CAutoMemoryPool amp(CAutoMemoryPool::ElcExc, CMemoryPoolManager::EatTracker, false /* fThreadSafe */)
 
 // default id for the source system
 const CSystemId sysidDefault(IMDId::EmdidGPDB, GPOS_WSZ_STR_LENGTH("GPDB"));
@@ -516,23 +515,12 @@ COptTasks::Execute
 {
 	Assert(pfunc);
 
-	if (optimizer_parallel)
-	{
-		// be-aware that parallel optimizer mode may conflict with GPDB signal handlers,
-		// this mode should be avoided unless optimizer is spawned in a different process
-		if (gpos_set_threads(4, 4))
-		{
-			elog(ERROR, "unable to set number of threads in gpos");
-			return;
-		}
-	}
-
 	// initialize DXL support
 	InitDXL();
 
 	bool abort_flag = false;
 
-	CAutoMemoryPool amp(CAutoMemoryPool::ElcNone, CMemoryPoolManager::EatMalloc, optimizer_parallel);
+	CAutoMemoryPool amp(CAutoMemoryPool::ElcNone, CMemoryPoolManager::EatTracker, false /* fThreadSafe */);
 	IMemoryPool *pmp = amp.Pmp();
 	CHAR *err_buf = SzAllocate(pmp, GPOPT_ERROR_BUFFER_SIZE);
 
@@ -740,7 +728,7 @@ COptTasks::PoconfCreate
 	)
 {
 	// get chosen plan number, cost threshold
-	ULLONG ullPlanId =  (ULLONG) optimizer_plan_id;
+	ULLONG ullPlanId = (ULLONG) optimizer_plan_id;
 	ULLONG ullSamples = (ULLONG) optimizer_samples_number;
 	DOUBLE dCostThreshold = (DOUBLE) optimizer_cost_threshold;
 
@@ -748,14 +736,19 @@ COptTasks::PoconfCreate
 	DOUBLE dDampingFactorJoin = (DOUBLE) optimizer_damping_factor_join;
 	DOUBLE dDampingFactorGroupBy = (DOUBLE) optimizer_damping_factor_groupby;
 
-	ULONG ulCTEInliningCutoff =  (ULONG) optimizer_cte_inlining_bound;
+	ULONG ulCTEInliningCutoff = (ULONG) optimizer_cte_inlining_bound;
+	ULONG ulJoinArityForAssociativityCommutativity = (ULONG) optimizer_join_arity_for_associativity_commutativity;
+	ULONG ulArrayExpansionThreshold = (ULONG) optimizer_array_expansion_threshold;
 
 	return GPOS_NEW(pmp) COptimizerConfig
 						(
 						GPOS_NEW(pmp) CEnumeratorConfig(pmp, ullPlanId, ullSamples, dCostThreshold),
 						GPOS_NEW(pmp) CStatisticsConfig(pmp, dDampingFactorFilter, dDampingFactorJoin, dDampingFactorGroupBy),
 						GPOS_NEW(pmp) CCTEConfig(ulCTEInliningCutoff),
-						pcm
+						pcm,
+						GPOS_NEW(pmp) CHint(INT_MAX /* optimizer_parts_to_force_sort_on_insert */,
+								ulJoinArityForAssociativityCommutativity,
+								ulArrayExpansionThreshold)
 						);
 }
 
@@ -1008,16 +1001,6 @@ COptTasks::PvOptimizeTask
 			IConstExprEvaluator *pceeval =
 					GPOS_NEW(pmp) CConstExprEvaluatorDXL(pmp, &mda, &ceevalproxy);
 
-			// preload metadata if optimizer uses multiple threads
-			if (optimizer_parallel)
-			{
-				// install opt context in TLS
-				pocconf->AddRef();
-				pceeval->AddRef();
-				CAutoOptCtxt aoc(pmp, &mda, pceeval, pocconf);
-				CTranslatorUtils::PreloadMD(pmp, &mda, sysidDefault, (Query*) poctx->m_pquery);
-			}
-
 			CDXLNode *pdxlnQuery = ptrquerytodxl->PdxlnFromQuery();
 			DrgPdxln *pdrgpdxlnQueryOutput = ptrquerytodxl->PdrgpdxlnQueryOutput();
 			DrgPdxln *pdrgpdxlnCTE = ptrquerytodxl->PdrgpdxlnCTE();
@@ -1105,7 +1088,7 @@ COptTasks::PvOptimizeTask
 	CRefCount::SafeRelease(pbsEnabled);
 	CRefCount::SafeRelease(pbsDisabled);
 	CRefCount::SafeRelease(pbsTraceFlags);
-	if (optimizer_release_mdcache)
+	if (!optimizer_metadata_caching)
 	{
 		CMDCache::Shutdown();
 	}
@@ -1245,64 +1228,6 @@ COptTasks::PvOptimizeMinidumpTask
 	return NULL;
 }
 
-
-//---------------------------------------------------------------------------
-//	@function:
-//		COptTasks::PvDXLFromPlstmtTask
-//
-//	@doc:
-//		task that does the translation from planned stmt to XML
-//
-//---------------------------------------------------------------------------
-void*
-COptTasks::PvDXLFromPlstmtTask
-	(
-	void *pv
-	)
-{
-	GPOS_ASSERT(NULL != pv);
-
-	SOptContext *poctx = SOptContext::PoptctxtConvert(pv);
-
-	GPOS_ASSERT(NULL != poctx->m_pplstmt);
-	GPOS_ASSERT(NULL == poctx->m_szPlanDXL);
-
-	AUTO_MEM_POOL(amp);
-	IMemoryPool *pmp = amp.Pmp();
-
-	CIdGenerator idgtor(1);
-
-	// relcache MD provider
-	CMDProviderRelcache *pmdpr = GPOS_NEW(pmp) CMDProviderRelcache(pmp);
-
-	{
-		CAutoMDAccessor amda(pmp, pmdpr, sysidDefault);
-
-		CMappingParamIdScalarId mapps(pmp);
-
-		CTranslatorPlStmtToDXL tplstmtdxl(pmp, amda.Pmda(), &idgtor, (PlannedStmt*) poctx->m_pplstmt, &mapps);
-		CDXLNode *pdxlnPlan = tplstmtdxl.PdxlnFromPlstmt();
-
-		GPOS_ASSERT(NULL != pdxlnPlan);
-
-		CWStringDynamic str(pmp);
-		COstreamString oss(&str);
-
-		// get chosen plan number
-		ULLONG ullPlanId =  (ULLONG) optimizer_plan_id;
-		CWStringDynamic *pstrDXL = CDXLUtils::PstrSerializePlan(pmp, pdxlnPlan, ullPlanId, 0 /*ullPlanSpaceSize*/, true /*fSerializeHeaderFooter*/, true /*fIndent*/);
-
-		poctx->m_szPlanDXL = SzFromWsz(pstrDXL->Wsz());
-
-		// cleanup
-		GPOS_DELETE(pstrDXL);
-		pdxlnPlan->Release();
-	}
-
-	return NULL;
-}
-
-
 //---------------------------------------------------------------------------
 //	@function:
 //		COptTasks::PvPlstmtFromDXLTask
@@ -1377,66 +1302,6 @@ COptTasks::PvPlstmtFromDXLTask
 
 	return NULL;
 }
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		COptTasks::PvQueryFromDXLTask
-//
-//	@doc:
-//		task that does the translation from xml to dxl to pquery
-//
-//---------------------------------------------------------------------------
-void*
-COptTasks::PvQueryFromDXLTask
-	(
-	void *pv
-	)
-{
-	GPOS_ASSERT(NULL != pv);
-
-	SOptContext *poctx = SOptContext::PoptctxtConvert(pv);
-
-	GPOS_ASSERT(NULL == poctx->m_pquery);
-	GPOS_ASSERT(NULL != poctx->m_szQueryDXL);
-
-	AUTO_MEM_POOL(amp);
-	IMemoryPool *pmp = amp.Pmp();
-
-	CWStringDynamic str(pmp);
-	COstreamString oss(&str);
-
-	// parse the DXL
-	CQueryToDXLResult *ptroutput = CDXLUtils::PdxlnParseDXLQuery(pmp, poctx->m_szQueryDXL, NULL);
-
-	GPOS_ASSERT(NULL != ptroutput->Pdxln());
-
-	// relcache MD provider
-	CMDProviderRelcache *pmdpr = GPOS_NEW(pmp) CMDProviderRelcache(pmp);
-
-	{
-		CAutoMDAccessor amda(pmp, pmdpr, sysidDefault);
-
-		// initialize hash table that maintains the mapping between ColId and Var
-		TEMap *ptemap = GPOS_NEW(pmp) TEMap(pmp);
-
-		CTranslatorDXLToQuery trdxlquery(pmp, amda.Pmda(), gpdb::UlSegmentCountGP());
-		CStateDXLToQuery statedxltoquery(pmp);
-
-		Query *pquery = trdxlquery.PqueryFromDXL(ptroutput->Pdxln(), ptroutput->PdrgpdxlnOutputCols(), &statedxltoquery, ptemap, GPDXL_QUERY_LEVEL);
-
-		CRefCount::SafeRelease(ptemap);
-		GPOS_DELETE(ptroutput);
-
-		GPOS_ASSERT(NULL != pquery);
-		GPOS_ASSERT(NULL != CurrentMemoryContext);
-
-		poctx->m_pquery = pquery;
-	}
-
-	return NULL;
-}
-
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -1798,61 +1663,6 @@ COptTasks::SzDXL
 	octx.Free(octx.epinQuery, octx.epinQueryDXL);
 
 	return octx.m_szQueryDXL;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		COptTasks::SzDXL
-//
-//	@doc:
-//		serializes planned stmt to DXL
-//
-//---------------------------------------------------------------------------
-char *
-COptTasks::SzDXL
-	(
-	PlannedStmt *pplstmt
-	)
-{
-	Assert(pplstmt);
-
-	SOptContext octx;
-	octx.m_pplstmt = pplstmt;
-	octx.m_fSerializePlanDXL = true;
-	Execute(&PvDXLFromPlstmtTask, &octx);
-
-	// clean up context
-	octx.Free(octx.epinPlStmt, octx.epinPlanDXL);
-
-	return octx.m_szPlanDXL;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		COptTasks::PqueryFromXML
-//
-//	@doc:
-//		deserializes query from DXL
-//
-//---------------------------------------------------------------------------
-Query *
-COptTasks::PqueryFromXML
-	(
-	char *szDXL
-	)
-{
-	Assert(NULL != szDXL);
-
-	SOptContext octx;
-	octx.m_szQueryDXL = szDXL;
-	Execute(&PvQueryFromDXLTask, &octx);
-
-	// clean up context
-	octx.Free(octx.epinQueryDXL, octx.epinQuery);
-
-	return (Query *) octx.m_pquery;
 }
 
 

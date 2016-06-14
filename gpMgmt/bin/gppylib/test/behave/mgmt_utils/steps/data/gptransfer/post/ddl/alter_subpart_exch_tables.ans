@@ -3,7 +3,6 @@ You are now connected to database "gptest" as user "tangp3".
 ------+------------+----------+------
     1 | 2008-01-02 | one      |     
     1 | 2008-01-03 | one      |     
-    1 | 2008-02-01 | ten      |     
     1 | 2008-02-02 | newfive  |     
     1 | 2008-02-02 | newfour  |     
     1 | 2008-02-02 | newone   |     
@@ -22,5 +21,5 @@ You are now connected to database "gptest" as user "tangp3".
     6 | 2008-01-03 | six      |     
     7 | 2008-01-02 | nine     |     
     7 | 2008-01-03 | nine     |     
-(21 rows)
+(20 rows)
 

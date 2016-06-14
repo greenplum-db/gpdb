@@ -1016,11 +1016,11 @@ AppendOnlyExecutorReadBlock_ProcessTuple(
 			 */
 			tuple = memtuple_aligned_clone(tuple, slot->tts_mt_bind, true /* upgrade */);
 			Assert(tuple);
-			ExecStoreMemTuple(tuple, slot, true /* shouldFree */);
+			ExecStoreMinimalTuple(tuple, slot, true /* shouldFree */);
 		}
 		else
 		{
-			ExecStoreMemTuple(tuple, slot, false);
+			ExecStoreMinimalTuple(tuple, slot, false);
 		}
 
 		slot_set_ctid(slot, &(executorReadBlock->cdb_fake_ctid));
@@ -2235,7 +2235,8 @@ appendonly_fetch_init(
 						aoFetchDesc->totalSegfiles,
 						aoFetchDesc->relation,
 						1,
-						false);
+						false,
+						NULL);
 
 	AppendOnlyVisimap_Init(&aoFetchDesc->visibilityMap,
 						aoentry->visimaprelid,
@@ -2943,7 +2944,8 @@ appendonly_insert_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int se
 		tup = (MemTuple) toast_insert_or_update(relation, (HeapTuple) instup,
 												NULL, aoInsertDesc->mt_bind,
 												aoInsertDesc->toast_tuple_target,
-												false /* errtbl is never AO */);
+												false, /* errtbl is never AO */
+												true, true);
 	else
 		tup = instup;
 

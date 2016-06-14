@@ -22,15 +22,6 @@
 #include <unistd.h>
 #include <string.h>
 
-/*
- * Limitation of buffer-alignment for direct IO depends on OS and filesystem,
- * but XLOG_BLCKSZ is assumed to be enough for it.
- */
-#ifdef O_DIRECT
-#define ALIGNOF_XLOG_BUFFER     XLOG_BLCKSZ
-#else
-#define ALIGNOF_XLOG_BUFFER     ALIGNOF_BUFFER
-#endif 
 
 #ifdef WIN32
 #define FSYNC_FILENAME	"./test_fsync.out"

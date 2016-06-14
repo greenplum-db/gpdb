@@ -22,11 +22,13 @@
 #include "access/genam.h"
 #include "access/nbtree.h"
 #include "catalog/index.h"
+#include "catalog/pg_namespace.h"
 #include "commands/vacuum.h"
 #include "storage/freespace.h"
 #include "storage/ipc.h"
 #include "storage/lmgr.h"
 #include "utils/memutils.h"
+#include "utils/guc.h"
 #include "nodes/tidbitmap.h"
 #include "cdb/cdbfilerepprimary.h"
 
@@ -245,6 +247,234 @@ btbuildCallback(Relation index,
 }
 
 /*
+ * Post vacuum, iterate over all entries in index, check if the h_tid
+ * of each entry exists and is not dead.  For specific system tables,
+ * also ensure that the key in index entry matches the corresponding
+ * attribute in the heap tuple.
+ */
+void
+_bt_validate_vacuum(Relation irel, Relation hrel, TransactionId oldest_xmin)
+{
+	MIRROREDLOCK_BUFMGR_DECLARE;
+
+	BlockNumber blkno;
+	BlockNumber num_pages;
+	Buffer ibuf = InvalidBuffer;
+	Buffer hbuf = InvalidBuffer;
+	Page ipage;
+	BTPageOpaque opaque;
+	IndexTuple itup;
+	HeapTupleData htup;
+	OffsetNumber maxoff,
+			minoff,
+			offnum;
+	Oid ioid,
+		hoid;
+	bool isnull;
+
+	blkno = BTREE_METAPAGE + 1;
+	num_pages = RelationGetNumberOfBlocks(irel);
+
+	elog(LOG, "btvalidatevacuum: index %s, heap %s",
+		 RelationGetRelationName(irel), RelationGetRelationName(hrel));
+
+	MIRROREDLOCK_BUFMGR_LOCK;
+	for (; blkno < num_pages; blkno++)
+	{
+		ibuf = ReadBuffer(irel, blkno);
+		ipage = BufferGetPage(ibuf);
+		opaque = (BTPageOpaque) PageGetSpecialPointer(ipage);
+		if (!PageIsNew(ipage))
+			_bt_checkpage(irel, ibuf);
+		if (P_ISLEAF(opaque))
+		{
+			minoff = P_FIRSTDATAKEY(opaque);
+			maxoff = PageGetMaxOffsetNumber(ipage);
+			for (offnum = minoff;
+				 offnum <= maxoff;
+				 offnum = OffsetNumberNext(offnum))
+			{
+				itup = (IndexTuple) PageGetItem(ipage,
+												PageGetItemId(ipage, offnum));
+				ItemPointerCopy(&itup->t_tid, &htup.t_self);
+				/*
+				 * TODO: construct a tid bitmap based on index tids
+				 * and fetch heap tids in order afterwards.  That will
+				 * also allow validating if a heap tid appears twice
+				 * in a unique index.
+				 */
+				if (!heap_release_fetch(hrel, SnapshotAny, &htup,
+										&hbuf, true, NULL))
+				{
+					elog(ERROR, "btvalidatevacuum: tid (%d,%d) from index %s "
+						 "not found in heap %s",
+						 ItemPointerGetBlockNumber(&itup->t_tid),
+						 ItemPointerGetOffsetNumber(&itup->t_tid),
+						 RelationGetRelationName(irel),
+						 RelationGetRelationName(hrel));
+				}
+				switch (HeapTupleSatisfiesVacuum(htup.t_data, oldest_xmin, hbuf))
+				{
+					case HEAPTUPLE_RECENTLY_DEAD:
+					case HEAPTUPLE_LIVE:
+					case HEAPTUPLE_INSERT_IN_PROGRESS:
+					case HEAPTUPLE_DELETE_IN_PROGRESS:
+						/* these tuples are considered alive by vacuum */
+						break;
+					case HEAPTUPLE_DEAD:
+						elog(ERROR, "btvalidatevacuum: vacuum did not remove "
+							 "dead tuple (%d,%d) from heap %s and index %s",
+							 ItemPointerGetBlockNumber(&itup->t_tid),
+							 ItemPointerGetOffsetNumber(&itup->t_tid),
+							 RelationGetRelationName(hrel),
+							 RelationGetRelationName(irel));
+						break;
+					default:
+						elog(ERROR, "btvalidatevacuum: invalid visibility");
+						break;
+				}
+				switch(RelationGetRelid(irel))
+				{
+					case DatabaseOidIndexId:
+					case TypeOidIndexId:
+					case ClassOidIndexId:
+					case ConstraintOidIndexId:
+						hoid = HeapTupleGetOid(&htup);
+						ioid = index_getattr(itup, 1, RelationGetDescr(irel), &isnull);
+						if (hoid != ioid)
+						{
+							elog(ERROR,
+								 "btvalidatevacuum: index oid(%d) != heap oid(%d)"
+								 " tuple (%d,%d) index %s", ioid, hoid,
+								 ItemPointerGetBlockNumber(&itup->t_tid),
+								 ItemPointerGetOffsetNumber(&itup->t_tid),
+								 RelationGetRelationName(irel));
+						}
+						break;
+					case GpRelationNodeOidIndexId:
+						hoid = heap_getattr(&htup, 1, RelationGetDescr(hrel), &isnull);
+						ioid = index_getattr(itup, 1, RelationGetDescr(irel), &isnull);
+						if (hoid != ioid)
+						{
+							elog(ERROR,
+								 "btvalidatevacuum: index oid(%d) != heap oid(%d)"
+								 " tuple (%d,%d) index %s", ioid, hoid,
+								 ItemPointerGetBlockNumber(&itup->t_tid),
+								 ItemPointerGetOffsetNumber(&itup->t_tid),
+								 RelationGetRelationName(irel));
+						}
+						int4 hsegno = heap_getattr(&htup, 2, RelationGetDescr(hrel), &isnull);
+						int4 isegno = index_getattr(itup, 2, RelationGetDescr(irel), &isnull);
+						if (isegno != hsegno)
+						{
+							elog(ERROR,
+								 "btvalidatevacuum: index segno(%d) != heap segno(%d)"
+								 " tuple (%d,%d) index %s", isegno, hsegno,
+								 ItemPointerGetBlockNumber(&itup->t_tid),
+								 ItemPointerGetOffsetNumber(&itup->t_tid),
+								 RelationGetRelationName(irel));
+						}
+						break;
+					default:
+						break;
+				}
+				if (RelationGetNamespace(irel) == PG_AOSEGMENT_NAMESPACE)
+				{
+					int4 isegno = index_getattr(itup, 1, RelationGetDescr(irel), &isnull);
+					int4 hsegno = heap_getattr(&htup, 1, RelationGetDescr(hrel), &isnull);
+					if (isegno != hsegno)
+					{
+						elog(ERROR,
+							 "btvalidatevacuum: index segno(%d) != heap segno(%d)"
+							 " tuple (%d,%d) index %s", isegno, hsegno,
+							 ItemPointerGetBlockNumber(&itup->t_tid),
+							 ItemPointerGetOffsetNumber(&itup->t_tid),
+							 RelationGetRelationName(irel));
+					}
+				}
+			}
+		}
+		if (BufferIsValid(ibuf))
+			ReleaseBuffer(ibuf);
+	}
+	if (BufferIsValid(hbuf))
+		ReleaseBuffer(hbuf);
+	MIRROREDLOCK_BUFMGR_UNLOCK;
+}
+
+/*
+ * For a newly inserted heap tid, check if an entry with this tid
+ * already exists in a unique index.  If it does, abort the inserting
+ * transaction.
+ */
+static void
+_bt_validate_tid(Relation irel, ItemPointer h_tid)
+{
+	MIRROREDLOCK_BUFMGR_DECLARE;
+
+	BlockNumber blkno;
+	BlockNumber num_pages;
+	Buffer buf;
+	Page page;
+	BTPageOpaque opaque;
+	IndexTuple itup;
+	OffsetNumber maxoff,
+			minoff,
+			offnum;
+
+	elog(DEBUG1, "validating tid (%d,%d) for index (%s)",
+		 ItemPointerGetBlockNumber(h_tid), ItemPointerGetOffsetNumber(h_tid),
+		 RelationGetRelationName(irel));
+
+	blkno = BTREE_METAPAGE + 1;
+	num_pages = RelationGetNumberOfBlocks(irel);
+
+	MIRROREDLOCK_BUFMGR_LOCK;
+	for (; blkno < num_pages; blkno++)
+	{
+		buf = ReadBuffer(irel, blkno);
+		page = BufferGetPage(buf);
+		opaque = (BTPageOpaque) PageGetSpecialPointer(page);
+		if (!PageIsNew(page))
+			_bt_checkpage(irel, buf);
+		if (P_ISLEAF(opaque))
+		{
+			minoff = P_FIRSTDATAKEY(opaque);
+			maxoff = PageGetMaxOffsetNumber(page);
+			for (offnum = minoff;
+				 offnum <= maxoff;
+				 offnum = OffsetNumberNext(offnum))
+			{
+				itup = (IndexTuple) PageGetItem(page,
+												PageGetItemId(page, offnum));
+				if (ItemPointerEquals(&itup->t_tid, h_tid))
+				{
+					Form_pg_attribute key_att = RelationGetDescr(irel)->attrs[0];
+					Oid key = InvalidOid;
+					bool isnull;
+					if (key_att->atttypid == OIDOID)
+					{
+						key = DatumGetInt32(
+								index_getattr(itup, 1, RelationGetDescr(irel), &isnull));
+						elog(ERROR, "found tid (%d,%d), %s (%d) already in index (%s)",
+							 ItemPointerGetBlockNumber(h_tid), ItemPointerGetOffsetNumber(h_tid),
+							 NameStr(key_att->attname), key, RelationGetRelationName(irel));
+					}
+					else
+					{
+						elog(ERROR, "found tid (%d,%d) already in index (%s)",
+							 ItemPointerGetBlockNumber(h_tid), ItemPointerGetOffsetNumber(h_tid),
+							 RelationGetRelationName(irel));
+					}
+				}
+			}
+		}
+		ReleaseBuffer(buf);
+	}
+	MIRROREDLOCK_BUFMGR_UNLOCK;
+}
+
+/*
  *	btinsert() -- insert an index tuple into a btree.
  *
  *		Descend the tree recursively, find the appropriate location for our
@@ -264,6 +494,14 @@ btinsert(PG_FUNCTION_ARGS)
 	IndexTuple	itup;
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_ENTER;
+
+	if (checkUnique && (
+				(gp_indexcheck_insert == INDEX_CHECK_ALL && RelationIsHeap(heapRel)) ||
+				(gp_indexcheck_insert == INDEX_CHECK_SYSTEM &&
+				 PG_CATALOG_NAMESPACE == RelationGetNamespace(heapRel))))
+	{
+		_bt_validate_tid(rel, ht_ctid);
+	}
 
 	/* generate an index tuple */
 	itup = index_form_tuple(RelationGetDescr(rel), values, isnull);

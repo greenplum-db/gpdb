@@ -271,6 +271,7 @@ typedef struct MKContext {
     int strxfrmConstantFactor;
 
     TupleDesc tupdesc;
+    Relation indexRel;
     MemTupleBinding *mt_bind;
 
     /* Limit the sort?  If 0 then we sort all input values, else we keep only the first limit-many values */
@@ -418,16 +419,5 @@ static inline int64 mkheap_cnt(MKHeap *mkheap)
 {
     return mkheap->count;
 }
-
-/**
- * ereport an ERROR indicating that the uniqueness constraint was violated
- */
-#define ERROR_UNIQUENESS_VIOLATED() \
-    do \
-    { \
-        ereport(ERROR, (errcode(ERRCODE_UNIQUE_VIOLATION), \
-                    errmsg("could not create unique index"), \
-                    errdetail("Table contains duplicate values."))); \
-    } while(0)
 
 #endif

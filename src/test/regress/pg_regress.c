@@ -545,7 +545,7 @@ convert_sourcefiles_in(char *source, char *dest, char *suffix)
 		{
 			char		cmd[MAXPGPATH * 3];
 			snprintf(cmd, sizeof(cmd),
-					 SYSTEMQUOTE "%s/gpstringsubs.pl %s" SYSTEMQUOTE, bindir, destfile);
+					 SYSTEMQUOTE "%s %s" SYSTEMQUOTE, gpstringsubsprog, destfile);
 			if (run_diff(cmd, destfile) != 0)
 			{
 				fprintf(stderr, _("%s: could not convert %s\n"),
@@ -569,7 +569,7 @@ convert_sourcefiles_in(char *source, char *dest, char *suffix)
 	pgfnames_cleanup(names);
 }
 
-/* Create the .sql and .out files from the .source files, if any */
+/* Create the .sql, .out and .yml files from the .source files, if any */
 static void
 convert_sourcefiles(void)
 {
@@ -1030,6 +1030,57 @@ spawn_process(const char *cmdline)
 
 	ZeroMemory(&si, sizeof(si));
 	si.cb = sizeof(si);
+	
+	Advapi32Handle = LoadLibrary("ADVAPI32.DLL");
+	if (Advapi32Handle != NULL)
+	{
+      _CreateRestrictedToken = (__CreateRestrictedToken) GetProcAddress(Advapi32Handle, "CreateRestrictedToken");
+   }
+   
+   if (_CreateRestrictedToken == NULL)
+   {
+      if (Advapi32Handle != NULL)
+      	FreeLibrary(Advapi32Handle);
+      fprintf(stderr, "ERROR: Unable to create restricted tokens on this platform\n");
+      exit_nicely(2);
+   }
+
+   /* Open the current token to use as base for the restricted one */
+   if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &origToken))
+   {
+      fprintf(stderr, "Failed to open process token: %lu\n", GetLastError());
+      exit_nicely(2);
+   }
+
+	/* Allocate list of SIDs to remove */
+	ZeroMemory(&dropSids, sizeof(dropSids));
+	if (!AllocateAndInitializeSid(&NtAuthority, 2,
+			SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &dropSids[0].Sid) ||
+		 !AllocateAndInitializeSid(&NtAuthority, 2,
+		   SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_POWER_USERS, 0, 0, 0, 0, 0, 0, &dropSids[1].Sid))
+   {
+      fprintf(stderr, "Failed to allocate SIDs: %lu\n", GetLastError());
+      exit_nicely(2);
+   }
+	
+	b = _CreateRestrictedToken(origToken,
+          DISABLE_MAX_PRIVILEGE,
+          sizeof(dropSids)/sizeof(dropSids[0]),
+          dropSids,
+          0, NULL,
+          0, NULL,
+          &restrictedToken);
+
+   FreeSid(dropSids[1].Sid);
+   FreeSid(dropSids[0].Sid);
+   CloseHandle(origToken);
+   FreeLibrary(Advapi32Handle);
+   
+   if (!b)
+   {
+      fprintf(stderr, "Failed to create restricted token: %lu\n", GetLastError());
+      exit_nicely(2);
+   }
 
 	Advapi32Handle = LoadLibrary("ADVAPI32.DLL");
 	if (Advapi32Handle != NULL)
@@ -1828,8 +1879,7 @@ run_single_test(const char *test, test_function tfunc)
 
 /*
  * Find the other binaries that we need. Currently, gpdiff.pl and
- * gpstringsubs.pl. gpdiff.pl in turn will call atmsort.pl and explain.pl,
- * but it's up to gpdiff.pl to find them.
+ * gpstringsubs.pl.
  */
 static void
 find_helper_programs(const char *argv0)

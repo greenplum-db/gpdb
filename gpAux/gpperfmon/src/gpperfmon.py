@@ -14,8 +14,8 @@ import subprocess
 import shutil
 import ConfigParser
 import re
-import psi.process
 import getpass
+import psutil
 from gppylib.db import dbconn
 
 GPPERFMONHOME=os.getenv('GPPERFMONHOME')
@@ -244,12 +244,10 @@ def lighty_stop(instance):
     status = lighty_status(instance)
     if status == RUNNING or status == STRANDED_LIGHT or status == ONLY_LIGHT:
         try:
-            ptable = psi.process.ProcessTable()
-            for pid in ptable:
-                process = ptable[pid]
+            for process in psutil.process_iter():
 
                 try:
-                    process_args  = process.args
+                    process_args  = process.cmdline()
                 except:
                     continue
                     # we do not have privalege to view/kill this process, so skip it
@@ -261,8 +259,8 @@ def lighty_stop(instance):
                 if not re.search(instance_conf, process_args[2]):
                     continue
 
-                print "killing pid %d" % pid
-                os.kill(pid, signal.SIGTERM)
+                print "killing pid %d" % process.pid
+                os.kill(process.pid, signal.SIGTERM)
             
             # lighty shuts down quickly, but give it a little bit of time.
             time.sleep(1)
@@ -289,12 +287,9 @@ def lighty_stop(instance):
 def kill_orphaned_cgi_scripts():
     "Search for any gpmonws.py that are stranded and do not belong to lighttpd"
 
-    ptable = psi.process.ProcessTable()
-    for pid in ptable:
-        process = ptable[pid]
-
+    for process in psutil.process_iter():
         try:
-            process_args  = process.args
+            process_args  = process.cmdline()
         except:
             continue
             # we do not have privalege to view/kill this process, so skip it
@@ -302,9 +297,9 @@ def kill_orphaned_cgi_scripts():
         if len(process_args) >= 2:
             if process_args[0] == 'python':
                 if re.search("gpmonws.py", process_args[1]):
-                    if process.ppid == 1:
-                        print "Killing stranded gpmonws.py process with pid %d" % pid
-                        os.kill(pid, signal.SIGTERM)
+                    if process.ppid() == 1:
+                        print "Killing stranded gpmonws.py process with pid %d" % process.pid
+                        os.kill(process.pid, signal.SIGTERM)
 
 #################
 def lighty_restart(instance):
@@ -346,12 +341,10 @@ def lighty_status(instance):
         pass
 
     try:
-        ptable = psi.process.ProcessTable()
-        for pid in ptable:
-            process = ptable[pid]
+        for process in psutil.process_iter():
 
             try:
-                process_args  = process.args
+                process_args  = process.cmdline()
             except:
                 continue
                 # we do not have privalege to view/kill this process, so skip it
@@ -361,7 +354,7 @@ def lighty_status(instance):
 
             # lighttpd process
             if re.search(light_bin, process_args[0]):
-                if lightpid != 0 and pid == lightpid:
+                if lightpid != 0 and process.pid == lightpid:
                     foundLighthttp = True
                 elif len(process_args) >= 3:
                     if re.search(instance_conf, process_args[2]):
@@ -372,7 +365,7 @@ def lighty_status(instance):
                 if len(process_args) < 2:
                     continue
                 if re.search(instance_mon, process_args[1]):
-                    if lightpid != 0 and process.ppid == lightpid:
+                    if lightpid != 0 and process.ppid() == lightpid:
                         foundGpmonws = True
                     else:
                         foundStrandedPython = True

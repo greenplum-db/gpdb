@@ -311,7 +311,6 @@ WorkfileQueryspace_ReleaseEntry(void)
 	}
 
 	querySpaceNestingLevel--;
-	Assert(querySpaceNestingLevel >= 0);
 
 	if (querySpaceNestingLevel > 0)
 	{
@@ -322,15 +321,25 @@ WorkfileQueryspace_ReleaseEntry(void)
 		return;
 	}
 
+	int session_id = queryEntry->key.session_id;
+	int command_count = queryEntry->key.command_count;
+
 	bool deleted = SyncHTRelease(queryspace_Hashtable, queryEntry);
+
+	/*
+	 * Set the queryEntry to NULL as we may soon CHECK_FOR_INTERRUPTS, which can come back to this
+	 * method if an ERROR cleanup (e.g., because of a QueryCancelPending) invokes ExecutorEnd.
+	 * We don't want to release our queryEntry again.
+	 */
+	queryEntry = NULL;
 
 	if (deleted)
 	{
 		elog(gp_workfile_caching_loglevel, "Deleted entry for query (sessionid=%d, commandcnt=%d)",
-				queryEntry->key.session_id, queryEntry->key.command_count);
+				session_id, command_count);
 	}
 
-	queryEntry = NULL;
+	Assert(querySpaceNestingLevel == 0);
 }
 
 /*

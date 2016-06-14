@@ -835,6 +835,22 @@ write_auth_time_file(Relation rel_authid, Relation rel_authtime)
 							(errmsg("time constraints are being added against superuser")));
 				authtime_info[curr_constraint].rolname = found_role->rolname;
 			}
+			else
+			{
+				/*
+				 * pg_auth_time_constraint or pg_authid is corrupt: a role mentioned in
+				 * pg_auth_time_constraint was not found in pg_authid. Remove the entry
+				 * from the array so that we can start up the system.
+				 */
+				ereport(WARNING,
+						(errmsg("role with OID %u mentioned in pg_auth_time_constraint does not exist",
+								authtime_info[curr_constraint].roleid)));
+				total_constraints--;
+				memmove(&authtime_info[curr_constraint],
+						&authtime_info[curr_constraint + 1],
+						total_constraints - curr_constraint);
+				curr_constraint--;
+			}
 		}
 	}
 

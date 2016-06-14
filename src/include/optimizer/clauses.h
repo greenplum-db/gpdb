@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/clauses.h,v 1.85 2007/01/05 22:19:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/clauses.h,v 1.87 2007/02/19 07:03:34 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -72,6 +72,7 @@ extern bool contain_agg_clause(Node *clause);
 extern void count_agg_clauses(Node *clause, AggClauseCounts *counts);
 
 extern bool expression_returns_set(Node *clause);
+extern double expression_returns_set_rows(Node *clause);
 
 extern bool contain_subplans(Node *clause);
 

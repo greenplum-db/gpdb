@@ -5,7 +5,7 @@
 # Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/backend/Makefile,v 1.121 2007/01/20 17:16:10 petere Exp $
+# $PostgreSQL: pgsql/src/backend/Makefile,v 1.122 2007/02/09 15:55:57 petere Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -32,6 +32,10 @@ SUBDIRS = access bootstrap catalog parser commands executor \
 
 ifeq ($(enable_orca),yes)
 SUBDIRS += gpopt
+endif
+
+ifeq ($(enable_codegen),yes)
+SUBDIRS += codegen
 endif
 
 include $(srcdir)/common.mk
@@ -72,6 +76,11 @@ LIBS := $(LIBS) -L$(OPTIMIZER)/libnaucrates/$(OBJDIR_DEFAULT) -lnaucrates
 LIBS := $(LIBS) -L$(OPTIMIZER)/libgpdbcost/$(OBJDIR_DEFAULT) -lgpdbcost
 LIBS := $(LIBS) -L$(OPTIMIZER)/libgpopt/$(OBJDIR_DEFAULT) -lgpopt
 LIBS := $(LIBS) -L$(top_builddir)/src/backend/gpopt -ldxltranslators
+endif
+
+# adding codegen libraries
+ifeq ($(enable_codegen),yes)
+LIBS := $(LIBS) -L$(top_builddir)/src/backend/codegen -lgpcodegen
 endif
 
 # Greenplum uses threads in the backend
@@ -218,6 +227,12 @@ endif
 	$(INSTALL_DATA) $(srcdir)/libpq/pg_ident.conf.sample '$(DESTDIR)$(datadir)/pg_ident.conf.sample'
 	$(INSTALL_DATA) $(srcdir)/utils/misc/postgresql.conf.sample '$(DESTDIR)$(datadir)/postgresql.conf.sample'
 	$(INSTALL_DATA) $(srcdir)/access/transam/recovery.conf.sample '$(DESTDIR)$(datadir)/recovery.conf.sample'
+ifeq ($(enable_orca), yes)
+	$(MAKE) -C gpopt $@ INSTLOC=$(DESTDIR)$(libdir)
+endif
+ifeq ($(enable_codegen), yes)
+	$(MAKE) -C codegen $@ DESTDIR=$(DESTDIR)
+endif
 
 install-bin: postgres $(POSTGRES_IMP) installdirs
 	$(INSTALL_PROGRAM) postgres$(X) '$(DESTDIR)$(bindir)/postgres$(X)'

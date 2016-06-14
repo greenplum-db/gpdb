@@ -1,0 +1,434 @@
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+create schema indexapply;
+set search_path to indexapply;
+-- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: sql_bfv_other/mpp22263.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop table if exists mpp22263;
+NOTICE:  table "mpp22263" does not exist, skipping
+CREATE TABLE mpp22263 (
+	unique1		int4,
+	unique2		int4,
+	two			int4,
+	four		int4,
+	ten			int4,
+	twenty		int4,
+	hundred		int4,
+	thousand	int4,
+	twothousand	int4,
+	fivethous	int4,
+	tenthous	int4,
+	odd			int4,
+	even		int4,
+	stringu1	name,
+	stringu2	name,
+	string4		name
+) distributed by (unique1);
+create index mpp22263_idx1 on mpp22263 using btree(unique1);
+-- end_ignore
+-- @author onosen
+-- @created 2015-01-08 18:00:00
+-- @tags ORCA bfv
+-- @gpopt 1.522
+-- @description bfv for MPP-22263
+--start_ignore
+explain
+select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
+    WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=256)
+   ->  Nested Loop  (cost=0.00..2.00 rows=1 width=256)
+         Join Filter: true
+         ->  Append  (cost=0.00..0.00 rows=1 width=12)
+               ->  Result  (cost=0.00..0.00 rows=1 width=12)
+                     ->  Result  (cost=0.00..0.00 rows=1 width=12)
+               ->  Result  (cost=0.00..0.00 rows=1 width=12)
+                     ->  Result  (cost=0.00..0.00 rows=1 width=12)
+         ->  Index Scan using mpp22263_idx1 on mpp22263  (cost=0.00..2.00 rows=1 width=244)
+               Index Cond: mpp22263.unique1 = "outer".column1
+               Filter: mpp22263.stringu1::text = "outer".column2
+ Settings:  optimizer=on
+ Optimizer status: PQO version 1.633
+(13 rows)
+
+--end_ignore
+\!grep 'Filter: mpp22263.stringu1::text = "outer".column2' @abs_srcdir@/results/indexapply.out | wc -l
+2
+-- ----------------------------------------------------------------------
+-- Test: sql_bfv_other/mpp25537.sql
+-- ----------------------------------------------------------------------
+-- @author gcaragea
+-- @created 2015-05-08 18:00:00
+-- @tags ORCA bfv
+-- @gpopt 1.577
+-- @description bfv for MPP-25537
+--start_ignore
+DROP TABLE IF EXISTS mpp25537_facttable1;
+NOTICE:  table "mpp25537_facttable1" does not exist, skipping
+DROP TABLE IF EXISTS mpp25537_dimdate;
+NOTICE:  table "mpp25537_dimdate" does not exist, skipping
+DROP TABLE IF EXISTS mpp25537_dimtabl1;
+NOTICE:  table "mpp25537_dimtabl1" does not exist, skipping
+--end_ignore
+CREATE TABLE mpp25537_facttable1 (
+col1 integer,
+wk_id smallint,
+id integer
+)
+with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=5)
+partition by range (wk_id) (
+start (1::smallint) END (20::smallint) inclusive every (1),
+default partition dflt
+)
+;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_dflt" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_2" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_3" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_4" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_5" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_6" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_7" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_8" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_9" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_10" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_11" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_12" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_13" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_14" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_15" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_16" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_17" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_18" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_19" for table "mpp25537_facttable1"
+NOTICE:  CREATE TABLE will create partition "mpp25537_facttable1_1_prt_20" for table "mpp25537_facttable1"
+insert into mpp25537_facttable1 select col1, col1, col1 from (select generate_series(1,20) col1)a;
+CREATE TABLE mpp25537_dimdate (
+wk_id smallint,
+col2 date
+)
+;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'wk_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into mpp25537_dimdate select col1, current_date - col1 from (select generate_series(1,20,2) col1)a;
+CREATE TABLE mpp25537_dimtabl1 (
+id integer,
+col2 integer
+)
+;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into mpp25537_dimtabl1 select col1, col1 from (select generate_series(1,20,3) col1)a;
+CREATE INDEX idx_mpp25537_facttable1 on mpp25537_facttable1 (id); 
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_dflt"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_2"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_3"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_4"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_5"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_6"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_7"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_8"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_9"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_10"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_11"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_12"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_13"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_14"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_15"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_16"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_17"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_18"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_19"
+NOTICE:  building index for child partition "mpp25537_facttable1_1_prt_20"
+set optimizer_analyze_root_partition to on;
+set optimizer to on;
+ANALYZE mpp25537_facttable1;
+ANALYZE mpp25537_dimdate;
+ANALYZE mpp25537_dimtabl1;
+SELECT count(*) 
+FROM mpp25537_facttable1 ft, mpp25537_dimdate dt, mpp25537_dimtabl1 dt1
+WHERE ft.wk_id = dt.wk_id
+AND ft.id = dt1.id;
+ count 
+-------
+     4
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp21852.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop table x;
+ERROR:  table "x" does not exist
+drop table y;
+ERROR:  table "y" does not exist
+create table x ( i int, j int, k int, m int) distributed by (i);
+create table y ( i int, j int, k int, m int) distributed by (i);
+insert into x (i, j, k, m) values
+    (3,3,3,3), (7,7,7,7), (11,1,1,1), (15,5,5,5), (19,9,9,9),
+    (23,13,3,3), (27,17,7,7), (31,21,11,1), (35,25,15,5), (39,29,19,9),
+    (1,1,1,1), (5,5,5,5), (9,9,9,9), (13,3,3,3), (17,7,7,7),
+    (21,11,1,1), (25,15,5,5), (29,19,9,9), (33,23,13,3), (37,27,17,7),
+    (2,2,2,2), (6,6,6,6), (10,10,10,10), (14,4,4,4), (18,8,8,8),
+    (22,12,2,2), (26,16,6,6), (30,20,10,10), (34,24,14,4), (38,28,18,8),
+    (4,4,4,4), (8,8,8,8), (12,2,2,2), (16,6,6,6), (20,10,10,10),
+    (24,14,4,4), (28,18,8,8), (32,22,12,2), (36,26,16,6), (40,30,20,10);
+insert into y (i, j, k, m) values
+    (3,13,23,33), (7,17,27,37), (4,14,24,34), (8,18,28,38), (2,12,22,32),
+    (6,16,26,36), (10,20,30,40), (1,11,21,31), (5,15,25,35), (9,19,29,39);
+--create INDEX x_idx on x using %idxtype%(%xIDX%);
+create INDEX x_idx on x (NONE);
+ERROR:  column "none" does not exist
+create INDEX y_idx on y (j);
+create function plusone(x int) RETURNS int AS $$
+BEGIN
+    RETURN x + 5;
+END;
+$$ language plpgsql;
+create function plusone(x varchar) RETURNS varchar AS $$
+BEGIN
+    RETURN x || 'a';
+END;
+$$ language plpgsql;
+create function plusone(x text) RETURNS text AS $$
+BEGIN
+    RETURN x || 'x';
+END;
+$$ language plpgsql;
+set optimizer_enable_indexjoin=on;
+-- end_ignore
+-- @author onosen
+select * from x, y where x.i + x.j < y.j;
+ i  | j | k | m | i  | j  | k  | m  
+----+---+---+---+----+----+----+----
+  1 | 1 | 1 | 1 |  1 | 11 | 21 | 31
+  1 | 1 | 1 | 1 |  2 | 12 | 22 | 32
+  2 | 2 | 2 | 2 |  1 | 11 | 21 | 31
+  2 | 2 | 2 | 2 |  2 | 12 | 22 | 32
+  3 | 3 | 3 | 3 |  1 | 11 | 21 | 31
+  3 | 3 | 3 | 3 |  2 | 12 | 22 | 32
+  5 | 5 | 5 | 5 |  1 | 11 | 21 | 31
+  5 | 5 | 5 | 5 |  2 | 12 | 22 | 32
+  4 | 4 | 4 | 4 |  1 | 11 | 21 | 31
+  4 | 4 | 4 | 4 |  2 | 12 | 22 | 32
+  1 | 1 | 1 | 1 |  3 | 13 | 23 | 33
+  1 | 1 | 1 | 1 |  4 | 14 | 24 | 34
+  1 | 1 | 1 | 1 |  5 | 15 | 25 | 35
+  1 | 1 | 1 | 1 |  6 | 16 | 26 | 36
+  1 | 1 | 1 | 1 |  7 | 17 | 27 | 37
+ 13 | 3 | 3 | 3 |  7 | 17 | 27 | 37
+  2 | 2 | 2 | 2 |  3 | 13 | 23 | 33
+  2 | 2 | 2 | 2 |  4 | 14 | 24 | 34
+  2 | 2 | 2 | 2 |  5 | 15 | 25 | 35
+  2 | 2 | 2 | 2 |  6 | 16 | 26 | 36
+  2 | 2 | 2 | 2 |  7 | 17 | 27 | 37
+ 11 | 1 | 1 | 1 |  3 | 13 | 23 | 33
+ 11 | 1 | 1 | 1 |  4 | 14 | 24 | 34
+ 11 | 1 | 1 | 1 |  5 | 15 | 25 | 35
+ 11 | 1 | 1 | 1 |  6 | 16 | 26 | 36
+ 11 | 1 | 1 | 1 |  7 | 17 | 27 | 37
+  8 | 8 | 8 | 8 |  7 | 17 | 27 | 37
+ 12 | 2 | 2 | 2 |  5 | 15 | 25 | 35
+ 12 | 2 | 2 | 2 |  6 | 16 | 26 | 36
+ 12 | 2 | 2 | 2 |  7 | 17 | 27 | 37
+  3 | 3 | 3 | 3 |  3 | 13 | 23 | 33
+  3 | 3 | 3 | 3 |  4 | 14 | 24 | 34
+  3 | 3 | 3 | 3 |  5 | 15 | 25 | 35
+  3 | 3 | 3 | 3 |  6 | 16 | 26 | 36
+  3 | 3 | 3 | 3 |  7 | 17 | 27 | 37
+  7 | 7 | 7 | 7 |  5 | 15 | 25 | 35
+  7 | 7 | 7 | 7 |  6 | 16 | 26 | 36
+  7 | 7 | 7 | 7 |  7 | 17 | 27 | 37
+  5 | 5 | 5 | 5 |  3 | 13 | 23 | 33
+  5 | 5 | 5 | 5 |  4 | 14 | 24 | 34
+  5 | 5 | 5 | 5 |  5 | 15 | 25 | 35
+  5 | 5 | 5 | 5 |  6 | 16 | 26 | 36
+  5 | 5 | 5 | 5 |  7 | 17 | 27 | 37
+  6 | 6 | 6 | 6 |  3 | 13 | 23 | 33
+  6 | 6 | 6 | 6 |  4 | 14 | 24 | 34
+  6 | 6 | 6 | 6 |  5 | 15 | 25 | 35
+  6 | 6 | 6 | 6 |  6 | 16 | 26 | 36
+  6 | 6 | 6 | 6 |  7 | 17 | 27 | 37
+  4 | 4 | 4 | 4 |  3 | 13 | 23 | 33
+  4 | 4 | 4 | 4 |  4 | 14 | 24 | 34
+  4 | 4 | 4 | 4 |  5 | 15 | 25 | 35
+  4 | 4 | 4 | 4 |  6 | 16 | 26 | 36
+  4 | 4 | 4 | 4 |  7 | 17 | 27 | 37
+  1 | 1 | 1 | 1 |  8 | 18 | 28 | 38
+  1 | 1 | 1 | 1 |  9 | 19 | 29 | 39
+  1 | 1 | 1 | 1 | 10 | 20 | 30 | 40
+ 13 | 3 | 3 | 3 |  8 | 18 | 28 | 38
+ 13 | 3 | 3 | 3 |  9 | 19 | 29 | 39
+ 13 | 3 | 3 | 3 | 10 | 20 | 30 | 40
+  2 | 2 | 2 | 2 |  8 | 18 | 28 | 38
+  2 | 2 | 2 | 2 |  9 | 19 | 29 | 39
+  2 | 2 | 2 | 2 | 10 | 20 | 30 | 40
+ 14 | 4 | 4 | 4 |  9 | 19 | 29 | 39
+ 14 | 4 | 4 | 4 | 10 | 20 | 30 | 40
+ 11 | 1 | 1 | 1 |  8 | 18 | 28 | 38
+ 11 | 1 | 1 | 1 |  9 | 19 | 29 | 39
+ 11 | 1 | 1 | 1 | 10 | 20 | 30 | 40
+  9 | 9 | 9 | 9 |  9 | 19 | 29 | 39
+  9 | 9 | 9 | 9 | 10 | 20 | 30 | 40
+  8 | 8 | 8 | 8 |  8 | 18 | 28 | 38
+  8 | 8 | 8 | 8 |  9 | 19 | 29 | 39
+  8 | 8 | 8 | 8 | 10 | 20 | 30 | 40
+ 12 | 2 | 2 | 2 |  8 | 18 | 28 | 38
+ 12 | 2 | 2 | 2 |  9 | 19 | 29 | 39
+ 12 | 2 | 2 | 2 | 10 | 20 | 30 | 40
+  3 | 3 | 3 | 3 |  8 | 18 | 28 | 38
+  3 | 3 | 3 | 3 |  9 | 19 | 29 | 39
+  3 | 3 | 3 | 3 | 10 | 20 | 30 | 40
+  7 | 7 | 7 | 7 |  8 | 18 | 28 | 38
+  7 | 7 | 7 | 7 |  9 | 19 | 29 | 39
+  7 | 7 | 7 | 7 | 10 | 20 | 30 | 40
+  5 | 5 | 5 | 5 |  8 | 18 | 28 | 38
+  5 | 5 | 5 | 5 |  9 | 19 | 29 | 39
+  5 | 5 | 5 | 5 | 10 | 20 | 30 | 40
+  6 | 6 | 6 | 6 |  8 | 18 | 28 | 38
+  6 | 6 | 6 | 6 |  9 | 19 | 29 | 39
+  6 | 6 | 6 | 6 | 10 | 20 | 30 | 40
+  4 | 4 | 4 | 4 |  8 | 18 | 28 | 38
+  4 | 4 | 4 | 4 |  9 | 19 | 29 | 39
+  4 | 4 | 4 | 4 | 10 | 20 | 30 | 40
+(90 rows)
+
+-- @author onosen
+select * from x, y where y.j > x.i + x.j + 2;
+ i  | j | k | m | i  | j  | k  | m  
+----+---+---+---+----+----+----+----
+ 11 | 1 | 1 | 1 |  5 | 15 | 25 | 35
+ 11 | 1 | 1 | 1 |  6 | 16 | 26 | 36
+ 11 | 1 | 1 | 1 |  7 | 17 | 27 | 37
+ 12 | 2 | 2 | 2 |  7 | 17 | 27 | 37
+  3 | 3 | 3 | 3 |  3 | 13 | 23 | 33
+  3 | 3 | 3 | 3 |  4 | 14 | 24 | 34
+  3 | 3 | 3 | 3 |  5 | 15 | 25 | 35
+  3 | 3 | 3 | 3 |  6 | 16 | 26 | 36
+  3 | 3 | 3 | 3 |  7 | 17 | 27 | 37
+  7 | 7 | 7 | 7 |  7 | 17 | 27 | 37
+  5 | 5 | 5 | 5 |  3 | 13 | 23 | 33
+  5 | 5 | 5 | 5 |  4 | 14 | 24 | 34
+  5 | 5 | 5 | 5 |  5 | 15 | 25 | 35
+  5 | 5 | 5 | 5 |  6 | 16 | 26 | 36
+  5 | 5 | 5 | 5 |  7 | 17 | 27 | 37
+  6 | 6 | 6 | 6 |  5 | 15 | 25 | 35
+  6 | 6 | 6 | 6 |  6 | 16 | 26 | 36
+  6 | 6 | 6 | 6 |  7 | 17 | 27 | 37
+  4 | 4 | 4 | 4 |  3 | 13 | 23 | 33
+  4 | 4 | 4 | 4 |  4 | 14 | 24 | 34
+  4 | 4 | 4 | 4 |  5 | 15 | 25 | 35
+  4 | 4 | 4 | 4 |  6 | 16 | 26 | 36
+  4 | 4 | 4 | 4 |  7 | 17 | 27 | 37
+  1 | 1 | 1 | 1 |  3 | 13 | 23 | 33
+  1 | 1 | 1 | 1 |  4 | 14 | 24 | 34
+  1 | 1 | 1 | 1 |  5 | 15 | 25 | 35
+  1 | 1 | 1 | 1 |  6 | 16 | 26 | 36
+  1 | 1 | 1 | 1 |  7 | 17 | 27 | 37
+  2 | 2 | 2 | 2 |  3 | 13 | 23 | 33
+  2 | 2 | 2 | 2 |  4 | 14 | 24 | 34
+  2 | 2 | 2 | 2 |  5 | 15 | 25 | 35
+  2 | 2 | 2 | 2 |  6 | 16 | 26 | 36
+  2 | 2 | 2 | 2 |  7 | 17 | 27 | 37
+ 11 | 1 | 1 | 1 |  8 | 18 | 28 | 38
+ 11 | 1 | 1 | 1 |  9 | 19 | 29 | 39
+ 11 | 1 | 1 | 1 | 10 | 20 | 30 | 40
+  8 | 8 | 8 | 8 |  9 | 19 | 29 | 39
+  8 | 8 | 8 | 8 | 10 | 20 | 30 | 40
+ 12 | 2 | 2 | 2 |  8 | 18 | 28 | 38
+ 12 | 2 | 2 | 2 |  9 | 19 | 29 | 39
+ 12 | 2 | 2 | 2 | 10 | 20 | 30 | 40
+  3 | 3 | 3 | 3 |  8 | 18 | 28 | 38
+  3 | 3 | 3 | 3 |  9 | 19 | 29 | 39
+  3 | 3 | 3 | 3 | 10 | 20 | 30 | 40
+  7 | 7 | 7 | 7 |  8 | 18 | 28 | 38
+  7 | 7 | 7 | 7 |  9 | 19 | 29 | 39
+  7 | 7 | 7 | 7 | 10 | 20 | 30 | 40
+  5 | 5 | 5 | 5 |  8 | 18 | 28 | 38
+  5 | 5 | 5 | 5 |  9 | 19 | 29 | 39
+  5 | 5 | 5 | 5 | 10 | 20 | 30 | 40
+  6 | 6 | 6 | 6 |  8 | 18 | 28 | 38
+  6 | 6 | 6 | 6 |  9 | 19 | 29 | 39
+  6 | 6 | 6 | 6 | 10 | 20 | 30 | 40
+  4 | 4 | 4 | 4 |  8 | 18 | 28 | 38
+  4 | 4 | 4 | 4 |  9 | 19 | 29 | 39
+  4 | 4 | 4 | 4 | 10 | 20 | 30 | 40
+  1 | 1 | 1 | 1 |  8 | 18 | 28 | 38
+  1 | 1 | 1 | 1 |  9 | 19 | 29 | 39
+  1 | 1 | 1 | 1 | 10 | 20 | 30 | 40
+ 13 | 3 | 3 | 3 |  9 | 19 | 29 | 39
+ 13 | 3 | 3 | 3 | 10 | 20 | 30 | 40
+  2 | 2 | 2 | 2 |  8 | 18 | 28 | 38
+  2 | 2 | 2 | 2 |  9 | 19 | 29 | 39
+  2 | 2 | 2 | 2 | 10 | 20 | 30 | 40
+  3 | 3 | 3 | 3 |  1 | 11 | 21 | 31
+  3 | 3 | 3 | 3 |  2 | 12 | 22 | 32
+  4 | 4 | 4 | 4 |  1 | 11 | 21 | 31
+  4 | 4 | 4 | 4 |  2 | 12 | 22 | 32
+  1 | 1 | 1 | 1 |  1 | 11 | 21 | 31
+  1 | 1 | 1 | 1 |  2 | 12 | 22 | 32
+  2 | 2 | 2 | 2 |  1 | 11 | 21 | 31
+  2 | 2 | 2 | 2 |  2 | 12 | 22 | 32
+(72 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop schema indexapply cascade;
+NOTICE:  drop cascades to function plusone(text)
+NOTICE:  drop cascades to function plusone(character varying)
+NOTICE:  drop cascades to function plusone(integer)
+NOTICE:  drop cascades to table y
+NOTICE:  drop cascades to table x
+NOTICE:  drop cascades to table mpp25537_dimtabl1
+NOTICE:  drop cascades to table mpp25537_dimdate
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_20
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_20_check on append only columnar table mpp25537_facttable1_1_prt_20
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_19
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_19_check on append only columnar table mpp25537_facttable1_1_prt_19
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_18
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_18_check on append only columnar table mpp25537_facttable1_1_prt_18
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_17
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_17_check on append only columnar table mpp25537_facttable1_1_prt_17
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_16
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_16_check on append only columnar table mpp25537_facttable1_1_prt_16
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_15
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_15_check on append only columnar table mpp25537_facttable1_1_prt_15
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_14
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_14_check on append only columnar table mpp25537_facttable1_1_prt_14
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_13
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_13_check on append only columnar table mpp25537_facttable1_1_prt_13
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_12
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_12_check on append only columnar table mpp25537_facttable1_1_prt_12
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_11
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_11_check on append only columnar table mpp25537_facttable1_1_prt_11
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_10
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_10_check on append only columnar table mpp25537_facttable1_1_prt_10
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_9
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_9_check on append only columnar table mpp25537_facttable1_1_prt_9
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_8
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_8_check on append only columnar table mpp25537_facttable1_1_prt_8
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_7
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_7_check on append only columnar table mpp25537_facttable1_1_prt_7
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_6
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_6_check on append only columnar table mpp25537_facttable1_1_prt_6
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_5
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_5_check on append only columnar table mpp25537_facttable1_1_prt_5
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_4
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_4_check on append only columnar table mpp25537_facttable1_1_prt_4
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_3
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_3_check on append only columnar table mpp25537_facttable1_1_prt_3
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_2
+NOTICE:  drop cascades to constraint mpp25537_facttable1_1_prt_2_check on append only columnar table mpp25537_facttable1_1_prt_2
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1_1_prt_dflt
+NOTICE:  drop cascades to append only columnar table mpp25537_facttable1
+NOTICE:  drop cascades to table mpp22263
+-- end_ignore

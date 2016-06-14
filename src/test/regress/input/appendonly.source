@@ -32,6 +32,10 @@ CREATE TABLE tenk_ao6 (like tenk_heap) with (appendonly=false, compresslevel=6, 
 CREATE TABLE tenk_ao7 (like tenk_heap) with (appendonly=true, compresslevel=16, compresstype=zlib) distributed by(unique1);
 CREATE TABLE tenk_ao8 (like tenk_heap) with (appendonly=true, blocksize=100) distributed by(unique1);
 CREATE TABLE tenk_ao9 (like tenk_heap) with (appendonly=true, compresslevel=0, compresstype=zlib) distributed by(unique1);
+-- these should not work without appendonly=true
+CREATE TABLE tenk_ao10 (like tenk_heap) with (compresslevel=5);
+CREATE TABLE tenk_ao11 (like tenk_heap) with (blocksize=8192);
+CREATE TABLE tenk_ao12 (like tenk_heap) with (appendonly=false,blocksize=8192);
 
 -------------------- 
 -- catalog checks
@@ -52,7 +56,7 @@ declare
 begin
 
   execute 'select relname from pg_class where oid=(select segrelid from pg_class, pg_appendonly where relname=''' || relname || ''' and relid = pg_class.oid)' into aosegname;
-  if aosegname > 0 then
+  if aosegname is not null then
           execute 'select tupcount from pg_aoseg.' || aosegname into tupcount;
   end if;
   return tupcount;
@@ -234,6 +238,18 @@ SELECT count(*) FROM tenk_ao4;
 -- JOIN
 SELECT count(*) FROM tenk_ao1 t1, tenk_ao2 t2 where t1.unique1 = t2.unique2;
 SELECT count(*) FROM tenk_ao1 t1, tenk_heap t2 where t1.unique1 = t2.unique2;
+SELECT count(*) FROM tenk_ao1 t1 INNER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2);
+SELECT count(*) FROM tenk_ao1 t1 LEFT OUTER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2);
+SELECT count(*) FROM tenk_ao1 t1 RIGHT OUTER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2);
+SELECT count(*) FROM tenk_ao1 t1 FULL OUTER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2);
+SELECT count(*) FROM tenk_ao1 t1 INNER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
+SELECT count(*) FROM tenk_ao1 t1 LEFT OUTER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
+SELECT count(*) FROM tenk_ao1 t1 RIGHT OUTER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
+SELECT count(*) FROM tenk_ao1 t1 FULL OUTER JOIN tenk_ao2 t2 ON (t1.unique1 = t2.unique2) where t1.unique1 = 8095;
+
+CREATE TABLE empty_ao_table_for_join (like tenk_heap) with (appendonly=true) distributed by(unique1);
+SELECT count(*) FROM tenk_ao1 t1 INNER JOIN empty_ao_table_for_join t2 ON (t1.unique1 = t2.unique2);
+SELECT count(*) FROM tenk_ao1 t1 LEFT OUTER JOIN empty_ao_table_for_join t2 ON (t1.unique1 = t2.unique2);
 
 -- EXCEPT
 SELECT unique1 FROM tenk_ao1 EXCEPT SELECT unique1 FROM tenk_ao1;
@@ -270,6 +286,23 @@ insert into ao values (9,2,'b'), (10,2,'bb'), (11,2,'bbb'), (12,2,'bbbb'),
 	(13,5,'aaaaa'), (14,6,'aaaaaa'), (15,7,'aaaaaaa'), (16,8,'aaaaaaaa');
 select * from ao where j = 2;
 
+create index ao_ij on ao (i, j) with (fillfactor=10);
+alter index ao_ij set (fillfactor=20);
+reindex index ao_ij;
+select indexname from pg_indexes where tablename = 'ao' order by indexname;
+alter table ao alter j type bigint;
+alter table ao rename j to j_renamed;
+alter table ao drop column j_renamed;
+select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'ao' order by attname, tablename;
+create index ao_i on ao (i) where i = 9;
+analyze ao;
+select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'ao' order by attname, tablename;
+select indexname from pg_indexes where tablename = 'ao' order by indexname;
+select * from ao where i = 9;
+alter index ao_i rename to ao_i_renamed;
+select indexname from pg_indexes where tablename = 'ao' order by indexname;
+drop index if exists ao_i_renamed;
+
 drop table if exists ao;
 create table ao (i int, j int, k varchar) with(appendonly=true);
 insert into ao values (1,1,'a'), (2,2,'aa'), (3,3,'aaa'), (4,4,'aaaa'),
@@ -286,17 +319,83 @@ insert into ao values (9,2,'b'), (10,2,'bb'), (11,2,'bbb'), (12,2,'bbbb'),
 	(13,5,'aaaaa'), (14,6,'aaaaaa'), (15,7,'aaaaaaa'), (16,8,'aaaaaaaa');
 select * from ao where j = 2;
 
+-- small test on a performance bug in bitmap indexes due to large tid gaps
+insert into ao select i, 0, 'aaaaaaa' from generate_series(1, 20) i;
+insert into ao select i, 1, 'aaa' from generate_series(1, 20) i;
+insert into ao select i, 2, 'a' from generate_series(1, 20) i;
+select distinct j from ao where j > -1 and j < 3 order by j;
+
+-- Test clustering errors out
+cluster ao_j_cluster on ao_j;
+
+-- TEMP TABLES w/ INDEXES
+create temp table temp_tenk_ao5 with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
+    as select * from tenk_ao5 distributed by (unique1);
+create index temp_even_index on temp_tenk_ao5 (even);
+select count(*) from temp_tenk_ao5;
+select tablename, indexname, indexdef from pg_indexes where tablename = 'temp_tenk_ao5';
+insert into temp_tenk_ao5(unique1, unique2) values (99998888, 99998888);
+update temp_tenk_ao5 set unique2 = 99998889 where unique2 = 99998888;
+delete from temp_tenk_ao5 where unique2 = 99998889;
+select count(*) from temp_tenk_ao5;
+truncate table temp_tenk_ao5;
+vacuum analyze temp_tenk_ao5;
+\d temp_tenk_ao5
+insert into temp_tenk_ao5(unique1, unique2) values (99998888, 99998888);
+select unique1 from temp_tenk_ao5;
+
+-- TEMP TABLES w/ COMMIT DROP AND USING PREPARE
+begin;
+prepare tenk_ao5_prep(int4) as select * from tenk_ao5 where unique1 > 8000;
+create temp table tenk_ao5_temp_drop with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
+    on commit drop as execute tenk_ao5_prep(8095);
+select count(*) from tenk_ao5_temp_drop;
+commit;
+select count(*) from tenk_ao5_temp_drop;
+
+-- TEMP TABLES w/ COMMIT DELETE ROWS
+begin;
+create temp table tenk_ao5_temp_delete_rows with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
+    on commit delete rows as select * from tenk_ao5 where unique1 > 8000 distributed by (unique1);
+select count(*) from tenk_ao5_temp_delete_rows;
+commit;
+select count(*) from tenk_ao5_temp_delete_rows;
+
+-- TEMP TABLES w/ COMMIT PRESERVE ROWS
+begin;
+create temp table tenk_ao5_temp_pres_rows with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
+    on commit preserve rows as select * from tenk_ao5 where unique1 > 8000 distributed by (unique1);
+select count(*) from tenk_ao5_temp_pres_rows;
+commit;
+select count(*) from tenk_ao5_temp_pres_rows;
+
+-- RULES
+insert into tenk_ao5(unique1, unique2) values (1, 99998889);
+create rule ao_rule_update as on insert to tenk_ao5 do instead update tenk_ao5 set two=2;
+insert into tenk_ao5(unique1, unique2) values (2, 99998889);
+select distinct two from tenk_ao5;
+create rule ao_rule_delete as on update to tenk_ao5 do instead delete from tenk_ao5 where unique1=1;
+insert into tenk_ao5(unique1, unique2) values (3, 99998889); -- should go through both rules
+select * from tenk_ao5 where unique1=1;
 
 ---------------------
 -- UAO
 ---------------------
 -- DELETE
 select count(*) from tenk_ao1;
+select count(*) from gp_toolkit.__gp_aoseg_name('tenk_ao1') where modcount > 0;
 DELETE FROM tenk_ao1 WHERE unique1 = 1;
+-- modcount after DELETE must increment to flag table should be included in
+-- incremental backup
+select count(*) from gp_toolkit.__gp_aoseg_name('tenk_ao1') where modcount > 0;
 select count(*) from tenk_ao1;
 -- UPDATE
 select count(*) from tenk_ao1 where unique2 < 0;
 UPDATE tenk_ao1 SET unique2 = -unique1 WHERE unique2 <= 5;
+UPDATE tenk_ao1 SET two = 2;
+-- modcount after UPDATE must increment to flag table should be included in
+-- incremental backup
+select count(*) from gp_toolkit.__gp_aoseg_name('tenk_ao1') where modcount > 1;
 select count(*) from tenk_ao1 where unique2 < 0;
 
 -------------------- 
@@ -346,6 +445,27 @@ INSERT INTO ao_selection VALUES (generate_series(1,100000), generate_series(1,10
 SELECT count(*) from gp_fastsequence WHERE objid IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class WHERE relname='ao_selection'));
 INSERT INTO ao_selection values (generate_series(1,100000), generate_series(1,10000));
 SELECT count(*) FROM gp_fastsequence WHERE objid IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class WHERE relname='ao_selection'));
+
+-- Check compression and distribution
+create table ao_compress_table (id int, v varchar)
+    with (appendonly=true, compresstype=zlib, compresslevel=1) distributed by (id);
+create table ao_compress_results(table_size int, ao_compress_id_index_size int, ao_compress_v_index_size int) distributed randomly;
+create index ao_compress_id_index on ao_compress_table (id);
+create index ao_compress_v_index on ao_compress_table (v);
+insert into ao_compress_results values (pg_relation_size('ao_compress_table'), pg_relation_size('ao_compress_id_index'), pg_relation_size('ao_compress_v_index'));
+
+insert into ao_compress_table (id, v) values (1, 'ifyouwantto99knowwhatist8329histhenkeepreadingit;;untilyou]findoutyoureyeshurtandyoustil0ldontknow103kwhatitisdoyouunderstandmeyetandifyoustillwanttoknowthenyoupleasekeepreading');
+insert into ao_compress_results values (pg_relation_size('ao_compress_table'), pg_relation_size('ao_compress_id_index'), pg_relation_size('ao_compress_v_index'));
+
+-- compression ratio should be between 1.2 and 1.3
+select get_ao_compression_ratio('ao_compress_table') > 1.2 and get_ao_compression_ratio('ao_compress_table') < 1.3;
+select get_ao_distribution('ao_compress_table');
+
+truncate table ao_compress_table; -- after truncate, reclaim space from the table and index
+insert into ao_compress_results values (pg_relation_size('ao_compress_table'), pg_relation_size('ao_compress_id_index'), pg_relation_size('ao_compress_v_index'));
+
+select count(*) from (select distinct * from ao_compress_results) temp; -- should give 2 after reclaiming space
+
 -------------------- 
 -- supported sql 
 --------------------

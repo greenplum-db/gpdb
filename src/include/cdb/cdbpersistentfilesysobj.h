@@ -11,13 +11,9 @@
 
 #include "miscadmin.h"
 #include "utils/guc.h"
-#include "utils/palloc.h"
-#include "storage/fd.h"
 #include "access/persistentfilesysobjname.h"
 #include "access/persistentendxactrec.h"
 #include "cdb/cdbpersistentstore.h"
-#include "cdb/cdbdoublylinked.h"
-#include "storage/smgr.h"
 #include "catalog/gp_persistent.h"
 
 typedef struct PersistentFileSysObjSharedData
@@ -114,6 +110,9 @@ extern void PersistentFileSysObj_AddTuple(
 	ItemPointer 				persistentTid,
 				/* TID of the stored tuple. */
 	int64						*persistentSerialNum);
+
+extern uint64 PersistentFileSysObj_RebuildFreeList(
+	PersistentFsObjType fsObjType);
 
 extern void PersistentFileSysObj_FreeTuple(
 	PersistentFileSysObjData		*fileSysObjData,

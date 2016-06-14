@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/update.sgml,v 1.41 2006/09/16 00:30:20 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/update.sgml,v 1.43 2007/02/01 00:28:19 momjian Exp $
 PostgreSQL documentation
 -->
 
@@ -117,7 +117,7 @@ UPDATE [ ONLY ] <replaceable class="PARAMETER">table</replaceable> [ [ AS ] <rep
     <term><replaceable class="PARAMETER">expression</replaceable></term>
     <listitem>
      <para>
-      An expression to assign to the column.  The expression may use the
+      An expression to assign to the column.  The expression can use the
       old values of this and other columns in the table.
      </para>
     </listitem>
@@ -165,7 +165,7 @@ UPDATE [ ONLY ] <replaceable class="PARAMETER">table</replaceable> [ [ AS ] <rep
     <listitem>
      <para>
       An expression to be computed and returned by the <command>UPDATE</>
-      command after each row is updated.  The expression may use any
+      command after each row is updated.  The expression can use any
       column names of the <replaceable class="PARAMETER">table</replaceable>
       or table(s) listed in <literal>FROM</>.
       Write <literal>*</> to return all columns.
@@ -295,7 +295,7 @@ UPDATE employees SET sales_count = sales_count + 1 WHERE id =
   <para>
    Attempt to insert a new stock item along with the quantity of stock. If
    the item already exists, instead update the stock count of the existing
-   item. To do this without failing the entire transaction, use savepoints.
+   item. To do this without failing the entire transaction, use savepoints:
 <programlisting>
 BEGIN;
 -- other operations

@@ -282,8 +282,16 @@ void
 BitmapAOScanReScan(ScanState *scanState)
 {
 	/*
+	 * AO doesn't need rechecking every tuple once it resolves
+	 * from the bitmap page, except when it deals with lossy
+	 * bitmap, which is handled via scanState->isLossyBitmapPage.
+	 */
+	BitmapTableScanState *node = (BitmapTableScanState *)(scanState);
+	node->recheckTuples = false;
+
+	/*
 	 * As per the existing implementation from nodeBitmapAppendOnlyScan.c
-	 * for rescanning of AO, we don't have anything specific
+	 * for rescanning of AO, we don't have anything else
 	 * to do here (the refactored BitmapTableScan takes care of everything).
 	 */
 }

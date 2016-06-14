@@ -67,13 +67,6 @@ class ConfExpSegCmd(Command):
         self.writeGpDbidFileOnly = writeGpDbidFileOnly
         Command.__init__(self, name, cmdstr)
 
-
-    def __str__(self):
-        if self.results:
-            return "%s cmdStr='%s'  had result: %s" % (self.name, self.cmdStr, self.results)
-        else:
-            return "%s cmdStr='%s'" % (self.name, self.cmdStr)
-
     def validatePath(self, path, isSystemFilespaceDir):
         """
         Raises ValidationException when a validation problem is detected
@@ -225,30 +218,6 @@ class ConfExpSegCmd(Command):
             return
         else:
             self.set_results(CommandResult(0, '', '', True, False))
-
-    def set_results(self, results):
-        self.results = results
-        
-    def get_results(self):
-        return self.results
-
-    def cancel(self):
-        self.exec_context.cancel()    
-    
-    def interrupt(self):
-        self.exec_context.interrupt()
-    
-    def was_successful(self):
-        if self.results is None:
-            return False
-        else:
-            return self.results.wasSuccessful()
-    
-        
-    def validate(self):
-        """Plain vanilla validation which expects a 0 return code."""        
-        if self.results.rc != 0:
-            raise ExecutionError("non-zero rc: %d" % self.results.rc, self)  
 
 def getOidDirLists(oidDirs):
     """ break up list in <oid>:<dir> format into list of oid list of dir """

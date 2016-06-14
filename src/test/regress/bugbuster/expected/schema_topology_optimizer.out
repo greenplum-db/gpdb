@@ -1,9 +1,7 @@
 \echo -- start_ignore
 -- start_ignore
-drop database create_objects_db;
-ERROR:  database "create_objects_db" does not exist
-drop database create_table_db;
-ERROR:  database "create_table_db" does not exist
+drop database db_test_bed;
+ERROR:  database "db_test_bed" does not exist
 drop database db_tobe_vacuum;
 ERROR:  database "db_tobe_vacuum" does not exist
 drop database db_tobe_vacuum_analyze;
@@ -22,12 +20,8 @@ drop database unvacuum_data_db;
 ERROR:  database "unvacuum_data_db" does not exist
 drop database "TEST_DB";
 ERROR:  database "TEST_DB" does not exist
-drop database test_db;
-ERROR:  database "test_db" does not exist
 drop database "TEST_db";
 ERROR:  database "TEST_db" does not exist
-drop database test_db1;
-ERROR:  database "test_db1" does not exist
 drop database alter_table_db;
 ERROR:  database "alter_table_db" does not exist
 drop database cancel_trans;
@@ -62,8 +56,6 @@ drop role "iso123" ;
 ERROR:  role "iso123" does not exist
 drop GROUP prachgrp;
 ERROR:  role "prachgrp" does not exist
-create database db_test_bed;
-\c db_test_bed
 DROP RESOURCE QUEUE db_resque2;
 ERROR:  resource queue "db_resque2" does not exist
 DROP RESOURCE QUEUE DB_RESque3;
@@ -96,8 +88,6 @@ DROP ROLE db_role12;
 ERROR:  role "db_role12" does not exist
 DROP GROUP db_grp1;
 ERROR:  role "db_grp1" does not exist
-DROP SCHEMA db_schema1;
-ERROR:  schema "db_schema1" does not exist
 DROP GROUP db_user_grp1;
 ERROR:  role "db_user_grp1" does not exist
 DROP ROLE db_user1;
@@ -124,8 +114,6 @@ DROP ROLE db_user11;
 ERROR:  role "db_user11" does not exist
 DROP ROLE db_user12;
 ERROR:  role "db_user12" does not exist
-DROP SCHEMA db_schema2;
-ERROR:  schema "db_schema2" does not exist
 DROP RESOURCE QUEUE resqueu3;
 ERROR:  resource queue "resqueu3" does not exist
 DROP RESOURCE QUEUE resqueu4;
@@ -140,8 +128,6 @@ DROP DATABASE db_name1;
 ERROR:  database "db_name1" does not exist
 DROP ROLE db_owner2;
 ERROR:  role "db_owner2" does not exist
-DROP SCHEMA myschema;
-ERROR:  schema "myschema" does not exist
 DROP GROUP db_group1; 
 ERROR:  role "db_group1" does not exist
 DROP GROUP db_grp2;
@@ -176,91 +162,18 @@ DROP RESOURCE QUEUE grp_rsq1 ;
 ERROR:  resource queue "grp_rsq1" does not exist
 DROP RESOURCE QUEUE db_resque1;
 ERROR:  resource queue "db_resque1" does not exist
-DROP TABLE test_tbl;
-ERROR:  table "test_tbl" does not exist
-DROP SEQUENCE  db_seq3;
-ERROR:  sequence "db_seq3" does not exist
-DROP SEQUENCE  db_seq4;
-ERROR:  sequence "db_seq4" does not exist
-DROP SEQUENCE  db_seq5;
-ERROR:  sequence "db_seq5" does not exist
-DROP SEQUENCE  db_seq7;
-ERROR:  sequence "db_seq7" does not exist
-DROP SCHEMA db_schema9 CASCADE;
-ERROR:  schema "db_schema9" does not exist
-DROP TABLE test_emp CASCADE;
-ERROR:  table "test_emp" does not exist
-DROP LANGUAGE plpgsql CASCADE;
-NOTICE:  drop cascades to function gp_toolkit.__gp_skew_idle_fractions()
-NOTICE:  drop cascades to rule _RETURN on view gp_toolkit.gp_skew_idle_fractions
-NOTICE:  drop cascades to view gp_toolkit.gp_skew_idle_fractions
-NOTICE:  drop cascades to function gp_toolkit.__gp_skew_coefficients()
-NOTICE:  drop cascades to rule _RETURN on view gp_toolkit.gp_skew_coefficients
-NOTICE:  drop cascades to view gp_toolkit.gp_skew_coefficients
-NOTICE:  drop cascades to function gp_toolkit.gp_skew_details(oid)
-NOTICE:  drop cascades to function gp_toolkit.gp_param_settings()
-NOTICE:  drop cascades to rule _RETURN on view gp_toolkit.gp_param_settings_seg_value_diffs
-NOTICE:  drop cascades to view gp_toolkit.gp_param_settings_seg_value_diffs
-NOTICE:  drop cascades to function gp_toolkit.gp_param_setting(character varying)
-DROP DOMAIN domain_us_zip_code;
-ERROR:  type "domain_us_zip_code" does not exist
-DROP DOMAIN domain_1;
-ERROR:  type "domain_1" does not exist
-DROP DOMAIN domain_2;
-ERROR:  type "domain_2" does not exist
-DROP SCHEMA domain_schema CASCADE;
-ERROR:  schema "domain_schema" does not exist
 DROP ROLE domain_owner;
 ERROR:  role "domain_owner" does not exist
-DROP FUNCTION scube_accum(numeric, numeric)CASCADE;
-ERROR:  function scube_accum(numeric, numeric) does not exist
-DROP FUNCTION pre_accum(numeric, numeric)CASCADE;
-ERROR:  function pre_accum(numeric, numeric) does not exist
-DROP FUNCTION final_accum(numeric)CASCADE;
-ERROR:  function final_accum(numeric) does not exist
 DROP ROLE agg_owner;
 ERROR:  role "agg_owner" does not exist
-DROP SCHEMA agg_schema;
-ERROR:  schema "agg_schema" does not exist
-DROP FUNCTION add(integer, integer) CASCADE; 
-ERROR:  function add(integer, integer) does not exist
 DROP ROLE func_role ;
 ERROR:  role "func_role" does not exist
-DROP SCHEMA func_schema; 
-ERROR:  schema "func_schema" does not exist
-DROP VIEW IF EXISTS emp_view CASCADE;
-NOTICE:  view "emp_view" does not exist, skipping
-DROP TABLE test_emp_view;
-ERROR:  table "test_emp_view" does not exist
 DROP ROLE sally;
 ERROR:  role "sally" does not exist
 DROP ROLE ron;
 ERROR:  role "ron" does not exist
 DROP ROLE ken;
 ERROR:  role "ken" does not exist
-\c db_test_bed 
-DROP TABLE if exists sch_tbint CASCADE;
-NOTICE:  table "sch_tbint" does not exist, skipping
-DROP TABLE if exists sch_tchar CASCADE;
-NOTICE:  table "sch_tchar" does not exist, skipping
-DROP TABLE if exists sch_tclob CASCADE;
-NOTICE:  table "sch_tclob" does not exist, skipping
-DROP TABLE if exists sch_tversion CASCADE;
-NOTICE:  table "sch_tversion" does not exist, skipping
-DROP TABLE if exists sch_tjoin2 CASCADE;
-NOTICE:  table "sch_tjoin2" does not exist, skipping
-DROP TABLE if exists sch_T29 CASCADE;
-NOTICE:  table "sch_t29" does not exist, skipping
-DROP TABLE if exists sch_T33 CASCADE;
-NOTICE:  table "sch_t33" does not exist, skipping
-DROP TABLE if exists sch_T43 CASCADE;
-NOTICE:  table "sch_t43" does not exist, skipping
-DROP view if exists sch_srf_view1;
-NOTICE:  view "sch_srf_view1" does not exist, skipping
-DROP view if exists sch_fn_view2;
-NOTICE:  view "sch_fn_view2" does not exist, skipping
-DROP FUNCTION sch_multiply(integer,integer);
-ERROR:  function sch_multiply(integer, integer) does not exist
 \c template1
 select current_database();
  current_database 
@@ -268,37 +181,8 @@ select current_database();
  template1
 (1 row)
 
-DROP DATABASE db_test_bed;
 DROP ROLE admin ;
 ERROR:  role "admin" does not exist
-create database gptest;
-ERROR:  database "gptest" already exists
-\c gptest
-drop table region_hybrid_part;
-ERROR:  table "region_hybrid_part" does not exist
-drop table nation_hybrid_part;
-ERROR:  table "nation_hybrid_part" does not exist
-drop table part_hybrid_part;
-ERROR:  table "part_hybrid_part" does not exist
-drop table partsupp_hybrid_part;
-ERROR:  table "partsupp_hybrid_part" does not exist
-drop table supplier_hybrid_part;
-ERROR:  table "supplier_hybrid_part" does not exist
-drop table orders_hybrid_part;
-ERROR:  table "orders_hybrid_part" does not exist
-drop table lineitem_hybrid_part;
-ERROR:  table "lineitem_hybrid_part" does not exist
-drop table customer_hybrid_part;
-ERROR:  table "customer_hybrid_part" does not exist
-\c template1
-select current_database();
- current_database 
-------------------
- template1
-(1 row)
-
-drop database heap_table_drop_col3;
-ERROR:  database "heap_table_drop_col3" does not exist
 --
 \echo -- end_ignore
 -- end_ignore
@@ -306,8 +190,7 @@ set optimizer_disable_missing_stats_collection = on;
 create database ao_db;
 CREATE DATABASE db_test_bed;
 --
-create database create_objects_db;
-\c create_objects_db
+\c regression
 --Create Table
 --with uppercase
     CREATE TABLE "TABLE_NAME"( col_text text, col_numeric numeric ) DISTRIBUTED RANDOMLY;
@@ -376,28 +259,6 @@ create database create_objects_db;
  create index clusterindex on table2(col1);
     CLUSTER clusterindex on table2; 
     --drop index clusterindex;
-    
---Create View
-    create table employees1(id integer,empname varchar,sal integer) distributed randomly;
-    insert into employees1 values (1,'mohit',1000);
-    insert into employees1 values (2,'lalit',2000);
-    insert into employees1 select i,i||'_'||repeat('text',100),i from generate_series(3,100)i;
-    select count(*) from employees1;
- count 
--------
-   100
-(1 row)
-
-    create view empvw1 as select * from employees1; drop view empvw1;
-    --drop table employees1; 
-    
---Create Function
-    
-    CREATE FUNCTION add(integer,integer) RETURNS integer AS 'select $1 + $2;'
-    LANGUAGE SQL IMMUTABLE CONTAINS SQL
-    RETURNS NULL ON NULL INPUT;
-    --DROP FUNCTION add(integer,integer);
-    
 --Create Group
     \echo -- start_ignore
 -- start_ignore
@@ -409,20 +270,18 @@ NOTICE:  resource queue required -- using default resource queue "pg_default"
 --Create Domain
     
     create DOMAIN country_code1 char(2) NOT NULL;
-    create TABLE countrylist1(id integer,country text)distributed randomly;
    --drop DOMAIN country_code1 CASCADE;
-   --drop TABLE countrylist1; 
     
 --Create Rule
-                                                                                       create table foo_ao (a int) with (appendonly=true);
+create table foo_rule_ao (a int) with (appendonly=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-create table bar_ao (a int);
+create table bar_rule_ao (a int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 --try and trick by setting rules
-create rule one as on insert to bar_ao do instead update foo_ao set a=1;
-create rule two as on insert to bar_ao do instead delete from foo_ao where a=1;
+create rule one as on insert to bar_rule_ao do instead update foo_rule_ao set a=1;
+create rule two as on insert to bar_rule_ao do instead delete from foo_rule_ao where a=1;
 --Create User
 \echo -- start_ignore
 -- start_ignore
@@ -484,22 +343,11 @@ NOTICE:  resource queue required -- using default resource queue "pg_default"
     create database "TEST_DB";
     --drop database "TEST_DB";
     
---with lowercase
-                                                                                           create database test_db;
-    --drop database test_db;
 --with mixedcase
     create database "TEST_db";
     --drop database "TEST_db";
---with numbers
-\echo -- start_ignore
--- start_ignore
-    create database test_db1;
-   -- drop database test_db1;
-\echo -- end_ignore
--- end_ignore
 --
-create database create_table_db;
-\c create_table_db
+\c regression
 --Table with all data types
     CREATE TABLE all_types( bit1 bit(1), bit2 bit varying(50), boolean1 boolean, char1 char(50), charvar1 character varying(50), char2 character(50),
 varchar1 varchar(50),date1 date,dp1 double precision,int1 integer,interval1 interval,numeric1 numeric,real1 real,smallint1 smallint,time1 time,bigint1 bigint,
@@ -747,8 +595,7 @@ CREATE EXTERNAL TABLE ext_20081031095512_23244_11671 (
     'gpfdist://97.253.36.12:9010/R_LAA_DATA_2008-10-27.dat'
 ) FORMAT 'text' (delimiter ',' null '' )
 ENCODING 'UTF8'
-LOG ERRORS INTO err_20081031095512_23244_11671 SEGMENT REJECT LIMIT 100 ROWS;
-NOTICE:  Error table "err_20081031095512_23244_11671" does not exist. Auto generating an error table with the same name
+LOG ERRORS SEGMENT REJECT LIMIT 100 ROWS;
 CREATE WRITABLE EXTERNAL TABLE wet_ext_20081031095512_23244_11671 (
     a_party_id bigint,
     start_date date,
@@ -2703,9 +2550,9 @@ ERROR:  relative path not allowed for COPY to file
 COPY test_table2(   text_col,    bigint_col,    char_vary_col,    numeric_col,    int_col,    float_col,    int_array_col,    before_rename_col,    change_datatype_col,    a_ts_without ,    b_ts_with ,    date_column,    col_set_default)
  TO 'data/test2_file_copy' WITH OIDS  DELIMITER AS ','  NULL AS 'null string' ESCAPE AS 'OFF' ;
 ERROR:  relative path not allowed for COPY to file
-COPY test_table2 (   text_col,    bigint_col,    char_vary_col,    numeric_col,    int_col,    float_col,    int_array_col,    before_rename_col,    change_datatype_col,    a_ts_without ,    b_ts_with ,    date_column,    col_set_default) FROM 'data/test1_file_copy' WITH DELIMITER AS ',' NULL AS 'null string' ESCAPE AS E'\n' CSV HEADER QUOTE AS '"' FORCE NOT NULL date_column LOG ERRORS INTO err_table1 SEGMENT REJECT LIMIT 10 ROWS  ;
+COPY test_table2 (   text_col,    bigint_col,    char_vary_col,    numeric_col,    int_col,    float_col,    int_array_col,    before_rename_col,    change_datatype_col,    a_ts_without ,    b_ts_with ,    date_column,    col_set_default) FROM 'data/test1_file_copy' WITH DELIMITER AS ',' NULL AS 'null string' ESCAPE AS E'\n' CSV HEADER QUOTE AS '"' FORCE NOT NULL date_column LOG ERRORS SEGMENT REJECT LIMIT 10 ROWS  ;
 ERROR:  could not open file "data/test1_file_copy" for reading: No such file or directory
-COPY test_table2 (   text_col,    bigint_col,    char_vary_col,    numeric_col,    int_col,    float_col,    int_array_col,    before_rename_col,    change_datatype_col,    a_ts_without ,    b_ts_with ,    date_column,    col_set_default) FROM 'data/test2_file_copy' WITH OIDS DELIMITER AS ',' NULL AS 'null string' ESCAPE AS 'OFF' LOG ERRORS INTO err_table1 KEEP SEGMENT REJECT LIMIT 10 PERCENT  ;
+COPY test_table2 (   text_col,    bigint_col,    char_vary_col,    numeric_col,    int_col,    float_col,    int_array_col,    before_rename_col,    change_datatype_col,    a_ts_without ,    b_ts_with ,    date_column,    col_set_default) FROM 'data/test2_file_copy' WITH OIDS DELIMITER AS ',' NULL AS 'null string' ESCAPE AS 'OFF' LOG ERRORS SEGMENT REJECT LIMIT 10 PERCENT  ;
 ERROR:  could not open file "data/test2_file_copy" for reading: No such file or directory
 \c db_test_bed
 CREATE OR REPLACE TEMP VIEW vista AS SELECT 'Hello World'; 
@@ -3374,6 +3221,7 @@ NOTICE:  CREATE TABLE will create partition "co_compr_part_1_1_prt_p2_2_prt_6" f
 --
 --Insert data to the table
 --
+set LC_MONETARY='C';
 INSERT INTO co_compr_part_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) values(generate_series(1,20),'M',2011,'t','a','This is news of today: Deadlock between Republicans and Democrats over how best to reduce the U.S. deficit, and over what period, has blocked an agreement to allow the raising of the $14.3 trillion debt ceiling','2001-12-24 02:26:11','U.S. House of Representatives Speaker John Boehner, the top Republican in Congress who has put forward a deficit reduction plan to be voted on later on Thursday said he had no control over whether his bill would avert a credit downgrade.',generate_series(2490,2505),'2011-10-11','The Republican-controlled House is tentatively scheduled to vote on Boehner proposal this afternoon at around 6 p.m. EDT (2200 GMT). The main Republican vote counter in the House, Kevin McCarthy, would not say if there were enough votes to pass the bill.','WASHINGTON:House Speaker John Boehner says his plan mixing spending cuts in exchange for raising the nations $14.3 trillion debt limit is not perfect but is as large a step that a divided government can take that is doable and signable by President Barack Obama.The Ohio Republican says the measure is an honest and sincere attempt at compromise and was negotiated with Democrats last weekend and that passing it would end the ongoing debt crisis. The plan blends $900 billion-plus in spending cuts with a companion increase in the nations borrowing cap.','1234.56',323453,generate_series(3452,3462),7845,'0011','2005-07-16 01:51:15+1359','2001-12-13 01:51:15','((1,2),(0,3),(2,1))','((2,3)(4,5))','08:00:2b:01:02:03','1-2','Republicans had been working throughout the day Thursday to lock down support for their plan to raise the nations debt ceiling, even as Senate Democrats vowed to swiftly kill it if passed.','((2,3)(4,5))','(6,7)',11.222,'((4,5),7)',32,3214,'(1,0,2,3)','2010-02-21',43564,'$1,000.00','192.168.1','126.1.3.4','12:30:45','Johnson & Johnsons McNeil Consumer Healthcare announced the voluntary dosage reduction today. Labels will carry new dosing instructions this fall.The company says it will cut the maximum dosage of Regular Strength Tylenol and other acetaminophen-containing products in 2012.Acetaminophen is safe when used as directed, says Edwin Kuffner, MD, McNeil vice president of over-the-counter medical affairs. But, when too much is taken, it can cause liver damage.The action is intended to cut the risk of such accidental overdoses, the company says in a news release.','1','0',12,23);
 INSERT INTO co_compr_part_1(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) values(generate_series(500,510),'F',2010,'f','b','Some students may need time to adjust to school.For most children, the adjustment is quick. Tears will usually disappear after Mommy and  Daddy leave the classroom. Do not plead with your child','2001-12-25 02:22:11','Some students may need time to adjust to school.For most children, the adjustment is quick. Tears will usually disappear after Mommy and  Daddy leave the classroom. Do not plead with your child',generate_series(2500,2516),'2011-10-12','Some students may need time to adjust to school.For most children, the adjustment is quick. Tears will usually disappear after Mommy and  Daddy leave the classroom. Do not plead with your child','Some students may need time to adjust to school.For most children, the adjustment is quick. Tears will usually disappear after Mommy and  Daddy leave the classroom. Do not plead with your child The type integer is the usual choice, as it offers the best balance between range, storage size, and performance The type integer is the usual choice, as it offers the best balance between range, storage size, and performanceThe type integer is the usual choice, as it offers the best balance between range, storage size, and performanceThe type integer is the usual choice, as it offers the best balance between range, storage size, and performanceThe type integer ','1134.26',311353,generate_series(3982,3992),7885,'0101','2002-02-12 01:31:14+1344','2003-11-14 01:41:15','((1,1),(0,1),(1,1))','((2,1)(1,5))','08:00:2b:01:01:03','1-3','Some students may need time to adjust to school.For most children, the adjustment is quick. Tears will usually disappear after Mommy and  Daddy leave the classroom. Do not plead with your child The types smallint, integer, and bigint store whole numbers, that is, numbers without fractional components, of various ranges. The types smallint, integer, and bigint store whole numbers, that is, numbers without fractional components, of various ranges. Attempts to store values outside of the allowed range will result in an errorThe types smallint, integer, and bigint store whole numbers, that is, numbers without fractional components, of various ranges.','((6,5)(4,2))','(3,6)',12.233,'((5,4),2)',12,3114,'(1,1,0,3)','2010-03-21',43164,'$1,500.00','192.167.2','126.1.1.1','10:30:55','Parents and other family members are always welcome at Stratford. After the first two weeks ofschool','0','1',33,44);
 --Alter table Add Partition 

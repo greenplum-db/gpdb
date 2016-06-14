@@ -308,10 +308,12 @@ typedef struct PLyExceptionEntry
 /* exported functions */
 Datum		plpython_validator(PG_FUNCTION_ARGS);
 Datum		plpython_call_handler(PG_FUNCTION_ARGS);
+Datum		plpython_inline_handler(PG_FUNCTION_ARGS);
 void		_PG_init(void);
 
 PG_FUNCTION_INFO_V1(plpython_validator);
 PG_FUNCTION_INFO_V1(plpython_call_handler);
+PG_FUNCTION_INFO_V1(plpython_inline_handler);
 
 /* most of the remaining of the declarations, all static */
 
@@ -478,6 +480,12 @@ plpython_error_callback(void *arg)
 }
 
 static void
+plpython_inline_error_callback(void *arg)
+{
+		errcontext("PL/Python anonymous code block");
+}
+
+static void
 plpython_trigger_error_callback(void *arg)
 {
 	if (PLy_curr_procedure)
@@ -498,6 +506,61 @@ PLy_procedure_is_trigger(Form_pg_proc procStruct)
 			(procStruct->prorettype == OPAQUEOID &&
 			 procStruct->pronargs == 0));
 }
+
+Datum
+plpython_inline_handler(PG_FUNCTION_ARGS)
+{
+	InlineCodeBlock *codeblock = (InlineCodeBlock *) DatumGetPointer(PG_GETARG_DATUM(0));
+	FunctionCallInfoData fake_fcinfo;
+	FmgrInfo	flinfo;
+	PLyProcedure *save_curr_proc;
+	PLyProcedure *volatile proc = NULL;
+	ErrorContextCallback plerrcontext;
+
+	if (SPI_connect() != SPI_OK_CONNECT)
+		elog(ERROR, "SPI_connect failed");
+
+	save_curr_proc = PLy_curr_procedure;
+
+	/*
+	 * Setup error traceback support for ereport()
+	 */
+	plerrcontext.callback = plpython_inline_error_callback;
+	plerrcontext.previous = error_context_stack;
+	error_context_stack = &plerrcontext;
+
+	MemSet(&fake_fcinfo, 0, sizeof(fake_fcinfo));
+	MemSet(&flinfo, 0, sizeof(flinfo));
+	fake_fcinfo.flinfo = &flinfo;
+	flinfo.fn_oid = InvalidOid;
+	flinfo.fn_mcxt = CurrentMemoryContext;
+
+	proc = PLy_malloc0(sizeof(PLyProcedure));
+	proc->pyname = PLy_strdup("__plpython_inline_block");
+	proc->result.out.d.typoid = VOIDOID;
+
+	PG_TRY();
+	{
+		PLy_procedure_compile(proc, codeblock->source_text);
+		PLy_curr_procedure = proc;
+		PLy_function_handler(&fake_fcinfo, proc);
+	}
+	PG_CATCH();
+	{
+		PLy_curr_procedure = save_curr_proc;
+		PyErr_Clear();
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
+	/* Pop the error context stack */
+	error_context_stack = plerrcontext.previous;
+
+	PLy_curr_procedure = save_curr_proc;
+
+	PG_RETURN_VOID();
+}
+
 
 Datum
 plpython_validator(PG_FUNCTION_ARGS)
@@ -1454,13 +1517,21 @@ static void
 PLy_function_delete_args(PLyProcedure *proc)
 {
 	int			i;
+	PyObject	*arg;
 
 	if (!proc->argnames)
 		return;
 
 	for (i = 0; i < proc->nargs; i++)
-		if (proc->argnames[i])
-			PyDict_DelItemString(proc->globals, proc->argnames[i]);
+		if (proc->argnames[i]) {
+			arg = PyString_FromString(proc->argnames[i]);
+
+			/* Deleting the item only if it exists in the dictionaty */
+			if (PyDict_Contains(proc->globals, arg)) {
+				PyDict_DelItem(proc->globals, arg);
+			}
+			Py_DECREF(arg);
+		}
 }
 
 /*
@@ -1982,12 +2053,12 @@ PLy_procedure_munge_source(const char *name, const char *src)
 				}
 			}
 
-			pyelog(INFO, "After searching the start of the string, index is: %d sf is: %d endquote is: %c", i, sf, cendquote); 
+			pyelog(INFO, "After searching the start of the string, index is: %d sf is: %d endquote is: %c", (int)i, sf, cendquote);
 
 			/* now copy all characters to the destination buffer if we see the beginning of a string */ 
 			while (sf != STRING_BEGIN_NOT_YET && sf != STRING_SEEN_END && i < olen)
 			{
-				pyelog(INFO, "copying src[%d]=%c", i, src[i]); 
+				pyelog(INFO, "copying src[%d]=%c", (int)i, src[i]);
 
 				BOUNDED_PTR_ASSIGN_INC(mp, mrc + mlen, src[i]); 
 
@@ -2016,7 +2087,7 @@ PLy_procedure_munge_source(const char *name, const char *src)
 				i++; 
 			}
 
-			pyelog(INFO, "After searching the END of the string, index is: %d sf is: %d", i, sf); 
+			pyelog(INFO, "After searching the END of the string, index is: %d sf is: %d", (int)i, sf);
 
 			if (i == olen) 
 				break; 

@@ -11,7 +11,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/bin/pg_dump/common.c,v 1.95 2007/01/05 22:19:48 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/bin/pg_dump/common.c,v 1.96 2007/01/23 17:54:50 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -74,7 +74,7 @@ void		reset(void);
  *	  Collect information about all potentially dumpable objects
  */
 TableInfo *
-getSchemaData(int *numTablesPtr)
+getSchemaData(int *numTablesPtr, int g_role)
 {
 	NamespaceInfo *nsinfo;
 	AggInfo    *agginfo;
@@ -83,6 +83,7 @@ getSchemaData(int *numTablesPtr)
 	ProcLangInfo *proclanginfo;
 	CastInfo   *castinfo;
 	OpclassInfo *opcinfo;
+	OpfamilyInfo *opfinfo;
 	ConvInfo   *convinfo;
 	ExtProtInfo *ptcinfo;
 	int			numNamespaces;
@@ -92,6 +93,7 @@ getSchemaData(int *numTablesPtr)
 	int			numProcLangs;
 	int			numCasts;
 	int			numOpclasses;
+	int			numOpfamilies;
 	int			numConversions;
 	int			numExtProtocols;
 	const char *LOGGER_INFO = "INFO";
@@ -101,47 +103,54 @@ getSchemaData(int *numTablesPtr)
 		status_log_msg(LOGGER_INFO, progname, "reading schemas\n");
 	nsinfo = getNamespaces(&numNamespaces);
 
-	if(is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading user-defined functions\n");
-	funinfo = getFuncs(&numFuncs);
-
-	/* this must be after getFuncs */
-	if(is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading user-defined types\n");
-	typinfo = getTypes(&numTypes);
-
-	/* this must be after getFuncs */
-	if(is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading type storage options\n");
-	typestorageoptions = getTypeStorageOptions(&numTypeStorageOptions);
-
-	/* this must be after getFuncs, too */
-	if(is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading procedural languages\n");
-	proclanginfo = getProcLangs(&numProcLangs);
-
-	if(is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading user-defined aggregate functions\n");
-	agginfo = getAggregates(&numAggregates);
-	
-	if(is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading user-defined operators\n");
-	oprinfo = getOperators(&numOperators);
-
-	if (testExtProtocolSupport())
+	if(g_role == 1) // ROLE_MASTER
 	{
 		if(is_gpdump || g_verbose)
-			status_log_msg(LOGGER_INFO, progname, "reading user-defined external protocols\n");
-		ptcinfo = getExtProtocols(&numExtProtocols);
+			status_log_msg(LOGGER_INFO, progname, "reading user-defined functions\n");
+		funinfo = getFuncs(&numFuncs);
+
+		/* this must be after getFuncs */
+		if(is_gpdump || g_verbose)
+			status_log_msg(LOGGER_INFO, progname, "reading user-defined types\n");
+		typinfo = getTypes(&numTypes);
+
+		/* this must be after getFuncs */
+		if(is_gpdump || g_verbose)
+			status_log_msg(LOGGER_INFO, progname, "reading type storage options\n");
+		typestorageoptions = getTypeStorageOptions(&numTypeStorageOptions);
+
+		/* this must be after getFuncs, too */
+		if(is_gpdump || g_verbose)
+			status_log_msg(LOGGER_INFO, progname, "reading procedural languages\n");
+		proclanginfo = getProcLangs(&numProcLangs);
+
+		if(is_gpdump || g_verbose)
+			status_log_msg(LOGGER_INFO, progname, "reading user-defined aggregate functions\n");
+		agginfo = getAggregates(&numAggregates);
+
+		if(is_gpdump || g_verbose)
+			status_log_msg(LOGGER_INFO, progname, "reading user-defined operators\n");
+		oprinfo = getOperators(&numOperators);
+
+		if (testExtProtocolSupport())
+		{
+			if(is_gpdump || g_verbose)
+				status_log_msg(LOGGER_INFO, progname, "reading user-defined external protocols\n");
+			ptcinfo = getExtProtocols(&numExtProtocols);
+		}
+
+		if(is_gpdump || g_verbose)
+			status_log_msg(LOGGER_INFO, progname, "reading user-defined operator classes\n");
+		opcinfo = getOpclasses(&numOpclasses);
+
+		if (is_gpdump || g_verbose)
+			status_log_msg(LOGGER_INFO, progname, "reading user-defined operator families\n");
+		opfinfo = getOpfamilies(&numOpfamilies);
+
+		if(is_gpdump || g_verbose)
+			status_log_msg(LOGGER_INFO, progname, "reading user-defined conversions\n");
+		convinfo = getConversions(&numConversions);
 	}
-
-	if(is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading user-defined operator classes\n");
-	opcinfo = getOpclasses(&numOpclasses);
-
-	if(is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading user-defined conversions\n");
-	convinfo = getConversions(&numConversions);
 
 	if(is_gpdump || g_verbose)
 		status_log_msg(LOGGER_INFO, progname, "reading user-defined tables\n");
@@ -172,17 +181,20 @@ getSchemaData(int *numTablesPtr)
 		status_log_msg(LOGGER_INFO, progname, "flagging inherited columns in subtables\n");
 	flagInhAttrs(tblinfo, numTables, inhinfo, numInherits);
 
-	if(is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading indexes\n");
-	getIndexes(tblinfo, numTables);
+	if(g_role == 1) // ROLE_MASTER
+	{
+		if(is_gpdump || g_verbose)
+			status_log_msg(LOGGER_INFO, progname, "reading indexes\n");
+		getIndexes(tblinfo, numTables);
 
-	if(is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading constraints\n");
-	getConstraints(tblinfo, numTables);
+		if(is_gpdump || g_verbose)
+			status_log_msg(LOGGER_INFO, progname, "reading constraints\n");
+		getConstraints(tblinfo, numTables);
 
-	if(is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading triggers\n");
-	getTriggers(tblinfo, numTables);
+		if(is_gpdump || g_verbose)
+			status_log_msg(LOGGER_INFO, progname, "reading triggers\n");
+		getTriggers(tblinfo, numTables);
+	}
 
 	*numTablesPtr = numTables;
 	return tblinfo;

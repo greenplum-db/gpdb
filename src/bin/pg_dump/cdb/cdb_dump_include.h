@@ -54,6 +54,10 @@ extern bool g_gp_supportsPartitioning;
  */
 extern bool g_gp_supportsPartitionTemplates;
 
+/*
+ * Indicates whether or not the GPDB cluster supports opfamilies.
+ */
+extern bool g_gp_supportsOpfamilies;
 
 /*
  * Indicates whether or not the GPDB cluster supports column attributes.

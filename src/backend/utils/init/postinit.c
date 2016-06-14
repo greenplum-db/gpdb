@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/init/postinit.c,v 1.173 2007/01/05 22:19:44 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/init/postinit.c,v 1.174 2007/02/15 23:23:23 alvherre Exp $
  *
  *
  *-------------------------------------------------------------------------
@@ -54,10 +54,11 @@
 #include "utils/ps_status.h"
 #include "utils/relcache.h"
 #include "utils/resscheduler.h"
+#include "utils/sharedsnapshot.h"
 #include "utils/syscache.h"
-#include "utils/tqual.h"  		/* SharedSnapshot */
 #include "pgstat.h"
 #include "utils/session_state.h"
+#include "codegen/codegen_wrapper.h"
 
 static HeapTuple GetDatabaseTuple(const char *dbname);
 static HeapTuple GetDatabaseTupleByOid(Oid dboid);
@@ -68,6 +69,11 @@ static void InitCommunication(void);
 static void ShutdownPostgres(int code, Datum arg);
 static bool ThereIsAtLeastOneRole(void);
 static void process_startup_options(Port *port, bool am_superuser);
+
+#ifdef USE_ORCA
+extern void InitGPOPT();
+extern void TerminateGPOPT();
+#endif
 
 
 /*** InitPostgres support ***/
@@ -347,9 +353,9 @@ CheckMyDatabase(const char *name, bool am_superuser)
 	 * a way to recover from disabling all access to all databases, for
 	 * example "UPDATE pg_database SET datallowconn = false;".
 	 *
-	 * We do not enforce them for autovacuum worker processes either.
+	 * We do not enforce them for the autovacuum worker processes either.
 	 */
-	if (IsUnderPostmaster && !IsAutoVacuumProcess())
+	if (IsUnderPostmaster && !IsAutoVacuumWorkerProcess())
 	{
 		/*
 		 * Check that the database is currently allowing connections.
@@ -536,6 +542,9 @@ BaseInit(void)
 	InitFileAccess();
 	smgrinit();
 	InitBufferPoolAccess();
+
+	/* Initialize llvm library if USE_CODEGEN is defined */
+	init_codegen();
 }
 
 
@@ -566,7 +575,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 			 char *out_dbname)
 {
 	bool		bootstrap = IsBootstrapProcessingMode();
-	bool		autovacuum = IsAutoVacuumProcess();
+	bool		autovacuum = IsAutoVacuumWorkerProcess();
 	bool		am_superuser;
 	char	   *fullpath;
 	char		dbname[NAMEDATALEN];
@@ -582,6 +591,11 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	SessionState_Init();
 	/* Initialize memory protection */
 	GPMemoryProtect_Init();
+
+#ifdef USE_ORCA
+	/* Initialize GPOPT */
+	InitGPOPT();
+#endif
 
 	/*
 	 * Initialize my entry in the shared-invalidation manager's array of
@@ -1072,6 +1086,10 @@ ShutdownPostgres(int code, Datum arg)
 	 * our usage, report now.
 	 */
 	ReportOOMConsumption();
+
+#ifdef USE_ORCA
+  TerminateGPOPT();
+#endif
 
 	/* Disable memory protection */
 	GPMemoryProtect_Shutdown();

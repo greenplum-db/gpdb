@@ -1,6 +1,6 @@
 set optimizer_disable_missing_stats_collection = on;
 --
--- This test case covers basic ADD COLUMN functionality for AOCS relations.
+-- This test case covers ALTER functionality for AOCS relations.
 --
 
 --
@@ -257,6 +257,139 @@ alter table addcol8
    drop column c;
 select * from addcol8 order by a;
 \d addcol8
+
+-- try renaming table and see if stuff still works
+alter table addcol1 rename to addcol1_renamed;
+alter table addcol1_renamed add column new_column int default 10;
+alter table addcol1_renamed alter column new_column set not null;
+alter table addcol1_renamed add column new_column2 int not null; -- should fail
+select count(*) from addcol1_renamed;
+alter table addcol1_renamed drop column new_column;
+alter table addcol1_renamed rename to addcol1;
+
+-- try renaming columns and see if stuff still works
+alter table addcol1 rename column f to f_renamed;
+alter table addcol1 alter column f_renamed set default 10;
+select adsrc from pg_attrdef pdef, pg_attribute pattr
+    where pdef.adrelid='addcol1'::regclass and pdef.adrelid=pattr.attrelid and pdef.adnum=pattr.attnum and pattr.attname='f_renamed';
+insert into addcol1 values (999);
+select a, f_renamed from addcol1 where a = 999;
+
+-- try dropping and adding back the column
+alter table addcol1 drop column f_renamed;
+select attname from pg_attribute where attrelid='addcol1'::regclass and attname='f_renamed';
+alter table addcol1 add column f_renamed int default 20;
+select a, f_renamed from addcol1 where a = 999;
+
+-- try altering statistics of a column
+alter table addcol1 alter column f_renamed set statistics 1000;
+select attstattarget from pg_attribute where attrelid = 'aocs_addcol.addcol1'::regclass and attname = 'f_renamed';
+set client_min_messages to error;
+alter table addcol1 alter column f_renamed set statistics 1001; -- should limit to 1000 and give warning
+set client_min_messages to notice;
+select attstattarget from pg_attribute where attrelid = 'aocs_addcol.addcol1'::regclass and attname = 'f_renamed';
+
+-- test alter distribution policy
+alter table addcol1 set distributed randomly;
+alter table addcol1 set distributed by (a);
+
+-- test some constraints (unique indexes do not work for unique and pkey)
+alter table addcol1 add constraint tunique unique(a);
+alter table addcol1 add constraint tpkey primary key(a);
+alter table addcol1 add constraint tcheck check (a is not null);
+
+-- test changing the storage type of a column
+alter table addcol1 alter column f_renamed type varchar(7);
+alter table addcol1 alter column f_renamed set storage plain;
+select attname, attstorage from pg_attribute where attrelid='addcol1'::regclass and attname='f_renamed';
+alter table addcol1 alter column f_renamed set storage main;
+select attname, attstorage from pg_attribute where attrelid='addcol1'::regclass and attname='f_renamed';
+alter table addcol1 alter column f_renamed set storage external;
+select attname, attstorage from pg_attribute where attrelid='addcol1'::regclass and attname='f_renamed';
+alter table addcol1 alter column f_renamed set storage extended;
+select attname, attstorage from pg_attribute where attrelid='addcol1'::regclass and attname='f_renamed';
+
+-- cannot set reloption appendonly
+alter table addcol1 set (appendonly=true, compresslevel=5, fillfactor=50);
+alter table addcol1 reset (appendonly, compresslevel, fillfactor);
+
+-- test some aocs partition table altering
+create table alter_aocs_part_table (a int, b int) with (appendonly=true, orientation=column) distributed by (a)
+    partition by range(b) (start (1) end (5) exclusive every (1), default partition foo);
+insert into alter_aocs_part_table values (generate_series(1,10), generate_series(1,10));
+alter table alter_aocs_part_table drop partition for (rank(1));
+alter table alter_aocs_part_table split default partition start(6) inclusive end(7) exclusive;
+alter table alter_aocs_part_table split default partition start(6) inclusive end(8) exclusive;
+alter table alter_aocs_part_table split default partition start(7) inclusive end(8) exclusive;
+select partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive, partitionisdefault
+    from pg_partitions where tablename = 'alter_aocs_part_table';
+create table alter_aocs_ao_table (a int, b int) with (appendonly=true) distributed by (a);
+insert into alter_aocs_ao_table values (2,2);
+alter table alter_aocs_part_table exchange partition for (rank(1)) with table alter_aocs_ao_table;
+create table alter_aocs_heap_table (a int, b int) distributed by (a);
+insert into alter_aocs_heap_table values (3,3);
+alter table alter_aocs_part_table exchange partition for (rank(2)) with table alter_aocs_heap_table;
+
+-- Test truncating and exchanging partition and then rolling back
+begin work;
+create table alter_aocs_ptable_exchange (a int, b int) with (appendonly=true, orientation=column) distributed by (a);
+insert into alter_aocs_ptable_exchange values (3,3), (3,3), (3,3);
+alter table alter_aocs_part_table truncate partition for (rank(2));
+select count(*) from alter_aocs_part_table;
+alter table alter_aocs_part_table exchange partition for (rank(2)) with table alter_aocs_ptable_exchange;
+select count(*) from alter_aocs_part_table;
+rollback work;
+select count(*) from alter_aocs_part_table;
+
+-- Test AO hybrid partitioning scheme (range and list) w/ subpartitions
+create table aocs_multi_level_part_table (date date, region text, region1 text, amount decimal(10,2))
+  with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
+  partition by range(date) subpartition by list(region) (
+    partition part1 start(date '2008-01-01') end(date '2009-01-01')
+      (subpartition usa values ('usa'), subpartition asia values ('asia'), default subpartition def),
+    partition part2 start(date '2009-01-01') end(date '2010-01-01')
+      (subpartition usa values ('usa'), subpartition asia values ('asia')));
+
+-- insert some data
+insert into aocs_multi_level_part_table values ('2008-02-02', 'usa', 'Texas', 10.05), ('2008-03-03', 'asia', 'China', 1.01);
+insert into aocs_multi_level_part_table values ('2009-02-02', 'usa', 'Utah', 10.05), ('2009-03-03', 'asia', 'Japan', 1.01);
+
+-- add a partition that is not a default partition
+alter table aocs_multi_level_part_table add partition part3 start(date '2010-01-01') end(date '2012-01-01')
+  with (appendonly=true, orientation=column)
+  (subpartition usa values ('usa'), subpartition asia values ('asia'), default subpartition def);
+
+-- Add default partition (defaults to heap storage unless set with AO)
+alter table aocs_multi_level_part_table add default partition yearYYYY (default subpartition def);
+select count(*) from pg_appendonly where relid='aocs_multi_level_part_table_1_prt_yearyyyy'::regclass;
+alter table aocs_multi_level_part_table drop partition yearYYYY;
+alter table aocs_multi_level_part_table add default partition yearYYYY with (appendonly=true, orientation=column) (default subpartition def);
+select count(*) from pg_appendonly where relid='aocs_multi_level_part_table_1_prt_yearyyyy'::regclass;
+
+-- index on atts 1, 4
+create index ao_mlp_idx on aocs_multi_level_part_table(date, amount);
+select indexname from pg_indexes where tablename='aocs_multi_level_part_table';
+alter index ao_mlp_idx rename to ao_mlp_idx_renamed;
+select indexname from pg_indexes where tablename='aocs_multi_level_part_table';
+
+-- truncate partitions until table is empty
+select * from aocs_multi_level_part_table;
+truncate aocs_multi_level_part_table_1_prt_part1_2_prt_asia;
+select * from aocs_multi_level_part_table;
+alter table aocs_multi_level_part_table truncate partition for (rank(1));
+select * from aocs_multi_level_part_table;
+alter table aocs_multi_level_part_table alter partition part2 truncate partition usa;
+select * from aocs_multi_level_part_table;
+alter table aocs_multi_level_part_table truncate partition part2;
+select * from aocs_multi_level_part_table;
+
+-- drop column in the partition table
+select count(*) from pg_attribute where attrelid='aocs_multi_level_part_table'::regclass and attname = 'region1';
+alter table aocs_multi_level_part_table drop column region1;
+select count(*) from pg_attribute where attrelid='aocs_multi_level_part_table'::regclass and attname = 'region1';
+
+-- splitting top partition of a multi-level partition should not work
+alter table aocs_multi_level_part_table split partition part3 at (date '2011-01-01') into (partition part3, partition part4);
 
 -- cleanup so as not to affect other installcheck tests
 -- (e.g. column_compression).

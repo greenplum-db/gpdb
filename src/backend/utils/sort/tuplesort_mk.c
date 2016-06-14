@@ -195,7 +195,6 @@ typedef struct TupsortMergeReadCtxt
     int mem_used;
 } TupsortMergeReadCtxt;
 
-
 /*
  * Private state of a Tuplesort operation.
  */
@@ -378,9 +377,14 @@ static bool is_sortstate_rwfile(Tuplesortstate_mk *state)
     return state->tapeset_state_file != NULL;
 }
 #ifdef USE_ASSERT_CHECKING
-static bool is_under_sort_ctxt(Tuplesortstate_mk *state)
+static bool is_under_sort_or_exec_ctxt(Tuplesortstate_mk *state)
 {
-    return CurrentMemoryContext == state->sortcontext;
+	/*
+	 * Check if this is executed under sortcontext (most cases) or under
+	 * es_query_cxt (when under a SharedInputScan)
+	 */
+	return CurrentMemoryContext == state->sortcontext ||
+			CurrentMemoryContext == state->ss->ps.state->es_query_cxt;
 }
 #endif
 
@@ -628,9 +632,17 @@ void tuplesort_begin_pos_mk(Tuplesortstate_mk *st, TuplesortPos_mk **pos)
     st_pos = (TuplesortPos_mk *) palloc(sizeof(TuplesortPos_mk));
     memcpy(st_pos, &(st->pos), sizeof(TuplesortPos_mk));
 
-    if(st->tapeset)
+    if(st->result_tape)
+    {
         st_pos->cur_work_tape = LogicalTapeSetDuplicateTape(st->tapeset, st->result_tape);
-
+    }
+    else
+    {
+    	/* sort did not finish completely due to QueryFinishPending
+    	 * so pretend that there are no tuples
+    	 */
+    	st_pos->eof_reached = true;
+    }
     *pos = st_pos;
 }
 
@@ -895,6 +907,7 @@ tuplesort_begin_index_mk(Relation indexRel,
             tupdesc, 0, 0);
    
     state->mkctxt.enforceUnique = enforceUnique;
+    state->mkctxt.indexRel = indexRel;
     MemoryContextSwitchTo(oldcontext);
 
     return state;
@@ -1190,7 +1203,7 @@ grow_unsorted_array(Tuplesortstate_mk *state)
 static void
 puttuple_common(Tuplesortstate_mk *state, MKEntry *e)
 {
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
 	state->totalNumTuples++;
 
     if(state->gpmon_pkt)
@@ -1365,7 +1378,7 @@ tuplesort_gettuple_common_pos(Tuplesortstate_mk *state, TuplesortPos_mk *pos,
     LogicalTape *work_tape;
     bool fOK;
 
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
 
 	/*
 	 * No output if we are told to finish execution.
@@ -1550,14 +1563,14 @@ tuplesort_gettuple_common_pos(Tuplesortstate_mk *state, TuplesortPos_mk *pos,
 tuplesort_gettupleslot_mk(Tuplesortstate_mk *state, bool forward,
         TupleTableSlot *slot)
 {
-    return tuplesort_gettupleslot_pos_mk(state, &state->pos, forward, slot);
+    return tuplesort_gettupleslot_pos_mk(state, &state->pos, forward, slot, state->sortcontext);
 }
 
     bool
 tuplesort_gettupleslot_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos,
-        bool forward, TupleTableSlot *slot)
+        bool forward, TupleTableSlot *slot, MemoryContext mcontext)
 {
-    MemoryContext oldcontext = MemoryContextSwitchTo(state->sortcontext);
+    MemoryContext oldcontext = MemoryContextSwitchTo(mcontext);
     MKEntry	e; 
 
     bool should_free = false;
@@ -1571,7 +1584,7 @@ tuplesort_gettupleslot_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos,
     if (fOK) 
     {
         Assert(!mke_is_empty(&e));
-        ExecStoreMemTuple(e.ptr, slot, should_free);
+        ExecStoreMinimalTuple(e.ptr, slot, should_free);
 
 #ifdef USE_ASSERT_CHECKING
 		if (should_free && state->mkheap != NULL && state->mkheap->count > 0)
@@ -1684,7 +1697,7 @@ inittapes_mk(Tuplesortstate_mk *state, const char* rwfile_prefix)
     int 		j;
     long		tapeSpace;
 
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
 
     /* Compute number of tapes to use: merge order plus 1 */
     maxTapes = tuplesort_merge_order(state->memAllowed) + 1;
@@ -1867,11 +1880,6 @@ mergeruns(Tuplesortstate_mk *state)
 
     Assert(state->status == TSS_BUILDRUNS);
 
-	if (QueryFinishPending)
-	{
-		state->status = TSS_SORTEDONTAPE;
-		return;
-	}
 
 #ifdef FAULT_INJECTOR
     /*
@@ -1887,6 +1895,12 @@ mergeruns(Tuplesortstate_mk *state)
 			""); // tableName
 	RESUME_INTERRUPTS();
 #endif
+
+	if (QueryFinishPending)
+	{
+		state->status = TSS_SORTEDONTAPE;
+		return;
+	}
 
     /*
      * If we produced only one initial run (quite likely if the total data
@@ -2287,7 +2301,7 @@ dumptuples_mk(Tuplesortstate_mk *state, bool alltuples)
     LogicalTape *lt = NULL;
     MKEntry e;
 
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
 
     if(alltuples && !state->mkheap)
     {
@@ -2409,6 +2423,16 @@ tuplesort_rescan_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos)
             pos->cur_work_tape = NULL;
             break;
         case TSS_SORTEDONTAPE:
+            if (NULL == state->result_tape)
+            {
+                Assert(pos->eof_reached);
+                pos->markpos.tapepos.blkNum = 0L;
+                pos->markpos.tapepos.offset = 0;
+                pos->markpos_eof = true;
+
+                break;
+            }
+
             if(pos == &state->pos)
             {
                 Assert(pos->cur_work_tape == NULL);
@@ -2687,7 +2711,7 @@ readtup_heap(Tuplesortstate_mk *state, TuplesortPos_mk *pos, MKEntry *e, Logical
     uint32 tuplen;
     size_t readSize;
 
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
 
     MemSet(e, 0, sizeof(MKEntry));
     e->ptr = palloc(memtuple_size_from_uint32(len));
@@ -3373,7 +3397,7 @@ static void
 tuplesort_inmem_limit_insert(Tuplesortstate_mk *state, MKEntry *entry)
 {
     Assert(state->mkctxt.limit > 0);
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
     Assert(!mke_is_empty(entry));
 
     Assert(state->status == TSS_INITIAL);
@@ -3432,7 +3456,7 @@ tuplesort_inmem_nolimit_insert(Tuplesortstate_mk *state, MKEntry *entry)
 {
 	Assert(state->status == TSS_INITIAL);
 	Assert(state->mkctxt.limit == 0);
-	Assert(is_under_sort_ctxt(state));
+	Assert(is_under_sort_or_exec_ctxt(state));
 	Assert(!mke_is_empty(entry));
 	Assert(state->entry_count < state->entry_allocsize);
 
@@ -3451,7 +3475,7 @@ static void tuplesort_heap_insert(Tuplesortstate_mk *state, MKEntry *e)
 {
     int ins;
     Assert(state->mkheap);
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
 
     ins = mkheap_putAndGet_run(state->mkheap, e, state->currentRun);
     tupsort_cpfr(e, NULL, &state->mkctxt.lvctxt[mke_get_lv(e)]);
@@ -3478,7 +3502,7 @@ static void tuplesort_heap_insert(Tuplesortstate_mk *state, MKEntry *e)
 static void tuplesort_limit_sort(Tuplesortstate_mk *state)
 {
     Assert(state->mkctxt.limit > 0);
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
 
     if(!state->mkheap)
     {

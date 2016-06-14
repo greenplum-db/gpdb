@@ -309,13 +309,13 @@ AddRelationAttributeEncodings(Relation rel, List *attr_encodings)
 
 		Insist(IsA(c, ColumnReferenceStorageDirective));
 
-		attnum = get_attnum(relid, strVal(c->column));
+		attnum = get_attnum(relid, c->column);
 
 		if (attnum == InvalidAttrNumber)
-			elog(ERROR, "column \"%s\" does not exist", strVal(c->column));
+			elog(ERROR, "column \"%s\" does not exist", c->column);
 
 		if (attnum < 0)
-			elog(ERROR, "column \"%s\" is a system column", strVal(c->column));
+			elog(ERROR, "column \"%s\" is a system column", c->column);
 
 		encoding = c->encoding;
 

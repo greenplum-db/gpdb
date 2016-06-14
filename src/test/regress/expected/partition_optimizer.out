@@ -93,7 +93,8 @@ select * from region where r_regionkey = '7';
 -- tables since we cannot enfoce them. But since this insert maps to a 
 -- single definitive partition, we can detect it.
 insert into region values(7, 'abc', 'def');
-ERROR:  duplicate key violates unique constraint "region_pkey_1_prt_p1_2_prt_sp1_3_prt_1"  (seg0 rahmaf2-mbp:40000 pid=78904)
+ERROR:  duplicate key value violates unique constraint "region_pkey_1_prt_p1_2_prt_sp1_3_prt_1"
+DETAIL:  Key (r_regionkey)=(7) already exists.
 drop table region;
 -- exchange
 -- 1) test all sanity checking
@@ -2670,11 +2671,8 @@ from pg_partitions where tablename = 'ao_p';
 
 -- end_ignore
 -- try SREH
-copy ao_p from stdin log errors into ao_p_err segment reject limit 100;
-NOTICE:  Error table "ao_p_err" does not exist. Auto generating an error table with the same name
-WARNING:  The error table was created in the same transaction as this operation. It will get dropped if transaction rolls back even if bad rows are present
-HINT:  To avoid this create the error table ahead of time using: CREATE TABLE <name> (cmdtime timestamp with time zone, relname text, filename text, linenum integer, bytenum integer, errmsg text, rawdata text, rawbytes bytea)
-NOTICE:  Found 2 data formatting errors (2 or more input rows). Errors logged into error table "ao_p_err"
+copy ao_p from stdin log errors segment reject limit 100;
+NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
 -- start_ignore
 select partitiontablename, ao_ptotal(partitiontablename)
 from pg_partitions where tablename = 'ao_p';
@@ -6206,6 +6204,8 @@ ERROR:  cannot mix inheritance with partitioning
 insert into child_r values
     (0, 'from r', 0, 0);
 ERROR:  relation "child_r" does not exist
+LINE 1: insert into child_r values
+                    ^
     
 drop table if exists parent_s cascade; --ignore
 drop table if exists child_r cascade; --ignore
@@ -7759,7 +7759,45 @@ select * from deep_part;
  5 | 5 | 5 | M    
 (5 rows)
 
+-- Incorrect relation OID in pg_partition_oid()
+select pg_partition_oid(1, deep_part.*) from deep_part;
+ERROR:  relation with OID 1 does not exist
 drop table input2;
 drop table input1;
 drop table part_tab;
 drop table deep_part;
+-- Avoid TupleDesc leak when COPY partition table from files
+drop table if exists pt_td_leak;
+NOTICE:  table "pt_td_leak" does not exist, skipping
+CREATE TABLE pt_td_leak
+(
+col1 int,
+col2 int,
+col3 int
+)
+distributed by (col1)
+partition by range(col2)
+(
+    partition part1 start(1) end(5),
+    partition part2 start(5) end(10)
+);
+NOTICE:  CREATE TABLE will create partition "pt_td_leak_1_prt_part1" for table "pt_td_leak"
+NOTICE:  CREATE TABLE will create partition "pt_td_leak_1_prt_part2" for table "pt_td_leak"
+insert into pt_td_leak select i,i,i from generate_series(1,9) i;
+copy pt_td_leak to '/tmp/pt_td_leak.out' csv;
+alter table pt_td_leak drop column col3;
+alter table pt_td_leak add column col3 int default 7;
+drop table if exists pt_td_leak_exchange;
+NOTICE:  table "pt_td_leak_exchange" does not exist, skipping
+CREATE TABLE pt_td_leak_exchange ( col1 int, col2 int, col3 int) distributed by (col1);
+alter table pt_td_leak exchange partition part2 with table pt_td_leak_exchange;
+insert into pt_td_leak values(1,8,1);
+copy pt_td_leak from '/tmp/pt_td_leak.out' with delimiter ',';
+select * from pt_td_leak where col1 = 5;
+ col1 | col2 | col3
+------+------+------
+    5 |    5 |    5
+(1 row)
+
+drop table pt_td_leak;
+drop table pt_td_leak_exchange;

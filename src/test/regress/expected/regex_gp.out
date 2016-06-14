@@ -5081,6 +5081,8 @@ select DISTINCT lname, regexp_matches(lname, '(dad)') from phone_book_substr ;
 --Changed to First Name from Last Name.
 select DISTINCT fname, regexp_matches(fname, '(dad)') from phone_book_substr order by lname;
 ERROR:  column "phone_book_substr.lname" must appear in the GROUP BY clause or be used in an aggregate function
+LINE 1: ...tches(fname, '(dad)') from phone_book_substr order by lname;
+                                                                 ^
 --  fname  | regexp_matches 
 ---------+----------------
 -- Aahdadj | {dad}

@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/ruleutils.c,v 1.244 2007/01/20 01:08:42 neilc Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/ruleutils.c,v 1.306 2009/08/01 19:59:41 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -55,6 +55,8 @@
 #include "utils/lsyscache.h"
 #include "utils/typcache.h"
 #include "utils/xml.h"
+#include "gp-libpq-fe.h"
+#include "pqexpbuffer.h"
 
 
 /* ----------
@@ -139,12 +141,15 @@ static char *pg_get_viewdef_worker(Oid viewoid, int prettyFlags);
 static void decompile_column_index_array(Datum column_index_array, Oid relId,
 							 StringInfo buf);
 static char *pg_get_ruledef_worker(Oid ruleoid, int prettyFlags);
-static char *pg_get_indexdef_worker(Oid indexrelid, int colno, bool showTblSpc,
+static char *pg_get_indexdef_worker(Oid indexrelid, int colno,
+					   bool attrsOnly, bool showTblSpc,
 					   int prettyFlags);
 static char *pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 							int prettyFlags);
 static char *pg_get_expr_worker(text *expr, Oid relid, char *relname,
 				   int prettyFlags);
+static int print_function_arguments(StringInfo buf, HeapTuple proctup,
+									bool print_table_args, bool print_defaults);
 static void make_ruledef(StringInfo buf, HeapTuple ruletup, TupleDesc rulettc,
 			 int prettyFlags);
 static void make_viewdef(StringInfo buf, HeapTuple ruletup, TupleDesc rulettc,
@@ -198,6 +203,9 @@ static void get_sortlist_expr(List *l, List *targetList, bool force_colno,
                               deparse_context *context, char *keyword_clause);
 static void get_windowspec_expr(WindowSpec *spec, deparse_context *context);
 static void get_windowref_expr(WindowRef *wref, deparse_context *context);
+static void get_coercion_expr(Node *arg, deparse_context *context,
+							Oid resulttype, int32 resulttypmod,
+							Node *parentNode);
 static void get_const_expr(Const *constval, deparse_context *context,
 						   int showtype);
 static void get_sublink_expr(SubLink *sublink, deparse_context *context);
@@ -614,7 +622,7 @@ pg_get_indexdef(PG_FUNCTION_ARGS)
 	Oid			indexrelid = PG_GETARG_OID(0);
 
 	PG_RETURN_TEXT_P(string_to_text(pg_get_indexdef_worker(indexrelid, 0,
-														   false, 0)));
+														   false, false, 0)));
 }
 
 Datum
@@ -627,18 +635,31 @@ pg_get_indexdef_ext(PG_FUNCTION_ARGS)
 
 	prettyFlags = pretty ? PRETTYFLAG_PAREN | PRETTYFLAG_INDENT : 0;
 	PG_RETURN_TEXT_P(string_to_text(pg_get_indexdef_worker(indexrelid, colno,
-														 false, prettyFlags)));
+														   colno != 0,
+														   false,
+														   prettyFlags)));
 }
 
 /* Internal version that returns a palloc'd C string */
 char *
 pg_get_indexdef_string(Oid indexrelid)
 {
-	return pg_get_indexdef_worker(indexrelid, 0, true, 0);
+	return pg_get_indexdef_worker(indexrelid, 0, false, true, 0);
+}
+
+/* Internal version that just reports the column definitions */
+char *
+pg_get_indexdef_columns(Oid indexrelid, bool pretty)
+{
+	int			prettyFlags;
+
+	prettyFlags = pretty ? PRETTYFLAG_PAREN | PRETTYFLAG_INDENT : 0;
+	return pg_get_indexdef_worker(indexrelid, 0, true, false, prettyFlags);
 }
 
 static char *
-pg_get_indexdef_worker(Oid indexrelid, int colno, bool showTblSpc,
+pg_get_indexdef_worker(Oid indexrelid, int colno,
+					   bool attrsOnly, bool showTblSpc,
 					   int prettyFlags)
 {
 	HeapTuple	ht_idx;
@@ -741,7 +762,7 @@ pg_get_indexdef_worker(Oid indexrelid, int colno, bool showTblSpc,
 	 */
 	initStringInfo(&buf);
 
-	if (!colno)
+	if (!attrsOnly)
 		appendStringInfo(&buf, "CREATE %sINDEX %s ON %s USING %s (",
 						 idxrec->indisunique ? "UNIQUE " : "",
 						 quote_identifier(NameStr(idxrelrec->relname)),
@@ -795,31 +816,32 @@ pg_get_indexdef_worker(Oid indexrelid, int colno, bool showTblSpc,
 			keycoltype = exprType(indexkey);
 		}
 
-		/* Add the operator class name */
-		if (!colno)
-			get_opclass_name(indclass->values[keyno], keycoltype,
-							 &buf);
-
-		/* Add options if relevant */
-		if (amrec->amorderstrategy > 0)
+		if (!attrsOnly && (!colno || colno == keyno + 1))
 		{
-			/* if it supports sort ordering, report DESC and NULLS opts */
-			if (opt & INDOPTION_DESC)
+			/* Add the operator class name, if not default */
+			get_opclass_name(indclass->values[keyno], keycoltype, &buf);
+
+			/* Add options if relevant */
+			if (amrec->amcanorder)
 			{
-				appendStringInfo(&buf, " DESC");
-				/* NULLS FIRST is the default in this case */
-				if (!(opt & INDOPTION_NULLS_FIRST))
-					appendStringInfo(&buf, " NULLS LAST");
-			}
-			else
-			{
-				if (opt & INDOPTION_NULLS_FIRST)
-					appendStringInfo(&buf, " NULLS FIRST");
+				/* if it supports sort ordering, report DESC and NULLS opts */
+				if (opt & INDOPTION_DESC)
+				{
+					appendStringInfo(&buf, " DESC");
+					/* NULLS FIRST is the default in this case */
+					if (!(opt & INDOPTION_NULLS_FIRST))
+						appendStringInfo(&buf, " NULLS LAST");
+				}
+				else
+				{
+					if (opt & INDOPTION_NULLS_FIRST)
+						appendStringInfo(&buf, " NULLS FIRST");
+				}
 			}
 		}
 	}
 
-	if (!colno)
+	if (!attrsOnly)
 	{
 		appendStringInfoChar(&buf, ')');
 
@@ -925,26 +947,15 @@ static char *
 pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 							int prettyFlags)
 {
-	StringInfoData buf;
-	Relation	conDesc;
-	cqContext	cqc;
 	HeapTuple	tup;
 	Form_pg_constraint conForm;
+	StringInfoData buf;
 
-	/*
-	 * Fetch the pg_constraint row.  There's no syscache for pg_constraint so
-	 * we must do it the hard way.
-	 */
-	conDesc = heap_open(ConstraintRelationId, AccessShareLock);
-
-	tup = caql_getfirst(
-			caql_addrel(cqclr(&cqc), conDesc),
-			cql("SELECT * FROM pg_constraint "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(constraintId)));
-
-	if (!HeapTupleIsValid(tup))
-		elog(ERROR, "could not find tuple for constraint %u", constraintId);
+	tup = SearchSysCache(CONSTROID,
+						 ObjectIdGetDatum(constraintId),
+						 0, 0, 0);
+	if (!HeapTupleIsValid(tup)) /* should not happen */
+		elog(ERROR, "cache lookup failed for constraint %u", constraintId);
 	conForm = (Form_pg_constraint) GETSTRUCT(tup);
 
 	initStringInfo(&buf);
@@ -968,8 +979,8 @@ pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 				appendStringInfo(&buf, "FOREIGN KEY (");
 
 				/* Fetch and build referencing-column list */
-				val = heap_getattr(tup, Anum_pg_constraint_conkey,
-								   RelationGetDescr(conDesc), &isnull);
+				val = SysCacheGetAttr(CONSTROID, tup,
+									  Anum_pg_constraint_conkey, &isnull);
 				if (isnull)
 					elog(ERROR, "null conkey for constraint %u",
 						 constraintId);
@@ -981,8 +992,8 @@ pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 								 generate_relation_name(conForm->confrelid, NIL));
 
 				/* Fetch and build referenced-column list */
-				val = heap_getattr(tup, Anum_pg_constraint_confkey,
-								   RelationGetDescr(conDesc), &isnull);
+				val = SysCacheGetAttr(CONSTROID, tup,
+									  Anum_pg_constraint_confkey, &isnull);
 				if (isnull)
 					elog(ERROR, "null confkey for constraint %u",
 						 constraintId);
@@ -1085,8 +1096,8 @@ pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 					appendStringInfo(&buf, "UNIQUE (");
 
 				/* Fetch and build target column list */
-				val = heap_getattr(tup, Anum_pg_constraint_conkey,
-								   RelationGetDescr(conDesc), &isnull);
+				val = SysCacheGetAttr(CONSTROID, tup,
+									  Anum_pg_constraint_conkey, &isnull);
 				if (isnull)
 					elog(ERROR, "null conkey for constraint %u",
 						 constraintId);
@@ -1127,8 +1138,8 @@ pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 				List	   *context;
 
 				/* Fetch constraint expression in parsetree form */
-				val = heap_getattr(tup, Anum_pg_constraint_conbin,
-								   RelationGetDescr(conDesc), &isnull);
+				val = SysCacheGetAttr(CONSTROID, tup,
+									  Anum_pg_constraint_conbin, &isnull);
 				if (isnull)
 					elog(ERROR, "null conbin for constraint %u",
 						 constraintId);
@@ -1171,10 +1182,11 @@ pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 	}
 
 	/* Cleanup */
-	heap_close(conDesc, AccessShareLock);
+	ReleaseSysCache(tup);
 
 	return buf.data;
 }
+
 
 /*
  * Convert an int16[] Datum into a comma-separated list of column names
@@ -1432,8 +1444,226 @@ pg_get_serial_sequence(PG_FUNCTION_ARGS)
 	PG_RETURN_NULL();
 }
 
+/*
+ * pg_get_function_arguments
+ * 		Get a nicely-formatted list of arguments for a function.
+ * 		This is everything that would go between the parentheses in
+ * 		CREATE FUNCTION.
+ */
+Datum
+pg_get_function_arguments(PG_FUNCTION_ARGS)
+{
+	Oid         	funcid = PG_GETARG_OID(0);
+	StringInfoData	buf;
+	HeapTuple   	proctup;
+
+	initStringInfo(&buf);
+
+	proctup = SearchSysCache(PROCOID,
+                            ObjectIdGetDatum(funcid),
+                            0, 0, 0);
+	if (!HeapTupleIsValid(proctup))
+		elog(ERROR, "cache lookup failed for function %u", funcid);
+
+	(void) print_function_arguments(&buf, proctup, false, true);
+
+	ReleaseSysCache(proctup);
+
+	PG_RETURN_TEXT_P(string_to_text(buf.data));
+}
+
 
 /*
+ * pg_get_function_identity_arguments
+ * 		Get a formatted list of arguments for a function.
+ * 		This is everything that would go between the parentheses in
+ * 		ALTER FUNCTION, etc. In particular, don't print defaults.
+ */
+Datum
+pg_get_function_identity_arguments(PG_FUNCTION_ARGS)
+{
+	Oid         funcid = PG_GETARG_OID(0);
+	StringInfoData buf;
+	HeapTuple   proctup;
+
+	initStringInfo(&buf);
+
+	proctup = SearchSysCache(PROCOID,
+							 ObjectIdGetDatum(funcid),
+							 0, 0, 0);
+	if (!HeapTupleIsValid(proctup))
+		elog(ERROR, "cache lookup failed for function %u", funcid);
+
+	(void) print_function_arguments(&buf, proctup, false, false);
+
+	ReleaseSysCache(proctup);
+
+	PG_RETURN_TEXT_P(string_to_text(buf.data));
+}
+
+
+/*
+ * pg_get_function_result
+ * 		Get a nicely-formatted version of the result type of a function.
+ * 		This is what would appear after RETURNS in CREATE FUNCTION.
+ */
+Datum
+pg_get_function_result(PG_FUNCTION_ARGS)
+{
+	Oid         	funcid = PG_GETARG_OID(0);
+	StringInfoData 	buf;
+	StringInfoData	argbuf;
+	HeapTuple   	proctup;
+	Form_pg_proc 	procform;
+	int         	ntabargs = 0;
+
+	initStringInfo(&buf);
+	initStringInfo(&argbuf);
+
+	proctup = SearchSysCache(PROCOID,
+							 ObjectIdGetDatum(funcid),
+							 0, 0, 0);
+
+	if (!HeapTupleIsValid(proctup))
+		elog(ERROR, "cache lookup failed for function %u", funcid);
+	procform = (Form_pg_proc) GETSTRUCT(proctup);
+
+	ntabargs = print_function_arguments(&argbuf, proctup, true, true);
+
+	/* We have 3 cases: table function, setof function and others */
+	if (ntabargs > 0)
+	{
+		appendStringInfoString(&buf, "TABLE(");
+		appendStringInfoString(&buf, argbuf.data);
+		appendStringInfoString(&buf, ")");
+	}
+	else if (procform->proretset)
+	{
+		appendStringInfoString(&buf, "SETOF ");
+		appendStringInfoString(&buf, format_type_be(procform->prorettype));
+	}
+	else
+		appendStringInfoString(&buf, format_type_be(procform->prorettype));
+
+	ReleaseSysCache(proctup);
+
+	PG_RETURN_TEXT_P(string_to_text(buf.data));
+}
+
+/*
+ * Common code for pg_get_function_arguments and pg_get_function_result:
+ * append the desired subset of arguments to buf.  We print only TABLE
+ * arguments when print_table_args is true, and all the others when it's false.
+ * We print argument defaults only if print_defaults is true.
+ * Function return value is the number of arguments printed.
+ */
+static int
+print_function_arguments(StringInfo buf, HeapTuple proctup,
+						 bool print_table_args, bool print_defaults)
+{
+	Form_pg_proc proc = (Form_pg_proc) GETSTRUCT(proctup);
+	int         numargs;
+	Oid        *argtypes;
+	char      **argnames;
+	char       *argmodes;
+	int         argsprinted;
+	int			inputargno;
+	int			nlackdefaults;
+	ListCell   *nextargdefault = NULL;
+	Datum       proargdefaults;
+	bool        isnull;
+	int         i;
+
+	numargs = get_func_arg_info(proctup,
+								&argtypes, &argnames, &argmodes);
+
+	nlackdefaults = numargs;
+	proargdefaults = SysCacheGetAttr(PROCOID, proctup,
+									 Anum_pg_proc_proargdefaults, &isnull);
+	if (!isnull && print_defaults)
+	{
+		char   *str;
+		List   *argdefaults;
+
+		str = TextDatumGetCString(proargdefaults);
+		argdefaults = (List *) stringToNode(str);
+		Assert(IsA(argdefaults, List));
+		pfree(str);
+		nextargdefault = list_head(argdefaults);
+		/* nlackdefaults counts only *input* arguments lacking defaults */
+		nlackdefaults = proc->pronargs - list_length(argdefaults);
+	}
+
+	argsprinted = 0;
+	inputargno = 0;
+	for (i = 0; i < numargs; i++)
+	{
+		Oid     argtype = argtypes[i];
+		char   *argname = argnames ? argnames[i] : NULL;
+		char    argmode = argmodes ? argmodes[i] : PROARGMODE_IN;
+		const char *modename;
+
+		bool	isinput;
+
+		switch (argmode)
+		{
+			case PROARGMODE_IN:
+				modename = "";
+				isinput = true;
+				break;
+			case PROARGMODE_INOUT:
+				modename = "INOUT ";
+				isinput = true;
+				break;
+			case PROARGMODE_OUT:
+				modename = "OUT ";
+				isinput = false;
+				break;
+			case PROARGMODE_VARIADIC:
+				modename = "VARIADIC ";
+				isinput = true;
+				break;
+			case PROARGMODE_TABLE:
+				modename = "";
+				isinput = false;
+				break;
+			default:
+				elog(ERROR, "invalid parameter mode '%c'", argmode);
+				modename = NULL; /* keep compiler quiet */
+				isinput = false;
+				break;
+		}
+		if (isinput)
+			inputargno++;       /* this is a 1-based counter */
+
+		if (print_table_args != (argmode == PROARGMODE_TABLE))
+			continue;
+
+		if (argsprinted)
+			appendStringInfoString(buf, ", ");
+		appendStringInfoString(buf, modename);
+		if (argname && argname[0])
+			appendStringInfo(buf, "%s ", quote_identifier(argname));
+		appendStringInfoString(buf, format_type_be(argtype));
+
+		if (print_defaults && isinput && inputargno > nlackdefaults)
+		{
+			Node    *expr;
+
+			Assert(nextargdefault != NULL);
+			expr = (Node *) lfirst(nextargdefault);
+			nextargdefault = lnext(nextargdefault);
+
+			appendStringInfo(buf, " DEFAULT %s",
+							 deparse_expression(expr, NIL, false, false));
+		}
+		argsprinted++;
+	}
+
+	return argsprinted;
+}
+
+/* ----------
  * deparse_expression			- General utility for deparsing expressions
  *
  * calls deparse_expression_pretty with all prettyPrinting disabled
@@ -1704,7 +1934,7 @@ make_ruledef(StringInfo buf, HeapTuple ruletup, TupleDesc rulettc,
 	if (strlen(ev_qual) > 0 && strcmp(ev_qual, "<>") != 0)
 	{
 		Node	   *qual;
-			Query	   *query;
+		Query	   *query;
 		deparse_context context;
 		deparse_namespace dpns;
 
@@ -3475,6 +3705,12 @@ isSimpleNode(Node *node, Node *parentNode, int prettyFlags)
 		case T_RelabelType:
 			return isSimpleNode((Node *) ((RelabelType *) node)->arg,
 								node, prettyFlags);
+		case T_CoerceViaIO:
+			return isSimpleNode((Node *) ((CoerceViaIO *) node)->arg,
+								node, prettyFlags);
+		case T_ArrayCoerceExpr:
+			return isSimpleNode((Node *) ((ArrayCoerceExpr *) node)->arg,
+								node, prettyFlags);
 		case T_ConvertRowtypeExpr:
 			return isSimpleNode((Node *) ((ConvertRowtypeExpr *) node)->arg,
 								node, prettyFlags);
@@ -4007,6 +4243,48 @@ get_rule_expr(Node *node, deparse_context *context,
 			}
 			break;
 
+		case T_CoerceViaIO:
+			{
+				CoerceViaIO *iocoerce = (CoerceViaIO *) node;
+				Node	   *arg = (Node *) iocoerce->arg;
+
+				if (iocoerce->coerceformat == COERCE_IMPLICIT_CAST &&
+					!showimplicit)
+				{
+					/* don't show the implicit cast */
+					get_rule_expr_paren(arg, context, false, node);
+				}
+				else
+				{
+					get_coercion_expr(arg, context,
+									  iocoerce->resulttype,
+									  -1,
+									  node);
+				}
+			}
+			break;
+
+		case T_ArrayCoerceExpr:
+			{
+				ArrayCoerceExpr *acoerce = (ArrayCoerceExpr *) node;
+				Node	   *arg = (Node *) acoerce->arg;
+
+				if (acoerce->coerceformat == COERCE_IMPLICIT_CAST &&
+					!showimplicit)
+				{
+					/* don't show the implicit cast */
+					get_rule_expr_paren(arg, context, false, node);
+				}
+				else
+				{
+					get_coercion_expr(arg, context,
+									  acoerce->resulttype,
+									  acoerce->resulttypmod,
+									  node);
+				}
+			}
+			break;
+
 		case T_ConvertRowtypeExpr:
 			{
 				ConvertRowtypeExpr *convert = (ConvertRowtypeExpr *) node;
@@ -4126,6 +4404,15 @@ get_rule_expr(Node *node, deparse_context *context,
 				appendStringInfo(buf, "ARRAY[");
 				get_rule_expr((Node *) arrayexpr->elements, context, true);
 				appendStringInfoChar(buf, ']');
+
+				/*
+				 * If the array isn't empty, we assume its elements are
+				 * coerced to the desired type.  If it's empty, though, we
+				 * need an explicit coercion to the array type.
+				 */
+				if (arrayexpr->elements == NIL)
+					appendStringInfo(buf, "::%s",
+						format_type_with_typemod(arrayexpr->array_typeid, -1));
 			}
 			break;
 
@@ -4463,22 +4750,22 @@ get_rule_expr(Node *node, deparse_context *context,
 							con = (Const *) lthird(xexpr->args);
 							Assert(IsA(con, Const));
 							if (con->constisnull)
-								 /* suppress STANDALONE NO VALUE */ ;
+								/* suppress STANDALONE NO VALUE */ ;
 							else
 							{
 								switch (DatumGetInt32(con->constvalue))
 								{
 									case XML_STANDALONE_YES:
 										appendStringInfoString(buf,
-														 ", STANDALONE YES");
+															   ", STANDALONE YES");
 										break;
 									case XML_STANDALONE_NO:
 										appendStringInfoString(buf,
-														  ", STANDALONE NO");
+															   ", STANDALONE NO");
 										break;
 									case XML_STANDALONE_NO_VALUE:
 										appendStringInfoString(buf,
-													", STANDALONE NO VALUE");
+															   ", STANDALONE NO VALUE");
 										break;
 									default:
 										break;
@@ -5115,6 +5402,46 @@ get_windowref_expr(WindowRef *wref, deparse_context *context)
 	{
 		get_windowspec_expr(spec, context);
 	}
+}
+
+/*
+ * get_coercion_expr
+ *
+ *  Make a string representation of a value coerced to a specific type
+ * ----------
+ */
+static void
+get_coercion_expr(Node *arg, deparse_context *context,
+		  Oid resulttype, int32 resulttypmod,
+		  Node *parentNode)
+{
+    StringInfo  buf = context->buf;
+
+    /*
+     * Since parse_coerce.c doesn't immediately collapse application of
+     * length-coercion functions to constants, what we'll typically see
+     * in such cases is a Const with typmod -1 and a length-coercion
+     * function right above it.  Avoid generating redundant output.
+     * However, beware of suppressing casts when the user actually wrote
+     * something like 'foo'::text::char(3).
+     */
+    if (arg && IsA(arg, Const) &&
+	((Const *) arg)->consttype == resulttype &&
+	((Const *) arg)->consttypmod == -1)
+    {
+	/* Show the constant without normal ::typename decoration */
+	get_const_expr((Const *) arg, context, false);
+    }
+    else
+    {
+	if (!PRETTY_PAREN(context))
+	    appendStringInfoChar(buf, '(');
+	get_rule_expr_paren(arg, context, false, parentNode);
+	if (!PRETTY_PAREN(context))
+	    appendStringInfoChar(buf, ')');
+    }
+    appendStringInfo(buf, "::%s",
+		     format_type_with_typemod(resulttype, resulttypmod));
 }
 
 /* ----------
@@ -6154,7 +6481,6 @@ generate_function_name(Oid funcid, int nargs, Oid *argtypes, bool *is_variadic)
 		elog(ERROR, "cache lookup failed for function %u", funcid);
 	procform = (Form_pg_proc) GETSTRUCT(proctup);
 	proname = NameStr(procform->proname);
-	Assert(nargs >= procform->pronargs);
 
 	/*
 	 * The idea here is to schema-qualify only if the parser would fail to
@@ -6162,10 +6488,10 @@ generate_function_name(Oid funcid, int nargs, Oid *argtypes, bool *is_variadic)
 	 * specified argtypes.
 	 */
 	p_result = func_get_detail(list_make1(makeString(proname)),
-							   NIL, nargs, argtypes, false,
+							   NIL, nargs, argtypes, false, false,
 							   &p_funcid, &p_rettype,
 							   &p_retset, &p_retstrict, &p_retordered,
-							   &p_nvargs, &p_true_typeids);
+							   &p_nvargs, &p_true_typeids, NULL);
 	if ((p_result == FUNCDETAIL_NORMAL || p_result == FUNCDETAIL_AGGREGATE) &&
 		p_funcid == funcid)
 		nspname = NULL;
@@ -6603,6 +6929,7 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 		if (bLeafTablename) /* MPP-6297: dump by tablename */	
 		{
 			StringInfoData      	 sid1;
+			PQExpBuffer      	 pqbuf = createPQExpBuffer();
 
 			initStringInfo(&sid1);
 
@@ -6610,8 +6937,25 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 
 			/* always quote to make WITH (tablename=...) work correctly */
 			/* MPP-12243: but don't use quote_identifier if already quoted! */
-			appendStringInfo(&sid1, "tablename=\'%s\'", 
-							 get_rel_name(rule->parchildrelid));
+
+			char *relname = get_rel_name(rule->parchildrelid);
+			int len = strlen(relname);
+
+			if(strchr(relname, '\\') != NULL)
+				appendPQExpBufferChar(pqbuf, ESCAPE_STRING_SYNTAX);
+
+			appendPQExpBufferChar(pqbuf, '\'');
+
+			if(!enlargePQExpBuffer(pqbuf, 2 * len + 2))
+				elog(ERROR, "failed to increase buffer size for escaping relname %s", relname);
+
+			pqbuf->len += PQescapeString(pqbuf->data + pqbuf->len, relname, len);
+
+			appendPQExpBufferChar(pqbuf, '\'');
+
+			appendStringInfo(&sid1, "tablename=%s", pqbuf->data);
+
+			destroyPQExpBuffer(pqbuf);
 
 			/* MPP-7191, MPP-7193: fully-qualify storage type if not
 			 * specified (and not a template)
@@ -6677,9 +7021,26 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 			 *
 			 * MPP-10480: use tablename
 			 */
-			appendStringInfo(&buf, "tablename=\'%s\'",
-							 quote_identifier(
-									 get_rel_name(part->parrelid)));
+
+			PQExpBuffer pqbuf = createPQExpBuffer();
+			char *relname = get_rel_name(part->parrelid);
+			int len = strlen(relname);
+
+			if(strchr(relname, '\\') != NULL)
+				 appendPQExpBufferChar(pqbuf, ESCAPE_STRING_SYNTAX);
+
+			appendPQExpBufferChar(pqbuf, '\'');
+
+			if(!enlargePQExpBuffer(pqbuf, 2 * len + 2))
+				elog(ERROR, "failed to increase buffer size for escaping relname %s", relname);
+
+			pqbuf->len += PQescapeString(pqbuf->data + pqbuf->len, relname, len);
+
+			appendPQExpBufferChar(pqbuf, '\'');
+
+			appendStringInfo(&buf, "tablename=%s", pqbuf->data);
+
+			destroyPQExpBuffer(pqbuf);
 		}
 
 		opts = rule->parreloptions;
@@ -7279,7 +7640,7 @@ pg_get_partition_template_def_worker(Oid relid, int prettyFlags,
 		truncateStringInfo(&sid2, 0);
 
 		pnt = get_parts(relid, 
-						templatelevel, 0, true, CurrentMemoryContext, true /*includesubparts*/);
+						templatelevel, 0, true, true /*includesubparts*/);
 		get_partition_recursive(pnt, &headc, &bodyc, &leveldone, 
 								bLeafTablename);
 
@@ -7447,8 +7808,7 @@ get_rule_def_common(Oid partid, int prettyFlags, int bLeafTablename)
 	}
 
 
-	rule = ruleMakePartitionRule(tuple, RelationGetDescr(rel), 
-								 CurrentMemoryContext);
+	rule = ruleMakePartitionRule(tuple, RelationGetDescr(rel));
 	heap_close(rel, AccessShareLock);
 
 	/* lookup pg_partition by oid */
@@ -7466,8 +7826,7 @@ get_rule_def_common(Oid partid, int prettyFlags, int bLeafTablename)
 		return NULL;
 	}
 
-	part = partMakePartition(tuple, RelationGetDescr(rel),
-							 CurrentMemoryContext);
+	part = partMakePartition(tuple, RelationGetDescr(rel));
 
 	heap_close(rel, AccessShareLock);
 

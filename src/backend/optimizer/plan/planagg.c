@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planagg.c,v 1.25 2007/01/09 02:14:13 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planagg.c,v 1.27 2007/02/19 07:03:29 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -453,6 +453,7 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 	 */
 	memcpy(&subroot, root, sizeof(PlannerInfo));
 	subroot.parse = subparse = (Query *) copyObject(root->parse);
+	subroot.init_plans = NIL;
 	subparse->commandType = CMD_SELECT;
 	subparse->resultRelation = 0;
 	subparse->resultRelations = NIL;
@@ -552,6 +553,9 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 	info->param = SS_make_initplan_from_plan(&subroot, plan,
 											 exprType((Node *) tle->expr),
 											 -1);
+
+	/* Make sure the InitPlan gets into the outer list */
+	root->init_plans = list_concat(root->init_plans, subroot.init_plans);
 }
 
 /*

@@ -44,7 +44,7 @@
 #include "storage/backendid.h"
 #include "pgstat.h"
 #include "miscadmin.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "gp-libpq-fe.h"
 #include <unistd.h>
 

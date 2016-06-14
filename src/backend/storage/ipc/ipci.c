@@ -42,7 +42,6 @@
 #include "pgstat.h"
 #include "postmaster/autovacuum.h"
 #include "postmaster/bgwriter.h"
-#include "postmaster/checkpoint.h"
 #include "postmaster/postmaster.h"
 #include "postmaster/primary_mirror_mode.h"
 #include "postmaster/seqserver.h"
@@ -58,6 +57,7 @@
 #include "storage/spin.h"
 #include "utils/resscheduler.h"
 #include "utils/faultinjector.h"
+#include "utils/sharedsnapshot.h"
 #include "utils/simex.h"
 
 #include "cdb/cdbfts.h"

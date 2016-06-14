@@ -1,6 +1,6 @@
 
 #ifndef EXCEPT_H
-#define EXECPT_H
+#define EXCEPT_H
 
 #ifndef SETJMP_H
 #include <setjmp.h>

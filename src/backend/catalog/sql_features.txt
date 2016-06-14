@@ -512,22 +512,21 @@ M023	Foreign data wrapper interface routines in Pascal			NO
 M024	Foreign data wrapper interface routines in PL/I			NO	
 M030	SQL-server foreign data support			NO	
 M031	Foreign data wrapper general routines			NO	
-X010	XML type			NO	
-X011	Arrays of XML type			NO	
+X010	XML type			YES	
+X011	Arrays of XML type			YES	
 X012	Multisets of XML type			NO	
 X013	Distinct types of XML type			NO	
 X014	Attributes of XML type			NO	
 X015	Fields of XML type			NO	
-X016	Persistent XML values			NO	
-X020	XMLConcat			NO	
-X025	XMLCast			NO	
-X030	XMLDocument			NO	
-X031	XMLElement			NO	
-X032	XMLForest			NO	
-X034	XMLAgg			NO	
+X016	Persistent XML values			YES	
+X020	XML concatenation			YES	
+X031	XMLElement			YES	
+X032	XMLForest			YES	
+X033	XMLRoot			YES	
+X034	XMLAgg			YES	
 X035	XMLAgg: ORDER BY option			NO	
-X036	XMLComment			NO	
-X037	XMLPI			NO	
+X036	XMLComment			YES	
+X037	XMLPI			YES	
 X038	XMLText			NO	
 X040	Basic table mapping			NO	
 X041	Basic table mapping: nulls absent			NO	
@@ -548,14 +547,15 @@ X056	Advanced table mapping: data mapping			NO
 X057	Advanced table mapping: metadata mapping			NO	
 X058	Advanced table mapping: base64 encoding of binary strings			NO	
 X059	Advanced table mapping: hex encoding of binary strings			NO	
-X060	XMLParse: Character string input and CONTENT option			NO	
-X061	XMLParse: Character string input and DOCUMENT option			NO	
+X060	XMLParse: Character string input and CONTENT option			YES	
+X061	XMLParse: Character string input and DOCUMENT option			YES	
+X062	XMLParse: explicit WHITESPACE option			YES	
 X065	XMLParse: BLOB input and CONTENT option			NO	
 X066	XMLParse: BLOB input and DOCUMENT option			NO	
 X068	XMLSerialize: BOM			NO	
 X069	XMLSerialize: INDENT			NO	
-X070	XMLSerialize: Character string serialization and CONTENT option			NO	
-X071	XMLSerialize: Character string serialization and DOCUMENT option			NO	
+X070	XMLSerialize: Character string serialization and CONTENT option			YES	
+X071	XMLSerialize: Character string serialization and DOCUMENT option			YES	
 X072	XMLSerialize: Character string serialization			NO	
 X073	XMLSerialize: BLOB serialization and CONTENT option			NO	
 X074	XMLSerialize: BLOB serialization and DOCUMENT option			NO	
@@ -570,7 +570,7 @@ X083	XML namespace declarations in DDL			NO
 X084	XML namespace declarations in compound statements			NO	
 X085	Predefined namespace prefixes			NO	
 X086	XML namespace declarations in XMLTable			NO	
-X090	XML document predicate			NO	
+X090	XML document predicate			YES	
 X091	XML content predicate			NO	
 X096	XMLExists			NO	
 X100	Host language support for XML: CONTENT option			NO	
@@ -580,8 +580,8 @@ X111	Host language support for XML: CLOB mapping			NO
 X112	Host language support for XML: BLOB mapping			NO	
 X113	Host language support for XML: STRIP WHITESPACE option			NO	
 X114	Host language support for XML: PRESERVE WHITESPACE option			NO	
-X120	XML parameters in SQL routines			NO	
-X121	XML parameters in external routines			NO	
+X120	XML parameters in SQL routines			YES	
+X121	XML parameters in external routines			YES	
 X131	Query-level XMLBINARY clause			NO	
 X132	XMLBINARY clause in DML			NO	
 X133	XMLBINARY clause in DDL			NO	

@@ -59,14 +59,13 @@ case_translate_language_name(const char *input)
  * Extract a string value (otherwise uninterpreted) from a DefElem.
  */
 char *
-defGetString(DefElem *def, bool *need_free)
+defGetString(DefElem *def)
 {
 	if (def->arg == NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("%s requires a parameter",
 						def->defname)));
-	Assert(NULL != need_free);
 	switch (nodeTag(def->arg))
 	{
 		case T_Integer:
@@ -74,7 +73,6 @@ defGetString(DefElem *def, bool *need_free)
 				char	   *str = palloc(32);
 
 				snprintf(str, 32, "%ld", (long) intVal(def->arg));
-				*need_free = true;
 				return str;
 			}
 		case T_Float:
@@ -83,16 +81,12 @@ defGetString(DefElem *def, bool *need_free)
 			 * T_Float values are kept in string form, so this type cheat
 			 * works (and doesn't risk losing precision)
 			 */
-			*need_free = false;
 			return strVal(def->arg);
 		case T_String:
-			*need_free = false;
 			return strVal(def->arg);
 		case T_TypeName:
-			*need_free = true;
 			return TypeNameToString((TypeName *) def->arg);
 		case T_List:
-			*need_free = true;
 			return NameListToString((List *) def->arg);
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(def->arg));
@@ -157,26 +151,13 @@ defGetBoolean(DefElem *def)
 			break;
 		default:
 			{
-				bool need_free_value = false;
-				char *sval = defGetString(def, &need_free_value);
-				bool result = false;
+				char	   *sval = defGetString(def);
+
 				if (pg_strcasecmp(sval, "true") == 0)
-				{
-					result = true;
-				}
+					return true;
 				if (pg_strcasecmp(sval, "false") == 0)
-				{
-					result = false;
-				}
-				if (need_free_value)
-				{
-					pfree(sval);
-					sval = NULL;
-				}
+					return false;
 
-				AssertImply(need_free_value, NULL == sval);
-
-				return result;
 			}
 			break;
 	}
@@ -317,11 +298,10 @@ defGetTypeLength(DefElem *def)
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(def->arg));
 	}
-	bool need_free_value = false;
 	ereport(ERROR,
 			(errcode(ERRCODE_SYNTAX_ERROR),
 			 errmsg("invalid argument for %s: \"%s\"",
-					def->defname, defGetString(def, &need_free_value))));
+					def->defname, defGetString(def))));
 	return 0;					/* keep compiler quiet */
 }
 

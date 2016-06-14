@@ -16,6 +16,7 @@
 #include "access/relscan.h"
 #include "access/transam.h"
 #include "executor/execdebug.h"
+#include "executor/nodeBitmapHeapscan.h"
 #include "pgstat.h"
 #include "storage/bufmgr.h"
 #include "utils/memutils.h"
@@ -24,8 +25,6 @@
 #include "cdb/cdbvars.h" /* gp_select_invisible */
 #include "cdb/cdbfilerepprimary.h"
 #include "nodes/tidbitmap.h"
-
-static void bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres);
 
 /*
  * Prepares for a new heap scan.
@@ -213,122 +212,3 @@ BitmapHeapScanReScan(ScanState *scanState)
 	/* undo bogus "seq scan" count (see notes in ExecInitBitmapHeapScan) */
 	pgstat_discount_heap_scan(node->ss.ss_currentRelation);
 }
-
-/*
- * This routine reads and pins the specified page of the relation, then
- * builds an array indicating which tuples on the page are both potentially
- * interesting according to the bitmap, and visible according to the snapshot.
- */
-static void
-bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres)
-{
-	MIRROREDLOCK_BUFMGR_DECLARE;
-
-	BlockNumber page = tbmres->blockno;
-	Buffer		buffer;
-	Snapshot	snapshot;
-	Page		dp;
-	int			ntup;
-	int			curslot;
-	int			minslot;
-	int			maxslot;
-	int			maxoff;
-
-	/*
-	 * Acquire pin on the target heap page, trading in any pin we held before.
-	 */
-	Assert(page < scan->rs_nblocks);
-
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
-
-	scan->rs_cbuf = ReleaseAndReadBuffer(scan->rs_cbuf,
-										 scan->rs_rd,
-										 page);
-
-	buffer = scan->rs_cbuf;
-	snapshot = scan->rs_snapshot;
-
-	/*
-	 * We must hold share lock on the buffer content while examining tuple
-	 * visibility.	Afterwards, however, the tuples we have found to be
-	 * visible are guaranteed good as long as we hold the buffer pin.
-	 */
-	LockBuffer(buffer, BUFFER_LOCK_SHARE);
-
-	dp = (Page) BufferGetPage(buffer);
-	maxoff = PageGetMaxOffsetNumber(dp);
-
-	/*
-	 * Determine how many entries we need to look at on this page. If the
-	 * bitmap is lossy then we need to look at each physical item pointer;
-	 * otherwise we just look through the offsets listed in tbmres.
-	 */
-	if (tbmres->ntuples >= 0)
-	{
-		/* non-lossy case */
-		minslot = 0;
-		maxslot = tbmres->ntuples - 1;
-	}
-	else
-	{
-		/* lossy case */
-		minslot = FirstOffsetNumber;
-		maxslot = maxoff;
-	}
-
-	ntup = 0;
-	for (curslot = minslot; curslot <= maxslot; curslot++)
-	{
-		OffsetNumber targoffset;
-		ItemId		lp;
-		HeapTupleData loctup;
-		bool		valid;
-
-		if (tbmres->ntuples >= 0)
-		{
-			/* non-lossy case */
-			targoffset = tbmres->offsets[curslot];
-		}
-		else
-		{
-			/* lossy case */
-			targoffset = (OffsetNumber) curslot;
-		}
-
-		/*
-		 * We'd better check for out-of-range offnum in case of VACUUM since
-		 * the TID was obtained.
-		 */
-		if (targoffset < FirstOffsetNumber || targoffset > maxoff)
-			continue;
-
-		lp = PageGetItemId(dp, targoffset);
-
-		/*
-		 * Must check for deleted tuple.
-		 */
-		if (!ItemIdIsUsed(lp))
-			continue;
-
-		/*
-		 * check time qualification of tuple, remember it if valid
-		 */
-		loctup.t_data = (HeapTupleHeader) PageGetItem((Page) dp, lp);
-		loctup.t_len = ItemIdGetLength(lp);
-		ItemPointerSet(&(loctup.t_self), page, targoffset);
-
-		valid = HeapTupleSatisfiesVisibility(scan->rs_rd, &loctup, snapshot, buffer);
-		if (valid)
-			scan->rs_vistuples[ntup++] = targoffset;
-	}
-
-	LockBuffer(buffer, BUFFER_LOCK_UNLOCK);
-
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-
-	Assert(ntup <= MaxHeapTuplesPerPage);
-	scan->rs_ntuples = ntup;
-}
-

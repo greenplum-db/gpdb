@@ -54,9 +54,8 @@ CATALOG(gp_distribution_policy,5002) BKI_WITHOUT_OIDS
  */
 typedef enum GpPolicyType
 {
-	POLICYTYPE_UNDEFINED,
 	POLICYTYPE_PARTITIONED,		/* Tuples partitioned onto segment database. */
-	POLICYTYPE_ENTRY			/* Tuples stored on enty database. */
+	POLICYTYPE_ENTRY			/* Tuples stored on entry database. */
 } GpPolicyType;
 
 /*
@@ -67,8 +66,7 @@ typedef enum GpPolicyType
  * A GpPolicy is typically palloc'd with space for nattrs integer
  * attribute numbers (attrs) in addition to sizeof(GpPolicy).
  */
-typedef
-struct GpPolicy
+typedef struct GpPolicy
 {
 	GpPolicyType ptype;
 
@@ -76,6 +74,8 @@ struct GpPolicy
 	int			nattrs;
 	AttrNumber	attrs[1];		/* the first of nattrs attribute numbers.  */
 } GpPolicy;
+
+#define SizeOfGpPolicy(nattrs)	(offsetof(GpPolicy, attrs) + sizeof(AttrNumber) * (nattrs))
 
 /*
  * GpPolicyCopy -- Return a copy of a GpPolicy object.
@@ -116,5 +116,6 @@ void GpPolicyRemove(Oid tbloid);
 
 bool GpPolicyIsRandomly(GpPolicy *policy);
 
+extern GpPolicy *createRandomDistribution(void);
 
 #endif /*_GP_POLICY_H_*/

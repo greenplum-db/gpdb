@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_func.c,v 1.191 2007/01/05 22:19:34 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_func.c,v 1.194 2007/02/01 19:10:27 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -25,6 +25,7 @@
 #include "catalog/pg_window.h"
 #include "funcapi.h"
 #include "nodes/makefuncs.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/walkers.h"
 #include "parser/parse_agg.h"
 #include "parser/parse_clause.h"
@@ -85,8 +86,10 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 	Node	   *first_arg = NULL;
 	int			nargs;
 	int			nvargs = 0;
+	int         nargsplusdefs;
 	Oid			actual_arg_types[FUNC_MAX_ARGS];
 	Oid		   *declared_arg_types = NULL;
+	List       *argdefaults = NULL;
 	Node	   *retval = NULL;
 	bool		retset = false;
 	bool        retstrict = false;
@@ -239,19 +242,20 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 	 * disambiguation for polymorphic functions, handles inheritance, and
 	 * returns the funcid and type and set or singleton status of the
 	 * function's return value.  it also returns the true argument types to
-	 * the function. (In the case of a variadic function call, the reported
+	 * the function. In the case of a variadic function call, the reported
 	 * "true" types aren't really what is in pg_proc: the variadic argument is
 	 * replaced by a suitable number of copies of its element type. We'll fix
-	 * it up below.)
+	 * it up below. We may also have to deal with default arguments.
 	 */
 	fdresult = func_get_detail(funcname, fargs, nargs,
-							   actual_arg_types, !func_variadic,
+							   actual_arg_types, !func_variadic, true,
 							   &funcid, &rettype, &retset, &retstrict,
-							   &retordered, &nvargs, &declared_arg_types);
+							   &retordered, &nvargs,
+							   &declared_arg_types, &argdefaults);
 	if (fdresult == FUNCDETAIL_COERCION)
 	{
 		/*
-		 * We can do it as a trivial coercion. coerce_type can handle these
+		 * We interpreted it as a type coercion. coerce_type can handle these
 		 * cases, so why duplicate code...
 		 */
 		return coerce_type(pstate, linitial(fargs),
@@ -318,7 +322,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 							func_signature_string(funcname, nargs,
 												  actual_arg_types)),
 					 errhint("Could not choose a best candidate function. "
-							 "You may need to add explicit type casts."),
+							 "You might need to add explicit type casts."),
 					 parser_errposition(pstate, location)));
 		else
 			ereport(ERROR,
@@ -327,7 +331,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 							func_signature_string(funcname, nargs,
 												  actual_arg_types)),
 					 errhint("No function matches the given name and argument types. "
-							 "You may need to add explicit type casts."),
+							 "You might need to add explicit type casts."),
 					 parser_errposition(pstate, location)));
 	}
 
@@ -342,8 +346,29 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 				 errmsg("function %s() does not exist",
 						NameListToString(funcname)),
 				 errhint("No function matches the given name and argument types. "
-						 "You may need to add explicit type casts."),
+						 "You might need to add explicit type casts."),
 				 parser_errposition(pstate, location)));
+	}
+
+	/*
+	 * If there are default arguments, we have to include their types in
+	 * actual_arg_types for the purpose of checking generic type consistency.
+	 * However, we do NOT put them into the generated parse node, because
+	 * their actual values might change before the query gets run. The
+	 * planner has to insert the up-to-date values at plan time.
+	 */
+	nargsplusdefs = nargs;
+	foreach(l, argdefaults)
+	{
+		Node    *expr = (Node *) lfirst(l);
+		/* probably shouldn't happen ... */
+		if (nargsplusdefs >= FUNC_MAX_ARGS)
+			ereport(ERROR,
+					(errcode(ERRCODE_TOO_MANY_ARGUMENTS),
+							 errmsg("cannot pass more than %d arguments to a function",
+									 FUNC_MAX_ARGS),
+									 parser_errposition(pstate, location)));
+		actual_arg_types[nargsplusdefs++] = exprType(expr);
 	}
 
 	/*
@@ -353,7 +378,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 	 */
 	rettype = enforce_generic_type_consistency(actual_arg_types,
 											   declared_arg_types,
-											   nargs,
+											   nargsplusdefs,
 											   rettype);
 
 	/* perform the necessary typecasting of arguments */
@@ -382,7 +407,8 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					errmsg("could not find array type for data type %s",
-						   format_type_be(newa->element_typeid))));
+						   format_type_be(newa->element_typeid)),
+					parser_errposition(pstate, exprLocation((Node *) vargs))));
 		newa->multidims = false;
 
 		fargs = lappend(fargs, newa);
@@ -398,6 +424,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 		funcexpr->funcretset = retset;
 		funcexpr->funcformat = COERCE_EXPLICIT_CALL;
 		funcexpr->args = fargs;
+		funcexpr->location = location;
 
 		retval = (Node *) funcexpr;
 	}
@@ -530,13 +557,14 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 							func_signature_string(funcname, nargs, 
 												  actual_arg_types)),
 					 errhint("The filter clause is only supported over functions "
-							 "defined as STRICT.")));
+							 "defined as STRICT."),
+					 parser_errposition(pstate, location)));
 		}
 
 		if (retset)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-					 errmsg("aggregates may not return sets"),
+					 errmsg("aggregates cannot return sets"),
 					 parser_errposition(pstate, location)));
 
 		/* 
@@ -574,6 +602,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 		aggref->args        = fargs;
 		aggref->aggstar     = agg_star;
 		aggref->aggdistinct = agg_distinct;
+		aggref->location = location;
 
 		transformAggregateCall(pstate, aggref, agg_order);
 
@@ -981,7 +1010,7 @@ func_select_candidate(int nargs,
  * is as quick as possible.
  *
  * If an exact match isn't found:
- *	1) check for possible interpretation as a trivial type coercion
+ *	1) check for possible interpretation as a type coercion
  *	2) get a vector of all possible input arg type arrays constructed
  *	   from the superclasses of the original input arg types
  *	3) get a list of all possible argument type arrays to the function
@@ -1004,19 +1033,22 @@ func_get_detail(List *funcname,
 				int nargs,
 				Oid *argtypes,
 				bool expand_variadic,
+				bool expand_defaults,
 				Oid *funcid,	/* return value */
 				Oid *rettype,	/* return value */
 				bool *retset,	/* return value */
 				bool *retstrict, /* return value */
 				bool *retordered, /* return value */
 				int	 *nvargs,	/* return value */
-				Oid **true_typeids)		/* return value */
+				Oid **true_typeids,		/* return value */
+				List **argdefaults)     /* optional return value */
 {
 	FuncCandidateList raw_candidates;
 	FuncCandidateList best_candidate;
 
 	/* Get list of possible candidates from namespace search */
-	raw_candidates = FuncnameGetCandidates(funcname, nargs, expand_variadic);
+	raw_candidates = FuncnameGetCandidates(funcname, nargs,
+										   expand_variadic, expand_defaults);
 
 	/*
 	 * Quickly check if there is an exact match to the input datatypes (there
@@ -1036,29 +1068,37 @@ func_get_detail(List *funcname,
 		 * If we didn't find an exact match, next consider the possibility
 		 * that this is really a type-coercion request: a single-argument
 		 * function call where the function name is a type name.  If so, and
-		 * if we can do the coercion trivially (no run-time function call
-		 * needed), then go ahead and treat the "function call" as a coercion.
+		 * if the coercion path is RELABELTYPE or COERCEVIAIO, then go ahead
+		 * and treat the "function call" as a coercion.
+		 *
 		 * This interpretation needs to be given higher priority than
 		 * interpretations involving a type coercion followed by a function
 		 * call, otherwise we can produce surprising results. For example, we
-		 * want "text(varchar)" to be interpreted as a trivial coercion, not
+		 * want "text(varchar)" to be interpreted as a simple coercion, not
 		 * as "text(name(varchar))" which the code below this point is
 		 * entirely capable of selecting.
 		 *
-		 * "Trivial" coercions are ones that involve binary-compatible types
-		 * and ones that are coercing a previously-unknown-type literal
-		 * constant to a specific type.
+		 * We also treat a coercion of a previously-unknown-type literal
+		 * constant to a specific type this way.*
 		 *
-		 * The reason we can restrict our check to binary-compatible coercions
-		 * here is that we expect non-binary-compatible coercions to have an
-		 * implementation function named after the target type. That function
-		 * will be found by normal lookup if appropriate.
+		 * The reason we reject COERCION_PATH_FUNC here is that we expect the
+		 * cast implementation function to be named after the target type.
+		 * Thus the function will be found by normal lookup if appropriate.
 		 *
-		 * NB: it's important that this code stays in sync with what
-		 * coerce_type can do, because the caller will try to apply
-		 * coerce_type if we return FUNCDETAIL_COERCION.  If we return that
-		 * result for something coerce_type can't handle, we'll cause infinite
-		 * recursion between this module and coerce_type!
+		 *
+		 * The reason we reject COERCION_PATH_ARRAYCOERCE is mainly that
+		 * you can't write "foo[] (something)" as a function call.  In theory
+		 * someone might want to invoke it as "_foo (something)" but we have
+		 * never supported that historically, so we can insist that people
+		 * write it as a normal cast instead.  Lack of historical support is
+		 * also the reason for not considering composite-type casts here.
+		 *
+		 * NB: it's important that this code does not exceed what coerce_type
+		 * can do, because the caller will try to apply coerce_type if we
+		 * return FUNCDETAIL_COERCION.  If we return that result for something
+		 * coerce_type can't handle, we'll cause infinite recursion between
+		 * this module and coerce_type!
+		 *
 		 */
 		if (nargs == 1 && fargs != NIL)
 		{
@@ -1066,19 +1106,34 @@ func_get_detail(List *funcname,
 
 			targetType = LookupTypeName(NULL,
 										makeTypeNameFromNameList(funcname));
+
 			if (OidIsValid(targetType) &&
 				!ISCOMPLEX(targetType))
 			{
 				Oid			sourceType = argtypes[0];
 				Node	   *arg1 = linitial(fargs);
-				Oid			cfuncid;
+				bool		iscoercion;
 
-				if ((sourceType == UNKNOWNOID && IsA(arg1, Const)) ||
-					(find_coercion_pathway(targetType, sourceType,
-										   COERCION_EXPLICIT, &cfuncid) &&
-					 cfuncid == InvalidOid))
+				if (sourceType == UNKNOWNOID && IsA(arg1, Const))
 				{
-					/* Yup, it's a type coercion */
+					/* always treat typename('literal') as coercion */
+					iscoercion = true;
+				}
+				else
+				{
+					Oid			cfuncid;
+					CoercionPathType cpathtype;
+
+					cpathtype = find_coercion_pathway(targetType, sourceType,
+										   COERCION_EXPLICIT,
+											&cfuncid);
+					iscoercion = (cpathtype == COERCION_PATH_RELABELTYPE ||
+								cpathtype == COERCION_PATH_COERCEVIAIO);
+				}
+
+				if (iscoercion)
+				{
+					/* Yup, it's a trivial type coercion */
 					*funcid = InvalidOid;
 					*rettype = targetType;
 					*retset = false;
@@ -1133,6 +1188,17 @@ func_get_detail(List *funcname,
 		Form_pg_proc pform;
 		bool isagg = false;
 		cqContext	*procqCtx;
+		bool isnull;
+		Datum datum;
+		int pronargdefaults;
+
+		/*
+		 * If expanding variadics or defaults, the "best candidate" might
+		 * represent multiple equivalently good functions; treat this case
+		 * as ambiguous.
+		 */
+		if (!OidIsValid(best_candidate->oid))
+			return FUNCDETAIL_MULTIPLE;
 
 		*funcid = best_candidate->oid;
 		*nvargs = best_candidate->nvargs;
@@ -1154,6 +1220,44 @@ func_get_detail(List *funcname,
 		*retset = pform->proretset;
 		*retstrict = pform->proisstrict;
 		*retordered = false;
+
+		datum = SysCacheGetAttr(PROCOID, ftup,
+							    Anum_pg_proc_pronargdefaults, &isnull);
+		pronargdefaults = DatumGetObjectId(datum);
+
+		/* fetch default args if caller wants 'em */
+		if (argdefaults)
+		{
+			if (best_candidate->ndargs > 0)
+			{
+				Datum       proargdefaults;
+				bool        isnull;
+				char       *str;
+				List       *defaults;
+				int         ndelete;
+
+				/* shouldn't happen, FuncnameGetCandidates messed up */
+				if (best_candidate->ndargs > pronargdefaults)
+					elog(ERROR, "not enough default arguments");
+
+				proargdefaults = SysCacheGetAttr(PROCOID, ftup,
+												 Anum_pg_proc_proargdefaults,
+												 &isnull);
+				Assert(!isnull);
+				str = TextDatumGetCString(proargdefaults);
+				defaults = (List *) stringToNode(str);
+				Assert(IsA(defaults, List));
+				pfree(str);
+				/* Delete any unused defaults from the returned list */
+				ndelete = list_length(defaults) - best_candidate->ndargs;
+				while (ndelete-- > 0)
+					defaults = list_delete_first(defaults);
+				*argdefaults = defaults;
+			}
+			else
+				*argdefaults = NIL;
+		}
+
 		isagg = pform->proisagg;
 
 		caql_endscan(procqCtx);
@@ -1513,7 +1617,7 @@ LookupFuncName(List *funcname, int nargs, const Oid *argtypes, bool noError)
 {
 	FuncCandidateList clist;
 
-	clist = FuncnameGetCandidates(funcname, nargs, false);
+	clist = FuncnameGetCandidates(funcname, nargs, false, false);
 
 	while (clist)
 	{

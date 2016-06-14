@@ -43,7 +43,6 @@ CREATE RULE ab_reporting_beta_match_upd AS ON UPDATE TO ab_reporting_beta_match_
 CREATE RULE ab_reporting_beta_match_ins AS ON INSERT TO ab_reporting_beta_match DO INSTEAD INSERT INTO weblog_mart_tbls.ab_reporting_beta_match VALUES new.search_session_id;
 
 
---
 """
 
         in_name = os.path.join(os.getcwd(), 'infile')
@@ -94,11 +93,9 @@ CREATE UNIQUE INDEX dim_cruise_idx ON dim_cruise USING btree (cruiseid);
 CREATE INDEX ak1_property_select_error_loadtime ON hrs_property_select_errors USING btree (pse_load_timestamp);
 
 
---
 CREATE UNIQUE INDEX dim_betagroup_idx ON weblog_mart_tbls.dim_betagroup USING btree (betagroupid);
 
 
---
 """
 
         in_name = os.path.join(os.getcwd(), 'infile')
@@ -199,12 +196,10 @@ SET default_tablespace = '';
 
 SET default_with_oids = false;
 
---
 ALTER TABLE ONLY affil_linkshare_sku
     ADD CONSTRAINT affil_linkshare_sku_pkey PRIMARY KEY (affil_linkshare_sku_id);
 
 
---
 ALTER TABLE affil_page_landing_hist
     ADD CONSTRAINT affil_page_landing_hist_pkey PRIMARY KEY (affil_page_landing_hist_id);
 """
@@ -288,7 +283,7 @@ CREATE RULE ab_reporting_beta_match_ins AS ON INSERT TO weblog_mart_tbls.ab_repo
         os.remove(out_name)
 
     def test_check_table_valid(self):
-        line = 'ALTER TABLE ONLY ao_index_table\n'
+        line = 'ALTER TABLE ONLY public.ao_index_table\n'
         search_str = ' ONLY '
         schema = 'public'
         dump_tables = [('public', 'ao_index_table')]
@@ -312,7 +307,7 @@ CREATE RULE ab_reporting_beta_match_ins AS ON INSERT TO weblog_mart_tbls.ab_repo
         self.assertFalse(check_table(schema, line, search_str, dump_tables))
 
     def test_check_table_mismatched_table(self):
-        line = 'ALTER TABLE ONLY ao_index_table\n'
+        line = 'ALTER TABLE ONLY public.ao_index_table\n'
         search_str = ' ONLY '
         schema = 'public'
         dump_tables = [('public', 'ao_part_table')]
@@ -320,7 +315,7 @@ CREATE RULE ab_reporting_beta_match_ins AS ON INSERT TO weblog_mart_tbls.ab_repo
         self.assertFalse(check_table(schema, line, search_str, dump_tables))
 
     def test_check_table_trailing_text(self):
-        line = 'CREATE UNIQUE INDEX ON ao_index_table CLUSTER\n'
+        line = 'CREATE UNIQUE INDEX ON public.ao_index_table CLUSTER\n'
         search_str = ' ON '
         schema = 'public'
         dump_tables = [('public', 'ao_index_table')]
@@ -395,7 +390,6 @@ SET default_tablespace = '';
 
 SET default_with_oids = false;
 
---
 ALTER TABLE ONLY user_table
     ADD CONSTRAINT a_pkey PRIMARY KEY (a);
 
@@ -404,9 +398,6 @@ SET search_path = user_schema, pg_catalog;
 CREATE INDEX user_table_idx ON user_table USING btree (b);
 
 
---
--- Greenplum Database database dump complete
---
 """
 
         in_name = os.path.join(os.getcwd(), 'infile')
@@ -488,7 +479,6 @@ SET default_tablespace = '';
 
 SET default_with_oids = false;
 
---
 SET search_path = public, pg_catalog;
 CREATE INDEX "测试_btree_index" ON "测试" USING btree (id);
 
@@ -577,9 +567,6 @@ SET search_path = "测试_schema", pg_catalog;
 CREATE INDEX user_table_idx ON "测试" USING btree (b);
 
 
---
--- Greenplum Database database dump complete
---
 """
         in_name = os.path.join(os.getcwd(), 'infile')
         out_name = os.path.join(os.getcwd(), 'outfile')
@@ -664,9 +651,6 @@ SET search_path = "Áá_schema", pg_catalog;
 CREATE INDEX user_table_idx ON "Áá" USING btree (b);
 
 
---
--- Greenplum Database database dump complete
---
 """
         in_name = os.path.join(os.getcwd(), 'infile')
         out_name = os.path.join(os.getcwd(), 'outfile')
@@ -751,9 +735,6 @@ SET search_path = "Ж_schema", pg_catalog;
 CREATE INDEX user_table_idx ON "Ж" USING btree (b);
 
 
---
--- Greenplum Database database dump complete
---
 """
         in_name = os.path.join(os.getcwd(), 'infile')
         out_name = os.path.join(os.getcwd(), 'outfile')

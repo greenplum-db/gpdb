@@ -228,6 +228,9 @@ OPTIONS
  the destination database. If not specified, the default is 2. The 
  maximum is 10. 
 
+ When set to 1, it starts transferring of all tables based on the order 
+ specified from -t and -f option.
+
 -d <database>
 
  A source database to copy. This option can be specified multiple times 
@@ -328,7 +331,7 @@ OPTIONS
  file. 
 
 
--f <table_file> 
+-f <table-file>
 
  The location and name of file containing list of fully qualified table 
  names to copy from the Greenplum Database source system. In the text 
@@ -352,6 +355,68 @@ OPTIONS
  cannot specify individual tables from the database. 
 
  Not valid with the --full, -d, or -t options. 
+
+
+ --partition-transfer
+     Specify this option with the -f option to copy data from leaf child
+     partition tables of partitioned tables from a source database to the
+     leaf child partition tables in a destination database.
+
+     Note: the content in the text file specified by the -f option is
+     different from transferring normal tables without --partition-transfer.
+     For normal tables transfer, the file contains a list of fully qualified
+     table names specified separately on each line, for transferring leaf
+     partition tables, it contains a list of pairs of fully qualified table
+     names on each line.
+
+     Wildcard characters are not supported. Blank lines or commented lines
+     beginning with # (pound sign) will be ignored in the text file of -f
+     option.
+
+     Each line lists a pair of the fully qualified name of a source leaf
+     child partition table and the fully qualified name of a destination
+     leaf child partition table in this format.
+
+         src_db.src_schema.src_table,dest_db.dest_schema.dest_table
+
+     If source and destination partition tables are the same, below format
+     can be used.
+
+         transfer_db.transfer_schema.transfer_table
+
+     If the source and destination Greenplum Database systems are the
+     same, you must specify a destination table where at least one of the
+     following must be different from source partition table: database name,
+     schema name, and table name.
+
+     If either the source or destination table is not a leaf child partition,
+     the utility returns an error and no data are transferred.
+
+
+     Prerequisites:
+
+         The destination leaf partition table must exist.
+
+         These characteristics must be the same for each pair of the leaf
+         partition tables in the source and destination database.
+
+             Number of table columns and the order of the column data types
+             (the source and destination table names and table column names
+             can be different).
+
+             Partition level of the specified source and destination tables.
+
+             Partitioning criteria of the specified source and destination
+             leaf child partitions and child partitions above them in the
+             hierarchy (partition type and partition column key).
+
+     This option is not valid with the -d, --dest-database, --drop, -F, --full,
+     --schema-only, -T or -t options.
+
+     Note: If the destination table is not empty, the table row count validation
+     fails due to row count mismatch. If the destination table is not empty, you
+     can specify the --truncate option to truncate the table for the transfer
+     operation.
 
 
 -F <table-file> 
@@ -449,35 +514,6 @@ OPTIONS
  completes copying database objects to the target database. 
  The default is to compare the row count of tables copied to the destination 
  databases with the tables in the source database.
-
---partition-transfer
-
- Specify this option with the -f option to copy leaf child partition tables
- of partitioned tables from a source database to a destination database.
- The text file specified by the -f option contains a list of fully qualified
- leaf child partition table names. Each line lists one source and one
- destination table name as comma separated pair in below format.
-
- fully_qualified_source_table_name, fully_qualified_destination_table_name
-
- If only one table name is specified in the input file, source table name and
- destination table name will be the same.
-
- Wildcard characters are not supported.
-
- If the table is not a leaf child partition, the utility returns an error and
- no files are transferred. The destination partitioned table must exist and
- these characteristics must be the same for the partitioned table in the source
- and destination database.
-
-  Number of columns
-  Column order
-  Column data types
-  Partitioning criteria for the leaf child partition (partition type, partition
-  column, and partition values)
-
- This option is not valid with the -d, --dest-database, --drop, --full, -F, -t
- -T, or --schema-only options.
 
 -q | --quiet
 
@@ -732,6 +768,40 @@ are created. If any of the source tables exist on the destination
 system, gptransfer truncates the table and copies the data from the 
 source to the destination table. 
 
+
+This command copies leaf partition tables from source system to
+destination system.
+
+ gptransfer -f input_file --partition-transfer --source-host=source_host
+    --source-user=source_user --source-port=source_port
+    --dest-host=dest_host --dest-user=dest_user --dest-port=dest_port
+    --source-map-file=host_map_file
+
+Below is an example about specifying the pairs in the input_file of -f option.
+For instance, there is a leaf partition table called "person_1_prt_experienced"
+in schema "people" in database "srcdb" from source system:
+
+  CREATE TABLE person(id int, title char(1))
+  DISTRIBUTED BY (id)
+  PARTITION BY list (title)
+  (PARTITION experienced VALUES ('S'),
+   PARTITION entry_level VALUES ('J'),
+   DEFAULT PARTITION other );
+
+And there is a leaf partition table called "employee_1_prt_seniors" in schema
+"public" in database "destdb" from destination system:
+
+  CREATE TABLE employee(id int, level char(1))
+  DISTRIBUTED BY (id)
+  PARTITION BY list (level)
+  (PARTITION seniors VALUES ('S'),
+   PARTITION juniors VALUES ('J'),
+   DEFAULT PARTITION other );
+
+To copy data from "person_1_prt_experienced" to "employee_1_prt_seniors", specify
+below in the input_file:
+
+ srcdb.people.person_1_prt_experienced, destdb.public.employee_1_prt_seniors
 
 *****************************************************
 See Also

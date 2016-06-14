@@ -18,7 +18,6 @@
 #include "optimizer/clauses.h"
 #include "optimizer/plancat.h"
 #include "utils/hsearch.h"
-#include "utils/palloc.h"
 #include "utils/relcache.h"
 
 typedef enum
@@ -93,12 +92,11 @@ del_part_template(Oid rootrelid, int16 parlevel, Oid parent);
 extern void
 add_part_to_catalog(Oid relid, PartitionBy *pby, bool bTemplate_Only);
 
-extern void
-parruleord_reset_rank(Oid partid, int2 level, Oid parent, int2 ruleord, MemoryContext mcxt);
+extern void parruleord_reset_rank(Oid partid, int2 level, Oid parent,
+					  int2 ruleord);
 
-extern void
-parruleord_open_gap(Oid partid, int2 level, Oid parent, int2 ruleord,
-					int stopkey, MemoryContext mcxt, bool closegap);
+extern void parruleord_open_gap(Oid partid, int2 level, Oid parent,
+					int2 ruleord, int stopkey, bool closegap);
 
 extern AttrNumber 
 max_partition_attr(PartitionNode *pn);
@@ -109,15 +107,11 @@ get_partition_attrs(PartitionNode *pn);
 extern int 
 num_partition_levels(PartitionNode *pn);
 
-extern PartitionRule *
-ruleMakePartitionRule(HeapTuple tuple,
-											TupleDesc tupdesc,
-											MemoryContext mcxt);
+extern PartitionRule *ruleMakePartitionRule(HeapTuple tuple,
+					  TupleDesc tupdesc);
 
-extern Partition *
-partMakePartition(HeapTuple tuple,
-									TupleDesc tupdesc,
-									MemoryContext mcxt);
+extern Partition *partMakePartition(HeapTuple tuple,
+				  TupleDesc tupdesc);
 
 extern List *
 all_partition_relids(PartitionNode *pn);
@@ -128,18 +122,16 @@ get_relation_part_constraints(Oid rootOid, List **defaultLevels);
 extern List *
 all_prule_relids(PartitionRule *prule);
 
-extern PgPartRule *
-get_part_rule1(Relation rel, AlterPartitionId *pid,
-								  bool bExistError, bool bMustExist,
-								  MemoryContext mcxt, int *pSearch,
-								  PartitionNode *pNode,
-								  char *relname, PartitionNode **ppNode);
+extern PgPartRule *get_part_rule1(Relation rel, AlterPartitionId *pid,
+			   bool bExistError, bool bMustExist,
+			   int *pSearch,
+			   PartitionNode *pNode,
+			   char *relname, PartitionNode **ppNode);
 
-extern PgPartRule *
-get_part_rule(Relation rel, AlterPartitionId *pid,
-								 bool bExistError, bool bMustExist,
-								 MemoryContext mcxt, int *pSearch,
-								 bool inctemplate);
+extern PgPartRule *get_part_rule(Relation rel, AlterPartitionId *pid,
+			  bool bExistError, bool bMustExist,
+			  int *pSearch,
+			  bool inctemplate);
 
 
 extern char *
@@ -154,9 +146,8 @@ partition_get_policies_attrs(PartitionNode *pn,
 							             List **cols);
 
 /* RelationBuildPartitionDesc is built from get_parts */
-extern PartitionNode *
-get_parts(Oid relid, int2 level, Oid parent, bool inctemplate,
-		  MemoryContext mcxt, bool includesubparts);
+extern PartitionNode *get_parts(Oid relid, int2 level, Oid parent, bool inctemplate,
+		  bool includesubparts);
 
 extern List *
 rel_get_leaf_children_relids(Oid relid);
@@ -175,10 +166,10 @@ extern Oid selectPartition(PartitionNode *partnode, Datum *values,
 						   PartitionAccessMethods *accessMethods);
 
 extern Node *atpxPartAddList(Relation rel, 
-							 AlterPartitionCmd *pc,
+							 bool is_split,
+							 List *colencs,
 							 PartitionNode *pNode, 
-							 Node *pUtl,
-							 Node *partName, 
+							 char *partName,
 							 bool isDefault,
 							 PartitionElem *pelem,
 							 PartitionByType part_type,

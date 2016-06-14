@@ -166,4 +166,57 @@ drop table gp_persistent_all_types;
 drop table gp_persistent_supplier_hybrid_part;
 drop table gp_persistent_supplier_hybrid_subpart;
 drop table gp_persistent_supplier_hybrid_subpart1;
+--
+-- Test rebuilding free tid list
+--
 
+-- Input is PT OID and output is number of tuples in the rebuilt list.
+create function gp_persistent_freelist_rebuild(oid) returns int as
+	   '$libdir/gp_persistent_util', 'gp_persistent_freelist_rebuild' language C strict;
+
+-- Verifying sanity of free list before rebuilding is not exactly
+-- necessary, because rebuilding should make it sane.  But we check it
+-- anyway, as we don't expect ICG tests to break freelist.
+select count(*) = max(persistent_serial_num) as freelist_valid
+	   from gp_persistent_relation_node where previous_free_tid > '(0,0)';
+select gp_persistent_freelist_rebuild('gp_persistent_relation_node'::regclass) > 0
+	   as freelist_rebuilt;
+select count(*) = max(persistent_serial_num) as freelist_valid
+	   from gp_persistent_relation_node where previous_free_tid > '(0,0)';
+
+select count(*) = max(persistent_serial_num) as freelist_valid
+	   from gp_persistent_database_node where previous_free_tid > '(0,0)';
+select gp_persistent_freelist_rebuild('gp_persistent_database_node'::regclass) > 0
+	   as freelist_rebuilt;
+select count(*) = max(persistent_serial_num) as freelist_valid
+	   from gp_persistent_database_node where previous_free_tid > '(0,0)';
+
+-- TODO: Validate that max(ctid) and max(persistent_serial_num) yield
+-- the same tuple in the free list.
+
+SET allow_system_table_mods = 'DML';
+SET gp_permit_persistent_metadata_update = true;
+
+-- Break free list by updating persistent_serial_num = 2, so there are
+-- two free list entries with same free order number.  This should be
+-- fixed by rebuild.  Assume at least three entries in the free list,
+-- because we have dropped very many objects earlier in this test.
+UPDATE gp_persistent_relation_node SET persistent_serial_num = 2
+	   WHERE persistent_serial_num = 3 AND previous_free_tid > '(0, 0)';
+
+SET allow_system_table_mods = 'NONE';
+SET gp_permit_persistent_metadata_update = false;
+
+select count(*) = count(distinct(persistent_serial_num)) as freelist_valid
+	   from gp_persistent_relation_node where previous_free_tid > '(0,0)';
+select gp_persistent_freelist_rebuild('gp_persistent_relation_node'::regclass) > 0
+	   as freelist_rebuilt;
+select count(*) = count(distinct(persistent_serial_num)) as freelist_valid
+	   from gp_persistent_relation_node where previous_free_tid > '(0,0)';
+
+-- DDL after rebuilding free list
+create table gp_persistent_ao(a int, b int) with (appendonly=true);
+create index gp_persistent_ao_idx on gp_persistent_ao(a);
+insert into gp_persistent_ao select i,i from generate_series(1,10)i;
+select count(*) from gp_persistent_ao;
+drop table gp_persistent_ao;

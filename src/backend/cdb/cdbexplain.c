@@ -43,7 +43,6 @@ typedef struct CdbExplain_StatInst
     double      execmemused;    /* executor memory used (bytes) */
     double      workmemused;    /* work_mem actually used (bytes) */
     double      workmemwanted;  /* work_mem to avoid workfile i/o (bytes) */
-	bool        workfileReused; /* workfile reused in this node */
 	bool        workfileCreated;/* workfile created in this node */
 	instr_time	firststart;		/* Start time of first iteration of node */
 	double		peakMemBalance; /* Max mem account balance */
@@ -108,7 +107,6 @@ typedef struct CdbExplain_NodeSummary
     CdbExplain_Agg  execmemused;
     CdbExplain_Agg  workmemused;
     CdbExplain_Agg  workmemwanted;
-	CdbExplain_Agg  totalWorkfileReused;
 	CdbExplain_Agg  totalWorkfileCreated;
     CdbExplain_Agg  peakMemBalance;
     /* Used for DynamicTableScan, DynamicIndexScan and DynamicBitmapTableScan */
@@ -153,7 +151,6 @@ typedef struct CdbExplain_SliceSummary
 /* State for cdbexplain_showExecStats() */
 typedef struct CdbExplain_ShowStatCtx
 {
-    MemoryContext   explaincxt;         /* alloc all our buffers from this */
     StringInfoData  extratextbuf;
     instr_time      querystarttime;
 
@@ -268,14 +265,10 @@ cdbexplain_localExecStats(struct PlanState                 *planstate,
                           struct CdbExplain_ShowStatCtx    *showstatctx)
 {
     CdbExplain_LocalStatCtx ctx;
-    MemoryContext           oldcxt;
 
     Assert(Gp_role != GP_ROLE_EXECUTE);
 
     Insist(planstate && planstate->instrument && showstatctx);
-
-    /* Switch to the EXPLAIN memory context. */
-    oldcxt = MemoryContextSwitchTo(showstatctx->explaincxt);
 
     memset(&ctx, 0, sizeof(ctx));
 
@@ -307,9 +300,6 @@ cdbexplain_localExecStats(struct PlanState                 *planstate,
     /* Obtain per-slice stats and put them in SliceSummary. */
     cdbexplain_collectSliceStats(planstate, &ctx.send.hdr.worker);
     cdbexplain_depositSliceStats(&ctx.send.hdr, &ctx.recv);
-
-    /* Restore caller's memory context. */
-    MemoryContextSwitchTo(oldcxt);
 }                               /* cdbexplain_localExecStats */
 
 
@@ -473,7 +463,6 @@ cdbexplain_recvExecStats(struct PlanState              *planstate,
     CdbDispatchResult          *dispatchResultEnd;
     CdbExplain_RecvStatCtx      ctx;
     CdbExplain_DispatchSummary  ds;
-    MemoryContext   oldcxt;
     int             gpsegmentCount = getgpsegmentCount();
     int             iDispatch;
     int             nDispatch;
@@ -490,7 +479,6 @@ cdbexplain_recvExecStats(struct PlanState              *planstate,
      * must not return ptrs into the dispatch result buffers, but must copy any
      * needed information into a sufficiently long-lived memory context.
      */
-    oldcxt = MemoryContextSwitchTo(showstatctx->explaincxt);
 
     /* Initialize treewalk context. */
     memset(&ctx, 0, sizeof(ctx));
@@ -613,9 +601,6 @@ cdbexplain_recvExecStats(struct PlanState              *planstate,
     /* Transfer worker counts to SliceSummary. */
     showstatctx->slices[sliceIndex].dispatchSummary = ds;
 
-    /* Restore caller's memory context. */
-    MemoryContextSwitchTo(oldcxt);
-
     /* Clean up. */
     if (ctx.msgptrs)
         pfree(ctx.msgptrs);
@@ -727,9 +712,6 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr        *hdr,
     /* Slice's first worker? */
     if (!ss->workers)
     {
-        /* Caller already switched to EXPLAIN context. */
-        Assert(CurrentMemoryContext == showstatctx->explaincxt);
-
         /* Allocate SliceWorker array and attach it to the SliceSummary. */
         ss->segindex0 = recvstatctx->segindexMin;
         ss->nworker = recvstatctx->segindexMax + 1 - ss->segindex0;
@@ -819,9 +801,8 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
     si->execmemused     = instr->execmemused;
     si->workmemused     = instr->workmemused;
     si->workmemwanted   = instr->workmemwanted;
-    si->workfileReused   = instr->workfileReused;
     si->workfileCreated  = instr->workfileCreated;
-	si->peakMemBalance	 = MemoryAccounting_GetPeak(planstate->plan->memoryAccount);
+	si->peakMemBalance	 = MemoryAccounting_GetPeak(planstate->memoryAccount);
 	si->firststart      = instr->firststart;
 	si->numPartScanned = instr->numPartScanned;
 }                               /* cdbexplain_collectStatsFromNode */
@@ -942,7 +923,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
     CdbExplain_DepStatAcc       execmemused;
     CdbExplain_DepStatAcc       workmemused;
     CdbExplain_DepStatAcc       workmemwanted;
-    CdbExplain_DepStatAcc       totalWorkfileReused;
     CdbExplain_DepStatAcc       totalWorkfileCreated;
     CdbExplain_DepStatAcc       peakmemused;
     CdbExplain_DepStatAcc		vmem_reserved;
@@ -954,9 +934,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 
     Insist(instr &&
            ctx->iStatInst < ctx->nStatInst);
-
-    /* Caller already switched to EXPLAIN context. */
-    Assert(CurrentMemoryContext == ctx->showstatctx->explaincxt);
 
     /* Allocate NodeSummary block. */
     nInst = ctx->segindexMax + 1 - ctx->segindexMin;
@@ -973,7 +950,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
     cdbexplain_depStatAcc_init0(&execmemused);
     cdbexplain_depStatAcc_init0(&workmemused);
     cdbexplain_depStatAcc_init0(&workmemwanted);
-	cdbexplain_depStatAcc_init0(&totalWorkfileReused);
 	cdbexplain_depStatAcc_init0(&totalWorkfileCreated);
     cdbexplain_depStatAcc_init0(&peakMemBalance);
     cdbexplain_depStatAcc_init0(&totalPartTableScanned);
@@ -1020,7 +996,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
         cdbexplain_depStatAcc_upd(&execmemused, rsi->execmemused, rsh, rsi, nsi);
         cdbexplain_depStatAcc_upd(&workmemused, rsi->workmemused, rsh, rsi, nsi);
         cdbexplain_depStatAcc_upd(&workmemwanted, rsi->workmemwanted, rsh, rsi, nsi);
-		cdbexplain_depStatAcc_upd(&totalWorkfileReused, (rsi->workfileReused ? 1 : 0), rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&totalWorkfileCreated, (rsi->workfileCreated ? 1 : 0), rsh, rsi, nsi);
         cdbexplain_depStatAcc_upd(&peakMemBalance, rsi->peakMemBalance, rsh, rsi, nsi);
         cdbexplain_depStatAcc_upd(&totalPartTableScanned, rsi->numPartScanned, rsh, rsi, nsi);
@@ -1036,7 +1011,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
     ns->execmemused = execmemused.agg;
     ns->workmemused = workmemused.agg;
     ns->workmemwanted = workmemwanted.agg;
-	ns->totalWorkfileReused = totalWorkfileReused.agg;
 	ns->totalWorkfileCreated = totalWorkfileCreated.agg;
     ns->peakMemBalance = peakMemBalance.agg;
     ns->totalPartTableScanned = totalPartTableScanned.agg;
@@ -1063,7 +1037,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
         instr->execmemused      = ntuples.nsimax->execmemused;
         instr->workmemused      = ntuples.nsimax->workmemused;
         instr->workmemwanted    = ntuples.nsimax->workmemwanted;
-		instr->workfileReused   = ntuples.nsimax->workfileReused;
 		instr->workfileCreated  = ntuples.nsimax->workfileCreated;
         instr->firststart       = ntuples.nsimax->firststart;
     }
@@ -1091,14 +1064,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
          */
         if (peakmemused.agg.vmax > 1.05 * cdbexplain_agg_avg(&peakmemused.agg))
             cdbexplain_depStatAcc_saveText(&peakmemused, ctx->extratextbuf, &saved);
-
-		/*
-		 * One worker that used cached workfiles.
-		 */
-		if (totalWorkfileReused.agg.vcnt > 0)
-		{
-			cdbexplain_depStatAcc_saveText(&totalWorkfileReused, ctx->extratextbuf, &saved);
-		}
 		
         /*
          * One worker which produced the greatest number of output rows.
@@ -1163,17 +1128,11 @@ static void
 cdbexplain_formatExtraText(StringInfo   str,
                            int          indent,
                            int          segindex,
-						   bool         workfileReuse,
                            const char  *notes,
                            int          notelen)
 {
     const char *cp = notes;
     const char *ep = notes + notelen;
-	const char *reuse = "";
-	if (workfileReuse)
-	{
-		reuse = " reuse";
-	}
 
     /* Could be more than one line... */
     while (cp < ep)
@@ -1192,7 +1151,7 @@ cdbexplain_formatExtraText(StringInfo   str,
             appendStringInfoFill(str, 2*indent, ' ');
             if (segindex >= 0)
             {
-                appendStringInfo(str, "(seg%d%s) ", segindex, reuse);
+                appendStringInfo(str, "(seg%d) ", segindex);
                 if (segindex < 10)
                     appendStringInfoChar(str, ' ');
                 if (segindex < 100)
@@ -1297,33 +1256,22 @@ cdbexplain_formatSeg(char *outbuf, int bufsize, int segindex, int nInst)
  *
  * 'querystarttime' is the timestamp of the start of the query, in a
  *      platform-dependent format.
- * 'explaincxt' is a MemoryContext from which to allocate the ShowStatCtx as
- *      well as any needed buffers and the like.  The explaincxt ptr is saved
- *      in the ShowStatCtx.  The caller is expected to reset or destroy the
- *      explaincxt not too long after calling cdbexplain_showExecStatsEnd(); so
- *      we don't bother to pfree() memory that we allocate from this context.
  *
  * Note this function is called before ExecutorStart(), so there is no EState
  * or SliceTable yet.
  */
 struct CdbExplain_ShowStatCtx *
 cdbexplain_showExecStatsBegin(struct QueryDesc *queryDesc,
-                              MemoryContext     explaincxt,
                               instr_time        querystarttime)
 {
-    MemoryContext           oldcontext;
     CdbExplain_ShowStatCtx *ctx;
     int                     nslice;
 
     Assert(Gp_role != GP_ROLE_EXECUTE);
 
-    /* Switch to EXPLAIN memory context. */
-    oldcontext = MemoryContextSwitchTo(explaincxt);
-
     /* Allocate and zero the ShowStatCtx */
     ctx = (CdbExplain_ShowStatCtx *)palloc0(sizeof(*ctx));
 
-    ctx->explaincxt = explaincxt;
     ctx->querystarttime = querystarttime;
 
     /* Determine number of slices.  (SliceTable hasn't been built yet.) */
@@ -1336,8 +1284,6 @@ cdbexplain_showExecStatsBegin(struct QueryDesc *queryDesc,
     /* Allocate a buffer in which we can collect any extra message text. */
     initStringInfoOfSize(&ctx->extratextbuf, 4000);
 
-    /* Restore caller's MemoryContext. */
-    MemoryContextSwitchTo(oldcontext);
     return ctx;
 }                               /* cdbexplain_showExecStatsBegin */
 
@@ -1574,9 +1520,8 @@ cdbexplain_showExecStats(struct PlanState              *planstate,
     	if (nodeSupportWorkfileCaching(planstate))
     	{
     		appendStringInfo(str,
-    						 " Workfile: (%d spilling, %d reused)",
-    						 ns->totalWorkfileCreated.vcnt,
-    						 ns->totalWorkfileReused.vcnt);
+							 " Workfile: (%d spilling)",
+							 ns->totalWorkfileCreated.vcnt);
     	}
 
     	appendStringInfo(str,"\n");
@@ -1739,7 +1684,6 @@ cdbexplain_showExecStats(struct PlanState              *planstate,
                                        indent,
                                        (ns->ninst == 1) ? -1
                                                         : ns->segindex0 + i,
-									   nsi->workfileReused,
                                        ctx->extratextbuf.data + nsi->bnotes,
                                        nsi->enotes - nsi->bnotes);
         }
@@ -1801,9 +1745,7 @@ cdbexplain_showExecStats(struct PlanState              *planstate,
  * 'str' is the output buffer.
  *
  * This doesn't free the CdbExplain_ShowStatCtx object or buffers, because
- * shortly afterwards the caller is expected to destroy the 'explaincxt'
- * MemoryContext which was passed to cdbexplain_showExecStatsBegin(), thus
- * freeing all at once.
+ * they will be free'd shortly by the end of statement anyway.
  */
 void
 cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,

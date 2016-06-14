@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	$PostgreSQL: pgsql/src/backend/utils/adt/oracle_compat.c,v 1.67.2.1 2007/02/08 20:33:54 momjian Exp $
+ *	$PostgreSQL: pgsql/src/backend/utils/adt/oracle_compat.c,v 1.69 2007/02/08 18:19:33 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -321,7 +321,7 @@ wstring_lower(char *str)
 
 	out_text = wcstotext(workspace, i);
 	
-    	nbytes = VARSIZE(out_text) - VARHDRSZ;
+	nbytes = VARSIZE(out_text) - VARHDRSZ;
 	result = palloc(nbytes + 1);
 	memcpy(result, VARDATA(out_text), nbytes);
 

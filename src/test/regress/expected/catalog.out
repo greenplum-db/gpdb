@@ -1,0 +1,219 @@
+set optimizer_enable_master_only_queries = on;
+--
+-- Catalog Changes for function properties (original error when optimizer set to on: could not find tuple for constraint 88611)
+--
+select
+            tableid,
+            tableconname,
+            contype,
+            condef,
+            numexpected,
+            numactual
+        from
+            (
+                        select
+                                c.tableid,
+                                c.tableconname,
+                                c.contype,
+                                c.condef,
+                                i.tableparts + 1,
+                                count(c.partid),
+                                count(distinct c.partconname)
+                        from
+                                (
+                                        select
+                                                u.tableid,
+                                                u.conname,
+                                                u.contype,
+                                                u.condef,
+                                                p.partid,
+                                                p.conid,
+                                                coalesce(p.conname)
+                                        from
+                                                (
+                                                        select
+                                                                p.tableid,
+                                                                c.conname,
+                                                                c.contype,
+                                                                pg_get_constraintdef(c.oid) as condef
+                                                        from
+                                                                (
+                                                                        select
+                                                                                parrelid::regclass,
+                                                                                max(parlevel)+1
+                                                                        from
+                                                                                pg_partition
+                                                                        group by parrelid
+                                                                ) as p(tableid, tabledepth) ,
+                                                                pg_constraint c
+                                                        where
+                                                                p.tableid = c.conrelid
+                                                ) as u(tableid, conname, contype, condef)
+                                                        join
+                                                (
+                                                        select
+                                                                x.tableid::regclass as tableid,
+                                                                c.conrelid::regclass as partid,
+                                                                c.oid as conid,
+                                                                c.conname,
+                                                                c.contype,
+                                                                pg_get_constraintdef(c.oid) as condef
+                                                        from
+                                                                pg_constraint c,
+                                                                (
+                                                                        select
+                                                                                tableid,
+                                                                                tabledepth,
+                                                                                tableid::regclass partid,
+                                                                                0 as partdepth,
+                                                                                0 as partordinal,
+                                                                                'r'::char as partstatus
+                                                                        from
+                                                                                (
+                                                                                        select
+                                                                                                parrelid::regclass,
+                                                                                                max(parlevel)+1
+                                                                                        from
+                                                                                                pg_partition
+                                                                                        group by parrelid
+                                                                                ) as ptable(tableid, tabledepth)
+                                                                        union all
+                                                                        select
+                                                                                parrelid::regclass as tableid,
+                                                                                t.tabledepth as tabledepth,
+                                                                                r.parchildrelid::regclass partid,
+                                                                                p.parlevel + 1 as partdepth,
+                                                                                r.parruleord as partordinal,
+                                                                                case
+                                                                                        when t.tabledepth = p.parlevel + 1 then 'l'::char
+                                                                                        else 'i'::char
+                                                                                end as partstatus
+                                                                        from
+                                                                                pg_partition p,
+                                                                                pg_partition_rule r,
+                                                                                 (
+                                                                                        select
+                                                                                                parrelid::regclass,
+                                                                                                max(parlevel)+1
+                                                                                        from
+                                                                                                pg_partition
+                                                                                        group by parrelid
+                                                                                ) as t(tableid, tabledepth)
+                                                                        where
+                                                                                p.oid = r.paroid
+                                                                                and not p.paristemplate
+                                                                                and p.parrelid = t.tableid
+                                                                ) as x(tableid, tabledepth, partid, partdepth, partordinal, partstatus)
+                                                        where
+                                                                x.partid = c.conrelid
+                                                ) as p(tableid, partid, conid, conname, contype, condef)
+                                                        on (
+                                                                u.tableid = p.tableid and
+                                                                u.contype = p.contype and
+                                                                u.condef = p.condef
+                                                                )
+                                ) as c(tableid, tableconname, contype, condef, partid, partconid, partconname) ,
+                                (
+                                        select
+                                                t.tableid,
+                                                t.tabledepth,
+                                                n.nparts as tableparts,
+                                                r.nspname,
+                                                r.relname
+                                        from
+                                                (
+                                                        select
+                                                                parrelid::regclass,
+                                                                max(parlevel)+1
+                                                        from
+                                                                pg_partition
+                                                        group by parrelid
+                                                ) as t(tableid, tabledepth) ,
+                                                (
+                                                        select
+                                                                c.oid::regclass as relid,
+                                                                n.nspname,
+                                                                c.relname,
+                                                                c.relkind
+                                                        from
+                                                                pg_class c,
+                                                                pg_namespace n
+                                                        where
+                                                                c.relnamespace = n.oid
+                                                ) as r(relid, nspname, relname, relkind) ,
+                                                 (
+                                                        select tableid, count(*)
+                                                        from (
+                                                                        select
+                                                                                t.tableid::regclass,
+                                                                                p.parchildrelid::regclass as partid
+                                                                        from
+                                                                                (
+                                                                                        select pg_partition.parrelid, pg_partition.oid
+                                                                                        from pg_partition
+                                                                                        where not pg_partition.paristemplate
+                                                                                ) t(tableid, partid),
+                                                                                pg_partition_rule p
+                                                                        where p.paroid = t.partid
+                                                                ) as contains_part(tableid, partid)
+                                                        group by tableid
+                                                ) n(tableid, nparts)
+                                        where
+                                                t.tableid = r.relid and
+                                                t.tableid = n.tableid
+                                ) as i(tableid, tabledepth, tableparts, nspname, relname)
+                        where
+                                c.tableid = i.tableid
+                        group by
+                                c.tableid,
+                                c.tableconname,
+                                c.contype,
+                                c.condef,
+                                i.tableparts
+                ) as ptable_user_con_info(tableid, tableconname, contype, condef, numexpected, numactual, numnames)
+        where
+            contype != 'f' and -- no FK consistency in Rio
+            numexpected != numactual;
+ tableid | tableconname | contype | condef | numexpected | numactual 
+---------+--------------+---------+--------+-------------+-----------
+(0 rows)
+
+--
+--
+--
+select count(*)/1000 from 
+(select
+(select ressetting from pg_resqueue_attributes b
+where a.rsqname=b.rsqname and resname='priority') as "Priority",
+(select count(*) from pg_resqueue x,pg_roles y
+where x.oid=y.rolresqueue and a.rsqname=x.rsqname) as "RQAssignedUsers"
+from ( select distinct rsqname from pg_resqueue_attributes ) a)
+as foo;
+ ?column? 
+----------
+        0
+(1 row)
+
+select count(*)/1000 from
+(select a.rsqname as "RQname",
+(select ressetting from pg_resqueue_attributes b
+where a.rsqname=b.rsqname and resname='active_statements') as "ActiveStatment",
+(select ressetting from pg_resqueue_attributes b
+where a.rsqname=b.rsqname and resname='max_cost') as "MaxCost",
+(select ressetting from pg_resqueue_attributes b
+where a.rsqname=b.rsqname and resname='min_cost') as "MinCost",
+(select ressetting from pg_resqueue_attributes b
+where a.rsqname=b.rsqname and resname='cost_overcommit') as "CostOvercommit",
+(select ressetting from pg_resqueue_attributes b
+where a.rsqname=b.rsqname and resname='memory_limit') as "MemoryLimit",
+(select ressetting from pg_resqueue_attributes b
+where a.rsqname=b.rsqname and resname='priority') as "Priority",
+(select count(*) from pg_resqueue x,pg_roles y
+where x.oid=y.rolresqueue and a.rsqname=x.rsqname) as "RQAssignedUsers"
+from ( select distinct rsqname from pg_resqueue_attributes ) a)
+as foo;
+ ?column? 
+----------
+        0
+(1 row)
+

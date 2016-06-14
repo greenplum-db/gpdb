@@ -115,7 +115,7 @@ regprocin(PG_FUNCTION_ARGS)
 	 * pg_proc entries in the current search path.
 	 */
 	names = stringToQualifiedNameList(pro_name_or_oid, "regprocin");
-	clist = FuncnameGetCandidates(names, -1, false);
+	clist = FuncnameGetCandidates(names, -1, false, false);
 
 	if (clist == NULL)
 		ereport(ERROR,
@@ -179,7 +179,7 @@ regprocout(PG_FUNCTION_ARGS)
 			 * Would this proc be found (uniquely!) by regprocin? If not,
 			 * qualify it.
 			 */
-			clist = FuncnameGetCandidates(list_make1(makeString(proname)), -1, false);
+			clist = FuncnameGetCandidates(list_make1(makeString(proname)), -1, false, false);
 			if (clist != NULL && clist->next == NULL &&
 				clist->oid == proid)
 				nspname = NULL;
@@ -267,7 +267,7 @@ regprocedurein(PG_FUNCTION_ARGS)
 	parseNameAndArgTypes(pro_name_or_oid, "regprocedurein", false,
 						 &names, &nargs, argtypes);
 
-	clist = FuncnameGetCandidates(names, nargs, false);
+	clist = FuncnameGetCandidates(names, nargs, false, false);
 
 	for (; clist; clist = clist->next)
 	{
@@ -1054,9 +1054,11 @@ regtypesend(PG_FUNCTION_ARGS)
 	return oidsend(fcinfo);
 }
 
-
 /*
  * text_regclass: convert text to regclass
+ * This could be replaced by CoerceViaIO, except that we need to treat
+ * text-to-regclass as an implicit cast to support legacy forms of nextval()
+ * and related functions.
  */
 Datum
 text_regclass(PG_FUNCTION_ARGS)

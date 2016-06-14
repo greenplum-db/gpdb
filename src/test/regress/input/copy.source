@@ -76,7 +76,7 @@ copy copytest to '@abs_builddir@/results/copytest.csv' csv;
 create temp table copytest2 (like copytest);
 
 copy copytest2 from '@abs_builddir@/results/copytest.csv' csv;
-copy copytest2 from '@abs_builddir@/results/copytest.csv' csv LOG ERRORS INTO errtable SEGMENT REJECT LIMIT 10 ROWS;
+copy copytest2 from '@abs_builddir@/results/copytest.csv' csv LOG ERRORS SEGMENT REJECT LIMIT 10 ROWS;
 
 select * from copytest except select * from copytest2 order by 1,2,3;
 

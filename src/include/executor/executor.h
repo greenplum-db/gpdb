@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/executor.h,v 1.134 2007/01/10 18:06:04 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/executor/executor.h,v 1.136 2007/02/06 02:59:13 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -116,6 +116,10 @@ extern TupleHashTable BuildTupleHashTable(int numCols, AttrNumber *keyColIdx,
 extern TupleHashEntry LookupTupleHashEntry(TupleHashTable hashtable,
 					 TupleTableSlot *slot,
 					 bool *isnew);
+extern TupleHashEntry FindTupleHashEntry(TupleHashTable hashtable,
+										 TupleTableSlot *slot,
+										 FmgrInfo *eqfunctions,
+										 FmgrInfo *hashfunctions);
 
 /*
  * prototypes from functions in execJunk.c
@@ -207,6 +211,8 @@ extern TupleTableSlot *ExecutorRun(QueryDesc *queryDesc,
 			ScanDirection direction, long count);
 extern void ExecutorEnd(QueryDesc *queryDesc);
 extern void ExecutorRewind(QueryDesc *queryDesc);
+extern void ExecCheckRTPerms(List *rangeTable);
+extern void ExecCheckRTEPerms(RangeTblEntry *rte);
 extern void ExecEndPlan(PlanState *planstate, EState *estate);
 extern bool ExecContextForcesOids(PlanState *planstate, bool *hasoids);
 extern void ExecConstraints(ResultRelInfo *resultRelInfo,
@@ -408,6 +414,7 @@ extern void end_tup_output(TupOutputState *tstate);
 extern EState *CreateExecutorState(void);
 extern EState *CreateSubExecutorState(EState *parent_estate);
 extern void FreeExecutorState(EState *estate);
+extern void ClearPartitionState(EState *estate);
 extern ExprContext *CreateExprContext(EState *estate);
 extern ExprContext *CreateStandaloneExprContext(void);
 extern void FreeExprContext(ExprContext *econtext);

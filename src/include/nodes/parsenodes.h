@@ -14,7 +14,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/parsenodes.h,v 1.338 2007/01/09 02:14:15 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/parsenodes.h,v 1.340 2007/02/03 14:06:55 petere Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -301,9 +301,9 @@ typedef struct A_Const
  * TypeCast - a CAST expression
  *
  * NOTE: for mostly historical reasons, A_Const parsenodes contain
- * room for a TypeName; we only generate a separate TypeCast node if the
- * argument to be casted is not a constant.  In theory either representation
- * would work, but the combined representation saves a bit of code in many
+ * room for a TypeName, allowing a constant to be marked as being of a given
+ * type without a separate TypeCast node.  Either representation will work,
+ * but the combined representation saves a bit of code in many
  * productions in gram.y.
  */
 typedef struct TypeCast
@@ -470,7 +470,6 @@ typedef struct ColumnDef
 	char	   *cooked_default; /* nodeToString representation */
 	List	   *constraints;	/* other constraints on column */
 	List	   *encoding;		/* ENCODING clause */
-	bool	   default_is_null;	/* DEFAULT NULL case */
 } ColumnDef;
 
 /*
@@ -516,7 +515,7 @@ typedef struct IndexElem
 typedef struct ColumnReferenceStorageDirective
 {
 	NodeTag		type;
-	Value	   *column;
+	char	   *column;	  /* column name, or NULL for DEFAULTs (deflt==true) */
 	bool		deflt;
 	List	   *encoding;
 } ColumnReferenceStorageDirective;
@@ -1084,6 +1083,7 @@ typedef enum ObjectType
 	OBJECT_LARGEOBJECT,
 	OBJECT_OPCLASS,
 	OBJECT_OPERATOR,
+	OBJECT_OPFAMILY,
 	OBJECT_ROLE,
 	OBJECT_RULE,
 	OBJECT_SCHEMA,
@@ -1113,8 +1113,20 @@ typedef struct CreateSchemaStmt
 	char	   *schemaname;		/* the name of the schema to create */
 	char	   *authid;			/* the owner of the created schema */
 	List	   *schemaElts;		/* schema components (list of parsenodes) */
+
+	/*
+	 * In GPDB, when a CreateSchemaStmt is dispatched to executor nodes, the
+	 * following fields are set. schemaOid is the OID of the new schema.
+	 *
+	 * There's a special case for when the temporary namespace is created,
+	 * on the first use in the session. There are actually two temporary
+	 * namespaces, the regular one, and a temporary toast namespace. They are
+	 * both created in the same command, with istemp='true', schemaOid the
+	 * temp namespace's OID, and toastSchemaOid the temp toast namespace's OID.
+	 */
 	bool        istemp;         /* true for temp schemas (internal only) */
 	Oid			schemaOid;
+	Oid			toastSchemaOid;
 } CreateSchemaStmt;
 
 typedef enum DropBehavior
@@ -1183,6 +1195,7 @@ typedef enum AlterTableType
 	AT_SetDistributedBy,		/* SET DISTRIBUTED BY */
 	/* CDB: Partitioned Tables */
 	AT_PartAdd,					/* Add */
+	AT_PartAddForSplit,			/* Add, as subcommand of a split */
 	AT_PartAlter,				/* Alter */
 	AT_PartCoalesce,			/* Coalesce */
 	AT_PartDrop,				/* Drop */
@@ -1366,11 +1379,8 @@ typedef struct GrantRoleStmt
 typedef struct SingleRowErrorDesc
 {
 	NodeTag		type;
-	RangeVar	*errtable;			/* error table for data format errors */
 	int			rejectlimit;		/* per segment error reject limit */
-	bool		is_keep;			/* true if KEEP indicated (COPY only) */
 	bool		is_limit_in_rows;	/* true for ROWS false for PERCENT */
-	bool		reusing_existing_errtable;  /* var used later in trasform... */
 	bool		into_file;			/* log into file not table */
 } SingleRowErrorDesc;
 
@@ -1442,7 +1452,6 @@ typedef struct CreateStmt
 	bool		is_split_part;	/* CDB: is create spliting a part? */
 	Oid			ownerid;		/* OID of the role to own this. if InvalidOid, GetUserId() */
 	bool		buildAoBlkdir; /* whether to build the block directory for an AO table */
-	bool		is_error_table; /* true if the table being created is an error table */
 	List	   *attr_encodings; /* attribute storage directives */
 } CreateStmt;
 
@@ -1456,7 +1465,7 @@ typedef enum ExtTableType
 	EXTTBL_TYPE_EXECUTE			/* table defined with EXECUTE clause */
 } ExtTableType;
 
-typedef struct ExtTableTypeDesc
+typedef struct
 {
 	NodeTag			type;
 	ExtTableType	exttabletype;
@@ -1470,7 +1479,7 @@ typedef struct CreateExternalStmt
 	NodeTag		type;
 	RangeVar   *relation;		/* external relation to create */
 	List	   *tableElts;		/* column definitions (list of ColumnDef) */
-	Node	   *exttypedesc;    /* LOCATION or EXECUTE information */
+	ExtTableTypeDesc *exttypedesc;    /* LOCATION or EXECUTE information */
 	char	   *format;			/* data format name */
 	List	   *formatOpts;		/* List of DefElem nodes for data format */
 	bool		isweb;
@@ -1636,7 +1645,7 @@ typedef struct PartitionBy			/* the Partition By clause */
 typedef struct PartitionElem
 {
 	NodeTag				type;
-	Node			   *partName;	/* partition name (optional) */
+	char			   *partName;	/* partition name (optional) */
 	Node			   *boundSpec;	/* boundary specification */
 	Node			   *subSpec;	/* subpartition spec */
 	bool                isDefault;	/* TRUE if default partition declaration */
@@ -1770,10 +1779,12 @@ typedef struct CreatePLangStmt
 	NodeTag		type;
 	char	   *plname;			/* PL name */
 	List	   *plhandler;		/* PL call handler function (qual. name) */
+	List	   *plinline;		/* optional inline function (qual. name) */
 	List	   *plvalidator;	/* optional validator function (qual. name) */
 	bool		pltrusted;		/* PL is trusted */
 	Oid	   		plangOid;		/* oid for PL */
 	Oid			plhandlerOid;	/* oid for PL call handler function */
+	Oid			plinlineOid;	/* oid for inline function */
 	Oid			plvalidatorOid;	/* oid for validator function */
 } CreatePLangStmt;
 
@@ -1908,10 +1919,18 @@ typedef struct DefineStmt
 	List	   *defnames;		/* qualified name (list of Value strings) */
 	List	   *args;			/* a list of TypeName (if needed) */
 	List	   *definition;		/* a list of DefElem */
-	Oid			newOid;			/* for MPP only, the new Oid of the object */
-	Oid			shadowOid;
 	bool        ordered;        /* signals ordered aggregates */
 	bool		trusted;		/* used only for PROTOCOL as this point */
+
+	/*
+	 * These are filled in by the dispatcher, when sending the command
+	 * to segments.
+	 */
+	Oid			newOid;			/* the new Oid of the object */
+	Oid			arrayOid;		/* for CREATE TYPE, array type's OID */
+	Oid			commutatorOid;	/* for CREATE OPERATOR, commutator's OID */
+	Oid			negatorOid;		/* for CREATE OPERATOR, negator's OID */
+
 } DefineStmt;
 
 /* ----------------------
@@ -1940,7 +1959,15 @@ typedef struct CreateOpClassStmt
 	TypeName   *datatype;		/* datatype of indexed column */
 	List	   *items;			/* List of CreateOpClassItem nodes */
 	bool		isDefault;		/* Should be marked as default for type? */
+
+	/*
+	 * When dispatched from QD to QEs, opclassOid is the OID to use for
+	 * the opclass, and opfamilyOid is the OID of the operator family
+	 * to associate it with.
+	 */
 	Oid			opclassOid;
+	Oid			opfamilyOid;
+	bool		createOpFamily;
 } CreateOpClassStmt;
 
 #define OPCLASS_ITEM_OPERATOR		1
@@ -1956,9 +1983,37 @@ typedef struct CreateOpClassItem
 	List	   *args;			/* argument types */
 	int			number;			/* strategy num or support proc num */
 	bool		recheck;		/* only used for operators */
+	List	   *class_args;		/* only used for functions */
 	/* fields used for a storagetype item: */
 	TypeName   *storedtype;		/* datatype stored in index */
 } CreateOpClassItem;
+
+/* ----------------------
+ *		Create Operator Family Statement
+ * ----------------------
+ */
+typedef struct CreateOpFamilyStmt
+{
+	NodeTag		type;
+	List	   *opfamilyname;	/* qualified name (list of Value strings) */
+	char	   *amname;			/* name of index AM opfamily is for */
+
+	Oid			newOid;			/* Created opfamily's OID, when dispatched
+								 * from QD to QEs */
+} CreateOpFamilyStmt;
+
+/* ----------------------
+ *		Alter Operator Family Statement
+ * ----------------------
+ */
+typedef struct AlterOpFamilyStmt
+{
+	NodeTag		type;
+	List	   *opfamilyname;	/* qualified name (list of Value strings) */
+	char	   *amname;			/* name of index AM opfamily is for */
+	bool		isDrop;			/* ADD or DROP the items? */
+	List	   *items;			/* List of CreateOpClassItem nodes */
+} AlterOpFamilyStmt;
 
 /* ----------------------
  *		DROP Statement, applies to:
@@ -2148,6 +2203,7 @@ typedef struct FunctionParameter
 	char	   *name;			/* parameter name, or NULL if not given */
 	TypeName   *argType;		/* TypeName for parameter type */
 	FunctionParameterMode mode; /* IN/OUT/INOUT/VARIADIC/TABLE */
+	Node	   *defexpr;		/* raw default expr, or NULL if not given */
 } FunctionParameter;
 
 typedef struct AlterFunctionStmt
@@ -2156,6 +2212,26 @@ typedef struct AlterFunctionStmt
 	FuncWithArgs *func;			/* name and args of function */
 	List	   *actions;		/* list of DefElem */
 } AlterFunctionStmt;
+
+/* ----------------------
+ *		DO Statement
+ *
+ * DoStmt is the raw parser output, InlineCodeBlock is the execution-time API
+ * ----------------------
+ */
+typedef struct DoStmt
+{
+	NodeTag		type;
+	List	   *args;			/* List of DefElem nodes */
+} DoStmt;
+
+typedef struct InlineCodeBlock
+{
+	NodeTag		type;
+	char	   *source_text;	/* source text of anonymous code block */
+	Oid			langOid;		/* OID of selected language */
+	bool		langIsTrusted;  /* trusted property of the language */
+} InlineCodeBlock;
 
 /* ----------------------
  *		Drop {Function|Aggregate|Operator} Statement
@@ -2183,6 +2259,19 @@ typedef struct RemoveOpClassStmt
 	DropBehavior behavior;		/* RESTRICT or CASCADE behavior */
 	bool		missing_ok;		/* skip error if missing? */
 } RemoveOpClassStmt;
+
+/* ----------------------
+ *		Drop Operator Family Statement
+ * ----------------------
+ */
+typedef struct RemoveOpFamilyStmt
+{
+	NodeTag		type;
+	List	   *opfamilyname;	/* qualified name (list of Value strings) */
+	char	   *amname;			/* name of index AM opfamily is for */
+	DropBehavior behavior;		/* RESTRICT or CASCADE behavior */
+	bool		missing_ok;		/* skip error if missing? */
+} RemoveOpFamilyStmt;
 
 /* ----------------------
  *		Alter Object Rename Statement

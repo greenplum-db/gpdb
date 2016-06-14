@@ -92,7 +92,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplesort.c,v 1.74 2007/01/10 18:06:04 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplesort.c,v 1.92 2009/08/01 20:59:17 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -104,12 +104,12 @@
 #include "catalog/catquery.h"
 #include "catalog/pg_amop.h"
 #include "catalog/pg_operator.h"
+#include "executor/execWorkfile.h"
 #include "executor/instrument.h"        /* Instrumentation */
 #include "executor/nodeSort.h"  		/* Gpmon */ 
 #include "lib/stringinfo.h"             /* StringInfo */
 #include "miscadmin.h"
 #include "utils/datum.h"
-#include "executor/execWorkfile.h"
 #include "utils/logtape.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
@@ -1533,14 +1533,14 @@ bool
 tuplesort_gettupleslot(Tuplesortstate *state, bool forward,
 					   TupleTableSlot *slot)
 {
-	return tuplesort_gettupleslot_pos(state, &state->pos, forward, slot);
+	return tuplesort_gettupleslot_pos(state, &state->pos, forward, slot, state->sortcontext);
 }
 
 bool
 tuplesort_gettupleslot_pos(Tuplesortstate *state, TuplesortPos *pos,
-		bool forward, TupleTableSlot *slot)
+		bool forward, TupleTableSlot *slot, MemoryContext mcontext)
 {
-	MemoryContext oldcontext = MemoryContextSwitchTo(state->sortcontext);
+	MemoryContext oldcontext = MemoryContextSwitchTo(mcontext);
 	SortTuple	stup;
 	bool		should_free = false;
 
@@ -1551,7 +1551,7 @@ tuplesort_gettupleslot_pos(Tuplesortstate *state, TuplesortPos *pos,
 
 	if (stup.tuple)
 	{
-		ExecStoreMemTuple(stup.tuple, slot, should_free);
+		ExecStoreMinimalTuple(stup.tuple, slot, should_free);
 		if (state->gpmon_pkt)
 			Gpmon_M_Incr_Rows_Out(state->gpmon_pkt);
 		return true;
@@ -3039,10 +3039,19 @@ comparetup_index(const SortTuple *a, const SortTuple *b, Tuplesortstate *state)
 	 * error in that case.
 	 */
 	if (state->enforceUnique && !equal_hasnull && tuple1 != tuple2)
+	{
+		Datum	values[INDEX_MAX_KEYS];
+		bool	isnull[INDEX_MAX_KEYS];
+
+		index_deform_tuple(tuple1, tupDes, values, isnull);
 		ereport(ERROR,
 				(errcode(ERRCODE_UNIQUE_VIOLATION),
-				 errmsg("could not create unique index"),
-				 errdetail("Table contains duplicated values.")));
+				 errmsg("could not create unique index \"%s\"",
+						RelationGetRelationName(state->indexRel)),
+				 errdetail("Key %s is duplicated.",
+						   BuildIndexValueDescription(state->indexRel,
+													  values, isnull))));
+	}
 
 	/*
 	 * If key values are equal, we sort on ItemPointer.  This does not affect

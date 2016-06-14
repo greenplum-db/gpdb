@@ -13,7 +13,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/portalcmds.c,v 1.57.2.1 2007/02/06 22:49:30 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/portalcmds.c,v 1.60 2007/02/06 22:49:24 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -164,7 +164,7 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	 * Start execution, inserting parameters if any.
 	 */
 	PortalStart(portal, params, ActiveSnapshot,
-				savedSeqServerHost, savedSeqServerPort);
+				savedSeqServerHost, savedSeqServerPort, NULL);
 
 	Assert(portal->strategy == PORTAL_ONE_SELECT);
 
@@ -372,11 +372,7 @@ PortalCleanupHelper(Portal portal, volatile int *cleanupstate)
 	/* 
 	 * If resource scheduling is enabled, release the resource lock. 
 	 */
-	if (portal->releaseResLock)
-	{
-		portal->releaseResLock = false;
         ResUnLockPortal(portal);
-	}
 
 	/**
 	 * Clean up backend's backoff entry

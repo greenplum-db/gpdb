@@ -899,7 +899,7 @@ select decode(true, false);
 ERROR:  function decode(boolean, boolean) does not exist
 LINE 1: select decode(true, false);
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select decode(2);
 ERROR:  syntax error at or near ")"
 LINE 1: select decode(2);
@@ -956,19 +956,19 @@ from genders
 order by student_id;
 ERROR:  invalid input syntax for integer: "Unknown"
 LINE 1: select gender, decode(gender, 'Z', 'Unknown', 1)
-                              ^
+                                           ^
 select gender, decode(gender, 'Z', 0,  'M')
 from genders
 order by student_id;
 ERROR:  invalid input syntax for integer: "M"
 LINE 1: select gender, decode(gender, 'Z', 0,  'M')
-                              ^
+                                               ^
 select gender, decode(gender, 'Z', 0, 'M', 'Male', 'F')
 from genders
 order by student_id;
 ERROR:  invalid input syntax for integer: "F"
 LINE 1: select gender, decode(gender, 'Z', 0, 'M', 'Male', 'F')
-                              ^
+                                                           ^
 select decode('2011-01-05'::date, '2011-01-01'::date, 2011, '2010-12-30'::date, 2010, '2012');
  case 
 ------
@@ -977,12 +977,10 @@ select decode('2011-01-05'::date, '2011-01-01'::date, 2011, '2010-12-30'::date, 
 
 select decode('2011-01-05'::date, '2011-01-01'::date, '2011-01-01'::date, '2010-12-30'::date, '2010-01-01'::date, '2012');
 ERROR:  invalid input syntax for type date: "2012"
-LINE 1: select decode('2011-01-05'::date, '2011-01-01'::date, '2011-...
-                      ^
+LINE 1: ...-01'::date, '2010-12-30'::date, '2010-01-01'::date, '2012');
+                                                               ^
 select decode('2011-01-05'::date, '2011-01-01'::date, '2011-01-01'::date, '2010-12-30'::date, '2010-01-01'::date, 2012);
 ERROR:  CASE types integer and date cannot be matched
-LINE 1: select decode('2011-01-05'::date, '2011-01-01'::date, '2011-...
-                      ^
 -- Test using DECODE as table, database, column, constraint, index, partition name.
 -- These all fail because DECODE is a reserved keyword.
 create table decode (a int, b int) distributed by (b);

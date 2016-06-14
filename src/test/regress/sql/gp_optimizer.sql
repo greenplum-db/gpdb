@@ -249,8 +249,8 @@ select a,1 from orca.r group by rollup(a);
 select array[array[a,b]], array[b] from orca.r;
 
 -- setops
-select a, b from m union select b,a from orca.m;
-SELECT a from m UNION ALL select b from orca.m UNION ALL select a+b from orca.m group by 1;
+select a, b from orca.m union select b,a from orca.m;
+SELECT a from orca.m UNION ALL select b from orca.m UNION ALL select a+b from orca.m group by 1;
 
 ----------------------------------------------------------------------
 set optimizer=off;
@@ -474,6 +474,9 @@ insert into orca.t values('201208',2,'tag1','tag2');
 
 -- test projections
 select * from orca.t order by 1,2;
+
+-- test EXPLAIN support of partition selection nodes, while we're at it.
+explain select * from orca.t order by 1,2;
 
 select tag2, tag1 from orca.t order by 1, 2;;
 
@@ -1251,7 +1254,7 @@ drop table idxscan_outer;
 drop table idxscan_inner;
 
 drop table if exists ggg;
-set optimizer_release_mdcache=off;
+set optimizer_metadata_caching=on;
 
 create table ggg (a char(1), b char(2), d char(3));
 insert into ggg values ('x', 'a', 'c');
@@ -1276,6 +1279,9 @@ explain select * from orca.index_test where c = 5;
 
 -- force_explain
 explain select * from orca.index_test where a = 5 and c = 5;
+
+-- renaming columns
+select * from (values (2),(null)) v(k);
 
 -- clean up
 drop schema orca cascade;

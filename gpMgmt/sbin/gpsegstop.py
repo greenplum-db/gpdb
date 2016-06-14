@@ -132,7 +132,7 @@ class SegStop(base.Command):
 #-------------------------------------------------------------------------    
 class GpSegStop:
     ######
-    def __init__(self,dblist,mode,gpversion,timeout=SEGMENT_STOP_TIMEOUT_DEFAULT):
+    def __init__(self,dblist,mode,gpversion,timeout=SEGMENT_STOP_TIMEOUT_DEFAULT,logfileDirectory=False):
         self.dblist=dblist
         self.mode=mode
         self.expected_gpversion=gpversion
@@ -146,6 +146,7 @@ class GpSegStop:
                             "Please review and correct" % (self.actual_gpversion,self.expected_gpversion))                
         self.logger = logger
         self.pool = None
+        self.logfileDirectory = logfileDirectory
         
     ######
     def run(self):
@@ -199,7 +200,8 @@ class GpSegStop:
 
     @staticmethod
     def createProgram(options, args):
-        return GpSegStop(options.dblist,options.mode,options.gpversion,options.timeout)
+        logfileDirectory = options.ensure_value("logfileDirectory", False)
+        return GpSegStop(options.dblist,options.mode,options.gpversion,options.timeout,logfileDirectory=logfileDirectory)
 
 #-------------------------------------------------------------------------
 if __name__ == '__main__':

@@ -17,6 +17,10 @@
 ##
 ## ======================================================================
 
+os:
+  - linux
+  - osx
+
 language: c
 sudo: false
 
@@ -38,7 +42,8 @@ python:
 ## ----------------------------------------------------------------------
 
 install:
-  - pip install --user psi
+  - pip install --user --upgrade pip
+  - pip install --user --pre psutil
   - pip install --user lockfile
   - pip install --user paramiko
   - pip install --user setuptools
@@ -78,17 +83,14 @@ before_script:
 
 script:
   - cd ${TRAVIS_BUILD_DIR}
-  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql
+  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config
+
   - make
   - make install
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
   - cd ${TRAVIS_BUILD_DIR}/gpAux/extensions/orafce
   - make install USE_PGXS=1
   - cd ${TRAVIS_BUILD_DIR}/gpAux/extensions/gpmapreduce
-  - make install
-  - cd ${TRAVIS_BUILD_DIR}/gpAux/extensions/gpfdist
-  - CFLAGS=-w ./configure --enable-transformations --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config
-  - make
   - make install
   - postgres --version
   - initdb --version
@@ -100,9 +102,17 @@ script:
   - gpfdist --version
 
 ## ----------------------------------------------------------------------
+## Before install 
+## install libevent 
+## ----------------------------------------------------------------------
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
+       brew install libevent          ; 
+    fi
+
+## ----------------------------------------------------------------------
 ## Notification
 ## ----------------------------------------------------------------------
-
 notifications:
   email:
     recipients:

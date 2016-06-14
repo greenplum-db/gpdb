@@ -91,13 +91,13 @@ struct int_digest
 
 static const struct int_digest
 			int_digest_list[] = {
-	{"md5", init_md5, 0},
-	{"sha1", init_sha1, 1},
-	{"sha224", init_sha224, 1},
-	{"sha256", init_sha256, 1},
-	{"sha384", init_sha384, 1},
-	{"sha512", init_sha512, 1},
-	{NULL, NULL, NULL}
+	{"md5", init_md5},
+	{"sha1", init_sha1},
+	{"sha224", init_sha224},
+	{"sha256", init_sha256},
+	{"sha384", init_sha384},
+	{"sha512", init_sha512},
+	{NULL, NULL}
 };
 
 /* MD5 */
@@ -563,15 +563,15 @@ static const struct int_cipher
 };
 
 static const PX_Alias int_aliases[] = {
-	{"bf", "bf-cbc", 0},
-	{"blowfish", "bf-cbc", 0},
-	{"aes", "aes-128-cbc", 1},
-	{"aes-ecb", "aes-128-ecb", 1},
-	{"aes-cbc", "aes-128-cbc", 1},
-	{"aes-128", "aes-128-cbc", 1},
-	{"rijndael", "aes-128-cbc", 0},
-	{"rijndael-128", "aes-128-cbc", 0},
-	{NULL, NULL, NULL}
+	{"bf", "bf-cbc"},
+	{"blowfish", "bf-cbc"},
+	{"aes", "aes-128-cbc"},
+	{"aes-ecb", "aes-128-ecb"},
+	{"aes-cbc", "aes-128-cbc"},
+	{"aes-128", "aes-128-cbc"},
+	{"rijndael", "aes-128-cbc"},
+	{"rijndael-128", "aes-128-cbc"},
+	{NULL, NULL}
 };
 
 /* PUBLIC FUNCTIONS */

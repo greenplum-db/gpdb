@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/initdb.sgml,v 1.37.2.2 2007/03/26 17:23:44 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/initdb.sgml,v 1.40 2007/02/01 19:10:24 momjian Exp $
 PostgreSQL documentation
 -->
 
@@ -69,7 +69,7 @@ PostgreSQL documentation
    <command>initdb</command> must be run as the user that will own the
    server process, because the server needs to have access to the
    files and directories that <command>initdb</command> creates.
-   Since the server may not be run as root, you must not run
+   Since the server cannot be run as root, you must not run
    <command>initdb</command> as root either.  (It will in fact refuse
    to do so.)
   </para>
@@ -79,7 +79,7 @@ PostgreSQL documentation
    locale and character set encoding. The collation order
    (<literal>LC_COLLATE</>) and character set classes
    (<literal>LC_CTYPE</>, e.g. upper, lower, digit) are fixed for all
-   databases and can not be changed. Collation orders other than
+   databases and cannot be changed. Collation orders other than
    <literal>C</> or <literal>POSIX</> also have a performance penalty.
    For these reasons it is important to choose the right locale when
    running <command>initdb</command>. The remaining locale categories
@@ -265,8 +265,8 @@ PostgreSQL documentation
        <para>
 	By default, when <command>initdb</command>
 	determines that an error prevented it from completely creating the database
-	cluster, it removes any files it may have created before discovering
-	that it can't finish the job. This option inhibits tidying-up and is
+	cluster, it removes any files it might have created before discovering
+	that it cannot finish the job. This option inhibits tidying-up and is
 	thus useful for debugging.
        </para>
       </listitem>
@@ -286,7 +286,7 @@ PostgreSQL documentation
     <listitem>
      <para>
       Specifies the directory where the database cluster is to be
-      stored; may be overridden using the <option>-D</option> option.
+      stored; can be overridden using the <option>-D</option> option.
      </para>
     </listitem>
    </varlistentry>

@@ -6,7 +6,7 @@
  * Copyright (c) 2000-2008, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/transam/varsup.c,v 1.77 2007/01/05 22:19:23 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/transam/varsup.c,v 1.78 2007/02/15 23:23:22 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -91,7 +91,6 @@ GetNewTransactionId(bool isSubXact, bool setProcXid)
 		 *
 		 * MPP-19652: autovacuum disabled
 		 */
-
 		if (IsUnderPostmaster &&
 		 TransactionIdFollowsOrEquals(xid, ShmemVariableCache->xidStopLimit))
 			ereport(ERROR,
@@ -309,10 +308,6 @@ SetTransactionIdLimit(TransactionId oldest_datfrozenxid,
 	 * another iteration immediately if there are still any old databases.
 	 *
 	 * MPP-19652: autovacuum disabled
-	 *
-	 *  if (TransactionIdFollowsOrEquals(curXid, xidVacLimit) &&
-	 * 		IsUnderPostmaster)
-	 *		SendPostmasterSignal(PMSIGNAL_START_AUTOVAC);
 	 */
 
 	/* Give an immediate warning if past the wrap warn point */

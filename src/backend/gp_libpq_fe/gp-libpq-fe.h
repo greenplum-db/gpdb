@@ -196,6 +196,7 @@ typedef struct _PQconninfoOption
 								 * hide value "D"  Debug option - don't show
 								 * by default */
 	int			dispsize;		/* Field size in characters for dialog	*/
+	off_t	  connofs;
 } PQconninfoOption;
 
 /* ----------------
@@ -242,6 +243,9 @@ typedef struct
 #endif 
 #endif
 } PQaoRelTupCount;
+
+struct PartitionNode;
+struct HTAB;
 
 /* ----------------
  * Exported functions of libpq
@@ -315,7 +319,7 @@ extern char *PQhost(const PGconn *conn);
 extern char *PQport(const PGconn *conn);
 extern char *PQtty(const PGconn *conn);
 extern char *PQoptions(const PGconn *conn);
-extern int	PQgetQEdetail(PGconn *conn, bool alwaysFetch); /* GPDB -- retrieve QE-backend details. */
+extern int	PQgetQEdetail(PGconn *conn); /* GPDB -- retrieve QE-backend details. */
 extern ConnStatusType PQstatus(const PGconn *conn);
 extern PGTransactionStatusType PQtransactionStatus(const PGconn *conn);
 extern const char *PQparameterStatus(const PGconn *conn,
@@ -399,56 +403,6 @@ extern PGresult *PQexecPrepared(PGconn *conn,
  *
  * See cdbtm.h for valid flag values.
  */
-
-extern char *PQbuildGpQueryString(const char  *command,
-								   int          command_len,
-								   const char  *querytree,
-								   int          querytree_len,
-								   const char  *plantree,
-								   int          plantree_len,
-								   const char  *params,
-								   int          params_len,
-								   const char  *sliceinfo,
-								   int          sliceinfo_len,
-								   const char  *snapshotInfo,
-								   int			snapshotInfo_len,
-								   int          flags,
-								   int          gp_command_count,
-								   int			localSlice,
-								   int			rootIdx,
-								   const char  *seqServerHost,
-								   int          seqServerHostlen,
-								   int          seqServerPort,
-								   int		   	primary_gang_id,
-/* Ugly, because c.h might not be included in all files that use this */
-#ifdef HAVE_INT64	
-								   int64
-#else
-#ifdef HAVE_LONG_INT_64
-								   long int
-#else
-								   long long int
-#endif 
-#endif
-								   				currentStatementStartTimestamp,
-								   Oid			sessionUserId,
-								   pqbool		sessionUserIsSuper,
-					  			   Oid			outerUserId,
-					  			   pqbool		outerUserIsSuper,
-					 			   Oid			currentUserId,
-								   int         *final_len);
-
-extern char *PQbuildGpDtxProtocolCommand(
-					  int						dtxProtocolCommand,
-					  int						flags,
-					  char*						dtxProtocolCommandLoggingStr,
-					  char*						gid,
-					  int   					gxid,
-					  int						primary_gang_id,
-					  char*                     argument,
-					  int                       argumentLength,
-					  int         		    	*final_len);
-
 extern int PQsendGpQuery_shared(PGconn       *conn,
 								 char         *query,
 								 int          query_len);
@@ -642,6 +596,10 @@ extern int	PQdsplen(const char *s, int encoding);
 
 /* Get encoding id from environment variable PGCLIENTENCODING */
 extern int	PQenv2encoding(void);
+
+extern struct HTAB *
+PQprocessAoTupCounts(struct PartitionNode *parts, struct HTAB *ht,
+					 void *aotupcounts, int naotupcounts);
 
 /* === in fe-auth.c === */
 

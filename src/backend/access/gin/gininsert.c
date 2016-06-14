@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gin/gininsert.c,v 1.5.2.1 2007/06/05 12:48:21 teodor Exp $
+ *			$PostgreSQL: pgsql/src/backend/access/gin/gininsert.c,v 1.8 2007/02/01 04:16:08 neilc Exp $
  *-------------------------------------------------------------------------
  */
 
@@ -203,13 +203,13 @@ ginEntryInsert(Relation index, GinState *ginstate, Datum value, ItemPointerData 
 
 /*
  * Saves indexed value in memory accumulator during index creation
- * Function isnt use during normal insert
+ * Function isn't use during normal insert
  */
 static uint32
 ginHeapTupleBulkInsert(GinBuildState *buildstate, Datum value, ItemPointer heapptr)
 {
 	Datum	   *entries;
-	uint32		nentries;
+	int32		nentries;
 	MemoryContext oldCtx;
 
 	oldCtx = MemoryContextSwitchTo(buildstate->funcCtx);
@@ -363,7 +363,7 @@ static uint32
 ginHeapTupleInsert(Relation index, GinState *ginstate, Datum value, ItemPointer item)
 {
 	Datum	   *entries;
-	uint32		i,
+	int32		i,
 				nentries;
 
 	entries = extractEntriesSU(ginstate, value, &nentries);

@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/heapam.h,v 1.119 2007/01/09 22:01:00 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/heapam.h,v 1.121 2007/03/29 00:15:39 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -329,5 +329,7 @@ extern void heap_deformtuple(HeapTuple tuple, TupleDesc tupleDesc,
 extern void heap_freetuple(HeapTuple htup);
 extern HeapTuple heap_addheader(int natts, bool withoid,
 			   Size structlen, void *structure);
+
+extern void heap_sync(Relation relation);
 
 #endif   /* HEAPAM_H */

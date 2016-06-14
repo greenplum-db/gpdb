@@ -731,6 +731,38 @@ SELECT * FROM foo ORDER BY f1 DESC NULLS LAST;
    
 (7 rows)
 
+--
+-- Test some corner cases that have been known to confuse the planner
+--
+-- ORDER BY on a constant doesn't really need any sorting
+SELECT 1 AS x ORDER BY x;
+ x 
+---
+ 1
+(1 row)
+
+-- But ORDER BY on a set-valued expression does
+create function sillysrf(int) returns setof int as
+  'values (1),(10),(2),($1)' language sql immutable;
+select sillysrf(42);
+ sillysrf 
+----------
+        1
+       10
+        2
+       42
+(4 rows)
+
+select sillysrf(-1) order by 1;
+ sillysrf 
+----------
+       -1
+        1
+        2
+       10
+(4 rows)
+
+drop function sillysrf(int);
 -- Test unsupported sorting operators
 CREATE TABLE nosort (i int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
@@ -741,7 +773,7 @@ INSERT INTO nosort VALUES(1), (2);
 SELECT * FROM nosort ORDER BY i USING <<;
 ERROR:  operator << is not a valid ordering operator
 LINE 1: SELECT * FROM nosort ORDER BY i USING <<;
-                                      ^
+                                              ^
 HINT:  Ordering operators must be "<" or ">" members of btree operator families.
 DROP TABLE nosort;
 -- Test dispatch of recursive functions: MPP-8382

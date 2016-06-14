@@ -15,7 +15,7 @@ GPLOAD:
 
   - DELIMITER:        '	' # tab
   - ERROR_LIMIT:      10
-  - ERROR_TABLE:      dblp_errortable
+  - LOG_ERRORS:       True
 
   OUTPUT:
   - TABLE:            dblp_thesis

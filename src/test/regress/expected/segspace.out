@@ -1,0 +1,177 @@
+--
+-- Tests the spill files disk space accounting mechanism
+-- 
+-- create view to read the segspace value
+DROP VIEW IF EXISTS segspace_view_gp_workfile_segspace;
+NOTICE:  view "segspace_view_gp_workfile_segspace" does not exist, skipping
+DROP FUNCTION IF EXISTS segspace_view_gp_workfile_segspace_f();
+NOTICE:  function segspace_view_gp_workfile_segspace_f() does not exist, skipping
+DROP VIEW IF EXISTS segspace_view_gp_workfile_mgr_reset_segspace;
+NOTICE:  view "segspace_view_gp_workfile_mgr_reset_segspace" does not exist, skipping
+DROP FUNCTION IF EXISTS segspace_view_gp_workfile_mgr_reset_segspace_f();
+NOTICE:  function segspace_view_gp_workfile_mgr_reset_segspace_f() does not exist, skipping
+CREATE FUNCTION segspace_view_gp_workfile_segspace_f()
+RETURNS SETOF record
+AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_used_diskspace'
+LANGUAGE C IMMUTABLE;
+CREATE VIEW segspace_view_gp_workfile_segspace AS
+SELECT C.*
+FROM gp_toolkit.__gp_localid, segspace_view_gp_workfile_segspace_f() AS C (
+segid int,
+size bigint
+)
+UNION ALL
+SELECT C.*
+FROM gp_toolkit.__gp_masterid, segspace_view_gp_workfile_segspace_f() AS C (
+segid int,
+size bigint
+);
+-- create helper UDF to reset the segpsace variable
+CREATE FUNCTION segspace_view_gp_workfile_mgr_reset_segspace_f()
+RETURNS SETOF bigint
+AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_reset_segspace'
+LANGUAGE C IMMUTABLE;
+CREATE VIEW segspace_view_gp_workfile_mgr_reset_segspace AS
+SELECT * FROM gp_toolkit.__gp_localid, segspace_view_gp_workfile_mgr_reset_segspace_f()
+UNION ALL
+SELECT * FROM gp_toolkit.__gp_masterid, segspace_view_gp_workfile_mgr_reset_segspace_f();
+--- create and populate the table
+DROP TABLE IF EXISTS segspace_test_hj_skew;
+NOTICE:  table "segspace_test_hj_skew" does not exist, skipping
+CREATE TABLE segspace_test_hj_skew (i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int, i8 int) DISTRIBUTED BY (i1);
+set gp_autostats_mode = none;
+-- many values with i1 = 1
+INSERT INTO segspace_test_hj_skew SELECT 1,i,i,i,i,i,i,i FROM 
+	(select generate_series(1, nsegments * 50000) as i from 
+	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
+-- some nicely distributed values
+INSERT INTO segspace_test_hj_skew SELECT i,i,i,i,i,i,i,i FROM 
+	(select generate_series(1, nsegments * 100000) as i from 
+	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
+ANALYZE segspace_test_hj_skew;
+-- reset the segspace value
+-- start_ignore
+select count(*) > 0 from segspace_view_gp_workfile_mgr_reset_segspace;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- end_ignore
+--
+--  Testing that query cancelation during spilling updates the accounting
+--
+------------ Interrupting SELECT query that spills -------------------
+-- enable the fault injector
+--start_ignore
+\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
+20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
+20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
+20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
+20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
+20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
+\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
+20160114:11:07:01:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
+20160114:11:07:02:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160114:11:07:02:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
+20160114:11:07:02:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
+20160114:11:07:02:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
+20160114:11:07:02:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
+--end_ignore
+set gp_workfile_type_hashjoin=buffile;
+set statement_mem=2048;
+set gp_autostats_mode = none;
+set gp_hashjoin_metadata_memory_percent=0;
+begin;
+SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
+ERROR:  canceling MPP operation  (seg0 slice2 gcaragea-mbp.local:40070 pid=48717)
+rollback;
+-- check used segspace after test
+reset statement_mem;
+select max(size) from segspace_view_gp_workfile_segspace;
+ max 
+-----
+   0
+(1 row)
+
+------------ Interrupting INSERT INTO query that spills -------------------
+-- enable the fault injector
+--start_ignore
+\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
+20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
+20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
+20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
+20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
+20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
+\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
+20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
+20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
+20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
+20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
+20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
+--end_ignore
+drop table if exists segspace_t1_created;
+NOTICE:  table "segspace_t1_created" does not exist, skipping
+create table segspace_t1_created (i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int, i8 int) DISTRIBUTED BY (i1);
+set gp_workfile_type_hashjoin=buffile;
+set statement_mem=2048;
+set gp_autostats_mode = none;
+set gp_hashjoin_metadata_memory_percent=0;
+begin;
+insert into segspace_t1_created
+SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
+ERROR:  canceling MPP operation  (seg0 gcaragea-mbp.local:40070 pid=48717)
+rollback;
+-- check used segspace after test
+reset statement_mem;
+select max(size) from segspace_view_gp_workfile_segspace;
+ max 
+-----
+   0
+(1 row)
+
+--start_ignore
+drop table if exists segspace_t1_created;
+--end_ignore
+------------ Interrupting CREATE TABLE AS query that spills -------------------
+-- enable the fault injector
+--start_ignore
+\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
+20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
+20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
+20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
+20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
+20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
+\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
+20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
+20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
+20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
+20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
+20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
+--end_ignore
+drop table if exists segspace_t1_created;
+NOTICE:  table "segspace_t1_created" does not exist, skipping
+set gp_workfile_type_hashjoin=buffile;
+set statement_mem=2048;
+set gp_autostats_mode = none;
+set gp_hashjoin_metadata_memory_percent=0;
+begin;
+create table segspace_t1_created AS
+SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'i1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ERROR:  canceling MPP operation  (seg0 gcaragea-mbp.local:40070 pid=48717)
+rollback;
+-- check used segspace after test
+reset statement_mem;
+select max(size) from segspace_view_gp_workfile_segspace;
+ max 
+-----
+   0
+(1 row)
+

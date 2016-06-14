@@ -85,8 +85,6 @@
 #ifndef CDBVARBLOCK_H
 #define CDBVARBLOCK_H
 
-#include "postgres.h"
-
 typedef int32 VarBlockByteLen;
 typedef int32 VarBlockByteOffset;
 

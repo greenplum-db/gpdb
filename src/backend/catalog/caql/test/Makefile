@@ -2,7 +2,7 @@ subdir=src/backend/catalog/caql
 top_builddir=../../../../..
 include $(top_builddir)/src/Makefile.global
 
-TARGETS=catquery caqlanalyze gram 
+TARGETS=caqlanalyze gram
 
 include $(top_builddir)/src/backend/mock.mk
 

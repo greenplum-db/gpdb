@@ -38,7 +38,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/postmaster.c,v 1.508 2007/01/16 13:28:56 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/postmaster.c,v 1.525 2007/02/16 17:06:59 tgl Exp $
  *
  * NOTES
  *
@@ -120,11 +120,11 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "postmaster/autovacuum.h"
+#include "postmaster/bgwriter.h"
 #include "postmaster/fork_process.h"
 #include "postmaster/pgarch.h"
 #include "postmaster/postmaster.h"
 #include "postmaster/seqserver.h"
-#include "postmaster/checkpoint.h"
 #include "postmaster/fts.h"
 #include "postmaster/perfmon.h"
 #include "postmaster/primary_mirror_mode.h"
@@ -148,7 +148,6 @@
 #include "utils/resscheduler.h"
 
 #include "cdb/cdbgang.h"                /* cdbgang_parse_gpqeid_params */
-#include "cdb/cdblogsync.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 
@@ -480,6 +479,8 @@ bool		ClientAuthInProgress = false;		/* T during new-client
 bool		redirection_done = false;	/* stderr redirected for syslogger? */
 
 static volatile bool force_autovac = false; /* received START_AUTOVAC signal */
+/* received START_AUTOVAC_LAUNCHER signal */
+static bool start_autovac_launcher = false;
 
 /*
  * State for assigning random salts and cancel keys.
@@ -540,7 +541,7 @@ static bool StopServices(int excludeFlags, int signal);
 static char *GetServerProcessTitle(int pid);
 static void sigusr1_handler(SIGNAL_ARGS);
 static void dummy_handler(SIGNAL_ARGS);
-static void CleanupBackend(int pid, int exitstatus, bool resetRequired);
+static void CleanupBackend(int pid, int exitstatus);
 static void HandleChildCrash(int pid, int exitstatus, const char *procname);
 static void LogChildExit(int lev, const char *procname,
 			 int pid, int exitstatus);
@@ -561,7 +562,7 @@ static enum CAC_state canAcceptConnections(void);
 static long PostmasterRandom(void);
 static void RandomSalt(char *md5Salt);
 static void signal_child(pid_t pid, int signal);
-static bool SignalSomeChildren(int signal, int target);
+static void SignalSomeChildren(int signal, bool only_autovac);
 
 #define SignalChildren(sig)			SignalSomeChildren(sig, BACKEND_TYPE_ALL)
 #define SignalAutovacWorkers(sig)	SignalSomeChildren(sig, BACKEND_TYPE_AUTOVAC)
@@ -578,6 +579,7 @@ static bool SignalSomeChildren(int signal, int target);
 static int	CountChildren(int target);
 static bool CreateOptsFile(int argc, char *argv[], char *fullprogname);
 static pid_t StartChildProcess(AuxProcType type);
+static void StartAutovacuumWorker(void);
 
 static void setProcAffinity(int id);
 
@@ -1839,6 +1841,7 @@ checkIODataDirectory(void)
 	int fd;
 	char filename[MAXPGPATH];
 	int size = BLCKSZ + BLCKSZ;
+	int magic_len = strlen(FTS_PROBE_MAGIC_STRING) + 1;
 	char *data = malloc(size);
 	if (data == NULL)
 	{
@@ -1874,8 +1877,7 @@ checkIODataDirectory(void)
 							errmsg("FTS: could not create file \"%s\": %m", 
 								filename)));
 				}
-				int len = strlen(FTS_PROBE_MAGIC_STRING);
-				strncpy(dataAligned, FTS_PROBE_MAGIC_STRING, len);
+				strncpy(dataAligned, FTS_PROBE_MAGIC_STRING, magic_len);
 				if (write(fd, dataAligned, BLCKSZ) != BLCKSZ)
 				{
 					ereport(LOG, (errcode_for_file_access(), 
@@ -1908,11 +1910,9 @@ checkIODataDirectory(void)
 			break;
 		}
 
-		if (strncmp(dataAligned, FTS_PROBE_MAGIC_STRING, strlen(FTS_PROBE_MAGIC_STRING)) != 0)
+		if (strncmp(dataAligned, FTS_PROBE_MAGIC_STRING, magic_len) != 0)
 		{
-			ereport(LOG, (errmsg("FTS: Failed to compare read data (%s) "
-					"from file with MAGIC (%s)",
-	                                data, FTS_PROBE_MAGIC_STRING)));
+			ereport(LOG, (errmsg("FTS: Read corrupted data from \"%s\" file", filename)));
 			failure = true;
 			break;
 		}
@@ -2514,14 +2514,13 @@ ServerLoop(void)
 
 			/*
 			 * Start a new autovacuum process, if there isn't one running already.
-			 * (It'll die relatively quickly.)  We check that it's not started too
-			 * frequently in autovac_start.
+			 * (It'll die relatively quickly.)  
 			 */
 			if ((AutoVacuumingActive() || force_autovac) && AutoVacPID == 0 &&
 				StartupPidsAllZero() && pmState > PM_STARTUP_PASS4 &&
 				!FatalError && Shutdown == NoShutdown)
 			{
-				AutoVacPID = autovac_start();
+				AutoVacPID = start_autovac_launcher;
 				if (Debug_print_server_processes)
 					elog(LOG,"restarted 'autovacuum process' as pid %ld",
 						 (long)AutoVacPID);
@@ -4402,8 +4401,6 @@ static void do_reaper()
 
         Assert(pid != 0);
 
-		bool resetRequired = freeProcEntryAndReturnReset(pid);
-
 		if (Debug_print_server_processes)
 		{
 			char *procName;
@@ -4747,7 +4744,7 @@ static void do_reaper()
 						if (subProc->cleanupBackend == true)
 						{
 							Assert(subProc->procName && strcmp(subProc->procName, "perfmon process") != 0);
-							CleanupBackend(pid, exitstatus, resetRequired);
+							CleanupBackend(pid, exitstatus);
 						}
 
 						/*
@@ -4936,10 +4933,9 @@ static void do_reaper()
 		if (pid == AutoVacPID)
 		{
 			AutoVacPID = 0;
-			autovac_stopped();
-			if (!EXIT_STATUS_0(exitstatus) && !EXIT_STATUS_1(exitstatus) && resetRequired)
+			if (!EXIT_STATUS_0(exitstatus) && !EXIT_STATUS_1(exitstatus))
 				HandleChildCrash(pid, exitstatus,
-								 _("autovacuum process"));
+								 _("autovacuum launcher process"));
 			continue;
 		}
 
@@ -5013,7 +5009,7 @@ static void do_reaper()
 		/*
 		 * Else do standard backend child cleanup.
 		 */
-		CleanupBackend(pid, exitstatus, resetRequired);
+		CleanupBackend(pid, exitstatus);
 	}							/* loop over pending child-death reports */
 
 	/*
@@ -5204,8 +5200,7 @@ GetServerProcessTitle(int pid)
  */
 static void
 CleanupBackend(int pid,
-			   int exitstatus,	/* child's exit status. */
-			   bool resetRequired) /* postmaster reset is required */
+			   int exitstatus)	/* child's exit status. */
 {
 	Dlelem	   *curr;
 
@@ -5230,7 +5225,7 @@ CleanupBackend(int pid,
 	}
 #endif
 
-	if (!EXIT_STATUS_0(exitstatus) && !EXIT_STATUS_1(exitstatus) && resetRequired)
+	if (!EXIT_STATUS_0(exitstatus) && !EXIT_STATUS_1(exitstatus))
 	{
 		HandleChildCrash(pid, exitstatus, _("server process"));
 		return;
@@ -5574,17 +5569,14 @@ signal_to_name(int signal)
 static void
 LogChildExit(int lev, const char *procname, int pid, int exitstatus)
 {
-    char pidLabel[100];
-    sprintf(pidLabel, " (PID %d)", pid);
-
 	if (WIFEXITED(exitstatus))
 		ereport(lev,
 
 		/*------
 		  translator: %s is a noun phrase describing a child process, such as
 		  "server process" */
-				(errmsg("%s%s exited with exit code %d",
-						procname, pidLabel, WEXITSTATUS(exitstatus))));
+				(errmsg("%s (PID %d) exited with exit code %d",
+						procname, pid, WEXITSTATUS(exitstatus))));
 	else if (WIFSIGNALED(exitstatus))
 #if defined(WIN32)
 		ereport(lev,
@@ -5592,21 +5584,19 @@ LogChildExit(int lev, const char *procname, int pid, int exitstatus)
 		/*------
 		  translator: %s is a noun phrase describing a child process, such as
 		  "server process" */
-				(errmsg("%s%s was terminated by exception 0x%X",
-						procname, pidLabel, WTERMSIG(exitstatus)),
+				(errmsg("%s (PID %d) was terminated by exception 0x%X",
+						procname, pid, WTERMSIG(exitstatus)),
 				 errhint("See C include file \"ntstatus.h\" for a description of the hexadecimal value.")));
 #elif defined(HAVE_DECL_SYS_SIGLIST) && HAVE_DECL_SYS_SIGLIST
-	ereport(lev,
+		ereport(lev,
 
-	/*------
-	  translator: %s is a noun phrase describing a child process, such as
-	  "server process" */
-	// strsignal() is preferred over the deprecated use of sys_siglist, on platforms that support it.
-	// Solaris and Linux do support it, but I think MAC OSX doesn't?
-			(errmsg("%s%s was terminated by signal %d: %s",
-					procname, pidLabel, WTERMSIG(exitstatus),
-					WTERMSIG(exitstatus) < NSIG ?
-					sys_siglist[WTERMSIG(exitstatus)] : "(unknown)")));
+		/*------
+		  translator: %s is a noun phrase describing a child process, such as
+		  "server process" */
+				(errmsg("%s (PID %d) was terminated by signal %d: %s",
+						procname, pid, WTERMSIG(exitstatus),
+						WTERMSIG(exitstatus) < NSIG ?
+						sys_siglist[WTERMSIG(exitstatus)] : "(unknown)")));
 #else
 	{
 		// If we don't have strsignal or sys_siglist, do our own translation
@@ -5619,8 +5609,8 @@ LogChildExit(int lev, const char *procname, int pid, int exitstatus)
 		/*------
 		  translator: %s is a noun phrase describing a child process, such as
 		  "server process" */
-			    (errmsg("%s%s was terminated by signal %d: %s",
-						procname, pidLabel, WTERMSIG(exitstatus), signalName)));
+			    (errmsg("%s (PID %d) was terminated by signal %d: %s",
+						procname, pid, WTERMSIG(exitstatus), signalName)));
 	}
 #endif
 	else
@@ -5629,8 +5619,8 @@ LogChildExit(int lev, const char *procname, int pid, int exitstatus)
 		/*------
 		  translator: %s is a noun phrase describing a child process, such as
 		  "server process" */
-				(errmsg("%s%s exited with unrecognized status %d",
-						procname, pidLabel, exitstatus)));
+				(errmsg("%s (PID %d) exited with unrecognized status %d",
+						procname, pid, exitstatus)));
 }
 
 /**
@@ -6269,14 +6259,14 @@ signal_child(pid_t pid, int signal)
 }
 
 /*
- * Send a signal to the targeted children (but NOT special children;
- * dead_end children are never signaled, either).
+ * Send a signal to all backend children, including autovacuum workers (but NOT
+ * special children).  If only_autovac is TRUE, only the autovacuum worker
+ * processes are signalled.
  */
-static bool
-SignalSomeChildren(int signal, int target)
+static void
+SignalSomeChildren(int signal, bool only_autovac)
 {
 	Dlelem	   *curr;
-	bool		signaled = false;
 
 	for (curr = DLGetHead(BackendList); curr; curr = DLGetSucc(curr))
 	{
@@ -6284,32 +6274,14 @@ SignalSomeChildren(int signal, int target)
 
 		if (bp->dead_end)
 			continue;
-
-		/*
-		 * Since target == BACKEND_TYPE_ALL is the most common case, we test
-		 * it first and avoid touching shared memory for every child.
-		 */
-		if (target != BACKEND_TYPE_ALL)
-		{
-			int			child;
-
-			if (bp->is_autovacuum)
-				child = BACKEND_TYPE_AUTOVAC;
-			else if (IsPostmasterChildWalSender(bp->child_slot))
-				child = BACKEND_TYPE_WALSND;
-			else
-				child = BACKEND_TYPE_NORMAL;
-			if (!(target & child))
-				continue;
-		}
+		if (only_autovac && !bp->is_autovacuum)
+			continue;
 
 		ereport(DEBUG4,
 				(errmsg_internal("sending signal %d to process %d",
 								 signal, (int) bp->pid)));
 		signal_child(bp->pid, signal);
-		signaled = true;
 	}
-	return signaled;
 }
 
 /*
@@ -7119,8 +7091,10 @@ SubPostmasterMain(int argc, char *argv[])
 		PGSharedMemoryReAttach();
 
 	/* autovacuum needs this set before calling InitProcess */
-	if (strcmp(argv[1], "--forkautovac") == 0)
-		AutovacuumIAm();
+	if (strcmp(argv[1], "--forkavlauncher") == 0)
+		AutovacuumLauncherIAm();
+	if (strcmp(argv[1], "--forkavworker") == 0)
+		AutovacuumWorkerIAm();
 
 	/*
 	 * Start our win32 signal implementation. This has to be done after we
@@ -7166,6 +7140,15 @@ SubPostmasterMain(int argc, char *argv[])
 		if (EnableSSL)
 			secure_initialize();
 #endif
+
+		/*
+		 * process any libraries that should be preloaded at postmaster start
+		 *
+		 * NOTE: we have to re-load the shared_preload_libraries here because
+		 * 		 this backend is not fork()ed so we can't inherit any shared
+		 *		 libraries / DLL's from our parent (the postmaster).
+		 */
+		process_shared_preload_libraries();
 
 		/*
 		 * Perform additional initialization and client authentication.
@@ -7217,7 +7200,24 @@ SubPostmasterMain(int argc, char *argv[])
 		AuxiliaryProcessMain(argc - 2, argv + 2);
 		proc_exit(0);
 	}
-	if (strcmp(argv[1], "--forkautovac") == 0)
+	if (strcmp(argv[1], "--forkavlauncher") == 0)
+	{
+		/* Close the postmaster's sockets */
+		ClosePostmasterPorts(false);
+
+		/* Restore basic shared memory pointers */
+		InitShmemAccess(UsedShmemSegAddr);
+
+		/* Need a PGPROC to run CreateSharedMemoryAndSemaphores */
+		InitDummyProcess();
+
+		/* Attach process to shared data structures */
+		CreateSharedMemoryAndSemaphores(false, 0);
+
+		AutoVacLauncherMain(argc - 2, argv + 2);
+		proc_exit(0);
+	}
+	if (strcmp(argv[1], "--forkavworker") == 0)
 	{
 		/* Close the postmaster's sockets */
 		ClosePostmasterPorts(false);
@@ -7231,7 +7231,7 @@ SubPostmasterMain(int argc, char *argv[])
 		/* Attach process to shared data structures */
 		CreateSharedMemoryAndSemaphores(false, 0);
 
-		AutoVacMain(argc - 2, argv + 2);
+		AutoVacWorkerMain(argc - 2, argv + 2);
 		proc_exit(0);
 	}
 	if (strcmp(argv[1], "--forkarch") == 0)
@@ -7427,7 +7427,7 @@ sigusr1_handler(SIGNAL_ARGS)
 		WalReceiverPID = StartWalReceiver();
 	}
 
-	if (CheckPostmasterSignal(PMSIGNAL_START_AUTOVAC))
+	if (CheckPostmasterSignal(PMSIGNAL_START_AUTOVAC_LAUNCHER))
 	{
 		/*
 		 * Start one iteration of the autovacuum daemon, even if autovacuuming
@@ -7438,8 +7438,12 @@ sigusr1_handler(SIGNAL_ARGS)
 		 * that by launching another iteration as soon as the current one
 		 * completes.
 		 */
-		force_autovac = true;
+		start_autovac_launcher = true;
 	}
+
+	/* The autovacuum launcher wants us to start a worker process. */
+	if (CheckPostmasterSignal(PMSIGNAL_START_AUTOVAC_WORKER))
+		StartAutovacuumWorker();
 
 	if (CheckPostmasterSignal(PMSIGNAL_FILEREP_STATE_CHANGE))
 	{
@@ -7790,6 +7794,57 @@ StartChildProcess(AuxProcType type)
 	 * in parent, successful fork
 	 */
 	return pid;
+}
+
+/*
+ * StartAutovacuumWorker
+ *		Start an autovac worker process.
+ *
+ * This function is here because it enters the resulting PID into the
+ * postmaster's private backends list.
+ *
+ * NB -- this code very roughly matches BackendStartup.
+ */
+static void
+StartAutovacuumWorker(void)
+{
+	Backend	   *bn;
+
+	/*
+	 * do nothing if not in condition to run a process.  This should not
+	 * actually happen, since the signal is only supposed to be sent by
+	 * autovacuum launcher when it's OK to do it, but test for it just in case.
+	 */
+	if (StartupPID != 0 || FatalError || Shutdown != NoShutdown)
+		return;
+
+	bn = (Backend *) malloc(sizeof(Backend));
+	if (!bn)
+	{
+		ereport(LOG,
+				(errcode(ERRCODE_OUT_OF_MEMORY),
+				 errmsg("out of memory")));
+		return;
+	}
+
+	bn->pid = StartAutoVacWorker();
+	bn->is_autovacuum = true;
+	/* we don't need a cancel key */
+
+	if (bn->pid > 0)
+	{
+		DLAddHead(BackendList, DLNewElem(bn));
+#ifdef EXEC_BACKEND
+		ShmemBackendArrayAdd(bn);
+#endif
+	}
+	else
+	{
+		/* not much we can do */
+		ereport(LOG,
+				(errmsg("could not fork new process for autovacuum: %m")));
+		free(bn);
+	}
 }
 
 /*

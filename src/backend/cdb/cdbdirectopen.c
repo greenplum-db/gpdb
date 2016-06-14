@@ -7,14 +7,21 @@
  *-------------------------------------------------------------------------
  */
 
+#include "postgres.h"
+
+#include "access/aosegfiles.h"
+#include "access/aocssegfiles.h"
 #include "cdb/cdbdirectopen.h"
 #include "utils/guc.h"
 #include "storage/smgr.h"
 #include "utils/memutils.h"
-#include "catalog/pg_proc.h"
+#include "catalog/pg_authid.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_index.h"
+#include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
+#include "catalog/pg_proc.h"
+#include "catalog/pg_tablespace.h"
 #include "utils/builtins.h"
 
 /*

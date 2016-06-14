@@ -6,13 +6,11 @@ test: with_clause spilltodisk
 test: tiny
 test: wrkloadadmin
 ignore: jdbc
-test: jetpack
 test: spi
 test: security
 test: load_tpch sirv_functions view xpath
 # these tests depend on load_tpch
-test: tpch_query hashagg gpsort
-test: bkup_gp
+test: tpch_query tpch_aopart hashagg gpsort
 test: mpp-11333
 test: codecoverage
 test: gist_indexes
@@ -22,7 +20,7 @@ test: gp_persistent_table
 #mpp23872: Disabling gpcheckmirrorseg as it is erroring out bugbuster on some platforms.
 ignore: gpcheckmirrorseg
 test: AOCO_Compression2 schema_topology table_statistics
-test: bkup_pg gpmgmt1 cursor metadata_track
+test: cursor metadata_track
 test: memory_quota
 test: TestPSQL
 test: opperf

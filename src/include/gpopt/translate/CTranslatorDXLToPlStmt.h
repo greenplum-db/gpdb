@@ -607,7 +607,6 @@ namespace gpdxl
 				(
 				const CDXLTableDescr *pdxltabdesc,
 				const CDXLIndexDescr *pdxlid,
-				ULONG ulRelColumns,
 				Index iRel,
 				CDXLTranslateContextBaseTable *pdxltrctxbtOut
 				);

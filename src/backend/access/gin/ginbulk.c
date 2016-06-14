@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gin/ginbulk.c,v 1.7 2007/01/05 22:19:21 momjian Exp $
+ *			$PostgreSQL: pgsql/src/backend/access/gin/ginbulk.c,v 1.9 2007/02/01 04:16:08 neilc Exp $
  *-------------------------------------------------------------------------
  */
 
@@ -187,17 +187,17 @@ ginChooseElem(BuildAccumulator *accum, ItemPointer heapptr, Datum *entries, uint
 
 /*
  * Insert one heap pointer. Suppose entries is sorted.
- * Insertion order trys to get binary tree balanced: first insert middle value,
+ * Insertion order tries to get binary tree balanced: first insert middle value,
  * next middle on left part and middle of right part.
  */
 void
-ginInsertRecordBA(BuildAccumulator *accum, ItemPointer heapptr, Datum *entries, uint32 nentry)
+ginInsertRecordBA(BuildAccumulator *accum, ItemPointer heapptr, Datum *entries, int32 nentry)
 {
 	uint32		i,
 				nbit = 0,
 				offset;
 
-	if (nentry == 0)
+	if (nentry <= 0)
 		return;
 
 	i = nentry - 1;

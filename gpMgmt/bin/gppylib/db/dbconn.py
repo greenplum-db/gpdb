@@ -183,13 +183,21 @@ def connect(dburl, utility=False, verbose=False,
     timeout  = dburl.timeout
     cnx      = None
 
+    # All quotation and escaping here are to handle database name containig
+    # special characters like ' and \ and white spaces.
+
+    # Need to escape backslashes and single quote in db name
+    # Also single quoted the connection string for dbname
+    dbbase = dbbase.replace('\\', '\\\\')
+    dbbase = dbbase.replace('\'', '\\\'')
+
     # MPP-14121, use specified connection timeout
-    #
+    # Single quote the connection string for dbbase name
     if timeout is not None:
-        cstr    = "dbname=%s connect_timeout=%s" % (dbbase, timeout)
+        cstr    = "dbname='%s' connect_timeout=%s" % (dbbase, timeout)
         retries = dburl.retries
     else:
-        cstr    = "dbname=%s" % dbbase
+        cstr    = "dbname='%s'" % dbbase
         retries = 1
 
     # This flag helps to avoid logging the connection string in some special

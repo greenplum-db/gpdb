@@ -345,11 +345,11 @@ drop external web table example_in;
 CREATE  EXTERNAL WEB TABLE example_in(a boolean)
 execute 'cat $GP_SEG_DATADIR/hdfsfile.out'
  FORMAT 'CUSTOM' (formatter='gphdfs_import')
- log errors into errtbl SEGMENT REJECT LIMIT 1000 rows;
+ log errors SEGMENT REJECT LIMIT 1000 rows;
 
 select * from example_in order by 1;
 
-select relname, filename, linenum, bytenum, errmsg, rawdata, rawbytes from errtbl order by 1,2,3,4,5,6,7;
+select relname, filename, linenum, bytenum, errmsg, rawdata, rawbytes from gp_read_error_log('example_in') order by 1,2,3,4,5,6,7;
 --
 -- End of Test (drop stuff)
 --

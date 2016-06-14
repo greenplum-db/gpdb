@@ -19,6 +19,10 @@ reconstructTupleValues(AttrMap *map,
 extern TupleTableSlot *
 reconstructMatchingTupleSlot(TupleTableSlot *slot, ResultRelInfo *resultRelInfo);
 
+/*
+ * In PostgreSQL, ExecInsert, ExecDelete and ExecUpdate are static in execMain.c.
+ * In GPDB, they're exported.
+ */
 extern void
 ExecInsert(TupleTableSlot *slot,
 		   DestReceiver *dest,

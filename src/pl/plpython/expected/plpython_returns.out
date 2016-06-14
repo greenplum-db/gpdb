@@ -2655,7 +2655,11 @@ SELECT * FROM test_return_out_record('None');
 
 SELECT test_return_out_record('None') 
 FROM gp_single_row;
-ERROR:  Can't serialize transient record types (tupser.c:165)
+test_return_out_record 
+------------------------
+
+(1 row)
+
 SELECT (test_return_out_record('None')).*;
  first | second 
 -------+--------
@@ -2684,7 +2688,11 @@ SELECT * FROM test_return_out_record('("value", 4)');
 
 SELECT test_return_out_record('("value", 4)')
 FROM gp_single_row;
-ERROR:  Can't serialize transient record types (tupser.c:165)
+test_return_out_record 
+------------------------
+(value,4)
+(1 row)
+
 SELECT (test_return_out_record('("value", 4)')).*;
  first | second 
 -------+--------
@@ -2713,7 +2721,11 @@ SELECT * FROM test_return_out_record('["value", 4]');
 
 SELECT test_return_out_record('["value", 4]')
 FROM gp_single_row;
-ERROR:  Can't serialize transient record types (tupser.c:165)
+test_return_out_record 
+------------------------
+(value,4)
+(1 row)
+
 SELECT (test_return_out_record('["value", 4]')).*;
  first | second 
 -------+--------
@@ -2742,7 +2754,11 @@ SELECT * FROM test_return_out_record('{"first": "value", "second": 4}');
 
 SELECT test_return_out_record('{"first": "value", "second": 4}')
 FROM gp_single_row;
-ERROR:  Can't serialize transient record types (tupser.c:165)
+test_return_out_record 
+------------------------
+(value,4)
+(1 row)
+
 SELECT (test_return_out_record('{"first": "value", "second": 4}')).*;
  first | second 
 -------+--------
@@ -3008,7 +3024,10 @@ SELECT * FROM test_return_out_setof_record('[]');
 
 SELECT test_return_out_setof_record('[]')
 FROM gp_single_row;
-ERROR:  Can't serialize transient record types (tupser.c:165)
+test_return_out_setof_record 
+------------------------------
+(0 rows)
+
 SELECT (test_return_out_setof_record('[]')).*;
  first | second 
 -------+--------
@@ -3037,7 +3056,12 @@ SELECT * FROM test_return_out_setof_record('[ ("value", 4), {"first": "test", "s
 
 SELECT test_return_out_setof_record('[ ("value", 4), {"first": "test", "second": 2} ]')
 FROM gp_single_row;
-ERROR:  Can't serialize transient record types (tupser.c:165)
+test_return_out_setof_record 
+------------------------------
+(value,4)
+(test,2)
+(2 rows)
+
 SELECT (test_return_out_setof_record('[ ("value", 4), {"first": "test", "second": 2} ]')).*;
  first | second 
 -------+--------
@@ -3193,7 +3217,10 @@ SELECT * FROM test_return_table('[]');
 
 SELECT test_return_table('[]')
 FROM gp_single_row;
-ERROR:  Can't serialize transient record types (tupser.c:165)
+test_return_table 
+-------------------
+(0 rows)
+
 SELECT (test_return_table('[]')).*;
  first | second 
 -------+--------
@@ -3222,7 +3249,13 @@ SELECT * FROM test_return_table('[ ("value", 4), {"first": "test", "second": 2} 
 
 SELECT test_return_table('[ None, ("value", 4), {"first": "test", "second": 2} ]')
 FROM gp_single_row;
-ERROR:  Can't serialize transient record types (tupser.c:165)
+test_return_table 
+-------------------
+
+(value,4)
+(test,2)
+(3 rows)
+
 SELECT (test_return_table('[ ("value", 4), {"first": "test", "second": 2} ]')).*;
  first | second 
 -------+--------

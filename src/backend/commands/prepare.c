@@ -10,7 +10,7 @@
  * Copyright (c) 2002-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/prepare.c,v 1.67 2007/01/05 22:19:26 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/prepare.c,v 1.68 2007/01/28 19:05:35 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -220,16 +220,8 @@ ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
 					 errmsg("prepared statement is not a SELECT")));
 
 		pstmt->intoClause = copyObject(stmt->into);
-
-		/* XXX  Is it legitimate to assign a constant default policy without 
-		 *      even checking the relation?
-		 */
-		pstmt->intoPolicy = palloc0(sizeof(GpPolicy)- sizeof(pstmt->intoPolicy->attrs)
-									+ 255 * sizeof(pstmt->intoPolicy->attrs[0]));
-		pstmt->intoPolicy->nattrs = 1;			
-		pstmt->intoPolicy->ptype = POLICYTYPE_PARTITIONED;
-		pstmt->intoPolicy->attrs[0] = 1;
-		
+		Assert(pstmt->intoPolicy != NULL);
+		pstmt->intoPolicy = GpPolicyCopy(CurrentMemoryContext, pstmt->intoPolicy);	
 		MemoryContextSwitchTo(oldContext);
 	}
 
@@ -250,7 +242,7 @@ ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
 	 * Run the portal to completion.
 	 */
 	PortalStart(portal, paramLI, ActiveSnapshot,
-				savedSeqServerHost, savedSeqServerPort);
+				savedSeqServerHost, savedSeqServerPort, NULL);
 
 	(void) PortalRun(portal, 
 					FETCH_ALL, 
@@ -826,12 +818,7 @@ build_regtype_array(List *oid_list)
 	i = 0;
 	foreach(lc, oid_list)
 	{
-		Oid			oid;
-		Datum		oid_str;
-
-		oid = lfirst_oid(lc);
-		oid_str = DirectFunctionCall1(oidout, ObjectIdGetDatum(oid));
-		tmp_ary[i++] = DirectFunctionCall1(regtypein, oid_str);
+		tmp_ary[i++] = ObjectIdGetDatum(lfirst_oid(lc));
 	}
 
 	/* XXX: this hardcodes assumptions about the regtype type */

@@ -8,10 +8,6 @@
  */
 #include "postgres.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "catalog/pg_operator.h"
 #include "catalog/pg_proc.h"    /* CDB_PROC_TIDTOI8 */
 #include "catalog/pg_type.h"    /* INT8OID */
@@ -31,10 +27,7 @@ extern "C" {
 #include "cdb/cdbhash.h"        /* isGreenplumDbHashable() */
 
 #include "cdb/cdbpath.h"        /* me */
-
-#ifdef __cplusplus
-}   /* extern "C" */
-#endif
+#include "cdb/cdbvars.h"
 
 #ifdef small                    /* <socket.h> might #define small */
 #undef small                    /*  but I want it for a variable name */
@@ -266,35 +259,6 @@ invalid_motion_request:
     return NULL;
 }                               /* cdbpath_create_motion_path */
 
-
-/*
- * cdbpath_partkeyitem_eq_constant
- */
-static inline List *
-cdbpath_partkeyitem_eq_constant(CdbLocusType   locustype,
-                                 List          *partkeyitem)
-{
-    if (locustype == CdbLocusType_Hashed)
-    {
-        if (CdbPathkeyEqualsConstant(partkeyitem))
-            return partkeyitem;
-    }
-    else if (locustype == CdbLocusType_HashedOJ)
-    {
-        ListCell   *cell;
-        foreach(cell, partkeyitem)
-        {
-            List   *pathkey = (List*)lfirst(cell);
-            if (CdbPathkeyEqualsConstant(pathkey))
-                return pathkey;
-        }
-    }
-    else
-        Assert(false);
-    return NIL;
-}                               /* cdbpath_partkeyitem_eq_constant */
-
-
 /*
  * cdbpath_match_preds_to_partkey_tail
  *
@@ -316,91 +280,149 @@ typedef struct
 } CdbpathMatchPredsContext;
 
 
-static bool
-cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext   *ctx,
-                                    ListCell                   *partkeycell)
+/*
+ * A helper function to create a PathKey for an EquivalenceClass. This is used
+ * to construct a PathKey in a hash locus, rather than sort ordering, so we
+ * don't care about the particular opfamily being used, the strategy, nor
+ * nulls_first.
+ */
+static PathKey *
+makePathKeyForEC(EquivalenceClass *eclass)
 {
-    List       *copathkey;
-    List       *sublist;
-    ListCell   *rcell;
+	PathKey    *pk = makeNode(PathKey);
 
-    /* Get current item of partkey. */
-    sublist = (List *)lfirst(partkeycell);
+	pk->pk_eclass = eclass;
+	pk->pk_opfamily = linitial_oid(eclass->ec_opfamilies);
+	pk->pk_strategy = BTLessStrategyNumber;
+	pk->pk_nulls_first = false;
 
-    /* Is there a "<partkey item> = <constant expr>" predicate?
-     *
-     *  If table T is distributed on cols (C,D,E) and query contains preds
-     *          T.C = U.A AND T.D = <constant expr> AND T.E = U.B
-     *  then we would like to report a match and return the colocus
-     *          (U.A, <constant expr>, U.B)
-     *  so the caller can join T and U by redistributing only U.
-     *  (Note that "T.D = <constant expr>" won't be in the mergeclause_list
-     *  because it isn't a join pred.)
-     */
-    copathkey = cdbpath_partkeyitem_eq_constant(ctx->locus.locustype, sublist);
+	return pk;
+}
 
-    /* Look for an equijoin comparison to the partkey item. */
-    if (!copathkey)
-    {
-        foreach(rcell, ctx->mergeclause_list)
-        {
-            RestrictInfo   *rinfo = (RestrictInfo *)lfirst(rcell);
+static bool
+cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext *ctx,
+									ListCell *partkeycell)
+{
+	PathKey    *copathkey;
+	ListCell   *rcell;
 
-            if (!rinfo->left_pathkey)
-                cache_mergeclause_pathkeys(ctx->root, rinfo);
+	/*----------------
+	 * Is there a "<partkey item> = <constant expr>" predicate?
+	 *
+	 * If table T is distributed on cols (C,D,E) and query contains preds
+	 *		T.C = U.A AND T.D = <constant expr> AND T.E = U.B
+	 * then we would like to report a match and return the colocus
+	 * 		(U.A, <constant expr>, U.B)
+	 * so the caller can join T and U by redistributing only U.
+	 * (Note that "T.D = <constant expr>" won't be in the mergeclause_list
+	 * because it isn't a join pred.)
+	 *----------------
+	 */
+	copathkey = NULL;
 
-            if (CdbPathLocus_IsHashed(ctx->locus))
-            {
-                if (sublist == rinfo->left_pathkey)
-                    copathkey = rinfo->right_pathkey;
-                else if (sublist == rinfo->right_pathkey)
-                    copathkey = rinfo->left_pathkey;
-            }
-            else if (CdbPathLocus_IsHashedOJ(ctx->locus))
-            {
-                if (list_member_ptr(sublist, rinfo->left_pathkey))
-                    copathkey = rinfo->right_pathkey;
-                else if (rinfo->left_pathkey != rinfo->right_pathkey &&
-                    list_member_ptr(sublist, rinfo->right_pathkey))
-                    copathkey = rinfo->left_pathkey;
-            }
+	if (ctx->locus.locustype == CdbLocusType_Hashed)
+	{
+		PathKey    *pathkey = (PathKey *) lfirst(partkeycell);
 
-            if (copathkey)
-                break;
-        }
+		if (CdbPathkeyEqualsConstant(pathkey))
+			copathkey = pathkey;
+	}
+	else if (ctx->locus.locustype == CdbLocusType_HashedOJ)
+	{
+		List	   *sublist = (List *) lfirst(partkeycell);
+		ListCell   *cell;
 
-        /* Fail if didn't find a match for this partkey item. */
-        if (!copathkey)
-            return false;
-    }
+		foreach(cell, sublist)
+		{
+			PathKey    *pathkey = (PathKey *) lfirst(cell);
 
-    /* Might need to build co-locus if locus is outer join source or result. */
-    if (copathkey != sublist)
-        ctx->colocus_eq_locus = false;
+			if (CdbPathkeyEqualsConstant(pathkey))
+			{
+				copathkey = pathkey;
+				break;
+			}
+		}
+	}
+	else
+		elog(ERROR, "unexpected locus type: %u", ctx->locus.locustype);
+	/* Look for an equijoin comparison to the partkey item. */
+	if (!copathkey)
+	{
+		foreach(rcell, ctx->mergeclause_list)
+		{
+			ListCell   *i;
+			RestrictInfo *rinfo = (RestrictInfo *) lfirst(rcell);
 
-    /* Match remaining partkey items. */
-    partkeycell = lnext(partkeycell);
-    if (partkeycell)
-    {
-        if (!cdbpath_match_preds_to_partkey_tail(ctx, partkeycell))
-            return false;
-    }
+			if (!rinfo->left_ec)
+				cache_mergeclause_eclasses(ctx->root, rinfo);
 
-    /* Success!  Matched all items.  Return co-locus if requested. */
-    if (ctx->colocus)
-    {
-        if (ctx->colocus_eq_locus)
-            *ctx->colocus = ctx->locus;
-        else if (!partkeycell)
-            CdbPathLocus_MakeHashed(ctx->colocus, list_make1(copathkey));
-        else
-        {
-            ctx->colocus->partkey = lcons(copathkey, ctx->colocus->partkey);
-            Assert(cdbpathlocus_is_valid(*ctx->colocus));
-        }
-    }
-    return true;
-}                               /* cdbpath_match_preds_to_partkey_tail */
+			if (CdbPathLocus_IsHashed(ctx->locus))
+			{
+				PathKey    *pathkey = (PathKey *) lfirst(partkeycell);
+
+				if (pathkey->pk_eclass == rinfo->left_ec)
+					copathkey = makePathKeyForEC(rinfo->right_ec);
+				else if (pathkey->pk_eclass == rinfo->right_ec)
+					copathkey = makePathKeyForEC(rinfo->left_ec);
+			}
+			else if (CdbPathLocus_IsHashedOJ(ctx->locus))
+			{
+				List	   *sublist = (List *) lfirst(partkeycell);
+
+				foreach(i, sublist)
+				{
+					PathKey    *pathkey = (PathKey *) lfirst(i);
+
+					if (pathkey->pk_eclass == rinfo->left_ec)
+						copathkey = makePathKeyForEC(rinfo->right_ec);
+					else if (pathkey->pk_eclass == rinfo->right_ec)
+						copathkey = makePathKeyForEC(rinfo->left_ec);
+				}
+			}
+
+			if (copathkey)
+				break;
+		}
+
+		/* Fail if didn't find a match for this partkey item. */
+		if (!copathkey)
+			return false;
+	}
+
+	/* Might need to build co-locus if locus is outer join source or result. */
+	if (copathkey != lfirst(partkeycell))
+		ctx->colocus_eq_locus = false;
+
+	/* Match remaining partkey items. */
+	partkeycell = lnext(partkeycell);
+	if (partkeycell)
+	{
+		if (!cdbpath_match_preds_to_partkey_tail(ctx, partkeycell))
+			return false;
+	}
+
+	/* Success!  Matched all items.  Return co-locus if requested. */
+	if (ctx->colocus)
+	{
+		if (ctx->colocus_eq_locus)
+			*ctx->colocus = ctx->locus;
+		else if (!partkeycell)
+			CdbPathLocus_MakeHashed(ctx->colocus, list_make1(copathkey));
+		else
+		{
+			if (CdbPathLocus_IsHashed(*ctx->colocus))
+				ctx->colocus->partkey_h = lcons(copathkey, ctx->colocus->partkey_h);
+			else
+			{
+				Assert(CdbPathLocus_IsHashedOJ(*ctx->colocus));
+				ctx->colocus->partkey_oj = lcons(copathkey, ctx->colocus->partkey_oj);
+			}
+			Assert(cdbpathlocus_is_valid(*ctx->colocus));
+		}
+	}
+	return true;
+}	/* cdbpath_match_preds_to_partkey_tail */
+
 
 
 /*
@@ -435,7 +457,10 @@ cdbpath_match_preds_to_partkey(PlannerInfo     *root,
     ctx.colocus             = colocus;
     ctx.colocus_eq_locus    = true;
 
-    return cdbpath_match_preds_to_partkey_tail(&ctx, list_head(locus.partkey));
+	if (CdbPathLocus_IsHashed(locus))
+		return cdbpath_match_preds_to_partkey_tail(&ctx, list_head(locus.partkey_h));
+	else
+		return cdbpath_match_preds_to_partkey_tail(&ctx, list_head(locus.partkey_oj));
 }                               /* cdbpath_match_preds_to_partkey */
 
 
@@ -458,10 +483,11 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo   *root,
 {
     ListCell   *outercell;
     ListCell   *innercell;
+	List	   *outer_partkey;
+	List	   *inner_partkey;
 
     if (!mergeclause_list ||
-        !outer_locus.partkey ||
-        !inner_locus.partkey ||
+		CdbPathLocus_Degree(outer_locus) == 0 || CdbPathLocus_Degree(inner_locus) == 0 ||
         CdbPathLocus_Degree(outer_locus) != CdbPathLocus_Degree(inner_locus))
         return false;
 
@@ -470,31 +496,51 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo   *root,
     Assert(CdbPathLocus_IsHashed(inner_locus) ||
            CdbPathLocus_IsHashedOJ(inner_locus));
 
-    forboth(outercell, outer_locus.partkey, innercell, inner_locus.partkey)
+	if (CdbPathLocus_IsHashed(outer_locus))
+		outer_partkey = outer_locus.partkey_h;
+	else
+		outer_partkey = outer_locus.partkey_oj;
+
+	if (CdbPathLocus_IsHashed(inner_locus))
+		inner_partkey = inner_locus.partkey_h;
+	else
+		inner_partkey = inner_locus.partkey_oj;
+
+    forboth(outercell, outer_partkey, innercell, inner_partkey)
     {
         List        *outersublist = (List *)lfirst(outercell);
         List        *innersublist = (List *)lfirst(innercell);
         ListCell    *rcell;
         foreach(rcell, mergeclause_list)
         {
+			bool not_found = false;
             RestrictInfo   *rinfo = (RestrictInfo *)lfirst(rcell);
 
-            if (!rinfo->left_pathkey)
-                cache_mergeclause_pathkeys(root, rinfo);
+            if (!rinfo->left_ec)
+                cache_mergeclause_eclasses(root, rinfo);
 
             /* Skip predicate if neither side matches outer partkey item. */
             if (CdbPathLocus_IsHashed(outer_locus))
             {
-                if (outersublist != rinfo->left_pathkey &&
-                    outersublist != rinfo->right_pathkey)
-                    continue;
+				PathKey *pathkey = (PathKey *) outersublist;
+				if (pathkey->pk_eclass != rinfo->left_ec && pathkey->pk_eclass != rinfo->right_ec)
+					continue;
             }
             else
             {
-                Assert(CdbPathLocus_IsHashedOJ(outer_locus));
-                if (!list_member_ptr(outersublist, rinfo->left_pathkey) &&
-                    !list_member_ptr(outersublist, rinfo->right_pathkey))
-                    continue;
+				Assert(CdbPathLocus_IsHashedOJ(outer_locus));
+				ListCell *i;
+				foreach(i, outersublist)
+				{
+					PathKey *pathkey = (PathKey *) lfirst(i);
+					if (pathkey->pk_eclass != rinfo->left_ec && pathkey->pk_eclass != rinfo->right_ec)
+					{
+						not_found = true;
+						break;
+					}
+				}
+				if (not_found)
+					continue;
             }
 
             /* Skip predicate if neither side matches inner partkey item. */
@@ -502,16 +548,25 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo   *root,
             {}                  /* do nothing */
             else if (CdbPathLocus_IsHashed(inner_locus))
             {
-                if (innersublist != rinfo->left_pathkey &&
-                    innersublist != rinfo->right_pathkey)
-                    continue;
+				PathKey *pathkey = (PathKey *) innersublist;
+				if (pathkey->pk_eclass != rinfo->left_ec && pathkey->pk_eclass != rinfo->right_ec)
+					continue;
             }
             else
             {
                 Assert(CdbPathLocus_IsHashedOJ(inner_locus));
-                if (!list_member_ptr(innersublist, rinfo->left_pathkey) &&
-                    !list_member_ptr(innersublist, rinfo->right_pathkey))
-                    continue;
+				ListCell *i;
+				foreach(i, innersublist)
+				{
+					PathKey *pathkey = (PathKey *) lfirst(i);
+					if (pathkey->pk_eclass != rinfo->left_ec && pathkey->pk_eclass != rinfo->right_ec)
+					{
+						not_found = true;
+						break;
+					}
+				}
+				if (not_found)
+					continue;
             }
 
             /* Found equijoin between outer partkey item & inner partkey item */
@@ -530,26 +585,24 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo   *root,
 /*
  * cdb_pathkey_isGreenplumDbHashable
  *
- * Iterates through a list of PathKeyItems and determines if all of them
- * are GreenplumDbHashable.
- *
+ * Iterates through a list of equivalence class members and determines if all
+ * of them are GreenplumDbHashable.
  */
 static bool
-cdbpath_pathkey_isGreenplumDbHashable(List *pathkey)
+cdbpath_eclass_isGreenplumDbHashable(EquivalenceClass *ec)
 {
-    ListCell *plcell = NULL;
-    foreach(plcell, pathkey)
-    {
-        PathKeyItem *pki = (PathKeyItem*) lfirst(plcell);
+	ListCell *j;
 
-        if (!isGreenplumDbHashable(exprType(pki->key)))
-        {
-            /* bail if any of the items are non-hashable */
-            return false;
-        }
-    }
+	foreach(j, ec->ec_members)
+	{
+		EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
 
-    return true;
+		/* Fail on non-hashable expression types */
+		if (!isGreenplumDbHashable(exprType((Node *) em->em_expr)))
+				return false;
+	}
+
+	return true;
 }
 
 
@@ -557,7 +610,7 @@ cdbpath_pathkey_isGreenplumDbHashable(List *pathkey)
  * cdbpath_partkeys_from_preds
  *
  * Makes a CdbPathLocus for repartitioning, driven by
- * the equijoin predicates in the mergeclause_list.
+ * the equijoin predicates in the mergeclause_list (a List of RestrictInfo).
  * Returns true if successful, or false if no usable equijoin predicates.
  *
  * Readers may refer also to these related functions:
@@ -577,57 +630,93 @@ cdbpath_partkeys_from_preds(PlannerInfo    *root,
 
     foreach(rcell, mergeclause_list)
     {
-        RestrictInfo *rinfo = (RestrictInfo *)lfirst(rcell);
+        RestrictInfo *rinfo = (RestrictInfo *) lfirst(rcell);
 
-        if (!rinfo->left_pathkey)
+        if (!rinfo->left_ec)
         {
-            cache_mergeclause_pathkeys(root, rinfo);
-            Assert(rinfo->left_pathkey);
+            cache_mergeclause_eclasses(root, rinfo);
+            Assert(rinfo->left_ec);
         }
 
         /*
          * skip non-hashable keys
          */
-        if (!cdbpath_pathkey_isGreenplumDbHashable(rinfo->left_pathkey) ||
-            !cdbpath_pathkey_isGreenplumDbHashable(rinfo->right_pathkey))
+        if (!cdbpath_eclass_isGreenplumDbHashable(rinfo->left_ec) ||
+            !cdbpath_eclass_isGreenplumDbHashable(rinfo->right_ec))
         {
             continue;
         }
 
         /* Left & right pathkeys are usually the same... */
-        if (!b_partkey &&
-            rinfo->left_pathkey == rinfo->right_pathkey)
+        if (!b_partkey && rinfo->left_ec == rinfo->right_ec)
         {
-            if (!list_member_ptr(a_partkey, rinfo->left_pathkey))
-                a_partkey = lappend(a_partkey, rinfo->left_pathkey);
+			ListCell *i;
+
+			foreach(i, a_partkey)
+			{
+				PathKey *pathkey = (PathKey *) lfirst(i);
+				if (pathkey->pk_eclass == rinfo->left_ec)
+					a_partkey = lappend(a_partkey, rinfo->left_ec);
+			}
         }
 
         /* ... except in outer join ON-clause. */
         else
         {
-            List   *a_pathkey;
-            List   *b_pathkey;
+			EquivalenceClass *a_ec;
+			EquivalenceClass *b_ec;
+			ListCell   *i;
+			bool		found = false;
+
 
             if (bms_is_subset(rinfo->right_relids, a_path->parent->relids))
             {
-                a_pathkey = rinfo->right_pathkey;
-                b_pathkey = rinfo->left_pathkey;
+                a_ec = rinfo->right_ec;
+                b_ec = rinfo->left_ec;
             }
             else
             {
-                a_pathkey = rinfo->left_pathkey;
-                b_pathkey = rinfo->right_pathkey;
+                a_ec = rinfo->left_ec;
+                b_ec = rinfo->right_ec;
                 Assert(bms_is_subset(rinfo->left_relids, a_path->parent->relids));
             }
 
-            if (!b_partkey)
-                b_partkey = list_copy(a_partkey);
+			if (!b_ec)
+				b_ec = a_ec;
 
-            if (!list_member_ptr(a_partkey, a_pathkey) &&
-                !list_member_ptr(b_partkey, b_pathkey))
+			/*
+			 * Convoluted logic to ensure that (a_ec not in a_partkey) AND (b_ec not in b_partkey)
+			 */
+			found = false;
+			foreach(i, a_partkey)
+			{
+				PathKey *pathkey = (PathKey *) lfirst(i);
+				if (pathkey->pk_eclass == a_ec)
+				{
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+			{
+				foreach(i, b_partkey)
+				{
+					PathKey *pathkey = (PathKey *) lfirst(i);
+					if (pathkey->pk_eclass == b_ec)
+					{
+						found = true;
+						break;
+					}
+				}
+			}
+
+			if (!found)
             {
-                a_partkey = lappend(a_partkey, a_pathkey);
-                b_partkey = lappend(b_partkey, b_pathkey);
+				PathKey *a_pk = makePathKeyForEC(a_ec);
+				PathKey *b_pk = makePathKeyForEC(b_ec);
+
+                a_partkey = lappend(a_partkey, a_pk);
+                b_partkey = lappend(b_partkey, b_pk);
             }
         }
 
@@ -1111,16 +1200,16 @@ cdbpath_dedup_fixup_unique(UniquePath *uniquePath, CdbpathDedupFixupContext *ctx
 				ctid_operators = lappend_oid(ctid_operators, TIDEqualOperator);
 			}
 
-            /* Add to repartitioning key.  Can use tid type without coercion. */
-            if (uniquePath->must_repartition)
-            {
-                List   *cpathkey;
+			/* Add to repartitioning key.  Can use tid type without coercion. */
+			if (uniquePath->must_repartition)
+			{
+				PathKey    *cpathkey;
 
-                if (!eq)
-                    eq = list_make1(makeString("="));
-                cpathkey = cdb_make_pathkey_for_expr(ctx->root, (Node *)var, eq);
-                partkey = lappend(partkey, cpathkey);
-            }
+				if (!eq)
+					eq = list_make1(makeString("="));
+				cpathkey = cdb_make_pathkey_for_expr(ctx->root, (Node *) var, eq, false);
+				partkey = lappend(partkey, cpathkey);
+			}
         }
 
         /* other uniqueifiers such as gp_segment_id */

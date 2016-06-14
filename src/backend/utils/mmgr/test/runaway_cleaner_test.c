@@ -36,6 +36,13 @@
     	will_return_with_sideeffect(errstart, false, &_ExceptionalCondition, NULL);\
     } \
 
+#define CHECK_FOR_RUNAWAY_CLEANUP_MEMORY_LOGGING() \
+	will_be_called(write_stderr); \
+	expect_any(write_stderr, fmt); \
+	will_be_called(MemoryAccounting_SaveToLog); \
+	will_be_called(MemoryContextStats); \
+	expect_any(MemoryContextStats, context); \
+
 /* MySessionState will use the address of this global variable */
 static SessionState fakeSessionState;
 
@@ -203,6 +210,8 @@ test__RunawayCleaner_StartCleanup__IgnoresCleanupInCriticalSection(void **state)
 
 	CritSectionCount = 1;
 	InterruptHoldoffCount = 0;
+
+	CHECK_FOR_RUNAWAY_CLEANUP_MEMORY_LOGGING();
 	RunawayCleaner_StartCleanup();
 
 	assert_true(beginCleanupRunawayVersion == *latestRunawayVersion);
@@ -243,6 +252,8 @@ test__RunawayCleaner_StartCleanup__IgnoresCleanupInHoldoffInterrupt(void **state
 
 	CritSectionCount = 0;
 	InterruptHoldoffCount = 1;
+
+	CHECK_FOR_RUNAWAY_CLEANUP_MEMORY_LOGGING();
 	RunawayCleaner_StartCleanup();
 
 	assert_true(beginCleanupRunawayVersion == *latestRunawayVersion);
@@ -385,6 +396,7 @@ test__RunawayCleaner_RunawayCleanupDoneForProcess__PreventsDuplicateCleanup(void
 	vmemTrackerInited = true;
 	isProcessActive = true;
 
+	CHECK_FOR_RUNAWAY_CLEANUP_MEMORY_LOGGING();
 	RunawayCleaner_RunawayCleanupDoneForProcess(false /* ignoredCleanup */);
 	/* cleanupCountdown should be adjusted */
 	assert_true(MySessionState->cleanupCountdown == CLEANUP_COUNTDOWN - 1);
@@ -433,6 +445,7 @@ test__RunawayCleaner_RunawayCleanupDoneForProcess__UndoDeactivation(void **state
 	/* We must undo the idle state */
 	will_be_called(IdleTracker_ActivateProcess);
 
+	CHECK_FOR_RUNAWAY_CLEANUP_MEMORY_LOGGING();
 	RunawayCleaner_RunawayCleanupDoneForProcess(false /* ignoredCleanup */);
 	/* The cleanupCountdown must be decremented as we cleaned up */
 	assert_true(MySessionState->cleanupCountdown == 1);
@@ -472,6 +485,7 @@ test__RunawayCleaner_RunawayCleanupDoneForProcess__ReactivatesRunawayDetection(v
 	/* Make sure the cleanup goes through */
 	vmemTrackerInited = true;
 
+	CHECK_FOR_RUNAWAY_CLEANUP_MEMORY_LOGGING();
 	RunawayCleaner_RunawayCleanupDoneForProcess(false /* ignoredCleanup */);
 	/* The cleanupCountdown must be decremented as we cleaned up */
 	assert_true(MySessionState->cleanupCountdown == 1);
@@ -487,6 +501,7 @@ test__RunawayCleaner_RunawayCleanupDoneForProcess__ReactivatesRunawayDetection(v
 	 */
 	endCleanupRunawayVersion = 1;
 
+	CHECK_FOR_RUNAWAY_CLEANUP_MEMORY_LOGGING();
 	/*
 	 * cleanupCountdown should reach 0, and immediately afterwards should be set to
 	 * CLEANUP_COUNTDOWN_BEFORE_RUNAWAY

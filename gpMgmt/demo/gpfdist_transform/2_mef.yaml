@@ -16,7 +16,7 @@ GPLOAD:
 
   - DELIMITER:        '|'
   - ERROR_LIMIT:      10
-  - ERROR_TABLE:      mef_errortable
+  - LOG_ERRORS:       True
 
   OUTPUT:
   - TABLE:            mef_xml

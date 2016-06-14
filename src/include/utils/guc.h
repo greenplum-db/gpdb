@@ -188,6 +188,7 @@ extern bool Disable_persistent_recovery_logging;
 extern bool	Debug_persistent_store_print;
 extern bool Debug_persistent_bootstrap_print;
 extern bool persistent_integrity_checks;
+extern bool validate_previous_free_tid;
 extern bool disable_persistent_diagnostic_dump;
 extern bool debug_persistent_ptcat_verification;
 extern bool debug_print_persistent_checks;
@@ -227,8 +228,8 @@ extern bool filerep_inject_listener_fault;
 extern bool filerep_inject_db_startup_fault;
 extern bool filerep_inject_change_tracking_recovery_fault;
 extern bool filerep_mirrorvalidation_during_resync;
+extern bool log_filerep_to_syslogger;
 extern bool gp_crash_recovery_suppress_ao_eof;
-extern bool Debug_check_for_invalid_persistent_tid;
 extern bool gp_create_table_random_default_distribution;
 extern bool gp_allow_non_uniform_partitioning_ddl;
 extern bool gp_enable_exchange_default_partition;
@@ -291,7 +292,6 @@ extern bool gp_temporary_files_filespace_repair;
 extern bool gp_perfmon_print_packet_info;
 extern bool gp_plpgsql_clear_cache_always;
 extern bool fts_diskio_check;
-extern bool gp_disable_catalog_access_on_segment;
 
 /* Debug DTM Action */
 typedef enum
@@ -375,7 +375,7 @@ extern int  optimizer_cost_model;
 extern bool optimizer_print_query;
 extern bool optimizer_print_plan;
 extern bool optimizer_print_xform;
-extern bool optimizer_release_mdcache;
+extern bool optimizer_metadata_caching;
 extern int optimizer_mdcache_size;
 extern bool optimizer_disable_xform_result_printing;
 extern bool	optimizer_print_memo_after_exploration;
@@ -386,7 +386,6 @@ extern bool	optimizer_print_expression_properties;
 extern bool	optimizer_print_group_properties;
 extern bool	optimizer_print_optimization_context;
 extern bool optimizer_print_optimization_stats;
-extern bool	optimizer_parallel;
 extern bool	optimizer_local;
 extern int  optimizer_retries;
 extern bool  optimizer_xforms[OPTIMIZER_XFORMS_COUNT];
@@ -430,6 +429,8 @@ extern double optimizer_damping_factor_filter;
 extern double optimizer_damping_factor_join;
 extern double optimizer_damping_factor_groupby;
 extern int optimizer_segments;
+extern int optimizer_join_arity_for_associativity_commutativity;
+extern int optimizer_array_expansion_threshold;
 extern bool optimizer_analyze_root_partition;
 extern bool optimizer_analyze_midlevel_partition;
 extern bool optimizer_enable_constant_expression_evaluation;
@@ -450,6 +451,12 @@ extern bool optimizer_multilevel_partitioning;
 extern bool optimizer_enable_derive_stats_all_groups;
 extern bool optimizer_explain_show_status;
 extern bool optimizer_prefer_scalar_dqa_multistage_agg;
+
+/**
+ * GUCs related to code generation.
+ **/
+extern bool init_codegen;
+extern bool codegen;
 
 /**
  * Enable logging of DPE match in optimizer.
@@ -502,6 +509,16 @@ extern char  *gp_default_storage_options;
 extern int log_count_recovered_files_batch;
 
 extern int writable_external_table_bufsize;
+
+typedef enum
+{
+	INDEX_CHECK_NONE,
+	INDEX_CHECK_SYSTEM,
+	INDEX_CHECK_ALL
+} IndexCheckType;
+
+extern IndexCheckType gp_indexcheck_insert;
+extern IndexCheckType gp_indexcheck_vacuum;
 
 /* Storage option names */
 #define SOPT_FILLFACTOR    "fillfactor"

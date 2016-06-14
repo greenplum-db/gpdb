@@ -18,7 +18,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbconn.h"
 #include "cdb/cdbutil.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 #include "access/xact.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbtm.h"
@@ -206,12 +206,12 @@ void
 FtsReConfigureMPP(bool create_new_gangs)
 {
 	/* need to scan to pick up the latest view */
-	detectFailedConnections();
+	FtsNotifyProber();
 	local_fts_statusVersion = ftsProbeInfo->fts_statusVersion;
 
 	ereport(LOG, (errmsg_internal("FTS: reconfiguration is in progress"),
 			errSendAlert(true)));
-	disconnectAndDestroyAllGangs();
+	disconnectAndDestroyAllGangs(true);
 
 	/* Caller should throw an error. */
 	return;
@@ -229,109 +229,38 @@ FtsHandleNetFailure(SegmentDatabaseDescriptor ** segDB, int numOfFailed)
 }
 
 /*
- * FtsHandleGangConnectionFailure is called by createGang during
- * creating connections return true if error need to be thrown
+ * Check if any segment DB is down.
+ *
+ * returns true if any segment DB is down.
  */
 bool
-FtsHandleGangConnectionFailure(SegmentDatabaseDescriptor * segdbDesc, int size)
+FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor * segdbDesc, int size)
 {
-	int			i;
-	bool		dtx_active;
-	bool		reportError = false;
-    bool		realFaultFound = false;
-	bool		forceRescan=true;
+	int i = 0;
+	bool forceRescan = true;
 
-    for (i = 0; i < size; i++)
-    {
-        if (PQstatus(segdbDesc[i].conn) != CONNECTION_OK)
-        {
-			CdbComponentDatabaseInfo *segInfo = segdbDesc[i].segment_database_info;
+	Assert(isFTSEnabled());
 
-			elog(DEBUG2, "FtsHandleGangConnectionFailure: looking for real fault on segment dbid %d", segInfo->dbid);
-
-			if (!FtsTestConnection(segInfo, forceRescan))
-			{
-				elog(DEBUG2, "found fault with segment dbid %d", segInfo->dbid);
-				realFaultFound = true;
-
-				/* that at least one fault exists is enough, for now */
-				break;
-			}
-			forceRescan = false; /* only force the rescan on the first call. */
-        }
-    }
-
-    if (!realFaultFound)
-	{
-		/* If we successfully tested the gang and didn't notice a
-		 * failure, our caller must've seen some kind of transient
-		 * failure when the gang was originally constructed ...  */
-		elog(DEBUG2, "FtsHandleGangConnectionFailure: no real fault found!");
-        return false;
-	}
-
-	if (!isFTSEnabled())
-	{
-		return false;
-	}
-
-	ereport(LOG, (errmsg_internal("FTS: reconfiguration is in progress")));
-
-	forceRescan = true;
 	for (i = 0; i < size; i++)
 	{
 		CdbComponentDatabaseInfo *segInfo = segdbDesc[i].segment_database_info;
 
-		if (PQstatus(segdbDesc[i].conn) != CONNECTION_OK)
+		elog(DEBUG2, "FtsTestSegmentDBIsDown: looking for real fault on segment dbid %d", segInfo->dbid);
+
+		if (!FtsTestConnection(segInfo, forceRescan))
 		{
-			if (!FtsTestConnection(segInfo, forceRescan))
-			{
-				ereport(LOG, (errmsg_internal("FTS: found bad segment with dbid %d", segInfo->dbid),
-						errSendAlert(true)));
-				/* probe process has already marked segment down. */
-			}
-			forceRescan = false; /* only force rescan on first call. */
+			ereport(LOG, (errmsg_internal("FTS: found fault with segment dbid %d. "
+					"Reconfiguration is in progress", segInfo->dbid)));
+			return true;
 		}
+
+		/* only force the rescan on the first call. */
+		forceRescan = false;
 	}
-
-	if (gangsExist())
-	{
-		reportError = true;
-		disconnectAndDestroyAllGangs();
-	}
-
-	/*
-	 * KLUDGE: Do not error out if we are attempting a DTM protocol retry
-	 */
-	if (DistributedTransactionContext == DTX_CONTEXT_QD_RETRY_PHASE_2)
-	{
-		return false;
-	}
-
-	/* is there a transaction active ? */
-	dtx_active = isCurrentDtxActive();
-
-    /* When the error is raised, it will abort the current DTM transaction */
-	if (dtx_active)
-	{
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-			 "FtsHandleGangConnectionFailure found an active DTM transaction (returning true).");
-		return true;
-	}
-
-	/*
-	 * error out if this sets read only flag, at this stage the read only
-	 * transaction checking has passed, so error out, but do not error out if
-	 * tm is in recovery
-	 */
-	if ((*ftsReadOnlyFlag && !isTMInRecovery()) || reportError)
-		return true;
-
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "FtsHandleGangConnectionFailure returning false.");
 
 	return false;
 }
+
 
 void
 FtsCondSetTxnReadOnly(bool *XactFlag)
@@ -364,4 +293,9 @@ bool
 isFtsReadOnlySet(void)
 {
 	return *ftsReadOnlyFlag;
+}
+
+uint64 getFtsVersion(void)
+{
+	return ftsProbeInfo->fts_statusVersion;
 }

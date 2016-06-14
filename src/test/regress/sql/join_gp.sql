@@ -74,6 +74,36 @@ select count(*) from hjn_test, (select 3 as bar) foo where least (foo.bar,(array
 select count(*) from hjn_test, (select 3 as bar) foo where hjn_test.i = least (foo.bar, least(4,10)) and hjn_test.j = least(4,10);
 select * from int4_tbl a join int4_tbl b on (a.f1 = (select f1 from int4_tbl c where c.f1=b.f1));
 
+-- Same as the last query, but with a partitioned table (which requires a
+-- Result node to do projection of the hash expression, as Append is not
+-- projection-capable)
+create table part4_tbl (f1 int4) partition by range (f1) (start(-1000000) end (1000000) every (1000000));
+insert into part4_tbl values
+       (-123457), (-123456), (-123455),
+       (-1), (0), (1),
+       (123455), (123456), (123457);
+select * from part4_tbl a join part4_tbl b on (a.f1 = (select f1 from int4_tbl c where c.f1=b.f1));
+
+--
+-- Test case where a Motion hash key is only needed for the redistribution,
+-- and not returned in the final result set. There was a bug at one point where
+-- tjoin.c1 was used as the hash key in a Motion node, but it was not added
+-- to the sub-plans target list, causing a "variable not found in subplan
+-- target list" error.
+--
+create table tjoin1(dk integer, id integer) distributed by (dk);
+create table tjoin2(dk integer, id integer, t text) distributed by (dk);
+create table tjoin3(dk integer, id integer, t text) distributed by (dk);
+
+insert into tjoin1 values (1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3);
+insert into tjoin2 values (1, 1, '1-1'), (1, 2, '1-2'), (2, 1, '2-1'), (2, 2, '2-2');
+insert into tjoin3 values (1, 1, '1-1'), (2, 1, '2-1');
+
+select tjoin1.id, tjoin2.t, tjoin3.t
+from tjoin1
+left outer join (tjoin2 left outer join tjoin3 on tjoin2.id=tjoin3.id) on tjoin1.id=tjoin3.id;
+
+
 set enable_hashjoin to off;
 -- Disable hashjoin forms fo ORCA
 select disable_xform('CXformInnerJoin2HashJoin');
@@ -97,4 +127,5 @@ select enable_xform('CXformLeftAntiSemiJoinNotIn2HashJoinNotIn');
 select enable_xform('CXformLeftOuterJoin2HashJoin');
 select enable_xform('CXformLeftSemiJoin2HashJoin');
 
+set client_min_messages='warning'; -- silence drop-cascade NOTICEs
 drop schema pred cascade;

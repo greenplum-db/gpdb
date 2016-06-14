@@ -9,8 +9,12 @@
  *
  *-------------------------------------------------------------------------
  */
-#include "cdb/cdbbufferedappend.h"
+
+#include "postgres.h"
+
 #include <unistd.h>				/* for write() */
+
+#include "cdb/cdbbufferedappend.h"
 #include "utils/guc.h"
 
 static void BufferedAppendWrite(

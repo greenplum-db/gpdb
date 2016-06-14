@@ -1,0 +1,1927 @@
+-- ----------------------------------------------------------------------
+-- Test: setup_schema.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+create schema DML_over_joins;
+set search_path to DML_over_joins;
+-- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: heap_motion0.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+--   r,s colocated on join attributes
+--      delete: using clause, subquery, initplan
+--      update: join and subsubquery
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+NOTICE:  table "r" does not exist, skipping
+drop table if exists s;
+NOTICE:  table "s" does not exist, skipping
+-- end_ignore
+create table r (a int, b int) distributed by (a);
+create table s (a int, b int) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update r set b = r.b + 1 from s where r.a = s.a;
+update r set b = r.b + 1 from s where r.a in (select a from s);
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 rhel62-vm1:25432 pid=32303)
+delete from r using s where r.a = s.a;
+delete from r;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+delete from r where a in (select a from s);
+delete from r;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+delete from r where a = (select max(a) from s);
+-- start_ignore
+------------------------------------------------------------
+-- Updates with motion:
+-- 	Redistribute s
+------------------------------------------------------------
+-- end_ignore
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update r set b = r.b + 4 from s where r.b = s.b;
+update r set b = b + 1 where b in (select b from s);
+delete from s using r where r.a = s.b;
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+delete from r using s where r.b = s.b; 
+-- start_ignore
+------------------------------------------------------------
+-- 	Hash aggregate group by
+------------------------------------------------------------
+-- end_ignore
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
+delete from s where exists (select 1 from r where s.a = r.b);
+-- ----------------------------------------------------------------------
+-- Test: heap_motion1.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+--   r,s colocated on join attributes
+--      delete: using clause, subquery, initplan
+--      update: join and subsubquery
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+-- end_ignore
+create table r (a int4, b int4) distributed by (a);
+create table s (a int4, b int4) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update r set b = r.b + 1 from s where r.a = s.a;
+update r set b = r.b + 1 from s where r.a in (select a from s);
+ERROR:  multiple updates to a row by the same query is not allowed  (seg2 rhel62-vm1:25434 pid=32307)
+delete from r using s where r.a = s.a;
+delete from r;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+delete from r where a in (select a from s);
+delete from r;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+delete from r where a = (select max(a) from s);
+-- start_ignore
+------------------------------------------------------------
+-- Updates with motion:
+-- 	Redistribute s
+------------------------------------------------------------
+-- end_ignore
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update r set b = r.b + 4 from s where r.b = s.b;
+update r set b = b + 1 where b in (select b from s);
+delete from s using r where r.a = s.b;
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+delete from r using s where r.b = s.b; 
+-- start_ignore
+------------------------------------------------------------
+-- 	Hash aggregate group by
+------------------------------------------------------------
+-- end_ignore
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
+delete from s where exists (select 1 from r where s.a = r.b);
+-- ----------------------------------------------------------------------
+-- Test: heap_motion2.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+--   r,s colocated on join attributes
+--      delete: using clause, subquery, initplan
+--      update: join and subsubquery
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+-- end_ignore
+create table r (a int8, b int8) distributed by (a);
+create table s (a int8, b int8) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update r set b = r.b + 1 from s where r.a = s.a;
+update r set b = r.b + 1 from s where r.a in (select a from s);
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 rhel62-vm1:25432 pid=32303)
+delete from r using s where r.a = s.a;
+delete from r;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+delete from r where a in (select a from s);
+delete from r;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+delete from r where a = (select max(a) from s);
+-- start_ignore
+------------------------------------------------------------
+-- Updates with motion:
+-- 	Redistribute s
+------------------------------------------------------------
+-- end_ignore
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update r set b = r.b + 4 from s where r.b = s.b;
+update r set b = b + 1 where b in (select b from s);
+delete from s using r where r.a = s.b;
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+delete from r using s where r.b = s.b; 
+-- start_ignore
+------------------------------------------------------------
+-- 	Hash aggregate group by
+------------------------------------------------------------
+-- end_ignore
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
+delete from s where exists (select 1 from r where s.a = r.b);
+-- ----------------------------------------------------------------------
+-- Test: heap_motion3.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+--   r,s colocated on join attributes
+--      delete: using clause, subquery, initplan
+--      update: join and subsubquery
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+-- end_ignore
+create table r (a float4, b float4) distributed by (a);
+create table s (a float4, b float4) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update r set b = r.b + 1 from s where r.a = s.a;
+update r set b = r.b + 1 from s where r.a in (select a from s);
+ERROR:  multiple updates to a row by the same query is not allowed  (seg2 rhel62-vm1:25434 pid=32307)
+delete from r using s where r.a = s.a;
+delete from r;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+delete from r where a in (select a from s);
+delete from r;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+delete from r where a = (select max(a) from s);
+-- start_ignore
+------------------------------------------------------------
+-- Updates with motion:
+-- 	Redistribute s
+------------------------------------------------------------
+-- end_ignore
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update r set b = r.b + 4 from s where r.b = s.b;
+update r set b = b + 1 where b in (select b from s);
+delete from s using r where r.a = s.b;
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+delete from r using s where r.b = s.b; 
+-- start_ignore
+------------------------------------------------------------
+-- 	Hash aggregate group by
+------------------------------------------------------------
+-- end_ignore
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
+delete from s where exists (select 1 from r where s.a = r.b);
+-- ----------------------------------------------------------------------
+-- Test: heap_motion4.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+--   r,s colocated on join attributes
+--      delete: using clause, subquery, initplan
+--      update: join and subsubquery
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+-- end_ignore
+create table r (a float(24), b float(24)) distributed by (a);
+create table s (a float(24), b float(24)) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update r set b = r.b + 1 from s where r.a = s.a;
+update r set b = r.b + 1 from s where r.a in (select a from s);
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 rhel62-vm1:25432 pid=32303)
+delete from r using s where r.a = s.a;
+delete from r;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+delete from r where a in (select a from s);
+delete from r;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+delete from r where a = (select max(a) from s);
+-- start_ignore
+------------------------------------------------------------
+-- Updates with motion:
+-- 	Redistribute s
+------------------------------------------------------------
+-- end_ignore
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update r set b = r.b + 4 from s where r.b = s.b;
+update r set b = b + 1 where b in (select b from s);
+delete from s using r where r.a = s.b;
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+delete from r using s where r.b = s.b; 
+-- start_ignore
+------------------------------------------------------------
+-- 	Hash aggregate group by
+------------------------------------------------------------
+-- end_ignore
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
+delete from s where exists (select 1 from r where s.a = r.b);
+-- ----------------------------------------------------------------------
+-- Test: heap_motion5.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+--   r,s colocated on join attributes
+--      delete: using clause, subquery, initplan
+--      update: join and subsubquery
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+-- end_ignore
+create table r (a float(53), b float(53)) distributed by (a);
+create table s (a float(53), b float(53)) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update r set b = r.b + 1 from s where r.a = s.a;
+update r set b = r.b + 1 from s where r.a in (select a from s);
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 rhel62-vm1:25432 pid=32303)
+delete from r using s where r.a = s.a;
+delete from r;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+delete from r where a in (select a from s);
+delete from r;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+delete from r where a = (select max(a) from s);
+-- start_ignore
+------------------------------------------------------------
+-- Updates with motion:
+-- 	Redistribute s
+------------------------------------------------------------
+-- end_ignore
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update r set b = r.b + 4 from s where r.b = s.b;
+update r set b = b + 1 where b in (select b from s);
+delete from s using r where r.a = s.b;
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+delete from r using s where r.b = s.b; 
+-- start_ignore
+------------------------------------------------------------
+-- 	Hash aggregate group by
+------------------------------------------------------------
+-- end_ignore
+delete from r;
+delete from s;
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
+delete from s where exists (select 1 from r where s.a = r.b);
+-- ----------------------------------------------------------------------
+-- Test: unsupported_cases0.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion: unsupported cases
+--     	Updating the dsitribution key
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+drop table if exists p;
+NOTICE:  table "p" does not exist, skipping
+-- end_ignore
+create table r (a int, b int) distributed by (a);
+create table s (a int, b int) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+create table p (a int, b int, c int) 
+	partition by range (c) (start(1) end(5) every(1), default partition extra);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
+insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
+update s set a = r.a from r where r.b = s.b;
+-- start_ignore
+------------------------------------------------------------
+--	Statement contains correlated subquery
+------------------------------------------------------------
+-- end_ignore
+update s set b = (select min(a) from r where b = s.b);
+delete from s where b = (select min(a) from r where b = s.b);
+-- start_ignore
+------------------------------------------------------------
+--	Update partition key (requires moving tuples from one partition to another)
+------------------------------------------------------------
+-- end_ignore
+update p set c = c + 1;
+update p set c = c + 1 where b in (select b from s);
+-- ----------------------------------------------------------------------
+-- Test: unsupported_cases1.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion: unsupported cases
+--     	Updating the dsitribution key
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+drop table if exists p;
+-- end_ignore
+create table r (a int4, b int4) distributed by (a);
+create table s (a int4, b int4) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+create table p (a int4, b int4, c int4) 
+	partition by range (c) (start(1) end(5) every(1), default partition extra);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
+insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
+update s set a = r.a from r where r.b = s.b;
+-- start_ignore
+------------------------------------------------------------
+--	Statement contains correlated subquery
+------------------------------------------------------------
+-- end_ignore
+update s set b = (select min(a) from r where b = s.b);
+delete from s where b = (select min(a) from r where b = s.b);
+-- start_ignore
+------------------------------------------------------------
+--	Update partition key (requires moving tuples from one partition to another)
+------------------------------------------------------------
+-- end_ignore
+update p set c = c + 1;
+update p set c = c + 1 where b in (select b from s);
+-- ----------------------------------------------------------------------
+-- Test: unsupported_cases2.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion: unsupported cases
+--     	Updating the dsitribution key
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+drop table if exists p;
+-- end_ignore
+create table r (a int8, b int8) distributed by (a);
+create table s (a int8, b int8) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+create table p (a int8, b int8, c int8) 
+	partition by range (c) (start(1) end(5) every(1), default partition extra);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
+insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
+update s set a = r.a from r where r.b = s.b;
+-- start_ignore
+------------------------------------------------------------
+--	Statement contains correlated subquery
+------------------------------------------------------------
+-- end_ignore
+update s set b = (select min(a) from r where b = s.b);
+delete from s where b = (select min(a) from r where b = s.b);
+-- start_ignore
+------------------------------------------------------------
+--	Update partition key (requires moving tuples from one partition to another)
+------------------------------------------------------------
+-- end_ignore
+update p set c = c + 1;
+update p set c = c + 1 where b in (select b from s where b = 36);
+-- ----------------------------------------------------------------------
+-- Test: unsupported_cases3.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion: unsupported cases
+--     	Updating the dsitribution key
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+drop table if exists p;
+-- end_ignore
+create table r (a float4, b float4) distributed by (a);
+create table s (a float4, b float4) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+create table p (a float4, b float4, c float4) 
+	partition by range (c) (start(1) end(5) every(1), default partition extra);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
+insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
+update s set a = r.a from r where r.b = s.b;
+-- start_ignore
+------------------------------------------------------------
+--	Statement contains correlated subquery
+------------------------------------------------------------
+-- end_ignore
+update s set b = (select min(a) from r where b = s.b);
+delete from s where b = (select min(a) from r where b = s.b);
+-- start_ignore
+------------------------------------------------------------
+--	Update partition key (requires moving tuples from one partition to another)
+------------------------------------------------------------
+-- end_ignore
+update p set c = c + 1;
+update p set c = c + 1 where b in (select b from s);
+-- ----------------------------------------------------------------------
+-- Test: unsupported_cases4.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion: unsupported cases
+--     	Updating the dsitribution key
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+drop table if exists p;
+-- end_ignore
+create table r (a float(24), b float(24)) distributed by (a);
+create table s (a float(24), b float(24)) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+create table p (a float(24), b float(24), c float(24)) 
+	partition by range (c) (start(1) end(5) every(1), default partition extra);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
+insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
+update s set a = r.a from r where r.b = s.b;
+-- start_ignore
+------------------------------------------------------------
+--	Statement contains correlated subquery
+------------------------------------------------------------
+-- end_ignore
+update s set b = (select min(a) from r where b = s.b);
+delete from s where b = (select min(a) from r where b = s.b);
+-- start_ignore
+------------------------------------------------------------
+--	Update partition key (requires moving tuples from one partition to another)
+------------------------------------------------------------
+-- end_ignore
+update p set c = c + 1;
+update p set c = c + 1 where b in (select b from s);
+-- ----------------------------------------------------------------------
+-- Test: unsupported_cases5.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion: unsupported cases
+--     	Updating the dsitribution key
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+drop table if exists p;
+-- end_ignore
+create table r (a float(53), b float(53)) distributed by (a);
+create table s (a float(53), b float(53)) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 4;
+create table p (a float(53), b float(53), c float(53)) 
+	partition by range (c) (start(1) end(5) every(1), default partition extra);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
+insert into p select generate_series(1,10000), generate_series(1,10000)*3, generate_series(1,10000)%6;
+update s set a = r.a from r where r.b = s.b;
+-- start_ignore
+------------------------------------------------------------
+--	Statement contains correlated subquery
+------------------------------------------------------------
+-- end_ignore
+update s set b = (select min(a) from r where b = s.b);
+delete from s where b = (select min(a) from r where b = s.b);
+-- start_ignore
+------------------------------------------------------------
+--	Update partition key (requires moving tuples from one partition to another)
+------------------------------------------------------------
+-- end_ignore
+update p set c = c + 1;
+update p set c = c + 1 where b in (select b from s);
+-- ----------------------------------------------------------------------
+-- Test: partition_motion0.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+drop table if exists p;
+-- end_ignore
+create table r (a int, b int) distributed by (a);
+create table s (a int, b int) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+create table p (a int, b int, c int)
+	distributed by (a)
+        partition by range (c) (start(1) end(5) every(1), default partition extra);
+NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
+	
+insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+--	Motion on p, append node, hash agg
+------------------------------------------------------------
+-- end_ignore
+update p set b = b + 1 where a in (select b from r where a = p.c);
+delete from p where p.a in (select b from r where a = p.c);
+delete from p using r where p.a = r.b and r.a = p.c;
+-- start_ignore
+------------------------------------------------------------
+-- Updates with motion:
+-- 	No motion, colocated distribution key
+------------------------------------------------------------
+-- end_ignore
+delete from p where a in (select a from r where a = p.c);
+delete from p using r where p.a = r.a and r.a = p.c;
+-- start_ignore
+------------------------------------------------------------
+-- 	No motion of s
+------------------------------------------------------------
+-- end_ignore
+delete from s where a in (select a from p where p.b = s.b);
+select count(*) from s;
+ count 
+-------
+     6
+(1 row)
+
+select * from s;
+ a | b  
+---+----
+ 3 |  9
+ 4 | 12
+ 5 | 15
+ 1 |  3
+ 2 |  6
+ 9 | 27
+(6 rows)
+
+delete from s where b in (select a from p where p.c = s.b);
+-- ----------------------------------------------------------------------
+-- Test: partition_motion1.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+drop table if exists p;
+-- end_ignore
+create table r (a int4, b int4) distributed by (a);
+create table s (a int4, b int4) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+create table p (a int4, b int4, c int4)
+	distributed by (a)
+        partition by range (c) (start(1) end(5) every(1), default partition extra);
+NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
+	
+insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+--	Motion on p, append node, hash agg
+------------------------------------------------------------
+-- end_ignore
+update p set b = b + 1 where a in (select b from r where a = p.c);
+delete from p where p.a in (select b from r where a = p.c);
+delete from p using r where p.a = r.b and r.a = p.c;
+-- start_ignore
+------------------------------------------------------------
+-- Updates with motion:
+-- 	No motion, colocated distribution key
+------------------------------------------------------------
+-- end_ignore
+delete from p where a in (select a from r where a = p.c);
+delete from p using r where p.a = r.a and r.a = p.c;
+-- start_ignore
+------------------------------------------------------------
+-- 	No motion of s
+------------------------------------------------------------
+-- end_ignore
+delete from s where a in (select a from p where p.b = s.b);
+select count(*) from s;
+ count 
+-------
+     6
+(1 row)
+
+select * from s;
+ a | b  
+---+----
+ 1 |  3
+ 2 |  6
+ 3 |  9
+ 4 | 12
+ 5 | 15
+ 9 | 27
+(6 rows)
+
+delete from s where b in (select a from p where p.c = s.b);
+-- ----------------------------------------------------------------------
+-- Test: partition_motion2.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+drop table if exists p;
+-- end_ignore
+create table r (a int8, b int8) distributed by (a);
+create table s (a int8, b int8) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+create table p (a int8, b int8, c int8)
+	distributed by (a)
+        partition by range (c) (start(1) end(5) every(1), default partition extra);
+NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
+	
+insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+--	Motion on p, append node, hash agg
+------------------------------------------------------------
+-- end_ignore
+update p set b = b + 1 where a in (select b from r where a = p.c);
+delete from p where p.a in (select b from r where a = p.c);
+delete from p using r where p.a = r.b and r.a = p.c;
+-- start_ignore
+------------------------------------------------------------
+-- Updates with motion:
+-- 	No motion, colocated distribution key
+------------------------------------------------------------
+-- end_ignore
+delete from p where a in (select a from r where a = p.c);
+delete from p using r where p.a = r.a and r.a = p.c;
+-- start_ignore
+------------------------------------------------------------
+-- 	No motion of s
+------------------------------------------------------------
+-- end_ignore
+delete from s where a in (select a from p where p.b = s.b);
+select count(*) from s;
+ count 
+-------
+     6
+(1 row)
+
+select * from s;
+ a | b  
+---+----
+ 1 |  3
+ 2 |  6
+ 3 |  9
+ 4 | 12
+ 5 | 15
+ 9 | 27
+(6 rows)
+
+delete from s where b in (select a from p where p.c = s.b);
+-- ----------------------------------------------------------------------
+-- Test: partition_motion3.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+drop table if exists p;
+-- end_ignore
+create table r (a float4, b float4) distributed by (a);
+create table s (a float4, b float4) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+create table p (a float4, b float4, c float4)
+	distributed by (a)
+        partition by range (c) (start(1) end(5) every(1), default partition extra);
+NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
+	
+insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+--	Motion on p, append node, hash agg
+------------------------------------------------------------
+-- end_ignore
+update p set b = b + 1 where a in (select b from r where a = p.c);
+delete from p where p.a in (select b from r where a = p.c);
+delete from p using r where p.a = r.b and r.a = p.c;
+-- start_ignore
+------------------------------------------------------------
+-- Updates with motion:
+-- 	No motion, colocated distribution key
+------------------------------------------------------------
+-- end_ignore
+delete from p where a in (select a from r where a = p.c);
+delete from p using r where p.a = r.a and r.a = p.c;
+-- start_ignore
+------------------------------------------------------------
+-- 	No motion of s
+------------------------------------------------------------
+-- end_ignore
+delete from s where a in (select a from p where p.b = s.b);
+select count(*) from s;
+ count 
+-------
+     6
+(1 row)
+
+select * from s;
+ a | b  
+---+----
+ 9 | 27
+ 1 |  3
+ 5 | 15
+ 2 |  6
+ 3 |  9
+ 4 | 12
+(6 rows)
+
+delete from s where b in (select a from p where p.c = s.b);
+-- ----------------------------------------------------------------------
+-- Test: partition_motion4.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+drop table if exists p;
+-- end_ignore
+create table r (a float(24), b float(24)) distributed by (a);
+create table s (a float(24), b float(24)) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+create table p (a float(24), b float(24), c float(24))
+	distributed by (a)
+        partition by range (c) (start(1) end(5) every(1), default partition extra);
+NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
+	
+insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+--	Motion on p, append node, hash agg
+------------------------------------------------------------
+-- end_ignore
+update p set b = b + 1 where a in (select b from r where a = p.c);
+delete from p where p.a in (select b from r where a = p.c);
+delete from p using r where p.a = r.b and r.a = p.c;
+-- start_ignore
+------------------------------------------------------------
+-- Updates with motion:
+-- 	No motion, colocated distribution key
+------------------------------------------------------------
+-- end_ignore
+delete from p where a in (select a from r where a = p.c);
+delete from p using r where p.a = r.a and r.a = p.c;
+-- start_ignore
+------------------------------------------------------------
+-- 	No motion of s
+------------------------------------------------------------
+-- end_ignore
+delete from s where a in (select a from p where p.b = s.b);
+select count(*) from s;
+ count 
+-------
+     6
+(1 row)
+
+select * from s;
+ a | b  
+---+----
+ 9 | 27
+ 2 |  6
+ 3 |  9
+ 4 | 12
+ 1 |  3
+ 5 | 15
+(6 rows)
+
+delete from s where b in (select a from p where p.c = s.b);
+-- ----------------------------------------------------------------------
+-- Test: partition_motion5.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+------------------------------------------------------------
+-- end_ignore
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+drop table if exists p;
+-- end_ignore
+create table r (a float(53), b float(53)) distributed by (a);
+create table s (a float(53), b float(53)) distributed by (a);
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+create table p (a float(53), b float(53), c float(53))
+	distributed by (a)
+        partition by range (c) (start(1) end(5) every(1), default partition extra);
+NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
+	
+insert into p select generate_series(1,10000), generate_series(1,10000) * 3, generate_series(1,10000) % 6;
+-- start_ignore
+------------------------------------------------------------
+-- Update with Motion:
+--	Motion on p, append node, hash agg
+------------------------------------------------------------
+-- end_ignore
+update p set b = b + 1 where a in (select b from r where a = p.c);
+delete from p where p.a in (select b from r where a = p.c);
+delete from p using r where p.a = r.b and r.a = p.c;
+-- start_ignore
+------------------------------------------------------------
+-- Updates with motion:
+-- 	No motion, colocated distribution key
+------------------------------------------------------------
+-- end_ignore
+delete from p where a in (select a from r where a = p.c);
+delete from p using r where p.a = r.a and r.a = p.c;
+-- start_ignore
+------------------------------------------------------------
+-- 	No motion of s
+------------------------------------------------------------
+-- end_ignore
+delete from s where a in (select a from p where p.b = s.b);
+select count(*) from s;
+ count 
+-------
+     6
+(1 row)
+
+select * from s;
+ a | b  
+---+----
+ 3 |  9
+ 4 | 12
+ 9 | 27
+ 1 |  3
+ 2 |  6
+ 5 | 15
+(6 rows)
+
+delete from s where b in (select a from p where p.c = s.b);
+-- ----------------------------------------------------------------------
+-- Test: mpp1070.sql
+-- ----------------------------------------------------------------------
+--
+-- MPP-1070
+--
+-- start_ignore
+DROP TABLE IF EXISTS update_test;
+NOTICE:  table "update_test" does not exist, skipping
+DROP TABLE IF EXISTS t1;
+NOTICE:  table "t1" does not exist, skipping
+DROP TABLE IF EXISTS t2;
+NOTICE:  table "t2" does not exist, skipping
+-- end_ignore
+CREATE TABLE update_test (
+	e INT DEFAULT 1,
+	a INT DEFAULT 10,
+	b INT,
+	c TEXT
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'e' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO update_test(a,b,c) VALUES (5, 10, 'foo');
+INSERT INTO update_test(b,a) VALUES (15, 10);
+SELECT a,b,c FROM update_test ORDER BY a,c;
+ a  | b  |  c  
+----+----+-----
+  5 | 10 | foo
+ 10 | 15 | 
+(2 rows)
+
+UPDATE update_test SET a = DEFAULT, b = DEFAULT;
+SELECT a,b,c FROM update_test ORDER BY a,c;
+ a  | b |  c  
+----+---+-----
+ 10 |   | foo
+ 10 |   | 
+(2 rows)
+
+-- aliases for the UPDATE target table
+UPDATE update_test AS t SET b = 10 WHERE t.a = 10;
+SELECT a,b,c FROM update_test ORDER BY a,c;
+ a  | b  |  c  
+----+----+-----
+ 10 | 10 | foo
+ 10 | 10 | 
+(2 rows)
+
+UPDATE update_test t SET b = t.b + 10 WHERE t.a = 10;
+SELECT a,b,c FROM update_test ORDER BY a,c;
+ a  | b  |  c  
+----+----+-----
+ 10 | 20 | foo
+ 10 | 20 | 
+(2 rows)
+
+UPDATE update_test SET a=v.i FROM (VALUES(100, 20)) AS v(i, j)
+	WHERE update_test.b = v.j;
+SELECT a,b,c FROM update_test ORDER BY a,c;
+  a  | b  |  c  
+-----+----+-----
+ 100 | 20 | foo
+ 100 | 20 | 
+(2 rows)
+
+-- ----------------------------------------------
+-- Create 2 tables with the same columns, but distributed differently.
+CREATE TABLE t1 (id INTEGER, data1 INTEGER, data2 INTEGER) DISTRIBUTED BY (id);
+CREATE TABLE t2 (id INTEGER, data1 INTEGER, data2 INTEGER) DISTRIBUTED BY (data1);
+INSERT INTO t1 (id, data1, data2) VALUES (1, 1, 1);
+INSERT INTO t1 (id, data1, data2) VALUES (2, 2, 2);
+INSERT INTO t1 (id, data1, data2) VALUES (3, 3, 3);
+INSERT INTO t1 (id, data1, data2) VALUES (4, 4, 4);
+INSERT INTO t2 (id, data1, data2) VALUES (1, 2, 101);
+INSERT INTO t2 (id, data1, data2) VALUES (2, 1, 102);
+INSERT INTO t2 (id, data1, data2) VALUES (3, 4, 103);
+INSERT INTO t2 (id, data1, data2) VALUES (4, 3, 104);
+-- Now let's try an update that would require us to move info across segments 
+-- (depending upon exactly where the data is stored, which will vary depending 
+-- upon the number of segments; in my case, I used only 2 segments).
+UPDATE t1 SET data2 = t2.data2 FROM t2 WHERE t1.data1 = t2.data1;
+SELECT * from t1;
+ id | data1 | data2 
+----+-------+-------
+  1 |     1 |   102
+  2 |     2 |   101
+  3 |     3 |   104
+  4 |     4 |   103
+(4 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: query00.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+drop table if exists p;
+drop table if exists t cascade;
+NOTICE:  table "t" does not exist, skipping
+drop table if exists m;
+NOTICE:  table "m" does not exist, skipping
+drop table if exists sales cascade;
+NOTICE:  table "sales" does not exist, skipping
+drop table if exists sales_par cascade;
+NOTICE:  table "sales_par" does not exist, skipping
+drop table if exists sales_par2 cascade;
+NOTICE:  table "sales_par2" does not exist, skipping
+drop table if exists sales_par_CO cascade;
+NOTICE:  table "sales_par_co" does not exist, skipping
+DROP FUNCTION InsertIntoSales(VARCHAR, INTEGER, VARCHAR);
+ERROR:  function insertintosales(character varying, integer, character varying) does not exist
+DROP FUNCTION InsertManyIntoSales(INTEGER, VARCHAR);
+ERROR:  function insertmanyintosales(integer, character varying) does not exist
+-- end_ignore
+create table r (a int, b int) distributed by (a);
+create table s (a int, b int) distributed by (a);
+create table m ();
+NOTICE:  Table doesn't have 'distributed by' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+	alter table m add column a int;
+	alter table m add column b int;
+create table t (region text, id int) distributed by (region);
+create table p (a int, b int, c int)
+        distributed by (a)
+        partition by range (c) (start(1) end(5) every(1), default partition extra);
+NOTICE:  CREATE TABLE will create partition "p_1_prt_extra" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_2" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_3" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_4" for table "p"
+NOTICE:  CREATE TABLE will create partition "p_1_prt_5" for table "p"
+CREATE TABLE sales (id int, year int, month int, day int, region text)
+   DISTRIBUTED BY (id);
+-- Create one or more indexes before we insert data.
+CREATE INDEX sales_index_on_id ON sales (id);
+CREATE INDEX sales_index_on_year ON sales (year);
+CREATE TABLE sales_par (id int, year int, month int, day int, region text)
+   DISTRIBUTED BY (id)
+   PARTITION BY LIST (region)
+   (	PARTITION usa VALUES ('usa'),
+	PARTITION europe VALUES ('europe'),
+	PARTITION asia VALUES ('asia'),
+	DEFAULT PARTITION other_regions)
+   ;
+NOTICE:  CREATE TABLE will create partition "sales_par_1_prt_usa" for table "sales_par"
+NOTICE:  CREATE TABLE will create partition "sales_par_1_prt_europe" for table "sales_par"
+NOTICE:  CREATE TABLE will create partition "sales_par_1_prt_asia" for table "sales_par"
+NOTICE:  CREATE TABLE will create partition "sales_par_1_prt_other_regions" for table "sales_par"
+CREATE TABLE sales_par2 (id int, year int, month int, day int, region text)
+   DISTRIBUTED BY (id)
+   PARTITION BY RANGE (year)
+      SUBPARTITION BY LIST (region)
+         SUBPARTITION TEMPLATE (
+            SUBPARTITION usa VALUES ('usa'),
+            SUBPARTITION europe VALUES ('europe'),
+            SUBPARTITION asia VALUES ('asia'),
+            DEFAULT SUBPARTITION other_regions)
+   (PARTITION year2002 START (2002) INCLUSIVE,
+    PARTITION year2003 START (2003) INCLUSIVE,
+    PARTITION year2004 START (2004) INCLUSIVE,
+    PARTITION year2005 START (2005) INCLUSIVE,
+    PARTITION year2006 START (2006) INCLUSIVE
+                        END  (2007) EXCLUSIVE)
+   ;
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2002" for table "sales_par2"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003" for table "sales_par2"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004" for table "sales_par2"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005" for table "sales_par2"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2006" for table "sales_par2"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2002_2_prt_usa" for table "sales_par2_1_prt_year2002"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2002_2_prt_europe" for table "sales_par2_1_prt_year2002"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2002_2_prt_asia" for table "sales_par2_1_prt_year2002"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2002_2_prt_other_regions" for table "sales_par2_1_prt_year2002"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003_2_prt_usa" for table "sales_par2_1_prt_year2003"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003_2_prt_europe" for table "sales_par2_1_prt_year2003"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003_2_prt_asia" for table "sales_par2_1_prt_year2003"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2003_2_prt_other_regions" for table "sales_par2_1_prt_year2003"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004_2_prt_usa" for table "sales_par2_1_prt_year2004"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004_2_prt_europe" for table "sales_par2_1_prt_year2004"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004_2_prt_asia" for table "sales_par2_1_prt_year2004"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2004_2_prt_other_regions" for table "sales_par2_1_prt_year2004"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005_2_prt_usa" for table "sales_par2_1_prt_year2005"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005_2_prt_europe" for table "sales_par2_1_prt_year2005"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005_2_prt_asia" for table "sales_par2_1_prt_year2005"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2005_2_prt_other_regions" for table "sales_par2_1_prt_year2005"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2006_2_prt_usa" for table "sales_par2_1_prt_year2006"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2006_2_prt_europe" for table "sales_par2_1_prt_year2006"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2006_2_prt_asia" for table "sales_par2_1_prt_year2006"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_year2006_2_prt_other_regions" for table "sales_par2_1_prt_year2006"
+-- Add default partition
+ALTER TABLE sales_par2 ADD DEFAULT PARTITION yearXXXX;
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_yearxxxx" for table "sales_par2"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_yearxxxx_2_prt_usa" for table "sales_par2_1_prt_yearxxxx"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_yearxxxx_2_prt_europe" for table "sales_par2_1_prt_yearxxxx"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_yearxxxx_2_prt_asia" for table "sales_par2_1_prt_yearxxxx"
+NOTICE:  CREATE TABLE will create partition "sales_par2_1_prt_yearxxxx_2_prt_other_regions" for table "sales_par2_1_prt_yearxxxx"
+CREATE TABLE sales_par_CO (id int, year int, month int, day int, region text)
+   WITH (APPENDONLY=True, ORIENTATION=column, COMPRESSTYPE='zlib', COMPRESSLEVEL=1)
+   DISTRIBUTED BY (id)
+   PARTITION BY RANGE (year)
+      SUBPARTITION BY LIST (region)
+         SUBPARTITION TEMPLATE (
+            SUBPARTITION usa VALUES ('usa'),
+            SUBPARTITION europe VALUES ('europe'),
+            SUBPARTITION asia VALUES ('asia'),
+            DEFAULT SUBPARTITION other_regions)
+   (PARTITION year2002 START (2002) INCLUSIVE,
+    PARTITION year2003 START (2003) INCLUSIVE,
+    PARTITION year2004 START (2004) INCLUSIVE,
+    PARTITION year2005 START (2005) INCLUSIVE,
+    PARTITION year2006 START (2006) INCLUSIVE
+    			END  (2007) EXCLUSIVE)
+   ;
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2002" for table "sales_par_co"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003" for table "sales_par_co"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004" for table "sales_par_co"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005" for table "sales_par_co"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2006" for table "sales_par_co"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2002_2_prt_usa" for table "sales_par_co_1_prt_year2002"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2002_2_prt_europe" for table "sales_par_co_1_prt_year2002"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2002_2_prt_asia" for table "sales_par_co_1_prt_year2002"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2002_2_prt_other_regions" for table "sales_par_co_1_prt_year2002"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003_2_prt_usa" for table "sales_par_co_1_prt_year2003"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003_2_prt_europe" for table "sales_par_co_1_prt_year2003"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003_2_prt_asia" for table "sales_par_co_1_prt_year2003"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2003_2_prt_other_regions" for table "sales_par_co_1_prt_year2003"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004_2_prt_usa" for table "sales_par_co_1_prt_year2004"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004_2_prt_europe" for table "sales_par_co_1_prt_year2004"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004_2_prt_asia" for table "sales_par_co_1_prt_year2004"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2004_2_prt_other_regions" for table "sales_par_co_1_prt_year2004"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005_2_prt_usa" for table "sales_par_co_1_prt_year2005"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005_2_prt_europe" for table "sales_par_co_1_prt_year2005"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005_2_prt_asia" for table "sales_par_co_1_prt_year2005"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2005_2_prt_other_regions" for table "sales_par_co_1_prt_year2005"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2006_2_prt_usa" for table "sales_par_co_1_prt_year2006"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2006_2_prt_europe" for table "sales_par_co_1_prt_year2006"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2006_2_prt_asia" for table "sales_par_co_1_prt_year2006"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_year2006_2_prt_other_regions" for table "sales_par_co_1_prt_year2006"
+-- Add default partition
+ALTER TABLE sales_par_CO ADD DEFAULT PARTITION yearXXXX
+	WITH (APPENDONLY=True, ORIENTATION=column, COMPRESSTYPE='zlib', COMPRESSLEVEL=1);
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_yearxxxx" for table "sales_par_co"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_yearxxxx_2_prt_usa" for table "sales_par_co_1_prt_yearxxxx"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_yearxxxx_2_prt_europe" for table "sales_par_co_1_prt_yearxxxx"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_yearxxxx_2_prt_asia" for table "sales_par_co_1_prt_yearxxxx"
+NOTICE:  CREATE TABLE will create partition "sales_par_co_1_prt_yearxxxx_2_prt_other_regions" for table "sales_par_co_1_prt_yearxxxx"
+-- Create a function to insert data.
+CREATE FUNCTION insertIntoSales(VARCHAR, INTEGER, VARCHAR)
+RETURNS VOID AS
+$$
+DECLARE
+   tablename VARCHAR;
+BEGIN
+   tablename = $1;
+   if (tablename = 'sales')
+   	then INSERT INTO sales (id, year, month, day, region)
+ 		VALUES ($2, 2002 + ($2 % 7), ($2 % 12) + 1, ($2 % 28) + 1, $3);
+   elsif (tablename = 'sales_par') 
+	then INSERT INTO sales_par (id, year, month, day, region)
+ 		VALUES ($2, 2002 + ($2 % 7), ($2 % 12) + 1, ($2 % 28) + 1, $3);
+   elsif (tablename = 'sales_par2') 
+	then INSERT INTO sales_par2 (id, year, month, day, region)
+ 		VALUES ($2, 2002 + ($2 % 7), ($2 % 12) + 1, ($2 % 28) + 1, $3);
+   elsif (tablename = 'sales_par_CO') 
+	then INSERT INTO sales_par_CO (id, year, month, day, region)
+ 		VALUES ($2, 2002 + ($2 % 7), ($2 % 12) + 1, ($2 % 28) + 1, $3);
+   end if;
+END;
+$$ LANGUAGE plpgsql;
+CREATE FUNCTION InsertManyIntoSales(INTEGER, VARCHAR)
+RETURNS VOID AS
+$$
+DECLARE
+   rowCount INTEGER;
+   region VARCHAR;
+   tablename VARCHAR;
+BEGIN
+   rowCount = $1;
+   tablename = $2;
+   FOR i IN 1 .. rowCount LOOP
+      region = 'antarctica';  -- Never actually used.
+      IF (i % 4) = 0
+         THEN region := 'asia';
+      ELSEIF (i % 4) = 1
+         THEN region := 'europe';
+      ELSEIF (i % 4) = 2
+         THEN region := 'usa';
+      ELSEIF (i % 4) = 3
+         THEN region := 'australia';
+      END IF;
+      PERFORM insertIntoSales(tablename, i, region );
+   END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+--
+SELECT InsertManyIntoSales(20,'sales_par_CO');
+ insertmanyintosales 
+---------------------
+ 
+(1 row)
+
+-- created tables, functions are cleaned up at test99.sql
+-- ----------------------------------------------------------------------
+-- Test: query01.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+-- update/delete requires motion by joining 3 tables
+delete from r;
+delete from s;
+delete from sales;
+-- end_ignore
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+SELECT InsertManyIntoSales(40,'sales');
+ insertmanyintosales 
+---------------------
+ 
+(1 row)
+
+ANALYZE r;
+ANALYZE s;
+ANALYZE sales;
+-- index on distribution key
+select sales.* from sales,s,r where sales.id = s.b and sales.month = r.b+1;
+ id | year | month | day |  region   
+----+------+-------+-----+-----------
+  9 | 2004 |    10 |  10 | europe
+ 21 | 2002 |    10 |  22 | europe
+ 33 | 2007 |    10 |   6 | europe
+ 27 | 2008 |     4 |  28 | australia
+ 39 | 2006 |     4 |  12 | australia
+  3 | 2005 |     4 |   4 | australia
+ 15 | 2003 |     4 |  16 | australia
+ 18 | 2006 |     7 |  19 | usa
+  6 | 2008 |     7 |   7 | usa
+ 30 | 2004 |     7 |   3 | usa
+(10 rows)
+
+update sales set month = month+1 from r,s where sales.id = s.b and sales.month = r.b+1;
+select sales.* from sales,s,r where sales.id = s.b and sales.month = r.b+2;
+ id | year | month | day |  region   
+----+------+-------+-----+-----------
+ 39 | 2006 |     5 |  12 | australia
+  3 | 2005 |     5 |   4 | australia
+ 27 | 2008 |     5 |  28 | australia
+ 15 | 2003 |     5 |  16 | australia
+ 18 | 2006 |     8 |  19 | usa
+  6 | 2008 |     8 |   7 | usa
+ 30 | 2004 |     8 |   3 | usa
+ 21 | 2002 |    11 |  22 | europe
+  9 | 2004 |    11 |  10 | europe
+ 33 | 2007 |    11 |   6 | europe
+(10 rows)
+
+select sales.* from sales where id in (select s.b from s, r where s.a = r.b) and day in (select a from r);
+ id | year | month | day |  region   
+----+------+-------+-----+-----------
+ 27 | 2008 |     5 |  28 | australia
+ 18 | 2006 |     8 |  19 | usa
+ 36 | 2003 |     1 |   9 | asia
+  9 | 2004 |    11 |  10 | europe
+(4 rows)
+
+update sales set region = 'new_region' where id in (select s.b from s, r where s.a = r.b) and day in (select a from r);
+select sales.* from sales where id in (select s.b from s, r where s.a = r.b) and day in (select a from r);
+ id | year | month | day |   region   
+----+------+-------+-----+------------
+ 27 | 2008 |     5 |  28 | new_region
+ 18 | 2006 |     8 |  19 | new_region
+ 36 | 2003 |     1 |   9 | new_region
+  9 | 2004 |    11 |  10 | new_region
+(4 rows)
+
+select sales.* from sales where id in (select s.b-1 from s,r where s.a = r.b);
+ id | year | month | day |  region   
+----+------+-------+-----+-----------
+ 17 | 2005 |     6 |  18 | europe
+ 35 | 2002 |    12 |   8 | australia
+  8 | 2003 |     9 |   9 | asia
+ 26 | 2007 |     3 |  27 | usa
+(4 rows)
+
+delete from sales where id in (select s.b-1 from s,r where s.a = r.b);
+select sales.* from sales where id in (select s.b-1 from s,r where s.a = r.b);
+ id | year | month | day | region 
+----+------+-------+-----+--------
+(0 rows)
+
+-- no index on distribution key
+select s.* from s, r,sales where s.a = r.b and s.b = sales.id;
+ a  | b  
+----+----
+  3 |  9
+  6 | 18
+  9 | 27
+ 12 | 36
+(4 rows)
+
+delete from s using r,sales where s.a = r.b and s.b = sales.id;
+select s.* from s, r,sales where s.a = r.b and s.b = sales.id;
+ a | b 
+---+---
+(0 rows)
+
+select r.* from r,s,sales where s.a = sales.day and sales.month = r.b;
+ a | b  
+---+----
+ 1 |  3
+ 1 |  3
+ 2 |  6
+ 3 |  9
+ 3 |  9
+ 4 | 12
+(6 rows)
+
+update r set b = r.b + 1 from s,sales where s.a = sales.day and sales.month = r.b;
+ERROR:  multiple updates to a row by the same query is not allowed  (seg1 rhel62-vm1:25433 pid=32305)
+select r.* from r,s,sales where s.a = sales.day and sales.month = r.b-1;
+ a | b  
+---+----
+ 1 |  3
+ 1 |  3
+ 1 |  3
+ 1 |  3
+ 2 |  6
+ 2 |  6
+ 2 |  6
+ 2 |  6
+ 2 |  6
+ 2 |  6
+ 2 |  6
+ 3 |  9
+ 3 |  9
+ 3 |  9
+ 3 |  9
+ 3 |  9
+ 4 | 12
+ 4 | 12
+ 4 | 12
+ 4 | 12
+ 4 | 12
+(21 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: query02.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+-- 3 tables: heap and partition table
+delete from r;
+delete from s;
+delete from sales_par;
+-- end_ignore
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+SELECT InsertManyIntoSales(20,'sales_par');
+ insertmanyintosales 
+---------------------
+ 
+(1 row)
+
+-- update partition key
+select sales_par.* from sales_par where id in (select s.b from s, r where s.a = r.b) and day in (select a from r);
+ id | year | month | day | region 
+----+------+-------+-----+--------
+ 18 | 2006 |     7 |  19 | usa
+  9 | 2004 |    10 |  10 | europe
+(2 rows)
+
+-- start_ignore
+update sales_par set region = 'new_region' where id in (select s.b from s, r where s.a = r.b) and day in (select a from r);
+-- end_ignore
+select sales_par.* from sales_par where id in (select s.b from s, r where s.a = r.b) and day in (select a from r);
+ id | year | month | day |   region   
+----+------+-------+-----+------------
+ 18 | 2006 |     7 |  19 | new_region
+  9 | 2004 |    10 |  10 | new_region
+(2 rows)
+
+select sales_par.* from sales_par,s,r where sales_par.id = s.b and sales_par.month = r.b+1;
+ id | year | month | day |   region   
+----+------+-------+-----+------------
+  3 | 2005 |     4 |   4 | australia
+ 15 | 2003 |     4 |  16 | australia
+ 18 | 2006 |     7 |  19 | new_region
+  6 | 2008 |     7 |   7 | usa
+  9 | 2004 |    10 |  10 | new_region
+(5 rows)
+
+update sales_par set month = month+1 from r,s where sales_par.id = s.b and sales_par.month = r.b+1;
+select sales_par.* from sales_par,s,r where sales_par.id = s.b and sales_par.month = r.b+2;
+ id | year | month | day |   region   
+----+------+-------+-----+------------
+  3 | 2005 |     5 |   4 | australia
+ 15 | 2003 |     5 |  16 | australia
+ 18 | 2006 |     8 |  19 | new_region
+  6 | 2008 |     8 |   7 | usa
+  9 | 2004 |    11 |  10 | new_region
+(5 rows)
+
+select sales_par.* from sales_par where id in (select s.b-1 from s,r where s.a = r.b);
+ id | year | month | day | region 
+----+------+-------+-----+--------
+ 17 | 2005 |     6 |  18 | europe
+  8 | 2003 |     9 |   9 | asia
+(2 rows)
+
+delete from sales_par where id in (select s.b-1 from s,r where s.a = r.b);
+select sales_par.* from sales_par where id in (select s.b-1 from s,r where s.a = r.b);
+ id | year | month | day | region 
+----+------+-------+-----+--------
+(0 rows)
+
+-- heap table
+select s.* from s, r,sales_par where s.a = r.b and s.b = sales_par.id;
+ a | b  
+---+----
+ 3 |  9
+ 6 | 18
+(2 rows)
+
+delete from s using r,sales_par where s.a = r.b and s.b = sales_par.id;
+select s.* from s, r,sales_par where s.a = r.b and s.b = sales_par.id;
+ a | b 
+---+---
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: query03.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+-- 3 tables: heap and 2-level partition CO table + prepare
+-- direct dispatch
+delete from r;
+delete from s;
+delete from sales_par2;
+-- end_ignore
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+SELECT InsertManyIntoSales(20,'sales_par2');
+ insertmanyintosales 
+---------------------
+ 
+(1 row)
+
+-- partition key
+select sales_par2.* from sales_par2,s,r where sales_par2.id = s.b and sales_par2.month = r.b+1;
+ id | year | month | day |  region   
+----+------+-------+-----+-----------
+  3 | 2005 |     4 |   4 | australia
+ 15 | 2003 |     4 |  16 | australia
+ 18 | 2006 |     7 |  19 | usa
+  6 | 2008 |     7 |   7 | usa
+  9 | 2004 |    10 |  10 | europe
+(5 rows)
+
+update sales_par2 set month = month+1 from r,s where sales_par2.id = s.b and sales_par2.month = r.b+1;
+select sales_par2.* from sales_par2,s,r where sales_par2.id = s.b and sales_par2.month = r.b+2;
+ id | year | month | day |  region   
+----+------+-------+-----+-----------
+  9 | 2004 |    11 |  10 | europe
+ 15 | 2003 |     5 |  16 | australia
+  3 | 2005 |     5 |   4 | australia
+ 18 | 2006 |     8 |  19 | usa
+  6 | 2008 |     8 |   7 | usa
+(5 rows)
+
+PREPARE plan0 as update sales_par2 set month = month+1 from r,s where sales_par2.id = s.b and sales_par2.month = r.b+2;
+EXECUTE plan0;
+select sales_par2.* from sales_par2,s,r where sales_par2.id = s.b and sales_par2.month = r.b+3;
+ id | year | month | day |  region   
+----+------+-------+-----+-----------
+  9 | 2004 |    12 |  10 | europe
+  3 | 2005 |     6 |   4 | australia
+ 15 | 2003 |     6 |  16 | australia
+ 18 | 2006 |     9 |  19 | usa
+  6 | 2008 |     9 |   7 | usa
+(5 rows)
+
+select sales_par2.* from sales_par2 where id in (select s.b-1 from s,r where s.a = r.b);
+ id | year | month | day | region 
+----+------+-------+-----+--------
+ 17 | 2005 |     6 |  18 | europe
+  8 | 2003 |     9 |   9 | asia
+(2 rows)
+
+delete from sales_par2 where id in (select s.b-1 from s,r where s.a = r.b);
+select sales_par2.* from sales_par2 where id in (select s.b-1 from s,r where s.a = r.b);
+ id | year | month | day | region 
+----+------+-------+-----+--------
+(0 rows)
+
+-- heap table
+select s.* from s, r,sales_par2 where s.a = r.b and s.b = sales_par2.id;
+ a | b  
+---+----
+ 3 |  9
+ 6 | 18
+(2 rows)
+
+delete from s using r,sales_par2 where s.a = r.b and s.b = sales_par2.id;
+select s.* from s, r,sales_par2 where s.a = r.b and s.b = sales_par2.id;
+ a | b 
+---+---
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: query05.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+-- 4 tables: heap, AO, CO tables + duplicate distribution key
+delete from r;
+delete from s;
+drop table if exists s_ao;
+NOTICE:  table "s_ao" does not exist, skipping
+-- end_ignore
+insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
+insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+create table s_ao (a int, b int) with (appendonly = true) distributed by (a);
+insert into s_ao select generate_series(1, 100), generate_series(1, 100) * 3;
+-- heap table: delete --
+select * from r where b in (select month-1 from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
+ a | b 
+---+---
+ 3 | 9
+ 1 | 3
+ 2 | 6
+(3 rows)
+
+delete from r where b in (select month-1 from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
+select * from r where b in (select month-1 from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
+ a | b 
+---+---
+(0 rows)
+
+-- hdeap table: update: duplicate distribution key -- 
+SELECT InsertManyIntoSales(20,'sales_par_CO');
+ insertmanyintosales 
+---------------------
+ 
+(1 row)
+
+select * from r where a in (select sales_par_CO.id from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
+ a  | b  
+----+----
+  6 | 18
+ 18 | 54
+ 15 | 45
+  9 | 27
+ 12 | 36
+(5 rows)
+
+update r set b = r.b + 1 where a in (select sales_par_CO.id from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
+select * from r where a in (select sales_par_CO.id from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
+ a  | b  
+----+----
+ 15 | 46
+  9 | 28
+ 12 | 37
+  6 | 19
+ 18 | 55
+(5 rows)
+
+-- heap table: delete:
+select * from r where a in (select month from sales_par_CO, s_ao, s where sales_par_CO.id = s_ao.b and s_ao.a = s.b);
+ a  | b  
+----+----
+  7 | 21
+ 10 | 30
+(2 rows)
+
+delete from r where a in (select month from sales_par_CO, s_ao, s where sales_par_CO.id = s_ao.b and s_ao.a = s.b);
+select * from r where a in (select month from sales_par_CO, s_ao, s where sales_par_CO.id = s_ao.b and s_ao.a = s.b);
+ a | b 
+---+---
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: query06.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+-- 3 tables: direct dispatch + duplicate distribution key
+delete from s;
+delete from m;
+delete from sales_par;
+-- end_ignore
+insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+insert into s select generate_series(1, 10), generate_series(1, 10) * 4;
+insert into m select generate_series(1, 1000), generate_series(1, 1000) * 4;
+SELECT InsertManyIntoSales(20,'sales_par');
+ insertmanyintosales 
+---------------------
+ 
+(1 row)
+
+-- heap table: duplicate distribution key: delete --
+select * from s where a in (select day from sales_par,m where sales_par.id = m.b);
+ a  | b  
+----+----
+ 13 | 39
+ 17 | 51
+  9 | 27
+  9 | 36
+  5 | 15
+ 21 | 63
+  5 | 20
+(7 rows)
+
+delete from s where a in (select day from sales_par,m where sales_par.id = m.b);
+select * from s where a in (select day from sales_par,m where sales_par.id = m.b);
+ a | b 
+---+---
+(0 rows)
+
+-- direct dispatch: heap table: update -- 
+select * from s where a = 4 and a in (select b from m);
+ a | b  
+---+----
+ 4 | 12
+ 4 | 16
+(2 rows)
+
+update s set b = b + 1 where a = 4 and a in (select b from m);
+select * from s where a = 4 and a in (select b from m);
+ a | b  
+---+----
+ 4 | 13
+ 4 | 17
+(2 rows)
+
+-- direct dispatch: partitioned table: update --
+select distinct sales_par.* from sales_par,s where sales_par.id in (s.b, s.b+1) and region='europe';
+ id | year | month | day | region 
+----+------+-------+-----+--------
+ 13 | 2008 |     2 |  14 | europe
+  5 | 2007 |     6 |   6 | europe
+ 17 | 2005 |     6 |  18 | europe
+  9 | 2004 |    10 |  10 | europe
+(4 rows)
+
+update sales_par set month = month+1 from s where sales_par.id in (s.b, s.b+1) and region = 'europe';
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 rhel62-vm1:25432 pid=32303)
+select distinct sales_par.* from sales_par,s where sales_par.id in (s.b, s.b+1) and region='europe';
+ id | year | month | day | region 
+----+------+-------+-----+--------
+ 13 | 2008 |     2 |  14 | europe
+  5 | 2007 |     6 |   6 | europe
+ 17 | 2005 |     6 |  18 | europe
+  9 | 2004 |    10 |  10 | europe
+(4 rows)
+
+-- direct dispatch: partitioned table: delete --
+select * from sales_par where region='asia' and id in (select b from s where a = 1);
+ id | year | month | day | region 
+----+------+-------+-----+--------
+  4 | 2006 |     5 |   5 | asia
+(1 row)
+
+delete from sales_par where region='asia' and id in (select b from s where a = 1);
+select * from sales_par where region='asia' and id in (select b from s where a = 1);
+ id | year | month | day | region 
+----+------+-------+-----+--------
+(0 rows)
+
+select * from sales_par where region='asia' and id in (select b from m where a = 2);
+ id | year | month | day | region 
+----+------+-------+-----+--------
+  8 | 2003 |     9 |   9 | asia
+(1 row)
+
+delete from sales_par where region='asia' and id in (select b from m where a = 2);
+select * from sales_par where region='asia' and id in (select b from m where a = 2);
+ id | year | month | day | region 
+----+------+-------+-----+--------
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: query08.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+-- prepared statement: 3 tables: direct dispatch + duplicate distribution key
+delete from s;
+delete from m;
+delete from sales_par;
+-- end_ignore
+insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
+insert into s select generate_series(1, 10), generate_series(1, 10) * 4;
+insert into m select generate_series(1, 1000), generate_series(1, 1000) * 4;
+SELECT InsertManyIntoSales(20,'sales_par');
+ insertmanyintosales 
+---------------------
+ 
+(1 row)
+
+-- heap table: duplicate distribution key: delete --
+select * from s where a in (select day from sales_par,m where sales_par.id = m.b);
+ a  | b  
+----+----
+ 13 | 39
+ 17 | 51
+  5 | 15
+ 21 | 63
+  5 | 20
+  9 | 27
+  9 | 36
+(7 rows)
+
+PREPARE plan1 AS delete from s where a in (select day from sales_par,m where sales_par.id = m.b);
+EXECUTE plan1;
+select * from s where a in (select day from sales_par,m where sales_par.id = m.b);
+ a | b 
+---+---
+(0 rows)
+
+-- direct dispatch: heap table: update -- 
+select * from s where a = 4 and a in (select b from m);
+ a | b  
+---+----
+ 4 | 12
+ 4 | 16
+(2 rows)
+
+PREPARE plan2 AS update s set b = b + 1 where a = 4 and a in (select b from m);
+EXECUTE plan2;
+select * from s where a = 4 and a in (select b from m);
+ a | b  
+---+----
+ 4 | 13
+ 4 | 17
+(2 rows)
+
+-- direct dispatch: partitioned table: update --
+select distinct sales_par.* from sales_par,s where sales_par.id in (s.b, s.b+1) and region='europe';
+ id | year | month | day | region 
+----+------+-------+-----+--------
+  5 | 2007 |     6 |   6 | europe
+ 17 | 2005 |     6 |  18 | europe
+ 13 | 2008 |     2 |  14 | europe
+  9 | 2004 |    10 |  10 | europe
+(4 rows)
+
+PREPARE plan3 AS update sales_par set month = month+1 from s where sales_par.id in (s.b, s.b+1) and region = 'europe';
+EXECUTE plan3;
+ERROR:  multiple updates to a row by the same query is not allowed  (seg0 rhel62-vm1:25432 pid=32303)
+select distinct sales_par.* from sales_par,s where sales_par.id in (s.b, s.b+1) and region='europe';
+ id | year | month | day | region 
+----+------+-------+-----+--------
+ 13 | 2008 |     2 |  14 | europe
+  5 | 2007 |     6 |   6 | europe
+ 17 | 2005 |     6 |  18 | europe
+  9 | 2004 |    10 |  10 | europe
+(4 rows)
+
+-- direct dispatch: partitioned table: delete --
+select * from sales_par where region='asia' and id in (select b from s where a = 1);
+ id | year | month | day | region 
+----+------+-------+-----+--------
+  4 | 2006 |     5 |   5 | asia
+(1 row)
+
+PREPARE plan4 AS delete from sales_par where region='asia' and id in (select b from s where a = 1);
+EXECUTE plan4;
+select * from sales_par where region='asia' and id in (select b from s where a = 1);
+ id | year | month | day | region 
+----+------+-------+-----+--------
+(0 rows)
+
+select * from sales_par where region='asia' and id in (select b from m where a = 2);
+ id | year | month | day | region 
+----+------+-------+-----+--------
+  8 | 2003 |     9 |   9 | asia
+(1 row)
+
+PREPARE plan5 AS delete from sales_par where region='asia' and id in (select b from m where a = 2);
+EXECUTE plan5;
+select * from sales_par where region='asia' and id in (select b from m where a = 2);
+ id | year | month | day | region 
+----+------+-------+-----+--------
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: query99.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop table if exists r;
+drop table if exists s;
+drop table if exists p;
+drop table if exists t;
+drop table if exists m;
+drop table if exists s_ao;
+drop table if exists sales cascade;
+drop table if exists sales_par cascade;
+drop table if exists sales_par2 cascade;
+drop table if exists sales_par_CO cascade;
+DROP FUNCTION InsertIntoSales(VARCHAR, INTEGER, VARCHAR);
+DROP FUNCTION InsertManyIntoSales(INTEGER, VARCHAR);
+-- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop schema DML_over_joins cascade;
+NOTICE:  drop cascades to table t2
+NOTICE:  drop cascades to table t1
+NOTICE:  drop cascades to table update_test
+-- end_ignore

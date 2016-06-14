@@ -117,19 +117,15 @@ select * from atsdb where i = 1;
 
 drop table atsdb;
 -- Now try AO
-create table atsdb_ao (i int, j text) distributed by (i);
+create table atsdb_ao (i int, j text) with (appendonly=true) distributed by (i);
 insert into atsdb_ao select i, (i+1)::text from generate_series(1, 100) i;
 insert into atsdb_ao select i, (i+1)::text from generate_series(1, 100) i;
 -- check that we're an AO table
-explain select count(*) from atsdb_ao;
-                                QUERY PLAN                                 
----------------------------------------------------------------------------
- Aggregate  (cost=3.31..3.32 rows=1 width=0)
-   ->  Gather Motion 2:1  (slice1)  (cost=3.25..3.29 rows=1 width=0)
-         ->  Aggregate  (cost=3.25..3.26 rows=0 width=0)
-               ->  Seq Scan on atsdb_ao  (cost=0.00..3.00 rows=50 width=0)
- Settings:  enable_seqscan=off
-(5 rows)
+select count(*) from pg_appendonly where relid='atsdb_ao'::regclass;
+ count
+-------
+     1
+(1 row)
 
 select count(*) from atsdb_ao;
  count 
@@ -139,20 +135,26 @@ select count(*) from atsdb_ao;
 
 alter table atsdb_ao set distributed by (j);
 -- Still AO?
-explain select count(*) from atsdb_ao;
-                                QUERY PLAN                                 
----------------------------------------------------------------------------
- Aggregate  (cost=3.31..3.32 rows=1 width=0)
-   ->  Gather Motion 2:1  (slice1)  (cost=3.25..3.29 rows=1 width=0)
-         ->  Aggregate  (cost=3.25..3.26 rows=0 width=0)
-               ->  Seq Scan on atsdb_ao  (cost=0.00..3.00 rows=50 width=0)
- Settings:  enable_seqscan=off
-(5 rows)
+select count(*) from pg_appendonly where relid='atsdb_ao'::regclass;
+ count
+-------
+     1
+(1 row)
 
 select count(*) from atsdb_ao;
  count 
 -------
    200
+(1 row)
+
+-- check alter, vacuum analyze, and then alter
+delete from atsdb_ao where i = any(array(select generate_series(1,90)));
+vacuum analyze atsdb_ao;
+alter table atsdb_ao set distributed randomly;
+select count(*) from atsdb_ao;
+ count
+-------
+    20
 (1 row)
 
 drop table atsdb_ao;

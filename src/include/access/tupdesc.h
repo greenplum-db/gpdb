@@ -117,7 +117,7 @@ extern void DecrTupleDescRefCount(TupleDesc tupdesc);
 
 #define ReleaseTupleDesc(tupdesc) \
 	do { \
-		if ((tupdesc)->tdrefcount > 0) \
+		if ((tupdesc)->tdrefcount >= 0) \
 			DecrTupleDescRefCount(tupdesc); \
 	} while (0)
 

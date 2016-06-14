@@ -25,7 +25,7 @@ cdb_grouping_planner(PlannerInfo* root,
 					 AggClauseCounts *agg_counts,
 					 GroupContext *group_context);
 
-extern bool cdbpathlocus_collocates(CdbPathLocus locus, List *pathkeys, bool exact_match);
+extern bool cdbpathlocus_collocates(PlannerInfo *root, CdbPathLocus locus, List *pathkeys, bool exact_match);
 extern CdbPathLocus cdbpathlocus_from_flow(Flow *flow);
 extern void adapt_flow_to_targetlist(Plan *plan);
 extern void generate_three_tlists(List *tlist,

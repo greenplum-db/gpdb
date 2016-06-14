@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/pgstatfuncs.c,v 1.37 2007/01/05 22:19:41 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/pgstatfuncs.c,v 1.38 2007/02/07 23:11:29 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -448,7 +448,6 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 		bool		nulls[13];
 		HeapTuple	tuple;
 		PgBackendStatus *beentry;
-		SockAddr	zero_clientaddr;
 
 		MemSet(values, 0, sizeof(values));
 		MemSet(nulls, 0, sizeof(nulls));
@@ -489,6 +488,7 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 		/* Values only available to same user or superuser */
 		if (superuser() || beentry->st_userid == GetUserId())
 		{
+			SockAddr	zero_clientaddr;
 			bool		waiting;
 
 			if (*(beentry->st_activity) == '\0')
@@ -521,7 +521,7 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 			/* A zeroed client addr means we don't know */
 			memset(&zero_clientaddr, 0, sizeof(zero_clientaddr));
 			if (memcmp(&(beentry->st_clientaddr), &zero_clientaddr,
-					   sizeof(zero_clientaddr) == 0))
+					   sizeof(zero_clientaddr)) == 0)
 			{
 				nulls[9] = true;
 				nulls[10] = true;
@@ -625,16 +625,6 @@ pg_backend_pid(PG_FUNCTION_ARGS)
 	PG_RETURN_INT32(MyProcPid);
 }
 
-/*
- * Built-in function for resetting the counters
- */
-Datum
-pg_stat_reset(PG_FUNCTION_ARGS)
-{
-	pgstat_reset_counters();
-
-	PG_RETURN_BOOL(true);
-}
 
 Datum
 pg_stat_get_backend_pid(PG_FUNCTION_ARGS)
@@ -814,7 +804,7 @@ pg_stat_get_backend_client_addr(PG_FUNCTION_ARGS)
 	/* A zeroed client addr means we don't know */
 	memset(&zero_clientaddr, 0, sizeof(zero_clientaddr));
 	if (memcmp(&(beentry->st_clientaddr), &zero_clientaddr,
-			   sizeof(zero_clientaddr) == 0))
+			   sizeof(zero_clientaddr)) == 0)
 		PG_RETURN_NULL();
 
 	switch (beentry->st_clientaddr.addr.ss_family)
@@ -860,7 +850,7 @@ pg_stat_get_backend_client_port(PG_FUNCTION_ARGS)
 	/* A zeroed client addr means we don't know */
 	memset(&zero_clientaddr, 0, sizeof(zero_clientaddr));
 	if (memcmp(&(beentry->st_clientaddr), &zero_clientaddr,
-			   sizeof(zero_clientaddr) == 0))
+			   sizeof(zero_clientaddr)) == 0)
 		PG_RETURN_NULL();
 
 	switch (beentry->st_clientaddr.addr.ss_family)
@@ -995,6 +985,7 @@ pg_stat_get_db_blocks_hit(PG_FUNCTION_ARGS)
 	PG_RETURN_INT64(result);
 }
 
+
 /* Discard the active statistics snapshot */
 Datum
 pg_stat_clear_snapshot(PG_FUNCTION_ARGS)
@@ -1080,7 +1071,7 @@ pg_stat_get_queue_elapsed_wait(PG_FUNCTION_ARGS)
 #endif
 #include "lib/stringinfo.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
 
 /**
  * We no longer support pg_renice_session. For the time being issue an error.
@@ -1093,3 +1084,11 @@ pg_renice_session(PG_FUNCTION_ARGS)
 	PG_RETURN_INT32(prio_out);
 }
 
+/* Reset all counters for the current database */
+Datum
+pg_stat_reset(PG_FUNCTION_ARGS)
+{
+	pgstat_reset_counters();
+
+	PG_RETURN_VOID();
+}

@@ -27,7 +27,7 @@
 
 #include "cdb/cdbvars.h"
 
-#include "access/xlog.h"
+#include "access/xlogdefs.h"
 #include "cdb/cdbfilerepservice.h"
 #include "cdb/cdbfilerepmirror.h"
 #include "cdb/cdbfilerepmirrorack.h"
@@ -390,22 +390,6 @@ FileRepMirror_RunReceiver(void)
 											   "",	//databaseName
 											   ""); // tableName
 #endif				
-				
-				if (Debug_filerep_print)
-				{
-					fileRepProcIndex = msgType;
-					ereport(LOG,
-							(errmsg("M_RunReceiver "
-									"local count '%d' position insert '%p' msg length '%u' "
-									"consumer proc index '%d' ",
-									spareField,
-									msgPositionInsert,
-									msgLength,
-									msgType),
-							 FileRep_errdetail_Shmem(),
-							 FileRep_errcontext()));	
-				}
-				
 				fileRepShmemMessageDescr = (FileRepShmemMessageDescr_s*) msgPositionInsert;	
 		
 				/* it is not in use */
@@ -818,20 +802,6 @@ FileRepMirror_RunConsumer(void)
 							   spare,
 							   fileRepMessageHeader->messageCount);		
 		
-		if (Debug_filerep_print)
-			ereport(LOG,
-				(errmsg("M_RunConsumer msg header count '%d' local count '%d' "
-						"consumer proc index '%d'",
-						fileRepMessageHeader->messageCount,
-						spare,
-						fileRepProcIndex),
-				 FileRep_errdetail(fileRepMessageHeader->fileRepIdentifier,
-								   fileRepMessageHeader->fileRepRelationType,
-								   fileRepMessageHeader->fileRepOperation,
-								   fileRepMessageHeader->messageCount),
-				 FileRep_errdetail_Shmem(),
-				 FileRep_errcontext()));		
-	
 		spare = fileRepMessageHeader->messageCount;
 		
 		/* fileName is relative path to $PGDATA directory */

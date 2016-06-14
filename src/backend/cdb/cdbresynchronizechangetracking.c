@@ -778,43 +778,41 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 					break;
 				}
 				case XLOG_BTREE_SPLIT_L:
-				case XLOG_BTREE_SPLIT_R:
 				case XLOG_BTREE_SPLIT_L_ROOT:
+				case XLOG_BTREE_SPLIT_R:
 				case XLOG_BTREE_SPLIT_R_ROOT:
 				{
 					xl_btree_split *xlrec = (xl_btree_split *) data;
-					BlockIdData blkid = xlrec->target.tid.ip_blkid;
-					
+
+					/* orig page / new left page */
 					ChangeTracking_AddRelationChangeInfo(
-													   relationChangeInfoArray,
-													   relationChangeInfoArrayCount,
-													   relationChangeInfoMaxSize,
-													   &(xlrec->target.node),
-													   BlockIdGetBlockNumber(&blkid),
-													   &xlrec->target.persistentTid,
-													   xlrec->target.persistentSerialNum);
-					
+						relationChangeInfoArray,
+						relationChangeInfoArrayCount,
+						relationChangeInfoMaxSize, &(xlrec->node),
+						xlrec->leftsib,
+						&xlrec->persistentTid,
+						xlrec->persistentSerialNum);
+
+					/* new right page */
 					ChangeTracking_AddRelationChangeInfo(
-													   relationChangeInfoArray,
-													   relationChangeInfoArrayCount,
-													   relationChangeInfoMaxSize,
-													   &(xlrec->target.node),
-													   xlrec->otherblk,
-													   &xlrec->target.persistentTid,
-													   xlrec->target.persistentSerialNum);
-					
-					if (xlrec->rightblk != P_NONE)
+						relationChangeInfoArray,
+						relationChangeInfoArrayCount,
+						relationChangeInfoMaxSize, &(xlrec->node),
+						xlrec->rightsib,
+						&xlrec->persistentTid,
+						xlrec->persistentSerialNum);
+
+					/* next block (orig page's rightlink) */
+					if (xlrec->rnext != P_NONE)
 					{
 						ChangeTracking_AddRelationChangeInfo(
-														   relationChangeInfoArray,
-														   relationChangeInfoArrayCount,
-														   relationChangeInfoMaxSize,
-														   &(xlrec->target.node),
-														   xlrec->rightblk,
-														   &xlrec->target.persistentTid,
-														   xlrec->target.persistentSerialNum);
+							relationChangeInfoArray,
+							relationChangeInfoArrayCount,
+							relationChangeInfoMaxSize, &(xlrec->node),
+							xlrec->rnext,
+							&xlrec->persistentTid,
+							xlrec->persistentSerialNum);
 					}
-					
 					break;
 				}
 				case XLOG_BTREE_DELETE:

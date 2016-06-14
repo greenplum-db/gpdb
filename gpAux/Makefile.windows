@@ -1,0 +1,8 @@
+# help Windows builds find the cross-compiler and a pre-built curl
+tmpPATH:=/usr/local/mingw32/bin:/usr/local/mingw32/mingw32/bin:/opt/curl-7.16.1-crosscompile/bin:$(PATH)
+export PATH:=$(tmpPATH)
+export WINDOWS=true
+export ANT_OPTS="-DminGW=true"
+export SCRIPT_EXT=bat
+export EXE_EXT=.exe
+export PY_EXT=.py

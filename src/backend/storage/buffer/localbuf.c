@@ -60,7 +60,7 @@ static Block GetLocalBufferStorage(void);
  * does not get set.
  */
 BufferDesc *
-LocalBufferAlloc_SMgr(SMgrRelation smgr, BlockNumber blockNum, bool *foundPtr)
+LocalBufferAlloc(SMgrRelation smgr, BlockNumber blockNum, bool *foundPtr)
 {
 	BufferTag	newTag;			/* identity of requested block */
 	LocalBufferLookupEnt *hresult;

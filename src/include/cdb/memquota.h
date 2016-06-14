@@ -8,7 +8,6 @@
 #ifndef MEMQUOTA_H_
 #define MEMQUOTA_H_
 
-#include "postgres.h"
 #include "nodes/plannodes.h"
 #include "cdb/cdbplan.h"
 

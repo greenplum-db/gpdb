@@ -284,11 +284,7 @@ DETAIL:  Entity: line 1: parser error : Premature end of data in tag a line 1
 Entity: line 1: parser error : Premature end of data in tag a line 1
 <a>hello<a>
            ^
-select xmlcomment('<a>hello<\a>');
-WARNING:  nonstandard use of escape in a string literal
-LINE 1: select xmlcomment('<a>hello<\a>');
-                          ^
-HINT:  Use the escape string syntax for escapes, e.g., E'\r\n'.
+select xmlcomment(E'<a>hello<\a>');
      xmlcomment     
 --------------------
  <!--<a>hello<a>-->
@@ -300,11 +296,7 @@ select xmlcomment('adsfasdfasdfsadf');
  <!--adsfasdfasdfsadf-->
 (1 row)
 
-select xmlcomment('\n');
-WARNING:  nonstandard use of escape in a string literal
-LINE 1: select xmlcomment('\n');
-                          ^
-HINT:  Use the escape string syntax for escapes, e.g., E'\r\n'.
+select xmlcomment(E'\n');
  xmlcomment 
 ------------
  <!--       

@@ -8,7 +8,7 @@ SYNOPSIS
 *****************************************************
 
 gpssh { -f <hostfile_gpssh> | -h <hostname> [-h <hostname> ...] } 
-[-u userid] [-s] [-v] [-e] [<bash_command>]
+[-u userid] [-s] [-v] [-e] [-d seconds] [-t multiplier] [<bash_command>]
 
 gpssh -? 
 
@@ -50,6 +50,11 @@ to $HOME of the session user on the remote hosts after login. To ensure
 commands are executed correctly on all remote hosts, you should always 
 enter absolute paths.
 
+If you encounter network timeout problems when using gpssh, you can
+use -d and -t options or set parameters in the gpssh.conf file to
+control the timing that gpssh uses when validating the initial ssh
+connection. For information about the configuration file, see gpssh
+Configuration File.
 
 *****************************************************
 OPTIONS
@@ -60,6 +65,16 @@ OPTIONS
  A bash shell command to execute on all hosts involved in this 
  session (optionally enclosed in quotes). If not specified, gpssh 
  will start an interactive session.
+
+
+-d (delay) seconds
+
+ Optional. Specifies the time, in seconds, to wait at the start of a
+ gpssh interaction with ssh. Default is 0.05. This option overrides the
+ delaybeforesend value that is specified in the gpssh.conf configuration
+ file.
+
+ Increasing this value can cause a long wait time during gpssh startup.
 
 
 -e (echo)
@@ -91,7 +106,17 @@ OPTIONS
 
  This option is valid for both interactive mode and single command mode. 
 
- 
+
+-t multiplier
+
+ Optional. A decimal number greater than 0 (zero) that is the multiplier
+ for the timeout that gpssh uses when validating the ssh prompt. Default
+ is 1. This option overrides the prompt_validation_timeout value that is
+ specified in the gpssh.conf configuration file.
+
+ Increasing this value has a small impact during gpssh startup.
+
+
 -u <userid>
 
  Specifies the userid for this SSH session. 
@@ -111,6 +136,49 @@ OPTIONS
 -? (help)
 
  Displays the online help.
+
+
+
+
+*****************************************************
+gpssh Configuration File
+*****************************************************
+The gpssh.conf file contains parameters that let you adjust the timing
+that gpssh uses when validating the initial ssh connection. These
+parameters affect the network connection before the gpssh session
+executes commands with ssh. The location of the file is specified by the
+environment variable MASTER_DATA_DIRECTORY. If the environment variable
+is not defined or the gpssh.conf file does not exist in the directory
+gpssh uses the default values or the values set with the -d and -t
+options. For information about the environment variable, see the
+Greenplum Database Reference Guide.
+
+The gpssh.conf file is a text file that consists of a [gpssh] section
+and parameters. On a line, the # (pound sign) indicates the start of a
+comment. This is an example gpssh.conf file.
+
+
+    [gpssh]
+    delaybeforesend = 0.05
+    prompt_validation_timeout = 1.0
+
+
+These are the gpssh.conf parameters.
+
+delaybeforesend = seconds
+
+ Specifies the time, in seconds, to wait at the start of a gpssh
+ interaction with ssh. Default is 0.05. Increasing this value can
+ cause a long wait time during gpssh startup. The -d option
+ overrides this parameter.
+
+
+prompt_validation_timeout = multiplier
+
+ A decimal number greater than 0 (zero) that is the multiplier for the
+ timeout that gpssh uses when validating the ssh prompt. Increasing this
+ value has a small impact during gpssh startup. Default is 1. The -t
+ option overrides this parameter.
 
 
 

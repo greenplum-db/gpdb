@@ -12,7 +12,6 @@
 #define CDBMOTION_H
 
 #include "access/htup.h"
-#include "cdb/htupfifo.h"
 #include "cdb/cdbselect.h"
 #include "cdb/cdbinterconnect.h"
 #include "cdb/ml_ipc.h"

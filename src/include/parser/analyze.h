@@ -53,6 +53,8 @@ typedef struct
 								 * transfer to the list CreateStmt->deferredStmts
 								 * for later parse_analyze and dispatch */
 	IndexStmt  *pkey;			/* PRIMARY KEY index, if any */
+
+	MemoryContext tempCtx;
 } CreateStmtContext;
 
 Query *transformCreateStmt(ParseState *pstate, CreateStmt *stmt,
@@ -65,20 +67,10 @@ int validate_partition_spec(ParseState 			*pstate,
 							char	   			*at_depth,
 							int					 partNumber);
 
-List *make_partition_rules(ParseState *pstate,
-						   CreateStmtContext *cxt, CreateStmt *stmt,
-						   Node *partitionBy, PartitionElem *pElem,
-						   char *at_depth, char *child_name_str,
-						   int partNumId, int maxPartNum,
-						   int everyOffset, int maxEveryOffset,
-						   ListCell	**pp_lc_anp,
-						   bool doRuleStmt);
-Node *coerce_partition_value(Node *node, Oid typid, int32 typmod,
-							 PartitionByType partype);
+extern bool is_aocs(List *opts);
+
 List *transformStorageEncodingClause(List *options);
 List *TypeNameGetStorageDirective(TypeName *typname);
 extern List * form_default_storage_directive(List *enc);
-
-extern struct GpPolicy *createRandomDistribution(int maxattrs);
 
 #endif   /* ANALYZE_H */

@@ -39,7 +39,7 @@
 #define S_IXUSR		 S_IEXEC
 #endif 
 
-#define COMPRESSION_BUFFER_SIZE		4096
+#define COMPRESSION_BUFFER_SIZE		(1<<14)
 
 
 static int
@@ -444,7 +444,7 @@ static void z_free(voidpf a, voidpf b)
 	gfile_free(b);
 }
 
-static int gz_file_open(gfile_t *fd)
+int gz_file_open(gfile_t *fd)
 {
 	if (!(fd->u.z = gfile_malloc(sizeof *fd->u.z)))
 	{

@@ -463,32 +463,12 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "gptransfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_infile"
+        And the user runs "gptransfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_infile --batch-size=1"
         Then gptransfer should return a return code of 0
-        And verify that gptransfer is in order of "gppylib/test/behave/mgmt_utils/steps/data/gptransfer_infile"
+        And verify that gptransfer is in order of "gppylib/test/behave/mgmt_utils/steps/data/gptransfer_infile" when partition transfer is "None"
         And verify that table "t0" in "gptransfer_testdb1" has "100" rows
         And verify that table "t3" in "gptransfer_testdb2" has "400" rows
         And verify that table "t0" in "gptransfer_testdb3" has "700" rows
-
-    @T506748
-    Scenario: gptransfer input file
-        Given the database is running
-        And the database "gptransfer_destdb" does not exist
-        And the database "gptransfer_testdb1" does not exist
-        And the database "gptransfer_testdb2" does not exist
-        And the database "gptransfer_testdb3" does not exist
-        And the database "gptransfer_testdb4" does not exist
-        And the database "gptransfer_testdb5" does not exist
-        And the user runs "gptransfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_wildcard_infile"
-        Then gptransfer should return a return code of 0
-        And verify that gptransfer is in order of "gppylib/test/behave/mgmt_utils/steps/data/gptransfer_wildcard_infile"
-        And verify that table "t0" in "gptransfer_testdb1" has "100" rows
-        And verify that table "t1" in "gptransfer_testdb1" has "200" rows
-        And verify that table "t2" in "gptransfer_testdb1" has "300" rows
-        And verify that table "t3" in "gptransfer_testdb2" has "400" rows
-        And verify that table "t4" in "gptransfer_testdb2" has "500" rows
-        And verify that table "s1.t0" in "gptransfer_testdb3" has "800" rows
-        And verify that table "s2.t0" in "gptransfer_testdb3" has "900" rows
 
     @T886748
     Scenario: gptransfer -F exclude input file
@@ -1040,7 +1020,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb5" does not exist
         And the user runs "gptransfer -d gptransfer_testdb1 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_SOURCE_USER --dest-port $GPTRANSFER_SOURCE_PORT --dest-host $GPTRANSFER_SOURCE_HOST --source-map-file $GPTRANSFER_MAP_FILE"        
         Then gptransfer should return a return code of 2
-        And gptransfer should print Source and destination systems cannot be the same unless --dest-database option is set to stdout
+        And gptransfer should print Source and destination systems cannot be the same unless --dest-database or --partition-transfer option is set to stdout
 
     @T339900
     Scenario:  gptransfer --dest-database option specified to a different name within the same system, should succeed
@@ -1427,7 +1407,7 @@ Feature: gptransfer tests
         And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE"
         Then gptransfer should return a return code of 0
         And psql should return a return code of 0
-        Then Verify data integrity of database "gptest" between source and destination system, work-dir "gppylib/test/behave/mgmt_utils/steps/data/gptransfer_verify"
+        Then verify data integrity of database "gptest" between source and destination system, work-dir "gppylib/test/behave/mgmt_utils/steps/data/gptransfer_verify"
         And the user stops the gpfdist on host "GPTRANSFER_SOURCE_HOST" and port "2345" in work directory "HOME" from remote "2"
         And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
         And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
@@ -2131,7 +2111,7 @@ Feature: gptransfer tests
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_boys, gptest.public.employee_1_prt_boys"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_DEST_PORT --source-host $GPTRANSFER_DEST_HOST --source-user $GPTRANSFER_DEST_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a"
         Then gptransfer should return a return code of 2
-        And gptransfer should print Can not transfer between same partition table to stdout
+        And gptransfer should print Cannot transfer between same partition table to stdout
 
     @partition_transfer
     @prt_transfer_38
@@ -2146,6 +2126,82 @@ Feature: gptransfer tests
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a"
         Then gptransfer should return a return code of 0
         And verify that table "public.sales_1_prt_asia_2_prt_2" in "gptest" has "1" rows
+
+    @partition_transfer
+    @prt_transfer_39
+    Scenario: gptransfer, --partition-transfer can not be used with --dest-database option
+        Given the database is running
+        And there is a file "input_file" with tables "gptest.public.tbl, gptest.public.tbl1"
+        When the user runs "gptransfer -f input_file --partition-transfer --dest-database gptest --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a"
+        Then gptransfer should return a return code of 2
+        And gptransfer should print --partition-transfer option cannot be used with --dest-database option to stdout
+
+    @partition_transfer
+    @prt_transfer_40
+    Scenario: gptransfer, --partition-transfer ingores blank lines in input file
+        Given the database is running
+        And there is a file "input_file" with tables " "
+        When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --verbose"
+        Then gptransfer should return a return code of 0
+        And gptransfer should print Skipping blank lines to stdout
+
+    @partition_transfer
+    @prt_transfer_41
+    Scenario: gptransfer, --partition-transfer pre-checks source and destination pair format
+        Given the database is running
+        And there is a file "input_file" with tables "gptest.public.tbl ,, gptest.public.tbl1"
+        When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a"
+        Then gptransfer should return a return code of 2
+        And gptransfer should print Wrong format found for table transfer pair to stdout
+
+    @partition_transfer
+    @prt_transfer_42
+    Scenario: gptransfer, --partition-transfer pre-checks empty source table name
+        Given the database is running
+        And there is a file "input_file" with tables ", gptest.public.tbl1"
+        When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a"
+        Then gptransfer should return a return code of 2
+        And gptransfer should print Cannot specify empty source table name to stdout
+
+    @partition_transfer
+    @prt_transfer_43
+    Scenario: gptransfer, --partition-transfer pre-checks empty destination table name
+        Given the database is running
+        And there is a file "input_file" with tables "gptest.public.tbl,"
+        When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a"
+        Then gptransfer should return a return code of 2
+        And gptransfer should print Cannot specify empty destination table name to stdout
+
+    @partition_transfer
+    @prt_transfer_44
+    Scenario: gptransfer, --partition-transfer pre-checks full qualified format of source table name
+        Given the database is running
+        And there is a file "input_file" with tables "gptest.public.tbl.extra_tablename, gptest.public.tbl"
+        When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a"
+        Then gptransfer should return a return code of 2
+        And gptransfer should print Source table name "gptest.public.tbl.extra_tablename" isn't fully qualified format to stdout
+
+    @partition_transfer
+    @prt_transfer_45
+    Scenario: gptransfer, --partition-transfer pre-checks full qualified format of destination table name
+        Given the database is running
+        And there is a file "input_file" with tables "gptest.public.tbl, gptest.public.tbl.extra_tablename"
+        When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a"
+        Then gptransfer should return a return code of 2
+        And gptransfer should print Destination table name "gptest.public.tbl.extra_tablename" isn't fully qualified format to stdout
+
+    @partition_transfer
+    @prt_transfer_46
+    Scenario: gptransfer partition with batch size 1, tables transferred in sequential order
+        Given the database is running
+        And database "gptest" exists
+        And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_1.sql -d gptest"
+        And there is a file "input_file" with tables "gptest.public.sales_1_prt_2_2_prt_asia, gptest.public.sales_1_prt_2_2_prt_asia|gptest.public.sales_1_prt_3_2_prt_asia, gptest.public.sales_1_prt_3_2_prt_asia|gptest.public.sales_1_prt_2_2_prt_other_regions, gptest.public.sales_1_prt_2_2_prt_other_regions"
+        When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=1"
+        Then gptransfer should return a return code of 0
+        And verify that gptransfer is in order of "input_file" when partition transfer is "True"
 
     @gptransfer_help
     Scenario: use gptransfer --help with another gptransfer process already running.

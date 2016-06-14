@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/lwlock.h,v 1.33 2007/01/05 22:19:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/storage/lwlock.h,v 1.36 2007/04/16 18:30:04 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -78,7 +78,6 @@ typedef enum LWLockId
 	AutovacuumScheduleLock,
 	SharedSnapshotLock,
 	DistributedLogControlLock,
-	TemporarySerializePreparesLock,
 	SeqServerControlLock,
 	AOSegFileLock,
 	PersistentObjLock,

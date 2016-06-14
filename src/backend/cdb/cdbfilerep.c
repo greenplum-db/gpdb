@@ -1319,6 +1319,10 @@ FileRep_CheckFlushLogs(
 					   volatile	FileRepLogShmem_s	*logShmem,
 					   bool							isConfigLog)
 {
+
+	if (log_filerep_to_syslogger)
+		return;
+
 	uint32	dataLength = 0;
 	bool	flushConfigLog = FALSE;
 	char	*configBegin = NULL;
@@ -1378,8 +1382,54 @@ FileRep_InsertLogEntry(
 
 	struct timeval	logTime;
 
-	if (Debug_filerep_print || (*fileRepAckShmemArray) == NULL)
+	if (!Debug_filerep_print || (*fileRepAckShmemArray) == NULL)
 		return;
+
+	if (log_filerep_to_syslogger)
+	{
+		ereport(LOG,
+		(errmsg("'%s', "
+			"filerep operation '%s', "
+			"relation type '%s', "
+			"'%d', '%d', "
+			"header crc '%u', "
+			"body crc '%u', "
+			"ack state '%s', "
+			"'%p', '%p', '%p', '%p', '%p', '%d', '%d', "
+			"'%p', '%p', '%p', '%p', '%p', '%d', '%d', "
+			"mirroring role '%s', mirroring state '%s', segment state '%s', filerep state, '%s'"
+			"process name(pid) '%s(%d)' ",
+			routineName,
+			FileRepOperationToString[fileRepOperation],
+			FileRepRelationTypeToString[fileRepRelationType],
+			localCount,
+			fileRepMessageCount,
+			fileRepMessageHeaderCrc,
+			fileRepMessageBodyCrc,
+			FileRepAckStateToString[fileRepAckState],
+			fileRepShmemArray[fileRepProcIndex]->positionBegin,
+			fileRepShmemArray[fileRepProcIndex]->positionEnd,
+			fileRepShmemArray[fileRepProcIndex]->positionInsert,
+			fileRepShmemArray[fileRepProcIndex]->positionConsume,
+			fileRepShmemArray[fileRepProcIndex]->positionWraparound,
+			fileRepShmemArray[fileRepProcIndex]->insertCount,
+			fileRepShmemArray[fileRepProcIndex]->consumeCount,
+			(*fileRepAckShmemArray)->positionBegin,
+			(*fileRepAckShmemArray)->positionEnd,
+			(*fileRepAckShmemArray)->positionInsert,
+			(*fileRepAckShmemArray)->positionConsume,
+			(*fileRepAckShmemArray)->positionWraparound,
+			(*fileRepAckShmemArray)->insertCount,
+			(*fileRepAckShmemArray)->consumeCount,
+			FileRepRoleToString[fileRepRole],
+			DataStateToString[dataState],
+			SegmentStateToString[segmentState],
+			FileRepStateToString[FileRepSubProcess_GetState()],
+			FileRepProcessTypeToString[fileRepProcessType],
+			getpid())));
+
+			return;
+	}
 
 	halfLength = (fileRepLogShmem->logEnd - fileRepLogShmem->logBegin) / 2;
 
@@ -1606,11 +1656,14 @@ FileRepLog_ShmemReInit(void)
 static void
 FileRep_FlushLogActiveSlot(void)
 {
+	if (log_filerep_to_syslogger)
+		return;
+
 	uint32 dataLength = 0;
 
 	dataLength = (fileRepConfigLogShmem->logEnd - fileRepConfigLogShmem->logBegin) / 2;
 
-	if (! Debug_filerep_config_print)
+	if (Debug_filerep_config_print)
 	{
 		if (fileRepConfigLogShmem->activeSlot1 == TRUE)
 		{
@@ -1630,7 +1683,7 @@ FileRep_FlushLogActiveSlot(void)
 
 	dataLength = (fileRepLogShmem->logEnd - fileRepLogShmem->logBegin) / 2;
 
-	if (! Debug_filerep_print)
+	if (Debug_filerep_print)
 	{
 		if (fileRepLogShmem->activeSlot1 == TRUE)
 		{
@@ -1759,7 +1812,10 @@ FileRep_InsertConfigLogEntryInternal(char		*description,
 	struct timeval	logTime;
 	uint32		halfLength = (fileRepConfigLogShmem->logEnd - fileRepConfigLogShmem->logBegin) / 2;
 
-	if (Debug_filerep_config_print)
+	if (!Debug_filerep_config_print)
+		return;
+
+	if (log_filerep_to_syslogger)
 	{
 		ereport(LOG,
 				(errmsg("'%s', "
@@ -2206,8 +2262,6 @@ FileRep_ProcessSignals()
 			if ( errno == ECHILD)
 				break;
 
-			bool resetRequired = freeAuxiliaryProcEntryAndReturnReset(term_pid, NULL);
-
 			/* NOTE see do_reaper() */
 			for (i=0; i < MaxFileRepSubProc; i++)
 			{
@@ -2257,8 +2311,7 @@ FileRep_ProcessSignals()
 
 					if (! EXIT_STATUS_0(term_status) &&
 					    ! EXIT_STATUS_1(term_status) &&
-					    ! EXIT_STATUS_2(term_status) &&
-						resetRequired)
+					    ! EXIT_STATUS_2(term_status))
 					{
 					    FileRep_SetPostmasterReset();
 					}

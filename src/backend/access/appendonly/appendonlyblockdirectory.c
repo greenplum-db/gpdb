@@ -141,8 +141,13 @@ init_internal(AppendOnlyBlockDirectory *blockDirectory)
 		palloc0(sizeof(MinipagePerColumnGroup) * blockDirectory->numColumnGroups);
 	for (groupNo = 0; groupNo < blockDirectory->numColumnGroups; groupNo++)
 	{
-		MinipagePerColumnGroup *minipageInfo = &blockDirectory->minipages[groupNo];
-		
+		if (blockDirectory->proj && !blockDirectory->proj[groupNo])
+		{
+			/* Ignore columns that are not projected. */
+			continue;
+		}
+		MinipagePerColumnGroup *minipageInfo =
+			&blockDirectory->minipages[groupNo];
 		minipageInfo->minipage =
 			palloc0(minipage_size(NUM_MINIPAGE_ENTRIES));
 		minipageInfo->numMinipageEntries = 0;
@@ -169,8 +174,9 @@ AppendOnlyBlockDirectory_Init_forSearch(
 	int totalSegfiles,
 	Relation aoRel,
 	int numColumnGroups,
-	bool isAOCol)
-{	
+	bool isAOCol,
+	bool *proj)
+{
 	Assert(aoEntry != NULL);
 
 	blockDirectory->aoRel = aoRel;
@@ -196,6 +202,7 @@ AppendOnlyBlockDirectory_Init_forSearch(
 	blockDirectory->appendOnlyMetaDataSnapshot = appendOnlyMetaDataSnapshot;
 	blockDirectory->numColumnGroups = numColumnGroups;
 	blockDirectory->isAOCol = isAOCol;
+	blockDirectory->proj = proj;
 	blockDirectory->currentSegmentFileNum = -1;
 
 	Assert(OidIsValid(aoEntry->blkdirrelid));
@@ -255,7 +262,8 @@ AppendOnlyBlockDirectory_Init_forInsert(
 	blockDirectory->currentSegmentFileNum = segno;
 	blockDirectory->numColumnGroups = numColumnGroups;
 	blockDirectory->isAOCol = isAOCol;
-	
+	blockDirectory->proj = NULL;
+
 	Assert(OidIsValid(aoEntry->blkdirrelid));
 
 	blockDirectory->blkdirRel =
@@ -319,7 +327,8 @@ AppendOnlyBlockDirectory_Init_addCol(
 	blockDirectory->currentSegmentFileNum = segno;
 	blockDirectory->numColumnGroups = numColumnGroups;
 	blockDirectory->isAOCol = isAOCol;
-	
+	blockDirectory->proj = NULL;
+
 	Assert(OidIsValid(aoEntry->blkdirrelid));
 
 	/*
@@ -560,6 +569,11 @@ AppendOnlyBlockDirectory_GetEntry(
 
 	for (tmpGroupNo = 0; tmpGroupNo < blockDirectory->numColumnGroups; tmpGroupNo++)
 	{
+		if (blockDirectory->proj && !blockDirectory->proj[tmpGroupNo])
+		{
+			/* Ignore columns that are not projected. */
+			continue;
+		}
 		/* Setup the scan keys for the scan. */
 		Assert(scanKeys != NULL);
 		scanKeys[0].sk_argument = Int32GetDatum(segmentFileNum);
@@ -1258,7 +1272,8 @@ AppendOnlyBlockDirectory_End_forSearch(
 
 	for (groupNo = 0; groupNo < blockDirectory->numColumnGroups; groupNo++)
 	{
-		pfree(blockDirectory->minipages[groupNo].minipage);
+		if (blockDirectory->minipages[groupNo].minipage != NULL)
+			pfree(blockDirectory->minipages[groupNo].minipage);
 	}
 
 	ereportif(Debug_appendonly_print_blockdirectory, LOG,

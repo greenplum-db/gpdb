@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/comment.sgml,v 1.33 2006/10/23 18:10:32 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/comment.sgml,v 1.35 2007/01/31 23:26:03 momjian Exp $
 PostgreSQL documentation
 -->
 
@@ -22,33 +22,33 @@ PostgreSQL documentation
 <synopsis>
 
 COMMENT ON
-{ TABLE object_name |
-  COLUMN table_name.column_name |
-  AGGREGATE agg_name (agg_type [, ...]) |
-  CAST (sourcetype AS targettype) |
-  CONSTRAINT constraint_name ON table_name |
-  CONVERSION object_name |
-  DATABASE object_name |
-  DOMAIN object_name |
-  FILESPACE object_name |
-  FUNCTION func_name ([[argmode] [argname] argtype [, ...]]) |
-  INDEX object_name |
-  LARGE OBJECT large_object_oid |
-  OPERATOR op (leftoperand_type, rightoperand_type) |
-  OPERATOR CLASS object_name USING index_method |
-  [PROCEDURAL] LANGUAGE object_name |
-  RESOURCE QUEUE object_name |
-  ROLE object_name |
-    RULE rule_name ON table_name |
-  SCHEMA object_name |
-  SEQUENCE object_name |
-  TABLESPACE object_name |
-  TRIGGER trigger_name ON table_name |
-  TYPE object_name |
-  VIEW object_name } 
-IS 'text'
-
-  
+{
+  TABLE <replaceable class="PARAMETER">object_name</replaceable> |
+  COLUMN <replaceable class="PARAMETER">table_name</replaceable>.<replaceable class="PARAMETER">column_name</replaceable> |
+  AGGREGATE <replaceable class="PARAMETER">agg_name</replaceable> (<replaceable class="PARAMETER">agg_type</replaceable> [, ...] ) |
+  CAST (<replaceable>sourcetype</replaceable> AS <replaceable>targettype</replaceable>) |
+  CONSTRAINT <replaceable class="PARAMETER">constraint_name</replaceable> ON <replaceable class="PARAMETER">table_name</replaceable> |
+  CONVERSION <replaceable class="PARAMETER">object_name</replaceable> |
+  DATABASE <replaceable class="PARAMETER">object_name</replaceable> |
+  DOMAIN <replaceable class="PARAMETER">object_name</replaceable> |
+  FILESPACE <replaceable class="PARAMETER">object_name</replaceable> |
+  FUNCTION <replaceable class="PARAMETER">func_name</replaceable> ( [ [ <replaceable class="parameter">argmode</replaceable> ] [ <replaceable class="parameter">argname</replaceable> ] <replaceable class="parameter">argtype</replaceable> [, ...] ] ) |
+  INDEX <replaceable class="PARAMETER">object_name</replaceable> |
+  LARGE OBJECT <replaceable class="PARAMETER">large_object_oid</replaceable> |
+  OPERATOR <replaceable class="PARAMETER">op</replaceable> (<replaceable class="PARAMETER">leftoperand_type</replaceable>, <replaceable class="PARAMETER">rightoperand_type</replaceable>) |
+  OPERATOR CLASS <replaceable class="PARAMETER">object_name</replaceable> USING <replaceable class="parameter">index_method</replaceable> |
+  OPERATOR FAMILY <replaceable class="PARAMETER">object_name</replaceable> USING <replaceable class="parameter">index_method</replaceable> |
+  [ PROCEDURAL ] LANGUAGE <replaceable class="PARAMETER">object_name</replaceable> |
+  RESOURCE QUEUE <replaceable class="PARAMETER">object_name</replaceable> |
+  ROLE <replaceable class="PARAMETER">object_name</replaceable> |
+  RULE <replaceable class="PARAMETER">rule_name</replaceable> ON <replaceable class="PARAMETER">table_name</replaceable> |
+  SCHEMA <replaceable class="PARAMETER">object_name</replaceable> |
+  SEQUENCE <replaceable class="PARAMETER">object_name</replaceable> |
+  TABLESPACE <replaceable class="PARAMETER">object_name</replaceable> |
+  TRIGGER <replaceable class="PARAMETER">trigger_name</replaceable> ON <replaceable class="PARAMETER">table_name</replaceable> |
+  TYPE <replaceable class="PARAMETER">object_name</replaceable> |
+  VIEW <replaceable class="PARAMETER">object_name</replaceable>
+} IS <replaceable class="PARAMETER">'text'</replaceable>
 </synopsis>
  </refsynopsisdiv>
 
@@ -96,7 +96,7 @@ IS 'text'
      <para>
       The name of the object to be commented.  Names of tables,
       aggregates, domains, functions, indexes, operators, operator classes,
-      sequences, types, and views may be schema-qualified.
+      operator families, sequences, types, and views can be schema-qualified.
      </para>
     </listitem>
    </varlistentry>
@@ -251,6 +251,7 @@ COMMENT ON LARGE OBJECT 346344 IS 'Planning document';
 COMMENT ON OPERATOR ^ (text, text) IS 'Performs intersection of two texts';
 COMMENT ON OPERATOR - (NONE, text) IS 'This is a prefix operator on text';
 COMMENT ON OPERATOR CLASS int4ops USING btree IS '4 byte integer operators for btrees';
+COMMENT ON OPERATOR FAMILY integer_ops USING btree IS 'all integer operators for btrees';
 COMMENT ON ROLE my_role IS 'Administration group for finance tables';
 COMMENT ON RULE my_rule ON my_table IS 'Logs updates of employee records';
 COMMENT ON SCHEMA my_schema IS 'Departmental data';

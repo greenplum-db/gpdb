@@ -579,3 +579,117 @@ INSERT INTO force_quotes_tbl VALUES (123, 456, 'foo');
 
 COPY force_quotes_tbl TO stdout CSV FORCE QUOTE intcol, numcol, textcol;
 DROP TABLE force_quotes_tbl;
+
+-- Tests for error log
+DROP TABLE IF EXISTS errcopy, errcopy_err, errcopy_temp;
+
+CREATE TABLE errcopy(a int, b int, c text) distributed by (a);
+INSERT INTO errcopy select i, i, case when i <> 5 then i end || '_text' from generate_series(1, 10)i;
+COPY errcopy to '/tmp/errcopy.csv' csv null '';
+
+-- check if not null constraint not affect error log.
+TRUNCATE errcopy;
+ALTER table errcopy ALTER c SET NOT null;
+
+COPY errcopy from '/tmp/errcopy.csv' csv null '' log errors segment reject limit 10 rows;
+
+SELECT * FROM errcopy;
+
+-- reject rows with invalid format for int 
+ALTER table errcopy ALTER c DROP NOT null;
+ALTER table errcopy DROP COLUMN c;
+ALTER table errcopy ADD COLUMN c int;
+
+COPY errcopy from '/tmp/errcopy.csv' csv null '' log errors segment reject limit 10 rows;
+SELECT * FROM errcopy;
+SELECT relname, errmsg, rawdata FROM gp_read_error_log('errcopy');
+
+-- reject one row with extra column, one row with fewer columns
+TRUNCATE errcopy;
+SELECT gp_truncate_error_log('errcopy');
+
+COPY (select i::text || ',' || i::text || case when i = 4 then '' else ',' || i::text || case when i = 5 then ',5' else '' end end from generate_series(1, 10)i) to '/tmp/errcopy.csv';
+COPY errcopy from '/tmp/errcopy.csv' csv null '' log errors segment reject limit 10 rows;
+
+SELECT * FROM errcopy ORDER BY a;
+SELECT relname, errmsg, rawdata FROM gp_read_error_log('errcopy');
+
+-- metacharacter
+TRUNCATE errcopy;
+COPY errcopy from stdin csv newline 'LF' log errors segment reject limit 3 rows;
+1,2,0
+1,3,4^M
+1,3,3
+\.
+
+SELECT * FROM errcopy;
+
+-- exceed reject limit
+TRUNCATE errcopy;
+SELECT gp_truncate_error_log('errcopy');
+
+COPY errcopy from stdin delimiter E'\t' log errors segment reject limit 3 rows;
+1       2       0
+1       3       4
+1       4
+1       2
+1
+1       3       0
+1       30      999
+\.
+SELECT * FROM errcopy;
+SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('errcopy');
+
+-- abort and keep
+TRUNCATE errcopy;
+SELECT gp_truncate_error_log('errcopy');
+
+COPY errcopy from stdin delimiter '/' log errors segment reject limit 3 rows;
+1/2/3
+1/5
+7/8/9
+1/11/12/
+1
+1/17/18
+\.
+SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('errcopy');
+
+-- gp_initial_bad_row_limit guc test. This guc allows user to set the initial
+-- number of rows which can contain errors before the database stops loading
+-- the data. If there is a valid row within the first 'n' rows specified by
+-- this guc, the database continues to load the data. 
+DROP TABLE IF EXISTS test_first_segment_reject_limit;
+CREATE TABLE test_first_segment_reject_limit (a int, b text);
+SET gp_initial_bad_row_limit = 2;
+COPY test_first_segment_reject_limit FROM STDIN WITH DELIMITER '|' segment reject limit 20;
+error0
+error1
+error2
+error3
+1|1_number
+2|2_number
+3|3_number
+4|4_number
+5|5_number
+5|5_number
+6|6_number
+7|7_number
+\.
+
+-- should go through fine
+SET gp_initial_bad_row_limit = 6;
+COPY test_first_segment_reject_limit FROM STDIN WITH DELIMITER '|' segment reject limit 20;
+error0
+error1
+error2
+error3
+1|1_number
+2|2_number
+3|3_number
+4|4_number
+5|5_number
+5|5_number
+6|6_number
+7|7_number
+\.
+SELECT COUNT(*) FROM test_first_segment_reject_limit;

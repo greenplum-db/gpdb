@@ -40,7 +40,8 @@
 #include "cdb/tupchunklist.h"
 #include "cdb/ml_ipc.h"
 #include "cdb/cdbvars.h"
-#include "cdb/cdbdisp.h"
+#include "cdb/cdbdisp_query.h"
+#include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbicudpfaultinjection.h"
 
 #include <fcntl.h>
@@ -1394,6 +1395,7 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 	initMutex(&ic_control_info.lock);
 	pthread_cond_init(&ic_control_info.cond, NULL);
 	ic_control_info.shutdown = 0;
+	ic_control_info.threadCreated = false;
 
 	old = MemoryContextSwitchTo(ic_control_info.memContext);
 
@@ -3174,7 +3176,7 @@ setupOutgoingUDPConnection(ChunkTransportState *transportStates, ChunkTransportS
 		elog(DEBUG1, "setupOutgoingUDPConnection: node %d route %d srccontent %d dstcontent %d: %s",
 			 pEntry->motNodeId, conn->route, Gp_segment, conn->cdbProc->contentid, conn->remoteHostAndPort);
 
-	conn->conn_info.srcListenerPort = (Gp_listener_port>>16) & 0x0ffff;
+	conn->conn_info.srcListenerPort = Gp_listener_port;
 	conn->conn_info.srcPid = MyProcPid;
 	conn->conn_info.dstPid = conn->cdbProc->pid;
 	conn->conn_info.dstListenerPort = conn->cdbProc->listenerPort;
@@ -3207,8 +3209,9 @@ checkForCancelFromQD(ChunkTransportState *pTransportStates)
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(pTransportStates);
 	Assert(pTransportStates->estate);
+	Assert(pTransportStates->estate->dispatcherState);
 
-	if (cdbdisp_check_estate_for_cancel(pTransportStates->estate))
+	if (cdbdisp_checkResultsErrcode(pTransportStates->estate->dispatcherState->primaryResults))
 	{
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 						errmsg(CDB_MOTION_LOST_CONTACT_STRING)));
@@ -3430,7 +3433,7 @@ SetupUDPIFCInterconnect_Internal(EState *estate)
 				conn->conn_info.srcListenerPort = conn->cdbProc->listenerPort;
 				conn->conn_info.srcPid = conn->cdbProc->pid;
 				conn->conn_info.dstPid = MyProcPid;
-				conn->conn_info.dstListenerPort = (Gp_listener_port>>16) & 0x0ffff;
+				conn->conn_info.dstListenerPort = Gp_listener_port;
 				conn->conn_info.sessionId = gp_session_id;
 				conn->conn_info.icId = gp_interconnect_id;
 				conn->conn_info.flags = UDPIC_FLAGS_RECEIVER_TO_SENDER;
@@ -3489,9 +3492,9 @@ SetupUDPIFCInterconnect_Internal(EState *estate)
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 		ereport(DEBUG1, (errmsg("SetupUDPInterconnect will activate "
 								"%d incoming, %d outgoing routes for gp_interconnect_id %d. "
-								"Listening on ports=%d/%d sockfd=%d.",
+								"Listening on ports=%d sockfd=%d.",
 								expectedTotalIncoming, expectedTotalOutgoing, gp_interconnect_id,
-								Gp_listener_port&0x0ffff, (Gp_listener_port>>16)&0x0ffff, UDP_listenerFd)));
+								Gp_listener_port, UDP_listenerFd)));
 
 	/* If there are packets cached by background thread, add them to the connections. */
 	if (gp_interconnect_cache_future_packets)
@@ -4343,6 +4346,26 @@ logPkt(char *prefix, icpkthdr *pkt)
  * 		Called by sender to process acked packet.
  *
  * 	Remove it from unack queue and unack queue ring, change the rtt ...
+ *
+ * 	RTT (Round Trip Time) is computed as the time between we send the packet
+ * 	and receive the acknowledgement for the packet. When an acknowledgement 
+ * 	is received, an estimated RTT value (called SRTT, smoothed RTT) is updated
+ * 	by using the following equation. And we also set a limitation of the max
+ * 	value and min value for SRTT.
+ *	    (1) SRTT = (1 - g) SRTT + g x RTT (0 < g < 1)
+ *	where RTT is the measured round trip time of the packet. In implementation,
+ *	g is set to 1/8. In order to compute expiration period, we also compute an
+ *	estimated delay variance SDEV by using:
+ *	    (2) SDEV = (1 - h) x SDEV + h x |SERR| (0 < h < 1, In implementation, h is set to 1/4)
+ *	where SERR is calculated by using:
+ *	    (3) SERR = RTT - SRTT
+ *	Expiration period determines the timing we resend a packet. A long RTT means
+ *	a long expiration period. Delay variance is used to incorporate the variance
+ *	of workload/network variances at different time. When a packet is retransmitted,
+ *	we back off exponentially the expiration period.
+ *	    (4) exp_period = (SRTT + y x SDEV) << retry
+ *	Here y is a constant (In implementation, we use 4) and retry is the times the
+ *	packet is retransmitted.
  */
 static void inline
 handleAckedPacket(MotionConn *ackConn, ICBuffer *buf, uint64 now)
@@ -4375,13 +4398,11 @@ handleAckedPacket(MotionConn *ackConn, ICBuffer *buf, uint64 now)
 
 	        if (buf->nRetry == 0)
 	        {
-	            /* newRTT = buf->conn->rtt * (1 - RTT_COEFFICIENT) + ackTime * RTT_COEFFICIENT; */
 	        	newRTT = buf->conn->rtt - (buf->conn->rtt >> RTT_SHIFT_COEFFICIENT) + (ackTime >> RTT_SHIFT_COEFFICIENT);
 	        	newRTT = Min(MAX_RTT, Max(newRTT, MIN_RTT));
 	        	buf->conn->rtt = newRTT;
 
-	        	/* newDEV = buf->conn->dev * (1 - DEV_COEFFICIENT) + DEV_COEFFICIENT * abs(ackTime - newRTT); */
-	        	newDEV = buf->conn->dev - (buf->conn->dev >> DEV_SHIFT_COEFFICIENT) + (abs(ackTime - newRTT) >> DEV_SHIFT_COEFFICIENT);
+	        	newDEV = buf->conn->dev - (buf->conn->dev >> DEV_SHIFT_COEFFICIENT) + ((Max(ackTime, newRTT) - Min(ackTime, newRTT)) >> DEV_SHIFT_COEFFICIENT);
 	        	newDEV = Min(MAX_DEV, Max(newDEV, MIN_DEV));
 	        	buf->conn->dev = newDEV;
 
@@ -4505,7 +4526,7 @@ handleAcks(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntr
 		 */
 		if (pkt->srcContentId == Gp_segment &&
 				pkt->srcPid == MyProcPid &&
-				pkt->srcListenerPort == ((Gp_listener_port>>16) & 0x0ffff) &&
+				pkt->srcListenerPort == Gp_listener_port &&
 				pkt->sessionId == gp_session_id &&
 				pkt->icId == gp_interconnect_id)
 		{
@@ -4566,7 +4587,8 @@ handleAcks(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntr
 					break;
 				}
 
-				if (pkt->seq <= ackConn->receivedAckSeq)
+				/* don't get out of the loop if pkt->seq equals to ackConn->receivedAckSeq, need to check UDPIC_FLAGS_STOP flag */
+				if (pkt->seq < ackConn->receivedAckSeq)
 				{
 					if (DEBUG1 >= log_min_messages)
 						write_log("ack with bad seq?! expected (%d, %d] got %d flags 0x%x, capacity %d consumedSeq %d", ackConn->receivedAckSeq, ackConn->sentSeq, pkt->seq, pkt->flags, ackConn->capacity, ackConn->consumedSeq);
@@ -4583,6 +4605,13 @@ handleAcks(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntr
 					ackConn->conn_info.flags |= UDPIC_FLAGS_STOP;
 					ret = true;
 					/* continue to deal with acks */
+				}
+
+				if (pkt->seq == ackConn->receivedAckSeq)
+				{
+					if (DEBUG1 >= log_min_messages)
+						write_log("ack with bad seq?! expected (%d, %d] got %d flags 0x%x, capacity %d consumedSeq %d", ackConn->receivedAckSeq, ackConn->sentSeq, pkt->seq, pkt->flags, ackConn->capacity, ackConn->consumedSeq);
+					break;
 				}
 
 				/* deal with a regular ack. */
@@ -4626,7 +4655,7 @@ handleAcks(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntr
 					pkt->srcContentId, Gp_segment,
 					pkt->srcPid, MyProcPid,
 					pkt->dstPid,
-					pkt->srcListenerPort, ((Gp_listener_port>>16) & 0x0ffff),
+					pkt->srcListenerPort, Gp_listener_port,
 					pkt->dstListenerPort,
 					pkt->sessionId, gp_session_id,
 					pkt->icId, gp_interconnect_id);
@@ -6938,5 +6967,5 @@ WaitInterconnectQuitUDPIFC(void)
 		SendDummyPacket();
 		pthread_join(ic_control_info.threadHandle, NULL);
 	}
-	ic_control_info.threadCreated = 0;
+	ic_control_info.threadCreated = false;
 }

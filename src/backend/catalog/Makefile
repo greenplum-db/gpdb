@@ -23,7 +23,7 @@ OBJS = catalog.o dependency.o heap.o index.o indexing.o namespace.o aclchk.o \
        aoseg.o aoblkdir.o gp_fastsequence.o \
        pg_attribute_encoding.o pg_compression.o aovisimap.o \
        gp_global_sequence.o gp_persistent.o pg_appendonly.o \
-       aocatalog.o hiddencat.o $(QUICKLZ_COMPRESSION)
+       aocatalog.o $(QUICKLZ_COMPRESSION)
 
 
 SUBDIRS = caql core
@@ -97,8 +97,7 @@ postgres.shdescription: postgres.bki ;
 postgres_bki_srcs: process_col_defaults.pl $(POSTGRES_BKI_SRCS)
 	cat $(POSTGRES_BKI_SRCS) | $(PERL) process_col_defaults.pl > postgres_bki_srcs
 
-postgres.bki: genbki.sh postgres_bki_srcs \
-    $(top_srcdir)/src/include/postgres_ext.h $(top_builddir)/src/include/pg_config_manual.h
+postgres.bki: genbki.sh postgres_bki_srcs $(top_srcdir)/src/include/pg_config_manual.h
 	AWK='$(AWK)' $(SHELL) $< $(pg_includes) --set-version=$(VERSION) -o postgres postgres_bki_srcs
 
 .PHONY: install-data

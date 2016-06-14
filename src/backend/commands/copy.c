@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/copy.c,v 1.274 2007/01/05 22:19:25 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/copy.c,v 1.279 2007/03/29 00:15:38 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -38,6 +38,7 @@
 #include "commands/tablecmds.h"
 #include "commands/trigger.h"
 #include "executor/executor.h"
+#include "executor/execDML.h"
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
 #include "mb/pg_wchar.h"
@@ -48,6 +49,7 @@
 #include "storage/fd.h"
 #include "storage/smgr.h"
 #include "tcop/tcopprot.h"
+#include "tcop/utility.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
@@ -66,7 +68,7 @@
 #include "commands/vacuum.h"
 #include "utils/lsyscache.h"
 #include "nodes/makefuncs.h"
-#include "postmaster/autovacuum.h"
+#include "postmaster/autostats.h"
 
 /* DestReceiver for COPY (SELECT) TO */
 typedef struct
@@ -204,10 +206,6 @@ else \
 	}\
 	else\
 	{\
-		/* truncate trailing eol chars if we need to store this row in errtbl */ \
-		if (cstate->cdbsreh->errtbl) \
-			truncateEol(&cstate->line_buf, cstate->eol_type); \
-\
 		if (Gp_role == GP_ROLE_EXECUTE)\
 		{\
 			/* if line has embedded rownum, update the cursor to the pos right after */ \
@@ -1065,39 +1063,20 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 					(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
 					 errmsg("COPY single row error handling only available using COPY FROM")));
 
-		if (sreh->errtable)
+		if (sreh->into_file)
 		{
 			cstate->errMode = SREH_LOG;
-		}
-		else if (sreh->into_file)
-		{
-			cstate->errMode = SREH_LOG;
-			if (sreh->is_keep)
-				ereport(ERROR,
-						(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
-						 errmsg("KEEP may only be specified with an error table")));
 			log_to_file = true;
 		}
 		else
 		{
 			cstate->errMode = SREH_IGNORE;
-			if (sreh->is_keep)
-				ereport(ERROR,
-						(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
-						errmsg("KEEP may only be specified with a LOG INTO errortable clause")));
 		}
-		cstate->cdbsreh = makeCdbSreh(sreh->is_keep,
-									  sreh->reusing_existing_errtable,
-									  sreh->rejectlimit,
+		cstate->cdbsreh = makeCdbSreh(sreh->rejectlimit,
 									  sreh->is_limit_in_rows,
-									  sreh->errtable,
 									  stmt->filename,
 									  stmt->relation->relname,
 									  log_to_file);
-
-		/* if necessary warn the user of the risk of table getting dropped */
-		if(sreh->errtable && Gp_role == GP_ROLE_DISPATCH && !sreh->reusing_existing_errtable)
-			emitSameTxnWarning();
 	}
 	else
 	{
@@ -1560,8 +1539,8 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 								cstate->filename)));
 		}
 	}
-	else		/* copy from database to file */
-		DoCopyTo(cstate);
+	else
+		DoCopyTo(cstate);		/* copy from database to file */
 
 	/*
 	 * Close the relation or query.  If reading, we can release the
@@ -2494,11 +2473,11 @@ static void CopyFromCreateDispatchCommand(CopyState cstate,
 
 	/*
 	 * NOTE: we used to always pass STDIN here to the QEs. But since we want
-	 * the QEs to know the original file name for recording it in an error table
+	 * the QEs to know the original file name for recording it in an error log file
 	 * (if they use one) we actually pass the filename here, and in the QE COPY
 	 * we get it, save it, and then always revert back to actually using STDIN.
 	 * (if we originally use STDIN we just pass it along and record that in the
-	 * error table).
+	 * error log file).
 	 */
 	if(cstate->filename)
 		appendStringInfo(cdbcopy_cmd, " FROM %s WITH", quote_literal_internal(cstate->filename));
@@ -2555,19 +2534,7 @@ static void CopyFromCreateDispatchCommand(CopyState cstate,
 	{
 		if (cstate->errMode == SREH_LOG)
 		{
-			if (cstate->cdbsreh->errtbl)
-			{
-				Relation	errtbl = cstate->cdbsreh->errtbl;
-				char	   *namespace, *relname;
-
-				namespace = get_namespace_name(RelationGetNamespace(errtbl));
-				relname = RelationGetRelationName(errtbl);
-				appendStringInfo(cdbcopy_cmd, " LOG ERRORS INTO %s.%s",
-								 quote_identifier(namespace),
-								 quote_identifier(relname));
-			}
-			else
-				appendStringInfoString(cdbcopy_cmd, " LOG ERRORS");
+			appendStringInfoString(cdbcopy_cmd, " LOG ERRORS");
 		}
 
 		appendStringInfo(cdbcopy_cmd, " SEGMENT REJECT LIMIT %d %s",
@@ -2598,7 +2565,7 @@ CopyFromDispatch(CopyState cstate)
 	Datum	   *values;
 	bool	   *nulls;
 	int		   *attr_offsets;
-	int			total_rejeted_from_qes = 0;
+	int			total_rejected_from_qes = 0;
 	bool		isnull;
 	bool	   *isvarlena;
 	ResultRelInfo *resultRelInfo;
@@ -2785,6 +2752,7 @@ CopyFromDispatch(CopyState cstate)
 		RelationBuildPartitionDesc(cstate->rel, false);
 
 	CopyInitPartitioningState(estate);
+
 
 	if (list_length(cstate->ao_segnos) > 0)
 		cdbCopy->ao_segnos = cstate->ao_segnos;
@@ -3421,7 +3389,7 @@ CopyFromDispatch(CopyState cstate)
 					 * policy should be PARTITIONED (normal tables) or
 					 * ENTRY
 					 */
-					if (!part_policy || part_policy->ptype == POLICYTYPE_UNDEFINED)
+					if (!part_policy)
 					{
 						elog(FATAL, "Bad or undefined policy. (%p)", part_policy);
 					}
@@ -3526,7 +3494,7 @@ CopyFromDispatch(CopyState cstate)
 	 * databases Now we would like to end the copy command on
 	 * all segment databases across the cluster.
 	 */
-	total_rejeted_from_qes = cdbCopyEnd(cdbCopy);
+	total_rejected_from_qes = cdbCopyEnd(cdbCopy);
 
 	/*
 	 * If we quit the processing loop earlier due to a
@@ -3578,20 +3546,21 @@ CopyFromDispatch(CopyState cstate)
 	{
 		int total_rejected = 0;
 		int total_rejected_from_qd = cstate->cdbsreh->rejectcount;
-		
-		/* if used errtable, QD bad rows were sent to QEs and counted there. ignore QD count */
-		if (cstate->cdbsreh->errtbl)
+
+		/*
+		 * If error log has been requested, then we send the row to the segment
+		 * so that it can be written in the error log file. The segment process
+		 * counts it again as a rejected row. So we ignore the reject count
+		 * from the master and only consider the reject count from segments.
+		 */
+		if (cstate->cdbsreh->log_to_file)
 			total_rejected_from_qd = 0;
-		
-		total_rejected = total_rejected_from_qd + total_rejeted_from_qes;
+
+		total_rejected = total_rejected_from_qd + total_rejected_from_qes;
 		cstate->processed -= total_rejected;
 
 		/* emit a NOTICE with number of rejected rows */
 		ReportSrehResults(cstate->cdbsreh, total_rejected);
-
-		/* See if we want to DROP error table when destroying cdbsreh */
-		if(cstate->cdbsreh->errtbl)
-			SetErrorTableVerdict(cstate->cdbsreh, total_rejected);
 	}
 
 
@@ -3675,10 +3644,6 @@ CopyFromDispatch(CopyState cstate)
 	if (policy)
 		pfree(policy);
 
-	/* free the hash table allocated by values_get_partition(), if any */
-	if(estate->es_result_partitions && estate->es_partition_state->result_partition_hash != NULL)
-		hash_destroy(estate->es_partition_state->result_partition_hash);
-
 	/*
 	 * Don't worry about the partition table hash map, that will be
 	 * freed when our current memory context is freed. And that will be
@@ -3706,11 +3671,16 @@ CopyFrom(CopyState cstate)
 	int			attnum;
 	int			i;
 	Oid			in_func_oid;
-	Datum	   *values;
-	bool	   *nulls;
+	Datum		*values = NULL;
+	bool		*nulls = NULL;
+	Datum		*partValues = NULL;
+	bool		*partNulls = NULL;
+	Datum		*baseValues = NULL;
+	bool		*baseNulls = NULL;
 	bool		isnull;
 	ResultRelInfo *resultRelInfo;
 	EState	   *estate = CreateExecutorState(); /* for ExecConstraints() */
+	TupleTableSlot *baseSlot;
 	TupleTableSlot *slot;
 	bool		file_has_oids;
 	int		   *defmap;
@@ -3718,6 +3688,9 @@ CopyFrom(CopyState cstate)
 	ExprContext *econtext;		/* used for ExecEvalExpr for default atts */
 	MemoryContext oldcontext = CurrentMemoryContext;
 	ErrorContextCallback errcontext;
+	CommandId	mycid = GetCurrentCommandId();
+	bool		use_wal = true;		/* by default, use WAL logging */
+	bool		use_fsm = true;		/* by default, use FSM for free space */
 	int		   *attr_offsets;
 	bool		no_more_data = false;
 	ListCell   *cur;
@@ -3729,6 +3702,50 @@ CopyFrom(CopyState cstate)
 	num_phys_attrs = tupDesc->natts;
 	attr_count = list_length(cstate->attnumlist);
 	num_defaults = 0;
+
+	/*----------
+	 * Check to see if we can avoid writing WAL
+	 *
+	 * If archive logging is not enabled *and* either
+	 *	- table was created in same transaction as this COPY
+	 *	- data is being written to relfilenode created in this transaction
+	 * then we can skip writing WAL.  It's safe because if the transaction
+	 * doesn't commit, we'll discard the table (or the new relfilenode file).
+	 * If it does commit, we'll have done the heap_sync at the bottom of this
+	 * routine first.
+	 *
+	 * As mentioned in comments in utils/rel.h, the in-same-transaction test
+	 * is not completely reliable, since in rare cases rd_createSubid or
+	 * rd_newRelfilenodeSubid can be cleared before the end of the transaction.
+	 * However this is OK since at worst we will fail to make the optimization.
+	 *
+	 * When skipping WAL it's entirely possible that COPY itself will write no
+	 * WAL records at all.  This is of concern because RecordTransactionCommit
+	 * might decide it doesn't need to log our eventual commit, which we
+	 * certainly need it to do.  However, we need no special action here for
+	 * that, because if we have a new table or new relfilenode then there
+	 * must have been a WAL-logged pg_class update earlier in the transaction.
+	 *
+	 * Also, if the target file is new-in-transaction, we assume that checking
+	 * FSM for free space is a waste of time, even if we must use WAL because
+	 * of archiving.  This could possibly be wrong, but it's unlikely.
+	 *
+	 * The comments for heap_insert and RelationGetBufferForTuple specify that
+	 * skipping WAL logging is only safe if we ensure that our tuples do not
+	 * go into pages containing tuples from any other transactions --- but this
+	 * must be the case if we have a new table or new relfilenode, so we need
+	 * no additional work to enforce that.
+	 *----------
+	 */
+	if (cstate->rel->rd_createSubid != InvalidSubTransactionId ||
+		cstate->rel->rd_newRelfilenodeSubid != InvalidSubTransactionId)
+	{
+		use_fsm = false;
+		if (!XLogArchivingActive())
+			use_wal = false;
+	}
+
+	oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
 
 	/*
 	 * We need a ResultRelInfo so we can use the regular executor's
@@ -3755,7 +3772,7 @@ CopyFrom(CopyState cstate)
 	CopyInitPartitioningState(estate);
 
 	/* Set up a tuple slot too */
-	slot = MakeSingleTupleTableSlot(tupDesc);
+	baseSlot = MakeSingleTupleTableSlot(tupDesc);
 
 	econtext = GetPerTupleExprContext(estate);
 
@@ -3814,9 +3831,12 @@ CopyFrom(CopyState cstate)
 
 	file_has_oids = cstate->oids;	/* must rely on user to tell us this... */
 
-	values = (Datum *) palloc(num_phys_attrs * sizeof(Datum));
-	nulls = (bool *) palloc(num_phys_attrs * sizeof(bool));
+	baseValues = (Datum *) palloc(num_phys_attrs * sizeof(Datum));
+	baseNulls = (bool *) palloc(num_phys_attrs * sizeof(bool));
 	attr_offsets = (int *) palloc(num_phys_attrs * sizeof(int));
+
+	partValues = (Datum *) palloc(attr_count * sizeof(Datum));
+	partNulls = (bool *) palloc(attr_count * sizeof(bool));
 
 	/* Set up callback to identify error line number */
 	errcontext.callback = copy_in_error_callback;
@@ -3877,8 +3897,8 @@ CopyFrom(CopyState cstate)
 				MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
 
 				/* Initialize all values for row to NULL */
-				MemSet(values, 0, num_phys_attrs * sizeof(Datum));
-				MemSet(nulls, true, num_phys_attrs * sizeof(bool));
+				MemSet(baseValues, 0, num_phys_attrs * sizeof(Datum));
+				MemSet(baseNulls, true, num_phys_attrs * sizeof(bool));
 				/* reset attribute pointers */
 				MemSet(attr_offsets, 0, num_phys_attrs * sizeof(int));
 
@@ -3993,9 +4013,9 @@ CopyFrom(CopyState cstate)
 				PG_TRY();
 				{
 					if (cstate->csv_mode)
-						CopyReadAttributesCSV(cstate, nulls, attr_offsets, num_phys_attrs, attr);
+						CopyReadAttributesCSV(cstate, baseNulls, attr_offsets, num_phys_attrs, attr);
 					else
-						CopyReadAttributesText(cstate, nulls, attr_offsets, num_phys_attrs, attr);
+						CopyReadAttributesText(cstate, baseNulls, attr_offsets, num_phys_attrs, attr);
 
 					/*
 					 * Loop to read the user attributes on the line.
@@ -4008,7 +4028,7 @@ CopyFrom(CopyState cstate)
 
 						string = cstate->attribute_buf.data + attr_offsets[m];
 
-						if (nulls[m])
+						if (baseNulls[m])
 							isnull = true;
 						else
 							isnull = false;
@@ -4021,11 +4041,11 @@ CopyFrom(CopyState cstate)
 
 						cstate->cur_attname = NameStr(attr[m]->attname);
 
-						values[m] = InputFunctionCall(&in_functions[m],
+						baseValues[m] = InputFunctionCall(&in_functions[m],
 													  isnull ? NULL : string,
 													  typioparams[m],
 													  attr[m]->atttypmod);
-						nulls[m] = isnull;
+						baseNulls[m] = isnull;
 						cstate->cur_attname = NULL;
 					}
 
@@ -4036,11 +4056,11 @@ CopyFrom(CopyState cstate)
 					 */
 					for (i = 0; i < num_defaults; i++)
 					{
-						values[defmap[i]] = ExecEvalExpr(defexprs[i], econtext,
+						baseValues[defmap[i]] = ExecEvalExpr(defexprs[i], econtext,
 														 &isnull, NULL);
 
 						if (!isnull)
-							nulls[defmap[i]] = false;
+							baseNulls[defmap[i]] = false;
 					}
 				}
 				PG_CATCH();
@@ -4061,10 +4081,10 @@ CopyFrom(CopyState cstate)
 				 */
 				PG_TRY();
 				{
-					MemoryContextSwitchTo(oldcontext);
+					MemoryContextSwitchTo(estate->es_query_cxt);
 					if (estate->es_result_partitions)
 					{
-						resultRelInfo = values_get_partition(values, nulls,
+						resultRelInfo = values_get_partition(baseValues, baseNulls,
 															 tupDesc, estate);
 						estate->es_result_relation_info = resultRelInfo;
 					}
@@ -4112,6 +4132,27 @@ CopyFrom(CopyState cstate)
 				/*
 				 * And now we can form the input tuple.
 				 */
+				if (resultRelInfo->ri_partSlot != NULL)
+				{
+					AttrMap *map = resultRelInfo->ri_partInsertMap;
+					Assert(map != NULL);
+
+
+					MemSet(partValues, 0, attr_count * sizeof(Datum));
+					MemSet(partNulls, true, attr_count * sizeof(bool));
+
+					reconstructTupleValues(map, baseValues, baseNulls, (int) num_phys_attrs,
+										   partValues, partNulls, (int) attr_count);
+
+					values = partValues;
+					nulls = partNulls;
+				}
+				else
+				{
+					values = baseValues;
+					nulls = baseNulls;
+				}
+
 				if (relstorage == RELSTORAGE_AOROWS)
 				{
 					/* form a mem tuple */
@@ -4130,7 +4171,7 @@ CopyFrom(CopyState cstate)
 				else
 				{
 					/* form a regular heap tuple */
-					tuple = (HeapTuple) heap_form_tuple(tupDesc, values, nulls);
+					tuple = (HeapTuple) heap_form_tuple(resultRelInfo->ri_RelationDesc->rd_att, values, nulls);
 
 					if (cstate->oids && file_has_oids)
 						HeapTupleSetOid((HeapTuple)tuple, loaded_oid);
@@ -4140,7 +4181,7 @@ CopyFrom(CopyState cstate)
 				/*
 				 * Triggers and stuff need to be invoked in query context.
 				 */
-				MemoryContextSwitchTo(oldcontext);
+				MemoryContextSwitchTo(estate->es_query_cxt);
 
 				/* Partitions don't support triggers yet */
 				Assert(!(estate->es_result_partitions &&
@@ -4176,6 +4217,16 @@ CopyFrom(CopyState cstate)
 				{
 					char relstorage = RelinfoGetStorage(resultRelInfo);
 					
+					if (resultRelInfo->ri_partSlot != NULL)
+					{
+						Assert(resultRelInfo->ri_partInsertMap != NULL);
+						slot = resultRelInfo->ri_partSlot;
+					}
+					else
+					{
+						slot = baseSlot;
+					}
+
 					if (relstorage != RELSTORAGE_AOCOLS)
 					{
 						/* Place tuple in tuple slot */
@@ -4224,7 +4275,7 @@ CopyFrom(CopyState cstate)
 					}
 					else
 					{
-						simple_heap_insert(resultRelInfo->ri_RelationDesc, tuple);
+						heap_insert(resultRelInfo->ri_RelationDesc, tuple, mycid, use_wal, use_fsm, GetCurrentTransactionId());
 
 						if (resultRelInfo->ri_NumIndices > 0)
 							ExecInsertIndexTuples(slot, &(((HeapTuple)tuple)->t_self), estate, false);
@@ -4264,7 +4315,7 @@ CopyFrom(CopyState cstate)
 	 */
 	error_context_stack = errcontext.previous;
 
-	MemoryContextSwitchTo(oldcontext);
+	MemoryContextSwitchTo(estate->es_query_cxt);
 
 	/*
 	 * Execute AFTER STATEMENT insertion triggers
@@ -4286,18 +4337,18 @@ CopyFrom(CopyState cstate)
 	if (estate->es_result_partitions && Gp_role == GP_ROLE_EXECUTE)
 		SendAOTupCounts(estate);
 
-	/* free the hash table allocated by values_get_partition(), if any */
-	if(estate->es_result_partitions && estate->es_partition_state->result_partition_hash != NULL)
-		hash_destroy(estate->es_partition_state->result_partition_hash);
-		
-	pfree(attr_offsets);
+	/* NB: do not pfree baseValues/baseNulls and partValues/partNulls here, since
+	 * there may be duplicate free in ExecDropSingleTupleTableSlot; if not, they
+	 * would be freed by FreeExecutorState anyhow */
 
-	pfree(in_functions);
-	pfree(typioparams);
-	pfree(defmap);
-	pfree(defexprs);
+	ExecDropSingleTupleTableSlot(baseSlot);
 
-	ExecDropSingleTupleTableSlot(slot);
+	/*
+	 * If we skipped writing WAL, then we need to sync the heap (but not
+	 * indexes since those use WAL anyway)
+	 */
+	if (!use_wal)
+		heap_sync(cstate->rel);
 
 	/*
 	 * Finalize appends and close relations we opened.
@@ -4321,6 +4372,8 @@ CopyFrom(CopyState cstate)
 	}
 	
 	cstate->rel = NULL; /* closed above */
+
+	MemoryContextSwitchTo(oldcontext);
 	FreeExecutorState(estate);
 }
 
@@ -5014,12 +5067,6 @@ int GetDecimalFromHex(char hex)
  * attribute_buf.cursor -- an offset from the beginning of the
  * attribute buffer that indicates where the current attribute begins.
  */
-
-static inline uint64 uint64_has_nullbyte(uint64 w) {
-return ((w - 0x0101010101010101ull) & ~w & 0x8080808080808080ull); }
-static inline uint64 uint64_has_byte(uint64 w, unsigned char b) {
-	w ^= b * 0x0101010101010101ull;
-	return ((w - 0x0101010101010101ull) & ~w & 0x8080808080808080ull);}
 
 void
 CopyReadAttributesText(CopyState cstate, bool * __restrict nulls,
@@ -6076,7 +6123,7 @@ else \
  * row. Therefore the QD sends this information along with the data.
  * other metadata that the QD sends includes whether the data was
  * converted to server encoding (should always be the case, unless
- * encoding error happened and we're in error table mode).
+ * encoding error happened and we're in error log mode).
  *
  * in:
  *    line_buf: <original_num>^<buf_converted>^<data for this row>
@@ -6755,7 +6802,7 @@ void preProcessDataLine(CopyState cstate)
 		/* check if QD sent us a badly encoded row, still in client_encoding, 
 		 * in order to catch the encoding error ourselves. if line_buf_converted
 		 * is false after CopyExtractRowMetaData then we must transcode and catch
-		 * the error. Verify that we are indeed in SREH error table mode. that's
+		 * the error. Verify that we are indeed in SREH error log mode. that's
 		 * the only valid path for receiving an unconverted data row.
 		 */
 		if (!cstate->line_buf_converted)

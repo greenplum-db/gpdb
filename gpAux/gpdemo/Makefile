@@ -8,8 +8,8 @@ SHELL=/bin/bash
 # VARIABLES
 #
 
-MASTER_PORT=15432
-PORT_BASE=25432
+MASTER_PORT?=15432
+PORT_BASE?=25432
 
 all:
 	$(MAKE) clean
@@ -18,7 +18,7 @@ all:
 	$(MAKE) probe
 
 cluster:	
-	@- MASTER_DEMO_PORT=$(MASTER_PORT) DEMO_PORT_BASE=$(PORT_BASE) ./demo_cluster.sh 
+	@ MASTER_DEMO_PORT=$(MASTER_PORT) DEMO_PORT_BASE=$(PORT_BASE) ./demo_cluster.sh
 	@ echo ""
 
 probe:

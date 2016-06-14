@@ -100,8 +100,7 @@ typedef enum PortalStatus
 	PORTAL_QUEUE, 				/* portal is queued (cannot delete it) */
 	PORTAL_ACTIVE,				/* portal is running (can't delete it) */
 	PORTAL_DONE,				/* portal is finished (don't re-run it) */
-	PORTAL_FAILED,				/* portal got error (can't re-run it) */
-	PORTAL_STATUSMAX
+	PORTAL_FAILED				/* portal got error (can't re-run it) */
 } PortalStatus;
 
 /*
@@ -155,10 +154,15 @@ typedef struct PortalData
 
 	/* Status data */
 	PortalStatus status;		/* see above */
-	bool	releaseResLock;	/* true => resscheduler lock must be released */
+	bool	holdingResLock;	/* true => resscheduler lock must be released, however,
+				 * in an extreme case when a portal receives a SIGTERM just
+				 * after being granted the resource lock, the holding ResLock
+				 * is not set but it is indeed holding the ResLock */
 
 	/* If not NULL, Executor is active; call ExecutorEnd eventually: */
 	QueryDesc  *queryDesc;		/* info needed for executor invocation */
+
+	QueryDispatchDesc *ddesc;	/* extra info dispatched from QD to QEs */
 
 	/* If portal returns tuples, this is their tupdesc: */
 	TupleDesc	tupDesc;		/* descriptor for result tuples */

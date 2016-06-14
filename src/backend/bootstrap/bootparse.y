@@ -278,6 +278,7 @@ Boot_CreateStmt:
 								break;
 						}
 
+						Oid typarrayid = InvalidOid;
 						id = heap_create_with_catalog(LexIDStr($5),
 													  PG_CATALOG_NAMESPACE,
 													  $3 ? GLOBALTABLESPACE_OID : 0,
@@ -297,6 +298,7 @@ Boot_CreateStmt:
 													  true,
 													  /* valid_opts */ false,
 													  &typid,
+													  &typarrayid,
 						 					  		  /* persistentTid */ NULL,
 						 					  		  /* persistentSerialNum */ NULL);
 						elog(DEBUG4, "relation created with oid %u", id);
