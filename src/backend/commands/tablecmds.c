@@ -17854,7 +17854,12 @@ static Datum transformFormatOpts(char formattype, List *formatOpts, int numcols,
 		/* custom format */
 		
 		int 		len = 0;
-		const int	maxlen = 8 * 1024 - 1;
+        /*
+         * Increase maxlen to 64K from 8K
+         * Supports a fixedwidth_in format definition containing 1600
+         * columns (max number of columns in a table)
+         */
+		const int	maxlen = 64 * 1024 - 1;
 		StringInfoData key_modified;
 		
 		initStringInfo(&key_modified);
