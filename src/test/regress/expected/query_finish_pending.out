@@ -32,7 +32,7 @@ select DISTINCT S from (select row_number() over(partition by i1 order by i2) AS
  1
 (1 row)
 
--- test if shared input scan deletes memory correctly when QuerFinishPending and its child has been eagerly freed,
+-- test if shared input scan deletes memory correctly when QueryFinishPending and its child has been eagerly freed,
 -- where the child is a Sort node
 drop table if exists testsisc;
 NOTICE:  table "testsisc" does not exist, skipping
@@ -72,7 +72,7 @@ LIMIT 2;
      1
 (2 rows)
 
--- test if shared input scan deletes memory correctly when QuerFinishPending and its child has been eagerly freed,
+-- test if shared input scan deletes memory correctly when QueryFinishPending and its child has been eagerly freed,
 -- where the child is a Sort node and sort_mk algorithm is used
 set gp_enable_mk_sort=on;
 --start_ignore
@@ -103,7 +103,7 @@ LIMIT 2;
 (2 rows)
 
 reset gp_enable_mk_sort;
--- test if shared input scan deletes memory correctly when QuerFinishPending and its child has been eagerly freed,
+-- test if shared input scan deletes memory correctly when QueryFinishPending and its child has been eagerly freed,
 -- where the child is a Materialize node
 set statement_mem="5MB";
 set gp_cte_sharing=on;

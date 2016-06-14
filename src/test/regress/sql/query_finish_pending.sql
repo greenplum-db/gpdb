@@ -17,7 +17,7 @@ set gp_cte_sharing=on;
 -- return results although sort will be interrupted in one of the segments 
 select DISTINCT S from (select row_number() over(partition by i1 order by i2) AS T, count(*) over (partition by i1) AS S from _tmp_table) AS TMP;
 
--- test if shared input scan deletes memory correctly when QuerFinishPending and its child has been eagerly freed,
+-- test if shared input scan deletes memory correctly when QueryFinishPending and its child has been eagerly freed,
 -- where the child is a Sort node
 drop table if exists testsisc;
 create table testsisc (i1 int, i2 int, i3 int, i4 int); 
@@ -41,7 +41,7 @@ from testsisc
 LIMIT 2;
 
 
--- test if shared input scan deletes memory correctly when QuerFinishPending and its child has been eagerly freed,
+-- test if shared input scan deletes memory correctly when QueryFinishPending and its child has been eagerly freed,
 -- where the child is a Sort node and sort_mk algorithm is used
 
 set gp_enable_mk_sort=on;
@@ -59,7 +59,7 @@ LIMIT 2;
 
 reset gp_enable_mk_sort;
 
--- test if shared input scan deletes memory correctly when QuerFinishPending and its child has been eagerly freed,
+-- test if shared input scan deletes memory correctly when QueryFinishPending and its child has been eagerly freed,
 -- where the child is a Materialize node
 set statement_mem="5MB";
 set gp_cte_sharing=on;
