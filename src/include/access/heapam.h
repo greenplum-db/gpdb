@@ -176,6 +176,8 @@ inline static void xl_heaptid_set(
 {
 	heaptid->node = rel->rd_node;
 	heaptid->persistentTid = rel->rd_segfile0_relationnodeinfo.persistentTid;
+  heaptid->tidAllowedToBeZero = rel->rd_segfile0_relationnodeinfo.tidAllowedToBeZero;
+
 	heaptid->persistentSerialNum = rel->rd_segfile0_relationnodeinfo.persistentSerialNum;
 	heaptid->tid = *tid;
 }

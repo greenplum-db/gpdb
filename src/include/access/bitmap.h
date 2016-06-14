@@ -579,6 +579,7 @@ typedef struct xl_bm_bitmapwords
 {
 	RelFileNode 	bm_node;
 	ItemPointerData bm_persistentTid;
+	bool bm_tidAllowedToBeZero;
 	int64 			bm_persistentSerialNum;
 
 	/* The block number for the bitmap page */
@@ -637,6 +638,7 @@ typedef struct xl_bm_updatewords
 {
 	RelFileNode		bm_node;
 	ItemPointerData bm_persistentTid;
+	bool	bm_tidAllowedToBeZero;
 	int64 			bm_persistentSerialNum;
 
 	BlockNumber		bm_lov_blkno;
@@ -668,6 +670,7 @@ typedef struct xl_bm_updateword
 {
 	RelFileNode		bm_node;
 	ItemPointerData bm_persistentTid;
+	bool bm_tidAllowedToBeZero;
 	int64 			bm_persistentSerialNum;
 
 	BlockNumber		bm_blkno;
@@ -681,6 +684,7 @@ typedef struct xl_bm_lovitem
 {
 	RelFileNode 	bm_node;
 	ItemPointerData bm_persistentTid;
+	bool	bm_tidAllowedToBeZero;
 	int64 			bm_persistentSerialNum;
 
 	BlockNumber		bm_lov_blkno;
@@ -694,6 +698,7 @@ typedef struct xl_bm_newpage
 {
 	RelFileNode 	bm_node;
 	ItemPointerData bm_persistentTid;
+	bool	bm_tidAllowedToBeZero;
 	int64 			bm_persistentSerialNum;
 
 	BlockNumber		bm_new_blkno;
@@ -707,6 +712,7 @@ typedef struct xl_bm_bitmappage
 {
 	RelFileNode 	bm_node;
 	ItemPointerData bm_persistentTid;
+	bool	bm_tidAllowedToBeZero;
 	int64 			bm_persistentSerialNum;
 
 	BlockNumber		bm_bitmap_blkno;
@@ -727,6 +733,7 @@ typedef struct xl_bm_bitmap_lastwords
 {
 	RelFileNode 	bm_node;
 	ItemPointerData bm_persistentTid;
+	bool	bm_tidAllowedToBeZero;
 	int64 			bm_persistentSerialNum;
 
 	BM_HRL_WORD		bm_last_compword;
@@ -744,6 +751,7 @@ typedef struct xl_bm_metapage
 {
 	RelFileNode 	bm_node;
 	ItemPointerData bm_persistentTid;
+	bool	bm_tidAllowedToBeZero;
 	int64 			bm_persistentSerialNum;
 
 	Oid				bm_lov_heapId;		/* the relation id for the heap */

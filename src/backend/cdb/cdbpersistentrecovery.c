@@ -870,6 +870,7 @@ PersistentRecovery_ShouldHandlePass3XLogRec(
 	
 	RelFileNode xlogRelFileNode;
 	ItemPointerData xlogPersistentTid;
+	bool xlogTidAllowedToBeZero;
 	int64 xlogPersistentSerialNum;
 
 	bool exists;
@@ -889,7 +890,7 @@ PersistentRecovery_ShouldHandlePass3XLogRec(
 	ChangeTracking_GetRelationChangeInfoFromXlog(
 									  record->xl_rmid,
 									  record->xl_info,
-									  (void*)XLogRecGetData(record), 
+									  (void*)XLogRecGetData(record),
 									  relationChangeInfoArray,
 									  &relationChangeInfoArrayCount,
 									  arrlen);
@@ -938,6 +939,7 @@ PersistentRecovery_ShouldHandlePass3XLogRec(
 
 		xlogRelFileNode = relationChangeInfoArray[0].relFileNode;
 		xlogPersistentTid = relationChangeInfoArray[0].persistentTid;
+		xlogTidAllowedToBeZero = relationChangeInfoArray[0].tidAllowedToBeZero;
 		xlogPersistentSerialNum = relationChangeInfoArray[0].persistentSerialNum;
 	}
 	
@@ -966,10 +968,17 @@ PersistentRecovery_ShouldHandlePass3XLogRec(
 	/*
 	 * Further qualify using the RelFileNode.
 	 */
-	exists = PersistentRecovery_RedoRelationExists(
-												&xlogPersistentTid,
-												xlogPersistentSerialNum,
-												&xlogRelFileNode);
+	if (xlogTidAllowedToBeZero)
+	{
+		exists = true;
+	}
+	else
+	{
+		exists = PersistentRecovery_RedoRelationExists(
+													&xlogPersistentTid,
+													xlogPersistentSerialNum,
+													&xlogRelFileNode);
+	}
 
 	if (exists)
 	{
@@ -2362,4 +2371,3 @@ PersistentRecovery_RedoRelationExists(
 
 	return true;
 }
-
