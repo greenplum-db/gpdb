@@ -512,6 +512,16 @@ def create_parser():
         metavar='<database>',
         help='Database to transfer all source tables into'
     )
+    # destination HAWQ flasg
+    dest_option_group.add_option(
+        '--dest-is-hawq',
+        type='int',
+        dest='dest_is_hawq',
+        default=False,
+        action='store',
+        metavar='<hawqDest>',
+        help='Destination is to HAWQ'
+    )
     # skip tables that exist
     dest_option_group.add_option(
         '--skip-existing',
@@ -1378,7 +1388,7 @@ class GpSchemaDump(Command):
     """
 
     def __init__(self, name, host, port, user, full=True, database=None,
-                 schema=None, table=None, ctxt=LOCAL, remoteHost=None):
+                 schema=None, table=None, ctxt=LOCAL, remoteHost=None, destIsHAWQ=False):
         """
         name: name of the command
         host: GPDB host
@@ -1452,7 +1462,7 @@ class GpTransferCommand(Command):
         fast_mode, exclusive_lock, schema_only, work_dir,
         host_map, source_config, batch_size, gpfdist_port, gpfdist_last_port, 
         gpfdist_instance_count, max_line_length, timeout, wait_time, 
-        delimiter, validator, format, quote, table_transfer_set_total):
+        delimiter, validator, format, quote, dest_is_hawq, table_transfer_set_total):
         """
         name: name of the command
         src_host: source GPDB host
@@ -1483,6 +1493,7 @@ class GpTransferCommand(Command):
         validator: validator to use
         format: transfer data in CSV(default) or TEXT format
         quote: specifies the quotation character for CSV mode
+        dest_is_hawq: specifies the destination to be HAWQ
         table_transfer_set_total: Number of tables need to be transferred
         """
 
@@ -1513,6 +1524,7 @@ class GpTransferCommand(Command):
         self._delimiter = delimiter
         self._format = format
         self._quote = quote
+        self._dest_is_hawq = dest_is_hawq
         self._table_transfer_set_total = table_transfer_set_total
         # _used_ports is a dict where key is hostname and val is list of
         # ints (ports used)
@@ -1677,6 +1689,35 @@ GROUP BY nspname, relname;''' % (self._table_pair.source.schema,
         """
         logger.info('Creating target table %s...', self._table_pair.dest)
         schema_sql = self._get_source_table_schema()
+        if self._dest_is_hawq:
+            newSql = []
+            rawSql = schema_sql.split("\n")
+            tableName = None
+            for n, line in enumerate(rawSql):
+                # External table error table fixup logic
+                if "CREATE EXTERNAL TABLE" in line:
+                    tableName = line.split(" ")[3]
+                if "LOG ERRORS" in line:
+                    newSql.append(re.sub("LOG ERRORS", "LOG ERRORS INTO {0}_err".format(tableName), line))
+                    continue
+
+                # Primary key purge fixup logic
+                if "ALTER TABLE" in line:
+                    newSql.append(re.sub("^", "--", line))
+                    newSql.append(re.sub("^", "--", rawSql[n+1]))
+                    break
+                else:
+                    # TODO move Perl hack to here
+                    cleanLine = re.sub('(?i)DISTRIBUTED[^\)]+\)', '', line)
+                    cleanLine = re.sub('(?i)CREATE INDEX.*$', '', cleanLine)
+                    cleanLine = re.sub('(?i)    COLUMN [^\)]*\)', '', cleanLine)
+                    cleanLine = re.sub('(?i)appendonly=false', 'appendonly=true', cleanLine)
+                    cleanLine = re.sub('(?i)orientation=column', 'orientation=parquet', cleanLine)
+                    cleanLine = re.sub('(?i)PRIMARY KEY', '', cleanLine)
+                    cleanLine = re.sub('(?i) ENCODING.*$', ',', cleanLine)
+                    newSql.append(cleanLine)
+            schema_sql = "\n".join(newSql)
+
         cur = execSQL(self._dest_conn, schema_sql)
         cur.close()
 
@@ -1720,7 +1761,8 @@ GROUP BY nspname, relname;''' % (self._table_pair.source.schema,
             self._table_pair.source.schema,
             self._table_pair.source.table,
             ctxt=REMOTE,
-            remoteHost=self._src_host
+            remoteHost=self._src_host,
+            destIsHAWQ=self._dest_is_hawq
         )
         self._pool.addCommand(cmd)
         self._pool.join()
@@ -2078,6 +2120,8 @@ GROUP BY nspname, relname;''' % (self._table_pair.source.schema,
                 % (self._table_pair.dest.schema,
                    self._table_pair.dest.table,
                    self._ext_name)
+            if self._dest_is_hawq:
+                query = "SET hawq_rm_stmt_nvseg=%s ;" % len(self._source_config.getSegDbList()) + query
             if self._exclusive_lock:
                 lock_query = "LOCK TABLE \"%s\".\"%s\" IN EXCLUSIVE MODE" % \
                     (self._table_pair.dest.schema, self._table_pair.dest.table)
@@ -2499,6 +2543,7 @@ class GpTransfer(object):
                     self._options.validator,
                     self._options.format,
                     self._options.quote,
+                    self._options.dest_is_hawq,
                     self._table_transfer_set_total
                 )
                 self._pool.addCommand(cmd)
@@ -2565,7 +2610,8 @@ class GpTransfer(object):
                                            self._options.source_port,
                                            self._options.source_user,
                                            ctxt=REMOTE,
-                                           remoteHost=self._options.source_host)
+                                           remoteHost=self._options.source_host,
+                                           destIsHAWQ=self._options.dest_is_hawq)
             dump_schema_cmd.run()
             res = dump_schema_cmd.get_results()
             if not res or not res.wasSuccessful():
@@ -3060,6 +3106,7 @@ class GpTransfer(object):
                     raise Exception("Filespace '%s' does not exist on destination. Please create the filespace to run gptransfer" % fs)
             source_cur.close()
 
+
     def _get_configurations(self):
         """
         Retrieves the configurations of the source and destination GPDB systems.
@@ -3074,7 +3121,10 @@ class GpTransfer(object):
                     'Database...')
         url = DbURL(self._options.dest_host, self._options.dest_port,
                     'template1', self._options.dest_user)
-        self._dest_config = GpArray.initFromCatalog(url)
+        if self._options.dest_is_hawq:
+            self._dest_config = self._src_config
+        else:
+            self._dest_config = GpArray.initFromCatalog(url)
 
 
     def _validate_schema_not_exists(self):
