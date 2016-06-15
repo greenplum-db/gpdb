@@ -29,6 +29,7 @@
 #include "miscadmin.h"
 #include "libpq/password_hash.h"
 #include "optimizer/planmain.h"
+#include "optimizer/cost.h"
 #include "pgstat.h"
 #include "postmaster/syslogger.h"
 #include "replication/walsender.h"
@@ -455,17 +456,6 @@ char	   *gp_idf_deduplicate_str;
 bool		fts_diskio_check = false;
 
 /* Planner gucs */
-bool		enable_seqscan = true;
-bool		enable_indexscan = true;
-bool		enable_bitmapscan = true;
-bool		force_bitmap_table_scan = false;
-bool		enable_tidscan = true;
-bool		enable_sort = true;
-bool		enable_hashagg = true;
-bool		enable_groupagg = true;
-bool		enable_nestloop = false;
-bool		enable_mergejoin = false;
-bool		enable_hashjoin = true;
 bool		gp_enable_hashjoin_size_heuristic = false;
 bool		gp_enable_fallback_plan = true;
 bool		gp_enable_predicate_propagation = false;

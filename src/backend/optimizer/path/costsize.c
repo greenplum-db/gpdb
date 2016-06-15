@@ -99,7 +99,17 @@ int			effective_cache_size = DEFAULT_EFFECTIVE_CACHE_SIZE;
 
 Cost		disable_cost = 1.0e9;
 
-/* CDB: The enable_xxx globals have been moved to allpaths.c */
+bool		enable_seqscan = true;
+bool		enable_indexscan = true;
+bool		enable_bitmapscan = true;
+bool		force_bitmap_table_scan = false;
+bool		enable_tidscan = true;
+bool		enable_sort = true;
+bool		enable_hashagg = true;
+bool		enable_groupagg = true;
+bool		enable_nestloop = false;
+bool		enable_mergejoin = false;
+bool		enable_hashjoin = true;
 
 typedef struct
 {
