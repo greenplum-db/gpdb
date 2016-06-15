@@ -56,9 +56,10 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers,
     if (iter != params.end() && iter->second == "true") {
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     }
-#if DEBUG_S3_CURL
-    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-#endif
+
+    if (s3ext_debug_curl) {
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+    }
 
     CURLcode res = curl_easy_perform(curl);
 

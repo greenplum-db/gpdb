@@ -31,6 +31,9 @@ TEST(Config, Basic) {
 
     EXPECT_EQ(1024, s3ext_low_speed_limit);
     EXPECT_EQ(600, s3ext_low_speed_time);
+
+    EXPECT_FALSE(s3ext_encryption);
+    EXPECT_TRUE(s3ext_debug_curl);
 }
 
 TEST(Config, SpecialSectionValues) {
@@ -40,6 +43,9 @@ TEST(Config, SpecialSectionValues) {
     EXPECT_EQ(128 * 1024 * 1024, s3ext_chunksize);
     EXPECT_EQ(10240, s3ext_low_speed_limit);
     EXPECT_EQ(60, s3ext_low_speed_time);
+
+    EXPECT_TRUE(s3ext_encryption);
+    EXPECT_FALSE(s3ext_debug_curl);
 }
 
 TEST(Config, SpecialSectionLowValues) {

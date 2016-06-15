@@ -3,6 +3,13 @@
 
 #include "restful_service.h"
 
+#define S3_MAGIC_BYTES_NUM 4
+
+enum S3CompressionType {
+    S3_COMPRESSION_GZIP,
+    S3_COMPRESSION_PLAIN,
+};
+
 struct BucketContent {
     BucketContent() : name(""), size(0) {
     }
@@ -62,6 +69,9 @@ class S3Service : public S3Interface {
 
     uint64_t fetchData(uint64_t offset, char* data, uint64_t len, const string& sourceUrl,
                        const string& region, const S3Credential& cred);
+
+    S3CompressionType checkCompressionType(const string& keyUrl, const string& region,
+                                           const S3Credential& cred);
 
     void setRESTfulService(RESTfulService* service) {
         this->service = service;

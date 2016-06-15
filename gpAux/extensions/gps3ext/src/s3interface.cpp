@@ -303,6 +303,38 @@ uint64_t S3Service::fetchData(uint64_t offset, char *data, uint64_t len, const s
     return 0;
 }
 
+S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const string &region,
+                                                  const S3Credential &cred) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    UrlParser parser(keyUrl.c_str());
+
+    char rangeBuf[128] = {0};
+    snprintf(rangeBuf, 128, "bytes=%d-%d", 0, S3_MAGIC_BYTES_NUM - 1);
+
+    headers.Add(HOST, parser.Host());
+    headers.Add(RANGE, rangeBuf);
+    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+
+    SignRequestV4("GET", &headers, region, parser.Path(), "", cred);
+
+    Response resp = service->get(keyUrl, headers, params);
+    if (resp.getStatus() == OK) {
+        vector<uint8_t> &responseData = resp.getRawData();
+        CHECK_OR_DIE_MSG(responseData.size() == S3_MAGIC_BYTES_NUM, "%s",
+                         "Response is not fully received.");
+
+        if ((responseData[0] == 0x1f) && (responseData[1] == 0x8b)) {
+            return S3_COMPRESSION_GZIP;
+        }
+    } else {
+        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+                         resp.getMessage().c_str());
+    }
+
+    return S3_COMPRESSION_PLAIN;
+}
+
 ListBucketResult::~ListBucketResult() {
     vector<BucketContent *>::iterator i;
     for (i = this->contents.begin(); i != this->contents.end(); i++) {

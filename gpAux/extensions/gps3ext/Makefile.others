@@ -1,5 +1,4 @@
 # Options
-DEBUG_S3_CURL = n
 ARCH = $(shell uname -s)
 
 # Flags
@@ -12,10 +11,6 @@ ifeq "$(ARCH)" "Darwin"
 	LDFLAGS += -coverage
 else
 	LDFLAGS += -lgcov
-endif
-
-ifeq ($(DEBUG_S3_CURL),y)
-	CPPFLAGS += -DDEBUG_S3_CURL
 endif
 
 all: test

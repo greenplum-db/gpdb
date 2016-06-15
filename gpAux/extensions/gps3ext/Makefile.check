@@ -1,14 +1,9 @@
 # Options
-DEBUG_S3_CURL = n
 DEBUG_S3_SYMBOL = y
 
 # Flags
 PG_LIBS += -lstdc++ -lxml2 -lpthread -lcrypto -lcurl -lz
 PG_CPPFLAGS += -O2 -std=c++98 -Wall -fPIC -DS3_CHK_CFG -DS3_STANDALONE -Iinclude -Ilib -I/usr/include/libxml2
-
-ifeq ($(DEBUG_S3_CURL),y)
-	PG_CPPFLAGS += -DDEBUG_S3_CURL
-endif
 
 ifeq ($(DEBUG_S3_SYMBOL),y)
 	PG_CPPFLAGS += -g

@@ -18,7 +18,6 @@
 using std::string;
 using std::stringstream;
 
-#ifdef DEBUG_S3_CURL
 struct debug_data {
     char trace_ascii; /* 1 or 0 */
 };
@@ -101,7 +100,6 @@ static int trace_debug_data(CURL *handle, curl_infotype type, char *data, size_t
     dump_debug_data(text, stderr, (unsigned char *)data, size, config->trace_ascii);
     return 0;
 }
-#endif
 
 struct MemoryData {
     char *advance;
@@ -190,9 +188,9 @@ const char *GetUploadId(const char *host, const char *bucket, const char *obj_na
     CURL *curl = curl_easy_init();
     if (curl) {
         curl_easy_setopt(curl, CURLOPT_URL, url.str().c_str());
-#if DEBUG_S3_CURL
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-#endif
+        if (s3ext_debug_curl) {
+            curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        }
         curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
 
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&xml);
@@ -312,9 +310,9 @@ const char *PartPutS3Object(const char *host, const char *bucket, const char *ob
         /* HTTP PUT please */
         curl_easy_setopt(curl, CURLOPT_PUT, 1L);
 
-#if DEBUG_S3_CURL
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-#endif
+        if (s3ext_debug_curl) {
+            curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        }
         curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
 
         curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *)&header_data);
@@ -420,10 +418,11 @@ bool CompleteMultiPutS3(const char *host, const char *bucket, const char *obj_na
     XMLInfo xml;
     xml.ctxt = NULL;
 
-#ifdef DEBUG_S3_CURL
     struct debug_data config;
-    config.trace_ascii = 1;
-#endif
+
+    if (s3ext_debug_curl) {
+        config.trace_ascii = 1;
+    }
 
     if (!host || !bucket || !obj_name) return false;
 
@@ -481,10 +480,10 @@ bool CompleteMultiPutS3(const char *host, const char *bucket, const char *obj_na
 
     CURL *curl = curl_easy_init();
     if (curl) {
-#ifdef DEBUG_S3_CURL
-        curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, trace_debug_data);
-        curl_easy_setopt(curl, CURLOPT_DEBUGDATA, &config);
-#endif
+        if (s3ext_debug_curl) {
+            curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, trace_debug_data);
+            curl_easy_setopt(curl, CURLOPT_DEBUGDATA, &config);
+        }
         /* specify target URL, and note that this URL should include a file
            name, not only a directory */
         curl_easy_setopt(curl, CURLOPT_URL, url.str().c_str());
@@ -500,9 +499,9 @@ bool CompleteMultiPutS3(const char *host, const char *bucket, const char *obj_na
            */
         curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)body_size);
 
-#ifdef DEBUG_S3_CURL
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-#endif
+        if (s3ext_debug_curl) {
+            curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        }
         curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
 
         curl_easy_setopt(curl, CURLOPT_POST, 1L);

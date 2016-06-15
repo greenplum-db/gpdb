@@ -9,8 +9,10 @@ using std::string;
 
 class ReaderParams {
    public:
-    ReaderParams(){};
-    virtual ~ReaderParams(){};
+    ReaderParams() : keySize(0), chunkSize(0), numOfChunks(0), segId(0), segNum(1) {
+    }
+    virtual ~ReaderParams() {
+    }
 
     uint64_t getChunkSize() const {
         return chunkSize;

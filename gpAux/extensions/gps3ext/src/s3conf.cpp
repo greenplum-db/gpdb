@@ -42,6 +42,7 @@ string s3ext_secret;
 string s3ext_token;
 
 bool s3ext_encryption;
+bool s3ext_debug_curl;
 
 // global variables
 int32_t s3ext_segid = -1;
@@ -134,6 +135,9 @@ bool InitConfig(const string& conf_path, const string section = "default") {
 
     content = s3cfg->Get(section.c_str(), "encryption", "true");
     s3ext_encryption = to_bool(content);
+
+    content = s3cfg->Get(section.c_str(), "debug_curl", "false");
+    s3ext_debug_curl = to_bool(content);
 
 #ifdef S3_STANDALONE
     s3ext_segid = 0;

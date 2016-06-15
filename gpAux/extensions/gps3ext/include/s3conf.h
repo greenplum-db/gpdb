@@ -40,6 +40,9 @@ extern string s3ext_token;
 // http or https
 extern bool s3ext_encryption;
 
+// debug curl or not
+extern bool s3ext_debug_curl;
+
 // configuration file path
 extern string s3ext_config_path;
 

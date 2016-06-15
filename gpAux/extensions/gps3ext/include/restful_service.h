@@ -47,7 +47,7 @@ class Response {
     }
 
     void appendBuffer(char* ptr, size_t size) {
-        // TODO: Fix eclipse warning.
+        // Fix Eclipse warning
         buffer.insert(buffer.end(), ptr, ptr + size);
     }
 
