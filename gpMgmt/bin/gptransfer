@@ -512,13 +512,12 @@ def create_parser():
         metavar='<database>',
         help='Database to transfer all source tables into'
     )
-    # destination HAWQ flasg
+    # destination HAWQ flags
     dest_option_group.add_option(
         '--dest-is-hawq',
-        type='int',
         dest='dest_is_hawq',
         default=False,
-        action='store',
+        action='store_true',
         metavar='<hawqDest>',
         help='Destination is to HAWQ'
     )
