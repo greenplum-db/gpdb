@@ -863,7 +863,7 @@ transformInhRelation(ParseState *pstate, CreateStmtContext *cxt,
 			/* Build CREATE INDEX statement to recreate the parent_index */
 			index_stmt = generateClonedIndexStmt(cxt, parent_index,
 												 attmap, tupleDesc->natts);
-			
+
 			/* Save it in the inh_indexes list for the time being */
 			cxt->inh_indexes = lappend(cxt->inh_indexes, index_stmt);
 
@@ -878,7 +878,6 @@ transformInhRelation(ParseState *pstate, CreateStmtContext *cxt,
 	 */
 	heap_close(relation, NoLock);
 }
-
 
 /*
  * Generate an IndexStmt node using information from an already existing index

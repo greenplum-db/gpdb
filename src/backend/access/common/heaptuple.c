@@ -135,7 +135,6 @@ heap_compute_data_size(TupleDesc tupleDesc,
 	return data_length;
 }
 
-
 /* ----------------
  *		ComputeDataSize
  *
@@ -640,7 +639,7 @@ nocachegetattr(HeapTuple tuple,
 Datum
 heap_getsysattr(HeapTuple tup, int attnum, bool *isnull)
 {
-	Datum			result;
+	Datum		result;
 
 	Assert(tup);
 	Assert(!is_heaptuple_memtuple(tup));
@@ -684,9 +683,8 @@ heap_getsysattr(HeapTuple tup, int attnum, bool *isnull)
 			result = Int32GetDatum(Gp_segment);
 			break;
 		default:
-			result = Int32GetDatum(Gp_segment);
-			Assert(!"Invalid attnum for getsysattr");
 			elog(ERROR, "invalid attnum: %d", attnum);
+			result = 0;			/* keep compiler quiet */
 			break;
 	}
 	return result;

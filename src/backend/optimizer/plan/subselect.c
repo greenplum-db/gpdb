@@ -105,7 +105,7 @@ replace_outer_var(PlannerInfo *root, Var *var)
 	 * sort of aliasing will cause no trouble. The correct field should get
 	 * stored into the Param slot at execution in each part of the tree.
 	 *
-	 * We need to demand a match on vartypmod.  This does not matter for
+	 * We also need to demand a match on vartypmod.  This does not matter for
 	 * the Param itself, since those are not typmod-dependent, but it does
 	 * matter when make_subplan() instantiates a modified copy of the Var for
 	 * a subplan's args list.
@@ -553,7 +553,7 @@ build_subplan(PlannerInfo *root, Plan *plan, List *rtable,
 		result = (Node *) prm;
 	}
 	else if (splan->parParam == NIL && subLinkType == ARRAY_SUBLINK && Gp_role == GP_ROLE_DISPATCH)
-	{		
+	{
 		TargetEntry *te = linitial(plan->targetlist);
 		Oid			arraytype;
 		Param	   *prm;
@@ -1009,11 +1009,15 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
 	*rtrlist_inout = lappend(*rtrlist_inout, rtr);
 
 	/*
-	 * Build the result qual expression.
+	 * Build a list of Vars representing the subselect outputs.
 	 */
 	subquery_vars = generate_subquery_vars(root,
 										   subselect->targetList,
 										   rtindex);
+
+	/*
+	 * Build the result qual expression, replacing Params with these Vars.
+	 */
 	result = convert_testexpr(root,
 							  sublink->testexpr,
 							  subquery_vars);
@@ -1103,7 +1107,6 @@ convert_IN_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink)
 	ininfo->sub_targetlist = (List *) convert_testexpr(root,
 													   (Node *) right_exprs,
 													   subquery_vars);
-
 
 	/* Add the completed node to the query's list */
 	root->in_info_list = lappend(root->in_info_list, ininfo);

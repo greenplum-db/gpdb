@@ -318,9 +318,9 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 	hashtable = (HashJoinTable)palloc0(sizeof(HashJoinTableData));
 	hashtable->nbuckets = nbuckets;
 	hashtable->log2_nbuckets = log2_nbuckets;
-	hashtable->nbatch = nbatch;
 	hashtable->buckets = NULL;
 	hashtable->bloom = NULL;
+	hashtable->nbatch = nbatch;
 	hashtable->curbatch = 0;
 	hashtable->nbatch_original = nbatch;
 	hashtable->nbatch_outstart = nbatch;
@@ -334,7 +334,7 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 	hashtable->eagerlyReleased = false;
 	hashtable->hjstate = hjstate;
 
-    /*
+	/*
 	 * Get info about the hash functions to be used for each hash key. Also
 	 * remember whether the join operators are strict.
 	 */
@@ -383,9 +383,7 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 											 ALLOCSET_DEFAULT_INITSIZE,
 											 ALLOCSET_DEFAULT_MAXSIZE);
 
-	/*
-     * Allocate data that will live for the life of the hashjoin
-     */
+	/* Allocate data that will live for the life of the hashjoin */
 	oldcxt = MemoryContextSwitchTo(hashtable->hashCxt);
 
 #ifdef HJDEBUG

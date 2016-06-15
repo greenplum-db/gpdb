@@ -287,7 +287,7 @@ transformRelOptions(Datum oldOptions, List *defList,
 		else
 		{
 			text	   *t;
-			char *value;
+			const char *value;
 			Size		len;
 
 			if (ignoreOids && pg_strcasecmp(def->defname, "oids") == 0)
@@ -297,7 +297,6 @@ transformRelOptions(Datum oldOptions, List *defList,
 			 * Flatten the DefElem into a text string like "name=arg". If we
 			 * have just "name", assume "name=true" is meant.
 			 */
-
 			if (def->arg != NULL)
 				value = defGetString(def);
 			else

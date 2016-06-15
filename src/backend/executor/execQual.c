@@ -1157,22 +1157,19 @@ ExecEvalParam(ExprState *exprstate, ExprContext *econtext,
 		 * PARAM_EXEC params (internal executor parameters) are stored in the
 		 * ecxt_param_exec_vals array, and can be accessed by array index.
 		 */
-		ParamExecData *prmExec = &(econtext->ecxt_param_exec_vals[thisParamId]);
+		ParamExecData *prm;
 
-		/* 
-		 * Maybe this parameter has already been evaluated. If so, execPlan
-		 * would be NULL.
-		 */
-		if (prmExec->execPlan != NULL)
+		prm = &(econtext->ecxt_param_exec_vals[thisParamId]);
+
+		if (prm->execPlan != NULL)
 		{
 			/* Parameter not evaluated yet, so go do it */
-			ExecSetParamPlan(prmExec->execPlan, econtext, NULL);
+			ExecSetParamPlan(prm->execPlan, econtext, NULL);
 			/* ExecSetParamPlan should have processed this param... */
-			Assert(prmExec->execPlan == NULL);
+			Assert(prm->execPlan == NULL);
 		}
-
-		*isNull = prmExec->isnull;
-		return prmExec->value;
+		*isNull = prm->isnull;
+		return prm->value;
 	}
 	else
 	{

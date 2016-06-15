@@ -2122,7 +2122,6 @@ fix_upper_expr(PlannerGlobal *glob,
 	context.glob = glob;
 	context.subplan_itlist = subplan_itlist;
 	context.rtoffset = rtoffset;
-
 	return fix_upper_expr_mutator(node, &context);
 }
 
@@ -2133,7 +2132,6 @@ fix_upper_expr_mutator(Node *node, fix_upper_expr_context *context)
 
 	if (node == NULL)
 		return NULL;
-
 	if (IsA(node, Var))
 	{
 		Var		   *var = (Var *) node;

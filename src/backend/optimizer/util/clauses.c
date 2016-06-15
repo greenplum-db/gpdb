@@ -430,7 +430,7 @@ count_agg_clauses_walker(Node *node, AggClauseCounts *counts)
 	if (IsA(node, Aggref))
 	{
 		Aggref	   *aggref = (Aggref *) node;
-		Oid		   *inputTypes = NULL;
+		Oid		   *inputTypes;
 		int			numArguments;
 		HeapTuple	aggTuple;
 		Form_pg_aggregate aggform;
@@ -1151,13 +1151,13 @@ contain_nonstrict_functions_walker(Node *node, void *context)
 		return true;
 	if (IsA(node, MinMaxExpr))
 		return true;
+	if (IsA(node, XmlExpr))
+		return true;
 	if (IsA(node, NullIfExpr))
 		return true;
 	if (IsA(node, NullTest))
 		return true;
 	if (IsA(node, BooleanTest))
-		return true;
-	if (IsA(node, XmlExpr))
 		return true;
 	return expression_tree_walker(node, contain_nonstrict_functions_walker,
 								  context);

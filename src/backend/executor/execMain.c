@@ -3984,6 +3984,7 @@ lreplace:;
 	 * deletion is done later by VACUUM (see notes in ExecDelete).	All we do
 	 * here is insert new index tuples.  -cim 9/27/89
 	 */
+
 	/*
 	 * insert index entries for tuple
 	 *
@@ -4802,6 +4803,7 @@ ExecGetActivePlanTree(QueryDesc *queryDesc)
 		return queryDesc->planstate;
 }
 
+
 /*
  * Support for SELECT INTO (a/k/a CREATE TABLE AS)
  *
@@ -4859,12 +4861,13 @@ OpenIntoRel(QueryDesc *queryDesc)
 	int64			persistentSerialNum;
 	
 	targetPolicy = queryDesc->plannedstmt->intoPolicy;
+
+	Assert(into);
+
 	/*
 	 * XXX This code needs to be kept in sync with DefineRelation().
 	 * Maybe we should try to use that function instead.
 	 */
-
-	Assert(into);
 
 	/*
 	 * Check consistency of arguments
@@ -5222,10 +5225,6 @@ CreateIntoRelDestReceiver(void)
 static void
 intorel_startup(DestReceiver *self, int operation, TupleDesc typeinfo)
 {
-    UnusedArg(self);
-    UnusedArg(operation);
-    UnusedArg(typeinfo);
-
 	/* no-op */
 }
 

@@ -277,10 +277,10 @@ static volatile sig_atomic_t filerep_requires_postmaster_reset = false;
 static volatile sig_atomic_t filerep_has_signaled_backends_shutdown = false;
 
 /* Startup/shutdown state */
-#define			NoShutdown		    0
-#define			SmartShutdown	    1
-#define			FastShutdown        2
-#define         ImmediateShutdown   3
+#define			NoShutdown		0
+#define			SmartShutdown	1
+#define			FastShutdown	2
+#define			ImmediateShutdown	3
 
 static int	Shutdown = NoShutdown;
 

@@ -1334,7 +1334,7 @@ transformFuncCall(ParseState *pstate, FuncCall *fn)
 		targs = lappend(targs, transformExpr(pstate,
 											 (Node *) lfirst(args)));
 	}
-    
+
 	return ParseFuncOrColumn(pstate,
 							 fn->funcname,
 							 targs,

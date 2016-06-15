@@ -29,7 +29,6 @@
 #include "utils/lsyscache.h"
 
 
-
 typedef struct JoinHashEntry
 {
 	Relids		join_relids;	/* hash key --- MUST BE FIRST */
@@ -49,6 +48,7 @@ static List *subbuild_joinrel_restrictlist(RelOptInfo *joinrel,
 static List *subbuild_joinrel_joinlist(RelOptInfo *joinrel,
 						  List *joininfo_list,
 						  List *new_joininfo);
+
 
 /*
  * build_simple_rel
@@ -467,7 +467,8 @@ build_join_rel(PlannerInfo *root,
  * of data that was cached at the baserel level by set_rel_width().
  */
 void
-build_joinrel_tlist(PlannerInfo *root, RelOptInfo *joinrel, List *input_tlist)
+build_joinrel_tlist(PlannerInfo *root, RelOptInfo *joinrel,
+					List *input_tlist)
 {
 	Relids		relids = joinrel->relids;
 	ListCell   *vars;

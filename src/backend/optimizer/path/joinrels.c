@@ -674,9 +674,10 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 			elog(ERROR, "unrecognized join type: %d",
 				 (int) jointype);
 			break;
-    }
+	}
 
 	bms_free(joinrelids);
+
 	return joinrel;
 }
 

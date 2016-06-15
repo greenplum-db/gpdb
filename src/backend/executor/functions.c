@@ -233,6 +233,7 @@ init_execution_state(List *queryTree_list, SQLFunctionCache *fcache, bool readon
 	return firstes;
 }
 
+
 static void
 init_sql_fcache(FmgrInfo *finfo)
 {

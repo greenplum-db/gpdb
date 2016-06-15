@@ -919,7 +919,6 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 		else
 			newrelation = oldrelation;
 
-
 		/*
 		 * Build an RTE for the child, and attach to query's rangetable list.
 		 * We copy most fields of the parent's RTE, but replace relation OID,
@@ -994,15 +993,15 @@ make_inh_translation_lists(Relation oldrelation, Relation newrelation,
 	TupleDesc	new_tupdesc = RelationGetDescr(newrelation);
 	int			oldnatts = old_tupdesc->natts;
 	int			newnatts = new_tupdesc->natts;
-	int			old_attno = 0;
-	
+	int			old_attno;
+
 	for (old_attno = 0; old_attno < oldnatts; old_attno++)
 	{
-		Form_pg_attribute att = NULL;
-		char	   *attname = NULL;
-		Oid			atttypid = InvalidOid;
-		int32		atttypmod = 0;
-		int			new_attno = 0;
+		Form_pg_attribute att;
+		char	   *attname;
+		Oid			atttypid;
+		int32		atttypmod;
+		int			new_attno;
 
 		att = old_tupdesc->attrs[old_attno];
 		if (att->attisdropped)

@@ -336,7 +336,7 @@ ExecFunctionMarkPos(FunctionScanState *node)
 
     node->cdb_mark_ctid = node->cdb_fake_ctid;
 
-	tuplestore_markpos(node->tuplestorestate); 
+	tuplestore_markpos(node->tuplestorestate);
 }
 
 /* ----------------------------------------------------------------

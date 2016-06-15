@@ -183,6 +183,7 @@ CreateExecutorState(void)
 									 ALLOCSET_DEFAULT_MINSIZE,
 									 ALLOCSET_DEFAULT_INITSIZE,
 									 ALLOCSET_DEFAULT_MAXSIZE);
+
 	/*
 	 * Make the EState node within the per-query context.  This way, we don't
 	 * need a separate pfree() operation for it at shutdown.
@@ -296,9 +297,9 @@ freeDynamicTableScanInfo(DynamicTableScanInfo *scanInfo)
 }
 
 /* ----------------
- *      FreeExecutorState
+ *		FreeExecutorState
  *
- *      Release an EState along with all remaining working storage.
+ *		Release an EState along with all remaining working storage.
  *
  * Note: this is not responsible for releasing non-memory resources,
  * such as open relations or buffer pins.  But it will shut down any

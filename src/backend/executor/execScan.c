@@ -113,7 +113,7 @@ ExecScan(ScanState *node,
 	 * storage allocated in the previous tuple cycle.  
 	 */
 	econtext = node->ps.ps_ExprContext;
-    ResetExprContext(econtext);
+	ResetExprContext(econtext);
 
 	/*
 	 * get a tuple from the access method loop until we obtain a tuple which

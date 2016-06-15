@@ -127,25 +127,24 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
      */
     rel->cdbpolicy = RelationGetPartitioningKey(relation);
 
-    /*
-     * Estimate relation size --- unless it's an inheritance parent, in which
-     * case the size will be computed later in set_append_rel_pathlist, and we
-     * must leave it zero for now to avoid bollixing the total_table_pages
-     * calculation.
-     */
-     if (!inhparent)
-     {
-    	cdb_estimate_rel_size
-    		(
-    		rel,
-    		relation,
-    		relation,
-    		rel->attr_widths - rel->min_attr,
-    		&rel->pages,
-    		&rel->tuples,
-    		&rel->cdb_default_stats_used
-    		);
-     }
+	/*
+	 * Estimate relation size --- unless it's an inheritance parent, in which
+	 * case the size will be computed later in set_append_rel_pathlist, and we
+	 * must leave it zero for now to avoid bollixing the total_table_pages
+	 * calculation.
+	 */
+	if (!inhparent)
+	{
+		cdb_estimate_rel_size(
+			rel,
+			relation,
+			relation,
+			rel->attr_widths - rel->min_attr,
+			&rel->pages,
+			&rel->tuples,
+			&rel->cdb_default_stats_used
+			);
+	}
 
 	/*
 	 * Make list of indexes.  Ignore indexes on system catalogs if told to.

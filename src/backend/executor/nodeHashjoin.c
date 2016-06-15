@@ -1092,7 +1092,7 @@ ExecHashJoinGetSavedTuple(HashJoinBatchSide *batchside,
 	if (nread != memtuple_size_from_uint32(header[1]) - sizeof(uint32))
 		ereport(ERROR,
 				(errcode_for_file_access(),
-				 errmsg("could not read from temporary file")));
+				 errmsg("could not read from hash-join temporary file")));
 	return ExecStoreMinimalTuple(tuple, tupleSlot, true);
 }
 

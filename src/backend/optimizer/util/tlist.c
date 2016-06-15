@@ -115,7 +115,6 @@ tlist_member_ignore_relabel(Node *node, List *targetlist)
 	return NULL;
 }
 
-
 /*
  * flatten_tlist
  *	  Create a target list that only contains unique variables.

@@ -39,11 +39,13 @@
 #include "parser/parse_relation.h"
 #include "utils/lsyscache.h"
 
+
 static List *expand_targetlist(List *tlist, int command_type,
 				  Index result_relation, List *range_table);
-static List * supplement_simply_updatable_targetlist(DeclareCursorStmt *stmt,
+static List *supplement_simply_updatable_targetlist(DeclareCursorStmt *stmt,
 													 List *range_table,
 													 List *tlist);
+
 
 /*
  * preprocess_targetlist

@@ -2057,7 +2057,7 @@ translate_sub_tlist(List *tlist, int relid)
 		Var		   *var = (Var *) lfirst(l);
 
 		if (!var || !IsA(var, Var) ||
-			(int)var->varno != relid)
+			var->varno != relid)
 			return NIL;			/* punt */
 
 		result = lappend_int(result, var->varattno);

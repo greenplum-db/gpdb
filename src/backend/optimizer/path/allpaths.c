@@ -545,7 +545,7 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		 * estimates.  (If you want to change this, beware of child
 		 * attr_widths[] entries that haven't been set and are still 0.)
 		 */
-        rel->tuples += childrel->tuples;
+		rel->tuples += childrel->tuples;
 		rel->rows += cdbpath_rows(root, childrel->cheapest_total_path);
 		width_avg += cdbpath_rows(root, childrel->cheapest_total_path) * childrel->width;
 
@@ -1163,9 +1163,9 @@ make_rel_from_joinlist(PlannerInfo *root, List *joinlist)
 RelOptInfo *
 standard_join_search(PlannerInfo *root, int levels_needed, List *initial_rels, bool fallback)
 {
-	List	  **joinitems = NULL;
+	List	  **joinitems;
 	int			lev;
-	RelOptInfo *rel = NULL;
+	RelOptInfo *rel;
 
     root->config->mpp_trying_fallback_plan = fallback;
 
