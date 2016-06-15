@@ -1409,6 +1409,9 @@ class GpSchemaDump(Command):
         if full:
             cmdStr = 'pg_dumpall -s --gp-syntax -h %s -p %d -U %s' \
                 % (host, port, user)
+            # Force DDL through our HAWQ fixup regexp
+            if destIsHAWQ:
+                cmdStr = cmdStr + """ | perl -pe 's/DISTRIBUTED[^\)]+\)//ig;s/CREATE INDEX.*$//ig;s/    COLUMN [^\)]*\)//ig;s/appendonly\=false/appendonly=true/ig;s/orientation\=column/orientation=parquet/ig;s/PRIMARY KEY//ig;s/ ENCODING.*$/,/ig;s/DEFAULT nextval[^,]+//ig;'""""
         else:
             cmdStr = 'pg_dump -s -x -O --gp-syntax -h %s -p %d -U %s -t ' \
                 '\'\"%s\".\"%s\"\' %s' % (host, port, user, schema, table, database)
@@ -1685,37 +1688,64 @@ GROUP BY nspname, relname;''' % (self._table_pair.source.schema,
 
     def _create_target_table(self):
         """
-        Creates the table on the target GPDB system.
+        Creates the table on the target system.
         """
         logger.info('Creating target table %s...', self._table_pair.dest)
         schema_sql = self._get_source_table_schema()
         if self._dest_is_hawq:
             newSql = []
+            # Convert the single-table DDL string 
+            # into a list of lines to iterate over
             rawSql = schema_sql.split("\n")
+
+            # tableName is only used for external table
+            # error table syntactic sugar
             tableName = None
+
+            # Iterate over each line of GPDB-specific DDL
             for n, line in enumerate(rawSql):
-                # External table error table fixup logic
+                # Capture the name of the external table
+                # as the 4th space-delimited token to be
+                # used for the LOG ERRORS fixup below
                 if "CREATE EXTERNAL TABLE" in line:
                     tableName = line.split(" ")[3]
+                # External table error table fixup logic
                 if "LOG ERRORS" in line:
+                    # This statement is only hit for external tables
+                    # we need to explicitly state the name of the error table
                     newSql.append(re.sub("LOG ERRORS", "LOG ERRORS INTO {0}_err".format(tableName), line))
                     continue
 
                 # Primary key purge fixup logic
                 if "ALTER TABLE" in line:
+                    # ALTER TABLE statements span 2 lines
+                    # we comment out both of them
                     newSql.append(re.sub("^", "--", line))
                     newSql.append(re.sub("^", "--", rawSql[n+1]))
+
+                    # Because ALTER TABLE statements always come last
+                    # we can safely break here
                     break
                 else:
-                    # TODO move Perl hack to here
+                    # HAWQ 2.0 prefers random distribution
                     cleanLine = re.sub('(?i)DISTRIBUTED[^\)]+\)', '', line)
+                    # HAWQ 2.0 doesn't have index support
                     cleanLine = re.sub('(?i)CREATE INDEX.*$', '', cleanLine)
-                    cleanLine = re.sub('(?i)    COLUMN [^\)]*\)', '', cleanLine)
-                    cleanLine = re.sub('(?i)appendonly=false', 'appendonly=true', cleanLine)
-                    cleanLine = re.sub('(?i)orientation=column', 'orientation=parquet', cleanLine)
                     cleanLine = re.sub('(?i)PRIMARY KEY', '', cleanLine)
+                    # HAWQ 2.0 doesn't support column-level attributes
+                    cleanLine = re.sub('(?i)    COLUMN [^\)]*\)', '', cleanLine)
                     cleanLine = re.sub('(?i) ENCODING.*$', ',', cleanLine)
+                    # Heap tables aren't supported
+                    cleanLine = re.sub('(?i)appendonly=false', 'appendonly=true', cleanLine)
+                    # COLUMNAR support is provided via Parquet
+                    cleanLine = re.sub('(?i)orientation=column', 'orientation=parquet', cleanLine)
+                    # Because this code runs per-table, dependant objects like sequences
+                    # may not exist yet, so we omit them from DDL
+                    cleanLine = re.sub('(?i)DEFAULT nextval[^,]+', ',', cleanLine)
                     newSql.append(cleanLine)
+
+            # Convert the list of lines back into
+            # a single, newline-separated string
             schema_sql = "\n".join(newSql)
 
         cur = execSQL(self._dest_conn, schema_sql)
