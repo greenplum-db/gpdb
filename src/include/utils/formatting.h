@@ -33,6 +33,7 @@ extern Datum timestamptz_to_char(PG_FUNCTION_ARGS);
 extern Datum interval_to_char(PG_FUNCTION_ARGS);
 extern Datum to_timestamp(PG_FUNCTION_ARGS);
 extern Datum to_date(PG_FUNCTION_ARGS);
+extern Datum to_date_valid(PG_FUNCTION_ARGS);
 extern Datum numeric_to_number(PG_FUNCTION_ARGS);
 extern Datum numeric_to_char(PG_FUNCTION_ARGS);
 extern Datum int4_to_char(PG_FUNCTION_ARGS);

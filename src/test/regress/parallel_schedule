@@ -149,3 +149,6 @@ test: default_parameters
 # test workfiles compressed using zlib
 # 'zlib' utilizes fault injectors so it needs to be in a group by itself
 test: zlib
+
+# test to_date() and to_date_valid()
+test: to_date

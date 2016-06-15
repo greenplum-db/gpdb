@@ -3297,6 +3297,53 @@ to_date(PG_FUNCTION_ARGS)
 	PG_RETURN_DATEADT(result);
 }
 
+/* ----------
+ * TO_DATE_VALID
+ *	Make Date from date_str which is formated at argument 'fmt'
+ *	Validate the input date afterwards
+ * ----------
+ */
+Datum
+to_date_valid(PG_FUNCTION_ARGS)
+{
+	text		*date_txt = PG_GETARG_TEXT_P(0);
+	DateADT		result;
+	Datum		validate;
+	char		*result_out;
+	Timestamp	validate_in;
+
+	/* call the original to_date() function and receive the result */
+	result = DirectFunctionCall2(to_date, PG_GETARG_POINTER(0), PG_GETARG_POINTER(1));
+	if ((Pointer *)result == NULL)
+	{
+		/* if NULL, is this an invalid date? */
+		PG_RETURN_NULL();
+	}
+
+	/* transform the date back using the original format */
+	result_out = DirectFunctionCall1(date_out, result);
+	validate_in = DirectFunctionCall3(timestamp_in, result_out, ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
+
+	/* compare the two dates */
+	validate = DirectFunctionCall2(timestamp_to_char, TimestampGetDatum(validate_in), PG_GETARG_POINTER(1));
+	if ((Pointer *)validate == NULL)
+	{
+		PG_RETURN_NULL();
+	}
+	else
+	{
+		if (strcmp(text_to_cstring(DatumGetCString(validate)), text_to_cstring(date_txt)) != 0)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+					 errmsg("date out of range: \"%s\"",
+							text_to_cstring(date_txt))));
+		}
+	}
+
+	PG_RETURN_DATEADT(result);
+}
+
 /*
  * do_to_timestamp: shared code for to_timestamp and to_date
  *
