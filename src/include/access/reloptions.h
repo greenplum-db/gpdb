@@ -53,8 +53,6 @@ extern bytea *heap_reloptions(char relkind, Datum reloptions, bool validate);
 extern bytea *index_reloptions(RegProcedure amoptions, Datum reloptions,
 				 bool validate);
 
-extern TidycatOptions *tidycat_reloptions(Datum reloptions);
-
 extern void validateAppendOnlyRelOptions(bool ao, int blocksize, int writesize,
 										 int complevel, char* comptype, 
 										 bool checksum, char relkind, bool co);

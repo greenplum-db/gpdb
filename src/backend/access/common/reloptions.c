@@ -1230,42 +1230,6 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 	}
 }
 
-/**
- *  This function parses the tidycat option.
- *  In the tidycat definition, the WITH clause contains "shared",
- *  "reloid", etc. Those are the tidycat option.
- */
-TidycatOptions*
-tidycat_reloptions(Datum reloptions)
-{
-	static const char *const default_keywords[] = {
-		/* tidycat option for table */
-		"relid",
-		"reltype_oid",
-		"toast_oid",
-		"toast_index",
-		"toast_reltype",
-
-		/* tidycat option for index */
-		"indexid",
-	};
-
-	TidycatOptions *result;
-	char	       *values[ARRAY_SIZE(default_keywords)];
-
-	parseRelOptions(reloptions, ARRAY_SIZE(default_keywords), default_keywords, values, false);
-
-	result = (TidycatOptions *) palloc(sizeof(TidycatOptions));
-	result->relid         = (values[0] != NULL) ? pg_atoi(values[0], sizeof(int32), 0):InvalidOid;
-	result->reltype_oid   = (values[1] != NULL) ? pg_atoi(values[1], sizeof(int32), 0):InvalidOid;
-	result->toast_oid     = (values[2] != NULL) ? pg_atoi(values[2], sizeof(int32), 0):InvalidOid;
-	result->toast_index   = (values[3] != NULL) ? pg_atoi(values[3], sizeof(int32), 0):InvalidOid;
-	result->toast_reltype = (values[4] != NULL) ? pg_atoi(values[4], sizeof(int32), 0):InvalidOid;
-	result->indexid       = (values[5] != NULL) ? pg_atoi(values[5], sizeof(int32), 0):InvalidOid;
-
-	return result;
-}
-
 void
 heap_test_override_reloptions(char relkind, StdRdOptions *stdRdOptions, int *safewrite)
 {
