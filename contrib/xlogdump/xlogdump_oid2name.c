@@ -259,7 +259,7 @@ oid2name_get_name(uint32 oid, char *buf, size_t buflen, const char *query)
 }
 
 /*
- * Atempt to read the name of tablespace into lastSpcName
+ * Attempt to read the name of tablespace into lastSpcName
  * (if there's a database connection and the oid changed since lastSpcOid)
  */
 char *
@@ -276,7 +276,7 @@ getSpaceName(uint32 spcid, char *buf, size_t buflen)
 
 
 /*
- * Atempt to get the name of database (if there's a database connection)
+ * Attempt to get the name of database (if there's a database connection)
  */
 char *
 getDbName(uint32 dbid, char *buf, size_t buflen)
@@ -299,7 +299,7 @@ getDbName(uint32 dbid, char *buf, size_t buflen)
 }
 
 /*
- * Atempt to get the name of relation and copy to relName 
+ * Attempt to get the name of relation and copy to relName
  * (if there's a database connection and the reloid changed)
  * Copy a string with oid if not found
  */
@@ -321,7 +321,7 @@ getRelName(uint32 relid, char *buf, size_t buflen)
 	/*
 	 * If the xlog record has some information about rmgr operation on
 	 * a different database, it needs to establish a new connection
-	 * to the different database in order to retreive a object name
+	 * to the different database in order to retrieve a object name
 	 * from the system catalog.
 	 */
 	if (conn && strcmp(PQdb(conn), dbName) != 0)
