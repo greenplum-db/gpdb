@@ -77,8 +77,6 @@ typedef struct SharedChunkHeader
  * used by pfree() and repalloc() to find the context to call.	The allocated
  * size is not absolutely essential, but it's expected to be needed by any
  * reasonable implementation.
- *
- * NB: Chunks allocated from an AsetDirectContext have no StandardChunkHeader.
  */
 typedef struct StandardChunkHeader
 {
@@ -334,28 +332,6 @@ DeleteAndRestoreSwitchedMemoryContext(SwitchedMemoryContext context)
 	MemoryContextSwitchTo(context.oldContext);
 	MemoryContextDelete(context.newContext);
 }
-
-/* asetdirect.c */
-
-/*
- * AsetDirectContextCreate
- *
- * Create a context which allocates directly from malloc().
- *
- * Limited functionality.  Space can be freed only by resetting
- * or deleting the MemoryContext.
- *
- * Allocations from this context are not preceded by a StandardChunkHeader.
- * Therefore the caller must make certain never to pass an allocation obtained
- * from an AsetDirectContext to any of the following functions:
- *      pfree()
- *      repalloc()
- *      GetMemoryChunkSpace()
- *      GetMemoryChunkContext()
- *      MemoryContextContains()
- */
-extern MemoryContext AsetDirectContextCreate(MemoryContext parent, const char *name);
-
 
 /*
  * floor_log2_Size
