@@ -54,7 +54,7 @@ static OuterJoinInfo *make_outerjoininfo(PlannerInfo *root,
 				   Relids left_rels, Relids right_rels,
 				   Relids inner_join_rels,
 				   JoinType join_type, Node *clause);
-void distribute_qual_to_rels(PlannerInfo *root, Node *clause,
+static void distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 						bool is_deduced,
 						bool below_outer_join,
 						Relids qualscope,
@@ -873,7 +873,7 @@ make_outerjoininfo(PlannerInfo *root,
  * 'ojscope' is needed if we decide to force the qual up to the outer-join
  * level, which will be ojscope not necessarily qualscope.
  */
-void
+static void
 distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 						bool is_deduced,
 						bool below_outer_join,
