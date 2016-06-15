@@ -380,6 +380,12 @@ DECLARE_UNIQUE_INDEX(pg_compression_oid_index, 3058, on pg_compression using btr
 DECLARE_UNIQUE_INDEX(pg_compression_compname_index, 3059, on pg_compression using btree(compname name_ops));
 #define CompressionCompnameIndexId	3059
 
+DECLARE_UNIQUE_INDEX(pg_extension_oid_index, 3080, on pg_extension using btree(oid oid_ops));
+#define ExtensionOidIndexId 3080
+
+DECLARE_UNIQUE_INDEX(pg_extension_name_index, 3081, on pg_extension using btree(extname name_ops));
+#define ExtensionNameIndexId 3081
+
 /* TIDYCAT_END_CODEGEN */
 
 /* last step of initialization script: build the indexes declared above */

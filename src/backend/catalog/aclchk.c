@@ -2753,6 +2753,34 @@ pg_proc_ownercheck(Oid proc_oid, Oid roleid)
 }
 
 /*
+ * Ownership check for a extension (specified by OID).
+ */
+bool
+pg_extension_ownercheck(Oid ext_oid, Oid roleid)
+{
+	Oid			ownerId;
+	int			fetchCount = 0;
+
+	/* Superusers bypass all permission checking. */
+	if (superuser_arg(roleid))
+		return true;
+
+	ownerId = caql_getoid_plus(
+			NULL,
+			&fetchCount,
+			NULL,
+			cql("SELECT extowner FROM pg_extension WHERE oid = :1 ",
+				ObjectIdGetDatum(ext_oid)));
+
+	if (0 == fetchCount)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_EXTENSION),
+				 errmsg("schema with OID %u does not exist", ext_oid)));
+
+	return has_privs_of_role(roleid, ownerId);
+}
+
+/*
  * Ownership check for a namespace (specified by OID).
  */
 bool

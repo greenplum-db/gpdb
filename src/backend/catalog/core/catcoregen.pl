@@ -150,6 +150,7 @@ print <<"END_MESSAGE";
 #include "catalog/pg_description.h"
 #include "catalog/pg_extprotocol.h"
 #include "catalog/pg_exttable.h"
+#include "catalog/pg_extension.h"
 #include "catalog/pg_filespace.h"
 #include "catalog/pg_filespace_entry.h"
 #include "catalog/pg_inherits.h"

@@ -99,6 +99,19 @@ typedef enum
 	PGC_S_SESSION				/* SET command */
 } GucSource;
 
+typedef struct name_value_pair
+{
+	char       *name;
+	char       *value;
+	struct name_value_pair *next;
+}name_value_pair;
+
+extern bool ParseConfigFile(const char *config_file, const char *calling_file,
+							int depth, GucContext context, int elevel,
+							struct name_value_pair **head_p,
+							struct name_value_pair **tail_p);
+extern void free_name_value_list(struct name_value_pair * list);
+
 typedef const char *(*GucStringAssignHook) (const char *newval, bool doit, GucSource source);
 typedef bool (*GucBoolAssignHook) (bool newval, bool doit, GucSource source);
 typedef bool (*GucIntAssignHook) (int newval, bool doit, GucSource source);

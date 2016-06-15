@@ -185,6 +185,7 @@ typedef enum AclObjectKind
 	ACL_KIND_TABLESPACE,		/* pg_tablespace */
 	ACL_KIND_FILESPACE,         /* pg_filespace */
 	ACL_KIND_EXTPROTOCOL,		/* pg_extprotocol */
+	ACL_KIND_EXTENSION,         /* pg_extension */
 	MAX_ACL_KIND				/* MUST BE LAST */
 } AclObjectKind;
 
@@ -278,6 +279,7 @@ extern void aclcheck_error(AclResult aclerr, AclObjectKind objectkind,
 			   const char *objectname);
 
 /* ownercheck routines just return true (owner) or false (not) */
+extern bool pg_extension_ownercheck(Oid ext_oid, Oid roleid);
 extern bool pg_class_ownercheck(Oid class_oid, Oid roleid);
 extern bool pg_type_ownercheck(Oid type_oid, Oid roleid);
 extern bool pg_oper_ownercheck(Oid oper_oid, Oid roleid);

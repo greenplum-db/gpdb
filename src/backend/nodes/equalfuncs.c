@@ -1006,6 +1006,18 @@ _equalSetDistributionCmd(SetDistributionCmd *a, SetDistributionCmd *b)
 
 	return true;
 }
+
+static bool
+_equalCreateExtensionStmt(const CreateExtensionStmt *a, const CreateExtensionStmt *b)
+{
+	COMPARE_STRING_FIELD(extname);
+	COMPARE_SCALAR_FIELD(if_not_exists);
+	COMPARE_NODE_FIELD(options);
+	COMPARE_SCALAR_FIELD(create_ext_state);
+
+	return true;
+}
+
 static bool
 _equalInheritPartitionCmd(InheritPartitionCmd *a, InheritPartitionCmd *b)
 {
@@ -2914,6 +2926,9 @@ equal(void *a, void *b)
 			break;
 		case T_CreateFileSpaceStmt:
 			retval = _equalCreateFileSpaceStmt(a, b);
+			break;
+		case T_CreateExtensionStmt:
+			retval = _equalCreateExtensionStmt(a, b);
 			break;
 		case T_FileSpaceEntry:
 			retval = _equalFileSpaceEntry(a, b);

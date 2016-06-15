@@ -2863,6 +2863,41 @@ TempNamespaceOidIsValid(void)
 }
 
 /*
+ * get_namespace_oid - given a namespace name, look up the OID
+ *
+ * Returns InvalidOid if namespace name not found.
+ */
+Oid
+get_namespace_oid(const char *nsp_name, bool missing_ok)
+{
+	Oid			oid;
+	int			fetchCount;
+
+	/*
+	 * There's no syscache for pg_database indexed by name, so we must look
+	 * the hard way.
+	 */
+	oid = caql_getoid_plus(
+			NULL,
+			&fetchCount,
+			NULL,
+			cql("SELECT oid FROM pg_namespace" 
+				" WHERE nspname = :1 ", 
+				CStringGetDatum((char *) nsp_name)));
+
+	/* We assume that there can be at most one matching tuple */
+	if (!fetchCount)
+		oid = InvalidOid;
+
+    if (!OidIsValid(oid) && !missing_ok)
+        ereport(ERROR,
+                (errcode(ERRCODE_UNDEFINED_SCHEMA),
+                 errmsg("schema \"%s\" does not exist", nsp_name)));
+
+	return oid;
+}
+
+/*
  * Fetch the active search path. The return value is a palloc'ed list
  * of OIDs; the caller is responsible for freeing this storage as
  * appropriate.

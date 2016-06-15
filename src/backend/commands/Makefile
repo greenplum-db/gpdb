@@ -15,7 +15,7 @@ override CPPFLAGS := -I$(top_srcdir)/src/backend/gp_libpq_fe $(CPPFLAGS)
 
 OBJS = aggregatecmds.o alter.o analyze.o analyzefuncs.o async.o cluster.o comment.o  \
 	conversioncmds.o copy.o \
-	dbcommands.o define.o explain.o extprotocolcmds.o filespace.o functioncmds.o \
+	dbcommands.o define.o explain.o extension.o extprotocolcmds.o filespace.o functioncmds.o \
 	indexcmds.o lockcmds.o operatorcmds.o opclasscmds.o \
 	portalcmds.o prepare.o proclang.o queue.o \
 	schemacmds.o sequence.o tablecmds.o tablespace.o trigger.o \
