@@ -603,3 +603,18 @@ void Uploader::destroy() {
 bool Uploader::write(char *data, uint64_t &len) {
     return true;
 }
+
+// return the number of items
+uint64_t XMLParserCallback(void *contents, uint64_t size, uint64_t nmemb, void *userp) {
+    uint64_t realsize = size * nmemb;
+    struct XMLInfo *pxml = (struct XMLInfo *)userp;
+
+    if (!pxml->ctxt) {
+        pxml->ctxt =
+            xmlCreatePushParserCtxt(NULL, NULL, (const char *)contents, realsize, "resp.xml");
+    } else {
+        xmlParseChunk(pxml->ctxt, (const char *)contents, realsize, 0);
+    }
+
+    return nmemb;
+}

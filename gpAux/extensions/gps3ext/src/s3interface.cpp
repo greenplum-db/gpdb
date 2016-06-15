@@ -9,7 +9,6 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
-#include "gps3ext.h"
 #include "s3http_headers.h"
 #include "s3key_reader.h"
 #include "s3log.h"

@@ -4,7 +4,6 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-#include "gps3ext.h"
 #include "reader.h"
 #include "reader_params.h"
 #include "s3bucket_reader.h"

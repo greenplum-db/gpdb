@@ -1,8 +1,10 @@
+#include <openssl/crypto.h>
+#include <pthread.h>
 #include <sstream>
 #include <string>
 
+#include "gpcommon.h"
 #include "gpreader.h"
-#include "gps3ext.h"
 #include "s3conf.h"
 #include "s3log.h"
 #include "s3macros.h"
@@ -267,4 +269,55 @@ bool reader_cleanup(S3Reader **reader) {
     }
 
     return true;
+}
+
+// Thread related functions, called only by gpreader and gpcheckcloud
+
+#define MUTEX_TYPE pthread_mutex_t
+#define MUTEX_SETUP(x) pthread_mutex_init(&(x), NULL)
+#define MUTEX_CLEANUP(x) pthread_mutex_destroy(&(x))
+#define MUTEX_LOCK(x) pthread_mutex_lock(&(x))
+#define MUTEX_UNLOCK(x) pthread_mutex_unlock(&(x))
+#define THREAD_ID pthread_self()
+
+/* This array will store all of the mutexes available to OpenSSL. */
+static MUTEX_TYPE *mutex_buf = NULL;
+
+static void locking_function(int mode, int n, const char *file, int line) {
+    if (mode & CRYPTO_LOCK) {
+        MUTEX_LOCK(mutex_buf[n]);
+    } else {
+        MUTEX_UNLOCK(mutex_buf[n]);
+    }
+}
+
+static unsigned long id_function(void) {
+    return ((unsigned long)THREAD_ID);
+}
+
+int thread_setup(void) {
+    mutex_buf = new pthread_mutex_t[CRYPTO_num_locks()];
+    if (mutex_buf == NULL) {
+        return 0;
+    }
+    for (int i = 0; i < CRYPTO_num_locks(); i++) {
+        MUTEX_SETUP(mutex_buf[i]);
+    }
+    CRYPTO_set_id_callback(id_function);
+    CRYPTO_set_locking_callback(locking_function);
+    return 1;
+}
+
+int thread_cleanup(void) {
+    if (mutex_buf == NULL) {
+        return 0;
+    }
+    CRYPTO_set_id_callback(NULL);
+    CRYPTO_set_locking_callback(NULL);
+    for (int i = 0; i < CRYPTO_num_locks(); i++) {
+        MUTEX_CLEANUP(mutex_buf[i]);
+    }
+    delete mutex_buf;
+    mutex_buf = NULL;
+    return 1;
 }

@@ -35,11 +35,12 @@ class S3Reader : public S3ExtBase {
 };
 
 // Following 3 functions are invoked by s3_import(), need to be exception safe
-
 S3Reader* reader_init(const char* url_with_options);
-
 bool reader_transfer_data(S3Reader* reader, char* data_buf, int& data_len);
-
 bool reader_cleanup(S3Reader** reader);
+
+// Two thread related functions, called only by gpreader and gpcheckcloud
+int thread_setup(void);
+int thread_cleanup(void);
 
 #endif

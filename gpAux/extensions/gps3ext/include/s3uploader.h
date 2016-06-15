@@ -45,5 +45,10 @@ const char *PartPutS3Object(const char *host, const char *bucket, const char *ob
 bool CompleteMultiPutS3(const char *host, const char *bucket, const char *obj_name,
                         const char *upload_id, const char **etag_array, uint64_t count,
                         const S3Credential &cred);
+struct XMLInfo {
+    xmlParserCtxtPtr ctxt;
+};
+
+uint64_t XMLParserCallback(void *contents, uint64_t size, uint64_t nmemb, void *userp);
 
 #endif

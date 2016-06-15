@@ -4,7 +4,6 @@
 #include <string>
 using std::string;
 
-#include "gps3ext.h"
 #include "reader.h"
 #include "s3common.h"
 #include "s3interface.h"

@@ -105,21 +105,6 @@ void SignRequestV4(const string &method, HTTPHeaders *h, const string &orig_regi
     return;
 }
 
-// return the number of items
-uint64_t XMLParserCallback(void *contents, uint64_t size, uint64_t nmemb, void *userp) {
-    uint64_t realsize = size * nmemb;
-    struct XMLInfo *pxml = (struct XMLInfo *)userp;
-
-    if (!pxml->ctxt) {
-        pxml->ctxt =
-            xmlCreatePushParserCtxt(NULL, NULL, (const char *)contents, realsize, "resp.xml");
-    } else {
-        xmlParseChunk(pxml->ctxt, (const char *)contents, realsize, 0);
-    }
-
-    return nmemb;
-}
-
 // Returns string lengh till next occurence of given character.
 static int strlen_to_next_char(const char *ptr, char ch) {
     int len = 0;
