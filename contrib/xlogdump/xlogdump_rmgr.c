@@ -294,8 +294,7 @@ print_rmgr_xact(XLogRecPtr cur, XLogRecord *record, uint8 info, bool hideTimesta
 		snprintf(buf, sizeof(buf), "d/s:%d/%d commit at %s",
 			 xlrec.dbId, xlrec.tsId,
 			 str_time(_timestamptz_to_time_t(xlrec.xact_time)));
-/* 83MERGE_FIXME_HL: re-enable this after merging the relevant change */ */
-#elif PG_VERSION_NUM >= 80300 && 0
+#elif PG_VERSION_NUM >= 80300
 		snprintf(buf, sizeof(buf), "commit at %s",
 			 str_time(_timestamptz_to_time_t(xlrec.xact_time)));
 #else
@@ -315,8 +314,7 @@ print_rmgr_xact(XLogRecPtr cur, XLogRecord *record, uint8 info, bool hideTimesta
 		xl_xact_abort	xlrec;
 		memcpy(&xlrec, XLogRecGetData(record), sizeof(xlrec));
 		snprintf(buf, sizeof(buf), "abort at %s",
-/* 83MERGE_FIXME_HL: re-enable this after merging the relevant change */
-#if PG_VERSION_NUM >= 80300 && 0
+#if PG_VERSION_NUM >= 80300
 			 str_time(_timestamptz_to_time_t(xlrec.xact_time)));
 #else
 			 str_time(_timestamptz_to_time_t(xlrec.xtime)));
@@ -335,8 +333,7 @@ print_rmgr_xact(XLogRecPtr cur, XLogRecord *record, uint8 info, bool hideTimesta
 			 xlrec.xid,
 			 xlrec.crec.dbId, xlrec.crec.tsId,
 			 str_time(_timestamptz_to_time_t(xlrec.crec.xact_time)));
-/* 83MERGE_FIXME_HL: re-enable this after merging the relevant change */
-#elif PG_VERSION_NUM >= 80300 && 0
+#elif PG_VERSION_NUM >= 80300
 		snprintf(buf, sizeof(buf), "commit prepared xid:%d, commit at %s",
 			 xlrec.xid,
 			 str_time(_timestamptz_to_time_t(xlrec.crec.xact_time)));
@@ -358,8 +355,7 @@ print_rmgr_xact(XLogRecPtr cur, XLogRecord *record, uint8 info, bool hideTimesta
 			 xlrec.xid,
 			 xlrec.crec.dbId, xlrec.crec.tsId,
 			 str_time(_timestamptz_to_time_t(xlrec.crec.xact_time)));
-/* 83MERGE_FIXME_HL: re-enable this after merging the relevant change */
-#elif PG_VERSION_NUM >= 80300 && 0
+#elif PG_VERSION_NUM >= 80300
 		snprintf(buf, sizeof(buf), "abort prepared xid:%d, commit at %s",
 			 xlrec.xid,
 			 str_time(_timestamptz_to_time_t(xlrec.crec.xact_time)));
@@ -607,14 +603,11 @@ print_rmgr_standby(XLogRecPtr cur, XLogRecord *record, uint8 info)
 void
 print_rmgr_heap2(XLogRecPtr cur, XLogRecord *record, uint8 info)
 {
-	/*
-	 * 83MERGE_FIXME: re-enable the declaration of these variables when the
-	 * relevant changes are merged (see below).
-	 *
-	 * char spaceName[NAMEDATALEN];
-	 * char dbName[NAMEDATALEN];
-	 * char relName[NAMEDATALEN];
-	 */
+#if PG_VERSION_NUM >= 90000
+	char spaceName[NAMEDATALEN];
+	char dbName[NAMEDATALEN];
+	char relName[NAMEDATALEN];
+#endif
 	char buf[1024];
 
 	switch (info)
@@ -632,8 +625,7 @@ print_rmgr_heap2(XLogRecPtr cur, XLogRecord *record, uint8 info)
 		}
 		break;
 
-/* 83MERGE_FIXME_HL: re-enable this after merging the relevant change */
-#if PG_VERSION_NUM >= 80300 && 0
+#if PG_VERSION_NUM >= 80300
 		case XLOG_HEAP2_CLEAN:
 #if PG_VERSION_NUM < 90000
 		case XLOG_HEAP2_CLEAN_MOVE:
@@ -643,10 +635,12 @@ print_rmgr_heap2(XLogRecPtr cur, XLogRecord *record, uint8 info)
 			int total_off;
 			int nunused = 0;
 
+#if PG_VERSION_NUM >= 90000
 			memcpy(&xlrec, XLogRecGetData(record), sizeof(xlrec));
 			getSpaceName(xlrec.node.spcNode, spaceName, sizeof(spaceName));
 			getDbName(xlrec.node.dbNode, dbName, sizeof(dbName));
 			getRelName(xlrec.node.relNode, relName, sizeof(relName));
+#endif
 
 			total_off = (record->xl_len - SizeOfHeapClean) / sizeof(OffsetNumber);
 
@@ -656,11 +650,11 @@ print_rmgr_heap2(XLogRecPtr cur, XLogRecord *record, uint8 info)
 #if PG_VERSION_NUM >= 90000
 			snprintf(buf, sizeof(buf), "clean%s: s/d/r:%s/%s/%s block:%u redirected/dead/unused:%d/%d/%d removed xid:%d",
 			       "",
+			       spaceName, dbName, relName,
 #else
-			snprintf(buf, sizeof(buf), "clean%s: s/d/r:%s/%s/%s block:%u redirected/dead/unused:%d/%d/%d",
+			snprintf(buf, sizeof(buf), "clean%s: block:%u redirected/dead/unused:%d/%d/%d",
 			       info == XLOG_HEAP2_CLEAN_MOVE ? "_move" : "",
 #endif
-			       spaceName, dbName, relName,
 			       xlrec.block,
 			       xlrec.nredirected, xlrec.ndead, nunused
 #if PG_VERSION_NUM >= 90000
@@ -788,8 +782,7 @@ print_rmgr_heap(XLogRecPtr cur, XLogRecord *record, uint8 info, bool statements)
 			break;
 		}
 		case XLOG_HEAP_UPDATE:
-/* 83MERGE_FIXME_HL: re-enable this after merging the relevant change */
-#if PG_VERSION_NUM >= 80300 && 0
+#if PG_VERSION_NUM >= 80300
 		case XLOG_HEAP_HOT_UPDATE:
 #endif
 		{
@@ -804,8 +797,7 @@ print_rmgr_heap(XLogRecPtr cur, XLogRecord *record, uint8 info, bool statements)
 				printUpdate((xl_heap_update *) XLogRecGetData(record), record->xl_len - SizeOfHeapUpdate - SizeOfHeapHeader, relName);
 
 			snprintf(buf, sizeof(buf), "%supdate%s: s/d/r:%s/%s/%s block %u off %u to block %u off %u",
-/* 83MERGE_FIXME_HL: re-enable this after merging the relevant change */
-#if PG_VERSION_NUM >= 80300 && 0
+#if PG_VERSION_NUM >= 80300
 				   (info & XLOG_HEAP_HOT_UPDATE) ? "hot_" : "",
 #else
 				   "",
