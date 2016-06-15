@@ -8,8 +8,9 @@ INSERT INTO ABSTIME_HOROLOGY_TBL (f1) VALUES ('Jan 14, 1973 03:14:21'),
 (abstime 'epoch'),
 (abstime 'infinity'),
 (abstime '-infinity'),
-(abstime 'May 10, 1947 23:59:12'),
-('Jun 10, 1843');
+(abstime 'May 10, 1947 23:59:12');
+
+INSERT INTO ABSTIME_HOROLOGY_TBL (f1) VALUES('Jun 10, 1843');
 
 CREATE TABLE INTERVAL_HOROLOGY_TBL (f1 interval);
 INSERT INTO INTERVAL_HOROLOGY_TBL (f1) VALUES ('@ 1 minute'),
