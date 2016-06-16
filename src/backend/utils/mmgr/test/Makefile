@@ -24,6 +24,8 @@ vmem_tracker.t: \
 
 memprot.t: \
 	$(MOCK_DIR)/backend/utils/mmgr/vmem_tracker_mock.o \
+	$(MOCK_DIR)/backend/utils/mmgr/memaccounting_mock.o \
+	$(MOCK_DIR)/backend/utils/mmgr/aset_mock.o \
 	$(MOCK_DIR)/backend/utils/error/assert_mock.o \
 	$(MOCK_DIR)/backend/utils/error/elog_mock.o \
 	$(MOCK_DIR)/backend/utils/mmgr/event_version_mock.o 

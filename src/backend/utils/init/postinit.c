@@ -72,7 +72,7 @@ static bool ThereIsAtLeastOneRole(void);
 static void process_startup_options(Port *port, bool am_superuser);
 
 #ifdef USE_ORCA
-extern void InitGPOPT();
+extern void InitGPOPT(bool use_gpdb_allocators);
 extern void TerminateGPOPT();
 #endif
 
@@ -605,7 +605,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 
 #ifdef USE_ORCA
 	/* Initialize GPOPT */
-	InitGPOPT();
+	InitGPOPT(optimizer_use_gpdb_allocators);
 #endif
 
 	/*

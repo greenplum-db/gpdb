@@ -408,6 +408,8 @@ namespace gpdb {
 	void *PvMemoryContextReallocImpl(void *pointer, Size size, const char* file, const char * func, int line);
 	void *GPDBAlloc(Size size);
 	void GPDBFree(void *ptr);
+	void *GPMalloc(Size size);
+	void GPFree(void *ptr);
 
 	// create a duplicate of the given string in the given memory context
 	char *SzMemoryContextStrdup(MemoryContext context, const char *string);

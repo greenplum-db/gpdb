@@ -64,6 +64,7 @@ extern "C" {
 #include "parser/parse_coerce.h"
 #include "utils/selfuncs.h"
 #include "utils/faultinjector.h"
+#include "utils/gp_accounted_alloc.h"
 
 extern
 Query *preprocess_query_optimizer(Query *pquery, ParamListInfo boundParams);

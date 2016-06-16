@@ -2224,6 +2224,20 @@ gpdb::GPDBFree
 	GP_WRAP_END;
 }
 
+void *
+gpdb::GPMalloc
+	(
+	Size size
+	)
+{
+	GP_WRAP_START;
+	{
+		return gp_accounted_malloc(size);
+	}
+	GP_WRAP_END;
+	return NULL;
+}
+
 struct varlena *
 gpdb::PvlenDetoastDatum
 	(
@@ -2236,6 +2250,20 @@ gpdb::PvlenDetoastDatum
 	}
 	GP_WRAP_END;
 	return NULL;
+}
+
+void
+gpdb::GPFree
+	(
+	void *ptr
+	)
+{
+	GP_WRAP_START;
+	{
+		gp_accounted_free(ptr);
+		return;
+	}
+	GP_WRAP_END;
 }
 
 bool

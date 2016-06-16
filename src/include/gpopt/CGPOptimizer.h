@@ -44,7 +44,7 @@ class CGPOptimizer
 
     // gpopt initialize and terminate
     static
-    void InitGPOPT();
+    void InitGPOPT(bool use_gpdb_allocators);
 
     static
     void TerminateGPOPT();

@@ -47,7 +47,7 @@ OptVersion(void)
 }
 
 void
-InitGPOPT ()
+InitGPOPT (bool use_gpdb_allocators)
 {
 	elog(ERROR, "mock implementation of InitGPOPT called");
 }

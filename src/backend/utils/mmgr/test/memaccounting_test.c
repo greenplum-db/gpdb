@@ -4,6 +4,8 @@
 #include "cmockery.h"
 
 #include "postgres.h"
+#include "utils/gp_alloc.h"
+#include "utils/gp_accounted_alloc.h"
 
 /*
  * We assume the maximum output size from any memory accounting output
@@ -1560,6 +1562,45 @@ test__MemoryAccounting_SaveToFile__GeneratesCorrectString(void **state)
     pfree(newAccount);
 }
 
+/*
+ * Tests basic functionality of accounting allocators to record and
+ * retrieve allocation information from the active memory account.
+ */
+void
+test__MemoryAccounting__AccountedAllocators(void **state)
+{
+	const size_t allocation_size = 30;
+	size_t allocated = 0;
+	void *ptr1, *ptr2;
+
+	/* Switch to a new memory account */
+	START_MEMORY_ACCOUNT(MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Optimizer));
+
+	/* Reset the account for calculations */
+	MemoryAccounting_Reset();
+	assert_true(MemoryAccounting_GetBalance(ActiveMemoryAccount) == 0);
+
+	/* Check if we account for allocation in the account balance */
+	ptr1 = gp_accounted_malloc(allocation_size);
+	allocated += UserPtr_GetVmemPtrSize(UserPtrToAccountedAllocPtr(ptr1));
+	assert_true(MemoryAccounting_GetBalance(ActiveMemoryAccount) == allocated);
+
+	/* Allocate some more */
+	ptr2 = gp_accounted_malloc(2 * allocation_size);
+	allocated += UserPtr_GetVmemPtrSize(UserPtrToAccountedAllocPtr(ptr2));
+	assert_true(MemoryAccounting_GetBalance(ActiveMemoryAccount) == allocated);
+
+	gp_accounted_free(ptr1);
+	gp_accounted_free(ptr2);
+
+	/* Check if we accounted for all allocated memory freed in account balance */
+	assert_true(MemoryAccounting_GetBalance(ActiveMemoryAccount) == 0);
+	/* Check if we accounted peak allocation in the account peak */
+	assert_true(MemoryAccounting_GetPeak(ActiveMemoryAccount) == allocated);
+
+	END_MEMORY_ACCOUNT();
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -1598,6 +1639,7 @@ main(int argc, char* argv[])
 		unit_test_setup_teardown(test__MemoryAccounting_ToString__Validate, SetupMemoryDataStructures, TeardownMemoryDataStructures),
 		unit_test_setup_teardown(test__MemoryAccounting_SaveToLog__GeneratesCorrectString, SetupMemoryDataStructures, TeardownMemoryDataStructures),
 		unit_test_setup_teardown(test__MemoryAccounting_SaveToFile__GeneratesCorrectString, SetupMemoryDataStructures, TeardownMemoryDataStructures),
+		unit_test_setup_teardown(test__MemoryAccounting__AccountedAllocators, SetupMemoryDataStructures, TeardownMemoryDataStructures),
 	};
 
 	return run_tests(tests);
