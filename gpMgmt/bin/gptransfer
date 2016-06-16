@@ -1740,7 +1740,7 @@ GROUP BY nspname, relname;''' % (self._table_pair.source.schema,
                     cleanLine = re.sub('(?i)orientation=column', 'orientation=parquet', cleanLine)
                     # Because this code runs per-table, dependant objects like sequences
                     # may not exist yet, so we omit them from DDL
-                    cleanLine = re.sub('(?i)DEFAULT nextval[^,]+', ',', cleanLine)
+                    cleanLine = re.sub('(?i)DEFAULT nextval[^,]+', '', cleanLine)
                     newSql.append(cleanLine)
 
             # Convert the list of lines back into
