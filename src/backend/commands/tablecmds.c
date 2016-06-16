@@ -17775,20 +17775,10 @@ static Datum transformFormatOpts(char formattype, List *formatOpts, int numcols,
 	else
 	{
 		/* custom format */
-		
-		int 		len = 0;
-        /*
-         * Increase maxlen to 64K from 8K
-         * Supports a fixedwidth_in format definition containing 1600
-         * columns (max number of columns in a table)
-         */
-		const int	maxlen = 64 * 1024 - 1;
-		StringInfoData key_modified;
-		
-		initStringInfo(&key_modified);
-		
-		format_str = (char *) palloc0(maxlen + 1);
-		
+		StringInfoData cfbuf;
+
+		initStringInfo(&cfbuf);
+
 		foreach(option, formatOpts)
 		{
 			DefElem    *defel = (DefElem *) lfirst(option);
@@ -17805,26 +17795,28 @@ static Datum transformFormatOpts(char formattype, List *formatOpts, int numcols,
 				formatter = strVal(defel->arg);
 			}
 
-			/* MPP-14467 - replace any space chars with meta char */
-			resetStringInfo(&key_modified);
-			appendStringInfoString(&key_modified, key);
-			replaceStringInfoString(&key_modified, " ", "<gpx20>");
-
-			sprintf((char *) format_str + len, "%s '%s' ", key_modified.data, val);
-			len += strlen(key_modified.data) + strlen(val) + 4;
-
-			if (len > maxlen)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("format options must be less than %d bytes in size", maxlen)));			
+			/*
+			 * Output "<key> '<val>' ", but replace any space chars in the key
+			 * with meta char (MPP-14467)
+			 */
+			while (*key)
+			{
+				if (*key == ' ')
+					appendStringInfoString(&cfbuf, "<gpx20>");
+				else
+					appendStringInfoChar(&cfbuf, *key);
+				key++;
+			}
+			appendStringInfo(&cfbuf, " '%s' ", val);
 		}
 		
 		if(!formatter)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
 					 errmsg("no formatter function specified")));
+
+		format_str = cfbuf.data;
 	}
-	
 
 	/* convert c string to text datum */
 	result = DirectFunctionCall1(textin, CStringGetDatum(format_str));
