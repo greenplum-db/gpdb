@@ -11,11 +11,7 @@ Range OffsetMgr::getNextOffset() {
     Range ret;
 
     pthread_mutex_lock(&this->offsetLock);
-    if (this->curPos < this->keySize) {
-        ret.offset = this->curPos;
-    } else {
-        ret.offset = this->keySize;
-    }
+    ret.offset = std::min(this->curPos, this->keySize);
 
     if (this->curPos + this->chunkSize > this->keySize) {
         ret.length = this->keySize - this->curPos;
@@ -53,10 +49,7 @@ ChunkBuffer::~ChunkBuffer() {
 // Copy constructor will copy members, but chunkData must not be initialized before copy.
 // otherwise when worked with vector it will be freed twice.
 void ChunkBuffer::init() {
-    if (chunkData != NULL) {
-        S3ERROR("Error: reinitializing chunkBuffer.");
-        return;
-    }
+    CHECK_OR_DIE_MSG(chunkData == NULL, "%s", "Error: reinitializing chunkBuffer.");
 
     chunkData = new char[offsetMgr.getChunkSize()];
     CHECK_OR_DIE_MSG(chunkData != NULL, "%s", "Failed to allocate Buffer, no enough memory?");
@@ -168,6 +161,12 @@ void* DownloadThreadFunc(void* data) {
 
             // error is shared between all chunks, so all chunks will stop.
             buffer->setError();
+
+            // have to unlock ChunkBuffer::read in some certain conditions, for instance, status is
+            // not ReadyToRead, and read() is waiting for signal stat_cond.
+            buffer->setStatus(ReadyToRead);
+            pthread_cond_signal(const_cast<pthread_cond_t*>(buffer->getStatCond()));
+
             return NULL;
         }
 

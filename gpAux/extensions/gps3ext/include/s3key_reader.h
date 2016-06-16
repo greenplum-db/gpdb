@@ -50,7 +50,7 @@ class OffsetMgr {
 
    private:
     pthread_mutex_t offsetLock;
-    uint64_t keySize;
+    uint64_t keySize;  // size of S3 key(file)
     uint64_t chunkSize;
     uint64_t curPos;
 };
@@ -64,22 +64,6 @@ class ChunkBuffer {
    public:
     ChunkBuffer(const string& url, OffsetMgr& mgr, bool& sharedError, const S3Credential& cred,
                 const string& region);
-
-    /*ChunkBuffer(const ChunkBuffer& other)
-        : sourceUrl(other.sourceUrl),
-          sharedError(other.sharedError),
-          offsetMgr(other.offsetMgr),
-          credential(other.credential),
-          region(other.region),
-          s3interface(other.s3interface) {
-        this->chunkData = other.chunkData;
-
-        curFileOffset = other.curFileOffset;
-        chunkDataSize = other.chunkDataSize;
-        status = other.status;
-        eof = other.eof;
-        curChunkOffset = other.curChunkOffset;
-    }*/
 
     ~ChunkBuffer();
 
@@ -104,6 +88,14 @@ class ChunkBuffer {
 
     void init();
     void destroy();
+
+    const pthread_cond_t* getStatCond() const {
+        return &stat_cond;
+    }
+
+    void setStatus(ChunkStatus status) {
+        this->status = status;
+    }
 
    protected:
     string sourceUrl;

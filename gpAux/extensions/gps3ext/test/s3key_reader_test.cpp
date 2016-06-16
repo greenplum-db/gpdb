@@ -89,6 +89,85 @@ TEST(OffsetMgr, KeySizeSmallerThanChunkSize) {
     EXPECT_EQ(r.length, 0);
 }
 
+TEST(OffsetMgr, KeySizeEqualToChunkSize) {
+    OffsetMgr o;
+    o.setKeySize(127);
+    o.setChunkSize(127);
+
+    EXPECT_EQ(127, o.getChunkSize());
+    EXPECT_EQ(127, o.getKeySize());
+
+    Range r = o.getNextOffset();
+    EXPECT_EQ(r.offset, 0);
+    EXPECT_EQ(r.length, 127);
+
+    r = o.getNextOffset();
+    EXPECT_EQ(r.offset, 127);
+    EXPECT_EQ(r.length, 0);
+
+    r = o.getNextOffset();
+    EXPECT_EQ(r.offset, 127);
+    EXPECT_EQ(r.length, 0);
+}
+
+TEST(OffsetMgr, KeySizeIsDevidedByChunkSize) {
+    OffsetMgr o;
+    o.setKeySize(635);
+    o.setChunkSize(127);
+
+    EXPECT_EQ(127, o.getChunkSize());
+    EXPECT_EQ(635, o.getKeySize());
+
+    Range r = o.getNextOffset();
+    EXPECT_EQ(r.offset, 0);
+    EXPECT_EQ(r.length, 127);
+
+    r = o.getNextOffset();
+    EXPECT_EQ(r.offset, 127);
+    EXPECT_EQ(r.length, 127);
+
+    r = o.getNextOffset();
+    EXPECT_EQ(r.offset, 254);
+    EXPECT_EQ(r.length, 127);
+
+    r = o.getNextOffset();
+    EXPECT_EQ(r.offset, 381);
+    EXPECT_EQ(r.length, 127);
+
+    r = o.getNextOffset();
+    EXPECT_EQ(r.offset, 508);
+    EXPECT_EQ(r.length, 127);
+
+    r = o.getNextOffset();
+    EXPECT_EQ(r.offset, 635);
+    EXPECT_EQ(r.length, 0);
+
+    r = o.getNextOffset();
+    EXPECT_EQ(r.offset, 635);
+    EXPECT_EQ(r.length, 0);
+}
+
+TEST(OffsetMgr, KeySizeIsZero) {
+    OffsetMgr o;
+    o.setKeySize(0);
+    o.setChunkSize(1000);
+
+    EXPECT_EQ(1000, o.getChunkSize());
+    EXPECT_EQ(0, o.getKeySize());
+
+    Range r = o.getNextOffset();
+    EXPECT_EQ(r.offset, 0);
+    EXPECT_EQ(r.length, 0);
+
+    r = o.getNextOffset();
+    EXPECT_EQ(r.offset, 0);
+    EXPECT_EQ(r.length, 0);
+
+    r = o.getNextOffset();
+    EXPECT_EQ(r.offset, 0);
+    EXPECT_EQ(r.length, 0);
+}
+
 TEST_F(S3KeyReaderTest, OpenWithZeroChunk) {
     params.setNumOfChunks(0);
 
@@ -366,6 +445,66 @@ TEST_F(S3KeyReaderTest, MTReadWithFragmentalReadRequests) {
     EXPECT_EQ(0, keyReader->read(buffer, 31));
 }
 
+TEST_F(S3KeyReaderTest, MTReadWithHundredsOfThreads) {
+    params.setNumOfChunks(127);
+    params.setRegion("us-west-2");
+    params.setKeySize(1024);
+    params.setChunkSize(64);
+
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _)).WillRepeatedly(Return(64));
+
+    keyReader->open(params);
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(0, keyReader->read(buffer, 31));
+}
+
 TEST_F(S3KeyReaderTest, MTReadWithFetchDataError) {
     params.setNumOfChunks(3);
     params.setRegion("us-west-2");
@@ -467,4 +606,28 @@ TEST_F(S3KeyReaderTest, MTReadWithGPDBCancel) {
     // QueryCancelPending in ChunkBuffer::read will always be hit and throw.
 
     EXPECT_THROW(keyReader->read(buffer, 127), std::runtime_error);
+}
+
+TEST_F(S3KeyReaderTest, MTReadWithHundredsOfThreadsAndSignalCancel) {
+    params.setNumOfChunks(127);
+    params.setRegion("us-west-2");
+    params.setKeySize(1024);
+    params.setChunkSize(64);
+
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _)).WillRepeatedly(Return(64));
+
+    keyReader->open(params);
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(31, keyReader->read(buffer, 31));
+    EXPECT_EQ(2, keyReader->read(buffer, 31));
+
+    QueryCancelPending = true;
+
+    EXPECT_THROW(keyReader->read(buffer, 31), std::runtime_error);
 }

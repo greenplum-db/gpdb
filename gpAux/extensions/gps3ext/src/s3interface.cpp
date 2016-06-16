@@ -296,7 +296,10 @@ uint64_t S3Service::fetchData(uint64_t offset, char *data, uint64_t len, const s
     Response resp = service->get(sourceUrl, headers, params);
     if (resp.getStatus() == RESPONSE_OK) {
         vector<uint8_t> &responseData = resp.getRawData();
-        CHECK_OR_DIE_MSG(responseData.size() == len, "%s", "Response is not fully received.");
+        if (responseData.size() != len) {
+            S3ERROR("%s", "Response is not fully received.");
+            return 0;
+        }
 
         std::copy(responseData.begin(), responseData.end(), data);
         return responseData.size();
@@ -304,11 +307,10 @@ uint64_t S3Service::fetchData(uint64_t offset, char *data, uint64_t len, const s
         xmlParserCtxtPtr xmlptr = getXMLContext(resp);
         CHECK_OR_DIE(checkXMLMessage(xmlptr));
     } else {
-        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
-                         resp.getMessage().c_str());
+        S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+                resp.getMessage().c_str());
+        return 0;
     }
-
-    return 0;
 }
 
 S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const string &region,
