@@ -119,7 +119,7 @@ distdir	= postgresql-$(VERSION)
 dummy	= =install=
 garbage = =*  "#"*  ."#"*  *~*  *.orig  *.rej  core  postgresql-*
 
-dist: $(distdir).tar.gz 
+dist: $(distdir).tar.gz $(distdir).tar.bz2
 ifeq ($(split-dist), yes)
 dist: postgresql-base-$(VERSION).tar.gz postgresql-docs-$(VERSION).tar.gz postgresql-opt-$(VERSION).tar.gz postgresql-test-$(VERSION).tar.gz 
 endif
@@ -128,6 +128,8 @@ dist:
 
 $(distdir).tar: distdir
 	$(TAR) chf $@ $(distdir)
+
+.INTERMEDIATE: $(distdir).tar
 
 opt_files = \
 	src/tools src/tutorial \
@@ -150,7 +152,7 @@ postgresql-test-$(VERSION).tar: distdir
 
 distdir:
 	-rm -rf $(distdir)* $(dummy)
-	for x in `cd $(top_srcdir) && find . -name CVS -prune -o -print`; do \
+	for x in `cd $(top_srcdir) && find . \( -name CVS -prune \) -o \( -name .git -prune \) -o -print`; do \
 	  file=`expr X$$x : 'X\./\(.*\)'`; \
 	  if test -d "$(top_srcdir)/$$file" ; then \
 	    mkdir "$(distdir)/$$file" && chmod 777 "$(distdir)/$$file";	\
@@ -165,12 +167,12 @@ distdir:
 	#cp $(distdir)/doc/src/sgml/INSTALL $(distdir)/
 	#cp $(distdir)/doc/src/sgml/regress_README $(distdir)/src/test/regress/README
 	$(MAKE) -C $(distdir) distclean
-	-rm -f $(distdir)/README.CVS
+	#rm -f $(distdir)/README.git
 
-distcheck: $(distdir).tar.gz
+distcheck: dist
 	-rm -rf $(dummy)
 	mkdir $(dummy)
-	$(GZIP) -d -c $< | $(TAR) xf -
+	$(GZIP) -d -c $(distdir).tar.gz | $(TAR) xf -
 	install_prefix=`cd $(dummy) && pwd`; \
 	cd $(distdir) \
 	&& ./configure --prefix="$$install_prefix"

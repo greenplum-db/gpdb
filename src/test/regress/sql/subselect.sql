@@ -8,6 +8,21 @@ SELECT 1 AS zero WHERE 1 NOT IN (SELECT 1);
 
 SELECT 1 AS zero WHERE 1 IN (SELECT 2);
 
+-- Check grammar's handling of extra parens in assorted contexts
+
+SELECT * FROM (SELECT 1 AS x) ss;
+SELECT * FROM ((SELECT 1 AS x)) ss;
+
+(SELECT 2) UNION SELECT 2;
+((SELECT 2)) UNION SELECT 2;
+
+SELECT ((SELECT 2) UNION SELECT 2);
+SELECT (((SELECT 2)) UNION SELECT 2);
+
+SELECT (SELECT ARRAY[1,2,3])[1];
+SELECT ((SELECT ARRAY[1,2,3]))[2];
+SELECT (((SELECT ARRAY[1,2,3])))[3];
+
 -- Set up some simple test tables
 
 CREATE TABLE SUBSELECT_TBL (
@@ -218,9 +233,9 @@ create rule shipped_view_insert as on insert to shipped_view do instead
 insert into parts (partnum, cost) values (1, 1234.56);
 
 insert into shipped_view (ordnum, partnum, value)
-    values (0, 1, (select cost from parts where partnum = 1));
+    values (0, 1, (select cost from parts where partnum = '1'));
 
-select * from shipped_view ORDER BY 1,2;
+select * from shipped_view;
 
 create rule shipped_view_update as on update to shipped_view do instead
     update shipped set partnum = new.partnum, value = new.value
@@ -246,3 +261,107 @@ select * from (
   select min(unique1) from tenk1 as a
   where not exists (select 1 from tenk1 as b where b.unique2 = 10000)
 ) ss;
+
+--
+-- Test that an IN implemented using a UniquePath does unique-ification
+-- with the right semantics, as per bug #4113.  (Unfortunately we have
+-- no simple way to ensure that this test case actually chooses that type
+-- of plan, but it does in releases 7.4-8.3.  Note that an ordering difference
+-- here might mean that some other plan type is being used, rendering the test
+-- pointless.)
+--
+
+create temp table numeric_table (num_col numeric);
+insert into numeric_table values (1), (1.000000000000000000001), (2), (3);
+
+create temp table float_table (float_col float8);
+insert into float_table values (1), (2), (3);
+
+select * from float_table
+  where float_col in (select num_col from numeric_table);
+
+select * from numeric_table
+  where num_col in (select float_col from float_table);
+
+--
+-- Test case for bug #4290: bogus calculation of subplan param sets
+--
+
+create temp table ta (id int primary key, val int);
+
+insert into ta values(1,1);
+insert into ta values(2,2);
+
+create temp table tb (id int primary key, aval int);
+
+insert into tb values(1,1);
+insert into tb values(2,1);
+insert into tb values(3,2);
+insert into tb values(4,2);
+
+create temp table tc (id int primary key, aid int);
+
+insert into tc values(1,1);
+insert into tc values(2,2);
+
+select
+  ( select min(tb.id) from tb
+    where tb.aval = (select ta.val from ta where ta.id = tc.aid) ) as min_tb_id
+from tc;
+
+--
+-- Test case for 8.3 "failed to locate grouping columns" bug
+--
+
+create temp table t1 (f1 numeric(14,0), f2 varchar(30));
+
+select * from
+  (select distinct f1, f2, (select f2 from t1 x where x.f1 = up.f1) as fs
+   from t1 up) ss
+group by f1,f2,fs;
+
+--
+-- Check that whole-row Vars reading the result of a subselect don't include
+-- any junk columns therein
+--
+-- This test works in upstream PostgreSQL but triggers a problem in GPDB; in
+-- Greenplum the typmods must be the same between all segments and the master
+-- but PostgreSQL executor defers typmod assignment to ExecEvalWholeRowVar()
+-- which is too late for Greenplum since the plan has already been dispatched.
+-- This should be fixed but requires new infrastructure.
+--
+
+select q from (select max(f1) from int4_tbl group by f1 order by f1) q;
+
+--
+-- Test case for sublinks pushed down into subselects via join alias expansion
+--
+
+select
+  (select sq1) as qq1
+from
+  (select exists(select 1 from int4_tbl where f1 = q2) as sq1, 42 as dummy
+   from int8_tbl) sq0
+  join
+  int4_tbl i4 on dummy = i4.f1;
+
+--
+-- Test case for cross-type partial matching in hashed subplan (bug #7597)
+--
+
+create temp table outer_7597 (f1 int4, f2 int4);
+insert into outer_7597 values (0, 0);
+insert into outer_7597 values (1, 0);
+insert into outer_7597 values (0, null);
+insert into outer_7597 values (1, null);
+
+create temp table inner_7597(c1 int8, c2 int8);
+insert into inner_7597 values(0, null);
+
+select * from outer_7597 where (f1, f2) not in (select * from inner_7597);
+
+--
+-- Test case for premature memory release during hashing of subplan output
+--
+
+select '1'::text in (select '1'::name union all select '1'::name);

@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_view.sgml,v 1.35 2007/02/01 00:28:18 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_view.sgml,v 1.36.2.1 2009/10/02 18:13:19 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -140,10 +140,20 @@ CREATE VIEW vista AS SELECT text 'Hello World' AS hello;
 
    <para>
     Access to tables referenced in the view is determined by permissions of
-    the view owner.  However, functions called in the view are treated the
-    same as if they had been called directly from the query using the view.
-    Therefore the user of a view must have permissions to call all functions
-    used by the view.
+    the view owner.  In some cases, this can be used to provide secure but
+    restricted access to the underlying tables.  However, not all views are
+    secure against tampering; see <xref linkend="rules-privileges"> for
+    details.  Functions called in the view are treated the same as if they had
+    been called directly from the query using the view.  Therefore the user of
+    a view must have permissions to call all functions used by the view.
+   </para>
+
+   <para>
+    When <command>CREATE OR REPLACE VIEW</> is used on an
+    existing view, only the view's defining SELECT rule is changed.
+    Other view properties, including ownership, permissions, and non-SELECT
+    rules, remain unchanged.  You must own the view
+    to replace it (this includes being a member of the owning role).
    </para>
 
  </refsect1>
@@ -226,6 +236,7 @@ CREATE VIEW <replaceable class="parameter">name</replaceable> [ ( <replaceable c
   <title>See Also</title>
 
   <simplelist type="inline">
+   <member><xref linkend="sql-alterview" endterm="sql-alterview-title"></member>
    <member><xref linkend="sql-dropview" endterm="sql-dropview-title"></member>
   </simplelist>
  </refsect1>

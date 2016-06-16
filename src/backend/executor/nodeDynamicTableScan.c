@@ -22,8 +22,7 @@
 #include "utils/memutils.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbvars.h"
-
-#define DYNAMIC_TABLE_SCAN_NSLOTS 2
+#include "cdb/partitionselection.h"
 
 static inline void
 CleanupOnePartition(ScanState *scanState);
@@ -117,7 +116,7 @@ initNextTableToScan(DynamicTableScanState *node)
 
 		ExecAssignScanType(scanState, partTupDesc);
 
-		AttrNumber	*attMap = NULL;
+		AttrNumber	*attMap;
 
 		attMap = varattnos_map(lastTupDesc, partTupDesc);
 
@@ -344,10 +343,14 @@ ExecDynamicTableRestrPos(DynamicTableScanState *node)
 	MarkRestrNotAllowed((ScanState *)node);
 }
 
+/*
+ * XXX: We have backported the PostgreSQL patch that made these functions
+ * obsolete. The returned value isn't used for anything, so just return 0.
+ */
 int
 ExecCountSlotsDynamicTableScan(DynamicTableScan *node)
 {
-	return DYNAMIC_TABLE_SCAN_NSLOTS;
+	return 0;
 }
 
 void

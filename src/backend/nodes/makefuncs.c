@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/makefuncs.c,v 1.54 2007/01/05 22:19:30 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/makefuncs.c,v 1.58 2008/01/01 19:45:50 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -141,6 +141,20 @@ flatCopyTargetEntry(TargetEntry *src_tle)
 }
 
 /*
+ * makeFromExpr -
+ *	  creates a FromExpr node
+ */
+FromExpr *
+makeFromExpr(List *fromlist, Node *quals)
+{
+	FromExpr   *f = makeNode(FromExpr);
+
+	f->fromlist = fromlist;
+	f->quals = quals;
+	return f;
+}
+
+/*
  * makeConst -
  *	  creates a Const node
  */
@@ -155,6 +169,7 @@ makeConst(Oid consttype,
 	Const	   *cnst = makeNode(Const);
 
 	cnst->consttype = consttype;
+	cnst->consttypmod = consttypmod;
 	cnst->constlen = constlen;
 	cnst->constvalue = constvalue;
 	cnst->constisnull = constisnull;
@@ -172,7 +187,7 @@ makeConst(Oid consttype,
  * storage properties.
  */
 Const *
-makeNullConst(Oid consttype, int consttypmod)
+makeNullConst(Oid consttype, int32 consttypmod)
 {
 	int16		typLen;
 	bool		typByVal;
@@ -194,7 +209,8 @@ Node *
 makeBoolConst(bool value, bool isnull)
 {
 	/* note that pg_type.h hardwires size of bool as 1 ... duplicate it */
-	return (Node *) makeConst(BOOLOID, -1, 1, BoolGetDatum(value), isnull, true);
+	return (Node *) makeConst(BOOLOID, -1, 1,
+							  BoolGetDatum(value), isnull, true);
 }
 
 /*

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hashinsert.c,v 1.44 2007/01/05 22:19:22 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hashinsert.c,v 1.48 2008/01/01 19:45:46 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -75,8 +75,7 @@ _hash_doinsert(Relation rel, IndexTuple itup)
 	_hash_getlock(rel, 0, HASH_SHARE);
 
 	/* Read the metapage */
-	metabuf = _hash_getbuf(rel, HASH_METAPAGE, HASH_READ);
-	_hash_checkpage(rel, metabuf, LH_META_PAGE);
+	metabuf = _hash_getbuf(rel, HASH_METAPAGE, HASH_READ, LH_META_PAGE);
 	metap = (HashMetaPage) BufferGetPage(metabuf);
 
 	/*
@@ -113,8 +112,7 @@ _hash_doinsert(Relation rel, IndexTuple itup)
 	_hash_droplock(rel, 0, HASH_SHARE);
 
 	/* Fetch the primary bucket page for the bucket */
-	buf = _hash_getbuf(rel, blkno, HASH_WRITE);
-	_hash_checkpage(rel, buf, LH_BUCKET_PAGE);
+	buf = _hash_getbuf(rel, blkno, HASH_WRITE, LH_BUCKET_PAGE);
 	page = BufferGetPage(buf);
 	pageopaque = (HashPageOpaque) PageGetSpecialPointer(page);
 	Assert(pageopaque->hasho_bucket == bucket);
@@ -134,7 +132,7 @@ _hash_doinsert(Relation rel, IndexTuple itup)
 			 * find out next pass through the loop test above.
 			 */
 			_hash_relbuf(rel, buf);
-			buf = _hash_getbuf(rel, nextblkno, HASH_WRITE);
+			buf = _hash_getbuf(rel, nextblkno, HASH_WRITE, LH_OVERFLOW_PAGE);
 			page = BufferGetPage(buf);
 		}
 		else
@@ -154,8 +152,8 @@ _hash_doinsert(Relation rel, IndexTuple itup)
 			/* should fit now, given test above */
 			Assert(PageGetFreeSpace(page) >= itemsz);
 		}
-		_hash_checkpage(rel, buf, LH_OVERFLOW_PAGE);
 		pageopaque = (HashPageOpaque) PageGetSpecialPointer(page);
+		Assert(pageopaque->hasho_flag == LH_OVERFLOW_PAGE);
 		Assert(pageopaque->hasho_bucket == bucket);
 	}
 
@@ -214,7 +212,7 @@ _hash_pgaddtup(Relation rel,
 	page = BufferGetPage(buf);
 
 	itup_off = OffsetNumberNext(PageGetMaxOffsetNumber(page));
-	if (PageAddItem(page, (Item) itup, itemsize, itup_off, LP_USED)
+	if (PageAddItem(page, (Item) itup, itemsize, itup_off, false, false)
 		== InvalidOffsetNumber)
 		elog(ERROR, "failed to add index item to \"%s\"",
 			 RelationGetRelationName(rel));

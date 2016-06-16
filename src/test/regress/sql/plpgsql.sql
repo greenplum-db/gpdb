@@ -1917,8 +1917,8 @@ $$ language plpgsql CONTAINS SQL;
 
 begin;
 
---select refcursor_test1('test1');
---fetch next from test1;
+select refcursor_test1('test1');
+fetch next in test1;
 
 --select refcursor_test1('test2');
 --fetch all from test2;
@@ -2440,6 +2440,229 @@ end$$ language plpgsql READS SQL DATA;
 select footest();
 
 drop function footest();
+
+-- test scrollable cursor support
+
+create function sc_test() returns setof integer as $$
+declare 
+  c scroll cursor for select f1 from int4_tbl;
+  x integer;
+begin
+  open c;
+  fetch last from c into x;
+  while found loop
+    return next x;
+    fetch prior from c into x;
+  end loop;
+  close c;
+end;
+$$ language plpgsql;
+
+select * from sc_test();
+
+create or replace function sc_test() returns setof integer as $$
+declare 
+  c no scroll cursor for select f1 from int4_tbl;
+  x integer;
+begin
+  open c;
+  fetch last from c into x;
+  while found loop
+    return next x;
+    fetch prior from c into x;
+  end loop;
+  close c;
+end;
+$$ language plpgsql;
+
+select * from sc_test();  -- fails because of NO SCROLL specification
+
+create or replace function sc_test() returns setof integer as $$
+declare 
+  c refcursor;
+  x integer;
+begin
+  open c scroll for select f1 from int4_tbl;
+  fetch last from c into x;
+  while found loop
+    return next x;
+    fetch prior from c into x;
+  end loop;
+  close c;
+end;
+$$ language plpgsql;
+
+select * from sc_test();
+
+create or replace function sc_test() returns setof integer as $$
+declare 
+  c refcursor;
+  x integer;
+begin
+  open c scroll for execute 'select f1 from int4_tbl';
+  fetch last from c into x;
+  while found loop
+    return next x;
+    fetch relative -2 from c into x;
+  end loop;
+  close c;
+end;
+$$ language plpgsql;
+
+select * from sc_test();
+
+create or replace function sc_test() returns setof integer as $$
+declare
+  c cursor for select * from generate_series(1, 10);
+  x integer;
+begin
+  open c;
+  loop
+      move relative 2 in c;
+      if not found then
+          exit;
+      end if;
+      fetch next from c into x;
+      if found then
+          return next x;
+      end if;
+  end loop;
+  close c;
+end;
+$$ language plpgsql;
+
+select * from sc_test();
+
+drop function sc_test();
+
+-- test qualified variable names
+
+create function pl_qual_names (param1 int) returns void as $$
+<<outerblock>>
+declare
+  param1 int := 1;
+begin
+  <<innerblock>>
+  declare
+    param1 int := 2;
+  begin
+    raise notice 'param1 = %', param1;
+    raise notice 'pl_qual_names.param1 = %', pl_qual_names.param1;
+    raise notice 'outerblock.param1 = %', outerblock.param1;
+    raise notice 'innerblock.param1 = %', innerblock.param1;
+  end;
+end;
+$$ language plpgsql;
+
+select pl_qual_names(42);
+
+drop function pl_qual_names(int);
+
+-- tests for RETURN QUERY
+create function ret_query1(out int, out int) returns setof record as $$
+begin
+    $1 := -1;
+    $2 := -2;
+    return next;
+    return query select x + 1, x * 10 from generate_series(0, 10) s (x);
+    return next;
+end;
+$$ language plpgsql;
+
+select * from ret_query1();
+
+create type record_type as (x text, y int, z boolean);
+
+create or replace function ret_query2(lim int) returns setof record_type as $$
+begin
+    return query select md5(s.x::text), s.x, s.x > 0
+                 from generate_series(-8, lim) s (x) where s.x % 2 = 0;
+end;
+$$ language plpgsql;
+
+select * from ret_query2(8);
+
+-- Test for appropriate cleanup of non-simple expression evaluations
+-- (bug in all versions prior to August 2010)
+
+CREATE FUNCTION nonsimple_expr_test() RETURNS text[] AS $$
+DECLARE
+  arr text[];
+  lr text;
+  i integer;
+BEGIN
+  arr := array[array['foo','bar'], array['baz', 'quux']];
+  lr := 'fool';
+  i := 1;
+  -- use sub-SELECTs to make expressions non-simple
+  arr[(SELECT i)][(SELECT i+1)] := (SELECT lr);
+  RETURN arr;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT nonsimple_expr_test();
+
+DROP FUNCTION nonsimple_expr_test();
+
+CREATE FUNCTION nonsimple_expr_test() RETURNS integer AS $$
+declare
+   i integer NOT NULL := 0;
+begin
+  begin
+    i := (SELECT NULL::integer);  -- should throw error
+  exception
+    WHEN OTHERS THEN
+      i := (SELECT 1::integer);
+  end;
+  return i;
+end;
+$$ LANGUAGE plpgsql;
+
+SELECT nonsimple_expr_test();
+
+DROP FUNCTION nonsimple_expr_test();
+
+--
+-- Test cases involving recursion and error recovery in simple expressions
+-- (bugs in all versions before October 2010).  The problems are most
+-- easily exposed by mutual recursion between plpgsql and sql functions.
+--
+
+create function recurse(float8) returns float8 as
+$$
+begin
+  if ($1 > 0) then
+    return sql_recurse($1 - 1);
+  else
+    return $1;
+  end if;
+end;
+$$ language plpgsql;
+
+-- "limit" is to prevent this from being inlined
+create function sql_recurse(float8) returns float8 as
+$$ select recurse($1) limit 1; $$ language sql;
+
+select recurse(5);
+
+create function error1(text) returns text language sql as
+$$ SELECT relname::text FROM pg_class c WHERE c.oid = $1::regclass $$;
+
+create function error2(p_name_table text) returns text language plpgsql as $$
+begin
+  return error1(p_name_table);
+end$$;
+
+BEGIN;
+create table public.stuffs (stuff text);
+SAVEPOINT a;
+select error2('nonexistent.stuffs');
+ROLLBACK TO a;
+select error2('public.stuffs');
+rollback;
+
+drop function error2(p_name_table text);
+drop function error1(text);
 
 -- Test anonymous code blocks.
 

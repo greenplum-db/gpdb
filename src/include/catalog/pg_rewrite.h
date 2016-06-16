@@ -11,7 +11,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_rewrite.h,v 1.27 2007/01/05 22:19:53 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_rewrite.h,v 1.29 2008/01/01 19:45:57 momjian Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -33,6 +33,7 @@
    ev_class    oid, 
    ev_attr     smallint, 
    ev_type     "char", 
+   ev_enabled  "char", 
    is_instead  boolean, 
    ev_qual     text, 
    ev_action   text
@@ -59,6 +60,7 @@ CATALOG(pg_rewrite,2618)
 	Oid			ev_class;
 	int2		ev_attr;
 	char		ev_type;
+	char		ev_enabled;
 	bool		is_instead;
 
 	/* NB: remaining fields must be accessed via heap_getattr */
@@ -77,13 +79,14 @@ typedef FormData_pg_rewrite *Form_pg_rewrite;
  *		compiler constants for pg_rewrite
  * ----------------
  */
-#define Natts_pg_rewrite				7
+#define Natts_pg_rewrite				8
 #define Anum_pg_rewrite_rulename		1
 #define Anum_pg_rewrite_ev_class		2
 #define Anum_pg_rewrite_ev_attr			3
 #define Anum_pg_rewrite_ev_type			4
-#define Anum_pg_rewrite_is_instead		5
-#define Anum_pg_rewrite_ev_qual			6
-#define Anum_pg_rewrite_ev_action		7
+#define Anum_pg_rewrite_ev_enabled		5
+#define Anum_pg_rewrite_is_instead		6
+#define Anum_pg_rewrite_ev_qual			7
+#define Anum_pg_rewrite_ev_action		8
 
 #endif   /* PG_REWRITE_H */

@@ -9,14 +9,14 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/execdesc.h,v 1.33 2007/01/05 22:19:54 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/executor/execdesc.h,v 1.37 2008/01/01 19:45:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #ifndef EXECDESC_H
 #define EXECDESC_H
 
-#include "nodes/parsenodes.h"
+#include "nodes/execnodes.h"
 #include "nodes/plannodes.h"
 #include "tcop/dest.h"
 #include "gpmon/gpmon.h"
@@ -137,6 +137,19 @@ typedef struct SliceTable
 	uint32		ic_instance_id;
 } SliceTable;
 
+/*
+ * Holds information about a cursor's current position.
+ */
+typedef struct CursorPosInfo
+{
+	NodeTag type;
+
+	char	   *cursor_name;
+	int		 	gp_segment_id;
+	ItemPointerData	ctid;
+	Oid			table_oid;
+} CursorPosInfo;
+
 /* ----------------
  *		query dispatch information:
  *
@@ -173,7 +186,9 @@ typedef struct QueryDispatchDesc
 	 * The implementation of MPPEXEC, which runs on the QEs, installs
 	 * the slice table in the plan as required there.
 	 */
-	SliceTable  *sliceTable;
+	SliceTable *sliceTable;
+
+	List	   *cursorPositions;
 } QueryDispatchDesc;
 
 /* ----------------
@@ -238,9 +253,9 @@ extern QueryDesc *CreateQueryDesc(PlannedStmt *plannedstmt,
 
 extern QueryDesc *CreateUtilityQueryDesc(Node *utilitystmt,
 										 const char *sourceText,
-										 Snapshot snapshot,
-										 DestReceiver *dest,
-										 ParamListInfo params);
+					   Snapshot snapshot,
+					   DestReceiver *dest,
+					   ParamListInfo params);
 
 extern void FreeQueryDesc(QueryDesc *qdesc);
 

@@ -613,6 +613,8 @@ select * from vtable order by a;
 
 select decode(null, 1, 'null = 1', 'null != 1');
 
+select decode(null::integer, 1, 'null = 1', 'null != 1');
+
 select decode(1, null, '1 = null', '1 != null');
 
 select decode(null, null, 'null = null', 'null != null');

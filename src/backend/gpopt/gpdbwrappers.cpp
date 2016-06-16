@@ -2850,6 +2850,9 @@ gpdb::ICdbHashList
 }
 
 // check permissions on range table
+// GPDB_83_MERGE_FIXME: This is a no-op, because we do these permission
+// checks in the executor. I think we can remove this, but I wish someone
+// would confirm.
 void
 gpdb::CheckRTPermissions
 	(
@@ -2858,7 +2861,7 @@ gpdb::CheckRTPermissions
 {
 	GP_WRAP_START;
 	{
-		ExecCheckRTPerms(plRangeTable);	
+		//ExecCheckRTPerms(plRangeTable);	
 		return;
 	}
 	GP_WRAP_END;
@@ -2940,12 +2943,13 @@ Expr *
 gpdb::PexprEvaluate
 	(
 	Expr *pexpr,
-	Oid oidResultType
+	Oid oidResultType,
+	int32 iTypeMod
 	)
 {
 	GP_WRAP_START;
 	{
-		return evaluate_expr(pexpr, oidResultType);
+		return evaluate_expr(pexpr, oidResultType, iTypeMod);
 	}
 	GP_WRAP_END;
 	return NULL;
@@ -3065,7 +3069,13 @@ static int64 mdcache_invalidation_counter = 0;
 static int64 last_mdcache_invalidation_counter = 0;
 
 static void
-mdcache_invalidation_counter_callback(Datum arg, Oid relid)
+mdsyscache_invalidation_counter_callback(Datum arg, int cacheid,  ItemPointer tuplePtr)
+{
+	mdcache_invalidation_counter++;
+}
+
+static void
+mdrelcache_invalidation_counter_callback(Datum arg, Oid relid)
 {
 	mdcache_invalidation_counter++;
 }
@@ -3129,12 +3139,12 @@ register_mdcache_invalidation_callbacks(void)
 	for (i = 0; i < lengthof(metadata_caches); i++)
 	{
 		CacheRegisterSyscacheCallback(metadata_caches[i],
-									  &mdcache_invalidation_counter_callback,
+									  &mdsyscache_invalidation_counter_callback,
 									  (Datum) 0);
 	}
 
 	/* also register the relcache callback */
-	CacheRegisterRelcacheCallback(&mdcache_invalidation_counter_callback,
+	CacheRegisterRelcacheCallback(&mdrelcache_invalidation_counter_callback,
 								  (Datum) 0);
 }
 

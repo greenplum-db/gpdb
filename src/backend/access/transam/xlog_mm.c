@@ -571,9 +571,8 @@ emit_mmxlog_fs_record(mm_fs_obj_type type, Oid filespace,
 		}
 
 		/*
-		 * Make a non-transactional XLOG entry showing the file creation. It's
-		 * non-transactional because we should replay it whether the transaction
-		 * commits or not; if not, the file will be dropped at abort time.
+		 * Make an XLOG entry showing the file creation.  If we abort, the file
+		 * will be dropped at abort time.
 		 */
 		xlrec.objtype = type;
 		xlrec.filespace = filespace;
@@ -628,7 +627,7 @@ emit_mmxlog_fs_record(mm_fs_obj_type type, Oid filespace,
 		rdata.buffer = InvalidBuffer;
 		rdata.next = NULL;
 
-		XLogInsert(RM_MMXLOG_ID, flags | XLOG_NO_TRAN, &rdata);
+		XLogInsert(RM_MMXLOG_ID, flags, &rdata);
 		*beginLoc = XLogLastInsertBeginLoc();
 
 		return true;

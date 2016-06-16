@@ -4,7 +4,7 @@
  * Copyright (c) 2006-2010, Greenplum inc.
  * Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/backend/catalog/system_views.sql,v 1.35 2007/01/05 22:19:25 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/catalog/system_views.sql,v 1.48 2008/01/01 19:45:48 momjian Exp $
  */
 
 CREATE VIEW pg_roles AS 
@@ -152,8 +152,9 @@ CREATE VIEW pg_locks AS
     SELECT * 
     FROM pg_lock_status() AS L
     (locktype text, database oid, relation oid, page int4, tuple int2,
-     transactionid xid, classid oid, objid oid, objsubid int2,
-     transaction xid, pid int4, mode text, granted boolean, mppSessionId int4, mppIsWriter boolean, gp_segment_id int4);
+     virtualxid text, transactionid xid, classid oid, objid oid, objsubid int2,
+     virtualtransaction text, pid int4, mode text, granted boolean,
+     mppSessionId int4, mppIsWriter boolean, gp_segment_id int4);
 
 CREATE VIEW pg_cursors AS
     SELECT C.name, C.statement, C.is_holdable, C.is_binary,
@@ -214,6 +215,7 @@ CREATE VIEW pg_stat_all_tables AS
             pg_stat_get_tuples_inserted(C.oid) AS n_tup_ins, 
             pg_stat_get_tuples_updated(C.oid) AS n_tup_upd, 
             pg_stat_get_tuples_deleted(C.oid) AS n_tup_del,
+            pg_stat_get_tuples_hot_updated(C.oid) AS n_tup_hot_upd,
             pg_stat_get_live_tuples(C.oid) AS n_live_tup, 
             pg_stat_get_dead_tuples(C.oid) AS n_dead_tup,
             pg_stat_get_last_vacuum_time(C.oid) as last_vacuum,
@@ -228,11 +230,13 @@ CREATE VIEW pg_stat_all_tables AS
 
 CREATE VIEW pg_stat_sys_tables AS 
     SELECT * FROM pg_stat_all_tables 
-    WHERE schemaname IN ('pg_catalog', 'pg_toast', 'information_schema');
+    WHERE schemaname IN ('pg_catalog', 'information_schema') OR
+          schemaname ~ '^pg_toast';
 
 CREATE VIEW pg_stat_user_tables AS 
     SELECT * FROM pg_stat_all_tables 
-    WHERE schemaname NOT IN ('pg_catalog', 'pg_toast', 'information_schema');
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+          schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_statio_all_tables AS 
     SELECT 
@@ -261,11 +265,13 @@ CREATE VIEW pg_statio_all_tables AS
 
 CREATE VIEW pg_statio_sys_tables AS 
     SELECT * FROM pg_statio_all_tables 
-    WHERE schemaname IN ('pg_catalog', 'pg_toast', 'information_schema');
+    WHERE schemaname IN ('pg_catalog', 'information_schema') OR
+          schemaname ~ '^pg_toast';
 
 CREATE VIEW pg_statio_user_tables AS 
     SELECT * FROM pg_statio_all_tables 
-    WHERE schemaname NOT IN ('pg_catalog', 'pg_toast', 'information_schema');
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+          schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_stat_all_indexes AS 
     SELECT 
@@ -285,11 +291,13 @@ CREATE VIEW pg_stat_all_indexes AS
 
 CREATE VIEW pg_stat_sys_indexes AS 
     SELECT * FROM pg_stat_all_indexes 
-    WHERE schemaname IN ('pg_catalog', 'pg_toast', 'information_schema');
+    WHERE schemaname IN ('pg_catalog', 'information_schema') OR
+          schemaname ~ '^pg_toast';
 
 CREATE VIEW pg_stat_user_indexes AS 
     SELECT * FROM pg_stat_all_indexes 
-    WHERE schemaname NOT IN ('pg_catalog', 'pg_toast', 'information_schema');
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+          schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_statio_all_indexes AS 
     SELECT 
@@ -309,11 +317,13 @@ CREATE VIEW pg_statio_all_indexes AS
 
 CREATE VIEW pg_statio_sys_indexes AS 
     SELECT * FROM pg_statio_all_indexes 
-    WHERE schemaname IN ('pg_catalog', 'pg_toast', 'information_schema');
+    WHERE schemaname IN ('pg_catalog', 'information_schema') OR
+          schemaname ~ '^pg_toast';
 
 CREATE VIEW pg_statio_user_indexes AS 
     SELECT * FROM pg_statio_all_indexes 
-    WHERE schemaname NOT IN ('pg_catalog', 'pg_toast', 'information_schema');
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+          schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_statio_all_sequences AS 
     SELECT 
@@ -329,11 +339,13 @@ CREATE VIEW pg_statio_all_sequences AS
 
 CREATE VIEW pg_statio_sys_sequences AS 
     SELECT * FROM pg_statio_all_sequences 
-    WHERE schemaname IN ('pg_catalog', 'pg_toast', 'information_schema');
+    WHERE schemaname IN ('pg_catalog', 'information_schema') OR
+          schemaname ~ '^pg_toast';
 
 CREATE VIEW pg_statio_user_sequences AS 
     SELECT * FROM pg_statio_all_sequences 
-    WHERE schemaname NOT IN ('pg_catalog', 'pg_toast', 'information_schema');
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema') AND
+          schemaname !~ '^pg_toast';
 
 CREATE VIEW pg_stat_activity AS 
     SELECT 
@@ -386,7 +398,12 @@ CREATE VIEW pg_stat_database AS
             pg_stat_get_db_xact_rollback(D.oid) AS xact_rollback, 
             pg_stat_get_db_blocks_fetched(D.oid) - 
                     pg_stat_get_db_blocks_hit(D.oid) AS blks_read, 
-            pg_stat_get_db_blocks_hit(D.oid) AS blks_hit 
+            pg_stat_get_db_blocks_hit(D.oid) AS blks_hit,
+            pg_stat_get_db_tuples_returned(D.oid) AS tup_returned,
+            pg_stat_get_db_tuples_fetched(D.oid) AS tup_fetched,
+            pg_stat_get_db_tuples_inserted(D.oid) AS tup_inserted,
+            pg_stat_get_db_tuples_updated(D.oid) AS tup_updated,
+            pg_stat_get_db_tuples_deleted(D.oid) AS tup_deleted
     FROM pg_database D;
 
 CREATE VIEW pg_stat_resqueues AS
@@ -839,3 +856,75 @@ pg_resqueuecapability rc WHERE
 rq.oid=rc.resqueueid AND rc.restypid = rt.restypid
 ORDER BY rsqname, restypid
 ;
+
+CREATE VIEW pg_stat_bgwriter AS
+    SELECT
+        pg_stat_get_bgwriter_timed_checkpoints() AS checkpoints_timed,
+        pg_stat_get_bgwriter_requested_checkpoints() AS checkpoints_req,
+        pg_stat_get_bgwriter_buf_written_checkpoints() AS buffers_checkpoint,
+        pg_stat_get_bgwriter_buf_written_clean() AS buffers_clean,
+        pg_stat_get_bgwriter_maxwritten_clean() AS maxwritten_clean,
+        pg_stat_get_buf_written_backend() AS buffers_backend,
+        pg_stat_get_buf_alloc() AS buffers_alloc;
+
+-- Tsearch debug function.  Defined here because it'd be pretty unwieldy
+-- to put it into pg_proc.h
+
+CREATE FUNCTION ts_debug(IN config regconfig, IN document text,
+    OUT alias text,
+    OUT description text,
+    OUT token text,
+    OUT dictionaries regdictionary[],
+    OUT dictionary regdictionary,
+    OUT lexemes text[])
+RETURNS SETOF record AS
+$$
+SELECT 
+    tt.alias AS alias,
+    tt.description AS description,
+    parse.token AS token,
+    ARRAY ( SELECT m.mapdict::pg_catalog.regdictionary
+            FROM pg_catalog.pg_ts_config_map AS m
+            WHERE m.mapcfg = $1 AND m.maptokentype = parse.tokid
+            ORDER BY m.mapseqno )
+    AS dictionaries,
+    ( SELECT mapdict::pg_catalog.regdictionary
+      FROM pg_catalog.pg_ts_config_map AS m
+      WHERE m.mapcfg = $1 AND m.maptokentype = parse.tokid
+      ORDER BY pg_catalog.ts_lexize(mapdict, parse.token) IS NULL, m.mapseqno
+      LIMIT 1
+    ) AS dictionary,
+    ( SELECT pg_catalog.ts_lexize(mapdict, parse.token)
+      FROM pg_catalog.pg_ts_config_map AS m
+      WHERE m.mapcfg = $1 AND m.maptokentype = parse.tokid
+      ORDER BY pg_catalog.ts_lexize(mapdict, parse.token) IS NULL, m.mapseqno
+      LIMIT 1
+    ) AS lexemes
+FROM pg_catalog.ts_parse(
+        (SELECT cfgparser FROM pg_catalog.pg_ts_config WHERE oid = $1 ), $2 
+    ) AS parse,
+     pg_catalog.ts_token_type(
+        (SELECT cfgparser FROM pg_catalog.pg_ts_config WHERE oid = $1 )
+    ) AS tt
+WHERE tt.tokid = parse.tokid
+$$
+LANGUAGE SQL STRICT STABLE;
+
+COMMENT ON FUNCTION ts_debug(regconfig,text) IS
+    'debug function for text search configuration';
+
+CREATE FUNCTION ts_debug(IN document text,
+    OUT alias text,
+    OUT description text,
+    OUT token text,
+    OUT dictionaries regdictionary[],
+    OUT dictionary regdictionary,
+    OUT lexemes text[])
+RETURNS SETOF record AS
+$$
+    SELECT * FROM pg_catalog.ts_debug( pg_catalog.get_current_ts_config(), $1);
+$$
+LANGUAGE SQL STRICT STABLE;
+
+COMMENT ON FUNCTION ts_debug(text) IS
+    'debug function for current text search configuration';

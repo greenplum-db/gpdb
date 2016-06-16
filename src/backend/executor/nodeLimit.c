@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeLimit.c,v 1.29 2007/01/05 22:19:28 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeLimit.c,v 1.33 2008/01/01 19:45:49 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -57,17 +57,22 @@ ExecLimit(LimitState *node)
 		case LIMIT_INITIAL:
 
 			/*
+			 * First call for this node, so compute limit/offset. (We can't do
+			 * this any earlier, because parameters from upper nodes will not
+			 * be set during ExecInitLimit.)  This also sets position = 0 and
+			 * changes the state to LIMIT_RESCAN.
+			 */
+			recompute_limits(node);
+
+			/* FALL THRU */
+
+		case LIMIT_RESCAN:
+
+			/*
 			 * If backwards scan, just return NULL without changing state.
 			 */
 			if (!ScanDirectionIsForward(direction))
 				return NULL;
-
-			/*
-			 * First call for this scan, so compute limit/offset. (We can't do
-			 * this any earlier, because parameters from upper nodes may not
-			 * be set until now.)  This also sets position = 0.
-			 */
-			recompute_limits(node);
 
 			/*
 			 * Check for empty window; if so, treat like empty subplan.
@@ -131,7 +136,7 @@ ExecLimit(LimitState *node)
 				 * the state machine state to record having done so.
 				 */
 				if (!node->noCount &&
-					node->position >= node->offset + node->count)
+					node->position - node->offset >= node->count)
 				{
 					node->lstate = LIMIT_WINDOWEND;
 					ExecSquelchNode(outerPlan); /* CDB */
@@ -233,7 +238,7 @@ ExecLimit(LimitState *node)
 }
 
 /*
- * Evaluate the limit/offset expressions --- done at start of each scan.
+ * Evaluate the limit/offset expressions --- done at startup or rescan.
  *
  * This is also a handy place to reset the current-position state info.
  */
@@ -296,6 +301,41 @@ recompute_limits(LimitState *node)
 	/* Reset position to start-of-scan */
 	node->position = 0;
 	node->subSlot = NULL;
+
+	/* Set state-machine state */
+	node->lstate = LIMIT_RESCAN;
+
+	/*
+	 * If we have a COUNT, and our input is a Sort node, notify it that it can
+	 * use bounded sort.
+	 *
+	 * This is a bit of a kluge, but we don't have any more-abstract way of
+	 * communicating between the two nodes; and it doesn't seem worth trying
+	 * to invent one without some more examples of special communication
+	 * needs.
+	 *
+	 * Note: it is the responsibility of nodeSort.c to react properly to
+	 * changes of these parameters.  If we ever do redesign this, it'd be a
+	 * good idea to integrate this signaling with the parameter-change
+	 * mechanism.
+	 */
+	if (IsA(outerPlanState(node), SortState))
+	{
+		SortState  *sortState = (SortState *) outerPlanState(node);
+		int64		tuples_needed = node->count + node->offset;
+
+		/* negative test checks for overflow */
+		if (node->noCount || tuples_needed < 0)
+		{
+			/* make sure flag gets reset if needed upon rescan */
+			sortState->bounded = false;
+		}
+		else
+		{
+			sortState->bounded = true;
+			sortState->bound = tuples_needed;
+		}
+	}
 }
 
 /* ----------------------------------------------------------------
@@ -392,8 +432,12 @@ ExecEndLimit(LimitState *node)
 void
 ExecReScanLimit(LimitState *node, ExprContext *exprCtxt)
 {
-	/* resetting lstate will force offset/limit recalculation */
-	node->lstate = LIMIT_INITIAL;
+	/*
+	 * Recompute limit/offset in case parameters changed, and reset the state
+	 * machine.  We must do this before rescanning our child node, in case
+	 * it's a Sort that we are passing the parameters down to.
+	 */
+	recompute_limits(node);
 
 	/*
 	 * if chgParam of subnode is not null then plan will be re-scanned by

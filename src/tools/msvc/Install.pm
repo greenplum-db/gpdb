@@ -93,10 +93,17 @@ sub Install
     );
     GenerateConversionScript($target);
     GenerateTimezoneFiles($target,$conf);
+    GenerateTsearchFiles($target);
+    CopySetOfFiles('Stopword files', 
+				   [ glob ("src\\backend\\snowball\\stopwords\\*.stop") ], 
+				   $target . '/share/tsearch_data/');
+    CopySetOfFiles('Dictionaries sample files', 
+				   [ glob ("src\\backend\\tsearch\\*_sample.*" ) ], 
+				   $target . '/share/tsearch_data/');
     CopyContribFiles($config,$target);
     CopyIncludeFiles($target);
 
-    GenerateNLSFiles($target,$config->{nls},$majorver) if ($config->{nls});
+    GenerateNLSFiles($target,$config->{nls}) if ($config->{nls});
 
     print "Installation complete.\n";
 }
@@ -182,8 +189,8 @@ sub CopySolutionOutput
             # Static lib, such as libpgport, only used internally during build, don't install
             next;
         }
-        lcopy("$conf\\$pf\\$pf.$ext","$target\\$dir\\$pf.$ext") || carp "Could not copy $conf\\$pf\\$pf.$ext to $target\\$dir\\$pf.$ext\n";
-        lcopy("$conf\\$pf\\$pf.pdb","$target\\symbols\\$pf.pdb") || carp "Could not copy $pf.pdb\n";
+        lcopy("$conf\\$pf\\$pf.$ext","$target\\$dir\\$pf.$ext") || croak "Could not copy $pf.$ext\n";
+        lcopy("$conf\\$pf\\$pf.pdb","$target\\symbols\\$pf.pdb") || croak "Could not copy $pf.pdb\n";
         print ".";
     }
     print "\n";
@@ -311,7 +318,21 @@ sub CopyContribFiles
             foreach my $f (split /\s+/,$flist)
             {
                 lcopy('contrib/' . $d . '/' . $f,$target . '/share/contrib/' . basename($f))
-                  || carp("Could not copy file $f in contrib $d");
+                  || croak("Could not copy file $f in contrib $d");
+                print '.';
+            }
+        }
+
+        $flist = '';
+        if ($mf =~ /^DATA_TSEARCH\s*=\s*(.*)$/m) {$flist .= $1}
+        if ($flist ne '')
+        {
+            $flist = ParseAndCleanRule($flist, $mf);
+
+            foreach my $f (split /\s+/,$flist)
+            {
+                lcopy('contrib/' . $d . '/' . $f,$target . '/share/tsearch_data/' . basename($f))
+                  || croak("Could not copy file $f in contrib $d");
                 print '.';
             }
         }
@@ -329,7 +350,7 @@ sub CopyContribFiles
             foreach my $f (split /\s+/,$flist)
             {
                 lcopy('contrib/' . $d . '/' . $f, $target . '/doc/contrib/' . $f)
-                  || carp("Could not copy file $f in contrib $d");
+                  || croak("Could not copy file $f in contrib $d");
                 print '.';
             }
         }
@@ -373,7 +394,7 @@ sub CopyIncludeFiles
         'src/include/', 'postgres_ext.h', 'pg_config.h', 'pg_config_os.h', 'pg_config_manual.h'
     );
     lcopy('src/include/libpq/libpq-fs.h', $target . '/include/libpq/')
-      || carp 'Could not copy libpq-fs.h';
+      || croak 'Could not copy libpq-fs.h';
 
     CopyFiles('Libpq headers',
 	      $target . '/include/', 'src/interfaces/libpq/',
@@ -389,8 +410,8 @@ sub CopyIncludeFiles
         $target . '/include/internal/',
         'src/include/', 'c.h', 'port.h', 'postgres_fe.h'
     );
-	lcopy('src/include/libpq/pqcomm.h', $target . '/include/internal/libpq/')
-      || carp 'Could not copy pqcomm.h';
+    lcopy('src/include/libpq/pqcomm.h', $target . '/include/internal/libpq/')
+      || croak 'Could not copy pqcomm.h';
 
     CopyFiles(
         'Server headers',
@@ -403,15 +424,16 @@ sub CopyIncludeFiles
     my $D;
     opendir($D, 'src/include') || croak "Could not opendir on src/include!\n";
 
-    while (my $d = readdir($D))
+	# some xcopy progs don't like mixed slash style paths
+	(my $ctarget = $target) =~ s!/!\\!g;
+	while (my $d = readdir($D))
     {
         next if ($d =~ /^\./);
         next if ($d eq 'CVS');
-        next unless (-d 'src/include/' . $d);
+        next unless (-d "src/include/$d");
 
-        EnsureDirectories($target . '/include/server', $d);
-        system(
-            "xcopy /s /i /q /r /y src\\include\\$d\\*.h \"$target\\include\\server\\$d\\\"")
+        EnsureDirectories("$target/include/server/$d");
+        system(qq{xcopy /s /i /q /r /y src\\include\\$d\\*.h "$ctarget\\include\\server\\$d\\"})
           && croak("Failed to copy include directory $d\n");
     }
     closedir($D);
@@ -444,17 +466,18 @@ sub GenerateNLSFiles
     print "Installing NLS files...";
     EnsureDirectories($target, "share/locale");
 	my @flist;
-	File::Find::find({wanted => 
-						  sub { /^nls\.mk\z/s && 
-									!                                                                       push(@flist, $File::Find::name); 	
-							} 
+	File::Find::find({wanted =>
+						  sub { /^nls\.mk\z/s &&
+									!push(@flist, $File::Find::name);
+							}
 				  }, "src");
     foreach (@flist)
     {
-        my $prgm = DetermineCatalogName($_);
         s/nls.mk/po/;
         my $dir = $_;
         next unless ($dir =~ /([^\/]+)\/po$/);
+        my $prgm = $1;
+        $prgm = 'postgres' if ($prgm eq 'backend');
         foreach (glob("$dir/*.po"))
         {
             my $lang;

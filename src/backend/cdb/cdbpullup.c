@@ -98,7 +98,7 @@ cdbpullup_colIdx(struct Plan   *plan,
             Assert(subtle);
 
             /* Look for matching expr in the given plan's targetlist. */
-            tle = tlist_member_ignoring_RelabelType(subtle->expr, plan->targetlist);
+            tle = tlist_member_ignore_relabel((Node *) subtle->expr, plan->targetlist);
         }
 
         /* Quit if the plan's projection doesn't include this column. */
@@ -399,7 +399,7 @@ cdbpullup_findPathKeyExprInTargetList(PathKey *item, List *targetlist)
 			{
 				TargetEntry *tle;
 
-				tle = tlist_member_ignoring_RelabelType(key, targetlist);
+				tle = tlist_member_ignore_relabel((Node *) key, targetlist);
 				if (tle)
 					return key;
 			}
@@ -494,17 +494,17 @@ cdbpullup_isExprCoveredByTargetlist(Expr *expr, List *targetlist)
     {
         foreach(cell, (List *)expr)
         {
-            Expr   *item = (Expr *)lfirst(cell);
+            Node	   *item = (Node *) lfirst(cell);
 
             /* The whole expr or all of its Vars must be in targetlist. */
-            if (!tlist_member_ignoring_RelabelType(item, targetlist) &&
-                cdbpullup_missingVarWalker((Node *)item, targetlist))
+            if (!tlist_member_ignore_relabel(item, targetlist) &&
+                cdbpullup_missingVarWalker(item, targetlist))
                 return false;
         }
     }
 
     /* The whole expr or all of its Vars must be in targetlist. */
-    else if (!tlist_member_ignoring_RelabelType(expr, targetlist) &&
+    else if (!tlist_member_ignore_relabel((Node *) expr, targetlist) &&
              cdbpullup_missingVarWalker((Node *)expr, targetlist))
         return false;
 
@@ -599,7 +599,7 @@ cdbpullup_missingVarWalker(Node *node, void *targetlist)
         /* is targetlist a List of TargetEntry? */
         if (IsA(linitial(targetlist), TargetEntry))
         {
-            if (tlist_member_ignoring_RelabelType((Expr *)node, (List *)targetlist))
+            if (tlist_member_ignore_relabel(node, (List *) targetlist))
                 return false;   /* this Var ok - go on to check rest of expr */
         }
 

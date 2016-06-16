@@ -4,7 +4,7 @@
  *
  * Tatsuo Ishii
  *
- * $PostgreSQL: pgsql/src/backend/utils/mb/mbutils.c,v 1.61 2006/12/24 00:57:48 tgl Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/mb/mbutils.c,v 1.69.2.1 2008/05/27 12:24:46 mha Exp $
  */
 #include "postgres.h"
 
@@ -837,6 +837,28 @@ pg_encoding_mb2wchar_with_len(int encoding,
 	return (*pg_wchar_table[encoding].mb2wchar_with_len) ((const unsigned char *) from, to, len);
 }
 
+/* convert a wchar string to a multibyte */
+int
+pg_wchar2mb(const pg_wchar *from, char *to)
+{
+	return (*pg_wchar_table[DatabaseEncoding->encoding].wchar2mb_with_len) (from, (unsigned char *)to, pg_wchar_strlen(from));
+}
+
+/* convert a wchar string to a multibyte with a limited length */
+int
+pg_wchar2mb_with_len(const pg_wchar *from, char *to, int len)
+{
+	return (*pg_wchar_table[DatabaseEncoding->encoding].wchar2mb_with_len) (from, (unsigned char *)to, len);
+}
+
+/* same, with any encoding */
+int
+pg_encoding_wchar2mb_with_len(int encoding,
+							  const pg_wchar *from, char *to, int len)
+{
+	return (*pg_wchar_table[encoding].wchar2mb_with_len) (from, (unsigned char *)to, len);
+}
+
 /* returns the byte length of a multibyte word */
 int
 pg_mblen(const char *mbstr)
@@ -1024,6 +1046,25 @@ SetDatabaseEncoding(int encoding)
 
 	DatabaseEncoding = &pg_enc2name_tbl[encoding];
 	Assert(DatabaseEncoding->encoding == encoding);
+
+	/*
+	 * On Windows, we allow UTF-8 database encoding to be used with any
+	 * locale setting, because UTF-8 requires special handling anyway.
+	 * But this means that gettext() might be misled about what output
+	 * encoding it should use, so we have to tell it explicitly.
+	 *
+	 * In future we might want to call bind_textdomain_codeset
+	 * unconditionally, but that requires knowing how to spell the codeset
+	 * name properly for all encodings on all platforms, which might be
+	 * problematic.
+	 *
+	 * This is presently unnecessary, but harmless, on non-Windows platforms.
+	 */
+#ifdef ENABLE_NLS
+	if (encoding == PG_UTF8)
+		if (bind_textdomain_codeset("postgres", "UTF-8") == NULL)
+			elog(LOG, "bind_textdomain_codeset failed");
+#endif
 }
 
 /*

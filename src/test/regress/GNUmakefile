@@ -3,10 +3,10 @@
 # GNUmakefile--
 #    Makefile for src/test/regress (the regression tests)
 #
-# Portions Copyright (c) 1996-2007, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/test/regress/GNUmakefile,v 1.68 2007/06/12 11:07:32 mha Exp $
+# $PostgreSQL: pgsql/src/test/regress/GNUmakefile,v 1.71 2008/01/01 19:46:00 momjian Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -19,9 +19,14 @@ contribdir = $(top_builddir)/contrib
 # port number for temp-installation test postmaster
 TEMP_PORT = 5$(DEF_PGPORT)
 
+# file with extra config for temp build
+TEMP_CONF =
+ifdef TEMP_CONFIG
+TEMP_CONF += --temp-config=$(TEMP_CONFIG)
+endif
+
 # Greenplum regression tests use $PGPORT
 PGPORT?=15432
-
 
 # where to find psql for testing an existing installation
 PSQLDIR = $(bindir)
@@ -112,7 +117,7 @@ bb_output_files := $(foreach file, $(bb_ofile_list), bugbuster/expected/$(file).
 
 
 ifneq ($(PORTNAME),win32)
-abs_srcdir := $(shell cd $(srcdir) && pwd)
+abs_srcdir := $(shell cd "$(srcdir)" && pwd)
 abs_builddir := $(shell pwd)
 else
 abs_srcdir := $(shell cd $(srcdir) && pwd -W)
@@ -158,8 +163,6 @@ includecheck:
 ## Run tests
 ##
 
-## To load a procedural language use "--load-language=..."
-
 pg_regress_call = ./pg_regress --inputdir=$(srcdir) --multibyte=$(MULTIBYTE) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/init_file
 pg_regress_call_bb = ./pg_regress --inputdir=$(srcdir)/bugbuster --outputdir=$(srcdir)/bugbuster --multibyte=$(MULTIBYTE) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/init_file
 pg_regress_call_opt = ./pg_regress --inputdir=$(srcdir)/optfunctional --outputdir=$(srcdir)/optfunctional --multibyte=$(MULTIBYTE) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/optfunctional/init_file
@@ -182,6 +185,7 @@ installcheck-optfunctional: all
 	@echo "================================"
 	@echo "Installcheck-optfunctional starting ... "
 	@echo "================================"
+	export PGOPTIONS='-c optimizer=on' && \
 	$(pg_regress_call_opt) --psqldir=$(PSQLDIR) --schedule=$(srcdir)/optfunctional/optfunctional_schedule --srcdir=$(abs_srcdir)/optfunctional
 
 testbouncer: all

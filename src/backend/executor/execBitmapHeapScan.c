@@ -40,20 +40,12 @@ BitmapHeapScanBegin(ScanState *scanState)
 
 	/*
 	 * Even though we aren't going to do a conventional seqscan, it is useful
-	 * to create a HeapScanDesc --- this checks the relation size and sets up
-	 * statistical infrastructure for us.
+	 * to create a HeapScanDesc --- most of the fields in it are usable.
 	 */
-	node->scanDesc = heap_beginscan(currentRelation,
-												   estate->es_snapshot,
-												   0,
-												   NULL);
-
-	/*
-	 * One problem is that heap_beginscan counts a "sequential scan" start,
-	 * when we actually aren't doing any such thing.  Reverse out the added
-	 * scan count.	(Eventually we may want to count bitmap scans separately.)
-	 */
-	pgstat_discount_heap_scan(currentRelation);
+	node->scanDesc = heap_beginscan_bm(currentRelation,
+									   estate->es_snapshot,
+									   0,
+									   NULL);
 
 	/*
 	 * Heap always needs rechecking each tuple because of potential
@@ -209,6 +201,4 @@ BitmapHeapScanReScan(ScanState *scanState)
 
 	/* rescan to release any page pin */
 	heap_rescan(node->scanDesc, NULL);
-	/* undo bogus "seq scan" count (see notes in ExecInitBitmapHeapScan) */
-	pgstat_discount_heap_scan(node->ss.ss_currentRelation);
 }

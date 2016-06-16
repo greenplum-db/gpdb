@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/port/win32/socket.c,v 1.17 2007/01/26 20:06:52 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/port/win32/socket.c,v 1.20 2008/01/01 19:45:51 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -105,13 +105,13 @@ pgwin32_poll_signals(void)
 static int
 isDataGram(SOCKET s)
 {
-	int type;
-	int typelen = sizeof(type);
+	int			type;
+	int			typelen = sizeof(type);
 
-	if ( getsockopt(s, SOL_SOCKET, SO_TYPE, (char*)&type, &typelen) )
+	if (getsockopt(s, SOL_SOCKET, SO_TYPE, (char *) &type, &typelen))
 		return 1;
 
-	return ( type == SOCK_DGRAM ) ? 1 : 0;
+	return (type == SOCK_DGRAM) ? 1 : 0;
 }
 
 int
@@ -119,7 +119,7 @@ pgwin32_waitforsinglesocket(SOCKET s, int what, int timeout)
 {
 	static HANDLE waitevent = INVALID_HANDLE_VALUE;
 	static SOCKET current_socket = -1;
-	static int    isUDP = 0;
+	static int	isUDP = 0;
 	HANDLE		events[2];
 	int			r;
 
@@ -140,9 +140,9 @@ pgwin32_waitforsinglesocket(SOCKET s, int what, int timeout)
 	 * socket from a previous call
 	 */
 
-	if (current_socket != s) 
+	if (current_socket != s)
 	{
-		if ( current_socket != -1 )
+		if (current_socket != -1)
 			WSAEventSelect(current_socket, waitevent, 0);
 		isUDP = isDataGram(s);
 	}
@@ -158,7 +158,7 @@ pgwin32_waitforsinglesocket(SOCKET s, int what, int timeout)
 	events[0] = pgwin32_signal_event;
 	events[1] = waitevent;
 
-	/* 
+	/*
 	 * Just a workaround of unknown locking problem with writing in UDP socket
 	 * under high load: Client's pgsql backend sleeps infinitely in
 	 * WaitForMultipleObjectsEx, pgstat process sleeps in pgwin32_select().
@@ -167,23 +167,23 @@ pgwin32_waitforsinglesocket(SOCKET s, int what, int timeout)
 	 */
 	if ((what & FD_WRITE) && isUDP)
 	{
-		for(;;)
+		for (;;)
 		{
 			r = WaitForMultipleObjectsEx(2, events, FALSE, 100, TRUE);
 
-			if ( r == WAIT_TIMEOUT )
+			if (r == WAIT_TIMEOUT)
 			{
-				char        c;
-				WSABUF      buf;
-				DWORD       sent;
+				char		c;
+				WSABUF		buf;
+				DWORD		sent;
 
 				buf.buf = &c;
 				buf.len = 0;
 
 				r = WSASend(s, &buf, 1, &sent, 0, NULL, NULL);
-				if (r == 0)         /* Completed - means things are fine! */
+				if (r == 0)		/* Completed - means things are fine! */
 					return 1;
-				else if ( WSAGetLastError() != WSAEWOULDBLOCK )
+				else if (WSAGetLastError() != WSAEWOULDBLOCK)
 				{
 					TranslateSocketError();
 					return 0;
@@ -290,7 +290,7 @@ pgwin32_recv(SOCKET s, char *buf, int len, int f)
 	int			r;
 	DWORD		b;
 	DWORD		flags = f;
-	int		n;
+	int			n;
 
 	if (pgwin32_poll_signals())
 		return -1;
@@ -316,8 +316,8 @@ pgwin32_recv(SOCKET s, char *buf, int len, int f)
 	{
 		if (pgwin32_waitforsinglesocket(s, FD_READ | FD_CLOSE | FD_ACCEPT,
 										INFINITE) == 0)
-			return -1; /* errno already set */
-	
+			return -1;			/* errno already set */
+
 		r = WSARecv(s, &wbuf, 1, &b, &flags, NULL, NULL);
 		if (r == SOCKET_ERROR)
 		{
@@ -340,7 +340,7 @@ pgwin32_recv(SOCKET s, char *buf, int len, int f)
 		return b;
 	}
 	ereport(NOTICE,
-		(errmsg_internal("Failed to read from ready socket (after retries)")));
+	  (errmsg_internal("Failed to read from ready socket (after retries)")));
 	errno = EWOULDBLOCK;
 	return -1;
 }

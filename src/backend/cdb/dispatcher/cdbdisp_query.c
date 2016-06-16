@@ -245,8 +245,8 @@ cdbdisp_dispatchPlan(struct QueryDesc *queryDesc,
 		queryDesc->operation == CMD_UPDATE ||
 		queryDesc->operation == CMD_DELETE)
 	{
-
 		MemoryContext oldContext;
+		List	   *cursors;
 
 		oldContext = CurrentMemoryContext;
 		if (stmt->qdContext)
@@ -263,9 +263,10 @@ cdbdisp_dispatchPlan(struct QueryDesc *queryDesc,
 			oldContext = MemoryContextSwitchTo(mc);
 		}
 
-		stmt->planTree = (Plan *) exec_make_plan_constant(stmt, is_SRI);
+		stmt->planTree = (Plan *) exec_make_plan_constant(stmt, is_SRI, &cursors);
 
 		MemoryContextSwitchTo(oldContext);
+		queryDesc->ddesc->cursorPositions = (List *) copyObject(cursors);
 	}
 
 	/*

@@ -772,17 +772,6 @@ CreateQueue(CreateQueueStmt *stmt)
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("must be superuser to create resource queues")));
 
-	/*
-	 * MPP-7960: We cannot run CREATE RESOURCE QUEUE inside a user
-	 * transaction block because the shared memory structures are not
-	 * cleaned up on abort, resulting in "leaked", unreachable queues.
-	 */
-
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		PreventTransactionChain((void *) stmt, "CREATE RESOURCE QUEUE");
-	}
-
 	/* Extract options from the statement node tree */
 	foreach(option, stmt->options)
 	{
@@ -1093,17 +1082,6 @@ AlterQueue(AlterQueueStmt *stmt)
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("must be superuser to alter resource queues")));
-
-	/*
-	 * MPP-7960: We cannot run ALTER RESOURCE QUEUE inside a user
-	 * transaction block because the shared memory structures are not
-	 * cleaned up on abort, resulting in "leaked", unreachable queues.
-	 */
-
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		PreventTransactionChain((void *) stmt, "ALTER RESOURCE QUEUE");
-	}
 
 	/* Extract options from the statement node tree */
 	foreach(option, stmt->options)

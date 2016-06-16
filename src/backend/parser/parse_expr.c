@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_expr.c,v 1.211 2007/02/11 22:18:15 petere Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_expr.c,v 1.226.2.5 2010/07/30 17:57:07 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -66,10 +66,10 @@ static Node *transformMinMaxExpr(ParseState *pstate, MinMaxExpr *m);
 static Node *transformXmlExpr(ParseState *pstate, XmlExpr *x);
 static Node *transformXmlSerialize(ParseState *pstate, XmlSerialize *xs);
 static Node *transformBooleanTest(ParseState *pstate, BooleanTest *b);
+static Node *transformCurrentOfExpr(ParseState *pstate, CurrentOfExpr *cexpr);
 static Node *transformColumnRef(ParseState *pstate, ColumnRef *cref);
 static Node *transformWholeRowRef(ParseState *pstate, char *schemaname,
 					 char *relname, int location);
-static Node *transformBooleanTest(ParseState *pstate, BooleanTest *b);
 static Node *transformIndirection(ParseState *pstate, Node *basenode,
 					 List *indirection);
 static Node *transformGroupingFunc(ParseState *pstate, GroupingFunc *gf);
@@ -103,6 +103,8 @@ static char *percentileFuncString(PercentileExpr *p, Oid *argtypes, int arglen,
  *	function argument to the required type (via coerce_type())
  *	can apply transformExpr to an already-transformed subexpression.
  *	An example here is "SELECT count(*) + 1.0 FROM table".
+ *	3. CREATE TABLE t1 (LIKE t2 INCLUDING INDEXES) can pass in
+ *	already-transformed index expressions.
  * While it might be possible to eliminate these cases, the path of
  * least resistance so far has been to ensure that transformExpr() does
  * no damage if applied to an already-transformed tree.  This is pretty
@@ -184,8 +186,7 @@ transformExpr(ParseState *pstate, Node *expr)
 					Oid	elementType;
 					int32	targetTypmod;
 
-					targetType = typenameTypeId(pstate, tc->typname);
-					targetTypmod = typenameTypeMod(pstate, tc->typname, targetType);
+					targetType = typenameTypeId(pstate, tc->typname, &targetTypmod);
 
 					elementType = get_element_type(targetType);
 					if (OidIsValid(elementType))
@@ -307,29 +308,8 @@ transformExpr(ParseState *pstate, Node *expr)
 			break;
 
 		case T_CurrentOfExpr:
-			{
-				/*
-				 * The target RTE must be simply updatable. If not, we error out
-				 * early here to avoid having to deal with error cases later:
-				 * rewriting/planning against views, for example.
-				 */
-				Assert(pstate->p_target_rangetblentry != NULL);
-				if (!isSimplyUpdatableRelation(pstate->p_target_rangetblentry->relid))
-					ereport(ERROR,
-							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("\"%s\" is not simply updatable",
-									pstate->p_target_relation->rd_rel->relname.data)));
-
-				CurrentOfExpr *c = (CurrentOfExpr *) expr;
-				int sublevels_up;
-				c->cvarno = RTERangeTablePosn(pstate,
-											  pstate->p_target_rangetblentry,
-											  &sublevels_up);
-				c->target_relid = pstate->p_target_rangetblentry->relid;
-				Assert(sublevels_up == 0);
-				result = expr;
-				break;
-			}
+			result = transformCurrentOfExpr(pstate, (CurrentOfExpr *) expr);
+			break;
 
 		case T_GroupingFunc:
 			{
@@ -426,8 +406,8 @@ transformExpr(ParseState *pstate, Node *expr)
 		case T_FieldSelect:
 		case T_FieldStore:
 		case T_RelabelType:
-		case T_ArrayCoerceExpr:
 		case T_CoerceViaIO:
+		case T_ArrayCoerceExpr:
 		case T_ConvertRowtypeExpr:
 		case T_CaseTestExpr:
 		case T_ArrayExpr:
@@ -656,7 +636,7 @@ transformIndirection(ParseState *pstate, Node *basenode, List *indirection)
 														   result,
 														   exprType(result),
 														   InvalidOid,
-														   -1,
+														   exprTypmod(result),
 														   subscripts,
 														   NULL);
 			subscripts = NIL;
@@ -674,7 +654,7 @@ transformIndirection(ParseState *pstate, Node *basenode, List *indirection)
 												   result,
 												   exprType(result),
 												   InvalidOid,
-												   -1,
+												   exprTypmod(result),
 												   subscripts,
 												   NULL);
 
@@ -876,20 +856,20 @@ transformColumnRef(ParseState *pstate, ColumnRef *cref)
 	return node;
 }
 
-static Node *
-transformParamRef(ParseState *pstate, ParamRef *pref)
+/*
+ * Locate the parameter type info for the given parameter number, and
+ * return a pointer to it.
+ */
+static Oid *
+find_param_type(ParseState *pstate, int paramno, int location)
 {
-	int			paramno = pref->number;
-	ParseState *toppstate;
-	Param	   *param;
-	int			location = pref->location;
+	Oid		   *result;
 
 	/*
 	 * Find topmost ParseState, which is where paramtype info lives.
 	 */
-	toppstate = pstate;
-	while (toppstate->parentParseState != NULL)
-		toppstate = toppstate->parentParseState;
+	while (pstate->parentParseState != NULL)
+		pstate = pstate->parentParseState;
 
 	/* Check parameter number is in range */
 	if (paramno <= 0)			/* probably can't happen? */
@@ -897,42 +877,68 @@ transformParamRef(ParseState *pstate, ParamRef *pref)
 				(errcode(ERRCODE_UNDEFINED_PARAMETER),
 				 errmsg("there is no parameter $%d", paramno),
 				 parser_errposition(pstate, location)));
-	if (paramno > toppstate->p_numparams)
+	if (paramno > pstate->p_numparams)
 	{
-		if (!toppstate->p_variableparams)
+		if (!pstate->p_variableparams)
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_PARAMETER),
 					 errmsg("there is no parameter $%d", paramno),
 					 parser_errposition(pstate, location)));
 		/* Okay to enlarge param array */
-		if (toppstate->p_paramtypes)
-			toppstate->p_paramtypes =
-				(Oid *) repalloc(toppstate->p_paramtypes,
-								 paramno * sizeof(Oid));
+		if (pstate->p_paramtypes)
+			pstate->p_paramtypes = (Oid *) repalloc(pstate->p_paramtypes,
+													paramno * sizeof(Oid));
 		else
-			toppstate->p_paramtypes =
-				(Oid *) palloc(paramno * sizeof(Oid));
+			pstate->p_paramtypes = (Oid *) palloc(paramno * sizeof(Oid));
 		/* Zero out the previously-unreferenced slots */
-		MemSet(toppstate->p_paramtypes + toppstate->p_numparams,
+		MemSet(pstate->p_paramtypes + pstate->p_numparams,
 			   0,
-			   (paramno - toppstate->p_numparams) * sizeof(Oid));
-		toppstate->p_numparams = paramno;
+			   (paramno - pstate->p_numparams) * sizeof(Oid));
+		pstate->p_numparams = paramno;
 	}
-	if (toppstate->p_variableparams)
+
+	result = &pstate->p_paramtypes[paramno - 1];
+
+	if (pstate->p_variableparams)
 	{
 		/* If not seen before, initialize to UNKNOWN type */
-		if (toppstate->p_paramtypes[paramno - 1] == InvalidOid)
-			toppstate->p_paramtypes[paramno - 1] = UNKNOWNOID;
+		if (*result == InvalidOid)
+			*result = UNKNOWNOID;
 	}
+
+	return result;
+}
+
+static Node *
+transformParamRef(ParseState *pstate, ParamRef *pref)
+{
+	int			paramno = pref->number;
+	Oid		   *pptype = find_param_type(pstate, paramno, pref->location);
+	Param	   *param;
 
 	param = makeNode(Param);
 	param->paramkind = PARAM_EXTERN;
 	param->paramid = paramno;
-	param->paramtype = toppstate->p_paramtypes[paramno - 1];
+	param->paramtype = *pptype;
 	param->paramtypmod = -1;
 	param->location = pref->location;
 
 	return (Node *) param;
+}
+
+/* Test whether an a_expr is a plain NULL constant or not */
+static bool
+exprIsNullConstant(Node *arg)
+{
+	if (arg && IsA(arg, A_Const))
+	{
+		A_Const    *con = (A_Const *) arg;
+
+		if (con->val.type == T_Null &&
+			con->typname == NULL)
+			return true;
+	}
+	return false;
 }
 
 static Node *
@@ -945,12 +951,15 @@ transformAExprOp(ParseState *pstate, A_Expr *a)
 	/*
 	 * Special-case "foo = NULL" and "NULL = foo" for compatibility with
 	 * standards-broken products (like Microsoft's).  Turn these into IS NULL
-	 * exprs.
+	 * exprs. (If either side is a CaseTestExpr, then the expression was
+	 * generated internally from a CASE-WHEN expression, and
+	 * transform_null_equals does not apply.)
 	 */
 	if (Transform_null_equals &&
 		list_length(a->name) == 1 &&
 		strcmp(strVal(linitial(a->name)), "=") == 0 &&
-		(exprIsNullConstant(lexpr) || exprIsNullConstant(rexpr)))
+		(exprIsNullConstant(lexpr) || exprIsNullConstant(rexpr)) &&
+		(!IsA(lexpr, CaseTestExpr) && !IsA(rexpr, CaseTestExpr)))
 	{
 		NullTest   *n = makeNode(NullTest);
 
@@ -1143,7 +1152,7 @@ transformAExprOf(ParseState *pstate, A_Expr *a)
 	ltype = exprType(lexpr);
 	foreach(telem, (List *) a->rexpr)
 	{
-		rtype = typenameTypeId(pstate, lfirst(telem));
+		rtype = typenameTypeId(pstate, lfirst(telem), NULL);
 		matched = (rtype == ltype);
 		if (matched)
 			break;
@@ -1165,6 +1174,8 @@ transformAExprIn(ParseState *pstate, A_Expr *a)
 	Node	   *result = NULL;
 	Node	   *lexpr;
 	List	   *rexprs;
+	List	   *rvars;
+	List	   *rnonvars;
 	List	   *typeids;
 	bool		useOr;
 	bool		haveRowExpr;
@@ -1183,54 +1194,64 @@ transformAExprIn(ParseState *pstate, A_Expr *a)
 	 * possible if the inputs are all scalars (no RowExprs) and there is a
 	 * suitable array type available.  If not, we fall back to a boolean
 	 * condition tree with multiple copies of the lefthand expression.
+	 * Also, any IN-list items that contain Vars are handled as separate
+	 * boolean conditions, because that gives the planner more scope for
+	 * optimization on such clauses.
 	 *
 	 * First step: transform all the inputs, and detect whether any are
-	 * RowExprs.
+	 * RowExprs or contain Vars.
 	 */
 	lexpr = transformExpr(pstate, a->lexpr);
 	haveRowExpr = (lexpr && IsA(lexpr, RowExpr));
 	typeids = list_make1_oid(exprType(lexpr));
-	rexprs = NIL;
+	rexprs = rvars = rnonvars = NIL;
 	foreach(l, (List *) a->rexpr)
 	{
 		Node	   *rexpr = transformExpr(pstate, lfirst(l));
 
 		haveRowExpr |= (rexpr && IsA(rexpr, RowExpr));
 		rexprs = lappend(rexprs, rexpr);
-		typeids = lappend_oid(typeids, exprType(rexpr));
+		if (contain_vars_of_level(rexpr, 0))
+			rvars = lappend(rvars, rexpr);
+		else
+		{
+			rnonvars = lappend(rnonvars, rexpr);
+			typeids = lappend_oid(typeids, exprType(rexpr));
+		}
 	}
 
 	/*
-	 * If not forced by presence of RowExpr, try to resolve a common scalar
-	 * type for all the expressions, and see if it has an array type. (But if
-	 * there's only one righthand expression, we may as well just fall through
-	 * and generate a simple = comparison.)
+	 * ScalarArrayOpExpr is only going to be useful if there's more than
+	 * one non-Var righthand item.  Also, it won't work for RowExprs.
 	 */
-	if (!haveRowExpr && list_length(rexprs) != 1)
+	if (!haveRowExpr && list_length(rnonvars) > 1)
 	{
 		Oid			scalar_type;
 		Oid			array_type;
 
 		/*
-		 * Select a common type for the array elements.  Note that since the
-		 * LHS' type is first in the list, it will be preferred when there is
-		 * doubt (eg, when all the RHS items are unknown literals).
+		 * Try to select a common type for the array elements.  Note that
+		 * since the LHS' type is first in the list, it will be preferred when
+		 * there is doubt (eg, when all the RHS items are unknown literals).
 		 */
-		scalar_type = select_common_type(typeids, "IN");
+		scalar_type = select_common_type(typeids, NULL);
 
 		/* Do we have an array type to use? */
-		array_type = get_array_type(scalar_type);
+		if (OidIsValid(scalar_type))
+			array_type = get_array_type(scalar_type);
+		else
+			array_type = InvalidOid;
 		if (array_type != InvalidOid)
 		{
 			/*
-			 * OK: coerce all the right-hand inputs to the common type and
-			 * build an ArrayExpr for them.
+			 * OK: coerce all the right-hand non-Var inputs to the common type
+			 * and build an ArrayExpr for them.
 			 */
 			List	   *aexprs;
 			ArrayExpr  *newa;
 
 			aexprs = NIL;
-			foreach(l, rexprs)
+			foreach(l, rnonvars)
 			{
 				Node	   *rexpr = (Node *) lfirst(l);
 
@@ -1246,12 +1267,15 @@ transformAExprIn(ParseState *pstate, A_Expr *a)
 			newa->multidims = false;
 			newa->location = -1;
 
-			return (Node *) make_scalar_array_op(pstate,
-												 a->name,
-												 useOr,
-												 lexpr,
-												 (Node *) newa,
-												 a->location);
+			result = (Node *) make_scalar_array_op(pstate,
+												   a->name,
+												   useOr,
+												   lexpr,
+												   (Node *) newa,
+												   a->location);
+
+			/* Consider only the Vars (if any) in the loop below */
+			rexprs = rvars;
 		}
 	}
 
@@ -1495,23 +1519,21 @@ transformCaseExpr(ParseState *pstate, CaseExpr *c)
 static Node *
 transformSubLink(ParseState *pstate, SubLink *sublink)
 {
-	List	   *qtrees;
-	Query	   *qtree;
 	Node	   *result = (Node *) sublink;
+	Query	   *qtree;
 
 	/* If we already transformed this node, do nothing */
 	if (IsA(sublink->subselect, Query))
 		return result;
 
 	pstate->p_hasSubLinks = true;
-	qtrees = parse_sub_analyze(sublink->subselect, pstate);
+
+	qtree = parse_sub_analyze(sublink->subselect, pstate);
 
 	/*
 	 * Check that we got something reasonable.	Many of these conditions are
 	 * impossible given restrictions of the grammar, but check 'em anyway.
 	 */
-	Insist(list_length(qtrees) == 1);
-	qtree = (Query *) linitial(qtrees);
 	if (!IsA(qtree, Query) ||
 		qtree->commandType != CMD_SELECT ||
 		qtree->utilityStmt != NULL)
@@ -1678,7 +1700,7 @@ transformArrayExpr(ParseState *pstate, A_ArrayExpr *a,
 			 * Check for sub-array expressions, if we haven't already
 			 * found one.
 			 */
-			if (!newa->multidims && is_array_type(newe_type))
+			if (!newa->multidims && type_is_array(newe_type))
 				newa->multidims = true;
 		}
 
@@ -1787,7 +1809,13 @@ transformArrayExpr(ParseState *pstate, A_ArrayExpr *a,
 static Node *
 transformRowExpr(ParseState *pstate, RowExpr *r)
 {
-	RowExpr    *newr = makeNode(RowExpr);
+	RowExpr    *newr;
+
+	/* If we already transformed this node, do nothing */
+	if (OidIsValid(r->row_typeid))
+		return (Node *) r;
+
+	newr = makeNode(RowExpr);
 
 	/* Transform the field expressions */
 	newr->args = transformExpressionList(pstate, r->args);
@@ -1803,7 +1831,6 @@ transformRowExpr(ParseState *pstate, RowExpr *r)
 static Node *
 transformTableValueExpr(ParseState *pstate, TableValueExpr *t)
 {
-	List		*parsetrees;
 	Query		*query;
 
 	/* If we already transformed this node, do nothing */
@@ -1818,14 +1845,12 @@ transformTableValueExpr(ParseState *pstate, TableValueExpr *t)
 	pstate->p_hasTblValueExpr = true;
 
 	/* Analyze and transform the subquery */
-	parsetrees = parse_sub_analyze(t->subquery, pstate);
+	query = parse_sub_analyze(t->subquery, pstate);
 
 	/* 
 	 * Check that we got something reasonable.  Most of these conditions
 	 * are probably impossible given restrictions in the grammar.
 	 */
-	Insist(list_length(parsetrees) == 1);
-	query = (Query *) linitial(parsetrees);
 	if (query == NULL || !IsA(query, Query))
 		elog(ERROR, "unexpected non-SELECT command in TableValueExpr");
 	if (query->commandType != CMD_SELECT)
@@ -1927,46 +1952,6 @@ transformMinMaxExpr(ParseState *pstate, MinMaxExpr *m)
 }
 
 static Node *
-transformBooleanTest(ParseState *pstate, BooleanTest *b)
-{
-	const char *clausename;
-
-	switch (b->booltesttype)
-	{
-		case IS_TRUE:
-			clausename = "IS TRUE";
-			break;
-		case IS_NOT_TRUE:
-			clausename = "IS NOT TRUE";
-			break;
-		case IS_FALSE:
-			clausename = "IS FALSE";
-			break;
-		case IS_NOT_FALSE:
-			clausename = "IS NOT FALSE";
-			break;
-		case IS_UNKNOWN:
-			clausename = "IS UNKNOWN";
-			break;
-		case IS_NOT_UNKNOWN:
-			clausename = "IS NOT UNKNOWN";
-			break;
-		default:
-			elog(ERROR, "unrecognized booltesttype: %d",
-				 (int) b->booltesttype);
-			clausename = NULL;	/* keep compiler quiet */
-	}
-
-	b->arg = (Expr *) transformExpr(pstate, (Node *) b->arg);
-
-	b->arg = (Expr *) coerce_to_boolean(pstate,
-										(Node *) b->arg,
-										clausename);
-
-	return (Node *) b;
-}
-
-static Node *
 transformXmlExpr(ParseState *pstate, XmlExpr *x)
 {
 	XmlExpr    *newx;
@@ -1989,7 +1974,7 @@ transformXmlExpr(ParseState *pstate, XmlExpr *x)
 	newx->location = x->location;
 
 	/*
-	 * gram.y built the named args as a list of ResTarget.  Transform each,
+	 * gram.y built the named args as a list of ResTarget.	Transform each,
 	 * and break the names out as a separate list.
 	 */
 	newx->named_args = NIL;
@@ -2116,12 +2101,7 @@ transformXmlSerialize(ParseState *pstate, XmlSerialize *xs)
 													 XMLOID,
 													 "XMLSERIALIZE"));
 
-	targetType = typenameTypeId(pstate, xs->typeName);
-	/*
-	 * 83MERGE_FIXME: use -1, until we merge the 8.3 patch to support typmods
-	 * for user-defined types.
-	 */
-	targetTypmod = -1;
+	targetType = typenameTypeId(pstate, xs->typeName, &targetTypmod);
 
 	xexpr->xmloption = xs->xmloption;
 	xexpr->location = xs->location;
@@ -2146,6 +2126,93 @@ transformXmlSerialize(ParseState *pstate, XmlSerialize *xs)
 						format_type_be(targetType)),
 				 parser_errposition(pstate, xexpr->location)));
 	return result;
+}
+
+static Node *
+transformBooleanTest(ParseState *pstate, BooleanTest *b)
+{
+	const char *clausename;
+
+	switch (b->booltesttype)
+	{
+		case IS_TRUE:
+			clausename = "IS TRUE";
+			break;
+		case IS_NOT_TRUE:
+			clausename = "IS NOT TRUE";
+			break;
+		case IS_FALSE:
+			clausename = "IS FALSE";
+			break;
+		case IS_NOT_FALSE:
+			clausename = "IS NOT FALSE";
+			break;
+		case IS_UNKNOWN:
+			clausename = "IS UNKNOWN";
+			break;
+		case IS_NOT_UNKNOWN:
+			clausename = "IS NOT UNKNOWN";
+			break;
+		default:
+			elog(ERROR, "unrecognized booltesttype: %d",
+				 (int) b->booltesttype);
+			clausename = NULL;	/* keep compiler quiet */
+	}
+
+	b->arg = (Expr *) transformExpr(pstate, (Node *) b->arg);
+
+	b->arg = (Expr *) coerce_to_boolean(pstate,
+										(Node *) b->arg,
+										clausename);
+
+	return (Node *) b;
+}
+
+static Node *
+transformCurrentOfExpr(ParseState *pstate, CurrentOfExpr *cexpr)
+{
+	int			sublevels_up;
+
+	/*
+	 * The target RTE must be simply updatable. If not, we error out
+	 * early here to avoid having to deal with error cases later:
+	 * rewriting/planning against views, for example.
+	 */
+	Assert(pstate->p_target_rangetblentry != NULL);
+	(void) isSimplyUpdatableRelation(pstate->p_target_rangetblentry->relid, false);
+
+	/* CURRENT OF can only appear at top level of UPDATE/DELETE */
+	Assert(pstate->p_target_rangetblentry != NULL);
+	cexpr->cvarno = RTERangeTablePosn(pstate,
+									  pstate->p_target_rangetblentry,
+									  &sublevels_up);
+	Assert(sublevels_up == 0);
+
+	cexpr->target_relid = pstate->p_target_rangetblentry->relid;
+
+	/* If a parameter is used, it must be of type REFCURSOR */
+	if (cexpr->cursor_name == NULL)
+	{
+		Oid		   *pptype = find_param_type(pstate, cexpr->cursor_param, -1);
+
+		if (pstate->p_variableparams && *pptype == UNKNOWNOID)
+		{
+			/* resolve unknown param type as REFCURSOR */
+			*pptype = REFCURSOROID;
+		}
+		else if (*pptype != REFCURSOROID)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_AMBIGUOUS_PARAMETER),
+					 errmsg("inconsistent types deduced for parameter $%d",
+							cexpr->cursor_param),
+					 errdetail("%s versus %s",
+							   format_type_be(*pptype),
+							   format_type_be(REFCURSOROID))));
+		}
+	}
+
+	return (Node *) cexpr;
 }
 
 /*
@@ -2196,7 +2263,7 @@ transformWholeRowRef(ParseState *pstate, char *schemaname, char *relname,
 		case RTE_TABLEFUNCTION:
 		case RTE_FUNCTION:
 			toid = exprType(rte->funcexpr);
-			if (toid == RECORDOID || get_typtype(toid) == 'c')
+			if (type_is_rowtype(toid))
 			{
 				/* func returns composite; same as relation case */
 				result = (Node *) makeVar(vnum,
@@ -2626,7 +2693,15 @@ exprType(Node *expr)
 			type = ((WindowRef *) expr)->restype;
 			break;
 		case T_ArrayRef:
-			type = ((ArrayRef *) expr)->refrestype;
+			{
+				ArrayRef   *arrayref = (ArrayRef *) expr;
+
+				/* slice and/or store operations yield the array type */
+				if (arrayref->reflowerindexpr || arrayref->refassgnexpr)
+					type = arrayref->refarraytype;
+				else
+					type = arrayref->refelemtype;
+			}
 			break;
 		case T_FuncExpr:
 			type = ((FuncExpr *) expr)->funcresulttype;
@@ -2690,16 +2765,15 @@ exprType(Node *expr)
 					subplan->subLinkType == ARRAY_SUBLINK)
 				{
 					/* get the type of the subselect's first target column */
-					Oid itemtype = subplan->firstColType;
-					type = itemtype;
+					type = subplan->firstColType;
 					if (subplan->subLinkType == ARRAY_SUBLINK)
 					{
-						type = get_array_type(itemtype);
+						type = get_array_type(subplan->firstColType);
 						if (!OidIsValid(type))
 							ereport(ERROR,
 									(errcode(ERRCODE_UNDEFINED_OBJECT),
 									 errmsg("could not find array type for data type %s",
-							format_type_be(itemtype))));
+									format_type_be(subplan->firstColType))));
 					}
 				}
 				else
@@ -2729,9 +2803,6 @@ exprType(Node *expr)
 			break;
 		case T_CaseExpr:
 			type = ((CaseExpr *) expr)->casetype;
-			break;
-		case T_CaseWhen:
-			type = exprType((Node *) ((CaseWhen *) expr)->result);
 			break;
 		case T_CaseTestExpr:
 			type = ((CaseTestExpr *) expr)->typeId;
@@ -2836,8 +2907,13 @@ exprTypmod(Node *expr)
 	{
 		case T_Var:
 			return ((Var *) expr)->vartypmod;
+		case T_Const:
+			return ((Const *) expr)->consttypmod;
 		case T_Param:
 			return ((Param *) expr)->paramtypmod;
+		case T_ArrayRef:
+			/* typmod is the same for array or element */
+			return ((ArrayRef *) expr)->reftypmod;
 		case T_FuncExpr:
 			{
 				int32		coercedTypmod;
@@ -2845,6 +2921,27 @@ exprTypmod(Node *expr)
 				/* Be smart about length-coercion functions... */
 				if (exprIsLengthCoercion(expr, &coercedTypmod))
 					return coercedTypmod;
+			}
+			break;
+		case T_SubLink:
+			{
+				SubLink    *sublink = (SubLink *) expr;
+
+				if (sublink->subLinkType == EXPR_SUBLINK ||
+					sublink->subLinkType == ARRAY_SUBLINK)
+				{
+					/* get the typmod of the subselect's first target column */
+					Query	   *qtree = (Query *) sublink->subselect;
+					TargetEntry *tent;
+
+					if (!qtree || !IsA(qtree, Query))
+						elog(ERROR, "cannot get type for untransformed sublink");
+					tent = (TargetEntry *) linitial(qtree->targetList);
+					Assert(IsA(tent, TargetEntry));
+					Assert(!tent->resjunk);
+					return exprTypmod((Node *) tent->expr);
+					/* note we don't need to care if it's an array */
+				}
 			}
 			break;
 		case T_FieldSelect:
@@ -2886,6 +2983,38 @@ exprTypmod(Node *expr)
 			break;
 		case T_CaseTestExpr:
 			return ((CaseTestExpr *) expr)->typeMod;
+		case T_ArrayExpr:
+			{
+				/*
+				 * If all the elements agree on type/typmod, return that
+				 * typmod, else use -1
+				 */
+				ArrayExpr  *arrayexpr = (ArrayExpr *) expr;
+				Oid			commontype;
+				int32		typmod;
+				ListCell   *elem;
+
+				if (arrayexpr->elements == NIL)
+					return -1;
+				typmod = exprTypmod((Node *) linitial(arrayexpr->elements));
+				if (typmod < 0)
+					return -1;	/* no point in trying harder */
+				if (arrayexpr->multidims)
+					commontype = arrayexpr->array_typeid;
+				else
+					commontype = arrayexpr->element_typeid;
+				foreach(elem, arrayexpr->elements)
+				{
+					Node	   *e = (Node *) lfirst(elem);
+
+					if (exprType(e) != commontype)
+						return -1;
+					if (exprTypmod(e) != typmod)
+						return -1;
+				}
+				return typmod;
+			}
+			break;
 		case T_CoalesceExpr:
 			{
 				/*
@@ -2985,8 +3114,8 @@ exprIsLengthCoercion(Node *expr, int32 *coercedTypmod)
 	if (expr && IsA(expr, FuncExpr))
 	{
 		FuncExpr   *func = (FuncExpr *) expr;
-		int		 nargs;
-		Const	  *second_arg;
+		int			nargs;
+		Const	   *second_arg;
 
 		/*
 		 * If it didn't come from a coercion context, reject.
@@ -3019,6 +3148,23 @@ exprIsLengthCoercion(Node *expr, int32 *coercedTypmod)
 		return true;
 	}
 
+	if (expr && IsA(expr, ArrayCoerceExpr))
+	{
+		ArrayCoerceExpr *acoerce = (ArrayCoerceExpr *) expr;
+
+		/* It's not a length coercion unless there's a nondefault typmod */
+		if (acoerce->resulttypmod < 0)
+			return false;
+
+		/*
+		 * OK, it is indeed a length-coercion expression.
+		 */
+		if (coercedTypmod != NULL)
+			*coercedTypmod = acoerce->resulttypmod;
+
+		return true;
+	}
+
 	return false;
 }
 
@@ -3035,8 +3181,7 @@ typecast_expression(ParseState *pstate, Node *expr, TypeName *typename)
 	Oid			targetType;
 	int32		targetTypmod;
 
-	targetType = typenameTypeId(pstate, typename);
-	targetTypmod = typenameTypeMod(pstate, typename, targetType);
+	targetType = typenameTypeId(pstate, typename, &targetTypmod);
 
 	if (inputType == InvalidOid)
 		return expr;			/* do nothing if NULL input */
@@ -3147,9 +3292,9 @@ make_row_comparison_op(ParseState *pstate, List *opname,
 
 	/*
 	 * Now we must determine which row comparison semantics (= <> < <= > >=)
-	 * apply to this set of operators.	We look for btree opfamilies containing
-	 * the operators, and see which interpretations (strategy numbers) exist
-	 * for each operator.
+	 * apply to this set of operators.	We look for btree opfamilies
+	 * containing the operators, and see which interpretations (strategy
+	 * numbers) exist for each operator.
 	 */
 	opfamily_lists = (List **) palloc(nopers * sizeof(List *));
 	opstrat_lists = (List **) palloc(nopers * sizeof(List *));
@@ -3232,7 +3377,7 @@ make_row_comparison_op(ParseState *pstate, List *opname,
 		}
 		if (OidIsValid(opfamily))
 			opfamilies = lappend_oid(opfamilies, opfamily);
-		else					/* should not happen */
+		else	/* should not happen */
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("could not determine interpretation of row comparison operator %s",

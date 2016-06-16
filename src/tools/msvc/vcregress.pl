@@ -180,6 +180,7 @@ sub contribcheck
     my $mstat = 0;
     foreach my $module (glob("*"))
     {
+		next if ($module eq 'xml2' && ! $config->{xml});
         next unless -d "$module/sql" && 
 			-d "$module/expected" && 
 			(-f "$module/Makefile" || -f "$module/GNUmakefile");

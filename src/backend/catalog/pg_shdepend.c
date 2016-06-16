@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_shdepend.c,v 1.16 2007/01/05 22:19:25 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_shdepend.c,v 1.23.2.3 2010/07/03 13:53:38 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -27,12 +27,15 @@
 #include "catalog/pg_language.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_operator.h"
+#include "catalog/pg_opclass.h"
+#include "catalog/pg_opfamily.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_shdepend.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_type.h"
 #include "commands/conversioncmds.h"
 #include "commands/defrem.h"
+#include "commands/proclang.h"
 #include "commands/schemacmds.h"
 #include "commands/tablecmds.h"
 #include "commands/typecmds.h"
@@ -509,6 +512,9 @@ typedef struct
  * Check whether there are shared dependency entries for a given shared
  * object.	Returns a string containing a newline-separated list of object
  * descriptions that depend on the shared object, or NULL if none is found.
+ * The size of the returned string is limited to about MAX_REPORTED_DEPS lines;
+ * if there are more objects than that, the output is returned truncated at
+ * that point while the full message is logged to the postmaster log.
  *
  * We can find three different kinds of dependencies: dependencies on objects
  * of the current database; dependencies on shared objects; and dependencies
@@ -521,33 +527,46 @@ typedef struct
 char *
 checkSharedDependencies(Oid classId, Oid objectId)
 {
+	Relation	sdepRel;
+	ScanKeyData key[2];
+	SysScanDesc scan;
 	HeapTuple	tup;
-	cqContext  *pcqCtx;	
-	int			totalDeps = 0;
-	int			numLocalDeps = 0;
-	int			numSharedDeps = 0;
+	int			numReportedDeps = 0;
+	int			numNotReportedDeps = 0;
+	int			numNotReportedDbs = 0;
 	List	   *remDeps = NIL;
 	ListCell   *cell;
 	ObjectAddress object;
 	StringInfoData descs;
+	StringInfoData alldescs;
 
 	/*
-	 * We try to limit the number of reported dependencies to something sane,
-	 * both for the user's sake and to avoid blowing out memory.
+	 * We limit the number of dependencies reported to the client to
+	 * MAX_REPORTED_DEPS, since client software may not deal well with
+	 * enormous error strings.	The server log always gets a full report,
+	 * which is collected in a separate StringInfo if and only if we detect
+	 * that the client report is going to be truncated.
 	 */
 #define MAX_REPORTED_DEPS 100
 
 	initStringInfo(&descs);
+	initStringInfo(&alldescs);
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_shdepend "
-				" WHERE refclassid = :1 "
-				" AND refobjid = :2 ",
-				ObjectIdGetDatum(classId),
-				ObjectIdGetDatum(objectId)));
+	sdepRel = heap_open(SharedDependRelationId, AccessShareLock);
 
-	while (HeapTupleIsValid(tup = caql_getnext(pcqCtx)))
+	ScanKeyInit(&key[0],
+				Anum_pg_shdepend_refclassid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(classId));
+	ScanKeyInit(&key[1],
+				Anum_pg_shdepend_refobjid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(objectId));
+
+	scan = systable_beginscan(sdepRel, SharedDependReferenceIndexId, true,
+							  SnapshotNow, 2, key);
+
+	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
 		Form_pg_shdepend sdepForm = (Form_pg_shdepend) GETSTRUCT(tup);
 
@@ -576,17 +595,41 @@ checkSharedDependencies(Oid classId, Oid objectId)
 		 */
 		if (sdepForm->dbid == MyDatabaseId)
 		{
-			numLocalDeps++;
-			if (++totalDeps <= MAX_REPORTED_DEPS)
+			if (numReportedDeps < MAX_REPORTED_DEPS)
+			{
+				numReportedDeps++;
 				storeObjectDescription(&descs, LOCAL_OBJECT, &object,
 									   sdepForm->deptype, 0);
+			}
+			else
+			{
+				numNotReportedDeps++;
+				/* initialize the server-only log line */
+				if (alldescs.len == 0)
+					appendBinaryStringInfo(&alldescs, descs.data, descs.len);
+
+				storeObjectDescription(&alldescs, LOCAL_OBJECT, &object,
+									   sdepForm->deptype, 0);
+			}
 		}
 		else if (sdepForm->dbid == InvalidOid)
 		{
-			numSharedDeps++;
-			if (++totalDeps <= MAX_REPORTED_DEPS)
+			if (numReportedDeps < MAX_REPORTED_DEPS)
+			{
+				numReportedDeps++;
 				storeObjectDescription(&descs, SHARED_OBJECT, &object,
 									   sdepForm->deptype, 0);
+			}
+			else
+			{
+				numNotReportedDeps++;
+				/* initialize the server-only log line */
+				if (alldescs.len == 0)
+					appendBinaryStringInfo(&alldescs, descs.data, descs.len);
+
+				storeObjectDescription(&alldescs, SHARED_OBJECT, &object,
+									   sdepForm->deptype, 0);
+			}
 		}
 		else
 		{
@@ -616,36 +659,19 @@ checkSharedDependencies(Oid classId, Oid objectId)
 				dep->dbOid = sdepForm->dbid;
 				dep->count = 1;
 				remDeps = lappend(remDeps, dep);
-				totalDeps++;
 			}
 		}
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(scan);
 
-	if (totalDeps > MAX_REPORTED_DEPS)
-	{
-		/*
-		 * Report seems unreasonably long, so reduce it to per-database info
-		 *
-		 * Note: we don't ever suppress per-database totals, which should be
-		 * OK as long as there aren't too many databases ...
-		 */
-		descs.len = 0;			/* reset to empty */
-		descs.data[0] = '\0';
+	heap_close(sdepRel, AccessShareLock);
 
-		if (numLocalDeps > 0)
-		{
-			appendStringInfo(&descs, _("%d objects in this database"),
-							 numLocalDeps);
-			if (numSharedDeps > 0)
-				appendStringInfoChar(&descs, '\n');
-		}
-		if (numSharedDeps > 0)
-			appendStringInfo(&descs, _("%d shared objects"),
-							 numSharedDeps);
-	}
-
+	/*
+	 * Report dependencies on remote databases.  If we're truncating the
+	 * output already, don't put a line per database, but a single one for all
+	 * of them.  Otherwise add as many as fit in MAX_REPORTED_DEPS.
+	 */
 	foreach(cell, remDeps)
 	{
 		remoteDep  *dep = lfirst(cell);
@@ -654,8 +680,22 @@ checkSharedDependencies(Oid classId, Oid objectId)
 		object.objectId = dep->dbOid;
 		object.objectSubId = 0;
 
-		storeObjectDescription(&descs, REMOTE_OBJECT, &object,
-							   SHARED_DEPENDENCY_INVALID, dep->count);
+		if (numReportedDeps < MAX_REPORTED_DEPS)
+		{
+			numReportedDeps++;
+			storeObjectDescription(&descs, REMOTE_OBJECT, &object,
+								   SHARED_DEPENDENCY_INVALID, dep->count);
+		}
+		else
+		{
+			numNotReportedDbs++;
+			/* initialize the server-only log line */
+			if (alldescs.len == 0)
+				appendBinaryStringInfo(&alldescs, descs.data, descs.len);
+
+			storeObjectDescription(&alldescs, REMOTE_OBJECT, &object,
+								   SHARED_DEPENDENCY_INVALID, dep->count);
+		}
 	}
 
 	list_free_deep(remDeps);
@@ -663,8 +703,33 @@ checkSharedDependencies(Oid classId, Oid objectId)
 	if (descs.len == 0)
 	{
 		pfree(descs.data);
+		pfree(alldescs.data);
 		return NULL;
 	}
+
+	if (numNotReportedDeps > 0)
+		appendStringInfo(&descs, _("\nand %d other objects "
+								   "(see server log for list)"),
+						 numNotReportedDeps);
+	if (numNotReportedDbs > 0)
+		appendStringInfo(&descs, _("\nand objects in %d other databases "
+								   "(see server log for list)"),
+						 numNotReportedDbs);
+
+	if (numNotReportedDeps > 0 || numNotReportedDbs > 0)
+	{
+		ObjectAddress obj;
+
+		obj.classId = classId;
+		obj.objectId = objectId;
+		obj.objectSubId = 0;
+		ereport(LOG,
+				(errmsg("there are objects dependent on %s",
+						getObjectDescription(&obj)),
+				 errdetail("%s", alldescs.data)));
+	}
+
+	pfree(alldescs.data);
 
 	return descs.data;
 }
@@ -1075,7 +1140,12 @@ shdepDropOwned(List *roleids, DropBehavior behavior)
 
 	deleteobjs = new_object_addresses();
 
-	sdepRel = heap_open(SharedDependRelationId, AccessExclusiveLock);
+	/*
+	 * We don't need this strong a lock here, but we'll call routines that
+	 * acquire RowExclusiveLock.  Better get that right now to avoid potential
+	 * deadlock failures.
+	 */
+	sdepRel = heap_open(SharedDependRelationId, RowExclusiveLock);
 
 	/*
 	 * For each role, find the dependent objects and drop them using the
@@ -1120,8 +1190,12 @@ shdepDropOwned(List *roleids, DropBehavior behavior)
 			InternalGrant istmt;
 			Form_pg_shdepend sdepForm = (Form_pg_shdepend) GETSTRUCT(tuple);
 
-			/* We only operate on objects in the current database */
-			if (sdepForm->dbid != MyDatabaseId)
+			/*
+			 * We only operate on shared objects and objects in the current
+			 * database
+			 */
+			if (sdepForm->dbid != MyDatabaseId &&
+				sdepForm->dbid != InvalidOid)
 				continue;
 
 			switch (sdepForm->deptype)
@@ -1172,11 +1246,14 @@ shdepDropOwned(List *roleids, DropBehavior behavior)
 					ExecGrantStmt_oids(&istmt);
 					break;
 				case SHARED_DEPENDENCY_OWNER:
-					/* Save it for deletion below */
-					obj.classId = sdepForm->classid;
-					obj.objectId = sdepForm->objid;
-					obj.objectSubId = 0;
-					add_exact_object_address(&obj, deleteobjs);
+					/* If a local object, save it for deletion below */
+					if (sdepForm->dbid == MyDatabaseId)
+					{
+						obj.classId = sdepForm->classid;
+						obj.objectId = sdepForm->objid;
+						obj.objectSubId = 0;
+						add_exact_object_address(&obj, deleteobjs);
+					}
 					break;
 			}
 		}
@@ -1187,7 +1264,7 @@ shdepDropOwned(List *roleids, DropBehavior behavior)
 	/* the dependency mechanism does the actual work */
 	performMultipleDeletions(deleteobjs, behavior);
 
-	heap_close(sdepRel, AccessExclusiveLock);
+	heap_close(sdepRel, RowExclusiveLock);
 
 	free_object_addresses(deleteobjs);
 }
@@ -1204,7 +1281,12 @@ shdepReassignOwned(List *roleids, Oid newrole)
 	Relation	sdepRel;
 	ListCell   *cell;
 
-	sdepRel = heap_open(SharedDependRelationId, AccessShareLock);
+	/*
+	 * We don't need this strong a lock here, but we'll call routines that
+	 * acquire RowExclusiveLock.  Better get that right now to avoid potential
+	 * deadlock problems.
+	 */
+	sdepRel = heap_open(SharedDependRelationId, RowExclusiveLock);
 
 	foreach(cell, roleids)
 	{
@@ -1224,8 +1306,7 @@ shdepReassignOwned(List *roleids, Oid newrole)
 
 			ereport(ERROR,
 					(errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
-				   errmsg("cannot drop objects owned by %s because they are "
-						  "required by the database system",
+					 errmsg("cannot reassign ownership of objects owned by %s because they are required by the database system",
 						  getObjectDescription(&obj))));
 
 			/*
@@ -1291,6 +1372,18 @@ shdepReassignOwned(List *roleids, Oid newrole)
 					AlterFunctionOwner_oid(sdepForm->objid, newrole);
 					break;
 
+				case LanguageRelationId:
+					AlterLanguageOwner_oid(sdepForm->objid, newrole);
+					break;
+
+				case OperatorClassRelationId:
+					AlterOpClassOwner_oid(sdepForm->objid, newrole);
+					break;
+
+				case OperatorFamilyRelationId:
+					AlterOpFamilyOwner_oid(sdepForm->objid, newrole);
+					break;
+
 				default:
 					elog(ERROR, "unexpected classid %d", sdepForm->classid);
 					break;
@@ -1302,5 +1395,5 @@ shdepReassignOwned(List *roleids, Oid newrole)
 		caql_endscan(pcqCtx);
 	}
 
-	heap_close(sdepRel, AccessShareLock);
+	heap_close(sdepRel, RowExclusiveLock);
 }

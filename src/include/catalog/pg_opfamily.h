@@ -5,10 +5,10 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2007, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_opfamily.h,v 1.3 2007/01/28 16:16:52 neilc Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_opfamily.h,v 1.7 2008/01/01 19:45:57 momjian Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -48,7 +48,7 @@
 */
 
 /* ----------------
- *		pg_opfamily definition.	cpp turns this into
+ *		pg_opfamily definition. cpp turns this into
  *		typedef struct FormData_pg_opfamily
  * ----------------
  */
@@ -158,6 +158,13 @@ DATA(insert OID = 2595 (	783		circle_ops		PGNSP PGUID ));
 DATA(insert OID = 2745 (	2742	array_ops		PGNSP PGUID ));
 DATA(insert OID = 2968 (	403		uuid_ops		PGNSP PGUID ));
 DATA(insert OID = 2969 (	405		uuid_ops		PGNSP PGUID ));
+DATA(insert OID = 3522 (	403		enum_ops		PGNSP PGUID ));
+DATA(insert OID = 3523 (	405		enum_ops		PGNSP PGUID ));
+DATA(insert OID = 3626 (	403		tsvector_ops	PGNSP PGUID ));
+DATA(insert OID = 3655 (	783		tsvector_ops	PGNSP PGUID ));
+DATA(insert OID = 3659 (	2742	tsvector_ops	PGNSP PGUID ));
+DATA(insert OID = 3683 (	403		tsquery_ops		PGNSP PGUID ));
+DATA(insert OID = 3702 (	783		tsquery_ops		PGNSP PGUID ));
 
 /* Complex Number type */
 DATA(insert OID = 3221 (	403		complex_ops		PGNSP PGUID ));

@@ -1719,18 +1719,20 @@ void
 AtCommit_AppendOnly(void)
 {
 	HASH_SEQ_STATUS status;
-	AORelHashEntry	aoentry = NULL;
-	TransactionId 	CurrentXid = GetTopTransactionId();
+	AORelHashEntry	aoentry;
+	TransactionId 	CurrentXid;
 
 	if (Gp_role != GP_ROLE_DISPATCH)
 		return;
 
 	if (!appendOnlyInsertXact)
-	{
 		return;
-	}
 
 	hash_seq_init(&status, AppendOnlyHash);
+
+	CurrentXid = GetTopTransactionIdIfAny();
+	/* We should have an XID if we modified AO tables */
+	Assert(CurrentXid != InvalidTransactionId);
 
 	LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
 	/*

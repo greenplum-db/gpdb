@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/operatorcmds.c,v 1.35 2007/01/05 22:19:26 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/operatorcmds.c,v 1.39 2008/01/01 19:45:49 momjian Exp $
  *
  * DESCRIPTION
  *	  The "DefineFoo" routines take the parse tree and pick out the
@@ -70,7 +70,7 @@ DefineOperator(List *names, List *parameters,
 	Oid			oprNamespace;
 	AclResult	aclresult;
 	bool		canMerge = false;		/* operator merges */
-	bool		canHash = false;		/* operator hashes */
+	bool		canHash = false;	/* operator hashes */
 	List	   *functionName = NIL;		/* function for operator */
 	TypeName   *typeName1 = NULL;		/* first type name */
 	TypeName   *typeName2 = NULL;		/* second type name */
@@ -105,7 +105,7 @@ DefineOperator(List *names, List *parameters,
 			if (typeName1->setof)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-					errmsg("setof type not allowed for operator argument")));
+					errmsg("SETOF type not allowed for operator argument")));
 		}
 		else if (pg_strcasecmp(defel->defname, "rightarg") == 0)
 		{
@@ -113,7 +113,7 @@ DefineOperator(List *names, List *parameters,
 			if (typeName2->setof)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-					errmsg("setof type not allowed for operator argument")));
+					errmsg("SETOF type not allowed for operator argument")));
 		}
 		else if (pg_strcasecmp(defel->defname, "procedure") == 0)
 			functionName = defGetQualifiedName(defel);
@@ -155,9 +155,9 @@ DefineOperator(List *names, List *parameters,
 
 	/* Transform type names to type OIDs */
 	if (typeName1)
-		typeId1 = typenameTypeId(NULL, typeName1);
+		typeId1 = typenameTypeId(NULL, typeName1, NULL);
 	if (typeName2)
-		typeId2 = typenameTypeId(NULL, typeName2);
+		typeId2 = typenameTypeId(NULL, typeName2, NULL);
 
 	/*
 	 * now have OperatorCreate do all the work..

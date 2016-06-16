@@ -14,7 +14,7 @@ include $(top_builddir)/src/Makefile.global
 override CPPFLAGS := -I$(top_srcdir)/src/backend/gp_libpq_fe $(CPPFLAGS)
 
 
-OBJS = execAmi.o execGrouping.o execJunk.o execMain.o \
+OBJS = execAmi.o execCurrent.o execGrouping.o execJunk.o execMain.o \
        execProcnode.o execQual.o execScan.o execTuples.o \
        execUtils.o functions.o instrument.o nodeAppend.o nodeAgg.o \
        nodeBitmapAnd.o nodeBitmapOr.o \

@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/hash.h,v 1.76 2007/01/30 01:33:36 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/access/hash.h,v 1.84 2008/01/01 19:45:56 momjian Exp $
  *
  * NOTES
  *		modeled after Margo Seltzer's hash implementation for unix.
@@ -56,20 +56,18 @@ typedef struct HashPageOpaqueData
 	BlockNumber hasho_nextblkno;	/* next ovfl blkno */
 	Bucket		hasho_bucket;	/* bucket number this pg belongs to */
 	uint16		hasho_flag;		/* page type code, see above */
-	uint16		hasho_filler;	/* available for future use */
-
-	/*
-	 * We presently set hasho_filler to HASHO_FILL (0x1234); this is for the
-	 * convenience of pg_filedump, which otherwise would have a hard time
-	 * telling HashPageOpaqueData from BTPageOpaqueData.  If we ever need that
-	 * space for some other purpose, pg_filedump will have to find another
-	 * way.
-	 */
+	uint16		hasho_page_id;	/* for identification of hash indexes */
 } HashPageOpaqueData;
 
 typedef HashPageOpaqueData *HashPageOpaque;
 
-#define HASHO_FILL		0x1234
+/*
+ * The page ID is for the convenience of pg_filedump and similar utilities,
+ * which otherwise would have a hard time telling pages of different index
+ * types apart.  It should be the last 2 bytes on the page.  This is more or
+ * less "free" due to alignment considerations.
+ */
+#define HASHO_PAGE_ID		0xFF80
 
 /*
  *	HashScanOpaqueData is private state for a hash index scan.
@@ -258,6 +256,7 @@ extern Datum hashint2(PG_FUNCTION_ARGS);
 extern Datum hashint4(PG_FUNCTION_ARGS);
 extern Datum hashint8(PG_FUNCTION_ARGS);
 extern Datum hashoid(PG_FUNCTION_ARGS);
+extern Datum hashenum(PG_FUNCTION_ARGS);
 extern Datum hashfloat4(PG_FUNCTION_ARGS);
 extern Datum hashfloat8(PG_FUNCTION_ARGS);
 extern Datum hashoidvector(PG_FUNCTION_ARGS);
@@ -275,18 +274,25 @@ extern void _hash_doinsert(Relation rel, IndexTuple itup);
 
 /* hashovfl.c */
 extern Buffer _hash_addovflpage(Relation rel, Buffer metabuf, Buffer buf);
-extern BlockNumber _hash_freeovflpage(Relation rel, Buffer ovflbuf);
+extern BlockNumber _hash_freeovflpage(Relation rel, Buffer ovflbuf,
+				   BufferAccessStrategy bstrategy);
 extern void _hash_initbitmap(Relation rel, HashMetaPage metap,
 				 BlockNumber blkno);
 extern void _hash_squeezebucket(Relation rel,
-					Bucket bucket, BlockNumber bucket_blkno);
+					Bucket bucket, BlockNumber bucket_blkno,
+					BufferAccessStrategy bstrategy);
 
 /* hashpage.c */
 extern void _hash_getlock(Relation rel, BlockNumber whichlock, int access);
 extern bool _hash_try_getlock(Relation rel, BlockNumber whichlock, int access);
 extern void _hash_droplock(Relation rel, BlockNumber whichlock, int access);
-extern Buffer _hash_getbuf(Relation rel, BlockNumber blkno, int access);
-extern Buffer _hash_getnewbuf(Relation rel, BlockNumber blkno, int access);
+extern Buffer _hash_getbuf(Relation rel, BlockNumber blkno,
+			 int access, int flags);
+extern Buffer _hash_getinitbuf(Relation rel, BlockNumber blkno);
+extern Buffer _hash_getnewbuf(Relation rel, BlockNumber blkno);
+extern Buffer _hash_getbuf_with_strategy(Relation rel, BlockNumber blkno,
+						   int access, int flags,
+						   BufferAccessStrategy bstrategy);
 extern void _hash_relbuf(Relation rel, Buffer buf);
 extern void _hash_dropbuf(Relation rel, Buffer buf);
 extern void _hash_wrtbuf(Relation rel, Buffer buf);

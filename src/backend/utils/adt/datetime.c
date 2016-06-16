@@ -276,7 +276,6 @@ static const datetkn *deltacache[MAXDATEFIELDS] = {NULL};
 /*
  * strtoi --- just like strtol, but returns int not long
  */
-
 static inline int strtoi(const char *nptr, char **endptr, __attribute__((unused)) int base)
 {
 	/* Assume base = 10 */
@@ -743,7 +742,7 @@ ParseDateTime(const char *timestr, char *workbuf, size_t buflen,
 		 */
 		else if (isalpha((unsigned char) *cp))
 		{
-			bool	is_date;
+			bool		is_date;
 
 			ftype[nf] = DTK_STRING;
 			APPEND_CHAR(bufp, bufend, pg_tolower((unsigned char) *cp++));
@@ -2337,12 +2336,12 @@ ValidateDate(int fmask, bool is2digits, bool bc, struct pg_tm * tm)
 			if (tm->tm_year <= 0)
 				return DTERR_FIELD_OVERFLOW;
 			/* internally, we represent 1 BC as year zero, 2 BC as -1, etc */
-				tm->tm_year = -(tm->tm_year - 1);
+			tm->tm_year = -(tm->tm_year - 1);
 		}
 		else if (is2digits)
 		{
 			/* process 1 or 2-digit input as 1970-2069 AD, allow '0' and '00' */
-			if (tm->tm_year < 0)				/* just paranoia */
+			if (tm->tm_year < 0)	/* just paranoia */
 				return DTERR_FIELD_OVERFLOW;
 			if (tm->tm_year < 70)
 				tm->tm_year += 2000;
@@ -2790,9 +2789,6 @@ DecodeNumberField(int len, char *str, int fmask,
  * Return 0 if okay (and set *tzp), a DTERR code if not okay.
  *
  * NB: this must *not* ereport on failure; see commands/variable.c.
- *
- * Note: we allow timezone offsets up to 13:59.  There are places that
- * use +1300 summer time.
  */
 static int
 DecodeTimezone(char *str, int *tzp)
@@ -2837,7 +2833,8 @@ DecodeTimezone(char *str, int *tzp)
 	else
 		min = 0;
 
-	if (hr < 0 || hr > 14)
+	/* Range-check the values; see notes in utils/timestamp.h */
+	if (hr < 0 || hr > MAX_TZDISP_HOUR)
 		return DTERR_TZDISP_OVERFLOW;
 	if (min < 0 || min >= 60)
 		return DTERR_TZDISP_OVERFLOW;
@@ -3892,7 +3889,7 @@ EncodeDateTime(struct pg_tm * tm, fsec_t fsec, int *tzp, char **tzn, int style, 
 			if (tm->tm_year <= 0)
 				sprintf(str + strlen(str), " BC");
 			break;
-			
+
 		case USE_SQL_DATES:
 			/* Compatible with Oracle/Ingres date formats */
 
@@ -4075,14 +4072,14 @@ void
 EncodeInterval(struct pg_tm * tm, fsec_t fsec, int style, char *str)
 {
 	char	   *cp = str;
-		int			year = tm->tm_year;
-		int			mon  = tm->tm_mon;
-		int			mday = tm->tm_mday;
-		int			hour = tm->tm_hour;
-		int			min  = tm->tm_min;
-		int			sec  = tm->tm_sec;
-		bool		is_before = FALSE;
-		bool		is_zero = TRUE;
+	int			year = tm->tm_year;
+	int			mon = tm->tm_mon;
+	int			mday = tm->tm_mday;
+	int			hour = tm->tm_hour;
+	int			min = tm->tm_min;
+	int			sec = tm->tm_sec;
+	bool		is_before = FALSE;
+	bool		is_zero = TRUE;
 
 	/*
 	 * The sign of year and month are guaranteed to match, since they are
@@ -4092,8 +4089,8 @@ EncodeInterval(struct pg_tm * tm, fsec_t fsec, int style, char *str)
 	 */
 	switch (style)
 	{
-	/* SQL Standard interval format */
-	case INTSTYLE_SQL_STANDARD:
+		/* SQL Standard interval format */
+		case INTSTYLE_SQL_STANDARD:
 		{
 			bool has_negative = year < 0 || mon  < 0 ||
 								mday < 0 || hour < 0 ||

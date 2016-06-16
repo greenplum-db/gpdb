@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/pg_ctl-ref.sgml,v 1.38 2007/01/31 23:26:04 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/pg_ctl-ref.sgml,v 1.44 2007/11/10 21:48:51 momjian Exp $
 PostgreSQL documentation
 -->
 
@@ -21,9 +21,11 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
   <cmdsynopsis>
+
    <command>pg_ctl</command>
    <arg choice="plain">start</arg>
    <arg>-w</arg>
+   <arg>-t <replaceable>seconds</replaceable></arg>
    <arg>-s</arg>
    <arg>-D <replaceable>datadir</replaceable></arg>
    <arg>-l <replaceable>filename</replaceable></arg>
@@ -31,9 +33,11 @@ PostgreSQL documentation
    <arg>-p <replaceable>path</replaceable></arg>
    <arg>-c</arg>
    <sbr>
+
    <command>pg_ctl</command>
    <arg choice="plain">stop</arg>
    <arg>-W</arg>
+   <arg>-t <replaceable>seconds</replaceable></arg>
    <arg>-s</arg>
    <arg>-D <replaceable>datadir</replaceable></arg>
    <arg>-m
@@ -44,9 +48,11 @@ PostgreSQL documentation
      </group>
    </arg>
    <sbr>
+
    <command>pg_ctl</command>
    <arg choice="plain">restart</arg>
    <arg>-w</arg>
+   <arg>-t <replaceable>seconds</replaceable></arg>
    <arg>-s</arg>
    <arg>-D <replaceable>datadir</replaceable></arg>
    <arg>-c</arg>
@@ -59,20 +65,24 @@ PostgreSQL documentation
    </arg>
    <arg>-o <replaceable>options</replaceable></arg>
    <sbr>
+
    <command>pg_ctl</command>
    <arg choice="plain">reload</arg>
    <arg>-s</arg>
    <arg>-D <replaceable>datadir</replaceable></arg>
    <sbr>
+
    <command>pg_ctl</command>
    <arg choice="plain">status</arg>
    <arg>-D <replaceable>datadir</replaceable></arg>
    <sbr>
+
    <command>pg_ctl</command>
    <arg choice="plain">kill</arg>
-   <arg><replaceable>signal_name</replaceable></arg>
-   <arg><replaceable>process_id</replaceable></arg>
+   <arg choice="plain"><replaceable>signal_name</replaceable></arg>
+   <arg choice="plain"><replaceable>process_id</replaceable></arg>
    <sbr>
+
    <command>pg_ctl</command>
    <arg choice="plain">register</arg>
    <arg>-N <replaceable>servicename</replaceable></arg>
@@ -80,11 +90,15 @@ PostgreSQL documentation
    <arg>-P <replaceable>password</replaceable></arg>
    <arg>-D <replaceable>datadir</replaceable></arg>
    <arg>-w</arg>
+   <arg>-t <replaceable>seconds</replaceable></arg>
+   <arg>-s</arg>
    <arg>-o <replaceable>options</replaceable></arg>
    <sbr>
+
    <command>pg_ctl</command>
    <arg choice="plain">unregister</arg>
    <arg>-N <replaceable>servicename</replaceable></arg>
+
   </cmdsynopsis>
  </refsynopsisdiv>
 
@@ -175,13 +189,27 @@ PostgreSQL documentation
   <title>Options</title>
 
     <variablelist>
+
+     <varlistentry>
+      <term><option>-c</option></term>
+      <listitem>
+       <para>
+        Attempt to allow server crashes to produce core files, on platforms
+        where this available, by lifting any soft resource limit placed on 
+        them. 
+        This is useful in debugging or diagnosing problems by allowing a 
+        stack trace to be obtained from a failed server process.
+       </para>
+      </listitem>
+     </varlistentry>
+
      <varlistentry>
       <term><option>-D <replaceable class="parameter">datadir</replaceable></option></term>
       <listitem>
        <para>
-	Specifies the file system location of the database files.  If
-	this is omitted, the environment variable
-	<envar>PGDATA</envar> is used.
+        Specifies the file system location of the database files.  If
+        this is omitted, the environment variable
+        <envar>PGDATA</envar> is used.
        </para>
       </listitem>
      </varlistentry>
@@ -202,10 +230,10 @@ PostgreSQL documentation
       <term><option>-m <replaceable class="parameter">mode</replaceable></option></term>
       <listitem>
        <para>
-	Specifies the shutdown mode.  <replaceable>mode</replaceable>
-	can be <literal>smart</literal>, <literal>fast</literal>, or
-	<literal>immediate</literal>, or the first letter of one of
-	these three.
+        Specifies the shutdown mode.  <replaceable>mode</replaceable>
+        can be <literal>smart</literal>, <literal>fast</literal>, or
+        <literal>immediate</literal>, or the first letter of one of
+        these three.
        </para>
       </listitem>
      </varlistentry>
@@ -218,8 +246,8 @@ PostgreSQL documentation
         <command>postgres</command> command.
        </para>
        <para>
-	The options are usually surrounded by single or double
-	quotes to ensure that they are passed through as a group.
+        The options are usually surrounded by single or double
+        quotes to ensure that they are passed through as a group.
        </para>
       </listitem>
      </varlistentry>
@@ -228,12 +256,12 @@ PostgreSQL documentation
       <term><option>-p <replaceable class="parameter">path</replaceable></option></term>
       <listitem>
        <para>
-	Specifies the location of the <filename>postgres</filename>
-	executable.  By default the <filename>postgres</filename> executable is taken from the same
-	directory as <command>pg_ctl</command>, or failing that, the hard-wired
-	installation directory.  It is not necessary to use this
-	option unless you are doing something unusual and get errors
-	that the <filename>postgres</filename> executable was not found.
+        Specifies the location of the <filename>postgres</filename>
+        executable.  By default the <filename>postgres</filename> executable is taken from the same
+        directory as <command>pg_ctl</command>, or failing that, the hard-wired
+        installation directory.  It is not necessary to use this
+        option unless you are doing something unusual and get errors
+        that the <filename>postgres</filename> executable was not found.
        </para>
       </listitem>
      </varlistentry>
@@ -248,14 +276,11 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>-c</option></term>
+      <term><option>-t</option></term>
       <listitem>
        <para>
-        Attempt to allow server crashes to produce core files, on platforms
-        where this available, by lifting any soft resource limit placed on 
-		them. 
-		This is useful in debugging or diagnosing problems by allowing a 
-		stack trace to be obtained from a failed server process.
+        The number of seconds to wait when waiting for start or shutdown
+        to complete.
        </para>
       </listitem>
      </varlistentry>
@@ -264,8 +289,8 @@ PostgreSQL documentation
       <term><option>-w</option></term>
       <listitem>
        <para>
-	Wait for the start or shutdown to complete.  Times out after
-	60 seconds.  This is the default for shutdowns. A successful 
+        Wait for the start or shutdown to complete.  The default wait time
+        is 60 seconds.  This is the default option for shutdowns. A successful 
         shutdown is indicated by removal of the <acronym>PID</acronym> 
         file. For starting up, a successful <command>psql -l</command> 
         indicates success. <command>pg_ctl</command> will attempt to 
@@ -276,7 +301,7 @@ PostgreSQL documentation
         <productname>PostgreSQL</productname> was compiled with 
         (5432 by default). When waiting, <command>pg_ctl</command> will
         return an accurate exit code based on the success of the startup 
-	or shutdown.
+        or shutdown.
        </para>
       </listitem>
      </varlistentry>

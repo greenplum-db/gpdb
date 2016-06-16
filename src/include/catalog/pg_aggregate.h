@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_aggregate.h,v 1.61 2007/02/17 00:55:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_aggregate.h,v 1.65 2008/01/01 19:45:56 momjian Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -97,16 +97,16 @@
 
 CATALOG(pg_aggregate,2600) BKI_WITHOUT_OIDS
 {
-	regproc	aggfnoid;		
-	regproc	aggtransfn;		
-	regproc	agginvtransfn;	/* MPP windowing */
-	regproc	aggprelimfn;	/* MPP 2-phase agg */
-	regproc	agginvprelimfn;	/* MPP windowing */
-	regproc	aggfinalfn;		
-	Oid		aggsortop;		
-	Oid		aggtranstype;	
-	text	agginitval;		/* VARIABLE LENGTH FIELD */
-	bool	aggordered;		/* MPP ordered aggregates */
+	regproc		aggfnoid;
+	regproc		aggtransfn;
+	regproc		agginvtransfn;	/* MPP windowing */
+	regproc		aggprelimfn;	/* MPP 2-phase agg */
+	regproc		agginvprelimfn;	/* MPP windowing */
+	regproc		aggfinalfn;
+	Oid			aggsortop;
+	Oid			aggtranstype;
+	text		agginitval;		/* VARIABLE LENGTH FIELD */
+	bool		aggordered;		/* MPP ordered aggregates */
 } FormData_pg_aggregate;
 
 
@@ -187,6 +187,7 @@ DATA(insert ( 2130	numeric_larger	- numeric_larger	- -				1756	1700	_null_  f));
 DATA(insert ( 2050	array_larger	- array_larger		- -				1073	2277	_null_  f));
 DATA(insert ( 2244	bpchar_larger	- bpchar_larger		- -				1060	1042	_null_  f));
 DATA(insert ( 2797	tidlarger		- tidlarger			- -				2800	27		_null_  f));
+DATA(insert ( 3526	enum_larger		- enum_larger		- -				3519	3500	_null_  f));
 DATA(insert ( 3332	gpxlogloclarger	- gpxlogloclarger	- -				3328	3310	_null_  f));
 
 /* min */
@@ -209,6 +210,7 @@ DATA(insert ( 2146	numeric_smaller - numeric_smaller	- -				1754	1700	_null_  f)
 DATA(insert ( 2051	array_smaller	- array_smaller		- -				1072	2277	_null_  f));
 DATA(insert ( 2245	bpchar_smaller	- bpchar_smaller	- -				1058	1042	_null_  f));
 DATA(insert ( 2798	tidsmaller		- tidsmaller		- -				2799	27		_null_  f));
+DATA(insert ( 3527	enum_smaller	- enum_smaller		- -				3518	3500	_null_  f));
 DATA(insert ( 3333	gpxloglocsmaller - gpxloglocsmaller		- -			3327	3310	_null_  f));
 
 /* count */

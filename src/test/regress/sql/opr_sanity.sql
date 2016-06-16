@@ -294,6 +294,10 @@ WHERE c.castfunc = p.oid AND
 -- As of 8.2, this finds the cast from cidr to inet, because that is a
 -- trivial binary coercion while the other way goes through inet_to_cidr().
 
+-- As of 8.3, this finds the casts from xml to text, varchar, and bpchar,
+-- because those are binary-compatible while the reverse goes through
+-- texttoxml(), which does an XML syntax check.
+
 SELECT *
 FROM pg_cast c
 WHERE c.castfunc = 0 AND
@@ -807,6 +811,16 @@ WHERE p2.opfmethod = p1.oid AND p3.amprocfamily = p2.oid AND
                            p4.amproclefttype = p3.amproclefttype AND
                            p4.amprocrighttype = p3.amprocrighttype);
 
+-- Also, check if there are any pg_opclass entries that don't seem to have
+-- pg_amproc support.
+
+SELECT amname, opcname, count(*)
+FROM pg_am am JOIN pg_opclass op ON opcmethod = am.oid
+     LEFT JOIN pg_amproc p ON amprocfamily = opcfamily AND
+         amproclefttype = amprocrighttype AND amproclefttype = opcintype
+GROUP BY amname, amsupport, opcname, amprocfamily
+HAVING count(*) != amsupport OR amprocfamily IS NULL;
+
 -- Unfortunately, we can't check the amproc link very well because the
 -- signature of the function may be different for different support routines
 -- or different base data types.
@@ -846,11 +860,10 @@ WHERE p3.opfmethod = (SELECT oid FROM pg_am WHERE amname = 'btree')
 -- For hash we can also do a little better: the support routines must be
 -- of the form hash(lefttype) returns int4.  There are several cases where
 -- we cheat and use a hash function that is physically compatible with the
--- datatype even though there's no cast, so for now we can't check that.
+-- datatype even though there's no cast, so this check does find a small
+-- number of entries.
 
-SELECT p1.amprocfamily, p1.amprocnum,
-	p2.oid, p2.proname,
-	p3.opfname
+SELECT p1.amprocfamily, p1.amprocnum, p2.proname, p3.opfname
 FROM pg_amproc AS p1, pg_proc AS p2, pg_opfamily AS p3
 WHERE p3.opfmethod = (SELECT oid FROM pg_am WHERE amname = 'hash')
     AND p1.amprocfamily = p3.oid AND p1.amproc = p2.oid AND
@@ -858,8 +871,9 @@ WHERE p3.opfmethod = (SELECT oid FROM pg_am WHERE amname = 'hash')
      OR proretset
      OR prorettype != 'int4'::regtype
      OR pronargs != 1
---   OR NOT physically_coercible(amproclefttype, proargtypes[0])
-     OR amproclefttype != amprocrighttype);
+     OR NOT physically_coercible(amproclefttype, proargtypes[0])
+     OR amproclefttype != amprocrighttype)
+ORDER BY 1;
 
 -- Support routines that are primary members of opfamilies must be immutable
 -- (else it suggests that the index ordering isn't fixed).  But cross-type

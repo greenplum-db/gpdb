@@ -1324,15 +1324,15 @@ FileRepResyncManager_InSyncTransition(void)
 		MirroredFlatFile_DropFilesFromDir();
 		
 		fileRepResyncShmem->checkpointRequest = TRUE;		
-		CreateCheckPoint(false, true);
+		CreateCheckPoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
 		fileRepResyncShmem->checkpointRequest = FALSE;
 		
 		/* 
 		 * The second checkpoint is required in order to mirror pg_control
 		 * with last checkpoint position in the xlog file that is mirrored (XLogSwitch).
 		 */
-		CreateCheckPoint(false, true);
-		
+		CreateCheckPoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
+
 		FileRepSubProcess_ProcessSignals();
 		if (! (FileRepSubProcess_GetState() == FileRepStateReady &&
 			   dataState == DataStateInSync))

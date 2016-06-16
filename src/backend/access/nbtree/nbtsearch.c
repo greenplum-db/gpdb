@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsearch.c,v 1.111 2007/01/09 02:14:10 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsearch.c,v 1.116 2008/01/01 19:45:46 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -649,7 +649,7 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 			 * even if the row comparison is of ">" or "<" type, because the
 			 * condition applied to all but the last row member is effectively
 			 * ">=" or "<=", and so the extra keys don't break the positioning
-			 * scheme.  But, by the same token, if we aren't able to use all
+			 * scheme.	But, by the same token, if we aren't able to use all
 			 * the row members, then the part of the row comparison that we
 			 * did use has to be treated as just a ">=" or "<=" condition, and
 			 * so we'd better adjust strat_total accordingly.
@@ -659,7 +659,7 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 				bool		used_all_subkeys = false;
 
 				Assert(!(subkey->sk_flags & SK_ROW_END));
-				for(;;)
+				for (;;)
 				{
 					subkey++;
 					Assert(subkey->sk_flags & SK_ROW_MEMBER);
@@ -758,8 +758,6 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 	 *
 	 * If goback = true, we will then step back one item, while if
 	 * goback = false, we will start the scan on the located item.
-	 *
-	 * it's yet other place to add some code later for is(not)null ...
 	 *----------
 	 */
 	switch (strat_total)

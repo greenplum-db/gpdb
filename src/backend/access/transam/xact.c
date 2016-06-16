@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/transam/xact.c,v 1.234 2007/02/09 03:35:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/transam/xact.c,v 1.257.2.8 2010/07/23 00:43:26 rhaas Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -37,12 +37,14 @@
 #include "executor/spi.h"
 #include "libpq/be-fsstubs.h"
 #include "miscadmin.h"
+#include "pg_trace.h"
 #include "pgstat.h"
 #include "replication/walsender.h"
 #include "replication/syncrep.h"
 #include "storage/fd.h"
 #include "storage/lmgr.h"
 #include "storage/procarray.h"
+#include "storage/sinvaladt.h"
 #include "storage/smgr.h"
 #include "storage/freespace.h"
 #include "utils/combocid.h"
@@ -72,8 +74,17 @@ int			XactIsoLevel;
 bool		DefaultXactReadOnly = false;
 bool		XactReadOnly;
 
+bool		XactSyncCommit = true;
+
 int			CommitDelay = 0;	/* precommit delay in microseconds */
 int			CommitSiblings = 5; /* # concurrent xacts needed to sleep */
+
+/*
+ * MyXactAccessedTempRel is set when a temporary relation is accessed.
+ * We don't allow PREPARE TRANSACTION in that case.  (This is global
+ * so that it can be set from heapam.c.)
+ */
+bool		MyXactAccessedTempRel = false;
 
 XidBuffer subxbuf;
 int32 gp_subtrans_warn_limit = 16777216; /* 16 million */
@@ -147,7 +158,9 @@ typedef struct TransactionStateData
 	int			gucNestLevel;	/* GUC context nesting depth */
 	MemoryContext curTransactionContext;		/* my xact-lifetime context */
 	ResourceOwner curTransactionOwner;	/* my query resources */
-	List	   *childXids;		/* subcommitted child XIDs */
+	TransactionId *childXids;	/* subcommitted child XIDs, in XID order */
+	int			nChildXids;		/* # of subcommitted child XIDs */
+	int			maxChildXids;	/* allocated size of childXids[] */
 	Oid			prevUser;		/* previous CurrentUserId setting */
 	int			prevSecContext;	/* previous SecurityRestrictionContext */
 	bool		prevXactReadOnly;		/* entry-time xact r/o state */
@@ -181,7 +194,9 @@ static TransactionStateData TopTransactionStateData = {
 	0,							/* GUC context nesting depth */
 	NULL,						/* cur transaction context */
 	NULL,						/* cur transaction resource owner */
-	NIL,						/* subcommitted child Xids */
+	NULL,						/* subcommitted child Xids */
+	0,							/* # of subcommitted child Xids */
+	0,							/* allocated size of childXids[] */
 	InvalidOid,					/* previous CurrentUserId setting */
 	0,							/* previous SecurityRestrictionContext */
 	false,						/* entry-time xact r/o state */
@@ -198,6 +213,7 @@ static TransactionState CurrentTransactionState = &TopTransactionStateData;
  */
 static SubTransactionId currentSubTransactionId;
 static CommandId currentCommandId;
+static bool currentCommandIdUsed;
 
 /*
  * xactStartTimestamp is the value of transaction_timestamp().
@@ -221,6 +237,11 @@ static int currentSavepointTotal;
  * global to a whole transaction, so we don't keep it in the state stack.
  */
 static char *prepareGID;
+
+/*
+ * Some commands want to force synchronous commit.
+ */
+static bool forceSyncCommit = false;
 
 /*
  * Private context for transaction-abort work --- we reserve space for this
@@ -262,7 +283,7 @@ static SubXactCallbackItem *SubXact_callbacks = NULL;
 File subxip_file = 0;
 
 /* local function prototypes */
-static void AssignSubTransactionId(TransactionState s);
+static void AssignTransactionId(TransactionState s);
 static void AtAbort_Memory(void);
 static void AtCleanup_Memory(void);
 static void AtAbort_ResourceOwner(void);
@@ -277,7 +298,7 @@ static void CallSubXactCallbacks(SubXactEvent event,
 					 SubTransactionId mySubid,
 					 SubTransactionId parentSubid);
 static void CleanupTransaction(void);
-static void RecordTransactionAbort(void);
+static TransactionId RecordTransactionAbort(bool isSubXact);
 
 static void RecordSubTransactionCommit(void);
 static void StartSubTransaction(void);
@@ -343,26 +364,14 @@ IsTransactionState(void)
 {
 	TransactionState s = CurrentTransactionState;
 
-	switch (s->state)
-	{
-		case TRANS_DEFAULT:
-			return false;
-		case TRANS_START:
-			return true;
-		case TRANS_INPROGRESS:
-			return true;
-		case TRANS_COMMIT:
-			return true;
-		case TRANS_ABORT:
-			return true;
-		case TRANS_PREPARE:
-			return true;
-	}
-
 	/*
-	 * Shouldn't get here, but lint is not happy without this...
+	 * TRANS_DEFAULT and TRANS_ABORT are obviously unsafe states.  However, we
+	 * also reject the startup/shutdown states TRANS_START, TRANS_COMMIT,
+	 * TRANS_PREPARE since it might be too soon or too late within those
+	 * transition states to do anything interesting.  Hence, the only "valid"
+	 * state is TRANS_INPROGRESS.
 	 */
-	return false;
+	return (s->state == TRANS_INPROGRESS);
 }
 
 bool
@@ -407,23 +416,36 @@ GetAllTransactionXids(
 /*
  *	GetTopTransactionId
  *
- * Get the ID of the main transaction, even if we are currently inside
- * a subtransaction.
+ * This will return the XID of the main transaction, assigning one if
+ * it's not yet set.  Be careful to call this only inside a valid xact.
  */
 TransactionId
 GetTopTransactionId(void)
 {
+	if (!TransactionIdIsValid(TopTransactionStateData.transactionId))
+		AssignTransactionId(&TopTransactionStateData);
 	return TopTransactionStateData.transactionId;
 }
 
+/*
+ *	GetTopTransactionIdIfAny
+ *
+ * This will return the XID of the main transaction, if one is assigned.
+ * It will return InvalidTransactionId if we are not currently inside a
+ * transaction, or inside a transaction that hasn't yet been assigned an XID.
+ */
+TransactionId
+GetTopTransactionIdIfAny(void)
+{
+	return TopTransactionStateData.transactionId;
+}
 
 /*
  *	GetCurrentTransactionId
  *
- * We do not assign XIDs to subtransactions until/unless this is called.
- * When we do assign an XID to a subtransaction, recursively make sure
- * its parent has one as well (this maintains the invariant that a child
- * transaction has an XID following its parent's).
+ * This will return the XID of the current transaction (main or sub
+ * transaction), assigning one if it's not yet set.  Be careful to call this
+ * only inside a valid xact.
  */
 TransactionId
 GetCurrentTransactionId(void)
@@ -431,20 +453,71 @@ GetCurrentTransactionId(void)
 	TransactionState s = CurrentTransactionState;
 
 	if (!TransactionIdIsValid(s->transactionId))
-		AssignSubTransactionId(s);
-
+		AssignTransactionId(s);
 	return s->transactionId;
 }
 
-static void
-AssignSubTransactionId(TransactionState s)
+/*
+ *	GetCurrentTransactionIdIfAny
+ *
+ * This will return the XID of the current sub xact, if one is assigned.
+ * It will return InvalidTransactionId if we are not currently inside a
+ * transaction, or inside a transaction that hasn't been assigned an XID yet.
+ */
+TransactionId
+GetCurrentTransactionIdIfAny(void)
 {
+	return CurrentTransactionState->transactionId;
+}
+
+
+/*
+ * AssignTransactionId
+ *
+ * Assigns a new permanent XID to the given TransactionState.
+ * We do not assign XIDs to transactions until/unless this is called.
+ * Also, any parent TransactionStates that don't yet have XIDs are assigned
+ * one; this maintains the invariant that a child transaction has an XID
+ * following its parent's.
+ */
+static void
+AssignTransactionId(TransactionState s)
+{
+	bool		isSubXact = (s->parent != NULL);
 	ResourceOwner currentOwner;
 
-	Assert(s->parent != NULL);
+	/* Assert that caller didn't screw up */
+	Assert(!TransactionIdIsValid(s->transactionId));
 	Assert(s->state == TRANS_INPROGRESS);
-	if (!TransactionIdIsValid(s->parent->transactionId))
-		AssignSubTransactionId(s->parent);
+
+	/*
+	 * Ensure parent(s) have XIDs, so that a child always has an XID later
+	 * than its parent.  Musn't recurse here, or we might get a stack overflow
+	 * if we're at the bottom of a huge stack of subtransactions none of which
+	 * have XIDs yet.
+	 */
+	if (isSubXact && !TransactionIdIsValid(s->parent->transactionId))
+	{
+		TransactionState	p = s->parent;
+		TransactionState   *parents;
+		size_t	parentOffset = 0;
+
+		parents = palloc(sizeof(TransactionState) *  s->nestingLevel);
+		while (p != NULL && !TransactionIdIsValid(p->transactionId))
+		{
+			parents[parentOffset++] = p;
+			p = p->parent;
+		}
+
+		/*
+		 * This is technically a recursive call, but the recursion will
+		 * never be more than one layer deep.
+		 */
+		while (parentOffset != 0)
+			AssignTransactionId(parents[--parentOffset]);
+
+		pfree(parents);
+	}
 
 	/*
 	 * Generate a new Xid and record it in PG_PROC and pg_subtrans.
@@ -454,12 +527,14 @@ AssignSubTransactionId(TransactionState s)
 	 * PG_PROC, the subtrans entry is needed to ensure that other backends see
 	 * the Xid as "running".  See GetNewTransactionId.
 	 */
-	s->transactionId = GetNewTransactionId(true, true);
-	elog((Debug_print_full_dtm ? LOG : DEBUG5), "AssignSubTransactionId(): assigned xid %u", s->transactionId);
+	s->transactionId = GetNewTransactionId(isSubXact, true);
+	elog((Debug_print_full_dtm ? LOG : DEBUG5), "AssignTransactionId(): assigned xid %u", s->transactionId);
 
-	Assert(TransactionIdPrecedes(s->parent->transactionId, s->transactionId));
-
-	SubTransSetParent(s->transactionId, s->parent->transactionId);
+	if (isSubXact)
+	{
+		Assert(TransactionIdPrecedes(s->parent->transactionId, s->transactionId));
+		SubTransSetParent(s->transactionId, s->parent->transactionId);
+	}
 
 	/*
 	 * Acquire lock on the transaction XID.  (We assume this cannot block.) We
@@ -470,7 +545,6 @@ AssignSubTransactionId(TransactionState s)
 	PG_TRY();
 	{
 		CurrentResourceOwner = s->curTransactionOwner;
-
 		XactLockTableInsert(s->transactionId);
 	}
 	PG_CATCH();
@@ -481,22 +555,6 @@ AssignSubTransactionId(TransactionState s)
 	}
 	PG_END_TRY();
 	CurrentResourceOwner = currentOwner;
-}
-
-
-/*
- *	GetCurrentTransactionIdIfAny
- *
- * Unlike GetCurrentTransactionId, this will return InvalidTransactionId
- * if we are currently not in a transaction, or in a transaction or
- * subtransaction that has not yet assigned itself an XID.
- */
-TransactionId
-GetCurrentTransactionIdIfAny(void)
-{
-	TransactionState s = CurrentTransactionState;
-
-	return s->transactionId;
 }
 
 
@@ -514,11 +572,18 @@ GetCurrentSubTransactionId(void)
 
 /*
  *	GetCurrentCommandId
+ *
+ * "used" must be TRUE if the caller intends to use the command ID to mark
+ * inserted/updated/deleted tuples.  FALSE means the ID is being fetched
+ * for read-only purposes (ie, as a snapshot validity cutoff).  See
+ * CommandCounterIncrement() for discussion.
  */
 CommandId
-GetCurrentCommandId(void)
+GetCurrentCommandId(bool used)
 {
 	/* this is global to a transaction, not subtransaction-local */
+	if (used)
+		currentCommandIdUsed = true;
 	return currentCommandId;
 }
 
@@ -603,7 +668,7 @@ GetCurrentTransactionNestLevel(void)
  * is no longer "current", even though it may still have an entry on the
  * state stack.
  *
- * The parent list and childXIDs list within it are in sorted decreasing order.
+ * The XID of a child is always greater than that of its parent.
  * Taking advantage of this fact simple optimizations are added instead of linear traversal to fasten the search
  *  1] Added fastLink/skipLink pointers to skip nodes in list and scan fast across, instead of visiting all nodes in list
  *  2] Break-out as soon as XID to search is greater than the current node in (parent / child) list
@@ -615,23 +680,30 @@ TransactionIdIsCurrentTransactionIdInternal(TransactionId xid)
 
 	while (s != NULL)
 	{
-		ListCell   *cell;
-
 		if ((s->state != TRANS_ABORT) &&
 				(TransactionIdIsValid(s->transactionId)))
 		{
+			int low, high;
+
 			if (TransactionIdEquals(xid, s->transactionId))
 				return true;
-			foreach(cell, s->childXids)
+
+			/* As the childXids array is ordered, we can use binary search */
+			low = 0;
+			high = s->nChildXids - 1;
+			while (low <= high)
 			{
-				if (TransactionIdEquals(xid, lfirst_xid(cell)))
+				int				middle;
+				TransactionId	probe;
+
+				middle = low + (high - low) / 2;
+				probe = s->childXids[middle];
+				if (TransactionIdEquals(probe, xid))
 					return true;
-				/*
-				 * childXid list is maintained in decreasing order.
-				 * hence, can safely breakout if XID follows currentListNode XID.
-				 */
-				if (TransactionIdFollows(xid, lfirst_xid(cell)))
-					break;
+				else if (TransactionIdPrecedes(probe, xid))
+					low = middle + 1;
+				else
+					high = middle - 1;
 			}
 
 			/*
@@ -686,8 +758,8 @@ TransactionIdIsCurrentTransactionId(TransactionId xid)
 	if (!TransactionIdIsNormal(xid))
 		return false;
 
-    if ((DistributedTransactionContext == DTX_CONTEXT_QE_READER ||
-		 DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON))
+    if (DistributedTransactionContext == DTX_CONTEXT_QE_READER ||
+		DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON)
 	{
 		if (TransactionIdEquals(xid, TopTransactionStateData.transactionId))
 		{
@@ -739,7 +811,6 @@ TransactionIdIsCurrentTransactionId(TransactionId xid)
 	}
 
 	/* we aren't a reader */
-	Assert(DistributedTransactionContext != DTX_CONTEXT_QE_READER);
 	Assert(DistributedTransactionContext != DTX_CONTEXT_QE_ENTRY_DB_SINGLETON);
 
 	return TransactionIdIsCurrentTransactionIdInternal(xid);
@@ -752,26 +823,63 @@ TransactionIdIsCurrentTransactionId(TransactionId xid)
 void
 CommandCounterIncrement(void)
 {
-	currentCommandId += 1;
-	if (currentCommandId == FirstCommandId)		/* check for overflow */
+	/*
+	 * If the current value of the command counter hasn't been "used" to
+	 * mark tuples, we need not increment it, since there's no need to
+	 * distinguish a read-only command from others.  This helps postpone
+	 * command counter overflow, and keeps no-op CommandCounterIncrement
+	 * operations cheap.
+	 */
+	if (currentCommandIdUsed)
 	{
-		currentCommandId -= 1;
-		ereport(ERROR,
-				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+		currentCommandId += 1;
+		if (currentCommandId == FirstCommandId)	/* check for overflow */
+		{
+			currentCommandId -= 1;
+			ereport(ERROR,
+					(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 		  errmsg("cannot have more than 2^32-1 commands in a transaction")));
+		}
+		currentCommandIdUsed = false;
+
+		/* Propagate new command ID into static snapshots, if set */
+		if (SerializableSnapshot)
+			SerializableSnapshot->curcid = currentCommandId;
+		if (LatestSnapshot)
+			LatestSnapshot->curcid = currentCommandId;
+
+		/*
+		 * Make any catalog changes done by the just-completed command
+		 * visible in the local syscache.  We obviously don't need to do
+		 * this after a read-only command.  (But see hacks in inval.c
+		 * to make real sure we don't think a command that queued inval
+		 * messages was read-only.)
+		 */
+		AtCommit_LocalCache();
 	}
 
-	/* Propagate new command ID into static snapshots, if set */
-	if (SerializableSnapshot)
-		SerializableSnapshot->curcid = currentCommandId;
-	if (LatestSnapshot)
-		LatestSnapshot->curcid = currentCommandId;
-
 	/*
-	 * make cache changes visible to me.
+	 * Make any other backends' catalog changes visible to me.
+	 *
+	 * XXX this is probably in the wrong place: CommandCounterIncrement
+	 * should be purely a local operation, most likely.  However fooling
+	 * with this will affect asynchronous cross-backend interactions,
+	 * which doesn't seem like a wise thing to do in late beta, so save
+	 * improving this for another day - tgl 2007-11-30
 	 */
-	AtCommit_LocalCache();
 	AtStart_Cache();
+}
+
+/*
+ * ForceSyncCommit
+ *
+ * Interface routine to allow commands to force a synchronous commit of the
+ * current top-level transaction
+ */
+void
+ForceSyncCommit(void)
+{
+	forceSyncCommit = true;
 }
 
 
@@ -800,9 +908,9 @@ AtStart_Memory(void)
 	/*
 	 * If this is the first time through, create a private context for
 	 * AbortTransaction to work in.  By reserving some space now, we can
-	 * insulate AbortTransaction from out-of-memory scenarios.  Like
-	 * ErrorContext, we set it up with slow growth rate and a nonzero
-	 * minimum size, so that space will be reserved immediately.
+	 * insulate AbortTransaction from out-of-memory scenarios.	Like
+	 * ErrorContext, we set it up with slow growth rate and a nonzero minimum
+	 * size, so that space will be reserved immediately.
 	 */
 	if (TransactionAbortContext == NULL)
 		TransactionAbortContext =
@@ -921,19 +1029,26 @@ AtSubStart_ResourceOwner(void)
 
 /*
  *	RecordTransactionCommit
+ *
+ * Returns latest XID among xact and its children, or InvalidTransactionId
+ * if the xact has no XID.	(We compute that here just because it's easier.)
+ *
+ * This is exported only to support an ugly hack in VACUUM FULL.
  */
-void
+TransactionId
 RecordTransactionCommit(void)
 {
+	TransactionId xid;
+	bool		markXidCommitted;
+	TransactionId latestXid = InvalidTransactionId;
 	MIRRORED_LOCK_DECLARE;
-
-	CHECKPOINT_START_LOCK_DECLARE;
 
 	int32						persistentCommitSerializeLen;
 	PersistentEndXactRecObjects persistentCommitObjects;
 	int16						persistentCommitObjectCount;
 	char						*persistentCommitBuffer = NULL;
 
+	bool		haveNonTemp;
 	int			nchildren;
 	TransactionId *children;
 	bool		isDtxPrepared = 0;
@@ -941,30 +1056,34 @@ RecordTransactionCommit(void)
 	TMGXACT_LOG gxact_log;
 	XLogRecPtr	recptr = {0,0};
 
+	/* Like in CommitTransaction(), treat a QE reader as if there was no XID */
+	if (DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON ||
+		DistributedTransactionContext == DTX_CONTEXT_QE_READER)
+	{
+		xid = InvalidTransactionId;
+	}
+	else
+		xid = GetTopTransactionIdIfAny();
+	markXidCommitted = TransactionIdIsValid(xid);
+
 	/* Get data needed for commit record */
 	persistentCommitSerializeLen =
 			PersistentEndXactRec_FetchObjectsFromSmgr(
 										&persistentCommitObjects,
 										EndXactRecKind_Commit,
 										&persistentCommitObjectCount);
+	/* GPDB_83_MERGE_FIXME: smgrGetPendingDeletes() in upstream returns
+	 * the haveNonTemp boolean too. PersistentEndXactRec_FetchObjectsFromSmgr()
+	 * doesn't do that.
+	 */
+	haveNonTemp = (persistentCommitObjectCount > 0);
 
 	nchildren = xactGetCommittedChildren(&children);
 
 	isDtxPrepared = isPreparedDtxTransaction();
 	omitCommitRecordForDirtyQEReader = false;
-
-	/*
-	 * If we made neither any XLOG entries nor any temp-rel updates, and have
-	 * no files to be deleted, we can omit recording the transaction commit at
-	 * all.  (This test includes the effects of subtransactions, so the
-	 * presence of committed subxacts need not alone force a write.)
-	 */
-	if (MyXactMadeXLogEntry || MyXactMadeTempRelUpdate || isDtxPrepared ||
-		persistentCommitObjectCount > 0)
+	if (markXidCommitted)
 	{
-		TransactionId xid = GetCurrentTransactionId();
-		bool		madeTCentries;
-
 		/* Safety check in case our assumption is ever broken. */
 		if (Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer && !seqXlogWrite)
 		{
@@ -999,125 +1118,135 @@ RecordTransactionCommit(void)
 #endif
 			}
 		}
+	}
+	
+	/*
+	 * If we haven't been assigned an XID yet, we neither can, nor do we want
+	 * to write a COMMIT record.
+	 */
+	if (!markXidCommitted)
+	{
+		/*
+		 * We expect that every smgrscheduleunlink is followed by a catalog
+		 * update, and hence XID assignment, so we shouldn't get here with any
+		 * pending deletes.  Use a real test not just an Assert to check this,
+		 * since it's a bit fragile.
+		 */
+		if (persistentCommitObjectCount != 0)
+			elog(ERROR, "cannot commit a transaction that deleted files but has no xid");
+
+		/* Can't have child XIDs either; AssignTransactionId enforces this */
+		Assert(nchildren == 0);
+
+		/*
+		 * If we didn't create XLOG entries, we're done here; otherwise we
+		 * should flush those entries the same as a commit record.	(An
+		 * example of a possible record that wouldn't cause an XID to be
+		 * assigned is a sequence advance record due to nextval() --- we want
+		 * to flush that to disk before reporting commit.)
+		 */
+		if (XactLastRecEnd.xrecoff == 0)
+			goto cleanup;
+	}
+	else
+	{
+		/*
+		 * Begin commit critical section and insert the commit XLOG record.
+		 */
+		XLogRecData rdata[4];
+		int			lastrdata = 0;
+		xl_xact_commit xlrec;
 
 		/* Tell bufmgr and smgr to prepare for commit */
 		BufmgrCommit();
 
-		if (!omitCommitRecordForDirtyQEReader)
-		{
-		START_CRIT_SECTION();
-
 		/*
-		 * If our transaction made any transaction-controlled XLOG entries, we
-		 * need to lock out checkpoint start between writing our XLOG record
-		 * and updating pg_clog.  Otherwise it is possible for the checkpoint
-		 * to set REDO after the XLOG record but fail to flush the pg_clog
-		 * update to disk, leading to loss of the transaction commit if we
-		 * crash a little later.  Slightly klugy fix for problem discovered
-		 * 2004-08-10.
+		 * Mark ourselves as within our "commit critical section".	This
+		 * forces any concurrent checkpoint to wait until we've updated
+		 * pg_clog.  Without this, it is possible for the checkpoint to set
+		 * REDO after the XLOG record but fail to flush the pg_clog update to
+		 * disk, leading to loss of the transaction commit if the system
+		 * crashes a little later.
 		 *
-		 * (If it made no transaction-controlled XLOG entries, its XID appears
-		 * nowhere in permanent storage, so no one else will ever care if it
-		 * committed; so it doesn't matter if we lose the commit flag.)
+		 * Note: we could, but don't bother to, set this flag in
+		 * RecordTransactionAbort.	That's because loss of a transaction abort
+		 * is noncritical; the presumption would be that it aborted, anyway.
 		 *
-		 * Note we only need a shared lock.
+		 * It's safe to change the inCommit flag of our own backend without
+		 * holding the ProcArrayLock, since we're the only one modifying it.
+		 * This makes checkpoint's determination of which xacts are inCommit a
+		 * bit fuzzy, but it doesn't matter.
 		 */
-		madeTCentries = (MyLastRecPtr.xrecoff != 0);
-		if (madeTCentries)
-		{
-			/*
-			 * When we use CheckpointStartLock, we make sure we already have the
-			 * MirroredLock first.
-			 *
-			 * The lock order is: MirroredLock then CheckpointStartLock.
-			 */
-			MIRRORED_LOCK;
+		START_CRIT_SECTION();
+		MyProc->inCommit = true;
 
-			CHECKPOINT_START_LOCK;
-		}
+		MIRRORED_LOCK;
 
 		SetCurrentTransactionStopTimestamp();
-		/*
-		 * We only need to log the commit in XLOG if the transaction made any
-		 * transaction-controlled XLOG entries or will delete files.
-		 */
-		if (madeTCentries || persistentCommitObjectCount > 0 || isDtxPrepared)
+		xlrec.xact_time = xactStopTimestamp;
+		xlrec.persistentCommitObjectCount = persistentCommitObjectCount;
+		xlrec.nsubxacts = nchildren;
+		rdata[0].data = (char *) (&xlrec);
+		rdata[0].len = MinSizeOfXactCommit;
+		rdata[0].buffer = InvalidBuffer;
+		/* dump persistent commit objects */
+		if (persistentCommitObjectCount > 0)
 		{
-			XLogRecData rdata[4];
-			int			lastrdata = 0;
-			xl_xact_commit xlrec;
+			int16 objectCount;
 
-			xlrec.xtime = time(NULL);
-		    //xlrec.xact_time = xactStopTimestamp;
-			xlrec.persistentCommitObjectCount = persistentCommitObjectCount;
-			xlrec.nsubxacts = nchildren;
-			rdata[0].data = (char *) (&xlrec);
-			rdata[0].len = MinSizeOfXactCommit;
-			rdata[0].buffer = InvalidBuffer;
-			/* dump persistent commit objects */
-			if (persistentCommitObjectCount > 0)
-			{
-				int16 objectCount;
+			Assert(persistentCommitSerializeLen > 0);
+			persistentCommitBuffer =
+				(char *) palloc(persistentCommitSerializeLen);
 
-				Assert(persistentCommitSerializeLen > 0);
-				persistentCommitBuffer =
-							(char *) palloc(persistentCommitSerializeLen);
+			PersistentEndXactRec_Serialize(
+				&persistentCommitObjects,
+				EndXactRecKind_Commit,
+				&objectCount,
+				(uint8*)persistentCommitBuffer,
+				persistentCommitSerializeLen);
 
-				PersistentEndXactRec_Serialize(
-										&persistentCommitObjects,
-										EndXactRecKind_Commit,
-										&objectCount,
-										(uint8*)persistentCommitBuffer,
-										persistentCommitSerializeLen);
+			if (Debug_persistent_print)
+				PersistentEndXactRec_Print("RecordTransactionCommit", &persistentCommitObjects);
 
-				if (Debug_persistent_print)
-					PersistentEndXactRec_Print("RecordTransactionCommit", &persistentCommitObjects);
+			rdata[0].next = &(rdata[1]);
+			rdata[1].data = persistentCommitBuffer;
+			rdata[1].len = persistentCommitSerializeLen;
+			rdata[1].buffer = InvalidBuffer;
+			lastrdata = 1;
+		}
+		/* dump committed child Xids */
+		if (nchildren > 0)
+		{
+			rdata[lastrdata].next = &(rdata[2]);
+			rdata[2].data = (char *) children;
+			rdata[2].len = nchildren * sizeof(TransactionId);
+			rdata[2].buffer = InvalidBuffer;
+			lastrdata = 2;
+		}
+		/* add global transaction information */
+		if (isDtxPrepared)
+		{
+			getDtxLogInfo(&gxact_log);
 
-				rdata[0].next = &(rdata[1]);
-				rdata[1].data = persistentCommitBuffer;
-				rdata[1].len = persistentCommitSerializeLen;
-				rdata[1].buffer = InvalidBuffer;
-				lastrdata = 1;
-			}
-			/* dump committed child Xids */
-			if (nchildren > 0)
-			{
-				rdata[lastrdata].next = &(rdata[2]);
-				rdata[2].data = (char *) children;
-				rdata[2].len = nchildren * sizeof(TransactionId);
-				rdata[2].buffer = InvalidBuffer;
-				lastrdata = 2;
-			}
-			/* add global transaction information */
-			if (isDtxPrepared)
-			{
-				getDtxLogInfo(&gxact_log);
+			rdata[lastrdata].next = &(rdata[3]);
+			rdata[3].data = (char *) &gxact_log;
+			rdata[3].len = sizeof(gxact_log);
+			rdata[3].buffer = InvalidBuffer;
+			lastrdata = 3;
+		}
+		rdata[lastrdata].next = NULL;
 
-				rdata[lastrdata].next = &(rdata[3]);
-				rdata[3].data = (char *) &gxact_log;
-				rdata[3].len = sizeof(gxact_log);
-				rdata[3].buffer = InvalidBuffer;
-				lastrdata = 3;
-			}
-			rdata[lastrdata].next = NULL;
+		if (isDtxPrepared)
+		{
+			insertingDistributedCommitted();
 
-			if (isDtxPrepared)
-			{
-				insertingDistributedCommitted();
+			recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_DISTRIBUTED_COMMIT, rdata);
 
-				recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_DISTRIBUTED_COMMIT, rdata);
-
-				insertedDistributedCommitted();
-			}
-			else
-			{
-				recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_COMMIT, rdata);
-			}
+			insertedDistributedCommitted();
 		}
 		else
 		{
-			/* Just flush through last record written by me */
-			recptr = ProcLastRecEnd;
+			recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_COMMIT, rdata);
 		}
 
 		/* MPP: If we are the QD and we've used sequences (from the sequence server) then we need
@@ -1137,70 +1266,62 @@ RecordTransactionCommit(void)
 
 			LWLockRelease(SeqServerControlLock);
 		}
+	}
 
+	/*
+	 * Check if we want to commit asynchronously.  If the user has set
+	 * synchronous_commit = off, and we're not doing cleanup of any non-temp
+	 * rels nor committing any command that wanted to force sync commit, then
+	 * we can defer flushing XLOG.	(We must not allow asynchronous commit if
+	 * there are any non-temp tables to be deleted, because we might delete
+	 * the files before the COMMIT record is flushed to disk.  We do allow
+	 * asynchronous commit if all to-be-deleted tables are temporary though,
+	 * since they are lost anyway if we crash.)
+	 */
+	if (XactSyncCommit || forceSyncCommit || haveNonTemp)
+	{
 		/*
-		 * We must flush our XLOG entries to disk if we made any XLOG entries,
-		 * whether in or out of transaction control.  For example, if we
-		 * reported a nextval() result to the client, this ensures that any
-		 * XLOG record generated by nextval will hit the disk before we report
-		 * the transaction committed.
+		 * Synchronous commit case.
 		 *
-		 * Note: if we generated a commit record above, MyXactMadeXLogEntry
-		 * will certainly be set now.
+		 * Sleep before flush! So we can flush more than one commit records
+		 * per single fsync.  (The idea is some other backend may do the
+		 * XLogFlush while we're sleeping.  This needs work still, because on
+		 * most Unixen, the minimum select() delay is 10msec or more, which is
+		 * way too long.)
+		 *
+		 * We do not sleep if enableFsync is not turned on, nor if there are
+		 * fewer than CommitSiblings other backends with active transactions.
 		 */
-		if (MyXactMadeXLogEntry)
-		{
-			/*
-			 * Sleep before flush! So we can flush more than one commit
-			 * records per single fsync.  (The idea is some other backend may
-			 * do the XLogFlush while we're sleeping.  This needs work still,
-			 * because on most Unixen, the minimum select() delay is 10msec or
-			 * more, which is way too long.)
-			 *
-			 * We do not sleep if enableFsync is not turned on, nor if there
-			 * are fewer than CommitSiblings other backends with active
-			 * transactions.
-			 */
-			if (CommitDelay > 0 && enableFsync &&
-				CountActiveBackends() >= CommitSiblings)
-				pg_usleep(CommitDelay);
+		if (CommitDelay > 0 && enableFsync &&
+			CountActiveBackends() >= CommitSiblings)
+			pg_usleep(CommitDelay);
 
-			XLogFlush(recptr);
+		XLogFlush(recptr);
 
 #ifdef FAULT_INJECTOR
-			if (isDtxPrepared == 0 &&
-				CurrentTransactionState->blockState == TBLOCK_END)
-			{
-					FaultInjector_InjectFaultIfSet(
-												   LocalTmRecordTransactionCommit,
-												   DDLNotSpecified,
-												   "",  // databaseName
-												   ""); // tableName
-			}
+		if (isDtxPrepared == 0 &&
+			CurrentTransactionState->blockState == TBLOCK_END)
+		{
+			FaultInjector_InjectFaultIfSet(LocalTmRecordTransactionCommit,
+										   DDLNotSpecified,
+										   "",  // databaseName
+										   ""); // tableName
+		}
 #endif
 
-			/*
-			 * Now we may update the CLOG, if we wrote COMMIT record above
-			 */
-			if (max_wal_senders > 0)
-				WalSndWakeup();
+		/*
+		 * Now we may update the CLOG, if we wrote COMMIT record above
+		 */
+		if (max_wal_senders > 0)
+			WalSndWakeup();
 
-			if (isDtxPrepared)
-			{
-				forcedDistributedCommitted(&recptr);
-			}
-		}
+		if (isDtxPrepared)
+			forcedDistributedCommitted(&recptr);
 
 		/*
-		 * We must mark the transaction committed in clog if its XID appears
-		 * either in permanent rels or in local temporary rels. We test this
-		 * by seeing if we made transaction-controlled entries *OR* local-rel
-		 * tuple updates.  Note that if we made only the latter, we have not
-		 * emitted an XLOG record for our commit, and so in the event of a
-		 * crash the clog update might be lost.  This is okay because no one
-		 * else will ever care whether we committed.
+		 * Now we may update the CLOG, if we wrote a COMMIT record above
 		 */
-		if (madeTCentries || MyXactMadeTempRelUpdate)
+		if (markXidCommitted)
 		{
 			if (isDtxPrepared)
 			{
@@ -1217,25 +1338,48 @@ RecordTransactionCommit(void)
 			/* to avoid race conditions, the parent must commit first */
 			TransactionIdCommitTree(nchildren, children);
 		}
+	}
+	else
+	{
+		/*
+		 * Asynchronous commit case.
+		 *
+		 * Report the latest async commit LSN, so that the WAL writer knows to
+		 * flush this commit.
+		 */
+		XLogSetAsyncCommitLSN(XactLastRecEnd);
+
+		/*
+		 * We must not immediately update the CLOG, since we didn't flush the
+		 * XLOG. Instead, we store the LSN up to which the XLOG must be
+		 * flushed before the CLOG may be updated.
+		 */
+		if (markXidCommitted)
+		{
+			TransactionIdAsyncCommit(xid, XactLastRecEnd);
+			/* to avoid race conditions, the parent must commit first */
+			TransactionIdAsyncCommitTree(nchildren, children, XactLastRecEnd);
+		}
+	}
 
 #ifdef FAULT_INJECTOR
-		FaultInjector_InjectFaultIfSet(
-					       DtmXLogDistributedCommit,
-					       DDLNotSpecified,
-					       "",	// databaseName
-					       ""); // tableName
+	FaultInjector_InjectFaultIfSet(
+		DtmXLogDistributedCommit,
+		DDLNotSpecified,
+		"",	// databaseName
+		""); // tableName
 #endif
 
-		/* Unlock checkpoint lock if we acquired it */
-		if (madeTCentries)
-		{
-			CHECKPOINT_START_UNLOCK;
-
-			MIRRORED_UNLOCK;
-		}
-
+	/*
+	 * If we entered a commit critical section, leave it now, and let
+	 * checkpoints proceed.
+	 */
+	if (markXidCommitted)
+	{
+		MyProc->inCommit = false;
 		END_CRIT_SECTION();
-	}
+
+		MIRRORED_UNLOCK;
 	}
 
 	/*
@@ -1244,17 +1388,19 @@ RecordTransactionCommit(void)
 	 * Note that at this stage we have marked clog, but still show as running
 	 * in the procarray and continue to hold locks.
 	 */
-	if (MyXactMadeXLogEntry)
+	if (markXidCommitted)
 	{
 		Assert(recptr.xrecoff != 0);
 		SyncRepWaitForLSN(recptr);
 	}
 
-	/* Break the chain of back-links in the XLOG records I output */
-	MyLastRecPtr.xrecoff = 0;
-	MyXactMadeXLogEntry = false;
-	MyXactMadeTempRelUpdate = false;
+	/* Compute latestXid while we have the child XIDs handy */
+	latestXid = TransactionIdLatest(xid, nchildren, children);
 
+	/* Reset XactLastRecEnd until the next transaction writes something */
+	XactLastRecEnd.xrecoff = 0;
+
+cleanup:
 	/* And clean up local data */
 
 	// UNDONE: Free storage in persistentCommitObjects...
@@ -1263,6 +1409,8 @@ RecordTransactionCommit(void)
 		pfree(persistentCommitBuffer);
 	if (children)
 		pfree(children);
+
+	return latestXid;
 }
 
 /*
@@ -1281,7 +1429,7 @@ RecordDistributedForgetCommitted(TMGXACT_LOG *gxact_log)
 	rdata[0].buffer = InvalidBuffer;
 	rdata[0].next = NULL;
 
-	XLogInsert(RM_XACT_ID, XLOG_XACT_DISTRIBUTED_FORGET | XLOG_NO_TRAN, rdata);
+	XLogInsert(RM_XACT_ID, XLOG_XACT_DISTRIBUTED_FORGET, rdata);
 }
 
 /*
@@ -1359,49 +1507,79 @@ static void
 AtSubCommit_childXids(void)
 {
 	TransactionState s = CurrentTransactionState;
-	MemoryContext old_cxt;
+	int			new_nChildXids;
 
 	Assert(s->parent != NULL);
 
 	/*
-	 * We keep the child-XID lists in TopTransactionContext; this avoids
-	 * setting up child-transaction contexts for what might be just a few
-	 * bytes of grandchild XIDs.
+	 * The parent childXids array will need to hold my XID and all my
+	 * childXids, in addition to the XIDs already there.
 	 */
-	old_cxt = MemoryContextSwitchTo(TopTransactionContext);
+	new_nChildXids = s->parent->nChildXids + s->nChildXids + 1;
 
-	/*
-	 * The childXids is maintained in decreasing order. This is to
-	 * enable collection of subtransaction ids in decreasing order
-	 * for efficiency. See GetAddedSubtransactionsFromTree().
-	 * parent->childXids, if not NULL, has xids that precede s->childXids.
-	 */
-
-#ifdef USE_ASSERT_CHECKING
-	if (s->childXids && list_length(s->childXids))
+	/* Allocate or enlarge the parent array if necessary */
+	if (s->parent->maxChildXids < new_nChildXids)
 	{
-		Assert(TransactionIdPrecedes(s->transactionId, llast_oid(s->childXids)));
-	}
-#endif
-	List *new_childXids = lappend_xid(s->childXids,
-                                s->transactionId);
-
-	if (s->parent->childXids != NIL)
-	{
-		Assert(TransactionIdPrecedes(linitial_oid(s->parent->childXids), llast_oid(new_childXids)));
-
-		new_childXids = list_concat(new_childXids,
-				  s->parent->childXids);
+		int				new_maxChildXids;
+		TransactionId  *new_childXids;
 
 		/*
-		 * list_concat doesn't free the list header for the second list; do so
-		 * here to avoid memory leakage (kluge)
+		 * Make it 2x what's needed right now, to avoid having to enlarge it
+		 * repeatedly. But we can't go above MaxAllocSize.  (The latter
+		 * limit is what ensures that we don't need to worry about integer
+		 * overflow here or in the calculation of new_nChildXids.)
 		 */
-		pfree(s->parent->childXids);
+		new_maxChildXids = Min(new_nChildXids * 2,
+							   (int) (MaxAllocSize / sizeof(TransactionId)));
+
+		if (new_maxChildXids < new_nChildXids)
+			ereport(ERROR,
+					(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+					 errmsg("maximum number of committed subtransactions (%d) exceeded",
+							(int) (MaxAllocSize / sizeof(TransactionId)))));
+
+		/*
+		 * We keep the child-XID arrays in TopTransactionContext; this avoids
+		 * setting up child-transaction contexts for what might be just a few
+		 * bytes of grandchild XIDs.
+		 */
+		if (s->parent->childXids == NULL)
+			new_childXids =
+				MemoryContextAlloc(TopTransactionContext, 
+								   new_maxChildXids * sizeof(TransactionId));
+		else
+			new_childXids = repalloc(s->parent->childXids, 
+									 new_maxChildXids * sizeof(TransactionId));
+
+		s->parent->childXids  = new_childXids;
+		s->parent->maxChildXids = new_maxChildXids;
 	}
-	s->parent->childXids = new_childXids;
-	s->childXids = NIL;
-	MemoryContextSwitchTo(old_cxt);
+
+	/*
+	 * Copy all my XIDs to parent's array.
+	 *
+	 * Note: We rely on the fact that the XID of a child always follows that
+	 * of its parent.  By copying the XID of this subtransaction before the
+	 * XIDs of its children, we ensure that the array stays ordered.  Likewise,
+	 * all XIDs already in the array belong to subtransactions started and
+	 * subcommitted before us, so their XIDs must precede ours.
+	 */
+	s->parent->childXids[s->parent->nChildXids] = s->transactionId;
+
+	if (s->nChildXids > 0)
+		memcpy(&s->parent->childXids[s->parent->nChildXids + 1],
+			   s->childXids,
+			   s->nChildXids * sizeof(TransactionId));
+
+	s->parent->nChildXids = new_nChildXids;
+
+	/* Release child's array to avoid leakage */
+	if (s->childXids != NULL)
+		pfree(s->childXids);
+	/* We must reset these to avoid double-free if fail later in commit */
+	s->childXids = NULL;
+	s->nChildXids = 0;
+	s->maxChildXids = 0;
 }
 
 /*
@@ -1410,23 +1588,20 @@ AtSubCommit_childXids(void)
 static void
 RecordSubTransactionCommit(void)
 {
+	TransactionId xid = GetCurrentTransactionIdIfAny();
+
 	/*
 	 * We do not log the subcommit in XLOG; it doesn't matter until the
 	 * top-level transaction commits.
 	 *
-	 * We must mark the subtransaction subcommitted in clog if its XID appears
-	 * either in permanent rels or in local temporary rels. We test this by
-	 * seeing if we made transaction-controlled entries *OR* local-rel tuple
-	 * updates.  (The test here actually covers the entire transaction tree so
-	 * far, so it may mark subtransactions that don't really need it, but it's
-	 * probably not worth being tenser. Note that if a prior subtransaction
-	 * dirtied these variables, then RecordTransactionCommit will have to do
-	 * the full pushup anyway...)
+	 * We must mark the subtransaction subcommitted in the CLOG if it had a
+	 * valid XID assigned.	If it did not, nobody else will ever know about
+	 * the existence of this subxact.  We don't have to deal with deletions
+	 * scheduled for on-commit here, since they'll be reassigned to our parent
+	 * (who might still abort).
 	 */
-	if (MyLastRecPtr.xrecoff != 0 || MyXactMadeTempRelUpdate)
+	if (TransactionIdIsValid(xid))
 	{
-		TransactionId xid = GetCurrentTransactionId();
-
 		/* XXX does this really need to be a critical section? */
 		START_CRIT_SECTION();
 
@@ -1491,10 +1666,15 @@ RecordSubTransactionCommit(void)
 
 /*
  *	RecordTransactionAbort
+ *
+ * Returns latest XID among xact and its children, or InvalidTransactionId
+ * if the xact has no XID.	(We compute that here just because it's easier.)
  */
-static void
-RecordTransactionAbort(void)
+static TransactionId
+RecordTransactionAbort(bool isSubXact)
 {
+	TransactionId xid;
+	TransactionId latestXid;
 	int32						persistentAbortSerializeLen;
 	PersistentEndXactRecObjects persistentAbortObjects;
 	int16						persistentAbortObjectCount;
@@ -1502,6 +1682,24 @@ RecordTransactionAbort(void)
 
 	int			nchildren;
 	TransactionId *children;
+	XLogRecData rdata[3];
+	int			lastrdata = 0;
+	xl_xact_abort xlrec;
+	bool		isQEReader;
+
+	/* Like in CommitTransaction(), treat a QE reader as if there was no XID */
+	isQEReader = (DistributedTransactionContext == DTX_CONTEXT_QE_READER ||
+					DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON);
+	/*
+	 * Also, if an error occurred during distributed COMMIT processing, and
+	 * we had already decided that we are going to commit this transaction and
+	 * wrote a commit record for it, there's no turning back. The Distributed
+	 * Transaction Manager will take care of completing the transaction for us.
+	 */
+	if (isQEReader || getCurrentDtxState() == DTX_STATE_NOTIFYING_COMMIT_PREPARED)
+		xid = InvalidTransactionId;
+	else
+		xid = GetCurrentTransactionIdIfAny();
 
 	/* Get data needed for abort record */
 	persistentAbortSerializeLen =
@@ -1513,127 +1711,131 @@ RecordTransactionAbort(void)
 	nchildren = xactGetCommittedChildren(&children);
 
 	/*
-	 * If we made neither any transaction-controlled XLOG entries nor any
-	 * temp-rel updates, and are not going to delete any files, we can omit
-	 * recording the transaction abort at all.	No one will ever care that it
-	 * aborted.  (These tests cover our whole transaction tree.)
+	 * If we haven't been assigned an XID, nobody will care whether we aborted
+	 * or not.	Hence, we're done in that case.  It does not matter if we have
+	 * rels to delete (note that this routine is not responsible for actually
+	 * deleting 'em).  We cannot have any child XIDs, either.
 	 */
 	SetCurrentTransactionStopTimestamp();
-	if (MyLastRecPtr.xrecoff != 0 || MyXactMadeTempRelUpdate ||
-		persistentAbortObjectCount > 0)
+	if (!TransactionIdIsValid(xid))
 	{
-		TransactionId xid = GetCurrentTransactionId();
-
-		/*
-		 * Catch the scenario where we aborted partway through
-		 * RecordTransactionCommit ...
-		 */
-		if (TransactionIdDidCommit(xid))
-			elog(PANIC, "cannot abort transaction %u, it was already committed", xid);
-
-		START_CRIT_SECTION();
-
-		/*
-		 * We only need to log the abort in XLOG if the transaction made any
-		 * transaction-controlled XLOG entries or will delete files. (If it
-		 * made no transaction-controlled XLOG entries, its XID appears
-		 * nowhere in permanent storage, so no one else will ever care if it
-		 * committed.)
-		 *
-		 * We do not flush XLOG to disk unless deleting files, since the
-		 * default assumption after a crash would be that we aborted, anyway.
-		 * For the same reason, we don't need to worry about interlocking
-		 * against checkpoint start.
-		 */
-		if (MyLastRecPtr.xrecoff != 0 || persistentAbortObjectCount > 0)
-		{
-			XLogRecData rdata[3];
-			int			lastrdata = 0;
-			xl_xact_abort xlrec;
-			XLogRecPtr	recptr;
-
-			xlrec.xtime = time(NULL);
-			/* Write the ABORT record */
-			xlrec.persistentAbortObjectCount = persistentAbortObjectCount;
-			xlrec.nsubxacts = nchildren;
-			rdata[0].data = (char *) (&xlrec);
-			rdata[0].len = MinSizeOfXactAbort;
-			rdata[0].buffer = InvalidBuffer;
-			/* dump persistent abort objects */
-			if (persistentAbortObjectCount > 0)
-			{
-				int16 objectCount;
-
-				Assert(persistentAbortSerializeLen > 0);
-				persistentAbortBuffer =
-							(char *) palloc(persistentAbortSerializeLen);
-
-				PersistentEndXactRec_Serialize(
-										&persistentAbortObjects,
-										EndXactRecKind_Abort,
-										&objectCount,
-										(uint8*)persistentAbortBuffer,
-										persistentAbortSerializeLen);
-
-				if (Debug_persistent_print)
-					PersistentEndXactRec_Print("RecordTransactionAbort", &persistentAbortObjects);
-
-				rdata[0].next = &(rdata[1]);
-				rdata[1].data = persistentAbortBuffer;
-				rdata[1].len = persistentAbortSerializeLen;
-				rdata[1].buffer = InvalidBuffer;
-				lastrdata = 1;
-			}
-			/* dump committed child Xids */
-			if (nchildren > 0)
-			{
-				rdata[lastrdata].next = &(rdata[2]);
-				rdata[2].data = (char *) children;
-				rdata[2].len = nchildren * sizeof(TransactionId);
-				rdata[2].buffer = InvalidBuffer;
-				lastrdata = 2;
-			}
-			rdata[lastrdata].next = NULL;
-
-			recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_ABORT, rdata);
-
-			/* Must flush if we are deleting files... */
-			if (persistentAbortObjectCount > 0)
-				XLogFlush(recptr);
-
-			if (max_wal_senders > 0)
-				WalSndWakeup();
-
-		}
-
-		/*
-		 * Mark the transaction aborted in clog.  This is not absolutely
-		 * necessary but we may as well do it while we are here.
-		 *
-		 * The ordering here isn't critical but it seems best to mark the
-		 * parent first.  This assures an atomic transition of all the
-		 * subtransactions to aborted state from the point of view of
-		 * concurrent TransactionIdDidAbort calls.
-		 */
-		TransactionIdAbort(xid);
-		TransactionIdAbortTree(nchildren, children);
-
-		END_CRIT_SECTION();
+		/* Reset XactLastRecEnd until the next transaction writes something */
+		if (!isSubXact)
+			XactLastRecEnd.xrecoff = 0;
+		return InvalidTransactionId;
 	}
 
-	/* Break the chain of back-links in the XLOG records I output */
-	MyLastRecPtr.xrecoff = 0;
-	MyXactMadeXLogEntry = false;
-	MyXactMadeTempRelUpdate = false;
+	/*
+	 * We have a valid XID, so we should write an ABORT record for it.
+	 *
+	 * We do not flush XLOG to disk here, since the default assumption after a
+	 * crash would be that we aborted, anyway.	For the same reason, we don't
+	 * need to worry about interlocking against checkpoint start.
+	 */
+
+	/*
+	 * Check that we haven't aborted halfway through RecordTransactionCommit.
+	 */
+	if (TransactionIdDidCommit(xid))
+		elog(PANIC, "cannot abort transaction %u, it was already committed",
+			 xid);
+
+	/* XXX do we really need a critical section here? */
+	START_CRIT_SECTION();
+
+	/* Write the ABORT record */
+	if (isSubXact)
+		xlrec.xact_time = GetCurrentTimestamp();
+	else
+	{
+		SetCurrentTransactionStopTimestamp();
+		xlrec.xact_time = xactStopTimestamp;
+	}
+	xlrec.persistentAbortObjectCount = persistentAbortObjectCount;
+	xlrec.nsubxacts = nchildren;
+	rdata[0].data = (char *) (&xlrec);
+	rdata[0].len = MinSizeOfXactAbort;
+	rdata[0].buffer = InvalidBuffer;
+	/* dump persistent abort objects */
+	if (persistentAbortObjectCount > 0)
+	{
+		int16		objectCount;
+
+		Assert(persistentAbortSerializeLen > 0);
+		persistentAbortBuffer =
+			(char *) palloc(persistentAbortSerializeLen);
+
+		PersistentEndXactRec_Serialize(
+			&persistentAbortObjects,
+			EndXactRecKind_Abort,
+			&objectCount,
+			(uint8*)persistentAbortBuffer,
+			persistentAbortSerializeLen);
+
+		if (Debug_persistent_print)
+			PersistentEndXactRec_Print("RecordTransactionAbort", &persistentAbortObjects);
+
+		rdata[0].next = &(rdata[1]);
+		rdata[1].data = persistentAbortBuffer;
+		rdata[1].len = persistentAbortSerializeLen;
+		rdata[1].buffer = InvalidBuffer;
+		lastrdata = 1;
+	}
+	/* dump committed child Xids */
+	if (nchildren > 0)
+	{
+		rdata[lastrdata].next = &(rdata[2]);
+		rdata[2].data = (char *) children;
+		rdata[2].len = nchildren * sizeof(TransactionId);
+		rdata[2].buffer = InvalidBuffer;
+		lastrdata = 2;
+	}
+	rdata[lastrdata].next = NULL;
+
+	(void) XLogInsert(RM_XACT_ID, XLOG_XACT_ABORT, rdata);
+
+	/*
+	 * Mark the transaction aborted in clog.  This is not absolutely necessary
+	 * but we may as well do it while we are here; also, in the subxact case
+	 * it is helpful because XactLockTableWait makes use of it to avoid
+	 * waiting for already-aborted subtransactions.  It is OK to do it without
+	 * having flushed the ABORT record to disk, because in event of a crash
+	 * we'd be assumed to have aborted anyway.
+	 *
+	 * The ordering here isn't critical but it seems best to mark the parent
+	 * first.  This assures an atomic transition of all the subtransactions to
+	 * aborted state from the point of view of concurrent
+	 * TransactionIdDidAbort calls.
+	 */
+	TransactionIdAbort(xid);
+	TransactionIdAbortTree(nchildren, children);
+
+	END_CRIT_SECTION();
+
+	/* Compute latestXid while we have the child XIDs handy */
+	latestXid = TransactionIdLatest(xid, nchildren, children);
+
+	/*
+	 * If we're aborting a subtransaction, we can immediately remove failed
+	 * XIDs from PGPROC's cache of running child XIDs.  We do that here for
+	 * subxacts, because we already have the child XID array at hand.  For
+	 * main xacts, the equivalent happens just after this function returns.
+	 */
+	if (isSubXact && isQEReader)
+		XidCacheRemoveRunningXids(xid, nchildren, children, latestXid);
+
+	/* Reset XactLastRecEnd until the next transaction writes something */
+	if (!isSubXact)
+		XactLastRecEnd.xrecoff = 0;
+
+	if (max_wal_senders > 0)
+		WalSndWakeup();
 
 	/* And clean up local data */
-
-	// UNDONE: Free storage in persistentAbortObjects...
-
 	if (persistentAbortBuffer != 0)
 		pfree(persistentAbortBuffer);
-	if (children)
-		pfree(children);
+
+	return latestXid;
 }
 
 
@@ -1773,9 +1975,9 @@ static void
 AtAbort_Memory(void)
 {
 	/*
-	 * Switch into TransactionAbortContext, which should have some free
-	 * space even if nothing else does.  We'll work in this context until
-	 * we've finished cleaning up.
+	 * Switch into TransactionAbortContext, which should have some free space
+	 * even if nothing else does.  We'll work in this context until we've
+	 * finished cleaning up.
 	 *
 	 * It is barely possible to get here when we've not been able to create
 	 * TransactionAbortContext yet; if so use TopMemoryContext.
@@ -1833,142 +2035,15 @@ AtSubAbort_childXids(void)
 	TransactionState s = CurrentTransactionState;
 
 	/*
-	 * We keep the child-XID lists in TopTransactionContext (see
-	 * AtSubCommit_childXids).	This means we'd better free the list
+	 * We keep the child-XID arrays in TopTransactionContext (see
+	 * AtSubCommit_childXids).	This means we'd better free the array
 	 * explicitly at abort to avoid leakage.
 	 */
-	list_free(s->childXids);
-	s->childXids = NIL;
-}
-
-/*
- * RecordSubTransactionAbort
- */
-static void
-RecordSubTransactionAbort(void)
-{
-	int32						persistentAbortSerializeLen;
-	PersistentEndXactRecObjects persistentAbortObjects;
-	int16						persistentAbortObjectCount;
-	char						*persistentAbortBuffer = NULL;
-
-	TransactionId xid = GetCurrentTransactionId();
-	int			nchildren;
-	TransactionId *children;
-
-	/* Get data needed for abort record */
-	persistentAbortSerializeLen =
-			PersistentEndXactRec_FetchObjectsFromSmgr(
-										&persistentAbortObjects,
-										EndXactRecKind_Abort,
-										&persistentAbortObjectCount);
-
-	nchildren = xactGetCommittedChildren(&children);
-
-	/*
-	 * If we made neither any transaction-controlled XLOG entries nor any
-	 * temp-rel updates, and are not going to delete any files, we can omit
-	 * recording the transaction abort at all.	No one will ever care that it
-	 * aborted.  (These tests cover our whole transaction tree, and therefore
-	 * may mark subxacts that don't really need it, but it's probably not
-	 * worth being tenser.)
-	 *
-	 * In this case we needn't worry about marking subcommitted children as
-	 * aborted, because they didn't mark themselves as subcommitted in the
-	 * first place; see the optimization in RecordSubTransactionCommit.
-	 */
-	if (MyLastRecPtr.xrecoff != 0 || MyXactMadeTempRelUpdate ||
-		persistentAbortObjectCount > 0)
-	{
-		START_CRIT_SECTION();
-
-		/*
-		 * We only need to log the abort in XLOG if the transaction made any
-		 * transaction-controlled XLOG entries or will delete files.
-		 */
-		if (MyLastRecPtr.xrecoff != 0 || persistentAbortObjectCount > 0)
-		{
-			XLogRecData rdata[3];
-			int			lastrdata = 0;
-			xl_xact_abort xlrec;
-			XLogRecPtr	recptr;
-
-			xlrec.xtime = time(NULL);
-			xlrec.persistentAbortObjectCount = persistentAbortObjectCount;
-			xlrec.nsubxacts = nchildren;
-			rdata[0].data = (char *) (&xlrec);
-			rdata[0].len = MinSizeOfXactAbort;
-			rdata[0].buffer = InvalidBuffer;
-			/* dump persistent abort objects */
-			if (persistentAbortObjectCount > 0)
-			{
-				int16 objectCount;
-
-				Assert(persistentAbortSerializeLen > 0);
-				persistentAbortBuffer =
-							(char*)palloc(persistentAbortSerializeLen);
-
-				PersistentEndXactRec_Serialize(
-										&persistentAbortObjects,
-										EndXactRecKind_Abort,
-										&objectCount,
-										(uint8*)persistentAbortBuffer,
-										persistentAbortSerializeLen);
-
-				if (Debug_persistent_print)
-					PersistentEndXactRec_Print("RecordSubTransactionAbort", &persistentAbortObjects);
-
-				rdata[0].next = &(rdata[1]);
-				rdata[1].data = persistentAbortBuffer;
-				rdata[1].len = persistentAbortSerializeLen;
-				rdata[1].buffer = InvalidBuffer;
-				lastrdata = 1;
-			}
-			/* dump committed child Xids */
-			if (nchildren > 0)
-			{
-				rdata[lastrdata].next = &(rdata[2]);
-				rdata[2].data = (char *) children;
-				rdata[2].len = nchildren * sizeof(TransactionId);
-				rdata[2].buffer = InvalidBuffer;
-				lastrdata = 2;
-			}
-			rdata[lastrdata].next = NULL;
-
-			recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_ABORT, rdata);
-
-			/* Must flush if we are deleting files... */
-			if (persistentAbortObjectCount > 0)
-				XLogFlush(recptr);
-		}
-
-		/*
-		 * Mark the transaction aborted in clog.  This is not absolutely
-		 * necessary but XactLockTableWait makes use of it to avoid waiting
-		 * for already-aborted subtransactions.
-		 */
-		TransactionIdAbort(xid);
-		TransactionIdAbortTree(nchildren, children);
-
-		END_CRIT_SECTION();
-	}
-
-	/*
-	 * We can immediately remove failed XIDs from PGPROC's cache of running
-	 * child XIDs. It's easiest to do it here while we have the child XID
-	 * array at hand, even though in the main-transaction case the equivalent
-	 * work happens just after return from RecordTransactionAbort.
-	 */
-	XidCacheRemoveRunningXids(xid, nchildren, children);
-
-	/* And clean up local data */
-
-	// UNDONE: Free storage in persistentAbortObjects...
-
-	if (persistentAbortBuffer != 0)
-		pfree(persistentAbortBuffer);
-	if (children)
-		pfree(children);
+	if (s->childXids != NULL)
+		pfree(s->childXids);
+	s->childXids = NULL;
+	s->nChildXids = 0;
+	s->maxChildXids = 0;
 }
 
 /* ----------------------------------------------------------------
@@ -2105,6 +2180,13 @@ SetSharedTransactionId_reader(TransactionId xid, CommandId cid)
 	Assert(DistributedTransactionContext == DTX_CONTEXT_QE_READER ||
 		   DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON);
 
+	/*
+	 * GPDB_83_MERGE_FIXME: I don't understand how the top-level XID
+	 * can ever be different here from what it was in StartTransaction().
+	 * And usually it isn't, but when I tried adding the below assertion, it was
+	 * tripped.
+	 */
+	//Assert(TopTransactionStateData.transactionId == xid);
 	TopTransactionStateData.transactionId = xid;
 	currentCommandId = cid;
 }
@@ -2365,7 +2447,7 @@ GetAddedSubtransactionsFromTree(TransactionId xid, TransactionState state,
 	 */
 	for (s = state; s != NULL; s = s->parent)
 	{
-		ListCell   *cell;
+		int			i;
 
 		/* it can't have any child XIDs too */
 		if (!TransactionIdIsValid(s->transactionId))
@@ -2374,40 +2456,32 @@ GetAddedSubtransactionsFromTree(TransactionId xid, TransactionState state,
 		/*
 		 * subcommitted child XIDs
 		 */
-		foreach(cell, s->childXids)
+		while (size < *subcnt + s->nChildXids + 1)
 		{
+			size *= 2;
+			*subxids = (TransactionId *) repalloc((*subxids),
+												  size * sizeof(TransactionId));
+		}
+		for (i = 0; i < s->nChildXids; i++)
+		{
+			TransactionId childXid = s->childXids[i];
+
 			Assert(*subcnt < size);
 			elog((Debug_print_full_dtm ? LOG : DEBUG5),
 			     "Adding subcommitted child xid %u as #%u to shared"
-			     " snapshot", lfirst_xid(cell), *subcnt);
+			     " snapshot", childXid, *subcnt);
 
-			if (TransactionIdPrecedesOrEquals(lfirst_xid(cell), xid))
-			{
+			if (TransactionIdPrecedesOrEquals(childXid, xid))
 				continue;
-			}
-			(*subxids)[(*subcnt)++] = lfirst_xid(cell);
-			if (*subcnt == size)
-			{
-				size *= 2;
-				*subxids = (TransactionId *)repalloc((*subxids),
-						size * sizeof(TransactionId));
-			}
-		}
 
-		/*
-		 * This means xid is equal to one of the childXids. We
-		 * are done and not look any further.
-		 */
-		if (cell != NULL)
-			break;
+			(*subxids)[(*subcnt)++] = childXid;
+		}
 
 		if (s->nestingLevel == 1)
 			break;
 
 		if (TransactionIdPrecedesOrEquals(s->transactionId, xid))
-		{
 			continue;
-		}
 
 		/*
 		 * Ignore aborted subtransactions.
@@ -2421,12 +2495,6 @@ GetAddedSubtransactionsFromTree(TransactionId xid, TransactionState state,
 		     " snapshot", s->transactionId, *subcnt);
 
 		(*subxids)[(*subcnt)++] = s->transactionId;
-		if (*subcnt == size)
-		{
-			size *= 2;
-			*subxids = (TransactionId *)repalloc((*subxids),
-					size * sizeof(TransactionId));
-		}
 	}
 
 	reverse_xids(*subxids, *subcnt);
@@ -2446,8 +2514,8 @@ GetLastSubTransactionIdFromTree(TransactionState s)
 		/*
 		 * subcommitted child XIDs
 		 */
-		if (s->childXids && list_length(s->childXids))
-			return linitial_oid(s->childXids);
+		if (s->childXids && s->nChildXids > 0)
+			return s->childXids[s->nChildXids - 1];
 		else if (s->nestingLevel >= 2)
 			return s->transactionId;
 	}
@@ -2824,6 +2892,7 @@ void
 StartTransaction(void)
 {
 	TransactionState s;
+	VirtualTransactionId vxid;
 
 	/*
 	 * Let's just make sure the state stack is empty
@@ -2851,6 +2920,8 @@ StartTransaction(void)
 	FreeXactSnapshot();
 	XactIsoLevel = DefaultXactIsoLevel;
 	XactReadOnly = DefaultXactReadOnly;
+	forceSyncCommit = false;
+	MyXactAccessedTempRel = false;
 	seqXlogWrite = false;
 
 	/* set read only by fts, if any fts action is read only */
@@ -2862,6 +2933,7 @@ StartTransaction(void)
 	s->subTransactionId = TopSubTransactionId;
 	currentSubTransactionId = TopSubTransactionId;
 	currentCommandId = FirstCommandId;
+	currentCommandIdUsed = false;
 	currentSavepointTotal = 0;
 
 	fastNodeCount = 0;
@@ -2898,15 +2970,7 @@ StartTransaction(void)
 			 * transaction without any synchronization to segmates!
 			 * (e.g. CatchupInterruptHandler)
 			 */
-
-			/*
-			 * generate a new transaction id
-			 */
-			s->transactionId = GetNewTransactionId(false, true);
-
-			XactLockTableInsert(s->transactionId);
-			
-			PG_TRACE1(transaction__start, s->transactionId);
+			PG_TRACE1(transaction__start, InvalidTransactionId);
 
 			/*
 		 	 * set transaction_timestamp() (a/k/a now()).  We want this to be the
@@ -3131,6 +3195,13 @@ StartTransaction(void)
 						 xactStartTimestamp,
 						 SharedLocalSnapshotSlot->startTimestamp);
 
+					/*
+					 * We set TopTransactionStateData.transactionId to the same top-level
+					 * XID as the QE writer, so that visibility checks consider that
+					 * XID as "current transaction". But we don't advertise it in the
+					 * proc array, nor write a commit record for it, as the QE writer will
+					 * do that.
+					 */
 					s->transactionId = SharedLocalSnapshotSlot->xid;
 					xactStartTimestamp = SharedLocalSnapshotSlot->startTimestamp;
 					xactStopTimestamp = 0;
@@ -3212,13 +3283,46 @@ StartTransaction(void)
 		 DtxContextToString(DistributedTransactionContext));
 
 	/*
+	 * Assign a new LocalTransactionId, and combine it with the backendId to
+	 * form a virtual transaction id.
+	 */
+	vxid.backendId = MyBackendId;
+	vxid.localTransactionId = GetNextLocalTransactionId();
+
+	/*
+	 * Lock the virtual transaction id before we announce it in the proc array
+	 */
+	VirtualXactLockTableInsert(vxid);
+
+	/*
+	 * Advertise it in the proc array.	We assume assignment of
+	 * LocalTransactionID is atomic, and the backendId should be set already.
+	 */
+	Assert(MyProc->backendId == vxid.backendId);
+	MyProc->lxid = vxid.localTransactionId;
+
+	PG_TRACE1(transaction__start, vxid.localTransactionId);
+
+	/*
+	 * set transaction_timestamp() (a/k/a now()).  We want this to be the same
+	 * as the first command's statement_timestamp(), so don't do a fresh
+	 * GetCurrentTimestamp() call (which'd be expensive anyway).  Also, mark
+	 * xactStopTimestamp as unset.
+	 */
+	xactStartTimestamp = stmtStartTimestamp;
+	xactStopTimestamp = 0;
+	pgstat_report_xact_timestamp(xactStartTimestamp);
+
+	/*
 	 * initialize current transaction state fields
 	 *
 	 * note: prevXactReadOnly is not used at the outermost level
 	 */
 	s->nestingLevel = 1;
 	s->gucNestLevel = 1;
-	s->childXids = NIL;
+	s->childXids = NULL;
+	s->nChildXids = 0;
+	s->maxChildXids = 0;
 	GetUserIdAndSecContext(&s->prevUser, &s->prevSecContext);
 	/* SecurityRestrictionContext should never be set outside a transaction */
 	Assert(s->prevSecContext == 0);
@@ -3246,25 +3350,6 @@ StartTransaction(void)
 }
 
 /*
- * Clears the current transaction from PGPROC.
- *
- * Must be called while holding the ProcArrayLock.
- */
-void
-ClearTransactionFromPgProc_UnderLock(void)
-{
-	MyProc->xid = InvalidTransactionId;
-	MyProc->xmin = InvalidTransactionId;
-	MyProc->inVacuum = false;		/* must be cleared with xid/xmin */
-	MyProc->serializableIsoLevel = false;
-	MyProc->inDropTransaction = false;
-
-	/* Clear the subtransaction-XID cache too while holding the lock */
-	MyProc->subxids.nxids = 0;
-	MyProc->subxids.overflowed = false;
-}
-
-/*
  *	CommitTransaction
  *
  * NB: if you change this routine, better look at PrepareTransaction too!
@@ -3274,11 +3359,10 @@ CommitTransaction(void)
 {
 	MIRRORED_LOCK_DECLARE;
 
-	CHECKPOINT_START_LOCK_DECLARE;
-
 	TransactionState s = CurrentTransactionState;
+	TransactionId latestXid;
 
-	TransactionId localXid = InvalidTransactionId;
+	TransactionId localXid;
 	LocalDistribXactRef localDistribXactRef;
 	bool needStateChangeFromDistributed = false;
 	bool needNotifyCommittedDtxTransaction = false;
@@ -3328,6 +3412,8 @@ CommitTransaction(void)
 
 	/* Close any open regular cursors */
 	AtCommit_Portals();
+
+	AtEOXact_SharedSnapshot();
 
 	/* Perform any Resource Scheduler commit procesing. */
 	if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler)
@@ -3398,11 +3484,12 @@ CommitTransaction(void)
 		 * When we use CheckpointStartLock, we make sure we already have the
 		 * MirroredLock first.
 		 *
-		 * The lock order is: MirroredLock then CheckpointStartLock.
+		 * GPDB_83_MERGE_FIXME: we no longer need to worry about deadlock between
+		 * CheckpointStartLock and MirroredLock, as CheckpointStartLock is no longer
+		 * a lwlock but just a flag,  MyProc->inCommit. Do we still need to grab
+		 * MirroredLock?
 		 */
 		MIRRORED_LOCK;
-			
-		CHECKPOINT_START_LOCK;
 	}
 
 	/* Prevent cancel/die interrupt while cleaning up */
@@ -3415,96 +3502,40 @@ CommitTransaction(void)
 	s->state = TRANS_COMMIT;
 
 	/*
+	 * If we're a QE reader, we share the same top-level as the QE writer, but we
+	 * should't write a commit record because the QE writer will do that. We also
+	 * haven't advertised that XID in the proc array, so we don't need to clean
+	 * that up here either.
+	 */
+	if (DistributedTransactionContext == DTX_CONTEXT_QE_READER ||
+		DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON)
+	{
+		localXid = InvalidTransactionId;
+	}
+	else
+		localXid = GetTopTransactionIdIfAny();
+
+	/*
 	 * Here is where we really truly commit.
 	 */
-	RecordTransactionCommit();
+	latestXid = RecordTransactionCommit();
 
-	/*----------
-	 * Let others know about no transaction in progress by me. Note that
-	 * this must be done _before_ releasing locks we hold and _after_
+	PG_TRACE1(transaction__commit, MyProc->lxid);
+
+	/*
+	 * Let others know about no transaction in progress by me. Note that this
+	 * must be done _before_ releasing locks we hold and _after_
 	 * RecordTransactionCommit.
-	 *
-	 * LWLockAcquire(ProcArrayLock) is required; consider this example:
-	 *		UPDATE with xid 0 is blocked by xid 1's UPDATE.
-	 *		xid 1 is doing commit while xid 2 gets snapshot.
-	 * If xid 2's GetSnapshotData sees xid 1 as running then it must see
-	 * xid 0 as running as well, or it will be able to see two tuple versions
-	 * - one deleted by xid 1 and one inserted by xid 0.  See notes in
-	 * GetSnapshotData.
-	 *
-	 * Note: MyProc may be null during bootstrap.
-	 *----------
 	 */
-	if (MyProc != NULL)
-	{
-		/* Lock ProcArrayLock because that's what GetSnapshotData uses. */
-
-		// UNDONE: Move lock up over RecordTransactionCommit ??
-		
-		LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-
-		if (!LocalDistribXactRef_IsNil(&MyProc->localDistribXactRef))
-		{
-			switch (DistributedTransactionContext)
-			{
-				case DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE:
-					LocalDistribXact_ChangeStateUnderLock(
-						MyProc->xid,
-						&MyProc->localDistribXactRef,
-						LOCALDISTRIBXACT_STATE_COMMITDELIVERY);
-					needStateChangeFromDistributed = true;
-					break;
-				
-				case DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER:
-				case DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER:
-				case DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT:
-					LocalDistribXact_ChangeStateUnderLock(
-						MyProc->xid,
-						&MyProc->localDistribXactRef,
-						LOCALDISTRIBXACT_STATE_COMMITTED);
-					break;
-				
-				case DTX_CONTEXT_QE_READER:
-				case DTX_CONTEXT_QE_ENTRY_DB_SINGLETON:
-					// QD or QE Writer will handle it.
-					break;
-
-				case DTX_CONTEXT_QD_RETRY_PHASE_2:
-				case DTX_CONTEXT_QE_PREPARED:
-				case DTX_CONTEXT_QE_FINISH_PREPARED:
-					elog(PANIC, "Unexpected distribute transaction context: '%s'",
-						 DtxContextToString(DistributedTransactionContext));
-
-				default:
-					elog(PANIC, "Unrecognized DTX transaction context: %d",
-						 (int) DistributedTransactionContext);
-			}
-
-			/*
-			 * We need to transfer the xid and disributed ref
-			 * for processing below.
-			 */
-			localXid = MyProc->xid;
-			LocalDistribXactRef_Transfer(
-				&localDistribXactRef,
-				&MyProc->localDistribXactRef);
-		}
-
-		
-		if (!notifyCommittedDtxTransactionIsNeeded())
-		{
-			ClearTransactionFromPgProc_UnderLock();
-		}
-		else
-		{
-			needNotifyCommittedDtxTransaction = true;
-		}
-
-		LWLockRelease(ProcArrayLock);
-	}
-
-	PG_TRACE1(transaction__commit, s->transactionId);
-
+	ProcArrayEndTransaction(MyProc, latestXid,
+							true,
+							&needStateChangeFromDistributed,
+							&needNotifyCommittedDtxTransaction,
+							&localDistribXactRef);
+	/*
+	 * Note that in GPDB, ProcArrayEndTransaction does *not* clear the PGPROC
+	 * entry, if it sets *needNotifyCommittedDtxTransaction!
+	 */
 	if (needNotifyCommittedDtxTransaction)
 	{
 		/*
@@ -3577,8 +3608,6 @@ CommitTransaction(void)
 
 	if (willHaveObjectsFromSmgr)
 	{
-		CHECKPOINT_START_UNLOCK;
-		
 		MIRRORED_UNLOCK;
 	}
 	
@@ -3605,7 +3634,6 @@ CommitTransaction(void)
 	AtEOXact_ComboCid();
 	AtEOXact_HashTables(true);
 	AtEOXact_PgStat(true);
-	//AtEOXact_Snapshot(true);
 	pgstat_report_xact_timestamp(0);
 
 	CurrentResourceOwner = NULL;
@@ -3646,7 +3674,9 @@ CommitTransaction(void)
 	s->subTransactionId = InvalidSubTransactionId;
 	s->nestingLevel = 0;
 	s->gucNestLevel = 0;
-	s->childXids = NIL;
+	s->childXids = NULL;
+	s->nChildXids = 0;
+	s->maxChildXids = 0;
 	s->executorSaysXactDoesWrites = false;
 
 	/*
@@ -3717,6 +3747,8 @@ PrepareTransaction(void)
 	/* Close any open regular cursors */
 	AtCommit_Portals();
 
+	AtEOXact_SharedSnapshot();
+
 	/*
 	 * Let ON COMMIT management do its thing (must happen after closing
 	 * cursors, to avoid dangling-reference problems)
@@ -3727,6 +3759,29 @@ PrepareTransaction(void)
 	AtEOXact_LargeObject(true);
 
 	/* NOTIFY and flatfiles will be handled below */
+
+	/*
+	 * Don't allow PREPARE TRANSACTION if we've accessed a temporary table
+	 * in this transaction.  Having the prepared xact hold locks on another
+	 * backend's temp table seems a bad idea --- for instance it would prevent
+	 * the backend from exiting.  There are other problems too, such as how
+	 * to clean up the source backend's local buffers and ON COMMIT state
+	 * if the prepared xact includes a DROP of a temp table.
+	 *
+	 * We must check this after executing any ON COMMIT actions, because
+	 * they might still access a temp relation.
+	 *
+	 * XXX In principle this could be relaxed to allow some useful special
+	 * cases, such as a temp table created and dropped all within the
+	 * transaction.  That seems to require much more bookkeeping though.
+	 */
+	/* In GPDB, we allow this, however. GPDB_83_MERGE_FIXME: Is it really safe? */
+#if 0
+	if (MyXactAccessedTempRel)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("cannot PREPARE a transaction that has operated on temporary tables")));
+#endif
 
 	/* Prevent cancel/die interrupt while cleaning up */
 	HOLD_INTERRUPTS();
@@ -3782,6 +3837,7 @@ PrepareTransaction(void)
 	AtPrepare_Inval();
 	AtPrepare_Locks();
 	AtPrepare_PgStat();
+	AtPrepare_MultiXact();
 
 	/*
 	 * Here is where we really truly prepare.
@@ -3796,32 +3852,17 @@ PrepareTransaction(void)
 	 * Now we clean up backend-internal state and release internal resources.
 	 */
 
-	/* Break the chain of back-links in the XLOG records I output */
-	MyLastRecPtr.xrecoff = 0;
-	MyXactMadeXLogEntry = false;
-	MyXactMadeTempRelUpdate = false;
+	/* Reset XactLastRecEnd until the next transaction writes something */
+	XactLastRecEnd.xrecoff = 0;
 
 	/*
 	 * Let others know about no transaction in progress by me.	This has to be
 	 * done *after* the prepared transaction has been marked valid, else
 	 * someone may think it is unlocked and recyclable.
 	 */
-
-	/* Lock ProcArrayLock because that's what GetSnapshotData uses. */
 	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-	MyProc->xid = InvalidTransactionId;
-
+	ClearTransactionFromPgProc_UnderLock(MyProc);
 	LocalDistribXactRef_ReleaseUnderLock(&MyProc->localDistribXactRef);
-	
-	MyProc->xmin = InvalidTransactionId;
-	MyProc->inVacuum = false;	/* must be cleared with xid/xmin */
-	MyProc->serializableIsoLevel = false;
-	MyProc->inDropTransaction = false;
-
-	/* Clear the subtransaction-XID cache too while holding the lock */
-	MyProc->subxids.nxids = 0;
-	MyProc->subxids.overflowed = false;
-
 	LWLockRelease(ProcArrayLock);
 
 	/*
@@ -3855,7 +3896,7 @@ PrepareTransaction(void)
 
 	PostPrepare_smgr();
 
-	AtEOXact_MultiXact();
+	PostPrepare_MultiXact(xid);
 
 	PostPrepare_Locks(xid);
 
@@ -3905,7 +3946,9 @@ PrepareTransaction(void)
 	s->subTransactionId = InvalidSubTransactionId;
 	s->nestingLevel = 0;
 	s->gucNestLevel = 0;
-	s->childXids = NIL;
+	s->childXids = NULL;
+	s->nChildXids = 0;
+	s->maxChildXids = 0;
 	s->executorSaysXactDoesWrites = false;
 
 	/*
@@ -3929,11 +3972,10 @@ AbortTransaction(void)
 {
 	MIRRORED_LOCK_DECLARE;
 
-	CHECKPOINT_START_LOCK_DECLARE;
-
 	TransactionState s = CurrentTransactionState;
+	TransactionId latestXid;
 
-	TransactionId localXid = InvalidTransactionId;
+	TransactionId localXid = GetTopTransactionIdIfAny();
 	LocalDistribXactRef localDistribXactRef;
 	bool needDistribAborted = false;
 	bool willHaveObjectsFromSmgr;
@@ -4017,6 +4059,8 @@ AbortTransaction(void)
 	 */
 	AtEOXact_ResetDataSourceCtx();
 
+	AtEOXact_SharedSnapshot();
+
 	/* Perform any Resource Scheduler abort procesing. */
 	if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler)
 		AtAbort_ResScheduler();
@@ -4041,19 +4085,27 @@ AbortTransaction(void)
 		 * When we use CheckpointStartLock, we make sure we already have the
 		 * MirroredLock first.
 		 *
-		 * The lock order is: MirroredLock then CheckpointStartLock.
+		 * GPDB_83_MERGE_FIXME: see comments in CommitTransaction()
 		 */
 		MIRRORED_LOCK;
-			
-		CHECKPOINT_START_LOCK;
 	}
+
+	/* Like in CommitTransaction(), treat a QE reader as if there was no XID */
+	if (DistributedTransactionContext == DTX_CONTEXT_QE_READER ||
+		DistributedTransactionContext == DTX_CONTEXT_QE_ENTRY_DB_SINGLETON)
+	{
+		localXid = InvalidTransactionId;
+	}
+	else
+		localXid = GetTopTransactionIdIfAny();
 
 	/*
 	 * Advertise the fact that we aborted in pg_clog (assuming that we got as
 	 * far as assigning an XID to advertise).
 	 */
-	if (TransactionIdIsValid(s->transactionId))
-		RecordTransactionAbort();
+	latestXid = RecordTransactionAbort(false);
+
+	PG_TRACE1(transaction__abort, MyProc->lxid);
 
 	ResetXidBuffer(&subxbuf);
 	ResetSharedSnapshotSubxids(SharedLocalSnapshotSlot);
@@ -4063,75 +4115,10 @@ AbortTransaction(void)
 	 * must be done _before_ releasing locks we hold and _after_
 	 * RecordTransactionAbort.
 	 */
-	if (MyProc != NULL)
-	{
-		/* Lock ProcArrayLock because that's what GetSnapshotData uses. */
-
-		// UNDONE: Move lock up over RecordTransactionAbort ??
-		
-		LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-
-		if (!LocalDistribXactRef_IsNil(&MyProc->localDistribXactRef))
-		{
-			switch (DistributedTransactionContext)
-			{
-				case DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE:
-					LocalDistribXact_ChangeStateUnderLock(
-						MyProc->xid,
-						&MyProc->localDistribXactRef,
-						LOCALDISTRIBXACT_STATE_ABORTDELIVERY);
-					needDistribAborted = true;
-					break;
-				
-				case DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER:
-				case DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER:
-				case DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT:
-					LocalDistribXact_ChangeStateUnderLock(
-						MyProc->xid,
-						&MyProc->localDistribXactRef,
-						LOCALDISTRIBXACT_STATE_ABORTED);
-					break;
-				
-				case DTX_CONTEXT_QE_READER:
-				case DTX_CONTEXT_QE_ENTRY_DB_SINGLETON:
-					// QD or QE Writer will handle it.
-					break;
-
-				case DTX_CONTEXT_QD_RETRY_PHASE_2:
-				case DTX_CONTEXT_QE_PREPARED:
-				case DTX_CONTEXT_QE_FINISH_PREPARED:
-					elog(PANIC, "Unexpected distribute transaction context: '%s'",
-						 DtxContextToString(DistributedTransactionContext));
-
-				default:
-					elog(PANIC, "Unrecognized DTX transaction context: %d",
-						 (int) DistributedTransactionContext);
-			}
-			
-			/*
-			 * We need to transfer the xid and disributed ref
-			 * for processing below.
-			 */
-			localXid = MyProc->xid;
-			LocalDistribXactRef_Transfer(
-				&localDistribXactRef,
-				&MyProc->localDistribXactRef);
-		}
-
-		MyProc->xid = InvalidTransactionId;
-		MyProc->xmin = InvalidTransactionId;
-		MyProc->inVacuum = false;		/* must be cleared with xid/xmin */
-		MyProc->serializableIsoLevel = false;
-		MyProc->inDropTransaction = false;
-
-		/* Clear the subtransaction-XID cache too while holding the lock */
-		MyProc->subxids.nxids = 0;
-		MyProc->subxids.overflowed = false;
-
-		LWLockRelease(ProcArrayLock);
-	}
-
-	PG_TRACE1(transaction__abort, s->transactionId);
+	ProcArrayEndTransaction(MyProc, latestXid, false,
+							NULL,
+							NULL,
+							&localDistribXactRef);
 
 	/*
 	 * Post-abort cleanup.	See notes in CommitTransaction() concerning
@@ -4153,8 +4140,6 @@ AbortTransaction(void)
 	}
 	if (willHaveObjectsFromSmgr)
 	{
-		CHECKPOINT_START_UNLOCK;
-
 		MIRRORED_UNLOCK;
 	}
 	if (TopTransactionResourceOwner != NULL)
@@ -4178,14 +4163,22 @@ AbortTransaction(void)
 		AtEOXact_ComboCid();
 		AtEOXact_HashTables(false);
 		AtEOXact_PgStat(false);
-		//AtEOXact_Snapshot(false);
 		pgstat_report_xact_timestamp(0);
 	}
 
 	/*
 	 * Do abort to all QE. NOTE: we don't process
 	 * signals to prevent recursion until we've notified the QEs.
+	 *
+	 * If something goes wrong after this, we might recurse back to
+	 * AbortTransaction(). To avoid creating another Abort WAL record
+	 * and failing assertion in ProcArrayEndTransaction because MyProc->xid
+	 * has already been cleared, clear out transactionId now. The rest
+	 * of the fields in TransactionState will be cleared later, in
+	 * CleanupTransaction().
 	 */
+	TopTransactionStateData.transactionId = InvalidTransactionId;
+
 	rollbackDtxTransaction();
 
 	if (!LocalDistribXactRef_IsNil(&localDistribXactRef))
@@ -4260,7 +4253,9 @@ CleanupTransaction(void)
 	s->subTransactionId = InvalidSubTransactionId;
 	s->nestingLevel = 0;
 	s->gucNestLevel = 0;
-	s->childXids = NIL;
+	s->childXids = NULL;
+	s->nChildXids = 0;
+	s->maxChildXids = 0;
 	s->executorSaysXactDoesWrites = false;
 
 	/*
@@ -4782,12 +4777,14 @@ AbortCurrentTransaction(void)
  *	could issue more commands and possibly cause a failure after the statement
  *	completes).  Subtransactions are verboten too.
  *
- *	stmtNode: pointer to parameter block for statement; this is used in
- *	a very klugy way to determine whether we are inside a function.
- *	stmtType: statement type name for error messages.
+ *	isTopLevel: passed down from ProcessUtility to determine whether we are
+ *	inside a function or multi-query querystring.  (We will always fail if
+ *	this is false, but it's convenient to centralize the check here instead of
+ *	making callers do it.)
+ *	stmtType: statement type name, for error messages.
  */
 void
-PreventTransactionChain(void *stmtNode, const char *stmtType)
+PreventTransactionChain(bool isTopLevel, const char *stmtType)
 {
 	/*
 	 * xact block already started?
@@ -4810,15 +4807,14 @@ PreventTransactionChain(void *stmtNode, const char *stmtType)
 						stmtType)));
 
 	/*
-	 * Are we inside a function call?  If the statement's parameter block was
-	 * allocated in QueryContext, assume it is an interactive command.
-	 * Otherwise assume it is coming from a function.
+	 * inside a function call?
 	 */
-	if (!MemoryContextContains(QueryContext, stmtNode))
+	if (!isTopLevel)
 		ereport(ERROR,
 				(errcode(ERRCODE_ACTIVE_SQL_TRANSACTION),
 		/* translator: %s represents an SQL statement name */
-				 errmsg("%s cannot be executed from a function", stmtType)));
+				 errmsg("%s cannot be executed from a function or multi-command string",
+						stmtType)));
 
 	/* If we got past IsTransactionBlock test, should be in default state */
 	if (CurrentTransactionState->blockState != TBLOCK_DEFAULT &&
@@ -4840,12 +4836,12 @@ PreventTransactionChain(void *stmtNode, const char *stmtType)
  *	use of the current statement's results.  Likewise subtransactions.
  *	Thus this is an inverse for PreventTransactionChain.
  *
- *	stmtNode: pointer to parameter block for statement; this is used in
- *	a very klugy way to determine whether we are inside a function.
- *	stmtType: statement type name for error messages.
+ *	isTopLevel: passed down from ProcessUtility to determine whether we are
+ *	inside a function.
+ *	stmtType: statement type name, for error messages.
  */
 void
-RequireTransactionChain(void *stmtNode, const char *stmtType)
+RequireTransactionChain(bool isTopLevel, const char *stmtType)
 {
 	/*
 	 * xact block already started?
@@ -4860,12 +4856,11 @@ RequireTransactionChain(void *stmtNode, const char *stmtType)
 		return;
 
 	/*
-	 * Are we inside a function call?  If the statement's parameter block was
-	 * allocated in QueryContext, assume it is an interactive command.
-	 * Otherwise assume it is coming from a function.
+	 * inside a function call?
 	 */
-	if (!MemoryContextContains(QueryContext, stmtNode))
+	if (!isTopLevel)
 		return;
+
 	ereport(ERROR,
 			(errcode(ERRCODE_NO_ACTIVE_SQL_TRANSACTION),
 	/* translator: %s represents an SQL statement name */
@@ -4880,11 +4875,11 @@ RequireTransactionChain(void *stmtNode, const char *stmtType)
  *	a transaction block than when running as single commands.  ANALYZE is
  *	currently the only example.
  *
- *	stmtNode: pointer to parameter block for statement; this is used in
- *	a very klugy way to determine whether we are inside a function.
+ *	isTopLevel: passed down from ProcessUtility to determine whether we are
+ *	inside a function.
  */
 bool
-IsInTransactionChain(void *stmtNode)
+IsInTransactionChain(bool isTopLevel)
 {
 	/*
 	 * Return true on same conditions that would make PreventTransactionChain
@@ -4896,7 +4891,7 @@ IsInTransactionChain(void *stmtNode)
 	if (IsSubTransaction())
 		return true;
 
-	if (!MemoryContextContains(QueryContext, stmtNode))
+	if (!isTopLevel)
 		return true;
 
 	if (CurrentTransactionState->blockState != TBLOCK_DEFAULT &&
@@ -5372,16 +5367,9 @@ UserAbortTransactionBlock(void)
 			 * default state.
 			 */
 		case TBLOCK_STARTED:
-			if (Gp_role == GP_ROLE_EXECUTE)
-			{
-				ereport(DEBUG2,
-						(errcode(ERRCODE_NO_ACTIVE_SQL_TRANSACTION),
-						 errmsg("there is no transaction in progress")));
-			}
-			else
-				ereport(WARNING,
-						(errcode(ERRCODE_NO_ACTIVE_SQL_TRANSACTION),
-						 errmsg("there is no transaction in progress")));
+			ereport((Gp_role == GP_ROLE_EXECUTE) ? DEBUG2 : NOTICE,
+					(errcode(ERRCODE_NO_ACTIVE_SQL_TRANSACTION),
+					 errmsg("there is no transaction in progress")));
 			s->blockState = TBLOCK_ABORT_PENDING;
 			break;
 
@@ -5961,7 +5949,24 @@ AbortOutOfAnyTransaction(void)
 		switch (s->blockState)
 		{
 			case TBLOCK_DEFAULT:
-				/* Not in a transaction, do nothing */
+				if (s->state == TRANS_DEFAULT)
+				{
+					/* Not in a transaction, do nothing */
+				}
+				else
+				{
+					/*
+					 * We can get here after an error during transaction start
+					 * (state will be TRANS_START).  Need to clean up the
+					 * incompletely started transaction.  First, adjust the
+					 * low-level state to suppress warning message from
+					 * AbortTransaction.
+					 */
+					if (s->state == TRANS_START)
+						s->state = TRANS_INPROGRESS;
+					AbortTransaction();
+					CleanupTransaction();
+				}
 				break;
 			case TBLOCK_STARTED:
 			case TBLOCK_BEGIN:
@@ -6047,22 +6052,24 @@ IsTransactionOrTransactionBlock(void)
 /*
  * Did the transaction do work that requires a commit record to be written?
  */
-bool
+static bool
 IsTransactionDirty(void)
 {
-	bool result = (MyXactMadeXLogEntry || MyXactMadeTempRelUpdate || smgrIsPendingFileSysWork(EndXactRecKind_Commit));
+	TransactionId xid = GetTopTransactionIdIfAny();
+	bool		markXidCommitted = TransactionIdIsValid(xid);
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5), "IsTransactionDirty: TopTransactionId %u, dirty = %s",
-		 GetTopTransactionId(), (result ? "true" : "false"));
+		 xid, (markXidCommitted ? "true" : "false"));
 	
-	return result;
+	return markXidCommitted;
 }
 
 void
 ExecutorMarkTransactionUsesSequences(void)
 {
 	seqXlogWrite = true;
-	MyXactMadeXLogEntry = true;
+
+	ForceSyncCommit();
 }
 
 void 
@@ -6220,13 +6227,11 @@ CommitSubTransaction(void)
 	CommandCounterIncrement();
 
 	/* Mark subtransaction as subcommitted */
-	if (TransactionIdIsValid(s->transactionId))
-	{
-		RecordSubTransactionCommit();
-		AtSubCommit_childXids();
-	}
+	RecordSubTransactionCommit();
 
 	/* Post-commit cleanup */
+	if (TransactionIdIsValid(s->transactionId))
+		AtSubCommit_childXids();
 	AfterTriggerEndSubXact(true);
 	AtSubCommit_Portals(s->subTransactionId,
 						s->parent->subTransactionId,
@@ -6344,8 +6349,8 @@ AbortSubTransaction(void)
 	s->state = TRANS_ABORT;
 
 	/*
-	 * Reset user ID which might have been changed transiently.  (See notes in
-	 * AbortTransaction.)
+	 * Reset user ID which might have been changed transiently.  (See notes
+	 * in AbortTransaction.)
 	 */
 	SetUserIdAndSecContext(s->prevUser, s->prevSecContext);
 
@@ -6366,13 +6371,12 @@ AbortSubTransaction(void)
 									s->parent->subTransactionId);
 
 		/* Advertise the fact that we aborted in pg_clog. */
-		if (TransactionIdIsValid(s->transactionId))
-		{
-			RecordSubTransactionAbort();
-			AtSubAbort_childXids();
-		}
+		(void) RecordTransactionAbort(true);
 
 		/* Post-abort cleanup */
+		if (TransactionIdIsValid(s->transactionId))
+			AtSubAbort_childXids();
+
 		CallSubXactCallbacks(SUBXACT_EVENT_ABORT_SUB, s->subTransactionId,
 							 s->parent->subTransactionId);
 
@@ -6597,20 +6601,35 @@ ShowTransactionState(const char *str)
 static void
 ShowTransactionStateRec(TransactionState s)
 {
+	StringInfoData buf;
+
+	initStringInfo(&buf);
+
+	if (s->nChildXids > 0)
+	{
+		int i;
+
+		appendStringInfo(&buf, "%u", s->childXids[0]);
+		for (i = 1; i < s->nChildXids; i++)
+			appendStringInfo(&buf, " %u", s->childXids[i]);
+	}
+
 	if (s->parent)
 		ShowTransactionStateRec(s->parent);
 
 	/* use ereport to suppress computation if msg will not be printed */
 	ereport(DEBUG3,
-			(errmsg_internal("name: %s; blockState: %13s; state: %7s, xid/subid/cid: %u/%u/%u, nestlvl: %d, children: %s",
+			(errmsg_internal("name: %s; blockState: %13s; state: %7s, xid/subid/cid: %u/%u/%u%s, nestlvl: %d, children: %s",
 							 PointerIsValid(s->name) ? s->name : "unnamed",
 							 BlockStateAsString(s->blockState),
 							 TransStateAsString(s->state),
 							 (unsigned int) s->transactionId,
 							 (unsigned int) s->subTransactionId,
 							 (unsigned int) currentCommandId,
-							 s->nestingLevel,
-							 nodeToString(s->childXids))));
+							 currentCommandIdUsed ? " (used)" : "",
+							 s->nestingLevel, buf.data)));
+
+	pfree(buf.data);
 }
 
 /*
@@ -6721,28 +6740,13 @@ int
 xactGetCommittedChildren(TransactionId **ptr)
 {
 	TransactionState s = CurrentTransactionState;
-	int			nchildren;
-	TransactionId *children;
-	ListCell   *p;
 
-	nchildren = list_length(s->childXids);
-	if (nchildren == 0)
-	{
+	if (s->nChildXids == 0)
 		*ptr = NULL;
-		return 0;
-	}
+	else
+		*ptr = s->childXids;
 
-	children = (TransactionId *) palloc(nchildren * sizeof(TransactionId));
-	*ptr = children;
-
-	foreach(p, s->childXids)
-	{
-		TransactionId child = lfirst_xid(p);
-
-		*children++ = child;
-	}
-
-	return nchildren;
+	return s->nChildXids;
 }
 
 /*
@@ -7161,15 +7165,12 @@ xact_redo_get_info(
 static char*
 xact_desc_commit(StringInfo buf, xl_xact_commit *xlrec)
 {
-	struct tm  *tm = localtime(&xlrec->xtime);
 	int			i;
 	uint8 *data;
 	PersistentEndXactRecObjects persistentCommitObjects;
 	TransactionId *sub_xids;
 
-	appendStringInfo(buf, "%04u-%02u-%02u %02u:%02u:%02u",
-					 tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
-					 tm->tm_hour, tm->tm_min, tm->tm_sec);
+	appendStringInfoString(buf, timestamptz_to_str(xlrec->xact_time));
 	data = xlrec->data;
 	appendStringInfo(buf, "; persistent commit object count = %d",
 					 xlrec->persistentCommitObjectCount);
@@ -7248,15 +7249,12 @@ xact_desc_distributed_forget(StringInfo buf, xl_xact_distributed_forget *xlrec)
 static void
 xact_desc_abort(StringInfo buf, xl_xact_abort *xlrec)
 {
-	struct tm  *tm = localtime(&xlrec->xtime);
 	uint8 *data;
 	PersistentEndXactRecObjects persistentAbortObjects;
 	TransactionId *sub_xids;
 	int			i;
 
-	appendStringInfo(buf, "%04u-%02u-%02u %02u:%02u:%02u",
-					 tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
-					 tm->tm_hour, tm->tm_min, tm->tm_sec);
+	appendStringInfoString(buf, timestamptz_to_str(xlrec->xact_time));
 	data = xlrec->data;
 	appendStringInfo(buf, "; persistent abort object count = %d",
 					 xlrec->persistentAbortObjectCount);

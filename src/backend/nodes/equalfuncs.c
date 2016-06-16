@@ -23,7 +23,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.298 2007/02/03 14:06:54 petere Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.318.2.1 2009/04/16 20:42:27 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -192,6 +192,7 @@ static bool
 _equalConst(Const *a, Const *b)
 {
 	COMPARE_SCALAR_FIELD(consttype);
+	COMPARE_SCALAR_FIELD(consttypmod);
 	COMPARE_SCALAR_FIELD(constlen);
 	COMPARE_SCALAR_FIELD(constisnull);
 	COMPARE_SCALAR_FIELD(constbyval);
@@ -261,9 +262,9 @@ _equalWindowRef(WindowRef *a, WindowRef *b)
 static bool
 _equalArrayRef(ArrayRef *a, ArrayRef *b)
 {
-	COMPARE_SCALAR_FIELD(refrestype);
 	COMPARE_SCALAR_FIELD(refarraytype);
 	COMPARE_SCALAR_FIELD(refelemtype);
+	COMPARE_SCALAR_FIELD(reftypmod);
 	COMPARE_NODE_FIELD(refupperindexpr);
 	COMPARE_NODE_FIELD(reflowerindexpr);
 	COMPARE_NODE_FIELD(refexpr);
@@ -477,9 +478,9 @@ _equalArrayCoerceExpr(ArrayCoerceExpr *a, ArrayCoerceExpr *b)
 	 * that are equal() to both explicit and implicit coercions.
 	 */
 	if (a->coerceformat != b->coerceformat &&
-			a->coerceformat != COERCE_DONTCARE &&
-			b->coerceformat != COERCE_DONTCARE)
-			return false;
+		a->coerceformat != COERCE_DONTCARE &&
+		b->coerceformat != COERCE_DONTCARE)
+		return false;
 
 	return true;
 }
@@ -538,7 +539,7 @@ _equalArrayExpr(ArrayExpr *a, ArrayExpr *b)
 	COMPARE_SCALAR_FIELD(element_typeid);
 	COMPARE_NODE_FIELD(elements);
 	COMPARE_SCALAR_FIELD(multidims);
-	COMPARE_LOCATION_FIELD(location);
+	/* COMPARE_LOCATION_FIELD(location); */
 
 	return true;
 }
@@ -690,6 +691,7 @@ static bool
 _equalCurrentOfExpr(CurrentOfExpr *a, CurrentOfExpr *b)
 {
 	COMPARE_STRING_FIELD(cursor_name);
+	COMPARE_SCALAR_FIELD(cursor_param);
 	COMPARE_SCALAR_FIELD(cvarno);
 	COMPARE_SCALAR_FIELD(target_relid);
 
@@ -768,9 +770,9 @@ static bool
 _equalPathKey(PathKey *a, PathKey *b)
 {
 	/*
-	 * This is normally used on non-canonicalized PathKeys, so must chase
-	 * up to the topmost merged EquivalenceClass and see if those are the
-	 * same (by pointer equality).
+	 * This is normally used on non-canonicalized PathKeys, so must chase up
+	 * to the topmost merged EquivalenceClass and see if those are the same
+	 * (by pointer equality).
 	 */
 	EquivalenceClass *a_eclass;
 	EquivalenceClass *b_eclass;
@@ -797,6 +799,7 @@ _equalRestrictInfo(RestrictInfo *a, RestrictInfo *b)
 	COMPARE_SCALAR_FIELD(is_pushed_down);
 	COMPARE_SCALAR_FIELD(outerjoin_delayed);
 	COMPARE_BITMAPSET_FIELD(required_relids);
+	COMPARE_BITMAPSET_FIELD(nullable_relids);
 
 	/*
 	 * We ignore all the remaining fields, since they may not be set yet, and
@@ -861,6 +864,7 @@ _equalQuery(Query *a, Query *b)
 	COMPARE_SCALAR_FIELD(hasAggs);
 	COMPARE_SCALAR_FIELD(hasWindFuncs);
 	COMPARE_SCALAR_FIELD(hasSubLinks);
+	COMPARE_SCALAR_FIELD(hasDynamicFunctions);
 	COMPARE_NODE_FIELD(rtable);
 	COMPARE_NODE_FIELD(jointree);
 	COMPARE_NODE_FIELD(targetList);
@@ -879,17 +883,11 @@ _equalQuery(Query *a, Query *b)
 	COMPARE_NODE_FIELD(rowMarks);
 	COMPARE_NODE_FIELD(setOperations);
 	
-	/* Prior to 3.4 these fields were compared.
-	COMPARE_NODE_FIELD(resultRelations);
-	COMPARE_NODE_FIELD(returningLists);
-	 * now they are unused.
-	 */
-	
 	/* Prior to 3.4 this test was
 	 *     COMPARE_SCALAR_FIELD(intoPolicy); 
 	 * Maybe GpPolicy should be a Node?
 	 */
-	if (! GpPolicyEqual(a->intoPolicy, b->intoPolicy) )
+	if (!GpPolicyEqual(a->intoPolicy, b->intoPolicy))
 		return false;
 
 	return true;
@@ -1318,16 +1316,14 @@ _equalIndexStmt(IndexStmt *a, IndexStmt *b)
 	COMPARE_NODE_FIELD(indexParams);
 	COMPARE_NODE_FIELD(options);
 	COMPARE_NODE_FIELD(whereClause);
-	COMPARE_NODE_FIELD(rangetable);
 	COMPARE_SCALAR_FIELD(is_part_child);
 	COMPARE_SCALAR_FIELD(unique);
 	COMPARE_SCALAR_FIELD(primary);
 	COMPARE_SCALAR_FIELD(isconstraint);
-	COMPARE_STRING_FIELD(altconname);
 	COMPARE_SCALAR_FIELD(constrOid);
 	COMPARE_SCALAR_FIELD(concurrent);
 	COMPARE_NODE_FIELD(idxOids);
-	COMPARE_SCALAR_FIELD(do_part);
+	COMPARE_SCALAR_FIELD(is_split_part);
 
 	return true;
 }
@@ -1457,7 +1453,6 @@ _equalRuleStmt(RuleStmt *a, RuleStmt *b)
 	COMPARE_SCALAR_FIELD(instead);
 	COMPARE_NODE_FIELD(actions);
 	COMPARE_SCALAR_FIELD(replace);
-	COMPARE_SCALAR_FIELD(ruleOid);
 
 	return true;
 }
@@ -1506,6 +1501,18 @@ _equalCompositeTypeStmt(CompositeTypeStmt *a, CompositeTypeStmt *b)
 }
 
 static bool
+_equalCreateEnumStmt(CreateEnumStmt *a, CreateEnumStmt *b)
+{
+	COMPARE_NODE_FIELD(typeName);
+	COMPARE_NODE_FIELD(vals);
+	COMPARE_SCALAR_FIELD(enumTypeOid);
+	COMPARE_SCALAR_FIELD(enumArrayOid);
+	COMPARE_NODE_FIELD(valOids);
+
+	return true;
+}
+
+static bool
 _equalViewStmt(ViewStmt *a, ViewStmt *b)
 {
 	COMPARE_NODE_FIELD(view);
@@ -1514,6 +1521,7 @@ _equalViewStmt(ViewStmt *a, ViewStmt *b)
 	COMPARE_SCALAR_FIELD(replace);
 	COMPARE_SCALAR_FIELD(relOid);
 	COMPARE_SCALAR_FIELD(comptypeOid);
+	COMPARE_SCALAR_FIELD(comptypeArrayOid);
 	COMPARE_SCALAR_FIELD(rewriteOid);
 
 	return true;
@@ -1611,8 +1619,7 @@ static bool
 _equalAlterDatabaseSetStmt(AlterDatabaseSetStmt *a, AlterDatabaseSetStmt *b)
 {
 	COMPARE_STRING_FIELD(dbname);
-	COMPARE_STRING_FIELD(variable);
-	COMPARE_NODE_FIELD(value);
+	COMPARE_NODE_FIELD(setstmt);
 
 	return true;
 }
@@ -1675,6 +1682,7 @@ _equalAlterSeqStmt(AlterSeqStmt *a, AlterSeqStmt *b)
 static bool
 _equalVariableSetStmt(VariableSetStmt *a, VariableSetStmt *b)
 {
+	COMPARE_SCALAR_FIELD(kind);
 	COMPARE_STRING_FIELD(name);
 	COMPARE_NODE_FIELD(args);
 	COMPARE_SCALAR_FIELD(is_local);
@@ -1691,9 +1699,9 @@ _equalVariableShowStmt(VariableShowStmt *a, VariableShowStmt *b)
 }
 
 static bool
-_equalVariableResetStmt(VariableResetStmt *a, VariableResetStmt *b)
+_equalDiscardStmt(DiscardStmt *a, DiscardStmt *b)
 {
-	COMPARE_STRING_FIELD(name);
+	COMPARE_SCALAR_FIELD(target);
 
 	return true;
 }
@@ -1828,8 +1836,7 @@ static bool
 _equalAlterRoleSetStmt(AlterRoleSetStmt *a, AlterRoleSetStmt *b)
 {
 	COMPARE_STRING_FIELD(role);
-	COMPARE_STRING_FIELD(variable);
-	COMPARE_NODE_FIELD(value);
+	COMPARE_NODE_FIELD(setstmt);
 
 	return true;
 }
@@ -1928,7 +1935,6 @@ _equalPrepareStmt(PrepareStmt *a, PrepareStmt *b)
 {
 	COMPARE_STRING_FIELD(name);
 	COMPARE_NODE_FIELD(argtypes);
-	COMPARE_NODE_FIELD(argtype_oids);
 	COMPARE_NODE_FIELD(query);
 
 	return true;
@@ -1993,7 +1999,30 @@ static bool
 _equalReassignOwnedStmt(ReassignOwnedStmt *a, ReassignOwnedStmt *b)
 {
 	COMPARE_NODE_FIELD(roles);
-	COMPARE_NODE_FIELD(newrole);
+	COMPARE_STRING_FIELD(newrole);
+
+	return true;
+}
+
+static bool
+_equalAlterTSDictionaryStmt(AlterTSDictionaryStmt *a, AlterTSDictionaryStmt *b)
+{
+	COMPARE_NODE_FIELD(dictname);
+	COMPARE_NODE_FIELD(options);
+
+	return true;
+}
+
+static bool
+_equalAlterTSConfigurationStmt(AlterTSConfigurationStmt *a,
+							   AlterTSConfigurationStmt *b)
+{
+	COMPARE_NODE_FIELD(cfgname);
+	COMPARE_NODE_FIELD(tokentype);
+	COMPARE_NODE_FIELD(dicts);
+	COMPARE_SCALAR_FIELD(override);
+	COMPARE_SCALAR_FIELD(replace);
+	COMPARE_SCALAR_FIELD(missing_ok);
 
 	return true;
 }
@@ -2858,6 +2887,9 @@ equal(void *a, void *b)
 		case T_CompositeTypeStmt:
 			retval = _equalCompositeTypeStmt(a, b);
 			break;
+		case T_CreateEnumStmt:
+			retval = _equalCreateEnumStmt(a, b);
+			break;
 		case T_ViewStmt:
 			retval = _equalViewStmt(a, b);
 			break;
@@ -2909,8 +2941,8 @@ equal(void *a, void *b)
 		case T_VariableShowStmt:
 			retval = _equalVariableShowStmt(a, b);
 			break;
-		case T_VariableResetStmt:
-			retval = _equalVariableResetStmt(a, b);
+		case T_DiscardStmt:
+			retval = _equalDiscardStmt(a, b);
 			break;
 		case T_CreateFileSpaceStmt:
 			retval = _equalCreateFileSpaceStmt(a, b);
@@ -2981,9 +3013,14 @@ equal(void *a, void *b)
 		case T_DropOwnedStmt:
 			retval = _equalDropOwnedStmt(a, b);
 			break;
-
 		case T_ReassignOwnedStmt:
 			retval = _equalReassignOwnedStmt(a, b);
+			break;
+		case T_AlterTSDictionaryStmt:
+			retval = _equalAlterTSDictionaryStmt(a, b);
+			break;
+		case T_AlterTSConfigurationStmt:
+			retval = _equalAlterTSConfigurationStmt(a, b);
 			break;
 
 		case T_CreateQueueStmt:

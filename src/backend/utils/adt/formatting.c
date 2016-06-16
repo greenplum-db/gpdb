@@ -1,7 +1,7 @@
 /* -----------------------------------------------------------------------
  * formatting.c
  *
- * $PostgreSQL: pgsql/src/backend/utils/adt/formatting.c,v 1.128 2007/02/17 03:11:32 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/adt/formatting.c,v 1.137.2.2 2009/07/06 19:11:53 heikki Exp $
  *
  *
  *	 Portions Copyright (c) 1999-2008, PostgreSQL Global Development Group
@@ -70,7 +70,7 @@
 #include <math.h>
 #include <float.h>
 #include <limits.h>
-#include <locale.h>
+
 /*
  * towlower() and friends should be in <wctype.h>, but some pre-C99 systems
  * declare them in <wchar.h>.
@@ -124,7 +124,6 @@
 #define MAXDOUBLEWIDTH	500
 
 
-
 /* ----------
  * External (defined in PgSQL datetime.c (timestamp utils))
  * ----------
@@ -168,13 +167,6 @@ typedef struct
 	bool		is_digit;
 	FromCharDateMode date_mode;
 } KeyWord;
-
-typedef enum
-{
-	FORMAT_TOCHAR,
-	FORMAT_TONUMBER,
-	FORMAT_TOTIMESTAMP
-} FormatFunction;
 
 struct FormatNode
 {
@@ -547,7 +539,6 @@ static KeySuffix DCH_suff[] = {
 	/* last */
 	{NULL, 0, 0, 0}
 };
-
 
 /* ----------
  * Format-pictures (KeyWord).
@@ -2207,7 +2198,7 @@ DCH_to_char(FormatNode *node, bool is_interval, TmToChar *in, char *out)
 						tm->tm_hour % (HOURS_PER_DAY / 2) == 0 ? 12 :
 						tm->tm_hour % (HOURS_PER_DAY / 2));
 				if (S_THth(n->suffix))
-					str_numth(s, s, 0);
+					str_numth(s, s, S_TH_TYPE(n->suffix));
 				s += strlen(s);
 				break;
 			case DCH_HH24:
@@ -2319,7 +2310,7 @@ DCH_to_char(FormatNode *node, bool is_interval, TmToChar *in, char *out)
 				}
 				else
 					sprintf(s, "%*s", S_FM(n->suffix) ? 0 : -9,
-						asc_toupper_z(months_full[tm->tm_mon - 1]));
+							asc_toupper_z(months_full[tm->tm_mon - 1]));
 				s += strlen(s);
 				break;
 			case DCH_Month:
@@ -2905,7 +2896,7 @@ DCH_from_char(FormatNode *node, char *in, TmFromChar *out)
 					if (matched != 2)
 						ereport(ERROR,
 								(errcode(ERRCODE_INVALID_DATETIME_FORMAT),
-								 errmsg("invalid input string for \"Y,YYY\" in function \"to_date\"")));
+							 errmsg("invalid input string for \"Y,YYY\" in function \"to_date\"")));
 					years += (millenia * 1000);
 					from_char_set_int(&out->year, years, n);
 					out->yysz = 4;
@@ -3331,7 +3322,7 @@ do_to_timestamp(text *date_txt, text *fmt,
 	ZERO_tm(tm);
 	*fsec = 0;
 
-	fmt_len = VARSIZE(fmt) - VARHDRSZ;
+	fmt_len = VARSIZE_ANY_EXHDR(fmt);
 
 	if (fmt_len)
 	{
@@ -3883,7 +3874,7 @@ NUM_prepare_locale(NUMProc *Np)
 		if (lconv->thousands_sep && *lconv->thousands_sep)
 			Np->L_thousands_sep = lconv->thousands_sep;
 		/* Make sure thousands separator doesn't match decimal point symbol. */
-		else if (strcmp(Np->decimal, ",") !=0)
+		else if (strcmp(Np->decimal, ",") != 0)
 			Np->L_thousands_sep = ",";
 		else
 			Np->L_thousands_sep = ".";
@@ -3904,6 +3895,7 @@ NUM_prepare_locale(NUMProc *Np)
 		Np->L_negative_sign = "-";
 		Np->L_positive_sign = "+";
 		Np->decimal = ".";
+
 		Np->L_thousands_sep = ",";
 		Np->L_currency_symbol = " ";
 	}
@@ -4772,7 +4764,7 @@ NUM_processor(FormatNode *node, NUMDesc *Num, char *inout, char *number,
  */
 #define NUM_TOCHAR_prepare \
 do { \
-	len = VARSIZE(fmt) - VARHDRSZ;					\
+	len = VARSIZE_ANY_EXHDR(fmt);					\
 	if (len <= 0 || len >= (INT_MAX-VARHDRSZ)/NUM_MAX_ITEM_SIZ)		\
 		PG_RETURN_TEXT_P(cstring_to_text("")); \
 	result	= (text *) palloc0((len * NUM_MAX_ITEM_SIZ) + 1 + VARHDRSZ);	\

@@ -17,7 +17,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/preptlist.c,v 1.86 2007/02/19 07:03:30 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/preptlist.c,v 1.88 2008/01/01 19:45:50 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -432,11 +432,12 @@ expand_targetlist(List *tlist, int command_type,
 /*
  * supplement_simply_updatable_targetlist
  * 
- * For a simply updatable cursor, we supplement the targetlist with junk metadata for
- * gp_segment_id, ctid, and tableoid. The handling of a CURRENT OF invocation will rely
- * on this junk information during its constant folding. Thus, in a nutshell, it is the 
- * responsibility of this routine to ensure whatever information needed to uniquely
- * identify the currently positioned tuple is available in the tuple itself.
+ * For a simply updatable cursor, we supplement the targetlist with junk
+ * metadata for gp_segment_id, ctid, and tableoid. The handling of a CURRENT OF
+ * invocation will rely on this junk information, in execCurrentOf(). Thus, in
+ * a nutshell, it is the responsibility of this routine to ensure whatever
+ * information needed to uniquely identify the currently positioned tuple is
+ * available in the tuple itself.
  */
 static List *
 supplement_simply_updatable_targetlist(DeclareCursorStmt *stmt, List *range_table, List *tlist) 

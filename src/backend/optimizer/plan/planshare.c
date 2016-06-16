@@ -135,27 +135,26 @@ static ShareInputScan *make_shareinputscan(PlannerInfo *root, Plan *inputplan)
 	sisc = makeNode(ShareInputScan);
 	incr_plan_nsharer(inputplan);
 
-
-	sisc->plan.targetlist = copyObject(inputplan->targetlist);
-	sisc->plan.lefttree = inputplan;
-	sisc->plan.flow = copyObject(inputplan->flow); 
+	sisc->scan.plan.targetlist = copyObject(inputplan->targetlist);
+	sisc->scan.plan.lefttree = inputplan;
+	sisc->scan.plan.flow = copyObject(inputplan->flow);
 
 	set_plan_share_type((Plan *) sisc, get_plan_share_type(inputplan));
 	set_plan_share_id((Plan *) sisc, get_plan_share_id(inputplan));
 	sisc->driver_slice = -1;
 
-	sisc->plan.qual = NIL;
-	sisc->plan.righttree = NULL;
+	sisc->scan.plan.qual = NIL;
+	sisc->scan.plan.righttree = NULL;
 
 	cost_shareinputscan(&sipath, root, inputplan->total_cost, inputplan->plan_rows, inputplan->plan_width);
 
-	sisc->plan.startup_cost = sipath.startup_cost;
-	sisc->plan.total_cost = sipath.total_cost; 
-	sisc->plan.plan_rows = inputplan->plan_rows;
-	sisc->plan.plan_width = inputplan->plan_width;
+	sisc->scan.plan.startup_cost = sipath.startup_cost;
+	sisc->scan.plan.total_cost = sipath.total_cost; 
+	sisc->scan.plan.plan_rows = inputplan->plan_rows;
+	sisc->scan.plan.plan_width = inputplan->plan_width;
 
-	sisc->plan.extParam = bms_copy(inputplan->extParam);
-	sisc->plan.allParam = bms_copy(inputplan->allParam);
+	sisc->scan.plan.extParam = bms_copy(inputplan->extParam);
+	sisc->scan.plan.allParam = bms_copy(inputplan->allParam);
 
 	return sisc;
 }

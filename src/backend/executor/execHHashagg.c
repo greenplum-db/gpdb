@@ -644,7 +644,7 @@ static Size est_hash_tuple_size(TupleTableSlot *hashslot, List *hash_needed)
 		
 		Assert( !attr->attisdropped );
 		
-		len = att_align(len, attr->attalign);
+		len = att_align_nominal(len, attr->attalign);
 		len += get_typavgwidth(attr->atttypid, attr->atttypmod);
 	}
 

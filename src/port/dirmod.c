@@ -10,7 +10,7 @@
  *	Win32 (NT4 and newer).
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/port/dirmod.c,v 1.47 2007/01/19 16:42:24 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/port/dirmod.c,v 1.51.2.5 2009/09/13 18:32:27 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -307,7 +307,7 @@ pgsymlink(const char *oldpath, const char *newpath)
  * must call pgfnames_cleanup later to free the memory allocated by this
  * function.
  */
-char	  **
+char **
 pgfnames(const char *path)
 {
 	DIR		   *dir;
@@ -428,11 +428,11 @@ rmtree(const char *path, bool rmtopdir)
 		 * delete it anyway.
 		 *
 		 * This is not an academic possibility. One scenario where this
-		 * happens is when bgwriter has a pending unlink request for a file in
-		 * a database that's being dropped. In dropdb(), we call
+		 * happens is when bgwriter has a pending unlink request for a file
+		 * in a database that's being dropped. In dropdb(), we call
 		 * ForgetDatabaseFsyncRequests() to flush out any such pending unlink
-		 * requests, but because that's asynchronous, it's not guaranteed that
-		 * the bgwriter receives the message in time.
+		 * requests, but because that's asynchronous, it's not guaranteed
+		 * that the bgwriter receives the message in time.
 		 */
 		if (lstat(pathbuf, &statbuf) != 0)
 		{
@@ -509,7 +509,7 @@ rmtree(const char *path, bool rmtopdir)
  * to update this field.
  */
 int
-pgwin32_safestat(const char *path, struct stat * buf)
+pgwin32_safestat(const char *path, struct stat *buf)
 {
 	int			r;
 	WIN32_FILE_ATTRIBUTE_DATA attr;
@@ -535,8 +535,8 @@ pgwin32_safestat(const char *path, struct stat * buf)
 	}
 
 	/*
-	 * XXX no support for large files here, but we don't do that in general on
-	 * Win32 yet.
+	 * XXX no support for large files here, but we don't do that in
+	 * general on Win32 yet.
 	 */
 	buf->st_size = attr.nFileSizeLow;
 

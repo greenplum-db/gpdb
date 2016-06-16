@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/fmgr.c,v 1.104 2007/02/09 03:35:34 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/fmgr.c,v 1.113.2.2 2009/12/09 21:58:17 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -16,6 +16,7 @@
 #include "postgres.h"
 
 #include "catalog/catquery.h"
+#include "access/heapam.h"
 #include "access/tuptoaster.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_proc.h"
@@ -226,7 +227,14 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
 	finfo->fn_strict = procedureStruct->proisstrict;
 	finfo->fn_retset = procedureStruct->proretset;
 
-	if (procedureStruct->prosecdef && !ignore_security)
+	/*
+	 * If it has prosecdef set, or non-null proconfig, use
+	 * fmgr_security_definer call handler --- unless we are being called again
+	 * by fmgr_security_definer or fmgr_info_other_lang.
+	 */
+	if (!ignore_security &&
+		(procedureStruct->prosecdef ||
+		 !heap_attisnull(procedureTuple, Anum_pg_proc_proconfig)))
 	{
 		finfo->fn_addr = fmgr_security_definer;
 		finfo->fn_stats = TRACK_FUNC_ALL;		/* ie, never track */
@@ -390,27 +398,23 @@ fmgr_info_other_lang(Oid functionId, FmgrInfo *finfo, HeapTuple procedureTuple)
 {
 	Form_pg_proc procedureStruct = (Form_pg_proc) GETSTRUCT(procedureTuple);
 	Oid			language = procedureStruct->prolang;
+	HeapTuple	languageTuple;
+	Form_pg_language languageStruct;
 	FmgrInfo	plfinfo;
-	Oid			lanplcallfoid;
-	int			fetchCount;
 
-	lanplcallfoid = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT lanplcallfoid FROM pg_language "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(language)));
-
-	if (!fetchCount)
+	languageTuple = SearchSysCache(LANGOID,
+								   ObjectIdGetDatum(language),
+								   0, 0, 0);
+	if (!HeapTupleIsValid(languageTuple))
 		elog(ERROR, "cache lookup failed for language %u", language);
+	languageStruct = (Form_pg_language) GETSTRUCT(languageTuple);
 
 	/*
 	 * Look up the language's call handler function, ignoring any attributes
 	 * that would normally cause insertion of fmgr_security_definer.  We
 	 * need to get back a bare pointer to the actual C-language function.
 	 */
-	fmgr_info_cxt_security(lanplcallfoid, &plfinfo,
+	fmgr_info_cxt_security(languageStruct->lanplcallfoid, &plfinfo,
 						   CurrentMemoryContext, true);
 	finfo->fn_addr = plfinfo.fn_addr;
 
@@ -422,6 +426,7 @@ fmgr_info_other_lang(Oid functionId, FmgrInfo *finfo, HeapTuple procedureTuple)
 	if (plfinfo.fn_extra != NULL)
 		elog(ERROR, "language %u has old-style handler", language);
 
+	ReleaseSysCache(languageTuple);
 }
 
 /*
@@ -877,39 +882,46 @@ fmgr_oldstyle(PG_FUNCTION_ARGS)
 
 
 /*
- * Support for security definer functions
+ * Support for security-definer and proconfig-using functions.	We support
+ * both of these features using the same call handler, because they are
+ * often used together and it would be inefficient (as well as notationally
+ * messy) to have two levels of call handler involved.
  */
-
 struct fmgr_security_definer_cache
 {
-	FmgrInfo	flinfo;
-	Oid			userid;
+	FmgrInfo	flinfo;			/* lookup info for target function */
+	Oid			userid;			/* userid to set, or InvalidOid */
+	ArrayType  *proconfig;		/* GUC values to set, or NULL */
 };
 
 /*
- * Function handler for security definer functions.  We extract the
- * OID of the actual function and do a fmgr lookup again.  Then we
- * look up the owner of the function and cache both the fmgr info and
- * the owner ID.  During the call we temporarily replace the flinfo
- * with the cached/looked-up one, while keeping the outer fcinfo
- * (which contains all the actual arguments, etc.)
- * intact. 	This is not re-entrant, but then the fcinfo itself can't be used
+ * Function handler for security-definer/proconfig functions.  We extract the
+ * OID of the actual function and do a fmgr lookup again.  Then we fetch the
+ * pg_proc row and copy the owner ID and proconfig fields.	(All this info
+ * is cached for the duration of the current query.)  To execute a call,
+ * we temporarily replace the flinfo with the cached/looked-up one, while
+ * keeping the outer fcinfo (which contains all the actual arguments, etc.)
+ * intact.	This is not re-entrant, but then the fcinfo itself can't be used
  * re-entrantly anyway.
  */
 static Datum
 fmgr_security_definer(PG_FUNCTION_ARGS)
 {
 	Datum		result;
-	FmgrInfo   *save_flinfo;
 	struct fmgr_security_definer_cache *volatile fcache;
+	FmgrInfo   *save_flinfo;
 	Oid			save_userid;
 	int			save_sec_context;
+	volatile int save_nestlevel;
 	PgStat_FunctionCallUsage fcusage;
 
 	if (!fcinfo->flinfo->fn_extra)
 	{
-		Oid			proowner;
-		int			fetchCount;
+		HeapTuple	tuple;
+		Form_pg_proc procedureStruct;
+		Datum		datum;
+		bool		isnull;
+		MemoryContext oldcxt;
 
 		fcache = MemoryContextAllocZero(fcinfo->flinfo->fn_mcxt,
 										sizeof(*fcache));
@@ -918,31 +930,54 @@ fmgr_security_definer(PG_FUNCTION_ARGS)
 							   fcinfo->flinfo->fn_mcxt, true);
 		fcache->flinfo.fn_expr = fcinfo->flinfo->fn_expr;
 
-		proowner = caql_getoid_plus(
-				NULL,
-				&fetchCount,
-				NULL,
-				cql("SELECT proowner FROM pg_proc "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(fcinfo->flinfo->fn_oid)));
-
-		if (!fetchCount)
+		tuple = SearchSysCache1(PROCOID,
+								ObjectIdGetDatum(fcinfo->flinfo->fn_oid));
+		if (!HeapTupleIsValid(tuple))
 			elog(ERROR, "cache lookup failed for function %u",
 				 fcinfo->flinfo->fn_oid);
-		fcache->userid = proowner;
+		procedureStruct = (Form_pg_proc) GETSTRUCT(tuple);
+
+		if (procedureStruct->prosecdef)
+			fcache->userid = procedureStruct->proowner;
+
+		datum = SysCacheGetAttr(PROCOID, tuple, Anum_pg_proc_proconfig,
+								&isnull);
+		if (!isnull)
+		{
+			oldcxt = MemoryContextSwitchTo(fcinfo->flinfo->fn_mcxt);
+			fcache->proconfig = DatumGetArrayTypePCopy(datum);
+			MemoryContextSwitchTo(oldcxt);
+		}
+
+		ReleaseSysCache(tuple);
 
 		fcinfo->flinfo->fn_extra = fcache;
 	}
 	else
 		fcache = fcinfo->flinfo->fn_extra;
 
+	/* GetUserIdAndSecContext is cheap enough that no harm in a wasted call */
 	GetUserIdAndSecContext(&save_userid, &save_sec_context);
-	SetUserIdAndSecContext(fcache->userid,
-						   save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
+	if (fcache->proconfig)		/* Need a new GUC nesting level */
+		save_nestlevel = NewGUCNestLevel();
+	else
+		save_nestlevel = 0;		/* keep compiler quiet */
+
+	if (OidIsValid(fcache->userid))
+		SetUserIdAndSecContext(fcache->userid,
+							   save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
+
+	if (fcache->proconfig)
+	{
+		ProcessGUCArray(fcache->proconfig,
+						(superuser() ? PGC_SUSET : PGC_USERSET),
+						PGC_S_SESSION,
+						GUC_ACTION_SAVE);
+	}
 
 	/*
 	 * We don't need to restore GUC or userid settings on error, because the
-	 * ensuing xact or subxact abort will do that.	The PG_TRY block is only
+	 * ensuing xact or subxact abort will do that.  The PG_TRY block is only
 	 * needed to clean up the flinfo link.
 	 */
 	save_flinfo = fcinfo->flinfo;
@@ -974,7 +1009,10 @@ fmgr_security_definer(PG_FUNCTION_ARGS)
 
 	fcinfo->flinfo = save_flinfo;
 
-	SetUserIdAndSecContext(save_userid, save_sec_context);
+	if (fcache->proconfig)
+		AtEOXact_GUC(true, save_nestlevel);
+	if (OidIsValid(fcache->userid))
+		SetUserIdAndSecContext(save_userid, save_sec_context);
 
 	return result;
 }
@@ -1843,7 +1881,7 @@ OidFunctionCall9(Oid functionId, Datum arg1, Datum arg2,
  *
  * One important difference from the bare function call is that we will
  * push any active SPI context, allowing SPI-using I/O functions to be
- * called from other SPI functions without extra notation.	This is a hack,
+ * called from other SPI functions without extra notation.  This is a hack,
  * but the alternative of expecting all SPI functions to do SPI_push/SPI_pop
  * around I/O calls seems worse.
  */
@@ -2170,6 +2208,9 @@ get_call_expr_argtype(Node *expr, int argnum)
 		argtype = get_element_type(argtype);
 	else if (IsA(expr, ArrayCoerceExpr) &&
 			argnum == 0)
+		argtype = get_element_type(argtype);
+	else if (IsA(expr, ArrayCoerceExpr) &&
+			 argnum == 0)
 		argtype = get_element_type(argtype);
 
 	return argtype;

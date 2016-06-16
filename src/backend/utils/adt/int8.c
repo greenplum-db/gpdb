@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/int8.c,v 1.64 2007/02/01 19:10:28 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/int8.c,v 1.68 2008/01/01 19:45:52 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -98,7 +98,8 @@ scanint8(const char *str, bool errorOK, int64 *result)
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-					 errmsg("invalid input syntax for integer: \"%s\"",str)));
+					 errmsg("invalid input syntax for integer: \"%s\"",
+							str)));
 	}
 
 	/* process digits */
@@ -113,7 +114,8 @@ scanint8(const char *str, bool errorOK, int64 *result)
 			else
 				ereport(ERROR,
 						(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
-					   errmsg("value \"%s\" is out of range for type bigint",str)));
+					   errmsg("value \"%s\" is out of range for type bigint",
+							  str)));
 		}
 		tmp = newtmp;
 	}
@@ -576,12 +578,17 @@ int8mul(PG_FUNCTION_ARGS)
 	 * range; if so, no overflow is possible.  (But that only works if we
 	 * really have a 64-bit int64 datatype...)
 	 */
-
-	if (arg2 != 0 &&
-		(result / arg2 != arg1 || (arg2 == -1 && arg1 < 0 && result < 0)))
-		ereport(ERROR,
-				(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
-				 errmsg("bigint out of range")));
+#ifndef INT64_IS_BUSTED
+	if (arg1 != (int64) ((int32) arg1) || arg2 != (int64) ((int32) arg2))
+#endif
+	{
+		if (arg2 != 0 &&
+			((arg2 == -1 && arg1 < 0 && result < 0) ||
+			 result / arg2 != arg1))
+			ereport(ERROR,
+					(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+					 errmsg("bigint out of range")));
+	}
 	PG_RETURN_INT64(result);
 }
 
@@ -593,22 +600,35 @@ int8div(PG_FUNCTION_ARGS)
 	int64		result;
 
 	if (arg2 == 0)
+	{
 		ereport(ERROR,
 				(errcode(ERRCODE_DIVISION_BY_ZERO),
 				 errmsg("division by zero")));
+		/* ensure compiler realizes we mustn't reach the division (gcc bug) */
+		PG_RETURN_NULL();
+	}
+
+	/*
+	 * INT64_MIN / -1 is problematic, since the result can't be represented on
+	 * a two's-complement machine.  Some machines produce INT64_MIN, some
+	 * produce zero, some throw an exception.  We can dodge the problem by
+	 * recognizing that division by -1 is the same as negation.
+	 */
+	if (arg2 == -1)
+	{
+		result = -arg1;
+		/* overflow check (needed for INT64_MIN) */
+		if (arg1 != 0 && SAMESIGN(result, arg1))
+			ereport(ERROR,
+					(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+					 errmsg("bigint out of range")));
+		PG_RETURN_INT64(result);
+	}
+
+	/* No overflow is possible */
 
 	result = arg1 / arg2;
 
-	/*
-	 * Overflow check.	The only possible overflow case is for arg1 =
-	 * INT64_MIN, arg2 = -1, where the correct result is -INT64_MIN, which
-	 * can't be represented on a two's-complement machine.	Most machines
-	 * produce INT64_MIN but it seems some produce zero.
-	 */
-	if (arg2 == -1 && arg1 < 0 && result <= 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
-				 errmsg("bigint out of range")));
 	PG_RETURN_INT64(result);
 }
 
@@ -640,9 +660,22 @@ int8mod(PG_FUNCTION_ARGS)
 	int64		arg2 = PG_GETARG_INT64(1);
 
 	if (arg2 == 0)
+	{
 		ereport(ERROR,
 				(errcode(ERRCODE_DIVISION_BY_ZERO),
 				 errmsg("division by zero")));
+		/* ensure compiler realizes we mustn't reach the division (gcc bug) */
+		PG_RETURN_NULL();
+	}
+
+	/*
+	 * Some machines throw a floating-point exception for INT64_MIN % -1,
+	 * which is a bit silly since the correct answer is perfectly
+	 * well-defined, namely zero.
+	 */
+	if (arg2 == -1)
+		PG_RETURN_INT64(0);
+
 	/* No overflow is possible */
 
 	PG_RETURN_INT64(arg1 % arg2);
@@ -805,22 +838,35 @@ int84div(PG_FUNCTION_ARGS)
 	int64		result;
 
 	if (arg2 == 0)
+	{
 		ereport(ERROR,
 				(errcode(ERRCODE_DIVISION_BY_ZERO),
 				 errmsg("division by zero")));
+		/* ensure compiler realizes we mustn't reach the division (gcc bug) */
+		PG_RETURN_NULL();
+	}
+
+	/*
+	 * INT64_MIN / -1 is problematic, since the result can't be represented on
+	 * a two's-complement machine.  Some machines produce INT64_MIN, some
+	 * produce zero, some throw an exception.  We can dodge the problem by
+	 * recognizing that division by -1 is the same as negation.
+	 */
+	if (arg2 == -1)
+	{
+		result = -arg1;
+		/* overflow check (needed for INT64_MIN) */
+		if (arg1 != 0 && SAMESIGN(result, arg1))
+			ereport(ERROR,
+					(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+					 errmsg("bigint out of range")));
+		PG_RETURN_INT64(result);
+	}
+
+	/* No overflow is possible */
 
 	result = arg1 / arg2;
 
-	/*
-	 * Overflow check.	The only possible overflow case is for arg1 =
-	 * INT64_MIN, arg2 = -1, where the correct result is -INT64_MIN, which
-	 * can't be represented on a two's-complement machine.	Most machines
-	 * produce INT64_MIN but it seems some produce zero.
-	 */
-	if (arg2 == -1 && arg1 < 0 && result <= 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
-				 errmsg("bigint out of range")));
 	PG_RETURN_INT64(result);
 }
 
@@ -1315,48 +1361,6 @@ oidtoi8(PG_FUNCTION_ARGS)
 	PG_RETURN_INT64((int64) arg);
 }
 
-Datum
-text_int8(PG_FUNCTION_ARGS)
-{
-	text	   *str = PG_GETARG_TEXT_P(0);
-	int			len;
-	char	   *s;
-	Datum		result;
-
-	len = (VARSIZE(str) - VARHDRSZ);
-	s = palloc(len + 1);
-	memcpy(s, VARDATA(str), len);
-	*(s + len) = '\0';
-
-	result = DirectFunctionCall1(int8in, CStringGetDatum(s));
-
-	pfree(s);
-
-	return result;
-}
-
-Datum
-int8_text(PG_FUNCTION_ARGS)
-{
-	/* arg is int64, but easier to leave it as Datum */
-	Datum		arg = PG_GETARG_DATUM(0);
-	char	   *s;
-	int			len;
-	text	   *result;
-
-	s = DatumGetCString(DirectFunctionCall1(int8out, arg));
-	len = strlen(s);
-
-	result = (text *) palloc(VARHDRSZ + len);
-
-	SET_VARSIZE(result, VARHDRSZ + len);
-	memcpy(VARDATA(result), s, len);
-
-	pfree(s);
-
-	PG_RETURN_TEXT_P(result);
-}
-
 /*
  * non-persistent numeric series generator
  */
@@ -1426,6 +1430,10 @@ generate_series_step_int8(PG_FUNCTION_ARGS)
 	{
 		/* increment current in preparation for next iteration */
 		fctx->current += fctx->step;
+
+		/* if next-value computation overflows, this is the final result */
+		if (SAMESIGN(result, fctx->step) && !SAMESIGN(result, fctx->current))
+			fctx->step = 0;
 
 		/* do when there is more left to send */
 		SRF_RETURN_NEXT(funcctx, Int64GetDatum(result));

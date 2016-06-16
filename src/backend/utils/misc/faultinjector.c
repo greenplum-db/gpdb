@@ -24,8 +24,8 @@
 #include "cdb/cdbfilerep.h"
 #include "cdb/cdbfilerepservice.h"
 #include "cdb/cdbresynchronizechangetracking.h"
-#include "postmaster/bgwriter.h"
 #include "cdb/cdbutil.h"
+#include "postmaster/bgwriter.h"
 #include "postmaster/fts.h"
 #include "storage/spin.h"
 #include "storage/shmem.h"
@@ -263,6 +263,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault in ExecSort before doing the actual sort */
 	_("execsort_mksort_mergeruns"),
 		/* inject fault in MKSort during the mergeruns phase */
+	_("execshare_input_next"),
+		/* inject fault after shared input scan retrieved a tuple */
 	_("base_backup_post_create_checkpoint"),
 		/* inject fault after creation of checkpoint when basebackup requested */
 	_("compaction_before_segmentfile_drop"),
@@ -820,7 +822,7 @@ FaultInjector_InjectFaultIfSet(
 				FaultInjector_UpdateHashEntry(entryLocal);
 			}
 
-			RequestCheckpoint(true, false);
+			RequestCheckpoint(CHECKPOINT_WAIT | CHECKPOINT_IMMEDIATE);
 			ereport(PANIC,
 					(errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
 							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
@@ -1156,6 +1158,7 @@ FaultInjector_NewHashEntry(
 		case FaultExecHashJoinNewBatch:
 		case RunawayCleanup:
 		case ExecSortMKSortMergeRuns:
+		case ExecShareInputNext:
 			if (fileRepRole != FileRepNoRoleConfigured && fileRepRole != FileRepPrimaryRole)
 			{
 				FiLockRelease();

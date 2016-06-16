@@ -329,6 +329,10 @@ ExecInitTableFunction(TableFunctionScan *node, EState *estate, int eflags)
 	rte	 = rt_fetch(node->scan.scanrelid, estate->es_range_table);
 	Insist(rte->rtekind == RTE_TABLEFUNCTION);
 
+	/* get info about the function */
+	rte	 = rt_fetch(node->scan.scanrelid, estate->es_range_table);
+	Insist(rte->rtekind == RTE_TABLEFUNCTION);
+
 	/* 
 	 * The funcexpr must be a function call.  This check is to verify that
 	 * the planner didn't try to perform constant folding or other inlining

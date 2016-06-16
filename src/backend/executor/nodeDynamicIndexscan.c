@@ -27,9 +27,6 @@
 #include "utils/memutils.h"
 #include "cdb/cdbvars.h"
 
-/* Number of slots required for DynamicIndexScan */
-#define DYNAMICINDEXSCAN_NSLOTS 2
-
 /*
  * Free resources from a partition.
  */
@@ -38,11 +35,14 @@ CleanupOnePartition(IndexScanState *indexState);
 
 /*
  * Account for the number of tuple slots required for DynamicIndexScan
+ *
+ * XXX: We have backported the PostgreSQL patch that made these functions
+ * obsolete. The returned value isn't used for anything, so just return 0.
  */
 int 
 ExecCountSlotsDynamicIndexScan(DynamicIndexScan *node)
 {
-	return DYNAMICINDEXSCAN_NSLOTS;
+	return 0;
 }
 
 /*

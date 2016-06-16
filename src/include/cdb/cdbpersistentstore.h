@@ -13,6 +13,7 @@
 #include "access/persistentfilesysobjname.h"
 #include "catalog/gp_global_sequence.h"
 #include "storage/itemptr.h"
+#include "storage/proc.h"
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "utils/relcache.h"
@@ -303,89 +304,6 @@ typedef struct MirroredLockLocalVars
 	}
 #endif
 
-#ifdef USE_ASSERT_CHECKING
-
-typedef struct CheckpointStartLockLocalVars
-{
-	bool checkpointStartLockIsHeldByMe;
-	bool checkpointStartVariablesSet;
-} CheckpointStartLockLocalVars;
-
-#define CHECKPOINT_START_LOCK_DECLARE \
-	CheckpointStartLockLocalVars checkpointStartLockLocalVars = {false, false};
-#else
-
-typedef struct CheckpointStartLockLocalVars
-{
-	bool checkpointStartLockIsHeldByMe;
-} CheckpointStartLockLocalVars;
-
-#define CHECKPOINT_START_LOCK_DECLARE \
-	CheckpointStartLockLocalVars checkpointStartLockLocalVars = {false};
-#endif
-
-#ifdef USE_ASSERT_CHECKING
-#define CHECKPOINT_START_LOCK \
-	{ \
-		checkpointStartLockLocalVars.checkpointStartLockIsHeldByMe = LWLockHeldByMe(CheckpointStartLock); \
-		checkpointStartLockLocalVars.checkpointStartVariablesSet = true; \
-		\
-		if (!checkpointStartLockLocalVars.checkpointStartLockIsHeldByMe) \
-		{ \
-			LWLockAcquire(CheckpointStartLock , LW_SHARED); \
-		} \
-		else \
-		{ \
-			HOLD_INTERRUPTS(); \
-		} \
-		\
-		Assert(InterruptHoldoffCount > 0); \
-	}
-#else
-#define CHECKPOINT_START_LOCK \
-	{ \
-		checkpointStartLockLocalVars.checkpointStartLockIsHeldByMe = LWLockHeldByMe(CheckpointStartLock); \
-		\
-		if (!checkpointStartLockLocalVars.checkpointStartLockIsHeldByMe) \
-		{ \
-			LWLockAcquire(CheckpointStartLock , LW_SHARED); \
-		} \
-		else \
-		{ \
-			HOLD_INTERRUPTS(); \
-		} \
-	}
-#endif
-
-#ifdef USE_ASSERT_CHECKING
-#define CHECKPOINT_START_UNLOCK \
-	{ \
-		Assert(checkpointStartLockLocalVars.checkpointStartVariablesSet); \
-		Assert(InterruptHoldoffCount > 0); \
-		\
-		if (!checkpointStartLockLocalVars.checkpointStartLockIsHeldByMe) \
-		{ \
-			LWLockRelease(CheckpointStartLock); \
-		} \
-		else \
-		{ \
-			RESUME_INTERRUPTS(); \
-		} \
-	}
-#else
-#define CHECKPOINT_START_UNLOCK \
-	{ \
-		if (!checkpointStartLockLocalVars.checkpointStartLockIsHeldByMe) \
-		{ \
-			LWLockRelease(CheckpointStartLock); \
-		} \
-		else \
-		{ \
-			RESUME_INTERRUPTS(); \
-		} \
-	}
-#endif
-
 /*
  * Helper DEFINEs for the Persistent state-change modules to READ or WRITE.
  * We must maintain proper lock acquisition and ordering to prevent any
@@ -393,7 +311,6 @@ typedef struct CheckpointStartLockLocalVars
  *
  * The WRITE_PERSISTENT_STATE_ORDERED_LOCK gets these locks:
  *    MirroredLock        SHARED
- *    CheckpointStartLock SHARED
  *    PersistentObjLock   EXCLUSIVE
  *
  * The READ_PERSISTENT_STATE_ORDERED_LOCK gets this lock:
@@ -404,13 +321,12 @@ typedef struct CheckpointStartLockLocalVars
  * persistent table I/O at the same time. The filerep logic will always wait for an
  * EXCLUSIVE lock.
  *
- * By taking a SHARED CheckpointStartLock, the process is blocking a checkpoint from
- * occurring while performing persistent table I/O. The checkpoint logic will always
- * wait for an EXCLUSIVE lock.
- *
  * By taking an exclusive PersistentObjLock, the process is preventing simultaneous
  * I/O on the persistent tables. Only one process can obtain an EXCLUSIVE
  * PersistentObjLock.
+ *
+ * WRITE_PERSISTENT_STATE_ORDERED_LOCK also sets MyProc->inCommit, to block a checkpoint
+ * from starting while performing persistent table I/O.
  *
  * NOTE: Below these locks are the Buffer Pool content locks.
  */
@@ -423,17 +339,18 @@ typedef struct CheckpointStartLockLocalVars
 typedef struct WritePersistentStateLockLocalVars
 {
 	bool persistentObjLockIsHeldByMe;
+	bool save_inCommit;
 } WritePersistentStateLockLocalVars;
 
 #define WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE \
 	MIRRORED_LOCK_DECLARE; \
-	CHECKPOINT_START_LOCK_DECLARE;
 	WritePersistentStateLockLocalVars writePersistentStateLockLocalVars;
 
 #define WRITE_PERSISTENT_STATE_ORDERED_LOCK \
 	{ \
 		MIRRORED_LOCK; \
-		CHECKPOINT_START_LOCK; \
+		writePersistentStateLockLocalVars.save_inCommit = MyProc->inCommit; \
+		MyProc->inCommit = true;				\
 		writePersistentStateLockLocalVars.persistentObjLockIsHeldByMe = LWLockHeldByMe(PersistentObjLock); \
 		if (!writePersistentStateLockLocalVars.persistentObjLockIsHeldByMe) \
 		{ \
@@ -445,7 +362,7 @@ typedef struct WritePersistentStateLockLocalVars
 #define WRITE_PERSISTENT_STATE_ORDERED_UNLOCK \
 	{ \
 		MIRRORED_UNLOCK; \
-		CHECKPOINT_START_UNLOCK; \
+		MyProc->inCommit = writePersistentStateLockLocalVars.save_inCommit; \
 		if (!writePersistentStateLockLocalVars.persistentObjLockIsHeldByMe) \
 		{ \
 			LWLockRelease(PersistentObjLock); \

@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2008, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/funcapi.c,v 1.33 2007/02/01 19:10:28 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/funcapi.c,v 1.37.2.2 2008/11/30 18:49:42 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -66,8 +66,8 @@ init_MultiFuncCall(PG_FUNCTION_ARGS)
 		/*
 		 * First call
 		 */
-		ReturnSetInfo *rsi = (ReturnSetInfo *) fcinfo->resultinfo;
-		MemoryContext multi_call_ctx;
+		ReturnSetInfo  *rsi = (ReturnSetInfo *) fcinfo->resultinfo;
+		MemoryContext	multi_call_ctx;
 
 		/*
 		 * Create a suitably long-lived context to hold cross-call data
@@ -184,7 +184,6 @@ shutdown_MultiFuncCall(Datum arg)
 	 * Delete context that holds all multi-call data, including the
 	 * FuncCallContext itself
 	 */
-	MemoryContextSwitchTo(flinfo->fn_mcxt);
 	MemoryContextDelete(funcctx->multi_call_memory_ctx);
 }
 
@@ -459,6 +458,8 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args,
 	int			nargs = declared_args->dim1;
 	bool		have_anyelement_result = false;
 	bool		have_anyarray_result = false;
+	bool		have_anynonarray = false;
+	bool		have_anyenum = false;
 	Oid			anyelement_type = InvalidOid;
 	Oid			anyarray_type = InvalidOid;
 	int			i;
@@ -473,6 +474,14 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args,
 				break;
 			case ANYARRAYOID:
 				have_anyarray_result = true;
+				break;
+			case ANYNONARRAYOID:
+				have_anyelement_result = true;
+				have_anynonarray = true;
+				break;
+			case ANYENUMOID:
+				have_anyelement_result = true;
+				have_anyenum = true;
 				break;
 			default:
 				break;
@@ -493,6 +502,8 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args,
 		switch (declared_args->values[i])
 		{
 			case ANYELEMENTOID:
+			case ANYNONARRAYOID:
+			case ANYENUMOID:
 				if (!OidIsValid(anyelement_type))
 					anyelement_type = get_call_expr_argtype(call_expr, i);
 				break;
@@ -519,12 +530,22 @@ resolve_polymorphic_tupdesc(TupleDesc tupdesc, oidvector *declared_args,
 											 anyelement_type,
 											 ANYELEMENTOID);
 
+	/* Enforce ANYNONARRAY if needed */
+	if (have_anynonarray && type_is_array(anyelement_type))
+		return false;
+
+	/* Enforce ANYENUM if needed */
+	if (have_anyenum && !type_is_enum(anyelement_type))
+		return false;
+
 	/* And finally replace the tuple column types as needed */
 	for (i = 0; i < natts; i++)
 	{
 		switch (tupdesc->attrs[i]->atttypid)
 		{
 			case ANYELEMENTOID:
+			case ANYNONARRAYOID:
+			case ANYENUMOID:
 				TupleDescInitEntry(tupdesc, i + 1,
 								   NameStr(tupdesc->attrs[i]->attname),
 								   anyelement_type,
@@ -575,6 +596,8 @@ resolve_polymorphic_argtypes(int numargs, Oid *argtypes, char *argmodes,
 		switch (argtypes[i])
 		{
 			case ANYELEMENTOID:
+			case ANYNONARRAYOID:
+			case ANYENUMOID:
 				if (argmode == PROARGMODE_OUT || argmode == PROARGMODE_TABLE)
 					have_anyelement_result = true;
 				else
@@ -629,12 +652,16 @@ resolve_polymorphic_argtypes(int numargs, Oid *argtypes, char *argmodes,
 											 anyelement_type,
 											 ANYELEMENTOID);
 
+	/* XXX do we need to enforce ANYNONARRAY or ANYENUM here?  I think not */
+
 	/* And finally replace the output column types as needed */
 	for (i = 0; i < numargs; i++)
 	{
 		switch (argtypes[i])
 		{
 			case ANYELEMENTOID:
+			case ANYNONARRAYOID:
+			case ANYENUMOID:
 				argtypes[i] = anyelement_type;
 				break;
 			case ANYARRAYOID:
@@ -661,12 +688,13 @@ get_type_func_class(Oid typid)
 {
 	switch (get_typtype(typid))
 	{
-		case 'c':
+		case TYPTYPE_COMPOSITE:
 			return TYPEFUNC_COMPOSITE;
-		case 'b':
-		case 'd':
+		case TYPTYPE_BASE:
+		case TYPTYPE_DOMAIN:
+		case TYPTYPE_ENUM:
 			return TYPEFUNC_SCALAR;
-		case 'p':
+		case TYPTYPE_PSEUDO:
 			if (typid == RECORDOID)
 				return TYPEFUNC_RECORD;
 
@@ -906,7 +934,7 @@ get_func_result_name(Oid functionId)
  * Given a pg_proc row for a function, return a tuple descriptor for the
  * result rowtype, or NULL if the function does not have OUT parameters.
  *
- * Note that this does not handle resolution of ANYELEMENT/ANYARRAY types;
+ * Note that this does not handle resolution of polymorphic types;
  * that is deliberate.
  */
 TupleDesc
@@ -1093,7 +1121,7 @@ RelationNameGetTupleDesc(const char *relname)
 	List	   *relname_list;
 
 	/* Open relation and copy the tuple description */
-	relname_list = stringToQualifiedNameList(relname, "RelationNameGetTupleDesc");
+	relname_list = stringToQualifiedNameList(relname);
 	relvar = makeRangeVarFromNameList(relname_list);
 	rel = relation_openrv(relvar, AccessShareLock);
 	tupdesc = CreateTupleDescCopy(RelationGetDescr(rel));

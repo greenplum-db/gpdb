@@ -16,7 +16,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/copyfuncs.c,v 1.366 2007/02/19 02:23:11 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/copyfuncs.c,v 1.388.2.2 2010/08/18 15:22:15 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -26,6 +26,7 @@
 #include "access/attnum.h"
 #include "catalog/caqlparse.h"
 #include "catalog/gp_policy.h"
+#include "miscadmin.h"
 #include "nodes/plannodes.h"
 #include "nodes/execnodes.h" /* CdbProcess, Slice, and SliceTable. */
 #include "nodes/relation.h"
@@ -91,69 +92,12 @@
  */
 
 /*
- * CopyPlanFields
- *
- *		This function copies the fields of the Plan node.  It is used by
- *		all the copy functions for classes which inherit from Plan.
- */
-static void
-CopyPlanFields(Plan *from, Plan *newnode)
-{
-
-	COPY_SCALAR_FIELD(plan_node_id);
-	COPY_SCALAR_FIELD(plan_parent_node_id);
-
-	COPY_SCALAR_FIELD(startup_cost);
-	COPY_SCALAR_FIELD(total_cost);
-	COPY_SCALAR_FIELD(plan_rows);
-	COPY_SCALAR_FIELD(plan_width);
-	COPY_NODE_FIELD(targetlist);
-	COPY_NODE_FIELD(qual);
-	COPY_NODE_FIELD(lefttree);
-	COPY_NODE_FIELD(righttree);
-	COPY_NODE_FIELD(initPlan);
-	COPY_BITMAPSET_FIELD(extParam);
-	COPY_BITMAPSET_FIELD(allParam);
-	COPY_SCALAR_FIELD(nParamExec);
-	COPY_NODE_FIELD(flow);
-	COPY_SCALAR_FIELD(dispatch);
-	COPY_SCALAR_FIELD(nMotionNodes);
-	COPY_SCALAR_FIELD(nInitPlans);
-	COPY_NODE_FIELD(sliceTable);
-
-	COPY_SCALAR_FIELD(directDispatch.isDirectDispatch);
-	COPY_NODE_FIELD(directDispatch.contentIds);
-	COPY_SCALAR_FIELD(operatorMemKB);
-
-}
-
-/*
- * CopyLogicalIndexInfo
- *
- *		This function copies the LogicalIndexInfo, which is part of
- *		DynamicIndexScan node.
- */
-static void
-CopyLogicalIndexInfo(const LogicalIndexInfo *from, LogicalIndexInfo *newnode)
-{
-	COPY_SCALAR_FIELD(logicalIndexOid);
-	COPY_SCALAR_FIELD(nColumns);
-	COPY_POINTER_FIELD(indexKeys, from->nColumns * sizeof(AttrNumber));
-	COPY_NODE_FIELD(indPred);
-	COPY_NODE_FIELD(indExprs);
-	COPY_SCALAR_FIELD(indIsUnique);
-	COPY_SCALAR_FIELD(indType);
-	COPY_NODE_FIELD(partCons);
-	COPY_NODE_FIELD(defaultLevels);
-}
-
-/*
- * _copyPlannedStmt 
+ * _copyPlannedStmt
  */
 static PlannedStmt *
 _copyPlannedStmt(PlannedStmt *from)
 {
-	PlannedStmt   *newnode = makeNode(PlannedStmt);
+	PlannedStmt *newnode = makeNode(PlannedStmt);
 
 	COPY_SCALAR_FIELD(commandType);
 	COPY_SCALAR_FIELD(planGen);
@@ -162,11 +106,12 @@ _copyPlannedStmt(PlannedStmt *from)
 
 	COPY_NODE_FIELD(planTree);
 	COPY_NODE_FIELD(rtable);
-	
 	COPY_NODE_FIELD(resultRelations);
+
 	COPY_NODE_FIELD(utilityStmt);
 	COPY_NODE_FIELD(intoClause);
 	COPY_NODE_FIELD(subplans);
+	COPY_BITMAPSET_FIELD(rewindPlanIDs);
 	COPY_NODE_FIELD(returningLists);
 	
 	COPY_NODE_FIELD(result_partitions);
@@ -176,8 +121,8 @@ _copyPlannedStmt(PlannedStmt *from)
 	COPY_NODE_FIELD(numSelectorsPerScanId);
 	COPY_NODE_FIELD(rowMarks);
 	COPY_NODE_FIELD(relationOids);
-	COPY_SCALAR_FIELD(invalItems);
-	COPY_SCALAR_FIELD(nCrossLevelParams);
+	COPY_NODE_FIELD(invalItems);
+	COPY_SCALAR_FIELD(nParamExec);
 	COPY_SCALAR_FIELD(nMotionNodes);
 	COPY_SCALAR_FIELD(nInitPlans);
 	
@@ -201,8 +146,64 @@ _copyQueryDispatchDesc(QueryDispatchDesc *from)
 	COPY_NODE_FIELD(intoOidInfo);
 	COPY_NODE_FIELD(intoTableSpaceName);
 	COPY_NODE_FIELD(sliceTable);
+	COPY_NODE_FIELD(cursorPositions);
 
 	return newnode;
+}
+
+/*
+ * CopyPlanFields
+ *
+ *		This function copies the fields of the Plan node.  It is used by
+ *		all the copy functions for classes which inherit from Plan.
+ */
+static void
+CopyPlanFields(Plan *from, Plan *newnode)
+{
+
+	COPY_SCALAR_FIELD(plan_node_id);
+	COPY_SCALAR_FIELD(plan_parent_node_id);
+
+	COPY_SCALAR_FIELD(startup_cost);
+	COPY_SCALAR_FIELD(total_cost);
+	COPY_SCALAR_FIELD(plan_rows);
+	COPY_SCALAR_FIELD(plan_width);
+	COPY_NODE_FIELD(targetlist);
+	COPY_NODE_FIELD(qual);
+	COPY_NODE_FIELD(lefttree);
+	COPY_NODE_FIELD(righttree);
+	COPY_NODE_FIELD(initPlan);
+	COPY_BITMAPSET_FIELD(extParam);
+	COPY_BITMAPSET_FIELD(allParam);
+	COPY_NODE_FIELD(flow);
+	COPY_SCALAR_FIELD(dispatch);
+	COPY_SCALAR_FIELD(nMotionNodes);
+	COPY_SCALAR_FIELD(nInitPlans);
+	COPY_NODE_FIELD(sliceTable);
+
+	COPY_SCALAR_FIELD(directDispatch.isDirectDispatch);
+	COPY_NODE_FIELD(directDispatch.contentIds);
+	COPY_SCALAR_FIELD(operatorMemKB);
+}
+
+/*
+ * CopyLogicalIndexInfo
+ *
+ *		This function copies the LogicalIndexInfo, which is part of
+ *		DynamicIndexScan node.
+ */
+static void
+CopyLogicalIndexInfo(const LogicalIndexInfo *from, LogicalIndexInfo *newnode)
+{
+	COPY_SCALAR_FIELD(logicalIndexOid);
+	COPY_SCALAR_FIELD(nColumns);
+	COPY_POINTER_FIELD(indexKeys, from->nColumns * sizeof(AttrNumber));
+	COPY_NODE_FIELD(indPred);
+	COPY_NODE_FIELD(indExprs);
+	COPY_SCALAR_FIELD(indIsUnique);
+	COPY_SCALAR_FIELD(indType);
+	COPY_NODE_FIELD(partCons);
+	COPY_NODE_FIELD(defaultLevels);
 }
 
 /*
@@ -298,6 +299,7 @@ _copySequence(Sequence *from)
 	Sequence *newnode = makeNode(Sequence);
 	CopyPlanFields((Plan *) from, (Plan *) newnode);
 	COPY_NODE_FIELD(subplans);
+	COPY_NODE_FIELD(static_selector);
 
 	return newnode;
 }
@@ -648,6 +650,7 @@ _copySubqueryScan(SubqueryScan *from)
 	 * copy remainder of node
 	 */
 	COPY_NODE_FIELD(subplan);
+	COPY_NODE_FIELD(subrtable);
 
 	COPY_NODE_FIELD(subrtable);
 	
@@ -816,6 +819,10 @@ _copyShareInputScan(ShareInputScan *from)
 	COPY_SCALAR_FIELD(share_type);
 	COPY_SCALAR_FIELD(share_id);
 	COPY_SCALAR_FIELD(driver_slice);
+	COPY_NODE_FIELD(colnames);
+	COPY_NODE_FIELD(coltypes);
+	COPY_NODE_FIELD(coltypmods);
+
 	return newnode;
 }
 
@@ -1050,6 +1057,21 @@ _copyLimit(Limit *from)
 }
 
 /*
+ * _copyPlanInvalItem
+ */
+static PlanInvalItem *
+_copyPlanInvalItem(PlanInvalItem *from)
+{
+	PlanInvalItem *newnode = makeNode(PlanInvalItem);
+
+	COPY_SCALAR_FIELD(cacheId);
+	/* tupleId isn't really a "scalar", but this works anyway */
+	COPY_SCALAR_FIELD(tupleId);
+
+	return newnode;
+}
+
+/*
  * _copyMotion
  */
 static Motion *
@@ -1080,39 +1102,6 @@ _copyMotion(Motion *from)
 	
 	COPY_SCALAR_FIELD(segidColIdx);
 	
-	return newnode;
-}
-
-/*
-* _copyCoerceViaIO
-*/
-static CoerceViaIO *
-_copyCoerceViaIO(CoerceViaIO *from)
-{
-	CoerceViaIO   *newnode = makeNode(CoerceViaIO);
-
-	COPY_NODE_FIELD(arg);
-	COPY_SCALAR_FIELD(resulttype);
-	COPY_SCALAR_FIELD(coerceformat);
-
-	return newnode;
-}
-
-/*
- * _copyArrayCoerceExpr
- */
-static ArrayCoerceExpr *
-_copyArrayCoerceExpr(ArrayCoerceExpr *from)
-{
-	ArrayCoerceExpr   *newnode = makeNode(ArrayCoerceExpr);
-
-	COPY_NODE_FIELD(arg);
-	COPY_SCALAR_FIELD(elemfuncid);
-	COPY_SCALAR_FIELD(resulttype);
-	COPY_SCALAR_FIELD(resulttypmod);
-	COPY_SCALAR_FIELD(isExplicit);
-	COPY_SCALAR_FIELD(coerceformat);
-
 	return newnode;
 }
 
@@ -1281,7 +1270,7 @@ _copyIntoClause(IntoClause *from)
 	COPY_NODE_FIELD(options);
 	COPY_SCALAR_FIELD(onCommit);
 	COPY_STRING_FIELD(tableSpaceName);
-
+	
 	return newnode;
 }
 
@@ -1345,6 +1334,7 @@ _copyConst(Const *from)
 	Const	   *newnode = makeNode(Const);
 
 	COPY_SCALAR_FIELD(consttype);
+	COPY_SCALAR_FIELD(consttypmod);
 	COPY_SCALAR_FIELD(constlen);
 
 	if (from->constbyval || from->constisnull)
@@ -1455,9 +1445,9 @@ _copyArrayRef(ArrayRef *from)
 {
 	ArrayRef   *newnode = makeNode(ArrayRef);
 
-	COPY_SCALAR_FIELD(refrestype);
 	COPY_SCALAR_FIELD(refarraytype);
 	COPY_SCALAR_FIELD(refelemtype);
+	COPY_SCALAR_FIELD(reftypmod);
 	COPY_NODE_FIELD(refupperindexpr);
 	COPY_NODE_FIELD(reflowerindexpr);
 	COPY_NODE_FIELD(refexpr);
@@ -1648,6 +1638,39 @@ _copyRelabelType(RelabelType *from)
 }
 
 /*
+ * _copyCoerceViaIO
+ */
+static CoerceViaIO *
+_copyCoerceViaIO(CoerceViaIO *from)
+{
+	CoerceViaIO *newnode = makeNode(CoerceViaIO);
+
+	COPY_NODE_FIELD(arg);
+	COPY_SCALAR_FIELD(resulttype);
+	COPY_SCALAR_FIELD(coerceformat);
+
+	return newnode;
+}
+
+/*
+ * _copyArrayCoerceExpr
+ */
+static ArrayCoerceExpr *
+_copyArrayCoerceExpr(ArrayCoerceExpr *from)
+{
+	ArrayCoerceExpr *newnode = makeNode(ArrayCoerceExpr);
+
+	COPY_NODE_FIELD(arg);
+	COPY_SCALAR_FIELD(elemfuncid);
+	COPY_SCALAR_FIELD(resulttype);
+	COPY_SCALAR_FIELD(resulttypmod);
+	COPY_SCALAR_FIELD(isExplicit);
+	COPY_SCALAR_FIELD(coerceformat);
+
+	return newnode;
+}
+
+/*
  * _copyConvertRowtypeExpr
  */
 static ConvertRowtypeExpr *
@@ -1721,7 +1744,7 @@ _copyArrayExpr(ArrayExpr *from)
 	COPY_SCALAR_FIELD(element_typeid);
 	COPY_NODE_FIELD(elements);
 	COPY_SCALAR_FIELD(multidims);
-	COPY_LOCATION_FIELD(location);
+	/* COPY_LOCATION_FIELD(location); */
 
 	return newnode;
 }
@@ -1796,7 +1819,7 @@ _copyMinMaxExpr(MinMaxExpr *from)
 static XmlExpr *
 _copyXmlExpr(XmlExpr *from)
 {
-	XmlExpr *newnode = makeNode(XmlExpr);
+	XmlExpr    *newnode = makeNode(XmlExpr);
 
 	COPY_SCALAR_FIELD(op);
 	COPY_STRING_FIELD(name);
@@ -1915,9 +1938,6 @@ _copyCurrentOfExpr(CurrentOfExpr *from)
 	COPY_STRING_FIELD(cursor_name);
 	COPY_SCALAR_FIELD(cvarno);
 	COPY_SCALAR_FIELD(target_relid);
-	COPY_SCALAR_FIELD(gp_segment_id);
-	COPY_BINARY_FIELD(ctid, sizeof(ItemPointerData));
-	COPY_SCALAR_FIELD(tableoid);
 
 	return newnode;
 }
@@ -2045,7 +2065,7 @@ _copyCdbRelColumnInfo(CdbRelColumnInfo *from)
 static PathKey *
 _copyPathKey(PathKey *from)
 {
-	PathKey *newnode = makeNode(PathKey);
+	PathKey    *newnode = makeNode(PathKey);
 
 	/* EquivalenceClasses are never moved, so just shallow-copy the pointer */
 	COPY_SCALAR_FIELD(pk_eclass);
@@ -2071,6 +2091,7 @@ _copyRestrictInfo(RestrictInfo *from)
 	COPY_SCALAR_FIELD(pseudoconstant);
 	COPY_BITMAPSET_FIELD(clause_relids);
 	COPY_BITMAPSET_FIELD(required_relids);
+	COPY_BITMAPSET_FIELD(nullable_relids);
 	COPY_BITMAPSET_FIELD(left_relids);
 	COPY_BITMAPSET_FIELD(right_relids);
 	COPY_NODE_FIELD(orclause);
@@ -2752,6 +2773,7 @@ _copyQuery(Query *from)
 	COPY_SCALAR_FIELD(hasAggs);
 	COPY_SCALAR_FIELD(hasWindFuncs);
 	COPY_SCALAR_FIELD(hasSubLinks);
+	COPY_SCALAR_FIELD(hasDynamicFunctions);
 	COPY_NODE_FIELD(rtable);
 	COPY_NODE_FIELD(jointree);
 	COPY_NODE_FIELD(targetList);
@@ -2769,11 +2791,9 @@ _copyQuery(Query *from)
 	COPY_NODE_FIELD(limitCount);
 	COPY_NODE_FIELD(rowMarks);
 	COPY_NODE_FIELD(setOperations);
-	COPY_NODE_FIELD(resultRelations);
-	COPY_NODE_FIELD(returningLists);
 	if (from->intoPolicy)
 	{
-		COPY_POINTER_FIELD(intoPolicy,sizeof(GpPolicy) + from->intoPolicy->nattrs*sizeof(from->intoPolicy->attrs[0]));
+		COPY_POINTER_FIELD(intoPolicy, sizeof(GpPolicy) + from->intoPolicy->nattrs * sizeof(from->intoPolicy->attrs[0]));
 	}
 	else
 		newnode->intoPolicy = NULL;
@@ -2872,8 +2892,33 @@ _copyAlterTableStmt(AlterTableStmt *from)
 	COPY_NODE_FIELD(relation);
 	COPY_NODE_FIELD(cmds);
 	COPY_SCALAR_FIELD(relkind);
-	
-	/* No need to copy AT workspace fields. */
+	COPY_SCALAR_FIELD(oidInfoCount);
+
+	newnode->oidInfo = NULL;
+	if (from->oidInfoCount > 0)
+	{
+		int			m;
+
+		newnode->oidInfo = palloc(sizeof(TableOidInfo) * from->oidInfoCount);
+		for (m = 0; m < from->oidInfoCount; m++)
+		{
+			COPY_SCALAR_FIELD(oidInfo[m].relOid);
+			COPY_SCALAR_FIELD(oidInfo[m].comptypeOid);
+			COPY_SCALAR_FIELD(oidInfo[m].comptypeArrayOid);
+			COPY_SCALAR_FIELD(oidInfo[m].toastOid);
+			COPY_SCALAR_FIELD(oidInfo[m].toastIndexOid);
+			COPY_SCALAR_FIELD(oidInfo[m].toastComptypeOid);
+			COPY_SCALAR_FIELD(oidInfo[m].aosegOid);
+			COPY_SCALAR_FIELD(oidInfo[m].aosegIndexOid);
+			COPY_SCALAR_FIELD(oidInfo[m].aosegComptypeOid);
+			COPY_SCALAR_FIELD(oidInfo[m].aovisimapOid);
+			COPY_SCALAR_FIELD(oidInfo[m].aovisimapIndexOid);
+			COPY_SCALAR_FIELD(oidInfo[m].aovisimapComptypeOid);
+			COPY_SCALAR_FIELD(oidInfo[m].aoblkdirOid);
+			COPY_SCALAR_FIELD(oidInfo[m].aoblkdirIndexOid);
+			COPY_SCALAR_FIELD(oidInfo[m].aoblkdirComptypeOid);
+		}
+	}
 
 	return newnode;
 }
@@ -3042,6 +3087,7 @@ _copyClusterStmt(ClusterStmt *from)
 	COPY_STRING_FIELD(indexname);
 	COPY_SCALAR_FIELD(oidInfo.relOid);
 	COPY_SCALAR_FIELD(oidInfo.comptypeOid);
+	COPY_SCALAR_FIELD(oidInfo.comptypeArrayOid);
 	COPY_SCALAR_FIELD(oidInfo.toastOid);
 	COPY_SCALAR_FIELD(oidInfo.toastIndexOid);
 	COPY_SCALAR_FIELD(oidInfo.toastComptypeOid);
@@ -3094,8 +3140,10 @@ _copyCreateStmt(CreateStmt *from)
 	COPY_SCALAR_FIELD(oncommit);
 	COPY_STRING_FIELD(tablespacename);
 	COPY_NODE_FIELD(distributedBy);
+	COPY_NODE_FIELD(partitionBy);
 	COPY_SCALAR_FIELD(oidInfo.relOid);
 	COPY_SCALAR_FIELD(oidInfo.comptypeOid);
+	COPY_SCALAR_FIELD(oidInfo.comptypeArrayOid);
 	COPY_SCALAR_FIELD(oidInfo.toastOid);
 	COPY_SCALAR_FIELD(oidInfo.toastIndexOid);
 	COPY_SCALAR_FIELD(oidInfo.toastComptypeOid);
@@ -3111,6 +3159,7 @@ _copyCreateStmt(CreateStmt *from)
 	COPY_NODE_FIELD(deferredStmts);
 	COPY_SCALAR_FIELD(is_part_child);
 	COPY_SCALAR_FIELD(is_add_part);
+	COPY_SCALAR_FIELD(is_split_part);
 	COPY_SCALAR_FIELD(ownerid);
 	COPY_SCALAR_FIELD(buildAoBlkdir);
 	COPY_NODE_FIELD(attr_encodings);
@@ -3406,7 +3455,6 @@ _copyIndexStmt(IndexStmt *from)
 	COPY_NODE_FIELD(indexParams);
 	COPY_NODE_FIELD(options);
 	COPY_NODE_FIELD(whereClause);
-	COPY_NODE_FIELD(rangetable);
 	COPY_SCALAR_FIELD(is_part_child);
 	COPY_SCALAR_FIELD(unique);
 	COPY_SCALAR_FIELD(primary);
@@ -3415,7 +3463,7 @@ _copyIndexStmt(IndexStmt *from)
 	COPY_SCALAR_FIELD(constrOid);
 	COPY_SCALAR_FIELD(concurrent);
 	COPY_NODE_FIELD(idxOids);
-	COPY_SCALAR_FIELD(do_part);
+	COPY_SCALAR_FIELD(is_split_part);
 
 	return newnode;
 }
@@ -3570,7 +3618,6 @@ _copyRuleStmt(RuleStmt *from)
 	COPY_SCALAR_FIELD(instead);
 	COPY_NODE_FIELD(actions);
 	COPY_SCALAR_FIELD(replace);
-	COPY_SCALAR_FIELD(ruleOid);
 
 	return newnode;
 }
@@ -3630,6 +3677,20 @@ _copyCompositeTypeStmt(CompositeTypeStmt *from)
 	return newnode;
 }
 
+static CreateEnumStmt *
+_copyCreateEnumStmt(CreateEnumStmt *from)
+{
+	CreateEnumStmt *newnode = makeNode(CreateEnumStmt);
+
+	COPY_NODE_FIELD(typeName);
+	COPY_NODE_FIELD(vals);
+	COPY_SCALAR_FIELD(enumTypeOid);
+	COPY_SCALAR_FIELD(enumArrayOid);
+	COPY_NODE_FIELD(valOids);
+
+	return newnode;
+}
+
 static ViewStmt *
 _copyViewStmt(ViewStmt *from)
 {
@@ -3641,6 +3702,7 @@ _copyViewStmt(ViewStmt *from)
 	COPY_SCALAR_FIELD(replace);
 	COPY_SCALAR_FIELD(relOid);
 	COPY_SCALAR_FIELD(comptypeOid);
+	COPY_SCALAR_FIELD(comptypeArrayOid);
 	COPY_SCALAR_FIELD(rewriteOid);
 
 	return newnode;
@@ -3757,8 +3819,7 @@ _copyAlterDatabaseSetStmt(AlterDatabaseSetStmt *from)
 	AlterDatabaseSetStmt *newnode = makeNode(AlterDatabaseSetStmt);
 
 	COPY_STRING_FIELD(dbname);
-	COPY_STRING_FIELD(variable);
-	COPY_NODE_FIELD(value);
+	COPY_NODE_FIELD(setstmt);
 
 	return newnode;
 }
@@ -3841,6 +3902,7 @@ _copyVariableSetStmt(VariableSetStmt *from)
 {
 	VariableSetStmt *newnode = makeNode(VariableSetStmt);
 
+	COPY_SCALAR_FIELD(kind);
 	COPY_STRING_FIELD(name);
 	COPY_NODE_FIELD(args);
 	COPY_SCALAR_FIELD(is_local);
@@ -3858,12 +3920,12 @@ _copyVariableShowStmt(VariableShowStmt *from)
 	return newnode;
 }
 
-static VariableResetStmt *
-_copyVariableResetStmt(VariableResetStmt *from)
+static DiscardStmt *
+_copyDiscardStmt(DiscardStmt *from)
 {
-	VariableResetStmt *newnode = makeNode(VariableResetStmt);
+	DiscardStmt *newnode = makeNode(DiscardStmt);
 
-	COPY_STRING_FIELD(name);
+	COPY_SCALAR_FIELD(target);
 
 	return newnode;
 }
@@ -4024,8 +4086,7 @@ _copyAlterRoleSetStmt(AlterRoleSetStmt *from)
 	AlterRoleSetStmt *newnode = makeNode(AlterRoleSetStmt);
 
 	COPY_STRING_FIELD(role);
-	COPY_STRING_FIELD(variable);
-	COPY_NODE_FIELD(value);
+	COPY_NODE_FIELD(setstmt);
 
 	return newnode;
 }
@@ -4142,7 +4203,6 @@ _copyPrepareStmt(PrepareStmt *from)
 
 	COPY_STRING_FIELD(name);
 	COPY_NODE_FIELD(argtypes);
-	COPY_NODE_FIELD(argtype_oids);
 	COPY_NODE_FIELD(query);
 
 	return newnode;
@@ -4187,7 +4247,33 @@ _copyReassignOwnedStmt(ReassignOwnedStmt *from)
 	ReassignOwnedStmt *newnode = makeNode(ReassignOwnedStmt);
 
 	COPY_NODE_FIELD(roles);
-	COPY_SCALAR_FIELD(newrole);
+	COPY_STRING_FIELD(newrole);
+
+	return newnode;
+}
+
+static AlterTSDictionaryStmt *
+_copyAlterTSDictionaryStmt(AlterTSDictionaryStmt *from)
+{
+	AlterTSDictionaryStmt *newnode = makeNode(AlterTSDictionaryStmt);
+
+	COPY_NODE_FIELD(dictname);
+	COPY_NODE_FIELD(options);
+
+	return newnode;
+}
+
+static AlterTSConfigurationStmt *
+_copyAlterTSConfigurationStmt(AlterTSConfigurationStmt *from)
+{
+	AlterTSConfigurationStmt *newnode = makeNode(AlterTSConfigurationStmt);
+
+	COPY_NODE_FIELD(cfgname);
+	COPY_NODE_FIELD(tokentype);
+	COPY_NODE_FIELD(dicts);
+	COPY_SCALAR_FIELD(override);
+	COPY_SCALAR_FIELD(replace);
+	COPY_SCALAR_FIELD(missing_ok);
 
 	return newnode;
 }
@@ -4243,6 +4329,18 @@ _copySliceTable(SliceTable *from)
 	return newnode;
 }
 
+static CursorPosInfo *
+_copyCursorPosInfo(CursorPosInfo *from)
+{
+	CursorPosInfo *newnode = makeNode(CursorPosInfo);
+
+	COPY_STRING_FIELD(cursor_name);
+	COPY_SCALAR_FIELD(gp_segment_id);
+	COPY_BINARY_FIELD(ctid, sizeof(ItemPointerData));
+	COPY_SCALAR_FIELD(table_oid);
+
+	return newnode;
+}
 
 
 static CreateQueueStmt *
@@ -4283,6 +4381,7 @@ _copyTableValueExpr(TableValueExpr *from)
 	TableValueExpr *newnode = makeNode(TableValueExpr);
 
 	COPY_NODE_FIELD(subquery);
+	COPY_LOCATION_FIELD(location);
 
 	return newnode;
 }
@@ -4439,6 +4538,9 @@ copyObject(void *from)
 	if (from == NULL)
 		return NULL;
 
+	/* Guard against stack overflow due to overly complex expressions */
+	check_stack_depth();
+
 	switch (nodeTag(from))
 	{
 			/*
@@ -4566,6 +4668,9 @@ copyObject(void *from)
 			break;
 		case T_Limit:
 			retval = _copyLimit(from);
+			break;
+		case T_PlanInvalItem:
+			retval = _copyPlanInvalItem(from);
 			break;
 		case T_Motion:
 			retval = _copyMotion(from);
@@ -4945,6 +5050,9 @@ copyObject(void *from)
 		case T_CompositeTypeStmt:
 			retval = _copyCompositeTypeStmt(from);
 			break;
+		case T_CreateEnumStmt:
+			retval = _copyCreateEnumStmt(from);
+			break;
 		case T_ViewStmt:
 			retval = _copyViewStmt(from);
 			break;
@@ -4996,8 +5104,8 @@ copyObject(void *from)
 		case T_VariableShowStmt:
 			retval = _copyVariableShowStmt(from);
 			break;
-		case T_VariableResetStmt:
-			retval = _copyVariableResetStmt(from);
+		case T_DiscardStmt:
+			retval = _copyDiscardStmt(from);
 			break;
 		case T_CreateFileSpaceStmt:
 			retval = _copyCreateFileSpaceStmt(from);
@@ -5070,6 +5178,12 @@ copyObject(void *from)
 			break;
 		case T_ReassignOwnedStmt:
 			retval = _copyReassignOwnedStmt(from);
+			break;
+		case T_AlterTSDictionaryStmt:
+			retval = _copyAlterTSDictionaryStmt(from);
+			break;
+		case T_AlterTSConfigurationStmt:
+			retval = _copyAlterTSConfigurationStmt(from);
 			break;
 
 		case T_CreateQueueStmt:
@@ -5225,6 +5339,9 @@ copyObject(void *from)
 			break;
 		case T_SliceTable:
 			retval = _copySliceTable(from);
+			break;
+		case T_CursorPosInfo:
+			retval = _copyCursorPosInfo(from);
 			break;
 		case T_TableValueExpr:
 			retval = _copyTableValueExpr(from);

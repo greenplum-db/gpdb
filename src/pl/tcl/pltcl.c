@@ -2,7 +2,7 @@
  * pltcl.c		- PostgreSQL support for Tcl as
  *				  procedural language (PL)
  *
- *	  $PostgreSQL: pgsql/src/pl/tcl/pltcl.c,v 1.110 2007/02/09 03:35:35 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/tcl/pltcl.c,v 1.117.2.3 2010/05/13 18:29:25 tgl Exp $
  *
  **********************************************************************/
 
@@ -19,15 +19,17 @@
 #endif
 
 #include "access/heapam.h"
-#include "catalog/pg_language.h"
+#include "catalog/namespace.h"
 #include "catalog/pg_proc.h"
 #include "commands/trigger.h"
 #include "executor/spi.h"
 #include "fmgr.h"
+#include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "parser/parse_type.h"
 #include "tcop/tcopprot.h"
 #include "utils/builtins.h"
+#include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/syscache.h"
@@ -76,16 +78,37 @@ utf_e2u(unsigned char *src)
 
 PG_MODULE_MAGIC;
 
+
+/**********************************************************************
+ * Information associated with a Tcl interpreter.  We have one interpreter
+ * that is used for all pltclu (untrusted) functions.  For pltcl (trusted)
+ * functions, there is a separate interpreter for each effective SQL userid.
+ * (This is needed to ensure that an unprivileged user can't inject Tcl code
+ * that'll be executed with the privileges of some other SQL user.)
+ *
+ * The pltcl_interp_desc structs are kept in a Postgres hash table indexed
+ * by userid OID, with OID 0 used for the single untrusted interpreter.
+ **********************************************************************/
+typedef struct pltcl_interp_desc
+{
+	Oid			user_id;				/* Hash key (must be first!) */
+	Tcl_Interp *interp;					/* The interpreter */
+	Tcl_HashTable query_hash;			/* pltcl_query_desc structs */
+} pltcl_interp_desc;
+
+
 /**********************************************************************
  * The information we cache about loaded procedures
  **********************************************************************/
 typedef struct pltcl_proc_desc
 {
-	char	   *proname;
+	char	   *user_proname;
+	char	   *internal_proname;
 	TransactionId fn_xmin;
 	ItemPointerData fn_tid;
 	bool		fn_readonly;
 	bool		lanpltrusted;
+	pltcl_interp_desc *interp_desc;
 	FmgrInfo	result_in_func;
 	Oid			result_typioparam;
 	int			nargs;
@@ -109,18 +132,39 @@ typedef struct pltcl_query_desc
 
 
 /**********************************************************************
+ * For speedy lookup, we maintain a hash table mapping from
+ * function OID + trigger OID + user OID to pltcl_proc_desc pointers.
+ * The reason the pltcl_proc_desc struct isn't directly part of the hash
+ * entry is to simplify recovery from errors during compile_pltcl_function.
+ *
+ * Note: if the same function is called by multiple userIDs within a session,
+ * there will be a separate pltcl_proc_desc entry for each userID in the case
+ * of pltcl functions, but only one entry for pltclu functions, because we
+ * set user_id = 0 for that case.
+ **********************************************************************/
+typedef struct pltcl_proc_key
+{
+	Oid			proc_id;				/* Function OID */
+	Oid			trig_id;				/* Trigger OID, or 0 if not trigger */
+	Oid			user_id;				/* User calling the function, or 0 */
+} pltcl_proc_key;
+
+typedef struct pltcl_proc_ptr
+{
+	pltcl_proc_key proc_key;			/* Hash key (must be first!) */
+	pltcl_proc_desc *proc_ptr;
+} pltcl_proc_ptr;
+
+
+/**********************************************************************
  * Global data
  **********************************************************************/
 static bool pltcl_pm_init_done = false;
-static bool pltcl_be_init_done = false;
 static Tcl_Interp *pltcl_hold_interp = NULL;
-static Tcl_Interp *pltcl_norm_interp = NULL;
-static Tcl_Interp *pltcl_safe_interp = NULL;
-static Tcl_HashTable *pltcl_proc_hash = NULL;
-static Tcl_HashTable *pltcl_norm_query_hash = NULL;
-static Tcl_HashTable *pltcl_safe_query_hash = NULL;
+static HTAB *pltcl_interp_htab = NULL;
+static HTAB *pltcl_proc_htab = NULL;
 
-/* these are saved and restored by pltcl_call_handler */
+/* these are saved and restored by pltcl_handler */
 static FunctionCallInfo pltcl_current_fcinfo = NULL;
 static pltcl_proc_desc *pltcl_current_prodesc = NULL;
 
@@ -131,17 +175,20 @@ Datum		pltcl_call_handler(PG_FUNCTION_ARGS);
 Datum		pltclu_call_handler(PG_FUNCTION_ARGS);
 void		_PG_init(void);
 
-static void pltcl_init_all(void);
-static void pltcl_init_interp(Tcl_Interp *interp);
+static void pltcl_init_interp(pltcl_interp_desc *interp_desc, bool pltrusted);
+static pltcl_interp_desc *pltcl_fetch_interp(bool pltrusted);
 static void pltcl_init_load_unknown(Tcl_Interp *interp);
 
-static Datum pltcl_func_handler(PG_FUNCTION_ARGS);
+static Datum pltcl_handler(PG_FUNCTION_ARGS, bool pltrusted);
 
-static HeapTuple pltcl_trigger_handler(PG_FUNCTION_ARGS);
+static Datum pltcl_func_handler(PG_FUNCTION_ARGS, bool pltrusted);
 
-static void throw_tcl_error(Tcl_Interp *interp);
+static HeapTuple pltcl_trigger_handler(PG_FUNCTION_ARGS, bool pltrusted);
 
-static pltcl_proc_desc *compile_pltcl_function(Oid fn_oid, Oid tgreloid);
+static void throw_tcl_error(Tcl_Interp *interp, const char *proname);
+
+static pltcl_proc_desc *compile_pltcl_function(Oid fn_oid, Oid tgreloid,
+											   bool pltrusted);
 
 static int pltcl_elog(ClientData cdata, Tcl_Interp *interp,
 		   int argc, CONST84 char *argv[]);
@@ -174,6 +221,67 @@ static void pltcl_build_tuple_argument(HeapTuple tuple, TupleDesc tupdesc,
 
 
 /*
+ * Hack to override Tcl's builtin Notifier subsystem.  This prevents the
+ * backend from becoming multithreaded, which breaks all sorts of things.
+ * That happens in the default version of Tcl_InitNotifier if the TCL library
+ * has been compiled with multithreading support (i.e. when TCL_THREADS is
+ * defined under Unix, and in all cases under Windows).
+ * It's okay to disable the notifier because we never enter the Tcl event loop
+ * from Postgres, so the notifier capabilities are initialized, but never
+ * used.  Only InitNotifier and DeleteFileHandler ever seem to get called
+ * within Postgres, but we implement all the functions for completeness.
+ * We can only fix this with Tcl >= 8.4, when Tcl_SetNotifier() appeared.
+ */
+#if HAVE_TCL_VERSION(8,4)
+
+static ClientData
+pltcl_InitNotifier(void)
+{
+	static int	fakeThreadKey;	/* To give valid address for ClientData */
+
+	return (ClientData) &(fakeThreadKey);
+}
+
+static void
+pltcl_FinalizeNotifier(ClientData clientData)
+{
+}
+
+static void
+pltcl_SetTimer(Tcl_Time *timePtr)
+{
+}
+
+static void
+pltcl_AlertNotifier(ClientData clientData)
+{
+}
+
+static void
+pltcl_CreateFileHandler(int fd, int mask,
+						Tcl_FileProc *proc, ClientData clientData)
+{
+}
+
+static void
+pltcl_DeleteFileHandler(int fd)
+{
+}
+
+static void
+pltcl_ServiceModeHook(int mode)
+{
+}
+
+static int
+pltcl_WaitForEvent(Tcl_Time *timePtr)
+{
+	return 0;
+}
+#endif   /* HAVE_TCL_VERSION(8,2) */
+
+
+/*
  * This routine is a crock, and so is everyplace that calls it.  The problem
  * is that the cached form of pltcl functions/queries is allocated permanently
  * (mostly via malloc()) and never released until backend exit.  Subsidiary
@@ -194,10 +302,15 @@ perm_fmgr_info(Oid functionId, FmgrInfo *finfo)
  * _PG_init()			- library load-time initialization
  *
  * DO NOT make this static nor change its name!
+ *
+ * The work done here must be safe to do in the postmaster process,
+ * in case the pltcl library is preloaded in the postmaster.
  */
 void
 _PG_init(void)
 {
+	HASHCTL		hash_ctl;
+
 	/* Be sure we do initialization only once (should be redundant now) */
 	if (pltcl_pm_init_done)
 		return;
@@ -207,70 +320,87 @@ _PG_init(void)
 	Tcl_FindExecutable("");
 #endif
 
+#if HAVE_TCL_VERSION(8,4)
+
+	/*
+	 * Override the functions in the Notifier subsystem.  See comments above.
+	 */
+	{
+		Tcl_NotifierProcs notifier;
+
+		notifier.setTimerProc = pltcl_SetTimer;
+		notifier.waitForEventProc = pltcl_WaitForEvent;
+		notifier.createFileHandlerProc = pltcl_CreateFileHandler;
+		notifier.deleteFileHandlerProc = pltcl_DeleteFileHandler;
+		notifier.initNotifierProc = pltcl_InitNotifier;
+		notifier.finalizeNotifierProc = pltcl_FinalizeNotifier;
+		notifier.alertNotifierProc = pltcl_AlertNotifier;
+		notifier.serviceModeHookProc = pltcl_ServiceModeHook;
+		Tcl_SetNotifier(&notifier);
+	}
+#endif
+
 	/************************************************************
 	 * Create the dummy hold interpreter to prevent close of
 	 * stdout and stderr on DeleteInterp
 	 ************************************************************/
 	if ((pltcl_hold_interp = Tcl_CreateInterp()) == NULL)
-		elog(ERROR, "could not create \"hold\" interpreter");
+		elog(ERROR, "could not create master Tcl interpreter");
+	if (Tcl_Init(pltcl_hold_interp) == TCL_ERROR)
+		elog(ERROR, "could not initialize master Tcl interpreter");
 
 	/************************************************************
-	 * Create the two interpreters
+	 * Create the hash table for working interpreters
 	 ************************************************************/
-	if ((pltcl_norm_interp =
-		 Tcl_CreateSlave(pltcl_hold_interp, "norm", 0)) == NULL)
-		elog(ERROR, "could not create \"normal\" interpreter");
-	pltcl_init_interp(pltcl_norm_interp);
-
-	if ((pltcl_safe_interp =
-		 Tcl_CreateSlave(pltcl_hold_interp, "safe", 1)) == NULL)
-		elog(ERROR, "could not create \"safe\" interpreter");
-	pltcl_init_interp(pltcl_safe_interp);
+	memset(&hash_ctl, 0, sizeof(hash_ctl));
+	hash_ctl.keysize = sizeof(Oid);
+	hash_ctl.entrysize = sizeof(pltcl_interp_desc);
+	hash_ctl.hash = oid_hash;
+	pltcl_interp_htab = hash_create("PL/Tcl interpreters",
+									8,
+									&hash_ctl,
+									HASH_ELEM | HASH_FUNCTION);
 
 	/************************************************************
-	 * Initialize the proc and query hash tables
+	 * Create the hash table for function lookup
 	 ************************************************************/
-	pltcl_proc_hash = (Tcl_HashTable *) malloc(sizeof(Tcl_HashTable));
-	pltcl_norm_query_hash = (Tcl_HashTable *) malloc(sizeof(Tcl_HashTable));
-	pltcl_safe_query_hash = (Tcl_HashTable *) malloc(sizeof(Tcl_HashTable));
-	Tcl_InitHashTable(pltcl_proc_hash, TCL_STRING_KEYS);
-	Tcl_InitHashTable(pltcl_norm_query_hash, TCL_STRING_KEYS);
-	Tcl_InitHashTable(pltcl_safe_query_hash, TCL_STRING_KEYS);
+	memset(&hash_ctl, 0, sizeof(hash_ctl));
+	hash_ctl.keysize = sizeof(pltcl_proc_key);
+	hash_ctl.entrysize = sizeof(pltcl_proc_ptr);
+	hash_ctl.hash = tag_hash;
+	pltcl_proc_htab = hash_create("PL/Tcl functions",
+								  100,
+								  &hash_ctl,
+								  HASH_ELEM | HASH_FUNCTION);
 
 	pltcl_pm_init_done = true;
 }
 
 /**********************************************************************
- * pltcl_init_all()		- Initialize all
- *
- * This does initialization that can't be done in the postmaster, and
- * hence is not safe to do at library load time.
+ * pltcl_init_interp() - initialize a new Tcl interpreter
  **********************************************************************/
 static void
-pltcl_init_all(void)
+pltcl_init_interp(pltcl_interp_desc *interp_desc, bool pltrusted)
 {
+	Tcl_Interp *interp;
+	char		interpname[32];
+
 	/************************************************************
-	 * Try to load the unknown procedure from pltcl_modules
+	 * Create the Tcl interpreter as a slave of pltcl_hold_interp.
+	 * Note: Tcl automatically does Tcl_Init in the untrusted case,
+	 * and it's not wanted in the trusted case.
 	 ************************************************************/
-	if (!pltcl_be_init_done)
-	{
-		if (SPI_connect() != SPI_OK_CONNECT)
-			elog(ERROR, "SPI_connect failed");
-		pltcl_init_load_unknown(pltcl_norm_interp);
-		pltcl_init_load_unknown(pltcl_safe_interp);
-		if (SPI_finish() != SPI_OK_FINISH)
-			elog(ERROR, "SPI_finish failed");
-		pltcl_be_init_done = true;
-	}
-}
+	snprintf(interpname, sizeof(interpname), "slave_%u", interp_desc->user_id);
+	if ((interp = Tcl_CreateSlave(pltcl_hold_interp, interpname,
+								  pltrusted ? 1 : 0)) == NULL)
+		elog(ERROR, "could not create slave Tcl interpreter");
+	interp_desc->interp = interp;
 
+	/************************************************************
+	 * Initialize the query hash table associated with interpreter
+	 ************************************************************/
+	Tcl_InitHashTable(&interp_desc->query_hash, TCL_STRING_KEYS);
 
-/**********************************************************************
- * pltcl_init_interp() - initialize a Tcl interpreter
- **********************************************************************/
-static void
-pltcl_init_interp(Tcl_Interp *interp)
-{
 	/************************************************************
 	 * Install the commands for SPI support in the interpreter
 	 ************************************************************/
@@ -291,8 +421,40 @@ pltcl_init_interp(Tcl_Interp *interp)
 					  pltcl_SPI_execute_plan, NULL, NULL);
 	Tcl_CreateCommand(interp, "spi_lastoid",
 					  pltcl_SPI_lastoid, NULL, NULL);
+
+	/************************************************************
+	 * Try to load the unknown procedure from pltcl_modules
+	 ************************************************************/
+	pltcl_init_load_unknown(interp);
 }
 
+/**********************************************************************
+ * pltcl_fetch_interp() - fetch the Tcl interpreter to use for a function
+ *
+ * This also takes care of any on-first-use initialization required.
+ * Note: we assume caller has already connected to SPI.
+ **********************************************************************/
+static pltcl_interp_desc *
+pltcl_fetch_interp(bool pltrusted)
+{
+	Oid			user_id;
+	pltcl_interp_desc *interp_desc;
+	bool		found;
+
+	/* Find or create the interpreter hashtable entry for this userid */
+	if (pltrusted)
+		user_id = GetUserId();
+	else
+		user_id = InvalidOid;
+
+	interp_desc = hash_search(pltcl_interp_htab, &user_id,
+							  HASH_ENTER,
+							  &found);
+	if (!found)
+		pltcl_init_interp(interp_desc, pltrusted);
+
+	return interp_desc;
+}
 
 /**********************************************************************
  * pltcl_init_load_unknown()	- Load the unknown procedure from
@@ -301,6 +463,12 @@ pltcl_init_interp(Tcl_Interp *interp)
 static void
 pltcl_init_load_unknown(Tcl_Interp *interp)
 {
+	Oid			relOid;
+	Relation	pmrel;
+	char	   *pmrelname,
+			   *nspname;
+	char	   *buf;
+	int			buflen;
 	int			spi_rc;
 	int			tcl_rc;
 	Tcl_DString unknown_src;
@@ -310,46 +478,86 @@ pltcl_init_load_unknown(Tcl_Interp *interp)
 
 	/************************************************************
 	 * Check if table pltcl_modules exists
+	 *
+	 * We allow the table to be found anywhere in the search_path.
+	 * This is for backwards compatibility.  To ensure that the table
+	 * is trustworthy, we require it to be owned by a superuser.
+	 *
+	 * this next bit of code is the same as try_relation_openrv(),
+	 * which only exists in 8.4 and up.
 	 ************************************************************/
-	spi_rc = SPI_execute("select 1 from pg_catalog.pg_class "
-						 "where relname = 'pltcl_modules'",
-						 false, 1);
-	SPI_freetuptable(SPI_tuptable);
-	if (spi_rc != SPI_OK_SELECT)
-		elog(ERROR, "select from pg_class failed");
-	if (SPI_processed == 0)
+
+	/* Check for shared-cache-inval messages */
+	AcceptInvalidationMessages();
+
+	/* Look up the appropriate relation using namespace search */
+	relOid = RangeVarGetRelid(makeRangeVar(NULL, "pltcl_modules"), true);
+
+	/* Drop out on not-found */
+	if (!OidIsValid(relOid))
 		return;
 
-	/************************************************************
-	 * Read all the row's from it where modname = 'unknown' in
-	 * the order of modseq
-	 ************************************************************/
-	Tcl_DStringInit(&unknown_src);
+	/* Let relation_open do the rest */
+	pmrel = relation_open(relOid, AccessShareLock);
 
-	spi_rc = SPI_execute("select modseq, modsrc from pltcl_modules "
-						 "where modname = 'unknown' "
-						 "order by modseq",
-						 false, 0);
+	if (pmrel == NULL)
+		return;
+	/* must be table or view, else ignore */
+	if (!(pmrel->rd_rel->relkind == RELKIND_RELATION ||
+		  pmrel->rd_rel->relkind == RELKIND_VIEW))
+	{
+		relation_close(pmrel, AccessShareLock);
+		return;
+	}
+	/* must be owned by superuser, else ignore */
+	if (!superuser_arg(pmrel->rd_rel->relowner))
+	{
+		relation_close(pmrel, AccessShareLock);
+		return;
+	}
+	/* get fully qualified table name for use in select command */
+	nspname = get_namespace_name(RelationGetNamespace(pmrel));
+	if (!nspname)
+		elog(ERROR, "cache lookup failed for namespace %u",
+			 RelationGetNamespace(pmrel));
+	pmrelname = quote_qualified_identifier(nspname,
+										   RelationGetRelationName(pmrel));
+
+	/************************************************************
+	 * Read all the rows from it where modname = 'unknown',
+	 * in the order of modseq
+	 ************************************************************/
+	buflen = strlen(pmrelname) + 100;
+	buf = (char *) palloc(buflen);
+	snprintf(buf, buflen,
+			 "select modsrc from %s where modname = 'unknown' order by modseq",
+			 pmrelname);
+
+	spi_rc = SPI_execute(buf, false, 0);
 	if (spi_rc != SPI_OK_SELECT)
 		elog(ERROR, "select from pltcl_modules failed");
+
+	pfree(buf);
 
 	/************************************************************
 	 * If there's nothing, module unknown doesn't exist
 	 ************************************************************/
 	if (SPI_processed == 0)
 	{
-		Tcl_DStringFree(&unknown_src);
 		SPI_freetuptable(SPI_tuptable);
 		elog(WARNING, "module \"unknown\" not found in pltcl_modules");
+		relation_close(pmrel, AccessShareLock);
 		return;
 	}
 
 	/************************************************************
-	 * There is a module named unknown. Resemble the
+	 * There is a module named unknown. Reassemble the
 	 * source from the modsrc attributes and evaluate
 	 * it in the Tcl interpreter
 	 ************************************************************/
 	fno = SPI_fnumber(SPI_tuptable->tupdesc, "modsrc");
+
+	Tcl_DStringInit(&unknown_src);
 
 	for (i = 0; i < SPI_processed; i++)
 	{
@@ -364,8 +572,19 @@ pltcl_init_load_unknown(Tcl_Interp *interp)
 		}
 	}
 	tcl_rc = Tcl_GlobalEval(interp, Tcl_DStringValue(&unknown_src));
+
 	Tcl_DStringFree(&unknown_src);
 	SPI_freetuptable(SPI_tuptable);
+
+	if (tcl_rc != TCL_OK)
+	{
+		UTF_BEGIN;
+		elog(ERROR, "could not load module \"unknown\": %s",
+			 UTF_U2E(Tcl_GetStringResult(interp)));
+		UTF_END;
+	}
+
+	relation_close(pmrel, AccessShareLock);
 }
 
 
@@ -382,14 +601,28 @@ PG_FUNCTION_INFO_V1(pltcl_call_handler);
 Datum
 pltcl_call_handler(PG_FUNCTION_ARGS)
 {
+	return pltcl_handler(fcinfo, true);
+}
+
+/*
+ * Alternative handler for unsafe functions
+ */
+PG_FUNCTION_INFO_V1(pltclu_call_handler);
+
+/* keep non-static */
+Datum
+pltclu_call_handler(PG_FUNCTION_ARGS)
+{
+	return pltcl_handler(fcinfo, false);
+}
+
+
+static Datum
+pltcl_handler(PG_FUNCTION_ARGS, bool pltrusted)
+{
 	Datum		retval;
 	FunctionCallInfo save_fcinfo;
 	pltcl_proc_desc *save_prodesc;
-
-	/*
-	 * Initialize interpreters if first time through
-	 */
-	pltcl_init_all();
 
 	/*
 	 * Ensure that static pointers are saved/restored properly
@@ -406,12 +639,12 @@ pltcl_call_handler(PG_FUNCTION_ARGS)
 		if (CALLED_AS_TRIGGER(fcinfo))
 		{
 			pltcl_current_fcinfo = NULL;
-			retval = PointerGetDatum(pltcl_trigger_handler(fcinfo));
+			retval = PointerGetDatum(pltcl_trigger_handler(fcinfo, pltrusted));
 		}
 		else
 		{
 			pltcl_current_fcinfo = fcinfo;
-			retval = pltcl_func_handler(fcinfo);
+			retval = pltcl_func_handler(fcinfo, pltrusted);
 		}
 	}
 	PG_CATCH();
@@ -429,23 +662,11 @@ pltcl_call_handler(PG_FUNCTION_ARGS)
 }
 
 
-/*
- * Alternate handler for unsafe functions
- */
-PG_FUNCTION_INFO_V1(pltclu_call_handler);
-
-/* keep non-static */
-Datum
-pltclu_call_handler(PG_FUNCTION_ARGS)
-{
-	return pltcl_call_handler(fcinfo);
-}
-
 /**********************************************************************
  * pltcl_func_handler()		- Handler for regular function calls
  **********************************************************************/
 static Datum
-pltcl_func_handler(PG_FUNCTION_ARGS)
+pltcl_func_handler(PG_FUNCTION_ARGS, bool pltrusted)
 {
 	pltcl_proc_desc *prodesc;
 	Tcl_Interp *volatile interp;
@@ -460,14 +681,12 @@ pltcl_func_handler(PG_FUNCTION_ARGS)
 		elog(ERROR, "could not connect to SPI manager");
 
 	/* Find or compile the function */
-	prodesc = compile_pltcl_function(fcinfo->flinfo->fn_oid, InvalidOid);
+	prodesc = compile_pltcl_function(fcinfo->flinfo->fn_oid, InvalidOid,
+									 pltrusted);
 
 	pltcl_current_prodesc = prodesc;
 
-	if (prodesc->lanpltrusted)
-		interp = pltcl_safe_interp;
-	else
-		interp = pltcl_norm_interp;
+	interp = prodesc->interp_desc->interp;
 
 	/************************************************************
 	 * Create the tcl command to call the internal
@@ -475,7 +694,7 @@ pltcl_func_handler(PG_FUNCTION_ARGS)
 	 ************************************************************/
 	Tcl_DStringInit(&tcl_cmd);
 	Tcl_DStringInit(&list_tmp);
-	Tcl_DStringAppendElement(&tcl_cmd, prodesc->proname);
+	Tcl_DStringAppendElement(&tcl_cmd, prodesc->internal_proname);
 
 	/************************************************************
 	 * Add all call arguments to the command
@@ -558,7 +777,7 @@ pltcl_func_handler(PG_FUNCTION_ARGS)
 	 * Check for errors reported by Tcl.
 	 ************************************************************/
 	if (tcl_rc != TCL_OK)
-		throw_tcl_error(interp);
+		throw_tcl_error(interp, prodesc->user_proname);
 
 	/************************************************************
 	 * Disconnect from SPI manager and then create the return
@@ -595,7 +814,7 @@ pltcl_func_handler(PG_FUNCTION_ARGS)
  * pltcl_trigger_handler()	- Handler for trigger calls
  **********************************************************************/
 static HeapTuple
-pltcl_trigger_handler(PG_FUNCTION_ARGS)
+pltcl_trigger_handler(PG_FUNCTION_ARGS, bool pltrusted)
 {
 	pltcl_proc_desc *prodesc;
 	Tcl_Interp *volatile interp;
@@ -621,14 +840,12 @@ pltcl_trigger_handler(PG_FUNCTION_ARGS)
 
 	/* Find or compile the function */
 	prodesc = compile_pltcl_function(fcinfo->flinfo->fn_oid,
-									 RelationGetRelid(trigdata->tg_relation));
+									 RelationGetRelid(trigdata->tg_relation),
+									 pltrusted);
 
 	pltcl_current_prodesc = prodesc;
 
-	if (prodesc->lanpltrusted)
-		interp = pltcl_safe_interp;
-	else
-		interp = pltcl_norm_interp;
+	interp = prodesc->interp_desc->interp;
 
 	tupdesc = trigdata->tg_relation->rd_att;
 
@@ -642,7 +859,7 @@ pltcl_trigger_handler(PG_FUNCTION_ARGS)
 	PG_TRY();
 	{
 		/* The procedure name */
-		Tcl_DStringAppendElement(&tcl_cmd, prodesc->proname);
+		Tcl_DStringAppendElement(&tcl_cmd, prodesc->internal_proname);
 
 		/* The trigger name for argument TG_name */
 		Tcl_DStringAppendElement(&tcl_cmd, trigdata->tg_trigger->tgname);
@@ -780,7 +997,7 @@ pltcl_trigger_handler(PG_FUNCTION_ARGS)
 	 * Check for errors reported by Tcl.
 	 ************************************************************/
 	if (tcl_rc != TCL_OK)
-		throw_tcl_error(interp);
+		throw_tcl_error(interp, prodesc->user_proname);
 
 	/************************************************************
 	 * The return value from the procedure might be one of
@@ -912,7 +1129,7 @@ pltcl_trigger_handler(PG_FUNCTION_ARGS)
  * throw_tcl_error	- ereport an error returned from the Tcl interpreter
  **********************************************************************/
 static void
-throw_tcl_error(Tcl_Interp *interp)
+throw_tcl_error(Tcl_Interp *interp, const char *proname)
 {
 	/*
 	 * Caution is needed here because Tcl_GetVar could overwrite the
@@ -932,7 +1149,8 @@ throw_tcl_error(Tcl_Interp *interp)
 										   TCL_GLOBAL_ONLY));
 	ereport(ERROR,
 			(errmsg("%s", emsg),
-			 errcontext("%s", econtext)));
+			 errcontext("%s\nin PL/Tcl function \"%s\"",
+						econtext, proname)));
 	UTF_END;
 }
 
@@ -944,18 +1162,14 @@ throw_tcl_error(Tcl_Interp *interp)
  * (InvalidOid) when compiling a plain function.
  **********************************************************************/
 static pltcl_proc_desc *
-compile_pltcl_function(Oid fn_oid, Oid tgreloid)
+compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool pltrusted)
 {
-	bool		is_trigger = OidIsValid(tgreloid);
 	HeapTuple	procTup;
 	Form_pg_proc procStruct;
-	char		internal_proname[128];
-	Tcl_HashEntry *hashent;
-	pltcl_proc_desc *prodesc = NULL;
-	Tcl_Interp *interp;
-	int			i;
-	int			hashnew;
-	int			tcl_rc;
+	pltcl_proc_key proc_key;
+	pltcl_proc_ptr *proc_ptr;
+	bool		found;
+	pltcl_proc_desc *prodesc;
 
 	/* We'll need the pg_proc tuple in any case... */
 	procTup = SearchSysCache(PROCOID,
@@ -965,39 +1179,35 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid)
 		elog(ERROR, "cache lookup failed for function %u", fn_oid);
 	procStruct = (Form_pg_proc) GETSTRUCT(procTup);
 
-	/************************************************************
-	 * Build our internal proc name from the functions Oid
-	 ************************************************************/
-	if (!is_trigger)
-		snprintf(internal_proname, sizeof(internal_proname),
-				 "__PLTcl_proc_%u", fn_oid);
-	else
-		snprintf(internal_proname, sizeof(internal_proname),
-				 "__PLTcl_proc_%u_trigger_%u", fn_oid, tgreloid);
+	/* Try to find function in pltcl_proc_htab */
+	proc_key.proc_id = fn_oid;
+	proc_key.trig_id = tgreloid;
+	proc_key.user_id = pltrusted ? GetUserId() : InvalidOid;
 
-	/************************************************************
-	 * Lookup the internal proc name in the hashtable
-	 ************************************************************/
-	hashent = Tcl_FindHashEntry(pltcl_proc_hash, internal_proname);
+	proc_ptr = hash_search(pltcl_proc_htab, &proc_key,
+						   HASH_ENTER,
+						   &found);
+	if (!found)
+		proc_ptr->proc_ptr = NULL;
+
+	prodesc = proc_ptr->proc_ptr;
 
 	/************************************************************
 	 * If it's present, must check whether it's still up to date.
 	 * This is needed because CREATE OR REPLACE FUNCTION can modify the
 	 * function's pg_proc entry without changing its OID.
 	 ************************************************************/
-	if (hashent != NULL)
+	if (prodesc != NULL)
 	{
 		bool		uptodate;
 
-		prodesc = (pltcl_proc_desc *) Tcl_GetHashValue(hashent);
-
 		uptodate = (prodesc->fn_xmin == HeapTupleHeaderGetXmin(procTup->t_data) &&
-				ItemPointerEquals(&prodesc->fn_tid, &procTup->t_self));
+					ItemPointerEquals(&prodesc->fn_tid, &procTup->t_self));
 
 		if (!uptodate)
 		{
-			Tcl_DeleteHashEntry(hashent);
-			hashent = NULL;
+			proc_ptr->proc_ptr = NULL;
+			prodesc = NULL;
 		}
 	}
 
@@ -1009,11 +1219,11 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid)
 	 *
 	 * Then we load the procedure into the Tcl interpreter.
 	 ************************************************************/
-	if (hashent == NULL)
+	if (prodesc == NULL)
 	{
-		HeapTuple	langTup;
+		bool		is_trigger = OidIsValid(tgreloid);
+		char		internal_proname[128];
 		HeapTuple	typeTup;
-		Form_pg_language langStruct;
 		Form_pg_type typeStruct;
 		Tcl_DString proc_internal_def;
 		Tcl_DString proc_internal_body;
@@ -1022,6 +1232,19 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid)
 		bool		isnull;
 		char	   *proc_source;
 		char		buf[32];
+		Tcl_Interp *interp;
+		int			i;
+		int			tcl_rc;
+
+		/************************************************************
+		 * Build our internal proc name from the functions Oid + trigger Oid
+		 ************************************************************/
+		if (!is_trigger)
+			snprintf(internal_proname, sizeof(internal_proname),
+					 "__PLTcl_proc_%u", fn_oid);
+		else
+			snprintf(internal_proname, sizeof(internal_proname),
+					 "__PLTcl_proc_%u_trigger_%u", fn_oid, tgreloid);
 
 		/************************************************************
 		 * Allocate a new procedure description block
@@ -1032,35 +1255,26 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid)
 					(errcode(ERRCODE_OUT_OF_MEMORY),
 					 errmsg("out of memory")));
 		MemSet(prodesc, 0, sizeof(pltcl_proc_desc));
-		prodesc->proname = strdup(internal_proname);
+		prodesc->user_proname = strdup(NameStr(procStruct->proname));
+		prodesc->internal_proname = strdup(internal_proname);
+		if (prodesc->user_proname == NULL || prodesc->internal_proname == NULL)
+			ereport(ERROR,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+					 errmsg("out of memory")));
 		prodesc->fn_xmin = HeapTupleHeaderGetXmin(procTup->t_data);
 		prodesc->fn_tid = procTup->t_self;
 
 		/* Remember if function is STABLE/IMMUTABLE */
 		prodesc->fn_readonly =
 			(procStruct->provolatile != PROVOLATILE_VOLATILE);
+		/* And whether it is trusted */
+		prodesc->lanpltrusted = pltrusted;
 
 		/************************************************************
-		 * Lookup the pg_language tuple by Oid
+		 * Identify the interpreter to use for the function
 		 ************************************************************/
-		langTup = SearchSysCache(LANGOID,
-								 ObjectIdGetDatum(procStruct->prolang),
-								 0, 0, 0);
-		if (!HeapTupleIsValid(langTup))
-		{
-			free(prodesc->proname);
-			free(prodesc);
-			elog(ERROR, "cache lookup failed for language %u",
-				 procStruct->prolang);
-		}
-		langStruct = (Form_pg_language) GETSTRUCT(langTup);
-		prodesc->lanpltrusted = langStruct->lanpltrusted;
-		ReleaseSysCache(langTup);
-
-		if (prodesc->lanpltrusted)
-			interp = pltcl_safe_interp;
-		else
-			interp = pltcl_norm_interp;
+		prodesc->interp_desc = pltcl_fetch_interp(prodesc->lanpltrusted);
+		interp = prodesc->interp_desc->interp;
 
 		/************************************************************
 		 * Get the required information for input conversion of the
@@ -1073,7 +1287,8 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid)
 									 0, 0, 0);
 			if (!HeapTupleIsValid(typeTup))
 			{
-				free(prodesc->proname);
+				free(prodesc->user_proname);
+				free(prodesc->internal_proname);
 				free(prodesc);
 				elog(ERROR, "cache lookup failed for type %u",
 					 procStruct->prorettype);
@@ -1081,13 +1296,14 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid)
 			typeStruct = (Form_pg_type) GETSTRUCT(typeTup);
 
 			/* Disallow pseudotype result, except VOID */
-			if (typeStruct->typtype == 'p')
+			if (typeStruct->typtype == TYPTYPE_PSEUDO)
 			{
 				if (procStruct->prorettype == VOIDOID)
 					 /* okay */ ;
 				else if (procStruct->prorettype == TRIGGEROID)
 				{
-					free(prodesc->proname);
+					free(prodesc->user_proname);
+					free(prodesc->internal_proname);
 					free(prodesc);
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -1095,7 +1311,8 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid)
 				}
 				else
 				{
-					free(prodesc->proname);
+					free(prodesc->user_proname);
+					free(prodesc->internal_proname);
 					free(prodesc);
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -1104,9 +1321,10 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid)
 				}
 			}
 
-			if (typeStruct->typtype == 'c')
+			if (typeStruct->typtype == TYPTYPE_COMPOSITE)
 			{
-				free(prodesc->proname);
+				free(prodesc->user_proname);
+				free(prodesc->internal_proname);
 				free(prodesc);
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -1134,7 +1352,8 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid)
 										 0, 0, 0);
 				if (!HeapTupleIsValid(typeTup))
 				{
-					free(prodesc->proname);
+					free(prodesc->user_proname);
+					free(prodesc->internal_proname);
 					free(prodesc);
 					elog(ERROR, "cache lookup failed for type %u",
 						 procStruct->proargtypes.values[i]);
@@ -1142,9 +1361,10 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid)
 				typeStruct = (Form_pg_type) GETSTRUCT(typeTup);
 
 				/* Disallow pseudotype argument */
-				if (typeStruct->typtype == 'p')
+				if (typeStruct->typtype == TYPTYPE_PSEUDO)
 				{
-					free(prodesc->proname);
+					free(prodesc->user_proname);
+					free(prodesc->internal_proname);
 					free(prodesc);
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -1152,7 +1372,7 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid)
 						format_type_be(procStruct->proargtypes.values[i]))));
 				}
 
-				if (typeStruct->typtype == 'c')
+				if (typeStruct->typtype == TYPTYPE_COMPOSITE)
 				{
 					prodesc->arg_is_rowtype[i] = true;
 					snprintf(buf, sizeof(buf), "__PLTcl_Tup_%d", i + 1);
@@ -1252,7 +1472,8 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid)
 		Tcl_DStringFree(&proc_internal_def);
 		if (tcl_rc != TCL_OK)
 		{
-			free(prodesc->proname);
+			free(prodesc->user_proname);
+			free(prodesc->internal_proname);
 			free(prodesc);
 			UTF_BEGIN;
 			elog(ERROR, "could not create internal procedure \"%s\": %s",
@@ -1261,11 +1482,12 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid)
 		}
 
 		/************************************************************
-		 * Add the proc description block to the hashtable
+		 * Add the proc description block to the hashtable.  Note we do not
+		 * attempt to free any previously existing prodesc block.  This is
+		 * annoying, but necessary since there could be active calls using
+		 * the old prodesc.
 		 ************************************************************/
-		hashent = Tcl_CreateHashEntry(pltcl_proc_hash,
-									  prodesc->proname, &hashnew);
-		Tcl_SetHashValue(hashent, (ClientData) prodesc);
+		proc_ptr->proc_ptr = prodesc;
 	}
 
 	ReleaseSysCache(procTup);
@@ -1859,23 +2081,24 @@ pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp,
 	PG_TRY();
 	{
 		/************************************************************
-		 * Lookup the argument types by name in the system cache
-		 * and remember the required information for input conversion
+		 * Resolve argument type names and then look them up by oid
+		 * in the system cache, and remember the required information
+		 * for input conversion.
 		 ************************************************************/
 		for (i = 0; i < nargs; i++)
 		{
-			List	   *names;
-			HeapTuple	typeTup;
+			Oid			typId,
+						typInput,
+						typIOParam;
+			int32		typmod;
 
-			/* Parse possibly-qualified type name and look it up in pg_type */
-			names = stringToQualifiedNameList(args[i],
-											  "pltcl_SPI_prepare");
-			typeTup = typenameType(NULL, makeTypeNameFromNameList(names));
-			qdesc->argtypes[i] = HeapTupleGetOid(typeTup);
-			perm_fmgr_info(((Form_pg_type) GETSTRUCT(typeTup))->typinput,
-						   &(qdesc->arginfuncs[i]));
-			qdesc->argtypioparams[i] = getTypeIOParam(typeTup);
-			ReleaseSysCache(typeTup);
+			parseTypeString(args[i], &typId, &typmod);
+
+			getTypeInputInfo(typId, &typInput, &typIOParam);
+
+			qdesc->argtypes[i] = typId;
+			perm_fmgr_info(typInput, &(qdesc->arginfuncs[i]));
+			qdesc->argtypioparams[i] = typIOParam;
 		}
 
 		/************************************************************
@@ -1919,10 +2142,7 @@ pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp,
 	 * Insert a hashtable entry for the plan and return
 	 * the key to the caller
 	 ************************************************************/
-	if (interp == pltcl_norm_interp)
-		query_hash = pltcl_norm_query_hash;
-	else
-		query_hash = pltcl_safe_query_hash;
+	query_hash = &pltcl_current_prodesc->interp_desc->query_hash;
 
 	hashent = Tcl_CreateHashEntry(query_hash, qdesc->qname, &hashnew);
 	Tcl_SetHashValue(hashent, (ClientData) qdesc);
@@ -2013,10 +2233,7 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp,
 		return TCL_ERROR;
 	}
 
-	if (interp == pltcl_norm_interp)
-		query_hash = pltcl_norm_query_hash;
-	else
-		query_hash = pltcl_safe_query_hash;
+	query_hash = &pltcl_current_prodesc->interp_desc->query_hash;
 
 	hashent = Tcl_FindHashEntry(query_hash, argv[i]);
 	if (hashent == NULL)

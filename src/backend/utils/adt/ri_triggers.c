@@ -8,14 +8,12 @@
  *	across query and transaction boundaries, in fact they live as long as
  *	the backend does.  This works because the hashtable structures
  *	themselves are allocated by dynahash.c in its permanent DynaHashCxt,
- *	and the parse/plan node trees they point to are copied into
- *	TopMemoryContext using SPI_saveplan().	This is pretty ugly, since there
- *	is no way to free a no-longer-needed plan tree, but then again we don't
- *	yet have any bookkeeping that would allow us to detect that a plan isn't
- *	needed anymore.  Improve it someday.
+ *	and the SPI plans they point to are saved using SPI_saveplan().
+ *	There is not currently any provision for throwing away a no-longer-needed
+ *	plan --- consider improving this someday.
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  * $PostgreSQL: pgsql/src/backend/utils/adt/ri_triggers.c,v 1.114 2009/08/01 19:59:41 tgl Exp $
  *
@@ -35,7 +33,7 @@
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_operator.h"
 #include "commands/trigger.h"
-#include "executor/spi_priv.h"
+#include "executor/spi.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_relation.h"
 #include "miscadmin.h"
@@ -69,13 +67,12 @@
 #define RI_PLAN_RESTRICT_UPD_CHECKREF	8
 #define RI_PLAN_SETNULL_DEL_DOUPDATE	9
 #define RI_PLAN_SETNULL_UPD_DOUPDATE	10
-#define RI_PLAN_KEYEQUAL_UPD			11
 
 #define MAX_QUOTED_NAME_LEN  (NAMEDATALEN*2+3)
 #define MAX_QUOTED_REL_NAME_LEN  (MAX_QUOTED_NAME_LEN*2)
 
-#define RIAttName(rel, attnum)  NameStr(*attnumAttName(rel, attnum))
-#define RIAttType(rel, attnum)  SPI_gettypeid(RelationGetDescr(rel), attnum)
+#define RIAttName(rel, attnum)	NameStr(*attnumAttName(rel, attnum))
+#define RIAttType(rel, attnum)	attnumTypeId(rel, attnum)
 
 #define RI_TRIGTYPE_INSERT 1
 #define RI_TRIGTYPE_UPDATE 2
@@ -102,11 +99,14 @@ typedef struct RI_ConstraintInfo
 	char		confdeltype;	/* foreign key's ON DELETE action */
 	char		confmatchtype;	/* foreign key's match type */
 	int			nkeys;			/* number of key columns */
-	int16		pk_attnums[RI_MAX_NUMKEYS];	/* attnums of referenced cols */
-	int16		fk_attnums[RI_MAX_NUMKEYS];	/* attnums of referencing cols */
-	Oid			pf_eq_oprs[RI_MAX_NUMKEYS];	/* equality operators (PK = FK) */
-	Oid			pp_eq_oprs[RI_MAX_NUMKEYS];	/* equality operators (PK = PK) */
-	Oid			ff_eq_oprs[RI_MAX_NUMKEYS];	/* equality operators (FK = FK) */
+	int16		pk_attnums[RI_MAX_NUMKEYS];		/* attnums of referenced cols */
+	int16		fk_attnums[RI_MAX_NUMKEYS];		/* attnums of referencing cols */
+	Oid			pf_eq_oprs[RI_MAX_NUMKEYS];		/* equality operators (PK =
+												 * FK) */
+	Oid			pp_eq_oprs[RI_MAX_NUMKEYS];		/* equality operators (PK =
+												 * PK) */
+	Oid			ff_eq_oprs[RI_MAX_NUMKEYS];		/* equality operators (FK =
+												 * FK) */
 } RI_ConstraintInfo;
 
 
@@ -135,7 +135,7 @@ typedef struct RI_QueryKey
 typedef struct RI_QueryHashEntry
 {
 	RI_QueryKey key;
-	void	   *plan;
+	SPIPlanPtr	plan;
 } RI_QueryHashEntry;
 
 
@@ -159,8 +159,8 @@ typedef struct RI_CompareKey
 typedef struct RI_CompareHashEntry
 {
 	RI_CompareKey key;
-	bool		valid;				/* successfully initialized? */
-	FmgrInfo	eq_opr_finfo;		/* call info for equality fn */
+	bool		valid;			/* successfully initialized? */
+	FmgrInfo	eq_opr_finfo;	/* call info for equality fn */
 	FmgrInfo	cast_func_finfo;	/* in case we must coerce input */
 } RI_CompareHashEntry;
 
@@ -180,44 +180,45 @@ static HTAB *ri_compare_cache = NULL;
 static void quoteOneName(char *buffer, const char *name);
 static void quoteRelationName(char *buffer, Relation rel);
 static void ri_GenerateQual(StringInfo buf,
-							const char *sep,
-							const char *leftop, Oid leftoptype,
-							Oid opoid,
-							const char *rightop, Oid rightoptype);
+				const char *sep,
+				const char *leftop, Oid leftoptype,
+				Oid opoid,
+				const char *rightop, Oid rightoptype);
+static void ri_add_cast_to(StringInfo buf, Oid typid);
 static int ri_NullCheck(Relation rel, HeapTuple tup,
 			 RI_QueryKey *key, int pairidx);
 static void ri_BuildQueryKeyFull(RI_QueryKey *key,
-								 const RI_ConstraintInfo *riinfo,
-								 int32 constr_queryno);
+					 const RI_ConstraintInfo *riinfo,
+					 int32 constr_queryno);
 static void ri_BuildQueryKeyPkCheck(RI_QueryKey *key,
-									const RI_ConstraintInfo *riinfo,
-									int32 constr_queryno);
+						const RI_ConstraintInfo *riinfo,
+						int32 constr_queryno);
 static bool ri_KeysEqual(Relation rel, HeapTuple oldtup, HeapTuple newtup,
-						 const RI_ConstraintInfo *riinfo, bool rel_is_pk);
+			 const RI_ConstraintInfo *riinfo, bool rel_is_pk);
 static bool ri_AllKeysUnequal(Relation rel, HeapTuple oldtup, HeapTuple newtup,
 				  const RI_ConstraintInfo *riinfo, bool rel_is_pk);
 static bool ri_OneKeyEqual(Relation rel, int column,
 			   HeapTuple oldtup, HeapTuple newtup,
 			   const RI_ConstraintInfo *riinfo, bool rel_is_pk);
 static bool ri_AttributesEqual(Oid eq_opr, Oid typeid,
-							   Datum oldvalue, Datum newvalue);
+				   Datum oldvalue, Datum newvalue);
 static bool ri_Check_Pk_Match(Relation pk_rel, Relation fk_rel,
 				  HeapTuple old_row,
 				  const RI_ConstraintInfo *riinfo);
 
 static void ri_InitHashTables(void);
-static void *ri_FetchPreparedPlan(RI_QueryKey *key);
-static void ri_HashPreparedPlan(RI_QueryKey *key, void *plan);
+static SPIPlanPtr ri_FetchPreparedPlan(RI_QueryKey *key);
+static void ri_HashPreparedPlan(RI_QueryKey *key, SPIPlanPtr plan);
 static RI_CompareHashEntry *ri_HashCompareOp(Oid eq_opr, Oid typeid);
 
 static void ri_CheckTrigger(FunctionCallInfo fcinfo, const char *funcname,
 				int tgkind);
 static void ri_FetchConstraintInfo(RI_ConstraintInfo *riinfo,
 					   Trigger *trigger, Relation trig_rel, bool rel_is_pk);
-static void *ri_PlanCheck(const char *querystr, int nargs, Oid *argtypes,
+static SPIPlanPtr ri_PlanCheck(const char *querystr, int nargs, Oid *argtypes,
 			 RI_QueryKey *qkey, Relation fk_rel, Relation pk_rel,
 			 bool cache_plan);
-static bool ri_PerformCheck(RI_QueryKey *qkey, void *qplan,
+static bool ri_PerformCheck(RI_QueryKey *qkey, SPIPlanPtr qplan,
 				Relation fk_rel, Relation pk_rel,
 				HeapTuple old_tuple, HeapTuple new_tuple,
 				bool detectNewRows,
@@ -248,7 +249,7 @@ RI_FKey_check(PG_FUNCTION_ARGS)
 	HeapTuple	old_row;
 	Buffer		new_row_buf;
 	RI_QueryKey qkey;
-	void	   *qplan;
+	SPIPlanPtr	qplan;
 	int			i;
 
 	/*
@@ -260,7 +261,7 @@ RI_FKey_check(PG_FUNCTION_ARGS)
 	 * Get arguments.
 	 */
 	ri_FetchConstraintInfo(&riinfo,
-						   trigdata->tg_trigger, trigdata->tg_relation, false);
+						 trigdata->tg_trigger, trigdata->tg_relation, false);
 
 	if (TRIGGER_FIRED_BY_UPDATE(trigdata->tg_event))
 	{
@@ -279,19 +280,19 @@ RI_FKey_check(PG_FUNCTION_ARGS)
 	 * We should not even consider checking the row if it is no longer valid,
 	 * since it was either deleted (so the deferred check should be skipped)
 	 * or updated (in which case only the latest version of the row should be
-	 * checked).  Test its liveness with HeapTupleSatisfiesItself.
+	 * checked).  Test its liveness according to SnapshotSelf.
 	 *
 	 * NOTE: The normal coding rule is that one must acquire the buffer
-	 * content lock to call HeapTupleSatisfiesFOO.	We can skip that here
-	 * because we know that AfterTriggerExecute just fetched the tuple
+	 * content lock to call HeapTupleSatisfiesVisibility.  We can skip that
+	 * here because we know that AfterTriggerExecute just fetched the tuple
 	 * successfully, so there cannot be a VACUUM compaction in progress on the
 	 * page (either heap_fetch would have waited for the VACUUM, or the
-	 * VACUUM's LockBufferForCleanup would be waiting for us to drop pin).
-	 * And since this is a row inserted by our open transaction, no one else
-	 * can be entitled to change its xmin/xmax.
+	 * VACUUM's LockBufferForCleanup would be waiting for us to drop pin). And
+	 * since this is a row inserted by our open transaction, no one else can
+	 * be entitled to change its xmin/xmax.
 	 */
 	Assert(new_row_buf != InvalidBuffer);
-	if (!HeapTupleSatisfiesItself( /* relation = ??? */ NULL, new_row->t_data, new_row_buf))
+	if (!HeapTupleSatisfiesVisibility( /* relation = ??? */ NULL, new_row, SnapshotSelf, new_row_buf))
 		return PointerGetDatum(NULL);
 
 	/*
@@ -464,8 +465,8 @@ RI_FKey_check(PG_FUNCTION_ARGS)
 		querysep = "WHERE";
 		for (i = 0; i < riinfo.nkeys; i++)
 		{
-			Oid		pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
-			Oid		fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
+			Oid			pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
+			Oid			fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
 
 			quoteOneName(attname,
 						 RIAttName(pk_rel, riinfo.pk_attnums[i]));
@@ -542,7 +543,7 @@ ri_Check_Pk_Match(Relation pk_rel, Relation fk_rel,
 				  HeapTuple old_row,
 				  const RI_ConstraintInfo *riinfo)
 {
-	void	   *qplan;
+	SPIPlanPtr	qplan;
 	RI_QueryKey qkey;
 	int			i;
 	bool		result;
@@ -626,7 +627,7 @@ ri_Check_Pk_Match(Relation pk_rel, Relation fk_rel,
 		querysep = "WHERE";
 		for (i = 0; i < riinfo->nkeys; i++)
 		{
-			Oid		pk_type = RIAttType(pk_rel, riinfo->pk_attnums[i]);
+			Oid			pk_type = RIAttType(pk_rel, riinfo->pk_attnums[i]);
 
 			quoteOneName(attname,
 						 RIAttName(pk_rel, riinfo->pk_attnums[i]));
@@ -678,7 +679,7 @@ RI_FKey_noaction_del(PG_FUNCTION_ARGS)
 	Relation	pk_rel;
 	HeapTuple	old_row;
 	RI_QueryKey qkey;
-	void	   *qplan;
+	SPIPlanPtr	qplan;
 	int			i;
 
 	/*
@@ -782,8 +783,8 @@ RI_FKey_noaction_del(PG_FUNCTION_ARGS)
 				querysep = "WHERE";
 				for (i = 0; i < riinfo.nkeys; i++)
 				{
-					Oid		pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
-					Oid		fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
+					Oid			pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
+					Oid			fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
 
 					quoteOneName(attname,
 								 RIAttName(fk_rel, riinfo.fk_attnums[i]));
@@ -855,7 +856,7 @@ RI_FKey_noaction_upd(PG_FUNCTION_ARGS)
 	HeapTuple	new_row;
 	HeapTuple	old_row;
 	RI_QueryKey qkey;
-	void	   *qplan;
+	SPIPlanPtr	qplan;
 	int			i;
 
 	/*
@@ -970,8 +971,8 @@ RI_FKey_noaction_upd(PG_FUNCTION_ARGS)
 				querysep = "WHERE";
 				for (i = 0; i < riinfo.nkeys; i++)
 				{
-					Oid		pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
-					Oid		fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
+					Oid			pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
+					Oid			fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
 
 					quoteOneName(attname,
 								 RIAttName(fk_rel, riinfo.fk_attnums[i]));
@@ -1040,7 +1041,7 @@ RI_FKey_cascade_del(PG_FUNCTION_ARGS)
 	Relation	pk_rel;
 	HeapTuple	old_row;
 	RI_QueryKey qkey;
-	void	   *qplan;
+	SPIPlanPtr	qplan;
 	int			i;
 
 	/*
@@ -1132,8 +1133,8 @@ RI_FKey_cascade_del(PG_FUNCTION_ARGS)
 				querysep = "WHERE";
 				for (i = 0; i < riinfo.nkeys; i++)
 				{
-					Oid		pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
-					Oid		fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
+					Oid			pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
+					Oid			fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
 
 					quoteOneName(attname,
 								 RIAttName(fk_rel, riinfo.fk_attnums[i]));
@@ -1203,7 +1204,7 @@ RI_FKey_cascade_upd(PG_FUNCTION_ARGS)
 	HeapTuple	new_row;
 	HeapTuple	old_row;
 	RI_QueryKey qkey;
-	void	   *qplan;
+	SPIPlanPtr	qplan;
 	int			i;
 	int			j;
 
@@ -1315,8 +1316,8 @@ RI_FKey_cascade_upd(PG_FUNCTION_ARGS)
 				qualsep = "WHERE";
 				for (i = 0, j = riinfo.nkeys; i < riinfo.nkeys; i++, j++)
 				{
-					Oid		pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
-					Oid		fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
+					Oid			pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
+					Oid			fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
 
 					quoteOneName(attname,
 								 RIAttName(fk_rel, riinfo.fk_attnums[i]));
@@ -1397,7 +1398,7 @@ RI_FKey_restrict_del(PG_FUNCTION_ARGS)
 	Relation	pk_rel;
 	HeapTuple	old_row;
 	RI_QueryKey qkey;
-	void	   *qplan;
+	SPIPlanPtr	qplan;
 	int			i;
 
 	/*
@@ -1491,8 +1492,8 @@ RI_FKey_restrict_del(PG_FUNCTION_ARGS)
 				querysep = "WHERE";
 				for (i = 0; i < riinfo.nkeys; i++)
 				{
-					Oid		pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
-					Oid		fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
+					Oid			pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
+					Oid			fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
 
 					quoteOneName(attname,
 								 RIAttName(fk_rel, riinfo.fk_attnums[i]));
@@ -1569,7 +1570,7 @@ RI_FKey_restrict_upd(PG_FUNCTION_ARGS)
 	HeapTuple	new_row;
 	HeapTuple	old_row;
 	RI_QueryKey qkey;
-	void	   *qplan;
+	SPIPlanPtr	qplan;
 	int			i;
 
 	/*
@@ -1674,8 +1675,8 @@ RI_FKey_restrict_upd(PG_FUNCTION_ARGS)
 				querysep = "WHERE";
 				for (i = 0; i < riinfo.nkeys; i++)
 				{
-					Oid		pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
-					Oid		fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
+					Oid			pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
+					Oid			fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
 
 					quoteOneName(attname,
 								 RIAttName(fk_rel, riinfo.fk_attnums[i]));
@@ -1744,7 +1745,7 @@ RI_FKey_setnull_del(PG_FUNCTION_ARGS)
 	Relation	pk_rel;
 	HeapTuple	old_row;
 	RI_QueryKey qkey;
-	void	   *qplan;
+	SPIPlanPtr	qplan;
 	int			i;
 
 	/*
@@ -1841,8 +1842,8 @@ RI_FKey_setnull_del(PG_FUNCTION_ARGS)
 				qualsep = "WHERE";
 				for (i = 0; i < riinfo.nkeys; i++)
 				{
-					Oid		pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
-					Oid		fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
+					Oid			pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
+					Oid			fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
 
 					quoteOneName(attname,
 								 RIAttName(fk_rel, riinfo.fk_attnums[i]));
@@ -1916,7 +1917,7 @@ RI_FKey_setnull_upd(PG_FUNCTION_ARGS)
 	HeapTuple	new_row;
 	HeapTuple	old_row;
 	RI_QueryKey qkey;
-	void	   *qplan;
+	SPIPlanPtr	qplan;
 	int			i;
 	bool		use_cached_query;
 
@@ -2043,11 +2044,12 @@ RI_FKey_setnull_upd(PG_FUNCTION_ARGS)
 				qualsep = "WHERE";
 				for (i = 0; i < riinfo.nkeys; i++)
 				{
-					Oid		pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
-					Oid		fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
+					Oid			pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
+					Oid			fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
 
 					quoteOneName(attname,
 								 RIAttName(fk_rel, riinfo.fk_attnums[i]));
+
 					/*
 					 * MATCH <unspecified> - only change columns corresponding
 					 * to changed columns in pk_rel's key
@@ -2130,7 +2132,7 @@ RI_FKey_setdefault_del(PG_FUNCTION_ARGS)
 	Relation	pk_rel;
 	HeapTuple	old_row;
 	RI_QueryKey qkey;
-	void	   *qplan;
+	SPIPlanPtr	qplan;
 
 	/*
 	 * Check that this is a valid trigger call on the right time and event.
@@ -2228,8 +2230,8 @@ RI_FKey_setdefault_del(PG_FUNCTION_ARGS)
 				qualsep = "WHERE";
 				for (i = 0; i < riinfo.nkeys; i++)
 				{
-					Oid		pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
-					Oid		fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
+					Oid			pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
+					Oid			fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
 
 					quoteOneName(attname,
 								 RIAttName(fk_rel, riinfo.fk_attnums[i]));
@@ -2313,7 +2315,7 @@ RI_FKey_setdefault_upd(PG_FUNCTION_ARGS)
 	HeapTuple	new_row;
 	HeapTuple	old_row;
 	RI_QueryKey qkey;
-	void	   *qplan;
+	SPIPlanPtr	qplan;
 
 	/*
 	 * Check that this is a valid trigger call on the right time and event.
@@ -2421,8 +2423,8 @@ RI_FKey_setdefault_upd(PG_FUNCTION_ARGS)
 				qualsep = "WHERE";
 				for (i = 0; i < riinfo.nkeys; i++)
 				{
-					Oid		pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
-					Oid		fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
+					Oid			pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
+					Oid			fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
 
 					quoteOneName(attname,
 								 RIAttName(fk_rel, riinfo.fk_attnums[i]));
@@ -2513,8 +2515,6 @@ RI_FKey_keyequal_upd_pk(Trigger *trigger, Relation pk_rel,
 						HeapTuple old_row, HeapTuple new_row)
 {
 	RI_ConstraintInfo riinfo;
-	Relation	fk_rel;
-	RI_QueryKey qkey;
 
 	/*
 	 * Get arguments.
@@ -2527,18 +2527,11 @@ RI_FKey_keyequal_upd_pk(Trigger *trigger, Relation pk_rel,
 	if (riinfo.nkeys == 0)
 		return true;
 
-	fk_rel = heap_open(riinfo.fk_relid, AccessShareLock);
-
 	switch (riinfo.confmatchtype)
 	{
 		case FKCONSTR_MATCH_UNSPECIFIED:
 		case FKCONSTR_MATCH_FULL:
-			ri_BuildQueryKeyFull(&qkey, &riinfo,
-								 RI_PLAN_KEYEQUAL_UPD);
-
-			heap_close(fk_rel, AccessShareLock);
-
-			/* Return if key's are equal */
+			/* Return true if keys are equal */
 			return ri_KeysEqual(pk_rel, old_row, new_row, &riinfo, true);
 
 			/* Handle MATCH PARTIAL set null delete. */
@@ -2567,8 +2560,6 @@ RI_FKey_keyequal_upd_fk(Trigger *trigger, Relation fk_rel,
 						HeapTuple old_row, HeapTuple new_row)
 {
 	RI_ConstraintInfo riinfo;
-	Relation	pk_rel;
-	RI_QueryKey qkey;
 
 	/*
 	 * Get arguments.
@@ -2581,17 +2572,11 @@ RI_FKey_keyequal_upd_fk(Trigger *trigger, Relation fk_rel,
 	if (riinfo.nkeys == 0)
 		return true;
 
-	pk_rel = heap_open(riinfo.pk_relid, AccessShareLock);
-
 	switch (riinfo.confmatchtype)
 	{
 		case FKCONSTR_MATCH_UNSPECIFIED:
 		case FKCONSTR_MATCH_FULL:
-			ri_BuildQueryKeyFull(&qkey, &riinfo,
-								 RI_PLAN_KEYEQUAL_UPD);
-			heap_close(pk_rel, AccessShareLock);
-
-			/* Return if key's are equal */
+			/* Return true if keys are equal */
 			return ri_KeysEqual(fk_rel, old_row, new_row, &riinfo, false);
 
 			/* Handle MATCH PARTIAL set null delete. */
@@ -2637,7 +2622,7 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
 	int			old_work_mem;
 	char		workmembuf[32];
 	int			spi_result;
-	void	   *qplan;
+	SPIPlanPtr	qplan;
 
 	/*
 	 * Check to make sure current user has enough permissions to do the test
@@ -2687,8 +2672,8 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
 	sep = "(";
 	for (i = 0; i < riinfo.nkeys; i++)
 	{
-		Oid		pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
-		Oid		fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
+		Oid			pk_type = RIAttType(pk_rel, riinfo.pk_attnums[i]);
+		Oid			fk_type = RIAttType(fk_rel, riinfo.fk_attnums[i]);
 
 		quoteOneName(pkattname + 3,
 					 RIAttName(pk_rel, riinfo.pk_attnums[i]));
@@ -2751,7 +2736,7 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
 	snprintf(workmembuf, sizeof(workmembuf), "%d", maintenance_work_mem);
 	(void) set_config_option("work_mem", workmembuf,
 							 PGC_USERSET, PGC_S_SESSION,
-							 true, true);
+							 GUC_ACTION_LOCAL, true);
 
 	if (SPI_connect() != SPI_OK_CONNECT)
 		elog(ERROR, "SPI_connect failed");
@@ -2834,13 +2819,12 @@ RI_Initial_Check(Trigger *trigger, Relation fk_rel, Relation pk_rel)
 
 	/*
 	 * Restore work_mem for the remainder of the current transaction. This is
-	 * another SET LOCAL, so it won't affect the session value, nor any
-	 * tentative value if there is one.
+	 * another SET LOCAL, so it won't affect the session value.
 	 */
 	snprintf(workmembuf, sizeof(workmembuf), "%d", old_work_mem);
 	(void) set_config_option("work_mem", workmembuf,
 							 PGC_USERSET, PGC_S_SESSION,
-							 true, true);
+							 GUC_ACTION_LOCAL, true);
 
 	return true;
 }
@@ -2892,8 +2876,10 @@ quoteRelationName(char *buffer, Relation rel)
  * The idea is to append " sep leftop op rightop" to buf.  The complexity
  * comes from needing to be sure that the parser will select the desired
  * operator.  We always name the operator using OPERATOR(schema.op) syntax
- * (readability isn't a big priority here).  We have to emit casts too,
- * if either input isn't already the input type of the operator.
+ * (readability isn't a big priority here), so as to avoid search-path
+ * uncertainties.  We have to emit casts too, if either input isn't already
+ * the input type of the operator; else we are at the mercy of the parser's
+ * heuristics for ambiguous-operator resolution.
  */
 static void
 ri_GenerateQual(StringInfo buf,
@@ -2920,14 +2906,46 @@ ri_GenerateQual(StringInfo buf,
 
 	appendStringInfo(buf, " %s %s", sep, leftop);
 	if (leftoptype != operform->oprleft)
-		appendStringInfo(buf, "::%s", format_type_be(operform->oprleft));
+		ri_add_cast_to(buf, operform->oprleft);
 	appendStringInfo(buf, " OPERATOR(%s.", quote_identifier(nspname));
 	appendStringInfoString(buf, oprname);
 	appendStringInfo(buf, ") %s", rightop);
 	if (rightoptype != operform->oprright)
-		appendStringInfo(buf, "::%s", format_type_be(operform->oprright));
+		ri_add_cast_to(buf, operform->oprright);
 
 	ReleaseSysCache(opertup);
+}
+
+/*
+ * Add a cast specification to buf.  We spell out the type name the hard way,
+ * intentionally not using format_type_be().  This is to avoid corner cases
+ * for CHARACTER, BIT, and perhaps other types, where specifying the type
+ * using SQL-standard syntax results in undesirable data truncation.  By
+ * doing it this way we can be certain that the cast will have default (-1)
+ * target typmod.
+ */
+static void
+ri_add_cast_to(StringInfo buf, Oid typid)
+{
+	HeapTuple	typetup;
+	Form_pg_type typform;
+	char	   *typname;
+	char	   *nspname;
+
+	typetup = SearchSysCache(TYPEOID,
+							 ObjectIdGetDatum(typid),
+							 0, 0, 0);
+	if (!HeapTupleIsValid(typetup))
+		elog(ERROR, "cache lookup failed for type %u", typid);
+	typform = (Form_pg_type) GETSTRUCT(typetup);
+
+	typname = NameStr(typform->typname);
+	nspname = get_namespace_name(typform->typnamespace);
+
+	appendStringInfo(buf, "::%s.%s",
+					 quote_identifier(nspname), quote_identifier(typname));
+
+	ReleaseSysCache(typetup);
 }
 
 /* ----------
@@ -3033,15 +3051,15 @@ ri_FetchConstraintInfo(RI_ConstraintInfo *riinfo,
 	int			numkeys;
 
 	/*
-	 * Check that the FK constraint's OID is available; it might not be
-	 * if we've been invoked via an ordinary trigger or an old-style
-	 * "constraint trigger".
+	 * Check that the FK constraint's OID is available; it might not be if
+	 * we've been invoked via an ordinary trigger or an old-style "constraint
+	 * trigger".
 	 */
 	if (!OidIsValid(constraintOid))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-		   errmsg("no pg_constraint entry for trigger \"%s\" on table \"%s\"",
-				  trigger->tgname, RelationGetRelationName(trig_rel)),
+		  errmsg("no pg_constraint entry for trigger \"%s\" on table \"%s\"",
+				 trigger->tgname, RelationGetRelationName(trig_rel)),
 				 errhint("Remove this referential integrity trigger and its mates, then do ALTER TABLE ADD CONSTRAINT.")));
 
 	/* OK, fetch the tuple */
@@ -3081,14 +3099,14 @@ ri_FetchConstraintInfo(RI_ConstraintInfo *riinfo,
 
 	/*
 	 * We expect the arrays to be 1-D arrays of the right types; verify that.
-	 * We don't need to use deconstruct_array() since the array data is
-	 * just going to look like a C array of values.
+	 * We don't need to use deconstruct_array() since the array data is just
+	 * going to look like a C array of values.
 	 */
 	adatum = SysCacheGetAttr(CONSTROID, tup,
 							 Anum_pg_constraint_conkey, &isNull);
 	if (isNull)
 		elog(ERROR, "null conkey for constraint %u", constraintOid);
-	arr = DatumGetArrayTypeP(adatum);			/* ensure not toasted */
+	arr = DatumGetArrayTypeP(adatum);	/* ensure not toasted */
 	numkeys = ARR_DIMS(arr)[0];
 	if (ARR_NDIM(arr) != 1 ||
 		numkeys < 0 ||
@@ -3098,12 +3116,14 @@ ri_FetchConstraintInfo(RI_ConstraintInfo *riinfo,
 		elog(ERROR, "conkey is not a 1-D smallint array");
 	riinfo->nkeys = numkeys;
 	memcpy(riinfo->fk_attnums, ARR_DATA_PTR(arr), numkeys * sizeof(int16));
+	if ((Pointer) arr != DatumGetPointer(adatum))
+		pfree(arr);				/* free de-toasted copy, if any */
 
 	adatum = SysCacheGetAttr(CONSTROID, tup,
 							 Anum_pg_constraint_confkey, &isNull);
 	if (isNull)
 		elog(ERROR, "null confkey for constraint %u", constraintOid);
-	arr = DatumGetArrayTypeP(adatum);			/* ensure not toasted */
+	arr = DatumGetArrayTypeP(adatum);	/* ensure not toasted */
 	numkeys = ARR_DIMS(arr)[0];
 	if (ARR_NDIM(arr) != 1 ||
 		numkeys != riinfo->nkeys ||
@@ -3112,12 +3132,14 @@ ri_FetchConstraintInfo(RI_ConstraintInfo *riinfo,
 		ARR_ELEMTYPE(arr) != INT2OID)
 		elog(ERROR, "confkey is not a 1-D smallint array");
 	memcpy(riinfo->pk_attnums, ARR_DATA_PTR(arr), numkeys * sizeof(int16));
+	if ((Pointer) arr != DatumGetPointer(adatum))
+		pfree(arr);				/* free de-toasted copy, if any */
 
 	adatum = SysCacheGetAttr(CONSTROID, tup,
 							 Anum_pg_constraint_conpfeqop, &isNull);
 	if (isNull)
 		elog(ERROR, "null conpfeqop for constraint %u", constraintOid);
-	arr = DatumGetArrayTypeP(adatum);			/* ensure not toasted */
+	arr = DatumGetArrayTypeP(adatum);	/* ensure not toasted */
 	numkeys = ARR_DIMS(arr)[0];
 	if (ARR_NDIM(arr) != 1 ||
 		numkeys != riinfo->nkeys ||
@@ -3126,12 +3148,14 @@ ri_FetchConstraintInfo(RI_ConstraintInfo *riinfo,
 		ARR_ELEMTYPE(arr) != OIDOID)
 		elog(ERROR, "conpfeqop is not a 1-D Oid array");
 	memcpy(riinfo->pf_eq_oprs, ARR_DATA_PTR(arr), numkeys * sizeof(Oid));
+	if ((Pointer) arr != DatumGetPointer(adatum))
+		pfree(arr);				/* free de-toasted copy, if any */
 
 	adatum = SysCacheGetAttr(CONSTROID, tup,
 							 Anum_pg_constraint_conppeqop, &isNull);
 	if (isNull)
 		elog(ERROR, "null conppeqop for constraint %u", constraintOid);
-	arr = DatumGetArrayTypeP(adatum);			/* ensure not toasted */
+	arr = DatumGetArrayTypeP(adatum);	/* ensure not toasted */
 	numkeys = ARR_DIMS(arr)[0];
 	if (ARR_NDIM(arr) != 1 ||
 		numkeys != riinfo->nkeys ||
@@ -3140,12 +3164,14 @@ ri_FetchConstraintInfo(RI_ConstraintInfo *riinfo,
 		ARR_ELEMTYPE(arr) != OIDOID)
 		elog(ERROR, "conppeqop is not a 1-D Oid array");
 	memcpy(riinfo->pp_eq_oprs, ARR_DATA_PTR(arr), numkeys * sizeof(Oid));
+	if ((Pointer) arr != DatumGetPointer(adatum))
+		pfree(arr);				/* free de-toasted copy, if any */
 
 	adatum = SysCacheGetAttr(CONSTROID, tup,
 							 Anum_pg_constraint_conffeqop, &isNull);
 	if (isNull)
 		elog(ERROR, "null conffeqop for constraint %u", constraintOid);
-	arr = DatumGetArrayTypeP(adatum);			/* ensure not toasted */
+	arr = DatumGetArrayTypeP(adatum);	/* ensure not toasted */
 	numkeys = ARR_DIMS(arr)[0];
 	if (ARR_NDIM(arr) != 1 ||
 		numkeys != riinfo->nkeys ||
@@ -3154,6 +3180,8 @@ ri_FetchConstraintInfo(RI_ConstraintInfo *riinfo,
 		ARR_ELEMTYPE(arr) != OIDOID)
 		elog(ERROR, "conffeqop is not a 1-D Oid array");
 	memcpy(riinfo->ff_eq_oprs, ARR_DATA_PTR(arr), numkeys * sizeof(Oid));
+	if ((Pointer) arr != DatumGetPointer(adatum))
+		pfree(arr);				/* free de-toasted copy, if any */
 
 	ReleaseSysCache(tup);
 }
@@ -3165,12 +3193,12 @@ ri_FetchConstraintInfo(RI_ConstraintInfo *riinfo,
  * If cache_plan is true, the plan is saved into our plan hashtable
  * so that we don't need to plan it again.
  */
-static void *
+static SPIPlanPtr
 ri_PlanCheck(const char *querystr, int nargs, Oid *argtypes,
 			 RI_QueryKey *qkey, Relation fk_rel, Relation pk_rel,
 			 bool cache_plan)
 {
-	void	   *qplan;
+	SPIPlanPtr	qplan;
 	Relation	query_rel;
 	Oid			save_userid;
 	int			save_sec_context;
@@ -3214,7 +3242,7 @@ ri_PlanCheck(const char *querystr, int nargs, Oid *argtypes,
  * Perform a query to enforce an RI restriction
  */
 static bool
-ri_PerformCheck(RI_QueryKey *qkey, void *qplan,
+ri_PerformCheck(RI_QueryKey *qkey, SPIPlanPtr qplan,
 				Relation fk_rel, Relation pk_rel,
 				HeapTuple old_tuple, HeapTuple new_tuple,
 				bool detectNewRows,
@@ -3572,10 +3600,11 @@ ri_InitHashTables(void)
  *	and saved SPI execution plans. Return the plan if found or NULL.
  * ----------
  */
-static void *
+static SPIPlanPtr
 ri_FetchPreparedPlan(RI_QueryKey *key)
 {
 	RI_QueryHashEntry *entry;
+	SPIPlanPtr		plan;
 
 	/*
 	 * On the first call initialize the hashtable
@@ -3591,7 +3620,30 @@ ri_FetchPreparedPlan(RI_QueryKey *key)
 											  HASH_FIND, NULL);
 	if (entry == NULL)
 		return NULL;
-	return entry->plan;
+
+	/*
+	 * Check whether the plan is still valid.  If it isn't, we don't want
+	 * to simply rely on plancache.c to regenerate it; rather we should
+	 * start from scratch and rebuild the query text too.  This is to cover
+	 * cases such as table/column renames.  We depend on the plancache
+	 * machinery to detect possible invalidations, though.
+	 *
+	 * CAUTION: this check is only trustworthy if the caller has already
+	 * locked both FK and PK rels.
+	 */
+	plan = entry->plan;
+	if (plan && SPI_plan_is_valid(plan))
+		return plan;
+
+	/*
+	 * Otherwise we might as well flush the cached plan now, to free a
+	 * little memory space before we make a new one.
+	 */
+	entry->plan = NULL;
+	if (plan)
+		SPI_freeplan(plan);
+
+	return NULL;
 }
 
 
@@ -3602,7 +3654,7 @@ ri_FetchPreparedPlan(RI_QueryKey *key)
  * ----------
  */
 static void
-ri_HashPreparedPlan(RI_QueryKey *key, void *plan)
+ri_HashPreparedPlan(RI_QueryKey *key, SPIPlanPtr plan)
 {
 	RI_QueryHashEntry *entry;
 	bool		found;
@@ -3614,11 +3666,13 @@ ri_HashPreparedPlan(RI_QueryKey *key, void *plan)
 		ri_InitHashTables();
 
 	/*
-	 * Add the new plan.
+	 * Add the new plan.  We might be overwriting an entry previously
+	 * found invalid by ri_FetchPreparedPlan.
 	 */
 	entry = (RI_QueryHashEntry *) hash_search(ri_query_cache,
 											  (void *) key,
 											  HASH_ENTER, &found);
+	Assert(!found || entry->plan == NULL);
 	entry->plan = plan;
 }
 
@@ -3866,30 +3920,49 @@ ri_HashCompareOp(Oid eq_opr, Oid typeid)
 	 */
 	if (!entry->valid)
 	{
-		Oid		lefttype,
-				righttype,
-				castfunc;
+		Oid			lefttype,
+					righttype,
+					castfunc;
+		CoercionPathType pathtype;
 
 		/* We always need to know how to call the equality operator */
 		fmgr_info_cxt(get_opcode(eq_opr), &entry->eq_opr_finfo,
 					  TopMemoryContext);
 
 		/*
-		 * If we chose to use a cast from FK to PK type, we may have to
-		 * apply the cast function to get to the operator's input type.
+		 * If we chose to use a cast from FK to PK type, we may have to apply
+		 * the cast function to get to the operator's input type.
+		 *
+		 * XXX eventually it would be good to support array-coercion cases
+		 * here and in ri_AttributesEqual().  At the moment there is no point
+		 * because cases involving nonidentical array types will be rejected
+		 * at constraint creation time.
+		 *
+		 * XXX perhaps also consider supporting CoerceViaIO?  No need at the
+		 * moment since that will never be generated for implicit coercions.
 		 */
 		op_input_types(eq_opr, &lefttype, &righttype);
 		Assert(lefttype == righttype);
 		if (typeid == lefttype)
-			castfunc = InvalidOid;				/* simplest case */
-		else if (!find_coercion_pathway(lefttype, typeid, COERCION_IMPLICIT,
-										&castfunc))
+			castfunc = InvalidOid;		/* simplest case */
+		else
 		{
-			/* If target is ANYARRAY, assume it's OK, else punt. */
-			if (lefttype != ANYARRAYOID)
-				elog(ERROR, "no conversion function from %s to %s",
-					 format_type_be(typeid),
-					 format_type_be(lefttype));
+			pathtype = find_coercion_pathway(lefttype, typeid,
+											 COERCION_IMPLICIT,
+											 &castfunc);
+			if (pathtype != COERCION_PATH_FUNC &&
+				pathtype != COERCION_PATH_RELABELTYPE)
+			{
+				/*
+				 * The declared input type of the eq_opr might be a
+				 * polymorphic type such as ANYARRAY or ANYENUM.  If so,
+				 * assume the coercion is valid; otherwise complain.
+				 */
+				if (!IsPolymorphicType(lefttype))
+					elog(ERROR, "no conversion function from %s to %s",
+						 format_type_be(typeid),
+						 format_type_be(lefttype));
+			}
 		}
 		if (OidIsValid(castfunc))
 			fmgr_info_cxt(castfunc, &entry->cast_func_finfo,

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/libpq/auth.c,v 1.148 2007/02/08 04:52:18 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/libpq/auth.c,v 1.164.2.5 2009/10/16 22:08:48 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -92,14 +92,8 @@ static bool ident_unix(int sock, char *ident_user);
 #define PGSQL_PAM_SERVICE "postgresql"	/* Service name passed to PAM */
 
 static int	CheckPAMAuth(Port *port, char *user, char *password);
-
-#if defined(pg_on_solaris) || (_AIX)
-static int pam_passwd_conv_proc(int num_msg, struct pam_message **msg,
-                    struct pam_response **resp, void *appdata_ptr);
-#else
 static int pam_passwd_conv_proc(int num_msg, const struct pam_message ** msg,
                      struct pam_response ** resp, void *appdata_ptr);
-#endif
 
 static struct pam_conv pam_passw_conv = {
 	&pam_passwd_conv_proc,
@@ -215,6 +209,7 @@ static int pg_SSPI_recvauth(Port *port);
 #endif
 static int	CheckRADIUSAuth(Port *port);
 
+
 /*
  * Maximum accepted size of GSS and SSPI authentication tokens.
  *
@@ -235,7 +230,6 @@ static int	CheckRADIUSAuth(Port *port);
  * Global authentication functions
  *----------------------------------------------------------------
  */
-
 
 /*
  * Tell the user the authentication failed, but not (much about) why.

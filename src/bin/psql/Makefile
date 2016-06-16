@@ -38,7 +38,7 @@ OBJS=	command.o common.o help.o input.o stringutils.o mainloop.o copy.o \
 	tab-complete.o mbprint.o dumputils.o keywords.o kwlookup.o \
 	sql_help.o \
 	$(WIN32RES)
-	
+
 FLEXFLAGS = -Cfe
 
 # The frontend doesn't need everything that's in LIBS, some are backend only

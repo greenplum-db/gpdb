@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/date.c,v 1.128 2007/02/16 03:39:44 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/date.c,v 1.138.2.1 2008/07/07 18:09:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -49,9 +49,9 @@ static void AdjustTimeForTypmod(TimeADT *time, int32 typmod);
 static int32
 anytime_typmodin(bool istz, ArrayType *ta)
 {
-	int32	typmod;
-	int32	*tl;
-	int		n;
+	int32		typmod;
+	int32	   *tl;
+	int			n;
 
 	tl = ArrayGetIntegerTypmods(ta, &n);
 
@@ -74,10 +74,11 @@ anytime_typmodin(bool istz, ArrayType *ta)
 		ereport(WARNING,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("TIME(%d)%s precision reduced to maximum allowed, %d",
-						*tl, (istz ? " WITH TIME ZONE" : "" ),
+						*tl, (istz ? " WITH TIME ZONE" : ""),
 						MAX_TIME_PRECISION)));
 		typmod = MAX_TIME_PRECISION;
-	} else
+	}
+	else
 		typmod = *tl;
 
 	return typmod;
@@ -87,7 +88,7 @@ anytime_typmodin(bool istz, ArrayType *ta)
 static char *
 anytime_typmodout(bool istz, int32 typmod)
 {
-	char    *res = (char *) palloc(64);
+	char	   *res = (char *) palloc(64);
 	const char *tz = istz ? " with time zone" : " without time zone";
 
 	if (typmod >= 0)
@@ -339,12 +340,12 @@ date_mii(PG_FUNCTION_ARGS)
 static Timestamp
 date2timestamp(DateADT dateVal)
 {
-	Timestamp result;
+	Timestamp	result;
 
 #ifdef HAVE_INT64_TIMESTAMP
 	/* date is days since 2000, timestamp is microseconds since same... */
 	result = dateVal * USECS_PER_DAY;
-		/* Date's range is wider than timestamp's, so check for overflow */
+	/* Date's range is wider than timestamp's, so must check for overflow */
 	if (result / USECS_PER_DAY != dateVal)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
@@ -375,13 +376,39 @@ date2timestamptz(DateADT dateVal)
 
 #ifdef HAVE_INT64_TIMESTAMP
 	result = dateVal * USECS_PER_DAY + tz * USECS_PER_SEC;
-		/* Date's range is wider than timestamp's, so check for overflow */
+	/* Date's range is wider than timestamp's, so must check for overflow */
 	if ((result - tz * USECS_PER_SEC) / USECS_PER_DAY != dateVal)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
 				 errmsg("date out of range for timestamp")));
 #else
 	result = dateVal * (double) SECS_PER_DAY + tz;
+#endif
+
+	return result;
+}
+
+/*
+ * date2timestamp_no_overflow
+ *
+ * This is chartered to produce a double value that is numerically
+ * equivalent to the corresponding Timestamp value, if the date is in the
+ * valid range of Timestamps, but in any case not throw an overflow error.
+ * We can do this since the numerical range of double is greater than
+ * that of non-erroneous timestamps.  The results are currently only
+ * used for statistical estimation purposes.
+ */
+double
+date2timestamp_no_overflow(DateADT dateVal)
+{
+	double	result;
+
+#ifdef HAVE_INT64_TIMESTAMP
+	/* date is days since 2000, timestamp is microseconds since same... */
+	result = dateVal * (double) USECS_PER_DAY;
+#else
+	/* date is days since 2000, timestamp is seconds since same... */
+	result = dateVal * (double) SECS_PER_DAY;
 #endif
 
 	return result;
@@ -889,64 +916,6 @@ abstime_date(PG_FUNCTION_ARGS)
 }
 
 
-/* date_text()
- * Convert date to text data type.
- */
-Datum
-date_text(PG_FUNCTION_ARGS)
-{
-	/* Input is a Date, but may as well leave it in Datum form */
-	Datum		date = PG_GETARG_DATUM(0);
-	text	   *result;
-	char	   *str;
-	int			len;
-
-	str = DatumGetCString(DirectFunctionCall1(date_out, date));
-
-	len = strlen(str) + VARHDRSZ;
-
-	result = palloc(len);
-
-	SET_VARSIZE(result, len);
-	memcpy(VARDATA(result), str, (len - VARHDRSZ));
-
-	pfree(str);
-
-	PG_RETURN_TEXT_P(result);
-}
-
-
-/* text_date()
- * Convert text string to date.
- * Text type is not null terminated, so use temporary string
- *	then call the standard input routine.
- */
-Datum
-text_date(PG_FUNCTION_ARGS)
-{
-	text	   *str = PG_GETARG_TEXT_P(0);
-	int			i;
-	char	   *sp,
-			   *dp,
-				dstr[MAXDATELEN + 1];
-
-	if (VARSIZE(str) - VARHDRSZ > MAXDATELEN)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_DATETIME_FORMAT),
-				 errmsg("invalid input syntax for type date: \"%s\"",
-						DatumGetCString(DirectFunctionCall1(textout,
-													PointerGetDatum(str))))));
-	sp = VARDATA(str);
-	dp = dstr;
-	for (i = 0; i < (VARSIZE(str) - VARHDRSZ); i++)
-		*dp++ = *sp++;
-	*dp = '\0';
-
-	return DirectFunctionCall1(date_in,
-							   CStringGetDatum(dstr));
-}
-
-
 /*****************************************************************************
  *	 Time ADT
  *****************************************************************************/
@@ -1105,7 +1074,7 @@ time_send(PG_FUNCTION_ARGS)
 Datum
 timetypmodin(PG_FUNCTION_ARGS)
 {
-	ArrayType *ta = PG_GETARG_ARRAYTYPE_P(0);
+	ArrayType  *ta = PG_GETARG_ARRAYTYPE_P(0);
 
 	PG_RETURN_INT32(anytime_typmodin(false, ta));
 }
@@ -1113,7 +1082,7 @@ timetypmodin(PG_FUNCTION_ARGS)
 Datum
 timetypmodout(PG_FUNCTION_ARGS)
 {
-	int32 typmod = PG_GETARG_INT32(0);
+	int32		typmod = PG_GETARG_INT32(0);
 
 	PG_RETURN_CSTRING(anytime_typmodout(false, typmod));
 }
@@ -1271,6 +1240,17 @@ time_cmp(PG_FUNCTION_ARGS)
 	if (time1 > time2)
 		PG_RETURN_INT32(1);
 	PG_RETURN_INT32(0);
+}
+
+Datum
+time_hash(PG_FUNCTION_ARGS)
+{
+	/* We can use either hashint8 or hashfloat8 directly */
+#ifdef HAVE_INT64_TIMESTAMP
+	return hashint8(fcinfo);
+#else
+	return hashfloat8(fcinfo);
+#endif
 }
 
 Datum
@@ -1708,66 +1688,6 @@ time_mi_interval(PG_FUNCTION_ARGS)
 }
 
 
-/* time_text()
- * Convert time to text data type.
- */
-Datum
-time_text(PG_FUNCTION_ARGS)
-{
-	/* Input is a Time, but may as well leave it in Datum form */
-	Datum		time = PG_GETARG_DATUM(0);
-	text	   *result;
-	char	   *str;
-	int			len;
-
-	str = DatumGetCString(DirectFunctionCall1(time_out, time));
-
-	len = strlen(str) + VARHDRSZ;
-
-	result = palloc(len);
-
-	SET_VARSIZE(result, len);
-	memcpy(VARDATA(result), str, (len - VARHDRSZ));
-
-	pfree(str);
-
-	PG_RETURN_TEXT_P(result);
-}
-
-
-/* text_time()
- * Convert text string to time.
- * Text type is not null terminated, so use temporary string
- *	then call the standard input routine.
- */
-Datum
-text_time(PG_FUNCTION_ARGS)
-{
-	text	   *str = PG_GETARG_TEXT_P(0);
-	int			i;
-	char	   *sp,
-			   *dp,
-				dstr[MAXDATELEN + 1];
-
-	if (VARSIZE(str) - VARHDRSZ > MAXDATELEN)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_DATETIME_FORMAT),
-				 errmsg("invalid input syntax for type time: \"%s\"",
-						DatumGetCString(DirectFunctionCall1(textout, 
-													PointerGetDatum(str))))));
-
-	sp = VARDATA(str);
-	dp = dstr;
-	for (i = 0; i < (VARSIZE(str) - VARHDRSZ); i++)
-		*dp++ = *sp++;
-	*dp = '\0';
-
-	return DirectFunctionCall3(time_in,
-							   CStringGetDatum(dstr),
-							   ObjectIdGetDatum(InvalidOid),
-							   Int32GetDatum(-1));
-}
-
 /* time_part()
  * Extract specified field from time type.
  */
@@ -1998,7 +1918,7 @@ timetz_send(PG_FUNCTION_ARGS)
 Datum
 timetztypmodin(PG_FUNCTION_ARGS)
 {
-	ArrayType *ta = PG_GETARG_ARRAYTYPE_P(0);
+	ArrayType  *ta = PG_GETARG_ARRAYTYPE_P(0);
 
 	PG_RETURN_INT32(anytime_typmodin(true, ta));
 }
@@ -2006,7 +1926,7 @@ timetztypmodin(PG_FUNCTION_ARGS)
 Datum
 timetztypmodout(PG_FUNCTION_ARGS)
 {
-	int32 typmod = PG_GETARG_INT32(0);
+	int32		typmod = PG_GETARG_INT32(0);
 
 	PG_RETURN_CSTRING(anytime_typmodout(true, typmod));
 }
@@ -2170,20 +2090,27 @@ timetz_cmp(PG_FUNCTION_ARGS)
 	PG_RETURN_INT32(timetz_cmp_internal(time1, time2));
 }
 
-/*
- * timetz, being an unusual size, needs a specialized hash function.
- */
 Datum
 timetz_hash(PG_FUNCTION_ARGS)
 {
 	TimeTzADT  *key = PG_GETARG_TIMETZADT_P(0);
+	uint32		thash;
 
 	/*
-	 * Specify hash length as sizeof(double) + sizeof(int4), not as
-	 * sizeof(TimeTzADT), so that any garbage pad bytes in the structure won't
-	 * be included in the hash!
+	 * To avoid any problems with padding bytes in the struct, we figure the
+	 * field hashes separately and XOR them.  This also provides a convenient
+	 * framework for dealing with the fact that the time field might be either
+	 * double or int64.
 	 */
-	return hash_any((unsigned char *) key, sizeof(key->time) + sizeof(key->zone));
+#ifdef HAVE_INT64_TIMESTAMP
+	thash = DatumGetUInt32(DirectFunctionCall1(hashint8,
+											   Int64GetDatumFast(key->time)));
+#else
+	thash = DatumGetUInt32(DirectFunctionCall1(hashfloat8,
+											 Float8GetDatumFast(key->time)));
+#endif
+	thash ^= DatumGetUInt32(hash_uint32(key->zone));
+	PG_RETURN_UINT32(thash);
 }
 
 Datum
@@ -2494,66 +2421,6 @@ datetimetz_timestamptz(PG_FUNCTION_ARGS)
 	PG_RETURN_TIMESTAMP(result);
 }
 
-
-/* timetz_text()
- * Convert timetz to text data type.
- */
-Datum
-timetz_text(PG_FUNCTION_ARGS)
-{
-	/* Input is a Timetz, but may as well leave it in Datum form */
-	Datum		timetz = PG_GETARG_DATUM(0);
-	text	   *result;
-	char	   *str;
-	int			len;
-
-	str = DatumGetCString(DirectFunctionCall1(timetz_out, timetz));
-
-	len = strlen(str) + VARHDRSZ;
-
-	result = palloc(len);
-
-	SET_VARSIZE(result, len);
-	memcpy(VARDATA(result), str, (len - VARHDRSZ));
-
-	pfree(str);
-
-	PG_RETURN_TEXT_P(result);
-}
-
-
-/* text_timetz()
- * Convert text string to timetz.
- * Text type is not null terminated, so use temporary string
- *	then call the standard input routine.
- */
-Datum
-text_timetz(PG_FUNCTION_ARGS)
-{
-	text	   *str = PG_GETARG_TEXT_P(0);
-	int			i;
-	char	   *sp,
-			   *dp,
-				dstr[MAXDATELEN + 1];
-
-	if (VARSIZE(str) - VARHDRSZ > MAXDATELEN)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_DATETIME_FORMAT),
-		  errmsg("invalid input syntax for type time with time zone: \"%s\"",
-				 DatumGetCString(DirectFunctionCall1(textout, 
-													 PointerGetDatum(str))))));
-
-	sp = VARDATA(str);
-	dp = dstr;
-	for (i = 0; i < (VARSIZE(str) - VARHDRSZ); i++)
-		*dp++ = *sp++;
-	*dp = '\0';
-
-	return DirectFunctionCall3(timetz_in,
-							   CStringGetDatum(dstr),
-							   ObjectIdGetDatum(InvalidOid),
-							   Int32GetDatum(-1));
-}
 
 /* timetz_part()
  * Extract specified field from time type.

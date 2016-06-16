@@ -1273,15 +1273,25 @@ make_join_expr(Node *larg, int r_rtindex, int join_type)
 static Node *
 make_lasj_quals(PlannerInfo *root, SubLink * sublink, int subquery_indx)
 {
+	Query	   *subselect = (Query *) sublink->subselect;
 	Expr	   *join_pred;
-	List	   *subtlist = NIL;
+	List	   *subquery_vars;
 
 	Assert(sublink->subLinkType == ALL_SUBLINK);
 
+	/*
+	 * Build a list of Vars representing the subselect outputs.
+	 */
+	subquery_vars = generate_subquery_vars(root,
+										   subselect->targetList,
+										   subquery_indx);
+
+	/*
+	 * Build the result qual expression, replacing Params with these Vars.
+	 */
 	join_pred = (Expr *) convert_testexpr(root,
 										  sublink->testexpr,
-										  subquery_indx,
-										  &subtlist);
+										  subquery_vars);
 
 	join_pred = canonicalize_qual(make_notclause(join_pred));
 

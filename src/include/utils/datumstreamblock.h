@@ -1198,14 +1198,14 @@ DatumStreamBlockRead_Get(DatumStreamBlockRead * dsr, Datum *datum, bool *null)
 		Assert(dsr->delta_item == false);
 
 		*datum = PointerGetDatum(dsr->datump);
-		Assert(VARATT_IS_SHORT_D(*datum) || !VARATT_IS_EXTERNAL_D(*datum));
+		Assert(VARATT_IS_SHORT(DatumGetPointer(*datum)) || !VARATT_IS_EXTERNAL(DatumGetPointer(*datum)));
 
 		/*
 		 * PERFORMANCE EXPERIMENT: Only do integrity and trace checking for
 		 * DEBUG builds...
 		 */
 #ifdef USE_ASSERT_CHECKING
-		varLen = VARSIZE_ANY_D(*datum);
+		varLen = VARSIZE_ANY(DatumGetPointer(*datum));
 
 		if (varLen < 0 || varLen > dsr->physical_data_size)
 		{
@@ -1471,7 +1471,7 @@ DatumStreamBlockRead_AdvanceOrig(DatumStreamBlockRead * dsr)
 			 */
 			if (*dsr->datump == 0)
 			{
-				dsr->datump = (uint8 *) att_align(dsr->datump, dsr->typeInfo.align);
+				dsr->datump = (uint8 *) att_align_nominal(dsr->datump, dsr->typeInfo.align);
 			}
 
 			/*
@@ -1928,7 +1928,7 @@ DatumStreamBlockRead_AdvanceDense(DatumStreamBlockRead * dsr)
 			 */
 			if (*dsr->datump == 0)
 			{
-				dsr->datump = (uint8 *) att_align(dsr->datump, dsr->typeInfo.align);
+				dsr->datump = (uint8 *) att_align_nominal(dsr->datump, dsr->typeInfo.align);
 			}
 
 			/*

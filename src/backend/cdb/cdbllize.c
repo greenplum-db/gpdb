@@ -136,7 +136,6 @@ cdbparallelize(PlannerInfo *root,
 			   ParamListInfo boundParams __attribute__((unused))
 )
 {
-	int			nParamExec;
 	PlanProfile profile;
 	PlanProfile *context = &profile;
 	
@@ -242,10 +241,6 @@ cdbparallelize(PlannerInfo *root,
 	/* We need to keep track of whether any part of the plan needs to be
 	 * dispatched in parallel. */
 	context->dispatchParallel = context->resultSegments;
-	
-	/* Save the global count of PARAM_EXEC from the top plan node. */
-	nParamExec = plan->nParamExec;
-
 	context->currentPlanFlow = NULL;
 
 	/*
@@ -269,10 +264,6 @@ cdbparallelize(PlannerInfo *root,
 		Assert(root->parse == query);
 		plan = apply_motion(root, plan, query);
 	}
-
-
-	/* Restore the global count of PARAM_EXEC from the top plan node. */
-	plan->nParamExec = nParamExec;
 
 	if (gp_enable_motion_deadlock_sanity)
 		motion_sanity_check(root, plan);
@@ -606,7 +597,7 @@ ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerC
 		/**
 		 * Step 8: Fix up the result node on top of the material node
 		 */
-		Result *res = make_result(resTL, NULL, mat);
+		Result *res = make_result((PlannerInfo *) ctx->base.node, resTL, NULL, mat);
 		res->plan.qual = resQual;
 		((Plan *) res)->allParam = saveAllParam;
 		((Plan *) res)->extParam = saveExtParam;

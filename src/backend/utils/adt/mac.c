@@ -145,59 +145,6 @@ macaddr_send(PG_FUNCTION_ARGS)
 
 
 /*
- * Convert macaddr to text data type.
- */
-
-Datum
-macaddr_text(PG_FUNCTION_ARGS)
-{
-	/* Input is a macaddr, but may as well leave it in Datum form */
-	Datum		addr = PG_GETARG_DATUM(0);
-	text	   *result;
-	char	   *str;
-	int			len;
-
-	str = DatumGetCString(DirectFunctionCall1(macaddr_out, addr));
-
-	len = (strlen(str) + VARHDRSZ);
-
-	result = palloc(len);
-
-	SET_VARSIZE(result, len);
-	memcpy(VARDATA(result), str, (len - VARHDRSZ));
-
-	pfree(str);
-
-	PG_RETURN_TEXT_P(result);
-}
-
-/*
- * Convert text to macaddr data type.
- */
-
-Datum
-text_macaddr(PG_FUNCTION_ARGS)
-{
-	text	   *addr = PG_GETARG_TEXT_P(0);
-	Datum		result;
-	char		str[100];
-	int			len;
-
-	len = (VARSIZE(addr) - VARHDRSZ);
-	if (len >= sizeof(str))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-				 errmsg("text too long to convert to MAC address")));
-
-	memcpy(str, VARDATA(addr), len);
-	*(str + len) = '\0';
-
-	result = DirectFunctionCall1(macaddr_in, CStringGetDatum(str));
-
-	return (result);
-}
-
-/*
  *	Comparison function for sorting:
  */
 

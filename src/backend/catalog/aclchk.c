@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/aclchk.c,v 1.137 2007/02/14 01:58:56 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/aclchk.c,v 1.143.2.1 2008/03/24 19:12:58 tgl Exp $
  *
  * NOTES
  *	  See acl.h.
@@ -40,6 +40,8 @@
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_filespace.h"
 #include "catalog/pg_type.h"
+#include "catalog/pg_ts_config.h"
+#include "catalog/pg_ts_dict.h"
 #include "cdb/cdbpartition.h"
 #include "commands/dbcommands.h"
 #include "commands/tablecmds.h"
@@ -394,35 +396,35 @@ ExecuteGrantStmt(GrantStmt *stmt)
 				 */
 			case ACL_OBJECT_RELATION:
 				all_privileges = ACL_ALL_RIGHTS_RELATION | ACL_ALL_RIGHTS_SEQUENCE;
-				errormsg = _("invalid privilege type %s for relation");
+				errormsg = gettext_noop("invalid privilege type %s for relation");
 				break;
 			case ACL_OBJECT_SEQUENCE:
 				all_privileges = ACL_ALL_RIGHTS_SEQUENCE;
-				errormsg = _("invalid privilege type %s for sequence");
+				errormsg = gettext_noop("invalid privilege type %s for sequence");
 				break;
 			case ACL_OBJECT_DATABASE:
 				all_privileges = ACL_ALL_RIGHTS_DATABASE;
-				errormsg = _("invalid privilege type %s for database");
+				errormsg = gettext_noop("invalid privilege type %s for database");
 				break;
 			case ACL_OBJECT_FUNCTION:
 				all_privileges = ACL_ALL_RIGHTS_FUNCTION;
-				errormsg = _("invalid privilege type %s for function");
+				errormsg = gettext_noop("invalid privilege type %s for function");
 				break;
 			case ACL_OBJECT_LANGUAGE:
 				all_privileges = ACL_ALL_RIGHTS_LANGUAGE;
-				errormsg = _("invalid privilege type %s for language");
+				errormsg = gettext_noop("invalid privilege type %s for language");
 				break;
 			case ACL_OBJECT_NAMESPACE:
 				all_privileges = ACL_ALL_RIGHTS_NAMESPACE;
-				errormsg = _("invalid privilege type %s for schema");
+				errormsg = gettext_noop("invalid privilege type %s for schema");
 				break;
 			case ACL_OBJECT_TABLESPACE:
 				all_privileges = ACL_ALL_RIGHTS_TABLESPACE;
-				errormsg = _("invalid privilege type %s for tablespace");
+				errormsg = gettext_noop("invalid privilege type %s for tablespace");
 				break;
 			case ACL_OBJECT_EXTPROTOCOL:
 				all_privileges = ACL_ALL_RIGHTS_EXTPROTOCOL;
-				errormsg = _("invalid privilege type %s for external protocol");
+				errormsg = gettext_noop("invalid privilege type %s for external protocol");
 				break;
 			default:
 				/* keep compiler quiet */
@@ -455,8 +457,7 @@ ExecuteGrantStmt(GrantStmt *stmt)
 				if (priv & ~((AclMode) all_privileges))
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_GRANT_OPERATION),
-							 errmsg(errormsg,
-									privilege_to_string(priv))));
+							 errmsg(errormsg, privilege_to_string(priv))));
 	
 				istmt.privileges |= priv;
 			}
@@ -1204,18 +1205,10 @@ ExecGrant_Language(InternalGrant *istmt)
 		int			nnewmembers;
 		Oid		   *oldmembers;
 		Oid		   *newmembers;
-		cqContext	cqc;
-		cqContext  *pcqCtx;
 
-		pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), relation),
-				cql("SELECT * FROM pg_language "
-					" WHERE oid = :1 "
-					" FOR UPDATE ",
-					ObjectIdGetDatum(langId)));
-
-		tuple = caql_getnext(pcqCtx);
-
+		tuple = SearchSysCache(LANGOID,
+							   ObjectIdGetDatum(langId),
+							   0, 0, 0);
 		if (!HeapTupleIsValid(tuple))
 			elog(ERROR, "cache lookup failed for language %u", langId);
 
@@ -1231,13 +1224,10 @@ ExecGrant_Language(InternalGrant *istmt)
 		/*
 		 * Get owner ID and working copy of existing ACL. If there's no ACL,
 		 * substitute the proper default.
-		 *
-		 * Note: for now, languages are treated as owned by the bootstrap
-		 * user. We should add an owner column to pg_language instead.
 		 */
-		ownerId = BOOTSTRAP_SUPERUSERID;
-		aclDatum = caql_getattr(pcqCtx, Anum_pg_language_lanacl,
-								&isNull);
+		ownerId = pg_language_tuple->lanowner;
+		aclDatum = SysCacheGetAttr(LANGNAME, tuple, Anum_pg_language_lanacl,
+								   &isNull);
 		if (isNull)
 			old_acl = acldefault(ACL_OBJECT_LANGUAGE, ownerId);
 		else
@@ -1281,10 +1271,13 @@ ExecGrant_Language(InternalGrant *istmt)
 		replaces[Anum_pg_language_lanacl - 1] = true;
 		values[Anum_pg_language_lanacl - 1] = PointerGetDatum(new_acl);
 
-		newtuple = caql_modify_current(pcqCtx, values, nulls, replaces);
+		newtuple = heap_modify_tuple(tuple, RelationGetDescr(relation), values,
+									 nulls, replaces);
 
-		caql_update_current(pcqCtx, newtuple);
-		/* and Update indexes (implicit) */
+		simple_heap_update(relation, &newtuple->t_self, newtuple);
+
+		/* keep the catalog indexes up to date */
+		CatalogUpdateIndexes(relation, newtuple);
 
 		/* Update the shared dependency ACL info */
 		updateAclDependencies(LanguageRelationId, HeapTupleGetOid(tuple),
@@ -1292,7 +1285,7 @@ ExecGrant_Language(InternalGrant *istmt)
 							  noldmembers, oldmembers,
 							  nnewmembers, newmembers);
 
-		caql_endscan(pcqCtx);
+		ReleaseSysCache(tuple);
 
 		pfree(new_acl);
 
@@ -1836,6 +1829,10 @@ static const char *const no_priv_msg[MAX_ACL_KIND] =
 	gettext_noop("permission denied for conversion %s"),
 	/* ACL_KIND_TABLESPACE */
 	gettext_noop("permission denied for tablespace %s"),
+	/* ACL_KIND_TSDICTIONARY */
+	gettext_noop("permission denied for text search dictionary %s"),
+	/* ACL_KIND_TSCONFIGURATION */
+	gettext_noop("permission denied for text search configuration %s"),
 	/* ACL_KIND_FILESPACE */
 	gettext_noop("permission denied for filespace %s"),	
 	/* ACL_KIND_EXTPROTOCOL */
@@ -1868,6 +1865,10 @@ static const char *const not_owner_msg[MAX_ACL_KIND] =
 	gettext_noop("must be owner of conversion %s"),
 	/* ACL_KIND_TABLESPACE */
 	gettext_noop("must be owner of tablespace %s"),
+	/* ACL_KIND_TSDICTIONARY */
+	gettext_noop("must be owner of text search dictionary %s"),
+	/* ACL_KIND_TSCONFIGURATION */
+	gettext_noop("must be owner of text search configuration %s"),
 	/* ACL_KIND_FILESPACE */
 	gettext_noop("must be owner of filespace %s"),
 	/* ACL_KIND_EXTPROTOCOL */
@@ -2274,8 +2275,7 @@ pg_language_aclmask(Oid lang_oid, Oid roleid,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("language with OID %u does not exist", lang_oid)));
 
-	/* XXX pg_language should have an owner column, but doesn't */
-	ownerId = BOOTSTRAP_SUPERUSERID;
+	ownerId = ((Form_pg_language) GETSTRUCT(tuple))->lanowner;
 
 	aclDatum = caql_getattr(pcqCtx, Anum_pg_language_lanacl,
 							&isNull);
@@ -2409,14 +2409,7 @@ pg_tablespace_aclmask(Oid spc_oid, Oid roleid,
 	cqContext	cqc;
 	cqContext  *pcqCtx;
 
-	/*
-	 * Only shared relations can be stored in global space; don't let even
-	 * superusers override this, except during bootstrap and upgrade.
-	 */
-	if (spc_oid == GLOBALTABLESPACE_OID && !IsBootstrapProcessingMode())
-		return 0;
-
-	/* Otherwise, superusers bypass all permission checking. */
+	/* Superusers bypass all permission checking. */
 	if (superuser_arg(roleid))
 		return mask;
 
@@ -2753,6 +2746,34 @@ pg_proc_ownercheck(Oid proc_oid, Oid roleid)
 }
 
 /*
+ * Ownership check for a procedural language (specified by OID)
+ */
+bool
+pg_language_ownercheck(Oid lan_oid, Oid roleid)
+{
+	HeapTuple	tuple;
+	Oid			ownerId;
+
+	/* Superusers bypass all permission checking. */
+	if (superuser_arg(roleid))
+		return true;
+
+	tuple = SearchSysCache(LANGOID,
+						   ObjectIdGetDatum(lan_oid),
+						   0, 0, 0);
+	if (!HeapTupleIsValid(tuple))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_FUNCTION),
+				 errmsg("language with OID %u does not exist", lan_oid)));
+
+	ownerId = ((Form_pg_language) GETSTRUCT(tuple))->lanowner;
+
+	ReleaseSysCache(tuple);
+
+	return has_privs_of_role(roleid, ownerId);
+}
+
+/*
  * Ownership check for a namespace (specified by OID).
  */
 bool
@@ -2894,6 +2915,65 @@ pg_opfamily_ownercheck(Oid opf_oid, Oid roleid)
 
 	return has_privs_of_role(roleid, ownerId);
 }
+
+/*
+ * Ownership check for a text search dictionary (specified by OID).
+ */
+bool
+pg_ts_dict_ownercheck(Oid dict_oid, Oid roleid)
+{
+	HeapTuple	tuple;
+	Oid			ownerId;
+
+	/* Superusers bypass all permission checking. */
+	if (superuser_arg(roleid))
+		return true;
+
+	tuple = SearchSysCache(TSDICTOID,
+						   ObjectIdGetDatum(dict_oid),
+						   0, 0, 0);
+	if (!HeapTupleIsValid(tuple))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("text search dictionary with OID %u does not exist",
+						dict_oid)));
+
+	ownerId = ((Form_pg_ts_dict) GETSTRUCT(tuple))->dictowner;
+
+	ReleaseSysCache(tuple);
+
+	return has_privs_of_role(roleid, ownerId);
+}
+
+/*
+ * Ownership check for a text search configuration (specified by OID).
+ */
+bool
+pg_ts_config_ownercheck(Oid cfg_oid, Oid roleid)
+{
+	HeapTuple	tuple;
+	Oid			ownerId;
+
+	/* Superusers bypass all permission checking. */
+	if (superuser_arg(roleid))
+		return true;
+
+	tuple = SearchSysCache(TSCONFIGOID,
+						   ObjectIdGetDatum(cfg_oid),
+						   0, 0, 0);
+	if (!HeapTupleIsValid(tuple))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+			   errmsg("text search configuration with OID %u does not exist",
+					  cfg_oid)));
+
+	ownerId = ((Form_pg_ts_config) GETSTRUCT(tuple))->cfgowner;
+
+	ReleaseSysCache(tuple);
+
+	return has_privs_of_role(roleid, ownerId);
+}
+
 
 /*
  * Ownership check for a database (specified by OID).

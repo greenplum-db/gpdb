@@ -33,7 +33,7 @@ ERROR:  CREATE INDEX CONCURRENTLY is not supported
 alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
 drop index qp_misc_jiras.tbl1318_daa;
 ERROR:  index "tbl1318_daa" does not exist
-alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
+alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa::text);
 drop table qp_misc_jiras.tbl1318;
 create table qp_misc_jiras.tbl1318(dummy integer, aa text not null);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'dummy' as the Greenplum Database data distribution key for this table.
@@ -1496,12 +1496,12 @@ NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_33" for table "t
 NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_34" for table "tbl6419_test"
 NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_35" for table "tbl6419_test"
 insert into qp_misc_jiras.tbl6419_test values( 123, '2009-06-01', 12, '2009-06-01 01:01:01', 'aaaaaa');
-select * from qp_misc_jiras.tbl6419_test where icedt = (select partitionrangestart FROM pg_partitions where tablename='test1' and schemaname='public' and partitionrank=1);
+select * from qp_misc_jiras.tbl6419_test where icedt::text = (select partitionrangestart FROM pg_partitions where tablename='test1' and schemaname='public' and partitionrank=1);
  lstg_id | icedt | icehr | cre_time | lstg_desc_txt 
 ---------+-------+-------+----------+---------------
 (0 rows)
 
-select * from qp_misc_jiras.tbl6419_test where '2009-12-12'::date = (select 'test'::text);
+select * from qp_misc_jiras.tbl6419_test where '2009-12-12'::date::text = (select 'test'::text);
  lstg_id | icedt | icehr | cre_time | lstg_desc_txt 
 ---------+-------+-------+----------+---------------
 (0 rows)
@@ -1756,16 +1756,15 @@ NOTICE:  CREATE TABLE will create partition "tbl6833_anl_1_prt_bb_1" for table "
 NOTICE:  CREATE TABLE will create partition "tbl6833_anl_1_prt_bb_2" for table "tbl6833_anl"
 analyze qp_misc_jiras.tbl6833_anl;
 explain select * from qp_misc_jiras.tbl6833_anl; -- should not hit cdbRelSize();
-                                                QUERY PLAN                                                 
------------------------------------------------------------------------------------------------------------
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
    ->  Sequence  (cost=0.00..431.00 rows=1 width=12)
-         ->  Partition Selector for tbl6833_anl (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-               Partitions selected:  2 (out of 2)
+         Partitions selected: 2 (out of 2)
          ->  Dynamic Table Scan on tbl6833_anl (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=12)
  Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(7 rows)
+ Optimizer status: PQO version 1.633
+(6 rows)
 
 select relname, reltuples, relpages from pg_class where relname like 'tbl6833_anl%'; -- should show relpages = 1.0
         relname         | reltuples | relpages 
@@ -1780,16 +1779,15 @@ NOTICE:  CREATE TABLE will create partition "tbl6833_vac_1_prt_bb_1" for table "
 NOTICE:  CREATE TABLE will create partition "tbl6833_vac_1_prt_bb_2" for table "tbl6833_vac"
 vacuum qp_misc_jiras.tbl6833_vac;
 explain select * from qp_misc_jiras.tbl6833_vac; -- should not hit cdbRelSize();
-                                                QUERY PLAN                                                 
------------------------------------------------------------------------------------------------------------
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
    ->  Sequence  (cost=0.00..431.00 rows=1 width=12)
-         ->  Partition Selector for tbl6833_vac (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
-               Partitions selected:  2 (out of 2)
+         Partitions selected: 2 (out of 2)
          ->  Dynamic Table Scan on tbl6833_vac (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=12)
  Settings:  enable_indexscan=off; enable_nestloop=on; enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(7 rows)
+ Optimizer status: PQO version 1.633
+(6 rows)
 
 select relname, reltuples, relpages from pg_class where relname like 'tbl6833_vac%'; -- should show relpages = 1.0
         relname         | reltuples | relpages 
@@ -2733,7 +2731,7 @@ select gp_segment_id, a, func2(a) from qp_misc_jiras.fim1; -- we should disallow
 ERROR:  function cannot execute on segment because it accesses relation "qp_misc_jiras.pg_foo" (functions.c:155)  (seg1 slice1 nikos-mac:25433 pid=95127)
 DETAIL:  
 SQL statement "select count(*) from qp_misc_jiras.pg_foo"
-PL/pgSQL function "func2" line 4 at execute statement
+PL/pgSQL function "func2" line 4 at EXECUTE statement
 create or replace function func3(int) returns int as $$
 declare
 	t1 int;

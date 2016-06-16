@@ -8,7 +8,7 @@
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  *
- *	  $PostgreSQL: pgsql/src/include/utils/guc_tables.h,v 1.29.2.2 2009/12/09 21:58:30 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/include/utils/guc_tables.h,v 1.38.2.2 2009/12/09 21:58:17 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -120,18 +120,27 @@ enum config_group
 };
 
 /*
- * Stack entry for saving the state of a variable prior to the current
- * transaction
+ * Stack entry for saving the state a variable had prior to an uncommitted
+ * transactional change
  */
+typedef enum
+{
+	/* This is almost GucAction, but we need a fourth state for SET+LOCAL */
+	GUC_SAVE,					/* entry caused by function SET option */
+	GUC_SET,					/* entry caused by plain SET command */
+	GUC_LOCAL,					/* entry caused by SET LOCAL command */
+	GUC_SET_LOCAL				/* entry caused by SET then SET LOCAL */
+} GucStackState;
+
 typedef struct guc_stack
 {
 	struct guc_stack *prev;		/* previous stack item, if any */
-	int			nest_level;		/* nesting depth of cur transaction */
-	int			status;			/* previous status bits, see below */
-	GucSource	tentative_source;		/* source of the tentative_value */
-	GucSource	source;			/* source of the actual value */
-	union config_var_value tentative_val;		/* previous tentative val */
-	union config_var_value value;		/* previous actual value */
+	int			nest_level;		/* nesting depth at which we made entry */
+	GucStackState state;		/* see enum above */
+	GucSource	source;			/* source of the prior value */
+	union config_var_value prior;		/* previous value of variable */
+	union config_var_value masked;		/* SET value in a GUC_SET_LOCAL entry */
+	/* masked value's source must be PGC_S_SESSION, so no need to store it */
 } GucStack;
 
 /*
@@ -154,9 +163,8 @@ struct config_generic
 	enum config_type vartype;	/* type of variable (set only at startup) */
 	int			status;			/* status bits, see below */
 	GucSource	reset_source;	/* source of the reset_value */
-	GucSource	tentative_source;		/* source of the tentative_value */
 	GucSource	source;			/* source of the current actual value */
-	GucStack   *stack;			/* stacked outside-of-transaction states */
+	GucStack   *stack;			/* stacked prior values */
 };
 
 /* bit values in flags field */
@@ -171,7 +179,7 @@ struct config_generic
 #define GUC_SUPERUSER_ONLY		0x0100	/* show only to superusers */
 #define GUC_IS_NAME				0x0200	/* limit string to NAMEDATALEN-1 */
 
-#define GUC_UNIT_KB				0x0400	/* value is in 1 kB */
+#define GUC_UNIT_KB				0x0400	/* value is in kilobytes */
 #define GUC_UNIT_BLOCKS			0x0800	/* value is in blocks */
 #define GUC_UNIT_XBLOCKS		0x0C00	/* value is in xlog blocks */
 #define GUC_UNIT_MEMORY			0x0C00	/* mask for KB, BLOCKS, XBLOCKS */
@@ -188,9 +196,11 @@ struct config_generic
 #define GUC_DISALLOW_USER_SET  0x20000 /* Do not allow this GUC to be set by the user */
 
 /* bit values in status field */
-#define GUC_HAVE_TENTATIVE	0x0001		/* tentative value is defined */
-#define GUC_HAVE_LOCAL		0x0002		/* a SET LOCAL has been executed */
-#define GUC_HAVE_STACK		0x0004		/* we have stacked prior value(s) */
+#define GUC_IS_IN_FILE		0x0001		/* found it in config file */
+/*
+ * Caution: the GUC_IS_IN_FILE bit is transient state for ProcessConfigFile.
+ * Do not assume that its value represents useful information elsewhere.
+ */
 
 /* upper limit for GUC variables measured in kilobytes of memory */
 #if SIZEOF_SIZE_T > 4
@@ -204,58 +214,53 @@ struct config_generic
 struct config_bool
 {
 	struct config_generic gen;
-	/* these fields must be set correctly in initial value: */
-	/* (all but reset_val are constants) */
+	/* constant fields, must be set correctly in initial value: */
 	bool	   *variable;
-	bool		reset_val;
+	bool		boot_val;
 	GucBoolAssignHook assign_hook;
 	GucShowHook show_hook;
 	/* variable fields, initialized at runtime: */
-	bool		tentative_val;
+	bool		reset_val;
 };
 
 struct config_int
 {
 	struct config_generic gen;
-	/* these fields must be set correctly in initial value: */
-	/* (all but reset_val are constants) */
+	/* constant fields, must be set correctly in initial value: */
 	int		   *variable;
-	int			reset_val;
+	int			boot_val;
 	int			min;
 	int			max;
 	GucIntAssignHook assign_hook;
 	GucShowHook show_hook;
 	/* variable fields, initialized at runtime: */
-	int			tentative_val;
+	int			reset_val;
 };
 
 struct config_real
 {
 	struct config_generic gen;
-	/* these fields must be set correctly in initial value: */
-	/* (all but reset_val are constants) */
+	/* constant fields, must be set correctly in initial value: */
 	double	   *variable;
-	double		reset_val;
+	double		boot_val;
 	double		min;
 	double		max;
 	GucRealAssignHook assign_hook;
 	GucShowHook show_hook;
 	/* variable fields, initialized at runtime: */
-	double		tentative_val;
+	double		reset_val;
 };
 
 struct config_string
 {
 	struct config_generic gen;
-	/* these fields must be set correctly in initial value: */
-	/* (all are constants) */
+	/* constant fields, must be set correctly in initial value: */
 	char	  **variable;
 	const char *boot_val;
 	GucStringAssignHook assign_hook;
 	GucShowHook show_hook;
 	/* variable fields, initialized at runtime: */
 	char	   *reset_val;
-	char	   *tentative_val;
 };
 
 /* constant tables corresponding to enums above and in guc.h */

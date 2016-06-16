@@ -352,6 +352,85 @@ SELECT '2006-08-13 12:34:56'::timestamptz;
  2006-08-13 12:34:56-07
 (1 row)
 
+-- SET LOCAL persists through RELEASE (which was not true in 8.0-8.2)
+BEGIN;
+SHOW vacuum_cost_delay;
+ vacuum_cost_delay 
+-------------------
+ 400ms
+(1 row)
+
+SHOW datestyle;
+ DateStyle 
+-----------
+ ISO, YMD
+(1 row)
+
+SELECT '2006-08-13 12:34:56'::timestamptz;
+      timestamptz       
+------------------------
+ 2006-08-13 12:34:56-07
+(1 row)
+
+SAVEPOINT sp;
+SET LOCAL vacuum_cost_delay TO 300;
+SHOW vacuum_cost_delay;
+ vacuum_cost_delay 
+-------------------
+ 300ms
+(1 row)
+
+SET LOCAL datestyle = 'Postgres, MDY';
+SHOW datestyle;
+   DateStyle   
+---------------
+ Postgres, MDY
+(1 row)
+
+SELECT '2006-08-13 12:34:56'::timestamptz;
+         timestamptz          
+------------------------------
+ Sun Aug 13 12:34:56 2006 PDT
+(1 row)
+
+RELEASE SAVEPOINT sp;
+SHOW vacuum_cost_delay;
+ vacuum_cost_delay 
+-------------------
+ 300ms
+(1 row)
+
+SHOW datestyle;
+   DateStyle   
+---------------
+ Postgres, MDY
+(1 row)
+
+SELECT '2006-08-13 12:34:56'::timestamptz;
+         timestamptz          
+------------------------------
+ Sun Aug 13 12:34:56 2006 PDT
+(1 row)
+
+ROLLBACK;
+SHOW vacuum_cost_delay;
+ vacuum_cost_delay 
+-------------------
+ 400ms
+(1 row)
+
+SHOW datestyle;
+ DateStyle 
+-----------
+ ISO, YMD
+(1 row)
+
+SELECT '2006-08-13 12:34:56'::timestamptz;
+      timestamptz       
+------------------------
+ 2006-08-13 12:34:56-07
+(1 row)
+
 -- SET followed by SET LOCAL
 BEGIN;
 SET vacuum_cost_delay TO 400;
@@ -423,6 +502,212 @@ SELECT '2006-08-13 12:34:56'::timestamptz;
          timestamptz          
 ------------------------------
  Sun Aug 13 12:34:56 2006 PDT
+(1 row)
+
+--
+-- Test DISCARD TEMP
+--
+CREATE TEMP TABLE reset_test ( data text ) ON COMMIT DELETE ROWS;
+SELECT relname FROM pg_class WHERE relname = 'reset_test';
+  relname   
+------------
+ reset_test
+(1 row)
+
+DISCARD TEMP;
+SELECT relname FROM pg_class WHERE relname = 'reset_test';
+ relname 
+---------
+(0 rows)
+
+--
+-- Test DISCARD ALL
+--
+-- do changes
+DECLARE foo CURSOR WITH HOLD FOR SELECT 1;
+PREPARE foo AS SELECT 1;
+LISTEN foo_event;
+SET vacuum_cost_delay = 13;
+CREATE TEMP TABLE tmp_foo (data text) ON COMMIT DELETE ROWS;
+CREATE ROLE temp_reset_user;
+SET SESSION AUTHORIZATION temp_reset_user;
+-- look changes
+SELECT relname FROM pg_listener;
+  relname  
+-----------
+ foo_event
+(1 row)
+
+SELECT name FROM pg_prepared_statements;
+ name 
+------
+ foo
+(1 row)
+
+SELECT name FROM pg_cursors;
+ name 
+------
+ foo
+(1 row)
+
+SHOW vacuum_cost_delay;
+ vacuum_cost_delay 
+-------------------
+ 13ms
+(1 row)
+
+SELECT relname from pg_class where relname = 'tmp_foo';
+ relname 
+---------
+ tmp_foo
+(1 row)
+
+SELECT current_user = 'temp_reset_user';
+ ?column? 
+----------
+ t
+(1 row)
+
+-- discard everything
+DISCARD ALL;
+-- look again
+SELECT relname FROM pg_listener;
+ relname 
+---------
+(0 rows)
+
+SELECT name FROM pg_prepared_statements;
+ name 
+------
+(0 rows)
+
+SELECT name FROM pg_cursors;
+ name 
+------
+(0 rows)
+
+SHOW vacuum_cost_delay;
+ vacuum_cost_delay 
+-------------------
+ 0
+(1 row)
+
+SELECT relname from pg_class where relname = 'tmp_foo';
+ relname 
+---------
+(0 rows)
+
+SELECT current_user = 'temp_reset_user';
+ ?column? 
+----------
+ f
+(1 row)
+
+DROP ROLE temp_reset_user;
+--
+-- Tests for function-local GUC settings
+--
+set regex_flavor = advanced;
+create function report_guc(text) returns text as
+$$ select current_setting($1) $$ language sql
+set regex_flavor = basic;
+select report_guc('regex_flavor'), current_setting('regex_flavor');
+ report_guc | current_setting 
+------------+-----------------
+ basic      | advanced
+(1 row)
+
+-- this should draw only a warning
+alter function report_guc(text) set search_path = no_such_schema;
+NOTICE:  schema "no_such_schema" does not exist
+-- with error occurring here
+select report_guc('regex_flavor'), current_setting('regex_flavor');
+ERROR:  schema "no_such_schema" does not exist
+alter function report_guc(text) reset search_path set regex_flavor = extended;
+select report_guc('regex_flavor'), current_setting('regex_flavor');
+ report_guc | current_setting 
+------------+-----------------
+ extended   | advanced
+(1 row)
+
+alter function report_guc(text) reset all;
+select report_guc('regex_flavor'), current_setting('regex_flavor');
+ report_guc | current_setting 
+------------+-----------------
+ advanced   | advanced
+(1 row)
+
+-- SET LOCAL is restricted by a function SET option
+create or replace function myfunc(int) returns text as $$
+begin
+  set local regex_flavor = extended;
+  return current_setting('regex_flavor');
+end $$
+language plpgsql
+set regex_flavor = basic;
+select myfunc(0), current_setting('regex_flavor');
+  myfunc  | current_setting 
+----------+-----------------
+ extended | advanced
+(1 row)
+
+alter function myfunc(int) reset all;
+select myfunc(0), current_setting('regex_flavor');
+  myfunc  | current_setting 
+----------+-----------------
+ extended | advanced
+(1 row)
+
+set regex_flavor = advanced;
+-- but SET isn't
+create or replace function myfunc(int) returns text as $$
+begin
+  set regex_flavor = extended;
+  return current_setting('regex_flavor');
+end $$
+language plpgsql
+set regex_flavor = basic;
+select myfunc(0), current_setting('regex_flavor');
+  myfunc  | current_setting 
+----------+-----------------
+ extended | advanced
+(1 row)
+
+-- In GPDB, the plan looks somewhat different from what you get on
+-- PostgreSQL, so that the current_setting() in previous query is
+-- evaluated before myfunc(0), and therefore it shows 'advanced'.
+-- Query again to show that the myfunc(0) call actually changed
+-- the setting.
+select current_setting('regex_flavor');
+ current_setting 
+-----------------
+ extended
+(1 row)
+
+set regex_flavor = advanced;
+-- it should roll back on error, though
+create or replace function myfunc(int) returns text as $$
+begin
+  set regex_flavor = extended;
+  perform 1/$1;
+  return current_setting('regex_flavor');
+end $$
+language plpgsql
+set regex_flavor = basic;
+select myfunc(0);
+ERROR:  division by zero
+CONTEXT:  SQL statement "SELECT  1/ $1 "
+PL/pgSQL function "myfunc" line 3 at PERFORM
+select current_setting('regex_flavor');
+ current_setting 
+-----------------
+ advanced
+(1 row)
+
+select myfunc(1), current_setting('regex_flavor');
+  myfunc  | current_setting 
+----------+-----------------
+ extended | advanced
 (1 row)
 
 SELECT min_val, max_val FROM pg_settings WHERE name = 'gp_resqueue_priority_cpucores_per_segment';

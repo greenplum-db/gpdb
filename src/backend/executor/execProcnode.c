@@ -13,7 +13,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execProcnode.c,v 1.60 2007/01/05 22:19:27 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execProcnode.c,v 1.62 2008/01/01 19:45:49 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -710,11 +710,11 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 		SubPlan    *subplan = (SubPlan *) lfirst(l);
 		SubPlanState *sstate;
 
+		Assert(IsA(subplan, SubPlan));
+
 		setSubplanSliceId(subplan, estate);
 
-		sstate = ExecInitExprInitPlan(subplan, result);
-		ExecInitSubPlan(sstate, estate, eflags);
-
+		sstate = ExecInitSubPlan(subplan, result);
 		subps = lappend(subps, sstate);
 	}
 	if (result != NULL)
@@ -722,30 +722,6 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 
 	estate->currentSliceIdInPlan = origSliceIdInPlan;
 	estate->currentExecutingSliceId = origExecutingSliceId;
-
-	/*
-	 * Initialize any subPlans present in this node.  These were found by
-	 * ExecInitExpr during initialization of the PlanState.  Note we must do
-	 * this after initializing initPlans, in case their arguments contain
-	 * subPlans (is that actually possible? perhaps not).
-	 */
-	if (result != NULL)
-	{
-		foreach(l, result->subPlan)
-		{
-			SubPlanState *sstate = (SubPlanState *) lfirst(l);
-			
-			Assert(IsA(sstate, SubPlanState));
-
-			/**
-			 * Check if this subplan is an initplan. If so, we shouldn't initialize it again.
-			 */
-			if (sstate->planstate == NULL)
-			{
-				ExecInitSubPlan(sstate, estate, eflags);
-			}
-		}
-	}
 
 	/* Set up instrumentation for this node if requested */
 	if (estate->es_instrument && result != NULL)
@@ -1228,14 +1204,14 @@ Exec_Jmp_Done:
 			Assert(subplanState != NULL &&
 				   subplanState->planstate != NULL);
 
-			bool subplanAtTopNestLevel = (node->state->subplanLevel == 0);
+			bool subplanAtTopNestLevel = (node->state->currentSubplanLevel == 0);
 
 			if (subplanAtTopNestLevel)
 			{
 				ExecSquelchNode(subplanState->planstate);
+				ExecEagerFreeChildNodes(subplanState->planstate, subplanAtTopNestLevel);
+				ExecEagerFree(subplanState->planstate);
 			}
-			ExecEagerFreeChildNodes(subplanState->planstate, subplanAtTopNestLevel);
-			ExecEagerFree(subplanState->planstate);
 		}
 	}
 
@@ -1545,8 +1521,6 @@ ExecUpdateTransportState(PlanState *node, ChunkTransportState *state)
 void
 ExecEndNode(PlanState *node)
 {
-	ListCell   *subp;
-
 	/*
 	 * do nothing when we get to the end of a leaf on tree.
 	 */
@@ -1558,15 +1532,8 @@ ExecEndNode(PlanState *node)
 	int origSliceIdInPlan = estate->currentSliceIdInPlan;
 	int origExecutingSliceId = estate->currentExecutingSliceId;
 
-	/* Clean up initPlans and subPlans */
-	foreach(subp, node->initPlan)
-		ExecEndSubPlan((SubPlanState *) lfirst(subp));
-
 	estate->currentSliceIdInPlan = origSliceIdInPlan;
 	estate->currentExecutingSliceId = origExecutingSliceId;
-
-	foreach(subp, node->subPlan)
-		ExecEndSubPlan((SubPlanState *) lfirst(subp));
 
 	if (node->chgParam != NULL)
 	{

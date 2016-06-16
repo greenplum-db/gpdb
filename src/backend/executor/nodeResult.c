@@ -39,7 +39,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeResult.c,v 1.39 2007/02/16 03:49:04 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeResult.c,v 1.42 2008/01/01 19:45:49 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -95,7 +95,6 @@ static TupleTableSlot *NextInputSlot(ResultState *node)
 
 		node->ps.ps_OuterTupleSlot = candidateInputSlot;
 		econtext->ecxt_outertuple = candidateInputSlot;
-		econtext->ecxt_scantuple = candidateInputSlot;
 
 		/**
 		 * Extract out qual in case result node is also performing filtering.
@@ -194,7 +193,6 @@ ExecResult(ResultState *node)
 
 			node->ps.ps_OuterTupleSlot = inputSlot;
 			econtext->ecxt_outertuple = inputSlot;
-			econtext->ecxt_scantuple = inputSlot;
 
 			ExprDoneCond isDone;
 
@@ -480,9 +478,9 @@ ExecReScanResult(ResultState *node, ExprContext *exprCtxt)
 
 	/*
 	 * If chgParam of subnode is not null then plan will be re-scanned by
-	 * first ExecProcNode.  However, if caller is passing us an exprCtxt
-	 * then forcibly rescan the subnode now, so that we can pass the
-	 * exprCtxt down to the subnode (needed for gated indexscan).
+	 * first ExecProcNode.	However, if caller is passing us an exprCtxt then
+	 * forcibly rescan the subnode now, so that we can pass the exprCtxt down
+	 * to the subnode (needed for gated indexscan).
 	 */
 	if (node->ps.lefttree &&
 		(node->ps.lefttree->chgParam == NULL || exprCtxt != NULL))

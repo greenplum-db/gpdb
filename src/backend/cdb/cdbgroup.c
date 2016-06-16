@@ -1004,7 +1004,7 @@ make_one_stage_agg_plan(PlannerInfo *root,
 		 * base plan can't project. (This may be unnecessary, but, if so,
 		 * the Result node will be removed later.)
 		 */
-		result_plan = plan_pushdown_tlist(result_plan, sub_tlist);
+		result_plan = plan_pushdown_tlist(root, result_plan, sub_tlist);
 
 		Assert(result_plan->flow); 
     
@@ -1251,7 +1251,7 @@ make_two_stage_agg_plan(PlannerInfo *root,
 		 * (Though the result node may not always be necessary, it is safe,
 		 * and superfluous Result nodes are removed later.)
 		 */
-		result_plan = plan_pushdown_tlist(result_plan, ctx->sub_tlist);
+		result_plan = plan_pushdown_tlist(root, result_plan, ctx->sub_tlist);
 
 		/* Account for the cost of evaluation of the sub_tlist. */
 		cost_qual_eval(&tlist_cost, ctx->sub_tlist, root);
@@ -1651,7 +1651,7 @@ make_three_stage_agg_plan(PlannerInfo *root, MppGroupContext *ctx)
 		 * base plan can't project. (This may be unnecessary, but, if so,
 		 * the Result node will be removed later.)
 		 */
-		result_plan = plan_pushdown_tlist(result_plan, ctx->sub_tlist);
+		result_plan = plan_pushdown_tlist(root, result_plan, ctx->sub_tlist);
 
 		Assert(result_plan->flow); 
 		
@@ -3974,7 +3974,7 @@ add_second_stage_agg(PlannerInfo *root,
 	 *
 	 * The result of the preliminary aggregation (represented by lower_tlist)
 	 * may contain targets with no representatives in the range of its outer 
-	 * relation.  We resolve this be treating the preliminary aggregation as 
+	 * relation.  We resolve this by treating the preliminary aggregation as
 	 * a subquery.
 	 *
 	 * However, this breaks the correspondence between the Plan tree and
@@ -4019,8 +4019,8 @@ add_second_stage_agg(PlannerInfo *root,
 				else
 				{
 					const char *fmt = "unnamed_attr_%d";
-					char buf[32]; /* big enuf for fmt */
-					sprintf(buf,fmt,tle->resno);
+					char buf[32]; /* big enough for fmt */
+					sprintf(buf, fmt, tle->resno);
 					tle->resname = pstrdup(buf);
 				}
 			}
@@ -4058,6 +4058,12 @@ add_second_stage_agg(PlannerInfo *root,
 		parse->targetList = copyObject(upper_tlist); /* Match range. */
 	}
 
+	/*
+	 * Ensure that the plan we're going to attach to the subquery scan has all the
+	 * parameter fields figured out.
+	 */
+	SS_finalize_plan(root, result_plan, false);
+
 	result_plan = add_subqueryscan(root, p_current_pathkeys, 
 								   1, subquery, result_plan);
 
@@ -4088,16 +4094,20 @@ add_second_stage_agg(PlannerInfo *root,
 								  agg_node->lefttree, 
 								  (*p_current_pathkeys != NIL)
 								   && aggstrategy != AGG_HASHED );
-	
+
 	/* 
-	 * Since the rtable has changed, we had better recreate a RelOptInfo entry for it.
+	 * Since the rtable has changed, we had better recreate a RelOptInfo entry
+	 * for it. Make a copy of the groupClause since freeing the arrays can pull
+	 * out references still in use from underneath it.
 	 */
+	root->parse->groupClause = copyObject(root->parse->groupClause);
+
 	if (root->simple_rel_array)
 		pfree(root->simple_rel_array);
-	root->simple_rel_array_size = list_length(parse->rtable) + 1;
-	root->simple_rel_array = (RelOptInfo **)
-		palloc0(root->simple_rel_array_size * sizeof(RelOptInfo *));
-	build_simple_rel(root, 1, RELOPT_BASEREL);
+	if (root->simple_rte_array)
+		pfree(root->simple_rte_array);
+
+	rebuild_simple_rel_and_rte(root);
 
 	return agg_node;
 }
@@ -4221,6 +4231,7 @@ reconstruct_pathkeys(PlannerInfo *root, List *pathkeys, int *resno_map,
 	foreach(i, pathkeys)
 	{
 		PathKey    *pathkey = (PathKey *) lfirst(i);
+		bool		found = false;
 
 		foreach(j, pathkey->pk_eclass->ec_members)
 		{
@@ -4239,13 +4250,18 @@ reconstruct_pathkeys(PlannerInfo *root, List *pathkeys, int *resno_map,
 
 				new_eclass = get_eclass_for_sort_expr(root, new_tle->expr,
 													  em->em_datatype,
-													  pathkey->pk_eclass->ec_opfamilies);
+													  pathkey->pk_eclass->ec_opfamilies, 0);
 				new_pathkey = makePathKey(new_eclass, pathkey->pk_opfamily, pathkey->pk_strategy,
 										  pathkey->pk_nulls_first);
 
 				new_pathkeys = lappend(new_pathkeys, new_pathkey);
+				found = true;
 				break;
 			}
+		}
+		if (!found)
+		{	
+			new_pathkeys = lappend(new_pathkeys, copyObject(pathkey));
 		}
 	}
 
@@ -4367,7 +4383,7 @@ Cost cost_1phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInf
 			/* GroupAgg */
 			if ( ! is_sorted )
 			{
-				add_sort_cost(NULL, &input_dummy, ctx->numGroupCols, NULL, NULL);
+				add_sort_cost(NULL, &input_dummy, ctx->numGroupCols, NULL, NULL, -1.0);
 			}
 			add_agg_cost(NULL, &input_dummy, 
 						 ctx->sub_tlist, (List*)root->parse->havingQual,
@@ -4387,7 +4403,7 @@ Cost cost_1phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInf
 			double ngrps = *(ctx->p_dNumGroups);
 			double nsorts = ngrps * ctx->numDistinctCols;
 			double avgsize = input_dummy.plan_rows / ngrps;
-			cost_sort(&path_dummy, NULL, NIL, 0.0, avgsize, 32);
+			cost_sort(&path_dummy, NULL, NIL, 0.0, avgsize, 32, -1);
 			input_dummy.total_cost += nsorts * path_dummy.total_cost;
 		}
 	}
@@ -4475,7 +4491,7 @@ Cost cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInf
 			/* Preliminary GroupAgg */
 			if ( ! is_sorted )
 			{
-				add_sort_cost(NULL, &input_dummy, ctx->numGroupCols, NULL, NULL);
+				add_sort_cost(NULL, &input_dummy, ctx->numGroupCols, NULL, NULL, -1.0);
 			}
 			add_agg_cost(NULL, &input_dummy, 
 						NIL, NIL, /* Don't know preliminary tlist, qual IS NIL */
@@ -4497,7 +4513,7 @@ Cost cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInf
 			
 			Assert(ctx->numDistinctCols == 1);
 			
-			cost_sort(&path_dummy, NULL, NIL, input_dummy.total_cost, avgsize, 32);
+			cost_sort(&path_dummy, NULL, NIL, input_dummy.total_cost, avgsize, 32, -1.0);
 			run_cost = path_dummy.total_cost - path_dummy.startup_cost;
 			input_dummy.total_cost += path_dummy.startup_cost + ngrps * run_cost;
 		}
@@ -4551,7 +4567,7 @@ Cost cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInf
 		else
 		{
 			/* GroupAgg */
-			add_sort_cost(NULL, &input_dummy, ctx->numGroupCols, NULL, NULL);
+			add_sort_cost(NULL, &input_dummy, ctx->numGroupCols, NULL, NULL, -1.0);
 			add_agg_cost(NULL, &input_dummy, 
 						NIL, NIL, /* Don't know tlist or qual */
 						 AGG_SORTED, false, 
@@ -5013,7 +5029,7 @@ Cost incremental_sort_cost(double rows, int width, int numKeyCols)
 	dummy.plan_rows = rows;
 	dummy.plan_width = width;
 	
-	add_sort_cost(NULL, &dummy, numKeyCols, NULL, NULL);
+	add_sort_cost(NULL, &dummy, numKeyCols, NULL, NULL, -1.0);
 	
 	return dummy.total_cost;
 }	
@@ -5088,8 +5104,26 @@ choose_deduplicate(PlannerInfo *root, List *sortExprs,
 	cost_sort(&dummy_path, root, NIL,
 			  input_plan->total_cost,
 			  input_plan->plan_rows,
-			  input_plan->plan_width);
+			  input_plan->plan_width, -1.0);
 	naive_cost = dummy_path.total_cost;
+
+	/*
+	 * Make a flattened version of the rangetable. estimate_num_groups()
+	 * needs it. It is normally created later in the planning process,
+	 * in query_planner(), but since we want to call estimate_num_groups()
+	 * before query_planner(), we have to build it here.
+	 */
+	root->simple_rel_array_size = list_length(root->parse->rtable) + 1;
+	root->simple_rte_array = (RangeTblEntry **)
+		palloc0(root->simple_rel_array_size * sizeof(RangeTblEntry *));
+	int rti = 1;
+	ListCell *lc;
+	foreach(lc, root->parse->rtable)
+	{
+		RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
+
+		root->simple_rte_array[rti++] = rte;
+	}
 
 	/*
 	 * Next, calculate cost of deduplicate.
@@ -5109,8 +5143,10 @@ choose_deduplicate(PlannerInfo *root, List *sortExprs,
 	cost_sort(&dummy_path, root, NIL,
 			  dummy_path.total_cost,
 			  num_distinct,
-			  width);
+			  width, -1.0);
 	dedup_cost = dummy_path.total_cost;
+
+	pfree(root->simple_rte_array);
 
 	if (numGroups)
 		*numGroups = num_distinct;
@@ -5237,8 +5273,13 @@ rebuild_simple_rel_and_rte(PlannerInfo *root)
 	i = 1;
 	foreach (l, root->parse->rtable)
 	{
-		(void) build_simple_rel(root, i, RELOPT_BASEREL);
 		root->simple_rte_array[i] = lfirst(l);
+		i++;
+	}
+	i = 1;
+	foreach (l, root->parse->rtable)
+	{
+		(void) build_simple_rel(root, i, RELOPT_BASEREL);
 		i++;
 	}
 }
@@ -5532,7 +5573,7 @@ make_deduplicate_plan(PlannerInfo *root,
 	/*
 	 * It is doable to just concatenate groupClause and sortClause,
 	 * but it is more semantic to convert sortClause to groupClause.
-	 * Especially we want to use make_pathkeys_from_grouplcause later where
+	 * Especially we want to use make_pathkeys_from_groupclause later where
 	 * sortClause is not handled.
 	 *
 	 * Copy input groupClause, since we change it.
@@ -5600,6 +5641,7 @@ make_deduplicate_plan(PlannerInfo *root,
 
 	use_hashed_grouping = choose_hashed_grouping(root,
 												 group_context->tuple_fraction,
+												 -1.0,
 												 group_context->cheapest_path,
 												 NULL,
 												 groupOperators, numGroupCols, numGroups,
@@ -6021,6 +6063,7 @@ within_agg_construct_inner(PlannerInfo *root,
 	 */
 	use_hashed_grouping = choose_hashed_grouping(root,
 												 group_context->tuple_fraction,
+												 -1.0,
 												 &input_path,
 												 &input_path,
 												 grpOperators, numGroupCols, numGroups,
@@ -6115,17 +6158,12 @@ within_agg_join_plans(PlannerInfo *root,
 	const Index		Outer = 1, Inner = 2;
 	List		   *extravars;
 	Var			   *pc_var, *tc_var;
-	int				ngroups;
 
 	/*
 	 * Up to now, these should've been prepared.
 	 */
 	Assert(wag_context->pc_pos > 0);
 	Assert(wag_context->tc_pos > 0);
-
-	ngroups = list_length(root->parse->groupClause);
-	if (list_length(wag_context->current_pathkeys) < ngroups)
-		elog(ERROR, "fewer pathkeys than join clauses");
 
 	/*
 	 * Build target list for grouping columns.
@@ -6212,11 +6250,12 @@ within_agg_join_plans(PlannerInfo *root,
 	 * We choose cartesian product if there is no join clauses, meaning
 	 * no grouping happens.
 	 */
-	if (ngroups > 0)
+	if (root->parse->groupClause != NIL)
 	{
 		int				idx;
 		ListCell	   *lg;
 		ListCell	   *lpk;
+		int			ngroups = list_length(root->parse->groupClause);
 
 		/* Build merge join clauses for grouping columns */
 		mergefamilies = (Oid *) palloc(ngroups * sizeof(Oid));
@@ -6224,7 +6263,7 @@ within_agg_join_plans(PlannerInfo *root,
 		mergenullsfirst = (bool *) palloc(ngroups * sizeof(bool));
 		join_clause = NIL;
 		idx = 0;
-		forboth(lg, root->parse->groupClause, lpk, wag_context->current_pathkeys)
+		forboth(lg, root->parse->groupClause, lpk, root->group_pathkeys)
 		{
 			GroupClause	   *gc = (GroupClause *) lfirst(lg);
 			PathKey		   *pk = (PathKey *) lfirst(lpk);
@@ -6720,7 +6759,7 @@ within_agg_planner(PlannerInfo *root,
 	 */
 	Assert(sub_tlist != NIL);
 	result_plan = create_plan(root, group_context->best_path);
-	result_plan = plan_pushdown_tlist(result_plan, sub_tlist);
+	result_plan = plan_pushdown_tlist(root, result_plan, sub_tlist);
 	Assert(result_plan->flow);
 	current_pathkeys = group_context->best_path->pathkeys;
 

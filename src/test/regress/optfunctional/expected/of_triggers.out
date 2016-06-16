@@ -1,0 +1,304 @@
+-- start_ignore
+create schema triggers;
+set search_path to triggers;
+-- end_ignore
+-- start_ignore
+DROP TABLE IF EXISTS dml_trigger_table;
+NOTICE:  table "dml_trigger_table" does not exist, skipping
+CREATE TABLE dml_trigger_table
+(
+ name varchar(10),
+ age  numeric(10),
+ updated_by varchar
+)
+distributed by (age)
+partition by range (age) (
+	partition p1 start (1) end (25),
+	partition p2 start (26) end (50),
+	partition p3 start (51) end (75)
+	);
+NOTICE:  CREATE TABLE will create partition "dml_trigger_table_1_prt_p1" for table "dml_trigger_table"
+NOTICE:  CREATE TABLE will create partition "dml_trigger_table_1_prt_p2" for table "dml_trigger_table"
+NOTICE:  CREATE TABLE will create partition "dml_trigger_table_1_prt_p3" for table "dml_trigger_table"
+CREATE OR REPLACE FUNCTION dml_function_1() RETURNS trigger AS
+$$
+BEGIN
+   NEW.updated_by = 'a';
+   RETURN NEW;
+END
+$$ LANGUAGE 'plpgsql';
+CREATE TRIGGER dml_trigger_1
+BEFORE INSERT or UPDATE
+ON dml_trigger_table_1_prt_p1
+FOR EACH ROW
+EXECUTE PROCEDURE dml_function_1();-- end_ignore
+--start_ignore
+SET client_min_messages='log';
+INSERT INTO dml_trigger_table VALUES('TEST',10);
+LOG:  statement: INSERT INTO dml_trigger_table VALUES('TEST',10);
+LOG:  2016-05-31 11:34:12:208463 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: INSERT with triggers",
+LOG:  Planner produced plan :0
+SET client_min_messages='notice';
+LOG:  statement: SET client_min_messages='notice';
+--end_ignore
+SELECT * FROM dml_trigger_table order by 2;
+ name | age | updated_by 
+------+-----+------------
+ TEST |  10 | a
+(1 row)
+
+-- start_ignore
+DROP TABLE IF EXISTS dml_trigger_table_1;
+NOTICE:  table "dml_trigger_table_1" does not exist, skipping
+CREATE TABLE dml_trigger_table_1
+(
+ name varchar(10),
+ age  numeric(10)
+)
+distributed by (age);
+INSERT INTO dml_trigger_table_1 VALUES('TEST',10);
+CREATE OR REPLACE FUNCTION dml_function_1() RETURNS trigger AS
+$$
+BEGIN
+   RETURN OLD;
+END
+$$ LANGUAGE 'plpgsql';
+CREATE TRIGGER dml_trigger_1
+BEFORE UPDATE or DELETE
+ON dml_trigger_table_1
+FOR EACH ROW
+EXECUTE PROCEDURE dml_function_1();-- end_ignore
+SELECT * FROM dml_trigger_table_1 order by 2;
+ name | age 
+------+-----
+ TEST |  10
+(1 row)
+
+--start_ignore
+SET client_min_messages='log';
+DELETE FROM dml_trigger_table_1 where age=10;
+LOG:  statement: DELETE FROM dml_trigger_table_1 where age=10;
+LOG:  2016-05-31 11:34:12:293158 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: DELETE with triggers",
+LOG:  Planner produced plan :0
+SET client_min_messages='notice';
+LOG:  statement: SET client_min_messages='notice';
+--end_ignore
+SELECT * FROM dml_trigger_table_1 order by 2;
+ name | age 
+------+-----
+(0 rows)
+
+-- start_ignore
+DROP TABLE IF EXISTS dml_trigger_table_1;
+CREATE TABLE dml_trigger_table_1
+(
+ name varchar(10),
+ age  numeric(10)
+)
+distributed by (age);
+INSERT INTO dml_trigger_table_1 VALUES('TEST',10);
+CREATE OR REPLACE FUNCTION dml_function_1() RETURNS trigger AS
+$$
+BEGIN
+   RETURN OLD;
+END
+$$ LANGUAGE 'plpgsql';
+CREATE TRIGGER dml_trigger_1
+BEFORE UPDATE or INSERT
+ON dml_trigger_table_1
+FOR EACH ROW
+EXECUTE PROCEDURE dml_function_1();-- end_ignore
+SELECT * FROM dml_trigger_table_1 order by 2;
+ name | age 
+------+-----
+ TEST |  10
+(1 row)
+
+--start_ignore
+SET client_min_messages='log';
+DELETE FROM dml_trigger_table_1 where age=10;
+LOG:  statement: DELETE FROM dml_trigger_table_1 where age=10;
+SET client_min_messages='notice';
+LOG:  statement: SET client_min_messages='notice';
+--end_ignore
+SELECT * FROM dml_trigger_table_1 order by 2;
+ name | age 
+------+-----
+(0 rows)
+
+-- start_ignore
+DROP TABLE IF EXISTS dml_trigger_table_1;
+CREATE TABLE dml_trigger_table_1
+(
+ name varchar(10),
+ age  numeric(10),
+ updated_by varchar
+)
+distributed by (age);
+CREATE OR REPLACE FUNCTION dml_function_1() RETURNS trigger AS
+$$
+BEGIN
+   NEW.updated_by = 'a';
+   RETURN NEW;
+END
+$$ LANGUAGE 'plpgsql';
+CREATE TRIGGER dml_trigger_1
+BEFORE INSERT or UPDATE
+ON dml_trigger_table_1
+FOR EACH ROW
+EXECUTE PROCEDURE dml_function_1();-- end_ignore
+--start_ignore
+SET client_min_messages='log';
+INSERT INTO dml_trigger_table_1 VALUES('TEST',10);
+LOG:  statement: INSERT INTO dml_trigger_table_1 VALUES('TEST',10);
+LOG:  2016-05-31 11:34:12:405269 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: INSERT with triggers",
+LOG:  Planner produced plan :0
+LOG:  2016-05-31 11:34:12:412075 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: gp_dist_random",
+CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=2020720"
+LOG:  Planner produced plan :0
+CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=2020720"
+SET client_min_messages='notice';
+LOG:  statement: SET client_min_messages='notice';
+--end_ignore
+SELECT * FROM dml_trigger_table_1 order by 2;
+ name | age | updated_by 
+------+-----+------------
+ TEST |  10 | a
+(1 row)
+
+-- start_ignore
+DROP TABLE IF EXISTS dml_trigger_table_1;
+CREATE TABLE dml_trigger_table_1
+(
+ name varchar(10),
+ age  numeric(10),
+ updated_by varchar
+)
+distributed by (age);
+CREATE OR REPLACE FUNCTION dml_function_1() RETURNS trigger AS
+$$
+BEGIN
+   NEW.updated_by = 'a';
+   RETURN NEW;
+END
+$$ LANGUAGE 'plpgsql';
+CREATE TRIGGER dml_trigger_1
+AFTER DELETE or UPDATE
+ON dml_trigger_table_1
+FOR EACH ROW
+EXECUTE PROCEDURE dml_function_1();-- end_ignore
+--start_ignore
+SET client_min_messages='log';
+INSERT INTO dml_trigger_table_1 VALUES('TEST',10);
+LOG:  statement: INSERT INTO dml_trigger_table_1 VALUES('TEST',10);
+LOG:  2016-05-31 11:34:12:464587 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: gp_dist_random",
+CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=2020750"
+LOG:  Planner produced plan :0
+CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oid(c.oid))::float4[] from gp_dist_random('pg_class') c where c.oid=2020750"
+SET client_min_messages='notice';
+LOG:  statement: SET client_min_messages='notice';
+--end_ignore
+SELECT * FROM dml_trigger_table_1 order by 2;
+ name | age | updated_by 
+------+-----+------------
+ TEST |  10 | 
+(1 row)
+
+-- start_ignore
+DROP TABLE IF EXISTS dml_trigger_table_1;
+CREATE TABLE dml_trigger_table_1
+(
+ name varchar(10),
+ age  numeric(10),
+ updated_by varchar
+)
+distributed by (age);
+INSERT INTO dml_trigger_table_1 VALUES('TEST',10);
+CREATE OR REPLACE FUNCTION dml_function_1() RETURNS trigger AS
+$$
+BEGIN
+   NEW.updated_by = 'a';
+   RETURN NEW;
+END
+$$ LANGUAGE 'plpgsql';
+CREATE TRIGGER dml_trigger_1
+BEFORE INSERT or UPDATE
+ON dml_trigger_table_1
+FOR EACH ROW
+EXECUTE PROCEDURE dml_function_1();-- end_ignore
+SELECT * FROM dml_trigger_table_1 order by 2;
+ name | age | updated_by 
+------+-----+------------
+ TEST |  10 | 
+(1 row)
+
+--start_ignore
+SET client_min_messages='log';
+UPDATE dml_trigger_table_1 set name='NEW TEST' where name='TEST';
+LOG:  statement: UPDATE dml_trigger_table_1 set name='NEW TEST' where name='TEST';
+LOG:  2016-05-31 11:34:12:564410 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: UPDATE with triggers",
+LOG:  Planner produced plan :0
+SET client_min_messages='notice';
+LOG:  statement: SET client_min_messages='notice';
+--end_ignore
+SELECT * FROM dml_trigger_table_1 order by 2;
+   name   | age | updated_by 
+----------+-----+------------
+ NEW TEST |  10 | a
+(1 row)
+
+-- start_ignore
+DROP TABLE IF EXISTS dml_trigger_table_1;
+CREATE TABLE dml_trigger_table_1
+(
+ name varchar(10),
+ age  numeric(10),
+ updated_by varchar
+)
+distributed by (age);
+INSERT INTO dml_trigger_table_1 VALUES('TEST',10);
+CREATE OR REPLACE FUNCTION dml_function_1() RETURNS trigger AS
+$$
+BEGIN
+   NEW.updated_by = 'a';
+   RETURN NEW;
+END
+$$ LANGUAGE 'plpgsql';
+CREATE TRIGGER dml_trigger_1
+BEFORE INSERT or DELETE
+ON dml_trigger_table_1
+FOR EACH ROW
+EXECUTE PROCEDURE dml_function_1();-- end_ignore
+SELECT * FROM dml_trigger_table_1 order by 2;
+ name | age | updated_by 
+------+-----+------------
+ TEST |  10 | 
+(1 row)
+
+--start_ignore
+SET client_min_messages='log';
+UPDATE dml_trigger_table_1 set name='NEW TEST' where name='TEST';
+LOG:  statement: UPDATE dml_trigger_table_1 set name='NEW TEST' where name='TEST';
+SET client_min_messages='notice';
+LOG:  statement: SET client_min_messages='notice';
+--end_ignore
+SELECT * FROM dml_trigger_table_1 order by 2;
+   name   | age | updated_by 
+----------+-----+------------
+ NEW TEST |  10 | 
+(1 row)
+
+-- start_ignore
+drop schema triggers cascade;
+NOTICE:  drop cascades to function dml_function_1()
+NOTICE:  drop cascades to trigger dml_trigger_1 on table dml_trigger_table_1
+NOTICE:  drop cascades to trigger dml_trigger_1 on table dml_trigger_table_1_prt_p1
+NOTICE:  drop cascades to table dml_trigger_table_1
+NOTICE:  drop cascades to table dml_trigger_table_1_prt_p3
+NOTICE:  drop cascades to constraint dml_trigger_table_1_prt_p3_check on table dml_trigger_table_1_prt_p3
+NOTICE:  drop cascades to table dml_trigger_table_1_prt_p2
+NOTICE:  drop cascades to constraint dml_trigger_table_1_prt_p2_check on table dml_trigger_table_1_prt_p2
+NOTICE:  drop cascades to table dml_trigger_table_1_prt_p1
+NOTICE:  drop cascades to constraint dml_trigger_table_1_prt_p1_check on table dml_trigger_table_1_prt_p1
+NOTICE:  drop cascades to table dml_trigger_table
+-- end_ignore

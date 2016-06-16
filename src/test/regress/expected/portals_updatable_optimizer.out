@@ -769,7 +769,7 @@ FETCH 1 FROM c1;
 (1 row)
 
 DELETE FROM ucview WHERE CURRENT OF c1;
-ERROR:  "ucview" is not simply updatable
+ERROR:  WHERE CURRENT OF on a view is not implemented
 ROLLBACK;
 -- Negative, cursor-agnostic: cannot update distribution key
 UPDATE uctest SET f1 = f1 + 10 WHERE CURRENT OF a;

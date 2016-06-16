@@ -170,6 +170,9 @@
 /* Define to 1 if your compiler understands __FUNCTION__. */
 #undef HAVE_FUNCNAME__FUNCTION
 
+/* Define to 1 if you have __sync_lock_test_and_set(int *) and friends. */
+#undef HAVE_GCC_INT_ATOMICS
+
 /* Define to 1 if you have __atomic_compare_exchange_n(int *, int *, int). */
 #undef HAVE_GCC__ATOMIC_INT32_CAS
 
@@ -282,19 +285,19 @@
 /* Define to 1 if you have the <kernel/OS.h> header file. */
 #undef HAVE_KERNEL_OS_H
 
-/* Define to 1 if `e_data' is a member of `krb5_error'. */
+/* Define to 1 if `e_data' is member of `krb5_error'. */
 #undef HAVE_KRB5_ERROR_E_DATA
 
-/* Define to 1 if `text.data' is a member of `krb5_error'. */
+/* Define to 1 if `text.data' is member of `krb5_error'. */
 #undef HAVE_KRB5_ERROR_TEXT_DATA
 
 /* Define to 1 if you have krb5_free_unparsed_name */
 #undef HAVE_KRB5_FREE_UNPARSED_NAME
 
-/* Define to 1 if `client' is a member of `krb5_ticket'. */
+/* Define to 1 if `client' is member of `krb5_ticket'. */
 #undef HAVE_KRB5_TICKET_CLIENT
 
-/* Define to 1 if `enc_part2' is a member of `krb5_ticket'. */
+/* Define to 1 if `enc_part2' is member of `krb5_ticket'. */
 #undef HAVE_KRB5_TICKET_ENC_PART2
 
 /* Define to 1 if you have the <langinfo.h> header file. */
@@ -350,6 +353,9 @@
 
 /* Define to 1 if you have the `xml2' library (-lxml2). */
 #undef HAVE_LIBXML2
+
+/* Define to 1 if you have the `xslt' library (-lxslt). */
+#undef HAVE_LIBXSLT
 
 /* Define to 1 if you have the `z' library (-lz). */
 #undef HAVE_LIBZ
@@ -539,22 +545,22 @@
 /* Define to 1 if the system has the type `struct option'. */
 #undef HAVE_STRUCT_OPTION
 
-/* Define to 1 if `sa_len' is a member of `struct sockaddr'. */
+/* Define to 1 if `sa_len' is member of `struct sockaddr'. */
 #undef HAVE_STRUCT_SOCKADDR_SA_LEN
 
 /* Define to 1 if the system has the type `struct sockaddr_storage'. */
 #undef HAVE_STRUCT_SOCKADDR_STORAGE
 
-/* Define to 1 if `ss_family' is a member of `struct sockaddr_storage'. */
+/* Define to 1 if `ss_family' is member of `struct sockaddr_storage'. */
 #undef HAVE_STRUCT_SOCKADDR_STORAGE_SS_FAMILY
 
-/* Define to 1 if `ss_len' is a member of `struct sockaddr_storage'. */
+/* Define to 1 if `ss_len' is member of `struct sockaddr_storage'. */
 #undef HAVE_STRUCT_SOCKADDR_STORAGE_SS_LEN
 
-/* Define to 1 if `__ss_family' is a member of `struct sockaddr_storage'. */
+/* Define to 1 if `__ss_family' is member of `struct sockaddr_storage'. */
 #undef HAVE_STRUCT_SOCKADDR_STORAGE___SS_FAMILY
 
-/* Define to 1 if `__ss_len' is a member of `struct sockaddr_storage'. */
+/* Define to 1 if `__ss_len' is member of `struct sockaddr_storage'. */
 #undef HAVE_STRUCT_SOCKADDR_STORAGE___SS_LEN
 
 /* Define to 1 if the system has the type `struct sockaddr_un'. */
@@ -563,7 +569,7 @@
 /* Define to 1 if the system has the type `struct sockcred'. */
 #undef HAVE_STRUCT_SOCKCRED
 
-/* Define to 1 if `tm_zone' is a member of `struct tm'. */
+/* Define to 1 if `tm_zone' is member of `struct tm'. */
 #undef HAVE_STRUCT_TM_TM_ZONE
 
 /* Define to 1 if you have the <SupportDefs.h> header file. */
@@ -663,9 +669,6 @@
 /* Define to 1 if you have the `unsetenv' function. */
 #undef HAVE_UNSETENV
 
-/* Define to 1 if the system has the type `unsigned long long int'. */
-#undef HAVE_UNSIGNED_LONG_LONG_INT
-
 /* Define to 1 if you have the `utime' function. */
 #undef HAVE_UTIME
 
@@ -692,6 +695,9 @@
 
 /* Define to 1 if you have the <winldap.h> header file. */
 #undef HAVE_WINLDAP_H
+
+/* Define to 1 if you have the <winsock2.h> header file. */
+#undef HAVE_WINSOCK2_H
 
 /* Define to 1 if you have __cpuid. */
 #undef HAVE__CPUID
@@ -722,9 +728,6 @@
 
 /* Define to the one symbol short name of this package. */
 #undef PACKAGE_TARNAME
-
-/* Define to the home page for this package. */
-#undef PACKAGE_URL
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
@@ -818,6 +821,10 @@
 /* Define to 1 to build with XML support. (--with-libxml) */
 #undef USE_LIBXML
 
+/* Define to 1 to use XSLT support when building contrib/xml2.
+   (--with-libxslt) */
+#undef USE_LIBXSLT
+
 /* Define to select named POSIX semaphores. */
 #undef USE_NAMED_POSIX_SEMAPHORES
 
@@ -879,11 +886,6 @@
 # ifndef WORDS_BIGENDIAN
 #  undef WORDS_BIGENDIAN
 # endif
-#endif
-
-/* Enable large inode numbers on Mac OS X 10.5.  */
-#ifndef _DARWIN_USE_64_BIT_INODE
-# define _DARWIN_USE_64_BIT_INODE 1
 #endif
 
 /* Number of bits in a file offset, on hosts where this is settable. */

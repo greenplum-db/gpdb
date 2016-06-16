@@ -158,12 +158,9 @@ analyzeCTE(ParseState *pstate, CommonTableExpr *cte)
 	Assert(cte->ctequery != NULL);
 	Assert(!IsA(cte->ctequery, Query));
 
-	List *queryList;
-	
-	queryList = parse_sub_analyze(cte->ctequery, pstate);
-	Assert(list_length(queryList) == 1);
+	Query *query = parse_sub_analyze(cte->ctequery, pstate);
+	Assert(IsA(query, Query));
 
-	Query *query = (Query *)linitial(queryList);
 	cte->ctequery = (Node *)query;
 
 	/* Check if the query is what we expected. */

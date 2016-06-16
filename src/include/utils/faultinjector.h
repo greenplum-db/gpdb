@@ -171,6 +171,7 @@ typedef enum FaultInjectorIdentifier_e {
 
 	ExecSortBeforeSorting,
 	ExecSortMKSortMergeRuns,
+	ExecShareInputNext,
 	BaseBackupPostCreateCheckpoint,
 
 	CompactionBeforeSegmentFileDropPhase,

@@ -1,0 +1,27 @@
+-- $PostgreSQL: pgsql/src/backend/snowball/snowball.sql.in,v 1.6 2007/10/27 16:01:08 tgl Exp $$
+
+-- text search configuration for _LANGNAME_ language
+CREATE TEXT SEARCH DICTIONARY _DICTNAME_
+	(TEMPLATE = snowball, Language = _LANGNAME_ _STOPWORDS_);
+
+COMMENT ON TEXT SEARCH DICTIONARY _DICTNAME_ IS 'snowball stemmer for _LANGNAME_ language';
+
+CREATE TEXT SEARCH CONFIGURATION _CFGNAME_
+	(PARSER = default);
+
+COMMENT ON TEXT SEARCH CONFIGURATION _CFGNAME_ IS 'configuration for _LANGNAME_ language';
+
+ALTER TEXT SEARCH CONFIGURATION _CFGNAME_ ADD MAPPING
+	FOR email, url, url_path, host, file, version,
+	    sfloat, float, int, uint,
+	    numword, hword_numpart, numhword
+	WITH simple;
+
+ALTER TEXT SEARCH CONFIGURATION _CFGNAME_ ADD MAPPING
+    FOR asciiword, hword_asciipart, asciihword
+	WITH _ASCDICTNAME_;
+
+ALTER TEXT SEARCH CONFIGURATION _CFGNAME_ ADD MAPPING
+    FOR word, hword_part, hword
+	WITH _NONASCDICTNAME_;
+

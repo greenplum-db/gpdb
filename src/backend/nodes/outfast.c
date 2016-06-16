@@ -297,8 +297,6 @@ _outPlanInfo(StringInfo str, Plan *node)
 	WRITE_BITMAPSET_FIELD(extParam);
 	WRITE_BITMAPSET_FIELD(allParam);
 
-	WRITE_INT_FIELD(nParamExec);
-
 	if (print_variable_fields)
 	{
 		WRITE_NODE_FIELD(flow);
@@ -340,6 +338,7 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_NODE_FIELD(utilityStmt);
 	WRITE_NODE_FIELD(intoClause);
 	WRITE_NODE_FIELD(subplans);
+	WRITE_BITMAPSET_FIELD(rewindPlanIDs);
 	WRITE_NODE_FIELD(returningLists);
 
 	WRITE_NODE_FIELD(result_partitions);
@@ -349,8 +348,11 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_NODE_FIELD(numSelectorsPerScanId);
 	WRITE_NODE_FIELD(rowMarks);
 	WRITE_NODE_FIELD(relationOids);
-	WRITE_NODE_FIELD(invalItems);
-	WRITE_INT_FIELD(nCrossLevelParams);
+	/*
+	 * Don't serialize invalItems. The TIDs of the invalidated items wouldn't
+	 * make sense in segments.
+	 */
+	WRITE_INT_FIELD(nParamExec);
 	WRITE_INT_FIELD(nMotionNodes);
 	WRITE_INT_FIELD(nInitPlans);
 
@@ -618,9 +620,6 @@ _outCurrentOfExpr(StringInfo str, CurrentOfExpr *node)
 	WRITE_STRING_FIELD(cursor_name);
 	WRITE_UINT_FIELD(cvarno);
 	WRITE_OID_FIELD(target_relid);
-	WRITE_INT_FIELD(gp_segment_id);
-	WRITE_BINARY_FIELD(ctid, sizeof(ItemPointerData));
-	WRITE_OID_FIELD(tableoid);
 }
 
 static void
@@ -905,6 +904,7 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_BOOL_FIELD(hasAggs);
 	WRITE_BOOL_FIELD(hasWindFuncs);
 	WRITE_BOOL_FIELD(hasSubLinks);
+	WRITE_BOOL_FIELD(hasDynamicFunctions);
 	WRITE_NODE_FIELD(rtable);
 	WRITE_NODE_FIELD(jointree);
 	WRITE_NODE_FIELD(targetList);
@@ -922,10 +922,6 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_NODE_FIELD(limitCount);
 	WRITE_NODE_FIELD(rowMarks);
 	WRITE_NODE_FIELD(setOperations);
-	WRITE_NODE_FIELD(resultRelations);
-	WRITE_NODE_FIELD(result_partitions);
-	WRITE_NODE_FIELD(result_aosegnos);
-	WRITE_NODE_FIELD(returningLists);
 	/* Don't serialize policy */
 }
 
@@ -1658,6 +1654,9 @@ _outNode(StringInfo str, void *obj)
 			case T_CompositeTypeStmt:
 				_outCompositeTypeStmt(str,obj);
 				break;
+			case T_CreateEnumStmt:
+				_outCreateEnumStmt(str,obj);
+				break;
 			case T_CreateCastStmt:
 				_outCreateCastStmt(str,obj);
 				break;
@@ -1791,11 +1790,26 @@ _outNode(StringInfo str, void *obj)
 			case T_CopyStmt:
 				_outCopyStmt(str, obj);
 				break;
+			case T_SelectStmt:
+				_outSelectStmt(str, obj);
+				break;
+			case T_InsertStmt:
+				_outInsertStmt(str, obj);
+				break;
+			case T_DeleteStmt:
+				_outDeleteStmt(str, obj);
+				break;
+			case T_UpdateStmt:
+				_outUpdateStmt(str, obj);
+				break;
 			case T_ColumnDef:
 				_outColumnDef(str, obj);
 				break;
 			case T_TypeName:
 				_outTypeName(str, obj);
+				break;
+			case T_SortBy:
+				_outSortBy(str, obj);
 				break;
 			case T_TypeCast:
 				_outTypeCast(str, obj);
@@ -1918,8 +1932,11 @@ _outNode(StringInfo str, void *obj)
 			case T_SliceTable:
 				_outSliceTable(str, obj);
 				break;
-			case T_VariableResetStmt:
-				_outVariableResetStmt(str, obj);
+			case T_CursorPosInfo:
+				_outCursorPosInfo(str, obj);
+				break;
+			case T_VariableSetStmt:
+				_outVariableSetStmt(str, obj);
 				break;
 
 			case T_DMLActionExpr:

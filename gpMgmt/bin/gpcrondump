@@ -725,7 +725,7 @@ class GpCronDump(Operation):
 
             validate_current_timestamp(self.context)
             if self.interactive:
-                self._prompt_continue(self.context)
+                self._prompt_continue()
 
             if self.pre_vacuum:
                 logger.info('Commencing pre-dump vacuum')

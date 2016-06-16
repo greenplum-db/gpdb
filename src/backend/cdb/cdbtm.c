@@ -35,6 +35,7 @@
 #include "access/twophase.h"
 #include "access/distributedlog.h"
 #include "postmaster/postmaster.h"
+#include "storage/procarray.h"
 #include "cdb/cdbpersistentrecovery.h"
 #include "cdb/cdbpersistentcheck.h"
 
@@ -740,7 +741,7 @@ doInsertForgetCommitted(void)
 	 * master readers (e.g. those using  SnapshotNow for reading) the same as for
 	 * distributed transactions.
 	 */
-	ClearTransactionFromPgProc_UnderLock();
+	ClearTransactionFromPgProc_UnderLock(MyProc);
 	releaseGxact_UnderLocks();
 
 	elog(DTM_DEBUG5, "doInsertForgetCommitted called releaseGxact");

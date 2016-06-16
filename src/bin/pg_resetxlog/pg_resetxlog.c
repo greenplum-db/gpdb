@@ -23,7 +23,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/pg_resetxlog/pg_resetxlog.c,v 1.57 2007/02/10 14:58:55 petere Exp $
+ * $PostgreSQL: pgsql/src/bin/pg_resetxlog/pg_resetxlog.c,v 1.63.2.2 2009/05/03 23:13:44 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -75,6 +75,7 @@ static void PrintControlValues(bool guessed);
 static void RewriteControlFile(void);
 static void FindEndOfXLOG(void);
 static void KillExistingXLOG(void);
+static void KillExistingArchiveStatus(void);
 static void WriteEmptyXLOG(void);
 static void usage(void);
 
@@ -101,7 +102,6 @@ main(int argc, char *argv[])
 	char	   *endptr3;
 	char	   *DataDir;
 	int			fd;
-	char		path[MAXPGPATH];
 
 	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_resetxlog"));
 
@@ -281,13 +281,12 @@ main(int argc, char *argv[])
 	 * Check for a postmaster lock file --- if there is one, refuse to
 	 * proceed, on grounds we might be interfering with a live installation.
 	 */
-	snprintf(path, MAXPGPATH, "%s/postmaster.pid", DataDir);
-
-	if ((fd = open(path, O_RDONLY, 0)) < 0)
+	if ((fd = open("postmaster.pid", O_RDONLY, 0)) < 0)
 	{
 		if (errno != ENOENT)
 		{
-			fprintf(stderr, _("%s: could not open file \"%s\" for reading: %s\n"), progname, path, strerror(errno));
+			fprintf(stderr, _("%s: could not open file \"%s\" for reading: %s\n"),
+					progname, "postmaster.pid", strerror(errno));
 			exit(1);
 		}
 	}
@@ -295,7 +294,7 @@ main(int argc, char *argv[])
 	{
 		fprintf(stderr, _("%s: lock file \"%s\" exists\n"
 						  "Is a server running?  If not, delete the lock file and try again.\n"),
-				progname, path);
+				progname, "postmaster.pid");
 		exit(1);
 	}
 
@@ -362,7 +361,7 @@ main(int argc, char *argv[])
 	if (ControlFile.state != DB_SHUTDOWNED && !force)
 	{
 		printf(_("The database server was not shut down cleanly.\n"
-				 "Resetting the transaction log might cause data to be lost.\n"
+			   "Resetting the transaction log might cause data to be lost.\n"
 				 "If you want to proceed anyway, use -f to force reset.\n"));
 		exit(1);
 	}
@@ -372,6 +371,7 @@ main(int argc, char *argv[])
 	 */
 	RewriteControlFile();
 	KillExistingXLOG();
+	KillExistingArchiveStatus();
 	WriteEmptyXLOG();
 
 	printf(_("Transaction log reset\n"));
@@ -483,7 +483,6 @@ GuessControlValues(void)
 
 	ControlFile.checkPointCopy.redo.xlogid = 0;
 	ControlFile.checkPointCopy.redo.xrecoff = SizeOfXLogLongPHD;
-	ControlFile.checkPointCopy.undo = ControlFile.checkPointCopy.redo;
 	ControlFile.checkPointCopy.ThisTimeLineID = 1;
 	ControlFile.checkPointCopy.nextXidEpoch = 0;
 	ControlFile.checkPointCopy.nextXid = (TransactionId) 514;	/* XXX */
@@ -504,6 +503,7 @@ GuessControlValues(void)
 	ControlFile.xlog_seg_size = XLOG_SEG_SIZE;
 	ControlFile.nameDataLen = NAMEDATALEN;
 	ControlFile.indexMaxKeys = INDEX_MAX_KEYS;
+	ControlFile.toast_max_chunk_size = TOAST_MAX_CHUNK_SIZE;
 #ifdef HAVE_INT64_TIMESTAMP
 	ControlFile.enableIntTimes = TRUE;
 #else
@@ -556,9 +556,9 @@ PrintControlValues(bool guessed)
 	snprintf(sysident_str, sizeof(sysident_str), UINT64_FORMAT,
 			 ControlFile.system_identifier);
 
-	printf(_("First log file ID for new XLOG:       %u\n"),
+	printf(_("First log file ID after reset:        %u\n"),
 		   newXlogId);
-	printf(_("First log file segment for new XLOG:  %u\n"),
+	printf(_("First log file segment after reset:   %u\n"),
 		   newXlogSeg);
 	printf(_("pg_control version number:            %u\n"),
 		   ControlFile.pg_control_version);
@@ -592,6 +592,8 @@ PrintControlValues(bool guessed)
 		   ControlFile.nameDataLen);
 	printf(_("Maximum columns in an index:          %u\n"),
 		   ControlFile.indexMaxKeys);
+	printf(_("Maximum size of a TOAST chunk:        %u\n"),
+		   ControlFile.toast_max_chunk_size);
 	printf(_("Date/time type storage:               %s\n"),
 		   (ControlFile.enableIntTimes ? _("64-bit integers") : _("floating-point numbers")));
 	printf(_("Maximum length of locale name:        %u\n"),
@@ -619,7 +621,7 @@ RewriteControlFile(void)
 	ControlFile.checkPointCopy.redo.xlogid = newXlogId;
 	ControlFile.checkPointCopy.redo.xrecoff =
 		newXlogSeg * XLogSegSize + SizeOfXLogLongPHD;
-	ControlFile.checkPointCopy.time = (pg_time_t) time(NULL);
+	ControlFile.checkPointCopy.time = time(NULL);
 
 	ControlFile.state = DB_SHUTDOWNED;
 	ControlFile.time = (pg_time_t) time(NULL);
@@ -706,17 +708,17 @@ FindEndOfXLOG(void)
 	struct dirent *xlde;
 
 	/*
-	 * Initialize the max() computation using the last checkpoint address
-	 * from old pg_control.  Note that for the moment we are working with
-	 * segment numbering according to the old xlog seg size.
+	 * Initialize the max() computation using the last checkpoint address from
+	 * old pg_control.	Note that for the moment we are working with segment
+	 * numbering according to the old xlog seg size.
 	 */
 	newXlogId = ControlFile.checkPointCopy.redo.xlogid;
 	newXlogSeg = ControlFile.checkPointCopy.redo.xrecoff / ControlFile.xlog_seg_size;
 
 	/*
-	 * Scan the pg_xlog directory to find existing WAL segment files.
-	 * We assume any present have been used; in most scenarios this should
-	 * be conservative, because of xlog.c's attempts to pre-create files.
+	 * Scan the pg_xlog directory to find existing WAL segment files. We
+	 * assume any present have been used; in most scenarios this should be
+	 * conservative, because of xlog.c's attempts to pre-create files.
 	 */
 	xldir = opendir(XLOGDIR);
 	if (xldir == NULL)
@@ -732,11 +734,12 @@ FindEndOfXLOG(void)
 		if (strlen(xlde->d_name) == 24 &&
 			strspn(xlde->d_name, "0123456789ABCDEF") == 24)
 		{
-			unsigned int	tli,
-							log,
-							seg;
+			unsigned int tli,
+						log,
+						seg;
 
 			sscanf(xlde->d_name, "%08X%08X%08X", &tli, &log, &seg);
+
 			/*
 			 * Note: we take the max of all files found, regardless of their
 			 * timelines.  Another possibility would be to ignore files of
@@ -771,8 +774,8 @@ FindEndOfXLOG(void)
 	closedir(xldir);
 
 	/*
-	 * Finally, convert to new xlog seg size, and advance by one to ensure
-	 * we are in virgin territory.
+	 * Finally, convert to new xlog seg size, and advance by one to ensure we
+	 * are in virgin territory.
 	 */
 	newXlogSeg *= ControlFile.xlog_seg_size;
 	newXlogSeg = (newXlogSeg + XLogSegSize - 1) / XLogSegSize;
@@ -830,6 +833,63 @@ KillExistingXLOG(void)
 	{
 		fprintf(stderr, _("%s: could not read from directory \"%s\": %s\n"),
 				progname, XLOGDIR, strerror(errno));
+		exit(1);
+	}
+	closedir(xldir);
+}
+
+
+/*
+ * Remove existing archive status files
+ */
+static void
+KillExistingArchiveStatus(void)
+{
+	DIR		   *xldir;
+	struct dirent *xlde;
+	char		path[MAXPGPATH];
+
+#define ARCHSTATDIR	XLOGDIR "/archive_status"
+
+	xldir = opendir(ARCHSTATDIR);
+	if (xldir == NULL)
+	{
+		fprintf(stderr, _("%s: could not open directory \"%s\": %s\n"),
+				progname, ARCHSTATDIR, strerror(errno));
+		exit(1);
+	}
+
+	errno = 0;
+	while ((xlde = readdir(xldir)) != NULL)
+	{
+		if (strspn(xlde->d_name, "0123456789ABCDEF") == 24 &&
+			(strcmp(xlde->d_name + 24, ".ready") == 0 ||
+			 strcmp(xlde->d_name + 24, ".done")  == 0))
+		{
+			snprintf(path, MAXPGPATH, "%s/%s", ARCHSTATDIR, xlde->d_name);
+			if (unlink(path) < 0)
+			{
+				fprintf(stderr, _("%s: could not delete file \"%s\": %s\n"),
+						progname, path, strerror(errno));
+				exit(1);
+			}
+		}
+		errno = 0;
+	}
+#ifdef WIN32
+
+	/*
+	 * This fix is in mingw cvs (runtime/mingwex/dirent.c rev 1.4), but not in
+	 * released version
+	 */
+	if (GetLastError() == ERROR_NO_MORE_FILES)
+		errno = 0;
+#endif
+
+	if (errno)
+	{
+		fprintf(stderr, _("%s: could not read from directory \"%s\": %s\n"),
+				progname, ARCHSTATDIR, strerror(errno));
 		exit(1);
 	}
 	closedir(xldir);

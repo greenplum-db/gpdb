@@ -411,7 +411,7 @@ gphdfsformatter_export(PG_FUNCTION_ARGS)
 				datlen += sizeof(int32);
 			}
 			else
-				alignpadlen = att_align(datlen, tupdesc->attrs[i]->attalign) - datlen;
+				alignpadlen = att_align_nominal(datlen, tupdesc->attrs[i]->attalign) - datlen;
 			myData->outpadlen[i] = alignpadlen;
 			datlen += alignpadlen;
 		}
@@ -671,7 +671,7 @@ gphdfsformatter_import(PG_FUNCTION_ARGS)
 			if (isVariableLength(tupdesc->attrs[i]->atttypid))
 				bufidx = INTALIGN(bufidx);
 			else
-				bufidx = att_align(bufidx, tupdesc->attrs[i]->attalign);
+				bufidx = att_align_nominal(bufidx, tupdesc->attrs[i]->attalign);
 
 			/* For fixed length type, we can use the type length attribute.
 			 * For variable length type, we'll get the payload length from the first 4 byte.

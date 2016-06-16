@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/cost.h,v 1.84 2007/01/22 01:35:22 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/cost.h,v 1.90 2008/01/01 19:45:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -59,10 +59,24 @@ extern PGDLLIMPORT double cpu_tuple_cost;
 extern PGDLLIMPORT double cpu_index_tuple_cost;
 extern PGDLLIMPORT double cpu_operator_cost;
 extern PGDLLIMPORT int effective_cache_size;
+extern Cost disable_cost;
+extern bool enable_seqscan;
+extern bool enable_indexscan;
+extern bool enable_bitmapscan;
+extern bool enable_tidscan;
+extern bool enable_sort;
+extern bool enable_hashagg;
+extern bool enable_groupagg;
+extern bool enable_nestloop;
+extern bool enable_mergejoin;
+extern bool enable_hashjoin;
 extern bool constraint_exclusion;
-/* CDB: The enable_xxx globals have been moved to paths.h */
 
 extern Cost disable_cost;
+
+extern bool gp_enable_hashjoin_size_heuristic;          /*CDB*/
+extern bool gp_enable_fallback_plan;
+extern bool gp_enable_predicate_propagation;
 
 extern double index_pages_fetched(double tuples_fetched, BlockNumber pages,
 					double index_pages, PlannerInfo *root);
@@ -94,7 +108,9 @@ extern void cost_valuesscan(Path *path, PlannerInfo *root,
 				RelOptInfo *baserel);
 extern void cost_ctescan(Path *path, PlannerInfo *root, RelOptInfo *baserel);
 extern void cost_sort(Path *path, PlannerInfo *root,
-		  List *pathkeys, Cost input_cost, double tuples, int width);
+		  List *pathkeys, Cost input_cost, double tuples, int width,
+		  double limit_tuples);
+extern bool sort_exceeds_work_mem(Sort *sort);
 extern void cost_material(Path *path, PlannerInfo *root,
 			  Cost input_cost, double tuples, int width);
 extern void cost_agg(Path *path, PlannerInfo *root,
@@ -117,6 +133,7 @@ extern void cost_mergejoin(MergePath *path, PlannerInfo *root);
 extern void cost_hashjoin(HashPath *path, PlannerInfo *root);
 extern void cost_qual_eval(QualCost *cost, List *quals, PlannerInfo *root);
 extern void cost_qual_eval_node(QualCost *cost, Node *qual, PlannerInfo *root);
+extern Cost get_initplan_cost(PlannerInfo *root, SubPlan *subplan);
 extern void set_baserel_size_estimates(PlannerInfo *root, RelOptInfo *rel);
 extern void set_joinrel_size_estimates(PlannerInfo *root, RelOptInfo *rel,
 						   RelOptInfo *outer_rel,

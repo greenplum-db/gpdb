@@ -43,7 +43,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/error/elog.c,v 1.182 2007/02/11 11:59:26 mha Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/error/elog.c,v 1.201.2.5 2010/05/08 16:40:14 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -107,6 +107,9 @@ static const char *err_gettext(const char *str)
 /* This extension allows gcc to check the format string for consistency with
    the supplied arguments. */
 __attribute__((format_arg(1)));
+
+#undef _
+#define _(x) err_gettext(x)
 
 /* Global variables */
 ErrorContextCallback *error_context_stack = NULL;
@@ -182,7 +185,7 @@ static int	recursion_depth = 0;	/* to detect actual recursion */
 
 #define FORMATTED_TS_LEN 128
 static char formatted_start_time[FORMATTED_TS_LEN];
-//static char formatted_log_time[FORMATTED_TS_LEN];
+static char formatted_log_time[FORMATTED_TS_LEN];
 
 /* Macro for checking errordata_stack_depth is reasonable */
 #define CHECK_STACK_DEPTH() \
@@ -203,9 +206,9 @@ static const char *useful_strerror(int errnum);
 static const char *error_severity(int elevel);
 static void append_with_tabs(StringInfo buf, const char *str);
 static bool is_log_level_output(int elevel, int log_min_level);
-static void write_pipe_chunks(char *data, int len);
+static void write_pipe_chunks(char *data, int len, int dest);
+static void write_csvlog(ErrorData *edata);
 static void elog_debug_linger(ErrorData *edata);
-static void setup_formatted_start_time(void);
 
 
 /* verify string is correctly encoded, and escape it if invalid  */
@@ -437,9 +440,9 @@ errstart(int elevel, const char *filename, int lineno,
 
 		/*
 		 * Infinite error recursion might be due to something broken
-		 * in a context traceback routine.  Abandon them too.  We also
-		 * abandon attempting to print the error statement (which, if long,
-		 * could itself be the source of the recursive failure).
+		 * in a context traceback routine.	Abandon them too.  We also abandon
+		 * attempting to print the error statement (which, if long, could
+		 * itself be the source of the recursive failure).
 		 */
 		if (in_error_recursion_trouble())
 		{
@@ -477,6 +480,15 @@ errstart(int elevel, const char *filename, int lineno,
 	edata->elevel = elevel;
 	edata->output_to_server = output_to_server;
 	edata->output_to_client = output_to_client;
+	if (filename)
+	{
+		const char *slash;
+
+		/* keep only base name, useful especially for vpath builds */
+		slash = strrchr(filename, '/');
+		if (slash)
+			filename = slash + 1;
+	}
 	edata->filename = filename;
 	edata->lineno = lineno;
 	edata->funcname = funcname;
@@ -1437,6 +1449,15 @@ elog_start(const char *filename, int lineno, const char *funcname)
 	}
 
 	edata = &errordata[errordata_stack_depth];
+	if (filename)
+	{
+		const char *slash;
+
+		/* keep only base name, useful especially for vpath builds */
+		slash = strrchr(filename, '/');
+		if (slash)
+			filename = slash + 1;
+	}
 	edata->filename = filename;
 	edata->lineno = lineno;
 	edata->funcname = funcname;
@@ -1644,7 +1665,9 @@ ReThrowError(ErrorData *edata)
 		/*
 		 * Wups, stack not big enough.	We treat this as a PANIC condition
 		 * because it suggests an infinite loop of errors during error
-		 * recovery.
+		 * recovery.  Note that the message is intentionally not localized,
+		 * else failure to convert it to client encoding could cause further
+		 * recursion.
 		 */
 		errordata_stack_depth = -1;		/* make room on stack */
 		ereport(PANIC, (errmsg_internal("ERRORDATA_STACK_SIZE exceeded")));
@@ -1734,7 +1757,6 @@ pg_re_throw(void)
 	 */
 	abort();
 }
-
 
 
 /*
@@ -2131,28 +2153,6 @@ write_eventlog(int level, const char *line)
 }
 #endif   /* WIN32 */
 
-/*
- * setup formatted_start_time
- */
-static void
-setup_formatted_start_time(void)
-{
-	pg_time_t	stamp_time = (pg_time_t) MyStartTime;
-	pg_tz	   *tz;
-
-	/*
-	 * Normally we print log timestamps in log_timezone, but during startup we
-	 * could get here before that's set. If so, fall back to gmt_timezone
-	 * (which guc.c ensures is set up before Log_line_prefix can become
-	 * nonempty).
-	 */
-	tz = log_timezone ? log_timezone : gmt_timezone;
-
-	pg_strftime(formatted_start_time, FORMATTED_TS_LEN,
-				"%Y-%m-%d %H:%M:%S %Z",
-				pg_localtime(&stamp_time, tz));
-}
-
 
 /*
  * CDB: Tidy up the error message
@@ -2311,7 +2311,8 @@ log_line_prefix(StringInfo buf)
 	/*
 	 * This is one of the few places where we'd rather not inherit a static
 	 * variable's value from the postmaster.  But since we will, reset it when
-	 * MyProcPid changes.
+	 * MyProcPid changes. MyStartTime also changes when MyProcPid does, so
+	 * reset the formatted start timestamp too.
 	 */
 	if (log_my_pid != MyProcPid)
 	{
@@ -2390,58 +2391,62 @@ log_line_prefix(StringInfo buf)
 					 * log messages to have the same time format. See MPP-2591.
 					 *
 					 */
-					pg_time_t		stamp_time;
-					char		strfbuf[128],
-								msbuf[8];
 					struct timeval tv;
+					pg_time_t	stamp_time;
+					pg_tz	   *tz;
+					char		msbuf[8];
 
 					gettimeofday(&tv, NULL);
-					stamp_time = (pg_time_t)tv.tv_sec;
-
-					/*
-					 * GP: Save the time of the last log line.
-					 */
+					stamp_time = (pg_time_t) tv.tv_sec;
+					/* GP: Save the time of the last log line. */
 					LastLogTimeVal = tv;
 
-					pg_strftime(strfbuf, sizeof(strfbuf),
+					/*
+					 * Normally we print log timestamps in log_timezone, but
+					 * during startup we could get here before that's set. If
+					 * so, fall back to gmt_timezone (which guc.c ensures is
+					 * set up before Log_line_prefix can become nonempty).
+					 */
+					tz = log_timezone ? log_timezone : gmt_timezone;
+
+					pg_strftime(formatted_log_time, FORMATTED_TS_LEN,
 					/* leave room for microseconds... */
-					/* Win32 timezone names are too long so don't print them */
-#ifndef WIN32
 								"%Y-%m-%d %H:%M:%S        %Z",
-#else
-								"%Y-%m-%d %H:%M:%S        ",
-#endif
 							 pg_localtime(&stamp_time, log_timezone ? log_timezone : gmt_timezone));
 
-					/* 'paste' milliseconds into place... */
+					/* 'paste' microseconds into place... */
 					sprintf(msbuf, ".%06d", (int) (tv.tv_usec));
-					strncpy(strfbuf + 19, msbuf, 7);
+					strncpy(formatted_log_time + 19, msbuf, 4);
 
-					appendStringInfoString(buf, strfbuf);
+					appendStringInfoString(buf, formatted_log_time);
 				}
 				break;
 			case 't':
 				{
-					pg_time_t		stamp_time = (pg_time_t)time(NULL);
+					pg_time_t	stamp_time = (pg_time_t) time(NULL);
 					pg_tz	   *tz;
 					char		strfbuf[128];
 
 					tz = log_timezone ? log_timezone : gmt_timezone;
 
 					pg_strftime(strfbuf, sizeof(strfbuf),
-					/* Win32 timezone names are too long so don't print them */
-#ifndef WIN32
-							 "%Y-%m-%d %H:%M:%S %Z",
-#else
-							 "%Y-%m-%d %H:%M:%S",
-#endif
+								"%Y-%m-%d %H:%M:%S %Z",
 								pg_localtime(&stamp_time, tz));
 					appendStringInfoString(buf, strfbuf);
 				}
 				break;
 			case 's':
 				if (formatted_start_time[0] == '\0')
-					setup_formatted_start_time();
+				{
+					pg_time_t	stamp_time = (pg_time_t) MyStartTime;
+					pg_tz	   *tz;
+
+					tz = log_timezone ? log_timezone : gmt_timezone;
+
+					pg_strftime(formatted_start_time, FORMATTED_TS_LEN,
+								"%Y-%m-%d %H:%M:%S %Z",
+								pg_localtime(&stamp_time, tz));
+				}
 				appendStringInfoString(buf, formatted_start_time);
 				break;
 			case 'i':
@@ -2451,7 +2456,7 @@ log_line_prefix(StringInfo buf)
 					int		displen;
 
 					psdisp = get_ps_display(&displen);
-					appendStringInfo(buf, "%.*s", displen, psdisp);
+					appendBinaryStringInfo(buf, psdisp, displen);
 				}
 				break;
 			case 'r':
@@ -2474,14 +2479,14 @@ log_line_prefix(StringInfo buf)
 				if (MyProcPort == NULL)
 					i = format_len;
 				break;
+			case 'v':
+				/* keep VXID format in sync with lockfuncs.c */
+				if (MyProc != NULL)
+					appendStringInfo(buf, "%d/%u",
+									 MyProc->backendId, MyProc->lxid);
+				break;
 			case 'x':
-				if (MyProcPort)
-				{
-					if (IsTransactionState())
-						appendStringInfo(buf, "%u", GetTopTransactionId());
-					else
-						appendStringInfo(buf, "%u", InvalidTransactionId);
-				}
+				appendStringInfo(buf, "%u", GetTopTransactionIdIfAny());
 				break;
 
 			/* MPP SPECIFIC OPTIONS. */
@@ -2585,6 +2590,247 @@ log_line_prefix(StringInfo buf)
 				break;
 		}
 	}
+}
+
+/*
+ * append a CSV'd version of a string to a StringInfo
+ * We use the PostgreSQL defaults for CSV, i.e. quote = escape = '"'
+ * If it's NULL, append nothing.
+ */
+static inline void
+appendCSVLiteral(StringInfo buf, const char *data)
+{
+	const char *p = data;
+	char		c;
+
+	/* avoid confusing an empty string with NULL */
+	if (p == NULL)
+		return;
+
+	appendStringInfoCharMacro(buf, '"');
+	while ((c = *p++) != '\0')
+	{
+		if (c == '"')
+			appendStringInfoCharMacro(buf, '"');
+		appendStringInfoCharMacro(buf, c);
+	}
+	appendStringInfoCharMacro(buf, '"');
+}
+
+/*
+ * Constructs the error message, depending on the Errordata it gets, in a CSV
+ * format which is described in doc/src/sgml/config.sgml.
+ */
+static void
+write_csvlog(ErrorData *edata)
+{
+	StringInfoData buf;
+	bool	print_stmt = false;
+
+	/* static counter for line numbers */
+	static long log_line_number = 0;
+
+	/* has counter been reset in current process? */
+	static int	log_my_pid = 0;
+
+	/*
+	 * This is one of the few places where we'd rather not inherit a static
+	 * variable's value from the postmaster.  But since we will, reset it when
+	 * MyProcPid changes.
+	 */
+	if (log_my_pid != MyProcPid)
+	{
+		log_line_number = 0;
+		log_my_pid = MyProcPid;
+		formatted_start_time[0] = '\0';
+	}
+	log_line_number++;
+
+	initStringInfo(&buf);
+
+	/*
+	 * timestamp with milliseconds
+	 *
+	 * Check if the timestamp is already calculated for the syslog message,
+	 * and use it if so.  Otherwise, get the current timestamp.  This is done
+	 * to put same timestamp in both syslog and csvlog messages.
+	 */
+	if (formatted_log_time[0] == '\0')
+	{
+		struct timeval tv;
+		pg_time_t	stamp_time;
+		pg_tz	   *tz;
+		char		msbuf[8];
+
+		gettimeofday(&tv, NULL);
+		stamp_time = (pg_time_t) tv.tv_sec;
+
+		/*
+		 * Normally we print log timestamps in log_timezone, but during
+		 * startup we could get here before that's set. If so, fall back to
+		 * gmt_timezone (which guc.c ensures is set up before Log_line_prefix
+		 * can become nonempty).
+		 */
+		tz = log_timezone ? log_timezone : gmt_timezone;
+
+		pg_strftime(formatted_log_time, FORMATTED_TS_LEN,
+		/* leave room for milliseconds... */
+					"%Y-%m-%d %H:%M:%S     %Z",
+					pg_localtime(&stamp_time, tz));
+
+		/* 'paste' milliseconds into place... */
+		sprintf(msbuf, ".%03d", (int) (tv.tv_usec / 1000));
+		strncpy(formatted_log_time + 19, msbuf, 4);
+	}
+	appendStringInfoString(&buf, formatted_log_time);
+	appendStringInfoChar(&buf, ',');
+
+	/* username */
+	if (MyProcPort)
+		appendCSVLiteral(&buf, MyProcPort->user_name);
+	appendStringInfoChar(&buf, ',');
+
+	/* database name */
+	if (MyProcPort)
+		appendCSVLiteral(&buf, MyProcPort->database_name);
+	appendStringInfoChar(&buf, ',');
+
+	/* Process id  */
+	if (MyProcPid != 0)
+		appendStringInfo(&buf, "%d", MyProcPid);
+	appendStringInfoChar(&buf, ',');
+
+	/* Remote host and port */
+	if (MyProcPort && MyProcPort->remote_host)
+	{
+		appendStringInfoChar(&buf, '"');
+		appendStringInfo(&buf, "%s", MyProcPort->remote_host);
+		if (MyProcPort->remote_port && MyProcPort->remote_port[0] != '\0')
+			appendStringInfo(&buf, ":%s", MyProcPort->remote_port);
+		appendStringInfoChar(&buf, '"');
+	}
+	appendStringInfoChar(&buf, ',');
+
+	/* session id */
+	appendStringInfo(&buf, "%lx.%x", (long) MyStartTime, MyProcPid);
+	appendStringInfoChar(&buf, ',');
+
+	/* Line number */
+	appendStringInfo(&buf, "%ld", log_line_number);
+	appendStringInfoChar(&buf, ',');
+
+	/* PS display */
+	if (MyProcPort)
+	{
+		StringInfoData msgbuf;
+		const char *psdisp;
+		int			displen;
+
+		initStringInfo(&msgbuf);
+
+		psdisp = get_ps_display(&displen);
+		appendBinaryStringInfo(&msgbuf, psdisp, displen);
+		appendCSVLiteral(&buf, msgbuf.data);
+	
+		pfree(msgbuf.data);
+	}
+	appendStringInfoChar(&buf, ',');
+
+	/* session start timestamp */
+	if (formatted_start_time[0] == '\0')
+	{
+		pg_time_t	stamp_time = (pg_time_t) MyStartTime;
+		pg_tz	   *tz = log_timezone ? log_timezone : gmt_timezone;
+
+		pg_strftime(formatted_start_time, FORMATTED_TS_LEN,
+					"%Y-%m-%d %H:%M:%S %Z",
+					pg_localtime(&stamp_time, tz));
+	}
+	appendStringInfoString(&buf, formatted_start_time);
+	appendStringInfoChar(&buf, ',');
+
+	/* Virtual transaction id */
+	/* keep VXID format in sync with lockfuncs.c */
+	if (MyProc != NULL && MyProc->backendId != InvalidBackendId)
+		appendStringInfo(&buf, "%d/%u", MyProc->backendId, MyProc->lxid);
+	appendStringInfoChar(&buf, ',');
+
+	/* Transaction id */
+	appendStringInfo(&buf, "%u", GetTopTransactionIdIfAny());
+	appendStringInfoChar(&buf, ',');
+
+	/* Error severity */
+	appendStringInfo(&buf, "%s", error_severity(edata->elevel));
+	appendStringInfoChar(&buf, ',');
+
+	/* SQL state code */
+	appendStringInfo(&buf, "%s", unpack_sql_state(edata->sqlerrcode));
+	appendStringInfoChar(&buf, ',');
+
+	/* errmessage */
+	appendCSVLiteral(&buf, edata->message);
+	appendStringInfoCharMacro(&buf, ',');
+
+	/* errdetail */
+	appendCSVLiteral(&buf, edata->detail);
+	appendStringInfoCharMacro(&buf, ',');
+
+	/* errhint */
+	appendCSVLiteral(&buf, edata->hint);
+	appendStringInfoCharMacro(&buf, ',');
+
+	/* internal query */
+	appendCSVLiteral(&buf, edata->internalquery);
+	appendStringInfoCharMacro(&buf, ',');
+
+	/* if printed internal query, print internal pos too */
+	if (edata->internalpos > 0 && edata->internalquery != NULL)
+		appendStringInfo(&buf, "%d", edata->internalpos);
+	appendStringInfoCharMacro(&buf, ',');
+
+	/* errcontext */
+	appendCSVLiteral(&buf, edata->context);
+	appendStringInfoCharMacro(&buf, ',');
+
+	/* user query --- only reported if not disabled by the caller */
+	if (is_log_level_output(edata->elevel, log_min_error_statement) &&
+		debug_query_string != NULL &&
+		!edata->hide_stmt)
+		print_stmt = true;
+	if (print_stmt)
+		appendCSVLiteral(&buf, debug_query_string);
+	appendStringInfoCharMacro(&buf, ',');
+	if (print_stmt && edata->cursorpos > 0)
+		appendStringInfo(&buf, "%d", edata->cursorpos);
+	appendStringInfoCharMacro(&buf, ',');
+
+	/* file error location */
+	if (Log_error_verbosity >= PGERROR_VERBOSE)
+	{
+		StringInfoData	msgbuf;
+
+		initStringInfo(&msgbuf);
+
+		if (edata->funcname && edata->filename)
+			appendStringInfo(&msgbuf, "%s, %s:%d",
+							 edata->funcname, edata->filename,
+							 edata->lineno);
+		else if (edata->filename)
+			appendStringInfo(&msgbuf, "%s:%d",
+							 edata->filename, edata->lineno);
+		appendCSVLiteral(&buf, msgbuf.data);
+		pfree(msgbuf.data);
+	}
+
+	appendStringInfoChar(&buf, '\n');
+
+	/* If in the syslogger process, try to write messages direct to file */
+	if (am_syslogger)
+		write_syslogger_file(buf.data, buf.len, LOG_DESTINATION_CSVLOG);
+	else
+		write_pipe_chunks(buf.data, buf.len, LOG_DESTINATION_CSVLOG);
+
+	pfree(buf.data);
 }
 
 /*
@@ -2946,7 +3192,7 @@ append_stacktrace(PipeProtoChunk *buffer, StringInfo append, void *const *stacka
 			else
 			{
 				if (amsyslogger)
-					write_syslogger_file_binary(symbol, symbol_len);
+					write_syslogger_file_binary(symbol, symbol_len, LOG_DESTINATION_STDERR);
 				else
 					write(fileno(stderr), symbol, symbol_len);
 			}
@@ -2965,9 +3211,9 @@ write_syslogger_file_string(const char *str, bool amsyslogger, bool append_comma
 	{
 		if (amsyslogger)
 		{
-			write_syslogger_file_binary("\"", 1);
+			write_syslogger_file_binary("\"", 1, LOG_DESTINATION_STDERR);
 			syslogger_write_str(str, strlen(str), true, true);
-			write_syslogger_file_binary("\"", 1);
+			write_syslogger_file_binary("\"", 1, LOG_DESTINATION_STDERR);
 		}
 		else
 		{
@@ -2980,7 +3226,7 @@ write_syslogger_file_string(const char *str, bool amsyslogger, bool append_comma
 	if (append_comma)
 	{
 		if (amsyslogger)
-			write_syslogger_file_binary(",", 1);
+			write_syslogger_file_binary(",", 1, LOG_DESTINATION_STDERR);
 		else
 			write(fileno(stderr), ",", 1);
 	}
@@ -3028,10 +3274,7 @@ write_syslogger_in_csv(ErrorData *edata, bool amsyslogger)
 							   amsyslogger, true);
 
 	/* transaction id */
-	if (MyProcPort != NULL && IsTransactionState())
-		syslogger_write_int32(false, "", GetTopTransactionId(), amsyslogger, true);
-	else
-		syslogger_write_int32(false, "", InvalidTransactionId, amsyslogger, true);
+	syslogger_write_int32(false, "", GetTopTransactionIdIfAny(), amsyslogger, true);
 
 	/* GPDB specific options */
 	syslogger_write_int32(true, "con", gp_session_id, amsyslogger, true);
@@ -3108,7 +3351,7 @@ write_syslogger_in_csv(ErrorData *edata, bool amsyslogger)
 
 	/* EOL */
 	if (amsyslogger)
-		write_syslogger_file_binary(LOG_EOL, strlen(LOG_EOL));
+		write_syslogger_file_binary(LOG_EOL, strlen(LOG_EOL), LOG_DESTINATION_STDERR);
 	else
 		write(fileno(stderr), LOG_EOL, strlen(LOG_EOL));
 }
@@ -3179,9 +3422,7 @@ write_message_to_server_log(int elevel,
 	fix_fields.error_cursor_pos = cursorpos;
 	fix_fields.internal_query_pos = internalpos;
 	fix_fields.error_fileline = lineno;
-	fix_fields.top_trans_id = InvalidTransactionId;
-	if (MyProcPort != NULL && IsTransactionState())
-		fix_fields.top_trans_id = GetTopTransactionId();
+	fix_fields.top_trans_id = GetTopTransactionIdIfAny();
 
 	GetAllTransactionXids(&(fix_fields.dist_trans_id),
 						  &(fix_fields.local_trans_id),
@@ -3285,7 +3526,7 @@ send_message_to_server_log(ErrorData *edata)
 
 	if (Log_destination & LOG_DESTINATION_STDERR)
 	{
-		if (Redirect_stderr && gp_log_format == 1)
+		if (Logging_collector && gp_log_format == 1)
 		{
 			if (redirection_done)
 			{
@@ -3323,6 +3564,9 @@ send_message_to_server_log(ErrorData *edata)
 
 	/* Format message prefix. */
 	initStringInfo(&buf);
+
+	formatted_log_time[0] = '\0';
+
 	log_line_prefix(&buf);
 	nc = buf.len;
 	appendStringInfo(&buf, "%s:  ", error_severity(edata->elevel));
@@ -3514,6 +3758,13 @@ send_message_to_server_log(ErrorData *edata)
 	/* Write to stderr, if enabled */
 	if ((Log_destination & LOG_DESTINATION_STDERR) || whereToSendOutput == DestDebug)
 	{
+		/*
+		 * Use the chunking protocol if we know the syslogger should be
+		 * catching stderr output, and we are not ourselves the syslogger.
+		 * Otherwise, just do a vanilla write to stderr.
+		 */
+		if (redirection_done && !am_syslogger)
+			write_pipe_chunks(buf.data, buf.len, LOG_DESTINATION_STDERR);
 #ifdef WIN32
 
 		/*
@@ -3523,33 +3774,62 @@ send_message_to_server_log(ErrorData *edata)
 		 * If stderr redirection is active, it was OK to write to stderr above
 		 * because that's really a pipe to the syslogger process.
 		 */
-		if (pgwin32_is_service() && (!redirection_done || am_syslogger) )
+		else if (pgwin32_is_service() && (!redirection_done || am_syslogger) )
 			write_eventlog(edata->elevel, buf.data);
-		else
 #endif
 			/* only use the chunking protocol if we know the syslogger should
 			 * be catching stderr output, and we are not ourselves the
 			 * syslogger. Otherwise, go directly to stderr.
 			 */
 			if (redirection_done && !am_syslogger)
-				write_pipe_chunks(buf.data, buf.len);
+				write_pipe_chunks(buf.data, buf.len, LOG_DESTINATION_STDERR);
 			else
 				write(fileno(stderr), buf.data, buf.len);
 	}
 
 	/* If in the syslogger process, try to write messages direct to file */
 	if (am_syslogger)
-		write_syslogger_file_binary(buf.data, buf.len);
+		write_syslogger_file_binary(buf.data, buf.len, LOG_DESTINATION_STDERR);
 
 	pfree(prefix.data);
-	pfree(buf.data);
+
+	/* Write to CSV log if enabled */
+	if (Log_destination & LOG_DESTINATION_CSVLOG)
+	{
+		if (redirection_done || am_syslogger)
+		{
+			/*
+			 * send CSV data if it's safe to do so (syslogger doesn't need the
+			 * pipe). First get back the space in the message buffer.
+			 */
+			pfree(buf.data);
+			write_csvlog(edata);
+		}
+		else
+		{
+			const char *msg = _("Not safe to send CSV data\n");
+
+			write(fileno(stderr), msg, strlen(msg));
+			if (!(Log_destination & LOG_DESTINATION_STDERR) &&
+				whereToSendOutput != DestDebug)
+			{
+				/* write message to stderr unless we just sent it above */
+				write(fileno(stderr), buf.data, buf.len);
+			}
+			pfree(buf.data);
+		}
+	}
+	else
+	{
+		pfree(buf.data);
+	}
 }
 
 /*
  * Send data to the syslogger using the chunked protocol
  */
 static void
-write_pipe_chunks(char *data, int len)
+write_pipe_chunks(char *data, int len, int dest)
 {
 	PipeProtoChunk p;
 
@@ -3562,7 +3842,7 @@ write_pipe_chunks(char *data, int len)
 	p.hdr.thid = mythread();
 	p.hdr.main_thid = mainthread();
 	p.hdr.chunk_no = 0;
-	p.hdr.log_format = 't';
+	p.hdr.log_format = (dest == LOG_DESTINATION_CSVLOG ? 'c' : 't');
 	p.hdr.is_segv_msg = 'f';
 	p.hdr.next = -1;
 
@@ -3860,9 +4140,9 @@ useful_strerror(int errnum)
 	if (str == NULL || *str == '\0')
 	{
 		snprintf(errorstr_buf, sizeof(errorstr_buf),
-				 /*------
-				   translator: This string will be truncated at 47
-				   characters expanded. */
+		/*------
+		  translator: This string will be truncated at 47
+		  characters expanded. */
 				 _("operating system error %d"), errnum);
 		str = errorstr_buf;
 	}
@@ -3961,7 +4241,7 @@ write_stderr(const char *fmt,...)
 
 	va_start(ap, fmt);
 
-	if (Redirect_stderr && gp_log_format == 1)
+	if (Logging_collector && gp_log_format == 1)
 	{
 		char		errbuf[2048];		/* Arbitrary size? */
 
@@ -4023,7 +4303,7 @@ write_stderr(const char *fmt,...)
 
 		vsnprintf(errbuf, sizeof(errbuf), fmt, ap);
 
-		write_eventlog(EVENTLOG_ERROR_TYPE, errbuf);
+		write_eventlog(ERROR, errbuf);
 	}
 	else
 	{

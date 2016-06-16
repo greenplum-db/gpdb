@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_proc.c,v 1.143 2007/01/22 01:35:20 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_proc.c,v 1.148.2.2 2010/05/11 04:57:51 itagaki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -58,9 +58,9 @@ static bool match_prosrc_to_literal(const char *prosrc, const char *literal,
 /* ----------------------------------------------------------------
  *		ProcedureCreate
  *
- * Note: allParameterTypes, parameterModes, parameterNames are either arrays
- * of the proper types or NULL.  We declare them Datum, not "ArrayType *",
- * to avoid importing array.h into pg_proc.h.
+ * Note: allParameterTypes, parameterModes, parameterNames, and proconfig
+ * are either arrays of the proper types or NULL.  We declare them Datum,
+ * not "ArrayType *", to avoid importing array.h into pg_proc.h.
  * ----------------------------------------------------------------
  */
 Oid
@@ -84,6 +84,7 @@ ProcedureCreate(const char *procedureName,
 				Datum parameterModes,
 				Datum parameterNames,
 				List *parameterDefaults,
+				Datum proconfig,
 				float4 procost,
 				float4 prorows,
 				char prodataaccess,
@@ -98,6 +99,7 @@ ProcedureCreate(const char *procedureName,
 	bool		internalInParam = false;
 	bool		internalOutParam = false;
 	Oid			variadicType = InvalidOid;
+	Oid			proowner = GetUserId();
 	Relation	rel;
 	HeapTuple	tup;
 	HeapTuple	oldtup;
@@ -155,9 +157,9 @@ ProcedureCreate(const char *procedureName,
 	}
 
 	/*
-	 * Do not allow return type ANYARRAY or ANYELEMENT unless at least one
-	 * input argument is ANYARRAY or ANYELEMENT.  Also, do not allow return
-	 * type INTERNAL unless at least one input argument is INTERNAL.
+	 * Do not allow polymorphic return type unless at least one input argument
+	 * is polymorphic.	Also, do not allow return type INTERNAL unless at
+	 * least one input argument is INTERNAL.
 	 */
 	for (i = 0; i < parameterCount; i++)
 	{
@@ -165,6 +167,8 @@ ProcedureCreate(const char *procedureName,
 		{
 			case ANYARRAYOID:
 			case ANYELEMENTOID:
+			case ANYNONARRAYOID:
+			case ANYENUMOID:
 				genericInParam = true;
 				break;
 			case INTERNALOID:
@@ -187,6 +191,8 @@ ProcedureCreate(const char *procedureName,
 			{
 				case ANYARRAYOID:
 				case ANYELEMENTOID:
+				case ANYNONARRAYOID:
+				case ANYENUMOID:
 					genericOutParam = true;
 					break;
 				case INTERNALOID:
@@ -196,16 +202,12 @@ ProcedureCreate(const char *procedureName,
 		}
 	}
 
-	/* Normally, we don't allow ANY* return type without an ANY* input type.
-	 * But during upgrade, we're creating "special" function used by aggregate
-	 * and we'll bypass this check for those functions.
-	 */
-	if ((returnType == ANYARRAYOID || returnType == ANYELEMENTOID ||
-		 genericOutParam) && !genericInParam)
+	if ((IsPolymorphicType(returnType) || genericOutParam)
+		&& !genericInParam)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 				 errmsg("cannot determine result data type"),
-				 errdetail("A function returning \"anyarray\" or \"anyelement\" must have at least one argument of either type.")));
+				 errdetail("A function returning a polymorphic type must have at least one polymorphic argument.")));
 
 	if ((returnType == INTERNALOID || internalOutParam) && !internalInParam)
 		ereport(ERROR,
@@ -301,7 +303,7 @@ ProcedureCreate(const char *procedureName,
 	namestrcpy(&procname, procedureName);
 	values[Anum_pg_proc_proname - 1] = NameGetDatum(&procname);
 	values[Anum_pg_proc_pronamespace - 1] = ObjectIdGetDatum(procNamespace);
-	values[Anum_pg_proc_proowner - 1] = ObjectIdGetDatum(GetUserId());
+	values[Anum_pg_proc_proowner - 1] = ObjectIdGetDatum(proowner);
 	values[Anum_pg_proc_prolang - 1] = ObjectIdGetDatum(languageObjectId);
 	values[Anum_pg_proc_procost - 1] = Float4GetDatum(procost);
 	values[Anum_pg_proc_prorows - 1] = Float4GetDatum(prorows);
@@ -332,6 +334,10 @@ ProcedureCreate(const char *procedureName,
 		values[Anum_pg_proc_probin - 1] = CStringGetTextDatum(probin);
 	else
 		nulls[Anum_pg_proc_probin - 1] = true;
+	if (proconfig != PointerGetDatum(NULL))
+		values[Anum_pg_proc_proconfig - 1] = proconfig;
+	else
+		nulls[Anum_pg_proc_proconfig - 1] = 'n';
 	/* start out with empty permissions */
 	nulls[Anum_pg_proc_proacl - 1] = true;
 	values[Anum_pg_proc_prodataaccess - 1] = CharGetDatum(prodataaccess);
@@ -370,7 +376,7 @@ ProcedureCreate(const char *procedureName,
 					(errcode(ERRCODE_DUPLICATE_FUNCTION),
 			errmsg("function \"%s\" already exists with same argument types",
 				   procedureName)));
-		if (!pg_proc_ownercheck(oldOid, GetUserId()))
+		if (!pg_proc_ownercheck(oldOid, proowner))
 			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_PROC,
 						   procedureName);
 
@@ -521,7 +527,10 @@ ProcedureCreate(const char *procedureName,
 								procedureName)));
 		}
 
-		/* do not change existing ownership or permissions, either */
+		/*
+		 * Do not change existing ownership or permissions, either.  Note
+		 * dependency-update code below has to agree with this decision.
+		 */
 		replaces[Anum_pg_proc_proowner - 1] = false;
 		replaces[Anum_pg_proc_proacl - 1] = false;
 
@@ -557,11 +566,12 @@ ProcedureCreate(const char *procedureName,
 	/*
 	 * Create dependencies for the new function.  If we are updating an
 	 * existing function, first delete any existing pg_depend entries.
+	 * (However, since we are not changing ownership or permissions, the
+	 * shared dependencies do *not* need to change, and we leave them alone.)
 	 */
 	if (is_update)
 	{
 		deleteDependencyRecordsFor(ProcedureRelationId, retval);
-		deleteSharedDependencyRecordsFor(ProcedureRelationId, retval);
 		deleteProcCallbacks(retval);
 	}
 
@@ -612,7 +622,8 @@ ProcedureCreate(const char *procedureName,
 							   NIL, DEPENDENCY_NORMAL);
 
 	/* dependency on owner */
-	recordDependencyOnOwner(ProcedureRelationId, retval, GetUserId());
+	if (!is_update)
+		recordDependencyOnOwner(ProcedureRelationId, retval, proowner);
 
 	heap_freetuple(tup);
 
@@ -621,9 +632,29 @@ ProcedureCreate(const char *procedureName,
 	/* Verify function body */
 	if (OidIsValid(languageValidator))
 	{
+		ArrayType  *set_items;
+		int			save_nestlevel;
+
 		/* Advance command counter so new tuple can be seen by validator */
 		CommandCounterIncrement();
+
+		/* Set per-function configuration parameters */
+		set_items = (ArrayType *) DatumGetPointer(proconfig);
+		if (set_items)		/* Need a new GUC nesting level */
+		{
+			save_nestlevel = NewGUCNestLevel();
+			ProcessGUCArray(set_items,
+							(superuser() ? PGC_SUSET : PGC_USERSET),
+							PGC_S_SESSION,
+							GUC_ACTION_SAVE);
+		}
+		else
+			save_nestlevel = 0;		/* keep compiler quiet */
+
 		OidFunctionCall1(languageValidator, ObjectIdGetDatum(retval));
+
+		if (set_items)
+			AtEOXact_GUC(true, save_nestlevel);
 	}
 
 	return retval;
@@ -772,26 +803,24 @@ fmgr_sql_validator(PG_FUNCTION_ARGS)
 	proc = (Form_pg_proc) GETSTRUCT(tuple);
 
 	/* Disallow pseudotype result */
-	/* except for RECORD, VOID, ANYARRAY, or ANYELEMENT */
-	if (get_typtype(proc->prorettype) == 'p' &&
+	/* except for RECORD, VOID, or polymorphic */
+	if (get_typtype(proc->prorettype) == TYPTYPE_PSEUDO &&
 		proc->prorettype != RECORDOID &&
 		proc->prorettype != VOIDOID &&
-		proc->prorettype != ANYARRAYOID &&
-		proc->prorettype != ANYELEMENTOID)
+		!IsPolymorphicType(proc->prorettype))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 				 errmsg("SQL functions cannot return type %s",
 						format_type_be(proc->prorettype))));
 
 	/* Disallow pseudotypes in arguments */
-	/* except for ANYARRAY or ANYELEMENT */
+	/* except for polymorphic */
 	haspolyarg = false;
 	for (i = 0; i < proc->pronargs; i++)
 	{
-		if (get_typtype(proc->proargtypes.values[i]) == 'p')
+		if (get_typtype(proc->proargtypes.values[i]) == TYPTYPE_PSEUDO)
 		{
-			if (proc->proargtypes.values[i] == ANYARRAYOID ||
-				proc->proargtypes.values[i] == ANYELEMENTOID)
+			if (IsPolymorphicType(proc->proargtypes.values[i]))
 				haspolyarg = true;
 			else
 				ereport(ERROR,

@@ -1779,7 +1779,7 @@ static Plan *plan_common_subquery(PlannerInfo *root, List *lower_tlist,
 
 
 	/* Generate the best unsorted and presorted paths for this Query. */
-	query_planner(root, lower_tlist, 0.0, 
+	query_planner(root, lower_tlist, 0.0, -1.0,
 				  &cheapest_path, &sorted_path, &num_groups);
 					  
 	if ( order_hint != NIL &&
@@ -1796,7 +1796,7 @@ static Plan *plan_common_subquery(PlannerInfo *root, List *lower_tlist,
 	
 	/* Make the plan. */
 	result_plan = create_plan(root, best_path);
-	result_plan = plan_pushdown_tlist(result_plan, lower_tlist);
+	result_plan = plan_pushdown_tlist(root, result_plan, lower_tlist);
 	
 	Assert(result_plan->flow);
 
@@ -2072,7 +2072,8 @@ static Plan *plan_sequential_window_query(PlannerInfo *root, WindowContext *cont
 	AttrNumber resno;
 	ListCell *lc;
 	QualCost tlist_cost;
-		
+	int			i;
+
 	Assert ( pathkeys_ptr != NULL );
 	Assert ( context->original_range );
 	
@@ -2174,6 +2175,17 @@ static Plan *plan_sequential_window_query(PlannerInfo *root, WindowContext *cont
 	root->simple_rel_array_size = list_length(root->parse->rtable) + 1;
 	root->simple_rel_array = (RelOptInfo **)
 		palloc0(root->simple_rel_array_size * sizeof(RelOptInfo *));
+
+	root->simple_rte_array = (RangeTblEntry **)
+		palloc0(sizeof(RangeTblEntry *) * root->simple_rel_array_size);
+
+	i = 1;
+	foreach(lc, root->parse->rtable)
+	{
+		root->simple_rte_array[i] = lfirst(lc);
+		i++;
+	}
+
 	add_base_rels_to_query(root, (Node *)root->parse->jointree);
 
 	/* XXX I don't think the quals are used later so no need to translate. 
@@ -2192,7 +2204,7 @@ static Plan *plan_sequential_window_query(PlannerInfo *root, WindowContext *cont
 	 * XXX Could track this and avoid, but not yet.
 	 */
 	root->parse->targetList = targetlist;
-	result_plan = plan_pushdown_tlist(result_plan, targetlist);
+	result_plan = plan_pushdown_tlist(root, result_plan, targetlist);
 	cost_qual_eval(&tlist_cost, targetlist, root);
 	result_plan->startup_cost += tlist_cost.startup;
 	result_plan->total_cost += tlist_cost.startup + tlist_cost.per_tuple * result_plan->plan_rows;
@@ -2864,7 +2876,7 @@ static Plan *plan_parallel_window_query(PlannerInfo *root, WindowContext *contex
 			make_pathkeys_for_sortclauses(root, root->parse->sortClause, targetlist, true);
 		root->query_pathkeys = root->sort_pathkeys;
 		
-		query_planner(root, targetlist, 0.0, &cheapest_path, &sorted_path, &ngroups);
+		query_planner(root, targetlist, 0.0, -1.0, &cheapest_path, &sorted_path, &ngroups);
 		
 		if ( sorted_path != NULL )
 			best_path = sorted_path;
@@ -2878,7 +2890,7 @@ static Plan *plan_parallel_window_query(PlannerInfo *root, WindowContext *contex
 		 * since our target list may have expressions.  (Could track this
 		 * and avoid, but not yet.)
 		 */
-		result_plan = plan_pushdown_tlist(result_plan, targetlist);
+		result_plan = plan_pushdown_tlist(root, result_plan, targetlist);
 		cost_qual_eval(&tlist_cost, targetlist, root);
 		result_plan->startup_cost += tlist_cost.startup;
 		result_plan->total_cost += tlist_cost.startup + tlist_cost.per_tuple * result_plan->plan_rows;
@@ -4210,8 +4222,6 @@ Query *copy_common_subquery(Query *original, List *targetList)
 	common->limitOffset = NULL;
 	common->limitCount = NULL;
 	common->rowMarks = NIL;
-	common->resultRelations = NIL;
-	common->returningLists = NIL;
 	
 	return common;
 }

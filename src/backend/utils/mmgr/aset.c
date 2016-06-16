@@ -12,7 +12,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/mmgr/aset.c,v 1.71 2007/01/05 22:19:47 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/mmgr/aset.c,v 1.76 2008/01/01 19:45:55 momjian Exp $
  *
  * NOTE:
  *	This is a new (Feb. 05, 1999) implementation of the allocation set
@@ -818,13 +818,13 @@ AllocSetContextCreate(MemoryContext parent,
 #endif
 
 	/*
-	 * Compute the allocation chunk size limit for this context.  It can't
-	 * be more than ALLOC_CHUNK_LIMIT because of the fixed number of
-	 * freelists.  If maxBlockSize is small then requests exceeding the
-	 * maxBlockSize should be treated as large chunks, too.  We have to
-	 * have allocChunkLimit a power of two, because the requested and
-	 * actually-allocated sizes of any chunk must be on the same side of
-	 * the limit, else we get confused about whether the chunk is "big".
+	 * Compute the allocation chunk size limit for this context.  It can't be
+	 * more than ALLOC_CHUNK_LIMIT because of the fixed number of freelists.
+	 * If maxBlockSize is small then requests exceeding the maxBlockSize
+	 * should be treated as large chunks, too.	We have to have
+	 * allocChunkLimit a power of two, because the requested and
+	 * actually-allocated sizes of any chunk must be on the same side of the
+	 * limit, else we get confused about whether the chunk is "big".
 	 */
 	context->allocChunkLimit = ALLOC_CHUNK_LIMIT;
 	while (context->allocChunkLimit >

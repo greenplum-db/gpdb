@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hashpage.c,v 1.64 2007/01/29 23:22:59 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hashpage.c,v 1.72 2008/01/01 19:45:46 momjian Exp $
  *
  * NOTES
  *	  Postgres hash pages look like ordinary relation pages.  The opaque
@@ -101,6 +101,10 @@ _hash_droplock(Relation rel, BlockNumber whichlock, int access)
  *	_hash_getbuf() -- Get a buffer by block number for read or write.
  *
  *		'access' must be HASH_READ, HASH_WRITE, or HASH_NOLOCK.
+ *		'flags' is a bitwise OR of the allowed page types.
+ *
+ *		This must be used only to fetch pages that are expected to be valid
+ *		already.  _hash_checkpage() is applied using the given flags.
  *
  *		When this routine returns, the appropriate lock is set on the
  *		requested buffer and its reference count has been incremented
@@ -115,7 +119,7 @@ _hash_droplock(Relation rel, BlockNumber whichlock, int access)
  *		to be valid or not.
  */
 Buffer
-_hash_getbuf(Relation rel, BlockNumber blkno, int access)
+_hash_getbuf(Relation rel, BlockNumber blkno, int access, int flags)
 {
 	Buffer		buf;
 
@@ -130,13 +134,52 @@ _hash_getbuf(Relation rel, BlockNumber blkno, int access)
 		LockBuffer(buf, access);
 
 	/* ref count and lock type are correct */
+
+	_hash_checkpage(rel, buf, flags);
+
+	return buf;
+}
+
+/*
+ *	_hash_getinitbuf() -- Get and initialize a buffer by block number.
+ *
+ *		This must be used only to fetch pages that are known to be before
+ *		the index's filesystem EOF, but are to be filled from scratch.
+ *		_hash_pageinit() is applied automatically.	Otherwise it has
+ *		effects similar to _hash_getbuf() with access = HASH_WRITE.
+ *
+ *		When this routine returns, a write lock is set on the
+ *		requested buffer and its reference count has been incremented
+ *		(ie, the buffer is "locked and pinned").
+ *
+ *		P_NEW is disallowed because this routine can only be used
+ *		to access pages that are known to be before the filesystem EOF.
+ *		Extending the index should be done with _hash_getnewbuf.
+ */
+Buffer
+_hash_getinitbuf(Relation rel, BlockNumber blkno)
+{
+	Buffer		buf;
+
+	if (blkno == P_NEW)
+		elog(ERROR, "hash AM does not use P_NEW");
+
+	buf = ReadOrZeroBuffer(rel, blkno);
+
+	LockBuffer(buf, HASH_WRITE);
+
+	/* ref count and lock type are correct */
+
+	/* initialize the page */
+	_hash_pageinit(BufferGetPage(buf), BufferGetPageSize(buf));
+
 	return buf;
 }
 
 /*
  *	_hash_getnewbuf() -- Get a new page at the end of the index.
  *
- *		This has the same API as _hash_getbuf, except that we are adding
+ *		This has the same API as _hash_getinitbuf, except that we are adding
  *		a page to the index, and hence expect the page to be past the
  *		logical EOF.  (However, we have to support the case where it isn't,
  *		since a prior try might have crashed after extending the filesystem
@@ -144,14 +187,11 @@ _hash_getbuf(Relation rel, BlockNumber blkno, int access)
  *
  *		It is caller's responsibility to ensure that only one process can
  *		extend the index at a time.
- *
- *		All call sites should call _hash_pageinit on the returned page.
- *		Also, it's difficult to imagine why access would not be HASH_WRITE.
  */
 Buffer
-_hash_getnewbuf(Relation rel, BlockNumber blkno, int access)
+_hash_getnewbuf(Relation rel, BlockNumber blkno)
 {
-	BlockNumber	nblocks = RelationGetNumberOfBlocks(rel);
+	BlockNumber nblocks = RelationGetNumberOfBlocks(rel);
 	Buffer		buf;
 
 	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
@@ -171,12 +211,43 @@ _hash_getnewbuf(Relation rel, BlockNumber blkno, int access)
 				 BufferGetBlockNumber(buf), blkno);
 	}
 	else
-		buf = ReadBuffer(rel, blkno);
+		buf = ReadOrZeroBuffer(rel, blkno);
+
+	LockBuffer(buf, HASH_WRITE);
+
+	/* ref count and lock type are correct */
+
+	/* initialize the page */
+	_hash_pageinit(BufferGetPage(buf), BufferGetPageSize(buf));
+
+	return buf;
+}
+
+/*
+ *	_hash_getbuf_with_strategy() -- Get a buffer with nondefault strategy.
+ *
+ *		This is identical to _hash_getbuf() but also allows a buffer access
+ *		strategy to be specified.  We use this for VACUUM operations.
+ */
+Buffer
+_hash_getbuf_with_strategy(Relation rel, BlockNumber blkno,
+						   int access, int flags,
+						   BufferAccessStrategy bstrategy)
+{
+	Buffer		buf;
+
+	if (blkno == P_NEW)
+		elog(ERROR, "hash AM does not use P_NEW");
+
+	buf = ReadBufferWithStrategy(rel, blkno, bstrategy);
 
 	if (access != HASH_NOLOCK)
 		LockBuffer(buf, access);
 
 	/* ref count and lock type are correct */
+
+	_hash_checkpage(rel, buf, flags);
+
 	return buf;
 }
 
@@ -299,26 +370,24 @@ _hash_metapinit(Relation rel)
 	if (ffactor < 10)
 		ffactor = 10;
 
-	/*
-	 * We initialize the metapage, the first two bucket pages, and the
-	 * first bitmap page in sequence, using _hash_getnewbuf to cause
-	 * smgrextend() calls to occur.  This ensures that the smgr level
-	 * has the right idea of the physical index length.
-	 */
-	
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	metabuf = _hash_getnewbuf(rel, HASH_METAPAGE, HASH_WRITE);
+	/*
+	 * We initialize the metapage, the first two bucket pages, and the first
+	 * bitmap page in sequence, using _hash_getnewbuf to cause smgrextend()
+	 * calls to occur.	This ensures that the smgr level has the right idea of
+	 * the physical index length.
+	 */
+	metabuf = _hash_getnewbuf(rel, HASH_METAPAGE);
 	pg = BufferGetPage(metabuf);
-	_hash_pageinit(pg, BufferGetPageSize(metabuf));
 
 	pageopaque = (HashPageOpaque) PageGetSpecialPointer(pg);
 	pageopaque->hasho_prevblkno = InvalidBlockNumber;
 	pageopaque->hasho_nextblkno = InvalidBlockNumber;
 	pageopaque->hasho_bucket = -1;
 	pageopaque->hasho_flag = LH_META_PAGE;
-	pageopaque->hasho_filler = HASHO_FILL;
+	pageopaque->hasho_page_id = HASHO_PAGE_ID;
 
 	metap = (HashMetaPage) pg;
 
@@ -367,15 +436,14 @@ _hash_metapinit(Relation rel)
 	 */
 	for (i = 0; i <= 1; i++)
 	{
-		buf = _hash_getnewbuf(rel, BUCKET_TO_BLKNO(metap, i), HASH_WRITE);
+		buf = _hash_getnewbuf(rel, BUCKET_TO_BLKNO(metap, i));
 		pg = BufferGetPage(buf);
-		_hash_pageinit(pg, BufferGetPageSize(buf));
 		pageopaque = (HashPageOpaque) PageGetSpecialPointer(pg);
 		pageopaque->hasho_prevblkno = InvalidBlockNumber;
 		pageopaque->hasho_nextblkno = InvalidBlockNumber;
 		pageopaque->hasho_bucket = i;
 		pageopaque->hasho_flag = LH_BUCKET_PAGE;
-		pageopaque->hasho_filler = HASHO_FILL;
+		pageopaque->hasho_page_id = HASHO_PAGE_ID;
 		_hash_wrtbuf(rel, buf);
 	}
 
@@ -462,15 +530,16 @@ _hash_expandtable(Relation rel, Buffer metabuf)
 		goto fail;
 
 	/*
-	 * Can't split anymore if maxbucket has reached its maximum possible value.
+	 * Can't split anymore if maxbucket has reached its maximum possible
+	 * value.
 	 *
 	 * Ideally we'd allow bucket numbers up to UINT_MAX-1 (no higher because
 	 * the calculation maxbucket+1 mustn't overflow).  Currently we restrict
 	 * to half that because of overflow looping in _hash_log2() and
 	 * insufficient space in hashm_spares[].  It's moot anyway because an
-	 * index with 2^32 buckets would certainly overflow BlockNumber and
-	 * hence _hash_alloc_buckets() would fail, but if we supported buckets
-	 * smaller than a disk block then this would be an independent constraint.
+	 * index with 2^32 buckets would certainly overflow BlockNumber and hence
+	 * _hash_alloc_buckets() would fail, but if we supported buckets smaller
+	 * than a disk block then this would be an independent constraint.
 	 */
 	if (metap->hashm_maxbucket >= (uint32) 0x7FFFFFFE)
 		goto fail;
@@ -497,10 +566,10 @@ _hash_expandtable(Relation rel, Buffer metabuf)
 	/*
 	 * Likewise lock the new bucket (should never fail).
 	 *
-	 * Note: it is safe to compute the new bucket's blkno here, even though
-	 * we may still need to update the BUCKET_TO_BLKNO mapping.  This is
-	 * because the current value of hashm_spares[hashm_ovflpoint] correctly
-	 * shows where we are going to put a new splitpoint's worth of buckets.
+	 * Note: it is safe to compute the new bucket's blkno here, even though we
+	 * may still need to update the BUCKET_TO_BLKNO mapping.  This is because
+	 * the current value of hashm_spares[hashm_ovflpoint] correctly shows
+	 * where we are going to put a new splitpoint's worth of buckets.
 	 */
 	start_nblkno = BUCKET_TO_BLKNO(metap, new_bucket);
 
@@ -518,11 +587,12 @@ _hash_expandtable(Relation rel, Buffer metabuf)
 	if (spare_ndx > metap->hashm_ovflpoint)
 	{
 		Assert(spare_ndx == metap->hashm_ovflpoint + 1);
+
 		/*
-		 * The number of buckets in the new splitpoint is equal to the
-		 * total number already in existence, i.e. new_bucket.  Currently
-		 * this maps one-to-one to blocks required, but someday we may need
-		 * a more complicated calculation here.
+		 * The number of buckets in the new splitpoint is equal to the total
+		 * number already in existence, i.e. new_bucket.  Currently this maps
+		 * one-to-one to blocks required, but someday we may need a more
+		 * complicated calculation here.
 		 */
 		if (!_hash_alloc_buckets(rel, start_nblkno, new_bucket))
 		{
@@ -620,7 +690,7 @@ fail:
  * This does not need to initialize the new bucket pages; we'll do that as
  * each one is used by _hash_expandtable().  But we have to extend the logical
  * EOF to the end of the splitpoint; this keeps smgr's idea of the EOF in
- * sync with ours, so that overflow-page allocation works correctly.
+ * sync with ours, so that we don't get complaints from smgr.
  *
  * We do this by writing a page of zeroes at the end of the splitpoint range.
  * We expect that the filesystem will ensure that the intervening pages read
@@ -641,14 +711,14 @@ fail:
 static bool
 _hash_alloc_buckets(Relation rel, BlockNumber firstblock, uint32 nblocks)
 {
-	BlockNumber	lastblock;
+	BlockNumber lastblock;
 	char		zerobuf[BLCKSZ];
 
 	lastblock = firstblock + nblocks - 1;
 
 	/*
-	 * Check for overflow in block number calculation; if so, we cannot
-	 * extend the index anymore.
+	 * Check for overflow in block number calculation; if so, we cannot extend
+	 * the index anymore.
 	 */
 	if (lastblock < firstblock || lastblock == InvalidBlockNumber)
 		return false;
@@ -714,23 +784,21 @@ _hash_splitbucket(Relation rel,
 	 * either bucket.
 	 */
 	oblkno = start_oblkno;
-	obuf = _hash_getbuf(rel, oblkno, HASH_WRITE);
-	_hash_checkpage(rel, obuf, LH_BUCKET_PAGE);
+	obuf = _hash_getbuf(rel, oblkno, HASH_WRITE, LH_BUCKET_PAGE);
 	opage = BufferGetPage(obuf);
 	oopaque = (HashPageOpaque) PageGetSpecialPointer(opage);
 
 	nblkno = start_nblkno;
-	nbuf = _hash_getbuf(rel, nblkno, HASH_WRITE);
+	nbuf = _hash_getnewbuf(rel, nblkno);
 	npage = BufferGetPage(nbuf);
 
 	/* initialize the new bucket's primary page */
-	_hash_pageinit(npage, BufferGetPageSize(nbuf));
 	nopaque = (HashPageOpaque) PageGetSpecialPointer(npage);
 	nopaque->hasho_prevblkno = InvalidBlockNumber;
 	nopaque->hasho_nextblkno = InvalidBlockNumber;
 	nopaque->hasho_bucket = nbucket;
 	nopaque->hasho_flag = LH_BUCKET_PAGE;
-	nopaque->hasho_filler = HASHO_FILL;
+	nopaque->hasho_page_id = HASHO_PAGE_ID;
 
 	/*
 	 * Partition the tuples in the old bucket between the old bucket and the
@@ -760,8 +828,7 @@ _hash_splitbucket(Relation rel,
 			 */
 			_hash_wrtbuf(rel, obuf);
 
-			obuf = _hash_getbuf(rel, oblkno, HASH_WRITE);
-			_hash_checkpage(rel, obuf, LH_OVERFLOW_PAGE);
+			obuf = _hash_getbuf(rel, oblkno, HASH_WRITE, LH_OVERFLOW_PAGE);
 			opage = BufferGetPage(obuf);
 			oopaque = (HashPageOpaque) PageGetSpecialPointer(opage);
 			ooffnum = FirstOffsetNumber;
@@ -798,13 +865,12 @@ _hash_splitbucket(Relation rel,
 				_hash_chgbufaccess(rel, nbuf, HASH_WRITE, HASH_NOLOCK);
 				/* chain to a new overflow page */
 				nbuf = _hash_addovflpage(rel, metabuf, nbuf);
-				_hash_checkpage(rel, nbuf, LH_OVERFLOW_PAGE);
 				npage = BufferGetPage(nbuf);
 				/* we don't need nopaque within the loop */
 			}
 
 			noffnum = OffsetNumberNext(PageGetMaxOffsetNumber(npage));
-			if (PageAddItem(npage, (Item) itup, itemsz, noffnum, LP_USED)
+			if (PageAddItem(npage, (Item) itup, itemsz, noffnum, false, false)
 				== InvalidOffsetNumber)
 				elog(ERROR, "failed to add index item to \"%s\"",
 					 RelationGetRelationName(rel));
@@ -842,5 +908,5 @@ _hash_splitbucket(Relation rel,
 	_hash_wrtbuf(rel, obuf);
 	_hash_wrtbuf(rel, nbuf);
 
-	_hash_squeezebucket(rel, obucket, start_oblkno);
+	_hash_squeezebucket(rel, obucket, start_oblkno, NULL);
 }

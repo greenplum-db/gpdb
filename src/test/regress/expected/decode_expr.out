@@ -862,6 +862,11 @@ select * from vtable order by a;
 (2 rows)
 
 select decode(null, 1, 'null = 1', 'null != 1');
+ERROR:  operator does not exist: text = integer
+LINE 1: select decode(null, 1, 'null = 1', 'null != 1');
+                            ^
+HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
+select decode(null::integer, 1, 'null = 1', 'null != 1');
    case    
 -----------
  null != 1
@@ -924,18 +929,10 @@ commit;
 select gender, decode(gender, 1, 'Unknown', 'M', 'Male', 'F', 'Female', 'Unknown')
 from genders
 order by gender,student_id;
- gender |  case  
---------+--------
- F      | Female
- F      | Female
- F      | Female
- F      | Female
- M      | Male
- M      | Male
- M      | Male
- M      | Male
-(8 rows)
-
+ERROR:  operator does not exist: character = integer
+LINE 1: select gender, decode(gender, 1, 'Unknown', 'M', 'Male', 'F'...
+                                      ^
+HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
 select gender,decode(gender, 'N/A', 'Unknown', 'M', 'Male', 'F', 'Female')
 from genders
 order by gender,student_id;

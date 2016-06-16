@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/timestamp.c,v 1.173 2007/02/19 17:41:39 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/timestamp.c,v 1.184.2.2 2009/04/04 04:53:34 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -2717,12 +2717,17 @@ interval_hash(PG_FUNCTION_ARGS)
 {
 	Interval   *interval = PG_GETARG_INTERVAL_P(0);
 	TimeOffset	span = interval_cmp_value(interval);
+	uint32		thash;
 
 #ifdef HAVE_INT64_TIMESTAMP
-	return DirectFunctionCall1(hashint8, Int64GetDatumFast(span));
+	thash = DatumGetUInt32(DirectFunctionCall1(hashint8,
+											   Int64GetDatumFast(span)));
 #else
-	return DirectFunctionCall1(hashfloat8, Float8GetDatumFast(span));
+	thash = DatumGetUInt32(DirectFunctionCall1(hashfloat8,
+											   Float8GetDatumFast(span)));
 #endif
+
+	PG_RETURN_UINT32(thash);
 }
 
 /* overlaps_timestamp() --- implements the SQL92 OVERLAPS operator.
@@ -3951,187 +3956,6 @@ timestamptz_li_value(float8 f, TimestampTz y0, TimestampTz y1)
 /*----------------------------------------------------------
  *	Conversion operators.
  *---------------------------------------------------------*/
-
-/* timestamp_text()
- * Convert timestamp to text data type.
- */
-Datum
-timestamp_text(PG_FUNCTION_ARGS)
-{
-	/* Input is a Timestamp, but may as well leave it in Datum form */
-	Datum		timestamp = PG_GETARG_DATUM(0);
-	text	   *result;
-	char	   *str;
-	int			len;
-
-	str = DatumGetCString(DirectFunctionCall1(timestamp_out, timestamp));
-
-	len = (strlen(str) + VARHDRSZ);
-
-	result = palloc(len);
-
-	SET_VARSIZE(result, len);
-	memcpy(VARDATA(result), str, (len - VARHDRSZ));
-
-	pfree(str);
-
-	PG_RETURN_TEXT_P(result);
-}
-
-
-/* text_timestamp()
- * Convert text string to timestamp.
- * Text type is not null terminated, so use temporary string
- *	then call the standard input routine.
- */
-Datum
-text_timestamp(PG_FUNCTION_ARGS)
-{
-	text	   *str = PG_GETARG_TEXT_P(0);
-	int			i;
-	char	   *sp,
-			   *dp,
-				dstr[MAXDATELEN + 1];
-
-	if (VARSIZE(str) - VARHDRSZ > MAXDATELEN)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_DATETIME_FORMAT),
-				 errmsg("invalid input syntax for type timestamp: \"%s\"",
-						DatumGetCString(DirectFunctionCall1(textout,
-												   PointerGetDatum(str))))));
-
-	sp = VARDATA(str);
-	dp = dstr;
-	for (i = 0; i < VARSIZE(str) - VARHDRSZ; i++)
-		*dp++ = *sp++;
-	*dp = '\0';
-
-	return DirectFunctionCall3(timestamp_in,
-							   CStringGetDatum(dstr),
-							   ObjectIdGetDatum(InvalidOid),
-							   Int32GetDatum(-1));
-}
-
-
-/* timestamptz_text()
- * Convert timestamp with time zone to text data type.
- */
-Datum
-timestamptz_text(PG_FUNCTION_ARGS)
-{
-	/* Input is a Timestamp, but may as well leave it in Datum form */
-	Datum		timestamp = PG_GETARG_DATUM(0);
-	text	   *result;
-	char	   *str;
-	int			len;
-
-	str = DatumGetCString(DirectFunctionCall1(timestamptz_out, timestamp));
-
-	len = strlen(str) + VARHDRSZ;
-
-	result = palloc(len);
-
-	SET_VARSIZE(result, len);
-	memcpy(VARDATA(result), str, (len - VARHDRSZ));
-
-	pfree(str);
-
-	PG_RETURN_TEXT_P(result);
-}
-
-/* text_timestamptz()
- * Convert text string to timestamp with time zone.
- * Text type is not null terminated, so use temporary string
- *	then call the standard input routine.
- */
-Datum
-text_timestamptz(PG_FUNCTION_ARGS)
-{
-	text	   *str = PG_GETARG_TEXT_P(0);
-	int			i;
-	char	   *sp,
-			   *dp,
-				dstr[MAXDATELEN + 1];
-
-	if (VARSIZE(str) - VARHDRSZ > MAXDATELEN)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_DATETIME_FORMAT),
-				 errmsg("invalid input syntax for type timestamp with time zone: \"%s\"",
-						DatumGetCString(DirectFunctionCall1(textout,
-												   PointerGetDatum(str))))));
-
-	sp = VARDATA(str);
-	dp = dstr;
-	for (i = 0; i < VARSIZE(str) - VARHDRSZ; i++)
-		*dp++ = *sp++;
-	*dp = '\0';
-
-	return DirectFunctionCall3(timestamptz_in,
-							   CStringGetDatum(dstr),
-							   ObjectIdGetDatum(InvalidOid),
-							   Int32GetDatum(-1));
-}
-
-
-/* interval_text()
- * Convert interval to text data type.
- */
-Datum
-interval_text(PG_FUNCTION_ARGS)
-{
-	Interval   *interval = PG_GETARG_INTERVAL_P(0);
-	text	   *result;
-	char	   *str;
-	int			len;
-
-	str = DatumGetCString(DirectFunctionCall1(interval_out,
-											  IntervalPGetDatum(interval)));
-
-	len = strlen(str) + VARHDRSZ;
-
-	result = palloc(len);
-
-	SET_VARSIZE(result, len);
-	memcpy(VARDATA(result), str, len - VARHDRSZ);
-
-	pfree(str);
-
-	PG_RETURN_TEXT_P(result);
-}
-
-
-/* text_interval()
- * Convert text string to interval.
- * Text type may not be null terminated, so copy to temporary string
- *	then call the standard input routine.
- */
-Datum
-text_interval(PG_FUNCTION_ARGS)
-{
-	text	   *str = PG_GETARG_TEXT_P(0);
-	int			i;
-	char	   *sp,
-			   *dp,
-				dstr[MAXDATELEN + 1];
-
-	if (VARSIZE(str) - VARHDRSZ > MAXDATELEN)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_DATETIME_FORMAT),
-				 errmsg("invalid input syntax for type interval: \"%s\"",
-						DatumGetCString(DirectFunctionCall1(textout,
-												   PointerGetDatum(str))))));
-
-	sp = VARDATA(str);
-	dp = dstr;
-	for (i = 0; i < (VARSIZE(str) - VARHDRSZ); i++)
-		*dp++ = *sp++;
-	*dp = '\0';
-
-	return DirectFunctionCall3(interval_in,
-							   CStringGetDatum(dstr),
-							   ObjectIdGetDatum(InvalidOid),
-							   Int32GetDatum(-1));
-}
 
 
 /* timestamp_trunc()

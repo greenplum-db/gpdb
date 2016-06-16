@@ -919,8 +919,6 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
     Slice      *recvSlice = NULL;
     SliceTable *sliceTable = estate->es_sliceTable;
 
-	int			parentSliceIndex = estate->currentSliceIdInPlan;
-
 #ifdef CDB_MOTION_DEBUG
 	int			i;
 #endif
@@ -952,45 +950,9 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		MemoryContext   oldcxt = MemoryContextSwitchTo(estate->es_query_cxt);
-        Flow           *sendFlow;
-
-        /* Top node of subplan should have a Flow node. */
-        Insist(node->plan.lefttree && node->plan.lefttree->flow);
-        sendFlow = node->plan.lefttree->flow;
-
-        /* Sending slice table entry hasn't been filled in yet. */
-        Assert(sendSlice->rootIndex == -1);
-		Assert(sendSlice->gangSize == 0);
 
 		/* Look up the receiving (parent) gang's slice table entry. */
-		recvSlice = (Slice *)list_nth(sliceTable->slices, parentSliceIndex);
-
-		Assert(IsA(recvSlice, Slice));
-		Assert(recvSlice->sliceIndex == parentSliceIndex);
-        Assert(recvSlice->rootIndex == 0 ||
-               (recvSlice->rootIndex > sliceTable->nMotions &&
-                recvSlice->rootIndex < list_length(sliceTable->slices)));
-
-		/* Sending slice become a children of recv slice */
-		recvSlice->children = lappend_int(recvSlice->children, sendSlice->sliceIndex);
-		sendSlice->parentIndex = parentSliceIndex;
-        sendSlice->rootIndex = recvSlice->rootIndex;
-
-		/* The gang beneath a Motion will be a reader. */
-		if (sendFlow->flotype != FLOW_SINGLETON)
-		{
-			sendSlice->gangSize = getgpsegmentCount();
-			sendSlice->gangType = GANGTYPE_PRIMARY_READER;
-		}
-		else
-		{
-			sendSlice->gangSize = 1;
-			sendSlice->gangType =
-					sendFlow->segindex == -1 ?
-							GANGTYPE_ENTRYDB_READER : GANGTYPE_SINGLETON_READER;
-		}
-
-        sendSlice->numGangMembersToBeActive = sliceCalculateNumSendingProcesses(sendSlice);
+		recvSlice = (Slice *)list_nth(sliceTable->slices, sendSlice->parentIndex);
 
 		if (node->motionType == MOTIONTYPE_FIXED && node->numOutputSegs == 1)
 		{

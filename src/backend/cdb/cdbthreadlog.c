@@ -105,7 +105,7 @@ write_log(const char *fmt,...)
 
 	va_start(ap, fmt);
 
-	if (Redirect_stderr && gp_log_format == 1)
+	if (Logging_collector && gp_log_format == 1)
 	{
 		char		errbuf[2048]; /* Arbitrary size? */
 

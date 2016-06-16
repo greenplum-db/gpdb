@@ -96,6 +96,8 @@ SELECT * FROM fast_emp4000
 
 SELECT count(*) FROM fast_emp4000 WHERE home_base && '(1000,1000,0,0)'::box;
 
+SELECT count(*) FROM fast_emp4000 WHERE home_base IS NULL;
+
 SELECT * FROM polygon_tbl WHERE f1 ~ '((1,1),(2,2),(2,1))'::polygon
     ORDER BY (poly_center(f1))[0];
 
@@ -118,6 +120,8 @@ SELECT * FROM fast_emp4000
     ORDER BY (home_base[0])[0];
 
 SELECT count(*) FROM fast_emp4000 WHERE home_base && '(1000,1000,0,0)'::box;
+
+SELECT count(*) FROM fast_emp4000 WHERE home_base IS NULL;
 
 SELECT * FROM polygon_tbl WHERE f1 ~ '((1,1),(2,2),(2,1))'::polygon
     ORDER BY (poly_center(f1))[0];
@@ -193,7 +197,7 @@ CREATE INDEX func_index_index on func_index_heap (textcat(f1,f2));
 INSERT INTO func_index_heap VALUES('ABC','DEF');
 INSERT INTO func_index_heap VALUES('AB','CDEFG');
 INSERT INTO func_index_heap VALUES('QWE','RTY');
--- this should fail because of unique index:
+-- this should fail because of unique index: (In GPDB, the index isn't unique, so no error)
 INSERT INTO func_index_heap VALUES('ABCD', 'EF');
 -- but this shouldn't:
 INSERT INTO func_index_heap VALUES('QWERTY');
@@ -209,7 +213,7 @@ CREATE  INDEX func_index_index on func_index_heap ((f1 || f2) text_ops);
 INSERT INTO func_index_heap VALUES('ABC','DEF');
 INSERT INTO func_index_heap VALUES('AB','CDEFG');
 INSERT INTO func_index_heap VALUES('QWE','RTY');
--- this should fail because of unique index:
+-- this should fail because of unique index: (In GPDB, the index isn't unique, so no error)
 INSERT INTO func_index_heap VALUES('ABCD', 'EF');
 -- but this shouldn't:
 INSERT INTO func_index_heap VALUES('QWERTY');
@@ -228,20 +232,22 @@ create index hash_f8_index_3 on hash_f8_heap(random) where seqno > 1000;
 -- Unfortunately this only tests about half the code paths because there are
 -- no concurrent updates happening to the table at the same time.
 
-CREATE TABLE concur_heap (f1 text, f2 text) distributed by (f1);
+CREATE TABLE concur_heap (f1 text, f2 text, dk text) distributed by (dk);
 -- empty table
 CREATE INDEX CONCURRENTLY concur_index1 ON concur_heap(f2,f1);
 -- MPP-9772, MPP-9773: re-enable CREATE INDEX CONCURRENTLY (off by default)
 set gp_create_index_concurrently=true;
 CREATE INDEX CONCURRENTLY concur_index1 ON concur_heap(f2,f1);
-INSERT INTO concur_heap VALUES  ('a','b');
-INSERT INTO concur_heap VALUES  ('b','b');
+INSERT INTO concur_heap VALUES  ('a','b', '1');
+INSERT INTO concur_heap VALUES  ('b','b', '1');
+INSERT INTO concur_heap VALUES  ('c','c', '2');
+INSERT INTO concur_heap VALUES  ('d','d', '3');
 -- unique index
-CREATE UNIQUE INDEX CONCURRENTLY concur_index2 ON concur_heap(f1);
+CREATE UNIQUE INDEX CONCURRENTLY concur_index2 ON concur_heap(dk, f1);
 -- check if constraint is set up properly to be enforced
-INSERT INTO concur_heap VALUES ('b','x');
+INSERT INTO concur_heap VALUES ('b','x', '1');
 -- check if constraint is enforced properly at build time
---CREATE UNIQUE INDEX CONCURRENTLY concur_index3 ON concur_heap(f2);
+CREATE UNIQUE INDEX CONCURRENTLY concur_index3 ON concur_heap(dk, f2);
 -- test that expression indexes and partial indexes work concurrently
 CREATE INDEX CONCURRENTLY concur_index4 on concur_heap(f2) WHERE f1='a';
 CREATE INDEX CONCURRENTLY concur_index5 on concur_heap(f2) WHERE f1='x';
@@ -264,3 +270,45 @@ COMMIT;
 \d concur_heap
 
 DROP TABLE concur_heap;
+
+--
+-- Tests for IS NULL with b-tree indexes
+--
+
+SELECT unique1, unique2 INTO onek_with_null FROM onek;
+INSERT INTO onek_with_null (unique1,unique2) VALUES (NULL, -1), (NULL, NULL);
+CREATE UNIQUE INDEX onek_nulltest ON onek_with_null (unique2,unique1);
+
+SET enable_seqscan = OFF;
+SET enable_indexscan = ON;
+SET enable_bitmapscan = ON;
+
+SELECT count(*) FROM onek_with_null WHERE unique1 IS NULL;
+SELECT count(*) FROM onek_with_null WHERE unique1 IS NULL AND unique2 IS NULL;
+
+DROP INDEX onek_nulltest;
+
+CREATE UNIQUE INDEX onek_nulltest ON onek_with_null (unique2 desc,unique1);
+
+SELECT count(*) FROM onek_with_null WHERE unique1 IS NULL;
+SELECT count(*) FROM onek_with_null WHERE unique1 IS NULL AND unique2 IS NULL;
+
+DROP INDEX onek_nulltest;
+
+CREATE UNIQUE INDEX onek_nulltest ON onek_with_null (unique2 desc nulls last,unique1);
+
+SELECT count(*) FROM onek_with_null WHERE unique1 IS NULL;
+SELECT count(*) FROM onek_with_null WHERE unique1 IS NULL AND unique2 IS NULL;
+
+DROP INDEX onek_nulltest;
+
+CREATE UNIQUE INDEX onek_nulltest ON onek_with_null (unique2  nulls first,unique1);
+
+SELECT count(*) FROM onek_with_null WHERE unique1 IS NULL;
+SELECT count(*) FROM onek_with_null WHERE unique1 IS NULL AND unique2 IS NULL;
+
+RESET enable_seqscan;
+RESET enable_indexscan;
+RESET enable_bitmapscan;
+ 
+DROP TABLE onek_with_null;

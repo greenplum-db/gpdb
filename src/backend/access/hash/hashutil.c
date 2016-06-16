@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hashutil.c,v 1.51 2007/01/30 01:33:36 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hashutil.c,v 1.53 2008/01/01 19:45:46 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -137,6 +137,9 @@ _hash_log2(uint32 num)
 
 /*
  * _hash_checkpage -- sanity checks on the format of all hash pages
+ *
+ * If flags is not zero, it is a bitwise OR of the acceptable values of
+ * hasho_flag.
  */
 void
 _hash_checkpage(Relation rel, Buffer buf, int flags)

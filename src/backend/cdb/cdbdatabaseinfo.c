@@ -1199,12 +1199,20 @@ DatabaseInfo_CollectPgClass(
 	DatabaseInfo 		*info,
 	HTAB				*dbInfoRelHashTable,
 	HTAB				*relationIdHashTable,
+	Snapshot			 snapshot,
 	int					*count)
 {
 	Relation	pg_class_rel;
 
 	HeapScanDesc scan;
 	HeapTuple	tuple;
+
+	/*
+	 * If the caller isn't providing a Snapshot to use, fall back to using
+	 * SnapshotNow
+	 */
+	if (snapshot == NULL)
+		snapshot = SnapshotNow;
 
 	/*
 	 * Iterate through all the relations of the database and determine which
@@ -1215,7 +1223,7 @@ DatabaseInfo_CollectPgClass(
 			DirectOpen_PgClassOpen(
 							info->defaultTablespace, 
 							info->database);
-	scan = heap_beginscan(pg_class_rel, SnapshotNow, 0, NULL);
+	scan = heap_beginscan(pg_class_rel, snapshot, 0, NULL);
 	while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
 		Oid 			relationOid;
@@ -1277,7 +1285,6 @@ DatabaseInfo_CollectPgClass(
 	heap_endscan(scan);
 
 	DirectOpen_PgClassClose(pg_class_rel);
-
 }
 
 /*
@@ -1374,6 +1381,7 @@ DatabaseInfo *
 DatabaseInfo_Collect(
 	Oid			database,
 	Oid 		defaultTablespace,
+	Snapshot	snapshot,
 	bool        collectGpRelationNodeInfo,
 	bool		collectAppendOnlyCatalogSegmentInfo,
 	bool		scanFileSystem)
@@ -1425,7 +1433,7 @@ DatabaseInfo_Collect(
 	 *   - from gp_relation_node [if specified]
 	 *   - from file system
 	 */
-	DatabaseInfo_CollectPgClass(info, dbInfoRelHashTable, relationIdHashTable, &count);
+	DatabaseInfo_CollectPgClass(info, dbInfoRelHashTable, relationIdHashTable, NULL, &count);
 	DatabaseInfo_CollectPgAppendOnly(info, pgAppendOnlyHashTable);
 
 	if (info->collectAppendOnlyCatalogSegmentInfo)

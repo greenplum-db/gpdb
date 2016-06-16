@@ -229,6 +229,7 @@ _readQuery(void)
 	READ_BOOL_FIELD(hasAggs);
 	READ_BOOL_FIELD(hasWindFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
+	READ_BOOL_FIELD(hasDynamicFunctions);
 	READ_NODE_FIELD(rtable);
 	READ_NODE_FIELD(jointree);
 	READ_NODE_FIELD(targetList);
@@ -246,10 +247,6 @@ _readQuery(void)
 	READ_NODE_FIELD(limitCount);
 	READ_NODE_FIELD(rowMarks);
 	READ_NODE_FIELD(setOperations);
-	READ_NODE_FIELD(resultRelations);
-	READ_NODE_FIELD(result_partitions);
-	READ_NODE_FIELD(result_aosegnos);
-	READ_NODE_FIELD(returningLists);
 	/* policy not serialized */
 
 	READ_DONE();
@@ -266,9 +263,6 @@ _readCurrentOfExpr(void)
 	READ_STRING_FIELD(cursor_name);
 	READ_UINT_FIELD(cvarno);
 	READ_OID_FIELD(target_relid);
-	READ_INT_FIELD(gp_segment_id);
-	READ_BINARY_FIELD(ctid, sizeof(ItemPointerData));
-	READ_OID_FIELD(tableoid);
 
 	READ_DONE();
 }
@@ -388,6 +382,19 @@ _readConst(void)
 		local_node->constvalue = 0;
 	else
 		local_node->constvalue = readDatum(local_node->constbyval);
+
+	READ_DONE();
+}
+
+static ResTarget *
+_readResTarget(void)
+{
+	READ_LOCALS(ResTarget);
+
+	READ_STRING_FIELD(name);
+	READ_NODE_FIELD(indirection);
+	READ_NODE_FIELD(val);
+	READ_INT_FIELD(location);
 
 	READ_DONE();
 }
@@ -634,6 +641,69 @@ _readAlterOwnerStmt(void)
 	READ_DONE();
 }
 
+static SelectStmt *
+_readSelectStmt(void)
+{
+	READ_LOCALS(SelectStmt);
+
+	READ_NODE_FIELD(distinctClause);
+	READ_NODE_FIELD(intoClause);
+	READ_NODE_FIELD(targetList);
+	READ_NODE_FIELD(fromClause);
+	READ_NODE_FIELD(whereClause);
+	READ_NODE_FIELD(groupClause);
+	READ_NODE_FIELD(havingClause);
+	READ_NODE_FIELD(windowClause);
+	READ_NODE_FIELD(valuesLists);
+	READ_NODE_FIELD(sortClause);
+	READ_NODE_FIELD(scatterClause);
+	READ_NODE_FIELD(withClause);
+	READ_NODE_FIELD(limitOffset);
+	READ_NODE_FIELD(limitCount);
+	READ_NODE_FIELD(lockingClause);
+	READ_ENUM_FIELD(op, SetOperation);
+	READ_BOOL_FIELD(all);
+	READ_NODE_FIELD(larg);
+	READ_NODE_FIELD(rarg);
+	READ_NODE_FIELD(distributedBy);
+	READ_DONE();
+}
+
+static InsertStmt *
+_readInsertStmt(void)
+{
+	READ_LOCALS(InsertStmt);
+
+	READ_NODE_FIELD(relation);
+	READ_NODE_FIELD(cols);
+	READ_NODE_FIELD(selectStmt);
+	READ_NODE_FIELD(returningList);
+	READ_DONE();
+}
+
+static DeleteStmt *
+_readDeleteStmt(void)
+{
+	READ_LOCALS(DeleteStmt);
+
+	READ_NODE_FIELD(relation);
+	READ_NODE_FIELD(usingClause);
+	READ_NODE_FIELD(whereClause);
+	READ_NODE_FIELD(returningList);
+	READ_DONE();
+}
+
+static UpdateStmt *
+_readUpdateStmt(void)
+{
+	READ_LOCALS(UpdateStmt);
+
+	READ_NODE_FIELD(relation);
+	READ_NODE_FIELD(targetList);
+	READ_NODE_FIELD(whereClause);
+	READ_NODE_FIELD(returningList);
+	READ_DONE();
+}
 
 /*
  * _readFuncCall
@@ -1427,6 +1497,7 @@ _readPlannedStmt(void)
 	READ_NODE_FIELD(utilityStmt);
 	READ_NODE_FIELD(intoClause);
 	READ_NODE_FIELD(subplans);
+	READ_BITMAPSET_FIELD(rewindPlanIDs);
 	READ_NODE_FIELD(returningLists);
 	READ_NODE_FIELD(result_partitions);
 	READ_NODE_FIELD(result_aosegnos);
@@ -1435,8 +1506,8 @@ _readPlannedStmt(void)
 	READ_NODE_FIELD(numSelectorsPerScanId);
 	READ_NODE_FIELD(rowMarks);
 	READ_NODE_FIELD(relationOids);
-	READ_NODE_FIELD(invalItems);
-	READ_INT_FIELD(nCrossLevelParams);
+	/* invalItems not serialized in outfast.c */
+	READ_INT_FIELD(nParamExec);
 	READ_INT_FIELD(nMotionNodes);
 	READ_INT_FIELD(nInitPlans);
 	/* intoPolicy not serialized in outfast.c */
@@ -1454,6 +1525,7 @@ _readQueryDispatchDesc(void)
 	READ_NODE_FIELD(intoOidInfo);
 	READ_STRING_FIELD(intoTableSpaceName);
 	READ_NODE_FIELD(sliceTable);
+	READ_NODE_FIELD(cursorPositions);
 	READ_DONE();
 }
 
@@ -1528,6 +1600,7 @@ _readSequence(void)
 	READ_LOCALS(Sequence);
 	readPlanInfo((Plan *)local_node);
 	READ_NODE_FIELD(subplans);
+	READ_NODE_FIELD(static_selector);
 	READ_DONE();
 }
 
@@ -1994,6 +2067,9 @@ _readShareInputScan(void)
 	READ_ENUM_FIELD(share_type, ShareType);
 	READ_INT_FIELD(share_id);
 	READ_INT_FIELD(driver_slice);
+	READ_NODE_FIELD(colnames);
+	READ_NODE_FIELD(coltypes);
+	READ_NODE_FIELD(coltypmods);
 
 	readPlanInfo((Plan *)local_node);
 
@@ -2083,7 +2159,6 @@ _readLimit(void)
 
 	READ_DONE();
 }
-
 
 /*
  * _readHash
@@ -2299,7 +2374,6 @@ void readPlanInfo(Plan *local_node)
 	READ_NODE_FIELD(qual);
 	READ_BITMAPSET_FIELD(extParam);
 	READ_BITMAPSET_FIELD(allParam);
-	READ_INT_FIELD(nParamExec);
 
 	READ_NODE_FIELD(flow);
 	READ_INT_FIELD(dispatch);
@@ -2992,6 +3066,9 @@ readNodeBinary(void)
 			case T_CompositeTypeStmt:
 				return_value = _readCompositeTypeStmt();
 				break;
+			case T_CreateEnumStmt:
+				return_value = _readCreateEnumStmt();
+				break;
 			case T_CreateCastStmt:
 				return_value = _readCreateCastStmt();
 				break;
@@ -3124,11 +3201,26 @@ readNodeBinary(void)
 			case T_CopyStmt:
 				return_value = _readCopyStmt();
 				break;
+			case T_SelectStmt:
+				return_value = _readSelectStmt();
+				break;
+			case T_InsertStmt:
+				return_value = _readInsertStmt();
+				break;
+			case T_DeleteStmt:
+				return_value = _readDeleteStmt();
+				break;
+			case T_UpdateStmt:
+				return_value = _readUpdateStmt();
+				break;
 			case T_ColumnDef:
 				return_value = _readColumnDef();
 				break;
 			case T_TypeName:
 				return_value = _readTypeName();
+				break;
+			case T_SortBy:
+				return_value = _readSortBy();
 				break;
 			case T_TypeCast:
 				return_value = _readTypeCast();
@@ -3220,6 +3312,9 @@ readNodeBinary(void)
 			case T_A_Indirection:
 				return_value = _readA_Indirection();
 				break;
+			case T_ResTarget:
+				return_value = _readResTarget();
+				break;
 			case T_Constraint:
 				return_value = _readConstraint();
 				break;
@@ -3253,8 +3348,11 @@ readNodeBinary(void)
 			case T_SliceTable:
 				return_value = _readSliceTable();
 				break;
-			case T_VariableResetStmt:
-				return_value = _readVariableResetStmt();
+			case T_CursorPosInfo:
+				return_value = _readCursorPosInfo();
+				break;
+			case T_VariableSetStmt:
+				return_value = _readVariableSetStmt();
 				break;
 			case T_CreateTrigStmt:
 				return_value = _readCreateTrigStmt();

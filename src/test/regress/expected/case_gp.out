@@ -138,7 +138,10 @@ SELECT a,b,c,CASE c WHEN IS NOT DISTINCT FROM b THEN a
                     WHEN IS NOT DISTINCT FROM b+1 THEN a*100
                     ELSE c END 
   FROM mytable; 
-ERROR:  CASE types character varying and integer cannot be matched
+ERROR:  operator does not exist: character varying = integer
+LINE 1: SELECT a,b,c,CASE c WHEN IS NOT DISTINCT FROM b THEN a
+                                    ^
+HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
 --
 -- DECODE(): Oracle compatibility
 --
@@ -148,7 +151,7 @@ SELECT decode(null,null,true,false);
  t
 (1 row)
 
-SELECT decode(NULL, 1, 100, NULL, 200, 300);
+SELECT decode(NULL::integer, 1, 100, NULL, 200, 300);
  case 
 ------
   200
@@ -544,15 +547,8 @@ select sid,
        END as case_start_dt
 from nomatch_case
 order by sid, name;
- sid  |     name      | gender |  start_dt  | case_start_dt 
-------+---------------+--------+------------+---------------
- 1000 | Jane Doe      | F      | 01-15-2011 |              
- 2000 | Ryan Goesling | M      | 02-01-2011 |              
- 3000 | Tim Tebow     | M      | 01-15-2011 |              
- 4000 | Katy Perry    | F      | 03-01-2011 |              
- 5000 | Michael Scott | F      | 02-01-2011 |              
-(5 rows)
-
+ERROR:  operator does not exist: date = integer
+HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
 select sid,
        name,
        gender,

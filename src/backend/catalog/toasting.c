@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/toasting.c,v 1.5 2007/01/09 02:14:11 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/toasting.c,v 1.9 2008/01/01 19:45:48 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -22,6 +22,7 @@
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/indexing.h"
+#include "catalog/namespace.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_type.h"
@@ -136,6 +137,7 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	Relation	class_rel;
 	Oid			toast_relid;
 	Oid			toast_idxid;
+	Oid			namespaceid;
 	char		toast_relname[NAMEDATALEN];
 	char		toast_idxname[NAMEDATALEN];
 	IndexInfo  *indexInfo;
@@ -203,17 +205,21 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	tupdesc->attrs[2]->attstorage = 'p';
 
 	/*
-	 * Note: the toast relation is placed in the regular pg_toast namespace
-	 * even if its master relation is a temp table.  There cannot be any
-	 * naming collision, and the toast rel will be destroyed when its master
-	 * is, so there's no need to handle the toast rel as temp.
-	 *
+	 * Toast tables for regular relations go in pg_toast; those for temp
+	 * relations go into the per-backend temp-toast-table namespace.
+	 */
+	if (rel->rd_istemp)
+		namespaceid = GetTempToastNamespace();
+	else
+		namespaceid = PG_TOAST_NAMESPACE;
+
+	/*
 	 * XXX would it make sense to apply the master's reloptions to the toast
-	 * table?
+	 * table?  Or maybe some toast-specific reloptions?
 	 */
 	Oid unusedTypArrayOid = InvalidOid;
 	toast_relid = heap_create_with_catalog(toast_relname,
-										   PG_TOAST_NAMESPACE,
+										   namespaceid,
 										   rel->rd_rel->reltablespace,
 										   toastOid,
 										   rel->rd_rel->relowner,
@@ -259,7 +265,9 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	indexInfo->ii_Predicate = NIL;
 	indexInfo->ii_PredicateState = NIL;
 	indexInfo->ii_Unique = true;
+	indexInfo->ii_ReadyForInserts = true;
 	indexInfo->ii_Concurrent = false;
+	indexInfo->ii_BrokenHotChain = false;
 
 	classObjectId[0] = OID_BTREE_OPS_OID;
 	classObjectId[1] = INT4_BTREE_OPS_OID;
@@ -371,7 +379,7 @@ RelationNeedsToastTable(Relation rel)
 	{
 		if (att[i]->attisdropped)
 			continue;
-		data_length = att_align(data_length, att[i]->attalign);
+		data_length = att_align_nominal(data_length, att[i]->attalign);
 		if (att[i]->attlen > 0)
 		{
 			/* Fixed-length types are never toastable */

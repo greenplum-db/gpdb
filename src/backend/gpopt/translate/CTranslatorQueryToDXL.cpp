@@ -419,10 +419,17 @@ CTranslatorQueryToDXL::CheckSupportedCmdType
 
 	if (CMD_INSERT == pquery->commandType || CMD_DELETE == pquery->commandType || CMD_UPDATE == pquery->commandType)
 	{
+	  // GPDB_83_MERGE_FIXME: resultRelations was moved from Query to PlannedStmt. But
+	  // we're supposed to do the planning, so I assume we don't have easy access to
+	  // PlannedStmt here. I'm actually confused how this ever worked; I would've expected
+	  // resultRelations to not be filled in before planning. Or maybe it's filled in
+	  // at rewrite phase; not sure.
+#if 0
 		if (NULL != pquery->resultRelations)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("DML on partitioned tables"));
 		}
+#endif
 		return;
 	}
 
@@ -484,6 +491,8 @@ CTranslatorQueryToDXL::PdrgpdxlnCTE() const
 CDXLNode *
 CTranslatorQueryToDXL::PdxlnFromQueryInternal()
 {
+	// GPDB_83_MERGE_FIXME: Why do we check permissions here? The executor
+	// will do it anyway...
 	CTranslatorUtils::CheckRTEPermissions(m_pquery->rtable);
 	
 	CDXLNode *pdxlnChild = NULL;

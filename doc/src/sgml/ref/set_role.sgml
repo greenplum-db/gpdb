@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/set_role.sgml,v 1.4 2007/01/31 23:26:04 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/set_role.sgml,v 1.5 2008/01/03 21:23:15 tgl Exp $
 PostgreSQL documentation
 -->
 

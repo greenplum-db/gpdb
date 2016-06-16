@@ -279,3 +279,5 @@ INSERT INTO card_heap_table_w_bitmap (id, v, highCardinalityHighDomain)
  SELECT i, CAST(i AS VARCHAR), i % 50000 FROM generate_series(1000001, 1050000) i;
 
 SELECT COUNT(DISTINCT(highCardinalityHighDomain)) AS distinct_hchd FROM card_heap_table_w_bitmap ORDER BY distinct_hchd;
+
+drop table if exists bm_test;

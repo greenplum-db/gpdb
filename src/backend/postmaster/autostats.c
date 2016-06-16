@@ -71,7 +71,7 @@ autostats_issue_analyze(Oid relationOid)
 	analyzeStmt->rootonly = false;
 	analyzeStmt->relation = relation;	/* not used since we pass relids list */
 	analyzeStmt->va_cols = NIL;
-	vacuum(analyzeStmt, NIL);
+	vacuum(analyzeStmt, NIL, NULL, false, false);
 	pfree(analyzeStmt);
 }
 

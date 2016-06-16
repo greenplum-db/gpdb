@@ -26,6 +26,14 @@ then
 	INDENT=indent
 fi
 
+if [ "$#" -lt 2 ]
+then	echo "Usage:  `basename $0` typedefs file [...]" 1>&2
+	exit 1
+fi
+
+TYPEDEFS="$1"
+shift
+
 trap "rm -f /tmp/$$ /tmp/$$a" 0 1 2 3 15
 entab </dev/null >/dev/null
 if [ "$?" -ne 0 ]

@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/joinrels.c,v 1.86 2007/02/16 00:14:01 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/joinrels.c,v 1.91.2.1 2008/03/24 21:53:12 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -39,13 +39,15 @@ cdb_add_subquery_join_paths(PlannerInfo    *root,
 					        List           *restrictlist);
 static bool has_join_restriction(PlannerInfo *root, RelOptInfo *rel);
 static bool has_legal_joinclause(PlannerInfo *root, RelOptInfo *rel);
+static bool is_dummy_rel(RelOptInfo *rel);
+static void mark_dummy_join(PlannerInfo *root, RelOptInfo *rel);
 
 
 /*
- * make_rels_by_joins
+ * join_search_one_level
  *	  Consider ways to produce join relations containing exactly 'level'
  *	  jointree items.  (This is one step of the dynamic-programming method
- *	  embodied in make_one_rel_by_joins.)  Join rel nodes for each feasible
+ *	  embodied in standard_join_search.)  Join rel nodes for each feasible
  *	  combination of lower-level rels are created and returned in a list.
  *	  Implementation paths are created for each such joinrel, too.
  *
@@ -53,7 +55,7 @@ static bool has_legal_joinclause(PlannerInfo *root, RelOptInfo *rel);
  * joinrels[j], 1 <= j < level, is a list of rels containing j items.
  */
 List *
-make_rels_by_joins(PlannerInfo *root, int level, List **joinrels)
+join_search_one_level(PlannerInfo *root, int level, List **joinrels)
 {
 	List	   *result_rels = NIL;
 	List	   *new_rels;
@@ -358,8 +360,8 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
 	ListCell   *l;
 
 	/*
-	 * Ensure *jointype_p is set on failure return.  This is just to
-	 * suppress uninitialized-variable warnings from overly anal compilers.
+	 * Ensure *jointype_p is set on failure return.  This is just to suppress
+	 * uninitialized-variable warnings from overly anal compilers.
 	 */
 	*jointype_p = JOIN_INNER;
 
@@ -410,7 +412,7 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
 			bms_is_subset(ojinfo->min_righthand, rel2->relids))
 		{
 			if (jointype != JOIN_INNER)
-				return false;			/* invalid join path */
+				return false;	/* invalid join path */
 			jointype = ojinfo->join_type;
 			if (jointype != JOIN_FULL && jointype != JOIN_LASJ && jointype != JOIN_LASJ_NOTIN)
 				jointype = JOIN_LEFT;
@@ -419,7 +421,7 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
 				 bms_is_subset(ojinfo->min_righthand, rel1->relids))
 		{
 			if (jointype != JOIN_INNER)
-				return false;			/* invalid join path */
+				return false;	/* invalid join path */
 			jointype = ojinfo->join_type;
 			if (jointype != JOIN_FULL && jointype != JOIN_LASJ && jointype != JOIN_LASJ_NOTIN)
 				jointype = JOIN_RIGHT;
@@ -489,7 +491,6 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 {
 	Relids		joinrelids;
 	JoinType	jointype;
-    JoinType    swapjointype;
 	RelOptInfo *joinrel;
 	List	   *restrictlist;
 
@@ -522,10 +523,15 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 	joinrel = build_join_rel(root, joinrelids, rel1, rel2, jointype,
 							 &restrictlist);
 
-    /* Reversed jointype is useful when rel2 becomes outer and rel1 is inner. */
-    swapjointype = (jointype == JOIN_LEFT)  ? JOIN_RIGHT
-                 : (jointype == JOIN_RIGHT) ? JOIN_LEFT
-                 :                            jointype;
+	/*
+	 * If we've already proven this join is empty, we needn't consider
+	 * any more paths for it.
+	 */
+	if (is_dummy_rel(joinrel))
+	{
+		bms_free(joinrelids);
+		return joinrel;
+	}
 
     /*
      * CDB: Consider plans in which an upstream subquery's duplicate
@@ -535,28 +541,139 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
      */
     if ((rel1->dedup_info && rel1->dedup_info->later_dedup_pathlist) ||
         (rel2->dedup_info && rel2->dedup_info->later_dedup_pathlist))
-        cdb_add_subquery_join_paths(root,
-                                    joinrel,
-                                    rel1,
-                                    rel2,
-                                    jointype,
-                                    swapjointype,
-                                    restrictlist);
-
-    /*
-	 * For antijoins, the outer and inner rel are fixed.
-	 */
-	else if (jointype == JOIN_LASJ || jointype == JOIN_LASJ_NOTIN)
 	{
-        add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, restrictlist);
+		/* Reversed jointype is useful when rel2 becomes outer and rel1 is inner. */
+		JoinType    swapjointype;
+
+		if (jointype == JOIN_LEFT)
+			swapjointype = JOIN_RIGHT;
+		else if (jointype == JOIN_RIGHT)
+			swapjointype = JOIN_LEFT;
+		else
+			swapjointype = jointype;
+		cdb_add_subquery_join_paths(root, joinrel, rel1, rel2,
+									jointype, swapjointype, restrictlist);
+		bms_free(joinrelids);
+		return joinrel;
 	}
-    /*
-	 * Consider paths using each rel as both outer and inner.
+
+	/*
+	 * Consider paths using each rel as both outer and inner.  Depending
+	 * on the join type, a provably empty outer or inner rel might mean
+	 * the join is provably empty too; in which case throw away any
+	 * previously computed paths and mark the join as dummy.  (We do it
+	 * this way since it's conceivable that dummy-ness of a multi-element
+	 * join might only be noticeable for certain construction paths.)
 	 */
-    else
-    {
-        add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, restrictlist);
-        add_paths_to_joinrel(root, joinrel, rel2, rel1, swapjointype, restrictlist);
+	switch (jointype)
+	{
+		case JOIN_LASJ:
+		case JOIN_LASJ_NOTIN:
+			/*
+			 * For antijoins, the outer and inner rel are fixed.
+			 */
+			/* GPDB_83MERGE_FIXME: What do about dummy_rels here? */
+			add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, restrictlist);
+			break;
+
+		case JOIN_INNER:
+			if (is_dummy_rel(rel1) || is_dummy_rel(rel2))
+			{
+				mark_dummy_join(root, joinrel);
+				break;
+			}
+			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_INNER,
+								 restrictlist);
+			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_INNER,
+								 restrictlist);
+			break;
+		case JOIN_LEFT:
+			if (is_dummy_rel(rel1))
+			{
+				mark_dummy_join(root, joinrel);
+				break;
+			}
+			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_LEFT,
+								 restrictlist);
+			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_RIGHT,
+								 restrictlist);
+			break;
+		case JOIN_FULL:
+			if (is_dummy_rel(rel1) && is_dummy_rel(rel2))
+			{
+				mark_dummy_join(root, joinrel);
+				break;
+			}
+			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_FULL,
+								 restrictlist);
+			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_FULL,
+								 restrictlist);
+			break;
+		case JOIN_RIGHT:
+			if (is_dummy_rel(rel2))
+			{
+				mark_dummy_join(root, joinrel);
+				break;
+			}
+			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_RIGHT,
+								 restrictlist);
+			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_LEFT,
+								 restrictlist);
+			break;
+		case JOIN_IN:
+			if (is_dummy_rel(rel1) || is_dummy_rel(rel2))
+			{
+				mark_dummy_join(root, joinrel);
+				break;
+			}
+			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_IN,
+								 restrictlist);
+			/* REVERSE_IN isn't supported by joinpath.c */
+			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_UNIQUE_INNER,
+								 restrictlist);
+			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_UNIQUE_OUTER,
+								 restrictlist);
+			break;
+		case JOIN_REVERSE_IN:
+			if (is_dummy_rel(rel1) || is_dummy_rel(rel2))
+			{
+				mark_dummy_join(root, joinrel);
+				break;
+			}
+			/* REVERSE_IN isn't supported by joinpath.c */
+			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_IN,
+								 restrictlist);
+			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_UNIQUE_OUTER,
+								 restrictlist);
+			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_UNIQUE_INNER,
+								 restrictlist);
+			break;
+		case JOIN_UNIQUE_OUTER:
+			if (is_dummy_rel(rel1) || is_dummy_rel(rel2))
+			{
+				mark_dummy_join(root, joinrel);
+				break;
+			}
+			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_UNIQUE_OUTER,
+								 restrictlist);
+			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_UNIQUE_INNER,
+								 restrictlist);
+			break;
+		case JOIN_UNIQUE_INNER:
+			if (is_dummy_rel(rel1) || is_dummy_rel(rel2))
+			{
+				mark_dummy_join(root, joinrel);
+				break;
+			}
+			add_paths_to_joinrel(root, joinrel, rel1, rel2, JOIN_UNIQUE_INNER,
+								 restrictlist);
+			add_paths_to_joinrel(root, joinrel, rel2, rel1, JOIN_UNIQUE_OUTER,
+								 restrictlist);
+			break;
+		default:
+			elog(ERROR, "unrecognized join type: %d",
+				 (int) jointype);
+			break;
     }
 
 	bms_free(joinrelids);
@@ -682,9 +799,9 @@ cdb_add_subquery_join_paths(PlannerInfo    *root,
  * Note: this is only a problem if one side of a degenerate outer join
  * contains multiple rels, or a clauseless join is required within an IN's
  * RHS; else we will find a join path via the "last ditch" case in
- * make_rels_by_joins().  We could dispense with this test if we were willing
- * to try bushy plans in the "last ditch" case, but that seems much less
- * efficient.
+ * join_search_one_level().  We could dispense with this test if we were
+ * willing to try bushy plans in the "last ditch" case, but that seems much
+ * less efficient.
  */
 bool
 have_join_order_restriction(PlannerInfo *root,
@@ -694,9 +811,9 @@ have_join_order_restriction(PlannerInfo *root,
 	ListCell   *l;
 
 	/*
-	 * It's possible that the rels correspond to the left and right sides
-	 * of a degenerate outer join, that is, one with no joinclause mentioning
-	 * the non-nullable side; in which case we should force the join to occur.
+	 * It's possible that the rels correspond to the left and right sides of a
+	 * degenerate outer join, that is, one with no joinclause mentioning the
+	 * non-nullable side; in which case we should force the join to occur.
 	 *
 	 * Also, the two rels could represent a clauseless join that has to be
 	 * completed to build up the LHS or RHS of an outer join.
@@ -724,9 +841,9 @@ have_join_order_restriction(PlannerInfo *root,
 		}
 
 		/*
-		 * Might we need to join these rels to complete the RHS?  We have
-		 * to use "overlap" tests since either rel might include a lower OJ
-		 * that has been proven to commute with this one.
+		 * Might we need to join these rels to complete the RHS?  We have to
+		 * use "overlap" tests since either rel might include a lower OJ that
+		 * has been proven to commute with this one.
 		 */
 		if (bms_overlap(ojinfo->min_righthand, rel1->relids) &&
 			bms_overlap(ojinfo->min_righthand, rel2->relids))
@@ -784,6 +901,22 @@ have_join_order_restriction(PlannerInfo *root,
 		}
 	}
 
+	/*
+	 * We do not force the join to occur if either input rel can legally be
+	 * joined to anything else using joinclauses.  This essentially means that
+	 * clauseless bushy joins are put off as long as possible. The reason is
+	 * that when there is a join order restriction high up in the join tree
+	 * (that is, with many rels inside the LHS or RHS), we would otherwise
+	 * expend lots of effort considering very stupid join combinations within
+	 * its LHS or RHS.
+	 */
+	if (result)
+	{
+		if (has_legal_joinclause(root, rel1) ||
+			has_legal_joinclause(root, rel2))
+			result = false;
+	}
+
 	return result;
 }
 
@@ -795,7 +928,7 @@ have_join_order_restriction(PlannerInfo *root,
  *
  * Essentially, this tests whether have_join_order_restriction() could
  * succeed with this rel and some other one.  It's OK if we sometimes
- * say "true" incorrectly.  (Therefore, we don't bother with the relatively
+ * say "true" incorrectly.	(Therefore, we don't bother with the relatively
  * expensive has_legal_joinclause test.)
  */
 static bool
@@ -885,4 +1018,43 @@ has_legal_joinclause(PlannerInfo *root, RelOptInfo *rel)
 	}
 
 	return false;
+}
+
+
+/*
+ * is_dummy_rel --- has relation been proven empty?
+ *
+ * If so, it will have a single path that is dummy.
+ */
+static bool
+is_dummy_rel(RelOptInfo *rel)
+{
+	return (rel->cheapest_total_path != NULL &&
+			IS_DUMMY_PATH(rel->cheapest_total_path));
+}
+
+/*
+ * Mark a joinrel as proven empty.
+ */
+static void
+mark_dummy_join(PlannerInfo *root, RelOptInfo *rel)
+{
+	/* Set dummy size estimate */
+	rel->rows = 0;
+
+	/* Evict any previously chosen paths */
+	rel->pathlist = NIL;
+
+	/* Set up the dummy path */
+	add_path(root, rel, (Path *) create_append_path(root, rel, NIL));
+
+	/* The dummy path doesn't need deduplication */
+	rel->dedup_info = NULL;
+
+	/*
+	 * Although set_cheapest will be done again later, we do it immediately
+	 * in order to keep is_dummy_rel as cheap as possible (ie, not have
+	 * to examine the pathlist).
+	 */
+	set_cheapest(root, rel);
 }

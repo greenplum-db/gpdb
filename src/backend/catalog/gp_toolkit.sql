@@ -1284,15 +1284,15 @@ GRANT SELECT ON TABLE gp_toolkit.gp_resq_role TO public;
 CREATE VIEW gp_toolkit.gp_locks_on_resqueue
 AS
     SELECT
-        pgsa.usename     AS lorusename,
-        pgrq.rsqname     AS lorrsqname,
-        pgl.locktype     AS lorlocktype,
-        pgl.objid        AS lorobjid,
-        pgl.transaction  AS lortransaction,
-        pgl.pid          AS lorpid,
-        pgl.mode         AS lormode,
-        pgl.granted      AS lorgranted,
-        pgsa.waiting     AS lorwaiting
+        pgsa.usename      AS lorusename,
+        pgrq.rsqname      AS lorrsqname,
+        pgl.locktype      AS lorlocktype,
+        pgl.objid         AS lorobjid,
+        pgl.transactionid AS lortransaction,
+        pgl.pid           AS lorpid,
+        pgl.mode          AS lormode,
+        pgl.granted       AS lorgranted,
+        pgsa.waiting      AS lorwaiting
     FROM pg_catalog.pg_stat_activity pgsa
 
     JOIN pg_catalog.pg_locks pgl
@@ -1319,7 +1319,7 @@ AS
         pgl.database       AS lordatabase,
         pgc.relname        AS lorrelname,
         pgl.relation       AS lorrelation,
-        pgl.transaction    AS lortransaction,
+        pgl.transactionid  AS lortransaction,
         pgl.pid            AS lorpid,
         pgl.mode           AS lormode,
         pgl.granted        AS lorgranted,

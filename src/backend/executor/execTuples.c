@@ -17,7 +17,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execTuples.c,v 1.99 2007/01/05 22:19:27 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execTuples.c,v 1.110 2009/09/27 20:09:57 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -242,7 +242,6 @@ MakeSingleTupleTableSlot(TupleDesc tupdesc)
 {
 	TupleTableSlot *slot = MakeTupleTableSlot();
 
-	init_slot(slot, NULL);
 	ExecSetSlotDescriptor(slot, tupdesc);
 
 	return slot;
@@ -599,6 +598,7 @@ ExecStoreAllNullTuple(TupleTableSlot *slot)
  *		ExecCopySlotTuple
  *			Obtain a copy of a slot's regular physical tuple.  The copy is
  *			palloc'd in the current memory context.
+ *			The slot itself is undisturbed.
  *
  *		This works even if the slot contains a virtual or minimal tuple;
  *		however the "system columns" of the result will not be meaningful.
@@ -630,6 +630,7 @@ ExecCopySlotHeapTuple(TupleTableSlot *slot)
  *		ExecCopySlotMinimalTuple
  *			Obtain a copy of a slot's minimal physical tuple.  The copy is
  *			palloc'd in the current memory context.
+ *			The slot itself is undisturbed.
  * --------------------------------
  */
 MemTuple ExecCopySlotMemTuple(TupleTableSlot *slot)
@@ -641,7 +642,8 @@ MemTuple ExecCopySlotMemTuple(TupleTableSlot *slot)
 	Assert(slot->tts_mt_bind);
 
 	/*
-	 * If we have a physical tuple then just copy it.
+	 * If we have a physical tuple then just copy it.  Prefer to copy
+	 * tts_mintuple since that's a tad cheaper.
 	 */
 	if (slot->PRIVATE_tts_memtuple)
 		return memtuple_copy_to(slot->PRIVATE_tts_memtuple, slot->tts_mt_bind, NULL, NULL);
@@ -697,9 +699,11 @@ MemTuple ExecCopySlotMemTupleTo(TupleTableSlot *slot, MemoryContext pctxt, char 
  *
  *		If the slot contains a virtual tuple, we convert it to physical
  *		form.  The slot retains ownership of the physical tuple.
- *		Likewise, if it contains a minimal tuple we convert to regular form.
+ *		If it contains a minimal tuple we convert to regular form and store
+ *		that in addition to the minimal tuple (not instead of, because
+ *		callers may hold pointers to Datums within the minimal tuple).
  *
- * The difference between this and ExecMaterializeSlot() is that this
+ * The main difference between this and ExecMaterializeSlot() is that this
  * does not guarantee that the contained tuple is local storage.
  * Hence, the result must be treated as read-only.
  * --------------------------------
@@ -751,8 +755,10 @@ ExecFetchSlotHeapTuple(TupleTableSlot *slot)
  *			Fetch the slot's minimal physical tuple.
  *
  *		If the slot contains a virtual tuple, we convert it to minimal
- *		physical form.	The slot retains ownership of the physical tuple.
- *		Likewise, if it contains a regular tuple we convert to minimal form.
+ *		physical form.	The slot retains ownership of the minimal tuple.
+ *		If it contains a regular tuple we convert to minimal form and store
+ *		that in addition to the regular tuple (not instead of, because
+ *		callers may hold pointers to Datums within the regular tuple).
  *
  * As above, the result must be treated as read-only.
  * --------------------------------

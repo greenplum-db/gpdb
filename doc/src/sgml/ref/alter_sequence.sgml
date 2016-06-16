@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_sequence.sgml,v 1.16 2007/01/31 23:26:02 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/alter_sequence.sgml,v 1.19 2007/10/25 18:54:03 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -28,6 +28,7 @@ ALTER SEQUENCE <replaceable class="parameter">name</replaceable> [ INCREMENT [ B
     [ MINVALUE <replaceable class="parameter">minvalue</replaceable> | NO MINVALUE ] [ MAXVALUE <replaceable class="parameter">maxvalue</replaceable> | NO MAXVALUE ]
     [ RESTART [ WITH ] <replaceable class="parameter">start</replaceable> ] [ CACHE <replaceable class="parameter">cache</replaceable> ] [ [ NO ] CYCLE ]
     [ OWNED BY { <replaceable class="parameter">table</replaceable>.<replaceable class="parameter">column</replaceable> | NONE } ]
+ALTER SEQUENCE <replaceable class="parameter">name</replaceable> RENAME TO <replaceable class="parameter">new_name</replaceable>
 ALTER SEQUENCE <replaceable class="parameter">name</replaceable> SET SCHEMA <replaceable class="parameter">new_schema</replaceable>
   </synopsis>
  </refsynopsisdiv>
@@ -113,7 +114,10 @@ ALTER SEQUENCE <replaceable class="parameter">name</replaceable> SET SCHEMA <rep
        <para>
         The optional clause <literal>RESTART WITH <replaceable
         class="parameter">start</replaceable></literal> changes the
-        current value of the sequence.
+        current value of the sequence.  This is equivalent to calling the
+        <function>setval</> function with <literal>is_called</literal> =
+        <literal>false</>: the specified value will be returned by the
+        <emphasis>next</> call of <function>nextval</>.
        </para>
       </listitem>
      </varlistentry>
@@ -182,17 +186,61 @@ ALTER SEQUENCE <replaceable class="parameter">name</replaceable> SET SCHEMA <rep
     </listitem>
    </varlistentry>
 
-     <varlistentry>
-      <term><replaceable class="parameter">new_schema</replaceable></term>
-      <listitem>
-       <para>
-        The new schema for the sequence.
-       </para>
-      </listitem>
-     </varlistentry>
+   <varlistentry>
+    <term><replaceable class="parameter">new_name</replaceable></term>
+    <listitem>
+     <para>
+      The new name for the sequence.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="parameter">new_schema</replaceable></term>
+    <listitem>
+     <para>
+      The new schema for the sequence.
+     </para>
+    </listitem>
+   </varlistentry>
+
     </variablelist>
    </para>
   </refsect1>
+
+ <refsect1>
+  <title>Notes</title>
+
+  <para>
+   To avoid blocking of concurrent transactions that obtain numbers from the
+   same sequence, <command>ALTER SEQUENCE</command>'s effects on the sequence
+   generation parameters are never rolled back;
+   those changes take effect immediately and are not reversible.  However,
+   the <literal>OWNED BY</>, <literal>RENAME</>, and <literal>SET SCHEMA</>
+   clauses cause ordinary catalog updates that can be rolled back.
+  </para>
+
+  <para>
+   <command>ALTER SEQUENCE</command> will not immediately affect
+   <function>nextval</> results in backends,
+   other than the current one, that have preallocated (cached) sequence
+   values. They will use up all cached values prior to noticing the changed
+   sequence generation parameters.  The current backend will be affected
+   immediately.
+  </para>
+
+  <para>
+   <command>ALTER SEQUENCE</command> does not affect the <function>currval</>
+   status for the sequence.  (Before <productname>PostgreSQL</productname>
+   8.3, it sometimes did.)
+  </para>
+
+  <para>
+   Some variants of <command>ALTER TABLE</command> can be used with
+   sequences as well; for example, to rename a sequence it is also
+   possible to use <command>ALTER TABLE RENAME</command>.
+  </para>
+ </refsect1>
 
  <refsect1>
   <title>Examples</title>
@@ -206,42 +254,13 @@ ALTER SEQUENCE serial RESTART WITH 105;
  </refsect1>
 
  <refsect1>
-  <title>Notes</title>
-
-  <para>
-   To avoid blocking of concurrent transactions that obtain numbers from the
-   same sequence, <command>ALTER SEQUENCE</command>'s effects on the sequence
-   generation parameters are never rolled back;
-   those changes take effect immediately and are not reversible.  However,
-   the <literal>OWNED BY</> and <literal>SET SCHEMA</> clauses are ordinary
-   catalog updates and can be rolled back.
-  </para>
-
-  <para>
-   <command>ALTER SEQUENCE</command> will not immediately affect
-   <function>nextval</> results in backends,
-   other than the current one, that have preallocated (cached) sequence
-   values. They will use up all cached values prior to noticing the changed
-   sequence generation parameters.  The current backend will be affected
-   immediately.
-  </para>
-
-  <para>
-   Some variants of <command>ALTER TABLE</command> can be used with
-   sequences as well; for example, to rename a sequence use <command>ALTER
-   TABLE RENAME</command>.
-  </para>
- </refsect1>
-
-
- <refsect1>
   <title>Compatibility</title>
 
   <para>
    <command>ALTER SEQUENCE</command> conforms to the <acronym>SQL</acronym>
-   standard,
-   except for the <literal>OWNED BY</> and <literal>SET SCHEMA</literal>
-   clauses, which are <productname>PostgreSQL</productname> extensions.
+   standard, except for the <literal>OWNED BY</>, <literal>RENAME</>, and
+   <literal>SET SCHEMA</literal> clauses, which are
+   <productname>PostgreSQL</productname> extensions.
   </para>
  </refsect1>
 

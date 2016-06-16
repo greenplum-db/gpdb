@@ -110,7 +110,7 @@ DistributedLog_SetCommitted(
 		}
 	}
 	
-	slotno = SimpleLruReadPage(DistributedLogCtl, page, localXid);
+	slotno = SimpleLruReadPage(DistributedLogCtl, page, true, localXid);
 	ptr = (DistributedLogEntry *) DistributedLogCtl->shared->page_buffer[slotno];
 	ptr += entryno;
 
@@ -210,7 +210,7 @@ DistributedLog_CommittedCheck(
 		return false;
 	}
 		
-	slotno = SimpleLruReadPage(DistributedLogCtl, page, localXid);
+	slotno = SimpleLruReadPage(DistributedLogCtl, page, true, localXid);
 	ptr = (DistributedLogEntry *) DistributedLogCtl->shared->page_buffer[slotno];
 	ptr += entryno;
 	*distribTimeStamp = ptr->distribTimeStamp;
@@ -300,7 +300,7 @@ DistributedLog_ScanForPrevCommitted(
 			return false;
 		}
 			
-		slotno = SimpleLruReadPage(DistributedLogCtl, pageno, highXid);
+		slotno = SimpleLruReadPage(DistributedLogCtl, pageno, true, highXid);
 
 		for (xid = highXid; xid >= lowXid; xid--)
 		{
@@ -357,7 +357,7 @@ DistributedLog_ShmemSize(void)
 {
 	Size size;
 	
-	size = SimpleLruShmemSize(NUM_DISTRIBUTEDLOG_BUFFERS);
+	size = SimpleLruShmemSize(NUM_DISTRIBUTEDLOG_BUFFERS, 0);
 
 	size += DistributedLog_SharedShmemSize();
 
@@ -371,7 +371,7 @@ DistributedLog_ShmemInit(void)
 
 	/* Set up SLRU for the distributed log. */
 	DistributedLogCtl->PagePrecedes = DistributedLog_PagePrecedes;
-	SimpleLruInit(DistributedLogCtl, "DistributedLogCtl", NUM_DISTRIBUTEDLOG_BUFFERS,
+	SimpleLruInit(DistributedLogCtl, "DistributedLogCtl", NUM_DISTRIBUTEDLOG_BUFFERS, 0,
 				  DistributedLogControlLock, DISTRIBUTEDLOG_DIR);
 
 	/* Create or attach to the shared structure */
@@ -507,7 +507,7 @@ DistributedLog_Startup(
 
 		int			remainingEntries;
 
-		slotno = SimpleLruReadPage(DistributedLogCtl, endPage, nextXid);
+		slotno = SimpleLruReadPage(DistributedLogCtl, endPage, true, nextXid);
 		ptr = (DistributedLogEntry *) DistributedLogCtl->shared->page_buffer[slotno];
 		ptr += entryno;
 
@@ -716,7 +716,7 @@ DistributedLog_WriteZeroPageXlogRec(int page)
 	rdata.len = sizeof(int);
 	rdata.buffer = InvalidBuffer;
 	rdata.next = NULL;
-	(void) XLogInsert(RM_DISTRIBUTEDLOG_ID, DISTRIBUTEDLOG_ZEROPAGE | XLOG_NO_TRAN, &rdata);
+	(void) XLogInsert(RM_DISTRIBUTEDLOG_ID, DISTRIBUTEDLOG_ZEROPAGE, &rdata);
 }
 
 /*
@@ -738,7 +738,7 @@ DistributedLog_WriteTruncateXlogRec(int page)
 	rdata.len = sizeof(int);
 	rdata.buffer = InvalidBuffer;
 	rdata.next = NULL;
-	recptr = XLogInsert(RM_DISTRIBUTEDLOG_ID, DISTRIBUTEDLOG_TRUNCATE | XLOG_NO_TRAN, &rdata);
+	recptr = XLogInsert(RM_DISTRIBUTEDLOG_ID, DISTRIBUTEDLOG_TRUNCATE, &rdata);
 	XLogFlush(recptr);
 }
 

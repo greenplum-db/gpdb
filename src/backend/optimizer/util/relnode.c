@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/relnode.c,v 1.85 2007/01/20 20:45:40 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/relnode.c,v 1.89 2008/01/01 19:45:50 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -37,9 +37,9 @@ typedef struct JoinHashEntry
 } JoinHashEntry;
 
 static List *build_joinrel_restrictlist(PlannerInfo *root,
-										RelOptInfo *joinrel,
-										RelOptInfo *outer_rel,
-										RelOptInfo *inner_rel);
+						   RelOptInfo *joinrel,
+						   RelOptInfo *outer_rel,
+						   RelOptInfo *inner_rel);
 static void build_joinrel_joinlist(RelOptInfo *joinrel,
 					   RelOptInfo *outer_rel,
 					   RelOptInfo *inner_rel);
@@ -60,14 +60,14 @@ build_simple_rel(PlannerInfo *root, int relid, RelOptKind reloptkind)
 	RelOptInfo *rel;
 	RangeTblEntry *rte;
 
-	/* Fetch RTE for relation */
-	Assert(relid > 0 && relid <= list_length(root->parse->rtable));
-	rte = rt_fetch(relid, root->parse->rtable);
-
 	/* Rel should not exist already */
-	Assert(relid < root->simple_rel_array_size);
+	Assert(relid > 0 && relid < root->simple_rel_array_size);
 	if (root->simple_rel_array[relid] != NULL)
 		elog(ERROR, "rel %d already exists", relid);
+
+	/* Fetch RTE for relation */
+	rte = root->simple_rte_array[relid];
+	Assert(rte != NULL);
 
     /* CDB: Rel isn't expected to have any pseudo columns yet. */
     Assert(!rte->pseudocols);
@@ -581,8 +581,9 @@ build_joinrel_restrictlist(PlannerInfo *root,
 	 */
 	result = subbuild_joinrel_restrictlist(joinrel, outer_rel->joininfo, NIL);
 	result = subbuild_joinrel_restrictlist(joinrel, inner_rel->joininfo, result);
+
 	/*
-	 * Add on any clauses derived from EquivalenceClasses.  These cannot be
+	 * Add on any clauses derived from EquivalenceClasses.	These cannot be
 	 * redundant with the clauses in the joininfo lists, so don't bother
 	 * checking.
 	 */
@@ -670,10 +671,10 @@ subbuild_joinrel_joinlist(RelOptInfo *joinrel,
 		{
 			/*
 			 * This clause is still a join clause at this level, so add it to
-			 * the new joininfo list, being careful to eliminate
-			 * duplicates. (Since RestrictInfo nodes in different joinlists
-			 * will have been multiply-linked rather than copied, pointer
-			 * equality should be a sufficient test.)
+			 * the new joininfo list, being careful to eliminate duplicates.
+			 * (Since RestrictInfo nodes in different joinlists will have been
+			 * multiply-linked rather than copied, pointer equality should be
+			 * a sufficient test.)
 			 */
 			new_joininfo = list_append_unique_ptr(new_joininfo, rinfo);
 		}

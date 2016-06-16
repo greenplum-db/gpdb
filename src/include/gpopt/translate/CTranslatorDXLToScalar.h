@@ -148,11 +148,17 @@ namespace gpdxl
 				CMappingColIdVar *pmapcidvar
 				);
 
-                        Expr *PcoerceFromDXLNodeScCoerce
-                                (
-                                const CDXLNode *pdxlnScCoerce,
-                                CMappingColIdVar *pmapcidvar
-                                );
+			Expr *PcoerceFromDXLNodeScCoerceToDomain
+				(
+				const CDXLNode *pdxlnScCoerceToDomain,
+				CMappingColIdVar *pmapcidvar
+				);
+
+			Expr *PcoerceFromDXLNodeScCoerceViaIO
+				(
+				const CDXLNode *pdxlnScCoerceViaIO,
+				CMappingColIdVar *pmapcidvar
+				);
 
 			Expr *PnulltestFromDXLNodeScNullTest
 				(

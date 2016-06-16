@@ -4,7 +4,7 @@
  *
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/pg_ctl/pg_ctl.c,v 1.92.2.6 2009/01/28 11:19:40 mha Exp $
+ * $PostgreSQL: pgsql/src/bin/pg_ctl/pg_ctl.c,v 1.92.2.8 2009/11/14 15:39:41 mha Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,6 +20,7 @@
 #include "postgres_fe.h"
 #include "libpq-fe.h"
 
+#include <fcntl.h>
 #include <locale.h>
 #include <signal.h>
 #include <sys/types.h>
@@ -167,6 +168,9 @@ write_eventlog(int level, const char *line)
 {
 	static HANDLE evtHandle = INVALID_HANDLE_VALUE;
 
+	if (silent_mode && level == EVENTLOG_INFORMATION_TYPE)
+		return;
+
 	if (evtHandle == INVALID_HANDLE_VALUE)
 	{
 		evtHandle = RegisterEventSource(NULL, "PostgreSQL");
@@ -306,50 +310,84 @@ get_pgpid(void)
 static char **
 readfile(const char *path)
 {
-	FILE	   *infile;
-	int			maxlength = 0,
-				linelen = 0;
-	int			nlines = 0;
+	int			fd;
+	int			nlines;
 	char	  **result;
 	char	   *buffer;
-	int			c;
+	char	   *linebegin;
+	int			i;
+	int			n;
+	int			len;
+	struct stat	statbuf;
 
-	if ((infile = fopen(path, "r")) == NULL)
+	/*
+	 * Slurp the file into memory.
+	 *
+	 * The file can change concurrently, so we read the whole file into memory
+	 * with a single read() call. That's not guaranteed to get an atomic
+	 * snapshot, but in practice, for a small file, it's close enough for the
+	 * current use.
+	 */
+	fd = open(path, O_RDONLY | PG_BINARY, 0);
+	if (fd < 0)
 		return NULL;
-
-	/* pass over the file twice - the first time to size the result */
-
-	while ((c = fgetc(infile)) != EOF)
+	if (fstat(fd, &statbuf) < 0)
 	{
-		linelen++;
-		if (c == '\n')
-		{
-			nlines++;
-			if (linelen > maxlength)
-				maxlength = linelen;
-			linelen = 0;
-		}
+		close(fd);
+		return NULL;
+	}
+	if (statbuf.st_size == 0)
+	{
+		/* empty file */
+		close(fd);
+		result = (char **) pg_malloc(sizeof(char *));
+		*result = NULL;
+		return result;
+	}
+	buffer = pg_malloc(statbuf.st_size + 1);
+
+	len = read(fd, buffer, statbuf.st_size + 1);
+	close(fd);
+	if (len != statbuf.st_size)
+	{
+		/* oops, the file size changed between fstat and read */
+		free(buffer);
+		return NULL;
 	}
 
-	/* handle last line without a terminating newline (yuck) */
-	if (linelen)
-		nlines++;
-	if (linelen > maxlength)
-		maxlength = linelen;
-
-	/* set up the result and the line buffer */
-	result = (char **) pg_malloc((nlines + 1) * sizeof(char *));
-	buffer = (char *) pg_malloc(maxlength + 1);
-
-	/* now reprocess the file and store the lines */
-	rewind(infile);
+	/*
+	 * Count newlines. We expect there to be a newline after each full line,
+	 * including one at the end of file. If there isn't a newline at the end,
+	 * any characters after the last newline will be ignored.
+	 */
 	nlines = 0;
-	while (fgets(buffer, maxlength + 1, infile) != NULL)
-		result[nlines++] = xstrdup(buffer);
+	for (i = 0; i < len; i++)
+	{
+		if (buffer[i] == '\n')
+			nlines++;
+	}
 
-	fclose(infile);
+	/* set up the result buffer */
+	result = (char **) pg_malloc((nlines + 1) * sizeof(char *));
+
+	/* now split the buffer into lines */
+	linebegin = buffer;
+	n = 0;
+	for (i = 0; i < len; i++)
+	{
+		if (buffer[i] == '\n')
+		{
+			int		slen = &buffer[i] - linebegin + 1;
+			char   *linebuf = pg_malloc(slen + 1);
+			memcpy(linebuf, linebegin, slen);
+			linebuf[slen] = '\0';
+			result[n++] = linebuf;
+			linebegin = &buffer[i + 1];
+		}
+	}
+	result[n] = NULL;
+
 	free(buffer);
-	result[nlines] = NULL;
 
 	return result;
 }
@@ -676,7 +714,7 @@ read_post_opts(void)
 					post_opts = arg1 + 1; /* point past whitespace */
 				}
 				else
-                    post_opts = "";
+					post_opts = "";
 				if (postgres_path == NULL)
 					postgres_path = optline;
 			}
@@ -1335,7 +1373,7 @@ pgwin32_ServiceMain(DWORD argc, LPTSTR * argv)
 
 	memset(&pi, 0, sizeof(pi));
 
-        read_post_opts();
+	read_post_opts();
 
 	/* Register the control request handler */
 	if ((hStatus = RegisterServiceCtrlHandler(register_servicename, pgwin32_ServiceHandler)) == (SERVICE_STATUS_HANDLE) 0)
@@ -1360,8 +1398,8 @@ pgwin32_ServiceMain(DWORD argc, LPTSTR * argv)
 		write_eventlog(EVENTLOG_INFORMATION_TYPE, _("Waiting for server startup...\n"));
 		if (test_postmaster_connection(true) != PQPING_OK)
 		{
-                	write_eventlog(EVENTLOG_INFORMATION_TYPE, _("Timed out waiting for server startup\n"));
- 			pgwin32_SetServiceStatus(SERVICE_STOPPED);
+			write_eventlog(EVENTLOG_INFORMATION_TYPE, _("Timed out waiting for server startup\n"));
+			pgwin32_SetServiceStatus(SERVICE_STOPPED);
 			return;
 		}
 		write_eventlog(EVENTLOG_INFORMATION_TYPE, _("Server started and accepting connections\n"));
@@ -1371,7 +1409,7 @@ pgwin32_ServiceMain(DWORD argc, LPTSTR * argv)
 	 * Save the checkpoint value as it might have been incremented in
 	 * test_postmaster_connection
 	 */
-        check_point_start = status.dwCheckPoint;
+	check_point_start = status.dwCheckPoint;
 
 	pgwin32_SetServiceStatus(SERVICE_RUNNING);
 
@@ -1528,6 +1566,10 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION * processInfo, bool as_se
 		write_stderr("Failed to create restricted token: %lu\n", GetLastError());
 		return 0;
 	}
+
+#ifndef __CYGWIN__
+    AddUserToTokenDacl(restrictedToken);
+#endif
 
 	r = CreateProcessAsUser(restrictedToken, NULL, cmd, NULL, NULL, TRUE, CREATE_SUSPENDED, NULL, NULL, &si, processInfo);
 

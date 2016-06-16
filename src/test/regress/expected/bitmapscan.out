@@ -1004,3 +1004,4 @@ SELECT COUNT(DISTINCT(highCardinalityHighDomain)) AS distinct_hchd FROM card_hea
          50004
 (1 row)
 
+drop table if exists bm_test;

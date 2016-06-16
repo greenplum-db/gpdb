@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_clause.c,v 1.164 2007/02/01 19:10:27 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_clause.c,v 1.168 2008/01/01 19:45:50 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -804,8 +804,8 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 	 * Open target rel and grab suitable lock (which we will hold till end of
 	 * transaction).
 	 *
-	 * analyze.c will eventually do the corresponding heap_close(), but *not*
-	 * release the lock.
+	 * free_parsestate() will eventually do the corresponding heap_close(),
+	 * but *not* release the lock.
      *
 	 * CDB: Acquire ExclusiveLock if it is a distributed relation and we are
 	 * doing UPDATE or DELETE activity
@@ -920,7 +920,7 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
  * Simplify InhOption (yes/no/default) into boolean yes/no.
  *
  * The reason we do things this way is that we don't want to examine the
- * SQL_inheritance option flag until parse_analyze is run.	Otherwise,
+ * SQL_inheritance option flag until parse_analyze() is run.	Otherwise,
  * we'd do the wrong thing with query strings that intermix SET commands
  * with queries.
  */
@@ -1144,7 +1144,6 @@ transformTableEntry(ParseState *pstate, RangeVar *r)
 static RangeTblEntry *
 transformRangeSubselect(ParseState *pstate, RangeSubselect *r)
 {
-	List	   *parsetrees;
 	Query	   *query;
 	RangeTblEntry *rte;
 
@@ -1161,16 +1160,12 @@ transformRangeSubselect(ParseState *pstate, RangeSubselect *r)
 	/*
 	 * Analyze and transform the subquery.
 	 */
-	parsetrees = parse_sub_analyze(r->subquery, pstate);
+	query = parse_sub_analyze(r->subquery, pstate);
 
 	/*
-	 * Check that we got something reasonable.	Most of these conditions are
-	 * probably impossible given restrictions of the grammar, but check 'em
-	 * anyway.
+	 * Check that we got something reasonable.	Many of these conditions are
+	 * impossible given restrictions of the grammar, but check 'em anyway.
 	 */
-	if (list_length(parsetrees) != 1)
-		elog(ERROR, "unexpected parse analysis result for subquery in FROM");
-	query = (Query *) linitial(parsetrees);
 	if (!IsA(query, Query) ||
 		query->commandType != CMD_SELECT ||
 		query->utilityStmt != NULL)
@@ -3143,9 +3138,10 @@ addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 										  restype,
 										  restype,
 										  false);
+
 			/*
-			 * Verify it's a valid ordering operator, and determine
-			 * whether to consider it like ASC or DESC.
+			 * Verify it's a valid ordering operator, and determine whether to
+			 * consider it like ASC or DESC.
 			 */
 			if (!get_compare_function_for_ordering_op(sortop,
 													  &cmpfunc, &reverse))

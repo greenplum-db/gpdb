@@ -41,6 +41,7 @@
 #include "parser/parse_partition.h"
 #include "parser/parse_relation.h"
 #include "parser/parse_target.h"
+#include "parser/parse_utilcmd.h"
 #include "tcop/utility.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
@@ -6695,21 +6696,14 @@ atpxPartAddList(Relation rel,
 		bool			 bFirst_TemplateOnly = true;   /* ignore dummy entry */
 		int				 pby_templ_depth	 = 0;	   /* template partdepth */
 		Oid				 skipTableRelid		 = InvalidOid;
-		List			*attr_encodings		 = NIL;
-
-		/* this parse_analyze expands the phony create of a partitioned table
-		 * that we just build into the constituent commands we need to create
-		 * the new part.  (This will include some commands for the parent that
-		 * we don't need, since the parent already exists.)
-		 */
-
-		l1 = parse_analyze((Node *)ct, NULL, NULL, 0);
 
 		/*
-		 * Must reference ct->attr_encodings after parse_analyze() since that
-		 * stage by change the attribute encodings via expansion.
+		 * This transformCreateStmt() expands the phony create of a partitioned
+		 * table that we just build into the constituent commands we need to create
+		 * the new part.  (This will include some commands for the parent that we
+		 * don't need, since the parent already exists.)
 		 */
-		attr_encodings = ct->attr_encodings;
+		l1 = transformCreateStmt(ct, "ADD PARTITION", true);
 
 		/*
 		 * Look for the first CreateStmt and generate a GrantStmt
@@ -6723,15 +6717,13 @@ atpxPartAddList(Relation rel,
 			if (lc == list_head(l1))
 				continue;
 
-			if (IsA(s, Query) && IsA(((Query *)s)->utilityStmt, CreateStmt))
+			if (IsA(s, CreateStmt))
 			{
 				HeapTuple tuple;
 				Datum aclDatum;
 				bool isNull;
-				CreateStmt *t = (CreateStmt *)((Query *)s)->utilityStmt;
+				CreateStmt *t = (CreateStmt *) s;
 				cqContext	*classcqCtx;
-
-				t->attr_encodings = copyObject(attr_encodings);
 
 				classcqCtx = caql_beginscan(
 						NULL,
@@ -6777,7 +6769,6 @@ atpxPartAddList(Relation rel,
 					if (list_length(cp))
 					{
 						GrantStmt *gs = makeNode(GrantStmt);
-						List *pt;
 
 						gs->is_grant = true;
 						gs->objtype = ACL_OBJECT_RELATION;
@@ -6785,8 +6776,7 @@ atpxPartAddList(Relation rel,
 
 						gs->objects = list_make1(copyObject(t->relation));
 
-						pt = parse_analyze((Node *)gs, NULL, NULL, 0);
-						l1 = list_concat(l1, pt);
+						l1 = lappend(l1, gs);
 					}
 				}
 
@@ -6807,9 +6797,9 @@ atpxPartAddList(Relation rel,
 			/* MPP-10421: but save the relid of the skipped table,
 			 * because we skip indexes associated with it...
 			 */
-			if (IsA(s, Query) && IsA(((Query *)s)->utilityStmt, CreateStmt))
+			if (IsA(s, CreateStmt))
 			{
-				CreateStmt *t = (CreateStmt *)((Query *)s)->utilityStmt;
+				CreateStmt *t = (CreateStmt *) s;
 
 				skipTableRelid = RangeVarGetRelid(t->relation, true);
 			}
@@ -6818,7 +6808,7 @@ atpxPartAddList(Relation rel,
 
 		for_each_cell(lc, lnext(lc))
 		{
-			Query *q = lfirst(lc);
+			Node *q = lfirst(lc);
 
 			/*
 			 * MPP-6379, MPP-10421: If the statement is an expanded
@@ -6827,9 +6817,9 @@ atpxPartAddList(Relation rel,
 			 * parent has one or more indexes on it that our new
 			 * partition is inheriting.
 			 */
-			if (IsA(q->utilityStmt, IndexStmt))
+			if (IsA(q, IndexStmt))
 			{
-				IndexStmt *istmt	 = (IndexStmt *)q->utilityStmt;
+				IndexStmt *istmt	 = (IndexStmt *)q;
 				Oid		   idxRelid	 = RangeVarGetRelid(istmt->relation, true);
 
 				if (idxRelid == RelationGetRelid(rel))
@@ -6843,8 +6833,7 @@ atpxPartAddList(Relation rel,
 			/* XXX XXX: fix the first Alter Table Statement to have
 			 * the correct maxpartno.  Whoohoo!!
 			 */
-			if (bFixFirstATS && q && q->utilityStmt
-				&& IsA(q->utilityStmt, AlterTableStmt))
+			if (bFixFirstATS && q && IsA(q, AlterTableStmt))
 			{
 				PartitionSpec	*spec = NULL;
 				AlterTableStmt	*ats;
@@ -6853,7 +6842,7 @@ atpxPartAddList(Relation rel,
 
 				bFixFirstATS = false;
 
-				ats = (AlterTableStmt *)q->utilityStmt;
+				ats = (AlterTableStmt *) q;
 				Assert(IsA(ats, AlterTableStmt));
 
 				cmds = ats->cmds;
@@ -6885,17 +6874,17 @@ atpxPartAddList(Relation rel,
 				}
 
 			} /* end first alter table fixup */
-			else if (IsA(q->utilityStmt, CreateStmt))
+			else if (IsA(q, CreateStmt))
 			{
 				/* propagate owner */
-				((CreateStmt *)q->utilityStmt)->ownerid = ownerid;
+				((CreateStmt *) q)->ownerid = ownerid;
 			}
 
 			/* normal case - add partitions using CREATE statements
 			 * that get dispatched to the segments
 			 */
 			if (!bSetTemplate)
-				ProcessUtility(q->utilityStmt,
+				ProcessUtility(q,
 							   synthetic_sql,
 							   NULL,
 							   false, /* not top level */
@@ -6909,10 +6898,9 @@ atpxPartAddList(Relation rel,
 				 * build the catalog entries for subpartition
 				 * templates, not "real" table entries.
 				 */
-				if (q && q->utilityStmt
-					&& IsA(q->utilityStmt, AlterTableStmt))
+				if (IsA(q, AlterTableStmt))
 				{
-					AlterTableStmt *at2 = (AlterTableStmt *)q->utilityStmt;
+					AlterTableStmt *at2 = (AlterTableStmt *) q;
 					List *l2 = at2->cmds;
 					ListCell *lc2;
 

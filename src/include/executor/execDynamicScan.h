@@ -17,8 +17,6 @@
 #include "executor/tuptable.h"
 #include "commands/tablecmds.h"
 
-#define DYNAMIC_SCAN_NSLOTS 2
-
 typedef void (PartitionInitMethod)(ScanState *scanState, AttrNumber *attMap);
 typedef void (PartitionEndMethod)(ScanState *scanState);
 typedef void (PartitionReScanMethod)(ScanState *scanState);

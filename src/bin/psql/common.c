@@ -87,7 +87,7 @@ pg_calloc(size_t nmemb, size_t size)
 	tmp = calloc(nmemb, size);
 	if (!tmp)
 	{
-		psql_error("out of memory");
+		psql_error("out of memory\n");
 		exit(EXIT_FAILURE);
 	}
 	return tmp;
@@ -936,7 +936,7 @@ SendQuery(const char *query)
 	PQclear(results);
 
 	/* Possible microtiming output */
-	if (OK && pset.timing)
+	if (OK && pset.timing && !pset.quiet)
 		printf(_("Time: %.3f ms\n"), elapsed_msec);
 
 	/* check for events that may occur during query execution */

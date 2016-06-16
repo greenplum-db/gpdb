@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_attribute.h,v 1.130 2007/01/22 01:35:21 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_attribute.h,v 1.134 2008/01/01 19:45:56 momjian Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -354,8 +354,9 @@ DATA(insert ( 1247 gp_segment_id	23 0  4  -8 0 -1 -1 t p i t f f t 0));
 { 1255, {"proargdefaults"},		25, -1, -1, 21, 0, -1, -1, false, 'x', 'i', false, false, false, true, 0 }, \
 { 1255, {"prosrc"},				25, -1, -1, 22, 0, -1, -1, false, 'x', 'i', false, false, false, true, 0 }, \
 { 1255, {"probin"},				17, -1, -1, 23, 0, -1, -1, false, 'x', 'i', false, false, false, true, 0 }, \
-{ 1255, {"proacl"},			  1034, -1, -1, 24, 1, -1, -1, false, 'x', 'i', false, false, false, true, 0 }, \
-{ 1255, {"prodataaccess"},		18, -1, 1, 25, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }
+{ 1255, {"proconfig"},		  1009, -1, -1, 24, 1, -1, -1, false, 'x', 'i', false, false, false, true, 0 }, \
+{ 1255, {"proacl"},			  1034, -1, -1, 25, 1, -1, -1, false, 'x', 'i', false, false, false, true, 0 }, \
+{ 1255, {"prodataaccess"},		18, -1, 1, 26, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }
 
 DATA(insert ( 1255 proname			19 -1 NAMEDATALEN	1 0 -1 -1 f p i t f f t 0));
 DATA(insert ( 1255 pronamespace		26 -1 4   2 0 -1 -1 t p i t f f t 0));
@@ -380,8 +381,9 @@ DATA(insert ( 1255 proargnames	  1009 -1 -1 20 1 -1 -1 f x i f f f t 0));
 DATA(insert ( 1255 proargdefaults	25 -1 -1 21 0 -1 -1 f x i f f f t 0));
 DATA(insert ( 1255 prosrc			25 -1 -1 22 0 -1 -1 f x i f f f t 0));
 DATA(insert ( 1255 probin			17 -1 -1 23 0 -1 -1 f x i f f f t 0));
-DATA(insert ( 1255 proacl		  1034 -1 -1 24 1 -1 -1 f x i f f f t 0));
-DATA(insert ( 1255 prodataaccess	18 -1 1  25 0 -1 -1 t p c t f f t 0));
+DATA(insert ( 1255 proconfig	  1009 -1 -1 24 1 -1 -1 f x i f f f t 0));
+DATA(insert ( 1255 proacl		  1034 -1 -1 25 1 -1 -1 f x i f f f t 0));
+DATA(insert ( 1255 prodataaccess	18 -1 1  26 0 -1 -1 t p c t f f t 0));
 DATA(insert ( 1255 ctid				27 0  6  -1 0 -1 -1 f p s t f f t 0));
 DATA(insert ( 1255 oid				26 0  4  -2 0 -1 -1 t p i t f f t 0));
 DATA(insert ( 1255 xmin				28 0  4  -3 0 -1 -1 t p i t f f t 0));
@@ -531,11 +533,13 @@ DATA(insert ( 1259 gp_segment_id   23 0  4  -8 0 -1 -1 t p i t f f t 0));
 { 0, {"indisprimary"},		16, -1, 1, 5, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
 { 0, {"indisclustered"},	16, -1, 1, 6, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
 { 0, {"indisvalid"},		16, -1, 1, 7, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
-{ 0, {"indkey"},			22, -1, -1, 8, 1, -1, -1, false, 'p', 'i', true, false, false, true, 0 }, \
-{ 0, {"indclass"},			30, -1, -1, 9, 1, -1, -1, false, 'p', 'i', true, false, false, true, 0 }, \
-{ 0, {"indoption"},			22, -1, -1, 10, 1, -1, -1, false, 'p', 'i', true, false, false, true, 0 }, \
-{ 0, {"indexprs"},			25, -1, -1, 11, 0, -1, -1, false, 'x', 'i', false, false, false, true, 0 }, \
-{ 0, {"indpred"},			25, -1, -1, 12, 0, -1, -1, false, 'x', 'i', false, false, false, true, 0 }
+{ 0, {"indcheckxmin"},		16, -1, 1, 8, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
+{ 0, {"indisready"},		16, -1, 1, 9, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
+{ 0, {"indkey"},			22, -1, -1, 10, 1, -1, -1, false, 'p', 'i', true, false, false, true, 0 }, \
+{ 0, {"indclass"},			30, -1, -1, 11, 1, -1, -1, false, 'p', 'i', true, false, false, true, 0 }, \
+{ 0, {"indoption"},			22, -1, -1, 12, 1, -1, -1, false, 'p', 'i', true, false, false, true, 0 }, \
+{ 0, {"indexprs"},			25, -1, -1, 13, 0, -1, -1, false, 'x', 'i', false, false, false, true, 0 }, \
+{ 0, {"indpred"},			25, -1, -1, 14, 0, -1, -1, false, 'x', 'i', false, false, false, true, 0 }
 
 
 /* -----------------------------------------------

@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_relation.c,v 1.127 2007/01/05 22:19:34 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_relation.c,v 1.130.2.1 2008/04/05 01:58:28 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -484,14 +484,18 @@ scanRTEForColumn(ParseState *pstate, RangeTblEntry *rte, char *colname,
 		attnum = specialAttNum(colname);
 		if (attnum != InvalidAttrNumber)
 		{
-			/* now check to see if column actually is defined */
-			if (caql_getcount(
-						NULL,
-						cql("SELECT COUNT(*) FROM pg_attribute "
-							" WHERE attrelid = :1 "
-							" AND attnum = :2 ",
-							ObjectIdGetDatum(rte->relid),
-							Int16GetDatum(attnum))))
+			/*
+			 * Now check to see if column actually is defined.  Because of
+			 * an ancient oversight in DefineQueryRewrite, it's possible that
+			 * pg_attribute contains entries for system columns for a view,
+			 * even though views should not have such --- so we also check
+			 * the relkind.  This kluge will not be needed in 9.3 and later.
+			 */
+			if (SearchSysCacheExists(ATTNUM,
+									 ObjectIdGetDatum(rte->relid),
+									 Int16GetDatum(attnum),
+									 0, 0) &&
+				get_rel_relkind(rte->relid) != RELKIND_VIEW)
 			{
 				result = (Node *) make_var(pstate, rte, attnum, location);
 				/* Require read access */
@@ -1178,8 +1182,7 @@ addRangeTableEntryForFunction(ParseState *pstate,
 						 errmsg("column \"%s\" cannot be declared SETOF",
 								attrname),
 						 parser_errposition(pstate, n->typname->location)));
-			attrtype = typenameTypeId(pstate, n->typname);
-			attrtypmod = typenameTypeMod(pstate, n->typname, attrtype);
+			attrtype = typenameTypeId(pstate, n->typname, &attrtypmod);
 			eref->colnames = lappend(eref->colnames, makeString(attrname));
 			rte->funccoltypes = lappend_oid(rte->funccoltypes, attrtype);
 			rte->funccoltypmods = lappend_int(rte->funccoltypmods, attrtypmod);
@@ -1490,33 +1493,53 @@ getLockingClause(ParseState *pstate, char *refname)
  *
  * The oid must reference a normal, heap relation. This disallows
  * AO, AO/CO, external tables, views, etc.
+ *
+ * If 'noerror' is true, function returns true/false. If 'noerror'
+ * is false, throws an error if the relation is not simply updatable.
  */
 bool
-isSimplyUpdatableRelation(Oid relid)
+isSimplyUpdatableRelation(Oid relid, bool noerror)
 {
-	if (OidIsValid(relid))
+	Relation rel;
+
+	rel = relation_open(relid, AccessShareLock);
+
+	/*
+	 * This should match the error message in rewriteManip.c,
+	 * so that you get the same error as in PostgreSQL.
+	 */
+	if (rel->rd_rel->relkind == RELKIND_VIEW)
 	{
-		cqContext		*pcqCtx;
-		HeapTuple		 tuple;
-
-		pcqCtx = caql_beginscan(
-				NULL,
-				cql("SELECT * FROM pg_class "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(relid)));
-
-		tuple = caql_getnext(pcqCtx);
-
-		if (!HeapTupleIsValid(tuple))
-			elog(ERROR, "cache lookup failed for relation %u", relid);
-		Form_pg_class rel = (Form_pg_class) GETSTRUCT(tuple);
-		bool is_heap_tuple = rel->relkind == RELKIND_RELATION &&
-							 rel->relstorage == RELSTORAGE_HEAP;
-
-		caql_endscan(pcqCtx);
-		return is_heap_tuple;
+		if (!noerror)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("WHERE CURRENT OF on a view is not implemented")));
+		return false;
 	}
-	return false;
+
+	if (rel->rd_rel->relkind != RELKIND_RELATION)
+	{
+		if (!noerror)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("\"%s\" is not simply updatable",
+							RelationGetRelationName(rel))));
+		return false;
+	}
+
+	if (rel->rd_rel->relstorage != RELSTORAGE_HEAP)
+	{
+		if (!noerror)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("\"%s\" is not simply updatable",
+							RelationGetRelationName(rel))));
+		return false;
+	}
+
+	relation_close(rel, NoLock);
+
+	return true;
 }
 
 /*

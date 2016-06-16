@@ -14,17 +14,19 @@
  * CLOG page is initialized to zeroes.	Other writes of CLOG come from
  * recording of transaction commit or abort in xact.c, which generates its
  * own XLOG records for these events and will re-perform the status update
- * on redo; so we need make no additional XLOG entry here.	Also, the XLOG
- * is guaranteed flushed through the XLOG commit record before we are called
- * to log a commit, so the WAL rule "write xlog before data" is satisfied
- * automatically for commits, and we don't really care for aborts.  Therefore,
- * we don't need to mark CLOG pages with LSN information; we have enough
- * synchronization already.
+ * on redo; so we need make no additional XLOG entry here.	For synchronous
+ * transaction commits, the XLOG is guaranteed flushed through the XLOG commit
+ * record before we are called to log a commit, so the WAL rule "write xlog
+ * before data" is satisfied automatically.  However, for async commits we
+ * must track the latest LSN affecting each CLOG page, so that we can flush
+ * XLOG that far and satisfy the WAL rule.	We don't have to worry about this
+ * for aborts (whether sync or async), since the post-crash assumption would
+ * be that such transactions failed anyway.
  *
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/access/transam/clog.c,v 1.42 2007/01/05 22:19:23 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/access/transam/clog.c,v 1.46 2008/01/01 19:45:46 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -57,6 +59,13 @@
 #define TransactionIdToPgIndex(xid) ((xid) % (TransactionId) CLOG_XACTS_PER_PAGE)
 #define TransactionIdToByte(xid)	(TransactionIdToPgIndex(xid) / CLOG_XACTS_PER_BYTE)
 #define TransactionIdToBIndex(xid)	((xid) % (TransactionId) CLOG_XACTS_PER_BYTE)
+
+/* We store the latest async LSN for each group of transactions */
+#define CLOG_XACTS_PER_LSN_GROUP	32	/* keep this a power of 2 */
+#define CLOG_LSNS_PER_PAGE	(CLOG_XACTS_PER_PAGE / CLOG_XACTS_PER_LSN_GROUP)
+
+#define GetLSNIndex(slotno, xid)	((slotno) * CLOG_LSNS_PER_PAGE + \
+	((xid) % (TransactionId) CLOG_XACTS_PER_PAGE) / CLOG_XACTS_PER_LSN_GROUP)
 
 
 /*
@@ -93,11 +102,16 @@ char *XidStatus_Name(XidStatus status)
 /*
  * Record the final state of a transaction in the commit log.
  *
+ * lsn must be the WAL location of the commit record when recording an async
+ * commit.	For a synchronous commit it can be InvalidXLogRecPtr, since the
+ * caller guarantees the commit record is already flushed in that case.  It
+ * should be InvalidXLogRecPtr for abort cases, too.
+ *
  * NB: this is a low-level routine and is NOT the preferred entry point
  * for most uses; TransactionLogUpdate() in transam.c is the intended caller.
  */
 void
-TransactionIdSetStatus(TransactionId xid, XidStatus status)
+TransactionIdSetStatus(TransactionId xid, XidStatus status, XLogRecPtr lsn)
 {
 	MIRRORED_LOCK_DECLARE;
 
@@ -117,7 +131,16 @@ TransactionIdSetStatus(TransactionId xid, XidStatus status)
 
 	LWLockAcquire(CLogControlLock, LW_EXCLUSIVE);
 
-	slotno = SimpleLruReadPage(ClogCtl, pageno, xid);
+	/*
+	 * If we're doing an async commit (ie, lsn is valid), then we must wait
+	 * for any active write on the page slot to complete.  Otherwise our
+	 * update could reach disk in that write, which will not do since we
+	 * mustn't let it reach disk until we've done the appropriate WAL flush.
+	 * But when lsn is invalid, it's OK to scribble on a page while it is
+	 * write-busy, since we don't care if the update reaches disk sooner than
+	 * we think.  Hence, pass write_ok = XLogRecPtrIsInvalid(lsn).
+	 */
+	slotno = SimpleLruReadPage(ClogCtl, pageno, XLogRecPtrIsInvalid(lsn), xid);
 	byteptr = ClogCtl->shared->page_buffer[slotno] + byteno;
 
 	debugStatus = ((*byteptr >> bshift) & CLOG_XACT_BITMASK);
@@ -147,6 +170,22 @@ TransactionIdSetStatus(TransactionId xid, XidStatus status)
 
 	ClogCtl->shared->page_dirty[slotno] = true;
 
+	/*
+	 * Update the group LSN if the transaction completion LSN is higher.
+	 *
+	 * Note: lsn will be invalid when supplied during InRecovery processing,
+	 * so we don't need to do anything special to avoid LSN updates during
+	 * recovery. After recovery completes the next clog change will set the
+	 * LSN correctly.
+	 */
+	if (!XLogRecPtrIsInvalid(lsn))
+	{
+		int			lsnindex = GetLSNIndex(slotno, xid);
+
+		if (XLByteLT(ClogCtl->shared->group_lsn[lsnindex], lsn))
+			ClogCtl->shared->group_lsn[lsnindex] = lsn;
+	}
+
 	LWLockRelease(CLogControlLock);
 
 	MIRRORED_UNLOCK;
@@ -155,11 +194,20 @@ TransactionIdSetStatus(TransactionId xid, XidStatus status)
 /*
  * Interrogate the state of a transaction in the commit log.
  *
+ * Aside from the actual commit status, this function returns (into *lsn)
+ * an LSN that is late enough to be able to guarantee that if we flush up to
+ * that LSN then we will have flushed the transaction's commit record to disk.
+ * The result is not necessarily the exact LSN of the transaction's commit
+ * record!	For example, for long-past transactions (those whose clog pages
+ * already migrated to disk), we'll return InvalidXLogRecPtr.  Also, because
+ * we group transactions on the same clog page to conserve storage, we might
+ * return the LSN of a later transaction that falls into the same group.
+ *
  * NB: this is a low-level routine and is NOT the preferred entry point
  * for most uses; TransactionLogFetch() in transam.c is the intended caller.
  */
 XidStatus
-TransactionIdGetStatus(TransactionId xid)
+TransactionIdGetStatus(TransactionId xid, XLogRecPtr *lsn)
 {
 	MIRRORED_LOCK_DECLARE;
 
@@ -167,6 +215,7 @@ TransactionIdGetStatus(TransactionId xid)
 	int			byteno = TransactionIdToByte(xid);
 	int			bshift = TransactionIdToBIndex(xid) * CLOG_BITS_PER_XACT;
 	int			slotno;
+	int			lsnindex;
 	char	   *byteptr;
 	XidStatus	status;
 
@@ -178,6 +227,9 @@ TransactionIdGetStatus(TransactionId xid)
 	byteptr = ClogCtl->shared->page_buffer[slotno] + byteno;
 
 	status = (*byteptr >> bshift) & CLOG_XACT_BITMASK;
+
+	lsnindex = GetLSNIndex(slotno, xid);
+	*lsn = ClogCtl->shared->group_lsn[lsnindex];
 
 	LWLockRelease(CLogControlLock);
 
@@ -291,7 +343,7 @@ CLOGScanForPrevStatus(
 			return false;
 		}
 			
-		slotno = SimpleLruReadPage(ClogCtl, pageno, highXid);
+		slotno = SimpleLruReadPage(ClogCtl, pageno, false, highXid);
 
 		for (xid = highXid; xid >= lowXid; xid--)
 		{
@@ -362,15 +414,15 @@ CLOGTransactionIsOld(TransactionId xid)
 Size
 CLOGShmemSize(void)
 {
-	return SimpleLruShmemSize(NUM_CLOG_BUFFERS);
+	return SimpleLruShmemSize(NUM_CLOG_BUFFERS, CLOG_LSNS_PER_PAGE);
 }
 
 void
 CLOGShmemInit(void)
 {
 	ClogCtl->PagePrecedes = CLOGPagePrecedes;
-	SimpleLruInit(ClogCtl, "CLOG Ctl", NUM_CLOG_BUFFERS,
-				  CLogControlLock, CLOG_DIR);
+	SimpleLruInit(ClogCtl, "CLOG Ctl", NUM_CLOG_BUFFERS, CLOG_LSNS_PER_PAGE,
+				  CLogControlLock, "pg_clog");
 }
 
 /*
@@ -470,7 +522,7 @@ StartupCLOG(void)
 		int			slotno;
 		char	   *byteptr;
 
-		slotno = SimpleLruReadPage(ClogCtl, pageno, xid);
+		slotno = SimpleLruReadPage(ClogCtl, pageno, false, xid);
 		byteptr = ClogCtl->shared->page_buffer[slotno] + byteno;
 
 		/* Zero so-far-unused positions in the current byte */
@@ -630,10 +682,6 @@ CLOGPagePrecedes(int page1, int page2)
 
 /*
  * Write a ZEROPAGE xlog record
- *
- * Note: xlog record is marked as outside transaction control, since we
- * want it to be redone whether the invoking transaction commits or not.
- * (Besides which, this is normally done just before entering a transaction.)
  */
 static void
 WriteZeroPageXlogRec(int pageno)
@@ -644,7 +692,7 @@ WriteZeroPageXlogRec(int pageno)
 	rdata.len = sizeof(int);
 	rdata.buffer = InvalidBuffer;
 	rdata.next = NULL;
-	(void) XLogInsert(RM_CLOG_ID, CLOG_ZEROPAGE | XLOG_NO_TRAN, &rdata);
+	(void) XLogInsert(RM_CLOG_ID, CLOG_ZEROPAGE, &rdata);
 }
 
 /*
@@ -652,9 +700,6 @@ WriteZeroPageXlogRec(int pageno)
  *
  * We must flush the xlog record to disk before returning --- see notes
  * in TruncateCLOG().
- *
- * Note: xlog record is marked as outside transaction control, since we
- * want it to be redone whether the invoking transaction commits or not.
  */
 static void
 WriteTruncateXlogRec(int pageno)
@@ -666,7 +711,7 @@ WriteTruncateXlogRec(int pageno)
 	rdata.len = sizeof(int);
 	rdata.buffer = InvalidBuffer;
 	rdata.next = NULL;
-	recptr = XLogInsert(RM_CLOG_ID, CLOG_TRUNCATE | XLOG_NO_TRAN, &rdata);
+	recptr = XLogInsert(RM_CLOG_ID, CLOG_TRUNCATE, &rdata);
 	XLogFlush(recptr);
 }
 
@@ -704,8 +749,8 @@ clog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		memcpy(&pageno, XLogRecGetData(record), sizeof(int));
 
 		/*
-		 * During XLOG replay, latest_page_number isn't set up yet; insert
-		 * a suitable value to bypass the sanity test in SimpleLruTruncate.
+		 * During XLOG replay, latest_page_number isn't set up yet; insert a
+		 * suitable value to bypass the sanity test in SimpleLruTruncate.
 		 */
 		ClogCtl->shared->latest_page_number = pageno;
 

@@ -25,9 +25,9 @@ test: dispatch
 # so it needs to be in a group by itself
 test: segspace
 
-# 'sort_finish_pending' sets QueryFinishPending flag to true during sort using fault injectors
+# 'query_finish_pending' sets QueryFinishPending flag to true during query execution using fault injectors
 # so it needs to be in a group by itself
-test: sort_finish_pending
+test: query_finish_pending
 
 test: gpdiffcheck gptokencheck information_schema gp_hashagg sequence_gp tidscan
 

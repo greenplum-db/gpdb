@@ -34,9 +34,6 @@ extern int	AutovacuumLauncherPid;
 
 extern int	Log_autovacuum_min_duration;
 
-/* autovacuum launcher PID, only valid when worker is shutting down */
-extern int	AutovacuumLauncherPid;
-
 /* Status inquiry functions */
 extern bool AutoVacuumingActive(void);
 extern bool IsAutoVacuumLauncherProcess(void);
@@ -51,9 +48,6 @@ extern int	StartAutoVacWorker(void);
 
 /* called from postmaster when a worker could not be forked */
 extern void AutoVacWorkerFailed(void);
-
-/* autovacuum cost-delay balancer */
-extern void AutoVacuumUpdateDelay(void);
 
 /* autovacuum cost-delay balancer */
 extern void AutoVacuumUpdateDelay(void);

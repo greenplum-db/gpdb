@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtxlog.c,v 1.49 2007/11/16 19:53:50 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtxlog.c,v 1.50 2008/01/01 19:45:46 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -145,8 +145,8 @@ _bt_restore_page(Page page, char *from, int len)
 		memcpy(&itupdata, from, sizeof(IndexTupleData));
 		itemsz = IndexTupleDSize(itupdata);
 		itemsz = MAXALIGN(itemsz);
-		if (PageAddItem(page, (Item) from, itemsz,
-						FirstOffsetNumber, LP_USED) == InvalidOffsetNumber)
+		if (PageAddItem(page, (Item) from, itemsz, FirstOffsetNumber,
+						false, false) == InvalidOffsetNumber)
 			elog(PANIC, "_bt_restore_page: cannot add item to page");
 		from += itemsz;
 	}
@@ -251,7 +251,7 @@ btree_xlog_insert(bool isleaf, bool ismeta,
 			{
 				if (PageAddItem(page, (Item) datapos, datalen,
 							ItemPointerGetOffsetNumber(&(xlrec->target.tid)),
-								LP_USED) == InvalidOffsetNumber)
+								false, false) == InvalidOffsetNumber)
 					elog(PANIC, "btree_insert_redo: failed to add item");
 
 				PageSetLSN(page, lsn);
@@ -385,15 +385,15 @@ btree_xlog_split(bool onleft, bool isroot,
 	 * Reconstruct left (original) sibling if needed.  Note that this code
 	 * ensures that the items remaining on the left page are in the correct
 	 * item number order, but it does not reproduce the physical order they
-	 * would have had.  Is this worth changing?  See also _bt_restore_page().
+	 * would have had.	Is this worth changing?  See also _bt_restore_page().
 	 */
 	if (!(record->xl_info & XLR_BKP_BLOCK_1))
 	{
-		Buffer lbuf = XLogReadBuffer(reln, xlrec->leftsib, false);
+		Buffer		lbuf = XLogReadBuffer(reln, xlrec->leftsib, false);
 
 		if (BufferIsValid(lbuf))
 		{
-			Page lpage = (Page) BufferGetPage(lbuf);
+			Page		lpage = (Page) BufferGetPage(lbuf);
 			BTPageOpaque lopaque = (BTPageOpaque) PageGetSpecialPointer(lpage);
 
 			if (!XLByteLE(lsn, PageGetLSN(lpage)))
@@ -401,17 +401,18 @@ btree_xlog_split(bool onleft, bool isroot,
 				OffsetNumber off;
 				OffsetNumber maxoff = PageGetMaxOffsetNumber(lpage);
 				OffsetNumber deletable[MaxOffsetNumber];
-				int ndeletable = 0;
+				int			ndeletable = 0;
 
 				/*
-				 * Remove the items from the left page that were copied to
-				 * the right page.  Also remove the old high key, if any.
-				 * (We must remove everything before trying to insert any
-				 * items, else we risk not having enough space.)
+				 * Remove the items from the left page that were copied to the
+				 * right page.	Also remove the old high key, if any. (We must
+				 * remove everything before trying to insert any items, else
+				 * we risk not having enough space.)
 				 */
 				if (!P_RIGHTMOST(lopaque))
 				{
 					deletable[ndeletable++] = P_HIKEY;
+
 					/*
 					 * newitemoff is given to us relative to the original
 					 * page's item numbering, so adjust it for this deletion.
@@ -429,13 +430,13 @@ btree_xlog_split(bool onleft, bool isroot,
 				if (onleft)
 				{
 					if (PageAddItem(lpage, newitem, newitemsz, newitemoff,
-									LP_USED) == InvalidOffsetNumber)
+									false, false) == InvalidOffsetNumber)
 						elog(PANIC, "failed to add new item to left page after split");
 				}
 
 				/* Set high key */
 				if (PageAddItem(lpage, left_hikey, left_hikeysz,
-								P_HIKEY, LP_USED) == InvalidOffsetNumber)
+								P_HIKEY, false, false) == InvalidOffsetNumber)
 					elog(PANIC, "failed to add high key to left page after split");
 
 				/* Fix opaque fields */
@@ -452,17 +453,17 @@ btree_xlog_split(bool onleft, bool isroot,
 		}
 	}
 
-	/* We no longer need the right buffer. */
+	/* We no longer need the right buffer */
 	UnlockReleaseBuffer(rbuf);
 
 	/* Fix left-link of the page to the right of the new right sibling */
 	if (xlrec->rnext != P_NONE && !(record->xl_info & XLR_BKP_BLOCK_2))
 	{
-		Buffer buffer = XLogReadBuffer(reln, xlrec->rnext, false);
+		Buffer		buffer = XLogReadBuffer(reln, xlrec->rnext, false);
 
 		if (BufferIsValid(buffer))
 		{
-			Page page = (Page) BufferGetPage(buffer);
+			Page		page = (Page) BufferGetPage(buffer);
 
 			if (!XLByteLE(lsn, PageGetLSN(page)))
 			{
@@ -537,7 +538,7 @@ btree_xlog_delete(XLogRecPtr lsn, XLogRecord *record)
 	}
 
 	/*
-	 * Mark the page as not containing any LP_DELETE items --- see comments in
+	 * Mark the page as not containing any LP_DEAD items --- see comments in
 	 * _bt_delitems().
 	 */
 	opaque = (BTPageOpaque) PageGetSpecialPointer(page);
@@ -993,7 +994,7 @@ btree_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 								 xlrec->node.spcNode, xlrec->node.dbNode,
 								 xlrec->node.relNode);
 				appendStringInfo(buf, "left %u, right %u, next %u, level %u, firstright %d",
-								 xlrec->leftsib, xlrec->rightsib, xlrec->rnext,
+							     xlrec->leftsib, xlrec->rightsib, xlrec->rnext,
 								 xlrec->level, xlrec->firstright);
 				break;
 			}

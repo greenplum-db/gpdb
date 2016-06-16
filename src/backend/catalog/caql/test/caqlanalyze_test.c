@@ -400,11 +400,13 @@ test__caql_switch7(void **state)
 	cq_list			   *pcql = CaQL(query, 1, keys);
 	RelationData		dummyrel;
 	SysScanDescData		dummydesc;
+	SnapshotData		SnapshotDirty;
 
+	InitDirtySnapshot(SnapshotDirty);
 	dummyrel.rd_id = RelationRelationId;
 	hash_cookie = cq_lookup(query, strlen(query), pcql);
 
-	pCtx = caql_snapshot(cqclr(&context), SnapshotDirty);
+	pCtx = caql_snapshot(cqclr(&context), &SnapshotDirty);
 	/* setup heap_open */
 	expect__heap_open(RelationRelationId, true,
 					  AccessShareLock, true,
@@ -436,7 +438,7 @@ test__caql_switch7(void **state)
 	expect__systable_beginscan(&dummyrel, true,
 							   InvalidOid, false,
 							   false, true,
-							   SnapshotDirty, true,
+							   &SnapshotDirty, true,
 							   4, true,
 							   NULL, false,
 							   &dummydesc);

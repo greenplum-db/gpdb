@@ -330,6 +330,8 @@ on (x1 = xx1) where (xx2 is not null);
 -- regression test: check for bug with propagation of implied equality
 -- to outside an IN
 --
+analyze tenk1;		-- ensure we get consistent plans here
+
 select count(*) from tenk1 a where unique1 in
   (select unique1 from tenk1 b join tenk1 c using (unique1)
    where b.unique2 = 42);
@@ -487,3 +489,42 @@ select * from
   zt2 left join zt3 on (f2 = f3)
       left join zv1 on (f3 = f1)
 where f2 = 53;
+
+--
+-- regression test for improper extraction of OR indexqual conditions
+-- (as seen in early 8.3.x releases)
+--
+
+select a.unique2, a.ten, b.tenthous, b.unique2, b.hundred
+from tenk1 a left join tenk1 b on a.unique2 = b.tenthous
+where a.unique1 = 42 and
+      ((b.unique2 is null and a.ten = 2) or b.hundred = 3);
+
+--
+-- test for sane behavior with noncanonical merge clauses, per bug #4926
+--
+
+begin;
+
+set enable_mergejoin = 1;
+set enable_hashjoin = 0;
+set enable_nestloop = 0;
+
+create temp table a (i integer);
+create temp table b (x integer, y integer);
+
+select * from a left join b on i = x and i = y and x = i;
+
+rollback;
+
+--
+-- test handling of potential equivalence clauses above outer joins
+--
+
+select q1, unique2, thousand, hundred
+  from int8_tbl a left join tenk1 b on q1 = unique2
+  where coalesce(thousand,123) = q1 and q1 = coalesce(hundred,123);
+
+select f1, unique2, case when unique2 is null then f1 else 0 end
+  from int4_tbl a left join tenk1 b on f1 = unique2
+  where (case when unique2 is null then f1 else 0 end) = 0;

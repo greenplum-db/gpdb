@@ -67,8 +67,6 @@ bool		Debug_print_slice_table;	/* Shall we log the slice table? */
 
 bool		Debug_print_dispatch_plan;	/* Shall we log the plan we'll dispatch? */
 
-bool		Debug_print_plannedstmt;	/* Shall we log the final planned statement? */
-
 bool            gp_backup_directIO = false;     /* disable\enable direct I/O dump */
 
 int             gp_backup_directIO_read_chunk_mb = 20; /* size of readChunk buffer for directIO dump */
@@ -309,7 +307,6 @@ bool		gp_enable_motion_deadlock_sanity = FALSE; /* planning time sanity check */
 #ifdef USE_ASSERT_CHECKING
 bool		gp_mk_sort_check = false;
 #endif
-bool 		trace_sort = false;
 int			gp_sort_flags = 0;
 int			gp_dbg_flags = 0;
 int 		gp_sort_max_distinct = 20000;

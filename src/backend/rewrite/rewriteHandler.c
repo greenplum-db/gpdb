@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteHandler.c,v 1.170 2007/02/01 19:10:27 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteHandler.c,v 1.177.2.1 2008/09/24 16:52:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -22,10 +22,12 @@
 #include "parser/parse_coerce.h"
 #include "parser/parse_expr.h"
 #include "parser/parsetree.h"
+#include "rewrite/rewriteDefine.h"
 #include "rewrite/rewriteHandler.h"
 #include "rewrite/rewriteManip.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
+#include "commands/trigger.h"
 
 
 /* We use a list of these to detect recursion in RewriteQuery */
@@ -52,7 +54,7 @@ static Node *get_assignment_input(Node *node);
 static void rewriteValuesRTE(RangeTblEntry *rte, Relation target_relation,
 				 List *attrnos);
 static void markQueryForLocking(Query *qry, Node *jtnode,
-								bool forUpdate, bool noWait);
+					bool forUpdate, bool noWait);
 static List *matchLocks(CmdType event, RuleLock *rulelocks,
 		   int varno, Query *parsetree);
 static Query *fireRIRrules(Query *parsetree, List *activeRIRs);
@@ -1121,6 +1123,28 @@ matchLocks(CmdType event,
 	{
 		RewriteRule *oneLock = rulelocks->rules[i];
 
+		/*
+		 * Suppress ON INSERT/UPDATE/DELETE rules that are disabled or
+		 * configured to not fire during the current sessions replication
+		 * role. ON SELECT rules will always be applied in order to keep views
+		 * working even in LOCAL or REPLICA role.
+		 */
+		if (oneLock->event != CMD_SELECT)
+		{
+			if (SessionReplicationRole == SESSION_REPLICATION_ROLE_REPLICA)
+			{
+				if (oneLock->enabled == RULE_FIRES_ON_ORIGIN ||
+					oneLock->enabled == RULE_DISABLED)
+					continue;
+			}
+			else	/* ORIGIN or LOCAL ROLE */
+			{
+				if (oneLock->enabled == RULE_FIRES_ON_REPLICA ||
+					oneLock->enabled == RULE_DISABLED)
+					continue;
+			}
+		}
+
 		if (oneLock->event == event)
 		{
 			if (parsetree->commandType != CMD_SELECT ||
@@ -1766,22 +1790,22 @@ RewriteQuery(Query *parsetree, List *rewrite_events)
 				case CMD_INSERT:
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("cannot perform INSERT RETURNING on relation \"%s\"",
-								RelationGetRelationName(rt_entry_relation)),
+							 errmsg("cannot perform INSERT RETURNING on relation \"%s\"",
+								 RelationGetRelationName(rt_entry_relation)),
 							 errhint("You need an unconditional ON INSERT DO INSTEAD rule with a RETURNING clause.")));
 					break;
 				case CMD_UPDATE:
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("cannot perform UPDATE RETURNING on relation \"%s\"",
-								RelationGetRelationName(rt_entry_relation)),
+							 errmsg("cannot perform UPDATE RETURNING on relation \"%s\"",
+								 RelationGetRelationName(rt_entry_relation)),
 							 errhint("You need an unconditional ON UPDATE DO INSTEAD rule with a RETURNING clause.")));
 					break;
 				case CMD_DELETE:
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("cannot perform DELETE RETURNING on relation \"%s\"",
-								RelationGetRelationName(rt_entry_relation)),
+							 errmsg("cannot perform DELETE RETURNING on relation \"%s\"",
+								 RelationGetRelationName(rt_entry_relation)),
 							 errhint("You need an unconditional ON DELETE DO INSTEAD rule with a RETURNING clause.")));
 					break;
 				default:

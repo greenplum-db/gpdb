@@ -8,12 +8,13 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/page/bufpage.c,v 1.71 2007/02/21 20:02:17 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/page/bufpage.c,v 1.78 2008/02/10 20:39:08 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
+#include "access/htup.h"
 #include "storage/bufpage.h"
 
 
@@ -44,6 +45,7 @@ PageInit(Page page, Size pageSize, Size specialSize)
 	p->pd_upper = pageSize - specialSize;
 	p->pd_special = pageSize - specialSize;
 	PageSetPageSizeAndVersion(page, pageSize, PG_PAGE_LAYOUT_VERSION);
+	/* p->pd_prune_xid = InvalidTransactionId;		done by above MemSet */
 }
 
 
@@ -99,11 +101,17 @@ PageHeaderIsValid(PageHeader page)
  *	Add an item to a page.	Return value is offset at which it was
  *	inserted, or InvalidOffsetNumber if there's not room to insert.
  *
- *	If offsetNumber is valid and <= current max offset in the page,
+ *	If overwrite is true, we just store the item at the specified
+ *	offsetNumber (which must be either a currently-unused item pointer,
+ *	or one past the last existing item).  Otherwise,
+ *	if offsetNumber is valid and <= current max offset in the page,
  *	insert item into the array at that position by shuffling ItemId's
  *	down to make room.
  *	If offsetNumber is not valid, then assign one by finding the first
  *	one that is both unused and deallocated.
+ *
+ *	If is_heap is true, we enforce that there can't be more than
+ *	MaxHeapTuplesPerPage line pointers on the page.
  *
  *	!!! EREPORT(ERROR) IS DISALLOWED HERE !!!
  */
@@ -112,7 +120,8 @@ PageAddItem(Page page,
 			Item item,
 			Size size,
 			OffsetNumber offsetNumber,
-			ItemIdFlags flags)
+			bool overwrite,
+			bool is_heap)
 {
 	PageHeader	phdr = (PageHeader) page;
 	Size		alignedSize;
@@ -121,9 +130,6 @@ PageAddItem(Page page,
 	ItemId		itemId;
 	OffsetNumber limit;
 	bool		needshuffle = false;
-	bool		overwritemode = (flags & OverwritePageMode) != 0;
-
-	flags &= ~OverwritePageMode;
 
 	/*
 	 * Be wary about corrupted page pointers
@@ -146,12 +152,12 @@ PageAddItem(Page page,
 	if (OffsetNumberIsValid(offsetNumber))
 	{
 		/* yes, check it */
-		if (overwritemode)
+		if (overwrite)
 		{
 			if (offsetNumber < limit)
 			{
 				itemId = PageGetItemId(phdr, offsetNumber);
-				if (ItemIdIsUsed(itemId) || ItemIdGetLength(itemId) != 0)
+				if (ItemIdIsUsed(itemId) || ItemIdHasStorage(itemId))
 				{
 					elog(WARNING, "will not overwrite a used ItemId");
 					return InvalidOffsetNumber;
@@ -170,11 +176,15 @@ PageAddItem(Page page,
 		/* if no free slot, we'll put it at limit (1st open slot) */
 		if (PageHasFreeLinePointers(phdr))
 		{
-			/* look for "recyclable" (unused & deallocated) ItemId */
+			/*
+			 * Look for "recyclable" (unused) ItemId.  We check for no storage
+			 * as well, just to be paranoid --- unused items should never have
+			 * storage.
+			 */
 			for (offsetNumber = 1; offsetNumber < limit; offsetNumber++)
 			{
 				itemId = PageGetItemId(phdr, offsetNumber);
-				if (!ItemIdIsUsed(itemId) && ItemIdGetLength(itemId) == 0)
+				if (!ItemIdIsUsed(itemId) && !ItemIdHasStorage(itemId))
 					break;
 			}
 			if (offsetNumber >= limit)
@@ -193,6 +203,12 @@ PageAddItem(Page page,
 	if (offsetNumber > limit)
 	{
 		elog(WARNING, "specified item offset is too large");
+		return InvalidOffsetNumber;
+	}
+
+	if (is_heap && offsetNumber > MaxHeapTuplesPerPage)
+	{
+		elog(WARNING, "can't put more than MaxHeapTuplesPerPage items in a heap page");
 		return InvalidOffsetNumber;
 	}
 
@@ -224,9 +240,7 @@ PageAddItem(Page page,
 				(limit - offsetNumber) * sizeof(ItemIdData));
 
 	/* set the item pointer */
-	itemId->lp_off = upper;
-	itemId->lp_len = size;
-	itemId->lp_flags = flags;
+	ItemIdSetNormal(itemId, upper, size);
 
 	/* copy the item's data onto the page */
 	memcpy((char *) page + upper, item, size);
@@ -313,11 +327,10 @@ itemoffcompare(const void *itemidp1, const void *itemidp2)
  *
  * This routine is usable for heap pages only, but see PageIndexMultiDelete.
  *
- * Returns number of unused line pointers on page.	If "unused" is not NULL
- * then the unused[] array is filled with indexes of unused line pointers.
+ * As a side effect, the page's PD_HAS_FREE_LINES hint bit is updated.
  */
-int
-PageRepairFragmentation(Page page, OffsetNumber *unused)
+void
+PageRepairFragmentation(Page page)
 {
 	Offset		pd_lower = ((PageHeader) page)->pd_lower;
 	Offset		pd_upper = ((PageHeader) page)->pd_upper;
@@ -326,7 +339,8 @@ PageRepairFragmentation(Page page, OffsetNumber *unused)
 				itemidptr;
 	ItemId		lp;
 	int			nline,
-				nused;
+				nstorage,
+				nunused;
 	int			i;
 	Size		totallen;
 	Offset		upper;
@@ -350,38 +364,38 @@ PageRepairFragmentation(Page page, OffsetNumber *unused)
 				 errSendAlert(true)));
 
 	nline = PageGetMaxOffsetNumber(page);
-	nused = 0;
-	for (i = 0; i < nline; i++)
+	nunused = nstorage = 0;
+	for (i = FirstOffsetNumber; i <= nline; i++)
 	{
-		lp = PageGetItemId(page, i + 1);
-		if (ItemIdDeleted(lp))	/* marked for deletion */
-			lp->lp_flags &= ~(LP_USED | LP_DELETE);
+		lp = PageGetItemId(page, i);
 		if (ItemIdIsUsed(lp))
-			nused++;
-		else if (unused)
-			unused[i - nused] = (OffsetNumber) i;
+		{
+			if (ItemIdHasStorage(lp))
+				nstorage++;
+		}
+		else
+		{
+			/* Unused entries should have lp_len = 0, but make sure */
+			ItemIdSetUnused(lp);
+			nunused++;
+		}
 	}
 
-	if (nused == 0)
+	if (nstorage == 0)
 	{
 		/* Page is completely empty, so just reset it quickly */
-		for (i = 0; i < nline; i++)
-		{
-			lp = PageGetItemId(page, i + 1);
-			lp->lp_len = 0;		/* indicate unused & deallocated */
-		}
 		((PageHeader) page)->pd_upper = pd_special;
 	}
 	else
-	{							/* nused != 0 */
+	{							/* nstorage != 0 */
 		/* Need to compact the page the hard way */
-		itemidbase = (itemIdSort) palloc(sizeof(itemIdSortData) * nused);
+		itemidbase = (itemIdSort) palloc(sizeof(itemIdSortData) * nstorage);
 		itemidptr = itemidbase;
 		totallen = 0;
 		for (i = 0; i < nline; i++)
 		{
 			lp = PageGetItemId(page, i + 1);
-			if (ItemIdIsUsed(lp))
+			if (ItemIdHasStorage(lp))
 			{
 				itemidptr->offsetindex = i;
 				itemidptr->itemoff = ItemIdGetOffset(lp);
@@ -396,10 +410,6 @@ PageRepairFragmentation(Page page, OffsetNumber *unused)
 				totallen += itemidptr->alignedlen;
 				itemidptr++;
 			}
-			else
-			{
-				lp->lp_len = 0; /* indicate unused & deallocated */
-			}
 		}
 
 		if (totallen > (Size) (pd_special - pd_lower))
@@ -410,13 +420,13 @@ PageRepairFragmentation(Page page, OffsetNumber *unused)
 			   errSendAlert(true)));
 
 		/* sort itemIdSortData array into decreasing itemoff order */
-		qsort((char *) itemidbase, nused, sizeof(itemIdSortData),
+		qsort((char *) itemidbase, nstorage, sizeof(itemIdSortData),
 			  itemoffcompare);
 
 		/* compactify page */
 		upper = pd_special;
 
-		for (i = 0, itemidptr = itemidbase; i < nused; i++, itemidptr++)
+		for (i = 0, itemidptr = itemidbase; i < nstorage; i++, itemidptr++)
 		{
 			lp = PageGetItemId(page, itemidptr->offsetindex + 1);
 			upper -= itemidptr->alignedlen;
@@ -432,18 +442,19 @@ PageRepairFragmentation(Page page, OffsetNumber *unused)
 	}
 
 	/* Set hint bit for PageAddItem */
-	if (nused < nline)
+	if (nunused > 0)
 		PageSetHasFreeLinePointers(page);
 	else
 		PageClearHasFreeLinePointers(page);
-
-	return (nline - nused);
 }
 
 /*
  * PageGetFreeSpace
  *		Returns the size of the free (allocatable) space on a page,
- *		deducted by the space needed for a new line pointer.
+ *		reduced by the space needed for a new line pointer.
+ *
+ * Note: this should usually only be used on index pages.  Use
+ * PageGetHeapFreeSpace on heap pages.
  */
 Size
 PageGetFreeSpace(Page page)
@@ -466,7 +477,8 @@ PageGetFreeSpace(Page page)
 
 /*
  * PageGetExactFreeSpace
- *		Returns the size of the free (allocatable) space on a page.
+ *		Returns the size of the free (allocatable) space on a page,
+ *		without any consideration for adding/removing line pointers.
  */
 Size
 PageGetExactFreeSpace(Page page)
@@ -480,7 +492,78 @@ PageGetExactFreeSpace(Page page)
 	space = (int) ((PageHeader) page)->pd_upper -
 		(int) ((PageHeader) page)->pd_lower;
 
+	if (space < 0)
+		return 0;
+
 	return (Size) space;
+}
+
+
+/*
+ * PageGetHeapFreeSpace
+ *		Returns the size of the free (allocatable) space on a page,
+ *		reduced by the space needed for a new line pointer.
+ *
+ * The difference between this and PageGetFreeSpace is that this will return
+ * zero if there are already MaxHeapTuplesPerPage line pointers in the page
+ * and none are free.  We use this to enforce that no more than
+ * MaxHeapTuplesPerPage line pointers are created on a heap page.  (Although
+ * no more tuples than that could fit anyway, in the presence of redirected
+ * or dead line pointers it'd be possible to have too many line pointers.
+ * To avoid breaking code that assumes MaxHeapTuplesPerPage is a hard limit
+ * on the number of line pointers, we make this extra check.)
+ */
+Size
+PageGetHeapFreeSpace(Page page)
+{
+	Size		space;
+
+	space = PageGetFreeSpace(page);
+	if (space > 0)
+	{
+		OffsetNumber offnum,
+					nline;
+
+		/*
+		 * Are there already MaxHeapTuplesPerPage line pointers in the page?
+		 */
+		nline = PageGetMaxOffsetNumber(page);
+		if (nline >= MaxHeapTuplesPerPage)
+		{
+			if (PageHasFreeLinePointers((PageHeader) page))
+			{
+				/*
+				 * Since this is just a hint, we must confirm that there is
+				 * indeed a free line pointer
+				 */
+				for (offnum = FirstOffsetNumber; offnum <= nline; offnum++)
+				{
+					ItemId		lp = PageGetItemId(page, offnum);
+
+					if (!ItemIdIsUsed(lp))
+						break;
+				}
+
+				if (offnum > nline)
+				{
+					/*
+					 * The hint is wrong, but we can't clear it here since we
+					 * don't have the ability to mark the page dirty.
+					 */
+					space = 0;
+				}
+			}
+			else
+			{
+				/*
+				 * Although the hint might be wrong, PageAddItem will believe
+				 * it anyway, so we must believe it too.
+				 */
+				space = 0;
+			}
+		}
+	}
+	return space;
 }
 
 
@@ -524,6 +607,7 @@ PageIndexTupleDelete(Page page, OffsetNumber offnum)
 	offidx = offnum - 1;
 
 	tup = PageGetItemId(page, offnum);
+	Assert(ItemIdHasStorage(tup));
 	size = ItemIdGetLength(tup);
 	offset = ItemIdGetOffset(tup);
 
@@ -582,6 +666,7 @@ PageIndexTupleDelete(Page page, OffsetNumber offnum)
 		{
 			ItemId		ii = PageGetItemId(phdr, i);
 
+			Assert(ItemIdHasStorage(ii));
 			if (ItemIdGetOffset(ii) <= offset)
 				ii->lp_off += size;
 		}
@@ -660,6 +745,7 @@ PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems)
 	for (offnum = 1; offnum <= nline; offnum++)
 	{
 		lp = PageGetItemId(page, offnum);
+		Assert(ItemIdHasStorage(lp));
 		size = ItemIdGetLength(lp);
 		offset = ItemIdGetOffset(lp);
 		if (offset < pd_upper ||

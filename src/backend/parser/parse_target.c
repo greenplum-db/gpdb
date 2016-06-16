@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_target.c,v 1.154 2007/02/03 14:06:54 petere Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_target.c,v 1.158 2008/01/01 19:45:51 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -415,7 +415,7 @@ transformAssignedExpr(ParseState *pstate,
 			 * is not really a source value to work with. Insert a NULL
 			 * constant as the source value.
 			 */
-			colVar = (Node *) makeNullConst(attrtype, -1);
+			colVar = (Node *) makeNullConst(attrtype, attrtypmod);
 		}
 		else
 		{
@@ -851,8 +851,8 @@ ExpandColumnRefStar(ParseState *pstate, ColumnRef *cref,
 		 *
 		 * Since the grammar only accepts bare '*' at top level of SELECT, we
 		 * need not handle the targetlist==false case here.  However, we must
-		 * test for it because the grammar currently fails to distinguish
-		 * a quoted name "*" from a real asterisk.
+		 * test for it because the grammar currently fails to distinguish a
+		 * quoted name "*" from a real asterisk.
 		 */
 		if (!targetlist)
 			elog(ERROR, "invalid use of *");
@@ -1394,7 +1394,7 @@ FigureColnameInternal(Node *node, char **name)
 			break;
 		case T_XmlExpr:
 			/* make SQL/XML functions act like a regular function */
-			switch (((XmlExpr*) node)->op)
+			switch (((XmlExpr *) node)->op)
 			{
 				case IS_XMLCONCAT:
 					*name = "xmlconcat";

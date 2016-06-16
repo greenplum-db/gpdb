@@ -22,6 +22,7 @@
 #   DATA -- random files to install into $PREFIX/share/contrib
 #   DATA_built -- random files to install into $PREFIX/share/contrib,
 #     which need to be built first
+#   DATA_TSEARCH -- random files to install into $PREFIX/share/tsearch_data
 #   DOCS -- random files to install under $PREFIX/doc/contrib
 #   SCRIPTS -- script files (not binaries) to install into $PREFIX/bin
 #   SCRIPTS_built -- script files (not binaries) to install into $PREFIX/bin,
@@ -90,20 +91,26 @@ install: all installdirs
 ifneq (,$(DATA)$(DATA_built))
 	@for file in $(addprefix $(srcdir)/, $(DATA)) $(DATA_built); do \
 	  echo "$(INSTALL_DATA) $$file '$(DESTDIR)$(datadir)/contrib'"; \
-	  $(INSTALL_DATA) $$file '$(DESTDIR)$(datadir)/contrib'; \
+	  $(INSTALL_DATA) $$file '$(DESTDIR)$(datadir)/contrib' || exit; \
 	done
 endif # DATA
+ifneq (,$(DATA_TSEARCH))
+	@for file in $(addprefix $(srcdir)/, $(DATA_TSEARCH)); do \
+	  echo "$(INSTALL_DATA) $$file '$(DESTDIR)$(datadir)/tsearch_data'"; \
+	  $(INSTALL_DATA) $$file '$(DESTDIR)$(datadir)/tsearch_data' || exit; \
+	done
+endif # DATA_TSEARCH
 ifdef MODULES
 	@for file in $(addsuffix $(DLSUFFIX), $(MODULES)); do \
 	  echo "$(INSTALL_SHLIB) $$file '$(DESTDIR)$(pkglibdir)'"; \
-	  $(INSTALL_SHLIB) $$file '$(DESTDIR)$(pkglibdir)'; \
+	  $(INSTALL_SHLIB) $$file '$(DESTDIR)$(pkglibdir)' || exit; \
 	done
 endif # MODULES
 ifdef DOCS
 ifdef docdir
 	@for file in $(addprefix $(srcdir)/, $(DOCS)); do \
 	  echo "$(INSTALL_DATA) $$file '$(DESTDIR)$(docdir)/contrib'"; \
-	  $(INSTALL_DATA) $$file '$(DESTDIR)$(docdir)/contrib'; \
+	  $(INSTALL_DATA) $$file '$(DESTDIR)$(docdir)/contrib' || exit; \
 	done
 endif # docdir
 endif # DOCS
@@ -113,13 +120,13 @@ endif # PROGRAM
 ifdef SCRIPTS
 	@for file in $(addprefix $(srcdir)/, $(SCRIPTS)); do \
 	  echo "$(INSTALL_SCRIPT) $$file '$(DESTDIR)$(bindir)'"; \
-	  $(INSTALL_SCRIPT) $$file '$(DESTDIR)$(bindir)'; \
+	  $(INSTALL_SCRIPT) $$file '$(DESTDIR)$(bindir)' || exit; \
 	done
 endif # SCRIPTS
 ifdef SCRIPTS_built
 	@for file in $(SCRIPTS_built); do \
 	  echo "$(INSTALL_SCRIPT) $$file '$(DESTDIR)$(bindir)'"; \
-	  $(INSTALL_SCRIPT) $$file '$(DESTDIR)$(bindir)'; \
+	  $(INSTALL_SCRIPT) $$file '$(DESTDIR)$(bindir)' || exit; \
 	done
 endif # SCRIPTS_built
 
@@ -133,6 +140,12 @@ ifneq (,$(DATA)$(DATA_built))
 endif
 ifneq (,$(MODULES))
 	$(MKDIR_P) '$(DESTDIR)$(pkglibdir)'
+endif
+ifneq (,$(DATA_TSEARCH))
+	$(mkinstalldirs) '$(DESTDIR)$(datadir)/tsearch_data'
+endif
+ifneq (,$(MODULES)$(MODULE_big))
+	$(mkinstalldirs) '$(DESTDIR)$(pkglibdir)'
 endif
 ifdef DOCS
 ifdef docdir
@@ -151,6 +164,9 @@ endif # MODULE_big
 uninstall:
 ifneq (,$(DATA)$(DATA_built))
 	rm -f $(addprefix '$(DESTDIR)$(datadir)'/contrib/, $(notdir $(DATA) $(DATA_built)))
+endif
+ifneq (,$(DATA_TSEARCH))
+	rm -f $(addprefix '$(DESTDIR)$(datadir)'/tsearch_data/, $(notdir $(DATA_TSEARCH)))
 endif
 ifdef MODULES
 	rm -f $(addprefix '$(DESTDIR)$(pkglibdir)'/, $(addsuffix $(DLSUFFIX), $(MODULES)))
@@ -243,7 +259,7 @@ endif
 
 # against installed postmaster
 installcheck: submake
-	$(top_builddir)/src/test/regress/pg_regress --psqldir=$(PSQLDIR) $(REGRESS_OPTS) $(REGRESS)
+	$(top_builddir)/src/test/regress/pg_regress --psqldir="$(PSQLDIR)" $(REGRESS_OPTS) $(REGRESS)
 
 # in-tree test doesn't work yet (no way to install my shared library)
 #check: all submake
@@ -264,5 +280,5 @@ endif
 
 ifdef PROGRAM
 $(PROGRAM): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) $(PG_LIBS) $(LDFLAGS) $(LIBS) -o $@
+	$(CC) $(CFLAGS) $(OBJS) $(PG_LIBS) $(LDFLAGS) $(LIBS) -o $@$(X)
 endif

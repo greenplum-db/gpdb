@@ -25,7 +25,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/prepqual.c,v 1.57 2007/01/05 22:19:32 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/prepqual.c,v 1.58 2008/01/01 19:45:50 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump.h,v 1.133 2007/02/19 15:05:06 mha Exp $
+ * $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump.h,v 1.139.2.1 2009/01/18 20:44:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -128,7 +128,11 @@ typedef enum
 	DO_PROCLANG,
 	DO_CAST,
 	DO_TABLE_DATA,
-	DO_TABLE_TYPE,
+	DO_DUMMY_TYPE,
+	DO_TSPARSER,
+	DO_TSDICT,
+	DO_TSTEMPLATE,
+	DO_TSCONFIG,
 	DO_BLOBS,
 	DO_BLOB_COMMENTS,
 	DO_EXTPROTOCOL,
@@ -293,18 +297,10 @@ typedef struct _tableInfo
 	char	   *typstorage;		/* type storage scheme */
 	bool	   *attisdropped;	/* true if attr is dropped; don't dump it */
 	bool	   *attislocal;		/* true if attr has local definition */
-
-	/*
-	 * Note: we need to store per-attribute notnull, default, and constraint
-	 * stuff for all interesting tables so that we can tell which constraints
-	 * were inherited.
-	 */
-	bool	   *notnull;		/* Not null constraints on attributes */
-	struct _attrDefInfo **attrdefs;		/* DEFAULT expressions */
-	bool	   *inhAttrs;		/* true if each attribute is inherited */
-	bool	   *inhAttrDef;		/* true if attr's default is inherited */
+	bool	   *notnull;		/* NOT NULL constraints on attributes */
 	bool	   *inhNotNull;		/* true if NOT NULL is inherited */
-	char    **attencoding;  /* the attribute encoding values */
+	char	  **attencoding;	/* the attribute encoding values */
+	struct _attrDefInfo **attrdefs;		/* DEFAULT expressions */
 	struct _constraintInfo *checkexprs; /* CHECK constraints */
 
 	/*
@@ -317,7 +313,7 @@ typedef struct _tableInfo
 
 typedef struct _attrDefInfo
 {
-	DumpableObject dobj;
+	DumpableObject dobj;		/* note: dobj.name is name of table */
 	TableInfo  *adtable;		/* link to table of attribute */
 	int			adnum;
 	char	   *adef_expr;		/* decompiled DEFAULT expression */
@@ -351,6 +347,7 @@ typedef struct _ruleInfo
 	TableInfo  *ruletable;		/* link to table the rule is for */
 	char		ev_type;
 	bool		is_instead;
+	char		ev_enabled;
 	bool		separate;		/* TRUE if must dump as separate item */
 	/* separate is always true for non-ON SELECT rules */
 } RuleInfo;
@@ -367,7 +364,7 @@ typedef struct _triggerInfo
 	char	   *tgconstrname;
 	Oid			tgconstrrelid;
 	char	   *tgconstrrelname;
-	bool		tgenabled;
+	char		tgenabled;
 	bool		tgdeferrable;
 	bool		tginitdeferred;
 } TriggerInfo;
@@ -416,6 +413,37 @@ typedef struct _inhInfo
 	Oid			inhparent;		/* OID of its parent */
 } InhInfo;
 
+typedef struct _prsInfo
+{
+	DumpableObject dobj;
+	Oid			prsstart;
+	Oid			prstoken;
+	Oid			prsend;
+	Oid			prsheadline;
+	Oid			prslextype;
+} TSParserInfo;
+
+typedef struct _dictInfo
+{
+	DumpableObject dobj;
+	char	   *rolname;
+	Oid			dicttemplate;
+	char	   *dictinitoption;
+} TSDictInfo;
+
+typedef struct _tmplInfo
+{
+	DumpableObject dobj;
+	Oid			tmplinit;
+	Oid			tmpllexize;
+} TSTemplateInfo;
+
+typedef struct _cfgInfo
+{
+	DumpableObject dobj;
+	char	   *rolname;
+	Oid			cfgparser;
+} TSConfigInfo;
 
 /* global decls */
 extern bool force_quotes;		/* double-quotes for identifiers flag */
@@ -457,6 +485,7 @@ extern TableInfo *findTableByOid(Oid oid);
 extern TypeInfo *findTypeByOid(Oid oid);
 extern FuncInfo *findFuncByOid(Oid oid);
 extern OprInfo *findOprByOid(Oid oid);
+extern NamespaceInfo *findNamespaceByOid(Oid oid);
 
 extern void simple_oid_list_append(SimpleOidList *list, Oid val);
 extern void simple_string_list_append(SimpleStringList *list, const char *val);
@@ -493,6 +522,7 @@ extern OpclassInfo *getOpclasses(int *numOpclasses);
 extern OpfamilyInfo *getOpfamilies(int *numOpfamilies);
 extern ConvInfo *getConversions(int *numConversions);
 extern TableInfo *getTables(int *numTables);
+extern void getOwnedSeqs(TableInfo tblinfo[], int numTables);
 extern InhInfo *getInherits(int *numInherits);
 extern void getIndexes(TableInfo tblinfo[], int numTables);
 extern void getConstraints(TableInfo tblinfo[], int numTables);
@@ -501,6 +531,11 @@ extern void getTriggers(TableInfo tblinfo[], int numTables);
 extern ProcLangInfo *getProcLangs(int *numProcLangs);
 extern CastInfo *getCasts(int *numCasts);
 extern void getTableAttrs(TableInfo *tbinfo, int numTables);
+extern bool shouldPrintColumn(TableInfo *tbinfo, int colno);
+extern TSParserInfo *getTSParsers(int *numTSParsers);
+extern TSDictInfo *getTSDictionaries(int *numTSDicts);
+extern TSTemplateInfo *getTSTemplates(int *numTSTemplates);
+extern TSConfigInfo *getTSConfigurations(int *numTSConfigs);
 
 extern bool	testExtProtocolSupport(void);
 

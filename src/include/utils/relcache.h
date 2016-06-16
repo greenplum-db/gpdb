@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/relcache.h,v 1.59 2007/03/29 00:15:39 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/utils/relcache.h,v 1.61 2008/01/01 19:45:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -22,9 +22,6 @@
 #include "nodes/pg_list.h"
 #include "catalog/pg_class.h"
 
-
-struct SysScanDescData; /* defined in access/genam.h */
-
 typedef struct RelationData *Relation;
 
 /* ----------------
@@ -34,6 +31,8 @@ typedef struct RelationData *Relation;
  * ----------------
  */
 typedef Relation *RelationPtr;
+
+struct SysScanDescData; /* defined in access/genam.h */
 
 /*
  * Routines to open (lookup) and close a relcache entry
@@ -49,6 +48,7 @@ extern List *RelationGetIndexList(Relation relation);
 extern Oid	RelationGetOidIndex(Relation relation);
 extern List *RelationGetIndexExpressions(Relation relation);
 extern List *RelationGetIndexPredicate(Relation relation);
+extern Bitmapset *RelationGetIndexAttrBitmap(Relation relation);
 
 extern void RelationSetIndexList(Relation relation,
 					 List *indexIds, Oid oidIndex);
@@ -92,7 +92,8 @@ extern void RelationCacheMarkNewRelfilenode(Relation rel);
  * Routines to help manage rebuilding of relcache init file
  */
 extern bool RelationIdIsInInitFile(Oid relationId);
-extern void RelationCacheInitFileInvalidate(bool beforeSend);
+extern void RelationCacheInitFilePreInvalidate(void);
+extern void RelationCacheInitFilePostInvalidate(void);
 extern void RelationCacheInitFileRemove(void);
 
 extern void IndexSupportInitialize(oidvector *indclass,

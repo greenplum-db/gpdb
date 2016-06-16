@@ -74,13 +74,15 @@ exists(PG_FUNCTION_ARGS)
 	HStore	   *hs = PG_GETARG_HS(0);
 	text	   *key = PG_GETARG_TEXT_P(1);
 	HEntry	   *entry;
+	bool		res;
 
 	entry = findkey(hs, VARDATA(key), VARSIZE(key) - VARHDRSZ);
+	res = (entry != NULL) ? true : false;
 
 	PG_FREE_IF_COPY(hs, 0);
 	PG_FREE_IF_COPY(key, 1);
 
-	PG_RETURN_BOOL(entry);
+	PG_RETURN_BOOL(res);
 }
 
 PG_FUNCTION_INFO_V1(defined);

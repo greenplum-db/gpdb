@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/scan.l,v 1.55 2007/01/05 22:20:02 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/scan.l,v 1.60 2008/01/01 19:46:00 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -141,8 +141,8 @@ declare			{ return K_DECLARE;			}
 default			{ return K_DEFAULT;			}
 diagnostics		{ return K_DIAGNOSTICS;		}
 else			{ return K_ELSE;			}
-elseif          { return K_ELSIF;           }
-elsif           { return K_ELSIF;           }
+elseif			{ return K_ELSIF;			}
+elsif			{ return K_ELSIF;			}
 end				{ return K_END;				}
 exception		{ return K_EXCEPTION;		}
 execute			{ return K_EXECUTE;			}
@@ -159,6 +159,8 @@ into			{ return K_INTO;			}
 is				{ return K_IS;				}
 log				{ return K_LOG;				}
 loop			{ return K_LOOP;			}
+move			{ return K_MOVE;			}
+no{space}+scroll { return K_NOSCROLL;		}
 not				{ return K_NOT;				}
 notice			{ return K_NOTICE;			}
 null			{ return K_NULL;			}
@@ -171,6 +173,7 @@ result_oid		{ return K_RESULT_OID;		}
 return			{ return K_RETURN;			}
 reverse			{ return K_REVERSE;			}
 row_count		{ return K_ROW_COUNT;		}
+scroll			{ return K_SCROLL;			}
 strict			{ return K_STRICT;	    	}
 then			{ return K_THEN;			}
 to				{ return K_TO;				}

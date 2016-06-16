@@ -10,13 +10,18 @@
  *		reduce_outer_joins
  *
  *
+ * In PostgreSQL, there is code here to do with pulling up "simple UNION ALLs".
+ * In GPDB, there is no such thing as a simple UNION ALL as locus of the relations
+ * may be different, so all that has been removed.
+ *
+ *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/prepjointree.c,v 1.47 2007/02/19 07:03:30 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/prepjointree.c,v 1.49.2.1 2008/08/14 20:31:59 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -683,6 +688,7 @@ is_simple_subquery(PlannerInfo *root, Query *subquery)
 	 */
 	if (!IsA(subquery, Query) ||
 		subquery->commandType != CMD_SELECT ||
+		subquery->utilityStmt != NULL ||
 		subquery->intoClause != NULL)
 		elog(ERROR, "subquery is bogus");
 

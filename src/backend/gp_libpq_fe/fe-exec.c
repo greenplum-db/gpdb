@@ -1053,7 +1053,6 @@ fail:
 	return 0;
 }
 
-
 int
 PQsendGpQuery_shared(PGconn *conn, char *shared_query, int query_len)
 {

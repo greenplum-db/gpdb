@@ -110,7 +110,6 @@ static bool ssl_loaded_verify_locations = false;
 
 /* GUC variable controlling SSL cipher list */
 char	   *SSLCipherSuites = NULL;
-
 #endif
 
 /* ------------------------------------------------------------ */
@@ -270,7 +269,7 @@ rloop:
 #ifdef WIN32
 				pgwin32_waitforsinglesocket(SSL_get_fd(port->ssl),
 											(err == SSL_ERROR_WANT_READ) ?
-								   FD_READ | FD_CLOSE : FD_WRITE | FD_CLOSE,
+									FD_READ | FD_CLOSE : FD_WRITE | FD_CLOSE,
 											INFINITE);
 #endif
 				goto rloop;
@@ -393,7 +392,7 @@ wloop:
 #ifdef WIN32
 				pgwin32_waitforsinglesocket(SSL_get_fd(port->ssl),
 											(err == SSL_ERROR_WANT_READ) ?
-								   FD_READ | FD_CLOSE : FD_WRITE | FD_CLOSE,
+									FD_READ | FD_CLOSE : FD_WRITE | FD_CLOSE,
 											INFINITE);
 #endif
 				goto wloop;
@@ -776,6 +775,12 @@ initialize_SSL(void)
 							SSLerrmessage())));
 
 		/*
+		 * Disable OpenSSL's moving-write-buffer sanity check, because it
+		 * causes unnecessary failures in nonblocking send cases.
+		 */
+		SSL_CTX_set_mode(SSL_context, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+
+		/*
 		 * Load and verify server's certificate and private key
 		 */
 		if (SSL_CTX_use_certificate_chain_file(SSL_context,
@@ -879,9 +884,9 @@ initialize_SSL(void)
 						  X509_V_FLAG_CRL_CHECK | X509_V_FLAG_CRL_CHECK_ALL);
 #else
 				ereport(LOG,
-						(errmsg("SSL certificate revocation list file \"%s\" ignored",
-								ROOT_CRL_FILE),
-				  errdetail("SSL library does not support certificate revocation lists.")));
+				(errmsg("SSL certificate revocation list file \"%s\" ignored",
+						ROOT_CRL_FILE),
+				 errdetail("SSL library does not support certificate revocation lists.")));
 #endif
 			}
 			else
@@ -957,7 +962,7 @@ aloop:
 #ifdef WIN32
 				pgwin32_waitforsinglesocket(SSL_get_fd(port->ssl),
 											(err == SSL_ERROR_WANT_READ) ?
-					   FD_READ | FD_CLOSE | FD_ACCEPT : FD_WRITE | FD_CLOSE,
+						FD_READ | FD_CLOSE | FD_ACCEPT : FD_WRITE | FD_CLOSE,
 											INFINITE);
 #endif
 				goto aloop;

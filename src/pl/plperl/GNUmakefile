@@ -27,7 +27,7 @@ override CPPFLAGS += -DPLPERL_HAVE_UID_GID
 override CFLAGS += -Wno-comment
 endif
 
-override CPPFLAGS := -I$(srcdir) $(CPPFLAGS) -I$(perl_archlibexp)/CORE
+override CPPFLAGS := -I. -I$(srcdir) $(CPPFLAGS) -I$(perl_archlibexp)/CORE
 
 rpathdir = $(perl_archlibexp)/CORE
 

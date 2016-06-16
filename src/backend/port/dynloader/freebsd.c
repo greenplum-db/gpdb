@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/backend/port/dynloader/freebsd.c,v 1.26 2007/01/05 22:19:35 momjian Exp $ */
+/* $PostgreSQL: pgsql/src/backend/port/dynloader/freebsd.c,v 1.28 2008/01/01 19:45:51 momjian Exp $ */
 
 /*
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
@@ -13,11 +13,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *	  notice, this list of conditions and the following disclaimer in the
  *	  documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *	  must display the following acknowledgement:
- *		This product includes software developed by the University of
- *		California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *	  may be used to endorse or promote products derived from this software
  *	  without specific prior written permission.
  *
@@ -61,7 +57,7 @@ BSD44_derived_dlerror(void)
 void *
 BSD44_derived_dlopen(const char *file, int num)
 {
-#if defined(__mips__)
+#if !defined(HAVE_DLOPEN)
 	snprintf(error_message, sizeof(error_message),
 			 "dlopen (%s) not supported", file);
 	return NULL;
@@ -78,7 +74,7 @@ BSD44_derived_dlopen(const char *file, int num)
 void *
 BSD44_derived_dlsym(void *handle, const char *name)
 {
-#if defined(__mips__)
+#if !defined(HAVE_DLOPEN)
 	snprintf(error_message, sizeof(error_message),
 			 "dlsym (%s) failed", name);
 	return NULL;
@@ -93,7 +89,7 @@ BSD44_derived_dlsym(void *handle, const char *name)
 		snprintf(buf, sizeof(buf), "_%s", name);
 		name = buf;
 	}
-#endif
+#endif /* !__ELF__ */
 	if ((vp = dlsym(handle, (char *) name)) == NULL)
 		snprintf(error_message, sizeof(error_message),
 				 "dlsym (%s) failed", name);
@@ -104,8 +100,7 @@ BSD44_derived_dlsym(void *handle, const char *name)
 void
 BSD44_derived_dlclose(void *handle)
 {
-#if defined(__mips__)
-#else
+#if defined(HAVE_DLOPEN)
 	dlclose(handle);
 #endif
 }

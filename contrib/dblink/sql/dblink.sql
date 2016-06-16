@@ -34,13 +34,19 @@ FROM dblink_get_pkey('foo');
 -- build an insert statement based on a local tuple,
 -- replacing the primary key values with new ones
 SELECT dblink_build_sql_insert('foo','1 2',2,'{"0", "a"}','{"99", "xyz"}');
+-- too many pk fields, should fail
+SELECT dblink_build_sql_insert('foo','1 2 3 4',4,'{"0", "a", "{a0,b0,c0}"}','{"99", "xyz", "{za0,zb0,zc0}"}');
 
 -- build an update statement based on a local tuple,
 -- replacing the primary key values with new ones
 SELECT dblink_build_sql_update('foo','1 2',2,'{"0", "a"}','{"99", "xyz"}');
+-- too many pk fields, should fail
+SELECT dblink_build_sql_update('foo','1 2 3 4',4,'{"0", "a", "{a0,b0,c0}"}','{"99", "xyz", "{za0,zb0,zc0}"}');
 
 -- build a delete statement based on a local tuple,
 SELECT dblink_build_sql_delete('foo','1 2',2,'{"0", "a"}');
+-- too many pk fields, should fail
+SELECT dblink_build_sql_delete('foo','1 2 3 4',4,'{"0", "a", "{a0,b0,c0}"}');
 
 -- retest using a quoted and schema qualified table
 CREATE SCHEMA "MySchema";
@@ -364,3 +370,29 @@ SELECT * from
 SELECT dblink_cancel_query('dtest1');
 SELECT dblink_error_message('dtest1');
 SELECT dblink_disconnect('dtest1');
+
+-- test dropped columns in dblink_build_sql_insert, dblink_build_sql_update
+CREATE TEMP TABLE test_dropped
+(
+	col1 INT NOT NULL DEFAULT 111,
+	id SERIAL PRIMARY KEY,
+	col2 INT NOT NULL DEFAULT 112,
+	col2b INT NOT NULL DEFAULT 113
+);
+
+INSERT INTO test_dropped VALUES(default);
+
+ALTER TABLE test_dropped
+	DROP COLUMN col1,
+	DROP COLUMN col2,
+	ADD COLUMN col3 VARCHAR(10) NOT NULL DEFAULT 'foo',
+	ADD COLUMN col4 INT NOT NULL DEFAULT 42;
+
+SELECT dblink_build_sql_insert('test_dropped', '2', 1,
+                               ARRAY['1'::TEXT], ARRAY['2'::TEXT]);
+
+SELECT dblink_build_sql_update('test_dropped', '2', 1,
+                               ARRAY['1'::TEXT], ARRAY['2'::TEXT]);
+
+SELECT dblink_build_sql_delete('test_dropped', '2', 1,
+                               ARRAY['2'::TEXT]);

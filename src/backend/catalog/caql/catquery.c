@@ -940,6 +940,7 @@ cqContext *
 caql_getattname_scan(cqContext *pCtx0, Oid relid, const char *attname)
 {
 	cqContext				*pCtx;
+	HeapTuple tup;
 
 	/* use the provided context, or *allocate* a clean one */
 	if (pCtx0)
@@ -949,8 +950,6 @@ caql_getattname_scan(cqContext *pCtx0, Oid relid, const char *attname)
 		pCtx = (cqContext *) palloc0(sizeof(cqContext)); 
 		pCtx->cq_free = true;  /* free this context in caql_endscan */
 	}
-
-	HeapTuple tup;
 
 	tup = SearchSysCacheAttName(relid, attname);
 

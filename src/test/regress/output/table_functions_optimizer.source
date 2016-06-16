@@ -2171,12 +2171,12 @@ View definition:
  SELECT tf.a, tf.b
    FROM multiset_2(TABLE( SELECT example.a, example.b
            FROM example
-          SCATTER BY example.a::text || example.b, 5)) tf(a, b);
+          SCATTER BY example.a || example.b, 5)) tf(a, b);
 
 SELECT pg_get_viewdef('v2'::regclass);
-                                                               pg_get_viewdef                                                                
----------------------------------------------------------------------------------------------------------------------------------------------
- SELECT tf.a, tf.b FROM multiset_2(TABLE(SELECT example.a, example.b FROM example SCATTER BY ((example.a)::text || example.b), 5)) tf(a, b);
+                                                           pg_get_viewdef                                                            
+-------------------------------------------------------------------------------------------------------------------------------------
+ SELECT tf.a, tf.b FROM multiset_2(TABLE(SELECT example.a, example.b FROM example SCATTER BY (example.a || example.b), 5)) tf(a, b);
 (1 row)
 
 CREATE VIEW v3 AS
@@ -3068,8 +3068,9 @@ ERROR:  function multiset_2(unknown) does not exist
 LINE 1: PREPARE p2 AS SELECT * FROM multiset_2( $1 ) order by a, b;
                                     ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+-- This actually passes currently. You can't do anything useful with the prepared
+-- statement though, as anytable's input function just throws an error.
 PREPARE p3(anytable) AS SELECT * FROM multiset_5( $1 );
-ERROR:  type "anytable" is not a valid parameter for PREPARE
 -- FAIL: $1 is not a constant
 PREPARE p4 AS SELECT * FROM project( TABLE( SELECT * FROM pg_am ), $1);
 ERROR:  unable to resolve function argument (execQual.c:5348)
@@ -3098,12 +3099,24 @@ EXECUTE p6;
   value4.1/1
 (10 rows)
 
--- FAIL: MPP-16640: when underlying table has changed prepared statements 
--- will fail.  If this issue is ever fixed then this should pass as well.
+-- PASS: Check that the prepared statement is re-planned when the underlying
+-- table changes.
 ALTER TABLE example_r ALTER COLUMN a TYPE numeric;
 EXECUTE p6;
-ERROR:  attribute 1 has wrong type (execQual.c:642)  (seg1 slice1 maple.local:50001 pid=64248) (cdbdisp.c:1462)
-DETAIL:  Table has type numeric, but query expects integer.
+      b      
+-------------
+  value1.1/4
+  value1.2/4
+  value1.3/4
+  value1.4/4
+  value2.1/3
+  value2.2/3
+  value2.3/3
+  value3.1/2
+  value3.2/2
+  value4.1/1
+(10 rows)
+
 DEALLOCATE p6;
 -- =======
 -- Cleanup

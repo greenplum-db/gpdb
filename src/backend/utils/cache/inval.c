@@ -80,7 +80,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/inval.c,v 1.79 2007/01/05 22:19:43 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/inval.c,v 1.83.2.1 2008/03/13 18:00:39 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -161,17 +161,29 @@ static TransInvalidationInfo *transInvalInfo = NULL;
  * Dynamically-registered callback functions.  Current implementation
  * assumes there won't be very many of these at once; could improve if needed.
  */
+/*
+ * MAX_SYSCACHE_CALLBACKS has been bumped up in GPDB, because ORCA registers
+ * a lot of callbacks.
+ */
+#define MAX_SYSCACHE_CALLBACKS 40
+#define MAX_RELCACHE_CALLBACKS 5
 
-#define MAX_CACHE_CALLBACKS 20
-
-static struct CACHECALLBACK
+static struct SYSCACHECALLBACK
 {
-	int16		id;				/* cache number or message type id */
-	CacheCallbackFunction function;
+	int16		id;				/* cache number */
+	SyscacheCallbackFunction function;
 	Datum		arg;
-}	cache_callback_list[MAX_CACHE_CALLBACKS];
+}	syscache_callback_list[MAX_SYSCACHE_CALLBACKS];
 
-static int	cache_callback_count = 0;
+static int	syscache_callback_count = 0;
+
+static struct RELCACHECALLBACK
+{
+	RelcacheCallbackFunction function;
+	Datum		arg;
+}	relcache_callback_list[MAX_RELCACHE_CALLBACKS];
+
+static int	relcache_callback_count = 0;
 
 /* info values for 2PC callback */
 #define TWOPHASE_INFO_MSG			0	/* SharedInvalidationMessage */
@@ -439,7 +451,7 @@ RegisterRelcacheInvalidation(Oid dbId, Oid relId)
 	 * hack to ensure that the next CommandCounterIncrement() will think
 	 * that we need to do CommandEndInvalidationMessages().
 	 */
-	(void) GetCurrentCommandId(/*true*/);
+	(void) GetCurrentCommandId(true);
 
 	/*
 	 * If the relation being invalidated is one of those cached in the
@@ -463,7 +475,7 @@ RegisterSmgrInvalidation(RelFileNode rnode)
 	/*
 	 * As above, just in case there is not an associated catalog change.
 	 */
-	(void) GetCurrentCommandId(/*true*/);
+	(void) GetCurrentCommandId(true);
 }
 
 #ifdef USE_ASSERT_CHECKING
@@ -518,12 +530,13 @@ LocalExecuteInvalidationMessage(SharedInvalidationMessage *msg)
 									 msg->cc.hashValue,
 									 &msg->cc.tuplePtr);
 
-			for (i = 0; i < cache_callback_count; i++)
+			for (i = 0; i < syscache_callback_count; i++)
 			{
-				struct CACHECALLBACK *ccitem = cache_callback_list + i;
+				struct SYSCACHECALLBACK *ccitem = syscache_callback_list + i;
 
 				if (ccitem->id == msg->cc.id)
-					(*ccitem->function) (ccitem->arg, InvalidOid);
+					(*ccitem->function) (ccitem->arg,
+										 msg->cc.id, &msg->cc.tuplePtr);
 			}
 		}
 	}
@@ -533,12 +546,11 @@ LocalExecuteInvalidationMessage(SharedInvalidationMessage *msg)
 		{
 			RelationCacheInvalidateEntry(msg->rc.relId);
 
-			for (i = 0; i < cache_callback_count; i++)
+			for (i = 0; i < relcache_callback_count; i++)
 			{
-				struct CACHECALLBACK *ccitem = cache_callback_list + i;
+				struct RELCACHECALLBACK *ccitem = relcache_callback_list + i;
 
-				if (ccitem->id == SHAREDINVALRELCACHE_ID)
-					(*ccitem->function) (ccitem->arg, msg->rc.relId);
+				(*ccitem->function) (ccitem->arg, msg->rc.relId);
 			}
 		}
 	}
@@ -578,9 +590,16 @@ InvalidateSystemCaches(void)
 	ResetCatalogCaches();
 	RelationCacheInvalidate();	/* gets smgr cache too */
 
-	for (i = 0; i < cache_callback_count; i++)
+	for (i = 0; i < syscache_callback_count; i++)
 	{
-		struct CACHECALLBACK *ccitem = cache_callback_list + i;
+		struct SYSCACHECALLBACK *ccitem = syscache_callback_list + i;
+
+		(*ccitem->function) (ccitem->arg, ccitem->id, NULL);
+	}
+
+	for (i = 0; i < relcache_callback_count; i++)
+	{
+		struct RELCACHECALLBACK *ccitem = relcache_callback_list + i;
 
 		(*ccitem->function) (ccitem->arg, InvalidOid);
 	}
@@ -671,7 +690,7 @@ PrepareForTupleInvalidation(Relation relation, HeapTuple tuple)
 		 * KLUGE ALERT: we always send the relcache event with MyDatabaseId,
 		 * even if the rel in question is shared (which we can't easily tell).
 		 * This essentially means that only backends in this same database
-		 * will react to the relcache flush request. This is in fact
+		 * will react to the relcache flush request.  This is in fact
 		 * appropriate, since only those backends could see our pg_attribute
 		 * change anyway.  It looks a bit ugly though.	(In practice, shared
 		 * relations can't have schema changes after bootstrap, so we should
@@ -896,10 +915,10 @@ inval_twophase_postcommit(TransactionId xid, uint16 info,
 			SendSharedInvalidMessages(msg, 1);
 			break;
 		case TWOPHASE_INFO_FILE_BEFORE:
-			RelationCacheInitFileInvalidate(true);
+			RelationCacheInitFilePreInvalidate();
 			break;
 		case TWOPHASE_INFO_FILE_AFTER:
-			RelationCacheInitFileInvalidate(false);
+			RelationCacheInitFilePostInvalidate();
 			break;
 		default:
 			Assert(false);
@@ -946,7 +965,7 @@ AtEOXact_Inval(bool isCommit)
 		 * unless we committed.
 		 */
 		if (transInvalInfo->RelcacheInitFileInval)
-			RelationCacheInitFileInvalidate(true);
+			RelationCacheInitFilePreInvalidate();
 
 		AppendInvalidationMessages(&transInvalInfo->PriorCmdInvalidMsgs,
 								   &transInvalInfo->CurrentCmdInvalidMsgs);
@@ -955,7 +974,7 @@ AtEOXact_Inval(bool isCommit)
 										SendSharedInvalidMessages);
 
 		if (transInvalInfo->RelcacheInitFileInval)
-			RelationCacheInitFileInvalidate(false);
+			RelationCacheInitFilePostInvalidate();
 	}
 	else if (transInvalInfo != NULL)
 	{
@@ -1065,6 +1084,114 @@ CommandEndInvalidationMessages(void)
 							   &transInvalInfo->CurrentCmdInvalidMsgs);
 }
 
+
+/*
+ * BeginNonTransactionalInvalidation
+ *		Prepare for invalidation messages for nontransactional updates.
+ *
+ * A nontransactional invalidation is one that must be sent whether or not
+ * the current transaction eventually commits.  We arrange for all invals
+ * queued between this call and EndNonTransactionalInvalidation() to be sent
+ * immediately when the latter is called.
+ *
+ * Currently, this is only used by heap_page_prune(), and only when it is
+ * invoked during VACUUM FULL's first pass over a table.  We expect therefore
+ * that we are not inside a subtransaction and there are no already-pending
+ * invalidations.  This could be relaxed by setting up a new nesting level of
+ * invalidation data, but for now there's no need.  Note that heap_page_prune
+ * knows that this function does not change any state, and therefore there's
+ * no need to worry about cleaning up if there's an elog(ERROR) before
+ * reaching EndNonTransactionalInvalidation (the invals will just be thrown
+ * away if that happens).
+ *
+ * GPDB: In GPDB, however, the way we use transactions during VACUUM FULL is
+ * different from PostgreSQL, and can already be pending invalidations in
+ * the queue. So we do what the above suggested, and create a new nesting level.
+ */
+void
+BeginNonTransactionalInvalidation(void)
+{
+	TransInvalidationInfo *myInfo;
+
+	/* Must be at top of stack */
+	Assert(transInvalInfo != NULL && transInvalInfo->parent == NULL);
+
+	/* GPDB: create a new nesting level, as in AtSubStart_Inval() */
+	myInfo = (TransInvalidationInfo *)
+		MemoryContextAllocZero(TopTransactionContext,
+							   sizeof(TransInvalidationInfo));
+	myInfo->parent = transInvalInfo;
+	myInfo->my_level = GetCurrentTransactionNestLevel();
+	transInvalInfo = myInfo;
+}
+
+/*
+ * EndNonTransactionalInvalidation
+ *		Process queued-up invalidation messages for nontransactional updates.
+ *
+ * We expect to find messages in CurrentCmdInvalidMsgs only (else there
+ * was a CommandCounterIncrement within the "nontransactional" update).
+ * We must process them locally and send them out to the shared invalidation
+ * message queue.
+ *
+ * We must also reset the lists to empty and explicitly free memory (we can't
+ * rely on end-of-transaction cleanup for that).
+ */
+void
+EndNonTransactionalInvalidation(void)
+{
+	InvalidationChunk *chunk;
+	InvalidationChunk *next;
+
+	/* Must be at one nesting level below top of stack */
+	Assert(transInvalInfo != NULL);
+	Assert(transInvalInfo->parent != NULL);
+	Assert(transInvalInfo->parent->parent == NULL);
+
+	/* Must not have any prior-command messages */
+	Assert(transInvalInfo->PriorCmdInvalidMsgs.cclist == NULL);
+	Assert(transInvalInfo->PriorCmdInvalidMsgs.rclist == NULL);
+
+	/*
+	 * At present, this function is only used for CTID-changing updates;
+	 * since the relcache init file doesn't store any tuple CTIDs, we
+	 * don't have to invalidate it.  That might not be true forever
+	 * though, in which case we'd need code similar to AtEOXact_Inval.
+	 */
+
+	/* Send out the invals */
+	ProcessInvalidationMessages(&transInvalInfo->CurrentCmdInvalidMsgs,
+								LocalExecuteInvalidationMessage);
+	ProcessInvalidationMessageMulti(&transInvalInfo->CurrentCmdInvalidMsgs,
+									SendSharedInvalidMessages);
+
+	/* Clean up and release memory */
+	for (chunk = transInvalInfo->CurrentCmdInvalidMsgs.cclist;
+		 chunk != NULL;
+		 chunk = next)
+	{
+		next = chunk->next;
+		pfree(chunk);
+	}
+	for (chunk = transInvalInfo->CurrentCmdInvalidMsgs.rclist;
+		 chunk != NULL;
+		 chunk = next)
+	{
+		next = chunk->next;
+		pfree(chunk);
+	}
+
+	/* Pop the transaction state stack */
+	{
+		TransInvalidationInfo *myInfo = transInvalInfo;
+
+		transInvalInfo = myInfo->parent;
+
+		pfree(myInfo);
+	}
+}
+
+
 /*
  * CacheInvalidateHeapTuple
  *		Register the given tuple for invalidation at end of command
@@ -1156,26 +1283,25 @@ CacheInvalidateRelcacheByRelid(Oid relid)
 /*
  * CacheRegisterSyscacheCallback
  *		Register the specified function to be called for all future
- *		invalidation events in the specified cache.
+ *		invalidation events in the specified cache.  The cache ID and the
+ *		TID of the tuple being invalidated will be passed to the function.
  *
- * NOTE: currently, the OID argument to the callback routine is not
- * provided for syscache callbacks; the routine doesn't really get any
- * useful info as to exactly what changed.	It should treat every call
- * as a "cache flush" request.
+ * NOTE: NULL will be passed for the TID if a cache reset request is received.
+ * In this case the called routines should flush all cached state.
  */
 void
 CacheRegisterSyscacheCallback(int cacheid,
-							  CacheCallbackFunction func,
+							  SyscacheCallbackFunction func,
 							  Datum arg)
 {
-	if (cache_callback_count >= MAX_CACHE_CALLBACKS)
-		elog(FATAL, "out of cache_callback_list slots");
+	if (syscache_callback_count >= MAX_SYSCACHE_CALLBACKS)
+		elog(FATAL, "out of syscache_callback_list slots");
 
-	cache_callback_list[cache_callback_count].id = cacheid;
-	cache_callback_list[cache_callback_count].function = func;
-	cache_callback_list[cache_callback_count].arg = arg;
+	syscache_callback_list[syscache_callback_count].id = cacheid;
+	syscache_callback_list[syscache_callback_count].function = func;
+	syscache_callback_list[syscache_callback_count].arg = arg;
 
-	++cache_callback_count;
+	++syscache_callback_count;
 }
 
 /*
@@ -1188,15 +1314,14 @@ CacheRegisterSyscacheCallback(int cacheid,
  * In this case the called routines should flush all cached state.
  */
 void
-CacheRegisterRelcacheCallback(CacheCallbackFunction func,
+CacheRegisterRelcacheCallback(RelcacheCallbackFunction func,
 							  Datum arg)
 {
-	if (cache_callback_count >= MAX_CACHE_CALLBACKS)
-		elog(FATAL, "out of cache_callback_list slots");
+	if (relcache_callback_count >= MAX_RELCACHE_CALLBACKS)
+		elog(FATAL, "out of relcache_callback_list slots");
 
-	cache_callback_list[cache_callback_count].id = SHAREDINVALRELCACHE_ID;
-	cache_callback_list[cache_callback_count].function = func;
-	cache_callback_list[cache_callback_count].arg = arg;
+	relcache_callback_list[relcache_callback_count].function = func;
+	relcache_callback_list[relcache_callback_count].arg = arg;
 
-	++cache_callback_count;
+	++relcache_callback_count;
 }

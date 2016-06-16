@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_class.h,v 1.100 2007/01/22 01:35:22 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_class.h,v 1.104 2008/01/01 19:45:56 momjian Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -123,7 +123,7 @@ CATALOG(pg_class,1259) BKI_BOOTSTRAP
 	bool		relhaspkey;		/* has PRIMARY KEY index */
 	bool		relhasrules;	/* has associated rules */
 	bool		relhassubclass; /* has derived classes */
-	TransactionId relfrozenxid;	/* all Xids < this are frozen in this rel */
+	TransactionId relfrozenxid; /* all Xids < this are frozen in this rel */
 
 	/*
 	 * VARIABLE LENGTH FIELDS start here.  These fields may be NULL, too.
@@ -199,7 +199,7 @@ DATA(insert OID = 1247 (  pg_type		PGNSP 71 PGUID 0 1247 0 0 0 0 0 0 0 f f r h 2
 DESCR("");
 DATA(insert OID = 1249 (  pg_attribute	PGNSP 75 PGUID 0 1249 0 0 0 0 0 0 0 f f r h 17 0 0 0 0 0 f f f f 3 _null_ _null_ ));
 DESCR("");
-DATA(insert OID = 1255 (  pg_proc		PGNSP 81 PGUID 0 1255 0 0 0 0 0 0 0 f f r h 25 0 0 0 0 0 t f f f 3 _null_ _null_ ));
+DATA(insert OID = 1255 (  pg_proc		PGNSP 81 PGUID 0 1255 0 0 0 0 0 0 0 f f r h 26 0 0 0 0 0 t f f f 3 _null_ _null_ ));
 DESCR("");
 DATA(insert OID = 1259 (  pg_class		PGNSP 83 PGUID 0 1259 0 0 0 0 0 0 0 f f r h 30 0 0 0 0 0 t f f f 3 _null_ _null_ ));
 DESCR("");

@@ -10,6 +10,7 @@
 #include "postgres.h"
 
 #include "cdb/cdbpartition.h"
+#include "cdb/partitionselection.h"
 #include "executor/execDynamicScan.h"
 #include "executor/nodeIndexscan.h"
 #include "executor/instrument.h"

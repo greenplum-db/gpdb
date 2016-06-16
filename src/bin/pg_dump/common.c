@@ -11,7 +11,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/bin/pg_dump/common.c,v 1.96 2007/01/23 17:54:50 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/bin/pg_dump/common.c,v 1.102 2008/01/01 19:45:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -42,18 +42,29 @@ static int	numCatalogIds = 0;
 
 /*
  * These variables are static to avoid the notational cruft of having to pass
- * them into findTableByOid() and friends.
+ * them into findTableByOid() and friends.	For each of these arrays, we
+ * build a sorted-by-OID index array immediately after it's built, and then
+ * we use binary search in findTableByOid() and friends.  (qsort'ing the base
+ * arrays themselves would be simpler, but it doesn't work because pg_dump.c
+ * may have already established pointers between items.)
  */
 static TableInfo *tblinfo;
 static TypeInfo *typinfo;
 static TypeStorageOptions *typestorageoptions;
 static FuncInfo *funinfo;
 static OprInfo *oprinfo;
+static NamespaceInfo *nspinfo;
 static int	numTables;
 static int	numTypes;
 static int  numTypeStorageOptions;
 static int	numFuncs;
 static int	numOperators;
+static int	numNamespaces;
+static DumpableObject **tblinfoindex;
+static DumpableObject **typinfoindex;
+static DumpableObject **funinfoindex;
+static DumpableObject **oprinfoindex;
+static DumpableObject **nspinfoindex;
 
 bool is_gpdump = false; /* determines whether to print extra logging messages in getSchemaData */
 
@@ -61,6 +72,8 @@ static void flagInhTables(TableInfo *tbinfo, int numTables,
 			  InhInfo *inhinfo, int numInherits);
 static void flagInhAttrs(TableInfo *tbinfo, int numTables,
 			 InhInfo *inhinfo, int numInherits);
+static DumpableObject **buildIndexArray(void *objArray, int numObjs,
+				Size objSize);
 static int	DOCatalogIdCompare(const void *p1, const void *p2);
 static void findParentsByOid(TableInfo *self,
 				 InhInfo *inhinfo, int numInherits);
@@ -76,7 +89,6 @@ void		reset(void);
 TableInfo *
 getSchemaData(int *numTablesPtr, int g_role)
 {
-	NamespaceInfo *nsinfo;
 	AggInfo    *agginfo;
 	InhInfo    *inhinfo;
 	RuleInfo   *ruleinfo;
@@ -86,7 +98,10 @@ getSchemaData(int *numTablesPtr, int g_role)
 	OpfamilyInfo *opfinfo;
 	ConvInfo   *convinfo;
 	ExtProtInfo *ptcinfo;
-	int			numNamespaces;
+	TSParserInfo *prsinfo;
+	TSTemplateInfo *tmplinfo;
+	TSDictInfo *dictinfo;
+	TSConfigInfo *cfginfo;
 	int			numAggregates;
 	int			numInherits;
 	int			numRules;
@@ -96,102 +111,138 @@ getSchemaData(int *numTablesPtr, int g_role)
 	int			numOpfamilies;
 	int			numConversions;
 	int			numExtProtocols;
+	int			numTSParsers;
+	int			numTSTemplates;
+	int			numTSDicts;
+	int			numTSConfigs;
 	const char *LOGGER_INFO = "INFO";
 
-	//write_msg(NULL, "reading schemas\n");
-	if(is_gpdump || g_verbose)
+	if (is_gpdump || g_verbose)
 		status_log_msg(LOGGER_INFO, progname, "reading schemas\n");
-	nsinfo = getNamespaces(&numNamespaces);
+	nspinfo = getNamespaces(&numNamespaces);
+	nspinfoindex = buildIndexArray(nspinfo, numNamespaces, sizeof(NamespaceInfo));
 
-	if(g_role == 1) // ROLE_MASTER
+	/*
+	 * getTables should be done as soon as possible, so as to minimize the
+	 * window between starting our transaction and acquiring per-table locks.
+	 * However, we have to do getNamespaces first because the tables get
+	 * linked to their containing namespaces during getTables.
+	 */
+	if (g_verbose)
+		write_msg(NULL, "reading user-defined tables\n");
+	tblinfo = getTables(&numTables);
+	tblinfoindex = buildIndexArray(tblinfo, numTables, sizeof(TableInfo));
+
+	/*
+	 * ROLE_MASTER
+	 */
+	if (g_role == 1)
 	{
-		if(is_gpdump || g_verbose)
+		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading user-defined functions\n");
 		funinfo = getFuncs(&numFuncs);
+		funinfoindex = buildIndexArray(funinfo, numFuncs, sizeof(FuncInfo));
 
 		/* this must be after getFuncs */
-		if(is_gpdump || g_verbose)
+		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading user-defined types\n");
 		typinfo = getTypes(&numTypes);
+		typinfoindex = buildIndexArray(typinfo, numTypes, sizeof(TypeInfo));
 
 		/* this must be after getFuncs */
-		if(is_gpdump || g_verbose)
+		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading type storage options\n");
 		typestorageoptions = getTypeStorageOptions(&numTypeStorageOptions);
 
 		/* this must be after getFuncs, too */
-		if(is_gpdump || g_verbose)
+		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading procedural languages\n");
 		proclanginfo = getProcLangs(&numProcLangs);
 
-		if(is_gpdump || g_verbose)
+		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading user-defined aggregate functions\n");
 		agginfo = getAggregates(&numAggregates);
 
-		if(is_gpdump || g_verbose)
+		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading user-defined operators\n");
 		oprinfo = getOperators(&numOperators);
+		oprinfoindex = buildIndexArray(oprinfo, numOperators, sizeof(OprInfo));
 
 		if (testExtProtocolSupport())
 		{
-			if(is_gpdump || g_verbose)
+			if (is_gpdump || g_verbose)
 				status_log_msg(LOGGER_INFO, progname, "reading user-defined external protocols\n");
 			ptcinfo = getExtProtocols(&numExtProtocols);
 		}
 
-		if(is_gpdump || g_verbose)
+		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading user-defined operator classes\n");
 		opcinfo = getOpclasses(&numOpclasses);
+
+		if (is_gpdump || g_verbose)
+			write_msg(NULL, "reading user-defined text search parsers\n");
+		prsinfo = getTSParsers(&numTSParsers);
+
+		if (is_gpdump || g_verbose)
+			write_msg(NULL, "reading user-defined text search templates\n");
+		tmplinfo = getTSTemplates(&numTSTemplates);
+
+		if (is_gpdump || g_verbose)
+			write_msg(NULL, "reading user-defined text search dictionaries\n");
+		dictinfo = getTSDictionaries(&numTSDicts);
+
+		if (is_gpdump || g_verbose)
+			write_msg(NULL, "reading user-defined text search configurations\n");
+		cfginfo = getTSConfigurations(&numTSConfigs);
 
 		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading user-defined operator families\n");
 		opfinfo = getOpfamilies(&numOpfamilies);
 
-		if(is_gpdump || g_verbose)
+		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading user-defined conversions\n");
 		convinfo = getConversions(&numConversions);
 	}
 
-	if(is_gpdump || g_verbose)
-		status_log_msg(LOGGER_INFO, progname, "reading user-defined tables\n");
-	tblinfo = getTables(&numTables);
-
-	if(is_gpdump || g_verbose)
+	if (is_gpdump || g_verbose)
 		status_log_msg(LOGGER_INFO, progname, "reading table inheritance information\n");
 	inhinfo = getInherits(&numInherits);
 
-	if(is_gpdump || g_verbose)
+	if (is_gpdump || g_verbose)
 		status_log_msg(LOGGER_INFO, progname, "reading rewrite rules\n");
 	ruleinfo = getRules(&numRules);
 
-	if(is_gpdump || g_verbose)
+	if (is_gpdump || g_verbose)
 		status_log_msg(LOGGER_INFO, progname, "reading type casts\n");
 	castinfo = getCasts(&numCasts);
 
 	/* Link tables to parents, mark parents of target tables interesting */
-	if(is_gpdump || g_verbose)
+	if (is_gpdump || g_verbose)
 		status_log_msg(LOGGER_INFO, progname, "finding inheritance relationships\n");
 	flagInhTables(tblinfo, numTables, inhinfo, numInherits);
 
-	if(is_gpdump || g_verbose)
+	if (is_gpdump || g_verbose)
 		status_log_msg(LOGGER_INFO, progname, "reading column info for interesting tables\n");
 	getTableAttrs(tblinfo, numTables);
 
-	if(is_gpdump || g_verbose)
+	if (is_gpdump || g_verbose)
 		status_log_msg(LOGGER_INFO, progname, "flagging inherited columns in subtables\n");
 	flagInhAttrs(tblinfo, numTables, inhinfo, numInherits);
 
-	if(g_role == 1) // ROLE_MASTER
+	/*
+	 * ROLE_MASTER
+	 */
+	if (g_role == 1)
 	{
-		if(is_gpdump || g_verbose)
+		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading indexes\n");
 		getIndexes(tblinfo, numTables);
 
-		if(is_gpdump || g_verbose)
+		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading constraints\n");
 		getConstraints(tblinfo, numTables);
 
-		if(is_gpdump || g_verbose)
+		if (is_gpdump || g_verbose)
 			status_log_msg(LOGGER_INFO, progname, "reading triggers\n");
 		getTriggers(tblinfo, numTables);
 	}
@@ -245,7 +296,13 @@ flagInhTables(TableInfo *tblinfo, int numTables,
 
 /* flagInhAttrs -
  *	 for each dumpable table in tblinfo, flag its inherited attributes
- * so when we dump the table out, we don't dump out the inherited attributes
+ *
+ * What we need to do here is detect child columns that inherit NOT NULL
+ * bits from their parents (so that we needn't specify that again for the
+ * child) and child columns that have DEFAULT NULL when their parents had
+ * some non-null default.  In the latter case, we make up a dummy AttrDefInfo
+ * object so that we'll correctly emit the necessary DEFAULT NULL clause;
+ * otherwise the backend will apply an inherited default to the column.
  *
  * modifies tblinfo
  */
@@ -262,7 +319,6 @@ flagInhAttrs(TableInfo *tblinfo, int numTables,
 		TableInfo  *tbinfo = &(tblinfo[i]);
 		int			numParents;
 		TableInfo **parents;
-		TableInfo  *parent;
 
 		/* Sequences, views and external tables never have parents */
 		if (tbinfo->relkind == RELKIND_SEQUENCE ||
@@ -281,132 +337,70 @@ flagInhAttrs(TableInfo *tblinfo, int numTables,
 		if (numParents == 0)
 			continue;			/* nothing to see here, move along */
 
-		/*----------------------------------------------------------------
-		 * For each attr, check the parent info: if no parent has an attr
-		 * with the same name, then it's not inherited. If there *is* an
-		 * attr with the same name, then only dump it if:
-		 *
-		 * - it is NOT NULL and zero parents are NOT NULL
-		 *	 OR
-		 * - it has a default value AND the default value does not match
-		 *	 all parent default values, or no parents specify a default.
-		 *
-		 * See discussion on -hackers around 2-Apr-2001.
-		 *----------------------------------------------------------------
-		 */
+		/* For each column, search for matching column names in parent(s) */
 		for (j = 0; j < tbinfo->numatts; j++)
 		{
-			bool		foundAttr;		/* Attr was found in a parent */
 			bool		foundNotNull;	/* Attr was NOT NULL in a parent */
-			bool		defaultsMatch;	/* All non-empty defaults match */
-			bool		defaultsFound;	/* Found a default in a parent */
-			AttrDefInfo *attrDef;
+			bool		foundDefault;	/* Found a default in a parent */
 
-			foundAttr = false;
+			/* no point in examining dropped columns */
+			if (tbinfo->attisdropped[j])
+				continue;
+
 			foundNotNull = false;
-			defaultsMatch = true;
-			defaultsFound = false;
-
-			attrDef = tbinfo->attrdefs[j];
-
+			foundDefault = false;
 			for (k = 0; k < numParents; k++)
 			{
+				TableInfo  *parent = parents[k];
 				int			inhAttrInd;
 
-				parent = parents[k];
 				inhAttrInd = strInArray(tbinfo->attnames[j],
 										parent->attnames,
 										parent->numatts);
-
-				if (inhAttrInd != -1)
+				if (inhAttrInd >= 0)
 				{
-					AttrDefInfo *inhDef = parent->attrdefs[inhAttrInd];
-
-					foundAttr = true;
 					foundNotNull |= parent->notnull[inhAttrInd];
-					if (inhDef != NULL)
-					{
-						defaultsFound = true;
-
-						/*
-						 * If any parent has a default and the child doesn't,
-						 * we have to emit an explicit DEFAULT NULL clause for
-						 * the child, else the parent's default will win.
-						 */
-						if (attrDef == NULL)
-						{
-							attrDef = (AttrDefInfo *) malloc(sizeof(AttrDefInfo));
-							attrDef->dobj.objType = DO_ATTRDEF;
-							attrDef->dobj.catId.tableoid = 0;
-							attrDef->dobj.catId.oid = 0;
-							AssignDumpId(&attrDef->dobj);
-							attrDef->adtable = tbinfo;
-							attrDef->adnum = j + 1;
-							attrDef->adef_expr = strdup("NULL");
-
-							attrDef->dobj.name = strdup(tbinfo->dobj.name);
-							attrDef->dobj.namespace = tbinfo->dobj.namespace;
-
-							attrDef->dobj.dump = tbinfo->dobj.dump;
-
-							attrDef->separate = false;
-							addObjectDependency(&tbinfo->dobj,
-												attrDef->dobj.dumpId);
-
-							tbinfo->attrdefs[j] = attrDef;
-						}
-						if (strcmp(attrDef->adef_expr, inhDef->adef_expr) != 0)
-						{
-							defaultsMatch = false;
-
-							/*
-							 * Whenever there is a non-matching parent
-							 * default, add a dependency to force the parent
-							 * default to be dumped first, in case the
-							 * defaults end up being dumped as separate
-							 * commands.  Otherwise the parent default will
-							 * override the child's when it is applied.
-							 */
-							addObjectDependency(&attrDef->dobj,
-												inhDef->dobj.dumpId);
-						}
-					}
+					foundDefault |= (parent->attrdefs[inhAttrInd] != NULL);
 				}
 			}
 
-			/*
-			 * Based on the scan of the parents, decide if we can rely on the
-			 * inherited attr
-			 */
-			if (foundAttr)		/* Attr was inherited */
+			/* Remember if we found inherited NOT NULL */
+			tbinfo->inhNotNull[j] = foundNotNull;
+
+			/* Manufacture a DEFAULT NULL clause if necessary */
+			if (foundDefault && tbinfo->attrdefs[j] == NULL)
 			{
-				/* Set inherited flag by default */
-				tbinfo->inhAttrs[j] = true;
-				tbinfo->inhAttrDef[j] = true;
-				tbinfo->inhNotNull[j] = true;
+				AttrDefInfo *attrDef;
 
-				/*
-				 * Clear it if attr had a default, but parents did not, or
-				 * mismatch
-				 */
-				if ((attrDef != NULL) && (!defaultsFound || !defaultsMatch))
+				attrDef = (AttrDefInfo *) malloc(sizeof(AttrDefInfo));
+				attrDef->dobj.objType = DO_ATTRDEF;
+				attrDef->dobj.catId.tableoid = 0;
+				attrDef->dobj.catId.oid = 0;
+				AssignDumpId(&attrDef->dobj);
+				attrDef->dobj.name = strdup(tbinfo->dobj.name);
+				attrDef->dobj.namespace = tbinfo->dobj.namespace;
+				attrDef->dobj.dump = tbinfo->dobj.dump;
+
+				attrDef->adtable = tbinfo;
+				attrDef->adnum = j + 1;
+				attrDef->adef_expr = strdup("NULL");
+
+				/* Will column be dumped explicitly? */
+				if (shouldPrintColumn(tbinfo, j))
 				{
-					tbinfo->inhAttrs[j] = false;
-					tbinfo->inhAttrDef[j] = false;
+					attrDef->separate = false;
+					/* No dependency needed: NULL cannot have dependencies */
+				}
+				else
+				{
+					/* column will be suppressed, print default separately */
+					attrDef->separate = true;
+					/* ensure it comes out after the table */
+					addObjectDependency(&attrDef->dobj,
+										tbinfo->dobj.dumpId);
 				}
 
-				/*
-				 * Clear it if NOT NULL and none of the parents were NOT NULL
-				 */
-				if (tbinfo->notnull[j] && !foundNotNull)
-				{
-					tbinfo->inhAttrs[j] = false;
-					tbinfo->inhNotNull[j] = false;
-				}
-
-				/* Clear it if attr has local definition */
-				if (tbinfo->attislocal[j])
-					tbinfo->inhAttrs[j] = false;
+				tbinfo->attrdefs[j] = attrDef;
 			}
 		}
 
@@ -429,9 +423,9 @@ flagInhAttrs(TableInfo *tblinfo, int numTables,
 
 			for (k = 0; k < numParents; k++)
 			{
+				TableInfo  *parent = parents[k];
 				int			l;
 
-				parent = parents[k];
 				for (l = 0; l < parent->ncheck; l++)
 				{
 					ConstraintInfo *pconstr = &(parent->checkexprs[l]);
@@ -650,6 +644,70 @@ findObjectByCatalogId(CatalogId catalogId)
 	return NULL;
 }
 
+/*
+ * Find a DumpableObject by OID, in a pre-sorted array of one type of object
+ *
+ * Returns NULL for unknown OID
+ */
+static DumpableObject *
+findObjectByOid(Oid oid, DumpableObject **indexArray, int numObjs)
+{
+	DumpableObject **low;
+	DumpableObject **high;
+
+	/*
+	 * This is the same as findObjectByCatalogId except we assume we need not
+	 * look at table OID because the objects are all the same type.
+	 *
+	 * We could use bsearch() here, but the notational cruft of calling
+	 * bsearch is nearly as bad as doing it ourselves; and the generalized
+	 * bsearch function is noticeably slower as well.
+	 */
+	if (numObjs <= 0)
+		return NULL;
+	low = indexArray;
+	high = indexArray + (numObjs - 1);
+	while (low <= high)
+	{
+		DumpableObject **middle;
+		int			difference;
+
+		middle = low + (high - low) / 2;
+		difference = oidcmp((*middle)->catId.oid, oid);
+		if (difference == 0)
+			return *middle;
+		else if (difference < 0)
+			low = middle + 1;
+		else
+			high = middle - 1;
+	}
+	return NULL;
+}
+
+/*
+ * Build an index array of DumpableObject pointers, sorted by OID
+ */
+static DumpableObject **
+buildIndexArray(void *objArray, int numObjs, Size objSize)
+{
+	DumpableObject **ptrs;
+	int			i;
+
+	ptrs = (DumpableObject **) malloc(numObjs * sizeof(DumpableObject *));
+	for (i = 0; i < numObjs; i++)
+		ptrs[i] = (DumpableObject *) ((char *) objArray + i * objSize);
+
+	/* We can use DOCatalogIdCompare to sort since its first key is OID */
+	if (numObjs > 1)
+		qsort((void *) ptrs, numObjs, sizeof(DumpableObject *),
+			  DOCatalogIdCompare);
+
+	return ptrs;
+}
+
+/*
+ * qsort comparator for pointers to DumpableObjects
+ */
 static int
 DOCatalogIdCompare(const void *p1, const void *p2)
 {
@@ -740,80 +798,55 @@ removeObjectDependency(DumpableObject *dobj, DumpId refId)
  * findTableByOid
  *	  finds the entry (in tblinfo) of the table with the given oid
  *	  returns NULL if not found
- *
- * NOTE:  should hash this, but just do linear search for now
  */
 TableInfo *
 findTableByOid(Oid oid)
 {
-	int			i;
-
-	for (i = 0; i < numTables; i++)
-	{
-		if (tblinfo[i].dobj.catId.oid == oid)
-			return &tblinfo[i];
-	}
-	return NULL;
+	return (TableInfo *) findObjectByOid(oid, tblinfoindex, numTables);
 }
 
 /*
  * findTypeByOid
  *	  finds the entry (in typinfo) of the type with the given oid
  *	  returns NULL if not found
- *
- * NOTE:  should hash this, but just do linear search for now
  */
 TypeInfo *
 findTypeByOid(Oid oid)
 {
-	int			i;
-
-	for (i = 0; i < numTypes; i++)
-	{
-		if (typinfo[i].dobj.catId.oid == oid)
-			return &typinfo[i];
-	}
-	return NULL;
+	return (TypeInfo *) findObjectByOid(oid, typinfoindex, numTypes);
 }
 
 /*
  * findFuncByOid
  *	  finds the entry (in funinfo) of the function with the given oid
  *	  returns NULL if not found
- *
- * NOTE:  should hash this, but just do linear search for now
  */
 FuncInfo *
 findFuncByOid(Oid oid)
 {
-	int			i;
-
-	for (i = 0; i < numFuncs; i++)
-	{
-		if (funinfo[i].dobj.catId.oid == oid)
-			return &funinfo[i];
-	}
-	return NULL;
+	return (FuncInfo *) findObjectByOid(oid, funinfoindex, numFuncs);
 }
 
 /*
  * findOprByOid
  *	  finds the entry (in oprinfo) of the operator with the given oid
  *	  returns NULL if not found
- *
- * NOTE:  should hash this, but just do linear search for now
  */
 OprInfo *
 findOprByOid(Oid oid)
 {
-	int			i;
+	return (OprInfo *) findObjectByOid(oid, oprinfoindex, numOperators);
+}
 
-	for (i = 0; i < numOperators; i++)
-	{
-		if (oprinfo[i].dobj.catId.oid == oid)
-			return &oprinfo[i];
-	}
-	return NULL;
+/*
+ * findNamespaceByOid
+ *	  finds the entry (in nspinfo) of the namespace with the given oid
+ *	  returns NULL if not found
+ */
+NamespaceInfo *
+findNamespaceByOid(Oid oid)
+{
+	return (NamespaceInfo *) findObjectByOid(oid, nspinfoindex, numNamespaces);
 }
 
 

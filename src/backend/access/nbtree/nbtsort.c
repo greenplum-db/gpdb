@@ -57,13 +57,14 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsort.c,v 1.110 2007/01/09 02:14:10 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsort.c,v 1.114 2008/01/01 19:45:46 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
+#include "access/heapam.h"
 #include "access/nbtree.h"
 #include "miscadmin.h"
 #include "storage/smgr.h"
@@ -287,7 +288,8 @@ _bt_blwritepage(BTWriteState *wstate, Page page, BlockNumber blkno)
 	/* XLOG stuff */
 	if (wstate->btws_use_wal)
 	{
-		_bt_lognewpage(wstate->index, page, blkno);
+		/* We use the heap NEWPAGE record type for this */
+		log_newpage(&wstate->index->rd_node, blkno, page);
 	}
 
 	else
@@ -438,7 +440,7 @@ _bt_sortaddtup(Page page,
 	}
 
 	if (PageAddItem(page, (Item) itup, itemsize, itup_off,
-					LP_USED) == InvalidOffsetNumber)
+					false, false) == InvalidOffsetNumber)
 		elog(ERROR, "failed to add item to the index page");
 }
 
@@ -559,7 +561,7 @@ _bt_buildadd(BTWriteState *wstate, BTPageState *state, IndexTuple itup)
 		 */
 		hii = PageGetItemId(opage, P_HIKEY);
 		*hii = *ii;
-		ii->lp_flags &= ~LP_USED;
+		ItemIdSetUnused(ii);	/* redundant */
 		((PageHeader) opage)->pd_lower -= sizeof(ItemIdData);
 
 		/*

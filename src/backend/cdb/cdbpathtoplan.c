@@ -182,7 +182,7 @@ cdbpathtoplan_create_motion_plan(PlannerInfo   *root,
 			{
 				List *tlist = copyObject(subplan->targetlist);
 
-				subplan = (Plan *) make_result(tlist, NULL, subplan);
+				subplan = (Plan *) make_result(root, tlist, NULL, subplan);
 			}
 			subplan->targetlist = add_to_flat_tlist(subplan->targetlist,
 													hashExpr,

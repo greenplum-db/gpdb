@@ -89,7 +89,7 @@ SELECT a,b,c,CASE c WHEN IS NOT DISTINCT FROM b THEN a
 -- DECODE(): Oracle compatibility
 --
 SELECT decode(null,null,true,false);
-SELECT decode(NULL, 1, 100, NULL, 200, 300);
+SELECT decode(NULL::integer, 1, 100, NULL, 200, 300);
 SELECT decode('1'::text, '1', 100, '2', 200);
 SELECT decode(2, 1, 'ABC', 2, 'DEF');
 SELECT decode('2009-02-05'::date, '2009-02-05', 'ok');

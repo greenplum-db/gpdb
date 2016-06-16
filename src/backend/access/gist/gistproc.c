@@ -10,7 +10,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	$PostgreSQL: pgsql/src/backend/access/gist/gistproc.c,v 1.9.2.1 2007/09/07 17:04:46 teodor Exp $
+ *	$PostgreSQL: pgsql/src/backend/access/gist/gistproc.c,v 1.13.2.2 2009/09/18 14:03:12 teodor Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -228,9 +228,9 @@ chooseLR(GIST_SPLITVEC *v,
 						  NULL, NULL, InvalidOffsetNumber, FALSE);
 
 			gistentryinit(addon, BoxPGetDatum(union1), NULL, NULL, InvalidOffsetNumber, FALSE);
-			DirectFunctionCall3(gist_box_penalty, PointerGetDatum(&oldUnion), PointerGetDatum(&union1), PointerGetDatum(&p1));
+			DirectFunctionCall3(gist_box_penalty, PointerGetDatum(&oldUnion), PointerGetDatum(&addon), PointerGetDatum(&p1));
 			gistentryinit(addon, BoxPGetDatum(union2), NULL, NULL, InvalidOffsetNumber, FALSE);
-			DirectFunctionCall3(gist_box_penalty, PointerGetDatum(&oldUnion), PointerGetDatum(&union2), PointerGetDatum(&p2));
+			DirectFunctionCall3(gist_box_penalty, PointerGetDatum(&oldUnion), PointerGetDatum(&addon), PointerGetDatum(&p2));
 
 			if ((v->spl_ldatum_exists && p1 > p2) || (v->spl_rdatum_exists && p1 < p2))
 				firstToLeft = false;
@@ -263,6 +263,69 @@ chooseLR(GIST_SPLITVEC *v,
 			adjustBox(union1, DatumGetBoxP(v->spl_rdatum));
 		v->spl_rdatum = BoxPGetDatum(union1);
 	}
+
+	v->spl_ldatum_exists = v->spl_rdatum_exists = false;
+}
+
+/*
+ * Trivial split: half of entries will be placed on one page
+ * and another half - to another
+ */
+static void
+fallbackSplit(GistEntryVector *entryvec, GIST_SPLITVEC *v)
+{
+	OffsetNumber	i, 
+					maxoff;
+	BOX			   *unionL = NULL,
+				   *unionR = NULL;
+	int				nbytes;
+
+	maxoff = entryvec->n - 1;
+
+	nbytes = (maxoff + 2) * sizeof(OffsetNumber);
+	v->spl_left = (OffsetNumber *) palloc(nbytes);
+	v->spl_right = (OffsetNumber *) palloc(nbytes);
+	v->spl_nleft = v->spl_nright = 0;
+
+	for (i = FirstOffsetNumber; i <= maxoff; i = OffsetNumberNext(i))
+	{
+		BOX * cur = DatumGetBoxP(entryvec->vector[i].key);
+
+		if (i <= (maxoff - FirstOffsetNumber + 1) / 2)
+		{
+			v->spl_left[v->spl_nleft] = i;
+			if (unionL == NULL)
+			{
+				unionL = (BOX *) palloc(sizeof(BOX));
+				*unionL = *cur;
+			}
+			else
+				adjustBox(unionL, cur);
+
+			v->spl_nleft++;
+		}
+		else
+		{
+			v->spl_right[v->spl_nright] = i;
+			if (unionR == NULL)
+			{
+				unionR = (BOX *) palloc(sizeof(BOX));
+				*unionR = *cur;
+			}
+			else
+				adjustBox(unionR, cur);
+
+			v->spl_nright++;
+		}
+	}
+
+	if (v->spl_ldatum_exists)
+		adjustBox(unionL, DatumGetBoxP(v->spl_ldatum));
+	v->spl_ldatum = BoxPGetDatum(unionL);
+
+	if (v->spl_rdatum_exists)
+		adjustBox(unionR, DatumGetBoxP(v->spl_rdatum));
+	v->spl_rdatum = BoxPGetDatum(unionR);
 
 	v->spl_ldatum_exists = v->spl_rdatum_exists = false;
 }
@@ -319,52 +382,22 @@ gist_box_picksplit(PG_FUNCTION_ARGS)
 		adjustBox(&pageunion, cur);
 	}
 
+	if (allisequal)
+	{
+		/*
+		 * All entries are the same
+		 */
+		fallbackSplit(entryvec, v);
+		PG_RETURN_POINTER(v);
+	}
+
 	nbytes = (maxoff + 2) * sizeof(OffsetNumber);
 	listL = (OffsetNumber *) palloc(nbytes);
 	listR = (OffsetNumber *) palloc(nbytes);
-	unionL = (BOX *) palloc(sizeof(BOX));
-	unionR = (BOX *) palloc(sizeof(BOX));
-	if (allisequal)
-	{
-		cur = DatumGetBoxP(entryvec->vector[OffsetNumberNext(FirstOffsetNumber)].key);
-		if (memcmp((void *) cur, (void *) &pageunion, sizeof(BOX)) == 0)
-		{
-			v->spl_left = listL;
-			v->spl_right = listR;
-			v->spl_nleft = v->spl_nright = 0;
-			memcpy((void *) unionL, (void *) &pageunion, sizeof(BOX));
-			memcpy((void *) unionR, (void *) &pageunion, sizeof(BOX));
-
-			for (i = FirstOffsetNumber; i <= maxoff; i = OffsetNumberNext(i))
-			{
-				if (i <= (maxoff - FirstOffsetNumber + 1) / 2)
-				{
-					v->spl_left[v->spl_nleft] = i;
-					v->spl_nleft++;
-				}
-				else
-				{
-					v->spl_right[v->spl_nright] = i;
-					v->spl_nright++;
-				}
-			}
-
-			if (v->spl_ldatum_exists)
-				adjustBox(unionL, DatumGetBoxP(v->spl_ldatum));
-			v->spl_ldatum = BoxPGetDatum(unionL);
-
-			if (v->spl_rdatum_exists)
-				adjustBox(unionR, DatumGetBoxP(v->spl_rdatum));
-			v->spl_rdatum = BoxPGetDatum(unionR);
-
-			v->spl_ldatum_exists = v->spl_rdatum_exists = false;
-
-			PG_RETURN_POINTER(v);
-		}
-	}
-
 	listB = (OffsetNumber *) palloc(nbytes);
 	listT = (OffsetNumber *) palloc(nbytes);
+	unionL = (BOX *) palloc(sizeof(BOX));
+	unionR = (BOX *) palloc(sizeof(BOX));
 	unionB = (BOX *) palloc(sizeof(BOX));
 	unionT = (BOX *) palloc(sizeof(BOX));
 
@@ -394,20 +427,22 @@ gist_box_picksplit(PG_FUNCTION_ARGS)
 			ADDLIST(listT, unionT, posT, i);
 	}
 
-#define LIMIT_RATIO	0.1
+#define LIMIT_RATIO 0.1
 #define _IS_BADRATIO(x,y)	( (y) == 0 || (float)(x)/(float)(y) < LIMIT_RATIO )
 #define IS_BADRATIO(x,y) ( _IS_BADRATIO((x),(y)) || _IS_BADRATIO((y),(x)) )
 	/* bad disposition, try to split by centers of boxes  */
-	if ( IS_BADRATIO(posR, posL) && IS_BADRATIO(posT, posB) )
+	if (IS_BADRATIO(posR, posL) && IS_BADRATIO(posT, posB))
 	{
-		double	avgCenterX=0.0, avgCenterY=0.0;
-		double	CenterX, CenterY;
+		double		avgCenterX = 0.0,
+					avgCenterY = 0.0;
+		double		CenterX,
+					CenterY;
 
 		for (i = FirstOffsetNumber; i <= maxoff; i = OffsetNumberNext(i))
 		{
 			cur = DatumGetBoxP(entryvec->vector[i].key);
-			avgCenterX +=  ((double)cur->high.x + (double)cur->low.x)/2.0;
-			avgCenterY +=  ((double)cur->high.y + (double)cur->low.y)/2.0;
+			avgCenterX += ((double) cur->high.x + (double) cur->low.x) / 2.0;
+			avgCenterY += ((double) cur->high.y + (double) cur->low.y) / 2.0;
 		}
 
 		avgCenterX /= maxoff;
@@ -417,11 +452,11 @@ gist_box_picksplit(PG_FUNCTION_ARGS)
 		for (i = FirstOffsetNumber; i <= maxoff; i = OffsetNumberNext(i))
 		{
 			cur = DatumGetBoxP(entryvec->vector[i].key);
-			
-			CenterX =  ((double)cur->high.x + (double)cur->low.x)/2.0;
-			CenterY =  ((double)cur->high.y + (double)cur->low.y)/2.0;
 
-			if (CenterX < avgCenterX) 
+			CenterX = ((double) cur->high.x + (double) cur->low.x) / 2.0;
+			CenterY = ((double) cur->high.y + (double) cur->low.y) / 2.0;
+
+			if (CenterX < avgCenterX)
 				ADDLIST(listL, unionL, posL, i);
 			else if (CenterX == avgCenterX)
 			{
@@ -442,8 +477,14 @@ gist_box_picksplit(PG_FUNCTION_ARGS)
 				else
 					ADDLIST(listB, unionB, posB, i);
 			}
-			else 
+			else
 				ADDLIST(listT, unionT, posT, i);
+		}
+
+		if (IS_BADRATIO(posR, posL) && IS_BADRATIO(posT, posB))
+		{
+			fallbackSplit(entryvec, v);
+			PG_RETURN_POINTER(v);
 		}
 	}
 

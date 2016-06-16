@@ -355,9 +355,9 @@ create table pt(i int, j int, k int, l char(2)) distributed by (i)
 partition by range(k) subpartition by list(l) subpartition template(values('A'),
 values('B')) (start(30) end(50) every(10));
 NOTICE:  CREATE TABLE will create partition "pt_1_prt_1" for table "pt"
-NOTICE:  CREATE TABLE will create partition "pt_1_prt_2" for table "pt"
 NOTICE:  CREATE TABLE will create partition "pt_1_prt_1_2_prt_1" for table "pt_1_prt_1"
 NOTICE:  CREATE TABLE will create partition "pt_1_prt_1_2_prt_2" for table "pt_1_prt_1"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_2" for table "pt"
 NOTICE:  CREATE TABLE will create partition "pt_1_prt_2_2_prt_1" for table "pt_1_prt_2"
 NOTICE:  CREATE TABLE will create partition "pt_1_prt_2_2_prt_2" for table "pt_1_prt_2"
 alter table only pt set distributed randomly;

@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_table.sgml,v 1.107 2007/02/01 00:28:18 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_table.sgml,v 1.109 2007/07/17 05:02:00 neilc Exp $
 PostgreSQL documentation
 -->
 
@@ -300,7 +300,7 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
-    <term><literal>LIKE <replaceable>parent_table</replaceable> [ { INCLUDING | EXCLUDING } { DEFAULTS | CONSTRAINTS } ]</literal></term>
+    <term><literal>LIKE <replaceable>parent_table</replaceable> [ { INCLUDING | EXCLUDING } { DEFAULTS | CONSTRAINTS | INDEXES } ]</literal></term>
     <listitem>
      <para>
       The <literal>LIKE</literal> clause specifies a table from which
@@ -329,10 +329,15 @@ Where column_reference_storage_directive is:
       requested, all check constraints are copied.
      </para>
      <para>
+      Any indexes on the original table will not be created on the new
+      table, unless the <literal>INCLUDING INDEXES</literal> clause is
+      specified.
+     </para>
+     <para>
       Note also that unlike <literal>INHERITS</literal>, copied columns and
       constraints are not merged with similarly named columns and constraints.
       If the same name is specified explicitly or in another
-      <literal>LIKE</literal> clause an error is signalled.
+      <literal>LIKE</literal> clause, an error is signalled.
      </para>
     </listitem>
    </varlistentry>
@@ -717,9 +722,8 @@ Where column_reference_storage_directive is:
       The <replaceable class="PARAMETER">tablespace</replaceable> is the name
       of the tablespace in which the new table is to be created.
       If not specified,
-      <xref linkend="guc-default-tablespace"> is used, or the database's
-      default tablespace if <varname>default_tablespace</> is an empty
-      string.
+      <xref linkend="guc-default-tablespace"> is consulted, or
+      <xref linkend="guc-temp-tablespaces"> if the table is temporary.
      </para>
     </listitem>
    </varlistentry>
@@ -732,9 +736,8 @@ Where column_reference_storage_directive is:
       associated with a <literal>UNIQUE</literal> or <literal>PRIMARY
       KEY</literal> constraint will be created.
       If not specified,
-      <xref linkend="guc-default-tablespace"> is used, or the database's
-      default tablespace if <varname>default_tablespace</> is an empty
-      string.
+      <xref linkend="guc-default-tablespace"> is consulted, or
+      <xref linkend="guc-temp-tablespaces"> if the table is temporary.
      </para>
     </listitem>
    </varlistentry>

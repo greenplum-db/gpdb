@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeHashjoin.c,v 1.89 2007/02/02 00:07:03 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeHashjoin.c,v 1.93 2008/01/01 19:45:49 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -724,12 +724,11 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 					(hjstate->js.jointype == JOIN_LASJ_NOTIN) ||
 					hjstate->hj_nonequijoin;
 			if (ExecHashGetHashValue(hashState, hashtable, econtext,
-						hjstate->hj_OuterHashKeys,
-						true,
-						keep_nulls,
-						hashvalue,
-						&hashkeys_null
-						))
+									 hjstate->hj_OuterHashKeys,
+									 true,		/* outer tuple */
+									 keep_nulls,
+									 hashvalue,
+									 &hashkeys_null))
 			{
 				/* remember outer relation is not empty for possible rescan */
 				hjstate->hj_OuterNotEmpty = true;
@@ -737,8 +736,8 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 				return slot;
 			}
 			/*
-			 * That tuple couldn't match because of a NULL, so discard it
-			 * and continue with the next one.
+			 * That tuple couldn't match because of a NULL, so discard it and
+			 * continue with the next one.
 			 */
 		}
 

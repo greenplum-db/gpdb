@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gin/ginget.c,v 1.7 2007/02/01 04:16:08 neilc Exp $
+ *			$PostgreSQL: pgsql/src/backend/access/gin/ginget.c,v 1.10.2.1 2008/04/22 17:54:19 teodor Exp $
  *-------------------------------------------------------------------------
  */
 
@@ -27,14 +27,14 @@ findItemInPage(Page page, ItemPointer item, OffsetNumber *off)
 	OffsetNumber maxoff = GinPageGetOpaque(page)->maxoff;
 	int			res;
 
-	if ( GinPageGetOpaque(page)->flags & GIN_DELETED )
+	if (GinPageGetOpaque(page)->flags & GIN_DELETED)
 		/* page was deleted by concurrent  vacuum */
 		return false;
 
 	/*
 	 * scan page to find equal or first greater value
 	 */
-     
+
 	for (*off = FirstOffsetNumber; *off <= maxoff; (*off)++)
 	{
 		res = compareItemPointers(item, (ItemPointer) GinDataPageGetItem(page, *off));
@@ -55,10 +55,10 @@ startScanEntry(Relation index, GinState *ginstate, GinScanEntry entry)
 {
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
-	GinBtreeData    btreeEntry;
+	GinBtreeData 	btreeEntry;
 	GinBtreeStack  *stackEntry;
-	Page            page;
-	bool            needUnlock = TRUE;
+	Page			page;
+	bool			needUnlock = TRUE;
 
 	if (entry->master != NULL)
 	{
@@ -67,7 +67,7 @@ startScanEntry(Relation index, GinState *ginstate, GinScanEntry entry)
 	}
 
 	/*
-	 * We should find entry, and begin scan of posting tree
+	 * we should find entry, and begin scan of posting tree
 	 * or just store posting list in memory
 	 */
 
@@ -118,10 +118,10 @@ startScanEntry(Relation index, GinState *ginstate, GinScanEntry entry)
 			 */
 			entry->list = (ItemPointerData *) palloc( BLCKSZ );
 			entry->nlist = GinPageGetOpaque(page)->maxoff;
-			memcpy( entry->list, GinDataPageGetItem(page, FirstOffsetNumber),
+			memcpy( entry->list, GinDataPageGetItem(page, FirstOffsetNumber), 
 						GinPageGetOpaque(page)->maxoff * sizeof(ItemPointerData) );
 
-            LockBuffer(entry->buffer, GIN_UNLOCK);
+			LockBuffer(entry->buffer, GIN_UNLOCK);
 			freeGinBtreeStack(gdi->stack);
 			pfree(gdi);
 			entry->isFinished = FALSE;
@@ -162,10 +162,10 @@ startScanKey(Relation index, GinState *ginstate, GinScanKey key)
 	if (GinFuzzySearchLimit > 0)
 	{
 		/*
-		 * If all of keys more than threshold we will try to reduce result,
-		 * we hope (and only hope, for intersection operation of array our
-		 * supposition isn't true), that total result will not more than
-		 * minimal predictNumberResult.
+		 * If all of keys more than threshold we will try to reduce
+		 * result, we hope (and only hope, for intersection operation of
+		 * array our supposition isn't true), that total result will not
+		 * more than minimal predictNumberResult.
 		 */
 
 		for (i = 0; i < key->nentries; i++)

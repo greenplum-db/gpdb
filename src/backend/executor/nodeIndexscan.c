@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeIndexscan.c,v 1.120 2007/01/05 22:19:28 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeIndexscan.c,v 1.125 2008/01/01 19:45:49 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -479,17 +479,17 @@ ExecEndIndexScan(IndexScanState *node)
 	ExecClearTuple(node->ss.ss_ScanTupleSlot);
 
 	/*
-	 * close the index relation
+	 * close the index relation (no-op if we didn't open it)
 	 */
 	ExecEagerFreeIndexScan(node);
-	index_close(indexRelationDesc, NoLock);
+	if (indexRelationDesc)
+		index_close(indexRelationDesc, NoLock);
 
 	/*
 	 * close the heap relation.
 	 */
 	ExecCloseScanRelation(relation);
 
-	Assert(NULL != node->iss_RuntimeContext);
 	FreeRuntimeKeysContext(node);
 	EndPlanStateGpmonPkt(&node->ss.ps);
 }
@@ -590,6 +590,20 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 	ExecAssignScanType(&indexstate->ss, RelationGetDescr(currentRelation));
 
 	/*
+	 * Initialize result tuple type and projection info.
+	 */
+	ExecAssignResultTypeFromTL(&indexstate->ss.ps);
+	ExecAssignScanProjectionInfo(&indexstate->ss);
+
+	/*
+	 * If we are just doing EXPLAIN (ie, aren't going to run the plan), stop
+	 * here.  This allows an index-advisor plugin to EXPLAIN a plan containing
+	 * references to nonexistent indexes.
+	 */
+	if (eflags & EXEC_FLAG_EXPLAIN_ONLY)
+		return indexstate;
+
+	/*
 	 * Open the index relation.
 	 *
 	 * If the parent table is one of the target relations of the query, then
@@ -623,12 +637,6 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 	 */
 	indexstate->iss_RuntimeKeysReady = false;
 
-	/*
-	 * Initialize result tuple type and projection info.
-	 */
-	ExecAssignResultTypeFromTL(&indexstate->ss.ps);
-	ExecAssignScanProjectionInfo(&indexstate->ss);
-
 	initGpmonPktForIndexScan((Plan *)node, &indexstate->ss.ps.gpmon_pkt, estate);
 
 	/*
@@ -651,7 +659,6 @@ ExecCountSlotsIndexScan(IndexScan *node)
 		ExecCountSlotsNode(innerPlan((Plan *) node)) + INDEXSCAN_NSLOTS;
 }
 
-	
 void
 initGpmonPktForIndexScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
 {

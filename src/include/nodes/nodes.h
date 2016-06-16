@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.195 2007/02/19 07:03:31 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.205 2008/01/01 19:45:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -41,6 +41,7 @@ typedef enum NodeTag
 	T_CdbProcess,
 	T_Slice,
 	T_SliceTable,
+	T_CursorPosInfo,
 	T_ShareNodeEntry,
 	T_PartitionState,
 	T_QueryDispatchDesc,
@@ -205,13 +206,13 @@ typedef enum NodeTag
 	T_RangeTblRef,
 	T_JoinExpr,
 	T_FromExpr,
+	T_IntoClause,
 	T_Flow,
 	T_WindowFrame,
 	T_WindowFrameEdge,
 	T_WindowKey,
 	T_Grouping,
 	T_GroupId,
-	T_IntoClause,
     T_AggOrder,
 	T_PercentileExpr,
 	T_DMLActionExpr,
@@ -252,6 +253,7 @@ typedef enum NodeTag
 	T_NullTestState,
 	T_CoerceToDomainState,
 	T_DomainConstraintState,
+	T_WholeRowVarExprState,		/* will be in a more natural position in 9.3 */
 	T_WindowRefExprState,
 	T_GroupingFuncExprState,
 	T_PercentileExprState,
@@ -336,7 +338,7 @@ typedef enum NodeTag
 	T_OidList,
 
 	/*
-	 * TAGS FOR PARSE TREE NODES (parsenodes.h)
+	 * TAGS FOR STATEMENT NODES (mostly in parsenodes.h)
 	 */
 	T_Query = 700,
 	T_PlannedStmt,
@@ -384,7 +386,7 @@ typedef enum NodeTag
 	T_AlterSeqStmt,
 	T_VariableSetStmt,
 	T_VariableShowStmt,
-	T_VariableResetStmt,
+	T_DiscardStmt,
 	T_CreateTrigStmt,
 	T_DropPropertyStmt,
 	T_CreatePLangStmt,
@@ -421,6 +423,10 @@ typedef enum NodeTag
 	T_AlterOwnerStmt,
 	T_DropOwnedStmt,
 	T_ReassignOwnedStmt,
+	T_CompositeTypeStmt,
+	T_CreateEnumStmt,
+	T_AlterTSDictionaryStmt,
+	T_AlterTSConfigurationStmt,
 	T_WindowSpec,
 	T_WindowSpecParse,
 	T_PartitionBy,
@@ -440,9 +446,10 @@ typedef enum NodeTag
 	T_AlterTypeStmt,
 	T_SetDistributionCmd,
 
-	/**/
-	
-	T_A_Expr = 850,
+	/*
+	 * TAGS FOR PARSE TREE NODES (parsenodes.h)
+	 */
+	T_A_Expr = 900,
 	T_ColumnRef,
 	T_ParamRef,
 	T_A_Const,
@@ -470,7 +477,6 @@ typedef enum NodeTag
 	T_FuncWithArgs,
 	T_PrivTarget,
 	T_CreateOpClassItem,
-	T_CompositeTypeStmt,
 	T_InhRelation,
 	T_FunctionParameter,
 	T_LockingClause,
@@ -495,7 +501,7 @@ typedef enum NodeTag
 	 * purposes (usually because they are involved in APIs where we want to
 	 * pass multiple object types through the same pointer).
 	 */
-	T_TriggerData = 900,		/* in commands/trigger.h */
+	T_TriggerData = 950,		/* in commands/trigger.h */
 	T_ReturnSetInfo,			/* in nodes/execnodes.h */
 	T_InlineCodeBlock,			/* in nodes/parsenodes.h */
     T_HashBitmap,               /* in nodes/tidbitmap.h */
@@ -624,10 +630,9 @@ typedef double Cost;			/* execution cost (in page-access units) */
 
 /*
  * CmdType -
- *	  enums for type of operation represented by a Query
+ *	  enums for type of operation represented by a Query or PlannedStmt
  *
- * ??? could have put this in parsenodes.h but many files not in the
- *	  optimizer also need this...
+ * This is needed in both parsenodes.h and plannodes.h, so put it here...
  */
 typedef enum CmdType
 {

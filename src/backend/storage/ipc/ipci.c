@@ -216,6 +216,9 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 			 (unsigned long) size);
 
 		size = add_size(size, BgWriterShmemSize());
+		size = add_size(size, AutoVacuumShmemSize());
+		size = add_size(size, BTreeShmemSize());
+		size = add_size(size, SyncScanShmemSize());
 		size = add_size(size, CheckpointShmemSize());
 
 		size = add_size(size, WalSndShmemSize());
@@ -408,6 +411,7 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	 * Set up other modules that need some shared memory space
 	 */
 	BTreeShmemInit();
+	SyncScanShmemInit();
 	workfile_mgr_cache_init();
 
 #ifdef EXEC_BACKEND

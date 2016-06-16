@@ -96,4 +96,6 @@ extern bool isGreenplumDbHashable(Oid typid);
  */
 extern bool typeIsArrayType(Oid typeoid);
 
+extern bool typeIsEnumType(Oid typeoid);
+
 #endif   /* CDBHASH_H */

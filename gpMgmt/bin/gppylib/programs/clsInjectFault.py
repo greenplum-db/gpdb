@@ -387,6 +387,7 @@ class GpInjectFaultProgram:
 			      "multi_exec_hash_large_vmem (allocate large vmem using palloc inside MultiExecHash to attempt to exceed vmem limit), " \
 			      "execsort_before_sorting (inject fault in nodeSort after receiving all tuples and before sorting), " \
 			      "execsort_mksort_mergeruns (inject fault in MKSort during the mergeruns phase), " \
+			      "execshare_input_next (inject fault after shared input scan retrieved a tuple), " \
 			      "base_backup_post_create_checkpoint (inject fault after requesting checkpoint as part of basebackup), " \
 			      "compaction_before_segmentfile_drop (inject fault after compaction, but before the drop of the segment file), "  \
 			      "compaction_before_cleanup_phase (inject fault after compaction and drop, but before the cleanup phase), " \

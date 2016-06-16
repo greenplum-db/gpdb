@@ -23,7 +23,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/utils/init/flatfiles.c,v 1.24 2007/01/05 22:19:43 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/init/flatfiles.c,v 1.30 2008/01/01 19:45:53 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -202,7 +202,7 @@ name_okay(const char *str)
  * so we can set or update the XID wrap limit.
  *
  * Also, if "startup" is true, we tell relcache.c to clear out the relcache
- * init file in each database.  That's a bit nonmodular, but scanning
+ * init file in each database.	That's a bit nonmodular, but scanning
  * pg_database twice during system startup seems too high a price for keeping
  * things better separated.
  */
@@ -245,8 +245,8 @@ write_database_file(Relation drel, bool startup)
 		datfrozenxid = dbform->datfrozenxid;
 
 		/*
-		 * Identify the oldest datfrozenxid.  This must match
-		 * the logic in vac_truncate_clog() in vacuum.c.
+		 * Identify the oldest datfrozenxid.  This must match the logic in
+		 * vac_truncate_clog() in vacuum.c.
 		 *
 		 * MPP-20053: Skip databases that cannot be connected to in computing
 		 * the oldest database.
@@ -320,7 +320,6 @@ write_database_file(Relation drel, bool startup)
  *
  * The format for the flat auth file is
  *		"rolename" "password" "validuntil" "memberof" "memberof" ...
- * Only roles that are marked rolcanlogin are entered into the auth file.
  * Each role's line lists all the roles (groups) of which it is directly
  * or indirectly a member, except for itself.
  *
@@ -334,7 +333,6 @@ write_database_file(Relation drel, bool startup)
 typedef struct
 {
 	Oid			roleid;
-	bool		rolcanlogin;
 	bool		rolsuper;
 	char	   *rolname;
 	char	   *rolpassword;
@@ -406,8 +404,7 @@ load_auth_entries(Relation rel_authid, auth_entry **auth_info_out, int *total_ro
 	auth_entry *auth_info;
 
 	/*
-	 * Read pg_authid and fill temporary data structures.  Note we must read
-	 * all roles, even those without rolcanlogin.
+	 * Read pg_authid and fill temporary data structures.
 	 */
 	totalblocks = RelationGetNumberOfBlocks(rel_authid);
 	totalblocks = totalblocks ? totalblocks : 1;
@@ -433,7 +430,6 @@ load_auth_entries(Relation rel_authid, auth_entry **auth_info_out, int *total_ro
 
 		auth_info[curr_role].roleid = HeapTupleGetOid(tuple);
 		auth_info[curr_role].rolsuper = aform->rolsuper;
-		auth_info[curr_role].rolcanlogin = aform->rolcanlogin;
 		auth_info[curr_role].rolname = pstrdup(NameStr(aform->rolname));
 		auth_info[curr_role].member_of = NIL;
 
@@ -441,7 +437,10 @@ load_auth_entries(Relation rel_authid, auth_entry **auth_info_out, int *total_ro
 		 * We can't use heap_getattr() here because during startup we will not
 		 * have any tupdesc for pg_authid.  Fortunately it's not too hard to
 		 * work around this.  rolpassword is the first possibly-null field so
-		 * we can compute its offset directly.
+		 * we can compute its offset directly.	Note that this only works
+		 * reliably because the preceding field (rolconnlimit) is int4, and
+		 * therefore rolpassword is always 4-byte-aligned, and will be at the
+		 * same offset no matter whether it uses 1-byte or 4-byte header.
 		 */
 		tp = (char *) tup + tup->t_hoff;
 		off = offsetof(FormData_pg_authid, rolpassword);
@@ -460,6 +459,10 @@ load_auth_entries(Relation rel_authid, auth_entry **auth_info_out, int *total_ro
 			/*
 			 * The password probably shouldn't ever be out-of-line toasted; if
 			 * it is, ignore it, since we can't handle that in startup mode.
+			 *
+			 * It is entirely likely that it's 1-byte format not 4-byte, and
+			 * theoretically possible that it's compressed inline, but textout
+			 * should be able to handle those cases even in startup mode.
 			 */
 			if (VARATT_IS_EXTERNAL(DatumGetPointer(datum)))
 				auth_info[curr_role].rolpassword = pstrdup("");
@@ -467,7 +470,7 @@ load_auth_entries(Relation rel_authid, auth_entry **auth_info_out, int *total_ro
 				auth_info[curr_role].rolpassword = DatumGetCString(DirectFunctionCall1(textout, datum));
 
 			/* assume passwd has attlen -1 */
-			off = att_addlength(off, -1, PointerGetDatum(tp + off));
+			off = att_addlength_pointer(off, -1, tp + off);
 		}
 
 		if (HeapTupleHasNulls(tuple) &&
@@ -482,7 +485,7 @@ load_auth_entries(Relation rel_authid, auth_entry **auth_info_out, int *total_ro
 			 * rolvaliduntil is timestamptz, which we assume is double
 			 * alignment and pass-by-value.
 			 */
-			off = att_align(off, 'd');
+			off = att_align_nominal(off, 'd');
 			datum = fetch_att(tp + off, true, sizeof(TimestampTz));
 			auth_info[curr_role].rolvaliduntil = DatumGetCString(DirectFunctionCall1(timestamptz_out, datum));
 		}
@@ -585,10 +588,6 @@ write_auth_file(Relation rel_authid, Relation rel_authmem)
 			List	   *roles_names_list = NIL;
 			ListCell   *mem;
 
-			/* We can skip this for non-login roles */
-			if (!auth_info[curr_role].rolcanlogin)
-				continue;
-
 			/*
 			 * This search algorithm is the same as in is_member_of_role; we
 			 * are just working with a different input data structure.
@@ -677,26 +676,21 @@ write_auth_file(Relation rel_authid, Relation rel_authmem)
 	for (curr_role = 0; curr_role < total_roles; curr_role++)
 	{
 		auth_entry *arole = &auth_info[curr_role];
+		ListCell   *mem;
 
-		if (arole->rolcanlogin)
+		sputs_quote(&buffer, arole->rolname);
+		appendStringInfoChar(&buffer, ' ');
+		sputs_quote(&buffer, arole->rolpassword);
+		appendStringInfoChar(&buffer, ' ');
+		sputs_quote(&buffer, arole->rolvaliduntil);
+
+		foreach(mem, arole->member_of)
 		{
-			ListCell   *mem;
-
-			sputs_quote(&buffer, arole->rolname);
 			appendStringInfoChar(&buffer, ' ');
-			sputs_quote(&buffer, arole->rolpassword);
-			appendStringInfoChar(&buffer, ' ');
-			sputs_quote(&buffer, arole->rolvaliduntil);
-
-			foreach(mem, arole->member_of)
-			{
-				appendStringInfoChar(&buffer, ' ');
-				sputs_quote(&buffer, (char *) lfirst(mem));
-			}
-
-			appendStringInfoChar(&buffer, '\n');
-
+			sputs_quote(&buffer, (char *) lfirst(mem));
 		}
+
+		appendStringInfoChar(&buffer, '\n');
 	}
 
 	MirroredFlatFile_Append(&mirroredOpen, buffer.data, buffer.len,
@@ -1113,6 +1107,14 @@ AtEOXact_UpdateFlatFiles(bool isCommit)
 	 * Signal the postmaster to reload its caches.
 	 */
 	SendPostmasterSignal(PMSIGNAL_PASSWORD_CHANGE);
+
+	/*
+	 * Force synchronous commit, to minimize the window between changing the
+	 * flat files on-disk and marking the transaction committed.  It's not
+	 * great that there is any window at all, but definitely we don't want to
+	 * make it larger than necessary.
+	 */
+	ForceSyncCommit();
 }
 
 

@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_role.sgml,v 1.7.2.1 2007/05/15 19:43:59 neilc Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/alter_role.sgml,v 1.9 2007/09/03 18:46:29 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -78,7 +78,7 @@ where option can be:
   </para>
 
   <para>
-   The third and the fourth variant change a role's session default for
+   The remaining variants change a role's session default for
    a specified configuration variable.  Whenever the role subsequently
    starts a new session, the specified value becomes the session default,
    overriding whatever setting is present in <filename>postgresql.conf</>
@@ -168,6 +168,8 @@ where option can be:
         role-specific variable setting is removed, so the role will
         inherit the system-wide default setting in new sessions.  Use
         <literal>RESET ALL</literal> to clear all role-specific settings.
+        <literal>SET FROM CURRENT</> saves the session's current value of
+        the parameter as the role-specific value.
        </para>
 
        <para>

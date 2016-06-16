@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
- * $PostgreSQL: pgsql/src/bin/pg_dump/pg_dumpall.c,v 1.90 2007/02/10 14:58:55 petere Exp $
+ * $PostgreSQL: pgsql/src/bin/pg_dump/pg_dumpall.c,v 1.100 2008/01/01 19:45:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -74,8 +74,8 @@ static int	disable_triggers = 0;
 static int	use_setsessauth = 0;
 static int	server_version;
 
-static FILE	*OPF;
-static char	*filename = NULL;
+static FILE *OPF;
+static char *filename = NULL;
 
 int
 main(int argc, char *argv[])
@@ -84,7 +84,6 @@ main(int argc, char *argv[])
 	char	   *pgport = NULL;
 	char	   *pguser = NULL;
 	char	   *pgdb = NULL;
-
 	enum trivalue prompt_password = TRI_DEFAULT;
 	bool		data_only = false;
 	bool		globals_only = false;
@@ -95,7 +94,7 @@ main(int argc, char *argv[])
 	bool		no_gp_syntax = false;
 	PGconn	   *conn;
 	int			encoding;
-	const char	*std_strings;
+	const char *std_strings;
 	int			c,
 				ret;
 
@@ -380,7 +379,7 @@ main(int argc, char *argv[])
 	/* Make sure the user hasn't specified a mix of globals-only options */
 	if (globals_only && roles_only)
 	{
-		fprintf(stderr, _("%s: --globals-only and --roles-only cannot be used together\n"),
+		fprintf(stderr, _("%s: options -g/--globals-only and -r/--roles-only cannot be used together\n"),
 				progname);
 		fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
 				progname);
@@ -389,7 +388,7 @@ main(int argc, char *argv[])
 
 	if (globals_only && tablespaces_only)
 	{
-		fprintf(stderr, _("%s: --globals-only and --tablespaces-only cannot be used together\n"),
+		fprintf(stderr, _("%s: options -g/--globals-only and -t/--tablespaces-only cannot be used together\n"),
 				progname);
 		fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
 				progname);
@@ -398,7 +397,7 @@ main(int argc, char *argv[])
 
 	if (roles_only && tablespaces_only)
 	{
-		fprintf(stderr, _("%s: --roles-only and --tablespaces-only cannot be used together\n"),
+		fprintf(stderr, _("%s: options -r/--roles-only and -t/--tablespaces-only cannot be used together\n"),
 				progname);
 		fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
 				progname);
@@ -484,7 +483,7 @@ main(int argc, char *argv[])
 	{
 		/* Replicate encoding and std_strings in output */
 		fprintf(OPF, "SET client_encoding = '%s';\n",
-			   pg_encoding_to_char(encoding));
+				pg_encoding_to_char(encoding));
 		fprintf(OPF, "SET standard_conforming_strings = %s;\n", std_strings);
 		if (strcmp(std_strings, "off") == 0)
 			fprintf(OPF, "SET escape_string_warning = 'off';\n");
@@ -1555,26 +1554,28 @@ runPgDump(const char *dbname)
 	 * Strangely enough, this is the only place we pass a database name on the
 	 * command line, except "postgres" which doesn't need quoting.
 	 *
-	 * If we have a filename, use the undocumented plain-append pg_dump format.
+	 * If we have a filename, use the undocumented plain-append pg_dump
+	 * format.
 	 */
 	if (filename)
 	{
 #ifndef WIN32
-	appendPQExpBuffer(cmd, "%s\"%s\" %s -Fa '", SYSTEMQUOTE, pg_dump_bin,
+		appendPQExpBuffer(cmd, "%s\"%s\" %s -Fa '", SYSTEMQUOTE, pg_dump_bin,
 #else
-	appendPQExpBuffer(cmd, "%s\"%s\" %s -Fa \"", SYSTEMQUOTE, pg_dump_bin,
+		appendPQExpBuffer(cmd, "%s\"%s\" %s -Fa \"", SYSTEMQUOTE, pg_dump_bin,
 #endif
-					  pgdumpopts->data);
+						  pgdumpopts->data);
 	}
 	else
 	{
 #ifndef WIN32
-	appendPQExpBuffer(cmd, "%s\"%s\" %s -Fp '", SYSTEMQUOTE, pg_dump_bin,
+		appendPQExpBuffer(cmd, "%s\"%s\" %s -Fp '", SYSTEMQUOTE, pg_dump_bin,
 #else
-	appendPQExpBuffer(cmd, "%s\"%s\" %s -Fp \"", SYSTEMQUOTE, pg_dump_bin,
+		appendPQExpBuffer(cmd, "%s\"%s\" %s -Fp \"", SYSTEMQUOTE, pg_dump_bin,
 #endif
-					  pgdumpopts->data);
+						  pgdumpopts->data);
 	}
+
 
 	/* Shell quoting is not quite like SQL quoting, so can't use fmtId */
 	for (p = dbname; *p; p++)

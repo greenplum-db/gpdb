@@ -9,12 +9,13 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/var.c,v 1.69 2007/01/05 22:19:33 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/var.c,v 1.73.2.1 2010/07/08 00:14:16 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
+#include "access/htup.h"
 #include "optimizer/clauses.h"
 #include "optimizer/prep.h"
 #include "optimizer/var.h"
@@ -55,7 +56,11 @@ typedef struct
 {
 	PlannerInfo *root;
 	int			sublevels_up;
+	bool		possible_sublink;		/* could aliases include a SubLink? */
+	bool		inserted_sublink;		/* have we inserted a SubLink? */
 } flatten_join_alias_vars_context;
+
+static bool pull_varattnos_walker(Node *node, Bitmapset **varattnos);
 
 static bool contain_var_clause_walker(Node *node, void *context);
 static bool contain_vars_of_level_walker(Node *node, int *sublevels_up);
@@ -187,6 +192,47 @@ pull_varnos(Node *node)
 	return pull_varnos_of_level(node, 0);
 }
 
+/*
+ * pull_varattnos
+ *		Find all the distinct attribute numbers present in an expression tree,
+ *		and add them to the initial contents of *varattnos.
+ *		Only Vars that reference RTE 1 of rtable level zero are considered.
+ *
+ * Attribute numbers are offset by FirstLowInvalidHeapAttributeNumber so that
+ * we can include system attributes (e.g., OID) in the bitmap representation.
+ *
+ * Currently, this does not support subqueries nor expressions containing
+ * references to multiple tables; not needed since it's only applied to
+ * index expressions and predicates.
+ */
+void
+pull_varattnos(Node *node, Bitmapset **varattnos)
+{
+	(void) pull_varattnos_walker(node, varattnos);
+}
+
+static bool
+pull_varattnos_walker(Node *node, Bitmapset **varattnos)
+{
+	if (node == NULL)
+		return false;
+	if (IsA(node, Var))
+	{
+		Var		   *var = (Var *) node;
+
+		Assert(var->varno == 1);
+		*varattnos = bms_add_member(*varattnos,
+						 var->varattno - FirstLowInvalidHeapAttributeNumber);
+		return false;
+	}
+	/* Should not find a subquery or subplan */
+	Assert(!IsA(node, Query));
+	Assert(!is_subplan(node));
+
+	return expression_tree_walker(node, pull_varattnos_walker,
+								  (void *) varattnos);
+}
+
 
 /*
  *		contain_var_reference
@@ -270,6 +316,8 @@ contain_var_clause_walker(Node *node, void *context)
 			return true;		/* abort the tree traversal and return true */
 		return false;
 	}
+	if (IsA(node, CurrentOfExpr))
+		return true;
 	return expression_tree_walker(node, contain_var_clause_walker, context);
 }
 
@@ -598,6 +646,14 @@ pull_var_clause_walker(Node *node, pull_var_clause_context *context)
  *	  is necessary since we will not scan the JOIN as a base relation, which
  *	  is the only way that the executor can directly handle whole-row Vars.
  *
+ * If a JOIN contains sub-selects that have been flattened, its join alias
+ * entries might now be arbitrary expressions, not just Vars.  This affects
+ * this function in one important way: we might find ourselves inserting
+ * SubLink expressions into subqueries, and we must make sure that their
+ * Query.hasSubLinks fields get set to TRUE if so.  If there are any
+ * SubLinks in the join alias lists, the outer Query should already have
+ * hasSubLinks = TRUE, so this is only relevant to un-flattened subqueries.
+ *
  * NOTE: this is used on not-yet-planned expressions.  We do not expect it
  * to be applied directly to a Query node.
  */
@@ -608,6 +664,10 @@ flatten_join_alias_vars(PlannerInfo *root, Node *node)
 
 	context.root = root;
 	context.sublevels_up = 0;
+	/* flag whether join aliases could possibly contain SubLinks */
+	context.possible_sublink = root->parse->hasSubLinks;
+	/* if hasSubLinks is already true, no need to work hard */
+	context.inserted_sublink = root->parse->hasSubLinks;
 
 	return flatten_join_alias_vars_mutator(node, &context);
 }
@@ -657,6 +717,7 @@ flatten_join_alias_vars_mutator(Node *node,
 					IncrementVarSublevelsUp(newvar, context->sublevels_up, 0);
 				}
 				/* Recurse in case join input is itself a join */
+				/* (also takes care of setting inserted_sublink if needed) */
 				newvar = flatten_join_alias_vars_mutator(newvar, context);
 				fields = lappend(fields, newvar);
 			}
@@ -681,8 +742,15 @@ flatten_join_alias_vars_mutator(Node *node,
 			newvar = copyObject(newvar);
 			IncrementVarSublevelsUp(newvar, context->sublevels_up, 0);
 		}
+
 		/* Recurse in case join input is itself a join */
-		return flatten_join_alias_vars_mutator(newvar, context);
+		newvar = flatten_join_alias_vars_mutator(newvar, context);
+
+		/* Detect if we are adding a sublink to query */
+		if (context->possible_sublink && !context->inserted_sublink)
+			context->inserted_sublink = checkExprHasSubLink(newvar);
+
+		return newvar;
 	}
 	if (IsA(node, InClauseInfo))
 	{
@@ -698,17 +766,21 @@ flatten_join_alias_vars_mutator(Node *node,
 												ininfo->righthand);
 		return (Node *) ininfo;
 	}
-
 	if (IsA(node, Query))
 	{
 		/* Recurse into RTE subquery or not-yet-planned sublink subquery */
 		Query	   *newnode;
+		bool		save_inserted_sublink;
 
 		context->sublevels_up++;
+		save_inserted_sublink = context->inserted_sublink;
+		context->inserted_sublink = ((Query *) node)->hasSubLinks;
 		newnode = query_tree_mutator((Query *) node,
 									 flatten_join_alias_vars_mutator,
 									 (void *) context,
 									 QTW_IGNORE_JOINALIASES);
+		newnode->hasSubLinks |= context->inserted_sublink;
+		context->inserted_sublink = save_inserted_sublink;
 		context->sublevels_up--;
 		return (Node *) newnode;
 	}

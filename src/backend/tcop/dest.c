@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tcop/dest.c,v 1.71 2007/01/05 22:19:39 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tcop/dest.c,v 1.72.2.1 2010/01/30 20:10:05 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -166,6 +166,10 @@ EndCommand(const char *commandTag, CommandDest dest)
 	{
 		case DestRemote:
 		case DestRemoteExecute:
+			/*
+			 * We assume the commandTag is plain ASCII and therefore
+			 * requires no encoding conversion.
+			 */
 			if (Gp_role == GP_ROLE_EXECUTE && Gp_is_writer)
 			{
 				/*
@@ -175,7 +179,7 @@ EndCommand(const char *commandTag, CommandDest dest)
 				sendQEDetails();
 
 				pq_beginmessage(&buf, 'g');
-				pq_sendstring(&buf, commandTag);
+				pq_send_ascii_string(&buf, commandTag);
 
 				AddQEWriterTransactionInfo(&buf);
 
@@ -186,11 +190,11 @@ EndCommand(const char *commandTag, CommandDest dest)
 				sendQEDetails();
 
 				pq_beginmessage(&buf, 'C');
-				pq_sendstring(&buf, commandTag);
+				pq_send_ascii_string(&buf, commandTag);
 				pq_endmessage(&buf);
 			}
 			else
-				pq_puttextmessage('C', commandTag);
+				pq_putmessage('C', commandTag, strlen(commandTag) + 1);
 			break;
 		case DestNone:
 		case DestDebug:
@@ -229,7 +233,7 @@ NullCommand(CommandDest dest)
 			if (PG_PROTOCOL_MAJOR(FrontendProtocol) >= 3)
 				pq_putemptymessage('I');
 			else
-				pq_puttextmessage('I', "");
+				pq_putmessage('I', "", 1);
 			break;
 
 		case DestNone:

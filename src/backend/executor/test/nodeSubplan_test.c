@@ -43,25 +43,8 @@ test__ExecSetParamPlan__Check_Dispatch_Results(void **state)
 	PlannedStmt   *plannedstmt = (PlannedStmt *)palloc(sizeof(PlannedStmt));
 	QueryDesc *queryDesc = (QueryDesc *)palloc(sizeof(QueryDesc));
 	queryDesc->plannedstmt = plannedstmt;
-	queryDesc->estate = (EState *)palloc(sizeof(EState));
+	queryDesc->estate = CreateExecutorState();
 	queryDesc->estate->es_sliceTable = (SliceTable *) palloc(sizeof(SliceTable));
-	
-	/*QueryDescriptor generated when shouldDispatch is true.*/
-	QueryDesc *internalQueryDesc = (QueryDesc *)palloc(sizeof(QueryDesc));
-	internalQueryDesc->estate = (EState *)palloc(sizeof(EState));
-	/* Added to force assertion on queryDesc->estate->interconnect_context;
-	to fail */
-	internalQueryDesc->estate->interconnect_context=NULL;
-	internalQueryDesc->estate->es_sliceTable = (SliceTable *) palloc(sizeof(SliceTable));
-
-	expect_any(CreateQueryDesc,plannedstmt);
-	expect_any(CreateQueryDesc,sourceText);
-	expect_any(CreateQueryDesc,snapshot);
-	expect_any(CreateQueryDesc,crosscheck_snapshot);
-	expect_any(CreateQueryDesc,dest);
-	expect_any(CreateQueryDesc,params);
-	expect_any(CreateQueryDesc,doInstrument);
-	will_return(CreateQueryDesc,internalQueryDesc);
 	
 	Gp_role = GP_ROLE_DISPATCH;
 	plan->planstate->plan->dispatch=DISPATCH_PARALLEL;

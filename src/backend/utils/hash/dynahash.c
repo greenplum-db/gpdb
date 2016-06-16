@@ -68,6 +68,8 @@
 
 #include "postgres.h"
 
+#include <limits.h>
+
 #include "access/xact.h"
 #include "storage/shmem.h"
 #include "storage/spin.h"
@@ -204,6 +206,8 @@ static void hdefault(HTAB *hashp);
 static int	choose_nelem_alloc(Size entrysize);
 static bool init_htab(HTAB *hashp, long nelem);
 static void hash_corrupted(HTAB *hashp);
+static long next_pow2_long(long num);
+static int	next_pow2_int(long num);
 static void register_seq_scan(HTAB *hashp);
 static void deregister_seq_scan(HTAB *hashp);
 static bool has_seq_scans(HTAB *hashp);
@@ -378,8 +382,13 @@ hash_create(const char *tabname, long nelem, HASHCTL *info, int flags)
 	{
 		/* Doesn't make sense to partition a local hash table */
 		Assert(flags & HASH_SHARED_MEM);
-		/* # of partitions had better be a power of 2 */
-		Assert(info->num_partitions == (1L << my_log2(info->num_partitions)));
+
+		/*
+		 * The number of partitions had better be a power of 2. Also, it must
+		 * be less than INT_MAX (see init_htab()), so call the int version of
+		 * next_pow2.
+		 */
+		Assert(info->num_partitions == next_pow2_int(info->num_partitions));
 
 		hctl->num_partitions = info->num_partitions;
 	}
@@ -520,7 +529,6 @@ init_htab(HTAB *hashp, long nelem)
 {
 	HASHHDR    *hctl = hashp->hctl;
 	HASHSEGMENT *segp;
-	long		lnbuckets;
 	int			nbuckets;
 	int			nsegs;
 
@@ -535,9 +543,7 @@ init_htab(HTAB *hashp, long nelem)
 	 * number of buckets.  Allocate space for the next greater power of two
 	 * number of buckets
 	 */
-	lnbuckets = (nelem - 1) / hctl->ffactor + 1;
-
-	nbuckets = 1 << my_log2(lnbuckets);
+	nbuckets = next_pow2_int((nelem - 1) / hctl->ffactor + 1);
 
 	/*
 	 * In a partitioned table, nbuckets must be at least equal to
@@ -555,7 +561,7 @@ init_htab(HTAB *hashp, long nelem)
 	 * Figure number of directory segments needed, round up to a power of 2
 	 */
 	nsegs = (nbuckets - 1) / hctl->ssize + 1;
-	nsegs = 1 << my_log2(nsegs);
+	nsegs = next_pow2_int(nsegs);
 
 	/*
 	 * Make sure directory is big enough. If pre-allocated directory is too
@@ -625,9 +631,9 @@ hash_estimate_size(long num_entries, Size entrysize)
 				elementAllocCnt;
 
 	/* estimate number of buckets wanted */
-	nBuckets = 1L << my_log2((num_entries - 1) / DEF_FFACTOR + 1);
+	nBuckets = next_pow2_long((num_entries - 1) / DEF_FFACTOR + 1);
 	/* # of segments needed for nBuckets */
-	nSegments = 1L << my_log2((nBuckets - 1) / DEF_SEGSIZE + 1);
+	nSegments = next_pow2_long((nBuckets - 1) / DEF_SEGSIZE + 1);
 	/* directory entries */
 	nDirEntries = DEF_DIRSIZE;
 	while (nDirEntries < nSegments)
@@ -668,9 +674,9 @@ hash_select_dirsize(long num_entries)
 				nDirEntries;
 
 	/* estimate number of buckets wanted */
-	nBuckets = 1L << my_log2((num_entries - 1) / DEF_FFACTOR + 1);
+	nBuckets = next_pow2_long((num_entries - 1) / DEF_FFACTOR + 1);
 	/* # of segments needed for nBuckets */
-	nSegments = 1L << my_log2((nBuckets - 1) / DEF_SEGSIZE + 1);
+	nSegments = next_pow2_long((nBuckets - 1) / DEF_SEGSIZE + 1);
 	/* directory entries */
 	nDirEntries = DEF_DIRSIZE;
 	while (nDirEntries < nSegments)
@@ -823,10 +829,10 @@ hash_search_with_hash_value(HTAB *hashp,
 #endif
 
 	/*
-	 * If inserting, check if it's time to split the bucket.
+	 * If inserting, check if it is time to split a bucket.
 	 *
 	 * NOTE: failure to expand table is not a fatal error, it just means we
-	 * have to run at higher fill factor than we wanted. However, if we're
+	 * have to run at higher fill factor than we wanted.  However, if we're
 	 * using the palloc allocator then it will throw error anyway on
 	 * out-of-memory, so we must do this before modifying the table.
 	 */
@@ -844,7 +850,7 @@ hash_search_with_hash_value(HTAB *hashp,
 		if (!IS_PARTITIONED(hctl) && !hashp->frozen &&
 			hctl->nentries / (long) (hctl->max_bucket + 1) >= hctl->ffactor &&
 			!has_seq_scans(hashp))
-			(void)expand_table(hashp);
+			(void) expand_table(hashp);
 	}
 
 	/*
@@ -966,11 +972,12 @@ hash_search_with_hash_value(HTAB *hashp,
 			hashp->keycopy(ELEMENTKEY(currBucket), keyPtr, keysize);
 
 			/*
-			 * Caller is expected to fill the data field on return. DO NOT
+			 * Caller is expected to fill the data field on return.  DO NOT
 			 * insert any code that could possibly throw error here, as doing
 			 * so would leave the table entry incomplete and hence corrupt the
 			 * caller's data structure.
 			 */
+
 			return (void *) ELEMENTKEY(currBucket);
 	}
 
@@ -1407,16 +1414,37 @@ my_log2(long num)
 	int			i;
 	long		limit;
 
+	/* guard against too-large input, which would put us into infinite loop */
+	if (num > LONG_MAX / 2)
+		num = LONG_MAX / 2;
+
 	for (i = 0, limit = 1; limit < num; i++, limit <<= 1)
 		;
 	return i;
+}
+
+/* calculate first power of 2 >= num, bounded to what will fit in a long */
+static long
+next_pow2_long(long num)
+{
+	/* my_log2's internal range check is sufficient */
+	return 1L << my_log2(num);
+}
+
+/* calculate first power of 2 >= num, bounded to what will fit in an int */
+static int
+next_pow2_int(long num)
+{
+	if (num > INT_MAX / 2)
+		num = INT_MAX / 2;
+	return 1 << my_log2(num);
 }
 
 
 /************************* SEQ SCAN TRACKING ************************/
 
 /*
- * We track active hash_seq_search scans here.  The need for this mechanism
+ * We track active hash_seq_search scans here.	The need for this mechanism
  * comes from the fact that a scan will get confused if a bucket split occurs
  * while it's in progress: it might visit entries twice, or even miss some
  * entirely (if it's partway through the same bucket that splits).  Hence
@@ -1436,7 +1464,7 @@ my_log2(long num)
  *
  * This arrangement is reasonably robust if a transient hashtable is deleted
  * without notifying us.  The absolute worst case is we might inhibit splits
- * in another table created later at exactly the same address.  We will give
+ * in another table created later at exactly the same address.	We will give
  * a warning at transaction end for reference leaks, so any bugs leading to
  * lack of notification should be easy to catch.
  */
@@ -1464,7 +1492,7 @@ register_seq_scan(HTAB *hashp)
 static void
 deregister_seq_scan(HTAB *hashp)
 {
-	int		i;
+	int			i;
 
 	/* Search backward since it's most likely at the stack top */
 	for (i = num_seq_scans - 1; i >= 0; i--)
@@ -1485,7 +1513,7 @@ deregister_seq_scan(HTAB *hashp)
 static bool
 has_seq_scans(HTAB *hashp)
 {
-	int		i;
+	int			i;
 
 	for (i = 0; i < num_seq_scans; i++)
 	{
@@ -1510,7 +1538,7 @@ AtEOXact_HashTables(bool isCommit)
 	 */
 	if (isCommit)
 	{
-		int		i;
+		int			i;
 
 		for (i = 0; i < num_seq_scans; i++)
 		{
@@ -1525,7 +1553,7 @@ AtEOXact_HashTables(bool isCommit)
 void
 AtEOSubXact_HashTables(bool isCommit, int nestDepth)
 {
-	int		i;
+	int			i;
 
 	/*
 	 * Search backward to make cleanup easy.  Note we must check all entries,

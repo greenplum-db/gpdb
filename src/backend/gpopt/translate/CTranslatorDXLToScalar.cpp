@@ -105,7 +105,8 @@ CTranslatorDXLToScalar::PexprFromDXLNodeScalar
 		{EdxlopScalarAggref, &CTranslatorDXLToScalar::PaggrefFromDXLNodeScAggref},
 		{EdxlopScalarWindowRef, &CTranslatorDXLToScalar::PwindowrefFromDXLNodeScWindowRef},
 		{EdxlopScalarCast, &CTranslatorDXLToScalar::PrelabeltypeFromDXLNodeScCast},
-		{EdxlopScalarCoerceToDomain, &CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerce},
+		{EdxlopScalarCoerceToDomain, &CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceToDomain},
+		{EdxlopScalarCoerceViaIO, &CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceViaIO},
 		{EdxlopScalarInitPlan, &CTranslatorDXLToScalar::PparamFromDXLNodeScInitPlan},
 		{EdxlopScalarSubPlan, &CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan},
 		{EdxlopScalarArray, &CTranslatorDXLToScalar::PexprArray},
@@ -1198,14 +1199,14 @@ CTranslatorDXLToScalar::PrelabeltypeFromDXLNodeScCast
 
 //---------------------------------------------------------------------------
 //      @function:
-//              CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerce
+//              CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceToDomain
 //
 //      @doc:
-//              Translates a DXL scalar coerce into a GPDB coerce node
+//              Translates a DXL scalar coerce into a GPDB coercetodomain node
 //
 //---------------------------------------------------------------------------
 Expr *
-CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerce
+CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceToDomain
         (
         const CDXLNode *pdxlnCoerce,
         CMappingColIdVar *pmapcidvar
@@ -1227,6 +1228,40 @@ CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerce
         pcoerce->resulttypmod = pdxlop->IMod();
         pcoerce->location = pdxlop->ILoc();
         pcoerce->coercionformat = (CoercionForm)  pdxlop->Edxlcf();
+
+        return (Expr *) pcoerce;
+}
+
+//---------------------------------------------------------------------------
+//      @function:
+//              CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceViaIO
+//
+//      @doc:
+//              Translates a DXL scalar coerce into a GPDB coerceviaio node
+//
+//---------------------------------------------------------------------------
+Expr *
+CTranslatorDXLToScalar::PcoerceFromDXLNodeScCoerceViaIO
+        (
+        const CDXLNode *pdxlnCoerce,
+        CMappingColIdVar *pmapcidvar
+        )
+{
+        GPOS_ASSERT(NULL != pdxlnCoerce);
+        CDXLScalarCoerceViaIO *pdxlop = CDXLScalarCoerceViaIO::PdxlopConvert(pdxlnCoerce->Pdxlop());
+
+        GPOS_ASSERT(1 == pdxlnCoerce->UlArity());
+        CDXLNode *pdxlnChild = (*pdxlnCoerce)[0];
+
+        Expr *pexprChild = PexprFromDXLNodeScalar(pdxlnChild, pmapcidvar);
+
+
+        CoerceViaIO *pcoerce = MakeNode(CoerceViaIO);
+
+        pcoerce->resulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidResultType())->OidObjectId();
+        pcoerce->arg = pexprChild;
+        pcoerce->location = pdxlop->ILoc();
+        pcoerce->coerceformat = (CoercionForm)  pdxlop->Edxlcf();
 
         return (Expr *) pcoerce;
 }
@@ -1414,6 +1449,7 @@ CTranslatorDXLToScalar::PconstOid
 
 	Const *pconst = MakeNode(Const);
 	pconst->consttype = CMDIdGPDB::PmdidConvert(pdxldatumOid->Pmdid())->OidObjectId();
+	pconst->consttypmod = -1;
 	pconst->constbyval = pdxldatumOid->FByValue();
 	pconst->constisnull = pdxldatumOid->FNull();
 	pconst->constlen = pdxldatumOid->UlLength();
@@ -1449,6 +1485,7 @@ CTranslatorDXLToScalar::PconstInt2
 
 	Const *pconst = MakeNode(Const);
 	pconst->consttype = CMDIdGPDB::PmdidConvert(pdxldatumint2->Pmdid())->OidObjectId();
+	pconst->consttypmod = -1;
 	pconst->constbyval = pdxldatumint2->FByValue();
 	pconst->constisnull = pdxldatumint2->FNull();
 	pconst->constlen = pdxldatumint2->UlLength();
@@ -1484,6 +1521,7 @@ CTranslatorDXLToScalar::PconstInt4
 
 	Const *pconst = MakeNode(Const);
 	pconst->consttype = CMDIdGPDB::PmdidConvert(pdxldatumint4->Pmdid())->OidObjectId();
+	pconst->consttypmod = -1;
 	pconst->constbyval = pdxldatumint4->FByValue();
 	pconst->constisnull = pdxldatumint4->FNull();
 	pconst->constlen = pdxldatumint4->UlLength();
@@ -1518,6 +1556,7 @@ CTranslatorDXLToScalar::PconstInt8
 
 	Const *pconst = MakeNode(Const);
 	pconst->consttype = CMDIdGPDB::PmdidConvert(pdxldatumint8->Pmdid())->OidObjectId();
+	pconst->consttypmod = -1;
 	pconst->constbyval = pdxldatumint8->FByValue();
 	pconst->constisnull = pdxldatumint8->FNull();
 	pconst->constlen = pdxldatumint8->UlLength();
@@ -1552,6 +1591,7 @@ CTranslatorDXLToScalar::PconstBool
 
 	Const *pconst = MakeNode(Const);
 	pconst->consttype = CMDIdGPDB::PmdidConvert(pdxldatumbool->Pmdid())->OidObjectId();
+	pconst->consttypmod = -1;
 	pconst->constbyval = pdxldatumbool->FByValue();
 	pconst->constisnull = pdxldatumbool->FNull();
 	pconst->constlen = pdxldatumbool->UlLength();
@@ -1587,6 +1627,7 @@ CTranslatorDXLToScalar::PconstGeneric
 
 	Const *pconst = MakeNode(Const);
 	pconst->consttype = CMDIdGPDB::PmdidConvert(pdxldatumgeneric->Pmdid())->OidObjectId();
+	pconst->consttypmod = -1;
 	pconst->constbyval = pdxldatumgeneric->FByValue();
 	pconst->constisnull = pdxldatumgeneric->FNull();
 	pconst->constlen = pdxldatumgeneric->UlLength();
@@ -1862,7 +1903,6 @@ CTranslatorDXLToScalar::PexprArrayRef
 	ArrayRef *parrayref = MakeNode(ArrayRef);
 	parrayref->refarraytype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidArray())->OidObjectId();
 	parrayref->refelemtype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidElem())->OidObjectId();
-	parrayref->refrestype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidReturn())->OidObjectId();
 
 	const ULONG ulArity = pdxlnArrayref->UlArity();
 	GPOS_ASSERT(3 == ulArity || 4 == ulArity);

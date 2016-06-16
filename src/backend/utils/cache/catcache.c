@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/catcache.c,v 1.136 2007/01/05 22:19:42 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/catcache.c,v 1.140.2.1 2008/03/05 17:01:33 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -19,6 +19,7 @@
 #include "access/heapam.h"
 #include "access/relscan.h"
 #include "access/sysattr.h"
+#include "access/tuptoaster.h"
 #include "access/valid.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_type.h"
@@ -26,6 +27,7 @@
 #ifdef CATCACHE_STATS
 #include "storage/ipc.h"		/* for on_proc_exit */
 #endif
+#include "storage/lmgr.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/inval.h"
@@ -145,6 +147,8 @@ GetCCHashEqFuncs(Oid keytype, PGFunction *hashfunc, RegProcedure *eqfunc)
 		case REGOPERATOROID:
 		case REGCLASSOID:
 		case REGTYPEOID:
+		case REGCONFIGOID:
+		case REGDICTIONARYOID:
 			*hashfunc = hashoid;
 
 			*eqfunc = F_OIDEQ;
@@ -172,6 +176,7 @@ static uint32
 CatalogCacheComputeHashValue(CatCache *cache, int nkeys, ScanKey cur_skey)
 {
 	uint32		hashValue = 0;
+	uint32		oneHash;
 
 	CACHE4_elog(DEBUG2, "CatalogCacheComputeHashValue %s %d %p",
 				cache->cc_relname,
@@ -181,24 +186,31 @@ CatalogCacheComputeHashValue(CatCache *cache, int nkeys, ScanKey cur_skey)
 	switch (nkeys)
 	{
 		case 4:
-			hashValue ^=
+			oneHash =
 				DatumGetUInt32(DirectFunctionCall1(cache->cc_hashfunc[3],
-											  cur_skey[3].sk_argument)) << 9;
+												   cur_skey[3].sk_argument));
+			hashValue ^= oneHash << 24;
+			hashValue ^= oneHash >> 8;
 			/* FALLTHROUGH */
 		case 3:
-			hashValue ^=
+			oneHash =
 				DatumGetUInt32(DirectFunctionCall1(cache->cc_hashfunc[2],
-											  cur_skey[2].sk_argument)) << 6;
+												   cur_skey[2].sk_argument));
+			hashValue ^= oneHash << 16;
+			hashValue ^= oneHash >> 16;
 			/* FALLTHROUGH */
 		case 2:
-			hashValue ^=
+			oneHash =
 				DatumGetUInt32(DirectFunctionCall1(cache->cc_hashfunc[1],
-											  cur_skey[1].sk_argument)) << 3;
+												   cur_skey[1].sk_argument));
+			hashValue ^= oneHash << 8;
+			hashValue ^= oneHash >> 24;
 			/* FALLTHROUGH */
 		case 1:
-			hashValue ^=
+			oneHash =
 				DatumGetUInt32(DirectFunctionCall1(cache->cc_hashfunc[0],
 												   cur_skey[0].sk_argument));
+			hashValue ^= oneHash;
 			break;
 		default:
 			elog(FATAL, "wrong number of hash keys: %d", nkeys);
@@ -929,8 +941,16 @@ InitCatCachePhase2(CatCache *cache, bool touch_index)
 	{
 		Relation	idesc;
 
+		/*
+		 * We must lock the underlying catalog before opening the index to
+		 * avoid deadlock, since index_open could possibly result in reading
+		 * this same catalog, and if anyone else is exclusive-locking this
+		 * catalog and index they'll be doing it in that order.
+		 */
+		LockRelationOid(cache->cc_reloid, AccessShareLock);
 		idesc = index_open(cache->cc_indexoid, AccessShareLock);
 		index_close(idesc, AccessShareLock);
+		UnlockRelationOid(cache->cc_reloid, AccessShareLock);
 	}
 }
 
@@ -1615,15 +1635,31 @@ CatalogCacheCreateEntry(CatCache *cache, HeapTuple ntp,
 						uint32 hashValue, Index hashIndex, bool negative)
 {
 	CatCTup    *ct;
+	HeapTuple	dtp;
 	MemoryContext oldcxt;
+
+	/*
+	 * If there are any out-of-line toasted fields in the tuple, expand them
+	 * in-line.  This saves cycles during later use of the catcache entry,
+	 * and also protects us against the possibility of the toast tuples being
+	 * freed before we attempt to fetch them, in case of something using a
+	 * slightly stale catcache entry.
+	 */
+	if (HeapTupleHasExternal(ntp))
+		dtp = toast_flatten_tuple(ntp, cache->cc_tupdesc);
+	else
+		dtp = ntp;
 
 	/*
 	 * Allocate CatCTup header in cache memory, and copy the tuple there too.
 	 */
 	oldcxt = MemoryContextSwitchTo(CacheMemoryContext);
 	ct = (CatCTup *) palloc(sizeof(CatCTup));
-	heap_copytuple_with_tuple(ntp, &ct->tuple);
+	heap_copytuple_with_tuple(dtp, &ct->tuple);
 	MemoryContextSwitchTo(oldcxt);
+
+	if (dtp != ntp)
+		heap_freetuple(dtp);
 
 	/*
 	 * Finish initializing the CatCTup header, and add it to the cache's

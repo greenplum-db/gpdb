@@ -177,8 +177,8 @@ DROP TABLE oldcor;
 -- typname is out of sync
 CREATE TABLE cor (a int, b float, c text);
 UPDATE pg_type SET typname='newcor' WHERE typrelid='cor'::regclass;
-ALTER TABLE cor RENAME TO newcor;
-ALTER TABLE newcor RENAME TO cor;
+ALTER TABLE cor RENAME TO newcor2;
+ALTER TABLE newcor2 RENAME TO cor;
 DROP TABLE cor;
 
 -- relname is out of sync
@@ -547,7 +547,7 @@ drop table atacc1;
 
 -- adding a new column as primary key to a non-empty table.
 -- should fail unless the column has a non-null default value.
-create table atacc1 ( test int ) distributed by (test);
+create table atacc1 ( test int );
 insert into atacc1 (test) values (0);
 -- add a primary key column without a default (fails).
 alter table atacc1 add column test2 int primary key;
@@ -1103,6 +1103,15 @@ select * from another order by 1,2;
 
 drop table another;
 
+-- disallow recursive containment of row types
+create temp table recur1 (f1 int);
+alter table recur1 add column f2 recur1; -- fails
+alter table recur1 add column f2 recur1[]; -- fails
+create temp table recur2 (f1 int, f2 recur1);
+alter table recur1 add column f2 recur2; -- fails
+alter table recur1 add column f2 int;
+alter table recur1 alter column f2 type recur2; -- fails
+
 --
 -- alter function
 --
@@ -1229,7 +1238,8 @@ select relname, relnatts from pg_class where relname = 'ao1';
 -- check col details in pg_attribute
 select  pg_class.relname, attname, typname from pg_attribute, pg_class, pg_type where attrelid = pg_class.oid and pg_class.relname = 'ao1' and atttypid = pg_type.oid and attname = 'col3';
 
--- no explicit entry in pg_attrdef for NULL default
+-- There's an explicit entry in pg_attrdef for the NULL default (although it has
+-- the same effect as no entry).
 select relname, attname, adsrc from pg_class, pg_attribute, pg_attrdef where attrelid = pg_class.oid and adrelid = pg_class.oid and adnum = pg_attribute.attnum and pg_class.relname = 'ao1';
 
 
@@ -1313,7 +1323,8 @@ select relname, relnatts from pg_class where relname = 'aoco1';
 -- check col details in pg_attribute
 select  pg_class.relname, attname, typname from pg_attribute, pg_class, pg_type where attrelid = pg_class.oid and pg_class.relname = 'aoco1' and atttypid = pg_type.oid and attname = 'col3';
 
--- no explicit entry in pg_attrdef for NULL default
+-- There's an explicit entry in pg_attrdef for the NULL default (although it has
+-- the same effect as no entry).
 select relname, attname, adsrc from pg_class, pg_attribute, pg_attrdef where attrelid = pg_class.oid and adrelid = pg_class.oid and adnum = pg_attribute.attnum and pg_class.relname = 'aoco1';
 
 --- 

@@ -14,7 +14,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/tuplesort.h,v 1.25 2007/01/09 02:14:16 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/utils/tuplesort.h,v 1.28 2008/01/01 19:45:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -105,6 +105,9 @@ extern void cdb_tuplesort_init_mk(Tuplesortstate_mk *state,
 							   int sort_flags,
 							   int64 maxdistinct);
 
+extern void tuplesort_set_bound(Tuplesortstate *state, int64 bound);
+extern void tuplesort_set_bound_mk(Tuplesortstate_mk *state, int64 bound);
+
 extern void tuplesort_puttupleslot(Tuplesortstate *state, TupleTableSlot *slot);
 extern void tuplesort_puttupleslot_mk(Tuplesortstate_mk *state, TupleTableSlot *slot);
 
@@ -117,8 +120,8 @@ extern void tuplesort_putdatum_mk(Tuplesortstate_mk *state, Datum val, bool isNu
 extern void tuplesort_performsort(Tuplesortstate *state);
 extern void tuplesort_performsort_mk(Tuplesortstate_mk *state);
 
-extern bool tuplesort_gettupleslot_pos(Tuplesortstate *state, TuplesortPos *pos, bool forward, TupleTableSlot *slot);
-extern bool tuplesort_gettupleslot_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos, bool forward, TupleTableSlot *slot);
+extern bool tuplesort_gettupleslot_pos(Tuplesortstate *state, TuplesortPos *pos, bool forward, TupleTableSlot *slot, MemoryContext mcontext);
+extern bool tuplesort_gettupleslot_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos, bool forward, TupleTableSlot *slot, MemoryContext mcontext);
 
 extern bool tuplesort_gettupleslot(Tuplesortstate *state, bool forward, TupleTableSlot *slot);
 extern bool tuplesort_gettupleslot_mk(Tuplesortstate_mk *state, bool forward, TupleTableSlot *slot);
@@ -136,6 +139,9 @@ extern void tuplesort_flush_mk(Tuplesortstate_mk *state);
 
 extern void tuplesort_finalize_stats(Tuplesortstate *state);
 extern void tuplesort_finalize_stats_mk(Tuplesortstate_mk *state);
+
+extern char *tuplesort_explain(Tuplesortstate *state);
+extern char *tuplesort_explain_mk(Tuplesortstate_mk *state);
 
 extern int	tuplesort_merge_order(long allowedMem);
 

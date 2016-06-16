@@ -862,6 +862,7 @@ sub printfndef
 		 ($tup->{prosrc} ? $tup->{prosrc} : "_null_" )) . " " .
 		($tup->{probin} ? $tup->{probin} : "_null_") . " " .
 		($tup->{proacl} ? $tup->{proacl} : "_null_") . " " . 
+		($tup->{proconfig} ? $tup->{proconfig} : "_null_") . " " . 
 		$tup->{prodataaccess} . " " .
 		"));\n";
 	$bigstr .= "DESCR(" . $fndef->{with}->{description} . ");\n"

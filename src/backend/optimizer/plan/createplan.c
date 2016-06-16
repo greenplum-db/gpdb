@@ -11,7 +11,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.225 2007/02/19 02:23:12 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.237.2.2 2009/07/17 23:20:15 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,6 +20,7 @@
 #include <limits.h>
 
 #include "catalog/pg_type.h"    /* INT8OID */
+#include "access/skey.h"
 #include "nodes/makefuncs.h"
 #include "executor/execHHashagg.h"
 #include "optimizer/clauses.h"
@@ -160,7 +161,8 @@ static ValuesScan *make_valuesscan(List *qptlist, List *qpqual,
 static BitmapAnd *make_bitmap_and(List *bitmapplans);
 static BitmapOr *make_bitmap_or(List *bitmapplans);
 static Sort *make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
-		  AttrNumber *sortColIdx, Oid *sortOperators, bool *nullsFirst);
+		  AttrNumber *sortColIdx, Oid *sortOperators, bool *nullsFirst,
+		  double limit_tuples);
 static List *flatten_grouping_list(List *groupcls);
 
 
@@ -585,7 +587,8 @@ create_gating_plan(PlannerInfo *root, Plan *plan, List *quals)
 	if (!pseudoconstants)
 		return plan;
 
-	return (Plan *) make_result((List *) copyObject(plan->targetlist),
+	return (Plan *) make_result(root,
+								plan->targetlist,
 								(Node *) pseudoconstants,
 								plan);
 }
@@ -708,7 +711,8 @@ create_append_plan(PlannerInfo *root, AppendPath *best_path)
 	if (best_path->subpaths == NIL)
 	{
 		/* Generate a Result plan with constant-FALSE gating qual */
-		return (Plan *) make_result(tlist,
+		return (Plan *) make_result(root,
+									tlist,
 									(Node *) list_make1(makeBoolConst(false,
 																	  false)),
 									NULL);
@@ -748,7 +752,7 @@ create_result_plan(PlannerInfo *root, ResultPath *best_path)
 
 	quals = order_qual_clauses(root, best_path->quals);
 
-	return make_result(tlist, (Node *) quals, NULL);
+	return make_result(root, tlist, (Node *) quals, NULL);
 }
 
 /*
@@ -832,18 +836,24 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path)
 	 * add any such expressions to the subplan's tlist.
 	 *
 	 * The subplan may have a "physical" tlist if it is a simple scan plan.
-	 * This should be left as-is if we don't need to add any expressions;
+	 * If we're going to sort, this should be reduced to the regular tlist,
+	 * so that we don't sort more data than we need to.  For hashing, the
+	 * tlist should be left as-is if we don't need to add any expressions;
 	 * but if we do have to add expressions, then a projection step will be
-	 * needed at runtime anyway, and so we may as well remove unneeded items.
+	 * needed at runtime anyway, so we may as well remove unneeded items.
 	 * Therefore newtlist starts from build_relation_tlist() not just a
 	 * copy of the subplan's tlist; and we don't install it into the subplan
-	 * unless stuff has to be added.
+	 * unless we are sorting or stuff has to be added.
+	 *
+	 * To find the correct list of values to unique-ify, we look in the
+	 * information saved for IN expressions.  If this code is ever used in
+	 * other scenarios, some other way of finding what to unique-ify will
+	 * be needed.  The IN clause's operators are needed too, since they
+	 * determine what the meaning of "unique" is in this context.
 	 *----------
 	 */
 	uniq_exprs = best_path->distinct_on_exprs;  /*CDB*/
 	in_operators = best_path->distinct_on_eq_operators; /*CDB*/
-    Insist(uniq_exprs);
-    Insist(in_operators);
 
 	/* initialize modified subplan tlist as just the "required" vars */
 	newtlist = build_relation_tlist(best_path->path.parent);
@@ -868,12 +878,14 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path)
 		}
 	}
 
-	/*
-	 * If the top plan node can't do projections, we need to add a Result
-	 * node to help it along.
-	 */
-	if (newitems)
-		subplan = plan_pushdown_tlist(subplan, newtlist);
+	if (newitems || best_path->umethod == UNIQUE_PATH_SORT)
+	{
+		/*
+		 * If the top plan node can't do projections, we need to add a Result
+		 * node to help it along.
+		 */
+		subplan = plan_pushdown_tlist(root, subplan, newtlist);
+	}
 
 	/*
 	 * Build control information showing which subplan output columns are to
@@ -907,8 +919,8 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path)
 		/*
 		 * Get the hashable equality operators for the Agg node to use.
 		 * Normally these are the same as the IN clause operators, but if
-		 * those are cross-type operators then the equality operators are
-		 * the ones for the IN clause operators' RHS datatype.
+		 * those are cross-type operators then the equality operators are the
+		 * ones for the IN clause operators' RHS datatype.
 		 */
 		groupOperators = (Oid *) palloc(numGroupCols * sizeof(Oid));
 		groupColPos = 0;
@@ -958,7 +970,7 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path)
 			SortClause *sortcl;
 
 			sortop = get_ordering_op_for_equality_op(in_oper, false);
-			if (!OidIsValid(sortop))		/* shouldn't happen */
+			if (!OidIsValid(sortop))	/* shouldn't happen */
 				elog(ERROR, "could not find ordering operator for equality operator %u",
 					 in_oper);
 			tle = get_tle_by_resno(subplan->targetlist,
@@ -2190,12 +2202,6 @@ create_bitmap_appendonly_scan_plan(PlannerInfo *root,
 	 */
 	bitmapqualorig = list_difference_ptr(bitmapqualorig, qpqual);
 
-	/*
-	 * Copy the finished bitmapqualorig to make sure we have an independent
-	 * copy --- needed in case there are subplans in the index quals
-	 */
-	bitmapqualorig = copyObject(bitmapqualorig);
-
 	/* Finally ready to build the plan node */
 	scan_plan = make_bitmap_appendonlyscan(tlist,
 										   qpqual,
@@ -2483,9 +2489,10 @@ static SubqueryScan *
 create_ctescan_plan(PlannerInfo *root, Path *best_path,
 					List *tlist, List *scan_clauses)
 {
-	Assert(best_path->parent->rtekind == RTE_CTE);
-
 	Index scan_relid = best_path->parent->relid;
+	SubqueryScan *scan_plan;
+
+	Assert(best_path->parent->rtekind == RTE_CTE);
 
 	Assert(scan_relid > 0);
 	
@@ -2495,11 +2502,11 @@ create_ctescan_plan(PlannerInfo *root, Path *best_path,
 	/* Sort clauses into best execution order */
 	scan_clauses = order_qual_clauses(root, scan_clauses);
 
-	SubqueryScan *scan_plan = make_subqueryscan(root, tlist,
-												scan_clauses,
-												scan_relid,
-												best_path->parent->subplan,
-												best_path->parent->subrtable);
+	scan_plan = make_subqueryscan(root, tlist,
+								  scan_clauses,
+								  scan_relid,
+								  best_path->parent->subplan,
+								  best_path->parent->subrtable);
 
 	copy_path_costsize(root, &scan_plan->scan.plan, best_path);
 
@@ -2521,7 +2528,7 @@ create_functionscan_plan(PlannerInfo *root, Path *best_path,
 
 	/* it should be a function base rel... */
 	Assert(scan_relid > 0);
-	rte = rt_fetch(scan_relid, root->parse->rtable);
+	rte = planner_rt_fetch(scan_relid, root);
 	Assert(rte->rtekind == RTE_FUNCTION);
 
 	/* Sort clauses into best execution order */
@@ -2591,7 +2598,7 @@ create_valuesscan_plan(PlannerInfo *root, Path *best_path,
 
 	/* it should be a values base rel... */
 	Assert(scan_relid > 0);
-	rte = rt_fetch(scan_relid, root->parse->rtable);
+	rte = planner_rt_fetch(scan_relid, root);
 	Assert(rte->rtekind == RTE_VALUES);
 
 	/* Sort clauses into best execution order */
@@ -2780,8 +2787,8 @@ create_nestloop_plan(PlannerInfo *root,
 		}
 		else
 		{
-			Assert(IsA(best_path->innerjoinpath, BitmapAppendOnlyPath));
 			BitmapAppendOnlyPath *innerpath = (BitmapAppendOnlyPath *) best_path->innerjoinpath;
+			Assert(IsA(best_path->innerjoinpath, BitmapAppendOnlyPath));
 			isjoininner = innerpath->isjoininner;
 			bitmapqual = innerpath->bitmapqual;
 		}
@@ -2866,10 +2873,6 @@ create_mergejoin_plan(PlannerInfo *root,
 	bool	   *mergenullsfirst;
 	MergeJoin  *join_plan;
 	int			i;
-	EquivalenceClass *lastoeclass;
-	EquivalenceClass *lastieclass;
-	PathKey	   *opathkey;
-	PathKey	   *ipathkey;
 	ListCell   *lc;
 	ListCell   *lop;
 	ListCell   *lip;
@@ -2974,6 +2977,30 @@ create_mergejoin_plan(PlannerInfo *root,
 	}
 
 	/*
+	 * If inner plan is a sort that is expected to spill to disk, add a
+	 * materialize node to shield it from the need to handle mark/restore.
+	 * This will allow it to perform the last merge pass on-the-fly, while in
+	 * most cases not requiring the materialize to spill to disk.
+	 *
+	 * XXX really, Sort oughta do this for itself, probably, to avoid the
+	 * overhead of a separate plan node.
+	 */
+	if (IsA(inner_plan, Sort) &&
+		sort_exceeds_work_mem((Sort *) inner_plan))
+	{
+		Plan	   *matplan = (Plan *) make_material(inner_plan);
+
+		/*
+		 * We assume the materialize will not spill to disk, and therefore
+		 * charge just cpu_tuple_cost per tuple.
+		 */
+		copy_plan_costsize(matplan, inner_plan);
+		matplan->total_cost += cpu_tuple_cost * matplan->plan_rows;
+
+		inner_plan = matplan;
+	}
+
+	/*
 	 * Compute the opfamily/strategy/nullsfirst arrays needed by the executor.
 	 * The information is in the pathkeys for the two inputs, but we need to
 	 * be careful about the possibility of mergeclauses sharing a pathkey
@@ -2985,18 +3012,19 @@ create_mergejoin_plan(PlannerInfo *root,
 	mergestrategies = (int *) palloc(nClauses * sizeof(int));
 	mergenullsfirst = (bool *) palloc(nClauses * sizeof(bool));
 
-	lastoeclass = NULL;
-	lastieclass = NULL;
-	opathkey = NULL;
-	ipathkey = NULL;
 	lop = list_head(outerpathkeys);
 	lip = list_head(innerpathkeys);
 	i = 0;
 	foreach(lc, best_path->path_mergeclauses)
 	{
-		RestrictInfo   *rinfo = (RestrictInfo *) lfirst(lc);
+		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
 		EquivalenceClass *oeclass;
 		EquivalenceClass *ieclass;
+		PathKey    *opathkey;
+		PathKey    *ipathkey;
+		EquivalenceClass *opeclass;
+		EquivalenceClass *ipeclass;
+		ListCell   *l2;
 
 		/* fetch outer/inner eclass from mergeclause */
 		Assert(IsA(rinfo, RestrictInfo));
@@ -3013,28 +3041,100 @@ create_mergejoin_plan(PlannerInfo *root,
 		Assert(oeclass != NULL);
 		Assert(ieclass != NULL);
 
-		/* should match current or next pathkeys */
-		/* we check this carefully for debugging reasons */
-		if (oeclass != lastoeclass)
+		/*
+		 * For debugging purposes, we check that the eclasses match the
+		 * paths' pathkeys.  In typical cases the merge clauses are one-to-one
+		 * with the pathkeys, but when dealing with partially redundant query
+		 * conditions, we might have clauses that re-reference earlier path
+		 * keys.  The case that we need to reject is where a pathkey is
+		 * entirely skipped over.
+		 *
+		 * lop and lip reference the first as-yet-unused pathkey elements;
+		 * it's okay to match them, or any element before them.  If they're
+		 * NULL then we have found all pathkey elements to be used.
+		 */
+		if (lop)
 		{
-			if (!lop)
-				elog(ERROR, "too few pathkeys for mergeclauses");
 			opathkey = (PathKey *) lfirst(lop);
-			lop = lnext(lop);
-			lastoeclass = opathkey->pk_eclass;
-			if (oeclass != lastoeclass)
-				elog(ERROR, "outer pathkeys do not match mergeclause");
+			opeclass = opathkey->pk_eclass;
+			if (oeclass == opeclass)
+			{
+				/* fast path for typical case */
+				lop = lnext(lop);
+			}
+			else
+			{
+				/* redundant clauses ... must match something before lop */
+				foreach(l2, outerpathkeys)
+				{
+					if (l2 == lop)
+						break;
+					opathkey = (PathKey *) lfirst(l2);
+					opeclass = opathkey->pk_eclass;
+					if (oeclass == opeclass)
+						break;
+				}
+				if (oeclass != opeclass)
+					elog(ERROR, "outer pathkeys do not match mergeclauses");
+			}
 		}
-		if (ieclass != lastieclass)
+		else
 		{
-			if (!lip)
-				elog(ERROR, "too few pathkeys for mergeclauses");
-			ipathkey = (PathKey *) lfirst(lip);
-			lip = lnext(lip);
-			lastieclass = ipathkey->pk_eclass;
-			if (ieclass != lastieclass)
-				elog(ERROR, "inner pathkeys do not match mergeclause");
+			/* redundant clauses ... must match some already-used pathkey */
+			opathkey = NULL;
+			opeclass = NULL;
+			foreach(l2, outerpathkeys)
+			{
+				opathkey = (PathKey *) lfirst(l2);
+				opeclass = opathkey->pk_eclass;
+				if (oeclass == opeclass)
+					break;
+			}
+			if (l2 == NULL)
+				elog(ERROR, "outer pathkeys do not match mergeclauses");
 		}
+
+		if (lip)
+		{
+			ipathkey = (PathKey *) lfirst(lip);
+			ipeclass = ipathkey->pk_eclass;
+			if (ieclass == ipeclass)
+			{
+				/* fast path for typical case */
+				lip = lnext(lip);
+			}
+			else
+			{
+				/* redundant clauses ... must match something before lip */
+				foreach(l2, innerpathkeys)
+				{
+					if (l2 == lip)
+						break;
+					ipathkey = (PathKey *) lfirst(l2);
+					ipeclass = ipathkey->pk_eclass;
+					if (ieclass == ipeclass)
+						break;
+				}
+				if (ieclass != ipeclass)
+					elog(ERROR, "inner pathkeys do not match mergeclauses");
+			}
+		}
+		else
+		{
+			/* redundant clauses ... must match some already-used pathkey */
+			ipathkey = NULL;
+			ipeclass = NULL;
+			foreach(l2, innerpathkeys)
+			{
+				ipathkey = (PathKey *) lfirst(l2);
+				ipeclass = ipathkey->pk_eclass;
+				if (ieclass == ipeclass)
+					break;
+			}
+			if (l2 == NULL)
+				elog(ERROR, "inner pathkeys do not match mergeclauses");
+		}
+
 		/* pathkeys should match each other too (more debugging) */
 		if (opathkey->pk_opfamily != ipathkey->pk_opfamily ||
 			opathkey->pk_strategy != ipathkey->pk_strategy ||
@@ -3048,6 +3148,11 @@ create_mergejoin_plan(PlannerInfo *root,
 		i++;
 	}
 
+	/*
+	 * Note: it is not an error if we have additional pathkey elements
+	 * (i.e., lop or lip isn't NULL here).  The input paths might be
+	 * better-sorted than we need for the current mergejoin.
+	 */
 
 	/*
 	 * Now we can build the mergejoin node.
@@ -3224,6 +3329,7 @@ fix_indexqual_references(List *indexquals, IndexPath *index_path,
 		Oid			stratlefttype;
 		Oid			stratrighttype;
 		bool		recheck;
+		bool		is_null_op = false;
 
 		Assert(IsA(rinfo, RestrictInfo));
 
@@ -3310,6 +3416,17 @@ fix_indexqual_references(List *indexquals, IndexPath *index_path,
 														 &opfamily);
 			clause_op = saop->opno;
 		}
+		else if (IsA(clause, NullTest))
+		{
+			NullTest   *nt = (NullTest *) clause;
+
+			Assert(nt->nulltesttype == IS_NULL);
+			nt->arg = (Expr *) fix_indexqual_operand((Node *) nt->arg,
+													 index,
+													 &opfamily);
+			is_null_op = true;
+			clause_op = InvalidOid;		/* keep compiler quiet */
+		}
 		else
 		{
 			elog(ERROR, "unsupported indexqual type: %d",
@@ -3319,16 +3436,27 @@ fix_indexqual_references(List *indexquals, IndexPath *index_path,
 
 		*fixed_indexquals = lappend(*fixed_indexquals, clause);
 
-		/*
-		 * Look up the (possibly commuted) operator in the operator family to
-		 * get its strategy number and the recheck indicator.	This also
-		 * double-checks that we found an operator matching the index.
-		 */
-		get_op_opfamily_properties(clause_op, opfamily,
-								   &stratno,
-								   &stratlefttype,
-								   &stratrighttype,
-								   &recheck);
+		if (is_null_op)
+		{
+			/* IS NULL doesn't have a clause_op */
+			stratno = InvalidStrategy;
+			stratrighttype = InvalidOid;
+			/* We assume it's non-lossy ... might need more work someday */
+			recheck = false;
+		}
+		else
+		{
+			/*
+			 * Look up the (possibly commuted) operator in the operator family
+			 * to get its strategy number and the recheck indicator. This also
+			 * double-checks that we found an operator matching the index.
+			 */
+			get_op_opfamily_properties(clause_op, opfamily,
+									   &stratno,
+									   &stratlefttype,
+									   &stratrighttype,
+									   &recheck);
+		}
 
 		*indexstrategy = lappend_int(*indexstrategy, stratno);
 		*indexsubtype = lappend_oid(*indexsubtype, stratrighttype);
@@ -3434,6 +3562,7 @@ get_switched_clauses(List *clauses, Relids outerrelids)
 		RestrictInfo *restrictinfo = (RestrictInfo *) lfirst(l);
 
 		Expr *rclause = restrictinfo->clause;
+		OpExpr *clause;
 
 		/**
 		 * If this is a IS NOT FALSE boolean test, we can peek underneath.
@@ -3449,7 +3578,7 @@ get_switched_clauses(List *clauses, Relids outerrelids)
 		}
 
 		Assert(is_opclause(rclause));
-		OpExpr *clause = (OpExpr *) rclause;
+		clause = (OpExpr *) rclause;
 		if (bms_is_subset(restrictinfo->right_relids, outerrelids))
 		{
 			/*
@@ -3506,8 +3635,8 @@ order_qual_clauses(PlannerInfo *root, List *clauses)
 {
 	typedef struct
 	{
-		Node   *clause;
-		Cost	cost;
+		Node	   *clause;
+		Cost		cost;
 	} QualItem;
 	int			nitems = list_length(clauses);
 	QualItem   *items;
@@ -3538,8 +3667,8 @@ order_qual_clauses(PlannerInfo *root, List *clauses)
 
 	/*
 	 * Sort.  We don't use qsort() because it's not guaranteed stable for
-	 * equal keys.  The expected number of entries is small enough that
-	 * a simple insertion sort should be good enough.
+	 * equal keys.	The expected number of entries is small enough that a
+	 * simple insertion sort should be good enough.
 	 */
 	for (i = 1; i < nitems; i++)
 	{
@@ -3549,9 +3678,9 @@ order_qual_clauses(PlannerInfo *root, List *clauses)
 		/* insert newitem into the already-sorted subarray */
 		for (j = i; j > 0; j--)
 		{
-			if (newitem.cost >= items[j-1].cost)
+			if (newitem.cost >= items[j - 1].cost)
 				break;
-			items[j] = items[j-1];
+			items[j] = items[j - 1];
 		}
 		items[j] = newitem;
 	}
@@ -3848,12 +3977,6 @@ make_subqueryscan(PlannerInfo *root,
 	SubqueryScan *node = makeNode(SubqueryScan);
 	Plan	   *plan = &node->scan.plan;
 
-	/**
-	 * Ensure that the plan we're going to attach to the subquery scan has all the
-	 * parameter fields figured out.
-	 */
-	SS_finalize_plan(root, subrtable, subplan, false);
-
 	/*
 	 * Cost is figured here for the convenience of prepunion.c.  Note this is
 	 * only correct for the case where qpqual is empty; otherwise caller
@@ -4063,7 +4186,7 @@ make_hash(Plan *lefttree)
 	 * plan; this only affects EXPLAIN display not decisions.
 	 */
 	plan->startup_cost = plan->total_cost;
-	plan->targetlist = copyObject(lefttree->targetlist);
+	plan->targetlist = lefttree->targetlist;
 	plan->qual = NIL;
 	plan->lefttree = lefttree;
 	plan->righttree = NULL;
@@ -4107,17 +4230,20 @@ make_mergejoin(List *tlist,
  * make_sort --- basic routine to build a Sort plan node
  *
  * Caller must have built the sortColIdx, sortOperators, and nullsFirst
- * arrays already.
+ * arrays already.	limit_tuples is as for cost_sort (in particular, pass
+ * -1 if no limit)
  */
 static Sort *
 make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
-		  AttrNumber *sortColIdx, Oid *sortOperators, bool *nullsFirst)
+		  AttrNumber *sortColIdx, Oid *sortOperators, bool *nullsFirst,
+		  double limit_tuples)
 {
 	Sort	   *node = makeNode(Sort);
 	Plan	   *plan = &node->plan;
 
 	copy_plan_costsize(plan, lefttree); /* only care about copying size */
-	plan = add_sort_cost(root, plan, numCols, sortColIdx, sortOperators);
+	plan = add_sort_cost(root, plan, numCols, sortColIdx, sortOperators,
+						 limit_tuples);
 
 	plan->targetlist = cdbpullup_targetlist(lefttree,
                             cdbpullup_exprHasSubplanRef((Expr *)lefttree->targetlist));
@@ -4153,7 +4279,8 @@ make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
  * that root may be NULL (e.g. when called outside make_sort).
  */
 Plan *
-add_sort_cost(PlannerInfo *root, Plan *input, int numCols, AttrNumber *sortColIdx, Oid *sortOperators)
+add_sort_cost(PlannerInfo *root, Plan *input, int numCols,
+			  AttrNumber *sortColIdx, Oid *sortOperators, double limit_tuples)
 {
 	Path		sort_path;		/* dummy for result of cost_sort */
 
@@ -4164,7 +4291,8 @@ add_sort_cost(PlannerInfo *root, Plan *input, int numCols, AttrNumber *sortColId
 	cost_sort(&sort_path, root, NIL,
 			  input->total_cost,
 			  input->plan_rows,
-			  input->plan_width);
+			  input->plan_width,
+			  limit_tuples);
 	input->startup_cost = sort_path.startup_cost;
 	input->total_cost = sort_path.total_cost;
 
@@ -4190,8 +4318,8 @@ add_sort_column(AttrNumber colIdx, Oid sortOp, bool nulls_first,
 	for (i = 0; i < numCols; i++)
 	{
 		/*
-		 * Note: we check sortOp because it's conceivable that "ORDER BY
-		 * foo USING <, foo USING <<<" is not redundant, if <<< distinguishes
+		 * Note: we check sortOp because it's conceivable that "ORDER BY foo
+		 * USING <, foo USING <<<" is not redundant, if <<< distinguishes
 		 * values that < considers equal.  We need not check nulls_first
 		 * however because a lower-order column with the same sortop but
 		 * opposite nulls direction is redundant.
@@ -4218,11 +4346,11 @@ add_sort_column(AttrNumber colIdx, Oid sortOp, bool nulls_first,
  *	  'lefttree' is the node which yields input tuples
  *	  'pathkeys' is the list of pathkeys by which the result is to be sorted
  *	  'limit_tuples' is the bound on the number of output tuples;
- *               -1 if no bound
+ *				-1 if no bound
  *	  'add_keys_to_targetlist' is true if it is ok to append to the subplan's
- *               targetlist or insert a Result node atop the subplan to
- *               evaluate sort key exprs that are not already present in the
- *               subplan's tlist.
+ *				targetlist or insert a Result node atop the subplan to
+ *				evaluate sort key exprs that are not already present in the
+ *				subplan's tlist.
  *
  * We must convert the pathkey information into arrays of sort key column
  * numbers and sort operator OIDs.
@@ -4262,91 +4390,128 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
 
 	foreach(i, pathkeys)
 	{
-		PathKey	   *pathkey = (PathKey *) lfirst(i);
+		PathKey    *pathkey = (PathKey *) lfirst(i);
+		EquivalenceClass *ec = pathkey->pk_eclass;
 		TargetEntry *tle = NULL;
 		Oid			pk_datatype = InvalidOid;
 		Oid			sortop;
 		ListCell   *j;
 
-		/*
-		 * We can sort by any non-constant expression listed in the pathkey's
-		 * EquivalenceClass.  For now, we take the first one that corresponds
-		 * to an available Var in the tlist. If there isn't any, use the first
-		 * one that is an expression in the input's vars.  (The non-const
-		 * restriction only matters if the EC is below_outer_join; but if it
-		 * isn't, it won't contain consts anyway, else we'd have discarded
-		 * the pathkey as redundant.)
-		 *
-		 * XXX if we have a choice, is there any way of figuring out which
-		 * might be cheapest to execute?  (For example, int4lt is likely much
-		 * cheaper to execute than numericlt, but both might appear in the
-		 * same equivalence class...)  Not clear that we ever will have an
-		 * interesting choice in practice, so it may not matter.
-		 */
-		foreach(j, pathkey->pk_eclass->ec_members)
+		if (ec->ec_has_volatile)
 		{
-			EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
-
-			if (em->em_is_const || em->em_is_child)
-				continue;
-			tle = tlist_member((Node *) em->em_expr, tlist);
-			if (tle)
-			{
-				pk_datatype = em->em_datatype;
-				break;			/* found expr already in tlist */
-			}
+			/*
+			 * If the pathkey's EquivalenceClass is volatile, then it must
+			 * have come from an ORDER BY clause, and we have to match it to
+			 * that same targetlist entry.
+			 */
+			if (ec->ec_sortref == 0)	/* can't happen */
+				elog(ERROR, "volatile EquivalenceClass has no sortref");
+			tle = get_sortgroupref_tle(ec->ec_sortref, tlist);
+			Assert(tle);
+			Assert(list_length(ec->ec_members) == 1);
+			pk_datatype = ((EquivalenceMember *) linitial(ec->ec_members))->em_datatype;
 		}
-		if (!tle)
+		else
 		{
-			/* No matching Var; look for a computable expression */
-			Expr   *sortexpr = NULL;
-
-			if (!add_keys_to_targetlist)
-				break;
-
-			foreach(j, pathkey->pk_eclass->ec_members)
+			/*
+			 * Otherwise, we can sort by any non-constant expression listed in
+			 * the pathkey's EquivalenceClass.  For now, we take the first one
+			 * that corresponds to an available item in the tlist.	If there
+			 * isn't any, use the first one that is an expression in the
+			 * input's vars.  (The non-const restriction only matters if the
+			 * EC is below_outer_join; but if it isn't, it won't contain
+			 * consts anyway, else we'd have discarded the pathkey as
+			 * redundant.)
+			 *
+			 * XXX if we have a choice, is there any way of figuring out which
+			 * might be cheapest to execute?  (For example, int4lt is likely
+			 * much cheaper to execute than numericlt, but both might appear
+			 * in the same equivalence class...)  Not clear that we ever will
+			 * have an interesting choice in practice, so it may not matter.
+			 */
+			foreach(j, ec->ec_members)
 			{
 				EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
-				List	   *exprvars;
-				ListCell   *k;
 
 				if (em->em_is_const || em->em_is_child)
 					continue;
-				sortexpr = em->em_expr;
-				exprvars = pull_var_clause((Node *) sortexpr, false);
-				foreach(k, exprvars)
-				{
-					if (!tlist_member(lfirst(k), tlist))
-						break;
-				}
-				list_free(exprvars);
-				if (!k)
+
+				tle = tlist_member((Node *) em->em_expr, tlist);
+				if (tle)
 				{
 					pk_datatype = em->em_datatype;
-					break;		/* found usable expression */
+					break;		/* found expr already in tlist */
+				}
+
+				/*
+				 * We can also use it if the pathkey expression is a relabel
+				 * of the tlist entry, or vice versa.  This is needed for
+				 * binary-compatible cases (cf. make_pathkey_from_sortinfo).
+				 * We prefer an exact match, though, so we do the basic search
+				 * first.
+				 */
+				tle = tlist_member_ignore_relabel((Node *) em->em_expr, tlist);
+				if (tle)
+				{
+					pk_datatype = em->em_datatype;
+					break;		/* found expr already in tlist */
 				}
 			}
-			if (!j)
-				elog(ERROR, "could not find pathkey item to sort");
 
-			/*
-			 * Do we need to insert a Result node?
-			 */
-			if (!is_projection_capable_plan(lefttree))
+			if (!tle)
 			{
-				tlist = copyObject(tlist);
-				lefttree = (Plan *) make_result(tlist, NULL, lefttree);
-			}
+				/* No matching tlist item; look for a computable expression */
+				Expr	   *sortexpr = NULL;
 
-			/*
-			 * Add resjunk entry to input's tlist
-			 */
-			tle = makeTargetEntry(sortexpr,
-								  list_length(tlist) + 1,
-								  NULL,
-								  true);
-			tlist = lappend(tlist, tle);
-			lefttree->targetlist = tlist;		/* just in case NIL before */
+				if (!add_keys_to_targetlist)
+					break;
+
+				foreach(j, ec->ec_members)
+				{
+					EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
+					List	   *exprvars;
+					ListCell   *k;
+
+					if (em->em_is_const || em->em_is_child)
+						continue;
+					sortexpr = em->em_expr;
+					exprvars = pull_var_clause((Node *) sortexpr, false);
+					foreach(k, exprvars)
+					{
+						if (!tlist_member_ignore_relabel(lfirst(k), tlist))
+							break;
+					}
+					list_free(exprvars);
+					if (!k)
+					{
+						pk_datatype = em->em_datatype;
+						break;	/* found usable expression */
+					}
+				}
+				if (!j)
+					elog(ERROR, "could not find pathkey item to sort");
+
+				/*
+				 * Do we need to insert a Result node?
+				 */
+				if (!is_projection_capable_plan(lefttree))
+				{
+					/* copy needed so we don't modify input's tlist below */
+					tlist = copyObject(tlist);
+					lefttree = (Plan *) make_result(root, tlist, NULL,
+													lefttree);
+				}
+
+				/*
+				 * Add resjunk entry to input's tlist
+				 */
+				tle = makeTargetEntry(sortexpr,
+									  list_length(tlist) + 1,
+									  NULL,
+									  true);
+				tlist = lappend(tlist, tle);
+				lefttree->targetlist = tlist;	/* just in case NIL before */
+			}
 		}
 
 		/*
@@ -4380,7 +4545,7 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
 		return NULL;
 
 	return make_sort(root, lefttree, numsortkeys,
-					 sortColIdx, sortOperators, nullsFirst);
+					 sortColIdx, sortOperators, nullsFirst, limit_tuples);
 }
 
 /*
@@ -4429,7 +4594,7 @@ make_sort_from_sortclauses(PlannerInfo *root, List *sortcls, Plan *lefttree)
 	Assert(numsortkeys > 0);
 
 	return make_sort(root, lefttree, numsortkeys,
-					 sortColIdx, sortOperators, nullsFirst);
+					 sortColIdx, sortOperators, nullsFirst, -1.0);
 }
 
 /*
@@ -4516,7 +4681,7 @@ make_sort_from_groupcols(PlannerInfo *root,
 	Assert(numsortkeys > 0);
 
 	return make_sort(root, lefttree, numsortkeys,
-					 sortColIdx, sortOperators, nullsFirst);
+					 sortColIdx, sortOperators, nullsFirst, -1.0);
 }
 
 
@@ -4626,7 +4791,7 @@ make_sort_from_reordered_groupcols(PlannerInfo *root,
 	Assert(numsortkeys > 0);
 
 	return make_sort(root, lefttree, numsortkeys,
-					 sortColIdx, sortOperators, nullsFirst);
+					 sortColIdx, sortOperators, nullsFirst, -1.0);
 }
 
 /*
@@ -4673,7 +4838,7 @@ make_material(Plan *lefttree)
 	Plan	   *plan = &node->plan;
 
 	/* cost should be inserted by caller */
-	plan->targetlist = copyObject(lefttree->targetlist);
+	plan->targetlist = lefttree->targetlist;
 	plan->qual = NIL;
 	plan->lefttree = lefttree;
 	plan->righttree = NULL;
@@ -4958,7 +5123,7 @@ make_tablefunction(List *tlist,
 
 /*
  * distinctList is a list of SortClauses, identifying the targetlist items
- * that should be considered by the Unique filter.  The input path must
+ * that should be considered by the Unique filter.	The input path must
  * already be sorted accordingly.
  */
 Unique *
@@ -5008,7 +5173,7 @@ make_unique(Plan *lefttree, List *distinctList)
 
 		uniqColIdx[keyno] = tle->resno;
 		uniqOperators[keyno] = get_equality_op_for_ordering_op(sortcl->sortop);
-		if (!OidIsValid(uniqOperators[keyno]))		/* shouldn't happen */
+		if (!OidIsValid(uniqOperators[keyno]))	/* shouldn't happen */
 			elog(ERROR, "could not find equality operator for ordering operator %u",
 				 sortcl->sortop);
 		keyno++;
@@ -5082,7 +5247,7 @@ make_setop(SetOpCmd cmd, Plan *lefttree,
 
 		dupColIdx[keyno] = tle->resno;
 		dupOperators[keyno] = get_equality_op_for_ordering_op(sortcl->sortop);
-		if (!OidIsValid(dupOperators[keyno]))		/* shouldn't happen */
+		if (!OidIsValid(dupOperators[keyno]))	/* shouldn't happen */
 			elog(ERROR, "could not find equality operator for ordering operator %u",
 				 sortcl->sortop);
 		keyno++;
@@ -5190,7 +5355,8 @@ make_limit(Plan *lefttree, Node *limitOffset, Node *limitCount,
  * cost.  In either case, tlist eval cost is not to be included here.
  */
 Result *
-make_result(List *tlist,
+make_result(PlannerInfo *root,
+			List *tlist,
 			Node *resconstantqual,
 			Plan *subplan)
 {
@@ -5209,7 +5375,7 @@ make_result(List *tlist,
 		{
 			QualCost	qual_cost;
 
-			cost_qual_eval(&qual_cost, (List *) resconstantqual, NULL /*root*/);
+			cost_qual_eval(&qual_cost, (List *) resconstantqual, root);
 			/* resconstantqual is evaluated once at startup */
 			plan->startup_cost += qual_cost.startup + qual_cost.per_tuple;
 			plan->total_cost += qual_cost.startup + qual_cost.per_tuple;
@@ -5293,13 +5459,13 @@ is_projection_capable_plan(Plan *plan)
  * the given plan.
  */
 Plan *
-plan_pushdown_tlist(Plan *plan, List *tlist)
+plan_pushdown_tlist(PlannerInfo *root, Plan *plan, List *tlist)
 {
 	if (is_projection_capable_plan(plan))
     {
         /* Fix up annotation of plan's distribution and ordering properties. */
         if (plan->flow)
-            plan->flow = pull_up_Flow((Plan *)make_result(tlist, NULL, plan),
+            plan->flow = pull_up_Flow((Plan *)make_result(root, tlist, NULL, plan),
                                       plan, true);
 
         /* Install the new targetlist. */
@@ -5310,7 +5476,7 @@ plan_pushdown_tlist(Plan *plan, List *tlist)
         Plan   *subplan = plan;
 
 	    /* Insert a Result node to evaluate the targetlist. */
-        plan = (Plan *)make_result(tlist, NULL, subplan);
+        plan = (Plan *)make_result(root, tlist, NULL, subplan);
 
         /* Propagate the subplan's distribution and ordering properties. */
 		if (subplan->flow)

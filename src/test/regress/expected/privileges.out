@@ -689,8 +689,8 @@ revoke select on dep_priv_test from regressuser4 cascade;
 \dp dep_priv_test
                                                          Access privileges for database "regression"
  Schema |     Name      | Type  |                                                     Access privileges                                                      
---------+---------------+-------+----------------------------------------------------------------------------------------------------------------------------
- public | dep_priv_test | table | {regressuser1=arwdDxt/regressuser1,regressuser2=r*/regressuser1,regressuser3=r*/regressuser1,regressuser4=r*/regressuser3}
+--------+---------------+-------+--------------------------------------------------------------------------------------------------------------------------------------------------------
+ public | dep_priv_test | table | {regressuser1=arwdDxt/regressuser1,regressuser2=r*/regressuser1,regressuser3=r*/regressuser1,regressuser4=r*/regressuser3,regressuser5=r/regressuser4}
 (1 row)
 
 set session role regressuser3;

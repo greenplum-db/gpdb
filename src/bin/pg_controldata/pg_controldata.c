@@ -6,7 +6,7 @@
  * copyright (c) Oliver Elphick <olly@lfix.co.uk>, 2001;
  * licence: BSD
  *
- * $PostgreSQL: pgsql/src/bin/pg_controldata/pg_controldata.c,v 1.32 2006/12/08 19:50:53 tgl Exp $
+ * $PostgreSQL: pgsql/src/bin/pg_controldata/pg_controldata.c,v 1.36.2.1 2008/09/24 08:59:46 mha Exp $
  */
 #include "postgres_fe.h"
 
@@ -182,9 +182,6 @@ main(int argc, char *argv[])
 	printf(_("Latest checkpoint's REDO location:    %X/%X\n"),
 		   ControlFile.checkPointCopy.redo.xlogid,
 		   ControlFile.checkPointCopy.redo.xrecoff);
-	printf(_("Latest checkpoint's UNDO location:    %X/%X\n"),
-		   ControlFile.checkPointCopy.undo.xlogid,
-		   ControlFile.checkPointCopy.undo.xrecoff);
 	printf(_("Latest checkpoint's TimeLineID:       %u\n"),
 		   ControlFile.checkPointCopy.ThisTimeLineID);
 	printf(_("Latest checkpoint's NextXID:          %u/%u\n"),
@@ -221,6 +218,8 @@ main(int argc, char *argv[])
 		   ControlFile.nameDataLen);
 	printf(_("Maximum columns in an index:          %u\n"),
 		   ControlFile.indexMaxKeys);
+	printf(_("Maximum size of a TOAST chunk:        %u\n"),
+		   ControlFile.toast_max_chunk_size);
 	printf(_("Date/time type storage:               %s\n"),
 		   (ControlFile.enableIntTimes ? _("64-bit integers") : _("floating-point numbers")));
 	printf(_("Maximum length of locale name:        %u\n"),

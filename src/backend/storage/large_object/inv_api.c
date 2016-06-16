@@ -35,7 +35,6 @@
 #include "access/tuptoaster.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
-#include "catalog/catquery.h" 
 #include "catalog/indexing.h"
 #include "catalog/pg_largeobject.h"
 #include "commands/comment.h"
@@ -146,11 +145,6 @@ myLargeObjectExists(Oid loid, Snapshot snapshot)
 	/*
 	 * See if we can find any tuples belonging to the specified LO
 	 */
-	/* ARD-13: defer conversion for now */
-	cql0("SELECT COUNT(*) FROM pg_largeobject "
-		 " WHERE loid = :1 ",
-		 ObjectIdGetDatum(loid));
-	
 	ScanKeyInit(&skey[0],
 				Anum_pg_largeobject_loid,
 				BTEqualStrategyNumber, F_OIDEQ,
@@ -322,12 +316,6 @@ inv_getsize(LargeObjectDesc *obj_desc)
 	Assert(PointerIsValid(obj_desc));
 
 	open_lo_relation();
-	/* XXX XXX: index backward scan */
-	/* ORDER BY ... DESCENDING */
-	cql0("SELECT * FROM pg_largeobject "
-		 " WHERE loid = :1 "
-		 " ORDER BY loid, pageno ",
-		 ObjectIdGetDatum(obj_desc->id));
 
 	ScanKeyInit(&skey[0],
 				Anum_pg_largeobject_loid,
@@ -358,7 +346,7 @@ inv_getsize(LargeObjectDesc *obj_desc)
 		if (VARATT_IS_EXTENDED(datafield))
 		{
 			datafield = (bytea *)
-				heap_tuple_untoast_attr(datafield);
+				heap_tuple_untoast_attr((struct varlena *) datafield);
 			pfreeit = true;
 		}
 		lastbyte = data->pageno * LOBLKSIZE + getbytealen(datafield);
@@ -437,14 +425,6 @@ inv_read(LargeObjectDesc *obj_desc, char *buf, int nbytes)
 
 	open_lo_relation();
 
-	/* XXX XXX: index scan ORDER BY */
-	cql0("SELECT * FROM pg_largeobject "
-		 " WHERE loid = :1 "
-		 " AND pageno >= :2 "
-		 " ORDER BY loid, pageno ",
-		 ObjectIdGetDatum(obj_desc->id),
-		 Int32GetDatum(pageno));
-
 	ScanKeyInit(&skey[0],
 				Anum_pg_largeobject_loid,
 				BTEqualStrategyNumber, F_OIDEQ,
@@ -494,7 +474,7 @@ inv_read(LargeObjectDesc *obj_desc, char *buf, int nbytes)
 			if (VARATT_IS_EXTENDED(datafield))
 			{
 				datafield = (bytea *)
-					heap_tuple_untoast_attr(datafield);
+					heap_tuple_untoast_attr((struct varlena *) datafield);
 				pfreeit = true;
 			}
 			len = getbytealen(datafield);
@@ -563,14 +543,6 @@ inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes)
 	open_lo_relation();
 
 	indstate = CatalogOpenIndexes(lo_heap_r);
-	/* XXX XXX: index scan ORDER BY */
-	cql0("SELECT * FROM pg_largeobject "
-		 " WHERE loid = :1 "
-		 " AND pageno >= :2 "
-		 " ORDER BY loid, pageno "
-		 " FOR UPDATE ",
-		 ObjectIdGetDatum(obj_desc->id),
-		 Int32GetDatum(pageno));
 
 	ScanKeyInit(&skey[0],
 				Anum_pg_largeobject_loid,
@@ -623,7 +595,7 @@ inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes)
 			if (VARATT_IS_EXTENDED(datafield))
 			{
 				datafield = (bytea *)
-					heap_tuple_untoast_attr(datafield);
+					heap_tuple_untoast_attr((struct varlena *) datafield);
 				pfreeit = true;
 			}
 			len = getbytealen(datafield);
@@ -759,14 +731,6 @@ inv_truncate(LargeObjectDesc *obj_desc, int len)
 	open_lo_relation();
 
 	indstate = CatalogOpenIndexes(lo_heap_r);
-	/* XXX XXX: index scan ORDER BY */
-	cql0("SELECT * FROM pg_largeobject "
-		 " WHERE loid = :1 "
-		 " AND pageno >= :2 "
-		 " ORDER BY loid, pageno "
-		 " FOR UPDATE ",
-		 ObjectIdGetDatum(obj_desc->id),
-		 Int32GetDatum(pageno));
 
 	ScanKeyInit(&skey[0],
 				Anum_pg_largeobject_loid,
@@ -810,7 +774,7 @@ inv_truncate(LargeObjectDesc *obj_desc, int len)
 		if (VARATT_IS_EXTENDED(datafield))
 		{
 			datafield = (bytea *)
-				heap_tuple_untoast_attr(datafield);
+				heap_tuple_untoast_attr((struct varlena *) datafield);
 			pfreeit = true;
 		}
 		pagelen = getbytealen(datafield);

@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/timestamp.h,v 1.67 2007/02/16 03:39:45 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/timestamp.h,v 1.74 2008/01/23 21:26:13 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -99,6 +99,16 @@ typedef struct
 #define USECS_PER_MINUTE INT64CONST(60000000)
 #define USECS_PER_SEC	INT64CONST(1000000)
 #endif
+
+/*
+ * We allow numeric timezone offsets up to 15:59:59 either way from Greenwich.
+ * Currently, the record holders for wackiest offsets in actual use are zones
+ * Asia/Manila, at -15:56:00 until 1844, and America/Metlakatla, at +15:13:42
+ * until 1867.  If we were to reject such values we would fail to dump and
+ * restore old timestamptz values with these zone settings.
+ */
+#define MAX_TZDISP_HOUR		15				/* maximum allowed hour part */
+#define TZDISP_LIMIT		((MAX_TZDISP_HOUR + 1) * SECS_PER_HOUR)
 
 /*
  * Macros for fmgr-callable functions.
@@ -267,6 +277,7 @@ extern Datum interval_justify_days(PG_FUNCTION_ARGS);
 extern float8 interval_li_fraction(Interval *x, Interval *x0, Interval *x1, 
 								   bool *eq_bounds, bool *eq_abscissas);
 extern Interval *interval_li_value(float8 f, Interval *y0, Interval *y1);
+
 extern Datum timestamp_trunc(PG_FUNCTION_ARGS);
 extern Datum interval_trunc(PG_FUNCTION_ARGS);
 extern Datum timestamp_part(PG_FUNCTION_ARGS);

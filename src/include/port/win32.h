@@ -13,7 +13,7 @@
  * we want a switch to disable it sometime in the future.
  */
 #ifndef __BORLANDC__
-#undef ENABLE_SSPI
+#define ENABLE_SSPI 1
 #endif
 
 /* undefine and redefine after #include */
@@ -37,16 +37,31 @@
 /* Must be here to avoid conflicting with prototype in windows.h */
 #define mkdir(a,b)	mkdir(a)
 
-#define HAVE_FSYNC_WRITETHROUGH
-#define HAVE_FSYNC_WRITETHROUGH_ONLY
 #define ftruncate(a,b)	chsize(a,b)
-/*
- *	Even though we don't support 'fsync' as a wal_sync_method,
- *	we do fsync() a few other places where _commit() is just fine.
- */
+
+/* Windows doesn't have fsync() as such, use _commit() */
 #define fsync(fd) _commit(fd)
 
+/*
+ * For historical reasons, we allow setting wal_sync_method to
+ * fsync_writethrough on Windows, even though it's really identical to fsync
+ * (both code paths wind up at _commit()).
+ */
+#define HAVE_FSYNC_WRITETHROUGH
+#define FSYNC_WRITETHROUGH_IS_FSYNC
+
 #define USES_WINSOCK
+
+/*
+ * Ensure that anyone building an extension is using a 32 bit time_t.
+ * On Mingw/Msys, that should always be the case, but MSVC++ defaults
+ * to 64 bits. We set that for our own build in the project files
+ */
+#if defined(WIN32_ONLY_COMPILER) && !defined(FRONTEND)
+#ifndef _USE_32BIT_TIME_T
+#error "Postgres uses 32 bit time_t - add #define _USE_32BIT_TIME_T on Windows"
+#endif
+#endif
 
 /* defines for dynamic linking on Win32 platform */
 #if defined(WIN32) || defined(__CYGWIN__)
@@ -304,6 +319,9 @@ int			pgwin32_waitforsinglesocket(SOCKET s, int what, int timeout);
 extern int	pgwin32_is_admin(void);
 extern int	pgwin32_is_service(void);
 #endif
+
+/* in backend/port/win32_shmem.c */
+extern int	pgwin32_ReserveSharedMemoryRegion(HANDLE);
 
 /* in port/win32error.c */
 extern void _dosmaperr(unsigned long);

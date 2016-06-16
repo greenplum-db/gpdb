@@ -82,7 +82,7 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 										&distribXid))
 		{
 			DistributedTransactionTimeStamp checkDistribTimeStamp;
-			
+
 			/*
 			 * Ok, now we must consult the distributed log.
 			 */
@@ -115,7 +115,7 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 												localXid, 
 												dslm->header.distribTransactionTimeStamp,
 												/* distribXid */ InvalidDistributedTransactionId);
-				
+
 				return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
 			}
 		}

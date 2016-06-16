@@ -11,7 +11,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.125 2007/02/19 07:03:31 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/primnodes.h,v 1.137 2008/01/01 19:45:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -81,7 +81,6 @@ typedef struct RangeVar
 	Alias	   *alias;			/* table alias & optional column aliases */
 	int			location;		/* token location, or -1 if unknown */
 } RangeVar;
-
 
 typedef struct TableOidInfo
 {
@@ -395,8 +394,6 @@ typedef struct WindowRef
 typedef struct ArrayRef
 {
 	Expr		xpr;
-	Oid			refrestype;		/* type of the result of the ArrayRef
-								 * operation */
 	Oid			refarraytype;	/* type of the array proper */
 	Oid			refelemtype;	/* type of the array elements */
 	int32		reftypmod;		/* typmod of the array (and elements too) */
@@ -643,19 +640,19 @@ typedef struct SubPlan
 	/* The combining operators, transformed to an executable expression: */
 	Node	   *testexpr;		/* OpExpr or RowCompareExpr expression tree */
 	List	   *paramIds;		/* IDs of Params embedded in the above */
- 	
+
     int         qDispSliceId;   /* CDB: slice# of initplan's root slice, or 0 */
- 	
-	/* The subselect, transformed to a Plan: */
 
 	/* Identification of the Plan tree to use: */
 	int			plan_id;		/* Index (from 1) in PlannedStmt.subplans */
+
 	/* Identification of the SubPlan for EXPLAIN and debugging purposes: */
 	char	   *plan_name;		/* A name assigned during planning */
 
 	/* Extra data useful for determining subplan's output type: */
 	Oid			firstColType;	/* Type of first column of subplan result */
 	int32		firstColTypmod;	/* Typmod of first column of subplan result */
+
 	/* Information about execution strategy: */
 	bool		useHashTable;	/* TRUE to store subselect output in a hash
 								 * table (implies we are doing "IN") */
@@ -1150,17 +1147,14 @@ typedef struct SetToDefault
  */
 typedef struct CurrentOfExpr
 {
-	Expr    		xpr;
-	char     		*cursor_name;  	/* name of referenced cursor */
+	Expr		xpr;
+	char	   *cursor_name;	/* name of referenced cursor, or NULL */
+	int			cursor_param;	/* refcursor parameter number, or 0 */
 	/* for planning */
-	Index    		cvarno;      	/* RT index of target relation */
+	Index		cvarno;			/* RT index of target relation */
 	/* for validation */
-	Oid				target_relid;	/* OID of original target relation, 
-									 * before any inheritance expansion */
-	/* for constant folding */
-	int		 		gp_segment_id;
-	ItemPointerData	ctid;
-	Oid				tableoid;
+	Oid			target_relid;	/* OID of original target relation, 
+								 * before any inheritance expansion */
 } CurrentOfExpr;
 
 /*--------------------

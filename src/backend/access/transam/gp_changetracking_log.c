@@ -233,6 +233,7 @@ gp_changetracking_log(PG_FUNCTION_ARGS)
              * the calling code will copy our tuple data, so reuse our template one
              */
             HeapTupleHeader td = context->heapTuple->t_data;
+			int data_len = heap_compute_data_size(funcctx->tuple_desc, context->tupleValuesToCopy, NULL);
 #ifdef USE_ASSERT_CHECKING
             int len =
 #endif
@@ -240,6 +241,7 @@ gp_changetracking_log(PG_FUNCTION_ARGS)
                             context->tupleValuesToCopy,
                             NULL /* isnull */,
                             (char *) td + td->t_hoff,
+							data_len,
                             &td->t_infomask,
                             NULL /* bits -- NULL is okay because we have no nulls */);
 

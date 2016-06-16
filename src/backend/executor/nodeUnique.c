@@ -3,12 +3,20 @@
  * nodeUnique.c
  *	  Routines to handle unique'ing of queries where appropriate
  *
+ * Unique is a very simple node type that just filters out duplicate
+ * tuples from a stream of sorted tuples from its subplan.  It's essentially
+ * a dumbed-down form of Group: the duplicate-removal functionality is
+ * identical.  However, Unique doesn't do projection nor qual checking,
+ * so it's marginally more efficient for cases where neither is needed.
+ * (It's debatable whether the savings justifies carrying two plan node
+ * types, though.)
+ *
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeUnique.c,v 1.55 2007/01/10 18:06:02 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeUnique.c,v 1.56.2.1 2008/08/05 21:28:36 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

@@ -8,7 +8,7 @@
  * Darko Prenosil <Darko.Prenosil@finteh.hr>
  * Shridhar Daithankar <shridhar_daithankar@persistent.co.in>
  *
- * $PostgreSQL: pgsql/contrib/dblink/dblink.c,v 1.69.2.2 2009/01/03 19:57:54 joe Exp $
+ * $PostgreSQL: pgsql/contrib/dblink/dblink.c,v 1.69.2.8 2010/06/15 19:04:28 tgl Exp $
  * Copyright (c) 2001-2008, PostgreSQL Global Development Group
  * ALL RIGHTS RESERVED;
  *
@@ -37,6 +37,7 @@
 #include "libpq-fe.h"
 #include "fmgr.h"
 #include "funcapi.h"
+#include "miscadmin.h"
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/tupdesc.h"
@@ -47,11 +48,11 @@
 #include "executor/executor.h"
 #include "executor/spi.h"
 #include "lib/stringinfo.h"
-#include "miscadmin.h"
 #include "nodes/execnodes.h"
 #include "nodes/nodes.h"
 #include "nodes/pg_list.h"
 #include "parser/parse_type.h"
+#include "parser/scansup.h"
 #include "tcop/tcopprot.h"
 #include "utils/acl.h"
 #include "utils/array.h"
@@ -82,20 +83,24 @@ static remoteConn *getConnectionByName(const char *name);
 static HTAB *createConnHash(void);
 static void createNewConnection(const char *name, remoteConn * rconn);
 static void deleteConnection(const char *name);
-static char **get_pkey_attnames(Oid relid, int16 *numatts);
+static char **get_pkey_attnames(Relation rel, int16 *numatts);
 static char **get_text_array_contents(ArrayType *array, int *numitems);
-static char *get_sql_insert(Oid relid, int2vector *pkattnums, int16 pknumatts, char **src_pkattvals, char **tgt_pkattvals);
-static char *get_sql_delete(Oid relid, int2vector *pkattnums, int16 pknumatts, char **tgt_pkattvals);
-static char *get_sql_update(Oid relid, int2vector *pkattnums, int16 pknumatts, char **src_pkattvals, char **tgt_pkattvals);
+static char *get_sql_insert(Relation rel, int *pkattnums, int pknumatts, char **src_pkattvals, char **tgt_pkattvals);
+static char *get_sql_delete(Relation rel, int *pkattnums, int pknumatts, char **tgt_pkattvals);
+static char *get_sql_update(Relation rel, int *pkattnums, int pknumatts, char **src_pkattvals, char **tgt_pkattvals);
 static char *quote_literal_cstr(char *rawstr);
 static char *quote_ident_cstr(char *rawstr);
-static int16 get_attnum_pk_pos(int2vector *pkattnums, int16 pknumatts, int16 key);
-static HeapTuple get_tuple_of_interest(Oid relid, int2vector *pkattnums, int16 pknumatts, char **src_pkattvals);
-static Oid	get_relid_from_relname(text *relname_text);
-static char *generate_relation_name(Oid relid);
+static int	get_attnum_pk_pos(int *pkattnums, int pknumatts, int key);
+static HeapTuple get_tuple_of_interest(Relation rel, int *pkattnums, int pknumatts, char **src_pkattvals);
+static Relation get_rel_from_relname(text *relname_text, LOCKMODE lockmode, AclMode aclmode);
+static char *generate_relation_name(Relation rel);
 static void dblink_connstr_check(const char *connstr);
 static void dblink_security_check(PGconn *conn, remoteConn *rconn);
 static void dblink_res_error(const char *conname, PGresult *res, const char *dblink_context_msg, bool fail);
+static void dblink_security_check(PGconn *conn, remoteConn *rconn);
+static void validate_pkattnums(Relation rel,
+				   int2vector *pkattnums_arg, int32 pknumatts_arg,
+				   int **pkattnums, int *pknumatts);
 
 /* Global */
 static remoteConn *pconn = NULL;
@@ -128,6 +133,14 @@ typedef struct remoteConnHashEnt
 			var_ = NULL; \
 		} \
 	} while (0)
+
+#define xpstrdup(tgtvar_, srcvar_) \
+    do { \
+        if (srcvar_) \
+            tgtvar_ = pstrdup(srcvar_); \
+        else \
+            tgtvar_ = NULL; \
+    } while (0)
 
 #define DBLINK_RES_INTERNALERROR(p2) \
 	do { \
@@ -863,7 +876,6 @@ dblink_record_internal(FunctionCallInfo fcinfo, bool is_async, bool do_get)
 						PQfinish(conn);
 					MemoryContextSwitchTo(oldcontext);
 					SRF_RETURN_DONE(funcctx);
-				}
 			}
 
 			if (PQresultStatus(res) == PGRES_COMMAND_OK)
@@ -1136,19 +1148,22 @@ PG_FUNCTION_INFO_V1(dblink_exec);
 Datum
 dblink_exec(PG_FUNCTION_ARGS)
 {
+	text	   *volatile sql_cmd_status = NULL;
+	PGconn	   *volatile conn = NULL;
+	volatile bool freeconn = false;
+
+	DBLINK_INIT;
+
+	PG_TRY();
+	{
 	char	   *msg;
 	PGresult   *res = NULL;
-	text	   *sql_cmd_status = NULL;
 	TupleDesc	tupdesc = NULL;
-	PGconn	   *conn = NULL;
 	char	   *connstr = NULL;
 	char	   *sql = NULL;
 	char	   *conname = NULL;
 	remoteConn *rconn = NULL;
-	bool		freeconn = false;
 	bool		fail = true;	/* default to backward compatible behavior */
-
-	DBLINK_INIT;
 
 	if (PG_NARGS() == 3)
 	{
@@ -1228,8 +1243,17 @@ dblink_exec(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_S_R_E_PROHIBITED_SQL_STATEMENT_ATTEMPTED),
 				 errmsg("statement returning results not allowed")));
 	}
+	}
+	PG_CATCH();
+	{
+		/* if needed, close the connection to the database */
+		if (freeconn)
+			PQfinish(conn);
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
 
-	/* if needed, close the connection to the database and cleanup */
+	/* if needed, close the connection to the database */
 	if (freeconn)
 		PQfinish(conn);
 
@@ -1248,7 +1272,6 @@ Datum
 dblink_get_pkey(PG_FUNCTION_ARGS)
 {
 	int16		numatts;
-	Oid			relid;
 	char	  **results;
 	FuncCallContext *funcctx;
 	int32		call_cntr;
@@ -1259,7 +1282,8 @@ dblink_get_pkey(PG_FUNCTION_ARGS)
 	/* stuff done only on the first call of the function */
 	if (SRF_IS_FIRSTCALL())
 	{
-		TupleDesc	tupdesc = NULL;
+		Relation	rel;
+		TupleDesc	tupdesc;
 
 		/* create a function context for cross-call persistence */
 		funcctx = SRF_FIRSTCALL_INIT();
@@ -1269,13 +1293,13 @@ dblink_get_pkey(PG_FUNCTION_ARGS)
 		 */
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
-		/* convert relname to rel Oid */
-		relid = get_relid_from_relname(PG_GETARG_TEXT_P(0));
-		if (!OidIsValid(relid))
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_TABLE),
-					 errmsg("relation \"%s\" does not exist",
-							GET_STR(PG_GETARG_TEXT_P(0)))));
+		/* open target relation */
+		rel = get_rel_from_relname(PG_GETARG_TEXT_P(0), AccessShareLock, ACL_SELECT);
+
+		/* get the array of attnums */
+		results = get_pkey_attnames(rel, &numatts);
+
+		relation_close(rel, AccessShareLock);
 
 		/*
 		 * need a tuple descriptor representing one INT and one TEXT column
@@ -1292,9 +1316,6 @@ dblink_get_pkey(PG_FUNCTION_ARGS)
 		 */
 		attinmeta = TupleDescGetAttInMetadata(tupdesc);
 		funcctx->attinmeta = attinmeta;
-
-		/* get an array of attnums */
-		results = get_pkey_attnames(relid, &numatts);
 
 		if ((results != NULL) && (numatts > 0))
 		{
@@ -1378,12 +1399,13 @@ Datum
 dblink_build_sql_insert(PG_FUNCTION_ARGS)
 {
 	text	   *relname_text = PG_GETARG_TEXT_P(0);
-	int2vector *pkattnums = (int2vector *) PG_GETARG_POINTER(1);
-	int32		pknumatts_tmp = PG_GETARG_INT32(2);
+	int2vector *pkattnums_arg = (int2vector *) PG_GETARG_POINTER(1);
+	int32		pknumatts_arg = PG_GETARG_INT32(2);
 	ArrayType  *src_pkattvals_arry = PG_GETARG_ARRAYTYPE_P(3);
 	ArrayType  *tgt_pkattvals_arry = PG_GETARG_ARRAYTYPE_P(4);
-	Oid			relid;
-	int16		pknumatts = 0;
+	Relation	rel;
+	int		   *pkattnums;
+	int			pknumatts;
 	char	  **src_pkattvals;
 	char	  **tgt_pkattvals;
 	int			src_nitems;
@@ -1391,30 +1413,15 @@ dblink_build_sql_insert(PG_FUNCTION_ARGS)
 	char	   *sql;
 
 	/*
-	 * Convert relname to rel OID.
+	 * Open target relation.
 	 */
-	relid = get_relid_from_relname(relname_text);
-	if (!OidIsValid(relid))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_TABLE),
-				 errmsg("relation \"%s\" does not exist",
-						GET_STR(relname_text))));
+	rel = get_rel_from_relname(relname_text, AccessShareLock, ACL_SELECT);
 
 	/*
-	 * There should be at least one key attribute
+	 * Process pkattnums argument.
 	 */
-	if (pknumatts_tmp <= 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("number of key attributes must be > 0")));
-
-	if (pknumatts_tmp <= SHRT_MAX)
-		pknumatts = pknumatts_tmp;
-	else
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("input for number of primary key " \
-						"attributes too large")));
+	validate_pkattnums(rel, pkattnums_arg, pknumatts_arg,
+					   &pkattnums, &pknumatts);
 
 	/*
 	 * Source array is made up of key values that will be used to locate the
@@ -1449,7 +1456,12 @@ dblink_build_sql_insert(PG_FUNCTION_ARGS)
 	/*
 	 * Prep work is finally done. Go get the SQL string.
 	 */
-	sql = get_sql_insert(relid, pkattnums, pknumatts, src_pkattvals, tgt_pkattvals);
+	sql = get_sql_insert(rel, pkattnums, pknumatts, src_pkattvals, tgt_pkattvals);
+
+	/*
+	 * Now we can close the relation.
+	 */
+	relation_close(rel, AccessShareLock);
 
 	/*
 	 * And send it
@@ -1478,40 +1490,26 @@ Datum
 dblink_build_sql_delete(PG_FUNCTION_ARGS)
 {
 	text	   *relname_text = PG_GETARG_TEXT_P(0);
-	int2vector *pkattnums = (int2vector *) PG_GETARG_POINTER(1);
-	int32		pknumatts_tmp = PG_GETARG_INT32(2);
+	int2vector *pkattnums_arg = (int2vector *) PG_GETARG_POINTER(1);
+	int32		pknumatts_arg = PG_GETARG_INT32(2);
 	ArrayType  *tgt_pkattvals_arry = PG_GETARG_ARRAYTYPE_P(3);
-	Oid			relid;
-	int16		pknumatts = 0;
+	Relation	rel;
+	int		   *pkattnums;
+	int			pknumatts;
 	char	  **tgt_pkattvals;
 	int			tgt_nitems;
 	char	   *sql;
 
 	/*
-	 * Convert relname to rel OID.
+	 * Open target relation.
 	 */
-	relid = get_relid_from_relname(relname_text);
-	if (!OidIsValid(relid))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_TABLE),
-				 errmsg("relation \"%s\" does not exist",
-						GET_STR(relname_text))));
+	rel = get_rel_from_relname(relname_text, AccessShareLock, ACL_SELECT);
 
 	/*
-	 * There should be at least one key attribute
+	 * Process pkattnums argument.
 	 */
-	if (pknumatts_tmp <= 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("number of key attributes must be > 0")));
-
-	if (pknumatts_tmp <= SHRT_MAX)
-		pknumatts = pknumatts_tmp;
-	else
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("input for number of primary key " \
-						"attributes too large")));
+	validate_pkattnums(rel, pkattnums_arg, pknumatts_arg,
+					   &pkattnums, &pknumatts);
 
 	/*
 	 * Target array is made up of key values that will be used to build the
@@ -1531,7 +1529,12 @@ dblink_build_sql_delete(PG_FUNCTION_ARGS)
 	/*
 	 * Prep work is finally done. Go get the SQL string.
 	 */
-	sql = get_sql_delete(relid, pkattnums, pknumatts, tgt_pkattvals);
+	sql = get_sql_delete(rel, pkattnums, pknumatts, tgt_pkattvals);
+
+	/*
+	 * Now we can close the relation.
+	 */
+	relation_close(rel, AccessShareLock);
 
 	/*
 	 * And send it
@@ -1564,12 +1567,13 @@ Datum
 dblink_build_sql_update(PG_FUNCTION_ARGS)
 {
 	text	   *relname_text = PG_GETARG_TEXT_P(0);
-	int2vector *pkattnums = (int2vector *) PG_GETARG_POINTER(1);
-	int32		pknumatts_tmp = PG_GETARG_INT32(2);
+	int2vector *pkattnums_arg = (int2vector *) PG_GETARG_POINTER(1);
+	int32		pknumatts_arg = PG_GETARG_INT32(2);
 	ArrayType  *src_pkattvals_arry = PG_GETARG_ARRAYTYPE_P(3);
 	ArrayType  *tgt_pkattvals_arry = PG_GETARG_ARRAYTYPE_P(4);
-	Oid			relid;
-	int16		pknumatts = 0;
+	Relation	rel;
+	int		   *pkattnums;
+	int			pknumatts;
 	char	  **src_pkattvals;
 	char	  **tgt_pkattvals;
 	int			src_nitems;
@@ -1577,30 +1581,15 @@ dblink_build_sql_update(PG_FUNCTION_ARGS)
 	char	   *sql;
 
 	/*
-	 * Convert relname to rel OID.
+	 * Open target relation.
 	 */
-	relid = get_relid_from_relname(relname_text);
-	if (!OidIsValid(relid))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_TABLE),
-				 errmsg("relation \"%s\" does not exist",
-						GET_STR(relname_text))));
+	rel = get_rel_from_relname(relname_text, AccessShareLock, ACL_SELECT);
 
 	/*
-	 * There should be one source array key values for each key attnum
+	 * Process pkattnums argument.
 	 */
-	if (pknumatts_tmp <= 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("number of key attributes must be > 0")));
-
-	if (pknumatts_tmp <= SHRT_MAX)
-		pknumatts = pknumatts_tmp;
-	else
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("input for number of primary key " \
-						"attributes too large")));
+	validate_pkattnums(rel, pkattnums_arg, pknumatts_arg,
+					   &pkattnums, &pknumatts);
 
 	/*
 	 * Source array is made up of key values that will be used to locate the
@@ -1635,7 +1624,12 @@ dblink_build_sql_update(PG_FUNCTION_ARGS)
 	/*
 	 * Prep work is finally done. Go get the SQL string.
 	 */
-	sql = get_sql_update(relid, pkattnums, pknumatts, src_pkattvals, tgt_pkattvals);
+	sql = get_sql_update(rel, pkattnums, pknumatts, src_pkattvals, tgt_pkattvals);
+
+	/*
+	 * Now we can close the relation.
+	 */
+	relation_close(rel, AccessShareLock);
 
 	/*
 	 * And send it
@@ -1655,7 +1649,7 @@ dblink_build_sql_update(PG_FUNCTION_ARGS)
  * Return NULL, and set numatts = 0, if no primary key exists.
  */
 static char **
-get_pkey_attnames(Oid relid, int16 *numatts)
+get_pkey_attnames(Relation rel, int16 *numatts)
 {
 	Relation	indexRelation;
 	ScanKeyData skey;
@@ -1663,21 +1657,10 @@ get_pkey_attnames(Oid relid, int16 *numatts)
 	HeapTuple	indexTuple;
 	int			i;
 	char	  **result = NULL;
-	Relation	rel;
 	TupleDesc	tupdesc;
-	AclResult	aclresult;
 
 	/* initialize numatts to 0 in case no primary key exists */
 	*numatts = 0;
-
-	/* open relation using relid, check permissions, get tupdesc */
-	rel = relation_open(relid, AccessShareLock);
-
-	aclresult = pg_class_aclcheck(RelationGetRelid(rel), GetUserId(),
-								  ACL_SELECT);
-	if (aclresult != ACLCHECK_OK)
-		aclcheck_error(aclresult, ACL_KIND_CLASS,
-					   RelationGetRelationName(rel));
 
 	tupdesc = rel->rd_att;
 
@@ -1686,7 +1669,7 @@ get_pkey_attnames(Oid relid, int16 *numatts)
 	ScanKeyInit(&skey,
 				Anum_pg_index_indrelid,
 				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
+				ObjectIdGetDatum(RelationGetRelid(rel)));
 
 	scan = systable_beginscan(indexRelation, IndexIndrelidIndexId, true,
 							  SnapshotNow, 1, &skey);
@@ -1712,7 +1695,6 @@ get_pkey_attnames(Oid relid, int16 *numatts)
 
 	systable_endscan(scan);
 	heap_close(indexRelation, AccessShareLock);
-	relation_close(rel, AccessShareLock);
 
 	return result;
 }
@@ -1779,32 +1761,27 @@ get_text_array_contents(ArrayType *array, int *numitems)
 }
 
 static char *
-get_sql_insert(Oid relid, int2vector *pkattnums, int16 pknumatts, char **src_pkattvals, char **tgt_pkattvals)
+get_sql_insert(Relation rel, int *pkattnums, int pknumatts, char **src_pkattvals, char **tgt_pkattvals)
 {
-	Relation	rel;
 	char	   *relname;
 	HeapTuple	tuple;
 	TupleDesc	tupdesc;
 	int			natts;
 	StringInfoData buf;
 	char	   *val;
-	int16		key;
+	int			key;
 	int			i;
 	bool		needComma;
 
 	initStringInfo(&buf);
 
 	/* get relation name including any needed schema prefix and quoting */
-	relname = generate_relation_name(relid);
+	relname = generate_relation_name(rel);
 
-	/*
-	 * Open relation using relid
-	 */
-	rel = relation_open(relid, AccessShareLock);
 	tupdesc = rel->rd_att;
 	natts = tupdesc->natts;
 
-	tuple = get_tuple_of_interest(relid, pkattnums, pknumatts, src_pkattvals);
+	tuple = get_tuple_of_interest(rel, pkattnums, pknumatts, src_pkattvals);
 	if (!tuple)
 		ereport(ERROR,
 				(errcode(ERRCODE_CARDINALITY_VIOLATION),
@@ -1829,7 +1806,7 @@ get_sql_insert(Oid relid, int2vector *pkattnums, int16 pknumatts, char **src_pka
 	appendStringInfo(&buf, ") VALUES(");
 
 	/*
-	 * remember attvals are 1 based
+	 * Note: i is physical column number (counting from 0).
 	 */
 	needComma = false;
 	for (i = 0; i < natts; i++)
@@ -1840,12 +1817,9 @@ get_sql_insert(Oid relid, int2vector *pkattnums, int16 pknumatts, char **src_pka
 		if (needComma)
 			appendStringInfo(&buf, ",");
 
-		if (tgt_pkattvals != NULL)
-			key = get_attnum_pk_pos(pkattnums, pknumatts, i + 1);
-		else
-			key = -1;
+		key = get_attnum_pk_pos(pkattnums, pknumatts, i);
 
-		if (key > -1)
+		if (key >= 0)
 			val = tgt_pkattvals[key] ? pstrdup(tgt_pkattvals[key]) : NULL;
 		else
 			val = SPI_getvalue(tuple, tupdesc, i + 1);
@@ -1861,46 +1835,34 @@ get_sql_insert(Oid relid, int2vector *pkattnums, int16 pknumatts, char **src_pka
 	}
 	appendStringInfo(&buf, ")");
 
-	relation_close(rel, AccessShareLock);
 	return (buf.data);
 }
 
 static char *
-get_sql_delete(Oid relid, int2vector *pkattnums, int16 pknumatts, char **tgt_pkattvals)
+get_sql_delete(Relation rel, int *pkattnums, int pknumatts, char **tgt_pkattvals)
 {
-	Relation	rel;
 	char	   *relname;
 	TupleDesc	tupdesc;
-	int			natts;
 	StringInfoData buf;
 	int			i;
 
 	initStringInfo(&buf);
 
 	/* get relation name including any needed schema prefix and quoting */
-	relname = generate_relation_name(relid);
+	relname = generate_relation_name(rel);
 
-	/*
-	 * Open relation using relid
-	 */
-	rel = relation_open(relid, AccessShareLock);
 	tupdesc = rel->rd_att;
-	natts = tupdesc->natts;
 
 	appendStringInfo(&buf, "DELETE FROM %s WHERE ", relname);
 	for (i = 0; i < pknumatts; i++)
 	{
-		int16		pkattnum = pkattnums->values[i];
+		int			pkattnum = pkattnums[i];
 
 		if (i > 0)
 			appendStringInfo(&buf, " AND ");
 
 		appendStringInfoString(&buf,
-		   quote_ident_cstr(NameStr(tupdesc->attrs[pkattnum - 1]->attname)));
-
-		if (tgt_pkattvals == NULL)
-			/* internal error */
-			elog(ERROR, "target key array must not be NULL");
+		   quote_ident_cstr(NameStr(tupdesc->attrs[pkattnum]->attname)));
 
 		if (tgt_pkattvals[i] != NULL)
 			appendStringInfo(&buf, " = %s",
@@ -1909,37 +1871,31 @@ get_sql_delete(Oid relid, int2vector *pkattnums, int16 pknumatts, char **tgt_pka
 			appendStringInfo(&buf, " IS NULL");
 	}
 
-	relation_close(rel, AccessShareLock);
 	return (buf.data);
 }
 
 static char *
-get_sql_update(Oid relid, int2vector *pkattnums, int16 pknumatts, char **src_pkattvals, char **tgt_pkattvals)
+get_sql_update(Relation rel, int *pkattnums, int pknumatts, char **src_pkattvals, char **tgt_pkattvals)
 {
-	Relation	rel;
 	char	   *relname;
 	HeapTuple	tuple;
 	TupleDesc	tupdesc;
 	int			natts;
 	StringInfoData buf;
 	char	   *val;
-	int16		key;
+	int			key;
 	int			i;
 	bool		needComma;
 
 	initStringInfo(&buf);
 
 	/* get relation name including any needed schema prefix and quoting */
-	relname = generate_relation_name(relid);
+	relname = generate_relation_name(rel);
 
-	/*
-	 * Open relation using relid
-	 */
-	rel = relation_open(relid, AccessShareLock);
 	tupdesc = rel->rd_att;
 	natts = tupdesc->natts;
 
-	tuple = get_tuple_of_interest(relid, pkattnums, pknumatts, src_pkattvals);
+	tuple = get_tuple_of_interest(rel, pkattnums, pknumatts, src_pkattvals);
 	if (!tuple)
 		ereport(ERROR,
 				(errcode(ERRCODE_CARDINALITY_VIOLATION),
@@ -1947,6 +1903,9 @@ get_sql_update(Oid relid, int2vector *pkattnums, int16 pknumatts, char **src_pka
 
 	appendStringInfo(&buf, "UPDATE %s SET ", relname);
 
+	/*
+	 * Note: i is physical column number (counting from 0).
+	 */
 	needComma = false;
 	for (i = 0; i < natts; i++)
 	{
@@ -1959,12 +1918,9 @@ get_sql_update(Oid relid, int2vector *pkattnums, int16 pknumatts, char **src_pka
 		appendStringInfo(&buf, "%s = ",
 					  quote_ident_cstr(NameStr(tupdesc->attrs[i]->attname)));
 
-		if (tgt_pkattvals != NULL)
-			key = get_attnum_pk_pos(pkattnums, pknumatts, i + 1);
-		else
-			key = -1;
+		key = get_attnum_pk_pos(pkattnums, pknumatts, i);
 
-		if (key > -1)
+		if (key >= 0)
 			val = tgt_pkattvals[key] ? pstrdup(tgt_pkattvals[key]) : NULL;
 		else
 			val = SPI_getvalue(tuple, tupdesc, i + 1);
@@ -1983,29 +1939,22 @@ get_sql_update(Oid relid, int2vector *pkattnums, int16 pknumatts, char **src_pka
 
 	for (i = 0; i < pknumatts; i++)
 	{
-		int16		pkattnum = pkattnums->values[i];
+		int			pkattnum = pkattnums[i];
 
 		if (i > 0)
 			appendStringInfo(&buf, " AND ");
 
 		appendStringInfo(&buf, "%s",
-		   quote_ident_cstr(NameStr(tupdesc->attrs[pkattnum - 1]->attname)));
+		   quote_ident_cstr(NameStr(tupdesc->attrs[pkattnum]->attname)));
 
-		if (tgt_pkattvals != NULL)
-			val = tgt_pkattvals[i] ? pstrdup(tgt_pkattvals[i]) : NULL;
-		else
-			val = SPI_getvalue(tuple, tupdesc, pkattnum);
+		val = tgt_pkattvals[i];
 
 		if (val != NULL)
-		{
 			appendStringInfo(&buf, " = %s", quote_literal_cstr(val));
-			pfree(val);
-		}
 		else
 			appendStringInfo(&buf, " IS NULL");
 	}
 
-	relation_close(rel, AccessShareLock);
 	return (buf.data);
 }
 
@@ -2045,8 +1994,8 @@ quote_ident_cstr(char *rawstr)
 	return result;
 }
 
-static int16
-get_attnum_pk_pos(int2vector *pkattnums, int16 pknumatts, int16 key)
+static int
+get_attnum_pk_pos(int *pkattnums, int pknumatts, int key)
 {
 	int			i;
 
@@ -2054,34 +2003,22 @@ get_attnum_pk_pos(int2vector *pkattnums, int16 pknumatts, int16 key)
 	 * Not likely a long list anyway, so just scan for the value
 	 */
 	for (i = 0; i < pknumatts; i++)
-		if (key == pkattnums->values[i])
+		if (key == pkattnums[i])
 			return i;
 
 	return -1;
 }
 
 static HeapTuple
-get_tuple_of_interest(Oid relid, int2vector *pkattnums, int16 pknumatts, char **src_pkattvals)
+get_tuple_of_interest(Relation rel, int *pkattnums, int pknumatts, char **src_pkattvals)
 {
-	Relation	rel;
 	char	   *relname;
 	TupleDesc	tupdesc;
+	int			natts;
 	StringInfoData buf;
 	int			ret;
 	HeapTuple	tuple;
 	int			i;
-
-	initStringInfo(&buf);
-
-	/* get relation name including any needed schema prefix and quoting */
-	relname = generate_relation_name(relid);
-
-	/*
-	 * Open relation using relid
-	 */
-	rel = relation_open(relid, AccessShareLock);
-	tupdesc = CreateTupleDescCopy(rel->rd_att);
-	relation_close(rel, AccessShareLock);
 
 	/*
 	 * Connect to SPI manager
@@ -2090,21 +2027,46 @@ get_tuple_of_interest(Oid relid, int2vector *pkattnums, int16 pknumatts, char **
 		/* internal error */
 		elog(ERROR, "SPI connect failure - returned %d", ret);
 
+	initStringInfo(&buf);
+
+	/* get relation name including any needed schema prefix and quoting */
+	relname = generate_relation_name(rel);
+
+	tupdesc = rel->rd_att;
+	natts = tupdesc->natts;
+
 	/*
-	 * Build sql statement to look up tuple of interest Use src_pkattvals as
-	 * the criteria.
+	 * Build sql statement to look up tuple of interest, ie, the one matching
+	 * src_pkattvals.  We used to use "SELECT *" here, but it's simpler to
+	 * generate a result tuple that matches the table's physical structure,
+	 * with NULLs for any dropped columns.  Otherwise we have to deal with
+	 * two different tupdescs and everything's very confusing.
 	 */
-	appendStringInfo(&buf, "SELECT * FROM %s WHERE ", relname);
+	appendStringInfoString(&buf, "SELECT ");
+
+	for (i = 0; i < natts; i++)
+	{
+		if (i > 0)
+			appendStringInfoString(&buf, ", ");
+
+		if (tupdesc->attrs[i]->attisdropped)
+			appendStringInfoString(&buf, "NULL");
+		else
+			appendStringInfoString(&buf,
+								   quote_ident_cstr(NameStr(tupdesc->attrs[i]->attname)));
+	}
+
+	appendStringInfo(&buf, " FROM %s WHERE ", relname);
 
 	for (i = 0; i < pknumatts; i++)
 	{
-		int16		pkattnum = pkattnums->values[i];
+		int			pkattnum = pkattnums[i];
 
 		if (i > 0)
 			appendStringInfo(&buf, " AND ");
 
 		appendStringInfoString(&buf,
-		   quote_ident_cstr(NameStr(tupdesc->attrs[pkattnum - 1]->attname)));
+		   quote_ident_cstr(NameStr(tupdesc->attrs[pkattnum]->attname)));
 
 		if (src_pkattvals[i] != NULL)
 			appendStringInfo(&buf, " = %s",
@@ -2152,52 +2114,49 @@ get_tuple_of_interest(Oid relid, int2vector *pkattnums, int16 pknumatts, char **
 	return NULL;
 }
 
-static Oid
-get_relid_from_relname(text *relname_text)
+/*
+ * Open the relation named by relname_text, acquire specified type of lock,
+ * verify we have specified permissions.
+ * Caller must close rel when done with it.
+ */
+static Relation
+get_rel_from_relname(text *relname_text, LOCKMODE lockmode, AclMode aclmode)
 {
 	RangeVar   *relvar;
 	Relation	rel;
-	Oid			relid;
+	AclResult	aclresult;
 
 	relvar = makeRangeVarFromNameList(textToQualifiedNameList(relname_text));
-	rel = heap_openrv(relvar, AccessShareLock);
-	relid = RelationGetRelid(rel);
-	relation_close(rel, AccessShareLock);
+	rel = heap_openrv(relvar, lockmode);
 
-	return relid;
+	aclresult = pg_class_aclcheck(RelationGetRelid(rel), GetUserId(),
+								  aclmode);
+	if (aclresult != ACLCHECK_OK)
+		aclcheck_error(aclresult, ACL_KIND_CLASS,
+					   RelationGetRelationName(rel));
+
+	return rel;
 }
 
 /*
  * generate_relation_name - copied from ruleutils.c
- *		Compute the name to display for a relation specified by OID
+ *		Compute the name to display for a relation
  *
  * The result includes all necessary quoting and schema-prefixing.
  */
 static char *
-generate_relation_name(Oid relid)
+generate_relation_name(Relation rel)
 {
-	HeapTuple	tp;
-	Form_pg_class reltup;
 	char	   *nspname;
 	char	   *result;
 
-	tp = SearchSysCache(RELOID,
-						ObjectIdGetDatum(relid),
-						0, 0, 0);
-	if (!HeapTupleIsValid(tp))
-		elog(ERROR, "cache lookup failed for relation %u", relid);
-
-	reltup = (Form_pg_class) GETSTRUCT(tp);
-
 	/* Qualify the name if not visible in search path */
-	if (RelationIsVisible(relid))
+	if (RelationIsVisible(RelationGetRelid(rel)))
 		nspname = NULL;
 	else
-		nspname = get_namespace_name(reltup->relnamespace);
+		nspname = get_namespace_name(rel->rd_rel->relnamespace);
 
-	result = quote_qualified_identifier(nspname, NameStr(reltup->relname));
-
-	ReleaseSysCache(tp);
+	result = quote_qualified_identifier(nspname, RelationGetRelationName(rel));
 
 	return result;
 }
@@ -2207,13 +2166,13 @@ static remoteConn *
 getConnectionByName(const char *name)
 {
 	remoteConnHashEnt *hentry;
-	char		key[NAMEDATALEN];
+	char	   *key;
 
 	if (!remoteConnHash)
 		remoteConnHash = createConnHash();
 
-	MemSet(key, 0, NAMEDATALEN);
-	snprintf(key, NAMEDATALEN - 1, "%s", name);
+	key = pstrdup(name);
+	truncate_identifier(key, strlen(key), false);
 	hentry = (remoteConnHashEnt *) hash_search(remoteConnHash,
 											   key, HASH_FIND, NULL);
 
@@ -2239,20 +2198,25 @@ createNewConnection(const char *name, remoteConn * rconn)
 {
 	remoteConnHashEnt *hentry;
 	bool		found;
-	char		key[NAMEDATALEN];
+	char	   *key;
 
 	if (!remoteConnHash)
 		remoteConnHash = createConnHash();
 
-	MemSet(key, 0, NAMEDATALEN);
-	snprintf(key, NAMEDATALEN - 1, "%s", name);
+	key = pstrdup(name);
+	truncate_identifier(key, strlen(key), true);
 	hentry = (remoteConnHashEnt *) hash_search(remoteConnHash, key,
 											   HASH_ENTER, &found);
 
 	if (found)
+	{
+		PQfinish(rconn->conn);
+		pfree(rconn);
+
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
 				 errmsg("duplicate connection name")));
+	}
 
 	hentry->rconn = rconn;
 	strlcpy(hentry->name, name, sizeof(hentry->name));
@@ -2263,14 +2227,13 @@ deleteConnection(const char *name)
 {
 	remoteConnHashEnt *hentry;
 	bool		found;
-	char		key[NAMEDATALEN];
+	char	   *key;
 
 	if (!remoteConnHash)
 		remoteConnHash = createConnHash();
 
-	MemSet(key, 0, NAMEDATALEN);
-	snprintf(key, NAMEDATALEN - 1, "%s", name);
-
+	key = pstrdup(name);
+	truncate_identifier(key, strlen(key), false);
 	hentry = (remoteConnHashEnt *) hash_search(remoteConnHash,
 											   key, HASH_REMOVE, &found);
 
@@ -2300,6 +2263,7 @@ dblink_security_check(PGconn *conn, remoteConn *rconn)
 		}
 	}
 }
+
 /*
  * For non-superusers, insist that the connstr specify a password.  This
  * prevents a password from being picked up from .pgpass, a service file,
@@ -2389,4 +2353,53 @@ dblink_res_error(const char *conname, PGresult *res, const char *dblink_context_
 		 message_context ? errcontext("%s", message_context) : 0,
 		 errcontext("Error occurred on dblink connection named \"%s\": %s.",
 					dblink_context_conname, dblink_context_msg)));
+}
+
+/*
+ * Validate the PK-attnums argument for dblink_build_sql_insert() and related
+ * functions, and translate to the internal representation.
+ *
+ * The user supplies an int2vector of 1-based physical attnums, plus a count
+ * argument (the need for the separate count argument is historical, but we
+ * still check it).  We check that each attnum corresponds to a valid,
+ * non-dropped attribute of the rel.  We do *not* prevent attnums from being
+ * listed twice, though the actual use-case for such things is dubious.
+ *
+ * The internal representation is a palloc'd int array of 0-based physical
+ * attnums.
+ */
+static void
+validate_pkattnums(Relation rel,
+				   int2vector *pkattnums_arg, int32 pknumatts_arg,
+				   int **pkattnums, int *pknumatts)
+{
+	TupleDesc	tupdesc = rel->rd_att;
+	int			natts = tupdesc->natts;
+	int			i;
+
+	/* Don't take more array elements than there are */
+	pknumatts_arg = Min(pknumatts_arg, pkattnums_arg->dim1);
+
+	/* Must have at least one pk attnum selected */
+	if (pknumatts_arg <= 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("number of key attributes must be > 0")));
+
+	/* Allocate output array */
+	*pkattnums = (int *) palloc(pknumatts_arg * sizeof(int));
+	*pknumatts = pknumatts_arg;
+
+	/* Validate attnums and convert to internal form */
+	for (i = 0; i < pknumatts_arg; i++)
+	{
+		int		pkattnum = pkattnums_arg->values[i];
+
+		if (pkattnum <= 0 || pkattnum > natts ||
+			tupdesc->attrs[pkattnum - 1]->attisdropped)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("invalid attribute number %d", pkattnum)));
+		(*pkattnums)[i] = pkattnum - 1;
+	}
 }

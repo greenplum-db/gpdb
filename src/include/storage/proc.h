@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/proc.h,v 1.98 2007/04/16 18:30:04 alvherre Exp $
+ * $PostgreSQL: pgsql/src/include/storage/proc.h,v 1.104 2008/01/26 19:55:08 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -79,8 +79,13 @@ struct PGPROC
 
 	Latch		procLatch;		/* generic latch for process */
 
-	TransactionId xid;			/* transaction currently being executed by
-								 * this proc */
+	LocalTransactionId lxid;	/* local id of top-level transaction currently
+								 * being executed by this proc, if running;
+								 * else InvalidLocalTransactionId */
+
+	TransactionId xid;			/* id of top-level transaction currently being
+								 * executed by this proc, if running and XID
+								 * is assigned; else InvalidTransactionId */
 
 	LocalDistribXactRef	localDistribXactRef;
 								/* Reference to the LocalDistribXact 
@@ -91,14 +96,16 @@ struct PGPROC
 								 * xid >= xmin ! */
 
 	int			pid;			/* This backend's process id, or 0 */
+	BackendId	backendId;		/* This backend's backend ID (if assigned) */
 	Oid			databaseId;		/* OID of database this backend is using */
 	Oid			roleId;			/* OID of role using this backend */
     int         mppSessionId;   /* serial num of the qDisp process */
     int         mppLocalProcessSerial;  /* this backend's PGPROC serial num */
     bool		mppIsWriter;	/* The writer gang member, holder of locks */
 
-	bool		inVacuum;		/* true if current xact is a LAZY VACUUM */
-	bool		isAutovacuum;	/* true if it's autovacuum */
+	bool		inCommit;		/* true if within commit critical section */
+
+	uint8		vacuumFlags;	/* vacuum-related flags, see above */
 
 	/* Info about LWLock the process is currently waiting for, if any. */
 	bool		lwWaiting;		/* true if waiting for an LW lock */
@@ -157,6 +164,7 @@ extern PGDLLIMPORT PGPROC *MyProc;
 /* Special for MPP reader gangs */
 extern PGDLLIMPORT PGPROC *lockHolderProcPtr;
 
+
 /*
  * There is one ProcGlobal struct for the whole database cluster.
  */
@@ -211,9 +219,11 @@ typedef struct PROC_HDR
  */
 #define NUM_AUXILIARY_PROCS	 14
 
+
 /* configurable options */
 extern int	DeadlockTimeout;
 extern int	StatementTimeout;
+extern bool log_lock_waits;
 extern int IdleSessionGangTimeout;
 
 extern volatile bool cancel_from_timeout;
@@ -235,7 +245,7 @@ extern void ProcQueueInit(PROC_QUEUE *queue);
 extern int	ProcSleep(LOCALLOCK *locallock, LockMethod lockMethodTable);
 extern PGPROC *ProcWakeup(PGPROC *proc, int waitStatus);
 extern void ProcLockWakeup(LockMethod lockMethodTable, LOCK *lock);
-extern bool LockWaitCancel(void);
+extern void LockWaitCancel(void);
 
 extern void ProcWaitForSignal(void);
 extern void ProcSendSignal(int pid);

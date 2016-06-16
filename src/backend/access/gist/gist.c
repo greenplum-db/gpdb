@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/gist/gist.c,v 1.145 2007/01/05 22:19:21 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/gist/gist.c,v 1.149.2.1 2008/11/13 17:42:18 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,8 +20,6 @@
 #include "miscadmin.h"
 #include "utils/memutils.h"
 #include "cdb/cdbfilerepprimary.h"
-
-const XLogRecPtr XLogRecPtrForTemp = {1, 1};
 
 /* Working state for gistbuild and its callback */
 typedef struct
@@ -133,7 +131,7 @@ gistbuild(PG_FUNCTION_ARGS)
 		PageSetTLI(page, ThisTimeLineID);
 	}
 	else
-		PageSetLSN(page, XLogRecPtrForTemp);
+		PageSetLSN(page, GetXLogRecPtrForTemp());
 
 	UnlockReleaseBuffer(buffer);
 
@@ -153,7 +151,7 @@ gistbuild(PG_FUNCTION_ARGS)
 	buildstate.tmpCtx = createTempGistContext();
 
 	/* do the heap scan */
-	reltuples = IndexBuildScan(heap, index, indexInfo,
+	reltuples = IndexBuildScan(heap, index, indexInfo, true,
 							   gistbuildCallback, (void *) &buildstate);
 
 	/* okay, all heap tuples are indexed */
@@ -377,13 +375,13 @@ gistplacetopage(GISTInsertState *state, GISTSTATE *giststate)
 			ptr->block.blkno = BufferGetBlockNumber(ptr->buffer);
 
 			/*
-			 * fill page, we can do it because all these pages are new
-			 * (ie not linked in tree or masked by temp page
+			 * fill page, we can do it because all these pages are new (ie not
+			 * linked in tree or masked by temp page
 			 */
 			data = (char *) (ptr->list);
 			for (i = 0; i < ptr->block.num; i++)
 			{
-				if (PageAddItem(ptr->page, (Item) data, IndexTupleSize((IndexTuple) data), i + FirstOffsetNumber, LP_USED) == InvalidOffsetNumber)
+				if (PageAddItem(ptr->page, (Item) data, IndexTupleSize((IndexTuple) data), i + FirstOffsetNumber, false, false) == InvalidOffsetNumber)
 					elog(ERROR, "failed to add item to index page in \"%s\"", RelationGetRelationName(state->r));
 				data += IndexTupleSize((IndexTuple) data);
 			}
@@ -438,7 +436,7 @@ gistplacetopage(GISTInsertState *state, GISTSTATE *giststate)
 		{
 			for (ptr = dist; ptr; ptr = ptr->next)
 			{
-				PageSetLSN(ptr->page, XLogRecPtrForTemp);
+				PageSetLSN(ptr->page, GetXLogRecPtrForTemp());
 			}
 		}
 
@@ -506,7 +504,7 @@ gistplacetopage(GISTInsertState *state, GISTSTATE *giststate)
 			PageSetTLI(state->stack->page, ThisTimeLineID);
 		}
 		else
-			PageSetLSN(state->stack->page, XLogRecPtrForTemp);
+			PageSetLSN(state->stack->page, GetXLogRecPtrForTemp());
 
 		if (state->stack->blkno == GIST_ROOT_BLKNO)
 			state->needInsertComplete = false;
@@ -697,9 +695,12 @@ gistFindPath(Relation r, BlockNumber child)
 
 		if (GistPageIsLeaf(page))
 		{
-			/* we can safety go away, follows only leaf pages */
+			/*
+			 * Because we scan the index top-down, all the rest of the pages
+			 * in the queue must be leaf pages as well.
+			 */
 			UnlockReleaseBuffer(buffer);
-			return NULL;
+			break;
 		}
 
 		top->lsn = PageGetLSN(page);
@@ -707,14 +708,25 @@ gistFindPath(Relation r, BlockNumber child)
 		if (top->parent && XLByteLT(top->parent->lsn, GistPageGetOpaque(page)->nsn) &&
 			GistPageGetOpaque(page)->rightlink != InvalidBlockNumber /* sanity check */ )
 		{
-			/* page splited while we thinking of... */
+			/*
+			 * Page was split while we looked elsewhere. We didn't see the
+			 * downlink to the right page when we scanned the parent, so
+			 * add it to the queue now.
+			 *
+			 * Put the right page ahead of the queue, so that we visit it
+			 * next. That's important, because if this is the lowest internal
+			 * level, just above leaves, we might already have queued up some
+			 * leaf pages, and we assume that there can't be any non-leaf
+			 * pages behind leaf pages.
+			 */
 			ptr = (GISTInsertStack *) palloc0(sizeof(GISTInsertStack));
 			ptr->blkno = GistPageGetOpaque(page)->rightlink;
 			ptr->childoffnum = InvalidOffsetNumber;
-			ptr->parent = top;
-			ptr->next = NULL;
-			tail->next = ptr;
-			tail = ptr;
+			ptr->parent = top->parent;
+			ptr->next = top->next;
+			top->next = ptr;
+			if (tail == top)
+				tail = ptr;
 		}
 
 		maxoff = PageGetMaxOffsetNumber(page);
@@ -772,7 +784,9 @@ gistFindPath(Relation r, BlockNumber child)
 		top = top->next;
 	}
 
-	return NULL;
+	elog(ERROR, "failed to re-find parent of a page in index \"%s\", block %u",
+		 RelationGetRelationName(r), child);
+	return NULL; /* keep compiler quiet */
 }
 
 
@@ -846,7 +860,6 @@ gistFindCorrectParent(Relation r, GISTInsertStack *child)
 
 		/* ok, find new path */
 		ptr = parent = gistFindPath(r, child->blkno);
-		Assert(ptr != NULL);
 
 		/* read all buffers as expected by caller */
 		/* note we don't lock them or gistcheckpage them here! */
@@ -1050,7 +1063,7 @@ gistnewroot(Relation r, Buffer buffer, IndexTuple *itup, int len, ItemPointer ke
 		PageSetTLI(page, ThisTimeLineID);
 	}
 	else
-		PageSetLSN(page, XLogRecPtrForTemp);
+		PageSetLSN(page, GetXLogRecPtrForTemp());
 
 	END_CRIT_SECTION();
 }

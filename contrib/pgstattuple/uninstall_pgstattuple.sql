@@ -1,20 +1,9 @@
--- Adjust this setting to control where the objects get created.
+/* $PostgreSQL: pgsql/contrib/pgstattuple/uninstall_pgstattuple.sql,v 1.6 2007/11/13 04:24:28 momjian Exp $ */
+
+-- Adjust this setting to control where the objects get dropped.
 SET search_path = public;
 
-DROP FUNCTION pgstattuple(oid);
 DROP FUNCTION pgstattuple(text);
-DROP TYPE pgstattuple_type;
-
+DROP FUNCTION pgstattuple(oid);
 DROP FUNCTION pgstatindex(text);
-DROP TYPE pgstatindex_type;
-
-DROP FUNCTION bt_metap(text);
-DROP TYPE bt_metap_type;
-
-DROP FUNCTION bt_page_stats(text, int4);
-DROP TYPE bt_page_stats_type;
-
-DROP FUNCTION bt_page_items(text, int4);
-DROP TYPE bt_page_items_type;
-
 DROP FUNCTION pg_relpages(text);

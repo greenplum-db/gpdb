@@ -44,8 +44,6 @@ istatus_text(ItemId itemid)
 
 	initStringInfo(&buf);
 
-	if (ItemIdDeleted(itemid))
-		appendStringInfoString(&buf, "DELETED ");
 	if (ItemIdIsNormal(itemid))
 		appendStringInfoString(&buf, "USED ");
 	if (ItemIdIsDead(itemid))
