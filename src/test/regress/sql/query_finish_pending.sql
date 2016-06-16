@@ -59,16 +59,3 @@ LIMIT 2;
 
 reset gp_enable_mk_sort;
 
--- test if shared input scan deletes memory correctly when QueryFinishPending and its child has been eagerly freed,
--- where the child is a Materialize node
-set statement_mem="5MB";
-set gp_cte_sharing=on;
-
---start_ignore
-\! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
--- Set QueryFinishPending to true after SharedInputScan has retrieved the first tuple. 
--- This will eagerly free the memory context of shared input scan's child node.  
-\! gpfaultinjector -f execshare_input_next -y finish_pending --seg_dbid 2
---end_ignore 
- 
-with ctesisc as (select i1 as c1,i3 as c2 from testsisc) select count(*) > 0 from ctesisc as t1, ctesisc as t2 where t1.c1 = t2.c2;
