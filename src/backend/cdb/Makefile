@@ -36,7 +36,6 @@ OBJS = cdbappendonlystorage.o cdbappendonlystorageformat.o \
 	   cdbgang.o cdbgroup.o \
 	   cdbhash.o cdbheap.o \
 	   cdbllize.o cdblocaldistribxact.o \
-	   cdbmaxdistributedxid.o \
 	   cdbmirroredbufferpool.o \
 	   cdbmirroredfilesysobj.o cdbmirroredflatfile.o \
 	   cdbmirroredappendonly.o \
