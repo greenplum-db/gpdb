@@ -1618,44 +1618,32 @@ RecordSubTransactionCommit(void)
 		 */
 		switch (DistributedTransactionContext)
 		{
-		case DTX_CONTEXT_LOCAL_ONLY:
-			break;		// Ignore.
+			case DTX_CONTEXT_LOCAL_ONLY:
+				break;		// Ignore.
 
-		case DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE:
-		case DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER:
-		case DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER:
-		case DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT:
-			{
-				DistributedTransactionTimeStamp distribTransactionTimeStamp;
-				DistributedTransactionId distribXid;
+			case DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE:
+			case DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER:
+			case DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER:
+			case DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT:
+				DistributedLog_SetCommitted(xid,
+											MyProc->localDistribXactData.distribTimeStamp,
+											MyProc->localDistribXactData.distribXid,
+											/* isRedo */ false);
+				break;
 
-				LocalDistribXact_GetDistributedXid(
-									GetTopTransactionId(),
-									&MyProc->localDistribXactRef,
-									&distribTransactionTimeStamp,
-									&distribXid);
-
-				DistributedLog_SetCommitted(
-										xid,
-										distribTransactionTimeStamp,
-										distribXid,
-										/* isRedo */ false);
-			}
-			break;
-
-		case DTX_CONTEXT_QE_ENTRY_DB_SINGLETON:
-		case DTX_CONTEXT_QE_READER:
-		case DTX_CONTEXT_QD_RETRY_PHASE_2:
-		case DTX_CONTEXT_QE_FINISH_PREPARED:
-		case DTX_CONTEXT_QE_PREPARED:
-			elog(FATAL, "Unexpected segment distribute transaction context: '%s'",
-				 DtxContextToString(DistributedTransactionContext));
-			break;
+			case DTX_CONTEXT_QE_ENTRY_DB_SINGLETON:
+			case DTX_CONTEXT_QE_READER:
+			case DTX_CONTEXT_QD_RETRY_PHASE_2:
+			case DTX_CONTEXT_QE_FINISH_PREPARED:
+			case DTX_CONTEXT_QE_PREPARED:
+				elog(FATAL, "Unexpected segment distribute transaction context: '%s'",
+					 DtxContextToString(DistributedTransactionContext));
+				break;
 
 			default:
-			elog(PANIC, "Unrecognized DTX transaction context: %d",
-				(int) DistributedTransactionContext);
-			break;
+				elog(PANIC, "Unrecognized DTX transaction context: %d",
+					 (int) DistributedTransactionContext);
+				break;
 		}
 
 		END_CRIT_SECTION();
@@ -3055,7 +3043,7 @@ StartTransaction(void)
 
 					elog((Debug_print_full_dtm ? LOG : DEBUG5),
 						 "LocalDistribXact_StartOnSegment returned %s",
-				 	     LocalDistribXact_DisplayString(&MyProc->localDistribXactRef));
+					     LocalDistribXact_DisplayString(MyProc));
 				}
 				else
 				{
@@ -3349,7 +3337,7 @@ StartTransaction(void)
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),
 		 "StartTransaction in DTX Context = '%s', %s",
 		 DtxContextToString(DistributedTransactionContext),
- 	     LocalDistribXact_DisplayString(&MyProc->localDistribXactRef));
+	     LocalDistribXact_DisplayString(MyProc));
 }
 
 /*
@@ -3366,12 +3354,9 @@ CommitTransaction(void)
 	TransactionId latestXid;
 
 	TransactionId localXid;
-	LocalDistribXactRef localDistribXactRef;
 	bool needStateChangeFromDistributed = false;
 	bool needNotifyCommittedDtxTransaction = false;
 	bool willHaveObjectsFromSmgr;
-
-	LocalDistribXactRef_Init(&localDistribXactRef);
 
 	ShowTransactionState("CommitTransaction");
 
@@ -3533,8 +3518,7 @@ CommitTransaction(void)
 	ProcArrayEndTransaction(MyProc, latestXid,
 							true,
 							&needStateChangeFromDistributed,
-							&needNotifyCommittedDtxTransaction,
-							&localDistribXactRef);
+							&needNotifyCommittedDtxTransaction);
 	/*
 	 * Note that in GPDB, ProcArrayEndTransaction does *not* clear the PGPROC
 	 * entry, if it sets *needNotifyCommittedDtxTransaction!
@@ -3652,17 +3636,13 @@ CommitTransaction(void)
 
 	finishDistributedTransactionContext("CommitTransaction", false);
 
-	if (!LocalDistribXactRef_IsNil(&localDistribXactRef))
+	if (MyProc->localDistribXactData.state != LOCALDISTRIBXACT_STATE_NONE)
 	{
 		LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
 
 		if (needStateChangeFromDistributed)
-			LocalDistribXact_ChangeStateUnderLock(
-				localXid,
-				&localDistribXactRef,
-				LOCALDISTRIBXACT_STATE_COMMITTED);
-		
-		LocalDistribXactRef_ReleaseUnderLock(&localDistribXactRef);
+			LocalDistribXact_ChangeState(MyProc,
+										 LOCALDISTRIBXACT_STATE_COMMITTED);
 
 		LWLockRelease(ProcArrayLock);
 	}
@@ -3690,8 +3670,6 @@ CommitTransaction(void)
 
 	/* we're now in a consistent state to handle an interrupt. */
 	RESUME_INTERRUPTS();
-
-	Assert(LocalDistribXactRef_IsNil(&localDistribXactRef));
 
 	freeGangsForPortal(NULL);
 }
@@ -3811,8 +3789,7 @@ PrepareTransaction(void)
 	 * Reserve the GID for this transaction. This could fail if the requested
 	 * GID is invalid or already in use.
 	 */
-	gxact = MarkAsPreparing(xid, 
-							&MyProc->localDistribXactRef,
+	gxact = MarkAsPreparing(xid, &MyProc->localDistribXactData,
 							prepareGID, prepared_at,
 				GetUserId(), MyDatabaseId, NULL);
 	prepareGID = NULL;
@@ -3865,7 +3842,6 @@ PrepareTransaction(void)
 	 */
 	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
 	ClearTransactionFromPgProc_UnderLock(MyProc);
-	LocalDistribXactRef_ReleaseUnderLock(&MyProc->localDistribXactRef);
 	LWLockRelease(ProcArrayLock);
 
 	/*
@@ -3979,8 +3955,6 @@ AbortTransaction(void)
 	TransactionId latestXid;
 
 	TransactionId localXid = GetTopTransactionIdIfAny();
-	LocalDistribXactRef localDistribXactRef;
-	bool needDistribAborted = false;
 	bool willHaveObjectsFromSmgr;
 
 #ifdef FAULT_INJECTOR
@@ -3990,8 +3964,6 @@ AbortTransaction(void)
 			"",  // databaseName
 			""); // tableName
 #endif
-
-	LocalDistribXactRef_Init(&localDistribXactRef);
 
 	/* Prevent cancel/die interrupt while cleaning up */
 	HOLD_INTERRUPTS();
@@ -4120,8 +4092,7 @@ AbortTransaction(void)
 	 */
 	ProcArrayEndTransaction(MyProc, latestXid, false,
 							NULL,
-							NULL,
-							&localDistribXactRef);
+							NULL);
 
 	/*
 	 * Post-abort cleanup.	See notes in CommitTransaction() concerning
@@ -4184,27 +4155,12 @@ AbortTransaction(void)
 
 	rollbackDtxTransaction();
 
-	if (!LocalDistribXactRef_IsNil(&localDistribXactRef))
-	{
-		LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-
-		if (needDistribAborted)
-			LocalDistribXact_ChangeStateUnderLock(
-				localXid,
-				&localDistribXactRef,
-				LOCALDISTRIBXACT_STATE_ABORTED);
-
-		LocalDistribXactRef_ReleaseUnderLock(&localDistribXactRef);
-
-		LWLockRelease(ProcArrayLock);
-	}
+	MyProc->localDistribXactData.state = LOCALDISTRIBXACT_STATE_NONE;
 
 	/*
 	 * State remains TRANS_ABORT until CleanupTransaction().
 	 */
 	RESUME_INTERRUPTS();
-
-	Assert(LocalDistribXactRef_IsNil(&localDistribXactRef));
 
 	freeGangsForPortal(NULL);
 

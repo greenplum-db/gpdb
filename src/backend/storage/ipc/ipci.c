@@ -148,7 +148,6 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 			}
 		}
 		size = add_size(size, ProcGlobalShmemSize());
-		size = add_size(size, LocalDistribXact_ShmemSize());
 		size = add_size(size, XLOGShmemSize());
 		size = add_size(size, DistributedLog_ShmemSize());
 		size = add_size(size, CLOGShmemSize());
@@ -347,7 +346,6 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	GPMemoryProtect_ShmemInit();
 
 	CreateSharedProcArray();
-	LocalDistribXact_ShmemCreate();
 	CreateSharedBackendStatus();
 	
 	/*

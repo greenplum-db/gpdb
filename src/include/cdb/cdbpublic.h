@@ -22,7 +22,6 @@
 
 /* Things defined in this header */
 typedef struct TMGXACT_LOG           TMGXACT_LOG;
-typedef struct LocalDistribXactRef   LocalDistribXactRef;
 typedef struct CdbExplain_Agg        CdbExplain_Agg;
 typedef struct CdbCellBuf            CdbCellBuf;
 
@@ -47,23 +46,6 @@ typedef struct TMGXACT_CHECKPOINT
 #define TMGXACT_CHECKPOINT_BYTES(committedCount) \
     (SIZEOF_VARSTRUCT(committedCount, TMGXACT_CHECKPOINT, committedGxactArray))
 
-
-
-/* From "cdb/cdblocaldistribxact.h" */
-#define LocalDistribXactRef_Eyecatcher "LDX"
-#define LocalDistribXactRef_EyecatcherLen 4
-#define LocalDistribXactRef_StaticInit {LocalDistribXactRef_Eyecatcher,-1}
-
-struct LocalDistribXactRef
-{
-	char		eyecatcher[LocalDistribXactRef_EyecatcherLen];	
-								/* 
-								 * Used to validate this is a LocalDistribXact
-								 * reference.  3 characters plus NUL.
-								 */
-	int			index;			/* Index to the element. */
-
-};
 
 /* From "cdb/cdbexplain.h" */
 struct CdbExplain_Agg

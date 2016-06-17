@@ -24,12 +24,10 @@ struct SnapshotData;           /* utils/tqual.h */
 extern Size ProcArrayShmemSize(void);
 extern void CreateSharedProcArray(void);
 extern void ProcArrayAdd(PGPROC *proc);
-extern void ProcArrayRemove(PGPROC *proc, TransactionId latestXid,
-							bool forPrepare, bool isCommit);
+extern void ProcArrayRemove(PGPROC *proc, TransactionId latestXid);
 extern void ProcArrayEndTransaction(PGPROC *proc, TransactionId latestXid, bool isCommit,
 						bool *needStateChangeFromDistributed,
-						bool *needNotifyCommittedDtxTransaction,
-						LocalDistribXactRef *localDistribXactRef);
+						bool *needNotifyCommittedDtxTransaction);
 extern void ProcArrayClearTransaction(PGPROC *proc);
 extern void ClearTransactionFromPgProc_UnderLock(PGPROC *proc);
 

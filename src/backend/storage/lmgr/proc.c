@@ -349,7 +349,7 @@ InitProcess(void)
 	MyProc->waitStatus = STATUS_OK;
 	MyProc->lxid = InvalidLocalTransactionId;
 	MyProc->xid = InvalidTransactionId;
-	LocalDistribXactRef_Init(&MyProc->localDistribXactRef);
+	MyProc->localDistribXactData.state = LOCALDISTRIBXACT_STATE_NONE;
 	MyProc->xmin = InvalidTransactionId;
 	MyProc->serializableIsoLevel = false;
 	MyProc->inDropTransaction = false;
@@ -537,7 +537,7 @@ InitAuxiliaryProcess(void)
 	MyProc->waitStatus = STATUS_OK;
 	MyProc->lxid = InvalidLocalTransactionId;
 	MyProc->xid = InvalidTransactionId;
-	LocalDistribXactRef_Init(&MyProc->localDistribXactRef);
+	MyProc->localDistribXactData.state = LOCALDISTRIBXACT_STATE_NONE;
 	MyProc->xmin = InvalidTransactionId;
 	MyProc->serializableIsoLevel = false;
 	MyProc->inDropTransaction = false;
@@ -691,8 +691,7 @@ static void
 RemoveProcFromArray(int code, Datum arg)
 {
 	Assert(MyProc != NULL);
-	ProcArrayRemove(MyProc, InvalidTransactionId,
-					/* forPrepare */ false, /* (not used) isCommit */ false);
+	ProcArrayRemove(MyProc, InvalidTransactionId);
 }
 
 /*
@@ -767,7 +766,7 @@ ProcKill(int code, Datum arg)
 	 */
 	LWLockReleaseAll();
 
-	LocalDistribXactRef_Release(&MyProc->localDistribXactRef);
+	MyProc->localDistribXactData.state = LOCALDISTRIBXACT_STATE_NONE;
     MyProc->mppLocalProcessSerial = 0;
     MyProc->mppSessionId = 0;
     MyProc->mppIsWriter = false;
